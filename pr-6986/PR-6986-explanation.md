@@ -203,7 +203,9 @@ if (error_code != NO_ERROR) return error_code;
 
 **왜 이렇게?**
 
-`vacuum_heap_prepare_record`는 레코드를 **읽은 직후** 호출된다. 이 시점에 VFID를 미리 확정해두면, 이후 실제 정리 로직(`vacuum_heap_record`)이 VFID를 사용할 때 이미 준비된 상태. 조회 실패 시 **원자적으로 실패**하여 partial state를 남기지 않는다.
+`vacuum_ensure_oos_vfid_for_heap_record`는 `vacuum_heap_prepare_record` **안에서** 레코드를 읽은 직후 호출된다 (vacuum.c:2058 — `REC_RELOCATION` 분기, vacuum.c:2173 — `REC_HOME` 분기). 이 시점에 VFID를 캐시해두면 이후 정리 로직(`vacuum_heap_record`)이 VFID를 참조할 때 이미 준비된 상태.
+
+조회 실패 시 `ER_FAILED`가 상위로 전파되어 호출부(vacuum.c:1715-1731)가 `goto end`로 빠져나가므로, **이후 단계(`vacuum_heap_record`)가 아예 호출되지 않는다** — 그래서 partial state가 남지 않는다. 진짜 원자성 기전(`log_sysop_abort` 등)이 작동하는 것은 아니고, 단순히 "실패하면 뒤 단계 실행 없음" 구조에 의존하는 것이다.
 
 ---
 
