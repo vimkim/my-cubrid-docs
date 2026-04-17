@@ -6,6 +6,25 @@
 
 ---
 
+## 목차
+
+- [Q1. UPDATE 시 prev_version에 있는 구버전 OOS OID는 vacuum이 정리해주나요?](#q1-update-시-prev_version에-있는-구버전-oos-oid는-vacuum이-정리해주나요)
+- [Q2. OOS가 있는 레코드와 없는 레코드가 같은 페이지에 섞여 있으면 어떻게 되나요?](#q2-oos가-있는-레코드와-없는-레코드가-같은-페이지에-섞여-있으면-어떻게-되나요)
+- [Q3. oos_delete() 중간에 실패하면 어떻게 되나요? (멀티 청크 체인 부분 삭제)](#q3-oos_delete-중간에-실패하면-어떻게-되나요-멀티-청크-체인-부분-삭제)
+- [Q4. 왜 REC_BIGONE은 OOS 처리가 필요 없나요?](#q4-왜-rec_bigone은-oos-처리가-필요-없나요)
+- [Q5. 왜 OOS를 DELETE 시 즉시 삭제(eager deletion)하지 않고 Vacuum에 맡기나요?](#q5-왜-oos를-delete-시-즉시-삭제eager-deletion하지-않고-vacuum에-맡기나요)
+- [Q6. Vacuum이 OOS를 삭제하면 빈 OOS 페이지는 언제 반환되나요?](#q6-vacuum이-oos를-삭제하면-빈-oos-페이지는-언제-반환되나요)
+- [Q7. `RVOOS_NOTIFY_VACUUM`은 왜 `LOG_IS_MVCC_OPERATION`에 추가해야 하나요?](#q7-rvoos_notify_vacuum은-왜-log_is_mvcc_operation에-추가해야-하나요)
+- [Q8. Vacuum 중 다른 트랜잭션이 같은 OOS 레코드에 접근하면 어떻게 되나요?](#q8-vacuum-중-다른-트랜잭션이-같은-oos-레코드에-접근하면-어떻게-되나요)
+- [Q9. 서버 crash 후 recovery에서 OOS는 어떻게 처리되나요?](#q9-서버-crash-후-recovery에서-oos는-어떻게-처리되나요)
+- [Q10. `heap_recdes_get_oos_oids()`는 레코드에서 OOS OID를 어떻게 찾나요?](#q10-heap_recdes_get_oos_oids는-레코드에서-oos-oid를-어떻게-찾나요)
+- [Q11. 이 PR의 변경이 기존 non-OOS 테이블의 vacuum 성능에 영향을 주나요?](#q11-이-pr의-변경이-기존-non-oos-테이블의-vacuum-성능에-영향을-주나요)
+- [Q12. Bulk 경로와 Sysop 경로가 성능에 어떤 차이가 있나요?](#q12-bulk-경로와-sysop-경로가-성능에-어떤-차이가-있나요)
+- [Q13. OOS 파일이 아직 생성되지 않은 테이블에서 vacuum이 실행되면 어떻게 되나요?](#q13-oos-파일이-아직-생성되지-않은-테이블에서-vacuum이-실행되면-어떻게-되나요)
+- [Q14. `VACUUM_RECORD_DELETE_INSID_PREV_VER`가 무엇이고 왜 여기에도 OOS 정리 코드를 추가했나요?](#q14-vacuum_record_delete_insid_prev_ver가-무엇이고-왜-여기에도-oos-정리-코드를-추가했나요)
+
+---
+
 ## Q1. UPDATE 시 prev_version에 있는 구버전 OOS OID는 vacuum이 정리해주나요?
 
 ### 질문 상세
@@ -413,3 +432,101 @@ if (heap_recdes_contains_oos(&helper->record) && VFID_ISNULL(&helper->oos_vfid))
 이 경우는 **비정상 상태**입니다. `OR_MVCC_FLAG_HAS_OOS` 플래그가 설정된 레코드가 존재한다는 것은 OOS INSERT가 성공적으로 수행되었다는 뜻이고, 그렇다면 OOS 파일이 반드시 존재해야 합니다. OOS 파일 없이 OOS 플래그가 설정될 수 없으므로, 이 상황은 데이터 손상을 의미합니다.
 
 반면, OOS 플래그가 없는 레코드만 있는 테이블(OOS 컬럼이 없거나, 모든 값이 inline 저장 가능한 크기)에서는 `heap_recdes_contains_oos()`가 `false`를 반환하여 OOS 관련 코드가 실행되지 않습니다.
+
+---
+
+## Q14. `VACUUM_RECORD_DELETE_INSID_PREV_VER`가 무엇이고 왜 여기에도 OOS 정리 코드를 추가했나요?
+
+### 질문 상세
+
+해설서를 보면 `VACUUM_RECORD_REMOVE` 경로뿐 아니라 `VACUUM_RECORD_DELETE_INSID_PREV_VER` 경로(`vacuum_heap_record_insid_and_prev_version`)에서도 `vacuum_cleanup_prev_version_oos()`가 호출됩니다. 이 경로는 무엇을 하는 것이고, 왜 OOS 정리가 필요한가요?
+
+### 답변
+
+#### 먼저, `VACUUM_RECORD_DELETE_INSID_PREV_VER`는 이 PR이 만든 것이 아닙니다
+
+Vacuum이 한 레코드를 처리할 때 `mvcc_satisfies_vacuum()`이 세 가지 결정 중 하나를 반환합니다:
+
+| 결정 | 의미 | 동작 |
+|---|---|---|
+| `VACUUM_RECORD_CANNOT_VACUUM` | 아직 어떤 스냅샷은 볼 수도 있음 | 그냥 놔둠 |
+| `VACUUM_RECORD_DELETE_INSID_PREV_VER` | 행은 살아 있으나 INSID가 "모두에게 보임" 수준으로 오래됨 + prev_version 체인 정리 가능 | **헤더만** 청소, 행 유지 |
+| `VACUUM_RECORD_REMOVE` | DELETE 되어 아무도 못 봄 | 슬롯 자체 제거 |
+
+`DELETE_INSID_PREV_VER`는 **DELETE된 행을 지우는 것이 아니라**, 아직 살아 있는 행의 MVCC 메타데이터를 정리하는 기존 최적화 메커니즘입니다.
+
+#### 구체적인 시나리오
+
+```sql
+-- 오래 전
+INSERT INTO t VALUES (1, ...);          -- INSID=100
+-- 시간 경과 + UPDATE 몇 번
+UPDATE t SET col = 'A' WHERE id=1;      -- v2, prev_version_lsa → undo(v1)
+UPDATE t SET col = 'B' WHERE id=1;      -- v3, prev_version_lsa → undo(v2) → undo(v1)
+-- 현재: 모든 스냅샷이 v3만 보게 되어 v1, v2는 필요 없음. DELETE는 안 됨.
+```
+
+이 상황에서 vacuum이 판단: "v3는 살아 있어야 하지만, `INSID=100`은 이미 '모든 스냅샷에 보임' 상태이고 prev_version 체인은 아무도 안 따라감."
+
+수행 내용:
+
+1. `MVCC_SET_INSID(..., MVCCID_ALL_VISIBLE)` — INSID를 "모두에게 보임" 상수로 치환
+2. `prev_version_lsa`를 clear — undo 체인 포인터 제거
+3. **행 자체는 그대로 둔다** (현재 값은 여전히 필요)
+
+#### 이 메커니즘이 존재하는 이유 (이 PR 이전부터)
+
+1. **공간 절약**: MVCC 헤더는 flag bit에 따라 크기가 달라짐. INSID를 `ALL_VISIBLE`로 치환하면 INSID 자체가 제거되어 헤더가 작아짐. 많은 레코드에 적용되면 heap 파일 크기 감소.
+2. **Undo log 공간 회수**: `prev_version_lsa`가 살아 있는 동안 log archival이 그 undo 레코드를 회수할 수 없음 (MVCC reader가 따라갈 수 있으므로). 체인을 clear하면 **log archival이 오래된 undo를 드디어 회수** 가능.
+3. **미래 vacuum 단축**: 체인이 남아 있으면 미래에 이 행이 DELETE되어 REMOVE 경로로 갈 때 또다시 체인을 순회해야 함. 미리 clear하면 그때 작업이 짧아짐.
+
+#### 이 PR이 **추가한 것**
+
+PR 이전의 `vacuum_heap_record_insid_and_prev_version`은 INSID 치환과 `prev_version_lsa` clear만 수행했습니다. **OOS는 건드리지 않았습니다.**
+
+**문제:** `prev_version_lsa`를 clear하면 undo 체인에 숨어 있던 **구버전 OOS OID 참조가 영원히 유실**됩니다.
+
+```
+v3 (heap):  OOS_C           ← 살아있는 현재값, 유지 필요
+   ↓ prev_version_lsa (이걸 clear하려고 함)
+v2 (undo):  OOS_B           ← 아무도 안 봄, 회수해야 함
+   ↓
+v1 (undo):  OOS_A           ← 아무도 안 봄, 회수해야 함
+```
+
+`prev_version_lsa`를 clear한 후에는 `OOS_B`, `OOS_A` 위치를 알 방법이 없어져 OOS 파일에 **연결이 끊긴 orphan 레코드**로 영원히 남게 됩니다.
+
+그래서 이 PR이 추가한 코드:
+
+```c
+/* Clean up OOS records referenced by old versions in undo log
+ * BEFORE clearing prev_version_lsa. */
+if (MVCC_IS_HEADER_PREV_VERSION_VALID (&helper->mvcc_header)
+    && !VFID_ISNULL (&helper->oos_vfid))
+  {
+    log_sysop_start (thread_p);
+    error_code = vacuum_cleanup_prev_version_oos (thread_p, helper);
+    if (error_code != NO_ERROR) { log_sysop_abort (thread_p); return error_code; }
+    log_sysop_commit (thread_p);
+  }
+
+// 이제 안전하게 헤더 정리 진행
+switch (helper->record_type) { ... MVCC_SET_INSID(ALL_VISIBLE) ... }
+```
+
+**핵심 원칙:** "체인이 사라지기 직전이 구버전 OOS를 회수할 **마지막 기회**다."
+
+#### REMOVE 경로와의 비교
+
+| 경로 | 현재 행 | 현재 OOS 정리 | 구버전 OOS 정리 |
+|---|---|---|---|
+| `VACUUM_RECORD_REMOVE` (DELETE 완료) | 슬롯 자체 삭제 | ✅ `vacuum_heap_oos_delete` | ✅ `vacuum_cleanup_prev_version_oos` |
+| `VACUUM_RECORD_DELETE_INSID_PREV_VER` (아직 살아있음) | **유지** | ❌ (현재값은 써야 함) | ✅ `vacuum_cleanup_prev_version_oos` |
+
+두 경로 모두 구버전 OOS 정리가 필요하지만 **현재 OOS는 REMOVE 때만 정리**합니다. 이 대칭성이 코드의 두 호출 지점을 설명합니다.
+
+#### 요약
+
+- `DELETE_INSID_PREV_VER`는 이 PR이 만든 것이 아닌 **기존 vacuum 최적화** (헤더 축소 + undo 회수 + 미래 vacuum 단축).
+- 이 PR이 한 일은 **이 최적화가 작동하기 직전에 OOS를 회수**하는 코드 추가. `prev_version_lsa` clear 후에는 구버전 OOS에 도달할 방법이 사라지므로 "마지막 기회"를 잡는 것.
+- REMOVE 경로의 chain walk와 **동일한 함수**(`vacuum_cleanup_prev_version_oos`)를 재사용하여 대칭적으로 처리.
