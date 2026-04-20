@@ -1,225 +1,306 @@
-# PR #6986 코드 리뷰 보고서 — "Does this clean up all unreachable OOS values?"
+# PR #6986 코드 리뷰 보고서 — Forward-Walk 재설계 이후의 누수 경로 재평가
 
 **PR:** [CUBRID/cubrid#6986](https://github.com/CUBRID/cubrid/pull/6986)
-**제목:** [CBRD-26668] Wire vacuum to clean up OOS records after DELETE/UPDATE
+**JIRA:** [CBRD-26668] Wire vacuum to clean up OOS records after DELETE/UPDATE
 **작성자:** vimkim
 **베이스 브랜치:** `feat/oos`
-**HEAD SHA:** `6d41132a76a1e654f2dbc6e9658a177a4657de00`
-**리뷰 일시:** 2026-04-17
-**리뷰 초점:** 사용자 질문 — "이 PR이 모든 도달 불가능한(unreachable) OOS 값을 정리하는가?"
+**HEAD SHA:** `31e6e9dc6` (style(vacuum): match indent formatter on range-for and joined if)
+**이전 HEAD:** `6d41132a7` (2026-04-17 리뷰 대상)
+**리뷰 일시:** 2026-04-20
+**리뷰 초점:** 사용자 질문 — "이 PR이 모든 도달 불가능한 OOS 값을 정리하는가?"의 재검토.
 
-> 본 보고서는 이전 리뷰(2026-04-15, 2026-04-13) 이후 HEAD 기준으로 **사용자 질문에 집중하여 재분석**한 결과다. 이전 리뷰들과 중복되는 일반 스타일/안전성 지적은 생략하고, "unreachable OOS 정리 완전성" 관점에서 누수 경로를 추적한다.
-
----
-
-## 1. 결론 요약 (TL;DR)
-
-**아니오 — 완전하지 않다.** 이 PR은 가장 흔한 vacuum 경로(MVCC DELETE/UPDATE → `vacuum_heap_record`)를 커버하지만, OOS 레코드가 영구적으로 누수되는 **경로가 최소 4개** 남아 있다. 그중 하나는 코드 주석이 스스로 인정하는 한계이고, 하나는 (의도된) SA_MODE DELETE 공백이며, **가장 중요한 하나는 설계 의도와 실제 가드의 불일치로 인한 사각지대** — `vacuum_cleanup_prev_version_oos`의 내부 lazy VFID lookup 로직이 **두 호출자 모두에서 gate-out되어 dead code가 되어 있다.**
+**이전 버전과의 관계:** 이 보고서는 2026-04-17 리비전의 "`vacuum_cleanup_prev_version_oos` 기반 설계 + L1 블로커" 평가를 **forward-walk 재설계**(commit `f912b720c`) 기준으로 갱신한 개정판이다. L1은 재설계로 해결되었고 새로운 위험 영역이 등장했다.
 
 ---
 
-## 2. PR이 커버하는 정리 경로 (What IS covered)
+## 1. TL;DR
 
-| 시나리오 | 정리 함수 | 판정 |
-|---|---|---|
-| MVCC DELETE + REC_HOME + OOS → vacuum | `vacuum_heap_oos_delete` | ✅ sysop 내부에서 수행 |
-| MVCC DELETE + REC_RELOCATION + OOS → vacuum | `vacuum_heap_oos_delete` | ✅ sysop 내부에서 수행 |
-| MVCC UPDATE 체인 (OOS 컬럼 유지) → vacuum prev-version | `vacuum_cleanup_prev_version_oos` | ✅ 단, `oos_vfid`가 current record에서 설정될 때만 |
-| SA_MODE UPDATE (OOS 컬럼 교체) | `heap_update_home_delete_replaced_oos` | ✅ heap_update_home 내 eager delete |
-| INSERT abort/rollback | `RVOOS_INSERT`의 undo 핸들러 = `oos_rv_redo_delete` | ✅ 기존 WAL 메커니즘 (이 PR 변경 아님) |
+2026-04-17 리포트는 L1(UPDATE-drops-all-OOS → DELETE prev-version 누수)을 **머지 블로커**로 판정했다. L1의 원인은 `vacuum_cleanup_prev_version_oos`의 호출자 가드(`!VFID_ISNULL(&helper->oos_vfid)`)가 현재 레코드의 HAS_OOS 상태에 종속되어 lazy lookup 코드가 dead code가 된 것이었다.
 
-전역 grep 결과 `oos_delete`는 위 3개 호출 지점 외에서는 호출되지 않는다. 즉 이 목록에 없는 경로는 **영구 누수**다.
+**현재 상태: L1은 forward-walk 재설계로 완전 해소되었다.**
+
+commit `f912b720c`는 `vacuum_cleanup_prev_version_oos`와 REMOVE 경로의 prev-version 트리거 블록 전체(~250+ 라인)를 제거하고, `vacuum_process_log_block`의 forward walk 안에 inline OOS 정리를 추가했다. 각 MVCC 힙 로그 레코드(`RVHF_UPDATE_NOTIFY_VACUUM`, `RVHF_MVCC_DELETE_MODIFY_HOME`)의 undo payload를 해석하여 HAS_OOS가 있으면 `oos_delete`를 호출한다. 현재 레코드의 HAS_OOS 상태와 무관하게 각 과거 버전이 정리되므로 L1 시나리오는 **구조적으로 재발 불가능**하다.
+
+다만 재설계는 새로운 위험 영역을 도입했다. (1) non-OOS 테이블에 대해서도 undo decode 비용이 추가되어 성능 regression 가능성, (2) defensive copy 비용, (3) VFID 캐시 eviction 정책의 휴리스틱 특성, (4) sysop 페어링 assertion 의존성. 이 중 (1)은 정량 확인이 남아 있고, 나머지는 현재 구현에서 관리 가능한 수준으로 평가된다.
+
+**머지 권장 여부:** L1 해소로 **머지 블로커는 해제**된다. L3/L4/T0.5는 non-blocker 후속 작업으로 이관 권장.
 
 ---
 
-## 3. 남아 있는 누수 경로 (Leak Paths)
+## 2. 2026-04-17 보고서의 L1-L4 재평가
 
-### 3.1 [L1] prev-version 체인 가드의 dead-code 함정 — **실질적 correctness 버그**
+### 2.1 L1 — prev-version 체인 가드의 dead-code 함정: **RESOLVED**
 
-**증거 1 — 호출자 측 가드 (두 곳 모두 `oos_vfid` NULL일 때 호출 자체를 차단):**
+#### 과거 판정
 
-`vacuum_heap_record` (`src/query/vacuum.c`, diff 라인 1055-1057):
-```c
-bool need_prev_version_oos_cleanup = (MVCC_IS_HEADER_PREV_VERSION_VALID (&helper->mvcc_header)
-                                      && !VFID_ISNULL (&helper->oos_vfid)     // ← 가드
-                                      && (helper->record_type == REC_HOME || helper->record_type == REC_RELOCATION));
+`vacuum_cleanup_prev_version_oos`의 호출자 가드가 `!VFID_ISNULL(&helper->oos_vfid)`를 요구했으나, `oos_vfid`는 현재 레코드가 HAS_OOS를 가질 때만 설정되었다. 따라서 "현재 레코드는 HAS_OOS 없는데 undo chain에는 OOS가 있는" 시나리오에서 함수 호출 자체가 차단되어 내부 lazy lookup이 dead code가 되었다.
+
+누수 시나리오:
+
+```sql
+INSERT INTO t VALUES (1, REPEAT(X'AA', 4096));   -- HAS_OOS=1, OOS_A
+UPDATE t SET oos_col = NULL WHERE id = 1;         -- HAS_OOS=0
+DELETE FROM t WHERE id = 1;                       -- undo(DELETE)에 HAS_OOS=0 recdes
 ```
 
-`vacuum_heap_record_insid_and_prev_version` (diff 라인 742):
+REMOVE 시점 현재 레코드의 HAS_OOS=0 → `oos_vfid`=NULL → 체인 워커 호출 차단 → OOS_A 누수.
+
+#### 현재 상태
+
+`vacuum_cleanup_prev_version_oos`와 관련 가드/호출부 전부가 `f912b720c`에서 제거되었다. 신 설계는 다음과 같이 이 시나리오를 처리한다.
+
+- `vacuum_process_log_block`이 UPDATE의 MVCC 힙 로그 레코드(`RVHF_UPDATE_NOTIFY_VACUUM`)를 처리할 때, undo payload=v1(HAS_OOS=1, OOS_A) 을 recdes로 해석.
+- `heap_recdes_contains_oos(&undo_recdes)` = true → forward walk 블록 진입.
+- `vacuum_forward_walk_delete_oos`가 OOS_A를 삭제.
+
+현재 레코드의 HAS_OOS 상태가 조건에 전혀 등장하지 않으므로 과거 L1 시나리오는 구조적으로 발생하지 않는다.
+
+**판정: RESOLVED. 검증은 regression 테스트로 확인 필요 (T3.4 참조).**
+
+### 2.2 L2 — SA_MODE DELETE: 상태 유지
+
+#### 과거 판정
+
+SA_MODE에는 MVCC가 없고 vacuum이 no-op이므로 DELETE 시 OOS가 자동 정리되지 않는다. Standalone utility(loaddb 등)에서 DELETE를 수행하는 경로가 있다면 OOS 파일이 지속 증가.
+
+#### 현재 상태
+
+**변경 없음.** 본 PR은 여전히 SA_MODE DELETE eager 정리를 포함하지 않는다. `heap_update_home_delete_replaced_oos`(UPDATE용)는 있으나 DELETE용 대응이 없다.
+
+**권장 조치: 후속 JIRA에서 `heap_delete_logical` 내부의 non-MVCC branch에 eager OOS cleanup을 추가. PR-6986 설명에 "SA_MODE DELETE는 범위 외" 명시 권장.**
+
+### 2.3 L3 — REC_BIGONE + OOS 불변식: 상태 유지
+
+#### 과거 판정
+
+`vacuum_heap_record`의 REC_BIGONE 분기에서 `assert(!heap_recdes_contains_oos(...))`만 있어 release build에서는 불변식 위반 시 조용한 OOS 누수.
+
+#### 현재 상태
+
+**변경 없음.** Forward-walk 재설계는 REC_BIGONE 경로를 건드리지 않았다. `assert`가 여전히 debug-only.
+
+이론적으로 forward walk가 처리하는 MVCC 힙 로그 레코드의 undo는 REC_HOME 형식의 recdes이므로, 여기에는 REC_BIGONE 불변식이 적용되지 않는다(주석 vacuum.c:3654 `undo_recdes.type = REC_HOME`). 따라서 forward walk 자체는 REC_BIGONE 불변식과 무관하다. 그러나 `vacuum_heap_record`의 REC_BIGONE 분기는 여전히 debug-only assert에 의존.
+
+**권장 조치: `assert_release` 업그레이드 또는 `ER_FAILED` 반환.**
+
+### 2.4 L4 — RELOCATION 누적 시나리오 회귀 테스트 부재: 상태 유지
+
+#### 과거 판정
+
+UPDATE로 인한 연속 RELOCATION 체인이 OOS를 참조하는 경우에 대한 직접 회귀 테스트가 없음.
+
+#### 현재 상태
+
+**변경 없음.** 신 설계에서도 RELOCATION 연쇄는 forward walk로 커버되지만, 이를 스트레스로 검증하는 회귀 테스트는 없다.
+
+**권장 조치: T3.4 — 좁은 heap 페이지에서 UPDATE를 반복해 RELOCATION 강제 → DELETE → vacuum → OOS 파일 page count 확인.**
+
+---
+
+## 3. 새 설계로 인한 신규 위험 평가
+
+### 3.1 R1 — Undo 디코드 비용 (non-OOS 테이블에도 발생)
+
+#### 설명
+
+Forward walk는 **모든** MVCC 힙 로그 레코드에 대해 다음을 수행한다.
+
+1. `undo_data != NULL && undo_data_size > 0` 체크 (cheap).
+2. `heap_recdes_contains_oos(&undo_recdes)` — MVCC 헤더 바이트 읽기 + 비트 AND. 인라인 O(1).
+
+non-OOS 테이블의 경우 2번에서 false 반환 후 즉시 종료. 추가 비용은 로그 레코드당 수 명령어 수준으로 추정.
+
+#### 위험도
+
+낮음-중간. 이론적으로 무시 가능한 수준이지만 **정량 확인이 남아 있다** (T0.5).
+
+구 설계는 "OOS 있는 레코드만" 체인 워크를 했으므로 non-OOS 테이블에는 추가 비용이 없었다. 신 설계는 이 비용을 non-OOS 테이블에도 분산시킨다. 대규모 non-OOS 워크로드(예: 수백만 UPDATE의 OLTP)에서 측정 가능한 regression이 발생할 가능성은 낮지만 0은 아니다.
+
+#### 권장 조치
+
+T0.5 마이크로벤치마크 추가. non-OOS 테이블에서 `vacuum_process_log_block` 처리 시간을 PR 이전/이후 비교. 5% 미만 regression이면 수용 가능.
+
+### 3.2 R2 — Defensive copy 비용
+
+#### 설명
+
+Inline 블록은 sysop 진입 전 undo_data를 스택 버퍼(`IO_MAX_PAGE_SIZE`, 16KB)로 복사하거나 크기 초과 시 `db_private_alloc`으로 힙 할당한다(vacuum.c:3672-3690).
+
+- 스택 버퍼: 16KB 스택 공간 소비. 일반적인 heap recdes 크기(수 KB)에는 충분.
+- 힙 할당: undo_data_size > 16KB인 OOS recdes에서 발생. 대용량 OOS (예: 160KB) 삭제 시 1회 `db_private_alloc` + `db_private_free_and_init`.
+
+#### 위험도
+
+낮음. 복사는 HAS_OOS=1인 경우에만 수행되며, 스택 경로가 일반 사례이므로 힙 할당은 드물다.
+
+#### 주의점
+
+스택 경로의 `undo_copy_stack[IO_MAX_PAGE_SIZE]`는 함수 진입마다 할당되는 스택 공간 16KB. `vacuum_process_log_block` 프레임에 VFID 캐시(16 × 2 VFID ≈ 256 bytes) + 기타 지역변수까지 합쳐 스택 footprint가 증가한다. 스레드 스택이 충분해야 하며 (CUBRID 기본 vacuum 워커 스택 크기는 안전 범위), 재귀 없이 선형 호출이라 overflow 위험은 없다고 판단.
+
+**권장 조치:** 스택 크기를 모니터링. 필요 시 heap alloc-only 경로로 전환 고려(성능 손실).
+
+### 3.3 R3 — VFID 캐시 eviction 정책 (slot 0 overwrite)
+
+#### 설명
+
+캐시가 16 엔트리를 꽉 채우면 17번째부터는 슬롯 0을 덮어쓴다(vacuum.c:3402-3407). LRU도 LFU도 아닌 단순 휴리스틱.
+
+#### 위험도
+
+낮음. 실질 영향:
+
+- 한 블록이 17개 이상의 고유 heap VFID를 다룰 때 캐시 miss가 반복되어 `file_descriptor_get` + `heap_oos_find_vfid` 비용이 추가 발생.
+- 정확성에는 영향 없음 (miss 후 재조회하면 정확한 결과).
+
+#### 관찰
+
+일반 OLTP 워크로드에서 한 vacuum 블록이 16개 이상의 서로 다른 테이블의 MVCC 힙 변경을 포함하는 경우는 드물다. 다만 broad multi-table update 워크로드에서는 발생할 수 있다.
+
+**권장 조치:** 필요 시 크기 상향 또는 LRU 정책. 현재는 관찰 데이터 축적 후 결정 권장.
+
+### 3.4 R4 — Sysop 페어링 invariant 깨짐 위험
+
+#### 설명
+
+`vacuum_process_log_block`의 loop tail(vacuum.c:3864)과 함수 종료 시점(vacuum.c:3885)에 assert.
+
 ```c
-if (MVCC_IS_HEADER_PREV_VERSION_VALID (&helper->mvcc_header) && !VFID_ISNULL (&helper->oos_vfid))
-  {
-    log_sysop_start (thread_p);
-    error_code = vacuum_cleanup_prev_version_oos (thread_p, helper);
+assert (!LOG_FIND_CURRENT_TDES (thread_p)->is_under_sysop ());
 ```
 
-**증거 2 — `oos_vfid`는 current record가 OOS 플래그를 가질 때만 설정됨:**
+inline OOS 블록의 모든 경로가 이 불변식을 준수하도록 구성되어 있다(자세한 경로 분석은 `PR-6986-QnA.md` Q6 참조).
 
-`vacuum_ensure_oos_vfid_for_heap_record` (diff 라인 783-799):
+#### 위험도
+
+낮음 — 현재 구현 기준. 중간 — 미래 유지보수 리그레션 위험.
+
+코드 변경이 inline 블록 내 경로를 추가/수정할 때 sysop commit/abort 호출을 빠뜨리면 assert fire. debug build에서는 즉시 발견되지만 **release build에서는 조용한 상태 오염** 가능.
+
+#### 권장 조치
+
+Long-term: `assert`를 `assert_release`로 업그레이드 고려. 또는 RAII-style sysop 가드를 도입해 구조적으로 페어링을 강제(현재 CUBRID의 C 위주 코드에는 부적합할 수 있음).
+
+Short-term: 코드 리뷰 체크리스트에 "sysop 페어링 검증" 항목 추가.
+
+### 3.5 R5 — Corrupt log record 방어
+
+#### 설명
+
+Inline 블록은 `undo_data_size > 2 * IO_MAX_PAGE_SIZE`를 상한으로 가드하여 손상된 로그 레코드에서 메모리 오남용을 차단(vacuum.c:3661-3665).
+
 ```c
-if (!heap_recdes_contains_oos (&helper->record) || !VFID_ISNULL (&helper->oos_vfid))
+if (undo_data_size > 2 * IO_MAX_PAGE_SIZE)
   {
-    return NO_ERROR;   // current record OOS 플래그 없으면 VFID 조회 안 함
+    assert_release (false);
+    goto oos_cleanup_done;
   }
 ```
 
-**증거 3 — 함수 내부의 lazy lookup은 정확히 이 시나리오를 "처리하려고" 작성됨:**
+`assert_release`이므로 debug/release 모두에서 발동하며 abort가 아닌 skip 후 계속 진행 (vacuum block 처리가 전체 실패하지 않음).
 
-`vacuum_cleanup_prev_version_oos` (diff 라인 920-935):
-```c
-/* Check for OOS in the old version and delete if found. */
-if (heap_recdes_contains_oos (&old_recdes))
-  {
-    /* Lazy VFID lookup — the current record may have no OOS (REMOVE path after UPDATE that
-     * dropped an OOS column), but old versions do. */
-    if (VFID_ISNULL (&helper->oos_vfid))
-      {
-        if (!heap_oos_find_vfid (thread_p, &helper->hfid, &helper->oos_vfid, false))
-        ...
-```
+#### 위험도
 
-그리고 docstring(diff 라인 808-811)은:
+매우 낮음. 정상 heap recdes는 두 페이지를 넘지 않으며, 이 상한은 실질적으로 fail-safe 역할.
 
-> "oos_vfid may be NULL on entry — it is looked up lazily on the first old version that carries OOS. This matters for the REMOVE path, where the current record may have dropped its OOS columns (no current OOS flag) while old versions in the prev_version_lsa chain still carry OOS."
+---
 
-**분석:** 함수 내부는 "current record에 OOS 없고 prev-version에만 OOS 있는 경우"를 명시적으로 다루도록 작성되었는데, 두 호출자가 모두 `!VFID_ISNULL(&helper->oos_vfid)` 로 gate하므로 **함수 진입 자체가 차단**된다. 즉 lazy lookup 코드는 **프로덕션에서 도달 불가능한 dead code**이며, 유일하게 도달 가능한 경로는 `bridge_vacuum_cleanup_prev_version_oos` 테스트 bridge(그리고 그 bridge는 oos_vfid를 미리 채워서 전달).
+## 4. 현재 PR 리뷰 상태
 
-**결과:** 다음 시나리오에서 OOS 누수:
+### 4.1 Architect 관점
 
-```sql
-CREATE TABLE t (id INT PRIMARY KEY, oos_col BIT VARYING);
-INSERT INTO t VALUES (1, REPEAT(X'AA', 4096));   -- OOS 레코드 생성
-UPDATE t SET oos_col = NULL WHERE id = 1;        -- 현재 row에 OOS 플래그 없어짐
-DELETE FROM t WHERE id = 1;                      -- row 삭제
--- vacuum 실행 → current record에 OOS 없음 → oos_vfid 설정 안 됨
---           → prev_version_oos_cleanup 가드에서 short-circuit
---           → undo log의 구버전 OOS 레코드 영구 누수
-```
+**의견 요약:**
 
-이 시나리오는 `vacuum_heap_record`의 주석(diff 라인 1050-1053)이 이미 "known limitation"으로 자인한 바 있다:
+- L1 해결에 대한 설계가 우아하고 최소 침습.
+- 새 WAL 레코드 없이 기존 `RVOOS_DELETE` + sysop 조합으로 복구 의미론 달성 — 엔지니어링적으로 타당.
+- Forward walk의 undo decode 비용이 non-OOS 테이블에 미치는 영향 정량 확인 필요 (T0.5).
 
-> "Known limitation: UPDATEs that drop every OOS column and are then DELETEd leave no OOS flag on the current record; their prev-version OOS leak until a full-table rewrite."
+**Consensus:** 구조적으로 수용 가능. 성능 벤치마크를 조건부로 요청.
 
-그러나 주석은 "limitation"이라 표현하지만, **함수 내부의 lazy lookup 로직이 이를 처리하도록 명시적으로 작성되어 있기 때문에**, 이는 의도된 한계가 아니라 **가드가 함수 의도를 방해하는 버그**로 보는 것이 더 정확하다.
+### 4.2 Security 관점
 
-**권장 조치 (택 1):**
+**의견 요약:**
 
-| 옵션 | 변경 | 효과 |
+- 일시 실패 시 VFID 캐시에 false-negative를 기록하지 않도록 수정된 점(vacuum.c:3374-3381) 확인됨. 이전 초안에서 지적된 문제 해결.
+- Defensive copy가 log page buffer invalidation 위험을 방어함. v2 Risk 테이블 항목 해결.
+- Corrupt log 상한 가드(`2 * IO_MAX_PAGE_SIZE`)가 추가된 점 확인.
+
+**Consensus:** 보안 관련 지적 사항은 모두 해결됨. 승인.
+
+### 4.3 Code-review 관점
+
+**의견 요약:**
+
+- ~250 라인의 dead code 제거로 가독성 향상.
+- Inline 블록이 `vacuum_process_log_block` 안에서 조금 크지만, 현재 주석이 의도를 명확히 설명하고 있어 수용 가능.
+- Sysop 페어링 불변식이 assertion에만 의존하는 점은 미래 유지보수에서 주의 필요.
+
+**Consensus:** 승인. 단 L3의 `assert_release` 업그레이드 권장사항 추가.
+
+---
+
+## 5. 머지 권장 여부 및 조건
+
+### 5.1 머지 권장 여부
+
+**YES — 머지 권장.** 블로커는 해제되었다.
+
+### 5.2 머지 조건 (선택적)
+
+**Merge before (required):**
+
+- 없음. 현재 코드 그대로 머지 가능.
+
+**Merge before (strongly recommended):**
+
+- T0.5 마이크로벤치마크 실행 및 regression이 5% 이내임을 확인.
+
+**Merge after (non-blocker, 후속 JIRA):**
+
+- L2: SA_MODE DELETE eager cleanup.
+- L3: REC_BIGONE 불변식을 `assert_release`로 업그레이드.
+- L4 / T3.4: RELOCATION 누적 회귀 테스트.
+- T3.2 / T3.3: crash inject 및 sysop 페어링 스트레스 테스트.
+- R3: VFID 캐시 크기/정책 관찰 데이터 축적 후 결정.
+
+### 5.3 모니터링 권장
+
+머지 후 observability 관점:
+
+- `VACUUM_ER_LOG_HEAP` 로그에서 `"forward-walk oos_delete failed"` (vacuum.c:3710)와 `"failed to allocate ... for undo copy"` (vacuum.c:3683) 발생률 추적.
+- OOS 파일 크기 증가율 모니터 (OOS 누수 지표).
+
+---
+
+## 6. 사용자 질문 직답
+
+> "이 PR이 모든 도달 불가능한 OOS 값을 정리하는가?"
+
+**부분적으로 YES, 주요 경로는 완전히 커버.** 2026-04-17 리뷰와 비교.
+
+| 경로 | 2026-04-17 판정 | 2026-04-20 판정 |
 |---|---|---|
-| A. 정확성 우선 | 두 가드에서 `!VFID_ISNULL (&helper->oos_vfid)` 제거 | lazy lookup 활성화 → L1 해결. 단, `MVCC_IS_HEADER_PREV_VERSION_VALID`만 남으므로 non-OOS 테이블에서도 chain walk 진입 → 성능 저하. |
-| B. 정확성 + 성능 | heap header에 `has_oos_file` bool 캐싱 후 가드를 `!has_oos_file_cached`로 교체 | L1 해결 + 성능 유지. 단 heap header 포맷 변경 필요. |
-| C. 명시적 한계 인정 | 가드 유지 + 함수 내부 lazy lookup 코드 제거 + docstring 수정 + PR 설명에 한계 명시 + JIRA 후속 티켓 생성 | 코드 정직해짐. 누수는 미해결. |
+| MVCC UPDATE 체인 + DELETE (OOS 유지) | 부분 커버 | **완전 커버** (forward walk) |
+| UPDATE-drops-all-OOS → DELETE (L1) | **누수** (블로커) | **완전 커버** (forward walk) |
+| SA_MODE DELETE (L2) | 누수 (범위 외) | 누수 (범위 외) |
+| REC_BIGONE + OOS (L3) | 조용한 누수 가능 | 조용한 누수 가능 |
+| RELOCATION 누적 (L4) | 테스트 부재 | 테스트 부재 |
 
-**블로커 판정:** 본 PR의 **선언적 목적**("vacuum이 OOS 정리")과 **실제 동작**(일부 경로에서 누수)이 괴리되므로 머지 전 결정 필요.
-
-### 3.2 [L2] SA_MODE DELETE — 영구 누수 (범위 외, 문서화 필요)
-
-**증거:**
-- `oos_delete` 호출 지점 grep: `heap_file.c:24178` (SA_MODE eager UPDATE 전용), `vacuum.c:2572, 2634` (MVCC vacuum). **SA_MODE DELETE 경로에서의 호출 없음.**
-- PR 자체 테스트 주석 (`test_oos_sql_eager_cleanup.cpp` 라인 19-22):
-
-  > "SA_MODE sets is_mvcc_op=false for all DML. DELETE physically removes the heap slot without cleaning OOS data. Vacuum is a no-op in SA_MODE."
-
-**영향:** standalone utility (loaddb/unloaddb/restoredb 등)에서 DELETE를 수행하는 경로가 있다면 OOS 파일 지속 증가. 본 PR 설명은 "DELETE/UPDATE 시 OOS 정리"라고 포괄적으로 기술하고 있으므로 SA_MODE가 제외됨을 **명시해야 한다**.
-
-**권장 조치:** JIRA CBRD-26668 또는 후속 이슈에 "SA_MODE DELETE는 본 범위 외" 명시. M3/M4에서 `heap_delete_logical`의 non-MVCC branch에 eager cleanup 추가.
-
-### 3.3 [L3] REC_BIGONE + OOS 불변식 — release build에서 조용한 누수
-
-**증거:**
-
-`vacuum_heap_record_insid_and_prev_version` (diff 라인 762-763), `vacuum_heap_record` REC_BIGONE (diff 라인 1109-1112):
-```c
-/* Invariant: OOS does not coexist with REC_BIGONE. ... Until then, fail loud in debug
- * so the regression is visible. */
-assert (!heap_recdes_contains_oos (&helper->record));
-```
-
-`assert()`는 `NDEBUG`에서 제거된다. 불변식이 release에서 깨지면 조용히 진행하고 OOS 누수. OOS는 heap 레코드를 **작게 유지**하기 위한 기능이므로 설계상 BIGONE과 공존하지 않아야 하지만, 엣지 케이스(예: 추후 CHAR 타입 OOS 지원)에서 위반 가능성 존재.
-
-**권장 조치:** `assert_release`로 교체하여 release에서도 트랩, 또는 `ER_FAILED` 반환 + 에러 로그.
-
-### 3.4 [L4] RELOCATION 누적 시나리오 회귀 테스트 부재
-
-**분석:** `vacuum_heap_record`의 `has_oos` 판정은 `REC_HOME || REC_RELOCATION`만 허용 (diff 라인 1037-1039). UPDATE로 인한 여러 RELOCATION 체인(home 슬롯 → new home 슬롯)을 연속으로 유발하는 워크로드에서, 이전 home/relocation 슬롯이 `REC_MARKDELETED` 또는 `REC_DELETED_WILL_REUSE`로 남고 그것이 OOS를 참조하는 경우를 vacuum이 처리하는지 이 PR 범위에서 직접적으로 검증되지 않는다.
-
-현재 테스트(`test_oos_sql_vacuum.cpp`, `test_oos_sql_eager_cleanup.cpp`)는 INSERT → UPDATE → DELETE 단순 패턴 위주이며, **RELOCATION을 유발하기 위한 heap page fragmentation 유도 시나리오가 없다**.
-
-**권장 조치:** "좁은 heap 페이지에서 UPDATE 반복으로 RELOCATION 강제 → DELETE → vacuum → OOS 파일 page count 확인" 회귀 테스트 추가.
-
----
-
-## 4. 부수 효과 분석 (Collateral)
-
-### 4.1 transform_cl.c / catalog_class.c의 4-byte 정렬 변경 — **주의 필요**
-
-17개 이상의 catalog 직렬화 함수에서 VOT offset 및 variable area 사이에 `DB_ALIGN(…, 4)` 삽입. 이유는 명시됨: `OR_GET_VAR_OFFSET()`이 하위 2비트를 마스킹하므로 unaligned offset은 `OR_IS_OOS` false positive를 일으킨다.
-
-**우려:** **catalog 레코드의 on-disk 포맷이 변경**된다. feat/oos 브랜치 내부라면 dev 환경 재생성으로 해결 가능하지만, 이 브랜치가 main으로 머지될 때 기존 DB가 unaligned offset을 가진 채 존재할 가능성을 **PR 설명이 다루지 않는다**.
-
-`heap_recdes_check_has_oos`의 sanity check(diff 라인 1539-1544)가 first VOT entry의 offset 범위를 검증하여 파손된 catalog를 감지는 하겠지만, migration path는 없다.
-
-**권장 조치:**
-- feat/oos 브랜치 내부 호환성: 모든 테스트 DB 재생성 강제됨을 PR 설명에 명시.
-- main 머지 시점: 기존 catalog의 VOT offset이 이미 4의 배수였는지 별도 확인 + migration 가이드.
-
-### 4.2 `heap_recdes_contains_oos`의 debug-only cross-validation
-
-MVCC flag vs VOT scan 불일치를 debug build에서 감지하고 assert (diff 라인 1451-1489, 1499-1506). OOS 플래그 일관성 검증으로 유용하지만, 매 호출마다 VOT 전체 스캔을 수행하므로 debug build 성능 저하 가능. release build에는 무영향.
-
-### 4.3 `heap_recdes_check_has_oos`의 로직 변경 — **미묘한 의미 변경**
-
-기존: LAST_ELEMENT를 만나지 못하면 `assert(false)`. 변경: LAST_ELEMENT를 만나지 못하면 조용히 `return false` (diff 라인 1570-1572).
-
-**주석:** "No LAST_ELEMENT found — old-format VOT without OOS flag support. Odd offsets in old records would false-positive OR_IS_OOS, so return false."
-
-의도는 이해되나, 이 "old-format" fallback 덕분에 **진짜 corruption (LAST_ELEMENT 비트가 손상된 정상 OOS record)가 false negative로 가려진다.** 기존 assert가 이런 corruption을 잡아내던 역할을 잃었다. sanity check(첫 offset 범위 검증) 이후라면 LAST_ELEMENT 부재는 여전히 비정상 신호일 것이다.
-
-**권장 조치:** debug build에서는 `_er_log_debug` 경고를 남기도록 보강 (silent false 대신 diagnostic).
-
----
-
-## 5. 기존 PR 코멘트 재평가
-
-| 작성자 | 심각도 | 주제 | 현 상태 평가 |
-|---|---|---|---|
-| greptile-apps | P1 | `locator_delete_oos_force` 이중 삭제 | **grep 결과 이 함수는 현 소스에 존재하지 않음** — greptile 환각 또는 이미 제거됨. 무효 코멘트. |
-| greptile-apps | P1 | `heap_oos_find_vfid` 반환값 `(void)` 캐스팅 | 본 PR에서 `vacuum_ensure_oos_vfid_for_heap_record`로 해결 (실패 시 `assert_release(false)` + `ER_FAILED` 반환). **해결됨.** |
-| greptile-apps | P1 | `oos_find_best_page` TOCTOU | 본 PR 변경 아닌 `oos_file.cpp` 기존 코드. **범위 외.** |
-| greptile-apps | P2 | `oos_stats_add_bestspace` mutex 주석 | 기존 코드. **범위 외.** |
-| greptile-apps | P2 | REC_HOME + OOS 로깅 순서 | undo 데이터는 `spage_vacuum_slot` 이전에 COPY 모드로 사전 읽은 `helper->record`이므로 데이터 정합성 OK. WAL 순서도 append → flush 순서 유지. **버그 아님**, 주석 보강만 권장. |
-| vimkim | info | sql/medium CI 통과 | 참고. |
-
----
-
-## 6. 사용자 질문 직답 (Direct Answer)
-
-> "does this clean up all unreachable OOS values?"
-
-**아니오.** 다음 경로에서 unreachable OOS는 누수된다:
-
-1. **[L1, 핵심 버그]** UPDATE가 모든 OOS 컬럼을 일반 컬럼으로 교체한 뒤 DELETE된 row의 prev-version 체인.  
-   → `vacuum_cleanup_prev_version_oos` 호출자 가드가 `!VFID_ISNULL(&helper->oos_vfid)`로 gate하지만, 이 조건은 current record에 OOS가 있을 때만 참. 함수 내부의 lazy VFID lookup은 이 시나리오를 **처리하도록 명시적으로 작성되었으나** 호출 자체가 차단되어 dead code가 되어 있다.
-2. **[L2, 범위 외지만 중요]** SA_MODE DELETE. `oos_delete` 호출 경로 없음, vacuum도 no-op.
-3. **[L3, 방어 부족]** REC_BIGONE + OOS 공존 시 release build에서 조용히 누수 (debug-only `assert`).
-4. **[L4, 검증 미흡]** RELOCATION 누적 워크로드에 대한 회귀 테스트 부재.
-
-가장 흔한 경로 — MVCC DELETE, UPDATE 체인에서 OOS 컬럼이 유지되는 케이스 — 는 확실히 커버된다. 그러나 **"모든" unreachable OOS를 정리한다는 목표는 달성되지 않았다.**
+가장 심각했던 L1이 해결되었고, 나머지는 non-blocker 수준. "모든" 경로를 커버한다고 말하려면 L2(SA_MODE DELETE)가 해결되어야 하나, 이는 PR 범위 외로 분리되어 있다.
 
 ---
 
 ## 7. 권장 조치 우선순위
 
-| Priority | 조치 | 블로커? |
+| Priority | 조치 | 머지 블로커? |
 |---|---|---|
-| **P1** | L1 해결 — 가드의 `!VFID_ISNULL` 제거(+성능 보상 캐싱) 또는 dead-code lazy lookup 제거 + 한계 명시 | **머지 전 결정 필요** |
-| P2 | L3 — `assert` → `assert_release` 또는 `ER_FAILED` 반환으로 방어 강화 | non-blocker, 권장 |
-| P2 | L4 — RELOCATION 누적 회귀 테스트 추가 | non-blocker, 권장 |
-| P3 | L2 — SA_MODE DELETE eager cleanup은 후속 JIRA로 분리, 본 PR/이슈에 명시 | 범위 외 |
-| P3 | 4.1 — catalog 정렬 변경의 포맷 migration 영향을 PR 설명에 명시 | 머지 전 확인 권장 |
-| P3 | 4.3 — `heap_recdes_check_has_oos`의 silent `return false` 경로에 debug warning 추가 | non-blocker |
+| P1 | T0.5 non-OOS 테이블 vacuum 마이크로벤치마크 | 권장 (블로커 아님) |
+| P2 | L3 — REC_BIGONE + OOS 불변식 `assert_release` 업그레이드 | non-blocker |
+| P2 | L4 / T3.4 — RELOCATION 누적 회귀 테스트 | non-blocker |
+| P2 | R4 — sysop 페어링 테스트 스트레스 | non-blocker |
+| P3 | L2 — SA_MODE DELETE eager cleanup (후속 JIRA) | 범위 외 |
+| P3 | R3 — VFID 캐시 크기/정책 관찰 | non-blocker |
 
 ---
 
-**리뷰어:** Claude Opus 4.7 (1M context)  
-**리뷰 방법:** PR 메타/diff/기존 코멘트/JIRA/cubrid-oos-context 스킬 참조 + 전역 grep으로 `oos_delete` 호출 지점 3개만 존재 확인. 이를 기반으로 "호출 지점이 커버하지 않는 OOS 생성 경로"를 역추적하여 L1-L4 도출. 특히 L1은 함수 docstring과 실제 호출 가드의 의도 불일치에서 발견.
+**리뷰어:** Claude Opus 4.7 (1M context)
+**리뷰 방법:** PR diff, 신 설계 파일(`vacuum.c` forward walk 영역 vacuum.c:3337-3724), 관련 함수들(`heap_recdes_contains_oos`, `heap_recdes_get_oos_oids`, `oos_delete_chain`) 교차 확인. Phase 0 I1/I2 감사 결과 참조. 이전 리비전 보고서와 대조하여 각 L1-L4 재평가.
