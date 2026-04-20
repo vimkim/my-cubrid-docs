@@ -317,8 +317,6 @@ while (!LSA_ISNULL (&current_lsa))
     if (scan == S_DOESNT_FIT)
       {
         int needed = -old_recdes.length;
-        if (needed <= 0 || needed > MAX_UNDO_RECORD_SIZE)
-          { /* 손상된 length 값 탐지 */ }
         alloc_buf = db_private_alloc (thread_p, needed);
         old_recdes.data = alloc_buf;
         old_recdes.area_size = needed;
@@ -368,7 +366,7 @@ CUBRID 로그 시스템은 두 단계로 동작한다:
 
 **Step C — undo 레코드 확장 버퍼**
 
-스택 버퍼(`IO_MAX_PAGE_SIZE`)가 부족한 경우 `db_private_alloc`으로 힙 확장. `MAX_UNDO_RECORD_SIZE = IO_MAX_PAGE_SIZE * 16` 상한을 두어 **손상된 length 값으로부터 runaway allocation을 방지**. 이 안전장치가 **중요**하다 — 손상된 로그 페이지의 길이 필드가 GB 단위 값으로 읽히면 메모리 고갈이 발생할 수 있다.
+스택 버퍼(`IO_MAX_PAGE_SIZE`)가 부족한 경우 `db_private_alloc`으로 힙 확장. **상한 없음** — OOS 레코드는 300KB 이상으로 커질 수 있어 `MAX_UNDO_RECORD_SIZE` 캡은 최근 분석/수정에서 제거됨. 필요한 만큼 alloc하여 전체 undo 레코드를 읽는다.
 
 **Step D — 현 버전에 OOS 있으면 삭제**
 
