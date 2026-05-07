@@ -5,6 +5,7 @@
 **재작성일:** 2026-04-20
 **관련 PR:** [CUBRID/cubrid#6986](https://github.com/CUBRID/cubrid/pull/6986) — [CBRD-26668] Wire vacuum to clean up OOS records after DELETE/UPDATE
 **HEAD commit:** `31e6e9dc6`
+**최종 검증일:** 2026-05-08, 검증 HEAD: `977cf18a4` (이력 보존판; 본문은 의도적으로 갱신하지 않음)
 **관련 JIRA:** CBRD-26668 (본 PR), CBRD-26517 (OOS 메인)
 **이전 버전과의 관계:** 2026-04-17 원 제안서의 Option B가 추천 방향이었으나, 2026-04-20에 더 근본적인 재설계(Option A-lite)가 채택되었다. 본 문서는 그 경과와 미채택 옵션의 평가를 보존한다.
 

@@ -2,10 +2,10 @@
 
 **PR:** [CUBRID/cubrid#6986](https://github.com/CUBRID/cubrid/pull/6986)
 **제목:** [CBRD-26668] Wire vacuum to clean up OOS records after DELETE/UPDATE
-**HEAD commit:** `31e6e9dc6`
+**HEAD commit:** `977cf18a4`
 **최초 작성:** 2026-04-15
-**최신 갱신:** 2026-04-20
-**이전 버전과의 관계:** 2026-04-15 초판은 Greptile 리뷰(G-1 ~ R-2) 대응 기록이었다. 본 갱신은 이후 성능 회귀 수정(`899d5b633`)과 포워드 워크 재설계(`f912b720c`, `31e6e9dc6`)까지 누적해 포괄한다.
+**최신 갱신:** 2026-05-08
+**이전 버전과의 관계:** 2026-04-15 초판은 Greptile 리뷰(G-1 ~ R-2) 대응 기록이었다. 본 갱신은 이후 성능 회귀 수정(`899d5b633`)과 포워드 워크 재설계(`f912b720c`, `31e6e9dc6`)까지 누적해 포괄한다. 2026-05-08 갱신은 그 이후 정리·가독성 커밋 4건(`fc0e35ced`, `00f5a18c2`, `8a3d7dbc2`, `e158f5177`, `977cf18a4`)을 추가한다.
 
 ---
 
@@ -131,25 +131,72 @@ Architect / Security / Code review 3개 레인에서 다음 4개 수정 요구�
 
 ---
 
-## 4. 현재 미해결 리뷰 이슈
+## 4. 제4기 (2026-05-07~08) — 정리·가독성 커밋 5건
 
-**없음.** CI는 재설계 머지 이후 재실행 대기 중이며, 로컬 수준에서는 빌드와 OOS 관련 유닛 테스트가 기존 기준으로 통과한다. partition 테스트 세트 통과 확인이 최종 머지 조건이다.
+### 4.1 `fc0e35ced` — forward-walk를 UPDATE_NOTIFY_VACUUM으로 제한 (버그 수정)
+
+제3기 구현에서 forward-walk OOS 정리 블록이 `LOG_IS_MVCC_HEAP_OPERATION`에 해당하는 모든 rcvindex에 대해 실행됐다. `RVHF_MVCC_DELETE_MODIFY_HOME`의 undo에는 OOS OID를 담은 원본 recdes가 포함되지만, 삭제 후 heap 슬롯은 동일 OID를 그대로 참조하므로 `vacuum_heap_record`의 REMOVE 경로가 이미 회수한다. forward-walk까지 실행하면 이중 삭제가 발생해 `oos_delete_chain`의 `S_DOESNT_EXIST` assert를 유발한다.
+
+수정: forward-walk OOS 블록을 `RVHF_UPDATE_NOTIFY_VACUUM`으로만 제한. UPDATE는 `heap_attrinfo_insert_to_oos`에서 변환마다 새 OID를 할당하므로 pre-image OID가 post-image 슬롯에서 도달 불가능하고, forward-walk가 유일한 회수 경로다.
+
+부수 정리: `vacuum_ensure_oos_vfid_for_heap_record` → `vacuum_oos_find_vfid_for_heap_record` 이름 변경 (`ensure`는 lazy 생성을 암시하나 실제는 조회만 수행), 오타 수정(`heap_recdes_check_has_oos` → `heap_recdes_contains_oos`), REC_HOME 슬롯이 sysop 내부에서 inline 로그를 남기는 이유 주석 추가(sysop과 `RVOOS_DELETE` 청크의 원자성).
+
+### 4.2 `00f5a18c2` — 중복 has_oos 가드 제거
+
+`vacuum.c` REC_HOME 분기에서 외부 `if (has_oos)` 블록 내부의 동일 조건 `if (has_oos)`가 항상 참이므로 제거해 들여쓰기 한 단계를 낮춤. `locator_sr.c`의 주석 블록과 `if` 사이 불필요한 빈 줄 제거.
+
+### 4.3 `8a3d7dbc2` — 소형 헬퍼 추출 및 핵심 주석 이전
+
+동작 변경 없는 가독성 리팩터링.
+
+- `vacuum.c`: `vacuum_process_log_block`에서 UPDATE pre-image OOS 회수 sysop 루프를 `vacuum_forward_walk_delete_old_oos()`로 추출. `vacuum_heap_record`의 REC_HOME+OOS 분기를 `vacuum_heap_record_remove_oos_inline()`으로 추출. 각 헬퍼의 docstring에 load-bearing 근거(왜 UPDATE_NOTIFY_VACUUM만 허용하는지, rcvindex 제외 이유, defensive copy가 필요 없는 이유, sysop 원자성 근거) 이전.
+- `heap_file.c`: `heap_update_home_delete_replaced_oos`의 중첩 for-loop 안 선형 탐색을 `heap_oos_oid_in_vector()`로 추출해 외부 루프 깊이를 한 단계 낮춤.
+
+헬퍼 서명 규칙: `vacuum.c`의 신규 static 헬퍼는 포인터 인수(`const VFID *`, `const OID *`)를 사용해 파일 내 기존 관례를 따름; `OID_VECTOR`는 `std::vector`이므로 `const C++ reference`로 전달.
+
+### 4.4 `e158f5177` — 엔진 diff 축소 (리뷰 가독성)
+
+`feat/oos` 대비 PR diff를 약 64줄 줄이는 기계적 정리.
+
+- `vacuum.c`: forward-walk 헬퍼 섹션의 시대착오적 "(Phase 1)" 레이블 제거; `vacuum_oos_find_vfid_for_heap_record`의 `rectype_label` 파라미터 제거(에러 메시지는 `helper->record_type`에서 직접 유도); 세 헬퍼 docstring을 간결하게 축약(전문은 `8a3d7dbc2`와 `fc0e35ced` 커밋 메시지에 보존); `vacuum_oos_vfid_cache_lookup`의 4-way null assert 제거 및 중복 실패-미캐시 주석을 공통 한 블록으로 합산.
+- `heap_file.c`: `heap_recdes_contains_oos`의 불필요한 `(INT32)` 캐스트 제거; `heap_update_home_delete_replaced_oos`의 `heap_oos_find_vfid` 호출 전 `VFID_SET_NULL` 중복 제거(false 분기가 반환하므로 불필요).
+- `catalog_class.c`: `catcls_put_or_value_into_buffer`의 7줄 4바이트 정렬 블록 중복을 `catcls_align_var_data_to_4` 정적 헬퍼로 추출.
+
+`just build-test`: 18/18 통과.
+
+### 4.5 `977cf18a4` — forward-walk 게이트에 rcvindex 제외 근거 인라인 삽입
+
+이전 forward-walk 진입 조건 주석이 "상세는 `vacuum_forward_walk_delete_old_oos` docstring 참조"만 안내했고, 그 docstring은 다시 `fc0e35ced` 커밋을 가리켰다. 새 MVCC heap rcvindex를 추가하는 개발자가 커밋을 추적할 가능성이 낮다는 판단에 따라, 게이트에 직접 근거를 기술:
+
+- `UPDATE_NOTIFY_VACUUM` 허용: UPDATE는 매 변환마다 새 OOS OID를 할당하므로 pre-image OID는 post-image 슬롯에서 도달 불가능. forward-walk가 유일한 회수 경로.
+- `DELETE_MODIFY_HOME` 제외: 논리 DELETE는 `delete_mvccid`만 변경하고 recdes 내용은 유지. post-DELETE 슬롯이 동일 OID를 계속 참조하므로 REMOVE 경로가 회수. forward-walk 동시 실행 시 `oos_delete_chain` `S_DOESNT_EXIST`.
+- `INSERT / DELETE_REC_HOME / NO_MODIFY_HOME / REDISTRIBUTE`: pre-image recdes를 로그에 남기지 않으므로 `undo_data_size > 0` 조건이 자연스럽게 걸러냄.
+
+`just build-test`: 18/18 통과.
 
 ---
 
-## 5. 변경 파일 요약 (누적)
+## 5. 현재 미해결 리뷰 이슈
 
-| 파일 | 변경 유형 | 제1기 | 제2기 | 제3기 |
-|------|-----------|-------|-------|-------|
-| `src/transaction/locator_sr.c` | 함수/호출부/선언 제거 | −120줄 | — | — |
-| `src/query/vacuum.c` | 에러 처리 추가 | +12줄 | +1줄 (가드) | −250줄(워커) / +약 200줄(forward-walk + 캐시) |
-| `unit_tests/oos/sql/test_oos_sql_vacuum.cpp` | TC-12 수정 | +5/−3줄 | — | — |
-
-제3기는 net으로는 코드량이 감소한다(워커 본체 250줄 제거 대비 새 블록 200줄).
+**없음.** 제4기 커밋들은 모두 동작 변경 없는 정리이며 `just build-test` 18/18 통과. CI 재실행 대기 중이며 partition 테스트 세트 통과 확인이 최종 머지 조건이다.
 
 ---
 
-## 6. 후속 JIRA 목록
+## 6. 변경 파일 요약 (누적)
+
+| 파일 | 변경 유형 | 제1기 | 제2기 | 제3기 | 제4기 |
+|------|-----------|-------|-------|-------|-------|
+| `src/transaction/locator_sr.c` | 함수/호출부/선언 제거 | −120줄 | — | — | −1줄 (빈 줄) |
+| `src/query/vacuum.c` | 에러 처리 추가 | +12줄 | +1줄 (가드) | −250줄(워커) / +약 200줄(forward-walk + 캐시) | 헬퍼 추출·docstring 정리 (net −약 50줄) |
+| `src/storage/heap_file.c` | 헬퍼 추출 | — | — | — | +약 20줄 |
+| `src/storage/catalog_class.c` | 헬퍼 추출 | — | — | — | −약 10줄 |
+| `unit_tests/oos/sql/test_oos_sql_vacuum.cpp` | TC-12 수정 | +5/−3줄 | — | — | — |
+
+제3기는 net으로는 코드량이 감소한다(워커 본체 250줄 제거 대비 새 블록 200줄). 제4기는 추가 net 감소(헬퍼 추출·중복 제거).
+
+---
+
+## 7. 후속 JIRA 목록
 
 | # | 항목 | 비고 |
 |---|------|------|
@@ -160,9 +207,14 @@ Architect / Security / Code review 3개 레인에서 다음 4개 수정 요구�
 
 ---
 
-## 7. 커밋 참조
+## 8. 커밋 참조
 
 - `0748432eb` — P1 수정 (성능 회귀 유발).
 - `899d5b633` — 임시 VFID 가드 (L1 누수 수용).
 - `f912b720c` — 백워드 체인 워커 제거, forward-walk inline 정리, L1 해소, 3-way 리뷰 4개 수정 반영.
 - `31e6e9dc6` — range-for / joined if 스타일 정합.
+- `fc0e35ced` — forward-walk를 `RVHF_UPDATE_NOTIFY_VACUUM`으로 제한 (이중 삭제 버그 수정).
+- `00f5a18c2` — 중첩 has_oos 가드 제거.
+- `8a3d7dbc2` — `vacuum_forward_walk_delete_old_oos`, `vacuum_heap_record_remove_oos_inline`, `heap_oos_oid_in_vector` 헬퍼 추출.
+- `e158f5177` — 엔진 diff 축소 (~64줄), `catcls_align_var_data_to_4` 추출.
+- `977cf18a4` — forward-walk 게이트에 rcvindex 제외 근거 인라인 삽입.

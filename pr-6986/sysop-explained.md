@@ -4,7 +4,7 @@
 >
 > **관련 PR:** [CUBRID/cubrid#6986](https://github.com/CUBRID/cubrid/pull/6986) — Vacuum-OOS 연동
 >
-> **HEAD commit:** `31e6e9dc6`
+> **HEAD commit:** `977cf18a4`
 >
 > **재작성일:** 2026-04-20 (§11의 PR #6986 활용 테이블을 forward-walk 재설계 기준으로 전면 갱신)
 >
@@ -198,29 +198,48 @@ void log_sysop_abort (THREAD_ENTRY * thread_p)
 
 ## 6. 구체적 시나리오 — OOS forward-walk 삭제
 
-PR #6986 (재설계 이후)의 코드 — `src/query/vacuum.c:3697-3714`:
+PR #6986 (재설계 이후)의 코드 — `src/query/vacuum.c:3690-3716` (forward-walk gate) + `src/query/vacuum.c:3456-3478` (`vacuum_forward_walk_delete_old_oos`):
 
 ```c
+// vacuum_process_log_block 내 forward-walk gate (3690-3716):
+if (log_record_data.rcvindex == RVHF_UPDATE_NOTIFY_VACUUM && undo_data != NULL && undo_data_size > 0)
+  {
+    RECDES undo_recdes;
+    undo_recdes.data = undo_data;
+    undo_recdes.length = undo_data_size;
+
+    VFID oos_vfid;
+    if (heap_recdes_contains_oos (&undo_recdes)
+        && vacuum_oos_vfid_cache_lookup (..., &oos_vfid))
+      {
+        OID_VECTOR oos_oids;
+        int oos_err = heap_recdes_get_oos_oids (&undo_recdes, oos_oids);
+        if (oos_err == NO_ERROR)
+          oos_err = vacuum_forward_walk_delete_old_oos (thread_p, &oos_vfid, oos_oids);
+        if (oos_err != NO_ERROR)
+          {
+            vacuum_er_log_warning (...);
+            er_clear ();
+            /* Do not fail the vacuum block; continue processing. */
+          }
+      }
+  }
+
+// vacuum_forward_walk_delete_old_oos (3456-3478):
 log_sysop_start (thread_p);
-
-int oos_err = vacuum_forward_walk_delete_oos (thread_p, &undo_recdes, &oos_vfid);
-  // 내부에서 다중 청크 OOS 레코드일 경우:
-  //   oos_delete(OOS_A)  → WAL: RVOOS_DELETE(undo=OOS_A_chunk, redo=NULL)
-  //   oos_delete(OOS_B)  → WAL: RVOOS_DELETE(undo=OOS_B_chunk, redo=NULL)
-  //   oos_delete(OOS_C)  → FAIL (I/O error)
-  //   return error_code;
-
-if (oos_err == NO_ERROR)
+for (const OID & oid : oos_oids)
   {
-    log_sysop_commit (thread_p);
+    error_code = oos_delete (thread_p, *oos_vfid, oid);
+    // 다중 청크 OOS 레코드일 경우:
+    //   oos_delete(OOS_A)  → WAL: RVOOS_DELETE(undo=OOS_A_chunk, redo=NULL)
+    //   oos_delete(OOS_B)  → WAL: RVOOS_DELETE(undo=OOS_B_chunk, redo=NULL)
+    //   oos_delete(OOS_C)  → FAIL (I/O error) → break
+    if (error_code != NO_ERROR) break;
   }
+if (error_code == NO_ERROR)
+  log_sysop_commit (thread_p);
 else
-  {
-    log_sysop_abort (thread_p);
-    ...
-    er_clear ();
-    /* Do not fail the vacuum block; continue processing. */
-  }
+  log_sysop_abort (thread_p);
 ```
 
 ### abort 진행 과정
@@ -340,7 +359,7 @@ CUBRID sysop의 특징은 **Recovery index별 undo 핸들러**와 결합되어 �
 
 | 위치 | 용도 |
 |---|---|
-| `vacuum_process_log_block` forward-walk inline block (`src/query/vacuum.c:3697-3714`) | MVCC 힙 연산(`RVHF_UPDATE_NOTIFY_VACUUM`, `RVHF_MVCC_DELETE_MODIFY_HOME`) undo payload가 HAS_OOS를 담고 있고 블록 VFID 캐시가 OOS file의 존재를 확인한 경우, 다중 청크 `oos_delete` 시퀀스를 단일 sysop으로 묶어 원자화 |
+| `vacuum_forward_walk_delete_old_oos` (`src/query/vacuum.c:3456-3478`), `vacuum_process_log_block` forward-walk gate (`src/query/vacuum.c:3690-3716`) | MVCC 힙 연산(`RVHF_UPDATE_NOTIFY_VACUUM`) undo payload가 HAS_OOS를 담고 있고 블록 VFID 캐시가 OOS file의 존재를 확인한 경우, 다중 청크 `oos_delete` 시퀀스를 단일 sysop으로 묶어 원자화 |
 
 ### 11.3 유지된 호출 지점
 
@@ -359,26 +378,26 @@ CUBRID sysop의 특징은 **Recovery index별 undo 핸들러**와 결합되어 �
 
 `vacuum_process_log_block`는 블록 진입 시와 종료 시 모두 `assert(!LOG_FIND_CURRENT_TDES (thread_p)->is_under_sysop())`를 유지한다. 주요 assert 지점:
 
-- `src/query/vacuum.c:3505` — 함수 진입 직후.
-- `src/query/vacuum.c:3864, 3868, 3877, 3885` — 루프 및 함수 종료 경계.
+- `src/query/vacuum.c:3537` — 함수 진입 직후.
+- `src/query/vacuum.c:3858, 3862, 3871, 3879` — 루프 및 함수 종료 경계.
 
-forward-walk inline 정리 블록은 이 불변식을 지키도록 **sysop을 시작하자마자 동일 iteration 내에서 commit 또는 abort하고 종료**한다(`src/query/vacuum.c:3698-3714`). 다음 iteration은 sysop-free 상태에서 시작된다.
+forward-walk 정리 블록은 이 불변식을 지키도록 **sysop을 `vacuum_forward_walk_delete_old_oos` 내부에서 시작하고 동일 호출 내에서 commit 또는 abort하고 반환**한다(`src/query/vacuum.c:3460-3477`). 호출 반환 후 다음 iteration은 sysop-free 상태에서 시작된다.
 
 ### 12.2 오류 경로의 sysop 누설 방지
 
-`vacuum_forward_walk_delete_oos`가 에러를 반환하면 즉시 `log_sysop_abort`가 호출되고(`src/query/vacuum.c:3708`), 이후 `er_clear()`로 error stack을 비운 뒤 현재 로그 레코드에 대한 cleanup만 포기한다. 블록 처리는 계속되며, 다음 iteration 진입 전에 sysop은 반드시 닫혀 있다.
+`vacuum_forward_walk_delete_old_oos`가 에러를 반환하면 해당 함수 내부에서 즉시 `log_sysop_abort`가 호출되고(`src/query/vacuum.c:3475`) 반환된다. 호출자(`vacuum_process_log_block`)는 `er_clear()`로 error stack을 비운 뒤 현재 로그 레코드에 대한 cleanup만 포기한다(`src/query/vacuum.c:3714`). 블록 처리는 계속되며, 다음 iteration 진입 전에 sysop은 반드시 닫혀 있다.
 
 ### 12.3 방어적 undo 복사와 sysop 경계의 순서
 
-defensive copy는 `log_sysop_start` **이전에** 수행된다(`src/query/vacuum.c:3672-3691`). 이는 sysop 내부에서 `oos_delete`가 WAL append를 일으킬 때 `undo_data`가 가리키는 공유 로그 페이지가 롤오버되어 무효화되는 위험을 차단한다. sysop에 진입한 시점에는 undo_recdes.data가 독립적인 메모리(스택 또는 `db_private_alloc` heap)를 가리키므로 안전하다.
+`vacuum_process_log_block`는 `undo_recdes.data = undo_data`로 로그 페이지 버퍼를 직접 참조한 뒤 곧바로 `heap_recdes_get_oos_oids`로 OID 벡터를 추출한다(`src/query/vacuum.c:3692-3703`). OID 벡터는 호출자 스택 위의 `OID_VECTOR`(`std::vector<OID>`)이므로 이후 `vacuum_forward_walk_delete_old_oos` 내부에서 `oos_delete`가 WAL append를 일으켜 로그 페이지가 롤오버되더라도 OID 데이터는 안전하다. `vacuum_forward_walk_delete_old_oos`의 docstring이 이 책임을 명시한다("Caller must extract the OIDs into a self-owned vector before invoking this helper").
 
 ### 12.4 undo 복사 메모리의 수명
 
-`undo_copy_on_heap`이 true일 때 `db_private_free_and_init`은 sysop **이후**에 호출된다(`src/query/vacuum.c:3717-3720`). sysop 중간 실패/성공 어느 경우에도 도달하므로 메모리 누수 없음. `log_sysop_abort`가 호출되어도 heap 메모리는 sysop 복구 범위 밖이므로 영향 없음.
+OID_VECTOR는 `vacuum_process_log_block` 루프 iteration 스코프 내 로컬 변수(`src/query/vacuum.c:3701`)로 선언되어 iteration 종료 시 자동 소멸한다. 별도의 `db_private_alloc`/`db_private_free_and_init` 호출이 없으며 메모리 누수 경로가 없다.
 
 ### 12.5 MVCC 임계값 보증
 
-sysop 내부에서 삭제되는 OOS OID는 모두 이미 `threshold_mvccid = log_Gl.mvcc_table.get_global_oldest_visible()` 미만인 MVCC 힙 연산의 undo payload에서 유래한다(`src/query/vacuum.c:3477`, debug assert `src/query/vacuum.c:3611-3618`). 즉 어떤 활성 스냅샷도 해당 OID를 참조하지 않는다. sysop commit 후 재삽입 필요가 없는 정당한 이유다.
+sysop 내부에서 삭제되는 OOS OID는 모두 이미 `threshold_mvccid = log_Gl.mvcc_table.get_global_oldest_visible()` 미만인 MVCC 힙 연산의 undo payload에서 유래한다(`src/query/vacuum.c:3509`). 즉 어떤 활성 스냅샷도 해당 OID를 참조하지 않는다. sysop commit 후 재삽입 필요가 없는 정당한 이유다.
 
 ### 12.6 OID 분리성
 
@@ -411,7 +430,7 @@ abort가 log_rollback(..., lastparent_lsa) 호출
 ### PR #6986에서의 변화 요지
 
 - 백워드 체인 워커가 사용하던 여러 sysop 지점이 사라졌다.
-- 새 유일한 신규 sysop 지점은 `vacuum_process_log_block`의 forward-walk inline 정리 블록이다.
+- 새 유일한 신규 sysop 지점은 `vacuum_forward_walk_delete_old_oos`이며, `vacuum_process_log_block`의 forward-walk gate에서 호출된다.
 - 현재 레코드 정리용 sysop(REC_HOME + OOS, REC_RELOCATION + OOS)은 유지된다.
 - sysop 불변식(`is_under_sysop == false` at iteration boundary)은 명시적 assert로 보호된다.
 - defensive undo copy, size upper-bound, 일시 실패 시 non-cache 정책이 모두 sysop 경계와 상호작용하면서 L1 누수 해소와 성능 회귀 방지를 동시에 달성한다.

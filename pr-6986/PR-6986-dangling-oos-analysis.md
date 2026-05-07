@@ -2,9 +2,16 @@
 
 **PR:** [CUBRID/cubrid#6986](https://github.com/CUBRID/cubrid/pull/6986)
 **JIRA:** [CBRD-26668]
-**HEAD:** `31e6e9dc6`
-**작성일:** 2026-04-20
+**HEAD:** `977cf18a4`
+**작성일:** 2026-04-20 (HEAD 갱신: 2026-05-08)
 **이전 버전과의 관계:** 이 문서는 2026-04-20의 forward-walk 재설계를 반영한 **전면 개정판**이다. 이전 리비전(2026-04-17)은 `vacuum_heap_record`의 REMOVE 경로만 OOS를 정리하므로 prev-version 체인 누수가 발생한다고 결론지었다(P1-P3). 그 결론은 신 설계에서 대부분 해소되었다.
+
+**`31e6e9dc6` 이후 갱신 사항(2026-05-08):** forward-walk 핵심 설계는 변경되지 않았다. 다음 정리 커밋들이 누적되었으며 본 문서의 줄 번호와 일부 산문 묘사는 그에 맞춰 갱신되었다.
+
+- `8a3d7dbc2` refactor(oos): extract small helpers and relocate load-bearing comments
+- `00f5a18c2` drop redundant nested has_oos guard
+- `e158f5177` refactor(oos): trim engine diff for human reviewer readability
+- `977cf18a4` docs(oos): inline the rcvindex-exclusion rationale at the forward-walk gate
 
 **핵심 질문:** "SERVER_MODE vacuum이 모든 도달 불가능한 OOS를 정리하는가?"
 
@@ -48,11 +55,11 @@ COMMIT;
 
 `vacuum_process_log_block`이 블록을 forward로 순회하며 각 MVCC 힙 로그 레코드에 대해 다음을 수행:
 
-- **t_update**: UPDATE의 `RVHF_UPDATE_NOTIFY_VACUUM` 로그 레코드. undo payload = v1 recdes(HAS_OOS=1, OOS_A). Forward walk가 inline 블록 진입 → `heap_recdes_contains_oos(&undo)` = true → `vacuum_forward_walk_delete_oos` → OOS_A 삭제.
-- **t_delete**: DELETE의 `RVHF_MVCC_DELETE_MODIFY_HOME` 로그 레코드. undo payload = v2 recdes(HAS_OOS=1, OOS_B). Forward walk → OOS_B 삭제.
-- 이후 `vacuum_heap` 단계에서 `vacuum_heap_record` REMOVE 경로가 heap 슬롯을 제거. 현재 버전의 OOS는 이미 forward walk에서 삭제되었을 수 있고, 현재 `vacuum_heap_oos_delete`가 다시 시도하면 `oos_delete`가 `S_DOESNT_EXIST`를 반환(수용 가능 경로) 또는 현재 버전의 다른 OOS(있다면)를 정상 삭제.
+- **t_update**: UPDATE의 `RVHF_UPDATE_NOTIFY_VACUUM` 로그 레코드. undo payload = v1 recdes(HAS_OOS=1, OOS_A). Forward walk 게이트(vacuum.c:3690) 통과 → `heap_recdes_contains_oos(&undo)` = true → OID 추출 후 `vacuum_forward_walk_delete_old_oos` → OOS_A 삭제. UPDATE의 pre-image OID는 `heap_attrinfo_insert_to_oos`가 transform마다 fresh OID를 할당하므로 post-image와 disjoint이고, 따라서 vacuum의 REMOVE 경로로는 도달할 수 없다. forward-walk가 유일한 회수 경로.
+- **t_delete**: DELETE의 `RVHF_MVCC_DELETE_MODIFY_HOME` 로그 레코드. undo payload = v2 recdes(HAS_OOS=1, OOS_B). 이 rcvindex는 forward-walk 게이트에서 **의도적으로 제외**된다(`fc0e35ced`로 도입, `977cf18a4`로 게이트 옆에 인라인 주석화: vacuum.c:3674-3689). 논리적 DELETE는 슬롯의 recdes 내용을 그대로 두고 `delete_mvccid`만 갱신하므로 post-DELETE 슬롯이 v2와 **동일한** OOS_B를 가리킨다. 이 경우는 후속 `vacuum_heap` 단계의 REMOVE 경로(`vacuum_heap_record_remove_oos_inline` → `vacuum_heap_oos_delete`)가 OOS_B를 정리한다. forward-walk를 함께 돌리면 동일 OID를 두 번 삭제하여 `oos_delete_chain`의 `S_DOESNT_EXIST` assert를 트립한다.
+- 이후 `vacuum_heap` 단계에서 `vacuum_heap_record` REMOVE 경로가 heap 슬롯을 제거하면서 현재(=DELETE된) 버전이 가리키는 OOS_B를 정리한다.
 
-**판정: CLOSED.** 각 과거 버전은 자신의 MVCC 힙 로그 레코드 처리 시점에 정리된다. 현재 레코드의 HAS_OOS 상태가 무관해지므로 이전의 L1 엣지 케이스도 동시에 해소.
+**판정: CLOSED.** UPDATE의 pre-image OOS는 forward-walk가, DELETE된 현재 버전의 OOS는 REMOVE 경로가 정리한다. 두 경로의 책임이 rcvindex 게이트로 분리되어 중복 삭제 없이 모든 도달 불가 OOS가 회수된다.
 
 ### 2.2 P2 (Livelock on partial chain cleanup): CLOSED
 
@@ -62,12 +69,17 @@ COMMIT;
 
 #### 신 설계의 동작
 
-신 설계에는 더 이상 "체인 순회"가 없다. 각 로그 레코드에 대한 sysop 범위는 **"undo 1개의 OOS OID들을 하나의 단위로 삭제"**이며, 실패 시 `log_sysop_abort`가 그 undo 내의 부분 삭제를 깨끗이 롤백한다.
+신 설계에는 더 이상 "체인 순회"가 없다. 각 로그 레코드에 대한 sysop 범위는 **"undo 1개의 OOS OID들을 하나의 단위로 삭제"**이며, 실패 시 `log_sysop_abort`가 그 undo 내의 부분 삭제를 깨끗이 롤백한다. `vacuum_forward_walk_delete_old_oos` (vacuum.c:3456) 본체는 다음과 같다.
 
 ```c
 log_sysop_start (thread_p);
-int oos_err = vacuum_forward_walk_delete_oos (thread_p, &undo_recdes, &oos_vfid);
-if (oos_err == NO_ERROR)
+for (const OID & oid : oos_oids)
+  {
+    error_code = oos_delete (thread_p, *oos_vfid, oid);
+    if (error_code != NO_ERROR)
+      break;
+  }
+if (error_code == NO_ERROR)
   log_sysop_commit (thread_p);
 else
   log_sysop_abort (thread_p);
@@ -91,7 +103,7 @@ else
 
 #### 신 설계의 동작
 
-Forward walk는 MVCC 힙 로그 레코드의 undo payload를 REC_HOME 형식으로 해석한다(vacuum.c:3654: `undo_recdes.type = REC_HOME`). REC_BIGONE 관련 경로는 `vacuum_heap_record` 내부에 있으며 신 설계 변경사항에서 건드리지 않았다.
+Forward walk는 MVCC 힙 로그 레코드의 undo payload를 REC_HOME 형식의 recdes로 해석한다(vacuum.c:3692-3694: `undo_recdes.data`, `undo_recdes.length`만 설정하고 `heap_recdes_contains_oos`로 HAS_OOS 플래그를 검사). REC_BIGONE 관련 경로는 `vacuum_heap_record` 내부에 있으며 신 설계 변경사항에서 건드리지 않았다.
 
 **판정: 상태 유지.** 신 설계는 REC_BIGONE 불변식 방어를 개선하지 않았지만 악화시키지도 않았다.
 
@@ -108,16 +120,16 @@ Forward walk는 MVCC 힙 로그 레코드의 undo payload를 REC_HOME 형식으�
 `vacuum_process_log_block` 진입 시 설정:
 
 ```c
-MVCCID threshold_mvccid = log_Gl.mvcc_table.get_global_oldest_visible ();   // vacuum.c:3477
+MVCCID threshold_mvccid = log_Gl.mvcc_table.get_global_oldest_visible ();   // vacuum.c:3509
 ```
 
-블록 내 모든 MVCC 로그 레코드의 MVCCID는 이 임계값보다 오래됨이 debug assert로 검증(vacuum.c:3611-3618).
+블록 내 모든 MVCC 로그 레코드의 MVCCID는 이 임계값보다 오래됨이 debug assert로 검증(vacuum.c:3643-3650).
 
 **의미:** forward walk가 UPDATE_i의 로그 레코드를 처리할 때, UPDATE_i의 MVCCID는 threshold 이전. 모든 활성 스냅샷은 UPDATE_i 이후의 상태만 본다. UPDATE_i 직전의 pre-image(= undo recdes)를 MVCC로 재구성하려는 판독자는 존재할 수 없다.
 
 ### 3.2 불변식 2 — OID 분리성 불변식
 
-`heap_attrinfo_insert_to_oos` (heap_file.c:12408-12436, 12972-12981)는 모든 OOS 컬럼에 대해 **매 transform마다 무조건 fresh OID를 할당**한다. 따라서:
+`heap_attrinfo_insert_to_oos` (heap_file.c:12368, 호출부 12976)는 모든 OOS 컬럼에 대해 **매 transform마다 무조건 fresh OID를 할당**한다. 따라서:
 
 - UPDATE의 pre-image가 참조하는 OOS OID (예: OOS_A)
 - UPDATE의 post-image가 참조하는 OOS OID (예: OOS_B)
@@ -158,13 +170,13 @@ COMMIT;
 
 Vacuum 동작:
 
-- Forward walk:
-  - INSERT 로그(`RVHF_MVCC_INSERT`): zero-byte undo → skip.
+- Forward walk (vacuum.c:3690 게이트는 `RVHF_UPDATE_NOTIFY_VACUUM`만 통과시킨다):
+  - INSERT 로그(`RVHF_MVCC_INSERT`): rcvindex 미일치 + undo 비어 있음 → skip.
   - UPDATE 로그(`RVHF_UPDATE_NOTIFY_VACUUM`): undo = v1, HAS_OOS=1 → OOS_A 삭제.
-  - DELETE 로그(`RVHF_MVCC_DELETE_MODIFY_HOME`): undo = v2, HAS_OOS=1 → OOS_B 삭제.
-- `vacuum_heap` → `vacuum_heap_record` REMOVE: 현재 heap 슬롯 제거. (현재 버전의 OOS는 이미 forward walk에서 처리되었거나, `vacuum_heap_oos_delete`가 재시도 시 no-op/에러 처리.)
+  - DELETE 로그(`RVHF_MVCC_DELETE_MODIFY_HOME`): rcvindex 게이트에서 차단 → forward-walk no-op. (OOS_B는 다음 단계에서 처리.)
+- `vacuum_heap` → `vacuum_heap_record` REMOVE: 현재 heap 슬롯 제거. 현재 버전(=DELETE된 v2)이 가리키는 OOS_B를 `vacuum_heap_record_remove_oos_inline` → `vacuum_heap_oos_delete`가 정리.
 
-**결과: OOS_A, OOS_B 모두 회수. 누수 없음.**
+**결과: OOS_A는 forward-walk가, OOS_B는 REMOVE 경로가 회수. 누수 없음.**
 
 ### Case B — 여러 UPDATE 연쇄 + DELETE
 
@@ -176,14 +188,16 @@ UPDATE t SET c = 'v3' WHERE id=1;  -- OOS_3
 DELETE FROM t WHERE id=1;          -- undo(OOS_3)
 ```
 
-Forward walk:
+Vacuum 동작:
 
-- UPDATE1 로그 → undo=v0 (HAS_OOS? 원래 'v0'가 inline 크기라면 HAS_OOS=0, 크다면 1). HAS_OOS=1이면 OOS_0 삭제.
-- UPDATE2 로그 → undo=v1, OOS_1 삭제.
-- UPDATE3 로그 → undo=v2, OOS_2 삭제.
-- DELETE 로그 → undo=v3, OOS_3 삭제.
+- Forward walk (UPDATE_NOTIFY_VACUUM만 통과):
+  - UPDATE1 로그 → undo=v0 (HAS_OOS? 원래 'v0'가 inline 크기라면 HAS_OOS=0, 크다면 1). HAS_OOS=1이면 OOS_0 삭제.
+  - UPDATE2 로그 → undo=v1, OOS_1 삭제.
+  - UPDATE3 로그 → undo=v2, OOS_2 삭제.
+  - DELETE 로그 → 게이트에서 차단.
+- `vacuum_heap_record` REMOVE: v3 슬롯 제거 시 OOS_3을 `vacuum_heap_oos_delete`로 정리.
 
-모든 과거 버전이 각자의 로그 처리 시점에 정리된다. 이 경우가 구 설계에서 가장 누수가 심했던 시나리오(2026-04-17 보고서의 "The leak scales linearly with UPDATE churn before the DELETE" 섹션)인데, 신 설계는 **선형 스케일 누수가 0으로 환원**됨을 보여준다.
+UPDATE 사이의 prev-version OOS는 각자의 forward-walk 시점에, DELETE된 현재 버전의 OOS는 REMOVE 경로에서 정리된다. 구 설계에서 가장 누수가 심했던 시나리오(2026-04-17 보고서의 "The leak scales linearly with UPDATE churn before the DELETE" 섹션)이며, 신 설계는 **선형 스케일 누수가 0으로 환원**됨을 보여준다.
 
 **결과: 모든 OOS 회수. 누수 없음.**
 
@@ -199,11 +213,11 @@ DELETE FROM t WHERE id = 1;                       -- undo(post-UPDATE = HAS_OOS=
 
 신 설계 Forward walk:
 
-- UPDATE 로그 → undo = v1 (HAS_OOS=1, OOS_A) → OOS_A 삭제.
-- DELETE 로그 → undo = v2 (HAS_OOS=0) → `heap_recdes_contains_oos(undo)` = false → inline 블록 skip.
+- UPDATE 로그(`RVHF_UPDATE_NOTIFY_VACUUM`) → undo = v1 (HAS_OOS=1, OOS_A) → OOS_A 삭제.
+- DELETE 로그(`RVHF_MVCC_DELETE_MODIFY_HOME`) → rcvindex 게이트에서 차단(어차피 undo도 HAS_OOS=0).
 - `vacuum_heap_record` REMOVE: 현재 레코드 HAS_OOS=0이므로 `vacuum_heap_oos_delete` 호출 안 됨. 정상.
 
-**결과: OOS_A 회수. 구 L1 누수 완전 해소.**
+**결과: OOS_A 회수. 구 L1 누수 완전 해소.** 핵심: 현재 레코드의 HAS_OOS=0 가드(구 설계의 누수 원인)는 forward-walk가 별도 경로로 OOS_A를 회수하므로 더 이상 누수 트리거가 아니다.
 
 ### Case D — REC_RELOCATION 연쇄
 
@@ -214,7 +228,7 @@ slot 5 (home): REC_RELOCATION → slot 10 (newhome)
 slot 10: REC_NEWHOME with OOS_B
 ```
 
-UPDATE는 여전히 `RVHF_UPDATE_NOTIFY_VACUUM` 로그를 기록하며, undo payload에는 원래 slot의 recdes가 담긴다. Forward walk는 record_type에 민감하지 않고 HAS_OOS 플래그만 본다 (undo_recdes.type = REC_HOME으로 해석).
+UPDATE는 여전히 `RVHF_UPDATE_NOTIFY_VACUUM` 로그를 기록하며, undo payload에는 원래 slot의 recdes가 담긴다. Forward walk는 record_type에 민감하지 않고 HAS_OOS 플래그만 본다 (undo_recdes는 `data`/`length`만 채운 채 `heap_recdes_contains_oos`로 검사; vacuum.c:3692-3697).
 
 **결과: RELOCATION 발생 여부와 무관하게 OOS 회수. 단 이 시나리오에 대한 스트레스 회귀 테스트는 L4로 여전히 추가 필요.**
 
@@ -260,7 +274,7 @@ RELOCATION 누적 워크로드에 대한 직접 회귀 테스트 부재. §4 Cas
 
 | 시나리오 | 경로 | OOS cleanup |
 |---|---|---|
-| INSERT + DELETE + vacuum | `VACUUM_RECORD_REMOVE` → `vacuum_heap_record` + forward walk | 현재/과거 모두 회수 |
+| INSERT + DELETE + vacuum | `VACUUM_RECORD_REMOVE` → `vacuum_heap_record` (forward-walk는 rcvindex 게이트로 no-op) | 현재 버전 OOS 회수 |
 | INSERT + UPDATE + rollback | heap undo가 v1 복원, `oos_insert` undo가 OOS_B 롤백 | OOS_A 보존, OOS_B 롤백 |
 | INSERT + UPDATE + vacuum (INSID pass만 먼저) | forward walk가 UPDATE undo에서 OOS_A 삭제 | OOS_A 회수 |
 | Crash mid-vacuum sysop | Recovery undo가 sysop 내 `RVOOS_DELETE` 레코드 역순 실행 | Atomic |
@@ -270,7 +284,7 @@ RELOCATION 누적 워크로드에 대한 직접 회귀 테스트 부재. §4 Cas
 
 ## 7. 요약
 
-| 경로 | 2026-04-17 판정 | 2026-04-20 판정 |
+| 경로 | 2026-04-17 판정 | 현재 판정 (HEAD `977cf18a4`) |
 |---|---|---|
 | UPDATE → DELETE prev-version (P1) | ❌ 누수 | **CLOSED** (forward walk) |
 | Livelock on partial chain (P2) | ⚠ 가능 | **CLOSED** (단일 sysop per undo) |

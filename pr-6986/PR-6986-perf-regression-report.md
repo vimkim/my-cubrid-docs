@@ -1,7 +1,7 @@
 # PR #6986 — Vacuum Prev-Version 체인 순회 성능 회귀 분석 및 해소 경과
 
 **PR:** [CUBRID/cubrid#6986](https://github.com/CUBRID/cubrid/pull/6986)
-**HEAD commit:** `31e6e9dc6` — style(vacuum): match indent formatter on range-for and joined if
+**HEAD commit:** `977cf18a4` — docs(oos): inline the rcvindex-exclusion rationale at the forward-walk gate
 **원인 커밋:** `0748432eb` — fix(oos): prevent dangling OOS on UPDATE→DELETE and chain-walk livelock
 **임시 수정 커밋:** `899d5b633` — fix(oos): guard REMOVE-path prev_version chain walk on oos_vfid being set
 **근본 재설계 커밋:** `f912b720c` — refactor(oos): replace prev_version chain walker with forward-walk OOS cleanup
@@ -12,7 +12,7 @@
 
 ## 0. 개요
 
-본 문서는 현재 PR 상태 기준으로는 **역사적 기록물**이다. 2026-04-17 시점의 "가드 한 줄 추가" 방식 회귀 수정과, 그 수정이 엣지 케이스 누수(이하 L1)를 남긴 채 채택되었던 맥락을 남긴다. 그 후 2026-04-20에 `vacuum_cleanup_prev_version_oos` 함수 자체를 제거하고 포워드 로그 워크 내 inline 정리로 전환하면서, 본 보고서의 원 처방은 물리적으로 의미가 없어졌다. 현재 진실은 `src/query/vacuum.c:3642-3724`의 forward-walk OOS 정리 블록과 `src/query/vacuum.c:3336-3410`의 per-block VFID 캐시다.
+본 문서는 현재 PR 상태 기준으로는 **역사적 기록물**이다. 2026-04-17 시점의 "가드 한 줄 추가" 방식 회귀 수정과, 그 수정이 엣지 케이스 누수(이하 L1)를 남긴 채 채택되었던 맥락을 남긴다. 그 후 2026-04-20에 `vacuum_cleanup_prev_version_oos` 함수 자체를 제거하고 포워드 로그 워크 내 inline 정리로 전환하면서, 본 보고서의 원 처방은 물리적으로 의미가 없어졌다. 현재 진실은 `src/query/vacuum.c:3653-3719`의 forward-walk OOS 정리 블록과 `src/query/vacuum.c:3385-3444`의 per-block VFID 캐시다.
 
 ---
 
@@ -56,24 +56,22 @@ REMOVE 경로에도 체인 순회를 추가하면서 `vacuum_cleanup_prev_versio
 
 결과적으로 `!VFID_ISNULL(&helper->oos_vfid)` 가드 역시 `need_prev_version_oos_cleanup`과 함께 사라졌다. 그 가드가 보호하던 코드 경로가 물리적으로 존재하지 않는다.
 
-참고로 현재도 `vacuum_heap_record`는 **현재 레코드**(REC_HOME/REC_RELOCATION)의 OOS 정리를 수행한다(`src/query/vacuum.c:2460-2462`의 `has_oos` 계산, `src/query/vacuum.c:2540-2548`와 `src/query/vacuum.c:2602-2610`의 `vacuum_heap_oos_delete` 호출). 가드 없이도 이 경로는 현재 레코드가 실제로 OOS 플래그를 가진 경우에만 발동하므로, non-OOS 테이블에서는 원래부터 무관하다.
+참고로 현재도 `vacuum_heap_record`는 **현재 레코드**(REC_HOME/REC_RELOCATION)의 OOS 정리를 수행한다(`src/query/vacuum.c:2483-2485`의 `has_oos` 계산, `src/query/vacuum.c:2563`와 `src/query/vacuum.c:2617`의 `vacuum_heap_oos_delete` 호출). 가드 없이도 이 경로는 현재 레코드가 실제로 OOS 플래그를 가진 경우에만 발동하므로, non-OOS 테이블에서는 원래부터 무관하다.
 
 ### 2.2 새 설계가 추가하는 비용
 
-포워드 워크의 정리 코드는 `vacuum_process_log_block`의 기존 MVCC 로그 순회 루프 내부(`src/query/vacuum.c:3621-3725`)에 inline으로 들어간다. 비용 구조는 다음과 같다.
+포워드 워크의 정리 코드는 `vacuum_process_log_block`의 기존 MVCC 로그 순회 루프 내부(`src/query/vacuum.c:3653-3719`)에 inline으로 들어간다. 비용 구조는 다음과 같다.
 
 1. **Per-log-record 단계**: `LOG_IS_MVCC_HEAP_OPERATION`이 참인 레코드마다:
-   - `undo_data != NULL && undo_data_size > 0` 분기(`src/query/vacuum.c:3648`): 이미 `vacuum_process_log_record`가 디코드해 메모리에 올려둔 바이트에 대한 포인터 비교 + 크기 비교.
-   - `heap_recdes_contains_oos(&undo_recdes)` 호출(`src/query/vacuum.c:3656`): VOT 스캔이지만 재귀적 로그 I/O 없음.
+   - `rcvindex == RVHF_UPDATE_NOTIFY_VACUUM && undo_data != NULL && undo_data_size > 0` 분기(`src/query/vacuum.c:3690`): 이미 `vacuum_process_log_record`가 디코드해 메모리에 올려둔 바이트에 대한 포인터 비교 + 크기 비교.
+   - `heap_recdes_contains_oos(&undo_recdes)` 호출(`src/query/vacuum.c:3697`): VOT 스캔이지만 재귀적 로그 I/O 없음.
    - HAS_OOS가 false면 즉시 종료. 이 경로가 OOS-less 테이블의 기본 비용이며, `logpb_fetch_page`/`LOG_CS` 없음.
 
 2. **HAS_OOS가 true일 때의 비용**:
-   - `undo_data_size > 2 * IO_MAX_PAGE_SIZE` 상한 가드.
-   - 스택 버퍼(`IO_MAX_PAGE_SIZE`) 또는 `db_private_alloc`을 통한 undo payload 방어적 복사(`src/query/vacuum.c:3672-3690`).
    - `vacuum_oos_vfid_cache_lookup` 호출 — 캐시 히트 시 O(cache_size=16) 선형 탐색만으로 완료.
-   - `log_sysop_start` → `vacuum_forward_walk_delete_oos` → `log_sysop_commit|abort`.
+   - `heap_recdes_get_oos_oids` → `vacuum_forward_walk_delete_old_oos`.
 
-3. **VFID 캐시 미스 비용**: `file_descriptor_get` + `heap_oos_find_vfid`. 실패 시 캐시에 기록하지 않아 재시도 가능(`src/query/vacuum.c:3374-3392`).
+3. **VFID 캐시 미스 비용**: `file_descriptor_get` + `heap_oos_find_vfid`. 실패 시 캐시에 기록하지 않아 재시도 가능(`src/query/vacuum.c:3417-3438`).
 
 ### 2.3 파티션 워크로드에 대한 순 효과
 
@@ -146,7 +144,7 @@ OOS 파일이 있는 테이블의 경우 과거 설계와 새 설계 모두 per-
 ## 6. 현 상태 요약
 
 - `!VFID_ISNULL(&helper->oos_vfid)` 가드는 이제 코드에 존재하지 않는다.
-- `vacuum_cleanup_prev_version_oos` 함수도 존재하지 않는다 (관련 테스트 링크 호환을 위한 `bridge_vacuum_cleanup_prev_version_oos` 스텁만 `src/query/vacuum.c:8325-8334`에 남아있고, 본체는 `assert_release(false)`).
+- `vacuum_cleanup_prev_version_oos` 함수도 존재하지 않는다 (관련 테스트 링크 호환을 위한 `bridge_vacuum_cleanup_prev_version_oos` 스텁만 `src/query/vacuum.c:8311-8320`에 남아있고, 본체는 `assert_release(false)`).
 - OOS 정리는 두 곳에서 일어난다.
   - 현재 레코드: `vacuum_heap_record` (REC_HOME + 현재 OOS, REC_RELOCATION + OOS 경로).
   - 과거 버전: `vacuum_process_log_block`의 MVCC 힙 연산 loop 내 forward-walk inline 블록.
@@ -171,3 +169,8 @@ OOS 파일이 있는 테이블의 경우 과거 설계와 새 설계 모두 per-
 - `899d5b633` — 임시 VFID 가드 (L1 누수 수용).
 - `f912b720c` — 백워드 체인 워커 제거, forward-walk inline 정리로 전환, L1 해소.
 - `31e6e9dc6` — 포맷터 정합 (range-for, joined if).
+- `fc0e35ced` — forward-walk OOS 정리를 RVHF_UPDATE_NOTIFY_VACUUM로 제한 (cleanup).
+- `8a3d7dbc2` — 소형 헬퍼 추출 및 주요 주석 재배치 (cleanup).
+- `00f5a18c2` — 중복 has_oos 가드 및 잉여 빈 줄 제거 (cleanup).
+- `e158f5177` — 리뷰어 가독성을 위한 엔진 diff 정리 (cleanup).
+- `977cf18a4` — forward-walk 게이트에 rcvindex 제외 근거 인라인 문서화 (cleanup).
