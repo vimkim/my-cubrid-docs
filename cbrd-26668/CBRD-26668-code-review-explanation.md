@@ -71,11 +71,8 @@ OOS OID는 **행마다 새로 할당되며 행 간에 절대 공유되지 않는
 | `src/transaction/recovery.{h,c}`, `mvcc.h` | 수정 | 신규 로그타입 `RVHF_DELETE_NEWHOME_NOTIFY_VACUUM=136` |
 | `cubrid/CMakeLists.txt`, `sa/CMakeLists.txt` | 수정 | `vacuum_oos.cpp`, `oos_util.cpp`를 빌드에 추가 |
 
-신규 `.cpp`는 `memory_wrapper.hpp`를 **마지막 include**로, `// XXX: SHOULD BE THE LAST INCLUDE HEADER` 주석과 함께 둔다(프로젝트 규칙 준수). 라이선스 헤더는 CUBRID 단독 Apache 헤더(2016)다.
-
 > **✅ 리뷰 체크리스트 (모듈/빌드)**
 > - [ ] `cubrid/`와 `sa/` 두 CMakeLists 모두에 신규 소스가 추가됐는가 (한쪽만 추가하면 SA 또는 SERVER 빌드가 깨짐).
-> - [ ] 신규 `.cpp`의 마지막 include가 `memory_wrapper.hpp`이고 XXX 주석이 있는가.
 
 ---
 
@@ -208,8 +205,9 @@ heap_log_delete_physical (..., &forward_recdes, true, &prev_version_lsa, delete_
 > - [ ] UPDATE 경로가 `new_recdes`로 `context->recdes_p`(새 이미지)를 넘겨 교집합 보존이 동작하는가.
 > - [ ] 에러 반환 시 호출 스택이 트랜잭션 abort로 이어지는가(`ASSERT_ERROR();` + return → 상위에서 abort).
 >
-> **⚠️ 리스크**
-> - `heap_update_relocation`의 remove_old_forward MVCC 하위 경로는 **아직 forward-walk 게이트가 admit하지 않아 OOS 누수**가 남는다(주석에 명시된 별도 follow-up). 단 update_old_home 하위 경로는 `RVHF_UPDATE_NOTIFY_VACUUM`로 커버됨.
+> **⚠️ 리스크 / 발견사항**
+> - `heap_update_relocation`의 MVCC 두 하위 경로는 **모두 forward-walk로 커버된다**: ① update_old_forward(forward 슬롯 제자리 갱신) → `RVHF_UPDATE_NOTIFY_VACUUM`, ② remove_old_forward(forward 슬롯 삭제) → `RVHF_DELETE_NEWHOME_NOTIFY_VACUUM`.
+> - **⚑ 소스 주석 stale 발견 → ✅ 본 브랜치에서 수정 완료**: `heap_update_relocation` 함수 상단 주석(line ~23521)이 원래 "remove_old_forward MVCC sub-paths still leak OOS until the forward-walk gate is extended... — separate follow-up"라고 잘못 적혀 있었다. 그러나 이후 커밋의 `RVHF_DELETE_NEWHOME_NOTIFY_VACUUM` 경로가 이미 회수하고 있어(`vacuum.c`의 `else if (rcvindex == RVHF_DELETE_NEWHOME_NOTIFY_VACUUM)` 분기: "remove_old_forward... its OOS records are reclaimed here") 코드와 모순이었다. **해당 주석을 "두 MVCC 하위 경로 모두 forward-walk로 회수됨"으로 갱신 완료.**
 
 ---
 
@@ -227,6 +225,14 @@ vacuum_heap_record (REC_HOME with OOS)
   │           └─ 실패 → log_sysop_abort, return
   └─ log_sysop_commit                      ← heap 슬롯 제거 + OOS 삭제가 원자적
 ```
+
+> **⚠️ 왜 sysop이 꼭 필요한가 (코드 검증 완료 — 제거하면 안 됨)**
+> 흔한 의문: "redo 로그가 남으니 sysop 없어도 복구가 알아서 처리하지 않나?" → **아니다.**
+> - 이 연산은 **heap home 페이지 + OOS chunk 페이지(들)** 라는 **2개 이상의 페이지**를 수정한다. 단일 WAL 레코드는 *페이지 하나*에 대해서만 원자적이라, 멀티 페이지 묶음의 원자성은 sysop 없이 보장되지 않는다.
+> - **vacuum worker에는 user-transaction commit/abort 경계가 없다.** 복구 undo 단계는 `logtb_is_system_worker_tranid`로 **미완료 vacuum worker txn을 undo 대상에 포함**한다(`log_recovery.c:4596`). sysop을 빼면 이 멀티 페이지 작업을 "묶어서 영속화할 수단 자체가 사라진다".
+> - sysop commit 레코드(`LOG_SYSOP_END_COMMIT`)가 디스크에 도달해야만 그 안의 변경이 영구화된다. 도달 전 크래시 시 복구는 `lastparent_lsa`로 점프해(`log_manager.c:7954`) sysop 내부를 **전부 undo**한다 → **all-or-nothing 경계는 오직 sysop만 제공**한다.
+> - 제거 시 부분 크래시에서 heap slot redo는 영속화되는데 OOS 삭제는 사라져 → **영구 dangling OOS leak**(slot이 사라지면 그 OOS를 재회수할 트리거가 영영 없음). `vacuum.c:2404` 주석이 경고하는 상황.
+> - **선례**: REC_RELOCATION / REC_BIGONE도 OOS 이전부터 동일한 멀티 페이지 sysop 패턴 사용(`vacuum.c:2453,2534,2573`). OOS는 새 발명이 아니라 기존 패턴을 따른 것.
 
 ### 6-1. `vacuum_heap_helper`에 `oos_vfid` 필드 추가
 
@@ -470,8 +476,8 @@ log_sysop_commit / abort;
 | 7 | record-type 가드가 `contains_oos` 앞에 | §7-4, §5-2 | forwarding OID 오인 → bogus VOT assert |
 | 8 | eager 에러 시 트랜잭션 abort 필수 | `heap_oos.cpp` §5-1 | 살아남은 recdes가 삭제된 청크 참조 |
 
-### 알려진 미해결(주석에 명시)
-- `heap_update_relocation`의 **remove_old_forward MVCC 하위 경로**는 forward-walk 게이트가 physical-delete 로그를 admit하기 전까지 OOS 누수 잔존(별도 follow-up). update_old_home 하위 경로는 `RVHF_UPDATE_NOTIFY_VACUUM`로 커버.
+### 발견된 stale 주석 / 미해결
+- **⚑ stale 주석 → ✅ 수정 완료**: `heap_update_relocation` 상단 주석이 remove_old_forward가 여전히 누수한다고 잘못 적혀 있었으나, 이후 추가된 `RVHF_DELETE_NEWHOME_NOTIFY_VACUUM` 경로가 이미 회수한다(`vacuum.c` else-if 분기). 본 브랜치에서 주석을 "두 MVCC 하위 경로 모두 forward-walk로 회수됨"으로 **갱신 완료**(§5 발견사항 참조).
 - `RVOOS_NOTIFY_VACUUM=134`는 emitter 없는 dead 슬롯 — 로그 포맷 bump 시 enum과 함께 정리 예정.
 
 ---
