@@ -25,7 +25,7 @@
 | 경로 | 언제 쓰나 | 청소 시점 | 진입 함수 |
 |---|---|---|---|
 | **Eager (즉시 청소)** | `!is_mvcc_op` (SA_MODE + MVCC 안 쓰는 카탈로그 클래스) | DELETE/UPDATE 실행 도중 | `heap_oos_delete_unreferenced()` |
-| **Deferred (나중에, vacuum이 청소)** | MVCC (SERVER_MODE) | vacuum이 돌 때 | `vacuum_heap_oos_delete()` / `vacuum_forward_walk_reclaim_oos()` |
+| **Deferred (나중에, vacuum이 청소)** | MVCC (SERVER_MODE) | vacuum이 돌 때 | `vacuum_heap_oos_delete_within_sysop()` / `vacuum_forward_walk_reclaim_oos()` |
 
 왜 두 개냐면, 모드에 따라 "지금 당장 지워도 안전한가"가 다르기 때문이다(자세한 이유는 §1).
 
@@ -62,7 +62,7 @@
                                                   REMOVE 경로                    Forward-walk 경로
                                               (슬롯이 통째로 죽음)          (슬롯은 살아있으나 옛 OID를
                                                      │                       더 이상 가리키지 않음)
-                                          vacuum_heap_oos_delete()        vacuum_forward_walk_reclaim_oos()
+                                          vacuum_heap_oos_delete_within_sysop()        vacuum_forward_walk_reclaim_oos()
                                           (REC_HOME 인라인 sysop /         (undo image에서 옛 OID 추출)
                                            REC_RELOCATION forward와 함께)
 ```
@@ -300,7 +300,7 @@ vacuum_heap_record (REC_HOME with OOS)
   ├─ spage_vacuum_slot (슬롯 비우기)
   ├─ vacuum_heap_record_remove_oos_inline
   │     ├─ vacuum_log_redoundo_vacuum_record   (heap 슬롯 제거 로그)
-  │     └─ vacuum_heap_oos_delete              (OOS 청크 삭제)
+  │     └─ vacuum_heap_oos_delete_within_sysop              (OOS 청크 삭제)
   │           └─ 실패 → log_sysop_abort, return
   └─ log_sysop_commit                      ← heap 슬롯 제거 + OOS 삭제가 한 덩어리로 원자적
 ```
@@ -339,11 +339,11 @@ if (record_type == REC_RELOCATION || record_type == REC_BIGONE || has_oos)
 
 - **REC_HOME + OOS** 도 이제 멀티 페이지 연산으로 취급한다 → 그동안 쌓아둔 bulk vacuum 슬롯을 먼저 flush하고, 단독 sysop를 시작한다. 이렇게 안 하면 "heap 슬롯 제거 로그"와 "OOS 삭제"가 서로 다른 sysop로 쪼개져, 그 둘 사이에서 크래시가 나면 **dangling OOS**가 생긴다.
 - REC_HOME 분기: `has_oos`면 `vacuum_heap_record_remove_oos_inline` 호출, 아니면 기존대로 `n_bulk_vacuumed++`.
-- REC_RELOCATION 분기: forward 페이지를 비운 뒤, commit **직전**에 `has_oos`면 `vacuum_heap_oos_delete`를 호출.
+- REC_RELOCATION 분기: forward 페이지를 비운 뒤, commit **직전**에 `has_oos`면 `vacuum_heap_oos_delete_within_sysop`를 호출.
 
 ### 6-4. `vacuum_heap_record_remove_oos_inline()` (신규 헬퍼)
 
-REC_HOME 전용이다. 순서는 `pgbuf_set_dirty` → `vacuum_log_redoundo_vacuum_record` → `vacuum_heap_oos_delete` → 성공하면 `log_sysop_commit`, 실패하면 `log_sysop_abort`. **호출 전제(주석 계약)**: 호출자가 이미 sysop을 연 상태여야 하고, 슬롯도 `spage_vacuum_slot`로 비워둔 상태여야 한다.
+REC_HOME 전용이다. 순서는 `pgbuf_set_dirty` → `vacuum_log_redoundo_vacuum_record` → `vacuum_heap_oos_delete_within_sysop` → 성공하면 `log_sysop_commit`, 실패하면 `log_sysop_abort`. **호출 전제(주석 계약)**: 호출자가 이미 sysop을 연 상태여야 하고, 슬롯도 `spage_vacuum_slot`로 비워둔 상태여야 한다.
 
 ### 6-5. REC_BIGONE 불변식 assert (2곳)
 
@@ -380,7 +380,7 @@ heap_update_relocation / heap_update_home  (MVCC)
                ├─ undo image를 private buffer로 snapshot   ← 로그 페이지가 회전하는 것에 대비 (필수)
                ├─ vacuum_oos_vfid_cache_lookup            ← heap VFID → OOS VFID (블록 단위 캐시)
                ├─ heap_recdes_get_oos_oids                ← undo recdes에서 옛 OID 추출
-               └─ vacuum_forward_walk_delete_old_oos      ← 정렬 + 멱등 probe + sysop 삭제
+               └─ vacuum_forward_walk_oos_delete_atomic      ← 정렬 + 멱등 probe + sysop 삭제
 ```
 
 ### 7-1. `vacuum_process_log_block` — rcvindex 게이트 (★ 가장 리뷰 민감)
@@ -439,7 +439,7 @@ parse_recdes.data = stable_copy;
   > - **결정타**: 정렬을 어떻게 고치든 **복사 자체는 못 없앤다**. 복사의 1순위 이유는 정렬이 아니라 위의 **버퍼 회전 방지**(release 빌드에서도 실제 데이터 손실)이기 때문이다. 어차피 private buffer로 떠와야 하니, 정렬 교정은 그 복사에 **공짜로 딸려오는 보너스**다 — 그래서 "덤으로"라고 적었다.
 - **record-type 가드**: `(REC_HOME || REC_NEWHOME) && heap_recdes_contains_oos`를 통과한 것만 처리한다. forwarding 포인터(8B OID)를 `heap_recdes_contains_oos`에 넣으면, pageid의 bit 27이 `OR_MVCC_FLAG_HAS_OOS`로 오인돼서 엉터리 VOT를 walk하다 `assert_release`를 친다 → §3 경고 참조.
 
-### 7-5. `vacuum_forward_walk_delete_old_oos` — 정렬 + 멱등 probe
+### 7-5. `vacuum_forward_walk_oos_delete_atomic` — 정렬 + 멱등 probe
 
 ```c
 std::sort(oos_oids ...);            // (volid,pageid,slotid) 순 → 버퍼 풀 지역성(locality) 향상
@@ -469,6 +469,48 @@ log_sysop_commit / abort;
 - **릴리스**: log + er_clear + skip(제한적 누수로 넘어감).
 
 여기서 만약 `ER_FAILED`를 반환하면 `vacuum_heap_page` 루프의 release-only spin(§8-1)이 다시 무장되므로, **절대 에러를 반환하지 않는다.**
+
+### 7-8. 두 OOS 삭제 함수는 왜 sysop 처리가 다른가 (`_within_sysop` vs `_atomic`)
+
+리뷰 중 자주 나오는 질문: "둘 다 OOS를 지우는 거의 똑같은 함수인데, 왜 하나(`vacuum_forward_walk_oos_delete_atomic`)는 `log_sysop_start`를 하고, 다른 하나(`vacuum_heap_oos_delete_within_sysop`)는 안 하나? 일관성이 없는 것 아닌가?"
+
+결론부터: **버그가 아니라 의도된 설계다.** 두 함수의 호출자를 끝까지 추적해서 검증했다.
+
+**먼저, 둘 다에 공통으로 깔린 규칙 하나:**
+
+> **규칙: OOS 삭제는 "정확히 하나의 sysop" 안에서 일어나야 한다.**
+> - **0개(sysop 없음)는 안 됨**: OOS 삭제는 여러 OOS chunk 페이지를 건드리는데, 단일 WAL 레코드는 페이지 하나만 원자적으로 보장한다. 게다가 vacuum worker에는 일반 트랜잭션 같은 commit 경계가 없다. sysop이 없으면 부분 크래시에서 일부만 영속화돼 dangling OOS leak이 생긴다(§6 callout 참조).
+> - **2개(중첩 sysop)도 안 됨**: 안쪽 sysop이 따로 commit되면 바깥 작업과 **따로** 영속화되어 원자성이 쪼개진다.
+
+그러니 진짜 질문은 "sysop을 쓰냐 마냐"가 아니라 **"그 하나뿐인 sysop을 누가 여느냐"** 다. 답은 **호출자가 어떤 상황이냐**에 따라 갈린다.
+
+| | `vacuum_heap_oos_delete_within_sysop` | `vacuum_forward_walk_oos_delete_atomic` |
+|---|---|---|
+| 호출자 | `vacuum_heap_record` (REMOVE 경로) | `vacuum_process_log_block` (forward-walk) |
+| 호출 시점 호출자 상태 | **이미 sysop을 연 상태** (`vacuum.c:2439`) | **연 sysop이 전혀 없음** (이 함수·그 호출자 어디에도 `log_sysop_start`가 없음 — 검증 완료) |
+| 그래서 이 함수는 | sysop을 **열지 않는다** (호출자 것에 올라탐) | sysop을 **직접 연다** (commit/abort까지 자기 책임) |
+| 이름의 의미 | `_within_sysop` = 호출자의 sysop **안에서** 실행 (자기 sysop을 안 엶) | `_atomic` = 그 자체로 **원자적 단위** (자기 sysop을 엶) |
+
+**왜 `_within_sysop`은 자기 sysop을 열면 안 되나 (핵심):**
+
+REMOVE 경로에서 `vacuum_heap_record`는 **"heap 슬롯 제거 로그 + OOS 삭제"를 한 덩어리로** 묶으려고 sysop을 미리 연다(`vacuum.c:2439`). OOS 삭제는 그 묶음의 한 조각일 뿐이다. 만약 `vacuum_heap_oos_delete_within_sysop`이 **자기만의 sysop을 열어서 commit**해 버리면, OOS 삭제가 heap 슬롯 제거와 **따로** 영속화된다 → 그 둘 사이에서 크래시가 나면 슬롯은 사라졌는데 OOS는 남는(혹은 그 반대) dangling 상태가 된다. 바로 §6에서 막으려던 그 사고다. 그래서 이 함수는 **반드시 호출자의 sysop을 공유**해야 하고, 자기 sysop을 열어선 안 된다.
+
+> 코드의 전제 조건(이번 브랜치에서 주석으로 명시): "호출자가 이미 sysop을 연 상태여야 한다. 이 함수는 일부러 sysop을 시작하지 않는다."
+
+**왜 `_atomic`은 자기 sysop을 꼭 열어야 하나:**
+
+forward-walk 경로의 `vacuum_process_log_block`은 sysop을 전혀 열지 않은 채로 이 함수를 부른다(코드 확인: 이 함수 전체와 그 호출자 `vacuum_worker_task::execute` / `vacuum_sa_run_job` 어디에도 `log_sysop_start`가 없다). 그러니 멀티 청크 OOS 삭제를 원자적으로 만들어 줄 주체가 **이 함수 자신밖에 없다.** 그래서 자기가 직접 열고 닫는다.
+
+**쉽게 말하면:**
+> 두 사람 모두 "상자 여러 개를 한 번에 옮긴다(= 한 번에 commit)"는 같은 규칙을 지켜야 한다.
+> - `_within_sysop`은 **이미 출발 준비된 이삿짐 트럭(호출자의 sysop)에 자기 상자를 같이 싣는** 사람이다. 자기가 따로 택배(별도 sysop)를 부르면 그 상자만 다른 시간에 도착해서 "세트로 함께 도착" 약속이 깨진다.
+> - `_atomic`은 **자기 짐을 옮겨 줄 트럭이 아예 없는** 사람이다. 그래서 자기가 트럭(sysop)을 직접 부른다.
+
+**한 줄 더 — 이 차이를 뒷받침하는 독립 증거(멱등성):**
+
+`_atomic`에만 `oos_chunk_exists` 멱등 probe가 있다(§7-5). 이유가 sysop 구조와 정확히 맞물린다: `_atomic`은 자기 sysop을 **독립적으로** commit하므로, 블록이 재시도되면 앞서 commit된 삭제가 이미 영속화돼 있을 수 있다 → "이미 사라진 청크"를 만날 수 있어 skip이 필요하다. 반대로 `_within_sysop`은 호출자의 단일 sysop을 공유하므로, 실패 시 호출자가 abort하면 **전부 함께 롤백**된다 → 재시도해도 늘 깨끗한 상태에서 시작하니 멱등 probe가 애초에 필요 없다. **sysop 소유 차이와 멱등성 유무는 같은 설계 결정의 양면이다.**
+
+> **요약**: 두 함수는 "OOS 삭제는 하나의 sysop 안에서"라는 **같은 불변식**을 지키되, **호출자가 이미 sysop을 열었는지**가 달라서 한쪽은 올라타고(`_within_sysop`) 한쪽은 직접 연다(`_atomic`). 그 역할이 이름에 드러나도록 이번 브랜치에서 개명했다(이전 이름: `vacuum_heap_oos_delete` / `vacuum_forward_walk_delete_old_oos`).
 
 > **✅ 리뷰 체크리스트 (forward-walk)**
 > - [ ] rcvindex 게이트가 `RVHF_UPDATE_NOTIFY_VACUUM`만 admit하고 `RVHF_MVCC_DELETE_MODIFY_HOME`은 **배제**하는가(이중 삭제 방지).
@@ -530,7 +572,7 @@ log_sysop_commit / abort;
 
 | 테스트 파일 (줄수) | Fixture | 검증 대상 | 경로 |
 |---|---|---|---|
-| `test_oos_server.cpp` (471) | `OosVacuumCodePathServer` | `heap_recdes_contains_oos`, `heap_recdes_get_oos_oids`, `vacuum_heap_oos_delete` 직접 단위 + bulk reclaim | deferred(헬퍼) |
+| `test_oos_server.cpp` (471) | `OosVacuumCodePathServer` | `heap_recdes_contains_oos`, `heap_recdes_get_oos_oids`, `vacuum_heap_oos_delete_within_sysop` 직접 단위 + bulk reclaim | deferred(헬퍼) |
 | `test_oos_vacuum_server.cpp` (656) | `OosVacuumServer` | REMOVE 경로: insert/delete, multi-chunk, large multi-page, MVCC update, bulk reclaim+reuse, churn | deferred(REMOVE) |
 | `test_oos_real_vacuum_server.cpp` (509) | `OosRealVacuum` | **실제 vacuum 데몬 E2E**: single-row drain, multi-chunk chain drain, update stale 회수+new 생존, snapshot이 회수 차단 후 drain | deferred(E2E) |
 | `test_oos_mock_vacuum_server.cpp` (417) | (mock) | forward-walk 로직을 데몬 없이 단위 검증 | deferred(forward-walk) |

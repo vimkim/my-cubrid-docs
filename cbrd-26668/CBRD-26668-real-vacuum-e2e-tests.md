@@ -13,7 +13,7 @@ OOS 회수가 제대로 동작한다는 걸 증명하려면 결국 **"진짜 vac
 | 테스트 파일 | 무엇을 직접 호출? | 무엇을 가짜로 두나? | 증명하는 것 |
 |---|---|---|---|
 | `test_oos_mock_vacuum_server.cpp` | `oos_delete()` 를 직접 호출 | vacuum 로직 **전부** (사람이 손으로 delete) | OOS 파일의 삭제·공간 회수 *말단* 동작 |
-| `test_oos_vacuum_server.cpp` | `vacuum_heap_oos_delete()` (leaf 함수) | 로그·데몬·워커 (직접 RECDES를 만들어 leaf에 투입) | "heap recdes → OOS OID 추출 → 삭제" *leaf 로직* |
+| `test_oos_vacuum_server.cpp` | `vacuum_heap_oos_delete_within_sysop()` (leaf 함수) | 로그·데몬·워커 (직접 RECDES를 만들어 leaf에 투입) | "heap recdes → OOS OID 추출 → 삭제" *leaf 로직* |
 | **`test_oos_real_vacuum_server.cpp`** | **MVCC DML만 호출하고 나머진 진짜 vacuum이 처리** | **아무것도 가짜로 두지 않음 (E2E)** | **MVCC→로그→데몬→워커→회수** 전체 사슬 |
 
 > **비유**: 같은 "쓰레기 수거"를 세 단계로 검증한다. ① 쓰레기를 손으로 직접 소각장에 던져 소각로가 태우는지 본다(mock). ② 수거차의 *압축기* 부품만 떼어내 쓰레기를 직접 넣어보고 압축되는지 본다(leaf). ③ **봉투를 길가에 내놓고, 진짜 수거차가 와서 가져가는지** 본다(real E2E). 이 문서는 ③번에 대한 것이다.
@@ -44,7 +44,7 @@ leaf 테스트와 mock 테스트가 건너뛰는 부분이 바로 이 사슬이�
   vacuum master → worker → vacuum_heap
         │
         ▼
-  vacuum_heap_oos_delete() → oos_delete()   ← 여기서 OOS 청크가 실제로 사라진다
+  vacuum_heap_oos_delete_within_sysop() → oos_delete()   ← 여기서 OOS 청크가 실제로 사라진다
 ```
 
 - **왜 "블록이 닫혀야" 하나?** vacuum data 엔트리는 로그가 **블록 경계를 넘을 때만** 만들어진다. 관심 있는 MVCC op이 들어 있는 블록이 닫히기 전에는 master 데몬이 그 op을 영영 볼 수 없다.
@@ -110,7 +110,7 @@ fixture `OosRealVacuum`는 테스트마다 진짜 heap + 거기 붙은 OOS 파�
 ### TC-R1 — `SingleRowDeleteDrainsCompletely`
 - **시나리오**: 4096B OOS 1개를 가진 row 1개 INSERT → DELETE → 블록 닫고 vacuum 대기.
 - **검증**: `oos_live_recs() == 0` 이 되고, 해당 OID가 읽기 불가.
-- **커버하는 코드 경로**: 가장 기본적인 **REMOVE 경로** — 죽은 REC_HOME 슬롯을 vacuum이 물리적으로 지우면서 그 슬롯이 가리키던 OOS도 함께 회수(`vacuum_heap_oos_delete`).
+- **커버하는 코드 경로**: 가장 기본적인 **REMOVE 경로** — 죽은 REC_HOME 슬롯을 vacuum이 물리적으로 지우면서 그 슬롯이 가리키던 OOS도 함께 회수(`vacuum_heap_oos_delete_within_sysop`).
 
 ### TC-R2 — `MultiChunkChainsDrainCompletely`
 - **시나리오**: 멀티-청크 2개를 만든다 — (a) `max_chunk + 100`B(2청크 보장), (b) 160KB(16KB 페이지에서 ~10페이지). 둘 다 DELETE.
@@ -171,7 +171,7 @@ ctest --test-dir "$CUBRID_BUILD_DIR" -R test_oos_real_vacuum_server --output-on-
 
 ## 7. 핵심 요약 (TL;DR)
 
-- `test_oos_real_vacuum_server.cpp`는 OOS 회수의 **유일한 진짜 E2E 테스트**다: MVCC DML만 호출하고, **로그 블록 완성 → master 데몬 wake → worker → `vacuum_heap_oos_delete` → `oos_delete`** 전체를 진짜 엔진이 수행하게 둔다.
+- `test_oos_real_vacuum_server.cpp`는 OOS 회수의 **유일한 진짜 E2E 테스트**다: MVCC DML만 호출하고, **로그 블록 완성 → master 데몬 wake → worker → `vacuum_heap_oos_delete_within_sysop` → `oos_delete`** 전체를 진짜 엔진이 수행하게 둔다.
 - 4개 케이스가 (R1) 단일 삭제 완전 회수, (R2) 멀티-청크 체인 완전 회수, (R3) UPDATE old-version forward-walk 회수+신버전 보존, (R4) **스냅샷이 회수를 차단했다가 해제 시 회수**(=MVCC "stale" 정의)를 커버한다.
 - 영리한 부분: **db_user OID를 빌려 catalog-free로 진짜 MVCC 로그를 생성**, scancache 사전 성형으로 잘못된 heap 참조 회피, 작은 로그 블록(`vacuum_log_block_pages=4`) + filler로 블록을 강제로 닫아 데몬이 보게 만듦.
 - 디스크 레벨 공간 회수/leaf 로직은 형제 테스트(`test_oos_vacuum_server`, `test_oos_mock_vacuum_server`)가 담당 — 3단 피라미드로 함께 읽어야 전체 그림이 보인다.
