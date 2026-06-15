@@ -12,6 +12,12 @@
 
 ---
 
+> ## ⚠️ 리뷰 정정 (Review Corrections) — 2026-06-15
+> 코드 리뷰(HEAD `c062dce8f`) 결과, 아래 항목은 이 문서의 서술과 **실제 코드가 다르거나 빠져 있어** 본문을 정정했다. 자세한 쉬운 설명은 같은 폴더의 `2026-06-15-CBRD-26668-explanation-corrections.md`, 데이터 유실/데드락 상세는 `2026-06-15-CBRD-26668-caveats-rollback-and-latch-inversion.md` 참고.
+> - **§8-1 (스핀 루프 픽스)**: 문서가 적은 `page_ptr = obj_ptr;` 픽스는 **현재 코드에 없다.** 그 자리에 임시 `abort()`("REVERT BEFORE MERGE")가 들어가 있다 → 본문 정정.
+> - **§7-5/§7-8 (멱등성)**: `oos_chunk_exists`는 슬롯 **재사용(slot reuse)** 을 구분 못 해 **살아있는 행의 OOS를 지울 수 있다(데이터 유실).** → §7-5에 경고 추가.
+> - **§10 위험 목록**: TDE 평문 로그 누락(#9), 슬롯 재사용 신원 확인(#10), 래치 순서 역전 데드락(#11) 행 추가.
+
 ## 0. 한눈에 보기 (Executive Summary)
 
 먼저 큰 그림부터 보자.
@@ -494,6 +500,13 @@ log_sysop_commit / abort;
 - **OID를 값으로(by-value vector) 받는다**: `oos_delete`가 undo_data가 가리키던 로그 페이지를 회전시킬 수 있으므로, 호출자가 자기 소유 벡터를 `std::move`로 넘기고 그 위에서 정렬/삭제한다.
 - **멱등성(idempotency)**: 블록을 재시도하면, 같은 블록의 앞선 forward-walk가 이미 sysop commit을 했을 수 있다. 그 경우 그 OID의 청크는 이미 사라졌으니, `oos_chunk_exists`로 확인해 skip한다 — `oos_delete_chain`의 `S_DOESNT_EXIST` hard error를 피하려는 것이다. 단, **진짜 probe 실패(I/O 등)는 그대로 전파**한다.
 
+> **⚠️ 정정 (2026-06-15) — 멱등성 설명의 구멍: 슬롯 재사용(slot reuse) 데이터 유실**
+> 위 멱등성 논리는 **"내가 지운 슬롯이 다시 채워지지 않는다"** 는 가정에 의존하지만, **OOS 파일은 슬롯을 재사용한다.** `oos_chunk_exists`는 "그 슬롯에 *무언가* 있나"만 보고 **"그게 내가 지우려던 그 청크가 맞나"는 확인하지 않는다**(OOS 청크 헤더에 주인/세대 식별값이 없음). 따라서:
+> 1. 블록 재처리 사이에 내가 지운 슬롯을 **다른 살아있는 행**의 새 `oos_insert`가 차지하면(ANCHORED 페이지 + bestspace 재등록으로 발생 가능),
+> 2. 재처리 시 같은 (불변) undo 이미지가 같은 옛 OID를 다시 가리키고 → `oos_chunk_exists`="있음" → `oos_delete`가 **남의 살아있는 청크(멀티청크면 체인 전체)를 삭제** → **조용한 데이터 유실.**
+>
+> 이는 리뷰의 1순위 **critical** 버그다. 해법: 청크 헤더에 owner/generation 식별값을 추가해 `oos_chunk_exists`가 **신원까지 확인**하도록 바꾸거나, `oos_delete`에 기대 신원을 넘겨 불일치 시 no-op. (eager 경로 `heap_oos_delete_unreferenced`는 old∩new 집합 비교로 이미 이 위험을 막지만, forward-walk 경로엔 대응책이 없다.)
+
 ### 7-6. 실패 정책: 제한적이고 기록되는 누수(bounded, logged leak)
 
 `vacuum_forward_walk_reclaim_oos`의 모든 실패(VFID lookup ERROR, alloc 실패, delete 실패)는 **에러를 위로 전파하지 않는다.** 대신 `vacuum_er_log_error`로 시끄럽게(loud) 로그를 남긴 뒤 `er_clear`하고 그냥 반환한다.
@@ -564,18 +577,30 @@ forward-walk 경로의 `vacuum_process_log_block`은 sysop을 전혀 열지 않�
 
 ## 8. 버그픽스 (회수와 직접 엮인 안정화)
 
-### 8-1. `vacuum.c` — release-only spin-loop 픽스 (★ 중요)
+### 8-1. `vacuum.c` — release-only spin-loop 픽스 (★ 중요) — ⚠️ **현재 코드 미반영 (2026-06-15 정정)**
 
+> **정정**: 아래는 이 문서가 *의도한* 픽스이지만, **현재 HEAD(`vacuum.c:1581`)에는 들어가 있지 않다.** 그 자리에는 임시 `abort()`("REVERT BEFORE MERGE")가 있다. 즉 release 빌드에서 vacuum이 어떤 페이지 에러를 만나면 **페이지 건너뛰기가 아니라 서버가 죽는다(core dump).** 그리고 그 `abort()`를 그냥 지우기만 하면 `page_ptr = obj_ptr;`가 없어 **옛 스핀 루프 회귀가 되살아난다.**
+
+**의도했던 픽스 (아직 적용 안 됨):**
 ```c
       er_clear ();
       error_code = NO_ERROR;
-+     // for-헤더에 증가식이 없다 — page_ptr은 성공 경로에서만 전진한다.
-+     // 여기서 그냥 continue하면 같은 page_ptr을 영원히 재시도 (release 빌드에서 CPU spin).
-+     page_ptr = obj_ptr;
+      // for-헤더에 증가식이 없다 — page_ptr은 성공 경로에서만 전진한다.
+      // 여기서 그냥 continue하면 같은 page_ptr을 영원히 재시도 (release 빌드에서 CPU spin).
+      page_ptr = obj_ptr;   // ← 이 줄이 현재 코드에 없음
       continue;
 ```
 
-- `vacuum_heap_page`의 for 루프는 헤더에 증가식이 없고, `page_ptr`은 성공 경로에서만 전진한다. 그래서 릴리스 빌드에서 에러를 삼키고 `continue`하면 **같은 페이지를 무한히 재시도**하는 CPU spin이 된다(이전 PR 6986에서 관측된 회귀). `page_ptr = obj_ptr`로 다음 페이지 그룹으로 강제 전진시켜, 영구 실패 페이지를 skip한다. forward-walk / VFID-lookup이 절대 에러를 전파하지 않는 설계(§7-6, §7-7)와 짝을 이룬다.
+**현재 HEAD의 실제 코드 (임시):**
+```c
+      // TEMP (ovf+oos spec change): mirror the debug-build crash in release too. ... REVERT BEFORE MERGE.
+      fprintf (stderr, "VACUUM ABORT: heap page %d|%d, error_code=%d\n", ...);
+      fflush (stderr);
+      abort ();
+```
+
+- `vacuum_heap_page`의 for 루프는 헤더에 증가식이 없고, `page_ptr`은 성공 경로에서만 전진한다. 그래서 릴리스 빌드에서 에러를 삼키고 `continue`하면 **같은 페이지를 무한히 재시도**하는 CPU spin이 된다(이전 PR 6986에서 관측된 회귀). 올바른 픽스는 `page_ptr = obj_ptr`로 다음 페이지 그룹으로 강제 전진시켜 영구 실패 페이지를 skip하는 것이다. forward-walk / VFID-lookup이 절대 에러를 전파하지 않는 설계(§7-6, §7-7)와 짝을 이룬다.
+- **병합 전 할 일**: 임시 `abort()`를 제거하고 위 `page_ptr = obj_ptr; continue;`를 **실제로 넣어야** 한다. 그 전까지 §8-1은 "반영됨"이 아니라 "미반영(임시 abort 상태)"다.
 
 ### 8-2. `oos_file.cpp` — `oos_get_stats_by_vfid` 추출 + slot-0 언더카운트 픽스
 
@@ -652,14 +677,24 @@ forward-walk 경로의 `vacuum_process_log_block`은 sysop을 전혀 열지 않�
 | 2 | rcvindex 134/136은 **on-disk 고정**, append-only | `recovery.h` | 기존 로그/복구 깨짐, `RV_fun[]` 슬롯 밀림 |
 | 3 | forward-walk 게이트는 `UPDATE_NOTIFY_VACUUM`만 admit, `MVCC_DELETE_MODIFY_HOME` 배제 | `vacuum.c` §7-1 | 이중 삭제 → `S_DOESNT_EXIST` assert |
 | 4 | page fix **이전**에 undo image snapshot | `vacuum_oos.cpp` §7-4 | 버퍼 회전 → 조용한 회수 누락 |
-| 5 | forward-walk/lazy-lookup은 **에러 전파 금지**(제한적 누수) | §7-6, §7-7, §8-1 | vacuum이 멈춤(wedge) / release CPU spin |
+| 5 | forward-walk/lazy-lookup은 **에러 전파 금지**(제한적 누수) | §7-6, §7-7, §8-1 | vacuum이 멈춤(wedge) / release CPU spin ⚠️ **단, §8-1 스핀 픽스는 현재 미반영(abort 임시본)** |
 | 6 | REC_BIGONE은 OOS와 비공존, 플래그는 `mvcc_header`에서 읽기 | `vacuum.c` §6-5 | 미초기화 `record` dereference |
 | 7 | record-type 가드가 `contains_oos`보다 앞에 | §7-4, §5-2 | forwarding OID 오인 → 엉터리 VOT assert |
 | 8 | eager 에러 시 트랜잭션 abort 필수 | `heap_oos.cpp` §5-1 | 살아남은 recdes가 삭제된 청크를 참조 |
+| 9 ⚠️ | 사용자 데이터를 담는 새 rcvindex는 **`LOG_MAY_CONTAIN_USER_DATA`에도 등록** | `tde.h:107` | **TDE 테이블에서 삭제 행 컬럼값이 평문으로 WAL 기록** (136 누락 — 회귀) |
+| 10 ⚠️ | `oos_chunk_exists`는 슬롯 **점유**만 보지 말고 **신원(owner/generation)** 까지 확인 | `oos_file.cpp` §7-5 | 슬롯 재사용 시 **살아있는 행의 OOS 삭제(데이터 유실)** |
+| 11 ⚠️ | `heap_oos_find_vfid`는 데이터 페이지를 든 채 헤더를 **무조건 잠그면 안 됨** | `heap_file.c:12177` | 헤더↔데이터 래치 순서 역전 → **데드락**(조건부+재시도 필요, REC_BIGONE 패턴 참고) |
 
 ### 발견된 stale 주석 / 미해결
 - **⚑ stale 주석 → ✅ 수정 완료**: `heap_update_relocation` 상단 주석이 "remove_old_forward가 여전히 누수한다"고 잘못 적혀 있었으나, 이후 추가된 `RVHF_DELETE_NEWHOME_NOTIFY_VACUUM` 경로가 이미 회수한다(`vacuum.c` else-if 분기). 본 브랜치에서 주석을 "두 MVCC 하위 경로 모두 forward-walk로 회수됨"으로 **갱신 완료**(§5 발견사항 참조).
 - `RVOOS_NOTIFY_VACUUM=134`는 emitter 없는 dead 슬롯 — 로그 포맷 bump 시 enum과 함께 정리 예정.
+
+### 🔴 병합 전 해결 필요 (2026-06-15 리뷰 — 오픈 버그)
+1. **[critical] 슬롯 재사용 데이터 유실** — forward-walk `oos_chunk_exists`가 신원 미확인(§7-5 정정 참조). 청크 헤더에 owner/generation 추가 또는 신원 확인 probe로 수정.
+2. **[high/보안] TDE 평문 로그** — `RVHF_DELETE_NEWHOME_NOTIFY_VACUUM`(136)을 `tde.h`의 `LOG_MAY_CONTAIN_USER_DATA`에 추가(§10 #9).
+3. **[high/동시성] 래치 순서 역전** — `heap_oos_find_vfid` 무조건 헤더 fix를 조건부+재시도로 변경(§10 #11, caveats 문서 참고).
+4. **[high] 임시 `abort()` 7곳 제거 + §8-1 실제 스핀 픽스 적용** — `vacuum_oos.cpp:315,372`; `vacuum.c:1581,2326,2569`; `heap_file.c:21321,21540`. 그중 `heap_file.c`의 두 개는 **사용자 INSERT/UPDATE 경로**라 단일 행으로 서버 크래시(DoS) 가능.
+5. **[refuted] 롤백 회수 우려는 안전**(가시성 임계값 게이트) — caveats 문서 참고. 미수정 대상 아님.
 
 ---
 
