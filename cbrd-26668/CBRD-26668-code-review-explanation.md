@@ -313,6 +313,41 @@ vacuum_heap_record (REC_HOME with OOS)
 > - sysop을 빼면, 부분 크래시에서 heap slot 제거는 영속화되는데 OOS 삭제만 사라질 수 있다 → **영구 dangling OOS leak**. 슬롯이 이미 사라졌으니 그 OOS를 다시 회수할 트리거가 영영 없다. `vacuum.c:2404` 주석이 경고하는 바로 그 상황이다.
 > - **선례**: REC_RELOCATION / REC_BIGONE도 OOS가 생기기 전부터 똑같은 멀티 페이지 sysop 패턴을 써 왔다(`vacuum.c:2453,2534,2573`). 즉 OOS는 새 발명이 아니라 기존 패턴을 그대로 따른 것이다.
 
+### 6-0. 케이스별 "왜 이 record는 sysop이 필요한가" (직교하는 두 축)
+
+위 callout이 "왜 sysop이 필요한가"의 **일반 원리**(멀티 페이지 원자성)를 설명했다면, 여기서는 그 원리를 **record 종류별로** 적용해 "어떤 경우엔 sysop을 열고, 어떤 경우엔 안 여는가"를 한 장으로 정리한다. PR #6986 리뷰(discussion r3121789826)에서 반복적으로 나온 질문이다.
+
+핵심은 sysop 필요 여부를 **`record_type` 하나로 판단하면 안 된다**는 것이다. 진짜 기준은 **연산이 건드리는 전체 페이지 수**이고, 그건 서로 **직교(orthogonal)하는 두 축**의 합으로 정해진다:
+
+```
+body footprint (record_type)        OOS footprint (heap_recdes_contains_oos)
+────────────────────────────        ───────────────────────────────────────
+REC_HOME       : home 1장            no OOS  : 0장
+REC_RELOCATION : home + fwd 2장      has OOS : N장 (N≥1; multi-chunk면 더 많음)
+REC_BIGONE     : home + ovf 체인
+
+total footprint = body + OOS  ⇒  total이 home page를 벗어나면(> 1장) sysop 필요
+```
+
+| record_type | OOS? | 건드리는 페이지 | 경로 | sysop |
+|---|---|---|---|---|
+| `REC_HOME` | 없음 | home 1장 | bulk 로그 누적 (`n_bulk_vacuumed++`) | **불필요** |
+| `REC_HOME` | 있음 | home + OOS N장 | `case REC_HOME`의 `if (has_oos)` 인라인 분기 | **필요** (`has_oos`) |
+| `REC_RELOCATION` | 무관 | home + fwd (+ OOS) | forward 비우고 commit 직전 OOS 삭제 | **필요** |
+| `REC_BIGONE` | 비공존 | home + overflow 체인 | overflow 삭제 | **필요** (OOS는 §6-5 assert) |
+
+**왜 평범한 REC_HOME만 sysop을 안 여는가 (이게 표의 핵심):**
+
+`REC_HOME` + OOS 없음은 **유일하게 single-page** 연산이다. heap 슬롯 하나를 비우는 게 전부고, 그건 **단일 WAL 레코드 하나**로 로깅된다. 단일 페이지에 대한 단일 로그 레코드는 **그 자체로 원자적**이다(크래시는 그 페이지를 그 LSA까지 반영했거나 안 했거나 둘 중 하나) → 묶을 게 없으니 sysop이 필요 없고, 그래서 성능을 위해 여러 슬롯을 모아 한 번에 로깅하는 **bulk 경로**를 탄다.
+
+나머지 세 경우는 전부 **2장 이상**을 건드린다. 페이지마다 디스크 flush 시점이 제각각이라, sysop 없이는 "일부 페이지만 반영된 찢어진 상태"가 가능하다. sysop이 그 여러 per-page 로그를 **all-or-nothing 한 덩어리**로 묶어준다(상세 원리는 위 §6 callout).
+
+> **요점**: `record_type`은 페이지 수를 **부분적으로만** 알려주는 proxy다. OOS는 그것과 **직교하는 별도 축**이라, body가 1장인 `REC_HOME`도 OOS가 붙는 순간 멀티 페이지가 되어 sysop 경로로 승격된다 — 그래서 `case REC_HOME: if (has_oos)` 분기가 존재한다.
+
+> **쉽게 말하면**: 짐이 한 칸(home page)에 다 들어가면 그 칸만 잠그면 된다(sysop 불필요). 짐이 여러 칸에 걸치면(forward / overflow / OOS locker), "전부 한꺼번에, 아니면 아무것도 안" 을 보장하는 한 장의 운송장(sysop)으로 묶어야 한다.
+
+> **🔗 코드/문서 동기화**: 이 판단 매트릭스는 엔진 코드에도 박아두었다 — `src/query/vacuum.c`의 `has_oos` 계산 바로 위 주석, 그리고 ADR `docs/adr/0001-synchronous-oos-reclaim-in-vacuum-sysop.md`(동기 OOS 회수 결정 + deferred 대안 비교). 세 곳(코드 주석 / ADR / 이 가이드)이 같은 표를 공유한다.
+
 ### 6-1. `vacuum_heap_helper`에 `oos_vfid` 필드 추가
 
 ```c
