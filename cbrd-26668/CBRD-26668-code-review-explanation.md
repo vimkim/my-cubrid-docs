@@ -96,6 +96,53 @@ using OID_VECTOR = std::vector<OID>;
 
 가장 리뷰가 민감한 부분. MVCC 모드에서 `heap_update_relocation`이 옛 forward(REC_NEWHOME) 슬롯을 **물리적으로 삭제**할 때, 그 옛 레코드는 **이 삭제의 undo 이미지에만** 살아남는다(LSA가 새 버전의 `prev_version_lsa`가 됨). 이 옛 forward가 OOS를 참조했다면 forward-walk가 회수해야 하는데, vacuum이 그 로그 레코드를 "회수 대상"으로 식별하려면 **전용 rcvindex 태그**가 필요하다.
 
+### 4-0. 왜 새 타입이 필요한가 (직관)
+
+> **흔한 오해**: "`RVHF_DELETE`도 어차피 OOS를 검사해서 OID 따라가 회수하지 않나? 왜 새 타입을 만드나?"
+
+핵심은 **회수의 분기점이 rcvindex가 아니라 "OOS를 가리키는 슬롯이 아직 살아 있는가"** 라는 점이다. 회수 경로가 둘인 이유가 여기서 갈린다.
+
+| | 슬롯 상태 | 회수 주체 | OOS를 어디서 읽나 |
+|---|---|---|---|
+| **REMOVE 경로** | 죽었지만 **아직 존재** | `vacuum_heap_record` | **살아있는 슬롯의 recdes** |
+| **Forward-walk 경로** | **물리적으로 사라짐** | `vacuum_forward_walk_reclaim_oos` | **delete 로그의 undo 이미지** |
+
+당신이 떠올린 "OOS 검사 후 OID 따라가 회수"는 **REMOVE 경로**가 하는 일이고, 그건 **읽을 슬롯이 남아 있을 때만** 가능하다. 평범한 `RVHF_DELETE`가 회수를 트리거하는 게 아니다 — vacuum이 죽은 슬롯을 지우면서 그 슬롯을 읽어 회수하는 것뿐이다.
+
+**문제의 시나리오 — REC_NEWHOME 재배치:**
+
+```
+[UPDATE 전]
+HOME ──(REC_RELOCATION)──▶ forward 슬롯 (REC_NEWHOME, 데이터 + OOS 포인터) ──▶ OOS 파일의 큰 값
+
+[UPDATE 중: remove_old_forward = 옛 forward 슬롯을 "물리 삭제"]
+   옛 REC_NEWHOME 슬롯이 heap에서 사라짐
+   → 그 OOS를 가리키는 살아있는 슬롯이 0개
+   → OOS OID는 오직 이 delete 로그의 undo 이미지에만 남음  (heap_file.c:23684-23695)
+```
+
+이 순간 REMOVE 경로는 **읽을 슬롯이 없어서** 이 OOS에 영원히 못 닿는다. 유일한 회수 수단은 delete 로그의 undo 이미지를 보는 forward-walk다. 그래서 emitter가 **"OOS 달린 REC_NEWHOME forward를 MVCC로 삭제하는" 정확히 그 케이스만** 새 태그로 표시한다 (`heap_file.c:23690`):
+
+```c
+LOG_RCVINDEX delete_rcvindex = RVHF_DELETE;
+if (is_mvcc_op && forward_recdes.type == REC_NEWHOME
+    && heap_recdes_contains_oos (&forward_recdes))        // OOS 달린 forward 삭제일 때만
+  {
+    delete_rcvindex = RVHF_DELETE_NEWHOME_NOTIFY_VACUUM;   // ← vacuum아, 이건 forward-walk 해라
+  }
+```
+
+**"그럼 모든 `RVHF_DELETE`를 forward-walk하면 되잖아?" → double-delete 때문에 안 된다.**
+
+논리적 MVCC DELETE(`RVHF_MVCC_DELETE_MODIFY_HOME`)는 슬롯이 **살아남고 같은 OOS OID를 그대로 가리킨다**. 이 경우는 REMOVE 경로가 회수한다. 여기에 forward-walk까지 돌리면 **같은 OID를 두 번 삭제**해 `oos_delete_chain`의 `S_DOESNT_EXIST` assert가 터진다(vacuum.c:3546-3550). 따라서 게이트는 넓히는 게 아니라 **REMOVE가 구조적으로 못 닿는 한 케이스로 정확히 좁히는** 방향으로 설계됐다.
+
+| delete 종류 | 슬롯 생존 | 회수 담당 | forward-walk 하면? |
+|---|---|---|---|
+| 논리적 MVCC DELETE | 살아남음(recdes 동일) | REMOVE 경로 | 💥 double-delete |
+| UPDATE 재배치의 옛 forward 물리삭제 | **사라짐** | **forward-walk** | ✅ 유일한 회수 수단 |
+
+> **요약**: 새 타입은 "`RVHF_DELETE`가 못 하는 일"을 위해서가 아니라, **REMOVE 경로가 닿을 수 없는 고아 OOS를 double-delete 없이 정확히 그 케이스만 forward-walk로 라우팅**하기 위한 의미 태그다. 복구 동작은 `RVHF_DELETE`와 동일하다(§4-2).
+
 ### 4-1. `recovery.h` — enum 슬롯 136 (on-disk 고정)
 
 ```c
