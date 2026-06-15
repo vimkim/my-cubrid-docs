@@ -7,6 +7,8 @@
 > 변경 규모: 26개 파일, **+4822 / −78**. 단, 이 중 약 3,500줄은 새로 추가한 테스트다. 실제 엔진 코드는 약 1,300줄이고, 이 문서의 §3~§8이 그 1,300줄 전부를 다룬다.
 >
 > **리뷰 범위**: **필수 대상은 엔진 코드(§3~§8) 약 1,300줄**이다. **테스트 코드(§9 — unit test, E2E, mock, SQL 등)는 선택적 리뷰 대상**이며 근거 참고용이다(자세한 안내는 §9 상단).
+>
+> **🚫 리뷰 대상에서 제외**: **OVF(overflow record) 스펙 변경에 따른 부수 수정(§8-4 등)은 리뷰 포인트가 아니다.** CBRD-26668(회수) 본류가 아니라 OVF 스펙 변경에 맞춘 기계적 적응이므로, 리뷰 시 건너뛰어도 무방하다(do not review).
 
 ---
 
@@ -591,7 +593,10 @@ forward-walk 경로의 `vacuum_process_log_block`은 sysop을 전혀 열지 않�
 
 `oos_delete`의 읽기 전용 짝꿍이다. "이미 사라짐"을 **좁게** 정의한다: (a) `pgbuf_fix_if_not_deallocated`가 NO_ERROR이면서 page==NULL인 경우(페이지가 deallocate됨), 또는 (b) `spage_get_record`가 `S_DOESNT_EXIST`인 경우(슬롯이 제거됨). **그 외 모든 실패(진짜 I/O 에러, S_ERROR)는 전파**한다 — 호출자가 그걸 "gone"으로 오인하면 안 되기 때문이다.
 
-### 8-4. `heap_file.c` — `heap_recdes_compute_oos_flag_debug` VOT 검증 강화 (디버그 전용)
+### 8-4. `oos_util.cpp` — `heap_recdes_compute_oos_flag_debug` VOT 검증 강화 (디버그 전용)
+
+> **🚫 리뷰 대상 아님 (do not review)**: 이 §8-4 변경과 그 밖의 **OVF(overflow record) 스펙 변경에 따른 부수 수정**들은 CBRD-26668(회수)의 본류가 아니라 OVF 스펙 변경에 맞춘 기계적 적응이다. **리뷰 포인트가 아니므로 줄 단위 검토는 불필요**하며, 아래 설명은 배경 참고용이다.
+> (참고: 이 디버그 헬퍼는 `heap_file.c`에서 `oos_util.cpp`로 옮겼고, 릴리스 빌드에는 호출자가 없다 — `#if !defined(NDEBUG)` 전용이라 런타임 영향 0.)
 
 - 클래스/루트 레코드는 내부 포맷이 달라서 VOT로 해석하면 garbage가 나온다. 그래서 루프 전 가드에서 **첫 VOT 엔트리가 합리적인 offset인지**(`[0, length - header_size]` 범위) 검사한다. 또한 offset 기준을 **end-of-header 상대**로 교정했다(기존 `recdes->length` 기준은 버그였고, `header_size`를 빼야 맞다).
 - 루프 로직도 재구성: `has_oos`를 누적한 뒤 `LAST_ELEMENT`에서 결과를 반환한다. `LAST_ELEMENT`가 없으면(구포맷 VOT) 홀수 offset이 만드는 거짓 양성을 막기 위해 `false`로 처리한다. **디버그 전용**(`#if !defined(NDEBUG)`)이라 런타임 영향은 없다.
