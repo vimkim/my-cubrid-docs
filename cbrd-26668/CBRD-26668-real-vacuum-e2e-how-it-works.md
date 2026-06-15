@@ -3,7 +3,7 @@
 > 대상 파일: `unit_tests/oos/test_oos_real_vacuum_server.cpp`
 > 브랜치: `oos-vacuum` (base: `origin/feat/oos`)
 > 이 문서의 목적: OOS 회수(reclamation)의 **진짜 vacuum 경로**를 끝에서 끝까지(E2E) 검증하는 테스트가 *어떻게* 굴러가는지 — 진짜 서버를 단위 테스트 안에서 부팅하고, vacuum 데몬을 깨우고, 카탈로그 없이 진짜 MVCC 로그를 만드는 **메커니즘** — 을 정리한다.
-> 짝 문서: **무엇을** 검증하는지(테스트 케이스·커버리지)는 [`CBRD-26668-real-vacuum-e2e-what-it-tests.md`](./CBRD-26668-real-vacuum-e2e-what-it-tests.md) 를 보라. 엔진 코드 자체는 [`CBRD-26668-code-review-explanation.md`](./CBRD-26668-code-review-explanation.md).
+> 짝 문서: **무엇을** 검증하는지(테스트 케이스·커버리지)는 [`CBRD-26668-real-vacuum-e2e-what-it-tests.md`](./CBRD-26668-real-vacuum-e2e-what-it-tests.md), **놓치고 있는 것**(커버리지 갭·향후 검증 제안)은 [`CBRD-26668-real-vacuum-e2e-coverage-gaps.md`](./CBRD-26668-real-vacuum-e2e-coverage-gaps.md) 를 보라. 엔진 코드 자체는 [`CBRD-26668-code-review-explanation.md`](./CBRD-26668-code-review-explanation.md).
 
 ---
 

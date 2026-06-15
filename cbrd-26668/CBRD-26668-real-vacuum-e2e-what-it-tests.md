@@ -3,7 +3,7 @@
 > 대상 파일: `unit_tests/oos/test_oos_real_vacuum_server.cpp`
 > 브랜치: `oos-vacuum` (base: `origin/feat/oos`)
 > 이 문서의 목적: 이 E2E 테스트가 *무엇을, 왜* 검증하는지 — 형제 테스트들 사이에서의 위치, 테스트 케이스별(TC-R1~R4) 커버리지, 그리고 **무엇은 보장하고 무엇은 아닌지** — 를 정리한다.
-> 짝 문서: *어떻게* 동작하는지(파이프라인·인프라·트릭·빌드)는 [`CBRD-26668-real-vacuum-e2e-how-it-works.md`](./CBRD-26668-real-vacuum-e2e-how-it-works.md) 를 보라. 엔진 코드 자체는 [`CBRD-26668-code-review-explanation.md`](./CBRD-26668-code-review-explanation.md).
+> 짝 문서: *어떻게* 동작하는지(파이프라인·인프라·트릭·빌드)는 [`CBRD-26668-real-vacuum-e2e-how-it-works.md`](./CBRD-26668-real-vacuum-e2e-how-it-works.md), *놓치고 있는 것*(커버리지 갭·향후 검증 제안)은 [`CBRD-26668-real-vacuum-e2e-coverage-gaps.md`](./CBRD-26668-real-vacuum-e2e-coverage-gaps.md) 를 보라. 엔진 코드 자체는 [`CBRD-26668-code-review-explanation.md`](./CBRD-26668-code-review-explanation.md).
 
 ---
 
