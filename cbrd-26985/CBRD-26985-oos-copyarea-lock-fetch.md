@@ -3,7 +3,7 @@
 - JIRA: https://jira.cubrid.org/browse/CBRD-26985
 - PR: https://github.com/CUBRID/cubrid/pull/7368
 - Base branch: `feat/oos`
-- PR HEAD: `e4db120d3` (`[CBRD-26985] Preserve caller-owned heap fetch buffers`)
+- PR HEAD: `832ff391a` (`[CBRD-26985] Restore exact scan cache assignment predicate`)
 
 ## Purpose
 
@@ -45,7 +45,7 @@ recdes.area_size = 8672
 recdes.data = scan_cache.m_area 내부 주소
 ```
 
-현재 record 길이가 32 bytes 이므로 직접 원인은 큰 OOS payload 가 아니다. 앞선 fetch 중 `recdes.data` 가 scan cache 내부로 rebind 되었고, locator loop 가 그 pointer 를 계속 전진시킨 상태에서 copyarea descriptor 를 만들었다.
+현재 record 길이가 32 bytes 이므로 직접 원인은 큰 OOS payload 가 아니다. 앞선 fetch 중 `recdes.data` 가 scan cache 내부로 rebind 되었고, locator loop 가 copyarea next-slot 계산을 그 pointer 에 적용한 상태에서 copyarea descriptor 를 만들었다.
 
 ## Implementation
 
@@ -87,33 +87,46 @@ heap_prepare_recdes_copy_area
 ```text
 recdes != NULL
 && recdes->data != NULL
-&& recdes->data 가 scan-cache area 밖에 있음
+&& recdes->data != scan-cache assigned pointer
 ```
 
 즉, caller 가 위치시킨 non-scan-cache `RECDES.data` 는 남은 공간이 부족해도 caller-owned 로 유지한다. 공간 부족은 buffer ownership 변경이 아니라 `S_DOESNT_FIT` 으로 표현되어야 한다.
 
-### 2. scan-cache 소유 여부를 시작 주소가 아니라 range 로 판단한다
+### 2. scan-cache assignment 는 시작 주소 equality 로 판단한다
 
-기존 `heap_scancache::is_recdes_assigned_to_area` 는 아래처럼 scan-cache 시작 주소만 비교했다.
+`heap_scancache::assign_recdes_to_area` 는 scan-cache area 를 붙일 때 항상 `recdes.data` 를 `m_area->get_ptr()` 로 설정한다.
+
+```text
+scan_cache->assign_recdes_to_area(*recdes)
+  -> recdes.data = m_area->get_ptr()
+  -> recdes.area_size = m_area->get_size()
+```
+
+따라서 현재 `RECDES` 가 scan-cache area 에 "assigned" 된 상태인지는 range membership 이 아니라 이 assignment 결과와 같은지로 판단하는 것이 맞다.
 
 ```text
 recdes.data == m_area->get_ptr()
 ```
 
-하지만 locator loop 는 record 하나를 pack 한 뒤 `recdes.data += round_length` 를 수행한다. 만약 `recdes.data` 가 이미 scan cache 로 rebind 된 상태라면 pointer 는 scan-cache block 의 시작 주소가 아니라 중간 주소를 가리킬 수 있다.
+locator loop 의 `recdes.data += round_length` 는 copyarea payload slot 을 다음 위치로 옮기는 계산이다. 이 계산은 `recdes.data` 가 caller-owned copyarea 를 가리킨다는 전제에서만 유효하다. 만약 `recdes.data` 가 scan cache 로 이미 잘못 rebind 된 상태에서 이 계산이 수행되면 `recdes.data` 값이 scan-cache block 내부 offset 주소가 될 수 있지만, 그것은 복구해야 할 정상 ownership 상태가 아니라 CBRD-26985 의 결과 상태이다.
 
-pre-fix 판정은 이 중간 pointer 를 scan-cache-owned 로 인식하지 못했다. 그러면 다음 `heap_init_get_context` 가 scan-cache 내부 pointer 를 caller-owned 로 오판할 수 있다.
+따라서 predicate 를 scan-cache block range check 로 넓히지 않는다. 내부 offset 주소를 scan-cache-owned 로 정상화하면 invariant 가 흐려지고, 이미 copyarea descriptor 가 잘못 만들어진 상태를 근본적으로 고치지도 못한다.
 
-새 코드는 `m_area` 가 있고 `recdes.data` 가 scan-cache block 내부에 있으면 scan-cache-owned 로 본다.
+### 2.1. exact check 가 CBRD-26985 를 다시 만들지 않는 이유
 
-```text
-area_start = m_area->get_ptr()
-area_end = area_start + m_area->get_size()
+CBRD-26985 의 회귀 조건은 "caller 가 copyarea slot 을 지정했는데 heap 이 성공을 반환하면서 `recdes.data` 만 scan cache 로 바꾸는 것" 이다. 이 조건은 `is_recdes_assigned_to_area` 를 range 로 넓혀야 막히는 문제가 아니다. 핵심은 `heap_init_get_context` 가 caller-positioned buffer 를 `area_size` 와 무관하게 보존하는 것이다.
 
-area_start <= recdes.data && recdes.data <= area_end
-```
+copyarea 는 처음에 `LC_RECDES_IN_COPYAREA` 로 `recdes.data = copyarea->mem` 을 설정한다. 이 주소는 `m_area->get_ptr()` 와 같지 않으므로 `keep_recdes_buffer = true` 가 된다. 이후 locator 가 object 를 pack 하면서 `recdes.data` 를 copyarea 내부 다음 slot 으로 옮겨도, 그 주소 역시 scan-cache assigned pointer 와 같지 않다. 남은 공간이 0 이하가 되어도 caller-owned 상태는 유지된다.
 
-`recdes.data == area_end` 는 writable byte 를 가리키지 않더라도 같은 allocation 의 끝 위치이므로 scan-cache-owned 로 분류하는 쪽이 안전하다.
+그 상태에서 OOS expand 결과가 남은 copyarea slot 에 들어가지 않으면 `heap_oos_build_record` 는 `rec->length = -new_length` 와 함께 `S_DOESNT_FIT` 을 반환한다. locator 의 기존 grow/retry 루프는 더 큰 copyarea 를 새로 만들고 `LC_RECDES_IN_COPYAREA` 를 다시 수행하므로 같은 object 를 caller-owned copyarea 위치에서 재시도한다.
+
+직접 caller 들도 같은 계약 위에 있다.
+
+- `heap_init_get_context`: `recdes.data != m_area->get_ptr()` 인 caller-positioned buffer 를 `keep_recdes_buffer = true` 로 보존한다. CBRD-26985 보호의 핵심 caller 이다.
+- `heap_get_bigone_content`: `PEEK`, `recdes->data == NULL`, scan-cache assigned buffer 에서만 scan cache 를 자동 grow 한다. caller-owned COPY buffer 는 `heap_ovf_get` 의 `S_DOESNT_FIT` 을 caller 로 돌려보낸다.
+- `heap_get_visible_version_from_log`: undo record 가 `S_DOESNT_FIT` 일 때도 `recdes.data` 가 scan-cache assigned pointer 인 경우에만 scan cache 를 키워 재시도한다. caller-owned buffer 의 부족은 상위 fetch/grow 계약으로 전파된다.
+
+따라서 이번 변경의 regression 방지는 range check 가 아니라 `area_size` 를 ownership 판단에서 제거한 데서 나온다. `is_recdes_assigned_to_area` 는 기존처럼 exact assignment check 로 두는 편이 더 명확하다.
 
 ### 3. 기존 `S_DOESNT_FIT` grow/retry 계약을 다시 살린다
 
@@ -139,7 +152,7 @@ locator copyarea fetch 경로는 이미 `S_DOESNT_FIT` 일 때 copyarea 를 키�
 | 파일 | 변경 | 리뷰 포인트 |
 |------|------|-------------|
 | `src/storage/heap_file.c` | `heap_init_get_context` 의 `keep_recdes_buffer` 판정에서 `area_size >= 0` 제거 | `area_size` 는 capacity 상태이지 ownership 이 아니다. |
-| `src/storage/heap_file.c` | `heap_scancache::is_recdes_assigned_to_area` 를 scan-cache block range 검사로 변경 | scan-cache 내부로 전진한 pointer 도 scan-cache-owned 로 분류한다. |
+| `src/storage/heap_file.c` | `heap_scancache::is_recdes_assigned_to_area` 를 exact assignment check 로 유지 | `assign_recdes_to_area` 는 항상 `m_area->get_ptr()` 를 붙이므로 시작 주소 equality 가 invariant 이다. |
 | `src/storage/heap_file.h` | `keep_recdes_buffer` 주석 갱신 | field 의미를 caller-positioned buffer 보존으로 명확히 한다. |
 
 ## Remarks
@@ -147,7 +160,7 @@ locator copyarea fetch 경로는 이미 `S_DOESNT_FIT` 일 때 copyarea 를 키�
 ### Review focus
 
 - `keep_recdes_buffer` 에서 `area_size >= 0` 을 제거하는 것이 맞는지 확인한다. `area_size` 가 부족하다는 사실은 `S_DOESNT_FIT` 으로 흘러야지, heap 이 caller buffer 를 scan cache 로 바꿔 성공 반환하는 근거가 되면 안 된다.
-- `is_recdes_assigned_to_area` 의 range check 가 scan-cache-owned pointer 를 충분히 포착하는지 확인한다.
+- `is_recdes_assigned_to_area` 는 range membership 이 아니라 `assign_recdes_to_area` 가 만든 exact pointer assignment 를 확인한다. scan-cache 내부 offset 주소는 정상 assignment 상태가 아니다.
 - locator 쪽 새 helper 가 없는 점은 의도적이다. 기존 locator grow/retry 를 재사용하는 방식이 이 PR 의 범위이다.
 
 ### Verification
