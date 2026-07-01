@@ -11,9 +11,9 @@
 
 같은 버그가 `origin/develop` 에서 발생하지 않은 이유는 `origin/develop` 에는 아직 OOS 확장 fetch 경로가 없기 때문이다.
 
-기존 `origin/develop` 의 `xlocator_lock_and_fetch_all` 은 `heap_next` / `heap_get_visible_version` 으로 레코드를 copyarea 에 직접 복사한다. 반면 `feat/oos` 에서는 raw record 를 클라이언트로 넘기는 경로에서 OOS OID 를 실제 값으로 펼치기 위해 `heap_next_expand_oos` / `heap_get_visible_version_expand_oos` 를 쓰도록 바뀌었다. 이 새 경로는 heap scan-cache 버퍼를 사용할 수 있고, 그 결과 `RECDES.data` 가 더 이상 `LC_COPYAREA` 내부를 가리키지 않을 수 있었다.
+기존 `origin/develop` 의 `xlocator_lock_and_fetch_all` 은 `heap_next` / `heap_get_visible_version` 으로 레코드를 copyarea 에 직접 복사한다. 반면 `feat/oos` 에서는 raw record 를 클라이언트로 넘기는 경로에서 OOS OID 를 실제 값으로 펼치기 위해 `heap_next_expand_oos` / `heap_get_visible_version_expand_oos` 를 쓰도록 바뀌었다. 여기서 문제의 핵심은 단순히 scan-cache 를 인자로 받거나 scratch 로 쓰는 것이 아니다. copyarea caller 가 이미 `RECDES.data` 를 특정 출력 위치로 지정했는데도, 성공 결과가 scan-cache-backed `RECDES.data` 로 돌아올 수 있었다는 점이다.
 
-즉, 버그는 오래된 copyarea packing 코드가 원래부터 틀렸다기보다, OOS 도입으로 `RECDES.data` 의 소유권과 위치가 바뀔 수 있는 새 조건이 생겼는데 locator 쪽이 그 조건을 매번 검증하지 않아서 발생한 회귀이다.
+즉, 버그는 오래된 copyarea packing 코드가 원래부터 틀렸다기보다, OOS 도입으로 `heap_get_visible_version_expand_oos` 계열의 출력 버퍼 계약이 더 엄격해졌는데 heap/locator 양쪽이 그 계약을 끝까지 강제하지 못해서 발생한 회귀이다.
 
 ## 증상
 
@@ -161,9 +161,9 @@ heap_get_visible_version
 1. heap page 에서 원래 record 를 읽는다.
 2. record 에 OOS OID slot 이 있으면 `oos_read` 로 실제 값을 읽는다.
 3. 기존 record image 를 새 record image 로 재구성한다.
-4. 재구성 결과가 현재 `RECDES` 공간보다 크면 scan-cache 영역을 쓰거나 `S_DOESNT_FIT` 으로 돌려보낸다.
+4. 재구성 결과가 현재 `RECDES` 공간보다 크면, caller-owned buffer 가 없는 경우에는 scan-cache 영역을 쓸 수 있고, caller-owned buffer 가 있는 경우에는 `S_DOESNT_FIT` 으로 돌려보내야 한다.
 
-이때 locator 입장에서 가장 위험한 변화는 4번이다. OOS 확장 fetch 이후에는 `recdes.data` 가 반드시 원래 copyarea 위치라고 볼 수 없다.
+이때 locator 입장에서 가장 위험한 변화는 4번이다. `xlocator_lock_and_fetch_all` 처럼 copyarea slot 을 출력 위치로 지정한 caller 에게는 scan-cache-backed 결과를 성공으로 돌려주면 안 된다. 필요하면 내부 scratch 로 scan-cache 를 쓸 수는 있지만, 최종 `recdes.data` 는 caller 가 준 copyarea slot 이거나, 아니면 `S_DOESNT_FIT` 이어야 한다.
 
 ## 실제 버그
 
@@ -175,8 +175,8 @@ pre-fix `feat/oos` 의 `xlocator_lock_and_fetch_all` 은 OOS 확장 fetch 를 �
 1. locator 가 copyarea 를 할당한다.
 2. LC_RECDES_IN_COPYAREA 로 recdes.data 를 copyarea->mem 에 맞춘다.
 3. heap_next_expand_oos 또는 heap_get_visible_version_expand_oos 를 호출한다.
-4. fetch 결과로 recdes.data 가 scan-cache 영역을 가리킬 수 있다.
-5. locator 는 이 사실을 확인하지 않고 obj->offset = offset 을 기록한다.
+4. fetch 결과가 성공인데도 recdes.data 가 scan-cache 영역을 가리킬 수 있다.
+5. 이것은 copyarea caller 관점에서는 heap fetch 계약 위반이다. locator 는 이 사실을 확인하지 않고 obj->offset = offset 을 기록한다.
 6. offset 과 descriptor 는 copyarea 기준인데, 실제 bytes 는 copyarea 밖에 있다.
 7. 루프가 계속 돌면서 recdes.area_size 와 descriptor 위치 계산이 현실의 copyarea 여유 공간과 어긋난다.
 8. descriptor 영역 또는 allocator metadata 를 침범하고, 나중에 SIGSEGV/malloc abort/redo fatal 로 이어진다.
@@ -232,7 +232,7 @@ OOS branch 에서는 raw record 소비자가 OOS 를 모르기 때문에 OOS OID
 
 이번 core 에서 `recdes.length` 는 32 byte 수준이었다. 따라서 "큰 OOS value 가 copyarea 를 넘쳤기 때문" 이라고 보면 틀리다.
 
-실패의 직접 조건은 OOS value 의 크기 자체가 아니라, OOS 지원을 위해 도입된 `_expand_oos` fetch wrapper 가 locator 의 기존 copyarea packing 계약보다 넓은 buffer ownership 모델을 갖게 된 것이다.
+실패의 직접 조건은 OOS value 의 크기 자체가 아니라, OOS 지원을 위해 도입된 `_expand_oos` fetch wrapper 가 copyarea caller 에게 scan-cache-backed 성공 결과를 노출할 수 있었다는 점이다.
 
 그래서 작은 record 로 구성된 `ALTER TABLE ... CHANGE` 테스트도 `feat/oos` 에서는 실패할 수 있었고, OOS 코드가 없는 `origin/develop` 에서는 같은 실패 조건이 만들어지지 않았다.
 
@@ -252,7 +252,7 @@ CBRD-26818 은 이미 한 차례 비슷한 문제를 다뤘다. 그때의 핵심
 - 두 번째 fetch 전에 `recdes.data` / `recdes.area_size` 를 현재 copyarea slot 으로 다시 맞추지 않으면 이전 fetch 결과나 scan-cache 상태를 그대로 사용할 수 있다.
 - fetch 성공 후에도 `recdes.data` 가 정말 copyarea slot 인지 확인하지 않으면 descriptor 와 payload 의 위치가 갈라질 수 있다.
 
-따라서 CBRD-26818 이 heap 쪽의 "버퍼를 함부로 바꾸지 말라"는 규칙을 추가한 수정이라면, CBRD-26985 는 locator 쪽의 "descriptor 를 만들기 전에 실제 bytes 를 copyarea 에 pack 하라"는 규칙을 추가한 수정이다.
+따라서 CBRD-26818 이 heap 쪽의 "caller-owned buffer 를 함부로 scan-cache 로 바꾸지 말라"는 규칙을 추가한 수정이라면, CBRD-26985 는 locator 쪽에서도 "descriptor 를 만들기 전에 실제 bytes 가 copyarea 에 있음을 검증하라"는 방어선을 추가한 수정이다. 더 원칙적인 계약은 `heap_get_visible_version_expand_oos(..., COPY, ...)` 가 caller-owned `RECDES.data` 를 받은 경우 성공 결과를 scan-cache 로 publish 하지 않는 것이다.
 
 ## PR #7368 의 수정 내용
 
@@ -301,6 +301,27 @@ if (recdes->data != copyarea_data)
 
 이후에만 `obj->offset = offset` 을 기록한다.
 
+## Heap 계층 계약 보강
+
+위 locator-side 방어와 별개로, 더 원칙적인 수정은 heap 계층이 caller-owned buffer 를 scan-cache 로 바꿔 성공 반환하지 못하게 하는 것이다.
+
+이번 관점에서는 `heap_init_get_context` 의 `keep_recdes_buffer` 판정을 다음처럼 강화한다.
+
+```text
+AS-IS:
+  recdes->data != NULL
+  && recdes->area_size >= 0
+  && recdes->data 가 scan-cache 시작 주소가 아님
+
+TO-BE:
+  recdes->data != NULL
+  && recdes->data 가 scan-cache 영역 안에 있지 않음
+```
+
+`area_size >= 0` 조건을 제거하는 이유는 중요하다. copyarea slot 의 writable area 가 이미 소진되어 `area_size` 가 0 이하가 되었더라도, 그 `recdes.data` 는 여전히 caller 가 지정한 출력 위치이다. 이때 heap 이 scan-cache 로 갈아끼워 성공하면 안 되고, 부족한 공간은 `S_DOESNT_FIT` 으로 드러나야 한다.
+
+또한 scan-cache 소유 여부도 `recdes.data == scan_cache_area_start` 로만 보면 부족하다. locator 의 기존 루프처럼 `recdes.data += round_length` 가 실행된 뒤에는 `recdes.data` 가 scan-cache block 의 중간을 가리킬 수 있다. 따라서 scan-cache block 범위 안에 있는 포인터 전체를 scan-cache-owned 로 판정해야 한다.
+
 ## 수정 후 불변식
 
 수정 후 `xlocator_fetch_all` 과 `xlocator_lock_and_fetch_all` 은 descriptor 를 publish 하기 전에 아래 불변식을 강제로 맞춘다.
@@ -312,7 +333,7 @@ obj->offset == offset
 obj->length == recdes.length
 ```
 
-따라서 heap fetch 가 내부적으로 scan-cache 를 사용하더라도 `LC_COPYAREA` 의 외부 계약은 유지된다.
+따라서 heap fetch 가 내부 scratch 로 scan-cache 를 사용하더라도 `LC_COPYAREA` 의 외부 계약은 유지된다. 단, copyarea caller 에게 scan-cache-backed `recdes.data` 를 성공 결과로 돌려주는 것은 여전히 heap 계층의 계약 위반으로 보아야 한다.
 
 ## S_DOESNT_FIT 과 cursor 복원
 
@@ -347,7 +368,7 @@ retry_current_oid == true
 | OOS record 재구성 | 없음 | 있음 | 있음 |
 | `recdes.data` 위치 확인 | 필요 조건이 약함 | 확인하지 않음 | 매 fetch 후 확인 |
 | copyarea 남은 공간 계산 | 초기 `recdes.area_size` 에 의존 | 기존 방식 유지 | 매 object 마다 copyarea layout 로 재계산 |
-| scan-cache-backed 결과 | 해당 재현 경로에서 문제 조건 없음 | descriptor 와 payload 불일치 가능 | copyarea 로 복사 후 descriptor 생성 |
+| scan-cache-backed 성공 결과 | 해당 재현 경로에서 문제 조건 없음 | copyarea caller 에 대한 계약 위반, descriptor 와 payload 불일치 가능 | locator 에서 copyarea 로 복사 후 descriptor 생성 |
 | 첫 object `S_DOESNT_FIT` | 기존 copyarea 확장 | 일부 OOS path 에서 cursor 주의 필요 | `prev_oid` 복원 후 재시도 |
 
 ## 왜 이 수정이 origin/develop 에 필요 없었나
@@ -356,7 +377,7 @@ retry_current_oid == true
 
 답은 이렇다.
 
-`origin/develop` 의 코드는 `recdes.data` 가 copyarea 내부라는 전제를 깔고 있고, 해당 재현 경로에서는 heap fetch 가 그 전제를 깨지 않았다. 반면 OOS branch 는 raw record 를 OOS-expanded image 로 바꾸는 과정이 추가되면서 `recdes.data` 가 scan-cache-backed 결과가 될 수 있었다. 같은 locator 코드를 사용하더라도 heap 계층의 반환 계약이 넓어진 순간부터 기존 전제는 더 이상 충분하지 않았다.
+`origin/develop` 의 코드는 `recdes.data` 가 copyarea 내부라는 전제를 깔고 있고, 해당 재현 경로에서는 heap fetch 가 그 전제를 깨지 않았다. 반면 OOS branch 는 raw record 를 OOS-expanded image 로 바꾸는 과정이 추가되면서 `heap_get_visible_version_expand_oos` 가 copyarea caller 에게 scan-cache-backed 성공 결과를 노출할 수 있었다. 같은 locator 코드를 사용하더라도 heap 계층의 반환 계약이 달라진 순간부터 기존 전제는 더 이상 충분하지 않았다.
 
 따라서 PR #7368 의 수정은 `origin/develop` 의 기존 버그를 고친 것이 아니라, OOS branch 가 도입한 새 fetch 계약에 맞춰 locator 의 copyarea packing 계약을 명시적으로 보강한 것이다.
 
@@ -382,6 +403,6 @@ alter table t change i a int;
 
 `origin/develop` 에서 같은 버그가 발생하지 않은 직접적인 이유는 OOS 확장 fetch 경로가 없기 때문이다.
 
-pre-fix `feat/oos` 에서는 raw record 를 OOS-expanded form 으로 만들어야 했고, 이 과정에서 heap fetch 결과가 scan-cache 버퍼를 가리킬 수 있었다. locator 는 여전히 record bytes 가 copyarea 에 있다고 가정하고 descriptor 를 만들었기 때문에 metadata 와 payload 위치가 분리되었다.
+pre-fix `feat/oos` 에서는 raw record 를 OOS-expanded form 으로 만들어야 했고, 이 과정에서 caller-owned copyarea slot 을 보존해야 하는 경로에도 scan-cache-backed 성공 결과가 노출될 수 있었다. locator 는 여전히 record bytes 가 copyarea 에 있다고 가정하고 descriptor 를 만들었기 때문에 metadata 와 payload 위치가 분리되었다.
 
 PR #7368 은 이 분리를 막기 위해 fetch 전에는 현재 copyarea slot 을 명확히 준비하고, fetch 후에는 record bytes 가 실제로 그 slot 에 있는지 확인하며, 필요하면 copyarea 로 복사한 뒤 descriptor 를 만든다. 그래서 OOS branch 의 새 buffer ownership 조건에서도 `LC_COPYAREA` 의 기존 외부 계약이 다시 유지된다.
