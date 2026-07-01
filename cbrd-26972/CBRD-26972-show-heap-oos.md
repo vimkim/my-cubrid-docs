@@ -14,6 +14,8 @@ CBRD-26972는 OOS (큰 가변 길이 컬럼 값을 heap 레코드 밖의 별도 
 
 `src/query/show_scan.c`는 새 SHOW type을 `heap_header_capacity_start_scan()`, `heap_oos_next_scan()`, `heap_header_capacity_end_scan()`에 연결한다. `src/storage/heap_file.c`의 시작 scan은 `SHOWSTMT_ALL_HEAP_OOS`도 partition expansion 대상으로 처리한다.
 
+`src/storage/heap_oos.cpp`는 OOS expansion/cleanup 코드와 함께 `heap_oos_find_vfid()`와 `heap_oos_next_scan()`도 담당한다. `src/storage/heap_file_internal.hpp`에는 `heap_file.c`와 `heap_oos.cpp`가 함께 참조해야 하는 heap header layout과 SHOW scan context를 분리했다.
+
 `heap_oos_next_scan()`은 heap HFID의 file descriptor에서 class OID를 확인하고, `heap_oos_find_vfid(..., false)`로 OOS VFID를 찾는다. `false`를 넘기므로 SHOW 실행만으로 OOS 파일을 새로 만들지 않는다. OOS 파일이 있으면 `oos_get_stats_by_vfid()`를 호출하고, 없으면 성공 row로 반환하되 OOS VFID 컬럼은 `NULL`, count/byte 컬럼은 0으로 둔다.
 
 통계 계산은 다음 규칙을 사용한다.
@@ -31,6 +33,21 @@ CBRD-26972는 OOS (큰 가변 길이 컬럼 값을 heap 레코드 밖의 별도 
 `oos_get_stats_by_vfid()`는 OOS page를 순회하면서 live record 통계를 모은다. `Oos_recs_sumlen`은 OOS slot에 저장된 record 길이의 합이며, SQL 컬럼의 논리 payload 길이만을 뜻하지 않는다. 이 helper는 busy page를 만나면 일부 page를 건너뛸 수 있으므로, SHOW 결과는 DBA 진단용 현재 통계로 보아야 한다. 이 PR은 그 helper의 통계 수집 정책을 바꾸지 않는다.
 
 `SHOW ALL HEAP OOS OF <class>`는 기존 heap 진단 명령과 같은 partition metadata를 사용한다. partitioned class에서는 partitioned table heap과 partition heap들이 여러 row로 반환될 수 있고, 각 row는 해당 heap에 연결된 OOS 파일 상태를 보여준다.
+
+실제 `csql -S` 확인 결과는 다음과 같다.
+
+```sql
+CREATE TABLE t_show_oos (id INT PRIMARY KEY, data_col BIT VARYING);
+INSERT INTO t_show_oos VALUES (1, REPEAT(X'AA', 8192));
+SHOW HEAP OOS OF t_show_oos;
+```
+
+```text
+Table_name='dba.t_show_oos', Class_oid='(0|204|6)', Heap_volume_id=1, Heap_file_id=640,
+Heap_header_page_id=641, Has_oos_file=1, Oos_volume_id=1, Oos_file_id=704,
+Oos_num_user_pages=2, Oos_page_size=16344, Oos_num_recs=1, Oos_recs_sumlen=8216,
+Oos_physical_bytes=32688, Oos_unused_bytes=24472
+```
 
 ### Test Plan
 
