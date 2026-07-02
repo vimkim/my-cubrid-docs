@@ -14,7 +14,7 @@ CBRD-26972는 OOS (큰 가변 길이 컬럼 값을 heap 레코드 밖의 별도 
 
 `src/query/show_scan.c`는 새 SHOW type을 `heap_header_capacity_start_scan()`, `heap_oos_next_scan()`, `heap_header_capacity_end_scan()`에 연결한다. `src/storage/heap_file.c`의 시작 scan은 `SHOWSTMT_ALL_HEAP_OOS`도 partition expansion 대상으로 처리한다.
 
-`src/storage/heap_oos.cpp`는 OOS expansion/cleanup 코드와 함께 `heap_oos_find_vfid()`와 `heap_oos_next_scan()`도 담당한다. `src/storage/heap_file_internal.hpp`에는 `heap_file.c`와 `heap_oos.cpp`가 함께 참조해야 하는 heap header layout과 SHOW scan context를 분리했다.
+`src/storage/heap_oos.cpp`는 OOS expansion/cleanup 코드와 함께 SHOW OOS row를 만드는 `heap_oos_next_scan()`도 담당한다. `heap_oos_find_vfid()`는 heap header layout (`HEAP_HDR_STATS`)을 직접 읽고 쓰므로 `src/storage/heap_file.c`에 남겨 heap header/statistics 구조의 소유권을 유지했다. `src/storage/heap_show_scan_context.hpp`에는 `heap_header_capacity_start_scan()`과 OOS SHOW scan이 공유하는 작은 scan context만 분리했다.
 
 `heap_oos_next_scan()`은 heap HFID의 file descriptor에서 class OID를 확인하고, `heap_oos_find_vfid(..., false)`로 OOS VFID를 찾는다. `false`를 넘기므로 SHOW 실행만으로 OOS 파일을 새로 만들지 않는다. OOS 파일이 있으면 `oos_get_stats_by_vfid()`를 호출하고, 없으면 성공 row로 반환하되 OOS VFID 컬럼은 `NULL`, count/byte 컬럼은 0으로 둔다.
 
