@@ -47,6 +47,10 @@ if (recdes_allocate_data_area (&batched_value->raw, (int) oos_len) != NO_ERROR)
 catch (std::bad_alloc &)
 ```
 
+**작성자 답변 (2026-07-02):** `src` 안에 `catch` 사용례가 이미 있으며, 대부분은 `std::regex_error`, `std::filesystem_error`, locale 변환, parallel/XASL spawner cleanup 같은 표준 라이브러리/경계 레이어 예외를 CUBRID error code로 변환하는 용도다. 이번 PR의 `catch (std::bad_alloc &)` 도 예외를 일반 control flow로 쓰려는 것이 아니라, `std::vector::reserve()`/`resize()`/`push_back()` 실패를 `ER_OUT_OF_VIRTUAL_MEMORY` 로 변환하는 좁은 OOM boundary다.
+
+`std::vector::reserve()` 자체에는 `nothrow` API가 없으므로, `std::vector` 를 유지하는 한 allocation failure를 호출 지점에서 CUBRID error stack으로 바꾸는 표준적인 방법은 `std::bad_alloc` 을 catch하는 것이다. Strict no-exceptions 관례를 더 강하게 적용해야 한다면 대안은 `std::vector` 를 쓰지 않고 `batched_values`, `requests`, `pending`, `groups/continuations` 를 `db_private_alloc()`/`malloc()` 기반의 explicit scratch array + count + `cubbase::span` 으로 바꾸는 것이다. 현재 PR에서는 좁은 `std::bad_alloc` catch를 유지하고, 프로젝트 정책상 engine helper에서 STL allocation exception boundary도 금지한다는 결론이 나면 위 explicit-array 방식으로 치환하겠다.
+
 ## JIRA Context
 
 CBRD-27006은 CBRD-26583의 sub-task이며 목적은 한 heap record 안의 여러 OOS 값이 가능한 같은 OOS page에 모이도록 recdes locality를 개선하는 것이다. PR은 on-disk OOS format, OOS OID 공유 정책, replication log format을 바꾸지 않는다는 범위와 일치한다.
