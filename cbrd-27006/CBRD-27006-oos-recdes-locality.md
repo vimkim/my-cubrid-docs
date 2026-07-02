@@ -10,7 +10,7 @@
 
 CBRD-27006은 하나의 heap record (`RECDES`) 안에 여러 OOS (큰 가변 길이 컬럼 값을 heap record 밖의 OOS file에 저장하는 방식) 컬럼이 있을 때, 쓰기와 읽기의 page locality를 높이는 작업이다.
 
-- AS-IS: 여러 OOS 컬럼을 저장할 때 `heap_attrinfo_insert_to_oos()` 가 컬럼마다 `oos_insert()` 를 호출했다. 각 호출은 bestspace 탐색과 `pgbuf_fix` 를 따로 수행하므로, 같은 heap record에서 나온 OOS 값들이 서로 다른 OOS page로 흩어질 수 있었다.
+- AS-IS: 여러 OOS 컬럼을 저장할 때 `heap_attrinfo_insert_to_oos()` 가 컬럼마다 `oos_insert()` 를 호출했다. 각 호출은 bestspace (빈 공간이 충분한 OOS page 후보를 찾는 힌트) 탐색과 `pgbuf_fix` (page를 buffer pool에 고정하는 작업) 를 따로 수행하므로, 같은 heap record에서 나온 OOS 값들이 서로 다른 OOS page로 흩어질 수 있었다.
 - TO-BE: 같은 heap record에서 나온 single-chunk OOS 값들을 logical attribute order 그대로 single-page OOS batch로 묶는다. 읽을 때도 같은 head page에 있는 OOS OID들을 한 번의 page fix로 처리한다.
 
 이 변경은 on-disk OOS format을 바꾸지 않는다. OOS OID는 여전히 OOS 값 하나당 하나이고, multi-chunk chain 구조도 그대로 유지한다. 목적은 OOS record model을 유지하면서 한 record 단위의 placement locality와 read locality를 개선하는 것이다.
@@ -67,6 +67,6 @@ Reviewer는 세 부분을 우선 보면 된다.
 
 ### Verification
 
-이 문서는 code commit `56e22c15c4ae024c141035b62db9dfb6d17acf6c` 의 diff와 local uncommitted planning notes를 기준으로 작성했다. 해당 commit에는 OOS server unit tests와 SQL CRUD tests가 함께 포함되어 있다.
+이 문서는 PR #7391의 code commit `56e22c15c4ae024c141035b62db9dfb6d17acf6c` diff, JIRA CBRD-27006, OOS 설계 문맥을 기준으로 검토했다. 해당 commit에는 OOS server unit tests와 SQL CRUD tests가 함께 포함되어 있다.
 
 PR body에는 이 문서의 public GitHub URL만 링크하면 된다.
