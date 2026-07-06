@@ -1,64 +1,108 @@
+# CBRD-27029 Expand Raw Records
+
+Commit under review: `85d8f5480` (`[CBRD-27029] Make heap next OOS expansion explicit`)
+
 ## Purpose
 
-CBRD-27029 는 OOS (큰 컬럼 값을 heap record 밖의 OOS file 에 따로 저장하는 방식) 적용 후
-raw `RECDES` 바이트를 직접 쓰는 경로에서 inline OOS OID 가 그대로 보일 수 있는 회귀를 막는 작업이다.
+CBRD-27029 는 OOS 적용 후 raw `RECDES` 바이트를 직접 쓰는 경로에서 inline OOS OID 가 그대로 보일 수 있는 회귀를
+막는 작업이다.
 
-- `AS-IS:` 기본 heap fetch 는 OOS Expand 를 하지 않았고, 호출자가 직접 `_expand_oos` API 를 골라야 raw record 안의
-  OOS OID 가 실제 값으로 바뀌었다.
-- `TO-BE:` 기본 heap fetch 는 OOS Expand 를 수행하고, attribute layer 에서 필요한 컬럼만 lazy OOS Resolve 하는 경로만
-  명시적으로 `*_skip_oos_expand` API 를 사용한다.
+- `AS-IS:` `heap_next()` 호출자가 OOS Expand 여부를 함수 이름만으로 명시하기 어려웠고, develop 에서 온 기존
+  `heap_next()` 사용자는 OOS 경로에서 raw record 소비인지 attribute-layer 소비인지 다시 판단해야 했다.
+- `TO-BE:` `heap_next()` 이름은 유지하되, 호출자가 `HEAP_OOS_EXPAND_POLICY` enum 으로 record-level OOS Expand 여부를
+  명시한다.
 
-여기서 OOS Expand 는 record-level eager 동작이다. 즉, `RECDES` 안의 모든 inline OOS OID 를 실제 값으로 바꾸어
-record 전체를 다시 만든다. OOS Resolve 는 column-level lazy 동작이다. 즉, `heap_attrinfo_read_dbvalues` 가 필요한
-컬럼 하나를 읽을 때 `oos_read` 로 실제 값을 가져온다.
+여기서 OOS Expand 는 record-level eager 동작이다. 즉, `RECDES` 안의 모든 inline OOS OID 를 실제 값으로 바꾸어 record
+전체를 다시 만든다. OOS Resolve 는 column-level lazy 동작이다. 즉, `heap_attrinfo_read_dbvalues()` 가 필요한 컬럼을
+읽을 때 `oos_read()` 로 실제 값을 가져온다.
 
-이 변경은 "raw record bytes 를 소비하면 기본 Expand, attribute reader 를 바로 거치면 skip" 이라는 기준을 API 이름으로
-드러낸다. unload/load, compact/copy, log-oriented path 처럼 `RECDES.data` 를 직접 직렬화하거나 파싱하는 경로는
-호출자가 빠뜨려도 기본적으로 안전한 값을 받는다.
+## Policy
+
+| Enum | Meaning | Use when |
+|---|---|---|
+| `HEAP_WITH_OOS_EXPAND` | Return raw-record-safe `RECDES` bytes by replacing inline OOS OID slots with actual values. | The caller consumes raw record bytes: copyarea shipping, `or_*` parsing, raw serialization, reinsertion, or byte-level comparison. |
+| `HEAP_WITHOUT_OOS_EXPAND` | Keep inline OOS OID slots in the heap record. | The caller immediately decodes through the attribute layer, which resolves OOS columns lazily. |
+
+## Changed Public Scan APIs
+
+| Function | Change |
+|---|---|
+| `heap_next()` | Keeps the same function name; adds `HEAP_OOS_EXPAND_POLICY oos_expand_policy`. |
+| `heap_next_sampling()` | Keeps the same function name; adds `HEAP_OOS_EXPAND_POLICY oos_expand_policy`. |
+| `heap_prev()` | Keeps the same function name; adds `HEAP_OOS_EXPAND_POLICY oos_expand_policy`. |
+| `heap_next_expand_oos()` | Removed; callers now use `heap_next(..., HEAP_WITH_OOS_EXPAND)`. |
+| `heap_next_skip_oos_expand()` | Removed; callers now use `heap_next(..., HEAP_WITHOUT_OOS_EXPAND)`. |
+| `heap_next_sampling_skip_oos_expand()` | Removed; callers now use `heap_next_sampling(..., HEAP_WITHOUT_OOS_EXPAND)`. |
+| `heap_prev_skip_oos_expand()` | Removed; callers now use `heap_prev(..., HEAP_WITHOUT_OOS_EXPAND)`. |
 
 ## Implementation
 
-`src/storage/heap_file.c` 와 `src/storage/heap_file.h` 에서 `HEAP_GET_CONTEXT.expand_oos` 기본값을 `true` 로 바꾸었다.
-이에 따라 `heap_next`, `heap_prev`, `heap_next_sampling`, `heap_get_visible_version`,
-`heap_scan_get_visible_version` 계열의 기본 동작은 inline OOS OID 를 실제 값으로 바꾸는 쪽이 된다.
+`src/storage/heap_file.h` 에 `HEAP_OOS_EXPAND_POLICY` 를 추가하고 `heap_next()`, `heap_next_sampling()`,
+`heap_prev()` 의 public signature 에 enum 인자를 추가했다. 함수 이름은 유지하되 호출부에서 정책이 보이도록 만들었다.
 
-기존 `_expand_oos` API 는 compatibility alias 로 남겼다. 이미 `_expand_oos` 를 호출하던 raw-byte 소비자는 소스 호환을
-유지하면서 같은 동작을 계속 얻는다.
+`src/storage/heap_file.c` 의 `heap_next_internal()` 과 heap-scan visible-version helper 는 이 enum 을 그대로 전달한다.
+`HEAP_GET_CONTEXT` 도 boolean `expand_oos` 대신 enum 정책을 보관한다. 실제 record-level Expand 실행 지점인
+`heap_record_replace_oos_oids()` 는 `HEAP_WITHOUT_OOS_EXPAND` 일 때 바로 반환한다.
 
-대신 attribute layer 가 곧바로 lazy OOS Resolve 를 수행하는 경로에는 명시적인 skip API 를 추가했다.
+기존 skip/expand wrapper 는 제거했다. 새 호출자는 `heap_next()` 라는 기존 API 이름을 쓰면서도 다음처럼 선택해야 한다.
 
-- `heap_next_skip_oos_expand`
-- `heap_next_sampling_skip_oos_expand`
-- `heap_prev_skip_oos_expand`
-- `heap_get_visible_version_skip_oos_expand`
-- `heap_scan_get_visible_version_skip_oos_expand`
+```c
+heap_next (..., HEAP_WITH_OOS_EXPAND);
+heap_next (..., HEAP_WITHOUT_OOS_EXPAND);
+```
 
-`src/query/scan_manager.c` 의 normal heap scan, sampling scan, reverse scan, index heap lookup 은 새 skip API 로
-전환했다. 이 경로들은 fetch 직후 `heap_attrinfo_read_dbvalues` 로 requested attribute 를 읽으므로 record-level Expand 를
-먼저 하면 OOS 값을 불필요하게 모두 읽을 수 있다.
+## Caller Review Table
 
-`src/query/query_executor.c` 의 update/delete LOB attribute read 와 duplicate-key update read 도 skip API 로 전환했다.
-이 경로들도 `heap_attrinfo_read_dbvalues` 를 통해 필요한 attribute 를 읽는다.
+| Caller | Policy | Review reason |
+|---|---|---|
+| `src/connection/connection_support.cpp:2471` | `HEAP_WITHOUT_OOS_EXPAND` | Immediately calls `heap_attrinfo_read_dbvalues()`. |
+| `src/loaddb/load_server_loader.cpp:242` | `HEAP_WITHOUT_OOS_EXPAND` | Uses `heap_next()` to advance OID, then calls visible-version fetch and attribute decoding. |
+| `src/query/dblink_global_tran_catalog.c:225` | `HEAP_WITHOUT_OOS_EXPAND` | Global transaction lookup decodes values through `heap_attrinfo_read_dbvalues()`. |
+| `src/query/dblink_global_tran_catalog.c:482` | `HEAP_WITHOUT_OOS_EXPAND` | Global transaction iterator decodes values through `heap_attrinfo_read_dbvalues()`. |
+| `src/query/scan_manager.c:5930` | `HEAP_WITHOUT_OOS_EXPAND` | Normal heap scan feeds query attribute evaluation. |
+| `src/query/scan_manager.c:5936` | `HEAP_WITHOUT_OOS_EXPAND` | Sampling heap scan feeds query attribute evaluation. |
+| `src/query/scan_manager.c:5954` | `HEAP_WITHOUT_OOS_EXPAND` | Reverse heap scan feeds query attribute evaluation. |
+| `src/storage/btree_load.c:3722` | `HEAP_WITHOUT_OOS_EXPAND` | Index load generates keys through `heap_attrinfo_generate_key()`. |
+| `src/storage/btree_load.c:5371` | `HEAP_WITHOUT_OOS_EXPAND` | Online index build evaluates filters and keys through the attribute layer. |
+| `src/storage/catalog_class.c:5014` | `HEAP_WITHOUT_OOS_EXPAND` | Server compatibility metadata read decodes attributes. |
+| `src/storage/catalog_class.c:5467` | `HEAP_WITHOUT_OOS_EXPAND` | Collation metadata read decodes attributes. |
+| `src/storage/catalog_class.c:5679` | `HEAP_WITHOUT_OOS_EXPAND` | Apply-info metadata read decodes attributes. |
+| `src/storage/system_catalog.c:4718` | `HEAP_WITH_OOS_EXPAND` | Catalog consistency scan may parse raw class records with `or_*` helpers. |
+| `src/storage/system_catalog.c:5030` | `HEAP_WITH_OOS_EXPAND` | Catalog dump may parse raw class records with `or_*` helpers. |
+| `src/storage/heap_file.c:8542` | `HEAP_WITH_OOS_EXPAND` | `heap_first()` keeps a raw-record-safe default. |
+| `src/storage/heap_file.c:8570` | `HEAP_WITH_OOS_EXPAND` | `heap_last()` keeps a raw-record-safe default. |
+| `src/storage/heap_file.c:8740` | `HEAP_WITH_OOS_EXPAND` | Scanrange forward fallback keeps the raw-record-safe behavior. |
+| `src/storage/heap_file.c:8763` | `HEAP_WITH_OOS_EXPAND` | Scanrange forward continuation keeps the raw-record-safe behavior. |
+| `src/storage/heap_file.c:8852` | `HEAP_WITH_OOS_EXPAND` | Scanrange reverse fallback keeps the raw-record-safe behavior. |
+| `src/storage/heap_file.c:8871` | `HEAP_WITH_OOS_EXPAND` | Scanrange reverse continuation keeps the raw-record-safe behavior. |
+| `src/storage/heap_file.c:8948` | `HEAP_WITH_OOS_EXPAND` | Scanrange next fallback keeps the raw-record-safe behavior. |
+| `src/storage/heap_file.c:8969` | `HEAP_WITH_OOS_EXPAND` | Scanrange next continuation keeps the raw-record-safe behavior. |
+| `src/storage/heap_file.c:9019` | `HEAP_WITH_OOS_EXPAND` | Scanrange previous fallback keeps the raw-record-safe behavior. |
+| `src/storage/heap_file.c:9040` | `HEAP_WITH_OOS_EXPAND` | Scanrange previous continuation keeps the raw-record-safe behavior. |
+| `src/storage/heap_file.c:9085` | `HEAP_WITH_OOS_EXPAND` | Scanrange first fallback keeps the raw-record-safe behavior. |
+| `src/storage/heap_file.c:9130` | `HEAP_WITH_OOS_EXPAND` | Scanrange last fallback keeps the raw-record-safe behavior. |
+| `src/storage/heap_file.c:15783` | `HEAP_WITHOUT_OOS_EXPAND` | Heap dump calls `heap_attrinfo_read_dbvalues()`. |
+| `src/transaction/locator_sr.c:302` | `HEAP_WITH_OOS_EXPAND` | Classname cache parses class records with `or_class_name()`. |
+| `src/transaction/locator_sr.c:1975` | `HEAP_WITH_OOS_EXPAND` | Classname consistency check parses class records with `or_class_name()`. |
+| `src/transaction/locator_sr.c:2908` | `HEAP_WITH_OOS_EXPAND` | Fetch-all path ships raw records in `LC_COPYAREA`. |
+| `src/transaction/locator_sr.c:9152` | `HEAP_WITHOUT_OOS_EXPAND` | Index removal path decodes attributes to find the matching BTID/key. |
+| `src/transaction/locator_sr.c:9607` | `HEAP_WITHOUT_OOS_EXPAND` | Index consistency check decodes attributes and generates keys. |
+| `src/transaction/locator_sr.c:10062` | `HEAP_WITHOUT_OOS_EXPAND` | Index consistency check decodes attributes and generates keys. |
+| `src/transaction/locator_sr.c:10776` | `HEAP_WITH_OOS_EXPAND` | Class heap scan parses class records with `or_class_hfid()`. |
+| `src/transaction/locator_sr.c:11962` | `HEAP_WITHOUT_OOS_EXPAND` | Foreign-key validation generates keys through the attribute layer. |
+| `src/transaction/locator_sr.c:12117` | `HEAP_WITHOUT_OOS_EXPAND` | Locking branch only advances OID before refetching the locked record with OOS Expand. |
+| `src/transaction/locator_sr.c:12157` | `HEAP_WITH_OOS_EXPAND` | Unlocked fetch-all path ships raw records in `LC_COPYAREA`. |
 
-`src/query/parallel/px_scan/index/px_scan_index_leaf_slot_walker.cpp` 의 parallel non-covering index heap fetch 역시
-skip API 로 바꾸었다. heap record 를 가져온 뒤 `heap_attrinfo_read_dbvalues` 로 rest attribute 를 읽는 구조이기 때문이다.
+## Reviewer Checklist
 
-## Remarks
+- `HEAP_WITH_OOS_EXPAND` row: caller consumes raw `RECDES` bytes, or the function preserves a generic raw-record-safe default.
+- `HEAP_WITHOUT_OOS_EXPAND` row: an attribute-layer read follows before OOS values are interpreted.
+- Removed wrapper names do not remain in source.
+- Visible-version helpers only pass the enum policy through `HEAP_GET_CONTEXT`; they do not change unrelated MVCC behavior.
 
-가장 중요한 선택 기준은 `RECDES.data` 를 raw bytes 로 소비하는지 여부다. raw bytes 를 외부로 보내거나 다른 heap 에
-재삽입하거나 `OR_BUF` 로 직접 파싱하는 경로는 Expand 된 record 가 필요하다. attribute layer 를 통해 `DB_VALUE` 로 읽는
-경로는 OOS Resolve 가 이미 준비되어 있으므로 skip API 를 쓰는 편이 맞다.
+## Verification
 
-이 PR 은 API 기본값을 안전한 쪽으로 되돌리고, 비용을 아끼려는 경로를 명시적으로 표시한다. 따라서 새 호출 지점을 추가할 때
-`*_skip_oos_expand` 를 쓰려면 바로 뒤에서 `heap_attrinfo_read_dbvalues` 처럼 attribute-level OOS Resolve 를 수행한다는
-근거가 있어야 한다.
+- `git diff --check`
+- `just build`
 
-이 변경은 `OOS expansion is opt-in, and raw-record consumers are still easy to miss` 로 분류된 CI 회귀를 대상으로
-한다. 특히 load/unload/compact/copy-style shell test 처럼 unresolved OOS OID 를 raw record 로 받을 수 있는 영역이
-영향 범위다.
-
-### Test Plan
-
-- `git diff --check` 통과.
-- Debug build 와 OOS 관련 test target 실행 완료.
-- 23개 테스트가 모두 통과했고, 최종 SQL check 는 `TEST passed!` 를 출력했다.
+Result: build and install completed successfully.
