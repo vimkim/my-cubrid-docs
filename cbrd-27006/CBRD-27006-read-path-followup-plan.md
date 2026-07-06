@@ -1,5 +1,18 @@
 # CBRD-27006 Read-Path Follow-up Plan
 
+> **Status: IMPLEMENTED (2026-07-02, uncommitted working tree on
+> `CBRD-27006-oos-recdes-locality`).** Dispatch gating landed as
+> `heap_attrinfo_read_dbvalues_internal` (>=2 requested OOS values -> batched,
+> else scalar). Probe = `heap_attrvalue_oos_inline_ptr` on top of shared
+> `heap_attrvalue_get_vot_entry` + `heap_attrvalue_parse_oos_inline` helpers, so
+> the duplicated offset-switch/inline-header parsing (finding #3) was removed
+> rather than gated. The oos_file.cpp dedup that Step 4 deferred was also done
+> (`oos_read_chunk_in_page` + `oos_check_head_header` shared by `oos_read` and
+> `oos_read_many`) as part of a whole-PR minimization pass (product additions
+> 854 -> 738). Dispatch proven by SQL test
+> `OosSqlCrud.Cbrd27006ReadDispatchBatchesOnlyMultiOosProjections` via
+> `read_many_calls` counter; all 23 ctest suites pass.
+
 This handoff is for a new session continuing after the small Greptile cleanup
 commit on `CBRD-27006-oos-recdes-locality`.
 
