@@ -136,7 +136,7 @@ getter 3종이 정책 인자를 받게 되면서 전 호출부를 분류했다. 
 | `query_executor.c:13803` | get_object | WITHOUT | obj-fetch; `oRec` 소비는 `heap_attrinfo_read_dbvalues` 뿐. |
 | `locator_sr.c:2336` | get_object | **WITH** | `locator_lock_and_return_object`: recdes 를 `LC_COPYAREA` 로 클라이언트 전송 — raw bytes. base 대비 의도된 개선: client-fetch expansion gap (CBRD-26948) 일부 해소. 호출자 5곳 (`:2521`, `:2594`, `:3156`, `:3250`, `:11645`) 커버. |
 | `locator_sr.c:3961` | get_object | WITHOUT | recdes 인자 NULL; lock/존재 확인 전용. |
-| `compactdb_sr.c:215` | lock_and_get | **WITH** | old record 가 `locator_attribute_info_force` 재기록 경로로 흘러감; 보수적으로 raw-safe 유지. |
+| `compactdb_sr.c:215` | lock_and_get | WITHOUT | old record 는 `locator_attribute_info_force` → `locator_update_index` 로 흐르며, 소비는 attr-layer/OOS Resolve 기반이다. compactdb 의 heap page cleanup 과 무관하므로 record-level Expand 불필요. |
 | `locator_sr.c:4442` | lock_and_get | WITHOUT | `locator_check_primary_key_delete` (FK): CASCADE branch 는 `locator_delete_force` 로 재fetch; SET NULL branch 는 recdes 를 oldrecdes 로 `locator_attribute_info_force` 에 전달 = attr-layer. |
 | `locator_sr.c:4798` | lock_and_get | WITHOUT | `locator_check_primary_key_update` (FK SET NULL): `:4442` 와 동일한 attr-layer 소비. |
 | `locator_sr.c:7633` | lock_and_get | WITHOUT | `locator_attribute_info_force` last-committed-version retry; oldrecdes → attr-layer (`:7613` 과 동일 근거). |
@@ -171,9 +171,9 @@ getter 3종이 정책 인자를 받게 되면서 전 호출부를 분류했다. 
 |---|---|---|---|---|---|
 | `sp_code.cpp:90` | heap_get_visible_version | WITHOUT | unchanged | attr-layer (:128). SP code(자바 바이트코드)는 4KB 초과 가능 → 실제 perf 회복. | *done* |
 | `compactdb.c:565` | heap_get_visible_version | WITHOUT | unchanged | recdes=NULL, 참조 OID 존재 확인 전용. | *done* |
-| `compactdb.c:782` | heap_init_get_context (+ heap_get_last_version) | WITH | **flip (의도된 수정)** | SA compactdb 의 old record 가 OOS-blind raw 디코더로 감 — 이 PR 이 고치는 CBRD-26948 계열 stub 누출. | keep |
+| `compactdb.c:782` | heap_init_get_context (+ heap_get_last_version) | WITHOUT | unchanged | SA compactdb index update 의 old record 는 `locator_update_index` 에서 attr-layer/OOS Resolve 로 소비된다. caller-owned fixed buffer 에 record-level Expand 를 시도하면 불필요한 `oos_read`/`S_DOESNT_FIT` risk 만 생김. | *done* |
 | `compactdb_sr.c:109` | heap_get_visible_version | WITHOUT | unchanged | recdes=NULL, class 존재 확인 전용. | *done* |
-| `compactdb_sr.c:215` | locator_lock_and_get_object | WITH | **flip (의도된 수정)** | old record → `locator_attribute_info_force` 재기록 경로. 보수적으로 raw-safe 필요. | *done* (param threaded, WITH) |
+| `compactdb_sr.c:215` | locator_lock_and_get_object | WITHOUT | unchanged | old record → `locator_attribute_info_force` → `locator_update_index`; attr-layer/OOS Resolve 소비. compactdb heap cleanup 은 별도 physical page path 라 Expand 불필요. | *done* (param threaded, WITHOUT) |
 | `btree_load.c:3724` | heap_next | WITHOUT | unchanged | index build key gen, attr-layer. | keep |
 | `btree_load.c:5372` | visible-version fetch | WITHOUT | unchanged | online index build, filter/key attr-layer (:5392). | keep |
 | `btree_load.c:3417` | heap_next_1page | (WITHOUT inside) | unchanged | 병렬 index sort, attr-layer. | *done* |
@@ -222,7 +222,7 @@ getter 3종이 정책 인자를 받게 되면서 전 호출부를 분류했다. 
 | `locator_sr.c:13039` | heap_get_visible_version | WITH | rename | **`redistribute_partition_data`** — `locator_insert_force` 재삽입. census 필수. | keep |
 | `locator_sr.c:13328` | heap_init_get_context (getter 내부) | caller 정책 | unchanged | `locator_lock_and_get_object_with_evaluation` — 소비자 혼합 → caller 가 선언. | *done* (param threaded) |
 | `locator_sr.c:13463` | heap_init_get_context (getter 내부) | caller 정책 | unchanged | `locator_get_object` — 소비자 혼합 (LC_COPYAREA 전송 vs attr-layer) → caller 가 선언. | *done* (param threaded) |
-| `locator_sr.c:13564` | heap_init_get_context (getter 내부) | caller 정책 | unchanged | `locator_lock_and_get_object` — compactdb_sr 재기록(raw-safe 필요) + attr-layer 소비자 혼합 → caller 가 선언. | *done* (param threaded) |
+| `locator_sr.c:13564` | heap_init_get_context (getter 내부) | caller 정책 | unchanged | `locator_lock_and_get_object` — copyarea/raw-byte 소비자와 attr-layer 소비자가 혼합되어 caller 가 선언한다. compactdb_sr 는 attr-layer 소비자로 WITHOUT. | *done* (param threaded) |
 | `locator_sr.c:13800` | heap_get_visible_version | WITH | rename | `locator_mvcc_reeval_scan_filters` — PEEK + attr-layer. census 정리 후보 (이연). | keep |
 | `lock_manager.c:5644` | heap_get_visible_version | WITHOUT | unchanged | 소비는 `or_mvcc_get_header()` (:5647) — header 는 variable area 밖이라 expand 불필요. | *done* |
 
@@ -233,9 +233,9 @@ getter 3종이 정책 인자를 받게 되면서 전 호출부를 분류했다. 
    바뀌었던 곳: locator getter 3곳(→ 정책 인자 스레딩), `locator_attribute_info_force`, `heap_next_1page`(병렬 스캔!),
    scanrange 13곳, serial ×3, sp_code, load_server_loader, lock_manager, 존재-확인 3곳(recdes NULL). 모두 WITHOUT.
    수용된 잔여 leftover 는 `heap_first` 경유 3곳뿐 (위 고정 정책 표 참고; CBRD-26847 이연 결정).
-3. **의도된 flip (이 PR 의 목적)** — `compactdb.c:782`, `compactdb_sr.c:215`(getter 경유 WITH),
-   `locator_sr.c:2336`(`locator_lock_and_return_object` → `LC_COPYAREA`): base 에서 OOS stub 이
-   raw 디코더/클라이언트로 새던 CBRD-26948 계열 누출을 고침.
+3. **의도된 flip (이 PR 의 목적)** — `locator_sr.c:2336`(`locator_lock_and_return_object` → `LC_COPYAREA`):
+   base 에서 OOS stub 이 raw 디코더/클라이언트로 새던 CBRD-26948 계열 누출을 고침. compactdb old-record
+   fetches 는 attr-layer/index 소비라 WITHOUT 으로 정정함.
 4. **census(CBRD-26847) 필수 Expand 5곳 모두 WITH 유지 확인** — `xlocator_lock_and_fetch_all`,
    `redistribute_partition_data`, `catcls_delete_instance`, `catcls_update_instance`, `catcls_update_class_stats`.
 5. base 에 있던 `TODO (CBRD-26847)` audit 주석 — enum 정의부(`heap_file.h:361`)에 재부착 완료 (`6f6519c25`).
