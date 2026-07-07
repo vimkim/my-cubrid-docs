@@ -1,5 +1,12 @@
 # CBRD-27029 Expand Raw Records
 
+> **STALE (2026-07-07)**: 이 문서는 old head `846b5c7cf` (census flip 포함) 기준이다. PR #7416 은
+> 이후 **zero-behavior-change** 로 minimize 되어 현재 head 는 `309753de6` (단일 커밋, 모든 flip revert) 이다.
+> 아래 Caller Review Table 의 *done* flip 들 (`:3496/:5811/:5954/:6592/:6956/:13800`, scanrange boundary,
+> `locator_sr.c:2336` WITH 등) 은 **더 이상 PR 내용이 아니며** CBRD-26847 audit / 별도 이슈 소관이다.
+> 경위는 `CBRD-27029-minimize-plan.md`, 현재 head 의 greptile 대응은 `CBRD-27029-greptile-analysis.md`,
+> 단건 fetch flip 계획은 `../cbrd-26948/CBRD-26948-single-fetch-oos-expand-flip-plan.md` 참고.
+
 Review anchor: **PR #7416** (base `feat/oos`), HEAD `846b5c7cf` (`[CBRD-27029] Stop expanding attr-layer fetches inherited as WITH and scanrange boundaries`).
 
 PR 는 6개 커밋으로 진화했다. 최종 상태만이 계약이다:
