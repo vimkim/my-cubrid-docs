@@ -44,7 +44,10 @@ OOS 도입 시점부터 존재한 gap 이고, 코드 TODO + CBRD-26948 로 이�
 여기서 flip 하지 않는 것이 의도된 결정이다. 실제 노출 경로는 CS-mode 의 object-level fetch
 (workspace 객체 접근, trigger/method 평가 등)로 제한적이지만, 값 오염 가능성 자체는 인정한다.
 
-**Disposition**: 코드 변경 없음. thread 에 TODO/CBRD-26948 근거로 reply 후 follow-up 에서 해소.
+**Disposition**: ~~코드 변경 없음. thread 에 TODO/CBRD-26948 근거로 reply 후 follow-up 에서 해소.~~
+**UPDATE (2026-07-07)**: flip plan 의 안전성 검증 완료 후 사용자 결정으로 **이 PR 에서 flip 수행** —
+커밋 `f59e9b8b2`, `HEAP_WITH_OOS_EXPAND` + 근거 주석. 상세는 fix plan 및
+`~/gh/my-cubrid-docs/cbrd-26948/CBRD-26948-single-fetch-oos-expand-flip-plan.md` (EXECUTED) 참고.
 
 ---
 

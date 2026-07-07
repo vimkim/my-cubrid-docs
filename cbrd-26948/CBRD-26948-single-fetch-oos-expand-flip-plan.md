@@ -1,14 +1,21 @@
 # 단건 client fetch OOS Expand flip — future agent 실행 계획서
 
+> **✅ EXECUTED (2026-07-07, 작성 당일)**: 이 계획은 PR #7416 커밋 `f59e9b8b2`
+> (`[CBRD-27029] Expand OOS for single-object client fetch`) 로 **실행 완료**됐다.
+> 작성 직후 사용자가 "flip 이 mechanical 하게 안전하면 그냥 이 PR 에서 진행" 으로 재결정 —
+> §4 안전성 근거와 §5 체크리스트(5-caller S_DOESNT_FIT 처리)를 전수 검증한 뒤 in-PR flip.
+> build-test 23/23 + SQL regression 통과. §6 의 CS-mode gdb 재현/검증 (1,2번) 은 미수행 —
+> **CBRD-26948 본체 진행 시 이 문서의 §6 레시피로 E2E 검증할 것.**
+>
 > **이 문서의 목적**: `locator_lock_and_return_object()` 의 fetch 정책을
 > `HEAP_WITHOUT_OOS_EXPAND` → `HEAP_WITH_OOS_EXPAND` 로 flip 하는 작업을,
 > 나중에 컨텍스트 없이 투입되는 agent 가 **정확하게** 수행할 수 있도록 필요한 모든
 > 근거·함정·검증 절차를 기록한다.
 >
-> **이슈 소속**: 사용자 결정 (2026-07-07) — PR #7416 (CBRD-27029) 과는 **별도 이슈**로 수행한다.
-> 이 gap 은 CBRD-26948 issue 문서의 ANALYSIS 항목("단일 객체 fetch `xlocator_fetch` →
-> 워크스페이스 디코드 `tf_disk_to_mem` 도 같은 노출 가능성")에 기등재되어 있으므로 우선 이 디렉터리에
-> 둔다. 전용 CBRD 번호가 발급되면 문서를 그쪽으로 이동할 것.
+> **이슈 소속**: ~~사용자 결정 (2026-07-07) — PR #7416 (CBRD-27029) 과는 **별도 이슈**로 수행한다.~~
+> (같은 날 재결정으로 PR #7416 에서 수행됨.) 이 gap 은 CBRD-26948 issue 문서의 ANALYSIS 항목
+> ("단일 객체 fetch `xlocator_fetch` → 워크스페이스 디코드 `tf_disk_to_mem` 도 같은 노출 가능성")에
+> 기등재되어 있다 — 남은 몫은 E2E 검증과 unloaddb/compactdb 본체다.
 
 ## 1. 문제 정의
 

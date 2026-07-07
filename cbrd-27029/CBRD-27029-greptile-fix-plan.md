@@ -3,11 +3,15 @@
 - **PR**: #7416, HEAD `309753de6`, base `feat/oos`
 - **입력**: `CBRD-27029-greptile-analysis.md` (4건 분석: P1 ×1 pre-existing gap, P2 ×3 correctness false positive)
 - **날짜**: 2026-07-07
-- **상태**: DECIDED (2026-07-07 grilling) — **Option A 확정 + P1 flip 은 별도 이슈로 분리.**
-  P1 의 실제 flip 작업은 future agent 용 실행 계획서
-  `~/gh/my-cubrid-docs/cbrd-26948/CBRD-26948-single-fetch-oos-expand-flip-plan.md` 로 문서화.
-  (grilling Q1 의 1차 답변은 "이 PR 에서 flip" 이었으나, 직후 사용자 지시로
-  "별도 이슈 + future plan md" 로 최종 변경.)
+- **상태**: EXECUTED (2026-07-07) — **P1 flip 을 이 PR 에서 수행** (최종 결정, 같은 날 두 차례 번복 끝).
+  결정 근거: flip plan 의 안전성 검증(keep_recdes_buffer → S_DOESNT_FIT grow-retry)이 코드로 확인되어
+  "mechanical 하게 안전하면 이 PR 에서 진행" 지시. 커밋 `f59e9b8b2`
+  (`[CBRD-27029] Expand OOS for single-object client fetch`, **not pushed**).
+  flip 전 체크리스트 (5-caller S_DOESNT_FIT 처리) 전수 검증 + build-test 23/23 통과.
+  P2 ×3 은 여전히 코드 변경 없음 (CBRD-26847 소관). Greptile P1 thread 에 처리 완료 댓글 게시.
+  이전 경위: grilling Q1 1차 답변 "이 PR 에서 flip" → "별도 이슈 + future plan md"
+  (`~/gh/my-cubrid-docs/cbrd-26948/CBRD-26948-single-fetch-oos-expand-flip-plan.md`) → 계획서의
+  안전성 근거 확인 후 in-PR flip 으로 최종 확정. 해당 계획서는 EXECUTED 로 마킹.
 
 ## 결정 프레임
 
