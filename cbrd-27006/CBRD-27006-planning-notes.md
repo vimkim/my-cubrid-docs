@@ -35,7 +35,7 @@ Placement rules:
 
 `oos_read_many()` 는 requested head OIDs를 `(volid, pageid)` 기준으로 group한다. Page groups are processed in first-seen request order, and slots inside a page are processed in request order.
 
-Record-level Expand uses this in `heap_oos_read_blobs()`. Lazy Resolve uses it only from `heap_attrinfo_read_dbvalues()` and `heap_attrinfo_read_dbvalues_without_oid()` when the recdes has OOS. Single-attribute helper paths stay scalar in phase 1.
+Record-level Expand uses this in `heap_oos_read_values()`. Lazy Resolve uses it only from `heap_attrinfo_read_dbvalues()` and `heap_attrinfo_read_dbvalues_without_oid()` when the recdes has OOS. Single-attribute helper paths stay scalar in phase 1.
 
 ## Remarks
 

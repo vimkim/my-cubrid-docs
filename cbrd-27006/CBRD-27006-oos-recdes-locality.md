@@ -274,9 +274,20 @@ Code-by-code:
 | `1570-1593` | Head-chunk validation moved into `oos_check_head_header()`. |
 | `1599-1637` | `oos_read()` now calls `oos_read_within_page()` and then `oos_check_head_header()`, preserving scalar multi-chunk continuation and final length check. |
 
-## `heap_file.c` New Helpers And Refactors
+## Read-Path Helpers And Refactors (`heap_file.c` + `heap_oos.cpp`)
 
-### `heap_attrvalue_get_vot_entry()`
+> Relocation note: to keep the `heap_file.c` diff small and reviewable, the OOS-specific
+> read helpers now live in `src/storage/heap_oos.cpp`:
+> `heap_oos_parse_inline_ref()`, `heap_oos_attr_inline_ptr()`, and
+> `heap_oos_read_dbvalues_grouped()`. `heap_file.c` keeps the generic
+> `heap_recdes_get_var_offset_entry()`, the scalar `heap_attrvalue_read()` /
+> `heap_attrvalue_transform_to_dbvalue()` (now exported via `heap_file.h` so the grouped
+> reader can drive them), and the `heap_attrinfo_read_dbvalues_internal()` dispatch. The
+> moved functions were relocated verbatim, so the behavior descriptions below still hold;
+> the absolute line numbers in the per-function tables reflect the earlier single-file
+> layout and are approximate after the move.
+
+### `heap_recdes_get_var_offset_entry()`
 
 Location: `src/storage/heap_file.c:10482-10511`
 
@@ -296,16 +307,18 @@ Line-by-line behavior:
 Used by:
 
 - `heap_attrvalue_point_variable()` at `10655`.
-- `heap_attrvalue_oos_inline_ptr()` at `10854`.
+- `heap_oos_attr_inline_ptr()` at `10854`.
 
-### `heap_attrvalue_parse_oos_inline()`
+### `heap_oos_parse_inline_ref()`
 
-Location: `src/storage/heap_file.c:10513-10553`
+Location: `src/storage/heap_oos.cpp:419-462` (declared in `heap_oos.hpp`)
 
 Purpose:
 
-- Validate and parse the inline OOS header `[OID | full_length]`.
-- Share the scalar read and batched read parsing rule.
+- Validate and parse the inline OOS reference `[OID | full_length]`.
+- Single source of truth for the inline format — shared by scalar lazy Resolve, grouped lazy
+  Resolve, and record-level Expand (`heap_oos_read_values()`), so the parse rule and the
+  `DB_MAX_STRING_LENGTH` bound cannot drift between paths.
 
 Line-by-line behavior:
 
@@ -315,17 +328,18 @@ Line-by-line behavior:
 | `10531-10532` | Build an `OR_BUF` over the inline pointer up to `recdes->data + recdes->length`. |
 | `10534-10539` | Case 1: reject inline region shorter than `OR_OID_SIZE + OR_BIGINT_SIZE`. |
 | `10541-10542` | Read OID and bigint length. |
-| `10544-10550` | Cases 2 and 3: reject read failure, NULL OID, non-positive length, and length above `INT_MAX`. |
+| `10544-10550` | Cases 2 and 3: reject read failure, NULL OID, non-positive length, and length above `DB_MAX_STRING_LENGTH` (the max a stored value can hold; both the lazy Resolve and the Expand path share this bound). |
 | `10552` | Return `NO_ERROR` with parsed OID and length. |
 
 Used by:
 
-- Scalar `heap_attrvalue_read_oos_inline()` at `10578-10585`.
-- Batched lazy Resolve preparation at `10902-10912`.
+- Scalar `heap_attrvalue_read_oos_inline()` (heap_file.c).
+- Grouped lazy Resolve `heap_oos_read_dbvalues_grouped()`.
+- Record-level Expand `heap_oos_read_values()`.
 
-### `heap_attrvalue_oos_inline_ptr()`
+### `heap_oos_attr_inline_ptr()`
 
-Location: `src/storage/heap_file.c:10828-10860`
+Location: `src/storage/heap_oos.cpp:464-496` (declared in `heap_oos.hpp`)
 
 Purpose:
 
@@ -345,9 +359,9 @@ Important detail:
 
 - Invalid offset size is treated as "not batched" by the probe. If the scalar path later reads the attribute, it reports `ER_GENERIC_ERROR` from `heap_attrvalue_point_variable()`. This preserves scalar error ownership.
 
-### `heap_attrinfo_read_dbvalues_batched_oos()`
+### `heap_oos_read_dbvalues_grouped()`
 
-Location: `src/storage/heap_file.c:10862-10944`
+Location: `src/storage/heap_oos.cpp:498-580` (declared in `heap_oos.hpp`)
 
 Purpose:
 
@@ -388,7 +402,7 @@ Line-by-line behavior:
 | Lines | Behavior |
 |---|---|
 | `10959` | Only consider batching when the record exists and has `OR_MVCC_FLAG_HAS_OOS`. |
-| `10961-10969` | Count requested OOS attributes with `heap_attrvalue_oos_inline_ptr()`, stopping after 2. |
+| `10961-10969` | Count requested OOS attributes with `heap_oos_attr_inline_ptr()`, stopping after 2. |
 | `10970-10973` | If at least two requested OOS attrs are present, call the batched wrapper. |
 | `10976-10983` | Otherwise run the existing scalar per-attribute `heap_attrvalue_read()` loop. |
 | `10985` | Return success after scalar loop. |
@@ -409,7 +423,7 @@ Changed code:
 
 | Lines | Refactor |
 |---|---|
-| `10578-10585` | Inline OOS header parsing moved to `heap_attrvalue_parse_oos_inline()`. |
+| `10578-10585` | Inline OOS header parsing moved to `heap_oos_parse_inline_ref()`. |
 | `10587-10603` | Existing stack scratch / heap allocation behavior remains. Values up to `IO_MAX_PAGE_SIZE` still avoid heap allocation. |
 | `10605-10618` | Existing scalar `oos_read()` call and error cleanup remain. |
 | `10620-10622` | Length and ownership outputs are set as before. |
@@ -422,7 +436,7 @@ Changed code:
 
 | Lines | Refactor |
 |---|---|
-| `10655-10660` | Duplicated offset-size switch replaced by `heap_attrvalue_get_vot_entry()`. |
+| `10655-10660` | Duplicated offset-size switch replaced by `heap_recdes_get_var_offset_entry()`. |
 | `10662-10667` | OOS flag check remains; OOS values route to scalar inline read. |
 | `10668-10682` | Non-OOS variable length handling remains unchanged. |
 
@@ -491,30 +505,32 @@ Important detail:
 
 ## `heap_oos.cpp` Refactor
 
-### `heap_oos_read_blobs()`
+### `heap_oos_read_values()`
 
-Location: `src/storage/heap_oos.cpp:122-185`
+Location: `src/storage/heap_oos.cpp` (formerly `heap_oos_read_blobs()`; renamed to avoid confusion with the BLOB type)
 
 Purpose:
 
 - Record-level OOS Expand needs every OOS value in the recdes.
-- It now prepares all OOS read requests first and calls `oos_read_many()` once.
+- It prepares all OOS read requests first and calls `oos_read_many()` once.
 
-Line-by-line behavior:
+Behavior:
 
-| Lines | Behavior |
-|---|---|
-| `131` | New request vector for grouped OOS reads. |
-| `133-138` | Iterate variable attributes and skip non-OOS VOT entries. |
-| `140-147` | Validate inline OOS slot stays inside the source recdes. |
-| `149-168` | Parse inline OID and full length, preserving existing corruption checks. |
-| `171` | Resize per-attribute `state->oos_blobs[i]` destination buffer. |
-| `172-175` | Append one `oos_read_request`. |
-| `178-185` | If requests exist, resolve all of them through `oos_read_many()`. |
+- Iterate variable attributes and skip non-OOS VOT entries.
+- For each OOS entry, reuse `heap_oos_parse_inline_ref()` to validate and parse the inline
+  `[OID | full_length]` reference — the same single parser (and the same
+  `DB_MAX_STRING_LENGTH` bound) the lazy Resolve path uses. On corruption it returns
+  `ER_HEAP_OOS_BAD_INLINE_HEADER`, which Expand propagates (no `assert_release`: consistent
+  with the read-path contract from CBRD-26769 that a corrupt inline reference surfaces as a
+  returnable error, not a crash).
+- Resize the per-attribute `state->oos_blobs[i]` destination buffer and append one
+  `oos_read_request`.
+- If any requests exist, resolve all of them through `oos_read_many()`.
 
 Effect:
 
 - Expand still materializes every OOS value, but head pages shared by those OOS OIDs are fixed once per group instead of once per OID.
+- Inline-reference parsing is no longer duplicated: Expand, scalar lazy Resolve, and grouped Resolve all go through `heap_oos_parse_inline_ref()`.
 
 ## `locator_sr.c` Refactor
 
@@ -590,16 +606,16 @@ Review points:
 ### Lazy Resolve path
 
 ```text
-heap_attrinfo_read_dbvalues()
-  -> heap_attrinfo_read_dbvalues_internal()
-       -> count requested inline-OOS attrs up to 2
+heap_attrinfo_read_dbvalues()                         [heap_file.c]
+  -> heap_attrinfo_read_dbvalues_internal()           [heap_file.c]
+       -> count requested inline-OOS attrs up to 2 (heap_oos_attr_inline_ptr)
        -> 0 or 1 OOS request: scalar heap_attrvalue_read()
-       -> >=2 OOS requests: heap_attrinfo_read_dbvalues_batched_oos()
-            -> parse inline OOS headers
+       -> >=2 OOS requests: heap_oos_read_dbvalues_grouped()   [heap_oos.cpp]
+            -> parse inline OOS refs (heap_oos_parse_inline_ref)
             -> allocate destination buffers
             -> oos_read_many()
-            -> transform OOS raws to DB_VALUE
-            -> scalar-read non-OOS attrs
+            -> transform OOS raws to DB_VALUE (heap_attrvalue_transform_to_dbvalue)
+            -> scalar-read non-OOS attrs (heap_attrvalue_read)
             -> free raw buffers
 ```
 
@@ -613,7 +629,7 @@ Review points:
 
 ```text
 heap_record_replace_oos_oids()
-  -> heap_oos_read_blobs()
+  -> heap_oos_read_values()
        -> collect every OOS inline header
        -> oos_read_many()
        -> rebuild expanded record

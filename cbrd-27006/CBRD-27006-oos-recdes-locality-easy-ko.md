@@ -415,7 +415,7 @@ Record-level Expand는 heap record 안의 모든 OOS OID를 실제 값으로 바
 이 방식은 raw recdes bytes를 소비하는 코드에서 필요하다. 예를 들어 client로 record bytes를
 보내거나, record를 통째로 다시 넣거나, byte 단위로 비교하는 경로가 여기에 해당한다.
 
-이 경우에는 어차피 모든 OOS 값을 읽어야 하므로 `heap_oos_read_blobs()` 가 OOS read request를
+이 경우에는 어차피 모든 OOS 값을 읽어야 하므로 `heap_oos_read_values()` 가 OOS read request를
 모아서 `oos_read_many()` 를 호출한다.
 
 ## OOS insert publication 책임이 왜 바뀌었나
@@ -542,13 +542,19 @@ OID를 publish한다.
 
 ### lazy Resolve path
 
-파일: `src/storage/heap_file.c`
+OOS read helper는 `heap_file.c` diff를 줄이기 위해 `heap_oos.cpp` 로 옮겼다.
 
-- `heap_attrvalue_get_vot_entry()`
-- `heap_attrvalue_parse_oos_inline()`
-- `heap_attrvalue_oos_inline_ptr()`
-- `heap_attrinfo_read_dbvalues_batched_oos()`
-- `heap_attrinfo_read_dbvalues_internal()`
+파일: `src/storage/heap_file.c` (heap-core wiring)
+
+- `heap_recdes_get_var_offset_entry()` — generic VOT entry reader (`heap_file.h` 로 export)
+- `heap_attrvalue_read()` / `heap_attrvalue_transform_to_dbvalue()` — scalar reader (`heap_file.h` 로 export)
+- `heap_attrinfo_read_dbvalues_internal()` — dispatch (2개 이상이면 grouped path)
+
+파일: `src/storage/heap_oos.cpp` (OOS-specific, `heap_oos.hpp` 로 export)
+
+- `heap_oos_parse_inline_ref()`
+- `heap_oos_attr_inline_ptr()`
+- `heap_oos_read_dbvalues_grouped()`
 
 여기서 requested OOS 값이 2개 이상일 때만 batch read로 가는 dispatch rule을 볼 수 있다.
 
@@ -556,7 +562,7 @@ OID를 publish한다.
 
 파일: `src/storage/heap_oos.cpp`
 
-- `heap_oos_read_blobs()`
+- `heap_oos_read_values()`
 
 여기서 record 안의 모든 OOS 값을 모아 `oos_read_many()` 로 읽는다.
 
@@ -630,12 +636,12 @@ heap_attrinfo_insert_to_oos()
 lazy read 흐름:
 
 ```text
-heap_attrinfo_read_dbvalues()
-  -> heap_attrinfo_read_dbvalues_internal()
-       -> 요청된 OOS 값 개수 확인
+heap_attrinfo_read_dbvalues()                     [heap_file.c]
+  -> heap_attrinfo_read_dbvalues_internal()        [heap_file.c]
+       -> 요청된 OOS 값 개수 확인 (heap_oos_attr_inline_ptr)
        -> 0개 또는 1개면 scalar path
-       -> 2개 이상이면 heap_attrinfo_read_dbvalues_batched_oos()
-            -> oos_read_request[] 생성
+       -> 2개 이상이면 heap_oos_read_dbvalues_grouped()   [heap_oos.cpp]
+            -> oos_read_request[] 생성 (heap_oos_parse_inline_ref)
             -> oos_read_many()
             -> raw OOS bytes를 DB_VALUE로 변환
             -> non-OOS 값은 scalar read
@@ -645,7 +651,7 @@ record-level Expand 흐름:
 
 ```text
 heap_record_replace_oos_oids()
-  -> heap_oos_read_blobs()
+  -> heap_oos_read_values()
        -> record 안의 모든 OOS inline slot을 찾음
        -> oos_read_many()
        -> 실제 값들로 expanded record 재구성
