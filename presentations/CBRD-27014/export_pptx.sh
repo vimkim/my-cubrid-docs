@@ -16,7 +16,7 @@ cd "$(dirname "$0")"
 } > pptA-oos-review.html
 
 SHELL_BIN=$(ls ~/.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell | head -1)
-SLIDES=21
+SLIDES=$(grep -c '<section class="slide' deck-content.html)
 SHOTS=$(mktemp -d)
 trap 'rm -rf "$SHOTS"' EXIT
 
@@ -35,6 +35,8 @@ from pptx.util import Inches
 
 shots_dir, out_path = sys.argv[1], sys.argv[2]
 prs = Presentation()
+# 16:9
+
 prs.slide_width = Inches(13.333)
 prs.slide_height = Inches(7.5)
 for png in sorted(glob.glob(f"{shots_dir}/s*.png")):

@@ -158,9 +158,9 @@ body.flat .slide{animation:none!important}
   <h1 class="t">오늘의 흐름 — 설계를 검증받는 자리</h1>
   <div class="body">
     <div class="agenda" style="margin-bottom:18px">
-      <div class="card"><span class="num">01–05</span><div><h3>문제와 설계 선택</h3><p>column-level 분리 문제 정의 · PG/MySQL survey · slotted OOS file 을 선택한 이유</p></div></div>
-      <div class="card"><span class="num">06–11</span><div><h3>저장 구조와 메커니즘</h3><p>record layout · 16B OOS OID · largest-first demotion · read path · multi-chunk</p></div></div>
-      <div class="card"><span class="num">12–15</span><div><h3>생명주기와 운영 경로</h3><p>UPDATE/DELETE · WAL/recovery/replication 불변식 · vacuum 연동 · 3-tier bestspace</p></div></div>
+      <div class="card"><span class="num">01–05</span><div><h3>문제와 설계 선택</h3><p>column-level 분리 문제 정의 · PG/MySQL survey · slotted OOS file 을 선택한 이유 · 저장 구조</p></div></div>
+      <div class="card"><span class="num">06–09</span><div><h3>쓰기와 읽기</h3><p>largest-first demotion · 한계 조건 · Expand/Resolve read path · multi-chunk chain</p></div></div>
+      <div class="card"><span class="num">10–15</span><div><h3>생명주기와 운영</h3><p>UPDATE · DELETE · 동시성 시나리오 · 불변식 · vacuum 의 두 갈래 정리 · bestspace</p></div></div>
       <div class="card"><span class="num">16–18</span><div><h3>성능 — 모델과 측정 계획</h3><p>어디서 이기고 어디서 지는가 · 측정 시나리오 S1–S7 · 결과는 측정 후 공유 (TBD)</p></div></div>
     </div>
     <div class="qbox">
@@ -195,7 +195,7 @@ body.flat .slide{animation:none!important}
         </div>
         <div class="card">
           <h3>문제를 다시 정의하면</h3>
-          <p>기존 overflow (<code>REC_BIGONE</code>) 는 "record 가 한 페이지를 넘는가" 를 다룬다. OOS 가 다루는 것은 다르다 — <b>"자주 안 읽는 큰 컬럼이 자주 읽는 작은 컬럼의 I/O 를 오염시키는가"</b>, 즉 <b>column-level 분리</b> 문제다.</p>
+          <p>기존 overflow (<code>REC_BIGONE</code>) 는 "record 가 한 페이지를 넘으면 어디에 담을까" 를 다룬다. OOS 가 다루는 문제는 다르다 — <b>자주 읽는 작은 컬럼과 가끔 읽는 큰 컬럼이 한 덩어리로 묶여 있어서, 작은 컬럼만 읽어도 큰 컬럼의 I/O 비용을 함께 내야 한다</b>는 것이다. 그래서 해법도 record 가 아니라 <b>컬럼 단위 분리</b>다.</p>
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:16px">
@@ -209,7 +209,7 @@ body.flat .slide{animation:none!important}
             <tr><td>발동 조건</td><td>record &gt; page</td><td>record &gt; page/4</td></tr>
           </table>
         </div>
-        <div class="callout"><b>핵심 질문</b> — 큰 값은 어차피 어딘가에 저장해야 한다. 문제는 그것이 <b>작은 컬럼의 read path 위에 놓여 있는가</b> 이다.</div>
+        <div class="callout"><b>한 줄 요약</b> — 큰 값이 문제가 아니다. 큰 값이 <b>작은 컬럼을 읽으러 가는 길목에 놓여 있는 것</b>이 문제다. OOS 는 그 길목에서 큰 값을 치워준다.</div>
       </div>
     </div>
   </div>
@@ -306,7 +306,7 @@ body.flat .slide{animation:none!important}
         </div>
       </div>
       <div class="kv" style="align-self:start">
-        <div class="row"><b>파일 매핑</b><span>heap file : OOS file = <b>1 : 1</b>. OOS <code>VFID</code> 는 heap header page 에 저장 · 최초 필요 시 lazy create</span></div>
+        <div class="row"><b>파일 매핑</b><span>heap file : OOS file = <b>1 : 1</b>. OOS <code>VFID</code> 는 heap header page 에 저장 · 처음 필요할 때 만든다 (lazy create)</span></div>
         <div class="row"><b>페이지 구조</b><span>slotted page — 한 페이지에 여러 OOS record. 기존 overflow (1 record/page) 대비 내부 단편화 감소</span></div>
         <div class="row"><b>Inline token</b><span>heap 에는 <b>16B OOS OID</b> 만 남는다 (위치 + 전체 길이)</span></div>
         <div class="row"><b>참조 불변식</b><span>하나의 OOS OID 는 <b>정확히 하나의 record</b> 가 참조 — 공유 없음</span></div>
@@ -367,7 +367,7 @@ body.flat .slide{animation:none!important}
       <div class="flow">
         <div class="step"><span class="n">1</span><b>Record gate</b> — record &gt; <code>DB_PAGESIZE/4</code> (16K 페이지에서 4KB)? 아니면 <b>전부 inline</b>, OOS 없음</div>
         <div class="gap">↓</div>
-        <div class="step"><span class="n">2</span><b>후보 선정</b> — variable column 이면서 값 &gt; <code>OR_OOS_INLINE_SIZE</code> (16B). 16B stub 보다 커야 내보내는 의미가 있다</div>
+        <div class="step"><span class="n">2</span><b>후보 선정</b> — variable column 이면서 값 &gt; <code>OR_OOS_INLINE_SIZE</code> (16B). 자리에 남는 포인터가 16B 이므로, 그보다 작은 값은 내보내도 오히려 손해라 제외한다</div>
         <div class="gap">↓</div>
         <div class="step"><span class="n">3</span><b>Largest-first 루프</b> — 크기 내림차순으로 하나씩 demote, record 가 gate 이하로 내려오는 순간 <b>break</b>. 작은 후보는 inline 에 남는다</div>
       </div>
@@ -394,29 +394,27 @@ body.flat .slide{animation:none!important}
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
 </section>
 
-<!-- 9 · BIGONE REJECTION ================================================= -->
+<!-- 9 · LIMIT CASE ======================================================= -->
 <section class="slide">
   <div class="eyebrow">Write Path · 07</div>
-  <h1 class="t">경계 조건 — OOS + bigone 공존은 거부한다</h1>
-  <p class="sub">demotion 은 variable column 만 옮긴다. 거대한 고정 컬럼이 남으면? — CBRD-26937</p>
+  <h1 class="t">한계 조건 — 다 내보내도 한 페이지에 안 들어가면?</h1>
+  <p class="sub">demotion 이 옮길 수 있는 것은 variable column 뿐이다. 큰 고정 길이 컬럼만 남으면 더 내보낼 것이 없다.</p>
   <div class="body">
-    <div class="card" style="margin-bottom:18px">
-      <h3>demotion 이후 record 크기에 따른 3개 구간</h3>
-      <div style="display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--line);text-align:center;font-size:13.5px;font-weight:700">
-        <div style="flex:1;background:var(--ok-soft);padding:14px 10px">≤ 4KB<br><small style="font-weight:600;color:var(--muted)">inline 저장 — OOS 불필요 또는 demotion 으로 해소</small></div>
-        <div style="flex:1.4;background:var(--heap-soft);padding:14px 10px">4KB ～ ≈16KB<br><small style="font-weight:600;color:var(--muted)">OOS 후 inline 잔여 — <b>정상 저장</b> (gate 초과여도 OK)</small></div>
-        <div style="flex:1;background:var(--risk-soft);padding:14px 10px">&gt; ≈16KB + has_oos<br><small style="font-weight:600;color:var(--risk)">거부 — ER_HEAP_OOS_OVERPASS_MAXOBJ_SIZE (−1375)</small></div>
+    <div class="cols c2" style="margin-bottom:16px">
+      <div class="card">
+        <h3>언제 생기나</h3>
+        <p style="margin-bottom:8px">예: 큰 고정 길이 <code>BIT(n)</code> 컬럼이 여러 개인 테이블. variable column 을 전부 OOS 로 보내도 record 가 한 페이지 (≈16KB) 를 넘는다 — 실제 QA 에서 만난 사례다.</p>
+        <p>이때 OOS OID 를 품은 record 를 여러 페이지짜리 bigone (overflow record) 으로 다시 쪼개는 조합은 <b>지원하지 않는다</b> (CBRD-26937).</p>
+      </div>
+      <div class="card">
+        <h3>현재 동작 — 명확한 에러로 거부</h3>
+        <p style="margin-bottom:8px">저장하지 않고 <code>ER_HEAP_OOS_OVERPASS_MAXOBJ_SIZE</code> (−1375) 를 돌려준다. 거부 시점은 demotion <b>후</b> · OOS 기록 <b>전</b>이라, 실패해도 orphan OOS record 가 남지 않는다.</p>
+        <p style="font-size:13px;color:var(--muted)">일반 (OOS 없는) bigone record 는 기존과 동일하게 허용된다.</p>
       </div>
     </div>
     <div class="cols c2">
-      <div class="card">
-        <h3>왜 생기는 조합인가</h3>
-        <p>거대한 고정 길이 <code>BIT(n)</code>/<code>CHAR</code> 컬럼, 또는 16B 이하 variable 컬럼 다수 — demotion 으로도 record 가 bigone 문턱 (<code>heap_Maxslotted_reclength</code> ≈ 16KB) 을 넘게 남을 수 있다. OOS OID 를 품은 record 가 다시 <code>REC_BIGONE</code> overflow 로 가는 조합은 <b>지원하지 않기로 결정</b>했다.</p>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="callout ok"><b>거부 시점이 핵심</b> — demotion <b>후</b>, OOS record 기록 <b>전</b> (<code>heap_attrinfo_transform_to_disk_internal</code>). 거부되어도 <b>orphan OOS record 가 생기지 않는다</b>.</div>
-        <div class="callout"><b>범위</b> — <code>has_oos</code> 일 때만 발동. 일반 (non-OOS) bigone record 는 기존과 동일하게 허용.</div>
-      </div>
+      <div class="callout ok"><b>PostgreSQL 도 같은 방침이다</b> — TOAST 로 다 내보내고도 row 가 페이지에 안 들어가면 "row is too big" <b>사용자 에러</b>로 처리한다. 스키마가 페이지 한계를 넘는 것은 저장 엔진이 아니라 사용자가 고칠 문제라는 입장 — 우리도 같은 선을 긋는다.</div>
+      <div class="callout"><b>미래 방향</b> — 장기적으로는 heap 의 여러 페이지짜리 bigone (multipage overflow) 자체를 없애고, 큰 데이터는 <b>OOS 로 일원화</b>하는 방향을 검토한다. 그때가 되면 이 한계 조건 자체가 사라진다.</div>
     </div>
   </div>
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
@@ -438,11 +436,11 @@ body.flat .slide{animation:none!important}
       </div>
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="card">
-          <h3>Call-site census 결과 (CBRD-26847)</h3>
-          <p style="margin-bottom:8px">Expand 를 쓰던 <b>~22개 call site 를 전수 조사</b> — 진짜 Expand 가 필요한 곳은 <b>5곳</b> 뿐 (<code>xlocator_lock_and_fetch_all</code>, partition 재분배, catalog 3곳). 나머지 ~17곳은 cheap fetch 로 환원 대상.</p>
-          <p style="font-size:12.5px;color:var(--muted)">→ "Expand 는 명시적 opt-in" 이 규칙이 됐다 (ADR).</p>
+          <h3>실제로 Expand 가 필요한 곳은 얼마나 될까 (CBRD-26847)</h3>
+          <p style="margin-bottom:8px">Expand 를 쓰던 <b>call site 22곳을 전수 조사</b>해 보니, 정말 필요한 곳은 <b>5곳</b>뿐이었다 (<code>xlocator_lock_and_fetch_all</code>, partition 재분배, catalog 3곳). 나머지 17곳은 가벼운 fetch 로 되돌릴 수 있다.</p>
+          <p style="font-size:12.5px;color:var(--muted)">→ 그래서 "Expand 는 필요한 곳만 명시적으로 켠다 (opt-in)" 가 규칙이 됐다.</p>
         </div>
-        <div class="callout risk"><b>거울상 위험</b> — raw-byte 경로가 Expand 를 <b>빠뜨리면</b> OOS OID 가 그대로 밖으로 샌다. 확인된 사례: <code>xlocator_fetch_all</code> → unloaddb/compactdb (<b>CBRD-26948 · OPEN</b>).</div>
+        <div class="callout risk"><b>반대 방향의 위험도 있다</b> — raw-byte 를 소비하는 경로가 Expand 를 <b>빠뜨리면</b>, 값 대신 OOS OID 가 그대로 밖으로 새어 나간다. 확인된 사례: <code>xlocator_fetch_all</code> → unloaddb/compactdb (<b>CBRD-26948 · OPEN</b>).</div>
       </div>
     </div>
   </div>
@@ -453,76 +451,181 @@ body.flat .slide{animation:none!important}
 <section class="slide">
   <div class="eyebrow">Mechanism · 09</div>
   <h1 class="t">한 페이지를 넘는 값 — multi-chunk chain</h1>
+  <p class="sub">예: 50KB 값 하나. OOS page (16KB) 에 다 안 들어가므로 chunk 셋으로 나눠, 연결 리스트로 잇는다.</p>
   <div class="body">
-    <div class="cols c2b">
-      <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="card">
-          <h3>Chunk record 구조</h3>
+    <div class="card" style="margin-bottom:16px;padding:20px 22px">
+      <div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:800;margin-bottom:10px">
+        <span style="color:var(--ok)">READ — 머리부터 정방향 ① → ② → ③</span>
+        <span style="color:var(--oos)">INSERT — 꼬리부터 역순 ③ → ② → ①</span>
+      </div>
+      <div style="display:flex;align-items:stretch;gap:0">
+        <div style="flex:0 0 168px;display:flex;flex-direction:column;justify-content:center">
+          <div class="rec">
+            <div class="cell hdr" style="flex:0 0 44px">…</div>
+            <div class="cell oid" style="flex:1">OOS OID<small>→ chunk ①</small></div>
+          </div>
+          <p style="font-size:11.5px;color:var(--muted);text-align:center;margin-top:6px"><span class="tag heap">HEAP</span> record 는 머리만 안다</p>
+        </div>
+        <div style="flex:0 0 40px;display:flex;align-items:center;justify-content:center;color:var(--oos);font-size:22px;font-weight:800">→</div>
+        <div style="flex:1;border:1.5px solid var(--oos-line);background:var(--oos-soft);border-radius:10px;padding:12px 14px">
+          <p style="font-size:11.5px;font-weight:800;color:#A9713C;margin-bottom:4px">chunk ① — 값의 머리</p>
           <div class="rec" style="border-color:var(--oos-line)">
-            <div class="cell oid" style="flex:0 0 190px">next OOS OID<small>8B · 마지막이면 NULL</small></div>
-            <div class="cell oid" style="flex:1;background:#F6DFC8">chunk data<small>≤ max_chunk_size</small></div>
+            <div class="cell oid" style="flex:0 0 96px">next<small>→ ②</small></div>
+            <div class="cell oid" style="flex:1;background:#F6DFC8">data ≈16KB</div>
           </div>
         </div>
-        <div class="card">
-          <h3>왜 역순 삽입인가</h3>
-          <p>chunk_1 을 쓰려면 chunk_2 의 OID 가 <b>이미 존재</b>해야 한다. 그래서 꼬리부터 삽입한다 — 포인터 갱신을 위한 재방문이 없다.</p>
+        <div style="flex:0 0 40px;display:flex;align-items:center;justify-content:center;color:var(--oos);font-size:22px;font-weight:800">→</div>
+        <div style="flex:1;border:1.5px solid var(--oos-line);background:var(--oos-soft);border-radius:10px;padding:12px 14px">
+          <p style="font-size:11.5px;font-weight:800;color:#A9713C;margin-bottom:4px">chunk ② — 가운데</p>
+          <div class="rec" style="border-color:var(--oos-line)">
+            <div class="cell oid" style="flex:0 0 96px">next<small>→ ③</small></div>
+            <div class="cell oid" style="flex:1;background:#F6DFC8">data ≈16KB</div>
+          </div>
         </div>
+        <div style="flex:0 0 40px;display:flex;align-items:center;justify-content:center;color:var(--oos);font-size:22px;font-weight:800">→</div>
+        <div style="flex:1;border:1.5px solid var(--oos-line);background:var(--oos-soft);border-radius:10px;padding:12px 14px">
+          <p style="font-size:11.5px;font-weight:800;color:#A9713C;margin-bottom:4px">chunk ③ — 꼬리</p>
+          <div class="rec" style="border-color:var(--oos-line)">
+            <div class="cell oid" style="flex:0 0 96px">next<small>NULL</small></div>
+            <div class="cell oid" style="flex:1;background:#F6DFC8">data ≈18KB</div>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-top:10px">각 chunk 는 OOS page 의 평범한 slot 하나다 — 서로 다른 페이지에 흩어져 있어도 된다.</p>
+    </div>
+    <div class="cols c2">
+      <div class="card">
+        <h3>Chunk record 의 생김새</h3>
+        <p><b>next OOS OID (8B)</b> + <b>chunk data</b>. 마지막 chunk 만 next 가 NULL 이다.</p>
       </div>
       <div class="card">
-        <h3>50KB 값의 저장과 읽기</h3>
-        <div class="flow">
-          <div class="step" style="border-left:4px solid var(--oos)"><b>INSERT (역순)</b> — ③ chunk_3 (꼬리, next=NULL) → ② chunk_2 (next=③) → ① chunk_1 (머리, next=②)</div>
-          <div class="gap">↓</div>
-          <div class="step"><span class="tag heap">HEAP</span> record 의 OOS OID 는 <b>chunk_1</b> 을 가리킨다</div>
-          <div class="gap">↓</div>
-          <div class="step" style="border-left:4px solid var(--ok)"><b>READ (정방향)</b> — chunk_1 → chunk_2 → chunk_3 순회하며 값 재조립</div>
-        </div>
+        <h3>왜 꼬리부터 넣나</h3>
+        <p>chunk ① 을 쓰는 순간 ② 의 주소가 <b>이미 있어야</b> 하기 때문이다. 꼬리부터 넣으면 앞 chunk 를 다시 방문해 포인터를 고칠 일이 없다.</p>
       </div>
     </div>
   </div>
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
 </section>
 
-<!-- 12 · UPDATE/DELETE =================================================== -->
+<!-- 12 · UPDATE ========================================================== -->
 <section class="slide">
   <div class="eyebrow">Lifecycle · 10</div>
-  <h1 class="t">UPDATE / DELETE — 옛 OOS 는 vacuum 까지 산다</h1>
+  <h1 class="t">UPDATE — heap 을 고쳐 쓰고, 이전 버전은 undo 로</h1>
+  <p class="sub">CUBRID 의 논리적 UPDATE 는 물리적으로는 heap record 를 고쳐 쓰는 것이다. 이전 버전은 LSA record 사본으로 undo log 에 남는다 — OOS OID 를 품은 그대로.</p>
   <div class="body">
-    <div class="cols c2">
-      <div class="flow">
-        <div class="step"><span class="n">1</span><b>UPDATE</b> — 새 record 의 OOS 후보를 <code>oos_insert</code> → <b>항상 새 OOS OID</b> (값이 안 바뀌어도 — M1 설계)</div>
-        <div class="gap">↓</div>
-        <div class="step"><span class="n">2</span>이전 record 는 <b>OOS OID 를 품은 그대로</b> undo log 에 보존 — resolved 값이 아니다 (undo 비대화 방지)</div>
-        <div class="gap">↓</div>
-        <div class="step"><span class="n">3</span>옛 OOS record 는 <b>계속 생존</b> — MVCC snapshot 독자가 <code>prev_version_lsa</code> → undo recdes → <code>oos_read</code> 로 옛 버전을 재구성</div>
-        <div class="gap">↓</div>
-        <div class="step"><span class="n">4</span><b>vacuum</b> 이 죽은 heap 버전을 정리할 때 <code>oos_delete</code> 로 옛 OOS 도 함께 회수</div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="card">
-          <h3>DELETE 는 OOS 를 건드리지 않는다</h3>
-          <ul>
-            <li>heap record 에 delete MVCC id 만 기록</li>
-            <li>OOS OID 는 그대로 — <b>resolve 도 삭제도 하지 않음</b></li>
-            <li>이유: MVCC 가시성 + record 를 in-place 로 펼치면 16KB 페이지 한계를 넘는다</li>
-          </ul>
+    <div class="cols c2a">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="card" style="padding:14px 18px">
+          <h3><span class="tag heap">HEAP</span> 현재 버전 v2</h3>
+          <div class="rec">
+            <div class="cell hdr" style="flex:0 0 116px">Record HDR</div>
+            <div class="cell" style="flex:0 0 64px">id</div>
+            <div class="cell" style="flex:0 0 84px">small</div>
+            <div class="cell oid" style="flex:1">OOS OID₂ <small>신규</small></div>
+          </div>
         </div>
-        <div class="callout ok"><b>불변식 재확인</b> — 하나의 OOS OID 는 정확히 하나의 record (heap page 또는 undo log) 가 참조한다. UPDATE 가 항상 새 OID 를 만들기에 <b>old/new OID 는 서로소</b> — vacuum forward-walk 이 이 성질에 의존한다.</div>
-        <div class="callout"><b>Rollback</b> — undo 로 이전 record 복원 → 그 안의 OOS OID 들은 여전히 살아있는 OOS record 를 가리킨다. 별도 OOS 복원 작업이 필요 없다.</div>
+        <div class="dn" style="color:var(--muted);font-size:14px">↓ prev_version_lsa</div>
+        <div class="card" style="padding:14px 18px;opacity:.85">
+          <h3><span class="tag warn">UNDO LOG</span> 이전 버전 v1 — LSA record 사본</h3>
+          <div class="rec" style="opacity:.8">
+            <div class="cell hdr" style="flex:0 0 116px">Record HDR</div>
+            <div class="cell" style="flex:0 0 64px">id</div>
+            <div class="cell" style="flex:0 0 84px">small</div>
+            <div class="cell oid" style="flex:1">OOS OID₁ <small>그대로 보존</small></div>
+          </div>
+        </div>
+        <div class="card" style="padding:14px 18px">
+          <h3><span class="tag oos">OOS FILE</span> 두 값이 나란히 산다</h3>
+          <div style="display:flex;gap:10px">
+            <div class="oosbox" style="flex:1">OID₁ · v1 값<small>옛 독자를 위해 생존</small></div>
+            <div class="oosbox" style="flex:1">OID₂ · v2 값<small>새로 insert</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="flow" style="align-self:center">
+        <div class="step"><span class="n">1</span>새 값을 <code>oos_insert</code> → <b>OID₂</b>. 값이 안 바뀐 OOS 컬럼도 <b>항상 새 OID</b> 를 받는다 (M1 설계 — 재사용은 future)</div>
+        <div class="gap">↓</div>
+        <div class="step"><span class="n">2</span>heap record 를 v2 로 고쳐 쓴다 — inline 에는 OID₂ 만 남는다</div>
+        <div class="gap">↓</div>
+        <div class="step"><span class="n">3</span>v1 은 <b>LSA record 사본</b>으로 undo log 에 — 값을 풀어서 넣지 않고 <b>OID₁ 을 그대로</b> 담는다 (undo 가 커지지 않는다)</div>
+        <div class="gap">↓</div>
+        <div class="callout ok" style="font-size:13px"><b>Rollback 도 공짜</b> — v1 을 복원하면 그 안의 OID₁ 은 여전히 살아있는 OOS record 를 가리킨다. 죽은 버전과 OID 는 나중에 vacuum 이 함께 회수한다.</div>
       </div>
     </div>
   </div>
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
 </section>
 
-<!-- 13 · WAL/RECOVERY ==================================================== -->
+<!-- 13 · DELETE ========================================================== -->
 <section class="slide">
-  <div class="eyebrow">Durability · 11</div>
+  <div class="eyebrow">Lifecycle · 11</div>
+  <h1 class="t">DELETE — 지운 표시만 남긴다, OOS 는 그대로</h1>
+  <p class="sub">논리적 DELETE 도 물리적으로는 heap record 수정이다 — delete MVCC id 를 새길 뿐이고, UPDATE 와 달리 <b>undo 에 LSA record 사본을 남기지 않는다</b>.</p>
+  <div class="body">
+    <div class="cols c2a">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card" style="padding:14px 18px">
+          <h3><span class="tag heap">HEAP</span> 지워진 record — 그 자리에 그대로</h3>
+          <div class="rec">
+            <div class="cell hdr" style="flex:0 0 150px">Record HDR<small>delete id = T42</small></div>
+            <div class="cell" style="flex:0 0 64px">id</div>
+            <div class="cell" style="flex:0 0 84px">small</div>
+            <div class="cell oid" style="flex:1">OOS OID₁ <small>그대로</small></div>
+          </div>
+        </div>
+        <div class="card" style="padding:14px 18px">
+          <h3><span class="tag oos">OOS FILE</span> 값도 그대로</h3>
+          <div style="display:flex;gap:10px;align-items:center">
+            <div class="oosbox" style="flex:1">OID₁ · 값 생존<small>옛 snapshot 이 아직 읽는다</small></div>
+            <div style="flex:1;font-size:13px;color:var(--muted);line-height:1.5">resolve 도, 삭제도 하지 않는다 — 나중에 vacuum 이 heap record 를 정리할 때 함께 지운다</div>
+          </div>
+        </div>
+        <div class="callout"><b>왜 바로 못 지우나</b> — 옛 snapshot 독자가 아직 이 record 를 볼 수 있고 (MVCC), record 안의 OID 를 그 자리에서 값으로 펼치면 16KB 페이지 한계를 넘기 때문이다.</div>
+      </div>
+      <div class="flow" style="align-self:center">
+        <div class="step"><span class="n">1</span>heap record 에 <b>delete MVCC id</b> 를 기록 — 이것이 삭제의 전부다</div>
+        <div class="gap">↓</div>
+        <div class="step"><span class="n">2</span>OOS 는 건드리지 않는다 — OID 도, 값도 그대로</div>
+        <div class="gap">↓</div>
+        <div class="step"><span class="n">3</span>undo 사본이 없으므로, vacuum 은 <b>이 heap record 자체에서</b> OOS OID 를 추출해 회수한다 (vacuum 장에서 계속)</div>
+        <div class="gap">↓</div>
+        <div class="callout ok" style="font-size:13px"><b>불변식</b> — 하나의 OOS OID 는 정확히 하나의 record 가 참조한다. 지워진 record 도 자기 OID 의 유일한 주인이다.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
+</section>
+
+<!-- 14 · MVCC SCENARIO =================================================== -->
+<section class="slide">
+  <div class="eyebrow">Lifecycle · 12</div>
+  <h1 class="t">동시성 — 한 OOS 컬럼을 세 트랜잭션이 만나면</h1>
+  <p class="sub">REPEATABLE READ. A 는 처음부터 열려 있는 독자, B·C 는 차례로 UPDATE 하고 commit 한다.</p>
+  <div class="body">
+    <table class="tbl" style="font-size:14px;margin-bottom:16px">
+      <tr><th style="width:52px">시점</th><th style="width:120px">트랜잭션</th><th>동작</th><th style="width:340px">big_col 은 어떤 OOS record 를 가리키나</th></tr>
+      <tr><td>t1</td><td><span class="tag heap">A</span></td><td>big_col 읽기</td><td><b>OID₁</b> (v1)</td></tr>
+      <tr><td>t2</td><td><span class="tag oos">B</span></td><td>big_col <b>포함</b> UPDATE → commit</td><td>새 값 → <b>새 OID₂</b> (v2)</td></tr>
+      <tr><td>t3</td><td><span class="tag oos">C</span></td><td>small_col <b>만</b> UPDATE → commit</td><td>big_col 값은 그대로인데도 → <b>새 OID₃</b> (v3)</td></tr>
+      <tr><td>t4</td><td><span class="tag heap">A</span></td><td>big_col 다시 읽기</td><td>여전히 <b>OID₁</b> — snapshot 이 undo 체인 (<code>prev_version_lsa</code>) 을 따라 <code>oos_read</code></td></tr>
+      <tr><td>t5</td><td><span class="tag ok">새 독자</span></td><td>big_col 읽기</td><td><b>OID₃</b> (v3, 최신 commit)</td></tr>
+    </table>
+    <div class="cols c2">
+      <div class="callout"><b>이 순간 OOS file 에는 OID₁ · OID₂ · OID₃ 가 공존한다.</b> A 같은 독자가 살아있는 한 옛 OID 를 지울 수 없다 — 그래서 OOS 정리는 트랜잭션이 아니라 <b>vacuum 의 몫</b>이다.</div>
+      <div class="callout risk"><b>C 가 보여주는 비용</b> — 바꾸지 않은 OOS 컬럼도 UPDATE 마다 새 OID 를 만든다 (M1). 같은 값의 OID 재사용은 future 과제다 → 성능 시나리오 S5 가 이 비용을 측정한다.</div>
+    </div>
+  </div>
+  <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
+</section>
+
+<!-- 15 · WAL/RECOVERY ==================================================== -->
+<section class="slide">
+  <div class="eyebrow">Durability · 13</div>
   <h1 class="t">WAL · Recovery · Replication — 지켜야 할 6개 불변식</h1>
   <div class="body">
     <div class="cols c3" style="flex:0 0 auto;margin-bottom:14px">
       <div class="card"><h3><span class="tag heap">1</span> WAL 완전성</h3><p>모든 OOS insert/delete 는 로깅된다. crash + recovery 후 OOS 상태 = 마지막 commit 상태</p></div>
-      <div class="card"><h3><span class="tag heap">2</span> Undo 정확성</h3><p>undo 는 이전 record 를 <b>OOS OID 포함 그대로</b> 보존 — resolved 값을 저장하면 OOS 의 목적 자체가 무너진다</p></div>
+      <div class="card"><h3><span class="tag heap">2</span> Undo 정확성</h3><p>undo 는 이전 record 를 <b>OOS OID 포함 그대로</b> 보존한다 — 값을 풀어서 담으면 undo 가 커져 OOS 의 목적 자체가 무너진다</p></div>
       <div class="card"><h3><span class="tag heap">3</span> Orphan 금지</h3><p>UPDATE 의 옛 OOS 는 vacuum 이 죽은 heap 버전과 <b>함께</b> 회수 — 영구 잔존 없음</p></div>
       <div class="card"><h3><span class="tag heap">4</span> DELETE 안전성</h3><p>삭제된 record 도 OOS OID 유지 — vacuum 전까지 옛 snapshot 이 접근 가능</p></div>
       <div class="card"><h3><span class="tag heap">5</span> Replication 충분성</h3><p>repl log 는 slave 가 <b>스스로 <code>oos_insert</code></b> 할 수 있는 데이터를 담는다</p></div>
@@ -533,39 +636,44 @@ body.flat .slide{animation:none!important}
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
 </section>
 
-<!-- 14 · VACUUM ========================================================== -->
+<!-- 16 · VACUUM ========================================================== -->
 <section class="slide">
-  <div class="eyebrow">Operations · 12</div>
-  <h1 class="t">Vacuum 연동 — 세 갈래 정리 경로 <span class="tag ok">merged · CBRD-26668</span></h1>
+  <div class="eyebrow">Operations · 14</div>
+  <h1 class="t">Vacuum — stale OOS 를 지우는 두 갈래 <span class="tag ok">merged · CBRD-26668</span></h1>
+  <p class="sub">OOS 는 insert 와 delete 뿐이다 (update 없음). 죽은 버전이 <b>어디에 남아 있느냐</b>에 따라, vacuum 이 OOS OID 를 찾으러 가는 곳이 다르다.</p>
   <div class="body">
-    <div class="cols c3" style="flex:0 0 auto;margin-bottom:16px">
+    <div class="cols c2" style="margin-bottom:16px">
       <div class="card">
-        <h3>① Forward-walk</h3>
-        <p style="margin-bottom:8px">UPDATE/DELETE 의 <b>undo recdes 에서 옛 OOS OID 를 직접 추출</b>해 <code>oos_delete</code> (불변식 2 에 의존)</p>
-        <p style="font-size:12.5px;color:var(--muted)">독립 sysop — 중간 실패 시 자기 삭제분만 롤백</p>
+        <h3><span class="tag warn">①</span> UPDATE 가 남긴 stale — undo log 에서 찾는다</h3>
+        <div class="flow" style="margin-top:8px">
+          <div class="step">죽은 옛 버전 (v1) 은 <b>undo log 의 LSA record</b> 에 있다</div>
+          <div class="gap">↓</div>
+          <div class="step">LSA record 를 읽어 <b>OOS OID 추출</b> → <code>oos_delete</code></div>
+        </div>
+        <p style="font-size:12.5px;color:var(--muted);margin-top:8px">구현: forward-walk — <b>독립 sysop</b> 이라 중간 실패 시 자기 삭제분만 롤백된다</p>
       </div>
       <div class="card">
-        <h3>② Within-sysop</h3>
-        <p style="margin-bottom:8px">지금 vacuum 중인 heap record 가 참조하는 OOS 를 <b>호출자의 sysop 안에서</b> 삭제</p>
-        <p style="font-size:12.5px;color:var(--muted)">heap 회수와 OOS 회수가 원자적으로 묶인다</p>
-      </div>
-      <div class="card">
-        <h3>③ Eager (SA_MODE)</h3>
-        <p style="margin-bottom:8px">단독 프로세스 모드엔 vacuum 이 없다 — UPDATE 시점에 <b>동기 삭제</b></p>
-        <p style="font-size:12.5px;color:var(--muted)">old ∩ new OID 비교로 post-image 가 참조하는 것은 보존</p>
+        <h3><span class="tag heap">②</span> DELETE 가 남긴 stale — heap record 에서 찾는다</h3>
+        <div class="flow" style="margin-top:8px">
+          <div class="step">DELETE 는 undo 사본을 남기지 않는다 — OID 는 <b>지워진 heap record 자신</b>에 있다</div>
+          <div class="gap">↓</div>
+          <div class="step">heap slot 을 회수하면서 <b>같은 sysop 안에서</b> OID 추출 → <code>oos_delete</code></div>
+        </div>
+        <p style="font-size:12.5px;color:var(--muted);margin-top:8px">구현: within-sysop — heap 회수와 OOS 회수가 원자적으로 묶인다</p>
       </div>
     </div>
-    <div class="cols c2">
-      <div class="callout"><b>Record 까지, page 는 아직</b> — vacuum 은 OOS <b>slot</b> 을 비우지만 빈 페이지 dealloc 은 미구현 (<code>oos_remove_page</code> 호출자 없음 · CBRD-26786 proposed). 빈 공간은 bestspace 재활용으로 흡수한다.</div>
-      <div class="callout ok"><b>Crash 안전성</b> — chunk 삭제 각각이 sysop 내에서 로깅 → 중간 crash 에도 heap 회수와 OOS 상태가 원자적으로 복원.</div>
+    <div class="cols c3">
+      <div class="callout" style="font-size:12.5px"><b>③ SA_MODE 예외</b> — 단독 프로세스 모드엔 vacuum 이 없어, UPDATE 시점에 동기 삭제한다 (old∩new OID 비교로 아직 쓰이는 것은 보존).</div>
+      <div class="callout" style="font-size:12.5px"><b>Record 까지, page 는 아직</b> — slot 은 비우지만 빈 페이지 반납은 미구현 (CBRD-26786). 빈 공간은 bestspace 가 재활용한다.</div>
+      <div class="callout ok" style="font-size:12.5px"><b>Crash 안전</b> — chunk 삭제마다 sysop 내 로깅 → 중간 crash 에도 heap 과 OOS 가 원자적으로 복원된다.</div>
     </div>
   </div>
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
 </section>
 
-<!-- 15 · BESTSPACE ======================================================= -->
+<!-- 17 · BESTSPACE ======================================================= -->
 <section class="slide">
-  <div class="eyebrow">Operations · 13</div>
+  <div class="eyebrow">Operations · 15</div>
   <h1 class="t">3-Tier Bestspace — 빈 공간을 다시 쓰게 만들기 <span class="tag ok">CBRD-26658</span></h1>
   <p class="sub">M1 의 "마지막 삽입 페이지 1개" 캐시를 heap 의 15년+ 검증된 bestspace 구조로 교체 — hotspot 과 낭비를 동시에 완화.</p>
   <div class="body">
@@ -583,9 +691,9 @@ body.flat .slide{animation:none!important}
         <div class="card">
           <h3>설계 성질</h3>
           <ul>
-            <li>hint 는 <b>non-logged</b> — crash 후 sync scan 이 스스로 재발견 (self-healing)</li>
-            <li>후보 페이지는 <b>zero-wait conditional latch</b> — 다중 INSERT 간 deadlock 회피</li>
-            <li>delete/rollback redo 가 stale cache entry 를 즉시 evict</li>
+            <li>hint 는 로그를 남기지 않는다 (non-logged) — crash 로 날아가도 sync scan 이 <b>스스로 다시 찾아낸다</b></li>
+            <li>후보 페이지는 기다리지 않는 latch (zero-wait conditional) 로 잡는다 — 여러 INSERT 가 얽혀도 deadlock 이 없다</li>
+            <li>delete/rollback 이 일어나면 낡은 cache 항목을 그 자리에서 지운다</li>
           </ul>
         </div>
         <div class="callout risk"><b>확인된 결함 (수정 예정)</b> — fit-check 가 <code>+sizeof(SPAGE_SLOT)</code> 을 과다 예약해 들어갈 페이지를 거절 → 불필요한 새 페이지 할당 (delete/재삽입 반복에서 6→26 페이지 증식 관찰). heap 계약과 동일하게 raw length 비교로 수정.</div>
@@ -596,9 +704,9 @@ body.flat .slide{animation:none!important}
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
 </section>
 
-<!-- 16 · PERF MODEL ====================================================== -->
+<!-- 18 · PERF MODEL ====================================================== -->
 <section class="slide">
-  <div class="eyebrow">Performance · 14</div>
+  <div class="eyebrow">Performance · 16</div>
   <h1 class="t">성능 모델 — 어디서 이기고, 어디서 지는가</h1>
   <div class="body">
     <div class="cols c2">
@@ -621,9 +729,9 @@ body.flat .slide{animation:none!important}
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
 </section>
 
-<!-- 17 · PERF SCENARIOS ================================================== -->
+<!-- 19 · PERF SCENARIOS ================================================== -->
 <section class="slide">
-  <div class="eyebrow">Performance · 15</div>
+  <div class="eyebrow">Performance · 17</div>
   <h1 class="t">측정 시나리오 S1–S7 — 가치와 비용을 모두 드러내기</h1>
   <div class="body">
     <div class="cols c2a">
@@ -648,9 +756,9 @@ body.flat .slide{animation:none!important}
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
 </section>
 
-<!-- 18 · PERF RESULTS (TBD) ============================================== -->
+<!-- 20 · PERF RESULTS (TBD) ============================================== -->
 <section class="slide">
-  <div class="eyebrow">Performance · 16</div>
+  <div class="eyebrow">Performance · 18</div>
   <h1 class="t">측정 결과 — 수집 중 <span class="tag tbd">TBD</span></h1>
   <p class="sub">아래 표는 자리표시자다 — 실측 후 수치를 채워 업데이트한다. 오늘은 시나리오 설계의 타당성을 검토받는 것이 목적.</p>
   <div class="body">
@@ -669,9 +777,9 @@ body.flat .slide{animation:none!important}
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
 </section>
 
-<!-- 19 · RISKS =========================================================== -->
+<!-- 21 · RISKS =========================================================== -->
 <section class="slide">
-  <div class="eyebrow">Risks · 17</div>
+  <div class="eyebrow">Risks · 19</div>
   <h1 class="t">해결해야 머지할 수 있는 것들 — 정직한 리스크 목록</h1>
   <div class="body">
     <div class="cols c3">
@@ -696,9 +804,9 @@ body.flat .slide{animation:none!important}
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
 </section>
 
-<!-- 20 · STATUS ========================================================== -->
+<!-- 22 · STATUS ========================================================== -->
 <section class="slide">
-  <div class="eyebrow">Status · 18</div>
+  <div class="eyebrow">Status · 20</div>
   <h1 class="t">현재 위치 — M1 완료, M2 진행 중</h1>
   <div class="body">
     <div class="cols c3">
@@ -738,7 +846,7 @@ body.flat .slide{animation:none!important}
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
 </section>
 
-<!-- 21 · ASK ============================================================= -->
+<!-- 23 · ASK ============================================================= -->
 <section class="slide s-dark">
   <div class="eyebrow">Discussion</div>
   <h1 class="t" style="color:#F2F6FC">여쭙고 싶은 것들</h1>
