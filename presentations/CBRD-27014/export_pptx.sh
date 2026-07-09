@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
-# Regenerate pptA-oos-review.pptx from pptA-oos-review.html.
+# Regenerate pptA-oos-review.html (from deck-content.html) and pptA-oos-review.pptx.
 # Renders each slide (?flat=1&slide=N) at 2x with Playwright's cached headless
 # Chromium, then assembles a 16:9 PPTX (one full-bleed image per slide).
-# Usage: bash export_pptx.sh
+# Usage: bash export_pptx.sh  (or: just pptx)
 set -euo pipefail
 cd "$(dirname "$0")"
+
+{
+  printf '%s\n' '<!doctype html>' '<html lang="ko">' '<head>' \
+    '<meta charset="utf-8">' \
+    '<meta name="viewport" content="width=device-width, initial-scale=1">' \
+    '</head>' '<body>'
+  cat deck-content.html
+  printf '</body>\n</html>\n'
+} > pptA-oos-review.html
 
 SHELL_BIN=$(ls ~/.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell | head -1)
 SLIDES=21

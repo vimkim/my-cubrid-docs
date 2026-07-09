@@ -1,0 +1,15 @@
+# CBRD-27014 · PPT A (OOS 기술 리뷰) deliverables
+#
+# Edit deck-content.html (source of truth), then run `just pptx`.
+# pptA-oos-review.html and pptA-oos-review.pptx are generated from it.
+
+default:
+    @just --list
+
+# Rebuild pptA-oos-review.html from deck-content.html and regenerate the PPTX
+pptx:
+    bash export_pptx.sh
+
+# Open the HTML deck in the default browser (arrow keys / click to navigate)
+open:
+    xdg-open pptA-oos-review.html
