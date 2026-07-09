@@ -241,37 +241,22 @@ body.flat .slide{animation:none!important}
 <!-- 5 · DESIGN CHOICE ==================================================== -->
 <section class="slide">
   <div class="eyebrow">Design Choice · 03</div>
-  <h1 class="t">왜 "전용 OOS file + slotted page" 인가</h1>
+  <h1 class="t">왜 TOAST table 이 아니라 "전용 OOS file + 물리 OOS OID" 인가</h1>
+  <p class="sub">기존 overflow 확장안은 1 record/page 구조의 내부 단편화 때문에 초기에 제외했다. 실질 후보는 둘 — PG 식 TOAST table 이냐, 전용 파일이냐.</p>
   <div class="body">
-    <div class="cols c3" style="flex:0 0 auto;margin-bottom:16px">
-      <div class="card" style="opacity:.75">
-        <h3>A — TOAST 식 별도 테이블</h3>
-        <ul>
-          <li>일반 relation 재사용은 매력적</li>
-          <li>그러나 <b>다중 테이블 트랜잭션 동기화</b>가 새로 필요</li>
-          <li>catalog/스키마 결합도 증가</li>
-        </ul>
-      </div>
-      <div class="card" style="opacity:.75">
-        <h3>B — 기존 overflow 확장</h3>
-        <ul>
-          <li>record 단위 한계 그대로</li>
-          <li>1 record/page → <b>내부 단편화 큼</b></li>
-          <li>column 분리 효과 없음</li>
-        </ul>
-      </div>
-      <div class="card" style="border:2px solid var(--oos);background:#FFF9F3">
-        <h3><span class="tag oos">채택</span> C — 전용 OOS file</h3>
-        <ul>
-          <li><code>FILE_OOS</code> — heap file 과 <b>1 : 1</b></li>
-          <li><b>slotted page</b>: 페이지당 多 record → 단편화 감소</li>
-          <li>팀이 15년+ 다뤄온 저수준 heap/slotted API 재사용</li>
-        </ul>
-      </div>
-    </div>
+    <table class="tbl" style="font-size:13.5px;margin-bottom:14px">
+      <tr><th style="width:150px">비교 항목</th><th>PG 식 TOAST table</th><th style="background:#8A4A16">전용 OOS file (채택)</th></tr>
+      <tr><td>저장소</td><td>테이블마다 숨은 일반 relation (<code>pg_toast_N</code>) + 전용 index</td><td><code>FILE_OOS</code> — heap file 과 1:1 · slotted page</td></tr>
+      <tr class="hl"><td>값을 찾아가는 길</td><td>logical key (<code>chunk_id</code>) → <b>btree index 탐색</b> → chunk tuple</td><td><b>OOS OID (물리 locator)</b> → 페이지 직접 fix</td></tr>
+      <tr class="hl"><td>접근 비용</td><td>읽을 때마다 index 높이만큼 page 접근이 추가된다</td><td><b>역참조 1회 — btree 를 타지 않는다</b></td></tr>
+      <tr><td>카탈로그 / DDL</td><td>relation 생성·등록 — 권한·통계·DDL 경로와 결합</td><td>카탈로그 불변 — heap 내부 구현으로 캡슐화</td></tr>
+      <tr><td>Replication / HA</td><td>논리 key 라 replica 에서 그대로 유효</td><td>물리 주소라 replica 가 <b>자체 insert 로 OID 를 다시 달아야</b> 한다 (M1 에서 구현 — 값 동등성만 보장)</td></tr>
+      <tr><td>Vacuum / 정리</td><td>일반 테이블 vacuum 경로 재사용</td><td>vacuum 연동을 별도 구현 (M2 에서 완료)</td></tr>
+      <tr><td>관측 도구</td><td>일반 테이블이라 기존 도구가 공짜</td><td>전용 통계가 필요 (CBRD-26871 진행)</td></tr>
+    </table>
     <div class="cols c2">
-      <div class="callout ok"><b>얻는 것</b> — 기존 overflow 구현 패턴을 참조하는 낮은 구현 리스크, 트랜잭션/로깅 경로 재사용, 페이지 공간 효율.</div>
-      <div class="callout"><b>감수하는 것</b> — 한 OOS page 를 여러 트랜잭션이 동시에 수정할 때의 <b>page latch 경합</b> 가능성. (검토 질문 ①과 연결)</div>
+      <div class="callout ok"><b>결정의 축은 read 경로다</b> — 값 접근은 OOS 의 최빈 연산이다. key → btree → tuple 의 두 단계 대신, 물리 OOS OID 로 <b>한 번에</b> 도달하는 쪽이 구조적으로 빠르다고 판단했다.</div>
+      <div class="callout"><b>그 대가도 알고 치렀다</b> — replication/HA 는 OID 를 복사해 쓸 수 없어 replica 가 값을 다시 넣고 OID 를 바꿔 다는 구현이 필요했고 (M1 완료), 관측 도구도 직접 만들어야 한다 (진행 중). slotted page 공유의 latch 경합 가능성도 검토 질문 ①로 남겨둔 상태다.</div>
     </div>
   </div>
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
