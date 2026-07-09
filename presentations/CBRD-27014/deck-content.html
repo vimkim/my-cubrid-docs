@@ -178,7 +178,7 @@ body.flat .slide{animation:none!important}
         <div class="card">
           <h3>AS-IS — row 를 한 덩어리로</h3>
           <div class="rec" style="margin-bottom:10px">
-            <div class="cell hdr" style="flex:0 0 110px">MVCC HDR<small>+ VOT</small></div>
+            <div class="cell hdr" style="flex:0 0 110px">Record HDR<small>+ VOT</small></div>
             <div class="cell" style="flex:0 0 70px">id<small>4B</small></div>
             <div class="cell" style="flex:0 0 90px">name<small>40B</small></div>
             <div class="cell big" style="flex:1">big_text<small>4.5 KB</small></div>
@@ -280,7 +280,7 @@ body.flat .slide{animation:none!important}
         <div class="card">
           <h3><span class="tag heap">HEAP</span> record 는 가볍게</h3>
           <div class="rec">
-            <div class="cell hdr" style="flex:0 0 116px">MVCC HDR<small>HAS_OOS=1</small></div>
+            <div class="cell hdr" style="flex:0 0 116px">Record HDR<small>HAS_OOS=1</small></div>
             <div class="cell" style="flex:0 0 64px">id<small>4B</small></div>
             <div class="cell" style="flex:0 0 84px">name<small>40B</small></div>
             <div class="cell oid" style="flex:1">OOS OID<small>16B</small></div>
@@ -317,7 +317,7 @@ body.flat .slide{animation:none!important}
   <div class="body">
     <div class="card" style="margin-bottom:16px">
       <div class="rec">
-        <div class="cell hdr" style="flex:0 0 190px">MVCC Header<small>flags + txn ids</small></div>
+        <div class="cell hdr" style="flex:0 0 190px">Record Header<small>flags + txn ids</small></div>
         <div class="cell vot" style="flex:0 0 250px;background:#E9EFF9">Variable Offset Table<small>entry 당: offset 30b · RSV 1b · <b>IS_OOS 1b</b></small></div>
         <div class="cell" style="flex:0 0 130px">Fixed cols</div>
         <div class="cell" style="flex:1">Variable area<small>실제 값</small></div>
@@ -329,11 +329,11 @@ body.flat .slide{animation:none!important}
         <div class="card">
           <h3>두 단계 플래그</h3>
           <ul>
-            <li><b>Record-level</b> — MVCC header bit 3 <code>OR_MVCC_FLAG_HAS_OOS</code>: 이 record 에 OOS 컬럼이 하나라도 있는가</li>
+            <li><b>Record-level</b> — record header bit 3 <code>OR_MVCC_FLAG_HAS_OOS</code>: 이 record 에 OOS 컬럼이 하나라도 있는가</li>
             <li><b>Column-level</b> — VOT entry bit 0 <code>OR_VAR_BIT_OOS</code>: 이 offset 의 변수 영역이 값인가, 16B stub 인가</li>
           </ul>
         </div>
-        <div class="callout"><b>주의</b> — MVCC header 크기 lookup 은 하위 3비트만 사용 (<code>idx &amp; 0x07</code>). <b>HAS_OOS 는 header 크기에 영향을 주지 않는</b> 순수 metadata 비트다.</div>
+        <div class="callout"><b>주의</b> — record header 크기 lookup 은 하위 3비트만 사용 (<code>idx &amp; 0x07</code>). <b>HAS_OOS 는 header 크기에 영향을 주지 않는</b> 순수 metadata 비트다.</div>
       </div>
       <div class="card">
         <h3><span class="tag oos">OOS OID</span> 16 bytes 의 구성</h3>
@@ -360,7 +360,7 @@ body.flat .slide{animation:none!important}
       <div class="flow">
         <div class="step"><span class="n">1</span><b>Record gate</b> — record &gt; <code>DB_PAGESIZE/4</code> (16K 페이지에서 4KB)? 아니면 <b>전부 inline</b>, OOS 없음</div>
         <div class="gap">↓</div>
-        <div class="step"><span class="n">2</span><b>후보 선정</b> — variable column 이면서 값 &gt; <code>OR_OOS_INLINE_SIZE</code> (16B). 16B stub 보다 커야 내보내는 의미가 있다. <b>type-agnostic</b> — BLOB/CLOB locator 도 동일 규칙</div>
+        <div class="step"><span class="n">2</span><b>후보 선정</b> — variable column 이면서 값 &gt; <code>OR_OOS_INLINE_SIZE</code> (16B). 16B stub 보다 커야 내보내는 의미가 있다</div>
         <div class="gap">↓</div>
         <div class="step"><span class="n">3</span><b>Largest-first 루프</b> — 크기 내림차순으로 하나씩 demote, record 가 gate 이하로 내려오는 순간 <b>break</b>. 작은 후보는 inline 에 남는다</div>
       </div>
@@ -379,7 +379,7 @@ body.flat .slide{animation:none!important}
             <div class="cell big" style="flex:2">vc2 · 2KB <b>← inline 유지</b></div>
           </div>
         </div>
-        <div class="callout ok"><b>불변식</b> — 루프는 pre-loop header 크기로 비교하는 <b>보수적 추정</b>: 최대 1개 over-demote 는 가능하지만 <b>under-demote 는 불가</b> → "record 는 항상 페이지에 들어간다"가 보존된다.</div>
+        <div class="callout ok"><b>불변식 — 틀려도 안전한 방향으로만 틀린다.</b> 루프가 쓰는 record 크기 추정치는 항상 실제 이상이다 (비교 기준 header 크기를 루프 시작 시점 값으로 고정). 예: 실제 record 는 이미 3.9KB 로 줄었는데 추정치가 4.1KB 면 컬럼 하나를 <b>더</b> 내보낼 수 있다 — 비용은 약간의 추가 OOS I/O 뿐. 반대로 <b>덜 내보내서 페이지에 못 들어가는 일은 없다</b>. PostgreSQL 도 TOAST 로 내보낼 때 같은 보수적 추정을 쓴다.</div>
         <p style="font-size:12px;color:var(--muted)">(구) M1 정책 — 2KB gate + 512B 이상 전 컬럼 일괄 externalize — 는 폐기됨.</p>
       </div>
     </div>

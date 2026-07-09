@@ -10,4 +10,5 @@ BLOB/CLOB locator 도 동일 규칙 <- do not mention this. not important.
 
 ---
 
+Overall, the language is too nerdy. Make them easy and kind and understandable by Koreans.
 
