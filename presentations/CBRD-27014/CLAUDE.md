@@ -25,6 +25,7 @@ Above is the src path to CUBRID feat/oos branch. You can search there for actual
 | `pptA-oos-review.html` | **Source of truth.** Slide markup (23 `<section class="slide">` blocks); links deck.css/deck.js. Presentable in a browser (HTTP server or file://): arrow keys / click to navigate; `?flat=1&slide=N` renders one slide at exact 1280×720 for screenshots. |
 | `deck.css` | Deck styling, linked from pptA-oos-review.html. |
 | `deck.js` | Navigation, fit-to-window scaling, and flat-mode JS, linked from pptA-oos-review.html. |
+| `cubrid-logo.svg`, `cubrid-logo-dark.svg` | CUBRID logo (Wikimedia Commons) and its white-wordmark variant for dark slides (used on slides 1 and 23). |
 | `pptA-oos-review.pptx` | Generated 16:9 PPTX for submission — each slide is a full-bleed 2× PNG render (not text-editable). |
 | `export_pptx.sh` | Regenerates the PPTX by screenshotting pptA-oos-review.html. Uses Playwright's cached headless Chromium + `uv run --with python-pptx`. |
 | `justfile` | `just pptx` (regenerate), `just open` (view HTML deck). |
