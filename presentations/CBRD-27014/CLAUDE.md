@@ -12,26 +12,33 @@ questions. Korean prose with English technical terms.
 **PPT B** (company-wide workshop deck, 2026-07-17) is a separate deliverable,
 not in this directory yet.
 
+## Code Base
+
+/home/vimkim/gh/cb/oos-storage
+
+Above is the src path to CUBRID feat/oos branch. You can search there for actual implementation.
+
 ## Files
 
 | File | Role |
 |------|------|
-| `deck-content.html` | **Source of truth.** Slide content + CSS + JS, artifact-compatible (no doctype/head/body wrapper). Edit this file. |
-| `pptA-oos-review.html` | Generated standalone deck (doctype wrapper around deck-content.html). Presentable in a browser: arrow keys / click to navigate; `?flat=1&slide=N` renders one slide at exact 1280×720 for screenshots. |
+| `pptA-oos-review.html` | **Source of truth.** Slide markup (23 `<section class="slide">` blocks); links deck.css/deck.js. Presentable in a browser (HTTP server or file://): arrow keys / click to navigate; `?flat=1&slide=N` renders one slide at exact 1280×720 for screenshots. |
+| `deck.css` | Deck styling, linked from pptA-oos-review.html. |
+| `deck.js` | Navigation, fit-to-window scaling, and flat-mode JS, linked from pptA-oos-review.html. |
 | `pptA-oos-review.pptx` | Generated 16:9 PPTX for submission — each slide is a full-bleed 2× PNG render (not text-editable). |
-| `export_pptx.sh` | Regenerates both generated files from deck-content.html. Uses Playwright's cached headless Chromium + `uv run --with python-pptx`. |
+| `export_pptx.sh` | Regenerates the PPTX by screenshotting pptA-oos-review.html. Uses Playwright's cached headless Chromium + `uv run --with python-pptx`. |
 | `justfile` | `just pptx` (regenerate), `just open` (view HTML deck). |
 | `my-review-*.md` | The author's review feedback rounds, applied to the deck in numbered order. |
 
 ## Workflow rules
 
-- Edit `deck-content.html` only; never hand-edit the generated files.
+- Edit `pptA-oos-review.html`, `deck.css`, `deck.js`; never hand-edit the
+  generated `pptA-oos-review.pptx`. No build step for the HTML — edit and
+  refresh the browser.
 - **Do NOT regenerate the PPTX yourself** — the owner runs `just pptx` when they
   want to. Just report which slides changed.
 - Review loop: feedback arrives as `my-review-N.md`; apply each item, then note
   anything intentionally skipped.
-- Browser preview artifact (same URL across updates):
-  https://claude.ai/code/artifact/efee495a-87ca-439b-a6f1-14f7978e29be
 
 ## Content accuracy guardrails
 

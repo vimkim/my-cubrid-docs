@@ -1,12 +1,12 @@
 # CBRD-27014 · PPT A (OOS 기술 리뷰) deliverables
 #
-# Edit deck-content.html (source of truth), then run `just pptx`.
-# pptA-oos-review.html and pptA-oos-review.pptx are generated from it.
+# Edit pptA-oos-review.html / deck.css / deck.js, then run `just pptx`.
+# Only pptA-oos-review.pptx is generated.
 
 default:
     @just --list
 
-# Rebuild pptA-oos-review.html from deck-content.html and regenerate the PPTX
+# Regenerate the PPTX by screenshotting pptA-oos-review.html
 pptx:
     bash export_pptx.sh
 
