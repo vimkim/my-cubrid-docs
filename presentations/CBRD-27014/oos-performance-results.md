@@ -1,5 +1,7 @@
 # CBRD-27014 OOS Performance Results
 
+> **Superseded for narrow-read conclusions:** the controlled two-layout SELECT benchmark requested in `review-41a2e4e.md` is reported in [`oos-select-performance-results.md`](oos-select-performance-results.md). This file remains the earlier exploratory payload-read, INSERT, and UPDATE evidence.
+
 ## Scope and Verdict
 
 This report contains only the completed, valid warm measurements for S1-S4. Each scenario has five runs on `develop` and the OOS branch. `OOS delta` is `(OOS median / develop median - 1) * 100`; lower elapsed time is better.

@@ -1,184 +1,238 @@
-# OOS Performance Test Plan
+# OOS SELECT Performance Test Plan
 
 ## 1. Purpose
 
-This plan measures the OOS tradeoff fairly. It answers two questions together:
+This plan replaces the earlier broad warm-only comparison with a controlled SELECT benchmark that exposes both the advantage and the cost boundary of OOS.
 
-1. Does separating a 4KB-plus payload improve a full scan that reads only small columns?
-2. What are the read, write, update, and space-reclamation costs introduced by OOS?
+The primary question is: when a query reads only inline columns, how much heap and overflow I/O does OOS avoid? The comparison uses two deliberately different baseline layouts:
 
-The presentation should show both sides. Do not publish a performance claim until these measurements are collected.
+1. A logical record of about 14.5 KiB that remains an ordinary heap record on `develop`, but is reduced to about 4 KiB in the OOS branch.
+2. A logical record above 16 KiB that becomes a `REC_BIGONE` overflow record on `develop`, but is reduced to about 4 KiB in the OOS branch.
+
+The exact DDL, load DML, validation SQL, and measured SELECT statements are maintained in [`oos-select-performance-workload.sql`](oos-select-performance-workload.sql). Review that file before implementing or running the benchmark.
+
+The previous S1-S4 results remain exploratory evidence for OOS payload-read, INSERT, and UPDATE costs. They are not the primary evidence for narrow-read performance.
 
 ## 2. Comparison Contract
 
 | Item | Rule |
 | --- | --- |
-| Baseline | `/home/vimkim/gh/cb/develop` at its recorded commit |
-| OOS | `/home/vimkim/gh/cb/CBRD-27006-oos-recdes-locality` at its recorded commit |
-| Build | `build_preset_release_gcc` from each worktree; do not compare a debug build |
-| Server configuration | Same `cubrid.conf`, page size, buffer-pool size, CPU governor, storage device, and database volume options |
-| Data | Same schema, row count, and values. `BIT VARYING` is used to avoid the VARCHAR compression path. |
-| Repetitions | Five valid paired runs per branch and scenario. Randomize which branch runs first in each pair. Report the median and every raw value. |
-| Cache state | Measure cold and warm separately; never average them together. |
-| Result format | `develop`, `OOS`, delta %, plus the measurement environment and commit IDs. |
+| Baseline | `/home/vimkim/gh/cb/develop` at a recorded commit |
+| OOS | The selected OOS worktree at a recorded commit |
+| Build | Release-equivalent builds with identical compiler and optimization settings; do not compare a debug build with a release build |
+| Database | Fresh database per branch; 16 KiB database and log pages |
+| Server configuration | Same effective `cubrid.conf`, buffer size, volume options, CPU governor, storage device, and server port policy |
+| Data | Execute the same workload SQL on both branches; use `BIT VARYING` so the payload size is deterministic and not changed by VARCHAR compression |
+| Row count | Start with 100,000 rows per layout; the develop-side heap/overflow working set must be at least twice the configured data buffer |
+| Repetitions | At least five valid paired runs per layout, query, and cache state; randomize which branch runs first in each pair |
+| Result format | Report both branches, delta percentage, median, full raw range, commits, environment, storage layout, plan, and I/O evidence |
 
-The workload uses a 4KB `BIT VARYING` payload. With the row header and small columns, it exceeds the current OOS gate (`DB_PAGESIZE/4`) on a 16KB-page database. On the OOS branch, that payload is eligible for largest-first demotion; the exact same SQL remains valid on `develop`.
+No performance conclusion is accepted unless the storage-layout, execution-plan, correctness, and cache-state gates below all pass.
 
-## 3. Per-Branch Environment
+## 3. Workload Shape
 
-Run one branch at a time. The default service port makes two concurrently running local servers unsafe unless ports are explicitly separated. In each worktree, first run `just build`; it installs the selected release build to that worktree's configured `$CUBRID` prefix. The `build_preset_release_gcc` directory alone is not a runnable server home.
+### 3.1 Layout A: ordinary heap record on develop
+
+Table `perf_heap_14500` contains:
+
+- three 1,300-byte variable columns intended to remain inline;
+- two larger variable columns of 5,300 and 5,200 bytes;
+- `id`, `lookup_key`, and `hot_col` integer columns.
+
+The logical payload is 14,400 bytes before record metadata. On `develop`, the record must remain an ordinary heap record. On the OOS branch, largest-first demotion should move the 5,300-byte and 5,200-byte columns to OOS, leaving approximately 3,900 bytes plus the record header and two 16-byte OOS OIDs in the heap.
+
+### 3.2 Layout B: overflow record on develop
+
+Table `perf_overflow_22000` contains:
+
+- the same three 1,300-byte inline-target columns;
+- three larger variable columns of 7,000, 6,000, and 5,000 bytes;
+- `id`, `lookup_key`, and `hot_col` integer columns.
+
+The logical payload is 21,900 bytes before record metadata. On `develop`, it must be stored as a `REC_BIGONE` overflow record. On the OOS branch, largest-first demotion should move all three larger columns to OOS, again leaving approximately 3,900 bytes plus metadata in the heap. This does not test OOS-plus-bigone coexistence: the post-demotion OOS record must fit in the heap.
+
+### 3.3 Randomized lookup order
+
+`id` deliberately has no index so `SUM(id)` and `SELECT id` cannot become covering-index scans. A separate index is created on `lookup_key`.
+
+`lookup_key` is a deterministic permutation of insertion order. The cast avoids overflowing a 32-bit intermediate:
+
+```sql
+MOD (CAST (id - 1 AS BIGINT) * 48271, 100000) + 1
+```
+
+The multiplier is coprime with 100,000, so each lookup key is unique while adjacent key ranges map to scattered heap records. The range query projects `hot_col`, which is not part of the lookup index, forcing heap fetches without resolving any OOS column.
+
+## 4. Storage-Layout Acceptance Gate
+
+Validate the layout before collecting timing data. A run is rejected if any check fails.
+
+1. Execute the logical-size and value checks in the workload SQL on both branches.
+2. Record heap-page, overflow-page, and OOS-page counts after the load.
+3. On `develop`, capture record-level diagnostic evidence showing:
+   - `perf_heap_14500` uses ordinary heap records and no overflow records;
+   - `perf_overflow_22000` uses `REC_BIGONE` overflow records.
+4. On the OOS branch, capture OOS statistics and record-level diagnostic evidence showing:
+   - Layout A demotes the two large columns;
+   - Layout B demotes the three large columns;
+   - both post-demotion records remain normal heap records near, but not above, the 4 KiB target;
+   - the three 1,300-byte columns and `hot_col` remain inline.
+5. Record the actual page counts and average rows per heap page. Do not substitute calculated sizes for observed storage evidence.
+
+If record metadata pushes Layout A into overflow on `develop`, reduce only the 5,200-byte column in 128-byte steps until the ordinary-heap condition is satisfied. If post-demotion size exceeds 4 KiB, reduce the three inline-target columns equally. Apply the finalized values unchanged to both branches and update the workload SQL before any accepted run.
+
+## 5. SELECT Matrix
+
+Run all three queries against both layouts, producing six principal comparisons per branch.
+
+Every measured SELECT starts with:
+
+```sql
+/*+ NO_MERGE RECOMPILE PARALLEL(0) NO_PARALLEL_HEAP_SCAN */
+```
+
+`NO_PARALLEL_HEAP_SCAN` is the documented CUBRID hint. `HEAP_NO_PARALLEL_SCAN` is not used. `PARALLEL(0)` disables general parallel query execution, while `NO_PARALLEL_HEAP_SCAN` makes the heap-scan requirement explicit and takes precedence if parallel settings change.
+
+### Q1. Aggregate all IDs
+
+```sql
+SELECT /*+ NO_MERGE RECOMPILE PARALLEL(0) NO_PARALLEL_HEAP_SCAN */ SUM(id)
+  FROM <table>;
+```
+
+This is the cleanest server-side narrow full scan. It measures heap/overflow work without row-transfer volume dominating elapsed time.
+
+### Q2. Return all IDs
+
+```sql
+SELECT /*+ NO_MERGE RECOMPILE PARALLEL(0) NO_PARALLEL_HEAP_SCAN */ id
+  FROM <table>;
+```
+
+Run through the same `csql` options on both branches and redirect results to a file. Report:
+
+- server execution time from query trace;
+- end-to-end wall time including result serialization and transfer;
+- result row count and checksum.
+
+This prevents client-output cost from being mistaken for storage-engine cost.
+
+### Q3. Random non-covering range reads
+
+```sql
+SELECT /*+ NO_MERGE RECOMPILE PARALLEL(0) NO_PARALLEL_HEAP_SCAN */ hot_col
+  FROM <table>
+ WHERE lookup_key BETWEEN <range_start> AND <range_end>;
+```
+
+Use a checked-in, fixed-seed permutation of the 1,000 non-overlapping 100-key ranges that cover lookup keys 1 through 100,000. Execute the list in one `csql` session to avoid measuring process startup once per range. The list and order must be identical across branches, and no range may repeat within one measured pass.
+
+The accepted execution plan must use `ix_heap_14500_lookup` or `ix_overflow_22000_lookup` and then fetch `hot_col` from the heap. Reject any run that uses a sequential scan or a covering-index-only plan. No query may reference `inline_1` through `inline_3` or any `cold_*` column.
+
+### 5.4 Payload-read extension (Q4/Q5)
+
+Run this extension as a separate suite against the same two layouts, commits,
+cache states, buffer size, and five-pair protocol. It answers the inverse of
+Q1-Q3: what happens once the query must access demoted data?
+
+- **Q4, one OOS column:** count rows whose `cold_1` value equals the exact
+  loaded `BIT VARYING` constant. Content equality is intentional: a size-only
+  expression may use the full length stored in the OOS OID without reading the
+  payload.
+- **Q5, all logical columns:** aggregate `id`, `lookup_key`, and `hot_col` plus
+  a `CASE` that compares every payload column with its exact loaded value. This
+  is the server-side equivalent of an all-column projection for storage access,
+  while avoiding 1.4-2.2 GB of client output per pass.
+
+Both queries must remain serial table scans. Q4 must return 100,000. Q5 must
+return 10,050,150,000. On OOS, query-trace fetches must exceed the compact-heap
+page count by approximately one OOS access per row; Q5 fetches must not be below
+Q4. The content checksum, rather than a one-counter-per-column assumption, is
+the proof that every Q5 payload value was accessed: multiple OOS records may be
+served from the same page access path.
+
+Run with:
 
 ```bash
-# Run this in either worktree after `just build`.
-# Use the installed prefix configured by the worktree. Do not point CUBRID at
-# build_preset_release_gcc, which contains build artifacts rather than a full install.
-: "${CUBRID:?source the worktree environment or set the installed CUBRID prefix}"
-export CUBRID_DATABASES="${CUBRID_DATABASES:-$CUBRID/databases}"
-export PATH="$CUBRID/bin:$PATH"
-
-csql --version
-cubrid createdb --db-volume-size=2G --log-volume-size=2G perf_oos en_US.utf8 \
-  -F "$CUBRID_DATABASES/perf_oos"
-cubrid server start perf_oos
+SELECT_V2_SUITE=worst bash performance-results/run_oos_select_v2.sh 27006 100000 5
 ```
 
-Use a fresh database for each branch. Record the output of `csql --version`, `git rev-parse HEAD`, the effective `cubrid.conf`, CPU model, RAM, kernel, filesystem, and storage device in the result folder.
+The resulting report is [`oos-select-worstcase-results.md`](oos-select-worstcase-results.md).
 
-## 4. Shared Schema and Data
+## 6. Execution-Plan and Correctness Gate
 
-Load the same data on both branches through [`oos-performance-setup.sql`](oos-performance-setup.sql). Start at `N = 100000` rows (about 400MB of payload) and reduce only when storage capacity requires it. The actual `N` must be printed with every result.
+Capture and retain the compiled plan and SQL trace for every distinct layout/query pair.
 
-```sql
-DROP TABLE IF EXISTS perf_oos;
+- Q1 and Q2 must scan the heap and must not use the `lookup_key` index.
+- Q3 must use the named lookup index and perform non-covering heap fetches.
+- Every plan must show serial execution. If a parallel heap scan appears, reject the run.
+- The plans must be equivalent between branches apart from storage behavior introduced by OOS.
+- No measured query may resolve or expand an OOS column.
 
-CREATE TABLE perf_oos (
-  id       INT PRIMARY KEY,
-  hot_col  INT NOT NULL,
-  payload  BIT VARYING
-);
+Required results for `N = 100000`:
 
-INSERT INTO perf_oos
-SELECT LEVEL,
-       MOD (LEVEL, 1000),
-       REPEAT (X'0123456789ABCDEF', 512)
-  FROM db_root
-CONNECT BY LEVEL <= 100000;
-COMMIT;
+| Query | Correctness result |
+| --- | --- |
+| Q1 | `SUM(id) = 5000050000` |
+| Q2 | 100,000 IDs; same checksum on both branches |
+| Q3 | 100 rows per range; identical aggregate row count and checksum for the complete range list |
 
-SELECT COUNT(*) AS rows_loaded,
-       MIN (BIT_LENGTH (payload)) AS min_payload_bits,
-       MAX (BIT_LENGTH (payload)) AS max_payload_bits
-  FROM perf_oos;
-```
+Run correctness validation outside the timed interval when it would add work not present in the measured query.
 
-Execute the setup with:
+## 7. Cache and I/O Discipline
 
-```bash
-csql -u dba -p '' perf_oos -i oos-performance-setup.sql -o setup.out
-```
+### 7.1 Warm measurements
 
-The validation query must report `100000` rows and `32768` bits for both minimum and maximum payload lengths before a run is accepted.
+1. Load and validate the database once.
+2. Run the exact query workload once as an unmeasured warm-up.
+3. Run at least five measured repetitions without changing data.
+4. Record whether each layout fits in the configured database buffer after OOS demotion.
 
-## 5. Scenarios
+### 7.2 Restart-only measurements
 
-### S1. Narrow full scan - primary value proposition
+Restart the CUBRID server before each repetition but do not claim the OS page cache is cold. Label these results `restart-only`.
 
-```sql
-SELECT SUM(hot_col) FROM perf_oos;
-```
+### 7.3 Cold measurements
 
-- **Question:** when the payload is not requested, does OOS reduce heap page work?
-- **Measure:** elapsed time, `Num_data_page_fetches`, `Num_data_page_ioreads`, buffer hit ratio.
-- **Correctness check:** the result must be identical between branches.
-- **Expected direction:** this is the only scenario where an improvement is hypothesized. The presentation must show the measured result, not this hypothesis.
+Call a run `cold` only when both the CUBRID buffer pool and the relevant OS page cache have been cleared using the host's approved procedure on an otherwise idle test host. Run exactly one measured workload after each cold preparation.
 
-### S2. Payload access - read cost
+If approved OS cache clearing is unavailable, omit the cold series rather than relabeling restart-only results.
 
-```sql
-SELECT COUNT(*)
-  FROM perf_oos
- WHERE payload = CAST (REPEAT (X'0123456789ABCDEF', 512) AS BIT VARYING);
-```
+### 7.4 Demonstrating physical reads
 
-- **Question:** what does lazy OOS read cost when every payload is used?
-- **Measure:** elapsed time, data-page fetches/ioreads, client/server CPU if available.
-- **Correctness check:** both branches return `100000`.
-- **Interpretation:** this is a cost measurement, not a failure condition. It prevents presenting S1 without the corresponding payload-read cost.
+The Q3 range set is accepted only if query-level trace or verified server counters show non-zero physical data-page reads on the develop branch. Increase the range count or reduce the data-buffer size equally on both branches if the first pilot does not create measurable I/O. Do not use elapsed time alone as proof of I/O avoidance.
 
-### S3. Bulk INSERT - write-path cost
+## 8. Measurement Procedure
 
-On a fresh database, time the shared `INSERT INTO ... SELECT ... CONNECT BY ...` statement from Section 4, excluding `createdb` time.
+For every accepted run, retain:
 
-- **Question:** how much do demotion, OOS file writes, and WAL add to the initial load?
-- **Measure:** elapsed time, rows/s, `Num_data_page_iowrites`, `Num_log_page_iowrites`, and final database size.
-- **Correctness check:** row count and payload bit length match Section 4.
+- query text and generated range list;
+- compiled plan and SQL trace;
+- end-to-end elapsed time, user CPU, system CPU, and maximum RSS;
+- query-level heap/overflow/OOS page fetches and physical reads;
+- cumulative `statdump` snapshots before and after, as supporting evidence only;
+- database-space and file-page summaries;
+- result row count/checksum;
+- effective server configuration, CUBRID version, commit, host, CPU, memory, filesystem, and storage device.
 
-### S4. UPDATE only a small column - current OOS update cost
+The earlier benchmark produced zero `statdump` deltas for SELECT. Therefore, cumulative snapshots alone are not an acceptance metric. Use query-level trace/counters that demonstrably change during the measured SELECT; otherwise mark the I/O result unavailable.
 
-```sql
-UPDATE perf_oos
-   SET hot_col = hot_col + 1;
-COMMIT;
+Use at least five paired repetitions. Randomize branch order within each pair and report the median, minimum, maximum, and every raw value. Never average warm, restart-only, and cold results together.
 
-SELECT SUM(hot_col) FROM perf_oos;
-```
+## 9. Reporting
 
-- **Question:** what is the cost of updating a small value in a record that also owns an OOS payload?
-- **Measure:** elapsed time, rows/s, data-page I/O, log-page I/O, and database-size growth before vacuum.
-- **Correctness check:** the final sum is the S1 sum plus `N`.
-- **Interpretation:** the current design writes new OOS values during update; this test quantifies that known cost without hiding it.
+The primary result table has one row per layout/query/cache-state combination:
 
-## 6. Measuring Each Run
+| Baseline layout | Query | Cache state | develop median | OOS median | Delta | Heap fetches | Overflow fetches | OOS reads | Physical reads |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| ordinary heap (~14.5 KiB) | Q1/Q2/Q3 | warm/restart-only/cold | TBD | TBD | TBD | TBD | TBD | 0 expected | TBD |
+| `REC_BIGONE` overflow (>16 KiB) | Q1/Q2/Q3 | warm/restart-only/cold | TBD | TBD | TBD | TBD | TBD | 0 expected | TBD |
 
-For every query or DML statement, collect a cumulative statdump before and after, and retain the raw files. Derive deltas from those two snapshots.
+Presentation conclusions must distinguish:
 
-```bash
-mkdir -p results/$CASE/$BRANCH/$RUN
+1. OOS versus an ordinary wide heap record for narrow reads.
+2. OOS versus a whole-record overflow chain for narrow reads.
+3. Server storage time versus client transfer time for `SELECT id`.
+4. The benefit of avoiding OOS reads from the separately measured cost of accessing OOS payloads.
 
-cubrid statdump -c perf_oos > results/$CASE/$BRANCH/$RUN/stat-before.txt
-/usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M' \
-  csql -u dba -p '' perf_oos -c "$SQL" \
-  > results/$CASE/$BRANCH/$RUN/csql.out \
-  2> results/$CASE/$BRANCH/$RUN/time.txt
-cubrid statdump -c perf_oos > results/$CASE/$BRANCH/$RUN/stat-after.txt
-```
-
-Extract at least these counters from the raw statdump pair:
-
-- `Num_data_page_fetches`
-- `Num_data_page_ioreads`
-- `Num_data_page_iowrites`
-- `Num_log_page_iowrites`
-- `Data_page_buffer_hit_ratio`
-
-For S3-S4, also save `cubrid spacedb perf_oos` output before and after the phase. Keep the command output even when a summary spreadsheet is produced.
-
-## 7. Cold and Warm Discipline
-
-### Warm runs
-
-1. Load the database once.
-2. Execute the scenario once as a warm-up and discard its result.
-3. Execute five measured runs without changing the data except where the scenario explicitly changes it.
-
-### Cold runs
-
-1. Stop the database server.
-2. Clear the database buffer pool by restarting the server.
-3. Clear the OS page cache only on an otherwise idle dedicated host and only under the host's approved privileged procedure.
-4. Run one measured scenario immediately after server start; recreate the database or reload the scenario state before the next cold repetition.
-
-If OS cache clearing is unavailable, label the result **restart-only**, not **cold**. A restart by itself does not prove storage reads reached the device cache boundary.
-
-## 8. Presentation Output
-
-For each of S1-S4, use one grouped bar chart with `develop` and `OOS` bars.
-
-Every chart needs these labels:
-
-- `N`, payload size, CUBRID commit, release build, page size, buffer-pool size
-- cache state (`cold`, `restart-only`, or `warm`)
-- median of five runs and the raw-value range
-- the counter used to explain elapsed time
-
-The summary slide should state only: **S1 measures OOS value; S2-S4 measure OOS cost.** It must not promise a speedup before data is collected.
+Keep the existing payload-read, INSERT, and UPDATE results as the disadvantage/trade-off section. Do not present only the favorable SELECT cases, and do not claim an improvement when the page/I/O evidence does not explain the elapsed result.

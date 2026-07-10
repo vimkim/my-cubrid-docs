@@ -25,8 +25,8 @@
   </svg>
   <img class="logo-hero" src="cubrid-logo-dark.svg" alt="CUBRID">
   <div class="hero-badge"><span>CUBRID STORAGE</span><span>CBRD-26357 · M2</span><span>기술 리뷰</span></div>
-  <div class="hero-t">OOS<span class="accent">.</span><br>Out-of-row Storage<br>기술 리뷰와 성능 측정 계획</div>
-  <p class="hero-sub">큰 가변 컬럼을 heap record 밖 전용 OOS file 로 분리한다 — 저장 구조, 불변식, 그리고 무엇을 측정해야 하는가.</p>
+  <div class="hero-t">OOS<span class="accent">.</span><br>Out-of-row Storage<br>기술 리뷰와 SELECT 성능 실측</div>
+  <p class="hero-sub">큰 가변 컬럼을 heap record 밖 전용 OOS file 로 분리한다 — 저장 구조, 불변식, 그리고 narrow read 가 실제로 줄이는 I/O.</p>
   <div class="hero-meta">
     <div><b>2026-07-13</b> 개발팀 프로젝트 보고</div>
     <div><b>김박사님</b> 기술 검토 미팅</div>
@@ -43,7 +43,7 @@
       <div class="card"><span class="num">01–06</span><div><h3>문제 정의와 저장소 선택</h3><p>column-level 분리 문제 정의 · PG/MySQL survey · slotted OOS file 을 선택한 이유 · 저장 구조</p></div></div>
       <div class="card"><span class="num">07–11</span><div><h3>쓰기와 읽기</h3><p>largest-first demotion · 한계 조건 · Expand/Lazy read 경로 · multi-chunk chain</p></div></div>
       <div class="card"><span class="num">12–19</span><div><h3>생명주기와 운영</h3><p>UPDATE · DELETE · 동시성 시나리오 · 불변식 · vacuum 의 두 갈래 정리 · bestspace</p></div></div>
-      <div class="card"><span class="num">20–22</span><div><h3>성능 — 모델과 측정 계획</h3><p>어디서 이기고 어디서 지는가 · 측정 시나리오 S1–S7 · 결과는 측정 후 공유 (TBD)</p></div></div>
+      <div class="card"><span class="num">20–23</span><div><h3>성능 — 모델·실험·결과</h3><p>14.5KB heap vs 22KB overflow · narrow 2×3 + payload read 확장 · warm/restart-only 실측</p></div></div>
     </div>
   </div>
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
@@ -559,7 +559,7 @@
     </table>
     <div class="cols c2">
       <div class="callout"><b>이 순간 OOS file 에는 OID₁ · OID₂ · OID₃ 가 공존한다.</b> A 같은 독자가 살아있는 한 옛 OID 를 지울 수 없다 — 그래서 OOS 정리는 트랜잭션이 아니라 <b>vacuum 의 몫</b>이다.</div>
-      <div class="callout risk"><b>C 가 보여주는 비용</b> — 바꾸지 않은 OOS 컬럼도 UPDATE 마다 새 OID 를 만든다 (M1). 같은 값의 OID 재사용은 future 과제다 → 성능 시나리오 S5 가 이 비용을 측정한다.</div>
+      <div class="callout risk"><b>C 가 보여주는 비용</b> — 바꾸지 않은 OOS 컬럼도 UPDATE 마다 새 OID 를 만든다 (M1). 같은 값의 OID 재사용은 future 과제다 → 이전 UPDATE 실측에서 OOS 가 34.7% 느렸다.</div>
     </div>
   </div>
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
@@ -667,7 +667,7 @@
         <div class="gap">↓</div>
         <div class="step"><span class="n">3</span>새 독자는 v3 → <b>OID₃</b></div>
         <div class="gap">↓</div>
-        <div class="callout risk" style="font-size:13px"><b>같은 값이 OOS 에 두 벌</b> (OID₂·OID₃) — 이 쓰기 증폭이 성능 시나리오 <b>S5</b> 가 측정하는 비용이다. 죽은 버전과 그 OID 들은 vacuum 이 회수한다.</div>
+        <div class="callout risk" style="font-size:13px"><b>같은 값이 OOS 에 두 벌</b> (OID₂·OID₃) — 이전 UPDATE 실측에서 이 쓰기 증폭이 wall time +34.7%, permanent data +525MiB 로 나타났다. 죽은 버전과 그 OID 들은 vacuum 이 회수한다.</div>
       </div>
     </div>
   </div>
@@ -768,19 +768,18 @@
     <div class="cols c2">
       <div class="perf-side win">
         <h3><span class="tag ok">이득</span> 작은 컬럼이 자유로워진다</h3>
-        <div class="perf-item"><b>Narrow read 의 payload I/O 회피</b> — <code>SELECT id, name</code> 이 수 KB payload 를 더는 끌고 오지 않는다<small>OOS 의 존재 이유 · S1 에서 측정</small></div>
-        <div class="perf-item"><b>Heap 밀도 상승</b> — record 가 작아져 페이지당 행 수 ↑ → scan 이 만지는 페이지 수 ↓, buffer hit ↑<small>S3 에서 측정</small></div>
-        <div class="perf-item"><b>공간 재활용</b> — slotted OOS page + 3-tier bestspace 로 삭제 공간 재사용<small>S6 에서 확인</small></div>
+        <div class="perf-item"><b>Narrow full scan 의 payload I/O 회피</b> — 14.5KB heap 대비 4KB OOS heap: Q1/Q2 wall time <b>31–53% 감소</b><small>100K rows · serial scan · query trace 로 검증</small></div>
+        <div class="perf-item"><b>Whole-record overflow 제거</b> — 22KB <code>REC_BIGONE</code> 대비 Q1/Q2 wall time <b>60–82% 감소</b><small>fetch 약 300K → 33K</small></div>
+        <div class="perf-item"><b>Heap 밀도 상승</b> — heap page 100K → 33K, page 당 약 1 row → 3 rows<small>demoted column 을 읽지 않을 때 이득</small></div>
       </div>
       <div class="perf-side cost">
         <h3><span class="tag risk">비용</span> 큰 컬럼을 실제로 만질 때</h3>
-        <div class="perf-item"><b>Full-payload read 의 추가 I/O</b> — OOS 컬럼당 <code>oos_read</code> +1 (multi-chunk 면 chain 순회)<small>S2 에서 측정</small></div>
-        <div class="perf-item"><b>INSERT demotion 오버헤드</b> — <code>oos_insert</code> + WAL 로깅 추가<small>S4 에서 측정</small></div>
-        <div class="perf-item"><b>M1 UPDATE 재기록</b> — 값이 안 바뀐 OOS 컬럼도 항상 새 OID 로 재기록 (재사용은 future)<small>S5 에서 측정</small></div>
-        <div class="perf-item"><b>알려진 회귀</b> — unloaddb 1.6–1.7× 느려짐 (<code>heap_attrinfo_start</code> per <code>heap_next</code> · CBRD-26458)<small>S7 에서 확인</small></div>
+        <div class="perf-item"><b>Random lookup 은 이득이 작아질 수 있다</b> — 14.5KB heap warm Q3 는 fetch 수가 같아 wall <b>6% 개선</b>에 그침<small>index → heap lookup 1회/row</small></div>
+        <div class="perf-item"><b>공간은 오히려 증가</b> — 두 table 합계 permanent data <b>4,806 → 5,847MiB (+21.7%)</b><small>compact heap + 별도 slotted OOS page</small></div>
+        <div class="perf-item"><b>Payload 접근 시 이득 소멸</b> — ordinary heap Q4 는 <b>8–14% 느림</b>, all-column Q5 는 거의 동률<small>동일 100K rows · 5 paired runs · 다음 결과 장</small></div>
       </div>
     </div>
-    <div class="callout" style="margin-top:14px"><b>결론은 workload 가 낸다</b> — 효과는 access pattern (작은 컬럼 위주 read 비중) 에 좌우된다. 그래서 주장 대신 <b>시나리오 기반 측정</b>으로 판단한다 → 다음 장.</div>
+    <div class="callout" style="margin-top:14px"><b>결론은 workload 가 낸다</b> — OOS 는 narrow scan 과 overflow 회피에서 강하고, random lookup·payload read·write·공간에서는 tradeoff 가 드러난다 → 2×3 narrow matrix 뒤 payload read 를 따로 측정.</div>
   </div>
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
 </section>
@@ -788,54 +787,78 @@
 <!-- 23 · PERF SCENARIOS ================================================== -->
 <section class="slide">
   <div class="eyebrow">Performance · 21</div>
-  <h1 class="t">측정 시나리오 S1–S7 — 가치와 비용을 모두 드러내기</h1>
+  <h1 class="t">실험 설계 — 두 baseline layout × 세 SELECT</h1>
   <div class="body">
-    <div class="cols c2a">
-      <table class="tbl" style="align-self:start">
-        <tr><th style="width:44px">#</th><th>시나리오</th><th>측정 대상</th><th style="width:96px">기대</th></tr>
-        <tr><td>S1</td><td>Narrow SELECT — <code>id, small_col</code> (wide rows)</td><td>핵심 가치: payload I/O 회피</td><td class="c"><span class="tag ok">개선 예상</span></td></tr>
-        <tr><td>S2</td><td><code>SELECT *</code> — full payload 조회</td><td>tradeoff: <code>oos_read</code> 추가</td><td class="c"><span class="tag risk">비용 예상</span></td></tr>
-        <tr><td>S3</td><td>Full scan + narrow projection</td><td>heap 밀도 ↑ → 페이지 수 ↓</td><td class="c"><span class="tag ok">개선 예상</span></td></tr>
-        <tr><td>S4</td><td>Bulk INSERT 1,000+ rows (OOS 유발)</td><td>demotion + WAL 오버헤드</td><td class="c"><span class="tag risk">비용 예상</span></td></tr>
-        <tr><td>S5</td><td>UPDATE — OOS record 의 <b>non-OOS 컬럼</b></td><td>M1 always-new-OID 재기록 비용</td><td class="c"><span class="tag risk">비용 예상</span></td></tr>
-        <tr><td>S6</td><td>DELETE 전량 → vacuum → 재삽입</td><td>공간 회수·재활용 (bestspace)</td><td class="c"><span class="tag tbd">확인</span></td></tr>
-        <tr><td>S7</td><td>unloaddb</td><td>알려진 회귀 정량화 (CBRD-26458)</td><td class="c"><span class="tag warn">1.6–1.7×</span></td></tr>
-      </table>
-      <div class="kv" style="align-self:start">
-        <div class="row"><b>비교 대상</b><span><code>develop</code> (OOS 없음) vs <code>feat/oos</code> — 동일 스키마·데이터·설정</span></div>
-        <div class="row"><b>데이터</b><span><code>BIT VARYING</code> + <code>CAST(REPEAT(…))</code> — 문자열 압축 배제, 디스크 크기 정확 제어. record 가 4KB gate 를 확실히 초과하도록 구성</span></div>
-        <div class="row"><b>지표</b><span>elapsed · <code>statdump</code> data page fetches / ioreads / iowrites · buffer hit rate · TPS</span></div>
-        <div class="row"><b>환경</b><span>16KB page · 동일 buffer 크기 · cold/warm 캐시 각각 측정</span></div>
-      </div>
+    <div class="cols c2" style="margin-bottom:14px">
+      <div class="card"><h3><span class="tag ok">A</span> develop: ordinary heap</h3><p><b>14,480B</b> record · overflow 0 · heap 100K pages<br>OOS: 큰 컬럼 2개 demote → <b>3,996B</b> · heap 33K pages</p></div>
+      <div class="card"><h3><span class="tag warn">B</span> develop: whole-record overflow</h3><p><b>22,016B</b> · <code>REC_BIGONE</code> 100K · 200K pages<br>OOS: 큰 컬럼 3개 demote → <b>4,020B</b> · overflow 0</p></div>
+    </div>
+    <table class="tbl" style="font-size:13.5px;margin-bottom:14px">
+      <tr><th style="width:48px">#</th><th>SQL</th><th>격리하려는 비용</th><th>accepted plan</th></tr>
+      <tr><td><b>Q1</b></td><td><code>SELECT SUM(id)</code></td><td>client row transfer 없는 narrow full scan</td><td>serial table scan</td></tr>
+      <tr><td><b>Q2</b></td><td><code>SELECT id</code> — 100K rows</td><td>scan + serialization/transfer</td><td>serial table scan</td></tr>
+      <tr><td><b>Q3</b></td><td>random 100-row range × 1,000</td><td>non-covering index → scattered heap read</td><td>index scan + heap lookup</td></tr>
+    </table>
+    <div class="kv">
+      <div class="row"><b>고정 조건</b><span>100K rows · 16KB page · data buffer 512MiB · release build · <code>PARALLEL(0) NO_PARALLEL_HEAP_SCAN</code></span></div>
+      <div class="row"><b>반복·판정</b><span>warm / restart-only 각각 5 paired runs · branch 순서 교대 · plan·checksum·fetch·ioread machine gate <b>PASS</b></span></div>
+      <div class="row"><b>주의</b><span>OS cache 를 비우지 못한 shared host — restart-only 를 cold 라 부르지 않는다</span></div>
     </div>
   </div>
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
 </section>
 
-<!-- 24 · PERF RESULTS (TBD) ============================================== -->
+<!-- 24 · PERF RESULTS ==================================================== -->
 <section class="slide">
   <div class="eyebrow">Performance · 22</div>
-  <h1 class="t">측정 결과 — 수집 중 <span class="tag tbd">TBD</span></h1>
-  <p class="sub">아래 표는 자리표시자다 — 실측 후 수치를 채워 업데이트한다. 실측 전에는 결론을 보류한다.</p>
+  <h1 class="t">실측 결과 — narrow scan 은 이기고, random lookup 은 조건부다</h1>
+  <p class="sub">median wall time · develop → OOS · 음수 Δ 가 빠름 · 100K rows × 5 paired runs</p>
   <div class="body">
-    <table class="tbl" style="font-size:14px">
-      <tr><th style="width:44px">#</th><th>시나리오</th><th class="c">develop</th><th class="c">feat/oos</th><th class="c">Δ</th><th>비고</th></tr>
-      <tr><td>S1</td><td>Narrow SELECT</td><td class="c"><span class="tag tbd">TBD</span></td><td class="c"><span class="tag tbd">TBD</span></td><td class="c"><span class="tag tbd">TBD</span></td><td>elapsed · page fetches</td></tr>
-      <tr><td>S2</td><td>SELECT * (full payload)</td><td class="c"><span class="tag tbd">TBD</span></td><td class="c"><span class="tag tbd">TBD</span></td><td class="c"><span class="tag tbd">TBD</span></td><td>oos_read 횟수 포함</td></tr>
-      <tr><td>S3</td><td>Full scan + narrow projection</td><td class="c"><span class="tag tbd">TBD</span></td><td class="c"><span class="tag tbd">TBD</span></td><td class="c"><span class="tag tbd">TBD</span></td><td>스캔 페이지 수</td></tr>
-      <tr><td>S4</td><td>Bulk INSERT</td><td class="c"><span class="tag tbd">TBD</span></td><td class="c"><span class="tag tbd">TBD</span></td><td class="c"><span class="tag tbd">TBD</span></td><td>TPS · WAL 볼륨</td></tr>
-      <tr><td>S5</td><td>UPDATE non-OOS 컬럼</td><td class="c"><span class="tag tbd">TBD</span></td><td class="c"><span class="tag tbd">TBD</span></td><td class="c"><span class="tag tbd">TBD</span></td><td>M1 재기록 비용</td></tr>
-      <tr><td>S6</td><td>DELETE → vacuum → 재삽입</td><td class="c">—</td><td class="c"><span class="tag tbd">TBD</span></td><td class="c">—</td><td>OOS 파일 크기 추이</td></tr>
-      <tr><td>S7</td><td>unloaddb</td><td class="c"><span class="tag tbd">TBD</span></td><td class="c"><span class="tag tbd">TBD</span></td><td class="c"><span class="tag warn">1.6–1.7× 예상</span></td><td>CBRD-26458</td></tr>
+    <table class="tbl" style="font-size:13px;margin-bottom:14px">
+      <tr><th>develop layout</th><th>query</th><th class="c">restart-only</th><th class="c">warm</th><th>page evidence</th></tr>
+      <tr><td rowspan="3"><b>14.5KB heap</b><br><span class="tag ok">→ 4KB</span></td><td>Q1 <code>SUM(id)</code></td><td class="c">0.93→0.61s <b>-34%</b></td><td class="c">0.57→0.27s <b>-53%</b></td><td>fetch 100K→33K</td></tr>
+      <tr><td>Q2 all IDs</td><td class="c">1.10→0.76s <b>-31%</b></td><td class="c">0.72→0.39s <b>-46%</b></td><td>scan + client transfer</td></tr>
+      <tr><td>Q3 random ranges</td><td class="c">7.61→5.63s <b>-26%</b></td><td class="c">6.30→5.91s <b>-6%</b></td><td>fetch 동일 103K</td></tr>
+      <tr><td rowspan="3"><b>22KB BIGONE</b><br><span class="tag ok">→ 4KB</span></td><td>Q1 <code>SUM(id)</code></td><td class="c">1.69→0.57s <b>-66%</b></td><td class="c">0.91→0.16s <b>-82%</b></td><td>fetch 300K→33K</td></tr>
+      <tr><td>Q2 all IDs</td><td class="c">1.81→0.73s <b>-60%</b></td><td class="c">0.91→0.35s <b>-62%</b></td><td>overflow chain 제거</td></tr>
+      <tr><td>Q3 random ranges</td><td class="c">9.10→5.93s <b>-35%</b></td><td class="c">7.59→5.38s <b>-29%</b></td><td>fetch 403K→103K</td></tr>
     </table>
-    <p style="font-size:13px;color:var(--muted);margin-top:12px">측정 담당: 김대현 · 결과 공유 시 본 자료 v2 로 갱신 예정</p>
+    <div class="cols c3" style="gap:10px">
+      <div class="card"><h3><span class="tag ok">WHY</span> page density</h3><p>full scan 은 heap page 3× 감소, BIGONE 은 overflow chain 까지 제거.</p></div>
+      <div class="card"><h3><span class="tag warn">BOUNDARY</span> random lookup</h3><p>heap fetch 1회/row 가 남으면 warm 이득은 6%까지 축소.</p></div>
+      <div class="card"><h3><span class="tag risk">COST</span> space</h3><p>permanent data 4,806→5,847MiB, <b>+21.7%</b>.</p></div>
+    </div>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:9px">CBRD-27006 @ 3173d3bd vs develop @ e3b1bf01 · shared host · true-cold 아님 · machine acceptance PASS · 상세: oos-select-performance-results.md</p>
   </div>
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
 </section>
 
-<!-- 25 · RISKS =========================================================== -->
+<!-- 25 · PERF PAYLOAD RESULTS ============================================ -->
 <section class="slide">
-  <div class="eyebrow">Risks · 23</div>
+  <div class="eyebrow">Performance · 23</div>
+  <h1 class="t">OOS payload 를 읽으면 — ordinary heap 이득은 사라진다</h1>
+  <p class="sub">Q4: demote 된 컬럼 1개 · Q5: 모든 logical column · server-side checksum · median wall time</p>
+  <div class="body">
+    <table class="tbl" style="font-size:13px;margin-bottom:14px">
+      <tr><th>develop layout</th><th>payload access</th><th class="c">restart-only</th><th class="c">warm</th><th>restart fetch</th></tr>
+      <tr><td rowspan="2"><b>14.5KB heap</b><br><span class="tag risk">OOS 불리</span></td><td>Q4 OOS column 1개</td><td class="c">1.40→1.59s <b style="color:var(--risk)">+14%</b></td><td class="c">0.91→0.98s <b style="color:var(--risk)">+8%</b></td><td>100K→133K</td></tr>
+      <tr><td>Q5 모든 logical column</td><td class="c">2.24→2.41s <b style="color:var(--risk)">+8%</b></td><td class="c">1.76→1.75s <b>≈0%</b></td><td>100K→133K</td></tr>
+      <tr><td rowspan="2"><b>22KB BIGONE</b><br><span class="tag warn">이득 축소</span></td><td>Q4 OOS column 1개</td><td class="c">2.28→1.67s <b style="color:var(--ok)">-27%</b></td><td class="c">1.59→1.21s <b style="color:var(--ok)">-24%</b></td><td>300K→133K</td></tr>
+      <tr><td>Q5 모든 logical column</td><td class="c">3.56→3.53s <b>≈0%</b></td><td class="c">2.95→2.77s <b style="color:var(--ok)">-6%</b></td><td>300K→233K</td></tr>
+    </table>
+    <div class="cols c3" style="gap:10px">
+      <div class="card"><h3><span class="tag risk">COST</span> ordinary heap</h3><p>compact heap 뒤 OOS read 가 추가된다. 컬럼 1개만 읽어도 restart-only <b>14% 느림</b>.</p></div>
+      <div class="card"><h3><span class="tag warn">BOUNDARY</span> all columns</h3><p>모든 값이 필요하면 narrow-read 이득이 소멸 — ordinary heap 과 BIGONE 모두 <b>거의 동률</b>.</p></div>
+      <div class="card"><h3><span class="tag ok">STILL WINS</span> partial BIGONE</h3><p>whole-record overflow 대신 필요한 OOS 컬럼만 읽으면 fetch 56% 감소, <b>24–27% 빠름</b>.</p></div>
+    </div>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:9px">100K rows × 5 paired runs · Q5 는 raw-recdes Expand 가 아닌 all-logical-column SQL read · machine acceptance PASS · 상세: oos-select-worstcase-results.md</p>
+  </div>
+  <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
+</section>
+
+<!-- 26 · RISKS =========================================================== -->
+<section class="slide">
+  <div class="eyebrow">Risks · 24</div>
   <h1 class="t">해결해야 머지할 수 있는 것들 — 정직한 리스크 목록</h1>
   <div class="body">
     <div class="cols c3">
@@ -860,9 +883,9 @@
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
 </section>
 
-<!-- 26 · STATUS ========================================================== -->
+<!-- 27 · STATUS ========================================================== -->
 <section class="slide">
-  <div class="eyebrow">Status · 24</div>
+  <div class="eyebrow">Status · 25</div>
   <h1 class="t">현재 위치 — M1 완료, M2 진행 중</h1>
   <div class="body">
     <div class="cols c3">
@@ -902,7 +925,7 @@
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
 </section>
 
-<!-- 27 · ASK ============================================================= -->
+<!-- 28 · ASK ============================================================= -->
 <section class="slide s-dark">
   <div class="eyebrow">Discussion</div>
   <h1 class="t" style="color:#F2F6FC">여쭙고 싶은 것들</h1>
@@ -912,7 +935,7 @@
       <div class="card"><h3><span class="num">Q1</span> 저장 단위</h3><p>slotted page 공유 (多 record/page) 의 운영 리스크 — 단편화 이득 대비 page latch 경합을 어떤 지표로 감시할지. 섹션 분할 latch 같은 완화책이 필요한 임계점.</p></div>
       <div class="card"><h3><span class="num">Q2</span> Vacuum 안전성</h3><p>slot 재사용 데이터 손실 (CBRD-26950) 의 머지 전 결정 — chunk header 의 owner/generation 필드로 갈지, retry-idempotent 경로까지 포함할지.</p></div>
       <div class="card"><h3><span class="num">Q3</span> 압축의 위치</h3><p>향후 압축의 책임 경계 — type-serialization layer (<code>mr_data_writeval</code>) 와 OOS 경계 중 어느 쪽에 둘지, PG 의 TOAST 통합 방식과 비교해 정리.</p></div>
-      <div class="card"><h3><span class="num">Q4</span> 성능 시나리오</h3><p>S1–S7 의 측정 범위 — OOS 의 가치·비용을 드러내는 데 빠진 워크로드 (예: 혼합 OLTP, 대량 scan + 부분 payload) 가 있는지 확인.</p></div>
+      <div class="card"><h3><span class="num">Q4</span> 성능 결과의 경계</h3><p>narrow read 는 크게 이기지만 ordinary heap 의 OOS-column read 는 8–14% 느리고 all-column 은 거의 동률 — 다음 검증은 mixed OLTP, raw-recdes Expand, dedicated-host cold run 중 무엇을 우선할지.</p></div>
     </div>
     <div class="hero-meta" style="margin-top:26px">
       <img class="logo-foot" src="cubrid-logo-dark.svg" alt="CUBRID">

@@ -129,8 +129,32 @@
   <div class="foot"><span>CBRD-27014 · OOS 요약 · measured 2026-07-10</span><span class="pg"></span></div>
 </section>
 
+<!-- 5. Payload-read cost boundary -->
+<section class="slide">
+  <div class="eyebrow">CBRD-27014 · 05. Payload Read Boundary</div>
+  <h1 class="t">큰 값을 읽는 순간, OOS의 이득은 달라진다</h1>
+  <p class="sub">Q4: 분리된 큰 컬럼 1개 · Q5: 모든 logical column · median wall time · develop → OOS</p>
+  <div class="body">
+    <table class="tbl" style="font-size:13.5px;margin-bottom:16px">
+      <tr><th>develop layout</th><th>읽는 범위</th><th class="c">restart-only</th><th class="c">warm</th><th>restart fetch</th></tr>
+      <tr><td rowspan="2"><b>14.5KB heap</b><br><span class="tag risk">OOS 불리</span></td><td>큰 컬럼 1개</td><td class="c">1.40→1.59s <b style="color:var(--risk)">+14%</b></td><td class="c">0.91→0.98s <b style="color:var(--risk)">+8%</b></td><td>100K→133K</td></tr>
+      <tr><td>모든 컬럼</td><td class="c">2.24→2.41s <b style="color:var(--risk)">+8%</b></td><td class="c">1.76→1.75s <b>≈0%</b></td><td>100K→133K</td></tr>
+      <tr><td rowspan="2"><b>22KB BIGONE</b><br><span class="tag warn">이득 축소</span></td><td>큰 컬럼 1개</td><td class="c">2.28→1.67s <b style="color:var(--ok)">-27%</b></td><td class="c">1.59→1.21s <b style="color:var(--ok)">-24%</b></td><td>300K→133K</td></tr>
+      <tr><td>모든 컬럼</td><td class="c">3.56→3.53s <b>≈0%</b></td><td class="c">2.95→2.77s <b style="color:var(--ok)">-6%</b></td><td>300K→233K</td></tr>
+    </table>
+    <div class="cols c3" style="gap:12px;margin-bottom:16px">
+      <div class="card"><h3><span class="tag risk">ORDINARY HEAP</span></h3><p>heap에 있던 큰 값을 OOS에서 다시 읽으므로 컬럼 1개 조회가 <b>8–14% 느려진다.</b></p></div>
+      <div class="card"><h3><span class="tag ok">PARTIAL BIGONE</span></h3><p>전체 overflow chain 대신 필요한 컬럼만 읽어 fetch가 줄고 <b>24–27% 빠르다.</b></p></div>
+      <div class="card"><h3><span class="tag warn">ALL COLUMNS</span></h3><p>모든 값이 필요하면 narrow-read 이득은 사라지고 두 방식은 <b>거의 동률</b>이다.</p></div>
+    </div>
+    <div class="callout"><b>결론</b> - OOS는 항상 빠른 기능이 아니다. 큰 컬럼을 읽지 않는 비율과 기존 record가 ordinary heap인지 overflow인지가 성능을 결정한다.</div>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:9px">100K rows × 5 paired runs · Q5는 raw-recdes Expand가 아닌 all-logical-column SQL read · machine acceptance PASS</p>
+  </div>
+  <div class="foot"><span>CBRD-27014 · OOS 요약 · measured 2026-07-10</span><span class="pg"></span></div>
+</section>
+
 </div></div>
-<div id="pager">1 / 4</div>
+<div id="pager">1 / 5</div>
 
 <script src="deck.js"></script>
 </body>
