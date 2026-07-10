@@ -2,12 +2,14 @@
 # Regenerate pptA-oos-review.pptx from pptA-oos-review.html (+ deck.css/deck.js).
 # Renders each slide (?flat=1&slide=N) at 2x with Playwright's cached headless
 # Chromium, then assembles a 16:9 PPTX (one full-bleed image per slide).
-# Usage: bash export_pptx.sh  (or: just pptx)
+# Usage: bash export_pptx.sh [source.html] [output.pptx]  (or: just pptx)
 set -euo pipefail
 cd "$(dirname "$0")"
 
 SHELL_BIN=$(ls ~/.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell | head -1)
-SLIDES=$(grep -c '<section class="slide' pptA-oos-review.html)
+SOURCE=${1:-pptA-oos-review.html}
+OUTPUT=${2:-pptA-oos-review.pptx}
+SLIDES=$(grep -c '<section class="slide' "$SOURCE")
 SHOTS=$(mktemp -d)
 trap 'rm -rf "$SHOTS"' EXIT
 
@@ -16,10 +18,10 @@ for i in $(seq 1 $SLIDES); do
   "$SHELL_BIN" --headless --disable-gpu --no-sandbox \
     --force-device-scale-factor=2 --window-size=1280,720 \
     --screenshot="$SHOTS/s$n.png" \
-    "file://$PWD/pptA-oos-review.html?flat=1&slide=$i" >/dev/null 2>&1
+    "file://$PWD/$SOURCE?flat=1&slide=$i" >/dev/null 2>&1
 done
 
-uv run --quiet --with python-pptx python - "$SHOTS" pptA-oos-review.pptx <<'EOF'
+uv run --quiet --with python-pptx python - "$SHOTS" "$OUTPUT" <<'EOF'
 import glob, sys
 from pptx import Presentation
 from pptx.util import Inches

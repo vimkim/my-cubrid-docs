@@ -82,25 +82,24 @@
 <!-- 3. Performance plan -->
 <section class="slide">
   <div class="eyebrow">CBRD-27014 · 03. Performance Test Plan</div>
-  <h1 class="t">SELECT, INSERT, UPDATE를 같은 조건에서 비교한다</h1>
-  <p class="sub"><code>develop</code>과 OOS branch에 같은 schema와 data를 만들고, release-build <code>csql</code>로 반복 측정한다.</p>
+  <h1 class="t">두 baseline layout × 세 SELECT로 이득의 조건을 분리한다</h1>
+  <p class="sub"><code>develop</code>과 OOS branch에서 동일 데이터·설정으로 narrow read의 page 비용을 비교한다.</p>
   <div class="body">
-    <div class="cols c2a">
-      <table class="tbl" style="align-self:start">
-        <tr><th style="width:52px">#</th><th>시나리오</th><th>확인할 질문</th></tr>
-        <tr><td>S1</td><td>작은 컬럼 full scan<br><code>SUM(hot_col)</code></td><td>payload를 읽지 않을 때 heap page I/O가 줄어드는가?</td></tr>
-        <tr><td>S2</td><td>큰 값 조회<br><code>payload = ...</code></td><td>큰 값을 실제로 읽을 때 OOS read 비용은 얼마인가?</td></tr>
-        <tr><td>S3</td><td>일괄 INSERT</td><td>demotion과 WAL이 쓰기 처리량에 미치는 비용은?</td></tr>
-        <tr><td>S4</td><td>작은 컬럼 UPDATE</td><td>변경하지 않은 payload의 재기록 비용은 얼마인가?</td></tr>
-      </table>
-      <div class="kv" style="align-self:start">
-        <div class="row"><b>동일 조건</b><span>16KB page, 동일 CUBRID 설정, 동일 <code>BIT VARYING</code> 4KB payload, 동일 레코드 수</span></div>
-        <div class="row"><b>반복</b><span>warm-up 1회는 제외하고, 각 branch-시나리오를 5회 실행한다. 결과는 median으로 제시한다.</span></div>
-        <div class="row"><b>지표</b><span>elapsed, data page fetches / ioreads, log iowrites, throughput, database size</span></div>
-        <div class="row"><b>발표 결과</b><span>각 시나리오에 <b>develop | OOS | delta</b> 막대그래프 1개와 원시 수치 표를 함께 둔다.</span></div>
-      </div>
+    <div class="cols c2" style="margin-bottom:14px">
+      <div class="card"><h3><span class="tag ok">A</span> ordinary heap</h3><p><b>14,480B</b> record · overflow 0 · heap 100K pages<br>OOS: 큰 컬럼 2개 분리 → <b>3,996B</b> · heap 33K pages</p></div>
+      <div class="card"><h3><span class="tag warn">B</span> whole-record overflow</h3><p><b>22,016B</b> record · <code>REC_BIGONE</code> 100K<br>OOS: 큰 컬럼 3개 분리 → <b>4,016B</b> · overflow 0</p></div>
     </div>
-    <div class="callout" style="margin-top:16px"><b>해석 원칙</b> - S1의 이득과 S2-S4의 비용을 함께 제시한다. 환경과 cache 조건을 그래프에 명시하고, 실측 범위를 넘는 결론은 내리지 않는다.</div>
+    <table class="tbl" style="font-size:13.5px;margin-bottom:14px">
+      <tr><th style="width:48px">#</th><th>SQL</th><th>격리하려는 비용</th><th>accepted plan</th></tr>
+      <tr><td><b>Q1</b></td><td><code>SELECT SUM(id)</code></td><td>client row transfer 없는 narrow full scan</td><td>serial table scan</td></tr>
+      <tr><td><b>Q2</b></td><td><code>SELECT id</code> — 100K rows</td><td>scan + serialization / transfer</td><td>serial table scan</td></tr>
+      <tr><td><b>Q3</b></td><td>random 100-row range × 1,000</td><td>non-covering index → scattered heap read</td><td>index scan + heap lookup</td></tr>
+    </table>
+    <div class="kv">
+      <div class="row"><b>고정 조건</b><span>100K rows · 16KB page · data buffer 512MiB · release build · parallel scan 비활성화</span></div>
+      <div class="row"><b>반복·판정</b><span>warm / restart-only 각각 5 paired runs · branch 순서 교대 · plan·checksum·fetch·ioread machine gate <b>PASS</b></span></div>
+      <div class="row"><b>주의</b><span>OS cache를 비우지 못한 shared host — restart-only를 cold라고 부르지 않는다.</span></div>
+    </div>
   </div>
   <div class="foot"><span>CBRD-27014 · OOS 요약</span><span class="pg"></span></div>
 </section>
@@ -108,34 +107,24 @@
 <!-- 4. Measured performance results -->
 <section class="slide">
   <div class="eyebrow">CBRD-27014 · 04. Measured Result</div>
-  <h1 class="t">이번 warm workload에서는 OOS 비용이 더 크게 관찰됐다</h1>
-  <p class="sub">100,000 rows · 4KB <code>BIT VARYING</code> payload · branch별 5회 median · elapsed time, lower is better</p>
+  <h1 class="t">narrow scan은 이기고, random lookup은 조건부다</h1>
+  <p class="sub">median wall time · develop → OOS · 음수 Δ가 빠름 · 100K rows × 5 paired runs</p>
   <div class="body">
-    <div class="cols c2a">
-      <div class="card" style="padding:16px 18px">
-        <h3><span class="tag risk">OOS elapsed delta</span> <code>develop</code> 대비</h3>
-        <div style="display:flex;flex-direction:column;gap:12px;margin:12px 0 14px">
-          <div style="display:grid;grid-template-columns:115px 1fr 62px;gap:10px;align-items:center;font-size:12.5px"><b>S1 작은 컬럼 SELECT</b><div style="height:20px;background:#E8EDF5;border-radius:3px;overflow:hidden"><div style="width:10%;height:100%;background:#D97430"></div></div><b style="color:#A35319">+11.1%</b></div>
-          <div style="display:grid;grid-template-columns:115px 1fr 62px;gap:10px;align-items:center;font-size:12.5px"><b>S2 큰 값 SELECT</b><div style="height:20px;background:#E8EDF5;border-radius:3px;overflow:hidden"><div style="width:100%;height:100%;background:#B4342E"></div></div><b style="color:#B4342E">+114.3%</b></div>
-          <div style="display:grid;grid-template-columns:115px 1fr 62px;gap:10px;align-items:center;font-size:12.5px"><b>S3 일괄 INSERT</b><div style="height:20px;background:#E8EDF5;border-radius:3px;overflow:hidden"><div style="width:2%;min-width:3px;height:100%;background:#B7791F"></div></div><b style="color:#8C5B13">+0.8%</b></div>
-          <div style="display:grid;grid-template-columns:115px 1fr 62px;gap:10px;align-items:center;font-size:12.5px"><b>S4 작은 컬럼 UPDATE</b><div style="height:20px;background:#E8EDF5;border-radius:3px;overflow:hidden"><div style="width:30%;height:100%;background:#D97430"></div></div><b style="color:#A35319">+34.7%</b></div>
-        </div>
-        <table class="tbl" style="font-size:12.5px">
-          <tr><th>Scenario</th><th class="c">develop</th><th class="c">OOS</th><th class="c">delta</th></tr>
-          <tr><td>S1 작은 컬럼 SELECT</td><td class="c">0.09 s</td><td class="c">0.10 s</td><td class="c">+11.1%</td></tr>
-          <tr><td>S2 큰 값 SELECT</td><td class="c">0.21 s</td><td class="c">0.45 s</td><td class="c">+114.3%</td></tr>
-          <tr><td>S3 일괄 INSERT</td><td class="c">30.35 s</td><td class="c">30.60 s</td><td class="c">+0.8%</td></tr>
-          <tr><td>S4 작은 컬럼 UPDATE</td><td class="c">1.99 s</td><td class="c">2.68 s</td><td class="c">+34.7%</td></tr>
-        </table>
-      </div>
-      <div class="kv" style="align-self:start">
-        <div class="row"><b>S1</b><span><b>작은 컬럼 SELECT의 이득은 확인되지 않았다.</b> 이 warm workload에서는 0.09 s → 0.10 s였다.</span></div>
-        <div class="row"><b>S2</b><span><b>큰 값 조회 비용은 확인됐다.</b> 큰 값을 모두 읽는 SELECT는 OOS에서 2.14배 시간이 들었다.</span></div>
-        <div class="row"><b>S3</b><span><b>일괄 INSERT는 관측상 거의 동일했다.</b> 3,294.9 → 3,268.0 rows/s.</span></div>
-        <div class="row"><b>S4</b><span><b>small-column UPDATE 비용이 확인됐다.</b> OOS는 +34.7%, permanent data는 603 → 1,128 MiB로 늘었다.</span></div>
-      </div>
+    <table class="tbl" style="font-size:13px;margin-bottom:14px">
+      <tr><th>develop layout</th><th>query</th><th class="c">restart-only</th><th class="c">warm</th><th>page evidence</th></tr>
+      <tr><td rowspan="3"><b>14.5KB heap</b><br><span class="tag ok">→ 4KB</span></td><td>Q1 <code>SUM(id)</code></td><td class="c">0.93→0.61s <b>-34%</b></td><td class="c">0.57→0.27s <b>-53%</b></td><td>fetch 100K→33K</td></tr>
+      <tr><td>Q2 all IDs</td><td class="c">1.10→0.76s <b>-31%</b></td><td class="c">0.72→0.39s <b>-46%</b></td><td>scan + client transfer</td></tr>
+      <tr><td>Q3 random ranges</td><td class="c">7.61→5.63s <b>-26%</b></td><td class="c">6.30→5.91s <b>-6%</b></td><td>fetch 동일 103K</td></tr>
+      <tr><td rowspan="3"><b>22KB BIGONE</b><br><span class="tag ok">→ 4KB</span></td><td>Q1 <code>SUM(id)</code></td><td class="c">1.69→0.57s <b>-66%</b></td><td class="c">0.91→0.16s <b>-82%</b></td><td>fetch 300K→33K</td></tr>
+      <tr><td>Q2 all IDs</td><td class="c">1.81→0.73s <b>-60%</b></td><td class="c">0.91→0.35s <b>-62%</b></td><td>overflow chain 제거</td></tr>
+      <tr><td>Q3 random ranges</td><td class="c">9.10→5.93s <b>-35%</b></td><td class="c">7.59→5.38s <b>-29%</b></td><td>fetch 403K→103K</td></tr>
+    </table>
+    <div class="cols c3" style="gap:10px">
+      <div class="card"><h3><span class="tag ok">WHY</span> page density</h3><p>full scan은 heap page가 3× 줄고, BIGONE은 overflow chain까지 제거된다.</p></div>
+      <div class="card"><h3><span class="tag warn">BOUNDARY</span> random lookup</h3><p>heap fetch 1회/row가 남으면 warm 이득은 <b>6%</b>까지 축소된다.</p></div>
+      <div class="card"><h3><span class="tag risk">COST</span> space</h3><p>두 table permanent data는 4,806→5,847MiB, <b>+21.7%</b>.</p></div>
     </div>
-    <div class="callout risk" style="margin-top:15px"><b>해석 범위</b> - shared host의 warm-only, branch 순차 실행 결과다. SELECT의 <code>statdump</code> delta는 0이어서 storage I/O locality의 일반적 이득은 아직 주장할 수 없다. 모든 S1-S4 결과값 검증은 통과했다.</div>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:9px">CBRD-27006 @ 3173d3bd vs develop @ e3b1bf01 · shared host · true-cold 아님 · machine acceptance PASS</p>
   </div>
   <div class="foot"><span>CBRD-27014 · OOS 요약 · measured 2026-07-10</span><span class="pg"></span></div>
 </section>
