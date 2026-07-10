@@ -25,7 +25,7 @@
   </svg>
   <img class="logo-hero" src="cubrid-logo-dark.svg" alt="CUBRID">
   <div class="hero-badge"><span>CUBRID STORAGE</span><span>CBRD-26357 · M2</span><span>기술 리뷰</span></div>
-  <div class="hero-t">OOS<span class="accent">.</span><br>Out-of-row Storage<br>설계 리뷰와 성능 검증 계획</div>
+  <div class="hero-t">OOS<span class="accent">.</span><br>Out-of-row Storage<br>기술 리뷰와 성능 측정 계획</div>
   <p class="hero-sub">큰 가변 컬럼을 heap record 밖 전용 OOS file 로 분리한다 — 저장 구조, 불변식, 그리고 무엇을 측정해야 하는가.</p>
   <div class="hero-meta">
     <div><b>2026-07-13</b> 개발팀 프로젝트 보고</div>
@@ -37,10 +37,10 @@
 <!-- 2 · AGENDA =========================================================== -->
 <section class="slide">
   <div class="eyebrow">Agenda</div>
-  <h1 class="t">오늘의 흐름 — 설계를 검증받는 자리</h1>
+  <h1 class="t">오늘의 흐름 — 구현 현황과 남은 리스크</h1>
   <div class="body">
     <div class="agenda" style="margin-bottom:18px">
-      <div class="card"><span class="num">01–06</span><div><h3>문제와 설계 선택</h3><p>column-level 분리 문제 정의 · PG/MySQL survey · slotted OOS file 을 선택한 이유 · 저장 구조</p></div></div>
+      <div class="card"><span class="num">01–06</span><div><h3>문제 정의와 저장소 선택</h3><p>column-level 분리 문제 정의 · PG/MySQL survey · slotted OOS file 을 선택한 이유 · 저장 구조</p></div></div>
       <div class="card"><span class="num">07–11</span><div><h3>쓰기와 읽기</h3><p>largest-first demotion · 한계 조건 · Expand/Lazy read 경로 · multi-chunk chain</p></div></div>
       <div class="card"><span class="num">12–19</span><div><h3>생명주기와 운영</h3><p>UPDATE · DELETE · 동시성 시나리오 · 불변식 · vacuum 의 두 갈래 정리 · bestspace</p></div></div>
       <div class="card"><span class="num">20–22</span><div><h3>성능 — 모델과 측정 계획</h3><p>어디서 이기고 어디서 지는가 · 측정 시나리오 S1–S7 · 결과는 측정 후 공유 (TBD)</p></div></div>
@@ -94,7 +94,7 @@
 <section class="slide">
   <div class="eyebrow">Survey · 02</div>
   <h1 class="t">타 DBMS 는 같은 문제를 어떻게 푸는가</h1>
-  <p class="sub">PostgreSQL TOAST · MySQL InnoDB off-page 와 나란히 놓으면, CUBRID OOS 는 검증된 패턴 (column-level + largest-first) 위에 있다.</p>
+  <p class="sub">PostgreSQL TOAST · MySQL InnoDB off-page 와 나란히 놓으면, CUBRID OOS 는 이미 쓰이는 패턴 (column-level + largest-first) 위에 있다.</p>
   <div class="body">
     <table class="tbl" style="font-size:14px">
       <tr><th style="width:150px"></th><th>PostgreSQL — TOAST</th><th>MySQL — InnoDB off-page</th><th style="background:#8A4A16">CUBRID — OOS (현재)</th></tr>
@@ -114,7 +114,7 @@
 
 <!-- 5 · DESIGN CHOICE ==================================================== -->
 <section class="slide">
-  <div class="eyebrow">Design Choice · 03</div>
+  <div class="eyebrow">Architecture · 03</div>
   <h1 class="t">왜 TOAST table 이 아니라 "전용 OOS file + 물리 OOS OID" 인가</h1>
   <p class="sub">기존 overflow 확장안은 1 record/page 구조의 내부 단편화 때문에 초기에 제외했다. 실질 후보는 둘 — PG 식 TOAST table 이냐, 전용 파일이냐.</p>
   <div class="body">
@@ -770,7 +770,7 @@
         <h3><span class="tag ok">이득</span> 작은 컬럼이 자유로워진다</h3>
         <div class="perf-item"><b>Narrow read 의 payload I/O 회피</b> — <code>SELECT id, name</code> 이 수 KB payload 를 더는 끌고 오지 않는다<small>OOS 의 존재 이유 · S1 에서 측정</small></div>
         <div class="perf-item"><b>Heap 밀도 상승</b> — record 가 작아져 페이지당 행 수 ↑ → scan 이 만지는 페이지 수 ↓, buffer hit ↑<small>S3 에서 측정</small></div>
-        <div class="perf-item"><b>공간 재활용</b> — slotted OOS page + 3-tier bestspace 로 삭제 공간 재사용<small>S6 에서 검증</small></div>
+        <div class="perf-item"><b>공간 재활용</b> — slotted OOS page + 3-tier bestspace 로 삭제 공간 재사용<small>S6 에서 확인</small></div>
       </div>
       <div class="perf-side cost">
         <h3><span class="tag risk">비용</span> 큰 컬럼을 실제로 만질 때</h3>
@@ -780,7 +780,7 @@
         <div class="perf-item"><b>알려진 회귀</b> — unloaddb 1.6–1.7× 느려짐 (<code>heap_attrinfo_start</code> per <code>heap_next</code> · CBRD-26458)<small>S7 에서 확인</small></div>
       </div>
     </div>
-    <div class="callout" style="margin-top:14px"><b>결론은 workload 가 낸다</b> — 효과는 access pattern (작은 컬럼 위주 read 비중) 에 좌우된다. 그래서 주장 대신 <b>시나리오 기반 측정</b>으로 검증한다 → 다음 장.</div>
+    <div class="callout" style="margin-top:14px"><b>결론은 workload 가 낸다</b> — 효과는 access pattern (작은 컬럼 위주 read 비중) 에 좌우된다. 그래서 주장 대신 <b>시나리오 기반 측정</b>으로 판단한다 → 다음 장.</div>
   </div>
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
 </section>
@@ -792,13 +792,13 @@
   <div class="body">
     <div class="cols c2a">
       <table class="tbl" style="align-self:start">
-        <tr><th style="width:44px">#</th><th>시나리오</th><th>검증 대상</th><th style="width:96px">기대</th></tr>
+        <tr><th style="width:44px">#</th><th>시나리오</th><th>측정 대상</th><th style="width:96px">기대</th></tr>
         <tr><td>S1</td><td>Narrow SELECT — <code>id, small_col</code> (wide rows)</td><td>핵심 가치: payload I/O 회피</td><td class="c"><span class="tag ok">개선 예상</span></td></tr>
         <tr><td>S2</td><td><code>SELECT *</code> — full payload 조회</td><td>tradeoff: <code>oos_read</code> 추가</td><td class="c"><span class="tag risk">비용 예상</span></td></tr>
         <tr><td>S3</td><td>Full scan + narrow projection</td><td>heap 밀도 ↑ → 페이지 수 ↓</td><td class="c"><span class="tag ok">개선 예상</span></td></tr>
         <tr><td>S4</td><td>Bulk INSERT 1,000+ rows (OOS 유발)</td><td>demotion + WAL 오버헤드</td><td class="c"><span class="tag risk">비용 예상</span></td></tr>
         <tr><td>S5</td><td>UPDATE — OOS record 의 <b>non-OOS 컬럼</b></td><td>M1 always-new-OID 재기록 비용</td><td class="c"><span class="tag risk">비용 예상</span></td></tr>
-        <tr><td>S6</td><td>DELETE 전량 → vacuum → 재삽입</td><td>공간 회수·재활용 (bestspace)</td><td class="c"><span class="tag tbd">검증</span></td></tr>
+        <tr><td>S6</td><td>DELETE 전량 → vacuum → 재삽입</td><td>공간 회수·재활용 (bestspace)</td><td class="c"><span class="tag tbd">확인</span></td></tr>
         <tr><td>S7</td><td>unloaddb</td><td>알려진 회귀 정량화 (CBRD-26458)</td><td class="c"><span class="tag warn">1.6–1.7×</span></td></tr>
       </table>
       <div class="kv" style="align-self:start">
@@ -816,7 +816,7 @@
 <section class="slide">
   <div class="eyebrow">Performance · 22</div>
   <h1 class="t">측정 결과 — 수집 중 <span class="tag tbd">TBD</span></h1>
-  <p class="sub">아래 표는 자리표시자다 — 실측 후 수치를 채워 업데이트한다. 오늘은 시나리오 설계의 타당성을 검토받는 것이 목적.</p>
+  <p class="sub">아래 표는 자리표시자다 — 실측 후 수치를 채워 업데이트한다. 실측 전에는 결론을 보류한다.</p>
   <div class="body">
     <table class="tbl" style="font-size:14px">
       <tr><th style="width:44px">#</th><th>시나리오</th><th class="c">develop</th><th class="c">feat/oos</th><th class="c">Δ</th><th>비고</th></tr>
@@ -855,7 +855,7 @@
         <div class="fix"><b>방향</b> — OOS file 에 owner descriptor 부여 → per-table 귀속 + 통계 노출. <b>CBRD-26871</b></div>
       </div>
     </div>
-    <p style="font-size:13px;color:var(--muted);margin-top:14px">이 세 항목이 develop 머지 전 정리 대상이며, ①②는 오늘 설계 피드백을 받고 싶은 안건이기도 하다.</p>
+    <p style="font-size:13px;color:var(--muted);margin-top:14px">이 세 항목이 develop 머지 전 정리 대상이며, ①②는 머지 전 의사결정이 필요한 항목이다.</p>
   </div>
   <div class="foot"><span>CBRD-27014 · OOS 기술 리뷰</span><span class="pg"></span></div>
 </section>
@@ -906,13 +906,13 @@
 <section class="slide s-dark">
   <div class="eyebrow">Discussion</div>
   <h1 class="t" style="color:#F2F6FC">여쭙고 싶은 것들</h1>
-  <p class="sub">오늘의 목적은 보고가 아니라 검증입니다 — 설계 판단에 대한 의견을 부탁드립니다.</p>
+  <p class="sub">남은 의사결정과 리스크를 확인합니다.</p>
   <div class="body">
     <div class="ask">
-      <div class="card"><h3><span class="num">Q1</span> 저장 단위</h3><p>slotted page 공유 (多 record/page) 설계 — 단편화 이득 대비 page latch 경합 tradeoff 를 어떻게 평가하시는지. 섹션 분할 latch 같은 완화책이 필요한 수준인지.</p></div>
-      <div class="card"><h3><span class="num">Q2</span> Vacuum 안전성</h3><p>slot 재사용 데이터 손실 (CBRD-26950) 의 수정 방향 — chunk header 의 owner/generation 필드가 충분한가, retry-idempotent 설계로 더 가야 하는가.</p></div>
-      <div class="card"><h3><span class="num">Q3</span> 압축의 위치</h3><p>향후 압축을 type-serialization layer (<code>mr_data_writeval</code>) 에 둘 것인가, OOS 경계에 둘 것인가 — PG 의 TOAST 통합 방식과 비교해 의견을 듣고 싶습니다.</p></div>
-      <div class="card"><h3><span class="num">Q4</span> 성능 시나리오</h3><p>S1–S7 이 OOS 의 가치·비용을 공정하게 드러내는가 — 빠진 워크로드 (예: 혼합 OLTP, 대량 scan + 부분 payload) 가 있다면.</p></div>
+      <div class="card"><h3><span class="num">Q1</span> 저장 단위</h3><p>slotted page 공유 (多 record/page) 의 운영 리스크 — 단편화 이득 대비 page latch 경합을 어떤 지표로 감시할지. 섹션 분할 latch 같은 완화책이 필요한 임계점.</p></div>
+      <div class="card"><h3><span class="num">Q2</span> Vacuum 안전성</h3><p>slot 재사용 데이터 손실 (CBRD-26950) 의 머지 전 결정 — chunk header 의 owner/generation 필드로 갈지, retry-idempotent 경로까지 포함할지.</p></div>
+      <div class="card"><h3><span class="num">Q3</span> 압축의 위치</h3><p>향후 압축의 책임 경계 — type-serialization layer (<code>mr_data_writeval</code>) 와 OOS 경계 중 어느 쪽에 둘지, PG 의 TOAST 통합 방식과 비교해 정리.</p></div>
+      <div class="card"><h3><span class="num">Q4</span> 성능 시나리오</h3><p>S1–S7 의 측정 범위 — OOS 의 가치·비용을 드러내는 데 빠진 워크로드 (예: 혼합 OLTP, 대량 scan + 부분 payload) 가 있는지 확인.</p></div>
     </div>
     <div class="hero-meta" style="margin-top:26px">
       <img class="logo-foot" src="cubrid-logo-dark.svg" alt="CUBRID">
