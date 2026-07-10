@@ -1,0 +1,1021 @@
++ trap cleanup EXIT
++ record_environment
++ git -C /home/vimkim/gh/cb/CBRD-27006-oos-recdes-locality rev-parse HEAD
++ git -C /home/vimkim/gh/cb/CBRD-27006-oos-recdes-locality status --short --branch
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql --version
+csql (CUBRID utilities)
+11.5.0
+Copyright (C) 2008 Search Solution Corporation.
+Copyright (C) 2016 CUBRID Corporation.
++ uname -a
++ lscpu
++ free -h
++ df -h /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results
++ findmnt -T /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results
++ lsblk -o NAME,TYPE,SIZE,MOUNTPOINT,FSTYPE,MODEL
++ cp /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/oos-performance-setup.sql /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/sql/oos-performance-setup.sql
++ cp /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/conf/cubrid.conf /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/environment/cubrid.conf.before
++ configure_isolated_server
++ sed -Ei -e 's/^cubrid_port_id=.*/cubrid_port_id=15230/' -e 's/^data_buffer_size=.*/data_buffer_size=512M/' /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/conf/cubrid.conf
++ cp /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/conf/cubrid.conf /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/environment/cubrid.conf.active-s1-s4
++ run_s1_s2
++ create_database reads
++ local phase=reads
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/reads
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
+@ cubrid server stop: perf27014
+++ cubrid server 'perf27014' is not running.
++ true
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid createdb --db-volume-size=2G --log-volume-size=2G --db-page-size=16K --replace -F /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 perf27014 en_US.utf8
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server start perf27014
++ capture_server_state /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/reads/server-status.out
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/reads/server-status.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server status
++ setup_full_data reads
++ local phase=reads
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -i /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/oos-performance-setup.sql -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/reads/setup.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*), MIN(BIT_LENGTH(payload)), MAX(BIT_LENGTH(payload)), SUM(hot_col) FROM perf_oos;'
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1 /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT SUM(hot_col) FROM perf_oos;'
+++ seq 1 5
++ for run in $(seq 1 "$RUNS")
++ run_sql s1-narrow-scan-warm 1 'SELECT SUM(hot_col) FROM perf_oos;'
++ local case_name=s1-narrow-scan-warm
++ local run=1
++ local 'sql=SELECT SUM(hot_col) FROM perf_oos;'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-1
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-1
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-1/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-1/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-1/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT SUM(hot_col) FROM perf_oos;'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-1/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-1/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ for run in $(seq 1 "$RUNS")
++ run_sql s1-narrow-scan-warm 2 'SELECT SUM(hot_col) FROM perf_oos;'
++ local case_name=s1-narrow-scan-warm
++ local run=2
++ local 'sql=SELECT SUM(hot_col) FROM perf_oos;'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-2
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-2
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-2/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-2/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-2/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT SUM(hot_col) FROM perf_oos;'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-2/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-2/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ for run in $(seq 1 "$RUNS")
++ run_sql s1-narrow-scan-warm 3 'SELECT SUM(hot_col) FROM perf_oos;'
++ local case_name=s1-narrow-scan-warm
++ local run=3
++ local 'sql=SELECT SUM(hot_col) FROM perf_oos;'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-3
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-3
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-3/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-3/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-3/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT SUM(hot_col) FROM perf_oos;'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-3/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-3/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ for run in $(seq 1 "$RUNS")
++ run_sql s1-narrow-scan-warm 4 'SELECT SUM(hot_col) FROM perf_oos;'
++ local case_name=s1-narrow-scan-warm
++ local run=4
++ local 'sql=SELECT SUM(hot_col) FROM perf_oos;'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-4
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-4
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-4/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-4/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-4/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT SUM(hot_col) FROM perf_oos;'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-4/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-4/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ for run in $(seq 1 "$RUNS")
++ run_sql s1-narrow-scan-warm 5 'SELECT SUM(hot_col) FROM perf_oos;'
++ local case_name=s1-narrow-scan-warm
++ local run=5
++ local 'sql=SELECT SUM(hot_col) FROM perf_oos;'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-5
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-5
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-5/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-5/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-5/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT SUM(hot_col) FROM perf_oos;'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-5/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s1-narrow-scan-warm/run-5/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*) FROM perf_oos WHERE payload = CAST (REPEAT (X'\''0123456789ABCDEF'\'', 512) AS BIT VARYING);'
+++ seq 1 5
++ for run in $(seq 1 "$RUNS")
++ run_sql s2-payload-access-warm 1 'SELECT COUNT(*) FROM perf_oos WHERE payload = CAST (REPEAT (X'\''0123456789ABCDEF'\'', 512) AS BIT VARYING);'
++ local case_name=s2-payload-access-warm
++ local run=1
++ local 'sql=SELECT COUNT(*) FROM perf_oos WHERE payload = CAST (REPEAT (X'\''0123456789ABCDEF'\'', 512) AS BIT VARYING);'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-1
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-1
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-1/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-1/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-1/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*) FROM perf_oos WHERE payload = CAST (REPEAT (X'\''0123456789ABCDEF'\'', 512) AS BIT VARYING);'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-1/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-1/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ for run in $(seq 1 "$RUNS")
++ run_sql s2-payload-access-warm 2 'SELECT COUNT(*) FROM perf_oos WHERE payload = CAST (REPEAT (X'\''0123456789ABCDEF'\'', 512) AS BIT VARYING);'
++ local case_name=s2-payload-access-warm
++ local run=2
++ local 'sql=SELECT COUNT(*) FROM perf_oos WHERE payload = CAST (REPEAT (X'\''0123456789ABCDEF'\'', 512) AS BIT VARYING);'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-2
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-2
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-2/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-2/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-2/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*) FROM perf_oos WHERE payload = CAST (REPEAT (X'\''0123456789ABCDEF'\'', 512) AS BIT VARYING);'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-2/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-2/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ for run in $(seq 1 "$RUNS")
++ run_sql s2-payload-access-warm 3 'SELECT COUNT(*) FROM perf_oos WHERE payload = CAST (REPEAT (X'\''0123456789ABCDEF'\'', 512) AS BIT VARYING);'
++ local case_name=s2-payload-access-warm
++ local run=3
++ local 'sql=SELECT COUNT(*) FROM perf_oos WHERE payload = CAST (REPEAT (X'\''0123456789ABCDEF'\'', 512) AS BIT VARYING);'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-3
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-3
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-3/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-3/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-3/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*) FROM perf_oos WHERE payload = CAST (REPEAT (X'\''0123456789ABCDEF'\'', 512) AS BIT VARYING);'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-3/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-3/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ for run in $(seq 1 "$RUNS")
++ run_sql s2-payload-access-warm 4 'SELECT COUNT(*) FROM perf_oos WHERE payload = CAST (REPEAT (X'\''0123456789ABCDEF'\'', 512) AS BIT VARYING);'
++ local case_name=s2-payload-access-warm
++ local run=4
++ local 'sql=SELECT COUNT(*) FROM perf_oos WHERE payload = CAST (REPEAT (X'\''0123456789ABCDEF'\'', 512) AS BIT VARYING);'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-4
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-4
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-4/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-4/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-4/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*) FROM perf_oos WHERE payload = CAST (REPEAT (X'\''0123456789ABCDEF'\'', 512) AS BIT VARYING);'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-4/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-4/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ for run in $(seq 1 "$RUNS")
++ run_sql s2-payload-access-warm 5 'SELECT COUNT(*) FROM perf_oos WHERE payload = CAST (REPEAT (X'\''0123456789ABCDEF'\'', 512) AS BIT VARYING);'
++ local case_name=s2-payload-access-warm
++ local run=5
++ local 'sql=SELECT COUNT(*) FROM perf_oos WHERE payload = CAST (REPEAT (X'\''0123456789ABCDEF'\'', 512) AS BIT VARYING);'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-5
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-5
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-5/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-5/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-5/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*) FROM perf_oos WHERE payload = CAST (REPEAT (X'\''0123456789ABCDEF'\'', 512) AS BIT VARYING);'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-5/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s2-payload-access-warm/run-5/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ stop_database
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
++ run_s3
++ local run
++ local 'sql=INSERT INTO perf_oos SELECT LEVEL, MOD (LEVEL, 1000), REPEAT (X'\''0123456789ABCDEF'\'', 512) FROM db_root CONNECT BY LEVEL <= 100000; COMMIT;'
+++ seq 1 5
++ for run in $(seq 1 "$RUNS")
++ local phase=s3-bulk-insert/run-1
++ create_database s3-bulk-insert/run-1
++ local phase=s3-bulk-insert/run-1
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-1
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
+@ cubrid server stop: perf27014
+++ cubrid server 'perf27014' is not running.
++ true
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid createdb --db-volume-size=2G --log-volume-size=2G --db-page-size=16K --replace -F /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 perf27014 en_US.utf8
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server start perf27014
++ capture_server_state /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-1/server-status.out
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-1/server-status.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server status
++ create_empty_schema s3-bulk-insert/run-1
++ local phase=s3-bulk-insert/run-1
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -c 'CREATE TABLE perf_oos (id INT PRIMARY KEY, hot_col INT NOT NULL, payload BIT VARYING);'
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-1/space-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-1/space-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ sort
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ run_sql s3-bulk-insert 1 'INSERT INTO perf_oos SELECT LEVEL, MOD (LEVEL, 1000), REPEAT (X'\''0123456789ABCDEF'\'', 512) FROM db_root CONNECT BY LEVEL <= 100000; COMMIT;'
++ local case_name=s3-bulk-insert
++ local run=1
++ local 'sql=INSERT INTO perf_oos SELECT LEVEL, MOD (LEVEL, 1000), REPEAT (X'\''0123456789ABCDEF'\'', 512) FROM db_root CONNECT BY LEVEL <= 100000; COMMIT;'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-1
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-1
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-1/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-1/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-1/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'INSERT INTO perf_oos SELECT LEVEL, MOD (LEVEL, 1000), REPEAT (X'\''0123456789ABCDEF'\'', 512) FROM db_root CONNECT BY LEVEL <= 100000; COMMIT;'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-1/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-1/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-1/space-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-1/space-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*), MIN(BIT_LENGTH(payload)), MAX(BIT_LENGTH(payload)) FROM perf_oos;'
++ stop_database
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
++ for run in $(seq 1 "$RUNS")
++ local phase=s3-bulk-insert/run-2
++ create_database s3-bulk-insert/run-2
++ local phase=s3-bulk-insert/run-2
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-2
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
+@ cubrid server stop: perf27014
+++ cubrid server 'perf27014' is not running.
++ true
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid createdb --db-volume-size=2G --log-volume-size=2G --db-page-size=16K --replace -F /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 perf27014 en_US.utf8
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server start perf27014
++ capture_server_state /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-2/server-status.out
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-2/server-status.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server status
++ create_empty_schema s3-bulk-insert/run-2
++ local phase=s3-bulk-insert/run-2
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -c 'CREATE TABLE perf_oos (id INT PRIMARY KEY, hot_col INT NOT NULL, payload BIT VARYING);'
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-2/space-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-2/space-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ run_sql s3-bulk-insert 2 'INSERT INTO perf_oos SELECT LEVEL, MOD (LEVEL, 1000), REPEAT (X'\''0123456789ABCDEF'\'', 512) FROM db_root CONNECT BY LEVEL <= 100000; COMMIT;'
++ local case_name=s3-bulk-insert
++ local run=2
++ local 'sql=INSERT INTO perf_oos SELECT LEVEL, MOD (LEVEL, 1000), REPEAT (X'\''0123456789ABCDEF'\'', 512) FROM db_root CONNECT BY LEVEL <= 100000; COMMIT;'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-2
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-2
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-2/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-2/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-2/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'INSERT INTO perf_oos SELECT LEVEL, MOD (LEVEL, 1000), REPEAT (X'\''0123456789ABCDEF'\'', 512) FROM db_root CONNECT BY LEVEL <= 100000; COMMIT;'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-2/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-2/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-2/space-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-2/space-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*), MIN(BIT_LENGTH(payload)), MAX(BIT_LENGTH(payload)) FROM perf_oos;'
++ stop_database
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
++ for run in $(seq 1 "$RUNS")
++ local phase=s3-bulk-insert/run-3
++ create_database s3-bulk-insert/run-3
++ local phase=s3-bulk-insert/run-3
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-3
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
+@ cubrid server stop: perf27014
+++ cubrid server 'perf27014' is not running.
++ true
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid createdb --db-volume-size=2G --log-volume-size=2G --db-page-size=16K --replace -F /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 perf27014 en_US.utf8
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server start perf27014
++ capture_server_state /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-3/server-status.out
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-3/server-status.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server status
++ create_empty_schema s3-bulk-insert/run-3
++ local phase=s3-bulk-insert/run-3
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -c 'CREATE TABLE perf_oos (id INT PRIMARY KEY, hot_col INT NOT NULL, payload BIT VARYING);'
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-3/space-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-3/space-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ run_sql s3-bulk-insert 3 'INSERT INTO perf_oos SELECT LEVEL, MOD (LEVEL, 1000), REPEAT (X'\''0123456789ABCDEF'\'', 512) FROM db_root CONNECT BY LEVEL <= 100000; COMMIT;'
++ local case_name=s3-bulk-insert
++ local run=3
++ local 'sql=INSERT INTO perf_oos SELECT LEVEL, MOD (LEVEL, 1000), REPEAT (X'\''0123456789ABCDEF'\'', 512) FROM db_root CONNECT BY LEVEL <= 100000; COMMIT;'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-3
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-3
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-3/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-3/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-3/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'INSERT INTO perf_oos SELECT LEVEL, MOD (LEVEL, 1000), REPEAT (X'\''0123456789ABCDEF'\'', 512) FROM db_root CONNECT BY LEVEL <= 100000; COMMIT;'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-3/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-3/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-3/space-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-3/space-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*), MIN(BIT_LENGTH(payload)), MAX(BIT_LENGTH(payload)) FROM perf_oos;'
++ stop_database
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
++ for run in $(seq 1 "$RUNS")
++ local phase=s3-bulk-insert/run-4
++ create_database s3-bulk-insert/run-4
++ local phase=s3-bulk-insert/run-4
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-4
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
+@ cubrid server stop: perf27014
+++ cubrid server 'perf27014' is not running.
++ true
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid createdb --db-volume-size=2G --log-volume-size=2G --db-page-size=16K --replace -F /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 perf27014 en_US.utf8
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server start perf27014
++ capture_server_state /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-4/server-status.out
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-4/server-status.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server status
++ create_empty_schema s3-bulk-insert/run-4
++ local phase=s3-bulk-insert/run-4
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -c 'CREATE TABLE perf_oos (id INT PRIMARY KEY, hot_col INT NOT NULL, payload BIT VARYING);'
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-4/space-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-4/space-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ run_sql s3-bulk-insert 4 'INSERT INTO perf_oos SELECT LEVEL, MOD (LEVEL, 1000), REPEAT (X'\''0123456789ABCDEF'\'', 512) FROM db_root CONNECT BY LEVEL <= 100000; COMMIT;'
++ local case_name=s3-bulk-insert
++ local run=4
++ local 'sql=INSERT INTO perf_oos SELECT LEVEL, MOD (LEVEL, 1000), REPEAT (X'\''0123456789ABCDEF'\'', 512) FROM db_root CONNECT BY LEVEL <= 100000; COMMIT;'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-4
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-4
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-4/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-4/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-4/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'INSERT INTO perf_oos SELECT LEVEL, MOD (LEVEL, 1000), REPEAT (X'\''0123456789ABCDEF'\'', 512) FROM db_root CONNECT BY LEVEL <= 100000; COMMIT;'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-4/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-4/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-4/space-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-4/space-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ sort
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*), MIN(BIT_LENGTH(payload)), MAX(BIT_LENGTH(payload)) FROM perf_oos;'
++ stop_database
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
++ for run in $(seq 1 "$RUNS")
++ local phase=s3-bulk-insert/run-5
++ create_database s3-bulk-insert/run-5
++ local phase=s3-bulk-insert/run-5
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-5
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
+@ cubrid server stop: perf27014
+++ cubrid server 'perf27014' is not running.
++ true
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid createdb --db-volume-size=2G --log-volume-size=2G --db-page-size=16K --replace -F /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 perf27014 en_US.utf8
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server start perf27014
++ capture_server_state /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-5/server-status.out
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-5/server-status.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server status
++ create_empty_schema s3-bulk-insert/run-5
++ local phase=s3-bulk-insert/run-5
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -c 'CREATE TABLE perf_oos (id INT PRIMARY KEY, hot_col INT NOT NULL, payload BIT VARYING);'
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-5/space-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-5/space-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ run_sql s3-bulk-insert 5 'INSERT INTO perf_oos SELECT LEVEL, MOD (LEVEL, 1000), REPEAT (X'\''0123456789ABCDEF'\'', 512) FROM db_root CONNECT BY LEVEL <= 100000; COMMIT;'
++ local case_name=s3-bulk-insert
++ local run=5
++ local 'sql=INSERT INTO perf_oos SELECT LEVEL, MOD (LEVEL, 1000), REPEAT (X'\''0123456789ABCDEF'\'', 512) FROM db_root CONNECT BY LEVEL <= 100000; COMMIT;'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-5
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-5
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-5/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-5/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-5/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'INSERT INTO perf_oos SELECT LEVEL, MOD (LEVEL, 1000), REPEAT (X'\''0123456789ABCDEF'\'', 512) FROM db_root CONNECT BY LEVEL <= 100000; COMMIT;'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-5/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-5/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-5/space-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s3-bulk-insert/run-5/space-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*), MIN(BIT_LENGTH(payload)), MAX(BIT_LENGTH(payload)) FROM perf_oos;'
++ stop_database
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
++ run_s4
++ local run
+++ seq 1 5
++ for run in $(seq 1 "$RUNS")
++ local phase=s4-small-column-update/run-1
++ create_database s4-small-column-update/run-1
++ local phase=s4-small-column-update/run-1
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-1
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
+@ cubrid server stop: perf27014
+++ cubrid server 'perf27014' is not running.
++ true
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid createdb --db-volume-size=2G --log-volume-size=2G --db-page-size=16K --replace -F /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 perf27014 en_US.utf8
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server start perf27014
++ capture_server_state /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-1/server-status.out
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-1/server-status.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server status
++ setup_full_data s4-small-column-update/run-1
++ local phase=s4-small-column-update/run-1
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -i /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/oos-performance-setup.sql -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-1/setup.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*), MIN(BIT_LENGTH(payload)), MAX(BIT_LENGTH(payload)), SUM(hot_col) FROM perf_oos;'
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-1/space-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-1/space-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ sort
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ run_sql s4-small-column-update 1 'UPDATE perf_oos SET hot_col = hot_col + 1; COMMIT;'
++ local case_name=s4-small-column-update
++ local run=1
++ local 'sql=UPDATE perf_oos SET hot_col = hot_col + 1; COMMIT;'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-1
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-1
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-1/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-1/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-1/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'UPDATE perf_oos SET hot_col = hot_col + 1; COMMIT;'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-1/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-1/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-1/space-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-1/space-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*), SUM(hot_col), MIN(BIT_LENGTH(payload)), MAX(BIT_LENGTH(payload)) FROM perf_oos;'
++ stop_database
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
++ for run in $(seq 1 "$RUNS")
++ local phase=s4-small-column-update/run-2
++ create_database s4-small-column-update/run-2
++ local phase=s4-small-column-update/run-2
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-2
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
+@ cubrid server stop: perf27014
+++ cubrid server 'perf27014' is not running.
++ true
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid createdb --db-volume-size=2G --log-volume-size=2G --db-page-size=16K --replace -F /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 perf27014 en_US.utf8
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server start perf27014
++ capture_server_state /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-2/server-status.out
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-2/server-status.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server status
++ setup_full_data s4-small-column-update/run-2
++ local phase=s4-small-column-update/run-2
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -i /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/oos-performance-setup.sql -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-2/setup.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*), MIN(BIT_LENGTH(payload)), MAX(BIT_LENGTH(payload)), SUM(hot_col) FROM perf_oos;'
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-2/space-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-2/space-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ run_sql s4-small-column-update 2 'UPDATE perf_oos SET hot_col = hot_col + 1; COMMIT;'
++ local case_name=s4-small-column-update
++ local run=2
++ local 'sql=UPDATE perf_oos SET hot_col = hot_col + 1; COMMIT;'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-2
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-2
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-2/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-2/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-2/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'UPDATE perf_oos SET hot_col = hot_col + 1; COMMIT;'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-2/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-2/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-2/space-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-2/space-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*), SUM(hot_col), MIN(BIT_LENGTH(payload)), MAX(BIT_LENGTH(payload)) FROM perf_oos;'
++ stop_database
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
++ for run in $(seq 1 "$RUNS")
++ local phase=s4-small-column-update/run-3
++ create_database s4-small-column-update/run-3
++ local phase=s4-small-column-update/run-3
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-3
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
+@ cubrid server stop: perf27014
+++ cubrid server 'perf27014' is not running.
++ true
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid createdb --db-volume-size=2G --log-volume-size=2G --db-page-size=16K --replace -F /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 perf27014 en_US.utf8
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server start perf27014
++ capture_server_state /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-3/server-status.out
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-3/server-status.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server status
++ setup_full_data s4-small-column-update/run-3
++ local phase=s4-small-column-update/run-3
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -i /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/oos-performance-setup.sql -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-3/setup.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*), MIN(BIT_LENGTH(payload)), MAX(BIT_LENGTH(payload)), SUM(hot_col) FROM perf_oos;'
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-3/space-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-3/space-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ run_sql s4-small-column-update 3 'UPDATE perf_oos SET hot_col = hot_col + 1; COMMIT;'
++ local case_name=s4-small-column-update
++ local run=3
++ local 'sql=UPDATE perf_oos SET hot_col = hot_col + 1; COMMIT;'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-3
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-3
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-3/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-3/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-3/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'UPDATE perf_oos SET hot_col = hot_col + 1; COMMIT;'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-3/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-3/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-3/space-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-3/space-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*), SUM(hot_col), MIN(BIT_LENGTH(payload)), MAX(BIT_LENGTH(payload)) FROM perf_oos;'
++ stop_database
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
++ for run in $(seq 1 "$RUNS")
++ local phase=s4-small-column-update/run-4
++ create_database s4-small-column-update/run-4
++ local phase=s4-small-column-update/run-4
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-4
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
+@ cubrid server stop: perf27014
+++ cubrid server 'perf27014' is not running.
++ true
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid createdb --db-volume-size=2G --log-volume-size=2G --db-page-size=16K --replace -F /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 perf27014 en_US.utf8
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server start perf27014
++ capture_server_state /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-4/server-status.out
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-4/server-status.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server status
++ setup_full_data s4-small-column-update/run-4
++ local phase=s4-small-column-update/run-4
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -i /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/oos-performance-setup.sql -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-4/setup.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*), MIN(BIT_LENGTH(payload)), MAX(BIT_LENGTH(payload)), SUM(hot_col) FROM perf_oos;'
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-4/space-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-4/space-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ run_sql s4-small-column-update 4 'UPDATE perf_oos SET hot_col = hot_col + 1; COMMIT;'
++ local case_name=s4-small-column-update
++ local run=4
++ local 'sql=UPDATE perf_oos SET hot_col = hot_col + 1; COMMIT;'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-4
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-4
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-4/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-4/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-4/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'UPDATE perf_oos SET hot_col = hot_col + 1; COMMIT;'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-4/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-4/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-4/space-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-4/space-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ sort
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*), SUM(hot_col), MIN(BIT_LENGTH(payload)), MAX(BIT_LENGTH(payload)) FROM perf_oos;'
++ stop_database
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
++ for run in $(seq 1 "$RUNS")
++ local phase=s4-small-column-update/run-5
++ create_database s4-small-column-update/run-5
++ local phase=s4-small-column-update/run-5
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-5
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
+@ cubrid server stop: perf27014
+++ cubrid server 'perf27014' is not running.
++ true
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid createdb --db-volume-size=2G --log-volume-size=2G --db-page-size=16K --replace -F /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 perf27014 en_US.utf8
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server start perf27014
++ capture_server_state /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-5/server-status.out
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-5/server-status.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server status
++ setup_full_data s4-small-column-update/run-5
++ local phase=s4-small-column-update/run-5
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -i /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/oos-performance-setup.sql -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-5/setup.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*), MIN(BIT_LENGTH(payload)), MAX(BIT_LENGTH(payload)), SUM(hot_col) FROM perf_oos;'
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-5/space-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-5/space-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ sort
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ run_sql s4-small-column-update 5 'UPDATE perf_oos SET hot_col = hot_col + 1; COMMIT;'
++ local case_name=s4-small-column-update
++ local run=5
++ local 'sql=UPDATE perf_oos SET hot_col = hot_col + 1; COMMIT;'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-5
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-5
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-5/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-5/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-5/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'UPDATE perf_oos SET hot_col = hot_col + 1; COMMIT;'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-5/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-5/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-5/space-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s4-small-column-update/run-5/space-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*), SUM(hot_col), MIN(BIT_LENGTH(payload)), MAX(BIT_LENGTH(payload)) FROM perf_oos;'
++ stop_database
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
++ run_s5
++ [[ oos == \o\o\s ]]
++ enable_small_vacuum_log_blocks
++ printf '\n[@%s]\nvacuum_log_block_pages=4\n' perf27014
++ cp /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/conf/cubrid.conf /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/environment/cubrid.conf.active-s5
++ create_database s5-delete-vacuum-reinsert
++ local phase=s5-delete-vacuum-reinsert
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
+@ cubrid server stop: perf27014
+++ cubrid server 'perf27014' is not running.
++ true
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid createdb --db-volume-size=2G --log-volume-size=2G --db-page-size=16K --replace -F /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 perf27014 en_US.utf8
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server start perf27014
++ capture_server_state /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/server-status.out
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/server-status.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server status
++ setup_full_data s5-delete-vacuum-reinsert
++ local phase=s5-delete-vacuum-reinsert
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -i /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/oos-performance-setup.sql -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/setup.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*), MIN(BIT_LENGTH(payload)), MAX(BIT_LENGTH(payload)), SUM(hot_col) FROM perf_oos;'
++ local phase=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/space-before-delete.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/space-before-delete.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -c ';oos_stats perf_oos'
+
+In line 1, column 2,
+
+ERROR: In line 1, column 2 before ' perf_oos'
+Syntax error: unexpected 'oos_stats', expecting ';'
+
++ cleanup
++ local rc=1
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
+@ cubrid server stop: perf27014
+
+Server perf27014 notified of shutdown.
+This may take several minutes. Please wait.
+++ cubrid server stop: success
++ [[ -f /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/environment/cubrid.conf.before ]]
++ cp /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/environment/cubrid.conf.before /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/conf/cubrid.conf
++ exit 1
++ trap cleanup EXIT
++ record_environment
++ git -C /home/vimkim/gh/cb/CBRD-27006-oos-recdes-locality rev-parse HEAD
++ git -C /home/vimkim/gh/cb/CBRD-27006-oos-recdes-locality status --short --branch
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql --version
+csql (CUBRID utilities)
+11.5.0
+Copyright (C) 2008 Search Solution Corporation.
+Copyright (C) 2016 CUBRID Corporation.
++ uname -a
++ lscpu
++ free -h
++ df -h /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results
++ findmnt -T /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results
++ lsblk -o NAME,TYPE,SIZE,MOUNTPOINT,FSTYPE,MODEL
++ cp /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/oos-performance-setup.sql /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/sql/oos-performance-setup.sql
++ cp /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/conf/cubrid.conf /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/environment/cubrid.conf.before
++ configure_isolated_server
++ sed -Ei -e 's/^cubrid_port_id=.*/cubrid_port_id=15230/' -e 's/^data_buffer_size=.*/data_buffer_size=512M/' /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/conf/cubrid.conf
++ cp /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/conf/cubrid.conf /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/environment/cubrid.conf.active-s1-s4
++ [[ s5 == \a\l\l ]]
++ run_s5
++ [[ oos == \o\o\s ]]
++ enable_small_vacuum_log_blocks
++ printf '\n[@%s]\nvacuum_log_block_pages=4\n' perf27014
++ cp /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/conf/cubrid.conf /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/environment/cubrid.conf.active-s5
++ create_database s5-delete-vacuum-reinsert
++ local phase=s5-delete-vacuum-reinsert
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
+@ cubrid server stop: perf27014
+++ cubrid server 'perf27014' is not running.
++ true
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid createdb --db-volume-size=2G --log-volume-size=2G --db-page-size=16K --replace -F /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 perf27014 en_US.utf8
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server start perf27014
++ capture_server_state /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/server-status.out
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/server-status.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server status
++ setup_full_data s5-delete-vacuum-reinsert
++ local phase=s5-delete-vacuum-reinsert
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -i /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/oos-performance-setup.sql -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/setup.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*), MIN(BIT_LENGTH(payload)), MAX(BIT_LENGTH(payload)), SUM(hot_col) FROM perf_oos;'
++ local phase=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/space-before-delete.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/space-before-delete.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ printf ';oos_stats perf_oos\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ run_sql s5-delete-vacuum-reinsert/delete 1 'DELETE FROM perf_oos; COMMIT;'
++ local case_name=s5-delete-vacuum-reinsert/delete
++ local run=1
++ local 'sql=DELETE FROM perf_oos; COMMIT;'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/delete/run-1
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/delete/run-1
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/delete/run-1/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/delete/run-1/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/delete/run-1/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'DELETE FROM perf_oos; COMMIT;'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/delete/run-1/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/delete/run-1/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/space-after-delete.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/space-after-delete.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*) FROM perf_oos;'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -c 'CREATE TABLE vacuum_filler (id INT PRIMARY KEY, v VARCHAR(100)); INSERT INTO vacuum_filler SELECT LEVEL, REPEAT (CHAR(120), 100) FROM db_root CONNECT BY LEVEL <= 5000; COMMIT;'
+
+In line 1, column 114,
+
+ERROR: In line 1, column 114 before '(120), 100) FROM db_root CONNECT BY LEVEL <= 5000; COMMIT;'
+Syntax error: unexpected 'CHAR', expecting '+'
+
++ cleanup
++ local rc=1
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
+@ cubrid server stop: perf27014
+
+Server perf27014 notified of shutdown.
+This may take several minutes. Please wait.
+++ cubrid server stop: success
++ [[ -f /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/environment/cubrid.conf.before ]]
++ cp /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/environment/cubrid.conf.before /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/conf/cubrid.conf
++ exit 1
++ trap cleanup EXIT
++ record_environment
++ git -C /home/vimkim/gh/cb/CBRD-27006-oos-recdes-locality rev-parse HEAD
++ git -C /home/vimkim/gh/cb/CBRD-27006-oos-recdes-locality status --short --branch
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql --version
+csql (CUBRID utilities)
+11.5.0
+Copyright (C) 2008 Search Solution Corporation.
+Copyright (C) 2016 CUBRID Corporation.
++ uname -a
++ lscpu
++ free -h
++ df -h /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results
++ findmnt -T /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results
++ lsblk -o NAME,TYPE,SIZE,MOUNTPOINT,FSTYPE,MODEL
++ cp /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/oos-performance-setup.sql /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/sql/oos-performance-setup.sql
++ cp /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/conf/cubrid.conf /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/environment/cubrid.conf.before
++ configure_isolated_server
++ sed -Ei -e 's/^cubrid_port_id=.*/cubrid_port_id=15230/' -e 's/^data_buffer_size=.*/data_buffer_size=512M/' /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/conf/cubrid.conf
++ cp /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/conf/cubrid.conf /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/environment/cubrid.conf.active-s1-s4
++ [[ s5 == \a\l\l ]]
++ run_s5
++ [[ oos == \o\o\s ]]
++ enable_small_vacuum_log_blocks
++ printf '\n[@%s]\nvacuum_log_block_pages=4\n' perf27014
++ cp /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/conf/cubrid.conf /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/environment/cubrid.conf.active-s5
++ create_database s5-delete-vacuum-reinsert
++ local phase=s5-delete-vacuum-reinsert
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
+@ cubrid server stop: perf27014
+++ cubrid server 'perf27014' is not running.
++ true
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid createdb --db-volume-size=2G --log-volume-size=2G --db-page-size=16K --replace -F /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 perf27014 en_US.utf8
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server start perf27014
++ capture_server_state /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/server-status.out
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/server-status.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server status
++ setup_full_data s5-delete-vacuum-reinsert
++ local phase=s5-delete-vacuum-reinsert
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -i /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/oos-performance-setup.sql -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/setup.out
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*), MIN(BIT_LENGTH(payload)), MAX(BIT_LENGTH(payload)), SUM(hot_col) FROM perf_oos;'
++ local phase=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/space-before-delete.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/space-before-delete.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ printf ';oos_stats perf_oos\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ run_sql s5-delete-vacuum-reinsert/delete 1 'DELETE FROM perf_oos; COMMIT;'
++ local case_name=s5-delete-vacuum-reinsert/delete
++ local run=1
++ local 'sql=DELETE FROM perf_oos; COMMIT;'
++ local dir=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/delete/run-1
++ mkdir -p /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/delete/run-1
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/delete/run-1/stat-before.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/delete/run-1/stat-before.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ /usr/bin/time -f 'elapsed_s=%e\nmax_rss_kb=%M\nuser_cpu_s=%U\nsys_cpu_s=%S' -o /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/delete/run-1/time.txt /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'DELETE FROM perf_oos; COMMIT;'
++ capture_stats /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/delete/run-1/stat-after.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/delete/run-1/stat-after.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid statdump -c perf27014
++ capture_space /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/space-after-delete.txt
++ local out=/home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/s5-delete-vacuum-reinsert/space-after-delete.txt
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid spacedb -C --size-unit=M perf27014
++ find /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/database-files/oos/perf27014 -maxdepth 1 -type f -printf '%f %s bytes\n'
++ sort
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -t -N -c 'SELECT COUNT(*) FROM perf_oos;'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014 -c 'CREATE TABLE vacuum_filler (id INT PRIMARY KEY, v VARCHAR(100)); INSERT INTO vacuum_filler SELECT LEVEL, REPEAT ('\''x'\'', 100) FROM db_root CONNECT BY LEVEL <= 5000; COMMIT;'
+++ seq 1 60
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ printf ';vacuum\n'
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
++ printf ';vacuum\n'
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/csql -C -u dba -p '' perf27014
++ sleep 1
++ for poll in $(seq 1 60)
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid vacuumdb -C --dump perf27014
+Failed to connect to database server, 'perf27014', on the following host(s): localhost
++ cleanup
++ local rc=1
++ /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/bin/cubrid server stop perf27014
+@ cubrid server stop: perf27014
+++ cubrid server 'perf27014' is not running.
++ true
++ [[ -f /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/environment/cubrid.conf.before ]]
++ cp /home/vimkim/gh/my-cubrid-docs/presentations/CBRD-27014/performance-results/oos/environment/cubrid.conf.before /home/vimkim/.cub/install/CBRD-27006-oos-recdes-locality/release_gcc/conf/cubrid.conf
++ exit 1

@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OOS 요약 - CBRD-27014</title>
+<link rel="stylesheet" href="deck.css">
+</head>
+<body>
+
+<div id="stage"><div id="frame">
+
+<!-- 1. Purpose and background -->
+<section class="slide">
+  <div class="eyebrow">CBRD-27014 · 01. Purpose &amp; Background</div>
+  <h1 class="t">OOS: 큰 컬럼을 분리해 작은 조회를 가볍게</h1>
+  <p class="sub">스키마와 SQL은 그대로 두고, 큰 payload가 함께 있는 레코드에서 자주 쓰는 작은 값과 큰 값의 저장 위치를 분리한다.</p>
+  <div class="body">
+    <div class="cols c2a">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card">
+          <h3>문제 - 작은 조회에도 큰 값이 함께 움직인다</h3>
+          <div class="rec" style="margin:10px 0">
+            <div class="cell hdr" style="flex:0 0 120px">Record Header</div>
+            <div class="cell" style="flex:0 0 70px">id<small>4B</small></div>
+            <div class="cell" style="flex:0 0 100px">status<small>small</small></div>
+            <div class="cell big" style="flex:1">payload<small>8KB</small></div>
+          </div>
+          <p><code>SELECT id, status</code> 만 수행해도 payload가 든 <b>heap page</b>를 읽는다. 큰 값 때문에 페이지당 row 수가 줄어 buffer pool도 빨리 찬다.</p>
+        </div>
+        <div class="callout"><b>목표</b> - 큰 payload를 자주 읽지 않는 workload에서 heap page I/O와 working set을 줄인다. 큰 값이 필요한 조회는 정확한 값과 기존 SQL 결과를 유지한다.</div>
+      </div>
+      <div class="kv" style="align-self:start">
+        <div class="row"><b>개선 기능</b><span>큰 variable column을 table 전용 <b>OOS file</b>로 옮기고, heap에는 16B OOS OID만 남긴다.</span></div>
+        <div class="row"><b>개선 대상</b><span>큰 레코드에서 작은 컬럼만 읽는 조회, heap page 밀도, buffer pool 효율</span></div>
+        <div class="row"><b>참고한 방식</b><span>PostgreSQL TOAST의 <b>column-level 분리</b>와 largest-first 정책</span></div>
+        <div class="row"><b>적용 기준</b><span>record가 <code>DB_PAGESIZE/4</code>를 넘을 때만 분리를 시작한다. 16KB page에서는 약 4KB다.</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>CBRD-27014 · OOS 요약</span><span class="pg"></span></div>
+</section>
+
+<!-- 2. AS-IS / TO-BE -->
+<section class="slide">
+  <div class="eyebrow">CBRD-27014 · 02. AS-IS / TO-BE</div>
+  <h1 class="t">큰 레코드를 나누되, 애플리케이션에는 그대로 보이게</h1>
+  <div class="body">
+    <div class="cols c2">
+      <div class="card">
+        <h3><span class="tag risk">AS-IS</span> heap record 안에 모든 값</h3>
+        <div style="border:1.5px solid #BCC7D8;padding:16px;background:#F6F8FB;margin:14px 0">
+          <p style="font-size:12px;font-weight:800;color:#53677F;margin-bottom:9px">HEAP PAGE</p>
+          <div class="rec"><div class="cell" style="flex:.5">id</div><div class="cell" style="flex:.8">status</div><div class="cell big" style="flex:2">payload 8KB</div></div>
+          <div class="rec" style="margin-top:7px"><div class="cell" style="flex:.5">id</div><div class="cell" style="flex:.8">status</div><div class="cell big" style="flex:2">payload 8KB</div></div>
+        </div>
+        <p>작은 값만 필요해도 payload가 차지한 heap page를 읽어야 한다.</p>
+        <p>레코드 데이터(<code>recdes</code>)가 하나의 DB page(보통 16KB)를 넘으면, 특수한 <b>overflow page chain</b>으로 옮겨 저장한다. overflow page 하나에는 recdes 하나만 들어가므로 큰 recdes 하나가 여러 16KB page를 점유하며, 남는 공간은 다른 레코드가 쓸 수 없어 내부 단편화가 커진다.</p>
+        <p><b>극단적인 나쁜 경우:</b> overflow에 있는 4B <code>int</code> 하나만 읽어도 recdes 전체를 가져와야 한다. 연결된 모든 overflow page를 읽는 I/O가 발생한다.</p>
+      </div>
+      <div class="card" style="border:2px solid var(--oos-line)">
+        <h3><span class="tag oos">TO-BE</span> heap은 가볍게, payload는 OOS file로</h3>
+        <div style="border:1.5px solid #BCC7D8;padding:12px;background:#F6F8FB;margin:14px 0 8px">
+          <p style="font-size:12px;font-weight:800;color:#53677F;margin-bottom:9px">HEAP PAGE</p>
+          <div class="rec"><div class="cell" style="flex:.5">id</div><div class="cell" style="flex:.8">status</div><div class="cell oid" style="flex:1">OOS OID<small>16B</small></div></div>
+          <div class="rec" style="margin-top:7px"><div class="cell" style="flex:.5">id</div><div class="cell" style="flex:.8">status</div><div class="cell oid" style="flex:1">OOS OID<small>16B</small></div></div>
+        </div>
+        <div class="dn">payload가 필요할 때만 ↓</div>
+        <div class="oosbox" style="margin-top:8px">OOS FILE<small>payload 8KB · payload 8KB · ...</small></div>
+      </div>
+    </div>
+    <div class="cols c3" style="margin-top:18px">
+      <div class="callout"><b>1. 판단</b><br>record가 page의 1/4을 넘을 때만 OOS를 검토한다.</div>
+      <div class="callout"><b>2. 분리</b><br>큰 variable column부터 하나씩 옮긴다.</div>
+      <div class="callout ok"><b>3. 중단</b><br>record가 기준 아래로 내려오면 바로 멈춘다. 필요 이상으로 옮기지 않는다.</div>
+    </div>
+    <p style="font-size:14px;color:var(--muted);margin-top:16px"><b>읽기 방식:</b> 작은 컬럼 조회는 heap에서 끝나고, payload를 선택한 경우에만 lazy read로 OOS 값을 읽는다.</p>
+  </div>
+  <div class="foot"><span>CBRD-27014 · OOS 요약</span><span class="pg"></span></div>
+</section>
+
+<!-- 3. Performance plan -->
+<section class="slide">
+  <div class="eyebrow">CBRD-27014 · 03. Performance Test Plan</div>
+  <h1 class="t">SELECT, INSERT, UPDATE를 같은 조건에서 비교한다</h1>
+  <p class="sub"><code>develop</code>과 OOS branch에 같은 schema와 data를 만들고, release-build <code>csql</code>로 반복 측정한다.</p>
+  <div class="body">
+    <div class="cols c2a">
+      <table class="tbl" style="align-self:start">
+        <tr><th style="width:52px">#</th><th>시나리오</th><th>확인할 질문</th></tr>
+        <tr><td>S1</td><td>작은 컬럼 full scan<br><code>SUM(hot_col)</code></td><td>payload를 읽지 않을 때 heap page I/O가 줄어드는가?</td></tr>
+        <tr><td>S2</td><td>큰 값 조회<br><code>payload = ...</code></td><td>큰 값을 실제로 읽을 때 OOS read 비용은 얼마인가?</td></tr>
+        <tr><td>S3</td><td>일괄 INSERT</td><td>demotion과 WAL이 쓰기 처리량에 미치는 비용은?</td></tr>
+        <tr><td>S4</td><td>작은 컬럼 UPDATE</td><td>변경하지 않은 payload의 재기록 비용은 얼마인가?</td></tr>
+      </table>
+      <div class="kv" style="align-self:start">
+        <div class="row"><b>동일 조건</b><span>16KB page, 동일 CUBRID 설정, 동일 <code>BIT VARYING</code> 4KB payload, 동일 레코드 수</span></div>
+        <div class="row"><b>반복</b><span>warm-up 1회는 제외하고, 각 branch-시나리오를 5회 실행한다. 결과는 median으로 제시한다.</span></div>
+        <div class="row"><b>지표</b><span>elapsed, data page fetches / ioreads, log iowrites, throughput, database size</span></div>
+        <div class="row"><b>발표 결과</b><span>각 시나리오에 <b>develop | OOS | delta</b> 막대그래프 1개와 원시 수치 표를 함께 둔다.</span></div>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:16px"><b>해석 원칙</b> - S1의 이득과 S2-S4의 비용을 함께 제시한다. 환경과 cache 조건을 그래프에 명시하고, 실측 범위를 넘는 결론은 내리지 않는다.</div>
+  </div>
+  <div class="foot"><span>CBRD-27014 · OOS 요약</span><span class="pg"></span></div>
+</section>
+
+<!-- 4. Measured performance results -->
+<section class="slide">
+  <div class="eyebrow">CBRD-27014 · 04. Measured Result</div>
+  <h1 class="t">이번 warm workload에서는 OOS 비용이 더 크게 관찰됐다</h1>
+  <p class="sub">100,000 rows · 4KB <code>BIT VARYING</code> payload · branch별 5회 median · elapsed time, lower is better</p>
+  <div class="body">
+    <div class="cols c2a">
+      <div class="card" style="padding:16px 18px">
+        <h3><span class="tag risk">OOS elapsed delta</span> <code>develop</code> 대비</h3>
+        <div style="display:flex;flex-direction:column;gap:12px;margin:12px 0 14px">
+          <div style="display:grid;grid-template-columns:115px 1fr 62px;gap:10px;align-items:center;font-size:12.5px"><b>S1 작은 컬럼 SELECT</b><div style="height:20px;background:#E8EDF5;border-radius:3px;overflow:hidden"><div style="width:10%;height:100%;background:#D97430"></div></div><b style="color:#A35319">+11.1%</b></div>
+          <div style="display:grid;grid-template-columns:115px 1fr 62px;gap:10px;align-items:center;font-size:12.5px"><b>S2 큰 값 SELECT</b><div style="height:20px;background:#E8EDF5;border-radius:3px;overflow:hidden"><div style="width:100%;height:100%;background:#B4342E"></div></div><b style="color:#B4342E">+114.3%</b></div>
+          <div style="display:grid;grid-template-columns:115px 1fr 62px;gap:10px;align-items:center;font-size:12.5px"><b>S3 일괄 INSERT</b><div style="height:20px;background:#E8EDF5;border-radius:3px;overflow:hidden"><div style="width:2%;min-width:3px;height:100%;background:#B7791F"></div></div><b style="color:#8C5B13">+0.8%</b></div>
+          <div style="display:grid;grid-template-columns:115px 1fr 62px;gap:10px;align-items:center;font-size:12.5px"><b>S4 작은 컬럼 UPDATE</b><div style="height:20px;background:#E8EDF5;border-radius:3px;overflow:hidden"><div style="width:30%;height:100%;background:#D97430"></div></div><b style="color:#A35319">+34.7%</b></div>
+        </div>
+        <table class="tbl" style="font-size:12.5px">
+          <tr><th>Scenario</th><th class="c">develop</th><th class="c">OOS</th><th class="c">delta</th></tr>
+          <tr><td>S1 작은 컬럼 SELECT</td><td class="c">0.09 s</td><td class="c">0.10 s</td><td class="c">+11.1%</td></tr>
+          <tr><td>S2 큰 값 SELECT</td><td class="c">0.21 s</td><td class="c">0.45 s</td><td class="c">+114.3%</td></tr>
+          <tr><td>S3 일괄 INSERT</td><td class="c">30.35 s</td><td class="c">30.60 s</td><td class="c">+0.8%</td></tr>
+          <tr><td>S4 작은 컬럼 UPDATE</td><td class="c">1.99 s</td><td class="c">2.68 s</td><td class="c">+34.7%</td></tr>
+        </table>
+      </div>
+      <div class="kv" style="align-self:start">
+        <div class="row"><b>S1</b><span><b>작은 컬럼 SELECT의 이득은 확인되지 않았다.</b> 이 warm workload에서는 0.09 s → 0.10 s였다.</span></div>
+        <div class="row"><b>S2</b><span><b>큰 값 조회 비용은 확인됐다.</b> 큰 값을 모두 읽는 SELECT는 OOS에서 2.14배 시간이 들었다.</span></div>
+        <div class="row"><b>S3</b><span><b>일괄 INSERT는 관측상 거의 동일했다.</b> 3,294.9 → 3,268.0 rows/s.</span></div>
+        <div class="row"><b>S4</b><span><b>small-column UPDATE 비용이 확인됐다.</b> OOS는 +34.7%, permanent data는 603 → 1,128 MiB로 늘었다.</span></div>
+      </div>
+    </div>
+    <div class="callout risk" style="margin-top:15px"><b>해석 범위</b> - shared host의 warm-only, branch 순차 실행 결과다. SELECT의 <code>statdump</code> delta는 0이어서 storage I/O locality의 일반적 이득은 아직 주장할 수 없다. 모든 S1-S4 결과값 검증은 통과했다.</div>
+  </div>
+  <div class="foot"><span>CBRD-27014 · OOS 요약 · measured 2026-07-10</span><span class="pg"></span></div>
+</section>
+
+</div></div>
+<div id="pager">1 / 4</div>
+
+<script src="deck.js"></script>
+</body>
+</html>
