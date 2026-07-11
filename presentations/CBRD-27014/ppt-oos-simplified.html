@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OOS 요약 - CBRD-27014</title>
+<title>OOS Project 요약</title>
 <link rel="stylesheet" href="deck.css">
 </head>
 <body>
@@ -12,7 +12,7 @@
 
 <!-- 1. Purpose and background -->
 <section class="slide">
-  <div class="eyebrow">CBRD-27014 · 01. Purpose &amp; Background</div>
+  <div class="eyebrow">OOS Project · 01. Purpose &amp; Background</div>
   <h1 class="t">OOS: 큰 컬럼을 분리해 작은 조회를 가볍게</h1>
   <p class="sub">스키마와 SQL은 그대로 두고, 큰 payload가 함께 있는 레코드에서 자주 쓰는 작은 값과 큰 값의 저장 위치를 분리한다.</p>
   <div class="body">
@@ -38,12 +38,12 @@
       </div>
     </div>
   </div>
-  <div class="foot"><span>CBRD-27014 · OOS 요약</span><span class="pg"></span></div>
+  <div class="foot"><span>OOS Project 요약</span><span class="pg"></span></div>
 </section>
 
 <!-- 2. AS-IS / TO-BE -->
 <section class="slide">
-  <div class="eyebrow">CBRD-27014 · 02. AS-IS / TO-BE</div>
+  <div class="eyebrow">OOS Project · 02. AS-IS / TO-BE</div>
   <h1 class="t">큰 레코드를 나누되, 애플리케이션에는 그대로 보이게</h1>
   <div class="body">
     <div class="cols c2">
@@ -76,12 +76,12 @@
     </div>
     <p style="font-size:14px;color:var(--muted);margin-top:16px"><b>읽기 방식:</b> 작은 컬럼 조회는 heap에서 끝나고, payload를 선택한 경우에만 lazy read로 OOS 값을 읽는다.</p>
   </div>
-  <div class="foot"><span>CBRD-27014 · OOS 요약</span><span class="pg"></span></div>
+  <div class="foot"><span>OOS Project 요약</span><span class="pg"></span></div>
 </section>
 
 <!-- 3. Performance plan -->
 <section class="slide">
-  <div class="eyebrow">CBRD-27014 · 03. Performance Test Plan</div>
+  <div class="eyebrow">OOS Project · 03. Performance Test Plan</div>
   <h1 class="t">두 baseline layout × 세 SELECT로 이득의 조건을 분리한다</h1>
   <p class="sub"><code>develop</code>과 OOS branch에서 동일 데이터·설정으로 narrow read의 page 비용을 비교한다.</p>
   <div class="body">
@@ -101,12 +101,12 @@
       <div class="row"><b>주의</b><span>OS cache를 비우지 못한 shared host — restart-only를 cold라고 부르지 않는다.</span></div>
     </div>
   </div>
-  <div class="foot"><span>CBRD-27014 · OOS 요약</span><span class="pg"></span></div>
+  <div class="foot"><span>OOS Project 요약</span><span class="pg"></span></div>
 </section>
 
 <!-- 4. Measured performance results -->
 <section class="slide">
-  <div class="eyebrow">CBRD-27014 · 04. Measured Result</div>
+  <div class="eyebrow">OOS Project · 04. Measured Result</div>
   <h1 class="t">narrow scan은 이기고, random lookup은 조건부다</h1>
   <p class="sub">median wall time · develop → OOS · 음수 Δ가 빠름 · 100K rows × 5 paired runs</p>
   <div class="body">
@@ -126,12 +126,12 @@
     </div>
     <p style="font-size:11.5px;color:var(--muted);margin-top:9px">CBRD-27006 @ 3173d3bd vs develop @ e3b1bf01 · shared host · true-cold 아님 · machine acceptance PASS</p>
   </div>
-  <div class="foot"><span>CBRD-27014 · OOS 요약 · measured 2026-07-10</span><span class="pg"></span></div>
+  <div class="foot"><span>OOS Project 요약 · measured 2026-07-10</span><span class="pg"></span></div>
 </section>
 
 <!-- 5. Payload-read cost boundary -->
 <section class="slide">
-  <div class="eyebrow">CBRD-27014 · 05. Payload Read Boundary</div>
+  <div class="eyebrow">OOS Project · 05. Payload Read Boundary</div>
   <h1 class="t">큰 값을 읽는 순간, OOS의 이득은 달라진다</h1>
   <p class="sub">Q4: 분리된 큰 컬럼 1개 · Q5: 모든 logical column · median wall time · develop → OOS</p>
   <div class="body">
@@ -150,7 +150,7 @@
     <div class="callout"><b>결론</b> - OOS는 항상 빠른 기능이 아니다. 큰 컬럼을 읽지 않는 비율과 기존 record가 ordinary heap인지 overflow인지가 성능을 결정한다.</div>
     <p style="font-size:11.5px;color:var(--muted);margin-top:9px">100K rows × 5 paired runs · Q5는 raw-recdes Expand가 아닌 all-logical-column SQL read · machine acceptance PASS</p>
   </div>
-  <div class="foot"><span>CBRD-27014 · OOS 요약 · measured 2026-07-10</span><span class="pg"></span></div>
+  <div class="foot"><span>OOS Project 요약 · measured 2026-07-10</span><span class="pg"></span></div>
 </section>
 
 </div></div>
