@@ -18,6 +18,7 @@
 3. 따라서 OOS의 효과는 다음 두 질문으로 판단해야 한다.
    - workload가 큰 컬럼을 읽지 않는 비율은 얼마나 높은가?
    - OOS 도입 전 레코드는 ordinary heap인가, whole-record overflow인가?
+4. 측정 당시 compact heap은 page당 3행만 저장되어 33,334 pages를 사용했다. 이는 OOS의 불가피한 공간 비용이 아니라, demotion 목표를 단순히 `DB_PAGESIZE/4`로 계산하면서 heap의 `unfill_space`와 slotted-page overhead를 반영하지 않은 **코드 버그**다. 수정 목표는 page당 4행, layout당 약 25,000 compact heap pages다.
 
 이 보고서에서 “best case”는 주로 **작은 컬럼만 읽고 기존 레코드가 overflow인 경우**, “worst case”는 주로 **ordinary heap에 있던 큰 컬럼을 OOS에서 다시 읽는 경우**를 뜻한다. 일반적인 모든 workload의 절대 최선·최악을 뜻하지 않는다.
 
@@ -202,9 +203,9 @@ fi
 | branch | layout | 실제 평균 heap record | heap pages | overflow records | live OOS records | 해석 |
 |---|---|---:|---:|---:|---:|---|
 | develop | A | 14,480B | 100,000 | 0 | 0 | ordinary heap, page당 약 1행 |
-| OOS | A | 3,996B | 33,334 | 0 | 200,000 | 큰 컬럼 2개 OOS, page당 약 3행 |
+| OOS | A | 3,996B | 33,334 | 0 | 200,000 | 큰 컬럼 2개 OOS, page당 3행(계산 버그가 포함된 pre-fix 결과) |
 | develop | B | 22,016B | `SHOW` 보고 200,083 | 100,000 | 0 | 모든 행이 `REC_BIGONE` |
-| OOS | B | 4,016B | 33,334 | 0 | 300,000 | 큰 컬럼 3개 OOS, overflow 제거 |
+| OOS | B | 4,016B | 33,334 | 0 | 300,000 | 큰 컬럼 3개 OOS, page당 3행(계산 버그가 포함된 pre-fix 결과) |
 
 원시 출력:
 
@@ -525,7 +526,9 @@ develop의 22KB 행은 `REC_BIGONE`이므로 작은 값 하나를 읽어도 whol
 
 Layout A OOS에서 Q4와 Q5의 fetch가 같은 것은 Q5가 컬럼을 읽지 않았다는 뜻이 아니다. 여러 OOS record가 같은 page/access path에서 처리될 수 있어 “컬럼 하나당 counter 1 증가”가 보장되지 않는다. Q5의 모든 content comparison과 정답 checksum이 모든 값을 읽고 검증했다는 근거다.
 
-## 10. 공간 비용
+## 10. 공간 결과와 발견된 compact-heap 계산 버그
+
+### 10.1 측정 당시 결과
 
 두 table의 permanent data 사용량은 다음과 같았다.
 
@@ -533,7 +536,74 @@ Layout A OOS에서 Q4와 Q5의 fetch가 같은 것은 Q5가 컬럼을 읽지 않
 |---:|---:|---:|
 | 4,806MiB | 5,847MiB | +1,041MiB, **+21.7%** |
 
-OOS는 compact heap과 별도 slotted OOS pages를 함께 유지하며 page/slot metadata가 추가된다. 따라서 이 시험은 read locality 개선을 입증하지만, 저장 공간 절감까지 입증하지는 않는다.
+page 수로 분해하면 `spacedb` 차이가 거의 정확히 설명된다.
+
+| 구성 | develop | OOS(pre-fix) |
+|---|---:|---:|
+| Layout A 저장 pages | 100,000 | OOS 100,001 + compact heap 33,334 |
+| Layout B 저장 pages | 200,083 | OOS 200,001 + compact heap 33,334 |
+| 합계 | 약 300,083 | 약 366,670 |
+
+```text
+366,670 - 300,083 = 66,587 pages
+66,587 pages × 16KiB ≈ 1,040.4MiB
+```
+
+실제 `spacedb` 차이인 1,041MiB와 일치한다. 큰 payload를 저장한 OOS pages가 develop의 heap/overflow pages와 비슷한 수를 사용하고, 여기에 compact heap 66,668 pages가 추가된 형태였다.
+
+### 10.2 원인: OOS 고유 비용이 아니라 demotion 목표 크기 계산 버그
+
+측정 당시 코드는 compact heap record의 목표 크기를 단순히 다음과 같이 잡았다.
+
+```text
+target ≈ DB_PAGESIZE / 4
+```
+
+16KiB page에서는 약 4KiB이므로 평균 3,996B/4,016B record를 만들었다. 그러나 실제 heap page에서 사용할 수 있는 공간은 전체 `DB_PAGESIZE`가 아니다. heap의 `unfill_space`, page header, slot directory와 record별 slot overhead를 제외해야 한다.
+
+따라서 “record가 4KiB 이하”라는 조건만 만족해도 실제 page에 네 번째 record를 넣지 못할 수 있다. 이번 결과가 정확히 그 경우다.
+
+```text
+잘못된 목표:
+  target = DB_PAGESIZE / 4
+
+수정 방향:
+  target = (DB_PAGESIZE
+            - unfill_space
+            - slotted-page 공통 overhead
+            - record 4개에 필요한 slot overhead) / 4
+```
+
+구현에서는 기존 heap/slotted-page의 실제 usable-space 계산 계약을 재사용해 중복 계산이나 slot 이중 차감을 피해야 한다. 핵심은 largest-first demotion을 **nominal 4KiB**에서 멈추는 것이 아니라, 네 개의 결과 record가 실제 heap page의 허용 공간 안에 들어가는 크기까지 진행하는 것이다.
+
+이 문제는 OOS file의 bestspace page 검색 문제가 아니다. **OOS demotion이 compact heap의 목표 크기를 계산하는 부분의 단순 코드 버그**다.
+
+### 10.3 수정 목표와 예상 공간
+
+수정 목표는 두 layout 모두 compact heap page당 4행을 저장하는 것이다.
+
+| 항목 | pre-fix 측정 | 수정 목표 |
+|---|---:|---:|
+| Layout A compact heap | 33,334 pages(3 rows/page) | 약 25,000 pages(4 rows/page) |
+| Layout B compact heap | 33,334 pages(3 rows/page) | 약 25,000 pages(4 rows/page) |
+| OOS physical pages | 300,002 pages | 약 300,000 pages 유지 목표 |
+| 전체 주요 data pages | 약 366,670 | **약 350,000** |
+
+demotion이 한 단계 더 진행되더라도 추가로 분리된 작은 OOS record는 기존 OOS slotted page의 남는 공간을 사용할 수 있다. 이것이 slotted page를 사용하는 장점이며, 수정 후 OOS physical page 수를 약 300,000으로 유지하는 목표의 근거다.
+
+compact heap에서 약 16,668 pages가 줄면 대략 260MiB를 절약한다. 다른 index/catalog 공간이 동일하다고 단순 추정하면 permanent used size는 `5,847MiB → 약 5,587MiB`가 된다. 다만 이는 **목표 page 수에 근거한 예상값**이지 측정 결과가 아니다.
+
+### 10.4 성능 결과에 미치는 영향
+
+이 보고서의 `+21.7%` 공간 증가는 버그가 포함된 pre-fix 결과이므로 OOS의 정상적인 공간 overhead로 일반화하면 안 된다. 또한 compact heap이 33,334 pages에서 약 25,000 pages로 줄면 Q1/Q2 full scan의 fetch와 wall time도 달라질 수 있다.
+
+따라서 수정 후에는 동일 commit 계약과 workload로 Q1~Q5를 다시 실행하고 다음을 확인해야 한다.
+
+1. `SHOW HEAP CAPACITY`에서 compact heap이 약 25,000 pages, page당 4행인지 확인한다.
+2. `;oos_stats`에서 추가 demotion 후에도 OOS physical pages가 약 300,000으로 유지되는지 확인한다.
+3. `spacedb` permanent used size를 다시 측정한다.
+4. Q1~Q5의 correctness, plan, fetch, ioread, wall time을 다시 비교한다.
+5. 새 결과가 PASS하면 이 보고서와 발표 슬라이드의 33,334-page 및 `+21.7%` 수치를 교체한다.
 
 초기 두 table load는 develop 110.29초, OOS 104.90초였지만 shared host에서 순차로 한 번씩만 수행했다. paired 반복을 하지 않았으므로 INSERT 성능 결과로 해석하지 않는다.
 
@@ -603,7 +673,7 @@ storage 접근 관점에서 모든 logical value를 읽고 비교하지만, 1.4~
 
 ### “공간도 줄었나?”
 
-아니다. 이 dataset에서는 permanent data가 21.7% 늘었다. read locality 개선과 storage 절감을 혼동하면 안 된다.
+pre-fix 측정에서는 permanent data가 21.7% 늘었다. 그러나 이 값에는 `DB_PAGESIZE/4` 계산에서 `unfill_space`와 slotted-page overhead를 누락해 compact heap이 page당 3행만 저장된 코드 버그가 포함되어 있다. 수정 목표는 page당 4행, 전체 주요 data pages 약 350,000이다. 최종 공간 평가는 수정 후 재측정값으로 해야 한다.
 
 ### “INSERT도 빨라졌나?”
 
@@ -638,3 +708,7 @@ storage 접근 관점에서 모든 logical value를 읽고 비교하지만, 1.4~
 발표에서 한 문장으로 요약하면 다음과 같다.
 
 > OOS는 큰 값을 읽지 않는 workload에서는 compact heap으로 page I/O를 크게 줄이지만, 큰 값을 읽으면 별도 OOS read 비용이 생긴다. 기존 whole-record overflow를 필요한 column read로 바꾸는 경우에는 큰 값을 읽어도 이득이 남을 수 있다.
+
+공간 수치에는 다음 단서를 함께 말해야 한다.
+
+> 측정된 `+21.7%`에는 `DB_PAGESIZE/4`가 `unfill_space`와 slotted-page overhead를 반영하지 않아 compact heap이 page당 3행만 저장된 pre-fix 버그가 포함되어 있다. 수정 목표는 page당 4행, 전체 주요 data pages 약 350,000이며 최종 수치는 재측정해야 한다.
