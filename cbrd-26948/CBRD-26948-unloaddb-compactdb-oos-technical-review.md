@@ -2,7 +2,7 @@
 
 검토 기준은 PR #7416 HEAD `f59e9b8b2d` (2026-07-13)다. OOS 용어와 요구 동작은 같은 날짜의 `OOS-CONTEXT.md`를 따른다.
 
-## 1. 결론
+## 1. Conclusion
 
 CBRD-26948에서 처음 발견한 `unloaddb` 문제의 핵심은 맞다. `unloaddb`는 heap의 raw `RECDES`를 `LC_COPYAREA`로 받아 OOS를 모르는 `desc_disk_to_obj()`로 해석하므로, 서버가 전송 전에 OOS inline stub을 실제 값으로 Expand해야 한다.
 
@@ -11,12 +11,12 @@ CBRD-26948에서 처음 발견한 `unloaddb` 문제의 핵심은 맞다. `unload
 1. `xlocator_fetch_all()`의 OOS Expand 복구는 CBRD-27029가 아니라 CBRD-26818, commit `1561c3b9c`에서 이미 반영됐다. PR #7416의 첫 commit은 이 동작을 `HEAP_WITH_OOS_EXPAND`라는 명시적 정책으로 표현했고, 두 번째 commit은 별도의 단건 client fetch 경로를 수정했다.
 2. Compactdb는 하나의 동작이 아니다. standalone phase 1, server phase 1, heap page physical compaction을 분리해서 판단해야 한다.
 3. standalone Compactdb의 읽기에는 Expand가 필요하지만, Expand된 값을 `desc_obj_to_disk()`로 다시 직렬화해 `heap_update_logical()`로 직접 기록하는 현재 쓰기 경로는 정상 OOS Demotion 경로를 우회한다. 이 부분이 남은 핵심 연동 gap이다.
-4. server Compactdb는 `HEAP_CACHE_ATTRINFO`가 OOS-backed attribute를 Resolve할 수 있으므로 record-level Expand가 필요하지 않다. 현재 Expand된 길이로 처리 예산을 차감하는 것은 큰 OOS 값을 불필요하게 big object로 분류할 수 있다.
+4. server Compactdb는 `HEAP_CACHE_ATTRINFO`가 OOS-backed attribute를 Resolve할 수 있으므로 record-level Expand가 필요하지 않다. Expand된 `obj->length`가 `max_space_to_process`보다 크면 실제 stored record는 작아도 big object로 분류되어 건너뛸 수 있다. 최대 예산은 충분하고 현재 호출의 남은 예산만 부족하면 다음 호출로 미룬다.
 5. `heap_compact_pages()`의 `spage_compact()`는 물리 record bytes만 이동한다. OOS inline stub을 그대로 보존해야 하며 Expand해서는 안 된다.
 
 따라서 CBRD-26948은 이미 반영된 unloaddb 회귀 복구를 검증하는 범위와, 아직 해결되지 않은 Compactdb/OOS 연동 범위를 구분해야 한다. 구현 티켓까지 명확히 하려면 Compactdb 후속을 별도 이슈로 분리하는 편이 가장 이해하기 쉽다.
 
-## 2. 판단 기준: Expand, Resolve, 물리 보존
+## 2. Decision Rules
 
 OOS (Out-of-row Overflow Storage)는 큰 가변 attribute 값을 OOS value chain에 저장하고, heap record에는 16-byte OOS inline stub만 남긴다. 이 stub은 8-byte head OOS OID와 8-byte full length로 구성된다.
 
@@ -34,13 +34,13 @@ OOS (Out-of-row Overflow Storage)는 큰 가변 attribute 값을 OOS value chain
 
 | 후보 | 의미 | 평가 |
 |------|------|------|
-| `HEAP_RECDES_RAW_CONSUMER` / `HEAP_RECDES_ATTR_CONSUMER` | raw bytes 소비와 attribute 계층 소비를 직접 구분 | 가장 권장한다. 호출자가 왜 정책을 고르는지 분명하다. |
+| `HEAP_RECDES_RAW_BYTES_CONSUMED` / `HEAP_RECDES_RAW_BYTES_NOT_CONSUMED` | 반환된 raw record bytes가 실제로 소비되는지를 직접 구분 | 가장 권장한다. record body를 읽지 않는 caller까지 포함하며 CBRD-27029의 binary criterion과 일치한다. |
 | `HEAP_RECDES_EXPAND_OOS` / `HEAP_RECDES_PRESERVE_OOS` | 결과 형태를 직접 표현 | 구현 동작은 명확하지만 호출자의 의도가 덜 보인다. |
 | `HEAP_RECDES_MATERIALIZED` / `HEAP_RECDES_STORED` | materialized record와 저장형 record를 구분 | 개념은 정확하지만 `MATERIALIZED`의 의미를 별도로 배워야 한다. |
 
-단, `ATTR_CONSUMER`는 반드시 "attribute 계층이 OOS Resolve를 수행한다"는 계약을 뜻해야 한다. 물리 compaction처럼 attribute를 전혀 읽지 않는 경로까지 같은 이름으로 묶으려면 `HEAP_RECDES_STORED_FORM`이 더 안전하다.
+`HEAP_RECDES_RAW_BYTES_NOT_CONSUMED`는 attribute 계층이 OOS Resolve를 수행하는 경로뿐 아니라 record body를 읽지 않는 경로도 포함한다. 실제로 raw bytes를 parse, 전송, 재삽입 또는 비교하는지가 policy 선택 기준이다.
 
-## 3. 수정 이력과 소유권
+## 3. Fix Ownership
 
 | 시점 | 변경 | 실제 의미 |
 |------|------|-----------|
@@ -76,7 +76,7 @@ unloaddb
 
 PR #7416 HEAD에서는 `xlocator_fetch_all()`이 `HEAP_WITH_OOS_EXPAND`를 사용한다. 코드상 회귀는 CBRD-26818에서 복구된 상태지만, CS와 SA mode에서 byte equality 및 multi-chunk 값을 검증해야 완료로 판단할 수 있다.
 
-## 5. Compactdb가 실제로 하는 일
+## 5. Compactdb Flows
 
 Compactdb라는 이름 아래 서로 다른 세 작업이 있다.
 
@@ -132,7 +132,7 @@ xlocator_lock_and_fetch_all()
   -> locator_attribute_info_force()       정상 transformation/Demotion 경로
 ```
 
-`heap_attrinfo_read_dbvalues()`가 OOS inline stub을 이해하므로 record-level Expand는 정확성을 위해 필요하지 않다. 오히려 현재는 Expand 후의 logical record length를 `space_to_process`와 비교한다. heap에는 작은 stub record로 저장된 50KB OOS value가 Expand되면 50KB가 넘으므로, 처리 예산보다 크다는 이유로 big object로 분류되어 해당 호출에서 건너뛸 수 있다.
+`heap_attrinfo_read_dbvalues()`가 OOS inline stub을 이해하므로 record-level Expand는 정확성을 위해 필요하지 않다. 오히려 현재는 Expand 후의 logical record length를 `space_to_process`와 비교한다. heap에는 작은 stub record로 저장된 OOS value라도 expanded `obj->length > max_space_to_process`이면 big object로 분류되어 건너뛴다. `obj->length`가 최대 예산 이하지만 현재 호출의 남은 예산만 초과하면 `last_processed_oid`를 되돌리고 다음 호출로 미룬다.
 
 권장 방향은 이 caller가 stored-form `RECDES`를 받게 하고 attribute 계층에서 필요한 값만 Resolve하도록 하는 것이다. 처리 예산도 page/heap processing 비용을 나타내려면 stored record length를 기준으로 계산해야 한다. `xlocator_lock_and_fetch_all()`의 다른 직접 caller인 domain upgrade 경로도 곧바로 `heap_attrinfo_read_dbvalues()`를 사용하므로, 함수 전체를 no-Expand로 바꾸거나 consumption policy를 인자로 받을 수 있다. 변경 전 모든 caller 계약을 다시 확인해야 한다.
 
@@ -147,12 +147,12 @@ xlocator_lock_and_fetch_all()
 | 우선순위 | finding | 상태 / 조치 |
 |----------|---------|-------------|
 | 높음 | standalone Compactdb rewrite가 정상 OOS Demotion을 우회한다 | 별도 구현 또는 CBRD-26948 잔여 범위로 수정 필요 |
-| 중간 | server Compactdb가 불필요하게 Expand하고 expanded length로 처리 예산을 계산한다 | stored-form fetch + attribute Resolve로 변경 검토 |
+| 중간 | server Compactdb가 불필요하게 Expand하고, expanded length가 최대 예산을 넘으면 big object로 건너뛴다 | stored-form fetch + attribute Resolve로 변경 검토 |
 | 중간 | unloaddb 회귀의 fix ownership이 기존 issue에 잘못 기록됐다 | CBRD-26818로 정정하고 CS/SA E2E 검증 |
 | 중간 | standalone Compactdb의 영구 데이터 손실은 재현 없이 확정적으로 서술됐다 | OOS 배치 손실은 코드상 gap, logical value loss는 강제 rewrite TC로 검증 |
 | 낮음 | physical compaction과 logical Compactdb가 혼용됐다 | 호출 흐름과 acceptance criteria를 분리 |
 
-## 7. 권장 이슈 구성
+## 7. Recommended Issue Split
 
 가장 명확한 구성은 다음과 같다.
 
@@ -170,20 +170,20 @@ xlocator_lock_and_fetch_all()
 
 한 이슈에 유지한다면 최소한 "이미 수정됨", "남은 구현", "검증만 필요"를 표로 나눠야 한다.
 
-## 8. Acceptance test 제안
+## 8. Acceptance Tests
 
 | 대상 | 시나리오 | 검증값 |
 |------|----------|--------|
 | unloaddb CS/SA | OOS-backed `BIT VARYING`, OOS inline target 초과, multi-chunk 값 export | dump reload 후 byte equality, 빈 값 없음 |
 | standalone Compactdb no-change | OOS-backed row를 정리하되 update 조건 없음 | logical value 동일, OOS 배치 유지 |
 | standalone Compactdb forced rewrite | dangling OID 또는 old representation으로 실제 update 유도 | byte equality, update 후 다시 OOS-backed 상태/Demotion 확인 |
-| server Compactdb budget | `space_to_process`보다 logical OOS value는 크지만 stored record는 작은 row | expanded length만으로 big object 처리되지 않음 |
-| physical compaction | OOS-backed row가 있는 heap page compact | inline stub/value chain 보존, 이후 SELECT byte equality |
-| single-object CS fetch | copyarea보다 큰 expanded value | byte equality, `S_DOESNT_FIT` grow/retry 성공 |
+| server Compactdb budget | `stored length < max_space_to_process < expanded length`인 row | expansion만으로 `big_objects`가 증가하지 않고 row가 처리됨 |
+| physical compaction | OOS-backed row가 있는 heap page compact | 같은 slot의 stored `RECDES`를 compact 전후 byte-compare하고 이후 SELECT byte equality 확인 |
+| CBRD-27029 별도 검증 | copyarea보다 큰 single-object CS fetch | CBRD-26948 범위 밖. byte equality와 `S_DOESNT_FIT` grow/retry를 CBRD-27029에서 확인 |
 
 OOS 배치 자체는 release build SQL만으로 직접 확인하기 어렵다. 현재는 debug `oos.log`의 `oos_insert` 기록을 사용하고, CBRD-26871의 관측 기능이 들어오면 그 방식으로 교체한다. 테스트 데이터는 압축으로 크기가 달라지는 `VARCHAR`보다 `BIT VARYING`을 사용한다.
 
-## 9. Source references
+## 9. Source References
 
 - `src/transaction/locator_sr.c`: `xlocator_fetch_all()`, `xlocator_lock_and_fetch_all()`, `locator_lock_and_return_object()`
 - `src/loaddb/load_object.c`: `desc_disk_to_obj()`, `desc_obj_to_disk()`
@@ -192,4 +192,3 @@ OOS 배치 자체는 release build SQL만으로 직접 확인하기 어렵다. �
 - `src/storage/heap_file.c`: `heap_compact_pages()`, `heap_attrinfo_determine_disk_layout()`
 - commit `1561c3b9c`: `[CBRD-26818] Preserve OOS expansion copyarea ownership (#7337)`
 - PR #7416 / CBRD-27029: explicit consumption policy와 single-object client fetch
-
