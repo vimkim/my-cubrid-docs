@@ -6,6 +6,8 @@ CBRD-26972는 OOS (큰 가변 길이 컬럼 값을 heap 레코드 밖의 별도 
 
 이 변경은 `SHOW HEAP OOS OF <class>`와 `SHOW ALL HEAP OOS OF <class>`를 추가한다. DBA가 특정 테이블의 heap 파일과 OOS 파일을 한 행 단위로 확인하고, 파티션 테이블은 기존 `SHOW ALL HEAP HEADER/CAPACITY`처럼 여러 heap row로 볼 수 있게 하는 것이 목적이다.
 
+논의 결과, 이 PR의 범위는 신규 `SHOW HEAP OOS` 진단 SQL로 한정한다. 기존 `SHOW HEAP CAPACITY`의 결과 컬럼과 의미는 변경하지 않으며, 공유 OOS 통계 수집 구조에 free-space 구간별 page 수 같은 상세 지표도 추가하지 않는다. 두 변경은 기존 진단 인터페이스의 스펙 변경이므로 별도 합의 후 다룬다.
+
 ## Implementation
 
 `src/storage/storage_common.h`에 `SHOWSTMT_HEAP_OOS`, `SHOWSTMT_ALL_HEAP_OOS`를 추가했다. `src/parser/csql_grammar.y`, `src/parser/csql_lexer.l`, `src/parser/keyword.c`에는 `OOS` 토큰과 `HEAP OOS`, `ALL HEAP OOS` 문법을 추가했다. `OOS`는 identifier 대안에도 넣어서 일반 식별자 호환성을 유지한다.
@@ -29,6 +31,8 @@ CBRD-26972는 OOS (큰 가변 길이 컬럼 값을 heap 레코드 밖의 별도 
 ## Remarks
 
 이 명령은 storage 동작을 바꾸지 않는 진단 기능이다. OOS demotion 기준, OOS record format, MVCC, vacuum, recovery 동작은 변경하지 않는다.
+
+기존 `SHOW HEAP CAPACITY`와 개발자용 `;oos_stats`의 출력 스펙도 변경하지 않는다. 이 PR에서 추가되는 공개 진단 결과는 `SHOW HEAP OOS`와 `SHOW ALL HEAP OOS`뿐이다.
 
 `oos_get_stats_by_vfid()`는 OOS page를 순회하면서 live record 통계를 모은다. `Oos_recs_sumlen`은 OOS slot에 저장된 record 길이의 합이며, SQL 컬럼의 논리 payload 길이만을 뜻하지 않는다. 이 helper는 busy page를 만나면 일부 page를 건너뛸 수 있으므로, SHOW 결과는 DBA 진단용 현재 통계로 보아야 한다. 이 PR은 그 helper의 통계 수집 정책을 바꾸지 않는다.
 
