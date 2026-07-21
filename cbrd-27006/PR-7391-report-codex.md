@@ -1,36 +1,105 @@
 # PR #7391 코드 리뷰 보고서
 
-**PR:** [CUBRID/cubrid#7391](https://github.com/CUBRID/cubrid/pull/7391)
-**제목:** [CBRD-27006] Improve OOS recdes locality
-**작성자:** vimkim
-**HEAD SHA:** `3173d3bd5a9c615a17fb9425c2e1c2fee1095474`
-**리뷰 일시:** 2026-07-13
+**PR:** [CUBRID/cubrid#7391](https://github.com/CUBRID/cubrid/pull/7391)  
+**제목:** [CBRD-27006] Improve OOS recdes locality  
+**작성자:** vimkim  
+**HEAD SHA:** `3f40e134d0c5b3578fe60de6f1d9f5ca8d12f698`  
+**리뷰 일시:** 2026-07-21
 
-> **TL;DR** (Non-blocking): OOS (큰 가변 길이 값을 heap record 밖의 별도 file에 저장하는 방식) locality 변경에서 correctness regression은 발견하지 못했다. 머지 전 가독성을 높이려면 single-page OOS batch (한 heap record의 값을 한 OOS page에 배치하는 단위)의 record insert 중복, grouped read API의 과도한 cardinality 노출, parser 이동 후 남은 Case 번호 기반 ownership 주석을 정리할 수 있다.
+> **TL;DR — Approve:** 현재 HEAD에서 재현 가능하고 PR이 새로 만든 correctness 결함을 찾지 못했다.
+> 링크된 Greptile P1 코멘트는 `thread_p->oos_oids`의 소비 직후 정리와 오류 경로 정리를 놓친
+> 오탐이다. OOS 집중 테스트 23개와 빌드가 통과했다.
 
 ## Summary
 
-- **변경 요약**: 같은 heap record의 single-chunk OOS 값(한 OOS page에 들어가는 값)을 batch로 배치하고 같은 head page (OOS chain의 첫 chunk가 있는 page) read를 묶음.
-- **주요 이슈**: 머지 차단 이슈 없음; 코드 중복 1건, API/dispatch 단순화 1건, 주석 정리 2건.
-- **확인 필요 사항**: 없음.
+이 PR은 한 heap record에 속한 single-chunk OOS 값을 가능한 한 같은 OOS page에 배치하고,
+같은 head page의 OOS read를 한 page fix로 묶는다. 검토 범위는 write/read locality뿐 아니라
+publication state 수명, master replication log 순서, slave apply OID fixup, partial failure를 포함했다.
 
----
+- **Verdict:** Approve
+- **Actionable findings:** 없음
+- **Already-commented issue:** Greptile P1 1건은 오탐
+- **HEAD 안정성:** native review 전후 모두 원격 PR HEAD와 로컬 HEAD가 `3f40e13`으로 일치
 
 ## Findings
 
-### Non-blocking (should consider)
+재현 가능하고 PR이 새로 유입한 결함은 발견하지 못했다.
 
-- `src/storage/oos_file.cpp:1180` - `oos_insert_single_page_batch()`가 `oos_prepend_header`, `spage_insert`, OID 조립, physical WAL (write-ahead logging) 기록을 `oos_insert_within_page()`의 `src/storage/oos_file.cpp:1442`와 반복하므로, 이미 fix된 page (buffer pool에서 latch를 잡은 page)에 record 하나를 넣는 primitive를 추출하고 scalar/batch 경로가 공유하면 두 경로의 error/WAL 동작이 함께 유지된다.
-- `src/storage/heap_file.c:10874` - caller는 grouped Resolve (여러 OOS 값을 page별로 묶어 읽는 경로)의 적용 여부만 필요한데 helper의 정확한 `requested_oos_count`까지 전달받으므로, count는 request reserve를 위해 helper 안에 두고 `grouped_applied` boolean/enum만 반환하면 explicit dispatch 결정은 보존하면서 parameter, assert, `src/storage/heap_oos.hpp:72`의 장문 계약을 줄일 수 있다.
-- `src/storage/heap_file.c:10546` - inline reference parsing을 `heap_oos_parse_inline_ref()`로 이동한 뒤에도 함수와 두 caller가 `Case 1-5` 번호로 ownership을 설명하고 `src/storage/heap_file.c:10602`의 read 실패에서 이미 해제한 buffer를 owned로 표시하므로, 실패는 항상 `raw->data == NULL`/`oos_owned_buffer == false`, 성공만 true로 통일하면 no-op cleanup 분기와 이동에 취약한 Case 주석을 제거할 수 있다.
-- `unit_tests/oos/sql/test_oos_sql_crud.cpp:219` - `CBRD-27006 follow-up`은 작성 시점에만 의미가 있고 test 이름이 ticket과 dispatch 조건을 이미 설명하므로, prefix를 제거하고 "2개 이상이면 grouped path, 0/1개이면 scalar path"라는 영속적인 invariant만 남기는 편이 낫다.
+## Existing Comments
+
+### `discussion_r3614337787`: false positive
+
+Greptile은 OOS group A 처리 후 `thread_p->oos_oids`가 남아서 group B에 A의 OID가 섞이고,
+잘못된 OID가 B의 heap record에 기록될 수 있다고 지적했다. 현재 제어 흐름에서는 이 시나리오가
+성립하지 않는다.
+
+1. `xlocator_repl_force()` 진입 시 accumulator를 비운다
+   (`src/transaction/locator_sr.c:7024`).
+2. `LC_FLUSH_INSERT_OOS` 항목은 뒤따르는 heap INSERT/UPDATE가 사용할 slave-local head OID를
+   의도적으로 누적한다.
+3. heap row에서 `locator_fixup_oos_oids_in_recdes()`가 OID를 소비한 뒤, loop tail이
+   non-OOS operation에 대해 accumulator를 비운다
+   (`src/transaction/locator_sr.c:7185-7188`). 따라서 다음 OOS group은 빈 상태에서 시작한다.
+4. OID 개수가 맞지 않으면 fixup은 `ER_HA_GENERIC_ERROR`를 반환하고
+   (`src/transaction/locator_sr.c:14215-14239`), caller는 실제 INSERT/UPDATE 실행 전에
+   `exit_on_error`로 이동한다 (`src/transaction/locator_sr.c:7093-7097`).
+5. fatal path도 accumulator를 다시 비운다
+   (`src/transaction/locator_sr.c:7205-7209`).
+
+따라서 코멘트가 주장한 "B가 A의 OID로 기록되는 corruption"은 발생하지 않는다. 개수가
+초과하면 row mutation 전에 실패하고, 정상 cardinality이면 row 처리 직후 group state가 정리된다.
+코멘트의 제안처럼 fixup 함수 내부에서 무조건 clear하면 accumulator ownership이 producer/consumer
+양쪽으로 분산되므로 현재 outer force-area 경계에서 정리하는 편이 더 명확하다.
+
+## Risk Audit
+
+### Replication group boundary
+
+client-side `locator_repl_mflush()`는 OOS item 뒤에 heap row가 올 때 copy area가 부족하더라도 flush하지
+않고 copy area를 확장한다. 즉 OOS group과 해당 heap row는 같은 `xlocator_repl_force()` 호출에 들어간다.
+slave는 group 도중 OOS item이 실패하면 전체 pending group을 fatal 처리하고 OID state를 지운다.
+
+### Cardinality and mutation order
+
+fixup은 부족한 OID와 남는 OID를 모두 오류로 처리한다. 남는 OID가 발견되는 시점에는 일부 inline
+stub가 메모리 `RECDES`에 쓰였을 수 있지만, 실제 heap INSERT/UPDATE 전이며 outer top operation이
+abort되므로 저장 데이터 corruption으로 이어지지 않는다.
+
+### Publication lifetime
+
+현재 HEAD는 logical heap-record OOS 준비 시작에서 worker OID list와 transaction LSA queue를 함께
+reset하고, scalar/batch insert 실패 시 partial publication을 지운다. lazy OOS file header WAL은 value
+publication queue에서 제외되어 첫 OOS row의 OID/LSA pairing도 유지된다.
+
+### Remaining non-blocking trade-off
+
+batch insert와 grouped lazy Resolve는 선택된 여러 OOS payload를 동시에 메모리에 보유하므로 peak
+memory가 scalar path보다 커질 수 있다. 이는 문서화된 설계 trade-off이며 현재 변경의 correctness
+결함으로 분류하지 않았다.
 
 ## JIRA Context
 
-CBRD-27006은 하나의 heap record에 속한 OOS 값을 page 단위로 모아 insert/read page fix 횟수를 줄이는 작업이며, PR은 OOS OID 공유나 disk/WAL format을 바꾸지 않는 범위와 일치한다.
+CBRD-27006의 목표는 한 heap record의 여러 OOS 값에 대해 write/read page locality를 개선하는 것이다.
+현재 구현은 attribute order, per-value OID, 기존 multi-chunk chain, on-disk 및 replication log format을
+유지하며 이 범위와 일치한다.
 
 ## Verification
 
-- `codex review --base origin/feat/oos` 완료: actionable correctness regression 없음.
-- 로컬 release build 성공.
-- OOS ctest 23/23 통과.
+- `codex review --base origin/feat/oos`: actionable correctness regression 없음
+- 로컬 CUBRID build: 성공
+- focused OOS tests: 23/23 통과
+- PR prerequisite gate: review 전후 통과, HEAD `3f40e134d0c5b3578fe60de6f1d9f5ca8d12f698`
+- GitHub comment/thread와 기존 리뷰 피드백 대조: 신규 finding 없음
+
+## Suggested Reply
+
+```text
+I don't think this can carry group A's OIDs into group B. The OOS items intentionally
+accumulate until the following heap INSERT/UPDATE consumes them. After that non-OOS item,
+xlocator_repl_force() clears thread_p->oos_oids at the loop tail (lines 7185-7188).
+If exact cardinality fails, locator_fixup_oos_oids_in_recdes() returns an error and the
+caller jumps to exit_on_error before the heap row is inserted/updated; that path also
+clears the accumulator (lines 7205-7209). So the claimed B-with-A-OID corruption does
+not occur. I would keep cleanup at the force-area/group boundary rather than make the
+fixup helper own accumulator lifetime.
+```
