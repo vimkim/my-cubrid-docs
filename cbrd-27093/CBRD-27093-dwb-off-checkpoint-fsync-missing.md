@@ -215,8 +215,6 @@ t5  운영 재개               → 커밋된 변경이 사라져 있음. 에러
 `PRM_USER_CHANGE`라 **온라인으로 끌 수 있다.** 끄는 순간 이후 직접 볼륨에
 쓰인 페이지는 DWB가 보증 못 한다. false로 하면 호출자가 직접 fsync하므로
 항상 안전하고, 비용은 드문 경쟁 상황에서 fsync 한 번 더뿐이다.
-(이 판단은 `docs/adr/0001-...md`로 기록됨 — 미래에 누가 "destroy가 어차피
-flush하니까 true로 최적화하자"고 되돌리는 걸 막기 위해.)
 
 ### 4.2 이 한 곳 수정으로 전부 복구되는 이유
 
@@ -239,8 +237,9 @@ DWB 활성(기본) 구성은 경로 2를 그대로 타므로 **동작 변화 0**
 
 ### 4.4 검증·배포 계획
 
-- **테스트**: 이슈의 strace 재현 절차를 CTP 셸 테스트로 (strace 없으면
-  graceful skip). PR에 수정 전/후 strace 집계를 증거로 첨부.
+- **테스트**: 이슈의 strace 재현 절차를 CTP 셸 테스트로 구현한다. `strace`가
+  없거나 ptrace attach가 실패하면 false green을 피하기 위해 NOK로 판정한다.
+  PR에 수정 전/후 strace 집계를 증거로 첨부한다.
   - fsync "부재"를 검증해야 해서 선택지가 좁다. `cubrid statdump`의
     `Num_file_iosynches`는 로그 fsync 노이즈가 섞여 flaky 위험 → 배제.
 - **백포트**: develop 먼저. JIRA에 영향 버전(10.2~11.4) 명시, 릴리즈 브랜치
