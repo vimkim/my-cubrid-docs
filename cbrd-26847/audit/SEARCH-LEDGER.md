@@ -102,3 +102,25 @@ included/excluded/duplicate/pending)은 `fragments/<ID>-notes.md`에 있으며, 
 
 기준값 대비: CONSUME 25 / DONT 59 호출 인자 전수에 F-행 존재. OVER_EXPAND 25행 = 16개 distinct
 사이트(FINDINGS.md). BUG 0.
+
+## Phase 3 — closure (2026-07-24)
+
+no-new-path closure pass 기록 (각 pass의 검색 블록·명령은 `fragments/CLOSURE-PASS-N.md`):
+
+| pass | 일자 | 결과 | 조치 |
+|---|---|---|---|
+| PASS-1 | 2026-07-24 | 신규 5 call-arg 사이트 (heap_scanrange_prev×2/first/last — dead code, heap_is_object_not_null) | F-044~F-047 행 추가 |
+| PASS-2 | 2026-07-24 | 신규 1 (xheap_has_instance, NO_BODY probe) | F-048 행 추가 |
+| PASS-3 | 2026-07-24 | **0 new paths** (84 call-arg 전수 재도출, 7-API/wrapper/chokepoint caller 전수, 82파일 census 재확인) | — |
+| PASS-4 | 2026-07-24 | **0 new paths** — 연속 두 번째 clean pass | closure 확정 |
+
+Gate 3 판정:
+
+- [x] inventory source anchor 고정 (`6816023df`), 261행, TBD 0
+- [x] forward-only / reverse-only unexplained = 0 (PASS-3 S2/S3: 84/84 call-arg, 전 caller 커버; 역방향 소비자는 정책 API·Resolve·physical 보존 중 하나에 도달)
+- [x] 전체 검색 pending 합계 0
+- [x] 연속 2회 no-new-path pass (PASS-3, PASS-4, 2026-07-24, 명령은 fragment에 기록)
+- [x] 수정 전 snapshot: `AUDIT-INVENTORY.freeze-6816023df.tsv` (261행, source 수정 이전 상태)
+
+이 시점까지 source repo는 일절 수정하지 않았다. 이후 Phase 4에서 FINDINGS.md의 16개
+OVER_EXPAND 사이트를 수정한다.
