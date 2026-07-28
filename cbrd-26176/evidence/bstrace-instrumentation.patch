@@ -1,0 +1,412 @@
+diff --git a/src/storage/bestspace.cpp b/src/storage/bestspace.cpp
+index 942cc9e90..9dabcb447 100644
+--- a/src/storage/bestspace.cpp
++++ b/src/storage/bestspace.cpp
+@@ -31,6 +31,35 @@
+ #include <cstdint>
+ #include <chrono>
+ 
++/* ---- BSTRACE: temporary call-flow instrumentation for CBRD-26176 handover analysis. REVERT BEFORE COMMIT. ---- */
++#include <cstdio>
++#include <ctime>
++#include <unistd.h>
++#include <sys/syscall.h>
++#define BSTRACE_DIR "/tmp/claude-1000/-home-vimkim-gh-cb-develop/0eecb46e-9ae0-4d4b-9887-62083de16d11/scratchpad/bstrace"
++static FILE *
++bstrace_fp ()
++{
++  static FILE *fp = [] () -> FILE *
++  {
++    char path[512];
++    snprintf (path, sizeof (path), BSTRACE_DIR "/bstrace.%d.log", (int) getpid ());
++    FILE *f = fopen (path, "a");
++    if (f != NULL)
++      {
++	setvbuf (f, NULL, _IOLBF, 0);
++      }
++    return f;
++  } ();
++  return fp;
++}
++#define BSTRACE(fmt, ...) \
++  do { FILE *bsfp_ = bstrace_fp (); if (bsfp_ != NULL) { \
++    struct timespec bsts_; clock_gettime (CLOCK_MONOTONIC, &bsts_); \
++    fprintf (bsfp_, "%ld.%06ld tid=%ld " fmt "\n", (long) bsts_.tv_sec, bsts_.tv_nsec / 1000, \
++	     (long) syscall (SYS_gettid), ##__VA_ARGS__); } } while (0)
++/* ---- end BSTRACE ---- */
++
+ // XXX: SHOULD BE THE LAST INCLUDE HEADER
+ #include "memory_wrapper.hpp"
+ 
+@@ -353,6 +382,9 @@ namespace cubstorage
+ 	minimum = tier::FS1;
+       }
+ 
++    BSTRACE ("shard/find sh=%p needed=%u consume=%u tier_min=%d", (void *) this, needed_size, consume_size,
++	     (int) minimum);
++
+     error = L3_find (class_oid, minimum, needed_size, consume_size, bias, page_watcher);
+     if (error == status::FOUND || error == status::FAILURE)
+       {
+@@ -361,6 +393,9 @@ namespace cubstorage
+ 
+     assert (error == status::NOT_FOUND || error == status::CONTENDED);
+ 
++    BSTRACE ("shard/find sh=%p L3=%s -> allocate", (void *) this,
++	     error == status::CONTENDED ? "CONTENDED" : "NOT_FOUND");
++
+     return allocate (class_oid, hfid, needed_size, consume_size, page_watcher);
+   }
+ 
+@@ -582,6 +617,9 @@ namespace cubstorage
+ 
+     // first, check the recorded free space
+     expected = m_L1[l2_index * L2_FANOUT + l1_index].load ();
++    BSTRACE ("L1/probe sh=%p l2=%zu l1=%zu rec_fs=%u vpid=%d|%d needed=%u force=%d", (void *) this, l2_index, l1_index,
++	     expected.get_freespace (), expected.get_vpid ().volid, expected.get_vpid ().pageid, needed_size,
++	     (int) force_check);
+     if (!force_check && expected.get_freespace () < needed_size)
+       {
+ 	// there is no enough space
+@@ -602,6 +640,7 @@ namespace cubstorage
+ 	heap_get_class_oid_from_page (thread_p, page_watcher.pgptr, &page_class_oid) != NO_ERROR
+ 	|| !OID_EQ (&page_class_oid, class_oid))
+       {
++	BSTRACE ("L1/stale-class sh=%p vpid=%d|%d -> remove", (void *) this, old_vpid.volid, old_vpid.pageid);
+ 	L1_remove (l2_index, l1_index, expected);
+ 	pgbuf_ordered_unfix (thread_p, &page_watcher);
+ 	return status::NOT_FOUND;
+@@ -615,6 +654,8 @@ namespace cubstorage
+     freespace = spage_max_space_for_new_record (thread_p, page_watcher.pgptr);
+     if (freespace < needed_size)
+       {
++	BSTRACE ("L1/actual-small sh=%p vpid=%d|%d actual=%zu needed=%u -> shrink L1", (void *) this, old_vpid.volid,
++		 old_vpid.pageid, freespace, needed_size);
+ 	// there is no enough space and the free space information is wrong
+ 	if (VPID_EQ (&vpid, &old_vpid))
+ 	  {
+@@ -646,6 +687,9 @@ namespace cubstorage
+ 
+     STATS_INC (found, 1);
+ 
++    BSTRACE ("L1/FOUND sh=%p l2=%zu l1=%zu vpid=%d|%d actual=%zu newL1=%zu", (void *) this, l2_index, l1_index,
++	     old_vpid.volid, old_vpid.pageid, freespace, freespace - consume_size);
++
+     return status::FOUND;
+   }
+ 
+@@ -664,11 +708,13 @@ namespace cubstorage
+       {
+ 	if (error_code == ER_LK_PAGE_TIMEOUT)
+ 	  {
++	    BSTRACE ("L1/fix-CONTENDED sh=%p vpid=%d|%d (latch busy, no wait)", (void *) this, vpid.volid, vpid.pageid);
+ 	    er_clear ();
+ 	    return status::CONTENDED;
+ 	  }
+ 	if (error_code == ER_PB_BAD_PAGEID || er_errid () == ER_PB_BAD_PAGEID)
+ 	  {
++	    BSTRACE ("L1/fix-deallocated sh=%p vpid=%d|%d -> remove", (void *) this, vpid.volid, vpid.pageid);
+ 	    L1_remove (l2_index, l1_index, l1);
+ 	    er_clear ();
+ 	    return status::NOT_FOUND;
+@@ -769,6 +815,8 @@ namespace cubstorage
+     std::size_t i, j;
+ 
+     num_buffer = m_parent.pop_candidates (buffer, victims[ALLOC_BATCH_SIZE - 1].second, needed_size);
++    BSTRACE ("alloc/pop-candidates sh=%p popped=%zu (min_fs>%u needed=%u)", (void *) this, num_buffer,
++	     victims[ALLOC_BATCH_SIZE - 1].second, needed_size);
+ 
+     num_candidates = 0;
+     num_resident_candidates = 0;
+@@ -821,6 +869,8 @@ namespace cubstorage
+     // force-check candidates already resident in this shard and reuse them when possible.
+     for (i = 0; i < num_resident_candidates; i++)
+       {
++	BSTRACE ("alloc/resident-recheck sh=%p L1idx=%u vpid=%d|%d", (void *) this, resident_candidates[i].second,
++		 resident_candidates[i].first.volid, resident_candidates[i].first.pageid);
+ 	error = L1_find (class_oid, needed_size, consume_size,
+ 			 resident_candidates[i].second / L2_FANOUT,
+ 			 resident_candidates[i].second % L2_FANOUT, page_watcher, true);
+@@ -908,9 +958,12 @@ namespace cubstorage
+     candidate.freespace = spage_max_space_for_new_record (thread_p, page_watcher.pgptr);
+     if (candidate.freespace < needed_size)
+       {
++	BSTRACE ("alloc/verify-small vpid=%d|%d fs=%u needed=%u", vpid.volid, vpid.pageid, candidate.freespace,
++		 needed_size);
+ 	pgbuf_ordered_unfix (thread_p, &page_watcher);
+ 	return status::NOT_FOUND;
+       }
++    BSTRACE ("alloc/verify-ok vpid=%d|%d fs=%u needed=%u", vpid.volid, vpid.pageid, candidate.freespace, needed_size);
+     return status::FOUND;
+   }
+ 
+@@ -977,6 +1030,8 @@ namespace cubstorage
+       {
+ 	return error;
+       }
++    BSTRACE ("alloc/new-pages sh=%p n=%zu first_vpid=%d|%d", (void *) this, ALLOC_BATCH_SIZE - num_candidates,
++	     vpids[0].volid, vpids[0].pageid);
+     m_num_pages.fetch_add (ALLOC_BATCH_SIZE - num_candidates);
+ 
+     STATS_INC (allocated, ALLOC_BATCH_SIZE - num_candidates);
+@@ -1002,6 +1057,8 @@ namespace cubstorage
+     // renew the L1s
+     for (i = 0; i < ALLOC_BATCH_SIZE - 1; i++)
+       {
++	BSTRACE ("alloc/replace sh=%p L1idx=%u <- vpid=%d|%d fs=%u", (void *) this, victims[i].first,
++		 candidates[i].volid, candidates[i].pageid, candidates[i].freespace);
+ 	l1.set_freespace (candidates[i].freespace);
+ 	l1.set_vpid ({ candidates[i].pageid, candidates[i].volid });
+ 	m_L1[victims[i].first].store (l1);
+@@ -1033,11 +1090,17 @@ namespace cubstorage
+       {
+ 	STATS_INC (advance_shard, 1);
+ 
++	BSTRACE ("alloc/busy sh=%p -> ALLOCATING (advance to next shard)", (void *) this);
+ 	return status::ALLOCATING;
+       }
+ 
++    BSTRACE ("alloc/begin sh=%p needed=%u", (void *) this, needed_size);
++
+     // pick four pages with the smallest free space as replacement victims.
+     allocate_pick_victims (residents, victims);
++    BSTRACE ("alloc/victims sh=%p (L1idx,fs): (%u,%u) (%u,%u) (%u,%u) (%u,%u)", (void *) this,
++	     victims[0].first, victims[0].second, victims[1].first, victims[1].second,
++	     victims[2].first, victims[2].second, victims[3].first, victims[3].second);
+ 
+     // use candidate as a target page or update a residents
+     result = allocate_get_candidates_or_update_residents (class_oid, needed_size, consume_size, residents, victims,
+@@ -1063,6 +1126,9 @@ namespace cubstorage
+     allocate_replace_pages (victims, candidates);
+ 
+     allocate_unmark ();
++    BSTRACE ("alloc/FOUND sh=%p ret_vpid=%d|%d reserved_fs=%u", (void *) this,
++	     candidates[ALLOC_BATCH_SIZE - 1].volid, candidates[ALLOC_BATCH_SIZE - 1].pageid,
++	     candidates[ALLOC_BATCH_SIZE - 1].freespace);
+     return status::FOUND;
+   }
+ 
+@@ -1110,10 +1176,14 @@ namespace cubstorage
+     // not enough space to be candidate
+     if (m_size == MAX_CANDIDATES_QUEUE_SIZE && candidate.freespace <= m_array[0].freespace)
+       {
++	BSTRACE ("cq/push-reject vpid=%d|%d fs=%u (queue full, min=%u)", candidate.volid, candidate.pageid,
++		 candidate.freespace, m_array[0].freespace);
+ 	return true;
+       }
+ 
+     insert (candidate);
++    BSTRACE ("cq/push vpid=%d|%d fs=%u size=%zu (try)", candidate.volid, candidate.pageid, candidate.freespace,
++	     m_size);
+ 
+     return true;
+   }
+@@ -1128,10 +1198,13 @@ namespace cubstorage
+     // not enough space to be candidate
+     if (m_size == MAX_CANDIDATES_QUEUE_SIZE && candidate.freespace <= m_array[0].freespace)
+       {
++	BSTRACE ("cq/push-reject vpid=%d|%d fs=%u (queue full, min=%u)", candidate.volid, candidate.pageid,
++		 candidate.freespace, m_array[0].freespace);
+ 	return;
+       }
+ 
+     insert (candidate);
++    BSTRACE ("cq/push vpid=%d|%d fs=%u size=%zu", candidate.volid, candidate.pageid, candidate.freespace, m_size);
+   }
+ 
+   std::size_t
+@@ -1153,6 +1226,7 @@ namespace cubstorage
+ 	candidates[i] = m_array[m_size - 1];
+ 	m_size--;
+       }
++    BSTRACE ("cq/pop n=%zu min=%u needed=%u left=%zu", i, minimum, needed_size, m_size);
+     return i;
+   }
+ 
+@@ -1360,6 +1434,10 @@ namespace cubstorage
+     shard = 0;
+     bias = 0;
+ 
++    BSTRACE ("find/enter hfid=%d|%d|%d size=%u consume=%d needed=%d newrec=%d start_shard=%zu bias=%zu",
++	     hfid->vfid.volid, hfid->vfid.fileid, hfid->hpgid, size, consume_size, needed_size, (int) is_newrec,
++	     shard, bias);
++
+     // find
+     return find_from_shards (thread_ref, class_oid, hfid, shard, needed_size, consume_size, bias, is_newrec, page_watcher);
+   }
+@@ -1494,6 +1572,11 @@ namespace cubstorage
+ 		    error == status::FAILURE);
+ 	    if (error == status::FOUND)
+ 	      {
++		{
++		  VPID *bsvp_ = pgbuf_get_vpid_ptr (page_watcher.pgptr);
++		  BSTRACE ("find/FOUND shard=%zu tried=%zu vpid=%d|%d", (shard + i) % m_shards.size (), i + 1,
++			   bsvp_->volid, bsvp_->pageid);
++		}
+ 		m_shards[ (shard + i) % m_shards.size ()].add_estimates (0, is_newrec ? 1 : 0, consume_size - SPAGE_SLOT_SIZE);
+ 		return NO_ERROR;
+ 	      }
+@@ -1507,6 +1590,7 @@ namespace cubstorage
+ 
+ 	assert (error == status::ALLOCATING);
+ 
++	BSTRACE ("find/all-shards-allocating wait retry=%zu (unfix ordered pages + yield)", retry);
+ 	errid = pgbuf_ordered_callback (&thread_ref, wait_for_shard_allocation, &retry);
+ 	if (errid != NO_ERROR)
+ 	  {
+@@ -1578,6 +1662,10 @@ namespace cubstorage
+     node->entry->reset (entries, num_entries);
+     node->entry->push_candidates (candidates, num_candidates);
+ 
++    BSTRACE ("reg/create hfid=%d|%d|%d shards=%zu entries=%zu cands=%zu est(pages=%d recs=%llu sumlen=%llu) unfill=%u",
++	     hfid->vfid.volid, hfid->vfid.fileid, hfid->hpgid, shard_count, num_entries, num_candidates, num_pages,
++	     (unsigned long long) recs_num, (unsigned long long) recs_sumlen, unfill_space);
++
+     std::lock_guard<std::mutex> lock (m_mutex);
+ 
+     assert (!find_entry (m_head, hfid));
+@@ -1694,12 +1782,16 @@ namespace cubstorage
+     if (!pair)
+       {
+ 	// invalid class oid and hfid
++	BSTRACE ("reg/miss hfid=%d|%d|%d (not in global registry)", hfid->vfid.volid, hfid->vfid.fileid, hfid->hpgid);
+ 	return nullptr;
+       }
+     entry = (pair->second)->entry;
+ 
+     ulock.unlock ();
+ 
++    BSTRACE ("reg/global-hit->tls hfid=%d|%d|%d tls_size=%zu", hfid->vfid.volid, hfid->vfid.fileid, hfid->hpgid,
++	     TLS_cache.size);
++
+     // register in TLS list
+     if (TLS_cache.size < TLS_MAX_SIZE)
+       {
+diff --git a/src/storage/heap_file.c b/src/storage/heap_file.c
+index a6091a88a..9394a95a8 100644
+--- a/src/storage/heap_file.c
++++ b/src/storage/heap_file.c
+@@ -77,6 +77,36 @@
+ #include "tde.h"
+ 
+ #include <set>
++
++/* ---- BSTRACE: temporary call-flow instrumentation for CBRD-26176 handover analysis. REVERT BEFORE COMMIT. ---- */
++#include <cstdio>
++#include <ctime>
++#include <unistd.h>
++#include <sys/syscall.h>
++#define BSTRACE_DIR "/tmp/claude-1000/-home-vimkim-gh-cb-develop/0eecb46e-9ae0-4d4b-9887-62083de16d11/scratchpad/bstrace"
++static FILE *
++bstrace_fp ()
++{
++  static FILE *fp = [] () -> FILE *
++  {
++    char path[512];
++    snprintf (path, sizeof (path), BSTRACE_DIR "/bstrace.%d.log", (int) getpid ());
++    FILE *f = fopen (path, "a");
++    if (f != NULL)
++      {
++	setvbuf (f, NULL, _IOLBF, 0);
++      }
++    return f;
++  } ();
++  return fp;
++}
++#define BSTRACE(fmt, ...) \
++  do { FILE *bsfp_ = bstrace_fp (); if (bsfp_ != NULL) { \
++    struct timespec bsts_; clock_gettime (CLOCK_MONOTONIC, &bsts_); \
++    fprintf (bsfp_, "%ld.%06ld tid=%ld " fmt "\n", (long) bsts_.tv_sec, bsts_.tv_nsec / 1000, \
++	     (long) syscall (SYS_gettid), ##__VA_ARGS__); } } while (0)
++/* ---- end BSTRACE ---- */
++
+ // XXX: SHOULD BE THE LAST INCLUDE HEADER
+ #include "memory_wrapper.hpp"
+ 
+@@ -3894,6 +3924,10 @@ heap_create_bestspace (THREAD_ENTRY * thread_p, HFID * hfid, HEAP_HDR_STATS * he
+   heap_hdr->next_vpid = heap_hdr->bestspace.pages[0];
+   heap_hdr->last_vpid = heap_hdr->bestspace.pages[heap_hdr->bestspace.num_pages - 1];
+ 
++  BSTRACE ("heap/create_bestspace hfid=%d|%d|%d shards=%d bs_pages=%d p0=%d|%d", hfid->vfid.volid, hfid->vfid.fileid,
++	   hfid->hpgid, (int) heap_hdr->bestspace.num_shards, (int) heap_hdr->bestspace.num_pages,
++	   heap_hdr->bestspace.pages[0].volid, heap_hdr->bestspace.pages[0].pageid);
++
+   /* insert entries */
+   entries = (cubstorage::bestspace_entry *) PTR_ALIGN (pgbuf, MAX_ALIGNMENT);
+   remaining_entries = max_entries;
+@@ -4202,6 +4236,10 @@ heap_update_bestspace (THREAD_ENTRY * thread_p, const HFID * hfid, cubstorage::b
+   bestspace->to_entries (entries, candidates, num_candidates);
+   bestspace->get_estimates (num_pages, num_recs, recs_sumlen);
+ 
++  BSTRACE ("heap/disk-sync hfid=%d|%d|%d entries=%d cands=%d est(pages=%d recs=%llu sumlen=%llu) -> write shard pages + header",
++	   hfid->vfid.volid, hfid->vfid.fileid, hfid->hpgid, num_entries, (int) num_candidates, num_pages,
++	   (unsigned long long) num_recs, (unsigned long long) recs_sumlen);
++
+   heap_hdr = heap_get_header_stats_ptr (thread_p, header_watcher.pgptr);
+   if (!heap_hdr)
+     {
+@@ -4452,6 +4490,11 @@ heap_build_bestspace (THREAD_ENTRY * thread_p, OID * class_oid, HFID * hfid, PGB
+       num_shards = prm_get_integer_value (PRM_ID_BESTSPACE_SHARD_COUNT);
+     }
+ 
++  BSTRACE ("heap/build hfid=%d|%d|%d hdr(shards=%d bs_pages=%d cands=%d est_pages=%d est_recs=%llu) -> reg/create",
++	   hfid->vfid.volid, hfid->vfid.fileid, hfid->hpgid, (int) header->bestspace.num_shards,
++	   (int) header->bestspace.num_pages, (int) num_candidates, header->num_pages,
++	   (unsigned long long) header->num_recs);
++
+   cubstorage::bestspaces.create (hfid, num_shards, entries,
+ 				 MIN (num_entries, num_shards * cubstorage::bestspace::ENTRIES_PER_SHARD), candidates,
+ 				 num_candidates, header->num_pages, header->num_recs, header->recs_sumlen,
+@@ -4582,6 +4625,9 @@ heap_find_bestpage (THREAD_ENTRY * thread_p, OID * class_oid, HFID * hfid, std::
+   // *INDENT-ON*
+   int error;
+ 
++  BSTRACE ("heap/find_bestpage class=%d|%d|%d hfid=%d|%d|%d size=%u newrec=%d", class_oid->volid, class_oid->pageid,
++	   class_oid->slotid, hfid->vfid.volid, hfid->vfid.fileid, hfid->hpgid, size, (int) is_newrec);
++
+   bestspace = heap_find_bestspace (thread_p, class_oid, hfid, NULL);
+   if (!bestspace)
+     {
+@@ -4593,6 +4639,8 @@ heap_find_bestpage (THREAD_ENTRY * thread_p, OID * class_oid, HFID * hfid, std::
+   /* update may unfix the fixed page (best page) so sync in-memory bestspace with disk first */
+   if (bestspace->updatable ())
+     {
++      BSTRACE ("heap/30s-sync-trigger hfid=%d|%d|%d (updatable window elapsed)", hfid->vfid.volid, hfid->vfid.fileid,
++	       hfid->hpgid);
+       error = heap_update_bestspace (thread_p, hfid, bestspace);
+       if (error != NO_ERROR)
+ 	{
+@@ -4629,6 +4677,13 @@ heap_add_bestpage (THREAD_ENTRY * thread_p, HFID * hfid, PAGE_PTR pgptr, std::ui
+     }
+ 
+   freespace = spage_get_free_space_without_saving (thread_p, pgptr);
++  {
++    VPID *bsvp_ = pgbuf_get_vpid_ptr (pgptr);
++    BSTRACE ("heap/add_bestpage hfid=%d|%d|%d vpid=%d|%d fs=%d tier=%d ok=%d", hfid->vfid.volid, hfid->vfid.fileid,
++	     hfid->hpgid, bsvp_ ? bsvp_->volid : -1, bsvp_ ? bsvp_->pageid : -1, freespace,
++	     (int) cubstorage::bestspace::size_to_tier (freespace),
++	     (int) (cubstorage::bestspace::size_to_tier (freespace) >= cubstorage::bestspace::tier::FS3));
++  }
+   if (cubstorage::bestspace::size_to_tier (freespace) >= cubstorage::bestspace::tier::FS3)
+     {
+       vpid = pgbuf_get_vpid_ptr (pgptr);
+@@ -20499,6 +20554,9 @@ heap_get_insert_location_with_lock (THREAD_ENTRY * thread_p, HEAP_OPERATION_CONT
+   context->res_oid.volid = pgbuf_get_volume_id (context->home_page_watcher_p->pgptr);
+   context->res_oid.pageid = pgbuf_get_page_id (context->home_page_watcher_p->pgptr);
+ 
++  BSTRACE ("heap/insert-location page=%d|%d (home page fixed with WRITE latch)", context->res_oid.volid,
++	   context->res_oid.pageid);
++
+   /*
+    * Find a slot that is lockable and lock it
+    */
+@@ -25988,6 +26046,9 @@ heap_alloc_new_pages (THREAD_ENTRY * thread_p, HFID * hfid, int npages, VPID * n
+       goto error;
+     }
+ 
++  BSTRACE ("heap/alloc_new_pages hfid=%d|%d|%d n=%d first=%d|%d last_prev=%d|%d", hfid->vfid.volid, hfid->vfid.fileid,
++	   hfid->hpgid, npages, new_page_vpids[0].volid, new_page_vpids[0].pageid, last_vpid.volid, last_vpid.pageid);
++
+   VPID_SET_NULL (&null_vpid);
+   for (i = 0; i < npages; i++)
+     {

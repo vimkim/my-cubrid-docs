@@ -1,0 +1,115 @@
+427775.650763 tid=313292 heap/create_bestspace hfid=1|768|769 shards=8 bs_pages=1 p0=1|770
+427775.669744 tid=313294 reg/miss hfid=0|768|769 (not in global registry)
+427775.669764 tid=313292 reg/miss hfid=0|768|769 (not in global registry)
+427775.669774 tid=313298 reg/miss hfid=0|768|769 (not in global registry)
+427775.669801 tid=313300 reg/miss hfid=0|768|769 (not in global registry)
+427775.670011 tid=313295 reg/miss hfid=0|768|769 (not in global registry)
+427775.670175 tid=313302 reg/miss hfid=0|768|769 (not in global registry)
+427775.671170 tid=313306 reg/miss hfid=0|768|769 (not in global registry)
+427775.671241 tid=313304 reg/miss hfid=0|768|769 (not in global registry)
+427775.674975 tid=313292 heap/find_bestpage class=0|209|6 hfid=1|768|769 size=128 newrec=1
+427775.674990 tid=313292 reg/miss hfid=1|768|769 (not in global registry)
+427775.674974 tid=313294 heap/find_bestpage class=0|209|6 hfid=1|768|769 size=128 newrec=1
+427775.674995 tid=313292 reg/miss hfid=1|768|769 (not in global registry)
+427775.674998 tid=313294 reg/miss hfid=1|768|769 (not in global registry)
+427775.675011 tid=313292 heap/build hfid=1|768|769 hdr(shards=8 bs_pages=1 cands=0 est_pages=1 est_recs=0) -> reg/create
+427775.675062 tid=313292 reg/create hfid=1|768|769 shards=8 entries=512 cands=0 est(pages=1 recs=0 sumlen=0) unfill=1634
+427775.675067 tid=313292 reg/global-hit->tls hfid=1|768|769 tls_size=4
+427775.675068 tid=313298 heap/find_bestpage class=0|209|6 hfid=1|768|769 size=128 newrec=1
+427775.675073 tid=313292 find/enter hfid=1|768|769 size=128 consume=132 needed=1766 newrec=1 start_shard=0 bias=0
+427775.675076 tid=313298 reg/global-hit->tls hfid=1|768|769 tls_size=0
+427775.675081 tid=313298 find/enter hfid=1|768|769 size=128 consume=132 needed=1766 newrec=1 start_shard=0 bias=0
+427775.675084 tid=313298 shard/find sh=0x7fc86002ce40 needed=1766 consume=132 tier_min=0
+427775.675077 tid=313292 shard/find sh=0x7fc86002ce40 needed=1766 consume=132 tier_min=0
+427775.675093 tid=313292 L1/probe sh=0x7fc86002ce40 l2=0 l1=0 rec_fs=15152 vpid=1|769 needed=1766 force=0
+427775.675097 tid=313292 L1/fix-CONTENDED sh=0x7fc86002ce40 vpid=1|769 (latch busy, no wait)
+427775.675100 tid=313292 shard/find sh=0x7fc86002ce40 L3=CONTENDED -> allocate
+427775.675076 tid=313294 reg/global-hit->tls hfid=1|768|769 tls_size=0
+427775.675088 tid=313298 L1/probe sh=0x7fc86002ce40 l2=0 l1=0 rec_fs=15152 vpid=1|769 needed=1766 force=0
+427775.675103 tid=313292 alloc/begin sh=0x7fc86002ce40 needed=1766
+427775.675106 tid=313294 find/enter hfid=1|768|769 size=128 consume=132 needed=1766 newrec=1 start_shard=0 bias=0
+427775.675114 tid=313298 L1/FOUND sh=0x7fc86002ce40 l2=0 l1=0 vpid=1|769 actual=15152 newL1=15020
+427775.675112 tid=313292 alloc/victims sh=0x7fc86002ce40 (L1idx,fs): (1,0) (2,0) (3,0) (4,0)
+427775.675121 tid=313292 alloc/pop-candidates sh=0x7fc86002ce40 popped=0 (min_fs>0 needed=1766)
+427775.675114 tid=313294 shard/find sh=0x7fc86002ce40 needed=1766 consume=132 tier_min=0
+427775.675131 tid=313294 L1/probe sh=0x7fc86002ce40 l2=0 l1=0 rec_fs=15020 vpid=1|769 needed=1766 force=0
+427775.675135 tid=313294 L1/fix-CONTENDED sh=0x7fc86002ce40 vpid=1|769 (latch busy, no wait)
+427775.675138 tid=313294 shard/find sh=0x7fc86002ce40 L3=CONTENDED -> allocate
+427775.675141 tid=313294 alloc/busy sh=0x7fc86002ce40 -> ALLOCATING (advance to next shard)
+427775.675143 tid=313294 shard/find sh=0x7fc86004f380 needed=1766 consume=132 tier_min=0
+427775.675117 tid=313298 find/FOUND shard=0 tried=1 vpid=1|769
+427775.675149 tid=313298 heap/insert-location page=1|769 (home page fixed with WRITE latch)
+427775.675146 tid=313294 shard/find sh=0x7fc86004f380 L3=NOT_FOUND -> allocate
+427775.675153 tid=313294 alloc/begin sh=0x7fc86004f380 needed=1766
+427775.675155 tid=313294 alloc/victims sh=0x7fc86004f380 (L1idx,fs): (0,0) (1,0) (2,0) (3,0)
+427775.675158 tid=313294 alloc/pop-candidates sh=0x7fc86004f380 popped=0 (min_fs>0 needed=1766)
+427775.675170 tid=313300 heap/find_bestpage class=0|209|6 hfid=1|768|769 size=128 newrec=1
+427775.675179 tid=313300 reg/global-hit->tls hfid=1|768|769 tls_size=0
+427775.675182 tid=313300 find/enter hfid=1|768|769 size=128 consume=132 needed=1766 newrec=1 start_shard=0 bias=0
+427775.675185 tid=313300 shard/find sh=0x7fc86002ce40 needed=1766 consume=132 tier_min=0
+427775.675192 tid=313300 L1/probe sh=0x7fc86002ce40 l2=0 l1=0 rec_fs=15020 vpid=1|769 needed=1766 force=0
+427775.675202 tid=313300 L1/fix-CONTENDED sh=0x7fc86002ce40 vpid=1|769 (latch busy, no wait)
+427775.675204 tid=313300 shard/find sh=0x7fc86002ce40 L3=CONTENDED -> allocate
+427775.675204 tid=313292 heap/alloc_new_pages hfid=1|768|769 n=4 first=1|771 last_prev=1|770
+427775.675206 tid=313300 alloc/busy sh=0x7fc86002ce40 -> ALLOCATING (advance to next shard)
+427775.675208 tid=313300 shard/find sh=0x7fc86004f380 needed=1766 consume=132 tier_min=0
+427775.675210 tid=313300 shard/find sh=0x7fc86004f380 L3=NOT_FOUND -> allocate
+427775.675212 tid=313300 alloc/busy sh=0x7fc86004f380 -> ALLOCATING (advance to next shard)
+427775.675213 tid=313300 shard/find sh=0x7fc8600506c0 needed=1766 consume=132 tier_min=0
+427775.675214 tid=313300 shard/find sh=0x7fc8600506c0 L3=NOT_FOUND -> allocate
+427775.675216 tid=313300 alloc/begin sh=0x7fc8600506c0 needed=1766
+427775.675218 tid=313300 alloc/victims sh=0x7fc8600506c0 (L1idx,fs): (0,0) (1,0) (2,0) (3,0)
+427775.675220 tid=313300 alloc/pop-candidates sh=0x7fc8600506c0 popped=0 (min_fs>0 needed=1766)
+427775.675216 tid=313302 heap/find_bestpage class=0|209|6 hfid=1|768|769 size=128 newrec=1
+427775.675226 tid=313302 reg/global-hit->tls hfid=1|768|769 tls_size=0
+427775.675227 tid=313292 alloc/new-pages sh=0x7fc86002ce40 n=4 first_vpid=1|771
+427775.675232 tid=313292 alloc/replace sh=0x7fc86002ce40 L1idx=1 <- vpid=1|774 fs=16264
+427775.675235 tid=313292 alloc/replace sh=0x7fc86002ce40 L1idx=2 <- vpid=1|773 fs=16264
+427775.675237 tid=313292 alloc/replace sh=0x7fc86002ce40 L1idx=3 <- vpid=1|772 fs=16264
+427775.675240 tid=313292 alloc/FOUND sh=0x7fc86002ce40 ret_vpid=1|771 reserved_fs=16132
+427775.675242 tid=313292 find/FOUND shard=0 tried=1 vpid=1|771
+427775.675245 tid=313292 heap/insert-location page=1|771 (home page fixed with WRITE latch)
+427775.675229 tid=313302 find/enter hfid=1|768|769 size=128 consume=132 needed=1766 newrec=1 start_shard=0 bias=0
+427775.675250 tid=313302 shard/find sh=0x7fc86002ce40 needed=1766 consume=132 tier_min=0
+427775.675253 tid=313302 L1/probe sh=0x7fc86002ce40 l2=0 l1=0 rec_fs=15020 vpid=1|769 needed=1766 force=0
+427775.675243 tid=313295 heap/find_bestpage class=0|209|6 hfid=1|768|769 size=128 newrec=1
+427775.675258 tid=313302 L1/fix-CONTENDED sh=0x7fc86002ce40 vpid=1|769 (latch busy, no wait)
+427775.675260 tid=313294 heap/alloc_new_pages hfid=1|768|769 n=4 first=1|775 last_prev=1|774
+427775.675261 tid=313302 L1/probe sh=0x7fc86002ce40 l2=0 l1=1 rec_fs=16264 vpid=1|774 needed=1766 force=0
+427775.675268 tid=313302 L1/FOUND sh=0x7fc86002ce40 l2=0 l1=1 vpid=1|774 actual=16264 newL1=16132
+427775.675271 tid=313302 find/FOUND shard=0 tried=1 vpid=1|774
+427775.675274 tid=313302 heap/insert-location page=1|774 (home page fixed with WRITE latch)
+427775.675263 tid=313295 reg/global-hit->tls hfid=1|768|769 tls_size=0
+427775.675278 tid=313295 find/enter hfid=1|768|769 size=128 consume=132 needed=1766 newrec=1 start_shard=0 bias=0
+427775.675282 tid=313295 shard/find sh=0x7fc86002ce40 needed=1766 consume=132 tier_min=0
+427775.675286 tid=313295 L1/probe sh=0x7fc86002ce40 l2=0 l1=0 rec_fs=15020 vpid=1|769 needed=1766 force=0
+427775.675293 tid=313295 L1/fix-CONTENDED sh=0x7fc86002ce40 vpid=1|769 (latch busy, no wait)
+427775.675296 tid=313295 L1/probe sh=0x7fc86002ce40 l2=0 l1=1 rec_fs=16132 vpid=1|774 needed=1766 force=0
+427775.675301 tid=313295 L1/FOUND sh=0x7fc86002ce40 l2=0 l1=1 vpid=1|774 actual=16132 newL1=16000
+427775.675304 tid=313295 find/FOUND shard=0 tried=1 vpid=1|774
+427775.675306 tid=313295 heap/insert-location page=1|774 (home page fixed with WRITE latch)
+427775.675317 tid=313294 alloc/new-pages sh=0x7fc86004f380 n=4 first_vpid=1|775
+427775.675320 tid=313294 alloc/replace sh=0x7fc86004f380 L1idx=0 <- vpid=1|778 fs=16264
+427775.675323 tid=313294 alloc/replace sh=0x7fc86004f380 L1idx=1 <- vpid=1|777 fs=16264
+427775.675325 tid=313294 alloc/replace sh=0x7fc86004f380 L1idx=2 <- vpid=1|776 fs=16264
+427775.675327 tid=313294 alloc/FOUND sh=0x7fc86004f380 ret_vpid=1|775 reserved_fs=16132
+427775.675333 tid=313294 find/FOUND shard=1 tried=2 vpid=1|775
+427775.675335 tid=313294 heap/insert-location page=1|775 (home page fixed with WRITE latch)
+427775.675351 tid=313300 heap/alloc_new_pages hfid=1|768|769 n=4 first=1|779 last_prev=1|778
+427775.675383 tid=313300 alloc/new-pages sh=0x7fc8600506c0 n=4 first_vpid=1|779
+427775.675387 tid=313300 alloc/replace sh=0x7fc8600506c0 L1idx=0 <- vpid=1|782 fs=16264
+427775.675390 tid=313300 alloc/replace sh=0x7fc8600506c0 L1idx=1 <- vpid=1|781 fs=16264
+427775.675393 tid=313300 alloc/replace sh=0x7fc8600506c0 L1idx=2 <- vpid=1|780 fs=16264
+427775.675396 tid=313300 alloc/FOUND sh=0x7fc8600506c0 ret_vpid=1|779 reserved_fs=16132
+427775.675397 tid=313300 find/FOUND shard=2 tried=3 vpid=1|779
+427775.675399 tid=313300 heap/insert-location page=1|779 (home page fixed with WRITE latch)
+427775.675803 tid=313298 heap/find_bestpage class=0|209|6 hfid=1|768|769 size=128 newrec=1
+427775.675807 tid=313298 find/enter hfid=1|768|769 size=128 consume=132 needed=1766 newrec=1 start_shard=0 bias=0
+427775.675810 tid=313298 shard/find sh=0x7fc86002ce40 needed=1766 consume=132 tier_min=0
+427775.675812 tid=313298 L1/probe sh=0x7fc86002ce40 l2=0 l1=0 rec_fs=15020 vpid=1|769 needed=1766 force=0
+427775.675815 tid=313298 L1/FOUND sh=0x7fc86002ce40 l2=0 l1=0 vpid=1|769 actual=15020 newL1=14888
+427775.675817 tid=313298 find/FOUND shard=0 tried=1 vpid=1|769
+427775.675819 tid=313298 heap/insert-location page=1|769 (home page fixed with WRITE latch)
+427775.675971 tid=313292 heap/find_bestpage class=0|209|6 hfid=1|768|769 size=128 newrec=1
+427775.675976 tid=313292 find/enter hfid=1|768|769 size=128 consume=132 needed=1766 newrec=1 start_shard=0 bias=0
+427775.675979 tid=313292 shard/find sh=0x7fc86002ce40 needed=1766 consume=132 tier_min=0
