@@ -18,14 +18,57 @@ if [[ -z "${CUBRID_DATABASES:-}" ]]; then
   exit 1
 fi
 
+# Optional controls used by the persistent Podman runner:
+#   CUBRID_TEST_USE_SERVER=1     Run through cub_server instead of standalone csql.
+#   CUBRID_TEST_KEEP_RUNNING=1   Leave the database (and server, when used) alive.
+#   CUBRID_TEST_DB_NAME=name     Use a stable database name for later inspection.
+#   CUBRID_TEST_DB_DIR=path      Put database volumes in a known directory.
+CUBRID_TEST_USE_SERVER=${CUBRID_TEST_USE_SERVER:-${CUBRID_PODMAN_USE_SERVER:-0}}
+CUBRID_TEST_KEEP_RUNNING=${CUBRID_TEST_KEEP_RUNNING:-${CUBRID_PODMAN_KEEP_ALIVE:-0}}
+
+for boolean_name in CUBRID_TEST_USE_SERVER CUBRID_TEST_KEEP_RUNNING; do
+  if [[ "${!boolean_name}" != "0" && "${!boolean_name}" != "1" ]]; then
+    echo "ERROR: ${boolean_name} must be 0 or 1." >&2
+    exit 1
+  fi
+done
+
 # CUBRID database/log prefixes must be shorter than 17 characters.
-DB_NAME="c26${BASHPID}"
-DB_DIR=$(mktemp -d "${TMPDIR:-/tmp}/c26.XXXXXX")
+DB_NAME=${CUBRID_TEST_DB_NAME:-${CUBRID_PODMAN_DB_NAME:-"c26${BASHPID}"}}
+if [[ ${#DB_NAME} -ge 17 ]]; then
+  echo "ERROR: database name must be shorter than 17 characters: ${DB_NAME}" >&2
+  exit 1
+fi
+
+DB_DIR_OVERRIDE=${CUBRID_TEST_DB_DIR:-${CUBRID_PODMAN_DB_DIR:-}}
+if [[ -n "${DB_DIR_OVERRIDE}" ]]; then
+  DB_DIR=${DB_DIR_OVERRIDE}
+  mkdir -p "${DB_DIR}"
+else
+  DB_DIR=$(mktemp -d "${TMPDIR:-/tmp}/c26.XXXXXX")
+fi
+
 DB_CREATED=0
+SERVER_STARTED=0
 
 cleanup()
 {
   set +e
+  if [[ "${CUBRID_TEST_KEEP_RUNNING}" -eq 1 ]]; then
+    if [[ "${DB_CREATED}" -eq 1 ]]; then
+      echo "INFO: preserved database ${DB_NAME} at ${DB_DIR} for inspection"
+      if [[ "${SERVER_STARTED}" -eq 1 ]]; then
+        echo "INFO: cub_server ${DB_NAME} remains running"
+      fi
+    else
+      echo "INFO: database creation did not complete; preserved ${DB_DIR} for inspection"
+    fi
+    return
+  fi
+
+  if [[ "${SERVER_STARTED}" -eq 1 ]]; then
+    cubrid server stop "${DB_NAME}" >/dev/null 2>&1
+  fi
   if [[ "${DB_CREATED}" -eq 1 ]]; then
     cubrid deletedb "${DB_NAME}" >/dev/null 2>&1
   fi
@@ -39,7 +82,14 @@ cubrid createdb --db-volume-size=20M --log-volume-size=20M \
   "${DB_NAME}" en_US.utf8 -F "${DB_DIR}" >/dev/null
 DB_CREATED=1
 
-csql -S -u dba -c "
+CSQL_MODE=(-S)
+if [[ "${CUBRID_TEST_USE_SERVER}" -eq 1 ]]; then
+  cubrid server start "${DB_NAME}" >/dev/null
+  SERVER_STARTED=1
+  CSQL_MODE=()
+fi
+
+csql "${CSQL_MODE[@]}" -u dba -c "
 CREATE TABLE force_outline_16 (
   id INTEGER PRIMARY KEY,
   payload BIT VARYING STORAGE FORCE_OUTLINE
@@ -59,7 +109,7 @@ COMMIT;
 
 query_one()
 {
-  csql -S -u dba -q -N --delimiter='^' -c "$1" "${DB_NAME}" \
+  csql "${CSQL_MODE[@]}" -u dba -q -N --delimiter='^' -c "$1" "${DB_NAME}" \
     | sed '/^[[:space:]]*$/d'
 }
 
