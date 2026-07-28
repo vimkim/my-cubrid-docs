@@ -32,6 +32,17 @@
 
 `e84a7f6dc`와 `f30f1c260` 사이에 `src/storage/heap_file.c`가 4개 커밋(`741734a8f`, `58145583a`, `5119004c2`, `dbcfe381c`)으로 +237/−151 변경되었다. `bestspace.cpp` / `bestspace.hpp`는 **한 줄도 바뀌지 않았다**(`git diff --stat e84a7f6dc..f30f1c260` 확인). 따라서 bestspace 파일의 라인 번호는 두 리비전에서 동일하다.
 
+### 0.3 개별 커밋을 참조하는 방법
+
+**`e84a7f6dc`는 parent가 하나뿐인 squash merge 커밋이다** (`git log -1 --format=%P e84a7f6dc` → `b63fbc5dc` 단일, 직접 확인). 따라서 **`e84a7f6dc^2`는 존재하지 않으며, PR의 57개 개별 커밋은 `develop` 히스토리에 남아 있지 않다.** 본 문서와 `04` 문서가 인용하는 커밋 해시(`a8482a6e6`, `0ba2a3603`, `026e78a87` 등)를 조회하려면 PR head를 별도로 fetch해야 한다.
+
+```
+git fetch origin pull/7353/head:refs/remotes/pr/7353
+git log cd2d4718b^..cc6bd0d6e        # 57개 커밋 (base^..tip)
+```
+
+이 로컬 저장소에는 **이미 `refs/remotes/pr/7353`가 존재한다** (`cc6bd0d6e3cb6b2f0d662da36c8049f0a2ad17fa`, 직접 확인). 리뷰 리포트의 HEAD SHA와 동일하다.
+
 ---
 
 ## 1. 요구사항과 Acceptance
@@ -175,7 +186,7 @@ Acceptance Criteria의 "부하 분산"은 **원본 PR에서 검증되지 않았�
 | **결정** | 전역 registry의 키는 `HFID` 하나다. `class_oid`는 키가 아니라 **페이지 소유권 검증 용도로만** 쓴다. `destroy`는 `HFID`와 `VFID` 두 오버로드를 갖는다. |
 | **근거** | ① **키가 중복이었다** — heap 파일 하나는 정확히 한 클래스에 속하므로 HFID가 정해지면 class_oid는 종속적이다. ② **class_oid를 모르는 호출자가 실재한다** — `vacuum_rv_notify_dropped_file`은 복구 데이터에서 VFID만 얻는다 (`vacuum.c:6424@e84a7f6dc`). `HFID = VFID + hpgid`이므로 VFID만으로 매칭이 가능하다. |
 | **기각된 대안** | **`(OID class_oid, HFID hfid)` 복합 키**(초기 구현) — 정보를 더하지 않으면서 호출자에게 부담만 지우고, VFID-only 복구 경로가 성립하지 않는다. 커밋 `0ba2a3603` "uese only hfid as a key"(원문 오타)가 되돌렸다. 부수효과로 `destroy(VFID)`가 단일 제거가 아닌 **드레인 루프**가 된다. |
-| **출처** | `02 §3.2`; `04 M5`; `bestspace.hpp:429-431, 448-452@f30f1c260` |
+| **출처** | `02 §3.2`; `04 M5`; `bestspace.hpp:426-432, 451-452@f30f1c260` |
 
 ### D-08. thread_local registry 캐시 + generation 무효화
 
@@ -185,7 +196,7 @@ Acceptance Criteria의 "부하 분산"은 **원본 PR에서 검증되지 않았�
 | **근거** | 한 서버가 동시에 여는 heap 수가 많지 않고 TLS가 대부분의 조회를 흡수한다는 가정 **[추정 — 설계 근거 주석 없음]**. generation 방식은 dangling pointer를 원천 차단한다. `m_generation`은 매 조회마다 읽히므로 `alignas(64)`. |
 | **기각된 대안** | ① **전역 해시 테이블** — 레거시가 그랬고(`hfid_ht`/`vpid_ht` + 단일 mutex), 그것이 병목의 Layer 2였다 (`01 §7.1`). ② **개별 엔트리 참조 카운팅** — dangling 방지에는 정확하지만 조회마다 원자 증감이 필요. ③ **RCU/hazard pointer** — CUBRID에 기반 인프라가 없다. |
 | **한계** | `find_from_global`은 **선형 탐색**이므로 heap 수가 많아지면 mutex 아래 O(n)이 된다. generation 무효화는 heap 하나가 drop되면 **모든 스레드의 모든 캐시**를 날린다(과잉 무효화). |
-| **출처** | `02 §3.1`, `§3.3`; `bestspace.hpp:457-465@f30f1c260` |
+| **출처** | `02 §3.1`, `§3.3`; `bestspace.hpp:459-466@f30f1c260` (`m_head` 460 / `m_mutex` 461 / `alignas(64) m_generation` 463 / `TLS_MAX_SIZE = 40` 465 / `thread_local registry_cache TLS_cache` 466) |
 
 ### D-09. candidate queue — mutex + 정렬 고정 배열, 정원 128, 오름차순
 
@@ -223,9 +234,9 @@ Acceptance Criteria의 "부하 분산"은 **원본 PR에서 검증되지 않았�
 |---|---|
 | **결정** | bestspace 엔트리를 담을 전용 페이지 1~4장을 **같은 `FILE_HEAP` VFID에서** 할당하고, heap 페이지 체인의 **헤더 바로 다음**(2번째~N+1번째)에 끼워 넣는다. 전용 페이지 타입은 없고 `HEAP_CHAIN::flags` 비트 0(`HEAP_PAGE_FLAG_BESTSPACE`)으로만 구별한다. 슬롯 0 = `HEAP_CHAIN`, 슬롯 1 = `bestspace_entry` 평면 배열. |
 | **근거** | 별도 파일을 만들지 않으므로 heap 생성/삭제/재사용 경로가 그대로 동작한다. 찾을 때 스캔하지 않고 헤더의 `bestspace.pages[]`로 직접 fix한다. |
-| **기각된 대안** | **별도 VFID** — `04 R0` 5번 항목이 "이 결정을 R0에서 내려야 한다"고 명시한다. 별도 VFID는 파일 관리 비용이 늘지만 **오염 반경이 0**이다. |
+| **기각된 대안** | **별도 VFID** — 원본은 이 대안을 **명시적으로 검토한 흔적이 없다.** 재작성 시 정식으로 다시 열어야 하므로 **별도 결정 항목 D-25**로 승격했다. |
 | **대가 (매우 큼)** | shard 페이지가 체인에 있으므로 **기존 heap 스캐너 전부가 이를 밟는다.** `heap_page_is_bestspace()` 가드를 `heap_get_num_objects`, `heap_get_capacity`, `heap_next_internal`, `heap_page_next/prev`, `xheap_reclaim_addresses`, `heap_chkreloc_next`, `heap_update_statistics`, `heap_reuse` 등 9곳 이상에 뿌려야 했고, 그러고도 통계 경로 3곳이 뒤늦게 발견됐다(`04 T10`). 페이지 수를 세는 코드도 전부 함정이 되어 `heap_get_num_data_pages`가 신설됐다. |
-| **재작성 권고** | **별도 VFID를 진지하게 재검토하라.** `04 T10(d)`: "shard 페이지를 별도 VFID에 두는 설계를 먼저 검토할 가치가 있다 — 그러면 이 함정 부류 전체가 사라진다." 만약 heap VFID 안에 두기로 결정한다면 §6 P7의 전수 스윕이 **필수**다. |
+| **재작성 권고** | **→ D-25에서 정식으로 재결정할 것.** 함정 T3 / T10 / T14가 전부 이 하나의 결정에서 파생되므로, "그대로 간다"를 고르더라도 **판단 근거를 문서로 남겨야 한다.** heap VFID 안에 두기로 결정한다면 §6 P7의 전수 스윕이 **필수**다. |
 | **출처** | `02 §4.2~4.3`; `04 M3`, `T10`, `R0-5`; `heap_file.c:220-229@f30f1c260`(플래그 매크로 직접 확인) |
 
 ### D-13. shard 페이지 개수를 파라미터 **상한**으로 산정
@@ -255,7 +266,7 @@ Acceptance Criteria의 "부하 분산"은 **원본 PR에서 검증되지 않았�
 | **결정** | `OID_IS_ROOTOID(class_oid)`이면 shard 수를 **1**로 고정하고, 그 외에는 `PRM_ID_BESTSPACE_SHARD_COUNT`를 쓴다. |
 | **근거** | 카탈로그 heap은 INSERT 경합이 적어 shard를 나눌 이유가 없고, shard마다 4,800바이트를 쓰므로 낭비다(8 shard = 38,400바이트). |
 | **기각된 대안** | **일괄 파라미터 적용** — 모든 카탈로그 heap이 40KB씩 차지한다. |
-| **출처** | `02 §3.5`; `heap_file.c:4445-4452@f30f1c260`(직접 확인) |
+| **출처** | `02 §3.5`; `heap_file.c:4446-4452@f30f1c260`(직접 확인) |
 
 ### D-16. `bestspace_entry` ≡ `L1` ≡ 디스크 8바이트 — 3중 항등 ABI
 
@@ -264,7 +275,7 @@ Acceptance Criteria의 "부하 분산"은 **원본 PR에서 검증되지 않았�
 | **결정** | `{uint16_t freespace; short volid; int32_t pageid;}` 8바이트 레이아웃을 in-memory `L1`, 전달용 `bestspace_entry`, on-disk 엔트리 셋이 **완전히 공유**한다. `static_assert`로 크기와 오프셋(0/2/4)을 못 박고, `offsetof` 일치도 검증한다. |
 | **근거** | 플러시와 적재가 **`memcpy` 한 번**으로 끝난다. `freespace`가 오프셋 0인 것은 tier 판정이 이 값만 보면 되기 때문이고, 8바이트 전체를 단일 `lock cmpxchg`로 교체할 수 있어야 **free space와 VPID가 찢어지지 않는다** — 이것이 탐색 경로에서 mutex를 없앨 수 있었던 근본 이유다. |
 | **기각된 대안** | ① **직렬화 함수 경유** — 매 플러시마다 1,792개를 개별 변환. ② **`int freespace`(레거시 `HEAP_BESTSPACE`는 12바이트)** — 8바이트를 넘어 원자 CAS 불가. `uint16_t`로 줄여도 CUBRID 최대 페이지가 16K라 표현 가능. |
-| **출처** | `02 §1`, `§2.2`, `§2.5`; `bestspace.hpp:396-407@f30f1c260`(static_assert 직접 확인) |
+| **출처** | `02 §1`, `§2.2`, `§2.5`; `bestspace.hpp:62-65, 402-407@f30f1c260`(static_assert 직접 확인) |
 
 ### D-17. `atomic_wrapper` 64바이트 패딩 — 메모리 8배를 false sharing과 맞바꿈
 
@@ -274,7 +285,7 @@ Acceptance Criteria의 "부하 분산"은 **원본 PR에서 검증되지 않았�
 | **근거** | 8바이트를 64바이트에 담는 8배 낭비지만, **서로 다른 페이지 슬롯을 갱신하는 스레드끼리 false sharing이 완전히 사라진다.** shard 하나가 4,800바이트가 되는 이유다. 이 설계는 "인메모리 bestspace를 작게 유지"하려는 것이 아니라 "경합 없이 유지"하려는 것이다. |
 | **기각된 대안** | **패딩 없음** — 64슬롯이 8개 캐시라인에 몰려 인접 슬롯 갱신끼리 라인을 튕긴다. |
 | **예외** | `m_num_pages`/`m_recs_num`/`m_recs_sumlen`은 **맨 `std::atomic`** 으로 인접 배치되어 같은 라인을 공유한다. 정확도보다 갱신 비용이 중요한 값이라 패딩을 주지 않았다 **[추정 — 주석 없음]**. |
-| **출처** | `02 §2.7~2.8`; `bestspace.hpp:408-416@f30f1c260` |
+| **출처** | `02 §2.7~2.8`; `bestspace.hpp:408-413, 415-416@f30f1c260` |
 
 ### D-18. `needed_size` / `consume_size` / `record_length` 3분리
 
@@ -323,7 +334,7 @@ Acceptance Criteria의 "부하 분산"은 **원본 PR에서 검증되지 않았�
 | **근거** | `heap_update_bestspace`가 헤더 페이지를 ordered fix하는데, 그 과정에서 **이미 fix된 best page를 unfix했다가 재fix할 수 있다.** 탐색 결과를 watcher에 물린 뒤 체크포인트를 돌리면 그 watcher가 무효화된다. 코드 주석: `/* update may unfix the fixed page (best page) so sync in-memory bestspace with disk first */`. |
 | **기각된 대안** | **탐색 후 체크포인트**(초기 구현) — `04 T16`. |
 | **일반화된 규칙** | **ordered fix를 쓰는 함수는 "다른 페이지를 unfix할 수 있다"고 가정하라. 유지보수 작업은 항상 리소스 획득 전에 배치하라.** |
-| **출처** | `04 T16`; `heap_file.c:4592-4601@f30f1c260`(직접 확인) |
+| **출처** | `04 T16`; `heap_file.c:4593-4601@f30f1c260`(주석 4593, `updatable()` 4594 — 직접 확인) |
 
 ### D-23. 힌트 경로와 수요 경로 API 분리
 
@@ -343,7 +354,21 @@ Acceptance Criteria의 "부하 분산"은 **원본 PR에서 검증되지 않았�
 | **근거** | enum을 제거하면 **이후 모든 PRM id가 밀린다.** |
 | **출처** | `02 §6.2`; `04 M5` |
 
-**결정 총계: 24건.**
+### D-25. **[재작성 신규 결정 — 원본에서 명시적으로 내려지지 않았음]** shard 페이지를 별도 VFID에 둘 것인가
+
+D-12는 원본 PR이 실제로 내린 결정("heap 자신의 VFID, 페이지 체인 맨 앞")을 기록한 것이다. **이 항목은 그 결정을 재작성 시점에 다시 여는 정식 결정 슬롯이다.** `04` 문서가 "이 결정을 R0에서 내려야 한다 — 나중에 바꾸면 전면 재작업이다"라고 명시하므로, P0-3에서 **문서화된 판단**을 남겨야 한다.
+
+| | |
+|---|---|
+| **결정해야 할 것** | shard 페이지를 ① heap 자신의 `FILE_HEAP` VFID 안에(= 원본) 둘 것인가, ② **별도 VFID**에 둘 것인가 |
+| **①을 고를 때의 비용 — 파생 함정 목록** | `04` 문서의 함정 18건 중 **T3 / T10 / T14가 모두 이 단일 결정에서 파생된다.** ⟨T3⟩ `heap_Maxslotted_reclength`를 `spage_max_record_size() − sizeof(HEAP_HDR_STATS)`로 계산했는데, 데이터/shard 페이지의 슬롯 0에는 훨씬 작은 `HEAP_CHAIN`이 들어가므로 기준 자체가 틀렸다(→ `heap_nonheader_page_capacity()` 신설). ⟨T10⟩ `file_get_num_user_pages()`가 heap VFID의 **모든** 페이지를 세므로 옵티마이저가 보는 페이지 수가 최대 4 크고, 히스토그램 샘플러가 사용자 레코드 없는 페이지를 샘플로 잡는다(→ `heap_get_num_data_pages()` 신설 + 샘플러 2곳 스킵). ⟨T14⟩ compactdb가 디스크만 갱신하면 in-memory 객체가 사라진 페이지를 가리킨 채 남는다. **그리고 `heap_page_is_bestspace()` 가드를 스캐너 9곳 이상에 뿌리고도 통계 경로 3곳이 뒤늦게 발견됐다** — 스윕이 체계적이지 않았다는 신호다. |
+| **①의 이득** | 별도 파일을 만들지 않으므로 heap 생성/삭제/재사용/복구 경로가 그대로 동작한다. 파일 관리 비용 0 |
+| **②의 이득** | **오염 반경이 0.** `hfid.vfid`로 페이지를 세거나 순회하는 모든 코드가 자동으로 안전해지고, §6 P7의 전수 스윕 분량이 급감한다. `04 T10(d)` 원문: "대안으로 **shard 페이지를 별도 VFID에 두는 설계**를 먼저 검토할 가치가 있다 — 그러면 이 함정 부류 전체가 사라진다." |
+| **②의 비용** | 파일 하나가 늘어난다 → heap 생성/삭제/`heap_reuse`/compactdb/복구에서 두 파일의 **원자적 생명주기**를 맞춰야 한다. `vacuum_rv_notify_dropped_file`이 VFID 기준으로 registry를 정리하므로(D-07) 그 경로도 두 VFID를 알아야 한다 |
+| **판단 시 참고** | ②를 고르면 D-12의 `HEAP_PAGE_FLAG_BESTSPACE` 플래그와 `heap_page_is_bestspace()`가 **불필요해진다**. 반대로 ①을 고수하면 P7 전수 스윕이 **필수 단계**가 되고, `grep -rn "file_get_num_user_pages\|heap_vpid_next\|spage_next_record" src/` 체크리스트를 소진해야 한다 |
+| **출처** | `04 T3`, `T10`, `T14`, `R0-5`, `R7`; `02 §4.2~4.3`; 본 문서 D-12 |
+
+**결정 총계: 25건** (원본이 내린 결정 24건 + 재작성 시 다시 열어야 할 결정 1건).
 
 ---
 
@@ -433,11 +458,12 @@ L2/L3 비트맵은 L1의 **요약**이며, 갱신 순서가 L1 먼저 · L2/L3 �
 
 | 불변식 | 현재 강제 여부 |
 |---|---|
-| `sizeof(bestspace_entry) == 8`, offset 0/2/4 | ✅ `bestspace.hpp:396-399@f30f1c260` |
-| `sizeof(L1) == sizeof(L2) == sizeof(L3) == 8` | ✅ `bestspace.hpp:401-403` |
-| `std::atomic<L1/L2/L3>::is_always_lock_free` | ✅ `bestspace.hpp:404-406` |
-| `sizeof(atomic_wrapper<T>) == 64`, `alignof == 64` | ✅ `bestspace.hpp:407-412` |
-| `sizeof(shard) == 4800`, `alignof(shard) == 64` | ✅ `bestspace.hpp:414-415` |
+| `sizeof(bestspace_entry) == 8`, offset 0/2/4 | ✅ `bestspace.hpp:62-65@f30f1c260` |
+| `sizeof(bitmap) == 1` + trivially copyable | ✅ `bestspace.hpp:399-400` |
+| `sizeof(L1) == sizeof(L2) == sizeof(L3) == 8` | ✅ `bestspace.hpp:402-404` |
+| `std::atomic<L1/L2/L3>::is_always_lock_free` | ✅ `bestspace.hpp:405-407` |
+| `sizeof(atomic_wrapper<T>) == 64`, `alignof == 64` | ✅ `bestspace.hpp:408-413` |
+| `sizeof(shard) == 4800`, `alignof(shard) == 64` | ✅ `bestspace.hpp:415-416` |
 | `offsetof(L1, m_freespace) == offsetof(bestspace_entry, freespace)` 등 3건 | ✅ `bestspace.cpp:139-141@e84a7f6dc` |
 | **`sizeof(HEAP_HDR_STATS) == 1152`** | ❌ **없음.** 런타임 `assert(recdes.length == sizeof(HEAP_HDR_STATS))`만 존재 (`heap_file.c:4407@f30f1c260`) |
 
@@ -551,7 +577,7 @@ STATIC_INLINE int
 heap_find_bestpage (THREAD_ENTRY *thread_p, OID *class_oid, HFID *hfid, std::uint16_t size,
                     bool is_newrec, PGBUF_WATCHER *page_watcher);
 ```
-(`heap_file.c:4576-4604@f30f1c260`, 직접 확인)
+(`heap_file.c:4576-4605@f30f1c260`, 직접 확인)
 
 | 항목 | 계약 |
 |---|---|
@@ -584,7 +610,7 @@ heap_find_bestspace (THREAD_ENTRY *thread_p, OID *class_oid, HFID *hfid, PGBUF_W
 int bestspace::find (cubthread::entry &thread_ref, OID *class_oid, HFID *hfid,
                      std::uint16_t size, bool is_newrec, PGBUF_WATCHER &page_watcher);
 ```
-(`bestspace.hpp:369-370`, 구현 `bestspace.cpp:1324-1364@f30f1c260`)
+(`bestspace.hpp:368-369`, 구현 `bestspace.cpp:1324-1365@f30f1c260`)
 
 동작 순서:
 1. **stale error 방어** — 진입 시 `er_errid_if_has_error()`가 에러면 즉시 반환, 아니면 `er_clear()`. 이 경로가 `er_errid()`로 상태를 판별하는 곳이 많아 오염을 막아야 한다.
@@ -616,7 +642,34 @@ extern void heap_add_bestpage (THREAD_ENTRY *thread_p, HFID *hfid, PAGE_PTR pgpt
 
 > 레거시 대비: 구 코드에서 vacuum은 `PRM_ID_HF_MAX_BESTSPACE_ENTRIES > 0` 게이트와 `HEAP_DROP_FREE_SPACE`(30%) 문턱을 통과해야 `heap_stats_update`를 불렀다. 신 코드는 두 게이트를 없애고 이 함수 한 줄로 대체하면서 문턱을 FS3(25%)로 옮겼다.
 >
-> **레거시 정리 항목:** `vacuum.c:2419-2433@e84a7f6dc^`에 있던 `prev_freespace = 0` 트릭과 "This part will be refactored right away in the related issue" 주석 — **그 관련 이슈가 CBRD-26176이다.** 재작성 시 함께 정리하라 (`01 §6.3`, `§10-12`).
+> **레거시 정리 항목 (재작성 스코프에 반드시 포함).** 레거시 `vacuum.c`의 forward page 경로에는 **bestspace_mutex 경합 회피용 임시방편**이 코드에 명시적으로 남아 있고, 그 정리를 CBRD-26176에 예약해 두었다. **`e84a7f6dc^:src/query/vacuum.c` 2419-2435 (주석 2425-2432, 호출 2433)** — 직접 확인한 원문:
+>
+> ```c
+> if (prm_get_integer_value (PRM_ID_HF_MAX_BESTSPACE_ENTRIES) > 0)      /* 2419 */
+>   {
+>     int freespace = spage_get_free_space_without_saving (thread_p, helper->forward_page, NULL);
+>
+>     if (freespace > HEAP_DROP_FREE_SPACE)                             /* 2423 */
+>       {
+>         /*
+>          * NOTE:
+>          * By checking the freespace > HEAP_DROP_FREE_SPACE condition, heap_Bestspace->bestspace_mutex contention is reduced
+>          * and the unnecessarily frequent extraction from heap_Bestspace->vpid_ht due to small free space is prevented in heap_stats_find_page_in_bestspace().
+>          * And Passing the prev_freespace argument to 0 is a trick to get heap_stats_add_bestspace() called from heap_stats_update().
+>          *
+>          * This part will be refactored right away in the related issue, at which time this comment will be removed.
+>          */
+>         heap_stats_update (thread_p, helper->forward_page, &helper->hfid, 0);   /* 2433 — prev_freespace = 0 트릭 */
+>       }
+>   }
+> ```
+>
+> **"the related issue"가 곧 CBRD-26176이다.** 재작성 시 다음 셋을 모두 해소해야 스코프가 닫힌다.
+> 1. `prev_freespace = 0` **트릭 제거** — 신 설계의 `heap_add_bestpage`는 `prev_freespace`를 아예 쓰지 않으므로(S7) 트릭의 존재 이유가 사라진다.
+> 2. **`PRM_ID_HF_MAX_BESTSPACE_ENTRIES > 0` 게이트 제거** — 파라미터가 `PRM_OBSOLETED`가 되므로(D-24) 이 조건은 죽은 분기다.
+> 3. **주석 삭제** — 주석 자체가 "이 이슈에서 지운다"고 약속하고 있다.
+>
+> (`01 §6.3`, `§10-12`. 신 코드는 이 블록을 `heap_add_bestpage (thread_p, &helper->hfid, helper->forward_page);` 한 줄로 대체했고 문턱 판정을 FS3로 옮겼다 — `vacuum.c:2422@f30f1c260`, 직접 확인.)
 
 ### 5.3 bestspace 클래스 공개 API
 
@@ -746,7 +799,7 @@ typedef int (*PGBUF_ORDERED_CALLBACK_FUNC) (THREAD_ENTRY *thread_p, void *args);
 |---|---|---|
 | 0-1 | **온디스크 레이아웃 최종안** — `HEAP_HDR_STATS` 필드·오프셋, `HEAP_CHAIN` 플래그 비트 배분, shard 페이지 슬롯 구성, candidate 배열 위치/크기. **버전 필드를 넣을 것.** | D1, `04 T3` |
 | 0-2 | **디스크 호환성 정책** — `rel_disk_compatible()` bump(11.5f → 11.6f)로 구 DB를 명시적으로 거부할 것인가, 아니면 헤더 버전 필드 + 마이그레이션을 제공할 것인가. **셋 중 하나를 반드시 고른다.** | **D1** |
-| 0-3 | **shard 페이지를 heap VFID에 둘 것인가, 별도 VFID에 둘 것인가** (D-12). 별도 VFID면 P7 스윕 분량이 급감한다 | `04 T10` 부류 전체 |
+| 0-3 | **shard 페이지를 heap VFID에 둘 것인가, 별도 VFID에 둘 것인가** — **D-25의 표를 채워 문서로 남긴다.** 함정 **T3 / T10 / T14가 전부 이 하나의 결정에서 파생**되므로, ①(원본대로)을 고르더라도 근거를 명시하고 P7 스윕을 필수 단계로 승격시킨다 | `04 T3` / `T10` / `T14` 부류 전체 |
 | 0-4 | **`sizeof(HEAP_HDR_STATS)` 의존 지점 전수 조사.** 최소한 `heap_Maxslotted_reclength` 산정 | `04 T3` |
 | 0-5 | **페이지 유효성(allocated) 판정 규약** — `MAYBE_DEALLOCATED` fix만으로는 rollback postpone 중인 페이지를 걸러낼 수 없다. `HEAP_CHAIN` 플래그를 추가할 것인가? | **D9 (CBRD-27120)** |
 | 0-6 | **과소-stale L1 자가치유 정책** — FS3 게이트를 유지할 것인가, epoch 기반 강제 재검증을 넣을 것인가, resident 페이지의 L1을 직접 갱신할 것인가 | **D5** |
@@ -871,8 +924,8 @@ P1의 목록을 소진한다. 폴백 인터페이스를 걷어내고 registry �
 | S2 | `HEAP_HDR_STATS`에 크기 `static_assert`가 **없다.** `heap_file.c`/`.h` 전체에 `static_assert`가 하나도 없다 | `02 §4.1` | 추가 (I-10). D1의 조기 발견 수단 |
 | S3 | on-disk 구조체에 `std::size_t` 사용 — 플랫폼 이식성 | Greptile (작성자는 동일 플랫폼 전제로 답변, bot 철회) | **고정 폭 타입(`uint64_t`)으로 교체 권장.** on-disk 구조체에 `size_t`를 쓸 이유가 없다 |
 | S4 | `for_each`가 registry mutex를 **잡은 채 page I/O** 수행 | Greptile (shutdown-only precondition 설명 후 철회, **precondition 문서화 권장**) | 함수 주석에 "shutdown 단일 스레드 전제"를 명시하고 `assert`로 강제 |
-| S5 | sync 주기 30초가 **하드코딩 `constexpr`**, 튜닝 파라미터 없음 | `04 M4 갭` | P0-9에서 노출 여부 결정 |
-| S6 | 유닛 테스트가 도입 후 삭제되어 **복구되지 않음**(`unit_tests/bestspace/`) | `04 M1`, `R2` | P2부터 유지 |
+| S5 | **체크포인트 주기 30초가 하드코딩 `constexpr`** — `UPDATE_TIME_THRESHOLD`, 함수 지역 상수(`bestspace.cpp:1312@f30f1c260` = 커밋 시점 `:1312`, 직접 확인). **튜닝 파라미터가 없다.** bestspace 관련 파라미터는 `PRM_ID_BESTSPACE_SHARD_COUNT`와 `PRM_ID_DEBUG_BESTSPACE` 둘뿐이며 어느 쪽도 주기를 바꾸지 않는다. 워크로드에 따라 30초는 너무 길거나(crash 시 유실 폭) 너무 짧다(헤더 latch 왕복 빈도) | `04 M4 갭`; 직접 확인 | **P0-9에서 노출 여부를 결정한다.** 노출한다면 `PRM_FOR_SERVER`, 하한을 0(비활성)이 아닌 양수로 두고 shutdown 훅과의 관계를 문서화. 노출하지 않는다면 **30초를 고른 근거를 주석으로 남길 것** — 현재는 근거 주석조차 없다 |
+| S6 | **유닛 테스트가 도입 후 삭제되어 복구되지 않음** — `unit_tests/bestspace/`가 `eabbf4bcf`에서 655줄로 도입 → `a8482a6e6`에서 964줄로 재작성 → **`cc40a2a13`에서 통째로 삭제**. 현재 트리에 디렉터리가 **존재하지 않음**(직접 확인) | `04 M1`, `R2`; 직접 확인 | **§8.2 U0 — P2에서 새로 쓰고 끝까지 유지.** G2 게이트가 디렉터리 부재를 실패로 판정 |
 | S7 | `heap_add_bestpage`의 `prev_freespace`가 **받기만 하고 쓰이지 않음** ("leave this for future feature") | `f30f1c260` 직접 확인 | 제거하거나 D5의 자가치유에 실제로 활용 |
 | S8 | `heap_update_bestspace`에서 `num_pages`만 `MAX()`, 나머지는 덮어쓰기(비대칭) | `02 §5.4` | 주석으로 근거 명시(현재도 있음). 유지 가능 |
 | S9 | `set_estimates`의 read-then-subtract race로 **과대추정 잔존** | `02 §2.8` | 의도된 것. 주석 유지 |
@@ -889,12 +942,20 @@ P1의 목록을 소진한다. 폴백 인터페이스를 걷어내고 registry �
 | 게이트 | 내용 | 통과 기준 |
 |---|---|---|
 | **G1 정적** | 빌드(debug/release), `static_assert` 세트, 코드 스타일, cppcheck, memory_wrapper 검사 | 무경고 |
-| **G2 단위** | `unit_tests/bestspace/` (P2에서 유지) | 전항목 pass |
+| **G2 단위** | `unit_tests/bestspace/` **복원 + P2부터 유지** (§8.2) | 전항목 pass. **디렉터리가 존재하지 않으면 게이트 실패로 간주** |
 | **G3 기능 회귀** | CircleCI sql / medium / shell + HA shell | 신규 실패 0. **D8 관련 TC는 사전 수정 PR과 동시 머지** |
 | **G4 결함 재현** | §8.3의 D1~D9 재현 테스트 | 전항목 pass |
 | **G5 성능** | §8.4 | §1.4 수치 재현 + A5 분포 |
 
-### 8.2 단위 테스트 (G2) — P2에서 작성해 끝까지 유지
+### 8.2 단위 테스트 (G2) — **`unit_tests/bestspace/` 복원**, P2부터 끝까지 유지
+
+> **선행 작업 U0 — 삭제된 유닛 테스트 복원.** `unit_tests/bestspace/test_bestspace.cpp`는 커밋 **`eabbf4bcf`("implement the bestspace registry and add stats for debug")에서 655줄로 도입**됐다가, `a8482a6e6`(fanout 7→8)에서 964줄 규모로 재작성됐고, **커밋 `cc40a2a13`("pick victim pages and replace them with selected or allocated candidates")에서 통째로 삭제된 뒤 PR 종료까지 복구되지 않았다.** 현재 트리에 bestspace 유닛 테스트는 존재하지 않는다.
+>
+> 재작성에서는 이것을 **되살리는 것이 아니라 P2에서 처음부터 다시 쓰고 끝까지 유지한다.** 근거 두 가지:
+> - `04 R2`: "순수 인메모리 자료구조는 CUBRID에서 드물게 **단위 테스트하기 쉬운 코드**이므로 버리기 아깝다."
+> - 삭제의 직접 원인은 **레이아웃 상수가 늦게 확정된 것**(fanout 7→8)이었다. §6 P2가 상수를 최종값으로 못 박으므로 이 재작성 압력이 사라진다.
+>
+> CUBRID 유닛 테스트는 Catch2 v2.11.3 기반이며 `./build.sh -m debug -c "-DUNIT_TESTS=ON"`로 활성화한다. `unit_tests/AGENTS.md` 참조. 일부 모듈(`LOCKFREE`, `LOADDB`, `MEMORY_MONITOR`)이 컴파일 문제로 비활성화되어 있으므로, **신규 `BESTSPACE` 모듈이 그 전철을 밟지 않도록 CI에 실제로 등록됐는지 확인하라** — 리뷰 리포트는 "로컬 ctest에는 등록된 test가 없었다"고 기록하고 있다.
 
 | # | 대상 | 검증 내용 |
 |---|---|---|
@@ -958,6 +1019,9 @@ bash evidence/gen_workload.sh 8 500 && bash evidence/run_multi.sh 8
 - [ ] G1~G5 전부 통과
 - [ ] **D1~D9 9건 전부 해소 또는 명시적 wontfix + 근거 문서화**
 - [ ] S1~S12 검토 완료
+- [ ] **D-25(shard 페이지 VFID 배치) 결정이 문서로 남아 있고, ①을 골랐다면 P7 스윕 체크리스트가 소진됐다**
+- [ ] **`unit_tests/bestspace/`가 존재하고 CI(ctest)에 실제로 등록되어 실행된다** — 원본은 테스트가 삭제된 채 머지됐고, 리뷰는 "로컬 ctest에는 등록된 test가 없었다"고 기록했다
+- [ ] **레거시 정리 완료** — `vacuum.c`의 `prev_freespace = 0` 트릭 · `PRM_ID_HF_MAX_BESTSPACE_ENTRIES > 0` 게이트 · "will be refactored right away" 주석이 트리에 남아 있지 않다 (§5.2)
 - [ ] testcase PR (`cubrid-testcases` / `cubrid-testcases-private`)이 **함께 머지 가능한 상태** — 원본 PR은 TC PR #2969·#3529가 open이라 `Check TC PRs`가 실패 상태에서 머지됐다 (리뷰 Merge gate)
 - [ ] 성능 수치를 PR 본문에 첨부 — 리뷰 Test Gap 5: "JIRA acceptance인 다중 transaction INSERT 부하 분산과 성능 향상을 수치로 증명하는 신규 benchmark 결과가 PR에 없다"
 - [ ] 디스크 호환성 정책이 릴리스 노트에 반영
@@ -983,7 +1047,7 @@ bash evidence/gen_workload.sh 8 500 && bash evidence/run_multi.sh 8
 | 11 | `HEAP_HDR_STATS` 크기 `static_assert` 없음 | **추가** | I-10, S2 |
 | 12 | `heap_file.c`에 리터럴 `64` | **`ENTRIES_PER_SHARD`** | S1 |
 | 13 | on-disk `std::size_t` | **`uint64_t`** | S3 |
-| 14 | shard 페이지를 heap VFID 내부 체인에 | **별도 VFID를 P0에서 재검토** | D-12, `04 T10(d)` |
+| 14 | shard 페이지를 heap VFID 내부 체인에 (대안 미검토) | **D-25를 정식 결정 항목으로 채울 것** — T3/T10/T14의 공통 근원 | **D-25**, D-12, `04 T10(d)` |
 | 15 | 30초 하드코딩 | **파라미터 노출 여부를 P0에서 결정** | S5 |
 | 16 | 유닛 테스트 삭제됨 | **P2부터 유지** | S6 |
 | 17 | 헤더 1,152 B (candidate 1KB 인라인) | **candidate를 shard 페이지로 옮겨 헤더 증가 최소화 검토** | D8 |
