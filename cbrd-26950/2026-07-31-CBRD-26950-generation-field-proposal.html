@@ -50,6 +50,7 @@
   table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 13.5px; }
   th, td { border: 1px solid var(--line); padding: 8px 11px; text-align: left; vertical-align: top; }
   th { background: var(--code-bg); font-size: 12.5px; white-space: nowrap; }
+  tr:nth-child(even) td { background: #fbfcfd; }
   .scroll { overflow-x: auto; }
   .verdict-x { color: var(--danger); font-weight: 700; white-space: nowrap; }
   .verdict-o { color: var(--ok); font-weight: 700; white-space: nowrap; }
@@ -89,7 +90,11 @@
   .alt.chosen .badge { color: var(--ok); background: var(--bg); border: 1px solid var(--ok); }
 
   .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; }
-  @media (max-width: 640px) { .cols { grid-template-columns: 1fr; } }
+  @media (max-width: 640px) {
+    .wrap { padding: 32px 20px 56px; }
+    .cols { grid-template-columns: 1fr; }
+    h1 { font-size: 22px; }
+  }
   .card { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
   .card h3 { margin: 0 0 8px; font-size: 14px; }
   .card.ok { border-color: var(--ok); background: var(--ok-soft); }
@@ -117,211 +122,205 @@
 <div class="wrap">
 
   <span class="kicker">CBRD-26950 · Analysis · 미팅 자료</span>
-  <h1>vacuum이 살아있는 행의 OOS 데이터를 지울 수 있습니다<br>— 청크 헤더에 4B generation 필드를 제안합니다</h1>
+  <h1>OOS 슬롯 재사용 시 vacuum의 잘못된 삭제를 막기 위한<br>4B generation 필드 제안</h1>
   <div class="meta">
     검증 기준: <code>feat/oos</code> HEAD <code>0ad6afc0f</code> (2026-07-31, bestspace 리디자인 이후) ·
     발견: PR #6986 리뷰 · JIRA 상태: Analysis
   </div>
 
   <div class="tagline">
-    vacuum이 블록을 재처리할 때, 이미 회수했다가 다른 살아있는 행이 재사용한 OOS 슬롯을
-    구분하지 못하고 다시 지웁니다 — 에러도 로그도 없는 무증상 데이터 손실입니다.
-    <span class="fix">✓ 수정 제안: OOS 청크 헤더에 4B generation 하나를 추가하고, 삭제 전에 대조합니다.</span>
+    vacuum이 미완료 블록을 다시 처리할 때, 이전에 비운 OOS 슬롯을 다른 행이 재사용했는지
+    구분하지 못할 수 있습니다. 이 경우 살아있는 행의 OOS 데이터가 별도 오류 없이 삭제됩니다.
+    <span class="fix">제안: OOS 청크와 inline stub에 4B generation을 저장하고 삭제 전에 일치 여부를 확인합니다.</span>
   </div>
   <div class="ask">
-    <b>오늘 요청드리는 결정</b>: ① 결함 성립 인정(코드 수준 증명 완료), ② generation 방식으로 ANALYSIS 확정,
-    ③ feat/oos <b>머지 전</b> 처리 (미출시 상태라 온디스크 포맷 변경 비용이 지금 0입니다).
+    <b>이번 논의에서 결정할 사항</b>: ① 분석 결과에 동의하는지, ② generation 방식을 수정안으로 채택할지,
+    ③ 온디스크 호환성 부담이 생기기 전인 <code>feat/oos</code> 머지 전에 반영할지.
   </div>
 
-  <h2><span class="num">1</span>사고 시퀀스</h2>
+  <h2><span class="num">1</span>문제가 발생하는 순서</h2>
   <ul class="tl">
     <li data-t="T1" class="ok">
-      <div class="head">UPDATE R1</div>
-      <div class="body">옛 OOS 체인 <code>V|P|S</code> 의 참조가 <b>로그의 undo image에만</b> 남음 (UPDATE는 항상 새 OID 발급). 이 로그는 블록 B 소속.</div>
+      <div class="head">R1 UPDATE</div>
+      <div class="body">UPDATE는 새 OID를 발급하므로, 이전 OOS 체인 <code>V|P|S</code>의 참조는 <b>로그의 undo image에만</b> 남습니다. 이 로그는 블록 B에 속합니다.</div>
     </li>
     <li data-t="T2" class="ok">
-      <div class="head">vacuum이 블록 B 처리 시작 (IN_PROGRESS)</div>
-      <div class="body">블록에는 레코드가 여러 개 — 진행 기록은 <b>블록 단위뿐</b>, 레코드 단위 메모 없음.</div>
+      <div class="head">vacuum이 블록 B 처리 시작</div>
+      <div class="body">블록 상태는 <code>IN_PROGRESS</code>가 됩니다. 진행 상태는 <b>블록 단위</b>로만 기록되며, 개별 레코드의 완료 여부는 저장하지 않습니다.</div>
     </li>
     <li data-t="T3" class="ok">
-      <div class="head">1차 회수 (정상)</div>
-      <div class="body">undo image → <code>V|P|S</code> 추출 → <code>oos_delete</code> → <b>레코드 단위 sysop 커밋</b>.
-      슬롯이 비고 페이지는 <b>즉시 bestspace 재등록</b>. <code>start_lsa</code> 는 전진하지 않음.</div>
+      <div class="head">기존 OOS 체인 회수</div>
+      <div class="body">vacuum은 undo image에서 <code>V|P|S</code>를 읽어 <code>oos_delete</code>를 수행하고, <b>레코드 단위 sysop</b>을 커밋합니다.
+      빈 공간은 즉시 bestspace에 등록되지만 <code>start_lsa</code>는 전진하지 않습니다.</div>
     </li>
     <li data-t="T4" class="bad">
-      <div class="head">다른 행 R2의 INSERT가 같은 슬롯 재사용</div>
-      <div class="body">bestspace tier-1이 그 페이지를 우선 선택 + <code>spage_find_free_slot</code> 은 최저 빈 슬롯부터
-      → R2의 청크가 정확히 <code>V|P|S</code> 에 앉음. R2 커밋.</div>
+      <div class="head">R2가 같은 슬롯을 재사용</div>
+      <div class="body">다른 트랜잭션의 INSERT가 bestspace에서 해당 페이지를 선택합니다. <code>spage_find_free_slot</code>은 가장 낮은 빈 슬롯을 먼저 사용하므로,
+      R2의 청크가 같은 <code>V|P|S</code>에 저장될 수 있습니다.</div>
     </li>
     <li data-t="T5" class="bad">
-      <div class="head">블록 B 완료 전 중단</div>
-      <div class="body">크래시 / 정상 셧다운 / (릴리스) 중간 에러 — 셋 중 무엇이든. 블록은 <b>INTERRUPTED로 재장전</b>.</div>
+      <div class="head">블록 B 완료 전에 처리 중단</div>
+      <div class="body">크래시, 정상 셧다운, 릴리스 빌드의 중간 오류 등으로 처리가 중단되면 블록은 <code>INTERRUPTED</code> 상태로 다시 로드됩니다.</div>
     </li>
     <li data-t="T6" class="bad">
-      <div class="head">2차 처리 — 사고</div>
-      <div class="body">같은 <code>start_lsa</code> 부터 블록 전체 재주행 → 불변 undo image에서 같은 <code>V|P|S</code> →
-      probe <code>oos_chunk_exists</code>: "슬롯에 뭔가 있음" → true → <code>oos_delete</code> 가
-      <b>R2의 살아있는 청크를 삭제</b> (멀티청크면 R2의 체인 전체). 에러·경고 없음.</div>
+      <div class="head">재처리 중 R2의 청크 삭제</div>
+      <div class="body">vacuum은 같은 <code>start_lsa</code>부터 블록을 다시 읽고, 동일한 undo image에서 <code>V|P|S</code>를 얻습니다.
+      <code>oos_chunk_exists</code>는 슬롯의 점유 여부만 확인하므로 R2의 청크도 유효한 대상으로 판단합니다. 이어지는 <code>oos_delete</code>는
+      <b>R2의 청크를 삭제</b>하며, 멀티청크 값이면 체인 전체를 따라갑니다. 이 과정에서 오류나 경고는 발생하지 않습니다.</div>
     </li>
   </ul>
 
-  <h2><span class="num">2</span>왜 이것이 <em>반드시</em> 문제가 되는가</h2>
+  <h2><span class="num">2</span>현재 구조에서 발생 가능한 이유</h2>
 
-  <h3>2-1. 사고에 필요한 다섯 링크가 전부 "설계된 정상 동작"입니다</h3>
-  <p class="lead">이 버그는 어떤 컴포넌트의 오동작도 필요로 하지 않습니다. 각 링크가 <b>의도된 계약</b>이고,
-  전부 현재 HEAD 소스에서 라인 단위로 확인했습니다:</p>
+  <h3>2-1. 필요한 조건이 모두 현재의 정상 동작에 포함됩니다</h3>
+  <p class="lead">특정 컴포넌트 하나가 잘못 동작해서 생기는 문제가 아닙니다. 아래 다섯 동작은 각각 의도된 동작이지만,
+  함께 일어나면 잘못된 삭제로 이어집니다. 근거는 현재 HEAD 소스에서 확인했습니다.</p>
   <div class="scroll"><table>
-    <tr><th>#</th><th>링크</th><th>왜 정상 동작인가</th><th>근거 (HEAD 기준)</th></tr>
+    <tr><th>#</th><th>조건</th><th>현재 동작</th><th>근거 (HEAD 기준)</th></tr>
     <tr><td>1</td><td>청크 삭제가 블록 완료 <b>전에</b> 영구 확정</td>
-        <td>레코드 단위 sysop은 멀티페이지 원자성을 위한 의도된 설계. 복구 undo는 커밋된 sysop을 <code>lastparent_lsa</code> 로 건너뛰므로 크래시로도 안 돌아옴</td>
+        <td>레코드 단위 sysop은 멀티페이지 원자성을 위한 설계입니다. 복구 undo는 커밋된 sysop을 <code>lastparent_lsa</code>로 건너뛰므로 이미 끝난 삭제는 되돌리지 않습니다.</td>
         <td><code>vacuum_oos.cpp:171,196</code> · <code>log_recovery.c:4800-4804</code></td></tr>
     <tr><td>2</td><td>미완 블록은 <b>처음부터 통째로</b> 재처리</td>
-        <td>진행 위치 <code>start_lsa</code> 는 부분 완료 시 전진하지 않음(코드에 명시적 TODO). 미완 → AVAILABLE+INTERRUPTED, 크래시 부팅 시 IN_PROGRESS도 동일 재장전. 재처리는 버그가 아니라 <b>vacuum의 계약</b></td>
+        <td>부분 완료 시 <code>start_lsa</code>가 전진하지 않습니다(코드에 명시적 TODO). 미완료 블록과 재기동 시의 <code>IN_PROGRESS</code> 블록은 다시 처리 대상으로 등록됩니다.</td>
         <td><code>vacuum.c:3764(TODO), 3926, 8357-8361, 4398-4401</code></td></tr>
     <tr><td>3</td><td>비운 슬롯·페이지는 <b>즉시 재사용 후보</b></td>
-        <td>공간 회수가 OOS 회수의 존재 이유. ANCHORED 페이지의 삭제 슬롯은 <code>REC_DELETED_WILL_REUSE</code> 가 되고 최저 슬롯부터 결정적으로 재사용, 페이지는 삭제 직후 bestspace 전역 캐시+best[]에 재등록</td>
+        <td>ANCHORED 페이지에서 삭제된 슬롯은 <code>REC_DELETED_WILL_REUSE</code>가 되며, 가장 낮은 번호의 빈 슬롯부터 재사용합니다. 페이지도 삭제 직후 bestspace 캐시와 <code>best[]</code>에 다시 등록됩니다.</td>
         <td><code>slotted_page.c:2093-2095, 1284-1290</code> · <code>oos_file.cpp:2189→912-961</code></td></tr>
-    <tr><td>4</td><td>probe는 <b>신원을 물을 수 없음</b></td>
-        <td><code>oos_chunk_exists</code> 는 슬롯 점유 여부만 확인 — 레코드 내용을 읽지도 않음. 청크 헤더는 길이/인덱스/다음 OID뿐이라 <b>물을 방법 자체가 없음</b></td>
+    <tr><td>4</td><td>probe는 <b>청크 신원을 확인할 수 없음</b></td>
+        <td><code>oos_chunk_exists</code>는 슬롯 점유 여부만 확인하고 레코드 내용은 읽지 않습니다. 현재 청크 헤더에도 길이, 인덱스, 다음 OID 외에 점유자를 구분할 정보가 없습니다.</td>
         <td><code>oos_file.cpp:2241-2244</code> · <code>oos_file.hpp:26-31</code></td></tr>
     <tr><td>5</td><td>재처리 때 <b>같은 옛 OID</b>가 다시 나옴</td>
-        <td>WAL은 append-only — undo image는 불변이고, 재주행은 같은 LSA의 같은 이미지를 다시 파싱. <code>oos_delete</code> 는 현재 점유자의 헤더에서 <code>next_chunk_oid</code> 를 읽어 <b>남의 체인을 끝까지</b> 따라감</td>
+        <td>WAL의 undo image는 바뀌지 않으므로 재처리 시 같은 LSA에서 같은 OID를 얻습니다. <code>oos_delete</code>는 현재 점유자의 헤더에서 <code>next_chunk_oid</code>를 읽어 체인을 끝까지 따라갑니다.</td>
         <td><code>vacuum.c:3488, 3587-3590</code> · <code>oos_file.cpp:2171-2194</code></td></tr>
   </table></div>
   <div class="callout">
-    <b>핵심</b>: 다섯 링크가 전부 "설계대로"인데 조합하면 데이터 손실입니다. 즉 이것은 어느 한 컴포넌트의 버그가 아니라
-    <b>계약 사이의 상호작용 결함</b>이라서, 주변 코드가 개선돼도 자연 치유되지 않습니다 — 실제로 JIRA 앵커(<code>2c329a4e0</code>)
-    이후 bestspace 리디자인(CBRD-26176) 등 대형 변경을 전수 검토했지만 이 결함을 막거나 좁힌 커밋은 없습니다.
+    <b>정리</b>: 개별 동작은 모두 설계와 일치하지만, 조합했을 때 OOS 청크의 신원을 확인할 수 없다는 문제가 드러납니다.
+    JIRA 기준 커밋(<code>2c329a4e0</code>) 이후의 변경도 확인했으며, bestspace 리디자인(CBRD-26176)을 포함해 이 경로를 차단한 변경은 없습니다.
   </div>
 
-  <h3>2-2. 막아줄 불변식이 있는지 전수 수색했습니다 — 없습니다</h3>
-  <p>"어딘가에서 막히지 않을까"라는 가설 7개를 세우고 하나씩 소스로 반박했습니다:</p>
+  <h3>2-2. 기존 보호 장치로는 차단되지 않습니다</h3>
+  <p>재처리, 잠금, 복구 등 기존 장치가 이 경로를 막는지 확인한 결과는 다음과 같습니다.</p>
   <div class="scroll"><table>
-    <tr><th>차단 후보</th><th>반박</th></tr>
+    <tr><th>차단 가능성</th><th>확인 결과</th></tr>
     <tr><td>블록은 재방문되지 않는다</td><td>미완 블록은 AVAILABLE+INTERRUPTED로 되돌아가 재배포됨 (위 링크 2)</td></tr>
-    <tr><td>진행 위치가 처리된 엔트리 뒤에서 재개된다</td><td><code>start_lsa</code> 불변 — 명시적 TODO. 레코드 단위 진행 메모는 어디에도 없음</td></tr>
-    <tr><td>그 구간엔 슬롯 재할당이 불가능하다</td><td>비운 슬롯을 보호하는 잠금 없음(<code>oos_file.cpp:2116</code> TODO — 죽은 행의 row lock은 무의미). bestspace가 재사용을 오히려 촉진</td></tr>
+    <tr><td>진행 위치가 처리된 엔트리 뒤에서 재개된다</td><td><code>start_lsa</code>는 그대로이며(명시적 TODO), 레코드 단위의 진행 정보는 저장하지 않음</td></tr>
+    <tr><td>그 구간에는 슬롯을 다시 할당할 수 없다</td><td>빈 슬롯을 보호하는 잠금이 없음(<code>oos_file.cpp:2116</code> TODO). bestspace 등록으로 해당 페이지가 곧바로 재사용 후보가 됨</td></tr>
     <tr><td>페이지/슬롯 메타데이터가 새 점유자를 구분한다</td><td>헤더에 신원 필드 없음. probe는 내용조차 읽지 않음</td></tr>
-    <tr><td>트랜잭션/sysop/래치/스케줄링이 직렬화한다</td><td>sysop은 원자성만 제공(신원 아님), 래치는 fix 단위, vacuum 디스패치 게이트(MVCCID 임계값)는 죽은 행 조건일 뿐 새 점유자와 무관</td></tr>
-    <tr><td>복구가 재사용 전에 옛 참조를 제거한다</td><td>undo image는 불변이고, 복구는 오히려 블록을 재장전함. page LSA는 "같은 redo 두 번 적용"만 막음 — 2차 삭제는 replay가 아니라 <b>복구 후 평시 코드의 신규 연산</b></td></tr>
+    <tr><td>트랜잭션/sysop/래치/스케줄링이 직렬화한다</td><td>sysop은 원자성만 제공하며 점유자의 신원을 보장하지 않음. 래치는 fix 단위이고, MVCCID 임계값은 새 점유자와 무관함</td></tr>
+    <tr><td>복구가 재사용 전에 옛 참조를 제거한다</td><td>undo image는 그대로 유지되고 복구 후 블록이 다시 등록됨. page LSA는 같은 redo의 중복 적용만 막으며, 2차 삭제는 <b>복구 후 새로 수행하는 연산</b>임</td></tr>
     <tr><td><code>oos_delete</code> 전에 다른 검증이 있다</td><td>점유-여부 probe가 유일한 관문</td></tr>
   </table></div>
 
-  <h3>2-3. "확률이 낮으니 넘어가자"가 성립하지 않는 네 가지 이유</h3>
+  <h3>2-3. 발생 빈도와 별개로 출시 전에 다뤄야 합니다</h3>
   <div class="scroll"><table>
     <tr><th>#</th><th>이유</th><th>상세</th></tr>
-    <tr><td>1</td><td><b>트리거가 일상 이벤트</b></td>
-        <td>블록 재처리의 방아쇠는 이국적인 조건이 아니라 <b>정상 셧다운(패치·재시작), 크래시, 릴리스 빌드의 블록 중간 에러</b>입니다.
-        vacuum이 블록 하나라도 처리 중일 때 서버가 내려가면 그 블록은 반드시 재처리됩니다. 운영 수명 동안 수백~수천 번 반복되는 이벤트입니다.</td></tr>
-    <tr><td>2</td><td><b>시간 경쟁조차 필요 없음</b></td>
-        <td>재사용 창은 "다음 OOS insert까지" — blob-heavy 테이블이면 초 단위입니다. 더 나쁜 것: 셧다운·크래시 시나리오에서는
-        <b>재사용이 중단 이전에 이미 일어난 경우</b>에도 성립하므로, 재기동 후 타이밍 경쟁이 아예 필요 없습니다.
-        "1차 회수 → R2 insert → (몇 시간 뒤) 셧다운"이라는 완전히 여유로운 순서로도 발생합니다.</td></tr>
-    <tr><td>3</td><td><b>무증상 + 원인-증상 분리 + 백업 오염</b></td>
-        <td>발생 시점엔 아무 신호가 없습니다(정상 vacuum 로그와 구분 불가). 증상은 R2를 <b>나중에 읽을 때</b>에야 —
-        "행은 있는데 특정 컬럼만 못 읽음" — 나타나고, 슬롯이 3차 재사용된 뒤라면 <b>에러조차 없이 다른 행의 값을 읽습니다.</b>
-        원인(vacuum 재처리)과 증상(며칠 뒤 읽기 실패) 사이 거리가 멀어 진단이 사실상 불가능하고, 그 사이 백업에는 손실이 그대로 복제됩니다.
-        릴리스 빌드에 OOS 관측 도구도 없습니다(CBRD-26871).</td></tr>
-    <tr><td>4</td><td><b>피해가 확률과 독립적으로 증폭</b></td>
-        <td>재사용된 head 슬롯이 멀티청크 값이면 probe는 head만 보고 <code>oos_delete</code> 는 <b>새 점유자의 체인 전체</b>를 따라가
-        지웁니다 — 한 번의 오판이 수십 KB를 지울 수 있습니다. 그리고 DBMS에서 "확률적 무증상 데이터 손실"은
-        빈도와 무관하게 correctness 결함입니다 — 고객이 우리 제품에 기대하는 첫 번째 계약이 데이터 보존입니다.</td></tr>
+    <tr><td>1</td><td><b>일반적인 운영 이벤트로 재처리됨</b></td>
+        <td>정상 셧다운, 크래시, 릴리스 빌드의 블록 중간 오류로도 미완료 블록이 다시 처리됩니다. 별도의 특수한 장애 조건이 필요하지 않습니다.</td></tr>
+    <tr><td>2</td><td><b>좁은 타이밍 경쟁이 아님</b></td>
+        <td>슬롯 재사용은 중단 전에 이미 일어날 수 있습니다. 예를 들어 "기존 체인 회수 → R2 INSERT → 이후 셧다운" 순서만으로 조건이 성립하므로,
+        재기동 직후의 짧은 경쟁 구간을 맞출 필요가 없습니다.</td></tr>
+    <tr><td>3</td><td><b>발생 시점과 증상 확인 시점이 다름</b></td>
+        <td>잘못된 삭제는 정상 vacuum 작업처럼 기록됩니다. 증상은 R2를 나중에 읽을 때 나타나며, 추가 슬롯 재사용이 있으면 다른 값으로 읽힐 수도 있습니다.
+        원인과 증상이 시간상 분리되어 진단이 어렵고, 확인 전에 생성된 백업에도 손상된 상태가 포함될 수 있습니다. 릴리스 빌드에는 OOS 관측 도구도 없습니다(CBRD-26871).</td></tr>
+    <tr><td>4</td><td><b>잘못된 삭제가 체인 전체에 영향</b></td>
+        <td>재사용된 head 슬롯이 멀티청크 값이면 <code>oos_delete</code>는 새 점유자의 체인을 따라가며 전체를 삭제합니다.
+        발생 확률이 낮더라도 별도 신호 없이 데이터를 잃을 수 있다는 점에서 correctness 결함으로 다뤄야 합니다.</td></tr>
   </table></div>
 
-  <h2><span class="num">3</span>근본 원인 — vacuum의 지연 삭제 대상 중 OOS 청크만 신원이 없다</h2>
-  <p class="lead">vacuum의 블록 재시도는 원래 설계된 동작입니다. 다른 대상들이 재시도+재사용에도 안전한 이유는
-  <b>삭제 대상이 자기 몸에 신원 메타데이터를 지니기 때문</b>입니다:</p>
+  <h2><span class="num">3</span>근본 원인: OOS 청크에는 신원 정보가 없습니다</h2>
+  <p class="lead">블록 재처리 자체는 vacuum의 정상 동작입니다. heap과 btree가 재처리와 슬롯 재사용에도 안전한 이유는
+  <b>삭제 대상에 신원을 확인할 메타데이터가 있기 때문</b>입니다.</p>
   <div class="scroll"><table>
     <tr><th>재시도 대상</th><th>재시도를 안전하게 만드는 것</th><th>재사용돼도 안전한가</th></tr>
     <tr><td>heap 슬롯</td><td><b>MVCC 헤더</b> — 재사용된 슬롯은 새 MVCCID라 임계값 검사에서 자동 스킵</td><td class="verdict-o">안전</td></tr>
     <tr><td>btree 엔트리</td><td><b>키 + MVCC info</b> — 키 조회로 정확히 그 엔트리만 접근</td><td class="verdict-o">안전</td></tr>
-    <tr><td><b>OOS 청크</b></td><td><b>없음</b> — 헤더는 길이/인덱스/다음 OID뿐, probe는 "점유 여부"만 확인</td><td class="verdict-x">데이터 손실</td></tr>
+    <tr><td><b>OOS 청크</b></td><td><b>없음</b> — 헤더에는 길이, 인덱스, 다음 OID만 있고 probe는 점유 여부만 확인</td><td class="verdict-x">안전하지 않음</td></tr>
   </table></div>
-  <p>generation 필드는 새 발명이 아니라, <b>vacuum이 건드리는 모든 대상이 이미 갖춘 계약을 OOS에도 채우는 것</b>입니다.
-  (eager 경로가 신원 필드 없이 안전한 유일한 이유도 동기 실행이 주는 공짜 신원 보장입니다 — 지연되는 vacuum은 그걸 받을 수 없습니다.)</p>
+  <p>generation 필드는 OOS 청크에도 같은 신원 확인 절차를 추가하는 방법입니다. eager 경로는 할당과 삭제가 동기적으로 이어져 별도 신원 필드 없이도 안전하지만,
+  나중에 실행되는 vacuum 경로에는 그 보장이 없습니다.</p>
 
-  <h2><span class="num">4</span>대안 전수 검토 — 각각이 통하지 않는 이유</h2>
-  <p class="sub">7개 대안을 검토했습니다. 각 대안이 "왜 매력적으로 보이는지"와 "정확히 어디서 무너지는지"를 함께 적습니다.</p>
+  <h2><span class="num">4</span>대안 검토</h2>
+  <p class="sub">검토한 일곱 가지 대안과 채택하지 않은 이유를 정리했습니다.</p>
 
   <div class="alt rejected">
-    <h3>대안 1 — 수정하지 않음 ("재사용이 드물 것이다") <span class="badge">탈락</span></h3>
-    <div class="idea">아이디어: 삭제된 OID가 재발급되지 않거나 아주 늦게 재발급된다면 실질 위험이 없다.</div>
+    <h3>대안 1 — 수정하지 않음 <span class="badge">제외</span></h3>
+    <div class="idea">전제: 삭제된 OID가 다시 나타나지 않거나, 재사용까지 충분히 오래 걸린다.</div>
     <ul>
-      <li>OOS OID는 논리 식별자가 아니라 <b>물리 주소</b> <code>(volid, pageid, slotid)</code> 그 자체 — "재발급 절차"가 존재하지 않고, 슬롯 재점유가 곧 같은 OID의 재등장입니다.</li>
-      <li>현재 코드는 재점유를 막기는커녕 <b>최단 경로로 유도</b>합니다: 삭제 직후(sysop 커밋 전!) 페이지를 bestspace에 재등록하고, insert는 tier-1 캐시에서 그 페이지를 우선 선택하며, 슬롯 선택은 최저 번호부터 결정적입니다.</li>
-      <li>재사용 지연은 "엄청난 시간"이 아니라 <b>같은 테이블에 다음 OOS 값이 들어오는 순간</b>입니다. §2-3의 이유 1~4가 그대로 적용됩니다.</li>
+      <li>OOS OID는 논리 식별자가 아니라 물리 주소 <code>(volid, pageid, slotid)</code>입니다. 슬롯이 다시 점유되면 같은 OID가 곧바로 나타납니다.</li>
+      <li>삭제된 페이지는 bestspace에 다시 등록되고, INSERT는 tier-1 캐시와 가장 낮은 빈 슬롯을 우선 사용합니다. 현재 동작은 빠른 재사용을 허용합니다.</li>
+      <li>따라서 재사용 빈도가 낮다는 가정만으로 데이터 손실 가능성을 배제할 수 없습니다.</li>
     </ul>
   </div>
 
   <div class="alt rejected">
-    <h3>대안 2 — INTERRUPTED 블록에서 forward-walk 스킵 <span class="badge">탈락</span></h3>
-    <div class="idea">아이디어: 재처리 블록임을 알 수 있으니(INTERRUPTED 플래그), 위험한 forward-walk만 건너뛰자. 한 줄짜리 수정.</div>
+    <h3>대안 2 — <code>INTERRUPTED</code> 블록의 forward-walk 생략 <span class="badge">제외</span></h3>
+    <div class="idea">재처리 중인 블록에서는 forward-walk를 실행하지 않는다.</div>
     <ul>
-      <li>INTERRUPTED 플래그는 "재처리 중"만 알려줄 뿐 <b>"1차에서 어디까지 처리했는지"를 알 수 없습니다.</b> 크래시로 재장전된 블록은 1차에서 <b>한 건도 처리하지 못했을 수도</b> 있는데, 그것까지 통째로 스킵됩니다.</li>
-      <li>forward-walk는 UPDATE 옛 체인을 회수하는 <b>유일한</b> 경로입니다(살아있는 슬롯이 참조하지 않아 REMOVE 경로가 구조적으로 도달 불가). 스킵된 몫은 <b>영구 누수</b>가 됩니다.</li>
-      <li>정상 셧다운마다 진행 중이던 블록의 OOS가 누수 — 운영 수명 동안 무한 누적됩니다. <b>무한 누수 차단이 CBRD-26668(vacuum 통합)의 존재 이유</b>인데, 그 목적을 스스로 훼손하는 트레이드입니다.</li>
+      <li><code>INTERRUPTED</code>는 재처리 여부만 나타냅니다. 이전 실행에서 어느 레코드까지 처리했는지는 알 수 없으며, 하나도 처리하지 못한 블록도 같은 상태가 됩니다.</li>
+      <li>forward-walk는 UPDATE의 이전 OOS 체인을 회수하는 유일한 경로입니다. 이를 생략하면 해당 체인은 영구 누수로 남습니다.</li>
+      <li>셧다운이나 오류 때마다 누수가 누적될 수 있어 CBRD-26668의 회수 목적과 맞지 않습니다.</li>
     </ul>
   </div>
 
   <div class="alt rejected">
-    <h3>대안 3 — 레코드 단위 진행 영속화 (start_lsa 전진) <span class="badge">탈락</span></h3>
-    <div class="idea">아이디어: vacuum.c:3764 의 TODO 그대로 — 부분 완료 시 진행 위치를 저장해 같은 로그를 재처리하지 않게 하자.</div>
+    <h3>대안 3 — 레코드 단위 진행 상태 저장 <span class="badge">제외</span></h3>
+    <div class="idea"><code>vacuum.c:3764</code>의 TODO처럼 부분 완료 위치를 저장해 같은 로그를 다시 처리하지 않는다.</div>
     <ul>
-      <li>forward-walk는 블록의 <b>마지막</b> MVCC op에서 prev 링크로 <b>역방향</b> 진행합니다. "여기까지 했음"이 단순 LSA 워터마크로 표현되지 않습니다.</li>
-      <li>진행 기록은 각 레코드의 삭제 sysop과 <b>원자적으로</b> WAL-log돼야 합니다 — 아니면 "sysop 커밋 ~ 진행 기록" 사이 크래시에서 <b>정확히 같은 구멍</b>이 재발합니다. 즉 vacuum data 갱신을 레코드 단위로, worker의 sysop 안에서 하도록 바꿔야 합니다.</li>
-      <li>결과적으로 15년 된 블록-단위 vacuum data 계약을 OOS 하나 때문에 레코드-단위로 수술하는 것 — 회귀 리스크 반경이 청크 헤더 4B와 비교가 안 됩니다. heap·btree는 이 수술이 필요 없습니다(자기 신원 메타데이터로 이미 멱등).</li>
+      <li>forward-walk는 블록의 마지막 MVCC 작업에서 <code>prev</code> 링크를 따라 역방향으로 진행하므로, 완료 범위를 단순한 LSA 하나로 표현하기 어렵습니다.</li>
+      <li>삭제 sysop과 진행 상태를 하나의 원자적 WAL 작업으로 저장하지 않으면 둘 사이의 크래시에서 같은 문제가 남습니다. 이를 위해서는 worker의 레코드 단위 sysop 안에서 vacuum data까지 갱신해야 합니다.</li>
+      <li>OOS만을 위해 블록 단위 vacuum 진행 모델을 바꾸는 것은 변경 범위와 회귀 위험이 큽니다. heap과 btree는 기존 신원 정보로 이미 재처리에 안전합니다.</li>
     </ul>
   </div>
 
   <div class="alt rejected">
-    <h3>대안 4 — 블록 전체를 단일 sysop으로 <span class="badge">탈락</span></h3>
-    <div class="idea">아이디어: 재시도가 항상 깨끗한 상태에서 시작하도록, 블록의 모든 삭제를 하나의 sysop으로 묶자. (overflow도 sysop을 쓰지 않나?)</div>
+    <h3>대안 4 — 블록 전체를 하나의 sysop으로 처리 <span class="badge">제외</span></h3>
+    <div class="idea">블록의 모든 삭제를 하나의 sysop으로 묶어 중간 완료 상태를 없앤다.</div>
     <ul>
-      <li><b>선례 오인</b>: overflow(REC_BIGONE)의 sysop은 <b>레코드 단위</b>이고, OOS forward-walk도 이미 같은 패턴입니다. 블록 단위 sysop은 선례가 없습니다.</li>
-      <li><b>창이 닫히지 않습니다</b>: "블록=VACUUMED" 표기는 worker가 아니라 <b>master가 비동기로</b>(finished job queue 소비) 기록합니다. "블록 sysop 커밋 ~ VACUUMED 영속화" 사이에 크래시가 나면 커밋된 삭제는 영구인데 블록은 INTERRUPTED로 재처리 — <b>같은 버그가 좁아진 창에서 그대로</b> 재현됩니다. 닫으려면 master/worker 프로토콜 재설계까지 필요합니다.</li>
-      <li><b>다른 손상 채널을 증폭시킵니다</b>: <code>oos_delete_chain</code> 은 커밋 전에 페이지를 unfix하고 bestspace에 재등록하므로, <b>커밋 전 빈 슬롯이 물리적으로 노출</b>됩니다. 그 슬롯을 다른 트랜잭션이 차지한 뒤 sysop이 abort되면 undo(<code>spage_insert_for_recovery</code>)가 남이 앉은 슬롯에 옛 청크를 복원하려는 충돌이 발생합니다. 이 창이 레코드 sysop에선 마이크로초, 블록 sysop에선 <b>블록 처리 시간 전체</b>가 됩니다.</li>
-      <li>로그 수십 페이지 분량의 무한계 sysop(undo 체인 누적, 말단 실패 시 전량 롤백·전량 재실행)은 vacuum이 긴 시스템 트랜잭션을 피하도록 설계된 이유와 정면충돌합니다.</li>
+      <li>overflow(<code>REC_BIGONE</code>)와 현재 OOS forward-walk의 sysop은 모두 레코드 단위이며, 블록 단위 선례는 없습니다.</li>
+      <li><code>VACUUMED</code> 상태는 master가 finished job queue를 소비한 뒤 비동기로 기록합니다. 블록 sysop 커밋과 상태 저장 사이에 크래시가 나면 삭제는 남고 블록은 다시 처리되므로, 문제 구간이 줄어들 뿐 없어지지 않습니다.</li>
+      <li><code>oos_delete_chain</code>은 커밋 전에 페이지를 unfix하고 bestspace에 등록합니다. sysop이 길어지면 다른 트랜잭션이 빈 슬롯을 점유한 뒤 abort undo와 충돌할 수 있는 구간도 블록 처리 시간만큼 늘어납니다.</li>
+      <li>큰 undo 체인과 전체 롤백·재실행 비용도 vacuum이 긴 시스템 트랜잭션을 피하는 현재 설계와 맞지 않습니다.</li>
     </ul>
   </div>
 
   <div class="alt rejected">
-    <h3>대안 5 — forward-walk 폐지, 슬롯 기반(REMOVE식) 재설계 <span class="badge">탈락</span></h3>
-    <div class="idea">아이디어: REMOVE 경로는 heap 슬롯 + MVCC 체크로 안전하니, 옛 체인 회수도 슬롯 기반으로 바꾸자.</div>
+    <h3>대안 5 — forward-walk를 슬롯 기반 회수로 대체 <span class="badge">제외</span></h3>
+    <div class="idea">REMOVE 경로처럼 heap 슬롯과 MVCC 정보를 이용해 이전 체인을 회수한다.</div>
     <ul>
-      <li>슬롯 기반이 되려면 "옛 체인 참조를 vacuum 때까지 살아있는 어딘가에 유지"해야 합니다. 후보는 셋뿐이고 전부 더 비쌉니다:</li>
-      <li><b>(a) 새 버전 레코드에 tombstone 매달기</b> — vacuum 전에 N번 갱신되면 tombstone N세대 누적, 레코드 비대(4,060B 타깃 잠식), tombstone의 복제·복구 의미론 신설. UPDATE 의미론 자체의 대수술.</li>
-      <li><b>(b) 온디스크 "삭제 대기 큐" 신설</b> — UPDATE 핫패스에 쓰기+WAL 추가, 큐의 크래시 일관성 관리, MVCCID 게이팅 재구현. 결정적으로 <b>"큐 엔트리를 정확히 한 번 소비"라는 원자성 문제가 지금 블록 재처리 문제의 옷만 갈아입은 버전</b>으로 그대로 남습니다.</li>
-      <li><b>(c) 무참조 청크 스캔 GC</b> — "이 청크를 가리키는 live 레코드가 있나"를 답하려면 청크→소유자 역참조, 즉 <b>신원 메타데이터가 어차피 필요</b>하고 전체 스캔 비용까지 얹게 됩니다.</li>
-      <li><b>관점 전환이 핵심입니다</b>: forward-walk는 우회책이 아니라 <b>WAL undo image가 이미 완벽한 삭제 대기 큐</b>(영속 + MVCCID 게이팅 내장 + 추가 쓰기 0)라는 사실을 활용한 설계입니다. 고장난 것은 큐가 아니라 <b>소비 단계의 신원 확인 하나</b>입니다. 건물은 건강한데 나사 하나가 빠진 상황에서 건물을 다시 짓자는 안입니다.</li>
+      <li>슬롯 기반으로 바꾸려면 이전 체인의 참조를 vacuum 시점까지 별도로 유지해야 합니다.</li>
+      <li><b>(a) 새 버전 레코드에 tombstone 저장</b>: vacuum 전에 여러 번 UPDATE되면 tombstone이 누적되고, 레코드 크기와 복제·복구 규칙이 함께 바뀝니다.</li>
+      <li><b>(b) 온디스크 삭제 대기 큐 추가</b>: UPDATE 경로에 쓰기와 WAL이 늘고 큐의 크래시 일관성, MVCCID 게이팅, 정확히 한 번 소비하는 문제를 새로 해결해야 합니다.</li>
+      <li><b>(c) 참조되지 않는 청크를 스캔하는 GC</b>: live 레코드의 참조 여부를 확인하려면 결국 청크의 소유자 정보가 필요하며 전체 스캔 비용도 추가됩니다.</li>
+      <li>현재 WAL undo image는 이미 영속적인 회수 대상 목록과 MVCCID 게이팅을 제공합니다. forward-walk를 교체하기보다 삭제 시점에 신원을 확인하는 편이 변경 범위가 작습니다.</li>
     </ul>
   </div>
 
   <div class="alt rejected">
-    <h3>대안 6 — 생성 트랜잭션 MVCCID를 스탬프로 <span class="badge">탈락</span></h3>
-    <div class="idea">아이디어: 청크에 생성 MVCCID를 찍으면(쓰는 시점에 이미 알고 있음) stub도, insert 흐름도 안 바꿔도 된다 — undo image의 MVCC 헤더에서 기대값을 얻으면 되니까.</div>
+    <h3>대안 6 — 생성 트랜잭션의 MVCCID 저장 <span class="badge">제외</span></h3>
+    <div class="idea">청크에 생성 MVCCID를 저장하고 undo image의 MVCC 헤더와 비교한다.</div>
     <ul>
-      <li><b>같은 트랜잭션의 다중 UPDATE에서 충돌</b>: 트랜잭션 T가 같은 행을 두 번 갱신하면 1차 새 체인과 2차 새 체인이 <b>같은 T</b>로 찍힙니다. 1차 체인이 회수·재사용되고 그 자리에 2차 체인이 앉으면 스탬프가 일치 → 오판 그대로.</li>
-      <li>기대값 출처인 undo image의 insert MVCCID는 <b>이미 이전 vacuum이 지웠을 수 있습니다</b>(insert MVCCID 클리어는 vacuum의 정상 작업) → 대조 불가 케이스가 구조적으로 존재.</li>
+      <li>같은 트랜잭션이 한 행을 여러 번 UPDATE하면 서로 다른 체인이 같은 MVCCID를 갖습니다. 이전 체인의 슬롯을 이후 체인이 재사용하면 신원을 구분할 수 없습니다.</li>
+      <li>비교에 필요한 undo image의 insert MVCCID는 이전 vacuum에서 정상적으로 제거됐을 수 있어, 항상 기대값을 얻을 수도 없습니다.</li>
     </ul>
   </div>
 
   <div class="alt runnerup">
-    <h3>대안 7 — owner OID 스탬프 (신원 필드, 차선) <span class="badge">차선</span></h3>
-    <div class="idea">아이디어: 청크 헤더에 소유 heap 레코드의 OID를 찍자. 기대값은 vacuum이 로그 레코드 주소에서 공짜로 얻으므로 stub 불변.</div>
+    <h3>대안 7 — owner OID 저장 <span class="badge">차선</span></h3>
+    <div class="idea">청크 헤더에 소유 heap 레코드의 OID를 저장하고, vacuum이 로그 레코드 주소에서 얻은 값과 비교한다.</div>
     <ul>
-      <li>방향은 옳습니다(신원 대조) — 그러나 소스로 확인한 함정: <code>heap_attrinfo_insert_to_oos</code> 는 recdes 변환 단계(<code>heap_file.c:13128</code>)에서 실행되고, 이는 heap 슬롯 할당(<code>heap_insert_logical</code>) <b>이전</b>입니다. 즉 <b>INSERT로 만들어지는 체인은 쓰는 시점에 owner OID가 아직 존재하지 않습니다.</b></li>
-      <li>그런데 1세대 체인도 행이 나중에 UPDATE되면 forward-walk 회수 대상입니다. 스탬프 없이 두면(NULL) 대조 불가 → 스킵 → <b>모든 행의 첫 체인이 영구 누수</b> — 본말전도.</li>
-      <li>남는 선택지는 heap insert 후 청크 헤더 <b>backfill</b>(OOS INSERT 핫패스에 청크당 페이지 재고정+WAL — <b>영구 런타임 비용</b>) 또는 OID 할당을 변환 앞으로 <b>재배치</b>(insert 흐름 침습 변경)뿐입니다.</li>
-      <li>generation과의 저울: owner OID = 포맷 변경 1곳 + <b>핫패스 영구 비용</b>, generation = 포맷 변경 2곳 + 흐름 불변. <b>포맷 변경은 미출시인 지금 공짜지만 핫패스 비용은 영원히 냅니다</b> → generation 우세.</li>
+      <li>신원을 직접 확인한다는 방향은 적절합니다. 다만 <code>heap_attrinfo_insert_to_oos</code>는 recdes 변환 단계(<code>heap_file.c:13128</code>)에서 실행되고, heap 슬롯 할당(<code>heap_insert_logical</code>)보다 앞섭니다. 따라서 INSERT로 만든 체인을 쓸 때는 owner OID가 아직 없습니다.</li>
+      <li>첫 체인도 이후 UPDATE되면 forward-walk 회수 대상입니다. owner OID가 없는 체인을 비교 단계에서 생략하면 첫 체인이 계속 누수됩니다.</li>
+      <li>이를 해결하려면 heap INSERT 뒤에 청크 헤더를 backfill해 페이지 고정과 WAL을 추가하거나, OID 할당 순서를 앞당겨 INSERT 흐름을 바꿔야 합니다.</li>
+      <li>owner OID는 변경 지점이 하나 적지만 쓰기 경로에 지속적인 비용이 생깁니다. generation은 청크 헤더와 stub을 모두 바꿔야 하나 현재 쓰기 흐름은 유지할 수 있습니다.</li>
     </ul>
   </div>
 
   <div class="alt chosen">
-    <h3>채택 — 4B generation 대조 <span class="badge">제안</span></h3>
-    <div class="idea">재사용마다 반드시 달라지는 세대 번호를 청크에 찍고, 삭제 전 대조. 불일치 = 슬롯 재사용됨 = no-op.</div>
+    <h3>제안 — 4B generation 비교 <span class="badge">제안</span></h3>
+    <div class="idea">청크를 INSERT할 때 generation을 부여하고 삭제 전에 기대값과 비교한다. 값이 다르면 재사용된 슬롯이므로 삭제하지 않는다.</div>
     <ul>
-      <li>위 대안들이 무너진 지점을 전부 통과: 회수 유지(↔대안 2), vacuum 코어 무변경(↔대안 3·4), 기존 아키텍처 유지(↔대안 5), 같은-트랜잭션 충돌 없음(↔대안 6), 쓰기 흐름 불변(↔대안 7).</li>
-      <li>단일 청크·멀티청크 데이터 손실이 같은 근본 원인(신원 부재)이므로 <b>필드 하나로 둘 다</b> 차단. 미래의 재시도성 호출자(페이지 회수 CBRD-26786, flashback FU-01)까지 같은 계약으로 커버.</li>
+      <li>기존 회수 경로와 vacuum 진행 모델을 유지하면서, 동일 트랜잭션의 여러 UPDATE도 구분할 수 있습니다. owner OID처럼 INSERT 이후 backfill할 필요도 없습니다.</li>
+      <li>단일 청크와 멀티청크 모두 삭제 진입 전에 같은 방식으로 차단할 수 있습니다. 향후 재시도 가능한 삭제 경로(CBRD-26786, flashback FU-01)에도 같은 계약을 적용할 수 있습니다.</li>
     </ul>
   </div>
 
@@ -330,18 +329,18 @@
     <div class="card ok">
       <h3>변경 내용</h3>
       <ul>
-        <li><b>페이지 헤더에 uint32 카운터</b> — 그 페이지에 청크가 insert될 때마다 +1 (어차피 W-latch 잡고 쓰는 페이지라 비용 0)</li>
+        <li><b>페이지 헤더에 uint32 카운터</b> — 해당 페이지에 청크를 INSERT할 때마다 1씩 증가. 이미 W-latch를 보유한 상태에서 갱신</li>
         <li><b>청크 헤더</b> <code>oos_record_header</code> 16 → 20B: generation 4B 추가</li>
-        <li><b>inline stub</b> 16 → 20B: 기대 generation 4B 추가 (옛 참조가 살아남는 유일한 곳이 undo image 속 stub이므로)</li>
-        <li><b>삭제 계약 변경</b>: probe가 "슬롯이 점유됐나"가 아니라 <b>"점유자의 generation이 내 기대값과 같은가"</b> — 불일치 = 재사용됨 = no-op</li>
+        <li><b>inline stub</b> 16 → 20B: 기대 generation 4B 추가. undo image에 남는 stub이 이전 청크의 generation을 보관</li>
+        <li><b>삭제 조건 변경</b>: 슬롯 점유 여부 대신 현재 청크의 generation과 기대값을 비교. 값이 다르면 슬롯이 재사용된 것이므로 no-op</li>
       </ul>
     </div>
     <div class="card">
       <h3>왜 이 수치인가</h3>
       <ul>
-        <li><b>uint32 충분</b>: 오탐에는 블록 재처리 창 안에 한 페이지에서 2³² 번의 insert/delete 사이클이 필요 — 물리적으로 불가</li>
-        <li><b>20B(패딩 없음)</b>: stub은 행·컬럼마다 반복 지불하는 비용. variable area 내 오프셋이 임의라 24B 패딩은 8-정렬을 보장하지 못함(정렬은 리더 책임). PG TOAST 포인터도 18B</li>
-        <li>미래 예약이 필요하면 행당 반복인 stub이 아니라 <b>체인당 1회인 청크 헤더</b>에</li>
+        <li><b>uint32</b>: 잘못 일치하려면 블록 재처리 구간 안에 같은 페이지에서 2³²회의 INSERT/DELETE가 일어나야 하므로 충분한 범위</li>
+        <li><b>20B, 별도 패딩 없음</b>: stub은 행과 컬럼마다 반복됩니다. variable area의 시작 오프셋이 일정하지 않아 24B로 늘려도 8-byte 정렬은 보장되지 않으며, 정렬 처리는 reader의 책임입니다.</li>
+        <li>향후 확장 공간이 필요하다면 행마다 반복되는 stub보다 체인당 한 번만 저장되는 청크 헤더에 두는 편이 적절합니다.</li>
       </ul>
     </div>
   </div>
@@ -355,37 +354,35 @@
   <h2><span class="num">6</span>비용과 영향 범위</h2>
   <div class="scroll"><table>
     <tr><th>영역</th><th>영향</th></tr>
-    <tr><td>쓰기 핫패스</td><td><b>불변</b> — 카운터 +1은 이미 W-latch 잡은 페이지에서. owner OID 안과 달리 backfill/재배치 없음</td></tr>
-    <tr><td>복구 (redo/undo)</td><td><b>핸들러 불변</b> — RVOOS_INSERT/DELETE는 레코드 전체 이미지 물리 로깅이라 이미지 길이만 +4B</td></tr>
-    <tr><td>replication</td><td>slave는 자기 <code>oos_insert</code> 를 수행(OID 불일치 허용이 기존 계약) → generation도 slave 로컬 발급, 규칙 하나만 명문화</td></tr>
-    <tr><td>상수 연쇄</td><td><code>OR_OOS_INLINE_SIZE</code> 16→20, demotion 수익성 문턱(&gt;20B), 경계 테스트 9.1/9.2, OOS-CONTEXT 문서</td></tr>
-    <tr><td>마이그레이션</td><td><b>0</b> — feat/oos 미출시. 구포맷 OOS 파일이 세상에 없음. <b>머지·출시 후에는 이 비용이 유한하지 않게 됨</b></td></tr>
+    <tr><td>쓰기 경로</td><td>흐름은 유지됩니다. 이미 W-latch를 보유한 페이지에서 카운터만 증가하며, owner OID 방식에 필요한 backfill이나 순서 변경은 없습니다.</td></tr>
+    <tr><td>복구 (redo/undo)</td><td>핸들러는 유지됩니다. <code>RVOOS_INSERT</code>/<code>RVOOS_DELETE</code>가 레코드 전체 이미지를 물리 로깅하므로 이미지 길이만 4B 늘어납니다.</td></tr>
+    <tr><td>replication</td><td>slave가 자체 <code>oos_insert</code>를 수행하는 기존 방식에 맞춰 generation도 slave에서 로컬로 발급한다는 규칙을 명시해야 합니다.</td></tr>
+    <tr><td>관련 상수·테스트</td><td><code>OR_OOS_INLINE_SIZE</code> 16→20, demotion 수익성 기준(&gt;20B), 경계 테스트 9.1/9.2, OOS-CONTEXT 문서를 함께 갱신합니다.</td></tr>
+    <tr><td>마이그레이션</td><td><code>feat/oos</code>가 아직 출시되지 않아 기존 OOS 파일 형식과의 호환 처리는 필요하지 않습니다. 머지·출시 후에는 별도의 포맷 호환 또는 마이그레이션이 필요합니다.</td></tr>
   </table></div>
 
   <h2><span class="num">7</span>왜 지금인가</h2>
   <ul>
-    <li><b>포맷 변경이 공짜인 마지막 시점</b> — 출시 후에는 온디스크 호환/마이그레이션이 붙습니다. 늦출수록 같은 수정의 비용이 커지는 유일한 방향입니다.</li>
-    <li><b>후속 작업이 이 구멍 위에 쌓입니다</b> — OOS 빈 페이지 회수(CBRD-26786)는 재시도성 삭제 호출자를 추가하고, flashback retention(CBRD-26847 FU-01)은 이 수정이 오독 차단의 전제라고 명시돼 있습니다.</li>
-    <li><b>터지면 진단이 불가능한 부류입니다</b> — §2-3 이유 3. 사전 수정 외의 방어선이 없습니다.</li>
+    <li><b>온디스크 포맷을 바꾸기 가장 쉬운 시점입니다.</b> 출시 전에는 기존 파일과의 호환 처리가 필요하지 않지만, 출시 후에는 마이그레이션 설계가 추가됩니다.</li>
+    <li><b>후속 작업도 같은 삭제 계약을 사용합니다.</b> OOS 빈 페이지 회수(CBRD-26786)는 재시도 가능한 삭제 호출자를 추가하며, flashback retention(CBRD-26847 FU-01)도 잘못된 참조를 차단하는 장치가 필요합니다.</li>
+    <li><b>사후 진단이 어렵습니다.</b> 잘못된 삭제 시점에는 별도 오류가 없고 실제 읽기 실패는 나중에 나타날 수 있으므로, 출시 전에 예방하는 편이 안전합니다.</li>
   </ul>
 
   <h2><span class="num">8</span>예상 질문 (사전 답변)</h2>
   <dl class="qa">
     <dt>Q. REMOVE 경로는 heap 레코드와 sysop으로 묶이고 MVCC 체크가 있으니 안전하지 않나?</dt>
-    <dd>정확합니다 — 그래서 <b>REMOVE 경로는 이 이슈 대상이 아닙니다.</b> 버그는 forward-walk 경로인데,
-    UPDATE의 옛 체인은 살아있는 heap 레코드가 참조하지 않아(undo image에만 존재) <b>MVCC 체크를 걸 대상 자체가 없습니다.</b>
-    pass 1의 forward-walk는 heap 레코드를 건드리지 않으므로 어떤 heap 기반 게이트도 pass 2에서 같은 답을 냅니다.
-    heap을 지키는 그 원리(자기 몸의 신원 메타데이터)를 청크에도 주자는 것이 이 제안입니다.</dd>
+    <dd><b>REMOVE 경로는 이 이슈의 대상이 아닙니다.</b> 문제는 forward-walk 경로입니다.
+    UPDATE의 이전 체인은 live heap 레코드가 참조하지 않고 undo image에만 남으므로, MVCC 정보를 확인할 heap 레코드가 없습니다.
+    이 제안은 heap 슬롯처럼 OOS 청크도 자체 신원 정보로 재사용 여부를 확인하게 합니다.</dd>
     <dt>Q. page LSA가 있으니 recovery가 이중 적용을 막지 않나?</dt>
-    <dd>page LSA는 "같은 redo 두 번 적용"을 막습니다. 2차 삭제는 replay가 아니라 <b>복구 완료 후 평시 코드의 신규 연산</b>이라
-    새 로그를 남기며 정상 통과합니다. 크래시 없는 시나리오(셧다운, 릴리스 중간 에러)에서도 동일하게 발생합니다.</dd>
+    <dd>page LSA는 같은 redo가 한 페이지에 반복 적용되는 것을 막습니다. 여기서 두 번째 삭제는 replay가 아니라 <b>복구가 끝난 뒤 수행되는 새 연산</b>이며,
+    새 로그를 남깁니다. 정상 셧다운이나 릴리스 빌드의 중간 오류처럼 복구 redo가 없는 경우에도 같은 문제가 생길 수 있습니다.</dd>
     <dt>Q. bestspace 최근에 리디자인되지 않았나 (CBRD-26176)?</dt>
-    <dd>그 커밋은 heap bestspace 전용입니다 — <code>oos_file.*</code> 는 파일 목록에 없습니다.
-    본 분석의 모든 인용은 리디자인 <b>이후</b> HEAD(<code>0ad6afc0f</code>) 기준입니다.</dd>
+    <dd>해당 커밋은 heap bestspace를 변경했으며 <code>oos_file.*</code>는 수정하지 않았습니다.
+    이 문서의 소스 위치는 모두 리디자인 이후의 HEAD(<code>0ad6afc0f</code>)에서 확인했습니다.</dd>
     <dt>Q. 재현해봤나?</dt>
-    <dd>레이스라 단일 SQL 재현은 불가하고, 결정적 재현에는 fault-injection 훅(소스 변경)이 필요해 실험 설계까지 준비했습니다.
-    대신 증거 의무 A–H를 현재 소스 라인으로 전부 확인했고, 차단 불변식 후보 7종을 전수 반박했습니다(§2-2).
-    수정 후에는 같은 훅으로 회귀 테스트를 만들 수 있습니다.</dd>
+    <dd>단일 SQL만으로 실행 순서를 고정할 수 없어, 결정적인 재현에는 fault-injection 훅이 필요합니다. 현재는 각 단계의 도달 가능성과 기존 보호 장치의 동작을 소스에서 확인했습니다(§2-2).
+    수정 시 같은 훅을 이용해 슬롯 재사용과 블록 재처리 순서를 고정한 회귀 테스트를 추가할 수 있습니다.</dd>
   </dl>
 
   <div class="footnote">
