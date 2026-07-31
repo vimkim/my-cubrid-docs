@@ -69,6 +69,27 @@ page LSA는 "**같은 redo를 같은 페이지에 두 번 적용**"을 막는 �
 
 블록 재시도 + 슬롯 재사용 조합을 만드는 테스트가 **존재하지 않는다**(부재 ≠ 안전). 결정적 재현에는 vacuum sysop 커밋 직후 worker를 멈추는 fault-injection이 필요하다. 발현 시 증상이 에러·로그 없는 **무증상 데이터 손실**이라 사후 진단도 불가능한 부류이므로 심각도는 CRITICAL이 맞다. 낮은 확률은 도달 불가가 아니다.
 
+### Q5. "REMOVE 경로는 heap 레코드와 sysop으로 묶이고 MVCC version check가 있으니 문제없지 않나?"
+
+정확하다 — 그리고 그래서 **REMOVE 경로는 이 이슈 대상이 아니다.** 슬롯 제거와 OOS 삭제가 한 sysop으로 원자적이고, 재시도 시 heap 슬롯의 MVCC 체크가 자연 멱등성을 준다. 버그는 **forward-walk 경로**다: UPDATE는 변환마다 새 OID를 발급하므로 옛 체인을 참조하는 살아있는 heap 레코드가 없고(undo image에만 존재), **MVCC 체크를 걸 대상 자체가 없다.** pass 1의 forward-walk는 heap 레코드를 건드리지 않아 어떤 heap 기반 게이트도 pass 2에서 같은 답을 낸다. heap이 슬롯 재사용에도 안전한 이유는 삭제 대상이 자기 몸에 MVCC 헤더(신원/가시성 메타데이터)를 지니기 때문이다 — vacuum이 지연 삭제하는 대상(heap 슬롯: MVCC 헤더, btree 엔트리: 키+MVCC info) 중 **OOS 청크만 신원 메타데이터가 없다.** identity 필드 제안은 새 발명이 아니라 이 기존 계약을 OOS에 채우는 것이다.
+
+### Q6. "블록 전체를 단일 sysop으로 묶으면 되지 않나? (overflow 선례처럼)"
+
+overflow 선례는 **레코드 단위** sysop이고 OOS도 이미 그렇게 한다. 블록 단위 sysop은 세 가지로 탈락: ① 블록=VACUUMED 표기는 **master가 비동기로** 기록하므로 "sysop 커밋 ~ VACUUMED 영속화" 사이 크래시에서 같은 버그가 재현 — 창이 좁아질 뿐 닫히지 않는다. ② `oos_delete_chain` 은 커밋 전에 페이지를 unfix하고 bestspace에 재등록하므로 **커밋 전 빈 슬롯이 물리적으로 노출**되는데, sysop abort 시 undo가 남이 차지한 슬롯에 옛 청크를 복원하려는 충돌 창이 레코드 단위에선 마이크로초, 블록 단위에선 **블록 처리 시간 전체**로 늘어난다. ③ 로그 31페이지 분량의 무한계 sysop 자체가 vacuum 설계와 충돌.
+
+## 5-1. 수정 방식 그릴 결과 (2026-07-31 논의)
+
+| 쟁점 | 결론 |
+|---|---|
+| "OID 재발급이 안 되거나 오래 걸리면?" | OOS OID는 물리 주소 — 재발급 절차가 없고 재점유가 곧 재등장. bestspace 즉시 재등록 + 최저 슬롯 우선이 재사용을 **촉진** |
+| vacuum-side만 수정 (3안) | INTERRUPTED 스킵 = 영구 누수 회귀(CBRD-26668 목적 훼손), 레코드 단위 진행 영속화 = vacuum data 코어 수술(역방향 walk라 LSA 전진으로 표현 불가), 블록 sysop = 위 Q6 |
+| forward-walk 폐지·슬롯 기반 재설계 | **undo image가 이미 완벽한 '삭제 대기 큐'** (영속 + MVCCID 게이팅 + 추가 쓰기 0). tombstone/영속 큐/orphan 스캔 GC 전부 그 큐를 재발명하며 "정확히 한 번 소비" 문제를 그대로 계승. 고장난 건 큐가 아니라 소비 단계의 신원 확인 하나 |
+| owner OID vs generation | **저울은 generation 쪽.** owner OID는 stub 불변이 장점이나, `heap_attrinfo_insert_to_oos` 가 heap 슬롯 할당 **전에** 실행되므로(`heap_file.c:13128` → `heap_insert_logical` 순) INSERT 시점에 owner가 미존재 — backfill(핫패스 영구 비용) 또는 흐름 재배치(침습) 필요. generation은 온디스크 2곳(청크 헤더+stub) 변경이지만 쓰기 흐름 불변이고, 미출시라 포맷 변경은 지금 공짜 |
+| 제3안: 생성 MVCCID 스탬프 | 탈락 — 같은 트랜잭션의 다중 UPDATE에서 스탬프 충돌, undo image의 insert MVCCID가 이미 vacuum에 지워졌을 수 있음 |
+| generation 폭 | **uint32 충분** — 오탐에는 블록 재처리 창 안에 한 페이지 43억 insert/delete 사이클 필요(물리적 불가). 증가 시점은 행 UPDATE가 아니라 **페이지에 대한 청크 insert마다** (페이지 헤더 카운터 유력) |
+| stub 크기 20B vs 24B | **20B** (OID 8 + length 8 + gen 4, 패딩 없음). stub은 행·컬럼마다 반복 지불하는 비용이고, variable area 내 오프셋이 임의라 24B 패딩이 8-정렬을 보장하지 못함(정렬은 리더 책임, PG TOAST 18B 선례). 미래 예약은 행당 반복인 stub이 아니라 체인당 1회인 청크 헤더에 |
+| 연쇄 갱신 항목 | `OR_OOS_INLINE_SIZE` 16→20, demotion 수익성 문턱, 경계 테스트 9.1/9.2, OOS-CONTEXT 문서. redo/undo는 레코드 전체 이미지 물리 로깅이라 핸들러 불변. replication은 slave가 자기 `oos_insert` 를 수행하므로 generation도 slave 로컬 발급 |
+
 ## 6. JIRA 앵커(`2c329a4e0`) 이후 변경 검토
 
 | 파일 | 변경 | 이 결함과의 관계 |
@@ -84,7 +105,7 @@ page LSA는 "**같은 redo를 같은 페이지에 두 번 적용**"을 막는 �
 
 바뀌어야 할 최소 계약: forward-walk의 확인이 "슬롯이 점유돼 있는가"에서 "**슬롯이 여전히 undo image가 소유하던 그 청크를 담고 있는가**"로.
 
-- 유력안: `oos_record_header` 에 신원 필드(owner OID 또는 generation) 추가 + probe/`oos_delete` 대조, 불일치 시 no-op. 단일·멀티청크를 같은 근본 원인에서 함께 차단.
+- 유력안: `oos_record_header` 에 신원 필드(owner OID 또는 generation) 추가 + probe/`oos_delete` 대조, 불일치 시 no-op. 단일·멀티청크를 같은 근본 원인에서 함께 차단. **2026-07-31 그릴 결과 generation 우세 — §5-1 참조** (owner OID는 INSERT 시점 미존재 문제로 핫패스 backfill 또는 흐름 재배치 필요).
 - 대안: 슬롯 재사용 유예(블록 완료까지) — 공간 회수율·bestspace 설계 비용이 있어 비교 대상.
 - **온디스크 포맷 변경이므로 feat/oos 미출시인 지금이 마이그레이션 비용 0인 유일한 시점.**
 - 후속 의존: 페이지 회수(CBRD-26786), flashback retention(CBRD-26847 FU-01)이 이 수정을 전제.
