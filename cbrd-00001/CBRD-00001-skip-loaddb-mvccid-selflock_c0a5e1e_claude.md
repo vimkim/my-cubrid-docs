@@ -76,3 +76,31 @@ cubload::server_object_loader::finish_line
 수정 전 core 3건(cbrd_25481)과 대조 실험 core 1건(itrack_10006)의 스택이 모두 위 요약 호출 경로와 일치함을 확인했습니다.
 
 추가로 unique/PK 인덱스가 있는 테이블에 대한 `loaddb -C` 스모크 테스트를 수행했습니다: OOS 대상 JSON 행 2건 적재 → 값 동등성 확인, unique/PK 위반 정상 검출, 적재 후 신규 OOS 대상 행 INSERT 정상.
+
+## Revision: Uniform Self-lock Approach (2026-08-03, commit `5056c53a3`)
+
+시니어 리뷰 피드백("loaddb 예외를 추가하지 말고 uniform 하게 가자")을 반영하여 접근을 교체했습니다.
+스킵 방식(`c0a5e1ee8`, `log_tran_table.c` +17줄)을 폐기하고, **assert 를 트랜잭션 락에 한해 완화**하는
+방식으로 amend 했습니다 (`lock_manager.c` +5/-1, 단일 파일):
+
+```c
+/* lock_manager.c : lock_internal_perform_lock_object */
+assert (thread_p->type != TT_LOADDB || is_transaction_lock);
+```
+
+- loaddb 워커도 트랜잭션 MVCCID self-lock 을 다른 트랜잭션과 **완전히 동일하게** 획득합니다.
+  특수 케이스 스킵과 그에 딸린 "관측자 부재" 증명(위 한계 3번 포함)이 통째로 사라집니다.
+- 안전 근거 (코드로 확인):
+  1. 락 소유자는 워커 자신의 배치 트랜잭션 — `lock_transaction_mvccid` 는 `LOG_FIND_THREAD_TRAN_INDEX` 를
+     사용하고, `load_task::execute` 가 배치마다 fresh tran_index 를 발급 (`load_session.cpp:151`).
+  2. 방금 발급된 MVCCID 라 X 요청이 절대 대기하지 않음 — 데드락 불가.
+  3. 배치는 표준 `xtran_server_commit` 경로로 커밋하므로 `lock_unlock_all` 이 `inst_hold_list` 에서
+     self-lock 을 정상 해제 (transaction self-lock 은 instance lock 처럼 추적, `lock_manager.c:1465`).
+  4. release 빌드는 assert 가 컴파일 아웃되어 **이미 이 동작이었음** — debug 를 release 와 일치시키는 방향.
+- CBRD-23375 의 객체 락 계약(워커는 클래스/인스턴스 락 금지, 세션 BU_LOCK 의존, 락 조회의 세션 리다이렉트
+  4개 사이트)은 그대로 유지되며, assert 가 계속 감시합니다. "assert 전체 삭제 + 정책 폐지"는 락 소유/조회
+  불일치와 세션 BU_LOCK 데드락 노출 때문에 기각 (CBRD-23375 재설계 규모의 별도 과제).
+- 검증 (2026-08-03, 로컬 debug 빌드, CTP): `cbrd_25481` OK, `itrack_10006` OK, `bug_xdbms_sus880` OK,
+  신규 core 0건, ERROR_BACKUP 신규 항목 없음.
+- 남은 작업: 정식 JIRA 티켓 교체, PR 제목/본문을 uniform 접근으로 갱신 후 force-push, CI 재확인.
+  (스킵 방식의 "INSID 스탬프 debug assert 추가" 항목은 uniform 에서는 불필요 — 구조적으로 성립.)
