@@ -822,3 +822,23 @@
 - 의미: 승인된 source 변경과 새 회귀 테스트가 함께 컴파일되며 기존 OOS test suite를 깨뜨리지 않는다.
 - 한계: scanrange call site는 red/green으로 직접 증명했지만 locator 두 old-record fetch call site는 위 SA SQL
   테스트가 직접 도달하지 않으므로 별도의 lower-level 주입 테스트 없이는 같은 수준의 계측 증명이 아니다.
+
+## D-041 — non-NULL scanrange start OID follow-up separation
+
+- 정확한 결정: `heap_scanrange_to_following()`의 non-NULL/non-NULL_OID `start_oid` branch는 CBRD-26847 source
+  변경에 포함하지 않고 별도 Correct Error 이슈 자료로 분리한다.
+- 근거:
+  - 함수 계약은 지정한 `start_oid`를 range의 첫 객체로 사용한다고 명시한다.
+  - 구현은 `scan_range->first_oid = *start_oid`를 수행한 직후 visibility fetch에
+    `&scan_range->last_oid`를 전달한다.
+  - `heap_scanrange_start()` 직후 `last_oid`는 NULL이다. 유효한 첫 heap OID를 non-NULL `start_oid`로 전달한
+    임시 lower-level 테스트에서 `heap_prepare_object_page()`의 `!OID_ISNULL (oid)` assertion으로 abort함을
+    재현했다.
+  - 현재 repository의 유일한 production caller는 `start_oid = NULL`을 전달하므로 일반 grouped query scan은
+    이 branch를 타지 않는다.
+- 안전성: 이번 OOS policy 변경이 만든 결함이 아니고 현재 caller가 사용하지 않는 API branch이므로, 이미
+  검증한 CBRD-26847 patch에 동작 수정을 섞지 않는다. 재현용 임시 테스트는 결과 확인 후 제거했고 source를
+  다시 빌드해 committed state와 local binary를 일치시켰다.
+- 후속 자료:
+  `/home/vimkim/gh/my-cubrid-jira/issues/heap-scanrange-following-nonnull-start-oid_ab42c48_codex.md`
+- 사용자 결정: CBRD-26847 완료 뒤 별도 후속 이슈 자료로 순서대로 분리하도록 승인 (2026-08-03)
