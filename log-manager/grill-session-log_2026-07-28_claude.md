@@ -39,10 +39,20 @@
   뮤텍스가 파는 건 큐 넣기가 아니라 **3중 원자성** — ① LSA 확정(페이지 경계·정렬 탓에 fetch_add 한 방 불가), ② MVCC 체인 연결("직전"은 순서 확정 후에만 결정 — lock-free면 사슬 갈라짐 → vacuum 누락), ③ tdes 상태 전이와의 원자성(체크포인트 일관성, 코드 주석 명시).
 - 착수 전 다코어 고TPS에서 뮤텍스 경합 실증이 선행 과제 (현 실측 병목은 fsync: 커밋 0.5ms 중 0.32ms).
 
-### Q4. WAL 규칙의 집행 지점 — **여기서 중단, 미답변** ⏸️
+### Q4. WAL 규칙의 집행 지점 — 완료 ✅ (사용자 3문항 전부 정답)
 
-> **재개 시 이 질문부터**: 버퍼 풀(pgbuf)이 더티 데이터 페이지를 내리려는 순간, 그 페이지의 변경 로그가 아직 `nxio_lsa` 너머(미기록)라면 무슨 일이 일어나야 하나? 왜 그 판정 좌표가 `nxio_lsa`인가?
-> 준비된 추천 답: pgbuf flush 경로가 page LSA와 nxio_lsa를 비교, `page_lsa >= nxio_lsa`면 로그 선행 강제 flush (`logpb_flush_log_for_wal` 계열). nxio_lsa가 "디스크에 있는 로그의 경계" 그 자체이므로 WAL 판정의 유일한 좌표.
+- page LSA vs `nxio_lsa` strict `<` 비교, 부족하면 `logpb_flush_log_for_wal()`로 로그 선행 flush, append_lsa는 메모리 경계라 불가 — 모두 정확히 답변.
+- **추가 수확**: `logpb_need_wal()`은 `LSA_LE(nxio, page_lsa)`로 **등호를 보수적으로**("미기록") 취급 — 커밋 대기의 `>=` 탈출과 정반대. Q1 등호 미해결 건의 보강 증거로 보고서 §7.1에 추가.
+
+### Q5. 그룹 커밋 1초 지연 재구성 — 완료 ✅ (중간 오개념 2회 교정)
+
+- 오개념 1: "logpb_flush_pages가 데몬을 막는가?" → 아니오. 데몬을 막는 건 없고, `log_Flush_has_been_requested` 게이트에서 스스로 리턴. "모든 waiter 준비를 기다린다"는 개념 자체가 없음 — 병합은 쌓인 것을 쓸어담는 부수효과.
+- 손님(waiter)/직원(데몬)/호출벨(플래그) 비유로 전체 타임라인 재구성: 그룹커밋 손님은 벨을 안 누름 → 직원은 10ms마다 깨지만 벨 게이트에서 리턴 → 1000ms에 손님의 timedwait 타임아웃 → 그제서야 벨 → flush.
+- 오개념 2: "벨 없애고 무조건 주기 flush하면 병합 효과 깨짐" → 아니오, **본질적으로 유지**. fsync 상한 = 1/interval이 배치 창을 만듦 (MySQL/PG 방식). 다만 관찰된 '우연한 1s 배칭' 대비로는 fsync 증가 — 파라미터의 약속 기준으론 벨 제거가 더 충실.
+
+### Q6. 페이지 경계에 걸친 로그 레코드 (partial append) — **다음 질문, 미출제** ⏸️
+
+> 재개 시: 로그 레코드가 로그 페이지 경계를 넘으면? `LOGPB_APPENDREC_*` 상태 기계와 flush 중 "불완전 레코드" 처리 (`logpb_flush_all_append_pages`의 partial_append 분기, FLUSH 시 헤더 임시 변조 + 2차 fsync). 트레이스로 재현하려면 큰 VARCHAR 한 건 INSERT.
 
 ### 이후 후보 질문 (미출제)
 
