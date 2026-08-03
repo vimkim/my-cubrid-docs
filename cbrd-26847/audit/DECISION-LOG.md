@@ -773,23 +773,24 @@
 ## D-037 — visible-version regression test design
 
 - 정확한 결정: `unit_tests/oos/sql/test_oos_sql_visible_version.cpp`에 다음 두 회귀 테스트를 추가한다.
-  - `ScanrangeBoundaryFetchDoesNotExpandWholeRecord`: 64 KiB `BIT VARYING` 값을 가진 행을 만든 뒤
-    `heap_scanrange_to_following (..., start_oid = NULL)`을 직접 호출하고 `oos_debug_counters.read_many_calls == 0`을
-    단언한다.
+  - `ScanrangeNextFirstObjectFetchDoesNotExpandWholeRecord`: 64 KiB `BIT VARYING` 값을 가진 행을 만든 뒤
+    `heap_scanrange_to_following (..., start_oid = NULL)`로 range를 설정하고, NULL current OID로
+    `heap_scanrange_next`를 호출해 `oos_debug_counters.read_many_calls == 0`을 단언한다.
   - `LargeOldRecordUpdateDoesNotExpandWholeRecord`: OOS 대상 payload와 인덱스 키를 가진 행에서 키만 갱신한 뒤
     OOS batch read가 발생하지 않았고 payload의 길이와 값이 보존되었음을 확인한다.
-- 근거: 첫 테스트는 감사 대상 `heap_scanrange_to_following`의 실제 sole-caller 입력과 같은 NULL 시작 경계를
-  직접 실행하며, local `RECDES` body를 버리는 경로에서 전체 OOS materialization이 없어야 한다는 계약을
-  계측한다. 두 번째 테스트는 사용자가 보는 SQL 갱신 결과의 무결성을 보강한다.
+- 근거: 첫 테스트는 production과 같은 NULL 시작 경계로 range를 설정한 뒤 감사 대상
+  `heap_scanrange_next`의 first-object fetch를 직접 실행한다. sole caller가 body를 attribute layer로 읽는
+  경로에서 전체 OOS materialization이 없어야 한다는 계약을 계측한다. 두 번째 테스트는 사용자가 보는 SQL
+  갱신 결과의 무결성을 보강한다.
 - 안전성: 테스트 전용 테이블과 기존 OOS debug counter만 사용한다. production 동작이나 공개 API를 바꾸지
   않으며 각 fixture 종료 시 데이터베이스를 정리한다.
 - 사용자 결정: 다음 단계인 전용 회귀 테스트 추가를 진행하도록 승인 (2026-08-03)
 
 ## D-038 — scanrange test red/green proof
 
-- red 검증: 감사 대상의 정확한 `heap_next` policy를 일시적으로
+- red 검증: 감사 대상 `heap_scanrange_next` first-object fetch의 정확한 policy를 일시적으로
   `HEAP_RECDES_CONSUME_RAW_BYTES`로 바꾸고 다시 빌드했을 때
-  `ScanrangeBoundaryFetchDoesNotExpandWholeRecord`가 실패했다. 실제 `read_many_calls`는 1, 기대값은 0이었다.
+  `ScanrangeNextFirstObjectFetchDoesNotExpandWholeRecord`가 실패했다. 실제 `read_many_calls`는 1, 기대값은 0이었다.
 - green 검증: 같은 줄을 승인된 `HEAP_RECDES_DONT_CONSUME_RAW_BYTES`로 복구하고 다시 빌드했을 때 테스트가
   통과했으며 `read_many_calls`는 0이었다.
 - 근거: 테스트가 단순히 SQL 결과만 확인하는 것이 아니라 감사 대상 policy의 잘못된 회귀를 실제로 검출함을
@@ -820,8 +821,9 @@
   - 새 test binary: 2개 테스트 모두 통과
   - CTest 총 실행 시간: 42.82초
 - 의미: 승인된 source 변경과 새 회귀 테스트가 함께 컴파일되며 기존 OOS test suite를 깨뜨리지 않는다.
-- 한계: scanrange call site는 red/green으로 직접 증명했지만 locator 두 old-record fetch call site는 위 SA SQL
-  테스트가 직접 도달하지 않으므로 별도의 lower-level 주입 테스트 없이는 같은 수준의 계측 증명이 아니다.
+- 한계: `heap_scanrange_next` call site는 red/green으로 직접 증명했지만 scanrange following/prior 변경 branch와
+  locator 두 old-record fetch call site는 직접 도달하지 않는다. 이 지점은 별도의 lower-level 주입 테스트
+  없이는 같은 수준의 계측 증명이 아니며 소비 흐름의 정적 감사 근거를 사용한다.
 
 ## D-041 — non-NULL scanrange start OID follow-up separation
 
@@ -842,3 +844,57 @@
 - 후속 자료:
   `/home/vimkim/gh/my-cubrid-jira/issues/heap-scanrange-following-nonnull-start-oid_ab42c48_codex.md`
 - 사용자 결정: CBRD-26847 완료 뒤 별도 후속 이슈 자료로 순서대로 분리하도록 승인 (2026-08-03)
+
+## D-042 — PR base and latest OOS integration
+
+- 정확한 결정: PR base를 `develop`이 아니라 `feat/oos`로 사용하고, source branch에 최신
+  `origin/feat/oos`를 merge한다.
+- 근거: merge 전 branch는 `origin/feat/oos`보다 16개 commit 뒤, CBRD-26847 commit 2개 앞이었다.
+  `develop` 기준 PR은 OOS 기반 작업까지 83개 commit으로 보이지만 `feat/oos` 기준은 이 티켓의 2개 commit만
+  분리된다. merge-tree 사전 검사는 conflict가 없음을 확인했다.
+- 결과: 최신 base merge 뒤 reviewer 지적을 반영한 test 보강 commit까지 포함한 최종 HEAD는
+  `89937d7bdac3d928c06b077fb80f0e6a12985a12`다. 기준 브랜치 대비 의도한 11개 파일, 196 insertions,
+  26 deletions이며 `git diff --check`를 통과했다.
+- 안전성: OOS feature branch의 최신 상태 위에서 티켓 변경만 review하도록 범위를 보존한다. 사용자 local
+  submodule·설정·debug 파일은 merge, stage, commit 대상에서 제외했다.
+- 사용자 결정: 최신 `feat/oos` merge와 검증 진행을 승인 (2026-08-03)
+
+## D-043 — post-merge build and regression gate
+
+- 정확한 검증:
+  - debug GCC 전체 build/install 성공
+  - 새 `test_oos_sql_visible_version`을 포함한 OOS CTest 25개 중 25개 통과, 실패 0개
+  - 최종 CTest 총 실행 시간 45.40초
+- 근거: 최신 OOS base와 CBRD-26847 변경을 함께 컴파일하고 전체 OOS suite로 회귀 여부를 다시 확인해야
+  merge 전 검증 결과에만 의존하지 않는다.
+- 한계: scanrange policy는 red/green 계측으로 직접 검증했지만 locator old-record fetch 두 지점은 전용
+  lower-level 주입 계측까지 제공하지 않는다.
+
+## D-044 — push hook exception and one-shot CI contract
+
+- 정확한 결정: 게시 승인 뒤 source push에만 `git push --no-verify`를 사용한다. PR은
+  `CUBRID/CUBRID:feat/oos` <- `vimkim:CBRD-26847-oos-visible-version`으로 만들고, 생성 뒤 exact-head를 다시
+  검증한다. CI는 현재 head 이후의 기존 trigger와 실행 중 check를 모두 확인한 뒤 `/run all`을 최대 한 번만
+  게시한다.
+- 근거: local pre-push hook은 모든 branch에 최신 `origin/develop` 포함을 요구하지만, 올바른 PR base인 최신
+  `origin/feat/oos` 자체가 그 조건을 만족하지 않는다. 따라서 이 hook 실패는 source freshness 실패가 아니라
+  base 불일치에 의한 false block이다. `/run all`은 사용자가 요청한 SQL, medium, shell 전체 CI에 대응한다.
+- 안전성: hook 우회는 push 한 번에만 한정한다. 우회 전에 build, OOS CTest, diff 범위, whitespace 검사를
+  완료했고, CI 중복 방지 검사를 별도로 유지한다.
+- 사용자 결정: 올바른 `feat/oos` 기준의 hook 우회, push, PR 생성, 전체 CI trigger를 승인 (2026-08-03)
+
+## D-045 — independent grill finding and exact changed-line regression
+
+- 발견: 최초 scanrange 테스트는 `heap_scanrange_to_following (..., start_oid = NULL)`까지만 호출해 이번 diff가
+  바꾼 세 scanrange policy 지점이 아니라 기존 `heap_next (...DONT)`만 계측했다. 따라서 최초 D-038/D-040의
+  “변경 call site 직접 증명” 해석은 과장이었다.
+- 정확한 결정: range 설정 뒤 NULL current OID로 `heap_scanrange_next`를 직접 호출하도록 테스트를 보강하고,
+  이 함수의 first-object policy 한 줄을 대상으로 red/green을 다시 수행한다. following/prior 변경 branch는
+  직접 동적 검증했다고 주장하지 않고 정적 소비 흐름 감사로 한정한다.
+- 검증: 임시 `CONSUME_RAW_BYTES`에서 `read_many_calls = 1`로 테스트가 실패했고, 최종
+  `DONT_CONSUME_RAW_BYTES` 복구 후 해당 테스트와 전체 OOS CTest 25/25가 통과했다. 임시 production 변경은
+  남아 있지 않다.
+- 문서 정정: OOS 풀네임을 규범 문서의 `Out-of-row Overflow Storage`로 고치고, ADR 링크를 실제 원격인
+  `vimkim/cubrid-oos-context`로 고쳤다.
+- 안전성: 휴면 non-NULL following 오류를 수정하지 않고, 이번 diff의 기존 `heap_scanrange_next` 동작만
+  실제로 실행하는 test code를 추가했다. 독립 reviewer의 major 1건과 minor 2건을 모두 해소한다.
