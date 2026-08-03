@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CBRD-26950 — OOS generation 4B 비용 수용 보고</title>
+<style>
+  :root {
+    color-scheme: light only;
+    --bg: #f4f7fb;
+    --paper: #ffffff;
+    --fg: #17202a;
+    --muted: #667484;
+    --line: #dce3eb;
+    --navy: #173f6b;
+    --navy-soft: #edf4fb;
+    --red: #a72d35;
+    --red-soft: #fff2f2;
+    --green: #1f7046;
+    --green-soft: #eef8f2;
+    --amber: #8c6518;
+    --amber-soft: #fff8e9;
+    --code: #f3f5f8;
+  }
+
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0;
+    color: var(--fg);
+    background: var(--bg);
+    font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.68;
+  }
+  .paper {
+    width: min(960px, calc(100% - 32px));
+    margin: 28px auto;
+    padding: 54px 58px 72px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: 0 12px 36px rgba(31, 51, 73, .08);
+  }
+  h1 {
+    margin: 6px 0 10px;
+    font-size: 30px;
+    line-height: 1.34;
+    letter-spacing: -.025em;
+  }
+  h2 {
+    margin: 46px 0 15px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    color: var(--navy);
+    font-size: 20px;
+    letter-spacing: -.015em;
+  }
+  h3 { margin: 24px 0 9px; font-size: 15.5px; }
+  p { margin: 10px 0; }
+  a { color: var(--navy); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  code {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--code);
+    font-family: "JetBrains Mono", "D2Coding", Consolas, monospace;
+    font-size: 12.5px;
+  }
+  .kicker {
+    color: var(--navy);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+  .meta { color: var(--muted); font-size: 12.5px; }
+  .decision {
+    margin: 26px 0 18px;
+    padding: 20px 22px;
+    border: 1px solid #a9c8e8;
+    border-left: 5px solid var(--navy);
+    border-radius: 12px;
+    background: var(--navy-soft);
+    font-size: 17px;
+    font-weight: 750;
+    line-height: 1.55;
+  }
+  .decision small {
+    display: block;
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 13.5px;
+    font-weight: 500;
+  }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 18px 0;
+  }
+  .card {
+    padding: 16px 17px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+  }
+  .card .label { color: var(--muted); font-size: 12px; font-weight: 700; }
+  .card .value { margin-top: 5px; font-size: 17px; font-weight: 800; }
+  .card .desc { margin-top: 5px; color: var(--muted); font-size: 12.5px; }
+  .card.risk { background: var(--red-soft); border-color: #ecc4c7; }
+  .card.cost { background: var(--green-soft); border-color: #b9dcc8; }
+  .card.time { background: var(--amber-soft); border-color: #ead7a8; }
+  .flow {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin: 18px 0;
+  }
+  .flow .step {
+    position: relative;
+    min-height: 108px;
+    padding: 13px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fbfcfe;
+    font-size: 12.5px;
+  }
+  .flow .step::after {
+    content: "→";
+    position: absolute;
+    right: -10px;
+    top: 39px;
+    z-index: 2;
+    color: var(--muted);
+    font-weight: 800;
+  }
+  .flow .step:last-child::after { display: none; }
+  .flow .n { color: var(--navy); font-size: 11px; font-weight: 800; }
+  .flow b { display: block; margin: 3px 0 5px; font-size: 13px; }
+  .flow .bad { border-color: #df9ba0; background: var(--red-soft); }
+  .identity {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: stretch;
+    gap: 14px;
+    margin: 18px 0;
+  }
+  .identity .box {
+    padding: 15px 17px;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    background: #fbfcfe;
+  }
+  .identity .arrow { align-self: center; color: var(--navy); font-size: 22px; font-weight: 800; }
+  .identity .box.good { border-color: #93c9aa; background: var(--green-soft); }
+  .stub {
+    display: flex;
+    margin: 12px 0 5px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-family: "JetBrains Mono", "D2Coding", Consolas, monospace;
+    font-size: 12px;
+    text-align: center;
+  }
+  .stub div { padding: 12px 6px; }
+  .stub .oid { flex: 8; background: var(--code); }
+  .stub .len { flex: 8; border-left: 1px solid var(--line); background: var(--code); }
+  .stub .gen { flex: 4; border-left: 2px solid var(--navy); background: var(--navy-soft); color: var(--navy); font-weight: 800; }
+  table { width: 100%; margin: 15px 0; border-collapse: collapse; font-size: 13.5px; }
+  th, td { padding: 9px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+  th { background: var(--code); color: #394655; font-size: 12.5px; white-space: nowrap; }
+  tr:nth-child(even) td { background: #fbfcfd; }
+  .no { color: var(--red); font-weight: 750; }
+  .yes { color: var(--green); font-weight: 750; }
+  .callout {
+    margin: 17px 0;
+    padding: 14px 17px;
+    border-left: 4px solid var(--amber);
+    border-radius: 9px;
+    background: var(--amber-soft);
+    font-size: 13.5px;
+  }
+  .math {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 16px 0;
+  }
+  .math > div {
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    text-align: center;
+  }
+  .math strong { display: block; color: var(--navy); font-size: 20px; }
+  .math span { color: var(--muted); font-size: 12px; }
+  ul { margin: 9px 0; padding-left: 21px; }
+  li { margin: 5px 0; }
+  .accept {
+    margin-top: 46px;
+    padding: 22px 24px;
+    border: 2px solid var(--green);
+    border-radius: 13px;
+    background: var(--green-soft);
+  }
+  .accept h2 { margin: 0 0 10px; padding: 0; border: 0; color: var(--green); }
+  .accept ul { margin-bottom: 0; }
+  .sources {
+    margin-top: 34px;
+    padding-top: 17px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+  @media (max-width: 760px) {
+    .paper { width: 100%; margin: 0; padding: 34px 20px 54px; border: 0; border-radius: 0; box-shadow: none; }
+    h1 { font-size: 25px; }
+    .cards, .math { grid-template-columns: 1fr; }
+    .flow { grid-template-columns: 1fr; }
+    .flow .step { min-height: auto; }
+    .flow .step::after { content: "↓"; top: auto; right: 50%; bottom: -18px; }
+    .identity { grid-template-columns: 1fr; }
+    .identity .arrow { transform: rotate(90deg); justify-self: center; }
+    .scroll { overflow-x: auto; }
+  }
+  @media print {
+    html, body { background: #fff; }
+    .paper { width: auto; margin: 0; padding: 24px; border: 0; box-shadow: none; }
+    h2 { break-after: avoid; }
+    table, .card, .identity, .accept { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<main class="paper">
+  <div class="kicker">CBRD-26950 · Executive Decision Brief</div>
+  <h1>OOS generation reference의<br>4B 비용을 왜 수용해야 하는가</h1>
+  <div class="meta">
+    작성일 2026-08-03 · JIRA 상태 <code>Analysis</code> (2026-08-03 조회) ·
+    상세 검증 기준 <code>feat/oos</code> <code>0ad6afc0f</code> (2026-07-31)
+  </div>
+
+  <div class="decision">
+    결론: OOS inline stub을 16B에서 20B로 늘리고, generation 4B를 reference의 일부로 받아들여야 합니다.
+    <small>이 4B는 성능 기능을 위한 선택 비용이 아니라, 재시도 가능한 삭제가 살아있는 데이터를 지우지 않도록 만드는 최소 correctness 비용입니다.</small>
+  </div>
+
+  <section class="cards" aria-label="핵심 요약">
+    <div class="card risk">
+      <div class="label">수용하지 않을 때</div>
+      <div class="value">무증상 데이터 손실</div>
+      <div class="desc">오류 없이 살아있는 OOS value chain 전체가 삭제될 수 있습니다.</div>
+    </div>
+    <div class="card cost">
+      <div class="label">수용할 비용</div>
+      <div class="value">reference당 +4B</div>
+      <div class="desc">청크 헤더도 청크당 +4B이며, 비용은 명시적이고 상한을 계산할 수 있습니다.</div>
+    </div>
+    <div class="card time">
+      <div class="label">반영 시점</div>
+      <div class="value">출시 전 지금</div>
+      <div class="desc"><code>feat/oos</code> 출시 전이므로 기존 OOS 포맷 마이그레이션이 필요하지 않습니다.</div>
+    </div>
+  </section>
+
+  <h2>1. 문제는 “두 번 삭제”가 아니라 “다른 데이터 삭제”입니다</h2>
+  <p>
+    OOS OID는 논리 식별자가 아니라 <code>(volid, pageid, slotid)</code> 물리 주소입니다.
+    슬롯이 비었다가 다른 OOS chunk record에 재할당되면 같은 OID가 즉시 다시 나타납니다.
+    vacuum은 미완료 블록을 처음부터 재처리하지만, 현재 probe는 슬롯의 점유 여부만 확인합니다.
+  </p>
+
+  <div class="flow" aria-label="잘못된 삭제 순서">
+    <div class="step"><span class="n">01</span><b>옛 참조 보존</b>UPDATE undo image에 옛 head OOS OID가 남습니다.</div>
+    <div class="step"><span class="n">02</span><b>1차 삭제 커밋</b>vacuum sysop이 옛 value chain을 정상 회수합니다.</div>
+    <div class="step"><span class="n">03</span><b>슬롯 재사용</b>다른 INSERT가 같은 물리 OID에 새 청크를 저장합니다.</div>
+    <div class="step"><span class="n">04</span><b>블록 재처리</b>중단된 vacuum이 같은 undo image를 다시 읽습니다.</div>
+    <div class="step bad"><span class="n">05</span><b>살아있는 값 삭제</b>“점유됨”만 확인하고 새 점유자의 체인을 삭제합니다.</div>
+  </div>
+
+  <div class="callout">
+    sysop은 한 번의 멀티페이지 삭제를 all-or-nothing으로 만들지만, 이미 커밋된 요청이 다시 호출되는 것을 막거나 현재 점유자의 신원을 확인하지는 않습니다.
+  </div>
+
+  <h2>2. 4B는 reference가 가져야 할 최소 신원 정보입니다</h2>
+  <p>
+    안전한 지연 삭제에는 “어디인가”뿐 아니라 “그 주소의 몇 번째 점유자인가”가 필요합니다.
+    generation은 주소 재사용 전후를 구분하는 incarnation 값입니다.
+  </p>
+
+  <div class="identity">
+    <div class="box">
+      <strong>현재 16B reference</strong>
+      <div class="stub">
+        <div class="oid">head OOS OID<br>8B</div>
+        <div class="len">full length<br>8B</div>
+      </div>
+      <p class="meta">같은 주소와 같은 길이의 새 값은 옛 reference와 구분되지 않습니다.</p>
+    </div>
+    <div class="arrow">→</div>
+    <div class="box good">
+      <strong>제안 20B reference</strong>
+      <div class="stub">
+        <div class="oid">head OOS OID<br>8B</div>
+        <div class="len">full length<br>8B</div>
+        <div class="gen">generation<br>4B</div>
+      </div>
+      <p class="meta">현재 청크와 기대 generation이 다르면 재사용된 슬롯이므로 삭제하지 않습니다.</p>
+    </div>
+  </div>
+
+  <p>
+    2026-08-03 설계 논의의 전제는 향후 <code>RECDES.length</code>를 64-bit로 확장하는 것입니다.
+    따라서 full length 8B를 4B로 줄여 generation 공간으로 재사용하는 안은 미래 포맷 요구를 훼손하므로 제외합니다.
+  </p>
+
+  <h3>기존 recdes 정보로 generation을 계산할 수 없는 이유</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>후보</th><th>왜 안전한 신원이 아닌가</th><th>판정</th></tr></thead>
+      <tbody>
+        <tr><td><code>insid</code></td><td>트랜잭션 단위로 공유되고, heap vacuum이 나중에 제거할 수 있어 value chain 수명 동안 안정적이지 않습니다.</td><td class="no">사용 불가</td></tr>
+        <tr><td><code>delete MVCCID</code></td><td>OOS value chain 생성 시점에는 아직 존재하지 않습니다. 사용하려면 UPDATE/DELETE 때 옛 청크를 다시 써야 합니다.</td><td class="no">backfill 필요</td></tr>
+        <tr><td><code>prev_version_lsa</code></td><td>OOS insert 뒤 heap 로그가 기록되어야 결정되며, 이후 vacuum으로 제거될 수도 있습니다.</td><td class="no">시점 불일치</td></tr>
+        <tr><td>CHN</td><td>cache coherency 값이며 다른 행과 버전에서 반복될 수 있습니다. 슬롯 incarnation을 식별하는 계약이 아닙니다.</td><td class="no">의미 불일치</td></tr>
+        <tr><td>OID + length</td><td>재사용된 슬롯에 같은 길이의 값이 들어오면 옛 reference와 완전히 같습니다.</td><td class="no">결정적 충돌</td></tr>
+        <tr><td>위 값들의 hash</td><td>같은 입력은 같은 결과를 냅니다. hash는 존재하지 않는 신원 정보를 새로 만들지 못합니다.</td><td class="no">해결 안 됨</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    결국 OID와 64-bit length를 유지한 채 슬롯 incarnation을 구분하려면, 새 정보가 reference에 영속적으로 포함되어야 합니다.
+    32-bit generation은 검토안 중 이 목적만 수행하는 독립 필드이며, 잘못된 일치가 다시 나오려면 stale한 vacuum reference가 남아 있는 동안
+    같은 페이지에서 counter가 <code>2^32</code>회 돌아야 하므로 충분한 범위를 제공합니다.
+  </p>
+
+  <h2>3. 비용은 작고 명시적이며, 회피안의 비용은 더 큽니다</h2>
+  <div class="math" aria-label="heap record 추가 비용 예시">
+    <div><strong>+4B</strong><span>OOS-backed attribute 1개</span></div>
+    <div><strong>+16B</strong><span>OOS-backed attribute 4개</span></div>
+    <div><strong>+40B</strong><span>OOS-backed attribute 10개</span></div>
+  </div>
+
+  <ul>
+    <li><b>Heap record:</b> OOS-backed attribute마다 inline stub이 16B → 20B가 됩니다.</li>
+    <li><b>OOS storage:</b> OOS chunk header가 16B → 20B가 되어 청크마다 4B가 추가됩니다.</li>
+    <li><b>OOS page:</b> page-local <code>uint32</code> counter가 페이지마다 한 번 추가됩니다.</li>
+    <li><b>4,060B target과 비교:</b> stub 1개의 +4B는 약 0.10%, 10개의 +40B도 약 0.99%입니다.</li>
+    <li><b>16KB page와 비교:</b> 큰 청크 1개의 +4B는 페이지 규모의 약 0.025%입니다.</li>
+  </ul>
+
+  <div class="callout">
+    “4B를 없애는” 대안은 비용을 제거하지 않습니다. heap record 공통 확장, UPDATE hot path backfill, vacuum 진행 모델 변경, 슬롯 재사용 격리 같은 더 넓고 지속적인 비용으로 이동시킵니다.
+  </div>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>대안</th><th>표면상 장점</th><th>실제 비용 또는 위험</th><th>결론</th></tr></thead>
+      <tbody>
+        <tr><td>4B generation reference</td><td>삭제에 필요한 신원이 reference에 완결됨</td><td>stub·청크당 4B, 관련 경계값 갱신</td><td class="yes">채택</td></tr>
+        <tr><td>record-level generation</td><td>여러 stub이 4B 하나를 공유</td><td>MVCC header/VOT 시작 위치와 모든 recdes parser에 OOS 포맷 결합이 확산됨</td><td class="no">복잡도 과다</td></tr>
+        <tr><td>owner OID</td><td>stub을 늘리지 않을 가능성</td><td>OOS insert 시 heap OID가 아직 없어 backfill 또는 INSERT 순서 변경 필요</td><td class="no">hot path 침습</td></tr>
+        <tr><td>OOS MVCC header</td><td>heap과 같은 visibility 검사</td><td>옛 chain의 delete MVCCID를 UPDATE 때 기록해야 하므로 별도 MVCC 저장소가 됨</td><td class="no">과잉 설계</td></tr>
+        <tr><td>레코드별 vacuum 진행 저장</td><td>같은 삭제 요청을 재실행하지 않음</td><td>삭제 sysop과 진행 위치를 원자화해야 하며 vacuum data 핵심 모델을 변경</td><td class="no">변경 범위 과다</td></tr>
+        <tr><td>슬롯 재사용 지연</td><td>reference 포맷 유지</td><td>vacuum 블록 완료와 bestspace·공간 회수를 결합하는 격리 프로토콜 필요</td><td class="no">운영 비용 불명확</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>4. 제안은 기존 흐름을 유지하는 국소 변경입니다</h2>
+  <ul>
+    <li>이미 W-latch를 보유한 OOS page에서 counter를 증가시켜 generation을 발급합니다.</li>
+    <li>OOS chunk header와 inline stub에 같은 head generation을 저장합니다.</li>
+    <li>undo image는 inline stub을 그대로 보존하므로 기대 generation도 자동으로 보존됩니다.</li>
+    <li>삭제 전 현재 generation과 기대 generation을 비교하고, 불일치하면 성공적인 no-op으로 처리합니다.</li>
+    <li><code>RVOOS_INSERT</code>/<code>RVOOS_DELETE</code>는 레코드 전체 이미지를 물리 로깅하므로 복구 handler의 기본 구조는 유지됩니다.</li>
+    <li>slave는 기존처럼 자체 <code>oos_insert</code>를 수행하고 로컬 OID와 로컬 generation을 함께 발급합니다.</li>
+    <li>stub은 20B로 유지하고 24B padding은 추가하지 않습니다. variable area에서 8-byte 정렬을 보장하지 못하기 때문입니다.</li>
+  </ul>
+
+  <h3>반영과 함께 닫아야 할 검증 항목</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>검증</th><th>필수 결과</th></tr></thead>
+      <tbody>
+        <tr><td>결정적 fault injection</td><td>1차 삭제 commit → 같은 슬롯 재사용 → 블록 재처리 순서를 고정하고 새 점유자가 보존됨을 확인</td></tr>
+        <tr><td>단일·멀티청크</td><td>head generation 불일치 시 value chain 삭제 진입 자체가 no-op</td></tr>
+        <tr><td>Crash recovery</td><td>commit 전 crash는 undo, commit 후 crash는 redo되며 generation 이미지가 보존됨</td></tr>
+        <tr><td>Replication</td><td>master/slave의 OID·generation이 달라도 각 로컬 stub과 chunk header가 일치하고 값이 동일함</td></tr>
+        <tr><td>Format boundary</td><td><code>OR_OOS_INLINE_SIZE</code> 20B, demotion 수익성 기준 <code>&gt;20B</code>, 9.1/9.2 경계 테스트 갱신</td></tr>
+        <tr><td>64-bit length 보존</td><td>full length 8B를 유지하고 generation을 length 비트에 중첩하지 않음</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>5. 지금 수용하지 않으면 출시 후 비용이 커집니다</h2>
+  <p>
+    <code>feat/oos</code>가 아직 출시되지 않은 현재는 OOS 온디스크 포맷을 바꿔도 기존 고객 데이터에 대한 호환 처리나 마이그레이션이 필요하지 않습니다.
+    출시 후 동일한 변경을 하면 구·신 stub과 chunk header 판별, 파일 포맷 버전, 백업/복구 호환, 마이그레이션 정책이 추가됩니다.
+  </p>
+  <p>
+    반면 수정을 미루면 silent data loss 가능성을 가진 포맷을 먼저 고정하게 됩니다. 이번 결정은 4B와 0B의 비교가 아니라,
+    <b>지금의 국소적인 4B 비용과 출시 후의 데이터 손실·마이그레이션 비용을 비교하는 결정</b>입니다.
+  </p>
+
+  <section class="accept">
+    <h2>승인 요청</h2>
+    <ul>
+      <li>OOS inline stub의 4B generation reference 비용을 수용합니다: <b>16B → 20B</b>.</li>
+      <li>OOS chunk header에도 generation 4B를 추가합니다: <b>16B → 20B</b>.</li>
+      <li>향후 64-bit <code>RECDES.length</code> 확장을 위해 full length 8B는 그대로 유지합니다.</li>
+      <li>MVCC 필드 hash, length bit 재사용 등 신원 정보를 저장하지 않는 shortcut은 채택하지 않습니다.</li>
+      <li>온디스크 호환 부담이 생기기 전인 <code>feat/oos</code> 머지·출시 전에 반영하고 fault-injection 회귀 테스트를 merge gate로 둡니다.</li>
+    </ul>
+  </section>
+
+  <footer class="sources">
+    <b>근거</b> ·
+    <a href="2026-07-31-CBRD-26950-generation-field-proposal.html">4B generation 필드 제안 — 기술 미팅 자료</a> ·
+    <a href="2026-07-31-CBRD-26950-vacuum-oos-slot-reuse-verification.md">A–H 증거 의무 및 대안 검증</a> ·
+    <a href="http://jira.cubrid.org/browse/CBRD-26950">JIRA CBRD-26950</a><br>
+    OOS 규범 기준: <code>/home/vimkim/gh/cubrid-oos-context/OOS-CONTEXT.md</code> (Last updated 2026-07-13) ·
+    JIRA 조회: 2026-08-03, Status Analysis.
+  </footer>
+</main>
+</body>
+</html>
