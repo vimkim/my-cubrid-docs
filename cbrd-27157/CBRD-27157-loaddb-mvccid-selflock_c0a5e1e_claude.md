@@ -77,7 +77,7 @@ cubload::server_object_loader::finish_line
 
 추가로 unique/PK 인덱스가 있는 테이블에 대한 `loaddb -C` 스모크 테스트를 수행했습니다: OOS 대상 JSON 행 2건 적재 → 값 동등성 확인, unique/PK 위반 정상 검출, 적재 후 신규 OOS 대상 행 INSERT 정상.
 
-## Revision: Uniform Self-lock Approach (2026-08-03, commit `e20543df8` (리베이스 전 `5056c53a3`))
+## Revision: Uniform Self-lock Approach (2026-08-03, commit `8bcfd7dd2` (내용 동일 이전 해시: `e20543df8`, 최초 `5056c53a3`))
 
 시니어 리뷰 피드백("loaddb 예외를 추가하지 말고 uniform 하게 가자")을 반영하여 접근을 교체했습니다.
 스킵 방식(`c0a5e1ee8`, `log_tran_table.c` +17줄)을 폐기하고, **assert 를 트랜잭션 락에 한해 완화**하는
