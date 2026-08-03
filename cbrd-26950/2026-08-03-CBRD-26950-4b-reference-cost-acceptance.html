@@ -1,428 +1,1064 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CBRD-26950 — OOS generation 4B 비용 수용 보고</title>
-<style>
-  :root {
-    color-scheme: light only;
-    --bg: #f4f7fb;
-    --paper: #ffffff;
-    --fg: #17202a;
-    --muted: #667484;
-    --line: #dce3eb;
-    --navy: #173f6b;
-    --navy-soft: #edf4fb;
-    --red: #a72d35;
-    --red-soft: #fff2f2;
-    --green: #1f7046;
-    --green-soft: #eef8f2;
-    --amber: #8c6518;
-    --amber-soft: #fff8e9;
-    --code: #f3f5f8;
-  }
-
-  * { box-sizing: border-box; }
-  html { background: var(--bg); }
-  body {
-    margin: 0;
-    color: var(--fg);
-    background: var(--bg);
-    font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-size: 15px;
-    line-height: 1.68;
-  }
-  .paper {
-    width: min(960px, calc(100% - 32px));
-    margin: 28px auto;
-    padding: 54px 58px 72px;
-    background: var(--paper);
-    border: 1px solid var(--line);
-    border-radius: 18px;
-    box-shadow: 0 12px 36px rgba(31, 51, 73, .08);
-  }
-  h1 {
-    margin: 6px 0 10px;
-    font-size: 30px;
-    line-height: 1.34;
-    letter-spacing: -.025em;
-  }
-  h2 {
-    margin: 46px 0 15px;
-    padding-top: 24px;
-    border-top: 1px solid var(--line);
-    color: var(--navy);
-    font-size: 20px;
-    letter-spacing: -.015em;
-  }
-  h3 { margin: 24px 0 9px; font-size: 15.5px; }
-  p { margin: 10px 0; }
-  a { color: var(--navy); text-decoration-thickness: 1px; text-underline-offset: 2px; }
-  code {
-    padding: 1px 5px;
-    border-radius: 4px;
-    background: var(--code);
-    font-family: "JetBrains Mono", "D2Coding", Consolas, monospace;
-    font-size: 12.5px;
-  }
-  .kicker {
-    color: var(--navy);
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-  }
-  .meta { color: var(--muted); font-size: 12.5px; }
-  .decision {
-    margin: 26px 0 18px;
-    padding: 20px 22px;
-    border: 1px solid #a9c8e8;
-    border-left: 5px solid var(--navy);
-    border-radius: 12px;
-    background: var(--navy-soft);
-    font-size: 17px;
-    font-weight: 750;
-    line-height: 1.55;
-  }
-  .decision small {
-    display: block;
-    margin-top: 8px;
-    color: var(--muted);
-    font-size: 13.5px;
-    font-weight: 500;
-  }
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin: 18px 0;
-  }
-  .card {
-    padding: 16px 17px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: #fff;
-  }
-  .card .label { color: var(--muted); font-size: 12px; font-weight: 700; }
-  .card .value { margin-top: 5px; font-size: 17px; font-weight: 800; }
-  .card .desc { margin-top: 5px; color: var(--muted); font-size: 12.5px; }
-  .card.risk { background: var(--red-soft); border-color: #ecc4c7; }
-  .card.cost { background: var(--green-soft); border-color: #b9dcc8; }
-  .card.time { background: var(--amber-soft); border-color: #ead7a8; }
-  .flow {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 8px;
-    margin: 18px 0;
-  }
-  .flow .step {
-    position: relative;
-    min-height: 108px;
-    padding: 13px 12px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: #fbfcfe;
-    font-size: 12.5px;
-  }
-  .flow .step::after {
-    content: "→";
-    position: absolute;
-    right: -10px;
-    top: 39px;
-    z-index: 2;
-    color: var(--muted);
-    font-weight: 800;
-  }
-  .flow .step:last-child::after { display: none; }
-  .flow .n { color: var(--navy); font-size: 11px; font-weight: 800; }
-  .flow b { display: block; margin: 3px 0 5px; font-size: 13px; }
-  .flow .bad { border-color: #df9ba0; background: var(--red-soft); }
-  .identity {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: stretch;
-    gap: 14px;
-    margin: 18px 0;
-  }
-  .identity .box {
-    padding: 15px 17px;
-    border: 1px solid var(--line);
-    border-radius: 11px;
-    background: #fbfcfe;
-  }
-  .identity .arrow { align-self: center; color: var(--navy); font-size: 22px; font-weight: 800; }
-  .identity .box.good { border-color: #93c9aa; background: var(--green-soft); }
-  .stub {
-    display: flex;
-    margin: 12px 0 5px;
-    overflow: hidden;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    font-family: "JetBrains Mono", "D2Coding", Consolas, monospace;
-    font-size: 12px;
-    text-align: center;
-  }
-  .stub div { padding: 12px 6px; }
-  .stub .oid { flex: 8; background: var(--code); }
-  .stub .len { flex: 8; border-left: 1px solid var(--line); background: var(--code); }
-  .stub .gen { flex: 4; border-left: 2px solid var(--navy); background: var(--navy-soft); color: var(--navy); font-weight: 800; }
-  table { width: 100%; margin: 15px 0; border-collapse: collapse; font-size: 13.5px; }
-  th, td { padding: 9px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
-  th { background: var(--code); color: #394655; font-size: 12.5px; white-space: nowrap; }
-  tr:nth-child(even) td { background: #fbfcfd; }
-  .no { color: var(--red); font-weight: 750; }
-  .yes { color: var(--green); font-weight: 750; }
-  .callout {
-    margin: 17px 0;
-    padding: 14px 17px;
-    border-left: 4px solid var(--amber);
-    border-radius: 9px;
-    background: var(--amber-soft);
-    font-size: 13.5px;
-  }
-  .math {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin: 16px 0;
-  }
-  .math > div {
-    padding: 14px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    text-align: center;
-  }
-  .math strong { display: block; color: var(--navy); font-size: 20px; }
-  .math span { color: var(--muted); font-size: 12px; }
-  ul { margin: 9px 0; padding-left: 21px; }
-  li { margin: 5px 0; }
-  .accept {
-    margin-top: 46px;
-    padding: 22px 24px;
-    border: 2px solid var(--green);
-    border-radius: 13px;
-    background: var(--green-soft);
-  }
-  .accept h2 { margin: 0 0 10px; padding: 0; border: 0; color: var(--green); }
-  .accept ul { margin-bottom: 0; }
-  .sources {
-    margin-top: 34px;
-    padding-top: 17px;
-    border-top: 1px solid var(--line);
-    color: var(--muted);
-    font-size: 12.5px;
-  }
-  @media (max-width: 760px) {
-    .paper { width: 100%; margin: 0; padding: 34px 20px 54px; border: 0; border-radius: 0; box-shadow: none; }
-    h1 { font-size: 25px; }
-    .cards, .math { grid-template-columns: 1fr; }
-    .flow { grid-template-columns: 1fr; }
-    .flow .step { min-height: auto; }
-    .flow .step::after { content: "↓"; top: auto; right: 50%; bottom: -18px; }
-    .identity { grid-template-columns: 1fr; }
-    .identity .arrow { transform: rotate(90deg); justify-self: center; }
-    .scroll { overflow-x: auto; }
-  }
-  @media print {
-    html, body { background: #fff; }
-    .paper { width: auto; margin: 0; padding: 24px; border: 0; box-shadow: none; }
-    h2 { break-after: avoid; }
-    table, .card, .identity, .accept { break-inside: avoid; }
-  }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CBRD-26950 — OOS generation 4바이트 비용 수용 검토 보고서</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #56627a;
+      --line: #d9e0eb;
+      --soft: #f5f7fb;
+      --navy: #173b6c;
+      --blue: #2563a6;
+      --blue-soft: #eaf3ff;
+      --red: #a33030;
+      --red-soft: #fff0ef;
+      --green: #1f6b4f;
+      --green-soft: #eaf8f1;
+      --amber: #875d0b;
+      --amber-soft: #fff7df;
+      --violet: #5e48a2;
+      --violet-soft: #f2efff;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #edf1f7;
+      font-family: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      font-size: 16px;
+      line-height: 1.78;
+      word-break: keep-all;
+    }
+    main {
+      width: min(1120px, calc(100% - 32px));
+      margin: 28px auto 64px;
+      padding: 64px 72px 72px;
+      background: white;
+      border: 1px solid #dfe4ec;
+      box-shadow: 0 16px 42px rgba(31, 46, 74, .09);
+    }
+    h1, h2, h3, h4 { line-height: 1.35; color: #14233b; }
+    h1 { margin: 12px 0 20px; font-size: clamp(2rem, 5vw, 3.35rem); letter-spacing: -.04em; }
+    h2 { margin: 68px 0 22px; padding-bottom: 12px; font-size: 1.85rem; border-bottom: 2px solid #263f67; letter-spacing: -.025em; }
+    h3 { margin: 34px 0 12px; font-size: 1.28rem; }
+    h4 { margin: 24px 0 8px; font-size: 1.06rem; }
+    p { margin: 10px 0 16px; }
+    ul, ol { margin: 10px 0 18px; padding-left: 1.5rem; }
+    li { margin: 7px 0; }
+    a { color: #155a9a; }
+    code {
+      padding: .08em .32em;
+      border: 1px solid #e2e7ee;
+      border-radius: 4px;
+      background: #f5f7fa;
+      color: #263951;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: .91em;
+      word-break: break-all;
+    }
+    strong { color: #13233d; }
+    .eyebrow { color: var(--blue); font-size: .84rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .subtitle { max-width: 850px; color: #48556d; font-size: 1.18rem; }
+    .meta { margin-top: 28px; color: #68748a; font-size: .88rem; }
+    .status {
+      display: inline-block;
+      margin-left: 5px;
+      padding: 2px 9px;
+      border-radius: 99px;
+      background: var(--amber-soft);
+      color: var(--amber);
+      font-weight: 800;
+    }
+    .decision {
+      margin: 34px 0 28px;
+      padding: 25px 28px;
+      border-left: 7px solid var(--navy);
+      background: #edf4fc;
+      font-size: 1.15rem;
+    }
+    .decision b { display: block; margin-bottom: 7px; font-size: 1.38rem; color: #102c55; }
+    nav {
+      margin: 30px 0 36px;
+      padding: 20px 24px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--soft);
+    }
+    nav strong { display: block; margin-bottom: 8px; }
+    nav ol { columns: 2; margin: 0; }
+    nav li { break-inside: avoid; margin: 4px 0; }
+    .summary-grid, .two-col, .three-col {
+      display: grid;
+      gap: 16px;
+      margin: 20px 0;
+    }
+    .summary-grid { grid-template-columns: repeat(3, 1fr); }
+    .two-col { grid-template-columns: repeat(2, 1fr); }
+    .three-col { grid-template-columns: repeat(3, 1fr); }
+    .card {
+      padding: 20px 21px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+    }
+    .card h3, .card h4 { margin-top: 0; }
+    .card .big { display: block; margin: 4px 0 6px; font-size: 1.42rem; font-weight: 900; line-height: 1.25; }
+    .card.red { border-top: 5px solid var(--red); background: #fffafa; }
+    .card.green { border-top: 5px solid var(--green); background: #fbfffd; }
+    .card.blue { border-top: 5px solid var(--blue); background: #fbfdff; }
+    .card.amber { border-top: 5px solid #c39025; background: #fffdf7; }
+    .label { color: var(--muted); font-size: .82rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+    .callout {
+      margin: 22px 0;
+      padding: 18px 21px;
+      border: 1px solid #cbdcf1;
+      border-left: 6px solid var(--blue);
+      border-radius: 7px;
+      background: var(--blue-soft);
+    }
+    .callout.warning { border-color: #ecd799; border-left-color: #b17b0b; background: var(--amber-soft); }
+    .callout.danger { border-color: #efc6c2; border-left-color: var(--red); background: var(--red-soft); }
+    .callout.good { border-color: #b8decf; border-left-color: var(--green); background: var(--green-soft); }
+    .plain {
+      margin: 18px 0;
+      padding: 18px 22px;
+      border-radius: 8px;
+      background: #f7f8fb;
+      color: #344157;
+    }
+    .plain b { color: #1a2b47; }
+    .scroll { overflow-x: auto; margin: 18px 0 26px; }
+    table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+    th, td { padding: 12px 13px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: #eef2f8; color: #263b5c; font-weight: 800; }
+    tr:nth-child(even) td { background: #fafbfc; }
+    .nowrap { white-space: nowrap; }
+    .yes { color: var(--green); font-weight: 800; }
+    .no { color: var(--red); font-weight: 800; }
+    .maybe { color: var(--amber); font-weight: 800; }
+    .diagram {
+      margin: 20px 0 26px;
+      padding: 23px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f9fafc;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: .92rem;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: keep-all;
+    }
+    .timeline { margin: 20px 0 28px; padding-left: 31px; border-left: 3px solid #b9c7da; }
+    .event { position: relative; margin: 0 0 18px; padding: 17px 20px; border: 1px solid var(--line); border-radius: 8px; background: white; }
+    .event::before {
+      content: attr(data-step);
+      position: absolute;
+      left: -49px;
+      top: 15px;
+      width: 31px;
+      height: 31px;
+      border-radius: 50%;
+      background: var(--navy);
+      color: white;
+      text-align: center;
+      line-height: 31px;
+      font-size: .78rem;
+      font-weight: 900;
+    }
+    .event.bad { border-color: #e3aaa5; background: var(--red-soft); }
+    .event.bad::before { background: var(--red); }
+    .event h3 { margin: 0 0 6px; font-size: 1.08rem; }
+    .proof {
+      margin: 28px 0;
+      padding: 24px 26px;
+      border: 2px solid #273f67;
+      border-radius: 10px;
+      background: #f7faff;
+    }
+    .proof h3 { margin-top: 0; }
+    .formula {
+      margin: 14px 0;
+      padding: 15px 18px;
+      border-radius: 7px;
+      background: #172c4c;
+      color: #fff;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      line-height: 1.7;
+      white-space: pre-wrap;
+    }
+    .mapping td:first-child, .mapping td:nth-child(2) { width: 22%; }
+    .format {
+      display: flex;
+      margin: 20px 0 10px;
+      border: 2px solid #324966;
+      border-radius: 8px;
+      overflow: hidden;
+      font-size: .92rem;
+      font-weight: 800;
+      text-align: center;
+    }
+    .format div { display: grid; place-items: center; min-height: 70px; padding: 8px; border-right: 2px solid white; }
+    .format div:last-child { border-right: 0; }
+    .format .oid { flex: 2; background: #dceafd; }
+    .format .length { flex: 2; background: #dff5e8; }
+    .format .gen { flex: 1; background: #f3e7ff; }
+    .compare-arrow { align-self: center; text-align: center; color: #53657f; font-size: 2rem; }
+    .question {
+      margin: 18px 0;
+      padding: 19px 21px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: white;
+    }
+    .question h3 { margin: 0 0 8px; color: #18365e; }
+    .question p:last-child { margin-bottom: 0; }
+    .approval {
+      margin-top: 58px;
+      padding: 30px 32px;
+      border: 3px solid var(--green);
+      border-radius: 12px;
+      background: var(--green-soft);
+    }
+    .approval h2 { margin-top: 0; border-bottom-color: #69a58e; }
+    .footnotes { margin-top: 46px; padding-top: 22px; border-top: 1px solid var(--line); color: #667187; font-size: .88rem; }
+    .source-tag { display: inline-block; margin: 2px 4px 2px 0; padding: 2px 7px; border-radius: 4px; background: #edf1f6; color: #40506a; font-weight: 700; }
+    @media (max-width: 820px) {
+      main { width: 100%; margin: 0; padding: 36px 22px 50px; border: 0; }
+      .summary-grid, .two-col, .three-col { grid-template-columns: 1fr; }
+      nav ol { columns: 1; }
+      .format { font-size: .8rem; }
+      .compare-arrow { transform: rotate(90deg); }
+      body { word-break: normal; }
+    }
+    @media print {
+      body { background: white; font-size: 11pt; }
+      main { width: auto; margin: 0; padding: 20mm 16mm; border: 0; box-shadow: none; }
+      h2 { break-after: avoid; }
+      .card, .callout, .event, .proof, table, .format, .question { break-inside: avoid; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
 </head>
 <body>
-<main class="paper">
-  <div class="kicker">CBRD-26950 · Executive Decision Brief</div>
-  <h1>OOS generation reference의<br>4B 비용을 왜 수용해야 하는가</h1>
-  <div class="meta">
-    작성일 2026-08-03 · JIRA 상태 <code>Analysis</code> (2026-08-03 조회) ·
-    상세 검증 기준 <code>feat/oos</code> <code>0ad6afc0f</code> (2026-07-31)
+<main>
+  <header>
+    <div class="eyebrow">CBRD-26950 · Formal Decision Report</div>
+    <h1>OOS 참조에 generation 4바이트를<br>반드시 추가해야 하는 이유</h1>
+    <p class="subtitle">
+      vacuum 재처리와 OOS 슬롯 재사용이 만나면 살아있는 데이터가 삭제되는 문제를,
+      데이터베이스를 처음 배우는 독자도 따라갈 수 있도록 정상 동작부터 단계별로 설명한 승인 검토 보고서
+    </p>
+    <p class="meta">
+      작성일 2026-08-03 · JIRA <a href="http://jira.cubrid.org/browse/CBRD-26950">CBRD-26950</a>
+      <span class="status">Analysis</span> · 기술 검증 기준 <code>feat/oos</code> <code>0ad6afc0f</code> (2026-07-31)
+    </p>
+  </header>
+
+  <section class="decision" id="decision">
+    <b>승인 요청 결론</b>
+    OOS inline stub을 16바이트에서 20바이트로 늘리고, 물리 주소와 함께 4바이트 generation을 저장해야 합니다.
+    이 비용은 선택적인 성능 개선 비용이 아니라, 재시도 가능한 삭제가 주소를 재사용한 다른 데이터까지 지우지 않게 만드는
+    <strong>데이터 정확성 비용</strong>입니다.
+  </section>
+
+  <div class="summary-grid" aria-label="핵심 요약">
+    <article class="card red">
+      <span class="label">수정하지 않을 때</span>
+      <span class="big">무증상 데이터 손실</span>
+      오류나 경고 없이 다른 행의 살아있는 OOS 값 전체가 사라질 수 있습니다.
+    </article>
+    <article class="card blue">
+      <span class="label">수정 비용</span>
+      <span class="big">참조마다 +4바이트</span>
+      OOS-backed attribute의 stub과 각 OOS 청크 헤더에 각각 4바이트가 추가됩니다.
+    </article>
+    <article class="card green">
+      <span class="label">수정 효과</span>
+      <span class="big">주소 + 신원 확인</span>
+      같은 슬롯의 새 점유자를 옛 점유자와 구분하여 잘못된 삭제를 성공적인 no-op으로 바꿉니다.
+    </article>
   </div>
 
-  <div class="decision">
-    결론: OOS inline stub을 16B에서 20B로 늘리고, generation 4B를 reference의 일부로 받아들여야 합니다.
-    <small>이 4B는 성능 기능을 위한 선택 비용이 아니라, 재시도 가능한 삭제가 살아있는 데이터를 지우지 않도록 만드는 최소 correctness 비용입니다.</small>
-  </div>
+  <nav aria-label="목차">
+    <strong>목차</strong>
+    <ol>
+      <li><a href="#reading">먼저 알아야 할 용어</a></li>
+      <li><a href="#normal">OOS의 정상 동작</a></li>
+      <li><a href="#problem">문제가 일어나는 순서</a></li>
+      <li><a href="#inevitable">왜 조건이 갖춰지면 반드시 오삭제되는가</a></li>
+      <li><a href="#guards">기존 보호 장치가 막지 못하는 이유</a></li>
+      <li><a href="#heap">heap은 같은 문제를 어떻게 피하는가</a></li>
+      <li><a href="#solution">generation 해결 원리</a></li>
+      <li><a href="#cost">4바이트 비용 계산</a></li>
+      <li><a href="#alternatives">다른 방안이 더 나쁜 이유</a></li>
+      <li><a href="#implementation">구현 계약과 검증 계획</a></li>
+      <li><a href="#questions">팀장 검토 예상 질문</a></li>
+      <li><a href="#approval">최종 승인 요청</a></li>
+    </ol>
+  </nav>
 
-  <section class="cards" aria-label="핵심 요약">
-    <div class="card risk">
-      <div class="label">수용하지 않을 때</div>
-      <div class="value">무증상 데이터 손실</div>
-      <div class="desc">오류 없이 살아있는 OOS value chain 전체가 삭제될 수 있습니다.</div>
+  <section id="reading">
+    <h2>1. 먼저 알아야 할 용어</h2>
+    <p>
+      이 문제는 어려운 약어가 많지만, 핵심은 “주소는 재사용될 수 있으므로 주소만으로 물건의 주인까지 알 수 없다”는 간단한 원리입니다.
+      아래 용어만 이해하면 뒤의 사고 순서를 그대로 따라갈 수 있습니다.
+    </p>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>용어</th><th>쉬운 뜻</th><th>이 보고서에서의 역할</th></tr></thead>
+        <tbody>
+          <tr><td><strong>heap record</strong></td><td>테이블의 한 행을 디스크에 저장한 레코드입니다.</td><td>큰 값 자체 대신 OOS를 찾아갈 작은 참조를 보관합니다.</td></tr>
+          <tr><td><strong>OOS</strong><br>Out-of-row Storage</td><td>행 안에 넣기 큰 가변 길이 값을 별도 파일에 저장하는 방식입니다.</td><td>큰 문자열·비트 값 등을 하나 이상의 청크로 나누어 저장합니다.</td></tr>
+          <tr><td><strong>OOS inline stub</strong></td><td>heap record 안에 남는 작은 안내표입니다.</td><td>현재는 head OOS OID 8바이트와 전체 길이 8바이트, 합계 16바이트입니다.</td></tr>
+          <tr><td><strong>OOS chunk record</strong></td><td>큰 값을 나눈 한 조각입니다.</td><td>첫 조각은 다음 조각의 주소를 가지고 있어 value chain을 만듭니다.</td></tr>
+          <tr><td><strong>OOS value chain</strong></td><td>한 속성 값을 이루는 한 개 이상의 청크 연결 목록입니다.</td><td>head 청크부터 연결을 따라가면 원래 값을 복원할 수 있습니다.</td></tr>
+          <tr><td><strong>OID</strong></td><td>디스크의 물리 위치를 나타내는 주소입니다.</td><td><code>(volid, pageid, slotid)</code>이며, 슬롯이 재사용되면 같은 OID가 다른 청크를 가리킵니다.</td></tr>
+          <tr><td><strong>MVCC</strong></td><td>여러 트랜잭션이 서로 다른 시점의 행을 볼 수 있게 예전 버전을 잠시 보존하는 방식입니다.</td><td>UPDATE 직후 옛 OOS 값을 바로 지우지 못하게 합니다.</td></tr>
+          <tr><td><strong>undo image</strong></td><td>변경 전 행 모습을 로그에 저장한 복사본입니다.</td><td>옛 OOS inline stub, 즉 옛 OID를 그대로 보관합니다.</td></tr>
+          <tr><td><strong>vacuum</strong></td><td>아무도 보지 않는 옛 버전을 나중에 청소하는 작업입니다.</td><td>undo image에서 옛 OID를 읽어 OOS value chain을 삭제합니다.</td></tr>
+          <tr><td><strong>sysop</strong><br>system operation</td><td>여러 물리 변경을 전부 성공시키거나 전부 되돌리는 작은 원자적 작업 단위입니다.</td><td>한 OOS value chain 삭제 도중 실패해 반만 지워지는 일을 막습니다.</td></tr>
+          <tr><td><strong>WAL</strong><br>Write-Ahead Logging</td><td>데이터 페이지보다 변경 로그를 먼저 안전하게 기록하는 방식입니다.</td><td>크래시 뒤 commit된 변경은 다시 적용하고 미완료 변경은 되돌립니다.</td></tr>
+          <tr><td><strong>page LSA</strong></td><td>한 페이지에 마지막으로 반영된 로그의 순번표입니다.</td><td>복구 중 같은 redo 로그를 같은 페이지에 중복 적용하지 않게 합니다.</td></tr>
+          <tr><td><strong>latch</strong></td><td>메모리에 올라온 페이지를 읽거나 고치는 짧은 동안 잡는 내부 잠금입니다.</td><td>동시 수정으로 페이지 구조가 깨지는 것은 막지만, latch를 놓은 뒤 주소의 주인까지 보호하지는 않습니다.</td></tr>
+          <tr><td><strong>bestspace</strong></td><td>새 레코드를 넣을 빈 공간이 있는 페이지를 빨리 찾기 위한 후보 목록입니다.</td><td>삭제로 빈 공간이 생긴 OOS 페이지를 다음 insert가 빠르게 재사용하게 합니다.</td></tr>
+          <tr><td><strong>generation</strong></td><td>한 주소의 몇 번째 점유자인지를 표시하는 세대 번호입니다.</td><td>옛 참조와 현재 청크의 번호를 비교하여 슬롯 재사용을 알아냅니다.</td></tr>
+        </tbody>
+      </table>
     </div>
-    <div class="card cost">
-      <div class="label">수용할 비용</div>
-      <div class="value">reference당 +4B</div>
-      <div class="desc">청크 헤더도 청크당 +4B이며, 비용은 명시적이고 상한을 계산할 수 있습니다.</div>
+
+    <h3>옷 보관소 비유와 실제 구조의 대응</h3>
+    <div class="scroll">
+      <table class="mapping">
+        <thead><tr><th>옷 보관소</th><th>데이터베이스</th><th>정확한 의미</th></tr></thead>
+        <tbody>
+          <tr><td>5번 옷걸이</td><td>OOS OID</td><td>물건의 이름이 아니라 물리 위치입니다. 비면 다른 손님에게 다시 줄 수 있습니다.</td></tr>
+          <tr><td>옷</td><td>OOS chunk record</td><td>그 위치를 현재 차지하고 있는 실제 데이터입니다.</td></tr>
+          <tr><td>오래된 “5번을 치워라” 표</td><td>undo image 속 OOS inline stub</td><td>과거에는 맞았지만, 주소 재사용 뒤에는 다른 물건을 가리킬 수 있습니다.</td></tr>
+          <tr><td>청소 직원</td><td>vacuum</td><td>오래된 표를 보고 더 이상 필요 없는 데이터를 회수합니다.</td></tr>
+          <tr><td>방문 번호 41, 42</td><td>generation</td><td>같은 5번 옷걸이라도 어느 손님의 점유인지 구분합니다.</td></tr>
+        </tbody>
+      </table>
     </div>
-    <div class="card time">
-      <div class="label">반영 시점</div>
-      <div class="value">출시 전 지금</div>
-      <div class="desc"><code>feat/oos</code> 출시 전이므로 기존 OOS 포맷 마이그레이션이 필요하지 않습니다.</div>
+    <div class="callout warning">
+      <strong>비유의 한계:</strong> 실제 OOS 값은 한 벌의 옷이 아니라 여러 청크가 연결된 체인일 수 있습니다.
+      head 슬롯을 잘못 삭제하면 현재 head가 가리키는 다음 청크를 따라가므로 새 점유자의 체인 전체가 지워질 수 있습니다.
     </div>
   </section>
 
-  <h2>1. 문제는 “두 번 삭제”가 아니라 “다른 데이터 삭제”입니다</h2>
-  <p>
-    OOS OID는 논리 식별자가 아니라 <code>(volid, pageid, slotid)</code> 물리 주소입니다.
-    슬롯이 비었다가 다른 OOS chunk record에 재할당되면 같은 OID가 즉시 다시 나타납니다.
-    vacuum은 미완료 블록을 처음부터 재처리하지만, 현재 probe는 슬롯의 점유 여부만 확인합니다.
-  </p>
-
-  <div class="flow" aria-label="잘못된 삭제 순서">
-    <div class="step"><span class="n">01</span><b>옛 참조 보존</b>UPDATE undo image에 옛 head OOS OID가 남습니다.</div>
-    <div class="step"><span class="n">02</span><b>1차 삭제 커밋</b>vacuum sysop이 옛 value chain을 정상 회수합니다.</div>
-    <div class="step"><span class="n">03</span><b>슬롯 재사용</b>다른 INSERT가 같은 물리 OID에 새 청크를 저장합니다.</div>
-    <div class="step"><span class="n">04</span><b>블록 재처리</b>중단된 vacuum이 같은 undo image를 다시 읽습니다.</div>
-    <div class="step bad"><span class="n">05</span><b>살아있는 값 삭제</b>“점유됨”만 확인하고 새 점유자의 체인을 삭제합니다.</div>
-  </div>
-
-  <div class="callout">
-    sysop은 한 번의 멀티페이지 삭제를 all-or-nothing으로 만들지만, 이미 커밋된 요청이 다시 호출되는 것을 막거나 현재 점유자의 신원을 확인하지는 않습니다.
-  </div>
-
-  <h2>2. 4B는 reference가 가져야 할 최소 신원 정보입니다</h2>
-  <p>
-    안전한 지연 삭제에는 “어디인가”뿐 아니라 “그 주소의 몇 번째 점유자인가”가 필요합니다.
-    generation은 주소 재사용 전후를 구분하는 incarnation 값입니다.
-  </p>
-
-  <div class="identity">
-    <div class="box">
-      <strong>현재 16B reference</strong>
-      <div class="stub">
-        <div class="oid">head OOS OID<br>8B</div>
-        <div class="len">full length<br>8B</div>
-      </div>
-      <p class="meta">같은 주소와 같은 길이의 새 값은 옛 reference와 구분되지 않습니다.</p>
+  <section id="normal">
+    <h2>2. OOS의 정상 동작부터 이해하기</h2>
+    <h3>2.1 큰 값은 밖에 두고, 행에는 16바이트 안내표만 둡니다</h3>
+    <p>
+      큰 값을 heap record 안에 그대로 넣으면 한 페이지에 들어갈 행 수가 줄어듭니다. OOS는 큰 값을 별도 OOS 파일에 두고,
+      heap record에는 그 값을 찾는 참조만 남깁니다. 현재 OOS inline stub은 다음과 같습니다.
+    </p>
+    <div class="format" aria-label="현재 16바이트 OOS inline stub">
+      <div class="oid">head OOS OID<br>8B</div>
+      <div class="length">full length<br>8B</div>
     </div>
-    <div class="arrow">→</div>
-    <div class="box good">
-      <strong>제안 20B reference</strong>
-      <div class="stub">
-        <div class="oid">head OOS OID<br>8B</div>
-        <div class="len">full length<br>8B</div>
-        <div class="gen">generation<br>4B</div>
-      </div>
-      <p class="meta">현재 청크와 기대 generation이 다르면 재사용된 슬롯이므로 삭제하지 않습니다.</p>
+    <p class="plain">
+      예를 들어 <code>(vol 1, page 20, slot 5)</code>는 “1번 볼륨의 20번 페이지에 있는 5번 슬롯”이라는 주소입니다.
+      이 값에는 “R1 행의 데이터”라는 소유자 정보가 없습니다.
+    </p>
+
+    <h3>2.2 UPDATE는 새 OOS chain을 만들고, 옛 chain은 당장 지우지 않습니다</h3>
+    <p>
+      CUBRID의 MVCC에서는 UPDATE 이전 값을 보고 있는 트랜잭션이 있을 수 있습니다. 따라서 UPDATE가 끝났다고 옛 OOS 값을 즉시 지우면 안 됩니다.
+      현재 설계는 새 버전에 새 OOS chain을 만들고, 옛 버전의 inline stub을 undo image에 그대로 남깁니다.
+    </p>
+    <div class="diagram">UPDATE 전
+  heap R1 ── stub { OID=A, length=5000 } ──▶ OOS chain A
+
+UPDATE 후
+  현재 heap R1 ── stub { OID=B, length=5000 } ──▶ 새 OOS chain B
+  undo image   ── stub { OID=A, length=5000 } ──▶ 옛 OOS chain A
+
+옛 버전을 볼 수 있는 트랜잭션이 사라진 뒤
+  vacuum이 undo image에서 OID=A를 읽고 옛 OOS chain A를 삭제</div>
+
+    <h3>2.3 vacuum은 로그 블록 전체가 끝나야 진행 완료를 기록합니다</h3>
+    <p>
+      vacuum은 로그를 블록 단위로 나누어 처리합니다. 하지만 한 OOS chain 삭제는 그보다 작은, 레코드 단위 sysop으로 먼저 확정됩니다.
+      따라서 블록 중간까지 처리한 뒤 worker가 중단되면 다음 두 사실이 동시에 성립할 수 있습니다.
+    </p>
+    <ol>
+      <li>이미 처리한 OOS chain 삭제는 sysop commit으로 확정되어 있습니다.</li>
+      <li>블록 전체는 끝나지 않았으므로 시작 위치 <code>start_lsa</code>가 전진하지 않았고, 같은 블록을 처음부터 다시 읽습니다.</li>
+    </ol>
+    <div class="callout">
+      이것은 sysop이 실패한 것이 아닙니다. <strong>작은 작업의 성공 기록</strong>과 <strong>큰 블록의 완료 기록</strong>이 서로 다른 단위이기 때문에 생기는 재처리입니다.
+      재처리 자체는 vacuum이 누락 없이 청소하기 위한 정상적인 복구 전략입니다.
     </div>
-  </div>
-
-  <p>
-    2026-08-03 설계 논의의 전제는 향후 <code>RECDES.length</code>를 64-bit로 확장하는 것입니다.
-    따라서 full length 8B를 4B로 줄여 generation 공간으로 재사용하는 안은 미래 포맷 요구를 훼손하므로 제외합니다.
-  </p>
-
-  <h3>기존 recdes 정보로 generation을 계산할 수 없는 이유</h3>
-  <div class="scroll">
-    <table>
-      <thead><tr><th>후보</th><th>왜 안전한 신원이 아닌가</th><th>판정</th></tr></thead>
-      <tbody>
-        <tr><td><code>insid</code></td><td>트랜잭션 단위로 공유되고, heap vacuum이 나중에 제거할 수 있어 value chain 수명 동안 안정적이지 않습니다.</td><td class="no">사용 불가</td></tr>
-        <tr><td><code>delete MVCCID</code></td><td>OOS value chain 생성 시점에는 아직 존재하지 않습니다. 사용하려면 UPDATE/DELETE 때 옛 청크를 다시 써야 합니다.</td><td class="no">backfill 필요</td></tr>
-        <tr><td><code>prev_version_lsa</code></td><td>OOS insert 뒤 heap 로그가 기록되어야 결정되며, 이후 vacuum으로 제거될 수도 있습니다.</td><td class="no">시점 불일치</td></tr>
-        <tr><td>CHN</td><td>cache coherency 값이며 다른 행과 버전에서 반복될 수 있습니다. 슬롯 incarnation을 식별하는 계약이 아닙니다.</td><td class="no">의미 불일치</td></tr>
-        <tr><td>OID + length</td><td>재사용된 슬롯에 같은 길이의 값이 들어오면 옛 reference와 완전히 같습니다.</td><td class="no">결정적 충돌</td></tr>
-        <tr><td>위 값들의 hash</td><td>같은 입력은 같은 결과를 냅니다. hash는 존재하지 않는 신원 정보를 새로 만들지 못합니다.</td><td class="no">해결 안 됨</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <p>
-    결국 OID와 64-bit length를 유지한 채 슬롯 incarnation을 구분하려면, 새 정보가 reference에 영속적으로 포함되어야 합니다.
-    32-bit generation은 검토안 중 이 목적만 수행하는 독립 필드이며, 잘못된 일치가 다시 나오려면 stale한 vacuum reference가 남아 있는 동안
-    같은 페이지에서 counter가 <code>2^32</code>회 돌아야 하므로 충분한 범위를 제공합니다.
-  </p>
-
-  <h2>3. 비용은 작고 명시적이며, 회피안의 비용은 더 큽니다</h2>
-  <div class="math" aria-label="heap record 추가 비용 예시">
-    <div><strong>+4B</strong><span>OOS-backed attribute 1개</span></div>
-    <div><strong>+16B</strong><span>OOS-backed attribute 4개</span></div>
-    <div><strong>+40B</strong><span>OOS-backed attribute 10개</span></div>
-  </div>
-
-  <ul>
-    <li><b>Heap record:</b> OOS-backed attribute마다 inline stub이 16B → 20B가 됩니다.</li>
-    <li><b>OOS storage:</b> OOS chunk header가 16B → 20B가 되어 청크마다 4B가 추가됩니다.</li>
-    <li><b>OOS page:</b> page-local <code>uint32</code> counter가 페이지마다 한 번 추가됩니다.</li>
-    <li><b>4,060B target과 비교:</b> stub 1개의 +4B는 약 0.10%, 10개의 +40B도 약 0.99%입니다.</li>
-    <li><b>16KB page와 비교:</b> 큰 청크 1개의 +4B는 페이지 규모의 약 0.025%입니다.</li>
-  </ul>
-
-  <div class="callout">
-    “4B를 없애는” 대안은 비용을 제거하지 않습니다. heap record 공통 확장, UPDATE hot path backfill, vacuum 진행 모델 변경, 슬롯 재사용 격리 같은 더 넓고 지속적인 비용으로 이동시킵니다.
-  </div>
-
-  <div class="scroll">
-    <table>
-      <thead><tr><th>대안</th><th>표면상 장점</th><th>실제 비용 또는 위험</th><th>결론</th></tr></thead>
-      <tbody>
-        <tr><td>4B generation reference</td><td>삭제에 필요한 신원이 reference에 완결됨</td><td>stub·청크당 4B, 관련 경계값 갱신</td><td class="yes">채택</td></tr>
-        <tr><td>record-level generation</td><td>여러 stub이 4B 하나를 공유</td><td>MVCC header/VOT 시작 위치와 모든 recdes parser에 OOS 포맷 결합이 확산됨</td><td class="no">복잡도 과다</td></tr>
-        <tr><td>owner OID</td><td>stub을 늘리지 않을 가능성</td><td>OOS insert 시 heap OID가 아직 없어 backfill 또는 INSERT 순서 변경 필요</td><td class="no">hot path 침습</td></tr>
-        <tr><td>OOS MVCC header</td><td>heap과 같은 visibility 검사</td><td>옛 chain의 delete MVCCID를 UPDATE 때 기록해야 하므로 별도 MVCC 저장소가 됨</td><td class="no">과잉 설계</td></tr>
-        <tr><td>레코드별 vacuum 진행 저장</td><td>같은 삭제 요청을 재실행하지 않음</td><td>삭제 sysop과 진행 위치를 원자화해야 하며 vacuum data 핵심 모델을 변경</td><td class="no">변경 범위 과다</td></tr>
-        <tr><td>슬롯 재사용 지연</td><td>reference 포맷 유지</td><td>vacuum 블록 완료와 bestspace·공간 회수를 결합하는 격리 프로토콜 필요</td><td class="no">운영 비용 불명확</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <h2>4. 제안은 기존 흐름을 유지하는 국소 변경입니다</h2>
-  <ul>
-    <li>이미 W-latch를 보유한 OOS page에서 counter를 증가시켜 generation을 발급합니다.</li>
-    <li>OOS chunk header와 inline stub에 같은 head generation을 저장합니다.</li>
-    <li>undo image는 inline stub을 그대로 보존하므로 기대 generation도 자동으로 보존됩니다.</li>
-    <li>삭제 전 현재 generation과 기대 generation을 비교하고, 불일치하면 성공적인 no-op으로 처리합니다.</li>
-    <li><code>RVOOS_INSERT</code>/<code>RVOOS_DELETE</code>는 레코드 전체 이미지를 물리 로깅하므로 복구 handler의 기본 구조는 유지됩니다.</li>
-    <li>slave는 기존처럼 자체 <code>oos_insert</code>를 수행하고 로컬 OID와 로컬 generation을 함께 발급합니다.</li>
-    <li>stub은 20B로 유지하고 24B padding은 추가하지 않습니다. variable area에서 8-byte 정렬을 보장하지 못하기 때문입니다.</li>
-  </ul>
-
-  <h3>반영과 함께 닫아야 할 검증 항목</h3>
-  <div class="scroll">
-    <table>
-      <thead><tr><th>검증</th><th>필수 결과</th></tr></thead>
-      <tbody>
-        <tr><td>결정적 fault injection</td><td>1차 삭제 commit → 같은 슬롯 재사용 → 블록 재처리 순서를 고정하고 새 점유자가 보존됨을 확인</td></tr>
-        <tr><td>단일·멀티청크</td><td>head generation 불일치 시 value chain 삭제 진입 자체가 no-op</td></tr>
-        <tr><td>Crash recovery</td><td>commit 전 crash는 undo, commit 후 crash는 redo되며 generation 이미지가 보존됨</td></tr>
-        <tr><td>Replication</td><td>master/slave의 OID·generation이 달라도 각 로컬 stub과 chunk header가 일치하고 값이 동일함</td></tr>
-        <tr><td>Format boundary</td><td><code>OR_OOS_INLINE_SIZE</code> 20B, demotion 수익성 기준 <code>&gt;20B</code>, 9.1/9.2 경계 테스트 갱신</td></tr>
-        <tr><td>64-bit length 보존</td><td>full length 8B를 유지하고 generation을 length 비트에 중첩하지 않음</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <h2>5. 지금 수용하지 않으면 출시 후 비용이 커집니다</h2>
-  <p>
-    <code>feat/oos</code>가 아직 출시되지 않은 현재는 OOS 온디스크 포맷을 바꿔도 기존 고객 데이터에 대한 호환 처리나 마이그레이션이 필요하지 않습니다.
-    출시 후 동일한 변경을 하면 구·신 stub과 chunk header 판별, 파일 포맷 버전, 백업/복구 호환, 마이그레이션 정책이 추가됩니다.
-  </p>
-  <p>
-    반면 수정을 미루면 silent data loss 가능성을 가진 포맷을 먼저 고정하게 됩니다. 이번 결정은 4B와 0B의 비교가 아니라,
-    <b>지금의 국소적인 4B 비용과 출시 후의 데이터 손실·마이그레이션 비용을 비교하는 결정</b>입니다.
-  </p>
-
-  <section class="accept">
-    <h2>승인 요청</h2>
-    <ul>
-      <li>OOS inline stub의 4B generation reference 비용을 수용합니다: <b>16B → 20B</b>.</li>
-      <li>OOS chunk header에도 generation 4B를 추가합니다: <b>16B → 20B</b>.</li>
-      <li>향후 64-bit <code>RECDES.length</code> 확장을 위해 full length 8B는 그대로 유지합니다.</li>
-      <li>MVCC 필드 hash, length bit 재사용 등 신원 정보를 저장하지 않는 shortcut은 채택하지 않습니다.</li>
-      <li>온디스크 호환 부담이 생기기 전인 <code>feat/oos</code> 머지·출시 전에 반영하고 fault-injection 회귀 테스트를 merge gate로 둡니다.</li>
-    </ul>
   </section>
 
-  <footer class="sources">
-    <b>근거</b> ·
-    <a href="2026-07-31-CBRD-26950-generation-field-proposal.html">4B generation 필드 제안 — 기술 미팅 자료</a> ·
-    <a href="2026-07-31-CBRD-26950-vacuum-oos-slot-reuse-verification.md">A–H 증거 의무 및 대안 검증</a> ·
-    <a href="http://jira.cubrid.org/browse/CBRD-26950">JIRA CBRD-26950</a><br>
-    OOS 규범 기준: <code>/home/vimkim/gh/cubrid-oos-context/OOS-CONTEXT.md</code> (Last updated 2026-07-13) ·
-    JIRA 조회: 2026-08-03, Status Analysis.
+  <section id="problem">
+    <h2>3. 살아있는 데이터가 삭제되는 정확한 순서</h2>
+    <p>
+      아래에서 R1은 이미 UPDATE되어 옛 OOS chain을 청소해야 하는 행이고, R2는 그 뒤 새 값을 저장한 살아있는 행입니다.
+      같은 주소를 <code>A = (V, P, S)</code>라고 표시합니다.
+    </p>
+
+    <div class="timeline">
+      <article class="event" data-step="1">
+        <h3>R1의 옛 OOS 주소 A가 undo image에 남습니다</h3>
+        R1을 UPDATE하면 새 버전에는 새 OOS chain이 생깁니다. 옛 주소 A는 불변인 WAL의 undo image에 남아 vacuum의 삭제 대상이 됩니다.
+      </article>
+      <article class="event" data-step="2">
+        <h3>vacuum이 A의 옛 chain을 정상 삭제합니다</h3>
+        vacuum은 undo image에서 A를 읽고, <code>oos_chunk_exists(A)</code>가 true이면 <code>oos_delete(A)</code>를 실행합니다.
+        삭제 sysop이 commit되므로 R1의 옛 chain은 정상적으로 사라집니다.
+      </article>
+      <article class="event" data-step="3">
+        <h3>빈 슬롯 S가 즉시 재사용 가능한 공간이 됩니다</h3>
+        OOS 페이지는 ANCHORED 방식이므로 삭제한 slotid를 재사용합니다. 삭제된 페이지는 bestspace 후보로 등록되고,
+        insert는 사용 가능한 페이지와 빈 슬롯을 적극적으로 찾습니다.
+      </article>
+      <article class="event" data-step="4">
+        <h3>다른 행 R2의 새 청크가 같은 주소 A를 받습니다</h3>
+        R2의 OOS insert가 같은 <code>(V,P,S)</code>를 배정받습니다. 주소 A는 같지만 내용과 소유자는 완전히 다릅니다.
+        R2 트랜잭션이 commit하면 이 시점의 A는 복구 뒤에도 남아야 하는 살아있는 R2 데이터입니다.
+      </article>
+      <article class="event" data-step="5">
+        <h3>vacuum worker가 블록 완료 전에 중단됩니다</h3>
+        크래시, 정상 종료 중단, worker pause 또는 블록 중간 오류가 발생할 수 있습니다. 개별 삭제는 이미 commit되었지만 블록 완료는 기록되지 않았습니다.
+      </article>
+      <article class="event" data-step="6">
+        <h3>vacuum이 같은 블록과 같은 undo image를 다시 읽습니다</h3>
+        재시작된 vacuum은 <code>start_lsa</code>부터 블록을 다시 처리합니다. WAL의 undo image는 수정되지 않으므로 여전히 옛 주소 A를 돌려줍니다.
+      </article>
+      <article class="event bad" data-step="7">
+        <h3>현재 probe가 R2의 살아있는 청크를 “삭제 대상 있음”으로 판정합니다</h3>
+        <code>oos_chunk_exists(A)</code>는 슬롯에 레코드가 있는지만 확인합니다. R1 것인지 R2 것인지 확인할 필드가 없으므로 true를 반환하고,
+        <code>oos_delete(A)</code>는 현재 점유자인 R2의 chain을 삭제합니다. 이 두 번째 삭제도 새 sysop과 새 WAL 로그를 가진 정상 연산으로 commit됩니다.
+      </article>
+    </div>
+
+    <div class="callout danger">
+      <strong>핵심 구분:</strong> 같은 데이터를 두 번 지우는 “중복 삭제”라면 두 번째에는 슬롯이 비어 있어 no-op으로 끝납니다.
+      이 결함은 첫 삭제와 두 번째 삭제 사이에 슬롯의 주인이 바뀐 경우입니다. 두 번째 삭제는 <strong>같은 주소에 있는 다른 데이터</strong>를 지웁니다.
+    </div>
+  </section>
+
+  <section id="inevitable">
+    <h2>4. 왜 조건이 갖춰지면 오삭제는 반드시 일어나는가</h2>
+    <div class="callout warning">
+      <strong>정확한 표현이 중요합니다.</strong> 모든 운영 환경에서 일정 시간 안에 이 사고가 무조건 발생한다는 뜻은 아닙니다.
+      운영 패턴별 발생 빈도는 아직 측정하지 않았습니다. 그러나 아래 A–G가 한 번 같은 순서로 성립하면,
+      현재 코드에는 마지막 오삭제를 피할 분기가 없으므로 결과는 결정적입니다.
+    </div>
+
+    <h3>4.1 논리식으로 본 필연성</h3>
+    <div class="formula">A. 1차 OOS 삭제가 독립 sysop으로 commit됨
++ B. vacuum 블록 완료 위치는 아직 기록되지 않음
++ C. 삭제한 슬롯을 다른 insert가 재사용함
++ D. 같은 블록을 start_lsa부터 재처리함
++ E. 불변 undo image가 같은 옛 OID를 다시 제공함
++ F. probe가 “현재 점유자의 신원”이 아니라 “슬롯 점유 여부”만 검사함
++ G. oos_delete가 그 주소의 현재 점유자를 삭제함
+────────────────────────────────────────────────────────────
+= 살아있는 새 점유자의 데이터 삭제</div>
+    <p>
+      A부터 G까지 어느 하나라도 불가능하다는 시스템 불변식이 있으면 사고는 막힙니다. 현재 소스 검증에서는 그런 불변식을 찾지 못했으며,
+      오히려 각 단계가 기존 설계의 정상 동작으로 확인되었습니다.
+    </p>
+
+    <h3>4.2 A–G가 실제로 도달 가능한 이유</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th class="nowrap">증명 의무</th><th>현재 동작</th><th>왜 다음 단계로 이어지는가</th><th>판정</th></tr></thead>
+        <tbody>
+          <tr><td>A · 삭제 commit</td><td>forward-walk의 OOS 삭제는 레코드별 독립 sysop입니다.</td><td>블록이 끝나지 않아도 이미 지운 chain은 복구 시 되살아나지 않습니다.</td><td class="yes">확인</td></tr>
+          <tr><td>B · 진행 미기록</td><td>개별 레코드 완료 위치를 영속 저장하지 않고, 블록 완료 전에는 <code>start_lsa</code>가 그대로입니다.</td><td>중단 뒤 이미 처리한 로그 레코드도 다시 만납니다.</td><td class="yes">확인</td></tr>
+          <tr><td>C · 재사용 창</td><td>삭제된 슬롯을 보호하는 장기 잠금이나 격리 기간이 없습니다.</td><td>다른 트랜잭션의 insert가 중간에 들어올 수 있습니다.</td><td class="yes">확인</td></tr>
+          <tr><td>D · 동일 slotid</td><td>ANCHORED 페이지는 삭제된 slotid를 재사용하며, bestspace가 빈 공간을 다시 insert에 제공합니다.</td><td>새 청크가 정확히 같은 <code>(V,P,S)</code>를 받을 수 있습니다.</td><td class="yes">확인</td></tr>
+          <tr><td>E · 옛 참조 반복</td><td>undo image는 append-only WAL에 있는 과거 기록입니다.</td><td>슬롯 주인이 바뀌어도 undo image 속 OID는 바뀌지 않습니다.</td><td class="yes">확인</td></tr>
+          <tr><td>F · 신원 미검사</td><td>청크 헤더에는 length, index, next OID만 있고 owner·generation이 없습니다.</td><td>probe는 R1과 R2를 구분할 정보 자체가 없습니다.</td><td class="no">차단 없음</td></tr>
+          <tr><td>G · 현재 체인 삭제</td><td><code>oos_delete</code>는 현재 슬롯 헤더를 읽고 그 next OID를 따라갑니다.</td><td>R2가 멀티청크면 R2의 현재 chain 전체로 피해가 확대됩니다.</td><td class="yes">확인</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>4.3 “희귀할 수 있다”와 “안전하다”는 같은 말이 아닙니다</h3>
+    <p>현재 단계에서 정직하게 말할 수 있는 범위는 다음과 같습니다.</p>
+    <div class="two-col">
+      <article class="card amber">
+        <h3>아직 모르는 것</h3>
+        <ul>
+          <li>실제 고객 운영 패턴에서 시간당 발생 확률</li>
+          <li>크래시 없이 중간 오류만으로 발현되는 빈도</li>
+          <li>특정 페이지에 insert가 집중되는 정도</li>
+        </ul>
+      </article>
+      <article class="card red">
+        <h3>이미 아는 것</h3>
+        <ul>
+          <li>각 단계는 코드상 도달 가능합니다.</li>
+          <li>슬롯 재사용은 금지되지 않고 오히려 공간 정책이 촉진합니다.</li>
+          <li>조건 충족 후 신원 오판과 삭제는 결정적입니다.</li>
+          <li>결과가 silent data loss라 사후 발견·복구가 어렵습니다.</li>
+        </ul>
+      </article>
+    </div>
+    <p>
+      장시간 운영에서는 UPDATE·vacuum·OOS insert·worker 재시작의 기회가 반복됩니다. 개별 사건의 확률이 작아도 시도 횟수가 누적되면 전체 위험은 커집니다.
+      다만 실제 확률을 측정하지 않았으므로 이 보고서는 수치를 만들어 내지 않습니다. 승인 근거는 “높은 확률”이 아니라
+      <strong>도달 가능한 실행 순서 + 차단 불변식 부재 + 데이터 손실 결과</strong>입니다.
+    </p>
+  </section>
+
+  <section id="guards">
+    <h2>5. sysop·WAL·page LSA·latch가 왜 막지 못하는가</h2>
+    <h3>5.1 sysop은 “정확히 한 번”이 아니라 “한 번 호출의 원자성”을 보장합니다</h3>
+    <p>
+      sysop은 한 번의 <code>oos_delete</code>가 여러 청크를 지우다가 실패했을 때, 전부 지우거나 전부 되돌리게 합니다.
+      그러나 sysop은 바깥의 vacuum 블록이 같은 삭제 요청을 다시 만들지 못하게 하지 않습니다.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>질문</th><th>sysop이 보장</th><th>sysop이 보장하지 않음</th></tr></thead>
+        <tbody>
+          <tr><td>한 체인을 반만 지울 수 있는가?</td><td class="yes">아니오. 한 호출은 원자적입니다.</td><td>—</td></tr>
+          <tr><td>이미 commit된 요청이 다시 호출되는가?</td><td>—</td><td class="no">막지 않습니다.</td></tr>
+          <tr><td>같은 OID의 현재 점유자가 옛 점유자인가?</td><td>—</td><td class="no">확인하지 않습니다.</td></tr>
+          <tr><td>두 번째 호출 내용이 논리적으로 올바른가?</td><td>—</td><td class="no">호출자가 올바른 대상을 넘겨야 합니다.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="plain">
+      은행 이체에 비유하면, sysop은 “A 계좌에서 빼고 B 계좌에 더하는 두 단계가 함께 성공한다”를 보장합니다.
+      같은 이체 요청을 다음 날 다시 실행해도 되는지는 별도의 요청 번호, 즉 멱등성 키가 판단해야 합니다. generation이 OOS 삭제의 멱등성 키 역할을 합니다.
+    </div>
+
+    <h3>5.2 WAL과 page LSA는 잘못된 새 삭제까지 성실하게 보존합니다</h3>
+    <p>
+      page LSA는 복구 중 같은 redo 로그를 같은 페이지에 두 번 적용하지 않게 합니다. 하지만 사고의 두 번째 삭제는 옛 redo의 반복 적용이 아닙니다.
+      복구가 끝난 뒤 vacuum 코드가 undo image를 다시 읽고 실행하는 <strong>새로운 삭제 연산</strong>입니다. 새 WAL 로그도 정상적으로 생성됩니다.
+    </p>
+    <div class="diagram">복구 redo의 중복 적용
+  같은 로그 L을 다시 적용하려 함 → page LSA 비교 → 이미 적용했으면 건너뜀
+
+CBRD-26950의 두 번째 삭제
+  vacuum이 옛 undo image를 다시 읽음 → 새 oos_delete 호출 → 새 로그 L2 생성
+  → page LSA 관점에서는 처음 보는 정상 로그 → 적용하고 영속화</div>
+    <p>
+      따라서 WAL은 데이터 손실의 원인이 아니라, 잘못 선택된 대상을 일관되게 삭제하고 그 결과를 복구 가능하게 만드는 장치가 됩니다.
+      “복구가 정확하다”와 “업무 의미가 정확하다”는 서로 다른 문제입니다.
+    </p>
+
+    <h3>5.3 latch는 현재 접근만 직렬화하며 과거 참조까지 보호하지 않습니다</h3>
+    <p>
+      page latch는 한 시점에 같은 페이지를 동시에 수정하여 구조가 깨지는 것을 막습니다. 첫 삭제, R2 insert, 두 번째 삭제가 순서대로 각각 올바른 latch를 잡아 실행하면
+      물리 구조는 완전히 정상입니다. latch가 해제된 뒤까지 옛 OID의 의미를 보존해 주지는 않습니다.
+    </p>
+
+    <h3>5.4 MVCC 임계값은 R1의 옛 버전이 죽었다는 것만 증명합니다</h3>
+    <p>
+      vacuum이 R1의 옛 버전을 지워도 된다는 판단은 맞습니다. 문제는 그 판단에서 얻은 옛 물리 주소 A가 시간이 지난 뒤에도 여전히 R1의 청크인지입니다.
+      R2의 새 청크는 별도 행·별도 버전이므로 R1의 MVCC 판단으로 보호할 수 없습니다.
+    </p>
+  </section>
+
+  <section id="heap">
+    <h2>6. heap도 OID를 재사용하는데 왜 같은 사고를 피할 수 있는가</h2>
+    <p>
+      heap 슬롯도 삭제 뒤 재사용될 수 있습니다. 차이는 vacuum이 물리 삭제 직전에 현재 heap record를 다시 읽고 그 안의 MVCC header를 확인할 수 있다는 점입니다.
+      주소만 같고 MVCC 신원이 다르면 “내가 지울 옛 버전이 아니다”라고 판단할 근거가 있습니다.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>비교 항목</th><th>heap record</th><th>현재 OOS chunk record</th></tr></thead>
+        <tbody>
+          <tr><td>물리 주소 재사용</td><td>가능</td><td>가능</td></tr>
+          <tr><td>현재 레코드 안의 신원·가시성 정보</td><td class="yes">MVCC header 존재</td><td class="no">owner/generation 없음</td></tr>
+          <tr><td>삭제 전 “옛 대상이 맞나?” 확인</td><td class="yes">현재 MVCC 정보를 다시 검사 가능</td><td class="no">점유 여부만 검사 가능</td></tr>
+          <tr><td>재사용 슬롯 구분 근거</td><td>존재</td><td>부재</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      OOS 청크에 heap의 전체 MVCC header를 복사하자는 뜻은 아닙니다. OOS 삭제에 필요한 질문은 “이 주소의 현재 청크가 옛 참조가 가리킨 바로 그 세대인가?” 하나입니다.
+      generation은 그 질문에만 답하는 최소한의 신원 정보입니다.
+    </div>
+  </section>
+
+  <section id="solution">
+    <h2>7. generation 4바이트가 문제를 막는 원리</h2>
+    <h3>7.1 주소와 세대 번호를 함께 참조합니다</h3>
+    <div class="two-col">
+      <article class="card red">
+        <h3>현재: 16바이트</h3>
+        <div class="format">
+          <div class="oid">OID<br>8B</div>
+          <div class="length">length<br>8B</div>
+        </div>
+        <p>“5번 슬롯”만 알 수 있습니다. 그 슬롯의 몇 번째 점유자인지는 알 수 없습니다.</p>
+      </article>
+      <article class="card green">
+        <h3>제안: 20바이트</h3>
+        <div class="format">
+          <div class="oid">OID<br>8B</div>
+          <div class="length">length<br>8B</div>
+          <div class="gen">gen<br>4B</div>
+        </div>
+        <p>“5번 슬롯의 41번째 점유자”를 가리킵니다. 같은 주소의 42번째 점유자와 구분됩니다.</p>
+      </article>
+    </div>
+
+    <h3>7.2 숫자로 보는 삭제 판정</h3>
+    <div class="diagram">R1 생성 시
+  inline stub:  { OID=A, length=5000, generation=41 }
+  chunk header: { ..., generation=41 }
+
+R1의 옛 chain 삭제 후 R2가 같은 A를 재사용
+  R2 chunk:     { ..., generation=42 }
+  옛 undo stub: { OID=A, length=5000, generation=41 }  ← 불변
+
+vacuum 재처리 시
+  expected generation = 41
+  current  generation = 42
+  41 != 42 → 슬롯이 재사용됨 → 삭제하지 않고 성공 no-op</div>
+    <p>
+      이 비교는 첫 삭제가 아직 필요할 때는 방해하지 않습니다. 현재 청크가 정말 R1의 것이라면 두 값이 41로 같아 정상 삭제합니다.
+      이미 슬롯이 비었다면 기존처럼 no-op이고, 새 청크가 들어왔다면 generation 불일치로 no-op입니다.
+    </p>
+
+    <h3>7.3 generation은 어디서 만들고 어디에 저장하는가</h3>
+    <ol>
+      <li>OOS 페이지 헤더에 <code>uint32</code> generation counter를 둡니다.</li>
+      <li>청크를 insert할 때 이미 해당 페이지의 write latch를 잡은 상태에서 counter를 증가시킵니다.</li>
+      <li>발급된 값을 OOS chunk header에 저장합니다.</li>
+      <li>head 청크의 generation을 heap record의 inline stub에도 저장합니다.</li>
+      <li>UPDATE undo image는 inline stub을 그대로 보존하므로 옛 generation도 자동으로 보존됩니다.</li>
+      <li>vacuum은 head 삭제 진입 전에 expected generation과 current generation을 비교합니다.</li>
+    </ol>
+    <div class="callout danger">
+      <strong>필수 원자성 조건:</strong> generation을 별도 probe에서 확인한 뒤 latch를 놓고 나중에 삭제하면 안 됩니다.
+      확인과 삭제 사이에 슬롯이 다시 바뀌는 TOCTOU(Time Of Check To Time Of Use, “검사한 때와 사용한 때가 다른” 경쟁 조건)가 생길 수 있습니다.
+      head 청크의 generation 비교와 실제 head 삭제 진입은 같은 page write-latch 구간, 같은 삭제 연산 안에서 수행되어야 합니다.
+      즉, API의 의미도 단순한 <code>exists</code>가 아니라 <code>delete_if_generation_matches</code>여야 합니다.
+    </div>
+    <div class="callout good">
+      이 설계는 vacuum의 블록 재시도 정책, undo image 활용, 레코드 단위 sysop을 그대로 유지합니다.
+      고장 난 것은 재처리 자체가 아니라 재처리 때 대상의 신원을 확인할 방법이 없다는 점이므로, 확인 정보를 추가하는 것이 가장 국소적인 수정입니다.
+    </div>
+
+    <h3>7.4 이 문제는 전형적인 ABA 문제입니다</h3>
+    <p>
+      동시성 분야에서는 “처음 읽은 주소가 A였고, 중간에 없어졌다가 다른 객체가 같은 A를 차지했는데, 나중에 주소만 보고 처음과 같다고 오인하는 문제”를 ABA 문제라고 부릅니다.
+      현재 vacuum은 옛 OID A를 보관했다가 나중에도 A가 점유되어 있다는 이유로 같은 청크라고 오인합니다.
+      주소에 generation을 붙이는 tagged reference는 ABA를 막는 일반적인 방법입니다. 이 설계는 OOS만의 임시 예외가 아니라 알려진 문제에 맞는 표준적인 해법입니다.
+    </p>
+
+    <h3>7.5 왜 32비트면 충분한가</h3>
+    <p>
+      32비트 부호 없는 정수는 <code>0</code>부터 <code>2^32-1</code>, 즉 약 42억 9천만 개의 값을 가집니다.
+      옛 참조의 generation과 재사용된 새 청크의 generation이 우연히 다시 같아지려면, 그 옛 참조가 vacuum 재처리 대상으로 남아 있는 짧은 구간 동안
+      같은 페이지 counter가 한 바퀴를 모두 돌아야 합니다. 이는 같은 페이지에 약 43억 번의 청크 insert가 필요하다는 뜻입니다.
+    </p>
+    <p>
+      따라서 <code>uint32</code>는 무한히 충돌하지 않는 값은 아니지만, 이 결함의 재처리 시간 창에 대해 충분한 폭으로 판단합니다.
+      단, 이 계산은 generation namespace가 crash나 페이지 재할당 때문에 조기에 0으로 초기화되지 않는다는 전제가 필요합니다.
+    </p>
+
+    <h3>7.6 page-local counter가 지켜야 할 수명 규칙</h3>
+    <p>
+      현재 vacuum은 빈 OOS 페이지 안의 청크 슬롯만 지우며, 페이지 자체를 해제하지는 않습니다. 이 범위에서는 페이지 헤더 counter가 계속 남습니다.
+      그러나 후속 기능에서 빈 OOS 페이지를 해제하고 같은 VPID를 새 OOS 페이지로 재사용하면, counter를 작은 값으로 초기화하는 순간
+      <code>(OID, generation)</code> 쌍이 2<sup>32</sup>번을 기다리지 않고 다시 나타날 수 있습니다.
+    </p>
+    <div class="callout warning">
+      따라서 구현 계약에는 다음 중 하나와 동등한 보장이 필요합니다:
+      페이지 재할당 뒤에도 이전 generation namespace와 겹치지 않는 seed/epoch를 사용하거나, 파일 수준의 영속 high-water mark에서 발급하거나,
+      옛 참조가 존재할 수 있는 동안 동일 VPID의 generation을 초기화하지 않습니다.
+      정확한 발급 위치는 구현 설계에서 선택할 수 있지만, <strong>페이지 수명보다 짧은 counter 초기화는 허용할 수 없습니다.</strong>
+      이 조건은 향후 OOS 빈 페이지 회수 기능의 선행 조건입니다.
+    </div>
+  </section>
+
+  <section id="cost">
+    <h2>8. 수용해야 할 실제 비용과 그 크기</h2>
+    <p>
+      “참조에 4바이트 추가”가 전체 비용의 전부는 아닙니다. 의사결정에 필요한 비용을 숨기지 않고 세 부분으로 나누면 다음과 같습니다.
+    </p>
+    <div class="three-col">
+      <article class="card blue">
+        <span class="label">heap record</span>
+        <span class="big">stub마다 +4B</span>
+        OOS-backed attribute 하나마다 16B stub이 20B가 됩니다.
+      </article>
+      <article class="card blue">
+        <span class="label">OOS file</span>
+        <span class="big">청크마다 +4B</span>
+        <code>oos_record_header</code>가 16B에서 20B로 늘어납니다.
+      </article>
+      <article class="card blue">
+        <span class="label">OOS page</span>
+        <span class="big">페이지마다 +4B</span>
+        generation 발급용 <code>uint32</code> counter가 한 번 추가됩니다.
+      </article>
+    </div>
+
+    <h3>8.1 heap record 비용 예시</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>한 행의 OOS-backed attribute 수</th><th>현재 stub 합계</th><th>제안 stub 합계</th><th>추가 비용</th><th>4,060B target 대비</th></tr></thead>
+        <tbody>
+          <tr><td>1개</td><td>16B</td><td>20B</td><td><strong>+4B</strong></td><td>약 0.10%</td></tr>
+          <tr><td>4개</td><td>64B</td><td>80B</td><td><strong>+16B</strong></td><td>약 0.39%</td></tr>
+          <tr><td>10개</td><td>160B</td><td>200B</td><td><strong>+40B</strong></td><td>약 0.99%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      여기서 4,060바이트는 현재 16KB I/O 페이지 구조에서 계산되는 PG-style four-record heap target입니다.
+      stub이 20바이트가 되면 OOS로 내보내어 실제로 행 크기를 줄일 수 있는 값의 기준도 <code>&gt;16B</code>에서 <code>&gt;20B</code>로 함께 바뀌어야 합니다.
+    </p>
+
+    <h3>8.2 한 OOS 값의 총 추가 비용 공식</h3>
+    <div class="formula">한 OOS-backed attribute의 추가 비용
+  = heap inline stub 4B
+  + (그 값을 구성하는 chunk 수 × 4B)
+  + page counter 비용의 분담분
+
+예: 한 청크로 저장되는 값 1개
+  = heap 4B + OOS chunk 4B + page counter 분담분
+
+예: 세 청크로 저장되는 값 1개
+  = heap 4B + OOS chunks 12B + page counter 분담분</div>
+    <p>
+      큰 청크 하나의 4바이트는 16KB 페이지 규모와 비교하면 약 0.025%입니다. 실제 데이터베이스 전체 추가 비율은
+      OOS-backed attribute 수, 값별 청크 수, 페이지 채움 정도에 따라 달라지므로 하나의 고정 백분율로 말할 수 없습니다.
+      다만 OOS는 원래 큰 값을 대상으로 하므로 청크 payload에 대한 4바이트 비율은 작고, 위 공식으로 운영 패턴별 상한을 계산할 수 있습니다.
+    </p>
+
+    <h3>8.3 왜 8바이트 length를 줄여 공간을 만들면 안 되는가</h3>
+    <p>
+      현재 stub의 full length는 8바이트 <code>DB_BIGINT</code>입니다. 향후 <code>RECDES.length</code>도 64비트로 확장할 계획이므로,
+      length를 4바이트로 줄이고 남은 4바이트에 generation을 넣는 방식은 미래의 큰 레코드 표현 범위를 스스로 막습니다.
+    </p>
+    <div class="callout danger">
+      length 상위 비트를 generation으로 겹쳐 쓰는 방법도 채택하면 안 됩니다. 한 필드에 크기와 신원이라는 서로 다른 의미를 섞으면
+      최대 길이, 부호 처리, 직렬화, 복구, 호환성 해석이 모두 결합됩니다. 64비트 length 요구를 온전히 보존하려면 generation은 독립 4바이트여야 합니다.
+    </div>
+
+    <h3>8.4 왜 20바이트이고 24바이트가 아닌가</h3>
+    <p>
+      단순한 8바이트 정렬을 위해 4바이트 padding을 추가하면 OOS-backed attribute마다 비용이 다시 늘어납니다.
+      variable area 안의 stub 시작 오프셋 자체가 항상 8바이트 경계라는 보장이 없으므로, 전체 크기를 24바이트로 만든다고 내부 필드 정렬까지 보장되는 것도 아닙니다.
+      따라서 포맷은 20바이트로 유지하고 reader가 기존 방식대로 안전하게 값을 읽어야 합니다.
+    </p>
+  </section>
+
+  <section id="alternatives">
+    <h2>9. 기존 정보 조합과 다른 대안이 충분하지 않은 이유</h2>
+    <h3>9.1 recdes의 기존 필드로 generation을 계산할 수 없는 이유</h3>
+    <p>
+      hash나 조합식은 입력에 없던 신원을 새로 만들어 내지 못합니다. 안전하려면 “한 OOS head가 생성될 때마다 달라지고, undo image와 청크가 함께 기억하는 값”이 필요합니다.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>후보</th><th>쉬운 설명</th><th>실패하는 구체적 이유</th><th>판정</th></tr></thead>
+        <tbody>
+          <tr><td><code>insert MVCCID</code></td><td>행을 만든 트랜잭션 번호</td><td>한 트랜잭션에서 여러 OOS chain을 만들 수 있어 고유하지 않습니다. vacuum 시점에는 heap의 insert ID가 제거되었을 수도 있습니다.</td><td class="no">부적합</td></tr>
+          <tr><td><code>delete MVCCID</code></td><td>행을 죽인 트랜잭션 번호</td><td>OOS chain을 생성할 때는 아직 존재하지 않습니다. 나중에 UPDATE/DELETE할 때 옛 청크를 찾아 다시 써야 합니다.</td><td class="no">시점 불일치</td></tr>
+          <tr><td><code>prev_version_lsa</code></td><td>이전 행 버전 로그의 위치</td><td>OOS insert가 끝난 뒤 heap 로그를 쓸 때 결정됩니다. 생성 시점의 청크 헤더에 바로 넣을 수 없고, vacuum이 정보를 제거할 수도 있습니다.</td><td class="no">backfill 필요</td></tr>
+          <tr><td>CHN</td><td>캐시 일관성용 변경 번호</td><td>행·버전·트랜잭션 사이에서 반복될 수 있으며 OOS 슬롯 점유 세대를 뜻하지 않습니다.</td><td class="no">의미 불일치</td></tr>
+          <tr><td>OID + length</td><td>주소와 값 길이 조합</td><td>같은 슬롯에 같은 길이의 새 값이 들어오면 두 입력이 완전히 같습니다.</td><td class="no">결정적 충돌</td></tr>
+          <tr><td>기존 값의 hash</td><td>여러 필드를 짧은 숫자로 압축</td><td>같은 입력은 같은 hash를 만들고, 다른 입력도 확률적으로 충돌합니다. 없는 세대 정보를 만들지 못합니다.</td><td class="no">해결 아님</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>9.2 구조를 바꾸는 대안과 비교</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>대안</th><th>장점처럼 보이는 점</th><th>실제 문제와 추가 비용</th><th>결론</th></tr></thead>
+        <tbody>
+          <tr><td><strong>4B generation</strong></td><td>기존 흐름을 유지하고 삭제 직전에 직접 신원을 비교</td><td>stub·청크당 4B, 페이지 counter, 경계값 갱신</td><td class="yes">제안</td></tr>
+          <tr><td>수정하지 않음</td><td>저장 공간과 개발 비용 0</td><td>도달 가능한 silent data loss를 그대로 출시하며, 사후 복구도 어렵습니다.</td><td class="no">제외</td></tr>
+          <tr><td>INTERRUPTED 블록의 OOS 삭제 생략</td><td>재처리를 피함</td><td>처음에 아직 지우지 못한 옛 chain까지 영구 누수시켜 vacuum 목적을 훼손합니다.</td><td class="no">제외</td></tr>
+          <tr><td>레코드별 vacuum 진행 상태 영속화</td><td>같은 삭제 요청을 다시 만들지 않음</td><td>삭제 sysop과 진행 기록을 원자적으로 묶어야 하며 vacuum data의 핵심 상태 모델을 바꿉니다.</td><td class="no">과도</td></tr>
+          <tr><td>블록 전체를 하나의 sysop으로 처리</td><td>블록 중간 commit을 없앰</td><td>블록 완료 표시와의 창이 남고, 긴 sysop·많은 로그·공간 재사용/undo 충돌 위험이 커집니다.</td><td class="no">과도</td></tr>
+          <tr><td>슬롯 재사용을 블록 완료까지 금지</td><td>stub 포맷 유지</td><td>빈 슬롯마다 어느 vacuum 블록을 기다리는지 추적해야 하고 bestspace·공간 회수 정책이 결합됩니다.</td><td class="no">운영 비용 큼</td></tr>
+          <tr><td>owner heap OID 저장</td><td>사람이 이해하기 쉬운 소유자 표시</td><td>OOS insert 시점에는 heap 슬롯 OID가 아직 없습니다. insert 순서 변경 또는 생성 뒤 모든 청크를 다시 채우는 작업(backfill)이 필요합니다.</td><td class="maybe">차선</td></tr>
+          <tr><td>OOS에 전체 MVCC header 추가</td><td>heap과 같은 가시성 검사 가능</td><td>delete ID backfill, OOS 버전 관리, vacuum 규칙까지 별도 MVCC 저장소 수준으로 확장됩니다.</td><td class="no">과잉 설계</td></tr>
+          <tr><td>record-level generation 한 개 공유</td><td>한 행의 여러 stub이 4B 하나를 공유</td><td>MVCC header와 variable-offset parser 전체에 OOS 전용 포맷을 결합하고, 개별 OOS 참조의 자기완결성이 사라집니다.</td><td class="no">복잡도 확산</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      4바이트를 없애는 대안은 비용을 없애지 않습니다. 그 비용을 vacuum 상태 저장, 슬롯 격리, 자주 실행되는 UPDATE 경로의 backfill 또는 전체 MVCC 관리로 옮깁니다.
+      generation은 문제의 경계인 “참조와 현재 청크의 동일성”에 비용을 직접 지불하므로 영향 범위가 가장 작습니다.
+    </div>
+  </section>
+
+  <section id="implementation">
+    <h2>10. 구현 시 지켜야 할 계약과 검증 계획</h2>
+    <p>
+      이 보고서는 설계 승인 문서이며 아직 구현 완료를 뜻하지 않습니다. 구현에서는 다음 항목이 함께 반영되어야 4바이트 추가가 실제 안전성으로 이어집니다.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>영역</th><th>필수 변경 또는 확인</th><th>완료 기준</th></tr></thead>
+        <tbody>
+          <tr><td>generation 발급</td><td>우선안은 page-local <code>uint32</code> counter. write latch 아래 증가하고 WAL/복구·wrap·페이지 재할당 규칙 정의</td><td>crash 또는 VPID 재사용 뒤에도 stale 참조가 살아 있는 동안 같은 <code>(OID,generation)</code> 조기 재발급 없음</td></tr>
+          <tr><td>청크 포맷</td><td><code>oos_record_header</code> 16B → 20B, generation 직렬화·역직렬화</td><td>모든 insert/read/delete/recovery 경로가 같은 레이아웃 사용</td></tr>
+          <tr><td>inline stub</td><td>OID 8B + full length 8B + generation 4B = 20B</td><td>heap 현재 버전과 undo image 모두 generation을 보존</td></tr>
+          <tr><td>삭제 판정</td><td>head 슬롯 점유뿐 아니라 expected/current generation 비교. 비교와 삭제를 같은 write-latch 구간에 수행</td><td>불일치는 성공적인 no-op, 일치는 정상 chain 삭제, probe/delete 사이 TOCTOU 없음</td></tr>
+          <tr><td>멀티청크</td><td>head 신원 검증 뒤에만 chain traversal 진입</td><td>재사용된 head가 가리키는 새 chain 전체를 따라가지 않음</td></tr>
+          <tr><td>크기 정책</td><td><code>OR_OOS_INLINE_SIZE</code> 20B, 수익성 조건 <code>&gt;20B</code></td><td>20B 이하 값을 OOS로 보내 행이 오히려 커지는 회귀 없음</td></tr>
+          <tr><td>복구</td><td><code>RVOOS_INSERT</code>/<code>RVOOS_DELETE</code> 전체 이미지에 새 필드 포함</td><td>commit 전 crash는 undo, commit 후 crash는 redo, generation 보존</td></tr>
+          <tr><td>replication</td><td>slave가 로컬 OID와 로컬 generation을 함께 발급</td><td>master/slave 번호가 달라도 각 로컬 stub/header 쌍이 일치하고 값이 같음</td></tr>
+          <tr><td>64비트 length</td><td>full length 8B 유지, generation과 비트 공유 금지</td><td>향후 <code>RECDES.length</code> 64비트 확장과 충돌 없음</td></tr>
+          <tr><td>포맷 시점</td><td>미출시 <code>feat/oos</code>에서 변경</td><td>출시된 구버전 OOS 파일 마이그레이션 부담이 생기기 전에 완료</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>10.1 반드시 필요한 결정적 회귀 테스트</h3>
+    <ol>
+      <li>테스트 빌드에서 vacuum의 1차 OOS 삭제 sysop commit 직후 worker를 멈추는 fault-injection 지점을 둡니다.</li>
+      <li>R1의 OOS-backed 행을 UPDATE하여 옛 OOS head를 vacuum 대상으로 만듭니다.</li>
+      <li>vacuum이 1차 삭제한 OID와 generation을 기록합니다.</li>
+      <li>worker가 멈춘 사이 R2를 insert하여 같은 물리 슬롯이 재사용되도록 유도하고, 새 generation이 달라졌음을 확인합니다.</li>
+      <li>worker를 재개하거나 서버를 강제 종료 후 재기동하여 같은 vacuum 블록을 재처리합니다.</li>
+      <li>vacuum이 generation 불일치로 삭제를 no-op 처리하고 R2의 값을 정확히 읽을 수 있음을 확인합니다.</li>
+    </ol>
+
+    <h3>10.2 테스트 행렬</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>시험</th><th>고정할 실행 순서</th><th>필수 결과</th></tr></thead>
+        <tbody>
+          <tr><td>단일 청크 재사용</td><td>delete commit → 같은 head 슬롯 재사용 → block retry</td><td>새 청크 보존, no-op 기록 또는 관측 가능</td></tr>
+          <tr><td>멀티청크 재사용</td><td>새 multi-chunk chain의 head가 옛 head 슬롯 재사용</td><td>chain traversal에 진입하지 않고 전체 값 보존</td></tr>
+          <tr><td>재사용 없음</td><td>같은 block retry, 슬롯은 비어 있음</td><td>기존처럼 안전한 no-op</td></tr>
+          <tr><td>정상 최초 삭제</td><td>expected와 current generation 일치</td><td>옛 chain 정상 회수, 공간 누수 없음</td></tr>
+          <tr><td>crash recovery</td><td>counter/청크/stub 변경 각 경계에서 crash</td><td>generation 쌍이 어긋난 영속 상태 없음</td></tr>
+          <tr><td>wrap 경계</td><td>테스트 훅으로 counter를 최대값 근처에 설정</td><td>정의된 wrap 정책대로 동작하고 즉시 재사용 충돌 없음</td></tr>
+          <tr><td>페이지 재할당</td><td>빈 페이지 해제 뒤 같은 VPID를 다시 OOS로 할당</td><td>counter 초기화 때문에 stale <code>(OID,generation)</code> 쌍이 조기 재등장하지 않음</td></tr>
+          <tr><td>replication</td><td>master/slave에서 별도 로컬 할당</td><td>OID·generation 숫자 동일성 대신 값과 로컬 참조 일관성 확인</td></tr>
+          <tr><td>크기 경계</td><td>20B와 21B 값, 여러 OOS-backed attribute</td><td>demotion 수익성 및 4,060B 경계 계산 정확</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>10.3 현재 소스에서 확인한 핵심 근거 위치</h3>
+    <p>
+      아래 줄 번호는 기술 검증 기준 커밋 <code>0ad6afc0f</code>에 대한 것입니다. 이후 소스가 바뀌면 줄 번호는 달라질 수 있으나,
+      검토해야 할 함수와 불변식은 같습니다.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>증명 대상</th><th>소스 근거</th><th>확인 내용</th></tr></thead>
+        <tbody>
+          <tr><td>forward-walk 독립 sysop</td><td><code>vacuum_oos.cpp:171,196</code></td><td>레코드별 OOS 삭제가 블록 완료 전 commit 가능</td></tr>
+          <tr><td>재처리와 진행 위치</td><td><code>vacuum.c:3764</code>, <code>3926</code>, <code>8357-8361</code></td><td><code>start_lsa</code> 미전진과 INTERRUPTED 블록 재장전</td></tr>
+          <tr><td>정확한 slotid 재사용</td><td><code>slotted_page.c:2093-2095</code>, <code>1284-1290</code></td><td>ANCHORED 삭제 슬롯과 낮은 빈 slotid 재사용</td></tr>
+          <tr><td>삭제 뒤 공간 재등록</td><td><code>oos_file.cpp:2189</code>, <code>912-961</code></td><td>빈 공간이 OOS bestspace insert 후보로 복귀</td></tr>
+          <tr><td>신원 없는 청크 헤더</td><td><code>oos_file.hpp:26-31</code></td><td>length, index, next OID만 있고 owner/generation 없음</td></tr>
+          <tr><td>점유 여부만 보는 probe</td><td><code>oos_file.cpp:2241-2244</code></td><td>slot fetch 성공이면 내용 확인 없이 true</td></tr>
+          <tr><td>현재 chain을 따라가는 삭제</td><td><code>oos_file.cpp:2171-2194</code></td><td>현재 head header의 next OID로 멀티청크 삭제 진행</td></tr>
+          <tr><td>상세 A–H 검증</td><td><a href="2026-07-31-CBRD-26950-vacuum-oos-slot-reuse-verification.md">별도 소스 검증 보고서</a></td><td>차단 불변식 후보와 반론을 현재 HEAD에서 전수 점검</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="questions">
+    <h2>11. 팀장 검토 예상 질문과 답변</h2>
+
+    <article class="question">
+      <h3>Q1. 이 문제가 정말 “반드시” 발생합니까?</h3>
+      <p>
+        모든 서버에서 기한 내 반드시 발생한다고 주장하지 않습니다. 정확한 주장은 <strong>A–G 실행 순서가 성립하면 현재 코드상 반드시 R2가 삭제된다</strong>는 것입니다.
+        각 단계는 정상 정책에서 도달 가능하고, 이를 금지하는 불변식이 없습니다. 발생률 수치가 필요한 경우 별도 장기 stress·fault-injection 측정이 필요하지만,
+        silent data loss를 수정할지 여부는 그 측정 전에도 판단할 수 있습니다.
+      </p>
+    </article>
+
+    <article class="question">
+      <h3>Q2. 슬롯이 정확히 같은 slotid로 그렇게 빨리 재사용됩니까?</h3>
+      <p>
+        가능합니다. OOS 페이지는 ANCHORED이며 삭제된 slotid를 재사용합니다. 삭제 뒤 페이지는 bestspace 후보로 다시 들어가고 insert는 빈 공간을 우선 활용합니다.
+        OID에는 별도 “재발급” 절차가 없습니다. 같은 물리 슬롯을 다시 채우는 순간 같은 OID가 재등장합니다. 재사용이 느리다는 불변식도, vacuum 블록 완료까지 막는 격리도 없습니다.
+      </p>
+    </article>
+
+    <article class="question">
+      <h3>Q3. 왜 vacuum은 이미 처리한 레코드 다음부터 재개하지 않습니까?</h3>
+      <p>
+        현재 진행 관리 단위가 개별 로그 레코드가 아니라 블록이기 때문입니다. 블록을 모두 끝내기 전에는 <code>start_lsa</code>를 세밀하게 전진시킨 영속 기록이 없습니다.
+        이 방식은 중단 시 누락을 피하기 위해 블록을 다시 읽는 보수적인 설계입니다. 이를 바꾸려면 각 삭제 sysop과 진행 포인터를 원자적으로 결합하는 vacuum 핵심 상태 변경이 필요합니다.
+      </p>
+    </article>
+
+    <article class="question">
+      <h3>Q4. OOS multi-chunk 삭제가 이미 sysop인데 왜 충분하지 않습니까?</h3>
+      <p>
+        sysop은 한 번 호출된 chain 삭제의 all-or-nothing만 보장합니다. 첫 호출은 R1을 정확히 지우고 commit됩니다.
+        두 번째 호출은 R2를 대상으로 하는 별개의 새 연산이며, 그것도 원자적으로 정확히 commit됩니다. 두 호출 사이의 대상 동일성을 확인하는 것이 generation의 책임입니다.
+      </p>
+    </article>
+
+    <article class="question">
+      <h3>Q5. 블록 전체를 sysop으로 묶으면 4바이트를 피할 수 있지 않습니까?</h3>
+      <p>
+        블록 sysop commit과 블록 완료 상태 영속화가 하나의 원자적 사건이 아니면 여전히 재처리 창이 남습니다. 또한 vacuum 블록은 많은 레코드와 페이지를 포함하므로
+        sysop이 매우 길어지고 로그·undo·페이지 노출 문제를 키웁니다. 대상 신원 부재를 해결하지 않고 실행 단위만 크게 만드는 방법입니다.
+      </p>
+    </article>
+
+    <article class="question">
+      <h3>Q6. page LSA나 recovery가 두 번째 삭제를 막아야 하지 않습니까?</h3>
+      <p>
+        두 번째 삭제는 같은 redo의 재적용이 아니라 복구 후 vacuum이 만드는 새 로그 연산입니다. page LSA는 이를 정상적인 새 변경으로 봅니다.
+        recovery는 로그 순서를 정확히 복원하지만, OID의 과거 소유자와 현재 소유자가 같은지는 알지 못합니다.
+      </p>
+    </article>
+
+    <article class="question">
+      <h3>Q7. heap도 재부팅 뒤 옛 OID를 다시 지울 수 있지 않습니까?</h3>
+      <p>
+        heap vacuum은 현재 record의 MVCC header를 다시 읽어 대상 버전인지 확인할 수 있습니다. 슬롯 주소는 같아도 현재 신원이 다르면 삭제하지 않을 근거가 있습니다.
+        OOS 청크에는 그에 해당하는 최소 신원 필드가 없어 주소 점유만 확인하는 것이 차이입니다.
+      </p>
+    </article>
+
+    <article class="question">
+      <h3>Q8. OOS에 전체 MVCC header를 넣는 편이 더 일관적이지 않습니까?</h3>
+      <p>
+        전체 MVCC는 insert ID, delete ID, 이전 버전 연결, visibility 규칙과 vacuum 관리까지 요구합니다. OOS chain은 각 heap-record version이 단독 소유하고 공유하지 않으므로,
+        이 문제에 필요한 것은 visibility 판단이 아니라 슬롯 incarnation 판단 하나입니다. 4바이트 generation이 더 작은 계약입니다.
+      </p>
+    </article>
+
+    <article class="question">
+      <h3>Q9. 값의 length까지 비교하면 충분하지 않습니까?</h3>
+      <p>
+        충분하지 않습니다. R1과 R2가 모두 5,000바이트이면 OID와 length가 모두 같습니다. 공격적 입력이 아니어도 컬럼 크기가 일정한 운영 패턴에서는 같은 길이가 흔합니다.
+        길이는 내용의 크기이지 점유자의 신원이 아닙니다.
+      </p>
+    </article>
+
+    <article class="question">
+      <h3>Q10. generation도 2<sup>32</sup>번 뒤에는 충돌하는데 완전한 해결입니까?</h3>
+      <p>
+        수학적으로 무한한 고유값은 아닙니다. 다만 위험한 옛 참조가 남아 있는 한 번의 vacuum 재처리 창 안에 같은 페이지가 약 43억 번의 청크 insert를 해야 wrap 충돌이 가능합니다.
+        이 시간 경계에서 <code>uint32</code>를 충분한 공학적 폭으로 선택한 것입니다. 구현에는 wrap 경계 테스트와 규칙을 포함해야 합니다.
+      </p>
+    </article>
+
+    <article class="question">
+      <h3>Q11. 참조만 4바이트 늘리면 됩니까?</h3>
+      <p>
+        아닙니다. 비교하려면 inline stub의 expected generation과 현재 OOS chunk header의 generation이 모두 필요합니다. 페이지 counter도 필요합니다.
+        따라서 정확한 비용은 stub당 +4B, 청크당 +4B, 페이지당 +4B입니다. 이 보고서는 세 비용을 모두 승인 범위에 포함합니다.
+      </p>
+    </article>
+
+    <article class="question">
+      <h3>Q12. 왜 출시 전에 지금 결정해야 합니까?</h3>
+      <p>
+        OOS는 아직 미출시 feature이므로 지금 포맷을 바꾸면 기존 고객 OOS 파일을 변환할 필요가 없습니다. 출시 뒤 16B와 20B 포맷을 바꾸면 버전 판별,
+        backup/restore 호환, rolling upgrade, 마이그레이션 정책이 추가됩니다. 지금의 명시적 4바이트 비용보다 출시 후 포맷 전환 비용이 훨씬 커집니다.
+      </p>
+    </article>
+
+    <article class="question">
+      <h3>Q13. generation을 먼저 검사하고 기존 <code>oos_delete</code>를 호출하면 충분합니까?</h3>
+      <p>
+        검사와 삭제가 서로 다른 latch 구간이면 충분하지 않습니다. 검사 직후 슬롯이 바뀌는 TOCTOU 경쟁이 남습니다.
+        generation 비교는 head를 실제 삭제하는 연산 안에 들어가야 하며, 비교가 끝난 때부터 head 삭제가 결정될 때까지 같은 page write latch가 유지되어야 합니다.
+      </p>
+    </article>
+
+    <article class="question">
+      <h3>Q14. inline stub에만 generation을 넣거나, 청크 헤더에만 넣으면 안 됩니까?</h3>
+      <p>
+        두 곳 모두 필요합니다. inline stub은 vacuum이 기대하는 “옛 점유자의 번호”를 undo image까지 전달하고, 청크 헤더는 “현재 점유자의 번호”를 제공합니다.
+        한쪽만 있으면 비교의 두 피연산자 중 하나가 없어 신원 일치를 판정할 수 없습니다.
+      </p>
+    </article>
+
+    <article class="question">
+      <h3>Q15. 빈 OOS 페이지가 해제되었다가 같은 pageid로 재할당되면 counter가 초기화되지 않습니까?</h3>
+      <p>
+        현재 vacuum 경로는 청크만 삭제하고 페이지 자체는 해제하지 않으므로 당장 그 초기화는 없습니다. 하지만 향후 빈 페이지 회수를 구현할 때는 반드시 해결해야 합니다.
+        같은 VPID에서 counter가 작은 값으로 초기화되면 32비트 wrap 안전성 설명이 무효가 됩니다. 따라서 페이지 재할당에도 겹치지 않는 seed/epoch 또는 파일 수준 high-water mark 같은
+        generation namespace 보존 규칙을 페이지 회수의 선행 조건으로 둡니다.
+      </p>
+    </article>
+
+    <article class="question">
+      <h3>Q16. JIRA Priority가 Minor인데 왜 저장 포맷까지 바꿔야 합니까?</h3>
+      <p>
+        JIRA Priority는 현재 일정·분류 메타데이터이며 안전성 증명이 아닙니다. 이 보고서는 priority를 임의로 변경하지 않고 Minor라고 정확히 기록합니다.
+        별도로 기술 영향은 살아있는 데이터의 무증상 삭제이고, 이를 막는 불변식이 없다는 사실을 평가합니다. 특히 미출시 기능은 고객 노출 전에 포맷을 바로잡을 수 있으므로,
+        현재 priority만으로 데이터 정확성 문제를 수용하는 것은 타당하지 않습니다.
+      </p>
+    </article>
+
+    <article class="question">
+      <h3>Q17. 기존 테스트가 모두 통과했다면 이 실행 순서가 현실적으로 불가능한 것 아닙니까?</h3>
+      <p>
+        아닙니다. 일반 SQL 테스트는 “1차 삭제 sysop commit 직후 worker 정지”와 “그 사이 정확한 슬롯 재사용”을 결정적으로 고정하지 못합니다.
+        테스트가 이 순서를 만들지 않았다는 사실은 차단 불변식이 있다는 증거가 아닙니다. 이 때문에 수정 검증에는 시간 순서를 통제하는 fault-injection이 필요합니다.
+      </p>
+    </article>
+
+    <article class="question">
+      <h3>Q18. inline stub은 head만 가리키는데 왜 모든 청크 헤더가 4바이트 늘어납니까?</h3>
+      <p>
+        현재 <code>oos_record_header</code>는 head와 non-head가 같은 고정 포맷을 사용합니다. head 여부에 따라 서로 다른 헤더를 만들면 파싱·복구·검증 분기가 늘고,
+        각 물리 청크가 재사용될 때의 신원도 표현하지 못합니다. 삭제 진입을 막는 데 가장 중요한 비교는 head generation이지만,
+        공통 청크 포맷의 자기 식별성과 향후 chain 무결성 검증을 위해 청크마다 같은 필드를 두는 비용을 명시적으로 계산했습니다.
+      </p>
+    </article>
+  </section>
+
+  <section class="approval" id="approval">
+    <h2>12. 최종 승인 요청</h2>
+    <p><strong>다음 항목을 하나의 설계 묶음으로 승인해 주시기를 요청합니다.</strong></p>
+    <ol>
+      <li>OOS inline stub에 generation 4바이트를 추가합니다: <strong>16B → 20B</strong>.</li>
+      <li>OOS chunk header에 generation 4바이트를 추가합니다: <strong>16B → 20B</strong>.</li>
+      <li>OOS 페이지에 generation 발급용 <code>uint32</code> counter를 추가합니다: <strong>페이지당 +4B</strong>. crash·wrap·페이지 재할당에도 namespace가 조기 재사용되지 않게 합니다.</li>
+      <li>vacuum 삭제는 같은 write-latch 구간에서 OID 점유 여부와 generation 일치를 확인하고, 불일치는 성공적인 no-op으로 처리합니다.</li>
+      <li>향후 64비트 <code>RECDES.length</code> 확장을 위해 full length 8바이트는 그대로 유지합니다.</li>
+      <li><code>OR_OOS_INLINE_SIZE</code>와 수익성 경계를 20바이트 기준으로 갱신합니다.</li>
+      <li>fault-injection으로 “1차 삭제 commit → 슬롯 재사용 → 블록 재처리”를 고정한 단일·멀티청크 회귀 테스트를 merge gate로 둡니다.</li>
+      <li>미출시 OOS 포맷에 호환성 부채가 생기기 전, <code>feat/oos</code> 머지·출시 전에 반영합니다.</li>
+    </ol>
+    <p>
+      이 결정은 “4바이트와 0바이트”의 비교가 아닙니다. <strong>지금 지불하는 작고 계산 가능한 저장 비용</strong>과
+      <strong>출시 뒤 발생할 수 있는 무증상 데이터 손실 및 포맷 마이그레이션 비용</strong>의 비교입니다.
+      현재 구조에서는 주소만으로 지연 삭제의 안전성을 증명할 수 없으므로, generation 비용을 수용하는 것이 타당합니다.
+    </p>
+  </section>
+
+  <footer class="footnotes">
+    <p><strong>문서 성격:</strong> CBRD-26950 설계 승인 검토 자료. generation 방안은 제안 상태이며 구현 완료를 의미하지 않습니다.</p>
+    <p>
+      <span class="source-tag">상세 기술 제안</span>
+      <a href="2026-07-31-CBRD-26950-generation-field-proposal.html">4B generation 필드 제안</a><br>
+      <span class="source-tag">소스 검증</span>
+      <a href="2026-07-31-CBRD-26950-vacuum-oos-slot-reuse-verification.md">증명 의무 A–H 및 차단 불변식 검증</a><br>
+      <span class="source-tag">이슈</span>
+      <a href="http://jira.cubrid.org/browse/CBRD-26950">JIRA CBRD-26950</a><br>
+      <span class="source-tag">규범 기준</span>
+      <code>/home/vimkim/gh/cubrid-oos-context/OOS-CONTEXT.md</code> (Last updated 2026-07-13)
+    </p>
+    <p>
+      JIRA 조회일 2026-08-03: Status Analysis, Priority Minor, Target guava.
+      기술 검증 보고서는 <code>origin/feat/oos</code> <code>0ad6afc0ff871f5aa6c002923868fc6527149ea0</code> 기준입니다.
+      실제 발생 빈도는 fault-injection 및 장기 stress 측정 전이므로 정량 수치를 주장하지 않습니다.
+    </p>
   </footer>
 </main>
 </body>
