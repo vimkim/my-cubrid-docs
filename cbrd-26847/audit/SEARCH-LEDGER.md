@@ -5,7 +5,7 @@
 ```text
 current source anchor: 6816023df4ed910687523ab4d34bf667ab32b9cd
 current phase: Phase 1·2 완료(merge 완료, freeze 스냅샷 생성) → Phase 3 closure pass 진행 중
-last completed inventory id: 전체 256행 merge 완료 (F-001..F-043, F-101..F-129, F-201..F-218, F-301..F-319, R-001..R-025/X-001..X-006, R-101..R-110/X-101..X-107, R-201..R-223/X-201..X-204, R-301..R-314/X-301..X-313, R-401..R-412/X-401..X-407, R-501..R-511/X-501..X-524)
+last completed inventory id: 전체 261행 closure 완료 (F-001..F-048, F-101..F-129, F-201..F-218, F-301..F-319, R-001..R-025/X-001..X-006, R-101..R-110/X-101..X-107, R-201..R-223/X-201..X-204, R-301..R-314/X-301..X-313, R-401..R-412/X-401..X-407, R-501..R-511/X-501..X-524)
 new symbols not yet expanded: (closure pass 1에서 검증 중 — fragments/*-notes.md의 new-symbol 목록)
 pending candidate count: 0 (10개 fragment 전부 pending=0 보고)
 open findings: FIND-01..FIND-12 (BUG 0, OVER_EXPAND 16 distinct 사이트, 재판정 1), FU-01..FU-05
@@ -96,7 +96,7 @@ included/excluded/duplicate/pending)은 `fragments/<ID>-notes.md`에 있으며, 
 - 교차 충돌 해소 1건: compactdb reinsert — offline(compactdb.c disk_update_instance→heap_update_logical,
   re-demote 없음, R-313)과 online(compactdb_sr.c:262 locator_attribute_info_force, re-demote함)은
   서로 다른 바이너리로 둘 다 사실. 직접 소스 확인으로 확정.
-- 최종 tally: 256행 = CORRECT 162 / EXCLUDED 64 / OVER_EXPAND 25 / FOLLOWUP 5, TBD 0, ID 중복 0,
+- 최종 tally: 261행 = CORRECT 167 / EXCLUDED 64 / OVER_EXPAND 25 / FOLLOWUP 5, TBD 0, ID 중복 0,
   전 행 19열.
 - 수정 전 스냅샷: `AUDIT-INVENTORY.freeze-6816023df.tsv`
 

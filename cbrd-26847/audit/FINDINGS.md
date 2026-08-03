@@ -6,7 +6,7 @@ source anchor: `6816023df4ed910687523ab4d34bf667ab32b9cd` (조사·판정 시점
 
 | 구분 | 수 |
 |---|---|
-| inventory 행 | 256 (forward 109, reverse 147) |
+| inventory 행 | 261 (forward 114, reverse 147) |
 | BUG (stub 노출 / physical 오염) | **0** |
 | OVER_EXPAND | 25행 → **16개 distinct source 사이트** |
 | FOLLOWUP (별도 이슈 필요) | 5행 → 후속 항목 FU-01~FU-05 |
