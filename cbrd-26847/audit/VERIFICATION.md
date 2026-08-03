@@ -14,3 +14,6 @@ source anchor (조사 시작): `6816023df4ed910687523ab4d34bf667ab32b9cd`
 - scanrange following/prior 변경 branch와 locator old-record fetch 두 지점: 동적 계측 없이 정적 소비 흐름 감사
 - CTP shell 사용자 관점 회귀: 1/1 통과
 - CTP SQL: 로컬 JDBC class 누락으로 case 실행 전에 중단되어 미검증; runner exit code를 성공으로 해석하지 않음
+- draft PR: https://github.com/CUBRID/cubrid/pull/7596 (`feat/oos`, exact head `89937d7bd`)
+- 전체 CI trigger: https://github.com/CUBRID/cubrid/pull/7596#issuecomment-5163050089
+  (`/run all`, current-head trigger 1건, 게시 시각 `2026-08-03T06:27:27Z`)

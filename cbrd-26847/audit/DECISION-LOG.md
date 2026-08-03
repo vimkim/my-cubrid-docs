@@ -898,3 +898,23 @@
   `vimkim/cubrid-oos-context`로 고쳤다.
 - 안전성: 휴면 non-NULL following 오류를 수정하지 않고, 이번 diff의 기존 `heap_scanrange_next` 동작만
   실제로 실행하는 test code를 추가했다. 독립 reviewer의 major 1건과 minor 2건을 모두 해소한다.
+
+## D-046 — exact-head publication and one-shot full CI trigger
+
+- 문서 게시: 상세 문서와 감사 로그 3개 파일만 docs commit `0039955`로 만들고 `origin/main`에 push했다.
+  별도로 수정돼 있던 CBRD-26950 HTML은 stage, commit, push 범위에서 제외했다.
+- source push: push 직전 `origin/feat/oos`를 다시 fetch했고 검증 때와 같은 `18f35d524`임을 확인했다.
+  fork에 같은 branch가 없고 remote head가 없음을 확인한 뒤, 승인된 `git push --no-verify` 예외를 이 push 한
+  번에만 사용했다. fork remote head는 local과 같은 `89937d7bdac3d928c06b077fb80f0e6a12985a12`다.
+- PR 게시: draft PR [#7596](https://github.com/CUBRID/cubrid/pull/7596)을
+  `CUBRID/CUBRID:feat/oos` <- `vimkim:CBRD-26847-oos-visible-version`으로 만들었다. GitHub가 보고한 head도
+  `89937d7bdac3d928c06b077fb80f0e6a12985a12`로 일치한다.
+- 중복 방지: 현재 head의 synchronize event가 없어 PR 생성 시각 `2026-08-03T06:26:33Z`를 boundary로
+  사용했다. 게시 직전 boundary 이후 `/run` comment 0개, `test_sql|test_medium|test_shell` check 0개를 두 번
+  확인했다.
+- CI trigger: bare [`/run all`](https://github.com/CUBRID/cubrid/pull/7596#issuecomment-5163050089)을
+  `2026-08-03T06:27:27Z`에 정확히 한 번 게시했다. 재조회에서 current-head `/run` comment가 이 한 건뿐임을
+  확인했다. SQL, medium, shell 전체 suite 요청이며 shell status 부재는 queue 부재로 해석하지 않는다.
+- 안전성: 로컬 dirty submodule·설정·debug 파일은 source commit/push에 포함되지 않았다. head 변경, 기존
+  trigger, active check가 하나라도 있었다면 comment를 게시하지 않는 fail-closed 조건을 적용했다.
+- 사용자 결정: 최종 material 확인 후 docs/source push, draft PR 생성, 전체 CI trigger를 승인 (2026-08-03)
