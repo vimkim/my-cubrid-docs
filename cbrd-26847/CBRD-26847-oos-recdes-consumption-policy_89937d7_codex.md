@@ -56,9 +56,40 @@ PR 기준 브랜치는 `feat/oos`다. 최종 source HEAD `89937d7bdac3d928c06b07
 scanrange following/prior의 변경 branch와 locator의 두 old-record fetch 지점을 각각 직접 주입해 계측하는
 테스트까지 제공한다는 뜻은 아니다. 이 지점들은 소비 흐름을 정적으로 감사했다.
 
-`heap_scanrange_to_following()`의 non-NULL `start_oid` branch에서 `last_oid`를 fetch하는 기존 결함은 현재 유일한
-production caller가 NULL을 전달해 휴면 상태이며, 이번 OOS 소비 정책 변경과 원인이 다르다. 검증된 변경에 별도
-동작 수정을 섞지 않고 후속 이슈로 분리했다.
+### non-NULL `start_oid` 결함이란?
+
+여기서 non-NULL `start_oid` 는 포인터가 `NULL` 이 아니고, 그 포인터가 가리키는 `OID` 도 `NULL_OID` 가 아닌
+경우다. 즉 caller가 "이 heap 객체부터 다음 scanrange를 만들어 달라"고 시작 객체를 명시하는 입력이다.
+
+`heap_scanrange_start()` 직후에는 `first_oid` 와 `last_oid` 가 모두 NULL이다. 이후
+`heap_scanrange_to_following(..., start_oid = valid_oid)`은 다음 순서로 동작한다.
+
+```text
+기대 동작
+  first_oid = valid_oid
+  heap_get_visible_version(first_oid)
+
+현재 동작
+  first_oid = valid_oid
+  heap_get_visible_version(last_oid)  // last_oid는 아직 NULL
+```
+
+즉, 요청받은 `start_oid` 를 `first_oid` 에 저장하고도 visibility fetch에는 다른 필드인 `last_oid` 를 전달한다.
+유효한 heap OID를 넘긴 lower-level 재현 테스트에서는 NULL OID가 `heap_prepare_object_page()`까지 전달되어
+debug assertion `!OID_ISNULL (oid)`이 발생했다. 함수 주석의 계약과 구현이 일치하지 않는 별도 결함이다.
+
+현재 repository의 유일한 production caller인 `scan_manager.c` 는 `start_oid = NULL`을 전달한다. 따라서 현재의
+일반 grouped heap scan은 잘못된 non-NULL branch를 실행하지 않는다. 여기서 "휴면 상태"란 결함이 없다는 뜻이
+아니라, 결함이 있는 branch를 현재 제품 호출자가 사용하지 않아 일반 경로에서 드러나지 않는다는 뜻이다.
+
+이 결함은 CBRD-26847의 OOS 소비 정책과 원인이 다르다. CBRD-26847은 fetch한 record body를 raw bytes로
+소비하는지에 따라 OOS Expand 여부를 정하는 변경이고, 이 결함은 fetch 대상 OID 자체를 잘못 선택하는 문제다.
+또한 단순히 `last_oid` 를 `first_oid` 로 바꾸기 전에 삭제됐거나 현재 snapshot에서 보이지 않는 시작 객체를
+어떻게 처리할지 별도 계약 합의와 회귀 테스트가 필요하다. 그래서 검증된 OOS 변경에 동작 수정을 섞지 않았다.
+
+"후속 이슈로 분리했다"는 말은 실제 JIRA 이슈가 이미 생성됐다는 뜻이 아니다. 재현 결과와 AS-IS/TO-BE를
+별도 JIRA 등록용 초안 `heap-scanrange-following-nonnull-start-oid_ab42c48_codex.md`로 작성해 둔 상태이며,
+아직 JIRA key가 발급된 정식 이슈로 등록되지는 않았다.
 
 SQL 문법, 저장 형식, WAL 형식, 외부 API는 바뀌지 않는다. PR 게시 뒤에는 exact-head를 다시 확인하고 기존
 `/run` 요청이 없는 경우에만 `/run all`을 한 번 게시해 SQL, medium, shell CI를 실행한다.

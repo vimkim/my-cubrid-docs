@@ -843,6 +843,7 @@
   다시 빌드해 committed state와 local binary를 일치시켰다.
 - 후속 자료:
   `/home/vimkim/gh/my-cubrid-jira/issues/heap-scanrange-following-nonnull-start-oid_ab42c48_codex.md`
+- 후속 상태: 위 파일은 JIRA 등록용 로컬 초안이다. 아직 JIRA key가 발급된 정식 이슈를 생성한 상태는 아니다.
 - 사용자 결정: CBRD-26847 완료 뒤 별도 후속 이슈 자료로 순서대로 분리하도록 승인 (2026-08-03)
 
 ## D-042 — PR base and latest OOS integration
@@ -918,3 +919,16 @@
 - 안전성: 로컬 dirty submodule·설정·debug 파일은 source commit/push에 포함되지 않았다. head 변경, 기존
   trigger, active check가 하나라도 있었다면 comment를 게시하지 않는 fail-closed 조건을 적용했다.
 - 사용자 결정: 최종 material 확인 후 docs/source push, draft PR 생성, 전체 CI trigger를 승인 (2026-08-03)
+
+## D-047 — non-NULL scanrange follow-up wording clarification
+
+- 문제: 상세 문서의 "휴면 상태", "원인이 다르다", "후속 이슈로 분리했다"는 표현만으로는 실제 코드 결함,
+  현재 영향 범위, JIRA 등록 상태를 알기 어렵다.
+- 정확한 설명:
+  - non-NULL `start_oid` 는 명시적인 유효 heap OID에서 range를 시작하라는 입력이다.
+  - 구현은 `first_oid = *start_oid` 뒤에도 아직 NULL인 `last_oid` 를 visibility fetch 대상으로 사용한다.
+  - 현재 유일한 product caller는 `start_oid = NULL`을 전달하므로 결함 branch를 사용하지 않는다.
+  - OOS policy는 fetched body의 소비 방법 문제이고, 이 결함은 fetch 대상 OID 선택 문제이므로 원인이 다르다.
+  - "후속 이슈"는 정식 JIRA 생성 완료가 아니라 재현·AS-IS/TO-BE를 담은 등록용 초안 작성 상태다.
+- 안전성: source나 PR 동작은 바꾸지 않고 이미 재현·감사한 사실의 의미만 상세 문서와 감사 로그에 명시한다.
+- 사용자 결정: 해당 문장의 의미를 my-cubrid-docs에 명시하도록 요청 (2026-08-03)
