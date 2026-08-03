@@ -87,9 +87,10 @@ debug assertion `!OID_ISNULL (oid)`이 발생했다. 함수 주석의 계약과 
 또한 단순히 `last_oid` 를 `first_oid` 로 바꾸기 전에 삭제됐거나 현재 snapshot에서 보이지 않는 시작 객체를
 어떻게 처리할지 별도 계약 합의와 회귀 테스트가 필요하다. 그래서 검증된 OOS 변경에 동작 수정을 섞지 않았다.
 
-"후속 이슈로 분리했다"는 말은 실제 JIRA 이슈가 이미 생성됐다는 뜻이 아니다. 재현 결과와 AS-IS/TO-BE를
-별도 JIRA 등록용 초안 `heap-scanrange-following-nonnull-start-oid_ab42c48_codex.md`로 작성해 둔 상태이며,
-아직 JIRA key가 발급된 정식 이슈로 등록되지는 않았다.
+이 결함은 정식 후속 이슈 [CBRD-27156](http://jira.cubrid.org/browse/CBRD-27156)으로 등록했다. 이슈에는
+AS-IS/TO-BE와 develop 코드에서 직접 확인되는 변수 선택 실수를 독립적으로 설명했다. develop 실행 테스트는
+아직 수행하지 않았다고 명시하고, 복사해 실행할 수 있는 정적 코드 확인 명령만 기록했다. 로컬 원본은
+`my-cubrid-jira/issues/CBRD-27156-heap-scanrange-following-nonnull-start-oid_a74fdf2_codex.md`다.
 
 SQL 문법, 저장 형식, WAL 형식, 외부 API는 바뀌지 않는다. PR 게시 뒤에는 exact-head를 다시 확인하고 기존
 `/run` 요청이 없는 경우에만 `/run all`을 한 번 게시해 SQL, medium, shell CI를 실행한다.

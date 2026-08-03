@@ -842,8 +842,9 @@
   검증한 CBRD-26847 patch에 동작 수정을 섞지 않는다. 재현용 임시 테스트는 결과 확인 후 제거했고 source를
   다시 빌드해 committed state와 local binary를 일치시켰다.
 - 후속 자료:
-  `/home/vimkim/gh/my-cubrid-jira/issues/heap-scanrange-following-nonnull-start-oid_ab42c48_codex.md`
-- 후속 상태: 위 파일은 JIRA 등록용 로컬 초안이다. 아직 JIRA key가 발급된 정식 이슈를 생성한 상태는 아니다.
+  `/home/vimkim/gh/my-cubrid-jira/issues/CBRD-27156-heap-scanrange-following-nonnull-start-oid_a74fdf2_codex.md`
+- 후속 상태: 2026-08-03에 정식 Correct Error [CBRD-27156](http://jira.cubrid.org/browse/CBRD-27156)으로
+  등록했다.
 - 사용자 결정: CBRD-26847 완료 뒤 별도 후속 이슈 자료로 순서대로 분리하도록 승인 (2026-08-03)
 
 ## D-042 — PR base and latest OOS integration
@@ -929,6 +930,71 @@
   - 구현은 `first_oid = *start_oid` 뒤에도 아직 NULL인 `last_oid` 를 visibility fetch 대상으로 사용한다.
   - 현재 유일한 product caller는 `start_oid = NULL`을 전달하므로 결함 branch를 사용하지 않는다.
   - OOS policy는 fetched body의 소비 방법 문제이고, 이 결함은 fetch 대상 OID 선택 문제이므로 원인이 다르다.
-  - "후속 이슈"는 정식 JIRA 생성 완료가 아니라 재현·AS-IS/TO-BE를 담은 등록용 초안 작성 상태다.
+  - 당시 "후속 이슈"는 정식 JIRA 생성 완료가 아니라 재현·AS-IS/TO-BE를 담은 등록용 초안 작성 상태였다.
 - 안전성: source나 PR 동작은 바꾸지 않고 이미 재현·감사한 사실의 의미만 상세 문서와 감사 로그에 명시한다.
 - 사용자 결정: 해당 문장의 의미를 my-cubrid-docs에 명시하도록 요청 (2026-08-03)
+
+## D-048 — non-NULL scanrange follow-up JIRA registration
+
+- 정확한 결정: develop에 남아 있는 `heap_scanrange_to_following()`의 non-NULL `start_oid` 결함을 별도
+  Correct Error [CBRD-27156](http://jira.cubrid.org/browse/CBRD-27156)에 등록한다. CBRD-26847 source 변경에는
+  섞지 않는다.
+- 등록 내용 선택과 근거:
+  - 유형은 기존 이슈의 `Correct Error`, 우선순위는 `Minor`를 유지했다. 현재 develop 소스 트리에서 확인되는
+    유일한 직접 제품 호출자는 `start_oid = NULL`을 전달하지만, 직접 API 재현에서 debug assertion을 확인한
+    잠복 계약 위반이기 때문이다.
+  - 제목은 임시 `(작성 예정) scanrange 코드 실수 추정`에서 결함 대상을 명시하는
+    `[HEAP] heap_scanrange_to_following이 non-NULL start_oid 대신 NULL OID를 조회함`으로 바꿨다.
+  - 설명에는 local develop `a74fdf2`, 최신 `origin/develop` `8b870bb`, 직접 재현 commit `ab42c48`을 구분해
+    기록했다. release 동작과 삭제·비가시 시작 객체 처리 규칙은 확인·합의되지 않아 각각 미검증/TBD로 남겼다.
+- 등록 전 감사:
+  - JIRA 중복 검색은 `heap_scanrange_to_following`, `scanrange`, `start_oid` 세 범위로 수행했고 동일 결함은
+    찾지 못했다.
+  - 독립 reviewer가 실행 가능한 재현, Correct Error 섹션, 정보 중복, 사실성, TBD 경계를 검토했다. 최초
+    REVISE에서 Summary 누락, 실행 명령 누락, section ownership 중복, release 과장을 수정한 뒤 최종
+    `APPROVE`를 받았다.
+- JIRA 도구 실행 기록:
+  - 신규 생성 시도 3회는 각각 생성 화면의 priority 미지원, 필수 QA Scenario 누락, 선택형 QA Scenario에
+    자유 텍스트 전달로 HTTP 400을 반환했다. 모두 create 전 validation 실패이므로 신규 이슈나 중복 이슈는
+    생성되지 않았다.
+  - 사용자가 이미 만든 CBRD-27156을 지정한 뒤, dry-run에서 변경 필드가 `summary`, `description` 두 개뿐임을
+    확인하고 PUT을 실행했다. assignee, priority, component, QA Scenario는 변경하지 않았다.
+  - 서버 재조회에서 제목, 전체 본문, `Open / Correct Error / Minor`, assignee `vimkim`이 반영된 것을 확인했다.
+- 로컬 원본:
+  `/home/vimkim/gh/my-cubrid-jira/issues/CBRD-27156-heap-scanrange-following-nonnull-start-oid_a74fdf2_codex.md`
+- 사용자 결정: 생성해 둔 CBRD-27156에 감사 승인된 내용을 작성하도록 지정 (2026-08-03)
+
+## D-049 — CBRD-27156 standalone plain-language rewrite
+
+- 사용자 요청: CBRD-27156에서 OOS 관련 내용을 모두 빼고, 배경지식이 없는 독자도 코드 실수인지 이해할 수
+  있도록 친절하게 다시 작성한다.
+- 정확한 결정:
+  - 제목을 `[HEAP] 지정한 시작 주소 대신 빈 주소를 조회하는 코드 오류`로 바꾼다.
+  - 객체, 변수, 함수, OID, NULL OID, scanrange를 처음 등장할 때 일상어로 설명한다.
+  - 원인은 “시작 주소를 `first_oid`에 저장한 직후, 조회에는 아직 빈 `last_oid`를 넘긴 변수 선택 실수”로
+    한정하고 A/B 주소 칸 비유와 네 줄의 develop 코드 흐름으로 설명한다.
+  - 삭제됐거나 현재 읽기 시점에 보이지 않는 객체의 처리 규칙은 합의되지 않았으므로 TBD를 유지한다.
+- 제거한 내용과 이유:
+  - 이전 실행 빌드 `11.5.0.2461`, assertion 위치 `heap_file.c:26763`, 이전 작업 commit과 테스트 파일을 모두
+    삭제했다. 이 자료는 develop 자체에서 실행한 결과가 아니므로, 이름만 가린 채 develop 근거처럼 남기면
+    출처가 잘못된다.
+  - 정의되지 않은 변수가 포함된 C++ 테스트 조각도 삭제했다. 그대로 복사해 실행할 수 없으므로 Repro라고
+    부를 수 없기 때문이다.
+  - 실제 배포용 서버가 종료된다는 표현을 삭제했다. develop release build의 실행 영향은 확인하지 않았다.
+- 남긴 검증 근거:
+  - local develop `a74fdf2`의 `heap_file.c:8235`에서 `first_oid`를 NULL로 만들고 `:8237`에서 그 값을
+    `last_oid`에 복사한다.
+  - `:8313`에서 유효한 `start_oid`를 `first_oid`에 저장하지만, `:8314`의 조회에는 `last_oid`를 전달한다.
+  - 현재 직접 호출은 `scan_manager.c:5053` 한 곳이며 `start_oid = NULL`을 전달한다.
+  - 최신 `origin/develop` `8b870bb`에도 같은 코드가 있다. develop 실행 테스트는 수행하지 않았다고 이슈에
+    명시했다.
+- 독립 감사:
+  - 1차 REVISE에서 develop과 맞지 않는 실행 로그, 실행 불가능한 Repro, release 영향 과장, 선행 설명 없는
+    내부 용어, 중복 사실을 지적받았다.
+  - 전면 개정 뒤 develop line evidence, 정적 Repro, 용어표, Layer Ownership, 자연스러운 한국어를 다시
+    검사해 최종 `APPROVE`를 받았다.
+  - JIRA dry-run과 서버 재조회에서 `OOS`, `Out-of-row`, `CBRD-26847`, `RECDES`, 이전 commit·빌드·로그
+    식별자가 0건임을 확인했다. `just` 명령과 non-BMP 문자도 0건이다.
+- JIRA 반영: `summary`, `description` 두 필드만 갱신했다. 상태 `Open`, 유형 `Correct Error`, 우선순위
+  `Minor`, 담당자 `vimkim`은 유지했다.
+- 사용자 결정: 쉬운 말로 전면 재작성하고 관련 없는 프로젝트 맥락을 모두 제거하도록 요청 (2026-08-03)
