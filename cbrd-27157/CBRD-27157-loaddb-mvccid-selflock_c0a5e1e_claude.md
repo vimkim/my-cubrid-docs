@@ -1,6 +1,6 @@
-# [CBRD-00001] Skip MVCCID self-lock on loaddb worker threads (PoC)
+# [CBRD-27157] loaddb 워커 MVCCID self-lock 회귀 수정 (초기 PoC: self-lock 스킵 -> 개정: uniform self-lock)
 
-> PoC 문서입니다. CBRD-00001 은 자리표시용 티켓 번호이며, 정식 JIRA 이슈 발제 전 CI 검증용 draft PR 의 상세 설명으로 작성되었습니다.
+> PoC 문서입니다. 원래 자리표시 티켓 CBRD-00001 로 작성되었고, 정식 티켓 CBRD-27157 발제 후 이관되었다. CI 검증용 draft PR 의 상세 설명으로 작성되었습니다.
 > 분석 대상 커밋: `feat/oos` 헤드 `0ad6afc0f` (2026-07-30 develop 머지), 수정 커밋: `c0a5e1ee8`.
 
 ## Purpose
@@ -61,7 +61,7 @@ cubload::server_object_loader::finish_line
 - 리뷰 포인트: `logtb_acquire_mvccid_self_lock` 의 가드 순서(기존 가드 → NULL 정규화 → TT_LOADDB 가드 → 락 획득)와, 위 "안전 근거와 한계" 서술이 실제 코드 사실과 일치하는지.
 - release 빌드에서는 assert 가 컴파일 아웃되어 크래시하지 않을 것으로 추정되나 검증하지 않았습니다. 실질 영향 범위는 debug/optdebug (assert 활성 최적화 빌드) 빌드, 즉 QA/CI 입니다.
 - 이 수정은 `feat/oos` 헤드의 test_shell 실패 19건(CircleCI job 142161 기준) 중 3건(`cbrd_25481`, `loaddb_CS/itrack_10006`, `loaddb_CS/bug_xdbms_sus880`)을 해소합니다.
-- 정식 JIRA 이슈 발제 시 티켓 번호 교체, 커밋 메시지 갱신, 그리고 위 한계 항목의 INSID 스탬프 debug assert 추가 및 코드 주석 재정비가 필요합니다 (현재 CBRD-00001 은 자리표시).
+- 정식 티켓 CBRD-27157 발제 완료 (2026-08-03). 커밋 메시지의 티켓 번호 교체는 CI 완료 후 amend 예정. (스킵 방식의 "INSID 스탬프 debug assert" 항목은 uniform 개정으로 불필요해짐 — 하단 Revision 절 참고.)
 
 ### Test Plan
 
