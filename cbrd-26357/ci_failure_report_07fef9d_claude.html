@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat/oos CI 실패 분석 — PR #6864 @ 07fef9d</title>
+<style>
+:root {
+  --bg: #ffffff; --fg: #1a1d21; --muted: #5c6570; --border: #d9dee3;
+  --surface: #f6f8fa; --surface2: #eef1f4;
+  --accent: #0b62c4; --accent-soft: #e3effb;
+  --red: #b42318; --red-soft: #fdecea;
+  --amber: #92400e; --amber-soft: #fdf3e0;
+  --purple: #6d28d9; --purple-soft: #f1eafd;
+  --gray: #4b5563; --gray-soft: #eceef1;
+  --green: #05603a; --green-soft: #e3f5ec;
+  --code-bg: #f0f2f5;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171b; --fg: #e6e9ec; --muted: #9aa4af; --border: #333a42;
+    --surface: #1c2127; --surface2: #232931;
+    --accent: #5aa2e8; --accent-soft: #16283c;
+    --red: #f28b82; --red-soft: #3a201d;
+    --amber: #f5c26b; --amber-soft: #3a2c14;
+    --purple: #c4a5f5; --purple-soft: #2c2140;
+    --gray: #aab3bd; --gray-soft: #262c33;
+    --green: #7ed4a8; --green-soft: #16311f;
+    --code-bg: #22272e;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14171b; --fg: #e6e9ec; --muted: #9aa4af; --border: #333a42;
+  --surface: #1c2127; --surface2: #232931;
+  --accent: #5aa2e8; --accent-soft: #16283c;
+  --red: #f28b82; --red-soft: #3a201d;
+  --amber: #f5c26b; --amber-soft: #3a2c14;
+  --purple: #c4a5f5; --purple-soft: #2c2140;
+  --gray: #aab3bd; --gray-soft: #262c33;
+  --green: #7ed4a8; --green-soft: #16311f;
+  --code-bg: #22272e;
+}
+:root[data-theme="light"] {
+  --bg: #ffffff; --fg: #1a1d21; --muted: #5c6570; --border: #d9dee3;
+  --surface: #f6f8fa; --surface2: #eef1f4;
+  --accent: #0b62c4; --accent-soft: #e3effb;
+  --red: #b42318; --red-soft: #fdecea;
+  --amber: #92400e; --amber-soft: #fdf3e0;
+  --purple: #6d28d9; --purple-soft: #f1eafd;
+  --gray: #4b5563; --gray-soft: #eceef1;
+  --green: #05603a; --green-soft: #e3f5ec;
+  --code-bg: #f0f2f5;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.65; font-size: 15px;
+}
+.wrap { max-width: 980px; margin: 0 auto; padding: 40px 24px 80px; }
+h1 { font-size: 1.55rem; line-height: 1.35; margin: 0 0 6px; }
+h2 { font-size: 1.22rem; margin: 44px 0 12px; padding-bottom: 6px; border-bottom: 2px solid var(--border); }
+h3 { font-size: 1.05rem; margin: 28px 0 8px; }
+h4 { font-size: 0.95rem; margin: 20px 0 6px; color: var(--muted); text-transform: none; }
+p { margin: 10px 0; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code, pre {
+  font-family: "JetBrains Mono", "D2Coding", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.86em;
+}
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+pre {
+  background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 14px; overflow-x: auto; line-height: 1.5; margin: 10px 0;
+}
+pre code { background: none; padding: 0; }
+.meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 4px; }
+.meta code { font-size: 0.85em; }
+table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 0.92rem; }
+.tablewrap { overflow-x: auto; }
+th, td { border: 1px solid var(--border); padding: 7px 10px; text-align: left; vertical-align: top; }
+th { background: var(--surface2); font-weight: 600; white-space: nowrap; }
+tr:nth-child(even) td { background: var(--surface); }
+.badge {
+  display: inline-block; padding: 1px 9px; border-radius: 999px;
+  font-size: 0.78rem; font-weight: 600; white-space: nowrap;
+}
+.b-crash  { background: var(--red-soft);    color: var(--red); }
+.b-tc     { background: var(--amber-soft);  color: var(--amber); }
+.b-open   { background: var(--purple-soft); color: var(--purple); }
+.b-skip   { background: var(--gray-soft);   color: var(--gray); }
+.b-ok     { background: var(--green-soft);  color: var(--green); }
+.b-info   { background: var(--accent-soft); color: var(--accent); }
+.callout {
+  border-left: 4px solid var(--accent); background: var(--surface);
+  border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 16px 0;
+}
+.callout.warn { border-left-color: var(--red); }
+.callout.note { border-left-color: var(--amber); }
+.callout.open { border-left-color: var(--purple); }
+.callout > :first-child { margin-top: 0; }
+.callout > :last-child { margin-bottom: 0; }
+.tc-card {
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 20px 22px; margin: 22px 0; background: var(--bg);
+}
+.tc-card h3 { margin-top: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.tc-path { color: var(--muted); font-size: 0.82rem; word-break: break-all; margin: -4px 0 12px; }
+.kv { display: grid; grid-template-columns: 110px 1fr; gap: 4px 14px; margin: 10px 0; font-size: 0.92rem; }
+.kv dt { color: var(--muted); font-weight: 600; }
+.kv dd { margin: 0; }
+details { margin: 10px 0; }
+summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: 0.92rem; }
+.ev { font-weight: 700; font-size: 0.8rem; letter-spacing: 0.02em; }
+.ev.obs { color: var(--green); }
+.ev.inf { color: var(--amber); }
+.ev.unk { color: var(--purple); }
+ul, ol { padding-left: 22px; }
+li { margin: 4px 0; }
+.small { font-size: 0.85rem; color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+.toc { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 20px; font-size: 0.92rem; }
+.toc ol { margin: 6px 0; }
+.legend span { margin-right: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>feat/oos CI 실패 분석 보고서</h1>
+<p class="meta">PR <a href="https://github.com/CUBRID/cubrid/pull/6864">#6864</a> ( develop ← feat/oos CircleCI tracking ) · 분석 커밋 <code>07fef9d48b4776e60c42e8afa25b9f21c54b8226</code> (origin/develop 머지 직후 head)</p>
+<p class="meta">수집: 2026-08-05 01:20Z, <code>cubrid-ci 0.1.0</code> · 증거 번들: <code>~/gh/cubrid-circleci-analyzer/data/CBRD-26357/07fef9d</code> · 작성: Claude (Fable 5), 2026-08-05 · 영문 원본: <code>ci_analysis_report_07fef9d_claude.md</code></p>
+
+<h2 id="summary">요약 (TL;DR)</h2>
+
+<div class="callout warn">
+<p><strong>bigPageSize 는 현재 ORDER BY 문제로 실패하는 것이 아니다.</strong>
+지금은 <code>loaddb -C</code> 가 exit 254 로 죽고 (object 0 건 적재), 그 시각에 <code>cub_server</code> 코어덤프가 남는다.
+스크립트의 <code>if [ $? -eq 0 ]</code> 가드 때문에 <strong>ORDER BY 비교 쿼리는 아예 실행조차 되지 않는다.</strong>
+원인은 CBRD-27157 (loaddb 워커의 MVCCID self-lock assert) — 다른 loaddb 실패들과 같은 뿌리이며, draft PR <a href="https://github.com/CUBRID/cubrid/pull/7588">#7588</a> 이 고친다.</p>
+</div>
+
+<ul>
+  <li><strong>“order by 문제” 결론은 7월 실패 모드에는 정확했고, #7588 머지 후 다시 살아난다.</strong> 8/03 로컬 검증에서 #7588 적용 시 loaddb 는 성공하고, CLOB/BLOB locator 2줄 diff 가 남는 것을 확인했다.</li>
+  <li><strong>단, 그 잔여 diff 의 해석이 두 기존 분석에서 서로 모순된다.</strong> 7/08 보고서는 “locator 는 그대로 보존됐고, 256-way tie 에서 다른 row 를 골랐을 뿐” 임을 <em>실측으로 증명</em>했다. 8/03 문서는 “feat/oos loaddb 가 locator 를 재생성하는 듯” 이라고 <em>검증 없이 추정</em>했다. 판별 실험 (수 분 소요) 이 필요하다 — <a href="#tc-bigpagesize">§bigPageSize Layer C</a>.</li>
+  <li><strong>tiebreaker 수정 (<code>order by 1 desc, id</code>) 은 어느 TC 브랜치에도 반영된 적이 없다.</strong> <code>tc/pr-6864</code> (CI 가 실제 사용하는 브랜치), TC <code>feat/oos</code> (PR #3806 head), TC <code>develop</code> 모두 현재도 <code>order by 1 desc limit 1</code> 그대로다.</li>
+  <li><strong>실패는 9건이 아니라 실제로 10건이다.</strong> <code>bug_bts_5730</code> (loaddb_CS, node 33, 코어덤프 동반) 이 노드별 JUnit XML 에는 있으나 CircleCI 집계 목록에서 누락됐다.</li>
+  <li>CDC 2건 (<code>cbrd_27064</code>, <code>cbrd_27075</code>) 은 지시에 따라 분석 제외.</li>
+</ul>
+
+<h3>실패 10건의 원인 분포</h3>
+<div class="tablewrap"><table>
+  <tr><th>분류</th><th>건수</th><th>TC</th><th>해결 경로</th></tr>
+  <tr><td><span class="badge b-crash">서버측 loaddb 크래시 (CBRD-27157)</span></td><td>4 (+1 유력)</td><td>bigPageSize, cbrd_25481, itrack_10006, bug_xdbms_sus880 (+ bug_bts_5730)</td><td>PR #7588 머지</td></tr>
+  <tr><td><span class="badge b-crash">numerable FILE_OOS 페이지 북키핑 결함</span></td><td>2</td><td>cbrd_23430, cbrd_25365</td><td>JIRA 필요 · ADR-0001 (비-numerable 전환) 방향</td></tr>
+  <tr><td><span class="badge b-tc">OOS 레이아웃 변화로 TC 전제 붕괴</span></td><td>1</td><td>log_enc_04</td><td>TC workload 수정 (tc/pr-6864)</td></tr>
+  <tr><td><span class="badge b-skip">CDC — 분석 제외 (지시)</span></td><td>2</td><td>cbrd_27064, cbrd_27075</td><td>별도 트리아지</td></tr>
+  <tr><td><span class="badge b-open">bigPageSize 잔여 diff (#7588 이후)</span></td><td>(중첩)</td><td>bigPageSize Layer C</td><td>판별 실험 + tiebreaker 반영</td></tr>
+</table></div>
+
+<h2 id="snapshot">CI 스냅샷</h2>
+<div class="tablewrap"><table>
+  <tr><th>Suite</th><th>CircleCI job</th><th>Tests</th><th>실패</th><th>Skip</th><th>비고</th></tr>
+  <tr><td>test_medium</td><td><a href="https://circleci.com/gh/CUBRID/cubrid/143293">143293</a></td><td>975</td><td><span class="badge b-ok">0</span></td><td>0</td><td>—</td></tr>
+  <tr><td>test_sql</td><td><a href="https://circleci.com/gh/CUBRID/cubrid/143292">143292</a></td><td>17,444</td><td><span class="badge b-ok">0</span></td><td>0</td><td>—</td></tr>
+  <tr><td>test_shell</td><td><a href="https://circleci.com/gh/CUBRID/cubrid/143291">143291</a></td><td>3,250</td><td><span class="badge b-crash">9 (실제 10)</span></td><td>30</td><td>CircleCI 집계가 1건 누락</td></tr>
+</table></div>
+
+<div class="callout note">
+<p><strong>9 vs 10 재확인 근거</strong> — CircleCI tests API (<code>attempts/143291/raw/tests.json</code>) 는 3211 성공 + 9 실패 + 30 skip = 3,250 으로 집계하지만, <code>summary.json.failed_node_indexes</code> 는 노드 <strong>10개</strong> <code>[14,27,32,33,38,40,41,44,45,47]</code> 를 가리키고, 10개 노드의 <code>test-shell.xml</code> 에서 <code>&lt;failure&gt;</code> 레코드를 합산하면 정확히 <strong>10</strong> 이다. 누락된 것은 node 33 의 <code>loaddb_CS/_06_issues/_11_2h/bug_bts_5730</code> — 집계 API 에 이 경로의 항목 자체가 없다. <em>집계 수치만 보고 조종하면 실제 실패를 놓친다.</em></p>
+</div>
+
+<p class="small">직전 사이클 대비: job 142161 (<code>0ad6afc</code>, 7/31) 은 19건 실패. <code>tc/pr-6864</code> 에 푸시된 TC 수정 (TDE answer 8건 재보정 등, PR #3806 에 미러됨) 이 이번 사이클의 감소분을 만들었다.</p>
+
+<p class="legend small"><strong>증거 라벨:</strong>
+<span><span class="ev obs">관찰</span> — 이번 번들에서 직접 확인</span>
+<span><span class="ev inf">추론</span> — 근거 있는 설명 (이번 런의 스택 없음 등)</span>
+<span><span class="ev unk">미확인</span> — 추가 관측 필요</span></p>
+
+<div class="toc">
+<strong>TC 별 상세 분석</strong>
+<ol>
+  <li><a href="#tc-bigpagesize">bigPageSize</a> — 크래시 (현재) + ORDER BY 재검토 (요청 초점)</li>
+  <li><a href="#tc-25481">cbrd_25481</a> — loaddb 크래시</li>
+  <li><a href="#tc-itrack">itrack_10006</a> — loaddb 크래시 (client abort 관찰)</li>
+  <li><a href="#tc-sus880">bug_xdbms_sus880</a> — loaddb 크래시</li>
+  <li><a href="#tc-5730">bug_bts_5730</a> — 집계 누락된 10번째 실패</li>
+  <li><a href="#tc-23430">cbrd_23430</a> — numerable FILE_OOS 결함 계열</li>
+  <li><a href="#tc-25365">cbrd_25365</a> — numerable FILE_OOS 결함 계열 (+대안 가설)</li>
+  <li><a href="#tc-logenc">log_enc_04</a> — TDE TC 전제 붕괴</li>
+  <li><a href="#tc-cdc">cbrd_27064 / cbrd_27075</a> — CDC (분석 제외)</li>
+</ol>
+</div>
+
+<h2 id="mechanism">공통 메커니즘: CBRD-27157 — loaddb 워커 MVCCID self-lock assert</h2>
+
+<p>이번 실패의 최대 그룹 (4+1건) 이 공유하는 크래시. <strong>이 커밋의 소스에서 직접 검증했다</strong> (로컬 워크트리가 정확히 <code>07fef9d48</code>).</p>
+
+<pre><code>서버측 loaddb (loaddb -C) 가 OOS 대상 행을 적재
+  └─ OOS 파일이 아직 없음 → lazy 생성: oos_create_file
+       └─ file_create (file_manager.c:3455)
+            └─ FILE_OOS 는 SERVER_MODE 에서 logtb_get_current_mvccid() 필요
+                 └─ 트랜잭션의 첫 MVCCID 발급 (develop CBRD-26942, commit 741734a8f)
+                      └─ logtb_acquire_mvccid_self_lock (log_tran_table.c:4071)
+                           └─ lock_transaction_mvccid (log_tran_table.c:4093)
+                                └─ lock_internal_perform_lock_object
+                                     └─ assert (thread_p-&gt;type != TT_LOADDB);   ← lock_manager.c:3539
+                                          └─ loaddb 워커 스레드 (TT_LOADDB) → ABORT → cub_server 코어</code></pre>
+
+<p>즉 develop 의 CBRD-26942 (첫 MVCCID 발급 시 self-lock) 와 feat/oos 의 OOS 파일 lazy 생성 (생성 시 MVCCID 필요) 이 develop 머지에서 처음 만나며 생긴 상호작용이다. CI 는 optdebug 빌드라 assert 가 살아 있어 서버가 즉사한다 (release 는 assert 컴파일 아웃).</p>
+
+<p><strong>수정: PR <a href="https://github.com/CUBRID/cubrid/pull/7588">#7588</a></strong> — assert 를 <code>assert (thread_p-&gt;type != TT_LOADDB || is_transaction_lock);</code> 로 완화 (트랜잭션 self-lock 만 허용, 객체 락 계약은 유지). 현재 <strong>draft PoC</strong> 상태이며 head 브랜치명이 <code>CBRD-00001-oos-fix-regression-poc</code> (placeholder) 이므로 정식화 후 머지 필요.</p>
+
+<p class="small">반증 조건 (falsifier): node 44 / 33 의 코어 스택이 위 체인 (<code>lock_internal_perform_lock_object</code> ← <code>logtb_acquire_mvccid_self_lock</code> ← <code>file_create(FILE_OOS)</code>) 을 보이지 않으면 이 귀속은 틀린 것. 이번 수집은 text 모드라 코어 바이너리는 내려받지 않았다.</p>
+
+<hr>
+
+<h2 id="detail">TC 별 상세 분석</h2>
+
+<!-- ==================== bigPageSize ==================== -->
+<div class="tc-card" id="tc-bigpagesize">
+<h3>1. bigPageSize <span class="badge b-crash">현재: loaddb 크래시</span> <span class="badge b-open">이후: ORDER BY/locator 미결</span> <span class="badge b-info">요청 초점</span></h3>
+<p class="tc-path">shell/_35_cherry/issue_21654_server_side_loaddb/bigPageSize/cases/bigPageSize.sh · node 44 · 실행 19.4s</p>
+
+<h4>TC 가 하는 일</h4>
+<p><code>tdb1</code> (16K page, csql -S 직접 INSERT, 256 row — 큰 컬럼 c2 ≈ 12KB, c3 ≈ 1.2MB CLOB, j ≈ 1.5MB JSON) 을 <code>unloaddb</code> 로 덤프하고, <code>tdb2</code> (4K page) 에 <code>loaddb -C</code> 로 재적재한 뒤, 동일 SELECT (<code>… from t order by 1 desc limit 1</code>) 를 양쪽에서 실행해 결과를 비교한다. 이어 <code>load.answer</code> vs <code>load.log</code> 도 비교한다.</p>
+
+<h4><span class="ev obs">관찰</span> — 이번 CI 에서 실제로 일어난 일 (3중 레이어의 Layer A)</h4>
+<pre><code>+ cubrid loaddb -C -d tdb1_objects -s tdb1_schema -udba tdb2
++ '[' 254 -eq 0 ']'                     ← loaddb 가 exit 254 로 실패
++ compare_result_between_files load.answer load.log   ← csql 비교 블록은 통째로 스킵됨
+
+diff (load.answer vs load.log):
+  Start object loading.                  Start object loading.
+  Total 256 object(s) inserted, ...    &lt;                        ← load.log 에 완료 라인 없음</code></pre>
+<ul>
+  <li>node 44 에 <code>cub_server_20260805002806.294.coredump</code> — bigPageSize 재시도 실행 구간 <strong>00:27:51–00:28:09 의 정중앙</strong>. 즉 <code>tdb2</code> 서버가 object 적재 중 크래시했고 loaddb 클라이언트가 254 로 죽었다.</li>
+  <li>1차 시도 (00:22:14, time=20) 도 <strong>완전히 동일하게</strong> 실패 (exit 254 확인) — 결정적 (deterministic) 실패이지 flaky 가 아니다. 1차 시도의 코어는 수집 체계상 남지 않았다 (마지막 시도의 코어만 살아남는 수집 특성).</li>
+  <li>server .err 에 “Internal Error” grep 0건 — assert abort 는 이 grep 에 안 걸린다.</li>
+  <li><strong>따라서 “bigPageSize 는 order by 문제” 는 현재 실패 신호의 설명으로는 낡았다 (stale).</strong> ORDER BY 쿼리는 실행되지도 않았다.</li>
+</ul>
+<p>이 크래시는 위 <a href="#mechanism">CBRD-27157 메커니즘</a> 그대로다: 4K page 의 <code>tdb2</code> 에서 c2/c3/j 값이 전부 OOS 대상 (4K 레이아웃의 OOS inline target ≈ 1KB) → 서버측 loaddb 첫 OOS demotion 에서 lazy <code>oos_create_file</code> → MVCCID → assert. <strong>PR #7588 의 대상 TC 목록에 bigPageSize 를 추가해야 한다</strong> (현재는 cbrd_25481, itrack_10006, bug_xdbms_sus880 3건만 명시).</p>
+
+<h4>Layer B — “ORDER BY tie” 분석 (CBRD-26828 초안 + 7/08 보존 로그 보고서) 은 <em>그 당시 실패 모드에 대해선</em> 여전히 타당</h4>
+<ul>
+  <li>256 row 는 seed 1 row + <code>INSERT ... SELECT</code> 8회 self-doubling 으로 생성 → 선택 컬럼 전부 동일, <code>ORDER BY 1 DESC</code> 의 키 <code>col1 = -32768</code> 이 <strong>256-way tie</strong>. tie 에서 LIMIT 1 승자는 물리 scan 순서 의존 (implementation-defined).</li>
+  <li><code>heap_insert_physical</code> 계측 (vpid/slot 실측): develop 은 이 행들을 8B <code>REC_BIGONE</code> 포인터로 저장 → 4K 헤더 page 한 장에 256건 순서대로 → scan 첫 row = row 1. OOS 는 컬럼만 빼고 ~656B <code>REC_HOME</code> 유지 → row 1–255 는 뒷 page 로 밀리고 <strong>마지막 insert 인 row 256 이 헤더 page 의 남은 슬롯을 차지</strong> → scan 첫 row = row 256 → tie 승자 역전 → NOK.</li>
+  <li>결정적 증거: csql2 가 출력한 “다른” CLOB/BLOB locator 2건이 <strong><code>tdb1_objects</code> 덤프 안에 같은 row 로 verbatim 존재</strong> — 즉 loaddb 는 locator 를 정확히 보존했고, diff 는 <em>다른 tied row 를 골랐기 때문</em>이지 데이터 손상이 아니다.</li>
+  <li>기록 정정 1건: CBRD-26828 초안의 “Actual Result” 는 “diff 가 id 컬럼” 이라 했으나 <code>id</code> 는 SELECT 목록에 없다 — 실제 diff 는 <code>cl</code>/<code>bl</code> locator 문자열 (선택 컬럼 중 유일하게 row 별 고유값). 초안 제출 시 수정 필요.</li>
+</ul>
+
+<h4>Layer C — #7588 이후 남는 것: <span class="ev unk">미해결 모순</span></h4>
+<div class="callout open">
+<p>8/03 로컬 검증 (#7588 포함 빌드): loaddb 성공, TC 는 <strong><code>cl</code>/<code>bl</code> locator 2줄 diff</strong> 로 여전히 NOK. 그런데 이 잔여 diff 의 해석이 갈린다:</p>
+<ul>
+  <li><strong>7/08 보고서 (증거 강함):</strong> locator 는 보존됨 + tie 로 다른 row 선택 → <em>TC 비결정성</em>. (csql2 locator 를 <code>tdb1_objects</code> 에서 grep 으로 실증, locator 에 박힌 epoch 가 tdb2 서버 기동 <em>이전</em>임까지 확인)</li>
+  <li><strong>8/03 문서 (증거 약함):</strong> “develop 은 locator 를 보존해서 통과했으므로 feat/oos 가 locator 를 <em>재생성</em>하는 것으로 보임” — 판별 검사 없이 추정, 스스로 “후속 디버깅 필요” 표기.</li>
+</ul>
+<p>둘은 상호 배타적이다. 8/03 관찰 (2줄 locator diff) 은 tie-pick 만으로도 완전히 설명되므로, <strong>7/08 의 검증 기준이 우세</strong>하다 — 단 7/08 빌드 (<code>309753d</code>) 와 8/03 빌드 (<code>e20543df8</code>) 사이에 locator 처리 회귀가 들어왔을 가능성은 미검증.</p>
+</div>
+
+<h4>판별 실험 (수 분이면 끝남)</h4>
+<ol>
+  <li>#7588 적용 로컬 빌드에서 bigPageSize 를 cleanup 없이 실행.</li>
+  <li><code>grep -F '&lt;csql2 의 cl locator&gt;' tdb1_objects</code> — <strong>다른 row 에서 발견</strong> ⇒ tie-pick (Layer B 성립, TC 수정으로 종결) / <strong>부재</strong> ⇒ locator 재생성 실재 (엔진 JIRA + LOB <em>내용</em> 동등성 검증 필수 — 8/03 런에서 값 왕복 검증은 안 됐음).</li>
+  <li>동치의 원샷: tiebreaker (<code>order by 1 desc, id limit 1</code>) 적용 후 재실행 — OK ⇒ tie-pick 확정 + TC 도 고쳐짐 / 여전히 NOK ⇒ 재생성 실재.</li>
+</ol>
+
+<h4><span class="ev obs">관찰</span> — tiebreaker 는 어디에도 반영된 적 없음</h4>
+<p>분석 시점 기준 <code>bigPageSize.sh:24</code> 는 <code>from t order by 1 desc limit 1</code> 그대로다 — <code>tc/pr-6864</code> (tip <code>e21c7ce9c</code>, <strong>이 CI 가 실제 사용하는 브랜치</strong>), TC <code>feat/oos</code> (PR #3806 head — #3806 은 bigPageSize 를 건드리지 않음), TC <code>develop</code> 모두 확인. CBRD-26828 과 7/08 보고서가 두 차례 권고했지만 landing 이 없었다. Layer C 결과와 무관하게 256-way tie 는 입증된 잠재 비결정성이므로 tiebreaker 는 반영해야 한다.</p>
+
+<div class="kv">
+  <dt>현재 원인</dt><dd>CBRD-27157 loaddb 크래시 (관찰: exit 254 + in-window 코어, 신뢰도 <strong>높음</strong>)</dd>
+  <dt>이후 원인</dt><dd>tie-pick vs locator 재생성 — <strong>의도적으로 미결로 둠</strong>, 판별 실험 필요</dd>
+  <dt>다음 액션</dt><dd>#7588 머지 → 판별 실험 → tiebreaker 를 tc/pr-6864 + PR #3806 에 반영 (재생성이면 추가 JIRA)</dd>
+</div>
+</div>
+
+<!-- ==================== cbrd_25481 ==================== -->
+<div class="tc-card" id="tc-25481">
+<h3>2. cbrd_25481 <span class="badge b-crash">loaddb 크래시 (CBRD-27157)</span></h3>
+<p class="tc-path">shell/_06_issues/_24_2h/cbrd_25481/cases/cbrd_25481.sh · node 32</p>
+<h4>TC 가 하는 일</h4>
+<p>대형 문자열 컬럼을 가진 DB 3개 (<code>db_25481_1..3</code>) 를 만들어 offline/online <code>unloaddb</code> → <code>loaddb</code> (-S/-C 조합) 왕복 후 SELECT 결과를 answer 와 비교한다. 총 28 케이스 (hang 검사 포함).</p>
+<h4><span class="ev obs">관찰</span></h4>
+<pre><code>cbrd_25481-6/13/20/27 등 NOK. diff 의 우변 (실제 로그):
+  In the command from line ?,
+  ERROR: Your transaction has been aborted by the system due to ...
+  Exiting ...
+좌변 (기대): id, char_length(a) 정상 결과 (예: 1  1108895 / 1  6990515 / 5행 × 1398116)</code></pre>
+<ul>
+  <li>“transaction aborted by the system” 은 <strong>서버가 죽어서 세션이 끊겼을 때</strong> 클라이언트가 받는 전형적 후폭풍 시그니처다.</li>
+  <li>node 32 에 <code>cub_server</code> 코어 <strong>4개</strong> (00:28:01 / 00:28:53 / 00:29:35 / 00:30:05) — 테스트가 DB 를 바꿔가며 loaddb 할 때마다 서버가 반복 크래시. PR #7588 본문의 “DB 마다 cub_server core” 로컬 재현과 일치.</li>
+</ul>
+<h4><span class="ev inf">추론</span> — 원인·해결</h4>
+<p>대형 문자열 컬럼 (OOS 대상) 을 서버측 loaddb 로 적재 → CBRD-27157 assert. PR #7588 author 가 로컬에서 수정 후 28 케이스 전부 OK 로 전환 확인 (단, author = 8/03 문서 작성자와 동일인 — 동일 출처이지 독립 확증은 아님). 신뢰도 <strong>높음</strong>.</p>
+<div class="kv"><dt>다음 액션</dt><dd>PR #7588 머지 후 CI 재확인. 별도 TC 수정 불필요 예상.</dd></div>
+</div>
+
+<!-- ==================== itrack_10006 ==================== -->
+<div class="tc-card" id="tc-itrack">
+<h3>3. itrack_10006 <span class="badge b-crash">loaddb 크래시 (CBRD-27157 — 매핑은 간접)</span></h3>
+<p class="tc-path">shell/_35_cherry/issue_21654_server_side_loaddb/loaddb_CS/_01_utility/_17_loaddb/itrack_10006/cases/itrack_10006.sh · node 47</p>
+<h4><span class="ev obs">관찰</span> — 1차 시도와 재시도의 증상이 다르다</h4>
+<pre><code>[1차 시도, 00:23:30–00:23:41]
++ cub_admin loaddb --no-user-specified-name -C -u dba -s MQDB_schema itrack
++ cub_admin loaddb --no-user-specified-name -C -u dba -v -c 10000 -d MQDB_objects itrack
+itrack_10006.sh: line 47: 63340 Aborted   cub_admin loaddb ... -d MQDB_objects ${db_name} ...
+itrack_10006-1 : NOK
+itrack_10006-2 : NOK
+
+[재시도 — 수집된 failure 레코드는 이쪽]
+cubrid createdb -r itrack en_US
+  → Couldn't create database. Volume ".../itrack_vinf" already exists.   ← 1차 잔여물
+cubrid server start itrack → fail ... Database "itrack" is unknown</code></pre>
+<ul>
+  <li>1차 시도의 관찰은 <strong>클라이언트 유틸리티 (<code>cub_admin loaddb</code>) 의 SIGABRT</strong> — 서버 워커 assert 와는 다른 관측이다. object 적재 (<code>-d</code>) 단계에서 죽었다.</li>
+  <li>재시도 실패는 1차가 남긴 <strong>더러운 작업공간의 연쇄 실패</strong>일 뿐, 크래시 시그니처로 읽으면 안 된다.</li>
+  <li>이번 런에서 node 47 에 수집된 코어는 없다 (마지막 시도만 코어가 남는 수집 특성 + 1차 코어 미보존).</li>
+</ul>
+<h4><span class="ev inf">추론</span></h4>
+<p>CBRD-27157 매핑은 <strong>PR #7588 author 의 로컬 재현 (“동일 crash stack 확인”)</strong> 에 근거한다. 이번 런 증거만으로는 client abort 가 서버 assert 의 2차 효과인지 별도 client-측 assert 인지 구분 불가. 신뢰도 <strong>중간</strong> — #7588 적용 빌드에서 이 TC 의 통과 여부가 판별점.</p>
+<div class="kv"><dt>다음 액션</dt><dd>#7588 머지 후 재확인. NOK 잔존 시 client-측 abort 스택 별도 채취.</dd></div>
+</div>
+
+<!-- ==================== bug_xdbms_sus880 ==================== -->
+<div class="tc-card" id="tc-sus880">
+<h3>4. bug_xdbms_sus880 <span class="badge b-crash">loaddb 크래시 (CBRD-27157)</span></h3>
+<p class="tc-path">shell/_35_cherry/issue_21654_server_side_loaddb/loaddb_CS/_05_addition/bug_xdbms_sus880/cases/bug_xdbms_sus880.sh · node 14</p>
+<h4><span class="ev obs">관찰</span></h4>
+<ul>
+  <li><code>bug_xdbms_sus880-1 : NOK</code> (loaddb_CS 계열, 서버측 loaddb 사용 TC).</li>
+  <li>node 14 에 <code>cub_server_20260805002813.144.coredump</code> — 재시도 실행 구간 내. 1차 시도 (00:22:48–00:22:55) 도 동일 실패, 코어 미보존.</li>
+</ul>
+<h4><span class="ev inf">추론</span></h4>
+<p>PR #7588 이 명시적으로 claim 하고 로컬 OK 전환을 보고한 3건 중 하나. bigPageSize/cbrd_25481 과 동일 메커니즘. 신뢰도 <strong>높음</strong>.</p>
+<div class="kv"><dt>다음 액션</dt><dd>#7588 머지 후 CI 재확인.</dd></div>
+</div>
+
+<!-- ==================== bug_bts_5730 ==================== -->
+<div class="tc-card" id="tc-5730">
+<h3>5. bug_bts_5730 <span class="badge b-crash">loaddb 크래시 계열 (유력)</span> <span class="badge b-info">CircleCI 집계 누락</span></h3>
+<p class="tc-path">shell/_35_cherry/issue_21654_server_side_loaddb/loaddb_CS/_06_issues/_11_2h/bug_bts_5730/cases/bug_bts_5730.sh · node 33 · 실행 92s</p>
+<h4><span class="ev obs">관찰</span> — “9건” 에 안 잡힌 10번째 실패</h4>
+<pre><code>bug_bts_5730-1 : OK
+bug_bts_5730-2 : OK
++ cubrid loaddb --no-user-specified-name -u dba -s lecl_web_schema -d lecl_web_objects lecl -C
++ cubrid loaddb --no-user-specified-name -u dba -i lecl_web_indexes lecl -C
+ERROR: In line 1, column 1 before '�'        ← index 파일 첫 바이트가 쓰레기값
+Error occurred during index loading.
+Restart loaddb with '-i lecl_web_indexes:1' option
+bug_bts_5730-3 : NOK</code></pre>
+<ul>
+  <li>node 33 의 JUnit XML 과 step log 에는 실패로 기록됐지만, CircleCI tests API 응답에는 이 경로의 항목 자체가 없다 → 집계 9건에서 누락.</li>
+  <li><code>cub_server_20260805002731.432.coredump</code> — 실행 구간 00:27:11–00:28:43 내, object 적재 (<code>-d ... -C</code>) 직후 시각. <strong>서버 크래시 동반.</strong></li>
+</ul>
+<h4><span class="ev inf">추론</span> + <span class="ev unk">미확인</span></h4>
+<ul>
+  <li>같은 loaddb_CS 스위트 + object 적재 직후 in-window 서버 코어 → CBRD-27157 계열이 <strong>유력</strong>. 단 스택 미확보라 확정 아님 (신뢰도 중간).</li>
+  <li><strong>열린 하위 질문:</strong> <code>lecl_web_indexes</code> 파일이 왜 쓰레기 바이트로 시작하나? 직전 <code>unloaddb</code> 가 쓴 파일이므로, 크래시 후폭풍이 아니라 파일 자체가 손상됐다면 <strong>CBRD-26948 계열 (unloaddb 가 미해소 OOS inline stub 을 그대로 소비)</strong> 과 겹치는 별도 결함일 수 있다.</li>
+</ul>
+<div class="kv"><dt>다음 액션</dt><dd>#7588 검증 목록에 포함. 로컬 실행으로 <code>lecl_web_indexes</code> 내용을 크래시와 독립적으로 검사 — 손상이 재현되면 별도 JIRA. CircleCI 집계 누락은 CI 도구 이슈로 별도 보고.</dd></div>
+</div>
+
+<!-- ==================== cbrd_23430 ==================== -->
+<div class="tc-card" id="tc-23430">
+<h3>6. cbrd_23430 <span class="badge b-crash">numerable FILE_OOS 북키핑 결함 (추론)</span></h3>
+<p class="tc-path">shell/_35_cherry/issue_21522_json/cbrd_23430/cases/cbrd_23430.sh · node 45</p>
+<h4>TC 가 하는 일</h4>
+<p>길이 50,000 의 JSON 값을 <code>loaddb -C</code> 로 적재 후 <code>select json_length(j) from t</code> 가 50000 을 돌려주는지 확인.</p>
+<h4><span class="ev obs">관찰</span> — 여기도 1차/재시도 증상이 다르다</h4>
+<pre><code>[1차 시도, 00:20:25–00:20:34] ← 정보가 있는 쪽
+createdb jsondb OK → server start OK
++ cubrid loaddb --no-user-specified-name -d init_data -C jsondb -udba
+직후 csql: "Failed to connect to database server, 'jsondb'"   ← 서버가 loaddb -C 직후 사망
+
+[재시도] ← 수집된 failure 레코드는 이쪽 (오독 주의)
+createdb → Volume ".../jsondb_vinf" already exists.            ← 1차 잔여물
+server start → Database "jsondb" is unknown, or "databases.txt" cannot be accessed</code></pre>
+<ul>
+  <li>재시도 기록만 보면 “환경 실패” 로 보인다 — 실제로 직전 스냅샷 보고서 (<code>c2cbeaf</code>) 는 동일 시그니처를 환경 실패로 분류했다. 그건 <em>재시도 연쇄</em>에 대해선 맞지만, <strong>1차 시도의 “loaddb -C 직후 서버 사망” 이 진짜 엔진 신호</strong>다.</li>
+  <li>이번 런의 node 45 에 코어 없음 (1차 코어 미보존).</li>
+</ul>
+<h4><span class="ev inf">추론</span> — 왜 CBRD-27157 이 아니라 별도 결함으로 보나</h4>
+<p>8/03 분석이 정확한 스택으로 로컬 재현했다: <code>pgbuf_fix_debug</code> assert (<code>page_buffer.c:2564</code>), 스택 <code>oos_insert_many → oos_find_best_page → oos_file_alloc_new → file_alloc</code> — <code>file_alloc</code> 이 돌려준 새 페이지가 <strong>같은 OOS 파일의 이미 초기화된 dirty <code>PAGE_FTAB</code> 페이지</strong> (user page / FTAB 이중 배정). 즉 <strong>numerable FILE_OOS 의 페이지 북키핑 결함</strong>이며, ADR-0001 (FILE_OOS 비-numerable 전환 — <code>oos-m2-all-plans-experimental</code> 에 구현됨) 이 정확히 이 regime 을 제거하는 fix 방향이다.</p>
+<p class="small">주의: 트리거가 같은 <code>loaddb -C</code> 라서 이번 런 증거만으로는 CBRD-27157 과의 중첩을 배제할 수 없다 — 분리 근거는 8/03 스택뿐. 신뢰도 <strong>중간</strong>.</p>
+<div class="kv"><dt>다음 액션</dt><dd>numerable FILE_OOS 북키핑 JIRA 신규 발행 (8/03 스택 인용). feat/oos 머지 전 ADR-0001 전환 인입 여부 결정. #7588 만으로 고쳐지는지도 CI 로 판별 가능 (고쳐지면 재분류).</dd></div>
+</div>
+
+<!-- ==================== cbrd_25365 ==================== -->
+<div class="tc-card" id="tc-25365">
+<h3>7. cbrd_25365 <span class="badge b-crash">numerable FILE_OOS 결함 계열 (추론)</span> <span class="badge b-open">대안 가설 있음</span></h3>
+<p class="tc-path">shell/_39_fig_cake/cbrd_25365/cases/cbrd_25365.sh · node 38</p>
+<h4>TC 가 하는 일</h4>
+<p>아카이브 로그 (lgar) 생성 시각·순서, <code>SHOW ARCHIVE LOG HEADER</code>, <code>copydb</code>/<code>patchlog</code> 후의 creation time 일관성 등을 28개 케이스로 검사.</p>
+<h4><span class="ev obs">관찰</span></h4>
+<pre><code>NOK: 케이스 6, 7, 8, 9, 10, 11, 12, 20, 22, 24 + timeout 1건 (24/28 OK)
+케이스 6: "Archive log file (db25365/db25365_lgar000) not found.
+          Insert sufficient data (i.e. increase values in create_insert_tbl())
+          to archive the active log."</code></pre>
+<ul>
+  <li>이번 런의 node 38 에는 코어 없음.</li>
+  <li>8/03 로컬 재현에서는 실행 중 <code>cub_server</code> 코어 2개 — 둘 다 <code>pgbuf_fix_debug</code> assert (<code>page_buffer.c:2564</code>), 호출자 <code>file_numerable_add_page</code> (<code>file_manager.c:8055</code>), 일반 트랜잭션 워커의 csql INSERT 경로. cbrd_23430 과 같은 <strong>numerable FILE_OOS 북키핑 결함 계열</strong>.</li>
+</ul>
+<h4><span class="ev unk">미확인</span> — 살아있는 대안 가설</h4>
+<div class="callout open">
+<p>케이스 6 의 메시지 자체가 힌트다: OOS 가 heap 레코드를 대폭 압축하면 (큰 값이 stub 16B 로) <strong>같은 workload 가 만드는 로그량이 줄어 active log 가 아카이브로 안 넘어갈 수 있다</strong> — 이러면 크래시가 아니라 log_enc_04 와 같은 “TC 전제 붕괴” 계열이 된다. 케이스 20/22/24 (patchlog/copydb creation-time) 도 크래시 스토리와 깔끔히 안 맞는다. 이번 런에 코어가 없다는 사실도 이 가설과 정합적이다.</p>
+</div>
+<div class="kv"><dt>다음 액션</dt><dd>엔진 fix (numerable 결함) 이후, 코어가 안 나는 빌드에서 케이스 6–12/20/22/24 를 재판정. 로그량 부족이 원인이면 <code>create_insert_tbl()</code> 데이터량 증가 (TC 자체가 안내하는 방향) 로 TC 수정.</dd></div>
+</div>
+
+<!-- ==================== log_enc_04 ==================== -->
+<div class="tc-card" id="tc-logenc">
+<h3>8. log_enc_04 <span class="badge b-tc">OOS 레이아웃 변화 → TC workload 전제 붕괴</span></h3>
+<p class="tc-path">shell/_36_damson/cbrd_23608_tde/log_enc_04/cases/log_enc_04.sh · node 27 · 크래시 없음</p>
+<h4>TC 가 하는 일</h4>
+<p>TDE 암호화 DB 에서 다양한 DML 을 수행한 뒤, 로그 덤프 (<code>result.log</code>) 에 특정 recovery 레코드 타입 (rcvindex) 들이 존재하는지를 grep 으로 확인한다 — 로그가 암호화 경로를 제대로 탔는지의 대리 지표.</p>
+<h4><span class="ev obs">관찰</span></h4>
+<pre><code>grep -rc 'rcvindex = RVHF_MVCC_REDISTRIBUTE'  → 1   OK
+grep -rc 'rcvindex = RVHF_INSERT'             → 8   OK
+grep -rc 'rcvindex = RVHF_UPDATE'             → 6   OK
+grep -rc 'rcvindex = RVHF_DELETE'             → 2   OK
+grep -rc 'rcvindex = RVHF_INSERT_NEWHOME'     → 0   ← "RVHF_INSERT_NEWHOME is missing!" → NOK</code></pre>
+<p>즉 다른 로그 레코드는 전부 정상 생성·검출됐고, <strong><code>RVHF_INSERT_NEWHOME</code> 딱 하나가 아예 생성되지 않았다.</strong> 크래시·코어 없음. 이 TC 는 8/03 에 재보정된 TDE 8건 (tbl_enc_08/14, file_enc_01~05/07) 에 포함되지 않았던, 이번에 새로 표면화된 잔여 TDE 실패다.</p>
+<h4><span class="ev inf">추론</span> — 왜 안 생기나</h4>
+<ul>
+  <li><code>RVHF_INSERT_NEWHOME</code> 의 생산자는 이 트리에서 두 곳: (a) UPDATE 로 레코드가 home page 여유 공간을 넘겨 <strong>재배치 (REC_NEWHOME)</strong> 될 때 (<code>heap_file.c:22010</code>), (b) bestspace 페이지 insert 경로 (<code>heap_file.c:4048</code>, HA 중복 적용 회피용).</li>
+  <li>이 TC 의 workload 는 20,000B lpad 값을 <code>t2_big</code> 에 넣고 <code>varchar(10000)</code> 컬럼을 추가하는 식의 <strong>큰 값 위주</strong> — develop 에서는 이런 값이 레코드를 키워 재배치를 유발했지만, <strong>OOS 에서는 큰 값이 전부 16B stub 으로 demote 되어 레코드가 계속 작게 유지</strong> → 재배치가 일어날 조건 자체가 사라짐 → 해당 rcvindex 미생성.</li>
+</ul>
+<h4>다음 액션</h4>
+<ol>
+  <li><strong>선행 확인:</strong> 같은 TC 리비전으로 develop 빌드에서 어느 생산자가 이 레코드를 만들었는지 확인 (develop 도 0 이면 OOS 귀속이 틀린 것).</li>
+  <li>TC workload 수정 (tc/pr-6864): OOS inline target (16K page 기준 ~4,060B) <strong>미만으로 유지되면서도</strong> home page 여유를 넘기게 레코드를 키우는 UPDATE 를 추가해 진짜 재배치를 유발 — answer 만 고치는 게 아니라 workload 를 고쳐야 하는 케이스.</li>
+</ol>
+</div>
+
+<!-- ==================== CDC ==================== -->
+<div class="tc-card" id="tc-cdc">
+<h3>9–10. cbrd_27064 / cbrd_27075 <span class="badge b-skip">CDC — 분석 제외 (지시)</span></h3>
+<p class="tc-path">shell/_37_elderberry/cbrd_23842_cdc/bug/cbrd_27064 (node 40) · cbrd_27075 (node 41)</p>
+<p>지시에 따라 이번 분석에서 제외한다. 기록 목적의 최소 사실만 남긴다:</p>
+<ul>
+  <li><span class="ev obs">관찰</span> node 41 의 코어 5개 (<code>cub_server</code> ×3, <code>csql</code> ×2, 00:29:21–00:29:44) 는 전부 cbrd_27075 실행 구간 안에 있다 — 코어 장부는 이 TC 로 귀속.</li>
+  <li>두 TC 의 선행 컨텍스트는 8/03 문서에 있음 (27064 는 #7588 포함 헤드에서 통과 보고, 27075 는 별도 엔진 결함 재현 보고). 후속 트리아지 담당자가 참조.</li>
+  <li>OOS 머지 게이트 신호로는 별도 트리아지 전까지 사용하지 말 것.</li>
+</ul>
+</div>
+
+<h2 id="actions">권장 조치 (우선순위순)</h2>
+<ol>
+  <li><strong>PR #7588 정식화 + 머지</strong> (CBRD-27157) — 현재 draft PoC (head <code>CBRD-00001-oos-fix-regression-poc</code>). cbrd_25481 · itrack_10006 · bug_xdbms_sus880 해소 + bigPageSize 크래시 레이어 제거 + bug_bts_5730 도 유력. PR 의 대상 TC 목록에 bigPageSize (검증되면 bug_bts_5730 도) 추가.</li>
+  <li><strong>bigPageSize 판별 실험</strong> — #7588 적용 빌드에서 tiebreaker (<code>order by 1 desc, id limit 1</code>) 를 <code>tc/pr-6864</code> + PR #3806 에 반영하고 재실행. OK ⇒ tie-pick 확정·종결 / NOK ⇒ feat/oos loaddb 의 ELO locator 재생성 JIRA 신규 발행 (LOB 내용 동등성 검증 포함).</li>
+  <li><strong>bug_bts_5730 검증</strong> — #7588 하에서 재확인 + <code>lecl_web_indexes</code> 손상 여부를 크래시와 독립적으로 검사 (손상 시 CBRD-26948 계열 별도 결함).</li>
+  <li><strong>numerable FILE_OOS 북키핑 JIRA 발행</strong> (cbrd_23430 + cbrd_25365, 8/03 스택 인용) — feat/oos 머지 전 ADR-0001 비-numerable 전환 인입 여부 결정. 엔진 fix 후 cbrd_25365 의 비크래시 케이스 (6–12/20/22/24) 를 로그량 가설 포함해 재판정.</li>
+  <li><strong>log_enc_04 workload 수정</strong> (tc/pr-6864) — develop 에서의 생산자 확인 후, OOS 하에서도 진짜 재배치가 일어나게 수정.</li>
+  <li><strong>CI 증거 보존 개선</strong> — 코어 스택 수집 (필요 시 <code>cubrid-ci --artifact-mode all</code> 재수집), TC cleanup 이 지우는 <code>*_loaddb.log</code> 와 <code>$CUBRID/log/server/*.err</code> 를 아티팩트로 보존. 현재는 §크래시의 확정 증거가 될 loaddb 에러 텍스트가 TC 자신의 <code>rm -rf</code> 로 파괴된다.</li>
+  <li><strong>CircleCI 집계 누락 보고</strong> — bug_bts_5730 이 노드 XML 에는 있고 tests API 에는 없는 문제. 집계 수치만으로 상황판을 만들면 실제 실패를 놓친다.</li>
+</ol>
+
+<h2 id="limits">증거와 한계</h2>
+<ul>
+  <li>세 suite 모두 동일 커밋 <code>07fef9d48…</code> 에 고정 수집. 로컬 엔진 워크트리도 정확히 같은 커밋이라 소스 인용은 exact.</li>
+  <li>text 모드 수집 — 코어덤프 12개는 목록만 확보, 바이너리 미다운로드. 백트레이스 아티팩트는 이 런에 존재하지 않음. 따라서 <strong>이번 런의 크래시 지점 귀속은 전부 “실행 구간 내 코어 + 선행 정밀 스택 재현” 에 근거한 추론</strong>이며 본문에 라벨로 구분했다.</li>
+  <li>CTP 는 실패 시 1회 재시도하며 <strong>마지막 시도의 코어만 살아남는다</strong> — 1차 시도 코어의 부재는 1차 크래시의 반증이 아니다. 또 재시도는 1차가 남긴 더러운 작업공간 때문에 다른 증상 (createdb 실패 등) 을 보이는 경우가 있어 (itrack_10006, cbrd_23430), 수집된 failure 레코드 (= 재시도 로그) 만 읽으면 오분류하기 쉽다.</li>
+  <li><code>testcase_revision</code> 이 세 summary 모두에서 <strong>부재</strong> (구버전 번들엔 있었음 — collector 회귀 가능성). TC 브랜치는 config (<code>TC_BRANCH="tc/pr-6864"</code>, ls-remote 5회 실패 시에만 develop 폴백) + 내용 증거 (tc/pr-6864 에서 고친 12건이 이번에 전부 통과) 로 도출. CTP 속성 파일의 <code>develop</code> 표기는 장식적 기본값.</li>
+  <li>bigPageSize Layer C (tie-pick vs locator 재생성) 는 <strong>의도적으로 미결</strong> — 판별 검사 없이는 어느 쪽도 승인하지 않는다.</li>
+  <li>CDC 2건의 근본 원인은 지시에 따라 주장하지 않는다.</li>
+</ul>
+
+<p class="small">영문 상세 원본: <code>~/gh/my-cubrid-docs/cbrd-26357/ci_analysis_report_07fef9d_claude.md</code> · 이 HTML: <code>ci_failure_report_07fef9d_claude.html</code> (adversarial review 1회 반영판)</p>
+
+</div>
+</body>
+</html>
