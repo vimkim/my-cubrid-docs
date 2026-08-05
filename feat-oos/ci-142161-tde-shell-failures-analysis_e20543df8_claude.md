@@ -116,7 +116,29 @@ TC 브랜치 `tc/pr-6864`에 푸시된 커밋: `e7e87aa43`(TDE 8건), `c3a318e6f
    Resolve 미구현" 갭의 교차점. release 빌드에선 CDC가 오염된 before-image를 출력할 위험.
    증거: core `core.cdc-loginfo-pro.715349`(ERROR_BACKUP `AUTO_...194320`).
 
-### 미결 (본 세션 진행 중)
+### 미결 → 판정 완료 (2026-08-03 저녁)
 
-- `bigPageSize`: #7588로 loaddb는 성공하나 16K→4K loaddb 후 SELECT 결과가 원본과 diff.
-- `cbrd_25365`(아카이브 로그 타이밍), `cbrd_25481`(unloaddb/loaddb 대형 행): 로컬 재실행으로 판별 중.
+- `cbrd_25481`: **로컬 OK** — CI 실패는 #7588 미포함 crash 여파.
+- `cbrd_25365`: 로컬에서도 NOK — 실행 중 cub_server 코어 2개 발생, 둘 다
+  **`pgbuf_fix_debug` assert(page_buffer.c:2564), 호출자 `file_numerable_add_page`
+  (file_manager.c:8055)** — 일반 csql INSERT(트랜잭션 워커, lob_create_flag=1)에서 numerable
+  OOS 파일의 user-page-table 확장 페이지가 이미 초기화된 페이지와 충돌. cbrd_23430의
+  `file_alloc`(5509) 충돌과 같은 계열로, **numerable FILE_OOS 페이지 북키핑 결함**이 근본 원인.
+  ADR-0001(FILE_OOS 비-numerable 전환, `oos-m2-all-plans-experimental`에 구현됨)이 정확히 이
+  regime을 제거하는 fix 방향. 아카이브 로그 미생성(case 6~) NOK 는 crash 여파일 가능성 높음 —
+  엔진 fix 후 재판정.
+- `bigPageSize`: loaddb 자체는 #7588로 성공. 남은 diff는 **CLOB/BLOB locator 문자열 단 2줄**
+  (`file:.../dba.t.<timestamp>_<rand>`) — db1 원본 locator와 db2(4K) 로드본 locator가 다름.
+  develop 의 server-side loaddb 는 locator 를 보존해 이 TC가 통과했으므로, feat/oos 의
+  ELO(OOS demote 대상) 경로가 loaddb(`LOB_FLAG_EXCLUDE_LOB`) 중 locator 를 재생성하는 것으로
+  보임. heap writer 양쪽(인라인 12902 / OOS 12375)은 flag를 존중하므로 재생성 지점은 상류
+  (값 파이프라인) — 후속 디버깅 필요. 데이터 자체 동등성은 미확인(locator 명만 diff).
+
+### 결론 매트릭스 (19건)
+
+| 그룹 | TC | 처리 |
+|---|---|---|
+| TC 수정 완료·푸시 (12) | tbl_enc_08/14, file_enc_01~05/07, cbrd_26527, bug_bts_9836, bug_bts_14120 | tc/pr-6864 커밋 e7e87aa43, c3a318e6f, 876639d8d(+19082d837) |
+| 엔진 head로 이미 통과 (4) | bug_xdbms_sus880, itrack_10006, cbrd_25481, cbrd_27064 | **PR #7588 을 feat/oos(PR #6864 브랜치)에 머지해야 CI에 반영됨** |
+| 엔진 결함 잔존 (3) | cbrd_23430, cbrd_25365, cbrd_27075 | numerable FILE_OOS 페이지 북키핑 crash ×2 + CDC↔vacuum OOS chain lifetime crash — JIRA 필요 |
+| 잠재 신규 (1) | bigPageSize | crash 해소 후 locator diff 가 CI 에 표면화될 것 — ELO locator 보존 fix 또는 TC 마스킹 결정 필요 |
