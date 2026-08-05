@@ -125,6 +125,25 @@
 - fuzzy가 가능한 근거는 Q1: 모든 페이지가 WAL 규칙을 지키므로, 안 내려간 dirty 페이지는 redo로 복원 가능.
   체크포인트는 "일관 상태 만들기"가 아니라 **"redo 시작점을 앞으로 당겨 복구 시간을 줄이기"**.
 
+### Q15. sysop이 없다면 btree에서 무엇이 깨지나 — 부분 정답 (방향만) 🔶
+
+- 사용자 답: "split이 깨진다?" — 대상은 맞음, 층위 분해 필요. 아래 4층으로 해설함.
+- 코드 근거: split은 `btree_split_node_and_advance` (`btree.c:27677`)에서
+  `need_split` → `log_sysop_start` (`:28165`) → `btree_get_new_page` → 진행 방향 결정 후 `log_sysop_commit` (`:28208`/`:28224`),
+  실패 시 `log_sysop_abort` (`:28275`). merge도 동일 패턴 (`btree_merge_node_and_advance` `:31077`).
+- **① 커밋된 데이터 소실**: split 후 latch 해제 → 다른 tx가 즉시 새 페이지에 삽입·커밋.
+  T가 롤백하며 split을 되돌리면 그 커밋된 키가 사라짐. **최악은 롤백 실패가 아니라 남의 커밋 파괴.**
+- **② 롤백이 실패할 수 있게 됨**: split undo = merge인데, merge는 자리 부족·페이지 할당을 요구할 수 있음.
+  롤백/복구는 **절대 실패해선 안 되는 경로** — undo가 자원을 요구하면 디스크 풀에서 복구 불가.
+  sysop이 파는 것은 "물리 구조 변경을 undo 대상에서 영구히 제외"하는 보장.
+- **③ latch가 lock으로 승격**: 미커밋 split을 남이 못 보게 하려면 페이지 latch를 커밋까지 유지해야 함.
+  latch는 마이크로초 단위 물리 보호 장치 — 트랜잭션 수명까지 늘리면 동시성 붕괴 (AGENTS.md의
+  "latches for physical consistency, locks for logical" 원칙 위반).
+- **④ Q13이 무의미해짐**: 키 재탐색 전략은 "지금 트리 구조가 곧 진실"을 전제. 구조가 롤백으로 되돌아갈 수 있으면
+  vacuum/logical undo가 도달한 페이지가 곧 사라질 수 있음 → 물리 주소도 논리 주소도 못 믿는 상태.
+- 정리: sysop은 성능 장치가 아니라 **"구조 변경은 논리 트랜잭션과 생명주기가 다르다"는 선언**.
+  ARIES의 nested top action과 동일 개념.
+
 ## 형식 변경 (Q10 시점 사용자 요청)
 
 - AskUserQuestion 프롬프트는 가독성이 떨어짐 → **평문 4지선다**로 출제, 사용자가 번호로 답변.
@@ -147,6 +166,37 @@
 - **Q5와의 연결 (같은 함수 안에서!)**: `heap_file.c` 주석 "Page deallocation may append LOG_POSTPONE records,
   so do not use the transaction tail LSA here" — overflow 축소 시 `file_dealloc`이 postpone을 남기므로
   supplemental log가 tail LSA를 쓸 수 없음. `overflow_file.c:559`에도 동일 취지 주석.
+
+## 2부 시작 (사용자 승인) — 로드맵 방향으로 전환
+
+- Q1~Q15는 src/storage 접점 퀴즈 (9/11 정답 + 서술 1부분정답). 오답 축: "되돌릴 수 있는가/재개할 수 있는가".
+- 사용자 승인한 로드맵 순서로 2부 진행:
+  1단계 sysop 4함수 → 2단계 postpone 생애 → 3단계 log_recovery 3단 구조 → 4단계 vacuum 재독.
+- 형식 유지: 평문 4지선다, **한 문제씩**, 매번 file:line 근거 해설.
+
+### 정정 사항 (1부 Q10 해설 오류)
+
+- 1부에서 "sysop 종료 4종(commit/end_logical_undo/abort/attach_to_outer)"이라고 했으나 부정확.
+  실제 `LOG_SYSOP_END_TYPE` enum은 **6종** (`log_manager.c:3599` `log_sysop_end_type_string`):
+  COMMIT, ABORT, LOGICAL_UNDO, LOGICAL_MVCC_UNDO, LOGICAL_COMPENSATE, LOGICAL_RUN_POSTPONE.
+  `attach_to_outer`는 end type이 아니라 로그 레코드를 아예 남기지 않고 부모에 흡수하는 별도 경로.
+
+### Q16. sysop abort가 "자기 변경만" 되돌리는 근거 — 정답 ✅ (2번)
+
+- `log_sysop_start`이 `tdes->topops.stack[last].lastparent_lsa = tdes->tail_lsa` 저장 (`log_manager.c:3680`),
+  `log_sysop_abort`이 `log_rollback (thread_p, tdes, LOG_TDES_LAST_SYSOP_PARENT_LSA (tdes))` (`:4099`) —
+  그 경계 LSA까지만 undo. 변경 없으면(`tail_lsa <= lastparent_lsa`) 로그도 안 남김 (`:4080`).
+- topops는 **스택** (`topops.last`, `topops.max`, `logtb_realloc_topops_stack`) → sysop 중첩 가능.
+- 1번(변경 목록 배열)이 틀린 이유: 그 배열은 크래시하면 사라짐. 로그는 이미 디스크에 있음 →
+  **런타임 롤백과 복구 undo가 같은 코드로 동작**(`log_rollback`을 양쪽이 공유).
+
+### Q17. undo 역주행이 LOG_SYSOP_END(COMMIT)를 만나면 — 출제됨 (답변 대기)
+
+- 정답 근거: `log_manager.c:7909` `case LOG_SYSOP_END:` 주석 그대로 —
+  "We found a system top operation that **should be skipped from rollback**".
+  COMMIT/ABORT 등 기본 분기는 `prev_tranlsa = sysop_end->lastparent_lsa` (`:7966` "jump to last parent") →
+  sysop 구간 전체를 건너뜀. Q15의 "구조 변경은 undo 대상에서 영구 제외"가 구현되는 정확한 지점.
+- 대조: `LOGICAL_UNDO`/`LOGICAL_MVCC_UNDO`는 점프 **전에** `log_rollback_record`로 논리 undo 1건 실행 (`:7932`, `:7949`).
 
 ## 미해결 / 후속 의문
 
