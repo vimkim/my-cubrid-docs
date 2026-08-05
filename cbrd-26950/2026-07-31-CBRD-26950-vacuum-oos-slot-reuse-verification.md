@@ -1,10 +1,11 @@
 # CBRD-26950 — vacuum OOS 슬롯 재사용 데이터 손실: 현재 소스 검증 보고
 
-- **작성일**: 2026-07-31
+- **작성일**: 2026-07-31 / **갱신**: 2026-08-05 (§8 런타임 재현 완료로 교체, Q4 정정, §8-5 부수 발견 추가)
 - **검증 기준 커밋**: `0ad6afc0ff871f5aa6c002923868fc6527149ea0` (= `origin/feat/oos`, ahead/behind 0/0)
+- **재현 기준 커밋**: `07fef9d48` (`feat/oos` + `origin/develop` 머지, debug_gcc 빌드) — §8
 - **JIRA 앵커와의 관계**: JIRA 본문은 `2c329a4e0` 기준. 본 문서는 그 이후의 모든 변경(bestspace 리디자인 CBRD-26176 포함)을 반영한 현재 HEAD 재검증 결과.
-- **작성 도구**: Claude Code (Fable 5) — 분석 전용 세션, 소스 무변경
-- **판정**: **성립** (신뢰도 높음 — 코드 수준 도달 가능성. 런타임 재현은 fault-injection 훅이 필요해 미수행)
+- **작성 도구**: Claude Code (Fable 5) — 소스 무변경 (분석 + 런타임 재현)
+- **판정**: **성립 — 런타임 재현 완료.** 소스 수정도 fault-injection 훅도 필요하지 않았다. 스톡 debug 빌드에서 `cubrid server stop` 만으로 재현되며, 커밋하고 그 뒤 한 번도 수정하지 않은 행이 판독 불가가 된다. 상세는 §8.
 
 ---
 
@@ -67,7 +68,9 @@ page LSA는 "**같은 redo를 같은 페이지에 두 번 적용**"을 막는 �
 
 ### Q4. "테스트 다 통과하는데 왜 CRITICAL이냐?"
 
-블록 재시도 + 슬롯 재사용 조합을 만드는 테스트가 **존재하지 않는다**(부재 ≠ 안전). 결정적 재현에는 vacuum sysop 커밋 직후 worker를 멈추는 fault-injection이 필요하다. 발현 시 증상이 에러·로그 없는 **무증상 데이터 손실**이라 사후 진단도 불가능한 부류이므로 심각도는 CRITICAL이 맞다. 낮은 확률은 도달 불가가 아니다.
+블록 재시도 + 슬롯 재사용 조합을 만드는 테스트가 **존재하지 않는다**(부재 ≠ 안전). 발현 시 증상이 에러·로그 없는 **무증상 데이터 손실**이라 사후 진단도 불가능한 부류이므로 심각도는 CRITICAL이 맞다.
+
+> **2026-08-05 정정**: 이 답변은 원래 "결정적 재현에는 vacuum sysop 커밋 직후 worker를 멈추는 fault-injection이 필요하다"고 썼다. **틀렸다.** `cubrid server stop` 이 vacuum worker를 블록 중간에 버리므로(`vacuum.c:3493` 의 `thread_p->shutdown` 체크) 훅 없이 재현된다 — 즉 확률이 낮은 것도 아니고, OOS 부하가 있는 DB의 **평시 정상 종료**가 그대로 발현 조건이다. 크래시는 창을 넓히는 요인일 뿐 필수 조건이 아니다. §8 참조.
 
 ### Q5. "REMOVE 경로는 heap 레코드와 sysop으로 묶이고 MVCC version check가 있으니 문제없지 않나?"
 
@@ -110,16 +113,74 @@ overflow 선례는 **레코드 단위** sysop이고 OOS도 이미 그렇게 한�
 - **온디스크 포맷 변경이므로 feat/oos 미출시인 지금이 마이그레이션 비용 0인 유일한 시점.**
 - 후속 의존: 페이지 회수(CBRD-26786), flashback retention(CBRD-26847 FU-01)이 이 수정을 전제.
 
-## 8. 결정적 재현 실험 설계 (별도 승인 필요 — 소스 훅 필요)
+## 8. 런타임 재현 — 완료 (2026-08-05, 소스 무변경)
 
-1. `vacuum_forward_walk_oos_delete_atomic` 의 `log_sysop_commit` 직후 worker를 멈추는 fault-injection 훅 (테스트 빌드 전용).
-2. `BIT VARYING` 으로 OOS-backed 행 R1 insert → UPDATE → vacuum 유도 (`vacuum_log_block_pages=4`).
-3. 훅에서 정지된 사이 별도 세션이 R2 insert (슬롯 재사용 확인: debug `oos.log` 의 OID 대조).
-4. worker 재개(또는 kill -9 후 재기동) → 블록 재처리 → R2의 값 SELECT 가 실패하거나 오독되는지 확인.
+**재현됨.** 원래 계획했던 fault-injection 훅은 필요하지 않았다. 재현 스크립트: `cbrd-26950/cbrd-26950-poc.sh` (기준 커밋 `07fef9d48`, `debug_gcc` 프리셋). 전용 DB와 전용 `cubrid.conf` 를 만들어 쓰므로 설치본의 다른 DB는 건드리지 않고, 1회 약 4분이 걸린다.
+
+### 8-1. 레시피
+
+| 단계 | 내용 | 성립시키는 조건 |
+|---|---|---|
+| 1 | 5000B `BIT VARYING` 페이로드로 20000행 INSERT (전부 OOS 적재) | — |
+| 2 | **단일 트랜잭션**으로 전체 UPDATE → 커밋 순간 20000개 옛 체인이 한꺼번에 회수 대상이 됨. 동시에 별도 세션 6개가 **같은 크기로** 계속 INSERT | ② 슬롯 재사용 |
+| 3 | vacuum이 30%를 회수한 시점에 `cubrid server stop` | ③ 블록 중단 |
+| 4 | 재기동 → vacuum이 같은 블록을 `start_lsa` 부터 재주행 | ① 신원 없는 probe |
+
+UPDATE여야 하는 이유는 Q5와 같다. DELETE는 heap sysop 안에서 회수되고 MVCC 체크로 멱등하므로 이 경로가 아니다.
+
+### 8-2. 결과
+
+최종 파라미터로 연속 2회 재현. 두 증거가 **정확히 1:1** 로 맞았다.
+
+| 실행 | 두 pass 모두에서 삭제된 OOS OID | 판독 불가해진 살아있는 행 | 대조군(pass 1 이전에 할당된 체인) |
+|---|---|---|---|
+| 1회차 | 293 | 293 | 무손상 |
+| 2회차 | 163 | 163 | 무손상 |
+
+피해 행은 **슬롯이 해제된 뒤에 INSERT·커밋되고 그 후 한 번도 수정되지 않은** 행이다. SELECT 시:
+
+```
+ERROR: Internal error: slot 1 on page 8081 of volume ".../oos26950" is not allocated.
+```
+
+대조군은 UPDATE 후 체인이 어떤 삭제보다 먼저 할당되어 재사용 슬롯에 있을 수 없는 행들이며, 두 실행 모두 무손상이었다 — 즉 손상은 "재사용된 슬롯"에만 정확히 국한된다.
+
+### 8-3. 각 레버가 왜 필요한지 (실패한 시도 기록)
+
+재현이 안 되는 조합이 여러 개 있어, 같은 길을 다시 걷지 않도록 남긴다.
+
+| 문제 | 관찰 | 대응 |
+|---|---|---|
+| 블록이 아예 발행되지 않음 | 블록은 **다음 로그 레코드가 경계를 넘을 때만** 발행된다(`log_append.cpp:1376-1385`). UPDATE 후 로그를 더 쓰지 않으면 마지막 블록이 영원히 대기 | 뒤이어 로그를 더 밀어주는 워크로드를 둔다 (스크립트에서는 재사용용 INSERT가 겸함) |
+| vacuum이 backlog를 항상 다 비움 | `cubrid server stop` 이 worker에 도달하기까지 **약 1.5초**, vacuum 회수율은 **초당 수천 개**(실측 1000~13000/s, 버퍼 온도에 따라 요동). 4000행 규모로는 매번 완주 | backlog를 20000행으로 키운다 |
+| 배치 커밋 UPDATE로는 backlog가 안 쌓임 | vacuum 회수율 ≈ 클라이언트 생산율이라 backlog가 자라지 않는다 | UPDATE를 **단일 트랜잭션**으로 — 커밋 전까지 vacuum이 손대지 못한다 |
+| 고정 sleep이 불안정 | 회수율이 실행마다 요동쳐 어떤 실행은 다 비우고 어떤 실행은 덜 비움 | **진행률 기반 정지**(`STOP_AT_PCT`, 기본 30%)로 폴링 |
+| 재사용이 일어나지 않음 | 재시작 후에는 bestspace 캐시가 비어 있고 tier-3 sync가 파일 **앞쪽 100 페이지**만 훑는다(`oos_file.cpp` `oos_stats_sync_bestspace`, `oos_Find_best_page_limit`). 앞쪽이 꽉 차 있으면 새 페이지를 할당해버림 | 재사용 INSERT를 **삭제와 같은 서버 세션에서** vacuum과 동시에 돌린다 |
+| 재사용이 최근 해제 슬롯을 못 따라감 | 중단된 블록의 이미 처리된 구간은 **가장 최근에 해제된** 슬롯이다. 단일 writer는 vacuum 속도를 못 따라가 그 구간이 재기동 시점에 비어 있음 → probe가 false로 정상 스킵 | writer를 6개로 병렬화 |
+
+### 8-4. 재현으로 새로 확인된 사실 (§2·§3 보정)
+
+- **§2 T5 보정**: 중단이 서버 에러 로그에 `Processing log block N is interrupted!` 로 남는 것은 master가 종료 전에 finished-job 큐를 처리한 경우뿐이다. 그러지 못하면 블록은 vacuum data 페이지에 **IN_PROGRESS 로 남고**, 다음 부팅의 `vacuum_data_load_and_recover` 가 `set_interrupted()` 로 바꾼다(`vacuum.c:4398-4403`). **재주행은 어느 쪽이든 일어나므로**, 로그에 그 경고가 없다는 것이 안전의 근거가 되지 않는다. 실제로 경고가 0건인 실행에서도 재현됐다.
+- **§2 T3 보정**: "삭제 즉시 bestspace 재등록"은 맞지만, 그 재등록은 **프로세스 메모리 캐시**에 남는다. 재시작을 건너뛰면 재사용이 사실상 즉시 일어나고, 재시작이 끼면 tier-3 sync의 100 페이지 한계 때문에 오히려 잘 일어나지 않는다. 즉 **재사용 창이 가장 넓은 구간은 삭제와 같은 세션 안**이다.
+- **`vacuum_disable=yes` 는 backlog를 보존하지 못한다**: 그 부팅에서는 블록이 발행되지 않고(`vacuum_produce_log_block_data` 조기 return), 재활성화 시 `vacuum_is_empty()` 경로가 `last_blockid` 를 현재 로그 끝으로 밀어 대기 블록을 버린다(`vacuum.c:4430-4452`). 크래시 복구가 아니면 `vacuum_recover_lost_block_data` 도 조기 return한다. 재현 시나리오를 단계별로 끊는 용도로는 쓸 수 없다.
+
+### 8-5. 부수 발견 (CBRD-26950과 별개, 별도 티켓 후보)
+
+1. **종료 중 인터럽트가 debug 빌드에서 서버를 abort시킨다.** 서버 종료로 클라이언트의 OOS INSERT가 인터럽트되어 `pgbuf_fix` 가 `ER_INTERRUPTED`(-4)로 실패하면 `file_alloc` 이 정상적으로 에러를 반환하는데, `oos_file_alloc_new` 가 이를 있을 수 없는 상황으로 보고 무조건 `assert (false)` 를 건다 (`oos_file.cpp:1892`). 인터럽트는 정상 경로이므로 에러를 전파해야 할 자리다. 코어 스택:
+
+   ```
+   oos_file_alloc_new (oos_file.cpp:1892)  ← assert (false)
+     ← oos_find_best_page ← oos_insert_single_page_batch
+     ← oos_insert_many ← heap_oos_insert_serialized_values
+     ← heap_attrinfo_insert_to_oos ← heap_attrinfo_transform_to_disk_internal
+   ```
+
+2. **`oos_insert_many` 에 디버그 로그가 없다.** `oos_insert` 에는 `oos_debug ("inserted to oid=...")` 가 있는데(`oos_file.cpp:1219`) 실제 INSERT 경로인 배치 API(CBRD-27006)에는 없어서, `oos.log` 에 **삭제만 남고 삽입은 남지 않는다.** 이 때문에 재현 초기에 "OOS가 아예 트리거되지 않는다"고 오판했다. 슬롯 재사용을 로그만으로 직접 증명할 수 없게 만드는 관측성 공백이므로, 배치 경로에도 같은 로그를 넣는 것이 좋다.
 
 ## 9. 참고
 
 - JIRA: [CBRD-26950](http://jira.cubrid.org/browse/CBRD-26950) (Status: Analysis, 2026-07-29 갱신)
+- 재현 스크립트: `cbrd-26950/cbrd-26950-poc.sh` (§8)
 - 발견 경위: PR #6986 (CBRD-26668) 코드 리뷰 finding #1/#2 — `cbrd-26668/2026-06-15-CBRD-26668-PR6986-code-review.md`
 - 정상 동작 설명: `cbrd-26668/CBRD-26668-code-review-explanation.md` §7-5 (정정 포함)
 - OOS 사양: `OOS-CONTEXT.md` (Known Bugs 표의 CBRD-26950 행)
