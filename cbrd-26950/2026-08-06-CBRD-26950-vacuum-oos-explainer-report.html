@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CBRD-26950 — vacuum과 OOS 슬롯 재사용 문제: 원리부터 대책까지</title>
+<style>
+  :root {
+    color-scheme: light only;
+    --bg: #ffffff; --fg: #212529; --muted: #64707d; --line: #dde3e9;
+    --accent: #1a4f8b; --accent-soft: #f0f5fa;
+    --danger: #b02a30; --danger-soft: #fbf1f1;
+    --ok: #1e6f3e; --ok-soft: #f1f8f3;
+    --warn: #97701f; --warn-soft: #fbf7ee;
+    --code-bg: #f5f7f9;
+  }
+  * { box-sizing: border-box; }
+  html { background: #ffffff; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic", -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.72; font-size: 15px;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 52px 32px 80px; }
+  h1 { font-size: 25px; line-height: 1.4; margin: 0 0 6px; font-weight: 700; letter-spacing: -0.01em; }
+  h2 { font-size: 19.5px; margin: 54px 0 14px; padding-top: 24px; border-top: 1px solid var(--line); font-weight: 700; letter-spacing: -0.01em; }
+  h2 .num { color: var(--accent); margin-right: 8px; }
+  h3 { font-size: 15.5px; margin: 28px 0 8px; }
+  .sub { color: var(--muted); font-size: 13.5px; margin-bottom: 4px; }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 10px; }
+  .meta code { font-size: 12px; }
+  code {
+    background: var(--code-bg); border-radius: 4px; padding: 1px 5px;
+    font-family: "JetBrains Mono", "D2Coding", Consolas, monospace; font-size: 12.5px;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 16px; overflow-x: auto; font-size: 12.5px; line-height: 1.55;
+    font-family: "JetBrains Mono", "D2Coding", Consolas, monospace;
+  }
+  pre code { background: none; padding: 0; }
+  .tagline {
+    margin: 24px 0 0; padding: 18px 20px; border-radius: 10px;
+    background: var(--danger-soft); border-left: 4px solid var(--danger);
+    font-size: 16px; font-weight: 600;
+  }
+  .tagline .fix { display:block; margin-top: 8px; font-weight: 500; color: var(--fg); font-size: 14px; }
+  .callout {
+    margin: 16px 0; padding: 13px 18px; border-radius: 10px;
+    background: var(--warn-soft); border-left: 4px solid var(--warn); font-size: 14px;
+  }
+  .callout.blue { background: var(--accent-soft); border-left-color: var(--accent); }
+  .callout.green { background: var(--ok-soft); border-left-color: var(--ok); }
+  .callout.red { background: var(--danger-soft); border-left-color: var(--danger); }
+  .callout b.t { display: block; margin-bottom: 4px; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 8px 11px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-size: 12.5px; }
+  tr:nth-child(even) td { background: #fbfcfd; }
+  .scroll { overflow-x: auto; }
+  .verdict-x { color: var(--danger); font-weight: 700; white-space: nowrap; }
+  .verdict-o { color: var(--ok); font-weight: 700; white-space: nowrap; }
+  .verdict-t { color: var(--warn); font-weight: 700; white-space: nowrap; }
+
+  /* 타임라인 */
+  .tl { list-style: none; margin: 20px 0; padding: 0; }
+  .tl li { position: relative; padding: 0 0 20px 40px; }
+  .tl li::before {
+    content: attr(data-t); position: absolute; left: 0; top: 1px;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--code-bg); border: 2px solid var(--muted);
+    font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    color: var(--muted);
+  }
+  .tl li::after {
+    content: ""; position: absolute; left: 15px; top: 33px; bottom: -1px;
+    width: 2px; background: var(--line);
+  }
+  .tl li:last-child::after { display: none; }
+  .tl li.bad::before { border-color: var(--danger); color: var(--danger); background: var(--danger-soft); }
+  .tl li.ok::before  { border-color: var(--ok); color: var(--ok); background: var(--ok-soft); }
+  .tl li.warn::before { border-color: var(--warn); color: var(--warn); background: var(--warn-soft); }
+  .tl .head { font-weight: 700; font-size: 14.5px; }
+  .tl .body { color: var(--muted); font-size: 13.5px; margin-top: 2px; }
+  .tl .body b { color: var(--fg); }
+
+  /* 다이어그램 공통 */
+  .diagram {
+    margin: 18px 0; padding: 18px; border: 1px solid var(--line); border-radius: 10px;
+    background: #fdfdfe; overflow-x: auto;
+  }
+  .diagram .cap { text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 12px; }
+  .flow { display: flex; align-items: stretch; gap: 0; min-width: 560px; }
+  .flow .box {
+    flex: 1; border: 1.5px solid var(--line); border-radius: 8px; padding: 10px 12px;
+    background: var(--bg); font-size: 12.5px; line-height: 1.5;
+  }
+  .flow .box .bt { font-weight: 700; font-size: 13px; display: block; margin-bottom: 3px; }
+  .flow .box .bd { color: var(--muted); font-size: 12px; }
+  .flow .box.live { border-color: var(--ok); background: var(--ok-soft); }
+  .flow .box.log  { border-color: var(--muted); background: var(--code-bg); }
+  .flow .box.bad  { border-color: var(--danger); background: var(--danger-soft); }
+  .flow .box.hi   { border-color: var(--accent); background: var(--accent-soft); }
+  .flow .arr {
+    align-self: center; padding: 0 8px; color: var(--accent); font-weight: 700;
+    font-size: 13px; white-space: nowrap; text-align: center; line-height: 1.3; flex-shrink: 0;
+  }
+  .flow .arr small { display: block; color: var(--muted); font-weight: 500; font-size: 10.5px; }
+  .vflow { display: flex; flex-direction: column; gap: 0; max-width: 660px; margin: 0 auto; }
+  .vflow .box {
+    border: 1.5px solid var(--line); border-radius: 8px; padding: 10px 14px;
+    background: var(--bg); font-size: 13px;
+  }
+  .vflow .box .bt { font-weight: 700; display: block; }
+  .vflow .box .bd { color: var(--muted); font-size: 12.5px; }
+  .vflow .varr { text-align: center; color: var(--accent); font-weight: 700; padding: 3px 0; font-size: 14px; }
+  .vflow .varr small { color: var(--muted); font-weight: 500; margin-left: 6px; font-size: 11px; }
+  .vflow .box.hi { border-color: var(--accent); background: var(--accent-soft); }
+  .vflow .box.warn { border-color: var(--warn); background: var(--warn-soft); }
+
+  /* 레코드/스텁 그림 */
+  .rec {
+    display: flex; margin: 14px 0; border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--line); font-family: "JetBrains Mono", monospace; font-size: 11.5px; text-align: center;
+    min-width: 480px;
+  }
+  .rec div { padding: 9px 6px; border-left: 1px solid var(--line); }
+  .rec div:first-child { border-left: none; }
+  .rec .hdr { flex: 3; background: var(--code-bg); }
+  .rec .sml { flex: 2; background: var(--bg); }
+  .rec .big { flex: 5; background: var(--danger-soft); }
+  .rec .stubf { flex: 3; background: var(--accent-soft); font-weight: 700; color: var(--accent); }
+  .stub {
+    display: flex; margin: 14px 0; border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--line); font-family: "JetBrains Mono", monospace; font-size: 12px; text-align: center;
+    max-width: 560px;
+  }
+  .stub div { padding: 10px 6px; }
+  .stub .f1 { flex: 8; background: var(--accent-soft); }
+  .stub .f2 { flex: 8; background: var(--code-bg); border-left: 1px solid var(--line); }
+
+  /* 슬롯 상태 3단계 */
+  .slots { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 6px; align-items: center; margin: 16px 0; min-width: 640px; }
+  .slotcard { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .slotcard .sc-h { padding: 7px 10px; font-size: 12px; font-weight: 700; background: var(--code-bg); border-bottom: 1px solid var(--line); text-align: center;}
+  .slotcard .sc-b { padding: 10px; font-size: 12px; }
+  .slotcard .slotline { display: flex; gap: 6px; align-items: center; margin: 4px 0; font-family: monospace; font-size: 11.5px; }
+  .slotcard .slotname { color: var(--muted); width: 52px; flex-shrink: 0; }
+  .slotcard .cell { flex: 1; border-radius: 5px; padding: 4px 8px; border: 1px solid var(--line); background: var(--bg); }
+  .slotcard .cell.dead { background: var(--warn-soft); border-color: var(--warn); }
+  .slotcard .cell.free { background: var(--code-bg); color: var(--muted); border-style: dashed; }
+  .slotcard .cell.livec { background: var(--ok-soft); border-color: var(--ok); }
+  .slotarr { color: var(--accent); font-weight: 700; font-size: 13px; text-align: center; line-height: 1.3; }
+  .slotarr small { display: block; color: var(--muted); font-weight: 500; font-size: 10px; }
+
+  /* 대책 카드 */
+  .alt { border: 1px solid var(--line); border-radius: 10px; padding: 15px 18px; margin: 14px 0; }
+  .alt.idfam { border-left: 4px solid var(--accent); }
+  .alt.opfam { border-left: 4px solid var(--warn); }
+  .alt h4 { margin: 0 0 6px; font-size: 15px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .alt .idea { color: var(--muted); font-size: 13.5px; margin-bottom: 8px; }
+  .alt ul { margin: 6px 0 0; padding-left: 19px; font-size: 13.5px; }
+  .alt li { margin-bottom: 5px; }
+  .alt .badge { font-size: 11.5px; font-weight: 700; padding: 2px 10px; border-radius: 20px; white-space: nowrap; align-self: flex-start; }
+  .alt.idfam .badge { color: var(--accent); background: var(--accent-soft); }
+  .alt.opfam .badge { color: var(--warn); background: var(--warn-soft); }
+  .alt .pros b, .alt .cons b { font-size: 12.5px; }
+  .alt .pros { color: var(--ok); }
+  .alt .cons { color: var(--danger); }
+  .alt .pros ul, .alt .cons ul { color: var(--fg); }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; }
+  .cols3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 16px 0; }
+  @media (max-width: 700px) {
+    .wrap { padding: 32px 20px 56px; }
+    .cols, .cols3 { grid-template-columns: 1fr; }
+    h1 { font-size: 22px; }
+  }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .card h3, .card h4 { margin: 0 0 8px; font-size: 14px; }
+  .card.f1 { border-top: 4px solid var(--danger); }
+  .card.f2 { border-top: 4px solid var(--warn); }
+  .card.f3 { border-top: 4px solid var(--accent); }
+  .card p { margin: 0; font-size: 13px; color: var(--muted); }
+  .card p b { color: var(--fg); }
+  .card .kick { font-size: 11px; letter-spacing: .06em; font-weight: 700; color: var(--muted); }
+
+  .toc { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 14px 20px; margin: 22px 0; font-size: 13.5px; }
+  .toc ol { margin: 6px 0 2px; padding-left: 22px; columns: 2; column-gap: 36px; }
+  .toc li { margin-bottom: 4px; break-inside: avoid; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  .footnote { color: var(--muted); font-size: 12.5px; margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .kicker { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  p.lead { font-size: 15px; }
+  .qa dt { font-weight: 700; margin-top: 18px; font-size: 14.5px; }
+  .qa dt::before { content: "Q. "; color: var(--accent); }
+  .qa dd { margin: 6px 0 0; font-size: 14px; }
+  .qa dd::before { content: "A. "; color: var(--ok); font-weight: 700; }
+  .analogy {
+    margin: 18px 0; padding: 16px 20px; border-radius: 10px;
+    background: var(--accent-soft); border: 1px solid var(--line); font-size: 14px;
+  }
+  .analogy .t { font-weight: 700; margin-bottom: 6px; display: block; color: var(--accent); font-size: 13px; }
+  .term { border-bottom: 1.5px dotted var(--accent); cursor: help; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<span class="kicker">CBRD-26950 · CRITICAL · 팀 공유용 설명 보고서</span>
+<h1>vacuum이 살아있는 데이터를 지울 수 있다<br>— OOS 슬롯 재사용 문제: 원리부터 대책까지</h1>
+<div class="meta">
+  작성 2026-08-06 · 기준 커밋 <code>07fef9d48</code> (feat/oos + origin/develop 머지) ·
+  작성 도구 Claude Code (Fable 5) ·
+  근거 문서: <code>2026-07-31-CBRD-26950-vacuum-oos-slot-reuse-verification.md</code>,
+  <code>2026-08-05-CBRD-26950-poc-run-guide-and-results.md</code>, <code>OOS-CONTEXT.md</code>
+</div>
+
+<div class="tagline">
+  OOS를 사용하는 테이블에서, vacuum이 <u>커밋된 살아있는 행의 데이터</u>를 에러도 경고도 없이 지울 수 있습니다.
+  크래시 같은 특수 상황이 아니라, <u>평시의 정상 서버 종료</u>(<code>cubrid server stop</code>)만으로 재현되었습니다.
+  <span class="fix">본 보고서는 배경 지식이 없는 독자도 따라올 수 있도록 vacuum과 OOS의 동작 원리부터 시작해,
+  사고 메커니즘 → 실제 재현 결과 → 대책 후보 비교(중립) 순으로 정리했습니다. 대책의 선택은 열어 두었습니다.</span>
+</div>
+
+<div class="toc">
+  <b>목차</b>
+  <ol>
+    <li><a href="#s1">한눈에 보기</a></li>
+    <li><a href="#s2">배경 ① — UPDATE는 덮어쓰지 않는다 (MVCC)</a></li>
+    <li><a href="#s3">배경 ② — 청소부 vacuum은 블록 단위로 일한다</a></li>
+    <li><a href="#s4">vacuum 잡의 해부 — 로그 스캔과 vacuum_heap</a></li>
+    <li><a href="#s5">배경 ③ — OOS: 큰 컬럼을 밖으로 빼는 저장소</a></li>
+    <li><a href="#s6">vacuum과 OOS가 만나는 곳 — 세 가지 회수 경로</a></li>
+    <li><a href="#s7">사고의 전말 — 일곱 단계</a></li>
+    <li><a href="#s8">왜 OOS만 당하는가 — '문패'의 유무</a></li>
+    <li><a href="#s9">실증 — 정상 종료만으로 재현됐다</a></li>
+    <li><a href="#s10">자주 나오는 질문 (Q&amp;A)</a></li>
+    <li><a href="#s11">대책 후보 비교</a></li>
+    <li><a href="#s12">판단 포인트 · 참고 자료</a></li>
+  </ol>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s1"><span class="num">1.</span>한눈에 보기</h2>
+
+<div class="analogy">
+  <span class="t">비유로 먼저 잡는 그림 — "철거 명부와 새 입주자"</span>
+  구청(vacuum)은 <b>철거 대상 주소가 적힌 명부</b>(undo 로그)를 들고 다니며 빈집을 철거합니다.
+  명부는 한 번 쓰면 <b>수정할 수 없고</b>, 작업 완료 도장은 집집마다가 아니라 <b>구역(블록) 전체가 끝나야</b> 한 번 찍습니다.
+  어느 날 철거반이 구역의 절반을 철거하고 퇴근했는데(서버 종료), 그 사이 철거된 자리에 <b>새 입주자가 이사</b>를 왔습니다(슬롯 재사용).
+  다음 날 철거반은 도장이 없으니 <b>같은 구역을 처음부터</b> 다시 돕니다. 명부의 주소는 그대로이고,
+  집에는 <b>문패가 없어서</b> "누가 사는지"를 확인할 방법이 없습니다. 철거반은 규정대로 — 새 입주자의 집을 철거합니다.
+  <b>에러도, 기록도 남지 않습니다.</b>
+</div>
+
+<p>이 비유의 요소는 실제 시스템과 1:1로 대응합니다. 사고는 아래 세 가지 사실의 <b>조합</b>으로 발생하며,
+셋 중 어느 하나만 없어도 일어나지 않습니다.</p>
+
+<div class="cols3">
+  <div class="card f1">
+    <span class="kick">요인 ①</span>
+    <h4>진행 기록이 블록 전체 단위</h4>
+    <p>vacuum은 "이 레코드까지 처리했다"를 기록하지 않는다. 블록이 중단되면 <b>처음부터 재실행</b>하는 것이 설계된 정상 동작 — 전제는 "재실행해도 안전할 것".</p>
+  </div>
+  <div class="card f2">
+    <span class="kick">요인 ②</span>
+    <h4>OOS 삭제 전 확인이 '점유 여부'뿐</h4>
+    <p>삭제 전 검사(<code>oos_chunk_exists</code>)는 "슬롯에 뭔가 있나"만 본다. <b>"그것이 내가 지우려던 그 데이터인가"</b>(신원)는 확인할 수단 자체가 없다.</p>
+  </div>
+  <div class="card f3">
+    <span class="kick">요인 ③</span>
+    <h4>빈 슬롯은 즉시 재사용된다</h4>
+    <p>OOS OID는 물리 주소다. 삭제 즉시 그 페이지가 '빈자리 목록'(bestspace)에 재등록되고 가장 낮은 빈 슬롯부터 재사용 — 재사용은 우연이 아니라 <b>설계가 유도하는 동작</b>이다.</p>
+  </div>
+</div>
+
+<div class="callout red">
+  <b class="t">피해의 성격</b>
+  지워지는 것은 삭제 대기 중인 옛 데이터가 아니라, <b>그 뒤에 커밋되어 한 번도 수정된 적 없는 다른 행의 살아있는 값</b>입니다.
+  발현 시 에러·경고 로그가 전혀 없고, WAL/복구 관점에서는 완벽히 일관된 상태이므로 사후 진단이 사실상 불가능합니다.
+  2026-08-05, 소스 수정과 fault-injection 없이 스톡 debug 빌드에서 <b>재현이 완료</b>되었습니다(§9).
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s2"><span class="num">2.</span>배경 ① — UPDATE는 덮어쓰지 않는다 (MVCC)</h2>
+
+<p class="lead">
+데이터베이스에서 UPDATE는 왜 옛 값을 그 자리에서 덮어쓰지 않을까요?
+<b>동시에 다른 트랜잭션이 옛 값을 읽고 있을 수 있기 때문</b>입니다.
+예를 들어 A가 긴 집계 쿼리를 도는 도중 B가 어떤 행을 UPDATE하고 커밋하더라도,
+A의 결과는 A가 시작한 시점의 일관된 값이어야 합니다.
+</p>
+
+<p>CUBRID는 이를 <b>MVCC</b>(Multi-Version Concurrency Control, 다중 버전 동시성 제어)로 해결합니다.
+UPDATE는 <b>새 버전</b>을 쓰고, <b>옛 버전의 원본 이미지는 로그(WAL)에 보존</b>합니다.
+새 레코드의 머리에는 "내 이전 버전은 로그의 이 위치에 있다"라는 주소(<code>prev_version_lsa</code>)가 남습니다.
+옛 값이 필요한 트랜잭션은 이 주소를 따라가 로그에서 옛 버전을 꺼내 읽습니다.</p>
+
+<div class="diagram">
+  <div class="flow">
+    <div class="box live">
+      <span class="bt">heap 페이지의 현재 레코드 (v3)</span>
+      <span class="bd">최신 데이터. MVCC 헤더에 <code>prev_version_lsa</code> 보유 — "이전 버전은 로그 어디에 있다"</span>
+    </div>
+    <div class="arr">→<small>prev_version_lsa</small></div>
+    <div class="box log">
+      <span class="bt">로그 속 undo 이미지 (v2)</span>
+      <span class="bd">두 번째 UPDATE가 남긴 v2 원본. 자기 머리에 또 이전 링크 보유</span>
+    </div>
+    <div class="arr">→<small>prev_version_lsa</small></div>
+    <div class="box log">
+      <span class="bt">로그 속 undo 이미지 (v1)</span>
+      <span class="bd">첫 UPDATE가 남긴 v1 원본 (체인의 끝)</span>
+    </div>
+  </div>
+  <div class="cap">두 번 UPDATE된 행의 버전 체인. <b>초록(살아있는 레코드)은 heap에, 회색(옛 버전들)은 로그 속에만</b> 존재한다.</div>
+</div>
+
+<p>여기서 이 사건 내내 중요한 성질 세 가지가 나옵니다.</p>
+
+<table>
+  <tr><th style="width:30%">성질</th><th>내용</th></tr>
+  <tr><td><b>로그는 불변(append-only)</b></td><td>WAL은 뒤에 붙이기만 하고 이미 쓴 내용은 절대 고치지 않는다. 즉 <b>undo 이미지 속 내용은 영원히 그대로</b>다.</td></tr>
+  <tr><td><b>옛 버전에도 수명이 있다</b></td><td>옛 버전은 "그것을 볼 수 있는 마지막 트랜잭션"이 끝나는 순간 <b>죽은 버전</b>이 된다. 그 판별 기준이 트랜잭션 순번(<b>MVCCID</b>)이다.</td></tr>
+  <tr><td><b>죽은 버전은 쓰레기가 된다</b></td><td>죽은 버전이 차지한 공간(heap의 삭제 표시된 레코드, 인덱스 엔트리, 그리고 뒤에 볼 OOS 데이터)은 누군가 <b>나중에 청소</b>해야 한다. 그 청소부가 vacuum이다.</td></tr>
+</table>
+
+<!-- ================================================================ -->
+<h2 id="s3"><span class="num">3.</span>배경 ② — 청소부 vacuum은 블록 단위로 일한다</h2>
+
+<p class="lead">
+vacuum은 백그라운드에서 도는 청소 데몬입니다. "어디를 청소할지"의 목록이 바로 로그입니다 —
+UPDATE/DELETE가 일어난 곳은 반드시 로그에 흔적이 남으니, <b>로그를 다시 읽으면 청소할 곳을 전부 알 수 있습니다.</b>
+</p>
+
+<p>CUBRID vacuum의 작업 단위는 레코드도 페이지도 아닌 <b>로그 블록</b>입니다.
+로그를 일정 크기(블록)로 잘라 영속적인 작업 큐(<b>vacuum data</b>)에 등록해 두고,
+블록 안의 모든 트랜잭션이 "이제 아무도 그 옛 버전을 볼 수 없는" 시점
+(블록의 최신 MVCCID &lt; 현재 활성 트랜잭션 중 가장 오래된 MVCCID)이 되면 워커에게 배포합니다.</p>
+
+<div class="diagram">
+  <div class="vflow">
+    <div class="box"><span class="bt">WAL (트랜잭션 로그)</span><span class="bd">모든 INSERT/UPDATE/DELETE의 기록 — append-only, 불변</span></div>
+    <div class="varr">↓ <small>일정 크기로 분할</small></div>
+    <div class="box"><span class="bt">로그 블록들 … [B-2] [B-1] [B]</span><span class="bd">블록마다 "이 안의 MVCC 연산들" 요약이 vacuum data(영속 페이지)에 등록됨</span></div>
+    <div class="varr">↓ <small>블록의 옛 버전이 전부 '죽은' 시점에 배포</small></div>
+    <div class="box hi"><span class="bt">vacuum 워커가 블록 하나를 잡(job)으로 처리</span><span class="bd">여러 워커가 서로 다른 블록을 병렬로 처리. 블록 상태: AVAILABLE → IN_PROGRESS → <b>(완주 시에만)</b> VACUUMED</span></div>
+    <div class="varr">↓ <small>완주 못 하면?</small></div>
+    <div class="box warn"><span class="bt">중단된 블록은 "처음부터" 재실행된다</span><span class="bd">중간 저장 없음. 크래시·정상 종료·에러로 중단된 블록은 INTERRUPTED 표시 후 다음에 <b>블록 시작점부터 통째로</b> 다시 처리</span></div>
+  </div>
+  <div class="cap">vacuum의 큰 그림. 핵심은 마지막 상자 — <b>진행 기록이 블록 전체 단위</b>라는 것 (요인 ①).</div>
+</div>
+
+<div class="callout blue">
+  <b class="t">"처음부터 재실행"은 버그가 아니라 설계입니다 — 단, 전제가 있습니다</b>
+  레코드 하나하나마다 "여기까지 했음"을 영속화하면 vacuum 자체가 느려지므로, CUBRID는 블록 단위 기록을 선택하고
+  대신 <b>"같은 청소 작업을 두 번 해도 안전하다(멱등성)"</b>를 전제로 삼았습니다.
+  실제로 heap과 인덱스(B-tree) 청소는 이 전제를 만족합니다 — 청소 대상이 <b>자기 몸에 자신의 상태를 지니고 있어서</b>,
+  두 번째 방문 때 "이미 청소됐네" 또는 "이건 다른 주인의 것이네"를 스스로 말해줄 수 있기 때문입니다.
+  이 전제가 어디서 깨지는지가 §7~8의 주제입니다.
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s4"><span class="num">4.</span>vacuum 잡의 해부 — 로그 스캔과 vacuum_heap</h2>
+
+<p class="lead">워커가 블록 하나를 처리하는 잡은 <b>두 단계</b>로 나뉩니다 (<code>vacuum_process_log_block</code>, <code>vacuum.c</code>).</p>
+
+<div class="diagram">
+  <div class="vflow">
+    <div class="box hi">
+      <span class="bt">1단계 — 로그 스캔 (블록 내 MVCC 로그 레코드 순회)</span>
+      <span class="bd">
+        블록의 시작 위치(<code>start_lsa</code>)에서 출발해 로그 레코드들을 링크로 따라가며, 레코드 종류별로:<br>
+        · <b>heap 연산</b> → 대상 OID를 <b>수집만</b> 해 둔다 (나중에 일괄 처리)<br>
+        · <b>B-tree 연산</b> → 인덱스 엔트리를 <b>그 자리에서</b> 청소<br>
+        · <b>UPDATE undo 이미지에 OOS 참조가 있으면</b> → 옛 OOS 데이터를 <b>그 자리에서</b> 삭제
+        (<code>vacuum_forward_walk_reclaim_oos</code>, <code>vacuum.c:3589</code>) — 이 경로를 <b>포워드 워크</b>라 부른다 (§6)
+      </span>
+    </div>
+    <div class="varr">↓ <small>스캔 완료 후</small></div>
+    <div class="box">
+      <span class="bt">2단계 — vacuum_heap (수집한 heap 객체 일괄 처리, <code>vacuum.c:3746</code>)</span>
+      <span class="bd">
+        페이지 단위로 모아서 효율적으로:<br>
+        · 살아남은 레코드: MVCC 헤더 정리 — insert MVCCID를 '모두에게 보임'으로, <code>prev_version_lsa</code>를 NULL로 (<code>vacuum.c:2331-2332</code>)<br>
+        · 삭제된 레코드: 슬롯 자체를 제거(REMOVE)하고 공간 회수
+      </span>
+    </div>
+    <div class="varr">↓</div>
+    <div class="box"><span class="bt">블록 완주 → VACUUMED 도장</span><span class="bd">두 단계를 모두 마쳐야 완료로 기록. 중간 어디서 끊겨도 다음엔 1단계 처음부터</span></div>
+  </div>
+  <div class="cap">한 블록 잡의 내부. OOS 삭제는 <b>1단계에서 즉시</b> 일어나고, heap 정리는 <b>2단계로 미뤄서 일괄</b> 처리된다.</div>
+</div>
+
+<p>여기서 미리 밝혀 둘 구조적 사실 하나: 1단계의 순회는 <code>start_lsa</code> 에서 출발해
+<b>이전-연산 링크를 따라 과거 방향으로</b> 걷는 역방향 링크 순회입니다(<code>vacuum.c:3490</code>).
+그래서 "어디까지 처리했다"를 LSA 값 하나의 전진으로 표현할 수 없고 — 실제로 코드에는
+"vacuum이 미완일 때 start_lsa를 조정해 같은 로그를 재처리하지 않도록 할 수 있는지 검토하라"는
+TODO 주석이 남아 있습니다(<code>vacuum.c:3766</code>). 즉 <b>레코드 단위 진행 기록의 부재는 알려진 채로 남아 있던 설계 공백</b>입니다.</p>
+
+<!-- ================================================================ -->
+<h2 id="s5"><span class="num">5.</span>배경 ③ — OOS: 큰 컬럼을 밖으로 빼는 저장소</h2>
+
+<p class="lead">
+OOS(Out-of-row Overflow Storage)는 현재 <code>feat/oos</code> 브랜치에서 개발 중인 기능으로,
+<b>큰 가변 길이 컬럼 값을 heap 레코드에서 분리해 전용 OOS 파일에 저장</b>합니다.
+4바이트 id 하나를 읽으려고 9KB짜리 레코드 전체를 디스크에서 읽어오는 낭비를 없애기 위함입니다.
+</p>
+
+<p>레코드가 기준 크기(현 레이아웃에서 4,060B)를 넘으면, 큰 값부터 OOS 파일로 내보내고
+그 자리에는 16바이트짜리 <b>OOS inline stub</b>(위치 표지)만 남깁니다.</p>
+
+<div class="diagram">
+  <div style="min-width:560px">
+    <div style="font-size:12px; color:var(--muted); margin-bottom:4px">heap 레코드 (OOS 적용 후 — 작고 가벼움)</div>
+    <div class="rec">
+      <div class="hdr">MVCC 헤더<br><small>HAS_OOS 플래그</small></div>
+      <div class="sml">id</div>
+      <div class="sml">name</div>
+      <div class="stubf">OOS inline stub (16B)</div>
+    </div>
+    <div style="text-align:center; color:var(--accent); font-weight:700; margin:2px 0 6px">↓ stub의 내용</div>
+    <div class="stub">
+      <div class="f1">head OOS OID (8B)<br><small>= 값이 저장된 물리 주소<br>(volid | pageid | slotid)</small></div>
+      <div class="f2">전체 길이 (8B)</div>
+    </div>
+    <div style="text-align:center; color:var(--accent); font-weight:700; margin:2px 0 6px">↓ 그 주소를 따라가면</div>
+    <div class="flow" style="min-width:0">
+      <div class="box hi"><span class="bt">OOS 파일, 페이지 P의 슬롯 S</span><span class="bd">청크 레코드: [길이 | 순번 | 다음 청크 OID | 데이터 조각]. 값이 크면 여러 청크가 <b>체인</b>으로 연결</span></div>
+    </div>
+  </div>
+  <div class="cap">OOS의 구조. stub가 가리키는 <b>OOS OID는 이름표가 아니라 물리 주소</b>다 — 이 사실이 §7에서 결정적이 된다.</div>
+</div>
+
+<h3>UPDATE의 OOS 의미론 — 이 사건의 무대 설치</h3>
+
+<p>OOS가 있는 행을 UPDATE하면 (값이 안 바뀌어도) <b>항상 새 체인을 새 주소에 만들고</b>,
+새 heap 레코드의 stub는 새 주소를 가리킵니다. 그러면 옛 체인은 누가 참조할까요?
+<b>오직 undo 이미지 속의 옛 stub 하나뿐</b>입니다 — 옛 버전을 읽어야 하는 MVCC 독자들을 위해 옛 체인은 살려 둡니다.</p>
+
+<div class="callout">
+  <b class="t">기억해 둘 한 문장</b>
+  UPDATE 후 옛 OOS 체인의 유일한 참조는 <b>불변 로그 속 undo 이미지</b>에만 있다.
+  살아있는 어떤 heap 레코드도 옛 체인을 가리키지 않는다.
+  따라서 옛 체인을 청소하려면 <b>undo 이미지를 읽는 수밖에 없다</b> — 그것이 다음 절의 '포워드 워크'다.
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s6"><span class="num">6.</span>vacuum과 OOS가 만나는 곳 — 세 가지 회수 경로</h2>
+
+<p>DELETE/UPDATE 시점에는 OOS 체인을 지우지 않습니다(옛 버전 독자가 남아 있을 수 있으므로).
+청소는 전부 vacuum으로 미뤄지며, 경로는 셋입니다 (CBRD-26668, <code>vacuum_oos.cpp</code> / <code>heap_oos.cpp</code>).</p>
+
+<div class="scroll"><table>
+  <tr><th style="width:19%">경로</th><th style="width:27%">담당 대상</th><th>동작 방식</th><th style="width:17%">재시도 안전성</th></tr>
+  <tr>
+    <td><b>① 포워드 워크</b><br><small>(이 사건의 경로)</small></td>
+    <td>UPDATE가 남긴 <b>옛 버전의 체인</b> — 살아있는 레코드가 참조하지 않는 것들</td>
+    <td>1단계 로그 스캔 중, undo 이미지에서 옛 head OOS OID를 꺼내 <code>oos_delete</code>. 삭제마다 <b>독립 sysop</b>(내부 미니 트랜잭션)으로 즉시 커밋</td>
+    <td class="verdict-x">보장 없음<br><small>§7의 주제</small></td>
+  </tr>
+  <tr>
+    <td><b>② REMOVE 동반</b></td>
+    <td>슬롯째 제거되는 죽은 레코드가 <b>현재 들고 있는</b> 체인</td>
+    <td>2단계 vacuum_heap에서 heap 슬롯 제거와 <b>같은 sysop</b>으로 함께 삭제</td>
+    <td class="verdict-o">안전<br><small>heap 원자성+MVCC 판별</small></td>
+  </tr>
+  <tr>
+    <td><b>③ 즉시 삭제</b></td>
+    <td>SA 모드(단독 프로세스, vacuum 없음)의 옛 체인</td>
+    <td>UPDATE 시점에 동기 삭제, 새 이미지가 참조하는 체인은 보존</td>
+    <td class="verdict-o">해당 없음</td>
+  </tr>
+</table></div>
+
+<p>경로 ①이 존재하는 이유는 §5의 마지막 문장 그대로입니다 — 옛 체인은 살아있는 레코드가 참조하지 않으므로
+경로 ②(레코드를 지우며 딸린 것도 지우기)가 볼 수 없고, <b>undo 이미지를 읽는 것이 유일한 방법</b>입니다.
+소스 주석도 같은 말을 합니다(<code>vacuum.c:3581-3588</code>).</p>
+
+<p>포워드 워크의 삭제 절차는 두 단계입니다:</p>
+<ol>
+  <li><b>확인(probe)</b>: <code>oos_chunk_exists</code> — 그 주소의 슬롯에 레코드가 <b>있는지만</b> 확인합니다. 내용은 읽지 않습니다.</li>
+  <li><b>삭제</b>: <code>oos_delete</code> — <b>현재 그 슬롯에 있는</b> 청크의 헤더에서 '다음 청크 주소'를 읽어 체인 끝까지 전부 삭제합니다.</li>
+</ol>
+
+<!-- ================================================================ -->
+<h2 id="s7"><span class="num">7.</span>사고의 전말 — 일곱 단계</h2>
+
+<p class="lead">이제 부품이 모두 모였습니다. 시간 순서대로 따라가 봅니다.
+행 R1의 옛 OOS 체인이 물리 주소 <code>V|P|S</code>(볼륨 V, 페이지 P, 슬롯 S)에 있다고 합시다.</p>
+
+<ul class="tl">
+  <li data-t="T1"><span class="head">UPDATE R1 — 옛 체인이 '청소 대기'가 된다</span>
+    <div class="body">새 체인이 새 주소에 만들어지고, 옛 체인 <code>V|P|S</code> 의 유일한 참조는 <b>로그 블록 B에 기록된 undo 이미지</b> 속 stub뿐.</div></li>
+  <li data-t="T2"><span class="head">블록 B가 청소 가능해진다</span>
+    <div class="body">B 안의 옛 버전들을 볼 수 있는 트랜잭션이 모두 끝남 → B가 워커에 배포되고 상태는 <b>IN_PROGRESS</b>.</div></li>
+  <li data-t="T3" class="ok"><span class="head">1차 삭제 — 여기까지는 완전히 정상</span>
+    <div class="body">워커가 undo 이미지에서 <code>V|P|S</code> 추출 → probe 통과 → <code>oos_delete</code> → <b>레코드 단위 sysop 즉시 커밋</b>. 슬롯 S가 비고, 페이지 P는 곧바로 '빈자리 목록'(bestspace)에 재등록. ⚠️ 단, "이 레코드는 처리했음"이라는 메모는 <b>어디에도 남지 않고</b> 블록 B는 여전히 IN_PROGRESS.</div></li>
+  <li data-t="T4" class="warn"><span class="head">다른 트랜잭션이 빈 슬롯을 재사용한다</span>
+    <div class="body">다른 세션이 행 R2를 INSERT → <code>oos_insert</code> 가 bestspace에서 페이지 P를 고르고 <b>가장 낮은 빈 슬롯 = S</b>를 재사용. R2의 살아있는 청크가 정확히 <code>V|P|S</code> 에 앉는다. R2 커밋(영속화 완료).</div></li>
+  <li data-t="T5" class="warn"><span class="head">블록 B가 끝나기 전에 워커가 중단된다</span>
+    <div class="body">서버 정상 종료 / 크래시 / (릴리스 빌드) 블록 중간 에러 — 무엇이든. <b>정상 종료만으로 충분</b>하다는 것이 §9에서 실증됨.</div></li>
+  <li data-t="T6"><span class="head">재기동 — 복구 자체는 완벽하다</span>
+    <div class="body">WAL 복구는 페이지를 정확히 복원한다(여기엔 아무 문제 없음). vacuum data를 읽으니 블록 B가 IN_PROGRESS → <b>미완 블록이므로 재실행 대상으로 재장전</b>. 시작점은 그대로.</div></li>
+  <li data-t="T7" class="bad"><span class="head">2차 처리 — 사고</span>
+    <div class="body">B를 처음부터 재주행 → <b>같은 undo 이미지</b>(로그는 불변)에서 <b>같은 주소 <code>V|P|S</code></b> 추출 → probe: "슬롯에 레코드 있음"(R2의 것) → true → <code>oos_delete</code> 가 <b>R2의 살아있는 청크를 삭제</b>. 이것은 복구 replay가 아니라 평시 코드의 신규 연산이므로 새 로그를 정상적으로 남기며, WAL 관점에서는 완벽히 일관 — <b>내용만 틀리다</b>. 에러·경고 없음.</div></li>
+</ul>
+
+<div class="diagram">
+  <div class="slots">
+    <div class="slotcard">
+      <div class="sc-h">T3 이전 — OOS 페이지 P</div>
+      <div class="sc-b">
+        <div class="slotline"><span class="slotname">slot S</span><span class="cell dead">R1의 옛 청크 (죽은 버전 소유)</span></div>
+        <div class="slotline"><span class="slotname">slot S+1</span><span class="cell">다른 데이터</span></div>
+      </div>
+    </div>
+    <div class="slotarr">→<small>T3<br>1차 삭제<br>(정상)</small></div>
+    <div class="slotcard">
+      <div class="sc-h">T3 직후</div>
+      <div class="sc-b">
+        <div class="slotline"><span class="slotname">slot S</span><span class="cell free">빈 슬롯 — bestspace 재등록</span></div>
+        <div class="slotline"><span class="slotname">slot S+1</span><span class="cell">다른 데이터</span></div>
+      </div>
+    </div>
+    <div class="slotarr">→<small>T4<br>R2 INSERT<br>(재사용)</small></div>
+    <div class="slotcard">
+      <div class="sc-h">T4 이후 — 같은 주소, 새 주인</div>
+      <div class="sc-b">
+        <div class="slotline"><span class="slotname">slot S</span><span class="cell livec">R2의 살아있는 청크 ← <b>T7이 이것을 삭제</b></span></div>
+        <div class="slotline"><span class="slotname">slot S+1</span><span class="cell">다른 데이터</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="cap">주소 <code>V|P|S</code> 의 주인이 바뀌었지만, undo 이미지 속 주소는 그대로이고 청크에는 주인 표시가 없다.</div>
+</div>
+
+<div class="callout red">
+  <b class="t">멀티청크면 피해가 커진다</b>
+  <code>oos_delete</code> 는 <b>현재 점유자</b>의 헤더에서 '다음 청크 주소'를 읽어 체인을 끝까지 따라가므로,
+  재사용된 슬롯이 여러 청크짜리 큰 값의 머리라면 <b>R2 값의 체인 전체</b>가 삭제됩니다.
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s8"><span class="num">8.</span>왜 OOS만 당하는가 — '문패'의 유무</h2>
+
+<p class="lead">
+§3에서 "블록 재실행은 멱등성을 전제로 한 설계"라고 했습니다.
+그 전제가 heap과 B-tree에서는 성립하고 OOS에서만 깨지는 이유는 단순합니다 —
+<b>vacuum이 지연 삭제하는 세 대상 중 OOS 청크만 자기 몸에 신원 정보(문패)가 없습니다.</b>
+</p>
+
+<div class="scroll"><table>
+  <tr><th style="width:22%">지연 삭제 대상</th><th style="width:33%">자기 몸에 지닌 신원 정보</th><th>재시도(2차 방문) 때 무슨 일이 일어나나</th></tr>
+  <tr>
+    <td><b>heap 슬롯</b></td>
+    <td>MVCC 헤더 (insert/delete MVCCID = 언제 누가 만들고 지웠나)</td>
+    <td class="verdict-o">안전 — 슬롯이 재사용됐어도 새 레코드의 MVCC 헤더를 보고 "삭제 조건에 안 맞음"을 판별, 그냥 지나감</td>
+  </tr>
+  <tr>
+    <td><b>B-tree 엔트리</b></td>
+    <td>키 값 + MVCC 정보</td>
+    <td class="verdict-o">안전 — 키와 MVCC 정보를 대조해 내 대상이 아니면 지나감</td>
+  </tr>
+  <tr>
+    <td><b>OOS 청크</b></td>
+    <td class="verdict-x">없음 — 헤더는 [길이 | 청크 순번 | 다음 청크 주소]뿐</td>
+    <td class="verdict-x">위험 — probe(<code>oos_chunk_exists</code>)는 "슬롯 점유 여부"에 성공하면 무조건 true. 새 주인과 옛 주인을 구분할 <b>수단 자체가 없음</b></td>
+  </tr>
+</table></div>
+
+<div class="callout blue">
+  <b class="t">문제를 한 문장으로 압축하면</b>
+  청소 대기 목록(undo 이미지)은 완벽합니다 — 영속적이고, MVCCID로 배포 시점이 통제되고, 추가 쓰기 비용이 0입니다.
+  고장난 것은 목록이 아니라 <b>소비하는 쪽의 확인 절차 하나</b>입니다:
+  "슬롯이 점유돼 있는가"를 <b>"슬롯이 여전히 그 undo 이미지가 소유하던 그 청크를 담고 있는가"</b>로 바꿀 수단이 현재 온디스크 포맷에 없습니다.
+  §11의 대책들은 결국 이 간극을 어디서 메우느냐의 선택지들입니다.
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s9"><span class="num">9.</span>실증 — 정상 종료만으로 재현됐다</h2>
+
+<p class="lead">
+"이론적으로 가능하지만 확률이 낮지 않냐"는 반문이 자연스럽습니다.
+그래서 2026-08-05, 소스 무변경 스톡 debug 빌드(<code>07fef9d48</code>)로 런타임 재현을 수행했고 — <b>성공했습니다.</b>
+당초 예상했던 fault-injection(고장 주입) 훅은 <b>필요하지 않았습니다</b>.
+</p>
+
+<h3>재현 레시피 (요약)</h3>
+
+<div class="scroll"><table>
+  <tr><th style="width:8%">단계</th><th>내용</th><th style="width:26%">성립시키는 요인</th></tr>
+  <tr><td>1</td><td>5,000B <code>BIT VARYING</code> 값으로 20,000행 INSERT (전부 OOS 적재)</td><td>—</td></tr>
+  <tr><td>2</td><td><b>단일 트랜잭션</b>으로 전체 UPDATE 후 커밋 → 옛 체인 20,000개가 한꺼번에 청소 대상화. 동시에 별도 세션 6개가 같은 크기로 계속 INSERT</td><td>요인 ③ (슬롯 재사용)</td></tr>
+  <tr><td>3</td><td>vacuum이 약 30%를 회수한 시점에 <code>cubrid server stop</code> (정상 종료)</td><td>요인 ① (블록 중단·재실행)</td></tr>
+  <tr><td>4</td><td>재기동 → vacuum이 미완 블록을 처음부터 재주행</td><td>요인 ② (신원 없는 probe)</td></tr>
+</table></div>
+
+<h3>결과 — 두 증거가 정확히 1:1</h3>
+
+<div class="scroll"><table>
+  <tr><th>실행</th><th>두 pass 모두에서 삭제된 OOS OID 수</th><th>판독 불가가 된 살아있는 행 수</th><th>대조군 (1차 삭제 이전에 할당된 체인)</th></tr>
+  <tr><td>1회차</td><td><b>293</b></td><td><b>293</b></td><td class="verdict-o">전수 무손상</td></tr>
+  <tr><td>2회차</td><td><b>163</b></td><td><b>163</b></td><td class="verdict-o">전수 무손상</td></tr>
+</table></div>
+
+<p>피해 행은 모두 <b>슬롯이 비워진 뒤 INSERT·커밋되고, 그 후 한 번도 수정된 적 없는</b> 행이었습니다. SELECT 시:</p>
+
+<pre><code>ERROR: Internal error: slot 1 on page 8081 of volume ".../oos26950" is not allocated.</code></pre>
+
+<p>대조군(재사용 슬롯에 있을 수 없는 체인들)이 두 실행 모두 무손상이었다는 점에서,
+손상은 "재사용된 슬롯"에만 정확히 국한됨이 확인됩니다.</p>
+
+<div class="callout red">
+  <b class="t">이 재현이 말해주는 것</b>
+  <b>크래시는 필수 조건이 아닙니다.</b> <code>cubrid server stop</code> 은 vacuum 워커를 블록 중간에 그대로 두고 종료합니다
+  (<code>vacuum.c:3494</code> 의 shutdown 체크가 루프를 즉시 이탈). 즉 OOS 부하가 있는 DB의 <b>평시 정상 종료 자체가 발현 조건</b>이며,
+  크래시는 창을 넓히는 요인일 뿐입니다. 또한 서버 에러 로그에 "Processing log block N is interrupted!" 경고가
+  <b>없어도</b> 재현되었습니다 — 로그의 침묵이 안전의 근거가 되지 못합니다.
+</div>
+
+<p class="sub">재현 스크립트: <code>cbrd-26950/cbrd-26950-poc.sh</code> (전용 DB 사용, 1회 약 4분) ·
+상세 과정과 실패 조합의 기록: <code>2026-08-05-CBRD-26950-poc-run-guide-and-results.md</code></p>
+
+<!-- ================================================================ -->
+<h2 id="s10"><span class="num">10.</span>자주 나오는 질문 (Q&amp;A)</h2>
+
+<dl class="qa">
+  <dt>WAL 복구에는 page LSA 같은 중복 적용 방지 장치가 있지 않나? 그게 막아주지 않는 이유는?</dt>
+  <dd>page LSA는 "같은 redo를 같은 페이지에 두 번 적용"하는 것을 막는 장치입니다. 그런데 T7의 2차 삭제는 redo replay가 아니라
+  <b>복구가 다 끝난 뒤 평시 코드가 수행하는 새 연산</b>입니다 — 페이지가 아니라 로그 속 undo 이미지를 읽고, 새 삭제 로그를 정상적으로 남깁니다.
+  복구 기계는 오히려 이 잘못된 삭제를 충실히 영속화합니다.</dd>
+
+  <dt>DELETE된 행의 OOS도 같은 방식으로 위험한가?</dt>
+  <dd>아닙니다. DELETE된 행의 체인은 경로 ②(REMOVE 동반)로 회수됩니다 — heap 슬롯 제거와 <b>한 sysop</b>으로 원자적이고,
+  재시도 때는 heap 레코드의 MVCC 헤더가 판별 기준이 되어 자연히 멱등합니다.
+  위험한 것은 <b>UPDATE가 남긴 옛 체인(경로 ①)</b>뿐입니다 — 이들은 살아있는 heap 레코드가 참조하지 않아,
+  판별 기준으로 삼을 heap 상태 자체가 없습니다.</dd>
+
+  <dt>기존 테스트가 다 통과하는데 왜 CRITICAL인가?</dt>
+  <dd>"블록 재실행 + 슬롯 재사용"의 조합을 만드는 테스트가 존재하지 않았을 뿐입니다(부재 ≠ 안전).
+  발현 시 에러·경고가 전혀 없는 무증상 데이터 손실이라 사후 진단이 사실상 불가능한 부류이고,
+  §9에서 평시 정상 종료만으로 재현됨이 확인되어 발생 확률도 낮지 않습니다.</dd>
+
+  <dt>OOS 삭제를 vacuum_heap의 prev_version_lsa 정리와 묶어서, "prev_version_lsa가 아직 남아 있을 때만 지운다"로 만들면 안 되나?</dt>
+  <dd>세 가지 벽에 부딪힙니다. ① 살아있는 레코드의 <code>prev_version_lsa</code> 는 <b>가장 최근</b> UPDATE의 undo 하나만 가리키는 단일 값입니다 —
+  한 행이 N번 UPDATE되면 청소할 undo 이미지가 N개인데, 중간 버전들은 불변 로그 속에만 있어 대응하는 heap 상태가 없습니다(1차 pass에서조차 게이트가 false → 영구 누수).
+  ② relocation UPDATE의 옛 레코드(<code>RVHF_DELETE_NEWHOME_NOTIFY_VACUUM</code>, <code>vacuum.c:3724</code>)는 heap 슬롯이 이미 물리 삭제되어 <b>검사할 대상 자체가 없습니다</b>.
+  ③ heap 페이지 쓰기와 OOS 페이지 쓰기는 별개 원자 단위라, 사이에서 중단되면 순서에 따라 영구 누수 또는 지금과 같은 이중 삭제가 됩니다.</dd>
+
+  <dt>그럼 포워드 워크를 없애고, vacuum_heap에서 prev version 체인을 타고 들어가며 지우는 구조로 재설계하면?</dt>
+  <dd>방향의 직관(가변 상태에 멱등성 앵커를 두자)은 경로 ②가 안전한 이유와 같아 타당하지만, 이 재설계에는 구조적 결함이 있습니다.
+  ① 한 행이 여러 블록에 걸쳐 UPDATE되면 <b>각 블록의 잡이 같은 행을 수집</b>하므로, 처리 여부 마커 없이는 중단·재시작 없이도 같은 체인을 중복 방문합니다.
+  ② 마커로 쓸 수 있는 가변 상태는 <code>prev_version_lsa</code> 하나뿐이라(undo 이미지는 불변) "체인 전체가 죽었을 때만 일괄 청소"가 강제되는데,
+  계속 UPDATE되는 행은 그 조건이 영원히 성립하지 않아 <b>옛 체인이 무한 누적</b>됩니다.
+  ③ 병렬 워커 환경에서 REMOVE가 앵커(heap 레코드)를 먼저 지워버리는 경합, 슬롯이 없는 NEWHOME 경로 등이 남습니다.
+  요컨대 "정확히 한 번 소비" 문제가 그대로 따라오고, 위 Q의 ②·③도 상속합니다.</dd>
+
+  <dt>슬롯 재사용이 그렇게 빨리, 자주 일어나나?</dt>
+  <dd>OOS OID는 물리 주소라 "재발급 절차" 같은 것이 없고, 슬롯 재점유가 곧 같은 OID의 재등장입니다.
+  현재 코드는 재점유를 최단 경로로 유도합니다: 삭제 즉시 bestspace 재등록 + INSERT의 캐시 우선 선택 + 최저 슬롯 우선.
+  재사용까지의 지연은 "오랜 시간"이 아니라 <b>같은 테이블에 다음 OOS 값이 들어오는 순간</b>입니다.
+  재현 실험에서도 재사용 창이 가장 넓은 구간은 삭제와 같은 서버 세션 안(메모리 bestspace 캐시가 살아있는 동안)이었습니다.</dd>
+</dl>
+
+<!-- ================================================================ -->
+<h2 id="s11"><span class="num">11.</span>대책 후보 비교</h2>
+
+<p class="lead">
+대책들은 크게 두 계열로 나뉩니다. §8의 압축 문장으로 보면 —
+<b>A계열은 "소비자에게 문패 확인 능력을 준다"</b>,
+<b>B계열은 "재실행·재사용 상황 자체를 없앤다"</b>입니다.
+아래는 각 후보의 아이디어와, 지금까지의 분석·논의에서 기록된 장단점입니다.
+<b>본 보고서는 특정 안을 권고하지 않으며</b>, 선택 기준은 §12에 정리했습니다.
+</p>
+
+<h3>A계열 — 신원 확인 추가 (probe를 "점유됐나"에서 "내 것인가"로)</h3>
+
+<div class="alt idfam">
+  <h4>A-1. generation(세대 번호) 필드 <span class="badge">신원 확인 계열</span></h4>
+  <div class="idea">OOS 청크 헤더와 inline stub 양쪽에 세대 번호(uint32)를 추가. 슬롯이 재사용될 때마다 세대가 달라지므로,
+  삭제 전 "stub에 적힌 세대 == 슬롯의 현재 세대"를 대조하고 불일치면 no-op. 세대 카운터는 페이지 헤더에 두고 청크 INSERT마다 증가시키는 방안이 유력.</div>
+  <div class="pros"><b>기록된 장점</b>
+    <ul>
+      <li>단일·멀티청크 케이스를 같은 근본 원인 지점에서 함께 차단 — 재시도 횟수와 무관하게 성립</li>
+      <li>쓰기 흐름(INSERT/UPDATE 순서) 불변 — 상시 실행 경로 변경 없음</li>
+      <li>redo/undo는 레코드 전체 이미지 물리 로깅이라 복구 핸들러 무변경, replication도 slave 로컬 발급으로 무영향</li>
+      <li>오탐 확률: uint32 순환에는 블록 재처리 창 안에 한 페이지 43억 insert/delete 사이클이 필요 — 물리적으로 비현실적</li>
+    </ul>
+  </div>
+  <div class="cons"><b>기록된 단점·비용</b>
+    <ul>
+      <li><b>온디스크 포맷 변경 2곳</b>: 청크 헤더 + stub 16B→20B (OID 8 + 길이 8 + gen 4)</li>
+      <li>stub 4B 증가는 행·컬럼마다 반복 지불하는 비용 — <code>OR_OOS_INLINE_SIZE</code> 16→20, 데모션 수익성 문턱, 경계 테스트, 문서 등 연쇄 갱신 필요</li>
+      <li>미출시 기능이라 지금은 마이그레이션 비용 0이지만, 출시 후에는 포맷 마이그레이션 문제로 전환됨 (→ §12 타이밍 논점)</li>
+    </ul>
+  </div>
+</div>
+
+<div class="alt idfam">
+  <h4>A-2. owner OID(주인 표시) 필드 <span class="badge">신원 확인 계열</span></h4>
+  <div class="idea">청크 헤더에 "이 체인의 주인 heap 레코드 OID"를 기록하고 삭제 전 대조.</div>
+  <div class="pros"><b>기록된 장점</b>
+    <ul><li>stub 포맷은 불변(16B 유지) — 변경이 청크 헤더 한 곳</li></ul>
+  </div>
+  <div class="cons"><b>기록된 단점·비용</b>
+    <ul>
+      <li><b>INSERT 시점에 주인이 아직 없다</b>: OOS 삽입(<code>heap_attrinfo_insert_to_oos</code>)이 heap 슬롯 할당보다 먼저 실행되므로,
+      나중에 채워 넣는 backfill(핫패스에 영구 추가 쓰기) 또는 삽입 흐름 재배치(침습적) 중 하나가 필요</li>
+      <li>UPDATE마다 주인 OID가 같을 수 있어(같은 행의 버전들) 세대 구분력이 generation보다 약한 경우 존재</li>
+    </ul>
+  </div>
+</div>
+
+<div class="alt idfam">
+  <h4>A-3. 생성 MVCCID 스탬프 <span class="badge">신원 확인 계열</span></h4>
+  <div class="idea">새 필드 대신, 청크에 생성 트랜잭션의 MVCCID를 찍고 undo 이미지 쪽 정보와 대조.</div>
+  <div class="cons"><b>기록된 단점·비용</b>
+    <ul>
+      <li>같은 트랜잭션이 같은 행을 여러 번 UPDATE하면 스탬프가 충돌(같은 MVCCID) — 구분 불가</li>
+      <li>대조에 쓸 undo 이미지 쪽 insert MVCCID가 이미 vacuum에 의해 지워졌을 수 있음</li>
+      <li>선행 논의에서 위 두 사유로 탈락 처리된 기록 있음</li>
+    </ul>
+  </div>
+</div>
+
+<h3>B계열 — 재실행·재사용 차단 (사고의 무대 자체를 없애기)</h3>
+
+<div class="alt opfam">
+  <h4>B-1. 슬롯 재사용 유예 <span class="badge">운영 조건 차단 계열</span></h4>
+  <div class="idea">블록이 완주(VACUUMED)되기 전까지는 그 블록이 비운 슬롯을 재할당하지 않는다.</div>
+  <div class="pros"><b>기록된 장점</b>
+    <ul><li>온디스크 포맷 무변경</li></ul>
+  </div>
+  <div class="cons"><b>기록된 단점·비용</b>
+    <ul>
+      <li>"재사용 금지"는 현재 어디에도 없는 <b>새 불변식</b> — 유예 상태를 어디에 어떻게 영속화하고, 크래시 후 어떻게 복원할지 설계 필요</li>
+      <li>블록 완주 표시(VACUUMED)는 master가 <b>비동기로</b> 기록하므로, 유예 해제 시점의 신뢰성 자체가 같은 종류의 문제를 가짐</li>
+      <li>공간 회수율 저하 + bestspace(3-tier) 설계와의 충돌 비용</li>
+    </ul>
+  </div>
+</div>
+
+<div class="alt opfam">
+  <h4>B-2. 레코드 단위 진행 영속화 <span class="badge">운영 조건 차단 계열</span></h4>
+  <div class="idea">"블록 내 어느 레코드까지 처리했는지"를 vacuum data에 영속화해, 재실행 시 이미 처리한 항목을 건너뛴다.</div>
+  <div class="cons"><b>기록된 단점·비용</b>
+    <ul>
+      <li>블록 순회가 역방향 링크 워크(<code>start_lsa</code> 에서 과거로)라 진행을 "LSA 하나의 전진"으로 표현할 수 없음 — vacuum data 코어 구조 수술이 됨</li>
+      <li>레코드마다 영속 쓰기가 추가되면 vacuum 처리량에 상시 비용</li>
+      <li>코드에 남아 있는 TODO(<code>vacuum.c:3766</code>)가 바로 이 부재를 가리키지만, 그만큼 오래 미뤄질 정도의 난이도였다는 방증이기도 함</li>
+    </ul>
+  </div>
+</div>
+
+<div class="alt opfam">
+  <h4>B-3. 블록 전체를 단일 sysop으로 <span class="badge">운영 조건 차단 계열</span></h4>
+  <div class="idea">블록의 모든 OOS 삭제를 하나의 원자 단위로 묶어 "일부만 커밋된 상태"를 없앤다.</div>
+  <div class="cons"><b>기록된 단점·비용</b>
+    <ul>
+      <li>완주 표시가 비동기라 "sysop 커밋 ~ VACUUMED 영속화" 사이 중단에서 같은 버그가 재현 — 창이 좁아질 뿐 닫히지 않음</li>
+      <li><code>oos_delete_chain</code> 은 커밋 전에 페이지를 놓아주고 bestspace에 재등록하므로 커밋 전에도 빈 슬롯이 노출됨 —
+      sysop 중단(abort) 시 남이 차지한 슬롯에 옛 청크를 되살리려는 충돌 창이 레코드 단위에선 마이크로초, 블록 단위에선 <b>블록 처리 시간 전체</b>로 확대</li>
+      <li>로그 수십 페이지 분량의 무한계 sysop 자체가 vacuum 설계와 충돌</li>
+    </ul>
+  </div>
+</div>
+
+<div class="alt opfam">
+  <h4>B-4. 포워드 워크 폐지 — heap 기준(prev version 체인) 재설계 <span class="badge">운영 조건 차단 계열</span></h4>
+  <div class="idea">로그가 아니라 살아있는 heap 레코드에서 출발해 prev version 체인을 타며 옛 체인을 지우고, <code>prev_version_lsa</code> NULL을 완료 마커로 쓴다.</div>
+  <div class="pros"><b>기록된 장점</b>
+    <ul><li>"가변 상태에 멱등성 앵커"라는 직관은 경로 ②(REMOVE 동반)가 안전한 원리와 동일 — 단일 UPDATE 케이스에는 실제로 성립</li></ul>
+  </div>
+  <div class="cons"><b>기록된 단점·비용</b>
+    <ul>
+      <li>여러 블록의 잡이 같은 행을 수집 → 마커 없이는 <b>중단 없이도</b> 같은 undo 이미지를 중복 방문(평시 이중 삭제 위험)</li>
+      <li>마커가 <code>prev_version_lsa</code> 단일 값뿐 → "체인 전체가 죽었을 때만 일괄 청소"가 강제 → 계속 UPDATE되는(핫한) 행은 조건이 영원히 불성립 → <b>옛 체인 무한 누적</b>(영구 누수의 부활)</li>
+      <li>병렬 워커에서 REMOVE가 앵커를 먼저 소멸시키는 경합, heap 슬롯이 없는 NEWHOME 경로, vacuum_heap의 페이지 배치 설계와 로그 읽기의 충돌</li>
+    </ul>
+  </div>
+</div>
+
+<div class="alt opfam">
+  <h4>B-5. 중단(INTERRUPTED) 블록의 OOS 삭제 건너뛰기 <span class="badge">운영 조건 차단 계열</span></h4>
+  <div class="idea">재실행 블록에서는 OOS 삭제를 하지 않는다 — 이중 삭제 대신 누수를 택한다.</div>
+  <div class="cons"><b>기록된 단점·비용</b>
+    <ul>
+      <li>undo 이미지는 그 체인의 <b>유일한</b> 참조이므로, 건너뛴 체인은 영원히 회수 불가(영구 누수) —
+      vacuum-OOS 통합(CBRD-26668)이 해결하려던 문제의 회귀</li>
+      <li>§9의 재현처럼 정상 종료마다 발생하는 일이라, 운영 누적량이 무시할 수준이 아님</li>
+    </ul>
+  </div>
+</div>
+
+<h3>종합 비교표</h3>
+
+<div class="scroll"><table>
+  <tr>
+    <th style="width:24%">후보</th>
+    <th>이중 삭제 차단</th>
+    <th>누수 회귀 없음</th>
+    <th>온디스크 변경</th>
+    <th>상시 비용</th>
+    <th>구현 침습도</th>
+  </tr>
+  <tr>
+    <td><b>A-1</b> generation 필드</td>
+    <td class="verdict-o">완전</td>
+    <td class="verdict-o">예</td>
+    <td class="verdict-t">있음 (2곳, stub +4B)</td>
+    <td class="verdict-t">stub 4B/행·컬럼</td>
+    <td class="verdict-o">낮음 (쓰기 흐름 불변)</td>
+  </tr>
+  <tr>
+    <td><b>A-2</b> owner OID</td>
+    <td class="verdict-o">완전<small> (동일 행 재사용 케이스 검토 필요)</small></td>
+    <td class="verdict-o">예</td>
+    <td class="verdict-t">있음 (청크 헤더)</td>
+    <td class="verdict-x">backfill 시 핫패스 추가 쓰기</td>
+    <td class="verdict-x">높음 (흐름 재배치 또는 backfill)</td>
+  </tr>
+  <tr>
+    <td><b>A-3</b> MVCCID 스탬프</td>
+    <td class="verdict-x">불완전 (동일 트랜잭션 충돌)</td>
+    <td class="verdict-o">예</td>
+    <td class="verdict-t">있음</td>
+    <td class="verdict-o">낮음</td>
+    <td class="verdict-o">낮음</td>
+  </tr>
+  <tr>
+    <td><b>B-1</b> 재사용 유예</td>
+    <td class="verdict-t">해제 시점 신뢰성에 의존</td>
+    <td class="verdict-o">예</td>
+    <td class="verdict-o">없음</td>
+    <td class="verdict-x">공간 회수율 저하</td>
+    <td class="verdict-x">높음 (유예 영속화 + bestspace)</td>
+  </tr>
+  <tr>
+    <td><b>B-2</b> 레코드 단위 진행 기록</td>
+    <td class="verdict-o">완전 (성공 시)</td>
+    <td class="verdict-o">예</td>
+    <td class="verdict-o">없음<small> (vacuum data 제외)</small></td>
+    <td class="verdict-x">레코드별 영속 쓰기</td>
+    <td class="verdict-x">매우 높음 (vacuum 코어 수술)</td>
+  </tr>
+  <tr>
+    <td><b>B-3</b> 블록 단위 sysop</td>
+    <td class="verdict-x">불완전 (비동기 완주 표시 창)</td>
+    <td class="verdict-o">예</td>
+    <td class="verdict-o">없음</td>
+    <td class="verdict-t">거대 sysop 비용</td>
+    <td class="verdict-t">중간</td>
+  </tr>
+  <tr>
+    <td><b>B-4</b> heap 기준 재설계</td>
+    <td class="verdict-x">불완전 (중복 방문 내장)</td>
+    <td class="verdict-x">아니오 (핫 로우 무한 누적)</td>
+    <td class="verdict-o">없음</td>
+    <td class="verdict-t">체인 워크 로그 읽기</td>
+    <td class="verdict-x">매우 높음 (아키텍처 개편)</td>
+  </tr>
+  <tr>
+    <td><b>B-5</b> INTERRUPTED 스킵</td>
+    <td class="verdict-o">차단은 됨</td>
+    <td class="verdict-x">아니오 (영구 누수 회귀)</td>
+    <td class="verdict-o">없음</td>
+    <td class="verdict-o">낮음</td>
+    <td class="verdict-o">낮음</td>
+  </tr>
+</table></div>
+
+<p class="sub">평가는 검증 보고서(§5-1 그릴 기록)·본 세션 분석에 기록된 사실 기반이며, 각 셀의 근거는 위 카드에 있습니다.</p>
+
+<!-- ================================================================ -->
+<h2 id="s12"><span class="num">12.</span>판단 포인트 · 참고 자료</h2>
+
+<p class="lead">결정을 위해 실제로 저울에 올려야 할 축은 다음 다섯 가지로 정리됩니다.</p>
+
+<table>
+  <tr><th style="width:26%">판단 축</th><th>내용</th></tr>
+  <tr><td><b>① 차단의 완전성</b></td><td>"창을 좁히는" 수준(B-1, B-3)인가, "재시도 횟수와 무관하게 성립"(A-1)인가. 무증상 데이터 손실이라는 피해 성격상 부분 차단의 잔여 위험을 어떻게 평가할지.</td></tr>
+  <tr><td><b>② 온디스크 변경의 타이밍</b></td><td>OOS는 아직 미출시(feat/oos)이므로 <b>지금은 포맷 변경의 마이그레이션 비용이 0인 유일한 시점</b>. 출시 후에는 A계열의 비용 구조가 크게 달라짐.</td></tr>
+  <tr><td><b>③ 상시 비용의 지불 위치</b></td><td>stub +4B(모든 OOS 행·컬럼) vs 공간 회수율 저하(운영 전체) vs vacuum 코어 처리량 — 어느 쪽의 항구적 비용이 수용 가능한지.</td></tr>
+  <tr><td><b>④ 구현 리스크</b></td><td>vacuum 코어(B-2)나 회수 아키텍처(B-4)의 수술은 회귀 반경이 넓음. A-1은 국소적이지만 온디스크 포맷·경계값·테스트 연쇄 갱신이 뒤따름.</td></tr>
+  <tr><td><b>⑤ 후속 의존성</b></td><td>OOS 빈 페이지 회수(CBRD-26786), flashback retention(CBRD-26847 FU-01) 등 후속 작업이 "삭제 전 신원 확인" 능력을 전제로 설계되고 있음 — 대책 선택이 이들의 설계에 영향.</td></tr>
+</table>
+
+<p>참고로, 2026-07-31의 선행 설계 논의(그릴) 기록에서는 A계열 중 generation 안이 우세로 평가된 바 있습니다.
+다만 이는 해당 논의의 기록일 뿐이며, <b>최종 선택은 본 보고서의 범위 밖</b>입니다.</p>
+
+<h3>참고 자료</h3>
+<ul style="font-size:13.5px">
+  <li>JIRA: <a href="http://jira.cubrid.org/browse/CBRD-26950">CBRD-26950</a> (Status: Analysis) · 발견 경위: PR #6986 (CBRD-26668, vacuum-OOS 통합) 코드 리뷰</li>
+  <li>소스 검증 보고서: <code>cbrd-26950/2026-07-31-CBRD-26950-vacuum-oos-slot-reuse-verification.md</code> — 증명 의무 A–H 전수 점검, 차단 불변식 후보 7개 반박, Q&amp;A 원문</li>
+  <li>재현 가이드·결과: <code>cbrd-26950/2026-08-05-CBRD-26950-poc-run-guide-and-results.md</code> · 스크립트 <code>cbrd-26950/cbrd-26950-poc.sh</code></li>
+  <li>generation 필드 설계 제안: <code>cbrd-26950/2026-07-31-CBRD-26950-generation-field-proposal.html</code> · 참조 비용 수용성 분석: <code>2026-08-03-CBRD-26950-4b-reference-cost-acceptance.html</code></li>
+  <li>OOS 사양(단일 진실 원천): <code>OOS-CONTEXT.md</code> — §4 Vacuum + OOS, Known Bugs 표</li>
+  <li>관련 티켓: CBRD-26668 (vacuum 통합, 완료) · CBRD-26786 (OOS 빈 페이지 회수, 제안) · CBRD-26847 (fetch 경로 census)</li>
+</ul>
+
+<div class="footnote">
+  본 문서의 소스 인용은 워크트리 <code>CBRD-26950-oos-vacuum-delete-overlap</code> (커밋 <code>07fef9d48</code>, feat/oos + origin/develop 머지) 기준이며,
+  주요 라인: 블록 처리 루프 <code>vacuum.c:3490</code>, 포워드 워크 호출 <code>vacuum.c:3589-3592</code> / <code>3724-3731</code>,
+  vacuum_heap 호출 <code>vacuum.c:3746</code>, prev_version_lsa 정리 <code>vacuum.c:2331-2332</code>, start_lsa TODO <code>vacuum.c:3766</code>.
+  probe·삭제 동작(<code>oos_chunk_exists</code>, <code>oos_delete_chain</code>)과 슬롯 재사용 동작의 라인 근거는 검증 보고서(커밋 <code>0ad6afc0f</code> 기준 확인)를 따랐다.
+  본 문서는 Claude Code (Fable 5)가 작성했다. 사실 관계는 위 근거 문서들과 소스에서 재확인 가능하다.
+</div>
+
+</div>
+</body>
+</html>
