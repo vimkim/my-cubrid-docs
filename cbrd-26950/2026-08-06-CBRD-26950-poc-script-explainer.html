@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CBRD-26950 재현 스크립트 해부 — 무엇을 했고, 무엇을 하지 않았나</title>
+<style>
+  :root {
+    color-scheme: light only;
+    --bg: #ffffff; --fg: #212529; --muted: #64707d; --line: #dde3e9;
+    --accent: #1a4f8b; --accent-soft: #f0f5fa;
+    --danger: #b02a30; --danger-soft: #fbf1f1;
+    --ok: #1e6f3e; --ok-soft: #f1f8f3;
+    --warn: #97701f; --warn-soft: #fbf7ee;
+    --code-bg: #f5f7f9;
+  }
+  * { box-sizing: border-box; }
+  html { background: #ffffff; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic", -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.72; font-size: 15px;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 52px 32px 80px; }
+  h1 { font-size: 25px; line-height: 1.4; margin: 0 0 6px; font-weight: 700; letter-spacing: -0.01em; }
+  h2 { font-size: 19.5px; margin: 54px 0 14px; padding-top: 24px; border-top: 1px solid var(--line); font-weight: 700; letter-spacing: -0.01em; }
+  h2 .num { color: var(--accent); margin-right: 8px; }
+  h3 { font-size: 15.5px; margin: 28px 0 8px; }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 10px; }
+  .meta code { font-size: 12px; }
+  code {
+    background: var(--code-bg); border-radius: 4px; padding: 1px 5px;
+    font-family: "JetBrains Mono", "D2Coding", Consolas, monospace; font-size: 12.5px;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 16px; overflow-x: auto; font-size: 12.5px; line-height: 1.55;
+    font-family: "JetBrains Mono", "D2Coding", Consolas, monospace;
+  }
+  pre code { background: none; padding: 0; }
+  .tagline {
+    margin: 24px 0 0; padding: 18px 20px; border-radius: 10px;
+    background: var(--accent-soft); border-left: 4px solid var(--accent);
+    font-size: 15.5px; font-weight: 600;
+  }
+  .tagline .fix { display:block; margin-top: 8px; font-weight: 500; color: var(--fg); font-size: 14px; }
+  .callout {
+    margin: 16px 0; padding: 13px 18px; border-radius: 10px;
+    background: var(--warn-soft); border-left: 4px solid var(--warn); font-size: 14px;
+  }
+  .callout.blue { background: var(--accent-soft); border-left-color: var(--accent); }
+  .callout.green { background: var(--ok-soft); border-left-color: var(--ok); }
+  .callout.red { background: var(--danger-soft); border-left-color: var(--danger); }
+  .callout b.t { display: block; margin-bottom: 4px; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 8px 11px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-size: 12.5px; }
+  tr:nth-child(even) td { background: #fbfcfd; }
+  .scroll { overflow-x: auto; }
+  .verdict-x { color: var(--danger); font-weight: 700; white-space: nowrap; }
+  .verdict-o { color: var(--ok); font-weight: 700; white-space: nowrap; }
+  .verdict-t { color: var(--warn); font-weight: 700; white-space: nowrap; }
+  .chip { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 1px 10px; border-radius: 20px; white-space: nowrap; }
+  .chip.obs  { color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent); }
+  .chip.time { color: var(--warn); background: var(--warn-soft); border: 1px solid var(--warn); }
+  .chip.mech { color: var(--danger); background: var(--danger-soft); border: 1px solid var(--danger); }
+  .chip.none { color: var(--ok); background: var(--ok-soft); border: 1px solid var(--ok); }
+
+  .tl { list-style: none; margin: 20px 0; padding: 0; }
+  .tl li { position: relative; padding: 0 0 20px 40px; }
+  .tl li::before {
+    content: attr(data-t); position: absolute; left: 0; top: 1px;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--code-bg); border: 2px solid var(--muted);
+    font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    color: var(--muted);
+  }
+  .tl li::after {
+    content: ""; position: absolute; left: 15px; top: 33px; bottom: -1px;
+    width: 2px; background: var(--line);
+  }
+  .tl li:last-child::after { display: none; }
+  .tl li.bad::before { border-color: var(--danger); color: var(--danger); background: var(--danger-soft); }
+  .tl li.ok::before  { border-color: var(--ok); color: var(--ok); background: var(--ok-soft); }
+  .tl li.hi::before  { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .tl .head { font-weight: 700; font-size: 14.5px; }
+  .tl .body { color: var(--muted); font-size: 13.5px; margin-top: 2px; }
+  .tl .body b { color: var(--fg); }
+  .tl .maps {
+    margin-top: 6px; padding: 7px 12px; border-radius: 8px; background: var(--ok-soft);
+    border-left: 3px solid var(--ok); font-size: 13px;
+  }
+  .tl .maps::before { content: "≒ 평상시 운영에서: "; font-weight: 700; color: var(--ok); font-size: 12px; }
+
+  .diagram {
+    margin: 18px 0; padding: 18px; border: 1px solid var(--line); border-radius: 10px;
+    background: #fdfdfe; overflow-x: auto;
+  }
+  .diagram .cap { text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 12px; }
+  .rec {
+    display: flex; margin: 14px 0; border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--line); font-family: "JetBrains Mono", monospace; font-size: 11.5px; text-align: center;
+    min-width: 480px;
+  }
+  .rec div { padding: 9px 6px; border-left: 1px solid var(--line); }
+  .rec div:first-child { border-left: none; }
+  .rec .hdr { background: var(--accent-soft); }
+  .rec .dat { background: var(--bg); }
+  .rec .dim { background: var(--code-bg); color: var(--muted); }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; }
+  .cols3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 16px 0; }
+  @media (max-width: 700px) {
+    .wrap { padding: 32px 20px 56px; }
+    .cols, .cols3 { grid-template-columns: 1fr; }
+    h1 { font-size: 22px; }
+  }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .card h3, .card h4 { margin: 0 0 8px; font-size: 14px; }
+  .card p { margin: 0; font-size: 13px; color: var(--muted); }
+  .card p b { color: var(--fg); }
+  .card.mechc { border-top: 4px solid var(--danger); }
+  .card.timec { border-top: 4px solid var(--warn); }
+  .card.obsc  { border-top: 4px solid var(--accent); }
+
+  .toc { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 14px 20px; margin: 22px 0; font-size: 13.5px; }
+  .toc ol { margin: 6px 0 2px; padding-left: 22px; columns: 2; column-gap: 36px; }
+  .toc li { margin-bottom: 4px; break-inside: avoid; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  .footnote { color: var(--muted); font-size: 12.5px; margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .kicker { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  p.lead { font-size: 15px; }
+  .qa dt { font-weight: 700; margin-top: 18px; font-size: 14.5px; }
+  .qa dt::before { content: "Q. "; color: var(--accent); }
+  .qa dd { margin: 6px 0 0; font-size: 14px; }
+  .qa dd::before { content: "A. "; color: var(--ok); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<span class="kicker">CBRD-26950 · 재현 스크립트 해부 · 팀 공유용</span>
+<h1>재현 스크립트는 무엇을 했고, 무엇을 하지 않았나<br>— <code>cbrd-26950-poc.sh</code> 전수 해부</h1>
+<div class="meta">
+  작성 2026-08-06 · 대상 스크립트 <code>cbrd-26950/cbrd-26950-poc.sh</code> · 재현 기준 커밋 <code>07fef9d48</code> (debug_gcc 스톡 빌드) ·
+  작성 도구 Claude Code (Fable 5) ·
+  관련 문서: 사고 보고서 <code>2026-08-06-CBRD-26950-vacuum-oos-explainer-report.html</code>,
+  실행 가이드 <code>2026-08-05-CBRD-26950-poc-run-guide-and-results.md</code>
+</div>
+
+<div class="tagline">
+  이 문서는 하나의 질문에 답합니다 — <u>"재현 스크립트가 워크로드를 인위적으로 비틀어서 만들어 낸 결과 아닌가?"</u>
+  결론: 스크립트가 실행하는 것은 <b>표준 SQL(CREATE/INSERT/UPDATE/SELECT)과 정상 서버 종료·재시작뿐</b>이며,
+  소스 수정·fault-injection·디버거·강제 크래시(kill -9)는 일절 없습니다.
+  스크립트가 한 일은 <b>버그의 메커니즘을 만드는 것이 아니라, 운영 환경이 스스로 만들어 내는 상태를
+  4분짜리 테스트 안에 압축해 넣은 것</b>입니다.
+  <span class="fix">이를 보이기 위해 스크립트의 모든 구성 요소를 ⓐ 메커니즘 조작 / ⓑ 시간 압축 / ⓒ 관측 장치의
+  세 범주로 전수 분류합니다(§4~5). ⓐ에 해당하는 요소는 하나도 없습니다.</span>
+</div>
+
+<div class="toc">
+  <b>목차</b>
+  <ol>
+    <li><a href="#s1">판정 기준 — '조작'의 세 가지 층위</a></li>
+    <li><a href="#s2">스크립트의 5단계 — 각 단계의 운영 환경 대응물</a></li>
+    <li><a href="#s3">실행되는 SQL의 전부</a></li>
+    <li><a href="#s4">설정값 전수 검토 — 기본값과 다른 것들의 정체</a></li>
+    <li><a href="#s5">'조작'이라 부를 수 있는 것들의 부재 증명</a></li>
+    <li><a href="#s6">증거 설계 — 결과를 신뢰할 수 있는 이유</a></li>
+    <li><a href="#s7">예상 반론과 답 (Q&amp;A)</a></li>
+    <li><a href="#s8">실행 방법 · 결과 이력 · 산출물</a></li>
+  </ol>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s1"><span class="num">1.</span>판정 기준 — '조작'의 세 가지 층위</h2>
+
+<p class="lead">재현 스크립트를 평가할 때 "무언가를 설정했다 = 조작"으로 뭉뚱그리면 판단을 그르칩니다.
+재현 스크립트가 할 수 있는 개입은 성격이 전혀 다른 세 층위로 나뉩니다:</p>
+
+<div class="cols3">
+  <div class="card mechc">
+    <h4>ⓐ 메커니즘 조작</h4>
+    <p>자연 상태에서 <b>일어날 수 없는 동작을 만들어내는</b> 개입 — 소스 패치, fault-injection 훅,
+    디버거로 스레드 정지, 내부 페이지 직접 변조, 인위적 스케줄링 강제.
+    <b>이것이 있으면 재현의 증거 능력이 훼손됩니다.</b></p>
+  </div>
+  <div class="card timec">
+    <h4>ⓑ 시간 압축</h4>
+    <p>자연적으로 일어나는 사건들의 <b>동시 발생을 몇 분 안에 앉히는</b> 개입 — 부하 크기,
+    허용 범위 안의 파라미터 튜닝, 진행률을 보고 종료 시점 잡기.
+    사건 하나하나는 전부 정상 동작입니다.</p>
+  </div>
+  <div class="card obsc">
+    <h4>ⓒ 관측 장치</h4>
+    <p>동작에 영향을 주지 않고 <b>증거만 남기는</b> 장치 — 디버그 로그 읽기,
+    페이로드에 id 각인, 대조군 설계. 있으나 없으나 서버의 행동은 같습니다.</p>
+  </div>
+</div>
+
+<div class="callout blue">
+  <b class="t">이 문서의 주장</b>
+  <code>cbrd-26950-poc.sh</code> 의 모든 구성 요소는 ⓑ 또는 ⓒ입니다. ⓐ는 없습니다.
+  따라서 이 재현은 "스크립트가 만들어 낸 현상"이 아니라, <b>운영 달력이 언젠가 스스로 만들 상태를
+  미리 당겨서 보여준 것</b>으로 읽어야 합니다. 이하 전 절이 이 분류의 근거입니다.
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s2"><span class="num">2.</span>스크립트의 5단계 — 각 단계의 운영 환경 대응물</h2>
+
+<p class="lead">스크립트는 phase 0~4의 다섯 단계로 진행됩니다. 각 단계 아래에 "평상시 운영에서 같은 상태를
+만드는 시나리오"를 초록 상자로 함께 적었습니다 — 이 대응이 성립하는지가 이 문서의 핵심 검증 포인트입니다.</p>
+
+<ul class="tl">
+  <li data-t="P0"><span class="head">전용 DB 생성 — <code>oos26950</code>, 16K 페이지</span>
+    <div class="body"><code>cubrid createdb --db-page-size=16K</code> (기본 페이지 크기 그대로) + 전용 <code>cubrid.conf</code> 를
+    <code>CUBRID_CONF_FILE</code> 로 주입. 설치본의 다른 DB에 영향을 주지 않기 위한 <b>격리 장치</b>이지 동작 변경이 아니다.</div>
+    <div class="maps">새 서비스용 DB 하나를 표준 옵션으로 만드는 것과 동일.</div></li>
+  <li data-t="P1"><span class="head">1단계 — 20,000행 INSERT (gen=1, 'AA' 패턴, 행당 5,000B)</span>
+    <div class="body">payload는 <code>BIT VARYING</code> 5,000바이트. OOS 트리거 기준(4,060B)을 넘으므로 전부 OOS 적재.
+    payload 첫 8자에 자기 id를 16진수로 <b>각인</b>(관측 장치 ⓒ — §6). 표준 INSERT 문 20,000개.</div>
+    <div class="maps">문서·이미지 메타데이터·JSON 등 수 KB짜리 값을 가진 테이블의 일상적 대량 적재.</div></li>
+  <li data-t="P2" class="hi"><span class="head">2단계 — 전체 UPDATE(단일 트랜잭션) + 동시 INSERT 6세션, 그리고 정상 종료</span>
+    <div class="body">① <code>UPDATE t SET payload = ...('BB' 패턴)</code> 을 <b>한 트랜잭션으로</b> 실행·커밋 —
+    커밋 순간 옛 체인 20,000개가 한꺼번에 vacuum 회수 대상이 된다.
+    ② 동시에 별도 세션 6개가 같은 크기(gen=3, 'DD' 패턴)로 INSERT를 계속한다 — vacuum이 비우는 슬롯을 이들이 재사용.
+    ③ <code>oos.log</code> 의 삭제 건수를 폴링하다가 <b>30% 회수 시점에 <code>cubrid server stop</code></b> (정상 종료).</div>
+    <div class="maps">야간 일괄 배치(전 행 마스킹·재계산·포맷 변환)가 돌고, 그동안에도 서비스 INSERT는 계속 들어오며,
+    배치 후 정기 점검·패치를 위해 서버를 내리는 흔한 운영 순서. <b>단일 트랜잭션 대량 UPDATE는 배치 작업의 가장 흔한 작성 방식</b>이다.</div></li>
+  <li data-t="P3"><span class="head">3단계 — 재기동, vacuum이 잠잠해질 때까지 대기</span>
+    <div class="body">서버 시작 후 <code>oos.log</code> 삭제 건수가 5초간 변하지 않을 때까지 기다린다. 개입 없음 — 그냥 기다린다.</div>
+    <div class="maps">점검 후 서버를 올리고 평소처럼 운영. vacuum 재주행은 사용자가 시키는 게 아니라 엔진이 스스로 한다.</div></li>
+  <li data-t="P4" class="bad"><span class="head">4단계 — 판정: SELECT로 무결성 검사</span>
+    <div class="body">id 250개 단위 범위로 나눠 <code>SELECT ... WHERE payload &lt;&gt; 기대값</code> 실행.
+    gen-1(대조군)은 전부 정상이어야 하고, gen-3(피해 후보)에서 판독 불가/값 불일치가 나오면 재현.
+    추가로 두 vacuum pass의 삭제 OID 집합 교집합(<code>comm -12</code>)을 보강 증거로 수집.</div>
+    <div class="maps">평범한 조회. 피해 행은 "해제된 슬롯 이후에 INSERT·커밋되고 다시는 건드리지 않은 행"인데도 읽기가 실패한다.</div></li>
+</ul>
+
+<div class="callout red">
+  <b class="t">주목 — 종료 방식이 가장 온건한 형태라는 점</b>
+  스크립트는 <code>kill -9</code> 도, 크래시 유발도 쓰지 않습니다. <b><code>cubrid server stop</code> — 관리자가 매일 쓰는
+  정상 종료 명령</b> 하나입니다. vacuum worker는 종료 신호를 받으면 설계된 대로 블록을 중단하고(<code>vacuum.c:3494</code>),
+  그 중단된 블록의 재주행 역시 설계된 정상 동작입니다. 즉 이 재현은 비정상 상황을 흉내 낸 것이 아니라,
+  <b>설계된 두 정상 동작(중단, 재주행)의 조합이 데이터를 훼손함</b>을 보인 것입니다.
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s3"><span class="num">3.</span>실행되는 SQL의 전부</h2>
+
+<p>스크립트가 서버에 보내는 SQL은 아래 네 종류가 전부입니다. 힌트, 시스템 프로시저, 카탈로그 조작,
+내부 함수 호출은 없습니다.</p>
+
+<pre><code>-- P0: 테이블 생성
+CREATE TABLE t (id INT PRIMARY KEY, gen INT, payload BIT VARYING);
+
+-- P1: 적재 (id를 payload 앞 8자에 각인; 'AA' 반복으로 5,000B)
+INSERT INTO t VALUES (1, 1, CAST(CONCAT('00000001', REPEAT('AA',4996)) AS BIT VARYING));
+-- ... 20,000행
+
+-- P2: 일괄 갱신 (단일 트랜잭션) + 동시 INSERT (gen=3, 'DD')
+UPDATE t SET payload = CAST(CONCAT(LPAD(HEX(id),8,'0'), REPEAT('BB',4996)) AS BIT VARYING);
+COMMIT;
+
+-- P4: 무결성 검사 (250개 id 범위 단위)
+SELECT COUNT(*) FROM t WHERE id BETWEEN 1 AND 250
+   AND payload &lt;&gt; CAST(CONCAT(LPAD(HEX(id),8,'0'), REPEAT('BB',4996)) AS BIT VARYING);</code></pre>
+
+<p><code>BIT VARYING</code> 을 쓰는 이유는 OOS 테스트 원칙(OOS-CONTEXT §6) 그대로입니다 —
+VARCHAR는 문자열 압축 때문에 디스크 크기가 예측 불가라, <b>크기가 정확히 계산되는 타입</b>으로
+"이 행은 반드시 OOS에 간다"를 보장하는 것뿐입니다. 5,000B라는 크기 자체는 OOS의 대상 사용례
+(수 KB 문서·직렬화 객체) 한가운데 있는 평범한 값입니다.</p>
+
+<!-- ================================================================ -->
+<h2 id="s4"><span class="num">4.</span>설정값 전수 검토 — 기본값과 다른 것들의 정체</h2>
+
+<p class="lead">스크립트가 만드는 <code>cubrid.conf</code> 는 9줄입니다. 한 줄씩, 무엇을 위한 것이고
+어느 범주(ⓑ 시간 압축 / ⓒ 관측)인지 전수 검토합니다. <b>"이 설정이 없으면 버그가 물리적으로 불가능한가?"</b>가
+판단 질문입니다 — 답이 '예'인 항목은 하나도 없습니다.</p>
+
+<div class="scroll"><table>
+  <tr><th style="width:26%">설정</th><th>역할</th><th style="width:11%">분류</th><th style="width:30%">"이게 없으면 버그가 불가능한가?"</th></tr>
+  <tr>
+    <td><code>vacuum_log_block_pages=128</code></td>
+    <td>블록 하나를 로그 128페이지(2MB) 분량으로 — 블록 처리가 충분히 오래 걸려 <b>4분짜리 테스트 안에서</b> 종료가 블록 중간에 떨어지게 함. 허용 범위(4~1024, <code>system_parameter.c:3790</code>) 안의 튜닝값</td>
+    <td><span class="chip time">ⓑ 시간 압축</span></td>
+    <td>아니오. 블록 크기와 무관하게 <b>종료 시점에 처리 중이던 블록은 항상 중단·재주행</b>된다. 기본 크기(≈31페이지)면 잡히는 창이 좁아질 뿐 0이 되지 않는다 — backlog가 있는 한 어느 블록인가는 반드시 처리 중이다</td>
+  </tr>
+  <tr>
+    <td><code>vacuum_worker_count=1</code></td>
+    <td>진행률(30%) 측정과 로그 해석을 단순하게</td>
+    <td><span class="chip time">ⓑ 시간 압축</span></td>
+    <td>아니오. 오히려 <b>보수적인 설정</b>이다 — 기본값 10이면 종료 순간 처리 중인 블록이 최대 10개라 중단·재주행되는 블록이 더 많아진다</td>
+  </tr>
+  <tr>
+    <td><code>vacuum_master_interval_in_msecs=10</code></td>
+    <td>vacuum 기상 주기 단축 — 커밋 후 회수가 즉시 시작돼 테스트가 짧아짐</td>
+    <td><span class="chip time">ⓑ 시간 압축</span></td>
+    <td>아니오. 기본 주기여도 회수는 시작되고, 시작된 이상 같은 타임라인이 펼쳐진다. 몇 초 늦게 시작될 뿐</td>
+  </tr>
+  <tr>
+    <td><code>enable_string_compression=no</code></td>
+    <td>크기 예측성 보강. 실제 페이로드는 어차피 압축 대상이 아닌 <code>BIT VARYING</code> — 이중 안전장치</td>
+    <td><span class="chip obs">ⓒ 관측</span></td>
+    <td>아니오. OOS 적재 여부를 결정론적으로 만들 뿐, 슬롯 재사용·블록 재주행과 무관</td>
+  </tr>
+  <tr>
+    <td><code>er_log_vacuum=4163</code></td>
+    <td>서버 에러 로그에 vacuum 블록 상태 전이를 남김 (로깅 상세도)</td>
+    <td><span class="chip obs">ⓒ 관측</span></td>
+    <td>아니오. 로그를 더 쓸 뿐 동작 불변</td>
+  </tr>
+  <tr>
+    <td><code>data_buffer_size=256M</code><br><code>log_buffer_size=64M</code><br><code>max_clients=20</code></td>
+    <td>평범한 소형 인스턴스 사이징</td>
+    <td><span class="chip obs">ⓒ 관측</span></td>
+    <td>아니오. 통상 운영 범위의 값</td>
+  </tr>
+  <tr>
+    <td><code>cubrid_port_id=21950</code></td>
+    <td>공용 장비에서 다른 DB와의 충돌 방지 (격리)</td>
+    <td><span class="chip obs">ⓒ 관측</span></td>
+    <td>아니오</td>
+  </tr>
+</table></div>
+
+<div class="callout">
+  <b class="t">파라미터 튜닝을 어떻게 읽어야 하나</b>
+  <code>vacuum_log_block_pages</code> 와 worker 수는 "몇 분짜리 테스트가 그 창을 확실히 잡는가"를 조절하는
+  손잡이지, 창을 <b>만들어내는</b> 손잡이가 아닙니다. 운영 환경의 창은 다르게 생깁니다 —
+  기본 블록 크기라도 backlog가 수십만 건이면 처리 중 블록은 언제나 존재하고,
+  worker 10개면 중단되는 블록도 10개까지 늘어납니다. 스크립트는 그 창을 20,000행·4분 규모로 <b>축소 모형화</b>한 것입니다.
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s5"><span class="num">5.</span>'조작'이라 부를 수 있는 것들의 부재 증명</h2>
+
+<p class="lead">ⓐ(메커니즘 조작)에 해당할 수 있는 항목을 모두 나열하고, 스크립트에서의 유무를 확인합니다.</p>
+
+<div class="scroll"><table>
+  <tr><th style="width:34%">조작 수단</th><th style="width:12%">사용 여부</th><th>비고</th></tr>
+  <tr><td>소스 코드 수정 / 패치 빌드</td><td class="verdict-o">✗ 없음</td><td>스톡 <code>debug_gcc</code> 빌드 (커밋 <code>07fef9d48</code> 그대로). debug인 이유는 §7 Q4</td></tr>
+  <tr><td>fault-injection 훅 (특정 지점에서 강제 실패/정지)</td><td class="verdict-o">✗ 없음</td><td>최초 분석은 "sysop 커밋 직후 worker 정지 훅이 필요할 것"으로 봤으나 <b>오판</b> — 정상 종료만으로 충분함이 확인됨 (검증 문서 Q4 정정)</td></tr>
+  <tr><td>디버거(gdb) attach / 브레이크포인트 / 스레드 정지</td><td class="verdict-o">✗ 없음</td><td>—</td></tr>
+  <tr><td>강제 크래시 (kill -9, SIGSEGV 유발, 전원 차단 흉내)</td><td class="verdict-o">✗ 없음</td><td>정상 종료 명령 <code>cubrid server stop</code> 만 사용</td></tr>
+  <tr><td>데이터 파일·로그 파일 직접 변조</td><td class="verdict-o">✗ 없음</td><td><code>oos.log</code> 는 <b>읽기만</b> 한다 (진행률 폴링·증거 수집)</td></tr>
+  <tr><td>비공개 SQL·시스템 프로시저·카탈로그 직접 조작</td><td class="verdict-o">✗ 없음</td><td>§3의 표준 DML/DDL이 전부</td></tr>
+  <tr><td>허용 범위 밖의 파라미터, 문서화되지 않은 플래그</td><td class="verdict-o">✗ 없음</td><td>§4 — 전부 공식 파라미터의 허용 범위 내</td></tr>
+  <tr><td>스케줄러·타이밍 강제 (sleep 주입으로 특정 인터리빙 고정)</td><td class="verdict-o">✗ 없음</td><td>유일한 타이밍 개입은 "진행률 30%가 되면 정상 종료 명령을 보낸다"는 <b>관측 후 행동</b>이다. 서버 내부 타이밍은 건드리지 않는다 (§7 Q1)</td></tr>
+</table></div>
+
+<div class="callout green">
+  <b class="t">종합</b>
+  스크립트에서 서버가 경험하는 것은 <b>표준 SQL 트래픽, 정상 종료, 재시작</b> — 이 세 가지가 전부입니다.
+  이 셋을 겪지 않는 운영 DB는 없습니다.
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s6"><span class="num">6.</span>증거 설계 — 결과를 신뢰할 수 있는 이유</h2>
+
+<h3>6-1. 페이로드에 id를 각인 — "조용히 남의 값을 읽는" 경우까지 탐지</h3>
+
+<div class="diagram">
+  <div style="font-size:12px; color:var(--muted); margin-bottom:4px">payload 5,000바이트의 구조</div>
+  <div class="rec">
+    <div class="hdr" style="flex:3">HEX(id) 8자<br><small>자기 id 각인</small></div>
+    <div class="dat" style="flex:13">패턴 반복 × 4,996회 ('AA' → 'BB' → gen3는 'DD')<br><small>세대마다 다른 패턴 — 어느 세대의 값인지 식별 가능</small></div>
+  </div>
+  <div class="cap">검증은 "payload ≠ 이 행의 기대 바이트열"을 보므로, 에러가 나는 손상뿐 아니라
+  <b>에러 없이 남의 데이터가 반환되는 무증상 손상</b>(슬롯이 또 재할당된 경우)도 "rows wrong"으로 잡힌다.</div>
+</div>
+
+<h3>6-2. 대조군 — 손상이 정확히 예측 지점에만 국한됨을 증명</h3>
+
+<div class="scroll"><table>
+  <tr><th style="width:16%">집단</th><th>정의</th><th style="width:22%">기대 결과</th><th style="width:18%">실측 (3회 실행)</th></tr>
+  <tr>
+    <td><b>gen-1 대조군</b><br>(20,000행)</td>
+    <td>UPDATE 후의 'BB' 체인 — <b>어떤 삭제보다도 먼저</b> 할당됐으므로 재사용된 슬롯에 있을 수 없다. 버그와 무관해야 하는 행들</td>
+    <td class="verdict-o">반드시 무손상</td>
+    <td class="verdict-o">3회 전부 0 손상</td>
+  </tr>
+  <tr>
+    <td><b>gen-3 피해 후보</b><br>(수백~수천 행)</td>
+    <td>슬롯 해제가 시작된 <b>뒤에</b> INSERT·커밋되고, 이후 <b>한 번도 수정되지 않은</b> 행들. 이 행을 건드린 주체는 vacuum 2차 pass뿐</td>
+    <td class="verdict-x">재현 시 일부 판독 불가</td>
+    <td class="verdict-x">293 / 163 / 240행 손상</td>
+  </tr>
+</table></div>
+
+<p>이 설계의 힘: 만약 손상이 스크립트의 다른 요소(부하, 종료, 설정) 때문이라면 <b>대조군도 같이 손상돼야</b> 합니다.
+3회 실행 모두 대조군이 완전 무손상이고 피해가 gen-3에만 나타났다는 것은, 손상 원인이
+"재사용된 슬롯에 대한 2차 삭제" 단 하나임을 가리킵니다.</p>
+
+<h3>6-3. 교차 검증 — 독립적인 두 증거의 수치 일치</h3>
+
+<ul>
+  <li><b>증거 A (결정적)</b>: SQL 레벨 — 판독 불가가 된 gen-3 행 수</li>
+  <li><b>증거 B (보강)</b>: 스토리지 레벨 — <code>oos.log</code> 에서 1차 pass와 2차 pass <b>양쪽에서</b> 삭제된 OOS OID 집합의 크기 (같은 물리 슬롯이 11초 간격으로 두 번 삭제된 기록)</li>
+</ul>
+
+<p>서로 다른 층위에서 수집된 두 수치가 3회 실행 모두 <b>정확히 1:1로 일치</b>했습니다 (293=293, 163=163, 240=240).
+이 일치는 우연히 만들기가 매우 어렵습니다 — 손상된 행 하나당 재사용-재삭제된 슬롯이 정확히 하나씩 대응한다는,
+사고 메커니즘이 예측하는 바로 그 관계입니다.</p>
+
+<!-- ================================================================ -->
+<h2 id="s7"><span class="num">7.</span>예상 반론과 답 (Q&amp;A)</h2>
+
+<dl class="qa">
+  <dt>"30% 시점에 정확히 서버를 내리는 건 타이밍 조작 아닌가?"</dt>
+  <dd>스크립트가 잡는 것은 <b>순간이 아니라 상태</b>입니다 — "vacuum backlog가 남아 있는 동안의 종료".
+  이 상태는 밀리초 정밀도가 필요한 레이스 윈도우가 아니라, 이 실험 조건에서 <b>수 초~수십 초간 지속되는 구간</b>이고,
+  운영에서는 backlog 규모에 따라 훨씬 깁니다. 30%라는 숫자 자체도 정밀 타이밍이 아닙니다 — 실제 실행에서는
+  stop 명령이 worker에 닿는 1.5초 동안 회수가 계속되어 목표 6,000개가 8,215개로 지나쳤는데도 재현됐습니다.
+  운영에서는 "대량 배치가 끝난 지 얼마 안 된 시점의 점검 재시작"이 정확히 이 상태를 만듭니다 —
+  야간 배치 후 새벽 점검이라는 아주 흔한 조합입니다.</dd>
+
+  <dt>"단일 트랜잭션으로 20,000행 UPDATE라니, 극단적인 워크로드 아닌가?"</dt>
+  <dd>일괄 배치를 단일 트랜잭션으로 묶는 것은 극단이 아니라 <b>가장 흔한 배치 작성 방식</b>입니다
+  (원자성을 위해 오히려 권장되는 패턴입니다). 20,000행 × 5KB도 소규모입니다 — 운영 배치는 수백만 행 단위가 흔하고,
+  backlog가 클수록 이 버그의 창은 <b>더 넓어집니다</b>. 즉 스크립트는 운영보다 <b>불리한(작은)</b> 조건에서 재현한 셈입니다.
+  단일 트랜잭션이 필요한 이유도 조작이 아니라 관찰 가능성입니다: 커밋 전에는 vacuum이 손댈 수 없으므로,
+  커밋 순간 backlog가 한꺼번에 생겨 "backlog가 남은 상태"를 4분짜리 테스트 안에서 안정적으로 만들 수 있을 뿐입니다.</dd>
+
+  <dt>"동시 INSERT 6세션은 버그를 만들기 위한 특수 장치 아닌가?"</dt>
+  <dd>동시 INSERT는 <b>슬롯 재사용</b>이라는, 엔진이 스스로 촉진하는 동작을 받아주는 상대역일 뿐입니다.
+  <code>oos_delete_chain</code> 은 슬롯을 비우면 즉시 그 페이지를 bestspace에 재등록하고, 다음 <code>oos_insert</code> 는
+  그 페이지의 최저 빈 슬롯부터 씁니다 — 재사용은 INSERT가 6개라서가 아니라 <b>설계가 유도해서</b> 일어납니다.
+  6이라는 수는 "재기동 전, 같은 세션 안에서" 가장 최근에 해제된 슬롯까지 재사용이 따라잡게 하는 처리량 매칭이고
+  (writer 1개는 vacuum 회수 속도를 못 따라감), 운영에서는 배치와 무관하게 계속 흐르는 서비스 INSERT가 이 역할을 합니다.</dd>
+
+  <dt>"debug 빌드에서만 재현한 것 아닌가?"</dt>
+  <dd>debug 빌드는 <b>증거 수집용</b>이지 발현 조건이 아닙니다. 유일한 관측 창구인 <code>oos.log</code>
+  (청크 삭제 기록)가 debug 전용이라 debug를 쓴 것뿐, 사고 경로의 코드
+  (<code>vacuum_forward_walk_reclaim_oos</code>, <code>oos_chunk_exists</code>, <code>oos_delete</code>, 블록 상태 기계)는
+  release와 동일하게 컴파일됩니다. 오히려 release에는 "블록 중간 에러 시 계속 진행" 같은 <b>추가 중단 경로</b>가
+  있어 창이 더 넓을 수 있습니다. release에서는 증거 A(판독 불가 행)는 그대로 관측 가능하고, 증거 B(oos.log)만 없습니다.</dd>
+
+  <dt>"그래서 실제 운영에서 일어날 확률이 얼마나 되는가?"</dt>
+  <dd>필요 조건을 다시 세면: ① OOS 사용 테이블에 UPDATE가 만든 회수 backlog — <b>대량 UPDATE 배치가 있으면 항상</b>;
+  ② 같은 테이블에 동시 INSERT — <b>서비스가 살아 있으면 항상</b>; ③ backlog 소진 전의 종료·재시작 —
+  <b>점검·패치·페일오버마다</b>. 셋 다 개별적으로는 일상이고, 겹치는 것도 "배치 직후의 재시작"이라는 달력 수준의 우연이면
+  충분합니다. 한 번 발현하면 에러·경고 없이 커밋된 데이터가 사라지므로(무증상), 낮은 빈도로도 심각도는 CRITICAL입니다.
+  그리고 이 스크립트로 측정한 발현률은 조건 성립 시 <b>3회 시도 중 3회</b>였습니다.</dd>
+</dl>
+
+<!-- ================================================================ -->
+<h2 id="s8"><span class="num">8.</span>실행 방법 · 결과 이력 · 산출물</h2>
+
+<h3>실행</h3>
+
+<pre><code># debug 빌드의 $CUBRID / $CUBRID_DATABASES 환경에서 (전제조건은 스크립트가 스스로 검사)
+~/gh/my-cubrid-docs/cbrd-26950/cbrd-26950-poc.sh          # 기본값, 약 3~4분
+PORT=21951 ~/gh/my-cubrid-docs/cbrd-26950/cbrd-26950-poc.sh   # 포트가 사용 중일 때</code></pre>
+
+<p>전용 DB(<code>oos26950</code>)와 전용 conf를 만들어 쓰므로 <b>같은 설치본의 다른 DB에는 영향이 없습니다.</b>
+종료 코드: <b>0</b> = 재현, <b>1</b> = 미재현(재실행 권장 — 회수 속도 요동 때문), <b>2</b> = 환경 오류.</p>
+
+<h3>결과 이력 (기본값 기준 3회 연속 재현)</h3>
+
+<div class="scroll"><table>
+  <tr><th>실행</th><th>1차 pass 회수</th><th>재삭제된 OID (증거 B)</th><th>판독 불가 행 (증거 A)</th><th>대조군</th><th>소요</th></tr>
+  <tr><td>1회차</td><td>—</td><td>293</td><td><b>293</b></td><td class="verdict-o">무손상</td><td>~4분</td></tr>
+  <tr><td>2회차</td><td>—</td><td>163</td><td><b>163</b></td><td class="verdict-o">무손상</td><td>~4분</td></tr>
+  <tr><td>3회차</td><td>8,215 / 20,000</td><td>240</td><td><b>240</b></td><td class="verdict-o">무손상</td><td>170초</td></tr>
+</table></div>
+
+<h3>피해 행의 실제 모습 (3회차 실행의 csql 세션)</h3>
+
+<pre><code>SELECT id, gen FROM t WHERE id = 20273;          -- 행 자체는 존재
+        20273            3
+
+SELECT DISK_SIZE(payload) FROM t WHERE id = 20273;   -- 값을 읽으면:
+ERROR: Internal error: slot 2 on page 8079 of volume ".../oos26950" is not allocated.
+
+SELECT gen, COUNT(*) FROM t GROUP BY gen;        -- heap은 무손상, OOS 값만 소실
+            1                 20000
+            3                  1838</code></pre>
+
+<h3>산출물 (WORK 디렉터리)</h3>
+
+<div class="scroll"><table>
+  <tr><th style="width:26%">파일</th><th>내용</th></tr>
+  <tr><td><code>damaged_ids.txt</code></td><td>판독 불가가 된 행 id 전체 목록 (증거 A)</td></tr>
+  <tr><td><code>double_deleted.txt</code></td><td>두 pass 모두에서 삭제된 OOS OID 목록 (증거 B)</td></tr>
+  <tr><td><code>deleted_A.txt</code> / <code>deleted_C.txt</code></td><td>1차 / 2차 pass 각각의 삭제 OID 집합 (교집합의 원천)</td></tr>
+  <tr><td><code>verify_gen1.log</code> / <code>verify_gen3.log</code></td><td>대조군/피해군 검증 실패 범위와 서버 에러 원문</td></tr>
+  <tr><td><code>cubrid.conf</code>, <code>insert_*.sql</code>, <code>*.out</code></td><td>그 실행이 실제로 쓴 설정과 투입 SQL 전문 — <b>재검증 가능성</b></td></tr>
+</table></div>
+
+<div class="callout blue">
+  <b class="t">수정 검증 게이트로의 재사용</b>
+  이 스크립트는 수정안 검증에도 그대로 씁니다. 신원 확인(예: generation 필드)이 들어가면 2차 pass의 probe가
+  불일치를 감지해 no-op해야 하므로, <b>기대값이 반전됩니다</b>: <code>deleted in both passes = 0</code>,
+  <code>gen-3 unreadable = 0</code>, 종료 코드 1. 즉 "재현 스크립트"이면서 동시에 "회귀 테스트"입니다.
+</div>
+
+<div class="footnote">
+  본 문서는 <code>cbrd-26950-poc.sh</code> (2026-08-05 판, 15,876 bytes) 전문과 실행 가이드
+  <code>2026-08-05-CBRD-26950-poc-run-guide-and-results.md</code>, 소스 검증 보고서
+  <code>2026-07-31-CBRD-26950-vacuum-oos-slot-reuse-verification.md</code> 를 근거로 작성했다.
+  소스 라인 인용은 워크트리 커밋 <code>07fef9d48</code> 기준: vacuum worker의 종료 체크 <code>vacuum.c:3494</code>,
+  <code>vacuum_log_block_pages</code> 허용 범위 <code>system_parameter.c:3790</code> (하한 4, 상한 1024).
+  사고 메커니즘 자체의 설명은 자매 문서(사고 보고서·vacuum 원리 심화)를 참고.
+  본 문서는 Claude Code (Fable 5)가 작성했다.
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CUBRID vacuum 동작 원리 깊이 보기 — UPDATE가 로그가 되고, 로그가 청소가 되기까지</title>
+<style>
+  :root {
+    color-scheme: light only;
+    --bg: #ffffff; --fg: #212529; --muted: #64707d; --line: #dde3e9;
+    --accent: #1a4f8b; --accent-soft: #f0f5fa;
+    --danger: #b02a30; --danger-soft: #fbf1f1;
+    --ok: #1e6f3e; --ok-soft: #f1f8f3;
+    --warn: #97701f; --warn-soft: #fbf7ee;
+    --code-bg: #f5f7f9;
+  }
+  * { box-sizing: border-box; }
+  html { background: #ffffff; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic", -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.72; font-size: 15px;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 52px 32px 80px; }
+  h1 { font-size: 25px; line-height: 1.4; margin: 0 0 6px; font-weight: 700; letter-spacing: -0.01em; }
+  h2 { font-size: 19.5px; margin: 54px 0 14px; padding-top: 24px; border-top: 1px solid var(--line); font-weight: 700; letter-spacing: -0.01em; }
+  h2 .num { color: var(--accent); margin-right: 8px; }
+  h3 { font-size: 15.5px; margin: 28px 0 8px; }
+  .sub { color: var(--muted); font-size: 13.5px; margin-bottom: 4px; }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 10px; }
+  .meta code { font-size: 12px; }
+  code {
+    background: var(--code-bg); border-radius: 4px; padding: 1px 5px;
+    font-family: "JetBrains Mono", "D2Coding", Consolas, monospace; font-size: 12.5px;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 16px; overflow-x: auto; font-size: 12.5px; line-height: 1.55;
+    font-family: "JetBrains Mono", "D2Coding", Consolas, monospace;
+  }
+  pre code { background: none; padding: 0; }
+  .tagline {
+    margin: 24px 0 0; padding: 18px 20px; border-radius: 10px;
+    background: var(--accent-soft); border-left: 4px solid var(--accent);
+    font-size: 15.5px; font-weight: 600;
+  }
+  .tagline .fix { display:block; margin-top: 8px; font-weight: 500; color: var(--fg); font-size: 14px; }
+  .callout {
+    margin: 16px 0; padding: 13px 18px; border-radius: 10px;
+    background: var(--warn-soft); border-left: 4px solid var(--warn); font-size: 14px;
+  }
+  .callout.blue { background: var(--accent-soft); border-left-color: var(--accent); }
+  .callout.green { background: var(--ok-soft); border-left-color: var(--ok); }
+  .callout.red { background: var(--danger-soft); border-left-color: var(--danger); }
+  .callout b.t { display: block; margin-bottom: 4px; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 8px 11px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-size: 12.5px; }
+  tr:nth-child(even) td { background: #fbfcfd; }
+  .scroll { overflow-x: auto; }
+  .verdict-x { color: var(--danger); font-weight: 700; white-space: nowrap; }
+  .verdict-o { color: var(--ok); font-weight: 700; white-space: nowrap; }
+  .verdict-t { color: var(--warn); font-weight: 700; white-space: nowrap; }
+
+  .tl { list-style: none; margin: 20px 0; padding: 0; }
+  .tl li { position: relative; padding: 0 0 20px 40px; }
+  .tl li::before {
+    content: attr(data-t); position: absolute; left: 0; top: 1px;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--code-bg); border: 2px solid var(--muted);
+    font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    color: var(--muted);
+  }
+  .tl li::after {
+    content: ""; position: absolute; left: 15px; top: 33px; bottom: -1px;
+    width: 2px; background: var(--line);
+  }
+  .tl li:last-child::after { display: none; }
+  .tl li.bad::before { border-color: var(--danger); color: var(--danger); background: var(--danger-soft); }
+  .tl li.ok::before  { border-color: var(--ok); color: var(--ok); background: var(--ok-soft); }
+  .tl li.hi::before  { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .tl .head { font-weight: 700; font-size: 14.5px; }
+  .tl .body { color: var(--muted); font-size: 13.5px; margin-top: 2px; }
+  .tl .body b { color: var(--fg); }
+
+  .diagram {
+    margin: 18px 0; padding: 18px; border: 1px solid var(--line); border-radius: 10px;
+    background: #fdfdfe; overflow-x: auto;
+  }
+  .diagram .cap { text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 12px; }
+  .flow { display: flex; align-items: stretch; gap: 0; min-width: 560px; }
+  .flow .box {
+    flex: 1; border: 1.5px solid var(--line); border-radius: 8px; padding: 10px 12px;
+    background: var(--bg); font-size: 12.5px; line-height: 1.5;
+  }
+  .flow .box .bt { font-weight: 700; font-size: 13px; display: block; margin-bottom: 3px; }
+  .flow .box .bd { color: var(--muted); font-size: 12px; }
+  .flow .box.live { border-color: var(--ok); background: var(--ok-soft); }
+  .flow .box.log  { border-color: var(--muted); background: var(--code-bg); }
+  .flow .box.bad  { border-color: var(--danger); background: var(--danger-soft); }
+  .flow .box.hi   { border-color: var(--accent); background: var(--accent-soft); }
+  .flow .arr {
+    align-self: center; padding: 0 8px; color: var(--accent); font-weight: 700;
+    font-size: 13px; white-space: nowrap; text-align: center; line-height: 1.3; flex-shrink: 0;
+  }
+  .flow .arr small { display: block; color: var(--muted); font-weight: 500; font-size: 10.5px; }
+  .vflow { display: flex; flex-direction: column; gap: 0; max-width: 680px; margin: 0 auto; }
+  .vflow .box {
+    border: 1.5px solid var(--line); border-radius: 8px; padding: 10px 14px;
+    background: var(--bg); font-size: 13px;
+  }
+  .vflow .box .bt { font-weight: 700; display: block; }
+  .vflow .box .bd { color: var(--muted); font-size: 12.5px; }
+  .vflow .varr { text-align: center; color: var(--accent); font-weight: 700; padding: 3px 0; font-size: 14px; }
+  .vflow .varr small { color: var(--muted); font-weight: 500; margin-left: 6px; font-size: 11px; }
+  .vflow .box.hi { border-color: var(--accent); background: var(--accent-soft); }
+  .vflow .box.warn { border-color: var(--warn); background: var(--warn-soft); }
+  .vflow .box.okc { border-color: var(--ok); background: var(--ok-soft); }
+
+  .rec {
+    display: flex; margin: 14px 0; border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--line); font-family: "JetBrains Mono", monospace; font-size: 11.5px; text-align: center;
+    min-width: 520px;
+  }
+  .rec div { padding: 9px 6px; border-left: 1px solid var(--line); }
+  .rec div:first-child { border-left: none; }
+  .rec .hdr { background: var(--accent-soft); }
+  .rec .dat { background: var(--bg); }
+  .rec .dim { background: var(--code-bg); color: var(--muted); }
+  .rec .und { background: var(--warn-soft); }
+  .rec .red2 { background: var(--ok-soft); }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; }
+  .cols3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 16px 0; }
+  @media (max-width: 700px) {
+    .wrap { padding: 32px 20px 56px; }
+    .cols, .cols3 { grid-template-columns: 1fr; }
+    h1 { font-size: 22px; }
+  }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .card h3, .card h4 { margin: 0 0 8px; font-size: 14px; }
+  .card p { margin: 0; font-size: 13px; color: var(--muted); }
+  .card p b { color: var(--fg); }
+  .card .kick { font-size: 11px; letter-spacing: .06em; font-weight: 700; color: var(--muted); }
+  .card.c1 { border-top: 4px solid var(--ok); }
+  .card.c2 { border-top: 4px solid var(--accent); }
+  .card.c3 { border-top: 4px solid var(--warn); }
+
+  .toc { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 14px 20px; margin: 22px 0; font-size: 13.5px; }
+  .toc ol { margin: 6px 0 2px; padding-left: 22px; columns: 2; column-gap: 36px; }
+  .toc li { margin-bottom: 4px; break-inside: avoid; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  .footnote { color: var(--muted); font-size: 12.5px; margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .kicker { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  p.lead { font-size: 15px; }
+  .analogy {
+    margin: 18px 0; padding: 16px 20px; border-radius: 10px;
+    background: var(--accent-soft); border: 1px solid var(--line); font-size: 14px;
+  }
+  .analogy .t { font-weight: 700; margin-bottom: 6px; display: block; color: var(--accent); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<span class="kicker">CUBRID 내부 구조 · 학습용 심화 자료 · CBRD-26950 자매편</span>
+<h1>vacuum 동작 원리 깊이 보기<br>— UPDATE가 로그가 되고, 로그가 청소가 되기까지 (+ WAL·OOS 배경)</h1>
+<div class="meta">
+  작성 2026-08-06 (v2: WAL 물리 구조 §4 추가) · 기준 커밋 <code>07fef9d48</code> (feat/oos + origin/develop 머지) · 작성 도구 Claude Code (Fable 5) ·
+  자매 문서: <code>2026-08-06-CBRD-26950-vacuum-oos-explainer-report.html</code> (사고 보고서)
+</div>
+
+<div class="tagline">
+  이 문서는 특정 버그가 아니라 <u>CUBRID vacuum 그 자체</u>를 이해하기 위한 자료입니다.
+  UPDATE 한 번이 디스크에 무엇을 남기는지에서 출발해, WAL이 물리적으로 어떻게 저장되는지,
+  그 흔적이 어떻게 "청소 작업 목록"이 되고, vacuum이 어떤 경로로 heap 레코드를 지우며,
+  "포워드 워크"라 불리는 OOS 회수 경로가 무엇인지까지 소스 코드의 실제 함수·라인을 짚으며 따라갑니다.
+  <span class="fix">모든 절은 앞 절만 알면 읽히도록 배치했습니다. 마지막에 용어집(§12)이 있으니 모르는 말이 나오면 먼저 펴 보세요.</span>
+</div>
+
+<div class="toc">
+  <b>목차</b>
+  <ol>
+    <li><a href="#s1">전체 지도 — 한 UPDATE의 일생</a></li>
+    <li><a href="#s2">왜 vacuum이 필요한가 — MVCC의 청구서</a></li>
+    <li><a href="#s3">UPDATE 한 번이 남기는 것 — 로그 해부</a></li>
+    <li><a href="#s4">WAL은 디스크에 어떻게 저장되는가 — 페이지·레코드 포맷·LSA</a></li>
+    <li><a href="#s5">로그가 작업 큐가 되기까지 — 블록의 생산과 배포</a></li>
+    <li><a href="#s6">워커 잡의 두 단계 — 로그 스캔과 vacuum_heap</a></li>
+    <li><a href="#s7">vacuum이 heap 레코드를 지우는 경로</a></li>
+    <li><a href="#s8">OOS 배경 지식 — 큰 컬럼의 별거 생활</a></li>
+    <li><a href="#s9">포워드 워크 경로 — undo 이미지에서 직접 지우기</a></li>
+    <li><a href="#s10">종합 — 한 UPDATE의 일생, 코드 좌표와 함께</a></li>
+    <li><a href="#s11">CBRD-26950과의 연결</a></li>
+    <li><a href="#s12">용어집 · 참고 자료</a></li>
+  </ol>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s1"><span class="num">1.</span>전체 지도 — 한 UPDATE의 일생</h2>
+
+<p class="lead">세부로 들어가기 전에 목적지를 먼저 봅니다. <code>UPDATE t SET ... WHERE id=1</code> 한 문장이
+커밋된 뒤, 그 흔적이 완전히 정리되기까지의 전 과정입니다. 이 그림의 각 상자가 §2~§9의 주제입니다.</p>
+
+<div class="diagram">
+  <div class="vflow">
+    <div class="box"><span class="bt">① UPDATE 실행 — 두 곳에 동시에 쓴다 <small>(§2, §3, §4)</small></span>
+      <span class="bd">heap 페이지: <b>새 버전</b> 레코드 (+ 이전 버전 위치 링크 <code>prev_version_lsa</code>) ·
+      WAL 로그: UPDATE 로그 레코드 (<b>옛 버전 전체가 undo 이미지로</b> 들어감)</span></div>
+    <div class="varr">↓ <small>로그가 쌓여 블록 경계를 넘는 순간</small></div>
+    <div class="box"><span class="bt">② 로그 블록 발행 <small>(§5)</small></span>
+      <span class="bd">블록 요약 {블록 번호, 시작 LSA, 최고(最古)/최신 MVCCID}이 락프리 버퍼로 push</span></div>
+    <div class="varr">↓ <small>vacuum master가 소비</small></div>
+    <div class="box"><span class="bt">③ vacuum data(영속 작업 큐)에 등록 <small>(§5)</small></span>
+      <span class="bd">블록 상태: AVAILABLE → (배포되면) IN_PROGRESS → (완주하면) VACUUMED</span></div>
+    <div class="varr">↓ <small>블록의 옛 버전을 볼 수 있는 트랜잭션이 모두 끝나면</small></div>
+    <div class="box hi"><span class="bt">④ 워커 잡 1단계 — 로그 스캔 <small>(§6, §9)</small></span>
+      <span class="bd">블록 안 MVCC 로그 레코드 순회: heap 대상 <b>수집</b> · B-tree 엔트리 <b>즉시 청소</b> ·
+      UPDATE undo 이미지 속 옛 OOS 체인 <b>즉시 삭제</b>(= 포워드 워크)</span></div>
+    <div class="varr">↓</div>
+    <div class="box hi"><span class="bt">⑤ 워커 잡 2단계 — vacuum_heap <small>(§6, §7)</small></span>
+      <span class="bd">수집한 heap 레코드를 페이지 단위로 일괄 처리: 살아있는 레코드는 <b>도장 정리</b>,
+      죽은 레코드는 <b>슬롯 제거</b>(+ 딸린 OOS 체인 동반 삭제)</span></div>
+    <div class="varr">↓ <small>두 단계 완주 시에만</small></div>
+    <div class="box okc"><span class="bt">⑥ 블록에 VACUUMED 도장 — 청소 완료</span>
+      <span class="bd">이 UPDATE의 흔적(옛 버전, 도장, 인덱스 잔재, 옛 OOS 체인)이 모두 정리됨</span></div>
+  </div>
+  <div class="cap">한 UPDATE의 일생. §10에서 이 그림을 코드 좌표(파일:라인)와 함께 다시 본다.</div>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s2"><span class="num">2.</span>왜 vacuum이 필요한가 — MVCC의 청구서</h2>
+
+<p class="lead">
+CUBRID는 MVCC(다중 버전 동시성 제어)를 씁니다. 원칙은 하나입니다 —
+<b>"쓰는 사람은 읽는 사람을 기다리게 하지 않는다. 대신 읽는 사람마다 자기 시점의 버전을 보게 한다."</b>
+이를 위해 모든 heap 레코드는 데이터 앞에 <b>MVCC 헤더</b>라는 이력표를 답니다.
+</p>
+
+<div class="diagram">
+  <div style="font-size:12px; color:var(--muted); margin-bottom:4px">heap 레코드의 물리 구조 (개념도)</div>
+  <div class="rec">
+    <div class="hdr" style="flex:3">insert MVCCID<br><small>"누가 만들었나"</small></div>
+    <div class="hdr" style="flex:3">delete MVCCID<br><small>"누가 지웠나"<br>(안 지워졌으면 없음)</small></div>
+    <div class="hdr" style="flex:4">prev_version_lsa<br><small>"이전 버전은 로그 어디에"</small></div>
+    <div class="dat" style="flex:6">고정 길이 컬럼들</div>
+    <div class="dat" style="flex:6">가변 길이 컬럼들</div>
+  </div>
+  <div class="cap">MVCC 헤더의 세 필드가 이 문서 전체의 주인공이다. MVCCID는 트랜잭션마다 부여되는 단조 증가 순번 —
+  레코드에 찍힌 MVCCID를 내 스냅숏과 비교하면 "이 버전을 내가 봐도 되는가"가 결정된다.</div>
+</div>
+
+<p>세 가지 기본 연산이 이 이력표를 어떻게 다루는지 봅시다. 공통 원칙은 <b>"그 자리에서 없애지 않고, 표시만 남긴다"</b>입니다.</p>
+
+<div class="scroll"><table>
+  <tr><th style="width:12%">연산</th><th>그 순간 하는 일</th><th style="width:34%">나중에 치워야 할 것 (= vacuum의 일감)</th></tr>
+  <tr>
+    <td><b>INSERT</b></td>
+    <td>새 레코드에 <b>insert MVCCID 도장</b>을 찍는다. 커밋 후에도 도장은 남는다 — 아직 이 삽입을 못 보는 오래된 스냅숏이 있을 수 있으므로.</td>
+    <td>모두가 볼 수 있게 된 뒤에는 도장이 무의미 → <b>도장 정리</b> (있으면 매 판독마다 비교 비용)</td>
+  </tr>
+  <tr>
+    <td><b>DELETE</b></td>
+    <td>레코드를 지우지 <b>않는다</b>. <b>delete MVCCID 도장</b>만 찍는다 — 옛 스냅숏은 아직 이 행을 봐야 하므로.</td>
+    <td>아무도 못 보게 된 뒤 <b>레코드(슬롯) 실제 제거</b> + 인덱스 엔트리 제거</td>
+  </tr>
+  <tr>
+    <td><b>UPDATE</b></td>
+    <td>= "옛 버전 보존 + 새 버전 기록". 새 레코드를 쓰고, <b>옛 레코드 전체를 로그에 undo 이미지로</b> 남기며, 새 레코드의 <code>prev_version_lsa</code> 가 그 로그 위치를 가리킨다.</td>
+    <td>아무도 옛 버전을 못 보게 된 뒤: 새 레코드의 <b>도장·링크 정리</b> + (OOS가 있다면) <b>옛 OOS 체인 삭제</b></td>
+  </tr>
+</table></div>
+
+<div class="callout blue">
+  <b class="t">vacuum의 정체</b>
+  즉 vacuum은 "빨아들이는 무언가"가 아니라, MVCC가 미뤄 둔 뒷정리 — <b>① 죽은 레코드의 슬롯 제거,
+  ② 살아남은 레코드의 도장·링크 정리, ③ 부속물(인덱스 엔트리, 외부 LOB 파일, OOS 체인) 청소</b> —
+  를 백그라운드에서 수행하는 데몬입니다. PostgreSQL의 VACUUM과 목적은 같지만,
+  CUBRID는 "테이블을 훑어서" 일감을 찾지 않고 <b>로그를 다시 읽어서</b> 찾는다는 점이 다릅니다(§5).
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s3"><span class="num">3.</span>UPDATE 한 번이 남기는 것 — 로그 해부</h2>
+
+<p class="lead">"heap update가 일어나면 걔들이 어떻게 undo 로그에 가는가"를 코드 수준에서 봅니다.
+먼저 알아 둘 것: <b>CUBRID에는 별도의 undo 저장소가 없습니다.</b>
+Oracle의 롤백 세그먼트나 PostgreSQL의 dead tuple과 달리, CUBRID의 옛 버전은 <b>WAL 로그 레코드 안에</b> 삽니다.</p>
+
+<div class="analogy">
+  <span class="t">비유 — 한 봉투에 두 장</span>
+  UPDATE가 남기는 로그 레코드는 봉투 하나에 지시서 두 장을 담은 것과 같습니다.
+  <b>redo 장</b>: "크래시 후 다시 적용할 때는 이 새 값으로" · <b>undo 장</b>: "롤백하거나 옛 버전이 필요할 때는 이 옛 값으로 — 옛 레코드 원본 전체".
+  이 undo 장이 바로 이 문서 내내 말하는 <b>undo 이미지</b>이고, MVCC의 옛 버전 읽기와 vacuum의 청소가 모두 이 장을 다시 꺼내 읽는 행위입니다.
+  봉투가 물리적으로 어떻게 생겼는지는 §4에서 바이트 단위로 봅니다.
+</div>
+
+<h3>UPDATE의 실제 순서 (<code>heap_update_home</code>, <code>heap_file.c</code>)</h3>
+
+<ul class="tl">
+  <li data-t="1"><span class="head">새 레코드 준비</span>
+    <div class="body">새 버전의 MVCC 헤더에 내 insert MVCCID를 찍는다. <code>prev_version_lsa</code> 자리는 일단 <b>비워 둔다</b> —
+    아직 로그를 안 써서 "이전 버전의 로그 주소"를 모르기 때문 (<code>heap_file.c:21478-21479</code>).</div></li>
+  <li data-t="2" class="hi"><span class="head">UPDATE 로그 레코드를 WAL에 쓴다</span>
+    <div class="body">로그 종류는 <code>RVHF_UPDATE_NOTIFY_VACUUM</code> — <b>undo = 옛 레코드 recdes 통째, redo = 새 레코드</b>
+    (<code>heap_file.c:23756</code>). 이름의 "NOTIFY_VACUUM"이 핵심: 이 로그는 복구용이면서 동시에
+    <b>"vacuum아, 나중에 여기 와서 치워라"라는 예약장</b>이다.</div></li>
+  <li data-t="3"><span class="head">방금 쓴 로그의 주소(LSA)를 얻는다</span>
+    <div class="body"><code>LSA_COPY (&amp;prev_version_lsa, logtb_find_current_tran_lsa (thread_p))</code> (<code>heap_file.c:23765</code>) —
+    "내 트랜잭션이 마지막으로 쓴 로그 레코드"가 곧 방금 그 UPDATE 로그다.</div></li>
+  <li data-t="4"><span class="head">그 주소를 새 레코드의 머리에 새긴다</span>
+    <div class="body"><code>heap_update_set_prev_version()</code> (<code>heap_file.c:26598</code>)이 heap 페이지의 새 레코드 MVCC 헤더에
+    <code>prev_version_lsa</code> 를 직접 써 넣는다. 이로써 <b>heap의 새 버전 ↔ 로그 속 옛 버전</b>이 연결된다.</div></li>
+  <li data-t="5"><span class="head">heap 페이지를 새 레코드로 교체</span>
+    <div class="body">같은 슬롯의 내용이 새 버전으로 바뀐다. 옛 버전의 실체는 이제 <b>로그 속 undo 이미지가 유일</b>하다.</div></li>
+</ul>
+
+<div class="diagram">
+  <div class="flow">
+    <div class="box live">
+      <span class="bt">heap 페이지, 슬롯 k — 새 버전 (v2)</span>
+      <span class="bd">insert MVCCID = 나<br><b><code>prev_version_lsa</code> = 로그 주소 L</b><br>새 컬럼 값들</span>
+    </div>
+    <div class="arr">→<small>주소 L을 따라가면</small></div>
+    <div class="box log">
+      <span class="bt">WAL, 주소 L — UPDATE 로그 레코드</span>
+      <span class="bd">종류: RVHF_UPDATE_NOTIFY_VACUUM<br>redo: 새 레코드 ·
+      <b>undo: 옛 레코드(v1) 원본 전체</b><br>+ 같은 블록 내 이전 MVCC 연산 링크</span>
+    </div>
+  </div>
+  <div class="cap">UPDATE 직후의 상태. 옛 스냅숏을 가진 트랜잭션이 이 행을 읽으면
+  v2의 MVCCID가 "안 보임"으로 판정되고, <code>prev_version_lsa</code> 를 따라 로그에서 v1을 꺼내 읽는다
+  (<code>heap_file.c:26185</code> 부근 — "check visibility of old versions from log following prev_version_lsa links").</div>
+</div>
+
+<h3>여러 번 UPDATE되면 — 버전 체인</h3>
+
+<p>같은 행이 또 UPDATE되면 같은 일이 반복됩니다. 각 undo 이미지는 자기가 옛 버전이던 시절의
+<code>prev_version_lsa</code> 를 그대로 품고 있으므로, 로그 속에 <b>체인</b>이 생깁니다.</p>
+
+<div class="diagram">
+  <div class="flow">
+    <div class="box live"><span class="bt">heap: v3 (현재)</span><span class="bd">prev = L2</span></div>
+    <div class="arr">→<small>L2</small></div>
+    <div class="box log"><span class="bt">로그: v2의 undo 이미지</span><span class="bd">자기 머리에 prev = L1</span></div>
+    <div class="arr">→<small>L1</small></div>
+    <div class="box log"><span class="bt">로그: v1의 undo 이미지</span><span class="bd">prev 없음 (체인 끝)</span></div>
+  </div>
+  <div class="cap">중요한 관찰: <b>중간 버전(v2, v1)은 heap 어디에도 없다.</b> 로그는 불변이므로 이 체인은 수정할 수 없고,
+  살아있는 레코드에서 도달 가능한 가변 상태는 v3의 <code>prev_version_lsa</code> 하나뿐이다.
+  (이 사실이 CBRD-26950 대책 논의에서 반복적으로 중요해진다 — 자매 문서 참고.)</div>
+</div>
+
+<h3>변형: 레코드가 커져서 이사 가는 경우 (relocation)</h3>
+
+<p>UPDATE로 레코드가 커져 원래 페이지에 안 들어가면, 본체는 다른 페이지로 이사하고(<code>REC_NEWHOME</code>)
+원래 슬롯에는 이정표(<code>REC_RELOCATION</code>)만 남습니다. 이 상태에서 또 UPDATE가 일어나 본체가 다시 이사하면,
+<b>옛 본체 슬롯은 물리적으로 즉시 삭제</b>되며 그 삭제 로그(<code>RVHF_DELETE_NEWHOME_NOTIFY_VACUUM</code>)의
+undo 이미지가 옛 버전 보존을 대신하고, 그 로그의 LSA가 새 버전의 <code>prev_version_lsa</code> 가 됩니다
+(<code>heap_file.c:23710-23720</code>). — "heap 슬롯이 아예 없는 옛 버전"이 존재할 수 있다는 뜻이라, §9에서 다시 만납니다.</p>
+
+<h3>DELETE가 남기는 것 (대조용)</h3>
+
+<p>DELETE는 훨씬 단순합니다: 레코드에 delete MVCCID 도장을 찍고, <code>RVHF_MVCC_DELETE_REC_HOME</code> 계열
+로그를 남깁니다(<code>heap_file.c:23081</code>). 옛 버전 보존이 필요 없습니다 — <b>레코드 자체가 heap에 그대로
+남아 있으니까요</b>(도장만 찍힌 채). 이 차이가 §7과 §9의 안전성 차이로 직결됩니다.</p>
+
+<!-- ================================================================ -->
+<h2 id="s4"><span class="num">4.</span>WAL은 디스크에 어떻게 저장되는가 — 페이지·레코드 포맷·LSA</h2>
+
+<p class="lead">
+§3에서 "undo 이미지가 로그 주소 L에 있다"고 했습니다. 그 주소가 실제로 어떻게 생겼고,
+어떻게 <b>바이트 단위 정확한 위치</b>를 찾아내는지를 이 절에서 해부합니다.
+결론부터: <b>로그는 OID도 슬롯 페이지도 쓰지 않습니다.</b> 로그만의 세 번째 주소 체계 — LSA — 를 씁니다.
+</p>
+
+<h3>4-1. 파일 레이아웃 — 무한한 논리 로그, 유한한 물리 파일</h3>
+
+<p>개념적으로 로그는 <b>무한히 자라는 페이지의 나열</b>입니다. 페이지마다 영원히 증가하는
+<b>논리 페이지 번호</b>(logical pageid)가 붙습니다. 물리적으로는 두 종류의 파일에 삽니다:</p>
+
+<div class="scroll"><table>
+  <tr><th style="width:22%">파일</th><th>역할</th></tr>
+  <tr><td><b>active 로그</b> (<code>&lt;db&gt;_lgat</code>)</td><td>고정 크기. 최신 로그 페이지들이 <b>순환(circular)</b>하며 담긴다. 물리 0번 페이지는 로그 전체의 메타데이터(로그 헤더).</td></tr>
+  <tr><td><b>아카이브 로그</b> (<code>&lt;db&gt;_lgar000…</code>)</td><td>active가 한 바퀴 돌아 덮어쓰기 전에, 오래된 페이지들을 통째로 복사해 보존한 파일들. 아직 필요로 하는 독자(대표적으로 <b>vacuum</b>과 오래 걸리는 트랜잭션의 롤백)가 있는 한 지우면 안 된다.</td></tr>
+</table></div>
+
+<p>논리 번호 → 물리 위치 변환은 산수입니다 (<code>logpb_to_physical_pageid</code>, <code>log_page_buffer.c:4949</code>):</p>
+
+<pre><code>물리 페이지 = ((논리 페이지 − 최초 active 페이지) mod active_페이지수) + 1   /* +1: 물리 0번은 로그 헤더 */</code></pre>
+
+<p>단, 이 산수는 그 논리 페이지가 아직 active 안에 살아 있을 때 이야기이고, 이미 한 바퀴 돌아
+덮어쓰였다면 아카이브에서 읽습니다(<code>logpb_is_page_in_archive</code>). vacuum이 오래된 블록을
+처리할 때 로그 페이지를 가져오는 <code>vacuum_fetch_log_page</code> 가 정확히 이 분기를 수행합니다 —
+그래서 vacuum이 밀려 있으면 아카이브를 지울 수 없는 것입니다.</p>
+
+<h3>4-2. 로그 페이지 — 슬롯 없는 append-only 바이트 스트림</h3>
+
+<div class="diagram">
+  <div style="font-size:12px; color:var(--muted); margin-bottom:4px">LOG_PAGE 한 장 (<code>log_storage.hpp:63-87</code>)</div>
+  <div class="rec">
+    <div class="dim" style="flex:5">페이지 헤더 (LOG_HDRPAGE)<br><small>논리 pageid · 이 페이지 첫 레코드의 offset<br>· flags · checksum(CRC32)</small></div>
+    <div class="dat" style="flex:14"><b>area[]</b> — 로그 레코드들이 빈틈없이 이어 붙는 공간<br><small>LOGAREA_SIZE = LOG_PAGESIZE − 헤더 크기 (<code>log_impl.h:121</code>)</small></div>
+  </div>
+  <div class="cap">데이터 볼륨의 슬롯 페이지와 달리 <b>슬롯 디렉터리가 없다</b>. 레코드는 앞에서부터 순서대로 이어 붙고, 절대 이동하지 않는다.</div>
+</div>
+
+<p>여기서 첫 질문 — <b>"왜 로그에는 슬롯 페이지를 안 쓰나?"</b> — 에 답할 수 있습니다.
+슬롯 페이지가 슬롯 번호라는 <b>간접층</b>을 두는 이유는, 레코드가 커지고 줄고 지워지고 재배치(compaction)되어도
+바깥의 참조(OID)가 깨지지 않게 하기 위해서입니다. 그런데 로그는 <b>append-only 불변</b> —
+한 번 쓴 레코드는 절대 수정·이동·삭제되지 않습니다(수명이 다하면 페이지째 아카이브로 갈 뿐).
+움직이지 않는 것에는 간접층이 필요 없으므로, <b>물리 바이트 오프셋을 그대로 영구 주소로</b> 쓸 수 있습니다.</p>
+
+<h3>4-3. LSA — 6바이트 페이지 번호 + 2바이트 오프셋</h3>
+
+<pre><code>struct log_lsa                     /* log_lsa.hpp:38-40 */
+{
+  std::int64_t pageid : 48;        /* 논리 로그 페이지 번호 (6바이트) */
+  std::int64_t offset : 16;        /* 페이지 area[] 안의 바이트 오프셋 (2바이트) */
+};</code></pre>
+
+<p>LSA(Log Sequence Address)는 이 8바이트가 전부입니다. "LSA로 어떻게 정확한 위치를 찾는가"의 답은 그래서 단순합니다:</p>
+
+<ol>
+  <li><b>pageid</b> → §4-1의 산수(또는 아카이브 탐색)로 물리 페이지를 찾아 읽는다</li>
+  <li><b>offset</b> → 그 페이지 <code>area[offset]</code> 이 <b>곧 로그 레코드 공통 헤더의 첫 바이트</b>다 — 탐색도, 슬롯 조회도 없다</li>
+</ol>
+
+<p>또 하나의 성질: pageid가 단조 증가하므로 LSA는 <b>주소이면서 동시에 시간 순서</b>입니다.
+두 LSA의 대소 비교가 곧 "어느 쪽이 먼저 일어났나"입니다 — 페이지 LSA 기반 redo 중복 방지,
+커밋 대기("내 LSA까지 flush됐나"), vacuum 블록의 시간 범위가 전부 이 성질 위에 서 있습니다.</p>
+
+<h3>4-4. 로그 레코드의 실제 바이트 배치 — UPDATE 레코드로 보기</h3>
+
+<p>모든 로그 레코드는 <b>[공통 헤더] + [타입별 데이터 헤더] + [undo 데이터] + [redo 데이터]</b> 순서로,
+각 파트를 정렬(align) 단위로 올려붙인 구조입니다. §3의 UPDATE가 남기는
+<code>LOG_MVCC_UNDOREDO_DATA</code> 타입 레코드를 펼치면:</p>
+
+<div class="diagram">
+  <div style="font-size:12px; color:var(--muted); margin-bottom:4px">LSA가 가리키는 지점부터의 바이트 배치 (<code>log_record.hpp:150-212</code>)</div>
+  <div class="rec" style="min-width:660px">
+    <div class="hdr" style="flex:10">공통 헤더 LOG_RECORD_HEADER<br><small>prev_tranlsa (내 트랜잭션의 직전 레코드 — 롤백용)<br>back_lsa / forw_lsa (로그 전체의 앞뒤 — 스캔용)<br>trid · type(=LOG_MVCC_UNDOREDO_DATA)</small></div>
+    <div class="hdr" style="flex:10">데이터 헤더 LOG_REC_MVCC_UNDOREDO<br><small>LOG_DATA {rcvindex=RVHF_UPDATE_NOTIFY_VACUUM,<br><b>volid·pageid·offset(=슬롯번호+플래그)</b>}<br>ulength · rlength · <b>mvccid</b><br>vacuum_info {<b>prev_mvcc_op_log_lsa</b>, vfid}</small></div>
+    <div class="und" style="flex:8"><b>undo 데이터</b><br><small>[recdes.type]<br>[옛 레코드 바이트 통째]<br>= undo 이미지</small></div>
+    <div class="red2" style="flex:8"><b>redo 데이터</b><br><small>[recdes.type]<br>[새 레코드 바이트]</small></div>
+  </div>
+  <div class="cap">레코드가 페이지 끝을 넘으면 <b>다음 논리 페이지로 그대로 이어진다</b> — 읽는 쪽이
+  <code>LOG_READ_ADD_ALIGN</code> / <code>LOG_READ_ADVANCE_WHEN_DOESNT_FIT</code> (<code>log_reader.hpp:145-147</code>)로
+  페이지 헤더를 건너뛰며 계속 읽는다. 페이지 헤더의 "첫 레코드 offset"은 이런 걸침 상황에서
+  페이지가 어디서부터 새 레코드인지 복구·샐비지가 알 수 있게 하는 장치다.</div>
+</div>
+
+<p>이 그림에 이 절의 질문들과 앞뒤 절들의 연결 고리가 전부 들어 있습니다:</p>
+
+<ul>
+  <li><b>OID는 어디에?</b> — 로그 레코드 <b>자신의</b> 주소는 LSA지만, "이 연산이 <b>어느 데이터를</b> 건드렸나"는
+  데이터 헤더의 <code>LOG_DATA {volid, pageid, offset(슬롯)}</code> 이 담습니다. 즉 OID(에 해당하는 3요소)는
+  <b>내용물로서</b> 로그 안에 들어 있는 것이지, 로그를 찾는 열쇠가 아닙니다.
+  vacuum 1단계가 heap 대상을 수집할 때 바로 이 세 값으로 OID를 조립합니다(<code>vacuum.c:3563-3565</code>).</li>
+  <li><b>undo 이미지의 정체</b> — undo 데이터부에 옛 recdes가 <b>[타입 2바이트][원본 바이트 그대로]</b>로 담깁니다
+  (<code>log_append_undoredo_recdes2</code>, <code>log_manager.c:2548-2565</code>). "원본 그대로"이므로 옛 레코드의
+  MVCC 헤더·가변 오프셋 테이블·OOS inline stub까지 전부 보존됩니다 — §9의 포워드 워크가 undo recdes에서
+  stub를 꺼낼 수 있는 근거입니다.</li>
+  <li><b>vacuum_info.prev_mvcc_op_log_lsa</b> — "같은 로그 안의 직전 MVCC 연산" 링크. §6의 로그 스캔이
+  블록 안을 역방향으로 걸을 수 있는 것이 바로 이 필드 덕분입니다. 로그를 처음부터 다 읽지 않고
+  MVCC 연산만 골라 딛는 징검다리입니다.</li>
+</ul>
+
+<h3>4-5. 압축과 diff — 내용은 줄여도 주소는 불변</h3>
+
+<p>undo/redo 데이터가 문턱 크기 이상이면 쓰기 시점에 압축됩니다 (<code>log_append.cpp:677-813</code>):</p>
+
+<ul>
+  <li>undo·redo가 <b>둘 다</b> 크면 먼저 redo를 undo와 XOR(<code>log_diff</code>)합니다 — UPDATE의 옛/새 레코드는
+  대부분 비슷하므로 XOR 결과는 거의 0으로 채워져 압축이 잘 됩니다. 이때 레코드 타입이
+  <code>LOG_MVCC_DIFF_UNDOREDO_DATA</code> 로 바뀝니다.</li>
+  <li>그 다음 LZ4로 압축하고, 압축 여부는 길이 필드의 <b>최상위 비트</b>로 표시합니다
+  (<code>MAKE_ZIP_LEN(len) = len | 0x80000000</code>, <code>log_compress.h:33-40</code>).
+  읽는 쪽(복구·vacuum·MVCC 옛 버전 읽기)은 이 비트를 보고 <code>log_unzip</code> 후 사용합니다.</li>
+</ul>
+
+<div class="callout blue">
+  <b class="t">쓰기 경로 한 줄 요약 — LSA는 언제 확정되나</b>
+  로그 레코드는 디스크로 직행하지 않습니다. 먼저 메모리에서 <b>prior list</b>라는 대기열의 노드로 만들어지는데,
+  대기열에 붙는 <b>그 순간</b> LSA가 배정됩니다(<code>prior_lsa_next_record_internal</code>, <code>log_append.cpp:1359</code> —
+  §5의 "블록 경계 체크"도 정확히 이 자리에서 일어납니다). 그 뒤 로그 flush 스레드가 노드들을 §4-4의 바이트 배치로
+  직렬화해 로그 페이지 버퍼에 쓰고 디스크로 내립니다. <b>커밋 = "내 커밋 레코드의 LSA까지 flush 완료"를 기다리는 것</b>입니다.
+  일단 쓰인 바이트는 불변이므로, 그때 확정된 LSA는 영원히 유효한 주소가 됩니다.
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s5"><span class="num">5.</span>로그가 작업 큐가 되기까지 — 블록의 생산과 배포</h2>
+
+<p class="lead">
+CUBRID vacuum의 독특한 점: 청소할 곳을 찾으려고 테이블을 스캔하지 않습니다.
+<b>UPDATE/DELETE가 일어난 곳은 반드시 로그에 있으니, 로그를 다시 읽으면 일감 목록이 공짜로 나온다</b>는 발상입니다.
+다만 로그 전체를 통째로 다루면 너무 크므로, 일정 크기의 <b>블록</b> 단위로 자릅니다.
+</p>
+
+<div class="diagram">
+  <div class="vflow">
+    <div class="box"><span class="bt">모든 트랜잭션 스레드 (생산자)</span>
+      <span class="bd">로그 레코드를 하나 쓸 때마다(<code>prior_lsa_next_record_internal</code>, <code>log_append.cpp:1359</code>)
+      "이 레코드가 블록 경계를 넘었나?"를 확인. <b>넘는 순간</b>, 방금 닫힌 블록의 요약을 발행
+      (<code>vacuum_produce_log_block_data</code> 호출, <code>log_append.cpp:1384</code>)</span></div>
+    <div class="varr">↓ <small>블록 요약 = {블록 번호, start_lsa, 블록 내 최고(最古)·최신 MVCCID}</small></div>
+    <div class="box"><span class="bt">락프리 버퍼 (<code>vacuum_Block_data_buffer</code>, <code>vacuum.c:3071</code>)</span>
+      <span class="bd">트랜잭션 스레드를 기다리게 하지 않기 위한 완충 지대</span></div>
+    <div class="varr">↓ <small>vacuum master 데몬이 주기적으로 소비</small></div>
+    <div class="box hi"><span class="bt">vacuum data — 디스크의 영속 작업 큐</span>
+      <span class="bd">블록 엔트리들이 순서대로 저장. 각 엔트리의 blockid 상위 2비트가 상태:
+      <b>AVAILABLE</b>(00) / <b>IN_PROGRESS</b>(01) / <b>VACUUMED</b>(10) (<code>vacuum.c:144-147</code>).
+      영속이므로 서버가 재시작해도 일감이 사라지지 않는다</span></div>
+    <div class="varr">↓ <small>배포 조건: 블록의 최신 MVCCID &lt; 현재 가장 오래된 활성 스냅숏 MVCCID</small></div>
+    <div class="box"><span class="bt">워커 스레드 풀</span>
+      <span class="bd">master가 커서(<code>vacuum_job_cursor</code>, <code>vacuum.c:280</code>)로 블록을 골라 잡을 만들고,
+      여러 워커가 <b>서로 다른 블록을 병렬로</b> 처리</span></div>
+  </div>
+  <div class="cap">생산자–소비자 파이프라인. "배포 조건"이 곧 안전 조건이다 —
+  블록 안 <b>모든</b> 옛 버전이 이제 아무 트랜잭션에게도 필요 없음이 보장된 뒤에야 청소를 시작한다.</div>
+</div>
+
+<div class="callout">
+  <b class="t">알아두면 좋은 세부 사항 두 가지</b>
+  ① 블록은 <b>다음 로그 레코드가 경계를 넘어야</b> 발행됩니다. 대량 UPDATE 후 로그가 더 안 쓰이면
+  마지막 블록은 발행 대기 상태로 남습니다 (CBRD-26950 재현 실험에서 실측된 사실).
+  ② 완주(VACUUMED) 도장은 워커가 아니라 <b>master가 비동기로</b> 기록합니다 — 워커는 완료 보고만 하고 다음 잡으로 넘어갑니다.
+</div>
+
+<h3>중단과 재실행 — 블록 상태 기계의 핵심 규칙</h3>
+
+<p>워커가 블록을 처리하다 서버 종료·크래시·에러로 멈추면, 그 블록은 완주 도장을 못 받습니다.
+재기동 시 vacuum data를 읽으며 IN_PROGRESS인 블록을 발견하면 <b>INTERRUPTED 표시와 함께 다시 AVAILABLE</b>로 되돌리고
+(<code>vacuum.c:4398-4403</code> 부근), 다음 배포 때 <b>블록 시작점부터 통째로 재실행</b>합니다.
+"어느 레코드까지 했는지"의 기록은 없습니다 — 이를 개선할 수 있는지 검토하라는 TODO 주석이
+코드에 남아 있습니다(<code>vacuum.c:3766</code>). 이 설계가 성립하려면 <b>블록 안의 모든 청소 동작이
+두 번 실행돼도 안전(멱등)해야</b> 합니다. 어떤 동작이 그 성질을 갖고 어떤 동작이 못 갖는지가 §7과 §9의 주제입니다.</p>
+
+<!-- ================================================================ -->
+<h2 id="s6"><span class="num">6.</span>워커 잡의 두 단계 — 로그 스캔과 vacuum_heap</h2>
+
+<p class="lead">워커가 블록 하나를 받으면 <code>vacuum_process_log_block</code> (<code>vacuum.c</code>)이 실행됩니다. 내부는 두 단계입니다.</p>
+
+<h3>1단계 — 로그 스캔 (<code>vacuum.c:3490</code>~)</h3>
+
+<p>블록의 <code>start_lsa</code> 에서 출발해, 각 MVCC 로그 레코드에 박혀 있는
+"같은 블록 내 <b>이전</b> MVCC 연산" 링크(§4-4에서 본 <code>vacuum_info.prev_mvcc_op_log_lsa</code>)를 따라
+<b>역방향으로</b> 순회합니다.
+(그래서 진행 상황을 'LSA 하나의 전진'으로 표현하기 어렵습니다 — §5의 TODO가 오래 남은 이유 중 하나.)
+레코드 종류별 분기는 다음과 같습니다:</p>
+
+<div class="scroll"><table>
+  <tr><th style="width:34%">로그 레코드 종류</th><th style="width:22%">1단계에서 하는 일</th><th>이유</th></tr>
+  <tr>
+    <td>heap MVCC 연산<br><small>(INSERT/DELETE/UPDATE 계열, <code>vacuum.c:3560</code>)</small></td>
+    <td><b>대상 OID 수집만</b><br><small>(<code>vacuum_collect_heap_objects</code>)</small></td>
+    <td>heap은 페이지 단위로 모아 치우는 것이 효율적 → 2단계로 미룸</td>
+  </tr>
+  <tr>
+    <td>└ 그중 <code>RVHF_UPDATE_NOTIFY_VACUUM</code><br><small>(<code>vacuum.c:3589</code>)</small></td>
+    <td>+ <b>옛 OOS 체인 즉시 삭제</b><br><small>(포워드 워크, §9)</small></td>
+    <td>UPDATE의 옛 OOS 체인은 undo 이미지에서만 찾을 수 있음 — 로그를 읽고 있는 지금이 유일한 기회</td>
+  </tr>
+  <tr>
+    <td>B-tree MVCC 연산<br><small>(<code>vacuum.c:3594</code>)</small></td>
+    <td><b>인덱스 엔트리 즉시 청소</b><br><small>(<code>btree_vacuum_object</code> 등)</small></td>
+    <td>어느 키의 엔트리인지는 <b>undo 데이터 안의 키 값</b>으로만 알 수 있음 — 역시 지금이 기회</td>
+  </tr>
+  <tr>
+    <td><code>RVES_NOTIFY_VACUUM</code><br><small>(<code>vacuum.c:3709</code>)</small></td>
+    <td>외부 LOB 파일 삭제</td>
+    <td>파일 경로가 undo 데이터에 있음</td>
+  </tr>
+  <tr>
+    <td><code>RVHF_DELETE_NEWHOME_NOTIFY_VACUUM</code><br><small>(<code>vacuum.c:3724</code>)</small></td>
+    <td>옛 OOS 체인 즉시 삭제<br><small>(수집할 슬롯이 없음)</small></td>
+    <td>relocation 갱신의 옛 본체는 슬롯이 이미 물리 삭제됨(§3) — undo 이미지가 유일한 흔적</td>
+  </tr>
+</table></div>
+
+<h3>2단계 — vacuum_heap (<code>vacuum.c:3746</code> → <code>vacuum_heap</code>, <code>vacuum.c:1521</code>)</h3>
+
+<p>1단계에서 수집한 heap OID들을 <b>heap 파일별·페이지별로 정렬</b>한 뒤, 페이지 하나를 잡을 때
+그 페이지의 대상 슬롯들을 한꺼번에 처리합니다(<code>vacuum_heap_page</code>, <code>vacuum.c:1608</code>).
+페이지 고정(fix)·로그 기록을 슬롯마다 반복하지 않기 위한 배치 설계입니다.
+각 슬롯에서 실제로 일어나는 일 — 즉 "vacuum이 heap 레코드를 지우는 경로" — 는 다음 절에서 해부합니다.</p>
+
+<!-- ================================================================ -->
+<h2 id="s7"><span class="num">7.</span>vacuum이 heap 레코드를 지우는 경로</h2>
+
+<p class="lead">
+<code>vacuum_heap_page</code> 는 슬롯 하나마다 3단계를 밟습니다:
+<b>준비 → 판정 → 실행</b>. 판정이 이 절의 심장입니다.
+</p>
+
+<h3>준비 — <code>vacuum_heap_prepare_record</code> (<code>vacuum.c:1746</code>)</h3>
+<p>페이지를 고정하고 슬롯의 레코드 타입을 확인한 뒤 MVCC 헤더를 읽어 옵니다.
+본체가 다른 곳에 있는 타입(<code>REC_RELOCATION</code> → 본체 페이지, <code>REC_BIGONE</code> → overflow 페이지)이면
+그쪽 페이지도 함께 고정합니다.</p>
+
+<h3>판정 — <code>mvcc_satisfies_vacuum</code> (<code>mvcc.c:321</code>)</h3>
+
+<p>읽어 온 MVCC 헤더(도장들)와 임계값(threshold = 현재 가장 오래된 활성 스냅숏의 MVCCID)만으로 3-way 판정을 내립니다:</p>
+
+<div class="diagram">
+  <div class="vflow">
+    <div class="box"><span class="bt">Q1. delete MVCCID 도장이 있고, 임계값보다 오래됐나?</span>
+      <span class="bd">= "지운 트랜잭션이 커밋됐고, 이 레코드를 볼 수 있는 트랜잭션이 하나도 안 남았나"</span></div>
+    <div class="varr">예 ↓ <small>(아니오면 Q2로)</small></div>
+    <div class="box" style="border-color:var(--danger); background:var(--danger-soft)"><span class="bt">판정 ① VACUUM_RECORD_REMOVE — 완전 제거 대상</span></div>
+    <div class="varr">&nbsp;</div>
+    <div class="box"><span class="bt">Q2. (삭제 안 됐거나 최근 삭제) insert MVCCID 도장이 남아 있고, 임계값보다 오래됐나?</span>
+      <span class="bd">= "삽입이 이제 모든 트랜잭션에게 보이게 됐나"</span></div>
+    <div class="varr">예 ↓ <small>(아니오면 아래로)</small></div>
+    <div class="box okc"><span class="bt">판정 ② VACUUM_RECORD_DELETE_INSID_PREV_VER — 도장 정리 대상</span></div>
+    <div class="varr">&nbsp;</div>
+    <div class="box" style="border-style:dashed"><span class="bt">판정 ③ VACUUM_RECORD_CANNOT_VACUUM — 건너뜀</span>
+      <span class="bd">이미 다른 방문에서 청소됐거나, 아직 너무 최근이거나</span></div>
+  </div>
+  <div class="cap"><code>mvcc.c:321-374</code> 의 실제 분기 구조. 입력이 오직 <b>레코드 자신의 헤더 + 임계값</b>뿐이라는 점이 중요하다.</div>
+</div>
+
+<h3>실행 ① — 완전 제거: <code>vacuum_heap_record</code> (<code>vacuum.c:2424</code>)</h3>
+
+<ul>
+  <li><b>슬롯 제거</b>: <code>spage_vacuum_slot</code> (<code>vacuum.c:2475</code>)이 슬롯을 비운다. 이때 heap 파일 종류에 따라
+  두 가지 표시 중 하나가 남는다 — 일반 heap은 <code>REC_MARKDELETED</code>(슬롯 번호는 보존: 외부에 이 OID를 기억하는
+  참조가 있을 수 있으므로 번호 재발급 금지), OID 재사용 가능 파일은 <code>REC_DELETED_WILL_REUSE</code>(다음 INSERT가
+  이 슬롯 번호를 재사용 가능 — <code>slotted_page.c:1971, 2095</code>).</li>
+  <li><b>다중 페이지 원자화</b>: 본체가 딴 곳에 있는 <code>REC_RELOCATION</code>/<code>REC_BIGONE</code>, 그리고 OOS를 지닌
+  레코드는 여러 페이지를 고쳐야 하므로 <b>sysop</b>(시스템 내부 미니 트랜잭션)으로 묶어 전부-아니면-전무를 보장한다
+  (<code>vacuum.c:2459-2461</code>).</li>
+  <li><b>OOS 동반 삭제</b>: 제거되는 레코드가 OOS inline stub를 갖고 있으면(<code>HAS_OOS</code> 플래그),
+  <b>같은 sysop 안에서</b> 그 레코드가 현재 가리키는 OOS 체인들을 함께 삭제한다
+  (<code>vacuum_heap_oos_delete_within_sysop</code>, <code>vacuum.c:2520-2526</code>). — §9와 대비되는 "동반(within-sysop) 경로".</li>
+</ul>
+
+<h3>실행 ② — 도장 정리: <code>vacuum_heap_record_insid_and_prev_version</code> (<code>vacuum.c:2239</code>)</h3>
+
+<ul>
+  <li>insert MVCCID 도장을 "모두에게 보임"을 뜻하는 상수 <code>MVCCID_ALL_VISIBLE</code> 로 교체</li>
+  <li><code>prev_version_lsa</code> 를 NULL로 — 이제 아무도 옛 버전을 따라갈 필요가 없으므로 링크를 끊는다
+  (<code>vacuum.c:2331-2332</code>)</li>
+</ul>
+
+<div class="callout green">
+  <b class="t">이 경로가 블록 재실행에 안전한 이유 (§5의 복선 회수)</b>
+  판정의 입력이 <b>레코드 자기 몸의 MVCC 헤더</b>라는 점이 전부입니다. 재실행된 2차 방문에서 —
+  이미 도장이 정리된 레코드는 Q2가 "아니오"가 되어 <b>③ 건너뜀</b>으로 빠지고,
+  이미 제거된 슬롯은 타입이 달라 스위치의 default로 빠지며(<code>vacuum.c:1812-1816</code> 주석: "이미 다른 워커가
+  청소했거나 롤백·재사용된 경우"),
+  슬롯이 <b>재사용되어 새 레코드가 앉아 있어도</b> 그 새 레코드의 헤더(최근 MVCCID)가 조건에 안 맞아 건너뜁니다.
+  즉 heap 청소는 <b>대상이 자신의 상태와 신원을 스스로 증언</b>하기 때문에 몇 번을 다시 방문해도 안전합니다.
+  B-tree도 같습니다 — 키 값과 MVCC 정보를 대조하니까요. 이 성질을 갖지 <b>못한</b> 유일한 청소 대상이 §9에 나옵니다.
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s8"><span class="num">8.</span>OOS 배경 지식 — 큰 컬럼의 별거 생활</h2>
+
+<p class="lead">
+OOS(Out-of-row Overflow Storage)는 <code>feat/oos</code> 브랜치에서 개발 중인 기능으로,
+<b>큰 가변 길이 컬럼 값을 heap 레코드 밖의 전용 OOS 파일로 분리</b>합니다.
+동기는 단순합니다 — 4바이트 <code>id</code> 를 읽으려고 9KB 레코드 전체를 읽는 낭비를 없애는 것.
+</p>
+
+<div class="scroll"><table>
+  <tr><th style="width:30%">개념</th><th>내용</th></tr>
+  <tr><td><b>트리거</b></td><td>레코드가 기준 크기(현 16KB 페이지 레이아웃에서 4,060B)를 넘으면, 큰 가변 값부터 하나씩 OOS로 내보내고(largest-first) 기준 이하가 되면 멈춘다</td></tr>
+  <tr><td><b>OOS inline stub</b></td><td>내보낸 값의 자리에 남는 16바이트 표지: <b>head OOS OID (8B) + 전체 길이 (8B)</b>. 레코드의 가변 오프셋 테이블(VOT)에 "이 자리는 stub"라는 비트(IS_OOS)가 서고, MVCC 헤더에 HAS_OOS 플래그가 선다</td></tr>
+  <tr><td><b>OOS OID = 물리 주소</b></td><td><code>(volid | pageid | slotid)</code> — OOS 파일 안 슬롯 페이지의 좌표 그 자체. <b>논리적 이름이 아니라 물리 주소</b>이므로, 슬롯이 비워지고 다른 데이터가 앉으면 같은 OID가 다른 내용을 가리키게 된다</td></tr>
+  <tr><td><b>OOS 체인</b></td><td>값이 한 페이지보다 크면 여러 청크 레코드로 쪼개 링크드 리스트로 저장. 청크 헤더는 [전체 길이 | 청크 순번 | 다음 청크 OID] — <b>주인이 누구인지에 대한 정보는 없다</b></td></tr>
+  <tr><td><b>UPDATE 의미론</b></td><td>OOS가 있는 행을 UPDATE하면 (값이 안 변해도) <b>항상 새 체인을 새 주소에</b> 만든다. 옛 체인은 옛 버전 독자(MVCC)를 위해 남겨 두는데, 그 유일한 참조가 <b>undo 이미지 속 옛 stub</b>다</td></tr>
+  <tr><td><b>삭제 시점</b></td><td>DELETE/UPDATE 순간에는 OOS 체인을 절대 지우지 않는다(옛 버전 독자가 남아 있을 수 있으므로). <b>청소는 전부 vacuum의 몫</b></td></tr>
+</table></div>
+
+<div class="diagram">
+  <div class="flow">
+    <div class="box live">
+      <span class="bt">heap 레코드 (UPDATE 후 새 버전)</span>
+      <span class="bd">[헤더 | id | name | <b>stub → 새 체인 주소</b>]</span>
+    </div>
+    <div class="arr">→<small>prev_version_lsa</small></div>
+    <div class="box log">
+      <span class="bt">undo 이미지 (옛 버전)</span>
+      <span class="bd">[헤더 | id | name | <b>stub → 옛 체인 주소 V|P|S</b>]</span>
+    </div>
+    <div class="arr">→<small>V|P|S</small></div>
+    <div class="box hi">
+      <span class="bt">OOS 파일, 페이지 P 슬롯 S</span>
+      <span class="bd">옛 값의 청크 (→ 다음 청크 …)<br>vacuum이 지워야 할 대상</span>
+    </div>
+  </div>
+  <div class="cap">UPDATE 직후의 OOS 상황. 옛 체인 <code>V|P|S</code> 로 가는 유일한 이정표가 <b>불변 로그 속</b>에 있다.</div>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s9"><span class="num">9.</span>포워드 워크 경로 — undo 이미지에서 직접 지우기</h2>
+
+<p class="lead">
+이제 "포워드 워크가 뭐냐"에 답할 수 있습니다.
+<b>포워드 워크는 vacuum 잡의 1단계(로그 스캔)가 UPDATE 로그 레코드를 만났을 때,
+그 undo 이미지 속 옛 stub에서 옛 OOS 체인의 주소를 직접 꺼내 즉시 삭제하는 경로</b>입니다
+(<code>vacuum_forward_walk_reclaim_oos</code> → <code>vacuum_forward_walk_oos_delete_atomic</code>, <code>vacuum_oos.cpp</code>).
+</p>
+
+<h3>왜 이 경로가 존재해야 하는가</h3>
+
+<p>vacuum이 OOS 체인을 지우는 경로는 둘입니다. 나눠지는 기준은 <b>"살아있는(또는 heap에 남아 있는) 레코드가
+그 체인을 가리키고 있는가"</b>입니다.</p>
+
+<div class="scroll"><table>
+  <tr><th style="width:24%"></th><th style="width:38%">② 동반 경로 (within-sysop, §7)</th><th>① 포워드 워크 (§9, 이 절)</th></tr>
+  <tr><td><b>대상</b></td><td>제거되는 죽은 레코드가 <b>지금 들고 있는</b> 체인 (DELETE된 행의 것)</td><td>UPDATE가 남긴 <b>옛 버전의</b> 체인 — 살아있는 레코드는 이미 새 체인을 가리킴</td></tr>
+  <tr><td><b>주소를 어디서 얻나</b></td><td>heap 레코드의 stub에서</td><td><b>undo 이미지의 stub에서</b> — heap 어디에도 없으므로 (소스 주석: "Reading the undo image is the only way left to free them", <code>vacuum.c:3581-3588</code>)</td></tr>
+  <tr><td><b>실행 시점</b></td><td>2단계 vacuum_heap, 슬롯 제거와 <b>같은 sysop</b></td><td>1단계 로그 스캔 중 즉시, <b>삭제마다 독립 sysop 커밋</b></td></tr>
+  <tr><td><b>재실행 안전성</b></td><td class="verdict-o">안전 — heap 레코드의 MVCC 헤더가 신원·상태를 증언 (§7)</td><td class="verdict-x">보장 없음 — 아래 참조</td></tr>
+</table></div>
+
+<p>같은 이유로 <b>DELETE 로그에서는 포워드 워크를 하지 않습니다</b> — DELETE된 행의 체인은
+동반 경로가 지울 것이므로, 여기서 또 지우면 이중 삭제가 됩니다
+(소스 주석이 명시: "DELETE keeps the same OIDs, so REMOVE frees them already... the check below lets UPDATE in but keeps DELETE out", <code>vacuum.c:3586-3588</code>).
+예외적으로 <code>RVHF_DELETE_NEWHOME_NOTIFY_VACUUM</code>(§3의 relocation 변형)은 형식상 삭제 로그지만
+실질은 "UPDATE의 옛 본체"이므로 포워드 워크 대상입니다(<code>vacuum.c:3724-3731</code>).</p>
+
+<h3>포워드 워크의 실제 절차</h3>
+
+<ul class="tl">
+  <li data-t="1"><span class="head">undo 이미지 파싱</span>
+    <div class="body">UPDATE 로그의 undo recdes(옛 레코드 원본 — §4-4에서 본 대로 바이트 그대로 보존됨)에서
+    MVCC 헤더의 HAS_OOS 확인 → 가변 오프셋 테이블(VOT)을 돌며 IS_OOS 비트가 선 자리의 <b>stub에서 head OOS OID 추출</b>.</div></li>
+  <li data-t="2"><span class="head">확인(probe)</span>
+    <div class="body"><code>oos_chunk_exists</code> — 그 주소의 슬롯에 레코드가 <b>존재하는지만</b> 확인. 내용은 읽지 않고, 읽어도 대조할 신원 정보가 청크에 없다(§8의 청크 헤더 참고).</div></li>
+  <li data-t="3"><span class="head">삭제</span>
+    <div class="body"><code>oos_delete</code> — <b>현재 그 슬롯에 있는</b> 청크의 헤더에서 '다음 청크' 주소를 따라 체인 끝까지 삭제. 비워진 슬롯은 즉시 빈자리 목록(bestspace)에 재등록된다.</div></li>
+  <li data-t="4"><span class="head">레코드 단위 sysop 커밋</span>
+    <div class="body">이 삭제만의 미니 트랜잭션이 즉시 확정된다. 단, "이 로그 레코드는 처리 완료"라는 기록은 <b>어디에도 남지 않는다</b> — 블록 전체의 완주 도장이 유일한 진행 기록(§5).</div></li>
+</ul>
+
+<div class="callout red">
+  <b class="t">§7과의 결정적 차이 — 그리고 그것이 의미하는 것</b>
+  동반 경로의 판정 입력은 "지금 heap에 있는 레코드 자신"이지만, 포워드 워크의 입력은 <b>불변 로그 속 과거의 주소</b>입니다.
+  블록이 재실행되면 같은 undo 이미지에서 같은 주소가 다시 나오는데, 1차 실행이 이미 그 슬롯을 비웠고
+  그 사이 다른 행의 새 체인이 같은 슬롯을 재사용했다면 — probe는 "점유됨 = true"라고 답하고,
+  삭제는 <b>새 주인의 살아있는 데이터</b>에 적용됩니다. 이것이 CBRD-26950입니다(§11).
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s10"><span class="num">10.</span>종합 — 한 UPDATE의 일생, 코드 좌표와 함께</h2>
+
+<p class="lead">§1의 지도를 이제 코드 좌표와 함께 다시 봅니다. OOS가 있는 행 하나가 UPDATE된 경우입니다.</p>
+
+<ul class="tl">
+  <li data-t="1"><span class="head">UPDATE 실행</span>
+    <div class="body">새 OOS 체인 삽입(<code>heap_attrinfo_insert_to_oos</code>) → 새 레코드 heap 기록 →
+    <code>RVHF_UPDATE_NOTIFY_VACUUM</code> 로그 (undo = 옛 레코드, 옛 stub 포함; <code>heap_file.c:23756</code>) →
+    로그 LSA를 새 레코드의 <code>prev_version_lsa</code> 에 기록 (<code>heap_file.c:23765, 26598</code>)</div></li>
+  <li data-t="2"><span class="head">커밋 후에도 옛 것들은 그대로</span>
+    <div class="body">옛 버전(undo 이미지)과 옛 OOS 체인은 옛 스냅숏 독자를 위해 존속. 독자는
+    <code>prev_version_lsa</code> → undo recdes → (필요 시) <code>oos_read</code> 로 옛 값 복원</div></li>
+  <li data-t="3"><span class="head">블록 발행 → vacuum data 등록</span>
+    <div class="body">후속 로그가 블록 경계를 넘는 순간 <code>vacuum_produce_log_block_data</code> (<code>log_append.cpp:1384</code>) →
+    master가 소비해 vacuum data에 AVAILABLE로 저장</div></li>
+  <li data-t="4"><span class="head">임계값 통과 → 워커 배포</span>
+    <div class="body">블록의 최신 MVCCID &lt; 가장 오래된 활성 스냅숏 → 잡 생성, 블록 IN_PROGRESS</div></li>
+  <li data-t="5" class="hi"><span class="head">1단계 로그 스캔</span>
+    <div class="body">UPDATE 로그 도달 → heap OID 수집(<code>vacuum.c:3567</code>) + <b>포워드 워크로 옛 OOS 체인 삭제</b>(<code>vacuum.c:3589</code>, 독립 sysop) ·
+    같은 블록의 B-tree 로그들은 인덱스 엔트리 즉시 청소</div></li>
+  <li data-t="6" class="hi"><span class="head">2단계 vacuum_heap</span>
+    <div class="body">수집된 OID의 레코드를 판정(<code>mvcc_satisfies_vacuum</code>, <code>mvcc.c:321</code>):
+    이 행은 살아 있으므로 <b>도장 정리</b> — insert MVCCID → ALL_VISIBLE, <code>prev_version_lsa</code> → NULL
+    (<code>vacuum.c:2239, 2331-2332</code>). (만약 그 뒤 DELETE까지 됐었다면 REMOVE — 슬롯 제거 + 현재 체인 동반 삭제, <code>vacuum.c:2424, 2520</code>)</div></li>
+  <li data-t="7" class="ok"><span class="head">블록 완주 → master가 VACUUMED 기록</span>
+    <div class="body">이 UPDATE의 모든 흔적 정리 완료. — 만약 5~6 사이 어디서든 중단됐다면? 블록은 INTERRUPTED로 재장전되고
+    <b>5부터 통째로 재실행</b>된다. 6은 재실행에 안전(§7), <b>5의 포워드 워크만 안전 보장이 없다</b>(§9)</div></li>
+</ul>
+
+<!-- ================================================================ -->
+<h2 id="s11"><span class="num">11.</span>CBRD-26950과의 연결</h2>
+
+<p>이 문서가 설명한 구조에서, 재실행 안전성(멱등성)의 성립 근거를 대상별로 정리하면:</p>
+
+<div class="scroll"><table>
+  <tr><th>vacuum이 지연 청소하는 대상</th><th>재방문 시 판별 근거 (자기 몸의 신원·상태)</th><th>재실행 안전성</th></tr>
+  <tr><td>heap 슬롯</td><td>MVCC 헤더 (insert/delete MVCCID)</td><td class="verdict-o">안전 (§7)</td></tr>
+  <tr><td>B-tree 엔트리</td><td>키 값 + MVCC 정보</td><td class="verdict-o">안전 (§6)</td></tr>
+  <tr><td>OOS 청크 (포워드 워크 대상)</td><td class="verdict-x">없음 — 헤더는 [길이 | 순번 | 다음 주소]뿐</td><td class="verdict-x">보장 없음 (§9)</td></tr>
+</table></div>
+
+<p>이 비대칭이 실제 사고로 이어지는 조건(블록 재실행 + 슬롯 재사용)과 재현 결과(정상 종료만으로 발현,
+293건/163건 행 판독 불가), 그리고 대책 후보 비교는 자매 문서
+<b><code>2026-08-06-CBRD-26950-vacuum-oos-explainer-report.html</code></b> 에 정리되어 있습니다.</p>
+
+<!-- ================================================================ -->
+<h2 id="s12"><span class="num">12.</span>용어집 · 참고 자료</h2>
+
+<div class="scroll"><table>
+  <tr><th style="width:22%">용어</th><th>뜻</th></tr>
+  <tr><td><b>WAL</b></td><td>Write-Ahead Log. 모든 데이터 변경을 페이지에 반영하기 전에 먼저 기록하는 append-only 로그. CUBRID에서는 redo와 undo가 한 로그 레코드에 함께 담긴다.</td></tr>
+  <tr><td><b>LSA</b></td><td>Log Sequence Address. 로그 안의 위치 — 논리 페이지 번호(48비트) + 페이지 내 바이트 오프셋(16비트). 로그 레코드의 '주소'이자 시간 순서 (<code>log_lsa.hpp</code>).</td></tr>
+  <tr><td><b>active / 아카이브 로그</b></td><td>active(<code>_lgat</code>): 고정 크기 순환 파일, 최신 페이지 보관. 아카이브(<code>_lgar###</code>): 덮어쓰이기 전에 복사해 둔 옛 페이지들. vacuum이 밀리면 아카이브를 지울 수 없다.</td></tr>
+  <tr><td><b>로그 페이지</b></td><td>작은 헤더(논리 pageid, 첫 레코드 offset, checksum) + 레코드들이 이어 붙는 area[]. <b>슬롯 디렉터리 없음</b> — 로그는 불변이라 간접층이 불필요.</td></tr>
+  <tr><td><b>MVCCID</b></td><td>트랜잭션마다 부여되는 단조 증가 순번. 레코드의 insert/delete 도장과 스냅숏 비교에 쓰인다.</td></tr>
+  <tr><td><b>undo 이미지</b></td><td>UPDATE/DELETE 로그 레코드의 undo 데이터부에 담긴 변경 전 원본(recdes 타입 + 바이트 통째). CUBRID의 '옛 버전'은 별도 저장소가 아니라 여기 산다.</td></tr>
+  <tr><td><b>prev_version_lsa</b></td><td>레코드 MVCC 헤더의 필드. 이 레코드의 직전 버전이 담긴 undo 로그 레코드의 LSA.</td></tr>
+  <tr><td><b>prior list</b></td><td>로그 레코드가 디스크로 가기 전 대기하는 메모리 큐. 여기 붙는 순간 LSA가 확정되고, 로그 flush 스레드가 직렬화해 내려쓴다.</td></tr>
+  <tr><td><b>recdes</b></td><td>RECord DEScriptor. 레코드 바이트열 + 길이 + 타입을 담는 구조체 — "레코드 원본 통째"의 단위.</td></tr>
+  <tr><td><b>vacuum data</b></td><td>블록 단위 청소 일감이 저장되는 영속 페이지들. 블록 상태(AVAILABLE/IN_PROGRESS/VACUUMED)의 원장.</td></tr>
+  <tr><td><b>임계값 (threshold)</b></td><td>현재 시스템에서 가장 오래된 활성 스냅숏의 MVCCID. 이보다 오래된 도장/블록만 청소 가능.</td></tr>
+  <tr><td><b>sysop</b></td><td>system operation. 트랜잭션 내부의 원자적 미니 단위 — 커밋되면 상위 트랜잭션의 롤백과 무관하게 물리 변경이 확정된다. vacuum 워커의 모든 물리 변경이 sysop으로 묶인다.</td></tr>
+  <tr><td><b>슬롯 페이지</b></td><td>페이지 앞쪽의 슬롯 목록이 레코드 위치를 가리키는 페이지 구조. heap과 OOS 파일의 공통 기반(로그 페이지는 아님). 슬롯 번호가 OID의 마지막 성분.</td></tr>
+  <tr><td><b>REC_HOME / REC_RELOCATION / REC_NEWHOME / REC_BIGONE</b></td><td>heap 레코드 타입: 제자리 본체 / 이사 간 본체를 가리키는 이정표 / 이사 온 본체 / overflow 페이지로 나간 대형 레코드.</td></tr>
+  <tr><td><b>OOS inline stub</b></td><td>OOS로 나간 값의 heap 쪽 16B 표지 (head OOS OID 8B + 전체 길이 8B).</td></tr>
+  <tr><td><b>head OOS OID</b></td><td>OOS 체인 첫 청크의 물리 주소 (volid | pageid | slotid). stub에 저장된다.</td></tr>
+  <tr><td><b>bestspace</b></td><td>"빈자리 있는 페이지" 힌트 목록. INSERT가 새 페이지를 할당하기 전에 먼저 뒤지는 캐시 — 빈 슬롯 재사용을 촉진한다.</td></tr>
+  <tr><td><b>포워드 워크</b></td><td>vacuum 로그 스캔이 UPDATE 계열 undo 이미지에서 옛 OOS 체인 주소를 직접 꺼내 삭제하는 경로 (<code>vacuum_forward_walk_reclaim_oos</code>).</td></tr>
+</table></div>
+
+<h3>참고 자료</h3>
+<ul style="font-size:13.5px">
+  <li>자매 문서(사고 보고): <code>cbrd-26950/2026-08-06-CBRD-26950-vacuum-oos-explainer-report.html</code></li>
+  <li>소스 검증 보고서: <code>cbrd-26950/2026-07-31-CBRD-26950-vacuum-oos-slot-reuse-verification.md</code></li>
+  <li>OOS 사양(단일 진실 원천): <code>OOS-CONTEXT.md</code> — §3 CRUD Flows, §4 Recovery/Vacuum 불변식</li>
+  <li>주요 소스: <code>src/query/vacuum.c</code> (블록 처리·vacuum_heap), <code>src/query/vacuum_oos.cpp</code> (포워드 워크),
+  <code>src/transaction/mvcc.c</code> (<code>mvcc_satisfies_vacuum</code>), <code>src/storage/heap_file.c</code> (UPDATE·prev_version 기록),
+  <code>src/transaction/log_append.cpp</code> (로그 append·압축·블록 발행), <code>src/transaction/log_record.hpp</code> (레코드 포맷),
+  <code>src/transaction/log_lsa.hpp</code> (LSA), <code>src/transaction/log_storage.hpp</code> (로그 페이지),
+  <code>src/transaction/log_page_buffer.c</code> (논리→물리 매핑·아카이브), <code>src/storage/slotted_page.c</code> (슬롯 제거·재사용)</li>
+</ul>
+
+<div class="footnote">
+  본 문서의 함수명·라인 인용은 워크트리 <code>CBRD-26950-oos-vacuum-delete-overlap</code> (커밋 <code>07fef9d48</code>) 기준으로
+  본 세션에서 직접 확인한 것이다: UPDATE 로깅과 prev_version 기록 <code>heap_file.c:23438/23667/23756/23765/26598</code>,
+  LSA 정의 <code>log_lsa.hpp:38-40</code>, 로그 페이지 구조 <code>log_storage.hpp:63-87</code> · <code>log_impl.h:121</code>,
+  레코드 포맷 <code>log_record.hpp:150-212</code>, 논리→물리 페이지 매핑 <code>log_page_buffer.c:4949-4982</code>,
+  recdes 패킹 <code>log_manager.c:2548-2565</code>, 압축·diff <code>log_append.cpp:677-813</code> · <code>log_compress.h:33-40</code>,
+  페이지 걸침 읽기 <code>log_reader.hpp:145-147</code>, 블록 발행 <code>log_append.cpp:1359/1384</code> · <code>vacuum.c:3043</code>,
+  블록 상태 비트 <code>vacuum.c:144-147</code>, 로그 스캔 분기 <code>vacuum.c:3490-3741</code>,
+  vacuum_heap 판정·실행 <code>vacuum.c:1746-1817/2239/2331-2332/2424/2475/2520</code>, 3-way 판정 <code>mvcc.c:321-374</code>,
+  슬롯 재사용 표시 <code>slotted_page.c:1971/2095</code>. 본 문서는 Claude Code (Fable 5)가 작성했다.
+</div>
+
+</div>
+</body>
+</html>
