@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[CBRD-26786] 비어 있는 OOS 페이지, 어떻게 되찾을까? — 분석과 제안</title>
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --card: #ffffff;
+    --text: #1f2530;
+    --muted: #5b6472;
+    --accent: #2563eb;
+    --accent-soft: #e8effd;
+    --good: #15803d;
+    --good-soft: #e9f7ee;
+    --warn: #b45309;
+    --warn-soft: #fdf3e3;
+    --bad: #b91c1c;
+    --bad-soft: #fdeaea;
+    --border: #dde2ea;
+    --code-bg: #eef1f6;
+    --code-text: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171c;
+      --card: #1d222a;
+      --text: #e6e9ee;
+      --muted: #9aa4b2;
+      --accent: #7aa5f8;
+      --accent-soft: #22304a;
+      --good: #6fce93;
+      --good-soft: #1d3226;
+      --warn: #e5b366;
+      --warn-soft: #3a2e1a;
+      --bad: #ef8c8c;
+      --bad-soft: #3c2222;
+      --border: #333b47;
+      --code-bg: #2a313c;
+      --code-text: #f0a8a2;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    line-height: 1.75;
+    font-size: 16px;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 40px 20px 80px; }
+  header.doc-head { margin-bottom: 28px; }
+  .ticket {
+    display: inline-block;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 700;
+    padding: 3px 12px;
+    border-radius: 999px;
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  h1 { font-size: 28px; line-height: 1.4; margin: 0 0 8px; }
+  .subtitle { color: var(--muted); font-size: 15px; }
+  h2 {
+    font-size: 21px;
+    margin: 48px 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+  }
+  h3 { font-size: 17px; margin: 26px 0 10px; }
+  p { margin: 10px 0; }
+  code {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-family: "JetBrains Mono", "D2Coding", Consolas, monospace;
+    font-size: 0.86em;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin: 16px 0;
+  }
+  .callout { border-left: 5px solid var(--accent); }
+  .callout.good { border-left-color: var(--good); background: var(--good-soft); }
+  .callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .callout.bad  { border-left-color: var(--bad);  background: var(--bad-soft); }
+  .callout .label { font-weight: 700; font-size: 14px; margin-bottom: 4px; display:block; }
+  .callout.good .label { color: var(--good); }
+  .callout.warn .label { color: var(--warn); }
+  .callout.bad  .label { color: var(--bad); }
+  .callout.info .label { color: var(--accent); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14.5px;
+    background: var(--card);
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 9px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: var(--accent-soft); color: var(--text); }
+  .table-scroll { overflow-x: auto; }
+  .pill { display:inline-block; padding: 1px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; }
+  .pill.good { background: var(--good-soft); color: var(--good); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .pill.bad  { background: var(--bad-soft);  color: var(--bad); }
+  .pill.info { background: var(--accent-soft); color: var(--accent); }
+
+  /* 다이어그램 공통 */
+  .diagram {
+    background: var(--card);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 18px 0;
+    overflow-x: auto;
+  }
+  .diagram .dtitle {
+    font-size: 13px; font-weight: 700; color: var(--muted);
+    text-transform: none; margin-bottom: 14px;
+  }
+  .flow { display: flex; flex-direction: column; gap: 0; align-items: stretch; min-width: 320px; }
+  .fbox {
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    background: var(--bg);
+    font-size: 14.5px;
+  }
+  .fbox b { display:block; font-size: 14.5px; }
+  .fbox small { color: var(--muted); font-size: 13px; line-height: 1.5; display:block; }
+  .fbox.accent { border-color: var(--accent); background: var(--accent-soft); }
+  .fbox.good   { border-color: var(--good);   background: var(--good-soft); }
+  .fbox.bad    { border-color: var(--bad);    background: var(--bad-soft); }
+  .arrow {
+    text-align: center; color: var(--muted);
+    font-size: 17px; line-height: 1.2; padding: 4px 0;
+  }
+  .arrow small { display:block; font-size: 12.5px; }
+  .cols { display: flex; gap: 14px; flex-wrap: wrap; }
+  .cols > div { flex: 1 1 240px; }
+
+  /* 선반(페이지) 그림 */
+  .shelfrow { display:flex; gap:10px; flex-wrap: wrap; margin: 8px 0; }
+  .shelf {
+    border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; min-width: 120px; background: var(--bg);
+    font-size: 13px; text-align:center;
+  }
+  .shelf .slots { display:flex; gap:4px; justify-content:center; margin-top:6px; }
+  .slot { width: 20px; height: 20px; border-radius: 4px; border: 1px solid var(--border); }
+  .slot.full  { background: var(--accent); border-color: var(--accent); }
+  .slot.empty { background: transparent; }
+  .shelf.ghost { border-style: dashed; opacity: .85; }
+  .shelf .tag { font-size: 11.5px; font-weight: 700; }
+  .shelf .tag.bad { color: var(--bad); }
+  .shelf .tag.good { color: var(--good); }
+
+  ul, ol { padding-left: 24px; }
+  li { margin: 5px 0; }
+  .footnote { color: var(--muted); font-size: 13.5px; }
+  .kv { display: grid; grid-template-columns: 150px 1fr; gap: 6px 14px; font-size: 14.5px; }
+  .kv dt { font-weight: 700; color: var(--muted); }
+  .kv dd { margin: 0; }
+  hr.sep { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+  .appendix h2 { border-bottom-color: var(--warn); }
+  .status-strip { display:flex; gap:8px; flex-wrap:wrap; margin: 14px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc-head">
+  <span class="ticket">CBRD-26786 · OOS M2</span>
+  <h1>비어 있는 OOS 페이지, 어떻게 되찾을까?</h1>
+  <div class="subtitle">
+    vacuum 의 OOS 빈 페이지 회수 — 분석과 제안 (쉬운 설명 버전)<br>
+    작성일 2026-08-05 · 기준 커밋 <code>07fef9d48</code> (feat/oos) · 작성 도구 Claude Code
+  </div>
+  <div class="status-strip">
+    <span class="pill info">JIRA 상태: Analysis (미해결)</span>
+    <span class="pill info">유형: Sub-task (부모: CBRD-26583 M2 epic)</span>
+    <span class="pill info">우선순위: Minor</span>
+    <span class="pill info">목표 버전: guava</span>
+  </div>
+</header>
+
+<!-- ================================================================ -->
+<div class="card callout info">
+  <span class="label">📌 한눈에 보기 (TL;DR)</span>
+  <p style="margin-top:0">
+    vacuum(청소부)이 OOS 페이지 안의 데이터를 <b>전부</b> 지워도, 지금은 그 페이지가
+    "비었다"는 사실을 <b>bestspace cache 라는 메모장</b>만 알고 있습니다.
+    그런데 이 메모장은 <b>칸이 1000개뿐이고, 꽉 차면 새 메모를 못 쓰고, 서버를 재시작하면 전부 지워집니다.</b>
+    메모장에서 빠진 빈 페이지는 INSERT 경로에서 <b>투명 인간</b>이 되어,
+    빈 페이지를 놔두고 파일을 새로 늘리게 됩니다.
+  </p>
+  <p>
+    <b>제안:</b> vacuum 이 페이지를 다 비운 순간, <code>file_dealloc</code> 를 호출해서
+    그 페이지를 파일 관리자(file manager)의 <b>partial sector table 이라는 영구 장부</b>에
+    "빈 페이지"로 되돌려 놓자는 것입니다. 이 장부는 칸 제한이 없고 재시작해도 남습니다.
+    — 질문 주신 "vacuum 이 빈 페이지를 file partial table 로 되돌리면 되는가?"에 대한 답은 <b>"네, 정확히 그 방식이 현재 제안"</b>입니다.
+  </p>
+  <p style="margin-bottom:0">
+    <b>단, 조건이 하나 있습니다.</b> 이 제안은 "실제로 효과가 있는지"를 측정으로 먼저 증명해야 하는
+    <b>ANALYSIS 게이트</b>가 걸려 있습니다. 측정 결과 효과가 미미하면 이슈는 Won't Fix 로 닫고,
+    죽은 함수 정리만 소규모 패치로 처리하기로 되어 있습니다.
+  </p>
+</div>
+
+<!-- ================================================================ -->
+<h2>1. 배경 지식 3분 요약</h2>
+
+<p>이 문서를 읽는 데 필요한 개념은 네 개뿐입니다. 창고 비유로 기억하면 쉽습니다.</p>
+
+<div class="table-scroll"><table>
+  <tr><th style="width:170px">개념</th><th>비유</th><th>실제 의미</th></tr>
+  <tr>
+    <td><b>OOS 파일</b></td>
+    <td>창고 건물</td>
+    <td>테이블의 큰 컬럼 값(예: 4KB 넘는 문자열)을 heap 레코드에서 떼어내 따로 보관하는 파일.
+        테이블(heap 파일)당 최대 1개.</td>
+  </tr>
+  <tr>
+    <td><b>OOS 페이지</b></td>
+    <td>창고 안의 선반</td>
+    <td>파일을 구성하는 16KB 단위 저장 공간. 선반 하나에 상자(슬롯)가 여러 개 놓입니다.</td>
+  </tr>
+  <tr>
+    <td><b>vacuum</b></td>
+    <td>청소부</td>
+    <td>아무 트랜잭션도 더는 보지 않는 옛 데이터를 뒤늦게 치우는 백그라운드 프로세스.
+        OOS 의 경우, 죽은 레코드 버전이 갖고 있던 OOS 값들을 <code>oos_delete</code> 로 지웁니다.</td>
+  </tr>
+  <tr>
+    <td><b>bestspace cache</b></td>
+    <td>사무실 화이트보드</td>
+    <td>"3번 선반에 빈자리 있어요"라고 적어두는 <b>메모</b>. INSERT 가 빈자리를 빨리 찾도록 돕는
+        <b>힌트</b>일 뿐, 진짜 장부가 아닙니다. 메모리에만 존재합니다.</td>
+  </tr>
+</table></div>
+
+<p>
+  그리고 이 문서의 주인공인 <b>partial sector table</b> 은 <b>창고의 정식 장부</b>입니다.
+  파일 관리자(file manager)가 파일 헤더 페이지에 <b>디스크로 영구 저장</b>하는 표로,
+  "이 구역(sector)의 어느 페이지가 사용 중이고 어느 페이지가 비었는지"를 비트맵으로 기록합니다.
+  새 페이지가 필요할 때 <code>file_alloc</code> 이 가장 먼저 뒤져 보는 곳이 바로 이 장부입니다.
+</p>
+
+<!-- ================================================================ -->
+<h2>2. 문제: 빈 페이지가 '투명 인간'이 되는 과정</h2>
+
+<h3>2-1. 지금까지 된 것 — 슬롯(상자) 단위 회수</h3>
+<p>
+  선행 이슈(CBRD-26609, CBRD-26668)로 <b>슬롯 단위 회수는 이미 완성</b>되어 있습니다.
+  vacuum 이 <code>oos_delete</code> 를 부르면 페이지 안의 상자(청크 레코드)가 지워지고,
+  그 직후 "이 선반에 빈자리 생겼어요"가 <b>화이트보드(bestspace cache)에 메모</b>됩니다.
+</p>
+
+<h3>2-2. 안 된 것 — 페이지(선반) 단위 회수</h3>
+<p>
+  그런데 선반의 상자가 <b>전부</b> 비워져도, 그 선반을 창고 장부(partial sector table)에
+  "빈 선반"으로 되돌리는 코드는 <b>아직 아무도 호출하지 않습니다.</b>
+  코드에는 <code>oos_remove_page</code> 라는 함수가 준비만 되어 있고 (현재
+  <code>oos_file.cpp:1104</code>), 바로 위에 이런 주석이 붙어 있습니다:
+  <i>"TODO: will be called by vacuum when OOS vacuum is implemented"</i>.
+  즉, 페이지 회수는 <b>설계 의도만 있고 연결이 안 된 상태</b>입니다.
+</p>
+
+<h3>2-3. 화이트보드(bestspace cache)의 세 가지 약점</h3>
+<p>코드로 확인된 사실 세 가지입니다 (커밋 <code>07fef9d48</code> 기준):</p>
+<div class="cols">
+  <div class="card callout bad">
+    <span class="label">약점 ① 칸이 1000개</span>
+    <code>OOS_BESTSPACE_CACHE_CAPACITY</code> = 1000 (<code>oos_file.cpp:109</code>).
+    이 1000은 <b>서버 전체의 모든 OOS 파일을 합산</b>한 상한입니다.
+    OOS 컬럼을 가진 테이블이 여러 개면 충분히 도달할 수 있습니다.
+  </div>
+  <div class="card callout bad">
+    <span class="label">약점 ② 꽉 차면 새 메모 불가</span>
+    캐시가 가득 차면 새 페이지 등록 함수가 그냥 NULL 을 반환하고 끝납니다
+    (<code>oos_file.cpp:346</code>). 기존 메모의 숫자만 고칠 수 있고,
+    <b>한 번 못 들어간 페이지는 다시 등록될 기회가 없습니다.</b>
+  </div>
+  <div class="card callout bad">
+    <span class="label">약점 ③ 재시작하면 백지</span>
+    캐시는 malloc 으로 만든 메모리 해시테이블입니다. 서버를 재시작하면
+    <b>그동안 쌓인 빈 페이지 정보가 어디에도 남지 않습니다.</b>
+  </div>
+</div>
+
+<h3>2-4. 그래서 생기는 두 가지 낭비 시나리오</h3>
+
+<div class="diagram">
+  <div class="dtitle">그림 1 — 빈 선반을 두고 새 선반을 사는 창고</div>
+  <div class="flow">
+    <div class="fbox">
+      <b>① vacuum 이 선반 3개를 싹 비움</b>
+      <div class="shelfrow">
+        <div class="shelf"><span class="tag">페이지 A</span>
+          <div class="slots"><span class="slot empty"></span><span class="slot empty"></span><span class="slot empty"></span></div></div>
+        <div class="shelf"><span class="tag">페이지 B</span>
+          <div class="slots"><span class="slot empty"></span><span class="slot empty"></span><span class="slot empty"></span></div></div>
+        <div class="shelf"><span class="tag">페이지 C</span>
+          <div class="slots"><span class="slot empty"></span><span class="slot empty"></span><span class="slot empty"></span></div></div>
+      </div>
+    </div>
+    <div class="arrow">↓ <small>화이트보드가 꽉 찼거나(캡 1000) 서버가 재시작됨</small></div>
+    <div class="fbox bad">
+      <b>② 빈 페이지 A·B·C 가 '투명 인간'이 됨</b>
+      <small>화이트보드에 메모가 없으니 INSERT 는 이 페이지들에 빈자리가 있는 줄 모릅니다.
+      창고 장부(partial sector table)에도 "사용 중"으로 남아 있습니다.</small>
+    </div>
+    <div class="arrow">↓ <small>새 OOS 값 INSERT</small></div>
+    <div class="fbox bad">
+      <b>③ 파일을 늘려서 새 페이지 D 를 할당</b>
+      <div class="shelfrow">
+        <div class="shelf ghost"><span class="tag bad">A (빈 채 방치)</span>
+          <div class="slots"><span class="slot empty"></span><span class="slot empty"></span><span class="slot empty"></span></div></div>
+        <div class="shelf ghost"><span class="tag bad">B (빈 채 방치)</span>
+          <div class="slots"><span class="slot empty"></span><span class="slot empty"></span><span class="slot empty"></span></div></div>
+        <div class="shelf ghost"><span class="tag bad">C (빈 채 방치)</span>
+          <div class="slots"><span class="slot empty"></span><span class="slot empty"></span><span class="slot empty"></span></div></div>
+        <div class="shelf"><span class="tag">D (새로 확장!)</span>
+          <div class="slots"><span class="slot full"></span><span class="slot empty"></span><span class="slot empty"></span></div></div>
+      </div>
+      <small>슬롯이 재사용 가능한데도 파일 확장이 일어납니다.</small>
+    </div>
+  </div>
+</div>
+
+<ul>
+  <li><b>시나리오 1 — 캡 도달(cap-bound):</b> OOS 테이블이 많아 화이트보드 1000칸이 가득 찬 뒤에
+      생긴 빈 페이지들은 영영 메모되지 못합니다.</li>
+  <li><b>시나리오 2 — 재시작 직후(restart-cold):</b> 재시작하면 화이트보드가 백지가 됩니다.
+      파일 안에는 빈 페이지가 매달려 있는데, 캐시가 lazy 하게 다시 채워지기 전까지는 보이지 않습니다.</li>
+</ul>
+
+<div class="card callout warn">
+  <span class="label">⚠️ 정확히 무엇이 손해인가 (그리고 무엇은 손해가 아닌가)</span>
+  <p style="margin:0">
+    사용자 눈에 보이는 SQL 동작에는 <b>영향이 없습니다.</b> 손해는 <b>성능/공간 효율</b>입니다:
+    빈 페이지를 재사용하지 못해 OOS 파일의 <b>확장 빈도</b>가 불필요하게 올라갑니다.
+    또한 <code>oos_delete</code> 의 주석에 적힌 설계 의도
+    ("Empty pages will be reclaimed by vacuum…", <code>oos_file.cpp:2304</code>)가
+    미완으로 남아 있는 것도 기술 부채입니다.
+  </p>
+</div>
+
+<!-- ================================================================ -->
+<h2>3. 해결 후보 비교 — 왜 "vacuum + file_dealloc" 인가</h2>
+
+<p>
+  질문 주신 "bestspace 가 모든 빈 페이지를 추적하지 못하니, 되찾는 권장 방법은 무엇인가?"에 대해
+  세 가지 후보를 비교합니다.
+</p>
+
+<h3>후보 A — 화이트보드 자체를 고친다 (bestspace cache 개선)</h3>
+<p>
+  캡을 늘리고, 오래된 메모를 지우는 eviction 을 넣고, 디스크에 저장(persistence)하게 만드는 방법입니다.
+  하지만 bestspace 는 태생이 <b>"틀려도 되는 힌트"</b>입니다 — heap 파일이 15년 넘게 검증해 온 설계
+  자체가 그렇습니다. 힌트 캐시를 "절대 잊으면 안 되는 진실의 원천"으로 승격시키면
+  캐시 정합성·복구·동시성 문제를 전부 새로 떠안게 됩니다. 배보다 배꼽이 커집니다.
+</p>
+
+<h3>후보 B — PostgreSQL 방식 (tail truncate / VACUUM FULL)</h3>
+<p>
+  PG 의 일반 VACUUM 은 <b>파일 꼬리(맨 끝)의 빈 페이지만</b> 잘라서 OS 에 돌려줍니다.
+  중간에 흩어진 빈 공간까지 회수하려면 VACUUM FULL(테이블 통째 재작성)이나
+  <code>pg_repack</code> 확장이 필요합니다. CUBRID 는 sector 기반 파일 구조라
+  "꼬리 자르기" 개념이 그대로 이식되지 않고, VACUUM FULL 급 재작성은 이번 이슈와는
+  비교가 안 되는 큰 공사입니다. (이 비교는 이슈 코멘트에도 기록되어 있습니다.)
+</p>
+
+<h3>후보 C — vacuum 이 빈 페이지를 창고 장부에 되돌린다 <span class="pill good">제안</span></h3>
+<p>
+  vacuum 이 페이지를 다 비운 시점에 <code>file_dealloc</code> 를 호출하면, 파일 관리자가
+  그 페이지를 <b>partial sector table(영구 장부)</b>에 "빈 페이지"로 기록합니다.
+  이 장부는 <b>캡이 없고, 재시작해도 살아남고,</b> 다음 <code>file_alloc</code> 이
+  즉시 재사용할 수 있습니다. 이미 존재하는 검증된 인프라(<code>RVFL_DEALLOC</code> postpone 복구 경로 포함)를
+  그대로 재사용하므로 변경량도 작습니다.
+</p>
+
+<div class="table-scroll"><table>
+  <tr>
+    <th>비교 항목</th>
+    <th>A. bestspace 개선</th>
+    <th>B. PG 식 truncate/FULL</th>
+    <th>C. vacuum + file_dealloc <span class="pill good">제안</span></th>
+  </tr>
+  <tr>
+    <td>빈 페이지 정보가 영구 저장되나?</td>
+    <td>추가 구현해야 함 (새 복구 경로 필요)</td>
+    <td>페이지를 아예 잘라내므로 해당 없음</td>
+    <td><b>예</b> — 장부가 원래 디스크에 있음</td>
+  </tr>
+  <tr>
+    <td>캡/누락 문제</td>
+    <td>캡을 키워도 힌트라는 본질은 그대로</td>
+    <td>중간 빈 페이지는 못 건드림</td>
+    <td><b>없음</b> — 장부에는 칸 제한이 없음</td>
+  </tr>
+  <tr>
+    <td>구현 크기</td>
+    <td>중간~큼 (캐시 수명주기 재설계)</td>
+    <td>매우 큼 (파일 재작성/이동)</td>
+    <td><b>작음</b> (helper 1개 + 호출 3곳)</td>
+  </tr>
+  <tr>
+    <td>기존 인프라 재사용</td>
+    <td>낮음</td>
+    <td>낮음</td>
+    <td><b>높음</b> (file manager + WAL postpone 그대로)</td>
+  </tr>
+  <tr>
+    <td>판정</td>
+    <td><span class="pill bad">부적합</span></td>
+    <td><span class="pill warn">장기 과제 후보</span></td>
+    <td><span class="pill good">권장</span></td>
+  </tr>
+</table></div>
+
+<div class="card callout good">
+  <span class="label">✅ 결론</span>
+  <p style="margin:0">
+    권장 방법은 <b>후보 C</b> — 질문에서 예상하신 대로, <b>vacuum 이 빈 페이지를
+    file manager 의 partial sector table 로 되돌리는 방식</b>입니다.
+    화이트보드(bestspace)는 지금처럼 빠른 힌트로 계속 쓰고, "비었다"는 <b>사실</b>의 보관은
+    영구 장부에 맡기는 역할 분담입니다.
+  </p>
+</div>
+
+<div class="card callout warn">
+  <span class="label">⚠️ 정직한 한계 — 디스크 사용량 자체가 줄지는 않는다</span>
+  <p style="margin:0">
+    <code>file_perm_dealloc</code> 는 sector 를 디스크 관리자(disk manager)에게 반환하지 않습니다
+    (반환은 <code>file_destroy</code>, 즉 DROP TABLE 경로에서만 일어남).
+    그래서 이 제안이 줄여 주는 것은 OOS 파일의 <b>확장 빈도</b>이지,
+    이미 점유한 디스크 총량이 아닙니다. 다른 파일이 그 공간을 가져갈 수 있게 되는 것도 아닙니다.
+    (이 구분은 초안 리뷰에서 바로잡힌 부분으로, 이슈 본문에 경위가 기록되어 있습니다.)
+  </p>
+</div>
+
+<!-- ================================================================ -->
+<h2>4. 제안 설계 — 어떻게 동작하나</h2>
+
+<h3>4-1. 새 함수 하나: <code>oos_try_reclaim_empty_page</code></h3>
+<p>
+  페이지 회수의 실제 동작(mechanic)은 storage 레이어의 helper 함수 <b>한 곳</b>에 모읍니다.
+  이름의 <b>try</b> 가 중요합니다 — 실패해도 괜찮고, 여러 번 불려도 안전(멱등, idempotent)해야 합니다.
+</p>
+
+<div class="diagram">
+  <div class="dtitle">그림 2 — helper 내부의 4단계 안전 체크</div>
+  <div class="flow">
+    <div class="fbox accent">
+      <b>oos_try_reclaim_empty_page (oos_vfid, vpid)</b>
+      <small>"이 페이지, 비었으면 장부에 되돌려 줘" 요청</small>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="fbox">
+      <b>① 사용 중인 슬롯이 있나?</b>
+      <small>하나라도 있으면 → 아무것도 안 하고 정상 종료 (동시 INSERT 가 이미 재사용했을 수도 있음 — 정상 상황)</small>
+    </div>
+    <div class="arrow">↓ <small>비어 있음</small></div>
+    <div class="fbox">
+      <b>② 파일의 첫 페이지(sticky first page)인가?</b>
+      <small>OOS 파일 헤더가 사는 페이지는 절대 회수하면 안 됨 → 맞으면 정상 종료</small>
+    </div>
+    <div class="arrow">↓ <small>일반 페이지임</small></div>
+    <div class="fbox good">
+      <b>③ file_dealloc (FILE_OOS)</b>
+      <small>파일 관리자의 partial sector table 에 "빈 페이지"로 영구 등록.
+      실제 반영은 WAL 의 postpone(RVFL_DEALLOC) 메커니즘으로 커밋 시점에 안전하게 처리</small>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="fbox">
+      <b>④ bestspace cache 에서 이 페이지 메모 삭제</b>
+      <small>회수된 페이지를 화이트보드가 계속 가리키면 안 되므로
+      <code>oos_stats_del_bestspace_by_vpid</code> 재사용.
+      단, 이 함수는 <b>글로벌 해시 캐시만</b> 지운다 — 헤더 페이지의 best[10] 배열은 남는다
+      (§5 의 "추가 발견 ①" 참고)</small>
+    </div>
+  </div>
+</div>
+
+<h3>4-2. 누가, 언제 부르나 — 세 명의 호출자</h3>
+<p>
+  "언제 검사할지"(trigger)는 호출자 책임입니다. OOS 값을 지우는 경로는 세 곳이고,
+  각 경로의 <b>batch 경계</b>(한 묶음 처리가 끝나는 지점)에서 한 번씩 부릅니다.
+  상자 하나 지울 때마다 부르면(핫루프 안) 비용이 O(지운 상자 수)가 되지만,
+  묶음 끝에서 부르면 O(건드린 선반 수)로 줄기 때문입니다.
+</p>
+
+<div class="table-scroll"><table>
+  <tr><th>호출자 (현재 코드 기준 이름)</th><th>언제 동작하나</th><th>helper 호출 시점</th></tr>
+  <tr>
+    <td><code>vacuum_heap_oos_delete_within_sysop</code><br><span class="footnote">vacuum_oos.cpp:400</span></td>
+    <td>vacuum 이 죽은 heap 레코드를 치우면서 그 레코드 소유의 OOS 값들을 삭제할 때</td>
+    <td>레코드 한 건 처리가 끝난 뒤</td>
+  </tr>
+  <tr>
+    <td><code>vacuum_forward_walk_oos_delete_atomic</code><br><span class="footnote">vacuum_oos.cpp:154</span></td>
+    <td>UPDATE/DELETE 의 undo 이미지에서 옛 버전의 OOS 값들을 삭제할 때 (forward-walk)</td>
+    <td>로그 레코드 한 건 처리가 끝난 뒤</td>
+  </tr>
+  <tr>
+    <td><code>heap_oos_delete_unreferenced</code><br><span class="footnote">heap_oos.cpp:702 · SA_MODE 전용</span></td>
+    <td>단독 모드(SA_MODE)는 vacuum 이 없어서 UPDATE 시점에 즉시(eager) 옛 값을 삭제할 때</td>
+    <td>UPDATE 한 건 처리가 끝난 뒤</td>
+  </tr>
+</table></div>
+
+<div class="card">
+  <b>호출자 공통 패턴 (4단계):</b>
+  <ol style="margin:8px 0 0">
+    <li>기존 <code>oos_delete</code> 루프는 그대로 둔다.</li>
+    <li>루프를 도는 동안 "건드린 페이지(VPID)" 목록을 모아 둔다.</li>
+    <li>루프가 끝나면 목록의 페이지마다 <code>oos_try_reclaim_empty_page</code> 를 부른다.</li>
+    <li>helper 가 실패해도 경고만 남기고 vacuum 은 계속 간다 — 회수 못 한 페이지는
+        다음 vacuum 사이클의 후보로 남으면 충분하다.</li>
+  </ol>
+</div>
+
+<div class="diagram">
+  <div class="dtitle">그림 3 — 전체 흐름: 슬롯 회수(기존) 위에 페이지 회수(신규)를 얹는다</div>
+  <div class="flow">
+    <div class="fbox">
+      <b>vacuum: oos_delete 루프</b>
+      <small>죽은 OOS 값들의 상자(청크)를 슬롯 단위로 삭제 — <b>이미 구현됨</b> (CBRD-26609/26668).
+      건드린 페이지 목록을 옆에 적어 둠</small>
+    </div>
+    <div class="arrow">↓ <small>batch 끝</small></div>
+    <div class="fbox accent">
+      <b>신규: 건드린 페이지마다 oos_try_reclaim_empty_page</b>
+      <small>완전히 빈 페이지만 골라 file_dealloc → 창고 장부(partial sector table)에 등록</small>
+    </div>
+    <div class="arrow">↓ <small>나중에 새 OOS 값 INSERT</small></div>
+    <div class="fbox good">
+      <b>file_alloc 이 장부에서 빈 페이지를 발견 → 재사용</b>
+      <small>화이트보드(bestspace)가 어떤 상태이든 — 꽉 찼든, 재시작 직후든 — 상관없음.
+      파일 확장이 일어나지 않음</small>
+    </div>
+  </div>
+</div>
+
+<h3>4-3. 곁들여 정리되는 것들</h3>
+<ul>
+  <li>죽은 함수 <code>oos_remove_page</code> (<code>oos_file.cpp:1104</code>, 선언 <code>oos_file.hpp:102</code>)는
+      새 helper 가 상위 호환(superset)이므로 <b>삭제</b>. TODO 주석도 함께 제거.</li>
+  <li><code>oos_delete</code> 헤더 주석(<code>oos_file.cpp:2304</code>)의
+      "Empty pages will be reclaimed by vacuum…" 을 helper 이름을 명시하는 문장으로 갱신.</li>
+</ul>
+
+<!-- ================================================================ -->
+<h2>5. 아직 확정 안 된 것들 — Open Questions (Q1~Q5)</h2>
+
+<p>
+  아래 다섯 가지는 ANALYSIS 단계에서 확정할 항목입니다. 각각에 이슈의 <b>잠정 권고</b>가 있지만,
+  <b>모두 아직 최종 결정이 아닙니다.</b>
+</p>
+
+<div class="table-scroll"><table>
+  <tr><th style="width:230px">질문</th><th>쉬운 설명</th><th>잠정 권고 (미확정)</th></tr>
+  <tr>
+    <td><b>Q1. 복구(recovery) 호환성</b></td>
+    <td><code>file_dealloc</code> 는 "커밋되면 그때 실제로 지워라"라는 예약(postpone) 방식으로 동작합니다.
+        vacuum worker 의 트랜잭션 모델에서 이 예약이 제때 실행되는지, 크래시 후 복구와 충돌하지 않는지,
+        비교적 신참 파일 타입인 <code>FILE_OOS</code> 의 복구 분기가 다른 타입과 똑같이 동작하는지 확인이 필요합니다.</td>
+    <td>코드 정독 + 크래시 주입 테스트로 세 항목 모두 검증</td>
+  </tr>
+  <tr>
+    <td><b>Q2. 호출 묶음 단위</b></td>
+    <td>helper 를 레코드마다 부를지(A), heap 페이지마다(B), vacuum 로그 블록마다(C) 부를지.
+        자주 부르면 페이지 fix 비용이, 늦게 부르면 빈 페이지 방치 시간이 늘어납니다.</td>
+    <td>vacuum 은 <b>A(per-record)</b>로 시작해 측정 후 B 승격 검토, SA_MODE 는 A(per-UPDATE) 고정</td>
+  </tr>
+  <tr>
+    <td><b>Q3. "건드린 페이지" 목록 자료구조</b></td>
+    <td>목록 크기가 보통 한 자릿수~수십 개라, 정렬된 set 보다 단순 vector 가 빠를 수 있습니다.</td>
+    <td><b><code>std::vector</code> + 호출 직전 sort/unique</b></td>
+  </tr>
+  <tr>
+    <td><b>Q4. 멱등성(idempotency)</b></td>
+    <td>vacuum worker 가 도중에 죽으면 같은 블록을 다시 처리합니다. 그래서
+        ① 이미 회수된 페이지 ② 그 사이 다른 INSERT 가 재점유한 페이지 ③ 첫 페이지 강제 호출 —
+        세 경우 모두 <b>에러 없이 조용히 통과</b>해야 합니다.</td>
+    <td>helper 내부에서 세 경우 전부 NO_ERROR 로 흡수 (4-1 의 ①·② 체크가 그 장치)</td>
+  </tr>
+  <tr>
+    <td><b>Q5. 실측 게이트</b> <span class="pill warn">진행 조건</span></td>
+    <td>"bestspace 한계가 실제 워크로드에서 정말 문제인가?"를 측정으로 증명해야 합니다.
+        ① 캡 도달 시나리오 ② 재시작 직후 시나리오 ③ UPDATE 폭주 시나리오에서
+        helper 도입 전/후의 OOS 파일 페이지 수·확장 빈도를 비교합니다.</td>
+    <td>효과가 유의미하면 진행, 미미하면 <b>Won't Fix</b> + 죽은 함수 정리만 minor 패치</td>
+  </tr>
+</table></div>
+
+<h3>추가 발견 — 코드 분석에서 확인된 두 가지 갭 (2026-08-05, Q1/Q4 에 편입 권장)</h3>
+
+<p>
+  이 문서 작성 중 커밋 <code>07fef9d48</code> 의 bestspace 코드를 직접 읽으면서,
+  helper 의 캐시 퇴출(④)만으로는 닫히지 않는 구멍 두 개를 확인했습니다.
+  둘 다 JIRA 이슈 본문에는 아직 없는 내용이므로, ANALYSIS 단계에서 Q1/Q4 와 함께 다뤄야 합니다.
+</p>
+
+<div class="card callout warn">
+  <span class="label">🔍 추가 발견 ① — 헤더 페이지의 best[10] 배열은 퇴출되지 않는다</span>
+  <p>
+    <code>oos_stats_del_bestspace_by_vpid</code> (<code>oos_file.cpp:396</code>) 는
+    <b>글로벌 해시 캐시</b>(vpid_ht / vfid_ht)의 엔트리만 제거합니다.
+    그런데 힌트는 한 군데 더 있습니다 — OOS 헤더 페이지에 persist 되는
+    <b>best[10] 배열</b>(<code>OOS_HDR_STATS</code>)입니다. 이 배열은 그대로 남기 때문에,
+    페이지 탐색(<code>oos_stats_find_page_in_bestspace</code>)의 Phase B (best[] 스캔)가
+    이미 회수된 페이지의 VPID 를 후보로 반환할 수 있습니다.
+  </p>
+  <p style="margin-bottom:0">
+    문제는 후보 페이지를 잡는 Phase C 가 plain <code>OLD_PAGE</code> fix 를 쓴다는 점입니다 —
+    dealloc 된 페이지에 대한 plain <code>OLD_PAGE</code> fix 는 <b>debug 빌드에서 assert</b> 에
+    걸립니다 (<code>page_buffer.c:2358-2377</code>, ADR-0001 이 명시한 dead-page tripwire).
+    release 빌드는 에러 후 skip 으로 살아남지만 debug 는 죽습니다.
+    대응 후보: (a) helper 가 헤더 페이지의 best[] 항목도 함께 purge (헤더 페이지 fix 필요),
+    (b) lookup 의 방어적 skip 에 맡기고 tripwire 정책을 조정 — 어느 쪽이든 ANALYSIS 에서 확정 필요.
+  </p>
+</div>
+
+<div class="card callout warn">
+  <span class="label">🔍 추가 발견 ② — postpone 타이밍 레이스 (퇴출 후 재등록 창)</span>
+  <p>
+    <code>file_dealloc</code> 는 <code>RVFL_DEALLOC</code> postpone 방식이라
+    실제 dealloc 은 <b>커밋 시점(run-postpone)</b>에 일어납니다. 즉 helper 가 캐시를 지운 뒤 ~
+    postpone 실행 사이의 구간에서 그 페이지는 "아직 유효하고 텅 빈" 상태입니다.
+    이 창에서 동시 실행 중인 Tier-3 sync (<code>oos_stats_sync_bestspace</code>)가
+    그 페이지를 발견하고 <b>캐시에 다시 등록</b>할 수 있습니다 —
+    그러면 dealloc 이 완료된 뒤 스테일 엔트리가 재발합니다.
+  </p>
+  <p style="margin-bottom:0">
+    조기 퇴출 자체는 항상 안전합니다 (힌트를 <b>잃는</b> 방향의 오류는 성능 손해뿐).
+    위험한 것은 재등록으로 힌트가 <b>잘못 남는</b> 방향이며, 이 창을 완전히 닫으려면
+    sync 측 고려(예: dealloc 예약된 페이지 스킵, 또는 발견 ①과 같은 방어 정책)가 함께 필요합니다.
+    Q1 (postpone 호환성) · Q4 (멱등성) 검증 항목에 편입을 권장합니다.
+  </p>
+</div>
+
+<!-- ================================================================ -->
+<h2>6. 현재 상태와 다음 단계</h2>
+
+<div class="card">
+  <dl class="kv">
+    <dt>JIRA 상태</dt><dd><b>Analysis</b> (Unresolved) — 설계 제안까지 작성 완료, 실측 검증 대기</dd>
+    <dt>이슈 유형</dt><dd>Sub-task · 부모 CBRD-26583 (OOS M2 epic) · 우선순위 Minor · 목표 버전 guava</dd>
+    <dt>담당/보고</dt><dd>Daehyun Kim / Daehyun Kim (최근 갱신 2026-07-29)</dd>
+    <dt>코드 현황</dt><dd>커밋 <code>07fef9d48</code> 기준, <code>oos_try_reclaim_empty_page</code> 미구현.
+        <code>oos_remove_page</code> 는 호출자 0건의 죽은 함수로 존재</dd>
+  </dl>
+</div>
+
+<p><b>다음 단계 (순서대로):</b></p>
+<ol>
+  <li><b>Q5 실측</b> — 캡 도달 / 재시작 / UPDATE 폭주 세 시나리오로 전·후 비교 측정.
+      여기서 효과가 없으면 이슈는 Won't Fix 로 종료.</li>
+  <li>효과가 확인되면 <b>Q1~Q4 확정</b> (postpone 검증, batch 단위, 컨테이너, 멱등성 처리)
+      + §5 의 <b>추가 발견 ①·②</b> (best[] 미퇴출, postpone 레이스) 대응 결정.</li>
+  <li><b>구현</b> — helper 1개 + 호출자 3곳 + 죽은 함수 정리, CTP 회귀 테스트 추가.</li>
+</ol>
+
+<div class="card callout info">
+  <span class="label">📎 선행 조건 — ADR-0001 (non-numerable 전환)이 본 이슈보다 먼저</span>
+  <p style="margin:0">
+    <code>FILE_OOS</code> 는 현재 numerable 로 생성됩니다 (<code>oos_file.cpp:982</code>).
+    numerable 파일에서 페이지 dealloc 은 user page table 에 <b>mark-delete</b> 만 쌓고,
+    본 이슈가 dealloc churn 을 만들면 <code>file_numerable_find_nth</code> 가
+    per-call O(n) slow path 로 밀려납니다 (find_nth 캐시는 temp 파일 전용이라 OOS 는 사용 불가).
+    그래서 ADR-0001 은 <b>vacuum caller 를 연결하기 전에</b> non-numerable + sector-bitmap walk 로
+    전환하기로 결정했습니다 — 보존할 live dealloc 경로가 없을 때 마이그레이션이 가장 쉽습니다.
+    전환으로 잃는 기능은 OOS 가 쓰지 않는 것뿐이고 (nth 순서 보장, truncate),
+    페이지 할당마다 붙던 user-page-table append + WAL 이 사라져 오히려 순이득입니다.
+    해당 구현은 <code>oos-m2-all-plans-experimental</code> 브랜치에 있으며 아직 feat/oos 에
+    merge 되지 않았습니다 (관측 counter 미추가).
+  </p>
+</div>
+
+<div class="card callout info">
+  <span class="label">🔭 참고 — 이 이슈가 완성하는 그림</span>
+  <p style="margin:0">
+    이 이슈가 끝나면 OOS 페이지의 생애 주기가 완성됩니다:
+    <b>INSERT (페이지 할당) → DELETE/UPDATE (슬롯 회수, 완료) → 빈 페이지 회수 (본 이슈) →
+    DROP TABLE (파일 통째 회수, 완료)</b>.
+    또한 먼 미래에 disk manager 가 sector 단위 반환을 지원하게 되면, 본 helper 의 효과는
+    "확장 빈도 감소"에서 "디스크 사용량 감소"로 확장될 수 있습니다 (별도 후속 이슈).
+  </p>
+</div>
+
+<hr class="sep">
+
+<!-- ================================================================ -->
+<div class="appendix">
+<h2>부록 A. 구현자/리뷰어용 코드 레퍼런스</h2>
+<p class="footnote">모든 라인 번호는 이 worktree 의 커밋 <code>07fef9d48</code> (feat/oos merge) 기준으로 재검증한 값입니다.</p>
+
+<div class="table-scroll"><table>
+  <tr><th>항목</th><th>위치</th><th>비고</th></tr>
+  <tr><td><code>OOS_BESTSPACE_CACHE_CAPACITY</code> (=1000)</td><td><code>src/storage/oos_file.cpp:109</code></td><td>모든 OOS 파일 합산 상한</td></tr>
+  <tr><td>캡 도달 시 NULL 반환 (no eviction)</td><td><code>src/storage/oos_file.cpp:346</code></td><td><code>oos_stats_add_bestspace</code> 내부</td></tr>
+  <tr><td>죽은 함수 <code>oos_remove_page</code></td><td><code>src/storage/oos_file.cpp:1104</code> / 선언 <code>oos_file.hpp:102</code></td><td>본 이슈에서 삭제 예정 (helper 가 superset)</td></tr>
+  <tr><td><code>oos_delete</code> 헤더 주석 "Empty pages will be reclaimed…"</td><td><code>src/storage/oos_file.cpp:2304</code></td><td>본 이슈 PR 에서 helper 이름으로 갱신</td></tr>
+  <tr><td>슬롯 회수 + bestspace 갱신</td><td><code>oos_delete_chain</code> <code>oos_file.cpp:2153</code> → <code>oos_stats_update</code> 호출 <code>:2210</code></td><td>기존 동작, 본 이슈 무관하게 유지</td></tr>
+  <tr><td>vacuum 호출자 ① (dead record 경로)</td><td><code>vacuum_heap_oos_delete_within_sysop</code> — <code>src/query/vacuum_oos.cpp:400</code></td><td>호출부 <code>vacuum.c:2522, 2597</code></td></tr>
+  <tr><td>vacuum 호출자 ② (forward-walk 경로)</td><td><code>vacuum_forward_walk_oos_delete_atomic</code> — <code>src/query/vacuum_oos.cpp:154</code></td><td>자체 sysop 로 실행</td></tr>
+  <tr><td>SA_MODE eager 호출자 ③</td><td><code>heap_oos_delete_unreferenced</code> — <code>src/storage/heap_oos.cpp:702</code></td><td>단독 모드 전용 (vacuum 없음)</td></tr>
+  <tr><td>sticky first page 조회</td><td><code>file_get_sticky_first_page</code> — <code>src/storage/file_manager.c:5801</code></td><td>helper 의 가드 ②에 사용. <code>file_dealloc</code> 내부 assert 는 dev 빌드 전용이라 release 가드가 별도로 필요</td></tr>
+  <tr><td>페이지 반환 진입점</td><td><code>file_dealloc</code> — <code>src/storage/file_manager.c:6138</code></td><td>permanent file 은 <code>RVFL_DEALLOC</code> postpone 등록</td></tr>
+  <tr><td>실제 반환 (run-postpone 시점)</td><td><code>file_perm_dealloc</code> — <code>src/storage/file_manager.c:6331</code></td><td>sector bitmap 비트 clear + partial table 갱신. <b>sector 를 disk manager 로 반환하지 않음</b></td></tr>
+  <tr><td>OOS 첫 페이지 sticky 마킹</td><td><code>file_alloc_sticky_first_page</code> 호출 — <code>src/storage/oos_file.cpp:998</code></td><td>OOS 파일 생성 시</td></tr>
+  <tr><td>bestspace 캐시 퇴출 (helper ④에서 재사용)</td><td><code>oos_stats_del_bestspace_by_vpid</code> — <code>src/storage/oos_file.cpp:396</code></td><td>글로벌 해시(vpid_ht/vfid_ht)만 제거 — 헤더 best[10] 배열은 안 지움 (§5 추가 발견 ①)</td></tr>
+  <tr><td>페이지 탐색 (Phase A 해시 → B best[] → C 후보 fix)</td><td><code>oos_stats_find_page_in_bestspace</code> — <code>src/storage/oos_file.cpp:513</code></td><td>Phase C 는 plain <code>OLD_PAGE</code> + conditional latch — dealloc 페이지에 debug assert 위험</td></tr>
+  <tr><td>퇴출 선례 (delete redo 경로)</td><td><code>oos_rv_redo_delete</code> — <code>src/storage/oos_file.cpp:2362</code></td><td>동일 퇴출 함수를 이미 사용 중</td></tr>
+  <tr><td>OOS 파일 numerable 생성 (ADR-0001 전환 대상)</td><td><code>src/storage/oos_file.cpp:982</code></td><td>sync 의 find_nth 사용처는 <code>:751</code>, <code>:2536</code></td></tr>
+</table></div>
+
+<div class="card callout warn">
+  <span class="label">⚠️ JIRA 본문과 현재 코드의 함수명 차이 (리팩터링으로 인한 드리프트)</span>
+  <p style="margin:0">
+    JIRA 이슈 본문(2026-05 작성)의 호출자 이름은 이후 리팩터링으로 바뀌었습니다.
+    구현 시 아래 <b>현재 이름</b>을 기준으로 삼아야 합니다:
+  </p>
+  <div class="table-scroll"><table style="margin-bottom:0">
+    <tr><th>JIRA 본문 표기 (옛)</th><th>현재 코드 (커밋 07fef9d48)</th></tr>
+    <tr><td><code>vacuum_heap_oos_delete</code> (vacuum.c:2419)</td><td><code>vacuum_heap_oos_delete_within_sysop</code> (vacuum_oos.cpp:400)</td></tr>
+    <tr><td><code>vacuum_forward_walk_delete_old_oos</code> (vacuum.c:3458)</td><td><code>vacuum_forward_walk_oos_delete_atomic</code> (vacuum_oos.cpp:154)</td></tr>
+    <tr><td><code>heap_update_home_delete_replaced_oos</code> (heap_file.c:24131)</td><td><code>heap_oos_delete_unreferenced</code> (heap_oos.cpp:702)</td></tr>
+    <tr><td><code>oos_remove_page</code> (oos_file.cpp:1007)</td><td>동일 함수, 현재 <code>oos_file.cpp:1104</code></td></tr>
+  </table></div>
+</div>
+
+<h3>helper 시그니처 초안 (JIRA 본문)</h3>
+<div class="card"><code style="display:block; white-space:pre-wrap; background:transparent; color:var(--text); font-size:13.5px;">// 빈 페이지면 dealloc + bestspace 무효화. 이미 dealloc 된 경우 NO_ERROR.
+// header page (sticky first page) 는 절대 dealloc 하지 않는다.
+int oos_try_reclaim_empty_page (THREAD_ENTRY *thread_p, const VFID &amp;oos_vfid, const VPID &amp;vpid);</code></div>
+
+<h3>수용 기준(Acceptance Criteria) 요약</h3>
+<ul>
+  <li><b>(ANALYSIS 게이트)</b> Q5 시나리오 중 최소 1개에서 전/후 차이가 통계적으로 유의미할 것 — 아니면 Won't Fix.</li>
+  <li>helper 가 sticky first page 를 절대 회수하지 않고, 멱등하며, 사용 중 슬롯이 있으면 건너뛸 것.</li>
+  <li>세 호출자 경로 모두에서 touched VPID 추적 + helper 호출이 이뤄질 것.</li>
+  <li>회수된 페이지의 bestspace cache 항목이 자동 제거될 것.</li>
+  <li>회귀: 10000행 insert+delete 5사이클 후 페이지 수 ±10% 이내 / 동일 행 10000회 UPDATE 후 페이지 수 상한 검증 / 크래시-재처리 안전성 / 동시 워크로드 CTP / 기존 CI(test_sql, test_medium) 통과.</li>
+</ul>
+</div>
+
+<hr class="sep">
+<p class="footnote">
+  출처: JIRA CBRD-26786 (상태 Analysis, 2026-07-29 갱신) · OOS 정규 스펙 문서(OOS-CONTEXT.md, 2026-07-13) ·
+  커밋 <code>07fef9d48</code> 소스 재검증. 본 문서는 AI(Claude Code)가 작성한 분석·제안 요약이며,
+  설계 확정은 ANALYSIS 단계 실측 결과를 따릅니다.
+</p>
+
+</div>
+</body>
+</html>
