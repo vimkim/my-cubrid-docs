@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pgbuf 재구축 스펙 — 1장 요구사항과 외부 관점</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+
+<nav class="book">
+<a href="index.html">← 이전: 목차</a>
+<span class="chapter-title">1장 — 요구사항과 외부 관점</span>
+<a href="ch02-api-contracts.html">다음: 2장 Public API 계약 →</a>
+</nav>
+
+<p class="small">기준 소스: CUBRID commit <code>5cd4f860e</code> (branch pgbuf-analysis) · <code>src/storage/page_buffer.c</code> 17,513줄 / <code>page_buffer.h</code> 521줄</p>
+
+<h1>1장 — 요구사항과 외부 관점</h1>
+
+<p>이 장은 페이지 버퍼를 <b>바깥에서</b> 규정한다. 엔진의 나머지 부분(heap, btree, log, vacuum, disk manager)이
+pgbuf에게 무엇을 기대하는지, 재작성물이 어떤 조건을 만족해야 drop-in 교체가 성립하는지를 다룬다.
+내부 자료구조와 알고리즘은 3장 이후에서 규정하며, 이 장에서는 <b>구현 자유도가 없는 외부 계약</b>만 확정한다.</p>
+
+<div class="box"><span class="label">이 장을 읽고 나면</span>
+재작성자는 (1) pgbuf가 반드시 제공해야 하는 다섯 가지 보장, (2) <code>PAGE_PTR</code>라는 타입이 강제하는
+메모리 배치 계약, (3) 세 빌드 모드에서 달라지는 것의 전부, (4) 어떤 스레드가 어떤 방식으로 pgbuf에 진입하는지,
+(5) 어떤 상태 조합이 절대 존재해서는 안 되는지(불변식 10)를 알게 된다.
+2장부터의 모든 함수 계약은 이 장의 불변식을 전제로 서술된다.
+</div>
+
+<h2>1.1 pgbuf의 책무 — 엔진에 제공하는 다섯 가지 보장</h2>
+
+<p>CUBRID 엔진에서 <b>디스크 데이터 페이지에 접근하는 유일한 경로</b>가 pgbuf다. 로그 페이지는 별도 모듈
+(<code>log_page_buffer.c</code>)이 관리하므로 pgbuf의 관할이 아니다. pgbuf가 제공하는 보장은 다음 다섯 가지이며,
+이들이 재작성물의 수용 기준(acceptance criteria)의 최상위 층을 이룬다.</p>
+
+<h3>G1 — 페이지 캐싱과 동일성(identity)</h3>
+<div class="box norm"><span class="label">규범</span>
+<p><kbd class="must">MUST</kbd> 임의 시점에 하나의 <code>VPID</code>(volid, pageid 쌍)에 대응하는 버퍼 프레임은
+풀 전체에서 <b>최대 한 개</b>여야 한다. 같은 VPID를 두 프레임이 동시에 담고 있어서는 안 된다.
+<span class="ref">page_buffer.c:2330–2333, :7786–7825</span></p>
+<p><kbd class="must">MUST</kbd> 버퍼에 없는 페이지를 여러 스레드가 동시에 요청하면 <b>정확히 한 스레드만</b>
+디스크 읽기를 수행하고, 나머지는 그 읽기가 끝날 때까지 대기한 뒤 <b>재시도</b>해야 한다. 대기자에게 페이지를
+직접 건네주지 않는다 — 깨어난 뒤 처음부터 다시 조회하며, 그때는 페이지가 이미 상주 상태다.
+<span class="ref">page_buffer.c:7935–8033, :8109–8114, :2368–2372</span></p>
+<p class="small">근거: 이 직렬화가 없으면 같은 VPID에 두 프레임이 생기고 G1의 동일성이 깨진다. 직렬화 장치는
+버킷 해시 뮤텍스 아래 걸린 "buffer lock" 체인이며, 3·4장에서 규정한다.</p>
+</div>
+
+<h3>G2 — fix된 페이지의 주소 안정성</h3>
+<div class="box norm"><span class="label">규범</span>
+<p><kbd class="must">MUST</kbd> <code>pgbuf_fix()</code>가 성공적으로 반환한 <code>PAGE_PTR</code>는 같은 스레드가
+그 fix를 해제(<code>pgbuf_unfix()</code>)하기 전까지 <b>같은 물리 프레임의 같은 주소</b>를 계속 가리켜야 하며,
+그 프레임이 다른 VPID로 재사용되어서는 안 된다. <span class="ref">page_buffer.c:9210, :9238</span></p>
+<p><kbd class="must">MUST</kbd> 이 보장의 구현 앵커는 latch 워드의 fix 카운트(<code>fcnt</code>)다:
+<code>fcnt &gt; 0</code>인 BCB는 어떤 경로로도 victim이 될 수 없다.
+<span class="ref">page_buffer.c:9210 (<code>pgbuf_is_bcb_fixed_by_any</code>)</span></p>
+<p class="small">엔진 전역이 이 보장에 의존한다. heap record 포인터, btree 노드 슬롯 포인터 등 <b>페이지 내부를 가리키는
+raw 포인터</b>가 fix 구간 동안 자유롭게 유통되며, 아무도 재검증하지 않는다.</p>
+</div>
+
+<h3>G3 — latch 기반 동시성 제어</h3>
+<div class="box norm"><span class="label">규범</span>
+<p><kbd class="must">MUST</kbd> <code>PGBUF_LATCH_READ</code>는 서로 공유 가능하고,
+<code>PGBUF_LATCH_WRITE</code>는 배타적이어야 한다. WRITE latch를 보유한 스레드만 페이지 내용을 수정할 수 있다.
+<span class="ref">page_buffer.c:6285–6402</span></p>
+<p><kbd class="must">MUST</kbd> <b>이미 홀더인 스레드</b>는 동일 페이지를 다시 fix할 수 있어야 한다(재귀 fix).
+대기 중인 writer가 있어도 마찬가지다. 이 예외가 없으면 재진입 호출 경로가 스스로 데드락에 빠진다.
+<span class="ref">page_buffer.c:6326–6349, :6356–6360</span></p>
+<p><kbd class="must">MUST</kbd> 페이지 latch에는 <b>데드락 탐지기가 없다</b>. 다중 페이지 latch 순서는
+호출자 또는 <code>pgbuf_ordered_fix()</code>가 책임지며, 미탐지 데드락은 <b>타임아웃</b>으로만 해소된다.
+타임아웃된 스레드가 지정 희생자다. <span class="ref">page_buffer.c:7093–7100</span></p>
+</div>
+
+<h3>G4 — WAL 순서를 보존하는 flush</h3>
+<div class="box norm"><span class="label">규범</span>
+<p><kbd class="must">MUST</kbd> dirty 페이지를 디스크에 쓰기 전에, 그 페이지의 현재 LSA까지의 로그 레코드가
+로그 디스크에 먼저 도달해 있어야 한다(Write-Ahead Logging). 구현상 pgbuf는 페이지 쓰기 직전
+로그 매니저의 <code>logpb_flush_log_for_wal()</code>을 호출한다.
+<span class="ref">page_buffer.c:10786</span></p>
+<p><kbd class="must">MUST</kbd> 페이지 쓰기는 <b>단일 funnel</b>을 통과해야 한다. 이 브랜치에서 데이터 페이지가
+디스크로 나가는 유일한 함수는 <code>pgbuf_bcb_flush_with_wal()</code>이며, victim flush·checkpoint flush·
+동기 flush·복구 flush가 모두 이 하나를 경유한다. <span class="ref">page_buffer.c:10670–10898</span></p>
+<p class="small">재작성 시에도 이 단일 funnel 구조를 유지할 것을 <kbd class="should">SHOULD</kbd>로 권장한다.
+WAL 규칙, DWB 경유, <code>FLUSHING_TO_DISK</code> 표시, flush 대기자 기상까지 한 곳에 모여 있어야
+"모든 쓰기 경로가 WAL을 지켰다"를 코드 리뷰만으로 논증할 수 있다. 상세는 8장.</p>
+</div>
+
+<h3>G5 — victim 재활용과 진행 보장</h3>
+<div class="box norm"><span class="label">규범</span>
+<p><kbd class="must">MUST</kbd> 미사용 프레임이 없을 때 pgbuf는 교체 대상(victim)을 찾아 프레임을 재활용해야 하며,
+victim 후보가 전부 dirty여서 즉시 회수가 불가능한 상황에서도 <b>진행(progress)해야</b> 한다 —
+flush 데몬을 깨우고 대기한 뒤 flush된 프레임을 배급받는 경로가 존재해야 한다.
+<span class="ref">page_buffer.c:8192–8300</span></p>
+<p><kbd class="must">MUST</kbd> 그 모든 시도가 실패했을 때에만 <code>ER_PB_ALL_BUFFERS_DIRTY</code>를 올리고
+NULL을 반환한다. <span class="ref">page_buffer.c:8326–8330</span></p>
+<p><kbd class="must">MUST</kbd> victim 자격 판정에는 최소한 다음이 포함된다: <code>fcnt == 0</code>이고,
+<code>DIRTY</code>·<code>FLUSHING_TO_DISK</code>·<code>VICTIM_DIRECT</code>·
+<code>INVALIDATE_DIRECT_VICTIM</code> 플래그가 모두 clear일 것.
+<span class="ref">page_buffer.c:258–262, :9238</span></p>
+</div>
+
+<h2>1.2 <code>PAGE_PTR</code> 의미론 — 그리고 그것이 강제하는 메모리 배치</h2>
+
+<p>pgbuf의 공개 타입 중 가장 많은 것을 결정하는 것은 함수가 아니라 <code>PAGE_PTR</code>라는 타입 자체다.
+이것은 불투명 핸들이 아니라 <b>페이지 사용자 영역의 raw 주소</b>이고, 엔진 전역이 그 사실에 의존한다.</p>
+
+<h3>1.2.1 정의</h3>
+<pre>PAGE_PTR pgptr = (PAGE_PTR) &amp;bcb-&gt;iopage_buffer-&gt;iopage.page[0];</pre>
+<p>즉 <code>PAGE_PTR</code>는 프레임 구조체(<code>PGBUF_IOPAGE_BUFFER</code>)의 <b>사용자 영역 시작 주소</b>이며,
+프레임 헤더(<code>FILEIO_PAGE_RESERVED prv</code>: LSA, pageid, volid, ptype, pflag, tde_nonce)는
+이 주소보다 <b>앞쪽</b>에, 페이지 꼬리 watermark는 뒤쪽에 있다. 호출자가 볼 수 있는 유효 바이트 수는
+<code>DB_PAGESIZE</code>다. <span class="ref">page_buffer.c:546–555, file_io.h:186–193, storage_common.c:44,74</span></p>
+
+<h3>1.2.2 역변환이 포인터 산술이라는 사실</h3>
+<pre>#define CAST_PGPTR_TO_BFPTR(bufptr, pgptr) \
+  do { \
+    (bufptr) = ((PGBUF_BCB *) ((PGBUF_IOPAGE_BUFFER *) \
+      ((char *) pgptr - offsetof (PGBUF_IOPAGE_BUFFER, iopage.page)))-&gt;bcb); \
+    assert ((bufptr) == (bufptr)-&gt;iopage_buffer-&gt;bcb); \
+  } while (0)</pre>
+<p><span class="ref">page_buffer.c:148–169</span> — <code>PAGE_PTR</code>에서 BCB를 얻는 데 <b>해시 조회가 없다</b>.
+주소에서 프레임 헤더 시작으로 되돌아간 뒤 그 안의 back-pointer 한 번을 따라간다. 이 때문에
+<code>pgbuf_get_lsa()</code>, <code>pgbuf_get_vpid()</code>, <code>pgbuf_set_dirty()</code> 같은 호출이
+O(1) 상수 몇 개짜리 연산이 되고, 엔진이 이 함수들을 아무 데서나 부담 없이 호출한다.</p>
+
+<div class="box warn"><span class="label">재작성 요구 — 메모리 배치 계약</span>
+<p><kbd class="must">MUST</kbd> <b>L1.</b> 각 프레임은 &lt;BCB 역포인터, <code>FILEIO_PAGE</code>&gt; 순서의
+연속 메모리로 배치되어야 하고, 사용자 영역 시작점에서 <b>고정된 음수 오프셋</b>에 BCB 역포인터가 있어야 한다.
+<span class="ref">page_buffer.c:546–555</span></p>
+<p><kbd class="must">MUST</kbd> <b>L2.</b> <code>iopage</code>는 8바이트 정렬이어야 한다. 32비트 워드 크기에서는
+명시적 <code>int dummy</code> 패딩이 들어가고, 그 외 알려지지 않은 플랫폼에서는 <code>#error</code>로 빌드를 막는다.
+<span class="ref">page_buffer.c:546–555</span></p>
+<p><kbd class="must">MUST</kbd> <b>L3.</b> 프레임 배열의 stride는
+<code>offsetof(PGBUF_IOPAGE_BUFFER, iopage) + IO_PAGESIZE</code>이며,
+<code>CUBRID_DEBUG</code> 빌드에서는 뒤에 8바이트 guard가 더 붙는다.
+<code>sizeof(PGBUF_IOPAGE_BUFFER)</code>를 쓰면 <code>FILEIO_PAGE::page</code>가 <code>char[1]</code>이라
+<b>과소 할당</b>된다. <span class="ref">page_buffer.c:110–120, :852–856</span></p>
+<p><kbd class="must">MUST</kbd> <b>L4.</b> BCB 배열과 프레임 배열은 <b>같은 인덱스</b>로 짝지어져야 하며
+(<code>BCB_table[i] ↔ iopage_table[i]</code>), 초기화 시 양방향 포인터를 세팅해야 한다.
+BCB → 풀 인덱스 역변환은 <code>BCB_table</code> 기준 포인터 뺄셈으로 이루어진다.
+<span class="ref">page_buffer.c:135–139, :5594–5609, :16170–16174</span></p>
+<p><kbd class="must">MUST</kbd> <b>L5.</b> 풀 밖에서 <code>PAGE_PTR</code>를 만들어 내보내는 모든 장치는
+<b>진짜 &lt;더미 BCB, iopage&gt; 쌍</b>이어야 한다. CBRD-27041의 스캔용 복사 버퍼가 그 예로, 반환된 포인터가
+<code>CAST_PGPTR_TO_BFPTR</code>를 그대로 통과해야 하기 때문에 <code>PGBUF_BCB</code>를 통째로 포함한다.
+<span class="ref">page_buffer.c:860–888</span></p>
+</div>
+
+<h3>1.2.3 유효 구간</h3>
+<div class="box norm"><span class="label">규범</span>
+<p><kbd class="must">MUST</kbd> <code>PAGE_PTR</code>는 <b>fix가 성립한 동안에만</b> 유효하다.
+unfix 이후 그 포인터를 역참조하면 다른 페이지의 내용을 보게 될 수 있다 — 프레임이 즉시 victim이 되어
+다른 VPID를 담을 수 있기 때문이다.</p>
+<p><kbd class="must">MUST</kbd> 다음 세 경우는 <b>호출자가 넘긴 포인터가 조용히 무효화되는</b> 특수 사례이며,
+계약상 명시적으로 규정된다:</p>
+<ul>
+<li><code>pgbuf_promote_read_latch()</code> 실패 시 — 페이지가 unfix된 상태로 반환되며 <code>*pgptr_p</code>는
+NULL로 설정된다. <span class="ref">page_buffer.c:2919–2948, :2937</span></li>
+<li><code>pgbuf_ordered_fix()</code> 재정렬 시 — 이미 잡고 있던 페이지들이 unfix·재fix되므로 그 사이 내용이 바뀔 수 있다.
+watcher의 <code>page_was_unfixed</code> 비트가 이를 알린다. <span class="ref">page_buffer.c:12602–12669, :12661–12662</span></li>
+<li><code>pgbuf_set_dirty(..., FREE)</code>·<code>pgbuf_flush(..., FREE)</code> — 이름과 달리 unfix까지 수행한다.
+<span class="ref">page_buffer.c:4901–4904, :3524–3527</span></li>
+</ul>
+</div>
+
+<h2>1.3 빌드 모드 3종</h2>
+
+<p>CUBRID는 같은 소스를 세 가지 전처리기 구성으로 컴파일한다. pgbuf에 관한 한 <b>CS_MODE는 존재하지 않는다</b>:
+<code>page_buffer.c</code>는 <code>cubrid/</code>(SERVER_MODE)와 <code>sa/</code>(SA_MODE) 타깃에만 들어가고
+<code>cs/</code> 타깃의 소스 목록에는 없다. 클라이언트는 페이지를 직접 다루지 않고 서버에 요청을 보낸다.
+<span class="ref">cubrid/CMakeLists.txt:524, sa/CMakeLists.txt:529 (cs/CMakeLists.txt에는 없음)</span></p>
+
+<div class="tablewrap"><table>
+<tr><th>항목</th><th>SERVER_MODE (<code>cub_server</code>)</th><th>SA_MODE (<code>cubridsa</code>)</th><th>CS_MODE (<code>cubridcs</code>)</th></tr>
+<tr><td><code>page_buffer.c</code> 컴파일</td><td>포함</td><td>포함</td><td><b>미포함</b> — 링크되는 pgbuf 구현이 없다</td></tr>
+<tr><td>스레딩</td><td>멀티스레드(워커 풀 + 데몬 + vacuum)</td><td>단일 스레드</td><td>해당 없음</td></tr>
+<tr><td>pgbuf 데몬 4종</td><td><code>pgbuf_daemons_init()</code>로 생성
+<span class="ref">:17166–17178</span></td><td>선언 자체가 <code>#if defined(SERVER_MODE)</code>로 배제
+<span class="ref">page_buffer.h:505–508</span></td><td>—</td></tr>
+<tr><td>flush 트리거</td><td>데몬 wakeup <span class="ref">:11622–11628</span></td>
+<td><b>호출 스레드가 인라인으로</b> <code>pgbuf_flush_victim_candidates()</code>를 직접 수행
+<span class="ref">:11630–11637</span></td><td>—</td></tr>
+<tr><td>private LRU 리스트</td><td>기본 <code>MAX_NTRANS + 50</code>개</td>
+<td><b>항상 0</b> — 쿼터 시스템 비활성 <span class="ref">:13918</span></td><td>—</td></tr>
+<tr><td>latch 블로킹</td><td>대기 큐 + timed sleep</td>
+<td>도달하면 <code>assert (0)</code> — 단일 스레드에서는 블로킹이 곧 버그
+<span class="ref">:6505–6507</span></td><td>—</td></tr>
+<tr><td>read→write promote</td><td>CAS 루프 + 대기 <span class="ref">:2857–2948</span></td>
+<td>무조건 <code>set_latch(WRITE)</code> 후 <code>NO_ERROR</code> <span class="ref">:3006</span></td><td>—</td></tr>
+<tr><td>direct victim 기구</td><td>대기자 큐 + 배급 <span class="ref">:743–750</span></td>
+<td>구조체는 있으나 대기자가 없어 사실상 사용 안 함</td><td>—</td></tr>
+<tr><td><code>pgbuf_has_any_waiters()</code></td><td>실제 대기 큐 검사</td>
+<td>무조건 <code>false</code> <span class="ref">:14610–14636</span></td><td>—</td></tr>
+<tr><td><code>pgbuf_is_io_stressful()</code></td><td>저우선순위 대기자 큐 비어있음 여부</td>
+<td>무조건 <code>false</code> <span class="ref">:16552–16565</span></td><td>—</td></tr>
+<tr><td><code>show_status_mutex</code></td><td><code>pthread_mutex_init</code> / <code>_destroy</code> 수행
+<span class="ref">:1860, :2061</span></td>
+<td>두 호출 모두 <code>#if defined(SERVER_MODE)</code> 안에 있어 실행되지 않는다
+(정적 <code>PTHREAD_MUTEX_INITIALIZER</code> 대입만 남는다 <span class="ref">:1661</span>)</td><td>—</td></tr>
+</table></div>
+
+<div class="box"><span class="label">재작성 지침</span>
+SA_MODE는 "동시성 코드를 뺀 버전"이 아니라 <b>동시성 코드가 도달 불가임을 assert로 선언한 버전</b>이다.
+재작성물도 같은 태도를 취할 것을 <kbd class="should">SHOULD</kbd>로 권장한다: SA_MODE에서 블로킹 경로에
+도달했다면 그것은 성능 문제가 아니라 논리 버그이므로, 조용히 처리하지 말고 즉시 드러내야 한다.
+</div>
+
+<h2>1.4 스레딩 모델</h2>
+
+<h3>1.4.1 <code>THREAD_ENTRY</code> — pgbuf의 필수 문맥 인자</h3>
+
+<p>pgbuf의 거의 모든 공개 함수는 첫 인자로 <code>THREAD_ENTRY *thread_p</code>를 받는다. 이는 단순한 로깅용
+문맥이 아니라 <b>pgbuf 상태의 일부가 스레드 엔트리 안에 저장되어 있기 때문</b>이다. 다음 필드들이 pgbuf 전용이다:</p>
+
+<div class="tablewrap"><table>
+<tr><th>필드</th><th>용도</th><th>근거</th></tr>
+<tr><td><code>int pgbuf_fix_req_cnt</code></td><td>이 스레드의 fix 요청 수 샤드. 평범한 비원자적 int이며,
+LRU 쿼터 휴리스틱이 나중에 전 스레드를 합산해 읽는다(경합·경미한 유실은 설계상 수용).</td>
+<td><span class="ref">thread_entry.hpp:219, page_buffer.c:2250–2253, :2117–2153</span></td></tr>
+<tr><td><code>int pgbuf_pg_unfix_cnt</code></td><td>같은 방식의 unfix 수 샤드.</td>
+<td><span class="ref">thread_entry.hpp:223, page_buffer.c:2164–…</span></td></tr>
+<tr><td><code>int private_lru_index</code></td><td>이 스레드가 배정받은 private LRU 리스트 번호.
+세션 생성 시 배정되어 워커로 복사되며, 세션 없는 스레드는 <code>-1</code>.</td>
+<td><span class="ref">thread_entry.hpp:229, page_buffer.c:14454–14538</span></td></tr>
+<tr><td><code>bool m_is_private_lru_enabled</code></td><td><code>num_private_LRU_list &gt; 0 &amp;&amp; private_lru_index != -1</code>을
+미리 계산해 캐시한 값. fix/unfix 핫패스가 매번 재계산하지 않기 위함.</td>
+<td><span class="ref">thread_entry.hpp:318, page_buffer.c:1496–1515</span></td></tr>
+<tr><td><code>pgbuf_holder_anchor *m_holder_anchor</code></td><td>이 스레드의 홀더 장부 앵커 포인터 캐시
+(스레드 인덱스로 매번 배열을 재색인하지 않기 위함).</td>
+<td><span class="ref">thread_entry.hpp:319, page_buffer.c:1511–1514</span></td></tr>
+<tr><td><code>int request_latch_mode</code>, <code>int request_fix_count</code></td>
+<td>latch 대기 큐에 자신을 등록할 때 "무엇을 얼마나 원하는지"를 공표하는 자리.
+기상시키는 쪽이 이 값을 읽어 latch를 부여한다. <code>PGBUF_NO_LATCH</code>는 "포기했음" 신호.</td>
+<td><span class="ref">thread_entry.hpp:249–250, page_buffer.c:7014–7015, :7317–7321</span></td></tr>
+<tr><td><code>entry *next_wait_thrd</code></td><td>BCB 대기 큐와 buffer-lock 대기 큐의 연결 포인터.
+대기 큐 노드가 스레드 엔트리 자체다 — 별도 할당이 없다.</td>
+<td><span class="ref">thread_entry.hpp:256, page_buffer.c:6995–7114</span></td></tr>
+<tr><td><code>bool wait_for_latch_promote</code></td><td>이 스레드가 promote를 기다리는 중임을 표시.
+대기 큐에서 promoter는 <b>머리</b>에 놓인다.</td>
+<td><span class="ref">thread_entry.hpp:255, page_buffer.c:2919–2948</span></td></tr>
+<tr><td><code>bool victim_request_fail</code></td><td>direct victim 배급 대기 결과 표시.</td>
+<td><span class="ref">thread_entry.hpp:251</span></td></tr>
+<tr><td><code>pgbuf_tracker m_pgbuf_tracker</code></td><td>디버그 빌드 전용 fix/unfix 균형 추적기.</td>
+<td><span class="ref">thread_entry.hpp:347–349, page_buffer.c:2518, :3147</span></td></tr>
+</table></div>
+
+<div class="box warn"><span class="label">규범</span>
+<kbd class="must">MUST</kbd> 재작성물은 위 필드들과 동등한 per-thread 저장소를 확보해야 한다.
+특히 <b>latch 대기 큐의 노드가 스레드 엔트리 자체</b>라는 설계(별도 대기 노드 할당 없음)는
+"대기 진입 시 메모리 할당 실패가 없다"는 성질을 만들고, 이는 victim 고갈 상황에서 결정적이다 —
+프레임이 없어 대기하려는데 대기 노드를 할당하려다 또 실패하는 경로가 존재해서는 안 된다.
+<span class="ref">page_buffer.c:7014–7044</span>
+</div>
+
+<h3>1.4.2 pgbuf에 진입하는 스레드 종류</h3>
+
+<div class="tablewrap"><table>
+<tr><th>스레드</th><th>pgbuf 접근 방식</th><th>특수 취급</th></tr>
+<tr><td><b>워커 스레드</b><br>(클라이언트 요청 처리)</td>
+<td>fix / unfix / ordered_fix / set_dirty / set_lsa — 전 API</td>
+<td>세션의 private LRU 인덱스를 상속. 일반 규칙 전부 적용.</td></tr>
+<tr><td><b>vacuum 워커</b></td>
+<td>fix / unfix, 그리고 <code>pgbuf_notify_vacuum_follows()</code></td>
+<td>부팅 시 <b>자체 private LRU</b>를 배정받음. unfix 시 <b>LRU 승격에서 제외</b>되고
+(<code>PGBUF_VACUUM_SHOULD_IGNORE_UNFIX</code>), 대신 direct victim 기부를 시도한다.
+victim 대기 시 <b>고우선순위</b> 큐를 쓴다. fix 시 <code>TO_VACUUM</code> 플래그를 지운다.
+<span class="ref">page_buffer.c:283, :6769, :8196, :8210, :2626–2629</span></td></tr>
+<tr><td><b>vacuum 마스터</b></td><td>거의 접근하지 않음</td><td>private LRU 없음.</td></tr>
+<tr><td><b>page flush 데몬</b></td>
+<td><code>pgbuf_flush_victim_candidates()</code></td>
+<td>victim 후보를 모아 flush하고, flush된 프레임을 대기자에게 배급되도록 큐에 넣는다.
+<span class="ref">page_buffer.c:3818–4119</span></td></tr>
+<tr><td><b>page post-flush 데몬</b></td>
+<td><code>pgbuf_assign_flushed_pages()</code></td>
+<td>flush 완료 큐를 비우고 <code>FLUSHING_TO_DISK</code>를 해제하며 flush 대기자를 깨운다.
+<span class="ref">page_buffer.c:15431–15493</span></td></tr>
+<tr><td><b>page maintenance 데몬</b></td>
+<td><code>pgbuf_adjust_quotas()</code> + <code>pgbuf_direct_victims_maintenance()</code></td>
+<td><b>flush하지 않는다.</b> 쿼터 재조정과 victim 사전 배급만 한다.
+<span class="ref">page_buffer.c:14195–14447, :9561–…</span></td></tr>
+<tr><td><b>flush control 데몬</b></td>
+<td><code>pgbuf_flush_control_from_dirty_ratio()</code>를 통해 fileio 측 토큰 버킷에 기여</td>
+<td>목표는 "풀의 절반이 dirty". <span class="ref">page_buffer.c:14788–14821</span></td></tr>
+<tr><td><b>checkpoint 스레드</b><br>(로그 매니저 소유)</td>
+<td><code>pgbuf_flush_checkpoint()</code></td>
+<td>rate-controlled seq flusher를 사용. 이 함수가 반환하는 "flush하지 못한 페이지들의 최소
+<code>oldest_unflush_lsa</code>"가 다음 체크포인트의 redo LSA가 된다.
+<span class="ref">page_buffer.c:4133–4264</span></td></tr>
+<tr><td><b>부팅/복구/종료 경로</b></td>
+<td><code>pgbuf_initialize()</code>, <code>pgbuf_flush_all*()</code>,
+<code>pgbuf_invalidate_all()</code>, <code>pgbuf_finalize()</code></td>
+<td>대개 단일 스레드 문맥에서 호출된다.</td></tr>
+</table></div>
+
+<h3>1.4.3 per-thread 자원 — 스레드 수로 사이징되는 것들</h3>
+
+<p>pgbuf는 스레드 인덱스(<code>thread_get_entry_index()</code>)로 직접 색인하는 배열을 여럿 갖는다.
+이 설계 덕분에 할당자도, 프리 리스트도, 경합도 없다. 재작성물도 같은 구조를 유지해야
+<kbd class="must">MUST</kbd> 동일한 확장성 특성을 얻는다.</p>
+
+<div class="tablewrap"><table>
+<tr><th>자원</th><th>크기</th><th>왜 per-thread인가</th><th>근거</th></tr>
+<tr><td>홀더 장부 앵커<br><code>thrd_holder_info[]</code></td>
+<td>스레드 수 × 64 B</td>
+<td>fix/unfix마다 쓰이는 필드(<code>num_hold_cnt</code>, 리스트 헤드)라 false sharing이 치명적.
+정확히 한 캐시라인이 되도록 손계산 패딩 + <code>static_assert</code>.</td>
+<td><span class="ref">page_buffer.c:485–490, :789</span></td></tr>
+<tr><td>예약 홀더 엔트리<br><code>thrd_reserved_holder</code></td>
+<td>스레드 수 × 7개</td>
+<td>스레드당 7개까지는 무할당. 초과분은 전역 풀에서 10개 블록으로 받아오며,
+<b>전역 풀로 반납되지 않는다</b>(소유 스레드의 free list로만 돌아간다).</td>
+<td><span class="ref">page_buffer.c:90, :94, :5914–5916, :5991–6018</span></td></tr>
+<tr><td>buffer lock 슬롯<br><code>buf_lock_table[]</code></td>
+<td>스레드 수 × 1개</td>
+<td>한 스레드는 동시에 최대 한 개의 미상주 페이지만 읽는다. 따라서 per-thread 슬롯이면 충분하고
+락 레코드 할당자가 아예 필요 없다.</td>
+<td><span class="ref">page_buffer.c:557–569, :5654–5686, :8023</span></td></tr>
+<tr><td>direct victim 슬롯<br><code>direct_victims.bcb_victims[]</code></td>
+<td>스레드 수</td>
+<td>"이 스레드에게 배급된 프레임" 한 칸.</td>
+<td><span class="ref">page_buffer.c:743–750, :1776–1783</span></td></tr>
+<tr><td>victim 대기자 큐</td>
+<td>고우선순위 = 스레드 수, 저우선순위 = 2 × 스레드 수</td>
+<td>모든 스레드가 동시에 대기해도 큐가 넘치지 않아야 한다.</td>
+<td><span class="ref">page_buffer.c:1786–1797</span></td></tr>
+<tr><td><code>SHOW PAGE BUFFER STATUS</code> 샤드<br><code>show_status[]</code></td>
+<td>(스레드 수 + 1) × 64 B, 64B 정렬 할당</td>
+<td>CBRD-26898. 카운터를 원자적으로도, 공유해서도 만들지 않는다 — fix마다 일어나는 증가가
+절대 경합하지 않도록. 읽는 쪽이 전 샤드를 합산한다.</td>
+<td><span class="ref">page_buffer.c:393–402, :1846–1855</span></td></tr>
+<tr><td>private LRU 인덱스</td>
+<td>스레드가 아니라 <b>세션</b>에 귀속</td>
+<td>같은 세션의 연속 요청이 서로 다른 워커에서 실행돼도 같은 private 리스트를 쓰게 하려는 것.
+스레드 인덱스와 무관하다.</td>
+<td><span class="ref">page_buffer.c:14454–14538</span></td></tr>
+</table></div>
+
+<h2>1.5 최상위 불변식 10</h2>
+
+<p>아래 열 가지는 <b>어느 시점에 관측해도 성립해야 하는</b> 상태 조건이다. 10장의 런타임 검증 훅은 이 목록을
+그대로 코드화한 것이며, 재작성 중 디버깅의 1차 기준이 된다. 각 항목은 위반 시 무엇이 깨지는지를 함께 적었다.</p>
+
+<div class="box norm"><span class="label">불변식 I1 — fix된 페이지는 victim이 될 수 없다</span>
+<p><kbd class="must">MUST</kbd> latch 워드의 <code>fcnt &gt; 0</code>인 BCB는 어떤 victim 선택 경로에서도
+선택되어서는 안 된다. <span class="ref">page_buffer.c:9210, :9238</span></p>
+<p class="small"><b>근거</b> — G2(주소 안정성)가 이 하나에 걸려 있다. 위반하면 다른 스레드가 들고 있는
+<code>PAGE_PTR</code> 아래에서 페이지 내용이 통째로 바뀐다. 무잠금 read fix 경로가
+<code>fcnt != 0</code>을 진입 조건으로 삼는 이유도 이것이다 — 살아 있는 READ latch가 있는 BCB는
+그 사실만으로 재활용될 수 없다. <span class="ref">page_buffer.c:7687–7691</span></p>
+</div>
+
+<div class="box norm"><span class="label">불변식 I2 — dirty 페이지는 victim이 될 수 없다</span>
+<p><kbd class="must">MUST</kbd> <code>DIRTY</code> 플래그가 선 BCB는 flush되어 플래그가 지워지기 전까지
+victim 후보 집합에 들어가서는 안 된다. <span class="ref">page_buffer.c:258–262</span></p>
+<p class="small"><b>근거</b> — 위반하면 커밋된 변경이 조용히 사라진다. 이것이 "victim 후보가 전부 dirty"일 때
+flush 데몬을 깨우고 기다렸다가 flush된 프레임을 배급받는 우회 경로(G5)가 존재하는 이유다.
+<span class="ref">page_buffer.c:8192–8300</span></p>
+</div>
+
+<div class="box norm"><span class="label">불변식 I3 — 페이지 flush 전에 그 LSA까지 로그가 flush되어 있다</span>
+<p><kbd class="must">MUST</kbd> 어떤 데이터 페이지가 디스크에 기록되는 순간, 그 페이지 이미지의 LSA 이하의
+모든 로그 레코드는 이미 로그 디스크에 있어야 한다. <span class="ref">page_buffer.c:10786</span></p>
+<p class="small"><b>근거</b> — WAL. 위반하면 크래시 복구가 "redo할 로그가 없는데 이미 반영된 페이지"를 만나
+불일치를 일으킨다. 이 불변식이 "모든 페이지 쓰기가 단일 함수를 통과한다"는 구조적 요구(G4)를 정당화한다.</p>
+</div>
+
+<div class="box norm"><span class="label">불변식 I4 — BCB와 프레임은 같은 인덱스로 1:1</span>
+<p><kbd class="must">MUST</kbd> 모든 <code>i</code>에 대해
+<code>BCB_table[i].iopage_buffer == &amp;iopage_table[i]</code>이고
+<code>iopage_table[i].bcb == &amp;BCB_table[i]</code>여야 하며, 이 관계는 초기화 이후 <b>절대 변하지 않는다</b>.
+<span class="ref">page_buffer.c:135–139, :5594–5609</span></p>
+<p class="small"><b>근거</b> — §1.2의 포인터 산술 전부가 이 불변에 기댄다. 그래서
+<code>CAST_PGPTR_TO_BFPTR</code>가 매크로 안에서 <code>assert(bufptr == bufptr-&gt;iopage_buffer-&gt;bcb)</code>를
+직접 검사한다 — 이 assert가 터지면 포인터 계산이 아니라 <b>메모리 손상</b>을 의심해야 한다.</p>
+</div>
+
+<div class="box norm"><span class="label">불변식 I5 — 해시 체인에 있는 동안에만 조회 가능하다</span>
+<p><kbd class="must">MUST</kbd> BCB는 유효한 VPID를 담고 <b>해시 체인에 연결된 동안에만</b> 다른 스레드의
+조회 대상이 될 수 있다. 미스 경로에서 새로 확보한 BCB의 해시 삽입은 <b>latch를 획득한 뒤에</b> 일어나야 하고,
+해시 제거는 BCB 뮤텍스를 잡은 상태에서만 일어나야 한다.
+<span class="ref">page_buffer.c:2483–2493, :7832–7923</span></p>
+<p class="small"><b>근거</b> — "아직 디스크 읽기가 끝나지 않은 프레임"이 조회 가능해지면 다른 스레드가
+쓰레기 내용을 읽는다. 순서(읽기 완료 → latch 부여 → 해시 삽입 → buffer lock 해제 및 대기자 전원 기상)가
+곧 이 불변식의 구현이다. 삽입 함수가 버킷 뮤텍스를 <b>일부러 쥔 채 반환</b>하고 buffer lock 해제 함수가
+그것을 소비하는 이유이기도 하다 — 하나의 임계 구역이 두 함수에 걸쳐 있다.
+<span class="ref">page_buffer.c:7817–7823</span></p>
+</div>
+
+<div class="box norm"><span class="label">불변식 I6 — VOID zone BCB는 어떤 리스트에도 없다</span>
+<p><kbd class="must">MUST</kbd> zone이 <code>PGBUF_VOID_ZONE</code>인 BCB는 LRU 리스트에도, invalid 리스트에도
+연결되어 있지 않아야 한다. 반대로 어떤 리스트에 연결된 BCB의 zone은 그 리스트를 정확히 지목해야 한다.
+<span class="ref">page_buffer.c:8891, :10356, :6844–6939</span></p>
+<p class="small"><b>근거</b> — invalid 리스트와 LRU 리스트가 <b>같은 <code>next_BCB</code> 필드</b>를 공유하므로
+(invalid는 단일 연결, LRU는 이중 연결) BCB는 물리적으로 둘 중 한 곳에만 있을 수 있다.
+zone 필드가 그 "어디에 있는가"의 단일 진실이다. 갓 확보한 BCB는 VOID이며,
+<b>첫 unfix 시점에</b> 비로소 어떤 LRU 리스트에 들어간다. <span class="ref">page_buffer.c:626–633, :6844–6939</span></p>
+</div>
+
+<div class="box norm"><span class="label">불변식 I7 — <code>oldest_unflush_lsa</code>가 비 NULL이면 그 BCB는 dirty다</span>
+<p><kbd class="must">MUST</kbd> <code>!LSA_ISNULL(&amp;bcb-&gt;oldest_unflush_lsa)</code>이면 반드시
+<code>DIRTY</code> 플래그가 서 있어야 한다. <span class="ref">page_buffer.c:2351, :6665</span></p>
+<p class="small"><b>근거</b> — <code>oldest_unflush_lsa</code>는 체크포인트가 "다음 redo LSA"를 계산할 때 읽는 값이다.
+dirty가 아닌데 이 값이 남아 있으면 체크포인트가 필요 없는 로그를 영원히 보존하거나, 반대로
+회수 시점을 잘못 계산한다. 방향이 한쪽뿐이라는 점에 주의하라 — <b>dirty인데 이 값이 NULL인 것은 정상</b>이다
+(LSA를 아직 찍지 않고 먼저 dirty로 표시하는 경로가 있다). <span class="ref">page_buffer.c:4990–4995</span></p>
+</div>
+
+<div class="box norm"><span class="label">불변식 I8 — latch 워드의 <code>fcnt</code>는 모든 홀더 <code>fix_count</code>의 합이다</span>
+<p><kbd class="must">MUST</kbd> 어떤 BCB에 대해
+<code>bcb.atomic_latch.fcnt == Σ<sub>모든 스레드 t</sub> holder(t, bcb).fix_count</code>가 성립해야 한다.
+<span class="ref">page_buffer.c:6084–6133, §9 (fix/latch/pin 3중 의미)</span></p>
+<p class="small"><b>근거</b> — 하나의 "fix"가 세 곳에 동시에 기록된다: latch 모드(내용 접근권), 전역 <code>fcnt</code>
+(재활용 방지), 그리고 스레드 로컬 <code>holder-&gt;fix_count</code>(내 몫). 이 셋이 어긋나면
+promote(자기 몫을 <code>fcnt</code>에서 빼고 대기)와 unfix(홀더 먼저 감소, 그 다음 <code>fcnt</code> 감소)의
+계산이 전부 틀어진다. 특히 <b><code>fcnt</code>는 홀더 수가 아니라 fix 횟수의 총합</b>이라는 점을 혼동하지 말 것 —
+한 스레드가 3번 fix하면 홀더는 1개, <code>fcnt</code>는 3이다.</p>
+</div>
+
+<div class="box norm"><span class="label">불변식 I9 — 이미 홀더인 스레드는 항상 재-fix에 성공할 수 있다</span>
+<p><kbd class="must">MUST</kbd> 스레드 T가 페이지 P를 이미 fix하고 있다면, T의 P에 대한 추가 fix 요청은
+<b>대기 없이</b> 성공해야 한다. WRITE latch를 들고 있으면 무조건 허용되고, READ latch를 들고 있는 상태에서
+대기 중인 writer가 있어도 T는 예외적으로 통과한다.
+<span class="ref">page_buffer.c:6326–6349, :6356–6360</span></p>
+<p class="small"><b>근거</b> — 위반하면 자기 자신과의 데드락이다. CUBRID의 호출 경로는 같은 페이지를 여러 깊이에서
+다시 fix하는 일이 흔하다. 동시에 이 예외는 "새 reader는 대기 중인 writer 뒤에 줄 선다"는
+writer starvation 방지 규칙과 <b>공존</b>해야 한다 — 즉 대기자 유무 검사에 "나는 이미 홀더인가"라는
+2차 검사가 반드시 붙어야 한다.</p>
+</div>
+
+<div class="box norm"><span class="label">불변식 I10 — flush 진행 중(<code>FLUSHING_TO_DISK</code>)인 BCB는 victim이 될 수 없다</span>
+<p><kbd class="must">MUST</kbd> <code>FLUSHING_TO_DISK</code> 플래그가 선 BCB는 victim 후보 집합에서 제외되어야 하고,
+해시 체인에서 제거되어서도 안 된다. <span class="ref">page_buffer.c:258–262, :7867–7876</span></p>
+<p class="small"><b>근거</b> — flush는 페이지 사본을 만들어 진행하지만, 그 사이 프레임이 다른 VPID로 재사용되면
+"어느 페이지를 쓰고 있는 중인지"에 대한 장부가 깨지고 flush 완료 처리(플래그 해제, 대기자 기상)가
+엉뚱한 BCB에 적용된다. 이 플래그의 해제는 flush를 시작한 쪽이 아니라 <b>post-flush 데몬</b>이 하므로
+(SERVER_MODE), 해제 전까지의 구간이 상당히 길 수 있다는 점에 유의하라.
+<span class="ref">page_buffer.c:15431–15493</span></p>
+</div>
+
+<h2>1.6 성능 요구 — 이 브랜치가 존재하는 이유</h2>
+
+<p>아래 항목들은 정확성이 아니라 <b>성능 특성</b>에 대한 요구다. 어겨도 데이터는 안전하지만,
+어기면 이 브랜치가 upstream 대비 갖는 확장성 이점이 사라진다. 따라서 전부
+<kbd class="should">SHOULD</kbd>이되, 재작성물의 수용 판정에는 포함된다.</p>
+
+<div class="tablewrap"><table>
+<tr><th>#</th><th>요구</th><th>내용</th><th>근거</th></tr>
+<tr><td>P1</td><td><b>read-hit 경로는 뮤텍스를 하나도 잡지 않는다</b></td>
+<td>조건이 맞는 READ fix는 버킷 뮤텍스도, BCB 뮤텍스도 잡지 않고 packed latch 워드를 CAS로 증가시키는 것만으로
+완료된다. 진입 조건: <code>request_mode == READ</code>이고 fetch mode가
+<code>OLD_PAGE</code>/<code>OLD_PAGE_PREVENT_DEALLOC</code>/<code>OLD_PAGE_MAYBE_DEALLOCATED</code> 중 하나이며
+unconditional일 것. 그리고 BCB 쪽 조건: <code>latch_mode == READ &amp;&amp; !waiter_exists &amp;&amp; fcnt != 0</code>이고
+VPID가 여전히 일치할 것.</td>
+<td><span class="ref">page_buffer.c:2309–2313, :7669–7732</span></td></tr>
+<tr><td>P2</td><td><b>read unfix도 무뮤텍스</b></td>
+<td>같은 조건 아래 CAS 감소만으로 끝난다. 단 <code>fcnt != 1</code>일 때만 — 즉 <b>마지막 unfixer는
+반드시 느린 경로로 내려가</b> zone 갱신·대기자 기상 같은 fix-count-zero 작업을 수행한다.</td>
+<td><span class="ref">page_buffer.c:7751–7774, :7759</span></td></tr>
+<tr><td>P3</td><td><b>zone 1 unfix는 아무 것도 하지 않는다</b></td>
+<td>가장 뜨거운 zone에 있는 페이지를 unfix할 때 LRU 리스트 조작이 없다. 재정렬이 필요 없는 위치이기 때문.
+zone 2는 "충분히 오래되었을 때만" 승격, zone 3은 항상 승격.</td>
+<td><span class="ref">page_buffer.c:6707–6792</span></td></tr>
+<tr><td>P4</td><td><b>대기자가 있으면 unfix는 LRU 작업을 전부 건너뛴다</b></td>
+<td>페이지를 빨리 넘겨주기 위한 의도적 단축. 부작용으로 unfix 카운트 샤드조차 증가하지 않아
+쿼터 휴리스틱이 경합 상황에서 과소 계수한다 — 이는 <b>재현해야 할 동작</b>이다.</td>
+<td><span class="ref">page_buffer.c:6674–6680</span></td></tr>
+<tr><td>P5</td><td><b>해시 버킷 첫 탐색은 뮤텍스 없이</b></td>
+<td>버킷 체인을 락 없이 걸어보고, 후보를 찾으면 BCB 뮤텍스를 trylock한 뒤 <b>VPID를 재검증</b>한다.
+바뀌었으면 재시작. 실패 시에만 버킷 뮤텍스를 잡는 2단계 경로로 내려간다.</td>
+<td><span class="ref">page_buffer.c:7555–7599, :7584–7590</span></td></tr>
+<tr><td>P6</td><td><b>스레드별 카운터 샤딩과 캐시라인 정렬</b></td>
+<td>fix/unfix 요청 수와 <code>SHOW PAGE BUFFER STATUS</code> 카운터는 스레드마다 별도 슬롯에 두고
+원자 연산조차 쓰지 않는다. 홀더 앵커는 <code>static_assert</code>로 정확히 64바이트임을 강제해
+인접 스레드와의 false sharing을 차단한다.</td>
+<td><span class="ref">page_buffer.c:393–402, :485–490, :2250–2253</span></td></tr>
+<tr><td>P7</td><td><b><code>waiter_exists</code>는 단 1비트, 그리고 반드시 회수된다</b></td>
+<td>P1/P2의 게이트가 이 한 비트다. 대기자가 모두 사라졌는데 비트가 남으면 무잠금 경로가 영구히 닫힌다
+(CBRD-27084). 그래서 <b>세 곳</b>에서 "실제 reader/writer 대기자가 없으면 비트를 내린다"는 정합화가 수행된다.
+flush 대기자는 이 계산에서 제외된다.</td>
+<td><span class="ref">page_buffer.c:6269–6283, :7077–7080, :7531–7534, :10964–10984</span></td></tr>
+<tr><td>P8</td><td><b>latch 상태 전이는 CAS 루프, 뮤텍스 아래 필드 갱신이 아니다</b></td>
+<td><code>latch_mode</code>(16비트) + <code>waiter_exists</code>(16비트) + <code>fcnt</code>(32비트)를
+하나의 64비트 원자 워드에 담아 한 번의 compare-exchange로 전이시킨다. <code>PGBUF_LATCH_MODE</code>가
+<code>enum : uint16_t</code>로 선언된 것은 바로 이 패킹을 위해서다.</td>
+<td><span class="ref">page_buffer.c:499–508, :365, :1392–1494, page_buffer.h:190–197</span></td></tr>
+</table></div>
+
+<div class="box"><span class="label">요약 — 이 장이 확정한 것</span>
+<p>재작성물은 (G1–G5)를 제공하고, (L1–L5)의 메모리 배치를 지키고, 세 빌드 모드의 차이표를 재현하며,
+<code>THREAD_ENTRY</code>에 열거된 per-thread 상태를 확보하고, 어떤 순간에도 (I1–I10)을 위반하지 않으면서,
+(P1–P8)의 성능 특성을 갖춰야 한다. 2장부터는 이 요구들을 만족하는 <b>구체적 API 계약</b>으로 내려간다.</p>
+</div>
+
+<nav class="book">
+<a href="index.html">← 이전: 목차</a>
+<span class="chapter-title">1장 — 요구사항과 외부 관점</span>
+<a href="ch02-api-contracts.html">다음: 2장 Public API 계약 →</a>
+</nav>
+
+</main>
+</body>
+</html>

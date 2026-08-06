@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pgbuf 재구축 스펙 — 10장 구현 로드맵과 수용 검증</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+
+<nav class="book">
+<a href="ch09-external-contracts.html">← 이전: 9장 외부 모듈 계약</a>
+<span class="chapter-title">10장 — 구현 로드맵과 수용 검증</span>
+<a href="index.html">다음: 목차로 →</a>
+</nav>
+
+<h1>10장 — 구현 로드맵과 수용 검증</h1>
+
+<div class="box"><span class="label">이 장의 목표</span>
+1~9장이 "무엇을 만들어야 하는가"라면, 이 장은 <b>"어떤 순서로 만들고, 다 만들었는지 어떻게 아는가"</b>다.
+17,500줄짜리 모듈을 한 번에 켜서 디버깅하는 것은 불가능하므로,
+<b>각 단계마다 실제로 부팅되고 관측 가능한 시스템</b>이 되도록 M0~M7로 쪼갠다.
+각 단계는 "이전 단계의 임시 스텁을 무엇으로 두는가"까지 규정한다 —
+스텁 설계가 잘못되면 단계 자체가 검증 불가능해진다.
+</div>
+
+<div class="box warn"><span class="label">수용 기준의 성격</span>
+이 장의 수용 테스트는 <b>정확한 수치 일치가 아니라 관계식(패턴) 일치</b>로 판정한다.
+퀴즈 실측치는 CPU·디스크·타이밍·vacuum 진행도에 따라 흔들린다.
+"2차 스캔의 <code>ioreads</code>가 1차와 거의 같다"는 <b>재현되어야 하고</b>,
+"917과 914"라는 숫자는 <b>재현될 필요가 없다</b>. 각 퀴즈 행의 <b>판정 기준</b> 열이 그 경계다.
+</div>
+
+<h2>10.1 마일스톤 M0 ~ M7</h2>
+
+<div class="tablewrap"><table>
+<tr><th>단계</th><th>구현 범위</th><th>규정 장</th><th>완료 판정</th></tr>
+<tr><td><b>M0</b></td><td>자료구조 + <code>initialize</code>/<code>finalize</code> + 해시 + invalid list</td>
+<td>3장</td><td>서버 부팅·정상 종료(페이지 fix 0회)</td></tr>
+<tr><td><b>M1</b></td><td>단일 스레드 fix/unfix (hit·miss)</td><td>5장 일부</td>
+<td><b>SA 모드</b>로 <code>createdb</code> + <code>csql</code> 기본 질의</td></tr>
+<tr><td><b>M2</b></td><td>latch 프로토콜 + 대기/기상 + 무잠금 fast path</td><td>4·5장</td>
+<td>동시 read/write 워크로드 무손상, quiz 02</td></tr>
+<tr><td><b>M3</b></td><td>LRU zone + private/shared + quota</td><td>6장</td><td>quiz 05·06·07·08</td></tr>
+<tr><td><b>M4</b></td><td>victim 3단계 탐색 + direct victim + lfcq</td><td>7장</td><td>quiz 09</td></tr>
+<tr><td><b>M5</b></td><td>dirty/LSA + <code>flush_with_wal</code> + 데몬 4종</td><td>8장</td><td>quiz 03·04, WAL 순서 위반 0</td></tr>
+<tr><td><b>M6</b></td><td>checkpoint + <code>flush_all</code> 계열 + DWB 연동 + 복구</td><td>8·9장</td>
+<td>quiz 10·11, crash-restart 정합</td></tr>
+<tr><td><b>M7</b></td><td>perfmon / SHOW / 파라미터 + quirk 재현</td><td>9장</td>
+<td>statdump·SHOW diff = 0, quiz 12</td></tr>
+</table></div>
+
+<h3>M0 — 자료구조와 생명주기</h3>
+
+<div class="tablewrap"><table>
+<tr><td style="width:7em"><b>구현 범위</b></td><td>3장 전부: <code>pgbuf_Pool</code> 전 멤버, <code>PGBUF_BCB</code>
+(flags/latch 워드 비트 배치 포함), 프레임 배열, 해시 테이블(<b>고정 1 Mi 버킷</b>), buffer lock 테이블,
+invalid list, 홀더 풀, 사이징 공식, <code>pgbuf_initialize</code>의 <b>초기화 순서</b>와
+<code>pgbuf_finalize</code>의 역순 해제.</td></tr>
+<tr><td><b>선행</b></td><td>없음. 이 단계는 외부 모듈 계약을 거의 쓰지 않는다
+(<code>thread_num_total_threads()</code>, 파라미터 읽기 정도).</td></tr>
+<tr><td><b>완료 판정</b></td><td>서버가 부팅해서 <code>pgbuf_initialize</code>를 통과하고
+<code>pgbuf_finalize</code>까지 도달한 뒤 정상 종료한다. 이 시점에는 어떤 페이지도 fix되지 않으므로
+부팅 후반(볼륨 마운트, 로그 읽기)에서 죽는 것이 정상이다 — <b>죽는 위치가 pgbuf 밖이면 M0 통과</b>다.</td></tr>
+<tr><td><b>스텁</b></td><td><code>pgbuf_fix</code>는 <code>assert(false)</code> + NULL 반환.
+victim/flush/perfmon 계열은 빈 함수. <b>단, 시그니처는 2장 계약대로 전부 존재해야</b> 링크가 된다 —
+M0의 실질 산출물의 절반은 "<code>page_buffer.h</code>가 내보내는 모든 심볼의 정의"다.</td></tr>
+<tr><td><b>함정</b></td><td>(1) 해시 테이블은 풀 크기와 <b>무관하게 고정 1 Mi 버킷 + 1 Mi 뮤텍스</b>다
+— 약 56 MiB가 항상 잡히고 종료 시 1 Mi번의 <code>pthread_mutex_destroy</code>가 돈다.
+"풀 크기에 비례"로 잘못 구현하면 소형 <code>data_buffer_size</code>에서 해시 충돌이 폭증해
+M3 이후의 성능 관측치가 전부 어긋난다.
+(2) <code>PGBUF_BCB</code>에 <code>std::atomic</code>이 들어 있으므로 초기화는 <code>memset</code>이 아니라
+<code>placement_new</code>다.
+(3) <code>num_buffers</code>의 하한은 <code>PGBUF_MINIMUM_BUFFERS = MAX_NTRANS × 10</code>이다.</td></tr>
+</table></div>
+
+<h3>M1 — 단일 스레드 fix/unfix</h3>
+
+<div class="tablewrap"><table>
+<tr><td style="width:7em"><b>구현 범위</b></td><td>5장의 hit 경로와 miss 경로:
+해시 조회 → 히트면 fix count 증가, 미스면 프레임 확보 → buffer lock → <code>fileio_read</code> →
+해시 삽입 → unlock. <code>pgbuf_unfix</code>의 fix count 감소.
+fetch 모드 4종(<code>OLD_PAGE*</code> / <code>NEW_PAGE</code>)의 분기.
+<b>latch는 아직 없다</b> — 단일 스레드이므로 모든 요청을 즉시 승인한다.</td></tr>
+<tr><td><b>선행</b></td><td>M0. 외부 계약: <code>fileio_read</code>, TDE 복호화(9.4),
+<code>dwb_read_page</code>(9.2.4)를 이 단계에서 이미 붙인다 — 나중에 끼워 넣으면 miss 경로를 다시 쓰게 된다.</td></tr>
+<tr><td><b>완료 판정</b></td><td><b>SA 모드</b>(<code>cubrid createdb</code>, <code>csql --SA-mode</code>)로
+DB 생성과 기본 DDL/DML/SELECT가 통과한다. SA 모드는 스레드가 하나이고
+<b>private LRU가 강제로 0개</b>이므로 <span class="ref">page_buffer.c:13918</span>,
+M3 이전 단계를 검증하기에 딱 맞는 환경이다.</td></tr>
+<tr><td><b>스텁</b></td><td><b>victim = invalid list만</b>. 즉 "빈 BCB가 없으면 실패"로 두고,
+<code>data_buffer_size</code>를 워크로드보다 크게 잡아 회피한다. 이 스텁이 성립하는 이유는
+M1의 목표가 <b>"쫓아내지 않아도 되는 소형 워크로드에서 fix/unfix가 정확한가"</b>이기 때문이다.
+LRU 리스트 삽입은 no-op으로 두고, unfix 시 BCB를 VOID zone에 그냥 남긴다.
+flush는 <code>pgbuf_flush_all*</code>만 얕게 구현(전수 스캔 + 동기 쓰기)해 종료 시 데이터가 남게 한다.</td></tr>
+<tr><td><b>함정</b></td><td>(1) <b>buffer lock을 M1부터 넣어야 한다</b>. 단일 스레드에서는 무의미해 보이지만,
+"같은 VPID를 두 스레드가 동시에 miss"라는 상황의 자료구조(팻말과 대기 큐)를 나중에 끼워 넣으면
+miss 경로 전체가 재작성된다.
+(2) <code>NEW_PAGE</code>는 디스크를 읽지 않는다 — 그리고 <b>hit로 집계된다</b>(D6d, §10.6).
+(3) 임시 볼륨 페이지는 읽은 뒤 LSA가 temp sentinel이 아니면 다시 찍고 dirty로 표시한다.</td></tr>
+</table></div>
+
+<h3>M2 — latch·대기·무잠금 fast path</h3>
+
+<div class="tablewrap"><table>
+<tr><td style="width:7em"><b>구현 범위</b></td><td>4장 전부와 5장의 latch 부분:
+64-bit atomic latch 워드, 승인 규칙 표, 대기 큐(<code>next_wait_thrd</code>),
+<code>pgbuf_block_bcb</code> / <code>pgbuf_timed_sleep</code> / <code>pgbuf_wakeup_reader_writer</code>,
+타임아웃(<code>page_latch_timeout_in_msecs</code>, 기본 300초), read→write promote,
+그리고 <b>무잠금 read fast path</b>.</td></tr>
+<tr><td><b>선행</b></td><td>M1. 외부 계약 9.6.3(suspend/resume 프로토콜)이 여기서 처음 필요해진다.</td></tr>
+<tr><td><b>완료 판정</b></td><td>다중 세션 read/write 혼합 워크로드에서 페이지 내용 손상 0,
+데드락/영구 대기 0. <b>quiz 02</b>: 수백 회 fetch 후 <code>Num_data_page_fixed</code> 게이지가 0~2로 돌아온다.</td></tr>
+<tr><td><b>스텁</b></td><td>M1의 스텁 유지(victim = invalid list). LRU는 여전히 no-op.
+즉 이 단계의 워크로드도 풀보다 작아야 한다.</td></tr>
+<tr><td><b>함정</b></td><td>(1) <b>무잠금 fast path의 안전 논증</b>(4장)을 구현이 실제로 만족하는지 확인할 것 —
+"BCB를 읽고 → VPID 확인 → CAS로 fcnt 증가 → VPID 재확인"의 재확인 단계를 빼면 ABA로 엉뚱한 페이지를 준다.
+(2) 대기자가 있는 BCB를 기상시킬 때 <code>waiter_exists</code> 비트를 정리하지 않으면
+<b><code>CREATE INDEX</code> 라이브락</b>이 재현된다 — 원본이 주석으로 이 버그를 기록해 두었다
+<span class="ref">page_buffer.c:10944-10953</span>.
+(3) 기상 후 <code>resume_status</code> 검사(계약 N9-11)를 빼면 인터럽트를 성공으로 오해한다.</td></tr>
+</table></div>
+
+<h3>M3 — LRU zone·private/shared·quota</h3>
+
+<div class="tablewrap"><table>
+<tr><td style="width:7em"><b>구현 범위</b></td><td>6장 전부: zone 1/2/3 경계 계산과 전이,
+삽입 3종(top/middle/bottom), 제거, <code>tick</code> 회계, private/shared 배정,
+<code>pgbuf_adjust_quotas</code>, private→shared 이사, AOUT 구조(비활성 상태로).</td></tr>
+<tr><td><b>선행</b></td><td>M2. 외부 계약 9.6.1(세션이 private 인덱스를 소유)이 필수 —
+이게 없으면 quiz 05/08의 격리가 재현되지 않는다.</td></tr>
+<tr><td><b>완료 판정</b></td><td>quiz 05·06·07·08의 <b>패턴</b>이 재현된다(§10.3).
+특히 quiz 08("이웃 세션의 대량 스캔 후에도 내 재스캔 miss 0")은 private 리스트와 quota가
+동시에 맞아야만 나오는 결과라 단일 지표로 강력하다.</td></tr>
+<tr><td><b>스텁</b></td><td>victim은 여전히 단순화 가능하다: <b>"자기 private list의 bottom부터
+non-dirty를 선형 탐색"</b>만 있으면 quiz 05·06·08이 전부 돈다.
+lock-free 큐, direct victim, 3단계 탐색은 M4로 미룬다.
+flush는 M1 수준(<code>flush_all</code>) 유지 — dirty가 쌓이면 그냥 실패시키고 워크로드를 read 위주로 짠다.</td></tr>
+<tr><td><b>함정</b></td><td>(1) <b>private list의 zone 비율은 파라미터와 무관하게 5%/5%/90% 고정</b>이다
+<span class="ref">page_buffer.c:14390-14391</span>. <code>lru_hot_ratio</code>/<code>lru_buffer_ratio</code>는
+<b>shared list에만</b> 적용된다. 이걸 private에도 적용하면 quiz 05의 "자기가 자기를 쫓아냄"이 훨씬 늦게 일어난다.
+(2) <b>zone 1 unfix는 아무 조작도 하지 않는다</b> — hit 등록만 하고 끝난다. "LRU니까 top으로"를 넣으면
+quiz 06의 <code>keep ≫ to_top</code>이 무너진다.
+(3) AOUT은 <b>구현하되 <code>max_count == 0</code>으로 전부 꺼진 채</b>여야 한다(D7).
+그 결과 모든 새 페이지가 private TOP으로 들어가고 middle 삽입 코드는 도달 불가가 된다 —
+이것이 <b>정상</b>이다.</td></tr>
+</table></div>
+
+<h3>M4 — victim과 direct victim</h3>
+
+<div class="tablewrap"><table>
+<tr><td style="width:7em"><b>구현 범위</b></td><td>7장 전부: <code>pgbuf_get_victim</code>의 3단계 탐색
+(자기 private → 남의 private → shared), <code>restrict_other</code> 규칙,
+리스트 스캔(<code>MAX_DEPTH = 1000</code>), lock-free 순환 큐 3종,
+direct victim 배급/소비/무효화, 대기 큐 2종(high/low)과 기아 방지(매 4번째는 low 우선, low 포화 시 승격).</td></tr>
+<tr><td><b>선행</b></td><td>M3. 외부 계약 9.5(vacuum은 high priority)를 여기서 붙인다.</td></tr>
+<tr><td><b>완료 판정</b></td><td><b>quiz 09</b>: 모든 후보가 dirty인 압박 상황에서도
+시스템이 <code>ER_PB_ALL_BUFFERS_DIRTY</code> 없이 진행한다.
+<code>Num_victim_assign_direct_flush &gt; 0</code>으로 "flush → 직접 배급" 경로가 실제로 탄 것을 확인한다.</td></tr>
+<tr><td><b>스텁</b></td><td>여기서 순서가 뒤집힌다: <b>direct victim은 flush 데몬(M5)이 있어야 완결</b>된다.
+M4 단계에서는 <b>배급자(donor)를 unfix 경로와 clean 후보 발견 경로로만</b> 두고,
+"모든 후보가 dirty"인 워크로드는 M5까지 미룬다.
+즉 M4의 판정은 "3단계 탐색과 큐가 정확한가"까지이고, quiz 09의 완전 재현은 M5 이후다.</td></tr>
+<tr><td><b>함정</b></td><td>(1) <code>big_private_lrus_with_victims</code> 큐는 <b>생산자가 없다</b>(D4).
+소비 후 되넣는 <code>produce</code> 하나뿐이라 이 큐는 영원히 비어 있고,
+over-quota 스레드의 2단계 탐색은 항상 NULL을 받아 shared로 직행한다. <b>충실 재현 대상</b> —
+"버그 같으니 채워 넣자"고 하면 victim 분포가 달라져 quiz 05/08의 수치가 바뀐다.
+(2) <code>pgbuf_direct_victims_maintenance</code>의 두 루프는 <b>진입 즉시 종료</b>한다(D3).
+<code>index = prv_index</code>로 초기화한 뒤 <code>index != prv_index</code>를 조건으로 걸었기 때문이다.
+<code>pgbuf-maintain</code> 데몬이 하는 두 일 중 하나가 통째로 no-op이라는 뜻이다.
+(3) victim 후보 정의는 <b>zone3 ∧ non-dirty</b>다. <code>SHOW</code>의 동명 컬럼은 정반대(D6c).</td></tr>
+</table></div>
+
+<h3>M5 — dirty·WAL·flush 데몬</h3>
+
+<div class="tablewrap"><table>
+<tr><td style="width:7em"><b>구현 범위</b></td><td>8장의 flush 부분:
+<code>pgbuf_set_dirty</code>/<code>pgbuf_set_lsa</code>와 <code>oldest_unflush_lsa</code> 회계,
+<code>pgbuf_bcb_flush_with_wal</code>(단일 쓰기 관문),
+<code>pgbuf_bcb_safe_flush_internal</code>의 즉시/지연 판정과 <code>ASYNC_FLUSH_REQ</code>,
+<code>pgbuf_flush_victim_candidates</code>, 데몬 4종, 토큰 버킷 연동, 이웃 flush.</td></tr>
+<tr><td><b>선행</b></td><td>M4. 외부 계약 9.1(WAL), 9.3(write mode), 9.6.4(데몬 인프라)가 전부 필요하다.</td></tr>
+<tr><td><b>완료 판정</b></td><td>quiz 03·04 재현. 그리고 <b>WAL 순서 위반 0</b>:
+디버그 빌드에서 "쓰기 직전 <code>logpb_need_wal(page_lsa)</code>가 참인데 쓴다"를 assert로 잡고
+장시간 워크로드를 돌린다(§10.2 R6).</td></tr>
+<tr><td><b>스텁</b></td><td>DWB는 아직 붙이지 않아도 된다 — <code>double_write_buffer_size=0</code>으로 꺼 두면
+flush 경로가 <code>fileio_write(FILEIO_WRITE_DEFAULT_WRITE)</code> 한 갈래로 단순해진다.
+checkpoint는 <code>pgbuf_flush_all</code>로 대체해 두고 M6에서 교체한다.</td></tr>
+<tr><td><b>함정</b></td><td>(1) flush는 <b>BCB의 프레임이 아니라 스택 사본</b>에서 나간다.
+사본을 뜬 뒤 BCB mutex를 놓고 쓰기 때문에, 쓰는 도중 재수정이 가능하고 그것이 의도다
+(<code>mark_is_flushing</code>이 <code>DIRTY</code>를 미리 끄는 이유).
+(2) <b><code>WRITE</code> latch를 쥔 채로도 flush가 허용</b>된다 — 단 그 latch 홀더가 자신일 때만.
+(3) flush 데몬의 "히트율 낮음" 술어는 <b>99.9% 미만</b>이면 참이다
+(<code>PGBUF_DESIRED_HIT_VS_MISS_RATE = 1000</code>). 현실적인 미스율에서는 항상 참이라
+<code>page_flush_interval_in_msecs=0</code>이어도 데몬이 계속 돈다.
+(4) 매 victim flush 패스마다 <b><code>ER_NOTIFICATION_SEVERITY</code> 레코드 2개</b>가
+서버 에러 로그에 찍힌다 — 파라미터와 무관하게. 로그 diff 시 이걸 노이즈로 오해하지 말 것.</td></tr>
+</table></div>
+
+<h3>M6 — checkpoint와 DWB 연동</h3>
+
+<div class="tablewrap"><table>
+<tr><td style="width:7em"><b>구현 범위</b></td><td>8장의 checkpoint 부분과 9.2:
+<code>pgbuf_flush_checkpoint</code>(BCB 테이블 전수 스캔 → 수집 → (volid,pageid) 정렬 → 배치 flush),
+<code>PGBUF_SEQ_FLUSHER</code>와 rate control(burst 16장, 최대 1.5초 양보),
+<code>smallest_lsa</code> 산출, <code>flush_all</code> 3변종, DWB 2단계 프로토콜,
+<code>pgbuf_invalidate_all</code>(DWB 복구가 부른다).</td></tr>
+<tr><td><b>선행</b></td><td>M5. 계약 N9-3(checkpoint 출력·fsync 소유권), N9-4~N9-7(DWB).</td></tr>
+<tr><td><b>완료 판정</b></td><td>quiz 10·11 재현.
+그리고 <b>crash-restart 정합</b>: 워크로드 중 <code>SIGKILL</code> → 재기동 →
+DWB 복구 경로가 돌고(에러 로그 확인) 데이터 검증 쿼리가 통과한다(§10.4).</td></tr>
+<tr><td><b>스텁</b></td><td>없음 — 이 단계는 앞 단계 스텁을 <b>제거하는</b> 단계다.
+M1의 얕은 <code>flush_all</code>을 정식 구현으로, M5의 <code>flush_all</code> 대체 checkpoint를
+정식 seq flusher로 교체한다.</td></tr>
+<tr><td><b>함정</b></td><td>(1) <b>checkpoint는 <code>Num_data_page_flushed</code>를 올리지 않는다</b>(D6b).
+그 카운터는 victim flusher 전용이다.
+(2) <b>checkpoint의 <code>Num_log_wals</code>는 정확히 +1</b>이다 — 시작할 때 한 번만
+<code>logpb_flush_log_for_wal(flush_upto_lsa)</code>를 부르기 때문. 페이지마다 부르면 +수백이 된다.
+(3) checkpoint는 <b>이미 clean한 페이지도 일부러 다시 쓴다</b>(순차 구간을 끊지 않으려고).
+"clean이면 건너뛰기"로 최적화하면 <code>iowrites</code>가 줄어 diff가 깨진다.
+(4) checkpoint와 victim flusher는 <b>서로 양보</b>한다: checkpoint는 victim flush 중 최대 1.5초 대기,
+victim flusher는 checkpoint 중 10× 부스트를 끈다.
+(5) DWB on이면 <code>iowrites</code>가 <b>페이지당 2</b>다(D6a) — 구현이 아니라 DWB 쪽 집계다.</td></tr>
+</table></div>
+
+<h3>M7 — 관측 가능성과 quirk</h3>
+
+<div class="tablewrap"><table>
+<tr><td style="width:7em"><b>구현 범위</b></td><td>9.7~9.10 전부:
+모든 <code>PSTAT_*</code> 증가 지점, activation flag 게이트 위치, per-thread 통계 샤드,
+<code>pgbuf_peek_stats</code>, <code>SHOW PAGE BUFFER STATUS</code>의 두 스캔,
+파라미터 30여 개 반영, 그리고 <b>§10.6의 quirk 전부</b>.</td></tr>
+<tr><td><b>선행</b></td><td>M6.</td></tr>
+<tr><td><b>완료 판정</b></td><td>동일 워크로드에서 <b>원본 빌드와 재작성 빌드의 statdump 델타 및
+SHOW 출력이 일치</b>한다(§10.4의 허용 오차 내). quiz 12의 트레이서를 재이식해
+이벤트 시퀀스가 같은 모양으로 나온다.</td></tr>
+<tr><td><b>스텁</b></td><td>없음.</td></tr>
+<tr><td><b>함정</b></td><td>카운터를 "고치고 싶은" 충동이 최대가 되는 단계다.
+D6의 네 건은 전부 <b>충실 재현</b>이 기본값이다 — 자세한 근거는 §10.5.</td></tr>
+</table></div>
+
+<h2>10.2 런타임 불변식 체크 목록</h2>
+
+<p>디버그 빌드에서 <code>assert</code>로 심어야 할 위치다. 앞 8개는 1장의 최상위 불변식
+I1~I10을 실행 가능한 술어로 옮긴 것이고, 뒤쪽은 장별 추가분이다.
+<kbd class="should">SHOULD</kbd> 모두 <code>#if !defined(NDEBUG)</code> 아래 둘 것 —
+릴리스 빌드에서 전수 스캔형 검사를 돌리면 성능 특성이 달라진다.</p>
+
+<div class="tablewrap"><table>
+<tr><th>#</th><th>불변식</th><th>심는 곳</th><th>검사 형태</th></tr>
+<tr><td>R1</td><td><b>I1</b> fix된 페이지는 victim이 될 수 없다</td>
+<td>victim 선정 직후, direct victim 배급 직전</td>
+<td><code>assert (get_fcnt (bcb-&gt;atomic_latch) == 0)</code></td></tr>
+<tr><td>R2</td><td><b>I2</b> dirty 페이지는 victim이 될 수 없다</td><td>동일</td>
+<td><code>assert (!(bcb-&gt;flags &amp; PGBUF_BCB_DIRTY_FLAG))</code>.
+더 강하게는 <code>INVALID_VICTIM_CANDIDATE_MASK</code> 전체가 0</td></tr>
+<tr><td>R3</td><td><b>I3</b> flush 전에 WAL이 만족된다</td><td><code>fileio_write</code>/<code>dwb_add_page</code> 직전</td>
+<td><code>assert (!logpb_need_wal (&amp;lsa))</code> — <b>가장 값진 assert</b>.
+DWB도 같은 검사를 자기 쪽에서 한다 <span class="ref">dwb:2257-2264</span></td></tr>
+<tr><td>R4</td><td><b>I4</b> BCB↔프레임 1:1</td><td><code>CAST_PGPTR_TO_BFPTR</code> 매크로 내부</td>
+<td><code>assert (bufptr == bufptr-&gt;iopage_buffer-&gt;bcb)</code> — 원본에 이미 있다</td></tr>
+<tr><td>R5</td><td><b>I5</b> 해시 체인에 있을 때만 조회 가능</td><td>해시 삽입/삭제 함수</td>
+<td>삽입 시 버킷 뮤텍스 보유 assert, 삭제 후 재조회가 NULL임을 확인</td></tr>
+<tr><td>R6</td><td><b>I6</b> VOID zone BCB는 어떤 리스트에도 없다</td>
+<td><code>pgbuf_remove_from_lru_list</code> 종료 시, LRU 삽입 진입 시</td>
+<td>zone 필드와 <code>prev/next</code> 포인터의 일관성</td></tr>
+<tr><td>R7</td><td><b>I7</b> <code>oldest_unflush_lsa</code> 비 NULL ⇒ dirty</td>
+<td><code>set_lsa</code>/<code>set_dirty</code>/flush 성공·실패 경로 전부</td>
+<td><code>assert (LSA_ISNULL (&amp;bcb-&gt;oldest_unflush_lsa) || is_dirty (bcb))</code>.
+<b>D1이 정확히 이 불변식을 깬다</b></td></tr>
+<tr><td>R8</td><td><b>I8</b> <code>fcnt</code> = 홀더 <code>fix_count</code> 합</td>
+<td>unfix 종료 시(디버그 전용 순회)</td><td>스레드 홀더 리스트를 순회해 합산 비교</td></tr>
+<tr><td>R9</td><td><b>I9</b> 홀더는 항상 재-fix 성공</td><td>latch 승인 실패 경로</td>
+<td>거절 직전에 "이 스레드가 이미 홀더인가"를 확인하고 홀더면 <code>assert(false)</code></td></tr>
+<tr><td>R10</td><td><b>I10</b> <code>FLUSHING_TO_DISK</code>는 victim 불가</td><td>R1/R2와 같은 지점</td>
+<td>마스크 검사에 포함</td></tr>
+<tr><td colspan="4" style="background:var(--th-bg)"><b>장별 추가</b></td></tr>
+<tr><td>R11</td><td>zone 카운터 합 = 리스트 길이</td><td>zone 경계 재조정 직후</td>
+<td><code>count_lru1 + count_lru2 + count_lru3 == count</code> (6장)</td></tr>
+<tr><td>R12</td><td>private 리스트 인덱스 범위</td><td>private 리스트 접근 전부</td>
+<td><code>num_LRU_list ≤ idx &lt; PGBUF_TOTAL_LRU_COUNT</code> (6장)</td></tr>
+<tr><td>R13</td><td>BCB mutex 보유 요구</td><td>flush·zone 변경·플래그 변경 진입부</td>
+<td><code>PGBUF_BCB_CHECK_OWN (bufptr)</code> — 원본이 쓰는 패턴</td></tr>
+<tr><td>R14</td><td>flush 진입 latch 모드 제한</td><td><code>pgbuf_bcb_flush_with_wal</code> 진입</td>
+<td><code>NO_LATCH</code>/<code>READ</code>/<code>WRITE</code>만 허용하고,
+<code>WRITE</code>면 홀더 리스트를 걸어 <b>자신이 홀더임을 확인</b> (8장)</td></tr>
+<tr><td>R15</td><td>victim 후보 카운터 정합</td><td><code>lru_add/remove_victim_candidate</code></td>
+<td><code>count_vict_cand</code>가 음수가 되지 않음 (7장)</td></tr>
+<tr><td>R16</td><td>direct victim 슬롯 단일 소유</td><td>배급 직전</td>
+<td>대기자의 <code>resume_status == THREAD_ALLOC_BCB_SUSPENDED</code> 확인 후 배급 (계약 N9-11)</td></tr>
+<tr><td>R17</td><td>checkpoint redo LSA 단조성</td><td><code>pgbuf_flush_checkpoint</code> 반환 직전</td>
+<td>산출한 <code>smallest_lsa</code>가 입력 <code>prev_chkpt_redo_lsa</code>보다 <b>앞서지 않음</b> (계약 N9-3)</td></tr>
+<tr><td>R18</td><td>페이지 워터마크 일치</td><td>LSA 변경 함수 종료 시(디버그)</td>
+<td><code>assert (fileio_is_page_sane (iopage, IO_PAGESIZE))</code>.
+<b>단 일반 읽기 경로에는 넣지 말 것</b> (9.2.6)</td></tr>
+</table></div>
+
+<h2>10.3 수용 테스트로서의 quizzes</h2>
+
+<h3>10.3.1 실행 방법</h3>
+
+<pre><code># 최초 1회 — quizdb 생성 + 서버 기동
+#   data_buffer_size=16M (16K 페이지 × 1024장), extended_statistics_activation=1023
+cd quizzes &amp;&amp; ./setup.sh
+
+# 각 퀴즈
+cd quizzes/05-eviction-pressure &amp;&amp; ./run.sh</code></pre>
+
+<div class="box warn"><span class="label">하네스가 대신 해 주는 것 — 그리고 그것이 왜 필요한가</span>
+<code>quizzes/lib/common.sh</code>의 <code>quiz_observe</code>가
+<b>perfmon watcher 기동 → 전 스냅샷 → 워크로드 → 후 스냅샷 → 델타 출력</b>을 묶어 준다.
+watcher 없이 <code>statdump</code>를 두 번 찍으면 <b>누적 카운터가 움직이지 않는다</b>(9.7.1).
+같은 이유로, 자체 검증 스크립트를 새로 짤 때도 반드시 watcher를 먼저 켜야 한다.<br>
+<code>extended_statistics_activation=1023</code>이 없으면
+<code>Num_victim_*</code>, <code>Num_unfix_*</code>, <code>alloc_bcb*</code>가 전부 0이다 —
+기본값 15에는 <code>PB_VICTIMIZATION</code>이 빠져 있다.
+</div>
+
+<h3>10.3.2 12종 대응표</h3>
+
+<div class="tablewrap"><table>
+<tr><th>#</th><th>검증 대상 (장 / 마일스톤)</th><th>실측 관측치 (참고값)</th><th>판정 기준 — <b>관계식</b></th></tr>
+<tr><td><b>01</b><br>cold-vs-hot</td><td>5장 hit/miss / <b>M1</b></td>
+<td>cold 스캔 <code>ioreads +28</code> → hot 스캔 <code>0</code>; <code>fetches</code>는 두 번 모두 발생</td>
+<td>1차 <code>ioreads &gt; 0</code> ∧ 2차 <code>ioreads ≈ 0</code> ∧
+<b>두 스캔의 <code>fetches</code>가 서로 비슷</b>. 절대 수치 무관.<br>
+<span class="small">주의: 재시작 직후 vacuum이 방금 INSERT된 페이지를 미리 데워 cold가 0에 가까워질 수 있다 —
+run.sh가 15초 대기로 회피한다</span></td></tr>
+<tr><td><b>02</b><br>fix-lifecycle</td><td>5장 unfix / <b>M2</b></td>
+<td>약 550 fetch 후 <code>Num_data_page_fixed</code> 게이지 <code>1</code></td>
+<td>워크로드 종료 후 <code>fixed</code> 게이지 <b>≤ 2</b> ∧
+<code>lru1+lru2+lru3</code> 합이 읽은 페이지 수 규모. "fix ≠ 캐시 상주"</td></tr>
+<tr><td><b>03</b><br>dirty-lazy-write</td><td>8장 dirty / <b>M5</b></td>
+<td><code>dirties</code> 대폭 증가, <code>iowrites 0</code>.
+2,000행 UPDATE에 <code>set_dirty</code> 호출 ~9,600회 vs 실제 dirty 페이지 ~50장</td>
+<td>COMMIT 직후 <code>Num_data_page_iowrites</code> 증가 <b>= 0</b>
+(백그라운드 flush가 끼면 소량 허용) ∧ <code>dirties ≫ dirty 게이지</code></td></tr>
+<tr><td><b>04</b><br>wal-before-data</td><td>9.1 WAL / <b>M5</b></td>
+<td>log 쪽 <code>+21</code>장, data <code>iowrites 0</code>.
+<code>Num_log_wals</code>는 <b>0일 수 있다</b></td>
+<td><code>Num_log_page_iowrites &gt; 0</code> ∧ <code>Num_data_page_iowrites = 0</code>.<br>
+<code>Num_log_wals</code>는 "페이지 flush가 로그 flush를 끌어낸 횟수"이므로
+데이터 flush가 없는 이 시나리오에서 0이어도 <b>정상</b></td></tr>
+<tr><td><b>05</b><br>eviction-pressure</td><td>6장 quota / <b>M3</b></td>
+<td>1차 <code>ioreads +917</code>, 2차 <code>+914</code>;
+<code>Num_victim_own_private_lru_success +914 / +911</code>;
+<code>private_quota 128</code>, <code>private_count 230</code></td>
+<td><b>테이블(&lt;풀) 전체를 두 번 스캔해도 2차 <code>ioreads</code> ≈ 1차</b> ∧
+victim의 압도적 다수가 <code>own_private</code> ∧
+<code>private_count &gt; private_quota</code>(quota는 soft target).
+숫자 917/914는 무관</td></tr>
+<tr><td><b>06</b><br>lru-zones</td><td>6장 boost / <b>M3</b></td>
+<td><code>Num_unfix_lru1_*_keep +2,853</code> vs <code>*_to_top +38</code></td>
+<td><b><code>keep ≫ to_top</code></b>(최소 한 자릿수 배). zone 1 unfix가 리스트를 건드리지 않는다는 증거.
+zone 3 unfix는 반대로 항상 <code>to_top</code></td></tr>
+<tr><td><b>07</b><br>aout-ghost-list</td><td>6장 AOUT / <b>M3</b></td>
+<td>conf <code>data_aout_ratio=1.0</code> vs <code>paramdump 0.000000</code>;
+<code>aout_found</code> 증가 없음, 전량 <code>not_found</code></td>
+<td><b><code>Num_unfix_void_aout_found = 0</code></b>(절대) ∧
+<code>aout_not_found</code>가 신규 페이지 진입 수와 같은 규모 ∧
+paramdump 유효값이 <code>0.000000</code></td></tr>
+<tr><td><b>08</b><br>private-vs-shared</td><td>6장 격리 / <b>M3</b></td>
+<td>이웃 세션 스캔 <code>+2,081 ioreads</code> 후에도 3단계(내 재스캔) <code>ioreads 0</code></td>
+<td><b>3단계 <code>ioreads</code> ≈ 0</b> — 이웃의 대량 스캔이 내 hot 페이지를 쫓아내지 못한다.
+풀(1024) &lt; 이웃 스캔량이어야 유의미</td></tr>
+<tr><td><b>09</b><br>victim-under-pressure</td><td>7장 direct victim / <b>M4·M5</b></td>
+<td><code>+281,700 dirties</code> 압박 중 <code>Num_victim_assign_direct_flush &gt; 0</code>,
+<code>Num_log_wals &gt; 0</code>, UPDATE 후에도 dirty 게이지 높음</td>
+<td><b><code>ER_PB_ALL_BUFFERS_DIRTY</code> 미발생</b> ∧
+<code>assign_direct_flush &gt; 0</code> ∧ <code>Num_log_wals &gt; 0</code>.
+진행이 멈추지 않는 것이 본질</td></tr>
+<tr><td><b>10</b><br>checkpoint</td><td>8장 checkpoint / <b>M6</b></td>
+<td>dirty 게이지 <code>13→1</code>(다른 실행에서 <code>14→2</code>),
+<code>iowrites +206</code>, <code>iosynches +12</code>,
+<code>start/end_checkpoints +1</code>, <b><code>Num_log_wals +1</code></b>,
+<code>Num_data_page_flushed +0</code></td>
+<td><b><code>Num_log_wals</code>가 정확히 +1</b>(페이지 수와 무관) ∧
+dirty 게이지가 크게 감소 ∧ <b><code>Num_data_page_flushed</code> 증가 = 0</b> ∧
+DWB on이면 <code>iowrites ≈ 2 × flush된 페이지 수</code></td></tr>
+<tr><td><b>11</b><br>double-write-buffer</td><td>9.2 DWB / <b>M6</b></td>
+<td>DWB on: <code>DWB_flush_block +3</code>, <code>iowrites +223</code>, <code>iosynches +12</code><br>
+DWB off: <code>flush_block</code> 없음, <code>iowrites +14</code>, <code>iosynches +7</code></td>
+<td><b>on의 <code>iowrites</code> ≈ off의 2배</b> ∧ on에서만 <code>DWB_flush_block &gt; 0</code> ∧
+on의 <code>iosynches</code> &gt; off. 223/14라는 절대값은 워크로드 의존</td></tr>
+<tr><td><b>12</b><br>trace-a-page-journey<br><span class="small">[instrumented]</span></td>
+<td>전 장 / <b>M7</b></td>
+<td>이벤트 시퀀스:<br>
+<code>READ_FROM_DISK → ENTER_LRU(private-top) → FALL_TO_ZONE3 →
+(FIX_HIT → BOOST_TO_TOP)* → EVICTED → READ_FROM_DISK → ENTER_LRU →
+(FIX_HIT×2 + SET_DIRTY×3)×100 → FLUSHED_TO_DISK</code></td>
+<td>(1) 두 번째 <code>READ_FROM_DISK</code> 앞에 반드시 <code>EVICTED</code>가 있다.<br>
+(2) 첫 <code>EVICTED</code> 앞에 <code>FLUSHED_TO_DISK</code>가 <b>없다</b>(clean eviction은 공짜).<br>
+(3) <code>ENTER_LRU</code>의 detail이 <b>항상 <code>private-top</code></b>(AOUT 비활성).<br>
+(4) 축출을 보려면 압박을 <b>같은 세션</b>에서 걸어야 한다(quiz 08의 격리)</td></tr>
+</table></div>
+
+<div class="box"><span class="label">트레이서 훅 위치 (M7에서 재이식)</span>
+<div class="tablewrap"><table>
+<tr><th>이벤트</th><th>함수</th></tr>
+<tr><td><code>READ_FROM_DISK</code></td><td><code>pgbuf_claim_bcb_for_fix</code> — ioread 직전</td></tr>
+<tr><td><code>ENTER_LRU</code></td><td><code>pgbuf_unlatch_void_zone_bcb</code> — 4갈래 결정 지점</td></tr>
+<tr><td><code>FIX_HIT</code></td><td><code>pgbuf_fix</code> — lockfree fast path와 hash hit <b>두 곳</b></td></tr>
+<tr><td><code>FALL_TO_ZONE3</code></td><td><code>pgbuf_lru_fall_bcb_to_zone_3</code></td></tr>
+<tr><td><code>BOOST_TO_TOP</code></td><td><code>pgbuf_lru_boost_bcb</code></td></tr>
+<tr><td><code>EVICTED</code></td><td><code>pgbuf_add_vpid_to_aout_list</code> — <b>모든 축출 경로가 여기를 지난다</b></td></tr>
+<tr><td><code>SET_DIRTY</code></td><td><code>pgbuf_bcb_set_dirty</code></td></tr>
+<tr><td><code>FLUSHED_TO_DISK</code></td><td><code>pgbuf_bcb_flush_with_wal</code> — 쓰기 성공 지점</td></tr>
+</table></div>
+훅 위치가 같다는 것은 <b>구조가 같다</b>는 강한 증거다. 특히 <code>EVICTED</code>를 한 함수에서
+관측할 수 있다는 성질(모든 축출이 AOUT 등록 함수를 지난다)은 재작성에서 쉽게 깨진다 —
+AOUT이 꺼져 있다고 그 호출을 생략하면 트레이서를 이식할 곳이 사라진다.
+</div>
+
+<h2>10.4 drop-in 등가성 체크</h2>
+
+<p>원본 <code>page_buffer.c</code>를 재작성본으로 바꿔 넣었을 때, <b>외부에서 구별할 수 없는가</b>를 본다.
+같은 하드웨어·같은 DB·같은 워크로드로 두 빌드를 각각 돌려 아래 5종을 비교한다.</p>
+
+<h3>(1) statdump 카운터 diff</h3>
+
+<pre><code># 두 빌드에서 동일 워크로드 실행 후
+cubrid statdump quizdb &gt; before.txt   # watcher 켠 상태에서 전/후 델타를 뜰 것
+# ... 워크로드 ...
+cubrid statdump quizdb &gt; after.txt
+diff &lt;(delta before.txt after.txt) &lt;(delta before_ref.txt after_ref.txt)</code></pre>
+
+<div class="tablewrap"><table>
+<tr><th>카운터군</th><th>허용 오차</th><th>이유</th></tr>
+<tr><td><code>Num_data_page_fetches</code>, <code>Num_data_page_dirties</code></td><td><b>0 (완전 일치)</b></td>
+<td>워크로드가 결정적이면 fix/set_dirty 호출 횟수는 구현과 무관하다</td></tr>
+<tr><td><code>Num_data_page_ioreads</code></td><td>±수 %</td>
+<td>교체 정책이 같으면 거의 같지만 타이밍·vacuum 개입으로 흔들린다</td></tr>
+<tr><td><code>Num_data_page_iowrites</code>, <code>Num_file_iosynches</code></td><td>±10~20%</td>
+<td>flush 시점은 데몬 타이밍에 좌우된다. <b>비율</b>(DWB on/off 2배 관계)이 유지되는지가 핵심</td></tr>
+<tr><td><code>Num_unfix_*</code> 전수</td><td><b>분포 형태 일치</b></td>
+<td>절대값이 아니라 "어느 분기가 지배적인가"가 같아야 한다.
+<code>lru1_keep</code>이 최대이고 <code>aout_found</code>가 0인 형태(§10.3 quiz 06·07)</td></tr>
+<tr><td><code>Num_victim_*</code></td><td>분포 형태 일치</td>
+<td><code>own_private_success</code> 우세, <code>Num_lfcq_big_private_lists</code>는 <b>항상 0</b>(D4)</td></tr>
+<tr><td><code>Num_log_wals</code></td><td>checkpoint 구간은 <b>정확히 +1</b></td>
+<td>구현 차이가 즉시 드러나는 지표</td></tr>
+<tr><td>게이지류(<code>lru1/2/3</code>, <code>private_quota</code>)</td><td>같은 자릿수</td>
+<td>스냅샷이라 순간값은 다르다. quota 산식이 같은지만 본다</td></tr>
+</table></div>
+
+<h3>(2) <code>SHOW PAGE BUFFER STATUS</code> diff</h3>
+
+<p>19개 컬럼을 같은 시점(예: 동일 워크로드 종료 직후 + 5초 안정화)에 떠서 비교한다.
+<kbd class="should">SHOULD</kbd> 특히 다음 세 컬럼을 확인:</p>
+
+<ul>
+<li><code>Victim_candidate_pages</code> — <b>zone3 ∧ dirty</b> 정의여야 한다.
+statdump의 <code>Num_data_page_victim_candidate</code>(zone3 ∧ non-dirty)와 <b>값이 다른 것이 정상</b>(D6c).
+두 값이 같아졌다면 정의를 "고쳐 버린" 것이다.</li>
+<li><code>Num_pages_written</code> — DWB on에서 <code>Num_data_page_iowrites</code>보다 <b>훨씬 작아야</b> 한다(D6a).</li>
+<li><code>Hit_rate</code> — insert-heavy 구간에서 statdump 기반 히트율
+(<code>1 − ioreads/fetches</code>)보다 <b>높게</b> 나와야 한다(D6d, NEW_PAGE 집계).</li>
+</ul>
+
+<h3>(3) 에러 로그 비교</h3>
+
+<div class="tablewrap"><table>
+<tr><th>로그</th><th>기대</th></tr>
+<tr><td><code>ER_LOG_FLUSH_VICTIM_STARTED</code> / <code>_FINISHED</code></td>
+<td><b>victim flush 패스마다 2개</b>가 <code>ER_NOTIFICATION_SEVERITY</code>로 찍힌다 —
+<code>log_pgbuf_victim_flush</code> 파라미터와 <b>무관</b>하게.
+두 빌드에서 <b>발생 빈도의 자릿수</b>가 같아야 한다</td></tr>
+<tr><td><code>ER_PB_ALL_BUFFERS_DIRTY</code></td><td>정상 서버 워크로드에서 <b>0회</b></td></tr>
+<tr><td><code>ER_LOG_CHECKPOINT_SKIP_INVALID_PAGE</code></td><td><b>0회</b> — 나오면 LSA 회계가 깨진 것</td></tr>
+<tr><td><code>er_log_debug</code> "flushing page %d|%d to disk without logging"</td>
+<td>드물게 나오는 것이 정상. 폭증하면 <code>oldest_unflush_lsa</code> 갱신이 빠진 것</td></tr>
+</table></div>
+
+<h3>(4) crash-restart 정합</h3>
+
+<pre><code>1. 대량 UPDATE 워크로드 실행 (dirty가 충분히 쌓이도록)
+2. checkpoint 직후가 아닌 임의 시점에 서버 프로세스 SIGKILL
+3. 재기동 — 부팅 로그에서 DWB 복구 경로가 돌았는지 확인
+4. 데이터 검증 쿼리(체크섬성 집계) 결과가 crash 이전 커밋 상태와 일치</code></pre>
+
+<div class="box norm"><span class="label">이 테스트가 실제로 무엇을 잡는가</span>
+DWB 복구 경로는 <b>pgbuf에 단 하나의 요구</b>를 한다: <code>pgbuf_invalidate_all (thread_p, NULL_VOLID)</code>
+(계약 N9-7). 이것이 빠지거나 dirty를 flush해 버리면, DWB가 디스크에 다시 쓴 <b>수리된 페이지</b>를
+버퍼에 남아 있던 <b>복구 이전 사본</b>이 덮어써서 손상이 되살아난다.
+crash-restart 없이는 이 결함을 절대 발견할 수 없다 — <kbd class="must">MUST</kbd> M6의 필수 관문.<br>
+<code>double_write_buffer_size=0</code>(DWB off)으로도 한 번 돌려 두 경로를 모두 확인할 것.
+</div>
+
+<h3>(5) 성능 스모크 — 무잠금 fast path 확인법</h3>
+
+<p>재작성에서 가장 조용히 사라지는 것이 <b>무잠금 read fast path</b>다.
+기능 테스트는 전부 통과하는데 처리량만 떨어진다. 카운터로 직접 확인한다:</p>
+
+<div class="tablewrap"><table>
+<tr><th>지표</th><th>확인법</th><th>기대</th></tr>
+<tr><td><code>Num_data_page_hash_anchor_waits</code></td>
+<td><code>extended_statistics_activation</code>에 <code>PB_HASH_ANCHOR(0x08)</code>를 켜고
+(기본값 15에 이미 포함) 읽기 전용 hot 워크로드를 다중 세션으로 돌린다</td>
+<td><b>fetch 수 대비 무시할 수준</b>. 이 값이 fetch에 비례해 늘면
+fast path가 없어 매 hit마다 해시 버킷 뮤텍스를 잡고 있다는 뜻</td></tr>
+<tr><td><code>Data_page_fix_lock_acquire_time_msec</code></td><td>같은 워크로드에서 비교</td>
+<td>원본과 같은 자릿수. 급증하면 락 경합</td></tr>
+<tr><td><code>perf record</code> / <code>perf top</code></td>
+<td>hot 워크로드 중 프로파일</td>
+<td><code>pthread_mutex_lock</code>이 상위에 없어야 한다.
+상위에 있으면 fast path 미구현 또는 조건이 너무 좁다</td></tr>
+<tr><td>세션 확장성</td><td>1 → 2 → 4 → 8 세션으로 hot read 처리량 측정</td>
+<td>원본과 같은 기울기. fast path가 없으면 4세션 이후 평평해진다</td></tr>
+</table></div>
+
+<h2>10.5 D1~D8 처리 방침</h2>
+
+<div class="tablewrap"><table>
+<tr><th>#</th><th>요약</th><th>심각도</th><th>권장</th><th>drop-in 검증에 미치는 영향</th></tr>
+<tr><td><b>D1</b></td><td><code>flush_with_wal</code> early return 2곳이
+<code>FLUSHING_TO_DISK</code> 누수 → BCB 영구 victim 불가 + flush 대기자 미기상</td>
+<td>Medium</td><td><b>수정</b></td>
+<td><b>없음.</b> 발생 조건이 "TDE 로드됨 + 암호화/DWB 슬롯 실패"로 희귀해서 정상 워크로드에서는
+경로 자체를 타지 않는다. 카운터·로그 diff 무영향. 불변식 R7이 잡는 결함이므로,
+충실 재현하면 assert가 자기 구현을 때린다 — 재현할 이유가 없다</td></tr>
+<tr><td><b>D2</b></td><td><code>direct_victims</code> memset의 잘못된 <code>sizeof</code>
+(<code>PGBUF_VICTIM_CANDIDATE_LIST</code> 16B로 <code>PGBUF_DIRECT_VICTIM</code> 24B를 지움)</td>
+<td>Low (latent)</td><td><b>수정</b></td>
+<td><b>없음.</b> 재작성 코드는 애초에 이 memset을 그대로 옮길 이유가 없다
+(<code>sizeof pgbuf_Pool.direct_victims</code> 또는 멤버별 초기화).
+동작이 관측 가능하게 바뀌지 않는다</td></tr>
+<tr><td><b>D3</b></td><td><code>pgbuf_direct_victims_maintenance</code>의 두 루프가
+<code>index != prv_index</code> 때문에 진입 즉시 종료 → 문서화된 backup plan이 무동작</td>
+<td>Medium</td><td><b>1차: 충실 재현</b> (별도 커밋으로 수정 검토)</td>
+<td><b>있음.</b> 루프를 살리면 <code>pgbuf-maintain</code> 데몬이 100ms마다 실제로 victim을 배급하게 되어
+<code>Num_victim_assign_direct_*</code> 분포와 대기 시간이 달라진다.
+quiz 09의 <code>assign_direct_flush</code> 비중이 눈에 띄게 감소한다.
+<b>먼저 재현해 등가성을 확보한 뒤</b> 별도로 고칠 것</td></tr>
+<tr><td><b>D4</b></td><td><code>big_private_lrus_with_victims</code> 큐에 생산자 없음 →
+over-quota 스레드의 2단계 탐색 무효</td><td>Low</td><td><b>충실 재현</b></td>
+<td><b>큼.</b> 큐를 채우면 victim 출처 분포가 바뀌어 quiz 05·08의 격리 특성이 달라진다.
+<code>Num_lfcq_big_private_lists</code>가 0이 아니게 되는 것만으로 statdump diff가 깨진다.
+큐와 카운터는 <b>존재하되 항상 비어 있는 상태</b>로 구현할 것</td></tr>
+<tr><td><b>D5</b></td><td><code>double_write_buffer_size=2M</code> 같은 크기 접미사를 거부하고
+<b>서버 부팅 실패</b></td><td>Low (usability)</td><td><b>범위 밖 — 그대로</b></td>
+<td><b>없음.</b> <code>system_parameter.c</code>는 재작성 대상이 아니다.
+재작성자는 "바이트 정수로 쓴다"만 알면 된다. 고치려면
+<code>PRM_SIZE_UNIT</code>과 <code>PRM_DIFFER_UNIT</code>을 <b>함께</b> 달고 변환 함수 쌍을 추가해야 한다
+(9.8 참조) — 별도 티켓</td></tr>
+<tr><td><b>D6</b></td><td>관측 카운터 의미 불일치 4건: (a) DWB 이중 집계 (b) flushed 편향
+(c) SHOW victim 정의 상충 (d) NEW_PAGE 히트 집계</td><td>Low (observability)</td>
+<td><b>전부 충실 재현</b></td>
+<td><b>결정적.</b> 네 건 모두 <b>관측값 그 자체</b>다. 하나라도 고치면 statdump/SHOW diff가 반드시 틀어지고,
+운영 중인 모니터링 대시보드의 기준선이 깨진다. (c)는 "이름이 같은데 정의가 정반대"라
+재작성자가 통일하고 싶어지는 대표적 함정 — §10.6 참조.
+개선하려면 <b>새 컬럼/새 카운터를 추가</b>하는 방향이어야지 기존 의미를 바꾸면 안 된다</td></tr>
+<tr><td><b>D7</b></td><td>"LRU + Aout of 2Q" 주석 vs AOUT 강제 비활성 —
+사용자 설정이 경고 없이 무시됨</td><td>Info (doc gap)</td><td><b>그대로 + 문서화</b></td>
+<td><b>없음</b>(pgbuf 쪽은). 강제 0은 <code>system_parameter.c</code>가 한다.
+pgbuf는 <code>max_count == 0</code>에서 전 기능이 꺼지도록만 구현하면 된다.
+개선안(설정 무시 시 경고 로그)은 근본 원인 CBRD-20741과 함께 다룰 일</td></tr>
+<tr><td><b>D8</b></td><td><code>pgbuf_peek_stats</code> 헤더 선언의 파라미터 이름 stale</td>
+<td>Cosmetic</td><td><b>수정</b></td>
+<td><b>없음.</b> 헤더 주석 수준. 재작성 시 정의와 같은 이름을 쓰면 자동 해결</td></tr>
+</table></div>
+
+<div class="box norm"><span class="label">기본 규칙 — 한 문장</span>
+<b>동작이 관측되지 않는 결함(D1, D2, D8)은 고치고, 관측되는 결함(D3, D4, D6)은 먼저 재현한다.</b>
+D5·D7은 pgbuf 밖이라 선택의 여지가 없다.<br>
+D3·D4·D6를 고치고 싶다면 <b>등가성 검증을 통과한 뒤 별도 커밋</b>으로 — 그래야
+"성능/동작 변화가 재작성 때문인가 결함 수정 때문인가"를 나눌 수 있다.
+</div>
+
+<h2>10.6 재작성자가 놓치기 쉬운 quirk 체크리스트</h2>
+
+<p>전부 <b>충실 재현 필수</b> 항목이다. 각 항목은 "직관적으로 고치고 싶어지지만 고치면 관측값이 바뀌는" 것들이다.
+구현 후 이 목록을 하나씩 짚어 볼 것.</p>
+
+<div class="tablewrap"><table>
+<tr><th>□</th><th>quirk</th><th>왜 틀리기 쉬운가</th><th>확인법</th></tr>
+<tr><td>1</td><td><b><code>NEW_PAGE</code> fix가 hit로 집계</b>된다
+<span class="ref">page_buffer.c:8574-8575</span></td>
+<td>디스크를 읽지 않았으니 hit가 맞아 보이지만, "캐시에 있어서 안 읽었다"와
+"애초에 존재하지 않아서 안 읽었다"는 다르다. insert-heavy에서 <code>Hit_rate</code>가 과대해진다</td>
+<td>대량 INSERT 후 <code>SHOW</code>의 <code>Hit_rate</code> &gt; statdump 기반 히트율</td></tr>
+<tr><td>2</td><td><b>unconditional → conditional 강등</b>이 존재한다</td>
+<td>어떤 조건에서 무조건 요청이 조건부로 낮춰진다(5장 결정 트리).
+"무조건인데 왜 실패하지?"로 보여 제거하기 쉽다</td><td>5장의 강등 조건 표를 코드와 1:1 대조</td></tr>
+<tr><td>3</td><td><b>대기자가 있으면 LRU 훅을 생략</b>한다
+<span class="ref">page_buffer.c:6662, 6674</span></td>
+<td>unfix의 boost/zone 조정은 <code>is_zero_fcnt</code>이고 <b>블록된 reader/writer가 없을 때만</b> 돈다.
+"어차피 unfix니까 항상"으로 짜면 zone 분포가 달라진다</td>
+<td>경합 워크로드에서 <code>Num_unfix_lru*_to_top</code> 비중 비교</td></tr>
+<tr><td>4</td><td><b>AOUT 강제 비활성</b> — 모든 새 페이지가 private TOP으로</td>
+<td>middle 삽입 코드가 도달 불가라는 사실을 모르면
+"scan resistance가 왜 middle 삽입으로 안 되지?"를 며칠 뒤진다</td>
+<td><code>Num_unfix_void_to_private_mid = 0</code>, <code>aout_found = 0</code></td></tr>
+<tr><td>5</td><td><b><code>pgbuf_direct_victims_maintenance</code>는 no-op</b>(D3)</td>
+<td>주석이 "backup plan"이라고 설명해서 동작한다고 믿게 된다</td>
+<td>데몬 주기(100ms)에 맞춘 victim 배급 증가가 <b>없어야</b> 한다</td></tr>
+<tr><td>6</td><td><b>big private 큐는 항상 비어 있다</b>(D4)</td>
+<td>큐와 카운터가 멀쩡히 존재해서 "왜 안 차지?"로 오해</td>
+<td><code>Num_lfcq_big_private_lists</code> 항상 0,
+<code>PSTAT_PB_LFCQ_LRU_PRV_GET_BIG</code> 항상 0</td></tr>
+<tr><td>7</td><td><b>DWB on이면 <code>iowrites</code>가 페이지당 2</b>(D6a)</td>
+<td>"쓰기 카운터가 2배로 이상하다"며 한쪽을 빼고 싶어진다.
+DWB 파일 쓰기와 원위치 쓰기를 <b>각각</b> 세는 것이 현재 의미다</td>
+<td>quiz 11의 on/off 비교 — 약 2배 관계</td></tr>
+<tr><td>8</td><td><b><code>Num_data_page_flushed</code>는 victim flusher 전용</b>(D6b)</td>
+<td>"flush량"으로 읽으면 checkpoint가 통째로 빠진다.
+checkpoint 경로에 카운터를 추가하고 싶어진다</td>
+<td>quiz 10 — checkpoint <code>+206 iowrites</code>에 <code>flushed +0</code></td></tr>
+<tr><td>9</td><td><b>checkpoint의 <code>Num_log_wals</code>는 정확히 +1</b></td>
+<td>WAL을 페이지마다 강제하도록 짜면 수백이 된다. checkpoint는 <b>시작할 때 한 번</b> 민다</td>
+<td>quiz 10</td></tr>
+<tr><td>10</td><td><b>flush 데몬의 "히트율 낮음"은 99.9% 미만</b>
+(<code>PGBUF_DESIRED_HIT_VS_MISS_RATE = 1000</code>)</td>
+<td>"저 히트율"이라는 이름과 달리 사실상 항상 참이다.
+<code>page_flush_interval_in_msecs=0</code>이어도 데몬이 쉬지 않는다</td>
+<td>0으로 설정하고 CPU 사용/flush 발생을 관찰</td></tr>
+<tr><td>11</td><td><b>zone 1 unfix는 아무 조작도 하지 않는다</b></td>
+<td>LRU라면 top으로 옮겨야 할 것 같지만, 가장 뜨거운 페이지는 어차피 victim이 안 되므로
+리스트 뮤텍스 비용을 없앤 것이다</td>
+<td>quiz 06 — <code>lru1_keep ≫ to_top</code></td></tr>
+<tr><td>12</td><td><b>private list의 zone 비율은 5%/5%/90% 고정</b>
+<span class="ref">page_buffer.c:14390-14391</span></td>
+<td><code>lru_hot_ratio</code>/<code>lru_buffer_ratio</code>가 <b>shared에만</b> 적용된다는 것을 놓치면
+private가 거대한 victim zone이라는 성질이 사라진다</td>
+<td>quiz 05·12 — 새 페이지가 TOP에 꽂혀도 금방 zone 3으로 떨어진다</td></tr>
+<tr><td>13</td><td><b>victim 후보 정의가 두 개</b>: 내부 = zone3 ∧ <b>non-dirty</b>,
+<code>SHOW</code> = zone3 ∧ <b>dirty</b>(D6c)</td>
+<td>이름이 같아 통일하고 싶어진다. 실제로는 "지금 가져갈 수 있는 것"과
+"flusher가 노릴 것"이라는 서로 다른 질문의 답이다</td>
+<td>두 값이 <b>달라야</b> 정상</td></tr>
+<tr><td>14</td><td><b>flush는 스택 사본에서</b> 나가고, 쓰는 동안 BCB mutex는 <b>풀려 있다</b></td>
+<td>"쓰는 동안 잠가야 안전"으로 짜면 flush가 fix 경로를 막아 처리량이 급락한다</td>
+<td>flush 중 같은 페이지 fix가 블록되지 않는지 확인</td></tr>
+<tr><td>15</td><td><b>일반 읽기 경로에 torn 검사가 없다</b>(9.2.6)</td>
+<td>"안전하니까"로 추가하기 쉽다. 검사는 <b>수리 가능한 곳</b>(DWB 복구)에만 있다</td>
+<td><code>fileio_is_page_sane</code> 호출 지점이 5곳을 넘지 않는다</td></tr>
+<tr><td>16</td><td><b>이웃 flush는 clean 페이지도 일부러 쓴다</b>
+(<code>/* flush even if it is not dirty. todo: is this necessary? */</code>)</td>
+<td>원저자도 의문을 남겼지만 현재 동작이다. 제거하면 <code>iowrites</code>가 줄어 diff가 깨진다</td>
+<td><code>data_buffer_neighbor_flush_nondirty=true</code>에서 비교</td></tr>
+<tr><td>17</td><td><b>checkpoint는 clean 페이지도 재flush</b>하고,
+한 패스에서 같은 페이지를 두 번 쓸 수 있다</td><td>순차 구간을 끊지 않으려는 의도적 낭비다</td>
+<td>quiz 10의 <code>iowrites</code>가 dirty 페이지 수보다 많다</td></tr>
+<tr><td>18</td><td><b>victim flush 패스마다 에러 로그 2줄</b></td>
+<td>"로그 노이즈"로 보여 파라미터 게이트를 걸고 싶어지지만, 현재는 무조건 찍힌다</td>
+<td>에러 로그 라인 수 비교</td></tr>
+<tr><td>19</td><td><b>통계 샤드는 비원자적</b>이고 캐시라인 정렬이다(계약 N9-13)</td>
+<td>"경쟁 조건"으로 보여 atomic으로 바꾸고 싶어진다. 의도적 설계다(CBRD-26898)</td>
+<td>다중 세션 hot read 처리량 비교</td></tr>
+<tr><td>20</td><td><b>release/debug의 dirty 마킹 의미가 다르다</b> —
+<code>pgbuf_set_lsa</code>의 자동 dirty 표시는 <code>#if defined(NDEBUG)</code>에서만</td>
+<td>디버그 빌드에서만 assert가 터지는 현상의 원인. 의도적으로
+"debug는 누락된 <code>set_dirty</code>를 버그로 드러내고 release는 안전하게"</td>
+<td>두 빌드 모두에서 회귀 테스트를 돌린다</td></tr>
+</table></div>
+
+<h2>10.7 완료 선언 기준</h2>
+
+<div class="box norm"><span class="label">이 책의 재작성이 "끝났다"는 것</span>
+<ol>
+<li><b>M0~M7 전부 통과</b> — 각 단계의 완료 판정이 재현 가능하게 문서화되어 있다.</li>
+<li><b>quizzes 12종의 판정 기준(§10.3.2 오른쪽 열) 전부 충족</b> — 절대 수치가 아니라 관계식으로.</li>
+<li><b>drop-in 등가성 5종(§10.4) 통과</b> — 특히 crash-restart와 무잠금 fast path 확인.</li>
+<li><b>디버그 빌드에서 R1~R18 assert를 켠 채</b> 전체 회귀 스위트가 통과한다.</li>
+<li><b>quirk 체크리스트 20항목을 한 번씩 확인</b>했다 — 각 항목의 "확인법"을 실제로 실행해서.</li>
+<li><b>D1·D2·D8은 수정</b>, <b>D3·D4·D6는 재현</b>된 상태다(§10.5). 수정한 것이 있다면 별도 커밋으로 분리되어 있다.</li>
+</ol>
+여섯 번째가 특히 중요하다. "고쳐 놓고 재작성 탓으로 오해되는" 변경이 하나라도 섞이면
+등가성 검증의 신뢰가 통째로 무너진다.
+</div>
+
+<p class="small">근거: 팩트시트 3부(<code>../pgbuf-analysis/research/cubrid-*.md</code>),
+결함 보고서(<code>../pgbuf-analysis/pgbuf-defects-report_5cd4f860e_claude.md</code>),
+그리고 <code>quizzes/</code> 12종의 <code>ANSWER.md</code> 실측(2026-08-06 실행분).
+퀴즈 수치는 <b>참고값</b>이며 환경에 따라 달라진다 — 판정은 관계식으로 한다.</p>
+
+<nav class="book">
+<a href="ch09-external-contracts.html">← 이전: 9장 외부 모듈 계약</a>
+<span class="chapter-title">10장 — 구현 로드맵과 수용 검증</span>
+<a href="index.html">다음: 목차로 →</a>
+</nav>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pgbuf 재구축 스펙 — 7장 victim 선택과 direct victim</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+
+<nav class="book">
+<a href="ch06-replacement.html">← 이전: 6장 — 교체 정책</a>
+<span class="chapter-title">7장 — victim 선택과 direct victim</span>
+<a href="ch08-flush-checkpoint.html">다음: 8장 — dirty·flush·checkpoint →</a>
+</nav>
+
+<h1>7장 — victim 선택과 direct victim</h1>
+
+<p class="small">기준 소스: CUBRID <code>5cd4f860e</code> · <code>src/storage/page_buffer.c</code></p>
+
+<div class="box"><span class="label">이 장의 범위</span>
+새 페이지를 담을 프레임이 필요할 때 <b>어느 BCB를 뽑아낼 것인가</b>, 그리고 뽑을 것이 없을 때
+<b>어떻게 기다리고 어떻게 배급받는가</b>를 규정한다. 6장이 “BCB가 어디에 놓이는가”였다면 이 장은
+“BCB가 어떻게 회수되는가”다.
+<br><br>두 개의 독립된 메커니즘이 맞물린다: <b>능동 탐색</b>(스레드가 직접 LRU 리스트를 훑는다)과
+<b>수동 배급</b>(direct victim — 깨끗한 BCB를 만든 자가 대기 중인 스레드의 전용 슬롯에 꽂아 주고 깨운다).
+정상 서버에서 압박이 걸리면 후자가 주된 공급원이 된다.
+</div>
+
+<h2>7.1 전체 그림</h2>
+
+<figure>
+<svg viewBox="0 0 900 470" role="img" aria-label="pgbuf_allocate_bcb의 victim 획득 흐름">
+  <!-- left column -->
+  <rect x="24" y="18" width="250" height="34" rx="6" fill="var(--accent-soft)" stroke="var(--accent)"/>
+  <text x="149" y="40" text-anchor="middle" class="svg-label">pgbuf_allocate_bcb</text>
+
+  <rect x="24" y="76" width="250" height="34" rx="6" fill="none" stroke="var(--line)"/>
+  <text x="149" y="98" text-anchor="middle" class="svg-small">① invalid list에서 꺼내기</text>
+
+  <rect x="24" y="134" width="250" height="34" rx="6" fill="none" stroke="var(--accent)"/>
+  <text x="149" y="156" text-anchor="middle" class="svg-small">② pgbuf_get_victim (능동 탐색)</text>
+
+  <rect x="24" y="206" width="250" height="34" rx="6" fill="none" stroke="var(--warn-line)"/>
+  <text x="149" y="228" text-anchor="middle" class="svg-small">③ high/low 대기 큐에 파킹</text>
+
+  <rect x="24" y="264" width="250" height="34" rx="6" fill="none" stroke="var(--warn-line)"/>
+  <text x="149" y="279" text-anchor="middle" class="svg-small">④ flush daemon 기상 →</text>
+  <text x="149" y="293" text-anchor="middle" class="svg-small">timed suspend (300 s)</text>
+
+  <rect x="24" y="322" width="250" height="34" rx="6" fill="none" stroke="var(--norm-line)"/>
+  <text x="149" y="344" text-anchor="middle" class="svg-small">⑤ pgbuf_get_direct_victim</text>
+
+  <rect x="24" y="392" width="250" height="34" rx="6" fill="var(--norm-bg)" stroke="var(--norm-line)"/>
+  <text x="149" y="414" text-anchor="middle" class="svg-small">⑥ pgbuf_victimize_bcb → 반환</text>
+
+  <path d="M 149 52 L 149 74" stroke="var(--muted)" marker-end="url(#a7)"/>
+  <path d="M 149 110 L 149 132" stroke="var(--muted)" marker-end="url(#a7)"/>
+  <path d="M 149 168 L 149 204" stroke="var(--muted)" marker-end="url(#a7)"/>
+  <path d="M 149 240 L 149 262" stroke="var(--muted)" marker-end="url(#a7)"/>
+  <path d="M 149 298 L 149 320" stroke="var(--muted)" marker-end="url(#a7)"/>
+  <path d="M 149 356 L 149 390" stroke="var(--muted)" marker-end="url(#a7)"/>
+
+  <path d="M 274 93 C 310 93, 310 400, 274 405" fill="none" stroke="var(--norm-line)" stroke-dasharray="4 3"
+        marker-end="url(#a7n)"/>
+  <text x="316" y="70" class="svg-muted">성공 시</text>
+  <text x="316" y="84" class="svg-muted">즉시 반환</text>
+
+  <!-- right column: get_victim steps -->
+  <rect x="392" y="108" width="482" height="150" rx="8" fill="none" stroke="var(--accent)" stroke-dasharray="4 3"/>
+  <text x="404" y="128" class="svg-label">pgbuf_get_victim — 4단계 탐색</text>
+
+  <text x="410" y="152" class="svg-small">① 자기 private list</text>
+  <text x="640" y="152" class="svg-muted">quota 초과일 때만</text>
+  <text x="410" y="176" class="svg-small">② 남의 private (lfcq)</text>
+  <text x="640" y="176" class="svg-muted">restrict 시 big 큐만 → 영구 공백 (D4)</text>
+  <text x="410" y="200" class="svg-small">③ shared list (lfcq)</text>
+  <text x="640" y="200" class="svg-muted">MT 1회 / ST 커서·nloops 루프</text>
+  <text x="410" y="224" class="svg-small">④ 자기 private 재시도</text>
+  <text x="640" y="224" class="svg-muted">quota 무관, 최후의 보루</text>
+  <text x="410" y="248" class="svg-muted">각 단계 → pgbuf_get_victim_from_lru_list (§7.4)</text>
+
+  <path d="M 274 151 L 390 151" stroke="var(--accent)" marker-end="url(#a7a)"/>
+
+  <!-- donors -->
+  <rect x="392" y="290" width="482" height="128" rx="8" fill="var(--warn-bg)" stroke="var(--warn-line)"/>
+  <text x="404" y="310" class="svg-label">direct victim 배급자 (§7.6)</text>
+  <text x="410" y="332" class="svg-muted">post-flush 데몬 · flush 후보 수집기 · zone fall</text>
+  <text x="410" y="352" class="svg-muted">vacuum unfix (zone 3 / void) · bottom 삽입 · panic assign</text>
+  <text x="410" y="378" class="svg-muted">→ bcb_victims[thread-&gt;index]에 꽂고 THREAD_ALLOC_BCB_RESUMED로 기상</text>
+  <text x="410" y="400" class="svg-muted">→ 소비 실패(재fix됨) 시 waiter는 high priority로 재파킹</text>
+
+  <path d="M 390 350 L 278 285" stroke="var(--warn-line)" marker-end="url(#a7w)"/>
+
+  <defs>
+    <marker id="a7" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L0,6.4 L7.5,3.2 z" fill="var(--muted)"/></marker>
+    <marker id="a7a" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L0,6.4 L7.5,3.2 z" fill="var(--accent)"/></marker>
+    <marker id="a7n" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L0,6.4 L7.5,3.2 z" fill="var(--norm-line)"/></marker>
+    <marker id="a7w" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L0,6.4 L7.5,3.2 z" fill="var(--warn-line)"/></marker>
+  </defs>
+</svg>
+<figcaption>프레임을 요구하는 스레드의 여정. ②가 실패하면 SERVER_MODE에서는 ③~⑤의 배급 경로로 들어가고,
+flush 데몬이 없는 환경(SA_MODE·복구)에서는 인라인 flush 후 ②를 재시도한다.</figcaption>
+</figure>
+
+<h2>7.2 <code>pgbuf_allocate_bcb</code> <span class="ref">page_buffer.c:8134-8335</span></h2>
+
+<pre><code>/* 반환: 잠긴(bcb mutex 보유) BCB, 또는 NULL.
+ * 설계 주석 8149-8168: 1) invalid list → 2) get_victim → 3) 파킹/배급(SERVER) 또는 flush 후 재시도(SA) */
+PGBUF_BCB *pgbuf_allocate_bcb (const VPID *src_vpid)
+{
+  detailed_perf = perfmon_is_perf_tracking_and_active (PERFMON_ACTIVATION_FLAG_PB_VICTIMIZATION);
+
+  /* ── 1) invalid list ─────────────────────────────────────── */
+  bufptr = pgbuf_get_bcb_from_invalid_list ();   /* 아래 §7.2.1 */
+  if (bufptr != NULL) return bufptr;             /* 타이머조차 시작하지 않는다 */
+
+  PERF_UTIME_TRACKER_START (&amp;tt_alloc_bcb);
+  if (detailed_perf) PERF_UTIME_TRACKER_START (&amp;tt_search_and_wait);
+
+  /* ── 2) 능동 탐색 ────────────────────────────────────────── */
+  bufptr = pgbuf_get_victim ();
+  PERF_UTIME_TRACKER_TIME_AND_RESTART (&amp;tt_search_and_wait, PSTAT_PB_ALLOC_BCB_SEARCH_VICTIM);
+  if (bufptr != NULL) goto end;
+
+#if defined (SERVER_MODE)
+  if (pgbuf_is_page_flush_daemon_available ())
+    {
+    retry:
+      /* ── 3) 우선순위 결정 ──────────────────────────────── */
+      high_priority = high_priority
+                      || VACUUM_IS_THREAD_VACUUM (thread_p)
+                      || pgbuf_is_thread_high_priority (thread_p);
+      /* pgbuf_is_thread_high_priority (11677-…): 내가 쥔 페이지 중
+       *   - 다른 스레드가 대기 중인 것이 있거나
+       *   - PAGE_VOLHEADER / PAGE_FTAB 등 매우 뜨거운 페이지(btree root, heap/file/volume header)
+       *     를 쥐고 있으면 true. 이런 스레드를 굶기면 시스템 전체가 막힌다. */
+
+      pgbuf_make_latch_timeout (&amp;to, pgbuf_latch_timeout_msecs);   /* 300 * 1000 ms */
+
+      thread_lock_entry (thread_p);                        /* ← 스레드 엔트리 락 */
+      assert (pgbuf_Pool.direct_victims.bcb_victims[thread_p-&gt;index] == NULL);
+
+      /* ── 파킹: 큐에 자신을 넣는다 ──────────────────────── */
+      if (high_priority)
+        {
+          if (detailed_perf &amp;&amp; VACUUM_IS_THREAD_VACUUM (thread_p))
+            perfmon_inc (PSTAT_PB_ALLOC_BCB_PRIORITIZE_VACUUM);
+          if (!waiter_threads_high_priority-&gt;produce (thread_p))
+            { assert (false); thread_unlock_entry (thread_p); return NULL; }
+          pstat_cond_wait = PSTAT_PB_ALLOC_BCB_COND_WAIT_HIGH_PRIO;
+        }
+      else
+        {
+          if (!waiter_threads_low_priority-&gt;produce (thread_p))
+            {
+              /* low 큐가 꽉 찼다 — 소비자가 ~93 ms 선점된 실측 사례가 있다.
+               * hack: high 큐로 승격시킨다 (8224-8233) */
+              if (!waiter_threads_high_priority-&gt;produce (thread_p))
+                { assert (false); thread_unlock_entry (thread_p); goto end; }
+              pstat_cond_wait = PSTAT_PB_ALLOC_BCB_COND_WAIT_HIGH_PRIO;
+            }
+          else
+            pstat_cond_wait = PSTAT_PB_ALLOC_BCB_COND_WAIT_LOW_PRIO;
+        }
+
+      /* ── 4) "적어도 flush는 우리를 먹여 줄 것이다" ───────── */
+      pgbuf_wakeup_page_flush_daemon ();
+      show_status-&gt;num_flusher_waiting_threads++;
+
+      r = thread_suspend_timeout_wakeup_and_unlock_entry (thread_p, &amp;to,
+                                                          THREAD_ALLOC_BCB_SUSPENDED);
+      show_status-&gt;num_flusher_waiting_threads--;
+      PERF_UTIME_TRACKER_TIME (&amp;tt_search_and_wait, pstat_cond_wait);
+
+      if (r == NO_ERROR)
+        {
+          if (thread_p-&gt;resume_status == THREAD_ALLOC_BCB_RESUMED)
+            {
+              /* ── 5) 배급된 BCB 수거 ────────────────────── */
+              bufptr = pgbuf_get_direct_victim ();
+              if (bufptr == NULL)
+                {
+                  /* 배급 후 누군가 그 페이지를 다시 fix했다 ⇒ high로 승격해 재파킹 */
+                  high_priority = true;
+                  goto retry;
+                }
+              goto end;
+            }
+
+          /* 인터럽트/셧다운으로 깨어난 경우 */
+          assert (resume_status == THREAD_RESUME_DUE_TO_INTERRUPT
+                  || resume_status == THREAD_RESUME_DUE_TO_SHUTDOWN);
+          if (pgbuf_Pool.direct_victims.bcb_victims[thread_p-&gt;index] != NULL)
+            {
+              /* 이미 배급받은 BCB가 있다면 반드시 반납한다 —
+               * 두 direct victim 플래그를 모두 내려 다른 스레드가 쓸 수 있게 만든다 */
+              pgbuf_bcb_update_flags (bcb_victims[thread_p-&gt;index], /*set*/ 0,
+                                      PGBUF_BCB_VICTIM_DIRECT_FLAG
+                                      | PGBUF_BCB_INVALIDATE_DIRECT_VICTIM_FLAG);
+              pgbuf_Pool.direct_victims.bcb_victims[thread_p-&gt;index] = NULL;
+            }
+          er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_INTERRUPTED, 0);
+        }
+      else
+        {
+          assert (r != ER_CSS_PTHREAD_COND_TIMEDOUT);   /* 타임아웃은 나면 안 된다 */
+          thread_p-&gt;resume_status = THREAD_ALLOC_BCB_RESUMED;
+          thread_unlock_entry (thread_p);
+          if (r == ER_CSS_PTHREAD_COND_TIMEDOUT)
+            er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_CSS_PTHREAD_COND_TIMEDOUT, 0);
+        }
+    }
+#endif /* SERVER_MODE */
+  else
+    {
+      /* ── SA_MODE / 복구: flush 데몬이 없다. 인라인 flush 후 재탐색 ── */
+      pgbuf_wakeup_page_flush_daemon ();      /* SA_MODE에서는 이 호출이 직접 flush한다 */
+      bufptr = pgbuf_get_victim ();
+      PERF_UTIME_TRACKER_TIME (&amp;tt_search_and_wait, PSTAT_PB_ALLOC_BCB_SEARCH_VICTIM);
+      assert (bufptr != NULL);                /* 여기서 실패하면 설계 위반 */
+    }
+
+end:
+  if (bufptr != NULL)
+    {
+      if (pgbuf_victimize_bcb (bufptr) != NO_ERROR)   /* §7.2.2 */
+        { assert (false); bufptr = NULL; }
+    }
+  else if (er_errid () == NO_ERROR)
+    {
+      er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_PB_ALL_BUFFERS_DIRTY, 1, 0);
+    }
+
+  PERF_UTIME_TRACKER_TIME (&amp;tt_alloc_bcb, PSTAT_PB_ALLOC_BCB);
+  return bufptr;
+}
+</code></pre>
+
+<h3>7.2.1 <code>pgbuf_get_bcb_from_invalid_list</code> <span class="ref">page_buffer.c:8858-8896</span></h3>
+
+<pre><code>PGBUF_BCB *pgbuf_get_bcb_from_invalid_list (void)
+{
+  if (pgbuf_Pool.buf_invalid_list.invalid_top == NULL) return NULL;   /* 무락 조기 탈출 */
+
+  pthread_mutex_lock (&amp;buf_invalid_list.invalid_mutex);
+  if (buf_invalid_list.invalid_top == NULL)                           /* 재확인 */
+    { pthread_mutex_unlock (...); return NULL; }
+
+  bufptr = buf_invalid_list.invalid_top;
+  buf_invalid_list.invalid_top = bufptr-&gt;next_BCB;
+  buf_invalid_list.invalid_cnt -= 1;
+  pthread_mutex_unlock (&amp;buf_invalid_list.invalid_mutex);
+
+  PGBUF_BCB_LOCK (bufptr);                       /* 반환은 "잠긴 채" */
+  bufptr-&gt;next_BCB = NULL;
+  pgbuf_bcb_change_zone (bufptr, 0, PGBUF_VOID_ZONE);   /* INVALID → VOID */
+  perfmon_inc (PSTAT_PB_VICTIM_USE_INVALID_BCB);
+  return bufptr;
+}
+</code></pre>
+
+<h3>7.2.2 <code>pgbuf_victimize_bcb</code> <span class="ref">page_buffer.c:8586-8631</span></h3>
+
+<pre><code>/* 전제: 호출자가 bcb mutex 보유. 반환 시에도 계속 보유한다. */
+int pgbuf_victimize_bcb (PGBUF_BCB *bufptr)
+{
+  /* 1) 재검증 — 탐색과 이 시점 사이에 상태가 바뀌었을 수 있다 */
+  if (!pgbuf_is_bcb_victimizable (bufptr, /*has_mutex*/ true))
+    { assert (false); PGBUF_BCB_UNLOCK (bufptr); return ER_FAILED; }
+
+  /* 2) TO_VACUUM 플래그 해제 — 이 프레임은 더 이상 그 페이지가 아니다 */
+  if (pgbuf_bcb_is_to_vacuum (bufptr))
+    pgbuf_bcb_update_flags (bufptr, /*set*/ 0, PGBUF_BCB_TO_VACUUM_FLAG);
+
+  assert (get_latch (&amp;bufptr-&gt;atomic_latch) == PGBUF_NO_LATCH);
+
+  /* 3) 해시 체인에서 제거 — 이제 아무도 이 VPID로 찾을 수 없다 */
+  if (pgbuf_delete_from_hash_chain (bufptr) != NO_ERROR) return ER_FAILED;
+
+  /* 4) latch 워드를 INVALID로 원자 저장 (fcnt=0, waiter_exists=false) */
+  impl = get_impl (&amp;bufptr-&gt;atomic_latch);
+  impl.impl.latch_mode = PGBUF_LATCH_INVALID;
+  impl.impl.waiter_exists = false;
+  impl.impl.fcnt = 0;
+  bufptr-&gt;atomic_latch.store (impl.raw);
+
+  return NO_ERROR;                               /* mutex는 계속 보유 */
+}
+</code></pre>
+
+<div class="box norm"><span class="label">규범 N7-1 — allocate 계약</span>
+<ul>
+<li><kbd class="must">MUST</kbd> <code>pgbuf_allocate_bcb</code>가 반환하는 BCB는 <b>mutex가 잠긴 상태</b>이며
+zone은 <code>PGBUF_VOID_ZONE</code>, latch는 <code>PGBUF_LATCH_INVALID</code>, 해시 체인에서 제거된 상태다.</li>
+<li><kbd class="must">MUST</kbd> 인터럽트/셧다운으로 대기가 깨지면 <b>이미 배급받은 BCB를 반드시 반납</b>한다
+<span class="ref">page_buffer.c:8278-8284</span>. 반납하지 않으면 그 프레임이 영구히 새어 나간다.</li>
+<li><kbd class="must">MUST</kbd> 마지막에 <code>bufptr == NULL</code>이고 기존 에러가 없으면
+<code>ER_PB_ALL_BUFFERS_DIRTY</code>를 설정한다 <span class="ref">page_buffer.c:8326-8330</span>.
+정상 서버에서 이 에러는 사실상 도달하지 않는다 — flush 데몬이 없는 환경의 최후 경로다.</li>
+<li><kbd class="should">SHOULD</kbd> 타임아웃(300 s)은 <code>assert(r != ER_CSS_PTHREAD_COND_TIMEDOUT)</code>로
+“나면 안 되는 일”로 취급된다. 디버그 빌드에서 이 assert가 터지면 배급 경로가 고장 난 것이다.</li>
+</ul>
+</div>
+
+<h2>7.3 <code>pgbuf_get_victim</code> — 4단계 탐색 <span class="ref">page_buffer.c:9019-9197</span></h2>
+
+<pre><code>PGBUF_BCB *pgbuf_get_victim (void)
+{
+  detailed_perf    = perfmon_is_perf_tracking_and_active (PERFMON_ACTIVATION_FLAG_PB_VICTIMIZATION);
+  has_flush_thread = pgbuf_is_page_flush_daemon_available ();
+  restrict_other   = false;
+  searched_own     = false;
+  nloops           = 0;
+
+  /* 요청 카운터: flush 데몬의 hit ratio 판정에 쓰이는 "miss" 측 값 */
+  ATOMIC_INC_32 (&amp;pgbuf_Pool.monitor.lru_victim_req_cnt, 1);
+
+  /* ── 단계 1: 자기 private list — quota를 넘겼을 때만 ──────────── */
+  if (PGBUF_THREAD_HAS_PRIVATE_LRU (thread_p))
+    {
+      private_lru_idx = PGBUF_LRU_INDEX_FROM_PRIVATE (PGBUF_PRIVATE_LRU_FROM_THREAD (thread_p));
+      lru_list = PGBUF_GET_LRU_LIST (private_lru_idx);
+
+      /* 두 조건 중 하나면 진입:
+       *   (a) zone 1+2 만으로 이미 quota 초과, 또는
+       *   (b) 리스트 전체가 quota 초과이면서 실제 후보가 존재 */
+      if (PGBUF_LRU_LIST_IS_ONE_TWO_OVER_QUOTA (lru_list)
+          || (PGBUF_LRU_LIST_IS_OVER_QUOTA (lru_list) &amp;&amp; lru_list-&gt;count_vict_cand &gt; 0))
+        {
+          victim = pgbuf_get_victim_from_lru_list (private_lru_idx);
+          if (victim != NULL)
+            {
+              PERF (PSTAT_PB_OWN_VICTIM_PRIVATE_LRU_SUCCESS);
+              PERF_TIME (PSTAT_PB_VICTIM_SEARCH_OWN_PRIVATE_LISTS);
+              return victim;
+            }
+          PERF (PSTAT_PB_VICTIM_OWN_PRIVATE_LRU_FAIL);
+          PERF_TIME (PSTAT_PB_VICTIM_SEARCH_OWN_PRIVATE_LISTS);
+
+          /* 벌칙: quota를 크게 넘긴 스레드는 남의 private을 뒤지지 못한다.
+           * 단 vacuum은 quota가 없으므로 제외.
+           * "약간만" 넘긴 스레드(새 트랜잭션 등)는 봐준다 → 버퍼를 둔다. */
+          if (!PGBUF_VACUUM_SHOULD_IGNORE_UNFIX (thread_p))
+            restrict_other = PGBUF_LRU_LIST_IS_OVER_QUOTA_WITH_BUFFER (lru_list);
+            /* 버퍼 = PGBUF_OVER_QUOTA_BUFFER(quota) = MAX (10, quota * 0.01) */
+
+          searched_own = true;
+        }
+    }
+
+  /* ── 단계 2: 남의 private list (lock-free 큐 경유) ─────────────── */
+  if (PGBUF_PAGE_QUOTA_IS_ENABLED &amp;&amp; has_flush_thread)
+    {
+      victim = pgbuf_lfcq_get_victim_from_private_lru (restrict_other);   /* §7.5 */
+      if (victim != NULL) { PERF_TIME (PSTAT_PB_VICTIM_SEARCH_OTHERS_PRIVATE_LISTS); return victim; }
+      PERF_TIME (PSTAT_PB_VICTIM_SEARCH_OTHERS_PRIVATE_LISTS);
+    }
+
+  /* ── 단계 3: shared list ───────────────────────────────────── */
+  initial_cursor = pgbuf_Pool.shared_lrus_with_victims-&gt;get_consumer_cursor ();
+  do
+    {
+      victim = pgbuf_lfcq_get_victim_from_shared_lru (has_flush_thread);
+      if (victim != NULL) { PERF_TIME (PSTAT_PB_VICTIM_SEARCH_SHARED_LISTS); return victim; }
+      current_cursor = pgbuf_Pool.shared_lrus_with_victims-&gt;get_consumer_cursor ();
+    }
+  while (!has_flush_thread                                   /* 멀티스레드면 1회만 */
+         &amp;&amp; !pgbuf_Pool.shared_lrus_with_victims-&gt;is_empty ()
+         &amp;&amp; ((int) (current_cursor - initial_cursor) &lt;= pgbuf_Pool.num_LRU_list)
+         &amp;&amp; (++nloops &lt;= pgbuf_Pool.num_LRU_list));         /* 무한 루프 안전장치 */
+  PERF_TIME (PSTAT_PB_VICTIM_SEARCH_SHARED_LISTS);
+
+  PERF (PSTAT_PB_VICTIM_ALL_LRU_FAIL);
+
+  /* ── 단계 4: 최후 — 자기 private을 quota와 무관하게 다시 뒤진다 ── */
+  if (PGBUF_THREAD_HAS_PRIVATE_LRU (thread_p) &amp;&amp; !searched_own)
+    {
+      private_lru_idx = PGBUF_LRU_INDEX_FROM_PRIVATE (PGBUF_PRIVATE_LRU_FROM_THREAD (thread_p));
+      victim = pgbuf_get_victim_from_lru_list (private_lru_idx);
+      if (victim != NULL) { PERF (PSTAT_PB_OWN_VICTIM_PRIVATE_LRU_SUCCESS); return victim; }
+      PERF (PSTAT_PB_VICTIM_OWN_PRIVATE_LRU_FAIL);
+    }
+
+  return NULL;
+}
+</code></pre>
+
+<div class="box"><span class="label">단계 4가 존재하는 이유 (소스 주석 9054-9056)</span>
+<i>“위의 모든 시도가 실패하면, quota 미만이더라도 자기 private에서 뽑아 본다. 모든 private 리스트가
+quota에 거의 맞닿아 있고(그러나 조금 미달), shared 리스트에는 zone 3이 아예 없어서 아무것도 교체하거나
+flush할 수 없는 이상한 사례를 발견했다.”</i> — 즉 이 단계는 이론적 완결성이 아니라 <b>실제로 관측된
+교착 상황</b>에 대한 대응이다. <kbd class="must">MUST</kbd> 재현해야 한다.
+</div>
+
+<div class="box defect"><span class="label">결함 D4 — big private 큐에는 생산자가 없다</span>
+단계 2에서 <code>restrict_other == true</code>인 스레드는
+<code>pgbuf_lfcq_get_victim_from_private_lru</code>의 <b>big 큐만</b> 볼 수 있다
+<span class="ref">page_buffer.c:16382-16385</span>. 그런데 <code>big_private_lrus_with_victims</code>에
+<code>produce</code>하는 지점은 파일 전체에 <b>단 한 곳</b>, 같은 함수 안에서 <b>big 큐 consume에
+성공한 뒤</b>의 재등록 경로뿐이다 <span class="ref">page_buffer.c:16401</span>. 생산자
+<code>pgbuf_lfcq_add_lru_with_victims</code>는 <code>private_lrus_with_victims</code>와
+<code>shared_lrus_with_victims</code>에만 넣는다 <span class="ref">16329</span>, <span class="ref">16337</span>.
+<br><br><b>귀결</b>: big 큐는 부팅부터 종료까지 <b>영구히 비어 있다</b>.
+<code>PSTAT_PB_LFCQ_LRU_PRV_GET_BIG</code>은 절대 증가하지 않고, <code>restrict_other</code>가 켜진
+스레드는 단계 2에서 <b>항상 즉시 NULL</b>을 받아 곧장 shared 리스트로 간다. 즉 “quota 초과 스레드를
+남의 private에서 배제한다”는 벌칙은 의도한 <i>“큰 리스트에서는 허용”</i> 완화 없이 <b>전면 배제</b>로
+작동한다.
+<br><br><b>선택지</b> —
+<kbd class="must">충실 재현(권장)</kbd> 코드를 그대로 옮긴다. big 큐를 할당은 하되
+(<code>PGBUF_PRIVATE_LRU_COUNT * 2</code> <span class="ref">1827</span>) 아무도 채우지 않는 상태를
+유지한다. 관측 카운터가 원본과 일치한다.
+<kbd class="may">수정</kbd> <code>pgbuf_lfcq_add_lru_with_victims</code>에 “리스트가 크고 quota를 크게
+넘겼으면 big 큐로 라우팅” 분기를 추가한다(§7.5의 재등록 조건과 같은 임계를 쓰면 자연스럽다).
+victim 분포와 <code>Num_lfcq_*</code> 계열이 모두 달라지므로 <b>1차 구현에서는 하지 않는다</b>.
+</div>
+
+<div class="box warn"><span class="label">주석과 구현의 불일치</span>
+설계 주석 <span class="ref">page_buffer.c:9050</span>은 “<code>victim_rich</code>가 참인 동안 세 탐색을
+반복한다”고 적혀 있으나, 실제 루프 <span class="ref">9146-9162</span>는 <code>victim_rich</code>를
+전혀 보지 않고 <code>has_flush_thread</code>와 큐 상태만 본다. <kbd class="must">MUST</kbd>
+구현은 <b>주석이 아니라 코드</b>를 따른다.
+</div>
+
+<h2>7.4 <code>pgbuf_get_victim_from_lru_list</code> <span class="ref">page_buffer.c:9267-9482</span></h2>
+
+<p>모든 탐색 단계가 최종적으로 도달하는 한 리스트짜리 스캔이다. 위(bottom)에서 아래(top) 방향으로
+— 즉 <code>prev_BCB</code>를 따라 — 최대 1000개를 훑는다.</p>
+
+<pre><code>#define MAX_DEPTH 1000
+
+PGBUF_BCB *pgbuf_get_victim_from_lru_list (int lru_idx)
+{
+  lru_list = &amp;pgbuf_Pool.buf_LRU_list[lru_idx];
+  PERF (PSTAT_PB_VICTIM_GET_FROM_LRU);
+
+  /* ── 1) 무락 조기 탈출 ─────────────────────────────────── */
+  if (lru_list-&gt;count_vict_cand == 0)
+    { PERF (PSTAT_PB_VICTIM_GET_FROM_LRU_LIST_WAS_EMPTY); return NULL; }
+
+  pthread_mutex_lock (&amp;lru_list-&gt;mutex);        /* ← 리스트 락 */
+
+  /* ── 2) 바닥이 zone 3인지 확인 ──────────────────────────── */
+  if (lru_list-&gt;bottom == NULL || !PGBUF_IS_BCB_IN_LRU_VICTIM_ZONE (lru_list-&gt;bottom))
+    { PERF (..._WAS_EMPTY); pthread_mutex_unlock (...); return NULL; }
+
+  /* ── 3) private이고 zone 1+2가 quota 초과면 먼저 강등해 후보를 만든다 ── */
+  if (PGBUF_IS_PRIVATE_LRU_ONE_TWO_OVER_QUOTA (lru_idx))
+    pgbuf_lru_adjust_zones (lru_list, /*min_one*/ false);
+
+  /* ── 4) 후보 수 재확인 ─────────────────────────────────── */
+  lru_victim_cnt = lru_list-&gt;count_vict_cand;
+  if (lru_victim_cnt &lt;= 0)
+    { PERF (..._WAS_EMPTY); pthread_mutex_unlock (...); return NULL; }
+
+  /* ── 5) hint 스냅: 바닥이 깨끗한데 hint가 딴 데를 가리키면 바닥으로 되돌린다 ── */
+  if (!pgbuf_bcb_is_dirty (lru_list-&gt;bottom) &amp;&amp; lru_list-&gt;victim_hint != lru_list-&gt;bottom)
+    ATOMIC_TAS_ADDR (&amp;lru_list-&gt;victim_hint, lru_list-&gt;bottom);
+
+  /* ── 6) hint(없으면 bottom)에서 위로 스캔 ─────────────────── */
+  found_victim_cnt = 0; bufptr_victimizable = NULL;
+  victim_hint  = lru_list-&gt;victim_hint;
+  bufptr_start = (victim_hint != NULL) ? victim_hint : lru_list-&gt;bottom;
+
+  for (bufptr = bufptr_start, search_cnt = 0;
+       bufptr != NULL &amp;&amp; PGBUF_IS_BCB_IN_LRU_VICTIM_ZONE (bufptr) &amp;&amp; search_cnt &lt; MAX_DEPTH;
+       bufptr = bufptr-&gt;prev_BCB, search_cnt++)
+    {
+      /* 6a) dirty / flushing / 이미 direct victim ⇒ 후보 자격 자체가 없다 */
+      if (pgbuf_bcb_avoid_victim (bufptr))
+        continue;
+
+      /* 6b) 누군가 fix 중이거나 대기자가 있다 ⇒ "유효한 후보지만 지금은 못 쓴다" */
+      if (pgbuf_is_bcb_fixed_by_any (bufptr, /*has_mutex*/ false))
+        {
+          if (bufptr_victimizable == NULL)
+            {
+              bufptr_victimizable = bufptr;
+              /* 첫 번째 그런 BCB로 hint를 전진시킨다 (그 사이 hint가 안 바뀌었을 때만) */
+              if (bufptr_victimizable != victim_hint)
+                ATOMIC_CAS_ADDR (&amp;lru_list-&gt;victim_hint, victim_hint, bufptr_victimizable);
+            }
+          if (++found_victim_cnt &gt;= lru_victim_cnt)
+            break;                       /* 조기 종료: 후보 수만큼 봤으면 더 없을 것이다 */
+          continue;
+        }
+
+      /* 6c) 진짜 후보다. 리스트 mutex를 쥔 채이므로 BCB 락은 "조건부"로만 */
+      if (PGBUF_BCB_TRYLOCK (bufptr) == 0)
+        {
+          if (pgbuf_is_bcb_victimizable (bufptr, /*has_mutex*/ true))
+            {
+              if (bufptr_victimizable == NULL)
+                pgbuf_lru_advance_victim_hint (lru_list, victim_hint, bufptr-&gt;prev_BCB, false);
+
+              pgbuf_remove_from_lru_list (bufptr, lru_list);    /* zone := VOID */
+
+#if defined (SERVER_MODE)
+              /* todo: this is a hack — low 대기자가 많으면 여기서 무더기 배급을 시도 */
+              if (waiter_threads_low_priority-&gt;size () &gt;= (5 + thread_num_total_threads () / 20))
+                pgbuf_panic_assign_direct_victims_from_lru (lru_list, bufptr-&gt;prev_BCB);
+#endif
+              /* 새 바닥이 dirty면 flush 데몬을 깨워 다음 후보를 만들게 한다 */
+              if (lru_list-&gt;bottom != NULL &amp;&amp; pgbuf_bcb_is_dirty (lru_list-&gt;bottom)
+                  &amp;&amp; pgbuf_is_page_flush_daemon_available ())
+                pgbuf_wakeup_page_flush_daemon ();
+
+              pthread_mutex_unlock (&amp;lru_list-&gt;mutex);         /* 리스트 락 해제 */
+              pgbuf_add_vpid_to_aout_list (&amp;bufptr-&gt;vpid, lru_idx);
+              return bufptr;                                    /* BCB는 "잠긴 채" 반환 */
+            }
+          PGBUF_BCB_UNLOCK (bufptr);
+        }
+      else
+        {
+          /* trylock 실패: 단일 스레드 환경에서는 불가능해야 한다 */
+          assert (pgbuf_is_page_flush_daemon_available ());
+          if (bufptr_victimizable == NULL)
+            {
+              bufptr_victimizable = bufptr;
+              if (bufptr != victim_hint)
+                ATOMIC_CAS_ADDR (&amp;lru_list-&gt;victim_hint, victim_hint, bufptr_victimizable);
+            }
+          if (++found_victim_cnt &gt;= lru_victim_cnt)
+            break;
+        }
+    }
+
+  /* ── 7) 전체 실패 ─────────────────────────────────────── */
+  PERF (PSTAT_PB_VICTIM_GET_FROM_LRU_FAIL);
+  if (bufptr_victimizable == NULL &amp;&amp; victim_hint != NULL)
+    {
+      /* hint가 있었는데 후보를 하나도 못 봤다 ⇒ hint가 틀렸다 */
+      PERF (PSTAT_PB_VICTIM_GET_FROM_LRU_BAD_HINT);
+      if (lru_list-&gt;count_vict_cand &gt; 0 &amp;&amp; PGBUF_IS_BCB_IN_LRU_VICTIM_ZONE (lru_list-&gt;bottom))
+        ATOMIC_CAS_ADDR (&amp;lru_list-&gt;victim_hint, victim_hint, lru_list-&gt;bottom);
+      else
+        ATOMIC_CAS_ADDR (&amp;lru_list-&gt;victim_hint, victim_hint, (PGBUF_BCB *) NULL);
+    }
+
+  pthread_mutex_unlock (&amp;lru_list-&gt;mutex);
+  pgbuf_wakeup_page_flush_daemon ();          /* 후보가 더 필요하다 */
+  return NULL;
+}
+</code></pre>
+
+<h3>7.4.1 교체 가능성 판정</h3>
+
+<pre><code>/* page_buffer.c:9237-9256 */
+bool pgbuf_is_bcb_victimizable (PGBUF_BCB *bcb, bool has_mutex_lock)
+{
+  if (pgbuf_bcb_avoid_victim (bcb))                     return false;  /* 플래그 검사 */
+#if defined (SERVER_MODE)
+  if (pgbuf_is_bcb_fixed_by_any (bcb, has_mutex_lock))  return false;  /* 사용 중 검사 */
+#endif
+  return true;
+}
+
+/* page_buffer.c:9209-9228 */
+bool pgbuf_is_bcb_fixed_by_any (PGBUF_BCB *bcb, bool has_mutex_lock)
+{
+#if defined (SERVER_MODE)
+  return get_fcnt (&amp;bcb-&gt;atomic_latch) &gt; 0
+         || bcb-&gt;next_wait_thrd != NULL                 /* 대기자가 있으면 후보 제외 */
+         || (!has_mutex_lock &amp;&amp; get_latch (&amp;bcb-&gt;atomic_latch) != PGBUF_NO_LATCH);
+#else
+  return get_fcnt (&amp;bcb-&gt;atomic_latch) != 0;
+#endif
+}
+/* 주석 9218-9220: next_wait_thrd에 flush 대기자만 있는 경우도 있지만, 대기 목록을 매번 훑느니
+ * 가끔 좋은 BCB를 놓치는 편을 택한다. */
+
+/* pgbuf_bcb_avoid_victim (16158-16162):
+ *   (flags &amp; PGBUF_BCB_INVALID_VICTIM_CANDIDATE_MASK) != 0
+ *   MASK = DIRTY | FLUSHING_TO_DISK | VICTIM_DIRECT | INVALIDATE_DIRECT_VICTIM   (258-262)
+ *   → TO_VACUUM과 MOVE_TO_LRU_BOTTOM은 교체를 "막지 않는다" */
+</code></pre>
+
+<div class="box norm"><span class="label">규범 N7-2 — 스캔 규약</span>
+<ul>
+<li><kbd class="must">MUST</kbd> 스캔은 <b>zone 3 안에서만</b> 진행한다. zone 경계를 만나면 즉시 멈춘다
+<span class="ref">page_buffer.c:9350</span>.</li>
+<li><kbd class="must">MUST</kbd> 리스트 mutex를 쥔 상태에서 BCB mutex는 <b>조건부 획득만</b> 한다
+— 락 순서가 반대이므로 무조건 획득은 데드락이다 <span class="ref">page_buffer.c:9387-9389</span>.</li>
+<li><kbd class="must">MUST</kbd> 성공 반환 시 BCB mutex는 <b>잠긴 채</b> 넘기고, 리스트 mutex는
+<b>먼저 푼다</b>. AOUT 추가는 리스트 mutex 밖에서 한다 <span class="ref">9415-9417</span>.</li>
+<li><kbd class="must">MUST</kbd> 실패 경로는 <b>반드시</b> flush 데몬을 깨운다
+<span class="ref">page_buffer.c:9473</span> — 이것이 없으면 “모든 후보가 dirty”인 상태에서 시스템이 멈춘다.</li>
+<li><kbd class="should">SHOULD</kbd> <code>MAX_DEPTH 1000</code>은 무한 스캔 방지용이며, 도달 시
+<code>bufptr_victimizable == NULL</code>이어도 bad-hint로 치지 않는다.</li>
+</ul>
+</div>
+
+<div class="box warn"><span class="label">victim hint는 틀릴 수 있다 — 소스가 인정한다</span>
+<span class="ref">page_buffer.c:597-599</span>:
+<i>“TPCC 코어 파일을 조사하다가, hint가 교체 가능한 첫 BCB보다 앞(아래)에 있는 경우를 발견했다.
+어딘가에 논리 오류가 있다는 뜻이다. 어디인지는 모르겠지만 분명히 있다.”</i>
+코드는 세 곳에서 이를 보정한다: 스캔 전 바닥 스냅(5단계), 실패 후 bad-hint 리셋(7단계),
+그리고 <code>pgbuf_lfcq_assign_direct_victims</code>의 hint 리셋(§7.6.6).
+<kbd class="must">MUST</kbd> 세 보정을 모두 구현한다 — hint는 <b>정확성이 아니라 성능</b>의 힌트이므로
+틀려도 되지만, 보정이 없으면 특정 리스트가 영원히 교체되지 않는다.
+</div>
+
+<h2>7.5 lock-free 큐 프로토콜</h2>
+
+<h3>7.5.1 세 개의 큐</h3>
+
+<div class="tablewrap"><table>
+<tr><th>큐</th><th>내용</th><th>용량</th><th>존재 조건</th></tr>
+<tr><td><code>private_lrus_with_victims</code></td><td>후보가 있는 private 리스트의 인덱스</td>
+<td><code>PGBUF_PRIVATE_LRU_COUNT × 2</code></td><td>quota 활성 시만 <span class="ref">1818</span></td></tr>
+<tr><td><code>big_private_lrus_with_victims</code></td><td>“크고 quota를 크게 넘긴” private 리스트</td>
+<td><code>PGBUF_PRIVATE_LRU_COUNT × 2</code></td><td>quota 활성 시만 <span class="ref">1827</span> — <b>D4로 항상 공백</b></td></tr>
+<tr><td><code>shared_lrus_with_victims</code></td><td>후보가 있는 shared 리스트의 인덱스</td>
+<td><code>PGBUF_SHARED_LRU_COUNT × 2</code></td><td>항상 <span class="ref">1837</span></td></tr>
+</table></div>
+
+<h3>7.5.2 생산 — <code>pgbuf_lfcq_add_lru_with_victims</code> <span class="ref">page_buffer.c:16311-16348</span></h3>
+
+<pre><code>/* 반환: 실제로 큐에 넣었으면 true, 이미 들어 있었으면 false */
+bool pgbuf_lfcq_add_lru_with_victims (PGBUF_LRU_LIST *lru_list)
+{
+  old_flags = lru_list-&gt;flags;
+  if (old_flags &amp; PGBUF_LRU_VICTIM_LFCQ_FLAG)
+    return false;                          /* 이미 등록됨 — 중복 삽입 방지 */
+
+  /* CAS로 플래그를 "먼저" 세운다. 두 스레드가 같은 리스트를 넣을 수 없게 하려는 것이다. */
+  if (ATOMIC_CAS_32 (&amp;lru_list-&gt;flags, old_flags, old_flags | PGBUF_LRU_VICTIM_LFCQ_FLAG))
+    {
+      if (PGBUF_IS_PRIVATE_LRU_INDEX (lru_list-&gt;index))
+        { if (private_lrus_with_victims-&gt;produce (lru_list-&gt;index)) return true; }
+      else
+        { if (shared_lrus_with_victims-&gt;produce (lru_list-&gt;index)) return true; }
+
+      lru_list-&gt;flags &amp;= ~PGBUF_LRU_VICTIM_LFCQ_FLAG;   /* push 실패 ⇒ 플래그 원복 */
+    }
+  return false;
+}
+</code></pre>
+
+<p>호출 지점: 새 victim 후보가 생길 때 <code>pgbuf_lru_add_victim_candidate</code>
+<span class="ref">page_buffer.c:15649</span> — 단 <b>shared이거나 quota 초과 private일 때만</b>
+<span class="ref">15647</span>; 그리고 <code>pgbuf_adjust_quotas</code>의 세 지점
+<span class="ref">14358</span>, <span class="ref">14404</span>, <span class="ref">14434</span>.</p>
+
+<h3>7.5.3 private 소비 <span class="ref">page_buffer.c:16357-16440</span></h3>
+
+<pre><code>PGBUF_BCB *pgbuf_lfcq_get_victim_from_private_lru (bool restricted)
+{
+  if (private_lrus_with_victims == NULL) return NULL;    /* quota 비활성 */
+  added_back = false;
+
+  /* 1) big 큐 우선 — 실제로는 항상 실패한다 (결함 D4) */
+  if (big_private_lrus_with_victims-&gt;consume (lru_idx))
+    { PERF (PSTAT_PB_LFCQ_LRU_PRV_GET_CALLS); PERF (PSTAT_PB_LFCQ_LRU_PRV_GET_BIG); }
+  else
+    {
+      /* 2) restricted 스레드는 여기서 끝 — 일반 private 큐를 볼 수 없다 */
+      if (restricted) return NULL;
+
+      PERF (PSTAT_PB_LFCQ_LRU_PRV_GET_CALLS);
+      if (!private_lrus_with_victims-&gt;consume (lru_idx))
+        { PERF (PSTAT_PB_LFCQ_LRU_PRV_GET_EMPTY); return NULL; }
+    }
+
+  lru_list = PGBUF_GET_LRU_LIST (lru_idx);
+
+  /* 3) "큰 리스트"면 탐색 전에 big 큐로 즉시 재등록한다 */
+  if (PGBUF_LRU_LIST_COUNT (lru_list) &gt; PBGUF_BIG_PRIVATE_MIN_SIZE          /* 100 */
+      &amp;&amp; PGBUF_LRU_LIST_COUNT (lru_list) &gt; 2 * lru_list-&gt;quota
+      &amp;&amp; lru_list-&gt;count_vict_cand &gt; 1)
+    {
+      if (big_private_lrus_with_victims-&gt;produce (lru_idx)) added_back = true;
+    }
+
+  /* 4) 실제 탐색 */
+  victim = pgbuf_get_victim_from_lru_list (lru_idx);
+  PERF (victim != NULL ? PSTAT_PB_VICTIM_OTHER_PRIVATE_LRU_SUCCESS
+                       : PSTAT_PB_VICTIM_OTHER_PRIVATE_LRU_FAIL);
+
+  if (added_back) return victim;           /* 이미 재등록됨 */
+
+  /* 5) 재등록 조건: 후보가 남아 있고 여전히 quota 초과 */
+  if (lru_list-&gt;count_vict_cand &gt; 0 &amp;&amp; PGBUF_LRU_LIST_IS_OVER_QUOTA (lru_list))
+    {
+      if (private_lrus_with_victims-&gt;produce (lru_idx)) return victim;
+    }
+
+  /* 6) 재등록하지 않았으니 플래그를 내린다 — 비원자 &amp;= (승인된 race, 아래 참조) */
+  assert ((lru_list-&gt;flags &amp; PGBUF_LRU_VICTIM_LFCQ_FLAG) != 0);
+  lru_list-&gt;flags &amp;= ~PGBUF_LRU_VICTIM_LFCQ_FLAG;
+  return victim;
+}
+</code></pre>
+
+<h3>7.5.4 shared 소비 <span class="ref">page_buffer.c:16449-16512</span></h3>
+
+<pre><code>PGBUF_BCB *pgbuf_lfcq_get_victim_from_shared_lru (bool multi_threaded)
+{
+  PERF (PSTAT_PB_LFCQ_LRU_SHR_GET_CALLS);
+  if (!shared_lrus_with_victims-&gt;consume (lru_idx))
+    { PERF (PSTAT_PB_LFCQ_LRU_SHR_GET_EMPTY); return NULL; }
+
+  lru_list = PGBUF_GET_LRU_LIST (lru_idx);
+  victim = pgbuf_get_victim_from_lru_list (lru_idx);
+  PERF (victim != NULL ? PSTAT_PB_VICTIM_SHARED_LRU_SUCCESS : PSTAT_PB_VICTIM_SHARED_LRU_FAIL);
+
+  /* 단일 스레드: 그 사이 flush가 돌아 후보가 생겼을 수 있으니 한 번 더 */
+  if (victim == NULL &amp;&amp; multi_threaded == false &amp;&amp; lru_list-&gt;count_vict_cand &gt; 0)
+    {
+      victim = pgbuf_get_victim_from_lru_list (lru_idx);
+      PERF (victim != NULL ? PSTAT_PB_VICTIM_SHARED_LRU_SUCCESS : PSTAT_PB_VICTIM_SHARED_LRU_FAIL);
+    }
+
+  /* 재등록: 멀티스레드이거나 성공했고, 후보가 남아 있으면 */
+  if ((multi_threaded || victim != NULL) &amp;&amp; lru_list-&gt;count_vict_cand &gt; 0)
+    {
+      if (shared_lrus_with_victims-&gt;produce (lru_idx)) return victim;
+      /* push 실패(소비자 장기 선점으로 큐가 꽉 차 보이는 경우)는 그냥 흘려보낸다.
+       * 다음 후보 등록이나 adjust_quotas가 다시 넣어 줄 것이다. */
+    }
+
+  assert ((lru_list-&gt;flags &amp; PGBUF_LRU_VICTIM_LFCQ_FLAG) != 0);
+  lru_list-&gt;flags &amp;= ~PGBUF_LRU_VICTIM_LFCQ_FLAG;      /* 비원자 */
+  return victim;
+}
+</code></pre>
+
+<div class="box norm"><span class="label">규범 N7-3 — 플래그 클리어의 승인된 race</span>
+<kbd class="should">SHOULD</kbd> <code>PGBUF_LRU_VICTIM_LFCQ_FLAG</code>를 내리는 연산은 <b>비원자</b>
+<code>&amp;=</code>로 구현한다 <span class="ref">page_buffer.c:16435</span>, <span class="ref">16507</span>.
+소스 주석이 근거를 밝힌다: <i>“플래그가 이것 하나뿐이고, set→clear 방향으로 바꾸는 주체가 우리뿐임이
+확실하다. 플래그가 늘어나거나 clear 지점이 늘어나면 원자 연산으로 바꿔야 한다.”</i>
+<br>알려진 경합: 후보 수가 0이 되어 플래그를 내리려는 순간 다른 스레드가 후보를 추가하면, 그 리스트는
+큐에 없으면서 후보를 가진 상태가 될 수 있다. 원본은 이를 수용하며
+<b><code>pgbuf_adjust_quotas</code>가 100 ms 안에 복구</b>한다는 것을 근거로 삼는다
+<span class="ref">16428-16430</span>.
+</div>
+
+<div class="box"><span class="label"><code>pgbuf_lru_remove_victim_candidate</code>의 한계</span>
+후보가 사라질 때(<code>zone 3 이탈</code> 또는 dirty 표시) 이 함수는 <b>카운터만 감소</b>시킨다.
+lock-free 원형 큐에서 특정 원소를 빼는 것은 쉽지 않으므로 <i>“그런 일이 너무 자주 일어나지 않기를
+바랄 뿐”</i>이라고 적혀 있다 <span class="ref">page_buffer.c:15663-15672</span>.
+<br>따라서 <b>후보가 0인 리스트가 큐에 남아 있는 상태가 정상적으로 발생</b>하며, 소비자는 빈 리스트를
+자주 pop한다. 그 빈도가 곧 <code>Num_victim_get_from_lru_was_empty</code>다
+<span class="ref">perf_monitor.c:527</span>. <kbd class="must">MUST</kbd> 이 카운터가 0에 가깝게
+나온다면 큐 프로토콜을 잘못 구현한 것이다.
+</div>
+
+<h3>7.5.5 victim 후보 등록과 hint 경쟁 <span class="ref">page_buffer.c:15609-15655</span></h3>
+
+<pre><code>/* zone 3으로 들어오면서 무효화 플래그가 없는 BCB마다 호출된다 (pgbuf_bcb_change_zone 15912-15915,
+ * pgbuf_bcb_update_flags 15753-15777). 리스트 mutex를 보유하지 않을 수 있다. */
+void pgbuf_lru_add_victim_candidate (PGBUF_LRU_LIST *lru_list, PGBUF_BCB *bcb)
+{
+  do
+    {
+      old_hint  = lru_list-&gt;victim_hint;
+      list_tick = lru_list-&gt;tick_lru3;
+
+      /* 현재 hint가 zone 3에 있고 "더 늙었다"면 교체하지 않는다 */
+      if (old_hint != NULL &amp;&amp; PGBUF_IS_BCB_IN_LRU_VICTIM_ZONE (old_hint)
+          &amp;&amp; PGBUF_AGE_DIFF (old_hint-&gt;tick_lru3, list_tick)
+             &gt; PGBUF_AGE_DIFF (bcb-&gt;tick_lru3, list_tick))
+        break;
+    }
+  while (!ATOMIC_CAS_ADDR (&amp;lru_list-&gt;victim_hint, old_hint, bcb));
+
+  ATOMIC_INC_32 (&amp;lru_list-&gt;count_vict_cand, 1);
+
+  /* shared이거나 quota 초과 private이면 큐에 등록 */
+  if (PGBUF_IS_SHARED_LRU_INDEX (lru_list-&gt;index) || PGBUF_LRU_LIST_IS_OVER_QUOTA (lru_list))
+    pgbuf_lfcq_add_lru_with_victims (lru_list);
+}
+</code></pre>
+
+<p class="small">§6.2.3의 “나이 위조”가 여기서 효과를 낸다 — bottom 삽입된 BCB는 <code>tick_lru3</code>가
+바닥보다 낮으므로 <code>PGBUF_AGE_DIFF</code>가 가장 크고, 위 비교에서 항상 이겨 즉시 hint가 된다.</p>
+
+<h2>7.6 direct victim 메커니즘</h2>
+
+<h3>7.6.1 자료구조 <span class="ref">page_buffer.c:738-752</span></h3>
+
+<pre><code>struct pgbuf_direct_victim
+{
+  PGBUF_BCB **bcb_victims;                                        /* thread_p-&gt;index로 색인 */
+  lockfree::circular_queue&lt;THREAD_ENTRY *&gt; *waiter_threads_high_priority;  /* 용량 = 총 스레드 수 */
+  lockfree::circular_queue&lt;THREAD_ENTRY *&gt; *waiter_threads_low_priority;   /* 용량 = 2 × 총 스레드 수 */
+};
+/* 별도로 pgbuf_Pool.flushed_bcbs: flush를 마친 BCB의 큐, 용량 PGBUF_FLUSHED_BCBS_BUFFER_SIZE = 8 * 1024 */
+</code></pre>
+
+<p><code>bcb_victims</code>는 <b>스레드당 슬롯 1칸</b>짜리 배열이다. 배급은 “큐에서 대기자를 하나 꺼내
+그 스레드의 슬롯에 BCB 포인터를 쓰고 깨우는” 동작이다.</p>
+
+<h3>7.6.2 배급자 목록 <span class="ref">page_buffer.c:8.4</span></h3>
+
+<div class="tablewrap"><table>
+<tr><th>배급자</th><th>줄</th><th>계기</th><th>통계</th></tr>
+<tr><td><code>pgbuf_assign_flushed_pages</code> (post-flush 데몬)</td><td class="small">15431-15493</td>
+<td>flush가 끝난 BCB를 소비하며</td><td class="small"><code>PSTAT_PB_VICTIM_ASSIGN_DIRECT_FLUSH</code> (15470)</td></tr>
+<tr><td><code>pgbuf_get_victim_candidates_from_lru</code> (flush 후보 수집기)</td><td class="small">3782-3793</td>
+<td>수집 중 이미 깨끗한 BCB를 발견하면 (반복당 1개)</td>
+<td class="small"><code>..._DIRECT_SEARCH_FOR_FLUSH</code> (3790)</td></tr>
+<tr><td><code>pgbuf_lru_fall_bcb_to_zone_3</code> (§6.3.4)</td><td class="small">10007-10052</td>
+<td>zone 1·2에서 zone 3으로 떨어지는 순간</td>
+<td class="small"><code>..._DIRECT_ADJUST</code> (10032) / TO_VACUUM 거부 시 <code>..._ADJUST_TO_VACUUM</code> (10016)</td></tr>
+<tr><td>vacuum의 zone 3 unfix</td><td class="small">6769-6776</td><td>vacuum이 zone 3 페이지를 놓을 때</td>
+<td class="small"><code>..._DIRECT_VACUUM_LRU</code> (6774)</td></tr>
+<tr><td>vacuum의 void zone unfix (§6.4.1 2단계)</td><td class="small">6871-6885</td>
+<td>vacuum이 갓 읽은 페이지를 놓을 때</td><td class="small"><code>..._DIRECT_VACUUM_VOID</code> (6876)</td></tr>
+<tr><td><code>pgbuf_lru_add_new_bcb_to_bottom</code></td><td class="small">10223-10228</td>
+<td>바닥 삽입 직전</td><td class="small"><b>없음</b> — 소스 각주 <i>“TODO: add stat. this is actually not used for now”</i></td></tr>
+<tr><td><code>pgbuf_panic_assign_direct_victims_from_lru</code></td><td class="small">9493-9549</td>
+<td>대기자가 몰렸을 때의 무더기 배급</td><td class="small"><code>..._DIRECT_PANIC</code> (9541)</td></tr>
+</table></div>
+
+<p><code>pgbuf_assign_flushed_pages</code>는 flush를 마친 BCB라도 <b>거절</b>할 수 있다: 여전히 dirty거나
+fix되어 있거나, zone 3이 아니거나(=아직 뜨겁다), <b>quota 미만인 private 리스트</b>에 속하면 배급하지
+않고 소유 세션에게 한 번 더 기회를 준다 <span class="ref">page_buffer.c:15448-15464</span>.
+어느 경우든 마지막에 <code>FLUSHING_TO_DISK</code> 플래그는 반드시 내린다
+<span class="ref">15481</span>.</p>
+
+<h3>7.6.3 배급 — <code>pgbuf_assign_direct_victim</code> <span class="ref">page_buffer.c:15364-15421</span></h3>
+
+<pre><code>/* 전제(모두 assert):
+ *   - 호출자가 bcb mutex 보유
+ *   - bcb는 아직 direct victim이 아니고, invalidate 표시도 없다
+ *   - bcb는 dirty가 아니고, 아무도 fix하고 있지 않다
+ *   - FLUSHING_TO_DISK는 "허용"된다 (flush 경로도 이 함수를 부른다) */
+bool pgbuf_assign_direct_victim (PGBUF_BCB *bcb)
+{
+#if defined (SERVER_MODE)
+  PERF_UTIME_TRACKER_START (&amp;timetr);
+
+  while (pgbuf_get_thread_waiting_for_direct_victim (waiter_thread))
+    {
+      thread_lock_entry (waiter_thread);                    /* ← 대기자 엔트리 락 */
+
+      if (waiter_thread-&gt;resume_status != THREAD_ALLOC_BCB_SUSPENDED)
+        { thread_unlock_entry (waiter_thread); continue; }   /* 더 이상 우리를 기다리지 않는다 */
+
+      thread_wakeup_already_had_mutex (waiter_thread, THREAD_ALLOC_BCB_RESUMED);
+
+      /* VICTIM_DIRECT를 세우고 FLUSHING_TO_DISK를 내린다 (한 번의 update로) */
+      pgbuf_bcb_update_flags (bcb, PGBUF_BCB_VICTIM_DIRECT_FLAG, PGBUF_BCB_FLUSHING_TO_DISK_FLAG);
+
+      pgbuf_Pool.direct_victims.bcb_victims[waiter_thread-&gt;index] = bcb;   /* 슬롯 기입 */
+
+      thread_unlock_entry (waiter_thread);
+      PERF_UTIME_TRACKER_TIME (&amp;timetr, PSTAT_PB_ASSIGN_DIRECT_BCB);
+      return true;
+    }
+  PERF_UTIME_TRACKER_TIME (&amp;timetr, PSTAT_PB_ASSIGN_DIRECT_BCB);
+#endif
+  return false;                                             /* 대기자가 없다 */
+}
+
+/* 대기자 선택 — page_buffer.c:15501-15525 */
+bool pgbuf_get_thread_waiting_for_direct_victim (THREAD_ENTRY *&amp;out)
+{
+  static INT64 count = 0;
+  my_count = ATOMIC_INC_64 (&amp;count, 1);
+
+  if (my_count % 4 == 0)                    /* 매 4번째는 low 큐를 먼저 본다 (기아 방지) */
+    if (waiter_threads_low_priority-&gt;consume (out)) return true;
+
+  if (waiter_threads_high_priority-&gt;consume (out)) return true;
+  if (waiter_threads_low_priority-&gt;consume (out))  return true;
+  return false;
+}
+</code></pre>
+
+<h3>7.6.4 소비 — <code>pgbuf_get_direct_victim</code> <span class="ref">page_buffer.c:15533-15588</span></h3>
+
+<pre><code>PGBUF_BCB *pgbuf_get_direct_victim (void)
+{
+  /* 슬롯을 원자적으로 비우며 가져온다 */
+  bcb = ATOMIC_TAS_ADDR (&amp;pgbuf_Pool.direct_victims.bcb_victims[thread_p-&gt;index], (PGBUF_BCB *) NULL);
+  assert (bcb != NULL);
+
+  PGBUF_BCB_LOCK (bcb);                             /* ← BCB 락 */
+
+  /* 배급 이후 누군가 이 페이지를 다시 fix했다면 무효 표시가 서 있다 */
+  if (pgbuf_bcb_is_invalid_direct_victim (bcb))
+    {
+      pgbuf_bcb_update_flags (bcb, 0, PGBUF_BCB_INVALIDATE_DIRECT_VICTIM_FLAG);  /* 표시 해제 */
+      PGBUF_BCB_UNLOCK (bcb);
+      return NULL;                                  /* 호출자는 high priority로 재파킹 */
+    }
+
+  assert (pgbuf_bcb_is_direct_victim (bcb));
+  pgbuf_bcb_update_flags (bcb, 0, PGBUF_BCB_VICTIM_DIRECT_FLAG);   /* 소유권 인수 */
+
+  if (!pgbuf_is_bcb_victimizable (bcb, true))
+    { assert (false); PGBUF_BCB_UNLOCK (bcb); return NULL; }       /* 일어나면 안 된다 */
+
+  switch (pgbuf_bcb_get_zone (bcb))
+    {
+    case PGBUF_VOID_ZONE:   break;                  /* 이미 리스트 밖 */
+    case PGBUF_INVALID_ZONE: assert (false); break;
+    default:                                        /* 아직 LRU에 남아 있다 */
+      lru_idx = pgbuf_bcb_get_lru_index (bcb);
+      pgbuf_lru_remove_bcb (bcb);                   /* 리스트 mutex 획득/해제, zone := VOID */
+      pgbuf_add_vpid_to_aout_list (&amp;bcb-&gt;vpid, lru_idx);
+      break;
+    }
+
+  assert (pgbuf_bcb_get_zone (bcb) == PGBUF_VOID_ZONE);
+  return bcb;                                       /* mutex는 잠긴 채 반환 */
+}
+</code></pre>
+
+<h3>7.6.5 재fix 무효화 규약</h3>
+
+<div class="box norm"><span class="label">규범 N7-4 — 배급된 BCB를 다시 fix하는 경우</span>
+배급된 BCB는 아직 해시 체인에 살아 있으므로, 대기 스레드가 깨어나기 전에 다른 워커가 그 VPID를 fix할 수
+있다 <span class="ref">page_buffer.c:228-233</span>.
+<br><kbd class="must">MUST</kbd> fix 경로는 <code>PGBUF_BCB_VICTIM_DIRECT_FLAG</code>가 서 있는 BCB를
+집으면 <b>같은 update 연산으로</b> <code>VICTIM_DIRECT</code>를 내리고
+<code>INVALIDATE_DIRECT_VICTIM</code>을 세운다 — 예:
+<code>pgbuf_simple_fix</code> <span class="ref">page_buffer.c:2706-2710</span> (5장의 fix 결정 트리 참조).
+<br><kbd class="must">MUST</kbd> 대기 스레드는 §7.6.4에서 이를 발견하고 NULL을 반환하며,
+<code>pgbuf_allocate_bcb</code>는 <b>high priority로 승격해 재파킹</b>한다
+<span class="ref">page_buffer.c:8265-8270</span>. 승격이 없으면 재fix가 반복될 때 그 스레드가 굶는다.
+<br><kbd class="must">MUST</kbd> fix가 <b>필요하지 않은</b> 조회 경로(<code>need_fix == false</code>)는
+direct victim 표시가 선 BCB를 <b>“찾지 못한 것”으로 취급</b>해 NULL을 반환한다
+<span class="ref">page_buffer.c:2714-2719</span> — 곧 해시에서 사라질 프레임이기 때문이다.
+</div>
+
+<h3>7.6.6 panic 배급과 lfcq 배급</h3>
+
+<pre><code>/* page_buffer.c:9493-9549. 주석 9501: "statistics shows not useful" */
+int pgbuf_panic_assign_direct_victims_from_lru (PGBUF_LRU_LIST *lru_list, PGBUF_BCB *bcb_start)
+{
+#define MAX_DEPTH 1000
+  if (bcb_start == NULL) return 0;
+  assert (pgbuf_bcb_get_lru_index (bcb_start) == lru_list-&gt;index);
+
+  for (bcb = bcb_start, count = 0, n_assigned = 0;
+       bcb != NULL &amp;&amp; PGBUF_IS_BCB_IN_LRU_VICTIM_ZONE (bcb)
+       &amp;&amp; lru_list-&gt;count_vict_cand &gt; 0 &amp;&amp; count &lt; MAX_DEPTH;
+       bcb = bcb-&gt;prev_BCB, count++)
+    {
+      if (!pgbuf_is_bcb_victimizable (bcb, false)) continue;
+      if (PGBUF_BCB_TRYLOCK (bcb) != 0)           continue;   /* 조건부만 */
+      if (!pgbuf_is_bcb_victimizable (bcb, true)) { PGBUF_BCB_UNLOCK (bcb); continue; }
+
+      if (!pgbuf_assign_direct_victim (bcb))
+        { PGBUF_BCB_UNLOCK (bcb); break; }        /* 대기자가 더 없다 ⇒ 즉시 종료 */
+
+      PGBUF_BCB_UNLOCK (bcb);
+      perfmon_inc (PSTAT_PB_VICTIM_ASSIGN_DIRECT_PANIC);      /* 상세 통계 시 */
+      n_assigned++;
+    }
+  return n_assigned;
+#undef MAX_DEPTH
+}
+
+/* page_buffer.c:9602-9635 */
+void pgbuf_lfcq_assign_direct_victims (int lru_idx, int *nassign_inout)
+{
+  lru_list = PGBUF_GET_LRU_LIST (lru_idx);
+  if (lru_list-&gt;count_vict_cand &gt; 0)
+    {
+      pthread_mutex_lock (&amp;lru_list-&gt;mutex);
+      victim_hint = lru_list-&gt;victim_hint;
+      nassigned = pgbuf_panic_assign_direct_victims_from_lru (lru_list, victim_hint);
+
+      if (nassigned == 0 &amp;&amp; lru_list-&gt;count_vict_cand &gt; 0
+          &amp;&amp; pgbuf_is_any_thread_waiting_for_direct_victim ())
+        {
+          /* hint가 나빴을 가능성이 가장 크다 ⇒ 바닥으로 리셋하고 다시 */
+          if (PGBUF_IS_BCB_IN_LRU_VICTIM_ZONE (lru_list-&gt;bottom))
+            ATOMIC_CAS_ADDR (&amp;lru_list-&gt;victim_hint, victim_hint, lru_list-&gt;bottom);
+          else
+            ATOMIC_CAS_ADDR (&amp;lru_list-&gt;victim_hint, victim_hint, (PGBUF_BCB *) NULL);
+
+          nassigned = pgbuf_panic_assign_direct_victims_from_lru (lru_list, lru_list-&gt;bottom);
+        }
+      pthread_mutex_unlock (&amp;lru_list-&gt;mutex);
+      (*nassign_inout) -= nassigned;
+    }
+}
+</code></pre>
+
+<h2>7.7 결함 D3 — <code>pgbuf_direct_victims_maintenance</code>는 no-op이다</h2>
+
+<div class="box defect"><span class="label">결함 D3 — 루프 조건이 진입 시점에 거짓</span>
+<span class="ref">page_buffer.c:9560-9592</span>. 이 함수는 “시스템 활동이 거의 없어 아무도 대기자를
+먹여 주지 못하는 상황”을 위한 <b>백업 플랜</b>으로 설계되었다(주석 9551-9556). 그런데 두 루프가 모두
+이렇게 쓰여 있다:
+<pre style="margin:0.6rem 0;"><code>static int prv_index = 0;
+for (index = prv_index, restarted = false;
+     pgbuf_is_any_thread_waiting_for_direct_victim () &amp;&amp; nassigns &gt; 0
+     &amp;&amp; index != prv_index &amp;&amp; !restarted;                    /* ← index == prv_index로 시작 */
+     (index == PGBUF_PRIVATE_LRU_COUNT - 1) ? index = 0, restarted = true : index++)
+  {
+    pgbuf_lfcq_assign_direct_victims (PGBUF_LRU_INDEX_FROM_PRIVATE (index), &amp;nassigns);
+  }
+prv_index = index;</code></pre>
+<code>index</code>가 <code>prv_index</code>로 초기화되므로 <code>index != prv_index</code>는
+<b>첫 평가에서 항상 거짓</b>이다. 두 루프 모두 몸통이 한 번도 실행되지 않으며,
+<code>prv_index</code>/<code>shr_index</code>도 값이 바뀌지 않는다. 결과적으로
+100 ms 유지보수 데몬의 후반부 <span class="ref">page_buffer.c:16942</span>는 아무 일도 하지 않는다.
+<br><br><b>선택지</b> —
+<kbd class="must">충실 재현(권장)</kbd> 함수를 그대로 옮기고 “이 루프는 실행되지 않는다”는 주석을 단다.
+동작이 원본과 동일하고, 대기자 급전은 §7.6.2의 배급자 6종과 <code>pgbuf_allocate_bcb</code>의
+flush 데몬 기상으로 충분히 공급된다(quiz 09가 이를 실증한다).
+<kbd class="may">수정</kbd> 조건을 라운드로빈 의도대로 고친다(예: <code>restarted</code>만으로 종료를
+판정하고 <code>index != prv_index</code>를 제거). 그러면 유휴 시스템에서 100 ms마다 최대 5개의 BCB가
+추가로 배급되고 <code>Num_victim_assign_direct_panic</code>이 새로 관측된다 — <b>동작이 바뀌므로
+1차 구현에서는 하지 않는다</b>.
+<br><br><span class="small">UNVERIFIED: 이것이 의도된 비활성인지 오타인지는 소스만으로 판정할 수 없다.
+감싸는 주석은 이 루프가 <i>실행되어야 한다</i>고 서술한다.</span>
+</div>
+
+<h2>7.8 기아 방지 장치 요약</h2>
+
+<div class="box norm"><span class="label">규범 N7-5 — 기아 방지 6종 (모두 필수)</span>
+<ol>
+<li><b>매 4번째 배급은 low 큐 우선</b> <span class="ref">page_buffer.c:15508-15514</span> —
+high 큐가 계속 차 있어도 low 대기자가 굶지 않는다.</li>
+<li><b>low 큐 오버플로 시 high로 승격</b> <span class="ref">page_buffer.c:8224-8233</span> —
+소비자 장기 선점(~93 ms 실측)으로 push가 실패해도 대기 자체는 성립한다.</li>
+<li><b>재fix로 배급이 무효화되면 high로 승격 후 재파킹</b> <span class="ref">page_buffer.c:8265-8270</span>.</li>
+<li><b>low 대기자가 <code>5 + 총스레드수/20</code>명 이상이면 panic 무더기 배급</b>
+<span class="ref">page_buffer.c:9402-9406</span> — victim을 하나 얻은 스레드가 리스트 mutex를 쥔 김에
+다른 대기자들 몫까지 배급한다.</li>
+<li><b>탐색 실패 시 무조건 flush 데몬 기상</b> <span class="ref">page_buffer.c:9473</span>,
+파킹 직전에도 기상 <span class="ref">8250</span>.</li>
+<li><b>300초 타임아웃과 <code>ER_PB_ALL_BUFFERS_DIRTY</code></b> — 최후의 안전망
+<span class="ref">page_buffer.c:107</span>, <span class="ref">8326-8330</span>.</li>
+</ol>
+설계 주석 <span class="ref">page_buffer.c:8160-8164</span>은 그럼에도 <b>취약점이 남아 있음을 인정</b>한다:
+<i>“대기 스레드에게 아무도 victim을 주지 않는 경우를 막는 보장이 없다. victim rich hack을 추가한 지금은
+일어나지 않을 수도 있지만, 잊힌 대기자를 위한 백업 플랜을 고려해야 한다.”</i> — 그 백업 플랜이 바로
+§7.7의 no-op 함수다.
+</div>
+
+<p>flush 데몬의 생존 조건도 여기에 묶여 있다: <code>pgbuf_keep_victim_flush_thread_running</code>
+<span class="ref">page_buffer.c:15349-15353</span>는 <b>“direct victim을 기다리는 스레드가 있거나</b>
+<b>hit ratio가 낮으면”</b> 계속 돌라고 답한다. <code>pgbuf_is_hit_ratio_low</code>
+<span class="ref">16567-16579</span>는 99.9%를 목표로 한다:
+<code>lru_victim_req_cnt &gt; 10 &amp;&amp; lru_victim_req_cnt * 1000 &gt; 총 fix 요청 수</code>.
+<code>pgbuf_is_io_stressful</code> <span class="ref">16551-16560</span>은 “low 대기 큐가 비어 있지 않음”이다.</p>
+
+<h2>7.9 관측 카운터</h2>
+
+<h3>7.9.1 탐색 결과 <span class="ref">perf_monitor.c:492-535</span></h3>
+
+<div class="tablewrap"><table>
+<tr><th>카운터</th><th>의미</th></tr>
+<tr><td><code>Num_victim_use_invalid_bcb</code></td><td>invalid list에서 바로 얻음 (탐색 없음)</td></tr>
+<tr><td><code>Num_victim_own_private_lru_success</code> / <code>_fail</code></td><td>단계 1·4의 자기 private</td></tr>
+<tr><td><code>Num_victim_other_private_lru_success</code> / <code>_fail</code></td><td>단계 2의 남의 private</td></tr>
+<tr><td><code>Num_victim_shared_lru_success</code> / <code>_fail</code></td><td>단계 3의 shared</td></tr>
+<tr><td><code>Num_victim_all_lru_fail</code></td><td>단계 1~3이 모두 실패 (단계 4 진입 직전)</td></tr>
+<tr><td><code>Num_victim_get_from_lru</code></td><td><code>get_victim_from_lru_list</code> 호출 총수</td></tr>
+<tr><td><code>Num_victim_get_from_lru_was_empty</code></td><td>후보 0으로 조기 탈출 (큐에 남은 빈 리스트의 지표)</td></tr>
+<tr><td><code>Num_victim_get_from_lru_fail</code></td><td>스캔했으나 못 찾음</td></tr>
+<tr><td><code>Num_victim_get_from_lru_bad_hint</code></td><td>hint가 있었는데 후보를 하나도 못 봄 ⇒ hint 리셋</td></tr>
+<tr><td><code>Num_alloc_bcb_prioritize_vacuum</code></td><td>vacuum이 high 큐로 파킹</td></tr>
+</table></div>
+
+<h3>7.9.2 배급 카운터</h3>
+
+<div class="tablewrap"><table>
+<tr><th>카운터</th><th>배급자</th></tr>
+<tr><td><code>Num_victim_assign_direct_flush</code></td><td>post-flush 데몬</td></tr>
+<tr><td><code>Num_victim_assign_direct_search_for_flush</code></td><td>flush 후보 수집기</td></tr>
+<tr><td><code>Num_victim_assign_direct_adjust_lru</code></td><td>zone fall</td></tr>
+<tr><td><code>Num_victim_assign_direct_adjust_lru_to_vacuum</code></td><td>zone fall에서 TO_VACUUM으로 거부됨</td></tr>
+<tr><td><code>Num_victim_assign_direct_vacuum_lru</code> / <code>_vacuum_void</code></td><td>vacuum unfix 2종</td></tr>
+<tr><td><code>Num_victim_assign_direct_panic</code></td><td>panic 무더기 배급</td></tr>
+</table></div>
+
+<h3>7.9.3 큐 카운터와 게이지</h3>
+
+<div class="tablewrap"><table>
+<tr><th>이름</th><th>종류</th><th>의미</th></tr>
+<tr><td><code>Num_lfcq_prv_get_total_calls</code> / <code>_empty</code> / <code>_big</code></td><td>카운터</td>
+<td>private 큐 소비 호출 / 빈 큐 / big 큐 적중 — <b><code>_big</code>은 D4로 항상 0</b></td></tr>
+<tr><td><code>Num_lfcq_shr_get_total_calls</code> / <code>_empty</code></td><td>카운터</td><td>shared 큐 소비</td></tr>
+<tr><td><code>Num_lfcq_private_lists</code> / <code>Num_lfcq_big_private_lists</code> / <code>Num_lfcq_shared_lists</code></td>
+<td>게이지</td><td>각 큐의 현재 원소 수 — <b>big은 항상 0</b></td></tr>
+<tr><td><code>Num_alloc_bcb_wait_threads_high_priority</code> / <code>_low_priority</code></td><td>게이지</td>
+<td>두 대기 큐의 길이</td></tr>
+<tr><td><code>Num_flushed_bcbs_wait_for_direct_victim</code></td><td>게이지</td>
+<td><code>flushed_bcbs</code> 큐 길이</td></tr>
+<tr><td><code>Num_data_page_avoid_victim</code></td><td>게이지</td>
+<td><code>FLUSHING_TO_DISK</code>가 선 BCB 수 <span class="ref">14739-14742</span></td></tr>
+</table></div>
+
+<p class="small">시간 측정 항목: <code>alloc_bcb</code>(전체), <code>alloc_bcb_search_victim</code>,
+<code>alloc_bcb_cond_wait_high_prio</code> / <code>_low_prio</code>, <code>assign_direct_bcb</code>,
+그리고 단계별 탐색 시간 3종(<code>..._search_own_private_list</code> / <code>_others_private_list</code> /
+<code>_shared_list</code>). 대부분
+<code>PERFMON_ACTIVATION_FLAG_PB_VICTIMIZATION</code> 게이트에 걸려 있어 상세 통계를 켜야 나타난다
+<span class="ref">page_buffer.c:9025</span>, <span class="ref">9282</span>.</p>
+
+<h2>7.10 수용 기준</h2>
+
+<div class="box norm"><span class="label">수용 기준 A7 — victim/direct victim (마일스톤 M4)</span>
+<b>quiz 09 (victim under pressure)</b>: 풀보다 큰 데이터에 UPDATE를 걸어 “모든 후보가 dirty”인 상태를
+만들었을 때 —
+<ol>
+<li><b>에러 없이 진행되어야 한다.</b> <code>ER_PB_ALL_BUFFERS_DIRTY</code>가 발생하면 실패다.
+이 에러는 flush 데몬이 없는 환경(SA_MODE)의 최후 경로다.</li>
+<li><code>Num_victim_assign_direct_flush &gt; 0</code> — flush → post-flush → 배급 경로가 실제로 작동한
+증거. 이 값이 0이면서 워크로드가 통과했다면 배급 경로가 아니라 다른 경로로 프레임을 얻은 것이므로
+설계가 다르다.</li>
+<li><code>Num_alloc_bcb_wait_threads_low_priority</code> 게이지가 압박 구간에서 양수로 관측되고,
+<code>alloc_bcb_cond_wait_low_prio</code> 시간이 쌓여야 한다 — 파킹이 실제로 일어났다는 뜻.</li>
+<li><code>Num_log_wals &gt; 0</code> — victim flush가 WAL flush를 끌어냈다(4장·8장의 WAL 규칙이 여기서
+대량 발동한다).</li>
+<li>UPDATE 종료 직후에도 <code>Num_data_page_dirty</code> 게이지가 높게 남아야 한다 — flush 데몬은
+victim 수요만큼만 흘려보내고 나머지는 checkpoint 몫이다.</li>
+<li><b>D4 재현 확인</b>: <code>Num_lfcq_lru_prv_get_big</code>과
+<code>Num_lfcq_big_private_lists</code>가 <b>모든 워크로드에서 0</b>이어야 한다. 0이 아니면 big 큐에
+생산자를 추가한 것이므로 충실 재현이 아니다.</li>
+<li><b>D3 재현 확인</b>: 완전 유휴 상태에서 <code>pgbuf-maintain</code> 데몬이 100 ms마다 도는 동안
+<code>Num_victim_assign_direct_panic</code>이 <b>증가하지 않아야</b> 한다.</li>
+</ol>
+대응 수치는 <b>10장의 quiz 기대치 표</b>를 따른다.
+</div>
+
+<hr>
+
+<nav class="book">
+<a href="ch06-replacement.html">← 이전: 6장 — 교체 정책</a>
+<span class="chapter-title">7장 — victim 선택과 direct victim</span>
+<a href="ch08-flush-checkpoint.html">다음: 8장 — dirty·flush·checkpoint →</a>
+</nav>
+
+</main>
+</body>
+</html>

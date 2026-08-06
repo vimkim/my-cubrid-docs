@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pgbuf 재구축 스펙 — 9장 외부 모듈 계약</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+
+<nav class="book">
+<a href="ch08-flush-checkpoint.html">← 이전: 8장 dirty·flush·checkpoint</a>
+<span class="chapter-title">9장 — 외부 모듈 계약</span>
+<a href="ch10-verification.html">다음: 10장 구현 로드맵과 수용 검증 →</a>
+</nav>
+
+<h1>9장 — 외부 모듈 계약</h1>
+
+<div class="box"><span class="label">이 장의 범위</span>
+1~8장이 <b>재작성 대상</b>(<code>page_buffer.c</code>)을 규정했다면, 이 장은 <b>재작성하지 않는 것</b>을 규정한다.
+pgbuf는 log manager, Double Write Buffer, fileio, TDE, vacuum, session/thread, perfmon, system parameter의
+여덟 모듈과 맞물려 있다. 재작성 코드는 이 모듈들의 소스를 건드리지 않고 <b>기존 구현을 그대로 링크</b>하므로,
+여기서 고정해야 할 것은 구현이 아니라 <b>호출 규약(calling contract)</b>이다:
+어떤 함수를 어떤 순서로, 어떤 락을 쥔 채/놓은 채, 어떤 반환값 해석으로 부르는가.
+계약을 어기면 컴파일은 되지만 정합성이 깨진다 — 이 장의 <kbd class="must">MUST</kbd>는 전부 그런 종류다.
+</div>
+
+<div class="box warn"><span class="label">읽는 방법</span>
+각 절은 <b>(1) pgbuf가 부르는 함수</b>와 <b>(2) pgbuf를 부르는 진입점</b>을 나누어 적는다.
+방향이 반대인 계약을 섞으면 재작성 중 순환 의존을 만들기 쉽다. 예를 들어 checkpoint는
+<b>log manager가 pgbuf를 부르는</b> 계약이고(9.1.4), WAL 강제는 <b>pgbuf가 log manager를 부르는</b>
+계약이다(9.1.1). 두 방향의 순서 요구가 서로 다르다.
+</div>
+
+<h2>9.1 log manager 계약</h2>
+
+<h3>9.1.1 WAL 강제: <code>logpb_flush_log_for_wal</code></h3>
+
+<p>데이터 페이지 쓰기 직전에 반드시 호출되는 단 하나의 WAL 강제 지점이다.</p>
+
+<pre><code>void logpb_flush_log_for_wal (THREAD_ENTRY *thread_p, const LOG_LSA *lsa_ptr);
+    /* src/transaction/log_page_buffer.c:4161-4189 */</code></pre>
+
+<p>의미론은 <b>조건부 flush</b>다. 내부는 다음과 같이 동작한다 <span class="ref">log_page_buffer.c:4161-4189</span>:</p>
+
+<ol>
+<li><code>logpb_need_wal (lsa_ptr)</code>가 거짓이면 아무것도 하지 않고 즉시 반환한다.</li>
+<li>참이면 <code>PSTAT_LOG_NUM_WALS</code>(statdump <code>Num_log_wals</code>)를 1 증가시킨다
+<span class="ref">log_page_buffer.c:4166</span>.</li>
+<li><code>LOG_CS</code>에 진입해 술어를 <b>재평가</b>하고(경합 중 다른 스레드가 이미 밀었을 수 있다),
+여전히 참이면 <code>logpb_flush_pages_direct</code>로 동기 flush한다.</li>
+</ol>
+
+<p><code>logpb_need_wal</code>의 정의는 한 줄이다 <span class="ref">log_page_buffer.c:11254-11267</span>:</p>
+
+<pre><code>bool logpb_need_wal (const LOG_LSA *lsa)
+{
+  LOG_LSA nxio_lsa = log_Gl.append.get_nxio_lsa ();
+  return LSA_LE (&amp;nxio_lsa, lsa);           /* nxio_lsa ≤ lsa 이면 flush 필요 */
+}</code></pre>
+
+<p><code>nxio_lsa</code>는 "다음에 디스크로 나갈 로그 위치"다. 즉 <b><code>lsa</code>가 아직 디스크에 내려가지
+않은 영역에 있으면 참</b>이다. 이 술어는 락 없이 읽는 <b>힌트</b>이므로, pgbuf 쪽에서 값싼 사전 검사로
+쓸 수 있다(victim flush 루프의 스킵 판정, 8장 참조) — 최종 보장은 <code>LOG_CS</code> 안의 재평가가 한다.</p>
+
+<div class="box norm"><span class="label">계약 N9-1 — WAL 순서</span>
+<kbd class="must">MUST</kbd> BCB의 페이지 이미지를 디스크(또는 DWB)로 내보내기 전에,
+그 BCB의 <b>현재 페이지 LSA</b>(<code>iopage.prv.lsa</code>)를 인자로 <code>logpb_flush_log_for_wal</code>을
+호출해야 한다. 호출 판단 조건은 "<code>oldest_unflush_lsa</code>가 NULL이 아닐 것"이고,
+<b>전달 인자는 <code>oldest_unflush_lsa</code>가 아니라 현재 LSA</b>다
+<span class="ref">page_buffer.c:10782-10795</span>. 두 값을 혼동하면 WAL이 과소 강제된다.<br>
+<kbd class="must">MUST</kbd> 이 호출은 <b>BCB mutex를 놓은 상태</b>에서 한다
+<span class="ref">page_buffer.c:10779-10787</span>. log manager 내부에서 <code>LOG_CS</code>를 잡으므로
+BCB mutex를 쥔 채 부르면 락 순서가 역전된다(4장 락 순서표).<br>
+<kbd class="should">SHOULD</kbd> <code>oldest_unflush_lsa</code>가 NULL인데 페이지가 dirty인 경우
+(로깅 없는 수정)는 정상 케이스로 취급하고, 임시 볼륨이 아니면 <code>er_log_debug</code>로만 남긴다
+<span class="ref">page_buffer.c:10797-10808</span>.
+</div>
+
+<h3>9.1.2 로그 flush 데몬 기상 — <code>log_wakeup_log_flush_daemon</code></h3>
+
+<pre><code>void log_wakeup_log_flush_daemon (void);      /* SERVER_MODE */
+void logpb_force_flush_pages (THREAD_ENTRY *thread_p);  /* SA_MODE 대체 */</code></pre>
+
+<p>victim flush가 "로그가 아직 안 내려가서" 후보를 건너뛸 때, pgbuf는 동기 flush 대신 데몬을 깨워
+비동기로 진행시킨다. 호출 지점은 두 곳이다 <span class="ref">page_buffer.c:4025</span>(스킵한 후보마다),
+<span class="ref">page_buffer.c:3946</span>(후보 수집 패스마다 1회). SA 모드에는 데몬이 없으므로
+<code>logpb_force_flush_pages</code>로 대체한다 <span class="ref">page_buffer.c:3951</span>.</p>
+
+<div class="box norm"><span class="label">계약 N9-2</span>
+<kbd class="must">MUST</kbd> 빌드 모드에 따라 두 함수를 갈라 쓴다. <code>SERVER_MODE</code>가 아닌 빌드에서
+<code>log_wakeup_log_flush_daemon</code>을 부르면 링크 에러 또는 무동작이 되어, victim flush가 영원히
+WAL 대기 상태로 남는다.<br>
+<kbd class="should">SHOULD</kbd> 모든 후보가 WAL 때문에 막힌 패스(<code>count_need_wal == victim_count</code>)에서는
+데몬 기상만으로 부족하다고 보고, <b>동기</b> <code>logpb_flush_log_for_wal(lsa_need_wal)</code>을 1회 수행한 뒤
+패스를 재시도한다 — 재시도는 <b>1회로 제한</b>한다 <span class="ref">page_buffer.c:4080-4097</span>.
+</div>
+
+<h3>9.1.3 <code>log_Gl</code> 직접 읽기 규약</h3>
+
+<p>pgbuf가 log manager의 전역 상태를 직접 들여다보는 곳은 <b>한 군데</b>뿐이다:
+<code>pgbuf_set_lsa</code>의 checkpoint 정합성 검사.</p>
+
+<div class="tablewrap"><table>
+<tr><th>대상</th><th>보호</th><th>사용처</th><th>규약</th></tr>
+<tr><td><code>log_Gl.chkpt_redo_lsa</code></td><td><code>log_Gl.chkpt_lsa_lock</code></td>
+<td><code>pgbuf_set_lsa</code> <span class="ref">page_buffer.c:4996-5018</span></td>
+<td>락 없이 한 번 읽어 값싸게 비교한 뒤, 위반이 의심될 때만 <b>락을 잡고 재확인</b>한다.
+재확인 후에도 페이지 LSA가 checkpoint redo LSA보다 오래되면
+<code>ER_LOG_CHECKPOINT_SKIP_INVALID_PAGE</code> + <code>assert(false)</code></td></tr>
+<tr><td><code>log_Gl.append.get_nxio_lsa()</code></td><td>없음(atomic 읽기)</td>
+<td><code>logpb_need_wal</code> 경유 <span class="ref">page_buffer.c:4013</span></td>
+<td>힌트로만 사용. 값이 낡아도 최종 보장은 <code>LOG_CS</code> 안에서 재평가된다</td></tr>
+</table></div>
+
+<div class="box"><span class="label">이 검사가 무엇을 잡는가</span>
+"checkpoint가 이미 지나간 위치보다 오래된 LSA가 페이지에 새로 찍힌다"는 것은,
+그 수정이 REDO 범위 밖으로 새어나갔다는 뜻이다 — 재기동 시 복원 불가능한 상태.
+따라서 이것은 성능 검사가 아니라 <b>정합성 assert</b>다. 재작성 시 생략해도 정상 경로는 돌지만,
+버그를 조용히 삼키게 된다. <kbd class="should">SHOULD</kbd> 그대로 이식할 것.
+</div>
+
+<h3>9.1.4 반대 방향 — log manager가 pgbuf를 부르는 계약</h3>
+
+<p>checkpoint의 순서는 <b>log manager가 소유</b>한다. pgbuf는 그 안에서 호출되는 한 단계일 뿐이다
+<span class="ref">log_page_buffer.c:7010-7021</span>:</p>
+
+<pre><code>logpb_checkpoint ()
+  1. logpb_flush_pages_direct ()                       /* 로그부터 내린다        :6985 */
+  2. LOG_START_CHKPT 레코드 append → newchkpt_lsa      /*                       :6988-6995 */
+  3. chkpt_lsa_lock 아래 chkpt_lsa / chkpt_redo_lsa 스냅샷 /*                    :6980-6983 */
+  4. pgbuf_flush_checkpoint (thread_p, &amp;newchkpt_lsa, &amp;chkpt_redo_lsa,
+                             &amp;tmp_chkpt.redo_lsa, &amp;flushed_page_cnt)   /*      :7011 */
+  5. fileio_synchronize_all (thread_p)                  /*                      :7018 */
+  6. tmp_chkpt.redo_lsa → 다음 checkpoint의 redo LSA
+     (아무것도 남지 않았으면 newchkpt_lsa로 대체)        /*                      :7025-7030 */</code></pre>
+
+<div class="box norm"><span class="label">계약 N9-3 — checkpoint 출력 규약</span>
+<kbd class="must">MUST</kbd> <code>pgbuf_flush_checkpoint</code>의 <code>smallest_lsa</code> 출력 파라미터에는
+<b>flush하지 못하고 남은 dirty BCB들의 최소 <code>oldest_unflush_lsa</code></b>를 넣는다.
+남은 것이 없으면 NULL LSA를 반환하고, 호출자가 <code>newchkpt_lsa</code>로 대체한다.
+이 값이 다음 checkpoint의 REDO 시작점이 되므로, <b>실제보다 큰 값을 반환하면 복구가 깨진다</b> —
+"덜 진행한 값(더 작은 LSA)"은 안전하고 "더 진행한 값"은 치명적이라는 비대칭을 지킬 것.<br>
+<kbd class="must">MUST</kbd> <code>fileio_synchronize_all</code>은 <b>pgbuf가 부르지 않는다</b>.
+호출자(log manager)가 <code>pgbuf_flush_checkpoint</code> 반환 <b>후에</b> 부른다.
+재작성 중 "안전하게 하려고" pgbuf 안에서 fsync를 추가하면 checkpoint 비용이 2배가 되고
+DWB의 fsync 생략 최적화(9.2.5)와 충돌한다.
+</div>
+
+<p><code>pgbuf_flush_checkpoint</code>의 다른 호출자 두 곳은 <code>prev_chkpt_redo_lsa = NULL</code>로 부른다
+(SA 모드 아카이브 제거 판정) <span class="ref">log_page_buffer.c:6277</span>,
+<span class="ref">log_page_buffer.c:10700</span>. <code>pgbuf_flush_all*</code> 계열의 호출자는
+복구(<code>log_recovery.c:930/3936/4996</code>), 부팅·종료(<code>boot_sr.c:5105/5137</code>),
+log manager(<code>log_manager.c:1825/5460/8928/8943/8963/9212</code>),
+디스크 볼륨 조작(<code>disk_manager.c:730/779/830</code>)이다.
+<kbd class="must">MUST</kbd> 이 세 변종(<code>all</code> / <code>all_unfixed</code> /
+<code>all_unfixed_and_set_lsa_as_null</code>)의 시그니처와 의미를 모두 유지할 것 —
+외부 호출자가 이미 존재하므로 하나라도 빠지면 링크가 깨진다.</p>
+
+<h3>9.1.5 <code>LOG_CS</code> 보유 스레드의 토큰 면제</h3>
+
+<div class="box warn"><span class="label">전제(pgbuf가 의존하는 외부 성질)</span>
+flush rate 토큰 버킷(<code>fileio_flush_control_get_token</code>)은 <code>LOG_CS</code>를 보유한 스레드를
+<b>무조건 통과시킨다</b> — 토큰을 소모하지 않고 <code>fc_Stats.num_log_pages</code>에만 기록한 뒤 즉시 반환한다
+<span class="ref">file_io.c:771-774</span>, <span class="ref">file_io.c:808-812</span>.<br>
+따라서 <b>로그 flush는 데이터 페이지 rate limiter에 절대 걸리지 않는다</b>.
+pgbuf의 WAL 강제가 토큰 고갈로 교착하지 않는 이유가 이것이다.
+재작성자는 이 면제를 <b>가정해도 된다</b>. 반대로, pgbuf가 자체 rate limit을 추가하면서
+WAL 경로를 그 안에 넣으면 이 성질이 깨져 데드락이 생긴다 — <kbd class="must">MUST NOT</kbd>.
+</div>
+
+<h2>9.2 Double Write Buffer 계약</h2>
+
+<p>DWB는 재작성 대상이 아니다. 여기서는 <b>pgbuf가 DWB에 기대하는 것</b>과
+<b>DWB가 pgbuf에 요구하는 것</b>만 고정한다.</p>
+
+<h3>9.2.1 인터페이스 표</h3>
+
+<div class="tablewrap"><table>
+<tr><th>함수</th><th>시그니처 요약</th><th>pgbuf 쪽 계약</th></tr>
+<tr><td><code>dwb_is_created</code></td><td><code>bool (void)</code></td>
+<td>DWB 활성 여부. flush 진입 시 1회 평가해 <code>uses_dwb = dwb_is_created() &amp;&amp; !is_temp</code>로 캐시한다
+<span class="ref">page_buffer.c:10741</span>. <b>임시 볼륨은 항상 DWB 우회</b></td></tr>
+<tr><td><code>dwb_set_data_on_next_slot</code></td>
+<td><code>int (THREAD_ENTRY*, FILEIO_PAGE *io_page, bool can_wait, DWB_SLOT **p_dwb_slot)</code></td>
+<td>슬롯을 확보하고 페이지 내용을 슬롯으로 복사. pgbuf는 <b><code>can_wait = false</code></b>로 호출
+<span class="ref">page_buffer.c:10762</span></td></tr>
+<tr><td><code>dwb_add_page</code></td>
+<td><code>int (THREAD_ENTRY*, FILEIO_PAGE *io_page, VPID *vpid, bool can_wait, DWB_SLOT **p_dwb_slot)</code></td>
+<td>슬롯을 DWB 해시에 등록하고 블록이 차면 flush를 촉발. pgbuf는 <b>BCB mutex를 놓은 뒤</b> 호출
+<span class="ref">page_buffer.c:10811</span></td></tr>
+<tr><td><code>dwb_read_page</code></td>
+<td><code>int (THREAD_ENTRY*, const VPID *vpid, void *io_page, bool *success)</code></td>
+<td>fix miss 경로에서 <b>디스크 읽기보다 먼저</b> 조회 <span class="ref">page_buffer.c:8454-8465</span></td></tr>
+<tr><td><code>dwb_flush_force</code> / <code>dwb_synchronize</code></td>
+<td><code>int (THREAD_ENTRY*, bool *all_sync)</code> / <code>int (THREAD_ENTRY*, int vol_fd, const char *vlabel)</code></td>
+<td>pgbuf가 직접 부르지 않는다. <code>fileio_synchronize</code> 계열이 내부적으로 경유
+<span class="ref">double_write_buffer.cpp:2842-2902</span></td></tr>
+<tr><td><code>dwb_load_and_recover_pages</code></td><td><code>int (THREAD_ENTRY*, const char*, const char*)</code></td>
+<td>부팅 시 <code>boot_sr.c:2408</code>이 호출. pgbuf보다 <b>먼저</b> 도는 것이 아니라,
+pgbuf를 <code>pgbuf_invalidate_all</code>로 되돌리며 진행한다(9.2.5)</td></tr>
+</table></div>
+
+<h3>9.2.2 2단계 프로토콜과 <code>can_wait</code> 의미론</h3>
+
+<p>DWB 슬롯 확보는 <b>BCB mutex를 쥔 구간</b>과 <b>놓은 구간</b>으로 쪼개져 있다.
+이 분할이 계약의 핵심이다.</p>
+
+<pre><code>/* BCB mutex 보유 중 */
+uses_dwb = dwb_is_created () &amp;&amp; !is_temp;
+was_dirty = mark_is_flushing (bcb);              /* FLUSHING_TO_DISK 세우고 DIRTY 끔 */
+iopage = PTR_ALIGN (stack_page_buf, MAX_ALIGNMENT);
+if (tde_algo != NONE) tde_encrypt_data_page (&amp;bcb-&gt;iopage, tde_algo, is_temp, iopage);
+else                  memcpy (iopage, &amp;bcb-&gt;iopage, IO_PAGESIZE);
+if (uses_dwb)
+  {
+    error = dwb_set_data_on_next_slot (thread_p, iopage, /* can_wait */ false, &amp;dwb_slot);
+    if (error != NO_ERROR) return error;         /* ← D1: 여기서 플래그 누수 */
+    if (dwb_slot != NULL) iopage = NULL;         /* 슬롯이 이미 데이터를 갖고 있음 */
+  }
+lsa = bcb-&gt;iopage.prv.lsa; saved_unflush = bcb-&gt;oldest_unflush_lsa;
+bcb-&gt;oldest_unflush_lsa = NULL;
+PGBUF_BCB_UNLOCK (bcb);                          /* ← 여기서 mutex를 놓는다 */
+
+/* mutex 없음 */
+if (!LSA_ISNULL (&amp;saved_unflush)) logpb_flush_log_for_wal (thread_p, &amp;lsa);
+if (uses_dwb)
+  {
+    error = dwb_add_page (thread_p, iopage, &amp;bcb-&gt;vpid, /* can_wait */ false, &amp;dwb_slot);
+    if (error == NO_ERROR &amp;&amp; dwb_slot == NULL)
+      { PGBUF_BCB_LOCK (bcb); goto start_copy_page; }   /* DWB가 소멸 → 비DWB로 재시도 */
+  }
+else
+  { fileio_write (..., dwb_is_created () ? NO_COMPENSATE : DEFAULT); }</code></pre>
+
+<div class="box norm"><span class="label">계약 N9-4 — <code>can_wait</code>의 두 얼굴</span>
+<kbd class="must">MUST</kbd> 1단계(<code>dwb_set_data_on_next_slot</code>)는 <b><code>can_wait = false</code></b>로 부른다.
+BCB mutex를 쥐고 있기 때문이다. 슬롯이 없으면 <code>*p_dwb_slot = NULL</code>로 <b>정상 반환</b>한다
+(에러가 아니다) <span class="ref">double_write_buffer.cpp:2695 → 2468</span>.<br>
+<kbd class="must">MUST</kbd> 2단계(<code>dwb_add_page</code>)는 <code>dwb_slot == NULL</code>인 상태로 들어오면
+내부에서 <b><code>can_wait = true</code>로 재시도</b>하며, 이때 호출 스레드는 <b>블록될 수 있다</b>
+<span class="ref">double_write_buffer.cpp:2743-2755</span>. 그래서 이 호출은 반드시
+mutex를 놓은 뒤여야 한다.<br>
+<kbd class="must">MUST</kbd> 슬롯 확보에 성공했으면 <code>iopage = NULL</code>로 만들어 2단계에 넘긴다.
+DWB가 이미 데이터를 갖고 있으므로 스택 사본을 다시 넘기면 이중 복사가 된다.
+</div>
+
+<div class="box defect"><span class="label">D1 — 이 지점의 알려진 결함</span>
+1단계 실패 반환(<span class="ref">page_buffer.c:10765</span>)과 TDE 암호화 실패 반환
+(<span class="ref">page_buffer.c:10753</span>)이 <code>FLUSHING_TO_DISK</code> 플래그를 되돌리지 않는다.
+이 BCB는 <b>영구히 victim 불가</b>가 되고 <code>PGBUF_LATCH_FLUSH</code> 대기자는 영원히 잠든다.<br>
+<b>충실 재현</b>: 위 의사코드대로 그냥 <code>return error</code>. <b>수정</b>: 정상 에러 경로와 동일하게
+<code>mark_was_not_flushed</code> + <code>oldest_unflush_lsa</code> 복원 + <code>wake_flush_waiters</code>
+후 반환. <b>권장 — 수정</b>. 발생 조건(TDE 로드 + 암호화/슬롯 실패)이 희귀해서 drop-in 카운터 diff에
+영향이 없고, 재현할 가치가 없는 순수 버그다. 10장 §10.5 참조.
+</div>
+
+<h3>9.2.3 NULL 슬롯 반환 = DWB 소멸 → 비DWB 재시도</h3>
+
+<div class="box norm"><span class="label">계약 N9-5</span>
+<code>dwb_add_page</code>가 <b><code>NO_ERROR</code>를 반환했는데 <code>dwb_slot == NULL</code></b>이면,
+그 사이에 DWB가 소멸(파라미터 변경/종료)한 것이다.
+<kbd class="must">MUST</kbd> 이 경우 BCB mutex를 다시 잡고 <b>페이지 복사 단계부터 재실행</b>해
+DWB 없이 <code>fileio_write</code>로 쓴다 <span class="ref">page_buffer.c:10814-10821</span>.
+에러로 처리하거나 그냥 성공으로 간주하면 <b>수정 유실</b>이다 —
+이미 <code>DIRTY</code>가 꺼져 있고 <code>oldest_unflush_lsa</code>도 NULL이기 때문이다.
+</div>
+
+<h3>9.2.4 읽기는 반드시 DWB를 먼저 본다</h3>
+
+<div class="box defect" style="border-left-color:var(--norm-line); background:var(--norm-bg);">
+<span class="label">계약 N9-6 — 정합성 요건 (성능 최적화가 아님)</span>
+<kbd class="must">MUST</kbd> fix miss 경로에서 <code>fileio_read</code>보다 <b>먼저</b>
+<code>dwb_read_page</code>를 호출하고, <code>success == true</code>면 디스크를 읽지 않는다
+<span class="ref">page_buffer.c:8454-8465</span>.<br>
+<b>이유</b>: <code>dwb_add_page</code> 시점부터 블록 flush의 "원위치 쓰기" 단계가 끝나는 시점까지,
+<b>홈 위치(데이터 볼륨)에는 아직 이전 버전이 들어 있다</b>. DWB를 건너뛰고 디스크를 읽으면
+<b>커밋된 최신 수정을 잃은 페이지</b>를 버퍼에 올리게 된다.
+DWB가 해시 엔트리를 <b>모든 홈 쓰기가 끝난 뒤에야</b> 지우는 것도 같은 이유다
+<span class="ref">double_write_buffer.cpp:2023-2027, 2153-2176</span>.<br>
+<code>dwb_read_page</code>가 에러를 반환하면 <code>assert(false)</code> 후 NULL 반환 — 디스크로 폴백하지 않는다.
+</div>
+
+<h3>9.2.5 블록 flush 순서 보장과 복구 — 동작 요약</h3>
+
+<div class="tablewrap"><table>
+<tr><th>#</th><th>단계</th><th>보장</th><th>근거</th></tr>
+<tr><td>1</td><td>슬롯 수집 + VPID 정렬 + 인접 중복 제거(낮은 LSA 무효화)</td>
+<td>한 블록에 같은 VPID가 두 번 쓰이지 않는다</td><td><span class="ref">dwb:2222, 2230-2254</span></td></tr>
+<tr><td>2</td><td>이전 블록의 file-sync helper 드레인 대기</td><td>블록 간 fsync 중첩 없음</td>
+<td><span class="ref">dwb:2276-2306</span></td></tr>
+<tr><td>3</td><td><b><code>&lt;db&gt;_dwb</code> 파일에 offset 0부터 일괄 write</b></td>
+<td>순차 쓰기 1회, <code>PSTAT_PB_NUM_IOWRITES += count</code></td><td><span class="ref">dwb:2329-2339</span></td></tr>
+<tr><td>4</td><td><b><code>fileio_synchronize</code>(DWB 파일)</b></td>
+<td><b>내구성 분기점</b> — 이 시점 이후 사본은 신뢰 가능</td><td><span class="ref">dwb:2341</span></td></tr>
+<tr><td>5</td><td>원위치(데이터 볼륨)에 VPID 순으로 write</td>
+<td>fsync·토큰 없음(<code>NO_COMPENSATE</code>)</td><td><span class="ref">dwb:2086-2087</span></td></tr>
+<tr><td>6</td><td>볼륨별 fsync (helper와 분담)</td><td>홈 쓰기 내구화</td><td><span class="ref">dwb:2362-2402</span></td></tr>
+<tr><td>7</td><td>해시 엔트리 제거 → 블록 리셋 → 대기자 해제</td><td>N9-6의 창(window)이 여기서 닫힌다</td>
+<td><span class="ref">dwb:2153-2176, 2416-2441</span></td></tr>
+</table></div>
+
+<p>복구(<code>dwb_load_and_recover_pages</code>, 부팅 시 <code>boot_sr.c:2408</code>) 요약:</p>
+
+<div class="tablewrap"><table>
+<tr><th>규칙</th><th>동작</th><th>근거</th></tr>
+<tr><td>파일 없음</td><td>복구 생략, 바로 <code>dwb_create</code></td><td><span class="ref">dwb:3209-3215</span></td></tr>
+<tr><td>페이지 수가 2의 거듭제곱이 아님</td><td><b>전체 폐기</b> — 부분 기록된 DWB로 간주</td>
+<td><span class="ref">dwb:3227-3235</span></td></tr>
+<tr><td>메타데이터 없음</td><td>VPID/LSA를 <b>페이지 헤더에서 재구성</b></td><td><span class="ref">dwb:3252-3259</span></td></tr>
+<tr><td>같은 VPID 중복</td><td>높은 LSA 우선, LSA 동률이면 <b>블록 내 낮은 위치</b> 우선</td>
+<td><span class="ref">dwb:3273-3318</span></td></tr>
+<tr><td><b>홈 페이지가 sane</b></td><td><b>절대 덮어쓰지 않는다</b> — DWB 사본이 더 새것이어도 폐기</td>
+<td><span class="ref">dwb:3155-3161</span></td></tr>
+<tr><td>홈 페이지 corrupted + DWB 사본 sane</td><td>DWB 사본으로 복원</td><td><span class="ref">dwb:3163-3180</span></td></tr>
+<tr><td>둘 다 corrupted</td><td><code>assert_release(false)</code> + <code>ER_FAILED</code> — 복구 불능</td>
+<td><span class="ref">dwb:3163-3176</span></td></tr>
+<tr><td>복원 직전</td><td><b><code>pgbuf_invalidate_all (thread_p, NULL_VOLID)</code></b> 선행</td>
+<td><span class="ref">dwb:3338-3339</span></td></tr>
+</table></div>
+
+<div class="box norm"><span class="label">계약 N9-7 — pgbuf가 복구에 제공해야 하는 것</span>
+<kbd class="must">MUST</kbd> <code>pgbuf_invalidate_all (thread_p, NULL_VOLID)</code>는 DWB 복구가
+<b>pgbuf에 요구하는 유일한 진입점</b>이다. 부팅 중 이미 읽혀 버퍼에 올라온 페이지들을 통째로 버려,
+DWB가 디스크에 다시 쓴 내용을 이후 fix가 재독하도록 만든다.
+이 함수가 dirty 페이지를 <b>쓰지 않고 버리는지 flush하는지</b>는 2장 API 계약을 따른다 —
+복구 문맥에서는 버퍼의 내용이 신뢰 대상이 아니므로 <b>버리는</b> 쪽이 맞다.<br>
+<kbd class="may">MAY</kbd> DWB의 나머지 동작은 전부 블랙박스로 취급해도 된다.
+"DWB 파일 크기 = 블록 1개 크기(기본 1 MB)"처럼 놀라운 성질들도 pgbuf 계약면에는 나타나지 않는다
+<span class="ref">dwb:1193-1194</span>.
+</div>
+
+<h3>9.2.6 torn 감지: <code>fileio_is_page_sane</code>과 호출 지점 제한</h3>
+
+<pre><code>/* src/storage/file_io.h:230-236 */
+STATIC_INLINE int fileio_is_page_sane (FILEIO_PAGE *io_page, PGLENGTH page_size)
+{
+  FILEIO_PAGE_WATERMARK *prv2 = fileio_get_page_watermark_pos (io_page, page_size);
+  return (LSA_EQ (&amp;io_page-&gt;prv.lsa, &amp;prv2-&gt;lsa));
+}</code></pre>
+
+<p><b>checksum은 어디에도 없다.</b> torn 판정은 페이지 <b>머리 LSA</b>와 <b>꼬리 워터마크 LSA</b>의
+동일성 하나다. 이 커밋에서 이 검사의 전체 호출 지점은 다섯 곳뿐이다:</p>
+
+<div class="tablewrap"><table>
+<tr><th>위치</th><th>문맥</th></tr>
+<tr><td><span class="ref">double_write_buffer.cpp:3149</span></td><td>DWB 복구 — 홈 페이지 손상 여부</td></tr>
+<tr><td><span class="ref">double_write_buffer.cpp:3164</span></td><td>DWB 복구 — DWB 사본 손상 여부</td></tr>
+<tr><td><span class="ref">double_write_buffer.cpp:2629</span></td><td><code>assert</code>만 — 슬롯 진입 페이지는 sane해야</td></tr>
+<tr><td><span class="ref">file_io.c:3695</span></td><td>fault-injection 디버그 블록 내부 <code>assert</code></td></tr>
+<tr><td><span class="ref">page_buffer.c:11455</span></td><td><code>pgbuf_is_consistent</code> — <code>CUBRID_DEBUG</code> 전용</td></tr>
+</table></div>
+
+<div class="box warn"><span class="label">충실 재현 항목 — 일반 읽기 경로는 검사하지 않는다</span>
+<kbd class="must">MUST</kbd> <code>pgbuf_claim_bcb_for_fix</code>의 정상 읽기 경로에서
+<code>fileio_page_check_corruption</code> / <code>fileio_is_page_sane</code>을 <b>호출하지 않는다</b>
+<span class="ref">page_buffer.c:8454-8521</span>.<br>
+"안전하니까 넣자"는 유혹이 크지만, 이것은 <b>일관된 설계 결정</b>이다:
+검사는 <b>수리 수단이 있는 곳에서만</b> 한다. fix 경로에서 torn을 발견해도 pgbuf가 할 수 있는 일은
+에러 반환뿐이고, 그 에러는 DWB 복구가 이미 처리했어야 할 상황이므로 실질적으로 도달 불가능하다.
+검사를 추가하면 매 miss마다 페이지 양끝을 건드려 캐시 라인 2개를 추가로 더럽히는 비용만 늘고,
+drop-in 성능 프로파일이 달라진다.
+</div>
+
+<h2>9.3 fileio 계약</h2>
+
+<h3>9.3.1 시그니처</h3>
+
+<pre><code>/* src/storage/file_io.h:481-495 */
+void *fileio_read  (THREAD_ENTRY *, int vol_fd, void *io_page_p, PAGEID, size_t page_size);
+void *fileio_write (THREAD_ENTRY *, int vol_fd, void *io_page_p, PAGEID, size_t page_size,
+                    FILEIO_WRITE_MODE write_mode);
+void *fileio_write_pages (THREAD_ENTRY *, int vol_fd, char *io_pages_p, PAGEID, int num_pages,
+                          size_t page_size, FILEIO_WRITE_MODE write_mode);
+void *fileio_write_or_add_to_dwb (THREAD_ENTRY *, int vol_fd, FILEIO_PAGE *, PAGEID, size_t);
+int   fileio_synchronize     (THREAD_ENTRY *, int vdes, const char *vlabel, bool ensure_metadata);
+int   fileio_synchronize_all (THREAD_ENTRY *);</code></pre>
+
+<h3>9.3.2 <code>write_mode</code>의 의미</h3>
+
+<div class="tablewrap"><table>
+<tr><th>모드</th><th>부수효과</th><th>pgbuf가 쓰는 곳</th></tr>
+<tr><td><code>FILEIO_WRITE_DEFAULT_WRITE</code>
+<span class="ref">file_io.h:160</span></td>
+<td><code>fileio_compensate_flush</code> 수행: <b>(a) 토큰 버킷에서 <code>npage</code>개 토큰 획득</b>(대기 가능),
+<b>(b)</b> 전역 flush 카운터를 올리고 <code>sync_on_nflush</code>를 넘으면 리셋 + <code>fileio_synchronize_all</code>
+<span class="ref">file_io.c:626-668</span>, <span class="ref">file_io.c:4197-4200</span></td>
+<td>DWB가 <b>꺼져 있을 때</b>의 페이지 쓰기 <span class="ref">page_buffer.c:10828</span></td></tr>
+<tr><td><code>FILEIO_WRITE_NO_COMPENSATE_WRITE</code>
+<span class="ref">file_io.h:161</span></td>
+<td>둘 다 생략 — 토큰도 안 쓰고 주기적 fsync도 없다</td>
+<td>DWB가 <b>켜져 있을 때</b>의 페이지 쓰기(전체 동기화는 DWB가 담당)
+<span class="ref">page_buffer.c:10827</span>, 그리고 DWB 내부의 모든 쓰기</td></tr>
+</table></div>
+
+<div class="box norm"><span class="label">계약 N9-8 — 모드 선택 규칙</span>
+<kbd class="must">MUST</kbd> 비DWB 쓰기 분기에서 모드는
+<code>dwb_is_created () ? NO_COMPENSATE : DEFAULT</code>로 <b>호출 시점에 다시</b> 평가한다
+<span class="ref">page_buffer.c:10827</span>. 진입부에서 캐시한 <code>uses_dwb</code>를 재사용하지 않는다 —
+임시 볼륨은 <code>uses_dwb == false</code>지만 DWB 자체는 켜져 있을 수 있고, 그때 토큰을 소모하면
+DWB 경로와 이중으로 rate limit이 걸린다.
+</div>
+
+<p><code>fileio_write_or_add_to_dwb</code>는 <b>pgbuf가 아닌</b> 쓰기 경로(볼륨 포맷/확장/복사)가 쓰는 함수다
+<span class="ref">file_io.c:4008-4060</span>. 영구 볼륨이면 <code>prv.volid</code>/<code>prv.pageid</code>를 찍고
+<code>dwb_add_page</code>로, 아니면 직접 쓰기로 간다. <code>CS_MODE</code>에서는 DWB 분기 전체가 컴파일 제외된다
+<span class="ref">file_io.c:4057-4058</span>. <kbd class="may">MAY</kbd> pgbuf는 이 함수를 쓰지 않는다 —
+계약 표에 넣는 이유는 "왜 pgbuf만 2단계 프로토콜을 쓰는가"를 설명하기 위해서다
+(pgbuf만이 BCB mutex를 쥔 채 시작하기 때문).</p>
+
+<h3>9.3.3 <code>FILEIO_PAGE</code> 레이아웃과 워터마크</h3>
+
+<pre><code>struct fileio_page_reserved {          /* file_io.h:165-176 */
+  LOG_LSA lsa;            /* 페이지 최종 수정 LSA */
+  INT32   pageid;  INT16 volid;
+  unsigned char ptype;    /* PAGE_* 타입 */
+  unsigned char pflag;    /* 현재는 TDE 비트만: mask 0x3 */
+  INT32 p_reserve_1, p_reserve_2;
+  INT64 tde_nonce;        /* temp: atomic 카운터 / perm: lsa */
+};
+struct fileio_page {                    /* file_io.h:186-193 */
+  FILEIO_PAGE_RESERVED  prv;            /* 머리 */
+  char                  page[1];        /* 사용자 영역 */
+  FILEIO_PAGE_WATERMARK prv2;           /* ★선언 위치 ≠ 실제 위치★ */
+};</code></pre>
+
+<div class="box warn"><span class="label">함정 — <code>prv2</code>는 선언된 오프셋에 없다</span>
+<kbd class="must">MUST NOT</kbd> <code>io_page-&gt;prv2</code>로 직접 접근하지 말 것.
+반드시 <code>fileio_get_page_watermark_pos (io_page, page_size)</code>
+= <code>io_page + (page_size - sizeof (FILEIO_PAGE_WATERMARK))</code>를 쓴다
+<span class="ref">file_io.h:195-199</span>. 헤더에도 경고 주석이 있다 <span class="ref">file_io.h:191</span>.<br>
+LSA를 바꾸는 모든 경로는 <b>두 사본을 함께</b> 갱신한다: <code>fileio_set_page_lsa</code>
+<span class="ref">file_io.h:220-228</span>, <code>fileio_init_lsa_of_page</code> /
+<code>fileio_reset_page_lsa</code> <span class="ref">file_io.h:201-218</span>.
+한쪽만 쓰면 그 페이지는 즉시 "torn"으로 판정된다.
+</div>
+
+<div class="tablewrap"><table>
+<tr><th>상수</th><th>정의</th><th>값</th></tr>
+<tr><td><code>IO_PAGESIZE</code></td><td><code>db_Io_page_size</code> — 디스크 페이지 전체
+<span class="ref">storage_common.h:100</span></td><td>기본·최대 16 KiB, 최소 4 KiB <span class="ref">storage_common.h:91-93</span></td></tr>
+<tr><td><code>DB_PAGESIZE</code></td><td><code>db_User_page_size</code> — 사용자 가용 바이트
+<span class="ref">storage_common.h:101</span></td><td><code>IO_PAGESIZE − RESERVED_SIZE_IN_PAGE</code></td></tr>
+<tr><td><code>RESERVED_SIZE_IN_PAGE</code></td>
+<td><code>sizeof(FILEIO_PAGE_RESERVED) + sizeof(FILEIO_PAGE_WATERMARK)</code> <span class="ref">storage_common.c:44</span></td>
+<td>머리 + 꼬리</td></tr>
+<tr><td>프레임 stride</td>
+<td><code>offsetof(PGBUF_IOPAGE_BUFFER, iopage) + IO_PAGESIZE</code>
+(<code>CUBRID_DEBUG</code>에서는 +8 가드) <span class="ref">page_buffer.c:110-120</span></td><td>3장 참조</td></tr>
+</table></div>
+
+<h2>9.4 TDE 계약</h2>
+
+<div class="tablewrap"><table>
+<tr><th>함수</th><th>시그니처</th><th>계약</th></tr>
+<tr><td><code>tde_is_loaded</code> <span class="ref">tde.h:174</span></td><td><code>bool (void)</code></td>
+<td>순수 술어, 실패 없음. pgbuf는 <code>pgbuf_set_tde_algorithm</code>의 <code>assert</code>에서만 쓴다
+<span class="ref">page_buffer.c:5060</span></td></tr>
+<tr><td><code>tde_encrypt_data_page</code> <span class="ref">tde.h:190</span></td>
+<td><code>int (const FILEIO_PAGE *plain, TDE_ALGORITHM, bool is_temp, FILEIO_PAGE *cipher)</code></td>
+<td>flush 시 <b>스택 사본으로</b> 암호화 — <code>memcpy</code>를 <b>대체</b>한다(추가가 아니다)
+<span class="ref">page_buffer.c:10746-10760</span></td></tr>
+<tr><td><code>tde_decrypt_data_page</code> <span class="ref">tde.h:192</span></td>
+<td><code>int (const FILEIO_PAGE *cipher, TDE_ALGORITHM, bool is_temp, FILEIO_PAGE *plain)</code></td>
+<td>fix miss에서 <code>fileio_read</code> 직후 <b>제자리(in-place, src==dst)</b> 복호화
+<span class="ref">page_buffer.c:8492-8506</span></td></tr>
+</table></div>
+
+<div class="box norm"><span class="label">계약 N9-9</span>
+<kbd class="must">MUST</kbd> 암호화는 <b>BCB의 프레임이 아니라 스택 사본</b>에 한다.
+BCB를 제자리 암호화하면 메모리의 페이지가 암호문이 되어 다른 fix 홀더가 쓰레기를 읽는다.
+<code>iopage = PTR_ALIGN (page_buf, MAX_ALIGNMENT)</code>로 정렬된
+<code>char page_buf[IO_MAX_PAGE_SIZE + MAX_ALIGNMENT]</code>가 그 대상이다
+<span class="ref">page_buffer.c:10673, 10744</span>.<br>
+<kbd class="must">MUST</kbd> 복호화는 반대로 <b>제자리</b>가 맞다 — 디스크에서 막 읽어온, 아직 아무도 못 보는
+프레임이기 때문이다. 실패 시 <code>pgbuf_put_bcb_into_invalid_list</code> + <code>pgbuf_unlock_page</code> 후
+NULL 반환 <span class="ref">page_buffer.c:8500-8505</span>(BCB를 그냥 버리면 buffer lock 대기자가 남는다).<br>
+<kbd class="must">MUST</kbd> 두 함수 모두 <code>tde_is_loaded()</code>가 거짓이면
+<code>ER_TDE_CIPHER_IS_NOT_LOADED</code>를 반환한다 <span class="ref">tde.c:921-925, 973-977</span>.
+pgbuf는 사전 검사 없이 호출하고 에러로 처리한다.
+</div>
+
+<p><b>pflag 비트</b>는 pgbuf가 소유한다 — TDE는 암복호만 한다.</p>
+
+<div class="tablewrap"><table>
+<tr><th>비트</th><th>값</th><th>근거</th></tr>
+<tr><td><code>FILEIO_PAGE_FLAG_ENCRYPTED_AES</code></td><td><code>0x1</code></td><td><span class="ref">file_io.h:63</span></td></tr>
+<tr><td><code>FILEIO_PAGE_FLAG_ENCRYPTED_ARIA</code></td><td><code>0x2</code></td><td><span class="ref">file_io.h:64</span></td></tr>
+<tr><td><code>FILEIO_PAGE_FLAG_ENCRYPTED_MASK</code></td><td><code>0x3</code></td><td><span class="ref">file_io.h:66</span></td></tr>
+</table></div>
+
+<p>헬퍼 매크로는 없고 전부 열린 비트 연산이다. 접근자 쌍은 pgbuf 안에 있다:
+<code>pgbuf_get_tde_algorithm(PAGE_PTR)</code> <span class="ref">page_buffer.c:5128</span> /
+<code>pgbuf_set_tde_algorithm(...)</code> <span class="ref">page_buffer.c:5055</span>.
+<code>pgbuf_dealloc_page</code>는 pflag를 0으로 지우고 <span class="ref">page_buffer.c:15159-15160</span>,
+undo/redo가 <code>PGBUF_DEALLOC_UNDO_DATA</code>에 담긴 값으로 복원한다
+<span class="ref">page_buffer.c:15142, 15227, 15266</span>.
+<kbd class="should">SHOULD</kbd> 암호화된 페이지도 <b>머리와 꼬리는 평문</b>으로 남는다는 사실을 유지할 것
+<span class="ref">tde.c:941-946</span> — 그래서 pgbuf가 복호화 전에 <code>prv.pflag</code>를 읽을 수 있다.</p>
+
+<h2>9.5 vacuum 계약</h2>
+
+<div class="tablewrap"><table>
+<tr><th>항목</th><th>계약</th><th>근거</th></tr>
+<tr><td><code>VACUUM_IS_THREAD_VACUUM(_WORKER/_MASTER)</code></td>
+<td><code>vacuum_is_thread_vacuum*</code> 함수의 매크로 별칭. pgbuf는 이것으로만 vacuum 스레드를 식별한다
+(스레드 타입이나 인덱스 범위로 추정하지 말 것)</td><td><span class="ref">vacuum.h:216-218</span></td></tr>
+<tr><td>private list 배정</td>
+<td>vacuum <b>워커</b>는 부팅 시 각자 private LRU를 배정받는다:
+<code>vacuum_Workers[i].private_lru_index = pgbuf_assign_private_lru (thread_p)</code>.
+vacuum <b>마스터</b>는 받지 않는다(<code>-1</code>)</td>
+<td><span class="ref">vacuum.c:1270</span>, 전파 <span class="ref">vacuum.c:881</span>,
+마스터 <span class="ref">vacuum.c:1250</span></td></tr>
+<tr><td><code>pgbuf_notify_vacuum_follows</code></td>
+<td>"이 페이지는 곧 vacuum이 온다"는 힌트. <code>PGBUF_BCB_TO_VACUUM_FLAG</code>를 세운다.
+<b>호출자는 pgbuf 밖에 있다</b>: <code>vacuum.c:6662</code>, <code>btree.c:28300</code>,
+<code>log_manager.c:2225</code>, <code>log_manager.c:2357</code></td>
+<td>정의 <span class="ref">page_buffer.c:16196</span>, 플래그 <span class="ref">page_buffer.c:239</span></td></tr>
+<tr><td>플래그 소멸</td><td>vacuum 워커가 그 페이지를 fix하면 지워진다</td>
+<td><span class="ref">page_buffer.c:2626-2628, 8610</span></td></tr>
+<tr><td><code>PGBUF_VACUUM_SHOULD_IGNORE_UNFIX</code></td>
+<td>vacuum 워커의 unfix는 <b>LRU 승격을 하지 않는다</b>. VOID zone 진입 시에는
+대기 스레드에게 direct victim으로 <b>기증</b>을 먼저 시도하고, 성공하면 그 BCB는 어떤 리스트에도 안 들어간다</td>
+<td>정의 <span class="ref">page_buffer.c:283</span>, 사용 <span class="ref">page_buffer.c:6871-6888</span></td></tr>
+<tr><td>victim 대기 우선순위</td><td>vacuum 스레드는 <b>high priority</b> 큐로 간다</td>
+<td><span class="ref">page_buffer.c:8196, 8208</span>, 카운터 <code>Num_alloc_bcb_prioritize_vacuum</code></td></tr>
+</table></div>
+
+<div class="box"><span class="label">왜 vacuum만 특별대우인가</span>
+vacuum은 "로그를 따라가며 이미 죽은 레코드를 청소하는" 워크로드다.
+읽는 페이지는 대체로 <b>한 번 보고 버릴</b> 것들이므로 LRU 상단에 올리면 순수한 오염이다.
+반대로 vacuum이 막히면 로그 아카이브가 쌓여 시스템 전체가 위험해지므로,
+프레임 확보에서는 <b>우선권</b>을 준다. "빨리 주되, 흔적은 남기지 말라"가 이 계약의 요약이다.
+</div>
+
+<h2>9.6 session / thread 계약</h2>
+
+<h3>9.6.1 private LRU 인덱스의 소유권 — 스레드가 아니라 세션</h3>
+
+<div class="box warn"><span class="label">핵심 오해 지점</span>
+private LRU 인덱스는 <b>스레드 인덱스가 아니다</b>. <b>세션</b>이 소유하고, 요청마다 워커 스레드로 복사된다.
+같은 세션의 두 요청이 서로 다른 워커 스레드에서 실행돼도 <b>같은</b> private list를 쓴다 —
+quiz 05/08의 "세션 단위 격리"가 성립하는 이유가 이것이다.
+</div>
+
+<div class="tablewrap"><table>
+<tr><th>시점</th><th>동작</th><th>근거</th></tr>
+<tr><td>세션 생성</td><td><code>pgbuf_assign_private_lru (thread_p)</code> 호출 → 세션에 인덱스 저장</td>
+<td><span class="ref">session.c:740</span></td></tr>
+<tr><td>세션 종료</td><td><code>pgbuf_release_private_lru</code> → 해당 리스트의 activity를 0으로</td>
+<td><span class="ref">session.c:406-407</span> → <span class="ref">page_buffer.c:14547-14561</span></td></tr>
+<tr><td>워커로 전파</td><td><code>thread_p-&gt;private_lru_index = session_p-&gt;private_lru_index</code></td>
+<td><span class="ref">session.c:2800</span>, 요청마다 <span class="ref">server_support.c:2081, 2117</span></td></tr>
+<tr><td>세션 없는 스레드</td><td><code>-1</code>(데몬, checkpoint, 비세션 워커)</td>
+<td><span class="ref">thread_entry.cpp:90</span>, <span class="ref">thread_entry_task.cpp:75, 95</span></td></tr>
+<tr><td>사용 가능 판정</td><td><code>thread_p-&gt;m_is_private_lru_enabled =
+(num_private_LRU_list &gt; 0 &amp;&amp; private_lru_index != -1)</code></td>
+<td><span class="ref">page_buffer.c:1496-1515</span>, 매크로 <span class="ref">page_buffer.c:1038-1042</span></td></tr>
+</table></div>
+
+<div class="box norm"><span class="label">계약 N9-10</span>
+<kbd class="must">MUST</kbd> <code>pgbuf_assign_private_lru</code> / <code>pgbuf_release_private_lru</code>는
+pgbuf가 <b>외부에 내보내는</b> 함수이고 호출자는 session/vacuum이다.
+시그니처와 "인덱스를 반환/반납"이라는 의미를 바꾸면 세션 계층이 깨진다.<br>
+<kbd class="must">MUST</kbd> <code>thread_p-&gt;private_lru_index</code>와
+<code>m_is_private_lru_enabled</code>는 <b>THREAD_ENTRY의 필드</b>이므로 pgbuf가 정의하지 않는다.
+pgbuf는 <code>pgbuf_thread_variables_init</code>에서 후자를 <b>계산해 써 넣을</b> 뿐이다.
+</div>
+
+<h3>9.6.2 THREAD_ENTRY가 pgbuf에 제공하는 필드</h3>
+
+<div class="tablewrap"><table>
+<tr><th>필드</th><th>선언</th><th>pgbuf의 용도</th></tr>
+<tr><td><code>index</code></td><td><span class="ref">thread_entry.hpp:218</span></td>
+<td>per-thread 배열 인덱싱: <code>direct_victims.bcb_victims[index]</code>
+<span class="ref">page_buffer.c:8203</span>, 홀더 앵커, <code>show_status</code> 샤드</td></tr>
+<tr><td><code>m_holder_anchor</code></td><td><span class="ref">thread_entry.hpp:319</span></td>
+<td>홀더 리스트 앵커 <b>캐시</b>. 최초 접근 시
+<code>&amp;pgbuf_Pool.thrd_holder_info[thread_p-&gt;index]</code>로 지연 바인딩
+<span class="ref">page_buffer.c:1511-1514, 5973-5977, 6056-6060</span></td></tr>
+<tr><td><code>private_lru_index</code> / <code>m_is_private_lru_enabled</code></td>
+<td><span class="ref">thread_entry.hpp:229, 318</span></td><td>9.6.1</td></tr>
+<tr><td><code>resume_status</code></td><td><span class="ref">thread_entry.hpp:248</span></td>
+<td>대기/기상 프로토콜의 상태 변수 (9.6.3)</td></tr>
+<tr><td><code>request_latch_mode</code></td><td><span class="ref">thread_entry.hpp:249</span></td>
+<td>대기 중인 latch 모드 전달. 인터럽트 시 <code>PGBUF_NO_LATCH</code>로 리셋
+<span class="ref">page_buffer.c:7291</span></td></tr>
+<tr><td><code>wait_for_latch_promote</code></td><td><span class="ref">thread_entry.hpp:255</span></td>
+<td>promote 대기자 구분</td></tr>
+<tr><td><code>wakeup_cond</code></td><td><span class="ref">thread_entry.hpp:235</span></td>
+<td>pgbuf가 <b>직접</b> <code>pthread_cond_signal</code>한다
+<span class="ref">page_buffer.c:11551, 11578</span></td></tr>
+<tr><td><code>shutdown</code></td><td><span class="ref">thread_entry.hpp:253</span></td>
+<td>데몬·대기 루프의 종료 조건 <span class="ref">page_buffer.c:4230, 4313, 4589</span></td></tr>
+<tr><td><code>type</code></td><td>enum <code>thread_type</code></td>
+<td><code>TT_WORKER</code>만 타임아웃 대상 <span class="ref">page_buffer.c:7267, 7275</span></td></tr>
+<tr><td><code>tran_index</code></td><td><span class="ref">thread_entry.hpp:228</span></td><td>에러 로그/perfmon 샤드</td></tr>
+<tr><td><code>pgbuf_fix_req_cnt</code> / <code>pgbuf_pg_unfix_cnt</code></td>
+<td><span class="ref">thread_entry.hpp:219, 223</span></td>
+<td><b>카운터 샤드</b> — 선언 주석이 <code>page_buffer.c</code>를 명시적으로 지목한다(CBRD-26898)</td></tr>
+<tr><td><code>get_pgbuf_tracker()</code></td><td><span class="ref">thread_entry.hpp:347</span></td>
+<td>디버그 빌드 fix/unfix 추적</td></tr>
+</table></div>
+
+<div class="box"><span class="label">없는 것도 계약이다</span>
+THREAD_ENTRY에는 <b><code>victim_bcb</code> 같은 필드가 없다</b>. direct victim 슬롯은
+pgbuf 자신의 배열 <code>pgbuf_Pool.direct_victims.bcb_victims[thread_p-&gt;index]</code>에 산다
+<span class="ref">page_buffer.c:8203, 8279-8284</span>. 즉 <b>"스레드에 붙은 우편함"이 아니라
+"pgbuf가 스레드 번호로 색인하는 사물함"</b>이다. 이 구분은 7장의 소유권 논증에 쓰인다.
+</div>
+
+<h3>9.6.3 대기 / 기상 API</h3>
+
+<div class="tablewrap"><table>
+<tr><th>API</th><th>선언</th><th>pgbuf 사용</th></tr>
+<tr><td><code>thread_suspend_wakeup_and_unlock_entry (entry*, reason)</code></td>
+<td><span class="ref">thread_entry.hpp:535</span></td>
+<td>무한 대기: <code>PGBUF_LATCH_FLUSH</code> 대기 <span class="ref">page_buffer.c:7051</span>,
+<code>pgbuf_sleep</code> <span class="ref">page_buffer.c:11539</span></td></tr>
+<tr><td><code>thread_suspend_timeout_wakeup_and_unlock_entry (entry*, timespec*, reason)</code></td>
+<td><span class="ref">thread_entry.hpp:536-537</span></td>
+<td>타임아웃 대기: 페이지 latch <span class="ref">page_buffer.c:7273</span>,
+alloc-BCB <span class="ref">page_buffer.c:8254</span></td></tr>
+<tr><td><code>thread_wakeup_already_had_mutex (entry*, reason)</code></td>
+<td><span class="ref">thread_entry.hpp:541</span></td>
+<td>direct victim 배급 <span class="ref">page_buffer.c:15402</span></td></tr>
+<tr><td><code>thread_lock_entry</code> / <code>thread_unlock_entry</code></td><td>—</td>
+<td>대기 전/후 엔트리 락. suspend 함수가 <b>내부에서 언락</b>한다는 점이 이름에 드러나 있다</td></tr>
+<tr><td><code>thread_wakeup</code></td><td><span class="ref">thread_entry.hpp:538</span></td>
+<td><b>pgbuf는 쓰지 않는다</b> — <code>pgbuf_wakeup</code>/<code>_uncond</code>가
+<code>pthread_cond_signal</code>을 직접 호출 <span class="ref">page_buffer.c:11543, 11571</span></td></tr>
+</table></div>
+
+<p>상태값(<code>enum thread_resume_suspend_status</code>, <span class="ref">thread_entry.hpp:140-168</span>):</p>
+
+<div class="tablewrap"><table>
+<tr><th>값</th><th>번호</th><th>의미</th></tr>
+<tr><td><code>THREAD_PGBUF_SUSPENDED</code> / <code>THREAD_PGBUF_RESUMED</code></td><td>3 / 4</td>
+<td>페이지 latch 대기 <span class="ref">thread_entry.hpp:145-146</span></td></tr>
+<tr><td><code>THREAD_ALLOC_BCB_SUSPENDED</code> / <code>THREAD_ALLOC_BCB_RESUMED</code></td><td>21 / 22</td>
+<td>victim(프레임) 대기 <span class="ref">thread_entry.hpp:163-164</span></td></tr>
+<tr><td><code>THREAD_RESUME_DUE_TO_INTERRUPT</code> / <code>_SHUTDOWN</code></td><td>1 / 2</td>
+<td>비정상 기상 — 두 경우 모두 대기 실패로 처리</td></tr>
+</table></div>
+
+<div class="box norm"><span class="label">계약 N9-11 — 기상 판정</span>
+<kbd class="must">MUST</kbd> 깨어난 뒤 <b>반드시 <code>resume_status</code>를 검사</b>한다.
+<code>*_RESUMED</code>가 아니면 <code>INTERRUPT</code> 또는 <code>SHUTDOWN</code>이어야 하고
+(디버그에서 assert), 대기 자원을 받은 것이 아니므로 <b>재시도하지 말고 에러로 빠져나온다</b>
+<span class="ref">page_buffer.c:8262, 8276-8277</span>.<br>
+<kbd class="must">MUST</kbd> 배급하는 쪽은 대기자의 <code>resume_status</code>가
+<code>THREAD_ALLOC_BCB_SUSPENDED</code>가 <b>아니면 건너뛴다</b> — 이미 다른 경로로 깨어난 스레드다
+<span class="ref">page_buffer.c:15394-15398</span>. 이 검사를 빼면 하나의 BCB가 두 스레드에게 배급된다.
+</div>
+
+<h3>9.6.4 데몬 등록 인프라 (<code>cubthread</code>)</h3>
+
+<pre><code>cubthread::daemon *
+cubthread::manager::create_daemon (const looper &amp;looper_arg, entry_task *exec_p,
+                                   const char *daemon_name = "", entry_manager *entry_mgr = NULL);
+                                             /* src/thread/thread_manager.hpp:170-171 */
+void cubthread::manager::destroy_daemon (daemon *&amp;);        /* thread_manager.hpp:173 */
+void cubthread::daemon::wakeup (void);                       /* thread_daemon.hpp:103 */
+bool cubthread::daemon::was_woken_up (void);                 /* thread_daemon.hpp:107 */
+void cubthread::daemon::reset_looper (void);                 /* thread_daemon.hpp:109 */</code></pre>
+
+<div class="tablewrap"><table>
+<tr><th><code>looper</code> 생성 형태</th><th>선언</th><th>pgbuf 사용</th></tr>
+<tr><td><code>looper ()</code> — 기상까지 무한 대기</td><td><span class="ref">thread_looper.hpp:88</span></td><td>미사용</td></tr>
+<tr><td><code>looper (delta_time fixed_period)</code></td><td><span class="ref">thread_looper.hpp:97</span></td>
+<td><code>pgbuf-maintain</code> 100 ms, <code>pgbuf-flush-control</code> 50 ms</td></tr>
+<tr><td><code>looper (const period_function &amp;)</code></td><td><span class="ref">thread_looper.hpp:94</span></td>
+<td><code>pgbuf-page-flush</code> — 주기를 파라미터에서 매번 다시 읽는다</td></tr>
+<tr><td><code>looper (std::array&lt;delta_time, N&gt;)</code>, N ≤ 3</td>
+<td><span class="ref">thread_looper.hpp:104</span>, 상한 <span class="ref">thread_looper.hpp:44</span></td>
+<td><code>pgbuf-page-post-flush</code> — <code>{1 ms, 10 ms, 100 ms}</code> 점증 백오프</td></tr>
+</table></div>
+
+<div class="box norm"><span class="label">계약 N9-12 — 데몬 4종의 등록 형태</span>
+<kbd class="must">MUST</kbd> 데몬 이름 문자열(<code>"pgbuf-maintain"</code>, <code>"pgbuf-page-flush"</code>,
+<code>"pgbuf-page-post-flush"</code>, <code>"pgbuf-flush-control"</code>)을 그대로 쓸 것 —
+운영 도구와 스레드 덤프가 이 이름으로 식별한다.<br>
+<kbd class="must">MUST</kbd> <code>period_function</code> 시그니처는
+<code>void (bool &amp;is_timed_wait, delta_time &amp;period)</code>다 <span class="ref">thread_looper.hpp:41</span>.
+<code>page_flush_interval_in_msecs == 0</code>이면 <code>is_timed_wait = false</code>로 설정해
+<b>무한 대기</b>가 되게 한다 <span class="ref">page_buffer.c:16924</span>.<br>
+<kbd class="must">MUST</kbd> flush 데몬은 루프 진입 시 <code>was_woken_up()</code>으로
+"타임아웃이 아니라 누가 깨웠는가"를 확인하고, 참이면 <b>최소 1회는 실행</b>한다
+<span class="ref">page_buffer.c:16971</span>. 이것이 없으면 wakeup이 유실된다.<br>
+<kbd class="should">SHOULD</kbd> <code>reset_looper()</code>는 <b>점증 주기 looper에만</b> 의미가 있다
+<span class="ref">thread_daemon.hpp:110</span>. post-flush 데몬이 실제로 일을 했을 때 호출해
+백오프를 1 ms로 되돌린다 <span class="ref">page_buffer.c:17017</span>.<br>
+<kbd class="must">MUST</kbd> 네 데몬 본문 모두 <code>if (!BO_IS_FLUSH_DAEMON_AVAILABLE ()) return;</code>으로 시작한다
+<span class="ref">page_buffer.c:16933, 16968, 17008, 17050</span>.
+</div>
+
+<h2>9.7 perfmon 계약</h2>
+
+<h3>9.7.1 API와 게이트</h3>
+
+<div class="tablewrap"><table>
+<tr><th>함수</th><th>선언</th><th>게이트</th></tr>
+<tr><td><code>perfmon_inc_stat (thread_p, psid)</code></td><td><span class="ref">perf_monitor.h:849</span></td>
+<td><code>perfmon_add_stat(..., 1)</code>과 동일 <span class="ref">perf_monitor.h:942</span></td></tr>
+<tr><td><code>perfmon_add_stat (thread_p, psid, amount)</code></td><td><span class="ref">perf_monitor.h:842-843</span></td>
+<td>내부에서 <code>perfmon_is_perf_tracking()</code>이 거짓이면 <b>즉시 반환</b>
+<span class="ref">perf_monitor.h:897-901</span></td></tr>
+<tr><td><code>perfmon_is_perf_tracking ()</code></td><td><span class="ref">perf_monitor.h:839</span></td>
+<td><code>pstat_Global.initialized &amp;&amp; pstat_Global.n_watchers &gt; 0</code>
+<span class="ref">perf_monitor.h:1457</span></td></tr>
+<tr><td><code>perfmon_is_perf_tracking_and_active (flag)</code></td><td><span class="ref">perf_monitor.h:840</span></td>
+<td>위 조건 <b>AND</b> <code>(flag &amp; pstat_Global.activation_flag)</code>
+<span class="ref">perf_monitor.h:1471</span></td></tr>
+</table></div>
+
+<div class="box warn"><span class="label">관측 도구의 함정 — watcher 모델</span>
+<b>watcher가 하나도 없으면 <code>perfmon_inc_stat</code>은 전역 카운터조차 건드리지 않는다</b>
+<span class="ref">perf_monitor.h:897</span>. <code>perfmon_start_watch</code>가
+<code>n_watchers</code>를 원자적으로 올려야 비로소 집계가 시작된다
+<span class="ref">perf_monitor.c:3359, 3375</span>.<br>
+그래서 <code>cubrid statdump</code>를 그냥 두 번 찍어 델타를 재면 <b>0이 나오는 카운터가 생긴다</b> —
+"구현이 카운터를 안 올린다"고 오진하기 딱 좋다. 퀴즈 하네스(<code>quizzes/lib/common.sh</code>의
+<code>quiz_observe</code>)가 watcher를 먼저 켜는 이유가 이것이다.<br>
+<b>비대칭 주의</b>: 다차원(offset) 카운터는 <code>perfmon_add_stat_at_offset</code>을 거치는데,
+이 경로는 <code>n_watchers</code>를 <b>재검사하지 않고</b> 전역 배열을 무조건 증가시킨다
+<span class="ref">perf_monitor.h:977</span>. 트랜잭션별 사본만
+<code>is_watching[tran_index]</code>로 걸린다 <span class="ref">perf_monitor.h:983</span>.
+따라서 이쪽의 억제는 호출자 쪽 <code>perfmon_is_perf_tracking_and_active(...)</code> 가드가 담당한다 —
+<kbd class="must">MUST</kbd> pgbuf의 가드 위치를 원본 그대로 둘 것.
+</div>
+
+<h3>9.7.2 activation flag</h3>
+
+<div class="tablewrap"><table>
+<tr><th>플래그</th><th>값</th><th>기본 포함?</th><th>pgbuf에서 게이트하는 것</th></tr>
+<tr><td><code>PERFMON_ACTIVATION_FLAG_DETAILED_BTREE_PAGE</code> <span class="ref">perf_monitor.h:60</span></td>
+<td><code>0x01</code></td><td>✔</td><td>B-tree 페이지 타입 세분화 <span class="ref">page_buffer.c:15017</span></td></tr>
+<tr><td><code>..._PB_HASH_ANCHOR</code> <span class="ref">perf_monitor.h:63</span></td><td><code>0x08</code></td><td>✔</td>
+<td>해시 앵커 대기 횟수/시간 <span class="ref">page_buffer.c:7608, 7795, 8062</span></td></tr>
+<tr><td><code>..._PB_VICTIMIZATION</code> <span class="ref">perf_monitor.h:64</span></td><td><code>0x10</code></td>
+<td><b>✘ (기본 꺼짐)</b></td><td><code>Num_victim_*</code>, <code>alloc_bcb*</code>, flush 스킵 상세, unfix 결정 상세
+<span class="ref">page_buffer.c:3841, 6772, 8139, 9025, 9282, 10872</span> 외</td></tr>
+<tr><td><code>..._FLUSHED_BLOCK_VOLUMES</code> <span class="ref">perf_monitor.h:67</span></td><td><code>0x80</code></td>
+<td>✘</td><td>DWB 블록당 볼륨 히스토그램 <span class="ref">double_write_buffer.cpp:2407</span></td></tr>
+<tr><td><code>..._MAX_VALUE</code> (전체) <span class="ref">perf_monitor.h:74</span></td><td><code>0x3FF</code> = 1023</td>
+<td>—</td><td>퀴즈 DB가 쓰는 값</td></tr>
+</table></div>
+
+<div class="box"><span class="label">기본값 15의 함의</span>
+<code>extended_statistics_activation</code>의 기본값은
+<code>BTREE|MVCC|LOCK|PB_HASH_ANCHOR = 15</code>다 <span class="ref">system_parameter.c:4117-4120</span>.
+<b><code>PB_VICTIMIZATION(0x10)</code>이 빠져 있다</b> — 그래서 기본 설정의 서버에서는
+victim 관련 카운터가 전부 0이다. 재작성 검증 시 "카운터가 안 오른다"의 절반은 이 파라미터 문제다.
+퀴즈 DB는 <code>extended_statistics_activation=1023</code>으로 전부 켠다.
+</div>
+
+<h3>9.7.3 다차원 <code>pbx_fix</code>/<code>pbx_unfix</code></h3>
+
+<pre><code>void perfmon_pbx_fix   (THREAD_ENTRY *, int page_type, int page_found_mode, int latch_mode, int cond_type);
+void perfmon_pbx_unfix (THREAD_ENTRY *, int page_type, int buf_dirty, int dirtied_by_holder, int holder_latch);
+    /* perf_monitor.h:1670-1675 ; 정의 perf_monitor.c:1165, 1221 */</code></pre>
+
+<div class="tablewrap"><table>
+<tr><th>축</th><th>enum</th><th>값</th></tr>
+<tr><td>(암묵) module</td><td><code>PERF_MODULE_TYPE</code></td>
+<td><b>인자가 아니다</b> — 내부에서 <code>perfmon_get_module_type(thread_p)</code>로 유도
+<span class="ref">perf_monitor.c:1173</span>. SYSTEM/…/VACUUM <span class="ref">perf_monitor.h:168-171</span></td></tr>
+<tr><td>page_type</td><td><code>PERF_PAGE_TYPE</code> <span class="ref">perf_monitor.h:210-232</span></td>
+<td>18종. <code>prv.ptype</code>을 <code>pgbuf_get_page_type_for_stat</code>이 매핑</td></tr>
+<tr><td>page_found_mode</td><td><code>PERF_PAGE_MODE</code> <span class="ref">perf_monitor.h:199-208</span></td>
+<td><code>OLD_LOCK_WAIT</code>, <code>OLD_NO_WAIT</code>, <code>NEW_LOCK_WAIT</code>,
+<code>NEW_NO_WAIT</code>, <code>OLD_IN_BUFFER</code>(기본)</td></tr>
+<tr><td>latch_mode</td><td><code>PERF_HOLDER_LATCH</code> <span class="ref">perf_monitor.h:173-180</span></td>
+<td><code>READ</code>, <code>WRITE</code>, <code>MIXED</code></td></tr>
+<tr><td>cond_type</td><td><code>PERF_CONDITIONAL_FIX_TYPE</code> <span class="ref">perf_monitor.h:182-189</span></td>
+<td><code>CONDITIONAL_FIX</code>, <code>UNCONDITIONAL_FIX_NO_WAIT</code>,
+<code>UNCONDITIONAL_FIX_WITH_WAIT</code></td></tr>
+</table></div>
+
+<p><code>pbx_unfix</code>의 4축은 <code>page_type</code> × <code>buf_dirty</code>(0/1) ×
+<code>dirtied_by_holder</code>(0/1) × <code>holder_latch</code>이다 <span class="ref">perf_monitor.c:1231-1235</span> —
+<b>unfix 쪽의 latch 축은 <code>PERF_PAGE_MODE</code>가 아니라 <code>PERF_HOLDER_LATCH</code></b>라는 점이
+자주 틀리는 부분이다. 호출 지점은 <code>perfmon_pbx_fix</code> <span class="ref">page_buffer.c:2606</span>,
+<code>perfmon_pbx_unfix</code> <span class="ref">page_buffer.c:3135</span>,
+<code>perfmon_pbx_promote</code> <span class="ref">page_buffer.c:2998</span>,
+그리고 세 종류의 시간 측정 <span class="ref">page_buffer.c:2592, 2609, 2619</span>이다.</p>
+
+<h2>9.8 시스템 파라미터 전체 표</h2>
+
+<p>모두 <code>src/base/system_parameter.c</code>의 <code>prm_Def[]</code> 항목이다.
+"동적"은 <code>PRM_USER_CHANGE</code>(세션에서 변경 가능) / <code>PRM_RELOADABLE</code>(재적재 가능) 여부.</p>
+
+<div class="tablewrap"><table>
+<tr><th>cubrid.conf 이름</th><th>PRM id</th><th>기본</th><th>범위</th><th>동적/플래그</th><th>의미</th></tr>
+<tr><td><code>data_buffer_size</code> <span class="ref">:1180</span></td><td><code>PAGE_BUFFER_SIZE</code></td>
+<td>32768 (페이지 환산)</td><td>≥1024 페이지</td><td>SIZE_UNIT·DIFFER_UNIT·RELOADABLE</td>
+<td>풀 크기. 사용자 대면 노브</td></tr>
+<tr><td><code>data_buffer_pages</code> <span class="ref">:1169</span></td><td><code>PB_NBUFFERS</code></td>
+<td>32768</td><td>≥1024</td><td><b>DEPRECATED</b>·RELOADABLE</td>
+<td>같은 값의 페이지 단위 쌍둥이. <code>pgbuf_initialize</code>가 읽는 것은 <b>이쪽</b></td></tr>
+<tr><td><code>page_latch_timeout_in_msecs</code> <span class="ref">:5308</span></td>
+<td><code>PAGE_LATCH_TIMEOUT_IN_MSECS</code></td><td>300000</td><td>0 – 3000000</td><td>HIDDEN</td>
+<td>latch·victim 대기 타임아웃. 0이면 무한</td></tr>
+<tr><td><code>lru_hot_ratio</code> <span class="ref">:3754</span></td><td><code>PB_LRU_HOT_RATIO</code></td>
+<td>0.4</td><td>0.05 – 0.90</td><td>RELOADABLE</td><td>shared list의 zone 1 비율</td></tr>
+<tr><td><code>lru_buffer_ratio</code> <span class="ref">:3766</span></td><td><code>PB_LRU_BUFFER_RATIO</code></td>
+<td>0.05</td><td>0.05 – 0.90</td><td>RELOADABLE</td><td>shared list의 zone 2 비율</td></tr>
+<tr><td><code>num_LRU_chains</code> <span class="ref">:1794</span></td><td><code>PB_NUM_LRU_CHAINS</code></td>
+<td>0 (=자동)</td><td>0 – 1000</td><td>HIDDEN</td><td>shared LRU 개수. 자동 = <code>MAX_NTRANS</code>,
+리스트당 ≥1000 페이지로 캡, 최소 4</td></tr>
+<tr><td><code>num_private_chains</code> <span class="ref">:4171</span></td><td><code>PB_NUM_PRIVATE_CHAINS</code></td>
+<td>−1 (=자동)</td><td>−1 – <code>CSS_MAX_CLIENT_COUNT+50</code></td><td>RELOADABLE</td>
+<td>private LRU 개수. 0이면 quota 시스템 자체가 꺼진다. <b>SA 모드는 항상 0</b></td></tr>
+<tr><td><code>data_aout_ratio</code> <span class="ref">:3463</span></td><td><code>PB_AOUT_RATIO</code></td>
+<td>0.0</td><td>0 – 3.0</td><td>RELOADABLE</td><td>AOUT 크기 비율 — <b>항상 0으로 덮어써짐(D7)</b></td></tr>
+<tr><td><code>data_buffer_flush_ratio</code> <span class="ref">:1158</span></td><td><code>PB_BUFFER_FLUSH_RATIO</code></td>
+<td>0.01</td><td>0.01 – 0.95</td><td>HIDDEN·USER_CHANGE</td><td>victim flush 1패스가 훑는 풀 비율</td></tr>
+<tr><td><code>data_buffer_sequential_victim_flush</code> <span class="ref">:4067</span></td>
+<td><code>PB_SEQUENTIAL_VICTIM_FLUSH</code></td><td>true</td><td>—</td><td>HIDDEN·USER_CHANGE</td>
+<td>후보를 (volid, pageid)로 정렬해 순차 쓰기</td></tr>
+<tr><td><code>data_buffer_neighbor_flush_pages</code> <span class="ref">:3953</span></td>
+<td><code>PB_NEIGHBOR_FLUSH_PAGES</code></td><td>8</td><td>0 – 32</td><td>USER_CHANGE</td>
+<td>&gt;1이면 이웃 배치 flush 활성</td></tr>
+<tr><td><code>data_buffer_neighbor_flush_nondirty</code> <span class="ref">:3942</span></td>
+<td><code>PB_NEIGHBOR_FLUSH_NONDIRTY</code></td><td>false</td><td>—</td><td>USER_CHANGE</td>
+<td>배치에 clean 이웃도 포함</td></tr>
+<tr><td><code>page_flush_interval_in_msecs</code> <span class="ref">:1806</span></td>
+<td><code>PAGE_BG_FLUSH_INTERVAL_MSECS</code></td><td>1000</td><td>≥0</td><td>USER_CHANGE·<b>DEPRECATED</b></td>
+<td>flush 데몬 주기. <b>0 = 무한 대기</b>(기상 시에만 동작)</td></tr>
+<tr><td><code>page_flush_interval</code> <span class="ref">:1818</span></td>
+<td><code>PAGE_BG_FLUSH_INTERVAL</code></td><td>1000 ms</td><td>≥0</td><td>USER_CHANGE·TIME_UNIT·DIFFER_UNIT</td>
+<td>위의 시간단위 쌍둥이(<code>1s</code> 같은 표기 허용)</td></tr>
+<tr><td><code>sync_on_nflush</code> <span class="ref">:1866</span></td><td><code>PB_SYNC_ON_NFLUSH</code></td>
+<td>200</td><td>1 – INT_MAX</td><td>USER_CHANGE·<b>DEPRECATED</b>·RELOADABLE</td>
+<td><code>fileio_compensate_flush</code>의 fsync 트리거 + DWB helper 인계 임계값</td></tr>
+<tr><td><code>max_flush_pages_per_second</code> <span class="ref">:1842</span></td>
+<td><code>MAX_FLUSH_PAGES_PER_SECOND</code></td><td>10000</td><td>1 – INT_MAX</td>
+<td>USER_CHANGE·<b>DEPRECATED</b>·RELOADABLE</td><td>adaptive control이 꺼졌을 때의 토큰 보충률</td></tr>
+<tr><td><code>adaptive_flush_control</code> <span class="ref">:1830</span></td>
+<td><code>ADAPTIVE_FLUSH_CONTROL</code></td><td>true</td><td>—</td><td>USER_CHANGE</td>
+<td>보충률을 <code>pgbuf_flush_control_from_dirty_ratio</code>로 라우팅</td></tr>
+<tr><td><code>checkpoint_every_npages</code> <span class="ref">:1358</span></td><td><code>LOG_CHECKPOINT_NPAGES</code></td>
+<td>100000</td><td>≥10</td><td>USER_CHANGE·<b>DEPRECATED</b>·RELOADABLE</td><td>checkpoint 촉발 로그량</td></tr>
+<tr><td><code>checkpoint_interval_in_mins</code> <span class="ref">:1380</span></td>
+<td><code>LOG_CHECKPOINT_INTERVAL_SECS</code></td><td>360</td><td>≥60</td>
+<td>USER_CHANGE·<b>DEPRECATED</b>·DIFFER_UNIT</td><td>checkpoint 주기</td></tr>
+<tr><td><code>checkpoint_interval</code> <span class="ref">:1391</span></td><td><code>LOG_CHECKPOINT_INTERVAL</code></td>
+<td>360</td><td>≥60</td><td>USER_CHANGE·TIME_UNIT·DIFFER_UNIT</td><td>위의 시간단위 쌍둥이</td></tr>
+<tr><td><code>checkpoint_sleep_msecs</code> <span class="ref">:1402</span></td>
+<td><code>LOG_CHECKPOINT_SLEEP_MSECS</code></td><td>1</td><td>≥0</td><td>USER_CHANGE·HIDDEN</td>
+<td>checkpoint flusher의 인터벌. <b>0이면 rate가 1000 페이지/s로 고정</b></td></tr>
+<tr><td><code>double_write_buffer_size</code> <span class="ref">:4309</span></td><td><code>DWB_SIZE</code></td>
+<td>2 MB (바이트 정수)</td><td>0 – 33554432</td><td>USER_CHANGE</td>
+<td>0이면 DWB 비활성. 512 KB 이상 2의 거듭제곱으로 올림</td></tr>
+<tr><td><code>double_write_buffer_blocks</code> <span class="ref">:4321</span></td><td><code>DWB_BLOCKS</code></td>
+<td>2</td><td>0 – 32</td><td>USER_CHANGE·HIDDEN</td><td>0이면 비활성. 2의 거듭제곱. 1이면 매 랩마다 생산자가 블록</td></tr>
+<tr><td><code>double_write_buffer_enable_flush_thread</code> <span class="ref">:4333</span></td>
+<td><code>ENABLE_DWB_FLUSH_THREAD</code></td><td>true</td><td>—</td><td>USER_CHANGE·HIDDEN</td>
+<td>false면 생산 스레드가 직접 블록 flush</td></tr>
+<tr><td><code>double_write_buffer_logging</code> <span class="ref">:4344</span></td><td><code>DWB_LOGGING</code></td>
+<td>false</td><td>—</td><td>USER_CHANGE·HIDDEN</td><td><code>dwb_log</code> 활성</td></tr>
+<tr><td><code>log_pgbuf_victim_flush</code> <span class="ref">:4444</span></td>
+<td><code>LOG_PGBUF_VICTIM_FLUSH</code></td><td>false</td><td>—</td><td>USER_CHANGE·HIDDEN</td>
+<td>victim flush 디버그 로깅</td></tr>
+<tr><td><code>detailed_checkpoint_logging</code> <span class="ref">:4455</span></td>
+<td><code>LOG_CHKPT_DETAILED</code></td><td>false</td><td>—</td><td>USER_CHANGE·HIDDEN</td>
+<td>checkpoint <code>detailed_er_log</code></td></tr>
+<tr><td><code>extended_statistics_activation</code> <span class="ref">:4112</span></td>
+<td><code>EXTENDED_STATISTICS_ACTIVATION</code></td><td>15</td><td>0 – 1023</td><td>FOR_SERVER·FOR_CLIENT</td>
+<td>9.7.2의 activation flag 마스크</td></tr>
+</table></div>
+
+<div class="box defect"><span class="label">D5 — <code>double_write_buffer_size=2M</code>이 서버 부팅을 막는다</span>
+<code>data_buffer_size=16M</code>은 되는데 <code>double_write_buffer_size=2M</code>은
+<code>ERROR CODE = -839: Unknown system parameter or bad value</code>로 <b>부팅 자체를 거부</b>한다.<br>
+<b>기전</b>: 값 파싱은 <code>sysprm_generate_new_value</code>의
+<code>case PRM_INTEGER</code>에서 세 갈래로 갈린다 <span class="ref">system_parameter.c:8658, 8766-8887</span>.
+<code>PRM_SIZE_UNIT</code>이 있으면 <code>util_size_string_to_byte</code>가 <code>K/M/G</code>를 받고
+<span class="ref">:8807-8810</span>, <code>PRM_TIME_UNIT</code>이면 <code>util_time_string_to_msec</code>
+<span class="ref">:8833-8837</span>, <b>둘 다 없으면 <code>parse_int(value, 10)</code></b>
+<span class="ref">:8861-8868</span>. <code>data_buffer_size</code>는
+<code>PRM_SIZE_UNIT | PRM_DIFFER_UNIT</code>를 달고 있지만 <span class="ref">:1182</span>,
+<code>double_write_buffer_size</code>는 <code>PRM_FOR_SERVER | PRM_USER_CHANGE</code>뿐이라
+<span class="ref">:4311</span> <code>parse_int("2M")</code>가 실패한다.<br>
+<b>이 스펙에서의 처리</b>: pgbuf 재작성 범위 <b>밖</b>이다(<code>system_parameter.c</code>는 재작성 대상이 아님).
+재작성자는 <b>바이트 정수만 쓴다</b>는 사실만 알면 된다 — 퀴즈 <code>run.sh</code>가 정수를 쓰는 이유.
+수정을 원한다면 <code>PRM_SIZE_UNIT</code>을 다는 것만으로는 부족하다:
+<code>PRM_SIZE_UNIT</code>이 있고 <code>PRM_DIFFER_UNIT</code>이 없으면 코드가 값을 <b>거부</b>하기 때문이다
+<span class="ref">:8830</span>. 별도 티켓 대상.
+</div>
+
+<div class="box defect"><span class="label">D7 — <code>data_aout_ratio</code>는 조용히 무시된다</span>
+<code>prm_tune_parameters()</code>가 <b>conf 파싱이 끝난 뒤</b> 실행되면서
+<code>prm_set (pb_aout_ratio_prm, "0", false);</code>로 무조건 덮어쓴다
+<span class="ref">system_parameter.c:9986</span>. 바로 위 주석이 이유를 밝힌다:
+<code>/* disable AOUT list until we fix CBRD-20741 */</code> <span class="ref">:9985</span>.
+경고 로그도 없다(quiz 07 실측: conf <code>1.0</code> vs paramdump <code>0.000000</code>).<br>
+<b>재작성 지침</b>: <kbd class="must">MUST</kbd> AOUT 코드 경로를 <b>구현은 하되</b>
+<code>max_count == 0 ⇒ 전 기능 오프</code>로 동작하게 만든다(6장 §AOUT).
+파라미터 강제 0은 <code>system_parameter.c</code>가 하는 일이므로 pgbuf 쪽은 손댈 것이 없다.
+"AOUT이 안 도는데 내 구현이 틀렸나?"로 시간을 쓰지 않는 것이 이 각주의 목적이다.
+</div>
+
+<h2>9.9 perfmon 카운터 통합 표</h2>
+
+<p>1~8장에 흩어진 <code>PSTAT_*</code>를 한 표로 합쳤다. <b>종류</b> 열의 "게이지"는
+<code>pgbuf_peek_stats</code>가 매번 스캔해 채우는 <b>스냅샷</b>이고, "누적"은 이벤트마다 증가하는 값이다.
+게이지는 델타를 재면 의미가 없고, 누적은 절대값을 봐도 의미가 없다.</p>
+
+<div class="tablewrap"><table>
+<tr><th><code>PSTAT_*</code></th><th>statdump 표시명</th><th>종류</th><th>증가 지점 / 산출</th></tr>
+<tr><td><code>PB_NUM_FETCHES</code></td><td><code>Num_data_page_fetches</code></td><td>누적</td>
+<td>모든 fix 1회 <span class="ref">page_buffer.c:2574</span></td></tr>
+<tr><td><code>PB_NUM_IOREADS</code></td><td><code>Num_data_page_ioreads</code></td><td>누적</td>
+<td>miss에서 디스크 읽기 <span class="ref">page_buffer.c:8442</span></td></tr>
+<tr><td><code>PB_NUM_DIRTIES</code></td><td><code>Num_data_page_dirties</code></td><td>누적</td>
+<td><code>pgbuf_set_dirty</code> <b>호출 횟수</b>(페이지 수 아님) <span class="ref">page_buffer.c:11610</span></td></tr>
+<tr><td><code>PB_NUM_IOWRITES</code></td><td><code>Num_data_page_iowrites</code></td><td>누적</td>
+<td>비DWB 쓰기 <span class="ref">page_buffer.c:10831</span> <b>+ DWB 내부 2곳</b>
+<span class="ref">dwb:2115, 2150, 2339</span> — <b>DWB on이면 페이지당 2</b></td></tr>
+<tr><td><code>PB_NUM_FLUSHED</code></td><td><code>Num_data_page_flushed</code></td><td>누적</td>
+<td><b>victim flusher 패스 끝에서만</b> <span class="ref">page_buffer.c:4113</span> — checkpoint는 0 (D6b)</td></tr>
+<tr><td><code>PB_FLUSH_PAGE_FLUSHED</code></td><td><code>Num_data_page_writes</code></td><td>누적</td>
+<td><code>pgbuf_bcb_flush_with_wal</code> 성공 <span class="ref">page_buffer.c:10894</span></td></tr>
+<tr><td><code>PB_FLUSH_SEND_DIRTY_TO_POST_FLUSH</code></td><td><code>Num_data_page_dirty_to_post_flush</code></td>
+<td>누적</td><td>post-flush 인계 <span class="ref">page_buffer.c:10872</span> (VICT 게이트)</td></tr>
+<tr><td><code>PB_NUM_SKIPPED_FLUSH</code></td><td><code>Num_data_page_skipped_flush</code></td><td>누적</td>
+<td>victim flush 스킵 총합</td></tr>
+<tr><td><code>PB_NUM_SKIPPED_NEED_WAL</code></td><td><code>..._skipped_flush_need_wal</code></td><td>누적</td>
+<td>WAL 미충족 스킵 <span class="ref">page_buffer.c:4013-4028</span> (VICT)</td></tr>
+<tr><td><code>PB_NUM_SKIPPED_ALREADY_FLUSHED</code></td><td><code>..._skipped_flush_already_flushed</code></td>
+<td>누적</td><td>VPID 변경/clean/이미 flush 중 (VICT)</td></tr>
+<tr><td><code>PB_NUM_SKIPPED_FIXED_OR_HOT</code></td><td><code>..._skipped_flush_fixed_or_hot</code></td>
+<td>누적</td><td>zone 이탈 또는 fix됨 (VICT)</td></tr>
+<tr><td><code>PB_LRU1_CNT</code> / <code>LRU2</code> / <code>LRU3</code></td>
+<td><code>Num_data_page_lru1/_lru2/_lru3</code></td><td><b>게이지</b></td>
+<td><code>peek_stats</code> 전수 스캔 <span class="ref">page_buffer.c:14684-14780</span></td></tr>
+<tr><td><code>PB_VICT_CAND</code></td><td><code>Num_data_page_victim_candidate</code></td><td><b>게이지</b></td>
+<td>리스트별 <code>count_vict_cand</code> 합 = zone3 ∧ <b>non-dirty</b> <span class="ref">page_buffer.c:14752-14755</span></td></tr>
+<tr><td><code>PB_PRIVATE_QUOTA</code> / <code>PRIVATE_COUNT</code></td>
+<td><code>Num_data_page_private_quota / _private_count</code></td><td><b>게이지</b></td>
+<td><code>private_pages_ratio × num_buffers</code> <span class="ref">page_buffer.c:14757</span></td></tr>
+<tr><td><code>PB_AVOID_DEALLOC_CNT</code> / <code>AVOID_VICTIM_CNT</code></td>
+<td><code>Num_data_page_avoid_dealloc / _avoid_victim</code></td><td><b>게이지</b></td>
+<td>후자는 <code>FLUSHING_TO_DISK</code> 개수 <span class="ref">page_buffer.c:14739-14742</span></td></tr>
+<tr><td><code>PB_WAIT_THREADS_HIGH_PRIO</code> / <code>LOW_PRIO</code></td>
+<td><code>Num_alloc_bcb_wait_threads_high_priority / _low_priority</code></td><td><b>게이지</b></td>
+<td>대기 큐 길이</td></tr>
+<tr><td><code>PB_FLUSHED_BCBS_WAIT_FOR_ASSIGN</code></td><td><code>Num_flushed_bcbs_wait_for_direct_victim</code></td>
+<td><b>게이지</b></td><td><code>flushed_bcbs</code> 큐 길이</td></tr>
+<tr><td><code>PB_LFCQ_BIG_PRV_NUM</code> / <code>PRV_NUM</code> / <code>SHR_NUM</code></td>
+<td><code>Num_lfcq_big_private_lists / _private_lists / _shared_lists</code></td><td><b>게이지</b></td>
+<td>victim 큐 3종 길이. <b>big은 항상 0</b> (D4)</td></tr>
+<tr><td><code>PB_UNFIX_*</code> (20여 종)</td><td><code>Num_unfix_void_to_private_top</code>,
+<code>..._lru{1,2,3}_*_keep</code>, <code>..._to_top</code>, <code>..._private_to_shared_mid</code>,
+<code>..._vacuum</code>, <code>..._aout_{found,not_found}</code></td><td>누적</td>
+<td>unfix 결정 트리 전수 <span class="ref">perf_monitor.c:452-475</span>,
+증가 <span class="ref">page_buffer.c:6707-6792</span> (VICT)</td></tr>
+<tr><td><code>PB_VICTIM_*</code></td><td><code>Num_victim_{shared,own_private,other_private}_lru_success/_fail</code>,
+<code>Num_victim_all_lru_fail</code>, <code>Num_victim_get_from_lru*</code>,
+<code>Num_victim_assign_direct_*</code>, <code>Num_victim_use_invalid_bcb</code></td><td>누적</td>
+<td><span class="ref">perf_monitor.c:492-535</span> (VICT)</td></tr>
+<tr><td><code>PB_ALLOC_BCB*</code></td><td><code>alloc_bcb</code>, <code>alloc_bcb_search_victim</code>,
+<code>alloc_bcb_cond_wait_high_prio/_low_prio</code>, <code>Num_alloc_bcb_prioritize_vacuum</code></td>
+<td>누적(카운터+타이머)</td><td><span class="ref">perf_monitor.c:495-499</span></td></tr>
+<tr><td><code>PB_NUM_HASH_ANCHOR_WAITS</code> / <code>TIME_HASH_ANCHOR_WAIT</code></td>
+<td><code>Num_data_page_hash_anchor_waits</code> / <code>Time_data_page_hash_anchor_wait</code></td><td>누적</td>
+<td><span class="ref">perf_monitor.c:477-478</span> (HASH_ANCHOR 게이트)</td></tr>
+<tr><td><code>PB_PAGE_{FIX,HOLD,LOCK}_ACQUIRE_TIME_10USEC</code></td>
+<td><code>Data_page_fix_{acquire,hold_acquire,lock_acquire}_time_msec</code></td><td>누적(시간)</td>
+<td><span class="ref">perf_monitor.c:442-444</span></td></tr>
+<tr><td><code>PB_FLUSH_{COLLECT,FLUSH,SLEEP}[_PER_PAGE]</code></td>
+<td><code>flush_collect</code>, <code>flush_flush</code>, <code>flush_sleep</code>, …</td><td>누적(타이머)</td>
+<td><span class="ref">perf_monitor.c:480-484</span></td></tr>
+<tr><td><code>PB_COMPENSATE_FLUSH</code> / <code>WAKE_FLUSH_WAITER</code></td>
+<td><code>compensate_flush</code> / <code>wake_flush_waiter</code></td><td>누적(타이머)</td>
+<td><span class="ref">perf_monitor.c:491, 493</span></td></tr>
+<tr><td><code>FC_NUM_PAGES</code> / <code>NUM_LOG_PAGES</code> / <code>TOKENS</code></td>
+<td><code>Num_adaptive_flush_pages / _log_pages / _max_pages</code></td><td>누적</td>
+<td>토큰 버킷 <span class="ref">perf_monitor.c:310-312</span></td></tr>
+<tr><td><code>FILE_NUM_IOWRITES</code> / <code>NUM_IOSYNCHES</code></td>
+<td><code>Num_file_iowrites</code> / <code>Num_file_iosynches</code></td><td>누적</td>
+<td><span class="ref">perf_monitor.c:201-202</span></td></tr>
+<tr><td><code>LOG_NUM_WALS</code></td><td><code>Num_log_wals</code></td><td>누적</td>
+<td><b>페이지 flush가 로그 flush를 끌어낸 횟수</b> <span class="ref">log_page_buffer.c:4166</span></td></tr>
+<tr><td><code>DWB_*</code> (8종)</td><td><code>DWB_flush_block</code>, <code>DWB_file_sync_helper</code>,
+<code>DWB_flush_block_cond_wait</code>, <code>DWB_flush_block_sort</code>,
+<code>DWB_decache_pages_after_write</code>, <code>DWB_wait_flush_block</code>,
+<code>DWB_wait_file_sync_helper</code>, <code>DWB_flush_force</code></td><td>누적(타이머)</td>
+<td><span class="ref">perf_monitor.c:537-544</span></td></tr>
+<tr><td><code>DWB_FLUSHED_BLOCK_NUM_VOLUMES</code></td><td><code>Num_dwb_flushed_block_volumes</code></td>
+<td>히스토그램</td><td><span class="ref">perf_monitor.c:605</span> (FLUSHED_BLOCK_VOLUMES 게이트)</td></tr>
+</table></div>
+
+<p class="small">(VICT) = <code>PERFMON_ACTIVATION_FLAG_PB_VICTIMIZATION</code> 필요 —
+기본 설정에서는 집계되지 않는다. 히트율은 저장되지 않고
+<code>(NUM_FETCHES − NUM_IOREADS)/NUM_FETCHES</code>로 계산된다 <span class="ref">perf_monitor.c:1913-1915</span>.</p>
+
+<h2>9.10 <code>SHOW PAGE BUFFER STATUS</code> / <code>pgbuf_peek_stats</code> 계약</h2>
+
+<p><code>SHOW PAGE BUFFER STATUS</code>는 DBA 전용이며 <span class="ref">show_meta.c:720</span>,
+컬럼은 다음 19개다 <span class="ref">show_meta.c:693-712</span>:</p>
+
+<div class="tablewrap"><table>
+<tr><th>컬럼</th><th>출처</th></tr>
+<tr><td><code>Hit_rate</code>, <code>Num_hit</code>, <code>Num_page_request</code></td>
+<td><b>per-thread 샤드 합산</b> — <code>PGBUF_STATUS</code> 배열 (아래)</td></tr>
+<tr><td><code>Pool_size</code>, <code>Page_size</code></td><td>정적 구성값</td></tr>
+<tr><td><code>Free_pages</code>, <code>Victim_candidate_pages</code>, <code>Clean_pages</code>,
+<code>Dirty_pages</code>, <code>Num_index_pages</code>, <code>Num_data_pages</code>,
+<code>Num_system_pages</code>, <code>Num_temp_pages</code></td>
+<td><code>pgbuf_scan_bcb_table</code> — BCB 테이블 <b>무잠금 전수 스캔</b>
+<span class="ref">page_buffer.c:17256-17332</span></td></tr>
+<tr><td><code>Num_pages_created</code>, <code>Num_pages_written</code>, <code>Num_pages_read</code>,
+<code>Pages_written_rate</code>, <code>Pages_read_rate</code>, <code>Num_flusher_waiting_threads</code></td>
+<td>per-thread 샤드 합산</td></tr>
+</table></div>
+
+<h3>9.10.1 per-thread 샤드 집계 방식</h3>
+
+<pre><code>struct alignas (64) pgbuf_status          /* page_buffer.c:393-402 */
+{
+  unsigned long long num_hit;
+  unsigned long long num_page_request;
+  unsigned long long num_pages_created;
+  unsigned long long num_pages_written;
+  unsigned long long num_pages_read;
+  unsigned int       num_flusher_waiting_threads;
+  unsigned int       dummy;
+};</code></pre>
+
+<div class="box norm"><span class="label">계약 N9-13 — 샤딩 규칙 (CBRD-26898)</span>
+<kbd class="must">MUST</kbd> 스레드 1개당 <b>캐시라인 1개</b>(<code>alignas(64)</code>)를 배정하고,
+<code>thread_get_entry_index(thread_p)</code>로 색인해 <b>비원자적으로</b> 증가시킨다
+<span class="ref">page_buffer.c:2232, 8140, 8356</span>. 할당은
+<code>cub_aligned_alloc (64, (threads + 1) × sizeof (PGBUF_STATUS))</code>
+<span class="ref">page_buffer.c:1846-1855</span>.<br>
+<b>비원자성은 의도된 설계다</b> — fix 경로의 카운터 증가가 절대 경합하지 않게 하려는 것이다.
+원자 연산으로 "개선"하면 무잠금 fast path의 성능 특성이 달라진다: <kbd class="must">MUST NOT</kbd>.<br>
+<kbd class="must">MUST</kbd> <code>SHOW</code> 시점에만 전 샤드를 순회해 합산한다.
+읽는 쪽도 락을 잡지 않으므로 값이 살짝 어긋날 수 있고, 그것이 계약이다.
+</div>
+
+<div class="box defect"><span class="label">D6 — 관측 카운터 의미 불일치 4건</span>
+<b>(a) DWB 이중 집계</b>: DWB on이면 <code>Num_data_page_iowrites</code>가 페이지당 2회 오르는데
+(DWB 파일 쓰기 + 원위치 쓰기), <code>SHOW</code>의 <code>Num_pages_written</code>은
+<b>비DWB 분기에서만</b> 증가해 과소 집계된다 <span class="ref">page_buffer.c:10826, 10831</span>.
+quiz 11 실측: DWB on +223 vs off +14.<br>
+<b>(b) flushed 편향</b>: <code>Num_data_page_flushed</code>는 victim flusher 전용이라
+checkpoint flush는 0으로 잡힌다 <span class="ref">page_buffer.c:4113</span>.<br>
+<b>(c) victim 정의 상충 — 이름이 같고 정의가 정반대</b>:
+<code>SHOW</code>의 <code>Victim_candidate_pages</code>는 <b>zone3 ∧ dirty</b>
+<span class="ref">page_buffer.c:17290-17293</span>(= victim flusher가 노릴 대상)인데,
+내부 <code>count_vict_cand</code> / <code>Num_data_page_victim_candidate</code>는
+<b>zone3 ∧ non-dirty</b>(= 지금 당장 가져갈 수 있는 프레임)다.<br>
+<b>(d) NEW_PAGE 히트</b>: 디스크를 읽지 않는 <code>NEW_PAGE</code> fix가 <code>num_hit</code>으로 집계되어
+<span class="ref">page_buffer.c:8574-8575</span> insert-heavy 워크로드의 <code>Hit_rate</code>가 과대해진다.
+perfmon 쪽 비율은 영향 없음.<br>
+<b>처리 방침</b>: 네 건 모두 <b>충실 재현</b>을 기본으로 한다. 전부 <b>관측값 자체</b>이므로
+고치면 drop-in 카운터 diff가 반드시 틀어지고, 기존 모니터링 대시보드의 기준선이 깨진다.
+(c)는 특히 재작성자가 "버그인 줄 알고" 통일하기 쉬우니 주의 — 10장 §10.6 quirk 체크리스트 참조.
+</div>
+
+<h3>9.10.2 <code>pgbuf_peek_stats</code></h3>
+
+<p><code>SHOW</code>와는 <b>별개의 두 번째 전수 스캔</b>이며, statdump 게이지의 원천이다
+<span class="ref">page_buffer.c:14683-14780</span>. 자체 주석이 계약을 명시한다:
+"copy flags. we do not lock the bcb and we can be affected by concurrent changes"
+<span class="ref">page_buffer.c:14713</span>.</p>
+
+<div class="box defect"><span class="label">D8 — 헤더 파라미터 이름 stale</span>
+<code>page_buffer.h:452-453</code>은 13번째 파라미터를 <code>alloc_bcb_waiter_low</code>로 선언하지만
+정의 <span class="ref">page_buffer.c:14687</span>의 이름은
+<code>flushed_bcbs_waiting_direct_assign</code>이다. 타입·인자 수가 일치해 컴파일은 된다.<br>
+<b>권장 — 수정</b>. 동작이 전혀 바뀌지 않으므로 drop-in 검증에 영향이 없고, 헤더만 읽는 독자를 오도한다.
+</div>
+
+<div class="box"><span class="label">9장 요약 — 계약 체크리스트</span>
+재작성 코드가 <b>이 8개 모듈에 대해 반드시 지켜야 하는 것</b>만 다시 모으면:
+WAL은 현재 LSA로·mutex 놓고(N9-1) / checkpoint fsync는 호출자 몫(N9-3) /
+DWB 슬롯은 <code>can_wait</code> 2단계(N9-4)·NULL 슬롯은 재시도(N9-5)·읽기는 DWB 먼저(N9-6) /
+torn 검사는 일반 읽기 경로에 넣지 않는다(9.2.6) / 쓰기 모드는 호출 시점 재평가(N9-8) /
+TDE는 flush에서 스택 사본·fix에서 제자리(N9-9) / private LRU는 세션 소유(N9-10) /
+기상 후 <code>resume_status</code> 검사(N9-11) / 데몬 4종의 looper 형태와 이름(N9-12) /
+통계 샤드는 비원자·캐시라인 정렬(N9-13).
+</div>
+
+<nav class="book">
+<a href="ch08-flush-checkpoint.html">← 이전: 8장 dirty·flush·checkpoint</a>
+<span class="chapter-title">9장 — 외부 모듈 계약</span>
+<a href="ch10-verification.html">다음: 10장 구현 로드맵과 수용 검증 →</a>
+</nav>
+
+</main>
+</body>
+</html>

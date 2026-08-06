@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CUBRID Page Buffer 재구축 스펙 — 목차</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+
+<p class="small">CUBRID pgbuf Rebuild Specification · 기준 소스 commit <code>5cd4f860e</code> (branch pgbuf-analysis)</p>
+<h1>CUBRID Page Buffer 재구축 스펙</h1>
+<p style="font-size:1.05rem; color:var(--muted); margin-top:0;">
+— 소스를 보지 않고 <code>src/storage/page_buffer.c</code>(17,500줄)를 처음부터 다시 구현하기 위한 규범(normative) 문서</p>
+
+<div class="box"><span class="label">이 문서의 목표</span>
+숙련된 C/C++ 시스템 프로그래머가 <b>원본 소스를 열지 않고 이 책만으로</b> CUBRID 페이지 버퍼를
+재작성해서, 기존 엔진에 drop-in으로 넣고 부팅·회귀 테스트·성능 특성이 같도록 만드는 것.
+세미나 리포트(<code>../pgbuf-analysis/cubrid-page-buffer-report_5cd4f860e_claude.html</code>)가
+"왜 이렇게 동작하는가"를 가르친다면, 이 책은 "정확히 무엇을 만들어야 하는가"를 규정한다.
+</div>
+
+<h2>0.1 충실도 원칙 (Fidelity Rules)</h2>
+<ul>
+<li><b>규범 대상은 commit <code>5cd4f860e</code> 시점의 이 트리다.</b> 이 브랜치의 로컬 설계
+(64-bit atomic latch word, per-thread 통계 샤딩 — CBRD-26941/26898/27041/27084/26975)를 포함한다.
+stock 11.5와 다른 지점은 본문에 표시한다.</li>
+<li><b>동작 충실(behavioral fidelity)이 기본값이다.</b> 외부에서 관측 가능한 모든 동작 —
+API 의미론, 에러 코드, 카운터 증가 지점, 로그/디스크 쓰기 순서, 심지어 히트율 집계의 quirk까지 —
+재현하는 것이 목표다. drop-in 검증이 가능해야 하기 때문이다.</li>
+<li><b>알려진 결함은 각주로 처리한다.</b> 분석 중 발견된 결함 D1~D8
+(<code>../pgbuf-analysis/pgbuf-defects-report_5cd4f860e_claude.md</code>)이 걸리는 지점마다
+<span style="border-left:3px solid var(--defect-line); padding-left:6px;">결함 각주 박스</span>로
+"충실 재현" vs "수정" 두 선택지를 명시한다. 기본 권장: <b>동작이 바뀌지 않는 결함(D2, D8)은 수정,
+동작이 바뀌는 결함(D1, D3, D4)은 1차 구현에서 충실 재현 후 별도 커밋으로 수정</b>.</li>
+<li><b>사문화 코드도 스펙이다.</b> AOUT(강제 비활성), big-private 큐(생산자 없음),
+direct victim maintenance(no-op 루프)는 "현재 실행되지 않는다"는 사실까지 포함해 규정한다 —
+재작성자가 이를 모르면 존재하지 않는 동작을 구현하느라 시간을 쓴다.</li>
+</ul>
+
+<h2>0.2 범위 (Scope)</h2>
+<div class="tablewrap"><table>
+<tr><th>재작성 대상 (이 책이 완전 규정)</th><th>외부 모듈 (계약만 규정 — 9장)</th></tr>
+<tr><td>
+<code>src/storage/page_buffer.c</code> / <code>page_buffer.h</code> 전체:<br>
+버퍼 풀 구조·초기화, 해시/버킷/buffer lock, BCB/latch,
+fix/unfix/ordered_fix/watcher, LRU zone/private·shared/quota/AOUT,
+victim 선택/direct victim, dirty/flush/데몬 4종, checkpoint flusher,
+perfmon 연동, SHOW/peek 통계
+</td><td>
+log manager(<code>logpb_*</code>), Double Write Buffer(<code>dwb_*</code>),
+<code>fileio_*</code>, TDE, vacuum, thread/daemon 인프라,
+<code>perfmon_*</code>, system parameter — 재작성하지 않으며,
+pgbuf가 기대하는 <b>인터페이스 계약</b>을 9장에 고정한다
+</td></tr>
+</table></div>
+
+<h2>0.3 규범 용어 (Normative Language)</h2>
+<p>본문에서 <kbd class="must">MUST</kbd>는 어기면 정합성/동시성이 깨지는 요구,
+<kbd class="should">SHOULD</kbd>는 성능·운영상 강한 권장(어겨도 정확성은 유지),
+<kbd class="may">MAY</kbd>는 재작성자의 재량을 뜻한다.
+모든 규범 문장에는 근거 위치(<span class="ref">page_buffer.c:NNNN</span>, commit 5cd4f860e 기준)를 달아
+검증 가능성을 유지한다 — 단, 재작성 자체에 그 소스를 볼 필요는 없도록 본문이 자기완결적으로 서술한다.</p>
+
+<h2>0.4 장 목록</h2>
+<ol class="toc-list">
+<li><a href="ch01-requirements.html"><b>요구사항과 외부 관점</b></a> — pgbuf가 엔진에 제공하는 보장,
+PAGE_PTR 의미론, 빌드 모드 3종, 스레딩 모델, 최상위 불변식 10</li>
+<li><a href="ch02-api-contracts.html"><b>Public API 계약</b></a> — 헤더가 내보내는 모든 진입점의
+시그니처·사전/사후조건·에러·스레드 문맥 (계약 표 전체)</li>
+<li><a href="ch03-data-structures.html"><b>자료구조 스펙</b></a> — pgbuf_Pool 전 멤버, BCB 필드와
+flags/latch 워드의 비트 배치, 해시·프레임·LRU·AOUT·direct victim 구조, 사이징 공식, 초기화 순서</li>
+<li><a href="ch04-concurrency.html"><b>동시성 프로토콜</b></a> — 락 인벤토리와 획득 순서, latch 부여
+규칙 표, 무잠금 fast path의 안전 논증, 대기/기상 프로토콜, 타임아웃 정책, ordered_fix 순서 규약</li>
+<li><a href="ch05-fix-unfix.html"><b>fix/unfix 알고리즘</b></a> — hit/miss/lockfree 경로,
+latch grant/block/wakeup, unfix 결정 트리, promote, ordered_fix — 전체 의사코드</li>
+<li><a href="ch06-replacement.html"><b>교체 정책</b></a> — zone 전이 규칙, 리스트 연산, private/shared
+배정, quota 조정 알고리즘, AOUT 스펙(비활성 각주 포함)</li>
+<li><a href="ch07-victim.html"><b>victim 선택과 direct victim</b></a> — 3단계 탐색, 리스트 스캔,
+lock-free 큐 프로토콜, 배급/소비/무효화, 기아 방지</li>
+<li><a href="ch08-flush-checkpoint.html"><b>dirty·flush·checkpoint</b></a> — LSA 규약,
+flush_with_wal, 데몬 4종, 토큰 버킷, victim 후보 flush, checkpoint seq flusher, flush_all 계열</li>
+<li><a href="ch09-external-contracts.html"><b>외부 모듈 계약</b></a> — log/DWB/fileio/TDE/vacuum/
+perfmon/시스템 파라미터: pgbuf가 호출하는 모든 외부 함수의 기대 계약과 전체 카운터·파라미터 표</li>
+<li><a href="ch10-verification.html"><b>구현 로드맵과 수용 검증</b></a> — 마일스톤 M0~M7,
+불변식 런타임 체크, quizzes 12종을 수용 테스트로 쓰는 방법(기대 관측치), D1~D8 처리 방침</li>
+</ol>
+
+<h2>0.5 구현 로드맵 (요약 — 상세는 10장)</h2>
+<div class="tablewrap"><table>
+<tr><th>단계</th><th>구현물</th><th>완료 판정</th></tr>
+<tr><td><b>M0</b></td><td>자료구조 + <code>pgbuf_initialize/finalize</code> + 해시/invalid list</td><td>서버 부팅, 페이지 0 fix 없이 shutdown</td></tr>
+<tr><td><b>M1</b></td><td>fix/unfix hit·miss 경로 (단일 스레드 정확성)</td><td>SA mode로 createdb/csql 기본 질의</td></tr>
+<tr><td><b>M2</b></td><td>latch 프로토콜 + 대기/기상 + lockfree fast path</td><td>동시 read/write 워크로드 무손상, quiz 02</td></tr>
+<tr><td><b>M3</b></td><td>LRU zone/private·shared/quota</td><td>quiz 05·06·08 기대치 재현</td></tr>
+<tr><td><b>M4</b></td><td>victim + direct victim + lfcq</td><td>quiz 09 재현 (모든 후보 dirty에서도 진행)</td></tr>
+<tr><td><b>M5</b></td><td>dirty/LSA + flush_with_wal + 데몬 4종</td><td>quiz 03·04 재현, WAL 순서 위반 0</td></tr>
+<tr><td><b>M6</b></td><td>checkpoint + flush_all + DWB 연동 + 복구 경로</td><td>quiz 10·11 재현, crash-restart 정합</td></tr>
+<tr><td><b>M7</b></td><td>perfmon/SHOW/파라미터 전체 + quirk 재현</td><td>statdump/SHOW 출력 diff = 0, quiz 12 tracer 재이식</td></tr>
+</table></div>
+
+<h2>0.6 함께 쓰는 자료</h2>
+<ul>
+<li><b>팩트시트 3부</b> (<code>../pgbuf-analysis/research/cubrid-*.md</code>) — 이 책의 모든 규범
+문장의 원전. 줄번호 근거가 담겨 있다 (인용 검증: 40 confirmed / 0 wrong).</li>
+<li><b>quizzes 12종</b> (cubrid 워크트리 <code>quizzes/</code>, branch pgbuf-analysis) — 수용 테스트.
+각 퀴즈의 실측 기대치가 10장에 표로 정리되어 있다.</li>
+<li><b>결함 보고서</b> (<code>../pgbuf-analysis/pgbuf-defects-report_5cd4f860e_claude.md</code>) — D1~D8 상세.</li>
+</ul>
+
+<p class="small">작성: Claude (Fable 5) · 2026-08-06 · 근거: CUBRID <code>5cd4f860e</code> 전수 분석
+(팩트시트 + 실측). 이 문서는 AI 분석 산출물로, 구현 착수 전 각 장의 계약 표를 원본 소스와 대조하는
+스팟체크를 권장한다.</p>
+
+<nav class="book">
+<span></span>
+<span class="chapter-title">목차</span>
+<a href="ch01-requirements.html">1장 요구사항과 외부 관점 →</a>
+</nav>
+
+</main>
+</body>
+</html>

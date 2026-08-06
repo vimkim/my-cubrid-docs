@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pgbuf 재구축 스펙 — 3장 자료구조 스펙</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+
+<nav class="book">
+<a href="ch02-api-contracts.html">← 이전: 2장 Public API 계약</a>
+<span class="chapter-title">3장 — 자료구조 스펙</span>
+<a href="ch04-concurrency.html">다음: 4장 동시성 프로토콜 →</a>
+</nav>
+
+<h1>3장 — 자료구조 스펙</h1>
+
+<p>이 장은 페이지 버퍼가 메모리에 갖는 <b>모든</b> 상태를 규정한다. 필드 하나하나에 대해 타입·역할·<b>누가 보호하는가</b>·초기값을 고정하고, 비트로 압축된 두 워드(<code>flags</code>, <code>atomic_latch</code>)의 배치를 그림과 표로 못박는다. 4장 이후의 모든 알고리즘은 여기서 정의한 필드 이름을 그대로 사용한다.</p>
+
+<div class="box"><span class="label">이 장을 읽는 법</span>
+"보호 주체(protected by)" 열이 이 장의 핵심이다. CUBRID 페이지 버퍼에는 <b>하나의 큰 락이 없다</b>.
+같은 구조체 안에서도 필드마다 보호 주체가 다르고, 어떤 필드는 <b>의도적으로 보호되지 않는다</b>
+(<code>hit_age</code>, 해시 탐색 중의 <code>vpid</code> 읽기). 재작성 시 이 열을 그대로 지키지 않으면
+컴파일은 되지만 4장의 동시성 논증이 전부 무효가 된다.
+</div>
+
+<h2>3.1 전역 객체</h2>
+
+<p>페이지 버퍼의 전체 상태는 <b>단 두 개의 파일 스코프 정적 객체</b>에 들어 있다. <span class="ref">page_buffer.c:845-846</span></p>
+
+<pre><code>static PGBUF_BUFFER_POOL pgbuf_Pool;              /* 버퍼 풀 전체 */
+static PGBUF_BATCH_FLUSH_HELPER pgbuf_Flush_helper; /* neighbor flush 스크래치 */</code></pre>
+
+<p><kbd class="must">MUST</kbd> <code>pgbuf_Pool</code>은 정적 저장 기간을 갖는 단일 인스턴스여야 한다. 동적 할당하거나 인스턴스를 복수로 두면 §3.12의 결함 D2가 <b>실제 크래시로 바뀐다</b>(정적 0-초기화가 버그를 가려주고 있기 때문).</p>
+
+<p><kbd class="must">MUST</kbd> <code>pgbuf_Flush_helper</code>도 단일 전역이다. <span class="ref">page_buffer.c:451-458</span> 이는 설계상의 결과를 낳는다 — <b>neighbor flush 배칭은 구조적으로 단일 스레드</b>이며, 두 스레드가 동시에 이웃 배치를 만들 수 없다. 8장의 flush 알고리즘은 이 사실에 의존한다. 이 구조체는 <code>npages</code>, <code>fwd_offset</code>, <code>back_offset</code>, 그리고 <code>2 × PGBUF_MAX_NEIGHBOR_PAGES − 1 = 63</code>칸짜리 <code>pages_bufptr[]</code>/<code>vpids[]</code> 배열로 이뤄진다 (<code>PGBUF_MAX_NEIGHBOR_PAGES = 32</code>, <span class="ref">page_buffer.c:310</span>).</p>
+
+<h3>3.1.1 <code>PGBUF_BUFFER_POOL</code> 전 멤버</h3>
+
+<p>선언은 <span class="ref">page_buffer.c:755-832</span>. "초기값" 열은 <code>pgbuf_initialize</code>가 명시적으로 세팅하는 값이다(§3.11).</p>
+
+<div class="tablewrap"><table>
+<tr><th>멤버</th><th>타입</th><th>역할</th><th>보호 주체</th><th>초기값</th></tr>
+<tr><td><code>num_buffers</code></td><td><code>int</code></td><td>BCB/프레임 개수. 주석은 "10 × num_trans"라 하지만 실제 출처는 파라미터다(§3.10)</td><td>init 이후 불변</td><td><code>0</code> → 파라미터</td></tr>
+<tr><td><code>BCB_table</code></td><td><code>PGBUF_BCB *</code></td><td><code>num_buffers</code>개 BCB 평면 배열</td><td>init 이후 포인터 불변</td><td><code>NULL</code></td></tr>
+<tr><td><code>buf_hash_table</code></td><td><code>PGBUF_BUFFER_HASH *</code></td><td>VPID→BCB 해시, <b>고정</b> 1&lt;&lt;20 버킷(§3.5)</td><td>버킷별 <code>hash_mutex</code></td><td><code>NULL</code></td></tr>
+<tr><td><code>buf_lock_table</code></td><td><code>PGBUF_BUFFER_LOCK *</code></td><td>미싱 페이지 팻말. <b>스레드당</b> 1개(§3.6)</td><td>버킷 <code>hash_mutex</code></td><td><code>NULL</code></td></tr>
+<tr><td><code>iopage_table</code></td><td><code>PGBUF_IOPAGE_BUFFER *</code></td><td>프레임 배열, stride <code>PGBUF_IOPAGE_BUFFER_SIZE</code>(§3.4)</td><td>프레임 내용은 BCB latch</td><td><code>NULL</code></td></tr>
+<tr><td><code>num_LRU_list</code></td><td><code>int</code></td><td><b>shared</b> LRU 리스트 수만</td><td>init 이후 불변</td><td><code>0</code></td></tr>
+<tr><td><code>ratio_lru1</code></td><td><code>float</code></td><td>zone 1 크기 비율</td><td>init 이후 불변</td><td><code>0.0f</code> → 클램프된 파라미터</td></tr>
+<tr><td><code>ratio_lru2</code></td><td><code>float</code></td><td>zone 2 크기 비율</td><td>init 이후 불변</td><td><code>0.0f</code> → 클램프된 파라미터</td></tr>
+<tr><td><code>buf_LRU_list</code></td><td><code>PGBUF_LRU_LIST *</code></td><td>한 배열에 shared 먼저, 그 뒤 private(§3.8)</td><td>리스트별 <code>mutex</code></td><td><code>NULL</code></td></tr>
+<tr><td><code>buf_AOUT_list</code></td><td><code>PGBUF_AOUT_LIST</code></td><td>2Q victim 이력 — BCB가 아니라 <b>VPID</b>의 FIFO</td><td><code>Aout_mutex</code></td><td>전체 0</td></tr>
+<tr><td><code>buf_invalid_list</code></td><td><code>PGBUF_INVALID_LIST</code></td><td>미사용/무효화된 BCB 프리 리스트(§3.7)</td><td><code>invalid_mutex</code></td><td>전체 0 → 전 BCB 체인</td></tr>
+<tr><td><code>victim_cand_list</code></td><td><code>PGBUF_VICTIM_CANDIDATE_LIST *</code></td><td><code>num_buffers</code> 크기 flush 후보 배열</td><td>flush 데몬 전용(단일 소유)</td><td><code>NULL</code></td></tr>
+<tr><td><code>seq_chkpt_flusher</code></td><td><code>PGBUF_SEQ_FLUSHER</code></td><td>속도 제어형 checkpoint flusher(§3.8)</td><td>checkpoint 스레드 전용</td><td>전체 0</td></tr>
+<tr><td><code>monitor</code></td><td><code>PGBUF_PAGE_MONITOR</code></td><td><code>dirties_cnt</code>, LRU별 hits/activity, bcb-mutex 추적, <code>victim_rich</code></td><td>필드별 상이(대부분 atomic/racy)</td><td>멤버별 개별 0화</td></tr>
+<tr><td><code>quota</code></td><td><code>PGBUF_PAGE_QUOTA</code></td><td>private LRU 수, 쿼터, 조정 tick</td><td><code>is_adjusting</code> CAS로 단일 조정자</td><td>전체 0</td></tr>
+<tr><td><code>thrd_holder_info</code></td><td><code>PGBUF_HOLDER_ANCHOR *</code></td><td>스레드별 free/held holder 리스트(§3.9)</td><td><b>소유 스레드 단독</b></td><td><code>NULL</code></td></tr>
+<tr><td><code>thrd_reserved_holder</code></td><td><code>PGBUF_HOLDER *</code></td><td>스레드당 초기 7개 holder의 backing store</td><td>소유 스레드 단독</td><td><code>NULL</code></td></tr>
+<tr><td><code>free_holder_set_mutex</code></td><td><code>pthread_mutex_t</code></td><td>전역 holder-set 오버플로 할당기 보호</td><td>—</td><td><code>PTHREAD_MUTEX_INITIALIZER</code></td></tr>
+<tr><td><code>free_holder_set</code></td><td><code>PGBUF_HOLDER_SET *</code></td><td>10개 단위 holder 블록의 grow-only 전역 풀</td><td><code>free_holder_set_mutex</code></td><td><code>NULL</code></td></tr>
+<tr><td><code>free_index</code></td><td><code>int</code></td><td>현재 블록에서 첫 free 엔트리 인덱스</td><td><code>free_holder_set_mutex</code></td><td><code>0</code></td></tr>
+<tr><td><code>check_for_interrupts</code></td><td><code>bool</code></td><td>log manager가 <code>TR_TABLE_CS</code> 아래에서 set/clear; fix 재시도 루프가 읽음</td><td>외부(log manager)</td><td><code>false</code></td></tr>
+<tr><td><code>is_flushing_victims</code></td><td><code>bool</code></td><td>victim flush 데몬이 IO 경로를 점유 중</td><td>플래그(racy, 힌트)</td><td><code>false</code></td></tr>
+<tr><td><code>is_checkpoint</code></td><td><code>bool</code></td><td>checkpoint 진행 중</td><td>플래그(racy, 힌트)</td><td><code>false</code></td></tr>
+<tr><td><code>direct_victims</code></td><td><code>PGBUF_DIRECT_VICTIM</code></td><td>스레드별 <code>bcb_victims[]</code> + 고/저 우선순위 대기 큐(§3.8)</td><td>배열은 스레드별 슬롯, 큐는 lock-free</td><td>§3.12 결함 D2 참조</td></tr>
+<tr><td><code>flushed_bcbs</code></td><td><code>circular_queue&lt;PGBUF_BCB*&gt; *</code></td><td>flush 후처리 큐, 8192칸</td><td>lock-free</td><td><code>NULL</code></td></tr>
+<tr><td><code>private_lrus_with_victims</code></td><td><code>circular_queue&lt;int&gt; *</code></td><td>victim을 가진 private LRU 인덱스 LFCQ</td><td>lock-free</td><td><code>NULL</code></td></tr>
+<tr><td><code>big_private_lrus_with_victims</code></td><td><code>circular_queue&lt;int&gt; *</code></td><td>동일하되 크기 ≥ 100인 리스트용</td><td>lock-free</td><td><code>NULL</code></td></tr>
+<tr><td><code>shared_lrus_with_victims</code></td><td><code>circular_queue&lt;int&gt; *</code></td><td>동일하되 shared 리스트용</td><td>lock-free</td><td><code>NULL</code></td></tr>
+<tr><td><code>show_status</code></td><td><code>PGBUF_STATUS *</code></td><td>스레드별 <code>SHOW PAGE BUFFER STATUS</code> 샤드, 64B 정렬</td><td><b>비원자·비공유</b>(스레드 전용 슬롯)</td><td><code>NULL</code></td></tr>
+<tr><td><code>show_status_old</code></td><td><code>PGBUF_STATUS_OLD</code></td><td>직전 스냅샷 + <code>print_out_time</code>(델타 계산용)</td><td><code>show_status_mutex</code></td><td>전체 0, 시각은 <code>time(NULL)</code></td></tr>
+<tr><td><code>show_status_snapshot</code></td><td><code>PGBUF_STATUS_SNAPSHOT</code></td><td>순간 페이지 분류 카운트(free/victim cand/clean/dirty/index/data/system/temp)</td><td><code>show_status_mutex</code></td><td>전체 0</td></tr>
+<tr><td><code>show_status_mutex</code></td><td><code>pthread_mutex_t</code></td><td>스냅샷 계산 직렬화</td><td>—</td><td><code>PTHREAD_MUTEX_INITIALIZER</code> + <code>pthread_mutex_init</code></td></tr>
+</table></div>
+
+<div class="box norm"><span class="label">규범</span>
+<kbd class="must">MUST</kbd> <code>PGBUF_STATUS</code>는 <code>struct alignas(64)</code>로 선언하고
+스레드당 한 슬롯을 준다. <span class="ref">page_buffer.c:393-402</span>
+필드는 <code>num_hit</code>, <code>num_page_request</code>, <code>num_pages_created</code>,
+<code>num_pages_written</code>, <code>num_pages_read</code>(모두 <code>unsigned long long</code>),
+<code>num_flusher_waiting_threads</code>, <code>dummy</code>(<code>unsigned int</code>).
+<b>원자 연산을 쓰지 않는 것이 의도</b>다 — fix마다 하는 증가가 절대 경합하지 않게 하려는 설계이며,
+그 대가로 합산 시점의 값은 근사치다.
+</div>
+
+<h2>3.2 <code>PGBUF_BCB</code></h2>
+
+<p>버퍼 제어 블록. <span class="ref">page_buffer.c:511-543</span> <code>mutex</code>, <code>owner_mutex</code>, <code>next_wait_thrd</code>, <code>latch_last_thread</code>는 <code>SERVER_MODE</code>에서만 존재한다.</p>
+
+<div class="tablewrap"><table>
+<tr><th>필드</th><th>타입</th><th>역할</th><th>보호 주체</th></tr>
+<tr><td><code>mutex</code></td><td><code>pthread_mutex_t</code></td><td>BCB 뮤텍스</td><td>—</td></tr>
+<tr><td><code>owner_mutex</code></td><td><code>int</code></td><td>디버그용 소유자 추적</td><td><code>mutex</code></td></tr>
+<tr><td><code>vpid</code></td><td><code>VPID</code></td><td>상주 페이지 식별자</td><td>쓰기는 <code>mutex</code>; <b>해시 탐색 중에는 무보호로 읽힘</b>(락 후 재검증 필수 — 4장)</td></tr>
+<tr><td><code>atomic_latch</code></td><td><code>std::atomic&lt;uint64_t&gt;</code></td><td>latch_mode + waiter_exists + fcnt 패킹(§3.3)</td><td><b>락 아님 — CAS</b></td></tr>
+<tr><td><code>flags</code></td><td><code>volatile int</code></td><td>플래그 + zone + LRU 인덱스(§3.2.1)</td><td><code>ATOMIC_CAS_32</code></td></tr>
+<tr><td><code>next_wait_thrd</code></td><td><code>THREAD_ENTRY *</code></td><td>latch 대기 큐 head</td><td><code>mutex</code></td></tr>
+<tr><td><code>latch_last_thread</code></td><td><code>THREAD_ENTRY *</code></td><td>마지막 latch 획득 스레드(진단용)</td><td><code>mutex</code>(권고적)</td></tr>
+<tr><td><code>hash_next</code></td><td><code>PGBUF_BCB *</code></td><td>해시 체인</td><td>버킷 <code>hash_mutex</code></td></tr>
+<tr><td><code>prev_BCB</code></td><td><code>PGBUF_BCB *</code></td><td>LRU 이중 연결의 prev</td><td>LRU 리스트 <code>mutex</code></td></tr>
+<tr><td><code>next_BCB</code></td><td><code>PGBUF_BCB *</code></td><td><b>겸용</b>: LRU 이중 연결의 next <b>또는</b> invalid 리스트 단일 연결</td><td>LRU <code>mutex</code> <b>또는</b> <code>invalid_mutex</code></td></tr>
+<tr><td><code>tick_lru_list</code></td><td><code>int</code></td><td>삽입 시점의 리스트 tick — 나이 판정용</td><td>LRU <code>mutex</code></td></tr>
+<tr><td><code>tick_lru3</code></td><td><code>int</code></td><td>zone 3 내 위치. 작을수록 바닥</td><td>LRU <code>mutex</code></td></tr>
+<tr><td><code>count_fix_and_avoid_dealloc</code></td><td><code>volatile int</code></td><td>두 카운터 패킹(§3.2.2)</td><td><code>ATOMIC_INC_32</code> / <code>ATOMIC_CAS_32</code></td></tr>
+<tr><td><code>hit_age</code></td><td><code>int</code></td><td>마지막 히트 시각(activity/quota 계산용)</td><td><b>의도적 무보호</b> — 근사치면 충분</td></tr>
+<tr><td><code>oldest_unflush_lsa</code></td><td><code>LOG_LSA</code></td><td>디스크에 안 쓰인 가장 오래된 로그 LSA</td><td><code>mutex</code></td></tr>
+<tr><td><code>iopage_buffer</code></td><td><code>PGBUF_IOPAGE_BUFFER *</code></td><td>대응 프레임 포인터</td><td>init 이후 불변</td></tr>
+</table></div>
+
+<div class="box norm"><span class="label">불변식</span>
+<kbd class="must">MUST</kbd> 다음 넷을 항상 유지한다.
+<ol>
+<li><code>bcb-&gt;iopage_buffer-&gt;bcb == bcb</code> — 캐스트 매크로가 매번 assert한다. <span class="ref">page_buffer.c:152, :167</span></li>
+<li><code>next_BCB</code>는 <b>LRU 또는 invalid 중 정확히 한 곳</b>에서만 쓰인다. 즉 BCB는 두 리스트에 동시에 들어갈 수 없다. <span class="ref">page_buffer.c:626-633</span></li>
+<li><code>!LSA_ISNULL(&amp;oldest_unflush_lsa)</code> ⇒ BCB는 dirty다. <span class="ref">page_buffer.c:2351, :6665</span></li>
+<li><code>tick_lru_list</code>/<code>tick_lru3</code>는 <b>랩어라운드하는 부호 있는 카운터</b>다. 나이 비교는 반드시 <code>PGBUF_AGE_DIFF</code> 형태 — <code>list_age &gt;= bcb_age ? list_age − bcb_age : DB_INT32_MAX − (bcb_age − list_age)</code> — 로 해야 하며 단순 뺄셈은 금지다. <span class="ref">page_buffer.c:1004-1005</span></li>
+</ol>
+</div>
+
+<h3>3.2.1 <code>flags</code> — 플래그 + zone + LRU 인덱스가 한 워드에</h3>
+
+<figure>
+<svg viewBox="0 0 900 210" role="img" aria-label="bcb flags 32비트 워드 배치">
+  <rect x="34" y="46" width="182" height="46" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+  <rect x="216" y="46" width="130" height="46" fill="none" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <rect x="346" y="46" width="104" height="46" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+  <rect x="450" y="46" width="416" height="46" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+
+  <text x="125" y="75" text-anchor="middle" class="svg-label">flags (7)</text>
+  <text x="281" y="75" text-anchor="middle" class="svg-muted">unused (5)</text>
+  <text x="398" y="75" text-anchor="middle" class="svg-label">zone (4)</text>
+  <text x="658" y="75" text-anchor="middle" class="svg-label">LRU list index (16)</text>
+
+  <text x="34" y="36" text-anchor="start" class="svg-small">bit 31</text>
+  <text x="216" y="36" text-anchor="middle" class="svg-small">25 | 24</text>
+  <text x="346" y="36" text-anchor="middle" class="svg-small">20 | 19</text>
+  <text x="450" y="36" text-anchor="middle" class="svg-small">16 | 15</text>
+  <text x="866" y="36" text-anchor="end" class="svg-small">bit 0</text>
+
+  <text x="125" y="115" text-anchor="middle" class="svg-muted">PGBUF_BCB_FLAGS_MASK</text>
+  <text x="125" y="132" text-anchor="middle" class="svg-muted">0xFE000000</text>
+  <text x="398" y="115" text-anchor="middle" class="svg-muted">PGBUF_ZONE_MASK</text>
+  <text x="398" y="132" text-anchor="middle" class="svg-muted">0x000F0000</text>
+  <text x="658" y="115" text-anchor="middle" class="svg-muted">PGBUF_LRU_INDEX_MASK</text>
+  <text x="658" y="132" text-anchor="middle" class="svg-muted">0x0000FFFF → 최대 65,536개 리스트</text>
+
+  <line x1="34" y1="160" x2="866" y2="160" stroke="var(--line)" stroke-width="1"/>
+  <text x="34" y="182" class="svg-small">부팅 시 세 마스크의 비중첩을 검증하고, 실패하면 서버를 abort 한다 (pgbuf_flags_mask_sanity_check).</text>
+</svg>
+<figcaption>그림 3-1. <code>bcb-&gt;flags</code> 32비트 워드 배치 <span class="ref">page_buffer.c:178-265</span></figcaption>
+</figure>
+
+<p><b>zone 인코딩</b> — 값은 마스크가 아니라 <b>이미 시프트된 상수</b>다. 즉 <code>flags = PGBUF_MAKE_ZONE(list_id, zone) = (list_id | zone)</code>로 합성한다. <span class="ref">page_buffer.c:197-216</span></p>
+
+<div class="tablewrap"><table>
+<tr><th>zone</th><th>값</th><th>의미</th></tr>
+<tr><td><code>PGBUF_LRU_1_ZONE</code></td><td><code>1 &lt;&lt; 16 = 0x00010000</code></td><td>가장 뜨거운 구역. victim 불가, unfix 시 boost 안 함</td></tr>
+<tr><td><code>PGBUF_LRU_2_ZONE</code></td><td><code>2 &lt;&lt; 16 = 0x00020000</code></td><td>완충 구역. victim 불가, 조건부 boost</td></tr>
+<tr><td><code>PGBUF_LRU_3_ZONE</code></td><td><code>3 &lt;&lt; 16 = 0x00030000</code></td><td><b>victim 구역</b>. 여기에서만 victim 후보가 나온다</td></tr>
+<tr><td><code>PGBUF_LRU_ZONE_MASK</code></td><td><code>0x00030000</code></td><td>위 셋의 OR</td></tr>
+<tr><td><code>PGBUF_INVALID_ZONE</code></td><td><code>1 &lt;&lt; 18 = 0x00040000</code></td><td>invalid 리스트에 있음. BCB의 초기값</td></tr>
+<tr><td><code>PGBUF_VOID_ZONE</code></td><td><code>2 &lt;&lt; 18 = 0x00080000</code></td><td>과도 상태 — 디스크에서 읽은 뒤 LRU 삽입 전, 또는 LRU 제거 후 victim 확정 전</td></tr>
+<tr><td><code>PGBUF_ZONE_MASK</code></td><td><code>0x000F0000</code></td><td>전체 zone 필드</td></tr>
+</table></div>
+
+<p><kbd class="must">MUST</kbd> <code>INVALID_ZONE</code>과 <code>VOID_ZONE</code>은 LRU zone 비트(16-17)와 <b>완전히 다른 비트</b>(18-19)를 써야 한다. 그래야 <code>PGBUF_IS_BCB_IN_LRU(bcb) ≡ (zone &amp; PGBUF_LRU_ZONE_MASK) != 0</code>이 성립한다. <span class="ref">page_buffer.c:1001</span></p>
+
+<p><b>플래그 7종</b> <span class="ref">page_buffer.c:224-241</span></p>
+
+<div class="tablewrap"><table>
+<tr><th>플래그</th><th>비트값</th><th>의미</th><th>victim 차단?</th></tr>
+<tr><td><code>PGBUF_BCB_DIRTY_FLAG</code></td><td><code>0x80000000</code></td><td>페이지가 수정됨. flush 성공 시 해제</td><td>예</td></tr>
+<tr><td><code>PGBUF_BCB_FLUSHING_TO_DISK_FLAG</code></td><td><code>0x40000000</code></td><td>flush 진행 중. dirty는 이미 false일 수 있으나 flush 성공 전엔 victim 금지</td><td>예</td></tr>
+<tr><td><code>PGBUF_BCB_VICTIM_DIRECT_FLAG</code></td><td><code>0x20000000</code></td><td>특정 대기 스레드에 direct victim으로 이미 배급됨</td><td>예</td></tr>
+<tr><td><code>PGBUF_BCB_INVALIDATE_DIRECT_VICTIM_FLAG</code></td><td><code>0x10000000</code></td><td>배급된 direct victim을 누군가 다시 fix했음 — 수령자는 다시 요청해야 함</td><td>예</td></tr>
+<tr><td><code>PGBUF_BCB_MOVE_TO_LRU_BOTTOM_FLAG</code></td><td><code>0x08000000</code></td><td>fix count 0이 되는 순간 LRU 바닥으로. <code>pgbuf_dealloc_page</code>가 설정</td><td>아니오</td></tr>
+<tr><td><code>PGBUF_BCB_TO_VACUUM_FLAG</code></td><td><code>0x04000000</code></td><td>vacuum이 곧 읽을 페이지</td><td>아니오</td></tr>
+<tr><td><code>PGBUF_BCB_ASYNC_FLUSH_REQ</code></td><td><code>0x02000000</code></td><td>비동기 flush 요청. unfix 말미에 처리</td><td>아니오</td></tr>
+</table></div>
+
+<p><code>PGBUF_BCB_FLAGS_MASK</code> = 위 7개의 OR = <code>0xFE000000</code>.<br> <code>PGBUF_BCB_INVALID_VICTIM_CANDIDATE_MASK</code> = <code>DIRTY | FLUSHING_TO_DISK | VICTIM_DIRECT | INVALIDATE_DIRECT_VICTIM</code> <span class="ref">page_buffer.c:258-262</span>. <b>이 마스크에 "fix 중"은 포함되지 않는다</b> — <code>fcnt &gt; 0</code>은 별도로 검사한다(§3.3).</p>
+
+<div class="box warn"><span class="label">MUST — 부팅 시 마스크 검증</span>
+<kbd class="must">MUST</kbd> <code>pgbuf_initialize</code>의 <b>제일 첫 줄</b>에서 네 가지 비중첩을 검사하고,
+하나라도 위반하면 <b>서버를 즉시 abort</b>한다. <span class="ref">page_buffer.c:1602, :16777-16798</span>
+<pre><code>if (PGBUF_BCB_FLAGS_MASK &amp; PGBUF_ZONE_MASK)                  abort;
+if (PGBUF_BCB_FLAGS_MASK &amp; PGBUF_LRU_INDEX_MASK)             abort;
+if (PGBUF_ZONE_MASK      &amp; PGBUF_LRU_INDEX_MASK)             abort;
+if ((PGBUF_INVALID_ZONE | PGBUF_VOID_ZONE) &amp; PGBUF_LRU_ZONE_MASK) abort;</code></pre>
+abort 매크로는 릴리스에서 <code>pgbuf_Abort_release_line = __LINE__; abort()</code>,
+디버그에서 <code>assert(false)</code>다. <span class="ref">page_buffer.c:1082-1086</span>
+릴리스 최적화로 콜스택이 망가져도 원인 줄을 남기려는 장치이므로 <kbd class="should">SHOULD</kbd>
+동일한 전역 변수 기법을 유지한다.
+</div>
+
+<p><b>플래그 변경 경로</b> — <kbd class="must">MUST</kbd> 모든 플래그 변경은 CAS 루프여야 하고, 성공 후에는 두 가지 부수 유지보수를 <b>반드시</b> 수행한다. <span class="ref">page_buffer.c:15726-15794</span></p>
+<ol>
+<li>BCB가 zone 3에 있고 invalid-victim 마스크의 상태가 바뀌었으면 해당 LRU의 victim 후보로 추가/제거한다.</li>
+<li><code>DIRTY</code> 비트가 바뀌었으면 전역 <code>monitor.dirties_cnt</code>를 증감한다.</li>
+</ol>
+<p>단 <code>pgbuf_bcb_set_dirty</code>는 <b>의도적으로 이 공통 함수를 우회</b>하고 위 유지보수를 인라인으로 복제한다 — 핫패스 최적화다. <span class="ref">page_buffer.c:15967-15995</span> <kbd class="may">MAY</kbd> 재작성 시 우회를 포기하고 공통 경로만 써도 동작은 같다(성능만 다르다).</p>
+
+<p>zone 변경은 별도 함수를 쓴다. <kbd class="must">MUST</kbd> zone 교체 시 <b>플래그 비트는 보존</b>하고 zone+index만 갈아끼워야 한다: <code>new = (old &amp; PGBUF_BCB_FLAGS_MASK) | new_zone_idx</code>, CAS 루프. <span class="ref">page_buffer.c:15841-15851</span></p>
+
+<h3>3.2.2 <code>count_fix_and_avoid_dealloc</code> — 두 카운터 한 워드</h3>
+
+<pre><code>#define PGBUF_BCB_COUNT_FIX_SHIFT_BITS   16
+#define PGBUF_BCB_AVOID_DEALLOC_MASK     ((int) 0x0000FFFF)</code></pre>
+<p><span class="ref">page_buffer.c:267-269</span> 두 카운터를 나눠 담지 않고 합친 이유는 소스가 직접 밝힌다 — "avoid deallocation은 원자적으로 바뀌어야 하는데 2바이트 원자 연산은 흔하지 않다". <span class="ref">page_buffer.c:533-538</span></p>
+
+<div class="tablewrap"><table>
+<tr><th>구간</th><th>내용</th><th>연산</th><th>규범</th></tr>
+<tr><td>상위 16비트</td><td>fix 카운터(핫 페이지 판별용)</td><td><code>ATOMIC_INC_32(&amp;w, 1 &lt;&lt; 16)</code></td><td><kbd class="must">MUST</kbd> <code>PGBUF_FIX_COUNT_THRESHOLD = 64</code>에서 <b>포화</b>(증가 중단). 핫 판정은 <code>count &gt;= (64 &lt;&lt; 16)</code>인 단순 비교</td></tr>
+<tr><td>하위 16비트</td><td>avoid-dealloc 참조 카운트</td><td>등록은 <code>ATOMIC_INC_32(&amp;w, 1)</code>, 해제는 CAS 루프</td><td><kbd class="must">MUST</kbd> 해제 시 <b>카운트 0을 허용</b>하고 assert 대신 로그만 남긴다</td></tr>
+</table></div>
+
+<p>0 허용이 필수인 이유: <code>pgbuf_ordered_fix</code>가 마킹된 페이지를 unfix → 그 사이 victim화 → 다시 읽어오면 카운터가 사라진 상태로 해제가 호출된다. <span class="ref">page_buffer.c:16195-16231</span></p>
+
+<p><kbd class="must">MUST</kbd> 세 지점에서 <code>0x00008000</code> 비트가 켜지지 않았음을 assert한다 (<span class="ref">page_buffer.c:16185, :16203, :16243</span>) — avoid-dealloc이 32,768 미만이어야 fix 카운터의 부호 처리로 번지지 않는다.</p>
+
+<h2>3.3 atomic latch word</h2>
+
+<p>이 브랜치의 가장 큰 설계 변경. latch 상태 셋이 <b>하나의 64비트 원자 워드</b>에 들어간다. <span class="ref">page_buffer.c:365, :499-508</span></p>
+
+<pre><code>typedef std::atomic&lt;uint64_t&gt; PGBUF_ATOMIC_LATCH;
+
+union pgbuf_atomic_latch_impl
+{
+  uint64_t raw;
+  struct
+  {
+    PGBUF_LATCH_MODE latch_mode;   /* enum : uint16_t */
+    uint16_t         waiter_exists;
+    int32_t          fcnt;
+  } impl;
+};</code></pre>
+
+<figure>
+<svg viewBox="0 0 900 150" role="img" aria-label="atomic latch 64비트 워드 배치">
+  <rect x="40" y="40" width="200" height="48" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+  <rect x="240" y="40" width="200" height="48" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+  <rect x="440" y="40" width="400" height="48" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+  <text x="140" y="62" text-anchor="middle" class="svg-label">latch_mode</text>
+  <text x="140" y="80" text-anchor="middle" class="svg-muted">uint16 · 16 bits</text>
+  <text x="340" y="62" text-anchor="middle" class="svg-label">waiter_exists</text>
+  <text x="340" y="80" text-anchor="middle" class="svg-muted">uint16 · 16 bits</text>
+  <text x="640" y="62" text-anchor="middle" class="svg-label">fcnt</text>
+  <text x="640" y="80" text-anchor="middle" class="svg-muted">int32 · 32 bits</text>
+  <text x="40" y="30" class="svg-small">선언 순서 →  합계 정확히 8바이트, 패딩 0</text>
+  <text x="40" y="115" class="svg-small">모든 상태 전이는 이 워드 하나에 대한 compare-exchange 로 이뤄진다 — 세 값이 함께 원자적으로 바뀐다.</text>
+  <text x="40" y="134" class="svg-muted">라이터/리더/대기자 존재 여부를 따로 읽어 조합하는 코드는 이 설계에서 불가능하다.</text>
+</svg>
+<figcaption>그림 3-2. <code>PGBUF_ATOMIC_LATCH_IMPL</code> 필드 배치 <span class="ref">page_buffer.c:499-508</span></figcaption>
+</figure>
+
+<div class="box warn"><span class="label">MUST — enum 폭 고정</span>
+<kbd class="must">MUST</kbd> <code>PGBUF_LATCH_MODE</code>를 <code>typedef enum : uint16_t {...}</code>로
+선언한다. <span class="ref">page_buffer.h:190-197</span>
+기본 <code>int</code> 폭이면 구조체가 16+32(패딩)+32이 되어 <code>union</code>이 8바이트를 넘고,
+<code>std::atomic&lt;uint64_t&gt;</code>와의 대응이 깨진다. <kbd class="should">SHOULD</kbd>
+<code>static_assert(sizeof(PGBUF_ATOMIC_LATCH_IMPL) == 8)</code>를 넣어 컴파일 타임에 고정한다.
+</div>
+
+<p><b>fcnt는 holder 수가 아니다.</b> 모든 holder의 <code>fix_count</code> 총합이며, 개별 <code>holder-&gt;fix_count</code>는 스레드 로컬 메모리에 산다(§3.9). 한 스레드가 같은 페이지를 3번 fix하면 <code>fcnt = 3</code>, holder는 1개다.</p>
+
+<h3>3.3.1 접근자 계약</h3>
+
+<p><kbd class="must">MUST</kbd> 아홉 개 접근자를 아래 계약대로 제공한다. <span class="ref">page_buffer.c:1392-1494</span> 쓰기 접근자는 전부 동일한 골격이다.</p>
+
+<pre><code>do {
+    impl.raw = latch-&gt;load (std::memory_order_acquire);
+    new_impl = impl;
+    &lt;필드 하나 또는 둘을 수정&gt;
+} while (!latch-&gt;compare_exchange_weak (impl.raw, new_impl.raw,
+                                        std::memory_order_acq_rel,
+                                        std::memory_order_acquire));</code></pre>
+
+<div class="tablewrap"><table>
+<tr><th>함수</th><th>동작</th><th>메모리 오더</th></tr>
+<tr><td><code>set_latch(latch, mode)</code></td><td><code>latch_mode</code>만 교체, 나머지 보존</td><td>CAS <code>acq_rel</code> / 실패 <code>acquire</code></td></tr>
+<tr><td><code>add_fcnt(latch, cnt)</code></td><td><code>fcnt += cnt</code>(음수 가능)</td><td>동일</td></tr>
+<tr><td><code>set_latch_and_fcnt(latch, mode, cnt)</code></td><td>mode 교체 + <code>fcnt = cnt</code>(<b>대입</b>)</td><td>동일</td></tr>
+<tr><td><code>set_latch_and_add_fcnt(latch, mode, cnt)</code></td><td>mode 교체 + <code>fcnt += cnt</code>(<b>누적</b>)</td><td>동일</td></tr>
+<tr><td><code>set_waiter_exists(latch, bool)</code></td><td><code>waiter_exists</code>만 교체</td><td>동일</td></tr>
+<tr><td><code>get_fcnt(latch)</code></td><td><code>fcnt</code> 읽기</td><td>load <code>acquire</code></td></tr>
+<tr><td><code>get_waiter_exists(latch)</code></td><td><code>waiter_exists</code> 읽기</td><td>load <code>acquire</code></td></tr>
+<tr><td><code>get_latch(latch)</code></td><td><code>latch_mode</code> 읽기</td><td>load <code>acquire</code></td></tr>
+<tr><td><code>get_impl(latch)</code></td><td>세 필드를 <b>하나의 일관된 스냅샷</b>으로 읽기</td><td>load <code>acquire</code></td></tr>
+</table></div>
+
+<p><kbd class="must">MUST</kbd> 조건 판정에 여러 필드가 필요할 때는 <b>반드시 <code>get_impl</code> 한 번</b>으로 읽는다. <code>get_latch()</code> + <code>get_waiter_exists()</code>를 따로 부르면 두 읽기 사이에 상태가 바뀌어 4장의 fast-path 안전 논증이 무너진다.</p>
+
+<p><kbd class="should">SHOULD</kbd> 부여(grant)·기상(wakeup)처럼 판정과 갱신 사이에 재시도가 정확히 필요한 지점은 <code>compare_exchange_<b>strong</b></code>을, 단순 필드 갱신 루프는 <code>compare_exchange_<b>weak</b></code>을 쓴다 — 원본이 그렇게 나뉘어 있다 (<span class="ref">page_buffer.c:6399-6401</span> vs <span class="ref">:1403</span>).</p>
+
+<h2>3.4 프레임: <code>PGBUF_IOPAGE_BUFFER</code>와 <code>FILEIO_PAGE</code></h2>
+
+<pre><code>struct pgbuf_iopage_buffer
+{
+  PGBUF_BCB *bcb;        /* 역방향 포인터 */
+#if (__WORDSIZE == 32)
+  int dummy;             /* iopage 8바이트 정렬용 */
+#elif !defined(LINUX) &amp;&amp; !defined(WINDOWS) &amp;&amp; !defined(AIX)
+#error "you must check that iopage is aligned by 8byte !!"
+#endif
+  FILEIO_PAGE iopage;
+};</code></pre>
+<p><span class="ref">page_buffer.c:546-555</span></p>
+
+<p><kbd class="must">MUST</kbd> <code>iopage</code>는 8바이트 정렬되어야 한다. 64비트에서는 포인터 하나로 자연히 맞고, 32비트에서는 <code>dummy</code> 패딩이 필요하다. 지원 목록에 없는 플랫폼은 <b>컴파일 에러로 막는다</b> — 재작성 시에도 이 <code>#error</code>를 유지할 것.</p>
+
+<figure>
+<svg viewBox="0 0 900 200" role="img" aria-label="FILEIO_PAGE 레이아웃">
+  <rect x="40" y="50" width="150" height="50" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+  <rect x="190" y="50" width="580" height="50" fill="none" stroke="var(--line)" stroke-width="1.5"/>
+  <rect x="770" y="50" width="90" height="50" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+  <text x="115" y="72" text-anchor="middle" class="svg-label">prv</text>
+  <text x="115" y="90" text-anchor="middle" class="svg-muted">32 B</text>
+  <text x="480" y="72" text-anchor="middle" class="svg-label">page[ ] — 사용자 영역</text>
+  <text x="480" y="90" text-anchor="middle" class="svg-muted">DB_PAGESIZE 바이트, PAGE_PTR 이 가리키는 곳</text>
+  <text x="815" y="72" text-anchor="middle" class="svg-label">prv2</text>
+  <text x="815" y="90" text-anchor="middle" class="svg-muted">8 B</text>
+  <line x1="115" y1="110" x2="815" y2="110" stroke="var(--accent)" stroke-width="1" stroke-dasharray="4 4"/>
+  <text x="465" y="128" text-anchor="middle" class="svg-small">머리·꼬리 LSA 워터마크 쌍 — 값이 다르면 torn write</text>
+  <text x="40" y="160" class="svg-small">IO_PAGESIZE = 40 + DB_PAGESIZE  (기본 16,384 = 40 + 16,344)</text>
+  <text x="40" y="180" class="svg-muted">prv2 는 struct 멤버로 직접 접근할 수 없다 — 반드시 fileio_get_page_watermark_pos() 로 계산한다.</text>
+</svg>
+<figcaption>그림 3-3. 디스크·메모리 공통 페이지 레이아웃 <span class="ref">file_io.h:165-199</span></figcaption>
+</figure>
+
+<p><b><code>FILEIO_PAGE_RESERVED prv</code> 전 필드</b> <span class="ref">file_io.h:165-176</span></p>
+
+<div class="tablewrap"><table>
+<tr><th>필드</th><th>타입</th><th>오프셋</th><th>역할</th></tr>
+<tr><td><code>lsa</code></td><td><code>LOG_LSA</code>(48비트 pageid + 16비트 offset)</td><td>0</td><td>이 페이지에 반영된 마지막 로그 레코드의 LSA</td></tr>
+<tr><td><code>pageid</code></td><td><code>INT32</code></td><td>8</td><td>페이지 식별자</td></tr>
+<tr><td><code>volid</code></td><td><code>INT16</code></td><td>12</td><td>볼륨 식별자</td></tr>
+<tr><td><code>ptype</code></td><td><code>unsigned char</code></td><td>14</td><td>페이지 타입(<code>PAGE_UNKNOWN</code>, <code>PAGE_HEAP</code>, …)</td></tr>
+<tr><td><code>pflag</code></td><td><code>unsigned char</code></td><td>15</td><td>현재는 TDE 비트만 사용(<code>ENCRYPTED_AES</code>/<code>ARIA</code>, 마스크 <code>0x3</code>)</td></tr>
+<tr><td><code>p_reserve_1</code></td><td><code>INT32</code></td><td>16</td><td>예약</td></tr>
+<tr><td><code>p_reserve_2</code></td><td><code>INT32</code></td><td>20</td><td>예약(미사용)</td></tr>
+<tr><td><code>tde_nonce</code></td><td><code>INT64</code></td><td>24</td><td>TDE nonce. 임시 페이지는 원자 카운터, 영구 페이지는 LSA</td></tr>
+</table></div>
+
+<div class="box norm"><span class="label">규범 — 꼬리 워터마크</span>
+<kbd class="must">MUST</kbd> <code>prv2</code>(= <code>prv.lsa</code>의 사본)를 페이지 <b>끝</b>에 둔다.
+실제 위치는 구조체 선언 순서가 아니라
+<code>(char *) io_page + (page_size − sizeof (FILEIO_PAGE_WATERMARK))</code>이며,
+<kbd class="must">MUST</kbd> 접근 함수(<code>fileio_get_page_watermark_pos()</code>)로만 읽고 쓴다.
+<code>io_page-&gt;prv2</code>로 직접 접근하면 <b>엉뚱한 주소</b>를 가리킨다 —
+<code>page[1]</code> 뒤가 아니라 페이지 끝이 진짜 위치이기 때문이다.
+<span class="ref">file_io.h:186-199</span><br><br>
+<b>페이지 체크섬은 존재하지 않는다.</b> torn write 탐지는 이 머리/꼬리 LSA 쌍 비교가 전부이고,
+전체 페이지 원자성은 Double Write Buffer가 담당한다(8장).
+</div>
+
+<p><b>크기</b> <span class="ref">storage_common.h:91-101, storage_common.c:44, :74</span></p>
+<ul>
+<li><code>IO_PAGESIZE = db_Io_page_size</code>, <code>DB_PAGESIZE = db_User_page_size</code>.</li>
+<li><code>RESERVED_SIZE_IN_PAGE = sizeof(FILEIO_PAGE_RESERVED) + sizeof(FILEIO_PAGE_WATERMARK) = 32 + 8 = 40</code>.</li>
+<li><code>DB_PAGESIZE = IO_PAGESIZE − 40</code>. 기본·최대 <code>IO_PAGESIZE</code>는 16 KiB, 최소 4 KiB이므로 기본 <code>DB_PAGESIZE = 16,344</code>. <span class="small">(40/16,344는 구조체로부터 계산한 값)</span></li>
+<li>프레임 stride: <code>PGBUF_IOPAGE_BUFFER_SIZE = offsetof(PGBUF_IOPAGE_BUFFER, iopage) + SIZEOF_IOPAGE_PAGESIZE_AND_GUARD()</code>. 후자는 <code>IO_PAGESIZE</code>, <code>CUBRID_DEBUG</code> 빌드에서는 <code>IO_PAGESIZE + sizeof(pgbuf_Guard)</code>. <span class="ref">page_buffer.c:110-120</span></li>
+</ul>
+
+<p><kbd class="may">MAY</kbd> <code>CUBRID_DEBUG</code> 가드 바이트는 선택 사항이다. 켜면 각 프레임 뒤에 가드 패턴을 두고 오버런을 검출한다(<code>PGBUF_FIND_BUFFER_GUARD(bufptr)</code> = <code>&amp;iopage.page[DB_PAGESIZE]</code>, <span class="ref">page_buffer.c:144-145, :852-856</span>). <code>CUBRID_DEBUG</code>는 일반 디버그 빌드와 <b>다른</b> 매크로이며 기본적으로 꺼져 있다.</p>
+
+<h3>3.4.1 인덱스 대응과 캐스트 계약</h3>
+
+<p><kbd class="must">MUST</kbd> <b>BCB 인덱스와 프레임 인덱스는 같은 인덱스</b>다. 두 배열은 원소 크기가 다르므로(<code>sizeof(PGBUF_BCB)</code> vs <code>PGBUF_IOPAGE_BUFFER_SIZE</code>) 각각 자기 stride로 주소를 계산하되, 같은 <code>i</code>가 짝을 이룬다. <span class="ref">page_buffer.c:135-139, :5594-5609</span> 역방향은 포인터 뺄셈으로 얻는다(<code>pgbuf_bcb_get_pool_index</code>, <span class="ref">page_buffer.c:16170-16174</span>).</p>
+
+<p><code>PAGE_PTR</code>↔BCB 변환은 <b>조회 없이 순수 포인터 연산</b>이다. <span class="ref">page_buffer.c:148-169</span></p>
+
+<pre><code>#define CAST_PGPTR_TO_BFPTR(bufptr, pgptr)                                  \
+  do {                                                                       \
+    (bufptr) = ((PGBUF_BCB *) ((PGBUF_IOPAGE_BUFFER *)                       \
+      ((char *) pgptr - offsetof (PGBUF_IOPAGE_BUFFER, iopage.page)))-&gt;bcb); \
+    assert ((bufptr) == (bufptr)-&gt;iopage_buffer-&gt;bcb);                       \
+  } while (0)</code></pre>
+
+<div class="box"><span class="label">계약</span>
+이 매크로가 성립하려면 <kbd class="must">MUST</kbd> 다음이 동시에 참이어야 한다.
+<ol>
+<li><code>PAGE_PTR</code>는 <b>언제나</b> 어떤 <code>PGBUF_IOPAGE_BUFFER</code>의 <code>iopage.page</code> 주소다.</li>
+<li>그 앞 <code>offsetof(PGBUF_IOPAGE_BUFFER, iopage.page)</code> 바이트에 <code>bcb</code> 역포인터가 있다.</li>
+<li><code>bcb-&gt;iopage_buffer</code>가 다시 그 프레임을 가리킨다.</li>
+</ol>
+<b>따라서 "가짜 프레임"을 만들려면 진짜 <code>&lt;BCB, iopage&gt;</code> 쌍을 만들어야 한다.</b>
+CBRD-27041의 복사 버퍼가 정확히 그 사례로, ① <code>sizeof</code>가 아니라 <code>offsetof</code>로 크기를
+잡고(<code>FILEIO_PAGE::page</code>가 <code>char[1]</code>이라 <code>sizeof</code>는 과소 할당),
+② <code>memset</code>이 아니라 <code>placement new</code>로 구성한다(<code>PGBUF_BCB</code>가
+<code>std::atomic</code>을 포함하므로).
+<span class="ref">page_buffer.c:860-888</span>
+</div>
+
+<h2>3.5 해시 테이블</h2>
+
+<pre><code>struct pgbuf_buffer_hash
+{
+  pthread_mutex_t hash_mutex;    /* 해시 체인 + buffer lock 체인 양쪽을 보호 */
+  PGBUF_BCB *hash_next;          /* 상주 BCB 체인 앵커 */
+  PGBUF_BUFFER_LOCK *lock_next;  /* 읽기 진행 중 팻말 체인 앵커 */
+};</code></pre>
+<p><span class="ref">page_buffer.c:575-582</span> 뮤텍스 하나가 <b>두 체인</b>을 함께 보호한다는 점이 중요하다 — 4장의 미싱 페이지 프로토콜이 이 결합에 의존한다.</p>
+
+<div class="box warn"><span class="label">MUST — 버킷 수는 고정</span>
+<kbd class="must">MUST</kbd> 버킷 수는 <code>HASH_SIZE_BITS = 20</code>,
+<code>PGBUF_HASH_SIZE = 1 &lt;&lt; 20 = 1,048,576</code>으로 <b>풀 크기와 무관하게 고정</b>이다.
+<span class="ref">page_buffer.c:295-296, :5631-5642</span> 버퍼가 1,000개든 1,000만 개든 같다.
+버킷마다 <code>pthread_mutex_init</code>을 하므로 <b>뮤텍스도 1Mi개</b>이며, 종료 시 1Mi번
+<code>pthread_mutex_destroy</code>를 돈다(<span class="ref">page_buffer.c:1894-1897</span>).<br><br>
+<span class="small">x86-64 glibc 기준 버킷당 56 B(뮤텍스 40 + 포인터 2개) ⇒ <b>항상 약 56 MiB</b> 상주.
+작은 버퍼 풀을 설정해도 이 비용은 줄지 않는다. 이는 계산값이며, 재작성 시 풀 크기 비례로 바꾸면
+<b>동작은 같지만 메모리·시작 시간 특성이 달라져 drop-in 검증이 흔들린다</b>.</span>
+</div>
+
+<p><b>해시 함수</b> — "mirror" 해시. <code>volid</code>의 하위 8비트를 <b>뒤집어서 상위</b>에 놓고 <code>pageid</code>와 XOR한 뒤 20비트로 자른다. <span class="ref">page_buffer.c:1522-1553</span></p>
+
+<pre><code>hash (vpid):
+    reversed = 0
+    reverse_mask = 1 &lt;&lt; (20 - 1)          /* 0x80000 부터 시작 */
+    lsb_mask     = 1
+    repeat 8 times:                        /* volid 하위 8비트만 */
+        if (vpid.volid &amp; lsb_mask) reversed |= reverse_mask
+        reverse_mask &gt;&gt;= 1
+        lsb_mask    &lt;&lt;= 1
+    return (vpid.pageid ^ reversed) &amp; ((1 &lt;&lt; 20) - 1)</code></pre>
+
+<p>효과: 한 볼륨 안의 연속 <code>pageid</code>는 <b>연속 버킷</b>에 떨어지고(순차 스캔 시 캐시 지역성), 서로 다른 볼륨은 해시 공간에서 <b>멀리 떨어진다</b>(볼륨 간 충돌 억제). <kbd class="must">MUST</kbd> 이 함수를 그대로 재현한다 — 버킷 뮤텍스 경합 패턴이 바뀌면 성능 특성이 달라진다. 유일한 진입점은 <code>PGBUF_HASH_VALUE(vpid)</code>다.</p>
+
+<div class="box"><span class="label">주의 — 별개의 해시 함수가 하나 더 있다</span>
+<code>pgbuf_hash_vpid(key, htsize)</code> = <code>(pageid | (volid &lt;&lt; 24)) % htsize</code>
+<span class="ref">page_buffer.c:1561-1567</span>는 <b>완전히 다른 함수</b>로, 버퍼 해시가 아니라
+AOUT의 <code>MHT_TABLE</code>에만 쓰인다(<span class="ref">page_buffer.c:5823</span>).
+이름이 비슷해 혼동하기 쉽다 — 둘을 통합하지 말 것.
+</div>
+
+<h2>3.6 buffer lock 테이블</h2>
+
+<pre><code>struct pgbuf_buffer_lock
+{
+  VPID vpid;                     /* buffer-lock 걸린 페이지 */
+  PGBUF_BUFFER_LOCK *lock_next;  /* 같은 버킷의 다음 팻말 */
+  THREAD_ENTRY *next_wait_thrd;  /* 이 팻말을 기다리는 스레드 LIFO */
+};</code></pre>
+<p><span class="ref">page_buffer.c:557-569</span></p>
+
+<div class="box norm"><span class="label">규범 — 스레드당 정확히 1엔트리</span>
+<kbd class="must">MUST</kbd> 테이블 크기는 <code>thread_num_total_threads()</code>이고,
+스레드는 <b>언제나 자기 인덱스의 슬롯만</b> 사용한다:
+<code>&amp;pgbuf_Pool.buf_lock_table[thread_p-&gt;index]</code>.
+<span class="ref">page_buffer.c:5654-5686, :8023</span><br><br>
+<b>근거</b>: 한 스레드는 어느 순간에도 <b>최대 한 개의 미싱 페이지만 읽는다</b>. fix 경로에서 팻말을
+세운 뒤 디스크 읽기가 끝나고 팻말을 내리기 전까지 그 스레드는 다른 fix를 시작하지 않는다. 따라서
+할당기가 전혀 필요 없고, 팻말 재사용에 따른 ABA 문제도 없다. 이 전제를 깨는 구현(예: 한 스레드가
+비동기로 여러 미싱 페이지를 동시에 요청)은 <b>테이블 구조 자체를 무효화</b>한다.
+</div>
+
+<h2>3.7 invalid 리스트</h2>
+
+<pre><code>struct pgbuf_invalid_list
+{
+  pthread_mutex_t invalid_mutex;
+  PGBUF_BCB *invalid_top;   /* 스택 top */
+  int invalid_cnt;
+};</code></pre>
+<p><span class="ref">page_buffer.c:626-633</span> <b>단일 연결</b> 스택이며, <code>PGBUF_BCB::next_BCB</code>를 LRU와 <b>공유</b>한다 — 그래서 BCB는 LRU와 invalid 중 한 곳에만 있을 수 있다.</p>
+
+<p>초기에는 전체 배열이 한 줄로 엮인다: <code>invalid_top = BCB[0]</code>, <code>invalid_cnt = num_buffers</code>. <span class="ref">page_buffer.c:5576-5583, :5864-5865</span></p>
+
+<div class="tablewrap"><table>
+<tr><th>연산</th><th>절차 (<kbd class="must">MUST</kbd> 이 순서)</th></tr>
+<tr><td><b>pop</b><br><span class="ref">page_buffer.c:8858-8896</span></td><td>① <code>invalid_top == NULL</code>을 <b>락 없이</b> 먼저 본다(빠른 실패). ② <code>invalid_mutex</code> 획득 후 <b>다시</b> 확인. ③ top을 떼어내고 <code>invalid_cnt--</code>. ④ <b>list mutex를 먼저 해제</b>한 뒤 BCB mutex 획득. ⑤ <code>next_BCB = NULL</code>, zone을 <code>PGBUF_VOID_ZONE</code>으로. ⑥ <code>PSTAT_PB_VICTIM_USE_INVALID_BCB</code> 증가. ⑦ <b>BCB mutex를 쥔 채로 반환</b>한다.</td></tr>
+<tr><td><b>push</b><br><span class="ref">page_buffer.c:8907-8929</span></td><td>전제: 호출자가 이미 <b>BCB mutex 보유</b>. ① VPID를 NULL로. ② latch를 <code>PGBUF_LATCH_INVALID</code>로. ③ <b>모든 BCB 플래그가 0임을 assert</b> — <code>(flags &amp; PGBUF_BCB_FLAGS_MASK) == 0</code>. ④ zone을 <code>PGBUF_INVALID_ZONE</code>으로. ⑤ <code>count_fix_and_avoid_dealloc</code> 검사 후 0으로 리셋. ⑥ <code>invalid_mutex</code> 획득, top에 연결, <code>invalid_cnt++</code>. ⑦ <b>BCB mutex를 먼저 해제</b>, <b>그 다음</b> list mutex 해제.</td></tr>
+</table></div>
+
+<p>두 연산의 락 겹침 방향이 반대라는 점에 주의한다 — pop은 list mutex를 놓고 BCB를 잡고, push는 BCB를 쥔 채 list mutex를 잡는다. 사이클이 생기지 않는 이유는 4장 §4.2에서 다룬다.</p>
+
+<h2>3.8 교체·victim·flush 도메인 구조체</h2>
+
+<p>여기서는 <b>레이아웃만</b> 규정한다. 이 필드들을 어떻게 움직이는지는 6장(교체 정책), 7장(victim 선택), 8장(flush·checkpoint)에 있다.</p>
+
+<h3>3.8.1 <code>PGBUF_LRU_LIST</code> <span class="ref">page_buffer.c:585-623</span></h3>
+
+<div class="tablewrap"><table>
+<tr><th>필드</th><th>타입</th><th>역할</th><th>보호 주체</th></tr>
+<tr><td><code>mutex</code></td><td><code>pthread_mutex_t</code></td><td>리스트 무결성. <code>SERVER_MODE</code> 전용(SA에서는 매크로로 소거)</td><td>—</td></tr>
+<tr><td><code>top</code> / <code>bottom</code></td><td><code>PGBUF_BCB *</code></td><td>가장 뜨거운 끝 / 가장 차가운 끝(= victim 끝)</td><td><code>mutex</code></td></tr>
+<tr><td><code>bottom_1</code></td><td><code>PGBUF_BCB *</code></td><td>zone 1의 마지막. <code>count_lru1 == 0</code>일 때만 NULL</td><td><code>mutex</code></td></tr>
+<tr><td><code>bottom_2</code></td><td><code>PGBUF_BCB *</code></td><td>zone 2의 마지막. <code>count_lru2 == 0</code>일 때만 NULL</td><td><code>mutex</code></td></tr>
+<tr><td><code>victim_hint</code></td><td><code>PGBUF_BCB *volatile</code></td><td>victim 탐색 시작점. 주석이 "항상 첫 victim 가능 BCB는 아니다"라고 명시</td><td>CAS(힌트이므로 부정확 허용)</td></tr>
+<tr><td><code>count_lru1/2/3</code></td><td><code>int</code></td><td>zone별 BCB 수</td><td><code>mutex</code>(비원자)</td></tr>
+<tr><td><code>count_vict_cand</code></td><td><code>int</code></td><td>victim 무효 플래그가 없는 zone 3 BCB 수</td><td><code>ATOMIC_INC_32</code></td></tr>
+<tr><td><code>threshold_lru1/2</code></td><td><code>int</code></td><td>목표 zone 크기. quota 조정만이 갱신</td><td>조정자 단독</td></tr>
+<tr><td><code>quota</code></td><td><code>int</code></td><td>목표 크기 — <b>private 리스트만</b>. shared는 항상 0</td><td>조정자 단독</td></tr>
+<tr><td><code>tick_list</code></td><td><code>int</code></td><td>top 삽입/중간 삽입 때 증가. 나이 판정용</td><td><code>mutex</code></td></tr>
+<tr><td><code>tick_lru3</code></td><td><code>int</code></td><td>BCB가 zone 3로 떨어질 때마다 증가</td><td><code>mutex</code></td></tr>
+<tr><td><code>flags</code></td><td><code>volatile int</code></td><td>유일한 플래그 <code>PGBUF_LRU_VICTIM_LFCQ_FLAG = 0x80000000</code>("이미 victim 큐에 있음")</td><td>CAS(해제는 비원자 — 7장의 승인된 레이스)</td></tr>
+<tr><td><code>index</code></td><td><code>int</code></td><td>자기 인덱스. lock-free 큐에 밀어 넣는 값이기도 하다</td><td>불변</td></tr>
+</table></div>
+
+<p>초기값은 전부 0/NULL이고 <code>index = i</code>만 세팅한다. <span class="ref">page_buffer.c:5724-5746</span></p>
+
+<h3>3.8.2 AOUT <span class="ref">page_buffer.c:641-666</span></h3>
+
+<p><code>PGBUF_AOUT_BUF</code> = <code>{ VPID vpid; int lru_idx; next; prev; }</code>. <code>PGBUF_AOUT_LIST</code> = <code>Aout_mutex</code> + <code>Aout_top</code>/<code>Aout_bottom</code>(FIFO) + <code>Aout_free</code>(프리 리스트) + <code>bufarray</code>(전량 선할당) + <code>num_hashes</code> + <code>MHT_TABLE **aout_buf_ht</code> + <code>max_count</code>.</p>
+
+<p>기록되는 것은 <b>BCB가 아니라 VPID + 쫓겨난 LRU 인덱스</b>다 — 그래서 "ghost list"다. 버킷 선택은 <code>vpid.pageid % num_hashes</code>로, <b><code>volid</code>는 무시된다</b> (<span class="ref">page_buffer.c:935</span>). <code>PGBUF_AOUT_NOT_FOUND = -2</code>.</p>
+
+<div class="box warn"><span class="label">이 빌드에서 AOUT은 꺼져 있다</span>
+기본 설정에서 <code>max_count</code>가 0이 되어 기능이 비활성이다(6장에서 상세). 재작성 시
+<b>구조체와 초기화 경로는 만들되 활성 경로를 검증하려 시간을 쓰지 말 것</b> — 기본 빌드에서는 절대
+실행되지 않는다.
+</div>
+
+<h3>3.8.3 direct victim / lock-free 큐 <span class="ref">page_buffer.c:743-752</span></h3>
+
+<pre><code>struct pgbuf_direct_victim
+{
+  PGBUF_BCB **bcb_victims;                                    /* thread index 로 색인 */
+  lockfree::circular_queue&lt;THREAD_ENTRY *&gt; *waiter_threads_high_priority;
+  lockfree::circular_queue&lt;THREAD_ENTRY *&gt; *waiter_threads_low_priority;
+};
+#define PGBUF_FLUSHED_BCBS_BUFFER_SIZE (8 * 1024)</code></pre>
+
+<p><code>bcb_victims[thread_p-&gt;index]</code>는 <b>스레드 전용 슬롯</b>이므로 락이 필요 없다. 두 대기 큐와 <code>pgbuf_Pool.flushed_bcbs</code>, 그리고 세 개의 <code>circular_queue&lt;int&gt;</code>(private / big private / shared)는 모두 <b>lockfree::circular_queue</b>다 — <kbd class="must">MUST</kbd> <b>push/pop 실패를 정상 결과로 취급</b>해야 한다(큐가 가득 차거나 비면 실패를 반환하며, 알고리즘이 그 실패를 처리한다).</p>
+
+<h3>3.8.4 <code>PGBUF_SEQ_FLUSHER</code> <span class="ref">page_buffer.c:674-690</span></h3>
+
+<div class="tablewrap"><table>
+<tr><th>필드</th><th>역할</th></tr>
+<tr><td><code>flush_list</code></td><td><code>PGBUF_VICTIM_CANDIDATE_LIST *</code> — 플러시 대상 배열</td></tr>
+<tr><td><code>flush_upto_lsa</code></td><td>디스크에 쓸 페이지들의 "oldest LSA 중 가장 최신" 값</td></tr>
+<tr><td><code>control_intervals_cnt</code> / <code>control_flushed</code></td><td>1초 슈퍼 인터벌 안에서 지나간 인터벌 수 / 누적 플러시 수</td></tr>
+<tr><td><code>interval_msec</code></td><td>한 인터벌 길이</td></tr>
+<tr><td><code>flush_max_size</code></td><td>배열 최대 크기(init에서만 설정)</td></tr>
+<tr><td><code>flush_cnt</code> / <code>flush_idx</code> / <code>flushed_pages</code></td><td>현재 원소 수 / 커서 / 플러시 완료 수(반환값)</td></tr>
+<tr><td><code>flush_rate</code></td><td>최대 플러시 속도(음수면 미사용)</td></tr>
+<tr><td><code>burst_mode</code></td><td>몰아 쓰기 vs 인터벌 내 균등 분산</td></tr>
+</table></div>
+
+<p><code>PGBUF_VICTIM_CANDIDATE_LIST</code>는 <code>{ PGBUF_BCB *bufptr; VPID vpid; }</code> 두 필드뿐이다(<span class="ref">page_buffer.c:839-843</span>). VPID를 따로 복사해 두는 이유는 8장에서 다룬다 — 요약하면 BCB가 그 사이 다른 페이지로 바뀌었는지 검증하기 위해서다.</p>
+
+<h3>3.8.5 monitor / quota <span class="ref">page_buffer.c:693-736</span></h3>
+
+<div class="tablewrap"><table>
+<tr><th>구조체</th><th>필드</th></tr>
+<tr><td><code>PGBUF_PAGE_MONITOR</code></td><td><code>INT64 dirties_cnt</code>; <code>int *lru_hits</code>(리스트별, 조정 이후 히트); <code>int *lru_activity</code>(리스트별 평활값); <code>volatile int lru_shared_pgs_cnt</code>; <code>int lru_victim_req_cnt</code>; <code>PGBUF_MONITOR_BCB_MUTEX *bcb_locks</code>; <code>bool victim_rich</code></td></tr>
+<tr><td><code>PGBUF_PAGE_QUOTA</code></td><td><code>int num_private_LRU_list</code>; <code>float *lru_victim_flush_priority_per_lru</code>; <code>int *private_lru_session_cnt</code>; <code>float private_pages_ratio</code>; <code>unsigned int add_shared_lru_idx</code>; <code>int avoid_shared_lru_idx</code>; <code>TSC_TICKS last_adjust_time</code>; <code>INT32 adjust_age</code>; <code>int is_adjusting</code></td></tr>
+</table></div>
+
+<p><b>fix/unfix 횟수는 여기 없다.</b> <code>pgbuf_fix_req_cnt</code>와 <code>pgbuf_pg_unfix_cnt</code>는 CBRD-26941로 <code>THREAD_ENTRY</code>로 옮겨진 <b>스레드별 평범한 비원자 int</b>이며, 필요할 때 <code>pgbuf_monitor_sum_fix_req</code> / <code>pgbuf_monitor_sum_pg_unfix</code>로 합산한다. <span class="ref">page_buffer.c:703-705, :2117-2153</span> <kbd class="must">MUST</kbd> 이 샤딩을 유지한다 — 전역 원자 카운터로 되돌리면 fix 핫패스에 캐시라인 경합이 다시 생겨 성능 특성이 달라진다.</p>
+
+<p>초기값: <code>quota</code>는 <code>memset</code> 0 후 <code>last_adjust_time = tsc_getticks()</code>, <code>add_shared_lru_idx = 0</code>, <code>avoid_shared_lru_idx = -1</code>, <code>private_pages_ratio</code>는 쿼터 활성 시 <code>1.0f</code> 아니면 <code>0</code>. <span class="ref">page_buffer.c:13890-13895, :13968-13979</span></p>
+
+<h2>3.9 holder 장부</h2>
+
+<p>"이 스레드가 이 페이지를 몇 번 fix했는가"는 <b>전역이 아니라 스레드 로컬</b>에 산다.</p>
+
+<pre><code>struct pgbuf_holder
+{
+  int fix_count;               /* 이 스레드의 fix 횟수 */
+  PGBUF_BCB *bufptr;
+  PGBUF_HOLDER *thrd_link;     /* 스레드의 hold 리스트 연결 */
+  PGBUF_HOLDER *next_holder;   /* 스레드의 free 리스트 연결 */
+  PGBUF_HOLDER_STAT perf_stat; /* 4개 비트필드 */
+#if !defined(NDEBUG)
+  char fixed_at[64 * 1024];
+  int fixed_at_size;
+#endif
+  int watch_count;
+  PGBUF_WATCHER *first_watcher;
+  PGBUF_WATCHER *last_watcher;
+};</code></pre>
+<p><span class="ref">page_buffer.c:461-476</span> <code>perf_stat</code>은 <code>dirty_before_hold</code>, <code>dirtied_by_holder</code>, <code>hold_has_write_latch</code>, <code>hold_has_read_latch</code> 네 개의 1비트 필드다(<span class="ref">page_buffer.c:441-447</span>).</p>
+
+<div class="box warn"><span class="label">MUST — 앵커는 정확히 64바이트</span>
+<pre><code>struct pgbuf_holder_anchor
+{
+  int num_free_cnt;
+  int num_hold_cnt;
+  PGBUF_HOLDER *thrd_free_list;
+  PGBUF_HOLDER *thrd_hold_list;
+  char m_pad[64 - 2 * sizeof (int) - 2 * sizeof (PGBUF_HOLDER *)];
+};
+static_assert (sizeof (PGBUF_HOLDER_ANCHOR) == 64,
+               "pgbuf_holder_anchor must be exactly one 64B cache line; fix m_pad");</code></pre>
+<span class="ref">page_buffer.c:479-490</span>
+<kbd class="must">MUST</kbd> 이 <code>static_assert</code>를 포함한다. <code>num_hold_cnt</code>와
+<code>thrd_hold_list</code>는 <b>모든 fix/unfix마다</b> 쓰이므로, 패딩이 없으면 인접 스레드의 앵커와
+false sharing이 발생한다. 패딩을 손으로 계산하되 <code>alignof</code>는 8로 유지되므로 평범한
+<code>malloc</code>으로 할당해도 된다(64B 정렬 할당기 불필요).
+</div>
+
+<div class="tablewrap"><table>
+<tr><th>항목</th><th>규범</th></tr>
+<tr><td>스레드당 예약 holder</td><td><kbd class="must">MUST</kbd> <code>PGBUF_DEFAULT_FIX_COUNT = 7</code>개를 <code>thrd_reserved_holder</code>에서 미리 잘라 free 리스트에 넣는다 <span class="ref">page_buffer.c:90, :5914-5916</span></td></tr>
+<tr><td>오버플로 할당</td><td><kbd class="must">MUST</kbd> 부족하면 전역 <code>free_holder_set</code>에서 <code>PGBUF_NUM_ALLOC_HOLDER = 10</code>개 블록 단위로 가져온다 <span class="ref">page_buffer.c:94, :5991-6018</span></td></tr>
+<tr><td>반환</td><td><kbd class="must">MUST</kbd> 전역 풀로는 <b>절대 반환하지 않는다</b>. 해제된 holder는 <b>소유 스레드의 free 리스트로만</b> 돌아간다 — 전역 풀은 grow-only <span class="ref">page_buffer.c:792-800</span></td></tr>
+<tr><td>스레드 캐시</td><td><kbd class="should">SHOULD</kbd> <code>THREAD_ENTRY::m_holder_anchor</code>에 <code>&amp;thrd_holder_info[index]</code>를 캐시해 fix마다의 재색인을 없앤다 <span class="ref">page_buffer.c:1511-1514</span></td></tr>
+</table></div>
+
+<p class="small">디버그 빌드 메모리 비용(계산값): <code>PGBUF_HOLDER</code>가 <code>fixed_at[64 KiB]</code>를 품으므로 <code>thrd_reserved_holder</code>는 <b>스레드당 약 450 KiB</b>다(릴리스에서는 수백 바이트). 재작성 시 이 진단 버퍼는 <kbd class="may">MAY</kbd> 축소해도 동작에 영향이 없다.</p>
+
+<h2>3.10 사이징 공식</h2>
+
+<div class="tablewrap"><table>
+<tr><th>구조</th><th>개수 / 크기</th><th>비고</th></tr>
+<tr><td><code>num_buffers</code></td><td><code>PRM_ID_PB_NBUFFERS</code>, 하한 <code>PGBUF_MINIMUM_BUFFERS = MAX_NTRANS × 10</code></td><td>사용자 노브는 <code>data_buffer_size</code>; <code>data_buffer_pages</code>는 deprecated 중복. 기본 32,768페이지 = 512 MiB. <code>MAX_NTRANS = css_get_max_conn() + 1</code></td></tr>
+<tr><td><code>BCB_table</code></td><td><code>num_buffers × sizeof(PGBUF_BCB)</code></td><td><code>MEM_SIZE_IS_VALID</code> 검사 후 실패 시 <code>ER_PRM_BAD_VALUE</code>에 <code>"data_buffer_pages"</code>를 실어 보고</td></tr>
+<tr><td><code>iopage_table</code></td><td><code>num_buffers × PGBUF_IOPAGE_BUFFER_SIZE</code></td><td>동일한 검사</td></tr>
+<tr><td><code>buf_hash_table</code></td><td><b>고정 1,048,576</b></td><td>풀 크기 무관(§3.5)</td></tr>
+<tr><td><code>buf_lock_table</code></td><td><code>thread_num_total_threads()</code></td><td>스레드당 1</td></tr>
+<tr><td>shared LRU 수</td><td><code>PRM_ID_PB_NUM_LRU_CHAINS</code>; 0이면 자동: <code>MAX_NTRANS</code> → 리스트당 페이지가 1000 미만이면 <code>num_buffers / 1000</code> → 최소 4</td><td>이 순서를 그대로 지킬 것 <span class="ref">page_buffer.c:5698-5712</span></td></tr>
+<tr><td>private LRU 수</td><td><code>PRM_ID_PB_NUM_PRIVATE_CHAINS</code>; <code>-1</code>이면 <code>MAX_NTRANS + VACUUM_MAX_WORKER_COUNT(50)</code>, <code>0</code>이면 비활성, 양수면 최소 4로 올림. <b>SA_MODE는 항상 0</b></td><td><span class="ref">page_buffer.c:13897-13920</span></td></tr>
+<tr><td><code>buf_LRU_list</code></td><td><code>(shared + private) × sizeof(PGBUF_LRU_LIST)</code></td><td>shared가 앞, private이 뒤</td></tr>
+<tr><td>AOUT</td><td><code>num_buffers × PRM_ID_PB_AOUT_RATIO</code>, 상한 <code>PGBUF_LIMIT_AOUT_BUFFERS = 32,768</code>; ratio ≤ 0이면 0(기능 off)</td><td>해시 테이블 수 = <code>max(max_count / 1000, 1)</code></td></tr>
+<tr><td><code>thrd_holder_info</code></td><td><code>threads × 64 B</code></td><td>정확히 캐시라인 하나씩</td></tr>
+<tr><td><code>thrd_reserved_holder</code></td><td><code>threads × 7 × sizeof(PGBUF_HOLDER)</code></td><td>—</td></tr>
+<tr><td><code>victim_cand_list</code></td><td><code>num_buffers</code></td><td>—</td></tr>
+<tr><td><code>seq_chkpt_flusher</code></td><td><code>min(0.25 × num_buffers, 65536)</code></td><td><span class="ref">page_buffer.c:1761-1770</span></td></tr>
+<tr><td><code>direct_victims.bcb_victims</code></td><td><code>threads</code></td><td>할당 후 <code>memset</code> 0</td></tr>
+<tr><td>high-prio 대기 큐</td><td><code>threads</code></td><td>—</td></tr>
+<tr><td>low-prio 대기 큐</td><td><code>2 × threads</code></td><td>—</td></tr>
+<tr><td><code>flushed_bcbs</code></td><td><b>8,192</b> 고정</td><td>—</td></tr>
+<tr><td><code>private_lrus_with_victims</code>, <code>big_private_…</code></td><td>각 <code>2 × private 리스트 수</code></td><td><b>쿼터 활성 시에만 생성</b></td></tr>
+<tr><td><code>shared_lrus_with_victims</code></td><td><code>2 × shared 리스트 수</code></td><td>항상 생성</td></tr>
+<tr><td><code>show_status</code></td><td><code>cub_aligned_alloc(64, (threads + 1) × sizeof(PGBUF_STATUS))</code>, 그 뒤 전체 <code>memset</code> 0</td><td><b>+1</b> 잊지 말 것</td></tr>
+</table></div>
+
+<h2>3.11 초기화 순서</h2>
+
+<p><kbd class="must">MUST</kbd> <code>pgbuf_initialize</code>는 아래 순서를 그대로 따른다. 순서가 중요한 이유를 각 단계에 표시했다. <span class="ref">page_buffer.c:1599-1869</span></p>
+
+<div class="tablewrap"><table>
+<tr><th>#</th><th>단계</th><th>순서 제약</th></tr>
+<tr><td>1</td><td><code>pgbuf_flags_mask_sanity_check()</code></td><td><b>가장 먼저</b>. 마스크가 겹치면 이후 전부 무의미하므로 즉시 abort</td></tr>
+<tr><td>2</td><td>모든 멤버 개별 제로화</td><td>포인터 멤버는 <code>NULL</code>, 뮤텍스는 <code>PTHREAD_MUTEX_INITIALIZER</code>. 실패 시 <code>pgbuf_finalize</code>가 <b>NULL 검사로</b> 안전하게 되돌릴 수 있어야 하므로 필수. C++ 멤버(<code>monitor</code>)는 <code>memset</code>이 아니라 멤버별 대입</td></tr>
+<tr><td>3</td><td><code>num_buffers</code> 로드 + 하한 클램프</td><td>이후 모든 크기 계산의 입력</td></tr>
+<tr><td>4</td><td><code>pgbuf_latch_timeout_msecs</code> 로드; 디버그 빌드에서 <code>pgbuf_Monitor_locks = true</code> 강제</td><td>릴리스에서만 파라미터 값 사용 <span class="ref">page_buffer.c:1673-1680</span></td></tr>
+<tr><td>5</td><td>zone 비율 로드 + 클램프</td><td>각각 <code>[0.05, 0.90]</code>로 자른 뒤 <code>ratio2 ≤ 1.0 − 0.05 − ratio1</code>로 다시 자른다 ⇒ 합이 <b>0.95 이하</b> 보장 <span class="ref">page_buffer.c:1683-1691</span></td></tr>
+<tr><td>6</td><td>quota <b>파라미터</b> 초기화</td><td><b>LRU 초기화보다 먼저</b> — private 리스트 수가 정해져야 <code>PGBUF_TOTAL_LRU_COUNT</code>가 확정된다</td></tr>
+<tr><td>7</td><td>BCB 테이블 + 프레임</td><td>둘을 짝지어 <code>bcb-&gt;iopage_buffer</code> / <code>iopage-&gt;bcb</code> 상호 연결</td></tr>
+<tr><td>8</td><td>해시 테이블</td><td>1Mi 버킷 + 1Mi 뮤텍스</td></tr>
+<tr><td>9</td><td>buffer lock 테이블</td><td>스레드 수 기반</td></tr>
+<tr><td>10</td><td>LRU 리스트</td><td>6번의 private 수에 의존</td></tr>
+<tr><td>11</td><td>invalid 리스트</td><td><b>전 BCB를 한 줄로 엮는다</b>. 7번 이후여야 함</td></tr>
+<tr><td>12</td><td>AOUT 리스트</td><td>ratio 0이면 사실상 no-op</td></tr>
+<tr><td>13</td><td>스레드 holder</td><td>앵커 + 예약 7개/스레드</td></tr>
+<tr><td>14</td><td>quota <b>본체</b></td><td>리스트 수가 확정된 뒤 배열 할당</td></tr>
+<tr><td>15</td><td>page monitor</td><td>quota 다음</td></tr>
+<tr><td>16</td><td><code>victim_cand_list</code>, checkpoint seq flusher</td><td><code>num_buffers</code> 의존</td></tr>
+<tr><td>17</td><td>direct victim 배열 + 두 대기 큐 + <code>flushed_bcbs</code></td><td><code>SERVER_MODE</code>만</td></tr>
+<tr><td>18</td><td>victim LFCQ 3종</td><td>private 2종은 <b>쿼터 활성 시에만</b></td></tr>
+<tr><td>19</td><td><code>show_status</code> 할당 + 0화, <code>show_status_old.print_out_time = time(NULL)</code>, <code>show_status_mutex</code> init</td><td>마지막</td></tr>
+</table></div>
+
+<div class="box norm"><span class="label">MUST — 실패 경로</span>
+<kbd class="must">MUST</kbd> 위 단계 중 <b>어디서 실패해도</b> <code>goto error</code>로
+<code>pgbuf_finalize()</code>를 호출한 뒤 <code>ER_FAILED</code>를 반환한다.
+<span class="ref">page_buffer.c:1865-1868</span> 따라서 <code>pgbuf_finalize</code>는
+<b>부분 초기화 상태에서도 안전</b>해야 한다 — 모든 포인터를 NULL 검사하고, 아직 만들지 않은 뮤텍스를
+destroy하지 않아야 한다. 이것이 2단계(전 멤버 명시적 제로화)가 생략 불가인 이유다.
+</div>
+
+<h2>3.12 결함 각주</h2>
+
+<div class="box defect"><span class="label">결함 D2 — <code>direct_victims</code> memset의 잘못된 sizeof</span>
+<pre><code>#if defined (SERVER_MODE)
+  memset (&amp;pgbuf_Pool.direct_victims, 0, sizeof (PGBUF_VICTIM_CANDIDATE_LIST));
+#endif</code></pre>
+<span class="ref">page_buffer.c:1623-1625</span><br>
+대상은 <code>PGBUF_DIRECT_VICTIM</code>(포인터 3개 = 24 B)인데 크기는
+<code>PGBUF_VICTIM_CANDIDATE_LIST</code>(16 B)에서 온다. 결과적으로 마지막 8바이트 —
+<code>waiter_threads_low_priority</code> — 가 0화되지 않는다. 이 포인터는
+<span class="ref">page_buffer.c:1796</span>에서야 대입되는데, 그 전에 <code>goto error</code>가 걸리면
+<code>pgbuf_finalize</code>가 <b>쓰레기 포인터를 <code>delete</code></b>한다
+(<span class="ref">page_buffer.c:2026-2030</span>).<br><br>
+<b>왜 지금은 터지지 않는가</b>: <code>pgbuf_Pool</code>이 정적 저장 기간이라 최초 진입 시에는 이미
+0이다. 따라서 <b>한 프로세스에서 <code>pgbuf_initialize</code>가 두 번째로 호출될 때만</b> 도달
+가능하다.<br><br>
+<b>권장 처리</b>: <kbd class="should">SHOULD</kbd> 재작성 시 <code>sizeof
+(PGBUF_DIRECT_VICTIM)</code>으로 바로잡는다. 관측 가능한 동작이 바뀌지 않으므로(0장 방침의 "동작이
+바뀌지 않는 결함은 수정") drop-in 검증에 영향이 없다.
+</div>
+
+<hr>
+
+<p class="small">이 장에서 정의한 필드 이름과 보호 주체는 4장~8장에서 그대로 쓰인다. 특히 <code>atomic_latch</code>의 세 필드(§3.3)와 <code>flags</code>의 victim 무효 마스크(§3.2.1)는 다음 장의 모든 규칙이 참조하는 기본 어휘다.</p>
+
+<nav class="book">
+<a href="ch02-api-contracts.html">← 이전: 2장 Public API 계약</a>
+<span class="chapter-title">3장 — 자료구조 스펙</span>
+<a href="ch04-concurrency.html">다음: 4장 동시성 프로토콜 →</a>
+</nav>
+
+</main>
+</body>
+</html>

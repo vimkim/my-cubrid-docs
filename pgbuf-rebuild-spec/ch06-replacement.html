@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pgbuf 재구축 스펙 — 6장 교체 정책</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+
+<nav class="book">
+<a href="ch05-fix-unfix.html">← 이전: 5장 — fix/unfix 알고리즘</a>
+<span class="chapter-title">6장 — 교체 정책</span>
+<a href="ch07-victim.html">다음: 7장 — victim 선택과 direct victim →</a>
+</nav>
+
+<h1>6장 — 교체 정책 (Replacement Policy)</h1>
+
+<p class="small">기준 소스: CUBRID <code>5cd4f860e</code> · <code>src/storage/page_buffer.c</code></p>
+
+<div class="box"><span class="label">이 장의 범위</span>
+BCB가 <b>어느 리스트의 어느 위치에 놓이는가</b>를 결정하는 모든 규칙 — 3-zone 모델, 리스트 링크 연산
+5종, zone 임계 조정, 신규 페이지의 최초 배정, private/shared 리스트 배정 인프라, private→shared 이사,
+quota 조정 알고리즘, AOUT ghost list — 를 규정한다.
+<b>어느 BCB를 실제로 뽑아낼 것인가</b>(victim 선택)는 7장의 몫이다.
+이 장의 함수들은 대부분 unfix 경로(5장 §7.1)의 zone 디스패치에서 호출된다.
+</div>
+
+<h2>6.1 zone 모델 — 규범</h2>
+
+<h3>6.1.1 세 zone의 의미</h3>
+
+<p>모든 LRU 리스트는 <b>하나의 이중 연결 리스트</b>이며, <code>bottom_1</code>·<code>bottom_2</code> 두 개의
+경계 포인터로 세 구간(zone)으로 논리 분할된다. zone은 별도의 리스트가 아니라 BCB <code>flags</code> 워드에
+인코딩된 <b>라벨</b>이다(비트 배치는 3장 §2.2 참조). 설계 의도는 소스 주석에 명시되어 있다
+<span class="ref">page_buffer.c:188-196</span>.</p>
+
+<div class="tablewrap"><table>
+<tr><th>zone</th><th>역할</th><th>victim 가능</th><th>unfix 시 정책</th></tr>
+<tr><td><b>zone 1</b><br><code>PGBUF_LRU_1_ZONE</code></td>
+<td>가장 뜨거운 구간. 대부분의 fix/unfix가 여기서 일어난다.</td>
+<td class="small">불가</td>
+<td><b>아무 조작도 하지 않는다.</b> 리스트 mutex를 잡지 않는 것이 목적이다.</td></tr>
+<tr><td><b>zone 2</b><br><code>PGBUF_LRU_2_ZONE</code></td>
+<td>zone 1과 zone 3 사이의 완충 지대. zone 1에서 떨어진 BCB가 다시 뜨거워질 기회를 준다.</td>
+<td class="small">불가</td>
+<td>“충분히 늙었을 때만” top으로 boost.</td></tr>
+<tr><td><b>zone 3</b><br><code>PGBUF_LRU_3_ZONE</code></td>
+<td>victim 구간. 공격적으로 교체하는 시스템에서는 깨끗한 BCB가 여기서 오래 살아남지 못한다.</td>
+<td class="small">가능</td>
+<td><b>무조건</b> top으로 boost.</td></tr>
+</table></div>
+
+<div class="box norm"><span class="label">규범 N6-1 — zone별 unfix 정책</span>
+fix count가 0으로 떨어지고 대기자가 없는 unfix에서, 구현체는 zone에 따라 다음을 수행해야 한다
+<span class="ref">page_buffer.c:6691-6799</span>:
+<ul>
+<li><kbd class="must">MUST</kbd> zone 1의 BCB는 <b>리스트에서 이동시키지 않는다</b>. hit 등록만 하고 끝낸다.
+리스트 mutex를 획득해서는 안 된다 <span class="ref">page_buffer.c:6701-6727</span>.</li>
+<li><kbd class="must">MUST</kbd> zone 2의 BCB는 <code>PGBUF_IS_BCB_OLD_ENOUGH</code>가 참일 때만 boost한다
+<span class="ref">page_buffer.c:6746-6750</span>.</li>
+<li><kbd class="must">MUST</kbd> zone 3의 BCB는 조건 없이 boost한다 <span class="ref">page_buffer.c:6791</span>.</li>
+<li><kbd class="must">MUST</kbd> 위 세 경로 모두 <code>PGBUF_SHOULD_IGNORE_UNFIX</code>(vacuum 워커이거나
+temp 볼륨 페이지)일 때는 <b>어떤 이동도 hit 등록도 하지 않는다</b>
+<span class="ref">page_buffer.c:282-293</span>, <span class="ref">6703</span>, <span class="ref">6732</span>,
+<span class="ref">6767</span>. 단 zone 3에서는 대신 direct victim 기증을 시도한다(7장 §7.6).</li>
+</ul>
+</div>
+
+<figure>
+<svg viewBox="0 0 900 330" role="img" aria-label="LRU 리스트의 3-zone 구조와 boost/fall 경로">
+  <rect x="55" y="105" width="290" height="66" rx="6" fill="var(--accent-soft)" stroke="var(--accent)"/>
+  <rect x="345" y="105" width="150" height="66" rx="6" fill="none" stroke="var(--line)"/>
+  <rect x="495" y="105" width="345" height="66" rx="6" fill="none" stroke="var(--warn-line)" stroke-dasharray="5 3"/>
+  <text x="200" y="132" text-anchor="middle" class="svg-label">zone 1 (hot)</text>
+  <text x="200" y="152" text-anchor="middle" class="svg-muted">no-op on unfix · 교체 불가</text>
+  <text x="420" y="132" text-anchor="middle" class="svg-label">zone 2 (buffer)</text>
+  <text x="420" y="152" text-anchor="middle" class="svg-muted">old enough 시 boost</text>
+  <text x="667" y="132" text-anchor="middle" class="svg-label">zone 3 (victim)</text>
+  <text x="667" y="152" text-anchor="middle" class="svg-muted">항상 boost · 교체 후보</text>
+
+  <text x="55" y="96" text-anchor="middle" class="svg-small">top</text>
+  <text x="345" y="96" text-anchor="middle" class="svg-small">bottom_1</text>
+  <text x="495" y="96" text-anchor="middle" class="svg-small">bottom_2</text>
+  <text x="840" y="96" text-anchor="middle" class="svg-small">bottom</text>
+  <circle cx="55" cy="105" r="4" fill="var(--accent)"/>
+  <circle cx="345" cy="105" r="4" fill="var(--accent)"/>
+  <circle cx="495" cy="105" r="4" fill="var(--accent)"/>
+  <circle cx="840" cy="105" r="4" fill="var(--accent)"/>
+
+  <path d="M 420 105 C 420 55, 120 55, 70 100" fill="none" stroke="var(--accent)" stroke-width="1.6"
+        marker-end="url(#a6)"/>
+  <path d="M 667 105 C 667 30, 130 30, 62 98" fill="none" stroke="var(--accent)" stroke-width="1.6"
+        marker-end="url(#a6)"/>
+  <text x="250" y="50" text-anchor="middle" class="svg-small">boost → top (zone 2: 나이 조건 / zone 3: 무조건)</text>
+
+  <path d="M 320 178 L 370 178" stroke="var(--muted)" stroke-width="1.4" marker-end="url(#a6m)"/>
+  <path d="M 470 178 L 520 178" stroke="var(--muted)" stroke-width="1.4" marker-end="url(#a6m)"/>
+  <text x="420" y="200" text-anchor="middle" class="svg-muted">adjust_zone1 (1→2)</text>
+  <text x="600" y="200" text-anchor="middle" class="svg-muted">fall_bcb_to_zone_3 (1·2→3)</text>
+
+  <path d="M 860 138 L 890 138" stroke="var(--warn-line)" stroke-width="1.8" marker-end="url(#a6w)"/>
+  <text x="800" y="230" text-anchor="middle" class="svg-small">victim_hint → 여기서 위로 스캔</text>
+  <path d="M 800 220 L 800 178" stroke="var(--warn-line)" stroke-width="1.4" marker-end="url(#a6w)"/>
+
+  <text x="60" y="270" class="svg-muted">private list 임계: quota × 5% / quota × 5% / 나머지 (≈90%) — 파라미터 무관</text>
+  <text x="60" y="292" class="svg-muted">shared list 임계: avg × lru_hot_ratio(0.4) / avg × lru_buffer_ratio(0.05) / 나머지 (≈55%)</text>
+
+  <defs>
+    <marker id="a6" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L0,6.4 L7.5,3.2 z" fill="var(--accent)"/></marker>
+    <marker id="a6m" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L0,6.4 L7.5,3.2 z" fill="var(--muted)"/></marker>
+    <marker id="a6w" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L0,6.4 L7.5,3.2 z" fill="var(--warn-line)"/></marker>
+  </defs>
+</svg>
+<figcaption>한 LRU 리스트의 논리 구조. 세 zone은 별도 리스트가 아니라 <code>bottom_1</code>·<code>bottom_2</code>
+경계 포인터와 BCB flags의 zone 라벨로만 구분된다.</figcaption>
+</figure>
+
+<h3>6.1.2 나이 판정 — <code>PGBUF_IS_BCB_OLD_ENOUGH</code></h3>
+
+<p>“충분히 늙었다”는 <b>절대 시간</b>이 아니라 <b>리스트 tick의 상대 경과</b>로 정의된다. 리스트는
+top/middle 삽입이 일어날 때마다 <code>tick_list</code>를 1 올리고, BCB는 삽입 시점의 tick을
+<code>tick_lru_list</code>에 박아둔다. 즉 “나이”는 <b>내가 들어온 뒤 이 리스트에 새로 들어온 BCB 수</b>다.
+임계는 <code>count_lru2 / 2</code>, 즉 <b>zone 2 크기의 절반</b>이다
+<span class="ref">page_buffer.c:1004-1009</span>.</p>
+
+<pre><code>/* tick은 [0, DB_INT32_MAX) 범위를 순환한다. 뺄셈이 아니라 랩어라운드를 고려한 차이를 쓴다. */
+int PGBUF_AGE_DIFF (int bcb_age, int list_age)
+{
+  if (list_age &gt;= bcb_age)
+    return list_age - bcb_age;              /* 정상 구간 */
+  else
+    return DB_INT32_MAX - (bcb_age - list_age);   /* list_age가 한 바퀴 돈 경우 */
+}
+
+bool PGBUF_IS_BCB_OLD_ENOUGH (PGBUF_BCB *bcb, PGBUF_LRU_LIST *list)
+{
+  return PGBUF_AGE_DIFF (bcb-&gt;tick_lru_list, list-&gt;tick_list) &gt;= (list-&gt;count_lru2 / 2);
+}
+</code></pre>
+
+<div class="box norm"><span class="label">규범 N6-2 — tick 랩어라운드</span>
+<kbd class="must">MUST</kbd> <code>tick_list</code>와 <code>tick_lru3</code>는 증가 후
+<code>DB_INT32_MAX</code> 이상이 되면 <b>0으로 되돌린다</b> <span class="ref">page_buffer.c:9680-9683</span>,
+<span class="ref">9768-9771</span>, <span class="ref">10058-10061</span>. 나이 비교는 반드시
+<code>PGBUF_AGE_DIFF</code> 형태의 랩어라운드-안전 차이로 해야 하며, 단순 뺄셈을 쓰면 랩 직후
+모든 BCB가 “매우 늙음”으로 오판된다.
+<br><kbd class="must">MUST</kbd> <code>tick_list</code>는 <b>top 삽입과 middle 삽입에서만</b> 증가한다.
+bottom 삽입은 <code>tick_list</code>를 건드리지 않는다 <span class="ref">page_buffer.c:9784-9823</span>.
+</div>
+
+<p>이 판정은 두 곳에서 쓰인다: zone 2 boost 조건 <span class="ref">page_buffer.c:6746</span>, 그리고
+private→shared 이사 조건 2 <span class="ref">page_buffer.c:6976</span>.</p>
+
+<h2>6.2 리스트 연산 5종</h2>
+
+<p>여기 다섯 개는 <b>모두 호출자가 리스트 mutex를 이미 쥐고 있다고 가정</b>하는 내부 프리미티브다.
+락 획득·tick 스탬프·zone 재조정은 §6.2.6의 공개 래퍼가 담당한다.</p>
+
+<h3>6.2.1 <code>pgbuf_lru_add_bcb_to_top</code> <span class="ref">page_buffer.c:9646-9686</span></h3>
+
+<pre><code>/* 전제: 호출자가 lru_list-&gt;mutex 보유. bcb는 어떤 LRU에도 속하지 않음(VOID/INVALID zone). */
+void pgbuf_lru_add_bcb_to_top (bcb, lru_list)
+{
+  bcb-&gt;prev_BCB = NULL;
+  bcb-&gt;next_BCB = lru_list-&gt;top;
+
+  if (lru_list-&gt;top == NULL)
+    {
+      assert (lru_list-&gt;bottom == NULL);
+      lru_list-&gt;bottom = bcb;              /* 빈 리스트: top이자 bottom */
+    }
+  else
+    {
+      lru_list-&gt;top-&gt;prev_BCB = bcb;
+    }
+  lru_list-&gt;top = bcb;
+
+  /* zone 1이 비어 있었다면 이 bcb가 곧 zone 1의 바닥이 된다 */
+  if (lru_list-&gt;bottom_1 == NULL)
+    {
+      assert (lru_list-&gt;count_lru1 == 0);
+      lru_list-&gt;bottom_1 = bcb;
+    }
+
+  if (++lru_list-&gt;tick_list &gt;= DB_INT32_MAX)   /* 나이 기준점 전진 */
+    lru_list-&gt;tick_list = 0;
+
+  pgbuf_bcb_change_zone (bcb, lru_list-&gt;index, PGBUF_LRU_1_ZONE);  /* count_lru1++ */
+}
+</code></pre>
+
+<h3>6.2.2 <code>pgbuf_lru_add_bcb_to_middle</code> <span class="ref">page_buffer.c:9696-9774</span></h3>
+
+<p>“middle”은 <b><code>bottom_1</code>의 바로 다음</b>, 즉 zone 2의 머리다. zone 1이 비어 있으면 삽입 지점이
+없으므로 <b>top으로 대체</b>되지만, zone 라벨은 여전히 zone 2다 — 이 예외를 빠뜨리면 빈 zone 1 상태에서
+링크가 끊긴다.</p>
+
+<pre><code>/* 전제: 호출자가 lru_list-&gt;mutex 보유. */
+void pgbuf_lru_add_bcb_to_middle (bcb, lru_list)
+{
+  if (lru_list-&gt;bottom_1 == NULL)          /* --- 예외 경로: zone 1이 비었다 --- */
+    {
+      if (lru_list-&gt;top == NULL)
+        {                                   /* 리스트 전체가 비었다 */
+          assert (lru_list-&gt;bottom == NULL);
+          lru_list-&gt;top = lru_list-&gt;bottom = bcb;
+          bcb-&gt;prev_BCB = bcb-&gt;next_BCB = NULL;
+        }
+      else
+        {                                   /* top 앞에 끼운다 (top은 zone 1이 아님) */
+          assert (pgbuf_bcb_get_zone (lru_list-&gt;top) != PGBUF_LRU_1_ZONE);
+          lru_list-&gt;top-&gt;prev_BCB = bcb;
+          bcb-&gt;next_BCB = lru_list-&gt;top;
+          bcb-&gt;prev_BCB = NULL;
+          lru_list-&gt;top = bcb;
+        }
+    }
+  else                                      /* --- 정상 경로: bottom_1 뒤에 삽입 --- */
+    {
+      PGBUF_BCB *bcb_next = lru_list-&gt;bottom_1-&gt;next_BCB;
+
+      lru_list-&gt;bottom_1-&gt;next_BCB = bcb;
+      bcb-&gt;prev_BCB = lru_list-&gt;bottom_1;
+      bcb-&gt;next_BCB = bcb_next;
+
+      if (bcb_next == NULL)                 /* zone 2·3이 비었다 ⇒ 새 bottom */
+        {
+          assert (lru_list-&gt;bottom == lru_list-&gt;bottom_1);
+          lru_list-&gt;bottom = bcb;
+        }
+      else
+        {
+          bcb_next-&gt;prev_BCB = bcb;
+        }
+    }
+
+  if (lru_list-&gt;bottom_2 == NULL)           /* zone 2가 비었었다 ⇒ 새 bottom_2 */
+    {
+      assert (lru_list-&gt;count_lru2 == 0);
+      lru_list-&gt;bottom_2 = bcb;
+    }
+
+  if (++lru_list-&gt;tick_list &gt;= DB_INT32_MAX)
+    lru_list-&gt;tick_list = 0;
+
+  pgbuf_bcb_change_zone (bcb, lru_list-&gt;index, PGBUF_LRU_2_ZONE);
+}
+</code></pre>
+
+<h3>6.2.3 <code>pgbuf_lru_add_bcb_to_bottom</code> <span class="ref">page_buffer.c:9784-9823</span></h3>
+
+<div class="box warn"><span class="label">주의 — 나이 위조</span>
+bottom 삽입은 <code>tick_lru3</code>를 <b>현재 바닥보다 1 낮게</b> 설정한다. 그 결과 새로 넣은 BCB가
+zone 3에서 가장 늙은 것처럼 보이고, victim hint 경쟁(§7.5의
+<code>pgbuf_lru_add_victim_candidate</code>)에서 즉시 이긴다. 이것은 버그가 아니라 의도된 장치다 —
+<code>pgbuf_dealloc_page</code>가 버린 페이지를 flush 스레드가 가장 먼저 집어가게 만든다
+<span class="ref">page_buffer.c:9800</span>, <span class="ref">9810-9811</span>.
+</div>
+
+<pre><code>/* 전제: 호출자가 lru_list-&gt;mutex 보유. */
+void pgbuf_lru_add_bcb_to_bottom (bcb, lru_list)
+{
+  if (lru_list-&gt;bottom == NULL)
+    {
+      assert (lru_list-&gt;top == NULL);
+      lru_list-&gt;bottom = lru_list-&gt;top = bcb;
+      bcb-&gt;prev_BCB = bcb-&gt;next_BCB = NULL;
+      bcb-&gt;tick_lru3 = lru_list-&gt;tick_lru3 - 1;
+    }
+  else
+    {
+      lru_list-&gt;bottom-&gt;next_BCB = bcb;
+      bcb-&gt;prev_BCB = lru_list-&gt;bottom;
+      bcb-&gt;next_BCB = NULL;
+
+      /* 현재 바닥이 zone 3이면 그보다 1 낮게, 아니면 리스트 tick보다 1 낮게 */
+      bcb-&gt;tick_lru3 = PGBUF_IS_BCB_IN_LRU_VICTIM_ZONE (lru_list-&gt;bottom)
+                        ? lru_list-&gt;bottom-&gt;tick_lru3 - 1
+                        : lru_list-&gt;tick_lru3 - 1;
+      lru_list-&gt;bottom = bcb;
+    }
+
+  if (bcb-&gt;tick_lru3 &lt; 0)                  /* 음수 랩: 반대편 끝으로 감는다 */
+    bcb-&gt;tick_lru3 += DB_INT32_MAX;
+
+  pgbuf_bcb_change_zone (bcb, lru_list-&gt;index, PGBUF_LRU_3_ZONE);  /* victim 후보 등록 유발 */
+}
+</code></pre>
+
+<h3>6.2.4 <code>pgbuf_remove_from_lru_list</code> <span class="ref">page_buffer.c:10303-10357</span></h3>
+
+<p>경계 포인터 4종(<code>top</code>, <code>bottom</code>, <code>bottom_1</code>, <code>bottom_2</code>)을
+모두 보수해야 한다. <code>bottom_2</code>만 규칙이 다르다 — 이전 BCB가 zone 2가 아니면 zone 2가
+비었다는 뜻이므로 NULL로 만든다.</p>
+
+<pre><code>/* 전제: 호출자가 lru_list-&gt;mutex 보유 (MUST). */
+void pgbuf_remove_from_lru_list (bcb, lru_list)
+{
+  if (lru_list-&gt;top == bcb)      lru_list-&gt;top = bcb-&gt;next_BCB;
+  if (lru_list-&gt;bottom == bcb)   lru_list-&gt;bottom = bcb-&gt;prev_BCB;
+  if (lru_list-&gt;bottom_1 == bcb) lru_list-&gt;bottom_1 = bcb-&gt;prev_BCB;
+
+  if (lru_list-&gt;bottom_2 == bcb)
+    {
+      if (bcb-&gt;prev_BCB != NULL &amp;&amp; pgbuf_bcb_get_zone (bcb-&gt;prev_BCB) == PGBUF_LRU_2_ZONE)
+        lru_list-&gt;bottom_2 = bcb-&gt;prev_BCB;
+      else
+        { assert (lru_list-&gt;count_lru2 == 1); lru_list-&gt;bottom_2 = NULL; }
+    }
+
+  if (bcb-&gt;next_BCB != NULL) bcb-&gt;next_BCB-&gt;prev_BCB = bcb-&gt;prev_BCB;
+  bcb_prev = bcb-&gt;prev_BCB;
+  if (bcb_prev != NULL)      bcb_prev-&gt;next_BCB = bcb-&gt;next_BCB;
+
+  bcb-&gt;prev_BCB = bcb-&gt;next_BCB = NULL;
+
+  /* 순서가 중요하다: 링크를 끊은 "뒤에" hint를 전진시킨다. 끊기 전에 바꾸면
+   * 다른 스레드가 이 bcb를 hint로 재설정할 수 있다. */
+  pgbuf_lru_advance_victim_hint (lru_list, /*prev_hint*/ bcb, /*new_hint*/ bcb_prev, false);
+
+  pgbuf_bcb_change_zone (bcb, 0, PGBUF_VOID_ZONE);   /* zone 카운터 감소 + 후보 해제 */
+}
+</code></pre>
+
+<div class="box norm"><span class="label">규범 N6-3 — 제거 순서</span>
+<kbd class="must">MUST</kbd> victim hint 전진은 BCB를 리스트에서 <b>분리한 뒤</b>에 수행한다
+<span class="ref">page_buffer.c:10350-10353</span>.
+<kbd class="must">MUST</kbd> 제거된 BCB의 zone은 <code>PGBUF_VOID_ZONE</code>이 되어야 한다
+<span class="ref">page_buffer.c:10356</span>. VOID zone은 “살아 있지만 어느 리스트에도 없음”을 뜻하며,
+다음 unfix에서 §6.4의 배정 로직을 태우는 신호다.
+</div>
+
+<h3>6.2.5 <code>pgbuf_lru_boost_bcb</code> <span class="ref">page_buffer.c:10072-10137</span></h3>
+
+<pre><code>/* 전제: 호출자는 bcb mutex를 보유하고 있고, 리스트 mutex는 이 함수가 잡는다.
+ * assert: zone != PGBUF_LRU_1_ZONE (zone 1 boost는 호출 전에 걸러져야 한다) */
+void pgbuf_lru_boost_bcb (bcb)
+{
+  lru_list   = pgbuf_lru_list_from_bcb (bcb);
+  zone       = pgbuf_bcb_get_zone (bcb);
+  is_private = PGBUF_IS_PRIVATE_LRU_INDEX (lru_list-&gt;index);
+
+  assert (zone != PGBUF_LRU_1_ZONE);
+
+  /* 1) 통계를 "먼저" 올린다 (락 밖) */
+  if (zone == PGBUF_LRU_2_ZONE)
+    perfmon_inc (is_private ? PSTAT_PB_UNFIX_LRU_TWO_PRV_TO_TOP
+                            : PSTAT_PB_UNFIX_LRU_TWO_SHR_TO_TOP);
+  else /* zone 3 */
+    perfmon_inc (is_private ? PSTAT_PB_UNFIX_LRU_THREE_PRV_TO_TOP
+                            : PSTAT_PB_UNFIX_LRU_THREE_SHR_TO_TOP);
+
+  pthread_mutex_lock (&amp;lru_list-&gt;mutex);          /* ← 리스트 락 획득 */
+
+  pgbuf_remove_from_lru_list (bcb, lru_list);      /* 2) 현재 위치에서 제거 */
+  pgbuf_lru_add_bcb_to_top (bcb, lru_list);        /* 3) top에 삽입 (zone := 1, tick_list++) */
+
+  /* 4) zone 1이 커졌으므로 임계를 다시 맞춘다 */
+  if (zone == PGBUF_LRU_2_ZONE)
+    pgbuf_lru_adjust_zone1 (lru_list, /*min_one*/ true);   /* 2→1 이동뿐이므로 zone 1만 */
+  else
+    pgbuf_lru_adjust_zones (lru_list, /*min_one*/ true);   /* 3→1 이동이므로 전체 */
+
+  pgbuf_lru_sanity_check (lru_list);               /* 디버그 빌드 전용 */
+  pthread_mutex_unlock (&amp;lru_list-&gt;mutex);
+}
+</code></pre>
+
+<p class="small">boost는 <code>bcb-&gt;tick_lru_list</code>를 다시 찍지 <b>않는다</b> — top 삽입이
+<code>tick_list</code>를 올리므로 자연히 “나이 0”에 가까워진다. 새 BCB를 넣는 공개 래퍼만 명시적으로
+스탬프한다(§6.2.6).</p>
+
+<h3>6.2.6 공개 래퍼의 규약</h3>
+
+<div class="tablewrap"><table>
+<tr><th>래퍼</th><th>줄</th><th>락</th><th>tick 스탬프</th><th>삽입 후 조정</th><th>특이사항</th></tr>
+<tr><td><code>pgbuf_lru_add_new_bcb_to_top</code></td><td class="small">10147-10173</td>
+<td>리스트 mutex 획득/해제</td><td><code>bcb-&gt;tick_lru_list = list-&gt;tick_list</code></td>
+<td><code>adjust_zones(min_one=true)</code></td><td>—</td></tr>
+<tr><td><code>pgbuf_lru_add_new_bcb_to_middle</code></td><td class="small">10183-10205</td>
+<td>리스트 mutex 획득/해제</td><td>동일</td>
+<td><code>adjust_zone2(min_one=true)</code></td><td>—</td></tr>
+<tr><td><code>pgbuf_lru_add_new_bcb_to_bottom</code></td><td class="small">10215-10241</td>
+<td>리스트 mutex 획득/해제</td><td>동일</td>
+<td><b>없음</b></td>
+<td>락을 잡기 <b>전에</b> <code>pgbuf_assign_direct_victim</code>을 먼저 시도하고, 성공하면
+리스트 삽입을 통째로 건너뛴다 <span class="ref">10223-10228</span></td></tr>
+<tr><td><code>pgbuf_lru_remove_bcb</code></td><td class="small">10250-10269</td>
+<td>리스트 mutex 획득/해제</td><td>—</td><td>없음</td><td><code>remove_from_lru_list</code> 단순 래핑</td></tr>
+</table></div>
+
+<div class="box norm"><span class="label">규범 N6-4 — 래퍼 계약</span>
+<kbd class="must">MUST</kbd> 세 <code>add_new_*</code> 래퍼는 진입 시
+<code>assert(!PGBUF_IS_BCB_IN_LRU(bcb))</code>를 만족해야 한다 — 이미 어떤 리스트에 속한 BCB를 넣으면
+카운터가 어긋난다 <span class="ref">page_buffer.c:10153</span>, <span class="ref">10189</span>,
+<span class="ref">10221</span>.
+<br><kbd class="must">MUST</kbd> <code>min_one = true</code>는 신규 삽입 경로와 boost 경로에서만 쓴다.
+quota 조정 경로(§6.7)는 <code>false</code>를 넘겨 zone 1·2를 0까지 비울 수 있어야 한다.
+</div>
+
+<h2>6.3 zone 임계 조정</h2>
+
+<h3>6.3.1 <code>pgbuf_lru_adjust_zone1</code> <span class="ref">page_buffer.c:9833-9876</span></h3>
+
+<pre><code>/* zone 1이 임계를 넘으면 바닥부터 위로 올라가며 라벨을 1→2로 바꾼다. 링크는 건드리지 않는다. */
+void pgbuf_lru_adjust_zone1 (lru_list, bool min_one)
+{
+  threshold = lru_list-&gt;threshold_lru1;
+  if (min_one) threshold = MAX (1, threshold);
+  if (threshold &gt;= lru_list-&gt;count_lru1) return;      /* 조정 불필요 */
+
+  /* zone 2가 비어 있었다면, 강등될 첫 BCB(현재 bottom_1)가 곧 zone 2의 바닥이 된다 */
+  if (lru_list-&gt;bottom_2 == NULL)
+    lru_list-&gt;bottom_2 = lru_list-&gt;bottom_1;
+
+  for (b = lru_list-&gt;bottom_1; threshold &lt; lru_list-&gt;count_lru1; b = b-&gt;prev_BCB)
+    pgbuf_bcb_change_zone (b, lru_list-&gt;index, PGBUF_LRU_2_ZONE);  /* count_lru1--, count_lru2++ */
+
+  /* 루프는 마지막 강등 뒤 b를 prev로 한 칸 더 옮겨 놓았다 ⇒ b가 새 bottom_1 */
+  lru_list-&gt;bottom_1 = (lru_list-&gt;count_lru1 == 0) ? NULL : b;
+}
+</code></pre>
+
+<h3>6.3.2 <code>pgbuf_lru_adjust_zone2</code> <span class="ref">page_buffer.c:9886-9926</span></h3>
+
+<pre><code>void pgbuf_lru_adjust_zone2 (lru_list, bool min_one)
+{
+  threshold = lru_list-&gt;threshold_lru2;
+  if (min_one) threshold = MAX (1, threshold);
+  if (threshold &gt;= lru_list-&gt;count_lru2) return;
+
+  for (b = lru_list-&gt;bottom_2; threshold &lt; lru_list-&gt;count_lru2; b = b_prev)
+    {
+      b_prev = b-&gt;prev_BCB;                 /* fall이 b를 리스트에서 뺄 수 있으므로 미리 저장 */
+      pgbuf_lru_fall_bcb_to_zone_3 (b, lru_list);
+    }
+  lru_list-&gt;bottom_2 = (lru_list-&gt;count_lru2 == 0) ? NULL : b;
+}
+</code></pre>
+
+<h3>6.3.3 <code>pgbuf_lru_adjust_zones</code> <span class="ref">page_buffer.c:9936-9992</span></h3>
+
+<p>2단계다: 먼저 <b>zone 1+2 합계</b>의 초과분을 zone 3으로 떨어뜨리고, 그 다음 zone 1 내부 임계를 맞춘다.</p>
+
+<pre><code>void pgbuf_lru_adjust_zones (lru_list, bool min_one)
+{
+  threshold = lru_list-&gt;threshold_lru1 + lru_list-&gt;threshold_lru2;
+  if (min_one) threshold = MAX (1, threshold);
+
+  if (threshold &gt;= PGBUF_LRU_ZONE_ONE_TWO_COUNT (lru_list))
+    {
+      pgbuf_lru_adjust_zone1 (lru_list, min_one);   /* 합계는 괜찮다. zone 1만 손본다 */
+      return;
+    }
+
+  /* 바닥에서 시작: zone 2가 있으면 bottom_2, 없으면 bottom_1 */
+  for (b = (lru_list-&gt;bottom_2 != NULL ? lru_list-&gt;bottom_2 : lru_list-&gt;bottom_1);
+       threshold &lt; PGBUF_LRU_ZONE_ONE_TWO_COUNT (lru_list); b = b_prev)
+    {
+      b_prev = b-&gt;prev_BCB;
+      pgbuf_lru_fall_bcb_to_zone_3 (b, lru_list);
+    }
+
+  if (lru_list-&gt;count_lru2 == 0)
+    {
+      lru_list-&gt;bottom_2 = NULL;
+      lru_list-&gt;bottom_1 = (lru_list-&gt;count_lru1 == 0) ? NULL : b;
+    }
+  else
+    {
+      lru_list-&gt;bottom_2 = b;
+    }
+
+  pgbuf_lru_sanity_check (lru_list);
+  pgbuf_lru_adjust_zone1 (lru_list, min_one);       /* 2단계: zone 1 내부 임계 */
+}
+</code></pre>
+
+<div class="box"><span class="label"><code>min_one</code>의 의미</span>
+<code>min_one = true</code>면 임계를 <code>MAX(1, threshold)</code>로 올려, zone 1과 zone 2가
+<b>완전히 비지는 않도록</b> 보장한다 <span class="ref">page_buffer.c:9945-9948</span>,
+<span class="ref">9840-9843</span>, <span class="ref">9894-9897</span>. quota가 0인 private 리스트에
+<code>false</code>로 호출하면 zone 1·2가 실제로 0이 되어 리스트 전체가 victim 구간이 된다 — 이것이
+§6.7 8단계의 “무활동 리스트 회수” 메커니즘이다.
+</div>
+
+<h3>6.3.4 <code>pgbuf_lru_fall_bcb_to_zone_3</code> <span class="ref">page_buffer.c:10002-10063</span></h3>
+
+<p>zone 3으로 떨어지는 순간은 <b>BCB가 처음으로 교체 가능해지는 순간</b>이다. 그래서 리스트에 넣기 전에
+먼저 대기 중인 스레드에게 직접 기증(direct victim, 7장 §7.6)을 시도한다.</p>
+
+<pre><code>/* 전제: 호출자가 lru_list-&gt;mutex 보유. bcb는 zone 1 또는 zone 2. */
+void pgbuf_lru_fall_bcb_to_zone_3 (bcb, lru_list)
+{
+#if defined (SERVER_MODE)
+  if (pgbuf_is_bcb_victimizable (bcb, /*has_mutex*/ false)
+      &amp;&amp; pgbuf_is_any_thread_waiting_for_direct_victim ())
+    {
+      if (pgbuf_bcb_is_to_vacuum (bcb))
+        {
+          /* vacuum이 곧 읽을 페이지다. 기증하지 않고 zone 3으로만 내린다. */
+          perfmon_inc (PSTAT_PB_VICTIM_ASSIGN_DIRECT_ADJUST_TO_VACUUM);   /* 상세 통계 시 */
+          /* fall through */
+        }
+      else if (PGBUF_BCB_TRYLOCK (bcb) == 0)      /* 락 순서 역전 회피: 조건부 획득만 */
+        {
+          VPID vpid_copy = bcb-&gt;vpid;             /* 제거 후에도 AOUT에 쓸 수 있도록 복사 */
+          if (pgbuf_is_bcb_victimizable (bcb, true) &amp;&amp; pgbuf_assign_direct_victim (bcb))
+            {
+              perfmon_inc (PSTAT_PB_VICTIM_ASSIGN_DIRECT_ADJUST);         /* 상세 통계 시 */
+              pgbuf_remove_from_lru_list (bcb, lru_list);  /* 두 락을 다 쥐었으니 지금 뺀다 */
+              PGBUF_BCB_UNLOCK (bcb);
+              pgbuf_add_vpid_to_aout_list (&amp;vpid_copy, lru_list-&gt;index);
+              return;                              /* 리스트에 남기지 않는다 */
+            }
+          PGBUF_BCB_UNLOCK (bcb);
+        }
+      /* trylock 실패: "너무 애쓰지 않는다. 언젠가 교체될 것이다" */
+    }
+#endif
+
+  bcb-&gt;tick_lru3 = lru_list-&gt;tick_lru3;           /* zone 3 나이 스탬프 */
+  if (++lru_list-&gt;tick_lru3 &gt;= DB_INT32_MAX)
+    lru_list-&gt;tick_lru3 = 0;
+
+  pgbuf_bcb_change_zone (bcb, lru_list-&gt;index, PGBUF_LRU_3_ZONE);   /* victim 후보 등록 */
+}
+</code></pre>
+
+<div class="box norm"><span class="label">규범 N6-5 — TO_VACUUM 보호</span>
+<kbd class="must">MUST</kbd> <code>PGBUF_BCB_TO_VACUUM_FLAG</code>가 선 BCB는 zone fall 시점에
+direct victim으로 기증하지 않는다 <span class="ref">page_buffer.c:10012-10019</span>. 이 플래그는
+<b>일반 victim 선택은 막지 않는다</b>(7장 §7.4) — 오직 이 기증 경로만 막는다. vacuum의 미래 작업 집합을
+보호하려는 것이다.
+<br><kbd class="must">MUST</kbd> 락 순서가 역전되므로(리스트 mutex 보유 상태에서 BCB mutex 필요)
+<b>조건부 획득만</b> 허용된다. 무조건 <code>lock</code>을 쓰면 데드락이 난다.
+</div>
+
+<h2>6.4 신규 페이지의 최초 배정</h2>
+
+<p>디스크에서 막 읽어온 BCB는 <code>PGBUF_VOID_ZONE</code> 상태이며 어느 리스트에도 속하지 않는다
+(invalid list에서 꺼낼 때 <span class="ref">page_buffer.c:8891</span>, 또는 교체를 위해 리스트에서 뺄 때
+<span class="ref">10356</span>). 리스트에 들어가는 시점은 <b>첫 unfix</b>다.</p>
+
+<h3>6.4.1 <code>pgbuf_unlatch_void_zone_bcb</code> 결정 트리 <span class="ref">page_buffer.c:6844-6939</span></h3>
+
+<pre><code>/* 전제: 호출자가 bcb mutex 보유. zone == PGBUF_VOID_ZONE.
+ * thread_private_lru_index: 이 스레드의 private LRU 인덱스, 없으면 -1 */
+void pgbuf_unlatch_void_zone_bcb (bcb, int thread_private_lru_index)
+{
+  bool aout_enabled = false;
+  int  aout_list_id = PGBUF_AOUT_NOT_FOUND;   /* = -2 */
+
+  /* ── 1단계: AOUT 조회 (조회가 곧 제거다) ───────────────────────── */
+  if (pgbuf_Pool.buf_AOUT_list.max_count &gt; 0)
+    {
+      aout_enabled = true;
+      aout_list_id = pgbuf_remove_vpid_from_aout_list (&amp;bcb-&gt;vpid);
+    }
+
+  /* ── 2단계: vacuum 워커 분기 ────────────────────────────────── */
+  if (PGBUF_VACUUM_SHOULD_IGNORE_UNFIX (thread_p))
+    {
+      perfmon_inc (aout_list_id == PGBUF_AOUT_NOT_FOUND
+                     ? PSTAT_PB_UNFIX_VOID_AOUT_NOT_FOUND_VAC
+                     : PSTAT_PB_UNFIX_VOID_AOUT_FOUND_VAC);
+
+      /* 대기자에게 바로 넘길 수 있으면 리스트에 넣지 않는다 */
+      if (!pgbuf_bcb_avoid_victim (bcb) &amp;&amp; pgbuf_assign_direct_victim (bcb))
+        {
+          perfmon_inc (PSTAT_PB_VICTIM_ASSIGN_DIRECT_VACUUM_VOID);   /* 상세 통계 시 */
+          if (pgbuf_Pool.buf_AOUT_list.max_count &gt; 0)
+            pgbuf_add_vpid_to_aout_list (&amp;bcb-&gt;vpid, aout_list_id);
+          return;                              /* 어떤 리스트에도 들어가지 않는다 */
+        }
+      aout_list_id = PGBUF_AOUT_NOT_FOUND;     /* 기증 실패: AOUT 결과를 무효화 */
+    }
+  else
+    {
+      perfmon_inc (aout_list_id == PGBUF_AOUT_NOT_FOUND
+                     ? PSTAT_PB_UNFIX_VOID_AOUT_NOT_FOUND
+                     : PSTAT_PB_UNFIX_VOID_AOUT_FOUND);
+    }
+
+  /* ── 3단계: private 리스트가 있는 스레드 ──────────────────────── */
+  if (thread_private_lru_index != -1)
+    {
+      if (PGBUF_VACUUM_SHOULD_IGNORE_UNFIX (thread_p))
+        {                                       /* vacuum: 무조건 private TOP */
+          pgbuf_lru_add_new_bcb_to_top (bcb, thread_private_lru_index);
+          perfmon_inc (PSTAT_PB_UNFIX_VOID_TO_PRIVATE_TOP_VAC);
+          return;                               /* hit 등록 없음 */
+        }
+
+      if (!aout_enabled || thread_private_lru_index == aout_list_id)
+        {                                       /* AOUT 꺼짐, 또는 "내" 리스트에서 쫓겨났던 페이지 */
+          pgbuf_lru_add_new_bcb_to_top (bcb, thread_private_lru_index);
+          perfmon_inc (PSTAT_PB_UNFIX_VOID_TO_PRIVATE_TOP);
+          pgbuf_bcb_register_hit_for_lru (bcb);
+          return;
+        }
+
+      if (aout_list_id == PGBUF_AOUT_NOT_FOUND)
+        {                                       /* 처음 보는 페이지 ⇒ scan resistance */
+          pgbuf_lru_add_new_bcb_to_middle (bcb, thread_private_lru_index);
+          perfmon_inc (PSTAT_PB_UNFIX_VOID_TO_PRIVATE_MID);
+          pgbuf_bcb_register_hit_for_lru (bcb);
+          return;
+        }
+      /* 남의 private 리스트에서 쫓겨났던 페이지 ⇒ shared로 내려간다 (fall through) */
+    }
+
+  /* ── 4단계: shared 리스트 middle ───────────────────────────── */
+  pgbuf_lru_add_new_bcb_to_middle (bcb, pgbuf_get_shared_lru_index_for_add ());
+  perfmon_inc (PSTAT_PB_UNFIX_VOID_TO_SHARED_MID);
+  if (!PGBUF_VACUUM_SHOULD_IGNORE_UNFIX (thread_p))
+    pgbuf_bcb_register_hit_for_lru (bcb);
+}
+</code></pre>
+
+<div class="box warn"><span class="label">경고 — 이 빌드에서 실제로 도달하는 경로</span>
+AOUT은 이 빌드에서 <b>강제 비활성</b>이다(§6.8.5). 따라서 <code>aout_enabled</code>는 항상 false이고
+<code>aout_list_id</code>는 항상 <code>PGBUF_AOUT_NOT_FOUND</code>다. 결과적으로:
+<ul>
+<li>3단계의 두 번째 조건 <code>!aout_enabled</code>가 항상 참 ⇒ private 리스트가 있는 스레드는
+<b>언제나 private TOP</b>에 넣는다 <span class="ref">page_buffer.c:6912-6919</span>.</li>
+<li><b><code>PSTAT_PB_UNFIX_VOID_TO_PRIVATE_MID</code> 경로(middle 삽입)는 현재 도달 불가</b>다
+<span class="ref">page_buffer.c:6921-6928</span>. “처음 읽는 페이지는 middle에 넣어 scan resistance를
+얻는다”는 설계는 실행되지 않는다.</li>
+<li>4단계 shared middle에 도달하는 경우는 <b>private 리스트가 없는 스레드</b>(세션이 없는 시스템 데몬,
+checkpoint, 비세션 워커)뿐이다 — 그리고 §6.6의 private→shared 이사.</li>
+</ul>
+<kbd class="should">SHOULD</kbd> 재작성 시 결정 트리는 <b>위 의사코드 그대로</b> 구현한다. 도달 불가라고
+생략하면 AOUT을 되살리는 순간(CBRD-20741 수정 시) 동작이 달라진다.
+</div>
+
+<h3>6.4.2 shared 리스트 라운드로빈 <span class="ref">page_buffer.c:8937-9008</span></h3>
+
+<pre><code>#define PAGE_ADD_REFRESH_STAT  MAX (2 * pgbuf_Pool.num_buffers / PGBUF_SHARED_LRU_COUNT, 10000)
+
+int pgbuf_get_shared_lru_index_for_add (void)
+{
+  lru_idx = ATOMIC_INC_32 (&amp;pgbuf_Pool.quota.add_shared_lru_idx, 1);   /* 전역 라운드로빈 카운터 */
+
+  /* PAGE_ADD_REFRESH_STAT 호출마다 한 번, 전체 shared 리스트의 균형을 재평가한다 */
+  if (lru_idx % PAGE_ADD_REFRESH_STAT == 0)
+    {
+      sum = 0; max_bcb = 0; min_bcb = pgbuf_Pool.num_buffers; idx_with_max = -1;
+      for (i = 0; i &lt; PGBUF_SHARED_LRU_COUNT; i++)
+        {
+          cnt = PGBUF_LRU_LIST_COUNT (PGBUF_GET_LRU_LIST (i));
+          sum += cnt;
+          if (cnt &gt; max_bcb) { max_bcb = cnt; idx_with_max = i; }
+          if (cnt &lt; min_bcb) { min_bcb = cnt; }
+        }
+
+      if (sum &gt; pgbuf_Pool.num_buffers / 10
+          &amp;&amp; (max_bcb &gt; (int)(1.3f * sum) / PGBUF_SHARED_LRU_COUNT || max_bcb &gt; 2 * min_bcb))
+        {
+          /* 한 리스트가 평균의 1.3배 이상이거나 최소의 2배 이상 ⇒ 그 리스트를 회피 대상으로 */
+          ATOMIC_TAS_32 (&amp;pgbuf_Pool.quota.avoid_shared_lru_idx, idx_with_max);
+        }
+      else
+        {
+          /* 불균형 해소됨: 회피 대상이 평균 이하로 내려왔으면 해제 */
+          cur = pgbuf_Pool.quota.avoid_shared_lru_idx;
+          if (cur == -1
+              || PGBUF_LRU_LIST_COUNT (PGBUF_GET_LRU_LIST (cur)) &lt; sum / PGBUF_SHARED_LRU_COUNT)
+            ATOMIC_TAS_32 (&amp;pgbuf_Pool.quota.avoid_shared_lru_idx, -1);
+        }
+    }
+
+  lru_idx = lru_idx % PGBUF_SHARED_LRU_COUNT;
+
+  /* 회피 대상에 걸리면 한 칸 더 돌린다 (한 번만) */
+  if (pgbuf_Pool.quota.avoid_shared_lru_idx == (int) lru_idx)
+    {
+      lru_idx = ATOMIC_INC_32 (&amp;pgbuf_Pool.quota.add_shared_lru_idx, 1);
+      lru_idx = lru_idx % PGBUF_SHARED_LRU_COUNT;
+    }
+  return lru_idx;
+}
+</code></pre>
+
+<h3>6.4.3 temp 파일 fast path 예외</h3>
+
+<p><code>pgbuf_simple_fix</code>는 임시 볼륨용 경량 fix 경로로, <b>첫 unfix를 기다리지 않고 fix 시점에
+바로 리스트에 넣는다</b> <span class="ref">page_buffer.c:2689-2698</span>. private 리스트가 있으면
+private <b>TOP</b>, 없으면 shared <b>MIDDLE</b>이다. AOUT 조회도, vacuum 분기도, hit 등록도 없다.
+temp 페이지는 <code>PGBUF_SHOULD_IGNORE_UNFIX</code>에 걸려 이후 어떤 boost도 받지 못하므로
+<span class="ref">page_buffer.c:290</span>, 이 최초 위치가 사실상 그 페이지의 유일한 위치다 —
+그대로 바닥까지 밀려 내려가 교체된다.</p>
+
+<h2>6.5 private / shared 배정 인프라</h2>
+
+<h3>6.5.1 리스트 개수와 인덱스 배치</h3>
+
+<div class="tablewrap"><table>
+<tr><th>항목</th><th>값</th><th>근거</th></tr>
+<tr><td>shared 리스트 인덱스</td><td><code>[0, num_LRU_list)</code></td><td class="small">1048, 1055</td></tr>
+<tr><td>private 리스트 인덱스</td><td><code>[num_LRU_list, total)</code></td><td class="small">1049-1056</td></tr>
+<tr><td><code>PGBUF_LRU_INDEX_FROM_PRIVATE(p)</code></td><td><code>num_LRU_list + p</code></td><td class="small">1053</td></tr>
+<tr><td><code>PGBUF_PRIVATE_LIST_FROM_LRU_INDEX(i)</code></td><td><code>i - num_LRU_list</code></td><td class="small">1052</td></tr>
+<tr><td>quota 활성 조건</td><td><code>num_private_LRU_list &gt; 0</code></td><td class="small">1030</td></tr>
+</table></div>
+
+<p>개수 산정 공식은 3장(사이징)에 있다. 요약: shared는 기본값 0이면
+<code>MAX_NTRANS</code>로 시작해 “리스트당 최소 1000 페이지” 조건으로 줄이고 최소 4로 바닥을 친다
+<span class="ref">page_buffer.c:5698-5711</span>; private은 기본 <code>-1</code>이면
+<code>MAX_NTRANS + VACUUM_MAX_WORKER_COUNT(50)</code>, 최소 4, <b>SA_MODE에서는 항상 0</b>
+<span class="ref">page_buffer.c:13897-13918</span>.</p>
+
+<h3>6.5.2 세션 → private 리스트 매핑</h3>
+
+<div class="box"><span class="label">핵심</span>
+private 리스트는 <b>스레드가 아니라 세션</b>에 귀속된다. 같은 세션의 두 워커 스레드는 같은 private
+리스트를 공유한다. 스레드 엔트리의 <code>private_lru_index</code>는 세션에서 <b>복사된 값</b>일 뿐이다.
+</div>
+
+<pre><code>/* 세션 생성 시 1회 호출된다 (외부 계약: src/session/session.c:740 → 9장). */
+int pgbuf_assign_private_lru (void)
+{
+  if (!PGBUF_PAGE_QUOTA_IS_ENABLED) return -1;
+
+  retry_cnt = 0;
+retry:
+  lru_cand_zero_sessions = -1;      /* 우선순위 1: 세션 0개인 리스트 중 BCB가 가장 적은 것 */
+  lru_cand_idx           = -1;      /* 우선순위 2: 활동량이 가장 낮은 리스트 */
+  min_bcbs      = pgbuf_Pool.num_buffers;
+  min_activity  = PGBUF_TRAN_MAX_ACTIVITY;        /* = 10 * (num_buffers/4) */
+
+  for (i = PGBUF_SHARED_LRU_COUNT; i &lt; PGBUF_TOTAL_LRU_COUNT; i++)
+    {
+      if (quota-&gt;private_lru_session_cnt[PRIVATE_FROM_LRU (i)] == 0)
+        {
+          cnt = PGBUF_LRU_LIST_COUNT (PGBUF_GET_LRU_LIST (i));
+          if (cnt &lt; min_bcbs)
+            {
+              min_bcbs = cnt; lru_cand_zero_sessions = i;
+              if (min_bcbs &lt;= 0) break;           /* 완전히 빈 리스트를 찾으면 즉시 종료 */
+            }
+        }
+      if (monitor-&gt;lru_activity[i] &lt; min_activity)
+        { min_activity = monitor-&gt;lru_activity[i]; lru_cand_idx = i; }
+    }
+
+  if (lru_cand_zero_sessions != -1) lru_cand_idx = lru_cand_zero_sessions;
+  assert (lru_cand_idx != -1);
+  private_idx = PRIVATE_FROM_LRU (lru_cand_idx);
+
+  if (lru_cand_zero_sessions != -1)
+    {
+      /* "세션 0개"를 근거로 골랐으니, 증가 결과가 1이 아니면 누가 가로챈 것이다 */
+      if (ATOMIC_INC_32 (&amp;quota-&gt;private_lru_session_cnt[private_idx], 1) &gt; 1)
+        {
+          if (retry_cnt++ &lt; 5)                    /* 최대 5회 재시도, 그 뒤로는 공유를 수용 */
+            { ATOMIC_INC_32 (&amp;quota-&gt;private_lru_session_cnt[private_idx], -1); goto retry; }
+        }
+    }
+  else
+    {
+      ATOMIC_INC_32 (&amp;quota-&gt;private_lru_session_cnt[private_idx], 1);
+    }
+
+  pgbuf_adjust_quotas ();          /* 소스 각주: "TODO: is this necessary?" (14535) */
+  return private_idx;
+}
+
+/* 세션 종료 시 호출 (src/session/session.c:406-407 → 9장). */
+int pgbuf_release_private_lru (int private_idx)
+{
+  if (PGBUF_PAGE_QUOTA_IS_ENABLED &amp;&amp; 0 &lt;= private_idx &amp;&amp; private_idx &lt; PGBUF_PRIVATE_LRU_COUNT
+      &amp;&amp; pgbuf_Pool.num_buffers &gt; 0)
+    {
+      if (ATOMIC_INC_32 (&amp;quota-&gt;private_lru_session_cnt[private_idx], -1) &lt;= 0)
+        {
+          /* 마지막 세션이 떠났다: 활동량을 0으로 리셋해 다음 배정 후보로 만든다 */
+          ATOMIC_TAS_32 (&amp;monitor-&gt;lru_activity[LRU_FROM_PRIVATE (private_idx)], 0);
+          pgbuf_adjust_quotas ();  /* 역시 "TODO: is this necessary?" (14556) */
+        }
+    }
+  return NO_ERROR;
+}
+</code></pre>
+
+<div class="box norm"><span class="label">규범 N6-6 — 외부 계약 (상세는 9장)</span>
+<kbd class="must">MUST</kbd> pgbuf는 <code>thread_p-&gt;private_lru_index</code>를 <b>스스로 설정하지 않는다</b>.
+설정 지점은 모두 pgbuf 밖이다:
+<ul class="small">
+<li>세션 생성: <code>session.c:740</code>이 <code>pgbuf_assign_private_lru()</code> 결과를 세션에 저장</li>
+<li>워커 배정: <code>session.c:2800</code> (<code>thread_p-&gt;private_lru_index = session_p-&gt;private_lru_index</code>)</li>
+<li>요청 단위 복사: <code>server_support.c:2081</code>, <code>2117</code></li>
+<li>vacuum 워커: 부팅 시 <code>vacuum.c:1270</code>이 전용 리스트를 배정, <code>vacuum.c:881</code>에서 전파.
+vacuum <b>마스터는 받지 않는다</b>(<code>vacuum.c:1250</code>)</li>
+<li>세션 없는 스레드: <code>-1</code> (<code>thread_entry.cpp:90</code>, <code>thread_entry_task.cpp:75</code>, <code>95</code>)</li>
+</ul>
+<kbd class="must">MUST</kbd> pgbuf는 <code>pgbuf_thread_variables_init</code>에서 파생 플래그만 계산한다:
+<code>m_is_private_lru_enabled = (num_private_LRU_list &gt; 0 &amp;&amp; private_lru_index != -1)</code>
+<span class="ref">page_buffer.c:1496-1515</span>. 조회는 <code>PGBUF_THREAD_HAS_PRIVATE_LRU</code>로만 한다
+<span class="ref">page_buffer.c:1038-1042</span>; SERVER_MODE가 아니면 항상 false
+<span class="ref">page_buffer.c:1044-1045</span>.
+</div>
+
+<h2>6.6 private → shared 이사</h2>
+
+<p>이사는 “이 페이지는 한 세션의 것이 아니다”라는 판단이다. 조건은 두 개이며 <b>OR</b>다.</p>
+
+<pre><code>bool pgbuf_should_move_private_to_shared (bcb, int thread_private_lru_index)
+{
+  bcb_lru_idx = pgbuf_bcb_get_lru_index (bcb);
+
+  if (PGBUF_IS_SHARED_LRU_INDEX (bcb_lru_idx))
+    return false;                       /* 이미 shared다 */
+
+  /* 조건 1: 이 BCB가 "내 것이 아닌" private 리스트에 있다
+   *          ⇒ 두 개 이상의 세션이 이 페이지를 만졌다는 뜻 */
+  if (thread_private_lru_index != bcb_lru_idx)
+    return true;
+
+  /* 조건 2: 내 리스트지만, 매우 뜨겁고 충분히 늙었다 */
+  if (!pgbuf_bcb_is_hot (bcb))                                  return false;
+  if (!PGBUF_IS_BCB_OLD_ENOUGH (bcb, PGBUF_GET_LRU_LIST (bcb_lru_idx))) return false;
+  return true;
+}
+
+/* pgbuf_bcb_is_hot: fix 카운터가 포화 임계에 도달했는가 (page_buffer.c:16296-16301)
+ *   count_fix_and_avoid_dealloc &gt;= (PGBUF_FIX_COUNT_THRESHOLD &lt;&lt; 16),  임계 = 64
+ *   fix 카운터는 이 값에서 포화한다 (pgbuf_bcb_register_fix, 16275-16288) */
+
+static void pgbuf_lru_move_from_private_to_shared (bcb)
+{
+  assert (PGBUF_IS_PRIVATE_LRU_INDEX (pgbuf_bcb_get_lru_index (bcb)));
+  /* 소스 주석: 통계상 private→shared 이동은 매우 드물어 인라인하지 않는다 (10284) */
+
+  pgbuf_lru_remove_bcb (bcb);                                   /* 리스트 mutex 획득/해제 */
+  pgbuf_lru_add_new_bcb_to_middle (bcb, pgbuf_get_shared_lru_index_for_add ());  /* 새 리스트 mutex */
+  pgbuf_bcb_register_hit_for_lru (bcb);                         /* 새 리스트의 hit로 집계 */
+}
+</code></pre>
+
+<div class="box norm"><span class="label">규범 N6-7 — 이사의 비대칭성</span>
+<kbd class="must">MUST</kbd> 이사는 <b>private → shared 한 방향만</b> 존재한다. shared 리스트의 BCB를
+private으로 되돌리는 경로는 없다 <span class="ref">page_buffer.c:6955-6959</span>.
+<br><kbd class="must">MUST</kbd> 도착 위치는 shared 리스트의 <b>middle</b>이며 top이 아니다
+<span class="ref">page_buffer.c:10290</span>.
+<br><kbd class="must">MUST</kbd> 이사 판정은 zone 1·2·3 세 unfix arm <b>모두에서</b> boost보다 먼저
+평가되며, 이사가 일어나면 boost는 하지 않는다
+<span class="ref">page_buffer.c:6710-6716</span>, <span class="ref">6739-6745</span>,
+<span class="ref">6783-6789</span>. 대응 카운터는
+<code>PSTAT_PB_UNFIX_LRU_{ONE,TWO,THREE}_PRV_TO_SHR_MID</code>.
+</div>
+
+<h2>6.7 quota 시스템</h2>
+
+<h3>6.7.1 activity 집계 규약</h3>
+
+<pre><code>/* page_buffer.c:16534-16544 */
+void pgbuf_bcb_register_hit_for_lru (PGBUF_BCB *bcb)
+{
+  if (bcb-&gt;hit_age &lt; pgbuf_Pool.quota.adjust_age)
+    {
+      pgbuf_Pool.monitor.lru_hits[pgbuf_bcb_get_lru_index (bcb)]++;   /* 비원자 ++ */
+      bcb-&gt;hit_age = pgbuf_Pool.quota.adjust_age;
+    }
+}
+</code></pre>
+
+<div class="box norm"><span class="label">규범 N6-8 — hit는 epoch당 BCB 1회</span>
+<kbd class="must">MUST</kbd> 한 BCB는 한 quota epoch(<code>adjust_age</code> 한 값) 안에서 <b>최대 1회만</b>
+hit로 집계된다. 같은 페이지를 100 ms 안에 백만 번 fix해도 점수는 1이다. 따라서 quota가 추적하는 것은
+<b>접근 빈도가 아니라 작업 집합의 넓이</b>다.
+<br><kbd class="may">MAY</kbd> 증가는 <b>비원자 <code>++</code></b>다 — 경합 시 일부 hit가 유실될 수 있고,
+원본은 이를 수용한다. 충실 재현 시 원자 연산으로 바꾸면 통계값이 원본과 미세하게 달라진다.
+<br>호출 지점: zone 1/2/3 unfix arm <span class="ref">6726</span>, <span class="ref">6763</span>,
+<span class="ref">6792</span>; void zone 배정 3곳 <span class="ref">6917</span>, <span class="ref">6926</span>,
+<span class="ref">6937</span>; private→shared 이사 <span class="ref">10292</span>.
+</div>
+
+<h3>6.7.2 <code>pgbuf_adjust_quotas</code> 전체 <span class="ref">page_buffer.c:14195-14447</span></h3>
+
+<pre><code>#define MAX_PRIVATE_RATIO 0.998f
+#define MIN_PRIVATE_RATIO 0.01f
+
+void pgbuf_adjust_quotas (void)
+{
+  quota = &amp;pgbuf_Pool.quota; monitor = &amp;pgbuf_Pool.monitor;
+
+  /* ── 1) 재진입 가드 (mutex가 아니라 단순 플래그) ─────────────── */
+  if (!PGBUF_PAGE_QUOTA_IS_ENABLED || quota-&gt;is_adjusting) return;
+  quota-&gt;is_adjusting = 1;
+
+  /* ── 2) 최소 간격 1 ms ─────────────────────────────────────── */
+  tsc_getticks (&amp;curr_tick);
+  diff_usec = tsc_elapsed_utime (curr_tick, quota-&gt;last_adjust_time);
+  if (diff_usec &lt; 1000LL) { quota-&gt;is_adjusting = 0; return; }
+
+  /* ── 3) 활동 임계: unfix 총량이 임계 미만이면서 500 ms도 안 지났으면 건너뛴다 ── */
+  if (pgbuf_monitor_sum_pg_unfix (/*reset*/ false) &lt; PGBUF_TRAN_THRESHOLD_ACTIVITY
+      &amp;&amp; diff_usec &lt; 500000LL)
+    { quota-&gt;is_adjusting = 0; return; }
+
+  /* ── 4) 저활동 판정 + 누적 카운터 리셋 (reset=true) ──────────── */
+  if (pgbuf_monitor_sum_pg_unfix (/*reset*/ true) &lt; PGBUF_TRAN_THRESHOLD_ACTIVITY / 100)
+    low_overall_activity = true;
+
+  quota-&gt;last_adjust_time = curr_tick;
+
+  /* ── 5) epoch 전진: 모든 BCB의 hit 자격을 재무장한다 ─────────── */
+  ATOMIC_INC_32 (&amp;quota-&gt;adjust_age, 1);
+
+  /* ── 6) 리스트별 hits 수거 → 초당 환산 → private activity EMA ── */
+  sum_private_activity = 0; private_hits = 0; shared_hits = 0; total_victims = 0;
+  for (i = 0; i &lt; PGBUF_TOTAL_LRU_COUNT; i++)
+    {
+      lru_hits = ATOMIC_TAS_32 (&amp;monitor-&gt;lru_hits[i], 0);        /* 수거 겸 리셋 */
+      lru_hits = (int) (1000000LL * lru_hits / diff_usec);        /* hits/sec */
+
+      if (PGBUF_IS_PRIVATE_LRU_INDEX (i))
+        {
+          /* 10초 창의 지수이동평균. 10초 이상 지났으면 그냥 새 값으로 대체 */
+          if (diff_usec &gt;= 10000000LL)
+            monitor-&gt;lru_activity[i] = lru_hits;
+          else
+            monitor-&gt;lru_activity[i] =
+              (int) (((10000000LL - diff_usec) * monitor-&gt;lru_activity[i]
+                      + diff_usec * lru_hits) / 10000000LL);
+
+          sum_private_activity += monitor-&gt;lru_activity[i];
+          private_hits += lru_hits;
+        }
+      else
+        {
+          shared_hits += lru_hits;
+        }
+      total_victims += PGBUF_GET_LRU_LIST (i)-&gt;count_vict_cand;   /* 무락 읽기 */
+    }
+
+  /* ── 7) private 비율 결정 + 클램프 + EMA ──────────────────── */
+  if (low_overall_activity)
+    {
+      private_ratio = MIN_PRIVATE_RATIO;          /* 0.01 — private을 거의 굶긴다 */
+    }
+  else
+    {
+      shared_hits   = MAX (1, shared_hits);       /* 0 나눗셈 회피 */
+      private_ratio = (float) private_hits / (float) (private_hits + shared_hits);
+      private_ratio = MIN (MAX_PRIVATE_RATIO, private_ratio);
+      private_ratio = MAX (MIN_PRIVATE_RATIO, private_ratio);
+    }
+  if (diff_usec &gt;= 10000000LL)
+    quota-&gt;private_pages_ratio = private_ratio;
+  else
+    quota-&gt;private_pages_ratio =
+      (quota-&gt;private_pages_ratio * (10000000LL - diff_usec) + private_ratio * diff_usec) / 10000000LL;
+
+  /* ── 8) private activity가 전무한 경우: 모든 private quota를 0으로 ── */
+  if (sum_private_activity == 0)
+    {
+      all_private_quota = 0;
+      for (i = PGBUF_SHARED_LRU_COUNT; i &lt; PGBUF_TOTAL_LRU_COUNT; i++)
+        {
+          lru_list = PGBUF_GET_LRU_LIST (i);
+          lru_list-&gt;quota = lru_list-&gt;threshold_lru1 = lru_list-&gt;threshold_lru2 = 0;
+
+          if (lru_list-&gt;count_lru1 + lru_list-&gt;count_lru2 &gt; 0)
+            {
+              pthread_mutex_lock (&amp;lru_list-&gt;mutex);
+              pgbuf_lru_adjust_zones (lru_list, /*min_one*/ false);  /* 전부 zone 3으로 */
+              pthread_mutex_unlock (&amp;lru_list-&gt;mutex);
+            }
+          if (lru_list-&gt;count_vict_cand &gt; 0 &amp;&amp; PGBUF_LRU_LIST_IS_OVER_QUOTA (lru_list))
+            pgbuf_lfcq_add_lru_with_victims (lru_list);            /* victim 큐 등록 */
+        }
+    }
+  /* ── 9) 정상 경로: 활동 비례 배분 ────────────────────────── */
+  else
+    {
+      all_private_quota = (int) ((pgbuf_Pool.num_buffers - pgbuf_Pool.buf_invalid_list.invalid_cnt)
+                                 * quota-&gt;private_pages_ratio);
+
+      for (i = PGBUF_SHARED_LRU_COUNT; i &lt; PGBUF_TOTAL_LRU_COUNT; i++)
+        {
+          new_lru_ratio = (monitor-&gt;lru_activity[i] &gt; 0)
+                            ? (float) monitor-&gt;lru_activity[i] / (float) sum_private_activity
+                            : 0.0f;
+
+          new_quota = (int) (new_lru_ratio * all_private_quota);
+          new_quota = MIN (new_quota, PGBUF_PRIVATE_LRU_MAX_HARD_QUOTA);  /* 5000 */
+          new_quota = MIN (new_quota, pgbuf_Pool.num_buffers / 2);        /* 풀의 절반 */
+
+          lru_list = PGBUF_GET_LRU_LIST (i);
+          lru_list-&gt;quota          = new_quota;
+          lru_list-&gt;threshold_lru1 = (int) (new_quota * PGBUF_LRU_ZONE_MIN_RATIO);  /* 5% 고정 */
+          lru_list-&gt;threshold_lru2 = (int) (new_quota * PGBUF_LRU_ZONE_MIN_RATIO);  /* 5% 고정 */
+
+          /* ── 축소 메커니즘: zone 1+2가 quota를 넘으면 초과분을 zone 3으로 강등 ── */
+          if (PGBUF_LRU_LIST_IS_ONE_TWO_OVER_QUOTA (lru_list))
+            {
+              pthread_mutex_lock (&amp;lru_list-&gt;mutex);
+              pgbuf_lru_adjust_zones (lru_list, false);
+              pthread_mutex_unlock (&amp;lru_list-&gt;mutex);
+            }
+          if (lru_list-&gt;count_vict_cand &gt; 0 &amp;&amp; PGBUF_LRU_LIST_IS_OVER_QUOTA (lru_list))
+            pgbuf_lfcq_add_lru_with_victims (lru_list);
+        }
+    }
+
+  /* ── 10) shared 임계 재계산 ─────────────────────────────── */
+  avg_shared_lru_size = (pgbuf_Pool.num_buffers - all_private_quota) / pgbuf_Pool.num_LRU_list;
+  avg_shared_lru_size = MAX (avg_shared_lru_size, PGBUF_MIN_SHARED_LIST_ADJUST_SIZE);   /* 50 */
+  shared_threshold_lru1 = (int) (avg_shared_lru_size * pgbuf_Pool.ratio_lru1);
+  shared_threshold_lru2 = (int) (avg_shared_lru_size * pgbuf_Pool.ratio_lru2);
+
+  for (i = 0; i &lt; PGBUF_SHARED_LRU_COUNT; i++)
+    {
+      lru_list = PGBUF_GET_LRU_LIST (i);
+      lru_list-&gt;threshold_lru1 = shared_threshold_lru1;
+      lru_list-&gt;threshold_lru2 = shared_threshold_lru2;
+
+      if (PGBUF_LRU_ARE_ZONES_ONE_TWO_OVER_THRESHOLD (lru_list))
+        {
+          pthread_mutex_lock (&amp;lru_list-&gt;mutex);
+          pgbuf_lru_adjust_zones (lru_list, false);
+          pthread_mutex_unlock (&amp;lru_list-&gt;mutex);
+        }
+      if (lru_list-&gt;count_vict_cand &gt; 0)          /* shared는 quota 조건 없이 항상 등록 */
+        pgbuf_lfcq_add_lru_with_victims (lru_list);
+    }
+
+  /* ── 11) victim_rich 판정: 후보 총량이 풀의 10% 이상인가 ────── */
+  pgbuf_Pool.monitor.victim_rich = (total_victims &gt;= (int) (0.1 * pgbuf_Pool.num_buffers));
+
+  quota-&gt;is_adjusting = 0;
+}
+</code></pre>
+
+<div class="box norm"><span class="label">규범 N6-9 — quota 조정</span>
+<ul>
+<li><kbd class="must">MUST</kbd> private 리스트의 zone 임계는 <b>항상 <code>quota × 0.05</code></b>이며,
+<code>lru_hot_ratio</code>/<code>lru_buffer_ratio</code>를 <b>쓰지 않는다</b>
+<span class="ref">page_buffer.c:14390-14391</span>. 즉 private 리스트는 5% / 5% / ≈90% 구조이고,
+사실상 거대한 victim zone이다. 두 파라미터는 shared 리스트에만 적용된다
+<span class="ref">page_buffer.c:14416-14417</span>.</li>
+<li><kbd class="must">MUST</kbd> quota 상한은 <b>두 겹</b>이다: 하드 상한 5000
+<span class="ref">page_buffer.c:1024</span>과 풀의 절반 <span class="ref">14386</span>.</li>
+<li><kbd class="must">MUST</kbd> shared 리스트의 <code>quota</code> 필드는 <b>0으로 유지</b>된다 —
+이 함수는 shared에 <code>quota</code>를 쓰지 않는다. 그 결과
+<code>PGBUF_LRU_LIST_IS_OVER_QUOTA(shared)</code>는 리스트가 비지 않는 한 항상 참이다.</li>
+<li><kbd class="should">SHOULD</kbd> 재진입 가드는 <code>is_adjusting</code> 단순 플래그로 구현한다.
+원본은 원자 CAS를 쓰지 않으므로 두 스레드가 동시에 통과할 수 있고, 원본은 이를 수용한다
+<span class="ref">page_buffer.c:14233-14238</span>.</li>
+<li><kbd class="must">MUST</kbd> 3단계와 4단계의 <code>pgbuf_monitor_sum_pg_unfix</code> 인자가 다르다
+(<code>false</code> / <code>true</code>). 두 번째 호출이 per-thread unfix 샤드를 <b>리셋</b>하므로,
+조정이 실제로 수행될 때만 누적치가 비워진다 <span class="ref">page_buffer.c:14254</span>,
+<span class="ref">14259</span>.</li>
+</ul>
+</div>
+
+<h3>6.7.3 호출 주체</h3>
+
+<div class="tablewrap"><table>
+<tr><th>호출자</th><th>주기/시점</th><th>근거</th></tr>
+<tr><td><code>pgbuf-maintain</code> 데몬 → <code>pgbuf_page_maintenance_execute</code></td>
+<td><b>100 ms 고정</b>. <code>pgbuf_adjust_quotas</code> 후
+<code>pgbuf_direct_victims_maintenance</code>(7장 §7.7의 no-op)를 부른다</td>
+<td class="small">16930-16943, 17091</td></tr>
+<tr><td><code>pgbuf_assign_private_lru</code></td><td>세션 생성 시 1회
+— 소스 각주 <i>“TODO: is this necessary?”</i></td><td class="small">14535-14536</td></tr>
+<tr><td><code>pgbuf_release_private_lru</code></td><td>세션의 마지막 참조 해제 시 — 같은 각주</td>
+<td class="small">14556-14557</td></tr>
+</table></div>
+
+<h3>6.7.4 quota 초과의 결과 (요약, 상세는 7장)</h3>
+
+<ul>
+<li>자기 private 리스트에서 victim을 뽑을 수 있는 조건이 된다
+<span class="ref">page_buffer.c:9067-9068</span>.</li>
+<li>초과 상태에서 자기 리스트 탐색에 실패하면 <code>restrict_other</code>가 켜져 남의 private 리스트
+접근이 제한된다 <span class="ref">page_buffer.c:9098</span>. 버퍼는
+<code>MAX(10, quota × 1%)</code> <span class="ref">page_buffer.c:1067-1069</span>.</li>
+<li>private 리스트는 <b>초과 상태일 때만</b> lock-free victim 큐에 등록된다
+<span class="ref">page_buffer.c:15647</span>, <span class="ref">16417</span>. shared는 무조건 등록된다.</li>
+<li>flush 타깃 계산은 <code>quota × 90%</code>를 넘는 전량을 목표로 삼되 <code>count_lru3</code>로 자른다
+<span class="ref">page_buffer.c:14102-14103</span> (8장).</li>
+</ul>
+
+<h2>6.8 AOUT ghost list</h2>
+
+<h3>6.8.1 구조와 용량</h3>
+
+<p>AOUT은 “2Q의 Aout” — <b>쫓겨난 페이지의 VPID와 그 페이지가 있던 LRU 인덱스</b>만 기억하는 FIFO다
+<span class="ref">page_buffer.c:635-666</span>. 항목은
+<code>{ VPID vpid; int lru_idx; next; prev; }</code> <span class="ref">641-647</span>이고, 리스트는
+mutex + <code>Aout_top</code>/<code>Aout_bottom</code> FIFO + <code>Aout_free</code> 자유 목록 +
+사전 할당 배열 + 해시 테이블 배열로 구성된다 <span class="ref">650-666</span>.</p>
+
+<div class="tablewrap"><table>
+<tr><th>항목</th><th>공식/값</th><th>근거</th></tr>
+<tr><td><code>max_count</code></td><td><code>num_buffers × data_aout_ratio</code></td><td class="small">5765-5767</td></tr>
+<tr><td>비활성 조건</td><td><code>aout_ratio &lt;= 0</code> ⇒ <code>max_count = 0</code></td><td class="small">5775-5780</td></tr>
+<tr><td>하드 상한</td><td><code>PGBUF_LIMIT_AOUT_BUFFERS = 32768</code> (“512M 상당”)</td><td class="small">5759, 5782</td></tr>
+<tr><td>해시 버킷 수</td><td><code>MAX(max_count / 1000, 1)</code></td><td class="small">5809, 934</td></tr>
+<tr><td>버킷 선택</td><td><code>vpid-&gt;pageid % num_hashes</code> — <b>volid는 무시</b></td><td class="small">935</td></tr>
+<tr><td>“없음” 표식</td><td><code>PGBUF_AOUT_NOT_FOUND = -2</code></td><td class="small">279</td></tr>
+</table></div>
+
+<h3>6.8.2 추가 <span class="ref">page_buffer.c:10415-10486</span></h3>
+
+<pre><code>void pgbuf_add_vpid_to_aout_list (const VPID *vpid, int lru_idx)
+{
+  if (pgbuf_Pool.buf_AOUT_list.max_count &lt;= 0) return;      /* 비활성 시 즉시 반환 */
+
+  pthread_mutex_lock (&amp;list-&gt;Aout_mutex);
+
+  if (list-&gt;Aout_free == NULL)
+    {
+      /* 자유 목록 고갈: 가장 오래된 항목(bottom)을 재활용한다 */
+      aout_buf = list-&gt;Aout_bottom;
+      list-&gt;Aout_bottom = list-&gt;Aout_bottom-&gt;prev;
+      list-&gt;Aout_bottom-&gt;next = NULL;
+      mht_rem (list-&gt;aout_buf_ht[AOUT_HASH_IDX (&amp;aout_buf-&gt;vpid, list)], &amp;aout_buf-&gt;vpid, NULL, NULL);
+    }
+  else
+    {
+      aout_buf = list-&gt;Aout_free;
+      list-&gt;Aout_free = list-&gt;Aout_free-&gt;next;
+    }
+
+  aout_buf-&gt;lru_idx = lru_idx;
+  VPID_COPY (&amp;aout_buf-&gt;vpid, vpid);
+  mht_put (list-&gt;aout_buf_ht[AOUT_HASH_IDX (&amp;aout_buf-&gt;vpid, list)], &amp;aout_buf-&gt;vpid, aout_buf);
+
+  /* FIFO의 머리에 삽입 */
+  if (list-&gt;Aout_top == NULL) { list-&gt;Aout_top = list-&gt;Aout_bottom = aout_buf; }
+  else { aout_buf-&gt;next = list-&gt;Aout_top; list-&gt;Aout_top-&gt;prev = aout_buf; list-&gt;Aout_top = aout_buf; }
+
+  pthread_mutex_unlock (&amp;list-&gt;Aout_mutex);
+}
+</code></pre>
+
+<p>호출 지점은 모두 “이 BCB가 풀을 떠난다”는 순간이다:</p>
+
+<div class="tablewrap"><table>
+<tr><th>지점</th><th>줄</th></tr>
+<tr><td>victim 탐색 성공 직후</td><td class="small">9417</td></tr>
+<tr><td>zone fall 중 direct victim으로 기증</td><td class="small">10040</td></tr>
+<tr><td>대기 스레드가 direct victim을 소비</td><td class="small">15582</td></tr>
+<tr><td>vacuum이 void-zone BCB를 기증</td><td class="small">6882</td></tr>
+</table></div>
+
+<h3>6.8.3 조회 <span class="ref">page_buffer.c:10496-10574</span></h3>
+
+<div class="box"><span class="label">조회 = 제거</span>
+AOUT에는 순수 조회 API가 없다. <code>pgbuf_remove_vpid_from_aout_list</code>는 해시 조회 → 링크 해제 →
+저장된 <code>lru_idx</code> 반환 → 노드를 자유 목록으로 반납을 한 번에 한다. 못 찾으면
+<code>PGBUF_AOUT_NOT_FOUND</code>를 반환한다. <b>호출 지점은 정확히 한 곳</b>,
+<code>pgbuf_unlatch_void_zone_bcb</code>의 1단계다 <span class="ref">page_buffer.c:6855</span>.
+반환값의 해석은 §6.4.1 그대로다: 내 리스트 hit ⇒ TOP, miss ⇒ MIDDLE, 남의 리스트 hit ⇒ shared MIDDLE.
+</div>
+
+<h3>6.8.4 죽은 함수</h3>
+
+<p class="small"><code>pgbuf_remove_private_from_aout_list</code>는 특정 LRU 인덱스의 AOUT 항목을 일괄
+제거하는 함수로, <span class="ref">page_buffer.c:1160</span>에 선언되고
+<span class="ref">10583</span>에 정의되어 있으나 <b>어디서도 호출되지 않는다</b>.
+<kbd class="may">MAY</kbd> 재작성 시 생략해도 관측 가능한 동작은 바뀌지 않는다.</p>
+
+<h3>6.8.5 AOUT은 이 빌드에서 강제 비활성이다</h3>
+
+<div class="box warn"><span class="label">경고 — 사문화된 기능 (D-계열 결함 아님, 의도된 임시 조치)</span>
+<code>src/base/system_parameter.c:9985-9986</code>의 <code>prm_tune_parameters()</code> 안에서
+무조건 다음이 실행된다:
+<pre style="margin:0.5rem 0 0.6rem;"><code>/* disable AOUT list until we fix CBRD-20741 */
+prm_set (pb_aout_ratio_prm, "0", false);</code></pre>
+<code>prm_tune_parameters()</code>는 <code>sysprm_load_and_init_internal</code>의
+<code>system_parameter.c:6260</code>에서 호출되는데, 이 시점은 <b>설정 파일 파싱과 기본값 적용이 끝난
+뒤</b>다(<code>6240-6250</code>). 따라서 <code>cubrid.conf</code>에 <code>data_aout_ratio</code>를
+아무리 써도 서버·SA 프로세스에서는 무시된다.
+<br><br>귀결: <code>buf_AOUT_list.max_count</code>는 항상 0이고,
+<code>pgbuf_unlatch_void_zone_bcb</code>의 <code>aout_enabled</code>는 항상 false이며
+<span class="ref">page_buffer.c:6852</span>, 모든 AOUT 함수가 진입 즉시 반환한다
+<span class="ref">10425-10428</span>, <span class="ref">10506-10510</span>,
+<span class="ref">10590-10594</span>. 즉 <code>page_buffer.c:635-639</code>의
+“LRU + Aout of 2Q” 주석은 <b>실행 중인 시스템을 설명하지 않는다</b>.
+<br><br><kbd class="must">MUST</kbd> 동작 충실 재현이 목표라면 <b>이 강제 오버라이드까지 재현</b>해야
+한다. 재현하지 않으면 <code>data_aout_ratio</code>가 기본 0이라도 사용자가 conf로 켤 수 있게 되고,
+§6.4.1의 middle 삽입 경로가 살아나 LRU 분포와 <code>Num_unfix_void_*</code> 카운터가 원본과 달라진다.
+다만 이 오버라이드는 <b>pgbuf의 코드가 아니라 <code>system_parameter.c</code>의 소관</b>이므로,
+9장(외부 모듈 계약)에서 “pgbuf는 <code>PRM_ID_PB_AOUT_RATIO</code>가 튜닝 단계에서 0으로 강제된 값을
+읽는다”는 계약으로 고정한다.
+</div>
+
+<h2>6.9 관측 카운터</h2>
+
+<h3>6.9.1 unfix 결정 카운터 <span class="ref">perf_monitor.c:452-475</span></h3>
+
+<div class="tablewrap"><table>
+<tr><th>카운터</th><th>발생 지점</th><th>줄</th></tr>
+<tr><td><code>Num_unfix_void_to_private_top</code></td><td>void zone → private TOP (AOUT 꺼짐 또는 자기 리스트 hit)</td><td class="small">6916</td></tr>
+<tr><td><code>Num_unfix_void_to_private_mid</code></td><td>void zone → private MIDDLE (AOUT miss) — <b>현재 도달 불가</b></td><td class="small">6925</td></tr>
+<tr><td><code>Num_unfix_void_to_shared_mid</code></td><td>void zone → shared MIDDLE</td><td class="small">6934</td></tr>
+<tr><td><code>Num_unfix_void_to_private_mid_vacuum</code></td><td>vacuum의 void zone → private <b>TOP</b> (표시명과 실제 동작이 다르다 — 아래 경고 참조)</td><td class="small">6908</td></tr>
+<tr><td><code>Num_unfix_void_aout_found</code> / <code>_not_found</code> / <code>_found_vacuum</code> / <code>_not_found_vacuum</code></td><td>AOUT 조회 결과 4종</td><td class="small">6863, 6867, 6894, 6898</td></tr>
+<tr><td><code>Num_unfix_lru1_private_keep</code> / <code>_shared_keep</code></td><td>zone 1 무조작</td><td class="small">6720, 6724</td></tr>
+<tr><td><code>Num_unfix_lru2_private_keep</code> / <code>_shared_keep</code></td><td>zone 2, 나이 미달로 boost 안 함</td><td class="small">6756, 6760</td></tr>
+<tr><td><code>Num_unfix_lru2_private_to_top</code> / <code>_shared_to_top</code></td><td>zone 2 boost</td><td class="small">10104</td></tr>
+<tr><td><code>Num_unfix_lru3_private_to_top</code> / <code>_shared_to_top</code></td><td>zone 3 boost</td><td class="small">10109-10110</td></tr>
+<tr><td><code>Num_unfix_lru{1,2,3}_private_to_shared_mid</code></td><td>private→shared 이사 (zone별)</td><td class="small">6714, 6743, 6787</td></tr>
+<tr><td><code>Num_unfix_lru{1,2,3}_any_keep_vacuum</code></td><td>vacuum/temp 무조작</td><td class="small">6707, 6736, 6779</td></tr>
+</table></div>
+
+<p class="small">이 계열을 나란히 읽으면 §6.4·§6.1의 결정 트리 전체가 런타임에 재구성된다 — 그래서 이 표는
+재작성 검증의 1차 도구다.</p>
+
+<div class="box warn"><span class="label">주의 — 표시명이 잘못된 카운터가 하나 있다</span>
+<code>PSTAT_PB_UNFIX_VOID_TO_PRIVATE_TOP_VAC</code>의 표시 문자열은
+<b><code>"Num_unfix_void_to_private_mid_vacuum"</code></b>이다
+<span class="ref">perf_monitor.c:467</span>. 그러나 이 카운터를 올리는 코드는
+<code>pgbuf_lru_add_new_bcb_to_<b>top</b></code> 직후다 <span class="ref">page_buffer.c:6907-6908</span>.
+즉 <b>vacuum 워커의 신규 페이지는 private TOP에 들어가는데 통계 이름은 mid라고 말한다.</b>
+<kbd class="must">MUST</kbd> 충실 재현 시 <b>표시 문자열까지 그대로</b> 유지한다 — statdump 출력 diff를
+0으로 만드는 것이 M7의 완료 조건이기 때문이다. 이름을 고치면 기존 운영 스크립트와 비교가 깨진다.
+</div>
+
+<h3>6.9.2 zone 게이지 <span class="ref">page_buffer.c:14684-14780</span></h3>
+
+<div class="tablewrap"><table>
+<tr><th>게이지</th><th>출처</th><th>표시명</th></tr>
+<tr><td><code>PSTAT_PB_LRU1_CNT</code> / <code>LRU2</code> / <code>LRU3</code></td>
+<td>BCB 테이블 무락 순회 중 zone 라벨 집계</td>
+<td class="small"><code>Num_data_page_lru1/_lru2/_lru3</code></td></tr>
+<tr><td><code>PSTAT_PB_VICT_CAND</code></td><td>리스트별 <code>count_vict_cand</code> 합</td>
+<td class="small"><code>Num_data_page_victim_candidate</code></td></tr>
+<tr><td><code>PSTAT_PB_PRIVATE_COUNT</code></td><td>private 리스트에 속한 BCB 수</td>
+<td class="small"><code>Num_data_page_private_count</code></td></tr>
+<tr><td><code>PSTAT_PB_PRIVATE_QUOTA</code></td><td><code>private_pages_ratio × num_buffers</code></td>
+<td class="small"><code>Num_data_page_private_quota</code></td></tr>
+</table></div>
+
+<div class="box warn"><span class="label">주의 — SHOW의 victim candidate는 반대 의미다</span>
+<code>pgbuf_scan_bcb_table</code>이 채우는 <code>SHOW</code> 스냅샷의
+<code>victim_candidate_pages</code>는 <b>zone 3이면서 dirty인</b> 페이지를 센다
+<span class="ref">page_buffer.c:17290-17293</span>. 반면 내부 <code>count_vict_cand</code>와
+<code>PSTAT_PB_VICT_CAND</code>는 <b>zone 3이면서 무효화 플래그가 없는</b>(따라서 dirty가 아닌) 페이지를
+센다 <span class="ref">15855</span>, <span class="ref">15882-15886</span>. 두 지표는 비교 대상이 아니다.
+<kbd class="must">MUST</kbd> 충실 재현 시 두 정의를 그대로 유지한다.
+</div>
+
+<h2>6.10 수용 기준</h2>
+
+<div class="box norm"><span class="label">수용 기준 A6 — 교체 정책 (마일스톤 M3)</span>
+아래는 <code>quizzes/</code>의 실측 시나리오다. 대응하는 정확한 수치는 <b>10장의 quiz 기대치 표</b>를 따른다.
+<ol>
+<li><b>quiz 05 (eviction pressure)</b> — 풀보다 작은 테이블을 한 세션이 전체 스캔할 때,
+victim이 <b>자기 private 리스트에서</b> 나와야 한다
+(<code>Num_victim_own_private_lru_success</code>가 miss 수와 같은 자릿수). 2차 스캔의 I/O가
+1차와 거의 같아야 한다 — “스캔이 자기 페이지를 자기가 쫓아낸다”. 게이지에서
+<code>Num_data_page_private_count &gt; Num_data_page_private_quota</code>가 관측되어야 한다
+(quota는 hard limit이 아니라 soft target이다).</li>
+<li><b>quiz 06 (lru zones)</b> — 정상 워크로드에서
+<code>Num_unfix_lru1_*_keep + Num_unfix_lru2_*_keep</code>이
+<code>Num_unfix_lru{2,3}_*_to_top</code>보다 <b>훨씬 커야</b> 한다. zone 1 to_top 카운터는
+존재하지 않으며(구현상 boost가 없다), <code>Num_unfix_lru1_*_to_top</code>이 0이 아니면
+N6-1 위반이다. 여러 세션이 같은 페이지를 뜨겁게 쓸 때
+<code>Num_unfix_lru*_private_to_shared_mid</code>가 증가해야 하고, 역방향 카운터는 없어야 한다.</li>
+<li><b>quiz 08 (private vs shared)</b> — 세션 B의 대량 스캔이 세션 A의 hot 페이지를 밀어내지 않아야
+한다(3단계 <code>Num_data_page_ioreads</code> 델타 ≈ 0). 이는 §6.5의 세션 단위 격리와
+§6.7의 quota가 함께 작동해야만 재현된다.</li>
+<li><b>AOUT 비활성 확인</b> — 어떤 워크로드에서도
+<code>Num_unfix_void_aout_found</code>와 <code>Num_unfix_void_to_private_mid</code>가 <b>0</b>이어야
+한다. 0이 아니면 §6.8.5의 강제 오버라이드를 재현하지 않은 것이다.</li>
+</ol>
+</div>
+
+<hr>
+
+<nav class="book">
+<a href="ch05-fix-unfix.html">← 이전: 5장 — fix/unfix 알고리즘</a>
+<span class="chapter-title">6장 — 교체 정책</span>
+<a href="ch07-victim.html">다음: 7장 — victim 선택과 direct victim →</a>
+</nav>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pgbuf 재구축 스펙 — 4장 동시성 프로토콜</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+
+<nav class="book">
+<a href="ch03-data-structures.html">← 이전: 3장 자료구조 스펙</a>
+<span class="chapter-title">4장 — 동시성 프로토콜</span>
+<a href="ch05-fix-unfix.html">다음: 5장 fix/unfix 알고리즘 →</a>
+</nav>
+
+<h1>4장 — 동시성 프로토콜</h1>
+
+<p>3장이 "무엇이 있는가"라면 이 장은 <b>"누가 언제 무엇을 만질 수 있는가"</b>다. 5장 이후의 의사코드는
+전부 이 장의 규칙을 전제로 쓰여 있으므로, 여기 규정된 락 순서와 부여 규칙을 어기면 알고리즘이
+글자 그대로 맞아도 동작하지 않는다.</p>
+
+<div class="box"><span class="label">이 장의 큰 그림</span>
+CUBRID 페이지 버퍼의 동시성 설계는 세 층이다.
+<b>① 무잠금 층</b> — 읽기 전용 fix/unfix의 대부분은 <b>어떤 뮤텍스도 잡지 않고</b> 64비트 latch 워드
+하나에 대한 CAS로 끝난다.
+<b>② 뮤텍스 층</b> — 그 조건을 못 맞추면 버킷/BCB/LRU 뮤텍스로 내려간다. 여기서 락 순서가 중요해진다.
+<b>③ 대기 층</b> — 그래도 안 되면 스레드가 잠들고, <b>데드락 감지기 없이 타임아웃만으로</b> 깨어난다.
+층을 내려갈수록 비용이 커지므로, 이 장의 규칙 대부분은 "어떻게 하면 위층에 머무를 수 있는가"에 관한
+것이다.
+</div>
+
+<h2>4.1 락 인벤토리</h2>
+
+<div class="tablewrap"><table>
+<tr><th>동기화 객체</th><th>개수</th><th>보호 대상</th><th>비고</th></tr>
+<tr><td><code>PGBUF_BUFFER_HASH::hash_mutex</code></td><td><b>1,048,576</b> (버킷당 1, 풀 크기 무관)</td><td>그 버킷의 <b>BCB 해시 체인</b>과 <b>buffer lock 체인</b> 두 개</td><td>두 체인을 <b>같은</b> 뮤텍스가 보호한다는 사실이 §4.6 프로토콜의 토대다</td></tr>
+<tr><td><code>PGBUF_BCB::mutex</code></td><td><code>num_buffers</code></td><td>BCB의 <code>vpid</code> 쓰기, <code>next_wait_thrd</code>, <code>latch_last_thread</code>, <code>oldest_unflush_lsa</code>, 그리고 <b><code>waiter_exists</code>의 모든 전이</b></td><td>디버그 빌드에서는 항상 <code>pgbuf_bcbmon_*</code> 추적기를 경유한다 <span class="ref">page_buffer.c:950-957, :1674-1680</span></td></tr>
+<tr><td><code>PGBUF_LRU_LIST::mutex</code></td><td>shared + private 리스트 수</td><td><code>top/bottom/bottom_1/bottom_2</code>, <code>prev_BCB/next_BCB</code>, <code>count_lru1/2/3</code>, <code>tick_list</code>, <code>tick_lru3</code></td><td>SA_MODE에서는 매크로로 소거된다</td></tr>
+<tr><td><code>PGBUF_AOUT_LIST::Aout_mutex</code></td><td>1</td><td>AOUT FIFO 전체 + 그 해시 테이블들</td><td>기본 설정에서는 AOUT이 꺼져 있어 사실상 미사용</td></tr>
+<tr><td><code>PGBUF_INVALID_LIST::invalid_mutex</code></td><td>1</td><td><code>invalid_top</code>, <code>invalid_cnt</code>, 그리고 그 체인이 쓰는 <code>next_BCB</code></td><td>전역 단일 락. 워밍업 구간에서만 뜨겁다</td></tr>
+<tr><td><code>free_holder_set_mutex</code></td><td>1</td><td>전역 holder 블록 할당기(<code>free_holder_set</code>, <code>free_index</code>)</td><td>grow-only이므로 정상 상태에서는 거의 잡히지 않는다</td></tr>
+<tr><td><code>show_status_mutex</code></td><td>1</td><td><code>SHOW PAGE BUFFER STATUS</code> 스냅샷 계산 직렬화</td><td>—</td></tr>
+<tr><td><code>PGBUF_BCB::atomic_latch</code></td><td><code>num_buffers</code></td><td><b>락이 아니다.</b> <code>latch_mode</code> + <code>waiter_exists</code> + <code>fcnt</code></td><td>모든 전이는 CAS. 대기가 필요하면 BCB 뮤텍스를 잡고 §4.5로 넘어간다</td></tr>
+<tr><td><code>lockfree::circular_queue</code> 6종</td><td>—</td><td>direct victim 대기 큐 2, <code>flushed_bcbs</code>, victim LRU 인덱스 큐 3</td><td>완전 무잠금. <b>push/pop 실패는 정상 결과</b>이며 알고리즘이 처리한다</td></tr>
+<tr><td><code>PGBUF_STATUS</code> 슬롯</td><td>스레드 + 1</td><td>—</td><td><b>동기화 없음.</b> 스레드 전용 슬롯 + 64B 정렬로 경합 자체를 없앤 설계</td></tr>
+<tr><td><code>THREAD_ENTRY</code> 엔트리 락</td><td>스레드당 1</td><td>스레드 서스펜드/기상 상태</td><td>pgbuf 소유가 아니라 스레드 인프라가 제공(9장)</td></tr>
+</table></div>
+
+<p class="small">주목: <b>전역 버퍼 풀 락은 존재하지 않는다.</b> 풀 전체를 훑는 연산
+(<code>pgbuf_flush_all</code>, <code>pgbuf_peek_stats</code>)조차 BCB 배열을 인덱스 순서로 순회하며
+필요할 때만 개별 BCB 뮤텍스를 잡는다.</p>
+
+<h2>4.2 락 획득 순서 규칙</h2>
+
+<div class="box warn"><span class="label">MUST — 최상위 순서 규칙</span>
+<kbd class="must">MUST</kbd> <b>버킷 <code>hash_mutex</code>를 보유한 채 어떤 BCB 뮤텍스에도
+블로킹하지 않는다.</b> BCB 뮤텍스가 필요하면 <code>trylock</code>만 시도하고, <code>EBUSY</code>면
+<b>먼저 버킷 뮤텍스를 놓고</b> 무조건 획득으로 전환한다. 이 규칙 하나가 해시-BCB 사이의 사이클을
+원천 차단한다.
+</div>
+
+<h3>4.2.1 해시 탐색 — 2단계 프로토콜</h3>
+
+<p><span class="ref">page_buffer.c:7544-7667</span></p>
+
+<div class="tablewrap"><table>
+<tr><th>단계</th><th>절차</th></tr>
+<tr><td><b>one_phase</b><br>(버킷 뮤텍스 없음)</td><td>
+① <b>뮤텍스 없이</b> <code>hash_anchor-&gt;hash_next</code> 체인을 걷는다.<br>
+② VPID가 맞으면 <code>PGBUF_BCB_TRYLOCK</code>.<br>
+③ 성공 ⇒ 진행. <code>EBUSY</code> ⇒ <b>무조건 BCB 락</b>(버킷 뮤텍스를 애초에 안 잡았으므로 안전).
+그 외 오류 ⇒ one_phase 포기, two_phase로.<br>
+④ <b>락을 잡은 뒤 VPID를 재검증</b>한다. 달라졌으면 BCB를 놓고 <b>one_phase 처음부터</b> 재시도.<br>
+⑤ 찾았으면 <b>BCB 뮤텍스를 쥔 채</b> 반환.
+</td></tr>
+<tr><td><b>two_phase</b><br>(버킷 뮤텍스 보유)</td><td>
+① <code>hash_mutex</code> 획득(추적 중이면 대기 시간을 <code>PSTAT_PB_NUM_HASH_ANCHOR_WAITS</code> /
+<code>..._TIME_HASH_ANCHOR_WAIT</code>에 적재).<br>
+② 체인을 다시 걷는다.<br>
+③ VPID 일치 시 <code>TRYLOCK</code>. 성공 ⇒ <b>버킷 뮤텍스 해제</b>.
+<code>EBUSY</code> ⇒ <b>버킷 뮤텍스를 먼저 해제</b>한 뒤 무조건 BCB 락.
+그 외 오류 ⇒ <code>ER_CSS_PTHREAD_MUTEX_TRYLOCK</code>을 <b>치명(fatal)</b> 등급으로 올리고 NULL 반환.<br>
+④ VPID 재검증, 달라졌으면 <code>try_again</code>(버킷 뮤텍스부터 다시).
+</td></tr>
+</table></div>
+
+<div class="box norm"><span class="label">MUST — 비대칭 종료 계약</span>
+<kbd class="must">MUST</kbd> <code>pgbuf_search_hash_chain</code>은 다음 계약으로 반환한다.
+<span class="ref">page_buffer.c:7664-7665</span>
+<ul>
+<li>반환값 <b>≠ NULL</b> ⇒ 호출자는 <b>BCB 뮤텍스를 보유</b>하고 버킷 뮤텍스는 <b>보유하지 않는다</b>.</li>
+<li>반환값 <b>= NULL</b> ⇒ 호출자는 <b>버킷 뮤텍스를 보유</b>한다.</li>
+</ul>
+이 비대칭이 의도적인 이유: 미스일 때 버킷 뮤텍스를 이미 쥐고 있으므로 <b>재획득 없이 곧바로</b>
+buffer lock 프로토콜(§4.6)로 진입할 수 있다. 재작성 시 "항상 락을 놓고 반환"으로 정리하고 싶은
+유혹이 크지만, 그러면 미스 경로에 창(window)이 생겨 두 스레드가 동시에 같은 페이지의 팻말을 세울 수
+있다.
+</div>
+
+<p><b>무잠금 체인 순회가 안전한 이유</b>: 체인에서 BCB를 <b>떼어내는</b> 쪽
+(<code>pgbuf_delete_from_hash_chain</code>)은 버킷 뮤텍스를 잡고 unlink한 뒤에야 VPID를 NULL로
+만든다(<span class="ref">page_buffer.c:7917-7919</span>). 순회자가 볼 수 있는 최악은 <b>이미
+떨어져 나간 BCB를 계속 따라가는 것</b>이고, 그 경우 VPID 재검증(④)에서 걸러진다. 반대로 놓칠 수는
+있는데(삽입과 경합), 그건 미스로 처리되어 two_phase 혹은 buffer lock 경로에서 복구된다.</p>
+
+<h3>4.2.2 해시 삽입 — 분할된 임계 구역</h3>
+
+<figure>
+<svg viewBox="0 0 900 260" role="img" aria-label="미스 경로의 hash_mutex 인계 흐름">
+  <rect x="30" y="30" width="200" height="44" rx="6" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+  <text x="130" y="52" text-anchor="middle" class="svg-label">search_hash_chain</text>
+  <text x="130" y="68" text-anchor="middle" class="svg-muted">미스 → hash_mutex 보유</text>
+
+  <rect x="270" y="30" width="200" height="44" rx="6" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+  <text x="370" y="52" text-anchor="middle" class="svg-label">lock_page</text>
+  <text x="370" y="68" text-anchor="middle" class="svg-muted">팻말 세움 → hash_mutex 해제</text>
+
+  <rect x="510" y="30" width="180" height="44" rx="6" fill="none" stroke="var(--line)" stroke-width="1.5"/>
+  <text x="600" y="52" text-anchor="middle" class="svg-label">디스크 읽기 · latch</text>
+  <text x="600" y="68" text-anchor="middle" class="svg-muted">어떤 뮤텍스도 없음</text>
+
+  <rect x="230" y="140" width="230" height="44" rx="6" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+  <text x="345" y="162" text-anchor="middle" class="svg-label">insert_into_hash_chain</text>
+  <text x="345" y="178" text-anchor="middle" class="svg-muted">hash_mutex 획득 → <tspan font-weight="700">쥔 채 반환</tspan></text>
+
+  <rect x="500" y="140" width="230" height="44" rx="6" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+  <text x="615" y="162" text-anchor="middle" class="svg-label">unlock_page(need=false)</text>
+  <text x="615" y="178" text-anchor="middle" class="svg-muted">팻말 제거 → hash_mutex 해제 → 전원 기상</text>
+
+  <path d="M230 52 L266 52" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#a4)"/>
+  <path d="M470 52 L506 52" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#a4)"/>
+  <path d="M600 78 L600 110 L345 110 L345 136" stroke="var(--accent)" stroke-width="1.5" fill="none" marker-end="url(#a4)"/>
+  <path d="M460 162 L496 162" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#a4)"/>
+  <defs><marker id="a4" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+    <path d="M0,0 L8,4 L0,8 Z" fill="var(--accent)"/></marker></defs>
+
+  <line x1="30" y1="210" x2="870" y2="210" stroke="var(--line)"/>
+  <text x="30" y="232" class="svg-small">아래쪽 두 상자는 하나의 임계 구역을 두 함수가 나눠 가진 것이다 — 사이에서 hash_mutex 를 놓으면 안 된다.</text>
+  <text x="30" y="250" class="svg-muted">이 한 번의 인계가 "페이지 공개"와 "대기자 기상"을 동시에 원자적으로 만든다.</text>
+</svg>
+<figcaption>그림 4-1. 미스 경로의 <code>hash_mutex</code> 인계 <span class="ref">page_buffer.c:7786-7825, :2483-2493</span></figcaption>
+</figure>
+
+<div class="box warn"><span class="label">MUST — 분할 임계 구역</span>
+<kbd class="must">MUST</kbd> <code>pgbuf_insert_into_hash_chain</code>은 <code>hash_mutex</code>를 잡고
+체인 head에 밀어 넣은 뒤 <b>뮤텍스를 쥔 채로 반환</b>한다. 해제는 곧바로 이어지는
+<code>pgbuf_unlock_page(..., need_hash_mutex = false)</code>가 담당한다.
+<span class="ref">page_buffer.c:7817-7823</span><br><br>
+<b>왜 나눠야 하는가</b>: 만약 삽입 함수가 뮤텍스를 놓으면, 그 틈에 buffer lock 대기자가 깨어나
+재시도했을 때 <b>페이지는 해시에 있는데 팻말도 아직 서 있는</b> 중간 상태를 볼 수 있다. 하나의
+임계 구역 안에서 "해시에 공개"와 "팻말 제거 + 전원 기상"을 함께 해야 그 중간 상태가 관측되지 않는다.
+재작성 시 이 두 함수를 하나로 합치는 것은 <kbd class="may">MAY</kbd> 허용되지만,
+<b>사이에서 뮤텍스를 놓는 것은 금지</b>다.
+</div>
+
+<p>삭제(<code>pgbuf_delete_from_hash_chain</code>) 규칙:
+<kbd class="must">MUST</kbd> 호출자가 BCB 뮤텍스를 보유한 상태로 진입하고,
+BCB가 flush 중이면 <b>삭제를 거부</b>하며(<span class="ref">page_buffer.c:7867-7876</span>),
+unlink → <code>hash_mutex</code> 해제 → <b>그 다음에</b> VPID를 NULL로 만들고
+<code>count_fix_and_avoid_dealloc</code>을 리셋한다(<span class="ref">page_buffer.c:7917-7919</span>).
+순서를 뒤집어 VPID를 먼저 지우면 무잠금 순회자가 체인 중간에서 NULL VPID를 만나 페이지를 놓친다.</p>
+
+<h3>4.2.3 나머지 순서 규칙</h3>
+
+<div class="tablewrap"><table>
+<tr><th>#</th><th>규칙</th><th>근거</th></tr>
+<tr><td>R1</td><td><kbd class="must">MUST</kbd> 버킷 <code>hash_mutex</code>를 쥔 채 BCB 뮤텍스에 <b>블로킹</b>하지 않는다(trylock만)</td><td><span class="ref">page_buffer.c:7630-7648</span></td></tr>
+<tr><td>R2</td><td><kbd class="must">MUST</kbd> invalid 리스트 <b>pop</b>은 <code>invalid_mutex</code>를 <b>먼저 해제</b>한 뒤 BCB 뮤텍스를 잡는다 — 두 락을 겹쳐 쥐지 않는다</td><td><span class="ref">page_buffer.c:8887-8889</span></td></tr>
+<tr><td>R3</td><td><kbd class="must">MUST</kbd> invalid 리스트 <b>push</b>는 BCB 뮤텍스를 <b>이미 쥔 상태</b>로 진입해 <code>invalid_mutex</code>를 추가로 잡고, <b>BCB 뮤텍스를 먼저</b> 놓은 뒤 <code>invalid_mutex</code>를 놓는다</td><td><span class="ref">page_buffer.c:8921-8926</span></td></tr>
+<tr><td>R4</td><td>R2와 R3는 겹침 방향이 반대지만 사이클이 없다: pop은 <b>겹치지 않고</b>, push만 <code>BCB → invalid</code> 방향으로 겹친다. 즉 유효한 겹침 순서는 <b>단 하나</b>다. <kbd class="must">MUST</kbd> <code>invalid_mutex</code>를 쥔 채 BCB 뮤텍스를 <b>새로</b> 획득하지 않는다</td><td>R2·R3의 귀결</td></tr>
+<tr><td>R5</td><td><kbd class="must">MUST</kbd> BCB 뮤텍스와 LRU 리스트 뮤텍스를 겹쳐 쥘 때는 <b>항상 <code>BCB → LRU</code></b> 방향이다. LRU 뮤텍스를 쥔 채 BCB 뮤텍스를 <b>기다리는</b> 코드를 만들면 안 된다</td><td>unfix 경로 전반 <span class="ref">page_buffer.c:6674-6805</span></td></tr>
+<tr><td>R6</td><td><kbd class="must">MUST</kbd> <code>waiter_exists</code>의 모든 전이는 <b>BCB 뮤텍스 보유 중</b>에만 한다. 그래야 §4.5의 화해(reconciliation) 검사가 레이스 없이 성립한다</td><td><span class="ref">page_buffer.c:6270-6273</span>의 명시적 주석</td></tr>
+<tr><td>R7</td><td><kbd class="should">SHOULD</kbd> 두 LRU 리스트 뮤텍스를 동시에 쥐지 않는다. 리스트 간 이동은 "원본에서 제거 → 뮤텍스 해제 → 대상에서 삽입" 순으로 한다</td><td>6장의 리스트 연산</td></tr>
+<tr><td>R8</td><td><kbd class="must">MUST</kbd> 어떤 뮤텍스도 쥔 채로 <b>디스크 IO</b>(<code>fileio_read</code>/<code>write</code>, <code>dwb_*</code>)를 하지 않는다. 미스 경로가 buffer lock 팻말을 쓰는 이유가 정확히 이것이다</td><td>§4.6</td></tr>
+</table></div>
+
+<h2>4.3 latch 부여 규칙</h2>
+
+<p>latch 모드는 5종이다. <span class="ref">page_buffer.h:190-197</span></p>
+
+<div class="tablewrap"><table>
+<tr><th>모드</th><th>값</th><th>fix 가능?</th><th>의미</th></tr>
+<tr><td><code>PGBUF_NO_LATCH</code></td><td>0</td><td>—</td><td>latch 없음. 대기 큐에서는 <b>"이 대기자는 포기했다"</b>는 표식으로도 쓰인다</td></tr>
+<tr><td><code>PGBUF_LATCH_READ</code></td><td>1</td><td>예</td><td>공유</td></tr>
+<tr><td><code>PGBUF_LATCH_WRITE</code></td><td>2</td><td>예</td><td>배타</td></tr>
+<tr><td><code>PGBUF_LATCH_FLUSH</code></td><td>3</td><td><b>아니오</b></td><td><b>대기 전용 모드.</b> "이 페이지가 flush될 때까지 기다린다"는 뜻이며 페이지를 fix하지 않는다</td></tr>
+<tr><td><code>PGBUF_LATCH_INVALID</code></td><td>4</td><td>—</td><td>invalid 리스트에 있는 BCB. BCB 초기값</td></tr>
+</table></div>
+
+<p>부여 판정은 <b>단 하나의 CAS 루프</b> 안에서 이뤄지며, 루프 진입 시 <code>get_impl()</code>로
+세 필드의 일관된 스냅샷을 뜬다. <span class="ref">page_buffer.c:6285-6402</span>
+호출자는 BCB 뮤텍스를 보유한 상태로 진입한다.</p>
+
+<div class="tablewrap"><table>
+<tr><th>#</th><th>조건</th><th>결과</th><th>latch 워드 갱신</th></tr>
+<tr><td><b>Idle</b></td><td><code>buf_lock_acquired</code>(미스 경로에서 갓 확보한 BCB) <b>또는</b> <code>latch_mode == NO_LATCH</code></td><td><b>즉시 부여</b>. 새 holder 할당(<code>fix_count = 1</code>)</td><td>기대값을 <code>{NO_LATCH, waiter_exists = <b>false</b>, fcnt = 0}</code>으로 <b>강제</b>하고 <code>{request_mode, fcnt = 1}</code>로 교체</td></tr>
+<tr><td><b>1</b></td><td>READ 요청 ∧ 현재 READ ∧ <code>!waiter_exists</code></td><td><b>join</b>(즉시 부여)</td><td><code>fcnt++</code></td></tr>
+<tr><td><b>1′</b></td><td>READ 요청 ∧ 현재 READ ∧ <code>waiter_exists</code> ∧ <b>내가 이미 holder</b></td><td><b>join</b>(즉시 부여)</td><td><code>fcnt++</code></td></tr>
+<tr><td><b>1″</b></td><td>READ 요청 ∧ 현재 READ ∧ <code>waiter_exists</code> ∧ 내가 holder 아님</td><td><b>블록</b></td><td>변경 없음(<code>waiter_exists</code>는 이미 true)</td></tr>
+<tr><td><b>2-1</b></td><td>내가 holder ∧ 현재 WRITE</td><td><b>항상 부여</b>(재진입 fix)</td><td><code>fcnt++</code></td></tr>
+<tr><td><b>2-2a</b></td><td>내가 holder ∧ 현재 READ ∧ WRITE 요청 ∧ <code>fcnt == holder-&gt;fix_count</code>(내가 유일한 리더)</td><td><b>제자리 승격</b></td><td><code>latch_mode = WRITE</code>, <code>fcnt = 1</code></td></tr>
+<tr><td><b>2-2b</b></td><td>동일하되 다른 리더 존재 ∧ <code>CONDITIONAL</code></td><td><b>실패</b></td><td><code>waiter_exists = true</code></td></tr>
+<tr><td><b>2-2c</b></td><td>동일하되 다른 리더 존재 ∧ <code>UNCONDITIONAL</code></td><td><b><code>promote_needed</code></b> — 내 fix를 모두 반납하고 대기 큐 head로 간다</td><td><code>fcnt −= holder-&gt;fix_count</code>, <code>waiter_exists = true</code></td></tr>
+<tr><td><b>3</b></td><td>내가 holder 아님 ∧ 위 어디에도 안 맞음</td><td><b>블록</b></td><td><code>waiter_exists = true</code></td></tr>
+</table></div>
+
+<div class="box warn"><span class="label">MUST — idle 부여의 강제 기대값과 그 대가</span>
+<kbd class="must">MUST</kbd> idle 부여 CAS의 <b>기대값(expected)</b>은 실제로 읽은 값이 아니라
+<code>{NO_LATCH, waiter_exists = false, fcnt = 0}</code>으로 <b>덮어써서</b> 넣는다.
+<span class="ref">page_buffer.c:6310-6318</span><br><br>
+<b>결과</b>: BCB가 idle인데 <code>waiter_exists</code> 비트가 <b>잘못 남아 있으면</b> CAS가 영원히
+실패한다. idle 경로에는 블로킹이 없으므로 스레드는 <b>BCB 뮤텍스를 쥔 채 무한 스핀</b>하고, 곧 서버
+전체가 그 BCB에 물린다. 이것이 CBRD-27084가 고친 라이브락이다.<br><br>
+따라서 <kbd class="must">MUST</kbd> <b>세 곳의 화해 지점</b>을 모두 구현한다.
+<ol>
+<li><b>부여 직전 자가 치유</b> — BCB 뮤텍스를 잡은 직후, <code>latch_mode == NO_LATCH</code> ∧
+<code>waiter_exists</code> ∧ <code>next_wait_thrd == NULL</code>이면 비트를 클리어한다(디버그에서는
+<code>assert(false)</code>로 최초 발생을 잡는다). <span class="ref">page_buffer.c:6269-6283</span></li>
+<li><b>기상 경로</b> — §4.5. <span class="ref">page_buffer.c:7531-7534</span></li>
+<li><b>FLUSH 대기 인터럽트 경로</b> — §4.5. <span class="ref">page_buffer.c:7077-7080</span></li>
+</ol>
+세 지점 모두 판정이 <code>pgbuf_is_exist_blocked_reader_writer(bcb)</code> 하나로 통일된다.
+</div>
+
+<div class="box"><span class="label">두 규칙의 의도</span>
+<b>Case 1″(새 리더는 대기 중인 라이터 뒤에 선다)</b>은 <b>라이터 기아 방지</b>다. 리더가 계속 들어오면
+라이터가 영원히 못 들어오기 때문이다.<br>
+<b>Case 1′(기존 holder는 예외)</b>은 <b>자기 데드락 회피</b>다. 이미 READ latch를 쥔 스레드가 같은
+페이지를 한 번 더 fix하려 할 때 자기 뒤에 선 라이터를 기다리면 영원히 풀리지 않는다.<br>
+두 규칙은 <b>함께 있어야만</b> 올바르다 — 하나만 구현하면 기아이거나 데드락이다.
+</div>
+
+<p><b>부여 이후 처리</b> <span class="ref">page_buffer.c:6406-6582</span></p>
+<ul>
+<li><b>idle 부여</b>: BCB 뮤텍스 해제 → 새 holder 할당(<code>fix_count = 1</code>) →
+<code>perf_stat.hold_has_{read,write}_latch</code>와 <code>dirty_before_hold</code> 시드.
+<kbd class="must">MUST</kbd> 이때 <code>assert(기존 holder == NULL)</code>.</li>
+<li><b>일반 부여</b>: holder가 있으면 <code>fix_count++</code>, 없으면 새로 할당.</li>
+<li><b><code>promote_needed</code></b>: <code>request_fcnt += holder-&gt;fix_count</code>,
+<code>holder-&gt;fix_count = 0</code>, <code>perf_stat</code> 초기화, <b>holder 엔트리 자체를 제거</b>한 뒤
+블록한다 — 이 순간 페이지는 <b>이 스레드에게 진짜로 unfix된 상태</b>다.</li>
+<li><b>조건부 거부</b>: <code>LK_ZERO_WAIT</code>일 때만 클라이언트 이름/호스트/PID를 실어
+<code>ER_LK_PAGE_TIMEOUT</code>을 올리고, 그 외에는 조용히 실패한다.
+<span class="ref">page_buffer.c:6509-6543</span></li>
+<li><b>블로킹</b>: <code>pgbuf_block_bcb</code> 호출 후 holder를
+<code>fix_count = request_fcnt</code>로 할당하고 <code>*is_latch_wait = true</code>.</li>
+<li><kbd class="must">MUST</kbd> <code>SA_MODE</code>에서는 블로킹 경로에 <code>assert(0)</code>를 둔다 —
+단일 스레드에서 latch 대기가 발생하면 그 자체가 논리 오류다.
+<span class="ref">page_buffer.c:6505-6507</span></li>
+</ul>
+
+<p><b>READ→WRITE 승격</b>(<code>pgbuf_promote_read_latch</code>,
+<span class="ref">page_buffer.c:2796-3009</span>)은 위 2-2와 같은 판정을 별도 진입점으로 제공한다.
+추가 규칙 둘:</p>
+<ul>
+<li><kbd class="must">MUST</kbd> 내가 유일한 리더라도 <b>대기 큐 head에 다른 승격자가 있으면</b>
+<code>ER_PAGE_LATCH_PROMOTE_FAIL</code>로 포기한다 — 둘 다 "fix한 그 페이지를 다시 본다"를 보장할 수
+없기 때문이다. <span class="ref">page_buffer.c:2865-2874</span></li>
+<li><code>PGBUF_PROMOTE_ONLY_READER</code> 조건이면 다른 리더가 있을 때 즉시 실패,
+<code>PGBUF_PROMOTE_SHARED_READER</code>면 fix를 반납하고 <code>as_promote = true</code>로 큐
+<b>head</b>에 선다. <kbd class="must">MUST</kbd> 후자의 경우 소스 주석이 명시하듯
+<b>"이 시점에 페이지는 unfix 상태"</b>이며, 호출자의 <code>PAGE_PTR</code>는 깨어난 뒤 <b>다른 내용을
+가리킬 수 있다</b>. <span class="ref">page_buffer.c:2937</span></li>
+</ul>
+
+<h2>4.4 무잠금 fast path — 진입 조건과 안전 논증</h2>
+
+<h3>4.4.1 fix 쪽</h3>
+
+<p><kbd class="must">MUST</kbd> 다음 <b>세 조건이 모두</b> 참일 때만 무잠금 경로를 시도한다.
+<span class="ref">page_buffer.c:2309-2313</span></p>
+<ol>
+<li><code>request_mode == PGBUF_LATCH_READ</code></li>
+<li><code>fetch_mode ∈ { OLD_PAGE, OLD_PAGE_PREVENT_DEALLOC, OLD_PAGE_MAYBE_DEALLOCATED }</code></li>
+<li><code>condition == PGBUF_UNCONDITIONAL_LATCH</code></li>
+</ol>
+
+<p>경로 자체는 <span class="ref">page_buffer.c:7669-7732</span>:</p>
+<pre><code>bcb = 무잠금 해시 체인 탐색 (버킷 뮤텍스 없음)
+if (bcb == NULL) return NULL;               /* 슬로우 패스로 */
+
+do {
+    impl = get_impl (&amp;bcb-&gt;atomic_latch);    /* 세 필드 일관 스냅샷 */
+    if (impl.latch_mode != PGBUF_LATCH_READ  /* ① */
+     || impl.waiter_exists                   /* ② */
+     || impl.fcnt == 0                       /* ③ */
+     || bcb-&gt;vpid != *vpid)                  /* ④ */
+        return NULL;                         /* 슬로우 패스로 */
+    new_impl = impl; new_impl.fcnt++;
+} while (!CAS (bcb-&gt;atomic_latch, impl, new_impl));
+
+holder 갱신 또는 신규 할당;
+return page pointer;</code></pre>
+
+<div class="box norm"><span class="label">안전 논증</span>
+<b>주장</b>: 이 경로는 BCB 뮤텍스도 버킷 뮤텍스도 잡지 않지만, 반환된 <code>PAGE_PTR</code>는 요청한
+VPID의 유효한 READ-latched 페이지를 가리킨다.<br><br>
+<b>① <code>fcnt != 0</code>이 안전의 닻이다.</b> victim화의 필요조건은 <code>fcnt == 0</code>이다
+(§3.2.1의 플래그 마스크와 별개로 <code>pgbuf_is_bcb_fixed_by_any</code>가 따로 검사한다,
+<span class="ref">page_buffer.c:9210</span>). CAS가 성공했다는 것은 <b>그 순간까지 fcnt가 0이 된 적이
+없다</b>는 뜻이므로, 우리가 관측한 시점부터 증가시킨 시점 사이에 이 BCB가 회수되어 다른 페이지로
+바뀌었을 수 없다. 즉 <b>"살아 있는 READ latch는 BCB를 그 페이지에 고정시킨다"</b>.<br><br>
+<b>② <code>latch_mode == READ</code>는 라이터 배제를 보장한다.</b> 라이터가 들어오려면
+<code>fcnt</code>가 0이 되어 idle이 되거나(①에 모순), 대기 큐에 서야 한다(그러면
+<code>waiter_exists</code>가 켜져 ③에 걸린다).<br><br>
+<b>③ <code>!waiter_exists</code>는 기아 정책을 유지한다.</b> 이 검사가 없으면 무잠금 리더가 §4.3의
+Case 1″(라이터 뒤에 서기)를 우회해 버려 라이터가 굶는다. 정확성이 아니라 <b>공정성</b>을 위한
+조건이다.<br><br>
+<b>④ VPID 재확인이 ABA를 막는다.</b> 무잠금 체인 순회는 이미 체인에서 떨어진 BCB를 볼 수 있다.
+CAS 성공 <b>전에</b> 루프 안에서 VPID를 다시 보므로, 회수 후 다른 페이지로 재사용된 BCB를 잡는 일이
+없다.<br><br>
+<b>실패는 항상 안전하다.</b> 어느 조건이든 어긋나면 <code>NULL</code>을 반환하고 §4.2의 정규
+슬로우 패스로 내려간다 — 무잠금 경로는 <b>순수한 최적화</b>이며, 이를 아예 구현하지 않아도 정확성은
+유지된다(성능만 크게 다르다).
+</div>
+
+<h3>4.4.2 unfix 쪽</h3>
+
+<p><span class="ref">page_buffer.c:7751-7774</span>. 진입 조건은
+<code>latch_mode == READ ∧ !waiter_exists ∧ <b>fcnt != 1</b></code>이며, 통과하면 CAS로
+<code>fcnt--</code>하고 <b>BCB 뮤텍스와 LRU 장부 전체를 건너뛴다</b>.</p>
+
+<div class="box warn"><span class="label">MUST — <code>fcnt != 1</code> 가드의 역할</span>
+<kbd class="must">MUST</kbd> <code>fcnt == 1</code>(내가 마지막 unfixer)이면 <b>반드시</b> 슬로우
+패스로 보낸다.<br><br>
+<b>이유</b>: fix count가 0이 되는 순간에만 해야 하는 일이 여럿이다 — LRU zone 전이/boost,
+<code>MOVE_TO_LRU_BOTTOM</code> 처리, 대기자 기상(§4.5), <code>ASYNC_FLUSH_REQ</code> 처리. 무잠금
+경로가 <code>fcnt</code>를 1에서 0으로 떨어뜨려 버리면 <b>이 작업들이 아무도 하지 않은 채</b> 페이지가
+idle이 된다. 대기 중이던 스레드는 영원히 깨어나지 못하고, BCB는 LRU 위치가 갱신되지 않아 교체 정책이
+왜곡된다.<br><br>
+<code>waiter_exists</code> 검사만으로는 부족하다는 점에 주의: 대기자가 없어도 LRU 장부와 async flush
+처리는 여전히 필요하다. <b>두 가드는 서로 다른 것을 지킨다.</b>
+</div>
+
+<p><kbd class="must">MUST</kbd> holder 쪽 정리(<code>holder-&gt;fix_count--</code>, 0이면 holder 반환)는
+무잠금 시도 <b>이전에</b> 이미 끝나 있어야 한다. 즉 unfix의 순서는
+<b>holder 정리 → 무잠금 시도 → (실패 시) BCB 뮤텍스 + 슬로우 경로</b>다.
+<span class="ref">page_buffer.c:3116-3149</span></p>
+
+<h2>4.5 대기와 기상</h2>
+
+<h3>4.5.1 BCB 대기 큐</h3>
+
+<p><kbd class="must">MUST</kbd> 대기 큐는 <code>bufptr-&gt;next_wait_thrd</code>를 head로 하고
+<code>THREAD_ENTRY::next_wait_thrd</code>로 이어지는 <b>단일 연결 리스트</b>이며, <b>BCB 뮤텍스</b>가
+보호한다. 대기자는 자기 <code>THREAD_ENTRY</code>에 의도를 게시한다.
+<span class="ref">page_buffer.c:6995-7044</span></p>
+
+<pre><code>cur_thrd_entry-&gt;request_latch_mode = request_mode;   /* READ | WRITE | FLUSH | NO_LATCH */
+cur_thrd_entry-&gt;request_fix_count = request_fcnt;    /* 부여 시 fcnt 에 더해질 양 */</code></pre>
+
+<div class="tablewrap"><table>
+<tr><th>대기자 종류</th><th>큐에서의 위치</th><th>규범</th></tr>
+<tr><td>승격자(promoter)</td><td><b>head</b></td><td><kbd class="must">MUST</kbd> 큐에 승격자는 <b>최대 한 명</b>. 삽입 전 <code>assert(head == NULL || !head-&gt;wait_for_latch_promote)</code></td></tr>
+<tr><td>일반 리더/라이터</td><td><b>tail</b></td><td>FIFO</td></tr>
+<tr><td><code>PGBUF_LATCH_FLUSH</code></td><td>tail</td><td><kbd class="must">MUST</kbd> <b>무기한(untimed) 서스펜드</b>를 쓴다. 기상 로직은 이들을 <b>건너뛰고 큐에 남긴다</b></td></tr>
+<tr><td>포기자</td><td>제자리</td><td><code>request_latch_mode = PGBUF_NO_LATCH</code>가 <b>표식</b>. 다음 기상 스윕에서 제거된다</td></tr>
+</table></div>
+
+<h3>4.5.2 unfix 시 기상 정책</h3>
+
+<p>fix count가 0이 된 unfix에서만 호출되며, BCB 뮤텍스를 보유하고
+<code>{latch_mode == NO_LATCH, fcnt == 0}</code>을 assert한 상태로 진입한다.
+<span class="ref">page_buffer.c:7403-7535</span> 큐를 head부터 훑으며 <b>대기자 종류별로</b> 처리한다.</p>
+
+<div class="tablewrap"><table>
+<tr><th>큐 항목</th><th>처리</th></tr>
+<tr><td><code>NO_LATCH</code>(포기자)</td><td>큐에서 <b>제거</b>하고 계속 진행. 깨우지 않는다</td></tr>
+<tr><td><code>LATCH_FLUSH</code></td><td><b>건너뛴다</b>(큐에 남긴다). <kbd class="should">SHOULD</kbd> 이때 <code>ASYNC_FLUSH_REQ</code>가 켜져 있거나 실제 flush 중임을 assert한다 — 아니면 이 대기자는 영원히 안 깨어난다</td></tr>
+<tr><td><code>LATCH_READ</code></td><td>부여 가능하면 <code>fcnt += request_fix_count</code>, <code>latch_mode = READ</code>로 CAS 후 큐에서 빼고 기상. <b>연속된 리더들을 일괄로</b> 처리한다</td></tr>
+<tr><td><code>LATCH_WRITE</code></td><td>latch가 아직 <code>NO_LATCH</code>일 때만 부여하고 기상. 이미 READ가 부여된 뒤라면 <b>거기서 스윕을 종료</b>한다 — 즉 <b>첫 라이터 한 명만</b> 깨어난다</td></tr>
+</table></div>
+
+<p><kbd class="must">MUST</kbd> 부여 CAS 직전에 <code>thread_lock_entry</code>로 대기자 엔트리를 잠그고,
+잠근 뒤 <b>다시 한 번</b> <code>request_latch_mode == NO_LATCH</code>인지 확인한다 — 그 사이에
+타임아웃으로 포기했을 수 있다. 포기했으면 부여를 취소하고 큐에서 제거한다.
+<span class="ref">page_buffer.c:7467-7482</span></p>
+
+<div class="box warn"><span class="label">MUST — <code>waiter_exists</code> 화해</span>
+<kbd class="must">MUST</kbd> 스윕이 끝나면 <b>반드시</b> 아래를 수행한다.
+<span class="ref">page_buffer.c:7531-7534</span>
+<pre><code>if (!pgbuf_is_exist_blocked_reader_writer (bufptr))
+  {
+    set_waiter_exists (&amp;bufptr-&gt;atomic_latch, false);
+  }</code></pre>
+<code>pgbuf_is_exist_blocked_reader_writer</code>는 <b>FLUSH 대기자를 무시</b>한다
+(<span class="ref">page_buffer.c:10964-10984</span>). 따라서 <b>FLUSH 대기자만 남은 BCB는
+<code>waiter_exists = false</code></b>가 되고, 이는 §4.4의 무잠금 읽기 경로를 <b>다시 열어준다</b> —
+FLUSH 대기는 latch가 아니므로 리더를 막을 이유가 없다는 설계다.<br><br>
+이 화해를 빠뜨리면 §4.3의 idle 부여 CAS가 무한 스핀한다(CBRD-27084).
+</div>
+
+<p><b>타임아웃/인터럽트 시의 부분 기상</b>: 포기한 스레드가 <b>큐 head였다면</b>, 자기를 빼면서
+<b>뒤따르는 호환 리더들에게 latch를 넘겨준다</b>(<code>latch_mode == READ</code>인 경우에 한해
+<code>fcnt += request_fix_count</code> 후 기상). 라이터를 만나면 중단한다.
+<span class="ref">page_buffer.c:7177-7221</span>
+<kbd class="must">MUST</kbd> 이 함수는 <b>세 경로 모두에서 BCB 뮤텍스를 보유한 채</b> 반환하고,
+해제는 호출자가 한다 — "빈 큐" 조기 반환 경로(<span class="ref">page_buffer.c:7154-7158</span>)도
+예외가 아니다.</p>
+
+<h2>4.6 buffer lock — 미싱 페이지 팻말</h2>
+
+<p>미스가 났을 때 두 스레드가 <b>같은 페이지를 두 번 읽어 두 BCB를 만드는 것</b>을 막는 장치다.
+디스크 IO 중에는 어떤 뮤텍스도 쥘 수 없으므로(규칙 R8), 뮤텍스 대신 <b>팻말</b>을 세운다.</p>
+
+<p><code>pgbuf_lock_page</code>는 <b><code>hash_mutex</code>를 보유한 채 진입</b>하고 <b>항상
+보유하지 않은 채 종료</b>한다. <span class="ref">page_buffer.c:7935-8033</span></p>
+
+<div class="tablewrap"><table>
+<tr><th>경우</th><th>절차</th><th>반환</th></tr>
+<tr><td><b>팻말 없음</b><br>(내가 읽는다)</td><td>① 자기 슬롯 <code>buf_lock_table[thread_p-&gt;index]</code>에 VPID 기록<br>② 버킷의 <code>lock_next</code> head에 push<br>③ <code>hash_mutex</code> 해제<br>④ <code>PSTAT_LK_NUM_ACQUIRED_ON_PAGES</code> 증가</td><td><code>PGBUF_LOCK_HOLDER</code> (=1)</td></tr>
+<tr><td><b>팻말 있음</b><br>(남이 읽는 중)</td><td>① 그 팻말의 <code>next_wait_thrd</code> <b>LIFO</b>에 자신을 push<br>② <code>pgbuf_sleep(self, &amp;hash_mutex)</code> — 스레드 엔트리를 잠그고 <b><code>hash_mutex</code>를 해제한 뒤</b> <code>THREAD_PGBUF_SUSPENDED</code>로 서스펜드<br>③ 비정상 기상이면 스스로 큐에서 빠진다<br>④ <code>PSTAT_LK_NUM_WAITED_ON_PAGES</code> 증가</td><td><code>PGBUF_LOCK_WAITER</code> (=0)</td></tr>
+</table></div>
+
+<div class="box warn"><span class="label">MUST — 대기자는 페이지를 받지 않는다</span>
+<kbd class="must">MUST</kbd> <code>PGBUF_LOCK_WAITER</code>로 깨어난 스레드는 <b>페이지 포인터를 전달받지
+않는다</b>. 대신 fix 루프의 <code>try_again</code>으로 되돌아가 <b>처음부터 다시 탐색</b>한다 — 그
+시점에는 페이지가 이미 해시에 상주하므로 정상 히트가 된다.
+<span class="ref">page_buffer.c:2368-2372, :8376-8398</span><br><br>
+이 "전달 없음" 설계 덕분에 팻말 프로토콜이 극도로 단순해진다. 읽기 실패, TDE 복호화 실패, VPID 불일치
+같은 모든 오류 경로에서 <b>대기자에게 무엇을 어떻게 알릴지 고민할 필요가 없다</b> — 그냥 깨우면
+각자 다시 시도하고, 페이지가 없으면 자기가 새 holder가 된다.
+</div>
+
+<p><kbd class="must">MUST</kbd> <code>pgbuf_unlock_page</code>는 <b>대기자 전원</b>을 깨운다(한 명이
+아니다). 순서는 ① 필요 시 <code>hash_mutex</code> 재획득 → ② 팻말 unlink → ③
+<code>hash_mutex</code> 해제 → ④ 큐를 돌며 <code>pgbuf_wakeup_uncond</code>.
+<span class="ref">page_buffer.c:8048-8123</span> 성공 경로에서는 <code>need_hash_mutex = false</code>로
+호출되어 §4.2.2의 인계를 완성한다.</p>
+
+<h2>4.7 타임아웃과 데드락 정책</h2>
+
+<div class="box defect"><span class="label">설계상 명시 — 페이지 latch 데드락 감지기는 없다</span>
+소스가 직접 밝힌다. <span class="ref">page_buffer.c:7093-7100</span>
+<pre><code>/* We do not guarantee that there is no deadlock between page latches.
+ * So, we made a decision that when read/write buffer fix request is
+ * not granted immediately, block the request with timed sleep method.
+ * ...
+ * When the request is waken up, the request is treated as a victim.  */</code></pre>
+<b>페이지 latch 데드락은 오직 타임아웃으로 해소되고, 타임아웃된 스레드가 지정 희생자다.</b>
+(행/객체 락은 별개다 — 그쪽에는 <code>src/transaction/wait_for_graph.c</code>에 wait-for 그래프가 있다.)
+이 사실이 <code>pgbuf_ordered_fix</code>(§4.8)의 존재 이유이기도 하다.
+</div>
+
+<h3>4.7.1 타임아웃 값 결정</h3>
+
+<div class="box warn"><span class="label">충실 재현 대상 quirk</span>
+<kbd class="must">MUST</kbd> 다음 로직을 그대로 재현한다. <span class="ref">page_buffer.c:7250-7262</span>
+<pre><code>old_wait_msecs = wait_msecs = &lt;트랜잭션의 wait_msecs&gt;;
+if (wait_msecs == LK_ZERO_WAIT || wait_msecs == LK_FORCE_ZERO_WAIT)
+    wait_msecs = 0;
+else
+    wait_msecs = pgbuf_latch_timeout_msecs;   /* &lt;-- 전역값으로 덮어씀 */</code></pre>
+즉 <b>zero-wait가 아닌 한 트랜잭션이 설정한 <code>wait_msecs</code>는 완전히 무시</b>되고, 전역
+<code>pgbuf_latch_timeout_msecs</code>(<code>PRM_ID_PAGE_LATCH_TIMEOUT_IN_MSECS</code>,
+<b>기본 300,000 ms = 5분</b>)가 쓰인다. <code>LK_INFINITE_WAIT</code>를 요청해도 5분이다.<br>
+이는 사용자 관측 가능한 동작이므로 <b>수정하지 말고 그대로 재현</b>한다. 원래 값은
+<code>old_wait_msecs</code>에 보관되어 <b>오류 코드 선택에만</b> 쓰인다.
+</div>
+
+<p>관련해서 fix 프롤로그에도 quirk가 하나 더 있다: <kbd class="must">MUST</kbd> 트랜잭션이
+<code>LK_ZERO_WAIT</code>/<code>LK_FORCE_ZERO_WAIT</code>이면 <b>무조건(unconditional) latch 요청이
+조용히 조건부(conditional)로 강등</b>된다. <span class="ref">page_buffer.c:2273-2283</span></p>
+
+<h3>4.7.2 타임아웃 처리 절차</h3>
+
+<div class="tablewrap"><table>
+<tr><th>서스펜드 결과</th><th>처리</th></tr>
+<tr><td><code>resume_status == THREAD_PGBUF_RESUMED</code></td><td>정상 부여. <code>NO_ERROR</code></td></tr>
+<tr><td>인터럽트</td><td><code>request_latch_mode = PGBUF_NO_LATCH</code> → 큐 정리 → <code>ER_INTERRUPTED</code></td></tr>
+<tr><td><code>ER_CSS_PTHREAD_COND_TIMEDOUT</code> ∧ 트랜잭션이 <b>비활성</b></td><td><b>타임아웃을 무시하고 다시 잠든다</b>(<code>goto try_again</code>). 롤백/postpone 중인 트랜잭션은 희생시킬 수 없다</td></tr>
+<tr><td><code>ER_CSS_PTHREAD_COND_TIMEDOUT</code> ∧ 활성</td><td>이 스레드가 희생자. 아래 순서 규칙 참조</td></tr>
+<tr><td>그 외 오류</td><td><code>ER_CSS_PTHREAD_COND_TIMEDWAIT</code></td></tr>
+</table></div>
+
+<div class="box norm"><span class="label">MUST — 희생자 표식 순서</span>
+<kbd class="must">MUST</kbd> 이 순서를 지킨다. <span class="ref">page_buffer.c:7316-7322</span>
+<ol>
+<li><code>thread_p-&gt;request_latch_mode = PGBUF_NO_LATCH</code>를 <b>먼저</b> 쓴다.</li>
+<li><b>그 다음에</b> 스레드 엔트리 뮤텍스를 해제한다.</li>
+</ol>
+소스 주석이 "following order of execution is important"라고 못박은 지점이다. 큐에 남은
+<code>PGBUF_NO_LATCH</code>가 <b>"이 대기자는 포기했다"</b>는 유일한 신호이므로, 엔트리 뮤텍스를 먼저
+놓으면 기상자가 이미 포기한 스레드에게 latch를 부여하고 <code>fcnt</code>를 올려버린다 —
+<b>영구 누수</b>다.
+</div>
+
+<p><b>오류 코드</b> <span class="ref">page_buffer.c:7339-7393</span></p>
+<ul>
+<li>원래 요청이 <code>LK_INFINITE_WAIT</code>였다면 <code>ER_PAGE_LATCH_TIMEDOUT</code> →
+<code>ER_LK_UNILATERALLY_ABORTED</code>.</li>
+<li>유한 대기였다면 <code>ER_PAGE_LATCH_TIMEDOUT</code> → <code>ER_LK_PAGE_TIMEOUT</code>.</li>
+</ul>
+
+<div class="box defect"><span class="label">주의 — 디버그 빌드의 살아 있는 assert(0)</span>
+<code>LK_INFINITE_WAIT</code> 경로에 <code>/* FIXME: remove it. temporarily added for debugging */
+assert (0);</code>가 <b>그대로 남아 있다</b>. <span class="ref">page_buffer.c:7345-7346</span>
+따라서 <b>디버그 빌드에서 무한 대기 페이지 latch 타임아웃이 발생하면 서버가 죽는다.</b><br>
+<kbd class="may">MAY</kbd> 재작성 시 제거해도 <b>릴리스 동작은 동일</b>하다. 단, 디버그 회귀 테스트를
+원본과 대조할 계획이라면 유지하는 편이 diff가 깨끗하다.
+</div>
+
+<h2>4.8 <code>pgbuf_ordered_fix</code> 순서 규약</h2>
+
+<p>데드락 감지기가 없으므로(§4.7), 여러 페이지를 동시에 latch해야 하는 코드는 <b>전역 순서</b>를 지켜야
+한다. 적용 대상은 <code>PGBUF_IS_ORDERED_PAGETYPE(ptype)</code> = <code>PAGE_HEAP ||
+PAGE_OVERFLOW</code>뿐이다(<span class="ref">page_buffer.h:166-167</span>) — 고전적인 heap home vs.
+heap overflow 순서 위험 때문이다.</p>
+
+<div class="box warn"><span class="label">MUST — 정렬 키는 VPID가 아니다</span>
+<kbd class="must">MUST</kbd> 정렬 키는 <b><code>(group_id, rank, vpid)</code> 사전식</b>이며,
+<code>group_id</code>가 NULL인 항목은 <b>맨 뒤</b>로 보낸다.
+<span class="ref">page_buffer.c:12128-12183</span>
+<ul>
+<li><code>group_id</code> = 그 페이지가 속한 <b>heap header의 VPID</b>(<code>PGBUF_WATCHER_SET_GROUP</code>).</li>
+<li><code>rank</code> = <code>PGBUF_ORDERED_HEAP_HDR &lt; ..._HEAP_NORMAL &lt; ..._HEAP_OVERFLOW</code>.</li>
+<li><code>vpid</code>는 <b>동점 처리용</b>일 뿐이다.</li>
+</ul>
+즉 <b>heap header가 항상 자기 normal/overflow 페이지보다 먼저 latch된다.</b> 헤더 주소가 우연히 더
+큰 VPID를 갖더라도 그렇다. 소스 주석의 근거: 순수 VPID 순서라면 "우선순위 높은 페이지를 굳이 unfix하고
+재정렬해서 다시 fix"해야 하는 경우가 생기는데, rank를 우선하면 그 비용을 피할 수 있다.
+<span class="ref">page_buffer.h:219-229</span>
+</div>
+
+<p><b>절차 요약</b>(전체 의사코드는 5장):</p>
+<ol>
+<li>이 스레드가 <b>다른 페이지를 하나도 안 쥐고 있으면</b>(또는 대상 페이지만 쥐었으면)
+<code>UNCONDITIONAL</code>, 아니면 <code>CONDITIONAL</code>로 먼저 시도한다.
+<span class="ref">page_buffer.c:12277-12286</span></li>
+<li>성공하면 끝 — <b>이것이 압도적으로 흔한 경로이고 추가 비용이 0이다.</b></li>
+<li>실패 시: <code>ER_PB_BAD_PAGEID</code>/<code>ER_INTERRUPTED</code>는 그대로 전파, zero-wait
+트랜잭션은 <code>ER_LK_PAGE_TIMEOUT</code>으로 포기, <b>무조건 시도가 실패한 경우는 재시도하지 않는다</b>.</li>
+<li>그 외에는 에러를 지우고 재정렬 시작: 현재 watch 중인 페이지들을 수집하고,
+<b>대상 페이지보다 뒤에 정렬되는 것들만</b> 저장한다.</li>
+<li>저장된 페이지들을 <b>unfix</b>한다. <kbd class="must">MUST</kbd> unfix 전에 각각
+<code>pgbuf_bcb_register_avoid_deallocation</code>을 걸고, holder의 <code>fix_count</code> 횟수만큼
+루프 돌며 unfix하며, watcher마다 <code>page_was_unfixed = true</code>를 세운다.</li>
+<li><code>qsort</code>로 <code>(group_id, rank, vpid)</code> 정렬.</li>
+<li><b>정렬 순서대로 전부 <code>PGBUF_UNCONDITIONAL_LATCH</code>로 재fix</b>한다. 재fix 실패는
+<code>ER_PB_ORDERED_REFIX_FAILED</code>. 성공한 것마다
+<code>pgbuf_bcb_unregister_avoid_deallocation</code>.</li>
+</ol>
+
+<div class="box warn"><span class="label">MUST — 호출자에게 전달되는 신호</span>
+<kbd class="must">MUST</kbd> 재fix가 일어난 모든 watcher에 <code>page_was_unfixed = true</code>를
+세운다. 이는 호출자에게 <b>"네 <code>PAGE_PTR</code>가 가리키는 내용이 바뀌었을 수 있으니 상태를 다시
+검증하라"</b>는 계약상의 신호다. 오류 반환 시에도 <b>일부 페이지만 재fix된 상태</b>일 수 있으므로,
+호출자는 watcher의 <code>pgptr</code>를 쓰기 전에 반드시 확인해야 한다.
+</div>
+
+<div class="box defect"><span class="label">승인된 위험 — avoid_dealloc은 victim을 막지 않는다</span>
+잠시 unfix된 페이지는 <code>avoid_dealloc</code> 카운터로 <b>vacuum의 논리적 할당 해제</b>로부터만
+보호된다. <b>victim화는 막지 못한다</b> — 소스가 그 불완전성을 명시적으로 수용한다.
+<span class="ref">page_buffer.c:16218-16222</span>
+<blockquote class="small">"victimizing a bcb marked to avoid deallocation is not perfectly safe. however, the
+likelihood of page really getting deallocated is ... almost zero. the alternative ... poses serious
+risks (what if we leak the counter and prevent bcb from being victimized indefinitely?). so, we prefer
+the existing risks."</blockquote>
+그 귀결로 <kbd class="must">MUST</kbd> <code>unregister_avoid_deallocation</code>은 <b>카운터가 0인
+경우를 허용</b>하고 assert 대신 로그만 남긴다(페이지가 victim화된 뒤 다시 읽혀 카운터가 사라졌을 수
+있으므로). <span class="ref">page_buffer.c:16195-16231</span> 이 관대함을 제거하면 정상 워크로드에서
+assert가 터진다.
+</div>
+
+<p class="small">참고 비용(계산값): <code>ordered_holders_info[64]</code>가 스택에 잡히고 각 원소가
+watcher 포인터 64개를 품으므로 <code>pgbuf_ordered_fix</code> 프레임은 <b>약 35 KiB의 스택</b>을
+쓴다. 재작성 시 스레드 스택 크기 설정에 영향을 준다.</p>
+
+<h2>4.9 불변식 체크리스트</h2>
+
+<p><kbd class="should">SHOULD</kbd> 아래를 런타임 assert(디버그 빌드)로 넣는다. 원본이 실제로 assert하는
+항목에는 근거 위치를 달았고, 나머지는 이 스펙이 제안하는 추가 검증이다. 10장의 수용 검증에서 이
+목록을 그대로 재사용한다.</p>
+
+<div class="tablewrap"><table>
+<tr><th>#</th><th>불변식</th><th>검사 지점</th><th>원본</th></tr>
+<tr><td>I1</td><td><code>bcb-&gt;iopage_buffer-&gt;bcb == bcb</code></td><td>모든 <code>PAGE_PTR</code>↔BCB 캐스트</td><td><span class="ref">:152, :167</span></td></tr>
+<tr><td>I2</td><td>플래그·zone·LRU 인덱스 마스크 <b>비중첩</b></td><td>부팅 최초(실패 시 abort)</td><td><span class="ref">:16777-16798</span></td></tr>
+<tr><td>I3</td><td><code>!LSA_ISNULL(oldest_unflush_lsa)</code> ⇒ dirty</td><td>fix 진입, unfix에서 <code>fcnt==0</code> 도달 시</td><td><span class="ref">:2351, :6665</span></td></tr>
+<tr><td>I4</td><td>invalid 리스트 push 시 <code>(flags &amp; PGBUF_BCB_FLAGS_MASK) == 0</code></td><td><code>put_bcb_into_invalid_list</code></td><td><span class="ref">:8917</span></td></tr>
+<tr><td>I5</td><td>기상 진입 시 <code>{latch_mode == NO_LATCH, fcnt == 0}</code></td><td><code>wakeup_reader_writer</code></td><td><span class="ref">:7415</span></td></tr>
+<tr><td>I6</td><td>블록 진입 시 <code>waiter_exists == true</code></td><td><code>block_bcb</code></td><td><span class="ref">:7001</span></td></tr>
+<tr><td>I7</td><td>대기 큐에 <b>승격자는 최대 1명</b></td><td>승격자 head 삽입</td><td><span class="ref">:7022</span></td></tr>
+<tr><td>I8</td><td>FLUSH 대기자를 건너뛸 때 <code>ASYNC_FLUSH_REQ ∨ is_flushing</code></td><td>기상 스윕</td><td><span class="ref">:7452</span></td></tr>
+<tr><td>I9</td><td><code>fcnt</code>는 음수가 될 수 없다 — 되면 <b>손상</b>으로 간주하고 <code>ER_PB_UNFIXED_PAGEPTR</code> 후 latch를 <code>{NO_LATCH, 0, false}</code>로 강제 리셋</td><td>unfix CAS 루프</td><td><span class="ref">:6638-6649</span></td></tr>
+<tr><td>I10</td><td>avoid-dealloc 카운트가 <code>0x8000</code>에 도달하지 않음</td><td>register / unregister / reset</td><td><span class="ref">:16185, :16203, :16243</span></td></tr>
+<tr><td>I11</td><td>idle 부여 직전, <code>latch_mode == NO_LATCH ∧ waiter_exists</code>면 <b>큐가 비어 있지 않아야</b> 한다</td><td>latch 부여 진입</td><td><span class="ref">:6278</span></td></tr>
+<tr><td>I12</td><td>블록 후 깨어났을 때 <code>fcnt &gt; 0</code></td><td><code>block_bcb</code> 복귀</td><td><span class="ref">:7108</span></td></tr>
+<tr><td>I13</td><td><code>SA_MODE</code>에서 latch 블로킹이 발생하지 않는다</td><td>블로킹 경로</td><td><span class="ref">:6506</span></td></tr>
+<tr><td>I14</td><td>ordered_fix: <code>holder-&gt;fix_count == holder-&gt;watch_count</code></td><td>holder 정보 수집</td><td><span class="ref">:12452-12460</span></td></tr>
+<tr><td>I15</td><td>ordered_fix: 한 페이지의 watcher들은 rank와 group id가 <b>일치</b>해야 한다(불일치 시 <code>ER_PB_ORDERED_INCONSISTENCY</code> <b>fatal</b>)</td><td>holder 정보 수집</td><td><span class="ref">:12484-12512</span></td></tr>
+<tr><td>I16</td><td><b>추가 제안</b>: 함수 반환 시 이 스레드가 보유한 BCB 뮤텍스가 0개</td><td>fix/unfix 종료</td><td>추적기 존재 <span class="ref">:957</span></td></tr>
+<tr><td>I17</td><td><b>추가 제안</b>: 어떤 뮤텍스도 쥔 채 IO를 호출하지 않는다</td><td>IO 래퍼</td><td>규칙 R8</td></tr>
+<tr><td>I18</td><td><b>추가 제안</b>: BCB는 LRU 리스트와 invalid 리스트에 <b>동시에</b> 있지 않다(zone으로 검증)</td><td>리스트 삽입/제거</td><td>§3.7</td></tr>
+</table></div>
+
+<hr>
+
+<p class="small">이 장의 규칙은 5장(fix/unfix 의사코드)에서 코드로, 6·7장(교체·victim)에서 리스트
+연산으로, 8장(flush)에서 IO 순서로 각각 구체화된다. 특히 §4.3의 부여 표와 §4.4의 진입 조건은
+5장 의사코드가 그대로 참조하므로, 구현 중 두 문서가 어긋나 보이면 <b>이 장이 정본</b>이다.</p>
+
+<nav class="book">
+<a href="ch03-data-structures.html">← 이전: 3장 자료구조 스펙</a>
+<span class="chapter-title">4장 — 동시성 프로토콜</span>
+<a href="ch05-fix-unfix.html">다음: 5장 fix/unfix 알고리즘 →</a>
+</nav>
+
+</main>
+</body>
+</html>

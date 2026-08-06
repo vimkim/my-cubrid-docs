@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pgbuf 재구축 스펙 — 5장 fix/unfix 알고리즘</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+
+<nav class="book">
+<a href="ch04-concurrency.html">← 이전: 4장 — 동시성 프로토콜</a>
+<span class="chapter-title">5장 — fix/unfix 알고리즘</span>
+<a href="ch06-replacement.html">다음: 6장 — 교체 정책 →</a>
+</nav>
+
+<p class="small">CUBRID pgbuf Rebuild Specification · 기준 소스 commit <code>5cd4f860e</code></p>
+<h1>5장 — fix/unfix 알고리즘</h1>
+<p style="font-size:1.05rem; color:var(--muted); margin-top:0;">
+— hit / miss / lock-free 경로, latch 부여·차단·기상, unfix 결정 트리, promote, ordered_fix의 전체 의사코드</p>
+
+<div class="box"><span class="label">이 장의 위치</span>
+2장이 <b>무엇을</b> 제공하는지(API 계약), 3장이 <b>어떤 자료구조</b> 위에서인지, 4장이 <b>어떤 규칙</b>으로
+동시성을 지키는지를 규정했다면, 이 장은 그것들을 <b>실행 가능한 절차</b>로 내린다. 이 장의 의사코드는
+<kbd class="must">MUST</kbd> 수준의 규범이다 — 분기 하나, 카운터 증가 지점 하나, 뮤텍스 해제 위치 하나가
+동작 충실도(drop-in 검증)에 직접 걸린다. LRU 훅(6장)·victim 선택(7장)·flush(8장)는 <b>함수 이름과
+호출 시점만</b> 고정하고 알고리즘은 해당 장에 위임한다(<code>DELEGATE →</code>).
+</div>
+
+<h2>5.0 의사코드 표기 규약</h2>
+<div class="tablewrap"><table>
+<tr><th>표기</th><th>뜻</th></tr>
+<tr><td><code>LOCK(bcb)</code> / <code>UNLOCK(bcb)</code></td><td><code>bcb->mutex</code>. 디버그 빌드는 반드시
+<code>pgbuf_Monitor_locks</code> 추적기를 경유(3장).</td></tr>
+<tr><td><code>LOCK(hash)</code> / <code>UNLOCK(hash)</code></td><td>버킷 <code>hash_anchor->hash_mutex</code>.
+획득 시 <code>PSTAT_PB_NUM_HASH_ANCHOR_WAITS</code> / <code>..._TIME_HASH_ANCHOR_WAIT</code> 계측(§5.10).</td></tr>
+<tr><td><code>CAS_LOOP { … }</code></td><td><code>bcb->atomic_latch</code>(packed 64-bit) 대상 재시도 루프.
+본문에서 <code>old</code>를 읽고 <code>new</code>를 계산한 뒤 <code>compare_exchange(old,new,acq_rel,acquire)</code>
+성공까지 반복.</td></tr>
+<tr><td><code>latch{mode,waiter,fcnt}</code></td><td>packed latch word의 세 필드(3장 §2.1의 비트 배치).</td></tr>
+<tr><td><code>ss</code></td><td><code>pgbuf_Pool.show_status[thread_get_entry_index(thread_p)]</code> —
+per-thread <code>SHOW PAGE BUFFER STATUS</code> 샤드. 비원자·단일 기록자.</td></tr>
+<tr><td><code>DEBUG:</code> / <code>SA_MODE:</code></td><td>해당 빌드에서만 존재하는 문장.</td></tr>
+</table></div>
+<div class="box norm"><span class="label">뮤텍스 소유권 이전 규약</span>
+이 장의 내부 함수는 <b>뮤텍스 소유권을 반환값과 함께 비대칭적으로 이전</b>한다("보유한 채 반환",
+"스스로 해제", "어느 경로든 해제"가 함수마다 다르다). 각 절 머리의 <b>진입 / 사후</b> 한 줄이 규범이며,
+<kbd class="must">MUST</kbd> 재작성 시 이 계약을 바꾸지 않는다 — 호출부가 비대칭성에 의존한다.
+</div>
+
+<h2>5.1 <code>pgbuf_fix</code> 최상위</h2>
+
+<h3>5.1.1 매크로 간접</h3>
+<p><code>pgbuf_fix</code>는 매크로다. 디버그에서는 <code>pgbuf_fix_debug(..., ARG_FILE_LINE_FUNC)</code>,
+release에서는 <code>pgbuf_fix_release(...)</code>로 전개된다 <span class="ref">page_buffer.h:277-278 / :327-330</span>.
+본체는 하나이며 시그니처만 갈린다 <span class="ref">page_buffer.c:2205-2213</span>. 디버그 추가분은 둘뿐이다:
+<code>holder->fixed_at</code>에 <code>file:line</code> 누적(<code>pgbuf_add_fixed_at</code>)과
+<code>thread_p->get_pgbuf_tracker().increment()</code>. <code>pgbuf_unfix</code>·<code>pgbuf_promote_read_latch</code>·
+<code>pgbuf_ordered_fix</code>도 동일한 이중 정의 패턴을 따른다.</p>
+<p class="small"><b>헤더 결함(경미)</b>: <code>pgbuf_fix_without_validation</code>이 헤더의 NDEBUG 분기에만
+선언되어 있다 <span class="ref">page_buffer.h:320-326</span> — 논리적으로 반대다.
+<kbd class="should">SHOULD</kbd> 양쪽에 선언(동작 불변).</p>
+
+<h3>5.1.2 프롤로그</h3>
+<p class="small"><b>목적</b> 인자 검증·조건 강등·계측 시작 · <b>진입</b> 락 없음 · <b>사후</b> 락 없음</p>
+<pre>PAGE_PTR pgbuf_fix (thread_p, vpid, fetch_mode, request_mode, condition) {
+  perf.perf_page_found = PERF_PAGE_MODE_OLD_IN_BUFFER;                  // 낙관적 초기값
+  ss = &amp;pgbuf_Pool.show_status[thread_get_entry_index (thread_p)];
+  // (1) 인자 검증 — 에러를 세우지 않고 NULL 반환
+  if (request_mode ∉ {PGBUF_LATCH_READ, PGBUF_LATCH_WRITE})   { assert_release (false); return NULL; }
+  if (condition ∉ {PGBUF_UNCONDITIONAL_LATCH, PGBUF_CONDITIONAL_LATCH}) { assert_release (false); return NULL; }
+  // (2) per-thread fix 요청 샤드 [CBRD-26941]. THREAD_ENTRY의 평범한 int, 원자연산 없음(단일 기록자).
+  //     전역 합산은 pgbuf_monitor_sum_fix_req()가 수행한다.
+  if (thread_p != NULL) thread_p->pgbuf_fix_req_cnt++;
+  // (3) 디스크 유효성 검증 — NDEBUG에서는 항상 false로 접힌다
+  if (pgbuf_get_check_page_validation_level (PGBUF_DEBUG_PAGE_VALIDATION_FETCH) &amp;&amp; fetch_mode != RECOVERY_PAGE)
+    if (pgbuf_is_valid_page (thread_p, vpid, /*suppress_err=*/ fetch_mode == OLD_PAGE_IF_IN_BUFFER) != DISK_VALID)
+      return NULL;
+  // (4) 음수 pageid는 FATAL severity
+  if (vpid->pageid &lt; 0) { er_set (ER_FATAL_ERROR_SEVERITY, ER_PB_BAD_PAGEID, 2, vpid->pageid, vol_label); return NULL; }
+  // (5) *** 무조건 latch의 조용한 강등 *** — quirk Q2 (§5.11)
+  if (condition == PGBUF_UNCONDITIONAL_LATCH) {
+      wait_msecs = pgbuf_find_current_wait_msecs (thread_p);
+      if (wait_msecs ∈ {LK_ZERO_WAIT, LK_FORCE_ZERO_WAIT}) condition = PGBUF_CONDITIONAL_LATCH;   // 통보 없음
+  }
+  perf.lock_wait_time = 0;  perf.is_perf_tracking = perfmon_is_perf_tracking ();
+  if (perf.is_perf_tracking) tsc_getticks (&amp;perf.start_tick);
+try_again:
+  // 인터럽트는 재시도 루프 맨 앞에서만 검사한다. pgbuf_Pool.check_for_interrupts는 로그 매니저가
+  // TR_TABLE_CS 아래에서 갱신하는 전역 힌트.
+  if (logtb_get_check_interrupt (thread_p) &amp;&amp; logtb_is_interrupted (thread_p, true, &amp;pgbuf_Pool.check_for_interrupts)) {
+      er_set (ER_ERROR_SEVERITY, ER_INTERRUPTED, 0);
+      PGBUF_BCB_CHECK_MUTEX_LEAKS ();                                   // 디버그: 보유 BCB 뮤텍스 수 == 0
+      return NULL;
+  }
+</pre>
+<p class="small"><span class="ref">page_buffer.c:2214-2304</span></p>
+<p><code>fetch_mode</code>별로 어떤 검사를 건너뛰는지는 <b>2장의 fetch mode 계약 표</b>가 규범이다.
+<code>goto try_again</code>은 <b>정확히 한 곳</b>에서만 발생한다 — buffer lock 대기자가 되었다가 깨어난 경우(§5.4.1).
+<kbd class="must">MUST</kbd> 점프 전에 <code>retry = false</code>로 되돌린다 <span class="ref">:2368-2372</span>.</p>
+
+<h2>5.2 lock-free 읽기 fast path</h2>
+<p class="small"><b>목적</b> READ fix를 뮤텍스 0개로 처리 · <b>진입</b> 락 없음 ·
+<b>사후</b> 성공 시 락 없음 + <code>fcnt</code> 1 증가 + holder 갱신, 실패 시 상태 무변경</p>
+<pre>  // 진입 조건 세 가지가 모두 참일 때만 시도한다.
+  if (request_mode == PGBUF_LATCH_READ
+      &amp;&amp; fetch_mode ∈ {OLD_PAGE, OLD_PAGE_PREVENT_DEALLOC, OLD_PAGE_MAYBE_DEALLOCATED}
+      &amp;&amp; condition == PGBUF_UNCONDITIONAL_LATCH) {
+      pgptr = pgbuf_lockfree_fix_ro (thread_p, vpid, fetch_mode);
+      if (pgptr != NULL) {
+          CAST_PGPTR_TO_BFPTR (bufptr, pgptr);
+          DEBUG: pgbuf_add_fixed_at (pgbuf_find_thrd_holder (thread_p, bufptr), caller_file, caller_line, !had_holder);
+          SYSTEMTAP: CUBRID_PGBUF_HIT ();
+          ss->num_hit++;
+          goto fast_path;             // BCB 뮤텍스·버킷 뮤텍스·latch 부여를 전부 건너뛴다
+      }
+      // 실패는 정상이며 아래 일반 경로로 자연 낙하한다.
+  }
+
+PAGE_PTR pgbuf_lockfree_fix_ro (thread_p, vpid, fetch_mode) {
+  assert (fetch_mode ∈ {OLD_PAGE, OLD_PAGE_PREVENT_DEALLOC, OLD_PAGE_MAYBE_DEALLOCATED});
+  // 무락 해시 워크: 버킷 뮤텍스도 BCB 뮤텍스도 잡지 않는다. 결과는 "힌트"이고 아래 CAS가 검증한다.
+  bufptr = pgbuf_search_hash_chain_no_bcb_lock (…);   // for (b = anchor->hash_next; b; b = b->hash_next) VPID_EQ 비교
+  if (bufptr == NULL) return NULL;
+  CAS_LOOP {
+      old = latch;
+      // *** 안전 앵커: 넷 중 하나라도 어긋나면 즉시 포기 ***
+      if (old.mode != PGBUF_LATCH_READ    // READ latch가 아님
+          || old.waiter                   // 대기자 존재 (writer 기아 방지 규칙 준수)
+          || old.fcnt == 0                // fcnt==0 → victim화·재활용 가능 상태
+          || bufptr->vpid != *vpid)       // 무락 워크 이후 VPID가 바뀜
+        return NULL;
+      new = old; new.fcnt++;
+  }
+  // 이 시점 fcnt &gt; 0이 보장되므로 BCB는 우리 밑에서 victim화·재활용될 수 없다.
+  holder = pgbuf_find_thrd_holder (thread_p, bufptr);
+  if (holder != NULL) { holder->fix_count++; holder->perf_stat.hold_has_read_latch = 1; }   // dirty_before_hold 유지
+  else {                                                                                   // SERVER_MODE
+      holder = pgbuf_allocate_thrd_holder_entry (thread_p);
+      if (holder == NULL) { assert (false); return NULL; }        // 주: fcnt는 이미 증가 (도달 불가 취급, §5.11)
+      holder->fix_count = 1; holder->bufptr = bufptr;
+      holder->perf_stat = {hold_has_read_latch=1, hold_has_write_latch=0, dirtied_by_holder=0,
+                           dirty_before_hold=pgbuf_bcb_is_dirty (bufptr)};
+  }
+  CAST_BFPTR_TO_PGPTR (pgptr, bufptr);  return pgptr;
+}
+</pre>
+<p class="small"><span class="ref">page_buffer.c:2309-2328, :7669-7749</span></p>
+<div class="box"><span class="label">안전 논증</span>
+<code>fcnt != 0</code>이 이 경로의 유일한 생명줄이다. <code>fcnt &gt; 0</code>인 BCB는 victim이 될 수 없고
+VPID가 재할당될 수도 없다. CAS는 읽은 순간의 <b>워드 전체</b>를 교체하므로 <code>mode/waiter/fcnt</code>가
+원자적으로 검증된다. <kbd class="must">MUST</kbd> VPID 재검증을 CAS <b>안에서</b> 수행한다 — CAS 성공 후에
+검사하면 그 사이 재활용된 BCB에 fcnt를 걸어버린다.
+</div>
+
+<h2>5.3 해시 탐색 — <code>pgbuf_search_hash_chain</code></h2>
+<p class="small"><b>진입</b> 락 없음 · <b>사후(종료 계약)</b> 찾으면 <b>BCB mutex 보유·버킷 미보유</b>,
+못 찾으면 <b>버킷 mutex 보유</b></p>
+<pre>PGBUF_BCB *pgbuf_search_hash_chain (thread_p, hash_anchor, vpid) {
+one_phase:                                        // === 1단계: 버킷 뮤텍스 없이 워크 ===
+  for (bufptr = hash_anchor->hash_next; bufptr != NULL; bufptr = bufptr->hash_next) {
+      if (!VPID_EQ (&amp;bufptr->vpid, vpid)) continue;
+      rv = TRYLOCK (bufptr);
+      if (rv == 0) { /* 획득 */ } else if (rv != EBUSY) goto two_phase; else LOCK (bufptr);  // 버킷을 안 잡았으니 안전
+      if (!VPID_EQ (&amp;bufptr->vpid, vpid)) { UNLOCK (bufptr); goto one_phase; }   // *** 락 후 재검증: 교체됨 ***
+      return bufptr;                              // 계약: BCB mutex 보유
+  }
+two_phase: try_again:                             // === 2단계: 버킷 뮤텍스 보유 워크 ===
+  if (detailed_perf) tsc_getticks (&amp;start_tick);
+  LOCK (hash);
+  if (detailed_perf) { perfmon_inc_stat (PSTAT_PB_NUM_HASH_ANCHOR_WAITS);
+                       perfmon_add_stat (PSTAT_PB_TIME_HASH_ANCHOR_WAIT, elapsed); }
+  for (bufptr = hash_anchor->hash_next; bufptr != NULL; bufptr = bufptr->hash_next) {
+      if (!VPID_EQ (&amp;bufptr->vpid, vpid)) continue;
+      rv = TRYLOCK (bufptr);
+      if (rv == 0) UNLOCK (hash);                                 // 성공: 버킷을 먼저 놓는다
+      else if (rv != EBUSY) { er_set_with_oserror (ER_FATAL_ERROR_SEVERITY, ER_CSS_PTHREAD_MUTEX_TRYLOCK);
+                              return NULL; }                      // 주의: 버킷을 든 채 반환 (호출자가 해제)
+      else { UNLOCK (hash); LOCK (bufptr); }                       // *** 락 순서: 버킷을 놓고 나서 BCB를 무조건 대기 ***
+      if (!VPID_EQ (&amp;bufptr->vpid, vpid)) { UNLOCK (bufptr); goto try_again; }
+      return bufptr;                              // 계약: BCB mutex 보유, 버킷 미보유
+  }
+  return NULL;                                    // 계약: 버킷 mutex 보유 (miss 경로가 이어받는다)
+}
+</pre>
+<p class="small"><span class="ref">page_buffer.c:7544-7667</span></p>
+
+<h3>5.3.1 hit 전처리와 분기</h3>
+<pre>  hash_anchor = &amp;pgbuf_Pool.buf_hash_table[PGBUF_HASH_VALUE (vpid)];
+  buf_lock_acquired = false;
+  bufptr = pgbuf_search_hash_chain (thread_p, hash_anchor, vpid);
+  // *** direct-victim 선점: 이 BCB를 victim으로 배급받으려고 잠든 스레드에게 "다시 요청하라"고 알리는 유일한 수단 ***
+  if (bufptr != NULL &amp;&amp; pgbuf_bcb_is_direct_victim (bufptr))
+      pgbuf_bcb_update_flags (thread_p, bufptr, /*set*/ PGBUF_BCB_INVALIDATE_DIRECT_VICTIM_FLAG,
+                                                /*clear*/ PGBUF_BCB_VICTIM_DIRECT_FLAG);
+  if (bufptr != NULL) {                                     // --- HIT (보유: BCB mutex) ---
+      SYSTEMTAP: CUBRID_PGBUF_HIT ();
+      ss->num_hit++;
+      if (fetch_mode == NEW_PAGE) assert (LSA_ISNULL (&amp;bufptr->oldest_unflush_lsa) || pgbuf_bcb_is_dirty (bufptr));
+  } else if (fetch_mode == OLD_PAGE_IF_IN_BUFFER) {         // --- miss지만 읽지 않는다 ---
+      UNLOCK (hash);  return NULL;                          // 에러 없음
+  } else {                                                  // --- MISS ---
+      bufptr = pgbuf_claim_bcb_for_fix (thread_p, vpid, fetch_mode, hash_anchor, &amp;perf, &amp;retry, /*already_locked*/ false);
+      if (bufptr == NULL) { if (retry) { retry = false; goto try_again; }  ASSERT_ERROR (); return NULL; }
+      buf_lock_acquired = true;                             // 보유: BCB mutex + buffer lock(팻말)
+      SYSTEMTAP: if (fetch_mode != NEW_PAGE) CUBRID_PGBUF_MISS ();
+  }
+  assert (!pgbuf_bcb_is_direct_victim (bufptr));
+</pre>
+<p class="small"><span class="ref">page_buffer.c:2330-2389</span></p>
+
+<h2>5.4 miss 경로</h2>
+
+<h3>5.4.1 <code>pgbuf_lock_page</code> / <code>pgbuf_unlock_page</code> — 팻말</h3>
+<p class="small"><b>목적</b> 같은 미존재 페이지를 동시에 읽으려는 스레드 직렬화 · <b>진입</b> 버킷 mutex 보유 ·
+<b>사후</b> 어느 경로든 버킷 mutex 해제됨</p>
+<pre>int pgbuf_lock_page (thread_p, hash_anchor, vpid) {           // → PGBUF_LOCK_HOLDER | PGBUF_LOCK_WAITER
+  for (cur = hash_anchor->lock_next; cur != NULL; cur = cur->lock_next) {
+      if (!VPID_EQ (&amp;cur->vpid, vpid)) continue;
+      // === 이미 팻말이 있다 → 대기자가 된다 ===
+      thread_p->next_wait_thrd = cur->next_wait_thrd;  cur->next_wait_thrd = thread_p;
+      pgbuf_sleep (thread_p, &amp;hash_anchor->hash_mutex);        // 버킷 뮤텍스를 놓으며 잠든다
+      if (thread_p->resume_status != THREAD_PGBUF_RESUMED) {   // 인터럽트: 스스로 대기열에서 빠진다
+          [계측] LOCK (hash);  체인에서 자신을 언링크;  UNLOCK (hash);
+      }
+      perfmon_inc_stat (PSTAT_LK_NUM_WAITED_ON_PAGES);  return PGBUF_LOCK_WAITER;
+  }
+  // === 팻말이 없다 → 내가 세운다. buf_lock_table은 페이지당이 아니라 *스레드당* 한 칸이다(3장). ===
+  cur = &amp;pgbuf_Pool.buf_lock_table[thread_p->index];
+  cur->vpid = *vpid;  cur->next_wait_thrd = NULL;
+  cur->lock_next = hash_anchor->lock_next;  hash_anchor->lock_next = cur;
+  UNLOCK (hash);
+  perfmon_inc_stat (PSTAT_LK_NUM_ACQUIRED_ON_PAGES);  return PGBUF_LOCK_HOLDER;
+}
+int pgbuf_unlock_page (thread_p, hash_anchor, vpid, need_hash_mutex) {
+  if (need_hash_mutex) { [계측] LOCK (hash); }                 // false면 호출자가 이미 들고 있다
+  체인에서 vpid의 buffer lock 레코드를 찾아 언링크;
+  UNLOCK (hash);                                               // *** 깨우기 전에 버킷을 놓는다 ***
+  while (찾았고 (t = cur->next_wait_thrd) != NULL) {           // 대기자 *전원* 기상
+      cur->next_wait_thrd = t->next_wait_thrd; t->next_wait_thrd = NULL;
+      pgbuf_wakeup_uncond (t);                                 // 아무도 페이지를 받지 못한다 — 전부 try_again 재시도
+  }
+  return NO_ERROR;
+}
+</pre>
+<p class="small"><span class="ref">page_buffer.c:7936-8123</span></p>
+
+<h3>5.4.2 <code>pgbuf_allocate_bcb</code></h3>
+<p class="small"><b>진입</b> 락 없음(팻말만 보유) · <b>사후</b> 성공 시 <b>BCB mutex 보유</b>, 실패 시 락 없음 + 에러</p>
+<pre>PGBUF_BCB *pgbuf_allocate_bcb (thread_p, src_vpid) {
+  detailed_perf = perfmon_is_perf_tracking_and_active (PERFMON_ACTIVATION_FLAG_PB_VICTIMIZATION);
+  // (1) invalid list 우선 — 정리가 전혀 필요 없는 최선의 공급원
+  bufptr = pgbuf_get_bcb_from_invalid_list (thread_p);      // BCB mutex 보유 + PSTAT_PB_VICTIM_USE_INVALID_BCB
+  if (bufptr != NULL) return bufptr;                        // 주: 이 조기 반환은 PSTAT_PB_ALLOC_BCB 타이머를 건너뛴다
+  PERF_UTIME_TRACKER_START (alloc_bcb);  if (detailed_perf) PERF_UTIME_TRACKER_START (search_and_wait);
+  // (2) LRU 스캔 — DELEGATE → 7장
+  bufptr = pgbuf_get_victim (thread_p);
+  PERF_UTIME_TRACKER_TIME_AND_RESTART (search_and_wait, PSTAT_PB_ALLOC_BCB_SEARCH_VICTIM);
+  if (bufptr != NULL) goto end;
+  if (SERVER_MODE &amp;&amp; pgbuf_is_page_flush_daemon_available ()) {
+    retry:
+      high_priority = high_priority || VACUUM_IS_THREAD_VACUUM (thread_p) || pgbuf_is_thread_high_priority (thread_p);
+      pgbuf_make_latch_timeout (&amp;to, pgbuf_latch_timeout_msecs);
+      thread_lock_entry (thread_p);   assert (direct_victims.bcb_victims[thread_p->index] == NULL);
+      // (3) 직접 배급 대기 큐 등록 — DELEGATE → 7장
+      if (high_priority) {
+          if (detailed_perf &amp;&amp; VACUUM_IS_THREAD_VACUUM) perfmon_inc_stat (PSTAT_PB_ALLOC_BCB_PRIORITIZE_VACUUM);
+          if (!waiter_threads_high_priority->produce (thread_p)) { assert (false); unlock; return NULL; }
+          pstat_cond_wait = PSTAT_PB_ALLOC_BCB_COND_WAIT_HIGH_PRIO;
+      } else if (!waiter_threads_low_priority->produce (thread_p)) {   // low 큐 포화(희귀): high로 우회하는 의도된 해킹
+          if (!waiter_threads_high_priority->produce (thread_p)) { assert (false); unlock; goto end; }
+          pstat_cond_wait = PSTAT_PB_ALLOC_BCB_COND_WAIT_HIGH_PRIO;
+      } else pstat_cond_wait = PSTAT_PB_ALLOC_BCB_COND_WAIT_LOW_PRIO;
+      pgbuf_wakeup_page_flush_daemon (thread_p);            // 최소한 flush 데몬은 우리를 먹여야 한다
+      ss->num_flusher_waiting_threads++;
+      r = thread_suspend_timeout_wakeup_and_unlock_entry (thread_p, &amp;to, THREAD_ALLOC_BCB_SUSPENDED);
+      ss->num_flusher_waiting_threads--;
+      PERF_UTIME_TRACKER_TIME (search_and_wait, pstat_cond_wait);
+      if (r == NO_ERROR &amp;&amp; thread_p->resume_status == THREAD_ALLOC_BCB_RESUMED) {
+          bufptr = pgbuf_get_direct_victim (thread_p);      // DELEGATE → 7장
+          if (bufptr == NULL) { high_priority = true; goto retry; }     // 배급된 BCB가 다시 fix되었다
+          goto end;
+      } else if (r == NO_ERROR) {                           // 인터럽트/셧다운
+          assert (resume_status ∈ {THREAD_RESUME_DUE_TO_INTERRUPT, THREAD_RESUME_DUE_TO_SHUTDOWN});
+          if (direct_victims.bcb_victims[thread_p->index] != NULL) {    // 배급 예정이던 BCB를 무효화해 돌려준다
+              pgbuf_bcb_update_flags (…, 0, PGBUF_BCB_VICTIM_DIRECT_FLAG | PGBUF_BCB_INVALIDATE_DIRECT_VICTIM_FLAG);
+              direct_victims.bcb_victims[thread_p->index] = NULL;
+          }
+          er_set (ER_ERROR_SEVERITY, ER_INTERRUPTED, 0);
+      } else { assert (r != ER_CSS_PTHREAD_COND_TIMEDOUT);   // 타임아웃은 나면 안 된다
+               thread_p->resume_status = THREAD_ALLOC_BCB_RESUMED; thread_unlock_entry (thread_p); }
+  } else {                                                  // SA_MODE / 복구: flush 후 재탐색
+      pgbuf_wakeup_page_flush_daemon (thread_p);
+      bufptr = pgbuf_get_victim (thread_p);
+      PERF_UTIME_TRACKER_TIME (search_and_wait, PSTAT_PB_ALLOC_BCB_SEARCH_VICTIM);   assert (bufptr != NULL);
+  }
+end:
+  if (bufptr != NULL) { if (pgbuf_victimize_bcb (thread_p, bufptr) != NO_ERROR) { assert (false); bufptr = NULL; } }
+  else if (er_errid () == NO_ERROR) er_set (ER_ERROR_SEVERITY, ER_PB_ALL_BUFFERS_DIRTY, 1, 0);
+  PERF_UTIME_TRACKER_TIME (alloc_bcb, PSTAT_PB_ALLOC_BCB);
+  return bufptr;                                            // 계약: BCB mutex 보유
+}
+</pre>
+<p class="small"><span class="ref">page_buffer.c:8133-8335</span></p>
+
+<h3>5.4.3 <code>pgbuf_claim_bcb_for_fix</code></h3>
+<p class="small"><b>진입</b> 버킷 mutex 보유 · <b>사후</b> 성공 시 <b>BCB mutex + 팻말 보유</b>(해시 미삽입), 실패 시 락 없음</p>
+<pre>PGBUF_BCB *pgbuf_claim_bcb_for_fix (thread_p, vpid, fetch_mode, hash_anchor, perf, *try_again, already_locked) {
+  assert (fetch_mode != OLD_PAGE_IF_IN_BUFFER);
+  if (er_errid () == ER_CSS_PTHREAD_MUTEX_TRYLOCK) { UNLOCK (hash); return NULL; }   // 탐색이 trylock 오류로 실패
+  // (1) 팻말 세우기 — 어느 경로든 버킷 뮤텍스는 여기서 소비된다
+  if (!already_locked &amp;&amp; pgbuf_lock_page (thread_p, hash_anchor, vpid) != PGBUF_LOCK_HOLDER) {
+      if (perf) { if (perf->is_perf_tracking) perf->lock_wait_time = elapsed_since (perf->start_tick);
+                  perf->perf_page_found = (fetch_mode == NEW_PAGE) ? PERF_PAGE_MODE_NEW_LOCK_WAIT
+                                                                   : PERF_PAGE_MODE_OLD_LOCK_WAIT; }
+      *try_again = true;  return NULL;                       // 호출자는 goto try_again
+  }
+  if (perf &amp;&amp; perf->perf_page_found ∉ {NEW_LOCK_WAIT, OLD_LOCK_WAIT})
+      perf->perf_page_found = (fetch_mode == NEW_PAGE) ? PERF_PAGE_MODE_NEW_NO_WAIT : PERF_PAGE_MODE_OLD_NO_WAIT;
+  // (2) BCB 확보 (§5.4.2)
+  bufptr = pgbuf_allocate_bcb (thread_p, vpid);
+  if (bufptr == NULL) { ASSERT_ERROR (); pgbuf_unlock_page (thread_p, hash_anchor, vpid, true); return NULL; }
+  // (3) BCB 초기화 — 이 필드 집합이 규범이다 (BCB mutex 보유 중)
+  bufptr->vpid = *vpid;   assert (!pgbuf_bcb_avoid_victim (bufptr));
+  latch.store ({mode = PGBUF_NO_LATCH, waiter = false, fcnt = 0});        // CAS 아님: 단순 store
+  pgbuf_bcb_update_flags (thread_p, bufptr, 0, PGBUF_BCB_ASYNC_FLUSH_REQ);  /* todo: why this?? — §5.11 */
+  pgbuf_bcb_check_and_reset_fix_and_avoid_dealloc (bufptr, ARG_FILE_LINE);
+  LSA_SET_NULL (&amp;bufptr->oldest_unflush_lsa);
+  if (fetch_mode != NEW_PAGE) {
+      // === (4) 디스크 읽기 ===
+      perfmon_inc_stat (PSTAT_PB_NUM_IOREADS);   ss->num_pages_read++;   SYSTEMTAP: CUBRID_IO_READ_START (query_id);
+      // *** DWB를 먼저 본다 — 아직 제자리에 내려가지 않은 최신본이 있을 수 있다 (8장) ***
+      if (dwb_read_page (thread_p, vpid, &amp;iopage, &amp;success) != NO_ERROR) { assert (false); return NULL; }
+      else if (success) { /* DWB에서 복사됨 */ }
+      else if (fileio_read (thread_p, fileio_get_volume_descriptor (vpid->volid), &amp;iopage, vpid->pageid,
+                            IO_PAGESIZE) == NULL) {
+          ASSERT_ERROR ();
+          pgbuf_put_bcb_into_invalid_list (thread_p, bufptr);            // BCB mutex를 소비하며 반납
+          pgbuf_unlock_page (thread_p, hash_anchor, vpid, true);         // 팻말 해제 + 대기자 전원 기상
+          return NULL;
+      }
+      // (5) TDE 복호화 — 페이지가 알고리즘을 지정한 경우에만
+      tde_algo = pgbuf_get_tde_algorithm (pgptr);
+      if (tde_algo != TDE_ALGORITHM_NONE
+          &amp;&amp; tde_decrypt_data_page (&amp;iopage, tde_algo, pgbuf_is_temporary_volume (vpid->volid), &amp;iopage) != NO_ERROR) {
+          ASSERT_ERROR ();  pgbuf_put_bcb_into_invalid_list (…);  pgbuf_unlock_page (…, true);  return NULL;
+      }
+      // (6) 임시 볼륨: temp LSA 표식이 없으면 재도장하고 dirty로 만든다
+      if (pgbuf_is_temporary_volume (vpid->volid) &amp;&amp; !pgbuf_is_temp_lsa (iopage.prv.lsa)) {
+          pgbuf_init_temp_page_lsa (&amp;iopage, IO_PAGESIZE);   pgbuf_set_dirty_buffer_ptr (thread_p, bufptr);
+      }
+      DEBUG: 영구 볼륨 &amp;&amp; !복구중 &amp;&amp; LSA 비-NULL ⇒ assert (prv.pageid != -1 &amp;&amp; prv.volid != -1);
+      if (thread_get_sort_stats_active (thread_p)) perfmon_inc_stat (PSTAT_SORT_NUM_IO_PAGES);
+  } else {
+      // === (7) NEW_PAGE: 디스크를 읽지 않는다 ===
+      if (pgbuf_is_temporary_volume (vpid->volid)) pgbuf_init_temp_page_lsa (&amp;iopage, IO_PAGESIZE);
+      else                                         fileio_init_lsa_of_page (&amp;iopage, IO_PAGESIZE);
+      if (bufptr->vpid.volid &gt; NULL_VOLID) { iopage.prv.pageid = -1; iopage.prv.volid = -1; }   // 미성숙 표식
+      if (thread_get_sort_stats_active (thread_p)) perfmon_inc_stat (PSTAT_SORT_NUM_DATA_PAGES);
+      ss->num_pages_created++;
+      ss->num_hit++;                       // *** quirk Q1: 읽지 않은 새 페이지를 히트로 집계 (§5.11) ***
+  }
+  return bufptr;                           // 계약: BCB mutex + 팻말 보유
+}
+</pre>
+<p class="small"><span class="ref">page_buffer.c:8348-8579</span></p>
+
+<h3>5.4.4 공통 꼬리 — 등록·검증·latch·해시 삽입 핸드오프</h3>
+<pre>  // 보유: BCB mutex (miss 경로면 팻말도)
+  pgbuf_bcb_register_fix (bufptr);      // hot-page 카운터: count_fix_and_avoid_dealloc의 상위 절반을 ATOMIC_INC.
+                                        // 임계치(PGBUF_FIX_COUNT_THRESHOLD=64) 도달 후에는 더 증가시키지 않는다.
+  pgbuf_set_bcb_page_vpid (bufptr);     // 영구 볼륨이고 prv.{pageid,volid}가 NULL이면 지금 도장을 찍는다
+                                        // (redo 복구가 미성숙 페이지를 만나는 경우)
+  maybe_deallocated = (fetch_mode == OLD_PAGE_MAYBE_DEALLOCATED);
+  if (pgbuf_check_bcb_page_vpid (bufptr, maybe_deallocated) != true) {
+      if (buf_lock_acquired) { pgbuf_put_bcb_into_invalid_list (thread_p, bufptr);      // BCB mutex 소비
+                               pgbuf_unlock_page (thread_p, hash_anchor, vpid, true); } // 팻말 해제
+      else UNLOCK (bufptr);
+      return NULL;                                                                      // 에러 미설정(assert만)
+  }
+  if (fetch_mode == OLD_PAGE_PREVENT_DEALLOC) pgbuf_bcb_register_avoid_deallocation (bufptr);
+  if (perf.is_perf_tracking) tsc_getticks (&amp;perf.start_holder_tick);
+  // === latch 부여 (§5.5). 성공·실패 무관하게 BCB mutex는 이 함수가 해제한다 ===
+  DEBUG: had_holder = (pgbuf_find_thrd_holder (thread_p, bufptr) != NULL);
+  if (pgbuf_latch_bcb_upon_fix (thread_p, bufptr, request_mode, buf_lock_acquired, condition, &amp;is_latch_wait)
+      != NO_ERROR) {
+      if (buf_lock_acquired) { LOCK (bufptr);                                    // 다시 잡아서
+                               pgbuf_put_bcb_into_invalid_list (thread_p, bufptr);  // 반납하고
+                               pgbuf_unlock_page (thread_p, hash_anchor, vpid, true); }  // 팻말 해제
+      return NULL;                                                               // 에러는 latch 함수가 설정
+  }
+  DEBUG: pgbuf_add_fixed_at (holder, caller_file, caller_line, !had_holder);
+  if (perf.is_perf_tracking &amp;&amp; is_latch_wait) perf.holder_wait_time = elapsed_since (perf.start_holder_tick);
+  assert (bufptr == bufptr->iopage_buffer->bcb);
+  // === 해시 삽입은 오직 miss 경로에서, 오직 latch를 얻은 뒤에 ===
+  if (buf_lock_acquired) {
+      pgbuf_insert_into_hash_chain (thread_p, hash_anchor, bufptr);   // 내부에서 LOCK(hash) 후 *놓지 않고* 반환
+      pgbuf_unlock_page (thread_p, hash_anchor, vpid, /*need_hash*/ false);  // 그 뮤텍스를 소비 + 대기자 전원 기상
+  }
+  CAST_BFPTR_TO_PGPTR (pgptr, bufptr);
+</pre>
+<p class="small"><span class="ref">page_buffer.c:2389-2495</span>, 삽입 <span class="ref">:7786-7825</span></p>
+<div class="box"><span class="label">분할 임계구역 (의도된 설계)</span>
+<code>pgbuf_insert_into_hash_chain</code>은 <b>버킷 뮤텍스를 든 채</b> 반환하고
+<code>pgbuf_unlock_page(..., false)</code>가 그것을 소비한다 <span class="ref">page_buffer.c:7817-7823</span> —
+하나의 임계구역이 두 함수에 걸쳐 있다. <kbd class="must">MUST</kbd> 이 핸드오프를 유지한다: "해시에 게시"와
+"팻말 해제 + 대기자 기상"이 원자적이어야 깨어난 대기자가 <code>try_again</code>에서 반드시 새 BCB를 발견한다.
+</div>
+
+<h3>5.4.5 <code>fast_path:</code> 공통 후처리</h3>
+<pre>fast_path:
+  DEBUG: holder = pgbuf_get_holder (thread_p, pgptr);  assert (holder != NULL);
+         모든 watcher에 대해 assert (watcher->magic == PGBUF_WATCHER_MAGIC_NUMBER);
+  if (fetch_mode == OLD_PAGE_PREVENT_DEALLOC) pgbuf_bcb_unregister_avoid_deallocation (bufptr);  // latch를 얻었으므로
+  DEBUG: thread_p->get_pgbuf_tracker ().increment (caller_file, caller_line, pgptr);
+  if (iopage.prv.ptype == PAGE_UNKNOWN) {                     // 해제된(deallocated) 페이지
+      switch (fetch_mode) {
+        case NEW_PAGE: case OLD_PAGE_DEALLOCATED: case OLD_PAGE_IF_IN_BUFFER: case RECOVERY_PAGE:
+          break;                                              // 기대된 상황 — 그대로 반환
+        case OLD_PAGE: case OLD_PAGE_PREVENT_DEALLOC: default:
+          assert (false);  er_set (ER_ERROR_SEVERITY, ER_PB_BAD_PAGEID, 2, vpid->pageid, vol_label);
+          pgbuf_unfix (thread_p, pgptr);  return NULL;
+        case OLD_PAGE_MAYBE_DEALLOCATED:
+          er_set (ER_WARNING_SEVERITY, ER_PB_BAD_PAGEID, 2, vpid->pageid, vol_label);   // 경고 수준
+          pgbuf_unfix (thread_p, pgptr);  return NULL;
+      }
+  } else assert (fetch_mode != NEW_PAGE || pgbuf_is_lsa_temporary (pgptr));
+  ss->num_page_request++;                                     // 히트율의 분모 — 여기 한 번만 (quirk Q1)
+  if (perf.is_perf_tracking) {
+      perf.perf_page_type = pgbuf_get_page_type_for_stat (thread_p, pgptr);
+      perfmon_inc_stat (PSTAT_PB_NUM_FETCHES);
+      perf.perf_latch_mode = (request_mode == READ) ? PERF_HOLDER_LATCH_READ : PERF_HOLDER_LATCH_WRITE;
+      if (condition == PGBUF_UNCONDITIONAL_LATCH) {
+          if (is_latch_wait) { perf.perf_cond_type = PERF_UNCONDITIONAL_FIX_WITH_WAIT;
+                               if (perf.holder_wait_time &gt; 0) perfmon_pbx_hold_acquire_time (…, holder_wait_time); }
+          else perf.perf_cond_type = PERF_UNCONDITIONAL_FIX_NO_WAIT;
+      } else perf.perf_cond_type = PERF_CONDITIONAL_FIX;
+      perfmon_pbx_fix (thread_p, page_type, page_found, latch_mode, cond_type);          // 4차원 교차 통계
+      if (perf.lock_wait_time &gt; 0) perfmon_pbx_lock_acquire_time (…, perf.lock_wait_time);
+      perf.fix_wait_time = elapsed_since (perf.start_tick);
+      if (perf.fix_wait_time &gt; 0) {
+          perfmon_pbx_fix_acquire_time (…, perf.fix_wait_time);
+          perfmon_add_at_offset_to_local (thread_p,
+              pstat_Metadata[PSTAT_PB_PAGE_FIX_ACQUIRE_TIME_10USEC].start_offset, perf.fix_wait_time);
+      }
+  }
+  if (VACUUM_IS_THREAD_VACUUM_WORKER (thread_p)) pgbuf_bcb_update_flags (thread_p, bufptr, 0, PGBUF_BCB_TO_VACUUM_FLAG);
+  return pgptr;
+</pre>
+<p class="small"><span class="ref">page_buffer.c:2496-2633</span></p>
+
+<h2>5.5 latch 부여 — <code>pgbuf_latch_bcb_upon_fix</code></h2>
+<p class="small"><b>목적</b> 4장 grant 규칙표를 CAS 루프로 집행 · <b>진입</b> BCB mutex 보유 ·
+<b>사후</b> <b>모든 경로에서 BCB mutex 해제됨</b>(<code>scope_exit</code>가 보장), 성공 시 holder 등록 완료</p>
+<pre>int pgbuf_latch_bcb_upon_fix (thread_p, bufptr, request_mode, buf_lock_acquired, condition, *is_latch_wait) {
+  scope_exit unlock_BCB ([bufptr]{ UNLOCK (bufptr); });     // 어떤 조기 반환에서도 해제 보장
+  assert (request_mode ∈ {READ, WRITE});  assert (condition ∈ {UNCOND, COND});
+  *is_latch_wait = false;
+  holder = pgbuf_find_thrd_holder (thread_p, bufptr);
+  // === [CBRD-27084] 고아 waiter_exists 자가 치유 ===
+  // 아래 idle-grant CAS는 expected에 waiter=false를 *강제*한다. 대기열이 비었는데 비트만 남아 있으면
+  // 이 스레드는 BCB 뮤텍스를 든 채 영원히 스핀한다. waiter_exists 전이는 전부 BCB 뮤텍스 아래에서만
+  // 일어나고 우리가 그 뮤텍스를 보유하므로 이 검사는 race-free다.
+  SERVER_MODE: snap = latch;
+               if (snap.mode == PGBUF_NO_LATCH &amp;&amp; snap.waiter &amp;&amp; bufptr->next_wait_thrd == NULL) {
+                   assert (false);                          // 디버그: 최초 피해자에서 잡는다
+                   er_log_debug ("healed stranded waiter_exists on idle bcb %d|%d");
+                   set_waiter_exists (&amp;latch, false);
+               }
+  CAS_LOOP {
+      promote_needed = is_page_idle = can_latch = false;  request_fcnt = 1;
+      old = latch;  new = old;
+      if (buf_lock_acquired || old.mode == PGBUF_NO_LATCH) is_page_idle = true;
+      SA_MODE: else if ((holder = find_thrd_holder (…)) == NULL) { assert (0); is_page_idle = true; }  // latch 누수
+      if (is_page_idle) {
+          // *** expected를 강제로 덮어쓴다 — "정말 idle이었다"를 CAS로 검증하는 셈 ***
+          old = {mode = PGBUF_NO_LATCH, waiter = false, fcnt = 0};
+          new = {mode = request_mode,   waiter = false, fcnt = 1};
+      }
+      else if (request_mode == READ &amp;&amp; old.mode == PGBUF_LATCH_READ) {              // --- Case 1: reader 합류 ---
+          if (!old.waiter)         { can_latch = true; new.fcnt++; }                // 대기자 없음 → 즉시 허가
+          else if (holder == NULL) { can_latch = false; }                           // writer 기아 방지: 뒤에 줄 선다
+          else                     { can_latch = true; new.fcnt++; }                // 이미 홀더 → 자기 교착 회피
+      }
+      else if (holder != NULL) {
+          if (old.mode == PGBUF_LATCH_WRITE) { can_latch = true; new.fcnt++; }      // Case 2-1: 재진입 (항상 허가)
+          else if (old.mode == PGBUF_LATCH_READ) {                                  // Case 2-2: READ→WRITE 승격
+              if (old.fcnt == holder->fix_count)                                    //   (a) 내가 유일한 reader
+                  { can_latch = true; new.mode = request_mode; new.fcnt = 1; }      //       제자리 업그레이드
+              else if (condition == PGBUF_CONDITIONAL_LATCH)                        //   (b) 조건부 → 실패
+                  { can_latch = false; new.waiter = true; }
+              else { promote_needed = true; can_latch = false;                      //   (c) 무조건 → promote 경로
+                     new.fcnt -= holder->fix_count; new.waiter = true; }            //       내 몫을 latch에서 뺀다
+          }
+      }
+      else { can_latch = false; new.waiter = true; }                                // Case 3: 홀더 아님 → 차단
+  }
+  buf_is_dirty = pgbuf_bcb_is_dirty (bufptr);
+  if (is_page_idle) {                                        // --- idle grant: 새 holder 발급 ---
+      UNLOCK (bufptr);  unlock_BCB.release ();
+      assert (pgbuf_find_thrd_holder (thread_p, bufptr) == NULL);
+      holder = pgbuf_allocate_thrd_holder_entry (thread_p);
+      if (holder == NULL) { assert (false); return ER_FAILED; }
+      holder->fix_count = 1;  holder->bufptr = bufptr;
+      holder->perf_stat = {dirtied_by_holder = 0, dirty_before_hold = buf_is_dirty,
+                           hold_has_write_latch = (request_mode == WRITE),
+                           hold_has_read_latch  = (request_mode == READ)};
+      SERVER_MODE: bufptr->latch_last_thread = thread_p;
+      return NO_ERROR;
+  }
+  if (can_latch) {                                           // --- 일반 grant ---
+      UNLOCK (bufptr);  unlock_BCB.release ();
+      if (holder != NULL) {
+          holder->fix_count++;                                                       // dirty_before_hold는 유지
+          if (request_mode == WRITE) holder->perf_stat.hold_has_write_latch = 1;
+          else                       holder->perf_stat.hold_has_read_latch  = 1;
+      } else {                                               // SERVER_MODE: 새 reader (Case 1의 !waiter 분기)
+          holder = pgbuf_allocate_thrd_holder_entry (thread_p);
+          if (holder == NULL) { assert (false); return ER_FAILED; }
+          holder->fix_count = 1;  holder->bufptr = bufptr;
+          holder->perf_stat = {hold_has_read_latch=1, hold_has_write_latch=0,
+                               dirtied_by_holder=0, dirty_before_hold=buf_is_dirty};
+      }
+      SERVER_MODE: bufptr->latch_last_thread = thread_p;
+      return NO_ERROR;
+  }
+  if (promote_needed) {
+      request_fcnt += holder->fix_count;                     // 재획득 시 되돌려받을 총량
+      holder->fix_count = 0;   INIT_HOLDER_STAT (&amp;holder->perf_stat);
+      if (pgbuf_remove_thrd_holder (thread_p, holder) != NO_ERROR) { assert (false); return ER_FAILED; }
+      // *** 이 시점 이후 페이지는 이 스레드에 의해 진짜로 unfix된 상태다 ***
+  }
+  SA_MODE: assert (0);                                       // 단일 스레드 모드에서 차단 경로는 도달 불가
+  if (condition == PGBUF_CONDITIONAL_LATCH) {                // --- 조건부 거절 ---
+      tran_index = LOG_FIND_THREAD_TRAN_INDEX (thread_p);  wait_msec = logtb_find_wait_msecs (tran_index);
+      unlock_BCB.release ();  UNLOCK (bufptr);
+      if (wait_msec == LK_ZERO_WAIT) {
+          logtb_find_client_name_host_pid (tran_index, &amp;prog, &amp;user, &amp;host, &amp;pid);
+          er_set (ER_ERROR_SEVERITY, ER_LK_PAGE_TIMEOUT, 8, tran_index, user, host, pid,
+                  (request_mode == READ ? "READ" : "WRITE"), vpid.volid, vpid.pageid, NULL);
+      }
+      // wait_msec != LK_ZERO_WAIT면 *에러를 세우지 않고* 조용히 실패한다 (§5.11)
+      return ER_FAILED;
+  } else {                                                   // --- 차단 ---
+      unlock_BCB.release ();
+      if (pgbuf_block_bcb (thread_p, bufptr, request_mode, request_fcnt, /*as_promote*/ false) != NO_ERROR)
+          return ER_FAILED;                                  // block_bcb가 뮤텍스를 무조건 해제했다
+      // 여기 도달 = latch를 부여받고 기상했다. 기상자가 latch word를 이미 갱신했으므로 holder만 만든다.
+      assert (pgbuf_find_thrd_holder (thread_p, bufptr) == NULL);
+      holder = pgbuf_allocate_thrd_holder_entry (thread_p);
+      if (holder == NULL) { assert (false); return ER_FAILED; }
+      holder->fix_count = request_fcnt;                      // promote였다면 원래 fix 수를 통째로 복원
+      holder->bufptr = bufptr;
+      holder->perf_stat.hold_has_write_latch = (request_mode == WRITE);
+      holder->perf_stat.hold_has_read_latch  = (request_mode == READ);
+      holder->perf_stat.dirtied_by_holder = 0;  holder->perf_stat.dirty_before_hold = buf_is_dirty;
+      *is_latch_wait = true;
+      SERVER_MODE: bufptr->latch_last_thread = thread_p;
+      return NO_ERROR;
+  }
+}
+</pre>
+<p class="small"><span class="ref">page_buffer.c:6246-6583</span></p>
+<div class="box norm"><span class="label">holder fix_count 회계 불변식</span>
+<kbd class="must">MUST</kbd> 임계구역 밖에서 항상 <code>Σ(모든 holder의 fix_count) == latch.fcnt</code>가 성립한다.
+promote 경로는 <b>먼저 latch에서 빼고(CAS) 나서 holder를 제거</b>하는 순서로 이를 유지한다 — 반대로 하면
+중간 상태의 깨진 등식을 다른 스레드가 관측한다.
+</div>
+
+<h2>5.6 차단과 기상</h2>
+
+<h3>5.6.1 <code>pgbuf_block_bcb</code></h3>
+<p class="small"><b>진입</b> BCB mutex 보유 + <code>latch.waiter == true</code> 기설정 ·
+<b>사후</b> BCB mutex 해제됨. 성공 반환 = latch를 부여받고 기상</p>
+<pre>int pgbuf_block_bcb (thread_p, bufptr, request_mode, request_fcnt, as_promote) {
+  assert (get_waiter_exists (&amp;latch) == true);               // 호출자가 CAS로 세워두었어야 한다
+  assert (request_mode ∈ {READ, WRITE, FLUSH});
+  // 의도를 자기 THREAD_ENTRY에 게시한다 — 기상자는 이 두 필드만 보고 latch를 계산한다
+  thread_p->request_latch_mode = request_mode;
+  thread_p->request_fix_count  = request_fcnt;               /* SPECIAL_NOTE */
+  if (as_promote) {
+      assert (bufptr->next_wait_thrd == NULL || !bufptr->next_wait_thrd->wait_for_latch_promote);  // promoter는 유일
+      thread_p->next_wait_thrd = bufptr->next_wait_thrd;  bufptr->next_wait_thrd = thread_p;       // *** head 삽입 ***
+  } else {
+      thread_p->next_wait_thrd = NULL;                       // tail 삽입 (선형 탐색)
+      if (bufptr->next_wait_thrd == NULL) bufptr->next_wait_thrd = thread_p;
+      else { t = bufptr->next_wait_thrd; while (t->next_wait_thrd) t = t->next_wait_thrd; t->next_wait_thrd = thread_p; }
+  }
+  if (request_mode == PGBUF_LATCH_FLUSH) {
+      /* is it safe to use infinite wait instead of timed sleep? */          // 원본 주석 그대로
+      thread_lock_entry (thread_p);  UNLOCK (bufptr);
+      thread_suspend_wakeup_and_unlock_entry (thread_p, THREAD_PGBUF_SUSPENDED);      // *** 무기한 대기 ***
+      if (thread_p->resume_status != THREAD_PGBUF_RESUMED) {                          // 인터럽트
+          LOCK (bufptr);  대기열에서 자신을 언링크;
+          if (!pgbuf_is_exist_blocked_reader_writer (bufptr)) set_waiter_exists (&amp;latch, false);   // [CBRD-27084]
+          UNLOCK (bufptr);  return ER_FAILED;
+      }
+  } else {
+      /* 페이지 latch 간 교착을 보장하지 않는다. 즉시 부여되지 않는 요청은 timed sleep으로 차단하고,
+       * 일정 시간 내에 깨지 못하면 타임아웃으로 깨워 그 스레드를 victim으로 취급한다. */
+      if (pgbuf_timed_sleep (thread_p, bufptr) != NO_ERROR) return ER_FAILED;
+      DEBUG: assert (0 &lt; get_fcnt (&amp;latch));                 // latch를 받았으므로 최소 내 몫은 살아 있다
+  }
+  bufptr->latch_last_thread = thread_p;   return NO_ERROR;
+}
+</pre>
+<p class="small"><span class="ref">page_buffer.c:6995-7114</span></p>
+<div class="box warn"><span class="label">페이지 latch 교착 탐지기는 없다</span>
+행/객체 락과 달리 페이지 latch에는 wait-for 그래프가 없다. 교착은 <b>타임아웃으로만</b> 해소되고
+타임아웃된 스레드가 지정 victim이다 <span class="ref">page_buffer.c:7093-7100</span>.
+<kbd class="must">MUST</kbd> 이 정책을 유지한다 — 상위 계층(heap, btree)의 latch 순서 규약이 이 전제 위에 서 있다.
+</div>
+
+<h3>5.6.2 <code>pgbuf_timed_sleep</code>과 에러 처리</h3>
+<p class="small"><b>진입</b> BCB mutex 보유 · <b>사후</b> 모든 분기에서 BCB mutex 해제됨</p>
+<pre>int pgbuf_timed_sleep (thread_p, bufptr) {
+  thread_lock_entry (thread_p);  UNLOCK (bufptr);            // 조건변수 뮤텍스를 잡은 *뒤에* BCB를 놓는다(기상 유실 방지)
+  old_wait_msecs = wait_msecs = pgbuf_find_current_wait_msecs (thread_p);
+  assert (wait_msecs ∈ {LK_INFINITE_WAIT, LK_ZERO_WAIT, LK_FORCE_ZERO_WAIT} || wait_msecs &gt; 0);
+  if (wait_msecs ∈ {LK_ZERO_WAIT, LK_FORCE_ZERO_WAIT}) wait_msecs = 0;
+  else wait_msecs = pgbuf_latch_timeout_msecs;               // *** 트랜잭션 wait_msecs를 전역값(기본 300,000ms)으로 덮어쓴다 ***
+try_again:
+  pgbuf_make_latch_timeout (&amp;to, wait_msecs);
+  if (thread_p->type == TT_WORKER) old_check_interrupt = logtb_set_check_interrupt (thread_p, true);
+  thread_p->resume_status = THREAD_PGBUF_SUSPENDED;
+  r = thread_suspend_timeout_wakeup_and_unlock_entry (thread_p, &amp;to, THREAD_PGBUF_SUSPENDED);
+  if (thread_p->type == TT_WORKER) logtb_set_check_interrupt (thread_p, old_check_interrupt);
+  if (r == NO_ERROR) {
+      thread_lock_entry (thread_p);
+      if (thread_p->resume_status == THREAD_PGBUF_RESUMED) { thread_unlock_entry; return NO_ERROR; }   // 정상 기상
+      thread_p->request_latch_mode = PGBUF_NO_LATCH;         // --- 인터럽트 --- 포기 표식을 *먼저*
+      thread_unlock_entry (thread_p);
+      if (pgbuf_timed_sleep_error_handling (thread_p, bufptr) == NO_ERROR) UNLOCK (bufptr);
+      er_set (ER_ERROR_SEVERITY, ER_INTERRUPTED, 0);  return ER_FAILED;
+  } else if (r == ER_CSS_PTHREAD_COND_TIMEDOUT) {
+      if (thread_p->resume_status == THREAD_PGBUF_RESUMED) { thread_unlock_entry; return NO_ERROR; }   // 경합 기상
+      if (logtb_is_current_active (thread_p) == false) goto try_again;    // 롤백/postpone 중이면 계속 기다린다
+      // --- 페이지 교착 victim --- 실행 순서가 중요하다: request_latch_mode = NO_LATCH를 entry mutex를
+      // 놓기 *전에* 쓴다. 대기열의 NO_LATCH가 "이 대기자는 포기했다"는 유일한 신호다.
+      save_request_latch_mode = thread_p->request_latch_mode;
+      thread_p->request_latch_mode = PGBUF_NO_LATCH;   thread_unlock_entry (thread_p);
+      if (pgbuf_timed_sleep_error_handling (thread_p, bufptr) == NO_ERROR) goto er_set_return;
+      return ER_FAILED;
+  } else { thread_unlock_entry; er_set_with_oserror (ER_CSS_PTHREAD_COND_TIMEDWAIT); return ER_FAILED; }
+er_set_return:                                               // error_handling이 BCB mutex를 들고 돌아왔다
+  if (old_wait_msecs == LK_INFINITE_WAIT) {
+      er_set (ER_ERROR_SEVERITY, ER_PAGE_LATCH_TIMEDOUT, 2, volid, pageid);
+      assert (0);                                            /* FIXME: remove it. temporarily added for debugging */
+      UNLOCK (bufptr);
+      if (logtb_is_current_active (thread_p)) er_set (ER_ERROR_SEVERITY, ER_LK_UNILATERALLY_ABORTED, 4, …);
+      else er_log_debug ("Trying to abort a transaction twice.");        // 이미 abort 중 — 이중 abort 금지
+  } else if (old_wait_msecs &gt; 0) {
+      er_set (ER_ERROR_SEVERITY, ER_PAGE_LATCH_TIMEDOUT, 2, volid, pageid);
+      UNLOCK (bufptr);
+      er_set (ER_ERROR_SEVERITY, ER_LK_PAGE_TIMEOUT, 8, tran_index, user, host, pid,
+              (save_request_latch_mode == READ ? "READ" : "WRITE"), volid, pageid, NULL);
+  } else UNLOCK (bufptr);
+  return ER_FAILED;
+}
+int pgbuf_timed_sleep_error_handling (thrd_entry, bufptr) {   // 사후: 세 경우 모두 BCB mutex를 *보유한 채* 반환
+  LOCK (bufptr);
+  if (bufptr->next_wait_thrd == NULL) return NO_ERROR;                    // case 1: 이미 누가 빼갔다
+  if (bufptr->next_wait_thrd != thrd_entry) { 선형 탐색으로 언링크; return NO_ERROR; }   // case 2: 중간
+  // case 3: 내가 head였다 → 뒤따르는 연속 reader들에게 기회를 준다
+  bufptr->next_wait_thrd = thrd_entry->next_wait_thrd;  thrd_entry->next_wait_thrd = NULL;
+  while ((curr = bufptr->next_wait_thrd) != NULL) {
+      CAS_LOOP { can_grant = false; old = latch; new = old;
+                 if (old.mode == PGBUF_LATCH_READ &amp;&amp; curr->request_latch_mode == PGBUF_LATCH_READ)
+                     { can_grant = true; new.fcnt += curr->request_fix_count; } }
+      if (!can_grant) break;
+      thread_lock_entry (curr);
+      if (curr->request_latch_mode == PGBUF_LATCH_READ) { 대기열에서 제거; pgbuf_wakeup (curr); }
+      else { thread_unlock_entry (curr); break; }
+  }
+  return NO_ERROR;
+}
+</pre>
+<p class="small"><span class="ref">page_buffer.c:7143-7394</span></p>
+<div class="box defect"><span class="label">결함 — 디버그 빌드의 라이브 assert</span>
+<code>LK_INFINITE_WAIT</code> 트랜잭션이 페이지 latch 타임아웃을 맞으면 <code>assert(0)</code>이 서버를 죽인다
+<span class="ref">page_buffer.c:7345-7346</span>. 주석 자체가 <code>FIXME: remove it</code>.
+<kbd class="should">SHOULD</kbd> 이 assert는 <b>제거</b>한다 — 릴리스 동작 불변, 디버그 QA 안정성 향상.
+</div>
+
+<h3>5.6.3 <code>pgbuf_wakeup_reader_writer</code></h3>
+<p class="small"><b>진입</b> BCB mutex 보유 + <code>latch == {NO_LATCH, fcnt=0}</code> ·
+<b>사후</b> BCB mutex 보유 유지(호출자가 이어서 처리)</p>
+<pre>void pgbuf_wakeup_reader_writer (thread_p, bufptr) {
+  assert (latch.mode == PGBUF_NO_LATCH &amp;&amp; latch.fcnt == 0);
+  /* 대기자 4종:  1. NO_LATCH  - 포기한 스레드(인터럽트/타임아웃) → 목록에서 제거만 한다.
+   *              2. FLUSH     - flush 대기. 여기서 깨우지 않고 제자리에 둔다.
+   *              3. READ      - head의 연속 reader를 한꺼번에 깨운다.
+   *              4. WRITE     - 첫 대기자 하나만 깨운다. */
+  for (t = bufptr->next_wait_thrd; t != NULL; t = next) {
+      next = t->next_wait_thrd;
+      if (t->request_latch_mode == PGBUF_NO_LATCH) { 언링크 (prev 기준); continue; }          // 포기자 제거
+      if (t->request_latch_mode == PGBUF_LATCH_FLUSH) {
+          assert (pgbuf_bcb_is_async_flush_request (bufptr) || pgbuf_bcb_is_flushing (bufptr));
+          prev = t; continue;                                                                 // 건너뛰되 제자리 유지
+      }
+      CAS_LOOP {
+          can_grant = false; old = latch; new = old;
+          if (old.mode == PGBUF_NO_LATCH || (old.mode == READ &amp;&amp; t->request_latch_mode == READ)) {
+              thread_lock_entry (t);
+              if (t->request_latch_mode == PGBUF_NO_LATCH)      // 잠금 후 재확인: 그 사이 포기했다
+                  { can_grant = false; 언링크; thread_unlock_entry (t); break; }
+              can_grant = true;
+              new.fcnt += t->request_fix_count;                 // *** 대기자가 게시한 수량을 그대로 더한다 ***
+              new.mode  = t->request_latch_mode;
+          }
+          else if (old.mode == PGBUF_LATCH_READ) { prev = t; break; }   // WRITE 요청자 → 다음 reader를 찾아 계속
+          else { assert (old.mode == PGBUF_LATCH_WRITE); should_stop = true; break; }         // WRITE가 걸렸다 → 종료
+      }
+      if (should_stop) break;
+      if (can_grant) { 대기열에서 언링크; pgbuf_wakeup (t); }   // holder 등록은 깨어난 쪽이 한다
+  }
+  // [CBRD-27084] 화해: reader/writer 대기자가 하나도 남지 않았으면 비트를 내린다.
+  // pgbuf_is_exist_blocked_reader_writer()는 FLUSH 대기자를 세지 않으므로, flush 대기자만 남은 BCB는
+  // waiter_exists=false가 되어 lock-free read fast path가 다시 열린다.
+  if (!pgbuf_is_exist_blocked_reader_writer (bufptr)) set_waiter_exists (&amp;latch, false);
+}
+</pre>
+<p class="small"><span class="ref">page_buffer.c:7403-7535</span></p>
+
+<h2>5.7 <code>pgbuf_unfix</code></h2>
+<p class="small"><b>진입</b> 이 스레드가 <code>pgptr</code>을 fix한 상태, 락 없음 ·
+<b>사후</b> 락 없음. holder 회계와 latch 회계가 각각 1 감소</p>
+<pre>void pgbuf_unfix (thread_p, pgptr) {
+  CAST_PGPTR_TO_BFPTR (bufptr, pgptr);   assert (!VPID_ISNULL (&amp;bufptr->vpid));
+  DEBUG:   holder = pgbuf_get_holder (thread_p, pgptr); assert (holder != NULL); 모든 watcher magic 검증;
+  RELEASE: if (pgptr == NULL) return;
+  is_perf_tracking = perfmon_is_perf_tracking ();
+  if (is_perf_tracking) perf_page_type = pgbuf_get_page_type_for_stat (thread_p, pgptr);
+  // === (1) holder 회계가 *먼저*. BCB 쪽 fcnt는 아직 손대지 않는다. ===
+  INIT_HOLDER_STAT (&amp;holder_perf_stat);
+  holder_status = pgbuf_unlatch_thrd_holder (thread_p, bufptr, &amp;holder_perf_stat);
+  assert (holder_perf_stat.hold_has_write_latch == 1 || holder_perf_stat.hold_has_read_latch == 1);
+  if (is_perf_tracking) {
+      perf_holder_latch = (read &amp;&amp; write) ? PERF_HOLDER_LATCH_MIXED
+                        : read ? PERF_HOLDER_LATCH_READ : PERF_HOLDER_LATCH_WRITE;
+      perfmon_pbx_unfix (thread_p, perf_page_type, holder_perf_stat.dirty_before_hold,
+                         holder_perf_stat.dirtied_by_holder, perf_holder_latch);
+  }
+  // === (2) lock-free unfix 시도 ===
+  if (pgbuf_lockfree_unfix_ro (thread_p, bufptr)) return;   // 성공 시 뮤텍스 0개, LRU 작업 0개
+  // === (3) 슬로우 패스 ===
+  LOCK (bufptr);
+  DEBUG: thread_p->get_pgbuf_tracker ().decrement (pgptr);
+  pgbuf_unlatch_bcb_upon_unfix (thread_p, bufptr, holder_status);      // 이 함수가 BCB mutex를 해제한다
+}
+int pgbuf_unlatch_thrd_holder (thread_p, bufptr, *holder_perf_stat) {
+  holder = pgbuf_find_thrd_holder (thread_p, bufptr);
+  if (holder == NULL) { assert (false); er_set (ER_PB_UNFIXED_PAGEPTR, 3, pgptr, pageid, vol); return ER_PB_UNFIXED_PAGEPTR; }
+  if (holder_perf_stat != NULL) *holder_perf_stat = holder->perf_stat;
+  holder->fix_count--;
+  if (holder->fix_count == 0 &amp;&amp; pgbuf_remove_thrd_holder (thread_p, holder) != NO_ERROR)
+      { assert (false); er_set (ER_PB_UNFIXED_PAGEPTR, 3, …); return ER_PB_UNFIXED_PAGEPTR; }
+  return NO_ERROR;
+}
+bool pgbuf_lockfree_unfix_ro (thread_p, bufptr) {
+  CAS_LOOP {
+      old = latch;
+      // *** fcnt == 1이면 실패시킨다 — 마지막 unfixer는 반드시 슬로우 패스로 보내야
+      //     fcnt==0 시점의 LRU/기상/flush 작업이 실제로 실행된다 ***
+      if (old.mode != PGBUF_LATCH_READ || old.waiter || old.fcnt == 1) return false;
+      new = old; new.fcnt--;
+  }
+  DEBUG: thread_p->get_pgbuf_tracker ().decrement (pgptr);
+  return true;
+}
+</pre>
+<p class="small"><span class="ref">page_buffer.c:3018-3223, :6083-6133, :7751-7774</span></p>
+
+<h3>5.7.1 <code>pgbuf_unlatch_bcb_upon_unfix</code> — 결정 트리</h3>
+<p class="small"><b>진입</b> BCB mutex 보유 · <b>사후</b> BCB mutex 해제됨(정확히 한 번)</p>
+<pre>int pgbuf_unlatch_bcb_upon_unfix (thread_p, bufptr, holder_status) {
+  assert (holder_status == NO_ERROR);
+  assert (!VPID_ISNULL (&amp;bufptr->vpid) &amp;&amp; pgbuf_check_bcb_page_vpid (bufptr, false) == true);
+  CAS_LOOP {
+      blocked_reader_writer = is_zero_fcnt = false;
+      old = latch;  new = old;  new.fcnt--;
+      blocked_reader_writer = old.waiter;                    // *** 감소 *직전*의 waiter 비트를 기억한다 ***
+      if (new.fcnt == 0) { is_zero_fcnt = true; new.mode = PGBUF_NO_LATCH; }
+      if (new.fcnt &lt; 0) {                                    // 손상: fix보다 unfix가 많다
+          assert (false);
+          er_set (ER_ERROR_SEVERITY, ER_PB_UNFIXED_PAGEPTR, 3, pgptr, pageid, vol_label);
+          new = {mode = PGBUF_NO_LATCH, waiter = false, fcnt = 0};   // latch 워드 강제 리셋
+          is_zero_fcnt = true;  break;                       // CAS 없이 탈출 → 아래 zero 처리로 진행
+      }
+  }
+  if (is_zero_fcnt) {
+      assert (LSA_ISNULL (&amp;bufptr->oldest_unflush_lsa) || pgbuf_bcb_is_dirty (bufptr));
+      if (pgbuf_bcb_should_be_moved_to_bottom_lru (bufptr))  // pgbuf_dealloc_page가 세운 MOVE_TO_LRU_BOTTOM.
+          pgbuf_move_bcb_to_bottom_lru (thread_p, bufptr);   // 대기자 유무와 무관하게 최우선. DELEGATE → 6장
+      else if (blocked_reader_writer == false) {
+          // *** 대기자가 있으면 아래 전부를 건너뛴다 — 페이지를 빨리 넘기려는 의도된 단락 (quirk Q3) ***
+          if (thread_p != NULL) thread_p->pgbuf_pg_unfix_cnt++;               // per-thread unfix 샤드 [CBRD-26941]
+          th_lru_idx = PGBUF_THREAD_HAS_PRIVATE_LRU (thread_p)
+                     ? PGBUF_LRU_INDEX_FROM_PRIVATE (PGBUF_PRIVATE_LRU_FROM_THREAD (thread_p)) : -1;
+          switch (pgbuf_bcb_get_zone (bufptr)) {                              // 알고리즘 전부 DELEGATE → 6장
+            case PGBUF_VOID_ZONE:  pgbuf_unlatch_void_zone_bcb (thread_p, bufptr, th_lru_idx);  break;
+            case PGBUF_LRU_1_ZONE:
+              if (PGBUF_SHOULD_IGNORE_UNFIX)           { PSTAT_PB_UNFIX_LRU_ONE_KEEP_VAC; break; }
+              if (pgbuf_should_move_private_to_shared) { pgbuf_lru_move_from_private_to_shared;
+                                                         PSTAT_PB_UNFIX_LRU_ONE_PRV_TO_SHR_MID; break; }
+              PSTAT_PB_UNFIX_LRU_ONE_{PRV|SHR}_KEEP;   pgbuf_bcb_register_hit_for_lru (bufptr);  break;
+            case PGBUF_LRU_2_ZONE:
+              if (PGBUF_SHOULD_IGNORE_UNFIX)           { PSTAT_PB_UNFIX_LRU_TWO_KEEP_VAC; break; }
+              if (pgbuf_should_move_private_to_shared) { pgbuf_lru_move_from_private_to_shared;
+                                                         PSTAT_PB_UNFIX_LRU_TWO_PRV_TO_SHR_MID; break; }
+              if (PGBUF_IS_BCB_OLD_ENOUGH) pgbuf_lru_boost_bcb (thread_p, bufptr);
+              else                         PSTAT_PB_UNFIX_LRU_TWO_{PRV|SHR}_KEEP;
+              pgbuf_bcb_register_hit_for_lru (bufptr);  break;
+            case PGBUF_LRU_3_ZONE:
+              if (PGBUF_SHOULD_IGNORE_UNFIX) {          // vacuum 스레드: 곧바로 victim 배급을 시도한다
+                  if (!pgbuf_bcb_avoid_victim (bufptr) &amp;&amp; pgbuf_assign_direct_victim (thread_p, bufptr))
+                      { if (detailed_perf) PSTAT_PB_VICTIM_ASSIGN_DIRECT_VACUUM_LRU; }
+                  else PSTAT_PB_UNFIX_LRU_THREE_KEEP_VAC;
+                  break;
+              }
+              if (pgbuf_should_move_private_to_shared) { pgbuf_lru_move_from_private_to_shared;
+                                                         PSTAT_PB_UNFIX_LRU_THREE_PRV_TO_SHR_MID; break; }
+              pgbuf_lru_boost_bcb (thread_p, bufptr);  pgbuf_bcb_register_hit_for_lru (bufptr);  break;
+            default: assert (false); break;
+          }
+      }
+      SERVER_MODE: pgbuf_wakeup_reader_writer (thread_p, bufptr);            // §5.6.3
+  }
+  assert (get_latch (&amp;latch) != PGBUF_LATCH_FLUSH);
+  // === 비동기 flush 꼬리 ===
+  if (pgbuf_bcb_is_async_flush_request (bufptr)) {
+      assert (fcnt == 0 || mode == WRITE || mode == READ);
+      error_code = pgbuf_bcb_safe_flush_force_unlock (thread_p, bufptr, /*synchronous*/ false);   // DELEGATE → 8장
+      if (error_code != NO_ERROR) { er_clear (); error_code = NO_ERROR; }   // *** 에러를 삼킨다 ***
+      // 위 함수가 BCB mutex를 해제했다
+  } else UNLOCK (bufptr);
+  return NO_ERROR;
+}
+</pre>
+<p class="small"><span class="ref">page_buffer.c:6605-6832</span></p>
+<div class="box"><span class="label">dirty는 unfix와 별개의 행위</span>
+<code>pgbuf_set_dirty(thread_p, pgptr, free_page)</code>는 <code>pgbuf_bcb_set_dirty</code> +
+"WRITE latch 보유" assert + <code>holder->perf_stat.dirtied_by_holder = 1</code> +
+<code>PSTAT_PB_NUM_DIRTIES</code>를 수행하고, <code>free_page == FREE</code>일 때만 이어서 <code>pgbuf_unfix</code>를
+호출한다(<code>pgbuf_set_dirty_and_free</code> 관용구) <span class="ref">page_buffer.c:4868-4905, :11592-11611</span>.
+전체 계약은 8장.
+</div>
+
+<h2>5.8 <code>pgbuf_promote_read_latch</code></h2>
+<p class="small"><b>진입</b> 이 스레드가 READ latch 보유, 락 없음 · <b>사후</b> <code>NO_ERROR</code>면 WRITE latch 보유,
+실패면 <b><code>*pgptr_p</code>의 페이지가 unfix된 상태일 수 있다</b></p>
+<div class="box warn"><span class="label">호출자 계약 — 실패 시 페이지가 풀린다</span>
+차단 경로에 들어간 순간 <b>페이지는 진짜로 unfix된다</b>(원본 주석 "at this point the page is unfixed",
+<span class="ref">page_buffer.c:2937</span>). 재획득에 실패하면 <code>*pgptr_p = NULL</code>이 되고, 성공해도
+그 사이 내용이 바뀌었을 수 있다. <kbd class="must">MUST</kbd> 호출자는 promote 이후 페이지 상태를 재검증한다.
+</div>
+<pre>int pgbuf_promote_read_latch (thread_p, *pgptr_p, condition) {     // condition ∈ {ONLY_READER, SHARED_READER}
+  DEBUG:   assert (*pgptr_p != NULL); 페이지 포인터 유효성 검사;
+  RELEASE: if (*pgptr_p == NULL) return ER_FAILED;
+  CAST_PGPTR_TO_BFPTR (bufptr, *pgptr_p);
+  SA_MODE: set_latch (&amp;latch, PGBUF_LATCH_WRITE); return NO_ERROR;              // 무조건 성공
+  vpid = bufptr->vpid;   if (is_perf_tracking) tsc_getticks (&amp;start_tick);
+  LOCK (bufptr);
+  holder = pgbuf_find_thrd_holder (thread_p, bufptr);   assert_release (holder != NULL);
+  CAS_LOOP {
+      need_block = false;  old = latch;  new = old;
+      if (holder->fix_count == old.fcnt) {                          // === 내가 유일한 reader ===
+          if (old.waiter &amp;&amp; bufptr->next_wait_thrd &amp;&amp; bufptr->next_wait_thrd->wait_for_latch_promote) {
+              // 큐 head가 또 다른 promoter다: 둘 다 "같은 페이지를 보았다"를 보장할 수 없으므로 포기
+              UNLOCK (bufptr);  rv = ER_PAGE_LATCH_PROMOTE_FAIL;
+              DEBUG: er_set (ER_NOTIFICATION_SEVERITY, ER_PAGE_LATCH_PROMOTE_FAIL, 2, pageid, volid);
+              goto end;
+          }
+          new.mode = PGBUF_LATCH_WRITE;                             // *** 제자리 승격, 대기 없음 ***
+          holder->perf_stat.hold_has_write_latch = 1;
+      } else {                                                      // === 다른 reader가 있다 ===
+          if (condition == PGBUF_PROMOTE_ONLY_READER                //  (1) 나만 있어야 한다는 조건
+              || (bufptr->next_wait_thrd != NULL &amp;&amp; bufptr->next_wait_thrd->wait_for_latch_promote)) {  // (2) 선행 promoter
+              UNLOCK (bufptr);  rv = ER_PAGE_LATCH_PROMOTE_FAIL;
+              DEBUG: er_set (ER_NOTIFICATION_SEVERITY, ER_PAGE_LATCH_PROMOTE_FAIL, 2, pageid, volid);
+              goto end;
+          }
+          fix_count = holder->fix_count;  perf_stat = holder->perf_stat;
+          if (old.fcnt == holder->fix_count) continue;              // 경합으로 조건이 바뀌었다 → 재시도
+          new.fcnt -= fix_count;  new.waiter = true;  need_block = true;   // 내 몫을 latch에서 뺀다
+      }
+  }
+  if (!need_block) UNLOCK (bufptr);
+  else {
+      holder->fix_count = 0;
+      if (pgbuf_remove_thrd_holder (thread_p, holder) != NO_ERROR)
+          { *pgptr_p = NULL; UNLOCK (bufptr); assert_release (false); return ER_FAILED; }
+      holder = NULL;                                               // *** 이 지점에서 페이지는 unfix된 상태 ***
+      thread_p->wait_for_latch_promote = true;                     // 큐 head 자격 표식
+      if (pgbuf_block_bcb (thread_p, bufptr, PGBUF_LATCH_WRITE, fix_count, /*as_promote*/ true) != NO_ERROR)
+          { *pgptr_p = NULL; thread_p->wait_for_latch_promote = false; return ER_FAILED; }
+      thread_p->wait_for_latch_promote = false;                    // BCB mutex는 더 이상 보유하지 않는다
+      assert (pgbuf_find_thrd_holder (thread_p, bufptr) == NULL);
+      holder = pgbuf_allocate_thrd_holder_entry (thread_p);
+      if (holder == NULL) { assert_release (false); return ER_FAILED; }        // latch는 있는데 holder가 없다
+      holder->fix_count = fix_count;  holder->bufptr = bufptr;  holder->perf_stat = perf_stat;
+      if      (get_latch (&amp;latch) == PGBUF_LATCH_WRITE) holder->perf_stat.hold_has_write_latch = 1;
+      else if (get_latch (&amp;latch) == PGBUF_LATCH_READ)  holder->perf_stat.hold_has_read_latch  = 1;
+      DEBUG: pgbuf_add_fixed_at (holder, caller_file, caller_line, true);
+  }
+end:
+  assert (rv == NO_ERROR || rv == ER_PAGE_LATCH_PROMOTE_FAIL);
+  if (is_perf_tracking) perfmon_pbx_promote (thread_p, perf_page_type, perf_promote_cond_type, perf_holder_latch,
+                                             /*success*/ (rv == NO_ERROR), elapsed_since (start_tick));
+  return rv;
+}
+</pre>
+<p class="small"><span class="ref">page_buffer.c:2796-3009</span></p>
+
+<h2>5.9 <code>pgbuf_ordered_fix</code></h2>
+<p>페이지 latch에 교착 탐지기가 없으므로(§5.6.1) 여러 페이지를 잡는 코드는 <b>전역 순서</b>를 지켜야 한다.
+<code>pgbuf_ordered_fix</code>는 그 순서를 강제하되, 이미 순서를 어긴 상태라면 <b>뒤 순서 페이지를 풀었다가
+정렬해서 다시 잡는다</b>. 적용 대상은 <code>PGBUF_IS_ORDERED_PAGETYPE(ptype)</code> —
+<code>PAGE_HEAP</code>과 <code>PAGE_OVERFLOW</code>뿐이다 <span class="ref">page_buffer.h:166-167</span>.</p>
+
+<h3>5.9.1 정렬 비교자</h3>
+<pre>int pgbuf_compare_hold_vpid_for_sort (h1, h2) {        // 키: (group_id, rank, vpid) — *VPID 단독이 아니다*
+  if (h1 == h2) return 0;
+  if ( VPID_ISNULL (h1->group_id) &amp;&amp; !VPID_ISNULL (h2->group_id)) return  1;    // NULL group은 맨 뒤
+  if (!VPID_ISNULL (h1->group_id) &amp;&amp;  VPID_ISNULL (h2->group_id)) return -1;
+  if ((d = h1->group_id.volid  - h2->group_id.volid)  != 0) return d;
+  if ((d = h1->group_id.pageid - h2->group_id.pageid) != 0) return d;
+  if ((d = h1->rank            - h2->rank)            != 0) return d;   // HEAP_HDR &lt; HEAP_NORMAL &lt; HEAP_OVERFLOW
+  if ((d = h1->vpid.volid      - h2->vpid.volid)      != 0) return d;
+  return    h1->vpid.pageid    - h2->vpid.pageid;
+}
+</pre>
+<p class="small"><span class="ref">page_buffer.c:12128-12183</span>, rank 정의 <span class="ref">page_buffer.h:222-229</span></p>
+<p>즉 <b>heap 헤더가 항상 자기 그룹의 normal·overflow 페이지보다 먼저</b> 잠긴다. VPID는 마지막 tie-break일
+뿐이다 — "VPID 순서였다면 풀었다 다시 잡아야 할 우선순위 높은 페이지를 계속 잡고 있게 해준다"
+<span class="ref">page_buffer.h:219-221</span>.</p>
+
+<h3>5.9.2 전체 절차</h3>
+<pre>int pgbuf_ordered_fix (thread_p, req_vpid, fetch_mode, request_mode, req_watcher) {
+  PGBUF_HOLDER_INFO ordered_holders_info[PGBUF_MAX_PAGE_FIXED_BY_TRAN];   // 스택 ~35KiB (아래 경고 박스)
+  ret_pgptr = NULL;  req_page_has_watcher = false;  saved_pages_cnt = 0;  er_status_get_hfid = NO_ERROR;
+  // --- (1) watcher 청결 검사와 rank 결정 ---
+  if (req_watcher->pgptr != NULL) { assert_release (false); er_status = ER_FAILED_ASSERTION; goto exit; }
+  req_watcher->curr_rank = VPID_EQ (&amp;req_watcher->group_id, req_vpid) ? PGBUF_ORDERED_HEAP_HDR
+                                                                      : req_watcher->initial_rank;
+  req_page_has_group = !VPID_ISNULL (&amp;req_watcher->group_id);
+  if (!req_page_has_group) VPID_SET_NULL (&amp;req_page_groupid);
+  req_page_holder_info = {group_id = req_watcher->group_id, rank = curr_rank, vpid = *req_vpid,
+                          watch_count = 1, watcher[0] = req_watcher};
+  // --- (2) latch 조건: 다른 페이지를 하나도 안 잡고 있을 때만 무조건 ---
+  holder = thrd_holder_info[thrd_idx].thrd_hold_list;
+  latch_condition = (holder == NULL || (holder->thrd_link == NULL &amp;&amp; VPID_EQ (req_vpid, &amp;holder->bufptr->vpid)))
+                  ? PGBUF_UNCONDITIONAL_LATCH : PGBUF_CONDITIONAL_LATCH;
+  // --- (3) 일단 시도 (공짜 경로) ---
+  ret_pgptr = pgbuf_fix (thread_p, req_vpid, fetch_mode, request_mode, latch_condition);
+  if (ret_pgptr != NULL) {
+      for (holder = 홀더 목록) if (VPID_EQ (req_vpid, &amp;holder->bufptr->vpid)) {
+          assert (PGBUF_IS_ORDERED_PAGETYPE (ptype));
+          if (!req_page_has_group &amp;&amp; holder->first_watcher != NULL)
+              req_watcher->group_id = holder->first_watcher->group_id;             // 기존 watcher에서 그룹 승계
+          else if (!req_page_has_group &amp;&amp; pgbuf_get_page_ptype (pgptr) == PAGE_HEAP) {
+              er_status = pgbuf_get_groupid_and_unfix (thread_p, req_vpid, &amp;ret_pgptr, &amp;req_page_groupid, false);
+              if (er_status != NO_ERROR) { er_status_get_hfid = er_status; goto exit; }
+              req_watcher->group_id = req_page_groupid;
+          }
+          pgbuf_add_watch_instance_internal (holder, ret_pgptr, req_watcher, request_mode, true);
+          req_page_has_watcher = true;  goto exit;                                 // *** 정상 종료 ***
+      }
+      assert_release (false);  er_status = ER_FAILED_ASSERTION;  goto exit;
+  }
+  // --- (4) 실패: 재정렬이 가능한지 판정 ---
+  er_status = er_errid_if_has_error ();
+  if (er_status ∈ {ER_PB_BAD_PAGEID, ER_INTERRUPTED}) goto exit;                    // 그대로 전파
+  if (fetch_mode == OLD_PAGE_MAYBE_DEALLOCATED &amp;&amp; er_errid () == ER_PB_BAD_PAGEID)  // WARNING severity는
+      { er_status = ER_PB_BAD_PAGEID; goto exit; }                                 // er_errid_if_has_error가 못 잡는다
+  wait_msecs = pgbuf_find_current_wait_msecs (thread_p);
+  if (wait_msecs ∈ {LK_ZERO_WAIT, LK_FORCE_ZERO_WAIT}) {   // 재fix도 어차피 CONDITIONAL로 강등된다(Q2) → 무의미
+      if (er_status == NO_ERROR) { assert (wait_msecs == LK_FORCE_ZERO_WAIT); er_status = ER_LK_PAGE_TIMEOUT; }
+      goto exit;                                          // 에러를 세우지 않아 페이지 스캔이 계속될 수 있게 한다
+  }
+  if (latch_condition == PGBUF_UNCONDITIONAL_LATCH)        // 무조건이 실패했다면 재시도해도 결과가 같다
+      { er_status = er_errid (); if (er_status == NO_ERROR) er_status = ER_FAILED; goto exit; }
+  er_status = NO_ERROR;                                   // 여기부터 재정렬. 밑에 깔린 에러는 잊는다
+  if (fetch_mode == OLD_PAGE_PREVENT_DEALLOC) { has_dealloc_prevent_flag = true; fetch_mode = OLD_PAGE; }
+  // --- (5) 홀더 수집 + 검증 ---
+  for (holder = 홀더 목록; holder != NULL; holder = next_holder) {
+      if (holder->watch_count &lt;= 0) continue;              // watcher 없는 페이지는 재fix 불가 → 무시한다
+      assert (PGBUF_IS_ORDERED_PAGETYPE (ptype));
+      if (saved_pages_cnt &gt;= PGBUF_MAX_PAGE_FIXED_BY_TRAN) { assert_release (false); er_status = ER_FAILED_ASSERTION; goto exit; }
+      if (VPID_EQ (req_vpid, &amp;holder->bufptr->vpid)) {     // 요청 페이지를 이미 잡고 있다 — 여기 오면 안 된다
+          er_status = (pgbuf_is_valid_page (…) != DISK_VALID) ? er_errid () : ER_FAILED_ASSERTION;
+          assert_release (false);  goto exit;
+      }
+      if (holder->fix_count != holder->watch_count)        // watcher 없이 fix한 이력이 있다 → 금지
+          { assert_release (false); er_status = ER_FAILED_ASSERTION; goto exit; }
+      // 이 페이지의 모든 watcher를 훑어 rank/group을 확정한다
+      info.latch_mode = PGBUF_LATCH_READ;  page_rank = UNDEFINED;  VPID_SET_NULL (&amp;group_id);
+      for (w = holder->first_watcher; w != NULL; w = w->next) {
+          DEBUG: assert (w->magic == MAGIC &amp;&amp; w->pgptr == pgptr &amp;&amp; w->curr_rank &lt; UNDEFINED &amp;&amp; !VPID_ISNULL (&amp;w->group_id));
+          if (page_rank == UNDEFINED) page_rank = w->curr_rank;
+          else if (page_rank != w->curr_rank) {            // *** FATAL: 한 페이지의 watcher는 rank가 같아야 한다 ***
+              er_set (ER_FATAL_ERROR_SEVERITY, ER_PB_ORDERED_INCONSISTENCY, 5, …, "different page ranks:%d,%d");
+              er_status = ER_PB_ORDERED_INCONSISTENCY;  goto exit;
+          }
+          if (VPID_ISNULL (&amp;group_id)) group_id = w->group_id;
+          else if (!VPID_EQ (&amp;group_id, &amp;w->group_id)) {   // *** FATAL: group도 같아야 한다 ***
+              er_set (ER_FATAL_ERROR_SEVERITY, ER_PB_ORDERED_INCONSISTENCY, 5, …, "different GROUP_ID …");
+              er_status = ER_PB_ORDERED_INCONSISTENCY;  goto exit;
+          }
+          info.watcher[j++] = w;
+          if (w->latch_mode == PGBUF_LATCH_WRITE) info.latch_mode = PGBUF_LATCH_WRITE;   // 최강 모드로 집계
+      }
+      info.group_id = group_id;  info.rank = page_rank;  info.vpid = holder->bufptr->vpid;
+      diff = req_page_has_group ? pgbuf_compare_hold_vpid_for_sort (&amp;req_page_holder_info, &amp;info) : -1;
+      if      (diff &lt; 0)  { info.watch_count = holder->watch_count; info.ptype = ptype; saved_pages_cnt++; }  // 풀어야 함
+      else if (diff == 0) { assert_release (false); er_status = ER_FAILED_ASSERTION; goto exit; }
+      else                { /* 이미 올바른 순서로 잡혀 있다 — 무시 */ }
+  }
+  // --- (6) 뒤 순서 페이지들을 unfix ---
+  holder = 홀더 목록 처음;
+  for (i = 0; i &lt; saved_pages_cnt; i++) {
+      holder를 ordered_holders_info[i].vpid로 전진 탐색;
+      if (holder == NULL) { assert_release (false); er_status = ER_FAILED_ASSERTION; goto exit; }
+      holder->watch_count = 0;  holder->first_watcher = holder->last_watcher = NULL;
+      holder_fix_cnt = holder->fix_count;   assert (holder_fix_cnt &gt; 0);
+      pgbuf_bcb_register_avoid_deallocation (holder->bufptr);      // 풀린 동안 vacuum의 해제를 막는다
+      ordered_holders_info[i].prevent_dealloc = true;
+      while (holder_fix_cnt-- &gt; 0) pgbuf_unfix (thread_p, pgptr);  // fix한 횟수만큼 전부 푼다
+      for (j = 0; j &lt; ordered_holders_info[i].watch_count; j++) {
+          PGBUF_CLEAR_WATCHER (watcher[j]);
+          watcher[j]->page_was_unfixed = true;                     // *** 호출자에게 "포인터를 재검증하라" ***
+          DEBUG: pgbuf_watcher_init_debug (watcher[j], caller_file, caller_line, true);
+      }
+  }
+  // --- (7) 그룹을 몰랐다면 요청 페이지를 잠깐 다시 잡아 HFID를 읽는다 ---
+  if (!req_page_has_group) {
+      DEBUG: 남아 있는 모든 holder의 watch_count == 0 확인;
+      pgptr = pgbuf_fix (thread_p, req_vpid, fetch_mode, request_mode, PGBUF_UNCONDITIONAL_LATCH);
+      if (pgptr != NULL) {
+          if (has_dealloc_prevent_flag) { pgbuf_bcb_unregister_avoid_deallocation (bufptr); has_dealloc_prevent_flag = false; }
+          if (pgbuf_get_page_ptype (pgptr) == PAGE_HEAP) {
+              er_status = pgbuf_get_groupid_and_unfix (thread_p, req_vpid, &amp;pgptr, &amp;req_page_groupid, true);
+              if (er_status != NO_ERROR) er_status_get_hfid = er_status;     // 계속 진행(옛 페이지 재latch)
+          }
+      } else { er_status_get_hfid = er_errid (); if (er_status_get_hfid == NO_ERROR) er_status_get_hfid = ER_FAILED; }
+      // 잔여 위험(원본 주석): 이 사이 클래스가 drop되고 HFID 페이지가 재사용되면 최악의 경우 교착이 여전히 가능하다.
+  }
+  // --- (8) 요청 페이지를 배열에 넣고 정렬 ---
+  if (req_page_has_group || er_status_get_hfid == NO_ERROR) {
+      info = ordered_holders_info[saved_pages_cnt];
+      info.group_id = req_page_has_group ? req_watcher->group_id : (req_watcher->group_id = req_page_groupid);
+      info.vpid = *req_vpid;
+      info.rank = req_page_has_group ? req_watcher->curr_rank
+                : (VPID_EQ (&amp;info.group_id, req_vpid) ? PGBUF_ORDERED_HEAP_HDR : req_watcher->curr_rank);
+      info.prevent_dealloc = false;   saved_pages_cnt++;
+  }
+  if (saved_pages_cnt &gt; 1) qsort (ordered_holders_info, saved_pages_cnt, sizeof (…), pgbuf_compare_hold_vpid_for_sort);
+  // --- (9) 정렬 순서대로 *전부 무조건* 재fix ---
+  for (i = 0; i &lt; saved_pages_cnt; i++) {
+      is_req = VPID_EQ (req_vpid, &amp;ordered_holders_info[i].vpid);
+      curr_request_mode = is_req ? request_mode : ordered_holders_info[i].latch_mode;
+      curr_fetch_mode   = is_req ? fetch_mode   : OLD_PAGE;
+      pgptr = pgbuf_fix (thread_p, &amp;ordered_holders_info[i].vpid, curr_fetch_mode, curr_request_mode,
+                         PGBUF_UNCONDITIONAL_LATCH);
+      if (pgptr == NULL) {
+          er_status = er_errid ();
+          if (er_status == ER_INTERRUPTED) goto exit;                        // 예상된 상황
+          if (er_status == ER_PB_BAD_PAGEID) {
+              if (is_req &amp;&amp; fetch_mode == OLD_PAGE_MAYBE_DEALLOCATED) er_log_debug ("page was deallocated …");
+              else { assert (false); er_log_debug ("… and we told it not to!"); }
+          }
+          if (!is_req) {                                                     // 옛 페이지 복원 실패
+              prev = er_status;  er_status = ER_PB_ORDERED_REFIX_FAILED;
+              er_set (ER_ERROR_SEVERITY, er_status, 3, volid, pageid, prev);
+          }
+          goto exit;
+      }
+      해당 vpid의 holder 탐색;   assert (holder != NULL);
+      if (is_req) {
+          ret_pgptr = pgptr;
+          if (has_dealloc_prevent_flag) { pgbuf_bcb_unregister_avoid_deallocation (bufptr); has_dealloc_prevent_flag = false; }
+          pgbuf_add_watch_instance_internal (holder, pgptr, req_watcher, request_mode, true);
+          req_page_has_watcher = true;
+      } else {
+          assert (ordered_holders_info[i].prevent_dealloc);   ordered_holders_info[i].prevent_dealloc = false;
+          pgbuf_bcb_unregister_avoid_deallocation (bufptr);   // 다시 잡았으므로 해제 방지는 불필요
+          DEBUG: pgbuf_check_page_ptype (thread_p, pgptr, ordered_holders_info[i].ptype);   // 타입 불변 확인
+          for (j = 1; j &lt; watch_count; j++)                   // 원래 fix 횟수 복원
+              if (pgbuf_fix (…, PGBUF_UNCONDITIONAL_LATCH) == NULL)
+                  { assert_release (false); er_status = ER_FAILED_ASSERTION; goto exit; }
+          for (j = 0; j &lt; watch_count; j++)                   // watcher 재부착 (rank/group은 보존되어 있다)
+              pgbuf_add_watch_instance_internal (holder, pgptr, watcher[j], watcher[j]->latch_mode, false);
+      }
+  }
+exit:
+  if (er_status_get_hfid != NO_ERROR &amp;&amp; er_status == NO_ERROR) er_status = er_status_get_hfid;
+  assert (er_status != NO_ERROR || !VPID_ISNULL (&amp;req_watcher->group_id));
+  if (ret_pgptr != NULL &amp;&amp; er_status != NO_ERROR)              // 실패 시 요청 페이지는 반드시 푼다
+      req_page_has_watcher ? pgbuf_ordered_unfix_and_init (thread_p, ret_pgptr, req_watcher)
+                           : pgbuf_unfix_and_init (thread_p, ret_pgptr);
+  if (!req_page_has_group &amp;&amp; ret_pgptr != NULL &amp;&amp; req_watcher->curr_rank != PGBUF_ORDERED_HEAP_HDR
+      &amp;&amp; VPID_EQ (&amp;req_watcher->group_id, req_vpid))  req_watcher->curr_rank = PGBUF_ORDERED_HEAP_HDR;
+  // 남아 있는 avoid_dealloc 등록을 전부 해제한다. 페이지가 fix되어 있지 않으므로 해시 재탐색이 필요하다.
+  for (i = 0; i &lt; saved_pages_cnt; i++) if (ordered_holders_info[i].prevent_dealloc) {
+      bufptr = pgbuf_search_hash_chain (thread_p, &amp;buf_hash_table[HASH (vpid)], &amp;vpid);
+      if (bufptr == NULL) { assert (false); UNLOCK (hash); continue; }       // 버퍼에서 사라졌다?!
+      if (!pgbuf_bcb_should_avoid_deallocation (bufptr)) assert (false);
+      else pgbuf_bcb_unregister_avoid_deallocation (bufptr);
+      UNLOCK (bufptr);
+  }
+  return er_status;
+}
+</pre>
+<p class="small"><span class="ref">page_buffer.c:12202-12999</span></p>
+<div class="box warn"><span class="label">스택 사용량 — 약 35 KiB per frame</span>
+<code>ordered_holders_info[PGBUF_MAX_PAGE_FIXED_BY_TRAN]</code>는 64개 엔트리이고 각
+<code>PGBUF_HOLDER_INFO</code>가 <code>PGBUF_WATCHER *watcher[PGBUF_MAX_PAGE_WATCHERS]</code>(64개 포인터)를
+품는다 ⇒ 64 × 약 544 B ≈ <b>35 KiB</b>가 한 프레임에서 소비된다
+(DERIVED: <span class="ref">page_buffer.c:12220, :426-436, :317-319</span>). <code>pgbuf_ordered_callback</code>도
+같은 배열을 쓴다. <kbd class="must">MUST</kbd> 워커 스레드 스택 크기 산정에 이 값을 반영한다. 힙으로 옮기는
+것은 <kbd class="may">MAY</kbd>(동작 불변)이지만 hot path에 할당이 들어간다.
+</div>
+
+<h2>5.10 이 장 경로가 건드리는 카운터 전량</h2>
+<div class="tablewrap"><table>
+<tr><th>카운터</th><th>증가 지점</th><th>비고</th></tr>
+<tr><td><code>PSTAT_PB_NUM_FETCHES</code></td><td>§5.4.5 <span class="ref">:2574</span></td><td>tracking 활성 시에만</td></tr>
+<tr><td><code>PSTAT_PB_NUM_IOREADS</code></td><td>§5.4.3 읽기 직전 <span class="ref">:8442</span></td><td>NEW_PAGE 제외</td></tr>
+<tr><td><code>PSTAT_PB_NUM_DIRTIES</code></td><td><code>pgbuf_set_dirty_buffer_ptr</code> <span class="ref">:11610</span></td><td>unfix가 아니라 dirty 시점</td></tr>
+<tr><td><code>PSTAT_PB_PAGE_FIX_ACQUIRE_TIME_10USEC</code></td><td>§5.4.5 <span class="ref">:2619-2622</span></td><td><code>perfmon_add_at_offset_to_local</code> 직접 가산 포함</td></tr>
+<tr><td><code>PSTAT_PB_PAGE_HOLD_ACQUIRE_TIME_10USEC</code></td><td>§5.4.5, <code>is_latch_wait</code>일 때만 <span class="ref">:2592</span></td><td></td></tr>
+<tr><td><code>PSTAT_PB_PAGE_LOCK_ACQUIRE_TIME_10USEC</code></td><td>§5.4.5, <code>lock_wait_time &gt; 0</code> <span class="ref">:2609</span></td><td>buffer lock 대기 시간</td></tr>
+<tr><td><code>PSTAT_PB_NUM_HASH_ANCHOR_WAITS</code> / <code>..._TIME_HASH_ANCHOR_WAIT</code></td>
+    <td>§5.3 2단계 <span class="ref">:7619</span>, 해시 삽입 <span class="ref">:7810</span>,
+        lock_page 인터럽트 <span class="ref">:7983</span>, unlock_page <span class="ref">:8075</span></td>
+    <td><code>PERFMON_ACTIVATION_FLAG_PB_HASH_ANCHOR</code> 게이트</td></tr>
+<tr><td><code>PSTAT_LK_NUM_ACQUIRED_ON_PAGES</code></td><td>§5.4.1 팻말 획득 <span class="ref">:8031</span></td><td></td></tr>
+<tr><td><code>PSTAT_LK_NUM_WAITED_ON_PAGES</code></td><td>§5.4.1 대기자가 됨 <span class="ref">:8005, :8013</span></td><td>두 경로 모두</td></tr>
+<tr><td><code>PSTAT_PB_ALLOC_BCB</code></td><td>§5.4.2 종료 <span class="ref">:8332</span></td><td>invalid list 히트는 <b>집계 안 됨</b></td></tr>
+<tr><td><code>PSTAT_PB_ALLOC_BCB_SEARCH_VICTIM</code></td><td>§5.4.2 <span class="ref">:8186, :8309</span></td><td></td></tr>
+<tr><td><code>PSTAT_PB_ALLOC_BCB_COND_WAIT_{HIGH,LOW}_PRIO</code></td><td>§5.4.2 대기 종료 <span class="ref">:8218 / :8244</span></td><td></td></tr>
+<tr><td><code>PSTAT_PB_ALLOC_BCB_PRIORITIZE_VACUUM</code></td><td>§5.4.2 <span class="ref">:8210</span></td><td>detailed perf 게이트</td></tr>
+<tr><td><code>PSTAT_PB_VICTIM_USE_INVALID_BCB</code></td><td><code>pgbuf_get_bcb_from_invalid_list</code> <span class="ref">:8893</span></td><td></td></tr>
+<tr><td><code>PSTAT_PB_UNFIX_LRU_*</code></td><td>§5.7.1 zone 디스패치 <span class="ref">:6707-6792</span></td><td>알고리즘은 6장</td></tr>
+<tr><td><code>PSTAT_PB_VICTIM_ASSIGN_DIRECT_VACUUM_LRU</code></td><td>§5.7.1 LRU_3 + vacuum <span class="ref">:6774</span></td><td>7장</td></tr>
+<tr><td><code>PSTAT_SORT_NUM_IO_PAGES</code> / <code>..._DATA_PAGES</code></td><td>§5.4.3 <span class="ref">:8540 / :8571</span></td><td><code>thread_get_sort_stats_active</code>일 때</td></tr>
+<tr><td><code>perfmon_pbx_fix</code> / <code>_unfix</code> / <code>_promote</code></td><td>§5.4.5 / §5.7 / §5.8</td><td>4차원 교차 통계</td></tr>
+<tr><td><code>ss->num_hit</code></td><td><b>3곳</b>: lock-free <span class="ref">:2325</span>,
+    hit <span class="ref">:2346</span>, NEW_PAGE <span class="ref">:8575</span></td><td>quirk Q1</td></tr>
+<tr><td><code>ss->num_page_request</code></td><td><b>1곳</b>: §5.4.5 <span class="ref">:2567</span></td><td>히트율의 분모</td></tr>
+<tr><td><code>ss->num_pages_read</code> / <code>num_pages_created</code></td><td>§5.4.3 <span class="ref">:8443 / :8574</span></td><td></td></tr>
+<tr><td><code>ss->num_flusher_waiting_threads</code></td><td>§5.4.2 대기 전후 ± <span class="ref">:8252 / :8256</span></td><td>순간값</td></tr>
+<tr><td><code>thread_p->pgbuf_fix_req_cnt</code></td><td>§5.1.2 <span class="ref">:2252</span></td><td>per-thread, 비원자</td></tr>
+<tr><td><code>thread_p->pgbuf_pg_unfix_cnt</code></td><td>§5.7.1, <b>대기자 없을 때만</b> <span class="ref">:6679</span></td><td>quirk Q3</td></tr>
+</table></div>
+
+<h2>5.11 결함·quirk 각주 — 충실 재현 대상</h2>
+
+<div class="box defect"><span class="label">Q1 — NEW_PAGE가 버퍼 히트로 집계된다</span>
+<code>pgbuf_claim_bcb_for_fix</code>의 NEW_PAGE 분기가 <code>ss->num_hit++</code>를 수행한다
+<span class="ref">page_buffer.c:8574-8575</span>. 디스크를 <b>읽지 않은</b> 새 페이지가 히트로 계산되므로
+<code>SHOW PAGE BUFFER STATUS</code> 히트율이 insert 집중 워크로드에서 과대평가된다. perfmon 쪽 비율
+<code>(NUM_FETCHES − NUM_IOREADS)/NUM_FETCHES</code>는 영향이 없다 <span class="ref">perf_monitor.c:1913-1915</span>.<br>
+<b>처리 방침</b>: <kbd class="must">MUST</kbd> 1차 구현에서 <b>그대로 재현</b> — SHOW 출력 diff가 수용 검증
+항목이다(10장 M7). 수정은 별도 커밋.
+</div>
+
+<div class="box defect"><span class="label">Q2 — 무조건 latch의 조용한 조건부 강등</span>
+트랜잭션 <code>wait_msecs</code>가 <code>LK_ZERO_WAIT</code>/<code>LK_FORCE_ZERO_WAIT</code>이면
+<code>PGBUF_UNCONDITIONAL_LATCH</code> 요청이 프롤로그에서 조건부로 바뀐다 <span class="ref">page_buffer.c:2273-2283</span>.
+호출자는 "무조건 잡힌다"고 믿고 NULL 처리를 생략할 수 있다. <code>pgbuf_ordered_fix</code>는 이를 알고
+zero-wait 트랜잭션에서 재정렬을 아예 포기한다 <span class="ref">:12359-12373</span>.<br>
+<b>처리 방침</b>: <kbd class="must">MUST</kbd> 재현. <code>heap_find_bestpage</code> 등이 "바쁜 페이지 건너뛰기"에
+이 동작을 의존한다.
+</div>
+
+<div class="box defect"><span class="label">Q3 — 대기자가 있으면 LRU 훅을 전부 생략한다</span>
+<code>pgbuf_unlatch_bcb_upon_unfix</code>는 <code>blocked_reader_writer == true</code>일 때 zone 디스패치는 물론
+<code>thread_p->pgbuf_pg_unfix_cnt</code> 샤드 증가까지 건너뛴다 <span class="ref">page_buffer.c:6674-6680</span>.
+페이지를 대기자에게 빨리 넘기려는 의도된 단락이지만, 결과적으로 <b>경합이 심할수록 quota 휴리스틱의 입력이
+과소 집계</b>된다 — 조정이 가장 필요한 순간에 신호가 약해진다.<br>
+<b>처리 방침</b>: <kbd class="must">MUST</kbd> 재현. 6장 quota 알고리즘 검증 시 이 편향을 전제로 기대치를 세운다.
+</div>
+
+<div class="box warn"><span class="label">그 밖의 재현 대상 quirk</span>
+<ul>
+<li><b>BCB 초기화의 <code>ASYNC_FLUSH_REQ</code> 클리어</b> — 갓 claim한 BCB에 그 플래그가 서 있을 수 없으므로
+사문화 코드이거나 누수를 덮는 코드다. 원본 주석이 <code>/* todo: why this?? */</code>
+<span class="ref">page_buffer.c:8435</span>. <kbd class="should">SHOULD</kbd> 그대로 둔다(동작 불변, 방어적).</li>
+<li><b><code>pgbuf_unlock_page</code>는 대기자 전원을 깨우지만 아무도 페이지를 받지 못한다</b>
+<span class="ref">:8109-8114</span> — 전부 <code>try_again</code>에서 해시를 다시 뒤진다. thundering herd이지만
+팻말 체인이 스레드당 1칸이라는 구조상 대안이 없다.</li>
+<li><b>조건부 실패는 zero-wait일 때만 에러를 남긴다</b> <span class="ref">:6509-6543</span>. 그 외에는
+<code>ER_FAILED</code>만 반환하고 에러 스택이 비어 있어 호출자가 <code>er_errid()</code>로 원인을 볼 수 없다 —
+<code>pgbuf_ordered_fix</code>의 <code>er_status == NO_ERROR</code> 분기가 이를 전제한다.</li>
+<li><b>lock-free fix가 holder 할당에 실패하면 <code>fcnt</code>가 누수된다</b> <span class="ref">:7712-7718</span> —
+CAS로 이미 증가시킨 뒤 NULL을 반환한다. 실제로는 <code>assert(false)</code>에 걸리는 도달 불가 경로로 취급된다.</li>
+<li><b><code>PSTAT_PB_ALLOC_BCB</code> 타이머는 invalid list 히트를 세지 않는다</b> <span class="ref">:8172-8176</span> —
+가장 빠른 경로가 통계에서 빠지므로 평균 alloc 시간이 과대 보고된다.</li>
+</ul>
+</div>
+
+<div class="box norm"><span class="label">이 장의 수용 검증 (10장 연계)</span>
+<b>M1</b>(hit/miss 단일 스레드) → §5.1·§5.3·§5.4·§5.7 경로. <b>M2</b>(latch + 대기/기상 + lock-free) →
+§5.2·§5.5·§5.6·§5.8, quiz 02. <code>pgbuf_ordered_fix</code>(§5.9)는 heap 워크로드가 있어야 발화하므로 M3 이후
+검증한다. 카운터 전량(§5.10) 일치는 M7의 <code>statdump</code>/<code>SHOW</code> diff = 0 판정에 들어간다.
+</div>
+
+<nav class="book">
+<a href="ch04-concurrency.html">← 이전: 4장 — 동시성 프로토콜</a>
+<span class="chapter-title">5장 — fix/unfix 알고리즘</span>
+<a href="ch06-replacement.html">다음: 6장 — 교체 정책 →</a>
+</nav>
+
+</main>
+</body>
+</html>
