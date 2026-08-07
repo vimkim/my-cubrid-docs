@@ -232,7 +232,8 @@
   <b>삭제 대상에 신원을 확인할 메타데이터가 있기 때문</b>입니다.</p>
   <div class="scroll"><table>
     <tr><th>재시도 대상</th><th>재시도를 안전하게 만드는 것</th><th>재사용돼도 안전한가</th></tr>
-    <tr><td>heap 슬롯</td><td><b>MVCC 헤더</b> — 재사용된 슬롯은 새 MVCCID라 임계값 검사에서 자동 스킵</td><td class="verdict-o">안전</td></tr>
+    <tr><td>heap 슬롯</td><td><b>MVCC 헤더</b> — 삭제 판단을 현재 점유자의 헤더에서 다시 유도(<code>mvcc_satisfies_vacuum</code> 임계값 검사).
+      재사용 점유자는 스킵되거나, 정말 죽은 레코드일 때만 제거되므로 어느 결과든 올바름</td><td class="verdict-o">안전</td></tr>
     <tr><td>btree 엔트리</td><td><b>키 + MVCC info</b> — 키 조회로 정확히 그 엔트리만 접근</td><td class="verdict-o">안전</td></tr>
     <tr><td><b>OOS 청크</b></td><td><b>없음</b> — 헤더에는 길이, 인덱스, 다음 OID만 있고 probe는 점유 여부만 확인</td><td class="verdict-x">안전하지 않음</td></tr>
   </table></div>
@@ -240,7 +241,7 @@
   나중에 실행되는 vacuum 경로에는 그 보장이 없습니다.</p>
 
   <h2><span class="num">4</span>대안 검토</h2>
-  <p class="sub">검토한 일곱 가지 대안과 채택하지 않은 이유를 정리했습니다.</p>
+  <p class="sub">검토한 여덟 가지 대안과 판정을 정리했습니다 (6은 팀 리뷰 후 6a/6b로 분리).</p>
 
   <div class="alt rejected">
     <h3>대안 1 — 수정하지 않음 <span class="badge">제외</span></h3>
@@ -296,11 +297,45 @@
   </div>
 
   <div class="alt rejected">
-    <h3>대안 6 — 생성 트랜잭션의 MVCCID 저장 <span class="badge">제외</span></h3>
-    <div class="idea">청크에 생성 MVCCID를 저장하고 undo image의 MVCC 헤더와 비교한다.</div>
+    <h3>대안 6a — 생성 MVCCID 저장, undo image의 MVCC 헤더와 비교 <span class="badge">제외</span></h3>
+    <div class="idea">청크에 생성 MVCCID를 저장하고 undo image의 MVCC 헤더 insid와 비교한다.</div>
     <ul>
-      <li>같은 트랜잭션이 한 행을 여러 번 UPDATE하면 서로 다른 체인이 같은 MVCCID를 갖습니다. 이전 체인의 슬롯을 이후 체인이 재사용하면 신원을 구분할 수 없습니다.</li>
-      <li>비교에 필요한 undo image의 insert MVCCID는 이전 vacuum에서 정상적으로 제거됐을 수 있어, 항상 기대값을 얻을 수도 없습니다.</li>
+      <li><b>기각 사유 — 비교할 기대값이 소실됩니다.</b> vacuum의 정상 작업 중 하나가 닫힌 지 오래된 레코드의 on-page 헤더에서
+        insert MVCCID를 제거하는 것입니다(<code>VACUUM_RECORD_DELETE_INSID_PREV_VER</code>, <code>mvcc.c:361</code> →
+        <code>vacuum_heap_record_insid_and_prev_version</code>, <code>vacuum.c:2232</code> — REC_HOME/REC_NEWHOME에서
+        <code>OR_MVCC_FLAG_VALID_INSID</code> 플래그와 값을 제거). 이후 그 행이 UPDATE되면 undo image는 정리된 헤더를
+        그대로 캡처하므로, forward-walk 시점에는 청크에 저장된 값과 비교할 생성 MVCCID 자체가 없습니다.
+        기대값이 없을 때 skip하면 가장 오래 산 행들의 체인이 영구 누수되고, 무시하고 지우면 원래 버그가 재발합니다.
+        방어 성립 여부가 "UPDATE 전에 insid 정리가 먼저 왔는가"라는 vacuum 타이밍에 좌우되는 비결정적 방어이기도 합니다.</li>
+      <li><b>정정(2026-08-07)</b>: 초판이 첫 번째 기각 사유로 들었던 "같은 트랜잭션의 다중 UPDATE 시 같은 MVCCID의 체인이 슬롯을
+        재사용해 구분 불가"는 현재 구현에서 성립하지 않아 철회합니다. vacuum job은 블록의 <code>newest_mvccid</code>가
+        oldest visible MVCCID보다 작을 때만 생성되고(<code>vacuum.c:3260</code>), MVCCID는 영속 카운터에서 전진만 하므로
+        (<code>log_Gl.hdr.mvcc_next_id</code>, <code>mvcc_table.cpp:571</code>), vacuum이 비운 슬롯의 재사용자는 항상 생성자보다
+        큰 MVCCID를 갖습니다. 검증 체인 전체는 비교 분석서 부록 B 참조.</li>
+      <li>기대값 소실을 우회하려는 임계값 비교 변형 2종(재시도 시점의 현재 oldest visible / 블록에 동결된 oldest visible)도
+        검토했으나, 각각 <b>재시작 후 "항상 삭제"로 퇴화(오탐)</b> · <b>MVCCID 순서 ≠ 커밋 순서로 인한 시스템적 영구 누수</b>로
+        탈락 — 어떤 임계값도 두 요건을 동시에 만족하지 못함이 구조적으로 확인됐습니다.
+        상세는 <a href="2026-08-07-CBRD-26950-identity-stamp-mvccid-vs-generation.html">신원 스탬프 비교 분석서</a> §3.</li>
+    </ul>
+  </div>
+
+  <div class="alt runnerup">
+    <h3>대안 6b — 청크와 stub 양쪽에 생성 MVCCID 저장(등가 비교) <span class="badge">차선</span></h3>
+    <div class="idea"><code>oos_insert</code> 시 생성 MVCCID를 청크 헤더와 inline stub 양쪽에 기록하고,
+      forward-walk가 undo image 속 stub의 기대값과 청크 저장값을 등가 비교한다.</div>
+    <ul>
+      <li><b>성립합니다.</b> stub은 variable area에 있어 vacuum의 insid 정리 대상이 아니므로 기대값이 항상 가용하고(6a 해소),
+        닫힌-블록 게이팅 + MVCCID 단조증가로 재사용 점유자와의 오탐도 현재 구현에서 불가능합니다.
+        owner OID(대안 7)보다 낫습니다 — backfill이 필요 없습니다.</li>
+      <li>generation 대비 열세 2축: ① <b>크기</b> — stub 16→24B(vs 20B), 청크 헤더 16→24B(vs 20B); stub은 행·컬럼마다
+        반복 지불하는 비용. ② <b>불변식 반경</b> — 정확성 논증이 vacuum 게이팅·MVCCID 단조성·롤백 보상·eager 경로 가드·M1
+        불변식이라는 4개 서브시스템 횡단 전역 불변식에 의존(vs generation의 할당 지점 국소 불변식). 미래의 eager-free류
+        변경에 조용히 붕괴할 수 있습니다.</li>
+      <li>미래 dedup(무변경 OOS 값의 체인 재사용)에서 공유 체인을 스탬프 갱신(bump)으로 보호하는 확장은 MVCCID로는
+        불가능합니다 — 같은 트랜잭션이 한 행을 두 번 UPDATE하면 중간 버전과 최종 버전의 stub이 같은 스탬프를 가져
+        중간 버전의 walk가 공유 체인을 삭제합니다. counter를 병설하면 막을 수 있으나 그 순간 generation으로 수렴합니다.</li>
+      <li>전체 진화 경로·반례 시나리오·검증 체인·dedup 분석:
+        <a href="2026-08-07-CBRD-26950-identity-stamp-mvccid-vs-generation.html">신원 스탬프 비교 분석서</a>.</li>
     </ul>
   </div>
 
@@ -319,7 +354,9 @@
     <h3>제안 — 4B generation 비교 <span class="badge">제안</span></h3>
     <div class="idea">청크를 INSERT할 때 generation을 부여하고 삭제 전에 기대값과 비교한다. 값이 다르면 재사용된 슬롯이므로 삭제하지 않는다.</div>
     <ul>
-      <li>기존 회수 경로와 vacuum 진행 모델을 유지하면서, 동일 트랜잭션의 여러 UPDATE도 구분할 수 있습니다. owner OID처럼 INSERT 이후 backfill할 필요도 없습니다.</li>
+      <li>기존 회수 경로와 vacuum 진행 모델을 유지하면서, MVCC 의미론과 독립적인 신원을 부여합니다.
+        vacuum의 insid 정리에 지워지지 않고 향후 체인 재사용(dedup)이 도입돼도 유효합니다(대안 6의 한계와 대비).
+        owner OID처럼 INSERT 이후 backfill할 필요도 없습니다.</li>
       <li>단일 청크와 멀티청크 모두 삭제 진입 전에 같은 방식으로 차단할 수 있습니다. 향후 재시도 가능한 삭제 경로(CBRD-26786, flashback FU-01)에도 같은 계약을 적용할 수 있습니다.</li>
     </ul>
   </div>
@@ -374,6 +411,18 @@
     <dd><b>REMOVE 경로는 이 이슈의 대상이 아닙니다.</b> 문제는 forward-walk 경로입니다.
     UPDATE의 이전 체인은 live heap 레코드가 참조하지 않고 undo image에만 남으므로, MVCC 정보를 확인할 heap 레코드가 없습니다.
     이 제안은 heap 슬롯처럼 OOS 청크도 자체 신원 정보로 재사용 여부를 확인하게 합니다.</dd>
+    <dt>Q. heap 슬롯 재사용은 MVCC 헤더 임계값 재검사로 idempotent한데, 청크에 MVCCID를 저장해 같은 방식을 쓰면 안 되나?</dt>
+    <dd>heap의 idempotency는 삭제 판단을 <b>현재 점유자의 헤더에서 다시 유도</b>하기 때문에 성립합니다
+    (<code>mvcc_satisfies_vacuum</code>, <code>mvcc.c:321</code> — 로그 레코드의 트랜잭션 ID와의 등가 비교가 아니라
+    oldest visible <b>임계값</b> 비교). "delid &lt; 임계값 ⇒ 쓰레기"는 점유자 <b>내재적</b> 기준이므로, 재사용된 슬롯이어도
+    최근 레코드는 스킵되고, 살아있는 오래된 레코드는 헤더만 정리되고, 정말 죽은 레코드만 제거됩니다 — 어느 결과든 올바릅니다.
+    OOS 청크에는 이 방식이 이식되지 않습니다. 청크의 쓰레기 여부는 청크 자신의 속성이 아니라 <b>소유 heap 버전의 죽음</b>이라는
+    외재적 사실이고, 그 버전은 페이지에서 이미 사라져 undo image에만 남아 있습니다. 청크에 생성 MVCCID를 저장해도 그것은
+    <b>출생 정보</b>일 뿐이어서 "생성자 &lt; 임계값"은 오래전 INSERT된 살아있는 행의 체인에서도 참이 되어 live 체인과 쓰레기를
+    구분하지 못합니다. 죽음 정보(delid)를 청크에 쓰려면 DELETE/UPDATE가 OOS 페이지를 만져야 하는데, 이는 지연 정리 설계와
+    hot-path 비용 때문에 제외한 방향입니다(owner OID backfill과 같은 비용 부류). 따라서 남는 대체물은 판단의 재유도가 아니라
+    <b>신원 확인</b>("지금 점유자가 undo image가 가리키던 그 객체인가")이며, 그것이 generation입니다. MVCCID 저장 자체의
+    한계는 대안 6a/6b를 참고하십시오.</dd>
     <dt>Q. page LSA가 있으니 recovery가 이중 적용을 막지 않나?</dt>
     <dd>page LSA는 같은 redo가 한 페이지에 반복 적용되는 것을 막습니다. 여기서 두 번째 삭제는 replay가 아니라 <b>복구가 끝난 뒤 수행되는 새 연산</b>이며,
     새 로그를 남깁니다. 정상 셧다운이나 릴리스 빌드의 중간 오류처럼 복구 redo가 없는 경우에도 같은 문제가 생길 수 있습니다.</dd>
@@ -389,7 +438,10 @@
     근거 문서: <code>my-cubrid-docs/cbrd-26950/2026-07-31-CBRD-26950-vacuum-oos-slot-reuse-verification.md</code>
     (증거 의무 A–H 전표, 차단 불변식 반박, 대안 검토 상세) ·
     JIRA <a href="http://jira.cubrid.org/browse/CBRD-26950">CBRD-26950</a> · 발견 경위: PR #6986 코드 리뷰 ·
-    2026-07-31 · 분석 도구: Claude Code
+    2026-07-31 · 분석 도구: Claude Code ·
+    정정 2026-08-07: 대안 6의 "동일 트랜잭션 다중 UPDATE" 기각 사유 철회(팀 리뷰 반박 수용), 기대값 소실을 주 기각 사유로 승격,
+    대안 6을 6a(헤더 비교, 제외)/6b(stub 탑재, 차선)로 분리 — 상세 근거:
+    <code>2026-08-07-CBRD-26950-identity-stamp-mvccid-vs-generation.html</code> · 검증 기준 worktree HEAD <code>07fef9d48</code>
   </div>
 
 </div>

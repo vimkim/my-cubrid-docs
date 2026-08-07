@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CBRD-26950 — 신원 스탬프 비교 분석: MVCCID 계열 vs 4B generation</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1d21; --muted: #5b6470; --line: #e2e6ea;
+    --accent: #2563eb; --accent-soft: #eaf1fe;
+    --danger: #c0392b; --danger-soft: #fdeeec;
+    --warn: #b7791f; --warn-soft: #fdf6e7;
+    --ok: #1e7e46; --ok-soft: #eaf7ef;
+    --code-bg: #f4f6f8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181c; --fg: #e6e9ec; --muted: #9aa4b0; --line: #2c313a;
+      --accent: #6ea1ff; --accent-soft: #1c2740;
+      --danger: #e07568; --danger-soft: #3a2320;
+      --warn: #d9a441; --warn-soft: #382e18;
+      --ok: #58b47f; --ok-soft: #1c3226;
+      --code-bg: #22262d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+    font-size: 15px; line-height: 1.65;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 40px 24px 80px; }
+  .kicker { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  h1 { font-size: 26px; line-height: 1.35; margin: 8px 0 10px; }
+  h2 { font-size: 19px; margin: 44px 0 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+  h2 .num {
+    display: inline-block; background: var(--accent); color: #fff; border-radius: 6px;
+    font-size: 13px; padding: 1px 8px; margin-right: 8px; vertical-align: 2px;
+  }
+  h3 { font-size: 15.5px; margin: 22px 0 8px; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 22px; }
+  code { background: var(--code-bg); border-radius: 4px; padding: 1px 5px; font-size: .88em;
+         font-family: ui-monospace, "JetBrains Mono", Consolas, monospace; }
+  .verdictbox {
+    border: 1px solid var(--ok); background: var(--ok-soft); border-radius: 10px;
+    padding: 14px 18px; margin: 18px 0; font-size: 15px;
+  }
+  .verdictbox b.ok { color: var(--ok); }
+  .callout {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 16px 0; font-size: 14px;
+  }
+  .scroll { overflow-x: auto; margin: 14px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-size: 12.5px; white-space: nowrap; }
+  .v-x { color: var(--danger); font-weight: 700; white-space: nowrap; }
+  .v-w { color: var(--warn); font-weight: 700; white-space: nowrap; }
+  .v-o { color: var(--ok); font-weight: 700; white-space: nowrap; }
+  .alt { border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; margin: 14px 0; }
+  .alt h3 { margin: 0 0 6px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .alt .badge { font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 20px; white-space: nowrap; }
+  .alt.rejected { border-color: var(--danger); }
+  .alt.rejected .badge { color: var(--danger); background: var(--danger-soft); }
+  .alt.runnerup { border-color: var(--warn); }
+  .alt.runnerup .badge { color: var(--warn); background: var(--warn-soft); }
+  .alt.chosen { border-color: var(--ok); background: var(--ok-soft); }
+  .alt.chosen .badge { color: var(--ok); background: var(--bg); border: 1px solid var(--ok); }
+  .alt .idea { color: var(--muted); font-size: 13.5px; margin-bottom: 8px; }
+  .alt ul { margin: 6px 0 2px; padding-left: 20px; }
+  .alt li { margin-bottom: 6px; }
+  details {
+    border: 1px solid var(--line); border-radius: 10px; margin: 12px 0; padding: 0 16px;
+  }
+  details summary {
+    cursor: pointer; font-weight: 700; padding: 12px 0; font-size: 14.5px;
+    list-style-position: inside;
+  }
+  details[open] { padding-bottom: 12px; }
+  ol.cx { padding-left: 22px; }
+  ol.cx li { margin-bottom: 6px; }
+  .footnote { color: var(--muted); font-size: 12.5px; margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); }
+  a { color: var(--accent); }
+  p.lead { font-size: 15.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="kicker">CBRD-26950 · Analysis · 미팅 자료 (보조 문서)</span>
+  <h1>OOS 신원 스탬프 값 비교 분석<br>— MVCCID 계열 대안의 진화와 4B generation 권고</h1>
+  <div class="meta">
+    검증 기준: <code>feat/oos</code> 파생 worktree HEAD <code>07fef9d48</code> (2026-08-07) ·
+    본 문서는 <a href="2026-07-31-CBRD-26950-generation-field-proposal.html">generation 필드 제안 리포트</a>의
+    대안 6(6a/6b) 상세 근거 문서입니다 · 발단: "생성 MVCCID 를 스탬프로 쓸 수 있지 않은가"라는 팀 리뷰 반론
+  </div>
+
+  <div class="verdictbox">
+    <b>결론 요약</b> — MVCCID 를 신원 스탬프로 쓰는 네 가지 변형을 검토한 결과,
+    세 가지(헤더 비교 · 임계값 비교 2종)는 정확성 요건 위반으로 탈락하고,
+    <b>청크와 stub 양쪽에 MVCCID 를 기록하는 등가 비교안은 현재 구현에서 성립합니다(차선)</b>.
+    다만 성립하는 그 안조차 <b class="ok">4B generation</b> 대비
+    ① 온디스크 비용(stub 24B vs 20B)과 ② 정확성 불변식의 검증 반경(4개 서브시스템 횡단 vs 할당 지점 국소)
+    두 축에서 열세이므로, <b class="ok">generation 채택을 권고</b>합니다.
+    추가로 미래 <b>dedup(무변경 OOS 값의 체인 재사용)</b> 확장을 §5 에서 분석한 결과,
+    ③ 재참조 시 스탬프를 갱신(bump)해 공유 체인을 보호하는 확장은 <b>generation 만 성립</b>하며 —
+    MVCCID 는 같은 트랜잭션 재참조 충돌 때문에 별도 counter 병설이 강제되어 사실상 generation 으로 수렴합니다.
+  </div>
+
+  <h2><span class="num">1</span>문제와 판정 기준</h2>
+  <p class="lead">
+    forward-walk 의 삭제 대상(UPDATE 의 이전 OOS value chain)은 live heap 레코드가 참조하지 않고
+    <b>undo image 에만</b> 남습니다. 즉 "이 청크가 쓰레기인가"는 청크 자신의 속성이 아니라
+    <b>소유 heap 버전의 죽음이라는 외재적 사실</b>이고, 그 버전은 페이지에서 이미 사라졌습니다.
+    따라서 재처리(블록 재시도) 시 필요한 것은 쓰레기 여부의 재유도가 아니라
+    <b>신원 확인</b> — "지금 슬롯 점유자가 undo image 가 가리키던 그 체인인가" — 입니다.
+  </p>
+  <div class="callout">
+    <b>heap 과의 비대칭.</b> heap 슬롯 재사용이 안전한 이유는 삭제 판단을
+    <b>현재 점유자의 헤더에서 다시 유도</b>하기 때문입니다(<code>mvcc_satisfies_vacuum</code>, <code>mvcc.c:321</code>).
+    heap 헤더의 delid 는 <b>죽음 정보</b>라 "delid &lt; 임계값 ⇒ 쓰레기"가 점유자 내재적 기준이 됩니다.
+    OOS 청크에는 죽음 정보가 없고(있는 것은 출생 정보뿐), 죽음 정보를 청크에 쓰려면 DELETE/UPDATE 가
+    OOS 페이지를 만져야 해 지연 정리 설계와 충돌합니다. 아래 모든 대안은 이 비대칭을 우회하려는 시도이며,
+    판정은 결국 "무엇을 스탬프로 삼아 <b>등가 비교</b>하느냐"로 수렴합니다.
+  </div>
+  <p>신원 스탬프가 만족해야 하는 요건:</p>
+  <div class="scroll"><table>
+    <tr><th>요건</th><th>내용</th><th>위반 시 결과</th></tr>
+    <tr><td><b>R1 가용성</b></td><td>기대값이 forward-walk(재시도 포함) 시점에 항상 손에 있어야 함</td><td>비교 불가 → skip 시 영구 누수 / 강행 시 버그 재발</td></tr>
+    <tr><td><b>R2 오탐 불가</b></td><td>다른 신원(재사용 점유자)과는 반드시 불일치</td><td><b>살아있는 데이터 삭제 (silent data loss)</b></td></tr>
+    <tr><td><b>R3 누수 불가</b></td><td>같은 신원(정당한 대상)과는 반드시 일치</td><td>영구 누수 — CBRD-26668 회수 목적 붕괴</td></tr>
+    <tr><td><b>R4 비용</b></td><td>stub 은 행·OOS 컬럼마다 반복 지불 — 크기 민감. 핫패스 추가 쓰기 금지</td><td>영구적 공간/쓰기 비용</td></tr>
+    <tr><td><b>R5 불변식 반경</b></td><td>정확성 논증이 의존하는 코드 범위가 좁을수록 안전</td><td>미래 변경이 조용히 정확성을 깨뜨림</td></tr>
+  </table></div>
+
+  <h2><span class="num">2</span>판정 요약</h2>
+  <div class="scroll"><table>
+    <tr><th>#</th><th>안</th><th>비교 형태</th><th>결정 근거</th><th>판정</th></tr>
+    <tr><td>6a</td><td>청크에 MVCCID 저장, <b>undo image 의 MVCC 헤더</b>와 비교</td><td>등가</td>
+        <td><b>R1 위반</b> — vacuum 의 insid 정리가 기대값을 지움</td><td class="v-x">제외</td></tr>
+    <tr><td>A</td><td>청크 MVCCID 를 <b>재시도 시점의 현재 oldest visible</b> 과 비교</td><td>부등호</td>
+        <td><b>R2 위반</b> — 재시작 후 "항상 삭제"로 퇴화, 기본 시나리오 그대로 뚫림</td><td class="v-x">제외</td></tr>
+    <tr><td>B</td><td>청크 MVCCID 를 <b>블록에 동결된 oldest_visible</b> 과 비교</td><td>부등호</td>
+        <td><b>R3 위반</b> — MVCCID 순서 ≠ 커밋 순서 → 장기 writer 하나로 시스템적 영구 누수</td><td class="v-x">제외</td></tr>
+    <tr><td>6b</td><td><b>청크 + stub 양쪽</b>에 MVCCID 기록, 등가 비교</td><td>등가</td>
+        <td>R1–R3 충족(현 구현 기준). 단 R4(stub 24B)·R5(전역 불변식) 열세</td><td class="v-w">차선</td></tr>
+    <tr><td>—</td><td><b>4B generation</b> (청크 + stub, 페이지 카운터 발급)</td><td>등가</td>
+        <td>R1–R3 충족 + 최소 비용(20B) + 국소 불변식</td><td class="v-o">권고</td></tr>
+  </table></div>
+
+  <h2><span class="num">3</span>진화 경로 — 각 변형이 탈락/생존한 이유</h2>
+  <p class="sub">팀 리뷰에서 제기된 순서 그대로입니다. 각 단계의 반박이 다음 단계를 낳았고,
+  마지막 형태는 성립합니다.</p>
+
+  <div class="alt rejected">
+    <h3>6a. 헤더 비교 원안 <span class="badge">제외 — R1 위반</span></h3>
+    <div class="idea">청크에 생성 MVCCID 를 저장하고, forward-walk 시 undo image 의 MVCC 헤더 insid 와 등가 비교한다.</div>
+    <ul>
+      <li>vacuum 의 정상 작업 중 하나가 닫힌 지 오래된 레코드의 on-page 헤더에서 insert MVCCID 를 제거하는 것입니다
+        (<code>VACUUM_RECORD_DELETE_INSID_PREV_VER</code>, <code>mvcc.c:361</code> →
+        <code>vacuum_heap_record_insid_and_prev_version</code>, <code>vacuum.c:2232</code>).
+        이후 그 행이 UPDATE 되면 undo image 는 정리된 헤더를 그대로 캡처하므로 <b>기대값 자체가 없습니다</b>.</li>
+      <li>오래 산 행일수록 소실 확률이 높아, 보호가 "UPDATE 전에 insid 정리가 먼저 왔는가"라는
+        vacuum 타이밍에 좌우되는 비결정적 방어가 됩니다.</li>
+      <li>참고: 초기 검토에서 "같은 트랜잭션 다중 UPDATE 시 스탬프 충돌"도 기각 사유로 들었으나,
+        닫힌-블록 게이팅과 MVCCID 단조증가에 의해 현재 구현에서 성립하지 않음이 확인되어 <b>철회</b>했습니다
+        (2026-08-07 정정 — 상세는 부록 B).</li>
+    </ul>
+  </div>
+
+  <div class="alt rejected">
+    <h3>A. 임계값 비교 — 재시도 시점의 현재 oldest visible <span class="badge">제외 — R2 위반</span></h3>
+    <div class="idea">점유자 청크의 생성 MVCCID 가 현재 oldest visible MVCCID 보다 작으면(충분히 오래됐으면) 삭제한다.</div>
+    <ul>
+      <li><b>재시작을 거치는 재시도에서 검사가 "항상 삭제"로 퇴화합니다.</b> oldest visible 은 활성 트랜잭션의
+        최소 MVCCID 인데, 재시작 후에는 pre-crash 트랜잭션이 전부 닫혀 있어 oldest visible 이
+        <code>log_Gl.hdr.mvcc_next_id</code> 이상 — 즉 <b>재시작 이전의 모든 MVCCID 보다 큽니다</b>.
+        재사용 점유자가 누구든 검사를 통과하고, 살아있는 체인이 지워집니다.</li>
+      <li>제안 리포트의 기본 타임라인이 정확히 이 순서입니다: T4(중단 <b>전에</b> 슬롯 재사용) →
+        T5(셧다운/크래시) → T6(INTERRUPTED 재처리). 즉 이 변형은 버그의 대표 트리거에서 보호를 0 제공합니다.</li>
+      <li>같은 런 내 재시도에서도 재사용자가 커밋되고 그보다 오래된 활성 트랜잭션이 사라지는 순간(보통 수 초)
+        임계값이 재사용자를 넘어 보호가 소멸하는 시간 경쟁입니다.</li>
+      <li>근본 원인: 임계값 검사는 점유자의 <b>나이</b>만 볼 뿐 <b>정체</b>를 모릅니다. 출생 정보(생성 MVCCID)가
+        오래됐다는 것은 그 체인이 쓰레기라는 뜻이 아닙니다 — 수년 전 INSERT 되고 한 번도 UPDATE 안 된
+        살아있는 행의 체인도 같은 조건을 만족합니다.</li>
+    </ul>
+  </div>
+
+  <div class="alt rejected">
+    <h3>B. 임계값 비교 — 블록에 동결된 oldest_visible <span class="badge">제외 — R3 위반</span></h3>
+    <div class="idea">비교 기준을 <code>VACUUM_DATA_ENTRY</code> 에 영속화된 블록 생성 시점의 <code>oldest_visible_mvccid</code> 로 바꾼다.</div>
+    <ul>
+      <li>방향을 뒤집으면 <b>오탐(R2)은 실제로 막힙니다</b>: 재사용은 항상 "블록 채움 → 디스패치 → 첫 삭제 → 재사용"
+        순서 뒤에 오므로, 재사용자의 MVCCID 는 블록의 동결값 이상임이 순서 논증으로 보장되고 재시작에도 깨지지 않습니다.</li>
+      <li>대신 <b>정당한 대상이 검사를 통과하지 못합니다.</b> MVCCID 는 첫 write 시점에 발급되므로
+        <b>MVCCID 순서 ≠ 커밋/갱신 순서</b>입니다. 장기 실행 배치 writer W(MVCCID 100)가 활성인 동안
+        T1(MVCCID 200)이 OOS 행을 INSERT·커밋하고 W 가 그 행을 UPDATE 하면(READ COMMITTED 에서 정상),
+        블록의 동결값은 ≤ 100 인데 삭제 대상 체인의 생성자는 200 → 항상 skip → <b>영구 누수</b>. 상세는 부록 A-2.</li>
+      <li>장기 writer 하나가 살아 있는 동안 채워진 <b>모든 블록</b>이 이 조건에 걸리므로 누수는 시스템적입니다.
+        forward-walk 의 존재 이유(CBRD-26668 누수 방지)를 스스로 무너뜨립니다.</li>
+      <li><b>구조적 정리</b>: 블록 유도 임계값으로 재사용자는 항상 걸러낼 수 있지만(블록보다 뒤이므로),
+        정당한 대상의 생성자 MVCCID 는 블록의 어떤 값(<code>newest_mvccid</code> 포함)과도 순서 관계가 없습니다.
+        두 모집단이 MVCCID 축에서 분리되지 않으므로 <b>어떤 임계값을 골라도</b> "손실 없음"과 "누수 없음"을
+        동시에 얻을 수 없습니다. (부등호 대신 로그 레코드의 updater MVCCID 와 등가 비교하는 변형도 검토했으나,
+        이전 버전의 체인 생성자 ≠ updater 라 정당한 삭제가 전부 불일치 → 전면 누수로 즉시 탈락.)</li>
+    </ul>
+  </div>
+
+  <div class="alt runnerup">
+    <h3>6b. stub 탑재 MVCCID — 등가 신원 비교 <span class="badge">차선 — 성립</span></h3>
+    <div class="idea"><code>oos_insert</code> 시 생성 MVCCID 를 <b>청크 헤더와 OOS inline stub 양쪽</b>에 기록.
+      forward-walk: HAS_OOS → IS_OOS → stub 에서 기대값 획득 → 청크의 저장값과 <b>등가 비교</b> → 일치할 때만 삭제.</div>
+    <ul>
+      <li><b>R1 충족 — 기대값이 소실되지 않습니다.</b> vacuum 의 insid 정리는 MVCC <b>헤더</b>의 플래그와 값만
+        제거하며(<code>vacuum.c:2282-2290</code>), variable area 안의 stub 은 건드리지 않습니다. undo image 는
+        recdes 를 통째로 보존하므로 stub 의 MVCCID 는 재시도 시점에 항상 살아 있습니다. 6a 를 죽인 문제가 해소됩니다.</li>
+      <li><b>R2 충족(현 구현 기준) — 같은 값의 다른 체인이 슬롯을 점유할 수 없습니다.</b> 체인을 참조하는 stub 이
+        walk 가능하려면 생성 트랜잭션 X 는 이미 닫혀 있고, walk 가 비운 슬롯의 재사용자는 반드시 X 보다 큰
+        MVCCID 를 가지며, X 활동 중의 free 경로(롤백 보상, eager <code>!is_mvcc_op</code>)는 walkable 참조를
+        남기지 않습니다. 검증 체인 전체는 부록 B.</li>
+      <li><b>R3 충족</b> — 같은 체인이면 같은 시점에 같은 값이 양쪽에 기록되므로 항상 일치합니다.</li>
+      <li>스탬프가 버전이 아니라 <b>체인</b>에 귀속되므로, 미래 dedup 이 stub 을 복사해도 신원 판정 자체는
+        유지됩니다. 다만 dedup 의 공유 체인 보호를 <b>스탬프 bump</b> 로 구현하는 확장은 MVCCID 로는
+        불가능합니다 — 같은 트랜잭션 재참조 충돌(§5, 부록 D-1).</li>
+      <li><b>그러나 R4 열세</b>: MVCCID 는 8B — stub 16→24B, 청크 헤더 16→24B. generation 은 4B — 20B/20B.
+        stub 은 행·OOS 컬럼마다 반복 지불하는 비용이며, 제안 리포트가 이미 stub 20B vs 24B 비교에서
+        24B 의 정렬 이득 없음을 확인하고 20B 를 채택했습니다. MVCCID 를 4B 로 절단하면 크기는 같아지지만
+        2<sup>32</sup> 주기 충돌 가능성이 이론상 재도입되는데, 절단한 MVCCID 는 "의미가 붙은 4B 카운터"일 뿐이라
+        그럴 바엔 처음부터 4B 카운터가 낫습니다.</li>
+      <li><b>그리고 R5 열세</b>: 위 R2 논증은 vacuum 디스패치 게이팅 + MVCCID 단조증가 + 롤백 보상 의미론 +
+        eager 경로 가드 + M1 항상-새-체인이라는 <b>4개 서브시스템 횡단 전역 불변식</b>입니다(부록 B 가 그 검증
+        기록입니다). 예컨대 미래에 자기-트랜잭션 중간 버전의 즉시 회수(PG HOT-pruning 류)가 MVCC 경로에
+        추가되면 "생성자 활동 중 free + walkable 참조"가 생겨 이 안은 <b>조용히</b> 깨집니다.</li>
+      <li>공정한 인정: MVCCID 스탬프는 진단 시 생성자를 식별할 수 있고, 페이지 헤더 카운터가 필요 없습니다.
+        다만 위 두 열세를 상쇄할 정도는 아닙니다.</li>
+    </ul>
+  </div>
+
+  <div class="alt chosen">
+    <h3>4B generation — 페이지 카운터 발급 등가 비교 <span class="badge">권고</span></h3>
+    <div class="idea">청크 INSERT 시 페이지 헤더의 uint32 카운터를 증가시켜 generation 을 부여하고,
+      청크 헤더(+4B)와 stub(+4B)에 기록. 삭제 전 등가 비교, 불일치면 재사용 슬롯이므로 no-op.</div>
+    <ul>
+      <li>6b 와 같은 자리(청크 + stub)에 같은 종류의 값(신원 스탬프)을 넣되, R1–R3 을 동일하게 충족하면서
+        <b>R4 최소 비용(stub 20B)</b>을 달성합니다.</li>
+      <li><b>R5 — 정확성 불변식이 국소적입니다</b>: "슬롯 재할당마다 해당 페이지 카운터가 증가한다" 하나뿐이며,
+        <code>oos_insert</code>(발급)와 삭제 검사 두 지점만 보면 검증이 끝납니다. 트랜잭션 수명, vacuum 게이팅,
+        롤백 의미론, 실행 모드와 무관하므로 6b 를 깨뜨리는 부류의 미래 변경에 자동으로 안전합니다.</li>
+      <li>미래 dedup(무변경 OOS 값의 체인 재사용)에서 공유 체인 보호를 <b>스탬프 bump</b> 로 구현할 수 있는
+        유일한 스탬프입니다 — 재참조마다 페이지 카운터에서 재발급하면 됩니다(§5).</li>
+      <li>설계 상세(카운터 위치, 폭 충분성, 온디스크 변경 목록)는
+        <a href="2026-07-31-CBRD-26950-generation-field-proposal.html">제안 리포트 §5</a> 를 따릅니다.</li>
+    </ul>
+  </div>
+
+  <h2><span class="num">4</span>성립하는 두 안의 정면 비교</h2>
+  <div class="scroll"><table>
+    <tr><th>기준</th><th>6b. stub 탑재 MVCCID (8B)</th><th>4B generation</th></tr>
+    <tr><td>R1 기대값 가용성</td><td class="v-o">충족</td><td class="v-o">충족</td></tr>
+    <tr><td>R2 오탐 불가 논거</td>
+        <td class="v-w">전역 불변식 — vacuum 게이팅 + MVCCID 단조증가 + 롤백 보상 + eager 가드 + M1 (부록 B, 4개 서브시스템)</td>
+        <td class="v-o">국소 불변식 — 재할당 시 페이지 카운터 증가 (2개 함수)</td></tr>
+    <tr><td>R3 누수 불가</td><td class="v-o">충족 (등가)</td><td class="v-o">충족 (등가)</td></tr>
+    <tr><td>stub 크기</td><td class="v-w">16 → 24B (행·컬럼 반복 비용)</td><td class="v-o">16 → 20B</td></tr>
+    <tr><td>청크 헤더</td><td class="v-w">16 → 24B</td><td class="v-o">16 → 20B</td></tr>
+    <tr><td>페이지 헤더</td><td class="v-o">변경 없음</td><td class="v-w">uint32 카운터 추가 (이미 보유한 W-latch 아래 증가)</td></tr>
+    <tr><td>핫패스 쓰기 흐름</td><td class="v-o">불변 (값이 이미 손에 있음)</td><td class="v-o">불변 (카운터 증가는 같은 latch 안)</td></tr>
+    <tr><td>미래 dedup — old∩new 공유 검사와 조합</td><td class="v-o">호환 (스탬프 복사 시 신원 판정 유지)</td><td class="v-o">호환 (스탬프 복사 시 신원 판정 유지)</td></tr>
+    <tr><td>미래 dedup — 스탬프 bump 보호와 조합 (§5)</td><td class="v-x">불가 — 같은 트랜잭션 재참조 시 스탬프 충돌, counter 병설 강제</td><td class="v-o">성립 — 재참조마다 페이지 카운터에서 재발급</td></tr>
+    <tr><td>미래 eager-free 류 변경 내성</td><td class="v-x">조용히 붕괴 가능 (같은 생성자 재점유 경로가 생기면)</td><td class="v-o">자동 안전 (재할당 자체가 스탬프를 바꿈)</td></tr>
+    <tr><td>진단성</td><td class="v-o">생성 트랜잭션 식별 가능</td><td class="v-w">불투명 카운터</td></tr>
+    <tr><td><b>판정</b></td><td class="v-w"><b>차선</b></td><td class="v-o"><b>권고</b></td></tr>
+  </table></div>
+
+  <h2><span class="num">5</span>확장 분석 — dedup(무변경 OOS 값의 체인 재사용)에서 두 스탬프</h2>
+  <p class="lead">
+    recdes 는 바뀌지만 OOS 값은 그대로인 UPDATE 에서, M1 은 항상 새 체인을 만듭니다(현행).
+    미래 개선(구 M3 / Optimization A)은 기존 체인의 head OOS OID 를 새 버전 stub 에 <b>복사(재사용)</b>합니다 —
+    OOS 는 insert-only 이므로 무변경 값의 재기록은 순수 낭비이기 때문입니다. 그러면 한 체인이 여러 버전에
+    공유되고, <b>이전 버전의 undo 를 walk 한 vacuum 이 최신 live 레코드가 아직 쓰는 체인을 지우면 안 된다</b>는
+    새 문제가 생깁니다(OOS-CONTEXT 가 dedup 의 전제조건으로 명시한 old∩new 공유 검사 문제).
+  </p>
+  <div class="callout">
+    <b>문제의 성격 구분.</b> 이것은 신원("점유자가 그 체인인가")이 아니라 <b>수명("아직 누가 참조하는가")</b>의
+    문제입니다. 재할당 감지용 스탬프는 dedup 과 무관하게 계속 필요하고, dedup 은 <b>별도의</b> 보호 장치를
+    추가로 요구합니다. 질문은 "어느 스탬프가 그 보호 장치와 더 잘 조합되는가"입니다.
+  </div>
+  <div class="scroll"><table>
+    <tr><th>보호 장치 후보</th><th>방식</th><th>비용</th><th>스탬프 호환성</th></tr>
+    <tr><td><b>(i) 스탬프 갱신(bump)</b></td>
+        <td>재참조 시 청크 스탬프를 <b>새 값</b>으로 갱신하고 새 버전 stub 에만 새 값 기록.
+            중간 버전들의 walk 는 불일치 → skip, <b>마지막 참조자의 walk 만 일치 → 삭제</b>.
+            삭제 판단이 undo image + 청크에 국소적으로 닫힘</td>
+        <td>재사용 UPDATE 마다 head 청크 페이지 fix + 소량 WAL — 체인 전체 재기록(M1) 대비 미미, dedup 이득 유지</td>
+        <td class="v-o">generation ✓</td></tr>
+    <tr><td><b>(ii) old∩new 공유 검사</b></td>
+        <td>walk 가 undo image 와 redo(post-image)의 head OID 를 비교해 공유 OID 를 skip</td>
+        <td>온디스크 무변경, walk CPU 추가. 단 post-image 가 같은 로그 레코드에 없는 경로
+            (REC_RELOCATION 계열)의 별도 처리가 필요 — 판단이 비국소적</td>
+        <td class="v-o">양쪽 호환</td></tr>
+    <tr><td><b>(iii) refcount</b></td>
+        <td>청크 헤더에 참조 수를 증감, 0 에서 삭제</td>
+        <td>재참조뿐 아니라 <b>모든 walk 에도</b> 쓰기 추가</td>
+        <td>교차-행 공유(내용 주소화)까지 갈 때만 필요 — 같은 행의 버전 공유는 참조가 선형이라 (i)로 충분</td></tr>
+  </table></div>
+
+  <h3>bump 확장은 왜 generation 만 성립하는가</h3>
+  <ul>
+    <li><b>generation</b>: 재참조 시 <b>페이지 카운터에서 새 값을 발급</b>받아 청크와 새 stub 에 기록합니다.
+      버전마다 stub 스탬프가 서로 다르므로 마지막 참조자만 삭제 권한을 갖습니다.
+      주의 규칙 하나: bump 값은 반드시 페이지 카운터 증가로 발급해야 합니다 — 청크 값에 지역적으로 +1 하면
+      페이지 카운터가 미래 insert 에 같은 값을 발급해 충돌할 수 있습니다(부록 D-3). 유일성의 원천을
+      페이지 카운터 하나로 유지하면 논증이 국소적으로 닫힙니다.</li>
+    <li><b>MVCCID</b>: 자연스러운 bump 값은 재참조 트랜잭션의 MVCCID 인데,
+      <b>같은 트랜잭션이 같은 행을 두 번 UPDATE(다른 컬럼만 변경, OOS 값 유지)하면 중간 버전과 최종 버전의
+      stub 이 같은 스탬프</b>를 갖습니다. 중간 버전의 walk 가 일치를 보고 공유 체인을 삭제 → 최신 live 버전의
+      데이터 손실(부록 D-1). 6a 초판에서 철회했던 "같은 트랜잭션 충돌"이 dedup 에서는 <b>실제 발생 조건으로
+      부활</b>합니다 — 트랜잭션이 한 행을 여러 번 갱신하는 것은 흔한 패턴입니다.
+      이를 막으려면 예상대로 modification counter 를 병설해야 하는데, 그 순간 유일성은 counter 가 전담하고
+      MVCCID 8B 는 잉여가 됩니다 — <b>결국 generation 으로 수렴</b>합니다.</li>
+  </ul>
+
+  <h3>마지막 참조자 삭제는 스냅샷에 안전한가</h3>
+  <p>bump(와 공유 검사)의 삭제 시점은 "마지막 참조 버전의 death 블록 walk"입니다. 이 블록의 디스패치 게이트가
+  앞선 모든 버전의 스냅샷 리더까지 자동으로 배제함을 커밋 순서 전이성으로 증명할 수 있습니다(부록 D-2) —
+  M1 의 기존 게이팅 원리가 공유 체인으로 그대로 확장됩니다. 즉 bump 는 "삭제를 마지막 참조자에게 위임"하는
+  안전한 프로토콜입니다.</p>
+  <p><b>소결</b>: dedup 관점에서 generation 우위가 강화됩니다. generation 은 (i)·(ii) 모두와 조합 가능하고
+  특히 (i)이 국소적·자연스러운 확장인 반면, MVCCID 는 (ii)와만 조합 가능하며 (i)을 시도하면
+  counter 병설이 강제됩니다.</p>
+
+  <h2><span class="num">6</span>권고</h2>
+  <ul>
+    <li><b>4B generation 을 채택합니다.</b> 신원 스탬프로서 동일한 정확성을 더 작은 온디스크 비용으로 제공하고,
+      정확성 논증이 할당 지점에 국소화되어 있어 미래 변경에 견고합니다.</li>
+    <li><b>6b(stub 탑재 MVCCID)는 "성립하는 차선"으로 기록합니다.</b> 헤더 비교 원안(6a)과 달리 정확하며,
+      owner OID 보다도 낫습니다(backfill 불필요, 기대값 항상 가용). generation 이 어떤 이유로 기각될 경우의
+      대체안은 6b 입니다.</li>
+    <li>임계값 계열(A/B)은 어떤 조합으로도 재구성하지 않습니다 — "손실 없음"과 "누수 없음"이 MVCCID 축에서
+      양립 불가능함이 구조적으로 확인됐습니다(§3-B).</li>
+    <li><b>미래 dedup 을 고려해도 결론은 같습니다.</b> 공유 체인 보호를 스탬프 bump 로 구현하는 확장은
+      generation 에서만 성립하며(§5), MVCCID 를 유지한 채 dedup 을 하려면 공유 검사(ii)에 묶이거나
+      counter 를 병설해 generation 으로 수렴합니다. generation 채택은 dedup 의 선행 투자이기도 합니다.</li>
+  </ul>
+
+  <h2><span class="num">부록</span>상세 근거</h2>
+
+  <details>
+    <summary>부록 A — 임계값 변형 반례 시나리오 전문</summary>
+    <h3>A-1. 변형 A(현재 oldest visible) — 재시작 반례</h3>
+    <ol class="cx">
+      <li>행 R1 UPDATE → 이전 체인 A(생성자 X)의 참조는 블록 K 의 undo image 에만 남음.</li>
+      <li>vacuum 이 블록 K 처리 시작, forward-walk 가 체인 A 삭제, 슬롯 free. <code>start_lsa</code> 는 전진하지 않음.</li>
+      <li>다른 트랜잭션 Y 가 INSERT — 체인 B 가 같은 슬롯을 재사용. Y 커밋.</li>
+      <li>블록 K 완료 전에 정상 셧다운(또는 크래시). K 는 INTERRUPTED 로 영속화.</li>
+      <li>재시작. pre-crash 트랜잭션은 전부 닫혀 있으므로 oldest visible ≥ <code>log_Gl.hdr.mvcc_next_id</code> &gt; Y.</li>
+      <li>K 재처리: 점유자 B 의 생성 MVCCID Y &lt; 현재 oldest visible → 검사 통과 → <b>살아있는 체인 B 삭제</b>.</li>
+    </ol>
+    <p>즉 재시작 경유 재시도에서는 어떤 pre-crash 재사용자도 걸러내지 못합니다 — 검사 없는 현재 동작과 동일.</p>
+    <h3>A-2. 변형 B(블록 동결값) — 장기 배치 writer 반례</h3>
+    <ol class="cx">
+      <li>배치 세션 W 가 트랜잭션 시작, 첫 write 로 MVCCID <b>100</b> 획득, 계속 실행 중.</li>
+      <li>세션 T1(MVCCID <b>200</b>)이 행 R 을 OOS 체인 A 와 함께 INSERT, 커밋.</li>
+      <li>W(100) 가 R 을 UPDATE — READ COMMITTED 에서 정상. 이 undo(image 가 체인 A 참조)는 MVCCID 100 으로
+        로깅되어 블록 K 에 들어감. K 의 동결 <code>oldest_visible_mvccid</code> ≤ 100 (W 가 활성이므로).</li>
+      <li>W 커밋 후 K 디스패치. forward-walk: 대상 체인 A 의 생성자 200 &lt; 동결값 100 ? 거짓 →
+        <b>skip → 영구 누수</b> (재시도마다 동일).</li>
+    </ol>
+    <p>W 가 살아 있는 동안 채워진 모든 블록의 동결값이 ≤ 100 이므로, 그 기간의 모든 UPDATE garbage 가
+    같은 방식으로 누수됩니다. 참고로 같은 반례에서 변형 A 는 올바르게 삭제합니다(200 &lt; 현재 임계값) —
+    두 변형은 상호 보완적으로 실패하며, 이것이 "어떤 임계값도 없다"는 구조 논증의 근거입니다.</p>
+    <h3>A-3. 등가 비교(6b)의 오탐 불가 순서 논증</h3>
+    <p>체인 A(생성자 X)를 참조하는 stub 이 forward-walk 대상이 되려면:
+    ① A 를 참조하는 버전을 다른 연산이 대체했고 그 undo 가 NOTIFY 로그로 남았으며,
+    ② 그 블록이 디스패치되려면 블록 내 모든 MVCCID 가 oldest visible 아래 — 특히 X 는 닫혀 있음.
+    walk 가 A 를 지워 슬롯이 비는 시점은 그 이후이므로, 재사용자는 "X 가 닫힌 뒤 활성"인 트랜잭션 —
+    단조증가·비재사용에 의해 MVCCID &gt; X. 한편 X 활동 중에 A 가 free 되는 경로는
+    (a) 롤백 보상: A 와 A 를 참조하는 stub 을 쓴 버전이 같은 연산에서 생성되므로 함께 undo — walkable 참조가
+    남지 않음. (b) eager 삭제: <code>!is_mvcc_op</code> 브랜치 전용이며 그 undo 는 NOTIFY 가 아니므로
+    walk 대상이 아님. 따라서 "stub 값 == 청크 값 ⇒ 같은 체인"이 현재 구현에서 성립합니다.</p>
+  </details>
+
+  <details>
+    <summary>부록 B — 6b 정확성이 의존하는 전역 불변식 검증 체인 (HEAD <code>07fef9d48</code>)</summary>
+    <div class="scroll"><table>
+      <tr><th>불변식 요소</th><th>코드 근거</th><th>확인 내용</th></tr>
+      <tr><td>vacuum 은 닫힌 블록만 처리</td><td><code>vacuum.c:3260</code></td>
+          <td><code>newest_mvccid &gt;= m_oldest_visible_mvccid</code> 이면 job 생산 중단 — 블록 내 모든
+          트랜잭션이 닫힌 뒤에만 디스패치</td></tr>
+      <tr><td>MVCCID 단조증가·비재사용</td><td><code>mvcc_table.cpp:571-572</code></td>
+          <td>영속 카운터 <code>log_Gl.hdr.mvcc_next_id</code> 에서 <code>MVCCID_FORWARD</code> 로 전진만 —
+          재시작 후에도 재사용 없음</td></tr>
+      <tr><td>insid 정리는 헤더만 대상</td><td><code>mvcc.c:361</code> · <code>vacuum.c:2232, 2282-2290</code></td>
+          <td>REC_HOME/REC_NEWHOME 에서 <code>OR_MVCC_FLAG_VALID_INSID</code> 플래그·값 제거 —
+          variable area(stub)는 불변. 6a 를 죽이고 6b 는 살리는 지점</td></tr>
+      <tr><td>ALL_VISIBLE 치환은 OOS 무관</td><td><code>vacuum.c:2309-2331</code></td>
+          <td>일반 <code>REC_BIGONE</code>(overflow) 전용 브랜치. OOS+bigone 은 CBRD-26937 이 쓰기 시점 거부
+          (2312 불변식 가드)</td></tr>
+      <tr><td>eager 삭제는 비-MVCC 연산 전용</td><td><code>heap_oos.cpp:683-690</code></td>
+          <td><code>!is_mvcc_op</code> 브랜치(SA_MODE, 서버모드 catalog 클래스)에서만
+          <code>heap_oos_delete_unreferenced</code> 실행</td></tr>
+      <tr><td>forward-walk 는 NOTIFY 로그만 처리</td><td><code>vacuum_oos.cpp:206-209</code></td>
+          <td><code>RVHF_UPDATE_NOTIFY_VACUUM</code> / <code>RVHF_DELETE_NEWHOME_NOTIFY_VACUUM</code> 만 —
+          eager 경로의 비-NOTIFY undo 는 walk 대상 아님</td></tr>
+      <tr><td>같은 트랜잭션 재-UPDATE 도 MVCC op</td><td><code>heap_file.c:21372</code></td>
+          <td><code>HEAP_UPDATE_IS_MVCC_OP</code> 는 클래스·in-place 강제 여부만 판단 — 같은 트랜잭션 여부와 무관</td></tr>
+      <tr><td>M1 항상-새-체인 (스탬프↔체인 1:1)</td><td>OOS-CONTEXT ownership invariant</td>
+          <td>UPDATE 는 항상 새 value chain·stub 생성 — 버전과 체인의 생성자가 일치</td></tr>
+    </table></div>
+    <p><b>이 표가 곧 R5 논거입니다</b>: 6b 의 오탐 불가는 위 8행이 <b>전부</b> 유지될 때만 성립합니다.
+    generation 의 대응 논거는 "<code>oos_insert</code> 가 재할당마다 페이지 카운터를 증가시킨다" 한 행입니다.</p>
+  </details>
+
+  <details>
+    <summary>부록 C — 용어와 관련 문서</summary>
+    <ul>
+      <li><b>OOS inline stub</b>: OOS-backed attribute 의 16B heap 표현(head OOS OID 8B + full length 8B).
+        6b 는 24B, generation 은 20B 로 확장.</li>
+      <li><b>OOS value chain / 청크 레코드</b>: 하나의 OOS 값을 담는 1개 이상의 청크 레코드 연결.
+        스탬프는 신원 확인의 관문인 head 청크에서 검사하며, 체인 단위 원자적 해제(sysop) 하에서 충분.</li>
+      <li><b>forward-walk</b>: <code>vacuum_forward_walk_reclaim_oos</code> — UPDATE/DELETE undo image 의
+        stub 에서 head OOS OID 를 추출해 이전 체인을 회수하는 경로. 본 결함(CBRD-26950)의 무대.</li>
+      <li>관련 문서:
+        <a href="2026-07-31-CBRD-26950-generation-field-proposal.html">generation 필드 제안 리포트(미팅 본문)</a> ·
+        <code>2026-07-31-CBRD-26950-vacuum-oos-slot-reuse-verification.md</code>(결함 검증 전표) ·
+        JIRA <a href="http://jira.cubrid.org/browse/CBRD-26950">CBRD-26950</a></li>
+    </ul>
+  </details>
+
+  <details>
+    <summary>부록 D — dedup 보호 장치의 정확성 논증</summary>
+    <h3>D-1. MVCCID bump 의 같은 트랜잭션 재참조 충돌 (반례)</h3>
+    <ol class="cx">
+      <li>트랜잭션 X 가 행 R 의 다른 컬럼을 UPDATE — OOS 값 무변경 → dedup: 체인 C 재사용,
+        청크 스탬프 := X, 새 버전 V2 의 stub = (C, X).</li>
+      <li>X 가 같은 행을 다시 UPDATE(또 다른 컬럼) → dedup: 청크 스탬프 := X (<b>불변</b>),
+        V3 의 stub = (C, X). V2 는 이제 garbage.</li>
+      <li>X 커밋 후 vacuum 이 V2 의 undo 를 walk: stub X == 청크 X → <b>일치 → C 삭제</b>.</li>
+      <li>live 레코드 V3 이 C 를 참조 중 → <b>데이터 손실</b>.
+        generation 이라면 1단계에서 g2, 2단계에서 g3 이 발급되어 V2.stub g2 ≠ 청크 g3 → skip.</li>
+    </ol>
+    <h3>D-2. "마지막 참조자 삭제"의 스냅샷 안전성 — 커밋 순서 전이성</h3>
+    <p><b>주장</b>: 공유 체인 C 를 마지막으로 참조한 버전의 death 블록(U<sub>n</sub> 의 undo 가 속한 블록)이
+    디스패치되면, U<sub>n</sub> 커밋 이전에 대체된 어떤 버전 V<sub>k</sub> 도 활성 스냅샷이 볼 수 없다.</p>
+    <ol class="cx">
+      <li>V<sub>k</sub> 를 보는 스냅샷 S 는 commit(U<sub>k+1</sub>) 이전에 생성 ⇒ commit(U<sub>n</sub>) 이전에 생성
+        (k+1 ≤ n, 같은 행의 갱신은 커밋 순서로 직렬).</li>
+      <li>S 생성 시점에 U<sub>n</sub> 은 미커밋: (a) 이미 MVCCID 를 보유한 활성 트랜잭션이면 S 의 가시성 하한 ≤ U<sub>n</sub>;
+        (b) 아직 MVCCID 미보유면 S 의 하한 ≤ 당시 next-id ≤ 이후 발급될 U<sub>n</sub>.</li>
+      <li>따라서 S 가 살아 있는 동안 global oldest visible ≤ U<sub>n</sub>. 그런데 블록(U<sub>n</sub>) 의 디스패치는
+        oldest visible &gt; newest ≥ U<sub>n</sub> 을 요구(<code>vacuum.c:3260</code>) — 모순. ∎</li>
+    </ol>
+    <p>M1 의 기존 안전성("각 블록의 게이트가 그 블록이 지우는 버전의 리더를 배제")과 같은 원리이며,
+    공유 체인의 삭제를 마지막 참조자의 블록으로 미뤄도 앞선 버전들의 리더가 자동으로 배제됨을 보입니다.
+    이 논증은 bump 방식과 old∩new 공유 검사 방식 모두의 삭제 시점에 적용됩니다.</p>
+    <h3>D-3. generation bump 의 발급 규칙</h3>
+    <p>재참조 bump 값은 반드시 <b>페이지 카운터 증가</b>로 발급해야 합니다. 청크의 현재 값에 지역적으로 +1 하는
+    방식은 페이지 카운터를 우회하므로, 이후 같은 슬롯의 새 insert 가 페이지 카운터에서 같은 값을 발급받아
+    "새 체인의 스탬프 == 옛 stub 의 기대값" 충돌을 만들 수 있습니다. 발급 원천을 페이지 카운터 하나로 유지하면
+    "한 슬롯을 거쳐 간 모든 (재)참조 스탬프는 서로 다르다"가 <code>oos_insert</code>/bump 두 지점의
+    지역 논증으로 성립합니다.</p>
+  </details>
+
+  <div class="footnote">
+    작성 2026-08-07 · 검증 기준 worktree HEAD <code>07fef9d48</code> · 분석 도구: Claude Code ·
+    본 문서는 팀 리뷰 반론("MVCCID 를 스탬프로 쓸 수 없는가")을 수용·검증하는 과정에서 작성됐으며,
+    제안 리포트 대안 6 의 6a/6b 분리와 연동됩니다.
+  </div>
+
+</div>
+</body>
+</html>
