@@ -6,82 +6,105 @@
 <title>CBRD-26950 — 신원 스탬프 비교 분석: MVCCID 계열 vs 4B generation</title>
 <style>
   :root {
-    --bg: #ffffff; --fg: #1a1d21; --muted: #5b6470; --line: #e2e6ea;
-    --accent: #2563eb; --accent-soft: #eaf1fe;
-    --danger: #c0392b; --danger-soft: #fdeeec;
-    --warn: #b7791f; --warn-soft: #fdf6e7;
-    --ok: #1e7e46; --ok-soft: #eaf7ef;
-    --code-bg: #f4f6f8;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #16181c; --fg: #e6e9ec; --muted: #9aa4b0; --line: #2c313a;
-      --accent: #6ea1ff; --accent-soft: #1c2740;
-      --danger: #e07568; --danger-soft: #3a2320;
-      --warn: #d9a441; --warn-soft: #382e18;
-      --ok: #58b47f; --ok-soft: #1c3226;
-      --code-bg: #22262d;
-    }
+    --bg: #ffffff; --fg: #1f2937; --muted: #667085; --line: #e4e7ec; --line-soft: #f2f4f7;
+    --accent: #1e50a0; --accent-soft: #f0f5ff;
+    --danger: #b42318; --danger-soft: #fef3f2;
+    --warn: #b54708; --warn-soft: #fffaeb;
+    --ok: #067647; --ok-soft: #ecfdf3;
+    --code-bg: #f4f6f8; --thead: #f9fafb;
   }
   * { box-sizing: border-box; }
+  html { background: var(--bg); }
   body {
     margin: 0; background: var(--bg); color: var(--fg);
-    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
-    font-size: 15px; line-height: 1.65;
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", system-ui, sans-serif;
+    font-size: 15px; line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
   }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 40px 24px 80px; }
-  .kicker { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
-  h1 { font-size: 26px; line-height: 1.35; margin: 8px 0 10px; }
-  h2 { font-size: 19px; margin: 44px 0 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 56px 32px 88px; }
+  .kicker { font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  h1 { font-size: 28px; line-height: 1.4; margin: 10px 0 12px; letter-spacing: -.01em; font-weight: 750; }
+  h2 {
+    font-size: 19px; margin: 52px 0 12px; padding-top: 26px;
+    border-top: 1px solid var(--line); letter-spacing: -.01em; font-weight: 700;
+  }
   h2 .num {
-    display: inline-block; background: var(--accent); color: #fff; border-radius: 6px;
-    font-size: 13px; padding: 1px 8px; margin-right: 8px; vertical-align: 2px;
+    display: inline-block; background: var(--accent); color: #fff; border-radius: 5px;
+    font-size: 12.5px; padding: 2px 9px; margin-right: 10px; vertical-align: 2.5px;
+    font-weight: 700; letter-spacing: 0;
   }
-  h3 { font-size: 15.5px; margin: 22px 0 8px; }
-  .meta { color: var(--muted); font-size: 13px; margin-bottom: 22px; }
-  code { background: var(--code-bg); border-radius: 4px; padding: 1px 5px; font-size: .88em;
-         font-family: ui-monospace, "JetBrains Mono", Consolas, monospace; }
+  h3 { font-size: 15.5px; margin: 26px 0 8px; font-weight: 700; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 26px; line-height: 1.8; }
+  code {
+    background: var(--code-bg); border: 1px solid var(--line-soft); border-radius: 4px;
+    padding: 1px 5px; font-size: .86em;
+    font-family: ui-monospace, "JetBrains Mono", "SF Mono", Consolas, monospace;
+  }
   .verdictbox {
-    border: 1px solid var(--ok); background: var(--ok-soft); border-radius: 10px;
-    padding: 14px 18px; margin: 18px 0; font-size: 15px;
+    border: 1px solid #abefc6; background: var(--ok-soft); border-radius: 8px;
+    padding: 16px 20px; margin: 22px 0; font-size: 14.5px;
   }
   .verdictbox b.ok { color: var(--ok); }
   .callout {
-    border-left: 4px solid var(--accent); background: var(--accent-soft);
-    border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 16px 0; font-size: 14px;
+    border: 1px solid #d1ddf0; border-left: 3px solid var(--accent); background: var(--accent-soft);
+    border-radius: 6px; padding: 13px 18px; margin: 18px 0; font-size: 14px;
   }
-  .scroll { overflow-x: auto; margin: 14px 0; }
+  .scroll { overflow-x: auto; margin: 16px 0; border: 1px solid var(--line); border-radius: 8px; }
   table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
-  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
-  th { background: var(--code-bg); font-size: 12.5px; white-space: nowrap; }
+  th, td { padding: 9px 12px; text-align: left; vertical-align: top; }
+  th {
+    background: var(--thead); font-size: 12px; white-space: nowrap; color: #475467;
+    font-weight: 700; letter-spacing: .02em; border-bottom: 1px solid var(--line);
+  }
+  td { border-bottom: 1px solid var(--line-soft); }
+  tr:last-child td { border-bottom: none; }
+  th + th, td + td { border-left: 1px solid var(--line-soft); }
   .v-x { color: var(--danger); font-weight: 700; white-space: nowrap; }
   .v-w { color: var(--warn); font-weight: 700; white-space: nowrap; }
   .v-o { color: var(--ok); font-weight: 700; white-space: nowrap; }
-  .alt { border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; margin: 14px 0; }
+  .alt {
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 16px 20px; margin: 16px 0; background: #fff;
+  }
+  .alt.rejected { border-left: 3px solid var(--danger); }
+  .alt.runnerup { border-left: 3px solid var(--warn); }
+  .alt.chosen  { border-left: 3px solid var(--ok); background: var(--ok-soft); border-color: #abefc6; }
   .alt h3 { margin: 0 0 6px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .alt .badge { font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 20px; white-space: nowrap; }
-  .alt.rejected { border-color: var(--danger); }
-  .alt.rejected .badge { color: var(--danger); background: var(--danger-soft); }
-  .alt.runnerup { border-color: var(--warn); }
-  .alt.runnerup .badge { color: var(--warn); background: var(--warn-soft); }
-  .alt.chosen { border-color: var(--ok); background: var(--ok-soft); }
-  .alt.chosen .badge { color: var(--ok); background: var(--bg); border: 1px solid var(--ok); }
-  .alt .idea { color: var(--muted); font-size: 13.5px; margin-bottom: 8px; }
+  .alt .badge {
+    font-size: 11.5px; font-weight: 700; padding: 2px 10px; border-radius: 999px;
+    white-space: nowrap; letter-spacing: .01em;
+  }
+  .alt.rejected .badge { color: var(--danger); background: var(--danger-soft); border: 1px solid #fecdca; }
+  .alt.runnerup .badge { color: var(--warn); background: var(--warn-soft); border: 1px solid #fedf89; }
+  .alt.chosen .badge { color: var(--ok); background: #fff; border: 1px solid #abefc6; }
+  .alt .idea { color: var(--muted); font-size: 13.5px; margin-bottom: 10px; }
   .alt ul { margin: 6px 0 2px; padding-left: 20px; }
-  .alt li { margin-bottom: 6px; }
+  .alt li { margin-bottom: 7px; }
   details {
-    border: 1px solid var(--line); border-radius: 10px; margin: 12px 0; padding: 0 16px;
+    border: 1px solid var(--line); border-radius: 8px; margin: 14px 0;
+    padding: 0 18px; background: var(--thead);
   }
   details summary {
-    cursor: pointer; font-weight: 700; padding: 12px 0; font-size: 14.5px;
-    list-style-position: inside;
+    cursor: pointer; font-weight: 700; padding: 13px 0; font-size: 14.5px;
+    list-style-position: inside; color: #344054;
   }
-  details[open] { padding-bottom: 12px; }
+  details[open] { padding-bottom: 14px; background: #fff; }
+  details[open] summary { border-bottom: 1px solid var(--line-soft); margin-bottom: 10px; }
   ol.cx { padding-left: 22px; }
-  ol.cx li { margin-bottom: 6px; }
-  .footnote { color: var(--muted); font-size: 12.5px; margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); }
-  a { color: var(--accent); }
+  ol.cx li { margin-bottom: 7px; }
+  .footnote {
+    color: var(--muted); font-size: 12.5px; margin-top: 56px;
+    padding-top: 18px; border-top: 1px solid var(--line); line-height: 1.8;
+  }
+  a { color: var(--accent); text-decoration-color: #b2ccff; text-underline-offset: 3px; }
   p.lead { font-size: 15.5px; }
+  p.sub { color: var(--muted); font-size: 14px; margin-top: -4px; }
+  @media print {
+    body { font-size: 12px; }
+    .wrap { max-width: none; padding: 0; }
+    .alt, .scroll, .callout, .verdictbox, details { break-inside: avoid; }
+    a { color: inherit; text-decoration: none; }
+  }
 </style>
 </head>
 <body>
