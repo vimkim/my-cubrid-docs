@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13장 — PostgreSQL: 2-mode에서 SHARE_EXCLUSIVE로 옮겨간 이유</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="12-experiments.html">이전: 12장</a><a rel="next" href="14-mysql.html">다음: 14장</a></nav>
+<h1>13장 — PostgreSQL: 2-mode에서 SHARE_EXCLUSIVE로 옮겨간 이유</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<p>CUBRID와 같은 처지(2-mode + 사본 flush)였던 PostgreSQL이 왜, 어떻게 SX 등가 mode로 옮겨가는 중인지 소스로 확인한다. 기준은 미출시 master(20devel, <code>fd2b8985</code>)이며, 출시 버전(18 이하)과의 차이를 명시한다.</p>
+
+<h2 id="pg-history">출시 버전의 세계 — CUBRID와 동형</h2>
+<p>출시된 PostgreSQL의 buffer content lock은 SHARE/EXCLUSIVE 2-mode다. hint bit(튜플 가시성 캐시 비트 — MVCC 판정 결과를 튜플에 표시해 두는 것)는 SHARE만으로도 설정할 수 있었기에, flush 도중 페이지가 바뀌어 checksum이 깨질 수 있었고, 그래서 flush는 페이지 사본(<code>PageSetChecksumCopy</code>)을 떠서 썼으며 I/O 중 재수정은 <code>BM_JUST_DIRTIED</code> 플래그로 추적했다 — 구조적으로 CUBRID의 사본 flush + 재더티 추적과 같은 그림이다. 20devel 트리에는 그 흔적이 남아 있다: flag 목록의 "flag bit 6 is not used anymore" 주석. <span class="claim-id">[PG-C003]</span></p>
+
+<h2 id="pg-three-modes" data-claim-id="PG-C001 PG-C002 PG-C003 PG-C004 PG-C005 PG-C006">20devel의 3-mode content lock</h2>
+<p class="callout evidence-source"><span class="evidence-label">Source-confirmed</span>
+<code>BufferLockMode</code>(<code>bufmgr.h:205-223</code>)는 SHARE("conflicts with exclusive locks"), SHARE_EXCLUSIVE("conflicts with itself and exclusive locks"), EXCLUSIVE("conflicts with every other lock type") 3-mode다. 충돌 판정은 <code>BufferLockAttempt</code>(<code>bufmgr.c:6118-6160</code>)의 비트 검사 몇 줄로 구현된다 — SHARE_EXCLUSIVE는 EXCLUSIVE·자기 자신 비트가 없을 때만 grant. CUBRID EPIC이 권장한 SX 행렬과 정확히 같다. 이 lock은 LWLock(경량 lock 라이브러리)이 아니라 buffer 상태어에 내장된 전용 구현이다(commit fcb9c977aa5). <span class="claim-id">[PG-C001]</span></p>
+
+<h2 id="pg-flushbuffer" data-claim-id="PG-C002">flush: 무사본으로</h2>
+<p class="callout evidence-source"><span class="evidence-label">Source-confirmed</span>
+<code>FlushBuffer</code>(<code>bufmgr.c:4526</code>)는 진입부에서 content lock이 EXCLUSIVE <em>또는 SHARE_EXCLUSIVE</em>임을 Assert하고(:4534-4535), <code>PageSetChecksum</code>을 공유 buffer에 제자리로 수행한 뒤 <code>smgrwrite</code>로 공유 buffer를 직접 쓴다 — 사본이 없다. <code>PageSetChecksumCopy</code>는 트리에서 제거되었다(전역 탐색 0건). 잠기지 않은 buffer를 flush하는 헬퍼 <code>FlushUnlockedBuffer</code>는 SHARE_EXCLUSIVE를 획득한다(:4654). "SX를 쥐면 페이지가 도중에 바뀔 수 없음이 증명되므로 사본이 필요 없다"는 6장의 명제를 그대로 코드화한 모습이다. <span class="claim-id">[PG-C002]</span></p>
+
+<h2 id="pg-why-sx" data-claim-id="PG-C003">전환의 이유 — 커밋 메시지의 증언</h2>
+<p class="callout evidence-source"><span class="evidence-label">Documented</span>
+commit <code>82467f627bd</code> "Require share-exclusive lock to set hint bits and to flush"의 논리: 사본 방식이 (1) AIO write에서 in-flight page마다 사본 버퍼를 요구하고 worker AIO에서는 그것이 shared memory에 있어야 하며, (2) AIO와 무관하게 direct I/O에서 "쓰는 도중 데이터 변경을 일부 파일시스템/RAID가 견디지 못한다(btrfs 파일시스템 오류 사례)"는 문제를 만든다. 그래서 share 아래의 수정(hint bit 포함)을 금지하고 SHARE_EXCLUSIVE를 flush와 hint bit 양쪽에 요구했다. 9장의 "AIO ⇒ frame 안정성" 화살표의 1차 사료다. <span class="claim-id">[PG-C003]</span></p>
+
+<h2 id="pg-nowait-upgrade" data-claim-id="PG-C005">승격은 nowait뿐</h2>
+<p class="callout evidence-source"><span class="evidence-label">Source-confirmed</span>
+hint bit를 설정하려는 스레드가 SHARE만 쥔 경우, <code>SharedBufferBeginSetHintBits</code>(<code>bufmgr.c:7000</code>)가 SHARE→SHARE_EXCLUSIVE 승격을 시도하되 <strong>다른 EXCLUSIVE/SHARE_EXCLUSIVE가 있으면 즉시 false를 반환</strong>한다(호출자는 hint bit 설정을 포기 — 어차피 최적화라 다음 기회에 하면 된다). blocking 승격 API는 존재하지 않는다. 7장의 전제조건("blocking READ→SX 금지, nowait만")을 독립적으로 채택한 선례다. <span class="claim-id">[PG-C005]</span></p>
+
+<h2 id="pg-nbtree" data-claim-id="PG-C006">B-tree: 승격을 아예 회피하는 설계</h2>
+<p class="callout evidence-source"><span class="evidence-label">Source-confirmed</span>
+nbtree insert 하강(<code>_bt_search</code>, <code>nbtsearch.c</code>)은 internal page를 전부 read lock으로 지나고(<code>page_access = BT_READ</code> 초기값 :106), <strong>leaf에 도달할 때만</strong> write lock으로 잡는다(:182). "읽다가 승격"이 아니라 "쓸 곳은 처음부터 leaf 하나로 한정"하는 프로토콜 설계다. split의 상향 전파는 Lehman&amp;Yao 방식의 부모-자식 lock coupling으로 진행한다. CUBRID처럼 non-leaf 승격이 필요한 순간 자체를 프로토콜로 제거한 셈이다. <span class="claim-id">[PG-C006]</span></p>
+
+<h2 id="pg-sync-writes" data-claim-id="PG-C004">단서: write는 아직 동기다</h2>
+<p class="callout evidence-source"><span class="evidence-label">Source-confirmed</span>
+PostgreSQL의 read는 AIO로 옮겨갔지만 write는 아직 <code>FlushBuffer → smgrwrite</code> 동기 경로뿐이다. write용 AIO primitive(<code>pgaio_io_start_writev</code>)는 정의만 있고 호출자가 없다(음성 탐색: src/backend, src/include 전체). 즉 SHARE_EXCLUSIVE 도입은 AIO write가 <em>오기 전에</em> 전제조건부터 갖춘 것이다 — "SX가 먼저, AIO가 나중"이라는 순서까지 CUBRID가 참고할 만한 대목이다. <span class="claim-id">[PG-C004]</span></p>
+
+<h2 id="axes">비교 축 요약</h2>
+<div class="table-wrap">
+<table>
+<caption>PostgreSQL 20devel vs CUBRID 현행</caption>
+<thead><tr><th>축</th><th>PostgreSQL 20devel</th><th>CUBRID f799e05d</th></tr></thead>
+<tbody>
+<tr><td>content lock/latch mode</td><td>SHARE / SHARE_EXCLUSIVE / EXCLUSIVE</td><td>READ / WRITE</td></tr>
+<tr><td>flush 중 frame</td><td>SHARE_EXCLUSIVE 보유, 무사본</td><td>사본, writer 자유</td></tr>
+<tr><td>승격</td><td>nowait SHARE→SHARE_EXCLUSIVE만</td><td>실패 기반 READ→WRITE (blocking 대기는 unfix 후)</td></tr>
+<tr><td>B-tree 쓰기 지점</td><td>leaf만 write lock (승격 회피 프로토콜)</td><td>non-leaf 승격 필요 시 promote</td></tr>
+<tr><td>write I/O</td><td>동기 (AIO 준비 단계)</td><td>동기</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="recap">요약</h2>
+<p>PostgreSQL은 CUBRID와 같은 사본-flush 세계에서 출발해, AIO/direct I/O를 이유로 SX 등가 mode로 이행 중이며, 승격은 nowait만 허용하고, B-tree는 애초에 승격이 불필요한 프로토콜을 쓴다. 다음 장은 10년 먼저 같은 길을 간 InnoDB다.</p>
+</main>
+<footer>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="12-experiments.html">이전: 12장</a><a rel="next" href="14-mysql.html">다음: 14장</a></nav>
+<p>기준 소스: PostgreSQL fd2b8985 (master, 미출시)</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SX page latch 도입 효과 — AIO/direct I/O 필수성과 현행 CUBRID에서의 성능 이득</title>
+<link rel="stylesheet" href="assets/report.css">
+</head>
+<body>
+<header>
+<h1>SX page latch 도입 효과 — AIO/direct I/O 필수성과 현행 CUBRID에서의 성능 이득</h1>
+<p>CUBRID page buffer의 latch 체계(READ/WRITE)를 소스와 런타임 실험으로 재구성하고, SX(shared-exclusive) latch 도입이 무엇을 바꾸는지, AIO/direct I/O write가 왜 frame 안정성을 전제조건으로 만드는지를 대학교 2학년 눈높이로 설명하는 책이다. PostgreSQL·MySQL(InnoDB)과 같은 축으로 비교한다.</p>
+</header>
+<main>
+<h2 id="answers">한 문단 결론</h2>
+<p><strong>질문 1(현행 구조에서 B-tree 이득?)</strong> — 구조적 근거는 확실하다: 승격은 insert당 4회가 넘는 실존 hot path이고(런타임 관측 88,779회/20,000 insert), 실패 시 루트 재시작이라는 세금이 있다. 크기는 promote 실패율 baseline이 정하며, 그 측정은 SX 없이 지금 가능하다. <strong>질문 2(AIO 없이 flush 이득?)</strong> — 사본 memcpy 제거 대 writer 대기의 교환이며 측정으로 판정할 사안이다. <strong>질문 3(AIO 도입 시 SX 필수?)</strong> — 그렇다, 방향이 중요하다: AIO/direct I/O write ⇒ frame 안정성(SX 등가 또는 상시 사본) 필수. PostgreSQL이 정확히 이 이유로 SHARE_EXCLUSIVE를 도입했다(커밋 메시지에 btrfs 오류 사례 명시). 상세 근거는 9장.</p>
+
+<h2 id="toc">목차</h2>
+<ul class="toc">
+<li><a href="chapters/01-orientation.html">1장 — 오리엔테이션: 세 가지 질문과 답</a></li>
+<li><a href="chapters/02-mental-model.html">2장 — 멘탈 모델: 도서관 사서의 두 가지 곤란</a></li>
+<li><a href="chapters/03-interface-data.html">3장 — 인터페이스, 자료구조, 상태 전이</a></li>
+<li><a href="chapters/05-core-workflows.html">5장 — 핵심 워크플로: B-tree insert의 하강, 승격, 재시작</a></li>
+<li><a href="chapters/06-flush-frame-stability.html">6장 — flush 깔때기: 사본, WAL 선행, 재더티 추적</a></li>
+<li><a href="chapters/07-concurrency.html">7장 — 동시성: lock-free READ, 대기 규칙, SX의 무교착 조건</a></li>
+<li><a href="chapters/08-errors-pressure.html">8장 — 오류와 자원 압박: 실패 경로의 계약</a></li>
+<li><a href="chapters/09-policies-algorithms.html">9장 — 정책의 저울질: 사본 vs SX, AIO 필수성</a></li>
+<li><a href="chapters/11-performance-observability.html">11장 — 성능과 관측: 카운터, 함정, 측정법</a></li>
+<li><a href="chapters/12-experiments.html">12장 — 실험 기록: 승격과 flush의 런타임 증거</a></li>
+<li><a href="chapters/13-postgresql.html">13장 — PostgreSQL: 2-mode에서 SHARE_EXCLUSIVE로</a></li>
+<li><a href="chapters/14-mysql.html">14장 — MySQL/InnoDB: 10년째 운영 중인 SX latch</a></li>
+<li><a href="chapters/15-comparison.html">15장 — 3사 비교: 같은 문제, 세 가지 해법</a></li>
+<li><a href="chapters/16-blueprint.html">16장 — 재구현 청사진: SX 도입 설계 스케치</a></li>
+<li><a href="chapters/17-glossary-evidence.html">17장 — 용어집, 증거 색인, 미해결, 준비도 선언</a></li>
+<li><a href="chapters/18-teaching-map.html">18장 — 교육 지도: 장·claim·퀴즈·grill 매핑</a></li>
+</ul>
+
+<h2 id="reading-paths">읽기 경로</h2>
+<ul>
+<li><strong>빠른 길</strong>(세 질문의 답만): 1 → 2 → 9 → 15장.</li>
+<li><strong>메커니즘 길</strong>: 2 → 3 → 5 → 6 → 7 → 11 → 12장.</li>
+<li><strong>손으로 배우는 길</strong>: 18장의 권장 순서(퀴즈 2종 포함).</li>
+</ul>
+
+<h2 id="provenance">근거 요약 (provenance)</h2>
+<div class="table-wrap">
+<table>
+<caption>고정 revision과 증거 규모</caption>
+<thead><tr><th>항목</th><th>내용</th></tr></thead>
+<tbody>
+<tr><td>CUBRID</td><td><code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code> (pgbuf-analysis) — 소스 + 런타임 실험 2종</td></tr>
+<tr><td>PostgreSQL</td><td><code>fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc</code> (master 20devel, 미출시) — 소스만</td></tr>
+<tr><td>MySQL/InnoDB</td><td><code>06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8</code> (trunk) — 소스만</td></tr>
+<tr><td>claim 원장</td><td>35건 (<code>evidence/claims.jsonl</code>) — 소스 기반 claim은 파일 해시·라인 고정, 설계 추론 1건과 미해결 6건은 전제·한계 명시</td></tr>
+<tr><td>런타임 기록</td><td>빌드 게이트 + 실험 관측 5회 + 대조·정리 기록 (<code>evidence/runs/</code>)</td></tr>
+<tr><td>퀴즈</td><td>2종 (<code>quiz/</code>) — 로컬 CUBRID 빌드로 재현 가능</td></tr>
+</tbody>
+</table>
+</div>
+<p>준비도 선언: <strong>READY WITHIN DECLARED SCOPE</strong> (17장). 성능 수치·ABI·포맷 호환성은 약속하지 않으며, 미해결 6건이 17장에 명시되어 있다.</p>
+</main>
+<footer>
+<p>생성: cubrid-code-analysis-report 워크플로 (agent: claude) · JIRA: CBRD-27193(EPIC), CBRD-27196(조사)</p>
+</footer>
+</body>
+</html>

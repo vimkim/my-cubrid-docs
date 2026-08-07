@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2장 — 멘탈 모델: 도서관 사서의 두 가지 곤란</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="01-orientation.html">이전: 1장</a><a rel="next" href="03-interface-data.html">다음: 3장</a></nav>
+<h1>2장 — 멘탈 모델: 도서관 사서의 두 가지 곤란</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<p>latch가 무엇인지, lock과 어떻게 다른지, READ/WRITE 두 단계만으로는 왜 곤란한 상황이 생기는지를 구체적 시나리오로 이해한다.</p>
+
+<h2 id="scenario">구체적 시나리오</h2>
+<p>데이터베이스의 buffer pool은 디스크 page(기본 16KiB 덩어리)를 메모리 frame에 올려 두는 캐시다. 인기 있는 page 하나 — 예를 들어 자주 조회되는 인덱스의 상단 node — 를 여러 세션이 동시에 읽고 있다고 하자. 이때 두 사건이 동시에 벌어진다.</p>
+<ol>
+<li>어떤 스레드가 이 page를 <em>읽다가</em>, 조건이 맞으면 <em>고쳐야</em> 한다는 것을 알게 된다 (B-tree insert가 하강 중 leaf가 가득 찬 것을 발견).</li>
+<li>flusher(수정된 page를 디스크에 반영하는 스레드)가 이 page를 디스크에 써야 한다.</li>
+</ol>
+
+<h2 id="latch" data-claim-id="CUBRID-C001 CUBRID-C007">latch란 무엇인가</h2>
+<p><strong>latch</strong>는 메모리 frame 내용의 물리적 일관성을 지키는 짧은 잠금이다. "누가 이 16KiB 바이트들을 지금 읽거나 쓰고 있는가"만 관리하며, 한 연산이 끝나면 바로 풀린다. 트랜잭션이 끝날 때까지 유지되며 논리적 일관성(두 계좌 이체의 원자성 같은)을 지키는 <strong>lock</strong>과는 다른 층의 장치다. CUBRID에서 latch는 <code>pgbuf_fix</code>(디스크 page를 buffer pool frame에 고정하고 latch를 얻는 함수)가 획득한다.</p>
+<p>CUBRID의 page latch에는 두 가지 실효 mode만 있다 <span class="claim-id">[CUBRID-C001]</span>:</p>
+<ul>
+<li><code>PGBUF_LATCH_READ</code> — 여럿이 동시에 보유 가능. 읽기만 허용.</li>
+<li><code>PGBUF_LATCH_WRITE</code> — 혼자만 보유 가능. 읽기와 쓰기 모두 허용.</li>
+</ul>
+
+<h2 id="two-troubles">두 단계 체계의 두 가지 곤란</h2>
+<p>도서관에 비유하면: READ는 "열람 중" 표찰(여러 명 가능), WRITE는 "편집 중" 표찰(한 명뿐, 열람도 금지)이다.</p>
+
+<h3 id="trouble-1">곤란 1 — 읽다가 고쳐야 할 때 (upgrade deadlock)</h3>
+<p>열람 중이던 사람이 오탈자를 발견해 편집 표찰로 바꾸고 싶다. 규칙상 편집은 혼자여야 하므로 다른 열람자들이 나갈 때까지 기다려야 한다. 그런데 <em>다른 열람자도 같은 생각으로</em> 편집 표찰을 기다리기 시작하면? 서로가 서로의 퇴장을 기다리며 아무도 못 움직인다. 이것이 upgrade deadlock(승격 교착)이다.</p>
+<svg viewBox="0 0 560 150" role="img" aria-label="승격 교착 다이어그램: 스레드 A와 B가 READ를 쥔 채 서로의 해제를 기다리는 원형 대기">
+<title id="dl-title">승격 교착 다이어그램: 스레드 A와 B가 각각 READ를 보유한 채 서로의 해제를 기다리는 원형 대기</title>
+<rect x="20" y="30" width="180" height="44" rx="8" fill="#eef3f9" stroke="#5b7fa6"/>
+<text x="110" y="57" text-anchor="middle" font-size="14">스레드 A: READ 보유</text>
+<rect x="360" y="30" width="180" height="44" rx="8" fill="#eef3f9" stroke="#5b7fa6"/>
+<text x="450" y="57" text-anchor="middle" font-size="14">스레드 B: READ 보유</text>
+<path d="M 200 42 C 260 10, 300 10, 360 42" fill="none" stroke="#b3423a" stroke-width="2" marker-end="url(#arr)"/>
+<path d="M 360 66 C 300 100, 260 100, 200 66" fill="none" stroke="#b3423a" stroke-width="2" marker-end="url(#arr)"/>
+<text x="280" y="18" text-anchor="middle" font-size="12" fill="#b3423a">B의 READ 해제를 기다림</text>
+<text x="280" y="112" text-anchor="middle" font-size="12" fill="#b3423a">A의 READ 해제를 기다림</text>
+<text x="280" y="140" text-anchor="middle" font-size="13" font-weight="bold">원형 대기 = 교착</text>
+<defs><marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#b3423a"/></marker></defs>
+</svg>
+<p class="diagram-alt">그림 설명: 스레드 A와 B가 각각 같은 page의 READ latch를 보유한 채, A는 B의 해제를, B는 A의 해제를 기다리는 화살표가 원을 이룬다. 둘 다 영원히 진행하지 못한다.</p>
+<p>그래서 CUBRID의 승격 함수는 교착을 "대기"가 아니라 "포기"로 회피한다 — 경쟁이 감지되면 한쪽이 실패 코드를 받고 물러난다(5장). SX는 이 곤란을 다르게 푼다: "편집 예약" 표찰을 하나 더 만들되, <em>예약 표찰은 한 장뿐</em>이라 예약자끼리는 경쟁 자체가 성립하지 않게 한다(7장).</p>
+
+<h3 id="trouble-2">곤란 2 — 고치지 않지만 안정된 이미지가 필요할 때 (flush)</h3>
+<p>사서(flusher)는 책을 고치지 않는다. 하지만 복사기에 올려 스캔하는(디스크에 쓰는) 동안 누가 페이지를 찢거나 덧쓰면 스캔본이 오염된다. 편집 표찰(WRITE)로 막자니 스캔 내내 열람까지 금지된다. CUBRID의 현행 해법은 "복사해서 스캔하기"다: 페이지 전체를 먼저 복사(16KiB memcpy)해 두고, 원본은 자유롭게 두고, 사본을 스캔한다. 스캔 중 원본이 바뀌면 "또 더러워졌음(dirty)"만 기록해 다음에 다시 스캔한다 <span class="claim-id">[CUBRID-C007]</span>. SX는 세 번째 해법이다: "편집만 금지, 열람 허용" 표찰을 쥐고 원본을 직접 스캔하는 것.</p>
+
+<h2 id="io-model">입출력의 책임 경계 (3번 질문의 씨앗)</h2>
+<p>"복사해서 스캔하기"가 성립하는 숨은 전제가 있다. buffered write(일반 <code>write()</code>)에서는 시스템콜이 반환되는 순간 kernel이 데이터를 자기 page cache로 이미 복사해 갔다. 그 뒤 원본을 고쳐도 디스크로 가는 데이터는 안전하다. 그런데 direct I/O나 AIO write는 kernel이 <em>시스템콜 반환 후에도</em> 사용자 버퍼(우리의 frame)를 직접 읽는다. 원본이 I/O 도중 바뀌면 안 되는 세계다. 이 차이가 9장의 주제다.</p>
+
+<h2 id="glossary-seed">용어 씨앗</h2>
+<div class="table-wrap">
+<table>
+<caption>이후 장에서 반복 사용할 용어 (전체 용어집은 17장)</caption>
+<thead><tr><th>용어</th><th>뜻</th></tr></thead>
+<tbody>
+<tr><td>BCB</td><td>buffer control block — frame에 올라온 page의 fix 수, latch, dirty 상태를 보관하는 제어 블록</td></tr>
+<tr><td>fix / unfix</td><td>page를 buffer pool에 고정해 참조를 얻는 것 / 반납하는 것</td></tr>
+<tr><td>승격(promotion)</td><td>READ latch를 쥔 채 WRITE로 올리는 것</td></tr>
+<tr><td>flush</td><td>dirty page를 디스크에 기록하는 것</td></tr>
+<tr><td>SX (shared-exclusive)</td><td>여러 READ와는 공존하지만 다른 SX·WRITE와는 배타인 중간 mode 후보</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="recap">요약</h2>
+<p>latch는 frame 바이트의 물리 일관성을 지키는 짧은 잠금이고, READ/WRITE 두 단계 체계는 "읽다가 고치기"(교착 위험)와 "안정 이미지 확보"(사본 비용)라는 두 곤란을 남긴다. 다음 장에서 이 체계의 실제 자료구조와 호출 계약을 본다.</p>
+</main>
+<footer>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="01-orientation.html">이전: 1장</a><a rel="next" href="03-interface-data.html">다음: 3장</a></nav>
+<p>기준 소스: CUBRID f799e05d</p>
+</footer>
+</body>
+</html>

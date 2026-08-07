@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7장 — 동시성: lock-free READ, 대기 규칙, SX의 무교착 조건</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="06-flush-frame-stability.html">이전: 6장</a><a rel="next" href="08-errors-pressure.html">다음: 8장</a></nav>
+<h1>7장 — 동시성: lock-free READ, 대기 규칙, SX의 무교착 조건</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<p>스레드 역할과 보호 대상, lock-free READ 경로의 정확한 성립 조건, 교착 방어의 실체(감지가 아니라 timeout), 그리고 "SX→WRITE 승격은 교착이 없다"는 주장의 전제조건을 정확히 이해한다. 사용자 질문 1("READ 잡고 WRITE 요청하면 되잖아")과 그 후속("SX→WRITE도 READ 막는 건 같잖아")의 완전한 답이 이 장에 있다.</p>
+
+<h2 id="roles">스레드 역할과 보호 대상</h2>
+<div class="table-wrap">
+<table>
+<caption>누가 무엇을 만지는가 <span class="claim-id">[CUBRID-C002, CUBRID-C003, CUBRID-C007]</span></caption>
+<thead><tr><th>역할</th><th>latch 사용</th><th>보호 대상</th></tr></thead>
+<tbody>
+<tr><td>워커(쿼리 실행)</td><td>READ/WRITE fix, promote</td><td>frame 내용</td></tr>
+<tr><td>page flush 데몬 / checkpoint</td><td>fix 없이 BCB mutex + FLUSHING 플래그</td><td>디스크로 가는 이미지(사본)</td></tr>
+<tr><td>모든 스레드 공통</td><td>64-bit atomic word CAS</td><td>latch 집계 상태 자체</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="lockfree-read" data-claim-id="CUBRID-C003">lock-free READ 경로 — SX 설계의 최대 제약</h2>
+<p class="callout evidence-source"><span class="evidence-label">Source-confirmed</span>
+READ fix의 빠른 경로 <code>pgbuf_lockfree_fix_ro</code>(<code>page_buffer.c:7725</code>)는 BCB mutex를 <em>잡지 않고</em> 다음 조건의 CAS로 fcnt만 올린다 (<code>:7742-7746</code>): <span class="claim-id">[CUBRID-C003]</span></p>
+<pre>latch_mode == PGBUF_LATCH_READ   /* 이미 누가 READ 중이고            */
+&amp;&amp; !waiter_exists                /* 기다리는 사람이 없고             */
+&amp;&amp; fcnt != 0                     /* 실제로 잡혀 있고 (유휴는 mutex로) */
+&amp;&amp; vpid 일치                     /* 그 사이 교체되지 않았고          */</pre>
+<p>함의 두 가지. 첫째, <strong>reader는 mutex 없이 상태어를 고친다</strong> — 그러므로 미래의 sx bit 조작도 반드시 같은 word에 대한 CAS여야 하며, "mutex 잡았으니 안전"이라는 가정은 lost update(동시 fcnt 증감을 덮어쓰는 갱신 손실)를 만든다. 둘째, <code>waiter_exists</code>는 빠른 경로를 잠그는 <strong>밸브</strong>다 — 대기자가 생기는 순간 새 reader는 느린 경로로 밀려나 공정성이 유지된다. 이 밸브가 아래 SX 논증의 마지막 조각이 된다.</p>
+
+<h2 id="no-deadlock-detector" data-claim-id="CUBRID-C010">교착 방어의 실체: 감지기가 아니라 timeout</h2>
+<p class="callout evidence-source"><span class="evidence-label">Source-confirmed</span>
+page latch에는 교착 감지기가 없다. 소스 주석(<code>page_buffer.c:7148-7152</code>): "We do not guarantee that there is no deadlock between page latches. So, we made a decision that when read/write buffer fix request is not granted immediately, block the request with timed sleep method." — 즉 잘못된 대기 규칙의 증상은 "감지된 교착"이 아니라 <strong>한참 뒤의 latch timeout</strong>(과 debug 빌드의 assert)이다. 새 mode의 대기 규칙을 설계할 때 이 방어의 얇음을 전제해야 한다. <span class="claim-id">[CUBRID-C010]</span></p>
+
+<h2 id="why-not-plain-upgrade">왜 "READ 잡고 WRITE 요청"으로는 안 되나</h2>
+<p>2장의 그림 그대로다: READ를 <em>쥔 채</em> WRITE를 기다리는 스레드가 둘이면 원형 대기가 성립한다. 그래서 현행 promotion은 (a) 쥔 채 기다리지 않고(자기 fix 반납 후 첫 대기자 등록), (b) 경쟁 promoter를 감지하면 즉시 포기한다(5장). "포기"가 안전장치인 대신, 포기의 비용(루트 재시작)이 성능 세금이 된다.</p>
+
+<h2 id="sx-precondition" data-claim-id="CUBRID-C003 CUBRID-C010 CUBRID-C015 PG-C005">SX→WRITE 승격의 무교착 논증 — 전제조건 포함</h2>
+<p class="callout evidence-inferred"><span class="evidence-label">Inferred.</span> 이 절의 무교착 결론은 기존 코드의 사실이 아니라 <strong>설계 단계의 추론</strong>이다(추론 자체가 claim CUBRID-C015로 등록되어 있고, 전제와 반증 조건을 명시한다). 반증 조건: 아래 전제 (1)(2)를 지키고도 SX→WRITE 승격이 무한 대기하는 실행이 단일 page 범위에서 제시되면 이 추론은 기각된다. <span class="claim-id">[CUBRID-C015]</span></p>
+<p>SX 호환성 행렬(READ와 공존, SX·WRITE와 배타)만으로는 부족하다. 논증은 전제 하나를 요구한다:</p>
+<p class="invariant"><span class="evidence-label">전제조건.</span> <strong>READ를 쥔 스레드가 SX를 blocking으로 기다리는 것을 금지한다.</strong> SX가 필요하면 fix 시점에 SX로 잡거나, READ 보유 중에는 nowait(조건부) 승격만 허용한다. 이를 허용하면 "SX holder는 READ가 빠지길 기다리고, READ holder는 SX를 기다리는" 같은 교착이 한 단계 위에서 재현된다.</p>
+<p>전제가 서면 무교착이 따라온다:</p>
+<ol>
+<li>SX는 SX끼리 배타 → 페이지당 SX holder는 최대 1명 → <strong>승격 후보가 1명으로 직렬화</strong>되어 promoter끼리의 경쟁이 원천 소멸.</li>
+<li>SX holder가 기다리는 대상은 기존 READ holder들뿐인데, 전제에 의해 그들은 SX를 기다릴 수 없는 <strong>순수 reader</strong>라 언젠가 반드시 unfix한다 → 같은 page 범위에서 대기 사이클이 성립하지 않는다.</li>
+<li>승격의 결정성은 신규 reader 유입을 닫는 밸브에 의존하는데, lock-free READ 경로가 이미 검사하는 <code>waiter_exists</code>가 그 밸브다 — SX→WRITE 대기 등록 시 이 비트를 세우면 기존 메커니즘이 그대로 작동한다. <span class="claim-id">[CUBRID-C003]</span></li>
+</ol>
+<p>여러 page에 걸친 latch 순서 교착(A page의 SX holder가 B page를 기다리고 그 역도 성립)은 이 논증 밖이며, 기존 CUBRID가 <code>pgbuf_ordered_fix</code>(heap-index 간 latch 순서 교착을 피하려고 잡은 page들을 추적하는 watcher 구조 사용)로 다루는 것과 같은 층의 문제로 남는다 — 16장과 미해결 질문 참조.</p>
+
+<h2 id="sx-vs-upgrade">"SX→WRITE도 결국 새 READ를 막지 않나?"</h2>
+<p>막는다 — 최종 수정 순간의 배타는 어떤 설계로도 피할 수 없고, 승격 대기가 시작되면 신규 READ 유입을 조절해야 하는 것도 같다. 다른 것은 세 가지다:</p>
+<ol>
+<li><strong>교착 없이 기다릴 권리</strong>: READ→WRITE는 "교착일 수 있어 포기해야 하는" 승격이고, SX→WRITE는 위 논증으로 "기다리면 반드시 얻는" 승격이다. 실패-재시작 분기가 사라진다.</li>
+<li><strong>배타 창의 길이</strong>: 읽기·판단 구간을 SX로 지나는 동안 reader는 계속 통과하고, 배타는 실제 수정 순간으로 줄어든다. 현행은 승격 실패가 두려운 호출자가 처음부터 WRITE 하강을 택해 배타 창이 작업 전체로 늘어난다.</li>
+<li><strong>승격이 필요 없는 사용처</strong>: flush는 page를 수정하지 않으므로 SX만 쥔 채 I/O를 끝내면 되고 WRITE로 올라갈 일 자체가 없다.</li>
+</ol>
+<p class="analogy"><span class="evidence-label">선례.</span> PostgreSQL 20devel의 유일한 content lock 승격이 정확히 이 규칙이다: hint bit 설정용 SHARE→SHARE_EXCLUSIVE 승격은 <em>nowait 조건부</em>뿐이고, 충돌이 있으면 즉시 false를 반환한다(<code>SharedBufferBeginSetHintBits</code>). blocking 승격은 존재하지 않는다. <span class="claim-id">[PG-C005]</span></p>
+
+<h2 id="interleavings">허용/금지 interleaving 요약</h2>
+<div class="table-wrap">
+<table>
+<caption>SX 도입 가정 시 동시 실행 규칙 — 현행 열은 Source-confirmed, "SX 도입 시" 열은 설계 추론이다 <span class="claim-id">[CUBRID-C003, CUBRID-C004, CUBRID-C007, CUBRID-C015]</span></caption>
+<thead><tr><th>동시 조합</th><th>현행</th><th>SX 도입 시</th></tr></thead>
+<tbody>
+<tr><td>READ + READ</td><td>허용</td><td>허용</td></tr>
+<tr><td>READ + flush 진행</td><td>허용 (사본 덕)</td><td>허용 (SX는 READ와 공존)</td></tr>
+<tr><td>WRITE + flush 진행</td><td>허용 (사본 덕, 재더티)</td><td><strong>금지 — writer는 SX 해제까지 대기</strong></td></tr>
+<tr><td>promoter + promoter (같은 page)</td><td>한쪽 즉시 실패</td><td>성립 불가 (SX 획득에서 직렬화)</td></tr>
+<tr><td>READ 보유 중 blocking SX 요청</td><td>해당 없음</td><td><strong>금지 (전제조건)</strong></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="recap">요약</h2>
+<p>reader는 mutex 없이 CAS로 다니므로 sx bit도 CAS로만 다뤄야 하고, 교착 방어는 timeout뿐이므로 대기 규칙은 설계 단계에서 증명되어야 한다. SX의 무교착은 "blocking READ→SX 금지" 전제 위에서 성립하며, 그 전제의 실무 형태(nowait 승격)는 PostgreSQL이 이미 채택했다. 다음 장은 실패와 자원 압박 아래의 행동이다.</p>
+</main>
+<footer>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="06-flush-frame-stability.html">이전: 6장</a><a rel="next" href="08-errors-pressure.html">다음: 8장</a></nav>
+<p>기준 소스: CUBRID f799e05d · PostgreSQL fd2b8985</p>
+</footer>
+</body>
+</html>

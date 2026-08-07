@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>18장 — 교육 지도: 장·claim·퀴즈·grill 매핑</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="17-glossary-evidence.html">이전: 17장</a></nav>
+<h1>18장 — 교육 지도: 장·claim·퀴즈·grill 매핑</h1>
+</header>
+<main>
+<h2 id="goals">이 장의 용도</h2>
+<p>학습자와 grill 진행자가 "어떤 개념을 어디서 읽고, 무엇으로 손을 움직이고, 어떤 질문으로 검증하는지"를 한눈에 보게 한다.</p>
+
+<h2 id="map" data-claim-id="CUBRID-C011 CUBRID-C012">중심 행동별 지도</h2>
+<div class="table-wrap">
+<table>
+<caption>central behavior → 장 → claim → 퀴즈 → grill 개념</caption>
+<thead><tr><th>중심 행동</th><th>주요 장</th><th>핵심 claim</th><th>퀴즈</th><th>grill 개념 영역</th></tr></thead>
+<tbody>
+<tr>
+<td><code>promote-fail-restart</code><br>(승격 실패와 루트 재시작)</td>
+<td>2장(교착 직관) → 5장(분기) → 7장(무교착 조건) → 8장(실패 계약)</td>
+<td class="claim-id">CUBRID-C004, C005, C006, C011 / MYSQL-C005 / PG-C006 / CMP-C002</td>
+<td><a href="../quiz/quiz-1/quiz.md">quiz-1</a></td>
+<td>lifecycle-state-machines, concurrency</td>
+</tr>
+<tr>
+<td><code>flush-frame-stability</code><br>(flush 사본과 frame 안정성)</td>
+<td>6장(깔때기) → 9장(저울질·AIO) → 11장(관측) → 12장(실험)</td>
+<td class="claim-id">CUBRID-C007, C008, C012, C014 / MYSQL-C002~C004 / PG-C001~C003 / CMP-C001</td>
+<td><a href="../quiz/quiz-2/quiz.md">quiz-2</a></td>
+<td>storage-durability-recovery, policies-algorithms, performance-observability</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="mastery-areas">grill 숙달 영역 ↔ 장 매핑</h2>
+<div class="table-wrap">
+<table>
+<caption>8개 숙달 영역과 근거 장</caption>
+<thead><tr><th>숙달 영역</th><th>장</th></tr></thead>
+<tbody>
+<tr><td>1. 책임·범위·인터페이스·seam</td><td>1, 3장</td></tr>
+<tr><td>2. 자료 소유와 수명</td><td>3장</td></tr>
+<tr><td>3. 수명 주기와 상태 전이</td><td>3, 5장</td></tr>
+<tr><td>4. 동시성 불변식과 금지 interleaving</td><td>7장 (+5장 분기)</td></tr>
+<tr><td>5. 내구성·복구·실패 행동</td><td>6, 8장</td></tr>
+<tr><td>6. 정책·성능 트레이드오프</td><td>9장 (+15장)</td></tr>
+<tr><td>7. 실험 해석과 한계</td><td>11, 12장</td></tr>
+<tr><td>8. PostgreSQL/MySQL 유사점과 비등가</td><td>13, 14, 15장</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="path">권장 학습 순서</h2>
+<ol>
+<li>1·2장을 읽고 quiz-1의 "실행 전 예측"까지만 적는다.</li>
+<li>3·5장을 읽고 quiz-1을 실행·분석한다.</li>
+<li>6장을 읽고 quiz-2의 예측을 적고, 11장을 읽은 뒤 quiz-2를 실행한다 — 카운터 함정을 스스로 밟아 보는 순서가 의도된 설계다.</li>
+<li>7·9장으로 논증을 완성하고, 13~15장으로 상대화한 뒤, 16장을 자기 말로 요약해 본다(캡스톤 teach-back 예행).</li>
+</ol>
+</main>
+<footer>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="17-glossary-evidence.html">이전: 17장</a></nav>
+<p>기준 소스: CUBRID f799e05d</p>
+</footer>
+</body>
+</html>

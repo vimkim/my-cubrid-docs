@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1장 — 오리엔테이션: 세 가지 질문과 답</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="next" href="02-mental-model.html">다음: 2장 멘탈 모델</a></nav>
+<h1>1장 — 오리엔테이션: 세 가지 질문과 답</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<p>이 보고서가 어떤 질문에 답하는지, 어떤 범위의 코드를 근거로 삼는지, 결론이 무엇인지를 먼저 파악한다. 세부 근거는 이후 장에서 층층이 쌓는다.</p>
+
+<h2 id="questions" data-claim-id="CMP-C001 CUBRID-C011 PG-C003">이 보고서가 답하는 세 질문</h2>
+<ol>
+<li><strong>CUBRID는 지금 AIO(asynchronous I/O — 요청 스레드가 완료를 동기적으로 기다리지 않는 입출력)도 direct I/O(운영체제 page cache를 우회하는 입출력)도 쓰지 않는다. 그런 현재 상태에서 SX latch만 도입해도 B-tree 같은 작업의 성능이 좋아질 수 있는가?</strong></li>
+<li><strong>AIO/direct I/O 없이도 flush 쪽 이득이 있는가?</strong></li>
+<li><strong>나중에 AIO/direct I/O write를 도입한다면 그때 SX가 왜 "필수"가 되는가?</strong></li>
+</ol>
+
+<h2 id="conclusions">핵심 결론 (요약)</h2>
+<p class="callout evidence-source"><span class="evidence-label">결론 1 — B-tree.</span>
+SX의 첫 번째 이득은 I/O 방식과 무관하다. CUBRID B-tree insert는 지금도 page latch 승격(READ를 쥔 채 WRITE로 올리는 것)을 대량으로 사용하며 — 20,000건 insert에서 승격 약 88,000회를 직접 관측했다 — 이 승격은 교착을 피하려고 경쟁이 감지되면 실패하는 방식이라, 실패한 insert는 루트부터 WRITE 하강으로 재시작한다. SX는 이 실패-재시작 분기를 구조적으로 없앨 수 있다. 다만 "얼마나 빨라지는가"는 승격 실패가 실제로 얼마나 자주 나는지(동시 경쟁 워크로드의 baseline 측정)에 달려 있고, 이 보고서는 그 측정 방법까지만 제시한다. <span class="claim-id">[CUBRID-C004, CUBRID-C005, CUBRID-C011]</span></p>
+
+<p class="callout evidence-source"><span class="evidence-label">결론 2 — flush.</span>
+AIO 없이도 이득 후보가 있다: 현행 flush는 디스크에 쓸 때마다 페이지 사본(기본 16KiB memcpy)을 만든다. SX가 있으면 plain page는 사본 없이 frame에서 직접 쓸 수 있다(InnoDB 방식). 대신 I/O 동안 그 page의 writer가 대기하는 새 비용이 생기므로, 사본 CPU 절감과 writer 대기 증가의 트레이드오프를 측정해야 한다. buffered write에서는 write() 시스템콜이 빨리 끝나므로 writer 대기 창이 짧다는 점도 고려 대상이다. <span class="claim-id">[CUBRID-C007, CMP-C001]</span></p>
+
+<p class="callout evidence-source"><span class="evidence-label">결론 3 — AIO/direct I/O.</span>
+화살표의 방향이 중요하다: "SX가 AIO 덕을 본다"가 아니라 <strong>"AIO/direct I/O write를 하려면 frame 안정성(SX 등가 latch 또는 사본) 확보가 전제조건"</strong>이다. buffered write는 시스템콜이 반환되는 순간 kernel이 데이터를 이미 복사했으므로 이후 frame을 고쳐도 안전하지만, direct I/O/AIO는 시스템콜 반환 후에도 kernel/장치가 사용자 버퍼를 계속 읽는다. PostgreSQL이 정확히 이 이유로 SHARE_EXCLUSIVE mode를 도입했고, 그 커밋 메시지는 btrfs에서 실제 파일시스템 오류가 난 사례까지 언급한다. 사본을 유지한 채 AIO를 하는 길도 있으나 in-flight page마다 사본 버퍼가 필요해져 이점이 반감된다. <span class="claim-id">[PG-C003]</span></p>
+
+<h2 id="scope">범위와 한계</h2>
+<ul>
+<li>다루는 것: CUBRID page buffer의 latch 체계, 승격(promotion), flush 깔때기, 그 관측 지점. InnoDB/PostgreSQL의 같은 축 비교. SX 도입 설계 스케치.</li>
+<li>다루지 않는 것: SX의 실제 구현 코드, LRU/victim 정책 상세, DWB(Double Write Buffer — 원래 위치에 쓰기 전 사본을 별도 파일에 먼저 기록하는 torn-write 보호 장치) 내부, WAL(Write-Ahead Logging — data page보다 log를 먼저 기록하는 규칙) 포맷.</li>
+<li>성능 수치 약속 없음: "현행 구조에 이 비용이 존재한다"는 사실과 타 DBMS의 설계 선택까지만 증거로 말한다. 개선 폭 추정은 JIRA CBRD-27196의 측정 계획으로 넘긴다.</li>
+</ul>
+
+<h2 id="provenance">기준 소스 (provenance)</h2>
+<div class="table-wrap">
+<table>
+<caption>세 저장소의 고정 revision</caption>
+<thead><tr><th>저장소</th><th>revision</th><th>비고</th></tr></thead>
+<tbody>
+<tr><td>CUBRID</td><td><code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code> (branch pgbuf-analysis)</td><td>인용 파일은 모두 commit과 일치(추적-클린). worktree에 무관한 미추적 파일 존재.</td></tr>
+<tr><td>PostgreSQL</td><td><code>fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc</code> (master, 20devel)</td><td>미출시 개발 브랜치 — 3-mode content lock은 릴리스 전 변경 가능.</td></tr>
+<tr><td>MySQL</td><td><code>06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8</code> (trunk)</td><td>비교 대상은 InnoDB storage engine.</td></tr>
+</tbody>
+</table>
+</div>
+<p>런타임 증거는 위 CUBRID revision을 debug 빌드해 만든 전용 데이터베이스에서 수집했다(12장). 모든 라인 번호는 위 revision 기준이다.</p>
+
+<h2 id="reading-paths">읽기 경로</h2>
+<ul>
+<li><strong>빠른 길(질문 3개의 답만)</strong>: 1장 → 2장 → 9장 → 15장.</li>
+<li><strong>메커니즘 길(엔진 내부)</strong>: 2장 → 3장 → 5장 → 6장 → 7장 → 11장 → 12장.</li>
+<li><strong>재구현 길</strong>: 전체 순서대로, 특히 16장.</li>
+</ul>
+
+<h2 id="recap">요약</h2>
+<p>SX의 B-tree 이득은 지금 구조에서도 성립하는 후보이고(승격은 실존하는 hot path), flush 이득은 사본 제거 대 writer 대기의 트레이드오프이며, AIO/direct I/O는 SX를 "선택"에서 "필수"로 바꾸는 미래 요인이다. 다음 장에서 latch가 무엇인지부터 쌓아 올린다.</p>
+</main>
+<footer>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="next" href="02-mental-model.html">다음: 2장 멘탈 모델</a></nav>
+<p>기준 소스: CUBRID f799e05d · PostgreSQL fd2b8985 · MySQL 06a5c1c9</p>
+</footer>
+</body>
+</html>

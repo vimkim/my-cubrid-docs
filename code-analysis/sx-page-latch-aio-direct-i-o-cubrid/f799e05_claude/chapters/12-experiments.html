@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12장 — 실험 기록: 승격과 flush의 런타임 증거</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="11-performance-observability.html">이전: 11장</a><a rel="next" href="13-postgresql.html">다음: 13장</a></nav>
+<h1>12장 — 실험 기록: 승격과 flush의 런타임 증거</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<p>두 central behavior의 런타임 증거가 어떤 절차로 수집되었고, 무엇을 증명하며 무엇을 증명하지 않는지 판별한다. 원시 기록은 <code>evidence/runs/</code>에, 실행물은 <code>experiments/</code>에 있다.</p>
+
+<h2 id="env">공통 환경</h2>
+<p>기준 소스 f799e05d의 debug 빌드(runtime-baseline-build-2로 캡처, <code>evidence/runtime-tools-baseline.json</code>에 바이너리 해시 봉인), 실험 전용 데이터베이스 <code>sx_latch_lab</code>(생성·서버 기동·삭제 전 과정 기록), 기본 설정. 첫 빌드 게이트 시도(runtime-baseline-build)는 대상 환경에 실행 중이던 서버 때문에 설치 단계가 거부되어 exit 75로 기록되어 있으며(컴파일 자체는 성공), 사용자 승인 후 서버를 중지하고 성공한 build-2가 이 보고서의 기준 빌드다. debug 빌드이므로 절대 시간은 release보다 느리다 — 이 실험들의 오라클은 시간이 아니라 카운터 불변식이다.</p>
+
+<h2 id="experiment-1" data-claim-id="CUBRID-C011 CUBRID-C012">experiment-1 — B-tree insert는 승격을 대량 사용한다</h2>
+<div class="table-wrap">
+<table>
+<caption>experiment-1 요약 (전문: experiments/experiment-1/)</caption>
+<thead><tr><th>항목</th><th>내용</th></tr></thead>
+<tbody>
+<tr><td>질문</td><td>소스에서 본 승격 호출(btree.c 11곳)이 런타임에서 실제로, 어느 규모로 발생하는가</td></tr>
+<tr><td>가설</td><td>단조 key 20,000건 insert → 승격 수만 회, 단일 세션이므로 실패 0</td></tr>
+<tr><td>방법</td><td>csql 세션 histogram(<code>;.hist on</code>)을 관측 장치로 내장한 runner를 3회 실행 (exp1-obs-1/2/3)</td></tr>
+<tr><td>관측</td><td><code>promote_success</code> = 89,587 / 88,779 / 88,779 (obs-1/2/3 실행 순), <code>promote_fail</code> = 0, <code>Num_btree_inserts</code> = 20,024 / 20,012 / 20,012 (첫 실행은 카탈로그 초기화분 포함)</td></tr>
+<tr><td>해석</td><td>승격은 insert당 약 4.4회의 실존 hot path다. SX 논의는 가상의 경로가 아니라 이 경로를 다룬다</td></tr>
+<tr><td>대조군</td><td>양성: 3회 반복 재현. 음성: 단순 SELECT에서 promote 0. 관측장치: watcher 없는 초기 실행(exp1-run-1~3)에서 전 카운터 0 — 11장 함정 1의 증거</td></tr>
+<tr><td>한계</td><td>실패율(동시 경쟁)은 측정하지 않음 — 9장 1단계 게이트로 넘김</td></tr>
+</tbody>
+</table>
+</div>
+<p><span class="claim-id">[CUBRID-C011]</span> 대안 설명 배제: 전용 DB + 단일 세션 + per-tran histogram이므로 다른 작업의 승격이 섞일 수 없고, 카운터-이벤트 결합(promote 카운터의 증가 지점이 <code>pgbuf_promote_read_latch</code> 내부뿐임)은 소스로 확인했다.</p>
+
+<h2 id="experiment-2" data-claim-id="CUBRID-C012">experiment-2 — flush 깔때기의 실행과 카운터 함정</h2>
+<div class="table-wrap">
+<table>
+<caption>experiment-2 요약 (전문: experiments/experiment-2/)</caption>
+<thead><tr><th>항목</th><th>내용</th></tr></thead>
+<tbody>
+<tr><td>질문</td><td>flush 깔때기 실행을 어떤 카운터로 관측할 수 있는가; <code>Num_data_page_flushed</code>는 신뢰 가능한가</td></tr>
+<tr><td>가설</td><td>dirty 생성은 per-tran에 잡히고, 물리 쓰기는 <code>Num_data_page_iowrites</code>로 잡히며, <code>Num_data_page_flushed</code>는 victim 전용이라 0에 머문다(소스 기반 예측)</td></tr>
+<tr><td>방법</td><td>interval statdump watcher를 붙이고, 10,000건 insert runner 2회(exp2-obs-1/2) → <code>backupdb -C -r</code>로 동기 checkpoint 강제 → statdump 전후 비교</td></tr>
+<tr><td>관측</td><td><code>Num_data_page_dirties</code> = 102,218 / 102,158 (per-tran), <code>Num_data_page_iowrites</code> 229 → 1163 (+934), <code>Num_data_page_flushed</code> 0 → 0</td></tr>
+<tr><td>해석</td><td>깔때기는 실행되었고(+934 물리 쓰기), flushed 카운터는 이름과 달리 checkpoint flush를 세지 않는다(본 보고서가 독립 확인, JIRA EPIC 발췌 사본 research/jira/ 참조)</td></tr>
+<tr><td>한계</td><td>checkpoint flush와 flush 데몬 자발 flush를 구분하지 못함(둘 다 같은 깔때기라 결론에는 무영향)</td></tr>
+</tbody>
+</table>
+</div>
+<p><span class="claim-id">[CUBRID-C012]</span> 과정에서 배운 것: csql sysadm의 <code>;checkpoint</code>는 비동기 요청이라 per-tran histogram에 잡히지 않고, checkpoint 데몬의 페이싱 때문에 수 분간 완료되지 않는 경우도 있었다 — 동기 강제 수단으로 backupdb를 채택한 이유다. 또 <code>cubrid statdump</code>는 wrapper가 실제 프로세스를 자식으로 띄우므로 pid 파일이 wrapper를 가리켜 정리가 누락될 수 있다 — 교정 정리(exp2-watcher-stop-2)까지 기록되어 있다.</p>
+
+<h2 id="observer">관측자 효과</h2>
+<p>watcher는 perfmon 증가 비용을 켠다. 두 실험의 결론(횟수 불변식)은 이 비용과 무관하지만, 시간 측정을 겸하려면 비교군 모두 watcher를 켜야 한다(11장).</p>
+
+<h2 id="recap">요약</h2>
+<p>승격은 실존 hot path(수만 회/2만 insert), flush 깔때기는 실행 확인, 그리고 카운터 이름의 함정까지 — 세 사실이 재현 가능한 기록으로 남았다. 다음 세 장은 같은 문제를 PostgreSQL과 InnoDB가 어떻게 풀었는지다.</p>
+</main>
+<footer>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="11-performance-observability.html">이전: 11장</a><a rel="next" href="13-postgresql.html">다음: 13장</a></nav>
+<p>기준 소스: CUBRID f799e05d</p>
+</footer>
+</body>
+</html>

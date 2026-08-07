@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>16장 — 재구현 청사진: CUBRID에 SX를 넣는 설계 스케치</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="15-comparison.html">이전: 15장</a><a rel="next" href="17-glossary-evidence.html">다음: 17장</a></nav>
+<h1>16장 — 재구현 청사진: CUBRID에 SX를 넣는 설계 스케치</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<p>지금까지의 사실들로부터, SX를 CUBRID에 도입할 때의 인터페이스 계약·상태 표현·경로별 변경·검증 순서를 독립 구현자가 따라갈 수 있는 수준으로 정리한다. 이는 구현 지시가 아니라 조사(JIRA CBRD-27196) 산출물의 설계 스케치다.</p>
+
+<h2 id="contract" data-claim-id="CUBRID-C002 CUBRID-C003 CUBRID-C013 MYSQL-C006 PG-C005">1. 인터페이스 계약 (제안)</h2>
+<ul>
+<li><strong>호환성</strong>: SX는 READ와 공존, 다른 SX·WRITE와 배타 (15장 용어 대응의 세 엔진과 동일 행렬).</li>
+<li><strong>획득 규칙</strong>: SX는 (a) fix 시점 요청 또는 (b) READ 보유 중 <em>nowait</em> 승격으로만. blocking READ→SX는 API 차원에서 금지 — InnoDB는 이를 "S 보유 중 SX 획득 실패" 규칙으로, PostgreSQL은 nowait 전용 함수로 강제했다 <span class="claim-id">[MYSQL-C006, PG-C005]</span>.</li>
+<li><strong>SX→WRITE 승격</strong>: 대기 등록 시 <code>waiter_exists</code>를 세워 신규 lock-free reader를 차단한 뒤 fcnt가 자기 fix 수로 줄 때까지 대기. 경쟁 promoter가 구조적으로 없으므로 실패 코드가 필요 없다(7장 논증).</li>
+<li><strong>downgrade</strong>: SX→READ 해제는 sx 표시 제거로 자연 처리. WRITE→SX는 1단계 범위 밖.</li>
+<li><strong>재귀</strong>: 같은 스레드의 중복 SX는 owner 비교로 허용 여부 결정(미해결 — 17장).</li>
+</ul>
+
+<h2 id="state-word">2. 상태 표현 (제안 2안 비교)</h2>
+<div class="table-wrap">
+<table>
+<caption>상태어 확장 두 가지 안</caption>
+<thead><tr><th>안</th><th>내용</th><th>평가</th></tr></thead>
+<tbody>
+<tr><td>1안 (권장)</td><td>64-bit word에 sx bit 1개 추가 + BCB에 <code>sx_owner</code>(스레드) 필드</td><td>SX holder는 페이지당 최대 1명이라 owner 하나로 충분. <code>latch_mode</code> 집계는 READ/WRITE 그대로 두어 lock-free READ 경로 변경 최소화. 재귀는 <code>sx_owner == self</code> 비교, downgrade는 bit 해제로 자연 처리.</td></tr>
+<tr><td>2안</td><td><code>PGBUF_LATCH_SX</code> enum 값 추가</td><td>enum 공간(uint16_t)은 있으나 READ+SX <em>공존</em> 상태를 집계값 하나로 표현 불가 — 결국 별도 bit가 필요해져 1안으로 수렴한다 <span class="claim-id">[CUBRID-C002]</span>.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="paths">3. 경로별 변경 목록</h2>
+<ol>
+<li><strong>lock-free READ</strong>: grant 조건에서 sx bit는 <em>무시</em>(공존이 목적). 단 sx bit 조작 자체는 반드시 같은 word의 CAS 재시도 루프 — reader가 mutex 없이 다니므로 mutex-보호 read-modify-write는 lost update를 만든다 <span class="claim-id">[CUBRID-C003]</span>.</li>
+<li><strong>대기열/wakeup</strong>: <code>pgbuf_block_bcb</code>에 SX 대기 클래스 추가. wakeup 시 READ 묶음 + SX 1명까지 동시 기상 가능, WRITE는 단독. <code>PGBUF_LATCH_FLUSH</code> pseudo-mode 대기자와의 구분 유지 <span class="claim-id">[CUBRID-C001]</span>.</li>
+<li><strong>승격 함수</strong>: SX→WRITE용 새 함수(실패 분기 없음). 기존 <code>pgbuf_promote_read_latch</code>는 이행기 동안 공존.</li>
+<li><strong>flusher 소유권</strong>: flush 스레드는 fix 없이 동작하므로 holder 목록과 독립인 <code>sx_owner</code>가 소유를 표현(InnoDB의 io_fix 유사). 기존 <code>FLUSHING_TO_DISK</code> 플래그와 통합할지는 미해결.</li>
+<li><strong>conditional 축</strong>: <code>PGBUF_CONDITIONAL_LATCH</code>와 조합한 nowait SX가 1급 시민이어야 한다 — InnoDB flush 완충 전략 전체가 nowait 위에 서 있다 <span class="claim-id">[MYSQL-C002]</span>.</li>
+<li><strong>ordered fix/watcher</strong>: 다중 page latch 순서를 다루는 <code>pgbuf_ordered_fix</code>의 재획득 규칙에 제3 mode가 주는 영향 조사 필요.</li>
+<li id="sa-mode" data-claim-id="CUBRID-C013"><strong>SA_MODE</strong>: 단일 스레드 standalone에서는 승격이 무조건 제자리 전환이듯(<code>page_buffer.c:3057</code>) SX도 자명한 grant로 정의 — loaddb 등 SA 경로의 assert 통과 확인 <span class="claim-id">[CUBRID-C013]</span>.</li>
+<li><strong>관측</strong>: SX 획득/대기/승격 카운터를 perfmon에 추가하되, 11장의 교훈대로 증가 지점과 이름을 일치시킨다.</li>
+</ol>
+
+<h2 id="staged">4. 단계적 도입과 검증 순서</h2>
+<ol>
+<li><strong>0단계 — baseline 측정</strong>: promote 실패율, flush memcpy CPU 비중 (9장 게이트 1).</li>
+<li><strong>1단계 — flush 내부 상태 한정</strong>: <code>pgbuf_fix</code> 공개 계약 불변. flusher만 sx bit를 쓰고 plain page 무사본 flush. 검증: 6장 불변식(WAL 선행, 재더티) 유지 + 9장 게이트 2 워크로드. TDE/DWB 경로는 사본 유지.</li>
+<li><strong>2단계 — public fix mode</strong>: B-tree 하강에 SX 노출. 검증: 5장 fallback 제거 후에도 delete/merge 3-page 시퀀스가 순서 교착 없이 동작(다중 page 승격 규칙 필요 — 미해결), promote_fail 소멸 확인.</li>
+</ol>
+
+<h2 id="conformance">5. 적합성 테스트 후보</h2>
+<ul>
+<li>동일 page에 reader N + SX 1 공존, SX→WRITE 승격 완료가 유한 시간 내 보장되는가 (기아 없음).</li>
+<li>READ 보유 스레드의 SX 요청이 즉시 실패하는가 (전제조건 강제).</li>
+<li>flush 중(1단계) reader 통과 / writer 대기 / 재더티 소멸 확인.</li>
+<li>latch timeout 빈도가 도입 전과 동일한가 (7장 — 교착 방어가 얇으므로 회귀 지표로 사용).</li>
+<li>quiz-1/quiz-2 오라클이 도입 후 어떻게 변해야 하는지 명시 (promote_fail → 0, flush memcpy 소멸).</li>
+</ul>
+
+<h2 id="recap">요약</h2>
+<p>sx bit + owner 필드, CAS 전용 조작, nowait 획득 규칙, flush-먼저 단계 도입, 그리고 게이트별 측정 — 이 순서면 독립 구현자가 소스를 다시 열지 않고 착수할 수 있다. 남은 미해결 항목은 17장에 모았다.</p>
+</main>
+<footer>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="15-comparison.html">이전: 15장</a><a rel="next" href="17-glossary-evidence.html">다음: 17장</a></nav>
+<p>기준 소스: CUBRID f799e05d</p>
+</footer>
+</body>
+</html>

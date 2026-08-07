@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5장 — 핵심 워크플로: B-tree insert의 하강, 승격, 재시작</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="03-interface-data.html">이전: 3장</a><a rel="next" href="06-flush-frame-stability.html">다음: 6장</a></nav>
+<h1>5장 — 핵심 워크플로: B-tree insert의 하강, 승격, 재시작</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<p>B-tree insert 한 건이 page latch를 어떤 순서로 잡고 놓는지, 승격이 언제 왜 실패하는지, 실패 후 무엇을 다시 하는지를 분기 단위로 추적한다. 이것이 SX의 첫 번째 적용 후보(사용자 질문 1)의 실체다.</p>
+
+<h2 id="scenario">시나리오</h2>
+<p>PRIMARY KEY 인덱스에 새 key를 넣는다. 트리는 root → internal → leaf 3층이라고 하자. leaf가 가득 차 있으면 split(가득 찬 node를 둘로 쪼개고 부모에 새 경계 key를 올리는 구조 변경)이 필요하다.</p>
+
+<h2 id="happy-path">빠른 경로 (수정이 leaf에 국한될 때)</h2>
+<p>insert 하강은 non-leaf를 READ로만 지나간다. leaf에 여유가 있으면 leaf만 WRITE로 잡고 key를 넣고 끝난다 — 다른 세션들은 non-leaf를 계속 읽을 수 있다. 이 낙관주의가 동시성의 원천이다.</p>
+
+<h2 id="promote-fail-restart" data-claim-id="CMP-C002 CUBRID-C004 CUBRID-C005 CUBRID-C006 CUBRID-C011 MYSQL-C005 PG-C006">승격 경로와 실패, 재시작</h2>
+<p>문제는 하강 중 "자식이 split될 것 같다"를 발견한 순간이다. 지금 READ로 쥔 non-leaf를 고쳐야 한다. unfix하고 WRITE로 다시 fix하면 그 틈에 page가 바뀔 수 있어 탐색 무효화 — 그래서 쥔 채로 올리는 승격을 쓴다 <span class="claim-id">[CUBRID-C004]</span>:</p>
+<pre>
+pgbuf_promote_read_latch()                        page_buffer.c:2842
+  ├ 단독 holder + 첫 대기자가 다른 promoter ── 즉시 실패 (:2916)
+  ├ 단독 holder(그 외) ─────────────────────── 제자리 승격 (:2929)
+  │    latch_mode를 WRITE로 CAS — 대기 없음
+  ├ 공유 holder + (ONLY_READER 조건 또는 첫 대기자가 promoter)
+  │                 ────────────────────────── 즉시 실패 (:2936)
+  │   ★ promoter 둘이 공존하면 "처음 fix한 page를 그대로 본다"는
+  │     보장이 깨지므로 한쪽을 포기시킨다 (소스 주석 :2939-2945)
+  └ 공유 holder + SHARED_READER 조건 ───────── 자기 fix를 전부 빼고
+                  (사실상 unfix) WRITE 첫 대기자로 등록, 대기 (:2976-2994)
+</pre>
+<p class="diagram-alt">그림 설명: 승격 함수는 네 갈래다. 혼자 쥐고 있고 경쟁 promoter가 없으면 제자리 승격, 경쟁 promoter가 있거나 ONLY_READER 조건에서 다른 reader가 있으면 즉시 실패, SHARED_READER 조건에서 다른 reader가 있으면 스스로 unfix하고 첫 대기자로 등록해 기다린다.</p>
+<p>주목할 세부 두 가지. 첫째, 대기 경로(SHARED_READER)는 <em>쥔 채 기다리는 게 아니다</em> — 자기 fix를 전부 반납하고 기다린다. 쥔 채 기다리면 2장의 교착이 그대로 생기기 때문이다. 대신 "첫 대기자" 자리를 보장받아, 성공 시 처음 본 page 이미지가 보존된다. 둘째, 경쟁 promoter의 즉시-실패는 교착 <em>감지</em>가 아니라 교착 <em>가능성의 선제 포기</em>다.</p>
+
+<h3 id="fallback">실패의 뒷감당</h3>
+<p>실패한 B-tree insert는 이렇게 한다 <span class="claim-id">[CUBRID-C005]</span> (<code>btree.c:28645-28654</code>):</p>
+<pre>
+error_code = pgbuf_promote_read_latch (..., PGBUF_PROMOTE_ONLY_READER);
+if (error_code == ER_PAGE_LATCH_PROMOTE_FAIL)
+  {
+    /* Could not promote. Restart insert from root by using write latch directly. */
+    insert_helper-&gt;nonleaf_latch_mode = PGBUF_LATCH_WRITE;
+    *restart = true;
+    pgbuf_unfix_and_init (thread_p, child_page);
+    pgbuf_unfix_and_init (thread_p, *crt_page);
+    ...
+  }
+</pre>
+<p>즉 <strong>전부 내려놓고 루트부터 다시 시작하되, 이번에는 하강 중 지나는 non-leaf를 각각 WRITE로 잡는다</strong>. latch coupling(자식을 잡은 뒤 부모를 곧바로 놓는 방식)이라 한 번에 한두 node지만, 그 경로의 각 node에서 reader가 직렬화된다. 재탐색 비용 + 경로상 동시성 하락 — 이것이 승격 실패 1회의 가격표다.</p>
+
+<h2 id="promote-callers" data-claim-id="CUBRID-C006">승격은 얼마나 널리 쓰이나</h2>
+<p class="callout evidence-source"><span class="evidence-label">Source-confirmed</span>
+<code>pgbuf_promote_read_latch</code> 호출자는 총 12곳이다: <code>btree.c</code> insert 경로 4곳(root 승격 <code>:28079</code>, 하강 <code>:28372</code>, <code>:28645</code>, <code>:28675</code>), delete/merge 경로 7곳(<code>:31715</code>, <code>:31829-31838</code>, <code>:32076-32086</code>), <code>file_manager.c</code> 1곳(<code>:8251</code>). 특히 delete/merge는 <code>crt_page</code> → <code>left_page</code>(또는 <code>child_page</code>) → <code>right_page</code> <strong>세 page를 연속으로 승격</strong>한다 — 단일 page 논증이 그대로 확장되지 않는 지점이다(16장의 다중 page 승격 항목). <span class="claim-id">[CUBRID-C006]</span></p>
+
+<h2 id="runtime">런타임 검증: 승격은 실존하는 hot path다</h2>
+<p class="experiment evidence-runtime"><span class="evidence-label">Runtime-observed</span>
+단조 증가 key 20,000건 insert에서 <code>Data_page_total_promote_success</code> = 89,587 / 88,779 / 88,779 (obs-1/2/3 실행 순), <code>promote_fail</code> = 0. insert 1건당 약 4.4회 승격 — 하강 단계와 split 대상(부모·형제) 수를 생각하면 수긍되는 규모다. 실패 0은 단일 세션(경쟁 없음)의 필연이다. 상세는 12장 experiment-1. <span class="claim-id">[CUBRID-C011]</span></p>
+
+<h2 id="before-after">단계별 상태 표</h2>
+<div class="table-wrap">
+<table>
+<caption>승격 성공/실패 각 분기의 전후 상태</caption>
+<thead><tr><th>분기</th><th>진입 시 latch</th><th>탈출 시 latch</th><th>page 이미지 보존</th><th>후속 비용</th><th>claim</th></tr></thead>
+<tbody>
+<tr><td>제자리 승격</td><td>READ(단독)</td><td>WRITE</td><td>보존</td><td>없음</td><td class="claim-id">CUBRID-C004</td></tr>
+<tr><td>대기 후 승격(SHARED_READER)</td><td>READ(공유)</td><td>WRITE</td><td>보존(첫 대기자 보장)</td><td>대기 시간</td><td class="claim-id">CUBRID-C004</td></tr>
+<tr><td>즉시 실패</td><td>READ</td><td>READ 유지(호출자가 unfix)</td><td>해당 없음</td><td>루트부터 WRITE 하강 재시작</td><td class="claim-id">CUBRID-C004, C005</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="sx-effect">SX가 이 그림을 어떻게 바꾸나 (미리보기)</h2>
+<p>SX 하강(수정 가능성이 있는 non-leaf를 SX로 잡기)이라면: SX는 READ와 공존하므로 reader를 막지 않고, SX끼리 배타이므로 승격 후보가 페이지당 1명으로 직렬화되어 "경쟁 promoter 즉시-실패" 분기가 사라진다. 왜 그것이 교착 없이 성립하는지는 7장에서 전제조건과 함께 증명한다.</p>
+
+<h2 id="recap">요약</h2>
+<p>B-tree insert는 READ 하강 + 필요 순간 승격이라는 낙관 전략을 쓰고, 승격은 교착 회피를 위해 실패 기반이며, 실패 시 루트부터 WRITE 하강으로 재시작한다. 승격은 insert당 4회가 넘는 실존 hot path다. 다음 장은 두 번째 곤란 — flush와 사본 — 이다.</p>
+</main>
+<footer>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="03-interface-data.html">이전: 3장</a><a rel="next" href="06-flush-frame-stability.html">다음: 6장</a></nav>
+<p>기준 소스: CUBRID f799e05d</p>
+</footer>
+</body>
+</html>

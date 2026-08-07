@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3장 — 인터페이스, 자료구조, 상태 전이</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="02-mental-model.html">이전: 2장</a><a rel="next" href="05-core-workflows.html">다음: 5장</a></nav>
+<h1>3장 — 인터페이스, 자료구조, 상태 전이</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<p>latch 체계의 공개 인터페이스(호출자가 지켜야 할 계약), 상태를 담는 자료구조와 그 소유·수명, 그리고 합법/불법 상태 전이를 파악한다. SX 도입 시 "무엇이 바뀌어야 하는가"의 목록이 이 장에서 나온다.</p>
+
+<h2 id="latch-modes" data-claim-id="CUBRID-C001">latch mode 정의</h2>
+<p class="callout evidence-source"><span class="evidence-label">Source-confirmed</span>
+<code>PGBUF_LATCH_MODE</code>는 <code>enum:uint16_t</code>로 <code>NO_LATCH(0)</code>, <code>READ(1)</code>, <code>WRITE(2)</code>, <code>FLUSH(3)</code>, <code>INVALID(4)</code> 값을 갖는다 (<code>page_buffer.h:186-197</code>). 이 중 page를 fix할 수 있는 content latch는 READ/WRITE뿐이고, <code>PGBUF_LATCH_FLUSH</code>는 "flush 완료를 기다린다"는 대기열 전용 pseudo-mode다 — 소스 주석: "page can never be fixed with flush latch mode". <span class="claim-id">[CUBRID-C001]</span></p>
+<p>또 하나의 입력 축으로 <code>PGBUF_LATCH_CONDITION</code>(<code>page_buffer.h:198-203</code>)이 있다: <code>UNCONDITIONAL_LATCH</code>(될 때까지 대기)와 <code>CONDITIONAL_LATCH</code>(즉시 실패 허용, nowait). SX를 설계할 때 이 nowait 축이 중요해진다(16장).</p>
+
+<h2 id="interface" data-claim-id="CUBRID-C001 CUBRID-C004">공개 인터페이스와 호출자 계약</h2>
+<div class="table-wrap">
+<table>
+<caption>이 보고서 범위의 세 인터페이스와 caller 의무</caption>
+<thead><tr><th>함수</th><th>입력 계약</th><th>출력/실패</th><th>caller 의무</th></tr></thead>
+<tbody>
+<tr><td><code>pgbuf_fix(vpid, fetch_mode, latch_mode, condition)</code></td><td>latch_mode는 READ 또는 WRITE. condition으로 nowait 선택 가능.</td><td>성공 시 page 포인터(fix 1 증가). 실패 시 NULL + 에러.</td><td>반드시 unfix. WRITE 보유 중 수정 시 dirty 표시와 LSA(log sequence address — 로그 상 위치) 갱신은 수정자가 책임.</td></tr>
+<tr><td><code>pgbuf_promote_read_latch(&amp;pgptr, condition)</code></td><td>READ holder만 호출 가능. condition은 ONLY_READER 또는 SHARED_READER.</td><td>NO_ERROR(승격됨) 또는 <code>ER_PAGE_LATCH_PROMOTE_FAIL</code>. 실패해도 pgptr는 READ 상태로 유효(단, SHARED_READER 대기 경로 진입 후 실패하면 NULL 가능).</td><td>실패 시 스스로 복구 전략(unfix 후 WRITE로 재fix + 재검증)을 실행해야 한다. 5장의 B-tree fallback이 그 예다.</td></tr>
+<tr><td><code>pgbuf_bcb_flush_with_wal(bcb, ...)</code></td><td>내부(BCB mutex 보유) 호출. latch는 NO_LATCH/READ/자기 소유 WRITE 허용.</td><td>flush 성공 또는 에러(dirty/LSA 복원).</td><td>모든 data page 쓰기는 이 깔때기를 지나야 한다(6장).</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="atomic-word" data-claim-id="CUBRID-C002">상태 자료구조: 64-bit atomic word</h2>
+<p>BCB(buffer control block — frame마다 하나씩 있는 제어 블록)는 latch 상태 전체를 원자적 64-bit word 하나에 담는다 <span class="claim-id">[CUBRID-C002]</span> (<code>page_buffer.c:499-508</code>):</p>
+<pre>union pgbuf_atomic_latch_impl {
+  uint64_t raw;                    /* CAS 단위 */
+  struct {
+    PGBUF_LATCH_MODE latch_mode;   /* uint16: 집계 mode — 지금 제일 센 게 뭔가 */
+    uint16_t waiter_exists;        /* 대기자 존재 플래그 (공정성 밸브) */
+    int32_t fcnt;                  /* 전체 fix 수 — mode 구분 없음 */
+  } impl;
+};</pre>
+<p><strong>소유와 수명</strong>: 이 word는 BCB가 소유하고, BCB는 buffer pool이 서버 수명 동안 소유한다. page가 교체(victim)되어도 BCB 구조체는 재사용된다. holder(스레드별 fix 기록)는 스레드 로컬 목록으로 관리되며, 각 항목에 perf 전용 힌트 비트(<code>hold_has_read_latch</code>/<code>hold_has_write_latch</code>, <code>page_buffer.c:445-446</code>)가 있지만 이는 통계용이지 권위 있는 mode 기록이 아니다.</p>
+<p class="invariant"><span class="evidence-label">핵심 불변식.</span> 이 설계에서 "누가 어떤 mode로 쥐고 있나"는 <em>집계로만</em> 존재한다: <code>latch_mode=READ, fcnt=3</code>은 "READ가 3개"라는 뜻이고, <code>latch_mode=WRITE, fcnt=1</code>(같은 스레드의 재귀 fix면 fcnt&gt;1)은 "한 스레드가 WRITE"라는 뜻이다. READ와 SX가 <em>공존</em>하는 상태는 이 표현으로는 담을 수 없다 — SX 도입 시 상태어 확장이 필요한 이유다(16장).</p>
+
+<h2 id="lifecycle" data-claim-id="CUBRID-C001 CUBRID-C004 CUBRID-C007">상태 전이</h2>
+<pre>
+            fix(READ)                    fix(WRITE)
+  NO_LATCH ──────────▶ READ    NO_LATCH ──────────▶ WRITE
+     ▲                  │  ▲                          │
+     │   마지막 unfix   │  │      promote 성공        │ unfix
+     └──────────────────┘  └──── READ ────────────────┘
+                                (제자리 또는 unfix-후-첫대기자 경로)
+
+  겹치는 직교 플래그: FLUSHING_TO_DISK (flush 중), DIRTY (수정됨)
+</pre>
+<p class="diagram-alt">그림 설명: NO_LATCH에서 fix(READ)로 READ 상태로, fix(WRITE)로 WRITE 상태로 전이한다. READ에서 promote가 성공하면 WRITE로 전이한다. 마지막 unfix는 NO_LATCH로 돌아간다. DIRTY와 FLUSHING_TO_DISK는 latch mode와 별개로 켜지고 꺼지는 플래그다.</p>
+<p><strong>합법 전이</strong>: NO_LATCH→READ/WRITE(fix), READ→WRITE(promote — 단 5장의 실패 조건), READ/WRITE→NO_LATCH(마지막 unfix). <strong>불법 전이</strong>: WRITE→READ의 제자리 downgrade API는 없고, FLUSH mode로의 fix도 없다. flush 진행은 latch 전이가 아니라 <code>FLUSHING_TO_DISK</code> 플래그로 표현된다 <span class="claim-id">[CUBRID-C007]</span>.</p>
+
+<h2 id="seams">이웃 책임과 seam</h2>
+<ul>
+<li><strong>lock-free 빠른 경로</strong>: READ fix/unfix에는 BCB mutex를 건너뛰는 CAS 경로가 따로 있다(7장). SX 설계의 최대 제약이 여기서 나온다.</li>
+<li><strong>대기열</strong>: latch를 못 받은 스레드는 BCB의 대기 목록에 서고, <code>waiter_exists</code> 비트가 빠른 경로에 "새치기 금지"를 알린다.</li>
+<li><strong>flush 하위 시스템</strong>: WAL(로그 선행 기록)과 DWB(torn-write 보호)가 flush 깔때기에 접합된다(6장).</li>
+</ul>
+
+<h2 id="recap">요약</h2>
+<p>인터페이스는 셋(fix/promote/flush 깔때기), 상태는 64-bit word 하나(집계 mode + fix 수 + 대기자 비트), holder별 mode 기록은 없다. 이 마지막 사실이 SX 도입의 첫 번째 설계 관문이다. 다음 장에서 이 인터페이스들이 B-tree insert라는 실전 workflow에서 어떻게 조합되는지 본다.</p>
+</main>
+<footer>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="02-mental-model.html">이전: 2장</a><a rel="next" href="05-core-workflows.html">다음: 5장</a></nav>
+<p>기준 소스: CUBRID f799e05d</p>
+</footer>
+</body>
+</html>

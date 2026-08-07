@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8장 — 오류와 자원 압박: 실패 경로의 계약</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="07-concurrency.html">이전: 7장</a><a rel="next" href="09-policies-algorithms.html">다음: 9장</a></nav>
+<h1>8장 — 오류와 자원 압박: 실패 경로의 계약</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<p>승격 실패, latch timeout, flush I/O 실패가 각각 어떻게 전파되고 누가 뒷정리를 책임지는지 파악한다. SX 도입은 이 실패 경로들의 계약을 바꾸므로, 현행 계약의 정확한 모양이 기준선이다.</p>
+
+<h2 id="errors-pressure" data-claim-id="CUBRID-C004 CUBRID-C005 CUBRID-C008 CUBRID-C010">세 가지 실패와 그 계약</h2>
+<div class="table-wrap">
+<table>
+<caption>실패 종류별 전파와 복구 책임</caption>
+<thead><tr><th>실패</th><th>에러/증상</th><th>누가 감지</th><th>복구 책임</th><th>claim</th></tr></thead>
+<tbody>
+<tr><td>승격 경쟁</td><td><code>ER_PAGE_LATCH_PROMOTE_FAIL</code> (notification 심각도)</td><td><code>pgbuf_promote_read_latch</code>가 즉시 반환</td><td><strong>호출자</strong> — unfix 후 WRITE 재fix + 재검증(B-tree는 루트 재시작)</td><td class="claim-id">CUBRID-C004, C005</td></tr>
+<tr><td>latch 장기 대기</td><td>timed sleep 후 timeout 에러</td><td>대기 스레드 자신 (감지기 없음)</td><td>호출자 — 쿼리 에러로 전파</td><td class="claim-id">CUBRID-C010</td></tr>
+<tr><td>flush I/O 실패</td><td>깔때기가 에러 반환</td><td><code>pgbuf_bcb_flush_with_wal</code></td><td>깔때기 — DIRTY/oldest_unflush_lsa 복원, flush 대기자 wakeup → 나중에 재시도</td><td class="claim-id">CUBRID-C008</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="promote-severity">승격 실패는 "예상된 실패"다</h2>
+<p><code>ER_PAGE_LATCH_PROMOTE_FAIL</code>은 notification 심각도로만 기록된다 — 시스템 오류가 아니라 <em>정상 프로토콜의 한 분기</em>라는 뜻이다. 그 대신 모든 호출자는 실패 처리 코드를 갖출 의무를 진다. 5장에서 본 12개 호출 지점 각각에 fallback이 붙어 있는 이유이며, SX가 승격을 확정적으로 만들면 이 12벌의 fallback 코드가 단순화 후보가 된다.</p>
+
+<h2 id="pressure">자원 압박 아래의 상호작용</h2>
+<ul>
+<li><strong>buffer 부족(victim 압박)</strong>: 빈 frame을 못 찾는 스레드는 dirty victim의 flush를 기다린다 — flush 깔때기가 밀리면 fix 자체가 밀린다. SX 직접 flush로 I/O 동안 writer를 막는 설계는 이 압박 아래에서 대기 사슬을 하나 더 만들 수 있어, 측정 계획(9장)의 flush-pressure 시나리오가 이 지점을 겨눈다.</li>
+<li><strong>로그 압박</strong>: WAL 선행(6장) 때문에 로그 flush가 느리면 data flush도 느려진다 — 깔때기 안에 로그 대기가 내장되어 있다.</li>
+<li><strong>shutdown/restart</strong>: 서버 종료는 dirty 전체 flush를 강제하고, 복구는 WAL 재적용으로 재구성한다. latch 상태는 휘발성이라 복구 대상이 아니다 — durable한 것은 page 이미지와 로그뿐이다.</li>
+</ul>
+
+<h2 id="degraded">성능 저하 모드의 증상</h2>
+<p>7장의 방어(timeout) 때문에, latch 설계 결함의 현장 증상은 교착 보고가 아니라 "간헐적으로 수 초~수십 초 멈추는 쿼리"다. 승격 실패 폭증의 증상은 promote_fail 카운터 증가와 B-tree 처리량 하락이 함께 나타나는 것이다(11장의 관측법).</p>
+
+<h2 id="recap">요약</h2>
+<p>승격 실패는 호출자 책임의 예상된 분기, latch 교착은 timeout으로만 방어, flush 실패는 깔때기가 상태 복원으로 재시도를 보장한다. 다음 장에서 정책 수준의 저울질 — 사본 대 SX, 그리고 AIO 필수성 — 을 다룬다.</p>
+</main>
+<footer>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="07-concurrency.html">이전: 7장</a><a rel="next" href="09-policies-algorithms.html">다음: 9장</a></nav>
+<p>기준 소스: CUBRID f799e05d</p>
+</footer>
+</body>
+</html>

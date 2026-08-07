@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": "experiment-2",
+  "behavior_ids": [
+    "flush-frame-stability"
+  ],
+  "claim_ids": [
+    "CUBRID-C012"
+  ],
+  "runner": "flush_workload.sql",
+  "runner_sha256": "a0e864a01da75a9fe64c0c6ca1a3eb22a1dc67b4361f9c321dbf0ad5c25f88a1",
+  "runner_argv": [
+    "/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc/bin/csql",
+    "-u",
+    "dba",
+    "sx_latch_lab",
+    "-i",
+    "flush_workload.sql"
+  ],
+  "run_ids": [
+    "exp2-obs-1",
+    "exp2-obs-2"
+  ],
+  "oracle_ko": "각 runner 실행의 ;.dump_hist 출력에서 Num_data_page_dirties > 0 (관측값 약 10만 — dirty 생성은 사용자 스레드에서 일어나 per-tran histogram에 잡힌다). 이어지는 backupdb 강제 checkpoint 후 전역 statdump(exp2-statdump-after)에서 Num_data_page_iowrites 가 exp2-statdump-before 대비 증가해야 한다(관측: 229 → 1163, +934). 반면 Num_data_page_flushed 는 0에 머무른다 — 이 카운터는 victim flush 경로(page_buffer.c:4167)에서만 증가하고 checkpoint flush 를 세지 않기 때문이다(본 보고서가 소스·런타임으로 독립 확인; research/jira/CBRD-27193.md 사본의 D6 항목에도 기록됨).",
+  "controls_ko": "양성 대조: runner 2회 반복에서 Num_data_page_dirties 가 유사 규모(102218/102158)로 재현. 음성 대조: dirty 워크로드 없이 찍은 exp2-statdump-before 는 iowrites=229 (직전 dry run 잔여)에서 시작하며, watcher 부재 구간의 활동은 어떤 카운터에도 잡히지 않는다(stats_on 게이트, experiment-1 부수 관측과 동일).",
+  "alternative_explanations_ko": "(1) iowrites 증가가 checkpoint 가 아니라 backupdb 의 아카이브 쓰기일 가능성 — Num_data_page_iowrites 의 살아 있는 증가 지점은 네 곳(double_write_buffer.cpp:2115/2150/2339, page_buffer.c:10893의 비-DWB 직접 쓰기 분기; page_buffer.c:4873은 ENABLE_UNUSED_FUNCTION으로 컴파일 제외)이고, backupdb 아카이브 쓰기는 fileio_write_backup 계열의 별도 경로라 이들 지점을 지나지 않는다(소스 확인). 이 실험 환경에서는 DWB 활성이 확인되므로(exp2-statdump-after 의 Num_DWB_flush_block=12) 증가분은 DWB 경로 집계다. 단, checkpoint flush 와 flush 데몬의 자발적 flush 는 구분하지 못한다 — 어느 쪽이든 pgbuf_bcb_flush_with_wal 깔때기를 지나므로 '깔때기가 실행되었다'는 결론에는 영향 없다. (2) dirty 카운터가 다른 세션 활동일 가능성 — 전용 DB 단일 세션 + per-tran histogram 으로 배제. (3) Num_data_page_flushed=0 이 'flush 가 없었다'는 뜻일 가능성 — iowrites +934 와 모순되므로 기각되고, 카운터 증가 지점의 편중(victim 경로 전용)으로 설명된다.",
+  "repetitions": 2,
+  "cubrid_runtime_only": true,
+  "runtime_tools_snapshot": "evidence/runtime-tools-baseline.json",
+  "cleanup_verified": true
+}

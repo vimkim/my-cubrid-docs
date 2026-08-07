@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15장 — 3사 비교: 같은 문제, 세 가지 해법</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="14-mysql.html">이전: 14장</a><a rel="next" href="16-blueprint.html">다음: 16장</a></nav>
+<h1>15장 — 3사 비교: 같은 문제, 세 가지 해법</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<p>공유 시나리오("여럿이 읽는 hot page를 한 스레드가 고쳐야 하고, flusher가 써야 한다") 위에서 세 엔진의 선택을 축별로 비교하고, 각 대응의 등가성 등급을 판정한다.</p>
+
+<h2 id="terminology">용어 대응표</h2>
+<div class="table-wrap">
+<table>
+<caption>같은 개념의 세 이름</caption>
+<thead><tr><th>개념</th><th>CUBRID</th><th>InnoDB</th><th>PostgreSQL 20devel</th></tr></thead>
+<tbody>
+<tr><td>page 잠금 장치</td><td>page latch (<code>PGBUF_LATCH_*</code>)</td><td>block rw_lock (<code>RW_*_LATCH</code>)</td><td>buffer content lock (<code>BUFFER_LOCK_*</code>)</td></tr>
+<tr><td>공유 mode</td><td>READ</td><td>S</td><td>SHARE</td></tr>
+<tr><td>SX 등가 mode</td><td>(없음 — 도입 검토 중)</td><td>SX</td><td>SHARE_EXCLUSIVE</td></tr>
+<tr><td>배타 mode</td><td>WRITE</td><td>X</td><td>EXCLUSIVE</td></tr>
+<tr><td>torn-write 보호</td><td>DWB</td><td>doublewrite buffer</td><td>full page write (WAL 내)</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="flush-axis" data-claim-id="CMP-C001 CMP-C002 MYSQL-C004">축 1 — flush 중 frame 안정성</h2>
+<div class="table-wrap">
+<table>
+<caption>flusher가 쓰는 동안 누가 무엇을 할 수 있나 <span class="claim-id">[CMP-C001]</span></caption>
+<thead><tr><th></th><th>CUBRID 현행</th><th>InnoDB</th><th>PostgreSQL 20devel</th></tr></thead>
+<tbody>
+<tr><td>안정성 수단</td><td>사본 (IO_PAGESIZE memcpy)</td><td>block SX 보유</td><td>SHARE_EXCLUSIVE 보유</td></tr>
+<tr><td>I/O 중 reader</td><td>자유</td><td>자유</td><td>자유</td></tr>
+<tr><td>I/O 중 writer</td><td><strong>자유</strong> (재더티 추적)</td><td>대기</td><td>대기</td></tr>
+<tr><td>flush CPU 사본</td><td>항상</td><td>dblwr 활성 시 dblwr 버퍼로만 (frame 안정성용 아님)</td><td>없음</td></tr>
+<tr><td>AIO/direct write 준비</td><td>안 됨 (frame 불안정)</td><td>됨</td><td>됨 (이것이 도입 동기)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>판정</strong>: InnoDB와 PG 20devel은 이 축에서 서로 <em>equivalent</em>하고, CUBRID 현행은 같은 문제를 사본으로 푸는 <em>partial analogy</em>다. 특기할 사실 — CUBRID 방식은 출시 PostgreSQL(18 이하)과 동형이며, 그 PostgreSQL이 방금 SX 쪽으로 이주했다. CUBRID만 "틀린" 것이 아니라, buffered write 세계에서는 셋 다 합리적이었고 AIO/direct I/O가 저울을 기울인 것이다.</p>
+
+<h2 id="upgrade-axis" data-claim-id="CMP-C002 MYSQL-C005 PG-C006">축 2 — 읽다가 고치기 (승격 규율)</h2>
+<div class="table-wrap">
+<table>
+<caption>read-then-modify를 다루는 세 방식 <span class="claim-id">[CMP-C002]</span></caption>
+<thead><tr><th></th><th>CUBRID 현행</th><th>InnoDB</th><th>PostgreSQL 20devel</th></tr></thead>
+<tbody>
+<tr><td>blocking 제자리 승격</td><td>없음 (대기는 unfix 후 첫 대기자로)</td><td>없음 (S 보유 중 SX 획득은 규칙상 실패)</td><td>없음</td></tr>
+<tr><td>제공되는 승격</td><td>실패 기반 promote (경쟁 감지 시 포기)</td><td>없음 — fix 시점 mode 선결정</td><td>nowait SHARE→SHARE_EXCLUSIVE (hint bit 전용)</td></tr>
+<tr><td>실패/충돌 시 전략</td><td>루트부터 WRITE 하강 재시작</td><td>비관 재시작: index lock SX + 필요한 page만 X</td><td>충돌 시 그냥 포기 (hint bit) / B-tree는 승격 자체가 불필요한 프로토콜</td></tr>
+<tr><td>재시작 후 reader 영향</td><td>하강 경로 node마다 직렬화</td><td>대부분의 reader 계속 통과</td><td>해당 없음</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>판정</strong>: 세 엔진 모두 "교착 가능한 대기 대신 포기/재시작"이라는 원칙을 공유하므로 <em>partial analogy</em>다. 차이는 재시도의 가격표다 — CUBRID가 가장 비싸고(경로 직렬화), InnoDB는 index SX로 가격을 낮췄고, PostgreSQL은 문제 자체를 프로토콜로 제거했다. CUBRID의 SX 도입은 "InnoDB의 가격표로 이사"에 해당한다.</p>
+
+<h2 id="responsibility">책임 소재 비교</h2>
+<p>세 엔진 모두 이 문제의 소유자는 buffer 관리자(CUBRID pgbuf, InnoDB buf0*, PG bufmgr)다. 다만 MySQL은 이 전부가 storage engine(InnoDB) 안의 일이고 SQL 서버 계층은 관여하지 않는다 — "MySQL의 SX"라고 말할 때 실제 주어는 InnoDB다.</p>
+
+<h2 id="evidence-note">증거의 비대칭 고지</h2>
+<p>CUBRID 주장은 소스 + 런타임 실험으로, InnoDB/PostgreSQL 주장은 소스로만 뒷받침된다(두 서버는 실행하지 않았다). PostgreSQL 쪽은 미출시 브랜치라 릴리스 전 변경 가능성이 남는다. 정량 성능 수치는 세 엔진 모두 이 보고서 범위에서 제시하지 않는다 — MySQL 5.7 발표문도 SX 개선을 정성적으로만 서술했다.</p>
+
+<h2 id="recap">요약</h2>
+<p>flush 축에서는 InnoDB·PG가 SX 보유로 수렴했고 CUBRID만 사본에 남아 있다. 승격 축에서는 셋 다 blocking 승격을 금지하되 재시도 가격이 다르다. 두 축 모두에서 SX 도입은 CUBRID를 검증된 산업 패턴 쪽으로 옮기는 일이다. 다음 장은 그 이사의 설계도다.</p>
+</main>
+<footer>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="14-mysql.html">이전: 14장</a><a rel="next" href="16-blueprint.html">다음: 16장</a></nav>
+<p>기준 소스: CUBRID f799e05d · PostgreSQL fd2b8985 · MySQL 06a5c1c9</p>
+</footer>
+</body>
+</html>

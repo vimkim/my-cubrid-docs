@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11장 — 성능과 관측: 카운터, 함정, 측정법</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="09-policies-algorithms.html">이전: 9장</a><a rel="next" href="12-experiments.html">다음: 12장</a></nav>
+<h1>11장 — 성능과 관측: 카운터, 함정, 측정법</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<p>9장의 결정 게이트가 요구하는 수치를 실제로 걷는 방법과, 그 과정에서 만나는 두 가지 함정(수집 게이트, 카운터 이름)을 익힌다.</p>
+
+<h2 id="stats-on-gate" data-claim-id="CUBRID-C014">함정 1 — 수집 게이트: 카운터는 기본적으로 꺼져 있다</h2>
+<p class="callout evidence-source"><span class="evidence-label">Source-confirmed + Runtime-observed</span>
+<code>stats_on</code>은 숨김(PRM_HIDDEN) 서버 파라미터로 기본 <code>false</code>이고, perfmon 카운터는 <strong>watcher가 붙어 있는 동안에만</strong> 누적된다(<code>perf_monitor.c:3200-3206</code>: <code>PRM_ID_STATS_ON</code>이 참일 때만 상시 watcher 등록). 실제로 watcher 없이 20,000건 insert를 실행한 기록에서는 모든 카운터가 0이었다. watcher가 되는 방법: (a) <code>cubrid statdump -i &lt;초&gt;</code>를 붙여 두기(전역), (b) csql에서 <code>;set communication_histogram=yes</code> + <code>;.hist on</code>(해당 트랜잭션만), (c) cubrid.conf에 <code>stats_on=yes</code>. <span class="claim-id">[CUBRID-C014]</span></p>
+
+<h2 id="promote-counters" data-claim-id="CUBRID-C009">승격 관측 지표</h2>
+<div class="table-wrap">
+<table>
+<caption>promote 관련 카운터 (perf_monitor.c:446-448, 572-575)</caption>
+<thead><tr><th>이름</th><th>뜻</th><th>9장 게이트에서의 역할</th></tr></thead>
+<tbody>
+<tr><td><code>Data_page_total_promote_success</code></td><td>승격 성공 누계</td><td>승격이 hot path인지 규모 확인</td></tr>
+<tr><td><code>Data_page_total_promote_fail</code></td><td>승격 실패 누계</td><td><strong>1단계 baseline의 핵심 수치</strong> — 실패-재시작 세금의 실측</td></tr>
+<tr><td><code>Data_page_total_promote_time_msec</code></td><td>승격 소요 시간 누계</td><td>대기 경로 비중 파악</td></tr>
+<tr><td><code>Num_data_page_promote_ext</code></td><td>조건/모드별 세분 복합 카운터</td><td>ONLY_READER vs SHARED_READER 분해</td></tr>
+</tbody>
+</table>
+</div>
+<p>읽는 법: <code>cubrid statdump &lt;db&gt;</code>(전역 누계) 또는 csql <code>;.dump_hist</code>(그 트랜잭션 분). 승격 수치는 워커 스레드에서 증가하므로 둘 다에 잡힌다. <span class="claim-id">[CUBRID-C009]</span></p>
+
+<h2 id="counter-trap" data-claim-id="CUBRID-C009 CUBRID-C012 CUBRID-C014">함정 2 — 이름이 그럴듯한 카운터: Num_data_page_flushed</h2>
+<p class="callout evidence-runtime"><span class="evidence-label">Runtime-observed + Source-confirmed</span>
+experiment-2에서 checkpoint가 dirty page를 실제로 디스크에 밀어냈는데도(<code>Num_data_page_iowrites</code> 229→1163) <code>Num_data_page_flushed</code>는 0에 머물렀다. 소스를 보면 이 카운터의 증가 지점은 <code>pgbuf_flush_victim_candidates</code>(<code>page_buffer.c:4167</code>) <strong>한 곳뿐</strong> — 즉 victim 후보 flush만 세고 checkpoint flush는 세지 않는다. 이름과 실체의 이 불일치는 본 보고서가 소스와 런타임으로 독립 확인했고, CUBRID JIRA의 page buffer EPIC에도 결함 D6으로 기록해 두었다(발췌 사본: <code>research/jira/CBRD-27193.md</code>). <span class="claim-id">[CUBRID-C012]</span></p>
+<div class="table-wrap">
+<table>
+<caption>flush 관측에 실제로 쓸 카운터</caption>
+<thead><tr><th>이름</th><th>실제 의미</th><th>증가 지점</th></tr></thead>
+<tbody>
+<tr><td><code>Num_data_page_iowrites</code></td><td>data page 물리 쓰기 — DWB 쓰기 경로와, DWB 미사용 시 깔때기의 직접 쓰기 분기 모두</td><td><code>double_write_buffer.cpp:2115/2150/2339</code>, <code>page_buffer.c:10893</code> (4곳; <code>page_buffer.c:4873</code>은 컴파일 제외)</td></tr>
+<tr><td><code>Num_data_page_flushed</code></td><td>victim 후보 flush만</td><td><code>page_buffer.c:4167</code></td></tr>
+<tr><td><code>Num_data_page_dirties</code></td><td>dirty 표시 횟수(같은 page 중복 포함)</td><td>워커 스레드 — per-tran 관측 가능</td></tr>
+<tr><td><code>Num_log_start/end_checkpoints</code></td><td>checkpoint 시작/완료 횟수</td><td>checkpoint 데몬</td></tr>
+</tbody>
+</table>
+</div>
+<p class="invariant"><span class="evidence-label">교훈.</span> SX 도입 전후 비교의 오라클을 정할 때 카운터 이름을 믿지 말고 증가 지점을 소스에서 확인하라. 특히 "flush 처리량" 비교에 <code>Num_data_page_flushed</code>를 쓰면 checkpoint 비중이 통째로 빠진 결론이 나온다.</p>
+
+<h2 id="hot-paths">비용의 위치 (hot path 지도)</h2>
+<ul>
+<li><strong>memcpy 사본</strong>: flush당 IO_PAGESIZE — flush-pressure 워크로드에서 CPU 프로파일(perf)의 <code>pgbuf_bcb_flush_with_wal</code> 아래 memcpy 비중으로 측정.</li>
+<li><strong>승격 실패 세금</strong>: promote_fail 1건 = 루트 재탐색 + WRITE 하강. B-tree 경합 워크로드에서 promote_fail 증가율과 tps 하락의 상관으로 측정.</li>
+<li><strong>lock-free READ 경로</strong>: SX 도입이 이 CAS 경로에 분기를 더하면 read-heavy가 물러날 수 있다 — 무회귀 확인 대상.</li>
+<li><strong>관측 비용 주의</strong>: watcher 자체가 카운터 증가 비용을 켠다. 성능 비교는 양쪽 모두 watcher를 켠 상태로, 절대치가 아니라 delta로 비교한다.</li>
+</ul>
+
+<h2 id="recap">요약</h2>
+<p>측정 전 두 함정을 기억하라: watcher 없으면 0만 나오고, 이름만 믿으면 틀린 오라클을 고른다. promote_fail과 iowrites가 9장 게이트의 두 기둥이다. 다음 장은 이 도구들로 실제 수행한 실험 기록이다.</p>
+</main>
+<footer>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="09-policies-algorithms.html">이전: 9장</a><a rel="next" href="12-experiments.html">다음: 12장</a></nav>
+<p>기준 소스: CUBRID f799e05d</p>
+</footer>
+</body>
+</html>

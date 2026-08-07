@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>14장 — MySQL/InnoDB: 10년째 운영 중인 SX latch</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="13-postgresql.html">이전: 13장</a><a rel="next" href="15-comparison.html">다음: 15장</a></nav>
+<h1>14장 — MySQL/InnoDB: 10년째 운영 중인 SX latch</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<p>SX latch를 실제로 구현해 MySQL 5.7(2015)부터 운영해 온 InnoDB에서, SX의 의미론·flush 적용·B-tree 적용·비용 완충 전략을 소스로 확인한다. 비교 대상은 SQL 계층이 아니라 InnoDB storage engine이다(trunk <code>06a5c1c9</code>).</p>
+
+<h2 id="innodb-sx-semantics" data-claim-id="MYSQL-C006">SX의 의미론과 인코딩</h2>
+<p class="callout evidence-source"><span class="evidence-label">Source-confirmed</span>
+InnoDB rw_lock의 호환성 행렬(소스 주석 그대로): S+S 허용, S+SX 허용, S+X 불가, SX+SX 불가, SX+X 불가, X+X 불가. 구현은 하나의 lock_word에 SX를 <code>X_LOCK_HALF_DECR</code> 감산으로 인코딩해 S 카운트와 공존시킨다(<code>sync0rw.cc:85-100</code>). 같은 스레드의 재귀 규칙도 명시적이다: X 보유 중 SX 획득은 허용, <strong>S 보유 중 SX 획득은 실패</strong>("NOTE: If the same thread has an s-lock, locking does not succeed!", <code>sync0rw.h:200-212</code>) — 7장의 전제조건(blocking READ→SX 금지)을 InnoDB는 아예 규칙으로 못박았다. <span class="claim-id">[MYSQL-C006]</span></p>
+
+<h2 id="innodb-latch-modes" data-claim-id="MYSQL-C001">page fix의 공개 mode</h2>
+<p class="callout evidence-source"><span class="evidence-label">Source-confirmed</span>
+page를 가져오는 <code>Buf_fetch::mtr_add_page</code>(<code>buf0buf.cc:4149-4180</code>)는 <code>RW_NO_LATCH / RW_S_LATCH / RW_SX_LATCH / RW_X_LATCH</code> 네 가지를 받는다 — SX가 <strong>공개 fix mode의 일원</strong>이다. CUBRID EPIC의 미해결 질문(SX를 public fix latch로 노출할지, 내부 상태로 둘지)에서 InnoDB는 public 쪽을 택한 사례다. <span class="claim-id">[MYSQL-C001]</span></p>
+
+<h2 id="innodb-flush-sx" data-claim-id="MYSQL-C001 MYSQL-C002 MYSQL-C003 MYSQL-C004 MYSQL-C005 MYSQL-C006">flush: SX를 쥐고 frame을 직접 쓴다</h2>
+<p class="callout evidence-source"><span class="evidence-label">Source-confirmed</span>
+<code>buf_flush_page</code>(<code>buf0flu.cc:1093-1148</code>)는 write I/O 동안 block latch를 SX로 쥔다. 획득은 기본 <strong>nowait</strong>(<code>rw_lock_sx_lock_nowait</code>)이고, 실패 시 flush 종류별로 다르게 완충한다: flush-list flush(checkpoint 목적)는 doublewrite buffer를 강제로 비워 holder를 풀어준 뒤 <strong>blocking</strong> SX를 잡고, LRU/단일 page flush는 그냥 그 page를 포기하고 다른 victim을 찾는다. I/O 완료 시 완료 루틴이 SX를 해제한다(<code>buf0buf.cc:5959-5975</code>) — SX 보유 구간이 정확히 write I/O 구간이다. 이 구간 동안 reader(S)는 통과하고 writer(X)만 대기한다. <span class="claim-id">[MYSQL-C002, MYSQL-C003]</span></p>
+
+<h2 id="innodb-dblwr-copy" data-claim-id="MYSQL-C004">정직한 각주: doublewrite의 사본</h2>
+<p class="callout evidence-source"><span class="evidence-label">Source-confirmed</span>
+"InnoDB flush는 무사본"은 절반만 맞다. doublewrite(기본 활성)가 켜져 있으면 page는 datafile에 가기 전에 doublewrite buffer 메모리로 <code>memcpy</code>된다(<code>buf0dblwr.h:87-98</code>의 <code>Buffer::append</code>). 단, 이 사본의 목적은 CUBRID 사본과 다르다: CUBRID의 사본은 "I/O 중 frame이 바뀌어도 되게" 하는 <em>정합성 장치</em>이고, InnoDB의 dblwr 사본은 torn-write(반쪽 쓰기) <em>복구 장치</em>다 — frame 안정성 자체는 SX가 보장한다. doublewrite를 끄면 InnoDB는 진짜 무사본으로 frame에서 장치로 직행한다. CUBRID의 SX 도입 논의에서도 "DWB 경로의 사본 수"는 별도 확인 항목으로 남는다(17장 미해결). <span class="claim-id">[MYSQL-C004]</span></p>
+
+<h2 id="innodb-btree" data-claim-id="MYSQL-C005">B-tree: 승격 대신 mode 선결정 + 재시작</h2>
+<p class="callout evidence-source"><span class="evidence-label">Source-confirmed</span>
+InnoDB에도 page latch의 제자리 S→X 승격 API는 없다. 수정 연산은 fix 시점에 mode를 정한다: 낙관 insert는 leaf만 X로 잡고(<code>BTR_MODIFY_LEAF</code>), 공간 부족(DB_FAIL)이면 <code>btr_cur_pessimistic_insert</code>로 <strong>재시작</strong>한다(<code>row0ins.cc:2585-2596</code>). 비관 경로(<code>BTR_MODIFY_TREE</code>)는 index 전역 latch(<code>dict_index_get_lock</code>)를 <strong>SX</strong>로 잡아(<code>btr0cur.cc:815-836</code>의 <code>mtr_sx_lock</code>; delete-heavy·spatial은 X) SMO(structure modification operation — split/merge 같은 트리 구조 변경) 동안에도 다른 reader가 트리를 통과하게 한다. 이것이 MySQL 5.7의 WL#6363(SX 도입)/WL#6326(index lock 경합 해소) 조합이다. <span class="claim-id">[MYSQL-C005]</span></p>
+<p>CUBRID와의 구조 대응에 주의: InnoDB의 index->lock SX에 해당하는 CUBRID 구조물은 index 전역 latch가 아니라 root page다. 재시작이라는 전략은 CUBRID와 같지만, <em>재시작 후의 동시성</em>이 다르다 — CUBRID는 경로의 non-leaf를 WRITE로 잡아 그 node들의 reader를 막고, InnoDB는 index SX + 필요한 page만 X라 대부분의 reader가 계속 다닌다.</p>
+
+<h2 id="caveats">운영 10년의 각주들</h2>
+<ul>
+<li>nowait 경로의 미완: <code>buf_page_get_known_nowait</code>는 "RW_SX_LATCH is not implemented yet" 주석과 함께 S/X만 지원한다 — SX를 모든 경로에 완비하는 일은 InnoDB에서도 점진적이었다. <span class="claim-id">[MYSQL-C005]</span></li>
+<li>압축 page는 write 완료 시 SX 해제 대신 IO_FIX 동기화를 쓴다 — mode 체계 밖의 예외 경로가 존재한다. <span class="claim-id">[MYSQL-C003]</span></li>
+</ul>
+
+<h2 id="recap">요약</h2>
+<p>InnoDB는 SX를 공개 fix mode로 노출하고, flush는 nowait SX + 종류별 완충으로 frame을 직접 쓰며, B-tree는 승격 대신 mode 선결정 + index SX 재시작을 쓴다. "S 보유 중 SX 획득 불가"를 규칙으로 못박은 것은 7장 전제조건의 산업 검증이다. 다음 장에서 세 엔진을 한 표로 놓는다.</p>
+</main>
+<footer>
+<nav class="book-nav"><a href="../index.html">목차</a><a rel="prev" href="13-postgresql.html">이전: 13장</a><a rel="next" href="15-comparison.html">다음: 15장</a></nav>
+<p>기준 소스: MySQL 06a5c1c9 (trunk, InnoDB)</p>
+</footer>
+</body>
+</html>
