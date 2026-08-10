@@ -1,0 +1,1175 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>OOS 삭제 후 공간 재사용 저하 — 원인과 해결 방향</title>
+  <style>
+    :root {
+      --ink: #17223b;
+      --muted: #5d687b;
+      --paper: #fbfcff;
+      --card: #ffffff;
+      --line: #dce3ee;
+      --blue: #315fa8;
+      --blue-soft: #eaf2ff;
+      --green: #27745a;
+      --green-soft: #eaf7f1;
+      --amber: #9a6215;
+      --amber-soft: #fff5df;
+      --red: #a84545;
+      --red-soft: #fff0ef;
+      --violet: #6650a4;
+      --violet-soft: #f3efff;
+      --shadow: 0 14px 38px rgba(38, 54, 84, 0.08);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--paper);
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% -5%, rgba(49, 95, 168, 0.11), transparent 28rem),
+        radial-gradient(circle at 92% 8%, rgba(39, 116, 90, 0.08), transparent 25rem),
+        var(--paper);
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Noto Sans KR", "Segoe UI", sans-serif;
+      font-size: 17px;
+      line-height: 1.72;
+      word-break: keep-all;
+    }
+
+    a { color: var(--blue); text-underline-offset: 3px; }
+    a:hover { color: #23477f; }
+
+    code, pre {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      word-break: normal;
+    }
+
+    code {
+      padding: 0.12em 0.34em;
+      border-radius: 5px;
+      background: #edf1f7;
+      color: #243d69;
+      font-size: 0.91em;
+    }
+
+    pre {
+      overflow-x: auto;
+      margin: 1rem 0;
+      padding: 1.1rem 1.2rem;
+      border: 1px solid #243657;
+      border-radius: 13px;
+      background: #17223b;
+      color: #edf4ff;
+      font-size: 0.85rem;
+      line-height: 1.65;
+    }
+
+    pre code {
+      padding: 0;
+      background: transparent;
+      color: inherit;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 250px minmax(0, 900px);
+      gap: 38px;
+      width: min(1220px, calc(100% - 42px));
+      margin: 0 auto;
+      padding: 34px 0 90px;
+    }
+
+    .toc {
+      position: sticky;
+      top: 24px;
+      align-self: start;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.87);
+      box-shadow: 0 8px 26px rgba(38, 54, 84, 0.06);
+      backdrop-filter: blur(8px);
+    }
+
+    .toc strong {
+      display: block;
+      margin: 0 0 10px;
+      color: #2b3f64;
+      font-size: 0.84rem;
+      letter-spacing: 0.08em;
+    }
+
+    .toc a {
+      display: block;
+      padding: 7px 9px;
+      border-radius: 8px;
+      color: #53617a;
+      font-size: 0.85rem;
+      text-decoration: none;
+    }
+
+    .toc a:hover {
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    main { min-width: 0; }
+
+    .hero {
+      overflow: hidden;
+      position: relative;
+      padding: 50px 48px 42px;
+      border: 1px solid #cfdced;
+      border-radius: 26px;
+      background: linear-gradient(135deg, #f9fbff 0%, #eef5ff 55%, #eefaf5 100%);
+      box-shadow: var(--shadow);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: -70px;
+      bottom: -80px;
+      width: 250px;
+      height: 250px;
+      border: 34px solid rgba(49, 95, 168, 0.08);
+      border-radius: 50%;
+    }
+
+    .eyebrow {
+      margin: 0 0 9px;
+      color: var(--blue);
+      font-size: 0.78rem;
+      font-weight: 750;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3 { line-height: 1.3; letter-spacing: -0.025em; }
+
+    h1 {
+      max-width: 760px;
+      margin: 0;
+      font-size: clamp(2.15rem, 5vw, 3.45rem);
+      font-weight: 830;
+    }
+
+    .hero .lead {
+      max-width: 750px;
+      margin: 20px 0 0;
+      color: #41516c;
+      font-size: 1.13rem;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 24px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border: 1px solid #cfdced;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72);
+      color: #53617a;
+      font-size: 0.78rem;
+      font-weight: 650;
+    }
+
+    section {
+      scroll-margin-top: 24px;
+      margin-top: 42px;
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      color: #23395f;
+      font-size: 1.72rem;
+    }
+
+    h3 {
+      margin: 1.5rem 0 0.65rem;
+      color: #2e4772;
+      font-size: 1.17rem;
+    }
+
+    p { margin: 0.65rem 0; }
+    ul, ol { padding-left: 1.35rem; }
+    li + li { margin-top: 0.46rem; }
+
+    .summary-card {
+      padding: 28px 30px;
+      border: 1px solid #c8d9ee;
+      border-left: 6px solid var(--blue);
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    .summary-card .big {
+      margin: 0;
+      color: #1f467f;
+      font-size: 1.32rem;
+      font-weight: 790;
+      line-height: 1.55;
+    }
+
+    .summary-grid, .cards, .solution-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .summary-grid {
+      grid-template-columns: repeat(3, 1fr);
+      margin-top: 16px;
+    }
+
+    .mini-card, .card, .solution {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: 0 8px 24px rgba(38, 54, 84, 0.05);
+    }
+
+    .mini-card { padding: 18px; }
+    .mini-card strong { display: block; margin-bottom: 5px; color: #2b456f; }
+    .mini-card span { color: var(--muted); font-size: 0.9rem; }
+
+    .callout {
+      margin: 18px 0;
+      padding: 17px 20px;
+      border-radius: 13px;
+      border: 1px solid;
+    }
+
+    .callout strong { color: inherit; }
+    .callout.info { border-color: #bfd2ed; background: var(--blue-soft); color: #294e84; }
+    .callout.good { border-color: #b8decf; background: var(--green-soft); color: #225f4b; }
+    .callout.warn { border-color: #ead09d; background: var(--amber-soft); color: #76501a; }
+    .callout.danger { border-color: #e8c0bd; background: var(--red-soft); color: #7b3939; }
+
+    .chart {
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 205px minmax(0, 1fr) 78px;
+      align-items: center;
+      gap: 14px;
+      margin: 16px 0;
+    }
+
+    .bar-label { font-size: 0.9rem; font-weight: 680; }
+    .track {
+      display: flex;
+      overflow: hidden;
+      height: 28px;
+      border-radius: 999px;
+      background: #edf1f6;
+      box-shadow: inset 0 0 0 1px rgba(73, 91, 120, 0.07);
+    }
+
+    .reuse {
+      display: grid;
+      place-items: center;
+      min-width: 34px;
+      background: linear-gradient(90deg, #3d8d6f, #59a98a);
+      color: white;
+      font-size: 0.74rem;
+      font-weight: 750;
+    }
+
+    .new-space { background: #e8b45f; }
+    .bar-value { color: var(--green); font-size: 0.92rem; font-weight: 800; text-align: right; }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .legend i {
+      display: inline-block;
+      width: 11px;
+      height: 11px;
+      margin-right: 5px;
+      border-radius: 50%;
+      vertical-align: -1px;
+    }
+
+    .layer-flow {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 18px 0;
+    }
+
+    .layer {
+      position: relative;
+      min-height: 160px;
+      padding: 19px 16px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: var(--card);
+    }
+
+    .layer:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      z-index: 2;
+      top: 48%;
+      right: -18px;
+      color: #7a8ca8;
+      font-size: 1.25rem;
+      font-weight: 800;
+    }
+
+    .layer .num {
+      display: inline-grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      margin-bottom: 10px;
+      border-radius: 50%;
+      background: var(--blue-soft);
+      color: var(--blue);
+      font-weight: 820;
+    }
+
+    .layer strong { display: block; color: #2b456f; }
+    .layer p { margin: 7px 0 0; color: var(--muted); font-size: 0.82rem; line-height: 1.55; }
+    .layer.done { border-color: #b8decf; background: #fbfffd; }
+    .layer.weak { border-color: #ecd19e; background: #fffdf8; }
+
+    .decision-flow {
+      overflow: hidden;
+      margin: 18px 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+    }
+
+    .flow-step {
+      display: grid;
+      grid-template-columns: 64px minmax(0, 1fr) 130px;
+      align-items: center;
+      min-height: 76px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .flow-step:last-child { border-bottom: 0; }
+    .flow-step .step-no { color: #8490a4; font-size: 0.8rem; font-weight: 780; }
+    .flow-step strong { color: #2c466f; }
+    .flow-step small { display: block; color: var(--muted); }
+    .route {
+      justify-self: end;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: var(--green-soft);
+      color: var(--green);
+      font-size: 0.75rem;
+      font-weight: 750;
+      text-align: center;
+    }
+
+    .route.bad { background: var(--amber-soft); color: var(--amber); }
+
+    .loop {
+      padding: 22px;
+      border: 1px dashed #c7b4ee;
+      border-radius: var(--radius);
+      background: var(--violet-soft);
+      color: #56448d;
+      text-align: center;
+    }
+
+    .loop strong { display: block; margin-bottom: 8px; font-size: 1.08rem; }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      overflow: hidden;
+      margin: 16px 0;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--card);
+      font-size: 0.88rem;
+    }
+
+    th, td {
+      padding: 13px 14px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th:last-child, td:last-child { border-right: 0; }
+    tr:last-child td { border-bottom: 0; }
+    th { background: #f2f6fb; color: #344b70; font-weight: 760; }
+
+    .status {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 780;
+      white-space: nowrap;
+    }
+
+    .status.confirmed { background: var(--green-soft); color: var(--green); }
+    .status.observed { background: var(--blue-soft); color: var(--blue); }
+    .status.open { background: var(--amber-soft); color: var(--amber); }
+
+    .cards { grid-template-columns: 1fr 1fr; }
+    .card { padding: 22px; }
+    .card h3 { margin-top: 0; }
+
+    .solution-grid { grid-template-columns: 1fr; }
+    .solution {
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr) 150px;
+      gap: 16px;
+      align-items: start;
+      padding: 22px;
+    }
+
+    .solution .rank {
+      display: grid;
+      place-items: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 13px;
+      background: var(--blue-soft);
+      color: var(--blue);
+      font-weight: 850;
+    }
+
+    .solution h3 { margin: 0 0 7px; }
+    .solution p { margin: 0; color: var(--muted); }
+    .solution ul { margin-bottom: 0; color: #48566d; font-size: 0.91rem; }
+    .tradeoff {
+      padding: 10px 12px;
+      border-radius: 11px;
+      background: #f4f6f9;
+      color: #56637a;
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+
+    .recommendation {
+      padding: 27px;
+      border: 2px solid #9dceb9;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, #f1fbf6, #fbfffd);
+    }
+
+    .recommendation h3 { margin-top: 0; color: var(--green); }
+
+    .timeline {
+      display: grid;
+      grid-template-columns: 26px minmax(0, 1fr);
+      gap: 0 14px;
+      margin: 16px 0;
+    }
+
+    .timeline .dot {
+      position: relative;
+      display: grid;
+      place-items: start center;
+      padding-top: 4px;
+    }
+
+    .timeline .dot::before {
+      content: "";
+      width: 11px;
+      height: 11px;
+      border: 3px solid white;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 2px var(--green);
+    }
+
+    .timeline .dot::after {
+      content: "";
+      position: absolute;
+      top: 20px;
+      bottom: -9px;
+      width: 2px;
+      background: #b9dccc;
+    }
+
+    .timeline .dot.last::after { display: none; }
+    .timeline .item { padding: 0 0 20px; }
+    .timeline .item strong { color: #285e4b; }
+    .timeline .item p { margin: 3px 0 0; color: var(--muted); font-size: 0.9rem; }
+
+    details {
+      margin: 12px 0;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--card);
+    }
+
+    summary {
+      cursor: pointer;
+      padding: 15px 18px;
+      color: #334e77;
+      font-weight: 730;
+    }
+
+    details > div { padding: 0 18px 17px; }
+
+    .footer {
+      margin-top: 44px;
+      padding: 24px 0 10px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .footer p { margin: 5px 0; }
+
+    @media (max-width: 980px) {
+      .shell { grid-template-columns: 1fr; width: min(900px, calc(100% - 28px)); }
+      .toc { position: static; display: none; }
+      .summary-grid { grid-template-columns: 1fr; }
+      .layer-flow { grid-template-columns: 1fr 1fr; }
+      .layer:nth-child(2)::after { display: none; }
+      .bar-row { grid-template-columns: 170px minmax(0, 1fr) 66px; }
+    }
+
+    @media (max-width: 650px) {
+      body { font-size: 16px; }
+      .hero { padding: 34px 24px 30px; }
+      .summary-card, .chart { padding: 21px; }
+      .cards, .layer-flow { grid-template-columns: 1fr; }
+      .layer::after { display: none; }
+      .bar-row { grid-template-columns: 1fr; gap: 6px; }
+      .bar-value { text-align: left; }
+      .flow-step { grid-template-columns: 45px 1fr; }
+      .route { grid-column: 2; justify-self: start; margin-top: 5px; }
+      .solution { grid-template-columns: 48px minmax(0, 1fr); }
+      .tradeoff { grid-column: 2; }
+      th, td { padding: 10px; }
+      table { font-size: 0.8rem; }
+    }
+
+    @media print {
+      body { background: white; font-size: 11pt; }
+      .shell { display: block; width: 100%; padding: 0; }
+      .toc { display: none; }
+      .hero, .summary-card, .mini-card, .card, .chart, .solution, .decision-flow, table {
+        box-shadow: none;
+      }
+      .hero { page-break-after: avoid; }
+      section { break-inside: auto; margin-top: 28px; }
+      .card, .callout, .solution, .layer, table { break-inside: avoid; }
+      a { color: inherit; text-decoration: none; }
+      details > div { display: block; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <nav class="toc" aria-label="보고서 목차">
+      <strong>REPORT MAP</strong>
+      <a href="#summary">1. 한눈에 보는 결론</a>
+      <a href="#measurement">2. 측정이 말해 주는 것</a>
+      <a href="#layers">3. 공간 회수의 네 단계</a>
+      <a href="#root-cause">4. 가장 유력한 원인</a>
+      <a href="#tradeoff">5. 왜 이렇게 되었나</a>
+      <a href="#evidence">6. 사실과 추론 구분</a>
+      <a href="#solutions">7. 해결 방향</a>
+      <a href="#recommendation">8. 권장 순서</a>
+      <a href="#verification">9. 검증 계획</a>
+      <a href="#references">10. 근거 자료</a>
+    </nav>
+
+    <main>
+      <header class="hero">
+        <p class="eyebrow">CUBRID OOS · SPACE REUSE ANALYSIS</p>
+        <h1>빈 공간은 있는데,<br>왜 새 페이지를 만들까?</h1>
+        <p class="lead">
+          OOS 대량 삭제 뒤 공간 재사용률이 낮아지는 현상을, “청소가 늦다”가 아니라
+          “청소된 자리를 다시 찾는 방법”의 문제로 풀어 설명합니다. 원인 후보의 확실한 부분과
+          아직 확인이 필요한 부분을 나누고, INSERT 성능을 지키면서 개선하는 방향을 제안합니다.
+        </p>
+        <div class="meta">
+          <span class="pill">작성일 2026-08-10</span>
+          <span class="pill">측정 기준: 사용자 제공 SHA 2017daabf</span>
+          <span class="pill">코드 대조: feat/oos 07fef9d48b</span>
+          <span class="pill">관련: CBRD-26824 · CBRD-26831 · CBRD-26786</span>
+        </div>
+      </header>
+
+      <section id="summary">
+        <h2>1. 한눈에 보는 결론</h2>
+        <div class="summary-card">
+          <p class="big">
+            삭제된 OOS 데이터의 자리는 생겼습니다. 하지만 새 INSERT가 그 자리를 충분히 발견하지 못해,
+            비어 있는 기존 페이지를 두고 새 페이지를 할당하는 것이 가장 유력한 설명입니다.
+          </p>
+          <p>
+            즉, 현재 증상은 <strong>데이터 삭제 실패</strong>보다 <strong>빈 공간 탐색·재사용 정책의 사각지대</strong>에 가깝습니다.
+            Internal LOB만의 문제가 아니라 일반 OOS에도 같은 구조가 적용됩니다.
+          </p>
+        </div>
+
+        <div class="summary-grid">
+          <div class="mini-card">
+            <strong>vacuum 지연 가능성 낮음</strong>
+            <span>DELETE 후 150초를 더 기다려도 패턴이 바뀌지 않았습니다.</span>
+          </div>
+          <div class="mini-card">
+            <strong>기능 정합성 문제는 아님</strong>
+            <span>관찰된 핵심은 읽기 오류나 데이터 손실이 아니라 파일 성장과 재사용 효율입니다.</span>
+          </div>
+          <div class="mini-card">
+            <strong>설계상 성능 절충</strong>
+            <span>과거의 비싼 반복 스캔을 막은 최적화가 삭제 후 탐색 기회를 줄였습니다.</span>
+          </div>
+        </div>
+
+        <div class="callout warn">
+          <strong>중요한 표현:</strong> “정상 상태의 동작”은 “바람직하다”는 뜻이 아닙니다.
+          대기하면 저절로 해결되는 일시적 지연이 아니라, 현재 정책대로라면 반복해서 나타날 수 있는
+          <strong>안정적인 비효율</strong>이라는 뜻입니다.
+        </div>
+      </section>
+
+      <section id="measurement">
+        <h2>2. 측정이 말해 주는 것</h2>
+        <p>
+          격리 prefix에서 한 사이클마다 25MB를 넣고, DELETE를 커밋한 뒤 30초를 기다리는 실험을 반복했습니다.
+          아래 비율은 “다음 INSERT가 직전 사이클의 공간을 얼마나 다시 쓴 것으로 보이는가”를 근사한 값입니다.
+        </p>
+
+        <div class="chart" role="img" aria-label="Internal LOB은 약 70퍼센트, 일반 OOS는 약 15퍼센트 공간을 재사용한 비교 그래프">
+          <div class="bar-row">
+            <div class="bar-label">Internal LOB<br><small>5행 × 5MB CLOB</small></div>
+            <div class="track">
+              <div class="reuse" style="width:70%">70%</div>
+              <div class="new-space" style="width:30%"></div>
+            </div>
+            <div class="bar-value">+5~9MB</div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">일반 OOS<br><small>1250행 × VARCHAR(20000)</small></div>
+            <div class="track">
+              <div class="reuse" style="width:15%">15%</div>
+              <div class="new-space" style="width:85%"></div>
+            </div>
+            <div class="bar-value">+21~22MB</div>
+          </div>
+          <div class="legend">
+            <span><i style="background:#4b9c7d"></i>기존 공간 재사용 추정분</span>
+            <span><i style="background:#e8b45f"></i>새 공간 증가 추정분</span>
+            <span>오른쪽 값: 사이클당 DB 전체 <code>used</code> 증가</span>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr><th>관찰</th><th>바로 말할 수 있는 것</th><th>아직 말할 수 없는 것</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>DELETE 후 150초 대기에도 <code>used</code> 유지</td>
+              <td>30초 vacuum 주기만 기다리면 해결되는 현상은 아님</td>
+              <td>OOS 페이지별 슬롯이 실제로 언제 비었는지는 별도 계측 필요</td>
+            </tr>
+            <tr>
+              <td>같은 크기 재삽입 시 다시 +10MB</td>
+              <td>일부 공간은 재사용하지만 전부는 아님</td>
+              <td>+10MB 전체가 OOS 파일 증가분인지는 확인되지 않음</td>
+            </tr>
+            <tr>
+              <td>일반 OOS 재사용률 약 15%</td>
+              <td>워크로드에 따라 재사용 편차가 매우 큼</td>
+              <td>게이트가 매 INSERT에서 닫혔다는 직접 증거는 아직 없음</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout info">
+          <strong>왜 Internal LOB이 더 낫게 보일까요?</strong>
+          두 워크로드는 행 수, OOS 값의 크기와 배치, LOB 외부 저장소 사용 방식이 다릅니다.
+          따라서 70%와 15%의 차이는 “Internal LOB 전용 알고리즘이 우수하다”기보다,
+          동일한 OOS 탐색 정책이 서로 다른 페이지 배치를 만났을 때 결과가 크게 달라질 수 있음을 보여 줍니다.
+        </div>
+      </section>
+
+      <section id="layers">
+        <h2>3. 먼저 구분할 것: 공간 회수는 네 단계입니다</h2>
+        <p>
+          <code>used</code>가 줄지 않았다는 한 가지 숫자만으로 vacuum 실패를 결론 내리기 어려운 이유입니다.
+          “지웠다”와 “디스크가 작아졌다” 사이에는 서로 다른 네 단계가 있습니다.
+        </p>
+
+        <div class="layer-flow">
+          <div class="layer done">
+            <span class="num">1</span>
+            <strong>OOS 청크 삭제</strong>
+            <p>vacuum이 더 이상 필요 없는 OOS 청크 레코드를 슬롯에서 제거합니다.</p>
+          </div>
+          <div class="layer weak">
+            <span class="num">2</span>
+            <strong>빈 슬롯 발견</strong>
+            <p>해시 캐시, 헤더 <code>best[]</code>, bestspace sync가 다시 쓸 페이지를 찾아야 합니다.</p>
+          </div>
+          <div class="layer weak">
+            <span class="num">3</span>
+            <strong>빈 페이지 반환</strong>
+            <p>완전히 빈 OOS 페이지를 <code>file_dealloc</code>로 파일 할당기에 돌려주는 별도 단계입니다.</p>
+          </div>
+          <div class="layer">
+            <span class="num">4</span>
+            <strong>볼륨 크기 축소</strong>
+            <p>예약된 sector·볼륨 용량 자체를 운영체제에 돌려주는 단계로, 이번 문제와는 별개입니다.</p>
+          </div>
+        </div>
+
+        <div class="callout good">
+          이번 측정은 <strong>1단계가 늦다기보다 2단계가 약하다</strong>는 설명과 잘 맞습니다.
+          또한 현재 <code>feat/oos</code> 기준으로 3단계는 아직 들어오지 않았으므로, 레코드가 사라져도
+          DB 전체 <code>used</code>가 즉시 감소하지 않는 것 자체는 예상 가능한 동작입니다.
+        </div>
+      </section>
+
+      <section id="root-cause">
+        <h2>4. 가장 유력한 원인: “빈 페이지가 있다는 신호”가 없으면 찾으러 가지 않습니다</h2>
+
+        <div class="decision-flow" aria-label="OOS bestspace 페이지 탐색 흐름">
+          <div class="flow-step">
+            <span class="step-no">STEP 1</span>
+            <div><strong>전역 해시 캐시 조회</strong><small>빠른 메모리 힌트</small></div>
+            <span class="route">찾으면 재사용</span>
+          </div>
+          <div class="flow-step">
+            <span class="step-no">STEP 2</span>
+            <div><strong>헤더 <code>best[10]</code> 조회</strong><small>파일 헤더에 남는 소수의 좋은 후보</small></div>
+            <span class="route">찾으면 재사용</span>
+          </div>
+          <div class="flow-step">
+            <span class="step-no">STEP 3</span>
+            <div><strong><code>num_other_high_best / num_pages ≥ 0.1</code>?</strong><small>파일을 직접 훑을 가치가 있는지 판단</small></div>
+            <span class="route bad">아니면 스캔 생략</span>
+          </div>
+          <div class="flow-step">
+            <span class="step-no">STEP 4</span>
+            <div><strong>bestspace sync</strong><small>최소 10개, 전체의 20%, 최대 100개 페이지 검사</small></div>
+            <span class="route">찾으면 재사용</span>
+          </div>
+          <div class="flow-step">
+            <span class="step-no">STEP 5</span>
+            <div><strong>새 OOS 페이지 할당</strong><small>후보가 없거나 게이트가 닫히면 파일 성장</small></div>
+            <span class="route bad">새 공간 사용</span>
+          </div>
+        </div>
+
+        <h3>원인 A — 스캔 진입 게이트</h3>
+        <pre><code>ratio = estimates.num_other_high_best / estimates.num_pages;
+
+if (ratio &gt;= OOS_BESTSPACE_SYNC_THRESHOLD)  // 0.1
+  oos_stats_sync_bestspace (...);
+else
+  break;                                     // 이후 새 페이지 할당</code></pre>
+        <p>
+          해시와 <code>best[]</code>가 놓친 페이지는 파일 스캔이 찾아야 합니다. 그러나 게이트 값이 10%보다 작으면
+          스캔 자체를 시작하지 않습니다. 대량 DELETE로 완전히 빈 페이지가 많아도 그 사실이 힌트에 충분히 반영되지 않았다면,
+          새 INSERT는 그 페이지를 보지 못한 채 새 페이지를 만듭니다.
+        </p>
+
+        <h3>원인 B — 스캔 범위가 최대 100페이지</h3>
+        <p>
+          부분 스캔은 <code>clamp(전체 페이지 × 20%, 10, 100)</code>입니다. 파일이 1,000페이지라면
+          한 번에 100페이지만 확인합니다. 이 제한 자체는 INSERT 지연을 통제하는 합리적인 장치지만,
+          다음 제약과 함께 있을 때 문제가 커집니다.
+        </p>
+
+        <h3>원인 C — “이어보기” 위치를 저장하지만 사용하지 않음</h3>
+        <pre><code>/* TODO: ideally find the index of full_search_vpid; for now start from 1 */
+start_idx = 1;</code></pre>
+        <p>
+          마지막 검사 페이지는 <code>full_search_vpid</code>에 저장되지만, 다음 스캔도 1번부터 시작합니다.
+          따라서 100페이지 제한이 있는 큰 파일에서는 여러 번 스캔해도 앞부분만 반복해서 보고,
+          뒤쪽의 빈 페이지까지 영원히 도달하지 못할 수 있습니다.
+        </p>
+
+        <h3>원인 D — 스캔을 허가하는 지표가 스스로 회복하기 어려움</h3>
+        <div class="loop">
+          <strong>힌트가 낮음 → 스캔 안 함 → 숨은 빈 페이지를 못 찾음 → 힌트가 계속 낮음</strong>
+          <span>한번 과소평가 상태에 들어가면, 외부 사건이 힌트를 충분히 올려 주기 전까지 빠져나오기 어렵습니다.</span>
+        </div>
+        <p>
+          헤더 통계는 정합성 데이터가 아니라 <code>log_skip_logging</code>으로 저장되는 비로그 힌트입니다.
+          삭제 시 헤더 WRITE latch를 조건부로 얻지 못하면 <code>best[]</code> 갱신도 건너뜁니다.
+          이런 “잃어도 안전한 힌트”는 데이터 정확성에는 좋지만, 공간 재사용 효율에는 사각지대를 만들 수 있습니다.
+        </p>
+      </section>
+
+      <section id="tradeoff">
+        <h2>5. 왜 이런 게이트가 생겼나: CBRD-26824가 해결한 실제 성능 문제</h2>
+        <p>
+          게이트를 단순히 제거하면 안 되는 이유가 있습니다. 이전에는 첫 시도마다 파일 스캔을 강제하는
+          <code>|| try_find == 0</code> 조건이 있었습니다. 큰 OOS 청크 하나가 페이지를 거의 채우는 워크로드에서는
+          부분적으로 빈 페이지를 아무리 찾아도 청크가 들어가지 않습니다. 그런데도 청크마다 스캔을 반복하면서
+          파일이 커질수록 INSERT가 급격히 느려졌습니다.
+        </p>
+
+        <table>
+          <thead>
+            <tr><th>CBRD-26824 실측</th><th>수정 전</th><th>수정 후</th><th>의미</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>마지막 반복의 행당 INSERT</td>
+              <td>약 890ms</td>
+              <td>약 71ms</td>
+              <td>불필요한 첫 스캔 제거로 약 12.5배 개선</td>
+            </tr>
+            <tr>
+              <td>시간 추세</td>
+              <td>파일 성장에 따라 계속 증가</td>
+              <td>대체로 평탄</td>
+              <td>스캔 비용이 파일 크기에 결합되어 있었음</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout danger">
+          <strong>피해야 할 되돌림:</strong> 모든 OOS 청크의 첫 실패 때 무조건 sync를 다시 실행하면
+          CBRD-26824가 제거한 “파일이 커질수록 INSERT가 느려지는 문제”를 그대로 되살릴 가능성이 큽니다.
+        </div>
+
+        <div class="callout info">
+          당시 코드 리뷰에서도 콜드 캐시에서 <code>num_other_high_best == 0</code>이면 sync bootstrap이 사라져,
+          실제 빈 페이지를 영원히 발견하지 못할 수 있다는 절충점이 지적됐습니다. 이번 반복 DELETE 측정은
+          그 우려가 현실 워크로드에서 나타날 수 있음을 보여 주는 강한 신호입니다.
+        </div>
+      </section>
+
+      <section id="evidence">
+        <h2>6. 어디까지 확정됐고, 어디부터 추론인가</h2>
+        <p>원인을 설득력 있게 설명하려면 “코드로 확인한 사실”과 “측정 패턴으로 추정한 실행 경로”를 섞지 않는 것이 중요합니다.</p>
+
+        <table>
+          <thead>
+            <tr><th>항목</th><th>상태</th><th>판단</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>10% 게이트와 CBRD-26824 도입 근거</td>
+              <td><span class="status confirmed">코드 확인</span></td>
+              <td><code>oos_find_best_page</code>와 hotfix 커밋에서 직접 확인</td>
+            </tr>
+            <tr>
+              <td>부분 스캔 20%, 최소 10, 최대 100</td>
+              <td><span class="status confirmed">코드 확인</span></td>
+              <td><code>oos_stats_sync_bestspace</code>에서 직접 확인</td>
+            </tr>
+            <tr>
+              <td><code>full_search_vpid</code> 저장 후 <code>start_idx = 1</code></td>
+              <td><span class="status confirmed">코드 확인</span></td>
+              <td>이어보기 TODO와 고정 시작점을 직접 확인</td>
+            </tr>
+            <tr>
+              <td>대기해도 <code>used</code>가 줄지 않음, 재삽입 시 추가 증가</td>
+              <td><span class="status observed">실험 관찰</span></td>
+              <td>vacuum 주기만의 문제라는 설명과 맞지 않음</td>
+            </tr>
+            <tr>
+              <td>런타임에서 게이트가 실제로 매번 닫혔음</td>
+              <td><span class="status open">계측 필요</span></td>
+              <td>ratio, sync 호출 수, 할당 이유 카운터가 없음</td>
+            </tr>
+            <tr>
+              <td>DB 전체 증가분 중 OOS 파일 몫</td>
+              <td><span class="status open">분리 필요</span></td>
+              <td>현재 측정은 heap·index·catalog·OOS·Internal LOB 합계</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout warn">
+          <strong>현재의 가장 정확한 결론:</strong> 코드 구조와 측정 결과는 게이트·제한 스캔·미구현 이어보기를
+          매우 유력한 원인으로 가리킵니다. 다만 “실행 때마다 게이트가 닫혀 새 페이지를 만들었다”는 최종 인과관계는
+          파일별 카운터를 한 번 더 수집해야 닫힙니다.
+        </div>
+      </section>
+
+      <section id="solutions">
+        <h2>7. 해결 방향: 한 가지 스위치가 아니라 세 층으로 고칩니다</h2>
+        <p>
+          좋은 해결책은 두 조건을 동시에 만족해야 합니다. 삭제 후에는 숨은 빈 공간을 결국 찾아야 하고,
+          INSERT-only 워크로드에서는 쓸모없는 스캔을 매 청크마다 반복하지 않아야 합니다.
+        </p>
+
+        <div class="solution-grid">
+          <article class="solution">
+            <div class="rank">0</div>
+            <div>
+              <h3>먼저 계측해서 실제 경로를 확정</h3>
+              <p>수정 전 한 번의 재현으로 “왜 새 페이지를 할당했는지”를 파일 단위로 기록합니다.</p>
+              <ul>
+                <li>해시 적중 / <code>best[]</code> 적중 / sync 적중 / 신규 할당 횟수</li>
+                <li>게이트 판정 당시 <code>num_other_high_best</code>, <code>num_pages</code>, ratio</li>
+                <li>스캔 시작·종료 VPID, 검사 페이지 수, 충분한 공간을 찾은 페이지 수</li>
+                <li>대상 OOS VFID의 user page 수와 페이지별 실제 free space</li>
+              </ul>
+            </div>
+            <div class="tradeoff"><strong>목적</strong><br>추론을 증거로 전환<br><strong>위험</strong><br>낮음, 진단용 계측</div>
+          </article>
+
+          <article class="solution">
+            <div class="rank">1</div>
+            <div>
+              <h3>완전히 빈 페이지는 파일 할당기에 반환</h3>
+              <p>
+                vacuum이 청크를 모두 지운 페이지를 <code>file_dealloc</code>로 돌려주면, bestspace 힌트가 없어도
+                다음 <code>file_alloc</code>이 페이지를 다시 쓸 수 있습니다. CBRD-26786 구현 브랜치가 이 방향입니다.
+              </p>
+              <ul>
+                <li>힌트 캐시의 cap·콜드 상태와 무관하게 완전 빈 페이지 재사용</li>
+                <li>선행 조건: FILE_OOS non-numerable 전환, 안전한 latch 인계, 삭제 sysop 커밋 이후 회수</li>
+                <li>효과는 주로 “추가 성장 억제”; 이미 예약된 볼륨 총량이 즉시 작아지는 것은 아님</li>
+              </ul>
+            </div>
+            <div class="tradeoff"><strong>강점</strong><br>완전 빈 페이지에 가장 확실<br><strong>한계</strong><br>부분 여유 페이지는 별도 탐색 필요</div>
+          </article>
+
+          <article class="solution">
+            <div class="rank">2</div>
+            <div>
+              <h3>부분 스캔이 실제로 이어지게 구현</h3>
+              <p>
+                매번 prefix부터 다시 보지 말고 <code>full_search_vpid</code> 다음부터 시작합니다.
+                CBRD-26831의 accepted ADR처럼 sector-bitmap walk를 사용하면 VPID 기반 이어보기가 자연스럽습니다.
+              </p>
+              <ul>
+                <li>한 번의 비용은 최대 100페이지로 유지</li>
+                <li>여러 번 실행하면 결국 파일 전체를 순회</li>
+                <li>끝에 도달하면 순환하고, deallocated page는 읽기 전용 hint 경로에서 안전하게 건너뜀</li>
+              </ul>
+            </div>
+            <div class="tradeoff"><strong>강점</strong><br>prefix 편향 제거<br><strong>한계</strong><br>게이트가 영원히 닫히면 실행되지 않음</div>
+          </article>
+
+          <article class="solution">
+            <div class="rank">3</div>
+            <div>
+              <h3>DELETE 사건을 아는, 제한된 스캔 게이트</h3>
+              <p>
+                ratio 하나만 보지 말고 “vacuum이 공간을 실제로 만들었다”는 사건을 별도 신호로 사용합니다.
+                단, 매 청크가 아니라 파일·회수 세대별로 한 번만 허용해야 합니다.
+              </p>
+              <ul>
+                <li>예: <code>reclaim_generation</code> 또는 <code>pages_freed_since_sync</code>가 증가한 뒤 첫 cache miss에만 bounded sync</li>
+                <li>스캔 budget과 cooldown을 두어 INSERT hot path 비용 상한 보장</li>
+                <li>완주하거나 새 회수 사건이 올 때까지 cursor를 이어서 진행</li>
+              </ul>
+            </div>
+            <div class="tradeoff"><strong>강점</strong><br>자기 잠금 상태 탈출<br><strong>주의</strong><br>무조건 첫 스캔 복원은 금지</div>
+          </article>
+        </div>
+
+        <h3>각 해결책을 단독 적용하면 남는 구멍</h3>
+        <table>
+          <thead>
+            <tr><th>단독 변경</th><th>좋아지는 점</th><th>여전히 남는 문제</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>게이트만 완화</td><td>스캔 기회 증가</td><td>매번 앞 100페이지만 보면 뒤쪽 공간은 계속 못 찾음</td></tr>
+            <tr><td>이어보기만 구현</td><td>스캔이 실행될 때 전체 파일을 공정하게 봄</td><td>ratio가 낮아 스캔을 시작하지 않으면 효과 없음</td></tr>
+            <tr><td>빈 페이지 dealloc만 구현</td><td>완전히 빈 페이지는 확실히 재사용</td><td>부분적으로 빈 페이지의 조각 배치 문제는 남음</td></tr>
+            <tr><td>무조건 첫 스캔 복원</td><td>콜드 캐시 bootstrap</td><td>CBRD-26824의 대형 INSERT 성능 회귀 재발 가능</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="recommendation">
+        <h2>8. 권장 순서</h2>
+        <div class="recommendation">
+          <h3>“완전 빈 페이지는 반환하고, 남은 부분 공간은 예산 안에서 끝까지 찾는다”</h3>
+          <p>
+            가장 안전한 해법은 한 층에 모든 책임을 몰지 않는 것입니다. 페이지 반환은 완전 빈 페이지를 확실히 처리하고,
+            bestspace는 부분 여유 페이지를 효율적으로 찾는 역할에 집중합니다.
+          </p>
+
+          <div class="timeline">
+            <div class="dot"></div>
+            <div class="item">
+              <strong>1단계 — 진단 카운터로 인과관계 확정</strong>
+              <p>같은 25MB 반복 시나리오에서 gate skip, sync, alloc의 실제 횟수와 OOS VFID별 페이지 수를 얻습니다.</p>
+            </div>
+            <div class="dot"></div>
+            <div class="item">
+              <strong>2단계 — CBRD-26831 + CBRD-26786 방향 검증·통합</strong>
+              <p>non-numerable + sector-bitmap 열거와 vacuum 후 빈 페이지 dealloc으로 완전 빈 페이지를 힌트 체계 밖에서도 재사용합니다.</p>
+            </div>
+            <div class="dot"></div>
+            <div class="item">
+              <strong>3단계 — cursor resume 완성</strong>
+              <p>부분 스캔의 100페이지 비용 상한은 유지하되, 호출이 누적되면 파일 전체를 공정하게 순회하도록 합니다.</p>
+            </div>
+            <div class="dot last"></div>
+            <div class="item">
+              <strong>4단계 — 필요할 때만 deletion-aware trigger 추가</strong>
+              <p>2~3단계 후에도 부분 공간이 숨는다면, vacuum 회수 사건당 한 번의 bounded sync를 허용합니다.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="verification">
+        <h2>9. 수정이 정말 좋은지 확인하는 기준</h2>
+        <p>
+          “재사용률이 좋아졌다”만 보면 INSERT 지연을 놓칠 수 있고, “INSERT가 빠르다”만 보면 파일 성장을 놓칠 수 있습니다.
+          공간·시간·정확성을 함께 봐야 합니다.
+        </p>
+
+        <table>
+          <thead>
+            <tr><th>검증 축</th><th>시나리오</th><th>통과 기준 예시</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>공간 안정성</strong></td>
+              <td>25MB INSERT → DELETE COMMIT → vacuum 완료를 5~10회 반복</td>
+              <td>warm-up 이후 OOS 파일 user page 수가 첫 안정 사이클 대비 ±10% 안쪽</td>
+            </tr>
+            <tr>
+              <td><strong>prefix 탈출</strong></td>
+              <td>파일 뒤쪽에만 빈 페이지를 만들고 sync를 여러 번 호출</td>
+              <td><code>ceil(data_pages / 100)</code> 이내 호출로 뒤쪽 후보 발견</td>
+            </tr>
+            <tr>
+              <td><strong>INSERT 성능 보존</strong></td>
+              <td>CBRD-26824의 3MB BIT VARYING·20행 반복 워크로드</td>
+              <td>행당 지연이 파일 크기에 따라 지속 상승하지 않고, 무익한 sync 횟수도 증가하지 않음</td>
+            </tr>
+            <tr>
+              <td><strong>콜드 캐시</strong></td>
+              <td>삭제·vacuum 후 서버 재시작, 다시 INSERT</td>
+              <td>숨은 빈 페이지를 결국 재사용하며 신규 페이지 폭증 없음</td>
+            </tr>
+            <tr>
+              <td><strong>동시성·복구</strong></td>
+              <td>vacuum과 INSERT 동시 실행, 회수 도중 crash injection</td>
+              <td>COUNT·값 일치, stale VPID 안전 처리, 오류 로그·데이터 손실 없음</td>
+            </tr>
+            <tr>
+              <td><strong>측정 분리</strong></td>
+              <td>DB 전체 <code>used</code>와 OOS VFID page 수를 동시에 기록</td>
+              <td>증가분을 heap/index/LOB/OOS 중 어디서 만들었는지 설명 가능</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="cards">
+          <div class="card">
+            <h3>성공으로 볼 수 있는 결과</h3>
+            <ul>
+              <li>반복 사이클 후 파일 크기가 안정 구간에 들어감</li>
+              <li>일반 OOS 재사용률이 Internal LOB 수준에 가까워짐</li>
+              <li>sync 비용은 설정한 budget을 넘지 않음</li>
+              <li>재시작 뒤에도 첫 삽입 묶음 안에서 재사용이 회복됨</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>회귀 신호</h3>
+            <ul>
+              <li>파일이 커질수록 행당 INSERT 시간이 다시 우상향</li>
+              <li>OOS 청크마다 sync가 한 번씩 실행됨</li>
+              <li>스캔이 같은 VPID 범위만 반복함</li>
+              <li>deallocated page를 write 경로가 다시 선택함</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="references">
+        <h2>10. 근거 자료와 리비전 주의사항</h2>
+
+        <div class="callout warn">
+          <strong>기준 SHA 확인 제한:</strong> 사용자께서 측정 기준으로 제시한 <code>2017daabf</code>는
+          현재 로컬 Git 객체와 확인 가능한 CUBRID GitHub 저장소에서 해석되지 않았습니다.
+          따라서 측정 수치는 사용자 제공 결과로 보존했고, 코드 구조는 현재 <code>feat/oos</code>
+          <code>07fef9d48b</code> 및 CBRD-26824 hotfix <code>031336327</code>과 교차 확인했습니다.
+          해당 SHA의 전체 값을 확보하면 줄번호와 동작 차이를 다시 대조해야 합니다.
+        </div>
+
+        <details open>
+          <summary>핵심 코드 위치 — 현재 feat/oos 07fef9d48b</summary>
+          <div>
+            <table>
+              <thead><tr><th>주제</th><th>위치</th></tr></thead>
+              <tbody>
+                <tr><td>sync threshold 0.1</td><td><code>src/storage/oos_file.cpp:109-112</code></td></tr>
+                <tr><td>부분 스캔 20%, 10~100 clamp</td><td><code>src/storage/oos_file.cpp:692-727</code></td></tr>
+                <tr><td>이어보기 TODO, <code>start_idx = 1</code></td><td><code>src/storage/oos_file.cpp:729-734</code></td></tr>
+                <tr><td><code>full_search_vpid</code> 저장</td><td><code>src/storage/oos_file.cpp:811-812</code></td></tr>
+                <tr><td>DELETE 후 cache/header hint 갱신</td><td><code>src/storage/oos_file.cpp:911-961</code></td></tr>
+                <tr><td>gate → sync 또는 break</td><td><code>src/storage/oos_file.cpp:1960-2018</code></td></tr>
+                <tr><td>결국 새 페이지 할당</td><td><code>src/storage/oos_file.cpp:2062-2075</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary>관련 결정·이슈</summary>
+          <div>
+            <ul>
+              <li><a href="http://jira.cubrid.org/browse/CBRD-26824">CBRD-26824</a> — 매 INSERT 첫 시도의 무익한 OOS bestspace sync 제거</li>
+              <li><a href="https://github.com/CUBRID/cubrid/commit/03133632701441320886f756ed4af902779d2c01">031336327</a> — CBRD-26824 hotfix 커밋</li>
+              <li><code>/home/vimkim/gh/cubrid-oos-context/docs/adr/0001-oos-page-enumeration-non-numerable.md</code> — accepted ADR, sector-bitmap 열거 결정</li>
+              <li><code>/home/vimkim/gh/my-cubrid-jira/issues/CBRD-26831-numerable-file-with-oos.md</code> — 스캔 상한과 이어보기 TODO 분석</li>
+              <li><code>/home/vimkim/gh/my-cubrid-jira/issues/CBRD-26786-vacuum-oos-empty-page-reclaim_82d6e4b_claude.md</code> — vacuum 후 빈 OOS 페이지 반환 설계·구현 기록</li>
+              <li><code>/home/vimkim/gh/cubrid-oos-context/OOS-CONTEXT.md</code> — OOS 규범 문서, 2026-07-13 갱신</li>
+            </ul>
+          </div>
+        </details>
+
+        <div class="callout good">
+          <strong>최종 메시지:</strong> OOS는 빈 공간을 전혀 추적하지 않는 구조가 아닙니다.
+          해시 캐시, 헤더 <code>best[]</code>, 파일 스캔이 모두 있습니다. 문제는 이 장치들이
+          대량 DELETE 뒤에는 서로를 깨우지 못하거나 같은 prefix만 반복할 수 있다는 점입니다.
+          해결의 핵심은 “무조건 더 많이 스캔”이 아니라, <strong>삭제 사건을 잃지 않고, 제한된 비용으로,
+          이전 위치부터 이어서 찾는 것</strong>입니다.
+        </div>
+      </section>
+
+      <footer class="footer">
+        <p>작성 범위: OOS 삭제 후 공간 재사용 저하의 원인 분석과 개선 방향. 코드 변경이나 JIRA 게시 작업은 포함하지 않았습니다.</p>
+        <p>문서 파일: <code>2026-08-10-CBRD-26824-oos-delete-space-reuse-analysis_2017daabf_codex.html</code></p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>
