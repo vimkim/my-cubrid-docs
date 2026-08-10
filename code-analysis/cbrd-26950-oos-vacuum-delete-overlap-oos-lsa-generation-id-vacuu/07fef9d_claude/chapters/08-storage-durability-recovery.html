@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ch08 — 내구성과 복구 · CBRD-26950</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="07-concurrency.html">← ch07</a>
+<a href="09-policies-algorithms.html">다음: ch09 →</a>
+</nav>
+<h1>ch08 — 내구성과 복구: WAL 은 잘못된 삭제도 성실히 영속화한다</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<ul>
+<li>OOS 연산의 로깅 형태(RVOOS_INSERT/DELETE)와 복구 핸들러의 대칭을 설명할 수 있다.</li>
+<li>page LSA 게이트가 정확히 어떤 질문에 답하는지 — 그리고 2차 삭제가 왜 그 질문 밖인지 답할 수 있다.</li>
+<li>크래시 매트릭스: 어느 시점의 크래시가 어떤 상태를 남기는지 나열할 수 있다.</li>
+</ul>
+
+<h2 id="logging-shape">OOS 연산의 로깅 형태</h2>
+<div class="table-wrap">
+<table>
+<caption>OOS 물리 로깅의 대칭 구조 <span class="claim-id">(CUBRID-C032)</span></caption>
+<thead><tr><th>연산</th><th>redo</th><th>undo</th><th>복구 의미</th></tr></thead>
+<tbody>
+<tr><td>RVOOS_INSERT (oos_file.cpp:2115)</td><td>조립된 레코드 전체 이미지</td><td>없음(주소만)</td><td>redo=재삽입, undo=삭제(oos_rv_redo_delete 재사용)</td></tr>
+<tr><td>RVOOS_DELETE (:2134)</td><td>없음(주소만)</td><td>삭제 직전 레코드 전체 이미지</td><td>redo=삭제, undo=원 슬롯에 복원(spage_insert_for_recovery)</td></tr>
+</tbody>
+</table>
+</div>
+<p>전체-이미지 물리 로깅이라는 사실이 스탬프 설계에 주는 보너스: 청크 헤더에 필드를 추가해도
+복구 핸들러는 <strong>그대로</strong>다 — 이미지 길이만 4B 늘어난다 <span class="claim-id">(CUBRID-C032)</span>.</p>
+
+<h2 id="why-lsa-cannot-help">page LSA 게이트 — 정확한 계약과 그 바깥</h2>
+<p>많은 독자의 첫 반응: "페이지에 LSA 도장이 있는데 왜 이중 적용이 안 막히지?"
+게이트의 실제 코드를 보자:</p>
+<pre><code>/* log_recovery.c:496-536 — log_rv_fix_page_and_check_redo_is_needed */
+rcv_page_ptr = pgbuf_get_lsa (rcv.pgptr);
+if (rcv_lsa &lt;= *rcv_page_ptr)
+    { /* already applied — skip */ }
+...
+assert (log_is_in_crash_recovery ());   /* :529 — 이 분기는 crash recovery 전용 */</code></pre>
+<p class="evidence-source"><span class="evidence-label">Source-confirmed</span> —
+게이트가 답하는 질문: "<strong>이 로그 레코드</strong>를 <strong>이 페이지</strong>에 이미 적용했는가?"
+— 과거에 결정된 변경의 replay 중복 방지이며, crash recovery 중에만 도달 가능하다고 스스로
+assert 한다 <span class="claim-id">(CUBRID-C022)</span>.</p>
+<p class="callout">2차 삭제는 replay 가 아니다. 복구가 <em>끝난 뒤</em> 평시 vacuum 코드가
+(페이지가 아니라) 로그의 undo image 를 읽고, <strong>새로운, 더 높은 LSA 의</strong> RVOOS_DELETE 를
+append 하는 <strong>신규 연산</strong>이다. 엔진이 수행하는 모든 LSA 비교를 통과하고,
+WAL 기계는 이 잘못된 삭제를 다른 정상 변경과 구별할 방법 없이 충실히 영속화한다 —
+복구 관점에서 완벽히 일관된, <em>내용만 틀린</em> 상태.</p>
+
+<h2 id="sysop-recovery">sysop 과 복구의 상호작용</h2>
+<p>1차 pass 의 삭제 sysop 이 커밋된 뒤 크래시가 나면? 복구 undo 는 <code>LOG_SYSOP_END</code> 를
+만나면 <code>lastparent_lsa</code> 로 건너뛴다(log_recovery.c:4800-4857) — <strong>커밋된 sysop 은
+트랜잭션 롤백에서도 안 풀린다</strong>. 즉 크래시는 1차 삭제를 되돌려 주지 않는다. 되돌릴 수 있는
+것은 크래시 순간 <em>미커밋</em>이던 sysop 하나뿐이고, 그 undo 는 청크를 <strong>원래 slotid 에
+복원</strong>한다(oos_rv_redo_insert → spage_insert_for_recovery) — 슬롯이 그 사이 재점유되었다면
+이 복원 자체가 같은 재사용 문제의 abort 쪽 쌍둥이가 된다(블록-sysop 대안이 기각된 이유 중 하나,
+ch16) <span class="claim-id">(CUBRID-C022)</span>.</p>
+
+<h2 id="crash-matrix">크래시 매트릭스</h2>
+<div class="table-wrap">
+<table>
+<caption>시점별 크래시/셧다운의 결과 <span class="claim-id">(CUBRID-C011, C012, C022, C023)</span></caption>
+<thead><tr><th>중단 시점</th><th>재기동 후 상태</th><th>위험</th></tr></thead>
+<tbody>
+<tr><td>블록 발행 전 (UPDATE 커밋 직후)</td><td>블록은 다음 로그가 경계를 넘을 때 발행 — 지연될 뿐 손실 없음</td><td>없음</td></tr>
+<tr><td>1차 pass 진행 중 (일부 sysop 커밋됨)</td><td>커밋된 삭제는 확정, 블록은 INTERRUPTED 재주행</td><td><strong>재주행 + 그 사이 재사용 = 본 결함</strong></td></tr>
+<tr><td>1차 pass 의 한 sysop 미커밋 상태</td><td>그 sysop 만 롤백 — 청크가 원 슬롯에 복원</td><td>슬롯이 재점유돼 있으면 복원 충돌(추적 안 됨, unknown)</td></tr>
+<tr><td>pass 완주, VACUUMED 영속화 전</td><td>블록 IN_PROGRESS → INTERRUPTED → <strong>전체 재주행</strong></td><td><strong>본 결함 (이번 재현의 실제 형태)</strong></td></tr>
+<tr><td>VACUUMED 영속화 후</td><td>블록 소비 완료 — 재주행 없음</td><td>없음</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="durability-of-wrong">잘못된 삭제의 내구성</h2>
+<p>2차 삭제는 정상 연산이므로: RVOOS_DELETE 가 로그에 남고, 페이지에 새 LSA 가 찍히고, 커밋되고,
+체크포인트를 넘어 영속화된다. <strong>이후의 어떤 복구도 이를 의심할 데이터가 없다.</strong>
+백업에도 손상 상태가 그대로 들어간다. 피해 행을 읽을 때에야
+<code>Internal error: slot ... is not allocated</code> 로 표면화되며(ch12 관측), 원인 시점과 증상
+시점이 분리되어 사후 진단이 곤란하다 <span class="claim-id">(CUBRID-C023)</span>.</p>
+
+<h2 id="recap">요약</h2>
+<p class="callout">WAL/복구 기계는 "무엇을 적용했는가"는 완벽히 추적하지만 "그 적용이 옳았는가"는
+묻지 않는다 — 물을 데이터가 없기 때문이다. 내구성 계층은 이 결함의 방어선이 아니라 성실한 공범이다.
+다음 장에서 정책 층위로 올라가 재사용·게이팅·probe 알고리즘과 heap 의 대칭 해법을 본다.</p>
+</main>
+<footer>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="07-concurrency.html">← ch07</a>
+<a href="09-policies-algorithms.html">다음: ch09 →</a>
+</nav>
+</footer>
+</body>
+</html>

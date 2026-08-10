@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ch16 — 재구현 Blueprint · CBRD-26950</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="15-cross-database-comparison.html">← ch15</a>
+<a href="17-glossary-evidence-unknowns.html">다음: ch17 →</a>
+</nav>
+<h1>ch16 — 재구현 Blueprint: 신원 스탬프와 dedup 설계</h1>
+</header>
+<main>
+<p class="callout"><strong>지위 안내</strong> — 이 장의 §1(요건)과 §2~§5(후보 판정)의 전제들은
+source-confirmed 지만, 설계안 자체는 <strong>미구현</strong>이다. 채택 방향(generation)은 로컬 설계
+문서와 2026-08-07 회의 결과의 <span class="evidence-label">Documented</span> 사항이고
+<span class="claim-id">(CUBRID-C034)</span>, 판정 논증은 <span class="evidence-label">Inferred</span>
+(전제·반증 조건 명시)다. 여기서부터는 비유를 내려놓는다 — 정확성 논증에 비유가 끼면 판정이 뭉개진다.</p>
+
+<h2 id="problem-restated">0. 문제의 재정식화</h2>
+<p>forward-walk 의 삭제 대상(옛 OOS value chain)은 live 레코드가 참조하지 않고 undo image 에만
+남는다. "이 청크가 쓰레기인가"는 청크 자신의 속성이 아니라 <strong>소유 heap 버전의 죽음이라는
+외재적 사실</strong>이고, 그 버전은 페이지에서 이미 사라졌다. 따라서 재처리 시 필요한 것은 쓰레기
+여부의 재유도가 아니라 <strong>신원 확인</strong> — "지금 슬롯 점유자가 undo image 가 가리키던 그
+체인인가". heap 과의 비대칭(ch09): heap 헤더의 delid 는 죽음 정보라 점유자-내재 기준이 되지만,
+OOS 청크에는 출생 정보조차 없고, 죽음 정보를 넣으려면 DELETE/UPDATE 가 OOS 페이지를 만져야 해
+지연 정리 설계와 충돌한다. 모든 후보는 이 비대칭의 우회이며, 판정은 "무엇을 스탬프로 삼아
+<strong>등가 비교</strong>하느냐"로 수렴한다.</p>
+
+<h2 id="requirements">1. 요건 R1–R5</h2>
+<div class="table-wrap">
+<table>
+<caption>신원 스탬프가 만족해야 하는 요건</caption>
+<thead><tr><th>요건</th><th>내용</th><th>위반 시</th></tr></thead>
+<tbody>
+<tr><td><strong>R1 가용성</strong></td><td>기대값이 forward-walk(재시도 포함) 시점에 항상 손에 있어야 함</td><td>비교 불가 → skip=영구 누수 / 강행=버그 재발</td></tr>
+<tr><td><strong>R2 오탐 불가</strong></td><td>다른 신원(재사용 점유자)과는 반드시 불일치</td><td>살아있는 데이터 삭제 (silent loss)</td></tr>
+<tr><td><strong>R3 누수 불가</strong></td><td>같은 신원(정당한 대상)과는 반드시 일치</td><td>영구 누수 — CBRD-26668 회수 목적 붕괴</td></tr>
+<tr><td><strong>R4 비용</strong></td><td>stub 은 행·OOS 컬럼마다 반복 지불 — 크기 민감. 핫패스 추가 쓰기 금지</td><td>영구적 공간/쓰기 비용</td></tr>
+<tr><td><strong>R5 불변식 반경</strong></td><td>정확성 논증이 의존하는 코드 범위가 좁을수록 안전</td><td>미래 변경이 조용히 정확성을 깨뜨림</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="candidate-6a">2. 탈락 후보들 — 각각 정확히 하나의 요건에서 죽는다</h2>
+<h3>6a. 청크에 생성 MVCCID 저장, undo image 의 MVCC 헤더와 비교 — R1 위반</h3>
+<p class="evidence-source"><span class="evidence-label">Source-confirmed 전제</span> —
+vacuum 의 정상 작업 중 하나가 오래 닫힌 레코드의 on-page 헤더에서 insert MVCCID 를
+<strong>물리적으로 제거</strong>하는 것이다(insid 정리 — REC_HOME/REC_NEWHOME arm 에서 플래그와 값을
+지우고 본문을 당겨 붙임, vacuum.c:2282-2291/2378-2387). 이후 그 행이 UPDATE 되면 undo image 는
+정리된 헤더를 그대로 캡처한다 — <strong>비교할 기대값 자체가 없다</strong>. 값을 남기는
+MVCCID_ALL_VISIBLE 치환은 REC_BIGONE 전용이고 OOS+bigone 은 쓰기 시점 거부라 무관
+<span class="claim-id">(CUBRID-C030)</span>. 기대값 소실 시 skip 은 R3, 강행은 R2 위반 — 방어가
+"UPDATE 전에 insid 정리가 먼저 왔는가"라는 vacuum 타이밍에 좌우되는 비결정적 방어가 된다.</p>
+<p>(정정 이력: "같은 트랜잭션 다중 UPDATE 시 스탬프 충돌"이라는 초기 기각 사유는 철회되었다 —
+닫힌-블록 게이팅과 MVCCID 단조성 때문에 현행 구현에서 성립하지 않는다. 6a 의 사인은 오직 R1 이다.)</p>
+
+<h3 id="threshold-variants">A/B. 임계값(threshold) 비교 계열 — 등가가 아닌 부등호의 구조적 실패</h3>
+<p class="evidence-inferred"><span class="evidence-label">Inferred</span>
+<span class="claim-id">(CUBRID-C033)</span> — 점유자의 생성 MVCCID 를 임계값과 부등호 비교하는 두 변형:</p>
+<ul>
+<li><strong>A: 현재 oldest visible 과 비교</strong> ("충분히 오래됐으면 삭제") — <strong>R2 위반</strong>.
+재시작 후에는 pre-crash 트랜잭션이 전부 닫혀 임계값이 재시작 이전의 <em>모든</em> MVCCID 보다
+커진다 → 검사가 "항상 삭제"로 퇴화 → 대표 트리거(재시작 경유 재시도)에서 보호가 정확히 0.
+근본 원인: 임계값은 점유자의 <em>나이</em>만 보지 <em>정체</em>를 모른다 — 수년 전 INSERT 되고
+한 번도 안 바뀐 살아있는 체인도 "오래됨"을 만족한다.</li>
+<li><strong>B: 블록에 동결된 oldest_visible 과 비교</strong> — 방향을 뒤집으면 오탐은 막힌다(재사용자는
+항상 블록 동결값 이후). 대신 <strong>R3 위반</strong>: MVCCID 는 첫 write 시점 발급이라
+<strong>발급 순서 ≠ 커밋 순서</strong>다(<span class="claim-id">CUBRID-C031</span>). 반례(V-9):
+장기 배치 writer W 가 MVCCID 100 을 쥐고 실행 중 → T1(MVCCID 200)이 OOS 행 INSERT·커밋 → W 가
+그 행을 UPDATE(READ COMMITTED 에서 정상). 이 undo 가 든 블록의 동결값 ≤ 100 인데 삭제 대상 체인의
+생성자는 200 → 영구 skip. W 가 사는 동안 채워진 <em>모든</em> 블록이 걸리는 시스템적 누수.</li>
+</ul>
+<figure>
+<svg viewBox="0 0 760 210" role="img" aria-labelledby="v9-title v9-desc">
+<title id="v9-title">MVCCID 축과 커밋 시간 축의 어긋남</title>
+<desc id="v9-desc">W 는 MVCCID 100 을 먼저 받지만 T1(MVCCID 200)보다 늦게 커밋한다.</desc>
+<style>text{font-family:sans-serif;font-size:13px;fill:#18202b}.ax{stroke:#5c6878;stroke-width:2}.w{fill:#fbeaea;stroke:#9c2f2f}.t{fill:#e6f4ea;stroke:#146c43}</style>
+<text x="20" y="26" font-weight="bold">커밋 시간 축 →</text>
+<line class="ax" x1="20" y1="60" x2="740" y2="60"/>
+<rect class="w" x="60" y="40" width="560" height="40" opacity="0.5"/><text x="70" y="34">W: 첫 write 에서 MVCCID=100 획득, 오래 실행</text>
+<rect class="t" x="240" y="45" width="120" height="30"/><text x="248" y="65">T1: MVCCID=200,</text><text x="248" y="95">INSERT+커밋</text>
+<text x="630" y="50">W 가 그 행을</text><text x="630" y="68">UPDATE 후 커밋</text>
+<text x="20" y="140" font-weight="bold">→ 블록 동결 임계값 ≤ 100 &lt; 삭제 대상 체인의 생성자 200 — "생성자 &lt; 임계값" 검사는 영원히 거짓 = 영구 누수</text>
+<text x="20" y="170">두 모집단(재사용자 / 정당한 대상)이 MVCCID 축에서 분리되지 않으므로 어떤 임계값도 R2·R3 를 동시에 못 만족한다.</text>
+<text x="20" y="196">— 같은 반례에서 변형 A 는 올바르게 지운다: A 와 B 는 상호 보완적으로 실패한다. 결론: 부등호가 아니라 등가여야 한다.</text>
+</svg>
+<figcaption><strong>V-9. MVCCID 발급 순서 ≠ 커밋 순서.</strong> threshold 계열 전체의 사망 진단서.</figcaption>
+</figure>
+<p class="diagram-alt">텍스트 대안: 배치 트랜잭션 W 는 첫 쓰기에서 MVCCID 100 을 받고 오래 실행된다.
+그동안 T1 이 MVCCID 200 으로 OOS 행을 INSERT·커밋하고, 이어 W 가 그 행을 UPDATE 한다. 커밋 순서는
+T1 → W 이지만 MVCCID 순서는 W(100) → T1(200) 이므로, 블록 동결 임계값(≤100)과 삭제 대상 생성자
+(200)의 부등호 비교는 정당한 대상을 영구히 건너뛴다. 반대 방향 변형(A)은 재시작 후 모든 것을
+통과시킨다. 등가 비교만이 두 모집단을 정확히 가른다.</p>
+
+<h3>owner OID — 차선. 쓰는 순간 신원이 아직 없다</h3>
+<p class="evidence-source"><span class="evidence-label">Source-confirmed 전제</span> —
+청크는 <code>heap_attrinfo_insert_to_oos</code>(heap_file.c:13150)에서 쓰이는데, 이 시점은 heap
+슬롯 확정(heap_insert_logical → :21626-21680) <strong>이전</strong>이다. 이 체인들을 소유할 새 버전의
+OID 는 아직 존재하지 않는다 <span class="claim-id">(CUBRID-C032)</span>. 채우려면 heap insert 후
+청크 헤더 backfill(핫패스에 페이지 fix+WAL 영구 추가) 또는 OID 할당 순서 재배치(침습) — 방향은
+옳지만 비용 구조가 나쁘다.</p>
+
+<h2 id="mvccid-monotonic">3. 성립하는 차선 — 6b: stub 탑재 MVCCID</h2>
+<p>oos_insert 시 생성 트랜잭션의 MVCCID 를 <strong>청크 헤더와 stub 양쪽에</strong> 기록하고,
+forward-walk 가 undo image 속 stub 의 기대값과 청크의 저장값을 <strong>등가 비교</strong>한다.</p>
+<ul>
+<li><strong>R1 충족</strong> — insid 정리는 MVCC 헤더만 다듬고 variable area(stub)는 건드리지 않으므로
+기대값이 소실되지 않는다(6a 의 사인 해소).</li>
+<li><strong>R2 충족(현행 구현 기준)</strong> — vacuum 은 닫힌 블록만 처리하고(vacuum.c:3260),
+MVCCID 는 복구를 포함해 단조·비재사용이므로(<span class="claim-id">CUBRID-C031</span>) walk 가 비운
+슬롯의 재사용자는 항상 생성자보다 큰 MVCCID 를 갖는다. 생성자 활동 중의 해제 경로(롤백 보상,
+eager)는 walk 대상 참조를 남기지 않는다.</li>
+<li><strong>R3 충족</strong> — 같은 체인이면 같은 시점에 같은 값이 양쪽에 기록.</li>
+<li><strong>R4 열세</strong> — 8B: stub 16→24B, 청크 헤더 16→24B (generation 은 20B/20B).
+4B 로 절단하면 "의미가 붙은 4B 카운터"가 될 뿐 — 그럴 바엔 처음부터 카운터가 낫다.</li>
+<li><strong>R5 열세</strong> — R2 논증이 vacuum 게이팅 + MVCCID 단조성 + 롤백 보상 의미론 + eager
+가드 + M1 항상-새-체인이라는 <strong>4개 서브시스템 횡단 불변식 8줄</strong>에 의존한다.
+미래에 "생성자 활동 중 해제 + walk 가능 참조"를 만드는 변경(예: 자기-트랜잭션 중간 버전 즉시
+회수)이 들어오면 <strong>조용히</strong> 깨진다.</li>
+</ul>
+
+<h2 id="verdict">4. 권고 — 4B generation (페이지 카운터 발급, 등가 비교)</h2>
+<p id="identity-stamp-design" class="evidence-source"><span class="evidence-label">Documented (채택 방향) + Source-confirmed (기반 사실)</span> —
+설계: OOS 페이지 헤더에 uint32 카운터를 두고, 청크 insert(슬롯 재할당)마다 증가시켜 그 값을
+<strong>청크 헤더(+4B)와 stub(+4B)</strong>에 기록한다. 삭제 전 등가 비교 — 불일치면 재사용된
+슬롯이므로 no-op <span class="claim-id">(CUBRID-C034)</span>.</p>
+<div class="table-wrap">
+<table>
+<caption>V-11. 후보 × 요건 판정 매트릭스</caption>
+<thead><tr><th>후보</th><th>R1</th><th>R2</th><th>R3</th><th>R4 (stub)</th><th>R5</th><th>판정</th></tr></thead>
+<tbody>
+<tr><td>6a 헤더 비교 MVCCID</td><td><strong>✗ 소실</strong></td><td>—</td><td>—</td><td>—</td><td>—</td><td>제외</td></tr>
+<tr><td>A 현재-임계값 비교</td><td>○</td><td><strong>✗ 재시작 퇴화</strong></td><td>○</td><td>+0B</td><td>—</td><td>제외</td></tr>
+<tr><td>B 동결-임계값 비교</td><td>○</td><td>○</td><td><strong>✗ 장기 writer 누수</strong></td><td>+0B</td><td>—</td><td>제외</td></tr>
+<tr><td>owner OID</td><td>△ backfill 필요</td><td>○</td><td>○</td><td>+0B (청크만 +8B)</td><td>중간</td><td>차선</td></tr>
+<tr><td>6b stub 탑재 MVCCID</td><td>○</td><td>○ (전역 불변식 조건부)</td><td>○</td><td>+8B (24B)</td><td><strong>전역 (8줄)</strong></td><td>차선</td></tr>
+<tr><td><strong>4B generation</strong></td><td>○</td><td>○ (국소 불변식)</td><td>○</td><td><strong>+4B (20B)</strong></td><td><strong>국소 (1줄)</strong></td><td><strong>권고</strong></td></tr>
+<tr><td>OOS LSA (해석: 생성 LSA 등가)</td><td>○ (stub 에 실으면)</td><td>○</td><td>○</td><td>+8B (24B)</td><td>중간 + 쓰기 순서 문제</td><td>조건부 — §5</td></tr>
+</tbody>
+</table>
+</div>
+<figure>
+<svg viewBox="0 0 760 200" role="img" aria-labelledby="v12-title v12-desc">
+<title id="v12-title">R5 — 검증 반경의 대비</title>
+<desc id="v12-desc">6b 는 4개 서브시스템에 걸친 불변식, generation 은 두 함수의 국소 불변식에 의존한다.</desc>
+<style>text{font-family:sans-serif;font-size:13px;fill:#18202b}.big{fill:#fbeaea;stroke:#9c2f2f}.small{fill:#e6f4ea;stroke:#146c43}</style>
+<text x="20" y="24" font-weight="bold">6b 의 R2 가 기대는 것 (전역)</text>
+<rect class="big" x="20" y="34" width="340" height="140" opacity="0.6"/>
+<text x="32" y="58">vacuum 디스패치 게이팅 (vacuum.c)</text>
+<text x="32" y="80">MVCCID 단조·비재사용 (mvcc_table.cpp)</text>
+<text x="32" y="102">롤백 보상 의미론 (log_recovery)</text>
+<text x="32" y="124">eager 경로 가드 (heap_oos/heap_file)</text>
+<text x="32" y="146">M1 항상-새-체인 (dedup 도입 시 소멸!)</text>
+<text x="420" y="24" font-weight="bold">generation 의 R2 가 기대는 것 (국소)</text>
+<rect class="small" x="420" y="34" width="320" height="60"/>
+<text x="432" y="58">"슬롯 재할당마다 페이지 카운터가 증가한다"</text>
+<text x="432" y="80">— 발급(oos_insert)·검사(삭제 전) 두 지점이 전부</text>
+<text x="420" y="130">트랜잭션 수명·게이팅·롤백·실행 모드와 무관.</text>
+<text x="420" y="152">6b 를 깨는 부류의 미래 변경에 자동으로 안전.</text>
+</svg>
+<figcaption><strong>V-12. 검증 반경.</strong> 두 안 모두 정확하다 — 차이는 "정확성이 얼마나 넓은 코드에 인질로 잡혀 있는가"다.</figcaption>
+</figure>
+<p class="diagram-alt">텍스트 대안: 6b 의 오탐-불가 논증은 vacuum 게이팅, MVCCID 단조성, 롤백 보상,
+eager 가드, M1 항상-새-체인 등 4개 서브시스템의 8개 불변식이 전부 유지될 때만 성립한다.
+generation 의 대응 논거는 "재할당마다 페이지 카운터가 증가한다" 한 줄이며 검사 지점이 두 함수뿐이다.
+특히 M1 불변식은 dedup 도입과 함께 사라질 예정이므로 6b 의 반경 문제는 가설이 아니다.</p>
+
+<h3 id="stamp-substrate">구현 기반 사실 (source-confirmed)</h3>
+<ul>
+<li>쓰기 지점 페이지는 <strong>이미 W-latch</strong> — 카운터 증가에 추가 래치 없음. 단, 청크 헤더는
+슬롯 확정 전에 직렬화되므로(:1503→:1516) 카운터를 <strong>미리 읽거나 사후 패치</strong>해야 한다 —
+설계서가 명시해야 할 순서 결정 <span class="claim-id">(CUBRID-C032)</span>.</li>
+<li>RVOOS 물리 로깅은 전체 이미지라 <strong>복구 핸들러 불변</strong>. replication 은 slave 가 자체
+oos_insert 를 수행하므로 generation 도 slave 로컬 발급 — 규칙 명문화만 필요.</li>
+<li>uint32 폭: 오탐에는 한 블록 재처리 창 안에 같은 페이지 2³² 회 재할당 사이클이 필요 — 물리적으로
+불가. stub 은 패딩 없이 20B(정렬 이득 없음, PG 18B 선례). 미래 예약은 행마다 반복되는 stub 이
+아니라 체인당 1회인 청크 헤더에.</li>
+<li>연쇄 갱신: <code>OR_OOS_INLINE_SIZE</code> 16→20, demotion 수익성 문턱(&gt;20B), 경계 테스트,
+OOS-CONTEXT 문서. <strong>온디스크 포맷 변경은 feat/oos 미출시인 지금이 마이그레이션 비용 0 인
+유일한 시점.</strong></li>
+</ul>
+
+<h2 id="oos-lsa">5. "OOS LSA" — 회의 어휘의 정직한 분석</h2>
+<p class="evidence-unknown"><span class="evidence-label">Unknown (정의) + Source-confirmed (기반 사실)</span> —
+"OOS LSA" 는 2026-08-07 회의 어휘로 로컬 문서에 정의가 없다 <span class="claim-id">(CUBRID-C035)</span>.
+가장 그럴듯한 해석 — <strong>체인 생성 연산의 로그 LSA 를 청크 헤더와 stub 에 신원 스탬프로 저장,
+등가 비교</strong> — 로 분석한다:</p>
+<ul>
+<li><strong>물리적으로 가능하다</strong> — insert 의 LSA 는 append 직후 <code>tdes-&gt;tail_lsa</code> 로
+관측 가능하다(멀티청크 replication 경로가 이미 이 값을 읽는다, oos_file.cpp:1440, 1476-1479)
+<span class="claim-id">(CUBRID-C032)</span>.</li>
+<li><strong>그러나 순서 문제가 있다</strong> — LSA 는 로그 append <em>후에야</em> 존재하는데, 청크
+바이트(헤더 포함)는 append 되는 redo 이미지 <em>안에</em> 있다. 자기 LSA 를 자기 이미지에 넣을 수
+없으므로: 두 번째 페이지 쓰기+로그, 또는 로깅 순서 재설계가 필요 — generation 에는 없는 비용.</li>
+<li><strong>폭 8B</strong> — stub 24B. 등가 비교에는 유일성만 필요하므로 전역 유일·순서성은 잉여다.</li>
+<li><strong>페이지 LSA 해석은 소스로 반박된다</strong> — 페이지 LSA 는 페이지의 모든 수정이 공유·덮어쓰므로
+청크 신원이 될 수 없다. redo 게이트 해석은 범주 오류다(ch08/ch13 — replay 전용).</li>
+<li><strong>정직한 결론</strong>: "LSA 를 등가 스탬프로 쓴다" = "LSN 이기도 한 세대 카운터" — 성립하되
+generation 대비 이점(카운터 필드 불필요, 진단성) 이 비용(8B, 쓰기 순서 재설계)을 상쇄하지 못한다.
+회의의 실제 의도 확인이 선행 과제다.</li>
+</ul>
+
+<h2 id="innodb-precedent">6. InnoDB 선례와의 정합</h2>
+<p>권고안은 InnoDB 의 <code>(last_trx_id, last_undo_no)</code> 등가 비교와 목적·형태가 같다
+<span class="claim-id">(MYSQL-C004, CMP-C004)</span>. 위치가 다른 이유는 회수 단위(페이지 vs 슬롯,
+ch14 §5) — InnoDB 는 대상 객체에, CUBRID 는 컨테이너 카운터에서 발급해 점유물·참조 양쪽에 싣는다.
+InnoDB 가 잔여 경쟁에서 누수를 선택했다는 사실은 "불일치 = skip(no-op)" 정책의 선례이기도 하다 —
+단, generation 의 skip 은 누수조차 아니다: 불일치 슬롯은 이미 남의 것이고, 정당한 대상은 항상
+일치한다(R3).</p>
+
+<h2 id="update-log">7. dedup 확장 — 수명 문제와 OOS update log</h2>
+<p>미래 dedup(무변경 OOS 값의 체인 재사용)은 M1 의 "버전당 새 체인"을 깨고 한 체인을 여러 버전이
+공유하게 만든다. 이때 새 문제는 <strong>신원("점유자가 그 체인인가")이 아니라 수명("아직 누가
+참조하는가")</strong>이다 — 신원 스탬프는 dedup 과 무관하게 계속 필요하고, dedup 은 별도 보호
+장치를 <em>추가로</em> 요구한다.</p>
+<div class="table-wrap">
+<table>
+<caption>dedup 보호 장치 4종 <span class="claim-id">(CUBRID-C036)</span></caption>
+<thead><tr><th>장치</th><th>방식</th><th>성립성</th></tr></thead>
+<tbody>
+<tr><td>(i) 스탬프 bump</td><td>재참조 시 페이지 카운터에서 <strong>새</strong> generation 발급, 청크와 새 버전 stub 에 기록 — 중간 버전 walk 는 불일치로 skip, 마지막 참조자만 삭제</td><td>generation 만 성립. MVCCID 로 bump 하면 같은 트랜잭션 재참조 충돌(같은 행 2회 UPDATE → 같은 스탬프) → counter 병설 강제 = generation 수렴. 발급은 반드시 페이지 카운터에서(청크값+1 은 미래 insert 와 충돌 가능)</td></tr>
+<tr><td>(ii) old∩new 공유 검사</td><td>walk 가 undo 와 post-image 의 head OID 를 비교해 공유 OID skip (eager 경로 :754-760 의 확장)</td><td>양쪽 스탬프와 호환. 단 post-image 가 같은 로그 레코드에 없는 경로의 별도 처리 필요 — 판단 비국소</td></tr>
+<tr><td>(iii) refcount</td><td>청크 헤더에 참조 수 증감</td><td>같은 행 버전 공유는 참조가 선형이라 과잉 — 교차-행 공유(내용 주소화)에서만 필요</td></tr>
+<tr><td><strong>(iv) OOS update log</strong> (2026-08-07 회의 방향)</td><td>OOS 값이 <strong>실제로 바뀐</strong> UPDATE 에 한해 <code>OOS aaa → bbb</code> 이동 로그를 남기고, <strong>그 로그 레코드가 vacuum 될 때 aaa 를 회수</strong> — heap record update 로그와 동형. 무변경이면 아무것도 안 씀(generation bump 도 없음)</td><td>아래 상세</td></tr>
+</tbody>
+</table>
+</div>
+<h3>OOS update log 의 정확한 위치 (V-13)</h3>
+<p class="evidence-inferred"><span class="evidence-label">Inferred</span>
+<span class="claim-id">(CUBRID-C036)</span> — 이 방식의 본질: 옛 체인 참조가 사는 곳을
+"heap UPDATE 의 undo image"에서 "전용 OOS update log 레코드"로 옮기고, 소비 시점을 그 레코드의
+vacuum 시점으로 정의한다. 장점 — 무변경 값의 회수 책임이 명시적 레코드로 분리되어, dedup 시
+"공유 체인의 마지막 참조자" 판정을 로그 구조로 표현할 여지가 생기고, 핫패스(무변경 UPDATE)에
+스탬프 bump 쓰기조차 없다. 그러나 성립 요건 네 가지가 남는다:</p>
+<ol>
+<li><strong>원자성</strong> — 레코드는 heap 변경과 같은 원자 단위 안에서 로깅되어야 한다. 사이에서
+크래시하면: 로그만 유실 → aaa 영구 누수 / 로그만 생존(heap 롤백) → 살아있는 aaa 회수.</li>
+<li><strong>게이팅</strong> — 소비는 지금의 NOTIFY 경로와 동일한 MVCCID 게이팅을 받아야 한다
+(스냅샷 독자가 aaa 를 아직 볼 수 있는 동안 회수 금지).</li>
+<li><strong>replication</strong> — 물리 OID 는 slave 에서 무의미하므로(slave 는 자체 oos_insert)
+레코드는 값-논리적이거나 slave 로컬 재생성이어야 한다.</li>
+<li><strong>신원은 그대로 필요하다 — 이것이 핵심이다.</strong> 블록 재처리는 update log 레코드도
+똑같이 두 번 읽고 같은 물리 aaa 를 재유도한다. 레코드(또는 청크)가 신원을 나르지 않으면
+<strong>같은 이중 삭제가 그대로 남는다</strong>. update log 는 참조의 <em>거처</em>를 바꾸는 수명
+메커니즘이지, 소비의 <em>검증</em>을 바꾸는 신원 메커니즘이 아니다. dedup 완성형은 "update log
+(수명) + 스탬프(신원)"의 합이다.</li>
+</ol>
+<p>반증 조건(명시): update log 소비를 블록 재처리와 무관한 별도의 exactly-once 큐로 설계하면 신원
+요건은 그 큐의 정확성으로 이전된다 — 그 큐가 다시 "정확히 한 번 소비" 문제를 풀어야 하므로 문제가
+이동할 뿐 소멸하지 않는다는 것이 현재 판단이다(InnoDB 의 self-mark 가 그 큐의 한 구현인데, CUBRID
+WAL 불변성이 막는다 — ch14).</p>
+<p>스냅샷 안전성 보강: "마지막 참조자의 death 블록에서 삭제" 프로토콜은 커밋 순서 전이성으로 안전이
+증명된다 — 공유 체인 C 의 마지막 참조 버전을 지운 블록이 디스패치되려면 그 이전 모든 버전의 독자
+스냅샷도 이미 배제되어 있다(M1 게이팅 원리의 자연 확장).</p>
+
+<h2 id="rejected">8. 기각된 대안 경로 (요약)</h2>
+<ul>
+<li><strong>수정 불필요론</strong> — OOS OID 는 물리 주소라 "재발급 지연"이 없다: 재점유가 곧 재등장이고, 정책 세 겹이 재점유를 촉진한다(ch09).</li>
+<li><strong>INTERRUPTED 블록의 forward-walk 스킵</strong> — INTERRUPTED 는 "얼마나 했는지"를 모른다. 스킵 = 옛 체인 영구 누수(회수 유일 경로).</li>
+<li><strong>레코드 단위 진행 영속화</strong> — 역방향 링크 순회라 단일 LSA 로 표현 불가 + 진행 기록과 삭제의 원자성 문제 = vacuum 코어 수술(ch05).</li>
+<li><strong>블록 전체 단일 sysop</strong> — VACUUMED 표기가 비동기라 창이 닫히지 않고, 커밋 전 빈 슬롯 노출(bestspace)과 abort 복원 충돌 창이 블록 길이로 확대(ch08).</li>
+<li><strong>forward-walk 폐지(tombstone/영속 큐/스캔 GC)</strong> — undo image 는 이미 영속적이고 MVCCID 게이팅되며 추가 쓰기 0 인 완벽한 삭제 대기 큐다. 대체물들은 그 큐를 재발명하며 "정확히 한 번 소비"를 그대로 계승한다. 고장난 것은 큐가 아니라 소비 단계의 신원 확인 하나다.</li>
+<li><strong>슬롯 재사용 유예</strong> — "블록 완료까지" 라는 조건 자체가 새 추적 문제 + 회수율 저하. 스탬프 대비 이점 없음.</li>
+</ul>
+
+<h2 id="contract">9. 재구현 계약 (스탬프 포함 완성형)</h2>
+<div class="table-wrap">
+<table>
+<caption>Interface 계약 — 독립 구현자가 소스를 다시 열지 않고 답할 수 있어야 하는 것</caption>
+<thead><tr><th>항목</th><th>계약</th></tr></thead>
+<tbody>
+<tr><td>oos_insert(+batch)</td><td>W-latch 페이지에서 카운터++ → generation 을 헤더 직렬화 전에 확보 → 청크 헤더·반환 stub 에 기록. 전체 이미지 로깅(핸들러 불변). 반환: head OID + generation.</td></tr>
+<tr><td>stub</td><td>20B = OID 8 + length 8 + gen 4. undo image 에 그대로 보존됨이 R1 의 근거.</td></tr>
+<tr><td>oos_delete(vfid, oid, expected_gen)</td><td>W-latch 안에서 점유·<strong>gen 등가</strong> 검사 → 불일치·부재 시 no-op(SKIPPED), 일치 시 체인 삭제. 체인 후속 링크는 검증 통과한 head 의 헤더에서만.</td></tr>
+<tr><td>forward-walk</td><td>undo image 의 (oid, gen) 쌍 추출 → 레코드당 sysop 은 유지 → oos_delete 에 기대값 전달. <strong>두 NOTIFY 타입 모두</strong>(C046).</td></tr>
+<tr><td>복구</td><td>물리 전체-이미지 로깅 불변. abort 복원(spage_insert_for_recovery)의 점유-슬롯 충돌은 별도 추적 항목(unknown).</td></tr>
+<tr><td>replication</td><td>generation 은 slave 로컬 발급 — 값 등가만 보장, OID/gen 등가는 비보장.</td></tr>
+<tr><td>초기화/이행</td><td>feat/oos 미출시 — 포맷 버전 상향으로 종결. 출시 후라면 마이그레이션 설계 필요(범위 밖).</td></tr>
+</tbody>
+</table>
+</div>
+<h3>구현 순서와 적합성 테스트</h3>
+<ol>
+<li>온디스크: 헤더·stub 확장 + 상수(OR_OOS_INLINE_SIZE 등) + reader/writer (경계 테스트: 20B 정확성).</li>
+<li>발급: 페이지 카운터 + insert 경로 배선 (테스트: 재할당마다 증가 — R2 국소 불변식의 직접 검증).</li>
+<li>검사: oos_delete 시그니처 확장 + forward-walk 배선 (테스트: 불일치 no-op).</li>
+<li><strong>적합성 오라클</strong>: experiment-2 관측이 exit 0 으로 뒤집히는가(회귀 게이트) +
+experiment-1 이 여전히 통과하는가(누수 없음 — 정당한 대상은 일치해 정상 회수) +
+REC_NEWHOME 경로 변형 테스트(C046).</li>
+<li>dedup 은 별도 마일스톤: update log(수명) 설계 확정 후 (i) 또는 (ii)와 스탬프의 합성.</li>
+</ol>
+
+<h2 id="recap">요약</h2>
+<p class="callout">등가 비교만이 두 모집단(재사용자/정당한 대상)을 가르고, 등가 스탬프 중
+generation 이 비용·검증 반경에서 우위다 — InnoDB 가 같은 형태의 답을 이미 운영한다.
+"OOS LSA" 는 해석상 성립하되 이점이 비용을 못 넘고, OOS update log 는 dedup 의 수명 문제를 풀지만
+신원 문제는 스탬프에 남긴다. 남은 것: 증거의 전체 색인과 unknown 목록(ch17).</p>
+</main>
+<footer>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="15-cross-database-comparison.html">← ch15</a>
+<a href="17-glossary-evidence-unknowns.html">다음: ch17 →</a>
+</nav>
+</footer>
+</body>
+</html>

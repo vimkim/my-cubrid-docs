@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ch15 — 3-DB 교차 비교 · CBRD-26950</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="14-mysql-analysis.html">← ch14</a>
+<a href="16-reimplementation-blueprint.html">다음: ch16 →</a>
+</nav>
+<h1>ch15 — 3-DB 교차 비교: 하나의 시나리오, 세 개의 답</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<ul>
+<li>공유 시나리오를 세 시스템의 용어로 각각 서술할 수 있다.</li>
+<li>각 대응의 equivalent / partial analogy / no equivalent 판정과 그 이유를 말할 수 있다.</li>
+<li>이름이 비슷한 것(page LSA/LSN 게이트)과 책임이 같은 것을 구분할 수 있다.</li>
+</ul>
+
+<h2 id="terminology">1. 용어 지도</h2>
+<div class="table-wrap">
+<table>
+<caption>같은 역할, 다른 이름</caption>
+<thead><tr><th>역할</th><th>CUBRID</th><th>PostgreSQL</th><th>MySQL/InnoDB</th></tr></thead>
+<tbody>
+<tr><td>out-of-row 값 저장소</td><td>OOS 파일 (FILE_OOS)</td><td>TOAST 테이블</td><td>LOB 페이지들 (first/index/data)</td></tr>
+<tr><td>행 내 참조</td><td>OOS inline stub 16B (물리 OID+길이)</td><td>varatt_external 16B (논리 OID 쌍)</td><td>extern 참조 20B (물리 주소+플래그)</td></tr>
+<tr><td>옛 버전의 거처</td><td>WAL undo image</td><td>heap 그 자리 (dead tuple)</td><td>undo log (rollback segment)</td></tr>
+<tr><td>지연 회수자</td><td>vacuum (log-driven)</td><td>lazy VACUUM (table-driven)</td><td>purge (undo-driven)</td></tr>
+<tr><td>회수 진행의 영속 단위</td><td>vacuum block</td><td>없음</td><td>없음 (history list 가 곧 큐)</td></tr>
+<tr><td>redo 중복 방지 도장</td><td>page LSA</td><td>page LSN</td><td>page LSN</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="scenario-flows">2. 공유 시나리오의 세 흐름</h2>
+<p>시나리오: <em>"행 UPDATE 로 대체된 큰 out-of-row 값의 지연 회수 — 회수자가 중단 후 재시도할 때,
+그 사이 물리 위치가 재사용되었다면 무엇이 이중 회수를 막는가?"</em></p>
+<ol>
+<li><strong>CUBRID</strong>: UPDATE 가 새 체인 생성 → 옛 체인 참조는 undo image 에만 →
+vacuum forward-walk 가 물리 OID 로 삭제 → 재시도 시 같은 OID 재제시, probe 는 점유 여부만 —
+<strong>막는 것이 없다 (결함)</strong> <span class="claim-id">(CUBRID-C023)</span>.</li>
+<li><strong>PostgreSQL</strong>: UPDATE 트랜잭션이 old TOAST 행들을 그 자리에서 MVCC delete →
+회수는 VACUUM 이 점유자 header 재평가 — <strong>재시도가 재평가라서 질문이 소멸</strong>;
+참조는 논리 이름이라 재사용 앨리어싱 자체가 불가 <span class="claim-id">(PG-C001, PG-C002, PG-C003)</span>.</li>
+<li><strong>InnoDB</strong>: UPDATE 가 옛 LOB 에 (trx_id, undo_no) 스탬프 기록 → purge 가 undo 레코드의
+물리 참조로 forward, <strong>스탬프 등가일 때만 해제</strong> + 소비한 참조에 FIL_NULL self-mark
+<span class="claim-id">(MYSQL-C002, MYSQL-C004)</span>.</li>
+</ol>
+
+<h2 id="responsibility-table">3. 책임·정책 대조표 (V-14)</h2>
+<div class="table-wrap">
+<table>
+<caption>V-14. 판정을 가르는 6축 <span class="claim-id">(CMP-C001, CMP-C002, CMP-C003, CMP-C004)</span></caption>
+<thead><tr><th>축</th><th>CUBRID</th><th>PostgreSQL</th><th>InnoDB</th></tr></thead>
+<tbody>
+<tr><td>① 참조의 신원</td><td>물리 주소</td><td><strong>논리 이름</strong> (죽은 참조 존속 중 재발급 금지)</td><td>물리 주소 + 대상 스탬프</td></tr>
+<tr><td>② 삭제 결정 주체</td><td>회수자 (로그에서 재유도)</td><td>DML 트랜잭션 (그 자리에서)</td><td>회수자 (undo 에서 재유도)</td></tr>
+<tr><td>③ 재시도 멱등성 근거</td><td>존재-probe — <strong>불충분</strong></td><td>점유자 자기 증언 재평가</td><td>스탬프 등가 + 지시서 self-mark</td></tr>
+<tr><td>④ 진행 영속화</td><td>블록 단위 — 재실행 지시化</td><td>없음</td><td>없음 (재처리 허용을 전제)</td></tr>
+<tr><td>⑤ 재사용 정책</td><td>즉시 + 촉진</td><td>이름: 드레인 후 / 주소: 순서 불변식 후</td><td>페이지 즉시 (스탬프가 보완)</td></tr>
+<tr><td>⑥ 잔여 실패 방향</td><td><strong>과잉 삭제 (무증상 손실)</strong></td><td>과소 회수 (낭비) / 시끄러운 손상 오류</td><td>누수 (명시적 선택)</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="verdicts">4. 대응 판정</h2>
+<div class="table-wrap">
+<table>
+<caption>기계별 최근접 대응과 판정 (셀마다 근거 claim)</caption>
+<thead><tr><th>CUBRID 메커니즘</th><th>PostgreSQL 대응</th><th>InnoDB 대응</th></tr></thead>
+<tbody>
+<tr><td id="reclaim-map">forward-walk (로그 유도 out-of-row 회수)</td>
+<td><strong>no equivalent</strong> — 책임이 DML+일반 vacuum 으로 분해되어 단일 대응물 부재 <span class="claim-id">(CMP-C001)</span></td>
+<td><strong>partial analogy</strong> — row_purge_upd_exist_or_extern 이 구조 동형; 방어 유무만 다름 <span class="claim-id">(CMP-C001)</span></td></tr>
+<tr><td id="idempotency-map">재시도 멱등성 확보</td>
+<td><strong>partial analogy</strong> — "재평가" 원리는 CUBRID heap 경로와 equivalent, OOS 경로엔 대응물 없음 <span class="claim-id">(CMP-C002)</span></td>
+<td><strong>partial analogy</strong> — self-mark 는 이식 불가(WAL 불변), 스탬프 등가는 이식 가능 <span class="claim-id">(CMP-C002)</span></td></tr>
+<tr><td id="aliasing-map">재사용 앨리어싱 방어</td>
+<td><strong>no equivalent</strong> (문제 자체가 설계로 제거됨) <span class="claim-id">(CMP-C003)</span></td>
+<td>제안 수정과 <strong>사실상 equivalent</strong> (목적·등가 비교 형태 동일) <span class="claim-id">(CMP-C003)</span></td></tr>
+<tr><td id="stamp-map">신원 스탬프 설계</td>
+<td><strong>no equivalent</strong> — 대신 대안 설계 공간(논리 신원)의 존재 증명 <span class="claim-id">(CMP-C004)</span></td>
+<td><strong>equivalent 선례</strong> — 위치(객체 vs 컨테이너)·폭(10B vs 4B)·기록 시점(해제 시 vs 할당 시)만 다름 <span class="claim-id">(CMP-C004)</span></td></tr>
+</tbody>
+</table>
+</div>
+<p class="callout">비슷한 이름에 속지 말 것: 세 시스템 모두 가진 page LSA/LSN 게이트는 셋 다
+<strong>replay 전용</strong>이며 이 시나리오의 방어가 아니다. 반대로 이름이 전혀 다른
+InnoDB 의 <code>(last_trx_id, last_undo_no)</code> 와 CUBRID 제안의 generation 이 <strong>같은
+책임</strong>을 진다 — 비교는 이름이 아니라 책임의 흐름으로 한다.</p>
+
+<h2 id="design-space">5. 종합: 설계 공간의 세 좌표</h2>
+<p>세 시스템은 "stale 물리 참조" 문제의 설계 공간에서 서로 다른 꼭짓점이다:</p>
+<ul>
+<li><strong>참조를 논리화한다</strong> (PG TOAST) — 근본적이지만 모든 읽기에 조회 비용, 이름 발급기 필요.
+CUBRID 가 지금 가기엔 온디스크·읽기 경로 전면 개편.</li>
+<li><strong>재평가 가능하게 만든다</strong> (PG/CUBRID heap) — 대상이 자기 증언 데이터를 지녀야 함.
+OOS 청크에 죽음 정보를 넣는 것은 지연 정리 설계와 충돌(DELETE 가 OOS 페이지를 만져야 하게 됨).</li>
+<li><strong>참조에 신원을 태운다</strong> (InnoDB, CUBRID 제안) — 최소 침습. 등가 비교 한 줄이 방어의 전부.</li>
+</ul>
+<p>CUBRID 의 제약(WAL 불변 → self-mark 불가, 회수 단위 = 슬롯 → 객체 스탬프 불가)을 대입하면
+세 번째 좌표의 컨테이너-카운터 변형만 남는다 — ch16 의 결론이 여기서 이미 그려진다.</p>
+
+<h2 id="recap">요약</h2>
+<p class="callout">같은 시나리오에 PG 는 "질문을 없애는 설계", InnoDB 는 "질문에 답하는 데이터",
+CUBRID(현재)는 "질문을 하지 않는 코드"다. 다음 장에서 CUBRID 가 InnoDB 좌표로 이동하는 구체적
+설계 — 스탬프 후보 판정과 dedup 확장 — 를 완성한다.</p>
+</main>
+<footer>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="14-mysql-analysis.html">← ch14</a>
+<a href="16-reimplementation-blueprint.html">다음: ch16 →</a>
+</nav>
+</footer>
+</body>
+</html>

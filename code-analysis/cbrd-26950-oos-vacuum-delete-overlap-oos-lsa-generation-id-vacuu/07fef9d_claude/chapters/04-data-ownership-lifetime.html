@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ch04 — 데이터 소유권과 수명 · CBRD-26950</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="03-scope-interface-seams.html">← ch03</a>
+<a href="05-lifecycle-state-machines.html">다음: ch05 →</a>
+</nav>
+<h1>ch04 — 데이터 소유권과 수명: 체인, stub, undo image</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<ul>
+<li>세 저장소(heap 페이지 / 로그 / OOS 파일)에 흩어진 상태와 각각의 수명을 그릴 수 있다.</li>
+<li>UPDATE 전후의 참조 그래프 변화 — "유일한 참조" 개념 — 를 설명할 수 있다.</li>
+<li>스탬프 후보가 물리적으로 놓일 수 있는 자리들을 열거할 수 있다.</li>
+</ul>
+
+<h2 id="layout">핵심 구조와 바이트 배치 (V-3, V-4)</h2>
+<figure>
+<svg viewBox="0 0 760 290" role="img" aria-labelledby="v3-title v3-desc">
+<title id="v3-title">stub 16B 와 청크 헤더 16B 의 배치</title>
+<desc id="v3-desc">OOS inline stub 은 head OOS OID 8바이트와 full length 8바이트, 청크 헤더는 길이·인덱스·next OID 세 필드다.</desc>
+<style>text{font-family:sans-serif;font-size:13px;fill:#18202b}.b{fill:#e8f1fc;stroke:#1558a6}.c{fill:#fdf2e3;stroke:#7a4d00}.gap{fill:#fbeaea;stroke:#9c2f2f;stroke-dasharray:4 3}</style>
+<text x="20" y="24" font-weight="bold">OOS inline stub (heap 레코드 variable area 안, 16B)</text>
+<rect class="b" x="20" y="34" width="340" height="40"/><text x="30" y="58">head OOS OID — volid 2B | pageid 4B | slotid 2B</text>
+<rect class="b" x="360" y="34" width="340" height="40"/><text x="372" y="58">full length (DB_BIGINT 8B)</text>
+<text x="20" y="110" font-weight="bold">OOS chunk record 헤더 (OOS 페이지 슬롯 안, 16B) + payload</text>
+<rect class="c" x="20" y="120" width="170" height="40"/><text x="30" y="144">total_data_length 4B</text>
+<rect class="c" x="190" y="120" width="150" height="40"/><text x="200" y="144">chunk_index 4B</text>
+<rect class="c" x="340" y="120" width="220" height="40"/><text x="350" y="144">next_chunk_oid 8B</text>
+<rect class="c" x="560" y="120" width="140" height="40"/><text x="572" y="144">payload …</text>
+<rect class="gap" x="20" y="180" width="680" height="44"/>
+<text x="30" y="200">← 이 헤더 어디에도 owner OID / generation / MVCCID / LSA 가 없다 —</text>
+<text x="30" y="218">   "누구의 청크인가"를 물을 데이터 자체가 부재 (oos_file.hpp:26-31)</text>
+<text x="20" y="262" font-weight="bold">레코드 표시: VOT 엔트리의 IS_OOS 비트(이 컬럼은 stub) + MVCC 헤더의 HAS_OOS 플래그(레코드에 stub 존재)</text>
+</svg>
+<figcaption><strong>V-3/V-4. 바이트 배치와 신원의 공백.</strong> 결함의 물리적 근거는 이 그림의 점선 상자 하나다 <span class="claim-id">(CUBRID-C002)</span>.</figcaption>
+</figure>
+<p class="diagram-alt">텍스트 대안: OOS inline stub 은 16바이트 — 앞 8바이트가 head OOS OID(volid 2B + pageid 4B + slotid 2B),
+뒤 8바이트가 full length. OOS chunk record 는 16바이트 헤더(total_data_length 4B, chunk_index 4B,
+next_chunk_oid 8B)와 payload 로 구성되어 next_chunk_oid 로 체인을 이룬다. 헤더에는 이 청크가 누구의
+것인지 나타내는 필드가 없다. 어느 가변 컬럼이 stub 인지는 VOT(Variable Offset Table) 엔트리의
+IS_OOS 비트가, 레코드에 stub 이 하나라도 있는지는 MVCC 헤더의 HAS_OOS 플래그가 표시한다.</p>
+
+<h2 id="ownership">소유권 불변식과 수명</h2>
+<div class="table-wrap">
+<table>
+<caption>상태 객체별 소유자·수명·회수자</caption>
+<thead><tr><th>객체</th><th>사는 곳</th><th>소유자</th><th>수명 종료</th><th>회수자</th></tr></thead>
+<tbody>
+<tr><td>살아있는 heap 레코드(새 버전)</td><td>heap 페이지 슬롯</td><td>테이블</td><td>다음 UPDATE/DELETE 로 대체</td><td>vacuum(heap 경로)</td></tr>
+<tr><td>OOS value chain</td><td>OOS 파일 페이지 슬롯들</td><td><strong>정확히 하나의 heap-record 버전</strong> (M1: 버전 간 공유 없음)</td><td>소유 버전이 죽고, 그것을 볼 스냅샷이 소멸</td><td>vacuum forward-walk / within-sysop / eager</td></tr>
+<tr><td>undo image (옛 버전 원본)</td><td>WAL (불변)</td><td>로그 — 아무도 수정 불가</td><td>로그 아카이브 소멸 시</td><td>— (참조만 소멸)</td></tr>
+<tr><td>옛 stub (undo image 내부)</td><td>WAL</td><td>undo image 의 일부</td><td>동상</td><td>—</td></tr>
+<tr><td>OOS 페이지·슬롯</td><td>OOS 파일</td><td>파일 (페이지는 프로덕션에서 dealloc 안 됨)</td><td>슬롯: 삭제 즉시 재사용 가능</td><td>재사용 (회수 아님)</td></tr>
+</tbody>
+</table>
+</div>
+<p class="invariant">소유권 불변식: <strong>한 OOS value chain 은 정확히 하나의 논리 heap-record 버전이
+소유한다.</strong> UPDATE 는 항상 새 체인을 만들므로(M1) 옛 체인과 새 체인의 head OID 는 서로소다 —
+forward-walk 는 이 서로소성에 <em>암묵적으로</em> 기대고 있다. 미래 dedup 이 이 불변식을 깨는 순간
+새 보호 장치가 필요해진다(ch16).</p>
+
+<h2 id="reference-graph">UPDATE 전후의 참조 그래프 (V-2)</h2>
+<figure>
+<svg viewBox="0 0 760 300" role="img" aria-labelledby="v2-title v2-desc">
+<title id="v2-title">UPDATE 후 세 저장소의 참조 관계</title>
+<desc id="v2-desc">heap 의 새 버전은 새 체인을, 로그 속 undo image 의 옛 stub 만이 옛 체인을 가리킨다.</desc>
+<style>text{font-family:sans-serif;font-size:13px;fill:#18202b}.h{fill:#e8f1fc;stroke:#1558a6}.l{fill:#eef7ee;stroke:#146c43}.o{fill:#fdf2e3;stroke:#7a4d00}line{stroke-width:2;marker-end:url(#m)}</style>
+<defs><marker id="m" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5c6878"/></marker></defs>
+<text x="20" y="24" font-weight="bold">heap 페이지</text>
+<rect class="h" x="20" y="34" width="300" height="52"/><text x="30" y="56">새 버전 레코드 (id=7)</text><text x="30" y="74">새 stub → 새 체인 (1|9|2)</text>
+<text x="20" y="130" font-weight="bold">WAL (불변)</text>
+<rect class="l" x="20" y="140" width="300" height="52"/><text x="30" y="162">UPDATE 로그의 undo image</text><text x="30" y="180">옛 stub → 옛 체인 (1|5|3) ← 유일한 참조</text>
+<text x="420" y="24" font-weight="bold">OOS 파일</text>
+<rect class="o" x="420" y="34" width="300" height="52"/><text x="430" y="56">새 체인: page 9, slot 2</text><text x="430" y="74">'BB…' (5000B)</text>
+<rect class="o" x="420" y="140" width="300" height="52"/><text x="430" y="162">옛 체인: page 5, slot 3</text><text x="430" y="180">'AA…' (5000B) — 아직 살아 있음(MVCC 독자용)</text>
+<line x1="320" y1="60" x2="418" y2="60" stroke="#1558a6"/>
+<line x1="320" y1="166" x2="418" y2="166" stroke="#146c43"/>
+<text x="20" y="240">스냅샷 독자는 새 버전의 prev_version_lsa → undo image → 옛 stub → 옛 체인 순으로 옛 값을 재구성한다.</text>
+<text x="20" y="262">그래서 옛 체인은 즉시 지울 수 없고, "아무도 못 보게 된 뒤" vacuum 이 undo image 를 보고 지운다.</text>
+</svg>
+<figcaption><strong>V-2. 유일한 참조.</strong> 살아있는 어떤 heap 레코드도 옛 체인을 가리키지 않는다 <span class="claim-id">(CUBRID-C001)</span>.</figcaption>
+</figure>
+<p class="diagram-alt">텍스트 대안: UPDATE 후 살아있는 heap 레코드의 stub 은 새 체인을 가리키고,
+옛 체인을 가리키는 유일한 참조는 로그 속 undo image 의 옛 stub 하나뿐이다. 스냅샷 독자는
+prev_version_lsa 를 따라 undo image 에서 옛 버전을 재구성하며, 그때 옛 stub 의 head OOS OID 로
+옛 체인을 읽는다. 이것이 옛 체인을 UPDATE 시점에 지울 수 없는 이유이자, vacuum 이 undo image 를
+읽어 지워야 하는 이유다.</p>
+
+<h2 id="lifetime-mismatch">수명 불일치 — 결함의 시간 구조</h2>
+<p>참조(undo image 속 옛 stub)의 수명과 참조 대상(옛 체인이 살던 슬롯)의 <em>의미</em> 수명이 어긋난다:</p>
+<ol>
+<li>forward-walk 1차 pass 가 옛 체인을 지운다 — 슬롯의 의미는 "빈 칸"이 된다.</li>
+<li>다른 행의 insert 가 슬롯을 재사용한다 — 슬롯의 의미는 "남의 체인"이 된다.</li>
+<li>그러나 undo image 는 불변이라, 블록 재처리는 <strong>1 단계 이전의 세계관</strong>(그 슬롯 = 내 옛 체인)을
+그대로 다시 들고 온다.</li>
+</ol>
+<p>C 프로그래머의 언어로 정확히 <strong>use-after-free + 재할당 = ABA 문제</strong>다.
+free 된 포인터(옛 OID)를 dangling 상태로 보관하다가, 같은 주소가 재할당된 뒤 역참조-후-해제하는 것.
+CS 에서 이 문제의 표준 해법이 <strong>태그드 포인터/세대 카운터</strong>라는 사실이 ch16 의 예고편이다.</p>
+
+<h2 id="stamp-locations">스탬프가 놓일 수 있는 자리들</h2>
+<div class="table-wrap">
+<table>
+<caption>신원 데이터의 후보 위치 <span class="claim-id">(CUBRID-C032)</span></caption>
+<thead><tr><th>자리</th><th>수명</th><th>반복 비용</th><th>비고</th></tr></thead>
+<tbody>
+<tr><td>청크 헤더 (16→20B)</td><td>체인과 동일</td><td>청크당 1회</td><td>현재 점유자의 자기 증언 — 비교의 한쪽</td></tr>
+<tr><td>stub (16→20B)</td><td>레코드 버전과 동일 — undo image 에 그대로 보존됨</td><td>행 × OOS 컬럼마다</td><td>기대값의 운반체 — 비교의 다른 쪽. <strong>undo image 에 남는다는 성질이 R1(가용성)을 해결</strong></td></tr>
+<tr><td>OOS 페이지 헤더 (카운터)</td><td>페이지와 동일</td><td>페이지당 1회</td><td>generation 발급원 후보 — 이미 보유한 W-latch 아래 증가 가능</td></tr>
+<tr><td>heap 레코드 MVCC 헤더</td><td>버전과 동일하나 <strong>vacuum insid 정리가 지움</strong></td><td>—</td><td>6a 가 기댔다 탈락한 자리(ch16)</td></tr>
+<tr><td>별도 사이드 테이블</td><td>독립</td><td>관리 비용</td><td>크래시 일관성·정확히-한-번 소비 문제를 새로 떠안음 — 검토 후 배제(ch16)</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="recap">요약</h2>
+<p class="callout">상태는 세 저장소에 흩어져 있고, 그중 로그만 불변이다. 옛 체인의 유일한 참조가
+불변 저장소에 살기 때문에, 슬롯의 의미가 바뀌어도 참조는 낡은 세계관을 유지한다 — ABA 문제의
+데이터베이스판. 다음 장에서 "누가, 언제, 왜 같은 undo image 를 두 번 읽는가"(블록 상태 기계)를 본다.</p>
+</main>
+<footer>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="03-scope-interface-seams.html">← ch03</a>
+<a href="05-lifecycle-state-machines.html">다음: ch05 →</a>
+</nav>
+</footer>
+</body>
+</html>

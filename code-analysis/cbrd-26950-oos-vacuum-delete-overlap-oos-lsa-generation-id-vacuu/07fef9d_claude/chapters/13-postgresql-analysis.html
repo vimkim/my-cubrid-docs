@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ch13 — PostgreSQL 분석 · CBRD-26950</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="12-experimental-validation.html">← ch12</a>
+<a href="14-mysql-analysis.html">다음: ch14 →</a>
+</nav>
+<h1>ch13 — PostgreSQL: TOAST 는 왜 이 문제를 가질 수 없는가</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<ul>
+<li>TOAST 참조의 논리 신원(chunk_id)과 그 발급 규칙을 설명할 수 있다.</li>
+<li>"삭제는 DML, 회수는 재평가" 분업이 재시도 문제를 제거하는 구조를 설명할 수 있다.</li>
+<li>PG 의 page LSN 게이트·순서 불변식이 CUBRID 상황과 어떻게 다른지 구분할 수 있다.</li>
+</ul>
+<p>기준: PostgreSQL master <code>fd2b89854</code>, 소스 근거만(서버 미실행).</p>
+
+<h2 id="toast-delete">1. 나눠진 책임: 삭제는 UPDATE 트랜잭션이, 회수는 VACUUM 이</h2>
+<p class="evidence-source"><span class="evidence-label">Source-confirmed</span> —
+PG 에서 큰 값은 TOAST 테이블의 행들(chunk)로 저장되고, 본 행에는 <code>varatt_external</code>
+— <code>va_rawsize, va_extinfo, va_valueid(OID), va_toastrelid(OID)</code> — 만 남는다.
+<strong>물리 주소(block, offset)가 아예 없다</strong>(varatt.h:32-39). UPDATE 시
+<code>toast_tuple_init</code> 이 old/new 포인터를 memcmp 로 비교해 <strong>바뀐 경우에만</strong>
+old 값을 삭제 대상으로 표시하고(toast_helper.c:73-98 — 안 바뀌면 새 버전이 같은 값을 <em>공유</em>),
+<code>toast_delete_datum</code> 이 chunk 행들을 <strong>일반 MVCC delete</strong> 로 지운다
+— UPDATE 트랜잭션 자신이, 그 트랜잭션 안에서 <span class="claim-id">(PG-C001)</span>.</p>
+<p>이 시점에 공간은 회수되지 않는다 — chunk 행들은 xmax 가 찍힌 죽은 행으로 남고, 트랜잭션이
+abort 하면 그대로 되살아난다(암묵 롤백). "삭제 결정"은 old/new 를 둘 다 손에 쥔 주체가 단 한 번
+내리고, 로그로 이월되지 않는다.</p>
+
+<h2 id="no-progress">2. 회수 = 재평가: VACUUM 은 진행 기록이 필요 없다</h2>
+<p class="evidence-source"><span class="evidence-label">Source-confirmed</span> —
+TOAST 테이블은 일반 heap 으로서 lazy VACUUM 을 받는다(vacuum_rel 재귀). 페이지별 판정
+<code>HeapTupleSatisfiesVacuum</code> 은 <strong>현재 점유자의 tuple header</strong>(xmin/xmax/infomask)와
+전역 트랜잭션 상태만 입력으로 받는 순수 술어다(heapam_visibility.c:1112-1329). 회수 대상 목록
+(dead_items)은 메모리 전용이고, 중단되면 통째로 버려진다 — 다음 VACUUM 이 페이지를 다시 읽고
+같은 술어를 다시 평가하면 그만이기 때문이다. <strong>재실행은 "작업의 재시도"가 아니라 "술어의
+재평가"라서 구조적으로 멱등하다</strong> <span class="claim-id">(PG-C002)</span>.
+슬롯(line pointer)이 재사용되었다면? — 새 점유자가 자기 header 로 "살아 있음"을 증언하고 판정이
+LIVE 로 나온다. CUBRID heap 과 같은 자기 증언 원리(ch09)다.</p>
+<p>영속되는 것은 둘뿐: 결과와 무관하게 참인 결론(relfrozenxid 등 — "이 트랜잭션이 커밋하든 말든
+새 값이 옳다"고 주석이 명시)과, 틀려도 안전한 방향으로만 틀리는 보수적 힌트(visibility map —
+비트가 꺼져 있으면 다시 검사할 뿐). <strong>PG 가 영속화하는 어떤 것도 "이 지시를 재실행하라"는
+형태가 아니다</strong> — CUBRID 의 블록 엔트리와의 근본 차이.</p>
+
+<h2 id="identity">3. 신원: 재사용될 수 없는 이름, 순서로 보호되는 주소</h2>
+<p class="evidence-source"><span class="evidence-label">Source-confirmed</span> —
+chunk_id(<code>va_valueid</code>)의 발급(<code>GetNewOidWithIndex</code>, catalog.c:475-549)은
+생성-검사 루프인데, 충돌 검사가 <code>SnapshotAny</code> — <strong>살아있는 행뿐 아니라 죽은 행과도
+충돌하면 재시도</strong>한다. 주석이 TOAST 를 명시적으로 지목한다: TOAST 스냅샷은 죽은 행을
+무기한 유효하게 보므로, stale 참조가 해소될 수 있는 동안 그 이름은 재사용되지 않는다.
+<strong>이름의 재사용이 참조의 소멸보다 늦도록 발급기가 강제한다</strong>
+<span class="claim-id">(PG-C003)</span>.</p>
+<p>PG 가 물리 주소를 장기 보관하는 유일한 곳 — 인덱스 엔트리의 heap TID — 는 스탬프가 아니라
+<strong>순서 불변식</strong>으로 보호된다: "어떤 인덱스 엔트리도 LP_UNUSED 라인 포인터를 가리킨 채
+존재할 수 없다"(vacuumlazy.c:1256-1266). 집행은 구조적이다 — 라인 포인터 재활용
+(<code>lazy_vacuum_heap_rel</code>)은 인덱스 청소 한 라운드가 <strong>성공적으로 끝난 뒤에만</strong>
+호출된다(:2454-2461). 중단되면? LP_DEAD 라인 포인터가 재활용되지 않은 채 남을 뿐 — 실패 방향이
+공간 낭비 쪽이다. 이 불변식 덕분에 인덱스에서 도달한 stale-해 보이는 TID 는 경쟁이 아니라
+<strong>손상</strong>으로 분류되어 시끄럽게 실패한다(<code>index_delete_check_htid</code> →
+ERRCODE_INDEX_CORRUPTED).</p>
+
+<h2 id="lsn-gate">4. page LSN 게이트 — 매력적인 거짓 친구</h2>
+<p class="evidence-source"><span class="evidence-label">Source-confirmed</span> —
+PG 의 <code>XLogReadBufferForRedo</code>: <code>lsn &lt;= PageGetLSN(page) → BLK_DONE</code>
+(xlogutils.c:444-447). CUBRID 의 게이트(ch08)와 동일한 계약 — <strong>이미 결정·영속된 변경의
+replay 전용</strong>이며, 복구 후 형성되는 새 연산은 범위 밖이다 <span class="claim-id">(PG-C004)</span>.</p>
+<p class="callout">"OOS LSA" 라는 이름이 이 게이트를 연상시키기 쉬운데, 제안된 용법은 전혀 다르다:
+redo 진행 표시가 아니라 <strong>등가 비교용 신원 스탬프</strong> — 즉 "LSN 이기도 한 세대 카운터"로
+쓰는 것이다. 이 구분을 놓치면 "게이트가 이미 있으니 해결된 문제"라는 오판이 나온다(ch16).</p>
+
+<h2 id="axes">5. 비교 축 요약</h2>
+<div class="table-wrap">
+<table>
+<caption>CUBRID OOS vacuum vs PostgreSQL TOAST+VACUUM <span class="claim-id">(CMP-C001, CMP-C002, CMP-C003)</span></caption>
+<thead><tr><th>축</th><th>CUBRID</th><th>PostgreSQL</th></tr></thead>
+<tbody>
+<tr><td>값 참조의 신원</td><td>물리 (volid,pageid,slotid)</td><td>논리 (toastrelid, valueid) — 물리 성분 0</td></tr>
+<tr><td>삭제 결정 주체·시점</td><td>vacuum, 나중에, 로그에서</td><td>UPDATE 트랜잭션, 즉시, old/new 를 손에 쥐고</td></tr>
+<tr><td>회수의 멱등성 근거</td><td>존재-probe (불충분 — 결함)</td><td>점유자 자기 증언의 재평가</td></tr>
+<tr><td>진행 영속화</td><td>블록 단위 (재실행 지시가 됨)</td><td>없음 (필요 없음)</td></tr>
+<tr><td>실패 방향</td><td>과잉 삭제 (무증상 손실)</td><td>과소 회수 (공간 낭비) / stale TID 는 시끄러운 손상 오류</td></tr>
+<tr><td>버전 간 값 공유</td><td>없음(M1) — dedup 은 미래</td><td>있음 — memcmp 동일 시 공유가 기본</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="gaps">6. 과대 해석 금지 — 의미론적 간극</h2>
+<ul>
+<li>"vacuum 이 out-of-row 체인을 지운다"는 연산의 PG 등가물은 <strong>없다</strong> — 책임이 DML 과
+일반 heap vacuum 으로 분해되며, 그 분해 자체가 위험을 제거한다(no equivalent).</li>
+<li>PG 의 순서 불변식(드레인 후 재활용)은 CUBRID 로 이식되지 않는다 — WAL 레코드는 인덱스 엔트리처럼
+"제거(drain)"할 수 있는 살아있는 구조가 아니다. <strong>PG 가 순서로 푸는 문제를 CUBRID 는 순서로 풀 수
+없고, 그래서 스탬프가 잔여 해답이 된다</strong> — PG 는 스탬프의 필요성을 반증하는 게 아니라,
+스탬프가 필요 없는 설계가 어떤 모습인지 보여준다.</li>
+<li>논리 신원의 대가도 기록해 둔다: 모든 TOAST 읽기가 인덱스 조회를 거친다(직접 주소 접근 대비 비용),
+그리고 OID 발급기는 테이블당 2^32 미만 항목 가정에 기댄다.</li>
+</ul>
+
+<h2 id="recap">요약</h2>
+<p class="callout">PG 는 세 가지 전략(논리 신원 / 순서 불변식 / 재검증 힌트)으로 "이 주소의 점유자가
+아직 내가 의도한 그것인가"라는 질문 자체를 설계에서 제거했다. CUBRID 의 forward-walk 는 그 질문을
+피할 수 없는 구조이므로, 답을 주는 데이터(스탬프)가 필요하다. 다음 장 — 그 스탬프를 이미 구현한
+시스템, InnoDB.</p>
+</main>
+<footer>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="12-experimental-validation.html">← ch12</a>
+<a href="14-mysql-analysis.html">다음: ch14 →</a>
+</nav>
+</footer>
+</body>
+</html>

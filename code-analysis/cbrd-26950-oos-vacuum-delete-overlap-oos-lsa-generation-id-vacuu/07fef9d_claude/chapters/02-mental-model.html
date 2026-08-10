@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ch02 — 멘탈 모델 · CBRD-26950</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="01-orientation.html">← ch01</a>
+<a href="03-scope-interface-seams.html">다음: ch03 →</a>
+</nav>
+<h1>ch02 — 멘탈 모델: UPDATE 한 번의 일생</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<ul>
+<li>slotted page, OID, MVCC, WAL/undo image, vacuum, OOS 를 결함 이해에 필요한 깊이로 정의할 수 있다.</li>
+<li>"UPDATE 한 번이 어디에 무엇을 남기는가"를 그림 없이 말로 재구성할 수 있다.</li>
+<li>사고 시퀀스의 뼈대(1차 회수 → 재사용 → 2차 회수)를 개요 수준에서 말할 수 있다.</li>
+</ul>
+
+<h2 id="scenario">구체적 시나리오 하나</h2>
+<p>테이블 <code>t (id INT PRIMARY KEY, gen INT, payload BIT VARYING)</code> 에
+5,000바이트 payload 를 가진 행이 있다. 누군가 <code>UPDATE t SET payload = ... WHERE id = 7</code> 을 실행하고
+커밋한다. 몇 초 뒤 서버가 정상 종료되고 재기동한다. <strong>이 평범한 시퀀스가 다른 행의 데이터를
+지울 수 있다</strong> — 왜 그런지가 이 책 전체의 질문이고, 이 장은 그 질문을 이해할 부품을 쌓는다.</p>
+
+<h2 id="storage">1. 저장 구조: 페이지, 슬롯, 그리고 주소로서의 OID</h2>
+<p><strong>page</strong> 는 디스크 I/O 의 단위다(이 환경에서 16KB). 테이블의 행들은
+<strong>slotted page</strong> 에 담긴다: 페이지 앞쪽에 <strong>슬롯 배열</strong>(slot directory)이 있고,
+각 슬롯이 페이지 안 어딘가의 레코드 위치를 가리킨다. 레코드가 페이지 안에서 이동해도
+슬롯 번호는 불변이므로, 바깥 세계는 레코드를 <code>(볼륨 id, 페이지 id, 슬롯 id)</code> 세 쌍으로 부른다.
+이 세 쌍이 <strong>OID</strong> 다.</p>
+<p class="invariant"><strong>뿌리 사실 ①</strong> — OID 는 이름이 아니라 <strong>물리 좌표</strong>다.
+집 주소이지 주민번호가 아니다. 살던 사람이 이사 가고 새 사람이 들어와도 주소는 그대로다.
+슬롯이 비워졌다 재할당되면, <em>같은 OID 가 완전히 다른 데이터를 가리킨다</em>.
+이 하나의 사실에서 결함의 절반이 따라 나온다.</p>
+
+<h2 id="wal">2. 로그: WAL 과 undo image</h2>
+<p><strong>WAL</strong>(Write-Ahead Logging)은 "페이지를 고치기 전에 로그부터 append 한다"는 규칙이다.
+로그 레코드 하나는 보통 <strong>redo</strong>(다시 적용할 방법)와 <strong>undo</strong>(되돌릴 방법)를
+한 봉투에 담는다. UPDATE 의 undo 는 <strong>옛 레코드 원본 바이트 통째</strong> — 이것을
+<strong>undo image</strong> 라 부른다. 로그 안의 위치는 <strong>LSA</strong>(Log Sequence Address,
+로그 페이지 id + 오프셋)로 가리키며, LSA 는 곧 시간 순서이기도 하다.</p>
+<p class="invariant"><strong>뿌리 사실 ②</strong> — 로그는 append-only <strong>불변</strong>이다.
+한 번 쓰인 undo image 는 아무도 고치지 않는다. 그래서 로그 안의 물리 오프셋(LSA)을 영구 주소로 써도
+안전하다 — 그리고 같은 이유로, undo image 속에 박힌 <em>남의 주소</em>(OID)는 세월이 지나
+낡아도 갱신되지 않는다.</p>
+<p>페이지에는 <strong>page LSA</strong> 라는 도장이 있다: "이 페이지에 마지막으로 반영된 로그의 LSA".
+crash recovery 의 redo 가 같은 로그를 같은 페이지에 두 번 적용하지 않게 하는 장치다.
+이 도장이 무엇을 <em>못</em> 막는지는 ch08 의 핵심이다.</p>
+<p><strong>sysop</strong>(system operation)은 트랜잭션 내부의 원자적 미니 단위다.
+sysop 이 커밋되면 상위 트랜잭션이 나중에 롤백해도 그 부분은 확정된다.
+"한 번 호출의 원자성"과 "정확히 한 번 실행"은 다른 약속이다 — ch08 에서 대면한다.</p>
+
+<h2 id="mvcc">3. MVCC: 덮어쓰지 않는 UPDATE</h2>
+<p>읽는 트랜잭션을 막지 않으려고, CUBRID 는 UPDATE 시 값을 제자리에서 덮어쓰지 않고
+<strong>버전</strong>을 만든다(MVCC, Multi-Version Concurrency Control). 레코드 머리의
+<strong>MVCC 헤더</strong>에 insert MVCCID(만든 트랜잭션), delete MVCCID(대체/삭제한 트랜잭션),
+prev_version_lsa(이전 버전이 있는 로그 위치)가 실린다.</p>
+<p><strong>MVCCID</strong> 는 트랜잭션의 <strong>첫 write 시점</strong>에 발급되는 단조증가 번호다
+— 커밋 시점이 아니라는 것이 뒤에서(ch16) 결정적으로 중요해진다
+<span class="claim-id">(CUBRID-C031)</span>. 각 스냅샷은 "어느 MVCCID 까지 보이는가"를 판정하고,
+시스템 전체에서 살아있는 스냅샷들의 하한선을 <strong>oldest visible MVCCID</strong> 라 한다.</p>
+<p class="invariant"><strong>뿌리 사실 ③ (CUBRID 특유)</strong> — CUBRID 는 in-place MVCC 다:
+새 버전이 heap 슬롯을 차지하고, <strong>옛 버전의 유일한 실체는 로그의 undo image</strong> 다.
+PostgreSQL 처럼 옛 버전이 heap 에 남지도, Oracle 처럼 별도 rollback segment 가 있지도 않다.
+"옛 버전을 참조하려면 로그를 읽는다" — 이 설계가 vacuum 의 모양을 결정한다.</p>
+
+<h2 id="vacuum">4. vacuum: 로그를 작업 큐로 쓰는 청소부</h2>
+<p>MVCC 의 청구서는 <strong>지연 회수</strong>다: 아무 스냅샷도 더는 볼 수 없게 된 옛 버전들을
+누군가 나중에 청소해야 한다. CUBRID 의 <strong>vacuum</strong> 은 테이블을 스캔하지 않는다 —
+<strong>로그 자체를 작업 큐로 쓴다</strong>. 로그를 일정 크기(<strong>vacuum block</strong>)로 잘라,
+블록 요약 {blockid, start_lsa, oldest/newest MVCCID} 을 영속 큐(vacuum data)에 등록하고,
+블록 안의 모든 트랜잭션이 닫힌 뒤(<code>newest &lt; oldest visible</code>) worker 에게 배포한다.
+worker 는 블록의 로그 레코드들을 걸으며 죽은 버전을 청소한다.</p>
+
+<h2 id="oos">5. OOS: 큰 값을 밖으로</h2>
+<p>4바이트 <code>id</code> 하나를 읽으려고 9KB 레코드를 읽는 낭비를 없애려고, CUBRID 는 큰 가변 컬럼 값을
+별도의 <strong>OOS 파일</strong>(heap 파일당 최대 1개)로 빼낸다. heap 레코드에는 16바이트
+<strong>OOS inline stub</strong> 만 남는다: <strong>head OOS OID</strong>(8B — 값이 시작하는
+OOS chunk record 의 물리 OID) + full length(8B). 값이 한 페이지에 안 들어가면 청크들이
+<code>next_chunk_oid</code> 로 이어진 <strong>OOS value chain</strong> 이 된다.</p>
+<p>OOS chunk record 의 헤더는 딱 세 필드다 —
+<code>total_data_length / chunk_index / next_chunk_oid</code>.</p>
+<p class="invariant evidence-source"><span class="evidence-label">Source-confirmed</span> —
+<strong>뿌리 사실 ④</strong>: 청크 헤더에는 <strong>신원 필드가 없다</strong>. 누구의 것인지(owner),
+몇 번째 세입자인지(generation), 언제 태어났는지(MVCCID/LSA) — 아무것도 없다
+<span class="claim-id">(CUBRID-C002)</span>. 구조체 네 줄을 읽으면 스스로 확인할 수 있다
+(<code>oos_file.hpp:26-31</code>).</p>
+<p>소유 규칙: 한 OOS value chain 은 정확히 하나의 논리 heap-record 버전이 소유하며,
+버전 간에 공유되지 않는다(현행 M1 — UPDATE 는 항상 새 체인을 만든다). 그래서:</p>
+<p class="callout"><strong>UPDATE 후 옛 체인을 가리키는 유일한 참조는, 로그 속 undo image 안의 옛 stub 하나뿐이다.</strong>
+살아있는 어떤 heap 레코드도 옛 체인을 가리키지 않는다. 그럼 옛 체인은 누가 지우나? —
+vacuum 이 undo image 를 읽어서 지운다. 이것이 <strong>forward-walk</strong> 다(ch06).</p>
+
+<h2 id="one-update">6. 한 UPDATE 의 일생 (V-1)</h2>
+<figure>
+<svg viewBox="0 0 760 400" role="img" aria-labelledby="v1-title v1-desc">
+<title id="v1-title">한 UPDATE 의 일생 — 6단계 수직 흐름</title>
+<desc id="v1-desc">UPDATE 실행부터 vacuum 완주까지 6단계가 화살표로 이어진다.</desc>
+<style>text{font-family:sans-serif;font-size:13px;fill:#18202b}rect{fill:#e8f1fc;stroke:#1558a6;rx:8}line{stroke:#5c6878;stroke-width:2;marker-end:url(#a)}</style>
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5c6878"/></marker></defs>
+<rect x="20" y="10" width="720" height="46"/><text x="32" y="30">① UPDATE 실행: 새 OOS 체인 insert → 새 stub 을 담은 새 버전이 heap 슬롯 점유</text><text x="32" y="48">   옛 레코드(옛 stub 포함)는 UPDATE 로그의 undo image 로 로그에 봉인</text>
+<line x1="380" y1="56" x2="380" y2="72"/>
+<rect x="20" y="74" width="720" height="30"/><text x="32" y="94">② COMMIT: 로그 flush — 이 시점부터 옛 체인의 유일한 참조는 undo image 속 옛 stub</text>
+<line x1="380" y1="104" x2="380" y2="120"/>
+<rect x="20" y="122" width="720" height="46"/><text x="32" y="142">③ 블록 발행: 이후의 로그가 블록 경계를 넘는 순간, 이 UPDATE 가 속한 vacuum block 요약이</text><text x="32" y="160">   영속 큐(vacuum data)에 AVAILABLE 로 등록</text>
+<line x1="380" y1="168" x2="380" y2="184"/>
+<rect x="20" y="186" width="720" height="30"/><text x="32" y="206">④ 게이팅: 블록의 newest MVCCID &lt; oldest visible 이 되면 worker 에 배포 (IN_PROGRESS)</text>
+<line x1="380" y1="216" x2="380" y2="232"/>
+<rect x="20" y="234" width="720" height="46"/><text x="32" y="254">⑤ worker 처리: 로그를 역방향으로 걸으며 — UPDATE 레코드를 만나면 forward-walk 가</text><text x="32" y="272">   undo image 의 옛 head OOS OID 를 꺼내 옛 체인 삭제(레코드당 sysop 커밋)</text>
+<line x1="380" y1="280" x2="380" y2="296"/>
+<rect x="20" y="298" width="720" height="46"/><text x="32" y="318">⑥ 완주 보고: worker 가 finished-job 큐에 넣고, master 가 비동기로 VACUUMED 도장을 영속화</text><text x="32" y="336">   — 완주 못 하면(셧다운 등) 블록은 처음부터 재실행된다</text>
+</svg>
+<figcaption><strong>V-1. 한 UPDATE 의 일생.</strong> 이 책의 모든 챕터는 이 그림의 한 상자를 확대한 것이다.</figcaption>
+</figure>
+<p class="diagram-alt">텍스트 대안: UPDATE 는 heap 페이지의 새 버전과 WAL 의 UPDATE 로그(undo = 옛 레코드 통째)를
+동시에 남긴다. 뒤이은 로그가 블록 경계를 넘으면 블록 요약이 발행되어 vacuum data 에 AVAILABLE 로 등록되고,
+그 블록의 옛 버전을 볼 수 있는 트랜잭션이 모두 끝나면 worker 가 받아 로그를 걸으며 옛 OOS 체인을
+즉시 삭제한다. 완주해야 VACUUMED 도장이 찍히고, 못 하면 블록 전체가 재실행된다
+<span class="claim-id">(CUBRID-C001, C010, C042)</span>.</p>
+
+<h2 id="analogy">7. 옷보관소 비유 — 그리고 이 비유가 깨지는 곳</h2>
+<p class="analogy">옷보관소 직원(vacuum)이 "5번 고리의 코트를 치워라"는 오래된 표(undo image 속 옛 stub)를
+들고 온다. 직원은 <em>"5번 고리에 코트가 걸려 있나?"</em> 만 확인하고(점유-probe) 치운다.
+그 사이 5번 고리는 비었다가 <strong>다른 손님</strong>이 자기 코트를 걸었다(슬롯 재사용).
+직원은 남의 코트를 치운다. 직원은 규정을 어기지 않았다 — <strong>결함은 부주의가 아니라 계약의 공백</strong>이다.</p>
+<p>비유의 정확한 한계 세 가지를 지금 박아 둔다:</p>
+<ul>
+<li><strong>표는 고칠 수 없다</strong> — 표는 관공서 대장(WAL)에 잉크로 인쇄되어 나오며 직원에게 수정 권한이 없다.
+"표에 완료 체크를 하면 되잖아"는 이 시스템에서 불가능하다(뿌리 사실 ②).</li>
+<li><strong>옷에는 이름표를 달 칸 자체가 없다</strong> — 청크 헤더 네 줄에 신원 필드가 없다(뿌리 사실 ④).
+직원이 아무리 자세히 봐도 대조할 것이 없다.</li>
+<li><strong>표에는 옷 사진이 없다</strong> — 표(stub)에는 위치(head OOS OID)와 크기(full length)만 적혀 있다.
+undo image 는 값을 풀어서 저장하지 않는다.</li>
+</ul>
+<p>"직원이 왜 이틀 연속 오는가"(블록 재처리)는 이 비유가 담지 못한다 — ch05 에서 별도 비유(재고 실사)로 다룬다.</p>
+
+<h2 id="preempt">8. 미리 차단하는 오개념 4가지</h2>
+<ul>
+<li><strong>"page LSA 가 모든 이중 효과를 막는다"</strong> — page LSA 는 crash recovery 의 redo replay 중복만 막는다. ch08 에서 대면.</li>
+<li><strong>"undo 에는 값이 풀린 채 저장된다"</strong> — undo image 는 옛 레코드 원본(stub 포함) 그대로다. 값을 풀면 undo 로그가 OOS 의 존재 이유를 스스로 무너뜨린다.</li>
+<li><strong>"vacuum 은 레코드 단위로 진행을 기록한다"</strong> — 블록 단위뿐이다. ch05.</li>
+<li><strong>"MVCCID 순서 = 커밋 순서"</strong> — 발급은 첫 write 시점이다. 장기 트랜잭션이 끼면 순서가 어긋난다. ch16 의 반례가 여기서 나온다.</li>
+</ul>
+
+<h2 id="recap">요약</h2>
+<p class="callout">네 개의 뿌리 사실 — ① OID 는 물리 좌표다, ② 로그는 불변이다,
+③ 옛 버전은 로그 안에만 산다, ④ OOS 청크에는 신원이 없다 — 위에
+"vacuum 은 로그를 작업 큐로 쓴다"를 얹으면, 남은 것은 시간 문제다:
+<em>불변의 낡은 주소를 들고 오는 재방문자</em>와 <em>그 주소에 새로 든 세입자</em>가 만나는 순간.
+다음 장에서 그 재방문자가 지나는 문(Interface)들을 정확히 살펴본다.</p>
+</main>
+<footer>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="01-orientation.html">← ch01</a>
+<a href="03-scope-interface-seams.html">다음: ch03 →</a>
+</nav>
+</footer>
+</body>
+</html>

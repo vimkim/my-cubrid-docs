@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ch03 — Interface 와 Seam · CBRD-26950</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="02-mental-model.html">← ch02</a>
+<a href="04-data-ownership-lifetime.html">다음: ch04 →</a>
+</nav>
+<h1>ch03 — Interface 와 Seam: 세 삭제 경로와 probe 의 계약</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<ul>
+<li>OOS 체인을 지우는 세 경로(forward-walk / within-sysop / eager)의 호출자 의무를 구분할 수 있다.</li>
+<li><code>oos_chunk_exists</code> 가 약속하는 것과 약속하지 않는 것을 시그니처 수준에서 말할 수 있다.</li>
+<li>신원 확인이 들어가야 할 Seam(이음새)의 위치를 지목할 수 있다.</li>
+</ul>
+
+<h2 id="module">Module 경계</h2>
+<p>이 책의 Module 은 "vacuum 의 OOS value-chain 지연 회수 서브시스템"이다. 구현 파일은
+<code>src/query/vacuum_oos.cpp</code>(vacuum 쪽 어댑터), <code>src/storage/oos_file.cpp/.hpp</code>(스토리지 연산),
+<code>src/storage/heap_oos.cpp</code>(heap-속성 계층)이고, 이 Module 이 의존하는 외부 Seam 이 둘 있다:
+vacuum 블록 상태 기계(<code>vacuum.c</code> — 진행 단위를 결정)와 슬롯 재사용 정책
+(<code>slotted_page.c</code> + OOS bestspace — 재사용 속도를 결정).</p>
+
+<h2 id="three-paths">세 삭제 경로의 Interface</h2>
+<div class="table-wrap">
+<table>
+<caption>OOS 체인 삭제 경로 비교 <span class="claim-id">(CUBRID-C001, C040)</span></caption>
+<thead><tr><th>경로</th><th>진입 함수</th><th>구동자</th><th>sysop 소유</th><th>대상 식별</th><th>재시도 존재?</th></tr></thead>
+<tbody>
+<tr><td><strong>forward-walk</strong> (본 결함의 무대)</td>
+<td><code>vacuum_forward_walk_reclaim_oos</code> → <code>vacuum_forward_walk_oos_delete_atomic</code> (vacuum_oos.cpp:222-319, 153-203)</td>
+<td>vacuum worker 가 NOTIFY 로그 2종(<code>RVHF_UPDATE_NOTIFY_VACUUM</code> :3589, <code>RVHF_DELETE_NEWHOME_NOTIFY_VACUUM</code> :3724)을 만날 때</td>
+<td><strong>자체 sysop</strong> — undo 레코드당 1개, 즉시 커밋</td>
+<td>undo image 에서 추출한 <strong>물리 OOS OID</strong></td>
+<td><strong>있음</strong> — 블록 재처리 시 같은 OID 재제시</td></tr>
+<tr><td>within-sysop (REMOVE 동반)</td>
+<td><code>vacuum_heap_oos_delete_within_sysop</code> (vacuum_oos.cpp:399-426)</td>
+<td>vacuum_heap 이 죽은 heap 레코드를 물리 제거할 때</td>
+<td>호출자의 sysop 안 (자체 sysop 금지)</td>
+<td>제거 중인 <strong>heap 레코드 자신</strong>의 stub</td>
+<td>heap 슬롯의 MVCC 헤더 재유도로 자연 멱등</td></tr>
+<tr><td>eager (비-MVCC)</td>
+<td><code>heap_oos_delete_unreferenced</code> (heap_oos.cpp:701-776)</td>
+<td><code>!is_mvcc_op</code> 인 heap 연산 4곳(카탈로그 클래스, SA_MODE)</td>
+<td>heap 연산의 sysop 안, 동기 실행</td>
+<td>지우는 연산이 <strong>지금 들고 있는</strong> old recdes 의 stub (+ old∩new 비교 :754-760)</td>
+<td>없음 — 로그 유도 재실행이 없음</td></tr>
+</tbody>
+</table>
+</div>
+<p>forward-walk 만이 "죽은 지 오래된 버전의, 페이지에서 이미 사라진 참조"를 다룬다.
+나머지 두 경로는 삭제 순간에 대상의 신원이 다른 수단으로 보장된다 — within-sysop 은 점유자
+자신에게서 판정을 재유도하고, eager 는 동기 실행이라 재사용이 끼어들 창 자체가 없다
+<span class="claim-id">(CUBRID-C040, C041)</span>.</p>
+
+<h2 id="probe-contract">probe 의 계약 — 정직하지만 불충분한</h2>
+<p>forward-walk 의 삭제 직전 유일한 관문은 이것이다:</p>
+<pre><code>/* oos_file.hpp:112-114 */
+/* Idempotency probe: *out_exists is true iff the chunk's slot is still present. ... */
+extern int oos_chunk_exists (THREAD_ENTRY *thread_p, const OID &amp;oid, bool *out_exists);</code></pre>
+<p class="evidence-source"><span class="evidence-label">Source-confirmed</span> —
+시그니처를 읽자. 입력은 <strong>OID 하나</strong>다. 기대 신원을 받을 자리 자체가 없다.
+구현은 <code>spage_get_record(..., PEEK)</code> 가 <code>S_SUCCESS</code> 면 가져온 레코드를
+<strong>한 바이트도 읽지 않고</strong> <code>*out_exists = true</code> 를 반환한다
+(oos_file.cpp:2235-2275, 판정 :2262-2266). 헤더 주석도 정직하다 — "the chunk's <em>slot</em> is
+still present"(슬롯의 존재이지 청크의 신원이 아니다) <span class="claim-id">(CUBRID-C002)</span>.</p>
+<p>호출부(vacuum_oos.cpp:174-191)의 in-source 주석은 설계 의도를 그대로 보여준다:
+블록 재시도가 이미 지운 OID 를 다시 제시할 수 있으니 "없으면 건너뛰라"는 것.
+저자는 재시도를 정확히 인지했고, <strong>존재 여부</strong>를 멱등성 장치로 택했다 —
+그 선택은 슬롯이 재점유될 수 없을 때만 건전하다. 계약의 공백은 여기다.</p>
+<p class="callout"><strong>두 번째 삭제 직전, 엔진이 아는 것</strong>: (volid, pageid, slotid) 에
+레코드가 있다. <strong>알 수 없는 것</strong>: 그 레코드가 여전히 undo image 가 소유하던 그 청크인가.
+비교할 데이터가 청크에도(헤더 3필드), stub 에도(OID+길이), 시그니처에도 없다.</p>
+
+<h2 id="callers">호출자 의무 (precondition) 정리</h2>
+<ul>
+<li><code>vacuum_forward_walk_reclaim_oos(thread_p, undo_data, undo_data_size, vfid, memo)</code> —
+호출자는 NOTIFY 계열 undo image 만 넘겨야 하며(레코드 타입 가드 :245 가 REC_BIGONE/RELOCATION 의
+8바이트 OID 이미지를 걸러냄), 실패를 기대하면 안 된다(오류는 내부에서 소비되고 유계 누수로 남는다,
+<span class="claim-id">CUBRID-C044</span>).</li>
+<li><code>oos_delete(thread_p, vfid, oid)</code> — 문서화된(그러나 forward-walk 에서는 공허한)
+전제: "호출자가 행 수준 잠금을 보유"(oos_file.cpp:2137-2138 TODO). 죽은 행에는 잠글 실체가 없다.</li>
+<li><code>oos_insert</code> 계열 — 페이지 W-latch 아래에서 헤더 직렬화(:1503) → 슬롯 확정(:1516) →
+전체 이미지 물리 로깅(:1530). 스탬프 설계가 개입할 지점이다(ch16).</li>
+</ul>
+
+<h2 id="seam">신원 확인이 들어갈 Seam</h2>
+<p>바뀌어야 할 최소 계약은 한 곳이다: <strong>삭제 직전 확인</strong>. 단, 구현 위치는 probe 가 아니라
+<code>oos_delete_chain</code> 의 W-latch 구간이어야 한다 — probe 는 판정 전에 페이지를 unfix 하므로
+(:2260) 내용 검사를 넣어도 확인-후-삭제 사이(TOCTOU)의 경쟁이 남는다
+<span class="claim-id">(CUBRID-C002 한계)</span>. Seam 의 형태:
+<code>oos_delete(thread_p, vfid, oid, expected_identity)</code> — 기대 신원은 undo image 의
+확장된 stub 이 나른다(ch16 blueprint).</p>
+
+<h2 id="neighbors">이웃 책임 (범위 밖, 경계만)</h2>
+<ul>
+<li><strong>OOS demotion</strong>(어떤 값이 OOS 로 가는가): 쓰기 시점 정책. 이 책은 "5,000B 값은 간다"만 쓴다.</li>
+<li><strong>bestspace</strong>: 빈 공간 힌트 캐시. 이 책에는 "삭제 즉시 재등록되어 재사용을 촉진한다"는 역할로만 등장한다.</li>
+<li><strong>빈 OOS 페이지 회수</strong>: 미구현(<code>oos_remove_page</code> 프로덕션 호출자 0 — CBRD-26786).
+따라서 probe 의 "페이지 소멸" 분기는 사실상 도달 불가다 <span class="claim-id">(CUBRID-C020 한계)</span>.</li>
+</ul>
+
+<h2 id="recap">요약</h2>
+<p class="callout">세 삭제 경로 중 forward-walk 만이 "신원을 확인할 수단이 없는 대상"을 다루고,
+그 유일한 관문(probe)은 시그니처부터 신원을 받을 수 없게 생겼다. 계약의 공백은 코드 실수가 아니라
+설계 가정("빈 슬롯은 그대로 비어 있다")의 공백이다. 다음 장에서 그 가정이 왜 성립하지 않는지 —
+데이터의 소유권과 수명을 따라가며 본다.</p>
+</main>
+<footer>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="02-mental-model.html">← ch02</a>
+<a href="04-data-ownership-lifetime.html">다음: ch04 →</a>
+</nav>
+</footer>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ch18 — Teaching Map · CBRD-26950</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="17-glossary-evidence-unknowns.html">← ch17</a>
+</nav>
+<h1>ch18 — Teaching Map: 챕터·퀴즈·grill 의 연결</h1>
+</header>
+<main>
+<h2 id="goals">이 장의 용도</h2>
+<p>학습자가 지금 어디에 있고 무엇으로 확인할지 찾는 지도다. 정적 퀴즈는 <code>quiz/quiz-N/</code>
+디렉터리(한국어 문제·답·실행 스크립트)에 있고, live grill 은 아래 8개 마스터리 영역을 하나씩
+질문한다.</p>
+
+<h2 id="behavior-map">중심 행동 ↔ 챕터 ↔ 퀴즈</h2>
+<div class="table-wrap">
+<table>
+<caption>중심 행동별 학습 자원</caption>
+<thead><tr><th>중심 행동</th><th>핵심 챕터·앵커</th><th>주 claim</th><th>퀴즈</th></tr></thead>
+<tbody>
+<tr><td>oos-forward-walk-reclaim (정상 회수)</td>
+<td><a href="06-core-workflows.html#forward-walk-reclaim">ch06</a>, <a href="04-data-ownership-lifetime.html">ch04</a>, <a href="03-scope-interface-seams.html#probe-contract">ch03</a></td>
+<td><span class="claim-id">C001–C003</span></td><td>quiz-1 (실행형)</td></tr>
+<tr><td>vacuum-block-retry (블록 재처리)</td>
+<td><a href="05-lifecycle-state-machines.html#block-retry">ch05</a>, <a href="08-storage-durability-recovery.html">ch08</a></td>
+<td><span class="claim-id">C010–C012</span></td><td>quiz-2 (추론+로그 검사)</td></tr>
+<tr><td>oos-slot-reuse-double-delete (결함)</td>
+<td><a href="06-core-workflows.html#double-delete-sequence">ch06</a>, <a href="07-concurrency.html">ch07</a>, <a href="12-experimental-validation.html#experiment-2">ch12</a></td>
+<td><span class="claim-id">C020–C023</span></td><td>quiz-3 (증거 해석)</td></tr>
+<tr><td>identity-stamp-and-dedup-design (설계)</td>
+<td><a href="16-reimplementation-blueprint.html#identity-stamp-design">ch16</a>, <a href="15-cross-database-comparison.html">ch15</a></td>
+<td><span class="claim-id">C030–C036</span></td><td>quiz-4 (판정 매트릭스), quiz-5 (설계 과제)</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="quiz-map">퀴즈 개요</h2>
+<div class="table-wrap">
+<table>
+<caption>quiz-1 ~ quiz-5</caption>
+<thead><tr><th>퀴즈</th><th>유형</th><th>배우는 것</th><th>필요 환경</th></tr></thead>
+<tbody>
+<tr><td>quiz-1</td><td>예측→실행→관찰 (~7분)</td><td>옛 체인 참조의 거처와 소비자; oos.log 의 insert/delete 비대칭(함정)</td><td>debug CUBRID</td></tr>
+<tr><td>quiz-2</td><td>추론 + 로그 검사 (~10분)</td><td>블록 상태 기계; "경고 부재 ≠ 안전"; 블록-sysop 대안이 안 되는 이유</td><td>experiment 산출물 재사용(읽기 전용)</td></tr>
+<tr><td>quiz-3</td><td>증거 해석 (~10분)</td><td>채널 A/B 의 강도 차이; 대조군의 구조적 무손상; probe 가 아는 것/모르는 것</td><td>experiment-2 산출물(읽기 전용)</td></tr>
+<tr><td>quiz-4</td><td>서면 판정 (~25분)</td><td>R1–R5 × 후보 매트릭스를 스스로 채우기; PG/InnoDB 대응</td><td>없음 (지필)</td></tr>
+<tr><td>quiz-5</td><td>설계 과제 (~35분)</td><td>OOS update log 명세 — 원자성·게이팅·replication·그리고 "신원은 남는다"에 도달하기</td><td>없음 (지필)</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="grill-map">Live grill 마스터리 영역 ↔ 자원</h2>
+<div class="table-wrap">
+<table>
+<caption>8개 마스터리 영역</caption>
+<thead><tr><th>영역</th><th>핵심 질문 예</th><th>재학습 자원</th></tr></thead>
+<tbody>
+<tr><td>1. 책임·범위·Interface·Seam</td><td>세 삭제 경로의 계약 차이는?</td><td>ch03, quiz-1</td></tr>
+<tr><td>2. 데이터 소유·수명</td><td>옛 체인의 유일한 참조는 어디에?</td><td>ch04, quiz-1</td></tr>
+<tr><td>3. 생명주기·상태 전이</td><td>경고 없이 재주행되는 경로는?</td><td>ch05, quiz-2</td></tr>
+<tr><td>4. 동시성 불변식</td><td>경쟁 창은 언제 열리고 닫히는가?</td><td>ch07, quiz-3</td></tr>
+<tr><td>5. 내구성·복구·실패</td><td>page LSA 는 왜 못 막는가?</td><td>ch08, quiz-2</td></tr>
+<tr><td>6. 정책·성능 트레이드오프</td><td>재사용을 늦추는 대신 스탬프를 택한 이유는?</td><td>ch09, ch11, quiz-4</td></tr>
+<tr><td>7. 실험 해석·한계</td><td>채널 B 가 피해 규모가 아닌 이유는?</td><td>ch12, quiz-3</td></tr>
+<tr><td>8. PG/MySQL 유사·비유사</td><td>InnoDB 스탬프와 generation 의 차이 3가지는?</td><td>ch13–ch15, quiz-4</td></tr>
+</tbody>
+</table>
+</div>
+<p class="callout">마스터리 완료 조건: 8개 영역 전부 + 종합 teach-back ("UPDATE 한 번의 일생을,
+결함과 수리 설계를 포함해 처음부터 끝까지"). grill 기록은 <code>grill/</code> 아래에 영속된다.</p>
+</main>
+<footer>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="17-glossary-evidence-unknowns.html">← ch17</a>
+</nav>
+</footer>
+</body>
+</html>

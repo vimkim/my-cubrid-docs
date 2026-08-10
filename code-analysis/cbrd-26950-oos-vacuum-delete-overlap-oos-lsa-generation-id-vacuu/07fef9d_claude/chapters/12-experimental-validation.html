@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ch12 — 실험 검증 · CBRD-26950</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="11-performance-observability.html">← ch11</a>
+<a href="13-postgresql-analysis.html">다음: ch13 →</a>
+</nav>
+<h1>ch12 — 실험 검증: 정상 경로의 무해성과 결함의 재현</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<ul>
+<li>두 실험의 가설·관찰·해석·대안 설명을 재구성할 수 있다.</li>
+<li>결정적 증거(채널 A)와 보강 증거(채널 B)의 강도 차이를 설명할 수 있다.</li>
+<li>재현 레시피의 각 레버가 어느 성립 조건을 만드는지 대응시킬 수 있다.</li>
+</ul>
+<p>공통 조건: HEAD <code>07fef9d48</code>, debug_gcc, <strong>소스 무변경·fault injection 없음</strong>.
+전 실행이 <code>evidence/runs/&lt;id&gt;/</code> 에 argv·exit·stdout/stderr 로 캡처되어 있다.
+필수 관측 실행은 캡처된 <code>csql</code> 바이너리가 해시된 SQL 러너를 직접 실행한다.</p>
+
+<h2 id="experiment-1">experiment-1 — 정상 forward-walk (negative control)</h2>
+<p class="experiment"><strong>질문</strong>: 중단 없는 회수는 무해한가? <strong>가설</strong>: 옛 체인만
+회수되고 살아있는 값은 무손상. <strong>절차</strong>: 전용 DB(oos26950exp1)에 5,000B 행 2,000개
+INSERT(전부 OOS) → 단일 트랜잭션 전체 UPDATE → 대형 필러로 로그를 밀어 블록 발행(ch05 §발행)
+→ oos.log 삭제 카운트 2,000 도달 대기 → csql 관측.</p>
+<ul>
+<li><strong>관찰</strong> (2회 반복 동일): 삭제 2,000건 기록, 문장 1 = 2000 (전 행 존재),
+문장 2 = 0 (payload mismatch 없음), ERROR 문자열 없음.</li>
+<li><strong>해석</strong>: 회수는 일어났고(negative result 아님) 손상은 없다 —
+조건 ②(재사용)·③(재처리) 부재 시 forward-walk 는 건전하다 <span class="claim-id">(CUBRID-C003)</span>.</li>
+<li><strong>대안 설명 배제</strong>: "vacuum 미실행" — 삭제 2,000건이 반박. "비교식이 형식적" —
+payload 는 행마다 고유(id 각인)라 남의 값 반환도 잡힌다. "필러 오염" — 필러는 gen=0, 관측은 gen=1 만.</li>
+<li><strong>기록</strong>: setup 실패 2회 보존 — PL 서버 일시 기동 실패(→ <code>stored_procedure=no</code>),
+필러 과소로 블록 미발행(→ 5,000B 배치 필러). 둘 다 가설과 무관한 setup 결함.</li>
+</ul>
+
+<h2 id="experiment-2">experiment-2 — 결함 재현 (PoC)</h2>
+<p class="experiment"><strong>질문</strong>: 세 조건이 겹치면 살아있는 커밋 데이터가 지워지는가?
+<strong>가설</strong>: 커밋 후 무수정 행의 payload 가 판독 불가가 된다. <strong>레시피와 조건의 대응</strong> (V-15):</p>
+<div class="table-wrap">
+<table>
+<caption>V-15. PoC 단계 ↔ 성립 조건 <span class="claim-id">(CUBRID-C023)</span></caption>
+<thead><tr><th>단계</th><th>내용</th><th>성립시키는 조건</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>R1 20,000행 INSERT (5,000B, 전부 OOS)</td><td>회수 대상의 재료</td></tr>
+<tr><td>2</td><td><strong>단일 트랜잭션</strong> 전체 UPDATE — 커밋 순간 옛 체인 20,000개가 일시에 회수 대상化</td><td>백로그 (vacuum 이 커밋 전엔 못 건드림)</td></tr>
+<tr><td>3</td><td>동시에 6개 세션이 같은 크기 R3 INSERT — 비워지는 슬롯을 실시간 재사용</td><td><strong>② 슬롯 재사용</strong> (재사용 창이 가장 넓은 곳은 삭제와 같은 서버 세션 안)</td></tr>
+<tr><td>4</td><td>회수 30% 시점 정상 <code>cubrid server stop</code></td><td><strong>③ 블록 재처리</strong> (도장 미영속 블록들)</td></tr>
+<tr><td>5</td><td>재기동 — vacuum 이 같은 블록들을 start_lsa 부터 재주행</td><td><strong>① 신원 없는 probe</strong> 가 재사용 슬롯을 통과시킴</td></tr>
+</tbody>
+</table>
+</div>
+<ul>
+<li><strong>관찰 (setup, 캡처 exit 0 = 재현)</strong>: 커밋된 gen-3 행 2,090 / 판독 불가 <strong>528</strong> /
+두 pass 재삭제 OID <strong>12,432</strong> / 대조군(gen-1 20,000행) 손상 0 / 값 오염 0.
+특기: pass 1 이 20,000 체인을 <strong>전부</strong> 회수했고 'is interrupted!' 경고 0건 —
+그런데도 재주행이 일어났다(도장 비동기 지연, <span class="claim-id">CUBRID-C012</span>).</li>
+<li><strong>관찰 (필수 csql 관측, exit 1 = 발현의 기계 판독 신호)</strong>: 문장 1 = 2090(피해자 모집단),
+문장 2 = 0·무오류(대조군 무손상), 문장 3 = <code>ERROR: Internal error: slot 0 on page 8080 ...
+is not allocated</code>. <strong>결함이 수정되면 이 관측은 exit 0 으로 뒤집힌다 — 회귀 게이트.</strong></li>
+<li><strong>해석</strong>: 피해 행들은 슬롯이 비워진 뒤 INSERT·COMMIT 되었고 이후 아무도 수정하지
+않았다 — 커밋 후 이들을 만진 유일한 주체는 2차 vacuum pass 다. 대조군(재사용 슬롯에 있을 수 없는
+체인들)의 무손상이 손상의 위치를 "재사용 슬롯"으로 정확히 국한시킨다 <span class="claim-id">(CUBRID-C023)</span>.</li>
+</ul>
+
+<h3 id="channels">증거 채널의 강도 — 그리고 이번 run 의 교훈</h3>
+<div class="table-wrap">
+<table>
+<caption>두 증거 채널</caption>
+<thead><tr><th>채널</th><th>내용</th><th>강도</th><th>한계</th></tr></thead>
+<tbody>
+<tr><td><strong>A (결정적)</strong></td><td>커밋 후 무수정인데 판독 불가가 된 행 528개</td><td>대안 설명 없음 — 피해 판정의 유일 기준</td><td>—</td></tr>
+<tr><td><strong>B (보강)</strong></td><td>두 pass 모두에서 삭제된 OID 12,432개 ("청크는 점유된 슬롯에서만 삭제되므로, 두 삭제 사이에 재배부되었다"는 스토리지 물증)</td><td>재사용 발생 자체의 물증</td><td>피해 규모 아님 — 셧다운 중 abort 된 sysop 의 복원 청크 재삭제 등이 섞임</td></tr>
+</tbody>
+</table>
+</div>
+<p id="channel-b-unknown" class="evidence-unknown"><span class="evidence-label">Unknown</span> —
+이번 run 에서 채널 B(12,432)와 식별 가능한 점유자(피해 528 + 잔존 gen-3 체인 1,562)의 산술이 맞지
+않는다: 재삭제된 슬롯 중 약 1.04만 건의 pass-2 시점 점유자가 무엇이었는지 추적되지 않았다.
+oos.log 에 insert 기록이 없는 관측성 공백(ch11) 때문에 사후 식별이 불가능하다. 선행 3회 실행에서는
+채널 A:B 가 1:1(293:293, 163:163, 240:240)이었다 — 채널 B 는 실행 조건에 따라 크게 다른 것을 세며,
+<strong>피해 판정은 채널 A 로만 한다</strong> <span class="claim-id">(CUBRID-C048)</span>.
+해소 경로: 배치 insert 로그 추가(CBRD-26871) 후 재실행.</p>
+
+<h2 id="repetitions">반복성과 통계</h2>
+<p>experiment-1: 이 run 에서 2회(결과 동일). experiment-2: 이 run 에서 1회 발현 + 동일 스크립트의
+선행 독립 재현 3회(2026-08-05: 293/163/240행) = <strong>총 4/4</strong>. 발현은 존재 명제(∃)이므로
+1회로도 성립하지만, 4/4 는 "좁은 타이밍 요행"이 아님을 보인다. 피해 <em>규모</em>는 실행마다
+다르며(163~528) 이는 타이밍 변수(ch11)의 함수다.</p>
+
+<h2 id="observer">관찰자 효과와 한계</h2>
+<ul>
+<li>debug 빌드는 <strong>관측 채널</strong>(oos.log)에만 필요하다 — 발현 메커니즘(블록 상태 기계,
+probe, 슬롯 재사용)은 release 와 동일 코드다. 단, debug 의 assert 경계(ch10) 때문에 release 에는
+있는 추가 트리거(블록 중간 에러)가 debug 에는 없다 — 즉 debug 재현은 오히려 보수적이다.</li>
+<li>파라미터 4종은 발현 빈도를 높일 뿐 안전장치를 끄지 않는다(ch11).</li>
+<li>실험이 증명하지 않는 것: 제2 호출부(REC_NEWHOME 경로)에서의 발현(<span class="claim-id">CUBRID-C046 한계</span>),
+멀티청크 피해의 실측, 값-오염(무오류 오답)의 실제 발생.</li>
+</ul>
+
+<h2 id="recap">요약</h2>
+<p class="callout">무중단이면 무해(2/2), 세 조건이 겹치면 발현(4/4, 이번 528행) — 인과의 양쪽이
+캡처된 실행으로 고정되었고, 관측 스크립트는 수정 후 exit 0 으로 뒤집히는 회귀 게이트를 겸한다.
+이제 시선을 밖으로 돌린다: 같은 문제를 PostgreSQL 은 어떻게 원천 차단했는가.</p>
+</main>
+<footer>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="11-performance-observability.html">← ch11</a>
+<a href="13-postgresql-analysis.html">다음: ch13 →</a>
+</nav>
+</footer>
+</body>
+</html>

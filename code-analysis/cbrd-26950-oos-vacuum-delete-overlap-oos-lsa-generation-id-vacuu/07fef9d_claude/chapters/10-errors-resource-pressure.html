@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ch10 — 오류 모델과 자원 압박 · CBRD-26950</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="09-policies-algorithms.html">← ch09</a>
+<a href="11-performance-observability.html">다음: ch11 →</a>
+</nav>
+<h1>ch10 — 오류 모델: silent loss 는 어떻게 "무증상"이 되는가</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<ul>
+<li>forward-walk 의 오류 격리 정책(무전파·유계 누수)과 그 이유를 설명할 수 있다.</li>
+<li>발생 시점·검출 시점·불검출 가능성의 삼분법으로 silent loss 를 분석할 수 있다.</li>
+<li>중단·assert 경계(debug vs release)와 부수 발견들을 열거할 수 있다.</li>
+</ul>
+
+<h2 id="error-containment">1. forward-walk 의 오류 격리</h2>
+<p class="evidence-source"><span class="evidence-label">Source-confirmed</span> —
+<code>vacuum_forward_walk_reclaim_oos</code> 는 어떤 실패도 블록으로 전파하지 않는다: 모든 오류
+경로가 <code>vacuum_er_log_error</code> 로 기록하고 <code>er_clear()</code> 후 return 한다
+(vacuum_oos.cpp:218-220, 275-303). in-source 근거: "블록을 실패시키면
+vacuum_finished_block_vacuum 의 shutdown 전용 assert 를 건드리고 vacuum 전체를 멈출 수 있다".
+실패의 결과는 <strong>유계·기록된 OOS 누수</strong> — 데이터 손상보다 훨씬 나은 실패 방향이다
+<span class="claim-id">(CUBRID-C044)</span>.</p>
+<p>아이러니: 오류 <em>처리</em>는 fail-safe 방향(누수)으로 잘 설계되어 있는데, 정작 오류가
+<em>아닌</em> 경로(probe 통과 → 삭제 성공)가 데이터를 파괴한다. 결함의 어떤 단계도 오류 코드를
+만들지 않기 때문에 오류 처리 체계 전체가 관여할 기회가 없다.</p>
+
+<h2 id="silent">2. silent loss 의 삼분법</h2>
+<div class="table-wrap">
+<table>
+<caption>발생·검출·오검출 <span class="claim-id">(CUBRID-C023)</span></caption>
+<thead><tr><th>시점</th><th>일어나는 일</th><th>신호</th></tr></thead>
+<tbody>
+<tr><td><strong>발생</strong> (2차 삭제)</td><td>정상 RVOOS_DELETE — 로그·통계 모두 정상 vacuum 작업으로 기록</td><td><strong>없음</strong> (debug 빌드의 oos.log 줄만)</td></tr>
+<tr><td><strong>검출</strong> (이후 읽기)</td><td>stub → head OID → 빈 슬롯: <code>Internal error: slot N ... is not allocated</code></td><td>읽기 시점의 internal error — 원인과 시간·주체가 분리됨</td></tr>
+<tr><td><strong>불검출 위험</strong></td><td>비워진 피해 슬롯이 <em>또다시</em> 재사용된 뒤 읽히면 — 오류 없이 <strong>남의 값이 반환</strong>될 수 있음</td><td>없음 — 값 검증 애플리케이션만 감지 가능</td></tr>
+</tbody>
+</table>
+</div>
+<p>재현 실험은 payload 앞 8 hex 에 자기 id 를 각인해 세 번째 행(값 오염)도 감지하도록 설계되었고,
+이번 run 관측치는 0 이었다 — 그러나 0 관측은 "일어나지 않는다"의 증명이 아니라 이번 타이밍에서
+안 일어났다는 뜻이다(ch12).</p>
+
+<h2 id="interrupts">3. 중단과 assert 경계</h2>
+<ul>
+<li><strong>정상 셧다운</strong> — worker 는 <code>thread_p-&gt;shutdown</code> 에서 <code>goto end</code>
+(vacuum.c:3493-3498). 오류가 아니라 협조적 중단이며, 블록은 INTERRUPTED 로 남는다.</li>
+<li><strong>debug 빌드의 경계</strong> — <code>vacuum_finished_block_vacuum</code> 은 비-shutdown
+중단을 <code>assert(thread_p-&gt;shutdown)</code> 으로 잡는다(:3918-3919). 따라서 "블록 중간 에러로
+인한 재처리" 트리거는 release 빌드 전용 시나리오다 <span class="claim-id">(CUBRID-C011 한계)</span>.</li>
+<li><strong>머지 준비 항목(결함과 별개)</strong> — vacuum_oos.cpp 의 무조건 <code>abort()</code> 2곳
+(:315, :372 — "remove before develop merge" 표시): undo image 에 OOS 플래그가 있는데 heap 에
+OOS 파일이 없으면 release 에서도 프로세스를 죽인다. 진단용 임시 크래시 장치다
+<span class="claim-id">(CUBRID-C044)</span>.</li>
+<li><strong>부수 발견(별도 티켓 후보, 재현 중 실측)</strong> — 셧다운이 클라이언트의 OOS INSERT 를
+인터럽트하면 <code>pgbuf_fix</code> 가 ER_INTERRUPTED 를 정상 반환하는데
+<code>oos_file_alloc_new</code> 가 이를 불가능 상황으로 보고 <code>assert(false)</code> 를 걸어
+debug 서버가 coredump 한다. 실험 중 코어가 생기면 이것이며 CBRD-26950 이 아니다.</li>
+</ul>
+
+<h2 id="resource">4. 자원 압박 관점</h2>
+<ul>
+<li><strong>디스크 풀·I/O 오류</strong> — forward-walk 안에서는 위 오류 격리로 누수化(fail-safe).
+이 결함 자체는 자원 압박과 무관하게, 오히려 시스템이 건강할수록(회수·삽입이 빠를수록) 잘 발현된다.</li>
+<li><strong>OOS 누수의 축적</strong> — 오류 격리·수정 후보의 skip 분기 모두 누수를 만든다.
+빈 페이지 회수(CBRD-26786)가 미구현이므로 누수는 파일 성장으로 남는다 — 스탬프 설계에서
+"불일치 = skip" 이 안전한 이유는 그 skip 이 <em>이미 남의 것이 된</em> 슬롯에 대한 것이라
+누수조차 아니기 때문이다(정당한 대상은 항상 일치 — R3).</li>
+</ul>
+
+<h2 id="recap">요약</h2>
+<p class="callout">이 결함의 오류 모델은 "오류가 없다"는 것이다: 발생은 정상 연산으로 기록되고,
+검출은 시간·주체가 분리된 internal error 이며, 최악의 경우 오류 없이 남의 값이 반환된다.
+fail-safe 하게 설계된 오류 격리조차 관여할 틈이 없다. 다음 장에서 이 무증상성이 관측성 공백과
+어떻게 결합하는지 본다.</p>
+</main>
+<footer>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="09-policies-algorithms.html">← ch09</a>
+<a href="11-performance-observability.html">다음: ch11 →</a>
+</nav>
+</footer>
+</body>
+</html>

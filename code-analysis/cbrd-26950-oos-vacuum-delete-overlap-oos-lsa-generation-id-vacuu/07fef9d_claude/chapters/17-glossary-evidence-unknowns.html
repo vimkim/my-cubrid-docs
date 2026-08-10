@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ch17 — 용어집·증거·unknown · CBRD-26950</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="16-reimplementation-blueprint.html">← ch16</a>
+<a href="18-teaching-map.html">다음: ch18 →</a>
+</nav>
+<h1>ch17 — 용어집, 증거 색인, unknown, 준비 선언</h1>
+</header>
+<main>
+<h2 id="glossary">용어집 (첫 정의 챕터 병기)</h2>
+<div class="table-wrap">
+<table>
+<caption>이 책의 용어 — 영문 항 유지</caption>
+<thead><tr><th>용어</th><th>정의</th><th>정의 위치</th></tr></thead>
+<tbody>
+<tr><td>OID</td><td>(volid, pageid, slotid) 물리 좌표 — 이름이 아니라 주소</td><td>ch02</td></tr>
+<tr><td>slotted page / slot directory</td><td>페이지 앞의 슬롯 배열이 레코드 위치를 가리키는 페이지 구조</td><td>ch02</td></tr>
+<tr><td>OOS (Out-of-row Overflow Storage)</td><td>큰 가변 컬럼 값을 heap 밖 전용 파일로 빼는 저장 방식</td><td>ch02</td></tr>
+<tr><td>OOS inline stub</td><td>heap 레코드에 남는 16B 표현: head OOS OID 8B + full length 8B</td><td>ch02/ch04</td></tr>
+<tr><td>head OOS OID / next-chunk OID</td><td>체인 첫 청크의 OID / 청크 헤더가 가리키는 다음 청크 OID</td><td>ch02/ch04</td></tr>
+<tr><td>OOS value chain / chunk record</td><td>한 값을 담는 1개 이상의 청크 연결 / 그 물리 낱개</td><td>ch02</td></tr>
+<tr><td>VOT / IS_OOS / HAS_OOS</td><td>가변 컬럼 오프셋 표 / 그 엔트리의 stub 표시 비트 / 레코드 수준 stub 존재 플래그</td><td>ch04</td></tr>
+<tr><td>MVCC / MVCCID / snapshot / oldest visible</td><td>버전 기반 동시성 제어 / 첫 write 시 발급되는 단조 번호 / 가시성 판정 기준 / 전역 하한</td><td>ch02</td></tr>
+<tr><td>WAL / undo image / LSA / page LSA</td><td>선행 로깅 / 옛 레코드 원본 바이트 / 로그 내 주소·순서 / 페이지의 최종 반영 LSA 도장</td><td>ch02</td></tr>
+<tr><td>sysop (system operation)</td><td>트랜잭션 내부의 원자 미니 단위 — 커밋되면 상위 롤백과 무관하게 확정</td><td>ch02</td></tr>
+<tr><td>vacuum / vacuum block / NOTIFY_VACUUM</td><td>지연 회수자 / 로그를 자른 작업·진행 단위 / forward-walk 대상 로그 표시</td><td>ch02/ch05</td></tr>
+<tr><td>forward-walk / eager delete / within-sysop</td><td>OOS 체인 3 삭제 경로 (ch03 표)</td><td>ch03</td></tr>
+<tr><td>probe (oos_chunk_exists)</td><td>삭제 전 점유-여부 확인 — 신원 비확인</td><td>ch03</td></tr>
+<tr><td>bestspace / ANCHORED / REC_DELETED_WILL_REUSE</td><td>빈 공간 힌트 캐시 / 슬롯 재사용형 페이지 앵커 / 재사용 대기 슬롯 표시</td><td>ch09</td></tr>
+<tr><td>idempotency / ABA / use-after-free</td><td>재실행 무해성 / 같은 주소 다른 실체 문제 / 해제 후 사용</td><td>ch04/ch09</td></tr>
+<tr><td>generation / 신원 스탬프 / OOS LSA</td><td>페이지 카운터 발급 4B 세대 번호 / 등가 비교용 신원 값 / 회의 어휘(해석: 생성 LSA 스탬프)</td><td>ch16</td></tr>
+<tr><td>dedup / OOS update log / bump</td><td>무변경 값 체인 재사용 / 변경 시 aaa→bbb 이동 로그 / 재참조 시 스탬프 재발급</td><td>ch16</td></tr>
+<tr><td>TOAST / chunk_id / SnapshotAny(발급 검사)</td><td>PG 의 out-of-row 저장 / 논리 값 이름(OID) / 죽은 행 포함 충돌 검사</td><td>ch13</td></tr>
+<tr><td>purge / undo log / history list / off-page(extern)</td><td>InnoDB 지연 회수자 / 옛 버전 저장소 / undo 소비 큐 / LOB 외부 저장</td><td>ch14</td></tr>
+<tr><td>owner/inherited flag / FIL_NULL self-mark</td><td>InnoDB 공유 LOB 해제 권한 비트 / 소비한 undo 참조의 파괴적 무효화</td><td>ch14</td></tr>
+<tr><td>delete-mark</td><td>InnoDB 의 논리 삭제 표시(물리 제거는 purge)</td><td>ch14</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="evidence-index">증거 색인</h2>
+<p>전체 claim 은 <code>evidence/claims.jsonl</code>(37건 — CUBRID 25, PG 4, MySQL 4, 비교 4)에
+파일 해시·라인 범위와 함께 있다. 챕터 본문의 <span class="claim-id">claim ID</span> 가 그 색인의
+키다. 런타임 증거는 <code>evidence/runs/</code> 아래 13개 캡처(빌드 2, 스냅샷 1, exp-1 계열 8,
+exp-2 계열 4 — 실패한 시도 포함 전부 보존).</p>
+<div class="table-wrap">
+<table>
+<caption>실험 ↔ 실행 ID ↔ claim</caption>
+<thead><tr><th>실험</th><th>주요 run id</th><th>귀속 claim</th></tr></thead>
+<tbody>
+<tr><td>experiment-1 (정상 회수, 2회)</td><td>setup-r1c/r2, observe-r1/r2, cleanup-r1/r2</td><td><span class="claim-id">CUBRID-C003</span></td></tr>
+<tr><td>experiment-2 (결함 재현)</td><td>setup-r1(PoC), observe-r1(설계 결함 보존)/r1b(최종), cleanup-r1</td><td><span class="claim-id">CUBRID-C012, C023, C048</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="coverage-matrix">커버리지 매트릭스</h2>
+<p>18개 의무 전부 <code>report.json</code> 에 챕터·앵커·claim 과 함께 <code>covered</code> 로
+기록되어 있다. not-applicable 항목은 없다 — 이 주제는 저장·동시성·복구·정책·비교의 전 관심사를
+실제로 행사한다.</p>
+
+<h2 id="unknowns">Unknown 목록 — 왜 미해결이고 어떻게 닫는가</h2>
+<div class="table-wrap">
+<table>
+<caption>명시적 unknown <span class="claim-id">(CUBRID-C035, C048 외)</span></caption>
+<thead><tr><th>#</th><th>내용</th><th>왜 unknown</th><th>닫는 방법</th></tr></thead>
+<tbody>
+<tr><td>U1</td><td>"OOS LSA" 의 회의 정의</td><td>회의록 부재 — 로컬 문서에 정의 없음</td><td>팀 확인. 그때까지 ch16 §5 의 해석 조건부 분석만 유효</td></tr>
+<tr><td>U2</td><td>experiment-2 채널 B(12,432) 중 ~1.04만 건의 pass-2 점유자</td><td>oos.log 에 insert 기록이 없어 사후 식별 불가</td><td>배치 insert 로그(CBRD-26871) 후 재실행, 또는 restored-청크 재삭제 규모 측정</td></tr>
+<tr><td>U3</td><td>btree 의 재시도 안전성(키+MVCC info 재유도)</td><td>이 run 에서 btree.c 미추적 — 로컬 문서 인용</td><td>btree_vacuum 경로 추적 1회</td></tr>
+<tr><td>U4</td><td>abort 복원(spage_insert_for_recovery)이 점유된 슬롯을 만날 때의 동작</td><td>소스 미추적 — 재사용 문제의 abort 쪽 쌍둥이</td><td>함수 추적 + 크래시 주입 실험(제안 E7)</td></tr>
+<tr><td>U5</td><td>REC_NEWHOME(제2 호출부) 경로의 런타임 발현</td><td>메커니즘 동일성은 소스 확인, 재현은 미수행</td><td>relocation 유도 변형 PoC(제안 E4)</td></tr>
+<tr><td>U6</td><td>재사용 창의 슬롯 수준 직접 측정 (probe 통과율 등)</td><td>관측성 공백(U2 와 동근)</td><td>debug 카운터 추가 후 측정</td></tr>
+<tr><td>U7</td><td>페이지 카운터가 놓일 정확한 필드(슬롯 페이지 헤더 여유)</td><td>설계 미결정 — 소스 수준 배치 미추적</td><td>SPAGE_HEADER 여유 분석 또는 OOS 페이지 전용 헤더 확장</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="compat-limits">호환성 한계 (재확인)</h2>
+<p>이 blueprint 는 개념·행동 재구현용이다. ABI·온디스크 바이트·타이밍·성능 동등성은 범위 밖이며,
+설계안(generation/OOS LSA/update log)은 미구현이므로 "현행 CUBRID 와의 호환"이 아니라 "결함 없는
+재구현의 계약"을 정의한다. 6b 의 정확성이 4개 서브시스템 불변식에 조건부라는 사실이 보여주듯,
+이 계약의 판정들은 <strong>현행 구현의 명시된 불변식에 조건부</strong>다 — 불변식이 바뀌면 ch16 의
+표를 다시 평가해야 한다.</p>
+
+<h2 id="readiness">준비 선언 (Readiness Declaration)</h2>
+<p class="callout evidence-source"><strong>READY WITHIN DECLARED SCOPE</strong> —
+선언된 범위(ch01) 안에서, 독립 구현자가 소스를 다시 열지 않고 다음에 답할 수 있다:
+Interface 와 호출자 의무(ch03, ch16 §9) / 상태 소유·수명(ch04) / 연산 전후 상태(ch06 표) /
+재시도·대기·실패 조건(ch05, ch10) / 보호 장치와 획득 순서(ch07) / 크래시 생존과 재구성(ch08) /
+영속 레이아웃(ch04, ch11 — 단 바이트 호환은 비약속) / 기동·중단·복구 순서(ch05, ch08) /
+재구축 순서(ch16 §9) / 적합성 테스트(ch16 §9 — experiment-1/2 오라클).
+Unknown U1–U7 은 전부 이 선언의 <em>경계 밖</em> 이거나(U1: 회의 의도 확인, U3–U5: 이웃 검증)
+결론에 영향 없는 측정 심화(U2, U6, U7)로 분류되며, 숨긴 미지수는 없다.</p>
+</main>
+<footer>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="16-reimplementation-blueprint.html">← ch16</a>
+<a href="18-teaching-map.html">다음: ch18 →</a>
+</nav>
+</footer>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CBRD-26950 — OOS vacuum delete overlap 분석 북</title>
+<link rel="stylesheet" href="assets/report.css">
+</head>
+<body>
+<header>
+<h1>CBRD-26950 — vacuum 이 재사용된 OOS 슬롯의 살아있는 데이터를 지우는 이유</h1>
+<p>CUBRID vacuum 의 OOS(Out-of-row Overflow Storage) 지연 회수 경로에서 일어나는
+이중 삭제 데이터 손실 결함과, 그것을 막는 신원 스탬프 설계(4B generation / OOS LSA / MVCCID),
+그리고 미래 dedup 의 OOS update log 방향을 소스와 런타임 재현으로 재구성한 책.</p>
+</header>
+<main>
+<h2 id="provenance">Provenance (증거 기준점)</h2>
+<div class="table-wrap">
+<table>
+<caption>세 소스 트리의 고정 리비전</caption>
+<thead><tr><th>프로젝트</th><th>루트</th><th>HEAD</th><th>상태</th></tr></thead>
+<tbody>
+<tr><td>CUBRID (분석 대상)</td><td><code>/home/vimkim/gh/cb/CBRD-26950-oos-vacuum-delete-overlap</code></td><td><code>07fef9d48b4776e60c42e8afa25b9f21c54b8226</code> (feat/oos + develop 머지)</td><td>추적 파일 전부 clean (비추적 파일만 존재)</td></tr>
+<tr><td>PostgreSQL (비교)</td><td><code>/home/vimkim/gh/pg/postgres</code></td><td><code>fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc</code> (master)</td><td>추적 파일 clean</td></tr>
+<tr><td>MySQL (비교, 실소유자 InnoDB)</td><td><code>/home/vimkim/gh/mysql/mysql-server</code></td><td><code>06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8</code> (trunk)</td><td>clean</td></tr>
+</tbody>
+</table>
+</div>
+<p>런타임 증거: debug_gcc 빌드(<code>runtime-baseline-build-2</code>),
+도구 스냅샷 <code>evidence/runtime-tools-baseline.json</code>. 실험 2종(정상 회수 / 결함 재현 PoC)은
+소스 무변경으로 수행되었다(instrumentation 미사용). 모든 주장은
+<code>evidence/claims.jsonl</code> 의 claim ID 로 소스·런타임 증거에 연결된다.</p>
+
+<h2 id="key-conclusions">핵심 결론 (TL;DR)</h2>
+<ol>
+<li><strong>결함은 세 정상 동작의 곱이다</strong> — 신원 없는 점유-probe(<span class="claim-id">CUBRID-C002</span>)
+× 설계가 유도하는 즉시 슬롯 재사용(<span class="claim-id">CUBRID-C020, C045</span>)
+× 블록 단위 재처리(<span class="claim-id">CUBRID-C010, C011, C012</span>).
+크래시 없이 정상 <code>cubrid server stop</code> 만으로 재현된다 — 이번 run 에서 528개의 커밋된 행이
+오류·경고 없이 데이터를 잃었다(<span class="claim-id">CUBRID-C023</span>).</li>
+<li><strong>기존 보호 장치는 전부 다른 질문에 답한다</strong> — page LSA 는 replay 중복만, sysop 은 호출 원자성만,
+래치는 현재 접근만, MVCCID 게이팅은 옛 버전의 죽음만 보증한다(<span class="claim-id">CUBRID-C022</span>).</li>
+<li><strong>수정의 최소 계약</strong>: probe 의 질문을 "슬롯이 점유돼 있는가"에서
+"점유자가 여전히 undo image 가 소유하던 그 체인인가"로 바꾸는 것 — 즉 신원 스탬프.
+설계 판정은 4B generation 권고(<span class="claim-id">CUBRID-C034</span>),
+stub 탑재 MVCCID(6b) 차선, threshold 계열 탈락(<span class="claim-id">CUBRID-C033</span>),
+"OOS LSA"는 회의 어휘로 정의 미문서화(<span class="claim-id">CUBRID-C035</span>).</li>
+<li><strong>InnoDB 가 동형의 선례다</strong> — UPDATE 가 옛 LOB 에 (trx_id, undo_no) 스탬프를 쓰고
+purge 가 등가 비교한다(<span class="claim-id">MYSQL-C004, CMP-C004</span>).
+PostgreSQL 은 논리 신원(chunk_id)으로 질문 자체를 제거한다(<span class="claim-id">PG-C003</span>).</li>
+<li><strong>미래 dedup 의 OOS update log 는 수명 메커니즘이지 신원 메커니즘이 아니다</strong> —
+참조가 사는 곳을 옮길 뿐, 소비 시점의 신원 확인(스탬프)을 대체하지 못한다(<span class="claim-id">CUBRID-C036</span>).</li>
+</ol>
+
+<h2 id="audience">독자와 읽기 경로</h2>
+<p>대상 독자: C/C++·자료구조·OS 기초·DB 입문을 아는 학부 2학년 이상. DBMS 내부 구조(MVCC, WAL, vacuum)는
+이 책 안에서 처음부터 쌓는다. 모든 CUBRID 전용 용어는 첫 등장에서 정의한다.</p>
+<ul>
+<li><strong>전체 경로(권장)</strong>: ch01 → ch18 순서대로. 개념 의존 순서로 배열되어 있다.</li>
+<li><strong>결함만 빨리</strong>: ch02(멘탈 모델) → ch06(사고 시퀀스) → ch12(재현).</li>
+<li><strong>설계 리뷰어</strong>: ch09(정책) → ch16(blueprint) → ch15(3-DB 비교).</li>
+</ul>
+
+<h2 id="toc">차례</h2>
+<ol class="toc">
+<li><a href="chapters/01-orientation.html">ch01 — Orientation: 주제·범위·한계</a></li>
+<li><a href="chapters/02-mental-model.html">ch02 — 멘탈 모델: UPDATE 한 번의 일생</a></li>
+<li><a href="chapters/03-scope-interface-seams.html">ch03 — Interface 와 Seam: 세 삭제 경로와 probe 계약</a></li>
+<li><a href="chapters/04-data-ownership-lifetime.html">ch04 — 데이터 소유권과 수명</a></li>
+<li><a href="chapters/05-lifecycle-state-machines.html">ch05 — vacuum 블록 상태 기계</a></li>
+<li><a href="chapters/06-core-workflows.html">ch06 — 핵심 워크플로: 정상 경로와 사고 시퀀스</a></li>
+<li><a href="chapters/07-concurrency.html">ch07 — 동시성: 재사용 경쟁 창</a></li>
+<li><a href="chapters/08-storage-durability-recovery.html">ch08 — 내구성과 복구: 왜 WAL 은 못 막는가</a></li>
+<li><a href="chapters/09-policies-algorithms.html">ch09 — 정책과 알고리즘</a></li>
+<li><a href="chapters/10-errors-resource-pressure.html">ch10 — 오류 모델과 자원 압박</a></li>
+<li><a href="chapters/11-performance-observability.html">ch11 — 성능과 관측성</a></li>
+<li><a href="chapters/12-experimental-validation.html">ch12 — 실험 검증</a></li>
+<li><a href="chapters/13-postgresql-analysis.html">ch13 — PostgreSQL: TOAST 는 왜 안전한가</a></li>
+<li><a href="chapters/14-mysql-analysis.html">ch14 — MySQL/InnoDB: 스탬프의 선례</a></li>
+<li><a href="chapters/15-cross-database-comparison.html">ch15 — 3-DB 교차 비교</a></li>
+<li><a href="chapters/16-reimplementation-blueprint.html">ch16 — 재구현 blueprint: 스탬프와 dedup 설계</a></li>
+<li><a href="chapters/17-glossary-evidence-unknowns.html">ch17 — 용어집·증거 색인·unknown·준비 선언</a></li>
+<li><a href="chapters/18-teaching-map.html">ch18 — Teaching map: quiz 와 grill 연결</a></li>
+</ol>
+
+<h2 id="evidence-legend">증거 라벨 규약</h2>
+<ul>
+<li><span class="evidence-label">Source-confirmed</span> — 고정 리비전 소스와 도달 가능한 호출 경로로 확인.</li>
+<li><span class="evidence-label">Runtime-observed</span> — 캡처된 재현 실행으로 관측.</li>
+<li><span class="evidence-label">Inferred</span> — source-confirmed 전제들의 합성 추론(전제·반증 조건 명시).</li>
+<li><span class="evidence-label">Unknown</span> — 미해결 질문(왜 미해결인지, 해소 방법 명시).</li>
+<li><span class="evidence-label">Partial analogy</span> — 타 DB 대응이 한 축에서만 성립.</li>
+<li><span class="evidence-label">Not applicable</span> — 이 주제가 해당 관심사를 행사하지 않음(근거 제시).</li>
+</ul>
+<p>라벨은 색과 텍스트를 병기한다 — 색만으로 의미를 전달하지 않는다.</p>
+
+<h2 id="limits">이 책이 약속하지 않는 것</h2>
+<p>이 책은 선언된 범위 안의 <strong>개념·행동 재구현 blueprint</strong> 다. ABI/온디스크 바이트 호환,
+모든 레이스 인터리빙, 동일한 에러 코드·타이밍·성능은 약속하지 않는다. 제안 설계(generation, OOS LSA,
+update log)는 <strong>미구현</strong>이며 설계 분석으로만 다룬다. 범위 제외 항목(OOS demotion 상세,
+bestspace 내부, TDE, replication 상세, btree vacuum 등)은 <a href="chapters/01-orientation.html">ch01</a> 에 명시한다.</p>
+</main>
+<footer>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="chapters/01-orientation.html">첫 챕터: ch01 Orientation →</a>
+</nav>
+<p>Report run: <code>07fef9d_claude</code> · 생성 2026-08-07 · 도구: Claude Code (Fable 5) · 소스 무변경 분석</p>
+</footer>
+</body>
+</html>

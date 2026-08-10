@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ch14 — MySQL/InnoDB 분석 · CBRD-26950</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<header>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="13-postgresql-analysis.html">← ch13</a>
+<a href="15-cross-database-comparison.html">다음: ch15 →</a>
+</nav>
+<h1>ch14 — MySQL/InnoDB: 같은 모양의 경로, 이미 구현된 스탬프</h1>
+</header>
+<main>
+<h2 id="goals">학습 목표</h2>
+<ul>
+<li>InnoDB off-page LOB 참조(20B)와 purge 의 undo-유도 forward 경로를 설명할 수 있다.</li>
+<li>purge 가 exactly-once 가 아님에도 이중 해제가 없는 세 겹 방어를 나열할 수 있다.</li>
+<li>UPDATE 경로와 DELETE 경로의 방어 비대칭 — CUBRID 와의 정확한 대응점 — 을 짚을 수 있다.</li>
+</ul>
+<p>기준: MySQL trunk <code>06a5c1c99</code>, 실소유자는 스토리지 엔진 <strong>InnoDB</strong>
+(<code>storage/innobase/</code>). SQL 서버 계층에는 회수 훅이 없다 — purge 는 전적으로 엔진 내부다.</p>
+
+<h2 id="purge-forward">1. 같은 모양: undo 레코드에서 물리 주소로</h2>
+<p class="evidence-source"><span class="evidence-label">Source-confirmed</span> —
+클러스터드 레코드의 off-page 컬럼 참조는 20바이트: space id 4B + page no 4B + offset/version 4B +
+length 8B(상위 비트에 owner/inherited/being-modified 플래그) — <strong>물리 주소다</strong>
+(lob0lob.h:102-136). UPDATE 로 대체된 extern 값의 회수는 purge 스레드가
+<code>row_purge_upd_exist_or_extern_func</code>(row0purge.cc:700-828)에서 <code>roll_ptr</code> 로
+<strong>undo 페이지를 열고 그 안의 참조를 읽어</strong> <code>lob::purge</code> 를 호출하는 —
+CUBRID forward-walk 와 동형의 "로그 유도 물리 주소 회수" 경로다 <span class="claim-id">(MYSQL-C001)</span>.</p>
+
+<h2 id="purge-progress">2. purge 는 exactly-once 가 아니다 — 그런데도 안전한 이유</h2>
+<p class="evidence-source"><span class="evidence-label">Source-confirmed</span> —
+purge 진행(<code>purge_sys</code> 의 iter/limit)은 <strong>메모리 전용</strong>이다(trx0purge.cc:220-232).
+재기동하면 on-disk rollback-segment history list 의 꼬리에서 위치를 재유도한다(trx0rseg.cc:270-301)
+— 처리했지만 아직 history 에서 unlink 되지 않은 undo 레코드는 <strong>다시 처리된다</strong>.
+CUBRID 의 블록 재처리와 정확히 같은 상황이다 <span class="claim-id">(MYSQL-C002)</span>.
+그런데 이중 해제가 없다. 세 겹:</p>
+<ol>
+<li><strong>드라이버의 파괴적 자기-표시</strong> — LOB 를 해체한 <strong>같은 redo-logged
+mini-transaction 안에서</strong>, undo 페이지에 든 참조 자체에 <code>FIL_NULL</code> 을 써 넣는다
+(lob0purge.cc:541-542). 재처리는 <code>page_no == FIL_NULL</code> 을 보고 즉시 return.
+"지시서를 소비하면서 지시서에 도장을 찍는" 방식 — <strong>CUBRID 의 WAL 은 불변이라 이 방식이
+이식 불가능하다</strong>(undo image 를 고쳐 쓸 수 없음) <span class="claim-id">(CMP-C002)</span>.</li>
+<li><strong>대상 객체의 신원 스탬프</strong> — 다음 절.</li>
+<li><strong>페이지 타입 검사</strong> — LOB 첫 페이지가 아니면 <code>ut_a</code> 로 즉사(조잡한
+점유자-내재 검사 — "지금은 B-tree 페이지"는 잡지만 "지금은 <em>다른</em> LOB"는 못 잡는다).</li>
+</ol>
+
+<h2 id="identity-stamp">3. 신원 스탬프 — 제안된 수정의 동형 선례</h2>
+<p class="evidence-source"><span class="evidence-label">Source-confirmed</span> —
+LOB 첫 페이지 헤더에 <code>OFFSET_LAST_TRX_ID</code>(6B) + <code>OFFSET_LAST_UNDO_NO</code>(4B)가 있다
+(lob0first.h). 컬럼을 통째로 대체하는 UPDATE 는 <strong>옛 LOB 의 첫 페이지에</strong>
+<code>(trx-&gt;id, trx-&gt;undo_no - 1)</code> 을 기록한다(<code>mark_cannot_be_partially_updated</code>,
+lob0first.cc:403-413). 호출부 주석이 목적을 명시한다: <em>"This is to inform the purge thread that
+the older version LOB in this update operation can be freed"</em>(lob0lob.cc:570-576).
+purge 는 해제 전에 <strong>등가 비교</strong>한다(lob0purge.cc:505-517):</p>
+<pre><code>ok_to_free = (rec_type ∈ {UPD_EXIST, UPD_DEL})
+          &amp;&amp; !can_be_partially_updated(lob)
+          &amp;&amp; last_trx_id == trxid            /* undo 레코드의 트랜잭션 */
+          &amp;&amp; last_undo_no == undo_no;        /* undo 레코드의 번호 — 정확한 등가 */</code></pre>
+<p>물리 주소만으로는 절대 해제하지 않는다 — <strong>UPDATE(참조를 해제한 자)가 미리 써 둔 신원과,
+지금 소비 중인 undo 레코드의 신원이 정확히 일치할 때만</strong>. CUBRID 제안(4B generation 등가
+비교)과 목적·비교 형태가 같다 <span class="claim-id">(MYSQL-C004)</span>.</p>
+<p>버전 간 LOB 공유(= CUBRID 미래 dedup 과 동형)는 참조의 <strong>owner/inherited 플래그</strong>로
+관리된다: PK 변경형 UPDATE 에서 무변경 extern 컬럼은 새 엔트리가 owner+inherited 를 받고 옛
+레코드는 disown 된다(row0upd.cc:2530-2650) — "여러 버전이 하나의 값을 공유할 때 해제 권한을
+누가 갖는가"를 데이터로 표현한 선례.</p>
+
+<h2 id="update-path-guards">4. 정직한 관찰: UPDATE 경로의 방어는 스탬프뿐이다</h2>
+<p class="evidence-source"><span class="evidence-label">Source-confirmed</span> —
+DELETE 경로의 purge 는 살아있는 클러스터드 레코드에 커서를 대고 occupant-intrinsic 검사
+(roll_ptr 등가 + delete-mark, 중간 mtr 커밋 후 재검증까지)를 한다. 그러나 <strong>UPDATE-of-extern
+경로에서는 그 검사들이 구조적으로 비활성이다</strong>: 이 경로의 BtrContext 는 클러스터드 레코드
+없이 만들어져(<code>m_rec = nullptr</code>) <code>is_delete_marked()</code> 가 무조건 true 를
+반환한다(lob0lob.h:1470-1476). 남는 살아있는 방어 = <strong>스탬프 등가 + FIL_NULL self-mark</strong>
+뿐 <span class="claim-id">(MYSQL-C003)</span>.</p>
+<p class="callout">즉 InnoDB 는 "CUBRID 와 같은 모양의 경로에는 occupant 검사가 불가능하다"는 것을
+이미 겪었고, 그 답으로 스탬프를 택했다. CUBRID 제안이 걷는 길의 선례 그 자체다.</p>
+<p>추가로, 잔여 경쟁(참조 nulling mtr 과 첫 페이지 해제가 분리되는 경우)에서 InnoDB 는
+<strong>이중 해제 대신 누수를 선택</strong>한다 — 소스 주석이 자인한다: <em>"the LOB first page
+will be leaked. We need to come up with a mechanism to avoid this leak"</em>(lob0purge.cc:530-538).
+실패 방향의 선택(잃느니 새는 게 낫다)이라는 설계 태도도 이식 가치가 있다.</p>
+<p>해제된 페이지 자체에는 세대/에포크 표시가 없다(XDES free 비트뿐, fsp0fsp.cc:3600-3603) —
+컨테이너 수준 재사용 감지는 InnoDB 에도 없으며, 그 공백을 대상-객체 스탬프가 메운다.</p>
+
+<h2 id="axes">5. 비교 축 요약</h2>
+<div class="table-wrap">
+<table>
+<caption>CUBRID vs InnoDB — UPDATE-of-extern 회수 경로 <span class="claim-id">(CMP-C001, CMP-C003, CMP-C004)</span></caption>
+<thead><tr><th>축</th><th>CUBRID forward-walk</th><th>InnoDB purge (UPDATE-of-extern)</th></tr></thead>
+<tbody>
+<tr><td>참조 형태</td><td>물리 OID (undo image 안)</td><td>물리 (space,page,offset) (undo 페이지 안)</td></tr>
+<tr><td>재처리 가능성</td><td>있음 (블록 재주행)</td><td>있음 (history 재유도)</td></tr>
+<tr><td>지시서 자기-표시</td><td><strong>불가</strong> (WAL 불변)</td><td>가능 — FIL_NULL self-mark</td></tr>
+<tr><td>대상 신원 검사</td><td><strong>없음</strong> (probe = 점유 여부)</td><td>(last_trx_id, last_undo_no) 등가</td></tr>
+<tr><td>스탬프 기록 주체·시점</td><td>(제안) insert 가 할당 시점에</td><td>UPDATE 가 참조 해제 시점에</td></tr>
+<tr><td>스탬프 위치·폭</td><td>(제안) 컨테이너 페이지 카운터 발급, 청크+stub 에 4B</td><td>대상 객체(LOB 첫 페이지)에 10B</td></tr>
+<tr><td>잔여 경쟁의 실패 방향</td><td>현재: 과잉 삭제(손실)</td><td>누수 (명시적 선택)</td></tr>
+</tbody>
+</table>
+</div>
+<p>위치 차이의 이유: InnoDB 의 회수 단위는 <strong>페이지</strong>라 대상 객체(첫 페이지)에 스탬프를
+둘 수 있다 — 회수가 끝날 때까지 그 페이지는 재활용되지 않으니까. CUBRID 의 회수 단위는
+<strong>슬롯</strong>이라 "객체"가 삭제와 함께 소멸한다 — 그래서 스탬프는 살아남는 두 곳,
+즉 점유물(청크 헤더)과 참조(stub, undo image 에 보존됨)에 나눠 실리고, 유일성의 원천은
+컨테이너(페이지 카운터)가 되어야 한다(ch16).</p>
+
+<h2 id="recap">요약</h2>
+<p class="callout">InnoDB 는 CUBRID 와 같은 모양의 undo-유도 물리 주소 회수를 갖고 있고, 같은
+재처리 가능성을 안고 있으며, 그 답이 정확히 "UPDATE 가 미리 써 둔 신원 스탬프의 등가 비교"다.
+차이는 스탬프의 위치와 폭, 그리고 CUBRID 가 쓸 수 없는 self-mark 보조 장치의 유무뿐이다.
+다음 장에서 세 시스템을 한 표에 놓는다.</p>
+</main>
+<footer>
+<nav class="book-nav" aria-label="책 탐색">
+<a href="../index.html">차례</a>
+<a href="13-postgresql-analysis.html">← ch13</a>
+<a href="15-cross-database-comparison.html">다음: ch15 →</a>
+</nav>
+</footer>
+</body>
+</html>
