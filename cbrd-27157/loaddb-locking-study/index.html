@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="CBRD-27157 loaddb BU_LOCK과 MVCCID self-lock 학습 자료 읽기 가이드">
+  <title>CBRD-27157 — loaddb 잠금 학습 가이드</title>
+  <link rel="stylesheet" href="assets/course.css">
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <p class="eyebrow">CBRD-27157 · Learning guide</p>
+      <h1>무엇을 먼저<br>읽어야 할까?</h1>
+      <p class="lede">PR #7588의 loaddb <code>BU_LOCK</code>과 MVCCID self-lock 논쟁을 이해하기 위한 출발점이다. 지금 가진 시간과 목적에 맞춰 아래 경로를 고르면 된다.</p>
+      <div class="meta">
+        <span class="pill">HTML 2개</span>
+        <span class="pill">전체 15–20분</span>
+        <span class="pill">한국어 · 소스 근거</span>
+      </div>
+    </header>
+
+    <nav class="toc" aria-label="목차">
+      <strong>학습 지도</strong>
+      <a href="#recommended">권장 순서</a>
+      <a href="#routes">목적별 경로</a>
+      <a href="#pages">문서 안내</a>
+      <a href="#done">완료 기준</a>
+    </nav>
+
+    <section id="recommended">
+      <h2>처음이라면 이 순서로 읽는다</h2>
+      <div class="callout fact">
+        <strong>권장 경로:</strong> Lesson 0001을 끝까지 읽고 → 5문제 퀴즈를 풀고 → 빠른 참조의 결정 질문을 다시 확인한다.
+      </div>
+
+      <div class="flow" aria-label="권장 학습 순서">
+        <div class="flow-step" data-step="1"><strong>12분 · 개념 형성</strong> — session과 worker transaction, 두 lock resource, self-lock observer protocol을 순서대로 익힌다.</div>
+        <div class="flow-step" data-step="2"><strong>3분 · 회상 연습</strong> — 본문을 보지 않고 대화형 퀴즈와 마지막 한 문장을 완성한다.</div>
+        <div class="flow-step" data-step="3"><strong>2분 · 판단 준비</strong> — 빠른 참조에서 resource, owner, observer, invariant 네 질문을 다시 점검한다.</div>
+      </div>
+
+      <p><a class="cta" href="lessons/0001-loaddb-bu-lock-and-mvccid-self-lock.html">Lesson 0001 시작하기 →</a></p>
+    </section>
+
+    <section id="routes">
+      <h2>목적에 따라 지름길을 고른다</h2>
+      <div class="grid-3">
+        <article class="card">
+          <span class="kicker">처음 학습 · 15–20분</span>
+          <h3>배경부터 이해하기</h3>
+          <p>용어가 아직 낯설다면 lesson을 처음부터 읽는다. 특히 행위자와 두 lock 부분을 건너뛰지 않는다.</p>
+          <p><a href="lessons/0001-loaddb-bu-lock-and-mvccid-self-lock.html">전체 lesson 읽기 →</a></p>
+        </article>
+
+        <article class="card">
+          <span class="kicker">회의 직전 · 2분</span>
+          <h3>핵심만 복습하기</h3>
+          <p>이미 한 번 읽었다면 한 장짜리 참조표로 owner, resource와 두 수정안의 대가만 빠르게 복원한다.</p>
+          <p><a href="reference/loaddb-locking-map.html">빠른 참조 열기 →</a></p>
+        </article>
+
+        <article class="card">
+          <span class="kicker">코드 리뷰 · 7분</span>
+          <h3>설계 판단에 집중하기</h3>
+          <p>crash stack과 두 수정안부터 읽은 뒤 primary source 링크로 실제 구현을 확인한다.</p>
+          <p><a href="lessons/0001-loaddb-bu-lock-and-mvccid-self-lock.html#crash">crash 경로부터 읽기 →</a></p>
+          <p><a href="lessons/0001-loaddb-bu-lock-and-mvccid-self-lock.html#debate">두 수정안 비교하기 →</a></p>
+        </article>
+      </div>
+    </section>
+
+    <section id="pages">
+      <h2>HTML 문서는 두 개다</h2>
+      <div class="grid-2">
+        <article class="card">
+          <span class="kicker">Main lesson</span>
+          <h3><a href="lessons/0001-loaddb-bu-lock-and-mvccid-self-lock.html">Lesson 0001 — 두 lock을 분리해서 보기</a></h3>
+          <p><strong>먼저 읽는 문서.</strong> 배경 개념부터 OOS crash stack, early return과 assert 완화안 비교까지 하나의 이야기로 연결한다.</p>
+          <ul>
+            <li>session transaction과 worker batch transaction</li>
+            <li>object <code>BU_LOCK</code>과 MVCCID transaction lock</li>
+            <li>INSID와 self-lock waiter protocol</li>
+            <li>OOS file lazy create에서 assert까지의 흐름</li>
+            <li>대화형 퀴즈 5문제와 source 링크</li>
+          </ul>
+          <p><a class="cta" href="lessons/0001-loaddb-bu-lock-and-mvccid-self-lock.html">Lesson 읽기 →</a></p>
+        </article>
+
+        <article class="card">
+          <span class="kicker">Quick reference</span>
+          <h3><a href="reference/loaddb-locking-map.html">loaddb 잠금 빠른 참조</a></h3>
+          <p><strong>lesson 후 다시 보는 문서.</strong> 회의나 코드 리뷰 중 헷갈리는 개념을 2분 안에 되살리는 인쇄용 지도다.</p>
+          <ul>
+            <li>transaction owner 한 장 그림</li>
+            <li>두 lock resource 비교표</li>
+            <li><code>BU_LOCK</code> compatibility</li>
+            <li>핵심 용어집과 결정 질문</li>
+            <li>primary source 빠른 링크</li>
+          </ul>
+          <p><a class="cta secondary" href="reference/loaddb-locking-map.html">참조표 보기 →</a></p>
+        </article>
+      </div>
+
+      <div class="callout inference">
+        <strong>보조 문서:</strong> 학습 범위와 성공 기준은 <a href="MISSION.md">MISSION.md</a>, 자료별 근거와 신뢰도는 <a href="RESOURCES.md">RESOURCES.md</a>에서 확인할 수 있다. 개념 학습만이 목적이라면 먼저 읽을 필요는 없다.
+      </div>
+    </section>
+
+    <section id="done">
+      <h2>여기까지 설명하면 학습 완료다</h2>
+      <div class="callout question">
+        <ol>
+          <li>session transaction과 worker batch transaction이 각각 무엇을 소유하는가?</li>
+          <li><code>BU_LOCK</code>과 MVCCID self-lock은 key와 보호 목적이 어떻게 다른가?</li>
+          <li>OOS file 생성은 왜 평소 loaddb가 가지 않던 self-lock 경로를 열었는가?</li>
+          <li>early return과 assert 완화 중 무엇을 선택할지 결정하는 정책 질문은 무엇인가?</li>
+        </ol>
+      </div>
+      <p>답이 막히면 해당 항목만 다시 읽는다. 답을 한두 문장으로 agent에게 보내면 resource, owner, observer와 invariant가 분리되어 있는지 피드백받을 수 있다.</p>
+    </section>
+
+    <footer class="footer">
+      <p>CBRD-27157 · PR <a href="https://github.com/CUBRID/cubrid/pull/7588">#7588</a> · 기준 source commit <code>f11fc4259</code></p>
+    </footer>
+  </main>
+</body>
+</html>

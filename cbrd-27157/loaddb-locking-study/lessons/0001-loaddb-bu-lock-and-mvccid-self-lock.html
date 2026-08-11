@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="CBRD-27157과 CUBRID PR #7588의 BU_LOCK과 MVCCID self-lock을 구분하고 두 수정안을 판단하는 첫 lesson">
+  <title>Lesson 0001 — loaddb의 두 lock을 분리해서 보기</title>
+  <link rel="stylesheet" href="../assets/course.css">
+  <script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <p class="eyebrow">Lesson 0001 · CUBRID loaddb locking</p>
+      <h1>두 lock을 분리하면<br>논쟁이 보인다</h1>
+      <p class="lede">PR #7588의 핵심은 “lock을 잡을까 말까”가 아니다. 서로 다른 두 resource, 두 transaction owner, 한 observer protocol이 OOS file 생성에서 우연히 만난 사건이다.</p>
+      <div class="meta">
+        <span class="pill">예상 12분</span>
+        <span class="pill">초급 → source review</span>
+        <span class="pill">즉시 채점 5문제</span>
+      </div>
+    </header>
+
+    <nav class="toc" aria-label="목차">
+      <strong>학습 흐름</strong>
+      <a href="#win">오늘의 성공</a>
+      <a href="#actors">행위자</a>
+      <a href="#two-locks">두 lock</a>
+      <a href="#rendezvous">self-lock</a>
+      <a href="#crash">crash stack</a>
+      <a href="#debate">두 수정안</a>
+      <a href="#quiz">퀴즈</a>
+    </nav>
+
+    <section id="win">
+      <h2>오늘의 tangible win</h2>
+      <div class="callout question">
+        이 lesson을 마치면 stack의 <code>lock_transaction_mvccid</code>를 보고 “session의 BU_LOCK과 같은 lock이 아니다”라고 즉시 말할 수 있다. 동시에 “그렇다고 BU_LOCK이 논쟁과 무관한 것은 아니다”라는 이유도 설명할 수 있다.
+      </div>
+      <p>막히면 먼저 <a href="../reference/loaddb-locking-map.html">loaddb 잠금 빠른 참조</a>를 열어 용어를 확인하자. 암기보다 resource와 owner를 매번 다시 그리는 편이 안전하다.</p>
+    </section>
+
+    <section id="actors">
+      <h2>1. loaddb에는 transaction이 하나만 있지 않다</h2>
+      <p>server-side loaddb의 worker는 session transaction을 그대로 공유하지 않는다. 각 batch마다 새 <code>tran_index</code>를 받아 자기 transaction으로 insert하고 commit 또는 abort한다. 소스에서 <code>logtb_assign_tran_index</code>와 <code>xtran_server_commit</code>을 직접 확인할 수 있다.<sup><a href="#src-1">[1]</a></sup></p>
+
+      <pre><code>session transaction S
+└─ class T에 BU_LOCK
+   ├─ worker W1 → batch transaction B1 → row batch insert → commit
+   └─ worker W2 → batch transaction B2 → row batch insert → commit
+
+질문: "누가 lock을 소유하는가?"
+답: object BU는 S, 새 MVCCID self-lock은 B1/B2</code></pre>
+
+      <div class="grid-2">
+        <article class="card">
+          <span class="kicker">Session side</span>
+          <h3>BU_LOCK의 owner</h3>
+          <p>loaddb worker가 object lock을 조회하면 lock manager는 connection의 session transaction index로 redirect한다.<sup><a href="#src-2">[2]</a></sup></p>
+        </article>
+        <article class="card">
+          <span class="kicker">Worker side</span>
+          <h3>MVCCID의 owner</h3>
+          <p><code>lock_transaction_mvccid()</code>는 호출 thread의 <code>tran_index</code>를 사용하므로 self-lock은 worker batch transaction 소유다.<sup><a href="#src-3">[3]</a></sup></p>
+        </article>
+      </div>
+
+      <div class="callout fact">
+        <span class="label">SOURCE FACT</span>
+        같은 loaddb 작업 안에서도 session transaction과 worker batch transaction은 구별해야 한다. client identity를 복사하는 것과 transaction/lock ownership을 공유하는 것은 다른 일이다.
+      </div>
+    </section>
+
+    <section id="two-locks">
+      <h2>2. Object lock과 transaction lock은 key부터 다르다</h2>
+      <table>
+        <thead><tr><th></th><th>Object lock</th><th>Transaction self-lock</th></tr></thead>
+        <tbody>
+          <tr><td>key</td><td>class/instance OID</td><td>writer MVCCID</td></tr>
+          <tr><td>대표 요청</td><td>class의 <code>BU_LOCK</code></td><td>자기 MVCCID의 <code>X_LOCK</code></td></tr>
+          <tr><td>보호 질문</td><td>“누가 이 class/row에 접근할 수 있나?”</td><td>“이 inserter가 끝났나?”</td></tr>
+          <tr><td>이번 진입점</td><td><code>lock_object()</code></td><td><code>lock_transaction_mvccid()</code></td></tr>
+        </tbody>
+      </table>
+
+      <p><code>LK_RES_KEY.type</code>이 key identity의 일부이므로 class OID와 MVCCID는 같은 hash table을 사용해도 서로 alias되지 않는다.<sup><a href="#src-4">[4]</a></sup> 따라서 다음 문장은 틀렸다.</p>
+
+      <div class="callout caution">
+        <strong>틀린 설명:</strong> “session이 BU_LOCK을 보유하니 worker의 MVCCID self-lock은 이미 잡힌 셈이다.”
+      </div>
+
+      <p>그러나 BU_LOCK은 여전히 <em>self-lock의 필요성</em> 판단에 관여한다. compatibility table에서 BU는 다른 BU와 호환되지만 일반 data access에 필요한 IS/S/IX/SIX/X와 충돌한다.<sup><a href="#src-5">[5]</a></sup> 즉 일반 transaction이 loaddb의 bulk row를 관측하거나 충돌할 가능성을 제한한다.</p>
+
+      <div class="callout inference">
+        <span class="label inference">정확한 추론</span>
+        “BU와 self-lock은 같은 resource라서 대체된다”가 아니라 “BU가 observer의 진입을 막기 때문에 self-lock protocol을 쓸 상황이 없어질 수 있다”이다.
+      </div>
+
+      <p><strong>정밀한 주의:</strong> BU는 <code>SCH_S_LOCK</code>과는 호환된다. 따라서 “다른 transaction은 아예 하나도 들어오지 못한다”보다 “일반적인 row data access mode와 충돌한다”가 소스에 더 가까운 표현이다.</p>
+    </section>
+
+    <section id="rendezvous">
+      <h2>3. MVCCID self-lock은 inserter와 waiter의 rendezvous다</h2>
+      <p>CUBRID의 row version은 inserter/deleter의 MVCCID를 metadata로 사용한다. 공식 매뉴얼은 다른 transaction이 row header의 MVCCID로 writer가 아직 active인지 판단한다고 설명한다.<sup><a href="#src-6">[6]</a></sup></p>
+
+      <div class="flow" aria-label="MVCCID self-lock 흐름">
+        <div class="flow-step" data-step="1"><strong>Inserter T1</strong>이 MVCCID 42를 발급받는다.</div>
+        <div class="flow-step" data-step="2">T1이 transaction resource <code>MVCCID=42</code>에 <code>X_LOCK</code>을 건다.</div>
+        <div class="flow-step" data-step="3">새 row header에 INSID 42가 기록되어 다른 검사자가 발견할 수 있다.</div>
+        <div class="flow-step" data-step="4">unique/FK 검사자 T2가 같은 resource에 <code>S_LOCK</code>을 요청해 T1 종료까지 기다린다.</div>
+        <div class="flow-step" data-step="5">T1 commit/abort 후 lock이 풀리면 T2가 key를 다시 검사한다.</div>
+      </div>
+
+      <p>이 protocol의 핵심 invariant는 다음 한 줄이다.</p>
+      <pre><code>observable INSID  ⇒  inserter가 같은 MVCCID에 X self-lock 보유</code></pre>
+
+      <p>그런데 loaddb는 <code>has_BU_lock</code>을 <code>context.is_bulk_op</code>으로 전달하고,<sup><a href="#src-7">[7]</a></sup> heap insert는 bulk op일 때 INSID를 기록하지 않는다.<sup><a href="#src-8">[8]</a></sup></p>
+
+      <div class="grid-2">
+        <article class="card">
+          <span class="kicker">현재 정확성</span>
+          <h3>observer가 없다</h3>
+          <p>INSID가 없으므로 unique/FK waiter가 이 worker MVCCID를 row에서 발견할 수 없다. 현재 경로만 보면 self-lock은 불필요하다는 근거다.</p>
+        </article>
+        <article class="card">
+          <span class="kicker">미래 불변식</span>
+          <h3>uniform은 방어가 된다</h3>
+          <p>향후 어떤 loaddb path가 INSID를 만들더라도 모든 정상 worker가 발급 즉시 self-lock한다면 invariant는 구조적으로 유지된다.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="crash">
+      <h2>4. OOS는 새 잠금 규칙이 아니라 숨은 경로를 열었다</h2>
+      <p>OOS file은 첫 OOS-backed attribute를 저장할 때 lazy create된다. <code>file_create(FILE_OOS)</code>는 vacuum이 dropped file identifier를 재사용하지 않도록 현재 MVCCID를 요구한다.<sup><a href="#src-9">[9]</a></sup> 이 때문에 기존 bulk insert가 평소에는 가지 않던 MVCCID 발급 경로로 들어갔다.</p>
+
+      <div class="flow" aria-label="crash call stack">
+        <div class="flow-step" data-step="1"><code>oos_create_file()</code> → <code>file_create(FILE_OOS)</code></div>
+        <div class="flow-step" data-step="2"><code>logtb_get_current_mvccid()</code>가 lazy MVCCID 발급</div>
+        <div class="flow-step" data-step="3">CBRD-26942 이후 발급 즉시 <code>logtb_acquire_mvccid_self_lock()</code></div>
+        <div class="flow-step" data-step="4"><code>lock_transaction_mvccid()</code>가 MVCCID key로 internal lock engine 진입</div>
+        <div class="flow-step" data-step="5">debug의 <code>assert(thread_p-&gt;type != TT_LOADDB)</code> 실패</div>
+      </div>
+
+      <div class="callout fact">
+        <span class="label">핵심 진단</span>
+        OOS가 object lock을 새로 요구한 것이 아니다. file identifier 안전 검사가 MVCCID를 요구했고, MVCCID 발급에 새로 붙은 self-lock side effect가 오래된 TT_LOADDB assert와 충돌했다.
+      </div>
+    </section>
+
+    <section id="debate">
+      <h2>5. 이제 두 수정안이 정확히 보인다</h2>
+
+      <div class="grid-2">
+        <article class="card">
+          <span class="kicker">안 A · explicit skip</span>
+          <h3><code>logtb</code>에서 early return</h3>
+          <p><strong>전제:</strong> bulk row에는 INSID가 없고 BU가 일반 data observer를 막으므로 waiter가 없다.</p>
+          <p><strong>장점:</strong> 불필요한 lock entry를 만들지 않고 “load worker no-lock” 규칙을 보존한다. self-lock 적용 정책이 <code>logtb_acquire_mvccid_self_lock()</code>에 모인다.</p>
+          <p><strong>위험:</strong> 미래에 TT_LOADDB가 INSID를 만들면 self-lock 없는 observable INSID가 생길 수 있다.</p>
+        </article>
+
+        <article class="card">
+          <span class="kicker">안 B · uniform acquire</span>
+          <h3>transaction key는 assert 허용</h3>
+          <p><strong>전제:</strong> CBRD-23375는 class/instance object lock 정책이고 transaction rendezvous는 별개다.</p>
+          <p><strong>장점:</strong> “observable INSID ⇒ self-lock”을 future path까지 유지한다. fresh MVCCID의 자기 X 요청은 기다리지 않으며 batch 종료 시 해제된다.</p>
+          <p><strong>위험:</strong> generic lock manager가 loaddb batch 정책을 알아야 하며, assert가 모든 transaction resource 요청을 허용한다.</p>
+        </article>
+      </div>
+
+      <h3>Module seam으로 한 번 더 보기</h3>
+      <p><span class="label preference">DESIGN LENS</span> “누가 self-lock 대상인가?”를 결정한다면 self-lock policy를 이미 모으고 있는 <code>logtb_acquire_mvccid_self_lock()</code>가 locality가 높은 seam이다. 반대로 “TT_LOADDB에 허용되는 lock resource 종류가 무엇인가?”를 정의한다면 lock manager의 assert가 그 interface를 표현한다.</p>
+
+      <div class="callout question">
+        <strong>회의에서 물어야 할 결정 질문:</strong><br>
+        CBRD-23375의 “no locking”은 object lock만 금지하는가, 아니면 TT_LOADDB worker의 모든 실제 lock resource 획득을 금지하는가? 그리고 현재 observer 부재보다 future uniform invariant에 더 높은 우선순위를 둘 것인가?
+      </div>
+
+      <p>현재 source만으로 두 설계 중 하나가 유일하게 옳다고 증명되지는 않는다. source는 각 전제와 대가를 보여 주고, 정책 범위는 maintainer가 명시적으로 결정해야 한다.</p>
+    </section>
+
+    <section id="quiz" class="quiz" data-quiz>
+      <h2>6. Retrieval practice</h2>
+      <p>본문을 다시 보지 말고 먼저 답하자. 각 문항은 보기 길이로 답을 추측하지 못하도록 동일한 단어 수로 맞췄다.</p>
+
+      <fieldset data-answer="b" data-explanation="이번 stack은 OID가 아니라 MVCCID를 key로 한 transaction resource에 X를 요청합니다.">
+        <legend>1. assert 직전 실제로 요청된 resource는?</legend>
+        <label class="choice"><input type="radio" name="q1" value="a"> 클래스 OID 기반 BU 락</label>
+        <label class="choice"><input type="radio" name="q1" value="b"> 트랜잭션 MVCCID 기반 X 락</label>
+        <p class="feedback" data-feedback aria-live="polite"></p>
+      </fieldset>
+
+      <fieldset data-answer="b" data-explanation="BU와 self-lock은 다른 resource입니다. BU 논거는 waiter가 생길 환경을 제거한다는 데 있습니다.">
+        <legend>2. BU_LOCK이 self-lock 논의와 관계있는 이유는?</legend>
+        <label class="choice"><input type="radio" name="q2" value="a"> 락 자원이 같아서 직접 대체한다</label>
+        <label class="choice"><input type="radio" name="q2" value="b"> 대기 관측자가 없어서 의미가 사라진다</label>
+        <p class="feedback" data-feedback aria-live="polite"></p>
+      </fieldset>
+
+      <fieldset data-answer="b" data-explanation="bulk insert는 INSID를 기록하지 않으므로 row에서 worker MVCCID를 발견할 waiter가 없습니다.">
+        <legend>3. 현재 loaddb bulk row의 INSID는?</legend>
+        <label class="choice"><input type="radio" name="q3" value="a"> 항상 기록되어 다른 트랜잭션이 기다린다</label>
+        <label class="choice"><input type="radio" name="q3" value="b"> 생략되어 대기용 MVCCID 표식이 없다</label>
+        <p class="feedback" data-feedback aria-live="polite"></p>
+      </fieldset>
+
+      <fieldset data-answer="a" data-explanation="self-lock 적용 대상을 정하는 정책은 기존 no-op guard가 모여 있는 logtb helper에 둘 수 있습니다.">
+        <legend>4. early return을 선택할 때 locality가 높은 seam은?</legend>
+        <label class="choice"><input type="radio" name="q4" value="a"> logtb가 self-lock 적용 정책을 가진다</label>
+        <label class="choice"><input type="radio" name="q4" value="b"> lock_manager가 loaddb 예외 정책을 가진다</label>
+        <p class="feedback" data-feedback aria-live="polite"></p>
+      </fieldset>
+
+      <fieldset data-answer="b" data-explanation="call stack은 경로만 말합니다. 설계 결론에는 무엇을 보호하는지와 어떤 invariant를 유지할지도 필요합니다.">
+        <legend>5. 두 수정안의 결론을 내리는 올바른 방법은?</legend>
+        <label class="choice"><input type="radio" name="q5" value="a"> 호출 경로만 확인하면 결론이 정해진다</label>
+        <label class="choice"><input type="radio" name="q5" value="b"> 보호 대상과 불변식을 함께 확인한다</label>
+        <p class="feedback" data-feedback aria-live="polite"></p>
+      </fieldset>
+
+      <button type="button" data-check-quiz>답 확인하기</button>
+      <p class="score" data-quiz-score aria-live="polite">아직 채점하지 않았습니다.</p>
+      <p class="print-only">인쇄본에서는 답을 가린 뒤 별도 종이에 설명해 보세요.</p>
+    </section>
+
+    <section>
+      <h2>7. 마지막 한 문장 연습</h2>
+      <div class="callout question">
+        다음 문장을 자기 말로 완성해서 agent에게 보내자.<br><br>
+        <strong>“BU_LOCK은 MVCCID self-lock을 직접 대체하지 않지만, ________ 때문에 현재 loaddb 경로에서는 self-lock이 불필요하다는 근거가 될 수 있다.”</strong>
+      </div>
+      <p>정답 여부뿐 아니라 설명에서 resource, owner, observer를 구분했는지 제가 feedback하겠습니다. 이해되지 않는 용어나 source line이 있다면 그대로 질문하세요. 이 workspace에서 제가 계속 teacher 역할을 맡습니다.</p>
+    </section>
+
+    <section id="sources" class="source-card">
+      <h2>Primary sources</h2>
+      <ol>
+        <li id="src-1"><a href="https://github.com/CUBRID/cubrid/blob/f11fc42594732c263d8f10101f9df73a21346ee9/src/loaddb/load_session.cpp#L145-L210">loaddb worker batch transaction lifecycle</a></li>
+        <li id="src-2"><a href="https://github.com/CUBRID/cubrid/blob/f11fc42594732c263d8f10101f9df73a21346ee9/src/transaction/lock_manager.c#L7484-L7510">TT_LOADDB object-lock lookup redirect</a></li>
+        <li id="src-3"><a href="https://github.com/CUBRID/cubrid/blob/f11fc42594732c263d8f10101f9df73a21346ee9/src/transaction/lock_manager.c#L6437-L6493"><code>lock_transaction_mvccid()</code></a></li>
+        <li id="src-4"><a href="https://github.com/CUBRID/cubrid/blob/f11fc42594732c263d8f10101f9df73a21346ee9/src/transaction/lock_manager.c#L904-L959">resource type-aware compare/hash</a></li>
+        <li id="src-5"><a href="https://github.com/CUBRID/cubrid/blob/f11fc42594732c263d8f10101f9df73a21346ee9/src/transaction/lock_table.c#L35-L131">lock compatibility table</a></li>
+        <li id="src-6"><a href="https://github.com/CUBRID/cubrid-manual/blob/3b6ae97bfbdc664b010ffa933ded5a05b291ae03/ko/sql/transaction.rst#L291-L351">CUBRID 한국어 매뉴얼: MVCC와 MVCCID</a></li>
+        <li id="src-7"><a href="https://github.com/CUBRID/cubrid/blob/f11fc42594732c263d8f10101f9df73a21346ee9/src/transaction/locator_sr.c#L5058-L5066"><code>has_BU_lock → is_bulk_op</code></a></li>
+        <li id="src-8"><a href="https://github.com/CUBRID/cubrid/blob/f11fc42594732c263d8f10101f9df73a21346ee9/src/storage/heap_file.c#L21188-L21265">bulk insert의 INSID 미기록</a></li>
+        <li id="src-9"><a href="https://github.com/CUBRID/cubrid/blob/f11fc42594732c263d8f10101f9df73a21346ee9/src/storage/file_manager.c#L3445-L3470"><code>file_create()</code>의 current MVCCID 요구</a></li>
+      </ol>
+      <p><strong>이번 lesson의 추천 primary reading:</strong> 먼저 <a href="https://github.com/CUBRID/cubrid/commit/741734a8f3785a3e2a678bb52e289000c2261b6f">CBRD-26942 commit 설명</a>만 읽고, “per-row X lock의 어떤 역할을 transaction self-lock으로 옮겼는가?”를 한 문장으로 적어 보세요.</p>
+    </section>
+
+    <footer class="footer">
+      <p><a href="../index.html">학습 홈</a> · <a href="../reference/loaddb-locking-map.html">빠른 참조 열기</a> · Lesson 0001 · 기준 source commit <code>f11fc4259</code></p>
+    </footer>
+  </main>
+</body>
+</html>
