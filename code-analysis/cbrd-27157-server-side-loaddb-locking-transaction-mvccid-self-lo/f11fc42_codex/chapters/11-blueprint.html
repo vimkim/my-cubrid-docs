@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>11장 — 재구현 청사진, 근거와 학습 지도</title><link rel="stylesheet" href="../assets/report.css"></head>
+<body>
+<header><p>11장</p><h1>다시 만들 수 있을 만큼 설명하기</h1><p>Interface, data model, total transition, 실패·recovery 경계, 시험, 근거와 학습 지도를 한곳에 모읍니다.</p></header>
+<nav class="book-nav" aria-label="장 이동"><a rel="prev" href="10-comparison-and-experiments.html">이전 장</a><a href="../index.html">목차</a></nav>
+<main>
+  <section class="chapter-guide" aria-label="이 장의 학습 안내">
+    <div><strong>학습 목표</strong>CBRD-27157 범위의 lock resource·owner·wait·cleanup과 loaddb/OOS(Out-of-row Overflow Storage) integration을 독립적으로 재구성할 청사진을 읽습니다.</div>
+    <div><strong>시작 상황</strong>새 구현자가 source를 열지 않고 class BU, worker MVCCID self-lock과 first OOS file path를 구현해야 합니다.</div>
+    <div><strong>확인할 불변식</strong>observable INSID(record에 적힌 inserter MVCCID)에는 matching X self-lock이 있고, inactive publication은 unlock보다 먼저며, TT_LOADDB 예외는 transaction resource에만 적용됩니다.</div>
+    <div><strong>실패·한계</strong>ABI·on-disk layout·전체 MVCC snapshot·전체 OOS·bit-for-bit 성능은 readiness 범위에 포함하지 않습니다.</div>
+  </section>
+
+  <section id="first-use-terms" class="callout">
+    <h2>이 장에서 다시 쓰는 약어</h2>
+    <p><strong>OID</strong>는 Object Identifier로 class/row 같은 logical object를 가리키며 메모리 pointer가 아닙니다. <strong><code>tran_index</code></strong>는 현재 server의 transaction table에서 owner를 찾는 칸 번호입니다. <strong>SCH_S_LOCK</strong>은 schema stability mode, <strong>SCH_M_LOCK</strong>은 schema modification mode입니다. <strong>UPR</strong>은 Upgrader Positioning Rule로, 더 강한 mode로 바꾸려다 막힌 holder를 holder queue의 어디에 둘지 정하는 규칙입니다.</p>
+    <p><strong>OOS</strong>는 Out-of-row Overflow Storage입니다. <strong>VFID</strong>는 Volume File Identifier입니다. <strong>sysop</strong>은 system operation입니다. PostgreSQL/MySQL 비교에서 쓰는 <strong>MDL</strong>은 Metadata Lock, <strong><code>trx_t</code></strong>는 InnoDB transaction state object입니다. “transaction-owned”는 owner를, “transaction-resource”는 잠그는 대상의 종류를 답하는 말입니다.</p>
+  </section>
+
+  <section id="readiness-declaration">
+    <h2>Readiness declaration</h2>
+    <p class="readiness">READY WITHIN DECLARED SCOPE</p>
+    <p>이 선언은 “잠금 기초에서 CBRD-27157의 server-side loaddb transaction self-lock 경계까지”를 conceptual·behavioral하게 재구현할 수 있다는 뜻입니다. CUBRID와 drop-in 호환되는 ABI, exact struct layout, on-disk format, timing, performance 또는 전체 recovery를 약속하지 않습니다.</p>
+    <p>아래 Interface, abstract state, total transitions, pseudocode, configuration, failure/recovery boundary와 conformance tests가 이 선언의 근거입니다. 남은 runtime evidence gap은 <a href="#known-unknowns">Unknown</a>으로 숨기지 않습니다.</p>
+  </section>
+
+  <section id="reimplementation-blueprint" data-claim-id="CUBRID-C002 CUBRID-C003 CUBRID-C004 CUBRID-C005 CUBRID-C006 CUBRID-C007 CUBRID-C008 CUBRID-C010 CUBRID-C011 CUBRID-C012 CUBRID-C013 CUBRID-C014 CUBRID-C015 CUBRID-C016 CUBRID-C017 CUBRID-C018 CUBRID-C019 CUBRID-C020 CUBRID-C021 CUBRID-C022">
+    <h2>1. Module과 Interface 계약</h2>
+    <div class="table-wrap"><table><caption>Caller가 지켜야 하는 precondition과 callee의 postcondition</caption><thead><tr><th>Conceptual Interface</th><th>Input·precondition</th><th>Success postcondition</th><th>Wait·error contract</th></tr></thead><tbody>
+      <tr><td><code>lock_object(thread, oid, mode, wait)</code></td><td>유효한 class/instance OID, active caller transaction. TT_LOADDB object path는 session BU redirect 계약을 사용합니다.</td><td>일반 caller는 compatible object holder를 얻습니다. TT_LOADDB worker의 허용된 object lookup은 worker entry를 만들지 않고 session BU를 확인합니다.</td><td>incompatible wait/timeout/deadlock을 generic lock result로 전달합니다. TT_LOADDB의 실제 class/instance internal acquire는 policy error/assert 대상입니다.</td></tr>
+      <tr><td><code>lock_internal_perform_lock_object(thread, key, mode, wait)</code></td><td><code>LK_RES_KEY</code>의 type과 value가 모두 초기화되어야 합니다. owner는 caller의 <code>tran_index</code>입니다.</td><td>compatible이면 holder list와 transaction hold list에 entry가 연결됩니다.</td><td>conditional conflict는 no-grant, unconditional conflict는 waiter queue입니다. TT_LOADDB이면 transaction resource만 허용합니다.</td></tr>
+      <tr><td><code>convert_lock(existing_entry, requested_mode, wait)</code></td><td>같은 transaction이 같은 typed key의 holder여야 합니다.</td><td>기존 mode와 요청 mode의 conversion이 다른 holder와 호환되면 같은 entry의 granted mode를 강화합니다.</td><td>zero-wait 충돌은 실패합니다. 기다릴 수 있으면 기존 holder에 blocked mode를 기록하고 UPR 위치에서 기다립니다. strict FIFO를 약속하지 않습니다.</td></tr>
+      <tr><td><code>lock_transaction_mvccid(thread, mvccid, mode)</code></td><td>full MVCCID와 active transaction descriptor. X는 inserter, S는 observer completion wait 용도입니다.</td><td>X holder는 transaction 종료까지 hold list에 남습니다. S waiter caller는 grant 직후 full release하고 업무 상태를 재검사합니다.</td><td>transaction의 wait policy에 따라 timeout·deadlock·interrupt를 반환합니다.</td></tr>
+      <tr><td><code>logtb_acquire_mvccid_self_lock</code> / <code>logtb_ensure_mvccid_self_lock</code></td><td>MVCCID assignment 뒤 호출합니다. observable INSID producer는 stamp 전에 ensure를 호출해야 합니다.</td><td>descriptor의 self-locked identity와 실제 X holder가 일치합니다. ensure가 성공한 뒤에만 INSID를 publish할 수 있습니다.</td><td>assignment choke point의 실패는 best-effort log일 수 있습니다. ensure는 실패를 statement caller에 반환합니다.</td></tr>
+      <tr><td><code>btree_wait_for_inserter_end</code> 계열</td><td>다른 active INSID를 확인한 unique/FK path. wait 전 고정 page latch와 임시 object lock을 놓을 수 있어야 합니다.</td><td>같은 MVCCID의 S grant 뒤 S를 full release하고 active/B-tree root·key를 다시 검사합니다.</td><td>timeout·deadlock·interrupt는 성공으로 바꾸지 않습니다. wakeup만으로 duplicate/FK 결론을 내리지 않습니다.</td></tr>
+      <tr><td><code>unlock_entry(thread, entry, full_release)</code></td><td>caller transaction이 소유하거나 기다리는 유효한 entry입니다. entry가 holder인지 waiter인지 먼저 구분해야 합니다.</td><td>holder full release는 resource list와 transaction hold list의 양방향 연결을 정리하며 mutex 순서는 <code>resource mutex → transaction hold_mutex</code>입니다. waiter 취소는 waiter list에서 제거·free합니다.</td><td>holder release만 blocked holder 후 compatible waiter prefix를 grant합니다. waiter 취소는 뒤쪽 waiter의 partial grant/recompute만 수행합니다. 완전히 빈 resource는 hash에서 제거하며 strict FIFO·starvation freedom은 계약하지 않습니다.</td></tr>
+      <tr><td><code>load_task</code> batch lifecycle</td><td>accepted batch와 load session. 새 transaction index를 할당할 수 있어야 합니다.</td><td>성공 batch는 순서에 맞춰 commit하고, 실패 batch는 abort한 뒤 transaction index를 free합니다.</td><td>interrupt·session shutdown은 active workers에 알리고 완료를 기다립니다. client identity 복사는 ownership 공유가 아닙니다.</td></tr>
+      <tr><td><code>heap_oos_find_vfid</code> → <code>file_create(FILE_OOS)</code></td><td>OOS-backed value가 필요하고 heap header의 OOS VFID가 비어 있는 first-create path입니다.</td><td>heap header WRITE latch 아래 OOS file을 만들고 VFID를 publish합니다. 같은 heap의 뒤 caller는 latch 뒤 published VFID를 다시 읽습니다.</td><td>ordinary error는 sysop abort, page unfix, payload/allocation cleanup과 NULL VFID 결과를 거칩니다. process assert recovery는 별도 Unknown입니다.</td></tr>
+    </tbody></table></div>
+    <p class="source-id">근거: CUBRID-C002–CUBRID-C008, CUBRID-C010–CUBRID-C022. CUBRID-C010·CUBRID-C020은 runtime observation이고, 나머지 구조·전이 계약은 고정 source trace에 기대어 있습니다. CUBRID-C009 추론은 재구현의 필수 전제로 사용하지 않습니다.</p>
+
+    <h2>2. Abstract data model과 ownership</h2>
+    <div class="table-wrap"><table><caption>재구현에 필요한 최소 state object</caption><thead><tr><th>Object</th><th>Identity와 mutable state</th><th>Owner·allocation</th><th>Reclamation·불변식</th></tr></thead><tbody>
+      <tr><td><code>LockResourceKey</code></td><td><code>type</code> + union payload: object <code>oid/class_oid</code> pair 또는 full MVCCID</td><td>요청 caller가 값으로 전달하고 lock table이 key로 복사합니다. instance copy에는 <code>class_oid</code>도 보존합니다.</td><td>실제 compare/hash identity는 object에서 <code>type+oid</code>, transaction에서 <code>type+full MVCCID</code>입니다. <code>class_oid</code>는 object compare/hash에 참여하지 않으며 서로 다른 type은 alias 금지.</td></tr>
+      <tr><td><code>LockResource</code></td><td>key, holder/waiter mode summary, holder list, waiter list, non-2PL list</td><td>global lock hash가 lookup·생성합니다. resource mutex가 mutable lists를 보호합니다.</td><td>holder·waiter·non-2PL entry가 모두 비면 hash에서 제거합니다. transaction hold list를 함께 바꿀 때 resource mutex를 바깥쪽에 둡니다.</td></tr>
+      <tr><td><code>LockEntry</code></td><td>owner <code>tran_index</code>, granted/blocked mode, resource link, transaction hold/wait links</td><td>transaction owner와 resource가 양쪽 list로 참조합니다. conversion waiter는 holder인 채 blocked mode도 가질 수 있습니다.</td><td>grant·timeout·deadlock·unlock의 모든 branch가 양쪽 link를 함께 정리합니다.</td></tr>
+      <tr><td><code>TransactionDescriptor</code></td><td><code>tran_index</code>, state, wait policy, main/sub MVCCID, self-locked identity, hold list</td><td>session transaction 또는 worker batch transaction이 실제 owner입니다.</td><td>commit/abort에서 MVCCID inactive publication 후 <code>lock_unlock_all</code>. worker end에서 descriptor free.</td></tr>
+      <tr><td><code>LoadSession</code></td><td>connection/session transaction index, class states, accepted batch ordering, active workers</td><td>connection request가 만들고 worker tasks가 참조합니다.</td><td>destroy는 worker 완료를 기다립니다. session transaction 종료가 BU를 해제합니다.</td></tr>
+      <tr><td><code>HeapOosFileRef</code></td><td>heap header의 nullable OOS VFID</td><td>heap/class당 최대 한 OOS file을 가리키는 persistent metadata입니다. header WRITE latch가 first-create 검사와 publish를 직렬화합니다.</td><td>first-create success 뒤 publish합니다. 실패하면 NULL을 유지합니다. VFID와 header latch는 lock-manager resource가 아닙니다.</td></tr>
+    </tbody></table></div>
+
+    <h2>3. Initialization, shutdown, abort, restart order</h2>
+    <ol>
+      <li><strong>Engine startup:</strong> lock hash, resource mutexes, compatibility table과 transaction table을 먼저 사용할 수 있게 합니다. transaction당 기본 local pool 10개와 boot-time hash sizing을 준비합니다. Persistent lock holder를 disk에서 복원하지 않습니다.</li>
+      <li><strong>Load start:</strong> connection/session transaction이 target class의 BU를 얻은 뒤 worker batch를 accept합니다.</li>
+      <li><strong>Worker start:</strong> batch마다 독립 <code>tran_index</code>와 wait policy를 가진 descriptor를 만듭니다.</li>
+      <li><strong>Steady state:</strong> object lookup은 session BU 계약을 확인합니다. worker가 MVCCID를 받으면 같은 transaction resource에 X self-lock을 acquire/ensure합니다.</li>
+      <li><strong>Worker success:</strong> batch order를 지키며 commit합니다. MVCCID를 inactive로 publish한 뒤 instance(transaction self-lock 포함) → class → root class → non-2PL 순으로 hold list를 풀고 transaction index를 free합니다.</li>
+      <li><strong>Worker error/abort:</strong> ordinary OOS/file state를 먼저 abort/cleanup하고 transaction abort로 remaining locks를 정리합니다.</li>
+      <li><strong>Session shutdown:</strong> active worker에 interrupt를 보내고 완료를 기다립니다. load session object 삭제와 BU release를 합치지 않습니다. outer session transaction commit/abort/unregister가 BU를 해제합니다.</li>
+      <li><strong>Process restart:</strong> lock table은 빈 volatile state로 재구축합니다. durable row/log/file state는 CUBRID recovery module이 재구성합니다. historical assert 뒤 OOS file-sector recovery는 이 보고서의 Unknown입니다.</li>
+    </ol>
+
+    <h2>4. Total transition table</h2>
+    <div class="table-wrap"><table><caption>정상·대기·실패를 모두 포함한 state transition</caption><thead><tr><th>현재 state</th><th>Event / guard</th><th>Action</th><th>다음 state / result</th></tr></thead><tbody>
+      <tr><td><code>NO_RESOURCE</code></td><td>첫 compatible request</td><td>resource와 holder entry 생성, transaction hold list 연결</td><td><code>GRANTED</code></td></tr>
+      <tr><td><code>RESOURCE_EXISTS</code></td><td>다른 owner와 compatible</td><td>holder entry 추가</td><td><code>GRANTED</code></td></tr>
+      <tr><td><code>RESOURCE_EXISTS</code></td><td>incompatible + conditional/zero wait</td><td>임시 entry 제거</td><td><code>NO_GRANT/TIMEOUT</code></td></tr>
+      <tr><td><code>RESOURCE_EXISTS</code></td><td>incompatible + may wait</td><td>waiter queue 연결, resource mutex release, suspend</td><td><code>WAITING</code></td></tr>
+      <tr><td><code>HOLDER</code></td><td>같은 owner의 equal/weaker 재요청</td><td>hold count 증가</td><td><code>GRANTED</code></td></tr>
+      <tr><td><code>HOLDER</code></td><td>stronger conversion + 다른 holder와 compatible</td><td>같은 entry의 granted mode 갱신</td><td><code>CONVERTED</code></td></tr>
+      <tr><td><code>HOLDER</code></td><td>stronger conversion + incompatible + may wait</td><td>blocked mode 설정, UPR로 holder 위치 조정, suspend</td><td><code>CONVERSION_WAIT</code></td></tr>
+      <tr><td><code>CONVERSION_WAIT</code></td><td>앞선 blocked mode와 holders에 compatible</td><td>granted=blocked, blocked clear, wake</td><td><code>CONVERTED</code></td></tr>
+      <tr><td><code>WAITING</code></td><td>holder unlock로 compatible</td><td>post-grant, holder/transaction list 연결</td><td><code>GRANTED</code></td></tr>
+      <tr><td><code>WAITING</code></td><td>timeout·deadlock·interrupt</td><td>waiter/blocked link 제거, error 저장</td><td><code>FAILED</code></td></tr>
+      <tr><td><code>WAITING</code></td><td>wait 취소</td><td>resource mutex 아래 waiter를 제거·free; 뒤 waiter가 있으면 앞선 waiter mode와 holder mode를 존중해 partial grant, 아니면 waiter summary 재계산</td><td><code>FAILED/RESOURCE_ACTIVE</code>; blocked-holder grant 없음</td></tr>
+      <tr><td><code>HOLDER</code></td><td>full release</td><td>resource list 제거; resource mutex 안에서 transaction hold mutex를 잡아 transaction link 제거; holder summary 재계산</td><td><code>HOLDER_REMOVED</code></td></tr>
+      <tr><td><code>HOLDER_REMOVED</code></td><td>entry가 남음</td><td>compatible blocked holders 먼저 grant; 이어 compatible waiter prefix를 holder로 이동·wake</td><td><code>RESOURCE_ACTIVE</code></td></tr>
+      <tr><td><code>HOLDER_REMOVED</code></td><td>holder·waiter·non-2PL 모두 없음</td><td>resource를 lock hash에서 제거</td><td><code>RESOURCE_RECLAIMED</code></td></tr>
+      <tr><td><code>MVCCID_ALLOCATED</code></td><td>self X acquire success</td><td>descriptor self-locked identity 기록</td><td><code>X_HELD</code></td></tr>
+      <tr><td><code>MVCCID_ALLOCATED</code></td><td>best-effort X acquire failure</td><td>log failure, observable producer에서 ensure 강제</td><td><code>UNENSURED</code>; INSID publish 금지</td></tr>
+      <tr><td><code>X_HELD</code></td><td>normal producer</td><td>INSID stamp</td><td><code>OBSERVABLE</code></td></tr>
+      <tr><td><code>OBSERVER_HAS_INSID</code></td><td>other inserter active</td><td>page latch/object temp lock release, S request</td><td><code>WAITING_ON_MVCCID</code></td></tr>
+      <tr><td><code>WAITING_ON_MVCCID</code></td><td>S grant</td><td>S full release, active와 B-tree 재검사</td><td><code>RETRY/SUCCESS/CONSTRAINT_ERROR</code></td></tr>
+      <tr><td><code>X_HELD/OBSERVABLE</code></td><td>commit 또는 abort</td><td>main/sub MVCCID inactive publish, then unlock</td><td><code>INACTIVE → RELEASED</code></td></tr>
+      <tr><td><code>OOS_VFID_NULL</code></td><td>first OOS-backed value + header WRITE latch 획득</td><td>VFID를 다시 확인하고 비어 있으면 sysop/file create 시작</td><td><code>OOS_CREATING</code></td></tr>
+      <tr><td><code>OOS_CREATING</code></td><td>file/TDE/header log 성공</td><td>header에 VFID publish, sysop commit, page unfix</td><td><code>OOS_VFID_PUBLISHED</code></td></tr>
+      <tr><td><code>OOS_CREATING</code></td><td>ordinary error</td><td>sysop abort, page unfix, buffers free, output VFID NULL</td><td><code>FAILED_CLEAN</code></td></tr>
+      <tr><td><code>OOS_HEADER_LATCH_WAIT</code></td><td>다른 caller의 publish 뒤 latch 획득</td><td>header의 non-NULL VFID 재확인·복사</td><td><code>OOS_VFID_PUBLISHED</code></td></tr>
+      <tr><td><code>TT_LOADDB_REQUEST</code></td><td>key type=TRANSACTION</td><td>generic grant/wait 실행</td><td>허용</td></tr>
+      <tr><td><code>TT_LOADDB_REQUEST</code></td><td>key type=CLASS/INSTANCE</td><td>debug assert/policy error; session BU redirect contract 유지</td><td>금지</td></tr>
+    </tbody></table></div>
+
+    <h2>5. Total policy pseudocode</h2>
+    <pre><code>acquire(thread, key, mode, wait_policy):
+  require active_transaction(thread.tran_index)
+  require valid(key.type, key.value)
+
+  if thread.type == TT_LOADDB and key.type != TRANSACTION:
+    return POLICY_ERROR
+
+  resource = lookup_or_create(key)
+  lock(resource.mutex)
+
+  existing = find_holder(resource, thread.tran_index)
+  if existing != NONE:
+    target = convert(existing.granted_mode, mode)
+    if target == existing.granted_mode:
+      existing.count += 1
+      unlock(resource.mutex)
+      return GRANTED(existing)
+    if compatible(other_holders(resource, existing), target):
+      existing.granted_mode = target
+      unlock(resource.mutex)
+      return CONVERTED(existing)
+    if wait_policy == ZERO_WAIT:
+      unlock(resource.mutex)
+      return TIMEOUT
+    existing.blocked_mode = target
+    position_by_upgrader_rule(resource, existing)
+    unlock(resource.mutex)
+    return suspend_and_cleanup_on_failure(existing, wait_policy)
+
+  if compatible(resource.granted_modes, mode)
+     and compatible(resource.waiter_modes, mode):
+    entry = attach_holder(resource, thread.transaction, mode)
+    unlock(resource.mutex)
+    return GRANTED(entry)
+
+  if wait_policy == CONDITIONAL or wait_policy.expired:
+    discard_temporary_entry()
+    unlock(resource.mutex)
+    return TIMEOUT_OR_NO_GRANT
+
+  waiter = allocate_waiter_entry(thread.transaction, mode)
+  if waiter == NONE:
+    unlock(resource.mutex)
+    return ALLOCATION_ERROR  # ER_LK_ALLOC_RESOURCE, queue append 전; 제거할 waiter 없음
+  append_waiter_tail(resource, waiter)
+  unlock(resource.mutex)
+  wake_reason = suspend(waiter, wait_policy)
+
+  if wake_reason in {TIMEOUT, DEADLOCK, INTERRUPTED}:
+    detach_waiter_from_both_lists(waiter)
+    return wake_reason
+
+  return POST_GRANTED(waiter)
+
+assign_and_publish_insid(transaction, record):
+  mvccid = get_or_allocate_mvccid(transaction)
+  result = ensure_x_self_lock(transaction, mvccid)
+  if result != GRANTED:
+    return result
+  record.insid = mvccid
+  return SUCCESS
+
+wait_for_inserter(checker, insid):
+  if not is_other_active(insid):
+    return RECHECK
+  release_page_latches_and_temporary_object_locks()
+  result = acquire(checker, TRANSACTION_KEY(insid), S, checker.wait_policy)
+  if result != GRANTED:
+    return result
+  full_release_s_lock(insid)
+  return RECHECK_ACTIVE_AND_BTREE
+
+unlock_entry(transaction, entry, full_release):
+  resource = entry.resource
+  lock(resource.mutex)
+
+  if entry is in resource.waiters:
+    later_waiter = entry.next
+    detach_and_free_waiter(resource, entry)
+    if later_waiter != NONE:
+      grant_later_waiters_compatible_with_earlier_waiters(resource, later_waiter)
+    else:
+      recompute_total_waiters_mode(resource)
+    unlock(resource.mutex)
+    return
+
+  detach_holder(resource, entry)
+  if not full_release and entry.count &gt; 0:
+    clear_failed_conversion_and_reposition(entry)
+  else:
+    lock(transaction.hold_mutex)  # resource mutex가 바깥쪽
+    detach_transaction_hold_link(transaction, entry)
+    unlock(transaction.hold_mutex)
+    free_entry(entry)
+
+  recompute_total_holders_mode(resource)
+  if no_holders_waiters_or_non2pl(resource):
+    erase_resource_from_hash_while_locked(resource)
+    return
+
+  grant_compatible_blocked_holders_from_front(resource)
+  grant_compatible_waiter_prefix(resource)
+  unlock(resource.mutex)
+
+unlock_all(transaction):
+  while transaction.instance_holds:  # transaction self-lock 포함
+    unlock_entry(transaction, first_instance_hold(), FULL)
+  while transaction.class_holds:
+    unlock_entry(transaction, first_class_hold(), FULL)
+  if transaction.root_class_hold:
+    unlock_entry(transaction, transaction.root_class_hold, FULL)
+  remove_all_non2pl_entries(transaction)
+
+finish_transaction(transaction, decision):
+  publish_mvccid_inactive(transaction, decision)
+  unlock_all(transaction)
+  return decision
+
+find_or_create_oos_file(heap):
+  latch(heap.header, WRITE, UNCONDITIONAL)
+  if heap.header.oos_vfid != NULL:
+    result = heap.header.oos_vfid
+    unlatch(heap.header)
+    return result
+  begin_sysop()
+  result = create_file_and_apply_tde()
+  if result.failed:
+    abort_sysop()
+    unlatch(heap.header)
+    return ERROR
+  log_and_publish(heap.header.oos_vfid, result.vfid)
+  commit_sysop()
+  unlatch(heap.header)
+  return result.vfid</code></pre>
+
+    <h2>6. Configuration과 고정 policy</h2>
+    <div class="table-wrap"><table><caption>runtime 조정 가능 여부</caption><thead><tr><th>항목</th><th>현재 contract</th><th>재구현 주의</th></tr></thead><tbody>
+      <tr><td><code>lock_timeout</code></td><td>client/session wait policy의 기본은 infinite입니다. deprecated <code>lock_timeout_in_secs</code>도 존재합니다.</td><td>MVCCID S wait는 caller transaction descriptor의 <code>wait_msecs</code>를 사용합니다.</td></tr>
+      <tr><td>loaddb worker wait</td><td>batch transaction은 <code>TRAN_LOCK_INFINITE_WAIT</code>로 생성됩니다.</td><td>fresh self-X가 runtime에서 zero-wait였다는 측정은 없으므로 “절대 기다리지 않음” counter claim을 만들지 않습니다.</td></tr>
+      <tr><td>BU compatibility</td><td>compile-time compatibility table입니다.</td><td>runtime parameter로 임의 변경하지 않습니다.</td></tr>
+      <tr><td>TT_LOADDB transaction exception</td><td>resource-type policy/assert입니다.</td><td>configuration으로 object locks까지 넓히지 않습니다.</td></tr>
+      <tr><td>observability</td><td>lock dump/event log/generic perf counters를 사용합니다.</td><td>전용 self-lock count parameter/counter는 source packet에서 찾지 못했습니다.</td></tr>
+      <tr><td>lock table sizing</td><td>transaction당 기본 local pool 10개. hash bucket은 <code>num_trans × lock_escalation × 3 / 1000</code>, 최소 10,000·최대 <code>2²³</code>입니다.</td><td>boot-time 산정이며 <code>xlock_dump</code> 표시 size는 전체 lock-manager memory가 아닙니다.</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section id="failure-recovery-tests" data-claim-id="CUBRID-C002 CUBRID-C003 CUBRID-C004 CUBRID-C005 CUBRID-C006 CUBRID-C007 CUBRID-C008 CUBRID-C010 CUBRID-C011 CUBRID-C012 CUBRID-C013 CUBRID-C014 CUBRID-C015 CUBRID-C016 CUBRID-C017 CUBRID-C018 CUBRID-C019 CUBRID-C020 CUBRID-C021 CUBRID-C022">
+    <h2>7. Failure, recovery와 conformance tests</h2>
+    <div class="table-wrap"><table><caption>실행 가능한 구현 시험의 input과 oracle</caption><thead><tr><th>ID</th><th>Setup / action</th><th>통과 oracle</th><th>근거·현재 evidence</th></tr></thead><tbody>
+      <tr><td>T01 key namespace</td><td>같은 numeric bits의 OID key와 MVCCID key를 동시에 요청</td><td>서로 다른 resource/hash comparison 결과, holder/waiter 혼합 없음</td><td>CUBRID-C017</td></tr>
+      <tr><td>T02 BU matrix</td><td>BU requester와 각 mode NULL·SCH_S·IS·S·IX·BU·SIX·X·SCH_M 조합</td><td>BU·SCH_S·NULL만 compatible, source matrix와 동일</td><td>CUBRID-C002</td></tr>
+      <tr><td>T03 owner split</td><td>한 session, worker B1/B2 load</td><td>BU owner=session tran_index, self-X owners=B1/B2; object lookup만 redirect</td><td>CUBRID-C001, CUBRID-C003·CUBRID-C004; BU holder는 runtime, owner topology는 source 결합</td></tr>
+      <tr><td>T04 grant branches</td><td>empty, compatible, conditional conflict, wait conflict 각각 실행</td><td>immediate grant, shared grant, no-grant cleanup, waiter tail 연결을 구분</td><td>CUBRID-C018</td></tr>
+      <tr><td>T05 wait failures</td><td>timeout·interrupt·deadlock victim을 각각 주입</td><td>waiter/blocked entry 누수 없음, 성공 path로 진행하지 않음</td><td>CUBRID-C018; runtime 미검증</td></tr>
+      <tr><td>T06 main/sub ordering</td><td>main commit, main abort, subtransaction end</td><td>inactive publication이 X release보다 먼저이고 wake waiter recheck가 inactive 관찰</td><td>CUBRID-C007; runtime 부분 관찰</td></tr>
+      <tr><td>T07 unique rendezvous</td><td>T1 unique insert 미종료, T2 같은 key, T1 rollback</td><td>T2 wait 뒤 재검사하여 성공; latch는 wait 전에 release</td><td>CUBRID-C010, <code>f03-exp2-observer-v3</code> + <code>f03-exp2-lockdb-v3</code>; latch는 source-only</td></tr>
+      <tr><td>T08 FK rendezvous</td><td>active referenced-row 변화와 FK checker</td><td>same MVCCID wait 뒤 FK/B-tree 상태 재평가</td><td>CUBRID-C006; runtime 미검증</td></tr>
+      <tr><td>T09 bulk INSID</td><td>session BU가 있는 bulk row와 ordinary MVCC row 비교</td><td>bulk row INSID/per-row object lock 생략, ordinary producer는 ensure 후 INSID</td><td>CUBRID-C008; runtime 내부 header 미검증</td></tr>
+      <tr><td>T10 OOS first create</td><td>fresh class에 small control과 5,000-byte noncompressible value</td><td>small은 no OOS file, large는 OOS VFID/live record, debug server 생존과 값 일치</td><td>CUBRID-C020, <code>f03-exp3-action-v2</code> + <code>f03-exp3-observer-v2</code>; 직접 관찰</td></tr>
+      <tr><td>T11 fix allow/deny</td><td>TT_LOADDB transaction key와 object key를 각각 internal request</td><td>transaction key 허용, class/instance key debug assert 유지</td><td>CUBRID-C011</td></tr>
+      <tr><td>T12 ordinary OOS error</td><td>safe failpoint로 payload/file create 실패</td><td>sysop abort, page unfix, allocation free, NULL VFID, transaction abort 뒤 lock 누수 없음</td><td>CUBRID-C016·CUBRID-C021; runtime 미검증</td></tr>
+      <tr><td>T13 restart boundary</td><td>ordinary commit/abort 뒤 server restart</td><td>volatile lock entry는 복원되지 않으며 durable row/file은 recovery 결과와 일치</td><td><span class="evidence-label not-applicable">Not applicable</span> for lock persistence; OOS crash matrix Unknown</td></tr>
+      <tr><td>T14 comparator semantics</td><td>pinned source unit 검사로 PG relation/XID tag와 MySQL MDL/record key를 추출</td><td>10장 8축 표의 resource·owner·release와 일치; runtime cross-DB는 요구하지 않음</td><td>PG-C001/010/020, MYSQL-C001/010/020</td></tr>
+      <tr><td>T15 conversion·queue</td><td>T1 S 보유, T2 S 보유, T1 X conversion, T3 신규 S 순서로 요청</td><td>T1은 blocked holder가 되고 UPR 위치를 지키며, grant는 앞선 blocked mode와 holder compatibility를 넘지 않음</td><td>CUBRID-C018; strict FIFO/starvation-free는 oracle 아님</td></tr>
+      <tr><td>T16 concurrent OOS first-create</td><td>fresh heap에 두 worker가 동시에 첫 큰 값을 transform</td><td>한 worker만 create/publish하고 뒤 worker는 header WRITE latch 뒤 같은 VFID를 재사용</td><td>CUBRID-C021; runtime 미검증</td></tr>
+      <tr><td>T17 lock pressure</td><td>제한된 entry allocator로 holder/waiter 생성을 반복하고 dump 수집</td><td>allocation failure가 error로 반환되고 누수 없음; dump size를 총 메모리로 오독하지 않음</td><td>CUBRID-C019; runtime 미검증</td></tr>
+      <tr><td>T18 unlock queue·reclamation</td><td>(A) blocked converter와 waiter를 만든 뒤 holder full release, (B) 중간 waiter를 별도로 취소, (C) 마지막 entry까지 정리</td><td>A는 resource→transaction mutex 순서·양쪽 link 제거·holder mode 재계산·blocked holder 후 waiter grant. B는 뒤 waiter partial grant/recompute만 하고 blocked holder를 grant하지 않음. C는 빈 resource hash 제거</td><td>CUBRID-C022; strict FIFO/starvation-free는 oracle 아님, runtime 미검증</td></tr>
+    </tbody></table></div>
+
+    <h3>관찰 지점과 debugger landmark</h3>
+    <ul>
+      <li>CUBRID <code>xlock_dump</code>는 transaction self-lock을 inserter MVCCID로 표시합니다. event log의 blocker/blocked 정보도 MVCCID를 표시합니다.</li>
+      <li>generic acquire/wait counters에는 transaction resource가 섞입니다. 별도 self-lock counter는 없습니다.</li>
+      <li><code>xlock_dump</code>의 allocated size는 <code>LK_ENTRY</code>와 <code>LK_RES</code> 합계이며 hash bucket·transaction table·local pool·wait-for graph를 포함한 총량이 아닙니다.</li>
+      <li>주요 debugger landmark: <code>lock_internal_perform_lock_object</code>, <code>lock_transaction_mvccid</code>, <code>logtb_acquire_mvccid_self_lock</code>, <code>btree_wait_for_inserter_end</code>, <code>heap_oos_find_vfid</code>, <code>file_create</code>.</li>
+      <li>transaction-resource timeout message가 union의 OID 표현을 사용할 수 있으므로 사용자 메시지 숫자만으로 MVCCID를 식별하지 않습니다. dump/event log와 함께 봅니다.</li>
+      <li>OOS path는 <code>f03-exp3-observer-v2</code>의 <code>;oos_stats</code>로 직접 관찰했습니다. small은 no OOS file, large는 VFID와 live record 1을 보였습니다. 비정상 <code>Logical data size</code>는 oracle에서 제외합니다.</li>
+    </ul>
+  </section>
+
+  <section id="glossary-evidence-unknowns" data-claim-id="CUBRID-C001 CUBRID-C002 CUBRID-C003 CUBRID-C004 CUBRID-C005 CUBRID-C006 CUBRID-C007 CUBRID-C008 CUBRID-C009 CUBRID-C010 CUBRID-C011 CUBRID-C012 CUBRID-C013 CUBRID-C014 CUBRID-C015 CUBRID-C016 CUBRID-C017 CUBRID-C018 CUBRID-C019 CUBRID-C020 CUBRID-C021 CUBRID-C022 PG-C001 PG-C002 PG-C003 PG-C004 PG-C005 PG-C006 PG-C007 PG-C008 PG-C010 PG-C011 PG-C012 PG-C020 MYSQL-C001 MYSQL-C002 MYSQL-C003 MYSQL-C004 MYSQL-C005 MYSQL-C006 MYSQL-C008 MYSQL-C009 MYSQL-C010 MYSQL-C011 MYSQL-C020 CMP-C001 CMP-C002 CMP-C003 CMP-C004 CMP-C005 CMP-C006 CMP-C007 CMP-C008 CMP-C010 CMP-C020">
+    <h2>8. 용어 사전, Evidence index와 Unknowns</h2>
+    <dl>
+      <dt><strong>Resource key</strong></dt><dd>lock manager가 보호 대상을 구별하는 type+value 주소입니다.</dd>
+      <dt><strong>OID</strong></dt><dd>Object Identifier. class나 row 같은 logical object를 가리키며 메모리 pointer가 아닙니다.</dd>
+      <dt><strong>tran_index</strong></dt><dd>현재 server transaction table에서 lock owner를 찾는 칸 번호입니다. 영구적인 업무 ID나 MVCCID와 같지 않습니다.</dd>
+      <dt><strong>Owner</strong></dt><dd>lock을 보유하고 release 책임이 있는 transaction입니다. 호출 thread나 session과 자동으로 같지 않습니다.</dd>
+      <dt><strong>Waiter</strong></dt><dd>같은 resource의 incompatible mode 때문에 grant를 기다리는 transaction입니다.</dd>
+      <dt><strong>SCH_S_LOCK</strong></dt><dd>schema definition을 안정적으로 참조하도록 조정하는 schema stability mode입니다. BU와 호환됩니다.</dd>
+      <dt><strong>SCH_M_LOCK</strong></dt><dd>schema definition을 변경하는 요청의 schema modification mode입니다. 이 책의 BU experiment에서는 BU holder와 충돌한 waiter mode였습니다.</dd>
+      <dt><strong>BU_LOCK</strong></dt><dd>server-side loaddb가 class OID resource에 사용하는 bulk update object-lock mode입니다.</dd>
+      <dt><strong>Transaction-owned lock</strong></dt><dd>transaction이 owner여서 해제 책임을 진다는 분류입니다. resource가 꼭 transaction일 필요는 없습니다.</dd>
+      <dt><strong>Transaction-resource lock</strong></dt><dd>transaction 식별자를 resource key로 삼는다는 분류입니다. CUBRID의 MVCCID self-lock이 예입니다.</dd>
+      <dt><strong>Lock conversion</strong></dt><dd>같은 owner가 같은 resource에 가진 mode를 재요청해 같거나 더 강한 mode로 합치는 과정입니다.</dd>
+      <dt><strong>UPR</strong></dt><dd>Upgrader Positioning Rule. 더 강한 mode를 기다리는 blocked holder의 queue 위치를 정하는 규칙입니다. strict FIFO 보장과 같은 말이 아닙니다.</dd>
+      <dt><strong>MVCCID</strong></dt><dd>row version writer를 식별하며 transaction self-lock key로도 쓰는 CUBRID identity입니다.</dd>
+      <dt><strong>INSID</strong></dt><dd>record version에 적는 inserter MVCCID입니다. current bulk row에서는 생략될 수 있습니다.</dd>
+      <dt><strong>Self-lock</strong></dt><dd>inserter가 자기 MVCCID resource에 가진 X lock입니다. observer가 transaction completion을 기다리는 rendezvous입니다.</dd>
+      <dt><strong>OOS</strong></dt><dd>Out-of-row Overflow Storage. 큰 variable value를 heap record 밖의 전용 OOS file에 저장하는 CUBRID subsystem입니다.</dd>
+      <dt><strong>VFID</strong></dt><dd>Volume File Identifier. volume ID와 file ID로 CUBRID file을 가리키는 값입니다.</dd>
+      <dt><strong>sysop</strong></dt><dd>system operation. file/page 내부 변경을 작은 원자 단위로 commit/abort하는 내부 경계입니다.</dd>
+      <dt><strong>MDL</strong></dt><dd>MySQL Metadata Lock. table 이름·정의·open 안정성을 조정하는 SQL 계층 잠금입니다.</dd>
+      <dt><strong>trx_t</strong></dt><dd>InnoDB transaction state와 lock ownership을 담는 내부 객체입니다.</dd>
+    </dl>
+
+    <h3>Claim-to-source index</h3>
+    <p>아래 55개 ID가 현재 <a href="../evidence/claims.jsonl">raw Claim ledger</a>의 전체 목록입니다. file SHA-256, symbol, confidence와 긴 limitation은 ledger에 있고, 여기에는 1-based source range와 runtime 연결을 빠짐없이 요약합니다.</p>
+    <div class="table-wrap"><table><caption>CUBRID Claim 22개</caption><thead><tr><th>Claim</th><th>고정 source ranges 또는 runtime</th><th>경계</th></tr></thead><tbody>
+      <tr><td><code>CUBRID-C001</code></td><td><a href="../evidence/runs/f03-exp1-observer-v7/meta.json"><code>f03-exp1-observer-v7</code></a> + <a href="../evidence/runs/f03-exp1-lockdb-v7/meta.json"><code>f03-exp1-lockdb-v7</code></a></td><td>BU holder/SCH_M waiter, unrelated control과 약 9.6초 observer. 한 interleaving만 관찰.</td></tr>
+      <tr><td><code>CUBRID-C002</code></td><td><code>lock_table.h:36–52</code>; <code>lock_table.c:30–131</code></td><td>BU compatibility; SQL별 실제 request 전체는 제외.</td></tr>
+      <tr><td><code>CUBRID-C003</code></td><td><code>load_server_loader.cpp:118–181</code>; <code>locator_sr.c:1017–1162</code>; <code>lock_manager.c:6238–6435,7473–7696</code></td><td>session BU와 worker object redirect.</td></tr>
+      <tr><td><code>CUBRID-C004</code></td><td><code>load_session.cpp:90–232,306–452</code></td><td>worker batch lifecycle; 모든 scheduling은 미검증.</td></tr>
+      <tr><td><code>CUBRID-C005</code></td><td><code>log_tran_table.c:4053–4192</code>; <code>lock_manager.c:6437–6493</code>; <code>heap_file.c:21570–21665,24757–24776</code></td><td>self-X acquire/ensure; assignment은 best-effort.</td></tr>
+      <tr><td><code>CUBRID-C006</code></td><td><code>btree.c:24228–24920,27365–27545</code></td><td>unique/FK waiter; runtime에서 latch를 직접 보지 않음.</td></tr>
+      <tr><td><code>CUBRID-C007</code></td><td><code>log_manager.c:5193–5384</code>; <code>lock_manager.c:7353–7428</code></td><td>ordinary local completion-before-unlock.</td></tr>
+      <tr><td><code>CUBRID-C008</code></td><td><code>locator_sr.c:4926–5085</code>; <code>heap_file.c:21162–21742,24255–24445</code></td><td>bulk INSID/object-lock omission의 current path.</td></tr>
+      <tr><td><code>CUBRID-C009</code></td><td><span class="evidence-label inferred">Inferred</span>: C006+C008 premises</td><td>다른 shared metadata observer가 발견되면 깨짐.</td></tr>
+      <tr><td><code>CUBRID-C010</code></td><td><a href="../evidence/runs/f03-exp2-observer-v3/meta.json"><code>f03-exp2-observer-v3</code></a> + <a href="../evidence/runs/f03-exp2-lockdb-v3/meta.json"><code>f03-exp2-lockdb-v3</code></a></td><td>MVCCID 7 X holder/S waiter와 약 10.7초 뒤 최종 row. latch/recheck 내부 호출은 source-only.</td></tr>
+      <tr><td><code>CUBRID-C011</code></td><td><code>lock_manager.c:3456–3543,6238–6317,7473–7696</code></td><td>current transaction-only TT_LOADDB exception.</td></tr>
+      <tr><td><code>CUBRID-C012</code></td><td><code>load_server_loader.cpp:691–734</code>; <code>heap_file.c:12241–12351,13064–13194</code>; <code>heap_oos.cpp:622–659</code>; <code>oos_file.cpp:968–1078</code>; <code>file_manager.c:3320–3483</code></td><td>OOS lazy-create source path; physical placement은 CUBRID-C020이 별도 runtime 확인.</td></tr>
+      <tr><td><code>CUBRID-C013</code></td><td><code>load_session.cpp:90–232</code>; <code>transaction_sr.c:107–145</code></td><td>ordinary worker error/cleanup; SIGABRT 제외.</td></tr>
+      <tr><td><code>CUBRID-C014</code></td><td><code>lock_manager.c:5585–5775,10072–10135</code></td><td>dump/event observability.</td></tr>
+      <tr><td><code>CUBRID-C015</code></td><td><code>lock_manager.c:2002–2248</code></td><td>transaction-resource timeout message gap; runtime 미재현.</td></tr>
+      <tr><td><code>CUBRID-C016</code></td><td><code>file_manager.c:3320–3923</code></td><td>ordinary file error cleanup; process-abort recovery 제외.</td></tr>
+      <tr><td><code>CUBRID-C017</code></td><td><code>lock_manager.h:151–203</code>; <code>lock_manager.c:671–740,865–960</code></td><td>payload는 OID pair/full MVCCID, 실제 identity는 object type+oid 또는 transaction type+MVCCID; class_oid compare/hash 제외.</td></tr>
+      <tr><td><code>CUBRID-C018</code></td><td><code>lock_manager.c:2657–3046,3456–4166</code></td><td>conversion·UPR·queue; strict FIFO/starvation-free 보장 제외.</td></tr>
+      <tr><td><code>CUBRID-C019</code></td><td><code>lock_manager.c:82–93,1085–1288,3456–3838,8942–9066</code></td><td>boot sizing·allocation error·partial dump size; 총 메모리/throughput 제외.</td></tr>
+      <tr><td><code>CUBRID-C020</code></td><td><a href="../evidence/runs/f03-exp3-action-v2/meta.json"><code>f03-exp3-action-v2</code></a> + <a href="../evidence/runs/f03-exp3-observer-v2/meta.json"><code>f03-exp3-observer-v2</code></a></td><td>2건/0실패, small no-file, large VFID/live=1과 값 일치. logical-size 수치는 제외.</td></tr>
+      <tr><td><code>CUBRID-C021</code></td><td><code>heap_file.c:12241–12351</code></td><td>same-heap first-create header WRITE latch; runtime timing/crash 제외.</td></tr>
+      <tr><td><code>CUBRID-C022</code></td><td><code>lock_manager.c:1356–1381,1504–1607,2657–3046,4185–4401,7353–7428</code></td><td>holder full unlock과 waiter cancellation의 서로 다른 grant branch·mutex order·resource removal; strict FIFO/starvation·all epoch timing 제외.</td></tr>
+    </tbody></table></div>
+
+    <div class="table-wrap"><table><caption>PostgreSQL Claim 12개</caption><thead><tr><th>Claim</th><th>고정 source ranges</th><th>경계</th></tr></thead><tbody>
+      <tr><td><code>PG-C001</code></td><td><code>copy.c:62–386</code>; <code>lmgr.c:106–139</code>; <code>relation.c:196–217</code></td><td>COPY relation lock/lifetime.</td></tr>
+      <tr><td><code>PG-C002</code></td><td><code>lockdefs.h:28–48</code>; <code>lock.c:68–108</code></td><td>RowExclusive matrix; row/page 별도.</td></tr>
+      <tr><td><code>PG-C003</code></td><td><code>lock.c:832–1278</code>; <code>lmgr.c:106–139,614–629</code></td><td>current ResourceOwner; prepared 예외.</td></tr>
+      <tr><td><code>PG-C004</code></td><td><code>nbtinsert.c:104–279,410–786</code>; <code>lmgr.c:648–730</code></td><td>regular immediate unique path.</td></tr>
+      <tr><td><code>PG-C005</code></td><td><code>ri_triggers.c:364–619,3278–3344</code>; <code>heapam.c:4727–5439</code></td><td>FK referenced tuple conflict.</td></tr>
+      <tr><td><code>PG-C006</code></td><td><code>xact.c:2269–2550,2854–3056</code>; <code>resowner.c:664–818</code>; <code>lock.c:2310–2582</code></td><td>ordinary commit/abort publication-release.</td></tr>
+      <tr><td><code>PG-C007</code></td><td><code>xact.c:2558–2850</code>; <code>lock.c:3563–3756</code></td><td>prepared lock transfer; full recovery 제외.</td></tr>
+      <tr><td><code>PG-C008</code></td><td><code>lockfuncs.c:92–444</code>; <code>system_views.sql:439–440,1466–1484</code>; <code>copyfrom.c:1535–1932</code></td><td><code>pg_locks</code>/COPY progress.</td></tr>
+      <tr><td><code>PG-C010</code></td><td><code>xact.c:636–787</code>; <code>lmgr.c:614–629</code>; <code>locktag.h:125–132</code></td><td>regular XID self lock; VXID/token 별도.</td></tr>
+      <tr><td><code>PG-C011</code></td><td><code>lmgr.c:648–730</code></td><td>XID waiter; subtransaction/token 예외.</td></tr>
+      <tr><td><code>PG-C012</code></td><td><code>lock.c:1939–2019</code>; <code>proc.c:1365–1605</code></td><td>wait failure cleanup.</td></tr>
+      <tr><td><code>PG-C020</code></td><td><code>copy.c:62–386</code>; <code>copyfrom.c:781–1519</code></td><td>native core COPY bounded negative.</td></tr>
+    </tbody></table></div>
+
+    <div class="table-wrap"><table><caption>MySQL/InnoDB Claim 11개</caption><thead><tr><th>Claim</th><th>고정 source ranges</th><th>경계</th></tr></thead><tbody>
+      <tr><td><code>MYSQL-C001</code></td><td><code>parse_tree_nodes.cc:4306–4367</code>; <code>table.h:3095–3108</code>; <code>sql_base.cc:2638–2754</code>; <code>sql_parse.cc:5008–5040</code></td><td>ordinary LOAD MDL.</td></tr>
+      <tr><td><code>MYSQL-C002</code></td><td><code>parse_tree_nodes.cc:4306–4367</code>; <code>mdl.cc:2183–2242</code></td><td>bulk MDL X; BU semantics 아님.</td></tr>
+      <tr><td><code>MYSQL-C003</code></td><td><code>row0ins.cc:1416–2088,3647–3733</code>; <code>lock0priv.h:578–599</code></td><td>ordinary IX/record conflict.</td></tr>
+      <tr><td><code>MYSQL-C004</code></td><td><code>lock0priv.ic:52–59</code>; <code>trx0sys.ic:140–180</code>; <code>lock0lock.cc:5197–5236</code></td><td>DB_TRX_ID marker→record key.</td></tr>
+      <tr><td><code>MYSQL-C005</code></td><td><code>row0ins.cc:1416–2088</code>; <code>row0mysql.cc:654–727,1498–1600</code></td><td>DB_LOCK_WAIT와 retry.</td></tr>
+      <tr><td><code>MYSQL-C006</code></td><td><code>lock0priv.h:136–171</code>; <code>trx0trx.cc:1888–1982</code>; <code>lock0lock.cc:5800–5850</code>; <code>ha_innodb.cc:5997–6218</code></td><td>commit/rollback release와 AUTO_INC 예외.</td></tr>
+      <tr><td><code>MYSQL-C008</code></td><td><code>table_md_locks.cc:47–70</code>; <code>table_data_locks.cc:48–77</code>; <code>table_data_lock_waits.cc:48–76</code></td><td>Performance Schema; runtime 미실행.</td></tr>
+      <tr><td><code>MYSQL-C009</code></td><td><code>row0mysql.cc:654–727</code>; <code>sql_parse.cc:5008–5016</code></td><td>statement/full rollback error policy.</td></tr>
+      <tr><td><code>MYSQL-C010</code></td><td><code>lock0priv.h:136–171,634–680</code>; <code>lock0lock.cc:5197–5236,5405–5445</code></td><td>transaction-ID keyed resource bounded negative.</td></tr>
+      <tr><td><code>MYSQL-C011</code></td><td><span class="evidence-label unknown">Unknown</span>: XA MDL/<code>trx_t</code> lifetime</td><td>추가 source trace/runtime으로 해소 가능.</td></tr>
+      <tr><td><code>MYSQL-C020</code></td><td><code>sql_load.cc:654–1021</code>; <code>handler0alter.cc:11346–11400</code>; <code>ddl0bulk.h:278–301</code>; <code>ddl0bulk.cc:155–193,725–778</code></td><td>bulk threads share transaction; external driver Unknown.</td></tr>
+    </tbody></table></div>
+
+    <div class="table-wrap"><table><caption>Cross-database Claim 10개</caption><thead><tr><th>Claim</th><th>세 DB의 exact source 축</th><th>판정 경계</th></tr></thead><tbody>
+      <tr><td><code>CMP-C001</code></td><td>CUBRID <code>locator_sr.c:1017–1162</code>; PG <code>copy.c:62–386</code>; MySQL <code>parse_tree_nodes.cc:4306–4367</code>, <code>row0ins.cc:3647–3733</code></td><td>coarse coordination <span class="evidence-label partial-analogy">Partial analogy</span>.</td></tr>
+      <tr><td><code>CMP-C002</code></td><td>CUBRID <code>lock_manager.c:6238–6435,7586–7696</code>; PG <code>copy.c:62–386</code>; MySQL <code>sql_base.cc:2638–2754</code>, <code>row0ins.cc:3647–3733</code></td><td>caller obligations.</td></tr>
+      <tr><td><code>CMP-C003</code></td><td>CUBRID <code>lock_manager.c:720–740</code>; PG <code>locktag.h:125–132</code>; MySQL <code>lock0priv.h:634–680</code>, <code>lock0lock.cc:5197–5236</code></td><td>identity: CUBRID↔PG regular completion만 Equivalent.</td></tr>
+      <tr><td><code>CMP-C004</code></td><td>CUBRID <code>load_session.cpp:90–232</code>, <code>load_server_loader.cpp:118–181</code>; PG <code>copyfrom.c:781–1519</code>; MySQL <code>ddl0bulk.cc:155–193</code>, <code>sql_load.cc:654–1021</code></td><td>owner topology <span class="evidence-label">No equivalent</span>.</td></tr>
+      <tr><td><code>CMP-C005</code></td><td>CUBRID <code>lock_table.c:30–131</code>; PG <code>lock.c:68–108</code>; MySQL <code>mdl.cc:2183–2242</code>, <code>lock0priv.h:578–599</code></td><td>compatibility <span class="evidence-label partial-analogy">Partial analogy</span>.</td></tr>
+      <tr><td><code>CMP-C006</code></td><td>CUBRID <code>log_manager.c:5193–5384</code>; PG <code>xact.c:2269–2550</code>, <code>lock.c:3563–3756</code>; MySQL <code>trx0trx.cc:1888–1982</code></td><td>ordinary completion publish-before-release만 Equivalent.</td></tr>
+      <tr><td><code>CMP-C007</code></td><td>CUBRID <code>load_session.cpp:90–232</code>, <code>file_manager.c:3320–3923</code>; PG <code>lock.c:1939–2019</code>; MySQL <code>row0mysql.cc:654–727</code>, <code>sql_parse.cc:5008–5016</code></td><td>failure policy; crash/disk-full 전체 제외.</td></tr>
+      <tr><td><code>CMP-C008</code></td><td>CUBRID <code>lock_manager.c:2002–2248,5585–5775</code>; PG <code>lockfuncs.c:92–444</code>, <code>system_views.sql:1466–1484</code>; MySQL <code>table_md_locks.cc:47–70</code>, <code>table_data_lock_waits.cc:48–76</code></td><td>observability; 공통 runtime 미실행.</td></tr>
+      <tr><td><code>CMP-C010</code></td><td>CUBRID <code>btree.c:24228–24334</code>, <code>lock_manager.c:6437–6493</code>; PG <code>lmgr.c:648–730</code>, <code>nbtinsert.c:104–279</code>; MySQL <code>lock0lock.cc:5197–5236</code>, <code>row0mysql.cc:1498–1600</code></td><td>CUBRID↔PG completion Equivalent; 전체는 Partial analogy.</td></tr>
+      <tr><td><code>CMP-C020</code></td><td>CUBRID <code>file_manager.c:3320–3483</code>, <code>lock_manager.c:3456–3543</code>; PG <code>copy.c:62–386</code>, <code>copyfrom.c:781–1519</code>; MySQL <code>sql_load.cc:654–1021</code>, <code>ddl0bulk.cc:155–193</code></td><td>exact regression composition <span class="evidence-label">No equivalent</span>.</td></tr>
+    </tbody></table></div>
+
+    <h3>Primary raw runtime evidence index</h3>
+    <div class="table-wrap"><table><caption>manifest가 채택한 observation/action run과 raw transcript</caption><thead><tr><th>Run ID</th><th>목적</th><th>Raw links</th></tr></thead><tbody>
+      <tr><td><code>runtime-baseline-build</code></td><td>pinned source debug build</td><td><a href="../evidence/runs/runtime-baseline-build/meta.json">meta</a> · <a href="../evidence/runs/runtime-baseline-build/stdout.txt">stdout</a> · <a href="../evidence/runs/runtime-baseline-build/stderr.txt">stderr</a> · <a href="../evidence/runtime-tools-baseline.json">tool snapshot</a></td></tr>
+      <tr><td><code>f03-exp1-observer-v7</code> + <code>f03-exp1-lockdb-v7</code></td><td>unrelated control·SCH_M wait 결과 + BU holder/waiter snapshot</td><td><a href="../evidence/runs/f03-exp1-observer-v7/meta.json">observer meta</a> · <a href="../evidence/runs/f03-exp1-observer-v7/stdout.txt">observer stdout</a> · <a href="../evidence/runs/f03-exp1-lockdb-v7/meta.json">lockdb meta</a> · <a href="../evidence/runs/f03-exp1-lockdb-v7/stdout.txt">lockdb stdout</a> · <a href="../experiments/experiment-1/README.md">all receipts</a></td></tr>
+      <tr><td><code>f03-exp2-observer-v3</code> + <code>f03-exp2-lockdb-v3</code></td><td>unique wait 뒤 row + MVCCID 7 X/S snapshot</td><td><a href="../evidence/runs/f03-exp2-observer-v3/meta.json">observer meta</a> · <a href="../evidence/runs/f03-exp2-observer-v3/stdout.txt">observer stdout</a> · <a href="../evidence/runs/f03-exp2-lockdb-v3/meta.json">lockdb meta</a> · <a href="../evidence/runs/f03-exp2-lockdb-v3/stdout.txt">lockdb stdout</a> · <a href="../experiments/experiment-2/README.md">all receipts</a></td></tr>
+      <tr><td><code>f03-exp3-action-v2</code> + <code>f03-exp3-observer-v2</code></td><td>loaddb 2/0 + small/large placement와 value observation</td><td><a href="../evidence/runs/f03-exp3-action-v2/meta.json">action meta</a> · <a href="../evidence/runs/f03-exp3-action-v2/stdout.txt">action stdout</a> · <a href="../evidence/runs/f03-exp3-observer-v2/meta.json">observer meta</a> · <a href="../evidence/runs/f03-exp3-observer-v2/stdout.txt">observer stdout</a> · <a href="../experiments/experiment-3/README.md">all receipts</a></td></tr>
+    </tbody></table></div>
+
+    <div class="callout evidence-runtime"><p><span class="evidence-label runtime-observed">해결된 runtime gap:</span> 세 README는 setup, action, control, setup release, cleanup과 cleanup check receipt를 연결합니다. experiment-3은 small no-file control과 large VFID/live record를 직접 보여 줍니다. setup은 readiness marker 뒤 release gate에서 기다렸으므로 setup receipt finish 시각만으로 action 순서를 판단하지 않습니다.</p></div>
+
+    <h3 id="known-unknowns">남아 있는 Unknown과 제외 범위</h3>
+    <ul>
+      <li><span class="evidence-label unknown">Unknown:</span> 수정 전·후 debug binary를 같은 input으로 실행한 A/B runtime과 historical core stack은 이 Report Run에 없습니다.</li>
+      <li><span class="evidence-label unknown">Unknown:</span> fresh MVCCID X acquire의 zero-wait를 runtime counter로 측정하지 않았습니다.</li>
+      <li><span class="evidence-label unknown">Unknown:</span> historical process abort 뒤 reserved sector·partial file tracker·heap OOS VFID의 전체 crash recovery입니다.</li>
+      <li><span class="evidence-label unknown">Unknown:</span> MySQL external <code>bulk_load_driver</code>의 parsing/scheduling 구현은 pinned source tree에서 찾지 못했습니다.</li>
+      <li><span class="evidence-label not-applicable">Not applicable:</span> OOS binary layout, chunk CRUD, vacuum reclamation 전체는 이 잠금 보고서의 선언 범위 밖입니다.</li>
+      <li><span class="evidence-label not-applicable">Not applicable:</span> full MVCC snapshot, WAL/ARIES, deadlock victim 선정, lock hash 최적화 전체를 재구현하지 않습니다.</li>
+      <li><span class="evidence-label not-applicable">Not applicable:</span> PostgreSQL/MySQL runtime 실험, ABI, on-disk, bit-for-bit, exact timing·performance compatibility를 약속하지 않습니다.</li>
+    </ul>
+  </section>
+
+  <section id="coverage-matrix">
+    <h2>9. 18개 Coverage Obligation 지도</h2>
+    <div class="table-wrap"><table><caption>Obligation에서 Book anchor·Claim·실행으로 가는 지도</caption><thead><tr><th>Coverage ID</th><th>Book anchor</th><th>주 근거</th><th>학습 확인</th></tr></thead><tbody>
+      <tr><td><code>orientation</code></td><td><a href="01-orientation.html#orientation">1장 orientation</a></td><td>CUBRID-C011, CUBRID-C012, CUBRID-C020, CMP-C020; provenance/runtime snapshot</td><td>세 revision·dirty·runtime identity 설명</td></tr>
+      <tr><td><code>mental-model</code></td><td><a href="02-three-kinds-of-lock.html#mental-model">2장 mental model</a></td><td>CUBRID-C003, CUBRID-C005, CUBRID-C006, CUBRID-C017, CUBRID-C018, CUBRID-C022</td><td>세 primitive와 lock manager input/output·whole-system picture</td></tr>
+      <tr><td><code>scope-interface-seams</code></td><td><a href="03-cubrid-lock-resources.html#lock-resource-owner-lifecycle">3장 resource·owner·Interface seam</a></td><td>CUBRID-C002–CUBRID-C005, CUBRID-C011, CUBRID-C017, CUBRID-C022</td><td>key/mode/owner/wait/lifetime와 TT_LOADDB 경계·mutex nesting</td></tr>
+      <tr><td><code>data-ownership-lifetime</code></td><td><a href="05-mvccid-self-lock.html#data-ownership-lifetime">5장 ownership</a></td><td>CUBRID-C003, CUBRID-C004, CUBRID-C005</td><td>session S와 worker B1/B2 그림</td></tr>
+      <tr><td><code>lifecycle-state-machines</code></td><td><a href="07-lifecycle-and-failure.html#lifecycle-state-machines">7장 lifecycle</a></td><td>CUBRID-C004, CUBRID-C007, CUBRID-C022; CUBRID-PACKET §§5.3, 5.5</td><td>inactive-before-unlock와 제거→grant→reclaim</td></tr>
+      <tr><td><code>core-workflows</code></td><td><a href="08-source-walkthrough.html#core-workflows">8장 workflows</a></td><td>CUBRID-C003, CUBRID-C005, CUBRID-C006, CUBRID-C008, CUBRID-C011–CUBRID-C013, CUBRID-C016, CUBRID-C020–CUBRID-C022</td><td>BU/self-lock/OOS/unlock의 fast·miss·wait/retry·failure</td></tr>
+      <tr><td><code>concurrency</code></td><td><a href="05-mvccid-self-lock.html#mvccid-self-lock-rendezvous">5장 rendezvous</a></td><td>CUBRID-C005–CUBRID-C007; PG-C004, PG-C010, PG-C011; MYSQL-C004, MYSQL-C005, MYSQL-C010; CMP-C010</td><td>wait 전 latch release와 recheck</td></tr>
+      <tr><td><code>storage-durability-recovery</code></td><td><a href="07-lifecycle-and-failure.html#storage-durability-recovery">7장 durability boundary</a></td><td>CUBRID-C007, CUBRID-C012, CUBRID-C016; CMP-C006, CMP-C007</td><td>volatile lock vs durable file; crash Unknown</td></tr>
+      <tr><td><code>policies-algorithms</code></td><td><a href="09-fix-boundary.html#policies-algorithms">9장 policy</a></td><td>CUBRID-C002, CUBRID-C005, CUBRID-C011, CUBRID-C018, CUBRID-C019, CUBRID-C022</td><td>설정/고정 policy·전체 pseudocode·정성적 비용·pathological queue</td></tr>
+      <tr><td><code>errors-resource-pressure</code></td><td><a href="07-lifecycle-and-failure.html#errors-resource-pressure">7장 errors</a></td><td>CUBRID-C013, CUBRID-C015, CUBRID-C016, CUBRID-C018, CUBRID-C019; PG-C012, MYSQL-C009, CMP-C007</td><td>wait failure·allocation pressure·OOS cleanup</td></tr>
+      <tr><td><code>performance-observability</code></td><td><a href="10-comparison-and-experiments.html#performance-observability">10장 observability</a></td><td>CUBRID-C014, CUBRID-C015, CUBRID-C019, PG-C008, MYSQL-C008, CMP-C008</td><td>세 DB 관찰 도구·비용 caveat</td></tr>
+      <tr><td><code>experimental-validation</code></td><td><a href="10-comparison-and-experiments.html#experimental-validation">10장 run table</a></td><td>CUBRID-C001→<code>f03-exp1-observer-v7</code>+<code>f03-exp1-lockdb-v7</code>; CUBRID-C010→<code>f03-exp2-observer-v3</code>+<code>f03-exp2-lockdb-v3</code>; CUBRID-C020→<code>f03-exp3-action-v2</code>+<code>f03-exp3-observer-v2</code></td><td>observation·control·cleanup과 남은 한계 분리</td></tr>
+      <tr><td><code>postgresql-analysis</code></td><td><a href="10-comparison-and-experiments.html#postgresql-analysis">10장 PostgreSQL</a></td><td>PG-C001–PG-C008, PG-C010–PG-C012, PG-C020; PG-PACKET</td><td>relation·XID·owner·wait·prepared 경계</td></tr>
+      <tr><td><code>mysql-analysis</code></td><td><a href="10-comparison-and-experiments.html#mysql-analysis">10장 MySQL</a></td><td>MYSQL-C001–MYSQL-C006, MYSQL-C008–MYSQL-C011, MYSQL-C020; MYSQL-PACKET</td><td>MDL/IX/record/<code>trx_t</code> 분리</td></tr>
+      <tr><td><code>cross-database-comparison</code></td><td><a href="10-comparison-and-experiments.html#cross-database-comparison">10장 8축 mapping</a></td><td>CMP-C001–CMP-C008, CMP-C010, CMP-C020</td><td>Equivalent/Partial/No equivalent 판정</td></tr>
+      <tr><td><code>reimplementation-blueprint</code></td><td><a href="#reimplementation-blueprint">11장 blueprint</a></td><td>CUBRID-C002–CUBRID-C008, CUBRID-C010–CUBRID-C022</td><td>Interface/state/total transitions/pseudocode/T01–T18</td></tr>
+      <tr><td><code>glossary-evidence-unknowns</code></td><td><a href="#glossary-evidence-unknowns">11장 evidence</a></td><td>55 Claims, primary runtime runs, source packets/provenance</td><td>first-use term과 Unknown teach-back</td></tr>
+      <tr><td><code>teaching-map</code></td><td><a href="#teaching-map">11장 teaching map</a></td><td>세 central behavior의 exact Claim group·Quiz·8 mastery areas</td><td>claim→quiz→teach-back 연결</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section id="teaching-map" data-claim-id="CUBRID-C001 CUBRID-C002 CUBRID-C003 CUBRID-C004 CUBRID-C005 CUBRID-C006 CUBRID-C007 CUBRID-C008 CUBRID-C010 CUBRID-C011 CUBRID-C012 CUBRID-C013 CUBRID-C016 CUBRID-C017 CUBRID-C018 CUBRID-C019 CUBRID-C020 CUBRID-C021 CUBRID-C022 PG-C001 PG-C002 PG-C003 PG-C004 PG-C005 PG-C006 PG-C010 PG-C011 PG-C020 MYSQL-C001 MYSQL-C002 MYSQL-C003 MYSQL-C004 MYSQL-C005 MYSQL-C006 MYSQL-C010 MYSQL-C020 CMP-C001 CMP-C002 CMP-C003 CMP-C004 CMP-C005 CMP-C006 CMP-C010 CMP-C020">
+    <h2>10. Central behavior, Quiz와 8개 Live Grill mastery 지도</h2>
+    <div class="table-wrap"><table><caption>중심 행동에서 Claim·Quiz·mastery로</caption><thead><tr><th>Central behavior</th><th>주 장·Claim</th><th>Quiz</th><th>Live mastery</th></tr></thead><tbody>
+      <tr><td><code>lock-resource-owner-lifecycle</code></td><td>2–4·7장; CUBRID-C001–CUBRID-C004·CUBRID-C017·CUBRID-C018·CUBRID-C022, PG-C001–PG-C003, MYSQL-C001–MYSQL-C003, CMP-C001·CMP-C002·CMP-C004·CMP-C005</td><td><code>quiz-1</code></td><td>1 scope/Interface, 2 ownership/lifetime, 3 lifecycle</td></tr>
+      <tr><td><code>mvccid-self-lock-rendezvous</code></td><td>5·7장; CUBRID-C005–CUBRID-C007·CUBRID-C010·CUBRID-C018·CUBRID-C019·CUBRID-C022, PG-C003–PG-C006·PG-C010·PG-C011, MYSQL-C003–MYSQL-C006·MYSQL-C010, CMP-C003·CMP-C006·CMP-C010</td><td><code>quiz-2</code></td><td>3 lifecycle, 4 concurrency, 5 failure/recovery, 6 policy/performance</td></tr>
+      <tr><td><code>loaddb-oos-regression</code></td><td>6·8·9장; CUBRID-C008·CUBRID-C011–CUBRID-C013·CUBRID-C016·CUBRID-C020·CUBRID-C021, PG-C020, MYSQL-C020, CMP-C020</td><td><code>quiz-3</code></td><td>1 seam, 5 failure boundary, 7 experiment interpretation, 8 cross-DB non-equivalence</td></tr>
+    </tbody></table></div>
+
+    <div class="table-wrap"><table><caption>Live Grill의 여덟 mastery area</caption><thead><tr><th>번호</th><th>Mastery area</th><th>주 장</th><th>한 번에 좁혀 물을 질문</th></tr></thead><tbody>
+      <tr><td>1</td><td>responsibility, scope, Interface, seams</td><td>1, 3, 8, 9, 11</td><td>“지금 요청의 resource key와 caller obligation은 무엇인가?”</td></tr>
+      <tr><td>2</td><td>core data ownership and lifetime</td><td>3–5, 11</td><td>“session S와 worker B1이 각각 무엇을 언제까지 소유하는가?”</td></tr>
+      <tr><td>3</td><td>main lifecycle and transitions</td><td>5, 7, 11</td><td>“MVCCID 미발급부터 inactive·unlock까지 state를 말해 보라.”</td></tr>
+      <tr><td>4</td><td>concurrency invariants and forbidden interleavings</td><td>2–7, 9</td><td>“INSID를 self-X보다 먼저 publish하면 무엇이 깨지는가?”</td></tr>
+      <tr><td>5</td><td>durability, recovery, failure</td><td>6–9, 11</td><td>“ordinary error, abort, assert process abort가 각각 무엇을 정리하는가?”</td></tr>
+      <tr><td>6</td><td>policy and performance trade-offs</td><td>4, 7, 9, 10</td><td>“uniform self-lock이 얻는 invariant와 지불하는 entry 비용은 무엇인가?”</td></tr>
+      <tr><td>7</td><td>experiment interpretation and limitations</td><td>6, 10, 11</td><td>“stdout이 직접 증명한 것과 source에서만 안 것을 분리하라.”</td></tr>
+      <tr><td>8</td><td>PostgreSQL/MySQL similarities and non-equivalence</td><td>10, 11</td><td>“같은 completion 책임의 resource key가 세 DB에서 어떻게 다른가?”</td></tr>
+    </tbody></table></div>
+    <p>Quiz 문제와 정답은 <code>quiz/quiz-N/quiz.md</code>, <code>answer.md</code>로 분리되어 있습니다. Live Grill은 한 user turn에 한국어 질문 하나만 묻고, 답이 약하면 같은 concept을 resource→owner→lifetime→observer→invariant 순서로 좁힙니다.</p>
+  </section>
+
+  <section id="final-teachback">
+    <h2>11장 복습과 마지막 transition</h2>
+    <p><strong>한 문장:</strong> 재구현의 핵심은 lock 이름이 아니라 typed resource, transaction owner, total wait/error transition, completion-before-unlock, 제거→mode 재계산→grant→resource 회수와 TT_LOADDB resource boundary입니다.</p>
+    <p><strong>실패를 막는 법:</strong> Unknown과 Not applicable을 숨기지 않고, runtime stdout이 직접 보여 준 것보다 강한 결론을 쓰지 않습니다.</p>
+    <p><strong>다음 단계:</strong> 큰 OOS-backed row 하나가 server-side loaddb에 들어오는 장면을 고르십시오. session과 worker owner, BU resource, MVCCID resource, OOS file creation, assert, current fix, PostgreSQL·MySQL 차이를 시간순으로 설명하면 Live Grill의 capstone을 시작할 준비가 된 것입니다.</p>
+  </section>
+</main>
+<footer><nav class="book-nav" aria-label="아래 장 이동"><a rel="prev" href="10-comparison-and-experiments.html">10장으로</a><a href="../index.html">목차로 돌아가기</a></nav></footer>
+</body></html>

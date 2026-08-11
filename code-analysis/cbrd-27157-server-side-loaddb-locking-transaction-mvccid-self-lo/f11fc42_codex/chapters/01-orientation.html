@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>1장 — 큰 행 하나가 assert에 닿기까지</title><link rel="stylesheet" href="../assets/report.css"></head>
+<body>
+<header><p>1장</p><h1>큰 행 하나가 debug assert에 닿기까지</h1><p>먼저 숲 전체를 봅니다. 모르는 용어는 뒤 장에서 하나씩 풉니다.</p></header>
+<nav class="book-nav" aria-label="장 이동"><a href="../index.html">목차</a><a rel="next" href="02-three-kinds-of-lock.html">다음 장</a></nav>
+<main>
+  <section class="chapter-guide" aria-label="이 장의 학습 안내">
+    <div><strong>학습 목표</strong>작은 값과 큰 값의 경로가 갈리는 지점을 찾고, session <code>BU_LOCK</code>과 worker self-lock을 처음부터 분리합니다.</div>
+    <div><strong>시작 상황</strong>같은 server-side loaddb에서 작은 행은 성공하지만 큰 variable value가 debug assert 경로를 엽니다.</div>
+    <div><strong>확인할 불변식</strong>서로 다른 resource key와 owner를 가진 잠금은 같은 이름이나 같은 manager를 지난다는 이유로 대체되지 않습니다.</div>
+    <div><strong>실패·한계</strong>이 장은 전체 지도를 보여 줍니다. 각 lock mode와 OOS 물리 형식은 뒤 장의 source 근거로 좁힙니다.</div>
+  </section>
+  <section id="orientation" data-claim-id="CUBRID-C011 CUBRID-C012 CUBRID-C020 CMP-C020">
+    <h2>작은 값과 큰 값의 갈림길</h2>
+    <p>server-side loaddb worker가 작은 행을 넣을 때는 보통 heap 안쪽 경로로 곧장 갑니다. 하지만 큰 variable value는 heap record 안에 모두 담지 않고 OOS(Out-of-row Overflow Storage, 큰 값을 heap record 밖의 전용 저장소에 두는 기능)로 옮길 수 있습니다. 그 class에서 OOS를 처음 쓰면 전용 file도 처음 만들어야 합니다.</p>
+    <pre><code>큰 값
+  → OOS로 옮길 준비
+  → 첫 FILE_OOS 생성
+  → file_create가 current MVCCID 요구
+  → worker가 자기 MVCCID에 X self-lock 요청
+  → 오래된 TT_LOADDB assert에 도달</code></pre>
+    <p class="diagram-alt">그림의 말뜻: 데이터 크기가 lock mode를 직접 바꾼 것이 아닙니다. 큰 값이 평소에는 가지 않던 file 생성 경로를 열었고, 그 경로가 MVCCID 발급과 self-lock을 불렀습니다.</p>
+    <div class="callout evidence-source"><p><span class="evidence-label source-confirmed">Source-confirmed:</span> 현재 고정 revision은 이 transaction resource 요청을 허용합니다. class나 instance object lock을 모두 허용한 것이 아닙니다. <span class="claim-id">CUBRID-C011</span></p></div>
+  </section>
+  <section id="two-locks-first-look">
+    <h2>처음부터 둘로 나누기</h2>
+    <pre><code>session transaction S
+  └─ class T에 BU_LOCK
+
+worker batch transaction B1
+  └─ 자기 MVCCID M1에 X_LOCK</code></pre>
+    <p><code>BU_LOCK</code>은 class <strong>OID(Object Identifier, class를 가리키는 logical 식별자)</strong>가 resource입니다. MVCCID self-lock은 transaction형 resource이며 key가 MVCCID입니다. 같은 lock manager를 지나가도 주소와 owner가 다릅니다.</p>
+    <p>비유하면 현장 책임자가 건물 사용 허가를 들고, 작업팀은 자기 작업 번호표에 “작업 중” 표시를 거는 상황입니다. 다만 실제 transaction은 조직도 속 부모·자식이 아닙니다. 각자 별도로 commit하거나 abort하는 owner입니다.</p>
+  </section>
+  <section id="scope">
+    <h2>이 책이 답할 것과 답하지 않을 것</h2>
+    <ul>
+      <li>답함: lock resource, mode, owner, waiter, lifetime.</li>
+      <li>답함: session과 worker batch transaction의 분리.</li>
+      <li>답함: unique/FK checker가 MVCCID에서 기다리고 재검사하는 이유.</li>
+      <li>답함: OOS lazy file creation에서 assert까지의 호출 사슬과 fix 경계.</li>
+      <li>짧게만 다룸: latch, WAL·recovery, deadlock, OOS 물리 형식.</li>
+    </ul>
+  </section>
+  <section id="provenance">
+    <h2>이 설명이 가리키는 정확한 revision</h2>
+    <div class="table-wrap"><table><caption>세 source tree와 dirty provenance</caption><thead><tr><th>Source</th><th>Revision</th><th>초기 상태</th></tr></thead><tbody>
+      <tr><td>CUBRID</td><td><code>f11fc42594732c263d8f10101f9df73a21346ee9</code></td><td><code>dirty=true</code>. worktree diff SHA-256 <code>3f3e8df8…f202</code>. 인용 file은 Claim ledger의 hash로 고정했습니다.</td></tr>
+      <tr><td>PostgreSQL</td><td><code>fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc</code></td><td><code>dirty=true</code>. tracked diff는 없고 untracked <code>.omc/</code>만 있었습니다.</td></tr>
+      <tr><td>MySQL</td><td><code>06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8</code></td><td><code>dirty=false</code>.</td></tr>
+    </tbody></table></div>
+    <p><strong>Runtime identity:</strong> run <code>runtime-baseline-build</code>에서 만든 <code>CUBRID 11.5.0 (11.5.0.2493-f11fc42) (64bit debug build for Linux)</code>입니다. <a href="../evidence/runtime-tools-baseline.json">binary path와 hash</a>, <a href="../provenance.json">전체 provenance</a>를 함께 보십시오.</p>
+    <p><strong>Evidence state 읽기:</strong> <code>COMMIT</code>은 인용한 file bytes가 pinned commit과 같다는 뜻입니다. <code>WORKTREE</code>라면 local bytes와 hash를 함께 고정했다는 뜻입니다. repository가 dirty라는 사실만으로 모든 인용 file이 WORKTREE 상태라는 뜻은 아닙니다.</p>
+    <p><span class="evidence-label source-confirmed">Source-confirmed</span>는 source 확인, <span class="evidence-label runtime-observed">Runtime-observed</span>는 run 직접 관찰, <span class="evidence-label inferred">Inferred</span>는 근거에서 좁게 이끈 결론, <span class="evidence-label unknown">Unknown</span>은 미해결 질문입니다. 비교에서 <span class="evidence-label equivalent">Equivalent</span>는 적어 둔 좁은 축에서 같음, <span class="evidence-label partial-analogy">Partial analogy</span>는 일부만 닮음, <span class="evidence-label no-equivalent">No equivalent</span>는 조사 범위에서 대응 없음, <span class="evidence-label not-applicable">Not applicable</span>은 근거를 들어 선언 범위 밖으로 판정한 항목입니다.</p>
+  </section>
+  <section id="recap-01">
+    <h2>1장 복습</h2>
+    <p><strong>한 문장:</strong> OOS는 새로운 잠금 정책의 원인이 아니라, 기존 MVCCID self-lock 경로를 연 trigger입니다.</p>
+    <p><strong>이제 구분할 것:</strong> session의 class <code>BU_LOCK</code>과 worker의 MVCCID self-lock.</p>
+    <p><strong>다음 질문:</strong> mutex, latch, transaction lock을 모두 “lock”이라고 불러도 왜 서로 대신할 수 없을까요?</p>
+  </section>
+</main>
+<footer><nav class="book-nav" aria-label="아래 장 이동"><a href="../index.html">목차</a><a rel="next" href="02-three-kinds-of-lock.html">2장으로</a></nav></footer>
+</body></html>

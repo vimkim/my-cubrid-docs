@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>9장 — 수정의 정확한 경계</title><link rel="stylesheet" href="../assets/report.css"></head>
+<body>
+<header><p>9장</p><h1>수정의 정확한 경계</h1><p>assert 한 줄이 아니라 허용 resource와 유지 invariant를 설명합니다.</p></header>
+<nav class="book-nav" aria-label="장 이동"><a rel="prev" href="08-source-walkthrough.html">이전 장</a><a href="../index.html">목차</a><a rel="next" href="10-comparison-and-experiments.html">다음 장</a></nav>
+<main>
+  <section class="chapter-guide" aria-label="이 장의 학습 안내">
+    <div><strong>학습 목표</strong>historical skip 대안과 frozen revision의 uniform self-lock 정책을 분리하고 fix의 allow/deny 경계를 설명합니다.</div>
+    <div><strong>시작 상황</strong><code>TT_LOADDB</code> worker가 <code>LOCK_RESOURCE_TRANSACTION</code> key로 generic lock engine에 들어옵니다.</div>
+    <div><strong>확인할 불변식</strong>transaction self-lock 예외는 허용하지만 class/instance object-lock bypass 계약은 유지합니다.</div>
+    <div><strong>실패·한계</strong>resource type 분류를 넓히거나 assert만 삭제하면 loaddb의 모든 object locking을 조용히 허용할 수 있습니다.</div>
+  </section>
+  <section id="policies-algorithms" data-claim-id="CUBRID-C002 CUBRID-C005 CUBRID-C011 CUBRID-C018 CUBRID-C019 CUBRID-C022">
+    <h2>두 정책을 먼저 분리하기</h2>
+    <div class="table-wrap"><table><caption>역사적 대안과 고정 revision의 선택</caption><thead><tr><th>정책</th><th>장점</th><th>필요한 전제·위험</th></tr></thead><tbody>
+      <tr><td>TT_LOADDB이면 self-lock skip</td><td>현재 bulk row observer가 없다면 entry 비용을 피함</td><td>모든 현재·미래 producer가 worker MVCCID를 절대 공개하지 않는다는 강한 전제</td></tr>
+      <tr><td>transaction self-lock uniform acquire</td><td>MVCCID 발급자에게 같은 invariant 적용</td><td>resource type 분류가 정확해야 하고 작은 lock entry 비용을 냄</td></tr>
+    </tbody></table></div>
+    <p>고정 revision은 두 번째를 선택했습니다. 기존 lesson에 남은 “둘 중 아직 미합의” 설명은 역사적 토론으로만 읽어야 합니다.</p>
+    <h3>무엇이 설정이고 무엇이 고정 policy인가?</h3>
+    <div class="table-wrap"><table><caption>조정 가능성과 경계</caption><thead><tr><th>항목</th><th>종류</th><th>이 issue에서의 의미</th></tr></thead><tbody>
+      <tr><td>transaction wait time</td><td>caller/session의 wait policy</td><td>충돌했을 때 conditional no-grant, finite timeout, infinite wait 중 어느 경로를 탈지 바꿈</td></tr>
+      <tr><td>BU compatibility</td><td>compile-time compatibility table</td><td>runtime knob가 아니며 BU와 어느 mode가 공존하는지 정함</td></tr>
+      <tr><td>TT_LOADDB 허용 resource</td><td>code-level policy/assert</td><td><code>TRANSACTION</code>만 예외로 허용. 설정으로 CLASS/INSTANCE까지 넓히지 않음</td></tr>
+      <tr><td>lock table sizing</td><td>boot-time sizing과 entry allocation</td><td>self-lock도 generic entry 비용을 내며 allocation 실패를 정상 오류로 전달해야 함</td></tr>
+    </tbody></table></div>
+    <h3>정책 전체를 작은 알고리즘으로 쓰기</h3>
+    <pre><code>decide_and_request(thread, typed_key, mode, wait_policy):
+  if thread.type == TT_LOADDB and typed_key.type != TRANSACTION:
+    return POLICY_ERROR
+
+  if same_owner_already_holds(typed_key):
+    return convert_now_or_wait_as_blocked_holder(mode, wait_policy)
+
+  if compatible_with_holders_and_earlier_waiters(typed_key, mode):
+    return GRANTED
+
+  if wait_policy is CONDITIONAL or expired:
+    return NO_GRANT_OR_TIMEOUT
+
+  waiter = allocate_waiter_entry()
+  if waiter == NONE:
+    return ALLOCATION_ERROR       # ER_LK_ALLOC_RESOURCE, queue에 넣기 전 실패
+  append_waiter_tail(waiter)
+  return suspend_until_grant_timeout_deadlock_or_interrupt(waiter)</code></pre>
+    <h3>비용과 pathological case</h3>
+    <p>hash lookup이 잘 분산된 평상시에는 resource 찾기가 빠르지만, compatibility와 unlock은 현재 holder/blocked holder/waiter list를 순회할 수 있습니다. 따라서 한 resource에 request가 몰리면 queue 길이에 비례한 scan과 wakeup 경쟁이 생길 수 있습니다. self-lock을 uniform하게 두는 선택은 “observable MVCCID에는 matching X가 있다”는 단순한 invariant를 얻는 대신 transaction resource와 entry를 더 만듭니다.</p>
+    <p>가장 나쁜 사고 실험은 많은 S holder 사이에서 X conversion이 막히고 새 S waiter가 계속 들어오는 경우입니다. UPR와 앞선 blocked mode를 고려해 grant하지만 이 책의 고정 source만으로 strict FIFO나 starvation 부재를 약속하지 않습니다. 또 entry allocator가 고갈되면 append 후 유령 waiter를 정리하는 것이 아니라 <strong>append 전에</strong> <code>ER_LK_ALLOC_RESOURCE</code>를 설정하고 allocation error로 끝나야 합니다. <span class="source-id">CUBRID-C002 · CUBRID-C005 · CUBRID-C011 · CUBRID-C018 · CUBRID-C019 · CUBRID-C022</span></p>
+  </section>
+  <section id="allow-deny-matrix" data-claim-id="CUBRID-C011">
+    <h2>현재 허용·금지 matrix</h2>
+    <div class="table-wrap"><table><caption>TT_LOADDB worker의 internal lock request</caption><thead><tr><th>Resource type</th><th>현재 assert</th><th>이유</th></tr></thead><tbody>
+      <tr><td>TRANSACTION, key=MVCCID</td><td>허용</td><td>uniform self-lock protocol</td></tr>
+      <tr><td>CLASS 또는 INSTANCE object</td><td>그대로 금지</td><td>session BU와 object lookup redirect 계약 유지</td></tr>
+    </tbody></table></div>
+    <pre><code>assert(thread_p-&gt;type != TT_LOADDB || is_transaction_lock);</code></pre>
+    <p>따라서 “assert를 완화해 loaddb worker의 모든 locking을 허용했다”는 설명은 틀립니다. resource type으로 좁힌 예외입니다.</p>
+  </section>
+  <section id="debug-release-boundary">
+    <h2>debug assert와 runtime correctness</h2>
+    <p>assert는 개발 build에서 예상하지 않은 경로를 즉시 드러내는 tripwire입니다. release build에서는 compile-out될 수 있으므로 “release도 같은 assert로 반드시 죽는다”고 말할 수 없습니다. 반대로 assert 한 줄을 없앴다는 사실만으로 acquire, release, cleanup, future waiter invariant가 모두 안전하다고 증명되지도 않습니다.</p>
+    <p>좋은 fix 설명은 네 가지를 함께 말합니다. 실제 request가 grant되는가, owner가 누구인가, transaction end에서 해제되는가, 기존 object-lock prohibition이 유지되는가.</p>
+  </section>
+  <section id="seam-review">
+    <h2>왜 이 seam인가?</h2>
+    <p>MVCCID allocation early-return은 caller context에 정책을 섞습니다. internal lock boundary의 resource-type check는 “누가 이 공통 lock manager에 어떤 key로 들어올 수 있는가”를 한곳에서 표현합니다. 다만 함수 이름에 object가 남아 있어 reviewer가 key type을 놓치기 쉬우므로, 테스트와 설명은 항상 resource를 명시해야 합니다.</p>
+  </section>
+  <section id="failure-09" data-claim-id="CUBRID-C005 CUBRID-C011 CUBRID-C018"><h2>Total policy pseudocode</h2><pre><code>request_internal_lock(thread, key, mode, wait_policy):
+  is_tx_key = (key.type == LOCK_RESOURCE_TRANSACTION)
+
+  if thread.type == TT_LOADDB and not is_tx_key:
+    assert_fail_in_debug()
+    return POLICY_ERROR
+
+  result = generic_grant_convert_or_wait(key, mode, thread.tran_index, wait_policy)
+  if result == ALLOCATION_ERROR:
+    return result  # waiter allocation이 append 전에 실패했으므로 wait entry 없음
+  if result in {TIMEOUT, DEADLOCK, INTERRUPTED}:
+    generic_engine_removes_wait_or_blocked_state()
+    return result
+  return GRANTED
+
+publish_observable_insid(record, transaction):
+  result = ensure_mvccid_self_lock(transaction)
+  if result != GRANTED:
+    return result
+  stamp_insid(record, transaction.mvccid)
+  return SUCCESS</code></pre><p>같은 owner가 이미 key를 보유하면 generic engine은 별도 waiter 생성 전에 conversion을 계산합니다. 이 pseudocode는 policy branch를 보여 주는 재구현 계약이며 실제 ABI나 내부 enum 값의 호환성을 약속하지 않습니다. <span class="source-id">CUBRID-C005 · CUBRID-C011 · CUBRID-C018</span></p></section>
+  <section id="recap-09"><h2>9장 복습</h2><p><strong>한 문장:</strong> fix는 TT_LOADDB의 transaction resource self-lock만 허용하고 object-lock bypass 계약은 그대로 둡니다.</p><p><strong>다음 질문:</strong> PostgreSQL과 MySQL은 같은 책임을 어느 resource와 owner에 배치할까요?</p></section>
+</main>
+<footer><nav class="book-nav" aria-label="아래 장 이동"><a rel="prev" href="08-source-walkthrough.html">8장으로</a><a href="../index.html">목차</a><a rel="next" href="10-comparison-and-experiments.html">10장으로</a></nav></footer>
+</body></html>

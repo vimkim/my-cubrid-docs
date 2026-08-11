@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>3장 — 잠금 요청을 읽는 다섯 칸</title><link rel="stylesheet" href="../assets/report.css"></head>
+<body>
+<header><p>3장</p><h1>잠금 요청을 읽는 다섯 칸</h1><p>resource, mode, owner, waiter, lifetime을 빠짐없이 묻습니다.</p></header>
+<nav class="book-nav" aria-label="장 이동"><a rel="prev" href="02-three-kinds-of-lock.html">이전 장</a><a href="../index.html">목차</a><a rel="next" href="04-bu-lock.html">다음 장</a></nav>
+<main>
+  <section class="chapter-guide" aria-label="이 장의 학습 안내">
+    <div><strong>학습 목표</strong>모든 lock request를 resource key, mode, owner, waiter, lifetime 다섯 칸으로 읽습니다.</div>
+    <div><strong>시작 상황</strong>class OID에 대한 X와 MVCCID 42에 대한 X가 같은 internal function으로 들어옵니다.</div>
+    <div><strong>확인할 불변식</strong>resource type과 value가 함께 identity를 이루며, compatible grant만 holder list에 들어갑니다.</div>
+    <div><strong>실패·한계</strong>mode 이름만 보면 다른 namespace를 하나로 합치게 됩니다. timeout·deadlock 세부는 7장에서 다룹니다.</div>
+  </section>
+  <section id="lock-resource-owner-lifecycle" data-claim-id="CUBRID-C002 CUBRID-C003 CUBRID-C004 CUBRID-C005 CUBRID-C011 CUBRID-C017 CUBRID-C022">
+    <h2>둘 다 X_LOCK이어도 다른 잠금일 수 있다</h2>
+    <div class="callout"><p><strong>처음 보는 세 용어:</strong> <strong>OID(Object Identifier)</strong>는 이 책에서 class나 row 같은 logical object를 가리키는 식별자이며 메모리 pointer가 아닙니다. <strong><code>tran_index</code></strong>는 현재 server process의 transaction table에서 owner를 찾는 칸 번호이지 영구 보존되는 업무 ID가 아닙니다. <strong><code>SCH_M_LOCK</code></strong>은 schema modification mode이며, 이 issue의 실험에서는 class 정의를 바꾸는 <code>ALTER</code> 요청이 가진 mode입니다. <span class="source-id">CUBRID-C001 · CUBRID-C002 · CUBRID-C003 · CUBRID-C004 · CUBRID-C017</span></p></div>
+    <div class="table-wrap"><table><caption>잠금 요청의 다섯 질문</caption><thead><tr><th>질문</th><th>뜻</th><th>예</th></tr></thead><tbody>
+      <tr><td>Resource key</td><td>무엇에 대한 잠금인가?</td><td>class OID T, row OID R, MVCCID 42</td></tr>
+      <tr><td>Mode</td><td>그 자원을 어떻게 쓰려는가?</td><td>S, X, IX, BU</td></tr>
+      <tr><td>Owner</td><td>누가 보유하고 풀 책임이 있는가?</td><td>session transaction, worker batch transaction</td></tr>
+      <tr><td>Waiter</td><td>누가 어떤 충돌 때문에 기다리는가?</td><td>같은 unique key를 검사하는 transaction</td></tr>
+      <tr><td>Lifetime</td><td>언제 grant되고 언제 해제되는가?</td><td>transaction commit·abort까지</td></tr>
+    </tbody></table></div>
+    <p>CUBRID의 resource key에는 resource type도 들어갑니다. 같은 숫자 비트가 우연히 같아도 <code>CLASS</code> OID와 <code>TRANSACTION</code> MVCCID는 다른 주소입니다. holder와 waiter entry의 owner는 runtime transaction table의 <code>tran_index</code>로 연결됩니다.</p>
+    <div class="callout evidence-source"><p><span class="evidence-label source-confirmed">Source-confirmed:</span> <code>LK_RES_KEY</code>는 object OID와 MVCCID를 type으로 구분합니다. 실제 compare/hash identity는 object resource에서 <code>type+oid</code>, transaction resource에서 <code>type+full MVCCID</code>입니다. instance key를 복사할 때 <code>class_oid</code>도 보존하지만 object compare/hash에는 쓰지 않습니다. <span class="claim-id">CUBRID-C017</span></p></div>
+    <div class="callout"><p><strong>Interface seam:</strong> generic internal 함수의 이름에 <code>object</code>가 있어도 typed key가 <code>TRANSACTION</code>일 수 있습니다. TT_LOADDB worker는 이 transaction-resource request만 허용되고 class/instance acquire는 session BU redirect 경계를 유지합니다. resource와 transaction 양쪽 list를 함께 바꿀 때 mutex 순서는 <code>resource mutex → transaction hold_mutex</code>입니다. <span class="source-id">CUBRID-C003 · CUBRID-C005 · CUBRID-C011 · CUBRID-C022</span></p></div>
+  </section>
+  <section id="scope-interface-seams" data-claim-id="CUBRID-C003 CUBRID-C005 CUBRID-C011 CUBRID-C017 CUBRID-C022">
+    <h2>Interface 경계에서 묻기</h2>
+    <p>함수 이름이 <code>lock_internal_perform_lock_object</code>라고 해서 입력이 모두 object resource인 것은 아닙니다. 현재 함수는 공통 search key를 받아 transaction resource도 처리합니다. 이름보다 parameter의 type과 caller obligation을 읽어야 합니다.</p>
+    <p>정책 seam은 “어떤 caller가 어떤 resource type을 요청할 수 있는가”를 판정하는 경계입니다. CBRD-27157의 한 줄 수정도 바로 이 경계에서 <code>TT_LOADDB</code>와 transaction resource의 조합을 좁게 허용합니다.</p>
+    <p>lock table 안에서는 resource mutex가 그 resource의 holder·waiter list를 보호합니다. transaction hold list에도 entry를 연결하거나 제거해야 할 때는 resource mutex를 가진 채 transaction의 <code>hold_mutex</code>를 잠급니다. 이 순서를 뒤집는 구현은 같은 두 mutex를 반대 방향으로 기다리는 deadlock을 만들 수 있습니다. 해제의 전체 순서는 7장에서 이어집니다. <span class="source-id">CUBRID-C003 · CUBRID-C005 · CUBRID-C011 · CUBRID-C017 · CUBRID-C022</span></p>
+  </section>
+  <section id="simple-compatibility">
+    <h2>S와 X로 compatibility 읽기</h2>
+    <div class="table-wrap"><table><caption>입문용 S/X 호환표</caption><thead><tr><th>요청 \ 현재</th><th>S</th><th>X</th></tr></thead><tbody><tr><th>S</th><td>호환</td><td>충돌</td></tr><tr><th>X</th><td>충돌</td><td>충돌</td></tr></tbody></table></div>
+    <p>같은 resource에서 mode가 충돌하면 요청자는 waiter가 됩니다. holder가 해제하면 waiter가 깨어나지만, wakeup은 업무 조건이 그대로라는 보장이 아닙니다. row나 index를 다시 읽어야 합니다.</p>
+  </section>
+  <section id="checkpoint-a"><h2>Checkpoint A</h2><p>“worker가 X lock을 잡았다”라는 문장을 보면 다섯 가지를 되물으세요. 어느 resource인가? 요청 mode는 무엇인가? 어느 transaction이 owner인가? 누가 기다리는가? 언제 풀리는가? 이 질문이 없으면 설명은 아직 절반입니다.</p></section>
+  <section id="failure-03" data-claim-id="CUBRID-C018"><h2>충돌·wait·오류의 최소 규칙</h2><p>compatible이면 즉시 grant합니다. incompatible인데 conditional request라면 임시 entry를 정리하고 no-grant를 반환합니다. 기다리는 request라면 waiter queue의 뒤에 넣고 resource mutex를 놓은 뒤 suspend합니다. 같은 owner가 더 강한 mode를 요청하면 새 waiter가 아니라 <em>conversion 중인 blocked holder</em>가 될 수 있습니다. timeout·deadlock·interrupt로 깨어나면 대기 정보를 제거하고 오류를 caller에 돌려야 합니다. 정상 wakeup도 업무 조건의 재검사를 생략할 권한은 주지 않습니다.</p><p>대기 순서는 단순한 “무조건 선착순”이 아닙니다. CUBRID는 앞선 blocked mode와 현재 holder의 호환성, <strong>UPR(Upgrader Positioning Rule, 잠금 강화를 기다리는 holder의 queue 위치 규칙)</strong>을 함께 봅니다. 따라서 이 책은 strict FIFO나 starvation 부재를 약속하지 않습니다. <span class="source-id">CUBRID-C018</span></p></section>
+  <section id="recap-03"><h2>3장 복습</h2><p><strong>한 문장:</strong> mode 이름은 lock identity가 아니며 resource type·key와 owner가 함께 있어야 합니다.</p><p><strong>다음 질문:</strong> row 수가 많은 table에서 class와 instance lock을 어떻게 함께 조정할까요?</p></section>
+</main>
+<footer><nav class="book-nav" aria-label="아래 장 이동"><a rel="prev" href="02-three-kinds-of-lock.html">2장으로</a><a href="../index.html">목차</a><a rel="next" href="04-bu-lock.html">4장으로</a></nav></footer>
+</body></html>

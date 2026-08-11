@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>4장 — class, instance, BU_LOCK</title><link rel="stylesheet" href="../assets/report.css"></head>
+<body>
+<header><p>4장</p><h1>class·instance 계층과 BU_LOCK</h1><p>건물 입구 표지판과 방 열쇠를 구분해 봅니다.</p></header>
+<nav class="book-nav" aria-label="장 이동"><a rel="prev" href="03-cubrid-lock-resources.html">이전 장</a><a href="../index.html">목차</a><a rel="next" href="05-mvccid-self-lock.html">다음 장</a></nav>
+<main>
+  <section class="chapter-guide" aria-label="이 장의 학습 안내">
+    <div><strong>학습 목표</strong>class와 instance hierarchy, intention mode, <code>BU_LOCK</code> compatibility를 표로 읽습니다.</div>
+    <div><strong>시작 상황</strong>여러 row에 접근하는 transaction과 class 전체를 보호하려는 bulk loader가 만납니다.</div>
+    <div><strong>확인할 불변식</strong>class intention 표식은 instance lock을 대신하지 않으며, 실제 동시 grant 여부는 compatibility matrix가 정합니다.</div>
+    <div><strong>실패·한계</strong><code>BU_LOCK</code>을 global exclusive lock으로 보면 다른 BU와 schema stability mode의 합법적 공존을 놓칩니다.</div>
+  </section>
+  <section id="class-instance-hierarchy">
+    <h2>왜 class에도 intention을 표시할까?</h2>
+    <p>class는 table 수준 logical object이고 instance는 한 row 수준 object입니다. row 하나를 X로 바꾸려는 transaction이 class에 IX를 표시하면, table 전체를 강하게 보호하려는 요청이 하위 row를 하나씩 뒤지지 않고 충돌을 알 수 있습니다.</p>
+    <p>비유하면 “3층 방에서 공사할 예정”이라는 입구 게시판입니다. 게시판의 IX 표시는 실제 방 열쇠를 대신하지 않습니다. class/instance도 물리 건물이 아니라 lock manager가 다루는 logical 계층입니다.</p>
+  </section>
+  <section id="bu-compatibility" data-claim-id="CUBRID-C002">
+    <h2>BU_LOCK은 완전 배타 잠금이 아니다</h2>
+    <p><code>SCH_S_LOCK</code>은 schema stability lock입니다. 이 장에서는 “table 정의를 안정적으로 참조하는 작업”을 조정하는 mode라는 정도만 사용합니다. schema lock 전체 설계는 범위 밖입니다.</p>
+    <div class="table-wrap"><table><caption>고정 CUBRID 소스에서 BU 요청의 호환성</caption><thead><tr><th>현재 holder mode</th><th>BU 요청 결과</th></tr></thead><tbody>
+      <tr><td>NULL, SCH_S, BU</td><td>호환</td></tr>
+      <tr><td>IS, S, IX, SIX, X, SCH_M</td><td>충돌</td></tr>
+    </tbody></table></div>
+    <p>이삿날 건물을 예약했다고 생각하면 도움이 됩니다. 일반 입주 작업과는 충돌하지만, 승인된 다른 이사팀은 함께 들어올 수 있습니다. 그러나 이것은 접근 권한 시스템이 아니고 정확한 허용 여부는 위 compatibility table이 정합니다.</p>
+    <div class="invariant"><p><strong>꼭 기억하기:</strong> <code>BU_LOCK</code>은 class OID resource의 object-lock mode입니다. MVCCID라는 transaction resource의 X self-lock을 대신하지 않습니다.</p></div>
+  </section>
+  <section id="conversion" data-claim-id="CUBRID-C018">
+    <h2>호환성과 conversion을 섞지 않기</h2>
+    <p>호환성은 서로 다른 owner의 mode가 함께 있을 수 있는지를 묻습니다. conversion은 같은 owner가 이미 가진 mode를 다른 mode와 합치거나 강화하는 요청입니다. 예를 들어 T1이 같은 resource에 S를 가진 채 X를 요청하면 lock manager는 S entry를 하나 더 만드는 대신 S와 X를 합친 더 강한 mode를 계산합니다.</p>
+    <p>그 mode가 다른 holder들과 호환되면 즉시 바뀝니다. 충돌하면 zero-wait 요청은 실패하고, 기다릴 수 있는 요청은 기존 holder entry에 <code>blocked_mode</code>를 기록해 conversion을 기다립니다. CUBRID는 upgrader가 일반 waiter 뒤에서 영원히 밀리지 않도록 positioning rule을 사용하지만, 이것을 모든 경우의 strict FIFO 보장으로 읽으면 안 됩니다. <span class="source-id">CUBRID-C018</span></p>
+  </section>
+  <section id="failure-04" data-claim-id="CUBRID-C002 CUBRID-C003 CUBRID-C018"><h2>호환표가 드러내는 실패 경계</h2><p>일반 data mode가 이미 holder라면 BU request는 기다리거나 configured timeout·deadlock 결과를 받습니다. 같은 transaction의 mode 강화는 conversion 경로로 갈 수 있습니다. BU holder가 있다는 사실은 worker가 임의의 instance lock을 얻어도 된다는 뜻이 아닙니다. 현재 loaddb 계약은 object-lock lookup을 session BU로 redirect합니다. <span class="source-id">CUBRID-C002 · CUBRID-C003 · CUBRID-C018</span></p></section>
+  <section id="recap-04"><h2>4장 복습</h2><p><strong>한 문장:</strong> <code>BU_LOCK</code>은 class OID를 key로 하며 다른 BU와 SCH_S에는 호환되고 일반 data mode와 충돌합니다.</p><p><strong>잘못된 결론 방지:</strong> “BU가 있으니 worker의 MVCCID도 이미 잠겼다”라고 말할 수 없습니다.</p><p><strong>다음 질문:</strong> 실제 BU owner와 MVCCID self-lock owner는 각각 누구일까요?</p></section>
+</main>
+<footer><nav class="book-nav" aria-label="아래 장 이동"><a rel="prev" href="03-cubrid-lock-resources.html">3장으로</a><a href="../index.html">목차</a><a rel="next" href="05-mvccid-self-lock.html">5장으로</a></nav></footer>
+</body></html>

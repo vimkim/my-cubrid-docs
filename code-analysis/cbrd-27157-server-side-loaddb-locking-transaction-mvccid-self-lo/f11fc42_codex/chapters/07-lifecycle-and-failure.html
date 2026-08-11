@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>7장 — 대기, 종료, 오류, 정리</title><link rel="stylesheet" href="../assets/report.css"></head>
+<body>
+<header><p>7장</p><h1>대기, 종료, 오류, 정리</h1><p>정상 경로만이 아니라 timeout, abort, shutdown도 같은 상태 기계로 읽습니다.</p></header>
+<nav class="book-nav" aria-label="장 이동"><a rel="prev" href="06-cbrd-27157-regression.html">이전 장</a><a href="../index.html">목차</a><a rel="next" href="08-source-walkthrough.html">다음 장</a></nav>
+<main>
+  <section class="chapter-guide" aria-label="이 장의 학습 안내">
+    <div><strong>학습 목표</strong>grant, wait, wakeup, commit, abort, shutdown의 legal transition과 cleanup을 설명합니다.</div>
+    <div><strong>시작 상황</strong>T2가 T1의 MVCCID에 S를 기다리는 동안 T1이 commit하거나 abort합니다.</div>
+    <div><strong>확인할 불변식</strong>MVCCID inactive publication이 X self-lock release보다 먼저이며, waiter는 wakeup 뒤 상태를 재검사합니다.</div>
+    <div><strong>실패·한계</strong>timeout·deadlock·interrupt는 grant가 아닙니다. historical process abort의 disk recovery 전체는 Unknown입니다.</div>
+  </section>
+  <section id="lifecycle-state-machines" data-claim-id="CUBRID-C004 CUBRID-C007 CUBRID-C022">
+    <h2>MVCCID self-lock의 상태</h2>
+    <pre><code>NO_ID
+  → MVCCID_ALLOCATED
+  → X_HELD
+  → COMMITTING 또는 ABORTING
+  → MVCC_INACTIVE
+  → LOCK_RELEASED</code></pre>
+    <p>중요한 순서는 MVCCID를 inactive로 보이게 만든 뒤 X self-lock을 해제하는 것입니다. 그래서 S waiter가 grant된 뒤 active를 다시 검사하면 정상 경로에서는 false여야 합니다.</p>
+    <p>main transaction은 commit과 abort에서 <code>logtb_complete_mvcc</code> 뒤 <code>lock_unlock_all</code>로 갑니다. transaction self-lock도 instance hold list에 있으므로 다른 보유 lock과 함께 정리됩니다. subtransaction은 자기 MVCCID active bit와 lock을 별도로 끝냅니다.</p>
+    <h3>“unlock”은 holder 해제와 waiter 취소가 다르다</h3>
+    <ol>
+      <li><strong>holder full release:</strong> resource mutex를 잡고 holder list에서 entry를 뺀 뒤 transaction hold list에서도 뺍니다. mutex 순서는 <code>resource mutex → transaction hold_mutex</code>입니다.</li>
+      <li><strong>holder 뒤 재계산·깨우기:</strong> 남은 holder의 granted·blocked mode를 다시 합칩니다. resource가 남아 있으면 호환되는 blocked holder(conversion)를 먼저 grant하고, 이어 queue 앞에서부터 호환되는 waiter 묶음을 holder로 옮겨 깨웁니다.</li>
+      <li><strong>waiter cancellation:</strong> 취소된 waiter를 waiter list에서 빼고 free합니다. 그 뒤에 있던 waiter만 앞선 waiter mode와 현재 holder mode에 맞춰 부분 grant하거나 waiter summary를 다시 계산합니다. 이 branch에서는 blocked holder grant를 호출하지 않습니다.</li>
+      <li><strong>회수와 전체 종료:</strong> holder·waiter·non-2PL entry가 모두 없으면 그 <code>LockResource</code>를 hash에서 제거합니다. transaction 전체 종료는 instance(transaction self-lock 포함) → class → root class → non-2PL 순서로 holder full release를 반복합니다.</li>
+    </ol>
+    <p>즉, lock 해제는 “표시 하나를 지운다”가 아니라 양쪽 목록의 일관성, 다음 grant, 빈 resource의 수명을 함께 끝내는 상태 전이입니다. 이 책은 이 동작이 strict FIFO나 starvation 부재를 보장한다고 확대 해석하지 않습니다. <span class="source-id">CUBRID-C022</span></p>
+  </section>
+  <section id="storage-durability-recovery" data-claim-id="CUBRID-C007 CUBRID-C012 CUBRID-C016">
+    <h2>lock state와 durable state는 다르다</h2>
+    <p>lock table의 holder·waiter entry는 동시 실행을 조정하는 volatile state입니다. process restart 뒤 같은 entry를 디스크에서 복원하는 대상이 아닙니다. 반면 row, log, file allocation 같은 durable state는 recovery 규칙의 대상입니다.</p>
+    <p><strong>sysop(system operation)</strong>은 file/page 같은 내부 변경을 작은 원자적 단위로 commit하거나 abort하기 위한 CUBRID 내부 작업 경계입니다. 사용자 SQL transaction 전체와 같지 않습니다.</p>
+    <p>일반 OOS/file error에는 sysop abort, page unfix, allocation buffer 해제가 있습니다. 그러나 debug assert에 따른 process abort는 정상 <code>goto exit</code> cleanup을 지나지 않습니다. 역사적 assert 뒤 모든 file·sector recovery 상태는 이번 책의 검증 범위 밖입니다.</p>
+    <div class="callout evidence-unknown"><p><span class="evidence-label not-applicable">Not applicable:</span> lock holder/waiter entry 자체의 WAL·checkpoint·restart 복원은 이 Module에 해당하지 않습니다. 이 entry는 volatile coordination state입니다. <span class="evidence-label unknown">Unknown:</span> historical SIGABRT 뒤 OOS permanent sysop과 file allocation의 전체 crash matrix는 이번 Report Run이 닫지 못했습니다.</p></div>
+  </section>
+  <section id="errors-resource-pressure" data-claim-id="CUBRID-C013 CUBRID-C015 CUBRID-C016 CUBRID-C018 CUBRID-C019">
+    <h2>wait가 정상으로 끝나지 않는 경우</h2>
+    <ul>
+      <li><strong>timeout:</strong> transaction의 wait policy를 넘으면 grant 없이 오류로 돌아옵니다.</li>
+      <li><strong>deadlock:</strong> 순환 대기에서 victim이 선택되면 해당 transaction은 abort 경로로 갑니다.</li>
+      <li><strong>interrupt·disconnect:</strong> loaddb session은 active worker를 interrupt하고 완료를 기다린 뒤 session을 파괴합니다.</li>
+      <li><strong>resource pressure:</strong> lock entry 할당이나 file creation 실패는 error propagation과 cleanup을 거칩니다.</li>
+    </ul>
+    <p>transaction self-lock도 generic lock grant/wait machinery를 사용합니다. 별도 self-lock count는 없고 일반 lock 성능 counter에 섞입니다. lock dump와 event log는 transaction resource를 MVCCID로 표시하지만, 고정 source의 일부 timeout 사용자 메시지는 이 union을 OID처럼 표현할 수 있다는 한계가 있습니다.</p>
+    <p><strong>메모리도 무한하지 않습니다.</strong> startup에는 transaction table과 transaction당 기본 lock entry local pool 10개를 준비합니다. object-lock hash bucket은 <code>num_trans × lock_escalation × 3 / 1000</code>에서 계산하되 최소 10,000, 최대 <code>2²³</code>으로 제한합니다. acquire 도중 entry를 더 얻지 못하면 <code>ER_LK_ALLOC_RESOURCE</code>로 실패합니다.</p>
+    <p><code>xlock_dump</code>의 “allocated size”는 할당된 <code>LK_ENTRY</code>와 <code>LK_RES</code> 크기의 합입니다. bucket array, transaction table, local pool, wait-for graph까지 포함한 총 메모리로 해석하면 안 됩니다. 실제 peak와 throughput은 이번 실행에서 측정하지 않았습니다. <span class="source-id">CUBRID-C019</span></p>
+  </section>
+  <section id="bu-release">
+    <h2>BU_LOCK은 load session object 삭제가 직접 푸는가?</h2>
+    <p>아닙니다. BU는 connection/session transaction의 lock entry입니다. worker들이 끝나 load session object가 사라지는 것과 session transaction이 끝나 BU가 해제되는 것은 다른 사건입니다. object-only loaddb의 최종 shutdown·unregister는 남은 active session transaction을 끝내며 BU를 정리합니다.</p>
+  </section>
+  <section id="failure-07" data-claim-id="CUBRID-C004 CUBRID-C013 CUBRID-C018 CUBRID-C019"><h2>오류별 caller 결과</h2><div class="table-wrap"><table><caption>wait와 load lifecycle의 실패 표면</caption><thead><tr><th>사건</th><th>잠금 상태</th><th>caller가 해야 할 일</th></tr></thead><tbody><tr><td>conditional conflict</td><td>grant하지 않고 임시 entry 정리</td><td>no-grant/timeout 결과 처리</td></tr><tr><td>timeout·interrupt</td><td>waiter 또는 blocked holder의 대기 정보 제거</td><td>성공으로 진행하지 않고 error propagation</td></tr><tr><td>deadlock victim</td><td>victim transaction abort가 hold list 정리</td><td>statement 또는 transaction 실패 보고</td></tr><tr><td>entry allocation 실패</td><td>새 holder/waiter를 만들지 못함</td><td><code>ER_LK_ALLOC_RESOURCE</code> 처리</td></tr><tr><td>worker batch 오류</td><td>batch abort 뒤 transaction index 해제</td><td>session이 worker 완료를 모아 종료</td></tr><tr><td>connection shutdown</td><td>남은 active session transaction abort</td><td>session BU도 transaction 종료에서 정리</td></tr></tbody></table></div><p class="source-id">CUBRID-C004 · CUBRID-C013 · CUBRID-C018 · CUBRID-C019</p></section>
+  <section id="recap-07"><h2>7장 복습</h2><p><strong>한 문장:</strong> wakeup은 성공 판정이 아니라 재검사를 시작할 기회이며, active publication이 lock release보다 먼저입니다.</p><p><strong>다음 질문:</strong> 이제 이 설명을 실제 source function의 caller와 callee로 다시 확인합니다.</p></section>
+</main>
+<footer><nav class="book-nav" aria-label="아래 장 이동"><a rel="prev" href="06-cbrd-27157-regression.html">6장으로</a><a href="../index.html">목차</a><a rel="next" href="08-source-walkthrough.html">8장으로</a></nav></footer>
+</body></html>

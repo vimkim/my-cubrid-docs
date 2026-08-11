@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>6장 — CBRD-27157 재구성</title><link rel="stylesheet" href="../assets/report.css"></head>
+<body>
+<header><p>6장</p><h1>CBRD-27157 재구성</h1><p>큰 값에서 열린 숨은 호출 경로와 현재 fix를 시간순으로 봅니다.</p></header>
+<nav class="book-nav" aria-label="장 이동"><a rel="prev" href="05-mvccid-self-lock.html">이전 장</a><a href="../index.html">목차</a><a rel="next" href="07-lifecycle-and-failure.html">다음 장</a></nav>
+<main>
+  <section class="chapter-guide" aria-label="이 장의 학습 안내">
+    <div><strong>학습 목표</strong>큰 값에서 OOS(Out-of-row Overflow Storage) lazy file creation이 열리고 transaction self-lock assert까지 가는 인과를 재구성합니다.</div>
+    <div><strong>시작 상황</strong>고정 debug build의 server-side loaddb가 첫 OOS-backed value를 적재합니다.</div>
+    <div><strong>확인할 불변식</strong>OOS는 object lock을 요청하지 않습니다. current MVCCID 요구가 transaction resource 경로를 엽니다.</div>
+    <div><strong>실패·한계</strong>수정 전 binary의 assertion failure와 crash recovery는 이번 runtime run으로 재현하지 않았습니다.</div>
+  </section>
+  <section id="loaddb-oos-regression" data-claim-id="CUBRID-C001 CUBRID-C010 CUBRID-C011 CUBRID-C012 CUBRID-C020 PG-C020 MYSQL-C020 CMP-C020">
+    <h2>한 줄 요약부터</h2>
+    <p><strong>VFID(Volume File Identifier)</strong>는 CUBRID file을 가리키는 volume ID와 file ID의 묶음입니다. 여기서는 heap header가 “이 class의 OOS file이 무엇인가”를 기억하는 식별자로 사용합니다. VFID는 lock resource key가 아닙니다.</p>
+    <p>큰 값이 첫 OOS file 생성을 요구했고, file 생성이 current MVCCID를 요구했으며, MVCCID 발급의 self-lock side effect가 “loaddb worker는 object lock 내부 경로에 오면 안 된다”는 오래된 broad assert와 만났습니다.</p>
+    <pre><code>server_object_loader::finish_line
+  → heap_attrinfo_transform_to_disk_except_lob
+  → heap_attrinfo_insert_to_oos
+  → heap_oos_find_vfid(docreate=true)
+  → oos_create_file
+  → file_create(FILE_OOS)
+  → logtb_get_current_mvccid
+  → lock_transaction_mvccid(X_LOCK)
+  → lock_internal_perform_lock_object</code></pre>
+    <p class="diagram-alt">OOS는 <code>lock_object</code>를 직접 호출하지 않습니다. <code>file_create</code>가 vacuum의 dropped-file VFID 재사용 검사를 위해 transaction-relative MVCCID를 요청하면서 lock manager에 도달합니다.</p>
+    <div class="callout evidence-source"><p><span class="evidence-label source-confirmed">Source-confirmed:</span> 현재 고정 revision의 assert는 <code>TT_LOADDB</code>이더라도 resource가 transaction lock이면 허용합니다. object resource 제한은 유지됩니다. <span class="claim-id">CUBRID-C011</span></p></div>
+  </section>
+  <section id="concurrency" data-claim-id="CUBRID-C006">
+    <h2>왜 transaction self-lock 정책을 그대로 적용했나?</h2>
+    <p>fresh MVCCID는 allocator가 고유하게 배정하므로, 그 번호를 처음 받은 transaction의 X self-lock은 같은 resource의 기존 holder가 없다는 전제에서 즉시 grant됩니다. 이 말은 worker가 다른 resource에서 절대 기다리지 않는다는 뜻이 아닙니다.</p>
+    <p>현재 bulk row에 INSID observer가 없더라도, MVCCID를 발급받는 active worker에 같은 규칙을 적용하면 “나중에 이 ID가 보이는 경로가 생겨도 matching X lock이 있다”는 invariant가 유지됩니다. current optimization과 future safety를 맞바꾸는 정책 선택입니다.</p>
+  </section>
+  <section id="first-oos-create-serialization" data-claim-id="CUBRID-C021">
+    <h2>두 worker가 동시에 첫 OOS file을 만들려 하면?</h2>
+    <p><code>heap_oos_find_vfid(docreate=true)</code>는 heap header page를 <strong>WRITE latch</strong>로 고정한 다음 OOS VFID가 비었는지 확인합니다. 먼저 들어간 worker가 latch를 가진 채 <strong>sysop(system operation, 내부 file/page 변경을 작은 원자 단위로 묶는 작업)</strong>을 시작해 file을 만들고 VFID를 header에 기록합니다. 뒤 worker는 같은 header의 write latch에서 기다렸다가, latch를 얻은 뒤 이미 기록된 VFID를 읽습니다.</p>
+    <pre><code>W1: heap-header WRITE latch → VFID NULL 확인 → file create → VFID publish → unlatch
+W2:                 WRITE latch 대기 ───────────────────────────────┘
+W2: latch 획득 → VFID 존재 확인 → 기존 VFID 사용 → unlatch</code></pre>
+    <p>이 latch는 짧은 물리 구조 보호 장치이며 lock manager의 transaction lock이 아닙니다. 다만 고정 source는 file create와 header publish 동안 latch를 잡으므로 “항상 매우 짧다”고 단정할 수 없고 같은 heap의 최초 생성에서는 contention 지점이 될 수 있습니다. <span class="source-id">CUBRID-C021</span></p>
+  </section>
+  <section id="historical-timeline" data-claim-id="CUBRID-C003 CUBRID-C005 CUBRID-C011 CUBRID-C012">
+    <h2>issue 맥락의 세 표지를 현재 동작에 연결하기</h2>
+    <p>아래 CBRD 번호는 issue history를 찾아가기 위한 표지입니다. 표의 동작 설명은 날짜나 도입 원인을 추정한 것이 아니라 고정 revision에서 확인한 현재 source claim에 근거합니다.</p>
+    <div class="table-wrap"><table><caption>issue 표지와 고정 source의 현재 동작</caption><thead><tr><th>표지</th><th>현재 확인한 계약</th><th>이 issue에서 만난 지점</th></tr></thead><tbody>
+      <tr><td>CBRD-23375 맥락</td><td>loaddb worker의 object-lock lookup은 session BU 계약으로 redirect</td><td><code>TT_LOADDB</code> object-lock 금지와 session owner 분리 · CUBRID-C003</td></tr>
+      <tr><td>CBRD-26942 맥락</td><td>observable inserter completion을 MVCCID transaction self-lock으로 rendezvous</td><td>worker MVCCID 발급 시 X self-lock · CUBRID-C005</td></tr>
+      <tr><td>CBRD-27157 / PR #7588</td><td>transaction self-lock은 허용하되 object-lock 금지는 유지</td><td>OOS file create가 current MVCCID를 요구하는 경로 · CUBRID-C011·CUBRID-C012</td></tr>
+    </tbody></table></div>
+  </section>
+  <section id="runtime-result">
+    <h2>고정 debug build에서 확인한 결과</h2>
+    <p>실제 <code>loaddb -C</code> action은 작은 값과 5,000바이트 큰 값을 합쳐 <strong>2건 적재·0건 실패</strong>를 보고했습니다. 새 csql observer에서 두 값은 모두 원문과 일치했습니다. 작은 값의 class에는 OOS file이 없었고, 큰 값의 class에는 OOS VFID <code>(volid=1, fileid=832)</code>와 live OOS record 1개가 있었습니다.</p>
+    <p><span class="run-id">Primary Run IDs:</span> <a href="../evidence/runs/f03-exp3-action-v2/meta.json"><code>f03-exp3-action-v2</code> action meta</a> · <a href="../evidence/runs/f03-exp3-action-v2/stdout.txt">action stdout</a> · <a href="../evidence/runs/f03-exp3-observer-v2/meta.json"><code>f03-exp3-observer-v2</code> observer meta</a> · <a href="../evidence/runs/f03-exp3-observer-v2/stdout.txt">observer stdout</a></p>
+    <p>전체 setup→action→observation→post-control→cleanup/check 영수증은 <a href="../experiments/experiment-3/README.md">experiment-3 evidence README</a>에서 이어집니다. setup process는 readiness marker를 만든 뒤 release gate에서 기다렸으므로 setup receipt의 <em>finish</em> 시각은 action보다 늦습니다. 실행 순서는 finish timestamp가 아니라 readiness marker와 분리된 receipt로 판정합니다.</p>
+    <div class="callout evidence-runtime"><p><span class="evidence-label runtime-observed">Runtime-observed:</span> storage placement의 oracle은 “small: no OOS file”과 “large: VFID + live record 1”입니다. 출력된 <code>Logical data size</code>는 비정상 값이므로 해석하거나 크기 근거로 사용하지 않습니다. <span class="claim-id">CUBRID-C020</span></p></div>
+    <div class="callout evidence-unknown"><p><span class="evidence-label unknown">Unknown:</span> 이 실행은 수정 후 결과만 확인했습니다. 수정 전 binary의 debug assertion failure와 같은 입력의 A/B, process crash 뒤 recovery는 재현하지 않았습니다. 역사적 AS-IS는 source history와 기존 issue evidence로 설명합니다.</p></div>
+  </section>
+  <section id="failure-06" data-claim-id="CUBRID-C016 CUBRID-C021"><h2>실패가 남기는 상태</h2><p><code>heap_oos_find_vfid</code>의 ordinary first-create 오류는 시작한 sysop을 abort하고 마지막에 header page를 unfix합니다. 더 깊은 <code>file_create</code> 오류 경로는 fixed page, permanent sysop, output VFID와 allocation buffer를 정리합니다. debug assert는 이 정상 error-return 경로를 거치지 않는 process abort입니다. 그러므로 “assert가 사라졌다”와 “모든 partial file 상태가 검증되었다”는 별개 주장입니다. <span class="source-id">CUBRID-C016 · CUBRID-C021</span></p></section>
+  <section id="recap-06"><h2>6장 복습</h2><p><strong>한 문장:</strong> 데이터 크기는 lock mode를 바꾼 것이 아니라 OOS file creation이라는 다른 dependency path를 선택했습니다.</p><p><strong>잘못된 결론 방지:</strong> “OOS와 BU가 충돌했다”가 아니라 “OOS file create가 worker MVCCID self-lock을 촉발했다”가 정확합니다.</p><p><strong>다음 질문:</strong> holder가 commit·abort하거나 wait가 실패하면 resource는 어떻게 정리될까요?</p></section>
+</main>
+<footer><nav class="book-nav" aria-label="아래 장 이동"><a rel="prev" href="05-mvccid-self-lock.html">5장으로</a><a href="../index.html">목차</a><a rel="next" href="07-lifecycle-and-failure.html">7장으로</a></nav></footer>
+</body></html>

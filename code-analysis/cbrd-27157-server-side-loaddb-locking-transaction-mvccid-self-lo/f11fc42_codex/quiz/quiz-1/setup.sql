@@ -1,0 +1,5 @@
+CREATE TABLE bu_target (id INTEGER PRIMARY KEY, payload INTEGER);
+CREATE TABLE bu_control (id INTEGER PRIMARY KEY, payload INTEGER);
+INSERT INTO bu_target VALUES (1, 1);
+INSERT INTO bu_control VALUES (1, 10);
+COMMIT;

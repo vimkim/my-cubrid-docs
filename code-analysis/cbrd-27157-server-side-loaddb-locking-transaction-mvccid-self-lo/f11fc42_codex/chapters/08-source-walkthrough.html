@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>8장 — 소스 호출 경로 따라가기</title><link rel="stylesheet" href="../assets/report.css"></head>
+<body>
+<header><p>8장</p><h1>소스 호출 경로 따라가기</h1><p>각 함수가 넘기는 state와 실패 지점을 함께 읽습니다.</p></header>
+<nav class="book-nav" aria-label="장 이동"><a rel="prev" href="07-lifecycle-and-failure.html">이전 장</a><a href="../index.html">목차</a><a rel="next" href="09-fix-boundary.html">다음 장</a></nav>
+<main>
+  <section class="chapter-guide" aria-label="이 장의 학습 안내">
+    <div><strong>학습 목표</strong>class protection, MVCCID rendezvous, OOS(Out-of-row Overflow Storage) file lifecycle의 caller와 state 전달을 연결합니다.</div>
+    <div><strong>시작 상황</strong><code>server_object_loader::finish_line</code>에 한 행이 도착하고 disk layout 변환을 시작합니다.</div>
+    <div><strong>확인할 불변식</strong>각 Interface는 자기 resource와 owner만 다루며, wait 전 latch release와 오류 cleanup obligation을 지킵니다.</div>
+    <div><strong>실패·한계</strong>함수 이름의 <code>object</code>만 보고 transaction resource를 배제하면 current generic Interface를 잘못 읽습니다.</div>
+  </section>
+  <section id="core-workflows" data-claim-id="CUBRID-C003 CUBRID-C005 CUBRID-C006 CUBRID-C008 CUBRID-C011 CUBRID-C012 CUBRID-C013 CUBRID-C016 CUBRID-C020 CUBRID-C021 CUBRID-C022">
+    <h2>네 개의 workflow와 전체 분기</h2>
+    <p><strong>VFID(Volume File Identifier)</strong>는 CUBRID file을 가리키는 volume ID와 file ID의 묶음입니다. <strong>sysop(system operation)</strong>은 file/page 내부 변경을 작은 원자 단위로 commit하거나 abort하는 내부 경계입니다.</p>
+    <div class="table-wrap"><table><caption>CBRD-27157을 이루는 네 흐름</caption><thead><tr><th>흐름</th><th>핵심 함수</th><th>넘겨지는 상태</th></tr></thead><tbody>
+      <tr><td>class 보호</td><td><code>locate_class → xlocator_find_class_oid → lock_object</code></td><td>class OID, BU mode, session tran_index</td></tr>
+      <tr><td>MVCCID rendezvous</td><td><code>logtb_get_current_mvccid → lock_transaction_mvccid</code></td><td>MVCCID key, X mode, worker tran_index</td></tr>
+      <tr><td>OOS lazy create</td><td><code>finish_line → heap_oos_find_vfid → oos_create_file → file_create</code></td><td>class heap, OOS VFID, current MVCCID</td></tr>
+      <tr><td>transaction 종료와 lock 해제</td><td><code>logtb_complete_mvcc → lock_unlock_all → lock_internal_perform_unlock_object</code></td><td>inactive MVCCID, transaction hold lists, resource holder/waiter summaries</td></tr>
+    </tbody></table></div>
+    <p>마지막 흐름의 <strong>holder full release</strong>는 resource list와 transaction hold list에서 같은 entry를 뺍니다. resource mutex를 먼저 잡고 transaction hold mutex를 안쪽에서 잠근 뒤 holder mode를 재계산하고 blocked holder, compatible waiter 순으로 grant합니다. 반면 <strong>waiter cancellation</strong>은 취소 waiter 뒤쪽만 부분 grant하며 blocked holder grant를 호출하지 않습니다. <span class="source-id">CUBRID-C022</span></p>
+    <div class="table-wrap"><table><caption>fast·miss·wait/retry·failure를 빠짐없이 보기</caption><thead><tr><th>Branch</th><th>조건</th><th>무슨 일이 생기는가?</th><th>Caller의 다음 행동</th></tr></thead><tbody>
+      <tr><td>fast: inline</td><td>값이 OOS 대상이 아님</td><td>OOS file lookup/create를 열지 않고 row 변환을 계속함</td><td>bulk row insert 계속</td></tr>
+      <tr><td>fast: OOS hit</td><td>heap header에 OOS VFID가 이미 있음</td><td>header latch 아래 기존 VFID를 읽어 재사용함</td><td>그 file에 value 저장</td></tr>
+      <tr><td>miss: first create</td><td>큰 값이고 OOS VFID가 비어 있음</td><td>header WRITE latch 아래 sysop과 file create를 시작함. <code>file_create</code>가 current MVCCID를 얻는 과정에서 worker의 transaction-resource X self-lock 요청이 generic lock manager에 들어감</td><td>file create와 class TDE 조회·적용이 모두 성공한 뒤에만 undo→VFID publish→redo→dirty→sysop commit</td></tr>
+      <tr><td>wait then hit</td><td>같은 heap의 다른 worker가 first create 중</td><td>header WRITE latch에서 기다린 뒤 다시 확인하여 앞 worker가 publish한 VFID를 읽음</td><td>duplicate create 없이 기존 VFID 사용</td></tr>
+      <tr><td>observer retry</td><td>unique/FK 검사에서 다른 active INSID 발견</td><td>page latch와 임시 object lock을 놓고 MVCCID S를 기다린 뒤 S를 full release함</td><td>active 상태와 B-tree 결과를 다시 검사</td></tr>
+      <tr><td>ordinary failure</td><td>lock wait, OOS/file/TDE/header 또는 batch 오류</td><td>grant로 위장하지 않음. file path는 sysop abort·page unfix·NULL VFID, worker path는 batch abort 뒤 transaction index free</td><td>caller에 오류를 전달하고 session이 worker 완료를 모음</td></tr>
+    </tbody></table></div>
+    <h3>시간 순서로 한 번에 연결하기</h3>
+    <pre><code>[A. current loaddb/OOS: bulk row INSID observer를 전제하지 않음]
+Session S       Worker W        Heap header / File        Lock manager
+   │ BU(CLASS)      │                    │                      │
+   ├───────────────▶│ object lookup은 S의 BU 확인              │
+   │                │ large value        │                      │
+   │                ├─WRITE latch───────▶│ VFID miss            │
+   │                │                    ├─file_create──────────▶│ MVCCID X holder
+   │                │                    │◀─create success───────┤
+   │                │                    │ VFID publish·unfix     │
+   │                │ MVCCID inactive → holder full release────▶│
+
+[B. ordinary observable INSID rendezvous: 별도 일반 경로]
+Producer P             Lock manager             Observer T
+ ensure X → INSID publish    │                        │ active INSID 발견
+         │                   │◀──── S request ────────┤ (page latch 먼저 release)
+ MVCCID inactive             │                        │ wait
+ X full release ────────────▶│────── wake ───────────▶│
+                             │                        │ S full release
+                             │                        │ active/B-tree recheck</code></pre>
+    <pre><code>load_one_value(session_tx, worker_tx, value):
+  require session_tx holds BU on target CLASS
+  use session BU for worker object-lock lookup redirect
+
+  if bulk_row:
+    omit per-row object lock and row INSID      # current optimization
+
+  if value stays inline:
+    return INSERT_INLINE                       # fast
+
+  lock(heap_header, WRITE)
+  if header.oos_vfid exists:
+    vfid = header.oos_vfid
+    unfix(heap_header)
+    return WRITE_TO_EXISTING_OOS(vfid)          # hit, including wait-then-hit
+
+  begin_sysop()
+  mvccid = get_or_allocate_current_mvccid(worker_tx)
+  request X on TRANSACTION_KEY(mvccid)          # TT_LOADDB transaction key만 허용
+  result = create_oos_file()
+  if result failed:
+    abort_sysop(); unfix_header(); return ERROR
+
+  tde = get_class_tde_algorithm(header.class_oid)
+  if tde lookup failed:
+    abort_sysop(); unfix_header(); return ERROR
+  if apply_tde_to_file(result.vfid, tde) failed:
+    abort_sysop(); unfix_header(); return ERROR
+
+  log_undo(old_heap_header)
+  publish(header.oos_vfid = result.vfid)
+  log_redo(new_heap_header)
+  mark_header_dirty()
+  commit_sysop()
+  unfix(heap_header)
+  return WRITE_TO_NEW_OOS                      # miss success
+
+finish_worker(worker_tx, result):
+  if result failed:
+    begin_abort(worker_tx)
+  else:
+    wait_for_batch_order(); begin_commit(worker_tx)
+  publish_mvccid_inactive(worker_tx)
+  release_instance_class_root_non2pl_holds(worker_tx)
+  free_worker_transaction_index()</code></pre>
+    <pre><code>check_unique_or_fk(observer_tx, candidate):
+  while true:
+    observation = read_active_insid_and_btree(candidate)
+    if observation has no other active inserter:
+      return observation.final_result           # fast
+
+    release_page_latches_and_temporary_object_locks()
+    wait = request S on TRANSACTION_KEY(observation.insid)
+    if wait failed by timeout/deadlock/interrupt:
+      return wait.error                         # failure
+
+    full_release_the_S_lock()
+    continue                                    # wakeup은 결론이 아님: 처음부터 재검사</code></pre>
+    <p>여기서 OOS miss가 row INSID를 새로 쓰기 때문에 self-lock이 필요한 것은 아닙니다. bulk row의 INSID는 생략될 수 있지만, file allocation의 transaction-relative 검사 때문에 current MVCCID가 필요해져 같은 assignment side effect를 통과합니다. fix는 이 <code>TRANSACTION</code> key만 허용하고 TT_LOADDB의 class/instance internal acquire 금지는 유지합니다. <span class="source-id">CUBRID-C008 · CUBRID-C011 · CUBRID-C012 · CUBRID-C013 · CUBRID-C016 · CUBRID-C021 · CUBRID-C022</span></p>
+    <div class="callout evidence-runtime"><p><span class="evidence-label runtime-observed">Runtime-observed:</span> 한 실행에서 small control은 OOS file이 없었고, large value는 OOS VFID와 live record 1을 보였으며 loaddb는 2건 성공·0건 실패였습니다. 내부 latch·self-lock 호출 자체는 이 stdout이 아니라 source trace로 확인했습니다. <span class="claim-id">CUBRID-C020</span></p></div>
+  </section>
+  <section id="bu-source-path" data-claim-id="CUBRID-C003">
+    <h2>BU 획득과 worker lookup redirect</h2>
+    <p>class install request는 connection request thread에서 <code>server_class_installer::locate_class</code>로 들어가 <code>BU_LOCK</code>을 요청합니다. batch worker가 later object lock을 조회하면 <code>thread_p→conn_entry→get_tran_index()</code>를 통해 session transaction의 class BU를 확인합니다.</p>
+    <p>instance request가 “grant”처럼 돌아와도 worker 소유의 instance lock entry를 만들었다는 뜻이 아닙니다. session BU를 확인해 별도 entry 없이 우회 성공한 것입니다.</p>
+  </section>
+  <section id="self-lock-source-path" data-claim-id="CUBRID-C005">
+    <h2>self-lock의 acquire와 ensure</h2>
+    <p>MVCCID 첫 assignment API는 error를 직접 반환할 수 없어 self-lock 실패를 best-effort로 기록합니다. 그러나 실제 INSID가 외부에 보이기 전 heap insert/update producer는 <code>logtb_ensure_mvccid_self_lock</code>을 다시 거쳐 오류를 caller에 전달합니다.</p>
+    <p>unique/FK helper는 active other inserter를 확인한 뒤 leaf·overflow page latch와 필요한 object lock을 놓습니다. 같은 MVCCID에 S를 얻은 직후 full release하고, active 상태와 B-tree root/key를 다시 봅니다.</p>
+  </section>
+  <section id="oos-source-path" data-claim-id="CUBRID-C012">
+    <h2>OOS는 어디에서 transaction 의미를 만나는가?</h2>
+    <p><code>heap_oos_find_vfid</code>는 heap header의 OOS VFID가 비어 있을 때만 file을 만듭니다. <code>file_create</code>는 candidate VFID가 vacuum의 dropped-file list와 충돌하지 않는지 transaction-relative하게 검사하려고 current MVCCID를 받습니다. row INSID를 쓰기 위한 요청과 목적이 다릅니다.</p>
+    <div class="callout"><p><strong>첫 사용 크기 주의:</strong> 고정 PR revision의 layout 코드는 raw <code>DB_PAGESIZE / 4</code> 기준을 사용합니다. 현재 OOS 설계 문맥의 정규 목표는 4,060바이트입니다. 이 차이는 본 잠금 호출 사슬을 바꾸지 않지만, threshold를 일반 규약처럼 단정하면 안 됩니다.</p></div>
+  </section>
+  <section id="failure-08" data-claim-id="CUBRID-C005 CUBRID-C006 CUBRID-C016 CUBRID-C021"><h2>각 seam의 실패 책임</h2><div class="table-wrap"><table><caption>Caller와 callee의 오류 계약</caption><thead><tr><th>Seam</th><th>실패</th><th>책임</th></tr></thead><tbody><tr><td>self-lock assignment</td><td>최초 best-effort acquire 실패</td><td>observable INSID producer가 ensure로 오류를 다시 받음</td></tr><tr><td>B-tree wait</td><td>timeout·deadlock·interrupt</td><td>page latch를 든 채 진행하지 않고 error/retry로 복귀</td></tr><tr><td>OOS first create</td><td>file/TDE/header 오류</td><td>header write latch 아래 sysop abort 후 page unfix</td></tr><tr><td><code>file_create</code></td><td>allocation·sysop 오류</td><td>output VFID를 NULL로 되돌리고 시작한 작업을 abort</td></tr></tbody></table></div><p class="source-id">CUBRID-C005 · CUBRID-C006 · CUBRID-C016 · CUBRID-C021</p></section>
+  <section id="recap-08"><h2>8장 복습</h2><p><strong>한 문장:</strong> class protection, transaction rendezvous, OOS file lifecycle은 서로 다른 module의 책임이며 한 호출 사슬에서 만났을 뿐입니다.</p><p><strong>다음 질문:</strong> 현재 fix는 이 만남을 어디까지 허용하고 어떤 금지는 유지할까요?</p></section>
+</main>
+<footer><nav class="book-nav" aria-label="아래 장 이동"><a rel="prev" href="07-lifecycle-and-failure.html">7장으로</a><a href="../index.html">목차</a><a rel="next" href="09-fix-boundary.html">9장으로</a></nav></footer>
+</body></html>

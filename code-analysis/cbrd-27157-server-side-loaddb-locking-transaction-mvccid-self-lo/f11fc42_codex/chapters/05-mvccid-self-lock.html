@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>5장 — session, worker, MVCCID self-lock</title><link rel="stylesheet" href="../assets/report.css"></head>
+<body>
+<header><p>5장</p><h1>한 load, 여러 transaction과 MVCCID self-lock</h1><p>“같은 요청에 속한다”와 “같은 owner다”를 분리합니다.</p></header>
+<nav class="book-nav" aria-label="장 이동"><a rel="prev" href="04-bu-lock.html">이전 장</a><a href="../index.html">목차</a><a rel="next" href="06-cbrd-27157-regression.html">다음 장</a></nav>
+<main>
+  <section class="chapter-guide" aria-label="이 장의 학습 안내">
+    <div><strong>학습 목표</strong>session transaction, worker batch transaction, MVCCID self-lock의 owner와 lifetime을 분리합니다.</div>
+    <div><strong>시작 상황</strong>T1이 unique key를 insert하고 끝나기 전에 T2가 같은 key를 검사합니다.</div>
+    <div><strong>확인할 불변식</strong>INSID(record에 적힌 inserter MVCCID)가 관찰 가능하고 inserter가 active이면 같은 MVCCID resource에 matching X self-lock이 있어야 합니다.</div>
+    <div><strong>실패·한계</strong>일반 snapshot reader와 unique/FK checker를 합치면 모든 MVCC read가 block된다고 오해합니다.</div>
+  </section>
+  <section id="data-ownership-lifetime" data-claim-id="CUBRID-C003 CUBRID-C004 CUBRID-C005">
+    <h2>session transaction과 worker batch transaction</h2>
+    <pre><code>connection / load session
+  session transaction S ──owns── class T의 BU_LOCK
+              ·
+              · object-lock lookup redirect
+              ·
+  worker W1 ──runs── batch transaction B1 ──owns── MVCCID M1의 X self-lock
+  worker W2 ──runs── batch transaction B2 ──owns── MVCCID M2의 X self-lock</code></pre>
+    <p class="diagram-alt">실선은 실제 ownership, 점선은 worker가 object lock 상태를 물을 때 session transaction을 보는 redirect입니다. B1과 B2는 S의 nested child transaction이 아닙니다.</p>
+    <p>각 accepted batch는 새 <code>tran_index</code>를 받고, 성공하면 정해진 batch 순서로 commit하며 실패하면 abort합니다. client identity 일부를 복사해도 transaction descriptor와 lock ownership이 복사되는 것은 아닙니다.</p>
+  </section>
+  <section id="identifier-map">
+    <h2>비슷한 네 식별자</h2>
+    <div class="table-wrap"><table><caption>CUBRID 식별자 구분</caption><thead><tr><th>이름</th><th>쉬운 뜻</th><th>이 이슈에서의 역할</th></tr></thead><tbody>
+      <tr><td>OID</td><td>class나 instance object의 주소</td><td>BU 같은 object resource key</td></tr>
+      <tr><td>tran_index</td><td>현재 서버 transaction table의 칸 번호</td><td>holder·waiter owner 찾기</td></tr>
+      <tr><td>TRANID</td><td>log transaction 식별자</td><td>MVCCID key와는 별도 필드</td></tr>
+      <tr><td>MVCCID</td><td>row version writer를 나타내는 번호</td><td>self-lock resource key, INSID 값</td></tr>
+      <tr><td>INSID</td><td>record version에 적히는 inserter의 MVCCID</td><td>다른 검사자가 unfinished inserter를 찾는 표식. bulk row에서는 생략될 수 있음</td></tr>
+    </tbody></table></div>
+  </section>
+  <section id="mvccid-self-lock-rendezvous" data-claim-id="CUBRID-C005 CUBRID-C006 CUBRID-C007 CUBRID-C010 PG-C004 PG-C010 PG-C011 MYSQL-C004 MYSQL-C005 MYSQL-C010 CMP-C010">
+    <h2>self-lock은 자기 자신을 막지 않는다</h2>
+    <p>T1이 MVCCID 42를 처음 받으면 같은 MVCCID 42 transaction resource에 X lock을 잡습니다. record가 normal MVCC insert라면 INSID에 42가 보일 수 있습니다. T2의 unique 또는 FK 검사 경로가 active inserter 42를 발견하면 같은 resource에 S lock을 요청합니다.</p>
+    <pre><code>T1: MVCCID 42 발급 → X(42) 보유 → INSID=42 공개
+T2: INSID 42 발견 → page latch 해제 → S(42) 요청 → 기다림
+T1: commit 또는 abort → active=false → X(42) 해제
+T2: 깨어남 → S(42) 즉시 해제 → active와 B-tree를 다시 검사</code></pre>
+    <p class="diagram-alt">일반 snapshot reader는 과거 version을 읽을 수 있으므로 이 S-lock 대기와 같다고 가정하지 않습니다. 여기의 observer는 source에서 확인한 unique/FK conflict checker입니다.</p>
+    <div class="invariant"><p><strong>핵심 불변식:</strong> 다른 transaction이 관찰할 수 있는 INSID가 있다면, 그 inserter가 아직 active인 동안 같은 MVCCID의 X self-lock이 있어야 합니다.</p></div>
+    <div class="callout evidence-runtime"><p><span class="evidence-label runtime-observed">Runtime-observed:</span> <a href="../evidence/runs/f03-exp2-lockdb-v3/stdout.txt"><code>f03-exp2-lockdb-v3</code></a>는 inserter MVCCID 7 resource에 X holder와 S waiter가 동시에 있음을 보였습니다. direct csql observer <a href="../evidence/runs/f03-exp2-observer-v3/meta.json"><code>f03-exp2-observer-v3</code></a>는 약 10.7초 뒤 <code>observer-after-wait</code> 행의 insert와 조회에 성공했습니다. 이 한 번의 실행은 내부 page latch 해제나 전체 재검사 호출을 직접 관찰하지 않았으며, 그 순서는 Source-confirmed 근거입니다. <span class="claim-id">CUBRID-C010</span></p></div>
+  </section>
+  <section id="bulk-exception" data-claim-id="CUBRID-C008 CUBRID-C009">
+    <h2>현재 bulk row는 INSID를 생략한다</h2>
+    <p>session BU를 확인한 bulk insert는 <code>is_bulk_op</code>으로 전달되어 row INSID와 per-row object lock, class IX를 생략합니다. 그래서 현재 분석한 bulk row metadata만 보면 unique/FK checker가 worker MVCCID를 발견하는 길이 없습니다.</p>
+    <p>그러나 이것은 “어떤 loaddb worker도 MVCCID가 필요 없다”는 말이 아닙니다. file metadata 같은 다른 경로가 MVCCID를 요구할 수 있고, 미래에 새로운 INSID producer가 생길 수도 있습니다. current path에 대한 좁은 추론과 전체 invariant 정책을 구분해야 합니다.</p>
+  </section>
+  <section id="failure-05" data-claim-id="CUBRID-C005 CUBRID-C006 CUBRID-C018"><h2>self-lock acquire가 실패하면</h2><p>MVCCID assignment 지점의 최초 X acquire는 API 제약 때문에 실패를 log로 남기는 best-effort 경계입니다. 실제 INSID를 외부에 보일 수 있는 heap producer는 <code>logtb_ensure_mvccid_self_lock</code>을 다시 호출해 실패를 statement error로 전달합니다. 이 ensure 없이 INSID를 먼저 공개하는 전이는 금지됩니다. timeout·deadlock·interrupt를 받은 S waiter도 성공처럼 진행하지 않고 caller 오류 또는 retry 규칙을 따라야 합니다. generic 대기 경로는 실패 wakeup에서 blocked/waiter 정보를 제거합니다. <span class="source-id">CUBRID-C005 · CUBRID-C006 · CUBRID-C018</span></p></section>
+  <section id="recap-05"><h2>5장 복습</h2><p><strong>한 문장:</strong> session은 class BU를, 각 worker batch는 자기 MVCCID self-lock을 별도로 소유합니다.</p><p><strong>이제 구분할 것:</strong> 일반 snapshot visibility와 unique/FK completion wait.</p><p><strong>다음 질문:</strong> 큰 OOS 값이 왜 평소에는 필요 없던 worker MVCCID를 요구했을까요?</p></section>
+</main>
+<footer><nav class="book-nav" aria-label="아래 장 이동"><a rel="prev" href="04-bu-lock.html">4장으로</a><a href="../index.html">목차</a><a rel="next" href="06-cbrd-27157-regression.html">6장으로</a></nav></footer>
+</body></html>

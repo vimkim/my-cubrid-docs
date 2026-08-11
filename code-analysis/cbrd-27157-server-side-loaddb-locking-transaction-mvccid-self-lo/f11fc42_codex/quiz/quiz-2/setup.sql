@@ -1,0 +1,2 @@
+CREATE TABLE unique_demo (id INTEGER PRIMARY KEY, note VARCHAR (40));
+COMMIT;
