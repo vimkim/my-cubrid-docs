@@ -5,13 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ch15 — 3-DB 교차 비교 · CBRD-26950</title>
 <link rel="stylesheet" href="../assets/report.css">
+<link rel="prev" href="14-mysql-analysis.html">
+<link rel="next" href="16-reimplementation-blueprint.html">
 </head>
 <body>
 <header>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="14-mysql-analysis.html">← ch14</a>
-<a href="16-reimplementation-blueprint.html">다음: ch16 →</a>
+<a rel="prev" href="14-mysql-analysis.html">← ch14</a>
+<a rel="next" href="16-reimplementation-blueprint.html">다음: ch16 →</a>
 </nav>
 <h1>ch15 — 3-DB 교차 비교: 하나의 시나리오, 세 개의 답</h1>
 </header>
@@ -54,7 +56,7 @@ vacuum forward-walk 가 물리 OID 로 삭제 → 재시도 시 같은 OID 재�
 <span class="claim-id">(MYSQL-C002, MYSQL-C004)</span>.</li>
 </ol>
 
-<h2 id="responsibility-table">3. 책임·정책 대조표 (V-14)</h2>
+<h2 id="responsibility-table" data-claim-id="CMP-C001 CMP-C002 CMP-C003 CMP-C004">3. 책임·정책 대조표 (V-14)</h2>
 <div class="table-wrap">
 <table>
 <caption>V-14. 판정을 가르는 6축 <span class="claim-id">(CMP-C001, CMP-C002, CMP-C003, CMP-C004)</span></caption>
@@ -65,7 +67,7 @@ vacuum forward-walk 가 물리 OID 로 삭제 → 재시도 시 같은 OID 재�
 <tr><td>③ 재시도 멱등성 근거</td><td>존재-probe — <strong>불충분</strong></td><td>점유자 자기 증언 재평가</td><td>스탬프 등가 + 지시서 self-mark</td></tr>
 <tr><td>④ 진행 영속화</td><td>블록 단위 — 재실행 지시化</td><td>없음</td><td>없음 (재처리 허용을 전제)</td></tr>
 <tr><td>⑤ 재사용 정책</td><td>즉시 + 촉진</td><td>이름: 드레인 후 / 주소: 순서 불변식 후</td><td>페이지 즉시 (스탬프가 보완)</td></tr>
-<tr><td>⑥ 잔여 실패 방향</td><td><strong>과잉 삭제 (무증상 손실)</strong></td><td>과소 회수 (낭비) / 시끄러운 손상 오류</td><td>누수 (명시적 선택)</td></tr>
+<tr><td>⑥ 잔여 실패 방향</td><td><strong>과잉 삭제 (무증상 손실)</strong></td><td>과소 회수 (낭비) / 시끄러운 손상 오류</td><td>회수 보류 — 스탬프 불일치면 해제하지 않고 지나간다(<code>ok_to_free</code> 논리곱). 별개로 크래시 창 누수 하나가 소스 주석에 미해결 결함으로 인정되어 있다</td></tr>
 </tbody>
 </table>
 </div>
@@ -116,8 +118,8 @@ CUBRID(현재)는 "질문을 하지 않는 코드"다. 다음 장에서 CUBRID �
 <footer>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="14-mysql-analysis.html">← ch14</a>
-<a href="16-reimplementation-blueprint.html">다음: ch16 →</a>
+<a rel="prev" href="14-mysql-analysis.html">← ch14</a>
+<a rel="next" href="16-reimplementation-blueprint.html">다음: ch16 →</a>
 </nav>
 </footer>
 </body>

@@ -5,13 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ch17 — 용어집·증거·unknown · CBRD-26950</title>
 <link rel="stylesheet" href="../assets/report.css">
+<link rel="prev" href="16-reimplementation-blueprint.html">
+<link rel="next" href="18-teaching-map.html">
 </head>
 <body>
 <header>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="16-reimplementation-blueprint.html">← ch16</a>
-<a href="18-teaching-map.html">다음: ch18 →</a>
+<a rel="prev" href="16-reimplementation-blueprint.html">← ch16</a>
+<a rel="next" href="18-teaching-map.html">다음: ch18 →</a>
 </nav>
 <h1>ch17 — 용어집, 증거 색인, unknown, 준비 선언</h1>
 </header>
@@ -48,17 +50,17 @@
 </div>
 
 <h2 id="evidence-index">증거 색인</h2>
-<p>전체 claim 은 <code>evidence/claims.jsonl</code>(37건 — CUBRID 25, PG 4, MySQL 4, 비교 4)에
+<p>전체 claim 은 <code>evidence/claims.jsonl</code>(38건 — CUBRID 26, PG 4, MySQL 4, 비교 4)에
 파일 해시·라인 범위와 함께 있다. 챕터 본문의 <span class="claim-id">claim ID</span> 가 그 색인의
-키다. 런타임 증거는 <code>evidence/runs/</code> 아래 13개 캡처(빌드 2, 스냅샷 1, exp-1 계열 8,
-exp-2 계열 4 — 실패한 시도 포함 전부 보존).</p>
+키다. 런타임 증거는 <code>evidence/runs/</code> 아래 18개 캡처(빌드 2, 스냅샷 1, exp-1 계열 8,
+exp-2 계열 7 — 실패한 시도까지 전부 보존).</p>
 <div class="table-wrap">
 <table>
 <caption>실험 ↔ 실행 ID ↔ claim</caption>
 <thead><tr><th>실험</th><th>주요 run id</th><th>귀속 claim</th></tr></thead>
 <tbody>
 <tr><td>experiment-1 (정상 회수, 2회)</td><td>setup-r1c/r2, observe-r1/r2, cleanup-r1/r2</td><td><span class="claim-id">CUBRID-C003</span></td></tr>
-<tr><td>experiment-2 (결함 재현)</td><td>setup-r1(PoC), observe-r1(설계 결함 보존)/r1b(최종), cleanup-r1</td><td><span class="claim-id">CUBRID-C012, C023, C048</span></td></tr>
+<tr><td>experiment-2 (결함 재현, 2회 — rep 2 정상 셧다운 / rep 1 abort 종료)</td><td>setup-r1/r2(PoC), observe-r2(최종 · r1·r1b 는 설계 이력으로 보존), cleanup-r1/r2</td><td><span class="claim-id">CUBRID-C012, C023, C048</span></td></tr>
 </tbody>
 </table>
 </div>
@@ -68,19 +70,21 @@ exp-2 계열 4 — 실패한 시도 포함 전부 보존).</p>
 기록되어 있다. not-applicable 항목은 없다 — 이 주제는 저장·동시성·복구·정책·비교의 전 관심사를
 실제로 행사한다.</p>
 
-<h2 id="unknowns">Unknown 목록 — 왜 미해결이고 어떻게 닫는가</h2>
+<h2 id="unknowns" data-claim-id="CUBRID-C035 CUBRID-C048">Unknown 목록 — 왜 미해결이고 어떻게 닫는가</h2>
 <div class="table-wrap">
 <table>
 <caption>명시적 unknown <span class="claim-id">(CUBRID-C035, C048 외)</span></caption>
 <thead><tr><th>#</th><th>내용</th><th>왜 unknown</th><th>닫는 방법</th></tr></thead>
 <tbody>
 <tr><td>U1</td><td>"OOS LSA" 의 회의 정의</td><td>회의록 부재 — 로컬 문서에 정의 없음</td><td>팀 확인. 그때까지 ch16 §5 의 해석 조건부 분석만 유효</td></tr>
-<tr><td>U2</td><td>experiment-2 채널 B(12,432) 중 ~1.04만 건의 pass-2 점유자</td><td>oos.log 에 insert 기록이 없어 사후 식별 불가</td><td>배치 insert 로그(CBRD-26871) 후 재실행, 또는 restored-청크 재삭제 규모 측정</td></tr>
+<tr><td>U2</td><td>rep 1 의 채널 B 초과분(12,432 대 피해 528)의 구성 — rep 2(정상 셧다운)는 233:233 로 1:1</td><td>oos.log 에 insert 기록이 없어 pass-2 점유자 사후 식별 불가. 게다가 rep 1 은 abort 종료라 교란 변수가 하나 더 있다(설명은 추정)</td><td>배치 insert 로그(CBRD-26871) 후 <strong>정상 셧다운으로 통제된</strong> 재실행</td></tr>
 <tr><td>U3</td><td>btree 의 재시도 안전성(키+MVCC info 재유도)</td><td>이 run 에서 btree.c 미추적 — 로컬 문서 인용</td><td>btree_vacuum 경로 추적 1회</td></tr>
 <tr><td>U4</td><td>abort 복원(spage_insert_for_recovery)이 점유된 슬롯을 만날 때의 동작</td><td>소스 미추적 — 재사용 문제의 abort 쪽 쌍둥이</td><td>함수 추적 + 크래시 주입 실험(제안 E7)</td></tr>
 <tr><td>U5</td><td>REC_NEWHOME(제2 호출부) 경로의 런타임 발현</td><td>메커니즘 동일성은 소스 확인, 재현은 미수행</td><td>relocation 유도 변형 PoC(제안 E4)</td></tr>
 <tr><td>U6</td><td>재사용 창의 슬롯 수준 직접 측정 (probe 통과율 등)</td><td>관측성 공백(U2 와 동근)</td><td>debug 카운터 추가 후 측정</td></tr>
 <tr><td>U7</td><td>페이지 카운터가 놓일 정확한 필드(슬롯 페이지 헤더 여유)</td><td>설계 미결정 — 소스 수준 배치 미추적</td><td>SPAGE_HEADER 여유 분석 또는 OOS 페이지 전용 헤더 확장</td></tr>
+<tr><td>U8</td><td>"완주한 블록도 재주행된다"의 <strong>정상 종료</strong> 판본 — 런타임 미검증</td><td>이를 관측한 rep 1 은 abort 종료였고, (a) 도장 비동기 지연과 (b) abort 로 인한 큐 미소비를 그 실행만으로 분리할 수 없다</td><td>도장 영속화 직전에 정상 stop 을 맞추는 통제 실행(또는 master 의 finished-job 소비를 지연시키는 관측)</td></tr>
+<tr><td>U9</td><td>rep 1 을 abort 시킨 <code>oos_file_alloc_new</code> assert 결함(ch10 부수 발견)의 티켓·수정 범위</td><td>CBRD-26950 과 별개 결함이며 이 report 의 범위 밖 — 스택만 확보(<code>evidence/raw/rep1-abort-backtrace.txt</code>)</td><td>별도 티켓 등록 후 인터럽트 오류 전파로 수정</td></tr>
 </tbody>
 </table>
 </div>
@@ -99,14 +103,19 @@ Interface 와 호출자 의무(ch03, ch16 §9) / 상태 소유·수명(ch04) / �
 재시도·대기·실패 조건(ch05, ch10) / 보호 장치와 획득 순서(ch07) / 크래시 생존과 재구성(ch08) /
 영속 레이아웃(ch04, ch11 — 단 바이트 호환은 비약속) / 기동·중단·복구 순서(ch05, ch08) /
 재구축 순서(ch16 §9) / 적합성 테스트(ch16 §9 — experiment-1/2 오라클).
-Unknown U1–U7 은 전부 이 선언의 <em>경계 밖</em> 이거나(U1: 회의 의도 확인, U3–U5: 이웃 검증)
-결론에 영향 없는 측정 심화(U2, U6, U7)로 분류되며, 숨긴 미지수는 없다.</p>
+Unknown U1–U9 는 이 선언의 <em>경계 밖</em>(U1 회의 의도 확인, U3–U5 이웃 검증, U9 별개 결함)이거나
+결론에 영향 없는 측정 심화(U2, U6, U7)이며, U8 은 <strong>결론의 일부를 소스 근거로 한정</strong>하는
+형태로 본문에 반영되어 있다(완주 블록 재주행의 정상-종료 판본은 소스 근거, abort 경유 발현은 런타임 관측).
+숨긴 미지수는 없다.</p>
+<p class="callout"><strong>재현의 근거 기반</strong>: 이 선언은 <strong>이 report 에 캡처된 2/2 재현</strong>에
+기초한다 — 그중 rep 2 가 정상 셧다운 회차이므로 "크래시 불필요"는 캡처로 뒷받침된다.
+2026-08-05 의 선행 3회 재현은 캡처가 없어 증거 기반에서 제외했다(ch12 참조).</p>
 </main>
 <footer>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="16-reimplementation-blueprint.html">← ch16</a>
-<a href="18-teaching-map.html">다음: ch18 →</a>
+<a rel="prev" href="16-reimplementation-blueprint.html">← ch16</a>
+<a rel="next" href="18-teaching-map.html">다음: ch18 →</a>
 </nav>
 </footer>
 </body>

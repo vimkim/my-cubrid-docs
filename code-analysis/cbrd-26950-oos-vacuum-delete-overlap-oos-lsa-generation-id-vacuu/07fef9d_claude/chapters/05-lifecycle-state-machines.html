@@ -5,13 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ch05 — vacuum 블록 상태 기계 · CBRD-26950</title>
 <link rel="stylesheet" href="../assets/report.css">
+<link rel="prev" href="04-data-ownership-lifetime.html">
+<link rel="next" href="06-core-workflows.html">
 </head>
 <body>
 <header>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="04-data-ownership-lifetime.html">← ch04</a>
-<a href="06-core-workflows.html">다음: ch06 →</a>
+<a rel="prev" href="04-data-ownership-lifetime.html">← ch04</a>
+<a rel="next" href="06-core-workflows.html">다음: ch06 →</a>
 </nav>
 <h1>ch05 — vacuum 블록 상태 기계: 무엇이 영속되고, 왜 두 번 읽는가</h1>
 </header>
@@ -55,19 +57,19 @@ MVCCID newest_mvccid;</code></pre>
 
 <h2 id="state-machine">상태 기계 (V-5)</h2>
 <figure>
-<svg viewBox="0 0 760 330" role="img" aria-labelledby="v5-title v5-desc">
+<svg class="dg" viewBox="0 0 760 330" role="img" aria-label="vacuum 블록 상태 기계 — AVAILABLE, IN_PROGRESS, VACUUMED 와 INTERRUPTED 플래그의 전이도" aria-labelledby="v5-title v5-desc">
 <title id="v5-title">vacuum 블록 상태 기계</title>
 <desc id="v5-desc">AVAILABLE, IN_PROGRESS, VACUUMED 세 상태와 INTERRUPTED 플래그의 전이.</desc>
-<style>text{font-family:sans-serif;font-size:13px;fill:#18202b}.s{fill:#e8f1fc;stroke:#1558a6;rx:10}.warn{fill:#fbeaea;stroke:#9c2f2f;rx:10}line{stroke:#5c6878;stroke-width:2;marker-end:url(#m5)}</style>
-<defs><marker id="m5" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5c6878"/></marker></defs>
-<rect class="s" x="30" y="40" width="200" height="56"/><text x="52" y="64" font-weight="bold">AVAILABLE</text><text x="52" y="84">(발행됨, 대기)</text>
-<rect class="s" x="300" y="40" width="200" height="56"/><text x="318" y="64" font-weight="bold">IN_PROGRESS</text><text x="318" y="84">(worker 처리 중)</text>
-<rect class="s" x="570" y="40" width="170" height="56"/><text x="592" y="64" font-weight="bold">VACUUMED</text><text x="592" y="84">(master 가 영속화)</text>
+
+<defs><marker id="dg-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5c6878"/></marker></defs>
+<rect class="box" x="30" y="40" width="200" height="56"/><text x="52" y="64" font-weight="bold">AVAILABLE</text><text x="52" y="84">(발행됨, 대기)</text>
+<rect class="box" x="300" y="40" width="200" height="56"/><text x="318" y="64" font-weight="bold">IN_PROGRESS</text><text x="318" y="84">(worker 처리 중)</text>
+<rect class="box" x="570" y="40" width="170" height="56"/><text x="592" y="64" font-weight="bold">VACUUMED</text><text x="592" y="84">(master 가 영속화)</text>
 <rect class="warn" x="300" y="200" width="230" height="72"/><text x="316" y="226" font-weight="bold">AVAILABLE + INTERRUPTED</text><text x="316" y="246">(재배포 대상 — start_lsa 는</text><text x="316" y="264">그대로, 처음부터 재주행)</text>
-<line x1="230" y1="68" x2="298" y2="68"/><text x="234" y="58">게이트 통과·디스패치</text>
-<line x1="500" y1="68" x2="568" y2="68"/><text x="502" y="58">완주 + master 큐 소비</text>
-<line x1="400" y1="96" x2="400" y2="198"/><text x="408" y="140">중단: 셧다운 / (release) 에러</text><text x="408" y="158">/ 재기동 시 IN_PROGRESS 재장전</text>
-<line x1="300" y1="236" x2="130" y2="98"/><text x="60" y="180">다음 디스패치</text>
+<line class="line" marker-end="url(#dg-arrow)" x1="230" y1="68" x2="298" y2="68"/><text x="234" y="58">게이트 통과·디스패치</text>
+<line class="line" marker-end="url(#dg-arrow)" x1="500" y1="68" x2="568" y2="68"/><text x="502" y="58">완주 + master 큐 소비</text>
+<line class="line" marker-end="url(#dg-arrow)" x1="400" y1="96" x2="400" y2="198"/><text x="408" y="140">중단: 셧다운 / (release) 에러</text><text x="408" y="158">/ 재기동 시 IN_PROGRESS 재장전</text>
+<line class="line" marker-end="url(#dg-arrow)" x1="300" y1="236" x2="130" y2="98"/><text x="60" y="180">다음 디스패치</text>
 </svg>
 <figcaption><strong>V-5. 블록 상태 기계.</strong> 완주 전 중단의 모든 형태가 하나의 재주행 상태로 수렴한다 <span class="claim-id">(CUBRID-C011)</span>.</figcaption>
 </figure>
@@ -78,13 +80,13 @@ worker 의 <code>thread_p-&gt;shutdown</code> 감지(:3493-3498), (release 빌�
 또는 재기동 시 IN_PROGRESS 로 남은 엔트리의 재장전(:4400-4403) — 모두
 AVAILABLE+INTERRUPTED 로 되돌아가고, 다음 디스패치 때 <strong>start_lsa 부터 통째로</strong> 재주행된다.</p>
 
-<h2 id="block-retry">재주행의 세 관문 — 전부 소스로 확인</h2>
+<h2 id="block-retry" data-claim-id="CUBRID-C010 CUBRID-C011 CUBRID-C012 CUBRID-C042">재주행의 세 관문 — 전부 소스로 확인</h2>
 <ol>
 <li><strong>중단은 흔하다</strong> — 정상 <code>cubrid server stop</code> 이 worker 루프의
 <code>thread_p-&gt;shutdown</code> 검사(vacuum.c:3493-3498)에서 블록을 포기하게 만든다.
 크래시가 필요 없다 <span class="claim-id">(CUBRID-C011)</span>.</li>
 <li><strong>재주행은 전체 재주행이다</strong> — <code>start_lsa</code> 는 블록 처리 중 결코 전진하지
-않는다(쓰기 지점 전수 조사: 생성자·소비·복구 재구축뿐). 소스의 TODO 가 이를 자인한다:
+않는다(쓰기 지점 전수 조사: 생성자·소비·복구 재구축뿐). 소스의 미해결 주석이 이를 자인한다:
 <em>"Check that if start_lsa can be set to a different value when vacuum is not complete,
 to avoid processing the same log data again"</em> (vacuum.c:3766-3767)
 <span class="claim-id">(CUBRID-C010)</span>.</li>
@@ -92,9 +94,18 @@ to avoid processing the same log data again"</em> (vacuum.c:3766-3767)
 master 가 finished-job 큐를 <strong>비동기로</strong> 소비하며 찍는다
 (vacuum_data_mark_finished, vacuum.c:4792-4869; RVVAC_DATA_FINISHED_BLOCKS :4946).
 도장이 영속화되기 전에 셧다운되면 완료 블록도 IN_PROGRESS 로 남아 재기동 시 재주행된다.
-<span class="evidence-runtime"><span class="evidence-label">Runtime-observed</span> —
-이번 재현에서 pass 1 이 20,000 체인을 <strong>전부</strong> 회수하고 'is interrupted!' 경고
-0건이었는데도 12,432건이 재삭제되었다</span> <span class="claim-id">(CUBRID-C012)</span>.</li>
+<span class="evidence-source"><span class="evidence-label">Source-confirmed</span> — 이 창의 존재는
+위 비동기 표기 코드에서 직접 읽힌다.</span>
+<span class="evidence-runtime"><span class="evidence-label">Runtime-observed (단, 비정상 종료 회차)</span> —
+재현 rep 1 에서 pass 1 이 20,000 체인을 <strong>전부</strong> 회수하고 <code>is interrupted!</code> 경고
+0건이었는데도 재기동 후 12,432건이 재삭제되었다. <strong>그 회차는 정상 종료가 아니라 debug assert 로
+abort 한 회차이므로</strong>, 이 관측은 (a) 도장 비동기 지연과 (b) abort 로 master 가 큐를 전혀 비우지
+못한 것을 분리하지 못한다. <strong>정상 종료에서도 완주 블록이 재주행된다는 판본은 위 소스 근거에만
+기초하며 런타임 미검증</strong>이다(<a href="17-glossary-evidence-unknowns.html#unknowns">ch17 U8</a>).
+정상 셧다운 회차인 rep 2 는 백로그가 남은 채 중단되어(<code>abandoned mid-walk: 1</code>) 233건 재삭제 =
+피해 233행의 1:1 관계를 보였다 — 두 회차 구분은
+<a href="12-experimental-validation.html#experiment-2">ch12</a>.</span>
+<span class="claim-id">(CUBRID-C012)</span>.</li>
 </ol>
 <p class="callout">따라서 "서버 로그에 interrupted 경고가 없으니 재처리도 없었다"는 추론은 틀린다.
 그 경고는 master 가 종료 전에 큐를 소비한 경우에만 남고, 소비하지 못한 블록은 조용히
@@ -123,8 +134,8 @@ vacuum data 페이지까지 갱신해야 한다 — 진행 모델의 코어 수�
 <footer>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="04-data-ownership-lifetime.html">← ch04</a>
-<a href="06-core-workflows.html">다음: ch06 →</a>
+<a rel="prev" href="04-data-ownership-lifetime.html">← ch04</a>
+<a rel="next" href="06-core-workflows.html">다음: ch06 →</a>
 </nav>
 </footer>
 </body>

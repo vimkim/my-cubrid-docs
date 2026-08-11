@@ -5,13 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ch11 — 성능과 관측성 · CBRD-26950</title>
 <link rel="stylesheet" href="../assets/report.css">
+<link rel="prev" href="10-errors-resource-pressure.html">
+<link rel="next" href="12-experimental-validation.html">
 </head>
 <body>
 <header>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="10-errors-resource-pressure.html">← ch10</a>
-<a href="12-experimental-validation.html">다음: ch12 →</a>
+<a rel="prev" href="10-errors-resource-pressure.html">← ch10</a>
+<a rel="next" href="12-experimental-validation.html">다음: ch12 →</a>
 </nav>
 <h1>ch11 — 성능과 관측성: 빠를수록 위험하고, 릴리스에선 보이지 않는다</h1>
 </header>
@@ -29,8 +31,15 @@
 <caption>이번 재현과 선행 기록의 실측치</caption>
 <thead><tr><th>변수</th><th>실측</th><th>발현에의 기여</th></tr></thead>
 <tbody>
-<tr><td>vacuum 회수율</td><td>~1,000–13,000 chains/s (버퍼 온도에 따라 요동; 이번 run 은 stop 도달 전 20,000 완주)</td><td>빠를수록 재사용 재료(빈 슬롯)가 빨리 공급됨</td></tr>
-<tr><td>셧다운 전파 지연</td><td>~1.5 s (stop 요청 → worker 의 shutdown 감지)</td><td>이 구간의 완료 블록들이 도장 미영속으로 남음 — 이번 run 재주행 12,432건의 원천</td></tr>
+<tr><td>vacuum 회수율</td><td><span class="evidence-label">캡처 없음(개발 노트)</span> ~1,000–13,000 chains/s —
+출처는 PoC 스크립트 주석(<code>cbrd-26950-poc.sh</code> 의 설계 근거)이며 이 report 에 측정 캡처는 없다.
+이 run 에서 <em>캡처로 뒷받침되는</em> 사실은 rep 1 이 stop 도달 전 20,000 체인을 완주하고 rep 2 는
+7,969 만 회수했다는 것뿐이다</td><td>빠를수록 재사용 재료(빈 슬롯)가 빨리 공급됨</td></tr>
+<tr><td>셧다운 전파 지연</td><td><span class="evidence-label">캡처 없음(개발 노트)</span> ~1.5 s
+(stop 요청 → worker 의 shutdown 감지) — 같은 출처. 캡처로 뒷받침되는 것은 "완주 블록이 재주행됐다"는
+결과이며(rep 1 12,432건), 그 1.5 초라는 값 자체는 이 report 가 측정하지 않았다</td>
+<td>이 구간의 완료 블록들이 도장 미영속으로 남음 — rep 1 재주행의 원천 후보(단 rep 1 은 abort 종료라
+경쟁 설명 있음, ch12)</td></tr>
 <tr><td>동시 insert 처리량</td><td>6 세션이 vacuum 회수를 실시간 추격 (커밋 2,090행)</td><td>비워진 슬롯의 점유율 — 피해 규모(528) 결정</td></tr>
 <tr><td>블록 크기</td><td>vacuum_log_block_pages=128 (2MB 로그)</td><td>재주행 단위의 크기 — 클수록 한 번의 중단이 재제시하는 지시 수가 큼</td></tr>
 </tbody>
@@ -39,7 +48,7 @@
 <p class="callout">역설: 시스템이 <em>건강할수록</em>(회수 빠름, 삽입 활발) 발현 확률이 올라간다.
 이 결함은 부하 실패가 아니라 정상 처리량의 부산물이다.</p>
 
-<h2 id="oos-log-gap">2. 관측성 공백 — oos.log 는 절반만 말한다</h2>
+<h2 id="oos-log-gap" data-claim-id="CUBRID-C012 CUBRID-C032 CUBRID-C043 CUBRID-C047">2. 관측성 공백 — oos.log 는 절반만 말한다</h2>
 <p class="evidence-source"><span class="evidence-label">Source-confirmed</span> —
 debug 전용 <code>oos.log</code> 의 기록 지점은 4곳뿐이며, insert 기록은 단건 API
 <code>oos_insert</code>(oos_file.cpp:1219)에만 있다. 실제 프로덕션 INSERT 경로인 배치 API
@@ -59,19 +68,19 @@ debug 전용 <code>oos.log</code> 의 기록 지점은 4곳뿐이며, insert 기
 
 <h2 id="cost">3. 스탬프 설계의 비용 회계 (V-10)</h2>
 <figure>
-<svg viewBox="0 0 760 240" role="img" aria-labelledby="v10-title v10-desc">
+<svg class="dg" viewBox="0 0 760 240" role="img" aria-label="OOS inline stub 와 청크 헤더가 16바이트에서 20바이트로 확장되는 비용 대비도" aria-labelledby="v10-title v10-desc">
 <title id="v10-title">stub 와 청크 헤더의 16B → 20B 확장</title>
 <desc id="v10-desc">generation 4바이트가 stub 와 청크 헤더 각각에 더해진다.</desc>
-<style>text{font-family:sans-serif;font-size:13px;fill:#18202b}.o{fill:#e8f1fc;stroke:#1558a6}.n{fill:#e6f4ea;stroke:#146c43}</style>
+
 <text x="20" y="24" font-weight="bold">OOS inline stub — 행 × OOS 컬럼마다 반복 지불</text>
-<rect class="o" x="20" y="34" width="260" height="36"/><text x="30" y="57">head OOS OID 8B</text>
-<rect class="o" x="280" y="34" width="260" height="36"/><text x="290" y="57">full length 8B</text>
-<rect class="n" x="540" y="34" width="120" height="36"/><text x="548" y="57">+ gen 4B = 20B</text>
+<rect class="box" x="20" y="34" width="260" height="36"/><text x="30" y="57">head OOS OID 8B</text>
+<rect class="box" x="280" y="34" width="260" height="36"/><text x="290" y="57">full length 8B</text>
+<rect class="ok" x="540" y="34" width="120" height="36"/><text x="548" y="57">+ gen 4B = 20B</text>
 <text x="20" y="110" font-weight="bold">OOS chunk 헤더 — 청크(체인 노드)마다 1회</text>
-<rect class="o" x="20" y="120" width="170" height="36"/><text x="30" y="143">length 4B</text>
-<rect class="o" x="190" y="120" width="150" height="36"/><text x="200" y="143">index 4B</text>
-<rect class="o" x="340" y="120" width="200" height="36"/><text x="350" y="143">next OID 8B</text>
-<rect class="n" x="540" y="120" width="120" height="36"/><text x="548" y="143">+ gen 4B = 20B</text>
+<rect class="box" x="20" y="120" width="170" height="36"/><text x="30" y="143">length 4B</text>
+<rect class="box" x="190" y="120" width="150" height="36"/><text x="200" y="143">index 4B</text>
+<rect class="box" x="340" y="120" width="200" height="36"/><text x="350" y="143">next OID 8B</text>
+<rect class="ok" x="540" y="120" width="120" height="36"/><text x="548" y="143">+ gen 4B = 20B</text>
 <text x="20" y="200">패딩 없는 20B 채택 근거: variable area 시작 오프셋이 임의라 24B 로 늘려도 8-정렬이 보장되지</text>
 <text x="20" y="220">않는다(정렬은 reader 책임, PG TOAST 18B 선례). 미래 예약 공간은 stub 이 아니라 청크 헤더에.</text>
 </svg>
@@ -86,11 +95,68 @@ area 안 오프셋이 임의여서 정렬 이득이 없기 때문이다.</p>
 <span class="claim-id">(CUBRID-C032)</span>. 읽기 경로 비용: probe/delete 시 헤더 4B 비교 1회.
 연쇄 갱신 항목: <code>OR_OOS_INLINE_SIZE</code> 16→20, demotion 수익성 문턱, 경계 테스트류.</p>
 
-<h2 id="tuning">4. 재현을 조율한 파라미터 (측정 주의사항 포함)</h2>
-<p><code>vacuum_worker_count=1</code>(순서 단순화), <code>vacuum_master_interval_in_msecs=10</code>
-(도장 처리 주기), <code>vacuum_log_block_pages=128</code>(블록 크기),
-<code>enable_string_compression=no</code>(payload 크기 고정) — 전부 정식 파라미터이며, 안전장치를
-끄는 종류가 아니라 <strong>발현 빈도를 높이는</strong> 종류다. 측정 주의: 회수율은 버퍼 온도에 따라
+<h2 id="counters" data-claim-id="CUBRID-C047">4. 계측 채널: 카운터·유틸리티·디버거 랜드마크</h2>
+<p class="evidence-source"><span class="evidence-label">Source-confirmed</span> —
+vacuum 에는 자체 perfmon 카운터가 있고 <strong>릴리스 빌드에서도</strong> <code>cubrid statdump</code> 로
+볼 수 있다 <span class="claim-id">(CUBRID-C047)</span>:</p>
+<div class="table-wrap">
+<table>
+<caption>이 Module 과 관련된 계측 채널</caption>
+<thead><tr><th>채널</th><th>무엇을 세는가</th><th>이 결함에 쓸 수 있는가</th></tr></thead>
+<tbody>
+<tr><td><code>Num_vacuum_log_pages_vacuumed</code> (PSTAT_VAC_NUM_VACUUMED_LOG_PAGES, vacuum.c:3755)</td>
+<td>블록 완료 시 그 블록의 로그 페이지 수를 누적 — 즉 <strong>블록 처리량</strong></td>
+<td>부분적. 재주행이 일어나면 같은 페이지가 다시 더해지므로 <em>총합이 로그 크기를 넘는 것</em>이
+재처리의 간접 신호가 된다. 그러나 어느 블록인지·어느 슬롯인지는 알 수 없다</td></tr>
+<tr><td><code>vacuum_job</code> / <code>vacuum_worker_execute</code> (PSTAT_VAC_JOB, PSTAT_VAC_WORKER_EXECUTE, vacuum.c:3778-3779)</td>
+<td>job·worker 실행 횟수와 누적 시간</td>
+<td>부분적. job 수가 발행 블록 수보다 크면 재실행을 시사</td></tr>
+<tr><td><code>oos.log</code> (oos_debug)</td>
+<td>OOS 청크 단위 삭제 <code>{vol,page,slot}</code> — 이 결함을 <strong>직접</strong> 보이는 유일한 채널</td>
+<td><strong>debug 전용</strong>: 매크로가 NDEBUG 에서 no-op 로 컴파일된다(oos_log.hpp:162-177).
+게다가 insert 는 배치 경로에서 기록되지 않는다(<span class="claim-id">CUBRID-C043</span>)</td></tr>
+<tr><td>서버 에러 로그 (<code>er_log_vacuum</code>)</td>
+<td><code>Add block</code>, 완료 통지, <code>is interrupted!</code></td>
+<td>부분적 — 경고 부재가 안전을 뜻하지 않는다(<a href="05-lifecycle-state-machines.html#vacuumed-async">ch05</a>)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>디버거 랜드마크</strong>(포워드워크를 추적할 최소 중단점 4개): <code>vacuum_forward_walk_reclaim_oos</code>
+(undo image 진입) → <code>heap_recdes_get_oos_oids</code>(stub 에서 OID 추출) →
+<code>oos_chunk_exists</code>(관문 — 여기서 <code>oid</code> 와 반환 <code>*out_exists</code> 를 본다) →
+<code>oos_delete_chain</code>(W-latch 안의 실제 삭제, <code>header.next_chunk_oid</code> 확인).
+블록 상태를 보려면 <code>vacuum_finished_block_vacuum</code> 과
+<code>vacuum_data_load_and_recover</code> 에 걸고 <code>blockid</code> 의 상위 3비트를 읽는다.</p>
+<p class="callout"><strong>결론</strong>: 릴리스 빌드에는 <em>블록 수준</em> 계측은 있지만 <em>OOS 청크 수준</em>
+관측 채널이 없다. 그래서 이 결함은 운영에서 "vacuum 이 바쁘다"까지만 보이고 "남의 슬롯을 지웠다"는
+보이지 않는다 — CBRD-26871 이 요구하는 도구의 공백이 정확히 이 지점이다.</p>
+
+<h2 id="na-items">5. 이 주제에 적용되지 않는 성능 항목 (근거 포함)</h2>
+<ul>
+<li><strong>메모리 사용 공식</strong> — <span class="evidence-label">Not applicable</span>:
+이 Module 은 자체 메모리 구조를 소유하지 않는다. forward-walk 가 쓰는 것은 worker 의 기존
+<code>undo_data_buffer</code> 와 함수-로컬 <code>std::vector&lt;OID&gt;</code>(undo 레코드 하나가 참조하는
+head OID 개수 = OOS 컬럼 수만큼, 보통 1~2개)뿐이고, 페이지는 공용 버퍼 풀에서 fix/unfix 한다.
+공식화할 상주 구조가 없다.</li>
+<li><strong>확장 한계(scaling limit)</strong> — <span class="evidence-label">Not applicable</span>
+(제안 설계에서는 존재): 현재 코드에는 이 경로가 소비하는 고정 크기 자원이 없다 — worker 수는
+<code>vacuum_worker_count</code> 로, 블록 크기는 <code>vacuum_log_block_pages</code> 로 외부에서 정해진다.
+반면 제안된 4B generation 은 <strong>페이지당 2³² 재할당</strong>이라는 명시적 한계를 도입하며,
+그 한계가 왜 실무상 도달 불가인지는 <a href="16-reimplementation-blueprint.html#stamp-substrate">ch16</a> 에서 계산한다.</li>
+<li><strong>CPU/캐시 특성</strong> — 이 경로의 비용은 페이지 fix I/O 가 지배하며(청크마다 fix/unfix),
+CPU·캐시 국소성은 측정 가치가 없다. 실측된 회수율의 요동(§1)이 버퍼 온도에 지배된다는 관측이 그 근거다.</li>
+</ul>
+
+<h2 id="tuning">6. 재현을 조율한 파라미터 (측정 주의사항 포함)</h2>
+<p>캡처된 실험 conf(<code>raw/poc-work-r2/cubrid.conf</code>)의 비기본 설정 전부:
+<code>vacuum_worker_count=1</code>(순서 단순화), <code>vacuum_master_interval_in_msecs=10</code>
+(도장 처리 주기), <code>vacuum_log_block_pages=128</code>(블록 크기 = 재주행 단위),
+<code>enable_string_compression=no</code>(payload 크기 고정 — 압축되면 OOS 문턱 밑으로 내려간다),
+<code>er_log_vacuum=4163</code>(서버 로그의 vacuum 진단 줄을 켠다 — ch12·quiz-2 가 읽는 채널),
+<code>data_buffer_size=256M</code>·<code>log_buffer_size=64M</code>(회수율에 영향 — 관측된 요동의 일부),
+<code>max_clients=20</code>(6개 병렬 writer 수용), 그리고 <code>createdb --db-page-size=16K</code>
+(5,000B payload 가 <strong>단일 청크</strong>가 되게 하는 설정 — 멀티청크 피해를 이 실험이 다루지 못하는 이유).
+전부 정식 파라미터이며, 안전장치를 끄는 종류가 아니라 <strong>발현 빈도를 높이거나 관측을 켜는</strong> 종류다. 측정 주의: 회수율은 버퍼 온도에 따라
 한 자릿수 배로 요동하므로, 재현 스크립트는 고정 sleep 이 아니라 진행률 폴링으로 정지 시점을 잡는다.</p>
 
 <h2 id="recap">요약</h2>
@@ -101,8 +167,8 @@ area 안 오프셋이 임의여서 정렬 이득이 없기 때문이다.</p>
 <footer>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="10-errors-resource-pressure.html">← ch10</a>
-<a href="12-experimental-validation.html">다음: ch12 →</a>
+<a rel="prev" href="10-errors-resource-pressure.html">← ch10</a>
+<a rel="next" href="12-experimental-validation.html">다음: ch12 →</a>
 </nav>
 </footer>
 </body>

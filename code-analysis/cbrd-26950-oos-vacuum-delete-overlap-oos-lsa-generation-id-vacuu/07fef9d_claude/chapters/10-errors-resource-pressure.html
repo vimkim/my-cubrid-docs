@@ -5,13 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ch10 — 오류 모델과 자원 압박 · CBRD-26950</title>
 <link rel="stylesheet" href="../assets/report.css">
+<link rel="prev" href="09-policies-algorithms.html">
+<link rel="next" href="11-performance-observability.html">
 </head>
 <body>
 <header>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="09-policies-algorithms.html">← ch09</a>
-<a href="11-performance-observability.html">다음: ch11 →</a>
+<a rel="prev" href="09-policies-algorithms.html">← ch09</a>
+<a rel="next" href="11-performance-observability.html">다음: ch11 →</a>
 </nav>
 <h1>ch10 — 오류 모델: silent loss 는 어떻게 "무증상"이 되는가</h1>
 </header>
@@ -23,7 +25,7 @@
 <li>중단·assert 경계(debug vs release)와 부수 발견들을 열거할 수 있다.</li>
 </ul>
 
-<h2 id="error-containment">1. forward-walk 의 오류 격리</h2>
+<h2 id="error-containment" data-claim-id="CUBRID-C023 CUBRID-C044">1. forward-walk 의 오류 격리</h2>
 <p class="evidence-source"><span class="evidence-label">Source-confirmed</span> —
 <code>vacuum_forward_walk_reclaim_oos</code> 는 어떤 실패도 블록으로 전파하지 않는다: 모든 오류
 경로가 <code>vacuum_er_log_error</code> 로 기록하고 <code>er_clear()</code> 후 return 한다
@@ -62,10 +64,21 @@ vacuum_finished_block_vacuum 의 shutdown 전용 assert 를 건드리고 vacuum 
 (:315, :372 — "remove before develop merge" 표시): undo image 에 OOS 플래그가 있는데 heap 에
 OOS 파일이 없으면 release 에서도 프로세스를 죽인다. 진단용 임시 크래시 장치다
 <span class="claim-id">(CUBRID-C044)</span>.</li>
-<li><strong>부수 발견(별도 티켓 후보, 재현 중 실측)</strong> — 셧다운이 클라이언트의 OOS INSERT 를
-인터럽트하면 <code>pgbuf_fix</code> 가 ER_INTERRUPTED 를 정상 반환하는데
-<code>oos_file_alloc_new</code> 가 이를 불가능 상황으로 보고 <code>assert(false)</code> 를 걸어
-debug 서버가 coredump 한다. 실험 중 코어가 생기면 이것이며 CBRD-26950 이 아니다.</li>
+<li id="interrupts-side-finding"><strong>부수 발견 — 이 run 에서 실제로 발생했고 스택을 확보했다
+(별도 티켓 후보, CBRD-26950 과 다른 결함)</strong>: 셧다운이 클라이언트의 OOS INSERT 를 인터럽트하면
+<code>pgbuf_fix</code> 가 ER_INTERRUPTED 를 정상 반환하는데 <code>oos_file_alloc_new</code> 가 이를 불가능
+상황으로 보고 <code>assert(false)</code>(oos_file.cpp:1892) 를 걸어 debug 서버가 abort 한다.
+<strong>experiment-2 rep 1 이 이렇게 종료됐다</strong> — 확보된 스택
+(<code>evidence/raw/rep1-abort-backtrace.txt</code>, SIGABRT):
+<code>qexec_execute_insert</code> → <code>locator_attribute_info_force</code> →
+<code>heap_attrinfo_transform_to_disk_internal</code>(heap_file.c:13150) →
+<code>heap_attrinfo_insert_to_oos</code> → <code>heap_oos_insert_serialized_values</code> →
+<code>oos_insert_many</code> → <code>oos_insert_single_page_batch</code> →
+<code>oos_find_best_page</code>(rec_length=5024) → <code>oos_file_alloc_new</code> → assert.
+즉 R3 writer 의 5,000B INSERT 가 정지 요청과 겹친 것이다. 인터럽트는 정상 경로이므로 에러를
+전파해야 할 자리다. <strong>이 abort 는 rep 1 의 해석에 영향을 준다</strong> —
+<a href="12-experimental-validation.html#experiment-2">ch12</a> 의 rep 1 / rep 2 구분과 대안 설명 참조.
+(1.4 GB 코어 파일은 스택 추출 후 삭제했고 스택만 증거로 보존한다.)</li>
 </ul>
 
 <h2 id="resource">4. 자원 압박 관점</h2>
@@ -87,8 +100,8 @@ fail-safe 하게 설계된 오류 격리조차 관여할 틈이 없다. 다음 �
 <footer>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="09-policies-algorithms.html">← ch09</a>
-<a href="11-performance-observability.html">다음: ch11 →</a>
+<a rel="prev" href="09-policies-algorithms.html">← ch09</a>
+<a rel="next" href="11-performance-observability.html">다음: ch11 →</a>
 </nav>
 </footer>
 </body>

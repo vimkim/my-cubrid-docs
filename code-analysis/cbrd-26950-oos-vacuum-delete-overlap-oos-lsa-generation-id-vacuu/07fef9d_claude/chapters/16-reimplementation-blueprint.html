@@ -5,13 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ch16 — 재구현 Blueprint · CBRD-26950</title>
 <link rel="stylesheet" href="../assets/report.css">
+<link rel="prev" href="15-cross-database-comparison.html">
+<link rel="next" href="17-glossary-evidence-unknowns.html">
 </head>
 <body>
 <header>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="15-cross-database-comparison.html">← ch15</a>
-<a href="17-glossary-evidence-unknowns.html">다음: ch17 →</a>
+<a rel="prev" href="15-cross-database-comparison.html">← ch15</a>
+<a rel="next" href="17-glossary-evidence-unknowns.html">다음: ch17 →</a>
 </nav>
 <h1>ch16 — 재구현 Blueprint: 신원 스탬프와 dedup 설계</h1>
 </header>
@@ -77,14 +79,14 @@ MVCCID_ALL_VISIBLE 치환은 REC_BIGONE 전용이고 OOS+bigone 은 쓰기 시�
 생성자는 200 → 영구 skip. W 가 사는 동안 채워진 <em>모든</em> 블록이 걸리는 시스템적 누수.</li>
 </ul>
 <figure>
-<svg viewBox="0 0 760 210" role="img" aria-labelledby="v9-title v9-desc">
+<svg class="dg" viewBox="0 0 760 210" role="img" aria-label="MVCCID 발급 순서와 커밋 순서가 어긋나는 반례 타임라인" aria-labelledby="v9-title v9-desc">
 <title id="v9-title">MVCCID 축과 커밋 시간 축의 어긋남</title>
 <desc id="v9-desc">W 는 MVCCID 100 을 먼저 받지만 T1(MVCCID 200)보다 늦게 커밋한다.</desc>
-<style>text{font-family:sans-serif;font-size:13px;fill:#18202b}.ax{stroke:#5c6878;stroke-width:2}.w{fill:#fbeaea;stroke:#9c2f2f}.t{fill:#e6f4ea;stroke:#146c43}</style>
+
 <text x="20" y="26" font-weight="bold">커밋 시간 축 →</text>
-<line class="ax" x1="20" y1="60" x2="740" y2="60"/>
-<rect class="w" x="60" y="40" width="560" height="40" opacity="0.5"/><text x="70" y="34">W: 첫 write 에서 MVCCID=100 획득, 오래 실행</text>
-<rect class="t" x="240" y="45" width="120" height="30"/><text x="248" y="65">T1: MVCCID=200,</text><text x="248" y="95">INSERT+커밋</text>
+<line class="axis" x1="20" y1="60" x2="740" y2="60"/>
+<rect class="warn" x="60" y="40" width="560" height="40" opacity="0.5"/><text x="70" y="34">W: 첫 write 에서 MVCCID=100 획득, 오래 실행</text>
+<rect class="ok" x="240" y="45" width="120" height="30"/><text x="248" y="65">T1: MVCCID=200,</text><text x="248" y="95">INSERT+커밋</text>
 <text x="630" y="50">W 가 그 행을</text><text x="630" y="68">UPDATE 후 커밋</text>
 <text x="20" y="140" font-weight="bold">→ 블록 동결 임계값 ≤ 100 &lt; 삭제 대상 체인의 생성자 200 — "생성자 &lt; 임계값" 검사는 영원히 거짓 = 영구 누수</text>
 <text x="20" y="170">두 모집단(재사용자 / 정당한 대상)이 MVCCID 축에서 분리되지 않으므로 어떤 임계값도 R2·R3 를 동시에 못 만족한다.</text>
@@ -126,7 +128,7 @@ eager)는 walk 대상 참조를 남기지 않는다.</li>
 </ul>
 
 <h2 id="verdict">4. 권고 — 4B generation (페이지 카운터 발급, 등가 비교)</h2>
-<p id="identity-stamp-design" class="evidence-source"><span class="evidence-label">Documented (채택 방향) + Source-confirmed (기반 사실)</span> —
+<p id="identity-stamp-design" data-claim-id="CUBRID-C030 CUBRID-C031 CUBRID-C032 CUBRID-C033 CUBRID-C034 CUBRID-C035 CUBRID-C036" class="evidence-source"><span class="evidence-label">Documented (채택 방향) + Source-confirmed (기반 사실)</span> —
 설계: OOS 페이지 헤더에 uint32 카운터를 두고, 청크 insert(슬롯 재할당)마다 증가시켜 그 값을
 <strong>청크 헤더(+4B)와 stub(+4B)</strong>에 기록한다. 삭제 전 등가 비교 — 불일치면 재사용된
 슬롯이므로 no-op <span class="claim-id">(CUBRID-C034)</span>.</p>
@@ -146,19 +148,19 @@ eager)는 walk 대상 참조를 남기지 않는다.</li>
 </table>
 </div>
 <figure>
-<svg viewBox="0 0 760 200" role="img" aria-labelledby="v12-title v12-desc">
+<svg class="dg" viewBox="0 0 760 200" role="img" aria-label="검증 반경 대비도 — 전역 불변식 4개 서브시스템 대 국소 불변식 두 함수" aria-labelledby="v12-title v12-desc">
 <title id="v12-title">R5 — 검증 반경의 대비</title>
 <desc id="v12-desc">6b 는 4개 서브시스템에 걸친 불변식, generation 은 두 함수의 국소 불변식에 의존한다.</desc>
-<style>text{font-family:sans-serif;font-size:13px;fill:#18202b}.big{fill:#fbeaea;stroke:#9c2f2f}.small{fill:#e6f4ea;stroke:#146c43}</style>
+
 <text x="20" y="24" font-weight="bold">6b 의 R2 가 기대는 것 (전역)</text>
-<rect class="big" x="20" y="34" width="340" height="140" opacity="0.6"/>
+<rect class="warn" x="20" y="34" width="340" height="140" opacity="0.6"/>
 <text x="32" y="58">vacuum 디스패치 게이팅 (vacuum.c)</text>
 <text x="32" y="80">MVCCID 단조·비재사용 (mvcc_table.cpp)</text>
 <text x="32" y="102">롤백 보상 의미론 (log_recovery)</text>
 <text x="32" y="124">eager 경로 가드 (heap_oos/heap_file)</text>
 <text x="32" y="146">M1 항상-새-체인 (dedup 도입 시 소멸!)</text>
 <text x="420" y="24" font-weight="bold">generation 의 R2 가 기대는 것 (국소)</text>
-<rect class="small" x="420" y="34" width="320" height="60"/>
+<rect class="ok" x="420" y="34" width="320" height="60"/>
 <text x="432" y="58">"슬롯 재할당마다 페이지 카운터가 증가한다"</text>
 <text x="432" y="80">— 발급(oos_insert)·검사(삭제 전) 두 지점이 전부</text>
 <text x="420" y="130">트랜잭션 수명·게이팅·롤백·실행 모드와 무관.</text>
@@ -290,9 +292,15 @@ WAL 불변성이 막는다 — ch14).</p>
 <li>온디스크: 헤더·stub 확장 + 상수(OR_OOS_INLINE_SIZE 등) + reader/writer (경계 테스트: 20B 정확성).</li>
 <li>발급: 페이지 카운터 + insert 경로 배선 (테스트: 재할당마다 증가 — R2 국소 불변식의 직접 검증).</li>
 <li>검사: oos_delete 시그니처 확장 + forward-walk 배선 (테스트: 불일치 no-op).</li>
-<li><strong>적합성 오라클</strong>: experiment-2 관측이 exit 0 으로 뒤집히는가(회귀 게이트) +
-experiment-1 이 여전히 통과하는가(누수 없음 — 정당한 대상은 일치해 정상 회수) +
-REC_NEWHOME 경로 변형 테스트(C046).</li>
+<li><strong>적합성 오라클</strong> — exit code 가 아니라 <strong>캡처된 출력 내용</strong>이 판정 기준이다
+(csql 기본 모드는 문장 오류와 무관하게 exit 0 이므로 결함이 있는 빌드에서도 exit 0 이 나온다):
+① experiment-2 관측의 stderr 에 <code>Internal error: slot … is not allocated</code> 가
+<strong>없고</strong> victim 문장이 mismatch 0 을 반환하는가(수정 확인) +
+② experiment-1 이 여전히 통과하는가(누수 없음 — 정당한 대상은 스탬프가 일치해 정상 회수) +
+③ REC_NEWHOME 경로 변형 테스트(<span class="claim-id">C046</span>).
+exit-code 게이트를 원하면 관측을 <code>--no-single-line --error-continue</code> 로 실행해야 한다
+(그 조합에서는 결함 present = exit 1, 수정 후 = exit 0 — 이 run 의 <code>experiment-2-observe-r1b</code> 가
+전자의 캡처다).</li>
 <li>dedup 은 별도 마일스톤: update log(수명) 설계 확정 후 (i) 또는 (ii)와 스탬프의 합성.</li>
 </ol>
 
@@ -305,8 +313,8 @@ generation 이 비용·검증 반경에서 우위다 — InnoDB 가 같은 형�
 <footer>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="15-cross-database-comparison.html">← ch15</a>
-<a href="17-glossary-evidence-unknowns.html">다음: ch17 →</a>
+<a rel="prev" href="15-cross-database-comparison.html">← ch15</a>
+<a rel="next" href="17-glossary-evidence-unknowns.html">다음: ch17 →</a>
 </nav>
 </footer>
 </body>

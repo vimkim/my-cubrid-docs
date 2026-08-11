@@ -5,13 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ch13 — PostgreSQL 분석 · CBRD-26950</title>
 <link rel="stylesheet" href="../assets/report.css">
+<link rel="prev" href="12-experimental-validation.html">
+<link rel="next" href="14-mysql-analysis.html">
 </head>
 <body>
 <header>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="12-experimental-validation.html">← ch12</a>
-<a href="14-mysql-analysis.html">다음: ch14 →</a>
+<a rel="prev" href="12-experimental-validation.html">← ch12</a>
+<a rel="next" href="14-mysql-analysis.html">다음: ch14 →</a>
 </nav>
 <h1>ch13 — PostgreSQL: TOAST 는 왜 이 문제를 가질 수 없는가</h1>
 </header>
@@ -52,7 +54,7 @@ LIVE 로 나온다. CUBRID heap 과 같은 자기 증언 원리(ch09)다.</p>
 비트가 꺼져 있으면 다시 검사할 뿐). <strong>PG 가 영속화하는 어떤 것도 "이 지시를 재실행하라"는
 형태가 아니다</strong> — CUBRID 의 블록 엔트리와의 근본 차이.</p>
 
-<h2 id="identity">3. 신원: 재사용될 수 없는 이름, 순서로 보호되는 주소</h2>
+<h2 id="identity" data-claim-id="PG-C001 PG-C002 PG-C003 PG-C004">3. 신원: 재사용될 수 없는 이름, 순서로 보호되는 주소</h2>
 <p class="evidence-source"><span class="evidence-label">Source-confirmed</span> —
 chunk_id(<code>va_valueid</code>)의 발급(<code>GetNewOidWithIndex</code>, catalog.c:475-549)은
 생성-검사 루프인데, 충돌 검사가 <code>SnapshotAny</code> — <strong>살아있는 행뿐 아니라 죽은 행과도
@@ -115,8 +117,8 @@ redo 진행 표시가 아니라 <strong>등가 비교용 신원 스탬프</stron
 <footer>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="12-experimental-validation.html">← ch12</a>
-<a href="14-mysql-analysis.html">다음: ch14 →</a>
+<a rel="prev" href="12-experimental-validation.html">← ch12</a>
+<a rel="next" href="14-mysql-analysis.html">다음: ch14 →</a>
 </nav>
 </footer>
 </body>

@@ -36,8 +36,10 @@
 <li><strong>결함은 세 정상 동작의 곱이다</strong> — 신원 없는 점유-probe(<span class="claim-id">CUBRID-C002</span>)
 × 설계가 유도하는 즉시 슬롯 재사용(<span class="claim-id">CUBRID-C020, C045</span>)
 × 블록 단위 재처리(<span class="claim-id">CUBRID-C010, C011, C012</span>).
-크래시 없이 정상 <code>cubrid server stop</code> 만으로 재현된다 — 이번 run 에서 528개의 커밋된 행이
-오류·경고 없이 데이터를 잃었다(<span class="claim-id">CUBRID-C023</span>).</li>
+크래시 없이 <strong>정상 <code>cubrid server stop</code> 만으로 재현된다</strong> — 이 run 의 캡처된
+2회 실행 모두 발현했고, 그중 rep 2 는 abort 없는 정상 셧다운 회차로 커밋된 233행이 오류·경고 없이
+데이터를 잃었다(rep 1 은 528행이지만 종료가 debug assert abort 였다 — ch12 가 두 회차를 구분한다)
+(<span class="claim-id">CUBRID-C023</span>).</li>
 <li><strong>기존 보호 장치는 전부 다른 질문에 답한다</strong> — page LSA 는 replay 중복만, sysop 은 호출 원자성만,
 래치는 현재 접근만, MVCCID 게이팅은 옛 버전의 죽음만 보증한다(<span class="claim-id">CUBRID-C022</span>).</li>
 <li><strong>수정의 최소 계약</strong>: probe 의 질문을 "슬롯이 점유돼 있는가"에서

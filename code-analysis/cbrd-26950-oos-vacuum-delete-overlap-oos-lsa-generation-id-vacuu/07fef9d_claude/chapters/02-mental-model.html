@@ -5,13 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ch02 — 멘탈 모델 · CBRD-26950</title>
 <link rel="stylesheet" href="../assets/report.css">
+<link rel="prev" href="01-orientation.html">
+<link rel="next" href="03-scope-interface-seams.html">
 </head>
 <body>
 <header>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="01-orientation.html">← ch01</a>
-<a href="03-scope-interface-seams.html">다음: ch03 →</a>
+<a rel="prev" href="01-orientation.html">← ch01</a>
+<a rel="next" href="03-scope-interface-seams.html">다음: ch03 →</a>
 </nav>
 <h1>ch02 — 멘탈 모델: UPDATE 한 번의 일생</h1>
 </header>
@@ -98,24 +100,24 @@ OOS chunk record 의 물리 OID) + full length(8B). 값이 한 페이지에 안 
 살아있는 어떤 heap 레코드도 옛 체인을 가리키지 않는다. 그럼 옛 체인은 누가 지우나? —
 vacuum 이 undo image 를 읽어서 지운다. 이것이 <strong>forward-walk</strong> 다(ch06).</p>
 
-<h2 id="one-update">6. 한 UPDATE 의 일생 (V-1)</h2>
+<h2 id="one-update" data-claim-id="CUBRID-C001 CUBRID-C002 CUBRID-C042">6. 한 UPDATE 의 일생 (V-1)</h2>
 <figure>
-<svg viewBox="0 0 760 400" role="img" aria-labelledby="v1-title v1-desc">
+<svg class="dg" viewBox="0 0 760 400" role="img" aria-label="한 UPDATE 의 일생 — 6단계 수직 흐름도" aria-labelledby="v1-title v1-desc">
 <title id="v1-title">한 UPDATE 의 일생 — 6단계 수직 흐름</title>
 <desc id="v1-desc">UPDATE 실행부터 vacuum 완주까지 6단계가 화살표로 이어진다.</desc>
-<style>text{font-family:sans-serif;font-size:13px;fill:#18202b}rect{fill:#e8f1fc;stroke:#1558a6;rx:8}line{stroke:#5c6878;stroke-width:2;marker-end:url(#a)}</style>
-<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5c6878"/></marker></defs>
-<rect x="20" y="10" width="720" height="46"/><text x="32" y="30">① UPDATE 실행: 새 OOS 체인 insert → 새 stub 을 담은 새 버전이 heap 슬롯 점유</text><text x="32" y="48">   옛 레코드(옛 stub 포함)는 UPDATE 로그의 undo image 로 로그에 봉인</text>
-<line x1="380" y1="56" x2="380" y2="72"/>
-<rect x="20" y="74" width="720" height="30"/><text x="32" y="94">② COMMIT: 로그 flush — 이 시점부터 옛 체인의 유일한 참조는 undo image 속 옛 stub</text>
-<line x1="380" y1="104" x2="380" y2="120"/>
-<rect x="20" y="122" width="720" height="46"/><text x="32" y="142">③ 블록 발행: 이후의 로그가 블록 경계를 넘는 순간, 이 UPDATE 가 속한 vacuum block 요약이</text><text x="32" y="160">   영속 큐(vacuum data)에 AVAILABLE 로 등록</text>
-<line x1="380" y1="168" x2="380" y2="184"/>
-<rect x="20" y="186" width="720" height="30"/><text x="32" y="206">④ 게이팅: 블록의 newest MVCCID &lt; oldest visible 이 되면 worker 에 배포 (IN_PROGRESS)</text>
-<line x1="380" y1="216" x2="380" y2="232"/>
-<rect x="20" y="234" width="720" height="46"/><text x="32" y="254">⑤ worker 처리: 로그를 역방향으로 걸으며 — UPDATE 레코드를 만나면 forward-walk 가</text><text x="32" y="272">   undo image 의 옛 head OOS OID 를 꺼내 옛 체인 삭제(레코드당 sysop 커밋)</text>
-<line x1="380" y1="280" x2="380" y2="296"/>
-<rect x="20" y="298" width="720" height="46"/><text x="32" y="318">⑥ 완주 보고: worker 가 finished-job 큐에 넣고, master 가 비동기로 VACUUMED 도장을 영속화</text><text x="32" y="336">   — 완주 못 하면(셧다운 등) 블록은 처음부터 재실행된다</text>
+
+<defs><marker id="dg-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5c6878"/></marker></defs>
+<rect class="box" x="20" y="10" width="720" height="46"/><text x="32" y="30">① UPDATE 실행: 새 OOS 체인 insert → 새 stub 을 담은 새 버전이 heap 슬롯 점유</text><text x="32" y="48">   옛 레코드(옛 stub 포함)는 UPDATE 로그의 undo image 로 로그에 봉인</text>
+<line class="line" marker-end="url(#dg-arrow)" x1="380" y1="56" x2="380" y2="72"/>
+<rect class="box" x="20" y="74" width="720" height="30"/><text x="32" y="94">② COMMIT: 로그 flush — 이 시점부터 옛 체인의 유일한 참조는 undo image 속 옛 stub</text>
+<line class="line" marker-end="url(#dg-arrow)" x1="380" y1="104" x2="380" y2="120"/>
+<rect class="box" x="20" y="122" width="720" height="46"/><text x="32" y="142">③ 블록 발행: 이후의 로그가 블록 경계를 넘는 순간, 이 UPDATE 가 속한 vacuum block 요약이</text><text x="32" y="160">   영속 큐(vacuum data)에 AVAILABLE 로 등록</text>
+<line class="line" marker-end="url(#dg-arrow)" x1="380" y1="168" x2="380" y2="184"/>
+<rect class="box" x="20" y="186" width="720" height="30"/><text x="32" y="206">④ 게이팅: 블록의 newest MVCCID &lt; oldest visible 이 되면 worker 에 배포 (IN_PROGRESS)</text>
+<line class="line" marker-end="url(#dg-arrow)" x1="380" y1="216" x2="380" y2="232"/>
+<rect class="box" x="20" y="234" width="720" height="46"/><text x="32" y="254">⑤ worker 처리: 로그를 역방향으로 걸으며 — UPDATE 레코드를 만나면 forward-walk 가</text><text x="32" y="272">   undo image 의 옛 head OOS OID 를 꺼내 옛 체인 삭제(레코드당 sysop 커밋)</text>
+<line class="line" marker-end="url(#dg-arrow)" x1="380" y1="280" x2="380" y2="296"/>
+<rect class="box" x="20" y="298" width="720" height="46"/><text x="32" y="318">⑥ 완주 보고: worker 가 finished-job 큐에 넣고, master 가 비동기로 VACUUMED 도장을 영속화</text><text x="32" y="336">   — 완주 못 하면(셧다운 등) 블록은 처음부터 재실행된다</text>
 </svg>
 <figcaption><strong>V-1. 한 UPDATE 의 일생.</strong> 이 책의 모든 챕터는 이 그림의 한 상자를 확대한 것이다.</figcaption>
 </figure>
@@ -159,8 +161,8 @@ undo image 는 값을 풀어서 저장하지 않는다.</li>
 <footer>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="01-orientation.html">← ch01</a>
-<a href="03-scope-interface-seams.html">다음: ch03 →</a>
+<a rel="prev" href="01-orientation.html">← ch01</a>
+<a rel="next" href="03-scope-interface-seams.html">다음: ch03 →</a>
 </nav>
 </footer>
 </body>

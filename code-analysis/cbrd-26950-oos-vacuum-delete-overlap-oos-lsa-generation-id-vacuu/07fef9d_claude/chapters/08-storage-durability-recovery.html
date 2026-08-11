@@ -5,13 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ch08 — 내구성과 복구 · CBRD-26950</title>
 <link rel="stylesheet" href="../assets/report.css">
+<link rel="prev" href="07-concurrency.html">
+<link rel="next" href="09-policies-algorithms.html">
 </head>
 <body>
 <header>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="07-concurrency.html">← ch07</a>
-<a href="09-policies-algorithms.html">다음: ch09 →</a>
+<a rel="prev" href="07-concurrency.html">← ch07</a>
+<a rel="next" href="09-policies-algorithms.html">다음: ch09 →</a>
 </nav>
 <h1>ch08 — 내구성과 복구: WAL 은 잘못된 삭제도 성실히 영속화한다</h1>
 </header>
@@ -37,7 +39,7 @@
 <p>전체-이미지 물리 로깅이라는 사실이 스탬프 설계에 주는 보너스: 청크 헤더에 필드를 추가해도
 복구 핸들러는 <strong>그대로</strong>다 — 이미지 길이만 4B 늘어난다 <span class="claim-id">(CUBRID-C032)</span>.</p>
 
-<h2 id="why-lsa-cannot-help">page LSA 게이트 — 정확한 계약과 그 바깥</h2>
+<h2 id="why-lsa-cannot-help" data-claim-id="CUBRID-C022 CUBRID-C032">page LSA 게이트 — 정확한 계약과 그 바깥</h2>
 <p>많은 독자의 첫 반응: "페이지에 LSA 도장이 있는데 왜 이중 적용이 안 막히지?"
 게이트의 실제 코드를 보자:</p>
 <pre><code>/* log_recovery.c:496-536 — log_rv_fix_page_and_check_redo_is_needed */
@@ -95,8 +97,8 @@ ch16) <span class="claim-id">(CUBRID-C022)</span>.</p>
 <footer>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="07-concurrency.html">← ch07</a>
-<a href="09-policies-algorithms.html">다음: ch09 →</a>
+<a rel="prev" href="07-concurrency.html">← ch07</a>
+<a rel="next" href="09-policies-algorithms.html">다음: ch09 →</a>
 </nav>
 </footer>
 </body>

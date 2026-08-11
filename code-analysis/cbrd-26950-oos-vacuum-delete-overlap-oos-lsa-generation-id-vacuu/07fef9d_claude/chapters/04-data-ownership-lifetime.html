@@ -5,13 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ch04 — 데이터 소유권과 수명 · CBRD-26950</title>
 <link rel="stylesheet" href="../assets/report.css">
+<link rel="prev" href="03-scope-interface-seams.html">
+<link rel="next" href="05-lifecycle-state-machines.html">
 </head>
 <body>
 <header>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="03-scope-interface-seams.html">← ch03</a>
-<a href="05-lifecycle-state-machines.html">다음: ch05 →</a>
+<a rel="prev" href="03-scope-interface-seams.html">← ch03</a>
+<a rel="next" href="05-lifecycle-state-machines.html">다음: ch05 →</a>
 </nav>
 <h1>ch04 — 데이터 소유권과 수명: 체인, stub, undo image</h1>
 </header>
@@ -25,19 +27,19 @@
 
 <h2 id="layout">핵심 구조와 바이트 배치 (V-3, V-4)</h2>
 <figure>
-<svg viewBox="0 0 760 290" role="img" aria-labelledby="v3-title v3-desc">
+<svg class="dg" viewBox="0 0 760 290" role="img" aria-label="OOS inline stub 16바이트와 OOS 청크 헤더 16바이트의 배치, 그리고 신원 필드의 공백" aria-labelledby="v3-title v3-desc">
 <title id="v3-title">stub 16B 와 청크 헤더 16B 의 배치</title>
 <desc id="v3-desc">OOS inline stub 은 head OOS OID 8바이트와 full length 8바이트, 청크 헤더는 길이·인덱스·next OID 세 필드다.</desc>
-<style>text{font-family:sans-serif;font-size:13px;fill:#18202b}.b{fill:#e8f1fc;stroke:#1558a6}.c{fill:#fdf2e3;stroke:#7a4d00}.gap{fill:#fbeaea;stroke:#9c2f2f;stroke-dasharray:4 3}</style>
+
 <text x="20" y="24" font-weight="bold">OOS inline stub (heap 레코드 variable area 안, 16B)</text>
-<rect class="b" x="20" y="34" width="340" height="40"/><text x="30" y="58">head OOS OID — volid 2B | pageid 4B | slotid 2B</text>
-<rect class="b" x="360" y="34" width="340" height="40"/><text x="372" y="58">full length (DB_BIGINT 8B)</text>
+<rect class="box" x="20" y="34" width="340" height="40"/><text x="30" y="58">head OOS OID — volid 2B | pageid 4B | slotid 2B</text>
+<rect class="box" x="360" y="34" width="340" height="40"/><text x="372" y="58">full length (DB_BIGINT 8B)</text>
 <text x="20" y="110" font-weight="bold">OOS chunk record 헤더 (OOS 페이지 슬롯 안, 16B) + payload</text>
-<rect class="c" x="20" y="120" width="170" height="40"/><text x="30" y="144">total_data_length 4B</text>
-<rect class="c" x="190" y="120" width="150" height="40"/><text x="200" y="144">chunk_index 4B</text>
-<rect class="c" x="340" y="120" width="220" height="40"/><text x="350" y="144">next_chunk_oid 8B</text>
-<rect class="c" x="560" y="120" width="140" height="40"/><text x="572" y="144">payload …</text>
-<rect class="gap" x="20" y="180" width="680" height="44"/>
+<rect class="neutral" x="20" y="120" width="170" height="40"/><text x="30" y="144">total_data_length 4B</text>
+<rect class="neutral" x="190" y="120" width="150" height="40"/><text x="200" y="144">chunk_index 4B</text>
+<rect class="neutral" x="340" y="120" width="220" height="40"/><text x="350" y="144">next_chunk_oid 8B</text>
+<rect class="neutral" x="560" y="120" width="140" height="40"/><text x="572" y="144">payload …</text>
+<rect class="warn" x="20" y="180" width="680" height="44"/>
 <text x="30" y="200">← 이 헤더 어디에도 owner OID / generation / MVCCID / LSA 가 없다 —</text>
 <text x="30" y="218">   "누구의 청크인가"를 물을 데이터 자체가 부재 (oos_file.hpp:26-31)</text>
 <text x="20" y="262" font-weight="bold">레코드 표시: VOT 엔트리의 IS_OOS 비트(이 컬럼은 stub) + MVCC 헤더의 HAS_OOS 플래그(레코드에 stub 존재)</text>
@@ -50,7 +52,7 @@ next_chunk_oid 8B)와 payload 로 구성되어 next_chunk_oid 로 체인을 이�
 것인지 나타내는 필드가 없다. 어느 가변 컬럼이 stub 인지는 VOT(Variable Offset Table) 엔트리의
 IS_OOS 비트가, 레코드에 stub 이 하나라도 있는지는 MVCC 헤더의 HAS_OOS 플래그가 표시한다.</p>
 
-<h2 id="ownership">소유권 불변식과 수명</h2>
+<h2 id="ownership" data-claim-id="CUBRID-C001 CUBRID-C002 CUBRID-C032">소유권 불변식과 수명</h2>
 <div class="table-wrap">
 <table>
 <caption>상태 객체별 소유자·수명·회수자</caption>
@@ -71,20 +73,20 @@ forward-walk 는 이 서로소성에 <em>암묵적으로</em> 기대고 있다. 
 
 <h2 id="reference-graph">UPDATE 전후의 참조 그래프 (V-2)</h2>
 <figure>
-<svg viewBox="0 0 760 300" role="img" aria-labelledby="v2-title v2-desc">
+<svg class="dg" viewBox="0 0 760 300" role="img" aria-label="UPDATE 후 heap 페이지·WAL·OOS 파일 세 저장소의 참조 관계도" aria-labelledby="v2-title v2-desc">
 <title id="v2-title">UPDATE 후 세 저장소의 참조 관계</title>
 <desc id="v2-desc">heap 의 새 버전은 새 체인을, 로그 속 undo image 의 옛 stub 만이 옛 체인을 가리킨다.</desc>
-<style>text{font-family:sans-serif;font-size:13px;fill:#18202b}.h{fill:#e8f1fc;stroke:#1558a6}.l{fill:#eef7ee;stroke:#146c43}.o{fill:#fdf2e3;stroke:#7a4d00}line{stroke-width:2;marker-end:url(#m)}</style>
-<defs><marker id="m" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5c6878"/></marker></defs>
+
+<defs><marker id="dg-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5c6878"/></marker></defs>
 <text x="20" y="24" font-weight="bold">heap 페이지</text>
-<rect class="h" x="20" y="34" width="300" height="52"/><text x="30" y="56">새 버전 레코드 (id=7)</text><text x="30" y="74">새 stub → 새 체인 (1|9|2)</text>
+<rect class="box" x="20" y="34" width="300" height="52"/><text x="30" y="56">새 버전 레코드 (id=7)</text><text x="30" y="74">새 stub → 새 체인 (1|9|2)</text>
 <text x="20" y="130" font-weight="bold">WAL (불변)</text>
-<rect class="l" x="20" y="140" width="300" height="52"/><text x="30" y="162">UPDATE 로그의 undo image</text><text x="30" y="180">옛 stub → 옛 체인 (1|5|3) ← 유일한 참조</text>
+<rect class="ok" x="20" y="140" width="300" height="52"/><text x="30" y="162">UPDATE 로그의 undo image</text><text x="30" y="180">옛 stub → 옛 체인 (1|5|3) ← 유일한 참조</text>
 <text x="420" y="24" font-weight="bold">OOS 파일</text>
-<rect class="o" x="420" y="34" width="300" height="52"/><text x="430" y="56">새 체인: page 9, slot 2</text><text x="430" y="74">'BB…' (5000B)</text>
-<rect class="o" x="420" y="140" width="300" height="52"/><text x="430" y="162">옛 체인: page 5, slot 3</text><text x="430" y="180">'AA…' (5000B) — 아직 살아 있음(MVCC 독자용)</text>
-<line x1="320" y1="60" x2="418" y2="60" stroke="#1558a6"/>
-<line x1="320" y1="166" x2="418" y2="166" stroke="#146c43"/>
+<rect class="neutral" x="420" y="34" width="300" height="52"/><text x="430" y="56">새 체인: page 9, slot 2</text><text x="430" y="74">'BB…' (5000B)</text>
+<rect class="neutral" x="420" y="140" width="300" height="52"/><text x="430" y="162">옛 체인: page 5, slot 3</text><text x="430" y="180">'AA…' (5000B) — 아직 살아 있음(MVCC 독자용)</text>
+<line class="line" marker-end="url(#dg-arrow)" x1="320" y1="60" x2="418" y2="60"/>
+<line class="line" marker-end="url(#dg-arrow)" x1="320" y1="166" x2="418" y2="166"/>
 <text x="20" y="240">스냅샷 독자는 새 버전의 prev_version_lsa → undo image → 옛 stub → 옛 체인 순으로 옛 값을 재구성한다.</text>
 <text x="20" y="262">그래서 옛 체인은 즉시 지울 수 없고, "아무도 못 보게 된 뒤" vacuum 이 undo image 를 보고 지운다.</text>
 </svg>
@@ -131,8 +133,8 @@ CS 에서 이 문제의 표준 해법이 <strong>태그드 포인터/세대 카�
 <footer>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="03-scope-interface-seams.html">← ch03</a>
-<a href="05-lifecycle-state-machines.html">다음: ch05 →</a>
+<a rel="prev" href="03-scope-interface-seams.html">← ch03</a>
+<a rel="next" href="05-lifecycle-state-machines.html">다음: ch05 →</a>
 </nav>
 </footer>
 </body>

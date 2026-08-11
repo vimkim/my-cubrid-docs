@@ -5,13 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ch14 — MySQL/InnoDB 분석 · CBRD-26950</title>
 <link rel="stylesheet" href="../assets/report.css">
+<link rel="prev" href="13-postgresql-analysis.html">
+<link rel="next" href="15-cross-database-comparison.html">
 </head>
 <body>
 <header>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="13-postgresql-analysis.html">← ch13</a>
-<a href="15-cross-database-comparison.html">다음: ch15 →</a>
+<a rel="prev" href="13-postgresql-analysis.html">← ch13</a>
+<a rel="next" href="15-cross-database-comparison.html">다음: ch15 →</a>
 </nav>
 <h1>ch14 — MySQL/InnoDB: 같은 모양의 경로, 이미 구현된 스탬프</h1>
 </header>
@@ -51,8 +53,15 @@ mini-transaction 안에서</strong>, undo 페이지에 든 참조 자체에 <cod
 <li><strong>페이지 타입 검사</strong> — LOB 첫 페이지가 아니면 <code>ut_a</code> 로 즉사(조잡한
 점유자-내재 검사 — "지금은 B-tree 페이지"는 잡지만 "지금은 <em>다른</em> LOB"는 못 잡는다).</li>
 </ol>
+<p class="callout"><strong>중요한 예외</strong>: 해제 조건의 실제 형태는
+<code>if (rec_type == TRX_UNDO_DEL_MARK_REC || ok_to_free)</code>(lob0purge.cc:517)로,
+<strong>delete-mark 레코드는 스탬프 비교 없이</strong> 해제된다. 스탬프가 필요 없는 이유는 §4 에 있다 —
+그 경로는 살아있는 클러스터드 레코드에서 점유자-내재 검사(roll_ptr 등가 + delete-mark)를 할 수 있기
+때문이다. ch14 만 보고 재구현하는 사람이 모든 경로에 스탬프 검사를 걸지 않도록 명시해 둔다.</p>
+<ol start="4">
+</ol>
 
-<h2 id="identity-stamp">3. 신원 스탬프 — 제안된 수정의 동형 선례</h2>
+<h2 id="identity-stamp" data-claim-id="MYSQL-C001 MYSQL-C002 MYSQL-C003 MYSQL-C004">3. 신원 스탬프 — 제안된 수정의 동형 선례</h2>
 <p class="evidence-source"><span class="evidence-label">Source-confirmed</span> —
 LOB 첫 페이지 헤더에 <code>OFFSET_LAST_TRX_ID</code>(6B) + <code>OFFSET_LAST_UNDO_NO</code>(4B)가 있다
 (lob0first.h). 컬럼을 통째로 대체하는 UPDATE 는 <strong>옛 LOB 의 첫 페이지에</strong>
@@ -82,10 +91,14 @@ DELETE 경로의 purge 는 살아있는 클러스터드 레코드에 커서를 �
 뿐 <span class="claim-id">(MYSQL-C003)</span>.</p>
 <p class="callout">즉 InnoDB 는 "CUBRID 와 같은 모양의 경로에는 occupant 검사가 불가능하다"는 것을
 이미 겪었고, 그 답으로 스탬프를 택했다. CUBRID 제안이 걷는 길의 선례 그 자체다.</p>
-<p>추가로, 잔여 경쟁(참조 nulling mtr 과 첫 페이지 해제가 분리되는 경우)에서 InnoDB 는
-<strong>이중 해제 대신 누수를 선택</strong>한다 — 소스 주석이 자인한다: <em>"the LOB first page
-will be leaked. We need to come up with a mechanism to avoid this leak"</em>(lob0purge.cc:530-538).
-실패 방향의 선택(잃느니 새는 게 낫다)이라는 설계 태도도 이식 가치가 있다.</p>
+<p>불일치 시의 실패 방향도 참고할 만하다: <code>ok_to_free</code> 의 논리곱이 거짓이면 purge 는
+<strong>아무것도 해제하지 않고 지나간다</strong>(lob0purge.cc:505-517) — 즉 이중 해제 대신 회수 보류
+(최악의 경우 누수)를 택하는 구조다. 이것이 CUBRID 제안의 "불일치 = no-op" 정책과 같은 방향이다.</p>
+<p>다만 정확히 구분해 둘 것: 같은 파일의 <code>:531-538</code> 주석 — <em>"If a crash happens after the
+btr_mtr commit and before freeing the LOB first page, then the LOB first page will be leaked.
+<strong>We need to come up with a mechanism to avoid this leak.</strong>"</em> — 은 <strong>설계 선택이
+아니라 인정된 미해결 결함</strong>(크래시 창 누수)이며, 저자가 제거하고 싶다고 적어 둔 것이다.
+InnoDB 를 "누수를 의도적으로 감수하는 설계"로 인용하면 소스를 오독하는 것이다.</p>
 <p>해제된 페이지 자체에는 세대/에포크 표시가 없다(XDES free 비트뿐, fsp0fsp.cc:3600-3603) —
 컨테이너 수준 재사용 감지는 InnoDB 에도 없으며, 그 공백을 대상-객체 스탬프가 메운다.</p>
 
@@ -101,7 +114,7 @@ will be leaked. We need to come up with a mechanism to avoid this leak"</em>(lob
 <tr><td>대상 신원 검사</td><td><strong>없음</strong> (probe = 점유 여부)</td><td>(last_trx_id, last_undo_no) 등가</td></tr>
 <tr><td>스탬프 기록 주체·시점</td><td>(제안) insert 가 할당 시점에</td><td>UPDATE 가 참조 해제 시점에</td></tr>
 <tr><td>스탬프 위치·폭</td><td>(제안) 컨테이너 페이지 카운터 발급, 청크+stub 에 4B</td><td>대상 객체(LOB 첫 페이지)에 10B</td></tr>
-<tr><td>잔여 경쟁의 실패 방향</td><td>현재: 과잉 삭제(손실)</td><td>누수 (명시적 선택)</td></tr>
+<tr><td>잔여 경쟁의 실패 방향</td><td>현재: 과잉 삭제(손실)</td><td>회수 보류 — 스탬프 불일치면 해제하지 않고 지나간다(<code>ok_to_free</code>). 별개로 크래시 창 누수 하나가 소스 주석에 <strong>미해결 결함</strong>으로 인정되어 있다(§4 — '명시적 선택'이라는 서술은 오독)</td></tr>
 </tbody>
 </table>
 </div>
@@ -120,8 +133,8 @@ will be leaked. We need to come up with a mechanism to avoid this leak"</em>(lob
 <footer>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="13-postgresql-analysis.html">← ch13</a>
-<a href="15-cross-database-comparison.html">다음: ch15 →</a>
+<a rel="prev" href="13-postgresql-analysis.html">← ch13</a>
+<a rel="next" href="15-cross-database-comparison.html">다음: ch15 →</a>
 </nav>
 </footer>
 </body>

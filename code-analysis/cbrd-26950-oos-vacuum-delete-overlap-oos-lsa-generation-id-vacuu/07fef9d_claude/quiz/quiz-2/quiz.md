@@ -12,7 +12,7 @@
 - **Q1.** vacuum 블록이 가질 수 있는 상태를 모두 쓰고, 각각 어디에 어떻게 영속되는지 답하라.
   INTERRUPTED 는 왜 "상태"가 아니라 "플래그"인가?
 - **Q2.** 정상 `cubrid server stop` 이 왜 블록 재처리를 유발하는가? 관련 코드 지점 두 곳
-  (worker 의 중단 감지, start_lsa 의 TODO)을 지목하라.
+  (worker 의 중단 감지, start_lsa 의 미해결 주석)을 지목하라.
 - **Q3.** 서버 에러 로그에 `is interrupted!` 경고가 없으면 그 부팅 주기에 재처리가 없었다고
   결론지을 수 있는가? 왜 그런가/아닌가?
 - **Q4.** "블록 전체를 하나의 sysop 으로 묶으면 해결된다"는 제안의 문제 세 가지를 들어라.
@@ -21,14 +21,28 @@
 
 ```sh
 cd quiz/quiz-2
-bash states.sh    # 이 run 의 experiment-1(무중단)과 experiment-2(중단) 서버 로그를 대조
+bash states.sh            # report 안에 보존된 로그 발췌를 읽는다 (재현 가능)
+bash states.sh --live     # (선택) $CUBRID 의 현재 로그에서 재유도 — 회전되면 달라진다
 ```
+
+`preserved/` 에는 experiment-2 두 회차의 **부팅 2개씩**(정지 전 / 재기동)과 experiment-1 의 로그에서
+vacuum 관련 줄만 뽑아 넣어 두었다. 원본은 `$CUBRID/log/server` 에 있고 회전되므로, 이 발췌가 채점 기준이다.
 
 ## 관찰할 것
 
-- experiment-1 로그: `Add block` 여러 건 + 완료 통지, `is interrupted!` 0건 — 그리고 손상 0.
-- experiment-2 로그: 같은 패턴에 `is interrupted!` 가 **있거나 없거나** — 이번 run 은 0건이었는데도
-  12,432건 재삭제·528행 손상이 있었다(ch12). Q3 의 답이 여기서 검증된다.
+| 대상 | Add block | 완료 통지 | `is interrupted!` |
+|---|---|---|---|
+| rep 1 정지 전 / 재기동 | 17 / 1 | 16 / 6 | **0 / 0** |
+| rep 2 정지 전 / 재기동 | 16 / 1 | 11 / 6 | **1 / 0** |
+| experiment-1 (무중단) | 0 | 0 | 0 |
+
+세 가지를 스스로 설명하라.
+
+1. 왜 `Add block` 은 **정지 전 부팅**에만 몰려 있고 재기동 부팅에는 1건뿐인가?
+2. rep 2 는 `is interrupted!` 가 1건인데 rep 1 은 0건이다. 그런데 **재기동 후 재삭제는 rep 1 이
+   12,432건, rep 2 가 233건**이다. 경고 건수와 재주행 규모가 왜 반대 방향인가?
+   (힌트: 두 회차의 종료 형태가 다르다 — ch12 의 rep 1 / rep 2 구분과 대안 설명을 보라.)
+3. experiment-1 은 왜 vacuum 로그가 **한 줄도** 없는가? 이것이 ch11 의 관측성 논점과 어떻게 연결되나?
 
 ## teach-back
 

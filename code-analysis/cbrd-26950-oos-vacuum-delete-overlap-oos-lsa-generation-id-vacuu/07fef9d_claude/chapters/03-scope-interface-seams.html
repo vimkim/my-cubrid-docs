@@ -5,13 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ch03 — Interface 와 Seam · CBRD-26950</title>
 <link rel="stylesheet" href="../assets/report.css">
+<link rel="prev" href="02-mental-model.html">
+<link rel="next" href="04-data-ownership-lifetime.html">
 </head>
 <body>
 <header>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="02-mental-model.html">← ch02</a>
-<a href="04-data-ownership-lifetime.html">다음: ch04 →</a>
+<a rel="prev" href="02-mental-model.html">← ch02</a>
+<a rel="next" href="04-data-ownership-lifetime.html">다음: ch04 →</a>
 </nav>
 <h1>ch03 — Interface 와 Seam: 세 삭제 경로와 probe 의 계약</h1>
 </header>
@@ -62,7 +64,7 @@ vacuum 블록 상태 기계(<code>vacuum.c</code> — 진행 단위를 결정)�
 자신에게서 판정을 재유도하고, eager 는 동기 실행이라 재사용이 끼어들 창 자체가 없다
 <span class="claim-id">(CUBRID-C040, C041)</span>.</p>
 
-<h2 id="probe-contract">probe 의 계약 — 정직하지만 불충분한</h2>
+<h2 id="probe-contract" data-claim-id="CUBRID-C001 CUBRID-C002 CUBRID-C040 CUBRID-C044">probe 의 계약 — 정직하지만 불충분한</h2>
 <p>forward-walk 의 삭제 직전 유일한 관문은 이것이다:</p>
 <pre><code>/* oos_file.hpp:112-114 */
 /* Idempotency probe: *out_exists is true iff the chunk's slot is still present. ... */
@@ -88,7 +90,7 @@ still present"(슬롯의 존재이지 청크의 신원이 아니다) <span class
 8바이트 OID 이미지를 걸러냄), 실패를 기대하면 안 된다(오류는 내부에서 소비되고 유계 누수로 남는다,
 <span class="claim-id">CUBRID-C044</span>).</li>
 <li><code>oos_delete(thread_p, vfid, oid)</code> — 문서화된(그러나 forward-walk 에서는 공허한)
-전제: "호출자가 행 수준 잠금을 보유"(oos_file.cpp:2137-2138 TODO). 죽은 행에는 잠글 실체가 없다.</li>
+전제: "호출자가 행 수준 잠금을 보유"(oos_file.cpp:2137-2138 미해결 주석). 죽은 행에는 잠글 실체가 없다.</li>
 <li><code>oos_insert</code> 계열 — 페이지 W-latch 아래에서 헤더 직렬화(:1503) → 슬롯 확정(:1516) →
 전체 이미지 물리 로깅(:1530). 스탬프 설계가 개입할 지점이다(ch16).</li>
 </ul>
@@ -118,8 +120,8 @@ still present"(슬롯의 존재이지 청크의 신원이 아니다) <span class
 <footer>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="02-mental-model.html">← ch02</a>
-<a href="04-data-ownership-lifetime.html">다음: ch04 →</a>
+<a rel="prev" href="02-mental-model.html">← ch02</a>
+<a rel="next" href="04-data-ownership-lifetime.html">다음: ch04 →</a>
 </nav>
 </footer>
 </body>

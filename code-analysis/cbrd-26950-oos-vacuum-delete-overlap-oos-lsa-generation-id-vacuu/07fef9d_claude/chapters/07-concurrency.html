@@ -5,13 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ch07 — 동시성: 재사용 경쟁 창 · CBRD-26950</title>
 <link rel="stylesheet" href="../assets/report.css">
+<link rel="prev" href="06-core-workflows.html">
+<link rel="next" href="08-storage-durability-recovery.html">
 </head>
 <body>
 <header>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="06-core-workflows.html">← ch06</a>
-<a href="08-storage-durability-recovery.html">다음: ch08 →</a>
+<a rel="prev" href="06-core-workflows.html">← ch06</a>
+<a rel="next" href="08-storage-durability-recovery.html">다음: ch08 →</a>
 </nav>
 <h1>ch07 — 동시성: 누가 어떤 상태를 보호하고, 어떤 창이 열리는가</h1>
 </header>
@@ -53,16 +55,16 @@
 질문은 <strong>어느 장치의 계약에도 속하지 않는다</strong> — 이 질문의 담당자가 없다는 것이 결함의
 동시성 측면 요약이다.</p>
 
-<h2 id="window">재사용 경쟁 창 (V-8)</h2>
+<h2 id="window" data-claim-id="CUBRID-C012 CUBRID-C020 CUBRID-C022 CUBRID-C023 CUBRID-C045">재사용 경쟁 창 (V-8)</h2>
 <figure>
-<svg viewBox="0 0 760 260" role="img" aria-labelledby="v8-title v8-desc">
+<svg class="dg" viewBox="0 0 760 260" role="img" aria-label="재사용 경쟁 창 구간도 — 삭제 시점에 열리고 블록 완료 표기에서 닫히는 구간" aria-labelledby="v8-title v8-desc">
 <title id="v8-title">재사용 경쟁 창 구간도</title>
 <desc id="v8-desc">창은 1차 삭제 시점에 열리고 블록의 VACUUMED 영속화로 닫힌다.</desc>
-<style>text{font-family:sans-serif;font-size:13px;fill:#18202b}.ax{stroke:#5c6878;stroke-width:2}.win{fill:#fbeaea;stroke:#9c2f2f}.ev{stroke:#1558a6;stroke-width:2}</style>
-<line class="ax" x1="30" y1="150" x2="740" y2="150"/>
-<rect class="win" x="180" y="110" width="430" height="80" opacity="0.55"/>
-<line class="ev" x1="180" y1="90" x2="180" y2="210"/><text x="100" y="80">① oos_delete + bestspace 재등록</text><text x="120" y="230">(sysop 커밋 전에 이미 공개)</text>
-<line class="ev" x1="610" y1="90" x2="610" y2="210"/><text x="560" y="80">② 블록 VACUUMED 영속화</text>
+
+<line class="axis" x1="30" y1="150" x2="740" y2="150"/>
+<rect class="warn" x="180" y="110" width="430" height="80" opacity="0.55"/>
+<line class="mark" x1="180" y1="90" x2="180" y2="210"/><text x="100" y="80">① oos_delete + bestspace 재등록</text><text x="120" y="230">(sysop 커밋 전에 이미 공개)</text>
+<line class="mark" x1="610" y1="90" x2="610" y2="210"/><text x="560" y="80">② 블록 VACUUMED 영속화</text>
 <text x="300" y="140" font-weight="bold">경쟁 창: 이 구간의 재사용 = 잠재 피해자</text>
 <text x="300" y="170">insert 는 tier-1 캐시에서 이 페이지를 우선 선택,</text>
 <text x="300" y="188">같은 페이지에선 최저 빈 슬롯 = 방금 빈 그 슬롯</text>
@@ -76,7 +78,7 @@
 지연이 결정하며, 셧다운·크래시는 창을 재기동 이후로 확장한다.</p>
 <p>이 창은 이론이 아니다 — 이번 재현에서 pass 1 완주 후에도 <strong>도장 지연분(~1.5초, 12,432 레코드
 분량)</strong>이 창으로 남아 재기동 후 재주행되었고 <span class="claim-id">(CUBRID-C012)</span>,
-그중 528개의 재사용 슬롯이 실제 피해가 되었다 <span class="claim-id">(CUBRID-C023)</span>.</p>
+그중 528개의 재사용 슬롯이 실제 피해가 되었다(rep 2 에서는 재삭제 233 = 피해 233 으로 1:1) <span class="claim-id">(CUBRID-C023)</span>.</p>
 
 <h2 id="interleavings">허용/금지 인터리빙</h2>
 <ul>
@@ -102,8 +104,8 @@
 <footer>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="06-core-workflows.html">← ch06</a>
-<a href="08-storage-durability-recovery.html">다음: ch08 →</a>
+<a rel="prev" href="06-core-workflows.html">← ch06</a>
+<a rel="next" href="08-storage-durability-recovery.html">다음: ch08 →</a>
 </nav>
 </footer>
 </body>

@@ -5,13 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ch06 — 핵심 워크플로 · CBRD-26950</title>
 <link rel="stylesheet" href="../assets/report.css">
+<link rel="prev" href="05-lifecycle-state-machines.html">
+<link rel="next" href="07-concurrency.html">
 </head>
 <body>
 <header>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="05-lifecycle-state-machines.html">← ch05</a>
-<a href="07-concurrency.html">다음: ch07 →</a>
+<a rel="prev" href="05-lifecycle-state-machines.html">← ch05</a>
+<a rel="next" href="07-concurrency.html">다음: ch07 →</a>
 </nav>
 <h1>ch06 — 핵심 워크플로: 정상 forward-walk, 그리고 2-pass 사고</h1>
 </header>
@@ -23,7 +25,7 @@
 <li>멀티청크 전파·제2 호출부·eager/REMOVE 대비를 설명할 수 있다.</li>
 </ul>
 
-<h2 id="forward-walk-reclaim">1. 정상 forward-walk — 전체 의사코드</h2>
+<h2 id="forward-walk-reclaim" data-claim-id="CUBRID-C001 CUBRID-C003 CUBRID-C021 CUBRID-C023 CUBRID-C040 CUBRID-C041 CUBRID-C046">1. 정상 forward-walk — 전체 의사코드</h2>
 <p>worker 가 블록을 처리하다 NOTIFY 계열 undo 레코드를 만나면
 (<code>vacuum_process_log_block</code> → <code>vacuum_forward_walk_reclaim_oos</code>):</p>
 <pre><code>vacuum_forward_walk_reclaim_oos(undo_data, size, heap_vfid, memo):        # vacuum_oos.cpp:222-319
@@ -83,25 +85,25 @@ head 슬롯이 남의 멀티청크 체인에 재사용됐다면, 걸음은 <stro
 
 <h2 id="double-delete-sequence">3. 사고 시퀀스 — 2-pass 타임라인 (V-6, 이 책의 대표 그림)</h2>
 <figure>
-<svg viewBox="0 0 780 440" role="img" aria-labelledby="v6-title v6-desc">
+<svg class="dg" viewBox="0 0 780 440" role="img" aria-label="2-pass 사고 타임라인 — vacuum, 다른 트랜잭션, 슬롯 상태 세 레인의 시간축 다이어그램" aria-labelledby="v6-title v6-desc">
 <title id="v6-title">2-pass 사고 타임라인</title>
 <desc id="v6-desc">vacuum, 다른 트랜잭션, 슬롯 상태 세 레인이 시간축 위에서 교차한다.</desc>
-<style>text{font-family:sans-serif;font-size:12.5px;fill:#18202b}.lane{fill:none;stroke:#d9e0ea}.v{fill:#e8f1fc;stroke:#1558a6;rx:6}.t{fill:#eef7ee;stroke:#146c43;rx:6}.s{fill:#fdf2e3;stroke:#7a4d00;rx:6}.bad{fill:#fbeaea;stroke:#9c2f2f;rx:6}.tl{stroke:#5c6878;stroke-width:1.5;stroke-dasharray:5 4}</style>
+
 <text x="10" y="26" font-weight="bold">vacuum</text>
 <text x="10" y="166" font-weight="bold">다른 트랜잭션</text>
 <text x="10" y="286" font-weight="bold">슬롯 V|P|S 의 상태</text>
-<line class="lane" x1="0" y1="130" x2="780" y2="130"/>
-<line class="lane" x1="0" y1="250" x2="780" y2="250"/>
-<rect class="v" x="100" y="36" width="180" height="70"/><text x="108" y="56">① pass 1: undo image 의</text><text x="108" y="73">옛 OID=V|P|S → probe 통과</text><text x="108" y="90">→ 삭제, sysop 커밋 (정상)</text>
-<rect class="v" x="300" y="36" width="130" height="70"/><text x="308" y="56">② start_lsa 는</text><text x="308" y="73">전진 안 함,</text><text x="308" y="90">도장도 미영속</text>
-<rect class="bad" x="560" y="36" width="200" height="88"/><text x="568" y="56">⑤ pass 2 (재기동 후): 같은</text><text x="568" y="73">undo image → 같은 V|P|S →</text><text x="568" y="90">probe "점유됨" → 삭제 =</text><text x="568" y="107" font-weight="bold">살아있는 R2 데이터 파괴</text>
-<rect class="t" x="300" y="146" width="180" height="70"/><text x="308" y="166">③ R2 INSERT: bestspace 가</text><text x="308" y="183">방금 빈 V|P|S 배정 —</text><text x="308" y="200">커밋 (R2 는 이후 무수정)</text>
-<rect class="t" x="490" y="146" width="120" height="52"/><text x="498" y="166">④ 정상 서버</text><text x="498" y="183">stop → 재기동</text>
-<rect class="s" x="100" y="296" width="140" height="52"/><text x="108" y="316">내 옛 체인 'AA'</text><text x="108" y="333">(죽은 버전 소유)</text>
-<rect class="s" x="250" y="296" width="100" height="52"/><text x="258" y="316">빈 슬롯</text><text x="258" y="333">(재사용 대기)</text>
-<rect class="s" x="360" y="296" width="180" height="52"/><text x="368" y="316">R2 의 체인 'DD' (살아있는</text><text x="368" y="333">커밋 데이터)</text>
-<rect class="bad" x="550" y="296" width="210" height="52"/><text x="558" y="316">빈 슬롯 — R2 는 존재하지만</text><text x="558" y="333">payload 판독 불가 (silent)</text>
-<line class="tl" x1="290" y1="0" x2="290" y2="360"/><line class="tl" x1="545" y1="0" x2="545" y2="360"/>
+<line class="faint" x1="0" y1="130" x2="780" y2="130"/>
+<line class="faint" x1="0" y1="250" x2="780" y2="250"/>
+<rect class="box" x="100" y="36" width="180" height="70"/><text x="108" y="56">① pass 1: undo image 의</text><text x="108" y="73">옛 OID=V|P|S → probe 통과</text><text x="108" y="90">→ 삭제, sysop 커밋 (정상)</text>
+<rect class="box" x="300" y="36" width="130" height="70"/><text x="308" y="56">② start_lsa 는</text><text x="308" y="73">전진 안 함,</text><text x="308" y="90">도장도 미영속</text>
+<rect class="warn" x="560" y="36" width="200" height="88"/><text x="568" y="56">⑤ pass 2 (재기동 후): 같은</text><text x="568" y="73">undo image → 같은 V|P|S →</text><text x="568" y="90">probe "점유됨" → 삭제 =</text><text x="568" y="107" font-weight="bold">살아있는 R2 데이터 파괴</text>
+<rect class="ok" x="300" y="146" width="180" height="70"/><text x="308" y="166">③ R2 INSERT: bestspace 가</text><text x="308" y="183">방금 빈 V|P|S 배정 —</text><text x="308" y="200">커밋 (R2 는 이후 무수정)</text>
+<rect class="ok" x="490" y="146" width="120" height="52"/><text x="498" y="166">④ 정상 서버</text><text x="498" y="183">stop → 재기동</text>
+<rect class="neutral" x="100" y="296" width="140" height="52"/><text x="108" y="316">내 옛 체인 'AA'</text><text x="108" y="333">(죽은 버전 소유)</text>
+<rect class="neutral" x="250" y="296" width="100" height="52"/><text x="258" y="316">빈 슬롯</text><text x="258" y="333">(재사용 대기)</text>
+<rect class="neutral" x="360" y="296" width="180" height="52"/><text x="368" y="316">R2 의 체인 'DD' (살아있는</text><text x="368" y="333">커밋 데이터)</text>
+<rect class="warn" x="550" y="296" width="210" height="52"/><text x="558" y="316">빈 슬롯 — R2 는 존재하지만</text><text x="558" y="333">payload 판독 불가 (silent)</text>
+<line class="dash" x1="290" y1="0" x2="290" y2="360"/><line class="dash" x1="545" y1="0" x2="545" y2="360"/>
 <text x="60" y="395">근거: ① CUBRID-C001/C002 · ② C010/C012 · ③ C020/C045 · ④ C011 · ⑤ C021/C023 (재현: 528행/4-4회)</text>
 <text x="60" y="420">오류·경고 0 — 2차 삭제는 새 로그를 남기는 "완벽히 일관된, 내용만 틀린" 연산이다 (C022)</text>
 </svg>
@@ -166,8 +168,8 @@ forward-walk 가 필요했고, 그 forward-walk 에만 신원이 없다 <span cl
 <footer>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="05-lifecycle-state-machines.html">← ch05</a>
-<a href="07-concurrency.html">다음: ch07 →</a>
+<a rel="prev" href="05-lifecycle-state-machines.html">← ch05</a>
+<a rel="next" href="07-concurrency.html">다음: ch07 →</a>
 </nav>
 </footer>
 </body>

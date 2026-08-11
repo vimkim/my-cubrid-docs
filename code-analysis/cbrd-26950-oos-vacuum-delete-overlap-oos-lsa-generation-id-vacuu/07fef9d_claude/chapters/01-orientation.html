@@ -5,12 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ch01 — Orientation · CBRD-26950</title>
 <link rel="stylesheet" href="../assets/report.css">
+<link rel="next" href="02-mental-model.html">
 </head>
 <body>
 <header>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="02-mental-model.html">다음: ch02 멘탈 모델 →</a>
+<a rel="next" href="02-mental-model.html">다음: ch02 멘탈 모델 →</a>
 </nav>
 <h1>ch01 — Orientation: 무엇을, 어디까지, 왜</h1>
 </header>
@@ -22,7 +23,7 @@
 <li>선언된 범위(Declared Scope)의 경계 — 포함/제외 — 를 말할 수 있다.</li>
 </ul>
 
-<h2 id="topic">주제 한 문장</h2>
+<h2 id="topic" data-claim-id="CUBRID-C023 CUBRID-C034 CUBRID-C035">주제 한 문장</h2>
 <p class="callout">CUBRID vacuum 이 UPDATE/DELETE 로 죽은 heap 레코드 버전의 OOS value chain 을
 지연 회수(forward-walk)할 때, <strong>블록 재처리</strong>와 <strong>OOS 슬롯 재사용</strong>이 겹치면
 <strong>신원 확인 없는 probe</strong> 가 살아있는 행의 체인을 두 번째로 삭제하는 결함(CBRD-26950)의
@@ -51,7 +52,8 @@
 <ul>
 <li><span class="evidence-label">Source-confirmed (구현 사실)</span> — forward-walk 회수 경로, 점유-probe,
 블록 상태 기계, 슬롯 재사용 정책, eager 경로. 그리고 <strong>결함 자체</strong>
-(<span class="claim-id">CUBRID-C023</span>, 런타임 재현 4/4).</li>
+(<span class="claim-id">CUBRID-C023</span>, 이 run 에서 캡처된 런타임 재현 2/2 — 그중 rep 2 가
+정상 셧다운 회차다).</li>
 <li><span class="evidence-label">Inferred / Documented</span> — 신원 스탬프 후보 판정(6a/6b/threshold/owner OID/generation),
 2026-08-07 회의의 generation·OOS LSA 채택 방향, dedup 의 OOS update log 방향.
 <strong>어느 것도 아직 코드에 없다.</strong> 판정의 전제들만 source-confirmed 다.</li>
@@ -82,8 +84,10 @@ experiment-2 채널 B 구성(<span class="claim-id">CUBRID-C048</span>), btree �
 
 <h2 id="provenance">Provenance 와 재현성</h2>
 <p>모든 소스 인용은 <a href="../index.html#provenance">고정 3 리비전</a> 기준이며 파일 해시가
-<code>evidence/claims.jsonl</code> 에 기록되어 있다. CUBRID worktree 의 dirty 항목은 비추적 파일뿐이라
-인용된 모든 파일은 커밋과 바이트 일치한다(evidence_state=COMMIT). 런타임 증거는
+<code>evidence/claims.jsonl</code> 에 기록되어 있다. CUBRID worktree 는 dirty 상태로 기록되어 있고
+(<code>provenance.json</code> 의 <code>dirty: true</code>), 추적 항목 중 변경된 것은
+<strong><code>cubrid-cci</code> 서브모듈 포인터 하나</strong>이며 나머지는 비추적 파일이다.
+인용된 소스 파일은 전부 커밋과 바이트 일치한다(<code>evidence_state=COMMIT</code>, 감사에서 97/97 해시 확인). 런타임 증거는
 <code>evidence/runs/&lt;id&gt;/</code> 에 argv·exit·stdout/stderr 가 원자적으로 보존된다.</p>
 
 <h2 id="limitations">한계 선언</h2>
@@ -96,14 +100,14 @@ experiment-2 채널 B 구성(<span class="claim-id">CUBRID-C048</span>), btree �
 
 <h2 id="recap">요약</h2>
 <p class="callout">이 책은 "vacuum 이 남의 데이터를 지운다"는 한 문장을,
-고정 리비전 소스의 함수 단위 증거와 4/4 런타임 재현으로 분해하고,
+고정 리비전 소스의 함수 단위 증거와 캡처된 2/2 런타임 재현으로 분해하고,
 그 수리 설계 공간을 InnoDB 선례·PostgreSQL 대안 설계와 나란히 놓는다.
 다음 장에서 UPDATE 한 번이 시스템에 남기는 것들을 그림으로 쌓는다.</p>
 </main>
 <footer>
 <nav class="book-nav" aria-label="책 탐색">
 <a href="../index.html">차례</a>
-<a href="02-mental-model.html">다음: ch02 멘탈 모델 →</a>
+<a rel="next" href="02-mental-model.html">다음: ch02 멘탈 모델 →</a>
 </nav>
 </footer>
 </body>
