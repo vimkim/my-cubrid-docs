@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>10장 — 세 DBMS responsibility map</title><link rel="stylesheet" href="../assets/report.css"></head>
+<body><header><nav class="book-nav"><a rel="prev" href="09-mysql.html">이전</a><a href="../index.html">목차</a><a rel="next" href="11-blueprint.html">다음</a></nav><h1>10장 — 세 DBMS responsibility map</h1></header><main>
+<aside class="chapter-goals"><strong>학습 목표.</strong> 세 엔진을 공통 scenario와 responsibility 축으로 비교하고 각 행을 <span class="status-badge">Equivalent</span>, <span class="status-badge">Partial analogy</span>, <span class="status-badge">No equivalent</span>로 판정한다.</aside>
+<p><strong>구체적 상황.</strong> 동일한 dirty page P를 reader가 읽는 동안 disk로 내보낼 때, 세 엔진은 어떤 memory를 I/O에 넘기고 누가 completion을 끝내는가?</p>
+<section id="cross-database-comparison" data-claim-id="CMP-C001 CMP-C002 CMP-C003 CMP-C004 CMP-C005 CMP-C006 PG-C005 PG-C006 PG-C007 MYSQL-C006 MYSQL-C007 CUBRID-C016 CUBRID-C017">
+<h2>이름이 아니라 책임으로 대응시킨다</h2>
+<div class="table-wrap"><table><caption>세 DBMS의 responsibility, evidence, semantic class</caption><thead><tr><th>공통 축</th><th>CUBRID 현행</th><th>PostgreSQL</th><th>InnoDB</th><th>판정</th></tr></thead><tbody>
+<tr><td>I/O input/content</td><td>snapshot/TDE/DWB output <span class="claim-id">[CUBRID-C002, CUBRID-C005]</span></td><td>SX/X 아래 shared frame <span class="claim-id">[PG-C001, PG-C002]</span></td><td>SX 아래 live frame 또는 transformed block <span class="claim-id">[MYSQL-C002, MYSQL-C004]</span></td><td><span class="status-badge">Partial analogy</span> writer overlap이 다름 <span class="claim-id">[CMP-C001]</span></td></tr>
+<tr><td>frame lifetime</td><td>fix/FLUSHING; current holder는 thread-owned <span class="claim-id">[CUBRID-C003, CUBRID-C008]</span></td><td>pin + AIO subsystem pin <span class="claim-id">[PG-C003]</span></td><td><code>io_fix</code> + request/callback <span class="claim-id">[MYSQL-C002, MYSQL-C003]</span></td><td><span class="status-badge">Partial analogy</span> 이름·owner가 다름 <span class="claim-id">[CMP-C002]</span></td></tr>
+<tr><td>single flusher/reuse</td><td><code>FLUSHING_TO_DISK</code> <span class="claim-id">[CUBRID-C003]</span></td><td><code>BM_IO_IN_PROGRESS</code> <span class="claim-id">[PG-C003]</span></td><td><code>BUF_IO_WRITE</code> <span class="claim-id">[MYSQL-C002]</span></td><td><span class="status-badge">Partial analogy</span> 책임 일부만 대응 <span class="claim-id">[CMP-C003]</span></td></tr>
+<tr><td>현재 write 완료 방식</td><td>blocking write/pwrite <span class="claim-id">[CUBRID-C009]</span></td><td>blocking <code>pg_pwritev</code>; AIO staging은 write에 미연결 <span class="claim-id">[PG-C004, PG-C005]</span></td><td>AIO slot/callback 가능 <span class="claim-id">[MYSQL-C003, MYSQL-C005]</span></td><td><span class="status-badge">No equivalent</span> current wiring이 다름 <span class="claim-id">[CMP-C005]</span></td></tr>
+<tr><td>write error</td><td>common failure는 DIRTY/LSA 복원 <span class="claim-id">[CUBRID-C004]</span></td><td>dirty 유지 + <code>BM_IO_ERROR</code> <span class="claim-id">[PG-C006]</span></td><td>ordinary terminal error는 fatal; stale delete는 cleanup <span class="claim-id">[MYSQL-C006]</span></td><td><span class="status-badge">No equivalent</span> retry/termination 정책이 다름 <span class="claim-id">[CMP-C004]</span></td></tr>
+<tr><td>page/config 예외</td><td>TDE와 DWB가 output/copy를 바꿈 <span class="claim-id">[CUBRID-C005]</span></td><td>current 분석은 shared permanent buffer 중심 <span class="claim-id">[PG-C002]</span></td><td>compressed/temp/intrinsic 별도 path <span class="claim-id">[MYSQL-C006]</span></td><td><span class="status-badge">Partial analogy</span> configuration별 재검증 필요 <span class="claim-id">[CMP-C001]</span></td></tr>
+</tbody></table></div>
+<h3>같은 scenario의 세 흐름</h3>
+<pre><code>CUBRID:  claim FLUSHING → copy image → unlock → WAL → sync write → re-dirty aware cleanup
+PG:      pin + content SX → claim IO bit → WAL → live frame sync write → terminate IO
+InnoDB:  page SX + io_fix → redo → DWB → live frame AIO → callback/pass cleanup</code></pre>
+<p class="diagram-alt">그림 설명: 세 흐름 모두 WAL과 single-I/O state를 거친다. CUBRID만 snapshot 뒤 writer를 허용하고, InnoDB만 traced normal path에서 callback이 장기 SX/io_fix를 끝낸다.</p>
+<p>CUBRID snapshot path와 두 비교 DB의 live-frame path는 목적은 같지만 mechanics가 다르다. 공통점은 content, lifetime, single-I/O, WAL을 분리한다는 것이고, 차이는 writer overlap과 re-dirty를 허용하느냐이다. <span class="claim-id">[CMP-C001, CMP-C003]</span></p>
+<p>CUBRID READ와 InnoDB S는 이름만 비슷하다. CUBRID READ는 WRITE를 배제하지만 InnoDB S는 SX와 호환된다. 그러므로 lock mode 이름을 일대일로 번역하면 틀린다. <span class="claim-id">[CMP-C002]</span></p>
+<p class="analogy evidence-inferred"><span class="evidence-label">안전한 비교 결론.</span> PostgreSQL/InnoDB는 “live frame을 쓰려면 SX 하나면 된다”가 아니라, <strong>reader-compatible writer exclusion + non-reuse reference + single-I/O state + completion ownership</strong>이 필요하다는 설계 증거다. CUBRID는 이를 public SX가 아닌 internal state로 구현할 수 있다. <span class="claim-id">[CMP-C001, CMP-C002]</span></p>
+
+<h3>저카디널리티 중복 key는 직접 대응물이 아니다</h3>
+<div class="table-wrap"><table><caption><code>status='ACTIVE'</code> 중복을 저장하는 구조</caption><thead><tr><th>DBMS</th><th>물리 표현</th><th>수정 latch</th><th>CUBRID overflow chain과의 판정</th></tr></thead><tbody>
+<tr><td>CUBRID</td><td>leaf의 head VPID → OID singly-linked pages <span class="claim-id">[CUBRID-C016, CUBRID-C017]</span></td><td>leaf WRITE + 방문 overflow WRITE</td><td>기준 구조</td></tr>
+<tr><td>PostgreSQL nbtree</td><td>heap TID를 tiebreaker로 정렬하고, bounded leaf-local posting tuple로 dedup <span class="claim-id">[PG-C007]</span></td><td>삽입 leaf EXCLUSIVE</td><td><span class="status-badge">No equivalent</span></td></tr>
+<tr><td>InnoDB secondary B-tree</td><td>secondary key 뒤 clustered-key column을 포함한 개별 record <span class="claim-id">[MYSQL-C007]</span></td><td>record 수정 leaf X; tree SX는 SMO coordination</td><td><span class="status-badge">No equivalent</span></td></tr>
+</tbody></table></div>
+<p>PostgreSQL의 buffer <code>SHARE_EXCLUSIVE</code>와 InnoDB block SX는 “reader와 공존하고 modifier를 하나로
+제한한다”는 호환성 한 축에서는 <span class="status-badge">Partial analogy</span>다. 그러나 PostgreSQL nbtree는
+그 mode를 삽입에 쓰지 않고 SX→X promotion API도 없으며, InnoDB의 tree/block SX 경로도 CUBRID처럼
+head부터 overflow page를 first-fit 탐색하지 않는다. 그러므로 두 DBMS는 SX 호환표의 참고 사례이지 이
+성능 제안의 검증 사례가 아니다. <span class="claim-id">[PG-C007, MYSQL-C007, CMP-C006]</span></p>
+<p><strong>비교 한계:</strong> 세 source revision, persistent layout, startup/shutdown, configuration, counter 명칭과 runtime은 같지 않다. PG/MySQL은 실행하지 않았고 성능 수치 비교도 하지 않았다. 따라서 timing·ABI·page-format equivalence는 <span class="status-badge">No equivalent</span>다.</p>
+</section>
+<section class="recap"><h2>요약과 다음 질문</h2><p>SX 이름은 부분 대응일 뿐 error와 completion wiring은 비등가다. 다음 장에서는 비교에서 추출한 책임을 CUBRID 전용 request/state Interface와 conformance test로 바꾼다.</p></section>
+</main><footer><nav class="book-nav"><a rel="prev" href="09-mysql.html">이전</a><a href="../index.html">목차</a><a rel="next" href="11-blueprint.html">다음</a></nav></footer></body></html>

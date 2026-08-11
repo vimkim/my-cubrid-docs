@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>8장 — PostgreSQL 비교</title><link rel="stylesheet" href="../assets/report.css"></head>
+<body><header><nav class="book-nav"><a rel="prev" href="07-experiment.html">이전</a><a href="../index.html">목차</a><a rel="next" href="09-mysql.html">다음</a></nav><h1>8장 — PostgreSQL 비교</h1></header><main>
+<aside class="chapter-goals"><strong>학습 목표.</strong> PostgreSQL의 content SX, pin, I/O state, blocking write와 dormant AIO staging을 분리하고 CUBRID에 직접 옮길 수 없는 semantic gap을 찾는다.</aside>
+<p><strong>구체적 상황.</strong> PostgreSQL이 <code>SHARE_EXCLUSIVE</code>를 쓴다는 사실만 보고 CUBRID flush에도 SX가 필요하다고 결론내릴 수 있는가?</p>
+<section id="postgresql-analysis" data-claim-id="PG-C001 PG-C002 PG-C003 PG-C004 PG-C005 PG-C006 PG-C007">
+<h2>PostgreSQL은 왜 SHARE_EXCLUSIVE를 쓰는가</h2>
+<p>PostgreSQL content lock의 <code>SHARE_EXCLUSIVE</code>는 reader의 <code>SHARE</code>와 공존하지만 다른 modifier인 SX/X와 충돌한다. 현재 <code>FlushBuffer</code>는 caller pin과 SX/X를 전제로, WAL을 먼저 내리고 checksum을 shared frame에 제자리로 설정한 뒤 그 frame을 storage manager에 넘긴다. <span class="claim-id">[PG-C001, PG-C002]</span></p>
+<pre><code>pin                    : frame/tag reuse 금지
+SHARE_EXCLUSIVE        : reader 허용, content modifier 금지
+BM_IO_IN_PROGRESS      : 두 번째 I/O 금지
+WAL flush              : recovery ordering
+blocking pg_pwritev    : return까지 input 소비</code></pre>
+<p>즉 SX 하나가 모든 일을 하지 않는다. content lock, pin, I/O state, WAL이 합쳐져 계약이 된다. PostgreSQL의 AIO staging도 issuer pin과 별도로 AIO subsystem pin을 추가해 completion까지 frame을 붙든다. <span class="claim-id">[PG-C003]</span></p>
+<p>현재 일반 data write는 storage manager를 거쳐 blocking <code>pg_pwritev</code>로 내려간다. 그래서 direct cache 정책과 async completion lifetime을 같은 것으로 보면 안 된다. <span class="claim-id">[PG-C004]</span></p>
+<p class="callout evidence-source"><span class="evidence-label">Source-confirmed gap.</span> AIO subsystem pin을 잡는 staging helper는 존재하지만 current ordinary buffer write producer는 <code>smgrwritev → mdwritev → FileWriteV</code> blocking 경로다. staging helper의 존재를 “현재 write AIO가 연결됐다”로 확대하면 안 된다. <span class="claim-id">[PG-C005]</span></p>
+<p>write 중 error가 발생하면 resource-owner cleanup의 <code>AbortBufferIO</code>가 dirty를 지우지 않고 <code>BM_IO_ERROR</code>를 설정하며 I/O state와 waiter를 끝낸다. CUBRID의 dirty/oldest-LSA rollback과 field는 다르지만 “실패를 clean 성공으로 publish하지 않는다”는 책임은 같다. <span class="claim-id">[PG-C006]</span></p>
+<h3>그대로 베끼면 안 되는 이유</h3>
+<p>PostgreSQL은 hint-bit modifier가 SX와 공존하는 고유 이력이 있고, 현재 flush가 shared frame을 직접 checksum/write한다. snapshot으로 writer overlap을 허용하는 CUBRID와 출발점이 다르다. PostgreSQL의 SX 사용은 좋은 책임 분해 사례이지만 CUBRID public enum 추가의 자동 근거는 아니다.</p>
+<h3>B-tree duplicate에는 이 SX를 쓰지 않는다</h3>
+<p>PostgreSQL nbtree는 logical duplicate를 heap TID로 물리 정렬하고, 필요하면 한 leaf 안의 bounded posting
+tuple로 deduplicate한다. insert target leaf는 처음부터 EXCLUSIVE다. nbtree에서
+<code>SHARE_EXCLUSIVE</code> 사용은 없고 buffer API에도 SX→X 전환은 없다. 따라서 PG는 제안 SX의 좁은
+호환성 참고일 뿐, CUBRID overflow OID chain의 선례가 아니다. <span class="claim-id">[PG-C007]</span></p>
+</section>
+<section class="recap"><h2>요약과 다음 질문</h2><p>PostgreSQL의 계약은 SX 단독이 아니라 SX+pin+I/O state+WAL이다. 다음 장에서는 true AIO completion ownership을 실제로 가진 InnoDB를 본다.</p></section>
+</main><footer><nav class="book-nav"><a rel="prev" href="07-experiment.html">이전</a><a href="../index.html">목차</a><a rel="next" href="09-mysql.html">다음</a></nav></footer></body></html>

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>11장 — 전용 I/O freeze 재구현 청사진</title><link rel="stylesheet" href="../assets/report.css"></head>
+<body><header><nav class="book-nav"><a rel="prev" href="10-comparison.html">이전</a><a href="../index.html">목차</a><a rel="next" href="12-glossary-teaching.html">다음</a></nav><h1>11장 — 전용 I/O freeze 재구현 청사진</h1></header><main>
+<aside class="chapter-goals"><strong>학습 목표.</strong> source를 다시 열지 않고도 request-owned frame AIO module의 Interface, data model, 모든 terminal transition, lock order, recovery, configuration과 conformance test를 구현할 수 있게 한다.</aside>
+<p><strong>구체적 상황.</strong> submit은 성공했지만 callback이 error로 끝나고 동시에 shutdown이 시작되면, 누가 freeze와 ref를 정확히 한 번 해제하는가?</p>
+<section id="reimplementation-blueprint" data-claim-id="CUBRID-C004 CUBRID-C008 CUBRID-C012 CUBRID-C013 CUBRID-C014 CUBRID-C015 CMP-C001">
+<h2>deep module: request가 lifecycle을 끝까지 소유한다</h2>
+<pre><code>prepare(page)
+  BCB mutex: dirty/identity 확인, FLUSHING + IO_WRITE_FREEZE + io_ref 설정
+  output 선택: live frame | request-owned TDE/copy | DWB slot
+  WAL dependency 만족
+submit(request)
+  성공: terminal completion만 cleanup 권한 보유
+  실패: prepare를 정확히 한 번 rollback
+complete(request, result)
+  BCB identity/generation 재검증
+  success/error/cancel별 dirty/LSA 처리
+  IO_WRITE_FREEZE, FLUSHING, io_ref 해제; waiter wakeup</code></pre>
+<p>public caller는 latch mode를 조립하지 않고 <code>prepare/submit/complete</code> 계약만 사용한다. request 안에 VPID와 frame generation, input allocation, WAL dependency, result, cleanup state를 둔다. submit thread가 아니라 terminal state가 release 권한을 소유해야 current thread-holder 한계를 피할 수 있다. <span class="claim-id">[CUBRID-C008, CUBRID-C013]</span></p>
+<h3>불변식</h3>
+<ol>
+<li>I/O consumer가 끝날 때까지 input 주소와 bytes는 유효·불변이다.</li>
+<li>in-flight request가 있으면 해당 frame을 다른 VPID에 재사용하지 않는다.</li>
+<li>같은 page generation에는 datafile flusher가 하나다.</li>
+<li>data submit 전에 image LSA까지 WAL이 durable하다. <span class="claim-id">[CUBRID-C004]</span></li>
+<li>success/error/cancel/submit-failure 모두 cleanup을 정확히 한 번 실행한다.</li>
+</ol>
+<p>정상·오류 shutdown은 새 submit을 닫고 모든 completion을 drain한 뒤 page pool과 DWB를 파기한다. <span class="claim-id">[CUBRID-C012]</span></p>
+<h3>구현 순서와 ship gate</h3>
+<ol>
+<li>copy 경로를 바꾸기 전에 lifecycle counter와 invariant assertion을 추가한다.</li>
+<li>먼저 synchronous live-frame + READ/fix prototype으로 content/lifetime 계약을 검증한다.</li>
+<li>그다음 request-owned freeze/ref와 fake async completion을 만들고 모든 실패 전이를 fault injection한다.</li>
+<li>TDE/DWB/queue-full fallback을 붙인 뒤 snapshot baseline과 다중 writer workload를 비교한다.</li>
+<li>writer p99, throughput, copy bytes, memory, correctness 중 하나라도 기준을 벗어나면 copy AIO 또는 현행으로 되돌린다.</li>
+</ol>
+<p>이 청사진은 구현 전 설계 inference다. InnoDB의 SX+io_fix+completion 책임 묶음과 의미상 대응하지만, CUBRID writer admission 전체를 계측·시험하기 전 correctness나 성능을 확정할 수 없다. <span class="claim-id">[CMP-C001, CUBRID-C014]</span></p>
+<h3>1. 외부 Interface 계약</h3>
+<pre><code>enum pgbuf_io_policy { SNAPSHOT_SYNC, COPY_AIO, FRAME_AIO_FREEZE };
+
+prepare_result pgbuf_prepare_write(page_handle, policy, io_context);
+submit_result  pgbuf_submit_write(write_request *req);
+void           pgbuf_complete_write(write_request *req,
+                                    terminal_result result);
+void           pgbuf_begin_io_shutdown(void);
+drain_result   pgbuf_drain_io(deadline);
+
+terminal_result = SUCCESS | IO_ERROR | CANCELLED | SUBMIT_FAILED</code></pre>
+<div class="table-wrap"><table><caption>public caller pre/postcondition</caption><thead><tr><th>operation</th><th>precondition</th><th>성공 postcondition</th><th>오류 postcondition</th></tr></thead><tbody>
+<tr><td><code>prepare</code></td><td>valid VPID, DIRTY, submit gate OPEN</td><td>request가 generation/input/ref/FLUSHING/freeze를 소유</td><td>BCB가 호출 전 dirty 상태와 동일; owner 없음</td></tr>
+<tr><td><code>submit</code></td><td>PREPARED, WAL dependency 만족</td><td>request만 terminal cleanup 권한 보유</td><td><code>SUBMIT_FAILED</code>로 동기 complete; caller release 금지</td></tr>
+<tr><td><code>complete</code></td><td>terminal CAS의 승자</td><td>result publish 뒤 freeze/ref/FLUSHING clear와 wake</td><td>CAS loser는 no-op; double cleanup 금지</td></tr>
+<tr><td><code>drain</code></td><td>submit gate CLOSED</td><td>in-flight=0 뒤 pool/DWB destroy 허용</td><td>deadline이면 pool을 free하지 않고 안전한 상위 failure</td></tr>
+</tbody></table></div>
+<p>caller는 latch enum이나 callback-thread holder를 직접 조립하지 않는다. request pointer는 terminal 전까지 module 소유이며 caller는 빌리기만 한다. current thread-owned holder를 completion으로 넘기지 않는다. <span class="claim-id">[CUBRID-C008, CUBRID-C013]</span></p>
+
+<h3>2. abstract data model과 layout</h3>
+<pre><code>BCB additions (volatile, on-disk layout change 없음):
+  uint64 frame_generation;
+  uint32 io_ref_count;
+  bool   io_write_freeze;
+  request_id active_write_request;   // 0 or exactly one
+
+write_request (queue-owned allocation):
+  request_id id; VPID vpid; uint64 frame_generation;
+  BCB *bcb; input_kind; void *input; size_t length;
+  LOG_LSA image_lsa; LOG_LSA old_oldest_unflush_lsa;
+  atomic terminal_owner; terminal_result result;
+  bool restored_dirty; timestamps; error_code;</code></pre>
+<ul>
+<li><strong>identity:</strong> <code>(VPID, frame_generation)</code>이 callback의 old-frame/new-page 혼동을 막는다.</li>
+<li><strong>allocation:</strong> bounded request pool에서 가져오며 queue limit 전에 frame을 freeze하지 않는다.</li>
+<li><strong>reclamation:</strong> terminal cleanup과 waiter publish가 끝난 뒤 request를 pool로 돌린다.</li>
+<li><strong>persistent compatibility:</strong> BCB/request는 volatile이고 page/DWB/WAL layout을 바꾸지 않는다. TDE output 형식과 DWB recovery는 현행을 유지한다. <span class="claim-id">[CUBRID-C005, CUBRID-C015]</span></li>
+</ul>
+
+<h3>3. total state machine</h3>
+<div class="table-wrap"><table><caption>모든 request transition과 action</caption><thead><tr><th>from → to</th><th>guard</th><th>BCB/request action</th><th>다음</th></tr></thead><tbody>
+<tr><td>IDLE → PREPARING</td><td>gate OPEN, DIRTY, no active request</td><td>generation snapshot, FLUSHING; frame policy는 freeze+io_ref</td><td>output/WAL 준비</td></tr>
+<tr><td>PREPARING → IDLE</td><td>alloc/TDE/WAL 실패</td><td>old dirty/LSA 복원, 모든 ref/state clear, wake</td><td>ERROR 반환</td></tr>
+<tr><td>PREPARING → SUBMITTED</td><td>WAL durable, submit success</td><td>terminal owner publish, in-flight++</td><td>callback 대기</td></tr>
+<tr><td>PREPARING → COMPLETING</td><td>submit failure</td><td>동기 terminal CAS</td><td>실패 cleanup</td></tr>
+<tr><td>SUBMITTED → COMPLETING</td><td>success/error/cancel 중 첫 terminal event</td><td>CAS winner, result 기록</td><td>BCB identity 재검증</td></tr>
+<tr><td>COMPLETING → IDLE</td><td>identity 일치</td><td>success면 새 DIRTY 보존; failure면 old dirty/LSA 보수 복원; state/ref clear; wake</td><td>request reclaim</td></tr>
+<tr><td>COMPLETING → IDLE</td><td>identity 불일치</td><td>assert+fatal diagnostic; 새 BCB state를 수정하지 않음</td><td>request ref만 안전하게 회수</td></tr>
+</tbody></table></div>
+<p><strong>불법 전이:</strong> SUBMITTED에서 caller가 직접 unfix, 두 request가 같은 BCB active ID를 소유, cancel 요청만 받고 OS terminal 확인 전에 frame reuse, terminal CAS loser의 state clear는 모두 금지다.</p>
+
+<h3>4. concurrency와 ordering</h3>
+<ol>
+<li>request-pool slot을 먼저 확보한다. queue full이면 BCB를 건드리지 않고 fallback한다.</li>
+<li>BCB mutex 아래 identity/dirty를 재검증하고 active ID, FLUSHING, freeze, io_ref를 한 번에 publish한다.</li>
+<li>reader는 freeze와 무관하게 READ 가능하다. writer/두 번째 flusher/victim은 각각 writer gate/active ID/io_ref에서 대기 또는 retry한다.</li>
+<li>BCB mutex를 놓고 WAL을 기다린 뒤 submit한다. BCB나 다른 page latch를 잡은 채 completion을 기다리지 않는다.</li>
+<li>completion CAS 승자가 BCB mutex 아래 result와 state를 publish한 뒤 waiter를 깨운다.</li>
+</ol>
+<p>fairness는 writer waiter가 생기면 신규 freeze admission을 제한하는 gate와 oldest-request metric으로 방어한다. bounded timeout은 request를 버리는 시간이 아니라 cancel을 요청하고 terminal 확인을 기다리는 상위 정책이다.</p>
+
+<h3>5. startup, shutdown, abort, recovery</h3>
+<pre><code>startup: init request pool → queue/completion workers → submit gate OPEN
+shutdown: gate CLOSED → stop new flush scheduling → drain/cancel terminal
+          → log/data/DWB synchronize → workers stop → pool/page buffer destroy
+abort: terminal CAS → dirty/LSA rollback → state/ref clear → wake → reclaim
+restart: volatile request/freeze는 없음 → DWB home-page recovery → WAL redo
+         → 새 BCB/frame state로 시작</code></pre>
+<p>current shutdown 순서를 유지하되 AIO drain을 page-pool free보다 앞에 삽입한다. crash 후 active request를 되살리지 않고 persistent WAL/DWB만 신뢰한다. <span class="claim-id">[CUBRID-C012, CUBRID-C015]</span></p>
+
+<h3>6. configuration, dependencies, observability</h3>
+<div class="table-wrap"><table><caption>설정과 dependency seam</caption><thead><tr><th>항목</th><th>계약</th></tr></thead><tbody>
+<tr><td><code>io_policy</code></td><td>기본 CURRENT_SNAPSHOT; prototype opt-in; runtime change는 in-flight=0에서만</td></tr>
+<tr><td>queue bounds</td><td>max requests와 max bytes 모두 제한; queue-full fallback 명시</td></tr>
+<tr><td>timeouts</td><td>freeze writer wait와 shutdown drain을 분리; terminal 확인 없는 강제 release 금지</td></tr>
+<tr><td>WAL</td><td>submit 전 image LSA durable; dependency failure는 PREPARING rollback <span class="claim-id">[CUBRID-C004]</span></td></tr>
+<tr><td>TDE/DWB</td><td>request-owned cipher 또는 DWB-owned copy; stack buffer를 async submit 금지</td></tr>
+<tr><td>metrics</td><td>copy bytes/time, freeze waits, queue depth/age, completion latency/result, cleanup mismatch</td></tr>
+</tbody></table></div>
+
+<h3>7. 구현 순서와 conformance oracle</h3>
+<ol>
+<li>현행 snapshot path의 state assertion과 metrics를 먼저 추가한다.</li>
+<li>request pool과 fake completion executor를 만들고 disk I/O 없이 total transition을 fault-inject한다.</li>
+<li>synchronous live-frame READ/fix prototype으로 writer exclusion/non-reuse를 검증한다.</li>
+<li>FRAME_AIO_FREEZE를 plain, TDE, DWB 순으로 연결한다.</li>
+<li>shutdown/restart fault matrix를 통과한 뒤에만 performance A/B를 실행한다.</li>
+</ol>
+<div class="table-wrap"><table><caption>필수 conformance tests와 oracle</caption><thead><tr><th>test</th><th>허용된 관측</th><th>실패 판정</th></tr></thead><tbody>
+<tr><td>reader during frame AIO</td><td>reader 진행, bytes 일관</td><td>reader block 또는 torn content</td></tr>
+<tr><td>writer/victim/second flusher</td><td>completion까지 대기/retry, 이후 진행</td><td>completion 전 mutation/reuse/두 write</td></tr>
+<tr><td>submit/TDE/allocation/WAL 실패</td><td>DIRTY·LSA 복원, state/ref 0, waiter wake</td><td>고아 freeze/clean 오판</td></tr>
+<tr><td>completion success + re-dirty</td><td>새 DIRTY 유지</td><td>clean으로 덮음</td></tr>
+<tr><td>error/cancel/double callback</td><td>cleanup 정확히 한 번</td><td>double ref decrement 또는 waiter 누락</td></tr>
+<tr><td>queue full</td><td>설정된 fallback, memory bound 유지</td><td>freeze 뒤 무한 queue wait</td></tr>
+<tr><td>shutdown race</td><td>in-flight 0 뒤 pool free</td><td>callback use-after-free</td></tr>
+<tr><td>crash: WAL/DWB/home 각 경계</td><td>restart 후 checksum/LSA/row invariant</td><td>torn page 또는 committed data 손실</td></tr>
+<tr><td>performance A/B</td><td>throughput·writer p99·memory·copy bytes 모두 보고</td><td>하나만 골라 승리 선언</td></tr>
+</tbody></table></div>
+</section>
+<section class="recap"><h2>요약과 다음 질문</h2><p>기능적 Interface와 conformance oracle은 구현 가능 수준으로 고정했지만 성능 우위는 여전히 Unknown이다. 마지막 장에서는 모든 Claim·evidence·coverage·Quiz·Grill 연결을 한눈에 검증한다.</p></section>
+</main><footer><nav class="book-nav"><a rel="prev" href="10-comparison.html">이전</a><a href="../index.html">목차</a><a rel="next" href="12-glossary-teaching.html">다음</a></nav></footer></body></html>

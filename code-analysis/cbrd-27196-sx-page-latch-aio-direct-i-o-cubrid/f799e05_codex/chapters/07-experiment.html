@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>7장 — 성능 관측과 runtime 실험</title><link rel="stylesheet" href="../assets/report.css"></head>
+<body><header><nav class="book-nav"><a rel="prev" href="06-policy.html">이전</a><a href="../index.html">목차</a><a rel="next" href="08-postgresql.html">다음</a></nav><h1>7장 — 성능 관측과 runtime 실험</h1></header><main>
+<aside class="chapter-goals"><strong>학습 목표.</strong> hot-path 비용과 memory/replacement trade-off를 계측 항목으로 바꾸고, exact command·raw receipt·observer effect를 이용해 runtime 주장 범위를 제한한다.</aside>
+<p><strong>구체적 상황.</strong> <code>Num_data_page_iowrites=3</code>이면 정확히 page 세 장이 flush됐다고 말할 수 있는가?</p>
+<section id="performance-observability" data-claim-id="CUBRID-C005 CUBRID-C011 CUBRID-C014 CUBRID-C017 CUBRID-C018 CUBRID-C021">
+<h2>성능 판정에 필요한 계측</h2>
+<ul>
+<li>snapshot copy bytes/time과 TDE/DWB copy bytes를 따로 잰다.</li>
+<li>writer의 freeze wait 시간, reader 통과량, 최대 in-flight request/bytes/age를 잰다.</li>
+<li>submit→completion latency, queue-full fallback, cancel/error cleanup 횟수를 잰다.</li>
+<li>logical page flush와 DWB/home physical write를 구분한다.</li>
+</ul>
+<p>현행 counter는 page write/skip/wait와 DWB 시간을 보여 주지만 위 AIO lifecycle이나 copy 비용을 직접 분해하지 않는다. TDE·DWB에 남는 copy를 빼먹으면 효과를 과대평가한다. <span class="claim-id">[CUBRID-C005, CUBRID-C014]</span></p>
+<p class="callout evidence-source"><span class="evidence-label">카운터 해석 정정.</span> B-tree promotion computed summary는 기존 computed slot에 raw complex counter를 다시 누적하고 배율을 적용하는 산식 경로를 가진다. 이 summary를 raw promotion count로 읽어 “insert당 횟수”를 계산한 결론은 폐기한다. <span class="claim-id">[CUBRID-C011]</span></p>
+<p class="callout evidence-unknown"><span class="evidence-label">overflow OID 관측 경계.</span>
+<code>btree_find_free_overflow_oids_page</code>에는 helper 전체 시간을 기록하는
+<code>bt_fix_ovf_oids</code> counter/timer가 있다. 이는 경로가 관측 가능하다는 뜻이지, page별 fix 횟수·chain
+길이·latch wait나 “알려진 병목”을 직접 증명하지 않는다. 이번 <code>experiment-1</code> workload는
+저카디널리티 index를 만들지 않았고 이 값을 검증 근거로 쓰지 않는다. <span class="claim-id">[CUBRID-C017,
+CUBRID-C021]</span></p>
+<h3>hot path와 도구 지도</h3>
+<div class="table-wrap"><table><caption>무엇을 어디서 관측할 것인가</caption><thead><tr><th>관심 비용</th><th>현재 관측점</th><th>추가해야 할 metric/debug landmark</th></tr></thead><tbody>
+<tr><td>copy CPU/cache</td><td>flush duration, CPU profile</td><td><code>snapshot_copy_bytes/time</code>; breakpoint <code>pgbuf_bcb_flush_with_wal</code></td></tr>
+<tr><td>physical I/O</td><td><code>cubrid statdump</code>의 <code>Num_data_page_iowrites</code>, SystemTap <code>CUBRID_IO_WRITE_START/END</code></td><td>DWB write와 home write를 phase별 분리</td></tr>
+<tr><td>writer contention</td><td>current latch wait statistics</td><td><code>io_freeze_writer_wait_ns</code> histogram과 p95/p99</td></tr>
+<tr><td>queue pressure</td><td>현재 해당 counter 없음</td><td>in-flight requests/bytes/oldest age, queue-full fallback</td></tr>
+<tr><td>lifecycle 오류</td><td>error log/assert</td><td>submit/error/cancel/double-completion/forced-drain counters</td></tr>
+<tr><td>overflow OID 탐색</td><td><code>bt_fix_ovf_oids</code> helper timer</td><td>방문 page 수/insert, leaf·overflow latch wait, chain length, SX→WRITE wait</td></tr>
+</tbody></table></div>
+<p>copy AIO의 peak memory는 대략 <code>max_inflight_requests × (IO_PAGESIZE + metadata)</code>다. frame AIO는 그 copy 대신 같은 수의 frame을 replacement 불가로 만든다. buffer pool이 작거나 hot page가 몰리면 후자가 더 비쌀 수 있다. DWB의 <code>PB_SYNC_ON_NFLUSH</code> 같은 sync threshold와 TDE/DWB on/off도 반드시 실험 configuration에 기록한다.</p>
+<p>overflow SX 후보는 (1) bulk-load 직후 같은 key DML, (2) runtime-only append, (3) old page에 hole을 만든
+fragmentation을 나눠 측정한다. insert latency의 주기적 spike와 방문 page 수, leaf WRITE hold/wait,
+overflow READ/WRITE wait를 함께 기록해야 O(K) 탐색과 latch 충돌을 분리할 수 있다.
+<span class="claim-id">[CUBRID-C018, CUBRID-C021]</span></p>
+</section>
+
+<section id="experimental-validation" data-claim-id="CUBRID-C006">
+<h2>고정 build에서 한 런타임 검증</h2>
+<p class="experiment evidence-runtime"><span class="evidence-label">Runtime-observed.</span> 동일 SQL을 세 번 직접 실행했다. 매회 table을 다시 만들고 20,000 rows를 삽입했으며 <code>Num_data_page_dirties</code>는 각각 <strong>204,467 / 204,516 / 204,515</strong>였다. 세 workload·background activity·online-backup trigger를 포함한 active observation window에서 global <code>Num_data_page_iowrites</code>는 <strong>0 → 3</strong>으로 증가했다. <span class="claim-id">[CUBRID-C006]</span></p>
+<div class="table-wrap"><table><caption>runtime 관측의 증명 범위와 한계</caption><thead><tr><th>관측</th><th>말할 수 있는 것</th><th>말할 수 없는 것</th></tr></thead><tbody>
+<tr><td>세 번 모두 20,000 rows + dirty &gt; 0</td><td>workload가 page를 반복해서 dirty하게 함</td><td>어느 소스 branch가 몇 번 실행됐는지</td></tr>
+<tr><td>I/O writes 0 → 3</td><td>관측 구간에 data-page I/O 활동이 있음</td><td>unique logical page 수; DWB가 두 단계 write를 셀 수 있음</td></tr>
+<tr><td><code>Num_data_page_flushed=0</code></td><td>이 counter 하나의 결과</td><td>flush가 없었다는 음성 증명</td></tr>
+</tbody></table></div>
+<p>이 실험은 현행 활동을 보강할 뿐, <code>memcpy</code>, WAL-before-data, exact re-dirty/error branch, 미래 SX/freeze의 성능을 증명하지 않는다. 해당 내용은 pinned source와 향후 계측 실험으로 분리했다. 실험 문서와 안전한 runner는 <a href="../experiments/experiment-1/experiment.md">experiment-1</a>에 있다. <span class="claim-id">[CUBRID-C006]</span></p>
+<h3>exact environment와 command</h3>
+<p>CUBRID source는 <code>f799e05d…</code>, build receipt는 <a href="../evidence/runs/runtime-baseline-build/meta.json">runtime-baseline-build/meta.json</a>, active tool snapshot은 <a href="../evidence/runtime-tools-runtime-tools-baseline.json">baseline runtime snapshot</a>이다. debug server를 한 번 시작한 상태에서 매 pass가 table을 DROP/CREATE했으므로 input은 고정했지만 OS cache까지 비운 cold run은 아니다.</p>
+<pre><code>cd /home/vimkim/gh/my-cubrid-docs/code-analysis/cbrd-27196-sx-page-latch-aio-direct-i-o-cubrid/f799e05_codex/experiments/experiment-1
+/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc/bin/csql -u dba sxaio_codex -i flush_workload.sql
+# 위 command를 동일 argv로 3회
+/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc/bin/cubrid backupdb -D /tmp/sx-aio-report-codex-backup -C -r sxaio_codex</code></pre>
+<p><code>-r</code>은 archive 제거 옵션이며 checkpoint 의미가 아니다. historical receipt ID <code>exp-backupdb-checkpoint</code>도 이름이 부정확하다. 실제 source의 online-backup preparation은 <code>disk_set_checkpoint</code> 뒤 <code>pgbuf_flush_all_unfixed</code>와 <code>dwb_synchronize</code>를 호출한다.</p>
+<h3>raw transcript와 repetition</h3>
+<ul>
+<li>pass 1: <a href="../evidence/runs/exp-flush-run-1/stdout.txt">stdout</a> · <a href="../evidence/runs/exp-flush-run-1/meta.json">receipt</a></li>
+<li>pass 2: <a href="../evidence/runs/exp-flush-run-2/stdout.txt">stdout</a> · <a href="../evidence/runs/exp-flush-run-2/meta.json">receipt</a></li>
+<li>pass 3: <a href="../evidence/runs/exp-flush-run-3/stdout.txt">stdout</a> · <a href="../evidence/runs/exp-flush-run-3/meta.json">receipt</a></li>
+<li>global before/after: <a href="../evidence/runs/exp-statdump-before/stdout.txt">before</a> · <a href="../evidence/runs/exp-statdump-after/stdout.txt">after</a> · <a href="../evidence/runs/exp-backupdb-checkpoint/meta.json">backup trigger receipt</a></li>
+</ul>
+<h3>controls, observer effect, cleanup</h3>
+<p>positive control은 매 pass의 <code>inserted_rows=20000</code>과 dirty &gt; 0이다. negative baseline은 workload 전 dirty/I/O counter 0이다. 그러나 watcher/statdump, background flush, backup과 DWB가 관찰 대상에 영향을 준다. 그래서 0→3을 backup caller나 unique page 수에 귀속하지 않는다.</p>
+<p>cleanup 순서는 watcher 종료 → server stop → quiz/report-owned DB delete → backup file/directory delete → registry/process 확인이다. <a href="../evidence/runs/exp-cleanup-verify/stdout.txt">cleanup verification</a>은 DB와 watcher가 남지 않았음을 기록한다. 첫 긴 DB 이름의 createdb 실패와 정리 receipt도 evidence에 남겼지만 Claim에는 성공 observation만 연결했다.</p>
+</section>
+<section class="recap"><h2>요약과 다음 질문</h2><p>runtime counter는 활동을 보여 주지만 source branch나 causality를 자동으로 증명하지 않는다. 다음 장부터는 PostgreSQL과 InnoDB가 같은 책임을 어떻게 다르게 구현하는지 비교한다.</p></section>
+</main><footer><nav class="book-nav"><a rel="prev" href="06-policy.html">이전</a><a href="../index.html">목차</a><a rel="next" href="08-postgresql.html">다음</a></nav></footer></body></html>

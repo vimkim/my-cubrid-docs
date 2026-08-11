@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>5장 — 동시성과 durability</title><link rel="stylesheet" href="../assets/report.css"></head>
+<body><header><nav class="book-nav"><a rel="prev" href="04-current-flush.html">이전</a><a href="../index.html">목차</a><a rel="next" href="06-policy.html">다음</a></nav><h1>5장 — 동시성과 durability</h1></header><main>
+<aside class="chapter-goals"><strong>학습 목표.</strong> thread별 역할과 보호 state, 획득 순서, wait/wakeup의 happens-before를 설명하고 crash 지점별 durable 결과를 판정한다.</aside>
+<p><strong>구체적 상황.</strong> flusher는 BCB mutex를 놓고 I/O하는데도 왜 두 번째 flusher와 victim은 막히고 writer는 진행할 수 있는가?</p>
+<section id="concurrency" data-claim-id="CUBRID-C001 CUBRID-C003 CUBRID-C007 CUBRID-C008 CUBRID-C014">
+<h2>한 장의 page에 다섯 책임이 있다</h2>
+<div class="table-wrap"><table><caption>한 page flush에 필요한 다섯 동시성 책임</caption><thead><tr><th>책임</th><th>현행 CUBRID 장치</th><th>서로 대신할 수 없는 이유</th></tr></thead><tbody>
+<tr><td>읽는 bytes의 불변성</td><td>snapshot copy</td><td><code>FLUSHING</code>만으로는 writer를 막지 않는다.</td></tr>
+<tr><td>frame identity/lifetime</td><td>fix count, victim mask</td><td>latch가 있어도 frame reuse 규칙은 별도다.</td></tr>
+<tr><td>한 번에 한 flusher</td><td><code>FLUSHING_TO_DISK</code></td><td>content가 불변이어도 두 write의 역전은 막아야 한다.</td></tr>
+<tr><td>새 수정 추적</td><td>DIRTY 세대와 oldest LSA</td><td>완료된 옛 image가 최신 변경을 clean으로 만들면 안 된다.</td></tr>
+<tr><td>대기·종료 정리</td><td>waiter wakeup, sync caller stack</td><td>AIO에는 request 기준 exactly-once cleanup이 추가된다.</td></tr>
+</tbody></table></div>
+<p><code>PGBUF_LATCH_READ</code>와 <code>WRITE</code>는 content 접근을 조정하고, fix는 frame 교체를 막는다. 반면 <code>FLUSHING_TO_DISK</code>는 victim 후보 제외와 두 번째 flush 방지에 쓰이며 writer는 snapshot 이후 다시 page를 고칠 수 있다. <span class="claim-id">[CUBRID-C001, CUBRID-C003, CUBRID-C007]</span></p>
+<p>AIO에서는 submit thread와 completion thread가 다를 수 있다. current holder가 thread anchor에 귀속된다는 사실 때문에, READ holder 자체를 callback으로 넘기는 설계에는 별도 ownership protocol이 필요하다. <span class="claim-id">[CUBRID-C008]</span></p>
+<h3>actor와 보호 규칙</h3>
+<div class="table-wrap"><table><caption>동시 actor, mutable state, 보호 장치</caption><thead><tr><th>actor</th><th>읽거나 바꾸는 state</th><th>획득/대기 규칙</th></tr></thead><tbody>
+<tr><td>transaction reader</td><td>frame content</td><td>READ latch; content를 바꾸지 않음</td></tr>
+<tr><td>transaction writer</td><td>content, DIRTY, oldest LSA</td><td>WRITE latch 뒤 BCB state update; future freeze가 있으면 writer gate 대기</td></tr>
+<tr><td>flush/checkpoint/victim</td><td>DIRTY, FLUSHING, image, waiter</td><td>BCB mutex로 claim·copy·publish; mutex release 뒤 WAL/I/O</td></tr>
+<tr><td>DWB daemon/file sync helper</td><td>DWB-owned slots, volume sync state</td><td>DWB 내부 queue/block order; live frame holder를 전제하지 않음</td></tr>
+<tr><td>victim/replacer</td><td>VPID/frame identity</td><td>fix count와 FLUSHING/io_ref가 0일 때만 reuse</td></tr>
+<tr><td>future completion</td><td>result, freeze/ref, dirty, wakeup</td><td>request terminal CAS의 단일 승자만 cleanup</td></tr>
+</tbody></table></div>
+<h3>순서와 happens-before</h3>
+<ol>
+<li><code>BCB mutex acquire</code> 뒤 VPID·DIRTY·FLUSHING을 재검증한다.</li>
+<li>같은 mutex 구간에서 image/LSA를 확정하고 FLUSHING을 publish한다.</li>
+<li>mutex release는 이후 writer가 FLUSHING과 cleared DIRTY를 보고 새 DIRTY 세대를 쓰기 전의 경계다.</li>
+<li>WAL durable 확인이 data submit보다 먼저다.</li>
+<li>completion은 BCB를 다시 잡아 terminal state를 publish하고, 그 뒤 waiter를 깨운다.</li>
+</ol>
+<p><strong>lock order:</strong> BCB mutex → 짧은 state/image 작업 → BCB mutex 해제 → WAL/DWB/file I/O → BCB mutex 재획득이다. 느린 I/O를 기다리며 BCB mutex나 unrelated page latch를 잡지 않는다. future frame AIO에서도 request claim은 BCB 안에서 하지만 completion wait는 BCB 밖에서 한다.</p>
+<div class="table-wrap"><table><caption>허용·금지 interleaving</caption><thead><tr><th>interleaving</th><th>판정</th><th>방어</th></tr></thead><tbody>
+<tr><td>snapshot 뒤 writer가 frame 수정</td><td>허용</td><td>output 분리 + 새 DIRTY 보존 <span class="claim-id">[CUBRID-C003]</span></td></tr>
+<tr><td>같은 BCB의 두 flusher가 동시 home write</td><td>금지</td><td>FLUSHING claim</td></tr>
+<tr><td>in-flight frame을 다른 VPID로 reuse</td><td>금지</td><td>fix/FLUSHING, future io_ref</td></tr>
+<tr><td>completion이 state clear 전 waiter wake</td><td>금지</td><td>BCB-protected publish-before-wakeup</td></tr>
+<tr><td>shutdown이 request보다 먼저 pool free</td><td>금지</td><td>submit close → drain → destroy</td></tr>
+</tbody></table></div>
+<p class="callout evidence-unknown"><span class="evidence-label">Unknown.</span> future freeze의 writer fairness, reader bypass, queue convoy와 starvation 한계는 아직 측정되지 않았다. bounded queue, writer-wait histogram, oldest request age, reader/writer fairness counter가 ship gate다. <span class="claim-id">[CUBRID-C014]</span></p>
+</section>
+
+<section id="storage-durability" data-claim-id="CUBRID-C004 CUBRID-C005 CUBRID-C015 MYSQL-C005">
+<h2>메모리 안정성과 WAL은 직교한다</h2>
+<pre><code>content image 확정
+    ├─ memory 계약: 누가 언제까지 이 bytes를 바꾸지 못하는가?
+    └─ durability 계약: 이 image의 LSA보다 log가 먼저 durable한가?</code></pre>
+<p>CUBRID는 snapshot LSA까지 log를 먼저 flush한 다음 data/DWB write를 수행한다. memory가 안정해도 WAL 순서를 어기면 recovery가 깨지고, WAL이 먼저 나가도 I/O 중 input bytes가 바뀌면 잘못된 image가 기록된다. 둘 다 필요하다. <span class="claim-id">[CUBRID-C004]</span></p>
+<p>TDE는 plain frame과 다른 암호문 allocation을 만들고, DWB는 받은 image를 자기 slot으로 복사한다. 그래서 “live frame copy 제거”가 곧 전체 경로의 zero-copy를 뜻하지 않는다. InnoDB도 redo 선행과 output/completion lifetime을 별도 책임으로 유지한다. <span class="claim-id">[CUBRID-C005, MYSQL-C005]</span></p>
+<h3>crash matrix와 restart reconstruction</h3>
+<div class="table-wrap"><table><caption>crash 시점별 durable state와 restart</caption><thead><tr><th>crash 시점</th><th>durable할 수 있는 것</th><th>restart 판단</th><th>idempotence</th></tr></thead><tbody>
+<tr><td>snapshot 전</td><td>이전 disk page와 WAL 일부</td><td>volatile DIRTY/FLUSHING은 소실; WAL recovery가 committed change를 재적용</td><td>page LSA가 redo 중복을 제한</td></tr>
+<tr><td>snapshot 뒤, WAL 전</td><td>새 data image는 아직 submit하지 않음</td><td>옛 disk page + WAL recovery</td><td>WAL-before-data가 unlogged image 노출을 막음</td></tr>
+<tr><td>WAL 뒤, DWB/home write 전</td><td>redo log</td><td>data page가 옛 버전이어도 redo 가능</td><td>LSA 비교로 재적용</td></tr>
+<tr><td>DWB durable, home write 중</td><td>WAL + DWB의 full image, home은 torn 가능</td><td>DWB recovery가 유효 image로 home page 복구 <span class="claim-id">[CUBRID-C015]</span></td><td>복구 page를 volume에 다시 쓰고 sync</td></tr>
+<tr><td>home write 뒤, clean publish 전</td><td>새 data image와 WAL</td><td>BCB state는 소실되므로 disk LSA 기준 recovery</td><td>같은 image 재기록은 허용</td></tr>
+<tr><td>재더티 뒤 crash</td><td>옛 snapshot + 그 이상 WAL</td><td>새 memory bytes는 잃어도 WAL이 복원 근거</td><td>옛 flush success가 새 WAL 필요성을 없애지 않음</td></tr>
+</tbody></table></div>
+<p>DWB restart는 persistent DWB block을 읽고 중복/유효 page를 검사한 뒤 손상된 home page를 다시 쓰고 volume을 sync한다. BCB의 volatile FLUSHING을 재사용하지 않는다. <span class="claim-id">[CUBRID-C015]</span></p>
+</section>
+<section class="recap"><h2>요약과 다음 질문</h2><p>동시성의 핵심은 publish-before-wakeup과 frame non-reuse이고, durability의 핵심은 WAL-before-data와 DWB/recovery다. 다음 장에서는 이 invariant를 만족하는 정책 가운데 무엇을 선택할지 비교한다.</p></section>
+</main><footer><nav class="book-nav"><a rel="prev" href="04-current-flush.html">이전</a><a href="../index.html">목차</a><a rel="next" href="06-policy.html">다음</a></nav></footer></body></html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CUBRID flush/AIO에서 SX latch가 정말 필요한가</title>
+<link rel="stylesheet" href="assets/report.css">
+</head>
+<body>
+<header>
+<h1>CUBRID flush/AIO에서 SX latch가 정말 필요한가</h1>
+<p>frame 안정성, strict READ, snapshot copy, 범용 SX, 전용 I/O freeze를 같은 책임 축으로 비교한 한국어 소스 분석서</p>
+</header>
+<main>
+<section id="answer" data-claim-id="CUBRID-C002 CUBRID-C007 CUBRID-C013 CMP-C002">
+<h2>먼저 답</h2>
+<p class="callout evidence-source"><span class="evidence-label">Source-confirmed.</span> 현행 synchronous snapshot-copy flush는 live frame이 아니라 분리된 image를 쓰므로 content freeze용 SX가 필요하지 않다. <span class="claim-id">[CUBRID-C002]</span></p>
+<p class="callout evidence-inferred"><span class="evidence-label">Inferred.</span> synchronous live-frame write에는 strict <code>READ</code> + retained fix가 정확성 후보이고, frame AIO에는 public SX 대신 전용 <code>IO_WRITE_FREEZE</code> + request-owned reference를 쓸 수 있다. copy AIO라면 live frame freeze가 필요 없다. 아직 성능 우위는 주장하지 않는다. <span class="claim-id">[CUBRID-C007, CUBRID-C013, CMP-C002]</span></p>
+<p><strong>가장 중요한 정정:</strong> synchronous <code>O_DIRECT</code>는 direct이지만 asynchronous가 아니다. blocking call이면 buffer 안정 구간은 호출부터 반환까지다. submit 반환 뒤 terminal completion까지 buffer가 살아야 하는 계약은 AIO에서 생긴다. <span class="claim-id">[CUBRID-C009, PG-C004, MYSQL-C003]</span></p>
+</section>
+
+<section id="reading-guide">
+<h2>누가 어떻게 읽으면 좋은가</h2>
+<p>대상 독자는 C/C++, 운영체제의 memory와 I/O, B-tree 기초를 배운 대학 2학년 수준이다. DBMS buffer manager 내부를 몰라도 읽을 수 있도록 page와 frame부터 시작한다.</p>
+<ul>
+<li><strong>10분 경로:</strong> 1장 → 2장 → 6장 → 10장으로 결론과 선택지를 본다.</li>
+<li><strong>구현 경로:</strong> 3장 → 4장 → 5장 → 11장으로 owner, 전이, 순서, conformance test를 본다.</li>
+<li><strong>검증 경로:</strong> 7장 → 12장 → Quiz로 command, raw receipt, Claim index를 확인한다.</li>
+<li><strong>B-tree SX 예시:</strong> <a href="chapters/06-policy.html#btree-overflow-oid-case"><code>ACTIVE</code> 100만 건의 overflow OID AS-IS/TO-BE</a>만 바로 읽는다.</li>
+</ul>
+</section>
+
+<section id="toc">
+<h2>목차</h2>
+<ol class="toc">
+<li><a href="chapters/01-orientation.html">1장 — 결론과 범위</a></li>
+<li><a href="chapters/02-mental-model.html">2장 — page, frame, image와 네 I/O mode</a></li>
+<li><a href="chapters/03-interface-ownership.html">3장 — Interface와 memory owner/lifetime</a></li>
+<li><a href="chapters/04-current-flush.html">4장 — 현행 CUBRID snapshot-copy flush</a></li>
+<li><a href="chapters/05-concurrency-durability.html">5장 — 동시성과 durability</a></li>
+<li><a href="chapters/06-policy.html">6장 — copy·READ·SX·freeze·WRITE 선택</a></li>
+<li><a href="chapters/07-experiment.html">7장 — 성능 관측과 runtime 실험</a></li>
+<li><a href="chapters/08-postgresql.html">8장 — PostgreSQL 비교</a></li>
+<li><a href="chapters/09-mysql.html">9장 — MySQL/InnoDB 비교</a></li>
+<li><a href="chapters/10-comparison.html">10장 — 세 DBMS responsibility map</a></li>
+<li><a href="chapters/11-blueprint.html">11장 — 전용 I/O freeze 재구현 청사진</a></li>
+<li><a href="chapters/12-glossary-teaching.html">12장 — 용어·증거·Quiz·Grill 지도</a></li>
+</ol>
+</section>
+
+<section id="evidence-summary" data-claim-id="CUBRID-C006">
+<h2>근거와 상태</h2>
+<div class="table-wrap"><table>
+<caption>고정 revision과 검증 방식</caption>
+<thead><tr><th>대상</th><th>revision / 근거</th></tr></thead>
+<tbody>
+<tr><td>CUBRID</td><td><code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code> — 소스 + pinned debug build + csql 3회 실험</td></tr>
+<tr><td>PostgreSQL</td><td><code>fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc</code> — pinned source, runtime 미사용</td></tr>
+<tr><td>MySQL/InnoDB</td><td><code>06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8</code> — pinned source, runtime 미사용</td></tr>
+<tr><td>준비도</td><td><strong>READY WITHIN DECLARED SCOPE</strong>. 구현되지 않은 대안의 성능·공정성은 unknown이다.</td></tr>
+</tbody></table></div>
+<p>runtime은 dirty page와 physical I/O 활동을 보강한다. <code>memcpy</code> 위치, WAL 순서, re-dirty/error 전이는 소스가 증명한다. <span class="claim-id">[CUBRID-C006]</span></p>
+</section>
+</main>
+<footer><p>CBRD-27196 재검토 · agent codex · 2026-08-11</p></footer>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>1장 — 결론과 범위</title><link rel="stylesheet" href="../assets/report.css"></head>
+<body><header><nav class="book-nav"><a href="../index.html">목차</a><a rel="next" href="02-mental-model.html">다음</a></nav><h1>1장 — 결론과 범위</h1></header><main>
+<aside class="chapter-goals"><strong>학습 목표.</strong> SX가 필요하다는 말의 숨은 전제를 찾고, 이 책의 포함 범위·근거 수준·읽기 경로를 설명한다.</aside>
+<p><strong>생각할 상황.</strong> flusher가 page 주소를 kernel에 넘긴 직후 다른 writer가 같은 주소를 바꾸면, 어떤 보호가 정확히 필요한가?</p>
+<section id="orientation" data-claim-id="CUBRID-C002 CUBRID-C007 CUBRID-C013 CMP-C002">
+<h2>질문에 대한 정확한 답</h2>
+<p>“flush나 AIO에는 왜 SX가 필요한가?”라는 질문은 반쯤 잘못 놓였다. 필요한 것은 latch 이름이 아니라 <strong>I/O가 읽는 memory의 주소와 bytes가 소비 종료까지 유효하고 불변</strong>이라는 계약이다. 현행 CUBRID는 live frame을 쓰지 않고 snapshot을 쓰므로 이미 이 계약을 만족한다. <span class="claim-id">[CUBRID-C002]</span></p>
+<div class="table-wrap"><table><caption>상황별 답</caption><thead><tr><th>상황</th><th>SX 필요성</th><th>정확한 이유</th></tr></thead><tbody>
+<tr><td>현행 sync snapshot flush</td><td>불필요</td><td>I/O는 live frame과 분리된 image를 읽는다.</td></tr>
+<tr><td>sync live-frame write</td><td>유일한 답 아님</td><td>strict READ가 writer를 막고 fix가 reuse를 막을 수 있다.</td></tr>
+<tr><td>copy-based AIO</td><td>불필요</td><td>request가 copy를 completion까지 소유한다.</td></tr>
+<tr><td>frame-based AIO</td><td>writer-freeze 필요</td><td>public SX, transferred READ, 전용 freeze 모두 가능하지만 owner/ref가 추가로 필요하다.</td></tr>
+</tbody></table></div>
+<p class="callout evidence-inferred"><span class="evidence-label">권고.</span> flush/writeback만을 위한 기능이라면 public latch enum을 넓히기보다 BCB 내부 <code>IO_WRITE_FREEZE + io_ref</code>를 우선 검토한다. B-tree가 별도로 generic SX를 정당화하는지는 독립 결정이다. <span class="claim-id">[CUBRID-C013, CMP-C002]</span></p>
+</section>
+
+<section id="corrections" data-claim-id="CUBRID-C009 CUBRID-C011 PG-C004 MYSQL-C003">
+<h2>이전 설명에서 바로잡을 세 가지</h2>
+<ol>
+<li><strong>direct ≠ async.</strong> synchronous <code>O_DIRECT</code>의 input buffer는 blocking call 반환까지 안정하면 된다. AIO는 callback/terminal completion까지다. <span class="claim-id">[CUBRID-C009, PG-C004, MYSQL-C003]</span></li>
+<li><strong>AIO ≠ zero-copy.</strong> AIO가 request-owned snapshot을 읽으면 live frame writer를 막지 않는다.</li>
+<li><strong>이전 B-tree promotion summary를 성능 근거로 재사용하지 않는다.</strong> computed field를 누적·배율 처리하는 산식 때문에 상세 raw counter와 일치하지 않는 경로가 확인됐다. <span class="claim-id">[CUBRID-C011]</span></li>
+</ol>
+</section>
+
+<section id="scope">
+<h2>포함과 제외</h2>
+<p>포함 범위는 CUBRID page-buffer flush funnel, latch/fix/BCB state, WAL·TDE·DWB seam, file write, runtime counter, PostgreSQL과 InnoDB의 같은 책임이다. 실제 SX/AIO 구현, read prefetch, device queue tuning, 성능 향상률은 제외한다. PostgreSQL/MySQL 서버는 실행하지 않았다.</p>
+<div class="table-wrap"><table><caption>고정 source와 worktree provenance</caption><thead><tr><th>저장소</th><th>정확한 revision</th><th>조사 시작 dirty state</th></tr></thead><tbody>
+<tr><td>CUBRID</td><td><code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code></td><td>개인 build/tool 파일 등 기존 변경 있음. source baseline hash로 보존.</td></tr>
+<tr><td>PostgreSQL</td><td><code>fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc</code></td><td>untracked <code>.omc/</code>만 존재.</td></tr>
+<tr><td>MySQL</td><td><code>06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8</code></td><td>clean.</td></tr>
+</tbody></table></div>
+<p>세 상태의 원문·diff fingerprint는 <a href="../provenance.json">provenance.json</a>에 있다. 이 보고서는 source를 수정하지 않았다.</p>
+<h3>이 책을 읽고 할 수 있어야 하는 일</h3>
+<ol>
+<li>direct, async, copy/live-frame 세 축을 분리한다.</li>
+<li>content, frame lifetime, single flusher, WAL, re-dirty 책임을 각 state에 배정한다.</li>
+<li>현행 copy, sync READ/fix, copy AIO, frame AIO를 같은 기준으로 평가한다.</li>
+<li>PG/MySQL의 SX를 CUBRID에 이름만 옮기면 안 되는 이유를 설명한다.</li>
+</ol>
+</section>
+<section class="recap"><h2>요약과 다음 질문</h2><p>필요한 것은 SX라는 이름이 아니라 consumer 종료까지의 memory 계약이다. 다음 장에서는 page와 frame을 분리해 “어느 주소를 언제까지 지키는가”를 묻는다.</p></section>
+</main><footer><nav class="book-nav"><a href="../index.html">목차</a><a rel="next" href="02-mental-model.html">다음: mental model</a></nav></footer></body></html>

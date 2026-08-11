@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>12장 — 용어·증거·Quiz·Grill 지도</title><link rel="stylesheet" href="../assets/report.css"></head>
+<body><header><nav class="book-nav"><a rel="prev" href="11-blueprint.html">이전</a><a href="../index.html">목차</a></nav><h1>12장 — 용어·증거·Quiz·Grill 지도</h1></header><main>
+<aside class="chapter-goals"><strong>학습 목표.</strong> 모든 Claim을 source/run으로 역추적하고, 18개 coverage와 두 central behavior가 Experiment·Quiz·Grill에 어떻게 연결되는지 검증한다.</aside>
+<p><strong>구체적 상황.</strong> “전용 freeze가 더 낫다”는 문장을 만났을 때 Source-confirmed 사실, Inferred 권고, Unknown 성능 중 무엇인지 어디서 확인할 수 있는가?</p>
+<section id="glossary" data-claim-id="CUBRID-C001 CUBRID-C009 CUBRID-C014 CUBRID-C016 CUBRID-C017 CUBRID-C020 CUBRID-C021">
+<h2>용어와 증거 경계</h2>
+<dl>
+<dt><strong>latch</strong></dt><dd>메모리 구조의 짧은 임계구역을 보호한다. transaction lock과 다르다.</dd>
+<dt><strong>SX</strong></dt><dd>보통 reader와 공존하고 다른 modifier와 충돌하는 mode. 제품마다 정확한 호환표가 다르다.</dd>
+<dt><strong>fix/pin/io_ref</strong></dt><dd>frame identity와 allocation lifetime을 붙드는 reference.</dd>
+<dt><strong>FLUSHING</strong></dt><dd>CUBRID의 in-flight/single-flusher·victim 차단 상태. writer-freeze와 동일하지 않다.</dd>
+<dt><strong>direct I/O</strong></dt><dd>cache 경로 선택. async 여부와 별도 축이다.</dd>
+<dt><strong>AIO</strong></dt><dd>submit 반환 뒤 terminal completion이 오는 I/O. request ownership이 필요하다.</dd>
+<dt><strong>zero-copy</strong></dt><dd>이 책에서는 page-buffer snapshot을 생략한다는 좁은 뜻. TDE/DWB/kernel copy까지 0이라는 뜻이 아니다.</dd>
+<dt><strong>overflow OID page</strong></dt><dd>한 B-tree key에 leaf record가 감당할 수 없는 physical OID/MVCC 정보를 저장하는 별도 page. 다음 page VPID 하나로 연결된다.</dd>
+<dt><strong>VPID</strong></dt><dd>volume과 page를 식별하는 CUBRID page identifier. overflow leaf record는 chain head의 VPID를 가진다.</dd>
+<dt><strong>B-tree SX 후보</strong></dt><dd>overflow page를 읽어 공간을 찾는 동안 reader와 공존하고, target에서 WRITE로 전환하려는 미구현 설계안. flush 전용 <code>IO_WRITE_FREEZE</code>와 책임이 다르다.</dd>
+</dl>
+<p>CUBRID current mode와 file path는 소스 확정이고, 미래 대안의 성능·공정성은 unknown이다. <span class="claim-id">[CUBRID-C001, CUBRID-C009, CUBRID-C014]</span></p>
+<div class="table-wrap"><table><caption>보고서의 증거 수준</caption><thead><tr><th>표시</th><th>뜻</th></tr></thead><tbody>
+<tr><td>소스 확정</td><td>고정 commit의 파일·symbol·line·SHA-256으로 추적 가능</td></tr>
+<tr><td>런타임 보강</td><td>고정 build의 receipt와 oracle로 확인</td></tr>
+<tr><td>설계 추론</td><td>소스 책임을 조합한 권고이며 구현되지 않음</td></tr>
+<tr><td>미확인</td><td>반증 조건과 필요한 다음 실험을 명시</td></tr>
+</tbody></table></div>
+<h3>known unknowns와 compatibility limit</h3>
+<ul>
+<li><span class="status-badge">Unknown</span> copy/freeze/AIO의 throughput, writer p99, memory, fairness 우열은 미측정이다. <span class="claim-id">[CUBRID-C014]</span></li>
+<li>TDE/DWB/queue-full/cancel/shutdown fault-injection은 future prototype conformance gate다.</li>
+<li>CUBRID의 current page format과 WAL/DWB layout을 바꾸지 않는 내부 BCB/request 설계까지만 READY 범위다.</li>
+<li>public SX ABI, on-disk compatibility, timing·performance equivalence, PostgreSQL/MySQL runtime은 보장하지 않는다.</li>
+</ul>
+
+<h3 id="source-evidence-index">complete source/evidence index</h3>
+<p>정확한 SHA-256, 모든 source ref와 한계는 <a href="../evidence/claims.jsonl">claims.jsonl</a>에 있다. 아래 표는 41개 Claim을 빠짐없이 source/run으로 안내한다.</p>
+<div class="table-wrap"><table><caption>전체 Claim과 evidence locator</caption><thead><tr><th>Claim</th><th>상태</th><th>핵심 evidence</th></tr></thead><tbody>
+<tr><td>CUBRID-C001</td><td>Source-confirmed</td><td><code>page_buffer.h:189-209 PGBUF_LATCH_MODE</code></td></tr>
+<tr><td>CUBRID-C002</td><td>Source-confirmed</td><td><code>page_buffer.c:10733-10857 pgbuf_bcb_flush_with_wal</code></td></tr>
+<tr><td>CUBRID-C003</td><td>Source-confirmed</td><td><code>page_buffer.c:8810-8902,16077-16125</code></td></tr>
+<tr><td>CUBRID-C004</td><td>Source-confirmed</td><td><code>page_buffer.c:10836-10923 logpb_flush_log_for_wal/error</code></td></tr>
+<tr><td>CUBRID-C005</td><td>Source-confirmed</td><td><code>tde.c:902-954</code>, <code>double_write_buffer.cpp:2604-2634</code></td></tr>
+<tr><td>CUBRID-C006</td><td>Source-confirmed + Runtime-observed</td><td><code>log_page_buffer.c:7471-7525</code>; 3 SQL + before/backup/after receipts</td></tr>
+<tr><td>CUBRID-C007</td><td>Inferred</td><td>READ compatibility/fix refs; synchronous prototype pending</td></tr>
+<tr><td>CUBRID-C008</td><td>Source-confirmed</td><td><code>page_buffer.c:6000-6184,3277-3349</code> thread holder</td></tr>
+<tr><td>CUBRID-C009</td><td>Source-confirmed</td><td><code>file_io.c:4123-4205 fileio_write</code></td></tr>
+<tr><td>CUBRID-C010</td><td>Source-confirmed defect candidate</td><td><code>page_buffer.c:10801-10923</code>; fault injection pending</td></tr>
+<tr><td>CUBRID-C011</td><td>Source-confirmed</td><td><code>perf_monitor.c:1788-1971 perfmon_server_calc_stats</code></td></tr>
+<tr><td>CUBRID-C012</td><td>Source-confirmed</td><td><code>boot_sr.c:3055-3132</code>, <code>log_manager.c:1742-1855</code></td></tr>
+<tr><td>CUBRID-C013</td><td>Inferred</td><td>flush/holder refs; IO_WRITE_FREEZE 미구현</td></tr>
+<tr><td>CUBRID-C014</td><td>Unknown</td><td>동시 workload와 prototype A/B 필요</td></tr>
+<tr><td>CUBRID-C015</td><td>Source-confirmed</td><td><code>double_write_buffer.cpp:3188-3374 dwb_load_and_recover_pages</code></td></tr>
+<tr><td>CUBRID-C016</td><td>Source-confirmed</td><td><code>btree.c:113-122,2301-2322,3090-3103,3977-4025</code></td></tr>
+<tr><td>CUBRID-C017</td><td>Source-confirmed</td><td><code>btree_load.c:2746-2842</code>, <code>btree.c:12137-12179,28881-28884,30069-30112</code></td></tr>
+<tr><td>CUBRID-C018</td><td>Inferred</td><td>runtime head insertion + first-fit traversal; per-insert benchmark pending</td></tr>
+<tr><td>CUBRID-C019</td><td>Source-confirmed</td><td><code>btree.c:3005-3008,29784-29948,3124-3137</code></td></tr>
+<tr><td>CUBRID-C020</td><td>Inferred</td><td>single-SX/new-reader gate/reader drain 조건; overflow-only prototype pending</td></tr>
+<tr><td>CUBRID-C021</td><td>Unknown</td><td>leaf wait와 overflow wait를 분리한 A/B 필요</td></tr>
+<tr><td>PG-C001</td><td>Source-confirmed</td><td><code>bufmgr.h:202-223</code>, <code>bufmgr.c:6118-6175</code></td></tr>
+<tr><td>PG-C002</td><td>Source-confirmed</td><td><code>bufmgr.c:4510-4642 FlushBuffer</code></td></tr>
+<tr><td>PG-C003</td><td>Source-confirmed</td><td><code>buf_internals.h:105-116</code>, <code>bufmgr.c:7251-8430</code></td></tr>
+<tr><td>PG-C004</td><td>Source-confirmed</td><td><code>smgr.c:764-798</code>, <code>md.c:1063-1121</code>, <code>fd.c:2230-2281</code></td></tr>
+<tr><td>PG-C005</td><td>Source-confirmed negative wiring</td><td><code>buffer_stage_common</code> 대 blocking <code>smgrwritev</code></td></tr>
+<tr><td>PG-C006</td><td>Source-confirmed</td><td><code>bufmgr.c:7455-7502 AbortBufferIO</code></td></tr>
+<tr><td>PG-C007</td><td>Source-confirmed</td><td><code>nbtree/README:42-49</code>, <code>nbtdedup.c:34-99</code>, <code>nbtinsert.c:163-170</code></td></tr>
+<tr><td>MYSQL-C001</td><td>Source-confirmed</td><td><code>sync0rw.cc:54-105</code> compatibility</td></tr>
+<tr><td>MYSQL-C002</td><td>Source-confirmed</td><td><code>buf0flu.cc:499-570,1051-1166</code></td></tr>
+<tr><td>MYSQL-C003</td><td>Source-confirmed</td><td><code>fil0fil.h:259-344</code>, <code>os0file.cc:6066-6169</code></td></tr>
+<tr><td>MYSQL-C004</td><td>Source-confirmed</td><td><code>buf0dblwr.h:61-140</code>, <code>buf0dblwr.cc:1668-1710</code></td></tr>
+<tr><td>MYSQL-C005</td><td>Source-confirmed</td><td><code>buf0flu.cc:943-1038</code>, <code>buf0buf.cc:5731-5997</code></td></tr>
+<tr><td>MYSQL-C006</td><td>Source-confirmed</td><td><code>buf0flu.cc:1073-1102</code>, <code>fil0fil.cc:7212-7331</code></td></tr>
+<tr><td>MYSQL-C007</td><td>Source-confirmed</td><td><code>dict0dict.cc:3227-3321</code>, <code>row0ins.cc:2806-3082</code>, <code>btr0btr.h:64-83</code></td></tr>
+<tr><td>CMP-C001</td><td>Partial analogy</td><td>snapshot 대 live-frame responsibility</td></tr>
+<tr><td>CMP-C002</td><td>Partial analogy · Inferred</td><td>READ/SHARE_EXCLUSIVE/SX non-equivalence</td></tr>
+<tr><td>CMP-C003</td><td>Partial analogy</td><td>FLUSHING/BM_IO_IN_PROGRESS/BUF_IO_WRITE</td></tr>
+<tr><td>CMP-C004</td><td>No equivalent</td><td>write-error rollback/error/fatal policy</td></tr>
+<tr><td>CMP-C005</td><td>No equivalent</td><td>blocking 대 callback write wiring</td></tr>
+<tr><td>CMP-C006</td><td>No equivalent</td><td>CUBRID overflow chain 대 PG posting tuple/InnoDB 개별 secondary record</td></tr>
+</tbody></table></div>
+
+<h3 id="experiment-transcript">experiment transcript summary</h3>
+<p>build와 runtime identity는 <a href="../evidence/runs/runtime-baseline-build/meta.json">build receipt</a>와 <a href="../evidence/runtime-tools-runtime-tools-baseline.json">tool snapshot</a>에 있다. 세 primary stdout은 <a href="../evidence/runs/exp-flush-run-1/stdout.txt">1</a>, <a href="../evidence/runs/exp-flush-run-2/stdout.txt">2</a>, <a href="../evidence/runs/exp-flush-run-3/stdout.txt">3</a>이고, global 관측은 <a href="../evidence/runs/exp-statdump-before/stdout.txt">before</a>와 <a href="../evidence/runs/exp-statdump-after/stdout.txt">after</a>다. cleanup은 <a href="../evidence/runs/exp-cleanup-verify/stdout.txt">검증 receipt</a>로 끝난다.</p>
+
+<h3 id="coverage-matrix">18-item coverage matrix</h3>
+<div class="table-wrap"><table><caption>필수 coverage와 Book anchor</caption><thead><tr><th>obligation</th><th>장/anchor</th><th>대표 Claim</th></tr></thead><tbody>
+<tr><td>orientation</td><td>1장 <code>#orientation</code></td><td>C002, C007, C013, CMP002</td></tr>
+<tr><td>mental-model</td><td>2장 <code>#mental-model</code></td><td>C009, MYSQL003</td></tr>
+<tr><td>scope-interface-seams</td><td>3장 <code>#scope-interface-seams</code></td><td>C001, C002, C004</td></tr>
+<tr><td>data-ownership-lifetime</td><td>3장 <code>#data-ownership-lifetime</code></td><td>C003, C005, C008, PG003, MYSQL003/004</td></tr>
+<tr><td>lifecycle-state-machines</td><td>4장 <code>#lifecycle-state-machines</code></td><td>C003, C004, C010, C012</td></tr>
+<tr><td>core-workflows</td><td>4장 <code>#snapshot-copy-flush</code></td><td>C002~C006</td></tr>
+<tr><td>concurrency</td><td>5장 <code>#concurrency</code></td><td>C001, C003, C007, C008, C014</td></tr>
+<tr><td>storage-durability-recovery</td><td>5장 <code>#storage-durability</code></td><td>C004, C005, C015, MYSQL005</td></tr>
+<tr><td>policies-algorithms</td><td>6장 <code>#policy-recommendation</code>, <code>#btree-overflow-oid-case</code></td><td>C007~C009, C013, C014, C016~C021, CMP002/006</td></tr>
+<tr><td>errors-resource-pressure</td><td>6장 <code>#errors-resource-pressure</code></td><td>C004, C010, C012, C014</td></tr>
+<tr><td>performance-observability</td><td>7장 <code>#performance-observability</code></td><td>C005, C011, C014, C017/018/021</td></tr>
+<tr><td>experimental-validation</td><td>7장 <code>#experimental-validation</code></td><td>C006</td></tr>
+<tr><td>postgresql-analysis</td><td>8장 <code>#postgresql-analysis</code></td><td>PG001~PG006</td></tr>
+<tr><td>mysql-analysis</td><td>9장 <code>#mysql-analysis</code></td><td>MYSQL001~MYSQL006</td></tr>
+<tr><td>cross-database-comparison</td><td>10장 <code>#cross-database-comparison</code></td><td>CMP001~CMP006, PG007, MYSQL007</td></tr>
+<tr><td>reimplementation-blueprint</td><td>11장 <code>#reimplementation-blueprint</code></td><td>C004, C008, C012~C015, CMP001</td></tr>
+<tr><td>glossary-evidence-unknowns</td><td>12장 <code>#glossary</code></td><td>C001, C009, C014, C016/017/020/021</td></tr>
+<tr><td>teaching-map</td><td>12장 <code>#teaching-map</code></td><td>C006, C013, C014</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="teaching-map" data-claim-id="CUBRID-C006 CUBRID-C013 CUBRID-C014 CUBRID-C016 CUBRID-C017 CUBRID-C018 CUBRID-C020 CUBRID-C021">
+<h2>Quiz와 live Grill</h2>
+<ol>
+<li><a href="../quiz/quiz-1/quiz.md">Quiz 1</a>: 직접 workload를 실행해 “runtime이 증명한 것/못한 것”을 분리한다. <span class="claim-id">[CUBRID-C006]</span></li>
+<li><a href="../quiz/quiz-2/quiz.md">Quiz 2</a>: sync/direct/AIO/copy/frame 계약을 고르고, overflow OID의 AS-IS/TO-BE latch 흐름을 직접 그린다. <span class="claim-id">[CUBRID-C016, CUBRID-C017, CUBRID-C018, CUBRID-C020, CUBRID-C021]</span></li>
+<li>Live Grill: owner/lifetime → state machine → durability/error → 정책/성능 → DBMS 비등가 순으로 한 번에 한 질문을 답한다.</li>
+</ol>
+<p>숙련의 기준은 “SX가 좋다/싫다”가 아니다. 주어진 I/O mode에서 input owner, 종료 event, writer exclusion, non-reuse ref, single-flusher, WAL, error cleanup을 빠짐없이 말하고 대안의 반증 조건까지 제시하는 것이다. <span class="claim-id">[CUBRID-C013, CUBRID-C014]</span></p>
+<div class="table-wrap"><table><caption>central behavior → evidence → 학습 활동</caption><thead><tr><th>central behavior</th><th>direct Claim</th><th>Experiment</th><th>Quiz</th><th>Live Grill concepts</th></tr></thead><tbody>
+<tr><td><code>snapshot-copy-flush</code></td><td>C002~C006, PG002/003, MYSQL004/005, CMP001/003</td><td><code>experiment-1</code></td><td><code>quiz-1</code></td><td>lifecycle, durability/error, experiment interpretation</td></tr>
+<tr><td><code>stable-frame-io-contract</code></td><td>C002, C006, C008/009, C016~C021, PG001/003/004/007, MYSQL001/002/003/007, CMP001/006</td><td><code>experiment-1</code> current baseline; overflow 성능은 미검증</td><td><code>quiz-2</code></td><td>Interface, owner/lifetime, concurrency, B-tree AS-IS/TO-BE, policy/performance, DB 비등가</td></tr>
+</tbody></table></div>
+</section>
+<section id="readiness"><h2>Readiness declaration</h2><p><strong>READY WITHIN DECLARED SCOPE</strong></p><p>현행 snapshot flush의 source-level 재구성과, on-disk format을 바꾸지 않는 request-owned freeze module의 기능 계약·total transitions·conformance oracle까지 준비됐다. 대안의 성능 우위, public SX ABI, timing equivalence는 scope 밖이며 Unknown으로 남긴다.</p></section>
+<section class="recap"><h2>최종 요약</h2><p>AIO라서 SX가 필요한 것이 아니다. consumer가 읽는 allocation을 terminal event까지 지키고, content·identity·single-I/O·WAL·dirty·cleanup 책임을 빠짐없이 배정해야 한다. 이 책의 Quiz와 이어지는 Live Grill로 그 판단을 직접 설명하면 학습이 완료된다.</p></section>
+</main><footer><nav class="book-nav"><a rel="prev" href="11-blueprint.html">이전</a><a href="../index.html">목차</a></nav></footer></body></html>

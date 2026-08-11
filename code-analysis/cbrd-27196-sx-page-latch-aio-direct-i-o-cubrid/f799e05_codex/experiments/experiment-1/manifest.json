@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "id": "experiment-1",
+  "behavior_ids": [
+    "snapshot-copy-flush",
+    "stable-frame-io-contract"
+  ],
+  "claim_ids": [
+    "CUBRID-C006"
+  ],
+  "runner": "flush_workload.sql",
+  "runner_sha256": "3d8de7b2e12c2113d30bbb80b266aec34aaaa471c8625bdd29f56220921e2b04",
+  "runner_argv": [
+    "/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc/bin/csql",
+    "-u",
+    "dba",
+    "sxaio_codex",
+    "-i",
+    "flush_workload.sql"
+  ],
+  "run_ids": [
+    "exp-flush-run-1",
+    "exp-flush-run-2",
+    "exp-flush-run-3"
+  ],
+  "oracle_ko": "세 csql 실행 모두 inserted_rows=20000이고 Num_data_page_dirties가 0보다 크며 관측값은 204467, 204516, 204515다. 세 workload·background activity·online-backup trigger를 포함한 active observation window의 전역 Num_data_page_iowrites는 0에서 3으로 증가한다. exact caller나 unique page 수가 아니라 I/O 활동의 양성 신호로만 해석한다.",
+  "controls_ko": "양성 대조는 동일한 hashed SQL을 세 번 반복해 row 수와 dirty 증가가 모두 재현되는지 확인한다. 음성 대조는 workload 전 statdump의 Num_data_page_dirties=0, Num_data_page_iowrites=0이다. 각 runner가 DROP 후 같은 table을 다시 만들어 입력 크기를 고정한다.",
+  "alternative_explanations_ko": "Num_data_page_iowrites 증가는 online backup의 pgbuf_flush_all_unfixed뿐 아니라 watcher 구간의 background flush 또는 DWB의 doublewrite/home-volume 쓰기가 함께 만들 수 있다. 따라서 exact caller와 logical page 수는 이 수치로 구별하지 않는다. SQL counter는 snapshot memcpy, BCB unlock, WAL 순서, re-dirty/error branch를 직접 관찰하지 않으며 이 사실들은 pinned source로만 주장한다.",
+  "repetitions": 3,
+  "cubrid_runtime_only": true,
+  "runtime_tools_snapshot": "evidence/runtime-tools-runtime-tools-baseline.json",
+  "cleanup_verified": true
+}

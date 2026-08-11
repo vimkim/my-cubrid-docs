@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>6장 — copy·READ·SX·freeze·WRITE 선택</title><link rel="stylesheet" href="../assets/report.css"></head>
+<body><header><nav class="book-nav"><a rel="prev" href="05-concurrency-durability.html">이전</a><a href="../index.html">목차</a><a rel="next" href="07-experiment.html">다음</a></nav><h1>6장 — copy·READ·SX·freeze·WRITE 선택</h1></header><main>
+<aside class="chapter-goals"><strong>학습 목표.</strong> source-confirmed stable-buffer 계약과 설계 권고를 분리하고, workload·TDE/DWB·queue bound에 따라 정책을 고르는 알고리즘과 실패 fallback을 제시한다.</aside>
+<p><strong>구체적 상황.</strong> 16 KiB copy 하나를 아끼려고 writer를 2 ms 멈추는 것이 항상 이득인가? 무엇을 측정해야 답할 수 있는가?</p>
+<section id="stable-frame-io-contract" data-claim-id="CUBRID-C002 CUBRID-C006 CUBRID-C008 CUBRID-C009 PG-C001 PG-C003 PG-C004 MYSQL-C001 MYSQL-C002 MYSQL-C003 CMP-C001">
+<h2>Source-confirmed: 어느 구현도 피할 수 없는 계약</h2>
+<div class="table-wrap"><table><caption>consumer 종류별 최소 안정 계약</caption><thead><tr><th>consumer</th><th>input owner</th><th>release event</th><th>companion state</th></tr></thead><tbody>
+<tr><td>CUBRID current blocking write</td><td>sync flusher stack snapshot</td><td>call return</td><td>FLUSHING, DIRTY generation, WAL <span class="claim-id">[CUBRID-C002, CUBRID-C009]</span></td></tr>
+<tr><td>PostgreSQL live-frame write</td><td>pinned shared buffer</td><td>blocking write와 I/O-state 종료</td><td>content SX/X, pin, BM_IO_IN_PROGRESS <span class="claim-id">[PG-C001, PG-C003, PG-C004]</span></td></tr>
+<tr><td>InnoDB live-frame AIO</td><td>buffer frame/request</td><td>callback completion</td><td>page SX, io_fix, request slot <span class="claim-id">[MYSQL-C001, MYSQL-C002, MYSQL-C003]</span></td></tr>
+</tbody></table></div>
+<p>세 구현 모두 input bytes, frame lifetime, single-I/O state, WAL과 completion cleanup을 분리한다. latch 하나가 전체 계약은 아니다. <span class="claim-id">[CMP-C001]</span></p>
+<p>현재 runtime은 비교용 CUBRID baseline에 dirty와 I/O 활동이 있음을 보강할 뿐, 아래 대안의 correctness나 성능을 검증하지 않는다. <span class="claim-id">[CUBRID-C006]</span></p>
+</section>
+
+<section id="policy-recommendation" data-claim-id="CUBRID-C007 CUBRID-C008 CUBRID-C009 CUBRID-C013 CUBRID-C014 CMP-C002">
+<h2>Inferred/Unknown: 정책 비교와 선택 알고리즘</h2>
+<div class="table-wrap"><table><caption>live frame 또는 copy를 I/O에 넘기는 방법</caption><thead><tr><th>정책</th><th>reader</th><th>writer</th><th>frame reuse</th><th>평가</th></tr></thead><tbody>
+<tr><td>현행 snapshot copy</td><td>계속</td><td>계속</td><td><code>FLUSHING</code>으로 제한</td><td>동시성 단순, copy 비용</td></tr>
+<tr><td>sync live frame + READ/fix</td><td>계속</td><td>call return까지 대기</td><td>fix로 금지</td><td>현행 mode 재사용 가능</td></tr>
+<tr><td>public SX + io ref</td><td>계속</td><td>completion까지 대기</td><td>io ref로 금지</td><td>범용 API·공정성 비용</td></tr>
+<tr><td>전용 <code>IO_WRITE_FREEZE</code> + io ref</td><td>계속</td><td>completion까지 대기</td><td>io ref로 금지</td><td>flush 책임에 가장 좁음</td></tr>
+<tr><td>WRITE + fix/ref</td><td>대기</td><td>대기</td><td>금지</td><td>정확하지만 reader까지 막음</td></tr>
+<tr><td>request-owned copy AIO</td><td>계속</td><td>계속</td><td>live frame은 submit 뒤 자유</td><td>copy와 request memory 비용</td></tr>
+</tbody></table></div>
+<p>CUBRID strict READ는 WRITE를 배제하므로 synchronous live-frame write 구간에는 correctness 후보가 된다. 그러나 current holder의 thread ownership 때문에 true AIO로 그대로 연장하기 어렵다. <span class="claim-id">[CUBRID-C007, CUBRID-C008, CUBRID-C009]</span></p>
+<p class="callout evidence-inferred"><span class="evidence-label">권고 아키텍처.</span> flush/AIO만 필요하면 public SX보다 request-owned <code>IO_WRITE_FREEZE + io_ref</code>를 우선한다. B-tree도 독립적으로 SX semantics를 필요로 하고 동일한 공정성·승격 계약을 공유할 때만 generic SX의 비용을 정당화한다. <span class="claim-id">[CUBRID-C013, CMP-C002]</span></p>
+<p class="callout evidence-unknown"><span class="evidence-label">아직 모르는 것.</span> copy 제거가 writer stall, cache miss, TDE/DWB copy를 포함한 전체 비용을 이길지는 구현과 경쟁 workload 없이는 알 수 없다. <span class="claim-id">[CUBRID-C014]</span></p>
+<h3>선택 pseudocode</h3>
+<pre><code>choose_policy(config, page, queue):
+  if not aio_enabled: return CURRENT_SNAPSHOT
+  if page_needs_TDE_transform: return REQUEST_OWNED_OUTPUT
+  if DWB_requires_copy and measured_copy_is_not_hot: return COPY_AIO
+  if queue.inflight_bytes + IO_PAGESIZE &gt; max_inflight_bytes:
+     return configured_fallback(COPY_SYNC or CURRENT_SNAPSHOT)
+  if writer_p99_budget is not measured: return COPY_AIO
+  return FRAME_AIO_WITH_IO_WRITE_FREEZE</code></pre>
+<p><strong>configuration/threshold:</strong> <code>max_inflight_requests</code>, <code>max_inflight_bytes</code>, queue-full fallback, freeze timeout, shutdown drain timeout은 명시적으로 둔다. 기본값을 임의로 정하지 않고 baseline 뒤 결정한다. copy memory는 최대 <code>N × IO_PAGESIZE</code>, frame mode의 replacement pressure는 최대 <code>N</code> pinned frames다.</p>
+<p><strong>복잡도:</strong> page당 state transition은 O(1)이고 copy는 O(page size)다. queue scan을 도입한다면 completion/timeout lookup은 request ID hash 또는 bounded ring으로 O(1)이어야 한다. hot-page 연속 flush, tiny buffer pool, TDE-heavy workload는 pathological case다.</p>
+</section>
+
+<section id="btree-overflow-oid-case" data-claim-id="CUBRID-C016 CUBRID-C017 CUBRID-C018 CUBRID-C019 CUBRID-C020 CUBRID-C021">
+<h2>B-tree 적용 예: <code>ACTIVE</code> OID가 한 키에 몰릴 때</h2>
+<p><strong>쉬운 상황.</strong> <code>CREATE INDEX idx ON t(status)</code>를 만들었고, 100만 행의
+<code>status</code>가 모두 <code>ACTIVE</code>라고 하자. 한 leaf record에 모든 OID를 넣을 수 없으므로 CUBRID는
+다음처럼 한 key를 overflow OID page의 단일 연결 리스트에 연결한다.</p>
+<pre><code>leaf record for ACTIVE
+[ key | leaf OIDs | flag 0x2000 | head VPID ]
+                         |
+                         v
+                       H1 -> H2 -> H3 -> NULL</code></pre>
+<p class="diagram-alt">그림 설명: leaf record 끝에는 첫 overflow page의 VPID가 있고, 각 overflow page header에는
+다음 page VPID 하나만 있다. 새 DML overflow page는 H1 앞, 즉 leaf 바로 뒤에 새 head로 들어간다.</p>
+
+<h3>(a) 어디에 저장하고, (b) 어떻게 표시하는가</h3>
+<p class="callout evidence-source"><span class="evidence-label">Source-confirmed.</span> overflow 여부는 별도 record
+header가 아니라 <strong>첫 OID의 slotid 상위 비트</strong>에
+<code>BTREE_LEAF_RECORD_OVERFLOW_OIDS (0x2000)</code>로 pack된다. leaf record 꼬리에는 chain head VPID가
+붙고, link가 없어지면 VPID와 flag를 함께 지운다. 런타임 증설은 기존 OID를 옮기는 것이 아니라 새 OID를
+담은 page를 새 head로 만든다. unique index도 MVCC physical version이 공존하면 이 경로를 쓸 수 있으므로
+“비유니크 전용”은 아니다. <span class="claim-id">[CUBRID-C016, CUBRID-C019]</span></p>
+<p><strong>CREATE INDEX와 이후 INSERT는 다르다.</strong> 기존 100만 행으로 index를 처음 만드는 bulk loader는
+현재 overflow tail을 들고 다음 page를 바로 연결한다. 아래 선형 탐색은 index 생성 자체가 아니라
+<strong>그 뒤 같은 key에 DML로 OID를 추가할 때</strong> 나타난다. <span class="claim-id">[CUBRID-C017]</span></p>
+
+<h3>(c) AS-IS — 한 장씩 WRITE로 확인</h3>
+<p><strong>예시:</strong> bulk-load 뒤 <code>H1</code>과 <code>H2</code>는 가득 찼고, 마지막 <code>H3</code>에만
+빈자리가 남았다고 하자.</p>
+<pre><code>leaf WRITE는 계속 보유
+  H1 WRITE fix -> full 확인 -> H2 주소 복사 -> H1 unfix
+  H2 WRITE fix -> full 확인 -> H3 주소 복사 -> H2 unfix
+  H3 WRITE fix -> free 발견 -> WRITE를 잡은 채 caller에 반환
+  caller        -> H3에 OID 삽입 -> H3 unfix</code></pre>
+<p>overflow page끼리는 latch crabbing을 하지 않는다. 탐색 helper가 동시에 잡는 overflow latch는 최대 한
+장이지만, 호출자는 그동안 <strong>leaf WRITE latch</strong>를 계속 보유한다. 공간을 찾은 H3도 놓지 않고 그대로
+삽입하므로 “사이에 다른 writer가 공간을 선점해 재검증한다”는 race는 없다. 비용은 방문 page마다
+fix/unfix와 짧은 exclusive 구간을 반복하고, 긴 탐색일수록 leaf WRITE 보유 시간도 늘어난다는 점이다.
+<span class="claim-id">[CUBRID-C017]</span></p>
+<p class="callout evidence-inferred"><span class="evidence-label">복잡도 정정.</span> 한 번의 최악 탐색은 chain
+길이 <code>K</code>에 대해 O(K)지만 <strong>매 INSERT가 O(K)는 아니다.</strong> DML이 새 page를 head에 만들면
+그 page에 여유가 있는 동안 다음 INSERT는 보통 H1에서 끝난다. 긴 scan은 head가 찬 증설 시점, bulk-built
+chain 끝의 partial page를 찾을 때, 또는 delete로 빈칸이 깊이 생긴 경우에 주기적으로 나타난다.
+<span class="claim-id">[CUBRID-C018]</span></p>
+
+<h3>TO-BE 후보 — 지나갈 page는 SX, 쓸 page에서 SX→WRITE</h3>
+<p>제안 SX가 READ와 호환되고 SX/SX·SX/WRITE는 충돌한다고 가정하면, H1·H2를 읽어 확인하는 동안 그
+overflow page의 reader는 통과할 수 있다. H3에서 빈자리를 찾으면 SX를 놓지 않고 WRITE로 올린 뒤 OID를
+넣는다. 한 modifier 후보만 존재하므로 경쟁 promoter가 먼저 끼어들어 재시작하는 경우를 없앨 수 있다.
+다만 이는 현재 코드가 아니라 설계 가설이다. <span class="claim-id">[CUBRID-C020]</span></p>
+<div class="table-wrap"><table><caption>AS-IS와 TO-BE 후보가 바꾸는 것</caption><thead><tr><th>질문</th><th>AS-IS</th><th>TO-BE 후보</th></tr></thead><tbody>
+<tr><td>지나갈 overflow page</td><td>WRITE</td><td>SX: READ와 공존</td></tr>
+<tr><td>쓸 overflow page</td><td>WRITE를 잡은 채 반환</td><td>SX→WRITE 뒤 삽입</td></tr>
+<tr><td>overflow latch 동시 보유</td><td>최대 1장</td><td>최대 1장</td></tr>
+<tr><td>chain 탐색</td><td>최악 O(K)</td><td>여전히 최악 O(K)</td></tr>
+<tr><td>같은 leaf writer</td><td>leaf WRITE에서 직렬화</td><td>overflow-only 변경이면 그대로</td></tr>
+<tr><td>기대 효과</td><td>지나가는 page도 reader와 충돌</td><td>overflow-page reader 충돌 완화 후보</td></tr>
+</tbody></table></div>
+<p><strong>“SX→WRITE는 항상 성공”의 정확한 뜻.</strong> 즉시·무조건 성공한다는 뜻은 아니다. page당 SX
+owner가 하나이고, 승격 대기 중 새 reader 유입을 닫고, 기존 reader가 유한 시간 안에 빠지며, 다른 page
+latch와 cycle이 없다는 조건에서만 <strong>경쟁 promoter 때문에 실패·재시작하지 않고 reader drain 뒤
+획득</strong>한다고 말할 수 있다. timeout·cancel·shutdown은 여전히 별도 실패다.
+<span class="claim-id">[CUBRID-C020]</span></p>
+<p class="callout evidence-unknown"><span class="evidence-label">중요한 한계.</span> 표준 range scan은 leaf
+READ를 유지한 채 overflow page를 읽고, insert는 leaf WRITE를 먼저 보유한다. 따라서 overflow page만 SX로
+바꿔도 upstream leaf 충돌이 이득을 가릴 수 있다. SX는 O(K), fix/unfix, 같은-leaf writer 직렬화를 없애지
+않는다. 실제 이득은 leaf wait와 overflow wait를 분리한 prototype A/B 전까지 Unknown이다.
+<span class="claim-id">[CUBRID-C020, CUBRID-C021]</span></p>
+<p><strong>주차장 비유.</strong> leaf WRITE는 건물 입구를 닫는 차단기이고, overflow latch는 각 층의 문이다.
+층 문을 SX로 바꿔 보행자를 통과시켜도 입구가 이미 닫혔다면 체감 효과는 작다. 이 비유는 latch 호환성만
+설명하며 O(K) 탐색, WAL, 공정성은 설명하지 않는다.</p>
+<p><strong>실무 판단.</strong> 저카디널리티 단독 index는 선택도가 낮고 이 overflow 구조도 만들기 쉽다. 무조건
+생성하기보다 실제 predicate와 실행 계획을 확인하고, 필요하면 다른 선택 컬럼을 포함한 composite index와
+비교한다. SX 최적화와 tail/free-page hint처럼 주소 탐색 자체를 줄이는 개선은 서로 다른 문제다.</p>
+</section>
+
+<section id="errors-resource-pressure" data-claim-id="CUBRID-C004 CUBRID-C010 CUBRID-C012 CUBRID-C014">
+<h2>오류와 자원 압박은 정상 경로보다 먼저 설계한다</h2>
+<div class="table-wrap"><table><caption>AIO 오류·자원 압박 사건별 cleanup 의무</caption><thead><tr><th>사건</th><th>반드시 끝낼 것</th><th>실패하면</th></tr></thead><tbody>
+<tr><td>submit 실패</td><td>freeze/ref/FLUSHING 해제, DIRTY 복원, wakeup</td><td>영구 writer·victim stall</td></tr>
+<tr><td>completion error</td><td>한 번만 결과 기록·복원·해제</td><td>double unfix 또는 clean 오판</td></tr>
+<tr><td>cancel/timeout</td><td>consumer가 buffer를 더 읽지 않는 terminal event 확인</td><td>use-after-reuse</td></tr>
+<tr><td>shutdown</td><td>새 submit 차단 후 모든 request drain, 그 뒤 pool free</td><td>completion의 해제된 BCB 접근</td></tr>
+<tr><td>queue/full buffer pressure</td><td>bounded fallback과 backpressure</td><td>무제한 memory 또는 convoy</td></tr>
+</tbody></table></div>
+<p>현행 common write 실패는 dirty/oldest LSA와 waiter를 되돌리지만, TDE와 첫 DWB-slot 실패는 그 공통 cleanup 전에 return하는 결함 후보가 있다. shutdown도 현재의 동기 drain 순서에 AIO request quiescence가 추가되어야 한다. <span class="claim-id">[CUBRID-C004, CUBRID-C010, CUBRID-C012]</span></p>
+<p>queue 크기, fallback(copy 또는 sync), timeout 정책은 아직 구현·실험되지 않았다. “전용 freeze가 더 빠르다”가 아니라 “책임 경계가 더 좁다”까지만 이 보고서가 결론낸다. <span class="claim-id">[CUBRID-C014]</span></p>
+<div class="table-wrap"><table><caption>구체적 failure boundary와 degraded mode</caption><thead><tr><th>failure</th><th>전파·cleanup</th><th>retry/degraded mode</th></tr></thead><tbody>
+<tr><td>request/cipher allocation 실패</td><td>publish 전이면 state 불변; publish 후면 common rollback</td><td>bounded sync snapshot fallback 또는 caller error</td></tr>
+<tr><td>queue full</td><td>frame freeze를 먼저 잡지 않음</td><td>copy-sync fallback; 무제한 wait 금지</td></tr>
+<tr><td>short write/full disk/I/O error</td><td>DIRTY/LSA 보존, FLUSHING/freeze/ref clear, waiter wake</td><td>현재 error policy로 전파; clean 처리 금지</td></tr>
+<tr><td>corrupt output/checksum mismatch</td><td>home write 금지, evidence log</td><td>DWB/WAL recovery 가능성 판단; assertion만으로 state 고아화 금지</td></tr>
+<tr><td>timeout/cancel</td><td>OS가 buffer를 더 읽지 않는 terminal 확인 뒤 release</td><td>확인 전 frame reuse 금지</td></tr>
+<tr><td>completion double delivery</td><td>terminal CAS loser는 아무 cleanup도 하지 않음</td><td>counter/assert로 탐지</td></tr>
+<tr><td>shutdown race</td><td>submit gate close → drain/cancel 완료 → pool free</td><td>timeout이면 안전한 process-level failure; 강제 reuse 금지</td></tr>
+</tbody></table></div>
+<p>assertion boundary는 “state 불변식 위반을 탐지”하는 곳이지 cleanup 대체물이 아니다. recoverable error는 caller에게 반환하고, durability가 불확실한 terminal error는 기존 server policy와 일치시켜야 한다.</p>
+</section>
+<section class="recap"><h2>요약과 다음 질문</h2><p>현행 계약은 source-confirmed지만 정책 우열은 measured threshold 없이는 Unknown이다. 다음 장에서는 어떤 counter와 command가 그 판단을 지지하고 무엇을 증명하지 못하는지 확인한다.</p></section>
+</main><footer><nav class="book-nav"><a rel="prev" href="05-concurrency-durability.html">이전</a><a href="../index.html">목차</a><a rel="next" href="07-experiment.html">다음</a></nav></footer></body></html>

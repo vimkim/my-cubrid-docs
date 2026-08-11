@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>9장 — MySQL/InnoDB 비교</title><link rel="stylesheet" href="../assets/report.css"></head>
+<body><header><nav class="book-nav"><a rel="prev" href="08-postgresql.html">이전</a><a href="../index.html">목차</a><a rel="next" href="10-comparison.html">다음</a></nav><h1>9장 — MySQL/InnoDB 비교</h1></header><main>
+<aside class="chapter-goals"><strong>학습 목표.</strong> InnoDB page SX, <code>io_fix</code>, DWB copy, live-frame datafile AIO와 callback/pass ownership을 추적하고 normal-page 규칙의 예외와 error policy를 구분한다.</aside>
+<p><strong>구체적 상황.</strong> DWB가 page를 한 번 복사했는데도 왜 home-file AIO가 live frame을 completion까지 붙들 수 있는가?</p>
+<section id="mysql-analysis" data-claim-id="MYSQL-C001 MYSQL-C002 MYSQL-C003 MYSQL-C004 MYSQL-C005 MYSQL-C006 MYSQL-C007">
+<h2>InnoDB의 SX도 혼자 일하지 않는다</h2>
+<p>InnoDB rw-lock SX는 S reader와 호환되고 다른 SX/X와 충돌한다. 정상 persistent uncompressed page flush는 page SX에 더해 <code>BUF_IO_WRITE</code>를 설정한다. 전자는 content modifier를 막고 후자는 pending write, single flusher, relocation/victim 제한을 표현한다. <span class="claim-id">[MYSQL-C001, MYSQL-C002]</span></p>
+<p>file interface는 synchronous buffer는 call 반환까지, asynchronous buffer는 callback 시작까지 유효해야 한다고 구분하고 AIO slot이 request 정보를 보유한다. completion은 clean/io_fix 전이와 SX 해제를 맡는다. <span class="claim-id">[MYSQL-C003, MYSQL-C005]</span></p>
+<div class="table-wrap"><table><caption>InnoDB DWB와 datafile 단계의 실제 I/O input</caption><thead><tr><th>단계</th><th>실제 input</th><th>수명</th></tr></thead><tbody>
+<tr><td>regular DWB batch</td><td>page bytes를 복사한 <code>m_buffer</code></td><td>DWB segment write까지</td></tr>
+<tr><td>plain datafile AIO</td><td>다시 live <code>bpage</code> frame</td><td>callback/completion까지</td></tr>
+<tr><td>compression/encryption 변환</td><td>request-lived auxiliary block</td><td>그 datafile completion까지</td></tr>
+</tbody></table></div>
+<p>DWB에서 copy가 한 번 일어난다고 home-file AIO도 그 copy를 쓴다고 가정하면 안 된다. plain path는 live frame을 다시 참조하므로 SX와 io_fix의 장기 보유가 실제 의미를 가진다. <span class="claim-id">[MYSQL-C004]</span></p>
+<p>redo-before-data, page SX, io_fix, request/callback ownership을 묶은 것이 전체 계약이다. 따라서 “InnoDB가 SX를 쓴다”는 사실은 CUBRID에도 동일한 public SX가 필수라는 뜻이 아니다. <span class="claim-id">[MYSQL-C002, MYSQL-C005]</span></p>
+<p class="callout evidence-source"><span class="evidence-label">Source-confirmed exceptions.</span> 이 규칙은 normal persistent uncompressed page 기준이다. compressed-only와 temporary/intrinsic page는 latch/fix retry가 다르다. stale/deleted tablespace는 cleanup 가능한 branch지만, retry 뒤 남은 ordinary terminal write error는 traced path에서 fatal assertion 정책을 따른다. <span class="claim-id">[MYSQL-C006]</span></p>
+<h3>secondary duplicate는 overflow OID chain이 아니다</h3>
+<p>InnoDB non-clustered index는 user secondary key에 clustered-key column을 더해 각 row를 구별하는 개별
+leaf record로 넣는다. record 수정 leaf는 X이고 tree/block SX는 구조 변경 coordination에 쓰인다. SX
+호환표는 비슷한 한 축이지만 CUBRID처럼 key 하나의 OID page chain을 head부터 first-fit하는 경로는 아니다.
+<span class="claim-id">[MYSQL-C007]</span></p>
+</section>
+<section class="recap"><h2>요약과 다음 질문</h2><p>InnoDB의 장기 SX는 live-frame AIO 때문에 의미가 있지만 io_fix와 callback ownership 없이는 불완전하다. 다음 장에서는 세 엔진을 같은 responsibility 축과 명시적 비등가 label로 맞춘다.</p></section>
+</main><footer><nav class="book-nav"><a rel="prev" href="08-postgresql.html">이전</a><a href="../index.html">목차</a><a rel="next" href="10-comparison.html">다음</a></nav></footer></body></html>

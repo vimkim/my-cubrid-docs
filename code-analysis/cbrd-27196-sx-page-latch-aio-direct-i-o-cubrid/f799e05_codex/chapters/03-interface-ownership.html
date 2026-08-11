@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>3장 — Interface와 owner/lifetime</title><link rel="stylesheet" href="../assets/report.css"></head>
+<body><header><nav class="book-nav"><a rel="prev" href="02-mental-model.html">이전</a><a href="../index.html">목차</a><a rel="next" href="04-current-flush.html">다음</a></nav><h1>3장 — Interface와 owner/lifetime</h1></header><main>
+<aside class="chapter-goals"><strong>학습 목표.</strong> flush caller의 pre/postcondition과 error 의무를 말하고, BCB·frame·snapshot·request의 owner와 reclamation 시점을 구분한다.</aside>
+<p><strong>구체적 상황.</strong> submitter가 return한 뒤 callback이 page를 정리한다면, thread-owned holder와 request-owned reference 중 누가 release 권한을 가져야 하는가?</p>
+<section id="scope-interface-seams" data-claim-id="CUBRID-C001 CUBRID-C002 CUBRID-C004">
+<h2>Module seam과 caller 의무</h2>
+<pre><code>flush caller
+  -&gt; page buffer: image/state 결정
+  -&gt; WAL: image LSA까지 먼저 durable
+  -&gt; TDE: plain -&gt; encrypted output
+  -&gt; DWB: torn-write용 slot/image
+  -&gt; file I/O: input buffer를 call return까지 소비
+  -&gt; page buffer: success/re-dirty/error 정리</code></pre>
+<p>CUBRID public content latch는 <code>READ</code>/<code>WRITE</code>이고 <code>FLUSH</code>는 fix에 쓰지 못하는 block pseudo-mode다. 현행 flush는 public holder를 새로 만들지 않고 BCB mutex/flags에서 시작한다. image를 만든 뒤 WAL과 data write를 호출하고 다시 BCB state를 끝낸다. <span class="claim-id">[CUBRID-C001, CUBRID-C002, CUBRID-C004]</span></p>
+<div class="table-wrap"><table><caption>caller별 Interface 계약</caption><thead><tr><th>caller/의존성</th><th>호출 전</th><th>성공 후</th><th>실패·설정·성능 의무</th></tr></thead><tbody>
+<tr><td>explicit/checkpoint/victim flusher</td><td>VPID·DIRTY·not-FLUSHING 재검증</td><td>그 snapshot 세대의 FLUSHING 종료</td><td>이미 clean/flushing이면 skip 또는 wait; long I/O 동안 BCB mutex 금지</td></tr>
+<tr><td>WAL</td><td>snapshot LSA 보유</td><td>data submit 전 해당 LSA durable</td><td>temporary/unlogged 성격은 caller policy로 분리 <span class="claim-id">[CUBRID-C004]</span></td></tr>
+<tr><td>TDE</td><td>plain image와 algorithm 확인</td><td>cipher output owner 확정</td><td>allocation/encrypt 실패도 common cleanup으로 합류해야 함 <span class="claim-id">[CUBRID-C005, CUBRID-C010]</span></td></tr>
+<tr><td>DWB/file I/O</td><td>stable input과 volume identity</td><td>sync return 또는 ownership transfer</td><td>DWB on/off, sync threshold가 path·copy·counter 의미를 바꿈</td></tr>
+<tr><td>future AIO completion</td><td>generation+io_ref+terminal owner</td><td>정확히 한 번 state/ref/wakeup 정리</td><td>queue full, cancel, shutdown, p99 writer wait를 Interface 밖으로 숨기지 않음</td></tr>
+</tbody></table></div>
+<p><strong>ordering precondition:</strong> image와 LSA를 같은 BCB 세대에서 확정하고, BCB mutex를 놓은 뒤 WAL과 느린 I/O를 수행한다. <strong>postcondition:</strong> 성공·실패 어느 쪽도 FLUSHING/ref/waiter를 고아로 남기지 않는다.</p>
+</section>
+
+<section id="data-ownership-lifetime" data-claim-id="CUBRID-C003 CUBRID-C005 CUBRID-C008 PG-C003 MYSQL-C003 MYSQL-C004">
+<h2>memory owner/lifetime ledger</h2>
+<div class="table-wrap"><table><caption>I/O 관련 memory의 owner와 lifetime</caption><thead><tr><th>object</th><th>owner</th><th>lifetime 끝</th><th>목적</th></tr></thead><tbody>
+<tr><td>live frame + BCB</td><td>buffer pool</td><td>fix/in-flight ref와 reuse protocol 종료</td><td>resident page identity</td></tr>
+<tr><td>CUBRID stack snapshot</td><td>sync flusher call stack</td><td>blocking write 또는 DWB transfer 반환</td><td>writer overlap 분리</td></tr>
+<tr><td>TDE output</td><td>flush/request</td><td>consumer 종료</td><td>disk cipher image</td></tr>
+<tr><td>DWB slot</td><td>DWB subsystem</td><td>slot reuse 허용</td><td>torn-write 보호</td></tr>
+<tr><td>AIO request</td><td>queue/completion protocol</td><td>success/error/cancel terminal state</td><td>pointer, result, ref, wakeup 소유</td></tr>
+</tbody></table></div>
+<p>CUBRID holder는 thread anchor에 연결되고 <code>pgbuf_unfix</code>는 current thread의 holder를 해제한다. 이것은 synchronous call에는 자연스럽지만 다른 completion thread가 끝낼 AIO request ownership과 같지 않다. PostgreSQL도 AIO subsystem pin과 I/O state를 별도로 두고, InnoDB도 callback/pass로 소유권을 넘긴다. <span class="claim-id">[CUBRID-C008, PG-C003, MYSQL-C003]</span></p>
+<p>TDE와 DWB는 snapshot copy와 목적이 다르다. plain snapshot을 없애도 암호화 output이나 DWB slot copy가 남을 수 있다. <span class="claim-id">[CUBRID-C005, MYSQL-C004]</span></p>
+<h3>BCB와 frame의 최소 data model</h3>
+<div class="table-wrap"><table><caption>volatile state, persistent identity, reclamation</caption><thead><tr><th>field/개념</th><th>identity·owner</th><th>보호·수명</th><th>volatile/persistent</th></tr></thead><tbody>
+<tr><td><code>VPID(volid,pageid)</code></td><td>BCB가 담는 logical page key</td><td>BCB mutex 아래 재사용 시 교체</td><td>page header/volume과 대응하는 persistent identity</td></tr>
+<tr><td><code>iopage_buffer</code></td><td>buffer pool frame allocation</td><td>fix/io_ref가 0이고 victim 조건일 때만 재할당</td><td>volatile bytes; disk image는 별도</td></tr>
+<tr><td>latch word + fix count</td><td>BCB aggregate state</td><td>atomic/mutex protocol</td><td>volatile; restart 때 복원하지 않음</td></tr>
+<tr><td>DIRTY·FLUSHING·oldest LSA</td><td>현재 memory generation</td><td>BCB mutex/flag helper</td><td>volatile scheduling state; WAL/page LSA가 recovery 근거 <span class="claim-id">[CUBRID-C003]</span></td></tr>
+<tr><td>snapshot/TDE output</td><td>sync stack 또는 future request</td><td>consumer return/completion까지</td><td>임시 allocation, 완료 후 회수</td></tr>
+<tr><td>DWB slot</td><td>DWB block</td><td>block write·home write protocol 뒤 reuse</td><td>DWB volume의 durable recovery copy를 가질 수 있음</td></tr>
+</tbody></table></div>
+<p>future request의 memory 하한은 대략 <code>N × (request metadata + copy policy이면 IO_PAGESIZE)</code>다. frame policy면 page-size copy는 줄지만 <code>N</code>개의 frame이 victim 불가 상태가 된다. 따라서 queue bound는 memory와 replacement pressure를 동시에 제한해야 한다.</p>
+</section>
+<section class="recap"><h2>요약과 다음 질문</h2><p>latch는 content, fix/ref는 identity, request는 cross-thread completion을 소유한다. 다음 장에서는 이 객체들이 정상·재더티·실패에서 어떻게 전이하는지 끝까지 추적한다.</p></section>
+</main><footer><nav class="book-nav"><a rel="prev" href="02-mental-model.html">이전</a><a href="../index.html">목차</a><a rel="next" href="04-current-flush.html">다음</a></nav></footer></body></html>
