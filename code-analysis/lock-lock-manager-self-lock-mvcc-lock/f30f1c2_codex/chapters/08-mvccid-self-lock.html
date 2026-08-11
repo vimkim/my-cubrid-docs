@@ -1,0 +1,40 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>8장 — MVCCID self-lock</title><link rel="stylesheet" href="../assets/report.css"></head><body><header><p>8장</p><h1>MVCCID self-lock</h1><p>inserter와 unique/FK observer의 transaction-resource rendezvous</p></header><nav class="book-nav"><a rel="prev" href="07-mvcc-lock-policy.html">7장</a><a href="../index.html">목차</a><a rel="next" href="09-failure-durability-observability.html">9장</a></nav><main>
+<section id="goals-08" data-claim-id="CUBRID-C030 CUBRID-C031 CUBRID-C032"><h2>학습 목표와 질문</h2><p>T1이 key 7을 insert했지만 아직 commit하지 않았고 T2가 같은 key를 insert한다고 하자. 이 장을 마치면 “self”의 주체, X/S의 owner, wait 전 release, transaction-end ordering, wake 뒤 recheck를 한 sequence로 설명하고, 순서를 뒤집은 반례를 만들 수 있다.</p></section>
+<section id="mvccid-self-lock-rendezvous" data-claim-id="CUBRID-C030 CUBRID-C031 CUBRID-C032 CUBRID-C033 CUBRID-C043 PG-C030 PG-C031 MYSQL-C030 MYSQL-C031 CMP-C030"><h2>한 줄 protocol과 직접 관측</h2><pre><code>T1: MVCCID M lazy allocation
+    X ensure on TRANSACTION(M)
+    publish INSID=M and INSERT_IN_PROGRESS in row/index
+
+T2: find active other INSID M
+    release page latch and transient object state
+    request S on TRANSACTION(M), conflict with T1 X, wait
+
+T1: publish commit/abort result and M inactive/completed
+    unlock X(M), grant/wake waiter
+
+T2: fully release S(M)
+    verify M terminal, restart B-tree/record search
+    decide unique/FK outcome from current state</code></pre><div class="invariant"><p><strong>Publication invariant:</strong> 다른 transaction이 관찰할 수 있는 INSID=M이 있고 inserter가 active라면 같은 M resource의 X self-lock이 이미 존재해야 한다. <span class="claim-id">CUBRID-C030</span></p></div><div class="experiment evidence-runtime"><p><span class="evidence-label">Runtime-observed:</span> Experiment 4의 한 contended dump에서 <code>Transaction self-lock (inserter MVCCID = 5)</code>에 T1 <code>X_LOCK</code> holder와 T2 <code>S_LOCK</code> waiter가 함께 있었다. T1 rollback 뒤 T2 key 7 insert가 성공했다. 이는 rendezvous identity와 좁은 결과만 관찰하며 latch release와 root restart는 source 근거다. <a href="../experiments/experiment-4/observed/contention.lockdb.txt">raw dump</a> · <a href="../evidence/runs/exp4-observe-r1/stdout.txt">SQL output</a>. <span class="claim-id">CUBRID-C043</span></p></div></section>
+<section id="concurrency" data-claim-id="CUBRID-C010 CUBRID-C027 CUBRID-C030 CUBRID-C031 CUBRID-C032"><h2>보호 상태와 뒤집으면 안 되는 ordering</h2><div class="table-wrap"><table><caption>Self-lock concurrency contract</caption><thead><tr><th>보호 상태</th><th>보호 primitive</th><th>Owner/lifetime</th><th>Ordering</th></tr></thead><tbody><tr><td>row/index physical bytes</td><td>page latch</td><td>search thread/짧은 access</td><td>S wait 전 release</td></tr><tr><td>LK_RES holder/waiter list</td><td>resource mutex</td><td>critical section</td><td>queue/grant state publication 후 unlock/wake</td></tr><tr><td>unfinished M outcome</td><td>TRANSACTION(M) X/S</td><td>transactions/completion wait</td><td>X-before-INSID, inactive-before-X-release</td></tr><tr><td>active/completed visibility</td><td>MVCC transaction state protocol</td><td>transaction lifecycle</td><td>wakeup 뒤 terminal 재검사</td></tr></tbody></table></div><ol><li><strong>X ensure → INSID publication:</strong> 반대면 T2의 S가 holder 없이 grant되어 active inserter를 기다리지 못한다.</li><li><strong>latch/object release → S wait:</strong> 반대면 장기 wait 동안 page를 고정하고 stale pointer나 cycle 위험을 만든다.</li><li><strong>inactive publication → X unlock → wake/recheck:</strong> 반대면 T2가 깨어났는데 M을 active로 보거나 미확정 결과를 확정할 수 있다.</li></ol><p>Wake는 업무 success가 아니라 최신 상태를 검사할 권리다. S를 계속 보유해 key를 보호하지 않고 full-release하는 이유도 S의 책임이 completion rendezvous로 끝나기 때문이다. <span class="claim-id">CUBRID-C031 CUBRID-C032</span></p></section>
+<section id="workflow-08" data-claim-id="CUBRID-C030 CUBRID-C031 CUBRID-C032"><h2>Unique/FK fast·wait·retry·failure</h2><pre><code>ensure_self_lock(T1):
+  M = lazy_get_main_or_sub_mvccid()
+  if local hint does not prove this M:
+    acquire TRANSACTION(M), X
+    on error: return error before INSID publication
+  remember hint; return success
+
+wait_for_inserter(T2, M):
+  if M is own or already terminal: skip external wait, re-evaluate
+  release leaf/overflow latch and transient row lock
+  result = acquire TRANSACTION(M), S, normal wait policy
+  if result is timeout/deadlock/interrupt/error: cleanup and propagate
+  fully release S; require terminal state
+  mark scan interrupted and restart search
+
+finish_inserter(T1):
+  publish main/sub MVCC completion or abort
+  release X through self-lock/subtransaction/all-lock path
+  grantable S waiter may wake</code></pre><p>Unique checker는 root부터 key를 다시 찾는다. FK checker는 active inserting parent에서 leaf/overflow latch와 현재 row lock을 놓고 scan을 interrupted로 만든다. Delete-in-progress FK는 object-lock branch를 사용할 수 있어 “모든 FK wait가 self-lock”은 틀리다.</p></section>
+<section id="why-self-lock" data-claim-id="CUBRID-C030 CUBRID-C033"><h2>왜 row X가 아니라 MVCCID X인가</h2><p>Successful MVCC insert fast path는 새 row마다 object X holder를 만들지 않는다. Transaction이 N개 row를 insert해도 한 main/sub MVCCID X가 여러 unique/FK observer의 completion target이 될 수 있다. Holder-side entry의 성장 방향을 inserted rows N에서 active MVCCID 수 A로 바꾸는 것이다.</p><p>비교 모델은 <code>M_row ≈ N·E</code>, <code>M_self ≈ A·E + W·E</code>다. E는 entry 크기, W는 실제 observer wait entries다. 이는 allocator/cache overhead를 뺀 symbolic formula이며 speedup 측정값이 아니다. Hot inserter에 W가 몰리는 fan-in, non-MVCC/tracking-failure row-X fallback, prepared 2PC OID tracking과 object-X materialization 때문에 “항상 O(1)”은 아니다. <span class="claim-id">CUBRID-C033</span></p></section>
+<section id="failure-08" data-claim-id="CUBRID-C012 CUBRID-C030 CUBRID-C031 CUBRID-C032 CUBRID-C033"><h2>Failure, subtransaction, 2PC 경계</h2><div class="table-wrap"><table><caption>Self-lock path의 실패와 보존해야 할 상태</caption><thead><tr><th>사건</th><th>금지 상태</th><th>안전한 처리</th></tr></thead><tbody><tr><td>X ensure allocation/acquire 실패</td><td>holder 없는 observable INSID</td><td>statement 오류, publication 이전 unwind</td></tr><tr><td>S wait timeout/deadlock/interrupt</td><td>stale key 판정 또는 leaked waiter</td><td>wait metadata cleanup, 오류 전파</td></tr><tr><td>main/sub abort</td><td>active publication 뒤 X만 먼저 사라짐</td><td>completion/inactive publication 후 self-lock release</td></tr><tr><td>prepared 2PC</td><td>recovery가 runtime self-lock 그대로 있다고 가정</td><td>tracked inserted OID의 object-X 예외 경로</td></tr><tr><td>restart</td><td>volatile waiter queue replay</td><td>durable outcome 복구 후 runtime table 재초기화</td></tr></tbody></table></div></section>
+<section id="nearest-mechanisms" data-claim-id="PG-C030 PG-C031 MYSQL-C030 MYSQL-C031 CMP-C030"><h2>PG/InnoDB와 왜 동일하지 않은가</h2><p>PostgreSQL XID lock은 transaction XID의 Exclusive owner와 Share waiter라는 모양이 가깝고 speculative token은 decision-before-release 순서가 직접 닮았다. 그러나 tuple ownership은 XMAX/MultiXact에도 남고 VXID/speculative token의 caller와 scope가 다르다. InnoDB는 DB_TRX_ID로 per-record implicit X owner를 찾고 contention 때 그 record에 explicit X를 materialize한다. Transaction wait edge는 있지만 transaction-ID S/X resource는 없다. 모두 partial analogy이며 CUBRID식 단일 MVCCID rendezvous와 equivalent가 아니다.</p></section>
+<section id="recap-08" data-claim-id="CUBRID-C030 CUBRID-C031 CUBRID-C032"><h2>복습과 다음 장</h2><p><code>self</code>, X, S, typed transaction resource, completion-before-unlock, recheck를 모두 사용해 protocol을 설명하라. 다음 장은 이 runtime state와 durable recovery의 경계, 실패·관측·성능을 다룬다.</p></section></main><footer><nav class="book-nav"><a rel="prev" href="07-mvcc-lock-policy.html">7장</a><a href="../index.html">목차</a><a rel="next" href="09-failure-durability-observability.html">9장</a></nav></footer></body></html>

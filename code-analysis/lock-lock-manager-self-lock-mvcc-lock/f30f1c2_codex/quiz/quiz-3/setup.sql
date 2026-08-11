@@ -1,0 +1,3 @@
+CREATE TABLE dba.q3_account (id INTEGER PRIMARY KEY, balance INTEGER NOT NULL);
+INSERT INTO dba.q3_account VALUES (1, 100), (2, 200);
+COMMIT;

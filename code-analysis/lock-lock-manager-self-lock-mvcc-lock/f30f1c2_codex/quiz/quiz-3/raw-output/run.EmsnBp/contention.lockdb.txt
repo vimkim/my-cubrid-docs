@@ -1,0 +1,41 @@
+
+*** Lock Table Dump ***
+ Lock Escalation at = 100000, Run Deadlock interval =  1.00
+
+Transaction (index  0, , @|0)
+Isolation COMMITTED READ
+State TRAN_ACTIVE
+Timeout_period : Infinite wait
+
+Transaction (index  1, csql, DBA@dev2|3367524)
+Isolation COMMITTED READ
+State TRAN_ACTIVE
+Timeout_period : Infinite wait
+
+Transaction (index  2, csql, DBA@dev2|3367600)
+Isolation COMMITTED READ
+State TRAN_ACTIVE
+Timeout_period : Infinite wait
+
+Transaction (index  3, lockdb, DBA@dev2|3367624)
+Isolation COMMITTED READ
+State TRAN_ACTIVE
+Timeout_period : No wait
+
+Object Lock Table:
+	Current number of objects which are locked    = 9
+	Current number of objects which are allocated = 1000
+	Current size of objects which are allocated = 242K
+
+OID =  1|   641|   1
+Object type: Instance of class ( 0|   209|   3) = dba.q3_account.
+MVCC info: insert ID = 5, delete ID = missing.
+Total mode of holders =     X_LOCK, Total mode of waiters =     X_LOCK.
+Num holders=  1, Num blocked-holders=  0, Num waiters=  1
+LOCK HOLDERS:
+    Tran_index =   1, Granted_mode =     X_LOCK, Count =   1
+LOCK WAITERS:
+    Tran_index =   2, Blocked_mode =     X_LOCK 
+	              Start_waiting_at = Tue Aug 11 19:59:51 2026       
+	              Wait_for_secs = -1.00
+

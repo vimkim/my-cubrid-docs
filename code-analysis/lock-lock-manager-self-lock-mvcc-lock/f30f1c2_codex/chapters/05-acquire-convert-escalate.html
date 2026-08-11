@@ -1,0 +1,41 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>5장 — acquire, conversion, escalation</title><link rel="stylesheet" href="../assets/report.css"></head><body><header><p>5장</p><h1>Acquire, conversion, escalation</h1></header><nav class="book-nav"><a rel="prev" href="04-ownership-lifetime.html">4장</a><a href="../index.html">목차</a><a rel="next" href="06-wait-deadlock-release.html">6장</a></nav><main>
+<section id="goals-05" data-claim-id="CUBRID-C052 CUBRID-C053 CUBRID-C054"><h2>학습 목표와 upgrade 시나리오</h2><p>이 장을 마치면 new request, re-request, conversion, no-wait miss, suspended wait, escalation을 서로 다른 branch로 구현할 수 있다. T1이 S를 가진 resource에서 더 강한 mode를 요청하고 T2가 incompatibility를 만들 때, T1은 old grant를 버리는가를 추적한다.</p></section>
+<section id="acquire-state-machine" data-claim-id="CUBRID-C052"><h2>Interface에서 generic state machine까지</h2><pre><code>lock_object(thread, oid, class_oid, mode, cond)
+  validate object/class; NULL_LOCK is no-op
+  derive ROOT/CLASS/INSTANCE and required class intention
+  acquire/check parent intention when required
+  call lock_internal_perform_lock_object
+    FIND_RESOURCE
+    NEW_REQUESTER or EXISTING_HOLDER
+    optional SUSPENDED
+    POST_GRANT
+    DONE</code></pre><p>입력 오류, implicit class coverage, resource miss/allocation, re-request, conversion, conflict-without-enqueue, wait는 각각 다른 결과를 낸다. Standalone mode와 bulk loader의 precovered path는 ordinary server state machine의 branch가 아니라 front-door exception이다. MVCCID transaction resource도 generic acquire scheduler를 재사용한다. <span class="claim-id">CUBRID-C052</span></p></section>
+<section id="acquire-transition-table" data-claim-id="CUBRID-C073"><h2>Legal transition table</h2><div class="table-wrap"><table><caption>Generic acquire의 guard, action, failure</caption><thead><tr><th>From</th><th>Guard</th><th>Action</th><th>Next/result</th></tr></thead><tbody><tr><td>FIND_RESOURCE</td><td>resource absent, allocation succeeds</td><td>initialize typed resource</td><td>NEW_REQUESTER</td></tr><tr><td>FIND_RESOURCE</td><td>allocation fails</td><td>error, no waiter publication</td><td>DONE/error</td></tr><tr><td>FIND_RESOURCE</td><td>my holder exists</td><td>classify re-request/upgrade</td><td>EXISTING_HOLDER</td></tr><tr><td>NEW_REQUESTER</td><td>compatible with holders and preceding waiters</td><td>link holder and transaction entry</td><td>POST_GRANT</td></tr><tr><td>NEW_REQUESTER</td><td>conflict + zero-wait</td><td>leave no waiter</td><td>DONE/not granted</td></tr><tr><td>NEW_REQUESTER</td><td>conflict + wait</td><td>enqueue and publish wait</td><td>SUSPENDED</td></tr><tr><td>EXISTING_HOLDER</td><td>equal/weaker</td><td>increment/reuse count</td><td>POST_GRANT</td></tr><tr><td>EXISTING_HOLDER</td><td>compatible conversion</td><td>replace granted mode</td><td>POST_GRANT</td></tr><tr><td>EXISTING_HOLDER</td><td>blocked conversion</td><td>retain old grant, set blocked mode</td><td>SUSPENDED 또는 no-grant</td></tr><tr><td>SUSPENDED</td><td>grant already published</td><td>consume resume state</td><td>POST_GRANT</td></tr><tr><td>SUSPENDED</td><td>timeout/interrupt/victim</td><td>remove wait/blocked state</td><td>DONE/error</td></tr><tr><td>POST_GRANT</td><td>bookkeeping complete</td><td>metrics/cleanup</td><td>DONE/granted</td></tr></tbody></table></div><p><code>DONE</code>나 unknown state를 loop가 다시 실행하는 것은 assertion/internal error 대상이다. 이 graph는 request-entry lifecycle이지 transaction/thread 전체 lifecycle이 아니다. <span class="claim-id">CUBRID-C073</span></p></section>
+<section id="conversion" data-claim-id="CUBRID-C053"><h2>Conversion은 fresh acquire가 아니다</h2><pre><code>if requested protection is already covered:
+  reuse holder and increment count
+else:
+  target = lock_Conv[granted][requested]
+  if target compatible with other holders:
+    granted_mode = target
+  else if zero_wait:
+    keep old granted_mode; return NOT_GRANTED
+  else:
+    keep old granted_mode; blocked_mode = target
+    place by Upgrader Positioning Rule; suspend</code></pre><p>Blocked upgrader는 protection gap을 만들지 않는다. Old grant와 target blocked mode가 한 holder entry에 공존하고 WFG에도 들어간다. Enum 숫자 비교가 아니라 conversion table이 target을 정한다. <span class="claim-id">CUBRID-C053</span></p></section>
+<section id="escalation" data-claim-id="CUBRID-C054 CUBRID-C061"><h2>Escalation은 여러 resource를 상위로 치환한다</h2><pre><code>if BU_LOCK or missing class or already escalating: SKIP
+choose superclass/class granule counter
+if count less than lock_escalation: SKIP
+
+if rollback_on_lock_escalation is true:
+  set abort reason and return aborted before conversion
+
+target = IS to S, or IX/SIX to X
+drop transaction hold mutex before generic acquisition
+try class conversion with FORCE_ZERO_WAIT
+if granted:
+  remove covered instance locks; preserve original class count
+else:
+  retain all pre-existing instance locks; return failure</code></pre><div class="table-wrap"><table><caption>Conversion과 escalation 차이</caption><thead><tr><th>구분</th><th>Conversion</th><th>Escalation</th></tr></thead><tbody><tr><td>입력</td><td>한 resource의 held/requested mode</td><td>class granule count와 여러 instance locks</td></tr><tr><td>변경</td><td>같은 resource mode</td><td>상위 class grant로 covered instances 제거</td></tr><tr><td>실패</td><td>old grant 유지 또는 blocked conversion</td><td>기존 instances 유지; true rollback policy는 conversion 전 abort</td></tr><tr><td>설정</td><td>mode table</td><td>default threshold 100000, minimum 5; rollback default false</td></tr></tbody></table></div><p><code>rollback_on_lock_escalation=true</code>는 zero-wait conversion 실패 뒤 rollback하는 정책이 아니다. Threshold가 통과된 직후 conversion 전에 abort한다. <span class="claim-id">CUBRID-C054 CUBRID-C061</span></p></section>
+<section id="fast-miss-failure-05" data-claim-id="CUBRID-C052 CUBRID-C053 CUBRID-C054 CUBRID-C070"><h2>Fast, miss, retry, failure</h2><ul><li><strong>Fast:</strong> empty/compatible resource, equal re-request, compatible upgrade.</li><li><strong>Miss:</strong> conditional conflict는 waiter 없이 not-granted.</li><li><strong>Slow:</strong> incompatible new request 또는 blocked conversion은 published wait state로 suspend.</li><li><strong>Retry:</strong> same-transaction lead waiter와 join하는 race에서 lead가 이미 깼으면 resource lookup부터 다시 시작.</li><li><strong>Failure:</strong> entry allocation은 half-link 없이 error; escalation true-policy abort와 false-policy conversion miss를 구분.</li></ul></section>
+<section id="performance-05" data-claim-id="CUBRID-C065"><h2>Complexity와 trade-off</h2><p>Hash bucket을 찾은 뒤 hot resource의 holder/waiter list work는 H holders와 W waiters에 대해 worst-case <code>O(H+W)</code>로 추론된다. 이는 source loop에서 유도한 구조적 bound이지 latency 측정이 아니다. Escalation은 entries를 줄이지만 class-level conflict domain을 넓힌다. Self-lock은 escalation과 달리 rows를 class로 합치지 않고 unfinished insert completion을 MVCCID key 하나에 모은다. <span class="claim-id">CUBRID-C065</span></p></section>
+<section id="recap-05" data-claim-id="CUBRID-C052 CUBRID-C053 CUBRID-C054"><h2>복습과 다음 장</h2><p>Request는 immediate grant, no-wait miss, blocked new waiter, blocked conversion, escalation이라는 서로 다른 branch를 가진다. 다음 장은 SUSPENDED branch의 publication, deadlock, grant-before-wakeup, release를 자세히 연다.</p></section></main><footer><nav class="book-nav"><a rel="prev" href="04-ownership-lifetime.html">4장</a><a href="../index.html">목차</a><a rel="next" href="06-wait-deadlock-release.html">6장</a></nav></footer></body></html>

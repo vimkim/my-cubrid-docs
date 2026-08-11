@@ -1,0 +1,87 @@
+
+*** Lock Table Dump ***
+ Lock Escalation at = 100000, Run Deadlock interval =  1.00
+
+Transaction (index  0, , @|0)
+Isolation COMMITTED READ
+State TRAN_ACTIVE
+Timeout_period : Infinite wait
+
+Transaction (index  1, csql, DBA@dev2|3367524)
+Isolation COMMITTED READ
+State TRAN_ACTIVE
+Timeout_period : Infinite wait
+
+Transaction (index  2, lockdb, DBA@dev2|3367599)
+Isolation COMMITTED READ
+State TRAN_ACTIVE
+Timeout_period : No wait
+
+Object Lock Table:
+	Current number of objects which are locked    = 9
+	Current number of objects which are allocated = 1000
+	Current size of objects which are allocated = 242K
+
+  Transaction self-lock (inserter MVCCID = 5)
+Total mode of holders =     X_LOCK, Total mode of waiters =  NULL_LOCK.
+Num holders=  1, Num blocked-holders=  0, Num waiters=  0
+LOCK HOLDERS:
+    Tran_index =   1, Granted_mode =     X_LOCK, Count =   1, Nsubgranules =  0
+
+OID =  0|   195|-32767
+Object type: Class = dual.
+Total mode of holders =    IS_LOCK, Total mode of waiters =  NULL_LOCK.
+Num holders=  1, Num blocked-holders=  0, Num waiters=  0
+LOCK HOLDERS:
+    Tran_index =   1, Granted_mode =    IS_LOCK, Count =   1, Nsubgranules =  0
+
+OID =  0|   209|-32765
+Object type: Class = dba.q3_account.
+Total mode of holders =    IS_LOCK, Total mode of waiters =  NULL_LOCK.
+Num holders=  1, Num blocked-holders=  0, Num waiters=  0
+LOCK HOLDERS:
+    Tran_index =   1, Granted_mode =    IS_LOCK, Count =   1, Nsubgranules =  0
+
+OID =  0|   193|   1
+Object type: Root class.
+Total mode of holders =    IX_LOCK, Total mode of waiters =  NULL_LOCK.
+Num holders=  1, Num blocked-holders=  0, Num waiters=  0
+LOCK HOLDERS:
+    Tran_index =   1, Granted_mode =    IX_LOCK, Count =   2, Nsubgranules =  0
+
+OID =  0|   195|   1
+Object type: Class = dual.
+Total mode of holders =    IS_LOCK, Total mode of waiters =  NULL_LOCK.
+Num holders=  1, Num blocked-holders=  0, Num waiters=  0
+LOCK HOLDERS:
+    Tran_index =   1, Granted_mode =    IS_LOCK, Count =   5, Nsubgranules =  0
+
+OID =  0|   198|   1
+Object type: Class = _db_synonym.
+Total mode of holders =    IS_LOCK, Total mode of waiters =  NULL_LOCK.
+Num holders=  1, Num blocked-holders=  0, Num waiters=  0
+LOCK HOLDERS:
+    Tran_index =   1, Granted_mode =    IS_LOCK, Count =   5, Nsubgranules =  0
+
+OID =  1|   641|   1
+Object type: Instance of class ( 0|   209|   3) = dba.q3_account.
+MVCC info: insert ID = 5, delete ID = missing.
+Total mode of holders =     X_LOCK, Total mode of waiters =  NULL_LOCK.
+Num holders=  1, Num blocked-holders=  0, Num waiters=  0
+LOCK HOLDERS:
+    Tran_index =   1, Granted_mode =     X_LOCK, Count =   1
+
+OID =  0|   198|   3
+Object type: Class = _db_histogram.
+Total mode of holders =    IS_LOCK, Total mode of waiters =  NULL_LOCK.
+Num holders=  1, Num blocked-holders=  0, Num waiters=  0
+LOCK HOLDERS:
+    Tran_index =   1, Granted_mode =    IS_LOCK, Count =   5, Nsubgranules =  0
+
+OID =  0|   209|   3
+Object type: Class = dba.q3_account.
+Total mode of holders =    IX_LOCK, Total mode of waiters =  NULL_LOCK.
+Num holders=  1, Num blocked-holders=  0, Num waiters=  0
+LOCK HOLDERS:
+    Tran_index =   1, Granted_mode =    IX_LOCK, Count =   6, Nsubgranules =  1
+

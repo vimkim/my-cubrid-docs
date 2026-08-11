@@ -1,0 +1,53 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>9장 — lifecycle, durability, failure, observability</title><link rel="stylesheet" href="../assets/report.css"></head><body><header><p>9장</p><h1>Lifecycle, durability, failure, observability</h1></header><nav class="book-nav"><a rel="prev" href="08-mvccid-self-lock.html">8장</a><a href="../index.html">목차</a><a rel="next" href="10-experiments.html">10장</a></nav><main>
+<section id="goals-09" data-claim-id="CUBRID-C050 CUBRID-C051 CUBRID-C059 CUBRID-C060"><h2>학습 목표와 restart 질문</h2><p>목표는 request state machine을 process lifecycle과 섞지 않고 startup·normal shutdown·abort·crash/restart를 구분하는 것이다. 서버가 crash했을 때 “holder/waiter queue를 WAL에서 그대로 복원하는가?”와 “prepared 2PC는 무엇이 예외인가?”를 답한다.</p></section>
+<section id="lock-manager-lifecycle" data-claim-id="CUBRID-C050 CUBRID-C051"><h2>Subsystem lifecycle</h2><pre><code>UNINITIALIZED
+  transaction/MVCC table ready
+INITIALIZING
+  transaction hold table, object hash/freelist, WFG, detector daemon
+  returned init error: partial lock_finalize and unwind
+RUNNING
+  acquire/wait/release, commit/abort, optional 2PC prepare
+FINALIZING
+  detector daemon, WFG, object structures, transaction hold table
+UNINITIALIZED
+
+PROCESS CRASH:
+  ordinary resources/entries/queues vanish
+  durable database/log recovery occurs outside ordinary queue replay</code></pre><p>Normal finalization destroys detector before graph/hash/transaction storage so it cannot access freed state. Higher-level connection quiescing은 이 lock-manager claim 밖이며 shutdown caller가 보장해야 한다. <span class="claim-id">CUBRID-C050 CUBRID-C051</span></p></section>
+<section id="storage-durability-recovery" data-claim-id="CUBRID-C012 CUBRID-C060 CUBRID-C069"><h2>Volatile/durable boundary와 N/A</h2><div class="table-wrap"><table><caption>Lock state의 storage·crash applicability</caption><thead><tr><th>Concern</th><th>Ordinary lock table</th><th>Evidenced seam</th><th>결론</th></tr></thead><tbody><tr><td>on-disk layout</td><td>process allocation/finalization</td><td>none for LK_RES/LK_ENTRY</td><td>Not applicable</td></tr><tr><td>dirty page/checkpoint</td><td>grant가 page dirty를 소유하지 않음</td><td>buffer/WAL subsystem</td><td>ordinary queue replay N/A</td></tr><tr><td>commit WAL</td><td>acquire 내부가 아님</td><td>logged local caller가 append/flush 주위에서 unlock</td><td>caller seam applicable</td></tr><tr><td>abort</td><td>queue는 runtime</td><td>rollback → MVCC complete → unlock all</td><td>caller seam applicable</td></tr><tr><td>full disk/corruption</td><td>direct transition 없음</td><td>logging/storage caller error</td><td>lock state N/A, transaction 영향은 가능</td></tr><tr><td>prepared 2PC</td><td>explicit exception</td><td>exclusive object-lock list serialize/reacquire</td><td>restricted durable seam</td></tr></tbody></table></div><p>Ordinary self-lock X/S와 waiter queue를 checkpoint/WAL이 replay한다고 말할 근거가 없다. 반대로 “모든 lock은 volatile”도 너무 넓다. Prepare는 lockless-insert OIDs를 object X로 materialize하고 exclusive object locks를 record에 저장해 recovery에서 infinite-wait로 reacquire한다. WAL/checkpoint/ARIES 전체 구현은 scope-excluded다. <span class="claim-id">CUBRID-C060 CUBRID-C069</span></p></section>
+<section id="transaction-end-order" data-claim-id="CUBRID-C059"><h2>Commit, abort, prepared ordering</h2><pre><code>logged local update commit with retain_lock=false:
+  complete MVCC
+  append commit/unlock record
+  unlock transaction locks
+  flush log and mark transaction completed
+
+local abort:
+  rollback changes
+  complete MVCC
+  lock_unlock_all
+
+2PC prepare:
+  materialize object X for tracked lockless inserts
+  serialize exclusive object-lock list
+  append and flush prepare record</code></pre><p>첫 branch는 logged local update와 <code>retain_lock=false</code>에 한정한다. Read-only/unlogged, retain-lock, non-local 2PC를 같은 order로 일반화하지 않는다. Self-lock X 자체가 prepare record의 lock-list format은 아니다. <span class="claim-id">CUBRID-C059</span></p></section>
+<section id="errors-resource-pressure" data-claim-id="CUBRID-C011 CUBRID-C070"><h2>Error classes를 하나로 합치지 않는다</h2><p>Allocation, zero-wait conflict, timeout, interrupt, deadlock victim, escalation abort, shutdown은 서로 다른 transition이다. I/O·ENOSPC·page corruption은 ordinary in-memory acquire가 직접 분류하는 error가 아니라 storage/log caller seam이며, transaction abort와 held-lock cleanup으로 연결돼야 한다. Silent retry나 업무상 “not found” 변환은 금지한다.</p></section>
+<section id="error-pressure-matrix" data-claim-id="CUBRID-C070"><h2>Failure propagation과 cleanup matrix</h2><div class="table-wrap"><table><caption>오류 검출, 남는 상태, retry 경계</caption><thead><tr><th>Failure</th><th>Detection</th><th>State after handling</th><th>Retry/degraded rule</th></tr></thead><tbody><tr><td>startup allocation</td><td>hold/object/WFG init</td><td>partial structures finalize</td><td>half-initialized RUNNING 금지</td></tr><tr><td>request entry shortage</td><td>new entry allocation</td><td>no half-enqueued waiter</td><td>exact allocation error 전파</td></tr><tr><td>WFG growth pressure</td><td>edge table growth</td><td>current detection attempt error</td><td>200→1000 reuse→at most T² cap</td></tr><tr><td>timeout/interrupt</td><td>finite-wait scan</td><td>request queue/metadata cleanup</td><td>cycle 없이 종료 가능</td></tr><tr><td>deadlock victim</td><td>validated cycle</td><td>first rollback owner, followers error</td><td>transaction-wide abort</td></tr><tr><td>escalation true-policy</td><td>threshold passed</td><td>conversion 전 abort result</td><td>false-policy conversion miss와 구분</td></tr><tr><td>shutdown</td><td>normal teardown</td><td>daemon first, structures reverse cleanup</td><td>new-work quiescing은 caller 의무</td></tr></tbody></table></div></section>
+<section id="configuration-thresholds" data-claim-id="CUBRID-C057 CUBRID-C061"><h2>Exact configuration과 behavioral use</h2><div class="table-wrap"><table><caption>Pinned defaults, limits, semantics</caption><thead><tr><th>Parameter/mechanism</th><th>Default</th><th>Minimum/cap</th><th>Use</th></tr></thead><tbody><tr><td>lock_escalation</td><td>100000</td><td>minimum 5</td><td>class granule threshold와 hash sizing input</td></tr><tr><td>rollback_on_lock_escalation</td><td>false</td><td>boolean</td><td>true이면 필요 판정 뒤 conversion 전 abort</td></tr><tr><td>lock_timeout</td><td>-1, infinite</td><td>session changeable</td><td>finite wait expiry</td></tr><tr><td>deadlock_detection_interval</td><td>1.0 s</td><td>0.1 s</td><td>WFG detection gate</td></tr><tr><td>daemon cadence</td><td>100 ms</td><td>implementation</td><td>timeout/interrupt/eligibility check</td></tr><tr><td>suspended waiter gate</td><td>at least 2</td><td>logical</td><td>WFG build skip below gate</td></tr></tbody></table></div></section>
+<section id="memory-complexity" data-claim-id="CUBRID-C062 CUBRID-C065"><h2>Memory formula와 scaling limits</h2><pre><code>T = configured transaction count
+E = lock_escalation
+B = max(10000, min(T * E * 3 / 1000, 2^23))
+
+memory inventory approximately:
+  8B bucket-pointer bytes
+  + T * 10 initial local LK_ENTRY pool
+  + R_alloc * sizeof(LK_RES)
+  + E_alloc * sizeof(LK_ENTRY)
+  + T * sizeof(WFG_NODE)
+  + edge_capacity * sizeof(WFG_EDGE)
+  + 300 victim slots
+  + mutex, allocator, auxiliary overhead</code></pre><p>Bucket cap은 약 64 MiB지만 전체 RSS cap이 아니다. <code>xlock_dump</code> size도 allocated LK_ENTRY+LK_RES만 포함해 total lock-manager memory가 아니다. Hot resource list는 <code>O(H+W)</code>, WFG pair generation은 local <code>O(H²+H·W+W²)</code> worst case로 추론되며 benchmark가 아니다. <span class="claim-id">CUBRID-C062 CUBRID-C065</span></p></section>
+<section id="performance-observability" data-claim-id="CUBRID-C033 CUBRID-C066 CUBRID-C067 CUBRID-C075"><h2>무엇을 측정할 수 있는가</h2><p>Generic counters에는 acquisition, conversion, re-request, wait count/time이 있고 transaction-resource self-lock도 같은 path를 지나므로 섞인다. Dedicated self-lock counter는 확인되지 않았다. <code>xlock_dump</code>는 resource type/key, aggregate modes, holders/waiters, settings, allocated counts와 제한된 size를 보여 준다. <span class="claim-id">CUBRID-C066 CUBRID-C067</span></p></section>
+<section id="observability-measurement" data-claim-id="CUBRID-C066 CUBRID-C067 CUBRID-C075"><h2>재현 가능한 measurement procedure</h2><ol><li>Revision, T, isolation, timeout, escalation, rollback policy, detector interval, <code>stats_on</code>을 기록한다.</li><li>Watcher를 workload 전에 붙이거나 startup 전 stats tracking을 명시하고 baseline counters를 잡는다.</li><li>Barrier가 있는 bounded sessions로 holder/waiter/release window를 만든다.</li><li>Blocked 시점에 한 번의 full <code>xlock_dump</code>로 exact resource/key/modes를 확인한다.</li><li>SQL outcome과 counter delta를 함께 수집하고 self-lock이 generic traffic과 섞임을 밝힌다.</li><li>Grant/timeout/interrupt/victim을 구분하고 post-clean resource absence를 확인한다.</li><li>여러 번 반복해 distribution을 제시하되 source branch와 runtime frequency를 분리한다.</li></ol><p><code>stats_on</code> default는 false다. Workload 뒤 watcher를 붙이면 target interval을 놓칠 수 있다. Dump는 lock table을 순회·출력하는 observer라 timing을 교란하므로 짧은 wait latency loop에 과도하게 사용하지 않는다. <span class="claim-id">CUBRID-C075</span></p></section>
+<section id="diagnostic-boundaries" data-claim-id="CUBRID-C068"><h2>Diagnostic Unknown</h2><p>Dump/event formatter는 TRANSACTION resource를 MVCCID로 출력하지만 simple-timeout branch는 union의 OID fields를 error arguments로 넘긴다. 이는 source-level discrepancy일 뿐 user-visible defect가 아니다. Finite-timeout self-lock 실험에서 error/event/dump를 함께 보존하기 전까지 <span class="evidence-label">Unknown</span>으로 남긴다. <span class="claim-id">CUBRID-C068</span></p></section>
+<section id="unknowns-09" data-claim-id="CUBRID-C065 CUBRID-C068 CUBRID-C069 CUBRID-C074"><h2>Known unknowns와 safe next experiments</h2><ul><li>self-lock 실제 memory/throughput benefit과 hot-MVCCID fan-in latency</li><li>adversarial conversion starvation freedom</li><li>full lock-manager RSS와 WFG allocation-failure runtime</li><li>active waiter가 있는 shutdown의 higher-level quiescing</li><li>checkpoint/full-disk가 locks를 보유한 transaction caller에 미치는 영향</li></ul><p>이 공백은 ordinary runtime lock table이 storage failure를 소유한다는 식으로 채우지 않는다.</p></section>
+<section id="recap-09" data-claim-id="CUBRID-C050 CUBRID-C051 CUBRID-C059 CUBRID-C060 CUBRID-C067"><h2>복습과 다음 장</h2><p>Ordinary queues는 volatile이고 restart 때 재초기화되며 prepared object locks만 제한된 durable exception이다. Configuration과 관측 수치를 정확히 해석해야 source 구조를 성능 결과로 오인하지 않는다. 다음 장은 네 central behavior의 actual CUBRID experiments를 검토한다.</p></section></main><footer><nav class="book-nav"><a rel="prev" href="08-mvccid-self-lock.html">8장</a><a href="../index.html">목차</a><a rel="next" href="10-experiments.html">10장</a></nav></footer></body></html>

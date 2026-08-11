@@ -1,0 +1,39 @@
+
+*** Lock Table Dump ***
+ Lock Escalation at = 100000, Run Deadlock interval =  1.00
+
+Transaction (index  0, , @|0)
+Isolation COMMITTED READ
+State TRAN_ACTIVE
+Timeout_period : Infinite wait
+
+Transaction (index  1, csql, DBA@dev2|3369146)
+Isolation COMMITTED READ
+State TRAN_ACTIVE
+Timeout_period : Infinite wait
+
+Transaction (index  2, csql, DBA@dev2|3369259)
+Isolation COMMITTED READ
+State TRAN_ACTIVE
+Timeout_period : Infinite wait
+
+Transaction (index  3, lockdb, DBA@dev2|3369345)
+Isolation COMMITTED READ
+State TRAN_ACTIVE
+Timeout_period : No wait
+
+Object Lock Table:
+	Current number of objects which are locked    = 8
+	Current number of objects which are allocated = 1000
+	Current size of objects which are allocated = 242K
+
+  Transaction self-lock (inserter MVCCID = 5)
+Total mode of holders =     X_LOCK, Total mode of waiters =     S_LOCK.
+Num holders=  1, Num blocked-holders=  0, Num waiters=  1
+LOCK HOLDERS:
+    Tran_index =   1, Granted_mode =     X_LOCK, Count =   1, Nsubgranules =  0
+LOCK WAITERS:
+    Tran_index =   2, Blocked_mode =     S_LOCK 
+	              Start_waiting_at = Tue Aug 11 20:00:38 2026       
+	              Wait_for_secs = -1.00
+

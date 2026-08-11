@@ -1,0 +1,3 @@
+INSERT INTO dba.q4_unique VALUES (100, 'a');
+SELECT SLEEP (20.0);
+ROLLBACK;

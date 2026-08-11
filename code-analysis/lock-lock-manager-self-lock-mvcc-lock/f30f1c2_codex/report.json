@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "scope": {"frozen": true, "path": "research/scope.md", "sha256": "711d1a0f5bfebdbe1b55b4299973efc353d90636e2f00fc807f51d031766a839"},
+  "status": "REPORT_READY",
+  "readiness": "READY WITHIN DECLARED SCOPE",
+  "runtime": {
+    "active_tools_snapshot": "evidence/runtime-tools-baseline.json",
+    "baseline_tools_snapshot": "evidence/runtime-tools-baseline.json",
+    "runtime_build_run_id": "runtime-baseline-build-2"
+  },
+  "instrumentation": {"markers": [], "post_clean_build_run_id": null, "status": "not-used", "target_files": []},
+  "runtime_run_ids": ["exp1-observe-r3", "exp2-observe-r10", "exp2-observe-r11", "exp2-observe-r12", "exp3-observe-r8", "exp3-observe-r9", "exp3-observe-r10", "exp4-observe-r8", "exp4-observe-r9", "exp4-observe-r10"],
+  "central_behaviors": [
+    {
+      "id": "resource-mode-hierarchy",
+      "name_ko": "잠금 자원·모드·계층·변환·에스컬레이션",
+      "claim_ids": ["CUBRID-C001", "CUBRID-C002", "CUBRID-C003", "CUBRID-C004", "CUBRID-C040", "PG-C001", "PG-C002", "MYSQL-C001", "MYSQL-C002", "CMP-C001"],
+      "coverage_ids": ["scope-interface-seams", "data-ownership-lifetime", "policies-algorithms"],
+      "experiment_ids": ["experiment-1"], "quiz_ids": ["quiz-1"],
+      "chapter": "chapters/03-interface-and-resources.html", "anchor": "resource-mode-hierarchy",
+      "grill_concepts": ["scope-interface-seams", "data-ownership-lifetime", "policy-performance"]
+    },
+    {
+      "id": "wait-deadlock-release",
+      "name_ko": "대기·교착·타임아웃·깨우기·트랜잭션 종료",
+      "claim_ids": ["CUBRID-C010", "CUBRID-C011", "CUBRID-C012", "CUBRID-C041", "PG-C010", "PG-C011", "MYSQL-C010", "MYSQL-C011", "CMP-C010"],
+      "coverage_ids": ["lifecycle-state-machines", "errors-resource-pressure", "storage-durability-recovery"],
+      "experiment_ids": ["experiment-2"], "quiz_ids": ["quiz-2"],
+      "chapter": "chapters/06-wait-deadlock-release.html", "anchor": "wait-deadlock-release",
+      "grill_concepts": ["lifecycle-state-machines", "durability-recovery-failures"]
+    },
+    {
+      "id": "mvcc-lock-policy",
+      "name_ko": "MVCC 가시성과 class/row lock의 역할 분담",
+      "claim_ids": ["CUBRID-C020", "CUBRID-C021", "CUBRID-C022", "CUBRID-C027", "CUBRID-C042", "PG-C020", "PG-C021", "MYSQL-C020", "MYSQL-C021", "CMP-C020"],
+      "coverage_ids": ["policies-algorithms", "concurrency", "experimental-validation"],
+      "experiment_ids": ["experiment-3"], "quiz_ids": ["quiz-3"],
+      "chapter": "chapters/07-mvcc-lock-policy.html", "anchor": "mvcc-lock-policy",
+      "grill_concepts": ["concurrency", "experiment-interpretation"]
+    },
+    {
+      "id": "mvccid-self-lock-rendezvous",
+      "name_ko": "MVCCID self-lock의 삽입자-관찰자 rendezvous",
+      "claim_ids": ["CUBRID-C030", "CUBRID-C031", "CUBRID-C032", "CUBRID-C043", "PG-C030", "PG-C031", "MYSQL-C030", "MYSQL-C031", "CMP-C030"],
+      "coverage_ids": ["core-workflows", "performance-observability", "cross-database-comparison"],
+      "experiment_ids": ["experiment-4"], "quiz_ids": ["quiz-4"],
+      "chapter": "chapters/08-mvccid-self-lock.html", "anchor": "mvccid-self-lock-rendezvous",
+      "grill_concepts": ["cross-database-non-equivalence"]
+    }
+  ],
+  "coverage": [
+    {"id":"orientation","status":"covered","chapter":"index.html","anchor":"orientation","claim_ids":["CUBRID-C020","CUBRID-C030","CMP-C030"],"rationale_ko":"책의 질문, 범위, 핵심 결론을 먼저 제시한다."},
+    {"id":"mental-model","status":"covered","chapter":"chapters/02-four-primitives.html","anchor":"mental-model","claim_ids":["CUBRID-C027"],"rationale_ko":"가시성, 논리 잠금, 물리 래치, WAL을 구분한다."},
+    {"id":"scope-interface-seams","status":"covered","chapter":"chapters/03-interface-and-resources.html","anchor":"resource-mode-hierarchy","claim_ids":["CUBRID-C001","CUBRID-C003"],"rationale_ko":"잠금 관리자의 자원과 호출 경계를 소스에서 추적한다."},
+    {"id":"data-ownership-lifetime","status":"covered","chapter":"chapters/04-ownership-lifetime.html","anchor":"data-ownership-lifetime","claim_ids":["CUBRID-C004"],"rationale_ko":"resource, entry, transaction lock의 소유권과 수명을 설명한다."},
+    {"id":"lifecycle-state-machines","status":"covered","chapter":"chapters/06-wait-deadlock-release.html","anchor":"wait-deadlock-release","claim_ids":["CUBRID-C010","CUBRID-C011","CUBRID-C055"],"rationale_ko":"grant에서 wait, wakeup, 해제로 이어지는 상태 전이를 복원하고 subsystem lifecycle은 9장에서 분리한다."},
+    {"id":"core-workflows","status":"covered","chapter":"chapters/08-mvccid-self-lock.html","anchor":"mvccid-self-lock-rendezvous","claim_ids":["CUBRID-C030","CUBRID-C031"],"rationale_ko":"삽입자의 X self-lock과 관찰자의 S wait/recheck 흐름을 연결한다."},
+    {"id":"concurrency","status":"covered","chapter":"chapters/08-mvccid-self-lock.html","anchor":"concurrency","claim_ids":["CUBRID-C032"],"rationale_ko":"publication, unlock, wake, 재검사의 happens-before를 설명한다."},
+    {"id":"storage-durability-recovery","status":"covered","chapter":"chapters/09-failure-durability-observability.html","anchor":"storage-durability-recovery","claim_ids":["CUBRID-C012","CUBRID-C060"],"rationale_ko":"ordinary volatile queue와 transaction-end WAL seam 및 prepared-2PC object-lock 예외를 구분한다."},
+    {"id":"policies-algorithms","status":"covered","chapter":"chapters/07-mvcc-lock-policy.html","anchor":"mvcc-lock-policy","claim_ids":["CUBRID-C020","CUBRID-C022"],"rationale_ko":"연산별 MVCC 가시성과 잠금 선택 정책을 설명한다."},
+    {"id":"errors-resource-pressure","status":"covered","chapter":"chapters/09-failure-durability-observability.html","anchor":"errors-resource-pressure","claim_ids":["CUBRID-C011"],"rationale_ko":"timeout, deadlock victim, 자원 압력에서의 실패 경계를 정리한다."},
+    {"id":"performance-observability","status":"covered","chapter":"chapters/09-failure-durability-observability.html","anchor":"performance-observability","claim_ids":["CUBRID-C033"],"rationale_ko":"관측 가능한 지표와 아직 측정하지 않은 성능 가설을 분리한다."},
+    {"id":"experimental-validation","status":"covered","chapter":"chapters/10-experiments.html","anchor":"experimental-validation","claim_ids":["CUBRID-C040","CUBRID-C041","CUBRID-C042","CUBRID-C043"],"rationale_ko":"네 central behavior를 고정된 실행 증거로 검증한다."},
+    {"id":"postgresql-analysis","status":"covered","chapter":"chapters/11-postgresql.html","anchor":"postgresql-analysis","claim_ids":["PG-C001","PG-C010","PG-C020","PG-C030"],"rationale_ko":"PostgreSQL의 표 잠금, tuple/XID 대기, speculative token을 비교한다."},
+    {"id":"mysql-analysis","status":"covered","chapter":"chapters/12-mysql.html","anchor":"mysql-analysis","claim_ids":["MYSQL-C001","MYSQL-C010","MYSQL-C020","MYSQL-C030"],"rationale_ko":"MySQL MDL과 InnoDB record/transaction wait의 분리를 비교한다."},
+    {"id":"cross-database-comparison","status":"covered","chapter":"chapters/13-comparison.html","anchor":"cross-database-comparison","claim_ids":["CMP-C001","CMP-C010","CMP-C020","CMP-C030"],"rationale_ko":"동등, 부분 유사, 대응 없음의 경계를 명시한다."},
+    {"id":"reimplementation-blueprint","status":"covered","chapter":"chapters/14-blueprint.html","anchor":"reimplementation-blueprint","claim_ids":["CUBRID-C001"],"rationale_ko":"typed resource와 상태 전이부터 재구현할 설계 청사진을 제시한다."},
+    {"id":"glossary-evidence-unknowns","status":"covered","chapter":"chapters/14-blueprint.html","anchor":"glossary-evidence-unknowns","claim_ids":["CUBRID-C033"],"rationale_ko":"용어, 증거 등급, 미검증 가설을 분명히 구분한다."},
+    {"id":"teaching-map","status":"covered","chapter":"index.html","anchor":"teaching-map","claim_ids":["CUBRID-C040","CUBRID-C041","CUBRID-C042","CUBRID-C043"],"rationale_ko":"행동별 장, 실험, 퀴즈의 학습 경로를 연결한다."}
+  ]
+}

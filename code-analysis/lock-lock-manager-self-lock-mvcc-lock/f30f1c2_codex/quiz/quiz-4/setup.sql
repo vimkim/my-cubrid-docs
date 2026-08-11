@@ -1,0 +1,2 @@
+CREATE TABLE dba.q4_unique (id INTEGER PRIMARY KEY, note_text VARCHAR (40));
+COMMIT;

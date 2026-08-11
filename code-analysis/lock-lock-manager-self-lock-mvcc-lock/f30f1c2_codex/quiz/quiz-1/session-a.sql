@@ -1,0 +1,3 @@
+SELECT id, balance FROM dba.q1_account WHERE id = 1 FOR UPDATE;
+SELECT SLEEP (20.0);
+ROLLBACK;
