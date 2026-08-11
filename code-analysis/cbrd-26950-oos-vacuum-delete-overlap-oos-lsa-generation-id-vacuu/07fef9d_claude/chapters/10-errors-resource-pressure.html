@@ -43,7 +43,7 @@ vacuum_finished_block_vacuum 의 shutdown 전용 assert 를 건드리고 vacuum 
 <caption>발생·검출·오검출 <span class="claim-id">(CUBRID-C023)</span></caption>
 <thead><tr><th>시점</th><th>일어나는 일</th><th>신호</th></tr></thead>
 <tbody>
-<tr><td><strong>발생</strong> (2차 삭제)</td><td>정상 RVOOS_DELETE — 로그·통계 모두 정상 vacuum 작업으로 기록</td><td><strong>없음</strong> (debug 빌드의 oos.log 줄만)</td></tr>
+<tr><td><strong>발생</strong> (2차 삭제)</td><td>정상 RVOOS_DELETE — 로그·통계 모두 정상 vacuum 작업으로 기록</td><td><strong>없음</strong>. 릴리스에서도 살아 있는 <code>oos_error</code> 계열은 <em>실패</em> 분기 전용이고 이 삭제는 <strong>성공</strong>하므로 걸리지 않는다; 성공 기록은 debug 전용 <code>oos_debug</code> 한 줄뿐이다 <span class="claim-id">(CUBRID-C047)</span></td></tr>
 <tr><td><strong>검출</strong> (이후 읽기)</td><td>stub → head OID → 빈 슬롯: <code>Internal error: slot N ... is not allocated</code></td><td>읽기 시점의 internal error — 원인과 시간·주체가 분리됨</td></tr>
 <tr><td><strong>불검출 위험</strong></td><td>비워진 피해 슬롯이 <em>또다시</em> 재사용된 뒤 읽히면 — 오류 없이 <strong>남의 값이 반환</strong>될 수 있음</td><td>없음 — 값 검증 애플리케이션만 감지 가능</td></tr>
 </tbody>

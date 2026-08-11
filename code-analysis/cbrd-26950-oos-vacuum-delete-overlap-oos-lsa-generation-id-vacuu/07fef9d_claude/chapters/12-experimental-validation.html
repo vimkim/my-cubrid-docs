@@ -129,8 +129,9 @@ experiment-2 는 2회 모두 발현(정상 셧다운 회차 233행, abort 회차
 <li>debug 빌드는 <strong>관측 채널</strong>(oos.log)에만 필요하다 — 발현 메커니즘(블록 상태 기계,
 probe, 슬롯 재사용)은 release 와 동일 코드다. 단, debug 의 assert 경계(ch10) 때문에 release 에는
 있는 추가 트리거(블록 중간 에러)가 debug 에는 없다 — 즉 debug 재현은 오히려 보수적이다.</li>
-<li>비기본 파라미터는 8종이며(vacuum 3종 + 압축 해제 + <code>er_log_vacuum</code> + 버퍼 2종 +
-16K 페이지 크기) 전부 발현 빈도를 높이거나 관측 채널을 켜는 것이고 안전장치를 끄지 않는다 —
+<li>비기본 설정은 <strong>conf 8종</strong>(vacuum 3종 + 압축 해제 + <code>er_log_vacuum</code> +
+버퍼 2종 + <code>max_clients</code>) <strong>+ createdb 의 16K 페이지 크기</strong>이며, 전부 발현 빈도를
+높이거나 관측 채널을 켜는 것이고 안전장치를 끄지 않는다 —
 전체 목록과 각각의 영향은 <a href="11-performance-observability.html#tuning">ch11 §6</a>.</li>
 <li>실험이 증명하지 않는 것: 제2 호출부(REC_NEWHOME 경로)에서의 발현(<span class="claim-id">CUBRID-C046 한계</span>),
 멀티청크 피해의 실측, 값-오염(무오류 오답)의 실제 발생.</li>
