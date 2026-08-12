@@ -14,8 +14,8 @@
       <h1>무엇을 먼저<br>읽어야 할까?</h1>
       <p class="lede">PR #7588의 loaddb <code>BU_LOCK</code>과 MVCCID self-lock 논쟁을 이해하기 위한 출발점이다. 지금 가진 시간과 목적에 맞춰 아래 경로를 고르면 된다.</p>
       <div class="meta">
-        <span class="pill">HTML 2개</span>
-        <span class="pill">전체 15–20분</span>
+        <span class="pill">HTML 3개</span>
+        <span class="pill">전체 25–30분</span>
         <span class="pill">한국어 · 소스 근거</span>
       </div>
     </header>
@@ -31,13 +31,14 @@
     <section id="recommended">
       <h2>처음이라면 이 순서로 읽는다</h2>
       <div class="callout fact">
-        <strong>권장 경로:</strong> Lesson 0001을 끝까지 읽고 → 5문제 퀴즈를 풀고 → 빠른 참조의 결정 질문을 다시 확인한다.
+        <strong>권장 경로:</strong> Lesson 0001을 끝까지 읽고 → 5문제 퀴즈를 풀고 → 빠른 참조의 결정 질문을 다시 확인한 뒤 → 최신 설계 검토 보고서를 읽는다.
       </div>
 
       <div class="flow" aria-label="권장 학습 순서">
         <div class="flow-step" data-step="1"><strong>12분 · 개념 형성</strong> — session과 worker transaction, 두 lock resource, self-lock observer protocol을 순서대로 익힌다.</div>
         <div class="flow-step" data-step="2"><strong>3분 · 회상 연습</strong> — 본문을 보지 않고 대화형 퀴즈와 마지막 한 문장을 완성한다.</div>
         <div class="flow-step" data-step="3"><strong>2분 · 판단 준비</strong> — 빠른 참조에서 resource, owner, observer, invariant 네 질문을 다시 점검한다.</div>
+        <div class="flow-step" data-step="4"><strong>10분 · 설계 검토</strong> — 최신 보고서에서 형규님 답변의 논리와 성능 주장을 검증하고 세 가지 구현안을 비교한다.</div>
       </div>
 
       <p><a class="cta" href="lessons/0001-loaddb-bu-lock-and-mvccid-self-lock.html">Lesson 0001 시작하기 →</a></p>
@@ -61,18 +62,18 @@
         </article>
 
         <article class="card">
-          <span class="kicker">코드 리뷰 · 7분</span>
+          <span class="kicker">코드 리뷰 · 10분</span>
           <h3>설계 판단에 집중하기</h3>
           <p>crash stack과 두 수정안부터 읽은 뒤 primary source 링크로 실제 구현을 확인한다.</p>
           <p><a href="lessons/0001-loaddb-bu-lock-and-mvccid-self-lock.html#crash">crash 경로부터 읽기 →</a></p>
-          <p><a href="lessons/0001-loaddb-bu-lock-and-mvccid-self-lock.html#debate">두 수정안 비교하기 →</a></p>
+          <p><a href="reports/0001-tt-loaddb-mvccid-self-lock-design-review.html">최신 설계 검토 보고서 →</a></p>
         </article>
       </div>
     </section>
 
     <section id="pages">
-      <h2>HTML 문서는 두 개다</h2>
-      <div class="grid-2">
+      <h2>HTML 문서는 세 개다</h2>
+      <div class="grid-3">
         <article class="card">
           <span class="kicker">Main lesson</span>
           <h3><a href="lessons/0001-loaddb-bu-lock-and-mvccid-self-lock.html">Lesson 0001 — 두 lock을 분리해서 보기</a></h3>
@@ -99,6 +100,20 @@
             <li>primary source 빠른 링크</li>
           </ul>
           <p><a class="cta secondary" href="reference/loaddb-locking-map.html">참조표 보기 →</a></p>
+        </article>
+
+        <article class="card">
+          <span class="kicker">Design review · 2026-08-12</span>
+          <h3><a href="reports/0001-tt-loaddb-mvccid-self-lock-design-review.html">Report 0001 — TT_LOADDB MVCCID self-lock 설계 검토</a></h3>
+          <p><strong>기초 자료를 읽은 뒤 보는 최신 보고서.</strong> 형규님의 uniform self-lock 의견을 소스에 대조하고, 성능 논거와 실제 분기 위치를 바로잡는다.</p>
+          <ul>
+            <li>답변 문장별 맞음·보완·불일치 판정</li>
+            <li>generic lock hot path와 self-lock helper 구분</li>
+            <li>uniform·common skip·assignment-only 세 안 비교</li>
+            <li>현재 회귀 테스트 결과와 증거 경계</li>
+            <li>회의에서 사용할 최종 권고 문장</li>
+          </ul>
+          <p><a class="cta" href="reports/0001-tt-loaddb-mvccid-self-lock-design-review.html">보고서 읽기 →</a></p>
         </article>
       </div>
 

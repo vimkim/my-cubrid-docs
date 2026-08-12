@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="CBRD-27157 TT_LOADDB MVCCID self-lock uniform안과 skip안, 형규님 답변의 논리와 성능 주장을 분석한 한글 보고서">
+  <title>CBRD-27157 — TT_LOADDB MVCCID self-lock 설계 검토</title>
+  <link rel="stylesheet" href="../assets/course.css">
+  <style>
+    .summary-banner {
+      margin: 1.3rem 0;
+      padding: 1.35rem 1.5rem;
+      border: 2px solid var(--teal);
+      border-radius: 1rem;
+      background: linear-gradient(135deg, var(--teal-wash), white);
+    }
+
+    .summary-banner strong {
+      color: var(--navy);
+      font-family: var(--serif);
+      font-size: 1.12rem;
+    }
+
+    .verdict {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.16rem 0.52rem;
+      border-radius: 999px;
+      color: white;
+      font-size: 0.72rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .verdict.correct { background: var(--teal); }
+    .verdict.partial { background: var(--amber); }
+    .verdict.mismatch { background: var(--red); }
+
+    .formula {
+      margin: 1.2rem 0;
+      padding: 1.1rem 1.3rem;
+      border: 1px dashed var(--teal);
+      border-radius: 0.85rem;
+      background: var(--teal-wash);
+      text-align: center;
+      font: 750 1.05rem/1.65 var(--mono);
+    }
+
+    .decision-card {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .decision-card::before {
+      content: attr(data-option);
+      position: absolute;
+      right: -0.15rem;
+      top: -0.65rem;
+      color: rgba(23, 63, 95, 0.08);
+      font: 900 5rem/1 var(--sans);
+    }
+
+    .recommendation {
+      border: 2px solid var(--navy);
+      background: var(--blue-wash);
+    }
+
+    .compact-list li { margin: 0.35rem 0; }
+
+    .source-note {
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    @media print {
+      .summary-banner, .recommendation, .formula { print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <p class="eyebrow">CBRD-27157 · Design review · 2026-08-12</p>
+      <h1>TT_LOADDB도<br>MVCCID self-lock을 잡아야 할까?</h1>
+      <p class="lede">형규님의 답변을 현재 CUBRID 소스에 대조하여, 논리적으로 맞는 부분과 성능 논거에서 바로잡아야 할 부분을 분리한다. 결론보다 먼저 self-lock이 무엇을 보호하는지, 어느 함수에 어느 분기가 생기는지를 정확히 본다.</p>
+      <div class="meta">
+        <span class="pill">기준 source f11fc4259</span>
+        <span class="pill">실험 worktree diff 포함</span>
+        <span class="pill">CBRD-26942 · CBRD-27157</span>
+        <span class="pill">읽는 시간 10분</span>
+      </div>
+    </header>
+
+    <nav class="toc" aria-label="목차">
+      <strong>바로가기</strong>
+      <a href="#summary">결론</a>
+      <a href="#model">최소 모델</a>
+      <a href="#stack">회귀 경로</a>
+      <a href="#claims">답변 문장별 분석</a>
+      <a href="#performance">성능 주장 검증</a>
+      <a href="#options">세 가지 설계안</a>
+      <a href="#recommendation">권고</a>
+      <a href="#evidence">검증과 근거</a>
+    </nav>
+
+    <section id="summary">
+      <h2>1. 먼저 결론</h2>
+
+      <div class="summary-banner">
+        <strong>형규님의 핵심 결론은 타당하다.</strong>
+        <p>loaddb worker가 MVCCID self-lock을 잡아도 lock 수는 transaction 수에 비례하고, fresh MVCCID이므로 획득 경쟁도 없다. uniform self-lock은 미래의 INSID 생산 경로까지 불변식을 구조적으로 지킨다는 장점이 있다.</p>
+      </div>
+
+      <div class="callout caution">
+        <span class="label">하지만</span>
+        <strong>“<code>lock_internal_perform_lock_object()</code>의 레코드별 hot path에 TT_LOADDB skip 분기가 추가된다”는 성능 비교는 현재 시험한 skip안과 맞지 않는다.</strong> skip 분기는 generic lock 함수가 아니라 <code>logtb_acquire_mvccid_self_lock()</code>에 있다. 현재 loaddb bulk row는 이 helper를 레코드마다 호출하지 않는다.
+      </div>
+
+      <p>따라서 이 결정을 성능으로 가르기 어렵다. 실제 쟁점은 다음 한 문장이다.</p>
+
+      <div class="formula">모든 active worker MVCCID를 self-lock할 것인가?<br>아니면 다른 transaction에 관찰 가능한 INSID가 있는 MVCCID만 self-lock할 것인가?</div>
+    </section>
+
+    <section id="model">
+      <h2>2. 논쟁에 필요한 최소 모델</h2>
+
+      <h3>행위자와 lock owner</h3>
+      <pre><code>server-side loaddb session
+
+session transaction S
+└─ class T에 BU_LOCK 보유
+   ├─ TT_LOADDB worker W1 ─ batch transaction B1 ─ MVCCID M1
+   └─ TT_LOADDB worker W2 ─ batch transaction B2 ─ MVCCID M2
+
+class BU owner       = session transaction S
+MVCCID self-lock owner = worker batch transaction B1/B2</code></pre>
+
+      <p><code>BU_LOCK</code>과 MVCCID self-lock은 같은 lock이 아니다. key, owner, 보호 목적이 모두 다르다.</p>
+
+      <table>
+        <thead>
+          <tr><th>구분</th><th>Class <code>BU_LOCK</code></th><th>MVCCID self-lock</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>resource key</td><td>class OID</td><td>worker의 MVCCID</td></tr>
+          <tr><td>owner</td><td>session transaction</td><td>batch transaction</td></tr>
+          <tr><td>mode</td><td><code>BU_LOCK</code></td><td>inserter <code>X_LOCK</code>, waiter <code>S_LOCK</code></td></tr>
+          <tr><td>목적</td><td>bulk load 중 일반 class/row data access 제한</td><td>unique/FK 검사가 unfinished inserter의 종료를 기다리는 rendezvous</td></tr>
+          <tr><td>현재 loaddb에서 waiter</td><td>일반 data mode와 충돌</td><td>bulk row에 INSID가 없어 형성되지 않음</td></tr>
+        </tbody>
+      </table>
+
+      <h3>self-lock이 보호하는 불변식</h3>
+      <pre><code>T1: MVCCID M 발급
+T1: resource TRANSACTION(M)에 X_LOCK
+T1: row header에 INSID=M 공개
+
+T2: unique/FK 검사 중 active INSID=M 발견
+T2: TRANSACTION(M)에 S_LOCK 요청 → T1 종료까지 대기
+T2: 깨어난 뒤 key와 active 상태를 다시 검사</code></pre>
+
+      <div class="callout fact">
+        <span class="label">핵심 불변식</span>
+        다른 transaction이 관찰할 수 있는 active INSID가 있다면, 같은 MVCCID resource에는 matching X self-lock이 있어야 한다.
+      </div>
+
+      <p>이 설명은 “모든 transaction은 시작할 때 반드시 self-lock을 가진다”와 다르다. 현재 구현도 transaction 시작 즉시가 아니라 <strong>MVCCID를 lazy 할당하는 시점</strong>에 self-lock을 시도한다. boot/recovery 및 system/vacuum transaction은 concurrent waiter와 정상 해제 경로가 없다는 이유로 이미 예외 처리한다.</p>
+    </section>
+
+    <section id="stack">
+      <h2>3. CBRD-27157 회귀는 왜 발생했나?</h2>
+
+      <pre><code>server-side loaddb가 첫 OOS-backed attribute를 적재
+  → OOS file lazy create
+  → file_create(FILE_OOS)
+  → vacuum dropped-file 검사에 current MVCCID 필요
+  → logtb_get_current_mvccid()가 MVCCID lazy 할당
+  → logtb_acquire_mvccid_self_lock()
+  → lock_transaction_mvccid()
+  → lock_internal_perform_lock_object()
+  → assert(thread_p-&gt;type != TT_LOADDB)</code></pre>
+
+      <p><code>file_create()</code>가 원하는 것은 dropped-file 식별자 재사용 검사를 위한 <strong>MVCCID 값</strong>이다. row에 INSID를 쓰기 위해 들어온 경로가 아니다. OOS는 새로운 lock 정책을 만든 것이 아니라, loaddb worker가 이전에는 가지 않던 MVCCID 발급 경로를 열었다.</p>
+
+      <div class="callout inference">
+        <span class="label inference">구분</span>
+        MVCCID 값이 필요하다는 사실만으로 MVCCID self-lock도 반드시 필요하다고 결론 내릴 수는 없다. self-lock 필요성은 그 MVCCID를 관찰하고 기다릴 주체가 있는지까지 확인해야 한다.
+      </div>
+    </section>
+
+    <section id="claims">
+      <h2>4. 형규님 답변을 문장별로 분석</h2>
+
+      <table>
+        <thead>
+          <tr><th style="width: 18%">판정</th><th style="width: 34%">주장</th><th>분석</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="verdict partial">표현 보완</span></td>
+            <td>“TT_LOADDB가 BU_LOCK을 보유한다.”</td>
+            <td>정확히는 TT_LOADDB worker가 아니라 <strong>session transaction</strong>이 class BU를 보유한다. worker의 object-lock 조회가 session transaction으로 redirect된다.</td>
+          </tr>
+          <tr>
+            <td><span class="verdict correct">맞음</span></td>
+            <td>“loaddb는 row에 MVCCID를 표시하지 않아 경쟁이 일어나지 않는다.”</td>
+            <td>현재 bulk insert는 <code>is_bulk_op=true</code>이고 record의 MVCC flag를 제거한다. unique/FK waiter가 worker MVCCID를 INSID에서 발견하는 경로가 없다.</td>
+          </tr>
+          <tr>
+            <td><span class="verdict correct">맞음</span></td>
+            <td>“uniform self-lock을 잡아도 최대 lock 수는 O(txn)이다.”</td>
+            <td>per-row X lock의 O(row) 증가와 다르다. main/sub MVCCID 단위의 self-lock이므로 active transaction·subtransaction 수에 비례한다.</td>
+          </tr>
+          <tr>
+            <td><span class="verdict partial">설계 선택</span></td>
+            <td>“메인 로직에 TT_LOADDB 예외를 둘 이유가 없다.”</td>
+            <td>uniform 불변식을 우선하면 타당하다. 그러나 source상 절대 규칙은 아니다. 이미 no-waiter/lifecycle 전제를 근거로 boot/recovery/system/vacuum을 생략한다. TT_LOADDB도 같은 종류의 정책 예외로 정의할 수는 있다.</td>
+          </tr>
+          <tr>
+            <td><span class="verdict mismatch">비교 불일치</span></td>
+            <td>“레코드마다 호출되는 generic lock 함수에 TT_LOADDB skip 분기가 생겨 더 큰 영향이 있다.”</td>
+            <td>현재 skip 실험은 generic 함수에 runtime skip을 넣지 않는다. <code>logtb_acquire_mvccid_self_lock()</code>에서만 early return한다. 현재 loaddb bulk row는 레코드별 ensure 경로에도 들어가지 않는다.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p class="source-note">여기서 “맞음”은 현재 revision의 reachable source에 대한 판정이다. 미래의 모든 loaddb path 부재를 증명한다는 뜻은 아니다.</p>
+    </section>
+
+    <section id="performance">
+      <h2>5. 성능 주장을 정확한 위치에서 비교하기</h2>
+
+      <div class="grid-2">
+        <article class="card">
+          <span class="kicker">Uniform안</span>
+          <h3>generic lock assert를 좁힌다</h3>
+          <pre><code>assert(thread_p-&gt;type != TT_LOADDB
+       || is_transaction_lock);</code></pre>
+          <ul class="compact-list">
+            <li>release 빌드에서는 assert 전체가 제거된다.</li>
+            <li>debug에서도 기존부터 thread type 검사는 있었다.</li>
+            <li>일반 non-TT_LOADDB 호출은 short-circuit된다.</li>
+            <li>실제 비용은 transaction당 self-lock resource 한 개와 종료 시 해제다.</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <span class="kicker">현재 skip 실험안</span>
+          <h3>self-lock policy helper에서 종료한다</h3>
+          <pre><code>if (thread_p-&gt;type == TT_LOADDB)
+  {
+    return NO_ERROR;
+  }</code></pre>
+          <ul class="compact-list">
+            <li>generic object-lock hot path에 추가된 분기가 아니다.</li>
+            <li>정상 transaction은 이미 self-locked이면 앞선 dedup에서 반환한다.</li>
+            <li>TT_LOADDB는 skip 후 hint가 unset이지만, 현재 bulk row는 ensure를 레코드마다 호출하지 않는다.</li>
+            <li>OOS 회귀 경로에서는 첫 MVCCID lazy assignment에서 주로 실행된다.</li>
+          </ul>
+        </article>
+      </div>
+
+      <h3>왜 bulk row마다 helper를 호출하지 않는가?</h3>
+      <pre><code>heap_get_insert_location_with_lock()
+  if (context-&gt;is_bulk_op)
+    lock = NULL_LOCK;
+
+  if (lock == X_LOCK &amp;&amp; MVCC class)
+    logtb_ensure_mvccid_self_lock();
+
+TT_LOADDB bulk insert: lock == NULL_LOCK
+→ per-row ensure 호출 조건이 false</code></pre>
+
+      <div class="callout question">
+        <strong>성능 판단:</strong> 두 안 모두 비용이 매우 작다고 보는 것이 안전하다. 측정 없이 어느 쪽이 더 빠르다고 주장하기보다, 불변식과 예외의 유지보수 비용으로 결정해야 한다.
+      </div>
+    </section>
+
+    <section id="options">
+      <h2>6. 실제 선택지는 두 개가 아니라 세 개다</h2>
+
+      <div class="grid-3">
+        <article class="card decision-card" data-option="A">
+          <span class="kicker">A · Uniform</span>
+          <h3>TT_LOADDB도 self-lock 획득</h3>
+          <p>transaction resource인 경우 internal assert를 허용한다.</p>
+          <p><strong>장점:</strong> 모든 active worker MVCCID에 동일 규칙을 적용한다. 미래에 loaddb INSID producer가 생겨도 안전하다.</p>
+          <p><strong>대가:</strong> 현재 waiter가 없는 MVCCID에도 lock entry를 만든다. generic lock module의 assert가 loaddb transaction 예외를 안다.</p>
+        </article>
+
+        <article class="card decision-card" data-option="B">
+          <span class="kicker">B · Common helper skip</span>
+          <h3>현재 실험 중인 방식</h3>
+          <p>공통 <code>logtb_acquire_mvccid_self_lock()</code>에서 TT_LOADDB를 반환한다.</p>
+          <p><strong>장점:</strong> 현재 의미상 불필요한 lock을 만들지 않고 strict internal assert를 보존한다.</p>
+          <p><strong>대가:</strong> assignment뿐 아니라 <code>ensure</code>도 같은 helper를 사용한다. 미래에 TT_LOADDB가 INSID를 공개해도 ensure가 실제 lock을 잡지 못한다.</p>
+        </article>
+
+        <article class="card decision-card" data-option="C">
+          <span class="kicker">C · Assignment-only skip</span>
+          <h3>좁은 절충안</h3>
+          <p>MVCCID assignment의 best-effort wrapper에서만 TT_LOADDB를 생략하고, error-propagating ensure는 실제 self-lock을 허용한다.</p>
+          <p><strong>장점:</strong> 현재 <code>file_create()</code>의 불필요한 eager lock은 생략하면서, 미래 INSID producer는 ensure에서 불변식을 복구할 수 있다.</p>
+          <p><strong>대가:</strong> policy가 eager assignment와 publication ensure로 갈라져 설명과 테스트가 더 필요하다. ensure가 generic assert를 통과하도록 별도 허용도 필요하다.</p>
+        </article>
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>판단 기준</th><th>A. Uniform</th><th>B. Common skip</th><th>C. Assignment-only</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>현재 회귀 해결</td><td>예</td><td>예</td><td>예</td></tr>
+          <tr><td>현재 불필요 lock 생략</td><td>아니오</td><td>예</td><td>예</td></tr>
+          <tr><td>미래 INSID producer 안전</td><td>구조적으로 안전</td><td>취약</td><td>ensure가 실행되면 안전</td></tr>
+          <tr><td>정책 locality</td><td>lock resource 허용 정책</td><td>self-lock 대상 정책</td><td>assignment/publication 정책 분리</td></tr>
+          <tr><td>설명 복잡도</td><td>가장 낮음</td><td>중간</td><td>가장 높음</td></tr>
+          <tr><td>lock 수</td><td>O(txn)</td><td>TT_LOADDB는 0</td><td>현재 TT_LOADDB는 0</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="recommendation">
+      <h2>7. 권고</h2>
+
+      <div class="card recommendation">
+        <span class="kicker">보고서 권고</span>
+        <h3>성능 논거는 제외하고, 기본 선택은 A(uniform)가 더 방어적이다</h3>
+        <p>self-lock 비용은 O(txn)이고 fresh MVCCID 획득은 기다리지 않는다. 반면 A안은 <code>observable INSID ⇒ matching X self-lock</code> 불변식을 future path까지 구조적으로 유지한다. 별도 예외 전제를 학습하고 감시할 필요가 적다.</p>
+      </div>
+
+      <p>다만 팀의 명시적 정책이 “TT_LOADDB는 object lock뿐 아니라 역할 없는 transaction self-lock도 잡지 않는다”라면 skip 선택도 논리적으로 성립한다. 그 경우 현재 B안은 예외 범위가 다소 넓다. 다음 안전장치가 필요하다.</p>
+
+      <ol>
+        <li><strong>전제 명문화:</strong> TT_LOADDB bulk row는 다른 transaction에 worker MVCCID를 INSID로 공개하지 않는다.</li>
+        <li><strong>금지 경로 검증:</strong> TT_LOADDB가 INSID를 stamp하는 위치에 들어오면 debug assertion 또는 실패가 발생하도록 한다.</li>
+        <li><strong>전용 동시성 테스트:</strong> unique/PK/FK를 포함한 server-side loaddb에서 다른 session이 worker MVCCID waiter가 되지 않음을 검증한다.</li>
+        <li><strong>helper 범위 재검토:</strong> assignment-only skip(C안)이 공통 helper skip(B안)보다 요구사항에 더 정확한지 검토한다.</li>
+      </ol>
+
+      <div class="callout fact">
+        <strong>회의에서 사용할 한 문장:</strong><br>
+        “형규님의 uniform안은 O(txn) 비용으로 미래 불변식까지 지키므로 유지보수 면에서 더 방어적입니다. 다만 hot-path 분기 비용 주장은 현재 skip 위치와 맞지 않으므로, 성능이 아니라 TT_LOADDB의 no-INSID 전제를 별도 정책으로 둘 것인지로 결정하는 것이 맞습니다.”
+      </div>
+    </section>
+
+    <section id="evidence">
+      <h2>8. 검증 결과와 근거</h2>
+
+      <h3>실험 중인 common helper skip안의 실행 검증</h3>
+      <table>
+        <thead><tr><th>검증</th><th>결과</th><th>확인 범위</th></tr></thead>
+        <tbody>
+          <tr><td>debug build/install</td><td>성공</td><td>변경 코드 컴파일·링크</td></tr>
+          <tr><td>ctest</td><td>25/25 통과</td><td>구성된 unit test</td></tr>
+          <tr><td><code>cbrd_25481</code></td><td>1/1 통과</td><td>관련 loaddb 회귀 경로</td></tr>
+          <tr><td><code>itrack_10006</code></td><td>1/1 통과</td><td>server-side loaddb</td></tr>
+          <tr><td><code>bug_xdbms_sus880</code></td><td>1/1 통과</td><td>server-side loaddb</td></tr>
+          <tr><td>신규 core</td><td>없음</td><td>위 회귀 실행 범위</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout caution">
+        테스트 통과는 현재 회귀가 해결되었음을 보여 주지만, 미래의 모든 TT_LOADDB INSID producer가 없다는 증명은 아니다. 설계안 B의 미래 안전성은 별도 invariant test가 필요하다.
+      </div>
+
+      <h3>Primary source</h3>
+      <ul>
+        <li><a href="https://github.com/CUBRID/cubrid/commit/741734a8f3785a3e2a678bb52e289000c2261b6f">CBRD-26942 — per-row X lock을 MVCCID self-lock으로 대체한 변경</a></li>
+        <li><a href="https://github.com/CUBRID/cubrid/commit/8bcfd7dd278cbe2b16a064bce4105e68cf80d6a1">CBRD-27157 uniform self-lock 구현 commit</a></li>
+        <li><a href="https://github.com/CUBRID/cubrid/blob/f11fc42594732c263d8f10101f9df73a21346ee9/src/transaction/log_tran_table.c#L4053-L4204"><code>logtb_acquire_mvccid_self_lock()</code>, lazy assignment, ensure</a></li>
+        <li><a href="https://github.com/CUBRID/cubrid/blob/f11fc42594732c263d8f10101f9df73a21346ee9/src/storage/heap_file.c#L21180-L21268">bulk insert에서 INSID를 제거하는 record header 경로</a></li>
+        <li><a href="https://github.com/CUBRID/cubrid/blob/f11fc42594732c263d8f10101f9df73a21346ee9/src/storage/heap_file.c#L21630-L21665">bulk insert의 <code>NULL_LOCK</code> 및 self-lock ensure 조건</a></li>
+        <li><a href="https://github.com/CUBRID/cubrid/blob/f11fc42594732c263d8f10101f9df73a21346ee9/src/transaction/lock_manager.c#L3478-L3543"><code>lock_internal_perform_lock_object()</code>와 TT_LOADDB assert</a></li>
+        <li><a href="https://github.com/CUBRID/cubrid/blob/f11fc42594732c263d8f10101f9df73a21346ee9/src/storage/file_manager.c#L3445-L3470"><code>file_create()</code>의 vacuum dropped-file MVCCID 검사</a></li>
+        <li><a href="https://github.com/CUBRID/cubrid/pull/7588">PR #7588 토론</a></li>
+      </ul>
+
+      <h3>증거 경계</h3>
+      <ul>
+        <li>기준 commit은 <code>f11fc42594732c263d8f10101f9df73a21346ee9</code>이다.</li>
+        <li>common helper skip안은 위 commit에 대한 로컬 worktree 변경이며, 이 보고서는 이를 merged 상태로 표현하지 않는다.</li>
+        <li>OOS 규격 원문은 2026-07-13 갱신본을 참조했다. 이 self-lock 정책은 OOS 규격이 직접 결정하지 않으며, OOS file lazy creation이 경로를 촉발했을 뿐이다.</li>
+        <li>정량 성능 benchmark는 수행하지 않았다. 따라서 두 안의 속도 우열을 주장하지 않는다.</li>
+      </ul>
+    </section>
+
+    <footer class="footer">
+      <p><a href="../index.html">학습 홈</a> · <a href="../lessons/0001-loaddb-bu-lock-and-mvccid-self-lock.html">기초 lesson</a> · <a href="../reference/loaddb-locking-map.html">빠른 참조</a> · Report 0001</p>
+    </footer>
+  </main>
+</body>
+</html>
