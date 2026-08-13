@@ -1,7 +1,7 @@
 # T8 — Write-path mechanics of reuse: where "assigned" is known and how the old stub carries forward
 
 - label: `wayfinder:research`
-- status: open
+- status: closed
 - assignee: claude-research (fired at T4 resolution)
 - blocked-by: (none — T4's contract is its input, already locked)
 - map: [CBRD-27230 OOS UPDATE dedup](../map.md)
@@ -19,4 +19,26 @@ Sources (local, read-only): worktree `/home/vimkim/gh/cb/CBRD-27230-oos-update-d
 
 ## Resolution
 
-(pending)
+(2026-08-13, claude-research.) Full trace with file:line evidence:
+[../findings/T8-write-path-mechanics-of-reuse.md](../findings/T8-write-path-mechanics-of-reuse.md).
+
+1. **AS-IS**: "unassigned" ≡ `state == HEAP_UNINIT_ATTRVALUE` at `heap_attrinfo_set_uninitialized`
+   (`heap_file.c:12156`); the same function destroys the signal by calling `heap_attrvalue_read` → `oos_read`
+   (`:12158`, `:10482`). Downstream the value is indistinguishable from an assigned one: it is re-sized
+   logically (`:12244`), re-demoted (`:12382`), re-inserted as a fresh chain (`:12680`), stamped into a new
+   stub (`:13047`). Cost per unassigned OOS attribute: one `oos_read` + one `oos_insert` + one dead chain.
+2. **TO-BE**: capture the old stub `(head OID, length[, generation])` inside `set_uninitialized`; split
+   `heap_oos_column_plan.selected` into "write a stub" vs "allocate a chain" so
+   `heap_attrinfo_prepare_oos_insert_requests` (`:12633`) skips reused columns. The stub writer
+   (`:13039-13050`) needs no change. The same pass yields the drop list (assigned + old-VOT `OR_IS_OOS`).
+   Registration vicinity: just before the three `heap_log_update_physical` calls (`:24145`, `:23588`, `:23906`).
+3. **Open mechanical point for T6** (invariant unaffected): vacuum's stream is fed only by MVCC *undo* appends
+   (`log_append.cpp:970-996`, `:1384`) and `logtb_complete_mvcc` precedes `log_tran_do_postpone`
+   (`log_manager.c:5228` vs `:5245`) — a bare `log_append_postpone` cannot deliver a vacuum-visible notify.
+   Three shapes listed in the findings; a commit hook placed before `logtb_complete_mvcc` is recommended.
+4. **Edge checks**: a reused stub below the gate is safe — the gate literal exists only in
+   `determine_disk_layout` (`:12345`, `:12378`) and reuse can only shrink the record, so the OOS+bigone guard
+   (`:13295`) cannot newly trip. `heap_oos_delete_unreferenced` needs no change (`heap_oos.cpp:754-760`);
+   the notify stays gated to `is_mvcc_op`.
+5. **Idea B**: synergy only — it moves `oos_insert` into the same window the notify needs and inherits fewer
+   OOS repl records thanks to dedup; the only caution is preserving the pre-append ordering.
