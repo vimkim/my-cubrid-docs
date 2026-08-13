@@ -26,6 +26,7 @@
 5. GCC LTO는 일부 파일의 컴파일을 빠르게 했지만 전체 빌드는 80.888초로 더 느렸고 ODR/type mismatch 경고도 발생했다.
 6. 전역 Unity Build는 생성된 lexer/parser 및 명시적 템플릿 특수화 충돌로 컴파일되지 않았다.
 7. 전체 디버그 정보 수준을 유지하면서 preset만으로 안전하게 적용할 수 있었던 개선은 `-pipe`였고, 전체 시간은 78.828초에서 77.270초로 약 2.0% 단축되었다.
+8. 1,190개 실제 compile command를 비교하면 GCC 명령은 평균 94.37개 token, Clang은 98.35개 token이었다. GCC 명령이 더 길거나 인자가 더 많아서 느린 것은 아니다.
 
 따라서 현재 제약 안에서는 `debug_gcc_fast`에 `-pipe`만 유지하는 것이 타당하다. GCC 빌드를 Clang의 약 51초 수준까지 줄이려면 선택적 PCH 또는 소스별 제외 규칙을 둔 Unity Build처럼 프로젝트 CMake 타깃을 수정하는 작업이 필요하다.
 
@@ -179,6 +180,147 @@ GCC command line에는 타깃별 설정과 상속으로 `-ggdb3`, `-Wall`, `-fno
 
 현재 장비에서는 `-j24`가 가장 빨랐다.
 
+### 5.3 `CMakeCache.txt`와 최종 플래그의 관계
+
+두 build directory의 `CMakeCache.txt`에서 빌드의 범위를 결정하는 주요 항목을 비교했다.
+
+| cache 항목 | `debug_gcc` | `debug_clang` |
+|---|---|---|
+| `CMAKE_BUILD_TYPE` | `Debug` | `Debug` |
+| Generator | Ninja | Ninja |
+| C/C++ compiler launcher | ccache | ccache |
+| `CMAKE_CXX_STANDARD` | 17 | 17 |
+| `CMAKE_CXX_STANDARD_REQUIRED` | `ON` | `ON` |
+| `UNIT_TESTS` | `OFF` | `OFF` |
+| `ENABLE_32BIT` | `OFF` | `OFF` |
+| `ENABLE_SYSTEMTAP` | `ON` | `ON` |
+| CCI/JDBC/CM 및 외부 라이브러리 선택 | 동일 | 동일 |
+
+두 compile database에는 정확히 같은 output 이름 1,190개가 있었다. 따라서 cache option 차이로 GCC가 테스트나 추가 타깃을 더 빌드한 것은 아니다.
+
+주의할 점은 `CMakeCache.txt`의 `CMAKE_C_FLAGS*`와 `CMAKE_CXX_FLAGS*`만 읽으면 최종 플래그를 알 수 없다는 것이다. preset 값은 cache에 기록되지만, top-level `CMakeLists.txt`는 configure 과정에서 같은 이름의 일반 변수를 만들고 플래그를 이어 붙인다. 이 일반 변수는 cache 파일의 원래 문자열을 갱신하지 않은 채 현재 scope에서 cache 값을 가린다.
+
+따라서 이 분석에서는 다음 순서로 확인했다.
+
+```text
+CMakeUserPresets.json
+  -> CMakeCache.txt의 초기/cache 값
+  -> CMakeLists.txt가 일반 변수로 옵션 추가
+  -> build.ninja의 FLAGS
+  -> compile_commands.json의 실제 compiler command
+```
+
+최종 동작을 판단할 때는 `build.ninja`와 `compile_commands.json`이 기준이다. `CMakeCache.txt`만 보면 GNU 분기에서 뒤에 추가된 `-ggdb`, `-fPIE`, `-std=c++17` 등이 보이지 않는다.
+
+### 5.4 1,190개 실제 compile command의 전수 비교
+
+모든 명령을 shell token으로 분해해 비교한 결과는 다음과 같다.
+
+| 지표 | GCC | Clang |
+|---|---:|---:|
+| compile command 수 | 1,190 | 1,190 |
+| C++ compiler를 사용한 명령 | 1,181 | 1,181 |
+| C compiler를 사용한 명령 | 9 | 9 |
+| `-x c++`가 있는 명령 | 1,152 | 1,152 |
+| 명령당 전체 token 평균 | 94.37 | 98.35 |
+| 명령당 compiler option 평균 | 33.79 | 37.76 |
+| 명령당 define 평균 | 12.63 | 12.63 |
+| 명령당 include path 평균 | 41.00 | 41.00 |
+| 명령당 중복 option occurrence 평균 | 4 | 3 |
+
+Clang 쪽이 명령당 약 4개 token과 compiler option이 더 많다. define과 명시적 include path 수는 동일하다. 옵션 문자열을 읽는 driver 비용 자체가 GCC의 28초 차이를 만들었다는 가설과 반대되는 결과이다.
+
+대부분의 legacy `.c` 파일도 실제로는 `g++`/`clang++`와 `-x c++`로 컴파일된다. 즉 이 빌드는 단순한 C compiler benchmark가 아니라, 큰 헤더 그래프와 template를 반복 처리하는 C++17 workload이다.
+
+#### 플래그가 추가되는 위치
+
+| 출처 | GCC에 추가되는 주요 항목 | Clang에 추가되는 주요 항목 |
+|---|---|---|
+| `CMakeUserPresets.json` | 진단 억제 옵션, `-ggdb3`, frame pointer | ThinLTO, delayed template parsing, PCH 결정성 옵션, `-fdebug-macro`, 진단 억제 옵션 |
+| `CMakeLists.txt` GNU 분기, 약 209~264행 | `-ggdb3 -Wall -fno-inline -ggdb -fno-omit-frame-pointer -fPIE -std=c++17` | 해당 분기 비어 있음 |
+| `CMakeLists.txt` Linux 공통 블록, 약 608~617행 | 경고 옵션과 `-pthread` | GCC와 동일한 경고 옵션과 `-pthread` |
+| CMake 자동 처리 | `-std=gnu++17`, color diagnostics | `-std=gnu++17`, color diagnostics |
+
+GNU 분기가 GCC에 옵션을 추가하는 것은 사실이다. 그러나 긴 Linux 경고 옵션 묶음은 compiler 분기 밖에 있어서 Clang에도 동일하게 들어간다. 반대로 Clang preset에는 GCC에 없는 ThinLTO와 여러 frontend 옵션이 더 많이 들어간다.
+
+GCC의 대표 C++ 명령에는 다음 중복이 있었다.
+
+- `-fdiagnostics-color=always` 2회: preset과 `CMAKE_COLOR_DIAGNOSTICS=ON`의 자동 추가
+- `-ggdb3` 2회: preset과 GNU debug flags
+- `-Wall` 2회: GNU debug flags와 Linux 공통 flags
+- `-fno-omit-frame-pointer` 2회: preset과 GNU common flags
+- `-std=c++17` 뒤에 `-std=gnu++17`: GNU common flags와 CMake C++ standard 처리
+
+마지막 standard option인 `-std=gnu++17`이 앞의 `-std=c++17`을 대체한다. 나머지 중복도 compiler가 같은 상태를 다시 설정하는 수준이라 소스 파싱이나 code generation 작업량을 두 배로 만들지 않는다. Clang도 color diagnostics와 `-fno-inline`이 중복된다.
+
+또한 `debug_gcc` preset의 `CC="gcc -std=gnu17"`, `CXX="g++ -Wno-error=stringop-overflow"` 환경값은 cache에서 `CMAKE_C_COMPILER=gcc`, `CMAKE_CXX_COMPILER=g++`를 명시했기 때문에 실제 compile command에는 들어가지 않았다. 이 환경 변수 문자열도 속도 차이의 원인이 아니다.
+
+### 5.5 추가/중복 인자 제거 실험
+
+대표 파일 3개를 ccache 없이 한 번 warm-up한 뒤 세 번 측정해 중앙값을 비교했다. 절대 시간은 page cache가 warm한 진단 실험이므로 클린 빌드의 개별 시간과 직접 비교하지 않고 variant 사이의 비율만 본다.
+
+| 파일 | GCC 원본 | GCC 중복 제거 | GNU 분기 추가분 제거 | 모든 `-W*` 제거 | Clang 원본 |
+|---|---:|---:|---:|---:|---:|
+| `object_representation_sr.c` | 0.8917초 | 0.8819초 | 0.8837초 | 0.8548초 | 0.4467초 |
+| `histogram_sampler_sr.cpp` | 1.5903초 | 1.5958초 | 1.6117초 | 1.5543초 | 0.6939초 |
+| `query_executor.c` | 1.4103초 | 1.3890초 | 1.3966초 | 1.3423초 | 0.6462초 |
+
+여기서 “GNU 분기 추가분 제거”는 중복 제거와 함께 `-ggdb`, `-fPIE`, `-std=c++17`, `-fno-inline`을 진단 목적으로 제거한 것이다. 산출물의 PIE 및 inline 관련 의미가 달라질 수 있으므로 실제 preset 후보는 아니다.
+
+결과는 다음과 같다.
+
+- 중복 제거: 파일에 따라 약 -1.5%에서 +0.3%로 측정 잡음 수준
+- GNU 분기 추가분 제거: 약 -1.0%에서 +1.3%로 측정 잡음 수준
+- 모든 경고 옵션 제거: 약 2.3~4.8% 개선
+- 같은 조건의 Clang: GCC 원본 시간의 약 43.6~50.1%
+
+경고 검사는 실제 compiler 작업이므로 옵션 문자열 중복과 달리 작은 비용이 있다. 그러나 같은 공통 경고 묶음이 Clang에도 들어가며, GCC에서 전부 제거해도 Clang과의 격차 대부분이 남았다. 따라서 경고 정책을 약화해도 전체 클린 빌드 28초 차이를 설명하거나 해소할 수 없다.
+
+### 5.6 컴파일러 내부 단계에서 보이는 차이
+
+code generation 이전에도 차이가 있는지 확인하기 위해 같은 실제 명령을 전처리 전용(`-E`)과 syntax-only(`-fsyntax-only`)로 실행했다.
+
+| 파일 | 전처리 GCC | 전처리 Clang | GCC/Clang | syntax GCC | syntax Clang | GCC/Clang |
+|---|---:|---:|---:|---:|---:|---:|
+| `object_representation_sr.c` | 0.1532초 | 0.1041초 | 1.47배 | 0.6388초 | 0.3654초 | 1.75배 |
+| `histogram_sampler_sr.cpp` | 0.1445초 | 0.0866초 | 1.67배 | 0.7229초 | 0.4436초 | 1.63배 |
+| `query_executor.c` | 0.1650초 | 0.1031초 | 1.60배 | 0.7585초 | 0.4752초 | 1.60배 |
+
+이 결과는 debug object를 생성하기 전부터 GCC의 preprocessing, parsing, name lookup, template/semantic 처리 경로가 이 CUBRID workload에서 약 1.5~1.75배 느리다는 것을 보여준다.
+
+두 compiler가 더 적은 헤더를 처리하는지도 Ninja dependency database로 확인했다.
+
+| 파일 | GCC dependency 수 | Clang dependency 수 |
+|---|---:|---:|
+| `object_representation_sr.c` | 646 | 677 |
+| `histogram_sampler_sr.cpp` | 601 | 632 |
+| `query_executor.c` | 726 | 757 |
+
+Clang이 오히려 각 파일에서 31개 더 많은 dependency를 기록했다. Clang이 훨씬 적은 헤더를 읽어서 빠르다는 설명도 맞지 않는다.
+
+`histogram_sampler_sr.cpp`에 `-ftime-report`를 적용하면 GCC는 총 1.48초와 내부 메모리 511 MiB를 보고했다.
+
+| GCC 내부 단계 | 시간 | 비율 | 보고 메모리 |
+|---|---:|---:|---:|
+| parsing | 0.60초 | 40% | 277 MiB |
+| language deferred | 0.19초 | 13% | 64 MiB |
+| optimization and generation | 0.65초 | 44% | 162 MiB |
+| last assembler | 0.04초 | 3% | 약 5 MiB |
+
+같은 파일의 Clang time report는 총 약 0.70초였고 front end 0.47초, LLVM IR generation 0.13초, optimizer/ThinLTO bitcode writer 0.10초로 나뉘었다. 두 compiler의 timer 분류가 완전히 같지는 않으므로 단계별 숫자를 일대일 benchmark로 해석하면 안 되지만, GCC에서 parsing과 generation 양쪽 모두 큰 비용을 차지한다는 점은 명확하다.
+
+#### 가장 plausible한 원인
+
+현재 증거로 원인을 다음과 같이 좁힐 수 있다.
+
+1. **GCC 16 frontend가 이 헤더 중심 C++17 코드에서 더 느리다.** 전처리만 해도 1.47~1.67배, syntax-only도 1.60~1.75배 느리다.
+2. **GCC의 debug/native object 생성 비용이 격차를 더 키운다.** full compile 격차는 대표 파일에서 약 2.0~2.3배이고, GCC object와 peak RSS도 더 크다.
+3. **Clang의 `-fdelayed-template-parsing`이 일부 유리하다.** 이를 제거하면 Clang이 약 4~8% 느려지지만 여전히 GCC보다 크게 빠르다.
+4. **Clang ThinLTO가 backend 일부를 link 단계로 미룬다.** 그러나 ThinLTO를 제거한 개별 실험에서도 Clang 우위가 약 1.8배 남으므로 주원인은 아니다. GCC LTO도 전체 빌드에서는 오히려 느렸다.
+5. **병렬 빌드에서 GCC의 높은 메모리 사용량이 차이를 증폭한다.** GCC 대표 프로세스는 약 416~517 MiB, Clang은 약 217~278 MiB였고, 24개 작업이 동시에 실행된다.
+
+즉 CMakeLists의 GNU 전용 옵션은 정리할 만한 중복을 만들지만 성능상 주범은 아니다. 이 환경에서 관찰된 차이는 주로 GCC 16과 Clang 22의 CUBRID C++17 frontend/debug code generation 구현 차이이며, CUBRID가 많은 translation unit에서 큰 헤더 집합을 반복 파싱하는 구조가 그 차이를 클린 빌드 전체로 확대한다.
+
 ## 6. GCC 최적화 실험
 
 ### 6.1 디버그 정보 및 GCC 옵션
@@ -321,4 +463,4 @@ cmake --build --preset debug_gcc_fast
 4. **더 공격적인 프로젝트 CMake 변경 허용:** Unity Build를 타깃별로 적용하되 generated lexer/parser와 specialization 충돌 소스를 명시적으로 제외한다.
 5. **GCC LTO:** 현재 상태에서는 전체 시간이 더 느리고 진단된 ODR/type 위험이 있으므로 빌드 가속 목적으로 사용하지 않는다.
 
-요약하면, preset만으로 Clang과 같은 속도를 만드는 숨은 linker 또는 LTO switch는 발견되지 않았다. 안전하고 의미 보존적인 preset-only 개선은 `-pipe`이며, 남은 약 26초의 차이를 줄일 현실적인 경로는 타깃별 PCH나 선택적 Unity Build이다.
+요약하면, GCC 명령에 중복 및 GNU 전용 인자가 있는 것은 사실이지만 이를 제거한 측정에서는 유의미한 개선이 없었다. preset만으로 Clang과 같은 속도를 만드는 숨은 compiler/linker/LTO switch는 발견되지 않았다. 안전하고 의미 보존적인 preset-only 개선은 `-pipe`이며, 남은 약 26초의 차이를 줄일 현실적인 경로는 타깃별 PCH나 선택적 Unity Build이다.
