@@ -11,6 +11,23 @@ vacuum 이 재사용된 OOS 슬롯의 살아있는 데이터를 삭제하는 문
 - **AS-IS**: 회수 직전 확인은 `oos_chunk_exists()` 의 슬롯 점유 여부 하나뿐이다. OOS OID 는 물리 주소 `(volid, pageid, slotid)` 라 슬롯이 재할당되면 같은 OID 가 남의 청크를 가리키는데, 이를 구분할 신원 정보가 청크에 없다. 완주하지 못한 vacuum 블록은 `start_lsa` 가 전진하지 않아 재시작 후 처음부터 재주행되고, 1차 pass 가 비운 슬롯을 그 사이 다른 살아있는 행이 재사용했다면 2차 pass 가 그 데이터를 지운다. 스톡 debug 빌드에서 소스 수정 없이 3회 실행 3회 모두 발현했다 (판독 불가 행 163~293건, 상세는 JIRA 본문).
 - **TO-BE**: 청크를 INSERT 할 때 페이지 단위 카운터에서 4바이트 generation 을 발급해 청크 헤더와 heap 의 OOS inline stub 양쪽에 기록하고, `oos_delete` 가 삭제 전에 둘을 등가 비교한다. 불일치(슬롯 재사용)나 부재(이미 회수됨)는 에러 없는 no-op 이므로, 블록 재시도가 살아있는 체인을 파괴할 수 없다.
 
+AS-IS 의 사고 시퀀스 — 두 번의 vacuum pass 사이에 슬롯 재사용이 끼어드는 순서:
+
+```mermaid
+sequenceDiagram
+    participant V as vacuum worker
+    participant S as OOS 슬롯 (vol|page|slot)
+    participant R2 as 살아있는 행 R2
+    Note over V: 1차 pass — undo image 에서 옛 OID 재유도
+    V->>S: oos_chunk_exists → true (죽은 체인)
+    V->>S: oos_delete — 슬롯이 비워짐
+    Note over V: 블록 완주 실패 (start_lsa 미전진)
+    R2->>S: oos_insert — 같은 슬롯을 재사용
+    Note over V: 재시작 — 같은 블록을 처음부터 재처리
+    V->>S: oos_chunk_exists → true (이제 R2 의 데이터!)
+    V->>S: oos_delete — R2 데이터 손실 (silent)
+```
+
 ## Implementation
 
 ### 온디스크 변경 (feat/oos 미출시 — 마이그레이션 불필요)
@@ -22,6 +39,8 @@ vacuum 이 재사용된 OOS 슬롯의 살아있는 데이터를 삭제하는 문
 | OOS inline stub (`OR_OOS_INLINE_SIZE`) | 16B (head OID 8B + full length 8B) | 20B (+기대 generation 4B) |
 | 삭제 조건 | 슬롯 점유 여부 | generation 등가 비교, 불일치/부재 시 no-op |
 
+![온디스크 레이아웃 변경 — stub 과 청크 헤더에 generation 4B 가 추가되고, 데이터 페이지 slot 0 에 카운터 레코드가 신설된다](./CBRD-26950-oos-generation-identity-stamp_01d110e_claude-assets/ondisk-layout.svg)
+
 ### 발급 경로 — `src/storage/oos_file.cpp`
 
 - `oos_vpid_init_new_data_page()` (신설): 데이터 페이지 초기화 시 slot 0 에 카운터 0 짜리 헤더 레코드를 심고 `RVOOS_NEWPAGE` 하나로 로깅한다. 파일 헤더 페이지(sticky first page)는 기존 `oos_vpid_init_new()` 를 그대로 쓰며 slot 0 에 `OOS_HDR_STATS` 를 유지한다.
@@ -29,21 +48,62 @@ vacuum 이 재사용된 OOS 슬롯의 살아있는 데이터를 삭제하는 문
 - `oos_insert` / `oos_insert_many` / `oos_insert_across_pages`: head 청크의 generation 을 out-param 으로 반환한다 (`oos_insert_request` 에 `generation_out` 추가). 멀티청크 체인은 청크마다 발급받고 stub 에는 head 의 값이 실린다.
 - 페이지당 용량: slot 0 헤더 레코드 몫(정렬된 레코드 8B + 슬롯 4B)을 뺀 `oos_get_data_page_capacity()` 를 신설하고 `oos_get_max_chunk_size_within_page()` 가 이를 따른다.
 
+![generation 발급 흐름 — 페이지 카운터가 7 에서 8 로 증가하고, 발급값이 새 청크 헤더와 heap stub 에 함께 기록된다](./CBRD-26950-oos-generation-identity-stamp_01d110e_claude-assets/generation-issue-flow.svg)
+
 ### 검증 경로
 
 - `oos_delete(thread_p, vfid, oid, expected_generation)`: 신설 probe `oos_chain_head_matches()` 가 head 청크의 저장 generation 과 기대값을 비교한다. 페이지 dealloc / 슬롯 부재 / generation 불일치는 모두 no-op (NO_ERROR), 실제 I/O 오류만 전파. 기존 존재 여부 probe `oos_chunk_exists()` 는 삭제했다.
 - `heap_recdes_get_oos_refs()` (`src/storage/heap_file.c`, 구 `heap_recdes_get_oos_oids`): stub 에서 `(head OID, generation)` 쌍 (`oos_chain_ref`) 을 추출한다. 호출자 셋 모두 전환 — vacuum forward-walk (`vacuum_forward_walk_oos_delete_atomic`), REMOVE 경로 (`vacuum_heap_oos_delete_within_sysop`), eager 정리 (`heap_oos_delete_unreferenced`).
 - stub 기록: `heap_oos_column_plan` 에 generation 을 담아 `or_put_int` 로 직렬화 (`heap_file.c` 변환 경로). 파싱 측 경계 검사(`heap_oos_parse_inline_ref`, midxkey 크기 검증)는 20B 기준으로 갱신.
 
+`oos_delete` 의 결정 트리 — 세 갈래 모두 "잘못 지우는 일"이 없는 방향으로 닫힌다:
+
+```mermaid
+flowchart TD
+    A["oos_delete(oid, 기대 g)"] --> B{"head 슬롯 상태"}
+    B -->|"페이지 dealloc / 슬롯 비어 있음"| C["no-op — 이미 회수됨<br/>(블록 재시도의 정상 경로)"]
+    B -->|"점유 중"| D{"저장 g == 기대 g ?"}
+    D -->|"불일치"| E["no-op — 슬롯 재사용<br/>(남의 살아있는 체인, CBRD-26950 의 사고 지점)"]
+    D -->|"일치"| F["oos_delete_chain<br/>(정당한 대상 — 체인 전체 회수)"]
+    style E stroke:#eb6834,stroke-width:2px
+    style F stroke:#1baf7a,stroke-width:2px
+```
+
 ### 복구 — `src/transaction/recovery.h/.c`
 
 - `RVOOS_NEWPAGE` (=140) 신설: redo 는 페이지 타입 + slotted page 초기화 + slot 0 헤더 레코드 재삽입 (`oos_rv_redo_newpage`, heap 의 `RVHF_NEWPAGE` 패턴). undo 는 `pgbuf_rv_new_page_undo`.
 - `oos_rv_redo_insert()`: slot 0 이 아닌 삽입(=청크)의 redo 시 청크에 스탬프된 generation 으로 페이지 카운터를 **단조 증가**(MAX) 재생한다. 이 함수는 `RVOOS_DELETE` 의 undo (롤백 복원) 로도 실행되므로, 대입이 아닌 MAX 여야 카운터가 퇴행해 같은 generation 을 재발급하는 일이 없다.
 
+```mermaid
+flowchart LR
+    subgraph RT["런타임 (oos_insert_record_in_fixed_page)"]
+        I["counter+1 발급 → 청크 스탬프<br/>spage_insert 성공 후에만 counter 커밋"]
+    end
+    subgraph RV["oos_rv_redo_insert — 두 역할, 하나의 규칙"]
+        R["RVOOS_INSERT 의 redo<br/>counter = max(counter, 청크 g)"]
+        U["RVOOS_DELETE 의 undo (롤백 복원)<br/>옛 청크 g ≤ counter → 변화 없음"]
+    end
+    I -.->|"같은 RVOOS_INSERT 로그가<br/>청크와 counter 를 함께 커버"| R
+    U ---|"대입이었다면 counter 퇴행<br/>→ generation 재발급 위험"| R
+```
+
 ### 복제 (HA)
 
 - `thread_p->oos_oids` 발급 결과 publication 이 `(OID, generation)` 쌍 (`oos_published_ref`, `src/thread/thread_entry.hpp`) 으로 확장됐다. slave 적용 시 `locator_fixup_oos_oids_in_recdes` (`src/transaction/locator_sr.c`) 가 복제된 heap 레코드의 stub 에서 OID 와 함께 generation 도 slave 로컬 발급값으로 다시 쓴다 — 스토리지를 다시 읽지 않는 순수 바이트 fixup 이다. 이 갱신이 빠지면 slave stub 이 master generation 을 갖게 되어 slave vacuum 회수가 전부 no-op(영구 누수)이 된다.
 - `log_applier.c` 의 청크 재조립 헤더는 transient 라 generation 0 으로 무방 (slave 측 `oos_insert` 가 자체 발급).
+
+```mermaid
+sequenceDiagram
+    participant M as master
+    participant L as repl log
+    participant A as slave applier
+    participant SS as slave 스토리지
+    M->>L: RVOOS_INSERT (청크 이미지) + RVREPL_OOS_INSERT
+    A->>L: 청크 이미지 수집·재조립 (헤더는 transient, g=0)
+    A->>SS: locator_oos_insert_force → oos_insert
+    SS-->>A: slave OID + slave g 발급, (OID, g) 쌍으로 publish
+    A->>A: heap 레코드 apply 직전 fixup — stub 의 OID 와 g 를<br/>publish 된 slave 값으로 재기록 (스토리지 재조회 없음)
+```
 
 ### 파생 변경
 
@@ -63,3 +123,5 @@ vacuum 이 재사용된 OOS 슬롯의 살아있는 데이터를 삭제하는 문
 
 - 단위 테스트: `ctest` OOS 스위트 25/25 통과 (debug_gcc). 갱신 항목 — stub 20B 라운드트립, generation 추출, 경계(18자/19자) 이관 판정, 재현/이중삭제 no-op 경로.
 - 재현 회귀: JIRA 첨부 `cbrd-26950-poc.sh` (수정 전 3/3 발현, 판독 불가 행 163~293건) 를 수정 후 실행 — 두 pass 재삭제 OOS OID 0건, 판독 불가 행 0건, 대조군 무손상. 살아있는 체인 수(`SHOW HEAP OOS`)가 기대값 21,956 (UPDATE 후 R1 20,000 + 커밋된 R3 1,956) 과 정확히 일치해 정당한 회수(누수 없음)도 함께 확인했다.
+
+![PoC 회귀 결과 — 수정 전 3회 실행에서 293, 163, 240건의 커밋 행이 판독 불가가 되었고, 수정 후 실행은 0건](./CBRD-26950-oos-generation-identity-stamp_01d110e_claude-assets/poc-before-after.svg)

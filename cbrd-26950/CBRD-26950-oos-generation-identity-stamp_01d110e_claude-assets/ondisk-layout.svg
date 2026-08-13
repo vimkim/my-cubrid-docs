@@ -1,0 +1,59 @@
+<svg viewBox="0 0 720 430" width="720" height="430" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="ondisk-title ondisk-desc">
+  <title id="ondisk-title">온디스크 레이아웃 변경 — generation 4B 추가</title>
+  <desc id="ondisk-desc">OOS inline stub 16B에서 20B, 청크 헤더 16B에서 20B로 확장되고, 데이터 페이지 slot 0에 4B 카운터 레코드가 신설되는 바이트 레이아웃</desc>
+  <rect x="0.5" y="0.5" width="719" height="429" rx="8" fill="#fcfcfb" stroke="#e3e2de"/>
+  <g font-family="ui-sans-serif, system-ui, 'Noto Sans KR', sans-serif">
+    <text x="24" y="30" font-size="14" font-weight="600" fill="#0b0b0b">온디스크 레이아웃 변경 — generation 4B 추가</text>
+
+    <!-- Section A: inline stub -->
+    <text x="24" y="62" font-size="12" fill="#52514e">① OOS inline stub — heap 레코드 variable area 안의 참조 (OR_OOS_INLINE_SIZE 16B → 20B)</text>
+    <text x="140" y="97" font-size="11" fill="#52514e" text-anchor="end">AS-IS</text>
+    <rect x="150" y="76" width="176" height="34" fill="#f0efec" stroke="#52514e"/>
+    <text x="238" y="97" font-size="12" fill="#0b0b0b" text-anchor="middle">head OOS OID (8B)</text>
+    <rect x="326" y="76" width="176" height="34" fill="#f0efec" stroke="#52514e"/>
+    <text x="414" y="97" font-size="12" fill="#0b0b0b" text-anchor="middle">full length (8B)</text>
+
+    <text x="140" y="143" font-size="11" fill="#52514e" text-anchor="end">TO-BE</text>
+    <rect x="150" y="122" width="176" height="34" fill="#f0efec" stroke="#52514e"/>
+    <text x="238" y="143" font-size="12" fill="#0b0b0b" text-anchor="middle">head OOS OID (8B)</text>
+    <rect x="326" y="122" width="176" height="34" fill="#f0efec" stroke="#52514e"/>
+    <text x="414" y="143" font-size="12" fill="#0b0b0b" text-anchor="middle">full length (8B)</text>
+    <rect x="502" y="122" width="88" height="34" fill="#cde2fb" stroke="#2a78d6" stroke-width="2"/>
+    <text x="546" y="143" font-size="12" font-weight="600" fill="#0b0b0b" text-anchor="middle">gen (4B)</text>
+
+    <!-- Section B: chunk header -->
+    <text x="24" y="194" font-size="12" fill="#52514e">② oos_record_header — 각 OOS 청크 레코드의 머리 (16B → 20B)</text>
+    <text x="140" y="229" font-size="11" fill="#52514e" text-anchor="end">AS-IS</text>
+    <rect x="150" y="208" width="88" height="34" fill="#f0efec" stroke="#52514e"/>
+    <text x="194" y="222" font-size="10" fill="#0b0b0b" text-anchor="middle">total_data_</text>
+    <text x="194" y="235" font-size="10" fill="#0b0b0b" text-anchor="middle">length (4B)</text>
+    <rect x="238" y="208" width="88" height="34" fill="#f0efec" stroke="#52514e"/>
+    <text x="282" y="222" font-size="10" fill="#0b0b0b" text-anchor="middle">chunk_index</text>
+    <text x="282" y="235" font-size="10" fill="#0b0b0b" text-anchor="middle">(4B)</text>
+    <rect x="326" y="208" width="176" height="34" fill="#f0efec" stroke="#52514e"/>
+    <text x="414" y="229" font-size="12" fill="#0b0b0b" text-anchor="middle">next_chunk_oid (8B)</text>
+
+    <text x="140" y="275" font-size="11" fill="#52514e" text-anchor="end">TO-BE</text>
+    <rect x="150" y="254" width="88" height="34" fill="#f0efec" stroke="#52514e"/>
+    <text x="194" y="268" font-size="10" fill="#0b0b0b" text-anchor="middle">total_data_</text>
+    <text x="194" y="281" font-size="10" fill="#0b0b0b" text-anchor="middle">length (4B)</text>
+    <rect x="238" y="254" width="88" height="34" fill="#f0efec" stroke="#52514e"/>
+    <text x="282" y="268" font-size="10" fill="#0b0b0b" text-anchor="middle">chunk_index</text>
+    <text x="282" y="281" font-size="10" fill="#0b0b0b" text-anchor="middle">(4B)</text>
+    <rect x="326" y="254" width="176" height="34" fill="#f0efec" stroke="#52514e"/>
+    <text x="414" y="275" font-size="12" fill="#0b0b0b" text-anchor="middle">next_chunk_oid (8B)</text>
+    <rect x="502" y="254" width="88" height="34" fill="#cde2fb" stroke="#2a78d6" stroke-width="2"/>
+    <text x="546" y="275" font-size="12" font-weight="600" fill="#0b0b0b" text-anchor="middle">gen (4B)</text>
+
+    <!-- Section C: page header record -->
+    <text x="24" y="326" font-size="12" fill="#52514e">③ OOS_PAGE_HEADER — 데이터 페이지 slot 0 의 신설 레코드 (발급의 유일한 원천)</text>
+    <rect x="150" y="340" width="140" height="34" fill="#cde2fb" stroke="#2a78d6" stroke-width="2"/>
+    <text x="220" y="354" font-size="10" font-weight="600" fill="#0b0b0b" text-anchor="middle">generation_counter</text>
+    <text x="220" y="367" font-size="10" fill="#0b0b0b" text-anchor="middle">(uint32, 4B)</text>
+    <text x="304" y="361" font-size="11" fill="#52514e">청크 INSERT 마다 +1 — 이 값이 청크 헤더와 stub 에 스탬프된다</text>
+
+    <!-- legend -->
+    <rect x="150" y="398" width="12" height="12" fill="#cde2fb" stroke="#2a78d6" stroke-width="2"/>
+    <text x="170" y="408" font-size="11" fill="#52514e">이번 변경으로 추가·신설된 필드</text>
+  </g>
+</svg>

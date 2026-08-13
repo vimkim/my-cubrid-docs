@@ -1,0 +1,58 @@
+<svg viewBox="0 0 780 430" width="780" height="430" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="issue-title issue-desc">
+  <title id="issue-title">generation 발급 흐름 — 페이지 카운터에서 청크 헤더와 heap stub 으로</title>
+  <desc id="issue-desc">OOS 데이터 페이지의 slot 0 카운터가 INSERT 시 7에서 8로 증가하고, 발급값 8이 새 청크 헤더와 heap 레코드의 inline stub 에 함께 기록되는 흐름</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#52514e"/>
+    </marker>
+  </defs>
+  <rect x="0.5" y="0.5" width="779" height="429" rx="8" fill="#fcfcfb" stroke="#e3e2de"/>
+  <g font-family="ui-sans-serif, system-ui, 'Noto Sans KR', sans-serif">
+    <text x="24" y="30" font-size="14" font-weight="600" fill="#0b0b0b">generation 발급 — INSERT 한 번에 세 곳이 같은 값을 갖는다</text>
+
+    <!-- steps legend -->
+    <text x="430" y="66" font-size="12" fill="#0b0b0b">① 카운터 7 → 8 발급 (보유한 W-latch 안, 성공 시에만 커밋)</text>
+    <text x="430" y="88" font-size="12" fill="#0b0b0b">② 새 청크 헤더에 g=8 스탬프 (같은 RVOOS_INSERT 로그가 커버)</text>
+    <text x="430" y="110" font-size="12" fill="#0b0b0b">③ oos_insert 가 g=8 반환 → heap stub 에 기록</text>
+
+    <!-- OOS data page -->
+    <text x="36" y="66" font-size="12" font-weight="600" fill="#52514e">OOS 데이터 페이지</text>
+    <rect x="36" y="76" width="320" height="310" fill="none" stroke="#52514e" stroke-width="1.5" rx="4"/>
+    <rect x="44" y="84" width="304" height="26" fill="#f0efec" stroke="#52514e"/>
+    <text x="196" y="101" font-size="11" fill="#52514e" text-anchor="middle">slotted page header</text>
+
+    <rect x="44" y="116" width="304" height="40" fill="#cde2fb" stroke="#2a78d6" stroke-width="2"/>
+    <text x="196" y="132" font-size="11" font-weight="600" fill="#0b0b0b" text-anchor="middle">slot 0: OOS_PAGE_HEADER</text>
+    <text x="196" y="148" font-size="12" fill="#0b0b0b" text-anchor="middle">generation_counter: 7 → 8  ①</text>
+
+    <rect x="44" y="162" width="304" height="32" fill="#f0efec" stroke="#52514e"/>
+    <text x="196" y="182" font-size="11" fill="#52514e" text-anchor="middle">slot 1: 청크 (g=3)</text>
+    <rect x="44" y="200" width="304" height="32" fill="#f0efec" stroke="#52514e"/>
+    <text x="196" y="220" font-size="11" fill="#52514e" text-anchor="middle">slot 2: 청크 (g=7)</text>
+
+    <rect x="44" y="238" width="304" height="44" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2"/>
+    <text x="196" y="256" font-size="11" font-weight="600" fill="#0b0b0b" text-anchor="middle">slot 3: 새 청크  ②</text>
+    <text x="196" y="272" font-size="12" fill="#0b0b0b" text-anchor="middle">header.generation = 8</text>
+
+    <rect x="44" y="290" width="304" height="88" fill="none" stroke="#b9b8b3" stroke-dasharray="5 4"/>
+    <text x="196" y="338" font-size="11" fill="#52514e" text-anchor="middle">free space</text>
+
+    <!-- heap record -->
+    <text x="470" y="196" font-size="12" font-weight="600" fill="#52514e">heap 페이지의 레코드</text>
+    <rect x="470" y="206" width="280" height="134" fill="none" stroke="#52514e" stroke-width="1.5" rx="4"/>
+    <text x="610" y="234" font-size="11" fill="#52514e" text-anchor="middle">… 고정 컬럼 · 다른 가변 컬럼 …</text>
+    <rect x="486" y="250" width="110" height="40" fill="#f0efec" stroke="#52514e"/>
+    <text x="541" y="274" font-size="11" fill="#0b0b0b" text-anchor="middle">head OOS OID</text>
+    <rect x="596" y="250" width="80" height="40" fill="#f0efec" stroke="#52514e"/>
+    <text x="636" y="274" font-size="11" fill="#0b0b0b" text-anchor="middle">full length</text>
+    <rect x="676" y="250" width="58" height="40" fill="#cde2fb" stroke="#2a78d6" stroke-width="2"/>
+    <text x="705" y="274" font-size="12" font-weight="600" fill="#0b0b0b" text-anchor="middle">g=8 ③</text>
+    <text x="610" y="322" font-size="11" fill="#52514e" text-anchor="middle">OOS inline stub (20B)</text>
+
+    <!-- arrow: new chunk -> stub -->
+    <path d="M 356 260 C 400 260 420 268 466 270" fill="none" stroke="#52514e" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="410" y="252" font-size="11" fill="#52514e" text-anchor="middle">OID + g=8</text>
+
+    <text x="36" y="414" font-size="11" fill="#52514e">UPDATE 후에는 이 stub 이 undo image 에 그대로 보존되어, vacuum 재시도 시점의 기대값이 된다.</text>
+  </g>
+</svg>
