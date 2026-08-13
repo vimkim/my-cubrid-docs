@@ -1,7 +1,7 @@
 # T7 — Report the forward-walk rollback exposure as CBRD-27237
 
 - label: `wayfinder:task`
-- status: open
+- status: closed
 - assignee: dhkim (claimed 2026-08-13)
 - blocked-by: (none)
 - map: [CBRD-27230 OOS UPDATE dedup](../map.md)
@@ -14,4 +14,4 @@ Per the dev's decision (2026-08-13): **no runtime verification** — write it up
 
 ## Resolution
 
-(in progress — 2026-08-13) Report written, grill-reviewed (3 rounds, all citations source-verified at `725a32c6e`, verdict APPROVED), committed and pushed: `my-cubrid-jira` commit `42b8887`, `issues/CBRD-27237-oos-forward-walk-rollback-delete_725a32c_claude.md`. **JIRA upload pending**: the `cubrid-jira` CLI is not installed on this machine (`uv` also missing). Install `uv`, then `uv tool install git+https://github.com/vimkim/cubrid-jira`, then publish the pushed file to CBRD-27237 via the `cubrid-jira` skill's publish-description workflow. Close this ticket after read-back verification.
+(2026-08-13) Report written, grill-reviewed (3 rounds, all citations source-verified at `725a32c6e`, verdict APPROVED), committed and pushed (`my-cubrid-jira` commit `42b8887`, `issues/CBRD-27237-oos-forward-walk-rollback-delete_725a32c_claude.md`), and **uploaded to [CBRD-27237](http://jira.cubrid.org/browse/CBRD-27237)** with read-back verification. Framed honestly as analysis-only (재현 미실시). 방안 offers two ranked candidates — CBRD-27230's notify-log architecture (removes the forward-walk, defect path disappears) vs. a short-term commit-check gate — with the choice marked TBD pending T4. Input to T4: if option 2 is adopted with commit-conditional emission, this bug is fixed for free, a genuine tiebreaker for the architecture decision.
