@@ -1,10 +1,14 @@
 # T6 — Write and upload the CBRD-27230 spec
 
 - label: `wayfinder:task`
-- status: open
-- assignee: (unclaimed)
+- status: closed
+- assignee: dhkim (claimed 2026-08-13)
 - blocked-by: [T4](./T4-lock-cleanup-architecture.md) (closed — contract locked), [T5](./T5-capture-cbrd-26950-locked-design.md), [T8](./T8-write-path-mechanics-of-reuse.md)
 - map: [CBRD-27230 OOS UPDATE dedup](../map.md)
+
+## Resolution
+
+(2026-08-13) Spec written, grill-reviewed (2 rounds, APPROVED — 15+ citations source-verified at `725a32c6e`), **dev-approved at the HITL gate** (including the embedded emission-shape decision: commit hook before `logtb_complete_mvcc`), committed and pushed (`my-cubrid-jira` `8821d04`, `issues/CBRD-27230-oos-update-dedup_725a32c_claude.md`), and **uploaded to [CBRD-27230](http://jira.cubrid.org/browse/CBRD-27230)** with read-back verification, replacing the 작성 중 description. OOS-CONTEXT.md updated with the superseding ownership invariant and accepted-design notes. **This was the map's final act — destination reached.**
 
 ## Question
 
