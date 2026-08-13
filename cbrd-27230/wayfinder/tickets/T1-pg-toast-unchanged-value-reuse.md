@@ -1,7 +1,7 @@
 # T1 — PG TOAST unchanged-value reuse on UPDATE: mechanism and vacuum safety
 
 - label: `wayfinder:research`
-- status: open
+- status: closed
 - assignee: claude-research (fired at charting)
 - blocked-by: (none)
 - map: [CBRD-27230 OOS UPDATE dedup](../map.md)
@@ -19,4 +19,8 @@ Primary sources: PostgreSQL source (`src/backend/access/heap/heaptoast.c`, `src/
 
 ## Resolution
 
-(pending)
+PG's safety is **two** mechanisms, not one, and only the second is MVCC. (A) *Ownership*: the newest row version owns the chunks; old versions hold borrowed pointers and never cascade — `heap_update` deliberately never calls `heap_toast_delete`, so a chain is released exactly once, either by a later UPDATE that changes the column (`toast_tuple_cleanup`) or by `heap_delete`. (B) *Grace period*: toast-table MVCC only spans release→physical removal; the chunk `xmax` is the same xid as the referencing version's `xmax`, so both cross the horizon together, and `HeapTupleSatisfiesToast` ignores `xmax` entirely. Detection is a `memcmp` of the 18-byte on-disk TOAST pointer in `toast_tuple_init` — not the value, not pointer identity — with reuse as the fallthrough branch. Crash-safety is plain WAL + MVCC rollback; there is **no** idempotence (`simple_heap_delete` errors `"tuple already updated by self"`), so PG depends absolutely on the one-owner discipline.
+
+PG carries **no generation id and no update log**: `TOASTCOL_NEEDS_DELETE_OLD` is a stack flag consumed a few hundred instructions later. Half (A) transfers to OOS directly — SA_MODE's `heap_oos_delete_unreferenced` already implements it. Half (B) transfers in substance without per-chunk MVCC, since OOS cleanup is *already* horizon-gated by vacuum scheduling. What genuinely does not transfer is the **decision timing**: PG decides with both images in hand at UPDATE time, OOS defers to vacuum which sees only the undo image. Closing that gap is exactly option 2 — **the OOS update log is PG's `TOASTCOL_NEEDS_DELETE_OLD` set, persisted.** Supports T3's suspicion on option 1: a reused chain has the same head OID *and* generation in both images, so stamp equality says "delete" precisely when it must not.
+
+Findings: [T1 — PostgreSQL TOAST unchanged-value reuse on UPDATE](../findings/T1-pg-toast-unchanged-value-reuse.md)

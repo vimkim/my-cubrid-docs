@@ -24,12 +24,15 @@ A locked, JIRA-ready Korean design spec for CBRD-27230 — OOS UPDATE dedup: reu
 
 <!-- one line per closed ticket: gist + link -->
 
-(none yet)
+- [T1 — PG TOAST unchanged-value reuse on UPDATE](./tickets/T1-pg-toast-unchanged-value-reuse.md) — PG reuses via an 18-byte pointer `memcmp`, needs no generation id and no update log: the newest version owns the chunks and deletion is decided at UPDATE time with both images in hand. OOS's missing piece is exactly that decision persisted for vacuum — i.e. option 2's update log; stamp equality (option 1) says "delete" precisely when it must not.
+- [T2 — OOS replication replay under chain reuse](./tickets/T2-oos-replication-replay-under-chain-reuse.md) — repl log ships no values, only `RVREPL_OOS_INSERT` LSA pointers the replica replays via its own `oos_insert`; today unassigned OOS attributes re-ship every UPDATE. Naive dedup breaks HA **loudly** (item-count vs stub-count mismatch stops apply) — the protocol needs a per-reused-attribute marker item + replica fixup from its own previous row version, and replica-side vacuum needs the same sharing protection as the master.
+- [T3 — Cleanup paths under chain reuse](./tickets/T3-cleanup-paths-under-chain-reuse.md) — only the vacuum forward-walk breaks (silent data loss on reused chains); SA_MODE eager delete is already correct. **Option 1 refuted**: a reused chain has the same (head OID, generation) in undo image and live stub, so equality fires exactly when deleting is wrong. **Option 2 sound and simpler**: reuse the existing emitter-less `RVOOS_NOTIFY_VACUUM` record, remove the forward-walk entirely; pin two things — log appended *before* the heap update record, emission commit-conditional. Dedup needs **no** generation id; CBRD-26950 stays orthogonal.
 
 ## Not yet specified
 
 - **OOS update log record shape** — fields, redo/undo kinds, idempotency under vacuum block retry, LSA sequencing vs replication logs; interplay with the deferred "move `oos_insert` to `attrinfo_force`" idea (OOS-CONTEXT Optimization Idea B). Graduates after the architecture locks.
 - **Write-path mechanics of reuse** — where "attribute assigned" is known (`heap_attrinfo_set_uninitialized` and friends), and how the old OOS inline stub is carried into the new record version without an `oos_read`. Graduates after the architecture locks.
+- **Replication protocol under dedup** (surfaced by T2) — the per-reused-attribute marker item, the replica-side fixup that pulls the reused OID from its own previous row version (needs the non-expanding fetch), replica-side vacuum protection, and `applylogdb` sql.log reconstruction for deduped UPDATEs. Graduates after the architecture locks.
 - **Spec fallout** — rewording of the ownership invariant in OOS-CONTEXT.md, and new §6 test scenarios (reuse visible across versions, vacuum after dedup'd update chains, crash mid-update-with-reuse). Graduates when the spec is drafted.
 
 ## Out of scope
@@ -38,3 +41,4 @@ A locked, JIRA-ready Korean design spec for CBRD-27230 — OOS UPDATE dedup: reu
 - **Cross-row value dedup / compression** — different features entirely (compression is deferred to type-layer per CTO direction).
 - **Implementing the dedup** on this branch — the destination is the spec; implementation follows as ordinary work.
 - **The CBRD-26950 fix itself** — separate high-priority effort; this map only consumes its locked design (see the capture ticket).
+- **AS-IS defect found by T2** (not dedup work): the DELETE path can emit OOS repl items from a stale `thread_p->oos_oids` at the known `locator_add_or_remove_index` refactoring site, draining an empty LSA queue into an assert — deserves its own JIRA bug, independent of this map.

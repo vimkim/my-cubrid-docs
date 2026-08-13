@@ -1,7 +1,7 @@
 # T3 — Cleanup paths under chain reuse: exact failure scenarios and the two candidate fixes
 
 - label: `wayfinder:research`
-- status: open
+- status: closed
 - assignee: claude-research (fired at charting)
 - blocked-by: (none)
 - map: [CBRD-27230 OOS UPDATE dedup](../map.md)
@@ -24,4 +24,21 @@ Sources (local, read-only): this worktree, OOS-CONTEXT.md §3–4, `my-cubrid-do
 
 ## Resolution
 
-(pending)
+Only the **forward-walk** (`src/query/vacuum_oos.cpp:154`, fed from `vacuum.c:3591`/`:3730`) breaks
+under chain reuse — it deletes every chain named by the undo image, including reused ones the live
+record still points at: silent data loss. The **within-sysop** path (`vacuum_oos.cpp:400`) is a
+downstream casualty (re-deletes an already-freed chain; hard error, no probe, stalls the slot) and
+widens CBRD-26950 to a single uninterrupted vacuum run. The **SA_MODE eager** path
+(`heap_oos.cpp:702`) is already correct, unchanged — it does the `old ∖ new` difference the others
+lack. **Option 1 is refuted**: a reused chain carries the *same* `(head OID, generation)` in undo
+image, live stub and chunk header, so equality fires exactly when deleting is wrong; the repairs are
+re-stamping (an OOS page write per reused chain per UPDATE) or fetching the live version (and then
+the generation is unused). **Option 2 is sound and is the bigger simplification** — reuse the
+existing emitter-less `RVOOS_NOTIFY_VACUUM`; DELETE keeps the REMOVE path; the forward-walk is
+removed, not gated, which retires the whole log-image-parsing machinery. Two things must be pinned:
+append the record before the heap update record (else crash ⇒ leak), and make emission
+commit-conditional (rollback). Dedup does **not** need the generation id; CBRD-26950 stays required
+and orthogonal for block-retry safety. Adjacent, needs runtime confirmation: the current forward-walk
+looks exposed to *rolled-back* UPDATEs independent of dedup (§7).
+
+Findings: [../findings/T3-cleanup-paths-under-chain-reuse.md](../findings/T3-cleanup-paths-under-chain-reuse.md)
