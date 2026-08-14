@@ -38,6 +38,121 @@ SQL grammar, `PT_ATTR_STORAGE` enum, schema flag의 디스크 표현은 바뀌�
 
 기존에 부적격 컬럼에 저장된 정책을 일괄 변환하는 catalog migration은 포함하지 않는다. 이후 해당 컬럼을 `STORAGE` 절 없이 부적격 타입으로 변경하는 경로에서는 기존 정책이 정리된다. heap OOS 배치, inline 크기, WAL, replication, vacuum, recovery도 변경 범위 밖이다.
 
+## PostgreSQL 비교와 후속 제안: 고정 타입의 `STORAGE DEFAULT`
+
+> 검토 상태: 이 절은 commit `882f70f9699ef68ee1457e8554178920df9894e1` 의 구현을 설명하는 앞 절과
+> 구분되는 **후속 리뷰 제안**이다. 비교 기준은 PostgreSQL 18.6 (`REL_18_6`,
+> `724edf9bde9d356724ad384a2e196edc3c9f80f7`)이며, 확인일은 2026-08-14 이다.
+
+### 제기된 사용성 문제
+
+`PREFER_INLINE`, `PREFER_OUTLINE`, `FORCE_OUTLINE` 같은 방향성 옵션은 OOS 배치 지시이므로 고정 타입에서
+실패해도 사용자가 이유를 추론할 수 있다. 반면 `STORAGE DEFAULT` 는 문구 자체가 특정 외부 저장 방식을
+지시하지 않고 "이 타입의 기본 저장 방식으로 되돌린다"고 읽힌다. 따라서 `INT STORAGE DEFAULT` 까지
+"가변 타입이 아니다"라는 이유로 거부하면, 기능 내부의 OOS 분류를 모르는 일반 사용자에게는 뜻밖의
+제약으로 보인다는 리뷰 의견이 제기되었다.
+
+이 문제 제기는 타당하다. `DEFAULT` 를 **정책 적용**이 아니라 **정책 해제/타입 기본값 복원**으로 정의하면,
+고정 타입에서 성공하는 것이 문법의 자연스러운 의미와 ALTER 복구 작업 모두에 더 잘 맞는다.
+
+### PostgreSQL 18.6의 실제 규칙
+
+PostgreSQL 문서는 `SET STORAGE` 가 컬럼을 inline 또는 TOAST 테이블에 둘 수 있는지와 압축 허용 여부를
+정한다고 설명한다. `PLAIN` 은 inline·비압축, `MAIN` 은 inline 선호·압축 허용, `EXTERNAL` 은 외부 저장
+허용·비압축, `EXTENDED` 는 외부 저장·압축 허용이며, `DEFAULT` 는 컬럼 타입의 기본 모드로 되돌린다.
+이 명령은 기존 행을 즉시 재작성하지 않고 이후 갱신에 사용할 전략만 바꾼다.
+([PostgreSQL 18 ALTER TABLE](https://www.postgresql.org/docs/18/sql-altertable.html#SQL-ALTERTABLE-DESC-SET-STORAGE),
+[PostgreSQL 18 TOAST](https://www.postgresql.org/docs/18/storage-toast.html))
+
+구현도 `DEFAULT` 를 별도 OOS/TOAST 정책으로 취급하지 않는다. `GetAttributeStorage()` 는 `DEFAULT` 를
+`get_typstorage(atttypid)` 로 먼저 해석한 뒤, 해석 결과가 `PLAIN` 이거나 타입이 TOAST-aware이면 허용한다.
+따라서 타입 기본값이 `PLAIN` 인 고정 타입의 `DEFAULT` 는 안전 검사에서 정상 통과한다.
+([`GetAttributeStorage()`](https://github.com/postgres/postgres/blob/724edf9bde9d356724ad384a2e196edc3c9f80f7/src/backend/commands/tablecmds.c#L22136-L22170),
+[`TYPSTORAGE_*`](https://github.com/postgres/postgres/blob/724edf9bde9d356724ad384a2e196edc3c9f80f7/src/include/catalog/pg_type.h#L307-L310))
+
+공식 `postgres:18` 이미지의 PostgreSQL 18.6 서버에서 각 문장을 독립적으로 실행하고
+`pg_attribute.attstorage` 를 조회한 결과는 다음과 같다.
+
+| PostgreSQL 타입 | 물리 분류와 타입 기본값 | `PLAIN` | `EXTERNAL` | `EXTENDED` | `MAIN` | `DEFAULT` |
+|---|---|---:|---:|---:|---:|---:|
+| `integer` (`int4`) | `typlen=4`, `typstorage=p` | 성공 (`p`) | 실패 | 실패 | 실패 | **성공 (`p`)** |
+| `char(10000)` (`bpchar`) | `typlen=-1`, `typstorage=x` | 성공 (`p`) | 성공 (`e`) | 성공 (`x`) | 성공 (`m`) | **성공 (`x`)** |
+
+`integer` 의 세 실패는 모두 SQLSTATE `0A000`, `column data type integer can only have storage PLAIN` 을
+반환했다. `DEFAULT` 는 성공하지만 이미 타입 기본값인 `PLAIN` 으로 돌아갈 뿐이므로 물리 동작은 바뀌지 않는다.
+`int4` 는 4바이트 타입이며 `typstorage` 를 생략해 catalog 기본값 `p` 를 사용한다.
+([`int4` catalog entry](https://github.com/postgres/postgres/blob/724edf9bde9d356724ad384a2e196edc3c9f80f7/src/include/catalog/pg_type.dat#L72-L76),
+[`typstorage` default](https://github.com/postgres/postgres/blob/724edf9bde9d356724ad384a2e196edc3c9f80f7/src/include/catalog/pg_type.h#L179-L192))
+
+`CHAR(n)` 은 SQL 의미상 blank-padded 고정 길이처럼 보이지만, PostgreSQL의 물리 타입 `bpchar` 는
+`typlen=-1`, `typstorage=x` 인 TOAST-aware varlena다. 그러므로 다섯 모드를 모두 받아들인다.
+([`bpchar` catalog entry](https://github.com/postgres/postgres/blob/724edf9bde9d356724ad384a2e196edc3c9f80f7/src/include/catalog/pg_type.dat#L274-L280))
+이는 CUBRID에서도 타입 이름의 인상보다 `pr_is_variable_type()` 에 따른 물리 분류를 사용해야 한다는 기존
+CBRD-26979 방향을 뒷받침한다. PostgreSQL에서 `DEFAULT` 문법은 16부터 지원되며, 15의 `SET STORAGE` 문법에는
+네 방향성 모드만 있었다.
+([PostgreSQL 15 ALTER TABLE](https://www.postgresql.org/docs/15/sql-altertable.html),
+[PostgreSQL 16 ALTER TABLE](https://www.postgresql.org/docs/16/sql-altertable.html))
+
+### PostgreSQL과 CUBRID 옵션의 대응 범위
+
+두 제품의 옵션은 이름의 출발점은 같아도 일대일 대응은 아니다. PostgreSQL은 TOAST 압축과 외부 저장 허용을
+함께 표현하지만, CUBRID OOS에는 압축 정책이 없고 컬럼 값의 demotion 순서 또는 강제 여부만 표현한다.
+
+| PostgreSQL | 의미 | 가장 가까운 CUBRID 개념 | 차이 |
+|---|---|---|---|
+| `PLAIN` | inline 고정, 압축/외부 저장 금지 | `FORCE_INLINE` 개념 | 현재 CBRD-26979 worktree에는 `FORCE_INLINE` 문법이 없고, OOS+overflow 상호작용을 다루는 별도 범위다. |
+| `MAIN` | 압축을 허용하되 inline 선호 | `PREFER_INLINE` | inline 선호는 비슷하지만 CUBRID 옵션에는 압축 의미가 없다. |
+| `EXTERNAL` | 비압축 외부 저장 허용 | `PREFER_OUTLINE` 과 일부 유사 | PostgreSQL도 row가 작으면 inline일 수 있어 강제가 아니다. |
+| `EXTENDED` | 압축 후 필요하면 외부 저장; 일반적인 기본값 | `DEFAULT`/`PREFER_OUTLINE` 과 일부 유사 | CUBRID 기본값은 압축이 아니라 PG-style four-record heap target에서의 기본 demotion 순서다. |
+| `DEFAULT` | 타입의 `typstorage` 기본값 복원 | `DEFAULT` | 두 제품 모두 방향성 정책을 새로 강제하기보다 기본 정책으로 복귀한다는 의미가 가장 가깝다. |
+| 직접 대응 없음 | row 크기와 무관한 외부 배치 강제 없음 | `FORCE_OUTLINE` | CUBRID 고유의 hard policy다. |
+
+### CBRD-26979 계약 수정 제안
+
+고정 타입에 대한 예외는 `STORAGE DEFAULT` 에만 좁게 둔다.
+
+| CUBRID DDL | 고정 타입의 제안 결과 | 이유 |
+|---|---|---|
+| `INT STORAGE DEFAULT` | **성공** | 타입의 기본 저장 정책으로 복귀하는 중립적 no-op |
+| 기존 정책 컬럼을 `INT STORAGE DEFAULT` 로 ALTER | **성공하고 기존 OOS 정책 제거** | 명시적 reset으로 사용 가능 |
+| `INT STORAGE PREFER_INLINE` | 실패 | OOS demotion 방향을 지정하지만 고정 타입은 후보가 아님 |
+| `INT STORAGE PREFER_OUTLINE` | 실패 | 현재 내부적으로 DEFAULT와 같더라도 문구는 outline 방향을 명시함 |
+| `INT STORAGE FORCE_OUTLINE` | 실패 | 고정 타입에 적용할 수 없는 hard OOS 정책 |
+| 향후 `INT STORAGE FORCE_INLINE` | 실패 | 방향성 정책은 일관되게 OOS 적격 타입에만 허용한다는 계약 유지 |
+
+이 예외는 **물리 타입 조건만 완화**한다. CLASS/SHARED 속성이나 VCLASS 컬럼은 일반 CLASS의 행별 저장
+정책 대상이 아니므로, `STORAGE DEFAULT` 도 계속 거부해야 한다. 즉 허용 조건은 다음처럼 정리된다.
+
+```text
+절 생략
+OR (일반 CLASS의 normal attribute AND 물리적 가변 타입)
+OR (일반 CLASS의 normal attribute AND 명시적 STORAGE DEFAULT)
+```
+
+### 구현 영향
+
+현재 parse tree는 `PT_ATTR_STORAGE_PREFER_OUTLINE = PT_ATTR_STORAGE_DEFAULT` 로 두 spelling을 같은 enum 값에
+합치고 `attr_storage` 를 2비트로 저장한다. 이 상태에서는 고정 타입에서 `DEFAULT` 만 허용하고
+`PREFER_OUTLINE` 은 거부할 수 없다.
+([current parse-tree representation](https://github.com/CUBRID/cubrid/blob/882f70f9699ef68ee1457e8554178920df9894e1/src/parser/parse_tree.h#L1941-L1964))
+
+따라서 parser 단계에서는 두 spelling을 분리해야 한다.
+
+- `PT_ATTR_STORAGE_DEFAULT` 와 `PT_ATTR_STORAGE_PREFER_OUTLINE` 에 서로 다른 enum 값을 부여한다.
+- `UNSET`, `DEFAULT`, `PREFER_OUTLINE`, `PREFER_INLINE`, `FORCE_OUTLINE` 다섯 상태를 담도록
+  `attr_storage:2` 를 `attr_storage:3` 으로 넓힌다. 향후 `FORCE_INLINE` 을 추가해도 3비트면 충분하다.
+- `do_validate_oos_storage_setting()` 은 일반 CLASS의 normal attribute인지 먼저 확인하고, 물리적으로 고정인
+  경우 `DEFAULT` 만 통과시킨다.
+- catalog flag는 변경할 필요가 없다. `DEFAULT` 와 현재의 `PREFER_OUTLINE` 은 적격 가변 타입에서 모두 기존
+  정책 비트를 해제하므로, spelling 구분은 semantic validation이 끝나는 parse tree 수명 동안만 필요하다.
+- CREATE, ADD, MODIFY, CHANGE에서 `INT STORAGE DEFAULT` 성공과 나머지 방향성 옵션 실패를 각각 검증하고,
+  variable-to-fixed ALTER에서 명시적 `DEFAULT` 가 기존 `PREFER_INLINE`/`FORCE_OUTLINE` 정책을 제거하는지
+  확인한다. CLASS/SHARED/VCLASS 거부 회귀도 유지한다.
+
+이 변경은 `DEFAULT` 의 사용자 의미를 PostgreSQL과 맞추면서도 OOS와 무관한 고정 타입에 방향성 정책이
+남는 문제는 다시 만들지 않는다. 따라서 리뷰 의견대로 **고정 타입에서도 `STORAGE DEFAULT` 는 허용하는
+것을 권고**한다.
+
 ### Test Plan
 
 - 수정 전 확장된 `test_oos_sql_storage`에서 6개 테스트가 실패해 고정 타입 및 VCLASS 허용과 `PREFER_INLINE` 잔존을 재현했다.
