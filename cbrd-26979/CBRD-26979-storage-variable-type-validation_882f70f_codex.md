@@ -118,7 +118,7 @@ CBRD-26979 방향을 뒷받침한다. PostgreSQL에서 `DEFAULT` 문법은 16부
 | `INT STORAGE PREFER_INLINE` | 실패 | OOS demotion 방향을 지정하지만 고정 타입은 후보가 아님 |
 | `INT STORAGE PREFER_OUTLINE` | 실패 | 현재 내부적으로 DEFAULT와 같더라도 문구는 outline 방향을 명시함 |
 | `INT STORAGE FORCE_OUTLINE` | 실패 | 고정 타입에 적용할 수 없는 hard OOS 정책 |
-| 향후 `INT STORAGE FORCE_INLINE` | 실패 | 방향성 정책은 일관되게 OOS 적격 타입에만 허용한다는 계약 유지 |
+| 향후 `INT STORAGE FORCE_INLINE` | **기능 추가 시 성공** | 고정 타입의 내재된 no-OOS 동작을 명시한다. 현재 CBRD-26979 worktree에는 이 문법이 없다. |
 
 이 예외는 **물리 타입 조건만 완화**한다. CLASS/SHARED 속성이나 VCLASS 컬럼은 일반 CLASS의 행별 저장
 정책 대상이 아니므로, `STORAGE DEFAULT` 도 계속 거부해야 한다. 즉 허용 조건은 다음처럼 정리된다.
@@ -128,6 +128,64 @@ CBRD-26979 방향을 뒷받침한다. PostgreSQL에서 `DEFAULT` 문법은 16부
 OR (일반 CLASS의 normal attribute AND 물리적 가변 타입)
 OR (일반 CLASS의 normal attribute AND 명시적 STORAGE DEFAULT)
 ```
+
+### `FORCE_INLINE` 추가 여부 검토
+
+`FORCE_INLINE` 은 추가할 가치가 있다. 다만 CBRD-26979의 `DEFAULT` 사용성 수정에 끼워 넣지 않고 별도
+기능으로 다루는 편이 안전하다. 가변 타입의 hard inline 정책은 grammar 한 줄을 더하는 데서 끝나지 않고,
+catalog flag, ALTER 전환, heap 배치 계획, `SHOW CREATE TABLE` 라운드트립, overflow 상호작용을 모두 바꾼다.
+
+먼저 `INLINE` 의 범위를 다음처럼 좁혀야 한다.
+
+> `FORCE_INLINE` 은 새 디스크 배치를 정할 때 해당 속성 값을 OOS inline stub 으로 바꾸지 않는다는 뜻이다.
+> 속성을 포함한 전체 heap 레코드가 반드시 home page 안에 남는다는 뜻은 아니다.
+
+CUBRID는 한 레코드가 최대 slotted-record 길이를 넘으면 전체 레코드를 overflow page에 두는 `REC_BIGONE`
+경로를 이미 지원한다. PostgreSQL은 tuple 자체가 page를 가로지를 수 없으므로 `PLAIN` 과 CUBRID의
+`FORCE_INLINE` 은 이 지점에서 다르다. `FORCE_INLINE` 만 있는 큰 CUBRID 레코드는 OOS-backed attribute가
+없으므로 기존과 같이 `REC_BIGONE` 이 될 수 있다.
+
+반면 다른 속성이 OOS로 demote된 뒤 `FORCE_INLINE` 속성 때문에 남은 레코드가 여전히 `REC_BIGONE` 을
+요구하면, 현재의 OOS+bigone 금지 규칙에 따라 `ER_HEAP_OOS_OVERPASS_MAXOBJ_SIZE` 로 실패해야 한다. 이 검사는
+OOS value chain을 쓰기 전에 실행되므로 실패 시 orphan chain을 만들지 않는다. 정책을 무시하고
+`FORCE_INLINE` 값을 OOS로 보내는 fallback은 두지 않는다.
+
+고정 타입의 기본값은 **효과상 `FORCE_INLINE`** 으로 해석하되, 이를 schema 정책 비트로 저장하거나
+`SHOW CREATE TABLE` 에 자동 출력하지 않는다. 고정 타입은 `is_fixed`/`pr_is_variable_type()` 분류만으로 이미
+OOS 후보가 될 수 없기 때문이다. 타입 능력에서 자동으로 따라오는 사실을 사용자 override로 중복 저장하면,
+나중에 고정→가변 ALTER에서 의미 없던 flag가 갑자기 hard 정책으로 살아나는 문제가 생긴다.
+
+| 고정 타입 DDL | 후속 `FORCE_INLINE` 기능의 권장 결과 | catalog / 출력 |
+|---|---|---|
+| `INT` | 성공, 내재된 no-OOS 기본값 | flag 없음, 절 출력 없음 |
+| `INT STORAGE DEFAULT` | 성공, 타입 기본값으로 reset | flag 없음, 절 출력 없음 |
+| `INT STORAGE FORCE_INLINE` | 성공, 내재된 기본값과 같은 결과 | flag 없음, canonical DDL에서는 절 생략 |
+| `INT STORAGE PREFER_INLINE` | 실패 | OOS demotion 순서를 지정할 수 없음 |
+| `INT STORAGE PREFER_OUTLINE` | 실패 | outline 방향을 지정할 수 없음 |
+| `INT STORAGE FORCE_OUTLINE` | 실패 | OOS demotion을 강제할 수 없음 |
+
+가변 타입에서는 `FORCE_INLINE` 이 실제 override이므로 flag를 저장하고 출력한다. ALTER에서 `STORAGE` 절을
+생략했을 때는 가변→가변 변경에서만 호환되는 override를 보존한다. 가변→고정은 기존 OOS 정책을 지우고
+내재된 fixed 기본값을 적용하며, 고정→가변은 새 가변 타입의 기본값을 적용한다. hard inline 의도를 타입
+변경 뒤에도 유지하려면 해당 ALTER에 `STORAGE FORCE_INLINE` 을 명시해야 한다.
+
+이 규칙은 타입의 **OOS 적격성**과 사용자가 요청한 **OOS 배치 정책**을 분리한다. CREATE/ADD/MODIFY/CHANGE가
+각자 분기하지 않도록 schema seam에 단일 resolver를 두는 것이 적합하다.
+
+```text
+resolve_oos_storage_policy(attribute_kind, physical_layout,
+                           requested_clause, old_override, ddl_operation)
+  -> effective_policy + persisted_override
+  -> or semantic error
+```
+
+resolver가 `DEFAULT` reset, 타입별 기본값, 호환되지 않는 ALTER policy 정리, one-hot flag 전환을 숨기면
+호출자는 같은 interface 하나만 사용한다. heap 배치 모듈은 정규화된 정책만 받아 `FORCE_INLINE` 을 후보에서
+제외하고, 기존 `FORCE_OUTLINE` 강제 대상 우선 선택과 `PREFER_INLINE` 후순위 정렬을 그대로 수행한다.
+
+> **권고**: CBRD-26979에서는 고정 타입의 `STORAGE DEFAULT` 만 먼저 허용한다. `FORCE_INLINE` 은 위 의미와
+> `REC_BIGONE` 계약, ALTER 전환, 라운드트립 및 recovery/replication 회귀를 갖춘 별도 기능으로 추가한다.
+> 고정 타입의 효과상 기본값은 지금도 no-OOS이므로, 별도 기능이 들어오기 전까지 새 flag는 필요 없다.
 
 ### 구현 영향
 
@@ -148,6 +206,10 @@ OR (일반 CLASS의 normal attribute AND 명시적 STORAGE DEFAULT)
 - CREATE, ADD, MODIFY, CHANGE에서 `INT STORAGE DEFAULT` 성공과 나머지 방향성 옵션 실패를 각각 검증하고,
   variable-to-fixed ALTER에서 명시적 `DEFAULT` 가 기존 `PREFER_INLINE`/`FORCE_OUTLINE` 정책을 제거하는지
   확인한다. CLASS/SHARED/VCLASS 거부 회귀도 유지한다.
+
+후속 `FORCE_INLINE` 기능은 위 CBRD-26979 수정과 달리 persisted policy를 하나 늘린다. 그때는
+`SM_ATTFLAG_OOS_FORCE_INLINE`, `OR_ATTRIBUTE_OOS_STORAGE_FORCE_INLINE`, heap 후보 제외, schema flag one-hot
+전환을 함께 추가해야 한다. 다만 고정 타입의 내재된 기본값에는 이 flag를 쓰지 않는다.
 
 이 변경은 `DEFAULT` 의 사용자 의미를 PostgreSQL과 맞추면서도 OOS와 무관한 고정 타입에 방향성 정책이
 남는 문제는 다시 만들지 않는다. 따라서 리뷰 의견대로 **고정 타입에서도 `STORAGE DEFAULT` 는 허용하는
