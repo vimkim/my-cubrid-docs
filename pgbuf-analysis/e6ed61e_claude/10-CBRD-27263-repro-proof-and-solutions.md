@@ -185,7 +185,7 @@ assert 는 "도난 순간 × vacuum 의 empty page 회수 × 체인 재 fix" 세
 
 ## 4. 연구: lock-free fix 는 어디서 왔고, 되돌리면 무엇을 잃나
 
-> 상세 근거: 재현 브랜치의 `pgbuf_docs/wayfinder-CBRD-27263/research/lockfree-fix-origin.md`
+> 상세 근거: [research/lockfree-fix-origin.md](./research/lockfree-fix-origin.md)
 
 - **출처**: 커밋 `58cef8e01` — `[CBRD-26425] Replace bcb mutex lock into atomic_latch (#6704)`,
   2026-01-14 병합. 부모 티켓 CBRD-26242 (같은 page 동시 READ 시 `PGBUF_BCB_LOCK` mutex 병목,
@@ -209,7 +209,7 @@ assert 는 "도난 순간 × vacuum 의 empty page 회수 × 체인 재 fix" 세
 
 ## 5. 연구: OLD_PAGE_PREVENT_DEALLOC 은 정합성 장치인가, 성능 장치인가
 
-> 상세 근거: 재현 브랜치의 `pgbuf_docs/wayfinder-CBRD-27263/research/prevent-dealloc-necessity.md`
+> 상세 근거: [research/prevent-dealloc-necessity.md](./research/prevent-dealloc-necessity.md)
 
 **판정: 정합성 장치다 — 지금 호출자 구조에서는 제거 불가.** 성능과는 무관하다
 (throughput 이득도 I/O 절약도 없고, fix 당 원자 연산 하나를 오히려 지불한다). 근거의
@@ -254,12 +254,12 @@ flowchart TD
     Q2{"lock-free 경로를<br/>유지할 가치가 있나?"} -- "아니오" --> A["A. 빠른 경로 revert<br/>~137줄, 기계적"]
     Q2 -- "예 (CBRD-26242 병목)" --> Q3{"회계를 어디서<br/>바로잡나?"}
     Q3 -- "카운터를 CAS 워드에 합침" --> C3["C3. atomic_latch 통합<br/>❌ 기각 (아래)"]
-    Q3 -- "pgbuf_fix 국소 수정" --> C1["C1. 최소 수정<br/>lock-free 시 해제 생략<br/>+ 오류 경로 2곳"]
-    Q3 -- "소유권 재배치" --> C2["C2. ordered_fix 전담<br/>★ 권장"]
+    Q3 -- "pgbuf_fix 국소 수정" --> C1["C1. 최소 수정<br/>lock-free 시 해제 생략<br/>+ 오류 경로 정규화<br/>★ 권장"]
+    Q3 -- "소유권 재배치" --> C2["C2. ordered_fix 전담<br/>△ 조건부 (심화 참고)"]
 
     style B fill:#5a2020,color:#fff
     style C3 fill:#5a2020,color:#fff
-    style C2 fill:#1e5a2e,color:#fff
+    style C1 fill:#1e5a2e,color:#fff
 ```
 
 ### 후보별 평가
@@ -268,8 +268,8 @@ flowchart TD
 |---|---|---|---|---|---|
 | **A. lock-free 빠른 경로 revert** | `:2311-2330`, `:2498`, `:3140-3144`, `:7671-7776`, 선언부 삭제 (~137 줄, 전부 `page_buffer.c` 내부) | 1 (행 4·5 는 별도) | hot 공유 READ page 의 무 mutex fix 를 잃음. 단 slow path 도 CAS 기반이라 CBRD-26425 이득의 상당 부분은 유지 | 가장 낮음. 대신 Open 상태인 CBRD-26242 병목을 다시 열고, 4×@64core 산출물을 폐기하는 **정치적 결정** | 성능 요구를 조직이 포기할 때만 |
 | **B. OLD_PAGE_PREVENT_DEALLOC 제거** | — | — | — | §5 판정 (a): 체인 워커 10 곳이 즉시 노출 | **기각** |
-| **C1. 최소 수정** | lock-free 성공 플래그로 `:2513-2517` 해제를 건너뜀 + 행 4 (등록 못한 상태를 ordered_fix 에 전달) + 행 5 (exit 에서 `has_dealloc_prevent_flag` 정리) | 1·4·5 모두 | 손실 없음 | 두 함수에 걸친 암묵 handshake 가 그대로 남음 — 계약 주석 필수. 다음 수정자가 또 밟을 수 있는 구조적 부채 유지 | 차선 (diff 최소가 최우선일 때) |
-| **C2. Marker A 를 `pgbuf_ordered_fix` 전담으로** ★ | `pgbuf_fix` 는 이 fetch mode 에서 카운터를 아예 안 건드림 (`:2427-2430`, `:2513-2517` 제거). ordered_fix 가 1차 시도 **전에** 등록하고 성공·실패·exit 모든 출구에서 해제 | 1·4·5 모두 + handshake 자체를 소멸 | 손실 없음 (등록 시 BCB hash 조회 1 회 추가 — exit 정리 `:12977` 가 이미 쓰는 패턴) | 등록/해제 5 상황이 **한 함수 안에서** 눈으로 검증 가능. lock-free 경로는 이 mode 를 계속 받아도 무해해짐 | **권장** |
+| **C1. 최소 수정** | lock-free 성공 플래그로 `:2513-2517` 해제를 건너뜀 + 행 4 (등록 못한 상태를 ordered_fix 에 전달) + 행 5 (exit 에서 `has_dealloc_prevent_flag` 정리) | 1·4·5 모두 | 손실 없음 | 두 함수에 걸친 암묵 handshake 가 그대로 남음 — 계약 주석 필수. 다음 수정자가 또 밟을 수 있는 구조적 부채 유지 | **권장** (심화 분석 참고) |
+| **C2. Marker A 를 `pgbuf_ordered_fix` 전담으로** | `pgbuf_fix` 는 이 fetch mode 에서 카운터를 아예 안 건드림 (`:2427-2430`, `:2513-2517` 제거). ordered_fix 가 1차 시도 **전에** 등록하고 성공·실패·exit 모든 출구에서 해제 | 1·4·5 모두 + handshake 자체를 소멸 | 손실 없음 (등록 시 BCB hash 조회 1 회 추가 — exit 정리 `:12977` 가 이미 쓰는 패턴) | 등록/해제 5 상황이 **한 함수 안에서** 눈으로 검증 가능. lock-free 경로는 이 mode 를 계속 받아도 무해해짐 | 조건부 — 등록 시점 딜레마와 hot 경로 비용은 아래 심화 참조 |
 | **C3. 카운터를 atomic_latch CAS 워드에 통합** | `fcnt` 를 16 비트로 줄여 하위 16 비트에 보호 카운트 편입 | — | — | 42 개 함수 / 87 참조가 이 워드를 CAS 함 — 전면 재작업. 그리고 **문제를 잘못 짚은 해법**: 카운터는 이미 `ATOMIC_INC_32` 로 원자적이다. 결함은 경합이 아니라 **건너뛴 장부 기록**(제어 흐름)이므로, 워드를 합쳐도 등록을 건너뛰는 `goto` 는 그대로 남는다 | **기각** |
 
 ### C3 기각 이유 (자주 나오는 오해라 별도 정리)
@@ -282,11 +282,47 @@ flowchart TD
 원자 연산 1 회 절약뿐이고, 대가는 `fcnt` 범위 반토막(32→16 비트)과 latch 기계 전체
 재검증이다.
 
-### 권장: C2 (+ 후속 정리)
+### C2 심화: "언제 등록하나"가 성능과 정합성을 동시에 가른다
 
-1. **C2 를 본 수정으로.** 판정 기준은 이슈의 TO-BE 그대로 — 5 가지 진입 상황 전부에서
-   순증감 0. 재현 브랜치의 계측 + `aggregate.sh` 가 그대로 검증 도구가 된다
-   (`net ≠ 0` vpid 0 건, `unreg-fix lockfree=1` 의 실질 감소 0 건).
+C2 의 추가 hash 조회가 `pgbuf_ordered_fix` 를 느리게 하지 않느냐는 질문에는 등록
+시점별로 답이 다르다. C2 는 사실 두 변형이고, 각각 다른 문제를 가진다.
+
+**먼저 이 마커의 숨은 세 번째 역할부터.** Marker A 는 재정렬 구간만 지키는 게 아니다.
+일반 경로에서 스캐너가 `:2427` 등록 후 latch 대기에 들어가 있는 동안 — 예컨대 vacuum
+이 그 page 의 WRITE latch 를 이미 쥔 경우 — vacuum 의 재확인(`heap_file.c:3383`)이
+이 +1 을 보고 *"somebody was doing a heap scan, and already reached our page"* 로그를
+남기며 **정상적으로 물러난다.** 마커가 없으면 그 대기자는 `heap_file.c:3395` 의
+`pgbuf_has_any_waiters` → `assert (false)` ("Unexpected page waiters") 에서야 잡힌다 —
+debug 빌드 중단, release 는 에러 경로. 즉 **latch 대기 중의 마커는 vacuum 의 우아한
+후퇴 신호**이며, 이 계약을 지키려면 등록은 "latch 를 기다리기 전"에 이미 돼 있어야 한다.
+
+| C2 변형 | 등록 시점 | 성능 | 정합성 |
+|---|---|---|---|
+| **C2-early** (초안의 서술) | 1차 시도 **전에** ordered_fix 가 직접 | PREVENT_DEALLOC 순회의 **모든 hop** 에 hash 조회 1 회 + 원자 연산 추가. lock-free 히트 경로 기준, 접촉하는 경합 캐시라인이 1 개(`atomic_latch`)에서 2 개(+`count_fix_and_avoid_dealloc`)로 — CBRD-26242 가 싸운 바로 그 패턴을 일부 되살림 | latch 대기 계약은 지킴. 대신 **BCB 미존재 문제**: page 가 버퍼에 없으면 등록할 BCB 자체가 없어, "조회 실패 시 fix 내부 등록으로 폴백" 같은 조건부 회계가 되살아난다 — C2 가 없애려던 복잡성이 다른 모양으로 귀환 |
+| **C2-late** | 조건부 latch 실패 후, 재정렬 진입 시에만 | 추가 비용 ≈ 0 (재정렬 경로는 이미 무거움; hot 성공 경로는 카운터를 아예 안 건드려 오늘보다 빨라짐) | **불건전.** 일반 경로의 latch 대기 구간에서 마커가 사라져 위의 vacuum 후퇴 계약(`:3383`)이 깨지고 `:3395` assert 로 넘어감. vacuum 쪽 수정 없이는 채택 불가 |
+| **C1** (비교 기준) | 현행 유지 (`:2427`), lock-free 경로만 카운터 불간섭 | **오늘보다 빨라짐** — 현행 행 1 은 버그로 인해 카운터 CAS 루프(`:16227` 계열)를 매번 실행하는데, C1 은 그것을 제거한다. 추가 비용 0 | 기존 불변식 전부 보존. 단 handshake 부채 유지 + `pgbuf_fix` 의 오류 출구 정규화 필요 (등록 후 무조건 latch 오류로 실패하는 출구 `:2444-2464` 도 +1 을 남기므로, "조건부 거절일 때만 +1 을 남긴다" 로 계약을 좁혀야 한다) |
+
+요컨대: **질문의 직감이 맞다.** 초안이 서술한 C2(= C2-early)는 hot 경로에 실비용을
+얹고 BCB 미존재라는 설계 혹까지 딸려 오며, 비용이 없는 C2-late 는 latch 대기 계약
+때문에 단독으로는 틀린 답이다.
+
+### 권장 (수정): C1 을 본 수정으로, C2 는 조건부
+
+이 분석으로 §6 첫 표의 권장을 수정한다 — **C1 이 기본 권장**이다:
+
+1. **C1**: lock-free 경로는 카운터 완전 불간섭(성능은 오늘보다 오히려 개선), 행 4·5
+   오류 경로 보정, `pgbuf_fix` 오류 출구 정규화, 그리고 handshake 계약을 두 함수
+   양쪽에 주석으로 명문화. 검증은 재현 브랜치의 계측 + `aggregate.sh` (net ≠ 0 vpid
+   0 건, 도난 0 건).
+2. **C2 는** 소유권 정리의 가치가 hot 경로 비용 + BCB 미존재 처리 복잡성을 상회한다고
+   팀이 판단할 때만, 반드시 C2-early 형태로 + CBRD-26242 워크로드 재측정과 함께.
+3. 이하 후속 정리 항목은 동일하다.
+
+### 후속 정리 (공통)
+
+1. **판정 기준은 이슈의 TO-BE 그대로** — 5 가지 진입 상황 전부에서 순증감 0. 재현
+   브랜치의 계측 + `aggregate.sh` 가 그대로 검증 도구가 된다 (`net ≠ 0` vpid 0 건,
+   `unreg-fix lockfree=1` 의 실질 감소 0 건).
 2. **같은 `goto` 가 삼킨 나머지 두 회계** — `pgbuf_bcb_register_fix` (hot page 판정
    과소 집계) 와 `had_holder` debug 추적 리셋 — 는 규모가 작으니 같은 PR 에서 함께
    정리하거나 EPIC CBRD-27193 아래 별도 티켓으로.
