@@ -43,6 +43,10 @@ SQL grammar, `PT_ATTR_STORAGE` enum, schema flag의 디스크 표현은 바뀌�
 > 검토 상태: 이 절은 commit `882f70f9699ef68ee1457e8554178920df9894e1` 의 구현을 설명하는 앞 절과
 > 구분되는 **후속 리뷰 제안**이다. 비교 기준은 PostgreSQL 18.6 (`REL_18_6`,
 > `724edf9bde9d356724ad384a2e196edc3c9f80f7`)이며, 확인일은 2026-08-14 이다.
+>
+> 범위 결정 (2026-08-18): PR #7611/CBRD-26979는 fixed 타입의 네 explicit STORAGE clause를 모두
+> 거부하는 현재 구현을 유지한다. 이 절의 `DEFAULT` 예외와 `FORCE_INLINE` 설계는
+> [CBRD-27259](http://jira.cubrid.org/browse/CBRD-27259)에서 처리한다.
 
 ### 제기된 사용성 문제
 
@@ -107,7 +111,7 @@ CBRD-26979 방향을 뒷받침한다. PostgreSQL에서 `DEFAULT` 문법은 16부
 | `DEFAULT` | 타입의 `typstorage` 기본값 복원 | `DEFAULT` | 두 제품 모두 방향성 정책을 새로 강제하기보다 기본 정책으로 복귀한다는 의미가 가장 가깝다. |
 | 직접 대응 없음 | row 크기와 무관한 외부 배치 강제 없음 | `FORCE_OUTLINE` | CUBRID 고유의 hard policy다. |
 
-### CBRD-26979 계약 수정 제안
+### CBRD-27259 후속 계약 제안
 
 고정 타입에 대한 예외는 `STORAGE DEFAULT` 에만 좁게 둔다.
 
@@ -118,7 +122,7 @@ CBRD-26979 방향을 뒷받침한다. PostgreSQL에서 `DEFAULT` 문법은 16부
 | `INT STORAGE PREFER_INLINE` | 실패 | OOS demotion 방향을 지정하지만 고정 타입은 후보가 아님 |
 | `INT STORAGE PREFER_OUTLINE` | 실패 | 현재 내부적으로 DEFAULT와 같더라도 문구는 outline 방향을 명시함 |
 | `INT STORAGE FORCE_OUTLINE` | 실패 | 고정 타입에 적용할 수 없는 hard OOS 정책 |
-| 향후 `INT STORAGE FORCE_INLINE` | **기능 추가 시 성공** | 고정 타입의 내재된 no-OOS 동작을 명시한다. 현재 CBRD-26979 worktree에는 이 문법이 없다. |
+| 향후 `INT STORAGE FORCE_INLINE` | **기능 추가 시 성공** | 고정 타입의 내재된 no-OOS 동작을 명시한다. 현재 PR #7611 worktree에는 이 문법이 없다. |
 
 이 예외는 **물리 타입 조건만 완화**한다. CLASS/SHARED 속성이나 VCLASS 컬럼은 일반 CLASS의 행별 저장
 정책 대상이 아니므로, `STORAGE DEFAULT` 도 계속 거부해야 한다. 즉 허용 조건은 다음처럼 정리된다.
@@ -131,9 +135,9 @@ OR (일반 CLASS의 normal attribute AND 명시적 STORAGE DEFAULT)
 
 ### `FORCE_INLINE` 추가 여부 검토
 
-`FORCE_INLINE` 은 추가할 가치가 있다. 다만 CBRD-26979의 `DEFAULT` 사용성 수정에 끼워 넣지 않고 별도
-기능으로 다루는 편이 안전하다. 가변 타입의 hard inline 정책은 grammar 한 줄을 더하는 데서 끝나지 않고,
-catalog flag, ALTER 전환, heap 배치 계획, `SHOW CREATE TABLE` 라운드트립, overflow 상호작용을 모두 바꾼다.
+`FORCE_INLINE` 은 추가할 가치가 있다. `DEFAULT` 예외와 함께 CBRD-27259에서 별도 기능으로 다룬다.
+가변 타입의 hard inline 정책은 grammar 한 줄을 더하는 데서 끝나지 않고, catalog flag, ALTER 전환,
+heap 배치 계획, `SHOW CREATE TABLE` 라운드트립, overflow 상호작용을 모두 바꾼다.
 
 먼저 `INLINE` 의 범위를 다음처럼 좁혀야 한다.
 
@@ -183,9 +187,10 @@ resolver가 `DEFAULT` reset, 타입별 기본값, 호환되지 않는 ALTER poli
 호출자는 같은 interface 하나만 사용한다. heap 배치 모듈은 정규화된 정책만 받아 `FORCE_INLINE` 을 후보에서
 제외하고, 기존 `FORCE_OUTLINE` 강제 대상 우선 선택과 `PREFER_INLINE` 후순위 정렬을 그대로 수행한다.
 
-> **권고**: CBRD-26979에서는 고정 타입의 `STORAGE DEFAULT` 만 먼저 허용한다. `FORCE_INLINE` 은 위 의미와
-> `REC_BIGONE` 계약, ALTER 전환, 라운드트립 및 recovery/replication 회귀를 갖춘 별도 기능으로 추가한다.
-> 고정 타입의 효과상 기본값은 지금도 no-OOS이므로, 별도 기능이 들어오기 전까지 새 flag는 필요 없다.
+> **범위 결정**: CBRD-26979에서는 fixed 타입의 네 explicit STORAGE clause를 모두 거부한다. CBRD-27259에서
+> `STORAGE DEFAULT` 예외와 `FORCE_INLINE`을 함께 추가하며, `REC_BIGONE` 계약, ALTER 전환, 라운드트립 및
+> recovery/replication 회귀를 포함한다. 고정 타입의 효과상 기본값은 지금도 no-OOS이므로 새 flag로
+> 저장하지 않는다.
 
 ### 구현 영향
 
@@ -194,7 +199,7 @@ resolver가 `DEFAULT` reset, 타입별 기본값, 호환되지 않는 ALTER poli
 `PREFER_OUTLINE` 은 거부할 수 없다.
 ([current parse-tree representation](https://github.com/CUBRID/cubrid/blob/882f70f9699ef68ee1457e8554178920df9894e1/src/parser/parse_tree.h#L1941-L1964))
 
-따라서 parser 단계에서는 두 spelling을 분리해야 한다.
+이 변경은 CBRD-26979가 아니라 CBRD-27259의 parser 단계에서 수행한다.
 
 - `PT_ATTR_STORAGE_DEFAULT` 와 `PT_ATTR_STORAGE_PREFER_OUTLINE` 에 서로 다른 enum 값을 부여한다.
 - `UNSET`, `DEFAULT`, `PREFER_OUTLINE`, `PREFER_INLINE`, `FORCE_OUTLINE` 다섯 상태를 담도록
@@ -207,13 +212,13 @@ resolver가 `DEFAULT` reset, 타입별 기본값, 호환되지 않는 ALTER poli
   variable-to-fixed ALTER에서 명시적 `DEFAULT` 가 기존 `PREFER_INLINE`/`FORCE_OUTLINE` 정책을 제거하는지
   확인한다. CLASS/SHARED/VCLASS 거부 회귀도 유지한다.
 
-후속 `FORCE_INLINE` 기능은 위 CBRD-26979 수정과 달리 persisted policy를 하나 늘린다. 그때는
+후속 `FORCE_INLINE` 기능은 persisted policy를 하나 늘린다. CBRD-27259에서는
 `SM_ATTFLAG_OOS_FORCE_INLINE`, `OR_ATTRIBUTE_OOS_STORAGE_FORCE_INLINE`, heap 후보 제외, schema flag one-hot
 전환을 함께 추가해야 한다. 다만 고정 타입의 내재된 기본값에는 이 flag를 쓰지 않는다.
 
 이 변경은 `DEFAULT` 의 사용자 의미를 PostgreSQL과 맞추면서도 OOS와 무관한 고정 타입에 방향성 정책이
-남는 문제는 다시 만들지 않는다. 따라서 리뷰 의견대로 **고정 타입에서도 `STORAGE DEFAULT` 는 허용하는
-것을 권고**한다.
+남는 문제는 다시 만들지 않는다. 따라서 리뷰 의견대로 고정 타입에서도 `STORAGE DEFAULT` 를 허용하며,
+구현 티켓은 **CBRD-27259로 분리한다**.
 
 ### Test Plan
 
@@ -222,4 +227,6 @@ resolver가 `DEFAULT` reset, 타입별 기본값, 호환되지 않는 ALTER poli
 - GCC debug 구성의 build와 해당 구성에 등록된 CTest 25건이 모두 통과했다.
 - commit `882f70f9699ef68ee1457e8554178920df9894e1`에 대해 whitespace 검사와 pre-commit code style 검사가 통과했다.
 
-리뷰 시 `do_add_attribute()`와 `build_attr_change_map()`이 동일한 helper를 사용하는지, omitted `STORAGE`와 explicit `STORAGE DEFAULT`가 구분되는지, 실패한 ALTER가 schema 변경 전에 중단되는지를 우선 확인하면 된다.
+PR #7611 리뷰에서는 `do_add_attribute()`와 `build_attr_change_map()`이 동일한 helper를 사용하는지,
+부적격 fixed 타입의 explicit STORAGE가 schema 변경 전에 거부되는지를 확인한다. omitted `STORAGE`와
+explicit `STORAGE DEFAULT`의 구분은 CBRD-27259에서 검증한다.
