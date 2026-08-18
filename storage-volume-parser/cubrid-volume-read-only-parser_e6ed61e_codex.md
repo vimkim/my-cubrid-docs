@@ -27,7 +27,7 @@ The practical conclusion is:
 | Is its payload encrypted? | Read prefix `pflag` | Direct, per page |
 | Is its sector reserved? | Read the volume sector bitmap | Reconstructed from volume metadata |
 | Which CUBRID file allocated it? | Traverse each file header's allocation tables | Reconstructed |
-| Is that file heap/B-tree/etc.? | Read `FILE_HEADER.type` | Direct once the file header is found/decrypted |
+| Is that file heap/B-tree/etc.? | Read `FILE_HEADER.type` | Direct once the file header is found; current TDE code leaves FTAB pages clear |
 | Which class/index name owns it? | Interpret the file descriptor and system catalogs | Reconstructed logical metadata |
 | Is the raw live image transactionally consistent? | Not knowable from a page alone | Unavailable without coordinated snapshot/recovery semantics |
 
@@ -126,6 +126,19 @@ The current `PAGE_TYPE` values are (`src/storage/storage_common.h:148-166`):
 | 13 | `PAGE_VACUUM_DATA` | Vacuum metadata |
 
 The source explicitly labels this field as used for debugging. It is useful as a classifier and strong consistency check, but it is not a substitute for parsing file metadata or page-specific headers. Treat unknown future values as “unrecognized,” not corruption.
+
+### 2.5 Read-only observation of the local `testdb`
+
+A byte-only `O_RDONLY` scan of the local sample database used for this report produced the following snapshot. The scanner derived the page size from page 0, read every page at `index * page_size`, compared the stored page ID with the index, compared the first and last eight LSA bytes, and counted the raw `ptype`/`pflag` bytes. It did not mount, recover, or modify the database.
+
+| File | Bytes | Page size | Pages | Page-ID mismatches | LSA-watermark mismatches | Nonzero TDE flags |
+|---|---:|---:|---:|---:|---:|---:|
+| `testdb` | 67,108,864 | 16,384 | 4,096 | 0 | 0 | 0 |
+| `testdb_x001` | 134,217,728 | 16,384 | 8,192 | 0 | 0 | 0 |
+
+The primary volume's raw page-type counts were `UNKNOWN=3867`, `FTAB=64`, `HEAP=96`, `VOLHEADER=1`, `VOLBITMAP=1`, `EHASH=4`, `CATALOG=26`, `BTREE=35`, `DROPPED_FILES=1`, and `VACUUM_DATA=1`. The extension volume contained `UNKNOWN=8164`, `FTAB=10`, `HEAP=12`, `VOLHEADER=1`, `VOLBITMAP=1`, and `BTREE=4`.
+
+This confirms the fixed 16 KiB page grid for this particular `testdb`; it does not establish 16 KiB as a universal format. It also illustrates why `PAGE_UNKNOWN` cannot mean “not worth scanning”: most physical slots are currently unknown/unallocated, while file tables determine authoritative allocation and ownership.
 
 ## 3. Discovering page size and volume identity
 
@@ -242,7 +255,7 @@ The authoritative engine route begins with the primary volume header's boot HFID
 
 Implement this route for the strongest result. It requires enough slotted-page/heap-record support to read the boot record.
 
-A simpler first version may scan every **plaintext** `PAGE_FTAB` page for a structurally valid `FILE_HEADER`, using `self == prefix VPID`, legal type, table-offset bounds, and count invariants to reject continuations and false positives. Then it follows each validated header's tables. Label this route `DISCOVERED_BY_SCAN`, because it can miss encrypted headers, damaged headers, or a future layout and may encounter stale bytes. Cross-check scanned headers against the tracker when tracker parsing becomes available.
+A simpler first version may scan every plaintext `PAGE_FTAB` page for a structurally valid `FILE_HEADER`, using `self == prefix VPID`, legal type, table-offset bounds, and count invariants to reject continuations and false positives. Then it follows each validated header's tables. Current TDE application deliberately maps only file **user pages** and skips collected file-table pages (`src/storage/file_manager.c:7306-7404`, `src/storage/file_manager.c:6006-6114`), so normal FTAB headers/tables remain available even when the file's data pages are encrypted. Still label this route `DISCOVERED_BY_SCAN`, because damaged metadata, stale bytes, or a future layout may defeat it. Cross-check scanned headers against the tracker when tracker parsing becomes available.
 
 ### 5.4 From VFID to heap/table/index identity
 
@@ -293,7 +306,9 @@ For a data page, CUBRID encrypts exactly the middle `DB_PAGESIZE` area beginning
 - reserved integers;
 - TDE nonce.
 
-The volume/file/slotted-page metadata in the middle is opaque whenever its page is encrypted. Do not infer “TDE is disabled for the database” merely from one clear page; inspect each page's flag. Conversely, if all relevant pages have zero encryption flags in a consistent snapshot, their payloads can be parsed directly.
+Any page's middle area is opaque whenever that page is encrypted. However, current file-level TDE application changes the file flag and then maps only user pages; its page walker explicitly excludes file-header/table (`PAGE_FTAB`) pages (`src/storage/file_manager.c:5960-6114`, `src/storage/file_manager.c:7306-7404`). Volume headers, volume bitmaps, and FTAB metadata therefore remain useful for locating encrypted user pages and reconstructing their owning VFID/file type/class OID without decrypting their payloads. Treat this as a current-version invariant to validate from each page's `pflag`, not as a timeless format guarantee.
+
+Do not infer “TDE is disabled for the database” merely from one clear page; inspect each page's flag. Conversely, if all relevant pages have zero encryption flags in a consistent snapshot, their payloads can be parsed directly.
 
 The implementation uses AES-256-CTR or ARIA-256-CTR (`src/storage/tde.c:1066-1131`, `src/storage/tde.c:1144-1208`). The permanent-page nonce is tied to its page LSA, while temporary pages use a counter retained in the prefix (`src/storage/tde.c:913-1000`). CTR mode here has no authentication tag. A successful-looking decryption does not by itself authenticate the key or bytes; structural and cross-page validation remains essential.
 
