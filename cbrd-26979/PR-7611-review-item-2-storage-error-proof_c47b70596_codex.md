@@ -2,7 +2,9 @@
 
 - PR: [CUBRID/cubrid#7611](https://github.com/CUBRID/cubrid/pull/7611)
 - 리뷰: [pullrequestreview-4958687037](https://github.com/CUBRID/cubrid/pull/7611#pullrequestreview-4958687037)
-- 기준 PR head: `c47b70596b8e564f203497f0a2f381697fc56f74`
+- 재현 기준 PR head: [`c47b70596`](https://github.com/CUBRID/cubrid/commit/c47b70596b8e564f203497f0a2f381697fc56f74)
+- 항목 2 수정 commit: [`8d8adb7f6`](https://github.com/CUBRID/cubrid/commit/8d8adb7f678a362964ee2ad0ceb7f69fbb4b48fb)
+- 최종 검증 PR head: [`ea2439deb`](https://github.com/CUBRID/cubrid/commit/ea2439deb07eb2f2772c24db32c63b48b7a24f60)
 - 검증 환경: CUBRID `11.5.0.2529`, GCC debug build, 2026-08-18
 - 범위: 리뷰 항목 2만 다룬다. 고정 타입의 `STORAGE DEFAULT` 정책은 후속
   [CBRD-27259](http://jira.cubrid.org/browse/CBRD-27259) 범위다.
@@ -165,7 +167,7 @@ Execute: STORAGE options can be set only on variable-type normal attributes of a
 [  FAILED  ] OosSqlStorage.AlterChangeClassAttributeReportsNonNormalAttributeError
 ```
 
-### Green: parser 수정 후
+### Green: parser 수정 및 최신 `feat/oos` 병합 후
 
 ```text
 Internal ctest changing into directory: build_preset_debug_gcc
@@ -178,6 +180,7 @@ Test project build_preset_debug_gcc
 3/3 Test  #2: oos_cleanup_db ...................   Passed
 
 100% tests passed, 0 tests failed out of 3
+Total Test time (real) = 9.02 sec
 ```
 
 전체 등록 OOS 테스트도 통과했다.
