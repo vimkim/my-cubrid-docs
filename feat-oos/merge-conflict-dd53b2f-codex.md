@@ -118,4 +118,27 @@ parent 1: b996d4d826113bc060804c381aa6912603a81c70  (feat/oos)
 parent 2: dd53b2f2aa0b91aa7a6f6ed471e811e173a4984c  (origin/develop)
 ```
 
-원격 push는 수행하지 않았다.
+이후 사용자 요청에 따라 merge commit `465cf53e3` 을 `origin/feat/oos` 에 push했다.
+
+## 6. 첫 CI 실행 후 testcase follow-up
+
+merge commit `465cf53e3878cc36465cbeb36e85894bdd993d7b` 에서 실행한 첫 `/run all` 의 exact-commit 결과는 다음과 같았다.
+
+| suite | CircleCI job | 결과 |
+|---|---:|---|
+| `test_medium` | 147307 | 975/975 성공 |
+| `test_sql` | 147308 | 17,449개 중 2개 실패 |
+| `test_shell` | 147311 | 실패; 이번 SQL answer follow-up의 분석 범위 밖 |
+
+`test_sql` 의 두 실패는 모두 testcase revision `b0129c05791a1b18781494c8aea08a6445821b3d` 의 answer가 OOS+bigone 거부를 `Error:-1380` 으로 기대하지만, 병합 후 엔진이 의도한 심볼 `ER_HEAP_OOS_OVERPASS_MAXOBJ_SIZE` 의 새 번호 `-1381` 을 반환한 동일한 1-line drift였다.
+
+### 결정 7 — 엔진 심볼 배치를 되돌리지 않고 두 SQL answer를 갱신
+
+`-1381` 은 결정 1~3에서 확정한 merged error-number 배치와 일치한다. 따라서 엔진 번호를 다시 바꾸지 않고 `tc/pr-6864` 의 다음 answer 두 곳만 `Error:-1380` 에서 `Error:-1381` 로 갱신했다.
+
+- `sql/_13_issues/_14_1h/answers/bug_bts_10516.answer`
+- `sql/_15_fbo/_02_qa_test/answers/fbo_ddl02.answer`
+
+testcase commit은 `bcc5774f2a579b20555553c78ff8412b47c31ce8` 이며 `origin/tc/pr-6864` 에 push했다. 두 CI diff가 가리킨 기대값만 변경했고 SQL case 본문이나 engine source는 변경하지 않았다.
+
+재검증으로 merged engine의 `debug_gcc` compile/install과 configured CTest 26/26이 다시 성공했다. 사용자 요청에 따라 같은 source head에서 testcase branch 갱신을 반영하도록 PR #6864에 새 `/run all` 을 한 번 게시했다: <https://github.com/CUBRID/cubrid/pull/6864#issuecomment-5345301955>.
