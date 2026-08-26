@@ -45,7 +45,7 @@ Git checkout에서 다음 파일이 portable authoritative state다.
 | `cbrd-26382/artifacts/full-server-gcc8/container/` | image metadata/history, RPM NEVRA list, fallback Containerfile |
 | `cbrd-26382/artifacts/full-server-gcc8/scripts/` | worktree 준비, build, timing, plan, PMU, 분석 scripts |
 | `cbrd-26382/artifacts/full-server-gcc8/*.csv`, `*.json` | compact layout/timing evidence |
-| `cbrd-26382/artifacts/full-server-gcc8/SHA256SUMS` | portable artifact 79개의 무결성 목록 |
+| `cbrd-26382/artifacts/full-server-gcc8/SHA256SUMS` | portable artifact 82개의 무결성 목록 |
 
 Origin host에만 있던 `/home/vimkim/gh/cb/cbrd-26382-results`와 `.scratch` 경로는 Git checkout의 전제조건이
 아니다. portable copy는 위 artifact directory에 포함됐다.
@@ -332,14 +332,16 @@ Git handoff에는 이미 Wayfinder, manifests, C patch, scripts, timing/layout e
 수행한다.
 
 1. `my-cubrid-docs`를 handoff 보완 commit까지 pull한다.
-2. artifact root에서 `sha256sum -c SHA256SUMS`로 전달 파일을 검증한다.
-3. canonical CUBRID clone에 네 commit이 있는지 확인하고 `prepare-worktrees.sh`로 worktree를 재생성한다.
-4. `manifests/`의 submodule SHA와 새 worktree를 비교한다.
-5. prepared image tar를 별도로 받았다면 `podman load`한다. 없으면 supplied Containerfile/RPM list로 환경을
+2. artifact root에서 `sha256sum -c SHA256SUMS`와 `scripts/check-portability.sh`로 전달 파일과 script를 검증한다.
+3. `scripts/runtime-config.example.env`를 Git checkout 밖으로 복사하고 `RESULTS_ROOT`, build image/JDK,
+   container 이름, server/client CPU를 이 PC에 맞게 설정한 뒤 `RUNTIME_CONFIG`로 지정한다.
+4. canonical CUBRID clone에 네 commit이 있는지 확인하고 `prepare-worktrees.sh`로 worktree를 재생성한다.
+5. `manifests/`의 submodule SHA와 새 worktree를 비교한다.
+6. prepared image tar를 별도로 받았다면 `podman load`한다. 없으면 supplied Containerfile/RPM list로 환경을
    재구성하고 그 차이를 새 manifest에 기록한다.
-6. origin ELF/build tree/raw log는 없는 것을 정상 상태로 취급하고 새 PC에서 새 evidence root를 만든다.
-7. 실제 QA packages를 확보하면 가장 우선해서 별도 read-only evidence directory에 저장한다.
-8. 이 PC의 tracker DB에 새 item을 생성하고 handoff URL/commit을 note에 기록한다. origin item 30을 찾지 않는다.
+7. origin ELF/build tree/raw log는 없는 것을 정상 상태로 취급하고 새 PC에서 새 evidence root를 만든다.
+8. 실제 QA packages를 확보하면 가장 우선해서 별도 read-only evidence directory에 저장한다.
+9. 이 PC의 tracker DB에 새 item을 생성하고 handoff URL/commit을 note에 기록한다. origin item 30을 찾지 않는다.
 
 Origin host의 unstripped ELF 또는 raw contamination log가 추가로 필요하다고 판단될 때만 다음을 별도 전송한다.
 

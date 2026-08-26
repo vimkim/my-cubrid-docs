@@ -1,39 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-container=cbrd26382-single
-root=/home/vimkim/gh/cb/cbrd-26382-results/bench/pmu
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=runtime-common.sh
+source "$script_dir/runtime-common.sh"
+load_runtime_topology
+validate_runtime_topology
+
+root=$results_root/bench/pmu
 mkdir -p "$root"
-
-guard_host_quiet ()
-{
-  local phase=$1 compiler_count runnable
-  compiler_count=$(pgrep -cx cc1plus || true)
-  runnable=$(awk '{split($4, tasks, "/"); print tasks[1]}' /proc/loadavg)
-  if [ "$compiler_count" -ne 0 ] || [ "$runnable" -gt 80 ]; then
-    echo "host contention detected ($phase): cc1plus=$compiler_count runnable=$runnable" >&2
-    exit 1
-  fi
-}
-
-exec_variant ()
-{
-  local variant=$1
-  shift
-  podman exec \
-    -e "CUBRID=/opt/$variant" \
-    -e CUBRID_DATABASES=/bench/registry \
-    -e "PATH=/opt/$variant/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
-    -e "LD_LIBRARY_PATH=/opt/$variant/lib:/opt/$variant/cci/lib" \
-    "$container" "$@"
-}
+stage_query_file "$artifact_root/query.sql" "$container_query"
 
 start_server ()
 {
   local variant=$1 lifecycle=$2 server_pid
-  exec_variant "$variant" bash -lc 'cubrid server start c26382' >"$lifecycle" 2>&1
+  exec_variant "$variant" cubrid server start "$database_name" >"$lifecycle" 2>&1
   server_pid=$(podman exec "$container" pgrep -o cub_server)
-  podman exec "$container" taskset -apc 3,4 "$server_pid" >>"$lifecycle" 2>&1
+  podman exec "$container" taskset -apc "$server_cpus" "$server_pid" >>"$lifecycle" 2>&1
   podman top "$container" hpid pid comm \
     | awk -v pid="$server_pid" '$2 == pid && $3 == "cub_server" {print $1; exit}'
 }
@@ -41,7 +24,7 @@ start_server ()
 stop_server ()
 {
   local variant=$1 lifecycle=$2
-  exec_variant "$variant" timeout 30 cubrid server stop c26382 >>"$lifecycle" 2>&1
+  exec_variant "$variant" timeout 30 cubrid server stop "$database_name" >>"$lifecycle" 2>&1
   exec_variant "$variant" timeout 15 cub_commdb -A >>"$lifecycle" 2>&1
   ! podman exec "$container" pgrep cub_server >>"$lifecycle" 2>&1
   ! podman exec "$container" pgrep cub_master >>"$lifecycle" 2>&1
@@ -50,13 +33,14 @@ stop_server ()
 run_stat ()
 {
   local variant=$1 group=$2 repetition=$3 events=$4
-  local stem lifecycle hpid status result
+  local stem lifecycle hpid status result install
+  install=$container_install_root/$variant
   stem=$variant-$group-$repetition
   lifecycle=$root/$stem.lifecycle.log
   if [ -s "$root/$stem.perf.csv" ] && [ -s "$root/$stem.query.log" ]; then
     result=$(awk '/^[[:space:]]+[0-9]+[[:space:]]*$/ {gsub(/[[:space:]]/, ""); print; exit}' \
       "$root/$stem.query.log")
-    if [ "$result" = 282475249 ]; then
+    if [ "$result" = "$expected_result" ]; then
       echo "skip completed $stem"
       return
     fi
@@ -67,12 +51,12 @@ run_stat ()
   set +e
   perf stat -x, -o "$root/$stem.perf.csv" -e "$events" -p "$hpid" -- \
     podman exec \
-      -e "CUBRID=/opt/$variant" \
-      -e CUBRID_DATABASES=/bench/registry \
-      -e "PATH=/opt/$variant/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
-      -e "LD_LIBRARY_PATH=/opt/$variant/lib:/opt/$variant/cci/lib" \
-      "$container" bash -lc \
-      'taskset -c 5 csql -C -u dba -i /bench/query.sql c26382' \
+      -e "CUBRID=$install" \
+      -e "CUBRID_DATABASES=$container_registry" \
+      -e "PATH=$install/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+      -e "LD_LIBRARY_PATH=$install/lib:$install/cci/lib" \
+      "$container" taskset -c "$client_cpu" \
+      csql -C -u dba -i "$container_query" "$database_name" \
       >"$root/$stem.query.log" 2>&1
   status=$?
   set -e
@@ -81,7 +65,7 @@ run_stat ()
   guard_host_quiet "$stem/post"
   result=$(awk '/^[[:space:]]+[0-9]+[[:space:]]*$/ {gsub(/[[:space:]]/, ""); print; exit}' \
     "$root/$stem.query.log")
-  if [ "$status" -ne 0 ] || [ "$result" != 282475249 ]; then
+  if [ "$status" -ne 0 ] || [ "$result" != "$expected_result" ]; then
     echo "PMU run failed: $stem status=$status result=$result" >&2
     exit 1
   fi
@@ -90,12 +74,13 @@ run_stat ()
 
 run_profile ()
 {
-  local variant=$1 lifecycle hpid status result
+  local variant=$1 lifecycle hpid status result install
+  install=$container_install_root/$variant
   lifecycle=$root/$variant-profile.lifecycle.log
   if [ -s "$root/$variant-profile.perf.data" ] && [ -s "$root/$variant-profile.query.log" ]; then
     result=$(awk '/^[[:space:]]+[0-9]+[[:space:]]*$/ {gsub(/[[:space:]]/, ""); print; exit}' \
       "$root/$variant-profile.query.log")
-    if [ "$result" = 282475249 ]; then
+    if [ "$result" = "$expected_result" ]; then
       echo "skip completed $variant-profile"
       return
     fi
@@ -108,12 +93,12 @@ run_profile ()
   perf record -F 999 --call-graph fp -p "$hpid" \
     -o "$root/$variant-profile.perf.data" -- \
     podman exec \
-      -e "CUBRID=/opt/$variant" \
-      -e CUBRID_DATABASES=/bench/registry \
-      -e "PATH=/opt/$variant/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
-      -e "LD_LIBRARY_PATH=/opt/$variant/lib:/opt/$variant/cci/lib" \
-      "$container" bash -lc \
-      'taskset -c 5 csql -C -u dba -i /bench/query.sql c26382' \
+      -e "CUBRID=$install" \
+      -e "CUBRID_DATABASES=$container_registry" \
+      -e "PATH=$install/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+      -e "LD_LIBRARY_PATH=$install/lib:$install/cci/lib" \
+      "$container" taskset -c "$client_cpu" \
+      csql -C -u dba -i "$container_query" "$database_name" \
       >"$root/$variant-profile.query.log" 2>&1
   status=$?
   set -e
@@ -122,7 +107,7 @@ run_profile ()
   guard_host_quiet "$variant-profile/post"
   result=$(awk '/^[[:space:]]+[0-9]+[[:space:]]*$/ {gsub(/[[:space:]]/, ""); print; exit}' \
     "$root/$variant-profile.query.log")
-  if [ "$status" -ne 0 ] || [ "$result" != 282475249 ]; then
+  if [ "$status" -ne 0 ] || [ "$result" != "$expected_result" ]; then
     echo "profile run failed: $variant status=$status result=$result" >&2
     exit 1
   fi

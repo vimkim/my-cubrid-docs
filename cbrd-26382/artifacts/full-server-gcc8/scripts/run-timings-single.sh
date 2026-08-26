@@ -1,39 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-container=cbrd26382-single
-results=/home/vimkim/gh/cb/cbrd-26382-results/bench
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=runtime-common.sh
+source "$script_dir/runtime-common.sh"
+load_runtime_topology
+validate_runtime_topology
+
+results=$results_root/bench
 raw=$results/raw
 csv=$results/timings.csv
-expected=282475249
 mkdir -p "$raw"
+stage_query_file "$artifact_root/query.sql" "$container_query"
 
 if [ "${RESUME:-0}" != 1 ] || [ ! -f "$csv" ]; then
   printf 'phase,series,round,position,variant,seconds,result,timestamp\n' >"$csv"
 fi
-
-guard_host_quiet ()
-{
-  local phase=$1 compiler_count runnable
-  compiler_count=$(pgrep -cx cc1plus || true)
-  runnable=$(awk '{split($4, tasks, "/"); print tasks[1]}' /proc/loadavg)
-  if [ "$compiler_count" -ne 0 ] || [ "$runnable" -gt 80 ]; then
-    echo "host contention detected ($phase): cc1plus=$compiler_count runnable=$runnable" >&2
-    exit 1
-  fi
-}
-
-exec_variant ()
-{
-  local variant=$1
-  shift
-  podman exec \
-    -e "CUBRID=/opt/$variant" \
-    -e CUBRID_DATABASES=/bench/registry \
-    -e "PATH=/opt/$variant/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
-    -e "LD_LIBRARY_PATH=/opt/$variant/lib:/opt/$variant/cci/lib" \
-    "$container" "$@"
-}
 
 run_one ()
 {
@@ -51,17 +33,17 @@ run_one ()
   fi
 
   guard_host_quiet "$stem/pre"
-  exec_variant "$variant" bash -lc 'cubrid server start c26382' >"$lifecycle" 2>&1
+  exec_variant "$variant" cubrid server start "$database_name" >"$lifecycle" 2>&1
   server_pid=$(podman exec "$container" pgrep -o cub_server)
-  podman exec "$container" taskset -apc 3,4 "$server_pid" >>"$lifecycle" 2>&1
+  podman exec "$container" taskset -apc "$server_cpus" "$server_pid" >>"$lifecycle" 2>&1
 
   set +e
-  exec_variant "$variant" bash -lc \
-    'taskset -c 5 csql -C -u dba -i /bench/query.sql c26382' >"$log" 2>&1
+  exec_variant "$variant" taskset -c "$client_cpu" \
+    csql -C -u dba -i "$container_query" "$database_name" >"$log" 2>&1
   query_status=$?
   set -e
 
-  exec_variant "$variant" timeout 30 cubrid server stop c26382 >>"$lifecycle" 2>&1
+  exec_variant "$variant" timeout 30 cubrid server stop "$database_name" >>"$lifecycle" 2>&1
   exec_variant "$variant" timeout 15 cub_commdb -A >>"$lifecycle" 2>&1
   if podman exec "$container" pgrep cub_server >>"$lifecycle" 2>&1; then
     echo "server remains after stop for $variant" >&2
@@ -79,7 +61,7 @@ run_one ()
 
   seconds=$(sed -n 's/^1 row selected\. (\([0-9.]*\) sec).*/\1/p' "$log")
   result=$(awk '/^[[:space:]]+[0-9]+[[:space:]]*$/ {gsub(/[[:space:]]/, ""); print; exit}' "$log")
-  if [ -z "$seconds" ] || [ "$result" != "$expected" ]; then
+  if [ -z "$seconds" ] || [ "$result" != "$expected_result" ]; then
     echo "invalid result for $variant in $log: seconds=$seconds result=$result" >&2
     exit 1
   fi

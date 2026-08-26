@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-root=/home/vimkim/gh/cb/cbrd-26382-results/bench/pmu
-results=/home/vimkim/gh/cb/cbrd-26382-results
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=runtime-common.sh
+source "$script_dir/runtime-common.sh"
+load_results_root
+
+root=$results_root/bench/pmu
 
 for variant in qa-2029 A B C; do
-  perf buildid-cache -a "$results/$variant/CUBRID/lib/libcubrid.so.11.5"
+  perf buildid-cache -a "$results_root/$variant/CUBRID/lib/libcubrid.so.11.5"
 done
 
 for variant in qa-2029 A B C; do

@@ -2,18 +2,26 @@
 set -euo pipefail
 
 if [ "$#" -ne 2 ]; then
-  echo "usage: $0 LABEL WORKTREE" >&2
+  echo "usage: RUNTIME_CONFIG=/path/to/config.env $0 LABEL WORKTREE" >&2
   exit 2
 fi
 
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=runtime-common.sh
+source "$script_dir/runtime-common.sh"
+
 label=$1
-worktree=$2
-results_root=/home/vimkim/gh/cb/cbrd-26382-results
+worktree=$(realpath "$2")
+load_results_root
+require_setting BUILD_IMAGE
+require_setting BUILD_JDK_HOME
+
 out=$results_root/$label
-image=localhost/cbrd26382-rocky8-gcc8:build-ready
-image_id=c4da6a0898ef11f67c3c45703e4d78d4f52446e6b225004da212a0d587806cbf
-jdk=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.504.b01-1.1.el8_10.x86_64
-gradle_cache=/home/vimkim/gh/cb/cbrd-26382-gradle-cache
+image=$BUILD_IMAGE
+jdk=$BUILD_JDK_HOME
+build_jobs=${BUILD_JOBS:-$(nproc)}
+gradle_cache=$(realpath -m "${GRADLE_CACHE_ROOT:-$results_root/gradle-cache}")
+patch_file=$artifact_root/scope-exit-C.patch
 
 case "$label" in
   qa-2029|A|B|C) ;;
@@ -24,6 +32,18 @@ if [ ! -d "$worktree/.git" ] && [ ! -f "$worktree/.git" ]; then
   echo "not a Git worktree: $worktree" >&2
   exit 2
 fi
+
+test -f "$patch_file"
+test "$(sha256sum "$patch_file" | cut -d' ' -f1)" = \
+  5334c3ac928329e16c891d8ab491e691c549e36cc448d774755dc555c1bace39
+if ! [[ "$build_jobs" =~ ^[1-9][0-9]*$ ]]; then
+  echo "BUILD_JOBS must be a positive integer: $build_jobs" >&2
+  exit 2
+fi
+image_id=$(podman image inspect --format '{{.Id}}' "$image")
+podman run --rm "$image" test -d "$jdk"
+git_common_dir=$(cd "$worktree" && realpath "$(git rev-parse --git-common-dir)")
+git_repository_root=$(dirname "$git_common_dir")
 
 mkdir -p "$out"
 if find "$out" -mindepth 1 -print -quit | grep -q .; then
@@ -41,13 +61,21 @@ git -C "$worktree" submodule status >"$out/manifest/submodules.txt"
 printf '%s\n' "$image" >"$out/manifest/container-image.txt"
 printf '%s\n' "$image_id" >"$out/manifest/container-image-id.txt"
 if [ "$label" = C ]; then
-  sha256sum "$results_root/manifests/scope-exit-C.patch" >"$out/manifest/patch.sha256"
+  sha256sum "$patch_file" >"$out/manifest/patch.sha256"
+fi
+
+git_mount_args=()
+if [ "$git_repository_root" != "$worktree" ]; then
+  git_mount_args+=(
+    -v "$git_repository_root:$git_repository_root:ro"
+    -v "$worktree:$worktree:ro"
+  )
 fi
 
 podman --cgroup-manager=cgroupfs run --rm \
   --security-opt label=disable \
   --userns=keep-id \
-  -v /home/vimkim/gh/cb:/home/vimkim/gh/cb:ro \
+  "${git_mount_args[@]}" \
   -v "$worktree:/src:rw" \
   -v "$out:/out:rw" \
   -v "$gradle_cache:/gradle-cache:rw" \
@@ -56,7 +84,7 @@ podman --cgroup-manager=cgroupfs run --rm \
   -e GRADLE_USER_HOME=/gradle-cache \
   -e 'GRADLE_OPTS=-Dorg.gradle.daemon=false -Dorg.gradle.vfs.watch=false' \
   -e CCACHE_DISABLE=1 \
-  -e MAKEFLAGS=-j40 \
+  -e "MAKEFLAGS=-j$build_jobs" \
   -e CC=gcc \
   -e CXX=g++ \
   "$image" \
