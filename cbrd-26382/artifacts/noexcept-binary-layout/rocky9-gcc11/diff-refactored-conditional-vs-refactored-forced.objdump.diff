@@ -1,0 +1,91 @@
+--- /home/vimkim/gh/my-cubrid-docs/cbrd-26382/artifacts/noexcept-binary-layout/rocky9-gcc11/refactored-conditional.objdump.txt	2026-08-26 14:52:29.603971546 +0900
++++ /home/vimkim/gh/my-cubrid-docs/cbrd-26382/artifacts/noexcept-binary-layout/rocky9-gcc11/refactored-forced.objdump.txt	2026-08-26 14:52:29.939977353 +0900
+@@ -1,5 +1,5 @@
+ 
+-/home/vimkim/gh/my-cubrid-docs/cbrd-26382/artifacts/noexcept-binary-layout/rocky9-gcc11/refactored-conditional:     file format elf64-x86-64
++/home/vimkim/gh/my-cubrid-docs/cbrd-26382/artifacts/noexcept-binary-layout/rocky9-gcc11/refactored-forced:     file format elf64-x86-64
+ 
+ 
+ Disassembly of section .init:
+@@ -54,19 +54,18 @@
+   40108b:	49 31 c1             	xor    r9,rax
+   40108e:	e8 6d 01 00 00       	call   401200 <hot_count(unsigned long)>
+   401093:	4d 89 c8             	mov    r8,r9
+-  401096:	31 c9                	xor    ecx,ecx
+-  401098:	ba 10 00 00 00       	mov    edx,0x10
+-  40109d:	49 31 c0             	xor    r8,rax
+-  4010a0:	be 02 00 00 00       	mov    esi,0x2
+-  4010a5:	48 8d 3d 64 0f 00 00 	lea    rdi,[rip+0xf64]        # 402010 <__dso_handle+0x8>
+-  4010ac:	31 c0                	xor    eax,eax
+-  4010ae:	e8 7d ff ff ff       	call   401030 <printf@plt>
+-  4010b3:	48 83 c4 08          	add    rsp,0x8
+-  4010b7:	31 c0                	xor    eax,eax
+-  4010b9:	41 5c                	pop    r12
+-  4010bb:	5d                   	pop    rbp
+-  4010bc:	c3                   	ret    
+-  4010bd:	0f 1f 00             	nop    DWORD PTR [rax]
++  401096:	b9 01 00 00 00       	mov    ecx,0x1
++  40109b:	ba 10 00 00 00       	mov    edx,0x10
++  4010a0:	49 31 c0             	xor    r8,rax
++  4010a3:	be 03 00 00 00       	mov    esi,0x3
++  4010a8:	48 8d 3d 61 0f 00 00 	lea    rdi,[rip+0xf61]        # 402010 <__dso_handle+0x8>
++  4010af:	31 c0                	xor    eax,eax
++  4010b1:	e8 7a ff ff ff       	call   401030 <printf@plt>
++  4010b6:	48 83 c4 08          	add    rsp,0x8
++  4010ba:	31 c0                	xor    eax,eax
++  4010bc:	41 5c                	pop    r12
++  4010be:	5d                   	pop    rbp
++  4010bf:	c3                   	ret    
+ 
+ 00000000004010c0 <_start>:
+   4010c0:	f3 0f 1e fa          	endbr64 
+@@ -91,8 +90,8 @@
+   4010ff:	90                   	nop
+ 
+ 0000000000401100 <deregister_tm_clones>:
+-  401100:	48 8d 3d b9 2f 00 00 	lea    rdi,[rip+0x2fb9]        # 4040c0 <__TMC_END__>
+-  401107:	48 8d 05 b2 2f 00 00 	lea    rax,[rip+0x2fb2]        # 4040c0 <__TMC_END__>
++  401100:	48 8d 3d c1 2f 00 00 	lea    rdi,[rip+0x2fc1]        # 4040c8 <__TMC_END__>
++  401107:	48 8d 05 ba 2f 00 00 	lea    rax,[rip+0x2fba]        # 4040c8 <__TMC_END__>
+   40110e:	48 39 f8             	cmp    rax,rdi
+   401111:	74 15                	je     401128 <deregister_tm_clones+0x28>
+   401113:	48 8b 05 ce 2e 00 00 	mov    rax,QWORD PTR [rip+0x2ece]        # 403fe8 <_ITM_deregisterTMCloneTable>
+@@ -104,8 +103,8 @@
+   401129:	0f 1f 80 00 00 00 00 	nop    DWORD PTR [rax+0x0]
+ 
+ 0000000000401130 <register_tm_clones>:
+-  401130:	48 8d 3d 89 2f 00 00 	lea    rdi,[rip+0x2f89]        # 4040c0 <__TMC_END__>
+-  401137:	48 8d 35 82 2f 00 00 	lea    rsi,[rip+0x2f82]        # 4040c0 <__TMC_END__>
++  401130:	48 8d 3d 91 2f 00 00 	lea    rdi,[rip+0x2f91]        # 4040c8 <__TMC_END__>
++  401137:	48 8d 35 8a 2f 00 00 	lea    rsi,[rip+0x2f8a]        # 4040c8 <__TMC_END__>
+   40113e:	48 29 fe             	sub    rsi,rdi
+   401141:	48 89 f0             	mov    rax,rsi
+   401144:	48 c1 ee 3f          	shr    rsi,0x3f
+@@ -123,12 +122,12 @@
+ 
+ 0000000000401170 <__do_global_dtors_aux>:
+   401170:	f3 0f 1e fa          	endbr64 
+-  401174:	80 3d 45 2f 00 00 00 	cmp    BYTE PTR [rip+0x2f45],0x0        # 4040c0 <__TMC_END__>
++  401174:	80 3d 4d 2f 00 00 00 	cmp    BYTE PTR [rip+0x2f4d],0x0        # 4040c8 <__TMC_END__>
+   40117b:	75 13                	jne    401190 <__do_global_dtors_aux+0x20>
+   40117d:	55                   	push   rbp
+   40117e:	48 89 e5             	mov    rbp,rsp
+   401181:	e8 7a ff ff ff       	call   401100 <deregister_tm_clones>
+-  401186:	c6 05 33 2f 00 00 01 	mov    BYTE PTR [rip+0x2f33],0x1        # 4040c0 <__TMC_END__>
++  401186:	c6 05 3b 2f 00 00 01 	mov    BYTE PTR [rip+0x2f3b],0x1        # 4040c8 <__TMC_END__>
+   40118d:	5d                   	pop    rbp
+   40118e:	c3                   	ret    
+   40118f:	90                   	nop
+@@ -190,10 +189,10 @@
+ 
+ 0000000000401240 <external_cleanup>:
+   401240:	48 8b 07             	mov    rax,QWORD PTR [rdi]
+-  401243:	48 8b 15 7e 2e 00 00 	mov    rdx,QWORD PTR [rip+0x2e7e]        # 4040c8 <g_cleanup_count>
++  401243:	48 8b 15 86 2e 00 00 	mov    rdx,QWORD PTR [rip+0x2e86]        # 4040d0 <g_cleanup_count>
+   40124a:	83 e0 01             	and    eax,0x1
+   40124d:	48 01 d0             	add    rax,rdx
+-  401250:	48 89 05 71 2e 00 00 	mov    QWORD PTR [rip+0x2e71],rax        # 4040c8 <g_cleanup_count>
++  401250:	48 89 05 79 2e 00 00 	mov    QWORD PTR [rip+0x2e79],rax        # 4040d0 <g_cleanup_count>
+   401257:	c3                   	ret    
+ 
+ Disassembly of section .fini:

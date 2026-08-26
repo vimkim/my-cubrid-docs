@@ -1,0 +1,293 @@
+--- /home/vimkim/gh/my-cubrid-docs/cbrd-26382/artifacts/noexcept-binary-layout/rocky9-gcc11/original.objdump.txt	2026-08-26 14:52:29.227965049 +0900
++++ /home/vimkim/gh/my-cubrid-docs/cbrd-26382/artifacts/noexcept-binary-layout/rocky9-gcc11/refactored-conditional.objdump.txt	2026-08-26 14:52:29.603971546 +0900
+@@ -1,5 +1,5 @@
+ 
+-/home/vimkim/gh/my-cubrid-docs/cbrd-26382/artifacts/noexcept-binary-layout/rocky9-gcc11/original:     file format elf64-x86-64
++/home/vimkim/gh/my-cubrid-docs/cbrd-26382/artifacts/noexcept-binary-layout/rocky9-gcc11/refactored-conditional:     file format elf64-x86-64
+ 
+ 
+ Disassembly of section .init:
+@@ -38,31 +38,30 @@
+   401051:	48 89 e5             	mov    rbp,rsp
+   401054:	41 54                	push   r12
+   401056:	41 bc 40 42 0f 00    	mov    r12d,0xf4240
+-  40105c:	53                   	push   rbx
+-  40105d:	83 ff 01             	cmp    edi,0x1
+-  401060:	7e 13                	jle    401075 <main+0x25>
+-  401062:	48 8b 7e 08          	mov    rdi,QWORD PTR [rsi+0x8]
+-  401066:	ba 0a 00 00 00       	mov    edx,0xa
+-  40106b:	31 f6                	xor    esi,esi
+-  40106d:	e8 ce ff ff ff       	call   401040 <strtoull@plt>
+-  401072:	49 89 c4             	mov    r12,rax
+-  401075:	4c 89 e7             	mov    rdi,r12
+-  401078:	e8 33 01 00 00       	call   4011b0 <guarded_work(unsigned long)>
+-  40107d:	4c 89 e7             	mov    rdi,r12
+-  401080:	48 89 c3             	mov    rbx,rax
+-  401083:	e8 b8 01 00 00       	call   401240 <released_work(unsigned long)>
+-  401088:	4c 89 e7             	mov    rdi,r12
+-  40108b:	48 31 c3             	xor    rbx,rax
+-  40108e:	e8 0d 02 00 00       	call   4012a0 <hot_count(unsigned long)>
+-  401093:	b9 01 00 00 00       	mov    ecx,0x1
+-  401098:	ba 28 00 00 00       	mov    edx,0x28
+-  40109d:	be 01 00 00 00       	mov    esi,0x1
+-  4010a2:	48 31 c3             	xor    rbx,rax
++  40105c:	48 83 ec 08          	sub    rsp,0x8
++  401060:	83 ff 01             	cmp    edi,0x1
++  401063:	7e 13                	jle    401078 <main+0x28>
++  401065:	48 8b 7e 08          	mov    rdi,QWORD PTR [rsi+0x8]
++  401069:	ba 0a 00 00 00       	mov    edx,0xa
++  40106e:	31 f6                	xor    esi,esi
++  401070:	e8 cb ff ff ff       	call   401040 <strtoull@plt>
++  401075:	49 89 c4             	mov    r12,rax
++  401078:	4c 89 e7             	mov    rdi,r12
++  40107b:	e8 30 01 00 00       	call   4011b0 <guarded_work(unsigned long)>
++  401080:	4c 89 e7             	mov    rdi,r12
++  401083:	49 89 c1             	mov    r9,rax
++  401086:	e8 65 01 00 00       	call   4011f0 <released_work(unsigned long)>
++  40108b:	49 31 c1             	xor    r9,rax
++  40108e:	e8 6d 01 00 00       	call   401200 <hot_count(unsigned long)>
++  401093:	4d 89 c8             	mov    r8,r9
++  401096:	31 c9                	xor    ecx,ecx
++  401098:	ba 10 00 00 00       	mov    edx,0x10
++  40109d:	49 31 c0             	xor    r8,rax
++  4010a0:	be 02 00 00 00       	mov    esi,0x2
+   4010a5:	48 8d 3d 64 0f 00 00 	lea    rdi,[rip+0xf64]        # 402010 <__dso_handle+0x8>
+   4010ac:	31 c0                	xor    eax,eax
+-  4010ae:	49 89 d8             	mov    r8,rbx
+-  4010b1:	e8 7a ff ff ff       	call   401030 <printf@plt>
+-  4010b6:	5b                   	pop    rbx
++  4010ae:	e8 7d ff ff ff       	call   401030 <printf@plt>
++  4010b3:	48 83 c4 08          	add    rsp,0x8
+   4010b7:	31 c0                	xor    eax,eax
+   4010b9:	41 5c                	pop    r12
+   4010bb:	5d                   	pop    rbp
+@@ -92,8 +91,8 @@
+   4010ff:	90                   	nop
+ 
+ 0000000000401100 <deregister_tm_clones>:
+-  401100:	48 8d 3d c1 2f 00 00 	lea    rdi,[rip+0x2fc1]        # 4040c8 <__TMC_END__>
+-  401107:	48 8d 05 ba 2f 00 00 	lea    rax,[rip+0x2fba]        # 4040c8 <__TMC_END__>
++  401100:	48 8d 3d b9 2f 00 00 	lea    rdi,[rip+0x2fb9]        # 4040c0 <__TMC_END__>
++  401107:	48 8d 05 b2 2f 00 00 	lea    rax,[rip+0x2fb2]        # 4040c0 <__TMC_END__>
+   40110e:	48 39 f8             	cmp    rax,rdi
+   401111:	74 15                	je     401128 <deregister_tm_clones+0x28>
+   401113:	48 8b 05 ce 2e 00 00 	mov    rax,QWORD PTR [rip+0x2ece]        # 403fe8 <_ITM_deregisterTMCloneTable>
+@@ -105,8 +104,8 @@
+   401129:	0f 1f 80 00 00 00 00 	nop    DWORD PTR [rax+0x0]
+ 
+ 0000000000401130 <register_tm_clones>:
+-  401130:	48 8d 3d 91 2f 00 00 	lea    rdi,[rip+0x2f91]        # 4040c8 <__TMC_END__>
+-  401137:	48 8d 35 8a 2f 00 00 	lea    rsi,[rip+0x2f8a]        # 4040c8 <__TMC_END__>
++  401130:	48 8d 3d 89 2f 00 00 	lea    rdi,[rip+0x2f89]        # 4040c0 <__TMC_END__>
++  401137:	48 8d 35 82 2f 00 00 	lea    rsi,[rip+0x2f82]        # 4040c0 <__TMC_END__>
+   40113e:	48 29 fe             	sub    rsi,rdi
+   401141:	48 89 f0             	mov    rax,rsi
+   401144:	48 c1 ee 3f          	shr    rsi,0x3f
+@@ -124,12 +123,12 @@
+ 
+ 0000000000401170 <__do_global_dtors_aux>:
+   401170:	f3 0f 1e fa          	endbr64 
+-  401174:	80 3d 4d 2f 00 00 00 	cmp    BYTE PTR [rip+0x2f4d],0x0        # 4040c8 <__TMC_END__>
++  401174:	80 3d 45 2f 00 00 00 	cmp    BYTE PTR [rip+0x2f45],0x0        # 4040c0 <__TMC_END__>
+   40117b:	75 13                	jne    401190 <__do_global_dtors_aux+0x20>
+   40117d:	55                   	push   rbp
+   40117e:	48 89 e5             	mov    rbp,rsp
+   401181:	e8 7a ff ff ff       	call   401100 <deregister_tm_clones>
+-  401186:	c6 05 3b 2f 00 00 01 	mov    BYTE PTR [rip+0x2f3b],0x1        # 4040c8 <__TMC_END__>
++  401186:	c6 05 33 2f 00 00 01 	mov    BYTE PTR [rip+0x2f33],0x1        # 4040c0 <__TMC_END__>
+   40118d:	5d                   	pop    rbp
+   40118e:	c3                   	ret    
+   40118f:	90                   	nop
+@@ -145,136 +144,62 @@
+ 00000000004011b0 <guarded_work(unsigned long)>:
+   4011b0:	48 b8 15 7c 4a 7f b9 79 37 9e 	movabs rax,0x9e3779b97f4a7c15
+   4011ba:	55                   	push   rbp
+-  4011bb:	66 0f ef c0          	pxor   xmm0,xmm0
+-  4011bf:	48 0f af f8          	imul   rdi,rax
+-  4011c3:	48 89 e5             	mov    rbp,rsp
+-  4011c6:	41 55                	push   r13
+-  4011c8:	41 54                	push   r12
+-  4011ca:	48 8d 45 98          	lea    rax,[rbp-0x68]
+-  4011ce:	49 89 fc             	mov    r12,rdi
+-  4011d1:	4c 8d 6d c8          	lea    r13,[rbp-0x38]
+-  4011d5:	49 c1 ec 1d          	shr    r12,0x1d
+-  4011d9:	49 31 fc             	xor    r12,rdi
+-  4011dc:	4c 89 ef             	mov    rdi,r13
+-  4011df:	48 83 ec 60          	sub    rsp,0x60
+-  4011e3:	48 89 45 a0          	mov    QWORD PTR [rbp-0x60],rax
+-  4011e7:	48 8d 05 f2 00 00 00 	lea    rax,[rip+0xf2]        # 4012e0 <std::_Function_handler<void (), cleanup_functor>::_M_invoke(std::_Any_data const&)>
+-  4011ee:	0f 11 45 a8          	movups XMMWORD PTR [rbp-0x58],xmm0
+-  4011f2:	66 0f 6f 4d a0       	movdqa xmm1,XMMWORD PTR [rbp-0x60]
+-  4011f7:	48 89 45 e0          	mov    QWORD PTR [rbp-0x20],rax
+-  4011fb:	48 8d 05 ee 00 00 00 	lea    rax,[rip+0xee]        # 4012f0 <std::_Function_handler<void (), cleanup_functor>::_M_manager(std::_Any_data&, std::_Any_data const&, std::_Manager_operation)>
+-  401202:	48 89 45 d8          	mov    QWORD PTR [rbp-0x28],rax
+-  401206:	c6 45 c0 01          	mov    BYTE PTR [rbp-0x40],0x1
+-  40120a:	4c 89 65 98          	mov    QWORD PTR [rbp-0x68],r12
+-  40120e:	0f 11 4d c8          	movups XMMWORD PTR [rbp-0x38],xmm1
+-  401212:	e8 c9 00 00 00       	call   4012e0 <std::_Function_handler<void (), cleanup_functor>::_M_invoke(std::_Any_data const&)>
+-  401217:	48 8b 45 d8          	mov    rax,QWORD PTR [rbp-0x28]
+-  40121b:	48 85 c0             	test   rax,rax
+-  40121e:	74 0d                	je     40122d <guarded_work(unsigned long)+0x7d>
+-  401220:	ba 03 00 00 00       	mov    edx,0x3
+-  401225:	4c 89 ee             	mov    rsi,r13
+-  401228:	4c 89 ef             	mov    rdi,r13
+-  40122b:	ff d0                	call   rax
+-  40122d:	48 83 c4 60          	add    rsp,0x60
+-  401231:	4c 89 e0             	mov    rax,r12
+-  401234:	41 5c                	pop    r12
+-  401236:	41 5d                	pop    r13
+-  401238:	5d                   	pop    rbp
+-  401239:	c3                   	ret    
+-  40123a:	66 0f 1f 44 00 00    	nop    WORD PTR [rax+rax*1+0x0]
+-
+-0000000000401240 <released_work(unsigned long)>:
+-  401240:	55                   	push   rbp
+-  401241:	66 0f ef c0          	pxor   xmm0,xmm0
+-  401245:	ba 03 00 00 00       	mov    edx,0x3
+-  40124a:	48 89 e5             	mov    rbp,rsp
+-  40124d:	41 54                	push   r12
+-  40124f:	4c 8d 67 11          	lea    r12,[rdi+0x11]
+-  401253:	48 8d 45 98          	lea    rax,[rbp-0x68]
+-  401257:	48 8d 7d c8          	lea    rdi,[rbp-0x38]
+-  40125b:	48 89 fe             	mov    rsi,rdi
+-  40125e:	48 83 ec 68          	sub    rsp,0x68
+-  401262:	48 89 45 a0          	mov    QWORD PTR [rbp-0x60],rax
+-  401266:	48 8d 05 73 00 00 00 	lea    rax,[rip+0x73]        # 4012e0 <std::_Function_handler<void (), cleanup_functor>::_M_invoke(std::_Any_data const&)>
+-  40126d:	0f 11 45 a8          	movups XMMWORD PTR [rbp-0x58],xmm0
+-  401271:	66 0f 6f 4d a0       	movdqa xmm1,XMMWORD PTR [rbp-0x60]
+-  401276:	48 89 45 e0          	mov    QWORD PTR [rbp-0x20],rax
+-  40127a:	48 8d 05 6f 00 00 00 	lea    rax,[rip+0x6f]        # 4012f0 <std::_Function_handler<void (), cleanup_functor>::_M_manager(std::_Any_data&, std::_Any_data const&, std::_Manager_operation)>
+-  401281:	4c 89 65 98          	mov    QWORD PTR [rbp-0x68],r12
+-  401285:	48 89 45 d8          	mov    QWORD PTR [rbp-0x28],rax
+-  401289:	c6 45 c0 00          	mov    BYTE PTR [rbp-0x40],0x0
+-  40128d:	0f 11 4d c8          	movups XMMWORD PTR [rbp-0x38],xmm1
+-  401291:	e8 5a 00 00 00       	call   4012f0 <std::_Function_handler<void (), cleanup_functor>::_M_manager(std::_Any_data&, std::_Any_data const&, std::_Manager_operation)>
+-  401296:	4c 89 e0             	mov    rax,r12
+-  401299:	4c 8b 65 f8          	mov    r12,QWORD PTR [rbp-0x8]
+-  40129d:	c9                   	leave  
+-  40129e:	c3                   	ret    
+-  40129f:	90                   	nop
+-
+-00000000004012a0 <hot_count(unsigned long)>:
+-  4012a0:	48 85 ff             	test   rdi,rdi
+-  4012a3:	74 33                	je     4012d8 <hot_count(unsigned long)+0x38>
+-  4012a5:	31 c0                	xor    eax,eax
+-  4012a7:	45 31 c0             	xor    r8d,r8d
+-  4012aa:	48 8d 0d cf 2d 00 00 	lea    rcx,[rip+0x2dcf]        # 404080 <g_hot_data>
+-  4012b1:	0f 1f 80 00 00 00 00 	nop    DWORD PTR [rax+0x0]
+-  4012b8:	48 89 c2             	mov    rdx,rax
+-  4012bb:	83 e2 07             	and    edx,0x7
+-  4012be:	48 8b 34 d1          	mov    rsi,QWORD PTR [rcx+rdx*8]
+-  4012c2:	48 31 c6             	xor    rsi,rax
+-  4012c5:	48 83 c0 01          	add    rax,0x1
+-  4012c9:	49 01 f0             	add    r8,rsi
+-  4012cc:	48 39 c7             	cmp    rdi,rax
+-  4012cf:	75 e7                	jne    4012b8 <hot_count(unsigned long)+0x18>
+-  4012d1:	4c 89 c0             	mov    rax,r8
+-  4012d4:	c3                   	ret    
+-  4012d5:	0f 1f 00             	nop    DWORD PTR [rax]
+-  4012d8:	45 31 c0             	xor    r8d,r8d
+-  4012db:	4c 89 c0             	mov    rax,r8
+-  4012de:	c3                   	ret    
+-  4012df:	90                   	nop
+-
+-00000000004012e0 <std::_Function_handler<void (), cleanup_functor>::_M_invoke(std::_Any_data const&)>:
+-  4012e0:	48 8b 3f             	mov    rdi,QWORD PTR [rdi]
+-  4012e3:	e9 48 00 00 00       	jmp    401330 <external_cleanup>
+-  4012e8:	0f 1f 84 00 00 00 00 00 	nop    DWORD PTR [rax+rax*1+0x0]
+-
+-00000000004012f0 <std::_Function_handler<void (), cleanup_functor>::_M_manager(std::_Any_data&, std::_Any_data const&, std::_Manager_operation)>:
+-  4012f0:	85 d2                	test   edx,edx
+-  4012f2:	74 14                	je     401308 <std::_Function_handler<void (), cleanup_functor>::_M_manager(std::_Any_data&, std::_Any_data const&, std::_Manager_operation)+0x18>
+-  4012f4:	83 fa 01             	cmp    edx,0x1
+-  4012f7:	74 1f                	je     401318 <std::_Function_handler<void (), cleanup_functor>::_M_manager(std::_Any_data&, std::_Any_data const&, std::_Manager_operation)+0x28>
+-  4012f9:	83 fa 02             	cmp    edx,0x2
+-  4012fc:	74 22                	je     401320 <std::_Function_handler<void (), cleanup_functor>::_M_manager(std::_Any_data&, std::_Any_data const&, std::_Manager_operation)+0x30>
+-  4012fe:	31 c0                	xor    eax,eax
+-  401300:	c3                   	ret    
+-  401301:	0f 1f 80 00 00 00 00 	nop    DWORD PTR [rax+0x0]
+-  401308:	48 8d 05 c1 2a 00 00 	lea    rax,[rip+0x2ac1]        # 403dd0 <vtable for __cxxabiv1::__class_type_info@CXXABI_1.3>
+-  40130f:	48 89 07             	mov    QWORD PTR [rdi],rax
+-  401312:	31 c0                	xor    eax,eax
+-  401314:	c3                   	ret    
+-  401315:	0f 1f 00             	nop    DWORD PTR [rax]
+-  401318:	48 89 37             	mov    QWORD PTR [rdi],rsi
+-  40131b:	31 c0                	xor    eax,eax
+-  40131d:	c3                   	ret    
+-  40131e:	66 90                	xchg   ax,ax
+-  401320:	48 8b 06             	mov    rax,QWORD PTR [rsi]
+-  401323:	48 89 07             	mov    QWORD PTR [rdi],rax
+-  401326:	eb d6                	jmp    4012fe <std::_Function_handler<void (), cleanup_functor>::_M_manager(std::_Any_data&, std::_Any_data const&, std::_Manager_operation)+0xe>
+-  401328:	0f 1f 84 00 00 00 00 00 	nop    DWORD PTR [rax+rax*1+0x0]
+-
+-0000000000401330 <external_cleanup>:
+-  401330:	48 8b 07             	mov    rax,QWORD PTR [rdi]
+-  401333:	48 8b 15 96 2d 00 00 	mov    rdx,QWORD PTR [rip+0x2d96]        # 4040d0 <g_cleanup_count>
+-  40133a:	83 e0 01             	and    eax,0x1
+-  40133d:	48 01 d0             	add    rax,rdx
+-  401340:	48 89 05 89 2d 00 00 	mov    QWORD PTR [rip+0x2d89],rax        # 4040d0 <g_cleanup_count>
+-  401347:	c3                   	ret    
++  4011bb:	48 0f af f8          	imul   rdi,rax
++  4011bf:	48 89 e5             	mov    rbp,rsp
++  4011c2:	41 54                	push   r12
++  4011c4:	49 89 fc             	mov    r12,rdi
++  4011c7:	49 c1 ec 1d          	shr    r12,0x1d
++  4011cb:	48 83 ec 18          	sub    rsp,0x18
++  4011cf:	49 31 fc             	xor    r12,rdi
++  4011d2:	48 8d 7d e8          	lea    rdi,[rbp-0x18]
++  4011d6:	4c 89 65 e8          	mov    QWORD PTR [rbp-0x18],r12
++  4011da:	e8 61 00 00 00       	call   401240 <external_cleanup>
++  4011df:	4c 89 e0             	mov    rax,r12
++  4011e2:	4c 8b 65 f8          	mov    r12,QWORD PTR [rbp-0x8]
++  4011e6:	c9                   	leave  
++  4011e7:	c3                   	ret    
++  4011e8:	0f 1f 84 00 00 00 00 00 	nop    DWORD PTR [rax+rax*1+0x0]
++
++00000000004011f0 <released_work(unsigned long)>:
++  4011f0:	48 8d 47 11          	lea    rax,[rdi+0x11]
++  4011f4:	c3                   	ret    
++  4011f5:	66 66 2e 0f 1f 84 00 00 00 00 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
++
++0000000000401200 <hot_count(unsigned long)>:
++  401200:	48 85 ff             	test   rdi,rdi
++  401203:	74 33                	je     401238 <hot_count(unsigned long)+0x38>
++  401205:	31 c0                	xor    eax,eax
++  401207:	45 31 c0             	xor    r8d,r8d
++  40120a:	48 8d 0d 6f 2e 00 00 	lea    rcx,[rip+0x2e6f]        # 404080 <g_hot_data>
++  401211:	0f 1f 80 00 00 00 00 	nop    DWORD PTR [rax+0x0]
++  401218:	48 89 c2             	mov    rdx,rax
++  40121b:	83 e2 07             	and    edx,0x7
++  40121e:	48 8b 34 d1          	mov    rsi,QWORD PTR [rcx+rdx*8]
++  401222:	48 31 c6             	xor    rsi,rax
++  401225:	48 83 c0 01          	add    rax,0x1
++  401229:	49 01 f0             	add    r8,rsi
++  40122c:	48 39 c7             	cmp    rdi,rax
++  40122f:	75 e7                	jne    401218 <hot_count(unsigned long)+0x18>
++  401231:	4c 89 c0             	mov    rax,r8
++  401234:	c3                   	ret    
++  401235:	0f 1f 00             	nop    DWORD PTR [rax]
++  401238:	45 31 c0             	xor    r8d,r8d
++  40123b:	4c 89 c0             	mov    rax,r8
++  40123e:	c3                   	ret    
++  40123f:	90                   	nop
++
++0000000000401240 <external_cleanup>:
++  401240:	48 8b 07             	mov    rax,QWORD PTR [rdi]
++  401243:	48 8b 15 7e 2e 00 00 	mov    rdx,QWORD PTR [rip+0x2e7e]        # 4040c8 <g_cleanup_count>
++  40124a:	83 e0 01             	and    eax,0x1
++  40124d:	48 01 d0             	add    rax,rdx
++  401250:	48 89 05 71 2e 00 00 	mov    QWORD PTR [rip+0x2e71],rax        # 4040c8 <g_cleanup_count>
++  401257:	c3                   	ret    
+ 
+ Disassembly of section .fini:
+ 
+-0000000000401348 <_fini>:
+-  401348:	f3 0f 1e fa          	endbr64 
+-  40134c:	48 83 ec 08          	sub    rsp,0x8
+-  401350:	48 83 c4 08          	add    rsp,0x8
+-  401354:	c3                   	ret    
++0000000000401258 <_fini>:
++  401258:	f3 0f 1e fa          	endbr64 
++  40125c:	48 83 ec 08          	sub    rsp,0x8
++  401260:	48 83 c4 08          	add    rsp,0x8
++  401264:	c3                   	ret    

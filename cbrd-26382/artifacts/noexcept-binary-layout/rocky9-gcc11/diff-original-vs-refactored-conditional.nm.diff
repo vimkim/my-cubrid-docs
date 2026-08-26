@@ -1,0 +1,57 @@
+--- /home/vimkim/gh/my-cubrid-docs/cbrd-26382/artifacts/noexcept-binary-layout/rocky9-gcc11/original.nm.txt	2026-08-26 14:52:29.215964842 +0900
++++ /home/vimkim/gh/my-cubrid-docs/cbrd-26382/artifacts/noexcept-binary-layout/rocky9-gcc11/refactored-conditional.nm.txt	2026-08-26 14:52:29.594971391 +0900
+@@ -1,8 +1,6 @@
+                  w _ITM_deregisterTMCloneTable
+                  w _ITM_registerTMCloneTable
+-                 U vtable for __cxxabiv1::__class_type_info@CXXABI_1.3
+                  w __gmon_start__
+-                 U __gxx_personality_v0@CXXABI_1.3
+                  U __libc_start_main@GLIBC_2.34
+                  U printf@GLIBC_2.2.5
+                  U strtoull@GLIBC_2.2.5
+@@ -15,30 +13,25 @@
+ 0000000000401130 t register_tm_clones
+ 0000000000401170 t __do_global_dtors_aux
+ 00000000004011a0 t frame_dummy
+-00000000004011b0 000000000000008a T guarded_work(unsigned long)
+-0000000000401240 000000000000005f T released_work(unsigned long)
+-00000000004012a0 000000000000003f T hot_count(unsigned long)
+-00000000004012e0 0000000000000008 W std::_Function_handler<void (), cleanup_functor>::_M_invoke(std::_Any_data const&)
+-00000000004012f0 0000000000000038 W std::_Function_handler<void (), cleanup_functor>::_M_manager(std::_Any_data&, std::_Any_data const&, std::_Manager_operation)
+-0000000000401330 0000000000000018 T external_cleanup
+-0000000000401348 T _fini
++00000000004011b0 0000000000000038 T guarded_work(unsigned long)
++00000000004011f0 0000000000000005 T released_work(unsigned long)
++0000000000401200 000000000000003f T hot_count(unsigned long)
++0000000000401240 0000000000000018 T external_cleanup
++0000000000401258 T _fini
+ 0000000000402000 0000000000000004 R _IO_stdin_used
+ 0000000000402008 R __dso_handle
+-0000000000402050 0000000000000012 V typeinfo name for cleanup_functor
+-0000000000402064 r __GNU_EH_FRAME_HDR
+-000000000040220c r __FRAME_END__
+-0000000000403dc0 d __frame_dummy_init_array_entry
+-0000000000403dc8 d __do_global_dtors_aux_fini_array_entry
+-0000000000403dd0 0000000000000010 V typeinfo for cleanup_functor
++0000000000402050 r __GNU_EH_FRAME_HDR
++000000000040218c r __FRAME_END__
++0000000000403dd0 d __frame_dummy_init_array_entry
++0000000000403dd8 d __do_global_dtors_aux_fini_array_entry
+ 0000000000403de0 d _DYNAMIC
+ 0000000000404000 d _GLOBAL_OFFSET_TABLE_
+ 0000000000404040 D __data_start
+ 0000000000404040 W data_start
+ 0000000000404080 0000000000000040 D g_hot_data
+-00000000004040c0 0000000000000008 V DW.ref.__gxx_personality_v0
+-00000000004040c8 D __TMC_END__
+-00000000004040c8 B __bss_start
+-00000000004040c8 D _edata
+-00000000004040c8 0000000000000001 b completed.0
+-00000000004040d0 0000000000000008 B g_cleanup_count
+-00000000004040d8 B _end
++00000000004040c0 D __TMC_END__
++00000000004040c0 B __bss_start
++00000000004040c0 D _edata
++00000000004040c0 0000000000000001 b completed.0
++00000000004040c8 0000000000000008 B g_cleanup_count
++00000000004040d0 B _end

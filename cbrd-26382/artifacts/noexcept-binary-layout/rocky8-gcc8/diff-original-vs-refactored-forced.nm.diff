@@ -1,0 +1,136 @@
+--- /home/vimkim/gh/my-cubrid-docs/cbrd-26382/artifacts/noexcept-binary-layout/rocky8-gcc8/original.nm.txt	2026-08-26 14:44:09.763334397 +0900
++++ /home/vimkim/gh/my-cubrid-docs/cbrd-26382/artifacts/noexcept-binary-layout/rocky8-gcc8/refactored-forced.nm.txt	2026-08-26 14:44:10.746351383 +0900
+@@ -1,74 +1,69 @@
+                  w _ITM_deregisterTMCloneTable
+                  w _ITM_registerTMCloneTable
+-                 U vtable for __cxxabiv1::__class_type_info@@CXXABI_1.3
+                  w __gmon_start__
+                  U __gxx_personality_v0@@CXXABI_1.3
+                  U __libc_start_main@@GLIBC_2.2.5
+                  U printf@@GLIBC_2.2.5
+                  U strtoull@@GLIBC_2.2.5
+-0000000000400590 T _init
+-00000000004005e0 t .annobin_elf_init.c.exit
+-00000000004005e0 t .annobin_elf_init.c.unlikely
+-00000000004005e0 t .annobin_elf_init.c_end.exit
+-00000000004005e0 t .annobin_elf_init.c_end.unlikely
+-00000000004005e0 t .annobin_init.c.exit
+-00000000004005e0 t .annobin_init.c.startup
+-00000000004005e0 t .annobin_init.c.unlikely
+-00000000004005e0 t .annobin_init.c_end.exit
+-00000000004005e0 t .annobin_init.c_end.startup
+-00000000004005e0 t .annobin_init.c_end.unlikely
+-00000000004005e0 t .annobin_static_reloc.c.exit
+-00000000004005e0 t .annobin_static_reloc.c.startup
+-00000000004005e0 t .annobin_static_reloc.c.unlikely
+-00000000004005e0 t .annobin_static_reloc.c_end.exit
+-00000000004005e0 t .annobin_static_reloc.c_end.startup
+-00000000004005e0 t .annobin_static_reloc.c_end.unlikely
+-00000000004005e0 000000000000006c T main
+-000000000040064c t .annobin_elf_init.c.hot
+-000000000040064c t .annobin_elf_init.c.startup
+-000000000040064c t .annobin_elf_init.c_end.hot
+-000000000040064c t .annobin_elf_init.c_end.startup
+-000000000040064c t .annobin_init.c.hot
+-000000000040064c t .annobin_init.c_end.hot
+-000000000040064c t .annobin_static_reloc.c.hot
+-000000000040064c t .annobin_static_reloc.c_end.hot
+-0000000000400650 000000000000002f T _start
+-000000000040067f t .annobin_init.c
+-000000000040067f t .annobin_init.c_end
+-000000000040067f t .annobin_static_reloc.c_end
+-0000000000400680 t .annobin__dl_relocate_static_pie.start
+-0000000000400680 t .annobin_static_reloc.c
+-0000000000400680 0000000000000005 T _dl_relocate_static_pie
+-0000000000400685 t .annobin__dl_relocate_static_pie.end
+-0000000000400690 t deregister_tm_clones
+-00000000004006c0 t register_tm_clones
+-0000000000400700 t __do_global_dtors_aux
+-0000000000400730 t frame_dummy
+-0000000000400740 0000000000000077 T guarded_work(unsigned long)
+-00000000004007c0 000000000000004e T released_work(unsigned long)
+-0000000000400810 0000000000000033 T hot_count(unsigned long)
+-0000000000400850 000000000000003d W std::_Function_base::_Base_manager<cleanup_functor>::_M_manager(std::_Any_data&, std::_Any_data const&, std::_Manager_operation)
+-0000000000400890 0000000000000008 W std::_Function_handler<void (), cleanup_functor>::_M_invoke(std::_Any_data const&)
+-00000000004008a0 0000000000000018 T external_cleanup
+-00000000004008c0 t .annobin___libc_csu_init.start
+-00000000004008c0 t .annobin_elf_init.c
+-00000000004008c0 0000000000000065 T __libc_csu_init
+-0000000000400925 t .annobin___libc_csu_fini.start
+-0000000000400925 t .annobin___libc_csu_init.end
+-0000000000400930 0000000000000005 T __libc_csu_fini
+-0000000000400935 t .annobin___libc_csu_fini.end
+-0000000000400935 t .annobin_elf_init.c_end
+-0000000000400938 T _fini
+-0000000000400950 0000000000000004 R _IO_stdin_used
+-0000000000400958 R __dso_handle
+-00000000004009a0 0000000000000012 V typeinfo name for cleanup_functor
+-00000000004009b4 r __GNU_EH_FRAME_HDR
+-0000000000400bcc r __FRAME_END__
+-0000000000600dc0 t __frame_dummy_init_array_entry
+-0000000000600dc0 t __init_array_start
+-0000000000600dc8 t __do_global_dtors_aux_fini_array_entry
+-0000000000600dc8 t __init_array_end
+-0000000000600dd0 0000000000000010 V typeinfo for cleanup_functor
++0000000000400538 T _init
++0000000000400590 t .annobin_elf_init.c.exit
++0000000000400590 t .annobin_elf_init.c.unlikely
++0000000000400590 t .annobin_elf_init.c_end.exit
++0000000000400590 t .annobin_elf_init.c_end.unlikely
++0000000000400590 t .annobin_init.c.exit
++0000000000400590 t .annobin_init.c.startup
++0000000000400590 t .annobin_init.c.unlikely
++0000000000400590 t .annobin_init.c_end.exit
++0000000000400590 t .annobin_init.c_end.startup
++0000000000400590 t .annobin_init.c_end.unlikely
++0000000000400590 t .annobin_static_reloc.c.exit
++0000000000400590 t .annobin_static_reloc.c.startup
++0000000000400590 t .annobin_static_reloc.c.unlikely
++0000000000400590 t .annobin_static_reloc.c_end.exit
++0000000000400590 t .annobin_static_reloc.c_end.startup
++0000000000400590 t .annobin_static_reloc.c_end.unlikely
++0000000000400590 000000000000006d T main
++00000000004005fd t .annobin_elf_init.c.hot
++00000000004005fd t .annobin_elf_init.c.startup
++00000000004005fd t .annobin_elf_init.c_end.hot
++00000000004005fd t .annobin_elf_init.c_end.startup
++00000000004005fd t .annobin_init.c.hot
++00000000004005fd t .annobin_init.c_end.hot
++00000000004005fd t .annobin_static_reloc.c.hot
++00000000004005fd t .annobin_static_reloc.c_end.hot
++0000000000400600 000000000000002f T _start
++000000000040062f t .annobin_init.c
++000000000040062f t .annobin_init.c_end
++000000000040062f t .annobin_static_reloc.c_end
++0000000000400630 t .annobin__dl_relocate_static_pie.start
++0000000000400630 t .annobin_static_reloc.c
++0000000000400630 0000000000000005 T _dl_relocate_static_pie
++0000000000400635 t .annobin__dl_relocate_static_pie.end
++0000000000400640 t deregister_tm_clones
++0000000000400670 t register_tm_clones
++00000000004006b0 t __do_global_dtors_aux
++00000000004006e0 t frame_dummy
++00000000004006f0 0000000000000038 T guarded_work(unsigned long)
++0000000000400730 0000000000000005 T released_work(unsigned long)
++0000000000400740 0000000000000033 T hot_count(unsigned long)
++0000000000400780 0000000000000018 T external_cleanup
++00000000004007a0 t .annobin___libc_csu_init.start
++00000000004007a0 t .annobin_elf_init.c
++00000000004007a0 0000000000000065 T __libc_csu_init
++0000000000400805 t .annobin___libc_csu_fini.start
++0000000000400805 t .annobin___libc_csu_init.end
++0000000000400810 0000000000000005 T __libc_csu_fini
++0000000000400815 t .annobin___libc_csu_fini.end
++0000000000400815 t .annobin_elf_init.c_end
++0000000000400818 T _fini
++0000000000400828 0000000000000004 R _IO_stdin_used
++0000000000400830 R __dso_handle
++0000000000400878 r __GNU_EH_FRAME_HDR
++0000000000400a44 r __FRAME_END__
++0000000000600dd0 t __frame_dummy_init_array_entry
++0000000000600dd0 t __init_array_start
++0000000000600dd8 t __do_global_dtors_aux_fini_array_entry
++0000000000600dd8 t __init_array_end
+ 0000000000600de0 d _DYNAMIC
+ 0000000000601000 d _GLOBAL_OFFSET_TABLE_
+ 0000000000601040 D __data_start
