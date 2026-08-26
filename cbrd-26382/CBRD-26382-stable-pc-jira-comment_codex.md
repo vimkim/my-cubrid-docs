@@ -1,27 +1,29 @@
 ## Stable-PC full-binary follow-up
 
-QA build/runtime 계열에 맞춰 전체 CUBRID 바이너리를 다시 비교했습니다.
+QA build/runtime 계열에 맞춘 전체 바이너리 재현과 “왜 호출되지 않는 `scope_exit` 변경이 `COUNT(*)`까지
+흔들었는가”에 대한 link/CPU pipeline 분석을 완료했습니다.
 
-- QA-2029/A/B/C를 현재 `cubridci/cubridci:develop` image의 CentOS 6.10 + devtoolset-8 GCC 8.3.1에서
-  `./build.sh -m release ... build`로 순차 빌드했습니다. 네 CMake cache 모두 `RelWithDebInfo`,
-  `-O2 -g -DNDEBUG`를 확인했고, 설치 바이너리는 Rocky Linux 8.10에서 실행했습니다.
-- QA-2029과 B를 각 20회 측정한 결과 B가 평균 `+1.464%` 느렸고, 100,000회 bootstrap 95% CI는
-  `+1.039% ~ +1.899%`였습니다. QA에서 보고된 `+10.56%`의 크기는 재현하지 못했지만 slowdown 방향과
-  통계적 분리는 확인했습니다. 사전에 정한 5% causal-effect 기준은 충족하지 않습니다.
-- 모든 I/O matrix query 40회에서 physical `read_bytes=0`, major fault=0이었고, elapsed time과 server CPU
-  migration 횟수의 상관은 `r=0.085`였습니다. 이 SQL의 stable-PC 차이를 storage 또는 migration으로 설명할
-  근거는 없습니다.
-- A→B에서 query hot function들이 16 byte 이동하여 cache-line phase가 바뀌었습니다. 두 PMU 반복 평균에서
-  IPC `-1.615%`, retired DSB(decoded-uop cache) miss/s `+52.819%`, MITE uops/s `+21.727%`였고, cycle
-  profile은 실제 workload가 이동한 query executor/scan 함수들에서 실행됨을 확인했습니다.
-- B/C의 query hot-function 주소와 raw bytes는 동일하고 forced destructor `noexcept`의 timing 방향도
-  일관되지 않았습니다. `log_Gl`도 B/C에서 동일합니다. 따라서 forced `noexcept`와 `log_Gl` 배치는 수정점이
-  아니며, PR 전체 refactor가 만든 final-link instruction front-end layout 변화가 현재 가장 강한 원인 후보입니다.
+- QA-2029/A/B/C를 현재 `cubridci/cubridci:develop`의 CentOS 6.10 + devtoolset-8 GCC 8.3.1에서 명시적
+  release/`RelWithDebInfo`로 빌드하고 Rocky Linux 8.10에서 실행했습니다.
+- QA-2029과 B 각 20회에서 B는 평균 `+1.464%` 느렸고 bootstrap 95% CI는 `+1.039% ~ +1.899%`였습니다.
+  QA `+10.56%`의 크기는 재현하지 못했고 사전 5% causal-effect gate도 충족하지 않습니다.
+- 원인은 `scope_exit` callback의 직접 실행 비용이 아닙니다. refactor가 GCC 8의
+  `log_recovery_redo(...).cold`를 7 byte 줄였고, linker alignment를 거치며 다음 symbol이 8 byte, query hot
+  function들이 16 byte 이동했습니다. 예를 들어 `qexec_execute_scan`은 `0x4db580 → 0x4db570`으로 이동해
+  32-byte block 내 위치가 `0 → 16`으로 바뀌었습니다.
+- A/B central PMU를 5회로 늘리자 IPC는 `-1.519%`, MITE µop/query는 `+12.664%`였습니다. CPU front-end 공급
+  경로가 바뀐 것은 맞지만, Top-down에서 front-end bound는 `5.73% → 3.85%`로 감소하고 core bound가
+  `10.58% → 13.48%`로 증가했습니다. 따라서 초기 2회의 DSB miss 증가만으로 slowdown을 설명하면 안 되며,
+  현재 정확한 분류는 final-binary layout에 민감한 **execution-core pipeline balance 변화**입니다. 마지막
+  hardware resource의 인과 확정에는 padding sweep과 PEBS가 필요합니다.
+- query I/O matrix 40/40에서 `read_bytes=0`, major fault=0이었고 migration/time 상관은 `r=0.085`였습니다.
+  B/C hot address와 raw bytes도 동일합니다. storage, CPU migration, forced destructor `noexcept`, `log_Gl`은
+  수정점이 아닙니다.
 
-현재 `develop` image tag는 mutable이고 2025년 QA 원본 package/image digest는 확보하지 못했습니다. 따라서
-정확한 `+10.56%` 전체를 단정하지 않으며, 오래된 QA CPU/RAM 계층에서 같은 front-end/cache 차이가 더 크게
-증폭됐을 가능성으로 결론을 제한합니다. 성능을 이유로 generic `scope_exit` destructor를 강제 `noexcept`로
-바꾸는 것은 권고하지 않습니다.
+소스 변경 → 7-byte cold-code 축소 → 16-byte hot-code phase → DSB/MITE 공급 변화 → Top-down core-bound 분류를
+모두가 따라갈 수 있도록 SVG와 쉬운 설명을 별도 문서에 정리했습니다.
 
-- 상세 보고서 및 compact evidence:
-  <https://github.com/vimkim/my-cubrid-docs/blob/afe5f11/cbrd-26382/CBRD-26382-gcc8-full-server-follow-up_codex.md>
+- 원인 설명 및 SVG:
+  <https://github.com/vimkim/my-cubrid-docs/blob/1e2631f/cbrd-26382/CBRD-26382-scope-exit-frontend-causal-chain_codex.md>
+- 상세 보고서와 110-run PMU evidence:
+  <https://github.com/vimkim/my-cubrid-docs/blob/1e2631f/cbrd-26382/CBRD-26382-gcc8-full-server-follow-up_codex.md>

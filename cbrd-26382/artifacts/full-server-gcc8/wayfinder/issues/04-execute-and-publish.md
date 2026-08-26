@@ -45,7 +45,10 @@ Compact evidence is under [`stable-pc-cubridci/`](../../stable-pc-cubridci/). Th
 [`afe5f11`](https://github.com/vimkim/my-cubrid-docs/commit/afe5f11), and the retained, post-publication-verified JIRA
 comment is
 [`4776011`](http://jira.cubrid.org/browse/CBRD-26382?focusedCommentId=4776011&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-4776011).
-The follow-up explanation adds the exact 7-byte→8-byte→16-byte link chain, expanded Top-down evidence, and an SVG:
+The follow-up explanation in
+[`1e2631f`](https://github.com/vimkim/my-cubrid-docs/commit/1e2631f) adds the exact 7-byte→8-byte→16-byte link chain,
+expanded 110-run PMU/Top-down evidence, and an SVG. JIRA comment `4776011` was updated in place and re-fetched to verify
+the new summary and immutable document URL:
 [`CBRD-26382-scope-exit-frontend-causal-chain_codex.md`](../../../../CBRD-26382-scope-exit-frontend-causal-chain_codex.md).
 
 [Back to map](../map.md)

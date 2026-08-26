@@ -36,7 +36,8 @@ The three research blockers are resolved. The execution ticket carries the accep
 PC rebuilt all four states in the QA CI-family CentOS 6/devtoolset-8 environment, ran them on Rocky 8, and completed timing,
 plan, I/O, scheduler, PMU, profile, and final-ELF analysis. Its directional effect is below the predeclared 5% magnitude
 gate, so the report explicitly distinguishes directional reproduction from reproduction of the full QA magnitude.
-The committed report is at `afe5f11`, and the verified CBRD-26382 follow-up is comment `4776011`.
+The initial committed report is at `afe5f11`; the expanded causal explanation, SVG, and 110-run Top-down correction are at
+`1e2631f`. The verified CBRD-26382 follow-up remains comment `4776011` and was updated in place with the new URL and summary.
 
 ## Evidence contract
 
