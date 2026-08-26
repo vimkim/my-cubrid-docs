@@ -19,18 +19,36 @@
 최우선 성공 조건은 **QA slowdown 방향 재현**이다. 현재 host의 normalized rebuild 결과만 다시 반복하고 종료하면
 안 된다.
 
+### Portability boundary
+
+이 문서가 처음 게시될 때 origin host의 `.scratch`, worktree, result directory와 tracker ID를 portable artifact처럼
+표현한 오류가 있었다. 다음을 명확히 구분한다.
+
+- **Git으로 전달됨**: 이 문서, WIP full-server 보고서, Wayfinder map/context/issues, build manifests, container
+  metadata/RPM list, C patch, timing/layout evidence, 재현 scripts
+- **전달되지 않음**: origin host의 네 worktree directory, 약 160 MiB인 각 unstripped ELF, build tree, raw log,
+  container image layer, work-tracker SQLite row
+- worktree는 commit에서 재생성하고, ELF/build/raw evidence는 안정 PC에서 새로 만든다. origin host의 대용량
+  artifact가 꼭 필요할 때만 별도 전송한다.
+- work-tracker ID는 host-local이다. 안정 PC에 item 30이 없는 것이 정상이며 새 local item을 생성한다.
+
 ## 2. Read first
 
-현재 PC에서 다음 파일이 작업의 authoritative state다.
+Git checkout에서 다음 파일이 portable authoritative state다.
 
 | 경로 | 내용 |
 |---|---|
-| `/home/vimkim/gh/cb/CBRD-26382-scope-exit/.scratch/cbrd-26382-gcc8-follow-up/map.md` | Wayfinder destination, route, evidence contract |
-| `.../.scratch/cbrd-26382-gcc8-follow-up/CONTEXT.md` | QA/A/B/C 용어와 비교 불변조건 |
-| `.../.scratch/cbrd-26382-gcc8-follow-up/issues/04-execute-and-publish.md` | 남은 hand ticket |
-| `/home/vimkim/gh/my-cubrid-docs/cbrd-26382/CBRD-26382-gcc8-full-server-follow-up_codex.md` | 미완성 최종 보고서 초안; `TBD`가 남아 있으므로 그대로 게시 금지 |
-| `artifacts/full-server-gcc8/` | compact build/layout/timing evidence와 재현 script |
-| `/home/vimkim/gh/cb/cbrd-26382-results` | 약 160 MiB ELF 네 개, manifest, raw log를 포함한 local evidence root |
+| `cbrd-26382/CBRD-26382-stable-pc-handoff_codex.md` | 이 실행 handoff |
+| `cbrd-26382/CBRD-26382-gcc8-full-server-follow-up_codex.md` | WIP 최종 보고서; `TBD`가 남아 있으므로 그대로 최종 게시/JIRA 인용 금지 |
+| `cbrd-26382/artifacts/full-server-gcc8/wayfinder/` | Wayfinder map, context, issue 01–04 |
+| `cbrd-26382/artifacts/full-server-gcc8/manifests/` | origin build의 네 compact manifest와 CMake cache |
+| `cbrd-26382/artifacts/full-server-gcc8/container/` | image metadata/history, RPM NEVRA list, fallback Containerfile |
+| `cbrd-26382/artifacts/full-server-gcc8/scripts/` | worktree 준비, build, timing, plan, PMU, 분석 scripts |
+| `cbrd-26382/artifacts/full-server-gcc8/*.csv`, `*.json` | compact layout/timing evidence |
+| `cbrd-26382/artifacts/full-server-gcc8/SHA256SUMS` | portable artifact 79개의 무결성 목록 |
+
+Origin host에만 있던 `/home/vimkim/gh/cb/cbrd-26382-results`와 `.scratch` 경로는 Git checkout의 전제조건이
+아니다. portable copy는 위 artifact directory에 포함됐다.
 
 선행 minimal-binary GCC 8/GCC 11 분석은 commit
 `aa9f8d226a9cc2bc6725fd14f92814859cabf2b2`의
@@ -38,7 +56,7 @@
 
 ## 3. Source matrix
 
-| label | worktree | commit/patch | 의미 |
+| label | origin-host worktree 예시 | commit/patch | 의미 |
 |---|---|---|---|
 | QA-2029 | `/home/vimkim/gh/cb/scope-exit-QA-2029` | `000a465c8fcf164d995aae005390a0af49b53a87` | 11.5.0.2029 source 재구성 |
 | A | `/home/vimkim/gh/cb/scope-exit-A` | `6146cdb6aaf8708856f4b8e9f336362bb0843b2c` | PR #6636 직전 parent, original `std::function` scope-exit |
@@ -47,6 +65,16 @@
 
 C patch SHA-256은 `5334c3ac928329e16c891d8ab491e691c549e36cc448d774755dc555c1bace39`다. C는 새 commit을
 만들지 않아 version string이라는 confounder를 추가하지 않았다.
+
+worktree directory 자체는 전달하지 않는다. Canonical CUBRID clone과 artifact root를 인자로 다음 script를 실행해
+네 worktree와 submodule을 재생성한다.
+
+```bash
+cbrd-26382/artifacts/full-server-gcc8/scripts/prepare-worktrees.sh \
+  /path/to/cubrid-clone \
+  /path/to/worktree-root \
+  /path/to/my-cubrid-docs/cbrd-26382/artifacts/full-server-gcc8
+```
 
 비교 축:
 
@@ -88,6 +116,14 @@ QA가 실행한 `.2029` package와 byte-identical하다고 주장하면 안 된�
 | cache | `CCACHE_DISABLE=1` |
 | scheduling | variant를 하나씩 clean build; 각 build 내부 compiler 병렬성은 허용 |
 | CM server | 네 variant 모두 `WITH_CMSERVER=OFF` |
+
+Origin build의 actual `source.sha`, submodule 상태, toolchain, CMake cache, ELF notes/hash는
+`artifacts/full-server-gcc8/manifests/{qa-2029,A,B,C}/`에 전달됐다. 새 build 결과가 이 값과 다르면 차이를 먼저
+기록하고 timing을 해석한다.
+
+Prepared image layer는 Git에 포함할 수 없다. 가장 정확한 이동 방법은 origin PC에서 `podman save`, 안정 PC에서
+`podman load`하는 것이다. 그것이 불가능하면 `container/Containerfile`과 `rpm-packages.txt`로 재구성하되,
+repository snapshot 시점에 따라 byte-identical image가 아님을 명시한다.
 
 ### QA-faithful build에서 반드시 확인할 차이
 
@@ -290,19 +326,27 @@ physical core와 sibling을 확인해 수정한다. checkpoint resume와 compile
 address movement만 있거나 cache counter 차이가 noise 범위면 “layout change는 확인, microarchitectural mechanism은
 미확정”으로 남긴다.
 
-## 10. Transfer checklist
+## 10. Bootstrap checklist on the stable PC
 
-안정 PC로 최소한 다음을 옮긴다.
+Git handoff에는 이미 Wayfinder, manifests, C patch, scripts, timing/layout evidence가 들어 있다. 안정 PC에서 다음을
+수행한다.
 
-1. Git repository/worktree 또는 commit 네 개를 재생성할 canonical CUBRID clone
-2. `artifacts/full-server-gcc8/` 전체
-3. `.scratch/cbrd-26382-gcc8-follow-up/`의 Wayfinder map/context/issues와 최신 scripts
-4. C patch `scope-exit-C.patch`
-5. 필요하면 현재 manifest와 unstripped ELF:
-   `/home/vimkim/gh/cb/cbrd-26382-results/{qa-2029,A,B,C}/{manifest,CUBRID/lib/libcubrid.so.11.5}`
-6. prepared container를 그대로 쓸 경우 `podman save`로 image를 export하거나 동일 Dockerfile/package manifest로
-   재구성
-7. 실제 QA packages를 확보했다면 가장 우선해서 별도 read-only evidence directory에 저장
+1. `my-cubrid-docs`를 handoff 보완 commit까지 pull한다.
+2. artifact root에서 `sha256sum -c SHA256SUMS`로 전달 파일을 검증한다.
+3. canonical CUBRID clone에 네 commit이 있는지 확인하고 `prepare-worktrees.sh`로 worktree를 재생성한다.
+4. `manifests/`의 submodule SHA와 새 worktree를 비교한다.
+5. prepared image tar를 별도로 받았다면 `podman load`한다. 없으면 supplied Containerfile/RPM list로 환경을
+   재구성하고 그 차이를 새 manifest에 기록한다.
+6. origin ELF/build tree/raw log는 없는 것을 정상 상태로 취급하고 새 PC에서 새 evidence root를 만든다.
+7. 실제 QA packages를 확보하면 가장 우선해서 별도 read-only evidence directory에 저장한다.
+8. 이 PC의 tracker DB에 새 item을 생성하고 handoff URL/commit을 note에 기록한다. origin item 30을 찾지 않는다.
+
+Origin host의 unstripped ELF 또는 raw contamination log가 추가로 필요하다고 판단될 때만 다음을 별도 전송한다.
+
+```text
+/home/vimkim/gh/cb/cbrd-26382-results/{qa-2029,A,B,C}/CUBRID/lib/libcubrid.so.11.5
+/home/vimkim/gh/cb/cbrd-26382-results/bench/raw/
+```
 
 현재 container topology는 참고용이다.
 
@@ -352,7 +396,8 @@ c26382  /bench/golden  localhost  /bench/golden  file:/bench/golden/lob
 - 미완성 full-server 보고서의 모든 `TBD` 제거 및 evidence link audit
 - `my-cubrid-docs` commit/push와 immutable report URL 확인
 - CBRD-26382에 쉬운 한국어 요약+URL 댓글 게시 후 comment ID/body 재조회
-- Wayfinder issue 04/map, work-tracker item 30을 최종 evidence로 완료 처리
+- portable Wayfinder issue 04/map을 최종 evidence로 갱신
+- 안정 PC에서 생성한 local work-tracker item을 완료 처리; origin host item 30은 참조만 하고 존재를 요구하지 않음
 
 현재 후속 JIRA 댓글은 아직 게시하지 않았다. 선행 minimal report 댓글만 존재한다. 안정 PC 결과가 QA 방향을
 재현하거나, 재현 실패의 조건을 충분히 좁힌 뒤 최종 댓글을 게시한다.

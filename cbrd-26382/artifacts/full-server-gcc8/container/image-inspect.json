@@ -1,0 +1,122 @@
+[
+     {
+          "Id": "c4da6a0898ef11f67c3c45703e4d78d4f52446e6b225004da212a0d587806cbf",
+          "Digest": "sha256:36f73aba88afab74e0d71b9d7b1942e82cd55ac348233780ef4c3106d007a999",
+          "RepoTags": [
+               "localhost/cbrd26382-rocky8-gcc8:build-ready"
+          ],
+          "RepoDigests": [
+               "localhost/cbrd26382-rocky8-gcc8@sha256:36f73aba88afab74e0d71b9d7b1942e82cd55ac348233780ef4c3106d007a999"
+          ],
+          "Parent": "c433221ffd667baf6c43ce3e6deab0919479429bf5c69e4d4d0f84a074d25666",
+          "Comment": "",
+          "Created": "2026-08-26T07:25:15.41413813Z",
+          "Config": {
+               "Env": [
+                    "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                    "JDK_URL=https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u442-b06/OpenJDK8U-jdk_x64_linux_hotspot_8u442b06.tar.gz"
+               ],
+               "Cmd": [
+                    "/bin/bash"
+               ],
+               "Labels": {
+                    "Description": "This is a build and test environment image for CUBRID",
+                    "cbrd26382.system-jdk": "true",
+                    "io.buildah.version": "1.41.5",
+                    "org.opencontainers.image.description": "Reuses Rocky 8 system OpenJDK 8; adds only CMake, Ninja, and Bison",
+                    "org.opencontainers.image.title": "CBRD-26382 Rocky 8 GCC 8 build environment"
+               }
+          },
+          "Version": "",
+          "Author": "",
+          "Architecture": "amd64",
+          "Os": "linux",
+          "Size": 1259407395,
+          "VirtualSize": 1259407395,
+          "GraphDriver": {
+               "Name": "overlay",
+               "Data": {
+                    "LowerDir": "/home/vimkim/.local/share/containers/storage/overlay/020b072f612d92bd1153c246e89f70e70c8fb67ef57ac72c4af4656b2a2d5465/diff:/home/vimkim/.local/share/containers/storage/overlay/57eccb7048b1ad38653ba4873fc3bcd370abeb7804a3b5b424ce895ec97607ba/diff:/home/vimkim/.local/share/containers/storage/overlay/0b319bdf2e13fefb82f513d4332156f047f040a0e649fef32a9d24e4938830cf/diff",
+                    "UpperDir": "/home/vimkim/.local/share/containers/storage/overlay/48f624b4cd823a58f8af30c971de900c16fcd8ec86e039944030161081e6e9b3/diff",
+                    "WorkDir": "/home/vimkim/.local/share/containers/storage/overlay/48f624b4cd823a58f8af30c971de900c16fcd8ec86e039944030161081e6e9b3/work"
+               }
+          },
+          "RootFS": {
+               "Type": "layers",
+               "Layers": [
+                    "sha256:0b319bdf2e13fefb82f513d4332156f047f040a0e649fef32a9d24e4938830cf",
+                    "sha256:025c32f77b3ccf9e216a412182f4d05a9365e5df04f151c91c42d94ed3d4029b",
+                    "sha256:a1763d0e29c2a748653ecb20eb99b1bb768f31e2a7d956a4f68a3da21a8e3977",
+                    "sha256:e789afccd9dec0b568d1726d3027bef2cc75f6a3c99cd8bb1a32d3dbdd927b2a"
+               ]
+          },
+          "Labels": {
+               "Description": "This is a build and test environment image for CUBRID",
+               "cbrd26382.system-jdk": "true",
+               "io.buildah.version": "1.41.5",
+               "org.opencontainers.image.description": "Reuses Rocky 8 system OpenJDK 8; adds only CMake, Ninja, and Bison",
+               "org.opencontainers.image.title": "CBRD-26382 Rocky 8 GCC 8 build environment"
+          },
+          "Annotations": {
+               "org.opencontainers.image.base.digest": "sha256:fe9512ddb9e0ef2e687ba80feeef6a7c0b0502137c0ed15fa5f4bb5ab6c266ce",
+               "org.opencontainers.image.base.name": "localhost/cbrd26382-rocky8-gcc8:system-jdk8",
+               "org.opencontainers.image.created": "2026-08-26T07:25:15.41413813Z"
+          },
+          "ManifestType": "application/vnd.oci.image.manifest.v1+json",
+          "User": "",
+          "History": [
+               {
+                    "created": "2024-06-03T16:13:38.139765185Z",
+                    "created_by": "/bin/sh -c #(nop) ADD file:6317989ad669956ae3e28263964daa06d3200aee43f36330e424c7b493cc4905 in / "
+               },
+               {
+                    "created": "2024-06-03T16:13:40.97515666Z",
+                    "created_by": "/bin/sh -c #(nop) CMD [\"/bin/bash\"]",
+                    "comment": "FROM 5d7eb843eda3",
+                    "empty_layer": true
+               },
+               {
+                    "created": "2026-08-26T07:09:37.910258405Z",
+                    "created_by": "/bin/sh -c #(nop) LABEL Description=\"This is a build and test environment image for CUBRID\"",
+                    "comment": "FROM quay.io/rockylinux/rockylinux:8.10",
+                    "empty_layer": true
+               },
+               {
+                    "created": "2026-08-26T07:11:16.256233006Z",
+                    "created_by": "/bin/sh -c dnf install -y dnf-plugins-core &&     dnf config-manager --set-enabled powertools ||     dnf config-manager --set-enabled crb"
+               },
+               {
+                    "created": "2026-08-26T07:15:38.617515008Z",
+                    "created_by": "/bin/sh -c set -x         && dnf install -y epel-release         && dnf install -y --setopt=tsflags=nodocs                 gcc gcc-c++ make                 python2-devel python3-devel                 elfutils-libelf-devel systemtap-sdt-devel libstdc++-static                 ncurses-devel ant flex git wget libxslt                 rpm-build libtool libtool-ltdl autoconf automake                 which ccache                 glibc-locale-source glibc-langpack-en glibc-langpack-ko         && dnf clean all -y         && rm -rf /var/cache/dnf"
+               },
+               {
+                    "created": "2026-08-26T07:15:46.029789799Z",
+                    "created_by": "/bin/sh -c #(nop) ENV JDK_URL=\"https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u442-b06/OpenJDK8U-jdk_x64_linux_hotspot_8u442b06.tar.gz\"",
+                    "empty_layer": true
+               },
+               {
+                    "created": "2026-08-26T07:25:14.231589775Z",
+                    "created_by": "/bin/sh -c dnf install -y cmake ninja-build bison  && dnf clean all -y  && rm -rf /var/cache/dnf",
+                    "comment": "FROM localhost/cbrd26382-rocky8-gcc8:system-jdk8"
+               },
+               {
+                    "created": "2026-08-26T07:25:15.359847075Z",
+                    "created_by": "/bin/sh -c #(nop) LABEL org.opencontainers.image.title=\"CBRD-26382 Rocky 8 GCC 8 build environment\"",
+                    "empty_layer": true
+               },
+               {
+                    "created": "2026-08-26T07:25:15.39601561Z",
+                    "created_by": "/bin/sh -c #(nop) LABEL org.opencontainers.image.description=\"Reuses Rocky 8 system OpenJDK 8; adds only CMake, Ninja, and Bison\"",
+                    "empty_layer": true
+               },
+               {
+                    "created": "2026-08-26T07:25:15.414311535Z",
+                    "created_by": "/bin/sh -c #(nop) LABEL cbrd26382.system-jdk=\"true\"",
+                    "empty_layer": true
+               }
+          ],
+          "NamesHistory": [
+               "localhost/cbrd26382-rocky8-gcc8:build-ready"
+          ]
+     }
+]

@@ -1,0 +1,20 @@
+FROM quay.io/rockylinux/rockylinux:8.10
+
+# This is a rebuild recipe, not a claim of byte-identical image reproduction.
+# Prefer importing the original image when it is available. The observed full
+# RPM NEVRA list and image metadata are stored next to this file.
+RUN dnf install -y dnf-plugins-core \
+    && (dnf config-manager --set-enabled powertools || dnf config-manager --set-enabled crb) \
+    && dnf install -y epel-release \
+    && dnf install -y --setopt=tsflags=nodocs \
+       gcc gcc-c++ make python2-devel python3-devel \
+       elfutils-libelf-devel systemtap-sdt-devel libstdc++-static \
+       ncurses-devel ant flex git wget libxslt rpm-build \
+       libtool libtool-ltdl autoconf automake which ccache \
+       glibc-locale-source glibc-langpack-en glibc-langpack-ko \
+       java-1.8.0-openjdk-devel cmake ninja-build bison \
+    && dnf clean all -y \
+    && rm -rf /var/cache/dnf
+
+LABEL org.opencontainers.image.title="CBRD-26382 Rocky 8 GCC 8 build environment" \
+      org.opencontainers.image.description="Uses Rocky 8 system OpenJDK 8 for the CUBRID build"
