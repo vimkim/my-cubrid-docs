@@ -67,6 +67,38 @@ caller sets LK_FORCE_ZERO_WAIT
 - Production: `assert`가 제거되어도 최종 `return wait_msecs`가 `LK_FORCE_ZERO_WAIT`을 그대로 반환하므로 latch wait로 승격되지 않는다.
 - Debug: `force_latch_wait`와 `LK_FORCE_ZERO_WAIT`이 동시에 활성화되는 순간에 assert하여 위험한 호출 조합을 조기에 발견한다.
 
+## Why the Original CBRD-27198 Failure Remains Fixed
+
+이 권장 수정은 원래 PR이 해결하려던 `lock_timeout=0` 재현의 동작을 바꾸지 않는다. 원래 재현의 입력은 엔진 내부 값인 `LK_FORCE_ZERO_WAIT`이 아니라 사용자 설정에서 유래한 `LK_ZERO_WAIT`이기 때문이다.
+
+코드상 전달 경로는 다음과 같다.
+
+1. [`db_admin.c:2934-2937`](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/compat/db_admin.c#L2934-L2937)은 `lock_timeout`이 양수일 때만 1,000을 곱한다. 따라서 사용자가 설정한 `0`은 그대로 `tran_reset_wait_times(0)`에 전달된다.
+2. [`tran_reset_wait_times()`](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/transaction/transaction_cl.c#L170-L175)는 이 값을 서버로 전달하고, [`xlogtb_reset_wait_msecs()`](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/transaction/log_tran_table.c#L2553-L2569)가 `tdes->wait_msecs = 0`으로 저장한다. enum 정의상 이 값은 [`LK_ZERO_WAIT`](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/transaction/lock_manager.h#L55-L62)이다.
+3. PR은 volume header fix와 sector allocation table fix 직전에 각각 `force_latch_wait=true`를 설정한다: [`disk_get_volheader_internal()`](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/storage/disk_manager.c#L3227-L3237), [`disk_stab_cursor_fix()`](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/storage/disk_manager.c#L3501-L3515).
+4. 권장 구현의 `pgbuf_find_current_wait_msecs()`는 `force_latch_wait=true`이면서 `wait_msecs == LK_ZERO_WAIT`이면 현재 PR과 동일하게 `LK_INFINITE_WAIT`을 반환한다.
+5. 따라서 [`pgbuf_fix_internal()`의 강등 조건](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/storage/page_buffer.c#L2227-L2236)인 `LK_ZERO_WAIT || LK_FORCE_ZERO_WAIT`에 해당하지 않는다. `PGBUF_UNCONDITIONAL_LATCH` 요청은 conditional request로 강등되지 않고 latch 대기에 진입한다.
+
+```text
+SET SYSTEM PARAMETERS 'lock_timeout=0'
+  -> tdes->wait_msecs = 0 = LK_ZERO_WAIT
+  -> disk helper sets force_latch_wait = true
+  -> recommended mapping: LK_ZERO_WAIT -> LK_INFINITE_WAIT
+  -> unconditional fix is not demoted to conditional
+  -> contention waits instead of returning ER_LK_PAGE_TIMEOUT immediately
+```
+
+원래 재현에 대한 현재 PR과 권장 수정의 결과는 동일하다.
+
+| Case | Current PR | Recommended change |
+|---|---|---|
+| User `lock_timeout=0` (`LK_ZERO_WAIT`) | `LK_INFINITE_WAIT` | `LK_INFINITE_WAIT` |
+| Engine `LK_FORCE_ZERO_WAIT` | `LK_INFINITE_WAIT` | preserve force-zero; debug assert |
+
+따라서 원래 결함인 “사용자 no-wait 설정 때문에 disk manager의 unconditional latch가 즉시 conditional로 강등되고 `ER_LK_PAGE_TIMEOUT`을 반환하는 현상”은 계속 해결된다. 달라지는 것은 원래 재현과 별개인 엔진 내부 `LK_FORCE_ZERO_WAIT` 정책뿐이다.
+
+이 결론은 no-wait로 인한 **즉시 거절 경로**가 제거된다는 의미다. 실제 latch wait는 `page_latch_timeout_in_msecs` watchdog, interrupt 또는 다른 오류로 종료될 수 있으므로 모든 disk latch 실패가 불가능해진다는 뜻은 아니다.
+
 `assert_release()`는 release 서버까지 종료시킬 수 있으므로 사용하지 않는 것을 권장한다. Assertion을 두 disk helper에 중복 배치하는 대신 `pgbuf_find_current_wait_msecs()`에 두면 정책 결합 지점 한 곳에서 현재와 미래의 모든 caller를 검증할 수 있어 locality가 높다.
 
 ## Existing Indirect Path
