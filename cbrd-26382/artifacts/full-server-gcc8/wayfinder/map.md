@@ -29,13 +29,14 @@ and publishes the evidence in `my-cubrid-docs` and CBRD-26382.
 1. [Version Provenance](issues/01-version-provenance.md) — resolved research.
 2. [Rocky 8 Build Reproducibility](issues/02-rocky8-build-reproducibility.md) — resolved research.
 3. [SQL and PMU Oracle](issues/03-sql-pmu-oracle.md) — resolved research.
-4. [Execute and Publish the Full-Binary Follow-up](issues/04-execute-and-publish.md) — stable-PC execution complete;
-   publication in progress.
+4. [Execute and Publish the Full-Binary Follow-up](issues/04-execute-and-publish.md) — resolved; report and verified
+   JIRA comment published.
 
 The three research blockers are resolved. The execution ticket carries the accepted plan through publication. The stable
 PC rebuilt all four states in the QA CI-family CentOS 6/devtoolset-8 environment, ran them on Rocky 8, and completed timing,
 plan, I/O, scheduler, PMU, profile, and final-ELF analysis. Its directional effect is below the predeclared 5% magnitude
 gate, so the report explicitly distinguishes directional reproduction from reproduction of the full QA magnitude.
+The committed report is at `afe5f11`, and the verified CBRD-26382 follow-up is comment `4776011`.
 
 ## Evidence contract
 

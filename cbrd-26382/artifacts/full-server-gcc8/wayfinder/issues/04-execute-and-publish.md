@@ -1,7 +1,7 @@
 # Execute and Publish the Full-Binary Follow-up
 
 Type: task
-Status: claimed
+Status: resolved
 Assignee: codex-stable-pc
 Blocked by: Version Provenance, Build Reproducibility, SQL and PMU Oracle
 
@@ -41,7 +41,9 @@ forced destructor `noexcept` does not improve timing consistently. `log_Gl` rema
 The evidence therefore supports an instruction front-end/cache-layout amplification, not query disk I/O, CPU migration,
 the destructor exception specification, or `log_Gl` layout.
 
-Compact evidence is under [`stable-pc-cubridci/`](../../stable-pc-cubridci/). Publication URLs and the verified JIRA comment
-identifier are recorded when the final commits are pushed.
+Compact evidence is under [`stable-pc-cubridci/`](../../stable-pc-cubridci/). The report and evidence were pushed in
+[`afe5f11`](https://github.com/vimkim/my-cubrid-docs/commit/afe5f11), and the retained, post-publication-verified JIRA
+comment is
+[`4776011`](http://jira.cubrid.org/browse/CBRD-26382?focusedCommentId=4776011&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-4776011).
 
 [Back to map](../map.md)
