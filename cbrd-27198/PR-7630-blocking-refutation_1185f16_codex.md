@@ -18,9 +18,10 @@
 
 1. **확정된 regression:** `force_latch_wait`가 원래 transaction wait policy를 읽기 전에 무조건 `LK_INFINITE_WAIT`를 반환한다. 그 결과 positive finite policy도 infinite classification으로 바뀌며, page-latch watchdog 만료 시 expected `ER_LK_PAGE_TIMEOUT` 대신 debug assert와 `ER_LK_UNILATERALLY_ABORTED` 경로를 탄다.
 2. **미입증 전제:** “`lock_timeout`은 사용자가 lock에만 적용하려 한 값”이라는 해석은 이름과 주 용례에 근거한 추론이다. exact code의 effective contract는 같은 값을 page-latch admission과 timeout classification에 오랫동안 사용해 왔다. engine도 `LK_FORCE_ZERO_WAIT`를 page-latch 회피에 의도적으로 사용한다.
-3. **새 progress 의미:** zero-wait structural-page miss가 즉시 실패하던 동작에서, 독립 page-latch watchdog까지 기다리는 동작으로 바뀐다. 기본 상한은 300초이며, 만료 시 infinite classification의 강한 실패 경로를 선택한다.
-4. **검증 부재:** PR diff는 production source 6개, 62 insertions이고 test 변경이 없다. latch-order cycle이 없다는 audit, forced-contention test, watchdog-expiry test, four-policy matrix가 모두 없다.
-5. **원래 repro의 한계:** `cbrd_27198_repro.sh`는 `lock_timeout=0 → immediate -76 → disk_reserve_sectors assert`를 재현할 뿐, PR의 wait policy가 옳거나 deadlock-safe하다는 것을 검증하지 않는다.
+3. **정의되지 않은 정책 범주:** `structural page`는 기존 CUBRID page category가 아니다. Merge-base에는 용례가 없고 exact HEAD의 다섯 용례는 모두 이 PR이 추가했다. Type, predicate, membership rule 없이 새 umbrella term이 no-wait override의 근거가 됐다.
+4. **새 progress 의미:** zero-wait structural-page miss가 즉시 실패하던 동작에서, 독립 page-latch watchdog까지 기다리는 동작으로 바뀐다. 기본 상한은 300초이며, 만료 시 infinite classification의 강한 실패 경로를 선택한다.
+5. **검증 부재:** PR diff는 production source 6개, 62 insertions이고 test 변경이 없다. latch-order cycle이 없다는 audit, forced-contention test, watchdog-expiry test, four-policy matrix가 모두 없다.
+6. **원래 repro의 한계:** `cbrd_27198_repro.sh`는 `lock_timeout=0 → immediate -76 → disk_reserve_sectors assert`를 재현할 뿐, PR의 wait policy가 옳거나 deadlock-safe하다는 것을 검증하지 않는다.
 
 가장 작은 merge 가능 수정은 PR의 scoped-wait 정책을 유지하되 **zero-wait 두 sentinel만 override하고 positive 및 already-infinite 값을 보존**하는 것이다. 그러나 zero-wait을 page latch에도 적용해야 한다는 제품 계약을 선택한다면, 이 PR의 thread-local override 자체를 버리고 typed `WOULD_BLOCK` interface와 all-or-nothing reservation cleanup을 설계해야 한다.
 
@@ -64,7 +65,43 @@ Source: [`page_buffer.c:16922-16949`](https://github.com/CUBRID/cubrid/blob/1185
 
 이 early return은 원래 `tdes->wait_msecs`가 무엇이었는지 확인하지 않는다.
 
-## Attack 1: “Lock-only Intent” Is Not the Existing Contract
+## Attack 1: “Structural Page” Is a New, Undefined Category
+
+`structural page`는 기존 CUBRID domain term이나 page-buffer contract가 아니다.
+
+- Exact merge-base `169cef5434ace12ca3597d6abf278b3ccf09e3b2`에서 case-insensitive exact phrase 검색 결과는 0건이다.
+- Exact reviewed HEAD의 다섯 용례—`thread_entry.hpp` 1건, `page_buffer.c` 2건, `disk_manager.c` 2건—는 모두 이 PR의 diff addition이다.
+- `STRUCTURAL_PAGE` enum, flag, predicate, membership table은 없다.
+- 기존 concrete page classification은 [`PAGE_TYPE`](https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/storage_common.h#L148-L166)의 `PAGE_VOLHEADER`, `PAGE_VOLBITMAP` 등이다. 이 enum 자체도 source 주석상 validation/debugging 용도이며 `structural`이라는 상위 범주를 정의하지 않는다.
+
+PR이 실제로 override를 적용하는 곳은 다음 두 call site뿐이다.
+
+| Exact page | Existing CUBRID name/type | PR의 새 표현 |
+|---|---|---|
+| volume header page | `PAGE_VOLHEADER` | structural page |
+| sector allocation-table/bitmap page | `PAGE_VOLBITMAP` | structural page |
+
+가장 가까운 기존 표현은 volume의 `system page` 영역이다. `DISK_VOLUME_HEADER::sys_lastpage`는 last system page를 나타내지만, source 어디에도 `system page == structural page`라는 equivalence나 wait-policy contract는 없다.
+
+따라서 다음 문장은 기존 invariant를 인용하는 것이 아니라 PR이 새 정책을 선언하는 것이다.
+
+```c
+/* A structural page must not inherit the transaction's no-wait setting. */
+```
+
+Source: [`page_buffer.c:16922-16931`](https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/page_buffer.c#L16922-L16931)
+
+정의가 없으므로 interface boundary가 불명확하다.
+
+- volume header와 sector table만 포함하는가?
+- file header, heap header, B-tree root도 구조를 대표하므로 포함되는가?
+- page가 hot하거나 내부 metadata라는 사실이 no-wait override의 충분조건인가?
+- 이 범주에 속하면 latch가 항상 microseconds 안에 해제된다는 보장은 무엇인가?
+- 새 caller가 이 helper를 사용해도 되는지는 어떤 rule로 판정하는가?
+
+현재 형태는 deep policy를 page-buffer interface에 올린 것이 아니라, 두 call site에 대한 예외를 generic-sounding label로 포장한 것이다. Scope가 정말 두 page뿐이라면 comment와 API contract는 `volume header and sector allocation table`을 정확히 명시해야 한다. 더 넓은 architecture category라면 membership, wait invariant, allowed callers를 type 또는 predicate로 정의하고 그 전체 범위를 audit/test해야 한다.
+
+## Attack 2: “Lock-only Intent” Is Not the Existing Contract
 
 작성자는 답변에서 다음을 인정한다.
 
@@ -93,7 +130,7 @@ Source: [`page_buffer.c:16922-16949`](https://github.com/CUBRID/cubrid/blob/1185
 
 이 coupling을 제거하는 장기 방향과, 현재 사용자가 관측하는 behavior를 두 페이지 종류에서만 바꾸는 단기 PR은 별개의 결정이다. 후자는 explicit spec, compatibility analysis, test evidence가 필요하다.
 
-## Attack 2: “No-wait Gains Nothing” Is Refuted by the Codebase
+## Attack 3: “No-wait Gains Nothing” Is Refuted by the Codebase
 
 PR의 새 주석은 structural-page latch가 microseconds 동안만 유지되므로 no-wait을 존중해도 얻는 것이 없다고 주장한다. 이 주장은 너무 강하다.
 
@@ -106,7 +143,7 @@ PR의 새 주석은 structural-page latch가 microseconds 동안만 유지되므
 
 > PR은 zero-wait을 최대 300초 wait 및 fatal watchdog classification으로 바꾸면서, 이 두 structural-page path에 cycle이 없다는 audit나 deterministic contention/watchdog test를 제공하지 않는다.
 
-## Attack 3: “Unconditional Cannot Fail” Is Also Too Strong
+## Attack 4: “Unconditional Cannot Fail” Is Also Too Strong
 
 `disk_get_volheader_internal`은 `pgbuf_fix`가 `NULL`을 반환할 수 있음을 직접 처리한다.
 
@@ -457,6 +494,7 @@ Migration cost:
 다음이 충족되기 전에는 merge하면 안 된다.
 
 - [ ] positive finite policy가 `LK_INFINITE_WAIT`로 재분류되지 않도록 구현 수정
+- [ ] `structural page`의 membership과 wait-policy invariant를 정의하거나, 정확한 두 page 예외로 terminology/API scope 축소
 - [ ] zero-wait structural-page exception의 explicit specification
 - [ ] `LK_FORCE_ZERO_WAIT` engine use와의 상호작용 분석
 - [ ] volume-header→sector-table 및 관련 reverse-order path audit
@@ -472,6 +510,8 @@ Migration cost:
 >
 > 더 근본적으로, “사용자 의도는 lock-only”라는 주장은 parameter 이름과 주 용례에 근거한 추론이지 existing behavior contract의 증명이 아닙니다. Exact code는 같은 field를 page-latch admission에 오랫동안 사용했고 engine도 busy-page skip/dead-latch avoidance에 `LK_FORCE_ZERO_WAIT`를 의도적으로 사용합니다. Structural-page exception이 제품 정책이라면 이를 명시하고 zero-wait의 최대 300초 wait 변화, latch ordering, watchdog expiry를 deterministic하게 검증해야 합니다.
 >
+> 또한 `structural page`는 기존 CUBRID source에 정의된 page category가 아니며, merge-base에는 용례가 없습니다. Exact HEAD의 다섯 용례는 모두 이 PR이 추가했고 type/predicate/membership rule도 없습니다. 현재 override 대상이 volume header와 sector allocation table뿐이라면 generic category 대신 두 page를 정확히 명시해야 합니다. 더 넓은 범주라면 어떤 page가 포함되고 왜 그 범주가 transaction no-wait을 무시해야 하는지 contract와 test가 필요합니다.
+>
 > 첨부 repro는 original `immediate -76 → assert` mechanism만 검증합니다. PR의 forced-wait 정책, deadlock safety, positive timeout preservation은 검증하지 않으며, PR에는 test 변경이 없습니다. 위 matrix와 consistency gate가 추가되기 전에는 merge할 수 없습니다.
 
 ## Final Position
@@ -481,6 +521,7 @@ Migration cost:
 그러나 좋은 motive와 일부 올바른 implementation detail은 merge 기준을 대체하지 않는다.
 
 - 현재 코드는 definite positive-timeout regression을 포함한다.
+- `structural page`라는 새 정책 범주가 정의·분류·검증되지 않았다.
 - zero-wait 의미를 바꾸는 policy 근거가 specification이 아니라 추론이다.
 - progress와 watchdog behavior를 검증하지 않았다.
 - concurrency policy change에 test가 하나도 없다.
