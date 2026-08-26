@@ -290,8 +290,8 @@ PMU가 아직 없으므로 2–4는 최종 판정이 아니다.
 4. 각 variant warmup 2회, QA-2029/B 연속 5회, A/B/C balanced randomized 60회씩 실행한다.
 5. result `282475249`, cardinality 49, plan topology가 다르면 timing을 해석하지 않는다.
 
-`run-timings-single.sh`는 container name/mount와 CPU 3,4,5가 현재 PC에 hard-code돼 있다. 새 PC topology에서
-physical core와 sibling을 확인해 수정한다. checkpoint resume와 compiler gate는 유지한다.
+모든 실행 script는 공통 `RUNTIME_CONFIG`에서 container name, mount, server/client CPU를 읽는다. 새 PC에서
+physical core와 sibling을 확인해 한 번 설정하며, checkpoint resume와 compiler gate는 유지한다.
 
 ### Phase C — plan and PMU
 
