@@ -6,8 +6,16 @@ script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$script_dir/runtime-common.sh"
 load_runtime_topology
 validate_runtime_topology
+require_setting P_CORE_CPUS
 
-root=$results_root/bench/pmu
+p_core_cpus=$P_CORE_CPUS
+if ! [[ "$p_core_cpus" =~ ^[0-9]+([,-][0-9]+)*$ ]]; then
+  echo "invalid taskset CPU list in P_CORE_CPUS: $p_core_cpus" >&2
+  exit 2
+fi
+podman exec "$container" taskset -c "$p_core_cpus" true
+
+root=$results_root/bench/pmu-pcores
 mkdir -p "$root"
 stage_query_file "$artifact_root/query.sql" "$container_query"
 
@@ -16,7 +24,7 @@ start_server ()
   local variant=$1 lifecycle=$2 server_pid
   exec_variant "$variant" cubrid server start "$database_name" >"$lifecycle" 2>&1
   server_pid=$(podman exec "$container" pgrep -o cub_server)
-  podman exec "$container" taskset -apc "$server_cpus" "$server_pid" >>"$lifecycle" 2>&1
+  podman exec "$container" taskset -apc "$p_core_cpus" "$server_pid" >>"$lifecycle" 2>&1
   podman top "$container" hpid pid comm \
     | awk -v pid="$server_pid" '$2 == pid && $3 == "cub_server" {print $1; exit}'
 }
@@ -49,13 +57,13 @@ run_stat ()
   hpid=$(start_server "$variant" "$lifecycle")
 
   set +e
-  perf stat -x, -o "$root/$stem.perf.csv" -e "$events" -p "$hpid" -- \
+  "${PERF_BIN:-perf}" stat -x, -o "$root/$stem.perf.csv" -e "$events" -p "$hpid" -- \
     podman exec \
       -e "CUBRID=$install" \
       -e "CUBRID_DATABASES=$container_registry" \
       -e "PATH=$install/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
       -e "LD_LIBRARY_PATH=$install/lib:$install/cci/lib" \
-      "$container" taskset -c "$client_cpu" \
+      "$container" taskset -c "$p_core_cpus" \
       csql -C -u dba -i "$container_query" "$database_name" \
       >"$root/$stem.query.log" 2>&1
   status=$?
@@ -90,14 +98,14 @@ run_profile ()
   cp "/proc/$hpid/maps" "$root/$variant-profile.maps"
 
   set +e
-  perf record -F 999 --call-graph fp -p "$hpid" \
+  "${PERF_BIN:-perf}" record -F 999 --call-graph fp -p "$hpid" \
     -o "$root/$variant-profile.perf.data" -- \
     podman exec \
       -e "CUBRID=$install" \
       -e "CUBRID_DATABASES=$container_registry" \
       -e "PATH=$install/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
       -e "LD_LIBRARY_PATH=$install/lib:$install/cci/lib" \
-      "$container" taskset -c "$client_cpu" \
+      "$container" taskset -c "$p_core_cpus" \
       csql -C -u dba -i "$container_query" "$database_name" \
       >"$root/$variant-profile.query.log" 2>&1
   status=$?
@@ -121,25 +129,30 @@ l1d_events='L1-dcache-loads,L1-dcache-load-misses'
 llc_events='LLC-loads,LLC-load-misses'
 itlb_events='iTLB-loads,iTLB-load-misses'
 l1i_events='L1-icache-load-misses'
-frontend_events='idq_uops_not_delivered.core,icache_64b.iftag_miss,icache_64b.iftag_stall'
+frontend_events='idq_bubbles.core,icache_data.stalls,icache_tag.stalls'
 uopcache_events='idq.dsb_uops,idq.mite_uops,dsb2mite_switches.penalty_cycles,machine_clears.count'
 frontendret_events='frontend_retired.l1i_miss,frontend_retired.dsb_miss'
 
-for repetition in 1 2; do
-  for variant in A B C qa-2029; do
-    run_stat "$variant" core "$repetition" "$core_events"
-    run_stat "$variant" branch "$repetition" "$branch_events"
-    run_stat "$variant" cache "$repetition" "$cache_events"
-    run_stat "$variant" l1d "$repetition" "$l1d_events"
-    run_stat "$variant" llc "$repetition" "$llc_events"
-    run_stat "$variant" itlb "$repetition" "$itlb_events"
-    run_stat "$variant" l1i "$repetition" "$l1i_events"
-    run_stat "$variant" frontend "$repetition" "$frontend_events"
-    run_stat "$variant" uopcache "$repetition" "$uopcache_events"
-    run_stat "$variant" frontendret "$repetition" "$frontendret_events"
-  done
-done
+if [ "${PMU_PILOT:-0}" = 1 ]; then
+  pilot_group=${PMU_PILOT_GROUP:-core}
+  eval "pilot_events=\${${pilot_group}_events}"
+  run_stat "${PMU_PILOT_VARIANT:-B}" "$pilot_group" 1 "$pilot_events"
+  exit
+fi
 
-for variant in A B C qa-2029; do
-  run_profile "$variant"
-done
+if [ "${PMU_ONLY_PROFILES:-0}" != 1 ]; then
+  for repetition in $(seq 1 "${PMU_REPETITIONS:-2}"); do
+    for variant in ${PMU_VARIANTS:-A B C qa-2029}; do
+      for group in ${PMU_GROUPS:-core branch cache l1d llc itlb l1i frontend uopcache frontendret}; do
+        eval "events=\${${group}_events}"
+        run_stat "$variant" "$group" "$repetition" "$events"
+      done
+    done
+  done
+fi
+
+if [ "${PMU_PROFILES:-1}" = 1 ]; then
+  for variant in ${PMU_VARIANTS:-A B C qa-2029}; do
+    run_profile "$variant"
+  done
+fi

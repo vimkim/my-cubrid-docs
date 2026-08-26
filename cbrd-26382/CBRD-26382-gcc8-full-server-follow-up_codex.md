@@ -3,24 +3,26 @@
 - 작성일: 2026-08-26
 - 대상: CUBRID PR [#6636](https://github.com/CUBRID/cubrid/pull/6636), JIRA [CBRD-26382](http://jira.cubrid.org/browse/CBRD-26382)
 - 선행 분석: [`noexcept` 6개 최소 바이너리 분석](CBRD-26382-noexcept-binary-layout-analysis_codex.md)
-- 상태: 전체 Rocky 8/GCC 8 빌드 완료, SQL/PMU 최종값 입력 전
+- 상태: stable-PC 재현·PMU·final ELF 분석 완료
 
 ## Executive summary
 
-TBD: 최종 SQL 및 PMU 수치 입력 후 갱신한다.
+QA와 같은 build 계열을 복원하자 slowdown 방향이 재현됐다. 최신 `cubridci/cubridci:develop`의 CentOS 6.10 +
+devtoolset-8 GCC 8.3.1에서 repository `./build.sh -m release ... build`를 명시 실행했고, 네 CMake cache 모두
+`RelWithDebInfo`와 `-O2 -g -DNDEBUG`를 확인했다. 이 바이너리를 Rocky 8에서 실행한 stable-PC 결과는 다음과 같다.
 
-현재까지 최종 ELF에서 확정된 사실은 다음과 같다.
-
-1. `cub_server` 실행 파일 자체는 QA-2029/A/B/C 네 빌드가 SHA-256까지 완전히 같다. 서버 엔진 본체는 동적
-   라이브러리 `libcubrid.so.11.5`에 있다. 따라서 이 이슈의 “최종 `cub_server` 바이너리” 분석 대상은 launcher와
-   함께 이 DSO여야 한다.
-2. PR 직전 A에서 PR 적용 B로 바뀌면 서버 DSO의 query hot function들이 4,080 byte 앞쪽으로 이동하고, 함수 시작의
-   64-byte cache-line offset이 모두 16 byte 변한다. 이는 GCC 8 최종 link layout 변화가 실제로 존재한다는 증거다.
-3. 그러나 B의 조건부 소멸자 `noexcept`를 강제 `noexcept`로만 바꾼 C는 B와 `.text` 전체, scope-exit 소멸자
-   machine code, query hot function의 주소·크기·machine code가 모두 같다. 달라지는 것은 EH metadata뿐이다.
-4. `log_Gl`은 A→B에서 정확히 한 page(-4,096 byte) 이동하지만 64-byte cache-line offset과 4 KiB page offset은
-   그대로다. B와 C에서는 주소·크기·인접 global까지 완전히 같다. 따라서 forced `noexcept`가 `log_Gl` 배치를
-   개선한다는 가설은 최종 ELF에서 성립하지 않는다.
+1. QA-2029과 B 각 20개 표본을 합치면 B는 평균 `+1.464%` 느렸고 100,000회 bootstrap 95% CI는
+   `+1.039% ~ +1.899%`다. QA 장비의 `+10.56%`보다 작지만 방향과 통계적 분리는 재현했다.
+2. query 구간의 physical `read_bytes`와 major fault는 40/40 모두 0이었다. 시간과 server migration 횟수의 상관도
+   `r=0.085`에 불과하다. 이 workload의 stable-PC 차이는 disk가 아니라 CPU/front-end 쪽이다.
+3. A→B에서 core IPC는 `-1.615%`, retired DSB(decoded-uop cache) miss/s는 `+52.819%`, legacy decoder의
+   MITE uops/s는 `+21.727%`였다. 일반 L1I miss/s는 오히려 `-2.301%`여서 핵심은 L1I capacity miss보다
+   DSB/MITE 경로다.
+4. 실제 cycle profile의 최대 hot function은 `qexec_execute_scan`(약 25–27%)이다. A→B에서 이 함수와 다른 query
+   hot function은 모두 16 byte 앞쪽으로 이동해 시작 주소 `%64`가 바뀐다. B와 C의 hot 주소와 raw bytes는 같다.
+5. forced destructor `noexcept` C는 B의 front-end layout을 되돌리지 못했고 B/C timing 방향도 일관되지 않았다.
+   조건부 `noexcept` 한 줄과 `log_Gl` 배치는 수정점이 아니다. PR 전체 refactor가 만든 final-link phase 변화가
+   현재 가장 강한 원인 후보이며, 더 오래된 QA CPU/RAM 계층에서 비용이 크게 증폭됐다는 해석이 증거에 맞는다.
 
 ## 1. 질문과 비교 축
 
@@ -62,61 +64,56 @@ QA 배포 package의 원본 manifest와 ELF는 확보하지 못했다. 따라서
 
 | 항목 | 값 |
 |---|---|
-| container OS | Rocky Linux 8.10 (Green Obsidian) |
-| image | `localhost/cbrd26382-rocky8-gcc8:build-ready` |
-| image digest | `c4da6a0898ef11f67c3c45703e4d78d4f52446e6b225004da212a0d587806cbf` |
-| GCC/G++ | 8.5.0-28.el8_10 |
-| linker | GNU ld 2.30-123.el8 |
-| CMake/Ninja | 3.26.5 / 1.8.2 |
-| Java | Rocky 8 system OpenJDK/Javac 1.8.0_504 |
+| build image | `docker.io/cubridci/cubridci:develop` |
+| resolved image ID | `3f5731ae2f0b...f94168ba` |
+| repository digest | `sha256:3a6f53a2...63a157` |
+| build container OS | CentOS 6.10 (Final), glibc 2.12 |
+| GCC/G++ | devtoolset-8 8.3.1-3 |
+| linker | GNU ld 2.30-55.el6.2 |
+| CMake/Ninja | 3.26.3 / 1.11.1 |
+| Java | Temurin OpenJDK/Javac 1.8.0_442 |
 | build type | `RelWithDebInfo`, `-O2 -g -DNDEBUG`, C++17 |
-| host CPU | Intel Xeon Gold 5218R, 2 sockets × 20 cores × 2 threads |
-| cache line | L1D/L1I 모두 64 byte |
-| host kernel / perf | Rocky 9 kernel 5.14.0-570.30.1.el9_6 / perf 5.14.0 |
-| source/output path | 모든 variant에서 `/src`, `/out`로 정규화 |
-| compiler cache | `CCACHE_DISABLE=1`; variant 간 cache 공유 없음 |
+| build command | `./build.sh -m release -s /src -b /out/build -p /out/CUBRID -j /opt/jdk8 build` |
+| runtime OS | Rocky Linux 8.10 container |
+| stable host CPU | Intel Core Ultra 7 270K Plus, 1 socket, 24 physical cores, SMT 없음 |
+| measured CPU set | P-core `0-7`; 단일 CPU 고정 없이 migration 허용 |
+| stable host storage | SHPP41-1000GM NVMe, XFS |
+| host kernel / perf | Fedora 44 kernel 7.1.8 / perf 7.1.10 |
+| source/output path | 모든 variant에서 `/src`, `/out` |
+| compiler cache | image의 `ccache gcc` wrapper, `CCACHE_DISABLE=1` |
 | install prefix | `/out/CUBRID` |
 
-별도 Temurin JDK를 내려받지 않았다. build tree의 JDK 위치는 Rocky 8 system JDK를 가리키게 했고, 실제 PL/JDBC
-빌드도 `java`/`javac 1.8.0_504`로 성공했다. historical worktree에는 개인용 `justfile`이 없으므로 repository의
-당시 `build.sh`를 사용했다. CM server submodule은 최종 `cub_server`와 무관하며 네 variant 모두 동일하게
-`WITH_CMSERVER=OFF`로 구성했다.
+2025년 11월 대상 source의 CircleCI와 Jenkinsfile은 모두 `cubridci/cubridci:develop`과
+`scl enable devtoolset-8 -- /entrypoint.sh build`를 사용한다. 현재 `develop` tag는 mutable이므로 당시 image digest와
+같다고 주장하지 않는다. 다만 현재 image를 직접 검사한 OS/compiler/userspace와 repository build 경로는 QA CI
+계열과 일치한다. image entrypoint의 최근 default mode 변경 가능성을 피하려고 `-m release`를 명시했으며,
+`CMakeCache.txt`로 `RelWithDebInfo`를 사후 검증했다.
 
-각 variant는 하나씩 순서대로 별도 clean build tree에서 빌드했고, build 내부 compiler 병렬성은 허용했다.
-source/submodule SHA, toolchain, CMake cache, ELF hash와 Build ID를 별도 manifest로 남겼다. 네 build의 CCI/JDBC
-submodule pin도 동일하다.
+CM server source가 없는 warning은 있었지만 DB engine/JDBC/PL/CCI build와 install은 정상 완료됐다. QA/A/B/C의
+CCI/JDBC submodule pin은 같고, `cubrid-cci/win/cci_version.h`가 build number로 바뀌는 것은 `build.sh`의 정상 생성
+동작으로 취급했다. 빌드 입력과 결과는 [`stable-pc-cubridci/manifests/`](artifacts/full-server-gcc8/stable-pc-cubridci/manifests/)에
+남겼다.
 
 ## 3. workload와 측정 protocol
 
-- 한 Rocky 8 container와 같은 DB volume을 사용하고 variant를 매회 clean start/stop하여 master/IPC 충돌을
-  배제했다.
-- 서버의 모든 thread는 host 물리 CPU 3,4에, CSQL은 별도 물리 CPU 5에 고정했다. 세 CPU의 sibling은 사용하지
-  않았다. 세 CPU의 governor는 `performance`이고 Intel turbo는 enabled다. PMU에서 `ref-cycles`를 함께 수집해
-  run 간 주파수 차이를 확인한다.
-- DB는 `en_US.utf8`, 16 KiB page, 최초 128 MiB data/log volume으로 한 번 생성했다.
-- 모든 variant에서 `db_class` cardinality는 49, 결과는 `49^5 = 282,475,249`여야 통과한다.
-- CSQL `;time on` 값은 `db_compile_statement()` 직전부터 `db_execute_statement()` 직후까지다. 결과 formatting과
-  auto-commit 시간은 제외된다.
-- warm-up은 variant별 2회다. QA view는 QA-2029과 B 각각 연속 5회 평균을 보존한다.
-- A/B/C는 ABC의 여섯 permutation을 두 번 배치한 12 round를 한 series로 하고 5 series를 실행한다. 즉 variant별
-  60개, 총 180개의 randomized measurement다.
-- 매 실행 전후 host의 `cc1plus` 수와 runnable task 수를 검사한다. 다른 대규모 병렬 빌드가 시작되면 해당
-  matrix 전체를 중단·격리하고 host가 조용해진 뒤 처음부터 다시 실행한다.
-- 1차 판정은 median ratio 5% 이상, paired bootstrap 95% CI가 1.0을 제외하는지, 분산과 series별 방향이
-  일관적인지를 함께 본다.
+- SQL은 `SELECT COUNT(*) FROM db_class a, ... db_class e`이며 결과 `49^5 = 282,475,249`를 매번 검사했다.
+- 한 Rocky 8 runtime container, 한 DB volume을 공유하되 variant를 매회 clean start/stop했다.
+- QA가 CPU pinning을 쓰지 않았다는 조건을 반영해 단일 CPU pinned matrix를 중단했다. 다만 stable host는 P/E
+  hybrid이므로 E-core 성능 차이를 섞지 않기 위해 server의 모든 thread와 CSQL이 P-core `0-7` 안에서 자유롭게
+  migrate하도록 했다.
+- 첫 QA/B 교차는 QA 5회→B 5회→B 5회→QA 5회다. 이어 QA/A/B/C forward와 C/B/A/QA reverse를 다섯 번
+  반복해 variant별 10개를 수집했다.
+- 두 번째 matrix는 query 전후 `/proc/<pid>/task/*/sched`, `/proc/<pid>/io`, `/proc/<pid>/stat`을 읽어 migration,
+  context switch, physical I/O, fault, CPU tick을 함께 기록했다.
+- PMU는 variant마다 core/branch/cache/L1D/LLC/iTLB/L1I/front-end/DSB-MITE 그룹을 별도 실행했다. central
+  core/L1I/front-end/DSB 그룹은 2회, 나머지는 1회이며 counter multiplexing을 줄이기 위해 group별 query를
+  분리했다. `perf record -F 999` cycle profile도 각 variant 한 번 수집했다.
+- 네 variant의 normalized plan hash는 모두 `fdfb8ef0a1e966dae644de819aaffbca74602dc028f0262729e07a55d8d77844`다.
 
-QA 장비와 이 분석 host의 CPU, package, DB volume 상태는 같지 않으므로 17.58초/19.44초라는 절대시간을 맞추는
-실험이 아니다. 같은 host·DB에서 재구성한 version delta의 방향과 크기, 그리고 A/B/C 인과 비교를 판정한다.
-
-초기 pilot에서 서버의 약 300개 thread를 CPU 한 개에 강제로 몰았을 때 watchdog 재시작이 발생했다. 이어 네
-container를 동시에 띄운 pilot에서는 네 `cub_master`가 소실됐다. 두 pilot은 correctness gate를 통과하지 못해
-결과에서 제외하고 별도 격리했다. 또한 분석 중 출력 파일을 빠뜨린 `objcopy --dump-section`이 설치 DSO를
-재작성한 사실을 hash audit로 발견했다. 해당 표본도 폐기하고 untouched build tree에서 설치본을 복원한 후 원래
-manifest SHA-256과 일치함을 확인하고 최종 측정을 처음부터 다시 수행했다.
-
-복원 후 첫 장기 측정 도중 같은 host의 다른 사용자가 80-way CUBRID 빌드를 시작해 load average가 80을 넘었고,
-B 한 표본이 약 18.5초에서 37.6초로 튀었다. 외부 작업은 건드리지 않았으며 해당 matrix 69개 raw file을 별도
-디렉터리에 보존하고 결과에서는 제외했다. 이 사건을 계기로 위 host-contention gate를 추가했다.
+이 stable PC는 QA 장비보다 CPU/RAM/storage가 훨씬 새롭다. 따라서 17.58초/19.44초라는 절대시간을 맞추는 것이
+아니라 같은 host·DB에서 version delta의 방향, PR 인과 비교, microarchitectural counter 방향을 판정한다.
+앞선 shared host의 Rocky 8/GCC 8.5 single-CPU 180개 matrix는 B/A가 10.28% 빠른 반대 방향이었고 외부 compiler
+오염도 반복됐다. 그 결과는 환경 민감성을 보여주는 control로만 보존하고 최종 판정에는 사용하지 않는다.
 
 ## 4. launcher와 실제 server DSO
 
@@ -124,17 +121,18 @@ B 한 표본이 약 18.5초에서 37.6초로 튀었다. 외부 작업은 건드�
 
 | artifact | 네 variant 공통 값 |
 |---|---|
-| SHA-256 | `53daf314c1196bbad1476b2a40865404480e1805b9061e308178a7e2369e6ecb` |
-| Build ID | `6ce76c680819a8a5884966f6d503f18c56048823` |
+| `cub_server` SHA-256 | `0cbcf122985652fde4ec8584798fca532efa33fabbbe35f63d4ea1b7603f1309` |
+| `cub_server` Build ID | `d101e3d560f2f0fda7856779616a1e07997a15e9` |
+| `csql` SHA-256 | `c8cdf3dc23c45b31db1b347ffdb5fef47cf953b9609aeb6980bc93c962691405` |
 
 반면 서버의 거의 모든 실행 코드는 `libcubrid.so.11.5`에 있다.
 
 | variant | bytes | SHA-256 | Build ID |
 |---|---:|---|---|
-| QA-2029 | 167,446,992 | `41082753538ce970...` | `4c90a5f6f076d6858386503d99e9f49f986d8ac0` |
-| A | 167,446,992 | `f40041b4c2390fa4...` | `ecab8534682d72195643ffb39965126f2425c067` |
-| B | 167,377,096 | `4236464ad9d75c36...` | `cf8431c74ffef0975fb93e64bf63c128516c1a0b` |
-| C | 167,376,920 | `37da8c432c6f2272...` | `9ae5c236c67c246a8b58d7a5c5e3e56e3939a758` |
+| QA-2029 | 177,505,504 | `b20aec6c76dd06b1...` | `8b84c6421a03b613a577e9becf1c39bcc371f406` |
+| A | 177,505,504 | `1da0f882f69e5577...` | `6050500a42714e509d280db079852b78bb4e919a` |
+| B | 177,432,760 | `a0d109bd4b288d04...` | `b6a93b756c7686a45ce61afcd989d9f499d7847d` |
+| C | 177,432,896 | `6cfa8b0cf56b2e29...` | `ffd17fbe49c230539a23af96bc35e9d2d922f6a7` |
 
 QA-2029과 A의 server `.text`는 byte-identical하다. 두 source 사이의 유일한 commit은 client-side optimizer의
 `query_planner.c` 변경이므로 예상과 일치한다. QA-2029/A의 DSO 전체 hash 차이는 release string 등 non-code
@@ -145,6 +143,8 @@ content를 포함한다.
 ### 5.1 직접 영향 object
 
 `scope_exit.hpp`를 실제 server mode에서 include하는 경로는 `log_recovery_redo_parallel.cpp.o`다.
+다음 object aggregate는 선행 Rocky 8/GCC 8.5 control에서 얻은 값이며, refactor가 축소하는 section의 종류를
+설명하기 위해 보존한다.
 
 | object aggregate | A original | B conditional | C forced |
 |---|---:|---:|---:|
@@ -162,18 +162,17 @@ A의 `scope_exit<std::function<void()>>` 소멸자는 68 byte 한 개지만 B/C�
 
 | section | A address / bytes | B address / bytes | C address / bytes |
 |---|---|---|---|
-| `.text` | `0x2f7000` / 8,314,404 | `0x2f6000` / 8,314,404 | B와 동일 |
-| `.rodata` | `0xae4e40` / 824,499 | `0xae3e40` / 823,539 | B와 동일 address/size |
-| `.eh_frame_hdr` | `0xbae2f4` / 189,052 | `0xbacf34` / 189,004 | B와 동일 |
-| `.eh_frame` | `0xbdc570` / 926,768 | `0xbdb180` / 926,656 | `0xbdb180` / 926,680 |
-| `.gcc_except_table` | `0xcbe9a0` / 69,014 | `0xcbd540` / 69,046 | `0xcbd558` / 69,014 |
-| `.data.rel.ro` | `0xecfdc0` / 250,160 | `0xeceea0` / 250,064 | B와 동일 |
-| `.data` | `0xf2c0c0` / 142,656 | `0xf2b0e0` / 142,656 | B와 동일 |
-| `.bss` | `0xf4ee80` / 920,280 | `0xf4de80` / 920,280 | B와 동일 |
+| `.text` | `0x2f4000` / `0x80c310` | A와 동일 | A와 동일 |
+| `.rodata` | `0xb00340` / `0xc8475` | `0xb00340` / `0xc80b5` | B와 동일 |
+| `.eh_frame_hdr` | `0xbc87b8` / `0x2edbc` | `0xbc83f8` / `0x2ed84` | B와 동일 |
+| `.eh_frame` | `0xbf7578` / `0xe6408` | `0xbf7180` / `0xe6360` | `0xbf7180` / `0xe6378` |
+| `.gcc_except_table` | `0xcdd980` / `0x1155d` | `0xcdd4e0` / `0x11579` | `0xcdd4f8` / `0x11555` |
+| `.data.rel.ro` | `0xeefa40` / `0x3d470` | `0xeefb20` / `0x3d410` | B와 동일 |
+| `.data` | `0xf4c5a0` / `0x22a60` | `0xf4c5e0` / `0x22a60` | B와 동일 |
+| `.bss` | `0xf6f080` / `0xe09f8` | `0xf6f100` / `0xe09f8` | B와 동일 |
 
-B→C에서 `.text`, writable data, hot symbol 주소는 동일하다. C는 B보다 `.eh_frame`이 24 byte 크고
-`.gcc_except_table`이 32 byte 작아서 read/execute LOAD segment의 file size만 8 byte 작다. 이 차이는 정상 path
-machine instruction의 차이가 아니다.
+B→C에서 `.text`, `.rodata`, writable data, hot symbol 주소는 동일하다. C는 B보다 `.eh_frame`이 24 byte 크고
+`.gcc_except_table`이 36 byte 작다. 이 차이는 정상 path machine instruction의 차이가 아니다.
 
 ### 5.3 query hot function과 cache-line offset
 
@@ -181,19 +180,21 @@ machine instruction의 차이가 아니다.
 
 | symbol | A address (line offset) | B address (line offset) | C |
 |---|---|---|---|
-| `qdata_evaluate_aggregate_list` | `0x495d00` (0) | `0x494d10` (16) | B와 동일 |
-| `qexec_start_mainblock_iterations` | `0x4bb450` (16) | `0x4ba460` (32) | B와 동일 |
-| `qexec_execute_mainblock` | `0x4ceb80` (0) | `0x4cdb90` (16) | B와 동일 |
-| `qexec_execute_query` | `0x4dc830` (48) | `0x4db840` (0) | B와 동일 |
-| `scan_next_scan_block` | `0x4fbbe0` (32) | `0x4fabf0` (48) | B와 동일 |
-| `scan_next_scan` | `0x4fcba0` (32) | `0x4fbbb0` (48) | B와 동일 |
+| `qexec_execute_scan` | `0x4db580` (0) | `0x4db570` (48) | B와 동일 |
+| `fetch_val_list` | `0x47aa10` (16) | `0x47aa00` (0) | B와 동일 |
+| `qdata_evaluate_aggregate_list` | `0x49aee0` (32) | `0x49aed0` (16) | B와 동일 |
+| `qexec_start_mainblock_iterations` | `0x4c0670` (48) | `0x4c0660` (32) | B와 동일 |
+| `qexec_execute_mainblock` | `0x4d3f20` (32) | `0x4d3f10` (16) | B와 동일 |
+| `qexec_execute_query` | `0x4e1b40` (0) | `0x4e1b30` (48) | B와 동일 |
+| `scan_next_scan_block` | `0x500f30` (48) | `0x500f20` (32) | B와 동일 |
+| `scan_next_scan` | `0x501ef0` (48) | `0x501ee0` (32) | B와 동일 |
 
-A→B에서 이 함수들은 모두 4,080 byte 앞쪽으로 이동한다. `.text` 시작 자체는 4,096 byte 앞쪽으로 이동하고,
-함수의 section-relative 위치가 16 byte 뒤로 바뀐 결과다. 반면 B/C의 각 함수는 size뿐 아니라 raw function byte
-SHA-256도 동일하다. 여섯 concrete `scope_exit` 소멸자의 주소(`0x732a20`부터), 크기(각 65 byte), disassembly도
-B/C에서 완전히 같다.
+stable `cubridci` build에서는 `.text` section 시작과 크기는 같지만 A→B의 query hot function들이 모두 16 byte
+앞쪽으로 이동한다. B/C의 각 함수는 size뿐 아니라 raw function byte SHA-256도 동일하다. 앞선 Rocky control은
+4,080 byte 이동이었으므로 이동량 자체는 toolchain/build graph에 민감하지만, 두 build 모두 hot 시작의 `%64`가
+정확히 16 byte 변한다.
 
-A/B에서는 위 여섯 hot function의 raw byte SHA-256이 모두 달라진다. source가 같아도 외부 target까지의 상대
+A/B에서는 위 hot function의 raw byte SHA-256이 모두 달라진다. source가 같아도 외부 target까지의 상대
 변위와 alignment가 바뀌면 instruction encoding byte가 달라질 수 있으므로, hash 차이 자체를 실행 로직 차이로
 해석하지는 않는다. 중요한 대조군은 final address와 raw byte가 모두 동일한 B/C다.
 
@@ -204,72 +205,127 @@ runtime mapping의 executable DSO base는 모든 실행에서 2 MiB 정렬이었
 
 | variant | `log_Gl` address | size | `% 64` | `% 4096` |
 |---|---:|---:|---:|---:|
-| A | `0x1003cc0` | 1,360 (`0x550`) | 0 | `0xcc0` |
-| B | `0x1002cc0` | 1,360 (`0x550`) | 0 | `0xcc0` |
-| C | `0x1002cc0` | 1,360 (`0x550`) | 0 | `0xcc0` |
+| A | `0x1023e80` | 1,360 (`0x550`) | 0 | `0xe80` |
+| B | `0x1023f00` | 1,360 (`0x550`) | 0 | `0xf00` |
+| C | `0x1023f00` | 1,360 (`0x550`) | 0 | `0xf00` |
 
-A→B에서는 `log_Gl`과 주변 큰 path buffer들이 모두 정확히 -4,096 byte 이동한다. cache line 안 위치와 page 안
-위치는 변하지 않는다. B/C에서는 다음 이웃까지 동일하다.
+A→B에서는 `log_Gl`과 주변 global이 모두 128 byte 이동하지만 cache-line 시작 위치 `%64=0`은 유지된다.
+B/C에서는 다음 이웃까지 동일하다.
 
 ```text
-0x1001cc0 log_Path          size 0x1000
-0x1002cc0 log_Gl            size 0x0550
-0x1003220 log_Clock_msec    size 0x0008
-0x1003228 cdc_Logging       size 0x0001
-0x1003240 cdc_Gl            size 0x8308
+0x1022f00 log_Path          size 0x1000
+0x1023f00 log_Gl            size 0x0550
+0x1024460 log_Clock_msec    size 0x0008
+0x1024468 cdc_Logging       size 0x0001
+0x1024480 cdc_Gl            size 0x8308
 ```
 
 `noexcept`는 `log_global` 구조에 field를 추가하지 않는다. B→C가 writable segment와 `.bss` symbol layout을 전혀
 바꾸지 않았으므로 “forced `noexcept`가 `log_Gl`의 cache-line miss를 개선한다”는 설명은 이 빌드에서는 기각된다.
-A→B의 text hot-function offset 변화는 실제이므로 instruction/front-end layout 가설은 PMU로 별도 검증한다.
+A→B의 text hot-function offset 변화와 DSB/MITE PMU 방향이 함께 관찰됐으므로 instruction front-end layout이
+data-global 가설보다 우선한다.
 
 ## 7. client optimizer 분리
 
 QA-2029→A의 CBRD-26266은 `qo_plan_compute_iscan_sort_list()`만 바꾸며 function-based multi-column index의
 ORDER BY skip을 지원한다. 대상 SQL에는 index나 ORDER BY가 없다.
 
-- `libcubridcs.so.11.5`의 `.text` 전체 크기는 QA-2029/A 모두 7,879,988 byte다.
+- `libcubridcs.so.11.5`의 `.text` 전체 크기는 네 variant 모두 8,028,992 byte다.
 - 변경 함수는 실제 symbol 기준 1,781 (`0x6f5`)→1,672 (`0x688`) byte로 줄었다.
 - 뒤의 `qo_planner_search()` 주소는 `0x4890c0`→`0x489050`, 즉 112 byte 이동한다.
-- A/B/C의 client `.text`는 서로 byte-identical하다. B/C client DSO의 차이는 build timestamp와 Build ID 등
+- A/B/C의 client `.text`는 서로 byte-identical하다. B/C client DSO의 차이는 Build ID/EH/debug 등
   non-code byte뿐이다.
 
-CSQL 시간에는 compile과 execute가 모두 포함되므로 최종 SQL 표에서는 QA-2029↔A도 표시한다. 다만 18–20초
-server workload에서 이 ORDER BY 전용 client diff를 곧바로 원인으로 해석하지 않고 plan과 server PMU를 확인한다.
+CSQL 시간에는 compile과 execute가 모두 포함되므로 최종 SQL 표에서는 QA-2029↔A도 표시한다. 다만 이 ORDER BY
+전용 client diff를 대상 SQL의 원인으로 해석하지 않으며, 실제 plan과 server PMU도 같은 결론을 지지한다.
 
 ## 8. SQL 결과
 
-TBD: QA 5회, A/B/C 60회 요약, bootstrap CI, series 방향, plan hash를 입력한다.
+QA/B 전용 교차와 QA/A/B/C I/O matrix를 합친 값이다.
+
+| variant | n | mean (s) | median (s) | stdev (s) |
+|---|---:|---:|---:|---:|
+| QA-2029 | 20 | 4.756998 | 4.742648 | 0.033418 |
+| B | 20 | 4.826650 | 4.808150 | 0.034005 |
+
+B/QA mean ratio는 `1.014642` (`+1.464%`)이고 100,000회 unpaired bootstrap 95% CI는
+`[1.010386, 1.018989]`, 즉 `+1.039% ~ +1.899%`다. QA의 `+10.56%`보다 작지만 slowdown 방향과 1.0을 넘는
+구간을 stable PC에서 재현했다.
+
+네 variant I/O matrix의 10개 표본은 다음과 같다.
+
+| variant | mean (s) | median (s) | min–max (s) |
+|---|---:|---:|---:|
+| QA-2029 | 4.764648 | 4.760149 | 4.722147–4.821150 |
+| A | 4.847351 | 4.727647 | 4.718147–5.840182 |
+| B | 4.837151 | 4.810650 | 4.799150–4.894152 |
+| C | 4.867651 | 4.881652 | 4.803150–4.893152 |
+
+A의 5.840182초 한 건은 CPU tick도 590으로 같이 증가한 명백한 host/frequency outlier여서 raw mean을 오염시킨다.
+raw file은 삭제하지 않았다. median 기준 B/A는 `+1.756%`, C/A는 `+3.258%`다. 반면 C/B는 이 matrix에서
+`+1.476%`, 별도 PMU core 2회 평균에서는 `-0.723%`로 방향이 뒤집힌다. B/C의 hot `.text`가 동일하다는 ELF
+증거까지 합치면 forced `noexcept`가 개선한다는 근거는 없다.
+
+I/O matrix 40/40에서 `read_bytes=0`, major fault=0이었다. 시간과 migration 횟수의 Pearson 상관은 `0.085`다.
+context-switch count와 시간은 함께 늘지만 이는 더 오래 실행된 process가 더 많은 switch를 누적하는 관계다.
+NVMe와 QA의 오래된 SATA/HDD 차이는 server 시작 절대시간에는 영향을 줄 수 있어도 측정된 query regression의
+직접 원인은 아니다. 네 normalized plan hash와 cardinality도 같다.
 
 ## 9. PMU와 hot profile
 
-TBD: cycles/ref-cycles/instructions/IPC/branches/cache/front-end counters, time-running, perf report를 입력한다.
+핵심 비교 A→B의 두 번 측정 평균이다. 각 event group의 query는 별도 실행했다.
 
-주소 변화는 cache miss의 증명이 아니다. cache-line 가설은 PMU에서 instruction 수가 같은데 cycle/IPC 및
-front-end/cache event가 일관되게 달라지는지까지 확인한 뒤 판정한다.
+| metric | A | B | B/A |
+|---|---:|---:|---:|
+| query seconds (core group) | 4.728647 | 4.844151 | +2.443% |
+| IPC | 7.019273 | 6.905903 | -1.615% |
+| effective GHz | 5.486768 | 5.444231 | -0.775% |
+| L1I load misses/s | 1,184,392 | 1,157,135 | -2.301% |
+| retired DSB misses/s | 409,016 | 625,055 | **+52.819%** |
+| DSB uops/s | 36.459B | 36.030B | -1.178% |
+| MITE uops/s | 6.300M | 7.669M | **+21.727%** |
+| MITE / (DSB + MITE) | 0.01728% | 0.02128% | **+23.155%** |
+
+일반 branch miss, cache miss, L1D/LLC miss는 1회씩만 수집했고 A/B 차이가 작은 run noise 범위였다. P-core에서
+`cpu_core` event가 count됐고 `cpu_atom` event의 not-counted 표시는 의도한 affinity의 결과다. 전체 counter
+time-running 중앙값은 100%다.
+
+cycle profile에서 0.5% 이상 address point를 source symbol로 다시 합산한 상위 경로는 다음과 같다.
+
+| function | QA-2029 | A | B | C |
+|---|---:|---:|---:|---:|
+| `qexec_execute_scan` | 26.70% | 25.70% | 25.12% | 26.29% |
+| `fetch_val_list` | 12.33% | 12.73% | 13.82% | 13.40% |
+| `scan_next_list_scan` | 9.13% | 8.95% | 8.18% | 8.99% |
+| `qdata_evaluate_aggregate_list` | 7.43% | 7.75% | 7.16% | 8.11% |
+
+profile은 workload가 실제로 16-byte phase가 바뀐 query executor/scan loop에서 시간을 쓴다는 연결 증거다.
+PMU와 layout을 합치면 L1I capacity miss보다는 DSB set/alignment 및 MITE fallback이 slowdown을 설명한다. 다만
+현재 CPU는 QA CPU가 아니므로 정확한 `+10.56%` 배율까지 이 PMU로 외삽하지 않는다.
 
 ## 10. 결론
 
-TBD: 최종 수치에 근거해 다음 세 문장을 확정한다.
-
-1. PR #6636이 normalized GCC 8 build에서 SQL을 빠르게/느리게 했는가?
-2. forced destructor `noexcept` C가 B를 개선했는가?
-3. QA의 2029→2031 +10.56%와 같은 방향을 재현했는가?
-
-현재 ELF만으로는 다음은 이미 확정할 수 있다.
-
-- forced `noexcept`는 B와 C의 query code 배치를 전혀 바꾸지 않았으므로 이 full build의 성능 수정책이 아니다.
-- GCC 8에서 PR refactor가 final link layout을 바꾸는 현상은 실제다. 이것은 compiler optimization failure의
-  증명이라기보다 object/EH/dynamic symbol 축소가 GNU ld 배치로 전파된 결과다.
-- `log_Gl`의 unlucky cache-line 배치는 B/C 차이를 설명하지 못한다.
-- QA 원인을 확정하려면 QA가 실제 사용한 `.2029`/`.2031` package의 `libcubrid.so.11.5`, `libcubridcs.so.11.5`,
-  Build ID와 CPU counter를 같은 장비에서 비교해야 한다. source 재빌드의 주소 방향은 배포 package와 달라질 수
-  있다.
+1. 최신 `cubridci` CentOS 6/devtoolset-8 release build를 Rocky 8에서 실행하면 B/QA slowdown 방향이 재현된다.
+   stable PC의 크기는 `+1.464%`이고 QA의 `+10.56%`보다는 작다.
+2. A→B PR 단독 비교도 timing과 PMU에서 느린 방향이다. instruction front-end에서 IPC 하락, DSB miss와 MITE
+   fallback 증가가 직접 관찰됐다.
+3. forced destructor `noexcept`는 B와 C의 hot code 주소·bytes를 바꾸지 않고 성능 개선 방향도 일관되지 않다.
+   이 한 줄은 수정책이 아니다.
+4. `log_Gl`은 size와 cache-line offset이 유지되고 B/C가 동일하다. data-global 배치 가설보다 query `.text`의
+   16-byte phase 변화가 증거에 맞는다.
+5. query physical I/O는 0이므로 QA의 느린 storage는 이번 SQL delta의 직접 설명이 아니다. 더 오래된 CPU/RAM의
+   front-end/cache 비용이 같은 layout 차이를 크게 증폭했을 가능성이 높다.
+6. historical `cubridci:develop` digest와 QA 원본 package ELF/PMU가 없으므로 정확한 `+10.56%`의 전부를 단정하지
+   않는다. 다만 “재현 불가” 상태에서는 벗어났고, slowdown 방향과 microarchitectural mechanism을 stable PC에서
+   연결했다.
 
 ## Reproducibility artifacts
 
-TBD: commit에 포함할 compact artifact 링크를 입력한다.
+compact evidence는 [`stable-pc-cubridci/`](artifacts/full-server-gcc8/stable-pc-cubridci/)에 있다. build provenance,
+네 manifest, raw timing/I/O CSV, bootstrap summary, 60 PMU run의 counter와 query time, hot symbol/hash, normalized
+plan hash, address-resolved profile summary를 포함한다. 실행 script는
+[`scripts/`](artifacts/full-server-gcc8/scripts/)에 있다.
 
-전체 build tree와 raw ELF는 크기 때문에 Git에 넣지 않는다. local evidence root는
-`/home/vimkim/gh/cb/cbrd-26382-results`이며, report artifact에는 source/toolchain manifest, C patch, timing CSV,
-PMU CSV, hot-symbol/section summary와 재현 script를 포함한다.
+전체 build tree, raw ELF, `perf.data`는 크기 때문에 Git에 넣지 않는다. local evidence root는
+`/home/vimkim/gh/cb/cbrd-26382-results-cubridci`다. installed ELF에는 `objcopy`를 적용하지 않았고 section byte
+hash는 `dd`로 읽기만 했다.

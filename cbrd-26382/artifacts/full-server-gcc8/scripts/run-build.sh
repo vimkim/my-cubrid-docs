@@ -44,6 +44,8 @@ image_id=$(podman image inspect --format '{{.Id}}' "$image")
 podman run --rm "$image" test -d "$jdk"
 git_common_dir=$(cd "$worktree" && realpath "$(git rev-parse --git-common-dir)")
 git_repository_root=$(dirname "$git_common_dir")
+git_repository_alias=/$(basename "$git_repository_root")
+worktree_alias=/$(basename "$worktree")
 
 mkdir -p "$out"
 if find "$out" -mindepth 1 -print -quit | grep -q .; then
@@ -68,7 +70,13 @@ git_mount_args=()
 if [ "$git_repository_root" != "$worktree" ]; then
   git_mount_args+=(
     -v "$git_repository_root:$git_repository_root:ro"
+    # Linked-worktree submodules use paths such as ../../cubrid/.git/....
+    # When the worktree is mounted at /src, that path resolves via /cubrid.
+    -v "$git_repository_root:$git_repository_alias:ro"
     -v "$worktree:$worktree:ro"
+    # The submodule Git config points back to the worktree using a relative
+    # path that resolves from the repository alias (for example /scope-exit-A).
+    -v "$worktree:$worktree_alias:ro"
   )
 fi
 
@@ -91,7 +99,9 @@ podman --cgroup-manager=cgroupfs run --rm \
   bash -lc '
     set -euo pipefail
     {
-      cat /etc/rocky-release
+      cat /etc/rocky-release 2>/dev/null \
+        || cat /etc/centos-release 2>/dev/null \
+        || cat /etc/os-release
       gcc --version | head -1
       g++ --version | head -1
       java -version

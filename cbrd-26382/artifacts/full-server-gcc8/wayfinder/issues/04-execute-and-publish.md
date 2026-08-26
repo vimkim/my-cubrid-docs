@@ -1,19 +1,20 @@
 # Execute and Publish the Full-Binary Follow-up
 
-Type: hand
-Status: claimed (waiting for stable-PC continuation)
-Blocked by: Version Provenance, Rocky 8 Build Reproducibility, SQL and PMU Oracle
+Type: task
+Status: claimed
+Assignee: codex-stable-pc
+Blocked by: Version Provenance, Build Reproducibility, SQL and PMU Oracle
 
 ## Objective
 
 Build QA-2029 and scope-exit A/B/C, run the accepted SQL and PMU protocols,
-analyze final `cub_server` ELF layout including hot functions and `log_Gl`, then
+analyze final installed server ELF layout including the `libcubrid.so` hot functions and `log_Gl`, then
 publish the evidence-backed report and verified CBRD-26382 follow-up comment.
 
 ## Completion evidence
 
 - Reproducible build manifests and binary hashes for all four states.
-- Five-run QA reconstruction plus randomized A/B/C timing samples.
+- QA/B directional reconstruction plus ordered/reversed A/B/C timing samples.
 - Correctness, cardinality, and plan checks.
 - Final-ELF section/symbol/disassembly/unwind/cache-line analysis.
 - PMU counter comparison tied to tested layout hypotheses.
@@ -22,16 +23,25 @@ publish the evidence-backed report and verified CBRD-26382 follow-up comment.
 
 ## Answer
 
-Rocky 8/GCC 8/system-JDK-8 builds and the current shared-host 180-sample timing matrix are complete. The normalized build
-produced B/A `0.897228` (B 10.28% faster; 60/60 paired rounds), the opposite of the QA report, while C/B was `1.003011`
-with a CI crossing 1.0. Final ELF analysis shows B/C query `.text`, hot-function layout, and `log_Gl` layout are identical;
-forced `noexcept` changes EH metadata only.
+The stable-PC execution is complete. QA-2029/A/B/C were built sequentially with the current
+`cubridci/cubridci:develop` CentOS 6.10 image and devtoolset-8 GCC 8.3.1, using an explicit repository
+`./build.sh -m release ... build`. All four CMake caches prove `RelWithDebInfo`, `-O2 -g -DNDEBUG`; the resulting binaries
+were run on Rocky Linux 8.10. The mutable image tag and missing historical QA package mean byte identity with the original
+QA binaries is not claimed.
 
-The shared host repeatedly ran 70–150 foreign `cc1plus` processes, inflating 18–20 second samples to 32–37 seconds. Those
-runs were gated and excluded, but PMU and the QA-exact build reproduction must move to a stable PC. Handoff commit:
-`cdf79d70450cd40504997b03f5433ec6dd443dbd`.
+QA-2029 and B have 20 accepted samples each. B is `+1.464%` slower by mean with a 100,000-bootstrap 95% CI of
+`+1.039%` to `+1.899%`. This reproduces the QA direction, but not the original `+10.56%` magnitude and not the Wayfinder's
+predeclared 5% causal-effect gate. The workload produced zero physical read bytes and zero major faults in all 40 I/O
+matrix runs; elapsed time versus server migration has only `r=0.085` correlation.
 
-Remaining: QA exact `build.sh build` provenance/package, stable-PC reproduction of the reported slowdown, PMU/profile,
-final report, and verified JIRA comment.
+A→B changes the query hot-function phase by 16 bytes. Two PMU repetitions show IPC `-1.615%`, retired decoded-uop-cache
+(DSB) misses/s `+52.819%`, and legacy-decoder MITE uops/s `+21.727%`. The profile confirms that the workload spends its
+cycles in the shifted query executor and scan functions. B/C have identical hot addresses and function bytes, while the
+forced destructor `noexcept` does not improve timing consistently. `log_Gl` remains cache-line aligned and B/C-identical.
+The evidence therefore supports an instruction front-end/cache-layout amplification, not query disk I/O, CPU migration,
+the destructor exception specification, or `log_Gl` layout.
+
+Compact evidence is under [`stable-pc-cubridci/`](../../stable-pc-cubridci/). Publication URLs and the verified JIRA comment
+identifier are recorded when the final commits are pushed.
 
 [Back to map](../map.md)

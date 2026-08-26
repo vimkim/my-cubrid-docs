@@ -67,8 +67,9 @@ validate_runtime_topology ()
   podman exec "$container" taskset -c "$server_cpus" true
   podman exec "$container" taskset -c "$client_cpu" true
   podman exec "$container" test -d "$container_bench_root"
-  podman exec "$container" test -f "$container_registry"
-  for variant in qa-2029 A B C; do
+  podman exec "$container" test -d "$container_registry"
+  podman exec "$container" test -f "$container_registry/databases.txt"
+  for variant in ${RUNTIME_VARIANTS:-qa-2029 A B C}; do
     podman exec "$container" test -d "$container_install_root/$variant"
   done
 }

@@ -4,6 +4,7 @@
 import csv
 import json
 import math
+import os
 import pathlib
 import re
 import statistics
@@ -64,7 +65,17 @@ def safe_ratio(numerator, denominator):
 
 def value(events, name):
     item = events.get(name)
-    return None if item is None else item["value"]
+    if item is not None:
+        return item["value"]
+    for event, candidate in events.items():
+        if not event.startswith("cpu_core/"):
+            continue
+        inner = event.removeprefix("cpu_core/")
+        if inner.endswith("/u"):
+            inner = inner[:-2]
+        if inner == name:
+            return candidate["value"]
+    return None
 
 
 def derived_metrics(group, events, seconds):
@@ -139,7 +150,7 @@ def main(root_arg):
         for item in missing:
             unsupported.append({"file": path.name, **item})
 
-    expected = 4 * 10 * 2
+    expected = int(os.environ.get("PMU_EXPECTED_RUNS", 4 * 10 * 2))
     if len(runs) != expected:
         raise SystemExit(f"incomplete PMU matrix: found {len(runs)}, expected {expected}")
 
@@ -156,7 +167,7 @@ def main(root_arg):
     output = {
         "input_root": str(root),
         "run_count": len(runs),
-        "unsupported": unsupported,
+        "unsupported_unique": sorted({item["event"] for item in unsupported}),
         "running_percent": summarize(running_percentages),
         "summary": {
             key: {metric: summarize(values) for metric, values in sorted(metrics.items())}
