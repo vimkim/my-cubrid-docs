@@ -1,0 +1,13 @@
+diff --git a/src/base/scope_exit.hpp b/src/base/scope_exit.hpp
+index c5fd4daea..cc16d375e 100644
+--- a/src/base/scope_exit.hpp
++++ b/src/base/scope_exit.hpp
+@@ -46,7 +46,7 @@ class scope_exit
+     }
+ 
+     // destructor calls the functor if engaged
+-    ~scope_exit() noexcept (noexcept (std::declval<fun_t &>()()))
++    ~scope_exit() noexcept
+     {
+       if (active_)
+ 	{
