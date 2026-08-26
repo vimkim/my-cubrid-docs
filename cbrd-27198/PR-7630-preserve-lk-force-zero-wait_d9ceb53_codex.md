@@ -21,7 +21,44 @@ if (wait_msecs == LK_ZERO_WAIT || wait_msecs == LK_FORCE_ZERO_WAIT)
 | `LK_ZERO_WAIT` | 사용자 transaction 정책 | `lock_timeout=0`에서 유래한 fail-fast 정책 |
 | `LK_FORCE_ZERO_WAIT` | 엔진 내부 progress 정책 | busy page를 건너뛰거나 이미 latch를 보유한 경로의 dead-latch를 회피 |
 
-실제 사용처도 이 차이를 보여 준다.
+## Evidence That `LK_FORCE_ZERO_WAIT` Is Engine-Internal
+
+`LK_FORCE_ZERO_WAIT`이 엔진 내부 값이라는 근거는 사용자 설정 범위와 실제 writer 양쪽에서 확인된다.
+
+### User configuration cannot produce `LK_FORCE_ZERO_WAIT`
+
+[`lock_manager.h:55-62`](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/transaction/lock_manager.h#L55-L62)는 wait sentinel을 다음처럼 정의한다.
+
+```c
+LK_ZERO_WAIT = 0,
+LK_INFINITE_WAIT = -1,
+LK_FORCE_ZERO_WAIT = -2
+```
+
+반면 사용자 설정인 [`lock_timeout`](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/base/system_parameter.c#L1345-L1357)은 `PRM_USER_CHANGE | PRM_FOR_SESSION`이지만 `lower_limit`이 `-1`이다. 이 initializer의 필드 순서가 `upper_limit`, `lower_limit`임은 [`SYSPRM_PARAM` 정의](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/base/system_parameter.h#L720-L733)에서 확인할 수 있다.
+
+설정 parser는 time-unit 값을 읽은 뒤 [`prm_check_range()`](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/base/system_parameter.c#L8926-L8937)를 호출하고, 이 함수는 값이 `lower_limit`보다 작으면 [`PRM_ERR_BAD_RANGE`](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/base/system_parameter.c#L8603-L8655)를 반환한다. 따라서 지원되는 SQL 설정 경로에서 다음 두 값의 provenance는 분리된다.
+
+| Value | Numeric value | User `lock_timeout` accepts it? | Producer |
+|---|---:|---:|---|
+| `LK_ZERO_WAIT` | `0` | yes | `SET SYSTEM PARAMETERS 'lock_timeout=0'` |
+| `LK_INFINITE_WAIT` | `-1` | yes | `lock_timeout=-1` |
+| `LK_FORCE_ZERO_WAIT` | `-2` | no: below lower limit | engine code only |
+
+### Direct writers are engine control paths
+
+Exact HEAD에서 `LK_FORCE_ZERO_WAIT`을 직접 대입하거나 transaction wait에 설치하는 코드는 엔진 내부의 conditional/progress 경로다.
+
+- [`lock_manager.c:6332-6340`](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/transaction/lock_manager.c#L6332-L6340) 등은 caller가 `LK_COND_LOCK`을 요청했을 때 엔진이 `wait_msecs = LK_FORCE_ZERO_WAIT`으로 정한다.
+- [`bestspace.cpp:675-688`](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/storage/bestspace.cpp#L675-L688)은 page scan 동안 transaction wait를 일시적으로 force-zero로 바꾸고 복원한다. [`page_buffer.c:12332-12344`](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/storage/page_buffer.c#L12332-L12344)는 이 값이 busy page를 오류 설정 없이 건너뛰기 위한 것이라고 명시한다.
+- [`btree.c:19760-19778`](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/storage/btree.c#L19760-L19778)은 이미 B-tree page latch를 보유한 경로의 추가 fix가 `dead latch`를 만들 수 있기 때문에 엔진이 force-zero를 설치한다.
+- [`lock_manager.c:9028-9030`](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/transaction/lock_manager.c#L9028-L9030)은 lock table dump 자체가 다른 lock에 막히지 않도록 force-zero를 설치한다.
+
+즉, `LK_ZERO_WAIT`은 사용자 정책을 표현하고 `LK_FORCE_ZERO_WAIT`은 특정 엔진 알고리즘이 “기다리면 안 된다”는 제어 의도를 표현한다. 숫자가 모두 transaction의 `wait_msecs`에 저장될 수 있다는 사실이 두 값의 owner까지 같다는 뜻은 아니다.
+
+다만 이 구분은 현재 타입 시스템이 강제하는 불변식은 아니다. [`xlogtb_reset_wait_msecs()`](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/transaction/log_tran_table.c#L2553-L2569)는 provenance가 없는 단순 `int`를 받는다. 따라서 “엔진 내부 값”이라는 것은 지원되는 사용자 설정 인터페이스와 현재 writer에 근거한 의미적 계약이며, 잘못된 내부 조합을 `assert`로 검출하자는 권장의 이유이기도 하다.
+
+이 provenance 차이는 기존 PR의 잔여 위험과 직접 연결된다.
 
 - [`bestspace.cpp:680`](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/storage/bestspace.cpp#L672-L688)은 contended page를 기다리지 않고 `CONTENDED` 결과로 처리한다.
 - [`btree.c:19764`](https://github.com/CUBRID/cubrid/blob/d9ceb5317c4d5bf15d2bcd2e89c08c2db9de3530/src/storage/btree.c#L19760-L19778)은 B-tree page latch를 보유한 상태의 추가 fix가 `dead latch`를 만들 수 있어 `LK_FORCE_ZERO_WAIT`을 사용한다고 명시한다.
