@@ -53,8 +53,9 @@ The committed report is at `afe5f11`, and the verified CBRD-26382 follow-up is c
   layout change, not a cache-miss mechanism.
 
 The stable-PC B/QA effect has a confidence interval excluding 1.0 but is only `+1.464%` by mean, so it does not satisfy the
-5% magnitude clause. It is reported as a statistically separated directional reproduction, while the PMU/layout evidence
-is reported as the leading mechanism rather than proof of the entire `+10.56%` QA effect.
+5% magnitude clause. It is reported as a statistically separated directional reproduction. Expanded Top-down evidence
+shows the lost slots are core-bound rather than front-end-bound, so the final-link/pipeline-layout class is the leading
+explanation while the exact microarchitectural resource and the entire `+10.56%` QA effect remain unproved.
 
 ## Notes
 

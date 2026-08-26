@@ -111,6 +111,20 @@ def derived_metrics(group, events, seconds):
     elif group in ("itlb", "l1i", "frontend", "frontendret"):
         for event, item in events.items():
             metrics[f"{event}_per_second"] = item["value"] / seconds
+    elif group == "topdown":
+        slots = value(events, "slots")
+        for name in ("topdown-retiring", "topdown-bad-spec", "topdown-fe-bound", "topdown-be-bound"):
+            metrics[f"{name}_percent"] = 100 * safe_ratio(value(events, name), slots)
+    elif group == "topdown2":
+        slots = value(events, "slots")
+        backend = value(events, "topdown-be-bound")
+        memory = value(events, "topdown-mem-bound")
+        metrics["topdown-mem-bound_percent"] = 100 * safe_ratio(memory, slots)
+        metrics["topdown-core-bound_percent"] = 100 * safe_ratio(
+            None if backend is None or memory is None else backend - memory, slots
+        )
+        for name in ("topdown-fetch-lat", "topdown-br-mispredict", "topdown-heavy-ops"):
+            metrics[f"{name}_percent"] = 100 * safe_ratio(value(events, name), slots)
     return metrics
 
 
@@ -132,7 +146,7 @@ def main(root_arg):
     runs = []
     unsupported = []
     for path in sorted(root.glob("*.perf.csv")):
-        match = re.fullmatch(r"(A|B|C|qa-2029)-([a-z0-9]+)-([12])\.perf\.csv", path.name)
+        match = re.fullmatch(r"(A|B|C|qa-2029)-([a-z0-9]+)-([1-9][0-9]*)\.perf\.csv", path.name)
         if not match:
             continue
         variant, group, repetition = match.groups()

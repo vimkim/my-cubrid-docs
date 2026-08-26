@@ -34,16 +34,18 @@ QA-2029 and B have 20 accepted samples each. B is `+1.464%` slower by mean with 
 predeclared 5% causal-effect gate. The workload produced zero physical read bytes and zero major faults in all 40 I/O
 matrix runs; elapsed time versus server migration has only `r=0.085` correlation.
 
-A→B changes the query hot-function phase by 16 bytes. Two PMU repetitions show IPC `-1.615%`, retired decoded-uop-cache
-(DSB) misses/s `+52.819%`, and legacy-decoder MITE uops/s `+21.727%`. The profile confirms that the workload spends its
-cycles in the shifted query executor and scan functions. B/C have identical hot addresses and function bytes, while the
-forced destructor `noexcept` does not improve timing consistently. `log_Gl` remains cache-line aligned and B/C-identical.
-The evidence therefore supports an instruction front-end/cache-layout amplification, not query disk I/O, CPU migration,
-the destructor exception specification, or `log_Gl` layout.
+A→B changes the query hot-function phase by 16 bytes. Expanded A/B central PMU groups (5 repetitions) show IPC `-1.519%`,
+MITE uops/query `+12.664%`, and a changed DSB/MITE supply path. Top-down L1/L2 prevents over-attribution: front-end bound
+falls from `5.73%` to `3.85%`, while core bound rises from `10.58%` to `13.48%`. The slowdown is therefore a final-layout
+pipeline-balance effect whose last hardware-resource link remains open, not a proven DSB-miss-only mechanism. The profile
+confirms that the workload spends its cycles in the shifted query executor and scan functions. B/C have identical hot
+addresses and bytes; forced destructor `noexcept` does not improve timing consistently, and `log_Gl` remains B/C-identical.
 
 Compact evidence is under [`stable-pc-cubridci/`](../../stable-pc-cubridci/). The report and evidence were pushed in
 [`afe5f11`](https://github.com/vimkim/my-cubrid-docs/commit/afe5f11), and the retained, post-publication-verified JIRA
 comment is
 [`4776011`](http://jira.cubrid.org/browse/CBRD-26382?focusedCommentId=4776011&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-4776011).
+The follow-up explanation adds the exact 7-byte→8-byte→16-byte link chain, expanded Top-down evidence, and an SVG:
+[`CBRD-26382-scope-exit-frontend-causal-chain_codex.md`](../../../../CBRD-26382-scope-exit-frontend-causal-chain_codex.md).
 
 [Back to map](../map.md)

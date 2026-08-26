@@ -1,0 +1,10 @@
+stage,symbol_or_region,A_address,A_size,B_address,B_size,B_minus_A_address,interpretation
+compiler-cold,log_recovery_redo.cold,0x2fd72a,0x215,0x2fd72a,0x20e,0,"same start; B cold fragment is 7 bytes shorter"
+linker-first-shift,log_system_tdes_map_all_tdes.cold,0x2fdeba,0x19,0x2fdeb2,0x19,-8,"alignment turns the preceding 7-byte shrink into an 8-byte address shift"
+linker-phase,_GLOBAL__sub_I_fileline_location.cpp,0x302590,,0x302580,,-16,"next alignment boundary establishes the 16-byte phase"
+query-hot,qexec_execute_scan,0x4db580,0x5e1,0x4db570,0x5e1,-16,"mod32 changes from 0 to 16"
+query-hot,fetch_val_list,0x47aa10,0x3b4,0x47aa00,0x3b4,-16,"mod32 changes from 16 to 0"
+query-hot,qdata_evaluate_aggregate_list,0x49aee0,0x1073,0x49aed0,0x1073,-16,"mod32 changes from 0 to 16"
+query-hot,qexec_execute_mainblock,0x4d3f20,0x46eb,0x4d3f10,0x46eb,-16,"mod32 changes from 0 to 16"
+query-hot,scan_next_scan,0x501ef0,0x16a,0x501ee0,0x16a,-16,"mod32 changes from 16 to 0"
+linker-run,common_symbols_from_global_init_through_log_recovery_analysis,0x302590,,0x302580,,-16,"8287 common symbols retain the same -16 shift before the changed recovery hot region"

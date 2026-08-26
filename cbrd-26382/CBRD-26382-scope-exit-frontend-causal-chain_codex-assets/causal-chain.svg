@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1280" viewBox="0 0 1400 1280" role="img" aria-labelledby="title desc">
+  <title id="title">CBRD-26382 scope_exit refactor to CPU pipeline causal chain</title>
+  <desc id="desc">The source refactor changes a cold recovery fragment, final link addresses, hot query code phase, front-end supply counters, and pipeline balance. Confirmed facts and the remaining causal hypothesis are separated.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8fafc"/>
+      <stop offset="1" stop-color="#eef2ff"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#475569"/>
+    </marker>
+    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#c2410c"/>
+    </marker>
+    <style>
+      .title { font-family: "Noto Sans CJK KR", sans-serif; font-size: 32px; font-weight: 700; fill: #0f172a; }
+      .subtitle { font-family: "Noto Sans CJK KR", sans-serif; font-size: 17px; font-weight: 500; fill: #475569; }
+      .step { font-family: "Noto Sans CJK KR", sans-serif; font-size: 18px; font-weight: 700; fill: #ffffff; }
+      .head { font-family: "Noto Sans CJK KR", sans-serif; font-size: 21px; font-weight: 700; fill: #0f172a; }
+      .body { font-family: "Noto Sans CJK KR", sans-serif; font-size: 16px; font-weight: 500; fill: #334155; }
+      .small { font-family: "Noto Sans CJK KR", sans-serif; font-size: 14px; font-weight: 500; fill: #475569; }
+      .mono { font-family: "Noto Sans Mono CJK KR", monospace; font-size: 15px; font-weight: 600; fill: #1e293b; }
+      .metric { font-family: "Noto Sans CJK KR", sans-serif; font-size: 17px; font-weight: 700; fill: #9a3412; }
+      .ok { font-family: "Noto Sans CJK KR", sans-serif; font-size: 16px; font-weight: 700; fill: #166534; }
+      .warn { font-family: "Noto Sans CJK KR", sans-serif; font-size: 16px; font-weight: 700; fill: #9a3412; }
+      .card { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; rx: 16; }
+      .confirmed { fill: #f0fdf4; stroke: #86efac; stroke-width: 2; rx: 16; }
+      .hypothesis { fill: #fff7ed; stroke: #fdba74; stroke-width: 2; stroke-dasharray: 8 6; rx: 16; }
+      .line { stroke: #475569; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .dash { stroke: #c2410c; stroke-width: 3; stroke-dasharray: 9 7; fill: none; marker-end: url(#arrow-orange); }
+    </style>
+  </defs>
+
+  <rect width="1400" height="1280" fill="url(#bg)"/>
+  <text x="70" y="58" class="title">왜 scope_exit 리팩토링이 COUNT(*) 성능까지 흔들었나</text>
+  <text x="70" y="88" class="subtitle">작은 소스 변경 → 전체 ELF 배치 변화 → CPU 공급 경로와 pipeline balance 변화</text>
+
+  <rect x="70" y="120" width="1260" height="160" class="card"/>
+  <rect x="70" y="120" width="70" height="160" fill="#334155" rx="16"/>
+  <text x="94" y="207" class="step">1</text>
+  <text x="170" y="154" class="head">소스 의도: type erasure 제거</text>
+  <rect x="170" y="174" width="505" height="76" fill="#f8fafc" stroke="#cbd5e1" rx="10"/>
+  <text x="192" y="202" class="mono">A: scope_exit&lt;std::function&lt;void()&gt;&gt;</text>
+  <text x="192" y="228" class="small">하나의 erased callable + 공통 wrapper/예외 정리 코드</text>
+  <rect x="745" y="174" width="505" height="76" fill="#eff6ff" stroke="#93c5fd" rx="10"/>
+  <text x="767" y="202" class="mono">B: scope_exit&lt;concrete lambda type&gt;</text>
+  <text x="767" y="228" class="small">lambda별 template specialization + 다른 EH/cold-code 생성</text>
+  <text x="170" y="268" class="warn">중요: COUNT(*) 실행 중 scope_exit 자체는 호출되지 않는다.</text>
+
+  <path d="M700 280 L700 320" class="line"/>
+
+  <rect x="70" y="320" width="1260" height="150" class="confirmed"/>
+  <rect x="70" y="320" width="70" height="150" fill="#166534" rx="16"/>
+  <text x="94" y="401" class="step">2</text>
+  <text x="170" y="356" class="head">컴파일 결과: 실행하지 않는 recovery cold fragment가 먼저 달라짐</text>
+  <text x="170" y="390" class="mono">log_recovery_redo(...).cold  A 0x215 bytes → B 0x20e bytes  (-7 bytes)</text>
+  <text x="170" y="420" class="body">template/EH cleanup 모양이 달라지면서 GCC 8이 만든 비정상·예외 경로 코드가 짧아졌다.</text>
+  <text x="170" y="448" class="ok">확인됨: nm -S로 같은 시작 주소와 7-byte size 감소를 직접 관찰했다.</text>
+
+  <path d="M700 470 L700 510" class="line"/>
+
+  <rect x="70" y="510" width="1260" height="210" class="confirmed"/>
+  <rect x="70" y="510" width="70" height="210" fill="#166534" rx="16"/>
+  <text x="94" y="621" class="step">3</text>
+  <text x="170" y="546" class="head">링커 도미노: 앞 조각 크기가 바뀌면 뒤 함수 주소도 바뀜</text>
+  <text x="170" y="582" class="mono">다음 cold symbol       0x2fdeba → 0x2fdeb2   (-8)</text>
+  <text x="170" y="612" class="mono">다음 정렬 구간          0x302590 → 0x302580  (-16)</text>
+  <text x="170" y="642" class="mono">qexec_execute_scan     0x4db580 → 0x4db570  (-16)</text>
+  <text x="170" y="672" class="mono">32-byte 안 위치(mod32)      0 → 16</text>
+  <text x="800" y="582" class="body">링커는 DSO 안의 code fragment를 순서대로 배치한다.</text>
+  <text x="800" y="612" class="body">alignment padding이 7-byte 차이를 8, 16-byte</text>
+  <text x="800" y="642" class="body">phase 변화로 전파했다. common symbol 8,287개가</text>
+  <text x="800" y="672" class="body">같이 -16 이동했고 hot query loop도 포함됐다.</text>
+  <text x="170" y="705" class="ok">확인됨: query source/plan/result가 같아도 final virtual address는 같다는 보장이 없다.</text>
+
+  <path d="M700 720 L700 760" class="line"/>
+
+  <rect x="70" y="760" width="600" height="250" class="card"/>
+  <rect x="730" y="760" width="600" height="250" class="card"/>
+  <text x="100" y="798" class="head">4-A. CPU front-end에서 실제로 바뀐 것</text>
+  <text x="100" y="834" class="body">DSB: 이미 decode한 µop를 주소 기반 cache에서 공급</text>
+  <text x="100" y="862" class="body">MITE: x86 instruction bytes를 legacy decoder로 재해석</text>
+  <text x="100" y="900" class="metric">MITE µops/query  +12.66% (A/B 각 5회 평균)</text>
+  <text x="100" y="930" class="metric">DSB→MITE penalty cycles/query  +71.73%</text>
+  <text x="100" y="960" class="body">32-byte 상대 위치 변화와 공급 경로 변화는 함께 관찰됨.</text>
+  <text x="100" y="990" class="warn">그러나 “front-end가 더 막혔다”는 뜻은 아니다.</text>
+
+  <text x="760" y="798" class="head">4-B. 전체 pipeline 분류는 다른 답을 줌</text>
+  <text x="760" y="838" class="mono">                    A        B</text>
+  <text x="760" y="870" class="mono">Front-end bound    5.73% →  3.85%</text>
+  <text x="760" y="902" class="mono">Back-end bound    11.14% → 14.27%</text>
+  <text x="760" y="934" class="mono">Memory bound       0.792% → 0.791%</text>
+  <text x="760" y="966" class="mono">IPC                 7.019 →  6.912</text>
+  <text x="760" y="994" class="warn">B의 손실은 front-end/memory가 아니라 core-bound로 분류됨.</text>
+
+  <path d="M370 1010 C370 1050 540 1050 610 1080" class="dash"/>
+  <path d="M1030 1010 C1030 1050 860 1050 790 1080" class="line"/>
+
+  <rect x="70" y="1080" width="1260" height="150" class="hypothesis"/>
+  <text x="100" y="1118" class="head">5. 현재 가능한 정확한 결론</text>
+  <text x="100" y="1152" class="body">확정: cold-code 크기, 전체 link phase, hot-code 주소, front-end 공급 통계와 pipeline balance가 함께 바뀌었다.</text>
+  <text x="100" y="1182" class="body">미확정: 16-byte phase가 공급 timing을 바꾸고 downstream execution-resource 압력을 키웠을 수 있다.</text>
+  <text x="100" y="1212" class="warn">DSB/MITE만으로 slowdown이나 QA +10.56%를 설명할 수 없다. padding sweep + PEBS가 마지막 검증이다.</text>
+
+  <text x="70" y="1262" class="small">solid = counter/ELF로 확인된 연결 · dashed orange = 아직 검증이 필요한 microarchitectural 연결</text>
+</svg>

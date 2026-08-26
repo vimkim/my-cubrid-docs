@@ -132,6 +132,8 @@ l1i_events='L1-icache-load-misses'
 frontend_events='idq_bubbles.core,icache_data.stalls,icache_tag.stalls'
 uopcache_events='idq.dsb_uops,idq.mite_uops,dsb2mite_switches.penalty_cycles,machine_clears.count'
 frontendret_events='frontend_retired.l1i_miss,frontend_retired.dsb_miss'
+topdown_events='cpu_core/slots/,cpu_core/topdown-retiring/,cpu_core/topdown-bad-spec/,cpu_core/topdown-fe-bound/,cpu_core/topdown-be-bound/'
+topdown2_events='cpu_core/slots/,cpu_core/topdown-be-bound/,cpu_core/topdown-mem-bound/,cpu_core/topdown-fetch-lat/,cpu_core/topdown-br-mispredict/,cpu_core/topdown-heavy-ops/'
 
 if [ "${PMU_PILOT:-0}" = 1 ]; then
   pilot_group=${PMU_PILOT_GROUP:-core}

@@ -14,13 +14,15 @@ devtoolset-8 GCC 8.3.1에서 repository `./build.sh -m release ... build`를 명
 1. QA-2029과 B 각 20개 표본을 합치면 B는 평균 `+1.464%` 느렸고 100,000회 bootstrap 95% CI는
    `+1.039% ~ +1.899%`다. QA 장비의 `+10.56%`보다 작지만 방향과 통계적 분리는 재현했다.
 2. query 구간의 physical `read_bytes`와 major fault는 40/40 모두 0이었다. 시간과 server migration 횟수의 상관도
-   `r=0.085`에 불과하다. 이 workload의 stable-PC 차이는 disk가 아니라 CPU/front-end 쪽이다.
-3. A→B에서 core IPC는 `-1.615%`, retired DSB(decoded-uop cache) miss/s는 `+52.819%`, legacy decoder의
-   MITE uops/s는 `+21.727%`였다. 일반 L1I miss/s는 오히려 `-2.301%`여서 핵심은 L1I capacity miss보다
-   DSB/MITE 경로다.
+   `r=0.085`에 불과하다. 이 workload의 stable-PC 차이는 disk나 CPU migration이 아니라 CPU 실행 쪽이다.
+3. A/B PMU central group을 5회로 늘리자 IPC는 B에서 매번 낮았고 평균 `-1.519%`, core-group query time은
+   `+1.832%`였다. MITE µop/query는 `+12.664%`, host perf의 DSB→MITE penalty 신호는 `+71.729%`로 공급 경로가
+   바뀌었다. 그러나 Top-down은 front-end bound가 `5.73%→3.85%`로 감소하고 core bound가
+   `10.58%→13.48%`로 증가했다고 분류한다. 따라서 DSB/MITE 변화는 관찰된 동반 현상이지 slowdown 단독 원인으로
+   확정할 수 없다.
 4. 실제 cycle profile의 최대 hot function은 `qexec_execute_scan`(약 25–27%)이다. A→B에서 이 함수와 다른 query
    hot function은 모두 16 byte 앞쪽으로 이동해 시작 주소 `%64`가 바뀐다. B와 C의 hot 주소와 raw bytes는 같다.
-5. forced destructor `noexcept` C는 B의 front-end layout을 되돌리지 못했고 B/C timing 방향도 일관되지 않았다.
+5. forced destructor `noexcept` C는 B의 hot-code layout을 되돌리지 못했고 B/C timing 방향도 일관되지 않았다.
    조건부 `noexcept` 한 줄과 `log_Gl` 배치는 수정점이 아니다. PR 전체 refactor가 만든 final-link phase 변화가
    현재 가장 강한 원인 후보이며, 더 오래된 QA CPU/RAM 계층에서 비용이 크게 증폭됐다는 해석이 증거에 맞는다.
 
@@ -105,9 +107,10 @@ CCI/JDBC submodule pin은 같고, `cubrid-cci/win/cci_version.h`가 build number
   반복해 variant별 10개를 수집했다.
 - 두 번째 matrix는 query 전후 `/proc/<pid>/task/*/sched`, `/proc/<pid>/io`, `/proc/<pid>/stat`을 읽어 migration,
   context switch, physical I/O, fault, CPU tick을 함께 기록했다.
-- PMU는 variant마다 core/branch/cache/L1D/LLC/iTLB/L1I/front-end/DSB-MITE 그룹을 별도 실행했다. central
-  core/L1I/front-end/DSB 그룹은 2회, 나머지는 1회이며 counter multiplexing을 줄이기 위해 group별 query를
-  분리했다. `perf record -F 999` cycle profile도 각 variant 한 번 수집했다.
+- PMU는 variant마다 core/branch/cache/L1D/LLC/iTLB/L1I/front-end/DSB-MITE 그룹을 별도 실행했다. 최초에는
+  central group 2회, 나머지 1회였고, 결론 검증을 위해 A/B central group을 5회로 늘리고 Top-down L1/L2도
+  A/B 각 5회 추가했다. 최종 raw matrix는 110 run이다. counter multiplexing을 줄이기 위해 group별 query를
+  분리했고 `perf record -F 999` cycle profile도 각 variant 한 번 수집했다.
 - 네 variant의 normalized plan hash는 모두 `fdfb8ef0a1e966dae644de819aaffbca74602dc028f0262729e07a55d8d77844`다.
 
 이 stable PC는 QA 장비보다 CPU/RAM/storage가 훨씬 새롭다. 따라서 17.58초/19.44초라는 절대시간을 맞추는 것이
@@ -222,8 +225,9 @@ B/C에서는 다음 이웃까지 동일하다.
 
 `noexcept`는 `log_global` 구조에 field를 추가하지 않는다. B→C가 writable segment와 `.bss` symbol layout을 전혀
 바꾸지 않았으므로 “forced `noexcept`가 `log_Gl`의 cache-line miss를 개선한다”는 설명은 이 빌드에서는 기각된다.
-A→B의 text hot-function offset 변화와 DSB/MITE PMU 방향이 함께 관찰됐으므로 instruction front-end layout이
-data-global 가설보다 우선한다.
+A→B의 text hot-function offset과 CPU pipeline 통계가 함께 변하고 B/C hot code는 동일하므로 final-code layout이
+data-global 가설보다 우선한다. 다만 확장 Top-down은 slowdown 증가분을 front-end가 아닌 core-bound로 분류하므로
+DSB/MITE만을 원인으로 단정하지 않는다.
 
 ## 7. client optimizer 분리
 
@@ -273,18 +277,40 @@ NVMe와 QA의 오래된 SATA/HDD 차이는 server 시작 절대시간에는 영�
 
 ## 9. PMU와 hot profile
 
-핵심 비교 A→B의 두 번 측정 평균이다. 각 event group의 query는 별도 실행했다.
+초기 2회에서 크게 보인 DSB miss를 재검증하기 위해 A/B central group을 5회까지 늘렸다. 횟수 자체가 같은
+workload이므로 공급량은 `/s`가 아니라 query당 raw count로 비교했다.
 
 | metric | A | B | B/A |
 |---|---:|---:|---:|
-| query seconds (core group) | 4.728647 | 4.844151 | +2.443% |
-| IPC | 7.019273 | 6.905903 | -1.615% |
-| effective GHz | 5.486768 | 5.444231 | -0.775% |
-| L1I load misses/s | 1,184,392 | 1,157,135 | -2.301% |
-| retired DSB misses/s | 409,016 | 625,055 | **+52.819%** |
-| DSB uops/s | 36.459B | 36.030B | -1.178% |
-| MITE uops/s | 6.300M | 7.669M | **+21.727%** |
-| MITE / (DSB + MITE) | 0.01728% | 0.02128% | **+23.155%** |
+| query seconds (core group) | 4.780355 | 4.867951 | +1.832% |
+| IPC | 7.018736 | 6.912118 | **-1.519%** |
+| effective GHz | 5.428241 | 5.412624 | -0.288% |
+| L1I load misses/query | 5.302M | 5.503M | +3.783% |
+| retired DSB misses/query | 3.462M | 3.841M | +10.923% |
+| DSB uops/query | 173.433B | 173.365B | -0.039% |
+| MITE uops/query | 37.231M | 41.946M | **+12.664%** |
+| host-perf DSB→MITE penalty cycles/query | 9.577M | 16.446M | **+71.729%** |
+
+IPC는 A 최저값도 B 최고값보다 높아 5/5로 분리됐다. 반면 retired DSB miss는 A 한 run의 큰 outlier 때문에 최초
+2회 `+52.819%`에서 5회 `+10.923%`로 줄었고 분산도 크다. 현재 host perf가 노출한
+`DSB2MITE_SWITCHES.PENALTY_CYCLES`는 count됐지만 Intel Arrow Lake P-core online event 표에 같은 이름이 없어
+보조 신호로만 사용한다.
+
+전체 pipeline의 병목 위치를 확인하기 위해 Top-down L1/L2도 A/B 각 5회 수집했다.
+
+| Top-down slot ratio | A | B | B-A |
+|---|---:|---:|---:|
+| Retiring | 82.27% | 81.02% | -1.25%p |
+| Front-end bound | 5.73% | 3.85% | -1.88%p |
+| Back-end bound | 11.14% | 14.27% | **+3.13%p** |
+| Bad speculation | 0.87% | 0.94% | +0.08%p |
+| Memory bound | 0.792% | 0.791% | 거의 동일 |
+| Core bound | 10.58% | 13.48% | **+2.90%p** |
+
+B의 front-end bound는 오히려 줄고 core bound가 증가했다. 따라서 16-byte phase와 DSB/MITE 공급 변화는 실제지만
+그 변화만으로 slowdown을 설명하지 않는다. 현재의 정확한 분류는 memory가 아닌 execution-core pressure 증가다.
+주소 phase가 공급 timing과 downstream port/scheduler 압력까지 어떻게 바꿨는지는 padding sweep과 instruction-IP
+귀속이 필요한 마지막 가설이다.
 
 일반 branch miss, cache miss, L1D/LLC miss는 1회씩만 수집했고 A/B 차이가 작은 run noise 범위였다. P-core에서
 `cpu_core` event가 count됐고 `cpu_atom` event의 not-counted 표시는 의도한 affinity의 결과다. 전체 counter
@@ -300,29 +326,31 @@ cycle profile에서 0.5% 이상 address point를 source symbol로 다시 합산�
 | `qdata_evaluate_aggregate_list` | 7.43% | 7.75% | 7.16% | 8.11% |
 
 profile은 workload가 실제로 16-byte phase가 바뀐 query executor/scan loop에서 시간을 쓴다는 연결 증거다.
-PMU와 layout을 합치면 L1I capacity miss보다는 DSB set/alignment 및 MITE fallback이 slowdown을 설명한다. 다만
-현재 CPU는 QA CPU가 아니므로 정확한 `+10.56%` 배율까지 이 PMU로 외삽하지 않는다.
+PMU와 layout을 합치면 final-link phase가 CPU pipeline balance를 바꾼다는 설명은 지지되지만, DSB/MITE가 wall
+time의 단독 원인이라는 설명은 확장 측정으로 기각된다. 현재 CPU는 QA CPU가 아니므로 정확한 `+10.56%` 배율까지
+외삽하지 않는다. 쉬운 인과 설명과 증거 경계는
+[`scope_exit`→CPU pipeline 문서](CBRD-26382-scope-exit-frontend-causal-chain_codex.md)에 별도로 정리했다.
 
 ## 10. 결론
 
 1. 최신 `cubridci` CentOS 6/devtoolset-8 release build를 Rocky 8에서 실행하면 B/QA slowdown 방향이 재현된다.
    stable PC의 크기는 `+1.464%`이고 QA의 `+10.56%`보다는 작다.
-2. A→B PR 단독 비교도 timing과 PMU에서 느린 방향이다. instruction front-end에서 IPC 하락, DSB miss와 MITE
-   fallback 증가가 직접 관찰됐다.
+2. A→B PR 단독 비교도 timing과 PMU에서 느린 방향이다. IPC 하락과 MITE 공급 증가는 관찰됐지만 Top-down은
+   손실 증가분을 front-end가 아닌 execution core bound로 분류했다.
 3. forced destructor `noexcept`는 B와 C의 hot code 주소·bytes를 바꾸지 않고 성능 개선 방향도 일관되지 않다.
    이 한 줄은 수정책이 아니다.
 4. `log_Gl`은 size와 cache-line offset이 유지되고 B/C가 동일하다. data-global 배치 가설보다 query `.text`의
    16-byte phase 변화가 증거에 맞는다.
-5. query physical I/O는 0이므로 QA의 느린 storage는 이번 SQL delta의 직접 설명이 아니다. 더 오래된 CPU/RAM의
-   front-end/cache 비용이 같은 layout 차이를 크게 증폭했을 가능성이 높다.
+5. query physical I/O는 0이므로 QA의 느린 storage는 이번 SQL delta의 직접 설명이 아니다. 더 오래된 CPU의
+   address-sensitive pipeline/cache 구조가 같은 layout 차이를 크게 증폭했을 가능성은 있지만 아직 측정하지 않았다.
 6. historical `cubridci:develop` digest와 QA 원본 package ELF/PMU가 없으므로 정확한 `+10.56%`의 전부를 단정하지
-   않는다. 다만 “재현 불가” 상태에서는 벗어났고, slowdown 방향과 microarchitectural mechanism을 stable PC에서
-   연결했다.
+   않는다. 다만 “재현 불가” 상태에서는 벗어났고, slowdown 방향과 final-link/pipeline 변화는 stable PC에서
+   연결했다. 마지막 hardware resource의 인과 확정에는 padding sweep과 PEBS가 필요하다.
 
 ## Reproducibility artifacts
 
 compact evidence는 [`stable-pc-cubridci/`](artifacts/full-server-gcc8/stable-pc-cubridci/)에 있다. build provenance,
-네 manifest, raw timing/I/O CSV, bootstrap summary, 60 PMU run의 counter와 query time, hot symbol/hash, normalized
+네 manifest, raw timing/I/O CSV, bootstrap summary, 110 PMU run의 counter와 query time, hot symbol/hash, normalized
 plan hash, address-resolved profile summary를 포함한다. 실행 script는
 [`scripts/`](artifacts/full-server-gcc8/scripts/)에 있다.
 

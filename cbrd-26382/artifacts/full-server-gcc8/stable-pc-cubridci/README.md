@@ -13,9 +13,10 @@ Files:
 
 - `timing-summary.json`, `qa-pcores-five.csv`, `pcores-io.csv`: timing, bootstrap, migration, process I/O,
   page-fault, and CPU-tick evidence.
-- `pmu-summary-60-runs.json`: 40 one-repetition PMU groups plus second repetitions of the five central
-  front-end groups.
+- `pmu-summary-60-runs.json`: 최초 2-repetition central-group snapshot.
+- `pmu-summary-110-runs.json`: A/B central group을 5회로 늘리고 Top-down L1/L2 각 5회를 추가한 최종 summary.
 - `hot-symbols.csv`, `hot-function-hashes.csv`: final `libcubrid.so.11.5` layout and raw function bytes.
+- `layout-shift-chain.csv`: 7-byte recovery cold-code 축소가 8-byte, 16-byte final-address 이동으로 전파된 chain.
 - `perf-profile-summary.csv`: address-resolved flat cycle-profile functions reported at or above 0.5%.
 - `plan-hashes.csv`: normalized plan hashes.
 - `manifests/`: source/submodule, toolchain, CMake mode, binary hash, Build ID, and ELF section evidence.
