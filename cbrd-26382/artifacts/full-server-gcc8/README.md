@@ -7,6 +7,8 @@
 - `hot-symbols.csv`: query hot function과 `log_Gl` 주소 및 64-byte line offset
 - `hot-function-hashes.csv`: 해당 함수의 final-file raw byte SHA-256
 - `scope-exit-C.patch`: B에서 C를 만드는 단일 forced-`noexcept` patch
+- `scope-exit-D.patch`: B의 실행 로직을 유지하고 `.text.unlikely` contribution에 실행 불가능한 7 bytes만
+  복원하는 diagnostic patch
 - `exclusions.md`: 통계에서 제외한 pilot/incomplete run과 제외 근거
 - `query.sql`: correctness-gated workload
 - `query-plan.sql`: plan capture workload
@@ -41,4 +43,4 @@ scripts/check-portability.sh
 모든 build/timing/plan/PMU/profile script는 같은 `RUNTIME_CONFIG`를 읽는다. `RESULTS_ROOT`, `CONTAINER_NAME`,
 `SERVER_CPUS`, `CLIENT_CPU`는 필수이며, hybrid CPU에서 QA와 같이 migration을 허용하려면 P-core set 전체를
 `SERVER_CPUS`에 지정한다. build에는 `BUILD_IMAGE`와 `BUILD_JDK_HOME`도 필요하다. bundled
-`query.sql`, `query-plan.sql`, `scope-exit-C.patch`는 script 위치에서 자동으로 찾는다.
+`query.sql`, `query-plan.sql`, `scope-exit-C.patch`, `scope-exit-D.patch`는 script 위치에서 자동으로 찾는다.

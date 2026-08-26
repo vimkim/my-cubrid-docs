@@ -21,10 +21,11 @@ image=$BUILD_IMAGE
 jdk=$BUILD_JDK_HOME
 build_jobs=${BUILD_JOBS:-$(nproc)}
 gradle_cache=$(realpath -m "${GRADLE_CACHE_ROOT:-$results_root/gradle-cache}")
-patch_file=$artifact_root/scope-exit-C.patch
+c_patch_file=$artifact_root/scope-exit-C.patch
+d_patch_file=$artifact_root/scope-exit-D.patch
 
 case "$label" in
-  qa-2029|A|B|C) ;;
+  qa-2029|A|B|C|D) ;;
   *) echo "unsupported label: $label" >&2; exit 2 ;;
 esac
 
@@ -33,21 +34,24 @@ if [ ! -d "$worktree/.git" ] && [ ! -f "$worktree/.git" ]; then
   exit 2
 fi
 
-test -f "$patch_file"
-test "$(sha256sum "$patch_file" | cut -d' ' -f1)" = \
+test -f "$c_patch_file"
+test "$(sha256sum "$c_patch_file" | cut -d' ' -f1)" = \
   5334c3ac928329e16c891d8ab491e691c549e36cc448d774755dc555c1bace39
+test -f "$d_patch_file"
+test "$(sha256sum "$d_patch_file" | cut -d' ' -f1)" = \
+  b828ab9f2782991fb506abbfadc3cbe97b0c6ded8b482d5e5ffbb56264f47751
 if ! [[ "$build_jobs" =~ ^[1-9][0-9]*$ ]]; then
   echo "BUILD_JOBS must be a positive integer: $build_jobs" >&2
   exit 2
 fi
 image_id=$(podman image inspect --format '{{.Id}}' "$image")
-podman run --rm "$image" test -d "$jdk"
+podman run --rm --entrypoint /usr/bin/test "$image" -d "$jdk"
 git_common_dir=$(cd "$worktree" && realpath "$(git rev-parse --git-common-dir)")
 git_repository_root=$(dirname "$git_common_dir")
 git_repository_alias=/$(basename "$git_repository_root")
 worktree_alias=/$(basename "$worktree")
 
-mkdir -p "$out"
+mkdir -p "$out" "$gradle_cache"
 if find "$out" -mindepth 1 -print -quit | grep -q .; then
   echo "output directory is not empty: $out" >&2
   exit 2
@@ -63,7 +67,9 @@ git -C "$worktree" submodule status >"$out/manifest/submodules.txt"
 printf '%s\n' "$image" >"$out/manifest/container-image.txt"
 printf '%s\n' "$image_id" >"$out/manifest/container-image-id.txt"
 if [ "$label" = C ]; then
-  sha256sum "$patch_file" >"$out/manifest/patch.sha256"
+  sha256sum "$c_patch_file" >"$out/manifest/patch.sha256"
+elif [ "$label" = D ]; then
+  sha256sum "$d_patch_file" >"$out/manifest/patch.sha256"
 fi
 
 git_mount_args=()
@@ -81,6 +87,7 @@ if [ "$git_repository_root" != "$worktree" ]; then
 fi
 
 podman --cgroup-manager=cgroupfs run --rm \
+  --entrypoint /usr/bin/scl \
   --security-opt label=disable \
   --userns=keep-id \
   "${git_mount_args[@]}" \
@@ -96,8 +103,9 @@ podman --cgroup-manager=cgroupfs run --rm \
   -e CC=gcc \
   -e CXX=g++ \
   "$image" \
-  bash -lc '
+  enable devtoolset-8 -- /bin/bash -lc '
     set -euo pipefail
+    export PATH='"$jdk"'/bin:$PATH
     {
       cat /etc/rocky-release 2>/dev/null \
         || cat /etc/centos-release 2>/dev/null \

@@ -1,9 +1,9 @@
 # CBRD-26382: `std::function` 제거가 `COUNT(*)` 성능까지 흔든 과정
 
-- 작성일: 2026-08-26
+- 작성일: 2026-08-27
 - 대상 변경: CUBRID PR [#6636](https://github.com/CUBRID/cubrid/pull/6636)
 - 상세 실험 보고서: [GCC 8 full-binary follow-up](CBRD-26382-gcc8-full-server-follow-up_codex.md)
-- 결론 수준: final-ELF 배치 변화와 pipeline 분류까지 확인, 마지막 microarchitectural 연결은 추가 검증 필요
+- 결론 수준: 7-byte padding control로 final-link layout→timing 인과까지 확인, 마지막 microarchitectural resource는 추가 검증 필요
 
 ## 한 문장 답
 
@@ -12,7 +12,8 @@ recovery cold code가 7 byte 짧아졌고, 링크 정렬의 도미노 효과로 
 이동했다. 이 이동은 CPU가 instruction을 묶고 공급하는 방식까지 바꿨다. 다만 5회로 확장한 Top-down 결과는
 slowdown을 front-end bound가 아니라 **execution core bound 증가**로 분류한다. 따라서 “DSB miss가 전부의
 원인”은 아니며, 현재 정확히 확인된 원인은 **소스 로직의 직접 실행 비용이 아니라 final-binary layout에 민감한
-CPU pipeline balance 변화**다.
+CPU pipeline balance 변화**다. B의 실행 로직을 유지한 채 실행 불가능한 7-byte padding만 되돌린 D에서 hot
+주소와 timing이 A 쪽으로 함께 복원돼 이 link-layout 인과를 별도로 확인했다.
 
 ![scope_exit 소스 변경에서 CPU pipeline 변화까지의 인과 사슬](./CBRD-26382-scope-exit-frontend-causal-chain_codex-assets/causal-chain.svg)
 
@@ -25,6 +26,7 @@ CPU pipeline balance 변화**다.
 | `scope_exit` callback이 `COUNT(*)` 실행 중 느려졌나? | 아니다. 이 query path는 `scope_exit`을 호출하지 않는다. |
 | `scope_exit` refactor가 최종 server binary를 바꿔 query code의 CPU 실행 조건까지 바꿨나? | 그렇다. ELF 주소, 32-byte phase, PMU 공급 통계, Top-down 분류가 모두 바뀌었다. |
 | 그 변화가 QA의 `+10.56%` 전부를 설명하나? | 아직 아니다. stable PC에서는 방향만 `+1.464%`로 재현됐고 historical QA ELF가 없다. |
+| 7 bytes와 hot-code phase를 되돌리면 시간도 돌아오나? | 그렇다. shared-DB와 fresh-DB balanced matrix 모두 D가 B보다 빨랐다. |
 
 즉 “호출하지 않는 함수이므로 영향이 0이어야 한다”는 결론은 source-level call graph까지만 본 것이다. CPU가
 실행하는 것은 source file이 아니라 linker가 만든 하나의 `libcubrid.so.11.5`다.
@@ -102,6 +104,12 @@ CentOS 6/devtoolset-8 GCC 8.3.1 release build의 최종 DSO를 `nm -n -S -C`로 
 A/B 함수 raw byte hash도 다르다. 로직이 달라졌다는 뜻은 아니다. 다른 함수나 constant를 가리키는 PC-relative
 displacement는 함수가 이동하면 machine-code byte도 달라질 수 있다. 반대로 B/C는 hot-function 주소와 raw byte
 hash가 모두 같다. 이 B/C 대조군이 forced destructor `noexcept`가 query code를 되돌리지 못했다는 강한 증거다.
+
+D는 B의 query source/object를 그대로 두고 앞쪽 `log_recovery.c.o`의 `.text.unlikely` 끝에 실행 불가능한 NOP
+7 bytes만 추가했다. 그 결과 `qexec_execute_scan` 등 hot function 시작 주소는 A와 같아졌지만 `log_Gl`은 B와
+같았다. 즉 code phase와 data-global phase를 분리한 대조군이다. 최종 PC-relative relocation byte는 주소에 따라
+다시 계산되므로, B/D의 **pre-link query object가 동일**하고 A/D의 **final 시작 주소가 동일**하다고 표현하는 것이
+정확하다.
 
 ## 4. CPU front-end에서는 왜 16 byte가 의미가 있나
 
@@ -202,7 +210,29 @@ SATA/HDD 차이는 이 측정 구간의 version delta를 직접 설명하지 않
 
 남는 공통 변수는 PR refactor가 만든 final-link code/data phase와 그에 따른 address-sensitive CPU core 동작이다.
 
-## 9. QA에서는 왜 `+10.56%`였고 여기서는 `+1.464%`인가
+## 9. server restart와 fresh DB를 다시 확인한 결과
+
+QA 자동 shell은 current/old variant 각각에 대해 `createdb → server start → query 1회 → service stop → deletedb`를
+실행한다. stable harness도 **매 sample마다 server/master를 완전히 종료하고 다시 시작**했으므로 이전 sample의
+CUBRID buffer pool을 재사용하지 않았다. 차이는 stable이 같은 DB files를 재사용했다는 점이다. 두 protocol 모두
+host page cache를 drop하지 않으며, QA는 createdb가 DB files를 직전에 썼으므로 이것을 OS cold-cache로 부를 수도
+없다. 한편 JIRA의 trace-off 5회 수동 결과에는 다섯 번 사이의 restart cadence가 기록돼 있지 않다.
+
+이 차이를 제거한 QA-shell-faithful A/B/D 27회 fresh-DB matrix에서 round-paired B/A는 `+0.857%`, D/B는
+`-1.520%`, D/A는 `-0.676%`였다. 세 round 모두 B가 A보다 느리고 D가 B보다 빨랐다. query 구간의 physical
+`read_bytes`와 major fault는 27/27 모두 0이었다. 같은 DB를 재사용한 balanced 54회에서도 중앙값 B/A
+`+1.336%`, D/B `-1.786%`, D/A `-0.474%`로 같은 방향이었다.
+
+따라서 “stable이 server memory를 재사용해 만든 차이”와 “느린 disk read가 만든 차이”는 기각된다. B logic을
+그대로 둔 D가 hot-address phase와 timing을 함께 되돌렸다는 것이 현재 가장 직접적인 인과 증거다.
+
+balanced A/B/D PMU도 같은 방향이다. 6회 평균에서 B→D는 cycles/query `-1.446%`, IPC `+1.467%`, MITE
+µops/query `-7.048%`, host-perf DSB→MITE penalty/query `-24.214%`였다. Top-down core bound는
+`13.714% → 9.865%`, retiring은 `80.947% → 82.443%`로 A(`10.190%`, `82.636%`) 수준에 돌아왔다.
+반면 front-end bound는 D가 B보다 높았는데도 D가 빨랐다(`3.827% → 5.460%`). 따라서 padding control은
+layout→pipeline→time 연결을 강화하지만 “front-end miss 하나가 전부”라는 설명은 다시 기각한다.
+
+## 10. QA에서는 왜 `+10.56%`였고 여기서는 `+1.464%`인가
 
 stable PC에서 QA-2029/B를 각 20회 합치면 B는 평균 `+1.464%`, bootstrap 95% CI는
 `+1.039% ~ +1.899%`다. slowdown 방향은 재현됐지만 QA의 크기는 재현되지 않았다.
@@ -215,20 +245,21 @@ stable PC에서 QA-2029/B를 각 20회 합치면 B는 평균 `+1.464%`, bootstra
 historical `cubridci:develop` digest, QA 원본 package ELF, QA CPU model/PMU가 없으므로 정확한 배율의 나머지는
 현재 증거로 복원할 수 없다.
 
-## 10. 인과를 마지막까지 확정하려면
+## 11. 인과를 마지막까지 확정하려면
 
 “layout-sensitive”를 넘어 정확한 hardware 원인을 확정하려면 다음 순서가 필요하다.
 
-1. **Padding sweep**: B의 source logic은 그대로 두고 앞쪽 cold section padding만 `0/8/16/24/32...`로 바꾼
-   여러 binary를 만든다. query hot address phase와 time이 함께 주기적으로 움직이는지 확인한다.
+1. **추가 padding phase**: 7-byte D는 A phase와 timing을 함께 복원했다. 이를 `0/8/16/24/32...` 여러 phase와
+   독립 rebuild로 확장해 주기성과 build-date confound까지 제거한다.
 2. **PEBS/IP attribution**: 지원되는 `FRONTEND_RETIRED.*` precise event와 core-bound 관련 precise event를
    instruction address에 귀속시킨다.
 3. **Execution-port/dependency 분해**: Top-down L3의 port utilization, zero-port execution stall, load dependency,
    serialization을 동일 phase별로 비교한다.
 4. **Historical QA 대조**: 당시 image digest와 `.2029/.2031` ELF를 확보해 같은 symbol phase와 PMU를 확인한다.
 
-padding만 바꿔 time과 core-bound 비율이 되돌아오면 source semantics가 아니라 link phase가 원인이라는 인과가
-완성된다. PEBS가 특정 hot instruction을 가리키면 마지막 hardware resource까지 특정할 수 있다.
+7-byte padding만 바꿔 time, cycles, IPC와 core-bound 분류가 함께 되돌아왔으므로 source semantics가 아니라
+link phase가 원인이라는 인과는 크게 강화됐다. PEBS가 특정 hot instruction을 가리키는지를 확인하면 마지막
+hardware resource를 더 좁힐 수 있다.
 
 ## 결론
 
@@ -238,8 +269,12 @@ padding만 바꿔 time과 core-bound 비율이 되돌아오면 source semantics�
 4. 그러나 확장 Top-down 측정은 B의 slowdown을 front-end가 아니라 **execution core bound 증가**로 분류했다.
 5. 따라서 현재의 정확한 설명은 “`scope_exit` 실행 비용”이나 “DSB miss 단독 원인”이 아니라
    **PR이 만든 final-binary layout 변화에 따라 CPU pipeline balance가 달라진 현상**이다.
-6. forced `noexcept`는 hot layout을 바꾸지 않아 해결책이 아니다. 정확한 hardware resource와 QA `+10.56%`
-   배율을 확정하려면 padding sweep, PEBS, historical QA ELF가 필요하다.
+6. B logic에 실행 불가능한 7-byte padding만 추가한 D는 A의 hot phase를 복원했고 shared/fresh-DB 두 protocol에서
+   B보다 빨랐다. D의 cycles, IPC, retiring, core bound도 A 수준으로 돌아왔다. final-link layout이 timing을
+   움직인다는 인과는 확인됐지만 특정 DSB/port 하나로 귀속하진 않는다.
+7. forced `noexcept`는 hot layout을 바꾸지 않아 해결책이 아니다. 제품 완화는 blanket alignment가 아니라
+   [소수 함수 정렬 또는 profile-driven ordering의 단계별 검증](CBRD-26382-hot-function-alignment-options_codex.md)을
+   따라야 한다. 정확한 hardware resource와 QA `+10.56%` 배율에는 PEBS와 historical QA ELF가 여전히 필요하다.
 
 ## Evidence
 
@@ -253,3 +288,9 @@ padding만 바꿔 time과 core-bound 비율이 되돌아오면 source semantics�
   [`hot-function-hashes.csv`](artifacts/full-server-gcc8/stable-pc-cubridci/hot-function-hashes.csv)
 - Link shift chain:
   [`layout-shift-chain.csv`](artifacts/full-server-gcc8/stable-pc-cubridci/layout-shift-chain.csv)
+- A/B/D padding and fresh-DB summaries:
+  [`padding-balanced-summary.json`](artifacts/full-server-gcc8/stable-pc-cubridci/padding-balanced-summary.json),
+  [`padding-freshdb-summary.json`](artifacts/full-server-gcc8/stable-pc-cubridci/padding-freshdb-summary.json)
+- A/B/D 90-run PMU and ELF gates:
+  [`pmu-padding-abd-summary.json`](artifacts/full-server-gcc8/stable-pc-cubridci/pmu-padding-abd-summary.json),
+  [`padding-D-elf-gates.csv`](artifacts/full-server-gcc8/stable-pc-cubridci/padding-D-elf-gates.csv)

@@ -1,6 +1,6 @@
 # CBRD-26382 GCC 8 전체 CUBRID 바이너리 후속 분석
 
-- 작성일: 2026-08-26
+- 작성일: 2026-08-27
 - 대상: CUBRID PR [#6636](https://github.com/CUBRID/cubrid/pull/6636), JIRA [CBRD-26382](http://jira.cubrid.org/browse/CBRD-26382)
 - 선행 분석: [`noexcept` 6개 최소 바이너리 분석](CBRD-26382-noexcept-binary-layout-analysis_codex.md)
 - 상태: stable-PC 재현·PMU·final ELF 분석 완료
@@ -25,6 +25,11 @@ devtoolset-8 GCC 8.3.1에서 repository `./build.sh -m release ... build`를 명
 5. forced destructor `noexcept` C는 B의 hot-code layout을 되돌리지 못했고 B/C timing 방향도 일관되지 않았다.
    조건부 `noexcept` 한 줄과 `log_Gl` 배치는 수정점이 아니다. PR 전체 refactor가 만든 final-link phase 변화가
    현재 가장 강한 원인 후보이며, 더 오래된 QA CPU/RAM 계층에서 비용이 크게 증폭됐다는 해석이 증거에 맞는다.
+6. B의 실행 로직은 그대로 두고 같은 input object의 `.text.unlikely`에 실행 불가능한 7-byte NOP만 복원한
+   diagnostic D를 추가했다. D는 주요 query hot function의 시작 주소를 A와 같게 되돌렸고, shared-DB 54회와
+   QA식 fresh-DB 27회에서 모두 B보다 빨라졌다. 90회 balanced PMU에서도 D의 cycles, IPC, retiring, core bound가
+   A 수준으로 복원됐다. 이는 source semantics가 아니라 final-link phase가 timing과 pipeline balance를
+   움직인다는 인과를 크게 강화한다. 다만 정확한 DSB/port 수준의 마지막 원인은 PEBS/IP 귀속이 필요하다.
 
 ## 1. 질문과 비교 축
 
@@ -44,7 +49,7 @@ SELECT COUNT(*) FROM db_class a, db_class b, db_class c, db_class d, db_class e;
 ```
 
 `.2029`와 `.2031` 사이에는 PR #6636 외에 `query_planner.c`를 바꾼 CBRD-26266도 있다. 버전 비교와 PR 인과효과를
-섞지 않기 위해 전체 CUBRID를 네 상태로 빌드했다.
+섞지 않기 위해 먼저 전체 CUBRID를 QA-2029/A/B/C 네 상태로 빌드했고, 후속 인과 검증용 D를 추가했다.
 
 | label | source | 의미 |
 |---|---|---|
@@ -52,6 +57,7 @@ SELECT COUNT(*) FROM db_class a, db_class b, db_class c, db_class d, db_class e;
 | A | `6146cdb6aaf8708856f4b8e9f336362bb0843b2c` | PR #6636의 직전 parent, 11.5.0.2030 |
 | B | `8fd3ca03e58b342a494a2f5594be23c72a822479` | PR #6636 merge, conditional destructor `noexcept`, 11.5.0.2031 |
 | C | B + patch `5334c3ac...` | 소멸자 한 줄만 forced `noexcept` |
+| D | B + diagnostic patch `b828ab9f...` | 같은 object의 `.text.unlikely`에 실행 불가능한 7-byte NOP만 추가 |
 
 핵심 인과 비교는 다음과 같다.
 
@@ -113,6 +119,21 @@ CCI/JDBC submodule pin은 같고, `cubrid-cci/win/cci_version.h`가 build number
   분리했고 `perf record -F 999` cycle profile도 각 variant 한 번 수집했다.
 - 네 variant의 normalized plan hash는 모두 `fdfb8ef0a1e966dae644de819aaffbca74602dc028f0262729e07a55d8d77844`다.
 
+여기서 `clean start/stop`은 **매 sample마다 `cub_server`와 `cub_master` process가 종료되고 다음 sample에서 새로
+생성된다**는 뜻이다. 따라서 stable harness가 이전 sample의 CUBRID buffer pool을 재사용했다는 해석은 맞지 않는다.
+다만 QA 자동 shell과는 DB file lifecycle이 달랐다.
+
+| protocol | server lifecycle | DB lifecycle | host page cache |
+|---|---|---|---|
+| stable 기본 matrix | 매 query `server start → query 1회 → server stop` | 같은 DB volume 재사용 | 명시적 drop 없음 |
+| QA 자동 shell | variant마다 `createdb → server start → query 1회 → service stop → deletedb` | 매 variant 새 DB | 명시적 drop 없음; createdb 직후라 file page는 오히려 warm 가능 |
+| JIRA의 trace-off 5회 수동 결과 | 기록에 restart cadence 없음 | 기록에 없음 | 기록에 없음 |
+
+QA 자동 shell의 현재 SQL은 `TRACE ON`과 `LIMIT 250000000`을 쓰며, JIRA의 5회 수동 결과는 이 보고서와 같은
+`TRACE OFF`/무제한 Cartesian product다. 두 절차를 하나의 protocol로 합쳐 말하면 안 된다. 아래 D 재검증은
+stable 기본 protocol뿐 아니라 QA 자동 shell의 fresh-DB lifecycle도 별도로 실행했다. 어느 쪽도 host
+`drop_caches`를 호출하지 않는다.
+
 이 stable PC는 QA 장비보다 CPU/RAM/storage가 훨씬 새롭다. 따라서 17.58초/19.44초라는 절대시간을 맞추는 것이
 아니라 같은 host·DB에서 version delta의 방향, PR 인과 비교, microarchitectural counter 방향을 판정한다.
 앞선 shared host의 Rocky 8/GCC 8.5 single-CPU 180개 matrix는 B/A가 10.28% 빠른 반대 방향이었고 외부 compiler
@@ -136,6 +157,7 @@ CCI/JDBC submodule pin은 같고, `cubrid-cci/win/cci_version.h`가 build number
 | A | 177,505,504 | `1da0f882f69e5577...` | `6050500a42714e509d280db079852b78bb4e919a` |
 | B | 177,432,760 | `a0d109bd4b288d04...` | `b6a93b756c7686a45ce61afcd989d9f499d7847d` |
 | C | 177,432,896 | `6cfa8b0cf56b2e29...` | `ffd17fbe49c230539a23af96bc35e9d2d922f6a7` |
+| D | 177,432,760 | `fd91f1716936adaa...` | `5ddd0d71b8f7cbdc5f9ac39335f8d9f75dff5d58` |
 
 QA-2029과 A의 server `.text`는 byte-identical하다. 두 source 사이의 유일한 commit은 client-side optimizer의
 `query_planner.c` 변경이므로 예상과 일치한다. QA-2029/A의 DSO 전체 hash 차이는 release string 등 non-code
@@ -275,7 +297,112 @@ context-switch count와 시간은 함께 늘지만 이는 더 오래 실행된 p
 NVMe와 QA의 오래된 SATA/HDD 차이는 server 시작 절대시간에는 영향을 줄 수 있어도 측정된 query regression의
 직접 원인은 아니다. 네 normalized plan hash와 cardinality도 같다.
 
-## 9. PMU와 hot profile
+## 9. 7-byte padding control D와 cold-state audit
+
+### 9.1 D가 통제하는 변수
+
+D는 B commit에서 제품 로직을 고치려는 variant가 아니다. `log_recovery.c.o`가 linker에 제공하는
+`.text.unlikely` 끝에 실행 경로가 없는 NOP 7 bytes를 추가해, PR이 줄인 만큼의 input-section 길이만 복원하는
+진단 대조군이다. patch는
+[`scope-exit-D.patch`](artifacts/full-server-gcc8/scope-exit-D.patch)에 그대로 보존했다.
+
+| gate | A | B | D | 판정 |
+|---|---:|---:|---:|---|
+| 해당 object `.text.unlikely` bytes | `0x2d7` | `0x2d0` | `0x2d7` | D가 7 bytes 복원 |
+| `qexec_execute_scan` | `0x4db580` | `0x4db570` | `0x4db580` | D가 A phase 복원 |
+| `fetch_val_list` | `0x47aa10` | `0x47aa00` | `0x47aa10` | D가 A phase 복원 |
+| `qdata_evaluate_aggregate_list` | `0x49aee0` | `0x49aed0` | `0x49aee0` | D가 A phase 복원 |
+| `log_Gl` | `0x1023e80` | `0x1023f00` | `0x1023f00` | D는 B data layout 유지 |
+
+B/D의 `fetch.c.o`, `query_executor.c.o`, `query_opfunc.c.o`, `scan_manager.c.o` SHA-256은 각각 동일하다. 즉 D에서
+query source object를 다시 바꾼 것이 아니다. 최종 DSO에서는 이동한 code의 PC-relative relocation 값도 다시
+계산되므로 B/D 최종 함수 raw byte가 같다고 주장하지 않는다. 정확한 통제 문장은 **pre-link query object는
+B/D가 같고, final hot start phase는 A/D가 같다**이다.
+
+D도 같은 CentOS 6.10/devtoolset-8 8.3.1 image에서 명시적 `./build.sh -m release`로 빌드했고 CMake cache는
+`RelWithDebInfo`, `-O2 -g -DNDEBUG`다. 다만 D는 하루 뒤 rebuild라 `release_string.c.o`의 build date가 B와
+다르고 `.rodata`도 B보다 32 bytes 작다. B/D 사이에서 다른 server object는 이 release string object와 의도한
+`log_recovery.c.o` 두 개뿐이다. 따라서 D는 byte-identical rebuild가 아니라 **hot-address gate를 만족한
+controlled perturbation**이며, 이 잔여 build-date confound도 숨기지 않는다.
+
+### 9.2 shared-DB balanced matrix
+
+기존 forward/reverse 실험에서는 B가 항상 두 번째라 position 편향이 남았다. 이를 제거하기 위해 6개 순열
+`ABD/BDA/DAB/ADB/DBA/BAD`를 round마다 사용해 각 variant가 각 position을 정확히 6회 차지하도록 했다. 매 sample
+server stop/start, P-core `0-7` 안 migration 허용, query 1회 조건이다.
+
+| variant | n | mean (s) | median (s) | min–max (s) |
+|---|---:|---:|---:|---:|
+| A | 18 | 4.759258 | 4.751646 | 4.713145–4.812148 |
+| B | 18 | 4.833482 | 4.815148 | 4.796147–4.917152 |
+| D | 18 | 4.820815 | 4.729146 | 4.707145–5.942183 |
+
+median의 unpaired bootstrap 100,000회에서 B/A는 `+1.336%` (95% CI `+0.209% ~ +2.592%`), D/B는
+`-1.786%` (95% CI `-2.935% ~ -0.125%`), D/A는 `-0.474%` (95% CI `-1.461% ~ +1.544%`)다. D의
+`5.942183s` 한 건은 삭제하지 않았다. 이 outlier 때문에 round 평균을 짝지은 D/B CI는 1을 포함하지만, raw
+관측과 robust 중앙값은 보존한 상태에서도 D가 B의 slowdown을 A 수준으로 되돌리는 방향이다. query interval은
+54/54 `read_bytes=0`, major fault=0이었다.
+
+### 9.3 QA-shell-faithful fresh-DB matrix
+
+DB file 재사용이 결과를 만들었는지 별도로 확인하기 위해 매 sample마다 다음 전체 lifecycle을 실행했다.
+
+```text
+createdb(20 MiB data/log) → server start → query 1회 → service stop → deletedb
+```
+
+variant/position을 균형화한 3 round, 총 27회 결과다.
+
+| variant | n | mean (s) | median (s) |
+|---|---:|---:|---:|
+| A | 9 | 4.782147 | 4.792147 |
+| B | 9 | 4.827704 | 4.804148 |
+| D | 9 | 4.750702 | 4.728146 |
+
+round별 variant 3개 위치의 평균을 짝지으면 B/A는 `+0.857%` (3/3 round B가 느림), D/B는 `-1.520%`
+(3/3 round D가 빠름), D/A는 `-0.676%` (3/3 round D가 빠름)다. n=3 round이므로 CI의 정밀도를 과장하지
+않지만, shared-DB matrix와 방향이 같다. fresh createdb 직후인데도 query interval은 27/27 `read_bytes=0`, major
+fault=0이었다. 즉 차이는 CUBRID buffer-pool 재사용이나 physical disk read로 설명되지 않는다.
+
+이 두 protocol과 ELF gate를 합치면 **B의 logic을 유지하면서 앞쪽 section 길이와 hot-address phase만 복원할 때
+timing도 A 쪽으로 돌아온다**는 인과가 성립한다. 이는 final-link layout을 원인 축으로 확정하는 강한 증거다.
+다만 7 bytes가 어느 특정 DSB rule 또는 execution port를 통해 정확히 몇 cycle을 만들었는지는 PEBS 없이
+확정하지 않는다.
+
+### 9.4 A/B/D balanced PMU 90회
+
+D가 wall time만 되돌린 것인지 pipeline 지표도 되돌린 것인지 보기 위해 A/B/D의 순서를 6개 permutation으로
+균형화하고, variant별 6회씩 core/DSB-MITE/retired-front-end/Top-down L1/L2를 별도 query로 수집했다. 총 90회이며
+매 query마다 server를 stop/start했다.
+
+| metric (6회 mean) | A | B | D | D/B |
+|---|---:|---:|---:|---:|
+| core-group query time | 4.768978s | 4.853814s | 4.812146s | **-0.858%** |
+| cycles/query | 25.902B | 26.345B | 25.964B | **-1.446%** |
+| IPC | 7.0309 | 6.9126 | 7.0140 | **+1.467%** |
+| MITE µops/query | 34.386M | 41.541M | 38.613M | -7.048% |
+| DSB µops/query | 173.453B | 173.349B | 173.445B | +0.056% |
+| host-perf DSB→MITE penalty/query | 11.798M | 16.637M | 12.608M | **-24.214%** |
+| retired DSB miss/query | 2.405M | 2.619M | 1.735M | -33.768% |
+
+D의 cycles와 IPC는 A 대비 각각 `+0.242%`, `-0.241%`로 거의 복원됐다. MITE 공급과 host-perf 전환 penalty도
+B보다 줄었고 DSB 공급 총량은 세 variant가 사실상 같다. retired-front-end 두 event는 서로 multiplex되어 각
+49~50%만 running됐고 분산도 있으므로 보조 신호로만 해석한다. `DSB2MITE_SWITCHES.PENALTY_CYCLES` 역시 앞서
+설명한 model-specific 한계 때문에 단독 근거가 아니다.
+
+| Top-down slot ratio (6회 mean) | A | B | D |
+|---|---:|---:|---:|
+| Retiring | 82.636% | 80.947% | 82.443% |
+| Front-end bound | 5.204% | 3.827% | 5.460% |
+| Back-end bound | 11.438% | 14.505% | 11.246% |
+| Core bound | 10.190% | 13.714% | 9.865% |
+
+D는 B에서 늘어난 back-end/core-bound와 줄어든 retiring을 A 수준으로 되돌렸다. 동시에 D의 front-end bound는
+B보다 **높은데도** D가 더 빠르다. 따라서 이 대조군도 “DSB miss 단독 slowdown” 설명을 지지하지 않는다. 더
+정확한 결론은 16-byte final phase가 DSB/MITE 공급 통계와 downstream execution-core balance를 함께 바꾸며,
+7-byte control로 그 전체 상태가 되돌아왔다는 것이다.
+
+## 10. PMU와 hot profile
 
 초기 2회에서 크게 보인 DSB miss를 재검증하기 위해 A/B central group을 5회까지 늘렸다. 횟수 자체가 같은
 workload이므로 공급량은 `/s`가 아니라 query당 raw count로 비교했다.
@@ -331,7 +458,7 @@ time의 단독 원인이라는 설명은 확장 측정으로 기각된다. 현�
 외삽하지 않는다. 쉬운 인과 설명과 증거 경계는
 [`scope_exit`→CPU pipeline 문서](CBRD-26382-scope-exit-frontend-causal-chain_codex.md)에 별도로 정리했다.
 
-## 10. 결론
+## 11. 결론
 
 1. 최신 `cubridci` CentOS 6/devtoolset-8 release build를 Rocky 8에서 실행하면 B/QA slowdown 방향이 재현된다.
    stable PC의 크기는 `+1.464%`이고 QA의 `+10.56%`보다는 작다.
@@ -343,15 +470,22 @@ time의 단독 원인이라는 설명은 확장 측정으로 기각된다. 현�
    16-byte phase 변화가 증거에 맞는다.
 5. query physical I/O는 0이므로 QA의 느린 storage는 이번 SQL delta의 직접 설명이 아니다. 더 오래된 CPU의
    address-sensitive pipeline/cache 구조가 같은 layout 차이를 크게 증폭했을 가능성은 있지만 아직 측정하지 않았다.
-6. historical `cubridci:develop` digest와 QA 원본 package ELF/PMU가 없으므로 정확한 `+10.56%`의 전부를 단정하지
+6. QA 자동 shell과 stable harness 모두 측정 query마다 server process를 새로 만들었다. stable의 차이는 server
+   memory 재사용 착시가 아니며, fresh-DB 재현에서도 B slowdown과 D 복원 방향이 유지됐다.
+7. 7-byte diagnostic D가 B의 query object와 data layout을 유지하면서 A의 hot-code phase와 timing을 함께
+   복원했다. balanced PMU에서도 cycles, IPC, retiring, core bound가 A 수준으로 돌아왔다. 이로써 final-link
+   layout 인과는 크게 강화됐지만, 이를 곧바로 “모든 hot function을 32-byte
+   align하면 해결”로 일반화해서는 안 된다. 구체적 완화안은
+   [hot function alignment 선택지](CBRD-26382-hot-function-alignment-options_codex.md)를 따른다.
+8. historical `cubridci:develop` digest와 QA 원본 package ELF/PMU가 없으므로 정확한 `+10.56%`의 전부를 단정하지
    않는다. 다만 “재현 불가” 상태에서는 벗어났고, slowdown 방향과 final-link/pipeline 변화는 stable PC에서
-   연결했다. 마지막 hardware resource의 인과 확정에는 padding sweep과 PEBS가 필요하다.
+   연결했다. 마지막 hardware resource의 인과 확정에는 추가 padding phase와 PEBS가 필요하다.
 
 ## Reproducibility artifacts
 
 compact evidence는 [`stable-pc-cubridci/`](artifacts/full-server-gcc8/stable-pc-cubridci/)에 있다. build provenance,
-네 manifest, raw timing/I/O CSV, bootstrap summary, 110 PMU run의 counter와 query time, hot symbol/hash, normalized
-plan hash, address-resolved profile summary를 포함한다. 실행 script는
+다섯 manifest, raw timing/I/O CSV, bootstrap summary, 기존 110-run PMU와 A/B/D 90-run PMU summary, D ELF gates,
+hot symbol/hash, normalized plan hash, address-resolved profile summary를 포함한다. 실행 script는
 [`scripts/`](artifacts/full-server-gcc8/scripts/)에 있다.
 
 전체 build tree, raw ELF, `perf.data`는 크기 때문에 Git에 넣지 않는다. local evidence root는

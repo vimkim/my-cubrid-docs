@@ -65,7 +65,7 @@
   <text x="170" y="546" class="head">링커 도미노: 앞 조각 크기가 바뀌면 뒤 함수 주소도 바뀜</text>
   <text x="170" y="582" class="mono">다음 cold symbol       0x2fdeba → 0x2fdeb2   (-8)</text>
   <text x="170" y="612" class="mono">다음 정렬 구간          0x302590 → 0x302580  (-16)</text>
-  <text x="170" y="642" class="mono">qexec_execute_scan     0x4db580 → 0x4db570  (-16)</text>
+  <text x="170" y="642" class="mono">qexec_execute_scan  A 0x4db580 → B 0x4db570 → D 0x4db580</text>
   <text x="170" y="672" class="mono">32-byte 안 위치(mod32)      0 → 16</text>
   <text x="800" y="582" class="body">링커는 DSO 안의 code fragment를 순서대로 배치한다.</text>
   <text x="800" y="612" class="body">alignment padding이 7-byte 차이를 8, 16-byte</text>
@@ -98,9 +98,9 @@
 
   <rect x="70" y="1080" width="1260" height="150" class="hypothesis"/>
   <text x="100" y="1118" class="head">5. 현재 가능한 정확한 결론</text>
-  <text x="100" y="1152" class="body">확정: cold-code 크기, 전체 link phase, hot-code 주소, front-end 공급 통계와 pipeline balance가 함께 바뀌었다.</text>
-  <text x="100" y="1182" class="body">미확정: 16-byte phase가 공급 timing을 바꾸고 downstream execution-resource 압력을 키웠을 수 있다.</text>
-  <text x="100" y="1212" class="warn">DSB/MITE만으로 slowdown이나 QA +10.56%를 설명할 수 없다. padding sweep + PEBS가 마지막 검증이다.</text>
+  <text x="100" y="1152" class="body">확정: B logic + 실행 불가능한 7-byte D에서 A의 hot-code 주소와 timing이 함께 복원됐다.</text>
+  <text x="100" y="1182" class="body">확정: D의 cycles·IPC·retiring·core bound도 A 수준으로 돌아왔다. layout→pipeline→time이 함께 움직였다.</text>
+  <text x="100" y="1212" class="warn">미확정: 특정 DSB rule/port와 QA +10.56% 전부. 추가 phase + PEBS/IP 귀속이 필요하다.</text>
 
   <text x="70" y="1262" class="small">solid = counter/ELF로 확인된 연결 · dashed orange = 아직 검증이 필요한 microarchitectural 연결</text>
 </svg>

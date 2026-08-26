@@ -1,0 +1,21 @@
+diff --git a/src/transaction/log_recovery.c b/src/transaction/log_recovery.c
+index d0e20e338..00c02dda2 100644
+--- a/src/transaction/log_recovery.c
++++ b/src/transaction/log_recovery.c
+@@ -6489,3 +6489,16 @@ log_find_unilaterally_largest_undo_lsa (THREAD_ENTRY * thread_p, LOG_LSA & max_u
+   TR_TABLE_CS_EXIT (thread_p);
+   // *INDENT-ON*
+ }
++
++/*
++ * CBRD-26382 diagnostic control only.
++ *
++ * The scope_exit refactor reduced this translation unit's .text.unlikely
++ * contribution by seven bytes. Restore only those seven unreachable bytes so
++ * the final linker layout can be compared without changing query-path code.
++ */
++/* *INDENT-OFF* */
++__asm__ (".pushsection .text.unlikely,\"ax\",@progbits\n"
++	 ".fill 7, 1, 0x90\n"
++	 ".popsection\n");
++/* *INDENT-ON* */

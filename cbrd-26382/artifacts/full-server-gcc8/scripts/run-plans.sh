@@ -12,7 +12,7 @@ query_plan=$artifact_root/query-plan.sql
 mkdir -p "$root"
 stage_query_file "$query_plan" "$container_query_plan"
 
-for variant in qa-2029 A B C; do
+for variant in ${PLAN_VARIANTS:-qa-2029 A B C}; do
   lifecycle=$root/$variant.lifecycle.log
   exec_variant "$variant" cubrid server start "$database_name" >"$lifecycle" 2>&1
   server_pid=$(podman exec "$container" pgrep -o cub_server)

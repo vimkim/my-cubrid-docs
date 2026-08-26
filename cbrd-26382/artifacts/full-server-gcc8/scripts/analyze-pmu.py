@@ -84,6 +84,8 @@ def derived_metrics(group, events, seconds):
         metrics.update(
             ipc=safe_ratio(value(events, "instructions"), value(events, "cycles")),
             ghz=safe_ratio(value(events, "cycles"), seconds * 1e9),
+            cycles_per_query=value(events, "cycles"),
+            instructions_per_query=value(events, "instructions"),
             instructions_per_second=safe_ratio(value(events, "instructions"), seconds),
         )
     elif group == "branch":
@@ -107,9 +109,11 @@ def derived_metrics(group, events, seconds):
         mite = value(events, "idq.mite_uops")
         metrics["mite_percent_of_dsb_plus_mite"] = 100 * safe_ratio(mite, None if dsb is None or mite is None else dsb + mite)
         for event, item in events.items():
+            metrics[f"{event}_per_query"] = item["value"]
             metrics[f"{event}_per_second"] = item["value"] / seconds
     elif group in ("itlb", "l1i", "frontend", "frontendret"):
         for event, item in events.items():
+            metrics[f"{event}_per_query"] = item["value"]
             metrics[f"{event}_per_second"] = item["value"] / seconds
     elif group == "topdown":
         slots = value(events, "slots")
@@ -146,7 +150,7 @@ def main(root_arg):
     runs = []
     unsupported = []
     for path in sorted(root.glob("*.perf.csv")):
-        match = re.fullmatch(r"(A|B|C|qa-2029)-([a-z0-9]+)-([1-9][0-9]*)\.perf\.csv", path.name)
+        match = re.fullmatch(r"(A|B|C|D|qa-2029)-([a-z0-9]+)-([1-9][0-9]*)\.perf\.csv", path.name)
         if not match:
             continue
         variant, group, repetition = match.groups()

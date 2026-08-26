@@ -15,7 +15,7 @@ if ! [[ "$p_core_cpus" =~ ^[0-9]+([,-][0-9]+)*$ ]]; then
 fi
 podman exec "$container" taskset -c "$p_core_cpus" true
 
-root=$results_root/bench/pmu-pcores
+root=${PMU_OUTPUT_DIR:-$results_root/bench/pmu-pcores}
 mkdir -p "$root"
 stage_query_file "$artifact_root/query.sql" "$container_query"
 
@@ -144,7 +144,18 @@ fi
 
 if [ "${PMU_ONLY_PROFILES:-0}" != 1 ]; then
   for repetition in $(seq 1 "${PMU_REPETITIONS:-2}"); do
-    for variant in ${PMU_VARIANTS:-A B C qa-2029}; do
+    variants=${PMU_VARIANTS:-A B C qa-2029}
+    if [ "${PMU_BALANCED_ABD:-0}" = 1 ]; then
+      case $(((repetition - 1) % 6)) in
+        0) variants='A B D' ;;
+        1) variants='B D A' ;;
+        2) variants='D A B' ;;
+        3) variants='A D B' ;;
+        4) variants='D B A' ;;
+        5) variants='B A D' ;;
+      esac
+    fi
+    for variant in $variants; do
       for group in ${PMU_GROUPS:-core branch cache l1d llc itlb l1i frontend uopcache frontendret}; do
         eval "events=\${${group}_events}"
         run_stat "$variant" "$group" "$repetition" "$events"

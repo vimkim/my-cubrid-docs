@@ -1,0 +1,171 @@
+
+=== Plan Dump ===
+
+plan simple (opt level 257)
+
+Execute OK.Committed.
+
+Query plan:
+
+ Object fetch(t.g=db_user)
+    Nested-loop join(table(u) -> t)
+        Index scan(db_user u, u_db_user_name, u.[name]= CURRENT_USER )
+        Sequential scan(t)
+
+Query plan:
+
+ Object fetch(t.g=db_user)
+    Nested-loop join(table(u) -> t)
+        Index scan(db_user u, u_db_user_name, u.[name]= CURRENT_USER )
+        Sequential scan(t)
+
+Query plan:
+
+ Object fetch(t.g=db_user)
+    Nested-loop join(table(u) -> t)
+        Index scan(db_user u, u_db_user_name, u.[name]= CURRENT_USER )
+        Sequential scan(t)
+
+Query plan:
+
+ Object fetch(au.grantee=db_user)
+    Sequential scan(_db_auth au)
+
+Query plan:
+
+ Object fetch(t.g=db_user)
+    Nested-loop join(table(u) -> t)
+        Index scan(db_user u, u_db_user_name, u.[name]= CURRENT_USER )
+        Sequential scan(t)
+
+Query plan:
+
+ Object fetch(t.g=db_user)
+    Nested-loop join(table(u) -> t)
+        Index scan(db_user u, u_db_user_name, u.[name]= CURRENT_USER )
+        Sequential scan(t)
+
+Query plan:
+
+ Object fetch(t.g=db_user)
+    Nested-loop join(table(u) -> t)
+        Index scan(db_user u, u_db_user_name, u.[name]= CURRENT_USER )
+        Sequential scan(t)
+
+Query plan:
+
+ Object fetch(au.grantee=db_user)
+    Sequential scan(_db_auth au)
+
+Query plan:
+
+ Object fetch(t.g=db_user)
+    Nested-loop join(table(u) -> t)
+        Index scan(db_user u, u_db_user_name, u.[name]= CURRENT_USER )
+        Sequential scan(t)
+
+Query plan:
+
+ Object fetch(t.g=db_user)
+    Nested-loop join(table(u) -> t)
+        Index scan(db_user u, u_db_user_name, u.[name]= CURRENT_USER )
+        Sequential scan(t)
+
+Query plan:
+
+ Object fetch(t.g=db_user)
+    Nested-loop join(table(u) -> t)
+        Index scan(db_user u, u_db_user_name, u.[name]= CURRENT_USER )
+        Sequential scan(t)
+
+Query plan:
+
+ Object fetch(au.grantee=db_user)
+    Sequential scan(_db_auth au)
+
+Query plan:
+
+ Object fetch(t.g=db_user)
+    Nested-loop join(table(u) -> t)
+        Index scan(db_user u, u_db_user_name, u.[name]= CURRENT_USER )
+        Sequential scan(t)
+
+Query plan:
+
+ Object fetch(t.g=db_user)
+    Nested-loop join(table(u) -> t)
+        Index scan(db_user u, u_db_user_name, u.[name]= CURRENT_USER )
+        Sequential scan(t)
+
+Query plan:
+
+ Object fetch(t.g=db_user)
+    Nested-loop join(table(u) -> t)
+        Index scan(db_user u, u_db_user_name, u.[name]= CURRENT_USER )
+        Sequential scan(t)
+
+Query plan:
+
+ Object fetch(au.grantee=db_user)
+    Sequential scan(_db_auth au)
+
+Query plan:
+
+ Object fetch(t.g=db_user)
+    Nested-loop join(table(u) -> t)
+        Index scan(db_user u, u_db_user_name, u.[name]= CURRENT_USER )
+        Sequential scan(t)
+
+Query plan:
+
+ Object fetch(t.g=db_user)
+    Nested-loop join(table(u) -> t)
+        Index scan(db_user u, u_db_user_name, u.[name]= CURRENT_USER )
+        Sequential scan(t)
+
+Query plan:
+
+ Object fetch(t.g=db_user)
+    Nested-loop join(table(u) -> t)
+        Index scan(db_user u, u_db_user_name, u.[name]= CURRENT_USER )
+        Sequential scan(t)
+
+Query plan:
+
+ Object fetch(au.grantee=db_user)
+    Sequential scan(_db_auth au)
+
+Query plan:
+
+ Nested loops
+    Nested loops
+        Nested loops
+            Nested loops
+                Object fetch(a.[owner]=db_user)
+                    Nested-loop join((a.collation_id=coll.coll_id))
+                        Sequential scan(_db_class a)
+                        Sequential scan(_db_collation coll)
+                Object fetch(b.[owner]=db_user)
+                    Nested-loop join((b.collation_id=coll_1.coll_id))
+                        Sequential scan(_db_class b)
+                        Sequential scan(_db_collation coll_1)
+            Object fetch(c.[owner]=db_user)
+                Nested-loop join((c.collation_id=coll_2.coll_id))
+                    Sequential scan(_db_class c)
+                    Sequential scan(_db_collation coll_2)
+        Object fetch(d.[owner]=db_user)
+            Nested-loop join((d.collation_id=coll_3.coll_id))
+                Sequential scan(_db_class d)
+                Sequential scan(_db_collation coll_3)
+    Object fetch(e.[owner]=db_user)
+        Nested-loop join((e.collation_id=coll_4.coll_id))
+            Sequential scan(_db_class e)
+            Sequential scan(_db_collation coll_4)
+
+=== <Result of SELECT Command in Line 4> ===
+
+              count(*)
+======================
+             282475249
+
+1 row selected.Committed.
