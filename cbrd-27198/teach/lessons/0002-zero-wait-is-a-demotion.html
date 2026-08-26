@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zero-wait is a demotion — PR #7630</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main>
+  <p class="kicker">Lesson 1 · Original failure</p>
+  <h1>Zero-wait did not expire. It changed the request.</h1>
+  <p class="lead">The tangible win: explain why the original failure was immediate even though the disk manager explicitly requested an unconditional latch.</p>
+
+  <div class="callout">
+    <strong>One correction to the diagnostic:</strong> no transaction-lock attempt has to fail first. The transaction's wait-policy value is consulted directly inside the page-fix path.
+  </div>
+
+  <h2>The event chain</h2>
+  <ol class="timeline">
+    <li><strong>Policy already equals zero.</strong>The transaction descriptor carries <code>wait_msecs = LK_ZERO_WAIT</code>, the value produced by <code>lock_timeout=0</code>.</li>
+    <li><strong>The caller asks for unconditional.</strong>The disk path calls <code>pgbuf_fix(..., PGBUF_UNCONDITIONAL_LATCH)</code> for a structural page.</li>
+    <li><strong><code>pgbuf_fix</code> rewrites the condition.</strong>It reads the current transaction wait policy. Zero-wait changes <code>UNCONDITIONAL</code> to <code>CONDITIONAL</code> before trying the latch.</li>
+    <li><strong>The busy page cannot be latched immediately.</strong>The conditional branch rejects the request. It does not add the thread to the BCB wait queue.</li>
+    <li><strong>The fix returns failure now.</strong>For <code>LK_ZERO_WAIT</code>, the rejection sets <code>ER_LK_PAGE_TIMEOUT</code> and returns. A structural-page caller that assumes its unconditional fix cannot fail can then hit its assertion.</li>
+  </ol>
+
+  <div class="contrast">
+    <div>
+      <h2>What happened</h2>
+      <p><code>UNCONDITIONAL → CONDITIONAL → immediate rejection</code></p>
+    </div>
+    <div>
+      <h2>What did not happen</h2>
+      <p><code>enqueue → timed sleep → elapsed latch timeout</code></p>
+    </div>
+  </div>
+
+  <h2>Read the decisive branches</h2>
+  <p>First, read the small <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/page_buffer.c#L2273-L2283">unconditional-to-conditional rewrite</a>. Then skip to the <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/page_buffer.c#L6543-L6577">conditional rejection</a>. The function contract states the same split: a conditional miss returns an error, while an unconditional miss queues and blocks at <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/page_buffer.c#L6260-L6278">lines 6260–6278</a>.</p>
+
+  <section class="question">
+    <p class="meta">Retrieval checkpoint</p>
+    <h2>Reconstruct it without the timeline</h2>
+    <p>A transaction has <code>lock_timeout=0</code>. The disk manager requests an unconditional write latch on a structural page, but another thread holds an incompatible latch. Explain the four transitions from caller request to caller-visible failure. End by stating why the phrase “the latch timed out” is misleading.</p>
+  </section>
+
+  <footer>
+    Close this lesson before answering. Ask the teacher about any step that does not follow; the next lesson depends on this chain being retrievable.
+  </footer>
+</main>
+</body>
+</html>

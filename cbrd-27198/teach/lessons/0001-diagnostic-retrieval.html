@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Diagnostic retrieval — PR #7630</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main>
+  <p class="kicker">PR #7630 · Diagnostic</p>
+  <h1>What can you retrieve before the course?</h1>
+  <p class="lead">This is a baseline, not a test to pass. Answer from memory. “I don’t know” is useful evidence because it chooses the first lesson.</p>
+
+  <div class="callout">
+    Do not open the report or source yet. Reply to the teacher with answers numbered 1–6. Keep the whole attempt under ten minutes.
+  </div>
+
+  <section class="question">
+    <h2>1 · Name the objects</h2>
+    <p>In your own words, distinguish a transaction lock, a page latch, and a page fix. One sentence each is enough.</p>
+  </section>
+
+  <section class="question">
+    <h2>2 · Decode the request</h2>
+    <p>What are latch mode and latch condition deciding? Explain how “write + unconditional” differs from “read + conditional.”</p>
+  </section>
+
+  <section class="question">
+    <h2>3 · Trace zero-wait</h2>
+    <p>A transaction has <code>lock_timeout=0</code> and requests an unconditional latch on a busy structural page. What did the pre-fix page-buffer path do, and why could the caller reject the result immediately?</p>
+  </section>
+
+  <section class="question">
+    <h2>4 · Predict all four policies</h2>
+    <p>For <code>LK_ZERO_WAIT</code>, <code>LK_FORCE_ZERO_WAIT</code>, a positive finite value, and <code>LK_INFINITE_WAIT</code>, say which values the PR should override while fixing a structural page—and which it should preserve.</p>
+  </section>
+
+  <section class="question">
+    <h2>5 · Find the regression</h2>
+    <p>Suppose the original policy is a positive finite value, the structural page remains busy, and the separate page-latch timer expires. Compare the expected error path with the PR’s current path.</p>
+  </section>
+
+  <section class="question">
+    <h2>6 · Defend the scope</h2>
+    <p>A reviewer says, “The real issue is that <code>lock_timeout</code> affects latches at all, so this finite-timeout concern can wait for the architecture cleanup.” Give your best response in two or three sentences.</p>
+  </section>
+
+  <h2>Primary source for the next step</h2>
+  <p>After submitting the baseline, we will use the exact reviewed source: the <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/AGENTS.md#buffer-pool-protocol">page-buffer protocol</a>, the <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/transaction/lock_manager.h#L55-L63">wait-policy sentinels</a>, and the <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/page_buffer.c#L16922-L16949">PR’s override</a>.</p>
+
+  <footer>
+    Ask the teacher about any wording that is unclear. Clarifying the question is allowed; looking up the answer is not.
+  </footer>
+</main>
+</body>
+</html>

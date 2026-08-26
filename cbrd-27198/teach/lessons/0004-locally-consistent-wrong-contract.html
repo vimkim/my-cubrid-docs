@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Locally consistent, wrong contract — PR #7630</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main>
+  <p class="kicker">Lesson 1C · The ticket boundary</p>
+  <h1>Reasonable policy, wrong place.</h1>
+  <p class="lead">Immediate rejection is consistent with zero-wait in isolation. It is still wrong when zero-wait has crossed into a structural-page operation whose caller explicitly requires an unconditional fix.</p>
+
+  <div class="contrast">
+    <div>
+      <h2>User-level policy</h2>
+      <p><code>lock_timeout=0</code>: do not wait for conflicting logical transaction locks.</p>
+    </div>
+    <div>
+      <h2>Internal requirement</h2>
+      <p><code>PGBUF_UNCONDITIONAL_LATCH</code>: obtain this short-lived structural-page latch even if it is temporarily busy.</p>
+    </div>
+  </div>
+
+  <p>The bug appears when the first policy silently rewrites the second request. The disk manager cannot treat “structural page was busy for an instant” as a normal result: it needs that page to maintain allocation metadata, and its unconditional-call contract was written on that assumption.</p>
+
+  <div class="callout">
+    Therefore: <strong>the immediate rejection mechanism works as coded, but applying it to this structural-page fix violates the caller's contract.</strong>
+  </div>
+
+  <p>The reviewed code labels the volume header a structural page and explicitly issues an <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/disk_manager.c#L3233-L3236">unconditional fix</a>. The generic page-buffer code performs the conflicting <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/page_buffer.c#L2273-L2283">zero-wait demotion</a>.</p>
+
+  <section class="question">
+    <p class="meta">Reviewer sentence</p>
+    <h2>Complete the distinction</h2>
+    <p>“The immediate rejection is consistent with ________, but wrong here because ________.”</p>
+  </section>
+
+  <footer>
+    Answer in one sentence. Once this distinction is stable, the course can move from the original bug to the PR's new regression.
+  </footer>
+</main>
+</body>
+</html>

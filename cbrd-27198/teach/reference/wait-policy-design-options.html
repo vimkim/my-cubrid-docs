@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PR #7630 wait-policy 설계 대안</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main>
+  <p class="kicker">Reference · Design it twice</p>
+  <h1>Page-latch wait-policy 설계 대안</h1>
+  <p class="lead">Exact reviewed HEAD <code>1185f16d</code> 기준. 질문은 transaction zero-wait와 내부 structural-page contention이 만나는 seam을 어디에 둘 것인가다.</p>
+
+  <h2>A · 최소 interface: reservation이 WOULD_BLOCK을 반환</h2>
+  <p><code>disk_try_reserve_sectors</code>가 <code>OK / WOULD_BLOCK / ERROR</code>를 반환한다. zero-wait contention은 queue나 retry 없이 정상 unwind 후 즉시 상위로 전달한다. interface는 작고 disk cleanup 지식의 locality가 좋지만, 일시적 내부 경합 때문에 쿼리가 실패한다.</p>
+
+  <h2>B · 명시적 page-buffer wait policy</h2>
+  <p><code>pgbuf_fix_with_policy</code>가 <code>IMMEDIATE / UNTIL(deadline) / INTERNAL</code>을 받고 <code>ACQUIRED / WOULD_BLOCK / DEADLINE_EXPIRED / INTERNAL_STALL / ERROR</code>를 반환한다. admission, 실제 deadline, error classification을 한 module 안에 숨겨 가장 높은 leverage를 얻지만 migration 범위가 크다.</p>
+
+  <h2>C · common caller를 단순하게</h2>
+  <p>대부분의 caller는 단순 <code>pgbuf_fix(..., mode)</code>로 required wait을 사용하고, 예외적인 caller만 <code>pgbuf_fix_with_wait</code>를 사용한다. page buffer에서 transaction-lock 지식을 제거해 interface가 선명해지지만, 현재 숨은 <code>lock_timeout → latch condition</code> 결합에 의존하는 caller 전체 audit가 필요하다.</p>
+
+  <h2>D · reservation preflight + bounded retry</h2>
+  <p>수정 전에 필요한 structural page를 정해진 순서로 try-fix하고, 하나라도 busy면 아무 page도 수정하지 않은 채 unwind한다. partial rollback 문제를 피하지만 여러 write latch를 오래 보유해 latch footprint와 새로운 deadlock 위험을 키울 수 있다. strict zero-wait이면 retry budget은 1이어야 한다.</p>
+
+  <h2>비교</h2>
+  <table>
+    <thead><tr><th>설계</th><th>Seam</th><th>강점</th><th>핵심 비용</th></tr></thead>
+    <tbody>
+      <tr><td>A</td><td>disk reservation interface</td><td>작고 정직한 zero-wait</td><td>부분 변경 cleanup도 latch가 필요할 수 있음</td></tr>
+      <tr><td>B</td><td>page-fix wait-policy interface</td><td>정책·deadline·오류 의미의 locality</td><td>넓은 migration</td></tr>
+      <tr><td>C</td><td>common/advanced page-fix interface</td><td>일반 caller의 높은 leverage</td><td>기존 caller audit</td></tr>
+      <tr><td>D</td><td>reservation attempt interface</td><td>retry 전 all-or-nothing 보장</td><td>latch footprint·복잡도</td></tr>
+    </tbody>
+  </table>
+
+  <h2>추천</h2>
+  <p>현재 PR 범위에서는 zero-wait 두 값만 scoped override하고 positive/infinite 분류를 보존하는 것이 가장 작은 수정이다. 그러나 “zero-wait이면 latch도 절대 기다리지 않는다”가 제품 원칙이라면 <strong>A만 단독 적용해서는 부족하다</strong>. B의 typed <code>WOULD_BLOCK</code> seam과 reservation의 all-or-nothing redesign을 결합해야 한다.</p>
+
+  <div class="callout">
+    특히 현재 temp reservation cleanup은 이미 수정한 sector를 되돌리기 위해 volume header와 sector table을 다시 fix한다. rollback까지 strict no-wait이면 cleanup 자체도 WOULD_BLOCK할 수 있다. 단순 assert 제거가 안전성 증명이 되지 않는 이유다.
+  </div>
+
+  <p>Primary source: <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/disk_manager.c#L4379-L4455">현재 unwind 경로</a>, <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/page_buffer.c#L7284-L7425">현재 wait 및 timeout classification</a>.</p>
+
+  <footer>
+    이 reference는 설계 선택을 위한 것이며, published review의 기존 positive-timeout blocker를 대체하지 않는다.
+  </footer>
+</main>
+</body>
+</html>

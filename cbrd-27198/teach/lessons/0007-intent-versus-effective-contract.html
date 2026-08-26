@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Intent와 effective contract를 분리하라 — PR #7630</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main>
+  <p class="kicker">Lesson 2 · Architecture claim audit</p>
+  <h1>이름은 intent의 증거이지, existing contract의 증명이 아니다.</h1>
+  <p class="lead">Exact HEAD는 lock-oriented naming과 latch-coupled behavior를 동시에 갖고 있다. 둘 중 하나를 지우려면 “원래 의도”가 아니라 호환성 판단이 필요하다.</p>
+
+  <table>
+    <thead><tr><th>Lock-only intent를 지지하는 코드</th><th>Latch-inclusive behavior를 지지하는 코드</th></tr></thead>
+    <tbody>
+      <tr><td><code>db_set_lock_timeout</code> 주석은 object lock 획득 대기라고 정의한다.</td><td><code>pgbuf_fix</code>가 같은 transaction wait 값을 읽어 unconditional latch를 conditional로 바꾼다.</td></tr>
+      <tr><td><code>LOG_TDES::wait_msecs</code> 주석은 “for locks”라고 쓴다.</td><td><code>pgbuf_timed_sleep</code>가 같은 값을 page-latch admission과 timeout 분류에 사용한다.</td></tr>
+      <tr><td><code>xlogtb_reset_wait_msecs</code> 주석도 lock 획득을 설명한다.</td><td>engine이 <code>LK_FORCE_ZERO_WAIT</code>를 일부러 설정해 busy page를 건너뛰고 dead latch를 피한다.</td></tr>
+    </tbody>
+  </table>
+
+  <p>Lock-oriented source: <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/compat/db_admin.c#L1563-L1597"><code>db_set_lock_timeout</code></a>, <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/transaction/log_impl.h#L475-L487"><code>LOG_TDES</code></a>, <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/transaction/log_tran_table.c#L2537-L2570">reset contract</a>.</p>
+
+  <p>Latch-coupled source: <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/page_buffer.c#L2273-L2283">condition rewrite</a>, <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/page_buffer.c#L7284-L7296">latch wait calculation</a>, <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/bestspace.cpp#L672-L689">intentional busy-page skip</a>, <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/btree.c#L19757-L19777">intentional dead-latch avoidance</a>.</p>
+
+  <div class="callout">
+    Verdict: “lock-only가 더 깨끗한 architecture다”는 말은 가능하다. “사용자는 latch no-wait을 의도하지 않았다”는 말은 현재 증거로 확정할 수 없다.
+  </div>
+
+  <h2>PR에 적용하면</h2>
+  <ol class="timeline">
+    <li><strong>작성자 답변은 추론임을 스스로 인정한다.</strong>파라미터 설명이 없고 이름과 주 용례에 근거했다고 말한다.</li>
+    <li><strong>PR은 observable behavior를 바꾼다.</strong>zero-wait transaction도 volume header와 sector table에서는 latch queue에 들어간다.</li>
+    <li><strong>그러므로 spec과 검증이 필요하다.</strong>structural-page exception, watchdog 상한, latch-order safety, user-visible failure semantics를 명시하고 test해야 한다.</li>
+  </ol>
+
+  <section class="question">
+    <p class="meta">Reviewer checkpoint</p>
+    <h2>두 문장으로 반박하라</h2>
+    <p>첫 문장은 왜 이름만으로 lock-only contract를 확정할 수 없는지, 둘째 문장은 exact code가 보여 주는 latch-coupled behavior와 PR에 필요한 증거를 말하라.</p>
+  </section>
+
+  <footer>
+    작성자 답변: <a href="https://github.com/CUBRID/cubrid/pull/7630#issuecomment-5365130299">PR comment 5365130299</a>. 이 lesson은 architecture/spec concern이며, positive-timeout blocking defect와 별도로 유지한다.
+  </footer>
+</main>
+</body>
+</html>

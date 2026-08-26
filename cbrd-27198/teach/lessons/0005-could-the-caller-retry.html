@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Could the caller retry? — PR #7630</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main>
+  <p class="kicker">Lesson 1D · Design truth</p>
+  <h1>Could the caller handle immediate failure? Yes.</h1>
+  <p class="lead">“Must wait” is the PR's chosen contract for these structural fixes, not a law of database physics.</p>
+
+  <div class="contrast">
+    <div>
+      <h2>Non-negotiable</h2>
+      <p>The thread must obtain a write latch before changing the volume header or sector-allocation table. Concurrent physical edits would corrupt shared allocation metadata.</p>
+    </div>
+    <div>
+      <h2>Design choice</h2>
+      <p>When that latch is temporarily busy, the system may wait there—or unwind the larger operation and arrange a safe retry.</p>
+    </div>
+  </div>
+
+  <h2>Why a retry is not one line</h2>
+  <p><code>disk_reserve_sectors</code> is a multi-step operation. It starts a system operation, enters the disk-check critical section, reserves capacity in the in-memory cache, and may update several volume sector tables. See the <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/disk_manager.c#L4324-L4359">setup and reservation path</a>.</p>
+
+  <p>If a later page fix fails, its error path may undo partial temporary allocations, return cache reservations, leave the critical section, and abort the system operation before deciding what to do. See the <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/disk_manager.c#L4379-L4455">unwind path</a>. The current expected-error list does not include <code>ER_LK_PAGE_TIMEOUT</code>, so debug builds assert.</p>
+
+  <h2>Why this PR waits locally</h2>
+  <ol class="timeline">
+    <li><strong>The conflict is internal and transient.</strong>A busy structural page does not mean the disk is full or the reservation is invalid.</li>
+    <li><strong>The latch is held briefly.</strong>Waiting at the exact conflict avoids abandoning the larger reservation operation.</li>
+    <li><strong>The scope is narrow.</strong>The override surrounds only the volume-header and sector-table fixes, not arbitrary page access.</li>
+  </ol>
+
+  <div class="callout">
+    <strong>Precision:</strong> “unconditional” does not mean the page fix cannot fail. I/O errors, interrupts, and the separate page-latch timeout still exist. It means latch incompatibility does not cause an immediate would-block rejection.
+  </div>
+
+  <p>The original JIRA analysis actually proposed the alternative: treat <code>ER_LK_PAGE_TIMEOUT</code> as expected contention. The PR chose local waiting instead. Both can be engineered safely; this review evaluates whether the submitted implementation preserves every wait policy while implementing its chosen design.</p>
+
+  <section class="question">
+    <p class="meta">Reviewer checkpoint</p>
+    <h2>Answer the challenge</h2>
+    <p>“Why not just return the immediate latch failure and retry in <code>disk_reserve_sectors</code>?” Give one reason it is possible, and one reason this PR's local-wait design is reasonable.</p>
+  </section>
+
+  <footer>
+    The primary sources are <a href="http://jira.cubrid.org/browse/CBRD-27198">CBRD-27198</a> and the exact reviewed source links above. Ask the teacher if the difference between “required latch” and “chosen wait policy” is still unclear.
+  </footer>
+</main>
+</body>
+</html>

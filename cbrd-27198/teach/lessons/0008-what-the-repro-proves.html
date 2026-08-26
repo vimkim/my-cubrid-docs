@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>재현 스크립트가 증명하는 것 — CBRD-27198</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main>
+  <p class="kicker">Lesson 2B · Evidence boundary</p>
+  <h1>Repro는 mechanism을 검증한다. Policy를 정하지 않는다.</h1>
+  <p class="lead"><code>cbrd_27198_repro.sh</code>는 original crash chain을 재현하도록 load와 timing을 만든다. 무엇이 옳아야 하는지는 말해 주지 않는다.</p>
+
+  <h2>스크립트가 만드는 조건</h2>
+  <ol class="timeline">
+    <li><strong>Temp file을 disk에 강제한다.</strong><code>temp_file_memory_size_in_pages=0</code>과 작은 temp cache를 설정하고, 100만 행을 정렬한다.</li>
+    <li><strong>No-wait transaction을 만든다.</strong>각 세션이 <code>SET SYSTEM PARAMETERS 'lock_timeout=0'</code>을 실행한다.</li>
+    <li><strong>경합 확률을 높인다.</strong>8개 세션이 동시에 여러 대형 정렬을 실행하고, 곧바로 client를 <code>SIGKILL</code>해 temp 파일 생성과 연결 정리를 겹친다.</li>
+    <li><strong>결과를 관찰한다.</strong>서버 PID·boot 횟수 변화와 서버 로그의 <code>CODE = -76</code>을 센다.</li>
+  </ol>
+
+  <h2>무엇을 입증하는가</h2>
+  <table>
+    <thead><tr><th>주장</th><th>증거 수준</th></tr></thead>
+    <tbody>
+      <tr><td>dblink 없이 local sort만으로 같은 종류의 crash를 만들 수 있다.</td><td>직접 검증</td></tr>
+      <tr><td><code>lock_timeout=0</code>, disk temp-file 생성, structural-page 경합이 함께 있을 때 <code>-76</code>과 debug server restart가 재현된다.</td><td>직접 검증하되 timing-dependent</td></tr>
+      <tr><td>서버 생존 여부만 보면 cub_master의 빠른 재기동 때문에 crash를 놓칠 수 있다.</td><td>PID/boot counter로 보완</td></tr>
+      <tr><td>정확한 내부 chain은 unconditional→conditional→immediate reject→assert다.</td><td>스크립트만으로는 부족; core stack과 source trace를 결합해야 함</td></tr>
+    </tbody>
+  </table>
+
+  <h2>무엇을 입증하지 않는가</h2>
+  <ul>
+    <li>사용자가 latch까지 zero-wait을 의도했는지, lock만 의도했는지</li>
+    <li>structural page에서 wait하는 정책이 제품적으로 옳은지</li>
+    <li>unconditional wait 경로에 deadlock이나 latch-order inversion이 없는지</li>
+    <li>positive finite와 infinite policy가 PR에서 보존되는지</li>
+    <li>즉시 실패를 expected outcome으로 바꿨을 때 partial cleanup이 안전한지</li>
+  </ul>
+
+  <div class="callout">
+    이 스크립트로 “기존 crash가 사라졌다”는 before/after 확인은 가능하다. 하지만 crash가 사라진 이유가 올바른 정책인지, 다른 regression을 만들지 않았는지는 별도 test matrix가 필요하다.
+  </div>
+
+  <p>Code chain: <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/page_buffer.c#L2273-L2283">zero-wait demotion</a>, <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/page_buffer.c#L6543-L6577">immediate rejection</a>, <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/disk_manager.c#L4424-L4455">unexpected-error assert</a>.</p>
+
+  <section class="question">
+    <p class="meta">Evidence checkpoint</p>
+    <h2>경계를 말해 보라</h2>
+    <p>이 스크립트가 직접 검증하는 사실 두 개와, 이 스크립트만으로는 검증할 수 없는 정책 주장 두 개를 말해 보라.</p>
+  </section>
+
+  <footer>
+    Attachment: <a href="http://jira.cubrid.org/secure/attachment/1020031/cbrd_27198_repro.sh">cbrd_27198_repro.sh</a>. 재현 성공률은 환경과 timing에 의존한다.
+  </footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Three-arrow zero-wait trace — PR #7630</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main>
+  <p class="kicker">Lesson 1B · Re-pitch</p>
+  <h1>Keep these three arrows in order.</h1>
+
+  <ol class="timeline">
+    <li><strong>Requested: UNCONDITIONAL</strong>The disk manager says: “If the page is busy, I am willing to wait.”</li>
+    <li><strong>Rewritten: CONDITIONAL</strong><code>pgbuf_fix</code> sees the transaction's zero-wait policy and changes the caller's request: “Try once; do not wait.”</li>
+    <li><strong>Busy page: REJECT NOW</strong>The latch cannot be granted immediately, so the conditional path returns failure without joining a wait queue.</li>
+  </ol>
+
+  <div class="callout">
+    <code>UNCONDITIONAL → CONDITIONAL → IMMEDIATE FAILURE</code><br>
+    There is no <code>timed sleep</code> anywhere in this chain.
+  </div>
+
+  <p>The source performs the rewrite at <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/page_buffer.c#L2273-L2283">page_buffer.c:2273–2283</a>. The conditional conflict then follows the explicit <a href="https://github.com/CUBRID/cubrid/blob/1185f16d7e5f540ffdad4509cbd061ef0535f4df/src/storage/page_buffer.c#L6543-L6577">reject-request branch</a>.</p>
+
+  <section class="question">
+    <p class="meta">One-line retrieval</p>
+    <h2>Close the lesson and fill the blanks</h2>
+    <p>The disk manager requested ________. Zero-wait changed it to ________. Because the page was busy, the request ________.</p>
+  </section>
+
+  <footer>
+    Use exactly these ideas, but write the final verb in your own words. Ask the teacher if “conditional” still feels backwards.
+  </footer>
+</main>
+</body>
+</html>
