@@ -1,7 +1,7 @@
 # [CBRD-27335] Add PGO build option for GCC (PoC)
 
 - JIRA: https://jira.cubrid.org/browse/CBRD-27335
-- Source commit: `3da1e21e8` (base: develop `95b79e7ed`)
+- Source commit: `2adb33a37` (base: develop `04620b2ce`)
 
 ## Purpose
 
