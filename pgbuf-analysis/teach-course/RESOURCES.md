@@ -8,6 +8,8 @@
   Primary authority for the public macros, modes, watcher types, and debug/release boundary. Use it whenever a caller contract is discussed.
 - [Progressive `pgbuf` question bank](reference/pgbuf-question-bank.html)
   Thirty-eight source-backed questions with visible model answers and correctness explanations. Use for self-study, presentation rehearsal, and targeted drilling by question number.
+- [Structure map reference card](reference/pgbuf-structure-map.html)
+  Printable glossary of the pool's internal data structures (`PGBUF_BCB`, hash/lock chains, LRU+AOUT, holder ledger) with the question each answers, its protecting lock, and source lines. Use whenever a mechanism discussion needs the "which structure owns this state?" answer.
 - [Durability contract card](reference/pgbuf-durability-contract.html)
   Printable separation of WRITE ownership, durable WAL, and later page-image propagation. Use when defending why commit does not wait for dirty data-page flush.
 - [Offline book: _CUBRID Page Buffer Field Guide_](../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/index.html)

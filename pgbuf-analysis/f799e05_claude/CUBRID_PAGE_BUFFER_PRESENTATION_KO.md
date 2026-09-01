@@ -26,7 +26,7 @@
 | 시간 | 화면 | 청중에게 먼저 물을 질문 |
 |---:|---|---|
 | 0–4분 | 한 문장 thesis | `PAGE_PTR`를 반환하기 전에 무엇이 참이어야 하는가? |
-| 4–9분 | 네 개 상태 축과 object graph | `PAGE_PTR` 주소가 page identity인가? |
+| 4–9분 | 네 개 상태 축, object graph와 규모감 | `PAGE_PTR` 주소가 page identity인가? `data_buffer_size=512M`이면 pool 메모리는 512MB인가? |
 | 9–16분 | acquisition chooser와 fetch mode | “없음”이 정상인 호출은 무엇인가? |
 | 16–24분 | hit/miss/wait/retry | 같은 cold VPID를 두 thread가 읽으면 누가 I/O를 하는가? |
 | 24–30분 | latch/holder/unfix | pointer 하나에 release debt가 여러 개일 수 있는가? |
@@ -97,6 +97,31 @@ flowchart LR
 | holder | current thread | 이 thread가 같은 BCB를 hold하는 동안 | global pin count |
 
 `PAGE_PTR` 주소가 unfix 뒤에도 우연히 readable할 수 있다. 그래도 contract는 끝났다. 그 frame은 나중에 다른 `VPID`로 reuse될 수 있으므로, pointer나 page 내부 record/slot 주소를 보관하면 use-after-unfix가 된다.
+
+### 2.1 그 명사들은 몇 개씩, 얼마나 큰가
+
+여섯 명사에 규모를 붙이면 object graph가 메모리 실물이 된다. 전부 server 프로세스당 하나뿐인 static 전역 `pgbuf_Pool`에 매달려 있고, 요점은 **개수의 단위가 세 종류(frame당 / thread당 / transaction당)로 갈린다**는 것이다.
+
+| 구조 | 몇 개? | 크기 (기본 `data_buffer_size` 512MB, 16KB page) | 근거 |
+|---|---|---|---|
+| frame (`iopage_table`) | frame당 1 — `num_buffers` = 512MB ÷ 16KB = 32,768 | ≈512MB, 메모리의 본체 | `page_buffer.c:1713`, `page_buffer.c:5583-5584` |
+| BCB (`BCB_table`) | frame당 1, frame과 1:1 | 개당 ~140B(x86-64 추정) → ≈5MB | `page_buffer.c:5569-5581` |
+| hash bucket (`buf_hash_table`) | 고정 `1<<20` = 1,048,576 — pool 크기와 무관 | 개당 ~56B(x86-64 추정) → ≈56MB 고정 | `page_buffer.c:295-296` |
+| buffer lock slot (`buf_lock_table`) | thread당 1 — 한 thread는 동시에 한 page만 적재 | 수 KB | `page_buffer.c:5713` |
+| LRU list | shared는 자동(`MAX_NTRANS` 기준, list당 ≥1000 pages, 최소 4 → 32,768 pages면 ≈32개), private는 transaction당 1 + vacuum worker당 1 | 개당 ~100B대 | `page_buffer.c:5749-5763`, `page_buffer.c:13965`, `log_common_impl.h:49-52` |
+| holder | thread당 anchor 1(정확히 64B) + holder 7개 사전 할당 | 수 KB | `page_buffer.c:490`, `page_buffer.c:90` |
+
+세 가지 관찰이 이후 섹션의 복선이다.
+
+1. "thread당"인 것은 buffer lock slot과 holder뿐이다 — 둘 다 "이 thread가 지금 하는 일"(적재 1건, fix 목록)의 추적이다. §4의 miss 직렬화와 §5의 두 장부가 여기서 나온다.
+2. "transaction당"인 것은 private LRU 하나뿐이다 — §8 replacement quota의 단위가 thread가 아닌 이유.
+3. hash table은 pool을 줄여도 안 줄어드는 고정 비용이다. bucket을 기본 frame 수의 32배로 과할당해 chain 평균 길이를 1 미만으로 만든 설계다 — §4에서 hash 탐색을 싸다고 말할 수 있는 근거.
+
+> [!speaker] 발표자 노트 — 1분
+> - Prediction: "`data_buffer_size=512M`을 주면 buffer pool 메모리는 512MB인가요?" — 아니다. hash ≈56MB, BCB ≈5MB 등 metadata가 얹힌다.
+> - 시간이 밀리면 표는 눈으로만 가리키고 "512는 512가 아니다, 단위는 frame·thread·transaction 세 종류다" 한 문장으로 끝낸다.
+> - AOUT(2Q history)은 기본 `pb_aout_ratio=0.0`이라 꺼져 있다 — §8에서 "CUBRID는 2Q다"라고 단정하지 않는 안전선의 근거 (`system_parameter.c`의 default, `page_buffer.c:5818` 상한 32,768).
+> - Evidence: `page_buffer.c:1713`, `page_buffer.c:295-296`, `page_buffer.c:5713`, `page_buffer.c:13965`.
 
 ## 3. Caller가 먼저 고르는 acquisition contract
 
