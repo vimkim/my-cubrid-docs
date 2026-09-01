@@ -131,6 +131,29 @@ stateDiagram-v2
 |---|---|---|---|---|
 | same scan cold→warm? | first ioreads 38, second 0; checksum identical | miss/load와 resident-hit halves exercised | catalog work, OS cache, prefetch | exact VPID, DWB-vs-volume, latency |
 
+> [!tip] Surprising moment — `ioreads` ≠ physical disk I/O
+> `Num_data_page_ioreads`는 `page_buffer.c:8497`에서 **DWB/main-volume source를 고르기 전에** 증가한다. 이후 `dwb_read_page()`가 error면 반환하고, image를 찾으면 DWB copy를 쓰며, error가 아닌 miss이면 `fileio_read()`로 내려간다. 따라서 `+1`은 old-page miss read attempt이지 storage device 완료 횟수가 아니다.
+
+```mermaid
+flowchart LR
+  M[old-page buffer miss] --> C[Num_data_page_ioreads +1]
+  C --> D{dwb_read_page result?}
+  D -- found --> W[DWB image copy]
+  D -- error --> E[return error]
+  D -- not found --> F[fileio_read main volume]
+  F --> U{kernel page cache or device?}
+  U --> X[counter alone: unknown]
+```
+
+| Counter에서 보이는 것 | Counter만으로 보이지 않는 것 |
+|---|---|
+| miss read attempt의 aggregate 수 | exact VPID 목록 |
+| 두 번째 scan의 추가 old-page read attempt가 0 | 모든 frame이 전체 시간 동안 resident였는지 |
+| page-buffer miss/load branch 진입 | DWB와 main volume 중 실제 source |
+| `fileio_read()`로 내려갈 가능성 | kernel page cache와 physical device 중 실제 공급자 |
+
+발표용 한 줄: **“이 counter는 buffer-pool miss의 read 시도를 세지, disk arm이 움직인 횟수를 세지 않는다.”**
+
 > [!speaker] 발표자 노트
 > - prediction: “OS cache가 warm이면 CUBRID miss가 아닌가?”
 > - 답의 핵: CUBRID buffer residency와 device/OS latency는 다른 layer다.
@@ -169,7 +192,7 @@ sequenceDiagram
   participant O as Current owner
   R->>B: incompatible latch request
   alt conditional
-    B-->>R: reject; no PAGE_PTR, no unfix
+    B-->>R: reject, no PAGE_PTR and no unfix
   else unconditional
     B->>Q: enqueue + bounded sleep
     O->>B: last unfix → NO_LATCH
@@ -238,7 +261,7 @@ sequenceDiagram
   participant DWB as TDE / DWB
   participant IO as Data volume
 
-  W->>B: mutate under WRITE; LSA + dirty
+  W->>B: mutate under WRITE, set LSA and dirty
   W->>B: unfix (still dirty resident)
   B->>B: mark FLUSHING, clear old DIRTY, copy image+LSA
   B->>LOG: force WAL through copied page LSA
@@ -246,9 +269,9 @@ sequenceDiagram
   B->>DWB: encrypt/copy slot (conditional)
   DWB->>IO: home write, or direct write
   par concurrent generation
-    W->>B: mutate again; set DIRTY
+    W->>B: mutate again, set DIRTY
   and completion
-    IO-->>B: clear FLUSHING; preserve new DIRTY
+    IO-->>B: clear FLUSHING, preserve new DIRTY
   end
 ```
 
@@ -270,7 +293,7 @@ flowchart TD
   Z -- no --> S
   Z -- yes --> D{clean, !flushing, !direct-victim?}
   D -- no --> Q[flush or skip]
-  D -- yes --> W{no latch waiters?}
+  D -- found --> W{no latch waiters?}
   W -- no --> S
   W -- yes --> R[recheck under protection]
   R --> E[hash remove + INVALID + reuse]
@@ -302,6 +325,9 @@ flowchart TD
 | dirty generation (`CMP-C008`) | DIRTY + oldest-unflush-LSA | BM_DIRTY + page LSN | oldest/newest LSN + flush list | partial analogy |
 | checkpoint/flush (`CMP-C009`) | LSA-bounded checkpoint | BufferSync | flush-list LSN limit | partial analogy |
 | startup recovery (`CMP-C010`) | boot restart + recovery fetch | StartupXLOG | recv recovery | partial analogy |
+| error/resource pressure (`CUBRID-C010,C012`; `PG-C001,C004`; `MYSQL-C001,C004`) | C error/timeout/direct-victim와 rare committed-accounting exception | all-pinned ERROR, I/O state, ResourceOwner cleanup | LRU scan→cleaner/single flush→wait, read/corruption error | partial analogy |
+| configuration/observability (`CUBRID-C005..008`; `PG-C004`; `MYSQL-C004`) | data buffer/latch/LRU/flush knobs; histogram/statdump | shared_buffers, I/O/bgwriter/checkpoint GUC; pg_stat_io/waits | pool/I/O/dirty/LRU knobs; status/INNODB_METRICS | partial analogy |
+| performance trade-offs (`CUBRID-C004,C005`; `PG-C004`; `MYSQL-C004`; `CMP-C007`) | hash/CAS, LRU zones, proactive cleaning | private pins, clock sweep/rings, paced writes | per-instance midpoint LRU, cleaner budget | partial analogy |
 
 > [!speaker] 발표자 노트
 > 함수명을 1:1로 연결하지 말고 responsibility, Interface, invariant 세 문장을 말한다.
@@ -312,15 +338,15 @@ flowchart TD
 
 - CUBRID public fetch/latch/watcher contract: `src/storage/page_buffer.h:172–249`
 - CUBRID fix/load: `src/storage/page_buffer.c:2260–2685, 8392–8634`
-- CUBRID latch/unfix/timed wait: `page_buffer.c:3062–3201, 6277–6883, 7281–7449`
-- CUBRID dirty/flush: `page_buffer.c:10723–10962`
+- CUBRID latch/unfix/timed wait: `page_buffer.c:3062–3201, 6277–6883, 7281–7590, 7724–7773`
+- CUBRID dirty/flush/victim exception: `page_buffer.c:9314–9538, 10723–10962, 16262–16296`
 - WAL gate: `src/transaction/log_page_buffer.c:4150–4189`
 - heap ordered ownership: `src/storage/page_buffer.c:12249–13063`; `src/storage/heap_file.c:25543–25625`
 - B-tree traversal/restart: `src/storage/btree.c:16867–17013, 23734–24089`
 - recovery physical undo/redo: `src/transaction/log_recovery.c:150–408, 6399–6431`
 - runtime counter sites: `page_buffer.c:8497` (ioread), `:3049` (promotion), `:11674` (dirty-setting call), `:4167` (`Num_data_page_flushed`, victim candidates only); `perf_monitor.c:213` (name mapping); `scan_manager.c:6693,6757` (noncovered/covered rows)
-- PostgreSQL: `bufmgr.c:2177–2351, 2548–2681, 3170–3250, 3575–3845, 4509–4642, 7289–7445`; `freelist.c:169–321`; `xloginsert.c:612–880`
-- InnoDB: `buf0buf.cc:3696–3745, 4295–4505`; `mtr0mtr.cc:243–296`; `buf0flu.cc:943–1038, 1834–1905`; `buf0dblwr.cc:2525–2660`
+- PostgreSQL: `bufmgr.c:2177–2351, 2548–2681, 3170–3250, 3575–3845, 4509–4642, 7289–7445`; `freelist.c:169–321`; `xloginsert.c:612–880`; `guc_parameters.dat:311–855,1408–1414,2714–2723`; `pgstatfuncs.c:1370–1455`
+- InnoDB: `buf0buf.cc:3696–3745, 4295–4505`; `mtr0mtr.cc:243–296`; `buf0flu.cc:943–1038, 1834–1905`; `buf0dblwr.cc:2525–2660`; `buf0lru.cc:493–680`; `ha_innodb.cc:22231–22391,22522–22687,23090–23100`; `srv0srv.cc:1562–1631`; `srv0mon.cc:225–570,1627–1646`
 
 ---
 

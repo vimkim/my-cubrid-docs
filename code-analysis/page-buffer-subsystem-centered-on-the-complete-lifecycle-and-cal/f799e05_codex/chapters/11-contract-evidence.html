@@ -485,7 +485,7 @@ flush_snapshot(bcb):
 </tr>
 </tbody>
 </table></div>
-<p>Setup receipt는 <code>rebind-createdb</code>/<code>rebind-setup</code>, isolated server boundary는 <code>rebind-start</code>, final DB cleanup은 <code>rebind-cleanup</code>이다. <code>rebind-backup-scratch-cleanup</code>은 owned temporary backup directory 제거와 부재를 별도로 검증했다. 이전 provenance의 receipts는 immutable history로 보존했다.</p></section><section id="source-index" data-claim-id="CUBRID-C001 CUBRID-C002 CUBRID-C003 CUBRID-C004 CUBRID-C005 CUBRID-C006 CUBRID-C007 CUBRID-C008 CUBRID-C009 CUBRID-C010 CUBRID-C011 CUBRID-C012"><h2>Complete source/evidence index</h2>
+<p>Setup receipt는 <code>rebind-createdb</code>/<code>rebind-setup</code>, isolated server boundary는 <code>rebind-start</code>, final DB cleanup은 <code>rebind-cleanup</code>이다. <code>rebind-backup-scratch-cleanup</code>은 owned temporary backup directory 제거와 부재를 별도로 검증했다. 이전 provenance의 receipts는 immutable history로 보존했다.</p></section><section id="source-index" data-claim-id="CUBRID-C001 CUBRID-C002 CUBRID-C003 CUBRID-C004 CUBRID-C005 CUBRID-C006 CUBRID-C007 CUBRID-C008 CUBRID-C009 CUBRID-C010 CUBRID-C011 CUBRID-C012 PG-C001 PG-C002 PG-C003 PG-C004 MYSQL-C001 MYSQL-C002 MYSQL-C003 MYSQL-C004 CMP-C001 CMP-C002 CMP-C003 CMP-C004 CMP-C005 CMP-C006 CMP-C007 CMP-C008 CMP-C009 CMP-C010"><h2>Complete source/evidence index</h2>
 <div class="table-wrap"><table>
 <caption>Mechanism→primary evidence</caption>
 <thead><tr>
@@ -511,7 +511,7 @@ flush_snapshot(bcb):
 </tr>
 <tr>
 <td>normal/lock-free holder allocation-after-grant failure</td>
-<td><code>page_buffer.c:6277–6634,7724–7773</code></td>
+<td><code>page_buffer.c:6277–6634,7452–7590,7724–7773</code></td>
 <td>CUBRID-C012</td>
 </tr>
 <tr>
@@ -526,7 +526,7 @@ flush_snapshot(bcb):
 </tr>
 <tr>
 <td>flush/WAL/victim</td>
-<td><code>page_buffer.c:10723–10962,9314–9538; log_page_buffer.c:4150–4189</code></td>
+<td><code>page_buffer.c:10723–10962,9314–9538,16262–16296; log_page_buffer.c:4150–4189</code></td>
 <td>CUBRID-C004/C008/C010</td>
 </tr>
 <tr>
@@ -536,17 +536,17 @@ flush_snapshot(bcb):
 </tr>
 <tr>
 <td>PostgreSQL</td>
-<td><code>bufmgr.c; freelist.c; xloginsert.c; xlog.c; nbtsearch.c; heapam_indexscan.c</code></td>
+<td><code>bufmgr.c; freelist.c; xloginsert.c; xlog.c; nbtsearch.c; heapam_indexscan.c; guc_parameters.dat; pgstatfuncs.c</code></td>
 <td>PG-C001..004</td>
 </tr>
 <tr>
 <td>InnoDB</td>
-<td><code>buf0buf.cc; mtr0mtr.cc; btr0cur.cc; buf0flu.cc; buf0dblwr.cc; buf0lru.cc; log0recv.cc</code></td>
+<td><code>buf0buf.cc; mtr0mtr.cc; btr0cur.cc; buf0flu.cc; buf0dblwr.cc; buf0lru.cc; log0recv.cc; ha_innodb.cc; srv0srv.cc; srv0mon.cc</code></td>
 <td>MYSQL-C001..004</td>
 </tr>
 <tr>
 <td>same-axis comparisons</td>
-<td>각 row가 CUBRID/PostgreSQL/InnoDB source ref 세 개를 가진다.</td>
+<td>10개 named CMP row와 error/configuration/performance row가 세 DB의 claim/source ref를 가진다.</td>
 <td>CMP-C001..010</td>
 </tr>
 <tr>

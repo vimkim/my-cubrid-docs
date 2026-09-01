@@ -12,7 +12,7 @@
 <h1>09. 함수명이 아니라 responsibility를 비교한다</h1>
 <section class="callout">
   <h2>학습 목표와 concrete scenario</h2>
-  <p>세 엔진을 identity, ownership, publication, caller, durability, recovery와 policy라는 같은 축으로 비교한다.</p>
+  <p>세 엔진을 identity, ownership, publication, caller, durability, recovery, error/resource pressure, configuration/observability와 performance라는 같은 축으로 비교한다.</p>
   <p><strong>질문:</strong> 함수 이름이 비슷하지 않아도 책임이 같을 수 있고, 이름이 비슷해도 비동치인 이유는 무엇인가?</p>
   <p><strong>직관:</strong> 한 page journey를 같은 열에 놓고, 직접 동치·부분 유사·비동치 판정을 분리한다.</p>
 </section>
@@ -31,7 +31,7 @@
 <section id="cross-database-comparison" data-claim-id="PG-C001 PG-C002 PG-C003 PG-C004 MYSQL-C001 MYSQL-C002 MYSQL-C003 MYSQL-C004 CMP-C001 CMP-C002 CMP-C003 CMP-C004 CMP-C005 CMP-C006 CMP-C007 CMP-C008 CMP-C009 CMP-C010">
   <h2>Same-axis verdict</h2>
   <div class="table-wrap"><table>
-    <caption>세 엔진의 10축 analogy classification — exact class vocabulary</caption>
+    <caption>세 엔진의 13축 analogy classification — exact class vocabulary</caption>
     <thead><tr><th>Axis</th><th>CUBRID</th><th>PostgreSQL</th><th>InnoDB</th><th>Class</th></tr></thead>
     <tbody>
       <tr><td>miss identity/publication <span class="claim-id">CMP-C001</span></td><td>VPID lock, publish after latch</td><td>invalid mapping before I/O</td><td>BUF_IO_READ before I/O</td><td>partial analogy</td></tr>
@@ -44,6 +44,9 @@
       <tr><td>dirty generation <span class="claim-id">CMP-C008</span></td><td>DIRTY + oldest-unflush-LSA</td><td>BM_DIRTY + page LSN</td><td>oldest/newest LSN + flush list</td><td>partial analogy</td></tr>
       <tr><td>checkpoint/flush <span class="claim-id">CMP-C009</span></td><td>LSA-bounded checkpoint flush</td><td>BufferSync</td><td>flush-list LSN limit</td><td>partial analogy</td></tr>
       <tr><td>startup recovery <span class="claim-id">CMP-C010</span></td><td>boot restart + recovery fetch modes</td><td>StartupXLOG</td><td>recv recovery</td><td>partial analogy</td></tr>
+      <tr><td>error/resource pressure <span class="claim-id">CUBRID-C010 CUBRID-C012 PG-C001 PG-C004 MYSQL-C001 MYSQL-C004</span></td><td>C return/error + timeout/direct-victim; rare committed-accounting exceptions (<code>page_buffer.c:6277–6634,7452–7590,7724–7773,8392–8565</code>)</td><td>all-pinned scan ERROR, I/O error state와 ResourceOwner cleanup (<code>freelist.c:169–321; bufmgr.c:2177–2351,4509–4642</code>)</td><td>free-list/LRU scan→cleaner request→single flush→wait, read/corruption errors (<code>buf0lru.cc:493–680; buf0buf.cc:4294–4443,5731–5998</code>)</td><td>partial analogy</td></tr>
+      <tr><td>configuration/observability <span class="claim-id">CUBRID-C005 CUBRID-C006 CUBRID-C007 CUBRID-C008 PG-C004 MYSQL-C004</span></td><td><code>data_buffer_size</code>, latch timeout, LRU/flush knobs; histogram/statdump/page-buffer status, increment-site caveat (<code>page_buffer.c:3049,4167,8497,11674; perf_monitor.c:213</code>)</td><td><code>shared_buffers</code>, I/O/bgwriter/checkpoint GUC; <code>pg_stat_io</code>와 wait events (<code>guc_parameters.dat:311–855,1408–1414,2714–2723; pgstatfuncs.c:1370–1455</code>)</td><td>buffer size, I/O capacity, dirty/LRU knobs; status와 <code>INNODB_METRICS</code> (<code>ha_innodb.cc:22231–22391,22522–22687,23090–23100; srv0srv.cc:1562–1631; srv0mon.cc:225–570,1627–1646</code>)</td><td>partial analogy</td></tr>
+      <tr><td>performance trade-offs <span class="claim-id">CUBRID-C004 CUBRID-C005 PG-C004 MYSQL-C004 CMP-C007</span></td><td>hash/CAS hot hit, LRU-chain scan, proactive dirty cleaning; zones/quota trade scan pollution와 no-victim latency</td><td>partitioned lookup/private pins, clock sweep, rings, sorted/paced writes; shared contention과 scan cost를 교환</td><td>per-instance hash/LRU, midpoint old/new aging, cleaner budgets; scan resistance와 write amplification을 교환</td><td>partial analogy</td></tr>
     </tbody>
   </table></div>
   <aside class="callout"><strong>Heavy question.</strong> “모두 WAL-before-data면 flush가 equivalent 아닌가?”에 completion boundary, torn-page mechanism, re-dirty accounting, checkpoint/replacement policy로 반박하라.</aside>

@@ -1,27 +1,26 @@
-# Independent Report Audit — Round 4
+# Independent Report Audit — Render-fix Round
 
-- Reviewer: `codex-isolated-page-buffer-reviewer`
+- Reviewer: `/root/pgbuf_renderfix_audit`
 - Phase: `report`
-- Isolation: fresh completeness review of the frozen report materials only
+- Isolation: fresh read-only reviewer over the exact `reportctl materials --phase report` set
+- Reviewed files: 258
+- Deterministic materials digest: `e32f7b7972e238aa58660cc01d313ba9e2ba8f9ac12327b10c4b79307243341b`
 - Verdict: `APPROVED`
 
 ## Review summary
 
-고정 scope, provenance, report manifest, 전체 claim ledger, 11개 HTML 장, Notion 문서, 실험 manifest와 raw receipt, 네 퀴즈 및 안전 runner, 그리고 필요한 CUBRID/PostgreSQL/MySQL 고정 소스 위치를 독립적으로 대조했다.
+고정 scope와 provenance, 30개 claim의 114개 pinned source reference, 11개 HTML 장, Notion companion, 네 실험과 raw receipt, 네 퀴즈·model answer, clean source/build/cleanup 상태를 독립적으로 대조했다. 18개 coverage obligation은 모두 충족되며 substantive finding은 없다.
 
-18개 coverage obligation 모두에 대해 인과적 완결성, 증거 충실도, source/runtime 경계, 비교 의미론, 발표 읽기 경로, source-closed 재구현 준비도를 검토했다. CUBRID의 fix/latch/holder/unfix, dirty/WAL/flush/replacement, lifecycle 및 실패 경로가 Ch11 규범 계약과 연결되고, PostgreSQL 및 MySQL 비교의 열 개 행은 각 DB 근거를 모두 포함한다.
+사용자가 요청한 **Surprising moment — `ioreads` ≠ physical disk I/O** 카드는 counter 증가(`page_buffer.c:8497`)가 `dwb_read_page()`보다 먼저 일어나며 DWB error/hit/miss와 이후 `fileio_read()` source를 aggregate 값만으로 구분하지 못한다는 사실을 정확히 설명한다. Exact VPID, OS cache/device service와 continuous residency도 과장해 추론하지 않는다.
 
-네 실험의 수치·실패·정리 결과는 raw receipt와 일치한다. 네 퀴즈는 기대 시간과 단일 `quiz/run-one.sh` 절차를 제공한다. runner는 기존 DB 정확 일치 사전검사, 성공한 createdb 뒤 소유권 설정, EXIT/INT/TERM trap, 소유한 DB만 삭제하는 규칙을 가지며 `quiz-safe-runner-selfcheck-r1`에서 성공 및 최종 부재가 확인되었다.
+Copyparty static checker가 통과했고, viewer와 같은 vendored Mermaid bundle에서 8개 block 모두 parse됐다. 기존 sequence message 안의 세미콜론은 호환되는 comma/text로 교정됐다. 의도된 MathJax equation은 없다. Browser-capable tool이 없어 live DOM/console 검증은 수행하지 않았으며 이를 통과했다고 주장하지 않는다.
 
-Ch11의 `pgbuf_fix` 실패 계약은 일반 실패 정리로 한정되어 있으며, C010 DWB 직접 반환과 C012 fcnt 증가 후 holder 할당 실패 예외, 호출자 소유권과 내부 계수 상태의 경계를 분명히 구분한다.
+이전 감사에서 발견한 `fcnt` 회계, normal/lock-free holder-allocation failure, question/answer numbering, avoid-deallocation semantics, exact counter increment sites, orientation, cross-database evidence와 E1/E2 수치 문제를 현재 재료에서 다시 확인했다. 특히 blocked waiter grant는 `pgbuf_wakeup_reader_writer()`의 latch/`fcnt` commit과 awakened holder allocation으로 닫혔고, avoid-deallocation은 vacuum deallocation만 보호하며 victimization을 막지 않는다는 경로가 claim/source index에 포함된다.
 
-## Prior findings
+PostgreSQL/MySQL 비교는 publication, ownership, latch/release, index-to-row, WAL/redo, torn-page defense, replacement, dirty generation, checkpoint, recovery뿐 아니라 error/resource pressure, configuration/observability, performance trade-offs까지 13개 동일 축에서 pinned evidence와 함께 다룬다.
 
-Round 1의 F1–F7, Round 2의 F1–F4, Round 3의 F1–F2를 현재 봉인 재료에서 모두 재검토했으며 전부 `RESOLVED`이다. 미해결 substantive finding은 없다.
+Runtime receipt는 E1 `38→0`, E2 detailed promotion `689`와 oracle에서 제외한 derived `69589.00`, E3 `100/0` 대 `0/100`, E4 generation `1/1`, dirties `58430`, backup success와 일치한다. Owned database와 temporary backup directory는 부재한다.
 
-## Verification
-
-봉인 직전 `reportctl verify --phase report`는 감사 파일 부재에 관한 예상 오류만 보고했다. `reportctl materials --phase report`가 반환한 전체 파일-해시 매핑을 JSON 감사 증거에 그대로 기록했다. 감사 파일 작성 후 최종 verifier를 다시 실행한다.
+감사 직전 verifier는 이전 seal 불일치 한 건만 보고했고 provenance와 quiz/grill structural error는 없었다. JSON seal은 감사자가 승인한 258개 파일의 exact hash map을 기록한다. `isolated_reviewer=true`는 host task boundary의 선언이며 cryptographic independence proof는 아니다.
 
 VERDICT: APPROVED
-
