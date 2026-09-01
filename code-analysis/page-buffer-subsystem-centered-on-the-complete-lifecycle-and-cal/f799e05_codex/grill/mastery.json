@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "state": "WAIT_FOR_USER",
+  "concepts": {
+    "scope-interface-seams": "MASTERED",
+    "data-ownership-lifetime": "MASTERED",
+    "lifecycle-state-machines": "MASTERED",
+    "concurrency": "MASTERED",
+    "durability-recovery-failures": "MASTERED",
+    "policy-performance": "MASTERED",
+    "experiment-interpretation": "PARTIAL",
+    "cross-database-non-equivalence": "NOT_STARTED"
+  },
+  "capstone": "NOT_STARTED",
+  "current": {
+    "concept": "experiment-interpretation",
+    "attempt": 1,
+    "question_ko": "같은 PK range에서 covered SELECT는 covered 100/noncovered 0, payload SELECT는 noncovered 100, UPDATE는 100 rows와 dirties 300을 보였습니다. 이 experiment가 지지하는 결론과, 이 결과만으로는 증명할 수 없는 결론을 각각 설명하세요.",
+    "model_answer_ko": "이 관찰은 해당 build와 workload에서 covered query와 heap payload access의 counter signature가 달랐고, UPDATE가 dirty holder activity를 만들었다는 방향성을 지지한다. 따라서 B-tree에서 heap으로의 handoff 및 write caller contract와 일치한다. 그러나 aggregate counter만으로 exact C call stack, 모든 error path의 balanced unfix, ordered refix interleaving, recovery fetch behavior를 증명할 수는 없다. Catalog access, prefetch, internal index page, warmed cache, optimizer choice가 counter에 섞일 수 있다.",
+    "why_correct_ko": "Runtime observation은 통제한 한 사례의 결과를 증명하지만 내부 인과관계와 모든 실행 경로를 자동으로 증명하지 않는다. Exact mechanism은 pinned source call-path evidence와 결합해야 하며, 1회 관찰과 aggregate counter의 alternative explanation을 한계로 남겨야 한다.",
+    "assessment_mode": "MODEL_VISIBLE_CAUSAL_EXPLANATION",
+    "references": [
+      "chapters/06-caller-contracts.html#caller-contracts",
+      "quiz/quiz-3"
+    ]
+  }
+}
