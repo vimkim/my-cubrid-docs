@@ -10,12 +10,12 @@
 
 **리뷰 일시:** 2026-09-01
 
-> **TL;DR:** CBRD-26786 동작 스펙은 충족하고 이전의 도달 가능한 blocker 2건도 해결됐습니다. 다만 전체 PR 범위의 `src/query/vacuum.c` 에 C++ 전용 문법을 `INDENT-OFF/ON` 으로 감싸지 않은 프로젝트 규칙 위반 1건이 남아 있어 현재 판정은 `REJECT` 입니다.
+> **TL;DR:** CBRD-26786 동작 스펙은 충족하고 이전의 도달 가능한 blocker 2건도 해결됐습니다. legacy numerable OOS 파일은 지원 범위 밖이며, Standards/Spec 양쪽에 blocking finding이 없어 현재 판정은 `APPROVE` 입니다.
 
 ## Summary
 
 - **Spec:** 0 findings. vacuum fast path, 2단계 판정, LSA 게이트, per-VFID reclaim debt/cursor, boot rule, 단일 성장 지점, SA/non-MVCC eager 경로가 빈 페이지 회수 불변식과 일치합니다.
-- **Standards:** blocking 1건. legacy `.c` 파일에 추가한 C++ 문법이 필수 GNU indent 보호 구간 밖에 있습니다.
+- **Standards:** blocking 0건. `oos_touched_pages.empty ()` 는 의미상 C++ method 호출이지만 문법 자체는 C에서도 유효하므로 GNU indent 보호 규칙 위반이 아닙니다.
 - **기존 blocker 정리:** foreign OOS page stale hint와 transient WRITE-latch miss는 `9d55b4484` 에서 각각 소유권 검사와 reclaim debt 보존으로 해결됐습니다.
 - **legacy numerable:** 미출시 중간 `feat/oos` 바이너리가 만든 DB를 계속 사용하는 경우에만 도달합니다. 현재 OOS 생성 경로는 항상 non-numerable이며 출시/지원 DB 포맷에는 OOS 자체가 없으므로 이 PR의 지원 범위 밖입니다.
 - **검증:** `debug_gcc` 빌드 성공, 구성된 OOS 테스트 27/27 통과 (0 failures, 106.98초). `git diff --check origin/feat/oos...9d55b4484` 도 통과했습니다.
@@ -26,13 +26,9 @@
 
 ### Blocking
 
-- `src/query/vacuum.c:1945` — `!oos_touched_pages.empty ()` 는 C++ member-call 문법이지만, CUBRID의 legacy `.c`/`.h` 규칙이 요구하는 정확한 `/* *INDENT-OFF* */` / `/* *INDENT-ON* */` 보호 구간 밖에 있습니다. GNU indent가 C++ 문법을 안전하게 다룬다고 가정할 수 없으므로 해당 조건문을 보호 구간으로 감싸야 합니다.
+**0 findings.**
 
-```c
-/* *INDENT-OFF* */
-  if (error_code == NO_ERROR && !oos_touched_pages.empty ())
-/* *INDENT-ON* */
-```
+초기 리뷰에서 `src/query/vacuum.c:1945` 의 `!oos_touched_pages.empty ()` 를 C++ 전용 syntax로 분류했으나 철회합니다. `xxx.yyy()` 는 C에서도 `yyy` 가 struct의 function-pointer member일 때 유효한 문법입니다. 여기서는 `VACUUM_OOS_TOUCHED_PAGES` 가 `std::vector<VPID>` 이므로 의미상 C++ method 호출이지만, GNU indent 관점의 문법은 C에서 해석 가능한 member access + call입니다. 따라서 “C++-specific syntax는 `INDENT-OFF/ON` 으로 보호” 규칙의 위반 근거가 되지 않습니다.
 
 ### Non-blocking
 
@@ -80,9 +76,9 @@ CBRD-26786의 핵심 계약은 다음 두 문장입니다.
 
 ## Decision
 
-- **Review points:** 1 blocking, 1 non-blocking
-- **Standards:** FAIL — `.c` C++ syntax의 필수 indent guard 누락
+- **Review points:** 0 blocking, 1 non-blocking
+- **Standards:** PASS — 0 blocking findings
 - **Spec:** PASS — 0 findings
-- **Decision:** **REJECT**
+- **Decision:** **APPROVE**
 
-`src/query/vacuum.c:1945` 의 guard를 수정한 뒤 재리뷰하면 됩니다. 이 판정에서는 full PR CI를 새로 요청하지 않았습니다.
+기존 도달 가능한 blocker 2건은 해결됐고 legacy numerable finding은 지원 범위 밖입니다. 이 판정에 따라 current PR head에 full CI (`/run all`)를 요청합니다.
