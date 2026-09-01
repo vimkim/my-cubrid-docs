@@ -3,33 +3,65 @@
 - **PR**: [CUBRID/cubrid#7617](https://github.com/CUBRID/cubrid/pull/7617) — [CBRD-26786] OOS 빈 페이지 회수
 - **리뷰 기준 head**: `66cd3cc` / **본 보고서 기준 head**: `8ba9b5398`
 - **작성일**: 2026-09-01 (agent: claude, 저자 검수)
+- **쉬운 설명 개정**: 2026-09-01 (agent: codex)
 
-리뷰 항목마다 ① 문제 요약 ② 수정 코드 ③ 그 코드가 왜 문제를 고치는지의 검증 근거를 정리한다. 리뷰가 옛 head 를 기준으로 작성된 뒤 커밋 스택 (`50c18b7de` → `b43950a38` → `ac926cb5b` → `132163dab` → `7f3030a26`) 이 올라갔고, 리뷰 후 신규 수정은 `8ba9b5398` 하나다.
+리뷰 항목마다 ① 실제로 어떤 일이 벌어지는지 ② 왜 위험한지 ③ 어떻게 고쳤는지 ④ 무엇으로 검증했는지를 순서대로 설명한다. 리뷰가 옛 head 를 기준으로 작성된 뒤 커밋 스택 (`50c18b7de` → `b43950a38` → `ac926cb5b` → `132163dab` → `7f3030a26`) 이 올라갔고, 리뷰 후 신규 수정은 `8ba9b5398` 하나다.
+
+## 먼저 읽기: blocker 두 건을 한눈에
+
+| 항목 | 쉽게 말하면 | 실제 위험 |
+|---|---|---|
+| **B1** | OOS 가 오래된 "빈 공간 메모"를 믿고, 이제는 다른 용도로 쓰이는 페이지에 데이터를 쓸 수 있었다. | 다른 파일의 메타데이터 손상 |
+| **B2** | 빈 페이지 회수를 한 번 시도했다가 실패하면, 그 페이지를 다시 찾는 장치가 없었다. | 빈 공간이 있어도 파일이 계속 커짐 |
+
+두 문제는 성격이 다르다. **B1 은 잘못된 페이지에 쓰는 정확성 문제**이고, **B2 는 빈 페이지를 영원히 잊을 수 있는 공간 회수 문제**다. 둘 다 실제 데이터베이스 손상 또는 반복 가능한 파일 증가로 이어질 수 있으므로 merge blocker 로 분류됐다.
+
+> **문서 범위:** 아래 B1 수정 설명은 보고서 기준 head `8ba9b5398` 의 비-OOS 페이지 타입 방어를 다룬다. 이후 `9d55b4484` 에서 타입이 같은 다른 OOS 파일의 페이지도 소유권 검사로 거부하도록 보강됐고, `bd0766dbb` 에서 그 소유권 검사의 assertion 정책만 정리됐다.
 
 ---
 
 ## B1. stale bestspace 힌트가 재할당된 비-OOS 페이지를 가리킬 때 쓰기 손상 (blocker)
 
-### Problem
+### 한 문장으로 설명
 
-bestspace 힌트 (해시 캐시 / 헤더 best[]) 는 비영속 힌트라서, 힌트가 가리키던 OOS 페이지가 ① 회수 (dealloc) 되고 ② 다른 파일이 다른 용도 (예: `PAGE_FTAB`) 로 재할당한 뒤에도 살아남을 수 있다. 기존 방어는 "죽은 페이지 fix 는 `ER_PB_BAD_PAGEID` 로 실패한다" 하나뿐이었는데, 이 그물은 **페이지가 죽어 있는 동안**만 유효하다 — 재할당되어 다시 유효해진 페이지는 fix 가 성공한다. 그 뒤의 판정 (`spage_max_space_for_new_record`) 은 페이지 타입을 확인하지 않았으므로, FTAB 초기화가 지우지 않은 잔재 바이트가 우연히 그럴듯한 슬롯 헤더로 읽히면 INSERT 가 **남의 파일테이블 페이지에 레코드를 쓰고 WAL 로깅**까지 진행한다. release 빌드에서는 assert 가 서지 않아 redo 로 재현되는 영구 손상이 된다 (리뷰어 실측 재현).
+OOS 가 "이 페이지에는 빈 공간이 있다"는 오래된 힌트를 따라갔는데, 그 페이지가 이미 다른 파일의 메타데이터 페이지로 재사용된 경우에도 OOS 레코드를 써 버릴 수 있었다.
 
-읽기 전용 세 지점 (sync 스캔·통계 수집·회수기) 은 이미 `ptype == PAGE_OOS` 를 확인하고 있었고, **쓰기로 이어지는 유일한 경로인 lookup 만** 확인이 없었다.
+### 어떻게 발생하는가
 
-### Fix (commit `8ba9b5398`, `src/storage/oos_file.cpp` — `oos_stats_find_page_in_bestspace`)
+bestspace 힌트는 정확성을 보장하는 소유권 정보가 아니라, INSERT 를 빠르게 하기 위해 저장해 둔 **페이지 번호 메모**다. 따라서 실제 페이지의 수명과 힌트의 수명이 어긋날 수 있다.
 
-조건부 fix 성공 직후, 페이지의 다른 어떤 정보도 신뢰하기 전에 타입을 재검증하고, 탈락 시 힌트를 퇴출한다. 퇴출 로직은 기존 `ER_PB_BAD_PAGEID` 분기와 공용 헬퍼로 묶었다 (리뷰 제안 그대로).
+예를 들어 다음 순서가 가능했다.
+
+1. OOS 가 `page 100` 에 빈 공간이 있다고 기록한다.
+2. 나중에 `page 100` 이 완전히 비어서 파일 관리자에게 반환된다.
+3. 파일 관리자가 같은 물리 페이지를 다른 파일의 파일테이블 페이지 (`PAGE_FTAB`) 로 재사용한다.
+4. 오래된 OOS 힌트는 여전히 `page 100` 을 가리킨다.
+5. OOS INSERT 가 힌트를 따라 `page 100` 을 fix 한다. 여기서 fix 는 버퍼 풀에서 페이지 접근 권한과 latch 를 얻는 동작이다. 페이지가 현재 존재하므로 fix 는 성공한다.
+6. 기존 코드는 "fix 성공"만 확인하고 그 페이지를 OOS 페이지처럼 해석해 레코드를 쓸 수 있었다.
+
+```text
+오래된 힌트: "page 100 에 빈 공간 있음"
+                       │
+page 100: OOS → 반환 → 다른 파일의 PAGE_FTAB 로 재사용
+                       │
+                       └─ fix 성공 → OOS 레코드 쓰기 → 다른 파일 손상
+```
+
+기존 `ER_PB_BAD_PAGEID` 검사는 2번과 3번 사이, 즉 페이지가 아직 미할당 상태일 때만 막아 준다. 다른 용도로 재할당된 뒤에는 페이지가 다시 유효하므로 이 오류가 발생하지 않는다.
+
+### 왜 blocker 인가
+
+잘못 쓰는 대상이 단순한 빈 페이지가 아니라 **다른 파일이 사용 중인 페이지**다. 특히 `PAGE_FTAB` 같은 파일 메타데이터를 덮어쓰면 해당 파일 전체가 손상될 수 있다. release 빌드에서는 내부 assert 가 실행을 중단하지 않으며, 잘못된 쓰기가 WAL 에 기록되면 재시작 후 redo 에서도 다시 적용될 수 있다.
+
+읽기 전용 경로들은 이미 페이지 타입을 검사하고 있었다. 실제 OOS INSERT 로 이어지는 bestspace lookup 경로만 이 검사가 빠져 있었다.
+
+### 어떻게 고쳤는가
+
+commit `8ba9b5398` 의 `oos_stats_find_page_in_bestspace` 는 fix 직후, 빈 공간 정보를 읽기 전에 페이지 타입부터 확인한다. `PAGE_OOS` 가 아니면 페이지를 사용하지 않고 오래된 힌트를 삭제한 뒤 다음 후보를 찾는다.
 
 ```c
-/* The hint may point at a page that reclaim deallocated and another file already
- * reallocated for a different purpose (e.g. PAGE_FTAB). The ER_PB_BAD_PAGEID branch above
- * only covers the window while the page STAYS deallocated; once reallocated its fix
- * succeeds again, and only the page type betrays the stale hint. Handing it out would
- * corrupt the new owner — release builds do not stop at the slotted-page asserts — so
- * re-validate the type before trusting anything else on the page. */
 if (pgbuf_get_page_ptype (thread_p, *out_pgptr) != PAGE_OOS)
   {
-    oos_trace ("stale bestspace hint to reallocated non-OOS page ... — evicting");
     pgbuf_unfix_and_init (thread_p, *out_pgptr);
     oos_stats_evict_stale_hint (thread_p, &candidate_vpid, found_in_hash, bestspace, best_array_index);
     notfound_cnt++;
@@ -37,35 +69,63 @@ if (pgbuf_get_page_ptype (thread_p, *out_pgptr) != PAGE_OOS)
   }
 ```
 
-```c
-/* Drop a hint that turned out not to point at a usable OOS data page — deallocated, or
- * reclaimed and already reallocated for another purpose — from whichever store it came from. */
-static void
-oos_stats_evict_stale_hint (THREAD_ENTRY *thread_p, VPID *candidate_vpid, bool found_in_hash,
-                            OOS_BESTSPACE *bestspace, int best_array_index)
-```
+타입 검사와 이후 사용은 같은 page latch 를 잡은 상태에서 이루어진다. 따라서 검사를 통과한 뒤 사용하기 전에 그 페이지가 회수되고 다른 타입으로 바뀌는 경쟁은 일어날 수 없다.
 
-### Validation
+### 무엇으로 검증했는가
 
-- **논증**: 힌트 경로의 위험은 "죽은 페이지" 와 "되살아난 남의 페이지" 두 상태뿐이다. 전자는 기존 `ER_PB_BAD_PAGEID` 분기가, 후자는 신규 ptype 재검증이 막는다. 재검증은 fix 로 latch 를 쥔 상태에서 수행하므로 검사와 사용 사이에 타입이 바뀔 틈이 없다 (타입 변경은 dealloc→realloc 을 거쳐야 하고, 그것은 latch 를 쥔 페이지에는 불가능).
-- **회귀 테스트** (`unit_tests/oos/test_oos_bestspace.cpp`, `BestspaceStaleHintToNonOosPageIsRejected`): 파일 **자신의 파일테이블 헤더 페이지** (`PAGE_FTAB`, vpid = {fileid, volid}) 를 가리키는 독 힌트를 캐시에 심고, lookup 이 두 번 연속 그 페이지를 내주지 않으며 (첫 호출에서 퇴출됨) 반환 페이지의 타입이 항상 `PAGE_OOS` 임을 단정한다 — 별도 파일을 만들지 않고 "재할당된 비-OOS 페이지" 를 결정적으로 재현하는 구성이다.
-- 부수 수정: 회수가 헤더의 `second_best[]` 링도 함께 청소하도록 하여 (minor `:1336`), 힌트 저장소 어디에도 회수된 페이지가 남지 않는다. lookup 측 재검증은 그와 독립적인 최종 방어선이다.
+- 회귀 테스트 `BestspaceStaleHintToNonOosPageIsRejected` 가 일부러 `PAGE_FTAB` 을 가리키는 잘못된 힌트를 넣는다.
+- lookup 이 해당 페이지를 반환하지 않는지, 첫 실패에서 힌트를 제거하는지, 최종 반환 페이지가 `PAGE_OOS` 인지를 확인한다.
+- 회수 시 `second_best[]` 에 남은 같은 페이지도 청소한다. lookup 의 타입 검사는 힌트 청소가 누락되더라도 잘못 쓰지 않게 하는 마지막 방어선이다.
+
+> **후속 보강:** `PAGE_OOS` 타입만으로는 "내 OOS 파일의 페이지"와 "다른 OOS 파일의 페이지"를 구분할 수 없다. 이 경우는 이후 commit `9d55b4484` 의 `file_is_vpid_in_file` 소유권 검사와 `BestspaceStaleHintToForeignOosPageIsRejected` 테스트로 막았다.
 
 ---
 
 ## B2. "next vacuum cycle 에 재시도" 주석이 사실과 다름 (blocker)
 
-### Problem
+### 한 문장으로 설명
 
-회수 후보는 "이번 배치가 청크를 지운 페이지" 목록에서만 나오므로, busy 로 한 번 skip 된 페이지·eager 경로 (SA/카탈로그) 가 비운 페이지·PR 이전의 누적 빈 페이지를 다시 후보로 만드는 "다음 사이클" 은 존재하지 않았다. 주석만 재시도를 약속하고 있었다.
+빈 OOS 페이지를 회수하려다가 한 번 실패하면, 나중에 그 페이지를 다시 후보로 올리는 장치가 없어서 빈 페이지가 영구적으로 버려질 수 있었다.
 
-### Fix (commit `132163dab` — 성장 게이트 sweep; 주석 정비는 `7f3030a26`)
+### 어떻게 발생하는가
 
-주석 삭제에 그치지 않고 **약속된 재시도 메커니즘을 실물로 구현**했다. 파일의 새 페이지 할당 지점 전부를 하나의 헬퍼로 단일화하고, 할당 직전에 sector-bitmap 기반 sweep 을 돌린다:
+기존 fast path 는 **이번 vacuum 배치에서 OOS 청크를 삭제한 페이지들만** 회수 후보로 받았다.
+
+예를 들어 다음 순서가 가능했다.
+
+1. vacuum 이 `page 200` 의 마지막 OOS 청크를 지운다. 이제 페이지 전체가 비었다.
+2. 같은 배치에서 `page 200` 회수를 시도하지만, 다른 스레드가 잠깐 사용 중이라서 skip 한다.
+3. 다음 vacuum 배치는 다른 페이지를 처리한다. `page 200` 에서는 새 삭제가 일어나지 않으므로 후보 목록에 다시 들어오지 않는다.
+4. 이후 INSERT 는 `page 200` 이 비어 있다는 사실을 모른 채 새 페이지를 할당한다.
+
+```text
+page 200 이 비어짐 → 회수 1회 시도 → 잠깐 busy → skip
+                                               │
+                                               └─ 재등록 장치 없음 → 영구 미회수
+```
+
+따라서 코드 주석의 "next vacuum cycle 에 재시도"는 실제 동작이 아니었다. 다음 cycle 이 같은 페이지를 다시 발견할 근거가 없었기 때문이다. SA_MODE 같은 eager 삭제 경로가 비운 페이지와 PR 적용 전부터 존재하던 빈 페이지는 처음부터 vacuum 후보 목록에 들어오지도 않았다.
+
+### 왜 blocker 인가
+
+빈 페이지가 실제로 존재해도 OOS 파일은 계속 새 페이지와 새 sector 를 할당할 수 있다. INSERT/DELETE 를 반복할수록 데이터 양은 같아도 파일 크기가 계속 증가하므로, "완전히 빈 OOS 페이지는 결국 파일 관리자에게 반환된다"는 CBRD-26786 의 핵심 요구를 만족하지 못한다.
+
+### 어떻게 고쳤는가
+
+commit `132163dab` 는 새 페이지를 할당하려는 순간에 마지막 확인을 하는 **growth-gate sweep** 을 추가했다. 주석만 바꾼 것이 아니라, 놓친 빈 페이지를 다시 찾는 실제 경로를 만들었다.
+
+동작은 다음과 같다.
+
+1. `oos_delete` 가 실행되면 해당 OOS 파일에 "회수할 것이 있을 수 있음"을 나타내는 카운터를 올린다. 이 카운터는 정확한 페이지 목록이 아니라 sweep 을 켜는 힌트다.
+2. 모든 OOS 새 페이지 할당은 `oos_alloc_page_with_reclaim` 한 곳을 통과한다.
+3. 정말 새 페이지를 할당하기 전에 `oos_reclaim_sweep_step` 이 파일 관리자의 페이지 할당 지도인 sector bitmap 에 있는 실제 페이지들을 저장된 커서부터 확인한다.
+4. 안전하게 회수할 수 있는 빈 페이지 하나를 찾으면 반환하고 sweep 을 멈춘다. 바로 뒤의 `file_alloc` 이 방금 반환된 공간을 재사용한다.
+5. 아직 활성 트랜잭션의 rollback 에 필요할 수 있는 페이지는 LSA gate 로 보류하고, 다음 성장 시 다시 확인한다.
+6. 재시작으로 메모리 카운터를 잃어도, boot rule 이 부팅 후 최소 한 바퀴를 강제로 돌려 오래된 빈 페이지를 다시 찾는다.
+
+핵심은 **vacuum 후보 목록을 놓쳐도, 파일이 커지기 직전에 디스크의 sector bitmap 을 다시 확인한다**는 점이다.
 
 ```c
-/* oos_alloc_page_with_reclaim () - The single growth point of an OOS file.
- * INVARIANT: every new-page allocation for an OOS file goes through this helper ... */
 static auto_unfix_page_ptr
 oos_alloc_page_with_reclaim (THREAD_ENTRY *thread_p, const VFID &oos_vfid, VPID &vpid_out)
 {
@@ -79,15 +139,19 @@ oos_alloc_page_with_reclaim (THREAD_ENTRY *thread_p, const VFID &oos_vfid, VPID 
 }
 ```
 
-`oos_reclaim_sweep_step` 은 per-VFID 카운터 (`oos_delete` 체인 1건당 +1) 가 켜져 있거나 boot rule (이번 부팅에 완주한 lap 없음) 이 적용될 때, bitmap 스냅샷을 저장된 커서부터 순회해 **첫 회수 성공에서 중단**한다. 회수된 페이지는 sweep 의 sysop 커밋 시점에 partial sector table 로 돌아가므로, 이어지는 `file_alloc` 이 재시도 루프 없이 그 페이지를 집는다.
+저장된 커서는 매번 파일 전체를 처음부터 훑는 비용을 피한다. 커서는 메모리에만 있지만, 유실 시 boot rule 이 다시 한 바퀴 돌기 때문에 정확성에는 영향을 주지 않는다.
 
-리뷰 제안 ① (당시 죽은 필드 `full_search_vpid` 로 재개 지점 구현) 은 side-map 커서로 대체 구현했다 — 동일한 아이디어이되 in-memory 로 두고, 유실은 boot rule 이 흡수하므로 영속화가 불필요하다. 죽은 writer 는 제거했다.
+### 무엇으로 검증했는가
 
-### Validation
+- 이번 vacuum 배치의 fast path 에서 회수되지 않은 빈 페이지를 다음 성장 sweep 이 다시 발견하는지 확인한다.
+- 커밋된 삭제 후 같은 양을 재삽입해도 페이지 수가 증가하지 않는지 확인한다.
+- 미커밋 삭제 페이지는 회수하지 않되 INSERT 자체는 계속 가능한지 확인한다.
+- 중단한 위치의 다음 페이지부터 이어서 확인하는지, 카운터가 완료 후 리셋되고 새 삭제에서 다시 켜지는지 확인한다.
+- 재부팅을 모사해 메모리 힌트가 없어도 boot rule 이 빈 페이지를 찾는지 확인한다.
+- sticky first page 는 어떤 경우에도 회수하지 않는지 확인한다.
+- 리뷰어의 15KB × 14,000행 delete/reinsert 반복 절차에서 SA 데이터 볼륨이 **321MB로 유지**됐다. 수정 전에는 같은 절차에서 320MB → 640MB → 768MB → 1024MB로 계속 증가했다. 서버 모드도 vacuum 정착 후 같은 크기로 유지됐다.
 
-- **리뷰의 "영구 미회수" 4행이 전부 닫힘**: busy-skip 페이지 → 다음 성장 sweep 이 재발견 / eager 경로 → 카운터가 게이트를 무장 / 누적 부채 → boot rule 의 무조건 1바퀴 / 이번 배치분 → fast path 그대로.
-- **단위 테스트** (`test_oos_growth_sweep.cpp`, 7종): 커밋된 삭제 burst 후 재삽입 시 페이지 수 불변 (회수·재사용), abort 복원 불간섭, incremental 중단 + 커서 연속 (full sweep 과 net 페이지 수로 구분), 카운터 리셋·재무장, 미커밋 삭제 deferred + 성장 허용, 재부팅 모사 후 무조건 sweep, 재충전 skip + sticky first page 절대 비회수.
-- **실측** (리뷰어 H2SU 절차): 비압축 15KB × 14,000행 delete+재삽입 ×3 — SA 데이터 볼륨 **321MB ×4 flat** (AS-IS 320→640→768→1024MB), 서버 (vacuum 정착 후) 동일 footprint flat. 매 라운드 COUNT/값 등치 14,000.
+> **후속 보강:** 두 단계 검사 사이에서 phase-2 WRITE fix 가 일시적으로 실패한 경우에도 회수 부채를 유지하도록 commit `9d55b4484` 에서 보강했고, `TransientWriteLatchMissKeepsReclaimDebt` 테스트를 추가했다.
 
 ---
 
