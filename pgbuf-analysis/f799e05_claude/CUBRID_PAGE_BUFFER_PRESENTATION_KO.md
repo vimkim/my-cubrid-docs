@@ -174,17 +174,17 @@ sequenceDiagram
     C->>H: fix(VPID, fetch, latch, condition)
     alt lock-free or normal hit
         H-->>B: resident candidate
-        B->>L: recheck identity; grant / wait / reject
+        B->>L: recheck identity, grant / wait / reject
     else miss
         H->>H: lock absent VPID
         alt another loader owns VPID
-            H-->>C: sleep; wake; retry hash
+            H-->>C: sleep, wake, retry hash
         else this thread owns load
             H->>B: invalid BCB or clean victim
             B->>IO: OLD = DWB then volume read
-            IO-->>B: bytes; decrypt; validate
+            IO-->>B: bytes, decrypt, validate
             B->>L: requested latch + holder
-            B->>H: publish hash; unlock VPID
+            B->>H: publish hash, unlock VPID
         end
     end
     L-->>C: borrowed PAGE_PTR
@@ -404,22 +404,22 @@ sequenceDiagram
     participant DWB as TDE / DWB
     participant IO as Data volume
 
-    W->>B: mutate under WRITE; set LSA; DIRTY
+    W->>B: mutate under WRITE, set LSA, DIRTY
     W->>B: unfix (resident and dirty)
-    B->>B: set FLUSHING; clear old DIRTY; copy image + LSA
+    B->>B: set FLUSHING, clear old DIRTY, copy image + LSA
     B->>LOG: force WAL through copied page LSA
     LOG-->>B: log durable enough
     alt DWB enabled
-        B->>DWB: encrypt/copy; add slot
-        DWB-->>B: slot accepted; block/home write may be later
+        B->>DWB: encrypt/copy, add slot
+        DWB-->>B: slot accepted, block/home write may be later
     else direct path
         B->>IO: encrypted fileio_write
         IO-->>B: direct write result
     end
     par new generation
-        W->>B: fix WRITE; mutate; set DIRTY again
+        W->>B: fix WRITE, mutate, set DIRTY again
     and old generation completion
-        B->>B: clear FLUSHING; preserve new DIRTY
+        B->>B: clear FLUSHING, preserve new DIRTY
     end
 ```
 
