@@ -482,6 +482,49 @@ DWB (Double-Write Buffer)는 torn page를 줄이는 pipeline이다. WAL rule을 
 > [!warning] Source-confirmed cleanup exceptions
 > 일반 file/DWB submission I/O failure는 old DIRTY와 `oldest_unflush_lsa`를 복구하고 FLUSHING을 clear한다. 그러나 TDE encryption error와 DWB slot reservation error는 common rollback 전에 direct return한다 (`page_buffer.c:10809-10828`). DWB read error도 miss provisional-state cleanup 전에 return한다 (`page_buffer.c:8510-8515`). 이는 fault reachability가 runtime으로 확인된 production bug가 아니라, 이 revision의 source-visible cleanup exception/defect candidate다.
 
+### 7.5 두 LSA 타임라인: 정상 세계, 그리고 복원이 빠진 세계
+
+먼저 기준선. resident + clean인 page(disk image의 page LSA = 90)에 dirty write가 두 번(LSA 100, 105) 일어나고 flush가 성공하는 **정상 세계**:
+
+| 시점 | memory image `prv.lsa` | BCB `oldest_unflush_lsa` | DIRTY | disk image `prv.lsa` |
+|---|---:|---:|---|---:|
+| 초기 (clean) | 90 | NULL | — | 90 |
+| write @ LSA 100 | **100** | **100** — 첫 dirtying으로 기록 | set | 90 |
+| write @ LSA 105 | **105** — 덮어씀 | **100 — 그대로!** | set | 90 |
+| flush snapshot | 105 | NULL로 비움 (로컬에 100 저장) | clear + FLUSHING | 90 |
+| WAL force(105까지) → write 성공 | 105 (clean) | NULL | — | **105** |
+
+이 표의 규칙은 두 줄이다. **`prv.lsa`는 logged write마다 최신값으로 덮어쓴다**("여기까지 반영됨") — image 안에 있는 필드라서 memory 복사본(105)과 disk 복사본(90)이 같은 필드의 서로 다른 세대를 갖는다. **`oldest_unflush_lsa`는 clean→dirty 전이에서 한 번만 기록된다** — 105 write는 `LSA_ISNULL`이 아니라 건드리지 않고, BCB에만 있어 disk로는 절대 나가지 않는다 (`page_buffer.c:4996-5052`). Crash 검산: flush 전에 crash가 나면 redo가 100부터 스캔해 disk 위에서 90→100→105를 그대로 재연한다 — redo가 "재실행"인 이유.
+
+한 가지 더: flush I/O **도중** 세 번째 write(LSA 110)가 오면, NULL로 비워진 필드에 110이 "첫 dirtying"으로 다시 기록된다. flush가 **성공**하면 이것은 정확한 값이다 — disk는 105 image이고 전파 안 된 변경은 정말 110부터니까. 같은 refill 코드가 거짓이 되는 유일한 조건이 "flush 실패 + 복원 누락"이고, 그것이 아래의 counterfactual이다.
+
+실제 코드는 write 실패 시 `pgbuf_bcb_mark_was_not_flushed()`로 DIRTY를 복원하고, 비워 뒀던 `oldest_unflush_lsa`도 `LSA_COPY`로 되돌린다 (`page_buffer.c:10908-10913`, `page_buffer.c:16122`). 이 복원 **한 줄**이 없다고 가정한 가상의 버그로, checkpoint와 recovery가 어떻게 속는지 같은 방식으로 굴려 보자. 청중에게 표를 한 줄씩 열며 다음 값을 예측시키기 좋다.
+
+| 시점 | 사건 | `oldest_unflush_lsa` (버그 세계) |
+|---:|---|---|
+| — | disk image의 page LSA = 90 | (참고) |
+| LSA 100 | 첫 수정 log — `pgbuf_set_lsa()`가 첫 dirtying으로 기록 (`page_buffer.c:5040-5052`) | 100 |
+| flush 시작 | flusher가 값을 로컬에 snapshot하고 필드를 NULL로 비움 | NULL |
+| write 실패 | DIRTY는 복원, **`oldest_unflush_lsa` 복원 누락(가상 버그)** | NULL |
+| LSA 250 | writer 수정 log — `pgbuf_set_lsa()`가 `LSA_ISNULL`을 보고 "첫 dirtying"으로 **오인** | **250 (거짓)** |
+| LSA 300 | checkpoint — 이 page 몫의 redo 하한에 250 반영 (정상 세계라면 100) | 250 |
+| LSA 350 | 성공한 flush 없이 crash | — |
+
+Crash 후 restart의 세 줄 결말:
+
+1. Recovery redo는 checkpoint가 기록한 하한(250)부터 스캔한다 — **LSA 100의 record는 스캔조차 되지 않는다.**
+2. Disk page LSA가 90이므로, 스캔만 됐다면 100은 적용됐을 record다(90 < 100). 유실의 원인은 page image가 아니라 **redo 시작점 계산**이다.
+3. LSA 250의 record는 정상 적용된다(90 < 250). 결과: update 250은 있는데 update 100만 조용히 사라진 lineage — WAL에 기록은 있으나 영원히 재생되지 않는 update.
+
+교훈은 한 문장이다: **`oldest_unflush_lsa` 복원은 "낡은 값"을 지키는 일이다.** Checkpoint의 안전은 각 dirty page의 "가장 오래된 미전파 변경"이 과대평가되지 않는 데 달려 있고, 실패 경로의 `LSA_COPY` 한 줄이 그 하한을 지킨다. 성공 경로(§7.3)의 "new DIRTY 보존"과 함께, flush의 양쪽 결말 모두 *표를 잃지 않는다*는 같은 invariant를 지킨다.
+
+> [!speaker] 발표자 노트 — 2–3분 (시간이 밀리면 Q&A 탄약으로만)
+> - 정상 세계 표를 먼저 30초로 굴린다. 105 write 행에서 "`oldest_unflush_lsa`는 왜 안 바뀌나요?"를 묻는다 — "oldest"라는 이름이 답.
+> - Prediction: "write가 실패하면 DIRTY 말고 또 무엇을 되돌려야 할까요?"를 묻고 버그 표를 연다.
+> - 표에서 굵은 **250 (거짓)** 칸이 유일한 반전이다 — NULL로 남는 게 아니라 `pgbuf_set_lsa()`의 첫-dirtying 경로가 거짓 값을 채운다는 것.
+> - §2.1의 규모감 질문("512는 512가 아니다")과 짝을 이루는 두 번째 counterfactual 카드다.
+> - Evidence: `page_buffer.c:10908-10913`, `page_buffer.c:5040-5052`, `page_buffer.c:16122`.
+
 ## 8. Replacement: eligibility와 policy를 분리하자
 
 ```mermaid
