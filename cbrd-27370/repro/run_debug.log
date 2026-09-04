@@ -1,0 +1,37 @@
+No symbol table is loaded.  Use the "file" command.
+Make breakpoint pending on future shared library load? (y or [n]) [answered N; input not from terminal]
+Warning: 'set logging on', an alias for the command 'set logging enabled', is deprecated.
+Use 'set logging enabled on'.
+
+Warning: 'set logging off', an alias for the command 'set logging enabled', is deprecated.
+Use 'set logging enabled off'.
+
+Breakpoint 1 at 0x4011eb: file /tmp/claude-1000/-home-vimkim-gh-cb-CBRD-27370-read-to-write-fix/1c21bfea-64d2-44df-bee1-e1c2326a9d35/scratchpad/probe/cbrd27370_probe.cpp, line 17.
+[Thread debugging using libthread_db enabled]
+[Detaching after fork from child process 3520113]
+GDB after READ 1: holder_fix_count=1
+after READ 1: global_fcnt=1 latch=1
+GDB after READ 2: holder_fix_count=2
+after READ 2: global_fcnt=2 latch=1
+GDB after WRITE: holder_fix_count=3
+after WRITE: global_fcnt=1 latch=2
+pointers equal: yes
+GDB after UNFIX 1: holder_fix_count=2
+after UNFIX 1: global_fcnt=0 latch=0
+cbrd27370_probe: /home/vimkim/gh/cb/CBRD-27370-read-to-write-fix/src/storage/page_buffer.c:6590: int pgbuf_unlatch_bcb_upon_unfix(THREAD_ENTRY*, PGBUF_BCB*, int): Assertion `false' failed.
+
+Program received signal SIGABRT, Aborted.
+0x00007ffff5e8bedc in __pthread_kill_implementation () from /lib64/libc.so.6
+#0  0x00007ffff5e8bedc in __pthread_kill_implementation () from /lib64/libc.so.6
+#1  0x00007ffff5e3eb46 in raise () from /lib64/libc.so.6
+#2  0x00007ffff5e28833 in abort () from /lib64/libc.so.6
+#3  0x00007ffff5e2875b in __assert_fail_base.cold () from /lib64/libc.so.6
+#4  0x00007ffff5e37886 in __assert_fail () from /lib64/libc.so.6
+#5  0x00007ffff7658330 in pgbuf_unlatch_bcb_upon_unfix (thread_p=0x50cff0, bufptr=0x7ffff557f010, holder_status=0) at /home/vimkim/gh/cb/CBRD-27370-read-to-write-fix/src/storage/page_buffer.c:6590
+#6  0x00007ffff7652db5 in pgbuf_unfix_debug (thread_p=0x50cff0, pgptr=0x7fffd553e038 "CUBRID/Volume", caller_file=0x402138 "/tmp/claude-1000/-home-vimkim-gh-cb-CBRD-27370-read-to-write-fix/1c21bfea-64d2-44df-bee1-e1c2326a9d3"..., caller_line=54, caller_func=0x4021c3 "main") at /home/vimkim/gh/cb/CBRD-27370-read-to-write-fix/src/storage/page_buffer.c:3098
+#7  0x0000000000401466 in main (argc=2, argv=0x7fffffffd338) at /tmp/claude-1000/-home-vimkim-gh-cb-CBRD-27370-read-to-write-fix/1c21bfea-64d2-44df-bee1-e1c2326a9d35/scratchpad/probe/cbrd27370_probe.cpp:54
+Are you sure you want to quit? (y or n)A debugging session is active.
+
+	Inferior 1 [process 3520046] will be killed.
+
+Quit anyway? (y or n) [answered Y; input not from terminal]
