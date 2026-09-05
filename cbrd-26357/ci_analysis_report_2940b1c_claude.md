@@ -9,20 +9,34 @@
   pending; this rev 2 (2026-09-05) replaces every inferred signature with the CircleCI observation. Not grilled:
   `grill-with-docs` was not invocable from this session; run it on this file before circulating.
 
-## Rev 3 delta (2026-09-05, after the tc/pr-6864 re-baseline) — in progress
+## Rev 3 delta (2026-09-05, after the tc/pr-6864 re-baseline)
 
 The six testcase edits (groups A–C below) were pushed as `cubrid-testcases-private-ex` `tc/pr-6864 @ 212149852` and
-`/run all` was posted on the PR at 08:21Z (engine head unchanged, `2940b1c`).
+`/run all` was posted on the PR at 08:21Z (engine head unchanged, `2940b1c`). Both shell suites and both other
+CircleCI suites reran on that head; collected 2026-09-05T09:50Z with the same collector, all three CircleCI suites
+pinned to the SHA (yesterday's shell bundle is preserved as `…/2940b1c/test_shell.job152256/`).
 
-| Suite | Source | Result | Job / run | Failures | Note |
-|---|---|---|---|---:|---|
-| test_shell | GitHub Actions `gha-ci` | failed | [33955055682](https://github.com/CUBRID/cubrid/actions/runs/33955055682) | **3** / 3274 (3241 passed, 30 skipped) | `log_enc_04`, `cbrd_27064`, `cbrd_27075` — exactly the predicted survivors. `bug_bts_9836`, `bug_bts_14120`, `file_enc_03`, `file_enc_05`, `bigPageSize` all pass with `212149852` (the run's recorded tc commit). 33.1 min end to end. Excerpts: `2940b1c/gha-ci-33955055682/`. |
-| test_shell | CircleCI | pending | — | — | New job not yet posted at 09:00Z; status still shows job 152256. To be appended. |
+| Suite | Source | Result | Job / run | Tests | Failures | Note |
+|---|---|---|---|---:|---:|---|
+| test_shell | CircleCI | failed | [152547](https://circleci.com/gh/CUBRID/cubrid/152547) | 3274 | **3** (3241 pass, 30 skip, 0 error/unknown) | `log_enc_04` (node 15), `cbrd_27064` + `cbrd_27075` (node 35). Per-node XML: 1 + 2 = 3, reconciles. 37.1 min wall. |
+| test_shell | GitHub Actions `gha-ci` | failed | [33955055682](https://github.com/CUBRID/cubrid/actions/runs/33955055682) | 3274 | **3** (3241 pass, 30 skip) | Same three; recorded tc commit `212149852`; 33.1 min. Excerpts: `2940b1c/gha-ci-33955055682/`. |
+| test_medium | CircleCI | passed | [152549](https://circleci.com/gh/CUBRID/cubrid/152549) | 975 | 0 | |
+| test_sql | CircleCI | passed | [152550](https://circleci.com/gh/CUBRID/cubrid/152550) | 17457 | 0 | |
 
-What this confirms: groups A and B were pure testcase drift (observed fix, not inferred any more), and the
-`bigPageSize` residual was the ORDER BY tie-pick, settled by `order by 1 desc, id`. What remains is unchanged: the
-`log_enc_04` workload assumption (TC work) and the CDC/OOS lifetime crashes (engine, CBRD-26939). Everything below
-this section is the rev 2 analysis of the pre-fix run and is kept as the evidence trail.
+**Cleared (observed, both CIs):** `bug_bts_9836` (61 s), `bug_bts_14120` (10 s), `file_enc_03` (6 s), `file_enc_05`
+(8 s), `bigPageSize` (37 s) all `success` in job 152547's test list. Groups A and B were therefore pure testcase drift,
+and the `bigPageSize` residual was the ORDER BY tie-pick, settled by `order by 1 desc, id`. `bug_bts_6938` passed
+again (24 s), so the 2026-09-04 GHA failure stays a one-off.
+
+**Remaining (unchanged signatures):**
+- `log_enc_04` — `RVHF_INSERT_NEWHOME is missing!` again. Testcase workload assumption under OOS; still to be rewritten.
+- `cbrd_27064`, `cbrd_27075` — `cbrd_27075` 4K config again `FINAL_SEQ=-1`, `CONFIGS_OK=1`, `TOTAL_CORRUPTION=0`;
+  three `cub_server` cores on node 35 with the same two signatures as yesterday (`oos_check_head_header
+  oos_file.cpp:2600` ×1, `pgbuf_fix_debug page_buffer.c:2487` ×2), all through `cdc_make_dml_loginfo`. Engine issue
+  (group D, CBRD-26939); nothing on the testcase side can change it.
+
+Net: **8 → 3**, and the three that remain are the two known non-testcase items. Everything below this section is the
+rev 2 analysis of the pre-fix run (job 152256), kept as the evidence trail for the root causes.
 
 ## Executive Summary
 

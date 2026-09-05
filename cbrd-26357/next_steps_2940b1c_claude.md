@@ -9,8 +9,10 @@
   edits were committed and pushed as `212149852` on tc/pr-6864 (TC PR #3782 now lists all six files) and `/run all`
   was posted on PR #6864 (comment 5550556895; `/run shell` alone is not a verified trigger form). Waiting on
   `ci/circleci: test_shell` and `gha-ci: test_shell` for head `2940b1c`; work-tracker item 63.
-  **08:58Z: GHA finished — 3 failures (log_enc_04, cbrd_27064, cbrd_27075), the predicted set; all five fixes
-  confirmed.** CircleCI shell still pending; rev 3 delta in the report is started and will be completed when it lands.
+  **Done 09:50Z: GHA run 33955055682 and CircleCI job 152547 both finished with 3 failures (log_enc_04, cbrd_27064,
+  cbrd_27075), the predicted set; all five fixes confirmed on both CIs; medium (152549) and sql (152550) green.**
+  Rev 3 delta is written at the top of the report; work-tracker item 63 closed. Path 1 is complete except the
+  `log_enc_04` workload rewrite, which was deliberately left out of this push. Next work is path 2 (CDC decision).
 
 ## Where things stand
 
