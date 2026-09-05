@@ -8,8 +8,9 @@
   Decision taken afterwards: skip local verification and let CI verify. Steps 4 executed 2026-09-05 08:21Z: the six
   edits were committed and pushed as `212149852` on tc/pr-6864 (TC PR #3782 now lists all six files) and `/run all`
   was posted on PR #6864 (comment 5550556895; `/run shell` alone is not a verified trigger form). Waiting on
-  `ci/circleci: test_shell` and `gha-ci: test_shell` for head `2940b1c`; work-tracker item 63. Step 5 (rev 3 delta)
-  follows when both finish.
+  `ci/circleci: test_shell` and `gha-ci: test_shell` for head `2940b1c`; work-tracker item 63.
+  **08:58Z: GHA finished — 3 failures (log_enc_04, cbrd_27064, cbrd_27075), the predicted set; all five fixes
+  confirmed.** CircleCI shell still pending; rev 3 delta in the report is started and will be completed when it lands.
 
 ## Where things stand
 
