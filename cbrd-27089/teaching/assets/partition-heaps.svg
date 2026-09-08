@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 440" role="img" aria-labelledby="title desc">
+<title id="title">One logical table, two child heaps</title><desc id="desc">The root class routes id 1 to p0. p0 has its own heap page and row slot; p1 has a different heap. The diagram is conceptual, not a physical page layout.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="#50627b"/></marker></defs>
+<rect width="860" height="440" rx="16" fill="#f1f5fa"/>
+<g font-family="system-ui,sans-serif" fill="#172b46" font-size="18">
+<text x="28" y="36" font-size="22" font-weight="700">Logical table → selected child → physical row</text>
+<rect x="205" y="58" width="450" height="80" rx="12" fill="#e3dff3" stroke="#75629a"/>
+<text x="430" y="88" text-anchor="middle" font-weight="700">Root class: t_oos_show_part</text><text x="430" y="117" text-anchor="middle">Partition metadata · root class OID</text>
+<path d="M340 138V166H224V195" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#arrow)"/><path d="M520 138V166H650V195" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="40" y="197" width="368" height="207" rx="12" fill="#e2f3ec" stroke="#287e60" stroke-width="2"/>
+<text x="60" y="228" font-size="22" font-weight="700">p0 child class</text><text x="60" y="257">id &lt; 10 · its own HFID</text>
+<rect x="60" y="279" width="328" height="105" rx="8" fill="white" stroke="#287e60"/>
+<text x="78" y="307">Heap page</text><text x="78" y="339" font-weight="700">slot → [ id=1 | value ]</text><text x="78" y="367" font-size="16">Our row lives here</text>
+<rect x="450" y="197" width="368" height="207" rx="12" fill="#e4ecfa" stroke="#3f6cab"/>
+<text x="470" y="228" font-size="22" font-weight="700">p1 child class</text><text x="470" y="257">id ≥ 10 · a different HFID</text>
+<rect x="470" y="279" width="328" height="105" rx="8" fill="white" stroke="#3f6cab"/>
+<text x="488" y="310">Separate heap storage</text><text x="488" y="342">Would receive id=20</text><text x="488" y="370" font-size="16">No row from our INSERT</text>
+</g></svg>

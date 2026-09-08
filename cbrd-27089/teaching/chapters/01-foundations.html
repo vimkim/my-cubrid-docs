@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>1. From a SQL table to a stored record · PR 7600</title><style>:root {
+  color-scheme: light dark;
+  --bg: #f7f7f4;
+  --surface: #ffffff;
+  --text: #202522;
+  --muted: #5d6861;
+  --line: #d8ddd9;
+  --accent: #176b55;
+  --code-bg: #edf1ee;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151916;
+    --surface: #1e2420;
+    --text: #edf2ee;
+    --muted: #aeb9b1;
+    --line: #39443d;
+    --accent: #78d6b5;
+    --code-bg: #252d28;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.65 var(--font, inherit);
+}
+
+main,
+header,
+nav,
+footer {
+  width: min(960px, calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+header {
+  padding-block: 3rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+main {
+  padding-block: 2rem 4rem;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+h2 {
+  margin-top: 2.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--line);
+}
+
+a {
+  color: var(--accent);
+}
+
+code,
+pre {
+  background: var(--code-bg);
+  border-radius: 0.3rem;
+}
+
+code {
+  padding: 0.1rem 0.3rem;
+}
+
+pre {
+  overflow-x: auto;
+  padding: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  vertical-align: top;
+}
+
+th {
+  background: var(--code-bg);
+  text-align: left;
+}
+
+.claim,
+.callout {
+  margin-block: 1rem;
+  padding: 0.8rem 1rem;
+  background: var(--surface);
+  border-left: 0.3rem solid var(--accent);
+}
+
+.muted,
+.provenance {
+  color: var(--muted);
+}
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  nav {
+    display: none;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+:root { color-scheme: light; --bg:#f3f5f8; --surface:#fff; --text:#1b2b42; --muted:#506178; --line:#d6dfe9; --accent:#17604d; --code-bg:#edf1f6; }
+body { font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-size:17px; line-height:1.75; }
+header, main, footer { width:min(1020px,calc(100% - 40px)); }
+header { padding:3.5rem 0 2rem; }
+header h1 { font-size:clamp(2rem,5vw,3.8rem); max-width:850px; letter-spacing:-.04em; margin:.45rem 0 1rem; }
+.eyebrow { font-size:.8rem; letter-spacing:.13em; color:var(--accent); font-weight:750; text-transform:uppercase; }
+.subtitle { font-size:1.17rem; color:var(--muted); max-width:780px; }
+.badge { display:inline-block; padding:.2rem .7rem; border:1px solid var(--line); border-radius:30px; margin:.25rem .35rem .25rem 0; font-size:.8rem; background:#fff; }
+nav.toc { width:min(1020px,calc(100% - 40px)); margin:1.5rem auto; padding:1.2rem 1.5rem; background:var(--surface); border:1px solid var(--line); border-radius:12px; }
+nav.toc ol { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.3rem 2rem; padding-left:1.3rem; }
+nav.toc a { text-decoration:none; }
+article { background:var(--surface); border:1px solid var(--line); border-radius:14px; margin-bottom:2rem; padding:2rem 2.7rem; overflow-wrap:anywhere; }
+article h1 { font-size:2rem; margin-top:.3rem; }
+article h2 { font-size:1.4rem; }
+article h3 { font-size:1.12rem; margin-top:2rem; }
+article h1,article h2,article h3 { scroll-margin-top:2rem; }
+pre { font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; tab-size:4; white-space:pre; overflow-x:auto; overflow-wrap:normal; border:1px solid var(--line); }
+pre code { padding:0; background:transparent; }
+code { font-size:.88em; }
+.table-scroll { overflow-x:auto; margin:1.3rem 0; }
+table { font-size:.9rem; min-width:560px; }
+td, th { padding:.65rem .8rem; }
+figure { margin:1.5rem 0; padding:0; overflow-x:auto; }
+figure svg { display:block; width:100%; min-width:650px; height:auto; }
+figcaption { color:var(--muted); font-size:.85rem; padding:.5rem 0; }
+.claim-ref { white-space:nowrap; font-size:.72em; font-weight:650; text-decoration:none; }
+.chapter-nav { display:flex; justify-content:space-between; gap:1rem; border-top:1px solid var(--line); padding-top:1rem; margin-top:2rem; font-size:.85rem; }
+.source-kind { color:var(--muted); }
+.line-map { color:var(--muted); font-size:.86rem; }
+footer { padding:0 0 3rem; color:var(--muted); font-size:.9rem; }
+@media(max-width:650px) { header,main,footer,nav.toc { width:calc(100% - 24px); } article { padding:1.1rem; } article h1 { font-size:1.55rem; } nav.toc ol { grid-template-columns:1fr; } body { font-size:16px; } }
+@media print { :root { --text:#000; --bg:#fff; } body { font-size:10pt; } header,main,footer { width:100%; } header { padding-top:0; } article { border:0; padding:0; break-before:page; } figure { overflow:visible; break-inside:avoid; } figure svg { min-width:0; } pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:8pt; } table { min-width:0; font-size:9pt; } .table-scroll { overflow:visible; } .chapter-nav { display:none; } h2,h3 { break-after:avoid; } }
+</style></head>
+<body><header id="top"><div class="eyebrow">CUBRID · source reading course · PR 7600</div><h1>1. From a SQL table to a stored record</h1><p class="subtitle">From heap pages and partition classes to every changed line of the two-pass OOS write path.</p><span class="badge">30 annotated hunks</span><span class="badge">6 changed files</span><span class="badge">Head b871ea386</span><span class="badge">Offline · Markdown + SVG</span><p class="provenance">Base 2940b1cfb · pinned on 2026-09-08 · English · basic C/C++ and SQL prerequisites</p></header>
+<nav class="toc" aria-label="Reading order"><a href="../index.html#chapter-01">Full book and reading map</a></nav><main><article><h1 id="chapter-01-1-from-a-sql-table-to-a-stored-record">1. From a SQL table to a stored record</h1>
+<p>PR #7600 makes a large value belong to the same partition heap as the row that refers to it. To understand why that requires two transformations, first distinguish a SQL name, a storage file, and a record buffer. <a class="claim-ref" href="../index.html#C-001">[C-001]</a> <a class="claim-ref" href="../index.html#C-002">[C-002]</a></p>
+<h2 id="chapter-01-what-this-book-covers">What this book covers</h2>
+<p>We follow the six-file PR diff from base <code>2940b1cfbc3c2d4d0fac3f9244a960350debd380</code> to head <code>b871ea386d2c5419b7abae07dda58b9b7f36377a</code>. The source worktree is <code>/home/vimkim/gh/cb/CBRD-27089-has-oos-but-no-oos</code>; the six changed files match that head. Unrelated local work is excluded. The scope is partition write preparation, its immediate dependencies and the regression; it does not certify the entire OOS subsystem. <a class="claim-ref" href="../index.html#C-029">[C-029]</a></p>
+<p>Read chapters 1–5 for the mental model, then chapter 6 for all 30 hunks. Chapters 7–8 develop test reasoning and review exercises. Chapter 9 holds answers and chapter 10 the evidence ledger. Claim links such as <a class="claim-ref" href="../index.html#C-001">[C-001]</a> jump to exact source references. Source links are supplementary; the lessons, code listings and SVGs work offline.</p>
+<h2 id="chapter-01-a-concrete-table">A concrete table</h2>
+<pre><code class="language-sql">CREATE TABLE t_oos_show_part (
+  id INT,
+  data_col BIT VARYING STORAGE FORCE_OUTLINE
+)
+PARTITION BY RANGE (id) (
+  PARTITION p0 VALUES LESS THAN (10),
+  PARTITION p1 VALUES LESS THAN MAXVALUE
+);
+INSERT INTO t_oos_show_part VALUES (1, REPEAT(X'EE', 64));
+</code></pre>
+<p>This is the table and input used by the added regression. The first partition accepts values below 10; the second accepts values from 10 upward. Our <code>id=1</code> row belongs to p0. The example deliberately uses a small value with a forced storage policy, so it exercises the path that ordinary large-row tests can miss. <code>REPEAT(X'EE',64)</code> constructs 64 repeated bytes; the serialized attribute may also carry type-specific overhead. <a class="claim-ref" href="../index.html#C-003">[C-003]</a></p>
+<p>The local manual describes partitions as independent physical units implemented as subclasses of the partitioned table. Its range-partition section specifies exclusive upper bounds and <code>MAXVALUE</code>. That explains SQL routing; source code establishes how the selected class maps to its heap. Manual provenance is recorded in the source map. <a class="claim-ref" href="../index.html#C-004">[C-004]</a></p>
+<h2 id="chapter-01-heap-means-row-storage-here">Heap means row storage here</h2>
+<p>A heap file holds table records in pages. A page is a fixed-sized unit managed by the storage layer. Within a slotted page, a slot directory identifies individual records: a slot points to a record's location and length within that page. This lets page contents be organized without requiring a table's rows to appear in primary-key order. A B-tree index provides a different structure for key-based access. Here, “heap” names database storage; it is separate from a C++ process's allocation heap. <a class="claim-ref" href="../index.html#C-005">[C-005]</a></p>
+<p>The SQL table is represented internally as a class. A partitioned root class describes the logical table and its partitions. Child classes represent p0 and p1 and each supplies a heap identifier. In the traced UPDATE implementation the root holds no row data; an existing row comes from a child. “The partition heap” means the heap belonging to that selected child class. It does not introduce a new slotted-page format. <a class="claim-ref" href="../index.html#C-004">[C-004]</a> <a class="claim-ref" href="../index.html#C-006">[C-006]</a></p>
+<p><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 440" role="img" aria-labelledby="partition-heaps-title partition-heaps-desc">
+<title id="partition-heaps-title">One logical table, two child heaps</title><desc id="partition-heaps-desc">The root class routes id 1 to p0. p0 has its own heap page and row slot; p1 has a different heap. The diagram is conceptual, not a physical page layout.</desc>
+<defs><marker id="partition-heaps-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="#50627b"/></marker></defs>
+<rect width="860" height="440" rx="16" fill="#f1f5fa"/>
+<g font-family="system-ui,sans-serif" fill="#172b46" font-size="18">
+<text x="28" y="36" font-size="22" font-weight="700">Logical table → selected child → physical row</text>
+<rect x="205" y="58" width="450" height="80" rx="12" fill="#e3dff3" stroke="#75629a"/>
+<text x="430" y="88" text-anchor="middle" font-weight="700">Root class: t_oos_show_part</text><text x="430" y="117" text-anchor="middle">Partition metadata · root class OID</text>
+<path d="M340 138V166H224V195" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#partition-heaps-arrow)"/><path d="M520 138V166H650V195" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#partition-heaps-arrow)"/>
+<rect x="40" y="197" width="368" height="207" rx="12" fill="#e2f3ec" stroke="#287e60" stroke-width="2"/>
+<text x="60" y="228" font-size="22" font-weight="700">p0 child class</text><text x="60" y="257">id &lt; 10 · its own HFID</text>
+<rect x="60" y="279" width="328" height="105" rx="8" fill="white" stroke="#287e60"/>
+<text x="78" y="307">Heap page</text><text x="78" y="339" font-weight="700">slot → [ id=1 | value ]</text><text x="78" y="367" font-size="16">Our row lives here</text>
+<rect x="450" y="197" width="368" height="207" rx="12" fill="#e4ecfa" stroke="#3f6cab"/>
+<text x="470" y="228" font-size="22" font-weight="700">p1 child class</text><text x="470" y="257">id ≥ 10 · a different HFID</text>
+<rect x="470" y="279" width="328" height="105" rx="8" fill="white" stroke="#3f6cab"/>
+<text x="488" y="310">Separate heap storage</text><text x="488" y="342">Would receive id=20</text><text x="488" y="370" font-size="16">No row from our INSERT</text>
+</g></svg>
+<figcaption>Root class, child classes, heap pages and row slots</figcaption></figure></p>
+<p>In the diagram, p0 owns the page containing our row; p1 is a different possible destination. A SQL query using the root name can access child data through partition-aware execution. Do not interpret the root box as one physical page containing both child heaps. <a class="claim-ref" href="../index.html#C-006">[C-006]</a></p>
+<h2 id="chapter-01-five-identifiers-and-two-record-representations">Five identifiers and two record representations</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Name</th>
+<th>What it identifies</th>
+<th>How it matters in this PR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OID</td>
+<td>An object address, with volume, page and slot components</td>
+<td>A row OID identifies a row; a class OID identifies a class object. Same type, different referent.</td>
+</tr>
+<tr>
+<td>Class OID</td>
+<td>The OID of a class</td>
+<td>The selected child's class OID is passed as the OOS owner.</td>
+</tr>
+<tr>
+<td>VPID</td>
+<td>A volume/page address</td>
+<td>Locates a physical page.</td>
+</tr>
+<tr>
+<td>VFID</td>
+<td>A volume/file identifier</td>
+<td>Identifies a database file, not a filesystem pathname.</td>
+</tr>
+<tr>
+<td>HFID</td>
+<td>A heap VFID plus its header page ID</td>
+<td>Leads to the heap header and its OOS VFID.</td>
+</tr>
+<tr>
+<td><code>HEAP_CACHE_ATTRINFO</code></td>
+<td>In-memory attribute values and representation metadata</td>
+<td>Survives both passes and carries their state.</td>
+</tr>
+<tr>
+<td><code>RECDES</code></td>
+<td>A byte buffer descriptor: data, length, allocated area, record type</td>
+<td>A probe can be valid serialized bytes without yet being a stored row.</td>
+</tr>
+</tbody>
+</table></div>
+<p>These types connect identity to storage. An HFID is not the class OID; the code must look up a class's HFID. An OOS value also has an OID, but that OID refers to an OOS chunk record rather than the table row. <a class="claim-ref" href="../index.html#C-005">[C-005]</a> <a class="claim-ref" href="../index.html#C-007">[C-007]</a></p>
+<p><code>DB_VALUE</code> represents a logical typed value in memory. Transformation serializes values into the byte layout expected by the engine. <code>record_descriptor</code> helps manage a buffer while <code>RECDES</code> describes its bytes. <code>LC_COPYAREA</code> supplies memory returned to the locator caller. These are stages in preparing data, not evidence that the row has already been inserted. <a class="claim-ref" href="../index.html#C-007">[C-007]</a> <a class="claim-ref" href="../index.html#C-008">[C-008]</a></p>
+<h2 id="chapter-01-predict-before-continuing">Predict before continuing</h2>
+<ol>
+<li>Where does <code>id=10</code> belong? Which destination changes if <code>id=1</code> becomes <code>id=20</code>?</li>
+<li>Why can a function receive both a class OID and an HFID?</li>
+<li>Does a successful transformation imply there is already a heap row?</li>
+<li>Draw the root, p0, p1 and the stored row without looking at the diagram.</li>
+</ol>
+<p>Answers are in chapter 9. Continue when you can distinguish class identity, file identity and record bytes.</p></article></main><footer>Built from editable Markdown and SVG. Source claims use the pinned revision; the fresh runtime observation uses the separately hashed pre-existing binary. Study questions are answered separately in chapter 9. <a href="#top">Back to top</a></footer></body></html>

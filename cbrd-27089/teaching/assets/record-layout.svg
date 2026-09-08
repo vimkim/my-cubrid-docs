@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 440" role="img" aria-labelledby="title desc">
+<title id="title">Inline bytes become a stub and an OOS value chain</title><desc id="desc">A probe has a header, variable offsets, a fixed id and the full inline value. The final record marks OOS and stores an OID and length stub whose OID points to chunk zero in the selected heap's OOS file.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="#287e60"/></marker></defs>
+<rect width="860" height="440" rx="16" fill="#f1f5fa"/>
+<g font-family="system-ui,sans-serif" font-size="18" fill="#172b46">
+<text x="26" y="35" font-weight="700" font-size="22">A record image is not yet a stored row</text>
+<text x="26" y="76" font-weight="700">Probe: all variable values inline</text>
+<g stroke="#718398"><rect x="26" y="93" width="150" height="56" fill="#fff"/><rect x="176" y="93" width="145" height="56" fill="#fff"/><rect x="321" y="93" width="105" height="56" fill="#fff"/><rect x="426" y="93" width="405" height="56" fill="#fceac8"/></g>
+<text x="43" y="127">Header</text><text x="192" y="127">VOT</text><text x="336" y="127">id=1</text><text x="444" y="127">Full serialized value bytes</text>
+<text x="26" y="199" font-weight="700">Final: OOS flag + marked VOT entry + inline stub</text>
+<g stroke="#718398"><rect x="26" y="217" width="150" height="60" fill="#e2f3ec"/><rect x="176" y="217" width="145" height="60" fill="#e2f3ec"/><rect x="321" y="217" width="105" height="60" fill="#fff"/><rect x="426" y="217" width="325" height="60" fill="#e2f3ec"/></g>
+<text x="40" y="253" font-size="16">HAS_OOS=1</text><text x="190" y="253" font-size="16">IS_OOS=1</text><text x="336" y="253">id=1</text><text x="441" y="253">Head OID + full length</text>
+<path d="M584 278V322" fill="none" stroke="#287e60" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="270" y="325" width="562" height="83" rx="9" fill="white" stroke="#287e60" stroke-width="2"/>
+<text x="290" y="355" font-weight="700">p0's associated OOS file</text><text x="290" y="386">chunk 0: header + bytes → next chunk if needed</text>
+<text x="27" y="345" font-size="16">Conceptual layout;</text><text x="27" y="369" font-size="16">alignment omitted.</text><text x="27" y="393" font-size="16">Stub: 16B at this head.</text>
+</g></svg>

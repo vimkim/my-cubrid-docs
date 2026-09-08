@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 558" role="img" aria-labelledby="title desc">
+<title id="title">Old and new ordering for the root-targeted INSERT</title><desc id="desc">The old flow creates a root-owned chain before selecting p0. The new flow makes an inline probe, prunes to p0, writes a p0-owned chain, then uses ordinary locator routing and row insertion. The old owner mismatch is visible even when a direct OID read succeeds.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="#50627b"/></marker></defs>
+<rect width="860" height="558" rx="16" fill="#f1f5fa"/>
+<g font-family="system-ui,sans-serif" font-size="18" fill="#172b46">
+<text x="28" y="36" font-size="22" font-weight="700">Route before choosing OOS ownership</text>
+<text x="38" y="81" font-weight="700" fill="#a44131">Before PR</text><text x="456" y="81" font-weight="700" fill="#287e60">After PR</text>
+<g stroke="#a95c4b" fill="#fff1ec"><rect x="28" y="104" width="372" height="77" rx="10"/><rect x="28" y="218" width="372" height="77" rx="10"/><rect x="28" y="332" width="372" height="77" rx="10"/></g>
+<text x="47" y="134">Ordinary transform</text><text x="47" y="163" font-weight="700">OOS chain → root heap owner</text>
+<text x="47" y="248">Lower locator prunes id=1</text><text x="47" y="277">Destination → p0</text>
+<text x="47" y="362">Store row in p0</text><text x="47" y="391" font-weight="700">Row owner ≠ chain owner</text>
+<path d="M214 182V211" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#arrow)"/><path d="M214 296V325" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#arrow)"/>
+<g stroke="#287e60" fill="#e2f3ec"><rect x="446" y="104" width="386" height="77" rx="10"/><rect x="446" y="218" width="386" height="77" rx="10"/><rect x="446" y="332" width="386" height="77" rx="10"/><rect x="446" y="446" width="386" height="77" rx="10"/></g>
+<text x="465" y="134">Probe transform</text><text x="465" y="163">Inline bytes; no OOS chain</text>
+<text x="465" y="248">Early pruning selects p0</text><text x="465" y="277">Keep class OID; free probe</text>
+<text x="465" y="362">Final transform</text><text x="465" y="391" font-weight="700">OOS chain → p0 heap owner</text>
+<text x="465" y="476">Lower locator still routes/locks</text><text x="465" y="505">Store row in p0</text>
+<path d="M639 182V211" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#arrow)"/><path d="M639 296V325" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#arrow)"/><path d="M639 410V439" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="38" y="466" font-size="16">Shown: partitioned write requiring OOS.</text><text x="38" y="493" font-size="16">No-demotion probes skip the final pass.</text>
+</g></svg>

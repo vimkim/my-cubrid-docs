@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>2. Why correct SELECT results can conceal wrong ownership · PR 7600</title><style>:root {
+  color-scheme: light dark;
+  --bg: #f7f7f4;
+  --surface: #ffffff;
+  --text: #202522;
+  --muted: #5d6861;
+  --line: #d8ddd9;
+  --accent: #176b55;
+  --code-bg: #edf1ee;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151916;
+    --surface: #1e2420;
+    --text: #edf2ee;
+    --muted: #aeb9b1;
+    --line: #39443d;
+    --accent: #78d6b5;
+    --code-bg: #252d28;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.65 var(--font, inherit);
+}
+
+main,
+header,
+nav,
+footer {
+  width: min(960px, calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+header {
+  padding-block: 3rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+main {
+  padding-block: 2rem 4rem;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+h2 {
+  margin-top: 2.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--line);
+}
+
+a {
+  color: var(--accent);
+}
+
+code,
+pre {
+  background: var(--code-bg);
+  border-radius: 0.3rem;
+}
+
+code {
+  padding: 0.1rem 0.3rem;
+}
+
+pre {
+  overflow-x: auto;
+  padding: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  vertical-align: top;
+}
+
+th {
+  background: var(--code-bg);
+  text-align: left;
+}
+
+.claim,
+.callout {
+  margin-block: 1rem;
+  padding: 0.8rem 1rem;
+  background: var(--surface);
+  border-left: 0.3rem solid var(--accent);
+}
+
+.muted,
+.provenance {
+  color: var(--muted);
+}
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  nav {
+    display: none;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+:root { color-scheme: light; --bg:#f3f5f8; --surface:#fff; --text:#1b2b42; --muted:#506178; --line:#d6dfe9; --accent:#17604d; --code-bg:#edf1f6; }
+body { font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-size:17px; line-height:1.75; }
+header, main, footer { width:min(1020px,calc(100% - 40px)); }
+header { padding:3.5rem 0 2rem; }
+header h1 { font-size:clamp(2rem,5vw,3.8rem); max-width:850px; letter-spacing:-.04em; margin:.45rem 0 1rem; }
+.eyebrow { font-size:.8rem; letter-spacing:.13em; color:var(--accent); font-weight:750; text-transform:uppercase; }
+.subtitle { font-size:1.17rem; color:var(--muted); max-width:780px; }
+.badge { display:inline-block; padding:.2rem .7rem; border:1px solid var(--line); border-radius:30px; margin:.25rem .35rem .25rem 0; font-size:.8rem; background:#fff; }
+nav.toc { width:min(1020px,calc(100% - 40px)); margin:1.5rem auto; padding:1.2rem 1.5rem; background:var(--surface); border:1px solid var(--line); border-radius:12px; }
+nav.toc ol { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.3rem 2rem; padding-left:1.3rem; }
+nav.toc a { text-decoration:none; }
+article { background:var(--surface); border:1px solid var(--line); border-radius:14px; margin-bottom:2rem; padding:2rem 2.7rem; overflow-wrap:anywhere; }
+article h1 { font-size:2rem; margin-top:.3rem; }
+article h2 { font-size:1.4rem; }
+article h3 { font-size:1.12rem; margin-top:2rem; }
+article h1,article h2,article h3 { scroll-margin-top:2rem; }
+pre { font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; tab-size:4; white-space:pre; overflow-x:auto; overflow-wrap:normal; border:1px solid var(--line); }
+pre code { padding:0; background:transparent; }
+code { font-size:.88em; }
+.table-scroll { overflow-x:auto; margin:1.3rem 0; }
+table { font-size:.9rem; min-width:560px; }
+td, th { padding:.65rem .8rem; }
+figure { margin:1.5rem 0; padding:0; overflow-x:auto; }
+figure svg { display:block; width:100%; min-width:650px; height:auto; }
+figcaption { color:var(--muted); font-size:.85rem; padding:.5rem 0; }
+.claim-ref { white-space:nowrap; font-size:.72em; font-weight:650; text-decoration:none; }
+.chapter-nav { display:flex; justify-content:space-between; gap:1rem; border-top:1px solid var(--line); padding-top:1rem; margin-top:2rem; font-size:.85rem; }
+.source-kind { color:var(--muted); }
+.line-map { color:var(--muted); font-size:.86rem; }
+footer { padding:0 0 3rem; color:var(--muted); font-size:.9rem; }
+@media(max-width:650px) { header,main,footer,nav.toc { width:calc(100% - 24px); } article { padding:1.1rem; } article h1 { font-size:1.55rem; } nav.toc ol { grid-template-columns:1fr; } body { font-size:16px; } }
+@media print { :root { --text:#000; --bg:#fff; } body { font-size:10pt; } header,main,footer { width:100%; } header { padding-top:0; } article { border:0; padding:0; break-before:page; } figure { overflow:visible; break-inside:avoid; } figure svg { min-width:0; } pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:8pt; } table { min-width:0; font-size:9pt; } .table-scroll { overflow:visible; } .chapter-nav { display:none; } h2,h3 { break-after:avoid; } }
+</style></head>
+<body><header id="top"><div class="eyebrow">CUBRID · source reading course · PR 7600</div><h1>2. Why correct SELECT results can conceal wrong ownership</h1><p class="subtitle">From heap pages and partition classes to every changed line of the two-pass OOS write path.</p><span class="badge">30 annotated hunks</span><span class="badge">6 changed files</span><span class="badge">Head b871ea386</span><span class="badge">Offline · Markdown + SVG</span><p class="provenance">Base 2940b1cfb · pinned on 2026-09-08 · English · basic C/C++ and SQL prerequisites</p></header>
+<nav class="toc" aria-label="Reading order"><a href="../index.html#chapter-02">Full book and reading map</a></nav><main><article><h1 id="chapter-02-2-why-correct-select-results-can-conceal-wrong-ownership">2. Why correct SELECT results can conceal wrong ownership</h1>
+<h2 id="chapter-02-a-row-can-refer-to-a-value-stored-elsewhere">A row can refer to a value stored elsewhere</h2>
+<p>OOS means Out-of-row Overflow Storage. Instead of keeping an eligible serialized value entirely inside a heap record, the engine stores that value in an OOS file and keeps an inline stub in the heap record. In this pinned revision the stub contains a head OOS OID and the full serialized value length. The OID leads to the first chunk; a value too large for one chunk uses a linked value chain. <a class="claim-ref" href="../index.html#C-009">[C-009]</a></p>
+<p>The record has two levels of marking. A record-level OOS flag says at least one attribute is represented out of row. A variable-offset-table entry marks the individual attribute that contains a stub. The VOT tells a reader where variable attributes begin; it is not itself the payload. The writer sets the attribute flag and writes the OID/length pair for a selected plan entry. <a class="claim-ref" href="../index.html#C-009">[C-009]</a></p>
+<p><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 440" role="img" aria-labelledby="record-layout-title record-layout-desc">
+<title id="record-layout-title">Inline bytes become a stub and an OOS value chain</title><desc id="record-layout-desc">A probe has a header, variable offsets, a fixed id and the full inline value. The final record marks OOS and stores an OID and length stub whose OID points to chunk zero in the selected heap's OOS file.</desc>
+<defs><marker id="record-layout-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="#287e60"/></marker></defs>
+<rect width="860" height="440" rx="16" fill="#f1f5fa"/>
+<g font-family="system-ui,sans-serif" font-size="18" fill="#172b46">
+<text x="26" y="35" font-weight="700" font-size="22">A record image is not yet a stored row</text>
+<text x="26" y="76" font-weight="700">Probe: all variable values inline</text>
+<g stroke="#718398"><rect x="26" y="93" width="150" height="56" fill="#fff"/><rect x="176" y="93" width="145" height="56" fill="#fff"/><rect x="321" y="93" width="105" height="56" fill="#fff"/><rect x="426" y="93" width="405" height="56" fill="#fceac8"/></g>
+<text x="43" y="127">Header</text><text x="192" y="127">VOT</text><text x="336" y="127">id=1</text><text x="444" y="127">Full serialized value bytes</text>
+<text x="26" y="199" font-weight="700">Final: OOS flag + marked VOT entry + inline stub</text>
+<g stroke="#718398"><rect x="26" y="217" width="150" height="60" fill="#e2f3ec"/><rect x="176" y="217" width="145" height="60" fill="#e2f3ec"/><rect x="321" y="217" width="105" height="60" fill="#fff"/><rect x="426" y="217" width="325" height="60" fill="#e2f3ec"/></g>
+<text x="40" y="253" font-size="16">HAS_OOS=1</text><text x="190" y="253" font-size="16">IS_OOS=1</text><text x="336" y="253">id=1</text><text x="441" y="253">Head OID + full length</text>
+<path d="M584 278V322" fill="none" stroke="#287e60" stroke-width="2" marker-end="url(#record-layout-arrow)"/>
+<rect x="270" y="325" width="562" height="83" rx="9" fill="white" stroke="#287e60" stroke-width="2"/>
+<text x="290" y="355" font-weight="700">p0's associated OOS file</text><text x="290" y="386">chunk 0: header + bytes → next chunk if needed</text>
+<text x="27" y="345" font-size="16">Conceptual layout;</text><text x="27" y="369" font-size="16">alignment omitted.</text><text x="27" y="393" font-size="16">Stub: 16B at this head.</text>
+</g></svg>
+<figcaption>Inline record versus an OOS-backed record</figcaption></figure></p>
+<p>The diagram omits alignment and exact header widths. It shows the key relationship: an OOS-backed row remains a heap record, while its large attribute bytes live in a separate file. Ordinary whole-record overflow (<code>REC_BIGONE</code>) is a distinct mechanism; the transformer rejects a record that would need both OOS and bigone in this revision. <a class="claim-ref" href="../index.html#C-009">[C-009]</a> <a class="claim-ref" href="../index.html#C-010">[C-010]</a></p>
+<h2 id="chapter-02-the-ownership-invariant">The ownership invariant</h2>
+<p>The heap header has an <code>oos_vfid</code> field. Given an owner class, <code>heap_oos_insert_serialized_values</code> obtains its HFID, finds or creates that heap's OOS file, and inserts the serialized requests there. Consequently the choice of class OID determines the owner heap of the new OOS chains. <a class="claim-ref" href="../index.html#C-001">[C-001]</a></p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Heap</th>
+<th>Contains our row?</th>
+<th>OOS file for this example?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Root</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>p0</td>
+<td>Yes</td>
+<td>Yes: contains the chain referenced by that row</td>
+</tr>
+<tr>
+<td>p1</td>
+<td>No</td>
+<td>No</td>
+</tr>
+</tbody>
+</table></div>
+<p>“Same owner” does not mean “same file.” The p0 heap file and its OOS file remain separate files. Their association is recorded in p0's heap header. <a class="claim-ref" href="../index.html#C-001">[C-001]</a> <a class="claim-ref" href="../index.html#C-003">[C-003]</a></p>
+<h2 id="chapter-02-follow-the-old-sequence">Follow the old sequence</h2>
+<p>Before the PR, <code>locator_attribute_info_force</code> built the record through an ordinary transform before calling the lower insert/update locator. The transform selected OOS values and inserted them using <code>attr_info-&gt;class_oid</code>. The lower locator subsequently pruned to the destination child and stored the record there. For a root-targeted INSERT that means the chain can be created under the root heap before the row is routed to p0. <a class="claim-ref" href="../index.html#C-002">[C-002]</a></p>
+<p><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 558" role="img" aria-labelledby="two-pass-title two-pass-desc">
+<title id="two-pass-title">Old and new ordering for the root-targeted INSERT</title><desc id="two-pass-desc">The old flow creates a root-owned chain before selecting p0. The new flow makes an inline probe, prunes to p0, writes a p0-owned chain, then uses ordinary locator routing and row insertion. The old owner mismatch is visible even when a direct OID read succeeds.</desc>
+<defs><marker id="two-pass-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="#50627b"/></marker></defs>
+<rect width="860" height="558" rx="16" fill="#f1f5fa"/>
+<g font-family="system-ui,sans-serif" font-size="18" fill="#172b46">
+<text x="28" y="36" font-size="22" font-weight="700">Route before choosing OOS ownership</text>
+<text x="38" y="81" font-weight="700" fill="#a44131">Before PR</text><text x="456" y="81" font-weight="700" fill="#287e60">After PR</text>
+<g stroke="#a95c4b" fill="#fff1ec"><rect x="28" y="104" width="372" height="77" rx="10"/><rect x="28" y="218" width="372" height="77" rx="10"/><rect x="28" y="332" width="372" height="77" rx="10"/></g>
+<text x="47" y="134">Ordinary transform</text><text x="47" y="163" font-weight="700">OOS chain → root heap owner</text>
+<text x="47" y="248">Lower locator prunes id=1</text><text x="47" y="277">Destination → p0</text>
+<text x="47" y="362">Store row in p0</text><text x="47" y="391" font-weight="700">Row owner ≠ chain owner</text>
+<path d="M214 182V211" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#two-pass-arrow)"/><path d="M214 296V325" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#two-pass-arrow)"/>
+<g stroke="#287e60" fill="#e2f3ec"><rect x="446" y="104" width="386" height="77" rx="10"/><rect x="446" y="218" width="386" height="77" rx="10"/><rect x="446" y="332" width="386" height="77" rx="10"/><rect x="446" y="446" width="386" height="77" rx="10"/></g>
+<text x="465" y="134">Probe transform</text><text x="465" y="163">Inline bytes; no OOS chain</text>
+<text x="465" y="248">Early pruning selects p0</text><text x="465" y="277">Keep class OID; free probe</text>
+<text x="465" y="362">Final transform</text><text x="465" y="391" font-weight="700">OOS chain → p0 heap owner</text>
+<text x="465" y="476">Lower locator still routes/locks</text><text x="465" y="505">Store row in p0</text>
+<path d="M639 182V211" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#two-pass-arrow)"/><path d="M639 296V325" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#two-pass-arrow)"/><path d="M639 410V439" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#two-pass-arrow)"/>
+<text x="38" y="466" font-size="16">Shown: partitioned write requiring OOS.</text><text x="38" y="493" font-size="16">No-demotion probes skip the final pass.</text>
+</g></svg>
+<figcaption>Old sequence and repaired sequence</figcaption></figure></p>
+<p>The head OOS OID can still point to readable bytes. The attribute reader parses that OID and calls <code>oos_read</code> directly; it does not first derive the chain's address from the row's heap header. This explains how a logical equality query can succeed even when the heap-level ownership relation is wrong. It is an inference from the two paths, corroborated by the earlier report's recorded result, not a new reproduction of the old binary. <a class="claim-ref" href="../index.html#C-011">[C-011]</a></p>
+<p>Vacuum's dependency is different: cleanup consults the heap's OOS VFID. An incorrect association can remain hidden during SELECT and emerge during reclamation. The added test deliberately checks ownership as well as value equality. <a class="claim-ref" href="../index.html#C-012">[C-012]</a> <a class="claim-ref" href="../index.html#C-003">[C-003]</a></p>
+<h2 id="chapter-02-read-executable-conditions-not-only-comments">Read executable conditions, not only comments</h2>
+<p>The historical issue says a missing OOS VFID led to temporary abort instrumentation. At the pinned head, <code>heap_oos_find_vfid(..., false)</code> returns success with a null VFID when no OOS file exists. <code>vacuum_oos_find_vfid_for_heap_record</code> returns early on that success; its abort is reached on the lookup-failure branch. Therefore “a null VFID always triggers this exact abort at this head” is not supported by the current condition. The wrong ownership remains the PR's problem, but the historical crash narrative must not be substituted for the current control flow. <a class="claim-ref" href="../index.html#C-012">[C-012]</a></p>
+<p>An error-message string and a nearby comment cannot prove the branch that executes. A current-server experiment with a deliberately inconsistent record would be needed to establish the full downstream failure path; we have not manufactured corruption for this book. <a class="claim-ref" href="../index.html#C-013">[C-013]</a></p>
+<h2 id="chapter-02-two-timelines-also-differ-in-storage-policy">Two timelines also differ in storage policy</h2>
+<p>The OOS normative context specifies a four-record physical-capacity target, 4,060 bytes for its described 16KB layout. The pinned PR source still compares against <code>DB_PAGESIZE / 4</code>. That is an implementation conformance gap relative to the loaded specification. We teach the literal comparison when walking this code. The 64-byte <code>FORCE_OUTLINE</code> regression does not depend on settling that threshold difference. <a class="claim-ref" href="../index.html#C-014">[C-014]</a></p>
+<h2 id="chapter-02-predict-before-continuing">Predict before continuing</h2>
+<ol>
+<li>Why is a value-equality SELECT insufficient as the only regression assertion?</li>
+<li>Where must the OOS file identifier be found for a row stored in p0?</li>
+<li>What evidence is needed before saying a missing VFID must abort at this revision?</li>
+<li>Distinguish a heap record, an OOS chunk record and an OOS value chain.</li>
+</ol></article></main><footer>Built from editable Markdown and SVG. Source claims use the pinned revision; the fresh runtime observation uses the separately hashed pre-existing binary. Study questions are answered separately in chapter 9. <a href="#top">Back to top</a></footer></body></html>

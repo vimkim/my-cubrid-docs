@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>3. Build a probe, choose the partition, then store the value · PR 7600</title><style>:root {
+  color-scheme: light dark;
+  --bg: #f7f7f4;
+  --surface: #ffffff;
+  --text: #202522;
+  --muted: #5d6861;
+  --line: #d8ddd9;
+  --accent: #176b55;
+  --code-bg: #edf1ee;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151916;
+    --surface: #1e2420;
+    --text: #edf2ee;
+    --muted: #aeb9b1;
+    --line: #39443d;
+    --accent: #78d6b5;
+    --code-bg: #252d28;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.65 var(--font, inherit);
+}
+
+main,
+header,
+nav,
+footer {
+  width: min(960px, calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+header {
+  padding-block: 3rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+main {
+  padding-block: 2rem 4rem;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+h2 {
+  margin-top: 2.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--line);
+}
+
+a {
+  color: var(--accent);
+}
+
+code,
+pre {
+  background: var(--code-bg);
+  border-radius: 0.3rem;
+}
+
+code {
+  padding: 0.1rem 0.3rem;
+}
+
+pre {
+  overflow-x: auto;
+  padding: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  vertical-align: top;
+}
+
+th {
+  background: var(--code-bg);
+  text-align: left;
+}
+
+.claim,
+.callout {
+  margin-block: 1rem;
+  padding: 0.8rem 1rem;
+  background: var(--surface);
+  border-left: 0.3rem solid var(--accent);
+}
+
+.muted,
+.provenance {
+  color: var(--muted);
+}
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  nav {
+    display: none;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+:root { color-scheme: light; --bg:#f3f5f8; --surface:#fff; --text:#1b2b42; --muted:#506178; --line:#d6dfe9; --accent:#17604d; --code-bg:#edf1f6; }
+body { font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-size:17px; line-height:1.75; }
+header, main, footer { width:min(1020px,calc(100% - 40px)); }
+header { padding:3.5rem 0 2rem; }
+header h1 { font-size:clamp(2rem,5vw,3.8rem); max-width:850px; letter-spacing:-.04em; margin:.45rem 0 1rem; }
+.eyebrow { font-size:.8rem; letter-spacing:.13em; color:var(--accent); font-weight:750; text-transform:uppercase; }
+.subtitle { font-size:1.17rem; color:var(--muted); max-width:780px; }
+.badge { display:inline-block; padding:.2rem .7rem; border:1px solid var(--line); border-radius:30px; margin:.25rem .35rem .25rem 0; font-size:.8rem; background:#fff; }
+nav.toc { width:min(1020px,calc(100% - 40px)); margin:1.5rem auto; padding:1.2rem 1.5rem; background:var(--surface); border:1px solid var(--line); border-radius:12px; }
+nav.toc ol { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.3rem 2rem; padding-left:1.3rem; }
+nav.toc a { text-decoration:none; }
+article { background:var(--surface); border:1px solid var(--line); border-radius:14px; margin-bottom:2rem; padding:2rem 2.7rem; overflow-wrap:anywhere; }
+article h1 { font-size:2rem; margin-top:.3rem; }
+article h2 { font-size:1.4rem; }
+article h3 { font-size:1.12rem; margin-top:2rem; }
+article h1,article h2,article h3 { scroll-margin-top:2rem; }
+pre { font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; tab-size:4; white-space:pre; overflow-x:auto; overflow-wrap:normal; border:1px solid var(--line); }
+pre code { padding:0; background:transparent; }
+code { font-size:.88em; }
+.table-scroll { overflow-x:auto; margin:1.3rem 0; }
+table { font-size:.9rem; min-width:560px; }
+td, th { padding:.65rem .8rem; }
+figure { margin:1.5rem 0; padding:0; overflow-x:auto; }
+figure svg { display:block; width:100%; min-width:650px; height:auto; }
+figcaption { color:var(--muted); font-size:.85rem; padding:.5rem 0; }
+.claim-ref { white-space:nowrap; font-size:.72em; font-weight:650; text-decoration:none; }
+.chapter-nav { display:flex; justify-content:space-between; gap:1rem; border-top:1px solid var(--line); padding-top:1rem; margin-top:2rem; font-size:.85rem; }
+.source-kind { color:var(--muted); }
+.line-map { color:var(--muted); font-size:.86rem; }
+footer { padding:0 0 3rem; color:var(--muted); font-size:.9rem; }
+@media(max-width:650px) { header,main,footer,nav.toc { width:calc(100% - 24px); } article { padding:1.1rem; } article h1 { font-size:1.55rem; } nav.toc ol { grid-template-columns:1fr; } body { font-size:16px; } }
+@media print { :root { --text:#000; --bg:#fff; } body { font-size:10pt; } header,main,footer { width:100%; } header { padding-top:0; } article { border:0; padding:0; break-before:page; } figure { overflow:visible; break-inside:avoid; } figure svg { min-width:0; } pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:8pt; } table { min-width:0; font-size:9pt; } .table-scroll { overflow:visible; } .chapter-nav { display:none; } h2,h3 { break-after:avoid; } }
+</style></head>
+<body><header id="top"><div class="eyebrow">CUBRID · source reading course · PR 7600</div><h1>3. Build a probe, choose the partition, then store the value</h1><p class="subtitle">From heap pages and partition classes to every changed line of the two-pass OOS write path.</p><span class="badge">30 annotated hunks</span><span class="badge">6 changed files</span><span class="badge">Head b871ea386</span><span class="badge">Offline · Markdown + SVG</span><p class="provenance">Base 2940b1cfb · pinned on 2026-09-08 · English · basic C/C++ and SQL prerequisites</p></header>
+<nav class="toc" aria-label="Reading order"><a href="../index.html#chapter-03">Full book and reading map</a></nav><main><article><h1 id="chapter-03-3-build-a-probe-choose-the-partition-then-store-the-value">3. Build a probe, choose the partition, then store the value</h1>
+<p>Transformation has two jobs that used to run together: produce bytes usable by downstream code, and create the out-of-row values referenced by those bytes. Partition selection needs the first job before the destination is known. The PR introduces a mode that prepares a fully-inline record while reporting whether an ordinary transform would choose OOS. <a class="claim-ref" href="../index.html#C-015">[C-015]</a></p>
+<h2 id="chapter-03-trace-the-example-from-sql-execution">Trace the example from SQL execution</h2>
+<p>The SQL executor evaluates values into attribute information and calls <code>locator_attribute_info_force</code> for the write. For INSERT, <code>old_recdes</code> is null. For UPDATE, the function first obtains the old row representation and deliberately falls through to the shared transformation code. The <code>[[fallthrough]]</code> explains why code under the INSERT case labels also handles UPDATE. <a class="claim-ref" href="../index.html#C-016">[C-016]</a></p>
+<p>With a partitioned operation, the new branch does the following:</p>
+<ol>
+<li>Initialize <code>would_demote_oos=false</code> and pass its address to the allocator. The address selects suppression mode. The initial false value is not what enables suppression.</li>
+<li>Build a fully-inline probe. For our forced-outline value, the planner reports true but leaves the plan unselected and <code>has_oos=false</code>.</li>
+<li>If the copy area exists and demotion is needed, initialize output identifiers and call insert or update pruning with the probe bytes.</li>
+<li>Free the probe copy area, clear its pointer and descriptor fields, and check the pruning error.</li>
+<li>On success, build the final image with <code>&amp;pruned_class_oid</code> and a null probe output. OOS creation now uses p0 as owner.</li>
+<li>Continue into the existing <code>locator_insert_force</code> or <code>locator_update_force</code> path, then release the final copy area. <a class="claim-ref" href="../index.html#C-016">[C-016]</a></li>
+</ol>
+<h2 id="chapter-03-a-second-pruning-still-happens">A second pruning still happens</h2>
+<p>The new early pruning does not replace the lower locator's existing pruning. The lower insert locator prunes again, selects the appropriate scan cache, obtains the subclass lock and forms a heap insert context from the final class/HFID. It then calls <code>heap_insert_logical</code>. The UPDATE path may call <code>locator_move_record</code> if the final destination differs from the row's current class. <a class="claim-ref" href="../index.html#C-017">[C-017]</a></p>
+<p>The early outputs <code>pruned_hfid</code> and <code>superclass_oid</code> satisfy the pruning API; the final transform specifically consumes <code>pruned_class_oid</code>. The PR does not overwrite the outer class/HFID with these early outputs. The lower locator continues to own actual write routing, locking and representation adjustment. <a class="claim-ref" href="../index.html#C-016">[C-016]</a> <a class="claim-ref" href="../index.html#C-017">[C-017]</a></p>
+<p>A useful invariant is agreement between early and final routing. Both operate on the same logical values, even though the final bytes can contain stubs. The partition reader uses the attribute layer to obtain a logical key. Probe increments have already been applied before early routing, and final serialization avoids applying them again. These facts support agreement; exhaustive agreement under every concurrent schema change is beyond the single regression. <a class="claim-ref" href="../index.html#C-018">[C-018]</a></p>
+<h2 id="chapter-03-what-pruning-actually-reads">What pruning actually reads</h2>
+<p><code>partition_find_partition_for_record</code> initializes an attribute cache for the partition key, temporarily changes the record's representation ID to the root representation, reads key values and restores the original ID. It evaluates the partition expression, searches matching partitions and requires exactly one match. It copies the chosen class OID and HFID to outputs. If the class changed, it adjusts the record representation ID to the child's representation. <a class="claim-ref" href="../index.html#C-019">[C-019]</a></p>
+<p>Existing partition code can therefore consume the probe before storage. The final image still needs lower-level routing because the early probe whose representation was adjusted is freed. <a class="claim-ref" href="../index.html#C-019">[C-019]</a> <a class="claim-ref" href="../index.html#C-016">[C-016]</a></p>
+<h2 id="chapter-03-the-mode-table-is-the-api">The mode table is the API</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Call</th>
+<th>Owner override</th>
+<th>Verdict pointer</th>
+<th>Increments already applied</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ordinary</td>
+<td>Null</td>
+<td>Null</td>
+<td>False</td>
+<td>Normal policy; owner from attribute info</td>
+</tr>
+<tr>
+<td>Probe</td>
+<td>Null</td>
+<td>Non-null</td>
+<td>False</td>
+<td>Inline image; report demotion; apply attribute effects</td>
+</tr>
+<tr>
+<td>Final owner</td>
+<td>Selected class</td>
+<td>Null</td>
+<td>True</td>
+<td>Normal policy; selected owner; skip repeated increments</td>
+</tr>
+<tr>
+<td>Except-LOB</td>
+<td>Null</td>
+<td>Null</td>
+<td>False</td>
+<td>Ordinary policy with existing excluded-LOB behavior</td>
+</tr>
+</tbody>
+</table></div>
+<p>At the allocator boundary dispatch order is probe pointer first, owner pointer second, then LOB mode. If both pointers were non-null, probe wins. Intended changed callers pass only the meaningful pointer. The public probe wrapper does not assert a non-null verdict pointer: passing null would fail to select suppression internally. The final wrapper assumes a successful probe on the same attribute state. These are caller obligations, not compiler-enforced mode types. <a class="claim-ref" href="../index.html#C-008">[C-008]</a> <a class="claim-ref" href="../index.html#C-015">[C-015]</a></p>
+<h2 id="chapter-03-paths-that-do-less-work">Paths that do less work</h2>
+<p>For a nonpartitioned class both pointers are null and the previous ordinary transform is selected. For a partitioned record whose probe reports no demotion, the probe copy area is retained and passed into the ordinary lower locator. There is no second transform; normal routing still occurs downstream. An oversized record with no eligible OOS attribute can also report no demotion—record size alone is not the verdict. <a class="claim-ref" href="../index.html#C-016">[C-016]</a> <a class="claim-ref" href="../index.html#C-020">[C-020]</a></p>
+<h2 id="chapter-03-prediction-questions">Prediction questions</h2>
+<ol>
+<li>How many transforms and pruning calls occur for our forced-outline INSERT?</li>
+<li>What happens when a partitioned probe returns false?</li>
+<li>Why free the probe before constructing the final image?</li>
+<li>If an UPDATE changes <code>id=1</code> to <code>id=20</code>, which heap should receive the new chain?</li>
+<li>Why would passing null as the probe verdict pointer be dangerous?</li>
+</ol></article></main><footer>Built from editable Markdown and SVG. Source claims use the pinned revision; the fresh runtime observation uses the separately hashed pre-existing binary. Study questions are answered separately in chapter 9. <a href="#top">Back to top</a></footer></body></html>

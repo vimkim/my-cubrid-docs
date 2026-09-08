@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>5. Duplicate probes, errors and lifetime · PR 7600</title><style>:root {
+  color-scheme: light dark;
+  --bg: #f7f7f4;
+  --surface: #ffffff;
+  --text: #202522;
+  --muted: #5d6861;
+  --line: #d8ddd9;
+  --accent: #176b55;
+  --code-bg: #edf1ee;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151916;
+    --surface: #1e2420;
+    --text: #edf2ee;
+    --muted: #aeb9b1;
+    --line: #39443d;
+    --accent: #78d6b5;
+    --code-bg: #252d28;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.65 var(--font, inherit);
+}
+
+main,
+header,
+nav,
+footer {
+  width: min(960px, calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+header {
+  padding-block: 3rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+main {
+  padding-block: 2rem 4rem;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+h2 {
+  margin-top: 2.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--line);
+}
+
+a {
+  color: var(--accent);
+}
+
+code,
+pre {
+  background: var(--code-bg);
+  border-radius: 0.3rem;
+}
+
+code {
+  padding: 0.1rem 0.3rem;
+}
+
+pre {
+  overflow-x: auto;
+  padding: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  vertical-align: top;
+}
+
+th {
+  background: var(--code-bg);
+  text-align: left;
+}
+
+.claim,
+.callout {
+  margin-block: 1rem;
+  padding: 0.8rem 1rem;
+  background: var(--surface);
+  border-left: 0.3rem solid var(--accent);
+}
+
+.muted,
+.provenance {
+  color: var(--muted);
+}
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  nav {
+    display: none;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+:root { color-scheme: light; --bg:#f3f5f8; --surface:#fff; --text:#1b2b42; --muted:#506178; --line:#d6dfe9; --accent:#17604d; --code-bg:#edf1f6; }
+body { font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-size:17px; line-height:1.75; }
+header, main, footer { width:min(1020px,calc(100% - 40px)); }
+header { padding:3.5rem 0 2rem; }
+header h1 { font-size:clamp(2rem,5vw,3.8rem); max-width:850px; letter-spacing:-.04em; margin:.45rem 0 1rem; }
+.eyebrow { font-size:.8rem; letter-spacing:.13em; color:var(--accent); font-weight:750; text-transform:uppercase; }
+.subtitle { font-size:1.17rem; color:var(--muted); max-width:780px; }
+.badge { display:inline-block; padding:.2rem .7rem; border:1px solid var(--line); border-radius:30px; margin:.25rem .35rem .25rem 0; font-size:.8rem; background:#fff; }
+nav.toc { width:min(1020px,calc(100% - 40px)); margin:1.5rem auto; padding:1.2rem 1.5rem; background:var(--surface); border:1px solid var(--line); border-radius:12px; }
+nav.toc ol { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.3rem 2rem; padding-left:1.3rem; }
+nav.toc a { text-decoration:none; }
+article { background:var(--surface); border:1px solid var(--line); border-radius:14px; margin-bottom:2rem; padding:2rem 2.7rem; overflow-wrap:anywhere; }
+article h1 { font-size:2rem; margin-top:.3rem; }
+article h2 { font-size:1.4rem; }
+article h3 { font-size:1.12rem; margin-top:2rem; }
+article h1,article h2,article h3 { scroll-margin-top:2rem; }
+pre { font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; tab-size:4; white-space:pre; overflow-x:auto; overflow-wrap:normal; border:1px solid var(--line); }
+pre code { padding:0; background:transparent; }
+code { font-size:.88em; }
+.table-scroll { overflow-x:auto; margin:1.3rem 0; }
+table { font-size:.9rem; min-width:560px; }
+td, th { padding:.65rem .8rem; }
+figure { margin:1.5rem 0; padding:0; overflow-x:auto; }
+figure svg { display:block; width:100%; min-width:650px; height:auto; }
+figcaption { color:var(--muted); font-size:.85rem; padding:.5rem 0; }
+.claim-ref { white-space:nowrap; font-size:.72em; font-weight:650; text-decoration:none; }
+.chapter-nav { display:flex; justify-content:space-between; gap:1rem; border-top:1px solid var(--line); padding-top:1rem; margin-top:2rem; font-size:.85rem; }
+.source-kind { color:var(--muted); }
+.line-map { color:var(--muted); font-size:.86rem; }
+footer { padding:0 0 3rem; color:var(--muted); font-size:.9rem; }
+@media(max-width:650px) { header,main,footer,nav.toc { width:calc(100% - 24px); } article { padding:1.1rem; } article h1 { font-size:1.55rem; } nav.toc ol { grid-template-columns:1fr; } body { font-size:16px; } }
+@media print { :root { --text:#000; --bg:#fff; } body { font-size:10pt; } header,main,footer { width:100%; } header { padding-top:0; } article { border:0; padding:0; break-before:page; } figure { overflow:visible; break-inside:avoid; } figure svg { min-width:0; } pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:8pt; } table { min-width:0; font-size:9pt; } .table-scroll { overflow:visible; } .chapter-nav { display:none; } h2,h3 { break-after:avoid; } }
+</style></head>
+<body><header id="top"><div class="eyebrow">CUBRID · source reading course · PR 7600</div><h1>5. Duplicate probes, errors and lifetime</h1><p class="subtitle">From heap pages and partition classes to every changed line of the two-pass OOS write path.</p><span class="badge">30 annotated hunks</span><span class="badge">6 changed files</span><span class="badge">Head b871ea386</span><span class="badge">Offline · Markdown + SVG</span><p class="provenance">Base 2940b1cfb · pinned on 2026-09-08 · English · basic C/C++ and SQL prerequisites</p></header>
+<nav class="toc" aria-label="Reading order"><a href="../index.html#chapter-05">Full book and reading map</a></nav><main><article><h1 id="chapter-05-5-duplicate-probes-errors-and-lifetime">5. Duplicate probes, errors and lifetime</h1>
+<h2 id="chapter-05-a-temporary-image-can-cause-a-permanent-mistake">A temporary image can cause a permanent mistake</h2>
+<p>REPLACE first needs to find conflicting unique keys so existing rows can be removed. ODKU (<code>INSERT ... ON DUPLICATE KEY UPDATE</code>) needs to find the row that would conflict before choosing its update behavior. Both paths construct a candidate record for key extraction. That candidate image is not itself the row finally inserted. <a class="claim-ref" href="../index.html#C-026">[C-026]</a></p>
+<p>The PR adds a local boolean and passes its address to the allocator in both helpers. Neither helper needs the resulting true/false verdict: the pointer's presence selects OOS suppression. This prevents the discarded key-probe image from creating an unowned chain. REPLACE preserves <code>LOB_FLAG_EXCLUDE_LOB</code>; ODKU preserves <code>LOB_FLAG_INCLUDE_LOB</code>. Suppression changes OOS publication, not the existing LOB policy. <a class="claim-ref" href="../index.html#C-026">[C-026]</a></p>
+<p>The rest of each helper still does real work. REPLACE loops over unique indexes, extracts keys, prunes index targets, calls <code>xbtree_find_unique</code>, and deletes conflicting rows when found. ODKU searches for a duplicate, records its OID and can select its partition scan cache. Calling the entire helper “side-effect free” would therefore be wrong. Only the temporary transformation's OOS creation is suppressed. <a class="claim-ref" href="../index.html#C-026">[C-026]</a></p>
+<h2 id="chapter-05-three-different-lifetimes">Three different lifetimes</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Object</th>
+<th>Owner and lifetime</th>
+<th>End of lifetime</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Probe/final <code>LC_COPYAREA</code></td>
+<td>Locator preparation owns transient bytes</td>
+<td>Freed after pruning or after lower write call</td>
+</tr>
+<tr>
+<td><code>attr_info</code> DB_VALUEs and state</td>
+<td>Caller-provided attribute cache survives both passes</td>
+<td>Released by its surrounding operation; not by freeing a copy area</td>
+</tr>
+<tr>
+<td>OOS value chains</td>
+<td>Persistent records associated with the selected heap</td>
+<td>Managed by transaction/recovery and reclamation paths, not <code>locator_free_copy_area</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The distinction is essential on errors. Freeing a copy area releases a memory buffer; it does not undo previously published database records. Before the final pass, suppression prevents OOS chains from being created for the probe. Once the final pass writes chains, a later failure must use the existing transaction/error machinery. <a class="claim-ref" href="../index.html#C-008">[C-008]</a> <a class="claim-ref" href="../index.html#C-016">[C-016]</a> <a class="claim-ref" href="../index.html#C-027">[C-027]</a></p>
+<h2 id="chapter-05-follow-each-failure-exit">Follow each failure exit</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Immediate action visible in the traced code</th>
+<th>What the caller must understand</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>First copy-area allocation fails</td>
+<td>Allocator returns null</td>
+<td>No transform ran</td>
+</tr>
+<tr>
+<td>Probe transform fails</td>
+<td>Allocator frees its copy area and returns null</td>
+<td>Attribute preparation may already have changed state; caller reports failure</td>
+</tr>
+<tr>
+<td>Early partition pruning fails</td>
+<td>Locator frees probe, clears pointer/area, breaks with pruning error</td>
+<td>No final OOS pass runs</td>
+</tr>
+<tr>
+<td>Final transform fails</td>
+<td>Allocator returns null; locator sets <code>ER_FAILED</code></td>
+<td>OOS work may have begun; memory cleanup is not rollback</td>
+</tr>
+<tr>
+<td>Unsupported OOS-plus-bigone layout</td>
+<td>Internal transform sets error and returns before insertion</td>
+<td>No chain is written by this transformation</td>
+</tr>
+<tr>
+<td>Buffer too small</td>
+<td>Internal loop enlarges and retries writing</td>
+<td>Increment set and LOB markers prevent repeated successful effects</td>
+</tr>
+<tr>
+<td>Lower insert/update fails</td>
+<td>Error is propagated, final copy area is freed</td>
+<td>Existing statement/transaction recovery obligations remain</td>
+</tr>
+</tbody>
+</table></div>
+<p>These are source control-flow facts, not a claim that every allocation failure was injected. One adjacent pre-existing path merits caution: after <code>release_buffer</code>, the allocator frees its original copy area and allocates a larger one; if that allocation fails, the shown return occurs before the explicit <code>free(allocated_data)</code>. We do not certify all allocation cleanup in this dependency. The book's scope is the PR ordering change. <a class="claim-ref" href="../index.html#C-008">[C-008]</a> <a class="claim-ref" href="../index.html#C-027">[C-027]</a></p>
+<h2 id="chapter-05-locks-persistence-and-ownership">Locks, persistence and ownership</h2>
+<p>A transaction groups database work that can commit or roll back. Write-ahead logging records changes needed for recovery; a successful memory allocation has no equivalent durability meaning. A lock coordinates logical access between transactions, while a page latch protects a brief physical page operation. The PR changes the order of preparation and routing within that existing machinery. <a class="claim-ref" href="../index.html#C-017">[C-017]</a> <a class="claim-ref" href="../index.html#C-027">[C-027]</a></p>
+<p>The new early phase selects a destination; it does not introduce a new locking protocol. The lower locator retains subclass locks, scan-cache selection and actual row operations. Any change to skip its second pruning would need to preserve those responsibilities and the representation-ID handling. The PR is also not a new commit boundary: successful OOS insertion is not equivalent to a committed SQL row. <a class="claim-ref" href="../index.html#C-017">[C-017]</a> <a class="claim-ref" href="../index.html#C-027">[C-027]</a></p>
+<p>One unchanged lower layer makes the persistence distinction concrete. If <code>heap_oos_find_vfid</code> must create a file, it starts a system operation, creates the OOS file, applies the class encryption policy, logs the heap-header update, marks the page dirty and completes the system operation. Errors abort that system operation and return failure. This file-creation operation is not the SQL transaction's final commit, and the PR adds no replacement for it. <a class="claim-ref" href="../index.html#C-034">[C-034]</a></p>
+<p>For MVCC, old row versions can still be visible to older transactions. Their out-of-row values cannot be reclaimed merely because the current SQL UPDATE has constructed new values. The unchanged eager-cleanup helper describes a separate non-MVCC path and compares old/new references. Full vacuum retry safety, chain identity and crash recovery are neighboring OOS concerns, not solved by choosing the correct partition owner. <a class="claim-ref" href="../index.html#C-027">[C-027]</a></p>
+<h2 id="chapter-05-costs-and-observable-behavior">Costs and observable behavior</h2>
+<p>Partitioned OOS writes now serialize a fully-inline probe and a compact final image, and prune early as well as through the ordinary lower path. The probe can be much larger than the stored record. This introduces extra CPU and transient memory work proportional to the logical values being serialized. No latency or peak-memory benchmark is reported here. Nonpartitioned writes retain the ordinary path, and no-demotion partition writes reuse their single probe image. <a class="claim-ref" href="../index.html#C-028">[C-028]</a></p>
+<p><code>SHOW ALL HEAP OOS</code> is useful because it reports separate root/child rows and per-file counts. Its <code>has_oos</code> diagnostic column means the heap has an OOS file; it must not be confused with a record's <code>HAS_OOS</code> flag. An empty-but-existing OOS file can still have a true file-existence indicator. This regression starts from a clean table, so zero file indicators have a precise meaning. <a class="claim-ref" href="../index.html#C-003">[C-003]</a></p>
+<p>Security: no new SQL authorization interface, parser rule or client protocol is introduced by these six files' diff. Existing locks and class lookup remain dependencies. This observation is limited to the patch; it is not an audit of all OOS access control or encryption. Network/restart experiments are not applicable to the fresh standalone observation, which opens an owned local database in process. <a class="claim-ref" href="../index.html#C-029">[C-029]</a></p>
+<h2 id="chapter-05-prediction-questions">Prediction questions</h2>
+<ol>
+<li>Why does a duplicate-key helper pass a verdict pointer and never read the verdict?</li>
+<li>What survives when the probe copy area is freed?</li>
+<li>Why does freeing the final buffer not undo its OOS writes?</li>
+<li>What responsibilities would be lost if you simply removed the lower locator's pruning block?</li>
+<li>Which cost would you measure for a multi-megabyte value even if the final heap record is small?</li>
+</ol></article></main><footer>Built from editable Markdown and SVG. Source claims use the pinned revision; the fresh runtime observation uses the separately hashed pre-existing binary. Study questions are answered separately in chapter 9. <a href="#top">Back to top</a></footer></body></html>
