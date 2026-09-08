@@ -261,10 +261,11 @@ next GHA run.
 
 1. **Testcase fixes on tc/pr-6864 (groups A–C, 7 files, no engine change)**: regenerate the three paramdump
    answers with `-1380,-1382,-1383`; restore the two TDE answers from `e7e87aa43`; add the `bigPageSize` tiebreaker;
-   rewrite the `log_enc_04` workload. Verify only in a fully isolated environment (PID + IPC + **network**
-   namespace with a CTP-replaceable `~/.CUBRID_SHELL_FM`, or a host/VM with no other CUBRID instance); the
-   container recipe mounts the install read-only, and the 2026-09-05 namespace attempt without a network
-   namespace stopped the host master (see the incident note). Then re-trigger with `/run shell`.
+   rewrite the `log_enc_04` workload. Verify only with the validated isolated runner in
+   `2940b1c/local-verify-attempt-2026-09-05/` (user + mount + IPC + PID + network namespaces **plus a private
+   `/tmp`**, because the master is also reachable through `/tmp/CUBRID<port>`; run the testcase script directly, not
+   through CTP's Java), or on a host/VM with no other CUBRID instance. Then re-trigger with `/run all`.
+   *Status 2026-09-08: groups A–C verified by CI (rev 3 delta); `log_enc_04` fixed and verified 3/3 locally, push pending.*
 2. **Engine (group D)**: confirm the merge-gate decision for CDC-with-OOS, then implement CBRD-26939. As a first
    step make `oos_read` fail soft on non-head chunks and deallocated pages instead of asserting, so CDC degrades to
    an extraction error. Use `cbrd_27064` case 2 as the reproducer.

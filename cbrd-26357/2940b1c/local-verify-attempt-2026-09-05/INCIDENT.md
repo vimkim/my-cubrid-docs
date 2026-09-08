@@ -55,7 +55,33 @@ The CI analysis itself is unaffected; it never depended on local execution.
 All four completed tests reported NOK **while the install had no `cubrid.conf`**, so they say nothing about the
 answer fixes. Verification of groups A–C is still outstanding.
 
-## Corrected procedure for the next attempt
+## Update 2026-09-08: a third escape route, and the runner that finally holds
+
+A network namespace alone is **not** enough. Preflighting the corrected recipe on 2026-09-08 showed
+`cubrid service status` inside a PID+IPC+mount+**net** namespace still reporting the host's master and its `quizdb`
+server: CUBRID clients reach the master over its **Unix domain socket** `/tmp/CUBRID<port>` (here `/tmp/CUBRID1523`),
+which lives in the shared filesystem, and only fall back to TCP when that fails. The preflight's abort guard stopped
+before any `service stop` could travel that path; the host master was never touched this time.
+
+The runner that passed preflight and then ran testcases safely (`iso2_enter.sh`, `iso2_driver.sh` in this directory):
+
+- `unshare -r --mount-proc -i -p -f -n --kill-child=SIGKILL`, wrapped in `timeout -s KILL`, so a hang cannot outlive
+  the command and the namespace init dies with it.
+- Inside, before anything else: bind the install copy on `/mnt` (short socket paths), bind a private `/etc/hosts`
+  (`127.0.0.1 localhost <hostname>`) and an **empty** `/etc/resolv.conf` (no DNS hangs with no network), then
+  `mount -t tmpfs tmpfs /tmp` so `/tmp/CUBRID1523` is invisible. Anything the run needs must then live outside `/tmp`
+  (the scratchpad is under `/tmp`, so the driver and probes live in the install copy).
+- `ip link set lo up`; copy on port 1600 as a second layer.
+- Hard guard: if `cubrid service status` reports a running master before start, abort.
+- **Never pipe a daemon-starting command** (`cubrid service start`, `cubrid server start`) into another process;
+  the daemons inherit the pipe and the reader never sees EOF. Redirect to a file, then read the file.
+- Run the testcase script directly with `init_path=~/CTP/shell/init_path` (CTP's `init.sh` provides everything the
+  script needs); do not involve CTP's Java, which is what emptied the conf directory on 2026-09-05.
+
+With this runner `log_enc_04` ran end to end three times with the host master, `/tmp/CUBRID1523`, and port 1523
+untouched throughout.
+
+## Corrected procedure for the next attempt (superseded by the update above where they differ)
 
 Do not run CTP shell on this host without all of the following:
 

@@ -11,8 +11,13 @@
   `ci/circleci: test_shell` and `gha-ci: test_shell` for head `2940b1c`; work-tracker item 63.
   **Done 09:50Z: GHA run 33955055682 and CircleCI job 152547 both finished with 3 failures (log_enc_04, cbrd_27064,
   cbrd_27075), the predicted set; all five fixes confirmed on both CIs; medium (152549) and sql (152550) green.**
-  Rev 3 delta is written at the top of the report; work-tracker item 63 closed. Path 1 is complete except the
-  `log_enc_04` workload rewrite, which was deliberately left out of this push. Next work is path 2 (CDC decision).
+  Rev 3 delta is written at the top of the report; work-tracker item 63 closed.
+  **log_enc_04 fixed and verified locally**: the workload rewrite (page-fill relocation for `RVHF_INSERT_NEWHOME`,
+  a fixed-width `BIT(160000)` table for the overflow paths, `RVOOS_INSERT`/`RVOOS_DELETE` added, report-all loop) is
+  committed on the tc/pr-6864 worktree and passed 3/3 on the 2940b1c debug build in the isolated namespace runner
+  (`2940b1c/local-verify-attempt-2026-09-05/iso2_enter.sh`, see the INCIDENT.md update for why a network namespace
+  alone was not enough). **Not yet pushed**; push + `/run all` is the next outward step. After that the only
+  remaining shell failures should be the two CDC tests (path 2).
 
 ## Where things stand
 
