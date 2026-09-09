@@ -1,0 +1,56 @@
+{
+  "label": "control-1-nonpartition-small-1-a",
+  "source_revision": "b871ea386d2c5419b7abae07dda58b9b7f36377a",
+  "runner": "/home/vimkim/gh/my-cubrid-docs/cbrd-27089/design/ticket01-evidence/run-isolated.py",
+  "runner_sha256": "0dc2b6d2ce2791241af2de85ba42e59589d37e59c06cfaca86b4e7ef29330170",
+  "source_status": " m cubrid-cci\n M unit_tests/oos/test_oos_real_vacuum_server.cpp\n?? unit_tests/oos/sql/test_oos_sql_pr7600_cleanup.cpp\n?? unit_tests/oos/sql/test_oos_sql_pr7600_measure.cpp\n",
+  "engine_test_diff": "diff --git a/unit_tests/oos/test_oos_real_vacuum_server.cpp b/unit_tests/oos/test_oos_real_vacuum_server.cpp\nindex 456e4cf39..882b3db41 100644\n--- a/unit_tests/oos/test_oos_real_vacuum_server.cpp\n+++ b/unit_tests/oos/test_oos_real_vacuum_server.cpp\n@@ -825,6 +825,48 @@ TEST_F (OosRealVacuum, ReVacuumAfterDrainIsIdempotent)\n   expect_oos_gone (oos_oid, \"drained OOS after re-vacuum\");\n }\n \n+/* A rolled-back replacement does not supersede the committed version. A\n+ * separate committed delete witnesses real vacuum progress before readback;\n+ * waking a daemon or freeing the replacement buffer alone proves nothing. */\n+TEST_F (OosRealVacuum, RolledBackUpdateKeepsCommittedOosAfterVacuum)\n+{\n+  const std::string original (4096, 'a');\n+  OID heap_oid, original_oid;\n+  insert_row_with_oos (original, heap_oid, original_oid);\n+\n+  /* Allocate the progress witness before creating any reclaimable version,\n+   * so a recycled OOS slot cannot alias the original OID in this test. */\n+  OID witness_heap_oid, witness_oos_oid;\n+  insert_row_with_oos (std::string (4096, 'w'), witness_heap_oid, witness_oos_oid);\n+\n+  RECDES replacement {};\n+  ASSERT_EQ (test_oos_utils::from_string_into_recdes (std::string (4096, 'b'), replacement), NO_ERROR);\n+  test_oos_utils::auto_freed_recdes_ptr defer_replacement (&replacement, recdes_free_data_area);\n+  OID replacement_oid = OID_INITIALIZER;\n+  ASSERT_EQ (test_oos_utils::oos_insert_from_recdes (thread_p, oos_vfid, replacement, replacement_oid), NO_ERROR);\n+\n+  RECDES new_heap_rec {};\n+  ASSERT_EQ (build_heap_recdes_with_oos ({replacement_oid}, { (INT64) replacement.length}, new_heap_rec), NO_ERROR);\n+  test_oos_utils::auto_freed_recdes_ptr defer_heap (&new_heap_rec, recdes_free_data_area);\n+  ASSERT_EQ (heap_update_mvcc (hfid, class_oid, scan_cache, heap_oid, new_heap_rec), NO_ERROR);\n+  ASSERT_EQ (xtran_server_abort (thread_p), TRAN_UNACTIVE_ABORTED);\n+\n+  RECDES before_vacuum {};\n+  ASSERT_EQ (test_oos_utils::oos_read_with_alloc (thread_p, original_oid, before_vacuum), NO_ERROR);\n+  test_oos_utils::auto_freed_recdes_ptr defer_before (&before_vacuum, recdes_free_data_area);\n+  ASSERT_EQ (std::string (before_vacuum.data, before_vacuum.length - 1), original);\n+\n+  delete_row_and_close_block (witness_heap_oid);\n+  ASSERT_TRUE (wait_for_vacuum ([this, &witness_oos_oid] { return oos_unreadable (witness_oos_oid); }, 60))\n+      << \"committed-delete witness did not establish vacuum progress\";\n+\n+  RECDES after_vacuum {};\n+  ASSERT_EQ (test_oos_utils::oos_read_with_alloc (thread_p, original_oid, after_vacuum), NO_ERROR)\n+      << \"rolled-back UPDATE must not make the committed OOS value reclaimable\";\n+  test_oos_utils::auto_freed_recdes_ptr defer_after (&after_vacuum, recdes_free_data_area);\n+  EXPECT_EQ (std::string (after_vacuum.data, after_vacuum.length - 1), original);\n+}\n+\n int\n main (int argc, char **argv)\n {\n",
+  "submodule_status": " bd86063a5bd481f0e22bf07c8a76bf736f86443a cubrid-cci (v11.2.0.0029-19-gbd86063)\n",
+  "build_mode": "release_gcc / SA_MODE",
+  "command_timeout_seconds": 600,
+  "measurement_environment": {
+    "PR7600_ROWS": "1024",
+    "PR7600_REPETITIONS": "11",
+    "PR7600_WORKLOAD": "nonpartition_small"
+  },
+  "cpu_affinity": [
+    6
+  ],
+  "binary": "/home/vimkim/gh/cb/pr7600-original-baseline/build_preset_release_gcc/bin/test_oos_sql_pr7600_measure",
+  "binary_sha256": "7201a8c39bb53f39aca8b4fae7884760b82b2789f1ba5a51e75c80314a3b700e",
+  "engine_library": "/home/vimkim/.cub/install/pr7600-original-baseline/release_gcc/lib/libcubridsa.so.11.5",
+  "engine_library_sha256": "da01bbee3f0e0045b1671dd3a5d25c3be56f5360c91709357125d4fa57364556",
+  "cmake_cache_sha256": "7b4e85cf794a7c12fa4d4d20ed03a3149ade9e0f644d8223f4924ae5b73fda88",
+  "build_log": "/home/vimkim/gh/cb/CBRD-27089-has-oos-but-no-oos/.artifacts/pr7600-independent-RjRhFS/pr7600-ticket01-jjzuujoa/build.log",
+  "sandbox": "/home/vimkim/gh/cb/CBRD-27089-has-oos-but-no-oos/.artifacts/pr7600-independent-RjRhFS/pr7600-ticket01-jjzuujoa",
+  "environment": {
+    "CUBRID": "/home/vimkim/gh/cb/CBRD-27089-has-oos-but-no-oos/.artifacts/pr7600-independent-RjRhFS/pr7600-ticket01-jjzuujoa/install",
+    "CUBRID_DATABASES": "/home/vimkim/gh/cb/CBRD-27089-has-oos-but-no-oos/.artifacts/pr7600-independent-RjRhFS/pr7600-ticket01-jjzuujoa/databases",
+    "LD_LIBRARY_PATH": "/home/vimkim/gh/cb/CBRD-27089-has-oos-but-no-oos/.artifacts/pr7600-independent-RjRhFS/pr7600-ticket01-jjzuujoa/install/lib:/home/vimkim/.local/opt/bison-3.0.5/lib:/home/vimkim/.cub/install/CBRD-27089-has-oos-but-no-oos/debug_gcc/cci/lib:/home/vimkim/.cub/install/CBRD-27089-has-oos-but-no-oos/debug_gcc/lib:/home/vimkim/CUB3LIB/lib:/usr/local/lib:"
+  },
+  "socket_directory": null,
+  "records": [
+    {
+      "command": [
+        "bash",
+        "/home/vimkim/gh/cb/pr7600-original-baseline/unit_tests/oos/scripts/setup_unittestdb.sh"
+      ],
+      "exit_code": 0,
+      "output": "Creating database with 64.0M size using locale en_US.utf8. The total amount of disk space needed is 104.0M.\n\nCUBRID 11.5.0\n\n"
+    },
+    {
+      "command": [
+        "/home/vimkim/gh/cb/pr7600-original-baseline/build_preset_release_gcc/bin/test_oos_sql_pr7600_measure",
+        "--gtest_filter=Pr7600Measure.Matrix",
+        "--gtest_output=xml:/home/vimkim/gh/cb/CBRD-27089-has-oos-but-no-oos/.artifacts/pr7600-independent-RjRhFS/pr7600-ticket01-jjzuujoa/gtest.xml"
+      ],
+      "exit_code": 0,
+      "output": "Note: Google Test filter = Pr7600Measure.Matrix\n[==========] Running 1 test from 1 test suite.\n[----------] Global test environment set-up.\n##### Starting Server For OOS SQL Testing #####\nwill be written at ./test_oos_sql_log\n[----------] 1 test from Pr7600Measure\n[ RUN      ] Pr7600Measure.Matrix\nPR7600_SAMPLE {\"workload\":\"nonpartition_small\",\"rep\":-2,\"rows\":1024,\"cpu_seconds\":0.081827677,\"elapsed_seconds\":0.082207357}\nPR7600_SAMPLE {\"workload\":\"nonpartition_small\",\"rep\":-1,\"rows\":1024,\"cpu_seconds\":0.076972043,\"elapsed_seconds\":0.077355494}\nPR7600_SAMPLE {\"workload\":\"nonpartition_small\",\"rep\":0,\"rows\":1024,\"cpu_seconds\":0.077271387,\"elapsed_seconds\":0.077630047}\nPR7600_SAMPLE {\"workload\":\"nonpartition_small\",\"rep\":1,\"rows\":1024,\"cpu_seconds\":0.077898537,\"elapsed_seconds\":0.078248624}\nPR7600_SAMPLE {\"workload\":\"nonpartition_small\",\"rep\":2,\"rows\":1024,\"cpu_seconds\":0.076759795,\"elapsed_seconds\":0.077111878}\nPR7600_SAMPLE {\"workload\":\"nonpartition_small\",\"rep\":3,\"rows\":1024,\"cpu_seconds\":0.076719247,\"elapsed_seconds\":0.077033734}\nPR7600_SAMPLE {\"workload\":\"nonpartition_small\",\"rep\":4,\"rows\":1024,\"cpu_seconds\":0.076571076,\"elapsed_seconds\":0.077041601}\nPR7600_SAMPLE {\"workload\":\"nonpartition_small\",\"rep\":5,\"rows\":1024,\"cpu_seconds\":0.079142896,\"elapsed_seconds\":0.079525984}\nPR7600_SAMPLE {\"workload\":\"nonpartition_small\",\"rep\":6,\"rows\":1024,\"cpu_seconds\":0.080344463,\"elapsed_seconds\":0.080709310}\nPR7600_SAMPLE {\"workload\":\"nonpartition_small\",\"rep\":7,\"rows\":1024,\"cpu_seconds\":0.079908430,\"elapsed_seconds\":0.080375999}\nPR7600_SAMPLE {\"workload\":\"nonpartition_small\",\"rep\":8,\"rows\":1024,\"cpu_seconds\":0.077457622,\"elapsed_seconds\":0.077845230}\nPR7600_SAMPLE {\"workload\":\"nonpartition_small\",\"rep\":9,\"rows\":1024,\"cpu_seconds\":0.074894513,\"elapsed_seconds\":0.075289258}\nPR7600_SAMPLE {\"workload\":\"nonpartition_small\",\"rep\":10,\"rows\":1024,\"cpu_seconds\":0.076597818,\"elapsed_seconds\":0.077008758}\n[       OK ] Pr7600Measure.Matrix (1533 ms)\n[----------] 1 test from Pr7600Measure (1533 ms total)\n\n[----------] Global test environment tear-down\n##### Stopping Server For OOS SQL Testing #####\n[==========] 1 test from 1 test suite ran. (2293 ms total)\n[  PASSED  ] 1 test.\n"
+    }
+  ],
+  "cleanup": "Private database/config retained; no network server or shared database touched.",
+  "libcubridsa": "/home/vimkim/.cub/install/pr7600-original-baseline/release_gcc/lib/libcubridsa.so.11.5",
+  "libcubridsa_sha256": "da01bbee3f0e0045b1671dd3a5d25c3be56f5360c91709357125d4fa57364556",
+  "test_source": "/home/vimkim/gh/cb/pr7600-original-baseline/unit_tests/oos/sql/test_oos_sql_pr7600_measure.cpp",
+  "test_source_sha256": "3fc56a0c3ad43eb0e108cb5bec6087fefa7ee45074675c651a8b2062ab4bf48e"
+}

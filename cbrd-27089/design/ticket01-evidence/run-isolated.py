@@ -40,6 +40,8 @@ def main():
     parser.add_argument('--sa-test', action='store_true', help='run an allowlisted non-SQL SA_MODE OOS binary')
     parser.add_argument('--sql-file', type=Path, help='run a retained SQL batch through standalone csql')
     parser.add_argument('--gdb-script', type=Path, help='run a retained scoped debugger check around the selected test')
+    parser.add_argument('--perf-stat', action='store_true', help='count user instructions/cycles for the entire test process')
+    parser.add_argument('--perf-record', action='store_true', help='sample user instructions and DWARF stacks for the entire test process')
     args = parser.parse_args()
     if args.cpu_affinity is not None:
         if args.cpu_affinity not in os.sched_getaffinity(0):
@@ -50,6 +52,10 @@ def main():
     INSTALL = Path('/home/vimkim/.cub/install') / SOURCE.name / args.preset
     if args.sql_file and args.gdb_script:
         parser.error('select either a SQL batch or a debugger-wrapped test')
+    if (args.perf_stat or args.perf_record) and (args.gdb_script or args.sql_file or args.server_test or args.sa_test):
+        parser.error('perf supports an unwrapped standalone SQL test only')
+    if args.perf_stat and args.perf_record:
+        parser.error('select stat or record, not both')
     if not args.label.replace('-', '').isalnum():
         parser.error('label must contain only letters, digits, and hyphens')
     server_binaries = {'test_oos_server', 'test_oos_delete_server', 'test_oos_remove_file_server',
@@ -153,6 +159,15 @@ def main():
         report['gdb_script_contents'] = args.gdb_script.read_text()
         commands[1] = ['gdb', '-nx', '-q', '-batch', '-iex', 'set debuginfod enabled off',
                        '-x', str(args.gdb_script.resolve()), '--args'] + commands[1]
+    if args.perf_stat or args.perf_record:
+        report['perf_scope'] = 'Entire SQL test process, including initialization, warmups, verification and rollback; not timed batches only.'
+        report['perf_version'] = subprocess.check_output(['perf', '--version'], text=True).strip()
+        if args.perf_stat:
+            commands[1] = ['perf', 'stat', '-x', ';', '-e', 'instructions:u,cycles:u', '--'] + commands[1]
+        else:
+            report['perf_data'] = str(sandbox / 'perf.data')
+            commands[1] = ['perf', 'record', '-e', 'instructions:u', '-c', '2000000',
+                           '--call-graph', 'dwarf,4096', '-o', report['perf_data'], '--'] + commands[1]
     try:
         for command in commands:
             try:

@@ -82,3 +82,5 @@ Small inline remains a suspected regression; the other controls also drift or ch
 - No engine change, fallback, downstream-routing removal, or design waiver was made for measurement. Final integrated-revision acceptance requires affected comparisons to be repeated.
 
 Handoff formatting note: the main branch commit hook later normalized whitespace in the previously changed engine signatures/calls. The post-format engine diff hash is `8ccb237954a348b5bef6f1b653dbe44e31816ba5c21d3b856f0d0c33684a215c`. Whitespace-insensitive contents are unchanged; the benchmark worktree, binaries and recorded measurement hash above were not rewritten. These measurements identify the pre-format candidate exactly, not an unmeasured final integration revision.
+
+2026-09-09 follow-up: [52 additional same-host interleaved runs](ticket06-interleaved-b871ea386-codex.md) all passed correctness checks, but runtime acceptance remains inconclusive. Small-inline CPU block ratios range from 0.9986 to 1.1355; system load rose from 2.64 to 64.93. No slowdown was waived. The follow-up recommends scoped cost attribution rather than more unqualified averaging.

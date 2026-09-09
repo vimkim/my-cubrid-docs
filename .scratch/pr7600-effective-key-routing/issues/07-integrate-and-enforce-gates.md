@@ -27,4 +27,12 @@
 
 ## Comments
 
+- 2026-09-09 (blocked handoff): User authorized routing review and local commit handoff without push or gate waivers. [Review](../../../cbrd-27089/design/routing-review-213ce80f5-codex.md) found no new implementation defect/scope creep, one optional Standards duplication suggestion, and three retained Spec acceptance limitation groups. [Handoff](../../../cbrd-27089/design/blocked-handoff-213ce80f5-codex.md) points to source commit 213ce80f5, the preliminary matrix and saved evidence. Ticket remains blocked; no new database experiments or final acceptance claim.
+
+- 2026-09-09 (dependency clarification): Wait specifically for the forthcoming CBRD-27237 fix, not an assumed CBRD-27230 solution. User-approved rollback/vacuum regression is necessary but insufficient for ticket 05 closure. Final routing is unchanged; ticket 06 runtime acceptance remains open. See the corrected [completion path](../../../cbrd-27089/design/acceptance-completion-path-213ce80f5-codex.md).
+
+- 2026-09-09: User accepted the lifecycle dependency wait. Final routing remains unchanged; ticket 05 stays blocked and ticket 06's runtime gate stays open. Final acceptance remains blocked. Reopen on a concrete lifecycle-fix patch or a new user direction; integration and verification still require authorization.
+
+- 2026-09-09: Ticket 04 is complete, but ticket 05 remains blocked and ticket 06 measurement delivery does not close its inconclusive runtime gate. Final routing stays unchanged. The [recommended completion path](../../../cbrd-27089/design/acceptance-completion-path-213ce80f5-codex.md) records upstream findings, proposed dependency handling and final-revision proof obligations; the wait-versus-separate-design decision is pending. No acceptance gate changed.
+
 - 2026-09-08: All remaining tickets authorized, but ticket 05 reproduced a baseline rollback/vacuum failure on both engines. Final acceptance remains blocked; no full-matrix/review/measurement completion is claimed. See [unmet-gate report](../../../cbrd-27089/design/tickets04-07-lifecycle-blocker-b871ea386-codex.md). A user decision is required before broadening scope or continuing independent work with this explicit prerequisite.
