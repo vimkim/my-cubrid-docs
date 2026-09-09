@@ -4,6 +4,12 @@
 
 The supplied runs contain **11 failure occurrences across 7 distinct tests**, accounted for by three causes: OOS error-number answer drift (6 occurrences / 4 tests), historical CDC reads of reclaimed OOS values (4 / 2), and an intermittent append-LSA torn read (1 / 1). The medium suite passes. Local repairs and existing PR verification are recorded below; this is not an all-CI-green claim.
 
+## Testcase Repairs Integrated (2026-09-09 08:04 UTC)
+
+At the user's request, the verified answer fixes were fast-forward pushed directly to canonical `tc/pr-6864` in both testcase repositories: SQL `b4e774d1f4dfe728960b095ae211b96825a19485`, shell `06fb3262ef1c8e6213c4bac70ceeb5557eebd34a`. GitHub automatically marked companion PRs #3469 and #4116 **merged** because their exact commits are now included in their target branches. Both remote branch heads were read back and verified. The four affected tests had already passed local RED/GREEN verification; no testcase statements or assertions changed.
+
+This supersedes the earlier notes below that the answer PRs were unmerged. New PR6864 CI runs can now select these updated testcase branches. No new CI run or `tc/pr-7908` branch was requested or created by this publication.
+
 ## CI Snapshot
 
 | Suite | Job/run | Success | Failure | Skipped | Error / unknown |
@@ -94,6 +100,6 @@ Published drafts:
 - Shell answer fix: https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4116 (base tc/pr-6864, head06fb326).
 - Existing CDC fix: https://github.com/CUBRID/cubrid/pull/7897 (base feat/oos, head68c6d0b).
 
-Posted one `/run all` on PR7908 at the verified head1efcabd: https://github.com/CUBRID/cubrid/pull/7908#issuecomment-5597530397. Full remote verification is pending. The answer PRs are unmerged and therefore do not alter the original PR6864 CI testcase branch yet. No source/testcase PR was merged, no assertions were weakened, and no existing repair branch was overwritten.
+Posted one `/run all` on PR7908 at the verified head1efcabd: https://github.com/CUBRID/cubrid/pull/7908#issuecomment-5597530397. Full remote verification is pending. The answer commits are now integrated into both original PR6864 testcase branches, as recorded above. No engine PR was merged and no assertions were weakened.
 
 Next: verify PR7908's exact engine/testcase selections, retain unrelated failures explicitly, and integrate reviewed repairs through the normal merge process. Do not claim PR6864 is green before its feature and testcase branches contain all repairs. Durable work item:86; detailed ledger:`ci-fix/pr-6864/index.md`.

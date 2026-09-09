@@ -58,3 +58,7 @@ Follow PR7908 CI using trigger receipt5597530397. No duplicate trigger. Review/i
 ## Current next step
 
 Await PR7908 remote CI; all proposed patches are published as drafts. Original PR6864 remains failing until maintainers merge the engine and testcase repairs. Wider failures on CDC PR7897 remain explicit follow-up; do not weaken its checks or manufacture success from its two targeted passes.
+
+## Direct Testcase Publication (2026-09-09 08:04 UTC)
+
+User requested direct pushes to both canonical tc/pr-6864 branches and closure of companion PR3469/4116. SQL fast-forwarded to b4e774d1f; shell to06fb3262e; both remote full SHAs verified. GitHub automatically marked both PRs MERGED because the pushed commits include their exact heads. No separate merge/close command, force push, new CI trigger, or tc/pr-7908 branch creation. Earlier unmerged-answer notes are historical and superseded by this receipt.
