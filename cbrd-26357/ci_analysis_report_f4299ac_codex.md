@@ -75,6 +75,16 @@ Existing develop PR7904 provides commit a59029274. An exact four-file backport a
 - Original dirty source submodules and user files were preserved; all repairs use isolated worktrees. Tests isolate network, IPC, PID, mount and /tmp sockets.
 - Initial SQL local attempt ran zero cases because the baseline install copy lacked JDBC; it is an invalid setup attempt, not a regression result. Adding the pinned built JDBC resolved setup. Locale generation completed once and is reused unchanged.
 
+## Repair CI Follow-up (2026-09-09)
+
+PR7908 remains an open draft at `1efcabd2ff700540f8d50408609620f3be20e839`, with base feat/oos still at f4299ac. In the requested workflow `48945a10-3430-4877-a562-ef24f9385ce9`, release153552 and debug153555 succeeded. Medium153556 completed with975 passes,0failures,0errors,0skips,0unknown; its validated collector bundle is `/home/vimkim/gh/cubrid-circleci-analyzer/data/CBRD-27400/1efcabd/test_medium/`.
+
+SQL153557 remains running. One completed shard reports bug_bts_10516 failure. Its branch-resolution log explicitly selects `develop` at testcase revision `b94995abfc7b196fb753aac158d52512288513a6`; the diff expects INSERT success (`1`) versus actual `Error:-1382`, followed by zero-row differences. This is a different expectation from the original f4299ac run's numeric-only mismatch. CI did not consume the repaired OOS testcase commits, so this run cannot verify the answer fixes. Partial results are not final suite counts. Separate API evidence: `/home/vimkim/gh/cubrid-circleci-analyzer/data/api-pr7908-1efcabd/`, especially `sql-testcase-branch.log`, `sql-partial-tests.json`, and `sql-partial-failure.txt`.
+
+Shell153554 has not run: prerequisite153553 is `not_running`, with no start time or diagnostic message. The exact source configuration assigns that prerequisite to the self-hosted `cubrid/ramdisk` resource; the cause of its delay is unknown. The trigger log confirms all three suites were requested, so no duplicate trigger was posted.
+
+Canonical `tc/pr-7908` refs are absent in both testcase repositories (GET returned404). The user decision is pending on creating temporary verification branches at SQL `b4e774d1f4dfe728960b095ae211b96825a19485` and shell `06fb3262ef1c8e6213c4bac70ceeb5557eebd34a`, then rerunning CI, versus deferring combined verification until integration. Neither those branches nor a second trigger has been published. This testcase staging alone would not add the separate CDC engine fix to PR7908.
+
 ## Next Actions
 
 Published drafts:
