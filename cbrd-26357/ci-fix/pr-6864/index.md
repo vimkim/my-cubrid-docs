@@ -37,11 +37,11 @@ Follow PR7908 CI using trigger receipt5597530397. No duplicate trigger. Review/i
 
 - Baseline f4299ac built in isolated worktree `/home/vimkim/gh/cb/oos-ci-f4299ac`; initial bootstrap stow-path issue resolved by explicit stow target followed by normal prepare/bootstrap. Original source worktree unchanged.
 - Baseline installation copied to `/home/vimkim/.cache/codex/pr6864-f4299ac/install` before backport edits.
-- `bug_bts_9836`: exact original failure reproduced, patched answers 3/3 subchecks pass. `bug_bts_14120`: original first-check failure reproduced, patched run pending.
+- `bug_bts_9836`: exact original failure reproduced, patched answers 3/3 subchecks pass. `bug_bts_14120`: original first-check failure reproduced, patched run passes both subchecks.
 - Answer patch set: separate SQL worktree `/home/vimkim/gh/tc/oos-ci-error-codes-sql`, shell `/home/vimkim/gh/tc/oos-ci-error-codes-shell`. Five answer files total; no testcase statements changed.
-- Backport branch `CBRD-27400-oos-append-lsa` at f4299ac plus uncommitted exact a590292 patch; build succeeds; Standards and Spec independent reviews both zero findings. OOS-specific reclaim-horizon atomic-read follow-up remains outside this exact JDBC backport.
+- Backport branch `CBRD-27400-oos-append-lsa` at 1efcabd with the committed exact a590292 backport on f4299ac; build succeeds; Standards and Spec independent reviews both zero findings. OOS-specific reclaim-horizon atomic-read follow-up remains outside this exact JDBC backport.
 - Existing CDC PR7897 targets feat/oos; existing append-LSA PR7904 targets develop. No duplicate CDC PR created.
-- JIRA live reads time out; direct REST returns HTTP503; JQL duplicate search also HTTP503. New error-code ticket draft and patch files retained here, not published.
+- Initial JIRA access returned HTTP503. Access recovered; duplicate search completed, CBRD-27403 was created, and its final description was published and read back.
 
 ## Publication receipts
 
