@@ -11,7 +11,7 @@
 
 ## Current stage
 
-Collecting exact-revision evidence. CircleCI: SQL 153253, shell 153250, medium 153254. Actions 34207150213 executes build SHA f4299ac despite its workflow metadata head being develop SHA 14d21ef; build-read log and collect summary establish engine identity. Actions testcase revision: private-ex 777b97745076ba2c48cf7e103857f0abbc765b5d.
+Published repairs; awaiting PR7908 remote CI. CircleCI analyzed: SQL 153253, shell 153250, medium 153254. Actions 34207150213 executes build SHA f4299ac despite its workflow metadata head being develop SHA 14d21ef; build-read log and collect summary establish engine identity. Actions testcase revision: private-ex 777b97745076ba2c48cf7e103857f0abbc765b5d.
 
 Evidence: /home/vimkim/gh/cubrid-circleci-analyzer/data/CBRD-26357/f4299ac/ and separate API bundle /home/vimkim/gh/cubrid-circleci-analyzer/data/api-pr6864-run34207150213/.
 
@@ -20,7 +20,7 @@ Evidence: /home/vimkim/gh/cubrid-circleci-analyzer/data/CBRD-26357/f4299ac/ and 
 - Medium 153254: 975 tests, zero failures.
 - Actions 34207150213: 3244 executed, 3239 passed, 5 failed, 30 skipped; all 50 shards published.
 - Actions failures: bug_bts_9836 (shard 20), bug_bts_4633 (34), cbrd_27064 (43), bug_bts_14120 (46), cbrd_27075 (49). Full paths in API failed.log summary.
-- SQL/shell counts and causes pending collection.
+- CircleCI SQL153253:17457 passed,2 failed; shell153250:3240 passed,4 failed,30 skipped. All11 failure occurrences across7tests accounted for in the report.
 - Check TC PRs (34204701926) fails because companion TC PRs 3159 and 3782 remain open; this is the intended merge gate, not an engine error. Later Actions plan failure 34214479285 belongs to CDC PR7897 (target build 68c6d0b), not this tested head; its own rerun request incorrectly referenced old run 34186373809 at 2940b1c. Exclude it from PR6864 runtime counts. Earlier cancelled run 34214219609 retained only as unclassified history.
 
 ## Coordination and local safety
@@ -31,14 +31,14 @@ Read local verification incident (2026-09-05, updated 2026-09-08): safe executio
 
 ## Next action
 
-Finish collection; reconcile all failure occurrences and obtain exact testcase sources. Diagnose each group, prepare concrete ticket/fix scope, then reproduce in isolated worktrees.
+Follow PR7908 CI using trigger receipt5597530397. No duplicate trigger. Review/integrate published engine and testcase PRs before revalidating original PR6864.
 
 ## Local progress (2026-09-09)
 
 - Baseline f4299ac built in isolated worktree `/home/vimkim/gh/cb/oos-ci-f4299ac`; initial bootstrap stow-path issue resolved by explicit stow target followed by normal prepare/bootstrap. Original source worktree unchanged.
 - Baseline installation copied to `/home/vimkim/.cache/codex/pr6864-f4299ac/install` before backport edits.
 - `bug_bts_9836`: exact original failure reproduced, patched answers 3/3 subchecks pass. `bug_bts_14120`: original first-check failure reproduced, patched run pending.
-- SQL five-line total answer patch set: separate SQL worktree `/home/vimkim/gh/tc/oos-ci-error-codes-sql`, shell `/home/vimkim/gh/tc/oos-ci-error-codes-shell`. Five answer files total; no testcase statements changed.
+- Answer patch set: separate SQL worktree `/home/vimkim/gh/tc/oos-ci-error-codes-sql`, shell `/home/vimkim/gh/tc/oos-ci-error-codes-shell`. Five answer files total; no testcase statements changed.
 - Backport branch `CBRD-27400-oos-append-lsa` at f4299ac plus uncommitted exact a590292 patch; build succeeds; Standards and Spec independent reviews both zero findings. OOS-specific reclaim-horizon atomic-read follow-up remains outside this exact JDBC backport.
 - Existing CDC PR7897 targets feat/oos; existing append-LSA PR7904 targets develop. No duplicate CDC PR created.
 - JIRA live reads time out; direct REST returns HTTP503; JQL duplicate search also HTTP503. New error-code ticket draft and patch files retained here, not published.
