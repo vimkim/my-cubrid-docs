@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from minischema import validate  # noqa: E402
+from minischema import unsupported_keywords, validate  # noqa: E402
 
 CAMPAIGN = Path(__file__).resolve().parent.parent
 CATALOGUE = CAMPAIGN / "catalogue" / "requirements.json"
@@ -117,6 +117,13 @@ def load_json(path):
         return json.load(handle)
 
 
+def check_schema_subset():
+    """Every campaign schema must stay inside the subset minischema evaluates."""
+    for path in sorted(SCHEMAS.glob("*.schema.json")):
+        for where, keyword in unsupported_keywords(load_json(path)):
+            fail("schema-subset", f"{path.name}: {where} uses {keyword!r}, which minischema ignores")
+
+
 def schema_validate(check, instance, schema, label):
     for error in validate(instance, schema):
         fail(check, f"{label}: {error}")
@@ -215,7 +222,8 @@ def check_catalogue():
             fail("accepted-unimplemented", f"{ticket} ({label}) has no requirement")
         for r in hits:
             if r.get("status") not in ("BLOCKED", "UNSUPPORTED"):
-                fail("accepted-unimplemented", f"{r['id']}: {ticket} must be BLOCKED or UNSUPPORTED, got {r.get('status')}")
+                fail("accepted-unimplemented",
+                     f"{r['id']}: {ticket} must be BLOCKED or UNSUPPORTED, got {r.get('status')}")
 
     # mixed-era specification statements are Specification-gap requirements
     for topic in MIXED_ERA_TOPICS:
@@ -308,7 +316,8 @@ def check_record_schemas():
     matrix = schemas.get("matrix")
     if matrix:
         row_required = matrix.get("$defs", {}).get("row", {}).get("required", [])
-        for field in ("requirement", "case", "configuration", "run", "oos_evidence", "finding", "flakiness", "known_issue", "attribution"):
+        for field in ("requirement", "case", "configuration", "run", "oos_evidence", "finding",
+                      "flakiness", "known_issue", "attribution"):
             if field not in row_required:
                 fail("matrix-row-fields", f"matrix row does not require {field!r}")
         excl = matrix.get("$defs", {}).get("accepted_exclusion", {})
@@ -322,7 +331,8 @@ def check_record_schemas():
     manifest = schemas.get("manifest")
     if manifest:
         inv = manifest.get("properties", {}).get("invocation", {})
-        for field in ("engine", "testcase", "context", "page_size", "build_mode", "services", "instrumentation", "seed", "runner", "tier"):
+        for field in ("engine", "testcase", "context", "page_size", "build_mode", "services",
+                      "instrumentation", "seed", "runner", "tier"):
             if field not in inv.get("required", []):
                 fail("manifest-identity", f"manifest invocation does not require {field!r}")
         for field in ("expected", "discovered", "executed", "proof", "cases", "outstanding_coverage"):
@@ -373,6 +383,7 @@ def check_documents():
 
 
 def main():
+    check_schema_subset()
     catalogue = check_catalogue()
     check_scenario_map(catalogue)
     check_record_schemas()

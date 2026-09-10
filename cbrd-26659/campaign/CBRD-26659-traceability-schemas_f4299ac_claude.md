@@ -17,7 +17,7 @@ requirement (catalogue) ──cited by──> case ──run under──> config
                                                               attempt record (compact, kept forever) ──points at──> replay bundle (bulky, retention-ruled)
                                                                                     │
 coverage matrix (cross-invocation) ── one row per (requirement, case, configuration): run, OOS-path evidence, finding,
-                                        flakiness, known issue, attribution; plus dated accepted exclusions written only by the user
+                                        flakiness, ticket link (known_issue), attribution; plus dated accepted exclusions written only by the user
 ```
 
 - The **campaign manifest** is the per-invocation record and the unit of execution proof. Ticket 13 and 14 write one by hand; ticket 15's wrappers generate them.
@@ -29,7 +29,7 @@ coverage matrix (cross-invocation) ── one row per (requirement, case, config
 
 | Field vocabulary | Values | Rule |
 |---|---|---|
-| Outcome (per executed attempt) | `PASS`, `FAIL`, `SKIP`, `UNSUPPORTED`, `BLOCKED` | Fixed taxonomy from the reproduction decision. SKIP carries a reason. A skip recorded as OK, an unfired hook or an unreached phase never maps to PASS. A known bug remains FAIL. |
+| Outcome (per executed attempt) | `PASS`, `FAIL`, `SKIP`, `UNSUPPORTED`, `BLOCKED` | Fixed taxonomy from the reproduction decision. SKIP carries a reason. A skip recorded as OK, an unfired hook or an unreached phase never maps to PASS. A documented Engine defect still records FAIL. |
 | OOS-path evidence status | `proven`, `reused`, `missing`, `not-applicable` | Separate from the outcome. `reused` requires applicability (fixture, execution path, engine configuration, conditions, source manifest). Logical success with `missing` evidence is not OOS coverage. |
 | Gap kind (matrix finding) | `none`, `Delivery gap`, `Capability gap`, `Specification gap`, `Engine defect` | Glossary terms, used exactly. `none` only for PASS with proven or reused evidence. |
 | Attribution target | `unknown`, `engine`, `harness`, `instrumentation`, `setup`, `specification` | Separate from the outcome. `engine` requires evidence; an unexplained failure stays `unknown`. |
@@ -42,6 +42,7 @@ Identities used everywhere: engine baseline commit plus library hashes (a build 
 
 Enforced by schema (checked by the negative controls):
 
+- Conditional rules (`if`/`then`) are not visible in the field tables of sections 4 to 8; this list is their reference.
 - Outcome outside the taxonomy is rejected; SKIP without a reason is rejected; a case with no outcome must carry an `outstanding` reason.
 - A manifest without the context content hash is rejected; storage roots outside `/home` are rejected.
 - `reused` evidence without applicability is rejected.
@@ -264,7 +265,7 @@ Tooling (ticket 15) must add what a schema cannot express:
 | `accepted_exclusions[].reason` | string | yes |  |
 | `accepted_exclusions[].accepted_by` | const `user` | yes |  |
 | `accepted_exclusions[].scope` | string/null | yes | Which cases or configurations the exclusion covers when not the whole requirement. |
-| `accepted_exclusions[].proposed_in` | string/null | yes | Report or ticket where an agent proposed the deferral. |
+| `accepted_exclusions[].proposed_in` | string/null | yes | Report or ticket where an agent proposed the exclusion. |
 <!-- END GENERATED: schema-matrix -->
 
 ## 6. Attempt record
@@ -484,7 +485,7 @@ Tooling (ticket 15) must add what a schema cannot express:
 | `requirements[].pinned_observation` | string/null | yes | What the pinned engine does, from ticket 11. Observation, never the expectation. |
 | `requirements[].configuration_scope` | string/null | yes | Configurations the requirement applies to when not all (for example client-server only). |
 | `requirements[].attack_dimensions` | array of string | yes | Adversarial dimensions case tickets must cover under this requirement. |
-| `requirements[].expected_engine_findings` | array of string `^CBRD-[0-9]+$` | yes | Known defects the campaign expects to surface here; a known bug remains a failure. |
+| `requirements[].expected_engine_findings` | array of string `^CBRD-[0-9]+$` | yes | Engine defects the campaign expects to surface here; a documented Engine defect still records the FAIL outcome. |
 | `requirements[].related` | array of string `^OOS-(REP\|SQL\|RD\|SCH\|CL\|DUR\|OPS\|RES)-[0-9]{2}$` | yes |  |
 <!-- END GENERATED: schema-requirement -->
 

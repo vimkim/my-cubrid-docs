@@ -162,13 +162,13 @@
         "attempt_records": {"type": "array", "items": {"type": "string"}}
       },
       "allOf": [
-        {"if": {"properties": {"flakiness": {"properties": {"deterministic_claim": {"const": true}}, "required": ["deterministic_claim"]}}}, "then": {"properties": {"flakiness": {"properties": {"consecutive_fresh_fixture_reproductions": {"minimum": 3}}}}}},
-        {"if": {"properties": {"attribution": {"properties": {"target": {"const": "engine"}}, "required": ["target"]}}}, "then": {"properties": {"attribution": {"properties": {"evidence": {"type": "string", "minLength": 1}}}}}}
+        {"if": {"properties": {"flakiness": {"properties": {"deterministic_claim": {"const": true}}, "required": ["deterministic_claim"]}}, "required": ["flakiness"]}, "then": {"properties": {"flakiness": {"properties": {"consecutive_fresh_fixture_reproductions": {"minimum": 3}}}}}},
+        {"if": {"properties": {"attribution": {"properties": {"target": {"const": "engine"}}, "required": ["target"]}}, "required": ["attribution"]}, "then": {"properties": {"attribution": {"properties": {"evidence": {"type": "string", "minLength": 1}}}}}}
       ]
     },
     "accepted_exclusion": {
       "type": "object",
-      "description": "Only the user converts incomplete coverage into an accepted exclusion, in writing, dated, naming the requirement and the reason. Agents propose deferrals in the report; they never write entries here.",
+      "description": "Only the user converts incomplete coverage into an accepted exclusion, in writing, dated, naming the requirement and the reason. Agents propose exclusions in the report; they never write entries here.",
       "additionalProperties": false,
       "required": ["requirement", "date", "reason", "accepted_by", "scope", "proposed_in"],
       "properties": {
@@ -177,7 +177,7 @@
         "reason": {"type": "string", "minLength": 1},
         "accepted_by": {"const": "user"},
         "scope": {"type": ["string", "null"], "description": "Which cases or configurations the exclusion covers when not the whole requirement."},
-        "proposed_in": {"type": ["string", "null"], "description": "Report or ticket where an agent proposed the deferral."}
+        "proposed_in": {"type": ["string", "null"], "description": "Report or ticket where an agent proposed the exclusion."}
       }
     }
   }

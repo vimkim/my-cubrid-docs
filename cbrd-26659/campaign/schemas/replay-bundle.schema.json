@@ -85,8 +85,8 @@
         "note": {"type": ["string", "null"], "description": "Why an item is missing or not applicable."}
       },
       "allOf": [
-        {"if": {"properties": {"state": {"const": "present"}}}, "then": {"properties": {"path": {"type": "string", "minLength": 1}}}},
-        {"if": {"properties": {"state": {"enum": ["missing", "not-applicable"]}}}, "then": {"properties": {"note": {"type": "string", "minLength": 1}}}}
+        {"if": {"properties": {"state": {"const": "present"}}, "required": ["state"]}, "then": {"properties": {"path": {"type": "string", "minLength": 1}}}},
+        {"if": {"properties": {"state": {"enum": ["missing", "not-applicable"]}}, "required": ["state"]}, "then": {"properties": {"note": {"type": "string", "minLength": 1}}}}
       ]
     }
   }

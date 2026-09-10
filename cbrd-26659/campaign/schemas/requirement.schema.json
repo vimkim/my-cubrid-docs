@@ -74,7 +74,7 @@
         "pinned_observation": {"type": ["string", "null"], "description": "What the pinned engine does, from ticket 11. Observation, never the expectation."},
         "configuration_scope": {"type": ["string", "null"], "description": "Configurations the requirement applies to when not all (for example client-server only)."},
         "attack_dimensions": {"type": "array", "items": {"type": "string"}, "description": "Adversarial dimensions case tickets must cover under this requirement."},
-        "expected_engine_findings": {"type": "array", "items": {"type": "string", "pattern": "^CBRD-[0-9]+$"}, "description": "Known defects the campaign expects to surface here; a known bug remains a failure."},
+        "expected_engine_findings": {"type": "array", "items": {"type": "string", "pattern": "^CBRD-[0-9]+$"}, "description": "Engine defects the campaign expects to surface here; a documented Engine defect still records the FAIL outcome."},
         "related": {"type": "array", "items": {"$ref": "#/$defs/requirement_id"}, "uniqueItems": true}
       }
     }

@@ -738,7 +738,7 @@
       "gap_kind": "Specification gap",
       "authority": {
         "policy": "withhold",
-        "note": "Mixed-era statement from the invariants research (deferred reuse text). Decides whether OOS-SQL-04's UNSUPPORTED status is a merge gate or an accepted deferral; either way the pin's behavior is never promoted as the answer."
+        "note": "Mixed-era statement from the invariants research (deferred reuse text). Decides whether OOS-SQL-04's UNSUPPORTED status is a merge gate or accepted later-milestone work; either way the pin's behavior is never promoted as the answer."
       },
       "authority_question": "Is CBRD-27230 UPDATE chain reuse required for feat/oos conformance before merge, or deferred to a later milestone? Should Optimization Idea A and the M3 milestone text be rewritten to point at the accepted design?",
       "accepted_design": null,
@@ -1164,7 +1164,7 @@
       "gap_kind": null,
       "authority": {
         "policy": "assert",
-        "note": "Universal rollback correctness independent of the physical design; expected to FAIL at the pin as Engine defect CBRD-27237. A known bug remains a failure."
+        "note": "Universal rollback correctness independent of the physical design; expected to FAIL at the pin as Engine defect CBRD-27237. A documented Engine defect still records the FAIL outcome."
       },
       "authority_question": null,
       "accepted_design": null,
@@ -1747,7 +1747,7 @@
       "gap_kind": "Specification gap",
       "authority": {
         "policy": "withhold",
-        "note": "Ticket 06: corruption cases are judged against documented guarantees only; arbitrary corruption implies no unconditional recovery promise. Record observed behavior; assert nothing."
+        "note": "Ticket 06: corruption cases are judged against documented guarantees only, arbitrary corruption implies no unconditional recovery promise, and 'unspecified guarantees remain explicit coverage gaps'. Because the context documents no guarantee, the gap is a Specification gap. Record observed behavior; assert nothing."
       },
       "authority_question": "What detection (checkdb, page checksum, stub/chain validation) and recovery behavior is guaranteed for a corrupted OOS page, chunk header or OOS log record?",
       "accepted_design": null,
@@ -1900,7 +1900,7 @@
       "citation": {
         "kind": "accepted-design",
         "document": "OOS-CONTEXT.md",
-        "source": "CBRD-26830 TDE applied to OOS pages — §5 Known Bugs (DONE on feat/oos, commit 138f624964)",
+        "source": "CBRD-26830 TDE plaintext leak on OOS pages (security) — listed in Quick Reference › JIRA; fix recorded as DONE on feat/oos in §5 Known Bugs (commit 138f624964)",
         "revision": "f6543de680b91ae357466b72a983f982892859cd",
         "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
@@ -1908,7 +1908,7 @@
       "gap_kind": null,
       "authority": {
         "policy": "assert",
-        "note": "Combine ciphertext evidence (recognizable non-compressible payload absent from raw pages) with correct decrypted reads and proof that the targeted pages were written."
+        "note": "The normative context has no encryption section. The requirement rests on CUBRID's general TDE guarantee applied to the OOS file as part of the class's storage (invariant 6) and on the resolved security defect CBRD-26830, whose fix on feat/oos is an accepted decision that plaintext OOS pages of an encrypted class are a defect. Combine ciphertext evidence (recognizable non-compressible payload absent from raw pages) with correct decrypted reads and proof that the targeted pages were written. A request that the context maintainer add an explicit TDE-on-OOS statement is recorded in the catalogue's context notes."
       },
       "authority_question": null,
       "accepted_design": null,
@@ -2125,12 +2125,14 @@
       "configuration_scope": null,
       "attack_dimensions": [
         "different sessions updating different rows simultaneously (scenario 6.3)",
+        "mixed-size churn that fragments OOS pages",
         "mixed single/multi-chunk churn",
         "churn with vacuum active and a long reader"
       ],
       "expected_engine_findings": [],
       "related": [
-        "OOS-CL-06"
+        "OOS-CL-06",
+        "OOS-RES-06"
       ]
     },
     {
@@ -2166,7 +2168,45 @@
         "CBRD-26458"
       ],
       "related": [
-        "OOS-RES-04"
+        "OOS-RES-04",
+        "OOS-RES-06"
+      ]
+    },
+    {
+      "id": "OOS-RES-06",
+      "title": "Fragmentation and page contention under mixed-size churn",
+      "statement": "Under mixed-size insert, update and delete churn that fragments OOS pages, and under concurrent inserts contending for the same OOS pages, every value stays exact and every statement completes within its deadline or fails with an explicit lock or deadlock error; free space on partially emptied pages is offered for reuse through the best-page policy.",
+      "family": "Resource pressure",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§2 Best Page Policy (3-Tier Bestspace — M2, CBRD-26658)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Assert values and deadline-bounded completion. Deadlock-freedom is not asserted: §5 Limitations lists the ordered-fix deadlock risk as a known limitation, so deadlock counts are recorded under OOS-RES-05. The quantity of space reuse is observed here; the growth invariant is OOS-CL-06."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": "Bestspace hints, Tier-3 sync (max 20% of pages, 100-page limit) and the zero-wait conditional latch are present at the pin (§2); no fragmentation measurement was taken by ticket 11.",
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "mixed-size churn fragmenting OOS pages",
+        "concurrent inserts targeting the same OOS pages (latch contention)",
+        "long fragmentation run with periodic vacuum",
+        "4, 8 and 16 KiB pages"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-CL-06",
+        "OOS-RES-04",
+        "OOS-RES-05"
       ]
     }
   ]

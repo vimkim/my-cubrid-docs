@@ -14,11 +14,15 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from minischema import resolve_ref  # noqa: E402
+
 CAMPAIGN = Path(__file__).resolve().parent.parent
 CATALOGUE_DOC = CAMPAIGN / "CBRD-26659-requirement-catalogue_f4299ac_claude.md"
 SCHEMAS_DOC = CAMPAIGN / "CBRD-26659-traceability-schemas_f4299ac_claude.md"
 FAMILIES = ["Representation", "SQL operations", "Read paths", "Schema and utilities",
             "Concurrent lifetime", "Durability", "Operational features", "Resource pressure"]
+STATUSES = ["assertable", "observation-only", "UNSUPPORTED", "BLOCKED"]
 
 
 def load(path):
@@ -39,13 +43,15 @@ def table(header, rows):
 # --- catalogue document blocks ------------------------------------------------------------
 def block_summary(cat):
     reqs = cat["requirements"]
+    def tally(subset):
+        return [sum(1 for r in subset if r["status"] == status) for status in STATUSES]
+
     rows = []
     for fam in FAMILIES:
         fam_reqs = [r for r in reqs if r["family"] == fam]
-        counts = {s: sum(1 for r in fam_reqs if r["status"] == s) for s in ["assertable", "observation-only", "UNSUPPORTED", "BLOCKED"]}
-        rows.append([fam, len(fam_reqs), counts["assertable"], counts["observation-only"], counts["UNSUPPORTED"], counts["BLOCKED"]])
-    rows.append(["**Total**", len(reqs)] + [sum(1 for r in reqs if r["status"] == s) for s in ["assertable", "observation-only", "UNSUPPORTED", "BLOCKED"]])
-    return table(["Family", "Requirements", "assertable", "observation-only", "UNSUPPORTED", "BLOCKED"], rows)
+        rows.append([fam, len(fam_reqs)] + tally(fam_reqs))
+    rows.append(["**Total**", len(reqs)] + tally(reqs))
+    return table(["Family", "Requirements"] + STATUSES, rows)
 
 
 def block_requirements(cat):
@@ -101,19 +107,20 @@ def block_policy(cat):
 
 def block_scenarios(smap):
     rows = [[s["scenario"], s["title"], ", ".join(f"`{x}`" for x in s["requirements"]) or "—",
-             (s["exclusion"] or {}).get("reason", "—"), s["note"] or ""] for s in smap["scenarios"]]
+             (s["exclusion"] or {}).get("reason", "—"), s["note"] or ""]
+            for s in smap["scenarios"]]
     return table(["§6 scenario", "Title", "Requirement IDs", "Exclusion", "Note"], rows)
 
 
 # --- schemas document blocks --------------------------------------------------------------
-def resolve(schema, root):
+def resolve(schema, root, _depth=0):
+    """Inline same-document $refs, letting sibling keywords override the target."""
     while "$ref" in schema:
-        node = root
-        for part in schema["$ref"][2:].split("/"):
-            node = node[part]
-        merged = dict(node)
+        if _depth > 20:
+            raise SystemExit(f"$ref chain too deep at {schema['$ref']!r}")
+        merged = dict(resolve_ref(root, schema["$ref"]))
         merged.update({k: v for k, v in schema.items() if k != "$ref"})
-        schema = merged
+        schema, _depth = merged, _depth + 1
     return schema
 
 
@@ -135,24 +142,33 @@ def type_of(schema, root):
     return t
 
 
-def walk(schema, root, prefix, required_parent, rows, depth=0):
+def walk(schema, root, prefix, rows):
+    """Append one table row per property, descending into objects and array items.
+
+    Conditional requirements (allOf / if / then) are deliberately not walked; the
+    Required column shows only unconditional `required` membership, and the
+    schemas document lists the conditional rules in prose.
+    """
     schema = resolve(schema, root)
     props = schema.get("properties", {})
     required = set(schema.get("required", []))
     for key, sub in props.items():
         path = f"{prefix}.{key}" if prefix else key
         sub_r = resolve(sub, root)
-        rows.append([f"`{path}`", type_of(sub, root), "yes" if key in required else "no", sub.get("description") or sub_r.get("description") or ""])
+        description = sub.get("description") or sub_r.get("description") or ""
+        rows.append([f"`{path}`", type_of(sub, root),
+                     "yes" if key in required else "no", description])
         target = sub_r
         if "anyOf" in sub_r:
-            objs = [resolve(s, root) for s in sub_r["anyOf"] if resolve(s, root).get("type") == "object" or "properties" in resolve(s, root)]
+            branches = [resolve(branch, root) for branch in sub_r["anyOf"]]
+            objs = [b for b in branches if b.get("type") == "object" or "properties" in b]
             target = objs[0] if objs else {}
         if target.get("type") == "array" and "items" in target:
             items = resolve(target["items"], root)
             if "properties" in items:
-                walk(items, root, path + "[]", required, rows, depth + 1)
+                walk(items, root, path + "[]", rows)
         elif "properties" in target:
-            walk(target, root, path, required, rows, depth + 1)
+            walk(target, root, path, rows)
         if "additionalProperties" in sub_r and isinstance(sub_r["additionalProperties"], dict):
             rows.append([f"`{path}.*`", type_of(sub_r["additionalProperties"], root), "no", "keyed entries"])
 
@@ -160,7 +176,7 @@ def walk(schema, root, prefix, required_parent, rows, depth=0):
 def block_schema(name):
     root = load(CAMPAIGN / "schemas" / f"{name}.schema.json")
     rows = []
-    walk(root, root, "", set(), rows)
+    walk(root, root, "", rows)
     head = f"**{root['title']}** — {root['description']}\n\n"
     return head + table(["Field", "Type", "Required", "Meaning"], rows)
 
@@ -189,7 +205,9 @@ def blocks():
 
 
 def apply(text, name, content):
-    pattern = re.compile(rf"(<!-- BEGIN GENERATED: {re.escape(name)} -->\n).*?(\n<!-- END GENERATED: {re.escape(name)} -->)", re.S)
+    marker = re.escape(name)
+    pattern = re.compile(rf"(<!-- BEGIN GENERATED: {marker} -->\n).*?(\n<!-- END GENERATED: {marker} -->)",
+                         re.S)
     if not pattern.search(text):
         raise SystemExit(f"marker block {name!r} not found")
     return pattern.sub(lambda m: m.group(1) + content + m.group(2), text)

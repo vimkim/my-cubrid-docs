@@ -44,7 +44,7 @@ Promotion rule that follows: an answer promotion for a case that touches a `BLOC
 <!-- BEGIN GENERATED: policy -->
 | Policy | Count | Requirements |
 |---|---|---|
-| assert | 42 | `OOS-REP-01`, `OOS-REP-02`, `OOS-REP-04`, `OOS-REP-06`, `OOS-REP-07`, `OOS-REP-08`, `OOS-REP-09`, `OOS-REP-10`, `OOS-REP-11`, `OOS-SQL-01`, `OOS-SQL-02`, `OOS-SQL-05`, `OOS-SQL-06`, `OOS-RD-01`, `OOS-RD-02`, `OOS-RD-03`, `OOS-SCH-01`, `OOS-SCH-02`, `OOS-SCH-03`, `OOS-SCH-04`, `OOS-SCH-05`, `OOS-CL-01`, `OOS-CL-03`, `OOS-CL-04`, `OOS-CL-09`, `OOS-CL-10`, `OOS-CL-11`, `OOS-CL-13`, `OOS-DUR-01`, `OOS-DUR-02`, `OOS-DUR-03`, `OOS-DUR-04`, `OOS-DUR-05`, `OOS-DUR-06`, `OOS-DUR-08`, `OOS-OPS-01`, `OOS-OPS-02`, `OOS-OPS-04`, `OOS-RES-01`, `OOS-RES-02`, `OOS-RES-03`, `OOS-RES-04` |
+| assert | 43 | `OOS-REP-01`, `OOS-REP-02`, `OOS-REP-04`, `OOS-REP-06`, `OOS-REP-07`, `OOS-REP-08`, `OOS-REP-09`, `OOS-REP-10`, `OOS-REP-11`, `OOS-SQL-01`, `OOS-SQL-02`, `OOS-SQL-05`, `OOS-SQL-06`, `OOS-RD-01`, `OOS-RD-02`, `OOS-RD-03`, `OOS-SCH-01`, `OOS-SCH-02`, `OOS-SCH-03`, `OOS-SCH-04`, `OOS-SCH-05`, `OOS-CL-01`, `OOS-CL-03`, `OOS-CL-04`, `OOS-CL-09`, `OOS-CL-10`, `OOS-CL-11`, `OOS-CL-13`, `OOS-DUR-01`, `OOS-DUR-02`, `OOS-DUR-03`, `OOS-DUR-04`, `OOS-DUR-05`, `OOS-DUR-06`, `OOS-DUR-08`, `OOS-OPS-01`, `OOS-OPS-02`, `OOS-OPS-04`, `OOS-RES-01`, `OOS-RES-02`, `OOS-RES-03`, `OOS-RES-04`, `OOS-RES-06` |
 | assert-after-eligibility | 3 | `OOS-CL-02`, `OOS-CL-05`, `OOS-CL-06` |
 | observe | 5 | `OOS-REP-12`, `OOS-SQL-03`, `OOS-SCH-06`, `OOS-OPS-06`, `OOS-RES-05` |
 | withhold | 12 | `OOS-REP-03`, `OOS-REP-05`, `OOS-REP-13`, `OOS-REP-14`, `OOS-SQL-04`, `OOS-SQL-07`, `OOS-CL-07`, `OOS-CL-08`, `OOS-CL-12`, `OOS-DUR-07`, `OOS-OPS-03`, `OOS-OPS-05` |
@@ -64,8 +64,8 @@ All eight mandatory families are present. Counts are by requirement, not by case
 | Concurrent lifetime | 13 | 10 | 0 | 1 | 2 |
 | Durability | 8 | 7 | 0 | 0 | 1 |
 | Operational features | 6 | 3 | 1 | 2 | 0 |
-| Resource pressure | 5 | 4 | 1 | 0 | 0 |
-| **Total** | 62 | 45 | 5 | 6 | 6 |
+| Resource pressure | 6 | 5 | 1 | 0 | 0 |
+| **Total** | 63 | 46 | 5 | 6 | 6 |
 <!-- END GENERATED: summary -->
 
 ## 5. Catalogue
@@ -266,7 +266,7 @@ ROLLBACK, savepoint rollback and statement failure restore the previous record a
 **`OOS-SQL-07` — Deferred-reuse text versus the accepted CBRD-27230 design** (BLOCKED, withhold)  
 §5 Optimization Ideas A and the Milestones section still describe UPDATE value-chain reuse as a cancelled-M3 future improvement not in M2, while the 2026-08-13 spec note records CBRD-27230 as an accepted design and M2 as the umbrella for all remaining OOS work; whether reuse is a merge-gating conformance item is undecided.
 
-- Authority: Mixed-era statement from the invariants research (deferred reuse text). Decides whether OOS-SQL-04's UNSUPPORTED status is a merge gate or an accepted deferral; either way the pin's behavior is never promoted as the answer.
+- Authority: Mixed-era statement from the invariants research (deferred reuse text). Decides whether OOS-SQL-04's UNSUPPORTED status is a merge gate or accepted later-milestone work; either way the pin's behavior is never promoted as the answer.
 - Authority question: Is CBRD-27230 UPDATE chain reuse required for feat/oos conformance before merge, or deferred to a later milestone? Should Optimization Idea A and the M3 milestone text be rewritten to point at the accepted design?
 - Related: `OOS-SQL-04`, `OOS-CL-08`
 
@@ -393,7 +393,7 @@ The OOS value chains owned by dead record versions are deleted by vacuum after e
 **`OOS-CL-03` — Rollback survival against vacuum (CBRD-27237)** (assertable, assert)  
 After an UPDATE of an OOS-backed attribute is rolled back, the restored value remains exact after vacuum has processed the aborted transaction's log records.
 
-- Authority: Universal rollback correctness independent of the physical design; expected to FAIL at the pin as Engine defect CBRD-27237. A known bug remains a failure.
+- Authority: Universal rollback correctness independent of the physical design; expected to FAIL at the pin as Engine defect CBRD-27237. A documented Engine defect still records the FAIL outcome.
 - Pinned observation (ticket 11): Forward-walk acts on undo-image content with no commit/abort filter (analysis-based, no runtime repro recorded in the context).
 - Attack dimensions: multi-chunk UPDATE, ROLLBACK, vacuum, verify; savepoint rollback variant; crash-induced rollback variant
 - Expected engine findings: CBRD-27237
@@ -533,7 +533,7 @@ Crashing again during recovery and recovering once more ends in a state consiste
 **`OOS-DUR-07` — Corruption detection guarantees for OOS pages and logs** (BLOCKED, withhold)  
 The context documents no detection or recovery guarantee for corrupted OOS pages or OOS log records; no expectation is fixed for copied-image corruption cases.
 
-- Authority: Ticket 06: corruption cases are judged against documented guarantees only; arbitrary corruption implies no unconditional recovery promise. Record observed behavior; assert nothing.
+- Authority: Ticket 06: corruption cases are judged against documented guarantees only, arbitrary corruption implies no unconditional recovery promise, and 'unspecified guarantees remain explicit coverage gaps'. Because the context documents no guarantee, the gap is a Specification gap. Record observed behavior; assert nothing.
 - Authority question: What detection (checkdb, page checksum, stub/chain validation) and recovery behavior is guaranteed for a corrupted OOS page, chunk header or OOS log record?
 - Related: `OOS-SCH-04`
 
@@ -551,7 +551,7 @@ Free-space hints are non-logged; after a crash, inserts continue to succeed and 
 | `OOS-OPS-01` | HA replication: value equality and ordering | assertable | assert | private-shell | context-heading: §4 Replication Notes |
 | `OOS-OPS-02` | HA rollback, applier restart and lag | assertable | assert | private-shell | context-heading: §4 Recovery & Replication Invariants, invariant 5 (Replication log completeness) |
 | `OOS-OPS-03` | HA marker item for reused attributes (CBRD-27230) | UNSUPPORTED | withhold | private-shell | accepted-design: CBRD-27230 UPDATE chain reuse — spec note (2026-08-13), replication marker item |
-| `OOS-OPS-04` | TDE covers OOS pages (CBRD-26830) | assertable | assert | private-shell | accepted-design: CBRD-26830 TDE applied to OOS pages — §5 Known Bugs (DONE on feat/oos, commit 138f624964) |
+| `OOS-OPS-04` | TDE covers OOS pages (CBRD-26830) | assertable | assert | private-shell | accepted-design: CBRD-26830 TDE plaintext leak on OOS pages (security) — listed in Quick Reference › JIRA; fix recorded as DONE on feat/oos in §5 Known Bugs (commit 138f624964) |
 | `OOS-OPS-05` | Durable OOS supplemental images for CDC and flashback (ADR-0004) | UNSUPPORTED | withhold | private-shell | adr: ADR-0004 Preserve OOS historical values in supplemental images |
 | `OOS-OPS-06` | CDC and flashback over OOS rows at the pin | observation-only | observe | private-shell | context-heading: §5 Known Bugs — CDC flashback OOS-stub Resolve (missing feature) |
 
@@ -579,7 +579,7 @@ Replication carries a per-reused-attribute marker item with replica-side fixup o
 **`OOS-OPS-04` — TDE covers OOS pages (CBRD-26830)** (assertable, assert)  
 For a TDE-encrypted class, OOS pages hold no plaintext payload on disk (data volumes, log, backup); a lazily created OOS file inherits the class algorithm before its VFID is published; altering encryption applies to an existing OOS file; decrypted reads return exact values.
 
-- Authority: Combine ciphertext evidence (recognizable non-compressible payload absent from raw pages) with correct decrypted reads and proof that the targeted pages were written.
+- Authority: The normative context has no encryption section. The requirement rests on CUBRID's general TDE guarantee applied to the OOS file as part of the class's storage (invariant 6) and on the resolved security defect CBRD-26830, whose fix on feat/oos is an accepted decision that plaintext OOS pages of an encrypted class are a defect. Combine ciphertext evidence (recognizable non-compressible payload absent from raw pages) with correct decrypted reads and proof that the targeted pages were written. A request that the context maintainer add an explicit TDE-on-OOS statement is recorded in the catalogue's context notes.
 - Attack dimensions: encrypted class, first demotion creates the OOS file; ALTER ... ENCRYPT on a class with an existing OOS file; backup image scan; log scan for RVOOS_INSERT payloads
 - Related: `OOS-SCH-05`
 
@@ -607,6 +607,7 @@ What CDC extraction and flashback emit for OOS-backed rows at the pin (unresolve
 | `OOS-RES-03` | Failures during rollback, vacuum, reclamation and recovery retry | assertable | assert | private-shell | context-heading: §4 Vacuum + OOS (IMPLEMENTED — CBRD-26668, PR #6986 merged) |
 | `OOS-RES-04` | Values and invariants hold under sustained concurrent churn | assertable | assert | private-shell | context-heading: §4 Recovery & Replication Invariants |
 | `OOS-RES-05` | Degradation observations | observation-only | observe | private-shell | context-heading: §5 Limitations (Milestone 1) — Ordered fix deadlock risk |
+| `OOS-RES-06` | Fragmentation and page contention under mixed-size churn | assertable | assert | private-shell | context-heading: §2 Best Page Policy (3-Tier Bestspace — M2, CBRD-26658) |
 
 **`OOS-RES-01` — Allocation failure during value construction, expansion and cleanup** (assertable, assert)  
 An allocation failure while building, expanding or cleaning OOS values fails the statement with an explicit error, leaves the transaction correct (rolled back or continued per its semantics), creates no orphan chain and never crashes the server.
@@ -634,8 +635,8 @@ A failure injected during rollback, vacuum, reclamation or a recovery retry neve
 Under sustained concurrent inserts, updates, deletes and vacuum, every row's value stays exact, rows never mix values, and visibility, atomicity and durability invariants continue to hold.
 
 - Authority: Randomized workloads with recorded seeds and operation traces; oracle is an independent model of expected values per row.
-- Attack dimensions: different sessions updating different rows simultaneously (scenario 6.3); mixed single/multi-chunk churn; churn with vacuum active and a long reader
-- Related: `OOS-CL-06`
+- Attack dimensions: different sessions updating different rows simultaneously (scenario 6.3); mixed-size churn that fragments OOS pages; mixed single/multi-chunk churn; churn with vacuum active and a long reader
+- Related: `OOS-CL-06`, `OOS-RES-06`
 
 **`OOS-RES-05` — Degradation observations** (observation-only, observe)  
 Latency, latch contention, ordered-fix deadlock risk, unloaddb slowdown (CBRD-26458) and needless OOS expansion on cheap paths are measured and recorded; none is asserted as a fixed bound.
@@ -643,7 +644,15 @@ Latency, latch contention, ordered-fix deadlock risk, unloaddb slowdown (CBRD-26
 - Authority: The context lists deadlock handling as a cancelled milestone and unloaddb slowdown as a known regression; record measurements so CBRD-26458 stays visible.
 - Attack dimensions: unloaddb time versus inline comparator; insert latency under page hotspot; deadlock/lock-timeout counts under churn
 - Expected engine findings: CBRD-26458
-- Related: `OOS-RES-04`
+- Related: `OOS-RES-04`, `OOS-RES-06`
+
+**`OOS-RES-06` — Fragmentation and page contention under mixed-size churn** (assertable, assert)  
+Under mixed-size insert, update and delete churn that fragments OOS pages, and under concurrent inserts contending for the same OOS pages, every value stays exact and every statement completes within its deadline or fails with an explicit lock or deadlock error; free space on partially emptied pages is offered for reuse through the best-page policy.
+
+- Authority: Assert values and deadline-bounded completion. Deadlock-freedom is not asserted: §5 Limitations lists the ordered-fix deadlock risk as a known limitation, so deadlock counts are recorded under OOS-RES-05. The quantity of space reuse is observed here; the growth invariant is OOS-CL-06.
+- Pinned observation (ticket 11): Bestspace hints, Tier-3 sync (max 20% of pages, 100-page limit) and the zero-wait conditional latch are present at the pin (§2); no fragmentation measurement was taken by ticket 11.
+- Attack dimensions: mixed-size churn fragmenting OOS pages; concurrent inserts targeting the same OOS pages (latch contention); long fragmentation run with periodic vacuum; 4, 8 and 16 KiB pages
+- Related: `OOS-CL-06`, `OOS-RES-04`, `OOS-RES-05`
 <!-- END GENERATED: requirements -->
 
 ## 6. Accepted-but-unimplemented designs at the pin
@@ -663,7 +672,7 @@ These appear as `UNSUPPORTED` requirements and are never omitted from the matrix
 
 ## 7. Specification-gap requirements and their authority questions
 
-The four mixed-era statements identified by the [invariants research](/home/vimkim/gh/cb/CBRD-26659-oos-testcases-handover/.scratch/oos-adversarial/issues/02-baseline-invariants.md) (cross-version sharing wording, deferred reuse text, stub-size terminology, unconditional reclamation) are `BLOCKED` requirements, plus two further gaps raised by the [specification-authority](/home/vimkim/gh/cb/CBRD-26659-oos-testcases-handover/.scratch/oos-adversarial/issues/10-specification-authority.md) and [fault-injection](/home/vimkim/gh/cb/CBRD-26659-oos-testcases-handover/.scratch/oos-adversarial/issues/06-fault-injection.md) decisions (placement-hint acceptance, corruption guarantees). Each question goes to the context maintainer through the map; the campaign never edits the normative context.
+The four mixed-era statements identified by the [invariants research](/home/vimkim/gh/cb/CBRD-26659-oos-testcases-handover/.scratch/oos-adversarial/issues/02-baseline-invariants.md) (cross-version sharing wording, deferred reuse text, stub-size terminology, unconditional reclamation) are `BLOCKED` requirements, plus two further gaps raised by the [specification-authority](/home/vimkim/gh/cb/CBRD-26659-oos-testcases-handover/.scratch/oos-adversarial/issues/10-specification-authority.md) and [fault-injection](/home/vimkim/gh/cb/CBRD-26659-oos-testcases-handover/.scratch/oos-adversarial/issues/06-fault-injection.md) decisions (placement-hint acceptance under ticket 10 policy 2; corruption guarantees under ticket 06's rule that unspecified guarantees remain explicit coverage gaps). Each question goes to the context maintainer through the map; the campaign never edits the normative context.
 
 <!-- BEGIN GENERATED: spec-gaps -->
 | ID | Title | Topic | Authority question |
@@ -710,7 +719,7 @@ Every scenario of the normative context's §6 Test Scenarios (36 at the pinned h
 | 8.1 | INSERT replicated correctly to slave | `OOS-OPS-01` | — |  |
 | 8.2 | UPDATE replicated correctly to slave | `OOS-OPS-01` | — |  |
 | 8.3 | DELETE replicated correctly to slave | `OOS-OPS-01` | — |  |
-| 8.4 | Multi-chunk operations replicated correctly to slave | `OOS-OPS-01` | — |  |
+| 8.4 | Multi-chunk operations replicated correctly to slave | `OOS-OPS-01`, `OOS-REP-07` | — |  |
 | 9.1 | Record gate boundary | `OOS-REP-01`, `OOS-REP-02`, `OOS-REP-03` | — | The scenario's 4,060 B boundary is the normative target, UNSUPPORTED at the pin (gate is 4,086 B); assert only outside the disputed band. |
 | 9.2 | Column eligibility floor | `OOS-REP-04`, `OOS-REP-05` | — | The scenario's 24 B floor is UNSUPPORTED at the pin (16 B); assert only for values at or below 16 B serialized. |
 | 9.3 | NULL values | `OOS-REP-09` | — |  |
@@ -729,6 +738,7 @@ Reported to the context maintainer; none changes an expectation on its own.
 - The reclaim invariant's "pending merge to `feat/oos`" note is stale for the pin: the mechanisms are present (ticket 11 §4 c).
 - Scenario 1.3 says to confirm largest-first demotion through the debug `oos.log` `oos_insert … src.size=` line; at the pin the SQL INSERT path uses `oos_insert_many`, which writes no debug line (ticket 11 §6). Activation evidence for public cases comes from SHOW HEAP OOS chunk counts on an isolated table or from instrumented runs.
 - §5 says no release-build tool proves a row went OOS; `SHOW HEAP OOS OF <class>` and `diagdb -d 1` owner descriptors exist at the pin and prove per-class placement (per-attribute placement remains debug/instrumentation only).
+- The normative context has no encryption statement. `OOS-OPS-04` rests on the resolved security defect CBRD-26830 (Quick Reference JIRA list; fix DONE in §5) and on CUBRID's general TDE guarantee applied to the OOS file as part of the class's storage. Request: add an explicit TDE-on-OOS sentence to the context so the citation can become a normative heading.
 - The §5 Limitations row for CBRD-26776 still says "strictly greater than 16B"; that wording is the `OOS-REP-14` Specification gap.
 
 ## 10. Change control

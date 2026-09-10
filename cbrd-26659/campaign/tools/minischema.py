@@ -9,6 +9,18 @@ here; run it through a full validator (``python3 -m jsonschema``) instead.
 """
 import re
 
+#: Keywords this module evaluates. Anything else in a schema is a silent no-op.
+EVALUATED_KEYWORDS = frozenset({
+    "$ref", "type", "enum", "const", "pattern", "minLength", "minimum", "maximum",
+    "properties", "required", "additionalProperties", "propertyNames",
+    "items", "minItems", "maxItems", "uniqueItems",
+    "allOf", "anyOf", "oneOf", "not", "if", "then", "else",
+})
+#: Keywords that carry no constraint, so ignoring them is correct.
+ANNOTATION_KEYWORDS = frozenset({
+    "$schema", "$id", "$defs", "$comment", "title", "description", "default", "examples",
+})
+
 _TYPE_CHECKS = {
     "string": lambda v: isinstance(v, str),
     "integer": lambda v: isinstance(v, int) and not isinstance(v, bool),
@@ -20,7 +32,7 @@ _TYPE_CHECKS = {
 }
 
 
-def _resolve_ref(root, ref):
+def resolve_ref(root, ref):
     if not ref.startswith("#/"):
         raise ValueError(f"unsupported $ref {ref!r}; only same-document refs are supported")
     node = root
@@ -41,10 +53,13 @@ def validate(instance, schema, root=None, path="$"):
         return [f"{path}: schema forbids any value"]
 
     if "$ref" in schema:
-        errors.extend(validate(instance, _resolve_ref(root, schema["$ref"]), root, path))
+        errors.extend(validate(instance, resolve_ref(root, schema["$ref"]), root, path))
 
     if "type" in schema:
         types = schema["type"] if isinstance(schema["type"], list) else [schema["type"]]
+        unknown = [t for t in types if t not in _TYPE_CHECKS]
+        if unknown:
+            raise ValueError(f"unknown type name(s) {unknown!r} at {path}")
         if not any(_TYPE_CHECKS[t](instance) for t in types):
             errors.append(f"{path}: expected type {'/'.join(types)}, got {type(instance).__name__}")
             return errors
@@ -114,3 +129,35 @@ def validate(instance, schema, root=None, path="$"):
         elif "else" in schema:
             errors.extend(validate(instance, schema["else"], root, path))
     return errors
+
+
+def unsupported_keywords(schema, path="$"):
+    """Return [(path, keyword)] for every keyword this module would ignore.
+
+    A non-empty result means validation against that schema is not trustworthy:
+    the ignored keyword's constraint would never be applied.
+    """
+    found = []
+    if not isinstance(schema, dict):
+        return found
+    for key, value in schema.items():
+        if key in ANNOTATION_KEYWORDS:
+            if key == "$defs" and isinstance(value, dict):
+                for name, sub in value.items():
+                    found += unsupported_keywords(sub, f"{path}.$defs.{name}")
+            continue
+        if key not in EVALUATED_KEYWORDS:
+            found.append((path, key))
+            continue
+        if key in ("properties", "propertyNames"):
+            if isinstance(value, dict) and key == "properties":
+                for name, sub in value.items():
+                    found += unsupported_keywords(sub, f"{path}.{name}")
+            else:
+                found += unsupported_keywords(value, f"{path}.{key}")
+        elif key in ("items", "additionalProperties", "not", "if", "then", "else"):
+            found += unsupported_keywords(value, f"{path}.{key}")
+        elif key in ("allOf", "anyOf", "oneOf") and isinstance(value, list):
+            for i, sub in enumerate(value):
+                found += unsupported_keywords(sub, f"{path}.{key}[{i}]")
+    return found

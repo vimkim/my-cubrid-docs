@@ -158,9 +158,9 @@
     "notes": {"type": ["string", "null"]}
   },
   "allOf": [
-    {"if": {"properties": {"outcome": {"const": "SKIP"}}}, "then": {"properties": {"skip_reason": {"type": "string", "minLength": 1}}}},
-    {"if": {"properties": {"kind": {"enum": ["rerun", "minimized", "reproduction"]}}}, "then": {"properties": {"parent_attempt": {"type": "string", "minLength": 1}}}},
-    {"if": {"properties": {"deadline": {"properties": {"reached": {"const": true}}, "required": ["reached"]}}}, "then": {"properties": {"outcome": {"enum": ["FAIL", "BLOCKED"]}, "deadline": {"properties": {"evidence_captured_on_timeout": {"type": "boolean"}}}}}}
+    {"if": {"properties": {"outcome": {"const": "SKIP"}}, "required": ["outcome"]}, "then": {"properties": {"skip_reason": {"type": "string", "minLength": 1}}}},
+    {"if": {"properties": {"kind": {"enum": ["rerun", "minimized", "reproduction"]}}, "required": ["kind"]}, "then": {"properties": {"parent_attempt": {"type": "string", "minLength": 1}}}},
+    {"if": {"properties": {"deadline": {"properties": {"reached": {"const": true}}, "required": ["reached"]}}, "required": ["deadline"]}, "then": {"properties": {"outcome": {"enum": ["FAIL", "BLOCKED"]}, "deadline": {"properties": {"evidence_captured_on_timeout": {"type": "boolean"}}}}}}
   ],
   "$defs": {
     "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
