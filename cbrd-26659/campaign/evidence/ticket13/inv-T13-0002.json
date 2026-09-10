@@ -94,7 +94,7 @@
   },
   "executed": {
     "case_count": 1,
-    "assertion_count": 27
+    "assertion_count": null
   },
   "proof": {
     "verdict": "proven",
@@ -118,7 +118,7 @@
       "skip_reason": null,
       "assertions": {
         "expected": 27,
-        "executed": 27,
+        "executed": null,
         "failed": 0
       },
       "oos_evidence": {
@@ -203,7 +203,7 @@
       "OOS-RES-04",
       "OOS-RES-06"
     ],
-    "note": "Ticket 13 is the public tracer bullet: one case proving the public seam end to end, not coverage. ASSERTION COUNT IS DERIVED, NOT MEASURED: CTP reports only Total, Success, Fail and execute_case, and has no assertion counter, so expected 27 versus executed 27 is not an independent comparison. The 27 is counted by hand from the case (11 scalars per row group x 2, plus 3 in the final aggregate, plus 2 INSERT affected-row counts) and is justified only because CTP compares the whole result text: a byte-identical .result entails that all 27 matched. Ticket 15 must add a real counter before any invocation claims a measured assertion count. The 43 assertable requirements without an executed case are the Delivery gap that tickets 18 to 22 (public SQL) and 23 to 32 (private shell) close. UNSUPPORTED and BLOCKED requirements are deliberately absent from this list. REGRESSION-POWER LIMIT: the committed CTP asset cannot detect a largest-first regression, because no portable SQL exposes per-attribute placement and DISK_SIZE reports the logical serialized size regardless of placement (ticket 11 section 5.2). An engine demoting `small` instead of `big` would produce a byte-identical answer. The discrimination is supplied only by the paired activation checker, which is not part of the public regression suite; that residual gap is recorded as a Delivery gap row against OOS-REP-02 in the matrix."
+    "note": "Ticket 13 is the public tracer bullet: one case proving the public seam end to end, not coverage. ASSERTION COUNT IS DERIVED, NOT MEASURED, AND executed.assertion_count IS THEREFORE NULL: CTP reports only Total, Success, Fail and execute_case, and has no assertion counter, so recording executed 27 would have manufactured a measurement and made the comparison against expected 27 vacuous. The independent review identified this as a schema defect (expected was nullable but executed was not), and the manifest schema has been widened so a seam that cannot count records null. The 27 is counted by hand from the case (11 scalars per row group x 2, plus 3 in the final aggregate, plus 2 INSERT affected-row counts) and is justified only because CTP compares the whole result text: a byte-identical .result entails that all 27 matched. proof.verdict remains 'proven' because it now rests on what was actually observed: expected case count 1 == discovered 1 == executed 1, execute_case:1 in main.info, and a byte-identical whole-result comparison against the reviewed answer. Ticket 15 must add a real counter before any invocation records a non-null executed assertion count. The 43 assertable requirements without an executed case are the Delivery gap that tickets 18 to 22 (public SQL) and 23 to 32 (private shell) close. UNSUPPORTED and BLOCKED requirements are deliberately absent from this list. REGRESSION-POWER LIMIT: the committed CTP asset cannot detect a largest-first regression, because no portable SQL exposes per-attribute placement and DISK_SIZE reports the logical serialized size regardless of placement (ticket 11 section 5.2). An engine demoting `small` instead of `big` would produce a byte-identical answer. The discrimination is supplied only by the paired activation checker, which is not part of the public regression suite; that residual gap is recorded as a Delivery gap row against OOS-REP-02 in the matrix."
   },
   "answer_promotions": [
     {

@@ -213,3 +213,70 @@ converts a coverage gap into an accepted exclusion.
   `~/.cub/campaign/cbrd-26659/db` are the activation checker's fixtures and its negative
   control. They are disposable, but they are referenced by the attempt record's
   `resources_owned`, so delete them only when the retention class expires.
+
+## 12. The rest of the independent review: two further findings and its limits
+
+The review's report arrived in two parts. The second part confirmed that the `OOS-REP-02`
+row split above is exactly the fix it wanted, and added two findings and an important
+correction to the brief it was given.
+
+**R5 (MAJOR) — `executed.assertion_count` was a manufactured measurement, and the schema
+caused it.** The reviewer's own hand count agreed that 27 is right under the stated
+convention, but pointed out that `expected: 27` against `executed: 27` compares the
+derivation to itself. The root cause is in ticket 12's manifest schema, not in this ticket:
+`expected.assertion_count` is nullable, described as "null when the seam cannot pre-count",
+while `executed.assertion_count` was forced to be an integer — so a runner with no
+assertion counter is *obliged* to invent one.
+
+Fixed at the source, as a minimal backward-compatible widening of ticket 12's schema (an
+existing integer still validates): `executed.assertion_count` and
+`case_result.assertions.executed` now accept null, with a description saying when null is
+required and where the hand-counted figure belongs. This manifest now records **null**,
+and `proof.verdict` stays `proven` on what was genuinely observed — expected case count
+1 = discovered 1 = executed 1, `execute_case:1`, and a byte-identical whole-result
+comparison. Ticket 15 still owns a real counter.
+
+*This edits another ticket's deliverable.* It is recorded here rather than done silently
+because ticket 12's schemas are the campaign's contract: the change removes a trap that
+would otherwise have made every later invocation fabricate an execution count.
+
+**R6 (MINOR) — the Delivery gap named the wrong obstacle.** My wording, "no portable SQL
+exposes per-attribute placement", was an assertion. The reviewer tested the obvious
+alternative and found the real constraints, which are now what the matrix row records:
+`SHOW` cannot be projected (`select … from (show heap oos of …) t` fails at parse time with
+`Syntax error: unexpected 'oos', expecting JOIN`; the grammar admits `SHOW` only as a whole
+statement, `csql_grammar.y:7379`), its full row carries volatile physical identifiers that
+cannot go in an answer file, and `DISK_SIZE` is placement-blind. Tickets 15 and 22 need the
+tested constraint, not the assertion.
+
+### What the review could not verify, and one thing I got wrong
+
+**The brief I gave the reviewer contained a false premise.** I told it "it is expected that
+no unrelated user cub process is running right now". By the time it ran, `pgrep` showed
+`cub_master`, `cub_server demodb` and `cub_pl demodb` from the
+`CBRD-27398-pgbuf-inspector-contract` install, started 20:58:45. The reviewer checked
+rather than trusting me, and **declined to run CTP** because `do_clean`'s unscoped
+`pkill cub` would have killed another session's live server. That was the right call, and
+it is the second time in this ticket that the unscoped `pkill` has been the hazard. It
+audited the retained result directories and logs instead, so the CTP figures in this record
+are from the retained `main.info` files, not from an independent re-run.
+
+Also outside what it could confirm, and recorded as such:
+
+- That pid 551535 was stopped by hand, and that `ipcs -m` was empty before the run. Both
+  are past states with no surviving artifact.
+- That the oracle predated the run. File mtimes are consistent (20:39 < 20:41:25) but are
+  not proof. The weight for that claim rests instead on the four digests being
+  reproducible in Python from the byte patterns alone, which needs no trust in mtimes.
+
+### Conditions, and their status
+
+| Condition | Status |
+|---|---|
+| Fix the pkill count and its framing | done (R1) |
+| Index or delete `ctp_final.log`; recompute `total_bytes` and `SHA256SUMS` | done — indexed, 19 files, all hashes verified (R2) |
+| Correct the three revision-1 citations | done (R3) |
+| Split the `OOS-REP-02` matrix row | done, as the reviewer specified (R4) |
+| Relax the schema's executed-count field before any ticket claims a measured count | done now rather than deferred (R5) |
+
+**The answer promotion is accepted.** None of the conditions blocked it.

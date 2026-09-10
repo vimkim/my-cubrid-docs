@@ -141,7 +141,7 @@ Tooling (ticket 15) must add what a schema cannot express:
 | `discovered.case_names` | array of string | yes |  |
 | `executed` | object | yes |  |
 | `executed.case_count` | integer | yes |  |
-| `executed.assertion_count` | integer | yes |  |
+| `executed.assertion_count` | integer/null | yes | Assertions the invocation actually executed, as reported by the runner. NULL when the runner reports no assertion counter of its own (the CTP SQL runner reports only total, success, fail and execute_case): recording a number the runner never produced manufactures a measurement and makes the comparison against `expected` vacuous. When this is null the proof rests on the case counts, the launcher artifacts and the whole-result comparison instead, and the derivation of any hand-counted figure belongs in outstanding_coverage.note. |
 | `proof` | object | yes | Comparison of expectation with discovery and execution. Any mismatch is a failure of proof, never a pass. |
 | `proof.verdict` | enum: `proven`, `failure-of-proof` | yes |  |
 | `proof.launcher_exit_status` | integer/null | yes |  |
@@ -159,7 +159,7 @@ Tooling (ticket 15) must add what a schema cannot express:
 | `cases[].skip_reason` | string/null | yes | Required text when outcome is SKIP. |
 | `cases[].assertions` | object | yes |  |
 | `cases[].assertions.expected` | integer/null | yes |  |
-| `cases[].assertions.executed` | integer | yes |  |
+| `cases[].assertions.executed` | integer/null | yes | Null when the runner reports no assertion counter; see executed.assertion_count. |
 | `cases[].assertions.failed` | integer | yes |  |
 | `cases[].oos_evidence` | object | yes |  |
 | `cases[].oos_evidence.status` | enum: `proven`, `reused`, `missing`, `not-applicable` | yes | proven: activation evidence captured in this run. reused: matching evidence from another run with recorded applicability. missing: logical checks ran without OOS-path evidence (not OOS coverage). not-applicable: the case asserts a non-activation property (for example a rejection). |
