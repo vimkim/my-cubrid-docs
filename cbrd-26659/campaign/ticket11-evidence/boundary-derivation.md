@@ -32,7 +32,7 @@ VOT width (page-size independent): 1-byte entries while header+payload <= 127; 2
 |---|---|---|---|
 | Smallest F rejected with ER_HEAP_OOS_OVERPASS_MAXOBJ_SIZE (-1382), pinned 16 B stub | 3,889 | 7,985 | 16,177 |
 | Same, normative 24 B stub | 3,881 | 7,977 | 16,169 |
-| inline_size_after_oos at that F (pinned) = F + 60 | 3,949 | 8,045 | 16,237 |
+| inline_size_after_oos at that F (pinned), one byte above heap_Maxslotted_reclength | 3,949 | 8,045 | 16,237 |
 
 ## Worked derivation, schema A, 16 KiB, pinned engine
 

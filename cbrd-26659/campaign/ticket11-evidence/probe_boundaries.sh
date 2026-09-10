@@ -7,6 +7,9 @@
 # runs the boundary SQL in standalone mode, dumps SHOW HEAP OOS, oos.log, diagdb and spacedb
 # evidence, and optionally starts one client-server instance (16 KiB) on a private port.
 # It never touches databases or processes outside its own CUBRID_DATABASES / port.
+# Side effect on the install: it sets cubrid_port_id in <install-dir>/conf/cubrid.conf so this
+# install's cub_master never collides with other installs on the host.
+# The boundary values come from oos_boundaries.py (--probe-rows) next to this script.
 set -u
 
 INSTALL=${1:?install dir}
@@ -23,11 +26,15 @@ mkdir -p "$CUBRID_DATABASES" "$OUT"
 cd "$CUBRID_DATABASES" || exit 1
 
 # private port so this install's master never collides with other installs
+CONF="$CUBRID/conf/cubrid.conf"
 if command -v crudini >/dev/null 2>&1; then
-  crudini --set "$CUBRID/conf/cubrid.conf" common cubrid_port_id "$PORT"
+  crudini --set "$CONF" common cubrid_port_id "$PORT"
+elif grep -q '^#\?cubrid_port_id=' "$CONF"; then
+  sed -i "s/^#\?cubrid_port_id=.*/cubrid_port_id=$PORT/" "$CONF"
 else
-  sed -i "s/^#\?cubrid_port_id=.*/cubrid_port_id=$PORT/" "$CUBRID/conf/cubrid.conf"
+  printf '\ncubrid_port_id=%s\n' "$PORT" >> "$CONF"
 fi
+grep -qx "cubrid_port_id=$PORT" "$CONF" || { echo "failed to set cubrid_port_id=$PORT in $CONF" >&2; exit 1; }
 
 {
   echo "install=$CUBRID"
@@ -36,18 +43,15 @@ fi
   cubrid_rel
 } > "$OUT/identity.txt" 2>&1
 
-# tag  io  gate_in gate_out norm  ch1   ch2   fok   frej  kfloor
-BOUNDS=(
-  "16k 16K 4035 4036 4012 16283 16284 16176 16177 4086"
-  "8k   8K 1987 1988 1964  8091  8092  7984  7985 2038"
-  "4k   4K  963  964  940  3995  3996  3888  3889 1014"
-)
+# tag io gate_in gate_out norm ch1 ch2 fok frej gate_filler -- derived, never hand-maintained
+mapfile -t BOUNDS < <(python3 "$(dirname "$0")/oos_boundaries.py" --probe-rows)
+[ "${#BOUNDS[@]}" -eq 3 ] || { echo "oos_boundaries.py --probe-rows did not yield 3 rows" >&2; exit 1; }
 
 OOSLOG="$CUBRID/log/oos.log"
 echo "oos.log lines before: $(wc -l < "$OOSLOG" 2>/dev/null || echo 0)" > "$OUT/ooslog-summary.txt"
 
 for row in "${BOUNDS[@]}"; do
-  read -r tag io gin gout norm ch1 ch2 fok frej kfloor <<<"$row"
+  read -r tag io gin gout norm ch1 ch2 fok frej gate_filler <<<"$row"
   db="${PREFIX}${tag}"
   sql="$OUT/probe_${tag}.sql"
   out="$OUT/probe_${tag}.out"
@@ -83,15 +87,15 @@ SELECT 'c1 ${ch1}' AS probe, (v = CAST(REPEAT('AB', ${ch1}) AS BIT VARYING)) AS 
 SELECT 'c2 ${ch2}' AS probe, (v = CAST(REPEAT('CD', ${ch2}) AS BIT VARYING)) AS whole_value_eq, LENGTH(v)/8 AS bytes FROM c2;
 SHOW HEAP OOS OF c1;
 SHOW HEAP OOS OF c2;
--- 3. eligibility floor: fixed BIT pushes the record over the gate; s is the only candidate
-CREATE TABLE e15 (id INT, f BIT($((kfloor*8))), s BIT VARYING);
-CREATE TABLE e16 (id INT, f BIT($((kfloor*8))), s BIT VARYING);
-CREATE TABLE e23 (id INT, f BIT($((kfloor*8))), s BIT VARYING);
-CREATE TABLE e24 (id INT, f BIT($((kfloor*8))), s BIT VARYING);
-INSERT INTO e15 VALUES (1, CAST(REPEAT('AA', ${kfloor}) AS BIT($((kfloor*8)))), CAST(REPEAT('D1', 15) AS BIT VARYING));
-INSERT INTO e16 VALUES (1, CAST(REPEAT('AA', ${kfloor}) AS BIT($((kfloor*8)))), CAST(REPEAT('D2', 16) AS BIT VARYING));
-INSERT INTO e23 VALUES (1, CAST(REPEAT('AA', ${kfloor}) AS BIT($((kfloor*8)))), CAST(REPEAT('D3', 23) AS BIT VARYING));
-INSERT INTO e24 VALUES (1, CAST(REPEAT('AA', ${kfloor}) AS BIT($((kfloor*8)))), CAST(REPEAT('D4', 24) AS BIT VARYING));
+-- 3. eligibility floor: fixed BIT(8*gate_filler) alone pushes the record over the gate; s is the only candidate
+CREATE TABLE e15 (id INT, f BIT($((gate_filler*8))), s BIT VARYING);
+CREATE TABLE e16 (id INT, f BIT($((gate_filler*8))), s BIT VARYING);
+CREATE TABLE e23 (id INT, f BIT($((gate_filler*8))), s BIT VARYING);
+CREATE TABLE e24 (id INT, f BIT($((gate_filler*8))), s BIT VARYING);
+INSERT INTO e15 VALUES (1, CAST(REPEAT('AA', ${gate_filler}) AS BIT($((gate_filler*8)))), CAST(REPEAT('D1', 15) AS BIT VARYING));
+INSERT INTO e16 VALUES (1, CAST(REPEAT('AA', ${gate_filler}) AS BIT($((gate_filler*8)))), CAST(REPEAT('D2', 16) AS BIT VARYING));
+INSERT INTO e23 VALUES (1, CAST(REPEAT('AA', ${gate_filler}) AS BIT($((gate_filler*8)))), CAST(REPEAT('D3', 23) AS BIT VARYING));
+INSERT INTO e24 VALUES (1, CAST(REPEAT('AA', ${gate_filler}) AS BIT($((gate_filler*8)))), CAST(REPEAT('D4', 24) AS BIT VARYING));
 SHOW HEAP OOS OF e15;
 SHOW HEAP OOS OF e16;
 SHOW HEAP OOS OF e23;

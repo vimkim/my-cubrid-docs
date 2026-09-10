@@ -1,0 +1,47 @@
+# Binary identity of the pinned builds (generated 2026-09-10)
+# cubrid_rel and every CUBRID executable load the version string from the shared library the dynamic loader
+# resolves, so identity checks must run with the install's own CUBRID, PATH and LD_LIBRARY_PATH.
+# Pitfall observed: with the login environment (coordinating worktree install on LD_LIBRARY_PATH), the pinned
+# install's cubrid_rel printed 'CUBRID 11.5.0 (11.5.0.2491-07fef9d) (64bit debug build for Linux) (Aug 14 2026 12:46:46)'.
+
+## release_gcc  (/home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc)
+version.h: #define BUILD_TYPE release #define VERSION_STRING "11.5.0.2648-f4299ac" 
+cubrid_rel (with CUBRID/PATH/LD_LIBRARY_PATH set to this install): CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit release build for Linux) (Sep 10 2026 16:19:43)
+runtime version string in lib/libcubridsa.so: 11.5.0.2648-f4299ac
+runtime version string in lib/libcubrid.so:   11.5.0.2648-f4299ac
+d7e6862666eae693c8832c07e1887cc3557b1523862d7bae088d9690b9433529  bin/cub_server
+e9d992382894ed0b5351f7caf1333b89aeb9322034936a7c7e040a386e8d45f6  bin/csql
+f7beff44260ab03a7fa8a2ed26551715557b55d6a1566f85ecf72304b88a463d  bin/cubrid_rel
+a3256a7a40748752165e65a395b8aebcf8d85e00b87ee62e68bf75e1a5c85444  lib/libcubrid.so
+8009c322633055df41af045fe560a86f1f8171648863d11f2e44d949e3cdd76e  lib/libcubridsa.so
+test seams exported by lib/libcubrid.so: 2
+
+## debug_gcc  (/home/vimkim/.cub/install/oos-baseline-f4299ac0c/debug_gcc)
+version.h: #define BUILD_TYPE debug #define VERSION_STRING "11.5.0.2648-f4299ac" 
+cubrid_rel (with CUBRID/PATH/LD_LIBRARY_PATH set to this install): CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit debug build for Linux) (Sep 10 2026 16:15:40)
+runtime version string in lib/libcubridsa.so: 11.5.0.2648-f4299ac
+runtime version string in lib/libcubrid.so:   11.5.0.2648-f4299ac
+0edcc7a3947688886688f45bffcaeebc75ad2e9dc846f04a04b58b7abd2d24ac  bin/cub_server
+8fcce3c15261307bc5faba9d64e283cd5a903e0e7585c11849e605f6cfcc489c  bin/csql
+dd3e4673fd849af2232bb1877f86ca13866c56076fe5dc24ecc03517c98e426a  bin/cubrid_rel
+27399fae11a5ef134ba303e5ac6d672748b224bdf593504a2d4fae533a357253  lib/libcubrid.so
+9a3db918bc01738666bbb1ede762da973a714090c15e6709c78b7dc9c825ba69  lib/libcubridsa.so
+test seams exported by lib/libcubrid.so: 2
+
+## cubrid_rel is a dynamically linked executable
+ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /
+
+## struct sizes from the debug libcubrid.so (gdb -nx -batch)
+$1 = 32 spage_header
+$2 = 4 spage_slot
+$3 = 40 heap_chain
+$4 = 16 oos_record_header
+$5 = 32 fileio_page_reserved
+$6 = 8 fileio_page_watermark
+$7 = 8 OID
+$8 = 8 VPID
+
+## pinned worktree
+f4299ac0cd777a2a964c1f197ae5ebf9841a4936
+ m cubrid-cci
+git diff --stat HEAD:  1 file changed, 0 insertions(+), 0 deletions(-)
