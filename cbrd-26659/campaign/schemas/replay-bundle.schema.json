@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cubrid.example/cbrd-26659/replay-bundle.schema.json",
+  "title": "CBRD-26659 replay bundle index (one per attempt)",
+  "description": "The index of one attempt's bulky evidence under the campaign's /home storage. Every item the specification lists is present in the index with a state: present, missing, or not-applicable. Missing evidence is recorded as missing; a bundle with missing items is never described as complete. Bundles are referenced from attempt records and matrix rows by path and hash.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "bundle_id", "attempt_id", "created_at", "root_path", "total_bytes", "complete", "items", "uncommitted_snapshots", "retention", "minimization"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "bundle_id": {"type": "string", "pattern": "^[A-Za-z0-9._:-]+$"},
+    "attempt_id": {"type": "string"},
+    "created_at": {"$ref": "#/$defs/timestamp"},
+    "root_path": {"type": "string", "pattern": "^/home/", "description": "Bundle directory under /home; the temporary filesystem is unsuitable."},
+    "total_bytes": {"type": "integer", "minimum": 0},
+    "complete": {"type": "boolean", "description": "True only when no item is in state missing."},
+    "items": {
+      "type": "object",
+      "description": "One entry per specification item.",
+      "additionalProperties": false,
+      "required": ["workload", "seed_and_generator_version", "session_and_barrier_trace", "injection_acknowledgements", "engine_identity", "testcase_identity", "specification_identity", "build_and_configuration_identity", "instrumentation_identity", "fixture_identity", "expected_versus_actual", "logs", "cores", "replay_command_with_prerequisites"],
+      "properties": {
+        "workload": {"$ref": "#/$defs/item", "description": "Exact SQL/workload files as executed."},
+        "seed_and_generator_version": {"$ref": "#/$defs/item", "description": "Seed value, generator name and version; not-applicable for fixed deterministic workloads."},
+        "session_and_barrier_trace": {"$ref": "#/$defs/item", "description": "Ordered operations and acknowledged phase schedule; not-applicable for single-session cases."},
+        "injection_acknowledgements": {"$ref": "#/$defs/item", "description": "Site, target operation, occurrence count, requested action and fired acknowledgement per fault; not-applicable without instrumentation."},
+        "engine_identity": {"$ref": "#/$defs/item", "description": "Baseline commit, version string, library hashes."},
+        "testcase_identity": {"$ref": "#/$defs/item", "description": "Repository, branch, commit, base commit."},
+        "specification_identity": {"$ref": "#/$defs/item", "description": "Context revision, content hash, catalogue hash."},
+        "build_and_configuration_identity": {"$ref": "#/$defs/item", "description": "Build mode, configure options, page size, run mode, cubrid.conf and broker configuration as used."},
+        "instrumentation_identity": {"$ref": "#/$defs/item", "description": "Patch id and hash, build hash, fault-disabled control reference; not-applicable for unmodified runs."},
+        "fixture_identity": {"$ref": "#/$defs/item", "description": "Database names, createdb parameters, fixture generation inputs."},
+        "expected_versus_actual": {"$ref": "#/$defs/item", "description": "Expected output, actual output and the comparison."},
+        "logs": {"$ref": "#/$defs/item", "description": "Server, client, CTP and utility logs; debug oos.log where produced."},
+        "cores": {"$ref": "#/$defs/item", "description": "Core files with matching binaries noted; not-applicable when no process crashed."},
+        "replay_command_with_prerequisites": {"$ref": "#/$defs/item", "description": "The command that replays the attempt and the prerequisites (install, databases, services) it assumes."}
+      }
+    },
+    "uncommitted_snapshots": {
+      "type": "array",
+      "description": "Source or specification snapshots kept when a commit alone does not identify the input.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["what", "path", "hash"],
+        "properties": {"what": {"type": "string"}, "path": {"type": "string"}, "hash": {"$ref": "#/$defs/sha256"}}
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["class", "expires_on", "hold_reason"],
+      "properties": {
+        "class": {"enum": ["success-bulky", "failure", "minimized-reproducer"], "description": "success-bulky: seven days. failure: through triage plus thirty days. minimized-reproducer: kept."},
+        "expires_on": {"anyOf": [{"$ref": "#/$defs/date"}, {"type": "null"}]},
+        "hold_reason": {"type": ["string", "null"], "description": "Set when an unresolved finding still needs the bundle past its expiry."}
+      }
+    },
+    "minimization": {
+      "type": ["object", "null"],
+      "description": "Set on minimized derivatives; both the failure and the relevant OOS path must remain.",
+      "additionalProperties": false,
+      "required": ["derived_from", "failure_preserved", "oos_path_preserved", "reduction"],
+      "properties": {
+        "derived_from": {"type": "string"},
+        "failure_preserved": {"type": "boolean"},
+        "oos_path_preserved": {"type": "boolean"},
+        "reduction": {"type": "string", "description": "What was reduced: rows, operations, values, participants."}
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "timestamp": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(Z|[+-][0-9]{2}:[0-9]{2})$"},
+    "date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "item_state": {"enum": ["present", "missing", "not-applicable"]},
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "path", "hash", "note"],
+      "properties": {
+        "state": {"$ref": "#/$defs/item_state"},
+        "path": {"type": ["string", "null"], "description": "Bundle-relative path; required when present."},
+        "hash": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "note": {"type": ["string", "null"], "description": "Why an item is missing or not applicable."}
+      },
+      "allOf": [
+        {"if": {"properties": {"state": {"const": "present"}}}, "then": {"properties": {"path": {"type": "string", "minLength": 1}}}},
+        {"if": {"properties": {"state": {"enum": ["missing", "not-applicable"]}}}, "then": {"properties": {"note": {"type": "string", "minLength": 1}}}}
+      ]
+    }
+  }
+}

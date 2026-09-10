@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cubrid.example/cbrd-26659/matrix.schema.json",
+  "title": "CBRD-26659 coverage matrix",
+  "description": "The cross-invocation aggregation keyed by requirement ID. Each row is one (requirement, case, configuration) chain: requirement, case, configuration, run, OOS-path evidence, finding, with flakiness, known-issue link and attribution as separate fields. A later pass never erases an earlier failure; accepted exclusions are dated entries only the user may add. Rows are merged from manifests by tooling; exclusions are never written by tooling.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "catalogue", "rows", "accepted_exclusions"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "generated_at": {"$ref": "#/$defs/timestamp"},
+    "catalogue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "hash"],
+      "properties": {"path": {"type": "string"}, "hash": {"$ref": "#/$defs/sha256"}}
+    },
+    "rows": {"type": "array", "items": {"$ref": "#/$defs/row"}},
+    "accepted_exclusions": {"type": "array", "items": {"$ref": "#/$defs/accepted_exclusion"}}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "timestamp": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(Z|[+-][0-9]{2}:[0-9]{2})$"},
+    "date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "requirement_id": {"type": "string", "pattern": "^OOS-(REP|SQL|RD|SCH|CL|DUR|OPS|RES)-[0-9]{2}$"},
+    "outcome": {"enum": ["PASS", "FAIL", "SKIP", "UNSUPPORTED", "BLOCKED"], "description": "Fixed per-attempt taxonomy."},
+    "evidence_status": {"enum": ["proven", "reused", "missing", "not-applicable"]},
+    "gap_kind": {"enum": ["none", "Delivery gap", "Capability gap", "Specification gap", "Engine defect"], "description": "Glossary classification of a non-pass. 'none' only when the latest outcome is PASS with proven or reused OOS evidence."},
+    "case_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "path", "name"],
+      "properties": {
+        "repository": {"enum": ["testcases", "testcases-private-ex"]},
+        "path": {"type": "string"},
+        "name": {"type": "string"}
+      }
+    },
+    "configuration": {
+      "type": "object",
+      "description": "The configuration the chain was run under; instrumented runs are separate configurations.",
+      "additionalProperties": false,
+      "required": ["page_size", "build_mode", "run_mode", "instrumentation_id", "services"],
+      "properties": {
+        "page_size": {"enum": [4096, 8192, 16384]},
+        "build_mode": {"enum": ["release", "debug"]},
+        "run_mode": {"enum": ["standalone", "client-server"]},
+        "instrumentation_id": {"type": ["string", "null"]},
+        "services": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manifest_id", "manifest_path", "manifest_hash", "engine_commit", "testcase_commit", "context_content_hash"],
+      "properties": {
+        "manifest_id": {"type": "string"},
+        "manifest_path": {"type": "string"},
+        "manifest_hash": {"$ref": "#/$defs/sha256"},
+        "engine_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "testcase_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "context_content_hash": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "oos_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "channel", "reference", "applicability"],
+      "properties": {
+        "status": {"$ref": "#/$defs/evidence_status"},
+        "channel": {"enum": [null, "show-heap-oos", "diagdb-owner-descriptor", "debug-oos-log", "instrumentation-counter", "injection-acknowledgement", "unit-test-seam", "other"]},
+        "reference": {"type": ["string", "null"]},
+        "applicability": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["fixture", "execution_path", "engine_configuration", "conditions", "source_manifest"],
+          "properties": {
+            "fixture": {"type": "string"},
+            "execution_path": {"type": "string"},
+            "engine_configuration": {"type": "string"},
+            "conditions": {"type": "string"},
+            "source_manifest": {"type": "string"}
+          }
+        }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "description": "Outcome history and classification. latest never overwrites history; ever_failed is monotonic.",
+      "additionalProperties": false,
+      "required": ["latest_outcome", "ever_failed", "history", "gap_kind", "summary"],
+      "properties": {
+        "latest_outcome": {"anyOf": [{"$ref": "#/$defs/outcome"}, {"type": "null"}], "description": "Null when no attempt exists yet (Delivery gap)."},
+        "ever_failed": {"type": "boolean"},
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["manifest_id", "attempt_id", "outcome", "at"],
+            "properties": {
+              "manifest_id": {"type": "string"},
+              "attempt_id": {"type": "string"},
+              "outcome": {"$ref": "#/$defs/outcome"},
+              "at": {"$ref": "#/$defs/timestamp"}
+            }
+          }
+        },
+        "gap_kind": {"$ref": "#/$defs/gap_kind"},
+        "summary": {"type": ["string", "null"]}
+      }
+    },
+    "flakiness": {
+      "type": "object",
+      "description": "Separate from the outcome: counts and reproduction status.",
+      "additionalProperties": false,
+      "required": ["attempts", "failures", "intermittent", "consecutive_fresh_fixture_reproductions", "deterministic_claim"],
+      "properties": {
+        "attempts": {"type": "integer", "minimum": 0},
+        "failures": {"type": "integer", "minimum": 0},
+        "intermittent": {"type": "boolean"},
+        "consecutive_fresh_fixture_reproductions": {"type": "integer", "minimum": 0},
+        "deterministic_claim": {"type": "boolean", "description": "May be true only with three or more consecutive fresh-fixture reproductions, all recorded."}
+      }
+    },
+    "known_issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ticket", "relation"],
+      "properties": {
+        "ticket": {"type": ["string", "null"], "pattern": "^CBRD-[0-9]+$"},
+        "relation": {"enum": ["none", "reproduces", "related", "blocked-by"]}
+      }
+    },
+    "attribution": {
+      "type": "object",
+      "description": "Separate from the outcome. An unexplained failure stays 'unknown'; 'engine' requires evidence.",
+      "additionalProperties": false,
+      "required": ["target", "evidence", "note"],
+      "properties": {
+        "target": {"enum": ["unknown", "engine", "harness", "instrumentation", "setup", "specification"]},
+        "evidence": {"type": ["string", "null"]},
+        "note": {"type": ["string", "null"]}
+      }
+    },
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["row_id", "requirement", "family", "case", "configuration", "run", "oos_evidence", "finding", "flakiness", "known_issue", "attribution", "attempt_records"],
+      "properties": {
+        "row_id": {"type": "string"},
+        "requirement": {"$ref": "#/$defs/requirement_id"},
+        "family": {"enum": ["Representation", "SQL operations", "Read paths", "Schema and utilities", "Concurrent lifetime", "Durability", "Operational features", "Resource pressure"]},
+        "case": {"anyOf": [{"$ref": "#/$defs/case_identity"}, {"type": "null"}], "description": "Null when no case exists yet for the requirement (Delivery gap row)."},
+        "configuration": {"anyOf": [{"$ref": "#/$defs/configuration"}, {"type": "null"}]},
+        "run": {"anyOf": [{"$ref": "#/$defs/run"}, {"type": "null"}]},
+        "oos_evidence": {"$ref": "#/$defs/oos_evidence"},
+        "finding": {"$ref": "#/$defs/finding"},
+        "flakiness": {"$ref": "#/$defs/flakiness"},
+        "known_issue": {"$ref": "#/$defs/known_issue"},
+        "attribution": {"$ref": "#/$defs/attribution"},
+        "attempt_records": {"type": "array", "items": {"type": "string"}}
+      },
+      "allOf": [
+        {"if": {"properties": {"flakiness": {"properties": {"deterministic_claim": {"const": true}}, "required": ["deterministic_claim"]}}}, "then": {"properties": {"flakiness": {"properties": {"consecutive_fresh_fixture_reproductions": {"minimum": 3}}}}}},
+        {"if": {"properties": {"attribution": {"properties": {"target": {"const": "engine"}}, "required": ["target"]}}}, "then": {"properties": {"attribution": {"properties": {"evidence": {"type": "string", "minLength": 1}}}}}}
+      ]
+    },
+    "accepted_exclusion": {
+      "type": "object",
+      "description": "Only the user converts incomplete coverage into an accepted exclusion, in writing, dated, naming the requirement and the reason. Agents propose deferrals in the report; they never write entries here.",
+      "additionalProperties": false,
+      "required": ["requirement", "date", "reason", "accepted_by", "scope", "proposed_in"],
+      "properties": {
+        "requirement": {"$ref": "#/$defs/requirement_id"},
+        "date": {"$ref": "#/$defs/date"},
+        "reason": {"type": "string", "minLength": 1},
+        "accepted_by": {"const": "user"},
+        "scope": {"type": ["string", "null"], "description": "Which cases or configurations the exclusion covers when not the whole requirement."},
+        "proposed_in": {"type": ["string", "null"], "description": "Report or ticket where an agent proposed the deferral."}
+      }
+    }
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "attempt_id": "att-EXAMPLE-0001",
+  "kind": "original",
+  "parent_attempt": null,
+  "finding_id": null,
+  "case": {
+    "repository": "testcases",
+    "path": "sql/_36_guava/cbrd_26659/cases/example_rep02_largest_first.sql",
+    "name": "example_rep02_largest_first"
+  },
+  "requirements": [
+    "OOS-REP-02",
+    "OOS-SQL-01"
+  ],
+  "manifest_id": "inv-EXAMPLE-0001",
+  "configuration": {
+    "page_size": 16384,
+    "build_mode": "release",
+    "run_mode": "client-server",
+    "instrumentation_id": null,
+    "seed": null
+  },
+  "started_at": "2026-09-10T18:00:00+09:00",
+  "ended_at": "2026-09-10T18:00:41+09:00",
+  "deadline": {
+    "seconds": 120,
+    "reached": false,
+    "evidence_captured_on_timeout": null
+  },
+  "outcome": "PASS",
+  "skip_reason": null,
+  "assertions": {
+    "executed": 6,
+    "failed": 0
+  },
+  "expected_versus_actual": "evidence/example/att-EXAMPLE-0001/result-vs-answer.diff",
+  "oos_evidence": {
+    "status": "proven",
+    "channel": "show-heap-oos",
+    "reference": "evidence/example/inv-EXAMPLE-0001/show_heap_oos.txt",
+    "applicability": null
+  },
+  "barriers": [],
+  "injections": [],
+  "resources_owned": {
+    "databases": [
+      "cmp16k_example"
+    ],
+    "processes": [
+      "cub_master:26659",
+      "cub_server:cmp16k_example"
+    ],
+    "ports": [
+      26659
+    ],
+    "directories": [
+      "/home/vimkim/.cub/campaign/cbrd-26659/db/cmp16k_example"
+    ]
+  },
+  "cleanup": {
+    "performed": true,
+    "scope_verified": true,
+    "evidence_preserved_first": true,
+    "evidence": "evidence/example/att-EXAMPLE-0001/cleanup.log"
+  },
+  "bundle": {
+    "path": "/home/vimkim/.cub/campaign/cbrd-26659/bundles/att-EXAMPLE-0001",
+    "hash": "sha256:aa9f93d00149377b6d1ec8d2e35cb6b67f13751e52f9cbccc0109972efa4bcc0"
+  },
+  "reproduction": null,
+  "notes": "Example record shaped like the ticket 13 tracer bullet."
+}

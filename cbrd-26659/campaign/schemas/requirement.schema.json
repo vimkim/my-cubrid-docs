@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cubrid.example/cbrd-26659/requirement.schema.json",
+  "title": "CBRD-26659 requirement catalogue",
+  "description": "The requirement catalogue every case, manifest row, matrix row and report line cites. One file, one pin, many requirements. IDs are stable forever; citations, statuses and observations are updated in place.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "pin", "requirements"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "pin": {
+      "type": "object",
+      "description": "Ticket 11 identities every citation carries. Changing the pin is a recorded decision, never an edit.",
+      "additionalProperties": false,
+      "required": ["engine_baseline", "context_repository", "context_revision", "content_hashes", "snapshot", "baseline_record"],
+      "properties": {
+        "engine_baseline": {"type": "string", "pattern": "^[0-9a-f]{40}$", "description": "Campaign engine baseline commit on feat/oos."},
+        "context_repository": {"type": "string"},
+        "context_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$", "description": "Committed HEAD of the normative context repository at pin time."},
+        "content_hashes": {
+          "type": "object",
+          "description": "sha256 of each cited document's working copy at pin time (the 24-byte wording exists only in the uncommitted copy).",
+          "additionalProperties": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+        },
+        "snapshot": {"type": "string", "description": "Repository-relative path of the archived normative snapshot."},
+        "baseline_record": {"type": "string", "description": "Repository-relative path of the ticket 11 baseline record."}
+      }
+    },
+    "requirements": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/requirement"}
+    }
+  },
+  "$defs": {
+    "requirement_id": {"type": "string", "pattern": "^OOS-(REP|SQL|RD|SCH|CL|DUR|OPS|RES)-[0-9]{2}$"},
+    "requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "statement", "family", "seam", "citation", "status", "gap_kind", "authority", "authority_question", "accepted_design", "specification_gap_topic", "pinned_observation", "configuration_scope", "attack_dimensions", "expected_engine_findings", "related"],
+      "properties": {
+        "id": {"$ref": "#/$defs/requirement_id", "description": "Stable identity. The family code is fixed at issue time and never renumbered or reused."},
+        "title": {"type": "string", "minLength": 1},
+        "statement": {"type": "string", "minLength": 1, "description": "The required behavior in normative wording, independent of the pinned engine's output."},
+        "family": {"enum": ["Representation", "SQL operations", "Read paths", "Schema and utilities", "Concurrent lifetime", "Durability", "Operational features", "Resource pressure"]},
+        "seam": {"enum": ["public-sql", "private-shell", "either"], "description": "Where the spec places the cases: CTP SQL runner (public), CTP shell runner (private), or either."},
+        "citation": {
+          "type": "object",
+          "description": "Exactly one normative citation: a context heading, an ADR, or an explicitly accepted CBRD design, with the pinned revision and content hash.",
+          "additionalProperties": false,
+          "required": ["kind", "document", "source", "revision", "content_hash"],
+          "properties": {
+            "kind": {"enum": ["context-heading", "adr", "accepted-design"]},
+            "document": {"enum": ["OOS-CONTEXT.md", "ADR-0001", "ADR-0002", "ADR-0003", "ADR-0004"]},
+            "source": {"type": "string", "minLength": 1, "description": "Heading, ADR title, or CBRD design plus the context passage that records its acceptance."},
+            "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+            "content_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+          }
+        },
+        "status": {"enum": ["assertable", "observation-only", "BLOCKED", "UNSUPPORTED"], "description": "assertable: expectation fixed and asserted. observation-only: recorded, never asserted as correct. BLOCKED: Specification gap. UNSUPPORTED: accepted design absent at the pin (Capability gap)."},
+        "gap_kind": {"enum": [null, "Capability gap", "Specification gap"]},
+        "authority": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["policy", "note"],
+          "properties": {
+            "policy": {"enum": ["assert", "assert-after-eligibility", "observe", "withhold"], "description": "assert: independently justified expectation. assert-after-eligibility: assert only after proven reclamation eligibility and safety. observe: record, never assert. withhold: no expectation fixed; engine output never promoted."},
+            "note": {"type": "string", "minLength": 1}
+          }
+        },
+        "authority_question": {"type": ["string", "null"], "description": "Required for BLOCKED: the question the context maintainer must answer."},
+        "accepted_design": {"type": ["string", "null"], "description": "Required for UNSUPPORTED: the accepted CBRD design or ADR that is absent at the pin."},
+        "specification_gap_topic": {"type": ["string", "null"], "pattern": "^[a-z0-9-]+$"},
+        "pinned_observation": {"type": ["string", "null"], "description": "What the pinned engine does, from ticket 11. Observation, never the expectation."},
+        "configuration_scope": {"type": ["string", "null"], "description": "Configurations the requirement applies to when not all (for example client-server only)."},
+        "attack_dimensions": {"type": "array", "items": {"type": "string"}, "description": "Adversarial dimensions case tickets must cover under this requirement."},
+        "expected_engine_findings": {"type": "array", "items": {"type": "string", "pattern": "^CBRD-[0-9]+$"}, "description": "Known defects the campaign expects to surface here; a known bug remains a failure."},
+        "related": {"type": "array", "items": {"$ref": "#/$defs/requirement_id"}, "uniqueItems": true}
+      }
+    }
+  }
+}

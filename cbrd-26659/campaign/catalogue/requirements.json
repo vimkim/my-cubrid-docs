@@ -1,0 +1,2173 @@
+{
+  "schema_version": 1,
+  "pin": {
+    "engine_baseline": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+    "context_repository": "/home/vimkim/gh/cubrid-oos-context",
+    "context_revision": "f6543de680b91ae357466b72a983f982892859cd",
+    "content_hashes": {
+      "OOS-CONTEXT.md": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698",
+      "ADR-0001": "sha256:9531a213d24c44353902264de5840dd65c170246a64ff968adec797d29598e55",
+      "ADR-0002": "sha256:2bdcbce486a97f29acbd4a75d5f45858d0f09205b886480238db22930810e528",
+      "ADR-0003": "sha256:09a8649904e63094fa39f984e5290ccbd9dc68bc930bef916b780b4274605585",
+      "ADR-0004": "sha256:2a4b94c06782e17db1cfeab3a5d953617730873dcabb6d8ad928e23e7e50c155"
+    },
+    "snapshot": "cbrd-26659/campaign/ticket11-evidence/normative-snapshot/",
+    "baseline_record": "cbrd-26659/campaign/CBRD-26659-engine-baseline_f4299ac_claude.md"
+  },
+  "requirements": [
+    {
+      "id": "OOS-REP-01",
+      "title": "Records at or below the gate stay inline",
+      "statement": "A heap record whose serialized size does not exceed the OOS inline target is stored entirely inline: no attribute is demoted, HAS_OOS stays clear, and a class that has never demoted a value has no OOS file.",
+      "family": "Representation",
+      "seam": "public-sql",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§1 Trigger Conditions — Largest-First Demotion (CBRD-26776; physical target CBRD-27057), step 1 (record gate)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Assertable only where the pinned gate (DB_PAGESIZE/4) and the normative four-record target agree. Schema-A BIT VARYING N ≤ 939 / 1,963 / 4,011 (4/8/16 KiB) stays inline under both; the band above is OOS-REP-03."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": "Pinned gate 1,014 / 2,038 / 4,086 B versus normative 988 / 2,012 / 4,060 B (ticket 11 §5.1). No OOS file is created until the first demotion (Has_oos_file 0).",
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "4, 8 and 16 KiB pages",
+        "one and many variable columns",
+        "NULL and empty eligible values",
+        "VOT 1-to-2-byte transition (schema A: N = 92)"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-REP-03",
+        "OOS-REP-09"
+      ]
+    },
+    {
+      "id": "OOS-REP-02",
+      "title": "Largest-first demotion above the gate",
+      "statement": "When a record exceeds the OOS inline target, eligible variable values are demoted one at a time in descending size until the record is at or below the target or candidates are exhausted; smaller eligible values may remain inline, and every value reads back exactly.",
+      "family": "Representation",
+      "seam": "public-sql",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§1 Trigger Conditions — Largest-First Demotion (CBRD-26776; physical target CBRD-27057), step 3 (largest-first loop)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Assertable above both gates (schema-A N ≥ 964 / 1,988 / 4,036). The number of demoted values is observable per class through SHOW HEAP OOS chunk counts on an isolated table; per-attribute placement needs a paired debug or instrumented run. At the pin the SQL INSERT path writes no oos.log line (ticket 11 §6)."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": "Order and early stop implemented in heap_attrinfo_determine_disk_layout; the stop compares against the pinned gate, not the normative target.",
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "two unequal eligible columns (only the largest demoted)",
+        "equal-size ties",
+        "candidates exhausted above the target",
+        "over-demotion by one value near a VOT width boundary (conservative estimate)",
+        "bulk insert of varying sizes"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-REP-03",
+        "OOS-SQL-01"
+      ]
+    },
+    {
+      "id": "OOS-REP-03",
+      "title": "Four-record physical target (CBRD-27057)",
+      "statement": "The record gate and the demotion stop use the PG-style four-record physical target derived from heap_nonheader_page_capacity(), excluding heap unfill: 988 / 2,012 / 4,060 B at 4 / 8 / 16 KiB.",
+      "family": "Representation",
+      "seam": "public-sql",
+      "citation": {
+        "kind": "accepted-design",
+        "document": "OOS-CONTEXT.md",
+        "source": "CBRD-27057 four-record physical target — spec note (2026-07-13) and §1 Trigger Conditions — Largest-First Demotion (CBRD-26776; physical target CBRD-27057)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "UNSUPPORTED",
+      "gap_kind": "Capability gap",
+      "authority": {
+        "policy": "withhold",
+        "note": "Accepted design absent at the pin. Cases in the disputed band take the UNSUPPORTED outcome; their engine output is retained as evidence and never promoted to an answer. Ticket 11 recorded this as a Capability gap of the pinned engine."
+      },
+      "authority_question": null,
+      "accepted_design": "CBRD-27057 four-record physical target (heap_oos_inline_target_size)",
+      "specification_gap_topic": null,
+      "pinned_observation": "heap_file.c:12350 and :12383 compare against DB_PAGESIZE / 4; heap_oos_inline_target_size does not exist. Disputed band schema-A N in [940, 963] / [1,964, 1,987] / [4,012, 4,035] stays inline at the pin.",
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "both sides of the normative boundary at each page size",
+        "unfill-independence"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-REP-01",
+        "OOS-REP-02"
+      ]
+    },
+    {
+      "id": "OOS-REP-04",
+      "title": "Eligibility floor where pinned and normative agree",
+      "statement": "A variable value whose serialized size is at or below 16 B is never demoted, and a variable value whose serialized size exceeds 24 B is a demotion candidate whenever its record exceeds the gate.",
+      "family": "Representation",
+      "seam": "public-sql",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§1 Trigger Conditions — Largest-First Demotion (CBRD-26776; physical target CBRD-27057), step 2 (eligibility)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Both floors agree outside the [17, 24] B serialized band. For BIT VARYING that is logical N ≤ 15 (never demoted) and N ≥ 24 (candidate). The band N in [16, 23] is OOS-REP-05."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": "15-byte value stays inline; 16-, 23- and 24-byte values are demoted (Oos_recs_sumlen 36 / 40 / 44). Normatively only the 24-byte value may be demoted.",
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "fixed BIT column pushes the record over the gate so only the small variable value is a candidate",
+        "4, 8 and 16 KiB"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-REP-05"
+      ]
+    },
+    {
+      "id": "OOS-REP-05",
+      "title": "24-byte identity layout (CBRD-26950)",
+      "statement": "The OOS inline stub is 24 bytes (head OOS OID, full length, packed identity stamp), each chunk header is 24 bytes with a raw LOG_LSA stamp captured under the write latch, the eligibility floor is strictly greater than 24 B, and deletes are identity-checked against the stamp.",
+      "family": "Representation",
+      "seam": "either",
+      "citation": {
+        "kind": "accepted-design",
+        "document": "OOS-CONTEXT.md",
+        "source": "CBRD-26950 identity layout — Identity layout reconciliation (2026-09-09), §2 Record Binary Layout and §2 Multi-Chunk OOS Chain",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "UNSUPPORTED",
+      "gap_kind": "Capability gap",
+      "authority": {
+        "policy": "withhold",
+        "note": "Accepted design absent at the pin (PR #7695 unmerged). Physical expectations that depend on the 24-byte layout are withheld; their cases take the UNSUPPORTED outcome. Universal value-correctness checks continue under OOS-CL-04."
+      },
+      "authority_question": null,
+      "accepted_design": "CBRD-26950 identity layout (24-byte stub and chunk header, identity-checked delete)",
+      "specification_gap_topic": null,
+      "pinned_observation": "OR_OOS_INLINE_SIZE = 16 (object_representation.h:466); oos_record_header is 16 B (oos_file.hpp:28-33); oos_delete takes no expected identity. Boundaries shift by 8 B: single-chunk max 16,288 pinned vs 16,280 normative at 16 KiB; eligibility band N in [16, 23] demoted at the pin.",
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "eligibility band N in [16, 23]",
+        "single-to-multi chunk boundary under a 24-byte header",
+        "OOS + bigone rejection threshold under a 24-byte stub",
+        "stamp uniqueness across slot reuse with logging enabled"
+      ],
+      "expected_engine_findings": [
+        "CBRD-26950"
+      ],
+      "related": [
+        "OOS-REP-04",
+        "OOS-REP-07",
+        "OOS-REP-08",
+        "OOS-CL-04"
+      ]
+    },
+    {
+      "id": "OOS-REP-06",
+      "title": "Type-agnostic eligibility including LOB locators (ADR-0002)",
+      "statement": "Eligibility depends only on the value being variable-length and larger than the floor; BLOB/CLOB locator values demote like any other variable value with LOB copy semantics preserved, and deleting or vacuuming a demoted locator never removes the external LOB payload.",
+      "family": "Representation",
+      "seam": "public-sql",
+      "citation": {
+        "kind": "adr",
+        "document": "ADR-0002",
+        "source": "ADR-0002 BLOB/CLOB locator columns remain OOS-demotable (type-agnostic eligibility)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:2bdcbce486a97f29acbd4a75d5f45858d0f09205b886480238db22930810e528"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Whole-value equality per type. String types are compressed and unsuitable for size boundaries; use them for correctness, not for boundary arithmetic."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "BIT VARYING, VARCHAR (compressed and uncompressed), VARNCHAR, JSON, SET/MULTISET/SEQUENCE, BLOB/CLOB locators",
+        "character sets and collations",
+        "many locator columns (bug_xdbms3693 shape)",
+        "INSERT ... SELECT copying of LOB rows",
+        "stub-writer S_DOESNT_FIT retry after locator size drift"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-REP-02"
+      ]
+    },
+    {
+      "id": "OOS-REP-07",
+      "title": "Multi-chunk value chains",
+      "statement": "A value larger than one page's maximum single-chunk payload is stored as a chain of chunk records, inserted tail first, and is read back complete and byte-identical; total_data_length excludes every chunk header.",
+      "family": "Representation",
+      "seam": "public-sql",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§2 Multi-Chunk OOS Chain",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Assert value equality and, on an isolated table, the chunk count from SHOW HEAP OOS. The exact split boundary is pinned-layout specific (16-byte header); the normative 24-byte boundary is OOS-REP-05."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": "Largest single-chunk N = 3,995 / 8,091 / 16,283; two chunks from N = 3,996 / 8,092 / 16,284 (Oos_num_recs 2, Oos_num_user_pages 3).",
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "one byte either side of the split",
+        "three or more chunks (50 KiB+)",
+        "mixed single- and multi-chunk values in one table",
+        "distinct byte pattern per chunk to detect cross-row mixing"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-REP-05",
+        "OOS-DUR-01"
+      ]
+    },
+    {
+      "id": "OOS-REP-08",
+      "title": "OOS + bigone rejection (CBRD-26937)",
+      "statement": "An INSERT or UPDATE whose record would still exceed heap_Maxslotted_reclength after demotion while containing an OOS inline stub is rejected with ER_HEAP_OOS_OVERPASS_MAXOBJ_SIZE before any chunk is written; no row is stored and no OOS value chain is created. A non-OOS bigone record, or an OOS-backed record left between the target and the bigone threshold, succeeds.",
+      "family": "Representation",
+      "seam": "public-sql",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§1 OOS + bigone Rejection (CBRD-26937)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Assert the rejection, the absence of the row and the absence of an OOS file or new chunks. Expected-error answers use the pinned error code and message text (ticket 11 §4 g); the context's -1375 is drift, reported to the context maintainer."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": "Error code is -1382 at the pin (error_code.h:1782); message reports 'size (N bytes) still exceeds the maximum record size (M bytes)'. Schema B: largest accepted F = 3,888 / 7,984 / 16,176; smallest rejected F = 3,889 / 7,985 / 16,177 with a 16-byte stub.",
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "fixed BIT(n) plus one OOS-backed column",
+        "many small (≤ floor) variable values",
+        "UPDATE that grows a fixed column past the threshold",
+        "non-OOS bigone control"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-REP-05"
+      ]
+    },
+    {
+      "id": "OOS-REP-09",
+      "title": "NULL and empty eligible values",
+      "statement": "A NULL or zero-length value in an OOS-eligible column is never demoted and reads back as NULL or as the empty value.",
+      "family": "Representation",
+      "seam": "public-sql",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§1 Trigger Conditions — Largest-First Demotion (CBRD-26776; physical target CBRD-27057), step 2 (eligibility)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Follows from eligibility requiring a serialized size above the floor. Assert on records that otherwise exceed the gate so demotion of siblings is exercised."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "NULL beside demoted siblings",
+        "empty BIT VARYING and empty VARCHAR beside demoted siblings",
+        "UPDATE to NULL and back"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-REP-01"
+      ]
+    },
+    {
+      "id": "OOS-REP-10",
+      "title": "Many OOS-backed attributes in one record",
+      "statement": "A record may carry many OOS inline stubs (ten or more); HAS_OOS is set once, each demoted attribute's VOT entry carries IS_OOS, and every value reads back exactly.",
+      "family": "Representation",
+      "seam": "public-sql",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§2 Record Binary Layout",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Flags are observable only through debug or diagnostic channels; the SQL seam asserts values and chunk counts. An OOS-bearing record never reaches 4-byte VOT entries (structural exclusion, ticket 11 §5.1)."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "10+ demoted attributes",
+        "VOT 1-to-2-byte width transition",
+        "fixed and variable columns interleaved",
+        "bound-bit bytes with 32+ fixed columns"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-REP-02"
+      ]
+    },
+    {
+      "id": "OOS-REP-11",
+      "title": "Inline and OOS transitions across writes",
+      "statement": "An attribute's representation may move between inline and OOS on each INSERT or UPDATE as the record size crosses the target; the logical value is never affected by the transition.",
+      "family": "Representation",
+      "seam": "public-sql",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§1 Trigger Conditions — Largest-First Demotion (CBRD-26776; physical target CBRD-27057)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Assert values across grow/shrink sequences; placement changes are evidence, not the oracle."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "grow a value past the gate then shrink it below",
+        "change a sibling so a previously inline value becomes the largest candidate",
+        "repeated transitions on one row"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-SQL-02"
+      ]
+    },
+    {
+      "id": "OOS-REP-12",
+      "title": "Placement hints: logical correctness only",
+      "statement": "With STORAGE PREFER_INLINE or STORAGE FORCE_OUTLINE declared on a column, values read back exactly, DDL and DML error paths behave, and the record stays valid; where a value is placed is recorded as an implementation observation.",
+      "family": "Representation",
+      "seam": "public-sql",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§5 Proposed Design Discussions — Per-column inline preference (CBRD-26912, proposed)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "observation-only",
+      "gap_kind": null,
+      "authority": {
+        "policy": "observe",
+        "note": "Ticket 10 policy 2: implemented behavior without established acceptance gets logical-correctness and error-path tests; placement is observed, never asserted. Coverage scope is a pending decision request from ticket 11 §9."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": "Grammar accepts both hints (csql_grammar.y:10574-10582); FORCE_OUTLINE bypasses the record gate (a 40-byte value in a small record was demoted).",
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "PREFER_INLINE column as largest candidate",
+        "FORCE_OUTLINE on a small value",
+        "hint on a column that is not variable-length (error path)",
+        "ALTER adding and removing the hint"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-REP-13"
+      ]
+    },
+    {
+      "id": "OOS-REP-13",
+      "title": "Placement-hint policy authority",
+      "statement": "Whether PREFER_INLINE ordering and the FORCE_OUTLINE gate bypass are required behavior is undecided; no placement expectation is fixed for either hint.",
+      "family": "Representation",
+      "seam": "public-sql",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§5 Proposed Design Discussions — Per-column inline preference (CBRD-26912, proposed)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "BLOCKED",
+      "gap_kind": "Specification gap",
+      "authority": {
+        "policy": "withhold",
+        "note": "Source existence does not establish acceptance (ticket 10). The gap stays visible in the matrix and does not block OOS-REP-12."
+      },
+      "authority_question": "Is CBRD-26912 (STORAGE PREFER_INLINE) accepted, and is STORAGE FORCE_OUTLINE an accepted design at all? If accepted, what exact ordering and bypass semantics are required?",
+      "accepted_design": null,
+      "specification_gap_topic": "placement-hint-acceptance",
+      "pinned_observation": "Both hints implemented beyond accepted policy (ticket 11 §4 b).",
+      "configuration_scope": null,
+      "attack_dimensions": [],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-REP-12"
+      ]
+    },
+    {
+      "id": "OOS-REP-14",
+      "title": "Stub-size terminology: 16, 20 or 24 bytes",
+      "statement": "Residual context statements still give the profitable demotion threshold as strictly greater than 16 B (§5 Limitations row for CBRD-26776) while the accepted layout fixes the OOS inline stub, chunk header and floor at 24 B, and the invariants research met a 20-byte generation-stub draft; the single normative size must be confirmed.",
+      "family": "Representation",
+      "seam": "either",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§5 Limitations (Milestone 1) — Bulk-externalize row (profitable threshold wording)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "BLOCKED",
+      "gap_kind": "Specification gap",
+      "authority": {
+        "policy": "withhold",
+        "note": "Mixed-era statement from the invariants research (stub-size terminology). Expectations in the 17-24 B serialized band are withheld (OOS-REP-05); outside the band OOS-REP-04 applies."
+      },
+      "authority_question": "Confirm that every remaining 16-byte and 20-byte statement is historical, that 24 B is the single normative stub, chunk-header and floor size, and that the pinned 16-byte constant is a conformance gap rather than an alternative accepted layout.",
+      "accepted_design": null,
+      "specification_gap_topic": "stub-size-terminology",
+      "pinned_observation": "OR_OOS_INLINE_SIZE = 16 and a 16-byte chunk header at the pin (ticket 11 §4 d, e).",
+      "configuration_scope": null,
+      "attack_dimensions": [],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-REP-04",
+        "OOS-REP-05"
+      ]
+    },
+    {
+      "id": "OOS-SQL-01",
+      "title": "INSERT then SELECT returns the exact value",
+      "statement": "An inserted OOS-backed row reads back with every attribute byte-identical to the inserted value, for single rows and bulk inserts of varying sizes.",
+      "family": "SQL operations",
+      "seam": "public-sql",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§3 INSERT",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Exact whole-value equality justified before the engine runs; DISK_SIZE supports the arithmetic but is not a placement oracle. Pair with activation evidence."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "single row",
+        "100+ rows of varying sizes",
+        "1000+ rows all OOS-backed",
+        "INSERT ... SELECT",
+        "prepared INSERT with host variables",
+        "inline comparator row"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-REP-02"
+      ]
+    },
+    {
+      "id": "OOS-SQL-02",
+      "title": "UPDATE correctness",
+      "statement": "After an UPDATE of an OOS-backed attribute, or of an inline attribute in an OOS-backed record, the updater and every later reader see the exact new value; repeated updates leave the final value correct.",
+      "family": "SQL operations",
+      "seam": "public-sql",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§3 UPDATE (Always New OID — M1)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Universal value correctness independent of the physical design; chain ownership is OOS-SQL-03 and OOS-SQL-04."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "single-chunk to multi-chunk and back",
+        "50+ repeated updates on one row",
+        "UPDATE of only an inline attribute",
+        "UPDATE via prepared statement",
+        "UPDATE with subquery reading the same OOS value"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-SQL-03",
+        "OOS-SQL-04",
+        "OOS-REP-11"
+      ]
+    },
+    {
+      "id": "OOS-SQL-03",
+      "title": "M1 always-new-chain on UPDATE (current behavior)",
+      "statement": "At the pin every UPDATE allocates fresh OOS value chains and head OOS OIDs for the new record version, even for attributes the statement did not assign.",
+      "family": "SQL operations",
+      "seam": "either",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§3 UPDATE (Always New OID — M1) — Current implementation",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "observation-only",
+      "gap_kind": null,
+      "authority": {
+        "policy": "observe",
+        "note": "Historical and current-implementation behavior superseded on paper by CBRD-27230. Record chunk-count growth as an observation; never promote it as required behavior (scenario 2.2 wording is M1-era)."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": "heap_attrinfo_insert_to_oos always allocates fresh chains; the vacuum forward-walk relies on old/new head-OID disjointness.",
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "UPDATE of an inline attribute only",
+        "UPDATE assigning the same value"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-SQL-04"
+      ]
+    },
+    {
+      "id": "OOS-SQL-04",
+      "title": "UPDATE chain reuse and commit-conditional cleanup (CBRD-27230)",
+      "statement": "UPDATE reuses the OOS value chains of attributes the statement does not assign; dropped chains are announced by a commit-conditional RVOOS_NOTIFY_VACUUM record consumed by vacuum; the forward-walk is removed; DELETE and the SA_MODE eager path are unchanged.",
+      "family": "SQL operations",
+      "seam": "either",
+      "citation": {
+        "kind": "accepted-design",
+        "document": "OOS-CONTEXT.md",
+        "source": "CBRD-27230 UPDATE chain reuse — spec note (2026-08-13) and §3 UPDATE superseding ownership invariant",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "UNSUPPORTED",
+      "gap_kind": "Capability gap",
+      "authority": {
+        "policy": "withhold",
+        "note": "Accepted design absent at the pin. Reuse and notify-record expectations are withheld; rollback-survival correctness continues under OOS-CL-03."
+      },
+      "authority_question": null,
+      "accepted_design": "CBRD-27230 UPDATE chain reuse with RVOOS_NOTIFY_VACUUM cleanup",
+      "specification_gap_topic": null,
+      "pinned_observation": "Forward walk present (vacuum_oos.cpp:154, :275); no notify emitter (recovery.c:899, mvcc.h:268 reserve the record).",
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "unassigned attribute keeps its head OID",
+        "notify record only on commit",
+        "forward-walk absence"
+      ],
+      "expected_engine_findings": [
+        "CBRD-27237"
+      ],
+      "related": [
+        "OOS-SQL-03",
+        "OOS-CL-03",
+        "OOS-OPS-03"
+      ]
+    },
+    {
+      "id": "OOS-SQL-05",
+      "title": "DELETE semantics",
+      "statement": "A deleted OOS-backed row is gone for the deleter and for later readers; the deleted record keeps its stubs and its value chains are not removed at delete time in MVCC mode, so the table stays reusable and earlier snapshots can still read the value.",
+      "family": "SQL operations",
+      "seam": "either",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§3 DELETE",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Logical checks on the SQL seam; 'chains not removed at delete time' is assertable through SHOW HEAP OOS chunk counts in client-server mode only, because the standalone eager path deletes synchronously (ticket 11 §6)."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": "Standalone DELETE dropped Oos_num_recs to 0 immediately while pages stayed allocated (LSA-gate deferral).",
+      "configuration_scope": "Physical deferral applies to client-server (MVCC) mode; standalone mode deletes eagerly.",
+      "attack_dimensions": [
+        "single row",
+        "DELETE all then re-INSERT",
+        "DELETE with WHERE on an OOS column",
+        "TRUNCATE comparator"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-CL-02",
+        "OOS-CL-11"
+      ]
+    },
+    {
+      "id": "OOS-SQL-06",
+      "title": "Transaction atomicity and undo correctness",
+      "statement": "ROLLBACK, savepoint rollback and statement failure restore the previous record as-is, including its OOS inline stubs whose head OIDs still reference live chains; no partial effect and no orphan chain remains from the aborted work.",
+      "family": "SQL operations",
+      "seam": "public-sql",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Recovery & Replication Invariants, invariant 2 (Undo correctness)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Exact original values after rollback; constraint and trigger failures are the statement-failure dimension. Orphan-chain cleanup eventuality is OOS-CL-02."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "INSERT + UPDATE then ROLLBACK",
+        "UPDATE of an OOS-backed attribute then ROLLBACK",
+        "ROLLBACK TO SAVEPOINT across OOS writes",
+        "unique/PK/NOT NULL violation on an OOS row",
+        "trigger raising an error after an OOS write",
+        "multi-row statement failing part way"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-CL-03",
+        "OOS-DUR-02"
+      ]
+    },
+    {
+      "id": "OOS-SQL-07",
+      "title": "Deferred-reuse text versus the accepted CBRD-27230 design",
+      "statement": "§5 Optimization Ideas A and the Milestones section still describe UPDATE value-chain reuse as a cancelled-M3 future improvement not in M2, while the 2026-08-13 spec note records CBRD-27230 as an accepted design and M2 as the umbrella for all remaining OOS work; whether reuse is a merge-gating conformance item is undecided.",
+      "family": "SQL operations",
+      "seam": "either",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§5 Optimization Ideas — A. Update OOS value-chain reuse (CBRD-26516) and Milestones (M3 cancelled)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "BLOCKED",
+      "gap_kind": "Specification gap",
+      "authority": {
+        "policy": "withhold",
+        "note": "Mixed-era statement from the invariants research (deferred reuse text). Decides whether OOS-SQL-04's UNSUPPORTED status is a merge gate or an accepted deferral; either way the pin's behavior is never promoted as the answer."
+      },
+      "authority_question": "Is CBRD-27230 UPDATE chain reuse required for feat/oos conformance before merge, or deferred to a later milestone? Should Optimization Idea A and the M3 milestone text be rewritten to point at the accepted design?",
+      "accepted_design": null,
+      "specification_gap_topic": "deferred-reuse-text",
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-SQL-04",
+        "OOS-CL-08"
+      ]
+    },
+    {
+      "id": "OOS-RD-01",
+      "title": "Every read path returns the complete OOS value",
+      "statement": "Every SQL read path that consumes an OOS-backed attribute obtains the complete OOS value: heap scans, index scans, joins, prepared statements, aggregates and functions, constraint and trigger evaluation, and attribute-level reads that touch one column.",
+      "family": "Read paths",
+      "seam": "public-sql",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§3 SELECT (OOS Resolve)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Exact whole-value equality per path; operation success alone does not prove Resolve routing, so pair each path with activation evidence where the path is claimed as OOS coverage."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "heap scan",
+        "index scan on a non-OOS key projecting the OOS column",
+        "join on inline keys projecting OOS values from both sides",
+        "prepared statement with host variables",
+        "GROUP BY / aggregate over OOS values",
+        "constraint and trigger reading the OOS value",
+        "SELECT of only the inline columns (no OOS I/O expected; observation)"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-RD-03"
+      ]
+    },
+    {
+      "id": "OOS-RD-02",
+      "title": "Old-version reads reconstruct through undo stubs",
+      "statement": "A reader whose snapshot predates another session's UPDATE or DELETE reads the exact old value, reconstructed through prev_version_lsa, the undo record's stubs and oos_read, whether the writer is uncommitted or committed.",
+      "family": "Read paths",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Recovery & Replication Invariants, invariant 2 (Undo correctness)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Needs two sessions with acknowledged barriers (ticket 05). Value survival is the oracle; cleanup afterwards is OOS-CL-02."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "uncommitted UPDATE visible only to the updater",
+        "committed UPDATE with an earlier reader snapshot",
+        "deleted row still visible to an earlier snapshot",
+        "multi-chunk old version"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-CL-01"
+      ]
+    },
+    {
+      "id": "OOS-RD-03",
+      "title": "Raw-byte consumers receive expanded records (ADR-0003)",
+      "statement": "Every path that consumes raw record bytes (client copy-area fetch, unloaddb, compactdb, partition redistribution, catalog updates, re-insertion into another heap) receives fully expanded records; no OOS inline stub leaks to an OOS-unaware consumer.",
+      "family": "Read paths",
+      "seam": "either",
+      "citation": {
+        "kind": "adr",
+        "document": "ADR-0003",
+        "source": "ADR-0003 OOS record expansion is opt-in for raw-byte consumers",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:09a8649904e63094fa39f984e5290ccbd9dc68bc930bef916b780b4274605585"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Assert logical output of each consumer (unload file contents, compacted table values, moved partition rows). CBRD-26948 is an expected finding to re-verify at the pin, not to assume."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": "locator_sr.c:2337 expands copy-area records at the pin (research report); unloaddb/compactdb leak status unverified.",
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "unloaddb of OOS tables",
+        "compactdb",
+        "ALTER ... PARTITION redistribution",
+        "CREATE TABLE AS SELECT / INSERT ... SELECT",
+        "catalog class statistics update"
+      ],
+      "expected_engine_findings": [
+        "CBRD-26948"
+      ],
+      "related": [
+        "OOS-SCH-04"
+      ]
+    },
+    {
+      "id": "OOS-SCH-01",
+      "title": "OOS file lifecycle: at most one per heap, removed with the heap",
+      "statement": "Each heap file has at most one OOS file, lazily created on first demotion and recorded in the heap header; destroying the heap (DROP TABLE, and TRUNCATE which recreates the heap) leaves no orphan OOS file.",
+      "family": "Schema and utilities",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Recovery & Replication Invariants, invariant 6 (OOS file <-> heap file 1:1)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Observable through SHOW HEAP OOS (Has_oos_file) and diagdb -d 1 / -d 2 owner descriptors. The DROP cleanup is the resolved CBRD-26608 design; the context has no explicit TRUNCATE sentence, so the TRUNCATE expectation is derived from invariant 6 and noted as such."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": "FILE_OOS owner descriptor 'CLASS_OID … OOS for HFID …' printed by diagdb -d 1 at the pin.",
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "DROP TABLE with single- and multi-chunk values",
+        "TRUNCATE then re-insert",
+        "DROP inside a rolled-back transaction",
+        "DROP concurrent with checkdb (narrow race noted in §5; observation)"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-SCH-06"
+      ]
+    },
+    {
+      "id": "OOS-SCH-02",
+      "title": "Schema evolution preserves OOS values",
+      "statement": "After ALTER TABLE (add, drop, modify or rename a column, change a type, add or drop an index, partition changes) every OOS-backed value reads back exactly and the resulting records are valid.",
+      "family": "Schema and utilities",
+      "seam": "public-sql",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§3 SELECT (OOS Resolve)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Universal value correctness across rewrites; the rewrite side applies the write rules of OOS-REP-02."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "ADD COLUMN with default beside OOS values",
+        "DROP COLUMN of an OOS-backed column",
+        "MODIFY type of an OOS-backed column",
+        "ADD INDEX on inline key of an OOS table",
+        "ALTER ... ADD PARTITION / REORGANIZE"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-RD-03"
+      ]
+    },
+    {
+      "id": "OOS-SCH-03",
+      "title": "loaddb writes correct OOS-backed rows, including no-logging mode",
+      "statement": "Rows loaded with loaddb read back exactly; with logging disabled the values remain correct while stamp-uniqueness and recovery guarantees are not asserted, per the accepted no-logging exception.",
+      "family": "Schema and utilities",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§2 Multi-Chunk OOS Chain — Accepted logging policy (2026-09-09)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Assert values in both modes; recovery after a no-logging load is recorded as observation only."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "loaddb of an unloaded OOS table",
+        "loaddb --no-logging",
+        "load across page sizes"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-RD-03",
+        "OOS-DUR-01"
+      ]
+    },
+    {
+      "id": "OOS-SCH-04",
+      "title": "compactdb and checkdb on OOS tables",
+      "statement": "checkdb passes on a consistent database holding OOS files, and compactdb preserves every OOS-backed value; utility exit status is asserted explicitly.",
+      "family": "Schema and utilities",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "adr",
+        "document": "ADR-0003",
+        "source": "ADR-0003 OOS record expansion is opt-in for raw-byte consumers",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:09a8649904e63094fa39f984e5290ccbd9dc68bc930bef916b780b4274605585"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Utility exit status plus value equality after the utility; the private DROP-reclaim pattern (extract identifier, fail explicitly) is the model."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "checkdb after DELETE and vacuum",
+        "compactdb with mixed inline/OOS rows",
+        "checkdb standalone versus client-server"
+      ],
+      "expected_engine_findings": [
+        "CBRD-26948"
+      ],
+      "related": [
+        "OOS-RD-03"
+      ]
+    },
+    {
+      "id": "OOS-SCH-05",
+      "title": "backup and restore preserve OOS values",
+      "statement": "A database restored from a full or incremental backup returns every committed OOS-backed value exactly and its OOS files remain consistent (checkdb passes).",
+      "family": "Schema and utilities",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Recovery & Replication Invariants, invariant 1 (WAL completeness)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Durability of committed state through the backup path; assert values and checkdb exit status."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "full backup and restore",
+        "incremental backup after OOS updates",
+        "restore to a different directory",
+        "backup of an encrypted OOS database (with OOS-OPS-04)"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-DUR-01"
+      ]
+    },
+    {
+      "id": "OOS-SCH-06",
+      "title": "Space accounting of OOS files (CBRD-27350)",
+      "statement": "spacedb and diagdb output for OOS storage is recorded as observed: at the pin OOS files are folded into the HEAP category and attributed to classes only through diagdb owner descriptors.",
+      "family": "Schema and utilities",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§5 Known Bugs — spacedb/diagdb can't see OOS space",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "observation-only",
+      "gap_kind": null,
+      "authority": {
+        "policy": "observe",
+        "note": "QA tooling ask, not required OOS behavior; record what the tools print so the expected finding CBRD-27350 stays visible."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": "spacedb -S -p reports 53 heap files where 45 are heaps and 8 are OOS files (ticket 11 §6).",
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "spacedb totals before and after OOS inserts",
+        "diagdb -d 2 OOS file listing"
+      ],
+      "expected_engine_findings": [
+        "CBRD-27350"
+      ],
+      "related": [
+        "OOS-SCH-01"
+      ]
+    },
+    {
+      "id": "OOS-CL-01",
+      "title": "Snapshot survival across update, delete and vacuum",
+      "statement": "A reader that established its snapshot by a real read keeps reading the exact old value while another session updates or deletes the row and vacuum runs; the old value is never lost before the reader releases.",
+      "family": "Concurrent lifetime",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Vacuum + OOS (IMPLEMENTED — CBRD-26668, PR #6986 merged)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Schedule family 'snapshot survival' (ticket 05) with acknowledged barriers and observed vacuum progress. Value survival is the oracle here; post-release cleanup is OOS-CL-02."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "reader vs UPDATE then vacuum",
+        "reader vs DELETE then vacuum",
+        "multi-chunk old value",
+        "two readers with different snapshots"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-RD-02",
+        "OOS-CL-02"
+      ]
+    },
+    {
+      "id": "OOS-CL-02",
+      "title": "Dead-version chains are reclaimed by vacuum once no reader needs them",
+      "statement": "The OOS value chains owned by dead record versions are deleted by vacuum after every snapshot that could read them has ended; no chain is deleted earlier and no chain is permanently orphaned.",
+      "family": "Concurrent lifetime",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Vacuum + OOS (IMPLEMENTED — CBRD-26668, PR #6986 merged)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert-after-eligibility",
+        "note": "Assert chunk-count decrease only after proving eligibility (no active snapshot older than the delete) and safety (vacuum processed the block, observed progress). Before eligibility, a decrease is a failure candidate; after eligibility, absence of decrease within the bounded wait is a failure candidate."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "UPDATE old chain reclaimed after reader release",
+        "DELETE chain reclaimed",
+        "aborted UPDATE's new chains reclaimed",
+        "vacuum progress witness and deadline"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-CL-01",
+        "OOS-CL-05"
+      ]
+    },
+    {
+      "id": "OOS-CL-03",
+      "title": "Rollback survival against vacuum (CBRD-27237)",
+      "statement": "After an UPDATE of an OOS-backed attribute is rolled back, the restored value remains exact after vacuum has processed the aborted transaction's log records.",
+      "family": "Concurrent lifetime",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Recovery & Replication Invariants, invariant 2 (Undo correctness)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Universal rollback correctness independent of the physical design; expected to FAIL at the pin as Engine defect CBRD-27237. A known bug remains a failure."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": "Forward-walk acts on undo-image content with no commit/abort filter (analysis-based, no runtime repro recorded in the context).",
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "multi-chunk UPDATE, ROLLBACK, vacuum, verify",
+        "savepoint rollback variant",
+        "crash-induced rollback variant"
+      ],
+      "expected_engine_findings": [
+        "CBRD-27237"
+      ],
+      "related": [
+        "OOS-SQL-04",
+        "OOS-SQL-06"
+      ]
+    },
+    {
+      "id": "OOS-CL-04",
+      "title": "Live data survives slot reuse and vacuum retry (CBRD-26950)",
+      "statement": "After vacuum frees an OOS slot and another row's chain reuses that slot, a vacuum retry (worker pause, mid-block error or crash recovery re-running the block) never deletes the new owner's chunk; the complete value survives.",
+      "family": "Concurrent lifetime",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Vacuum + OOS (IMPLEMENTED — CBRD-26668, PR #6986 merged)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Universal correctness (vacuum never deletes live data); expected to FAIL at the pin as Engine defect CBRD-26950. The identity-stamp mechanism itself is OOS-REP-05 (UNSUPPORTED)."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": "oos_chunk_exists checks occupied, not mine; header has no identity stamp.",
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "prove reclamation and reuse of the targeted slot",
+        "force block retry",
+        "multi-chunk new owner"
+      ],
+      "expected_engine_findings": [
+        "CBRD-26950"
+      ],
+      "related": [
+        "OOS-REP-05",
+        "OOS-CL-12"
+      ]
+    },
+    {
+      "id": "OOS-CL-05",
+      "title": "Empty-page reclaim invariant (CBRD-26786)",
+      "statement": "Every fully emptied OOS data page is eventually returned to the file manager, and an OOS file reserves a new sector only when no safely reclaimable empty page exists; pages whose last writer may still be a live undo source are deferred, and deferral ends when that writer finishes.",
+      "family": "Concurrent lifetime",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "accepted-design",
+        "document": "OOS-CONTEXT.md",
+        "source": "CBRD-26786 empty-page reclaim invariant — spec note (2026-08-28) and §4 Vacuum + OOS",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert-after-eligibility",
+        "note": "Ticket 10 policy 3: assert page release only after proving the page is empty, is a data page (not the header page), belongs to a non-legacy file, and passes the LSA gate (no active writer). Never use an unconditional zero-page assertion. Ticket 11 found the mechanisms present at the pin (conforming)."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": "oos_reclaim_lsa_gate_passes, oos_reclaim_empty_pages, oos_reclaim_sweep_step and oos_alloc_page_with_reclaim exist at the pin; after a standalone DELETE, Oos_num_user_pages stayed at 2 (deferral).",
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "empty page with deleter committed",
+        "empty page with active deleter, then abort",
+        "refilled page",
+        "interrupted sweep and boot-rule lap after crash",
+        "growth-gate sweep at the single growth point"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-CL-02",
+        "OOS-CL-06",
+        "OOS-CL-07"
+      ]
+    },
+    {
+      "id": "OOS-CL-06",
+      "title": "No unjustified OOS file growth under churn",
+      "statement": "Under sustained insert/delete churn with reclaimable empty pages available, the OOS file does not reserve new sectors while a safely reclaimable page exists.",
+      "family": "Concurrent lifetime",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "accepted-design",
+        "document": "OOS-CONTEXT.md",
+        "source": "CBRD-26786 empty-page reclaim invariant — spec note (2026-08-28) and §4 Vacuum + OOS",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert-after-eligibility",
+        "note": "Progress witness: page counts from SHOW HEAP OOS over time with eligibility established; the bound on 'eventually' is a Specification gap (OOS-CL-07) so the case records the observed lag rather than asserting a fixed bound."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "steady-state churn at each page size",
+        "churn with a long-lived reader deferring pages",
+        "churn after crash (hint loss)"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-CL-05",
+        "OOS-CL-07"
+      ]
+    },
+    {
+      "id": "OOS-CL-07",
+      "title": "Reclamation domain and eventuality bound",
+      "statement": "The exact domain of 'every fully emptied OOS data page is eventually returned' is not fixed: the header page, legacy numerable files, safely deferred pages and the time bound of 'eventually' need authoritative wording.",
+      "family": "Concurrent lifetime",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "accepted-design",
+        "document": "OOS-CONTEXT.md",
+        "source": "CBRD-26786 empty-page reclaim invariant — spec note (2026-08-28) and §4 Vacuum + OOS",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "BLOCKED",
+      "gap_kind": "Specification gap",
+      "authority": {
+        "policy": "withhold",
+        "note": "Mixed-era statement from the invariants research (unconditional reclamation). Until answered, physical page-count expectations are withheld except where eligibility and safety are proven per OOS-CL-05."
+      },
+      "authority_question": "Which pages are inside the reclaim guarantee (data pages only; header page excluded; legacy numerable files excluded?), and what progress witness or time bound makes 'eventually' testable? Is an implementation's sticky-page or legacy-file exception an accepted specification exception?",
+      "accepted_design": null,
+      "specification_gap_topic": "unconditional-reclamation",
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-CL-05",
+        "OOS-CL-06"
+      ]
+    },
+    {
+      "id": "OOS-CL-08",
+      "title": "Chain ownership wording: no cross-version sharing versus borrowed references",
+      "statement": "The Writing Conventions still require stating that value chains are never shared across record versions, while the accepted CBRD-27230 ownership invariant allows older versions to hold borrowed references; which statement governs at the pin is undecided.",
+      "family": "Concurrent lifetime",
+      "seam": "either",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "Writing Conventions — ownership statement",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "BLOCKED",
+      "gap_kind": "Specification gap",
+      "authority": {
+        "policy": "withhold",
+        "note": "Mixed-era statement from the invariants research. Ownership assertions are withheld; value correctness continues under OOS-CL-01 and OOS-CL-03."
+      },
+      "authority_question": "Which ownership statement is normative at the pin, and should the Writing Conventions be updated to the superseding invariant with an explicit 'effective once implemented' qualifier?",
+      "accepted_design": null,
+      "specification_gap_topic": "cross-version-sharing-wording",
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-SQL-04"
+      ]
+    },
+    {
+      "id": "OOS-CL-09",
+      "title": "Cancellation and disconnect during OOS writes",
+      "statement": "A statement cancelled or a session disconnected during an OOS INSERT, UPDATE or DELETE leaves no partial effect: the transaction is rolled back, values of other rows are intact, and the aborted work's chains become eligible for cleanup.",
+      "family": "Concurrent lifetime",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Recovery & Replication Invariants, invariant 2 (Undo correctness)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Assert transaction state and values; cleanup eventuality per OOS-CL-02."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "kill the client mid multi-chunk INSERT",
+        "query cancel during bulk UPDATE",
+        "disconnect with an open savepoint"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-SQL-06",
+        "OOS-CL-02"
+      ]
+    },
+    {
+      "id": "OOS-CL-10",
+      "title": "Concurrent DDL against OOS DML",
+      "statement": "ALTER, DROP or TRUNCATE running concurrently with OOS reads and writes yields either exact values or the standard DDL/lock error; no crash, no stub leak and no corrupted value.",
+      "family": "Concurrent lifetime",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§3 SELECT (OOS Resolve)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Universal correctness or explicit error; specific lock-ordering expectations are not fixed by the context."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "DROP while a reader holds a snapshot",
+        "ALTER ADD COLUMN during bulk OOS inserts",
+        "TRUNCATE versus concurrent UPDATE"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-SCH-01",
+        "OOS-SCH-02"
+      ]
+    },
+    {
+      "id": "OOS-CL-11",
+      "title": "Standalone eager cleanup keeps post-image chains",
+      "statement": "In standalone (non-MVCC) mode old chains are deleted synchronously at UPDATE or DELETE time, and any chain the post-image still references is kept; values read back exactly.",
+      "family": "Concurrent lifetime",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Vacuum + OOS (IMPLEMENTED — CBRD-26668, PR #6986 merged), path 3 (Eager, non-MVCC / SA_MODE)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Value correctness plus chunk-count decrease observable immediately in standalone mode (ticket 11 §6)."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": "heap_oos_delete_unreferenced (heap_oos.cpp:425); standalone DELETE dropped Oos_num_recs to 0.",
+      "configuration_scope": "Standalone mode only.",
+      "attack_dimensions": [
+        "UPDATE of one of two OOS-backed attributes",
+        "DELETE then re-INSERT in standalone"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-SQL-05",
+        "OOS-CL-12"
+      ]
+    },
+    {
+      "id": "OOS-CL-12",
+      "title": "Accepted eager-cleanup and silent-skip policy (CBRD-26950)",
+      "statement": "Vacuum treats an absent or reused head as a successful silent skip; eager reclamation completes the DML and emits a diagnostic when cleanup is skipped, leaving no stray error in the error stack; malformed heads and operational failures remain errors.",
+      "family": "Concurrent lifetime",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "accepted-design",
+        "document": "OOS-CONTEXT.md",
+        "source": "CBRD-26950 accepted eager-cleanup policy — §2 Multi-Chunk OOS Chain, Accepted eager-cleanup policy (2026-09-09)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "UNSUPPORTED",
+      "gap_kind": "Capability gap",
+      "authority": {
+        "policy": "withhold",
+        "note": "Accepted policy whose implementation and regression verification are pending the PR repair; diagnostic and error-stack expectations are withheld at the pin."
+      },
+      "authority_question": null,
+      "accepted_design": "CBRD-26950 eager-cleanup diagnostic policy",
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-CL-04",
+        "OOS-CL-11"
+      ]
+    },
+    {
+      "id": "OOS-CL-13",
+      "title": "Bestspace sync tolerates concurrent page deallocation (ADR-0001)",
+      "statement": "OOS free-space sampling enumerates data pages from the sector bitmap and tolerates pages deallocated by concurrent vacuum during the walk; inserts under concurrent reclaim never fail or crash because a sampled page disappeared.",
+      "family": "Concurrent lifetime",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "adr",
+        "document": "ADR-0001",
+        "source": "ADR-0001 OOS pages use a non-numerable file enumerated by a sector-bitmap scan",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:9531a213d24c44353902264de5840dd65c170246a64ff968adec797d29598e55"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Observable as insert success under concurrent reclaim; the ADR's skipped-page counter is not implemented at the pin, so the count is not an oracle."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": "Non-numerable migration landed inside PR #7617 and is present at the pin; legacy numerable files skip reclaim.",
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "inserts racing vacuum reclaim",
+        "bestspace sync after crash"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-CL-05"
+      ]
+    },
+    {
+      "id": "OOS-DUR-01",
+      "title": "Committed OOS writes survive a crash",
+      "statement": "Committed INSERT, UPDATE and DELETE of OOS-backed rows, including multi-chunk values, are present with exact values after kill -9 and restart.",
+      "family": "Durability",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Recovery & Replication Invariants, invariant 1 (WAL completeness)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Use the verified durable-commit configuration and the external operation journal (ticket 05); assert against acknowledged commits."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "committed INSERT then crash",
+        "committed multi-chunk (50 KiB+) then crash",
+        "committed UPDATE and DELETE then crash",
+        "crash immediately after the commit acknowledgement"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-DUR-02",
+        "OOS-REP-07"
+      ]
+    },
+    {
+      "id": "OOS-DUR-02",
+      "title": "Uncommitted OOS writes are undone by recovery",
+      "statement": "After a crash, transactions proven uncommitted leave no effect: uncommitted inserts are gone and uncommitted updates restore the original value through the undo record's stubs; mixed committed and uncommitted work recovers to the permitted state.",
+      "family": "Durability",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Recovery & Replication Invariants, invariant 1 (WAL completeness)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Evaluate against permitted transaction states from the journal, not against 'every missing acknowledgement was a rollback'."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "uncommitted INSERT",
+        "uncommitted UPDATE (original value restored)",
+        "mixed committed/uncommitted in one crash",
+        "orphan chains of undone work eventually reclaimed (OOS-CL-02)"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-DUR-01",
+        "OOS-SQL-06"
+      ]
+    },
+    {
+      "id": "OOS-DUR-03",
+      "title": "Interrupted COMMIT is all or nothing",
+      "statement": "A COMMIT whose acknowledgement was lost recovers either wholly committed or wholly rolled back, consistent with transaction ordering; partial application of an OOS-backed row is forbidden.",
+      "family": "Durability",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Recovery & Replication Invariants, invariant 1 (WAL completeness)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Transaction-state model with explicit outcome uncertainty preserved in the attempt record."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "crash during commit of a multi-row OOS transaction",
+        "crash during commit with mixed inline and OOS rows"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-DUR-01"
+      ]
+    },
+    {
+      "id": "OOS-DUR-04",
+      "title": "Insert-side atomicity between chunk writes and heap publication",
+      "statement": "Both the heap insert and every OOS chunk insert are logged, so a crash or injected interruption between chunk insertion and heap publication leaves no dangling stub and no permanently orphaned chain after recovery.",
+      "family": "Durability",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§3 INSERT",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Assert no dangling stub (values readable or row absent) and transaction correctness; orphan eventuality per OOS-CL-02. Interruption sites need ticket 16 validation."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "crash after the tail chunk, before the head chunk",
+        "crash after all chunks, before heap publication",
+        "injected failure in oos_insert_many after some publications"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-DUR-05",
+        "OOS-RES-01"
+      ]
+    },
+    {
+      "id": "OOS-DUR-05",
+      "title": "Delete-side atomicity of vacuum chunk deletes",
+      "statement": "Each chunk delete is logged within a system operation, so a crash mid-delete leaves OOS state atomic with the heap reclamation after recovery.",
+      "family": "Durability",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Vacuum + OOS (IMPLEMENTED — CBRD-26668, PR #6986 merged) — crash mid-delete",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Assert values of surviving rows and checkdb consistency after recovery; retry idempotency is OOS-CL-04."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "crash during forward-walk delete of a multi-chunk chain",
+        "crash during within-sysop delete"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-CL-04"
+      ]
+    },
+    {
+      "id": "OOS-DUR-06",
+      "title": "Repeated recovery interruption",
+      "statement": "Crashing again during recovery and recovering once more ends in a state consistent with the permitted transaction states; recovery is restartable.",
+      "family": "Durability",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Recovery & Replication Invariants, invariant 1 (WAL completeness)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Schedule family 'interrupted recovery' (ticket 05); reaching and acknowledging the recovery phase may be a Capability gap at run time."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "crash during redo of OOS inserts",
+        "crash during undo of OOS updates",
+        "two consecutive interruptions"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-DUR-02"
+      ]
+    },
+    {
+      "id": "OOS-DUR-07",
+      "title": "Corruption detection guarantees for OOS pages and logs",
+      "statement": "The context documents no detection or recovery guarantee for corrupted OOS pages or OOS log records; no expectation is fixed for copied-image corruption cases.",
+      "family": "Durability",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Recovery & Replication Invariants",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "BLOCKED",
+      "gap_kind": "Specification gap",
+      "authority": {
+        "policy": "withhold",
+        "note": "Ticket 06: corruption cases are judged against documented guarantees only; arbitrary corruption implies no unconditional recovery promise. Record observed behavior; assert nothing."
+      },
+      "authority_question": "What detection (checkdb, page checksum, stub/chain validation) and recovery behavior is guaranteed for a corrupted OOS page, chunk header or OOS log record?",
+      "accepted_design": null,
+      "specification_gap_topic": "corruption-guarantees",
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-SCH-04"
+      ]
+    },
+    {
+      "id": "OOS-DUR-08",
+      "title": "Bestspace hints recover after a crash",
+      "statement": "Free-space hints are non-logged; after a crash, inserts continue to succeed and the sync scanner rediscovers free space.",
+      "family": "Durability",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§2 Best Page Policy (3-Tier Bestspace — M2, CBRD-26658)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Assert functional success (inserts and exact values after crash); page reuse quantity belongs to OOS-CL-06."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "crash then heavy inserts",
+        "crash with a nearly full OOS file"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-CL-06"
+      ]
+    },
+    {
+      "id": "OOS-OPS-01",
+      "title": "HA replication: value equality and ordering",
+      "statement": "INSERT, UPDATE, DELETE and multi-chunk operations on OOS-backed rows are replicated so the replica holds equal logical values in the same transaction order; OOS OIDs on the replica may differ from the master.",
+      "family": "Operational features",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Replication Notes",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Compare values and ordering on both nodes; never compare physical OIDs."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "INSERT / UPDATE / DELETE replicated (scenarios 8.1-8.3)",
+        "multi-chunk replicated (8.4)",
+        "mixed transaction with inline and OOS rows"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-OPS-02"
+      ]
+    },
+    {
+      "id": "OOS-OPS-02",
+      "title": "HA rollback, applier restart and lag",
+      "statement": "Rolled-back transactions leave no effect on the replica; an applier restarted mid-stream resumes to an equal state; replication lag never yields a partially applied OOS row.",
+      "family": "Operational features",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Recovery & Replication Invariants, invariant 5 (Replication log completeness)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Assert equality after catch-up with bounded waits; applier internals are not read directly."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "ROLLBACK of a multi-chunk UPDATE",
+        "applier restart during a large transaction",
+        "catch-up after lag"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-OPS-01"
+      ]
+    },
+    {
+      "id": "OOS-OPS-03",
+      "title": "HA marker item for reused attributes (CBRD-27230)",
+      "statement": "Replication carries a per-reused-attribute marker item with replica-side fixup once UPDATE chain reuse is implemented.",
+      "family": "Operational features",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "accepted-design",
+        "document": "OOS-CONTEXT.md",
+        "source": "CBRD-27230 UPDATE chain reuse — spec note (2026-08-13), replication marker item",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "UNSUPPORTED",
+      "gap_kind": "Capability gap",
+      "authority": {
+        "policy": "withhold",
+        "note": "Accepted design absent at the pin; withheld with OOS-SQL-04."
+      },
+      "authority_question": null,
+      "accepted_design": "CBRD-27230 replication marker item and replica-side fixup",
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-SQL-04"
+      ]
+    },
+    {
+      "id": "OOS-OPS-04",
+      "title": "TDE covers OOS pages (CBRD-26830)",
+      "statement": "For a TDE-encrypted class, OOS pages hold no plaintext payload on disk (data volumes, log, backup); a lazily created OOS file inherits the class algorithm before its VFID is published; altering encryption applies to an existing OOS file; decrypted reads return exact values.",
+      "family": "Operational features",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "accepted-design",
+        "document": "OOS-CONTEXT.md",
+        "source": "CBRD-26830 TDE applied to OOS pages — §5 Known Bugs (DONE on feat/oos, commit 138f624964)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Combine ciphertext evidence (recognizable non-compressible payload absent from raw pages) with correct decrypted reads and proof that the targeted pages were written."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "encrypted class, first demotion creates the OOS file",
+        "ALTER ... ENCRYPT on a class with an existing OOS file",
+        "backup image scan",
+        "log scan for RVOOS_INSERT payloads"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-SCH-05"
+      ]
+    },
+    {
+      "id": "OOS-OPS-05",
+      "title": "Durable OOS supplemental images for CDC and flashback (ADR-0004)",
+      "statement": "CDC and flashback reconstruct before and after images of OOS-backed rows after vacuum reclaimed the chains; image-recording failure fails the write; unreconstructible legacy OOS images produce an explicit error; activation is offline and one-way.",
+      "family": "Operational features",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "adr",
+        "document": "ADR-0004",
+        "source": "ADR-0004 Preserve OOS historical values in supplemental images",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:2a4b94c06782e17db1cfeab3a5d953617730873dcabb6d8ad928e23e7e50c155"
+      },
+      "status": "UNSUPPORTED",
+      "gap_kind": "Capability gap",
+      "authority": {
+        "policy": "withhold",
+        "note": "Accepted direction, not implemented at the pin; historical-value scenarios stay blocked conformance requirements until the design is verified on the pinned engine."
+      },
+      "authority_question": null,
+      "accepted_design": "CBRD-26939 durable OOS supplemental images (ADR-0004)",
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "history after vacuum",
+        "write failure rolls back",
+        "legacy image explicit error",
+        "offline activation and restore"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-OPS-06"
+      ]
+    },
+    {
+      "id": "OOS-OPS-06",
+      "title": "CDC and flashback over OOS rows at the pin",
+      "statement": "What CDC extraction and flashback emit for OOS-backed rows at the pin (unresolved stubs, errors or values) is recorded as observed and never asserted as correct.",
+      "family": "Operational features",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§5 Known Bugs — CDC flashback OOS-stub Resolve (missing feature)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "observation-only",
+      "gap_kind": null,
+      "authority": {
+        "policy": "observe",
+        "note": "Observation for ticket 29; the accepted behavior is OOS-OPS-05."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "CDC extraction of INSERT/UPDATE/DELETE with OOS values",
+        "flashback of an OOS row before and after vacuum"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-OPS-05"
+      ]
+    },
+    {
+      "id": "OOS-RES-01",
+      "title": "Allocation failure during value construction, expansion and cleanup",
+      "statement": "An allocation failure while building, expanding or cleaning OOS values fails the statement with an explicit error, leaves the transaction correct (rolled back or continued per its semantics), creates no orphan chain and never crashes the server.",
+      "family": "Resource pressure",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Recovery & Replication Invariants, invariant 3 (No orphan OOS value chains after update)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Injected via validated sites (ticket 16) with fired acknowledgements and a fault-disabled control; eligible cleanup afterwards per OOS-CL-05."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "bad_alloc on next-OID publication (existing unit-test seam if a trigger path exists)",
+        "allocation failure during oos_read expansion",
+        "allocation failure during vacuum delete"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-DUR-04"
+      ]
+    },
+    {
+      "id": "OOS-RES-02",
+      "title": "I/O errors and bounded-volume exhaustion",
+      "statement": "Data or log I/O errors and volume exhaustion during OOS insert, delete or reclaim yield an explicit error and transaction correctness; after the fault is removed the database recovers or continues with exact values.",
+      "family": "Resource pressure",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Recovery & Replication Invariants, invariant 1 (WAL completeness)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Bounded test filesystems on disposable resources only; verify recovery or the expected explicit error, then value integrity."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "disk full during a multi-chunk INSERT",
+        "log volume full during commit of OOS writes",
+        "I/O error during reclaim",
+        "fault removed then recovery"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-DUR-02"
+      ]
+    },
+    {
+      "id": "OOS-RES-03",
+      "title": "Failures during rollback, vacuum, reclamation and recovery retry",
+      "statement": "A failure injected during rollback, vacuum, reclamation or a recovery retry never deletes live data, never leaves a permanent orphan, and retried cleanup is idempotent.",
+      "family": "Resource pressure",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Vacuum + OOS (IMPLEMENTED — CBRD-26668, PR #6986 merged)",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Universal correctness under retry; expected engine finding CBRD-26950 on the retry path."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "mid-block vacuum error then retry",
+        "reclaim sweep interrupted",
+        "recovery retry after injected failure"
+      ],
+      "expected_engine_findings": [
+        "CBRD-26950"
+      ],
+      "related": [
+        "OOS-CL-04"
+      ]
+    },
+    {
+      "id": "OOS-RES-04",
+      "title": "Values and invariants hold under sustained concurrent churn",
+      "statement": "Under sustained concurrent inserts, updates, deletes and vacuum, every row's value stays exact, rows never mix values, and visibility, atomicity and durability invariants continue to hold.",
+      "family": "Resource pressure",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§4 Recovery & Replication Invariants",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "assertable",
+      "gap_kind": null,
+      "authority": {
+        "policy": "assert",
+        "note": "Randomized workloads with recorded seeds and operation traces; oracle is an independent model of expected values per row."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "different sessions updating different rows simultaneously (scenario 6.3)",
+        "mixed single/multi-chunk churn",
+        "churn with vacuum active and a long reader"
+      ],
+      "expected_engine_findings": [],
+      "related": [
+        "OOS-CL-06"
+      ]
+    },
+    {
+      "id": "OOS-RES-05",
+      "title": "Degradation observations",
+      "statement": "Latency, latch contention, ordered-fix deadlock risk, unloaddb slowdown (CBRD-26458) and needless OOS expansion on cheap paths are measured and recorded; none is asserted as a fixed bound.",
+      "family": "Resource pressure",
+      "seam": "private-shell",
+      "citation": {
+        "kind": "context-heading",
+        "document": "OOS-CONTEXT.md",
+        "source": "§5 Limitations (Milestone 1) — Ordered fix deadlock risk",
+        "revision": "f6543de680b91ae357466b72a983f982892859cd",
+        "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "status": "observation-only",
+      "gap_kind": null,
+      "authority": {
+        "policy": "observe",
+        "note": "The context lists deadlock handling as a cancelled milestone and unloaddb slowdown as a known regression; record measurements so CBRD-26458 stays visible."
+      },
+      "authority_question": null,
+      "accepted_design": null,
+      "specification_gap_topic": null,
+      "pinned_observation": null,
+      "configuration_scope": null,
+      "attack_dimensions": [
+        "unloaddb time versus inline comparator",
+        "insert latency under page hotspot",
+        "deadlock/lock-timeout counts under churn"
+      ],
+      "expected_engine_findings": [
+        "CBRD-26458"
+      ],
+      "related": [
+        "OOS-RES-04"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "manifest_id": "inv-EXAMPLE-0001",
+  "producer": {
+    "kind": "hand-written",
+    "name": "example author",
+    "version": null
+  },
+  "invocation": {
+    "started_at": "2026-09-10T18:00:00+09:00",
+    "ended_at": "2026-09-10T18:00:41+09:00",
+    "tier": "fast",
+    "caps": {
+      "invocation_seconds": 900,
+      "per_case_seconds": 120,
+      "invocation_cap_reached": false
+    },
+    "resources": {
+      "cpus": 2,
+      "memory_gib": 4,
+      "storage_gib": 5,
+      "storage_root": "/home/vimkim/.cub/campaign/cbrd-26659"
+    },
+    "engine": {
+      "baseline_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+      "worktree": "/home/vimkim/gh/cb/oos-baseline-f4299ac0c",
+      "modified": false,
+      "install_prefix": "/home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc",
+      "version_string": "CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit release build for Linux) (Sep 10 2026 16:19:43)",
+      "library_hashes": {
+        "libcubrid.so": "sha256:a3256a7a40748752165e65a395b8aebcf8d85e00b87ee62e68bf75e1a5c85444",
+        "libcubridsa.so": "sha256:8009c322633055df41af045fe560a86f1f8171648863d11f2e44d949e3cdd76e"
+      }
+    },
+    "testcase": {
+      "repository": "testcases",
+      "branch": "CBRD-26659-oos-testcases-handover",
+      "commit": "1111111111111111111111111111111111111111",
+      "base_commit": "2222222222222222222222222222222222222222",
+      "worktree": "/home/vimkim/gh/tc/cubrid-testcases-cbrd-26659"
+    },
+    "context": {
+      "revision": "f6543de680b91ae357466b72a983f982892859cd",
+      "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698",
+      "snapshot": "cbrd-26659/campaign/ticket11-evidence/normative-snapshot/"
+    },
+    "catalogue": {
+      "path": "cbrd-26659/campaign/catalogue/requirements.json",
+      "hash": "sha256:b9017c207d237d191fe4fce66a35929330d3a38eecca05e69a94f94f63d725c9"
+    },
+    "page_size": 16384,
+    "build_mode": "release",
+    "run_mode": "client-server",
+    "services": [
+      {
+        "kind": "cub_master",
+        "identity": "port 26659",
+        "port": 26659,
+        "owned": true
+      },
+      {
+        "kind": "cub_server",
+        "identity": "cmp16k_example",
+        "port": null,
+        "owned": true
+      }
+    ],
+    "instrumentation": null,
+    "seed": null,
+    "runner": {
+      "kind": "ctp-sql",
+      "ctp_fingerprint": "ctp-2026-06 sha256:example",
+      "command": "ctp.sh sql -c conf/sql_cbrd26659.conf",
+      "scenario_selection": "sql/_36_guava/cbrd_26659"
+    }
+  },
+  "expected": {
+    "case_list": "cbrd-26659/campaign/evidence/example/case-list.txt",
+    "case_list_hash": "sha256:6f7db3a4df6398f6dce3b7c4649d9345d108cb20b5bba6c56b3a467741a97b14",
+    "case_count": 1,
+    "assertion_count": 6
+  },
+  "discovered": {
+    "case_count": 1,
+    "case_names": [
+      "example_rep02_largest_first"
+    ]
+  },
+  "executed": {
+    "case_count": 1,
+    "assertion_count": 6
+  },
+  "proof": {
+    "verdict": "proven",
+    "launcher_exit_status": 0,
+    "setup_log": "evidence/example/inv-EXAMPLE-0001/setup.log",
+    "mismatches": []
+  },
+  "cases": [
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/example_rep02_largest_first.sql",
+        "name": "example_rep02_largest_first"
+      },
+      "requirements": [
+        "OOS-REP-02",
+        "OOS-SQL-01"
+      ],
+      "outcome": "PASS",
+      "skip_reason": null,
+      "assertions": {
+        "expected": 6,
+        "executed": 6,
+        "failed": 0
+      },
+      "oos_evidence": {
+        "status": "reused",
+        "channel": "show-heap-oos",
+        "reference": "evidence/example/inv-EXAMPLE-0001/show_heap_oos.txt",
+        "applicability": null
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-EXAMPLE-0001",
+          "attempt_record": "evidence/example/att-EXAMPLE-0001.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/bundles/att-EXAMPLE-0001",
+          "bundle_hash": "sha256:aa9f93d00149377b6d1ec8d2e35cb6b67f13751e52f9cbccc0109972efa4bcc0"
+        }
+      ],
+      "outstanding": null
+    }
+  ],
+  "outstanding_coverage": {
+    "cases_not_executed": [],
+    "configurations_not_run": [
+      "4096/release/standalone",
+      "8192/release/standalone",
+      "16384/debug/client-server"
+    ],
+    "requirements_without_executed_case": [
+      "OOS-REP-01"
+    ],
+    "note": "Example invocation covers one case; every other requirement is outstanding."
+  },
+  "answer_promotions": [
+    {
+      "case": "example_rep02_largest_first",
+      "action": "promoted",
+      "flagged_for_user": false,
+      "review_note": "First-run .result matched the independently derived whole values and chunk count; promoted by rename.",
+      "reviewer": "example reviewer"
+    }
+  ]
+}

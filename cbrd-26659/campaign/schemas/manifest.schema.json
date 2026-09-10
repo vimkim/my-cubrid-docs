@@ -1,0 +1,334 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cubrid.example/cbrd-26659/manifest.schema.json",
+  "title": "CBRD-26659 campaign manifest (one per invocation)",
+  "description": "The per-invocation record that turns a launcher exit code into execution proof. It names the invocation identity, the expected case identities and counts, what was discovered and executed, the proof verdict, and per case its outcome, OOS-coverage evidence status, attempt bundles and outstanding coverage. The coverage matrix aggregates manifests; a manifest never aggregates.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "manifest_id", "producer", "invocation", "expected", "discovered", "executed", "proof", "cases", "outstanding_coverage", "answer_promotions"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "manifest_id": {"type": "string", "pattern": "^[A-Za-z0-9._:-]+$", "description": "Unique invocation identity, cited by matrix rows and attempt records."},
+    "producer": {
+      "type": "object",
+      "description": "Who wrote the manifest: a person (ticket 13/14 hand-written records) or the ticket 15 wrapper.",
+      "additionalProperties": false,
+      "required": ["kind", "name", "version"],
+      "properties": {
+        "kind": {"enum": ["hand-written", "wrapper"]},
+        "name": {"type": "string", "minLength": 1},
+        "version": {"type": ["string", "null"]}
+      }
+    },
+    "invocation": {
+      "type": "object",
+      "description": "Invocation identity. Every field is recorded for every run; nothing is inherited from the environment.",
+      "additionalProperties": false,
+      "required": ["started_at", "ended_at", "tier", "caps", "resources", "engine", "testcase", "context", "catalogue", "page_size", "build_mode", "run_mode", "services", "instrumentation", "seed", "runner"],
+      "properties": {
+        "started_at": {"$ref": "#/$defs/timestamp"},
+        "ended_at": {"$ref": "#/$defs/timestamp"},
+        "tier": {"enum": ["fast", "scheduled", "extended"], "description": "Execution tier from the budget decision."},
+        "caps": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["invocation_seconds", "per_case_seconds", "invocation_cap_reached"],
+          "properties": {
+            "invocation_seconds": {"type": "integer", "minimum": 1},
+            "per_case_seconds": {"type": "integer", "minimum": 1},
+            "invocation_cap_reached": {"type": "boolean", "description": "True when the invocation cap ended the bounded attempt; unfinished work is then listed under outstanding_coverage."}
+          }
+        },
+        "resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cpus", "memory_gib", "storage_gib", "storage_root"],
+          "properties": {
+            "cpus": {"type": "integer", "minimum": 1, "maximum": 8},
+            "memory_gib": {"type": "number", "minimum": 0, "maximum": 16},
+            "storage_gib": {"type": "number", "minimum": 0, "maximum": 100},
+            "storage_root": {"type": "string", "pattern": "^/home/", "description": "Fixtures, logs and cores live under /home."}
+          }
+        },
+        "engine": {
+          "type": "object",
+          "description": "Pinned engine identity proven by binary, not by build directory.",
+          "additionalProperties": false,
+          "required": ["baseline_commit", "worktree", "modified", "install_prefix", "version_string", "library_hashes"],
+          "properties": {
+            "baseline_commit": {"$ref": "#/$defs/sha1"},
+            "worktree": {"type": "string"},
+            "modified": {"type": "boolean", "description": "False for the unmodified pinned worktree; true for the instrumentation worktree (then instrumentation is not null)."},
+            "install_prefix": {"type": "string"},
+            "version_string": {"type": "string", "description": "cubrid_rel output with CUBRID, PATH and LD_LIBRARY_PATH pointed at the install under test."},
+            "library_hashes": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["libcubrid.so", "libcubridsa.so"],
+              "properties": {
+                "libcubrid.so": {"$ref": "#/$defs/sha256"},
+                "libcubridsa.so": {"$ref": "#/$defs/sha256"}
+              }
+            }
+          }
+        },
+        "testcase": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repository", "branch", "commit", "base_commit", "worktree"],
+          "properties": {
+            "repository": {"enum": ["testcases", "testcases-private-ex"]},
+            "branch": {"type": "string"},
+            "commit": {"$ref": "#/$defs/sha1"},
+            "base_commit": {"$ref": "#/$defs/sha1", "description": "The verified origin/develop tip the campaign branch was based on."},
+            "worktree": {"type": "string"}
+          }
+        },
+        "context": {
+          "type": "object",
+          "description": "Normative specification identity: committed revision plus content hash of the working copy the requirement IDs cite.",
+          "additionalProperties": false,
+          "required": ["revision", "content_hash", "snapshot"],
+          "properties": {
+            "revision": {"$ref": "#/$defs/sha1"},
+            "content_hash": {"$ref": "#/$defs/sha256"},
+            "snapshot": {"type": "string"}
+          }
+        },
+        "catalogue": {
+          "type": "object",
+          "description": "The requirement catalogue revision whose IDs this manifest cites.",
+          "additionalProperties": false,
+          "required": ["path", "hash"],
+          "properties": {"path": {"type": "string"}, "hash": {"$ref": "#/$defs/sha256"}}
+        },
+        "page_size": {"enum": [4096, 8192, 16384], "description": "createdb --db-page-size of every database the invocation created."},
+        "build_mode": {"enum": ["release", "debug"]},
+        "run_mode": {"enum": ["standalone", "client-server"]},
+        "services": {
+          "type": "array",
+          "description": "Every service the invocation started or depended on, with ownership.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "identity", "owned"],
+            "properties": {
+              "kind": {"enum": ["cub_master", "cub_server", "broker", "ha-master", "ha-slave", "ha-replica", "cdc-consumer", "other"]},
+              "identity": {"type": "string", "description": "Database name, port or process name that identifies the instance."},
+              "port": {"type": ["integer", "null"]},
+              "owned": {"type": "boolean", "description": "True when the scenario created it and may crash or clean it."}
+            }
+          }
+        },
+        "instrumentation": {
+          "description": "Null for unmodified-engine runs. Instrumented runs are separate configurations and carry patch and build identity.",
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["worktree", "patch_id", "patch_hash", "build_hash", "fault_disabled_control_manifest"],
+          "properties": {
+            "worktree": {"type": "string"},
+            "patch_id": {"type": "string"},
+            "patch_hash": {"$ref": "#/$defs/sha256"},
+            "build_hash": {"$ref": "#/$defs/sha256"},
+            "fault_disabled_control_manifest": {"type": ["string", "null"], "description": "Path of the manifest of the fault-disabled control run, or null when not yet run (then no fault coverage is claimed)."}
+          }
+        },
+        "seed": {
+          "description": "Null for fixed deterministic workloads. A seed alone never reconstructs a concurrent execution; the trace lives in the replay bundle.",
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["value", "generator", "generator_version"],
+          "properties": {
+            "value": {"type": ["integer", "string"]},
+            "generator": {"type": "string"},
+            "generator_version": {"type": "string"}
+          }
+        },
+        "runner": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "ctp_fingerprint", "command", "scenario_selection"],
+          "properties": {
+            "kind": {"enum": ["ctp-sql", "ctp-shell"]},
+            "ctp_fingerprint": {"type": "string", "description": "Artifact fingerprint of the external CTP install (it is not a Git checkout)."},
+            "command": {"type": "string"},
+            "scenario_selection": {"type": "string", "description": "The explicit scenario path or list given to CTP."}
+          }
+        }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "description": "Declared before the run: the case list and counts the run must reproduce.",
+      "additionalProperties": false,
+      "required": ["case_list", "case_list_hash", "case_count", "assertion_count"],
+      "properties": {
+        "case_list": {"type": "string"},
+        "case_list_hash": {"$ref": "#/$defs/sha256"},
+        "case_count": {"type": "integer", "minimum": 0},
+        "assertion_count": {"type": ["integer", "null"], "minimum": 0, "description": "Null when the seam cannot pre-count assertions; then the proof compares executed assertions against per-case declarations."}
+      }
+    },
+    "discovered": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case_count", "case_names"],
+      "properties": {
+        "case_count": {"type": "integer", "minimum": 0},
+        "case_names": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+      }
+    },
+    "executed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case_count", "assertion_count"],
+      "properties": {
+        "case_count": {"type": "integer", "minimum": 0},
+        "assertion_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "proof": {
+      "type": "object",
+      "description": "Comparison of expectation with discovery and execution. Any mismatch is a failure of proof, never a pass.",
+      "additionalProperties": false,
+      "required": ["verdict", "launcher_exit_status", "setup_log", "mismatches"],
+      "properties": {
+        "verdict": {"enum": ["proven", "failure-of-proof"]},
+        "launcher_exit_status": {"type": ["integer", "null"]},
+        "setup_log": {"type": ["string", "null"]},
+        "mismatches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "detail"],
+            "properties": {
+              "kind": {"enum": ["case-not-discovered", "case-not-executed", "unexpected-case", "assertion-count-mismatch", "setup-log-error", "launcher-exit-mismatch", "skip-recorded-as-ok"]},
+              "detail": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "cases": {"type": "array", "items": {"$ref": "#/$defs/case_result"}},
+    "outstanding_coverage": {
+      "type": "object",
+      "description": "What this invocation did not cover. A reached cap never waives it.",
+      "additionalProperties": false,
+      "required": ["cases_not_executed", "configurations_not_run", "requirements_without_executed_case", "note"],
+      "properties": {
+        "cases_not_executed": {"type": "array", "items": {"type": "string"}},
+        "configurations_not_run": {"type": "array", "items": {"type": "string"}},
+        "requirements_without_executed_case": {"type": "array", "items": {"$ref": "#/$defs/requirement_id"}},
+        "note": {"type": ["string", "null"]}
+      }
+    },
+    "answer_promotions": {
+      "type": "array",
+      "description": "CTP result-to-answer workflow per case: the first-run result is a candidate until reviewed.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["case", "action", "flagged_for_user", "review_note", "reviewer"],
+        "properties": {
+          "case": {"type": "string"},
+          "action": {"enum": ["candidate", "promoted", "retained-as-failure-evidence"]},
+          "flagged_for_user": {"type": "boolean", "description": "True when the case touches a Specification gap or an observed-versus-normative disagreement; the user signs off."},
+          "review_note": {"type": ["string", "null"]},
+          "reviewer": {"type": ["string", "null"]}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha1": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "timestamp": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(Z|[+-][0-9]{2}:[0-9]{2})$"},
+    "requirement_id": {"type": "string", "pattern": "^OOS-(REP|SQL|RD|SCH|CL|DUR|OPS|RES)-[0-9]{2}$"},
+    "outcome": {"enum": ["PASS", "FAIL", "SKIP", "UNSUPPORTED", "BLOCKED"], "description": "Fixed per-attempt taxonomy. A skip, an unfired hook or an unreached phase never maps to PASS."},
+    "evidence_status": {"enum": ["proven", "reused", "missing", "not-applicable"], "description": "proven: activation evidence captured in this run. reused: matching evidence from another run with recorded applicability. missing: logical checks ran without OOS-path evidence (not OOS coverage). not-applicable: the case asserts a non-activation property (for example a rejection)."},
+    "case_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "path", "name"],
+      "properties": {
+        "repository": {"enum": ["testcases", "testcases-private-ex"]},
+        "path": {"type": "string", "description": "Repository-relative path of the case file or case directory."},
+        "name": {"type": "string"}
+      }
+    },
+    "oos_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "channel", "reference", "applicability"],
+      "properties": {
+        "status": {"$ref": "#/$defs/evidence_status"},
+        "channel": {"enum": [null, "show-heap-oos", "diagdb-owner-descriptor", "debug-oos-log", "instrumentation-counter", "injection-acknowledgement", "unit-test-seam", "other"]},
+        "reference": {"type": ["string", "null"], "description": "Path (and hash where bulky) of the captured evidence."},
+        "applicability": {
+          "description": "Required content when status is reused: what must match for the evidence to transfer.",
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["fixture", "execution_path", "engine_configuration", "conditions", "source_manifest"],
+          "properties": {
+            "fixture": {"type": "string"},
+            "execution_path": {"type": "string"},
+            "engine_configuration": {"type": "string"},
+            "conditions": {"type": "string"},
+            "source_manifest": {"type": "string"}
+          }
+        }
+      }
+    },
+    "case_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case", "requirements", "outcome", "skip_reason", "assertions", "oos_evidence", "attempts", "outstanding"],
+      "properties": {
+        "case": {"$ref": "#/$defs/case_identity"},
+        "requirements": {"type": "array", "items": {"$ref": "#/$defs/requirement_id"}, "minItems": 1, "uniqueItems": true},
+        "outcome": {"anyOf": [{"$ref": "#/$defs/outcome"}, {"type": "null"}], "description": "Null only when the case was not executed; then outstanding is not null."},
+        "skip_reason": {"type": ["string", "null"], "description": "Required text when outcome is SKIP."},
+        "assertions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["expected", "executed", "failed"],
+          "properties": {
+            "expected": {"type": ["integer", "null"], "minimum": 0},
+            "executed": {"type": "integer", "minimum": 0},
+            "failed": {"type": "integer", "minimum": 0}
+          }
+        },
+        "oos_evidence": {"$ref": "#/$defs/oos_evidence"},
+        "attempts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["attempt_id", "attempt_record", "bundle", "bundle_hash"],
+            "properties": {
+              "attempt_id": {"type": "string"},
+              "attempt_record": {"type": "string"},
+              "bundle": {"type": ["string", "null"]},
+              "bundle_hash": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]}
+            }
+          }
+        },
+        "outstanding": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["reason", "detail"],
+          "properties": {
+            "reason": {"enum": ["cap-reached", "not-discovered", "not-written", "admission-refused", "prerequisite-missing", "infrastructure-unavailable"]},
+            "detail": {"type": "string"}
+          }
+        }
+      },
+      "allOf": [
+        {"if": {"properties": {"outcome": {"const": "SKIP"}}, "required": ["outcome"]}, "then": {"properties": {"skip_reason": {"type": "string", "minLength": 1}}}},
+        {"if": {"properties": {"outcome": {"const": null}}, "required": ["outcome"]}, "then": {"properties": {"outstanding": {"type": "object"}}}},
+        {"if": {"properties": {"oos_evidence": {"properties": {"status": {"const": "reused"}}, "required": ["status"]}}, "required": ["oos_evidence"]}, "then": {"properties": {"oos_evidence": {"properties": {"applicability": {"type": "object"}}}}}}
+      ]
+    }
+  }
+}
