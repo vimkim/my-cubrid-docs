@@ -1,0 +1,18 @@
+-- SA-mode DELETE/UPDATE on the debug build to exercise oos_delete logging
+1 row affected. (0.002000 sec) Committed. (0.001001 sec) 
+1 row affected. (0.000000 sec) Committed. (0.001000 sec) 
+  'dba.a_out'           '(0|209|3)'                        1           640                  641             1              1          768                   2          16344             0                     0                 32688                 32688
+  'dba.c1'              '(0|209|5)'                        1           832                  833             1              1          960                   3          16344             1                  5024                 49032                 44008
+--- oos.log after DELETE/UPDATE ---
+-rw-------. 1 vimkim vimkim 1027 Sep 10 16:25 /home/vimkim/.cub/install/oos-baseline-f4299ac0c/debug_gcc/log/oos.log
+10 /home/vimkim/.cub/install/oos-baseline-f4299ac0c/debug_gcc/log/oos.log
+[16:25:06] OOS [DEBUG](heap_recdes_get_oos_oids:28364): there exists an OOS with OID 1|962|0 at offset 13 index 0
+[16:25:06] OOS [DEBUG](heap_recdes_get_oos_oids:28388): Total 1 found. OOS OIDs: {(1|962|0)}
+[16:25:06] OOS [DEBUG](heap_recdes_get_oos_oids:28364): there exists an OOS with OID 1|963|0 at offset 13 index 0
+[16:25:06] OOS [DEBUG](heap_recdes_get_oos_oids:28388): Total 1 found. OOS OIDs: {(1|963|0)}
+[16:25:06] OOS [DEBUG](oos_delete:3236): arguments: oid={vol=1,page=962,slot=0}
+[16:25:06] OOS [DEBUG](oos_delete_chain:3135): deleted chunk at oid={vol=1,page=962,slot=0}, next={vol=-1,page=-1,slot=-1}
+[16:25:06] OOS [DEBUG](heap_recdes_get_oos_oids:28364): there exists an OOS with OID 1|770|0 at offset 13 index 0
+[16:25:06] OOS [DEBUG](heap_recdes_get_oos_oids:28388): Total 1 found. OOS OIDs: {(1|770|0)}
+[16:25:06] OOS [DEBUG](oos_delete:3236): arguments: oid={vol=1,page=770,slot=0}
+[16:25:06] OOS [DEBUG](oos_delete_chain:3135): deleted chunk at oid={vol=1,page=770,slot=0}, next={vol=-1,page=-1,slot=-1}

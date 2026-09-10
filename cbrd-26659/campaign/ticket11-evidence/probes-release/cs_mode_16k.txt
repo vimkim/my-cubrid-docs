@@ -1,0 +1,40 @@
+@ cubrid master start
+++ cubrid master start: success
+@ cubrid server start: br16k
+
+This may take a long time depending on the amount of recovery works to do.
+
+CUBRID 11.5.0
+
+++ cubrid server start: success
+@ cubrid server status
+ Server br16k (rel 11.5.0, pid 1107687)
+
+=== <Result of SELECT Command in Line 1> ===
+
+  Table_name            Class_oid             Heap_volume_id  Heap_file_id  Heap_header_page_id  Has_oos_file  Oos_volume_id  Oos_file_id  Oos_num_user_pages  Oos_page_size  Oos_num_recs       Oos_recs_sumlen    Oos_physical_bytes      Oos_unused_bytes
+============================================================================================================================================================================================================================================================
+  'dba.a_out'           '(0|209|3)'                        1           640                  641             1              1          768                   2          16344             1                  4060                 32688                 28628
+
+1 row selected. (0.000000 sec) Committed. (0.000000 sec) 
+
+=== <Result of SELECT Command in Line 1> ===
+
+  probe                       bytes
+===================================
+  'cs a_out'                   1009
+
+1 row selected. (0.001000 sec) Committed. (0.000000 sec) 
+csql cs exit=0
+@ cubrid server stop: br16k
+
+Server br16k notified of shutdown.
+This may take several minutes. Please wait.
+++ cubrid server stop: success
+@ cubrid broker stop
+++ cubrid broker is not running.
+@ cubrid manager server stop
+cubrid manager server is not installed.
+@ cubrid master stop
+++ cubrid master stop: success
+no cub_ processes from /home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc remain
