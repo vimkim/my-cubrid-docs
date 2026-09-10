@@ -4,7 +4,7 @@
   "attempt_id": "att-T13-0002",
   "created_at": "2026-09-10T20:50:00+09:00",
   "root_path": "/home/vimkim/.cub/campaign/cbrd-26659/attempts/att-T13-0002",
-  "total_bytes": 40462,
+  "total_bytes": 46360,
   "complete": true,
   "items": {
     "workload": {
@@ -77,7 +77,7 @@
       "state": "present",
       "path": "ctp.log",
       "hash": "sha256:4dffd72e25b6ba20b455d870d76308051e36ab2ba8a831b6650f0916e36e30c4",
-      "note": "Green run. The bundle also holds ctp_bootstrap.log (the empty-answer run that produced the candidate), ctp_negcontrol.log (the planted digest defect, which must fail), the activation checker's assertion logs for release, debug and its own negative control, and the derivation gate self-test."
+      "note": "Green run. The bundle also holds ctp_bootstrap.log (the empty-answer run that produced the candidate), ctp_negcontrol.log (the planted digest defect, which must fail), ctp_final.log (a fourth CTP invocation re-verifying the case after the review edits; success:1, execute_case:1, result dir schedule_linux_sql_64bit_1020515363), the activation checker's assertion logs for release, debug and its own negative control, and the derivation gate self-test. CORRECTED after independent review: ctp_final.log was present in the bundle root but absent from both SHA256SUMS and this index, which made `complete: true` false and left total_bytes understated by 5,818 bytes. The bundle has been re-indexed (19 files, every hash verified with sha256sum -c) and total_bytes corrected."
     },
     "cores": {
       "state": "not-applicable",
@@ -88,8 +88,8 @@
     "replay_command_with_prerequisites": {
       "state": "present",
       "path": "replay_command.txt",
-      "hash": "sha256:401b4ab827713fec56668080ae4fb7f9033061e9607f2188a0b4a2655e24b05b",
-      "note": "Includes the JDBC driver prerequisite and the requirement that no other cub process of this user be running, because CTP's do_clean runs pkill cub."
+      "hash": "sha256:786f33480c572fc8c5820d58affc4b1308b1ce1f6a293e67a688dc3ed0369c62",
+      "note": "Includes the JDBC driver prerequisite and the requirement that no other cub process of this user be running, because CTP's do_clean runs an unscoped `pkill cub`. CORRECTED after independent review: this file had been copied from the att-T13-0001 bundle and still named that attempt's directory and commit 37b1ceff8; it now names att-T13-0002 and commit e64c16481, matching this bundle's identity.txt."
     }
   },
   "uncommitted_snapshots": [],

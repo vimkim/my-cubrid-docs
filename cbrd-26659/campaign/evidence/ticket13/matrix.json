@@ -29,7 +29,7 @@
       "run": {
         "manifest_id": "inv-T13-0002",
         "manifest_path": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002.json",
-        "manifest_hash": "sha256:b5d97cdbee42448fcae66f5909684de177b0cc1d5f9c1e33d48930ca15e37aa6",
+        "manifest_hash": "sha256:d7ce19c653cfc6f787fa36e60033b8880b9a3d11c979d11e65272cfd5c7b3a67",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
         "testcase_commit": "e64c16481d1d65aeac0650edf32594d979c47a52",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
@@ -103,7 +103,7 @@
       "run": {
         "manifest_id": "inv-T13-0002",
         "manifest_path": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002.json",
-        "manifest_hash": "sha256:b5d97cdbee42448fcae66f5909684de177b0cc1d5f9c1e33d48930ca15e37aa6",
+        "manifest_hash": "sha256:d7ce19c653cfc6f787fa36e60033b8880b9a3d11c979d11e65272cfd5c7b3a67",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
         "testcase_commit": "e64c16481d1d65aeac0650edf32594d979c47a52",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
@@ -132,7 +132,7 @@
           }
         ],
         "gap_kind": "Delivery gap",
-        "summary": "PASS on the logical half: the OOS-backed row (record 4,264 B) was accepted and both values read back exactly, and the activation checker asserted one chunk with Oos_recs_sumlen 3,024 = 3,008 payload + one 16-byte chunk header, which identifies the moved-out value as `big` (moving `small` would give 1,224). DELIVERY GAP, recorded deliberately: the committed CTP asset alone cannot detect a largest-first regression. No portable SQL exposes per-attribute placement, and DISK_SIZE reports the logical serialized size regardless of placement (ticket 11 section 5.2), so an engine demoting `small` instead would produce a byte-identical answer and CTP would report success. The discrimination comes only from evidence/ticket13/activation_check.sh, which is a validated checker (it exits non-zero on mismatch, and its negative control at the smallest-first value 1,224 is shown to fail) but is NOT part of the public regression suite. Closing this gap needs the checker wired into a scheduled invocation, which belongs to ticket 15 and ticket 22."
+        "summary": "SCOPE OF THIS ROW: the logical half of OOS-REP-02 only. The OOS-backed row (record 4,264 B) was accepted and both values read back exactly, verified by digest and length as well as by equality; the paired activation checker asserted one chunk with Oos_recs_sumlen 3,024 = 3,008 payload + one 16-byte chunk header, which identifies the moved-out value as `big` (moving `small` would give 1,224). latest_outcome PASS refers to that executed attempt and MUST NOT be read as full coverage of OOS-REP-02: the placement half is not covered by any executed suite. See the companion row OOS-REP-02/-/placement-discrimination, whose latest_outcome is null, for that gap. gap_kind is Delivery gap on both rows for exactly this reason."
       },
       "flakiness": {
         "attempts": 1,
@@ -177,7 +177,7 @@
       "run": {
         "manifest_id": "inv-T13-0002",
         "manifest_path": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002.json",
-        "manifest_hash": "sha256:b5d97cdbee42448fcae66f5909684de177b0cc1d5f9c1e33d48930ca15e37aa6",
+        "manifest_hash": "sha256:d7ce19c653cfc6f787fa36e60033b8880b9a3d11c979d11e65272cfd5c7b3a67",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
         "testcase_commit": "e64c16481d1d65aeac0650edf32594d979c47a52",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
@@ -301,6 +301,44 @@
         "target": "instrumentation",
         "evidence": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002/ooslog_debug.txt",
         "note": "No insert-side log line exists at the pin; this is a property of the engine's logging, not a test failure."
+      },
+      "attempt_records": []
+    },
+    {
+      "row_id": "OOS-REP-02/-/placement-discrimination",
+      "requirement": "OOS-REP-02",
+      "family": "Representation",
+      "case": null,
+      "configuration": null,
+      "run": null,
+      "oos_evidence": {
+        "status": "missing",
+        "channel": null,
+        "reference": null,
+        "applicability": null
+      },
+      "finding": {
+        "latest_outcome": null,
+        "ever_failed": false,
+        "history": [],
+        "gap_kind": "Delivery gap",
+        "summary": "NO EXECUTED SUITE ASSERTS LARGEST-FIRST PLACEMENT. Recorded as its own row, with a null outcome, because the companion case row's PASS would otherwise let a reader filtering on outcome conclude that OOS-REP-02 is covered. The committed public case cannot detect a largest-first regression: no portable SQL exposes per-attribute placement, and DISK_SIZE reports the logical serialized size regardless of placement (ticket 11 section 5.2), so an engine demoting `small` instead of `big` would produce a byte-identical answer and CTP would report success. The discrimination exists and is validated -- evidence/ticket13/activation_check.sh asserts nine observations, exits non-zero on mismatch, and its negative control at the smallest-first value 1,224 is demonstrated to fail -- but it is a manually invoked script, not part of any CTP suite, so nothing in the campaign's executed coverage fails when largest-first breaks. Closing this requires wiring the checker into a scheduled invocation: tickets 15 and 22."
+      },
+      "flakiness": {
+        "attempts": 0,
+        "failures": 0,
+        "intermittent": false,
+        "consecutive_fresh_fixture_reproductions": 0,
+        "deterministic_claim": false
+      },
+      "known_issue": {
+        "ticket": null,
+        "relation": "none"
+      },
+      "attribution": {
+        "target": "harness",
+        "evidence": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002/activation_release.txt",
+        "note": "Not an engine failure: the engine behaved correctly. The gap is that the public SQL seam cannot observe placement, so the check lives outside the executed suite."
       },
       "attempt_records": []
     }

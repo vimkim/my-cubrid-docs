@@ -17,7 +17,7 @@ Vocabulary follows the [docs glossary](../../CONTEXT.md). This ticket is the pub
 | Case | `sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql` |
 | Reviewed answer | `sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_rep02_largest_first.answer` |
 | Negative controls | CTP comparison: `~/.cub/campaign/cbrd-26659/negative-control/`, **outside** the repository entirely. Activation checker: `activation_check.sh` run with a wrong expected sum. Derivation gate: `derive_case_sizes.py --self-test`. |
-| Replay bundle | `~/.cub/campaign/cbrd-26659/attempts/att-T13-0002`, sha256 `e0f27e71…` |
+| Replay bundle | `~/.cub/campaign/cbrd-26659/attempts/att-T13-0002`, sha256 `00c906fa…` (19 files, every hash verified) |
 
 Existing worktrees of the public repository (`cubrid-testcases` on `tc/pr-6864`, `cubrid-testcases-feat-oos`, `oos-ctp` with its two `.sql.disable` files, `oos-ci-error-codes-sql`) were not touched.
 
@@ -43,7 +43,7 @@ The expected output was written and justified in [`evidence/ticket13/expected-or
 | CTP discovery | 1 of 1, `execute_case:1`, case in `okList`, `notRunList` empty |
 | First run against an empty answer | `Fail:1`, candidate `.result` written |
 | Review | Candidate matched the pre-run oracle value for value: `DISK_SIZE` 1008/508 and 3008/1208, all four equality flags 1, `n_rows`/`n_exact`/`n_aliased` 2/2/0 |
-| Promotion | By rename into `answers/`. The retained candidate and the promoted answer hash identically (`bd64083a…`), which is the proof the promotion was a rename and not an edit |
+| Promotion | By rename into `answers/`. The retained candidate and the promoted answer hash identically (`b38a24b5…`), which is the proof the promotion was a rename and not an edit |
 | Green run | `Total:1 Success:1 Fail:0`, `execute_case:1`, 39 s |
 | Negative control | one hex digit of the OOS-backed row's `big_md5` changed; CTP reported `Fail:1`, so the comparison detects the planted defect |
 
@@ -152,3 +152,45 @@ revealed it. Fixed, then verified in both directions — good path exit 0, contr
 - Wiring `activation_check.sh` into a scheduled invocation, so that the largest-first
   discrimination becomes part of an executed suite rather than a manual step. That is the
   Delivery gap recorded against `OOS-REP-02`, and it belongs to tickets 15 and 22.
+
+---
+
+## 10. Independent agent review (2026-09-10)
+
+The campaign specification requires that "an independent agent session, never the authoring
+session, reviews Standards and Spec conformance per repository, validates the
+negative-control checkers, and audits replay and cleanup evidence before acceptance". That
+review has now run, in a session with no access to this one's reasoning, read-only.
+
+**Verdict: ACCEPT WITH CONDITIONS. The answer promotion is accepted.**
+
+What it re-verified independently, and which held: the promotion is a pure rename (all
+three copies of the answer hash identically); all four MD5 digests reproduce in Python and
+match the committed answer byte for byte; the activation checker passes nine assertions on
+the good path and fails on exactly the discriminating assertion under its control; the
+derivation gate rejects both disputed fixtures, and the reviewer re-derived both bands from
+ticket 11 §5 rather than trusting the script; all four engine library hashes match ticket
+11; the pinned worktree is clean apart from ticket 11's own `cubrid-cci` artifact; all four
+JSON records validate and `check_campaign_records.py` passes; `reused` is the correct
+evidence status; nothing was pushed.
+
+Four defects were found. **Every one was in the narrative or bookkeeping layer, none in the
+engineering**, and all four are now fixed:
+
+| # | Defect | Fix |
+|---|---|---|
+| R1 | The attempt record said `pkill` was denied "for two processes owned by another uid". The real count in `ctp.log` is 44 denial lines over **22 unique pids**. Worse, the wording implied CTP had scoped its kill | Count corrected, and the qualification that the earlier wording obscured is now stated outright: `pkill cub` is an unscoped pattern match, so the "no unrelated process was killed" outcome held **only because the kernel refused the signal**, not because the runner was careful. Any cub-named process this user owned would have died |
+| R2 | `complete: true` was **false**. `ctp_final.log`, a fourth CTP invocation re-verifying the case after the review edits, sat in the bundle root but appeared in neither `SHA256SUMS` nor the index, leaving `total_bytes` understated by 5,818 B | Bundle re-indexed to 19 files, every hash verified with `sha256sum -c`, `total_bytes` corrected to 46,360, and the fourth run described in the index rather than left as an orphan |
+| R3 | Three stale revision-1 citations: §3 quoted revision 1's promotion hash, §1 quoted a bundle hash that resolved to nothing, and `replay_command.txt` inside the *revision 2* bundle still named `att-T13-0001` and commit `37b1ceff8` | All three corrected. The replay command now matches its own bundle's `identity.txt`. (The two configurations are byte-identical, so a replay would still have run the right thing — but the record was self-contradictory) |
+| R4 | The `OOS-REP-02` case row carried `latest_outcome: PASS` while its own summary admitted the case has no regression power, so anyone filtering on PASS would read the requirement as covered | Split into two rows. The case row keeps `PASS` — the attempt genuinely passed — but now states that it covers the logical half only and names its companion. A new caseless row, `OOS-REP-02/-/placement-discrimination`, carries `latest_outcome: null` with `gap_kind: Delivery gap`, so no outcome filter can count the requirement as covered |
+
+R2 and R3 are both the same underlying mistake: I revised the work after the two-axis
+review and updated the JSON records carefully while letting the prose and one copied file
+drift behind. The lesson for tickets 14 to 32 is that the hand-written records need the
+same re-derivation discipline on a revision as on a first write — or, better, that ticket
+15's tooling should generate the hashes and counts that drifted here.
+
+**Condition on acceptance:** the independent review is advisory on the two items it could
+not settle — the spec reserves acceptance of incomplete coverage to the user alone. The
+`OOS-REP-02` placement gap is proposed for tickets 15 and 22, not accepted; only the user
+converts a coverage gap into an accepted exclusion.
