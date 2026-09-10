@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "attempt_id": "att-T13-0002",
+  "kind": "original",
+  "parent_attempt": null,
+  "finding_id": null,
+  "case": {
+    "repository": "testcases",
+    "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql",
+    "name": "cbrd_26659_oos_rep02_largest_first"
+  },
+  "requirements": [
+    "OOS-REP-01",
+    "OOS-REP-02",
+    "OOS-SQL-01"
+  ],
+  "manifest_id": "inv-T13-0002",
+  "configuration": {
+    "page_size": 16384,
+    "build_mode": "release",
+    "run_mode": "client-server",
+    "instrumentation_id": null,
+    "seed": null
+  },
+  "started_at": "2026-09-10T20:41:25+09:00",
+  "ended_at": "2026-09-10T20:42:05+09:00",
+  "deadline": {
+    "seconds": 120,
+    "reached": false,
+    "evidence_captured_on_timeout": false
+  },
+  "outcome": "PASS",
+  "skip_reason": null,
+  "assertions": {
+    "executed": 27,
+    "failed": 0
+  },
+  "expected_versus_actual": "/home/vimkim/.cub/campaign/cbrd-26659/attempts/att-T13-0002/expected_vs_actual.diff",
+  "oos_evidence": {
+    "status": "reused",
+    "channel": "show-heap-oos",
+    "reference": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002/activation_release.txt",
+    "applicability": {
+      "fixture": "Identical: the same two rows of (id INT PRIMARY KEY, big BIT VARYING, small BIT VARYING) with the same byte patterns and sizes, inserted in the same order, on a table the activation run owns exclusively in its own database.",
+      "execution_path": "DIFFERENT, which is why this is reused and not proven. The CTP invocation ran client-server over JDBC; the activation checker ran standalone under csql -S. The heap write path under test is server-side and identical in both, but the client transport and session layer are not. Certifies the INSERT-side demotion decision only; certifies no scan, recovery or vacuum path.",
+      "engine_configuration": "Same pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, same release install, same 16 KiB page size, unmodified build, no instrumentation. All nine assertions also pass identically on the pinned debug install (activation_debug.txt), so the observation is not release-specific.",
+      "conditions": "Single session, no concurrency, no fault injection, empty table at the start, no vacuum or restart in between. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture.",
+      "source_manifest": "inv-T13-0002"
+    }
+  },
+  "barriers": [],
+  "injections": [],
+  "resources_owned": {
+    "databases": [
+      "basic (CTP-created, under ~/.cub/campaign/cbrd-26659/ctpdb)",
+      "t13chk16k, t13chkd16k, t13chkn16k (activation checker and its negative control, under ~/.cub/campaign/cbrd-26659/db)"
+    ],
+    "processes": [
+      "cub_master port 26659",
+      "cub_server basic",
+      "broker BROKER1 port 33120"
+    ],
+    "ports": [
+      26659,
+      33120,
+      33122
+    ],
+    "directories": [
+      "/home/vimkim/.cub/campaign/cbrd-26659"
+    ]
+  },
+  "cleanup": {
+    "performed": true,
+    "scope_verified": true,
+    "evidence_preserved_first": true,
+    "evidence": "CTP's do_clean stopped and deleted its own database `basic`, ran `pkill cub` and swept this user's shared-memory segments. Before the run the user's only unrelated CUBRID process, an idle cub_master of the `develop` debug install (pid 551535, serving demodb/testdb, no cub_server attached), was stopped cleanly by hand with `cubrid service stop` on that install, on the user's instruction; it remains down pending the user's restart. No unrelated process was killed by the runner: pkill reported 'Operation not permitted' for two processes owned by another uid. `ipcs -m` showed no segments owned by this user before the run, so the sweep was a no-op. The activation databases were retained as evidence. All CTP result artifacts were copied into the bundle before any cleanup."
+  },
+  "bundle": {
+    "path": "/home/vimkim/.cub/campaign/cbrd-26659/attempts/att-T13-0002",
+    "hash": "sha256:27006f7549449d5c0ea7bf3bb5683c497df3b5280aac7624da4a466d2e7001fe"
+  },
+  "reproduction": {
+    "fresh_fixture": true,
+    "consecutive_reproductions_so_far": 0,
+    "failure_reproduced": false
+  },
+  "notes": "Revision 2 of the tracer bullet, after the two-axis review of revision 1. Findings carried forward. (1) CTP will not run a case with no .answer: ConsoleAgent hardcodes MODE_RESULT (ConsoleAgent.java:116) and ConsoleBO sets shouldRun=false when the answer is missing (ConsoleBO.java:367-375), so the case lands in notRunList with isSuccessFul=true and execute_case:0 while the launcher still exits 0. Bootstrap every new case with an empty .answer. (2) The launcher exits 0 on genuine failures too: both negative controls reported Fail:1 with exit status 0. Tooling must read main.info, never $?. (3) The pinned installs were built without the cubrid-jdbc submodule, so CTP could not load cubrid.sql.CUBRIDOID and executed nothing. The driver was built from the pin's own gitlink (936df5f9, version 11.4.0.0077) and installed under <install>/jdbc/ as a client artifact; all four engine library hashes were re-verified unchanged against ticket 11 afterwards, and the pinned worktree's `git status --short` still shows only the cubrid-cci generated header that ticket 11 recorded. Note that a 11.4 driver fronts an 11.5.0.2648 server: that is the pairing the pinned commit itself specifies through its gitlink, not a substitution, and the jar's sha256 is recorded in the bundle's identity.txt. (4) Writing the activation checker's negative control exposed a real bug in the checker: the assertion block was piped into tee, so it ran in a subshell, the failure counter never escaped, and the script printed FAIL while exiting 0. Fixed by writing the file and catting it. This is the clearest justification in this ticket for the spec's rule that every checking mechanism needs a controlled failure example."
+}

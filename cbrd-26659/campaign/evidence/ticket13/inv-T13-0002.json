@@ -1,0 +1,217 @@
+{
+  "schema_version": 1,
+  "manifest_id": "inv-T13-0002",
+  "producer": {
+    "kind": "hand-written",
+    "name": "Claude Opus 5 (1M context), campaign ticket 13",
+    "version": "revision 2, after the two-axis review"
+  },
+  "invocation": {
+    "started_at": "2026-09-10T20:41:25+09:00",
+    "ended_at": "2026-09-10T20:42:05+09:00",
+    "tier": "fast",
+    "caps": {
+      "invocation_seconds": 900,
+      "per_case_seconds": 120,
+      "invocation_cap_reached": false
+    },
+    "resources": {
+      "cpus": 8,
+      "memory_gib": 16,
+      "storage_gib": 0.5,
+      "storage_root": "/home/vimkim/.cub/campaign/cbrd-26659"
+    },
+    "engine": {
+      "baseline_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+      "worktree": "/home/vimkim/gh/cb/oos-baseline-f4299ac0c",
+      "modified": false,
+      "install_prefix": "/home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc",
+      "version_string": "CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit release build for Linux) (Sep 10 2026 16:19:43)",
+      "library_hashes": {
+        "libcubrid.so": "sha256:a3256a7a40748752165e65a395b8aebcf8d85e00b87ee62e68bf75e1a5c85444",
+        "libcubridsa.so": "sha256:8009c322633055df41af045fe560a86f1f8171648863d11f2e44d949e3cdd76e"
+      }
+    },
+    "testcase": {
+      "repository": "testcases",
+      "branch": "CBRD-26659-oos-testcases-handover",
+      "commit": "e64c16481d1d65aeac0650edf32594d979c47a52",
+      "base_commit": "b94995abfc7b196fb753aac158d52512288513a6",
+      "worktree": "/home/vimkim/gh/tc/cubrid-testcases-cbrd-26659"
+    },
+    "context": {
+      "revision": "f6543de680b91ae357466b72a983f982892859cd",
+      "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698",
+      "snapshot": "cbrd-26659/campaign/ticket11-evidence/normative-snapshot/"
+    },
+    "catalogue": {
+      "path": "cbrd-26659/campaign/catalogue/requirements.json",
+      "hash": "sha256:0cc33c82cfc472daece8e168f92d153d86d4c1feb0690ceffca786b0c8a8c5dd"
+    },
+    "page_size": 16384,
+    "build_mode": "release",
+    "run_mode": "client-server",
+    "services": [
+      {
+        "kind": "cub_master",
+        "identity": "CTP-owned master, port 26659",
+        "port": 26659,
+        "owned": true
+      },
+      {
+        "kind": "cub_server",
+        "identity": "basic",
+        "port": null,
+        "owned": true
+      },
+      {
+        "kind": "broker",
+        "identity": "BROKER1 port 33120",
+        "port": 33120,
+        "owned": true
+      }
+    ],
+    "instrumentation": null,
+    "seed": null,
+    "runner": {
+      "kind": "ctp-sql",
+      "ctp_fingerprint": "sha256:456cabffff33abe4c5cd4695d40b33a713b8e53d86b6158fd87f94148e17f078",
+      "command": "ctp.sh sql -c ~/.cub/campaign/cbrd-26659/attempts/att-T13-0002/sql_cbrd26659.conf",
+      "scenario_selection": "/home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659"
+    }
+  },
+  "expected": {
+    "case_list": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002/case-list.txt",
+    "case_list_hash": "sha256:14620df17d4a422732839a5c96981a1bee3c48ec1cb805871d3a6869a7a61bfb",
+    "case_count": 1,
+    "assertion_count": 27
+  },
+  "discovered": {
+    "case_count": 1,
+    "case_names": [
+      "cbrd_26659_oos_rep02_largest_first"
+    ]
+  },
+  "executed": {
+    "case_count": 1,
+    "assertion_count": 27
+  },
+  "proof": {
+    "verdict": "proven",
+    "launcher_exit_status": 0,
+    "setup_log": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002/setup.log",
+    "mismatches": []
+  },
+  "cases": [
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql",
+        "name": "cbrd_26659_oos_rep02_largest_first"
+      },
+      "requirements": [
+        "OOS-REP-01",
+        "OOS-REP-02",
+        "OOS-SQL-01"
+      ],
+      "outcome": "PASS",
+      "skip_reason": null,
+      "assertions": {
+        "expected": 27,
+        "executed": 27,
+        "failed": 0
+      },
+      "oos_evidence": {
+        "status": "reused",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002/activation_release.txt",
+        "applicability": {
+          "fixture": "Identical: the same two rows of (id INT PRIMARY KEY, big BIT VARYING, small BIT VARYING) with the same byte patterns and sizes, inserted in the same order, on a table the activation run owns exclusively in its own database.",
+          "execution_path": "DIFFERENT, which is why this is reused and not proven. The CTP invocation ran client-server over JDBC; the activation checker ran standalone under csql -S. The heap write path under test is server-side and identical in both, but the client transport and session layer are not. Certifies the INSERT-side demotion decision only; certifies no scan, recovery or vacuum path.",
+          "engine_configuration": "Same pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, same release install, same 16 KiB page size, unmodified build, no instrumentation. All nine assertions also pass identically on the pinned debug install (activation_debug.txt), so the observation is not release-specific.",
+          "conditions": "Single session, no concurrency, no fault injection, empty table at the start, no vacuum or restart in between. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture.",
+          "source_manifest": "inv-T13-0002"
+        }
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T13-0002",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket13/att-T13-0002.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/attempts/att-T13-0002",
+          "bundle_hash": "sha256:27006f7549449d5c0ea7bf3bb5683c497df3b5280aac7624da4a466d2e7001fe"
+        }
+      ],
+      "outstanding": null
+    }
+  ],
+  "outstanding_coverage": {
+    "cases_not_executed": [],
+    "configurations_not_run": [
+      "4096/release/standalone",
+      "4096/release/client-server",
+      "4096/debug/standalone",
+      "4096/debug/client-server",
+      "8192/release/standalone",
+      "8192/release/client-server",
+      "8192/debug/standalone",
+      "8192/debug/client-server",
+      "16384/release/standalone",
+      "16384/debug/client-server"
+    ],
+    "requirements_without_executed_case": [
+      "OOS-REP-04",
+      "OOS-REP-06",
+      "OOS-REP-07",
+      "OOS-REP-08",
+      "OOS-REP-09",
+      "OOS-REP-10",
+      "OOS-REP-11",
+      "OOS-SQL-02",
+      "OOS-SQL-05",
+      "OOS-SQL-06",
+      "OOS-RD-01",
+      "OOS-RD-02",
+      "OOS-RD-03",
+      "OOS-SCH-01",
+      "OOS-SCH-02",
+      "OOS-SCH-03",
+      "OOS-SCH-04",
+      "OOS-SCH-05",
+      "OOS-CL-01",
+      "OOS-CL-02",
+      "OOS-CL-03",
+      "OOS-CL-04",
+      "OOS-CL-05",
+      "OOS-CL-06",
+      "OOS-CL-09",
+      "OOS-CL-10",
+      "OOS-CL-11",
+      "OOS-CL-13",
+      "OOS-DUR-01",
+      "OOS-DUR-02",
+      "OOS-DUR-03",
+      "OOS-DUR-04",
+      "OOS-DUR-05",
+      "OOS-DUR-06",
+      "OOS-DUR-08",
+      "OOS-OPS-01",
+      "OOS-OPS-02",
+      "OOS-OPS-04",
+      "OOS-RES-01",
+      "OOS-RES-02",
+      "OOS-RES-03",
+      "OOS-RES-04",
+      "OOS-RES-06"
+    ],
+    "note": "Ticket 13 is the public tracer bullet: one case proving the public seam end to end, not coverage. ASSERTION COUNT IS DERIVED, NOT MEASURED: CTP reports only Total, Success, Fail and execute_case, and has no assertion counter, so expected 27 versus executed 27 is not an independent comparison. The 27 is counted by hand from the case (11 scalars per row group x 2, plus 3 in the final aggregate, plus 2 INSERT affected-row counts) and is justified only because CTP compares the whole result text: a byte-identical .result entails that all 27 matched. Ticket 15 must add a real counter before any invocation claims a measured assertion count. The 43 assertable requirements without an executed case are the Delivery gap that tickets 18 to 22 (public SQL) and 23 to 32 (private shell) close. UNSUPPORTED and BLOCKED requirements are deliberately absent from this list. REGRESSION-POWER LIMIT: the committed CTP asset cannot detect a largest-first regression, because no portable SQL exposes per-attribute placement and DISK_SIZE reports the logical serialized size regardless of placement (ticket 11 section 5.2). An engine demoting `small` instead of `big` would produce a byte-identical answer. The discrimination is supplied only by the paired activation checker, which is not part of the public regression suite; that residual gap is recorded as a Delivery gap row against OOS-REP-02 in the matrix."
+  },
+  "answer_promotions": [
+    {
+      "case": "cbrd_26659_oos_rep02_largest_first",
+      "action": "promoted",
+      "flagged_for_user": false,
+      "review_note": "Expected values were written to expected-oracle.md revision 2 before this revision of the case was run. The four MD5 digests were computed independently in Python (CUBRID's MD5 of a BIT VARYING digests its lowercase hex form), and OCTET_LENGTH and BIT_LENGTH were predicted as N and N*8; none was taken from an engine run. The first-run candidate matched the justification value for value: DISK_SIZE 1008/508 and 3008/1208, OCTET_LENGTH 1000/500 and 3000/1200, BIT_LENGTH 8000/4000 and 24000/9600, all four digests, all four equality flags 1, and 2/2/0. Promoted by rename; the retained candidate and the promoted answer are byte-identical. All three requirements are assertable with policy assert and neither fixture row lies in a disputed band, so the promotion is unflagged and needs independent agent review only, not user sign-off.",
+      "reviewer": "Claude Opus 5 (1M context), campaign ticket 13 (authoring session; the spec's independent agent review is still outstanding)"
+    }
+  ]
+}

@@ -1,0 +1,105 @@
+
+====================================== SQL ==========================================
+[SQL] TEST STARTED (Thu Sep 10 20:46:08 KST 2026)
+
+[SQL] CONFIG FILE: /home/vimkim/.cub/campaign/cbrd-26659/attempts/att-T13-0002/sql_negcontrol.conf
+[sql/cubrid_broker.conf/%BROKER1]
+APPL_SERVER_SHM_ID=33120
+APPL_SERVER_MAX_SIZE=100M
+BROKER_PORT=33120
+
+[sql/cubrid_broker.conf/broker]
+MASTER_SHM_ID=33122
+
+[sql]
+need_make_locale=no
+jdbc_config_file=test_default.xml
+scenario=/home/vimkim/.cub/campaign/cbrd-26659/negative-control/cbrd_26659_nc
+enable_memory_leak=no
+test_category=sql
+cubrid_createdb_opts=--db-volume-size=128M --log-volume-size=64M --db-page-size=16384 --log-page-size=16384
+db_charset=en_US
+testcase_exclude_from_file=${CTP_HOME}/conf/exclusions.txt
+
+[sql/cubrid.conf]
+cubrid_port_id=26659
+test_mode=yes
+ha_mode=yes
+unicode_input_normalization=no
+lock_timeout=10sec
+java_stored_procedure=yes
+max_plan_cache_entries=1000
+
+[sql/cubrid_broker.conf]
+
+[sql/cubrid_ha.conf]
+ha_apply_max_mem_size=300
+ha_port_id=59901
+ha_mode=yes
+
+[sql/cubrid_broker.conf/%query_editor]
+SERVICE=OFF
+
+
+----------END OF FILE----------
+stop database basic
+Could not connect to master server on localhost
+cubrid manager server is not installed.
+delete database basic
+Database "basic" is unknown, or the file "databases.txt" cannot be accessed.
+pkill: killing pid 2332463 failed: Operation not permitted
+Filtering out deprecated parameters for CUBRID 11.5+
+start config ha
+Don't need  make locale since you configure need_make_locale=no !
+MAKE basic DATABASE (default size)...
+cubrid createdb --db-volume-size=128M --log-volume-size=64M --db-page-size=16384 --log-page-size=16384 basic en_US.utf8
+Load Java Stored Procedure Classes
+rm: cannot remove '*.class': No such file or directory
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: SpTest6.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+Load jdbc_cubrid415.class...
+Load SpTest1.class...
+Load SpTest2.class...
+Load SpTest3.class...
+Load SpTest4bit64.class...
+Load SpTest4.class...
+Load SpTest5.class...
+Load SpTest6.class...
+Load SpTest7.class...
+Load SpTest8.class...
+Load SpTest9.class...
+Load SpTest.class...
+start database basic
+++ cubrid service is not running.
+@ cubrid master start
+++ cubrid master start: success
+@ cubrid broker start
+++ cubrid broker start: success
+start database basic
+restart broker...
+Result Root Dir:/home/vimkim/CTP/sql/result/y2026/m9/schedule_linux_sql_64bit_1020463816_11.5.0.2648-f4299ac
+
+
+---------------execute begin--------------------
+[20:46:39] Testing /home/vimkim/.cub/campaign/cbrd-26659/negative-control/cbrd_26659_nc/cases/cbrd_26659_oos_rep02_largest_first.sql (1/1 100.00%) [NOK]
+---------------execute end  --------------------
+
+-----------------------
+Fail:1
+Success:0
+Total:1
+Elapse Time:54
+Test Log:/home/vimkim/CTP/sql/log/sql_11.5.0.2648-f4299ac_1789040768.log
+Test Result Directory:/home/vimkim/CTP/sql/result/y2026/m9/schedule_linux_sql_64bit_1020463816_11.5.0.2648-f4299ac
+-----------------------
+
+stop database basic
+delete database basic
+pkill: killing pid 2332463 failed: Operation not permitted
+-----------------------
+Testing End!
+-----------------------
+[SQL] TEST END (Thu Sep 10 20:46:46 KST 2026)
+[SQL] ELAPSE TIME: 38 seconds

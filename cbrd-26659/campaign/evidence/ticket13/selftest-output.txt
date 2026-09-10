@@ -1,0 +1,13 @@
+# Self-test of the assertability gate (page size 16384 B)
+
+## Disputed fixtures: the gate must reject every one of these
+  record-gate band         pinned=-     normative=[0]   -> correctly REJECTED
+      record 4,064 B lies in (4,060, 4,086]: the normative four-record target demotes it, the pinned DB_PAGESIZE/4 gate leaves it inline
+  eligibility-floor band   pinned=[0]   normative=-     -> correctly REJECTED
+      the 16-byte value serializes to 20 B, above the pinned 16 B floor but not above the normative 24 B floor, so only the pinned engine demotes it
+
+## Shipped fixture: the gate must still accept it
+  row 1                      pinned=[0]   normative=[0]   -> accepted
+  row 2                      pinned=-     normative=-     -> accepted
+
+SELF-TEST PASSED

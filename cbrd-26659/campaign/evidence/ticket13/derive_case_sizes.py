@@ -134,5 +134,73 @@ def main():
     return 1
 
 
+# --- self-test: the assertability gate must be able to say NO ------------------------
+# A gate that never fires proves nothing.  Each fixture below was derived (not guessed) to
+# straddle one of the two bands where the pinned and the normative accountings disagree,
+# so `main()`'s agreement check must REJECT it.  The shipped fixture must still be
+# accepted, so the gate is not simply always-no.  Run with --self-test.
+DISPUTED_FIXTURES = [
+    {
+        "label": "record-gate band",
+        "fixed": [INT_DISK],
+        "var": [3500, 500],
+        "why": "record 4,064 B lies in (4,060, 4,086]: the normative four-record target "
+               "demotes it, the pinned DB_PAGESIZE/4 gate leaves it inline",
+    },
+    {
+        "label": "eligibility-floor band",
+        "fixed": [INT_DISK, 4100],
+        "var": [16],
+        "why": "the 16-byte value serializes to 20 B, above the pinned 16 B floor but not "
+               "above the normative 24 B floor, so only the pinned engine demotes it",
+    },
+]
+
+
+def fmt(indices):
+    """Render a demoted-index tuple for the self-test table."""
+    return str(list(indices)) if indices else "-"
+
+
+def demotion_under_each_accounting(fixed_sizes, var_byte_lengths):
+    """Return the demoted-index tuple under the pinned and the normative accounting."""
+    var_sizes = [ob.varbit_disk_len(n) for n in var_byte_lengths]
+    out = []
+    for _label, gate_fn, stub, _hdr in ACCOUNTINGS:
+        demoted, _inline, _off = ob.layout(fixed_sizes, var_sizes, gate_fn(PAGE_SIZE), stub)[:3]
+        out.append(tuple(demoted))
+    return out
+
+
+def self_test():
+    ok = True
+    print(f"# Self-test of the assertability gate (page size {PAGE_SIZE} B)\n")
+    print("## Disputed fixtures: the gate must reject every one of these")
+    for fx in DISPUTED_FIXTURES:
+        pinned, normative = demotion_under_each_accounting(fx["fixed"], fx["var"])
+        rejected = pinned != normative
+        ok &= rejected
+        print(f"  {fx['label']:<24} pinned={fmt(pinned):<5} "
+              f"normative={fmt(normative):<5} -> "
+              f"{'correctly REJECTED' if rejected else 'WRONGLY ACCEPTED'}")
+        print(f"      {fx['why']}")
+
+    print("\n## Shipped fixture: the gate must still accept it")
+    accepted = True
+    for rid, big_n, _bp, small_n, _sp, _i in FIXTURE:
+        pinned, normative = demotion_under_each_accounting([INT_DISK], [big_n, small_n])
+        row_ok = pinned == normative
+        accepted &= row_ok
+        print(f"  row {rid:<22} pinned={fmt(pinned):<5} "
+              f"normative={fmt(normative):<5} -> "
+              f"{'accepted' if row_ok else 'REJECTED'}")
+    ok &= accepted
+
+    print("\nSELF-TEST " + ("PASSED" if ok else "FAILED"))
+    return 0 if ok else 1
+
+
 if __name__ == "__main__":
+    if "--self-test" in sys.argv:
+        sys.exit(self_test())
     sys.exit(main())

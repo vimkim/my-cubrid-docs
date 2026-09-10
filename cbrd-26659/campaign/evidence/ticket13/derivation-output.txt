@@ -1,0 +1,31 @@
+# Ticket 13 case-size derivation (page size 16384 B)
+
+pinned record gate      =   4086 B  (heap_file.c:12350,12383)
+normative record target =   4060 B  (OOS-CONTEXT §1, CBRD-27057)
+max single-chunk payload (pinned)    =  16288 B
+max single-chunk payload (normative) =  16280 B
+
+## pinned    (gate DB_PAGESIZE/4, 16 B stub)
+  row 1: DISK_SIZE(big)= 3008  DISK_SIZE(small)= 1208  VOT width=2  record before= 4264  demoted=['big']  record after= 1272
+  row 2: DISK_SIZE(big)= 1008  DISK_SIZE(small)=  508  VOT width=2  record before= 1564  demoted=['-']  record after= 1564
+  class totals: Oos_num_recs=1  Oos_recs_sumlen=3024
+
+## normative (CBRD-27057 target, 24 B stub)
+  row 1: DISK_SIZE(big)= 3008  DISK_SIZE(small)= 1208  VOT width=2  record before= 4264  demoted=['big']  record after= 1280
+  row 2: DISK_SIZE(big)= 1008  DISK_SIZE(small)=  508  VOT width=2  record before= 1564  demoted=['-']  record after= 1564
+  class totals: Oos_num_recs=1  Oos_recs_sumlen=3032
+
+## Assertability
+  row 1: pinned demotes [0], normative demotes [0] -> ASSERTABLE   [OOS-backed: record over both gates, only `big` demoted]
+  row 2: pinned demotes -, normative demotes - -> ASSERTABLE   [inline comparator: record under both gates, nothing demoted]
+
+## Activation-evidence expectation (SHOW HEAP OOS OF the case's own class)
+  Oos_num_recs    = 1 under both accountings
+  Oos_recs_sumlen = 3024 at the pin (normative 3032; differs only by the 24-byte chunk header, a Capability gap of the pin, so only the chunk *count* is asserted)
+
+## Discriminating power of Oos_recs_sumlen (why this proves largest-first)
+  largest-first  (correct): demote big   -> sumlen 3024
+  smallest-first (defect) : demote small -> sumlen 1224
+    (a smallest-first engine also stops after one demotion: record after = 3072 <= 4086, so the chunk *count* alone cannot tell them apart -- the payload sum can)
+
+RESULT: every fixture row is assertable under both accountings.

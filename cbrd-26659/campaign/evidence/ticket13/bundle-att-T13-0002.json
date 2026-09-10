@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "bundle_id": "bundle-att-T13-0002",
+  "attempt_id": "att-T13-0002",
+  "created_at": "2026-09-10T20:50:00+09:00",
+  "root_path": "/home/vimkim/.cub/campaign/cbrd-26659/attempts/att-T13-0002",
+  "total_bytes": 40462,
+  "complete": true,
+  "items": {
+    "workload": {
+      "state": "present",
+      "path": "workload.sql",
+      "hash": "sha256:36c1d61ca180f0c5b2f94c15299c7a1b6a004358746b65a0e5ee6f1feaaae347",
+      "note": "The case file as committed at testcase commit e64c16481."
+    },
+    "seed_and_generator_version": {
+      "state": "not-applicable",
+      "path": null,
+      "hash": null,
+      "note": "Fixed deterministic workload; no generator and no seed."
+    },
+    "session_and_barrier_trace": {
+      "state": "not-applicable",
+      "path": "barrier_trace.txt",
+      "hash": "sha256:91a843c08c33346640479488757f3c5c17ea168a3cffe74ef3ec2e13b9c9ee8b",
+      "note": "Single session, no concurrency, so there is no schedule to acknowledge."
+    },
+    "injection_acknowledgements": {
+      "state": "not-applicable",
+      "path": "injections.txt",
+      "hash": "sha256:3ecdf478db43fab08138f412c1665618dcbeb68ee103b6e0770b71f0c0b74e30",
+      "note": "No fault was armed in this case."
+    },
+    "engine_identity": {
+      "state": "present",
+      "path": "identity.txt",
+      "hash": "sha256:5d0142efa00f8c8f1b573e4a0ce2ee3385ffc80354fe36103762951fe933e603",
+      "note": "Pinned commit, install prefix, both library sha256 values re-verified against ticket 11, and the sha256 and gitlink provenance of the JDBC client artifact."
+    },
+    "testcase_identity": {
+      "state": "present",
+      "path": "identity.txt",
+      "hash": "sha256:5d0142efa00f8c8f1b573e4a0ce2ee3385ffc80354fe36103762951fe933e603",
+      "note": "Repository, branch, commit e64c16481 and verified base commit b94995abf."
+    },
+    "specification_identity": {
+      "state": "present",
+      "path": "identity.txt",
+      "hash": "sha256:5d0142efa00f8c8f1b573e4a0ce2ee3385ffc80354fe36103762951fe933e603",
+      "note": "Context revision f6543de plus content hash c9daf3c4."
+    },
+    "build_and_configuration_identity": {
+      "state": "present",
+      "path": "sql_cbrd26659.conf",
+      "hash": "sha256:00c7d1d5618ae96f9179b3c9fc6ad2cffe301bb9cd6b7ab4127ea26e2e9784b6",
+      "note": "The exact CTP configuration used, including the createdb options that set the 16 KiB page size; release build, client-server."
+    },
+    "instrumentation_identity": {
+      "state": "not-applicable",
+      "path": null,
+      "hash": null,
+      "note": "Unmodified engine; no instrumentation worktree involved."
+    },
+    "fixture_identity": {
+      "state": "present",
+      "path": "identity.txt",
+      "hash": "sha256:5d0142efa00f8c8f1b573e4a0ce2ee3385ffc80354fe36103762951fe933e603",
+      "note": "Database basic created by CTP under a campaign-private CUBRID_DATABASES; the three activation databases retained."
+    },
+    "expected_versus_actual": {
+      "state": "present",
+      "path": "expected_vs_actual.diff",
+      "hash": "sha256:54e75a21e2e48a8a2e3cd44278e7ea5ab7491ddda0e2c3a2e02a93dc2e1860c2",
+      "note": "Empty diff: the promoted answer and the retained first-run candidate are byte-identical, proving promotion was a rename and not an edit."
+    },
+    "logs": {
+      "state": "present",
+      "path": "ctp.log",
+      "hash": "sha256:4dffd72e25b6ba20b455d870d76308051e36ab2ba8a831b6650f0916e36e30c4",
+      "note": "Green run. The bundle also holds ctp_bootstrap.log (the empty-answer run that produced the candidate), ctp_negcontrol.log (the planted digest defect, which must fail), the activation checker's assertion logs for release, debug and its own negative control, and the derivation gate self-test."
+    },
+    "cores": {
+      "state": "not-applicable",
+      "path": null,
+      "hash": null,
+      "note": "No core was produced; CTP's core scan found none, which is why it proceeded to do_clean."
+    },
+    "replay_command_with_prerequisites": {
+      "state": "present",
+      "path": "replay_command.txt",
+      "hash": "sha256:401b4ab827713fec56668080ae4fb7f9033061e9607f2188a0b4a2655e24b05b",
+      "note": "Includes the JDBC driver prerequisite and the requirement that no other cub process of this user be running, because CTP's do_clean runs pkill cub."
+    }
+  },
+  "uncommitted_snapshots": [],
+  "retention": {
+    "class": "success-bulky",
+    "expires_on": "2026-09-17",
+    "hold_reason": null
+  },
+  "minimization": null
+}

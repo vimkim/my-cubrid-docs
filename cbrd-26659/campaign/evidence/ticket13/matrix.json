@@ -1,0 +1,309 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-10T20:50:00+09:00",
+  "catalogue": {
+    "path": "cbrd-26659/campaign/catalogue/requirements.json",
+    "hash": "sha256:0cc33c82cfc472daece8e168f92d153d86d4c1feb0690ceffca786b0c8a8c5dd"
+  },
+  "rows": [
+    {
+      "row_id": "OOS-REP-01/cbrd_26659_oos_rep02_largest_first/16384-release-cs",
+      "requirement": "OOS-REP-01",
+      "family": "Representation",
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql",
+        "name": "cbrd_26659_oos_rep02_largest_first"
+      },
+      "configuration": {
+        "page_size": 16384,
+        "build_mode": "release",
+        "run_mode": "client-server",
+        "instrumentation_id": null,
+        "services": [
+          "cub_master:26659",
+          "cub_server:basic",
+          "broker:33120"
+        ]
+      },
+      "run": {
+        "manifest_id": "inv-T13-0002",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002.json",
+        "manifest_hash": "sha256:b5d97cdbee42448fcae66f5909684de177b0cc1d5f9c1e33d48930ca15e37aa6",
+        "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+        "testcase_commit": "e64c16481d1d65aeac0650edf32594d979c47a52",
+        "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "oos_evidence": {
+        "status": "reused",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002/activation_release.txt",
+        "applicability": {
+          "fixture": "Identical: the same two rows of (id INT PRIMARY KEY, big BIT VARYING, small BIT VARYING) with the same byte patterns and sizes, inserted in the same order, on a table the activation run owns exclusively in its own database.",
+          "execution_path": "DIFFERENT, which is why this is reused and not proven. The CTP invocation ran client-server over JDBC; the activation checker ran standalone under csql -S. The heap write path under test is server-side and identical in both, but the client transport and session layer are not. Certifies the INSERT-side demotion decision only; certifies no scan, recovery or vacuum path.",
+          "engine_configuration": "Same pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, same release install, same 16 KiB page size, unmodified build, no instrumentation. All nine assertions also pass identically on the pinned debug install (activation_debug.txt), so the observation is not release-specific.",
+          "conditions": "Single session, no concurrency, no fault injection, empty table at the start, no vacuum or restart in between. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture.",
+          "source_manifest": "inv-T13-0002"
+        }
+      },
+      "finding": {
+        "latest_outcome": "PASS",
+        "ever_failed": false,
+        "history": [
+          {
+            "manifest_id": "inv-T13-0002",
+            "attempt_id": "att-T13-0002",
+            "outcome": "PASS",
+            "at": "2026-09-10T20:42:05+09:00"
+          }
+        ],
+        "gap_kind": "none",
+        "summary": "The comparator row (record 1,564 B, below both the pinned 4,086 B gate and the normative 4,060 B target) stayed inline: the activation checker asserted Has_oos_file 0 and Oos_num_recs 0 after it was inserted, so the class had no OOS file until the first demotion. Values verified by digest and length as well as equality."
+      },
+      "flakiness": {
+        "attempts": 1,
+        "failures": 0,
+        "intermittent": false,
+        "consecutive_fresh_fixture_reproductions": 0,
+        "deterministic_claim": false
+      },
+      "known_issue": {
+        "ticket": null,
+        "relation": "none"
+      },
+      "attribution": {
+        "target": "unknown",
+        "evidence": null,
+        "note": "no failure to attribute"
+      },
+      "attempt_records": [
+        "cbrd-26659/campaign/evidence/ticket13/att-T13-0002.json"
+      ]
+    },
+    {
+      "row_id": "OOS-REP-02/cbrd_26659_oos_rep02_largest_first/16384-release-cs",
+      "requirement": "OOS-REP-02",
+      "family": "Representation",
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql",
+        "name": "cbrd_26659_oos_rep02_largest_first"
+      },
+      "configuration": {
+        "page_size": 16384,
+        "build_mode": "release",
+        "run_mode": "client-server",
+        "instrumentation_id": null,
+        "services": [
+          "cub_master:26659",
+          "cub_server:basic",
+          "broker:33120"
+        ]
+      },
+      "run": {
+        "manifest_id": "inv-T13-0002",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002.json",
+        "manifest_hash": "sha256:b5d97cdbee42448fcae66f5909684de177b0cc1d5f9c1e33d48930ca15e37aa6",
+        "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+        "testcase_commit": "e64c16481d1d65aeac0650edf32594d979c47a52",
+        "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "oos_evidence": {
+        "status": "reused",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002/activation_release.txt",
+        "applicability": {
+          "fixture": "Identical: the same two rows of (id INT PRIMARY KEY, big BIT VARYING, small BIT VARYING) with the same byte patterns and sizes, inserted in the same order, on a table the activation run owns exclusively in its own database.",
+          "execution_path": "DIFFERENT, which is why this is reused and not proven. The CTP invocation ran client-server over JDBC; the activation checker ran standalone under csql -S. The heap write path under test is server-side and identical in both, but the client transport and session layer are not. Certifies the INSERT-side demotion decision only; certifies no scan, recovery or vacuum path.",
+          "engine_configuration": "Same pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, same release install, same 16 KiB page size, unmodified build, no instrumentation. All nine assertions also pass identically on the pinned debug install (activation_debug.txt), so the observation is not release-specific.",
+          "conditions": "Single session, no concurrency, no fault injection, empty table at the start, no vacuum or restart in between. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture.",
+          "source_manifest": "inv-T13-0002"
+        }
+      },
+      "finding": {
+        "latest_outcome": "PASS",
+        "ever_failed": false,
+        "history": [
+          {
+            "manifest_id": "inv-T13-0002",
+            "attempt_id": "att-T13-0002",
+            "outcome": "PASS",
+            "at": "2026-09-10T20:42:05+09:00"
+          }
+        ],
+        "gap_kind": "Delivery gap",
+        "summary": "PASS on the logical half: the OOS-backed row (record 4,264 B) was accepted and both values read back exactly, and the activation checker asserted one chunk with Oos_recs_sumlen 3,024 = 3,008 payload + one 16-byte chunk header, which identifies the moved-out value as `big` (moving `small` would give 1,224). DELIVERY GAP, recorded deliberately: the committed CTP asset alone cannot detect a largest-first regression. No portable SQL exposes per-attribute placement, and DISK_SIZE reports the logical serialized size regardless of placement (ticket 11 section 5.2), so an engine demoting `small` instead would produce a byte-identical answer and CTP would report success. The discrimination comes only from evidence/ticket13/activation_check.sh, which is a validated checker (it exits non-zero on mismatch, and its negative control at the smallest-first value 1,224 is shown to fail) but is NOT part of the public regression suite. Closing this gap needs the checker wired into a scheduled invocation, which belongs to ticket 15 and ticket 22."
+      },
+      "flakiness": {
+        "attempts": 1,
+        "failures": 0,
+        "intermittent": false,
+        "consecutive_fresh_fixture_reproductions": 0,
+        "deterministic_claim": false
+      },
+      "known_issue": {
+        "ticket": null,
+        "relation": "none"
+      },
+      "attribution": {
+        "target": "unknown",
+        "evidence": null,
+        "note": "no failure to attribute"
+      },
+      "attempt_records": [
+        "cbrd-26659/campaign/evidence/ticket13/att-T13-0002.json"
+      ]
+    },
+    {
+      "row_id": "OOS-SQL-01/cbrd_26659_oos_rep02_largest_first/16384-release-cs",
+      "requirement": "OOS-SQL-01",
+      "family": "SQL operations",
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql",
+        "name": "cbrd_26659_oos_rep02_largest_first"
+      },
+      "configuration": {
+        "page_size": 16384,
+        "build_mode": "release",
+        "run_mode": "client-server",
+        "instrumentation_id": null,
+        "services": [
+          "cub_master:26659",
+          "cub_server:basic",
+          "broker:33120"
+        ]
+      },
+      "run": {
+        "manifest_id": "inv-T13-0002",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002.json",
+        "manifest_hash": "sha256:b5d97cdbee42448fcae66f5909684de177b0cc1d5f9c1e33d48930ca15e37aa6",
+        "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+        "testcase_commit": "e64c16481d1d65aeac0650edf32594d979c47a52",
+        "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "oos_evidence": {
+        "status": "reused",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002/activation_release.txt",
+        "applicability": {
+          "fixture": "Identical: the same two rows of (id INT PRIMARY KEY, big BIT VARYING, small BIT VARYING) with the same byte patterns and sizes, inserted in the same order, on a table the activation run owns exclusively in its own database.",
+          "execution_path": "DIFFERENT, which is why this is reused and not proven. The CTP invocation ran client-server over JDBC; the activation checker ran standalone under csql -S. The heap write path under test is server-side and identical in both, but the client transport and session layer are not. Certifies the INSERT-side demotion decision only; certifies no scan, recovery or vacuum path.",
+          "engine_configuration": "Same pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, same release install, same 16 KiB page size, unmodified build, no instrumentation. All nine assertions also pass identically on the pinned debug install (activation_debug.txt), so the observation is not release-specific.",
+          "conditions": "Single session, no concurrency, no fault injection, empty table at the start, no vacuum or restart in between. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture.",
+          "source_manifest": "inv-T13-0002"
+        }
+      },
+      "finding": {
+        "latest_outcome": "PASS",
+        "ever_failed": false,
+        "history": [
+          {
+            "manifest_id": "inv-T13-0002",
+            "attempt_id": "att-T13-0002",
+            "outcome": "PASS",
+            "at": "2026-09-10T20:42:05+09:00"
+          }
+        ],
+        "gap_kind": "none",
+        "summary": "Both rows read back byte-identical after the OOS-backed row was inserted. Checked three independent ways rather than by equality alone: OCTET_LENGTH (1,000/500 and 3,000/1,200), BIT_LENGTH (8,000/4,000 and 24,000/9,600) and MD5 over the whole value, every expected digest computed outside CUBRID before the run."
+      },
+      "flakiness": {
+        "attempts": 1,
+        "failures": 0,
+        "intermittent": false,
+        "consecutive_fresh_fixture_reproductions": 0,
+        "deterministic_claim": false
+      },
+      "known_issue": {
+        "ticket": null,
+        "relation": "none"
+      },
+      "attribution": {
+        "target": "unknown",
+        "evidence": null,
+        "note": "no failure to attribute"
+      },
+      "attempt_records": [
+        "cbrd-26659/campaign/evidence/ticket13/att-T13-0002.json"
+      ]
+    },
+    {
+      "row_id": "OOS-REP-05/-/-",
+      "requirement": "OOS-REP-05",
+      "family": "Representation",
+      "case": null,
+      "configuration": null,
+      "run": null,
+      "oos_evidence": {
+        "status": "not-applicable",
+        "channel": null,
+        "reference": null,
+        "applicability": null
+      },
+      "finding": {
+        "latest_outcome": null,
+        "ever_failed": false,
+        "history": [],
+        "gap_kind": "Capability gap",
+        "summary": "No case written yet (ticket 18 owns the identity-layout band). Recorded here because ticket 13 observed the consequence directly: Oos_recs_sumlen 3,024 reflects the pinned 16-byte chunk header, where the accepted 24-byte header (CBRD-26950) would give 3,032. That number is therefore kept as activation evidence and never written into an answer. Ticket 13's own expectations were chosen outside every band where the two layouts disagree, so this gap does not weaken them; derive_case_sizes.py --self-test demonstrates that the assertability gate does reject fixtures inside those bands."
+      },
+      "flakiness": {
+        "attempts": 0,
+        "failures": 0,
+        "intermittent": false,
+        "consecutive_fresh_fixture_reproductions": 0,
+        "deterministic_claim": false
+      },
+      "known_issue": {
+        "ticket": "CBRD-26950",
+        "relation": "related"
+      },
+      "attribution": {
+        "target": "unknown",
+        "evidence": null,
+        "note": null
+      },
+      "attempt_records": []
+    },
+    {
+      "row_id": "OOS-REP-02/-/debug-oos-log-channel",
+      "requirement": "OOS-REP-02",
+      "family": "Representation",
+      "case": null,
+      "configuration": null,
+      "run": null,
+      "oos_evidence": {
+        "status": "missing",
+        "channel": "debug-oos-log",
+        "reference": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002/ooslog_debug.txt",
+        "applicability": null
+      },
+      "finding": {
+        "latest_outcome": null,
+        "ever_failed": false,
+        "history": [],
+        "gap_kind": "Capability gap",
+        "summary": "EVIDENCE-CHANNEL gap, not a requirement gap. Ticket 13's ticket text asked for activation evidence from the debug OOS log; that channel cannot supply it at this pin. The SQL INSERT path calls oos_insert_many, which writes no debug line (ticket 11 section 6), and there is no runtime control over the log level. Measured on the pinned debug install during this invocation: oos.log stayed at 10 lines across the whole fixture and contained 0 oos_insert lines. SHOW HEAP OOS was used instead, as the handoff directs. The gap is recorded against the channel so that no later ticket assumes the debug log can witness an insert."
+      },
+      "flakiness": {
+        "attempts": 0,
+        "failures": 0,
+        "intermittent": false,
+        "consecutive_fresh_fixture_reproductions": 0,
+        "deterministic_claim": false
+      },
+      "known_issue": {
+        "ticket": null,
+        "relation": "none"
+      },
+      "attribution": {
+        "target": "instrumentation",
+        "evidence": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002/ooslog_debug.txt",
+        "note": "No insert-side log line exists at the pin; this is a property of the engine's logging, not a test failure."
+      },
+      "attempt_records": []
+    }
+  ],
+  "accepted_exclusions": []
+}

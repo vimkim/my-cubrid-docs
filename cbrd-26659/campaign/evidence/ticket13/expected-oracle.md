@@ -113,3 +113,96 @@ One deliberately wrong expected value (`big_ok` of the OOS-backed row changed fr
 `0`) must make the CTP comparison report a failure. If CTP reports success, the checking
 mechanism itself is not trustworthy and no result from it may be promoted. The control and
 its wrong answer are kept out of `sql/_36_guava/cbrd_26659/answers/`.
+
+---
+
+# Revision 2 — after the two-axis review (2026-09-10, before the revised case was run)
+
+The independent Spec review of revision 1 raised four findings that change what this
+oracle must contain. Revision 1's numbers are all unchanged and were all confirmed by the
+reviewer's own hand calculation; what follows is added, not corrected.
+
+## Why the whole-value equality flags were not enough
+
+Review finding: `big = CAST(REPEAT('AA', 3000) AS BIT VARYING)` asks the engine to compare
+a value it read back through the OOS path against a value it constructed itself. A defect
+that truncated the read *and* truncated the comparison operand identically would still
+report `1`. The spec requires oracles "justified independently of the observed engine
+result", and a self-comparison is not that.
+
+Three independent characterizations of the same values are therefore added. Each is
+predicted here from first principles and none is taken from an engine run:
+
+- `OCTET_LENGTH` — byte count, predicted as N.
+- `BIT_LENGTH` — bit count, predicted as N × 8.
+- `MD5` — a digest over the whole value, computed by a different code path than `=`.
+  CUBRID's `MD5` of a `BIT VARYING` digests its **lowercase hexadecimal** representation,
+  established by probe and reproduced independently in Python: for `REPEAT('AA', 3000)`
+  the digest is `md5("aa" * 3000)`. A truncated or corrupted read cannot produce the same
+  digest, and unlike the equality flag the digest is *visible* in the answer, so a wrong
+  value shows as a changed digest rather than as a silent `0`.
+
+| Value | N | `OCTET_LENGTH` | `BIT_LENGTH` | `MD5` (of the lowercase hex form) |
+|---|---:|---:|---:|---|
+| row 1 `big`, pattern AA | 3,000 | 3,000 | 24,000 | `56d1d803c5f755f96819a2996fb65e43` |
+| row 1 `small`, pattern BB | 1,200 | 1,200 | 9,600 | `6d5d5cbc57eac18ff5c9af115e2e7e69` |
+| row 2 `big`, pattern CC | 1,000 | 1,000 | 8,000 | `b8db77f08f4e9f30dfc31dcd13b53eee` |
+| row 2 `small`, pattern DD | 500 | 500 | 4,000 | `d9a0e8de165479413f12fc6065062298` |
+
+Verification command, independent of CUBRID:
+
+```
+python3 -c "import hashlib; print(hashlib.md5(('aa'*3000).encode()).hexdigest())"
+```
+
+## What the public case can and cannot prove
+
+Review finding, accepted: the committed `.sql` **cannot detect a largest-first
+regression**. It emits `DISK_SIZE`, lengths, digests and equality flags, and ticket 11 §5.2
+already established that `DISK_SIZE` "reports the logical serialized size regardless of
+placement (it is not a placement oracle)". An engine that demoted `small` instead of `big`
+would produce a byte-identical answer and CTP would report success.
+
+This is not a defect in the case; it follows from the ownership decision, which makes the
+public suite portable SQL only, and from the spec's rule that "activation evidence for
+public cases comes from corresponding instrumented or debug validation runs". No portable
+SQL exposes per-attribute placement at this pin.
+
+The consequence is recorded honestly rather than papered over:
+
+- The public case is the oracle for **value correctness** (`OOS-SQL-01`) and for the
+  logical half of `OOS-REP-01` and `OOS-REP-02`.
+- The **placement discrimination** for `OOS-REP-02` comes only from the paired activation
+  run, which is not part of the public regression.
+- Because that run was a passive evidence collector in revision 1, it could not fail. It
+  is therefore promoted to a **validated checker**: it now asserts the three expected
+  `SHOW HEAP OOS` observations and exits non-zero on any mismatch, and it has its own
+  negative control.
+- The residual gap — that nothing in the *committed public suite* fails when largest-first
+  breaks — is recorded as a Delivery gap row in the matrix against `OOS-REP-02`.
+
+## Expected activation-checker observations (unchanged values, now asserted)
+
+| After | `Has_oos_file` | `Oos_num_recs` | `Oos_recs_sumlen` |
+|---|---:|---:|---:|
+| `CREATE TABLE` | 0 | 0 | 0 |
+| comparator row (id 2) | 0 | 0 | 0 |
+| OOS-backed row (id 1) | 1 | 1 | 3,024 |
+
+`3024 = 3008 payload + one 16-byte chunk header`. Demoting `small` instead would give
+`1208 + 16 = 1224`; that difference is the checker's discriminating power. The sum is the
+pinned value: the accepted 24-byte chunk header (CBRD-26950) would give 3,032, so only the
+chunk *count* and the identification of *which* value was demoted are treated as stable;
+the exact sum is recorded as an observation of the pin.
+
+## Revised assertion count
+
+The revised case emits, per row group: `id`, `DISK_SIZE` ×2, `OCTET_LENGTH` ×2,
+`BIT_LENGTH` ×2, `MD5` ×2, equality ×2 = 11 scalars, for two row groups = 22; plus
+statement 10's 3 scalars and the two INSERT affected-row counts. **Assertion count = 27.**
+
+CTP reports no assertion counter of its own (it reports only `Total`, `Success`, `Fail`
+and `execute_case`). The manifest therefore records this count as **derived** from a
+whole-text match — a byte-identical `.result` entails that every one of the 27 scalars
+matched — and not as an independently measured execution count. Ticket 15's wrapper is
+where a real counter belongs.
