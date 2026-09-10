@@ -194,3 +194,22 @@ same re-derivation discipline on a revision as on a first write — or, better, 
 not settle — the spec reserves acceptance of incomplete coverage to the user alone. The
 `OOS-REP-02` placement gap is proposed for tickets 15 and 22, not accepted; only the user
 converts a coverage gap into an accepted exclusion.
+
+## 11. Environment side effects a replaying ticket must expect
+
+- **CTP rewrites the install's configuration.** `run.sh`'s `reset_cubrid_files` copies
+  `conf/cubrid.conf` to `conf/cubrid.conf.forFun` on its first run against an install and
+  restores from that backup on every later run. The pinned release install therefore now
+  carries a `cubrid.conf.forFun` created at the first CTP invocation, and its live
+  `cubrid.conf` was restored to the state ticket 11 left it in (`cubrid_port_id=26659`).
+  Nothing about the engine binaries changed, but a ticket that edits the install's
+  configuration between CTP runs will find its edit reverted.
+- **`pkill cub` is unscoped.** Before running the SQL suite, confirm no CUBRID process this
+  user owns is doing unrelated work. This host runs several installs concurrently
+  (`~/.cub/install/*`), and they all default to `cubrid_port_id=1523`, so only one master
+  can hold the default port at a time. A campaign run that stops someone else's master
+  frees that port, and another install may take it before the original is restarted.
+- **Databases retained as evidence.** `t13chk16k`, `t13chkd16k` and `t13chkn16k` under
+  `~/.cub/campaign/cbrd-26659/db` are the activation checker's fixtures and its negative
+  control. They are disposable, but they are referenced by the attempt record's
+  `resources_owned`, so delete them only when the retention class expires.
