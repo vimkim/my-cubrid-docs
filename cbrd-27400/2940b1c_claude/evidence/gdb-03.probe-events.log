@@ -1,0 +1,47 @@
+1788856006.493760 probe start: mode=pause &append_lsa=0x7f6634a86db8 &prior_lsa=0x7f6634a86cf0 max_wait=0.200s
+1788856006.632650 breakpoints set; resuming all threads
+1788856011.394144 [NO-ROLLOVER] lwp=169 word1=(207,8512) process_lsa=(207,2992) prior_lsa@stop=(208,3840) append now=(207,10552)
+1788856011.595072 [NO-ROLLOVER] lwp=169 word1=(207,10552) process_lsa=(207,1088) prior_lsa@stop=(208,14720) append now=(207,10552)
+1788856011.796066 [NO-ROLLOVER] lwp=169 word1=(207,10552) process_lsa=(207,1816) prior_lsa@stop=(208,14720) append now=(207,10552)
+1788856011.996919 [NO-ROLLOVER] lwp=169 word1=(207,10552) process_lsa=(207,4656) prior_lsa@stop=(208,14720) append now=(207,10552)
+1788856012.197665 [NO-ROLLOVER] lwp=169 word1=(207,10552) process_lsa=(207,3888) prior_lsa@stop=(208,14720) append now=(207,10552)
+1788856012.398412 [NO-ROLLOVER] lwp=169 word1=(207,10552) process_lsa=(207,5296) prior_lsa@stop=(208,14720) append now=(207,10552)
+1788856012.599418 [NO-ROLLOVER] lwp=169 word1=(207,10552) process_lsa=(207,5792) prior_lsa@stop=(208,14720) append now=(207,10552)
+1788856012.600660 [ROLLOVER-IN-WINDOW] lwp=174 word1(first load)=(208,15488) process_lsa=(208,14720) prior_lsa@stop=(209,5136) append_lsa now=(209,3912) waited_ms=0.01 -> second load reads offset 3912 : ASSERT-WILL-FAIL
+1788856012.600887 [TERMINAL] assert branch reached on lwp=174
+1788856012.602349 [TERMINAL-KIND] assert-branch(+117)
+1788856012.602471 [STOP] thread=(18, 174, 0) pc=0x7f66342d5595 log_get_undo_record
+1788856012.602567 [ASSERT-INPUTS] rcx@+117=0x0500000000000000 (= word1 XOR process_lsa) ; word1(first load)=0x3c800000000000d0 -> (208, 15488) ; second load offset(esi)=3912 ; process_lsa=0x39800000000000d0 -> (208, 14720) ; coherent append_lsa now=(209, 3912) ; prior_lsa now=(209, 5136)
+1788856012.602577 [ASSERT-INPUTS] effective compared value = (pageid from word1, offset from second load) = (208,3912) ; assert needs process_lsa (208, 14720) < that
+1788856013.186199 [BT]
+#0  0x00007f66342d5595 in log_get_undo_record (thread_p=thread_p@entry=0x7f6633b8ace8, log_page_p=log_page_p@entry=0x7f65b9fc40b0, process_lsa=..., recdes=recdes@entry=0x7f65b9fc8ad0) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/transaction/log_manager.c:9856
+#1  0x00007f66342037a6 in heap_get_visible_version_from_log (thread_p=thread_p@entry=0x7f6633b8ace8, recdes=0x7f65b9fc8ad0, previous_version_lsa=previous_version_lsa@entry=0x7f65b9fc8128, scan_cache=0x7f6440008048, has_chn=-1) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/storage/heap_file.c:26399
+#2  0x00007f663420a2be in heap_get_visible_version_internal (thread_p=thread_p@entry=0x7f6633b8ace8, context=context@entry=0x7f65b9fc8190, is_heap_scan=is_heap_scan@entry=true) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/storage/heap_file.c:26743
+#3  0x00007f663420a668 in heap_scan_get_visible_version_impl (thread_p=thread_p@entry=0x7f6633b8ace8, oid=oid@entry=0x7f65b9fc85e8, class_oid=class_oid@entry=0x7f644000805c, recdes=recdes@entry=0x7f65b9fc8ad0, peeked_recdes=peeked_recdes@entry=0x7f65b9fc85f0, scan_cache=scan_cache@entry=0x7f6440008048, ispeeking=1, old_chn=-1, recdes_consumption_policy=HEAP_RECDES_DONT_CONSUME_RAW_BYTES, is_cached_scan=false) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/storage/heap_file.c:26630
+#4  0x00007f663420b7eb in heap_next_internal (thread_p=thread_p@entry=0x7f6633b8ace8, class_oid=0x7f644000805c, class_oid@entry=0x7f6440008030, next_oid=next_oid@entry=0x7f6440008028, recdes=recdes@entry=0x7f65b9fc8ad0, scan_cache=scan_cache@entry=0x7f6440008048, ispeeking=ispeeking@entry=true, recdes_consumption_policy=HEAP_RECDES_DONT_CONSUME_RAW_BYTES, reversed_direction=<optimized out>, cache_recordinfo=0x0, hfid=0x7f6440008050) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/storage/heap_file.c:7914
+#5  0x00007f663420c4fd in heap_next (thread_p=thread_p@entry=0x7f6633b8ace8, hfid=hfid@entry=0x7f6440008038, class_oid=class_oid@entry=0x7f6440008030, next_oid=next_oid@entry=0x7f6440008028, recdes=recdes@entry=0x7f65b9fc8ad0, scan_cache=scan_cache@entry=0x7f6440008048, ispeeking=1, recdes_consumption_policy=HEAP_RECDES_DONT_CONSUME_RAW_BYTES) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/storage/heap_file.c:20270
+#6  0x00007f663407f768 in scan_next_heap_scan (scan_id=0x7f6440007fd8, thread_p=0x7f6633b8ace8) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/scan_manager.c:5935
+#7  scan_next_scan_local (thread_p=0x7f6633b8ace8, scan_id=0x7f6440007fd8) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/scan_manager.c:5719
+#8  0x00007f66340781d2 in scan_handle_single_scan (thread_p=thread_p@entry=0x7f6633b8ace8, s_id=0x7f6440007fd8, next_scan=next_scan@entry=0x7f663407d420 <scan_next_scan_local(THREAD_ENTRY*, SCAN_ID*)>) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/scan_manager.c:7702
+#9  0x00007f6634083c7c in scan_next_scan (thread_p=thread_p@entry=0x7f6633b8ace8, s_id=<optimized out>) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/scan_manager.c:7838
+#10 0x00007f663405a22c in qexec_intprt_fnc (thread_p=0x7f6633b8ace8, xasl=0x7f6440011bb0, xasl_state=0x7f65b9fc90d0, tplrec=0x7f65b9fc8f50, next_scan_fnc=0x56232e6d0008) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/query_executor.c:9496
+#11 0x00007f66340550bf in qexec_execute_mainblock_internal (p_class_instance_lock_info=<optimized out>, xasl_state=0x7f65b9fc90d0, xasl=0x7f66346cb688, thread_p=0x7f6633b8ace8) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/query_executor.c:16730
+#12 qexec_execute_mainblock (thread_p=thread_p@entry=0x7f6633b8ace8, xasl=xasl@entry=0x7f6440011bb0, xstate=xstate@entry=0x7f65b9fc90d0, p_class_instance_lock_info=p_class_instance_lock_info@entry=0x0) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/query_executor.c:15780
+#13 0x00007f663405f946 in qexec_execute_query (thread_p=thread_p@entry=0x7f6633b8ace8, xasl=0x7f6440011bb0, dbval_cnt=dbval_cnt@entry=0, dbval_ptr=dbval_ptr@entry=0x0, query_id=5) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/query_executor.c:17351
+#14 0x00007f6634060244 in qmgr_process_query (thread_p=thread_p@entry=0x7f6633b8ace8, xasl_tree=0x7f6440011bb0, xasl_stream=xasl_stream@entry=0x0, xasl_stream_size=xasl_stream_size@entry=0, dbval_count=dbval_count@entry=0, dbvals_p=dbvals_p@entry=0x0, flag=98317, query_p=0x7f6464000d20, tran_entry_p=0x56232ec80300) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/query_manager.c:1232
+#15 0x00007f66340648da in xqmgr_execute_query (thread_p=thread_p@entry=0x7f6633b8ace8, xasl_id_p=xasl_id_p@entry=0x7f65b9fc95f0, query_id_p=query_id_p@entry=0x7f65b9fc9550, dbval_count=<optimized out>, dbval_p=<optimized out>, flag_p=flag_p@entry=0x7f65b9fc9540, client_cache_time_p=0x7f65b9fc9570, server_cache_time_p=0x7f65b9fc9578, query_timeout=0, ret_cache_entry_p=0x7f65b9fc9560) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/query_manager.c:1577
+
+1788856013.186517 [REGS]
+rax            0xd0                208
+rcx            0x500000000000000   360287970189639680
+rdx            0x3980              14720
+rsi            0xf48               3912
+rbp            0x7f65b9fc4020      0x7f65b9fc4020
+
+1788856013.199303 [GLOBALS]
+$1 = {pageid = 209, offset = 3912}
+$2 = {pageid = 209, offset = 5136}
+$3 = {pageid = 209, offset = 3776}
+
+1788856013.199373 [FINAL-STATS] mode=pause hits=135 same_page=74 candidates=8 rollovers_in_window=1 would_fail=1 rollover_bp_count=n/a elapsed_s=6.6
+1788856013.309112 detached

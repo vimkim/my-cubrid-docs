@@ -1,0 +1,1284 @@
+{
+  "schema_version": 1,
+  "subject": "PR 7600: partition routing and OOS ownership",
+  "scope_kind": "mechanism",
+  "depth": "deep",
+  "source": {
+    "root": "/home/vimkim/gh/cb/CBRD-27089-has-oos-but-no-oos",
+    "repository": "https://github.com/CUBRID/CUBRID",
+    "revision": "b871ea386d2c5419b7abae07dda58b9b7f36377a",
+    "branch": "CBRD-27089-has-oos-but-no-oos",
+    "dirty": true,
+    "captured_at": "2026-09-08T05:13:46.165519+00:00",
+    "base_revision": "2940b1cfbc3c2d4d0fac3f9244a960350debd380",
+    "evidence_policy": "Pinned Git source only; six changed files verified equal to HEAD; unrelated dirty/submodule/untracked state excluded. Pre-existing runtime binary separately hashed."
+  },
+  "output": {
+    "format": "html",
+    "entry": "index.html",
+    "language": "en"
+  },
+  "scope": {
+    "frozen": true,
+    "included": [
+      "All six PR files and every diff hunk",
+      "Heap and partition foundations",
+      "Probe, final serialization, OOS ownership, side effects and error propagation",
+      "Regression test and bounded dependency traces"
+    ],
+    "excluded": [
+      "Full OOS implementation survey",
+      "Cross-database comparison",
+      "Production source modifications",
+      "Live CI monitoring"
+    ],
+    "central_questions": [
+      "What are heap and partition ownership?",
+      "Why does serialization before routing fail?",
+      "How does every changed line implement two-pass routing?",
+      "How do increments, LOB copies and error cleanup behave?",
+      "What does the regression test prove and leave open?"
+    ],
+    "scenarios": [
+      "Range-partition INSERT with 64-byte FORCE_OUTLINE value",
+      "Partition UPDATE and destination change",
+      "Nonpartitioned and no-demotion fast paths",
+      "REPLACE and ODKU duplicate probes",
+      "Allocation, pruning and serialization failures"
+    ]
+  },
+  "claims": [
+    {
+      "id": "C-001",
+      "text": "The selected class determines the heap whose OOS file receives serialized values.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_oos.cpp",
+          "start_line": 631,
+          "end_line": 660,
+          "symbol": "heap_oos_insert_serialized_values"
+        },
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 199,
+          "end_line": 209,
+          "symbol": "HEAP_HDR_STATS"
+        },
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12759,
+          "end_line": 12768,
+          "symbol": "heap_attrinfo_insert_to_oos"
+        }
+      ]
+    },
+    {
+      "id": "C-002",
+      "text": "Before the PR ordinary serialization preceded lower-locator partition routing.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "history",
+          "path": "src/transaction/locator_sr.c",
+          "start_line": 7692,
+          "end_line": 7725,
+          "symbol": "locator_attribute_info_force",
+          "revision": "2940b1cfbc3c2d4d0fac3f9244a960350debd380"
+        },
+        {
+          "type": "history",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12724,
+          "end_line": 12735,
+          "symbol": "heap_attrinfo_insert_to_oos",
+          "revision": "2940b1cfbc3c2d4d0fac3f9244a960350debd380"
+        },
+        {
+          "type": "source",
+          "path": "src/transaction/locator_sr.c",
+          "start_line": 4984,
+          "end_line": 4996,
+          "symbol": "locator_insert_force"
+        }
+      ]
+    },
+    {
+      "id": "C-003",
+      "text": "The added regression checks logical equality and root/p0/p1 OOS ownership.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "unit_tests/oos/sql/test_oos_sql_show.cpp",
+          "start_line": 387,
+          "end_line": 456,
+          "symbol": "PartitionedForceOutlineStoresOosInPrunedHeap"
+        },
+        {
+          "type": "test",
+          "path": "unit_tests/oos/sql/test_oos_sql_show.cpp",
+          "start_line": 47,
+          "end_line": 67,
+          "symbol": "show_heap_oos_query"
+        },
+        {
+          "type": "test",
+          "path": "unit_tests/oos/sql/test_oos_sql_show.cpp",
+          "start_line": 194,
+          "end_line": 214,
+          "symbol": "OosSqlShow fixture"
+        }
+      ]
+    },
+    {
+      "id": "C-004",
+      "text": "Partition routing evaluates a partition key and returns child class and heap identities.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/query/partition.c",
+          "start_line": 3467,
+          "end_line": 3581,
+          "symbol": "partition_find_partition_for_record"
+        },
+        {
+          "type": "source",
+          "path": "src/query/partition.c",
+          "start_line": 3605,
+          "end_line": 3689,
+          "symbol": "partition_prune_insert"
+        }
+      ]
+    },
+    {
+      "id": "C-005",
+      "text": "Heap records use slotted pages; OID, VPID, VFID and HFID identify different storage objects.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/slotted_page.h",
+          "start_line": 85,
+          "end_line": 91,
+          "symbol": "SPAGE_SLOT"
+        },
+        {
+          "type": "source",
+          "path": "src/storage/storage_common.h",
+          "start_line": 190,
+          "end_line": 231,
+          "symbol": "HFID and RECDES"
+        },
+        {
+          "type": "source",
+          "path": "src/compat/dbtype_def.h",
+          "start_line": 956,
+          "end_line": 974,
+          "symbol": "VPID and VFID"
+        },
+        {
+          "type": "source",
+          "path": "src/compat/dbtype_def.h",
+          "start_line": 1040,
+          "end_line": 1055,
+          "symbol": "OID"
+        }
+      ]
+    },
+    {
+      "id": "C-006",
+      "text": "The partitioned root holds no row data on the traced UPDATE path; child partitions supply heap identities.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/query/partition.c",
+          "start_line": 3755,
+          "end_line": 3777,
+          "symbol": "partition_prune_update"
+        },
+        {
+          "type": "source",
+          "path": "src/query/partition.c",
+          "start_line": 3550,
+          "end_line": 3570,
+          "symbol": "partition_find_partition_for_record"
+        }
+      ]
+    },
+    {
+      "id": "C-007",
+      "text": "Attribute state, record descriptors and copy-area memory have distinct roles.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/storage_common.h",
+          "start_line": 220,
+          "end_line": 231,
+          "symbol": "RECDES"
+        },
+        {
+          "type": "source",
+          "path": "src/transaction/locator_sr.c",
+          "start_line": 7490,
+          "end_line": 7562,
+          "symbol": "locator_allocate_copy_area_by_attr_info"
+        },
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 13317,
+          "end_line": 13359,
+          "symbol": "heap_attrinfo_transform_to_disk_internal"
+        }
+      ]
+    },
+    {
+      "id": "C-008",
+      "text": "The allocator dispatches probe first, then explicit-owner final mode, then LOB-specific ordinary mode.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/transaction/locator_sr.c",
+          "start_line": 7490,
+          "end_line": 7562,
+          "symbol": "locator_allocate_copy_area_by_attr_info"
+        }
+      ]
+    },
+    {
+      "id": "C-009",
+      "text": "OOS uses a head-OID/length stub, attribute offset flag, record flag and linked chunk headers.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/base/object_representation.h",
+          "start_line": 448,
+          "end_line": 468,
+          "symbol": "OR_OOS_INLINE_SIZE"
+        },
+        {
+          "type": "source",
+          "path": "src/base/object_representation_constants.h",
+          "start_line": 159,
+          "end_line": 174,
+          "symbol": "OR_RECORD_FLAG_HAS_OOS"
+        },
+        {
+          "type": "source",
+          "path": "src/storage/oos_file.hpp",
+          "start_line": 28,
+          "end_line": 34,
+          "symbol": "oos_record_header"
+        },
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 13088,
+          "end_line": 13122,
+          "symbol": "heap_attrinfo_transform_variable_to_disk"
+        },
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12869,
+          "end_line": 12910,
+          "symbol": "heap_attrinfo_transform_header_to_disk"
+        }
+      ]
+    },
+    {
+      "id": "C-010",
+      "text": "The transformer rejects OOS plus bigone before OOS insertion.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 13386,
+          "end_line": 13410,
+          "symbol": "heap_attrinfo_transform_to_disk_internal"
+        }
+      ]
+    },
+    {
+      "id": "C-011",
+      "text": "Logical SELECT can succeed despite a wrong heap-owner association.",
+      "kind": "inference",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 10452,
+          "end_line": 10505,
+          "symbol": "heap_attrvalue_read_oos_inline"
+        },
+        {
+          "type": "source",
+          "path": "src/storage/heap_oos.cpp",
+          "start_line": 631,
+          "end_line": 660,
+          "symbol": "heap_oos_insert_serialized_values"
+        }
+      ],
+      "rationale": "The read uses the parsed physical head OID directly, while write ownership is selected by class-to-heap lookup. A wrong owner can leave a readable physical chain. Earlier reports corroborate this but the old binary was not rerun."
+    },
+    {
+      "id": "C-012",
+      "text": "At the pinned head, missing-file success and lookup failure take different branches in the vacuum helper.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12433,
+          "end_line": 12543,
+          "symbol": "heap_oos_find_vfid"
+        },
+        {
+          "type": "source",
+          "path": "src/query/vacuum_oos.cpp",
+          "start_line": 401,
+          "end_line": 446,
+          "symbol": "vacuum_oos_find_vfid_for_heap_record"
+        }
+      ]
+    },
+    {
+      "id": "C-013",
+      "text": "The full current-server failure path of deliberately inconsistent ownership has not been reproduced here.",
+      "kind": "unknown",
+      "confidence": "medium",
+      "evidence": [],
+      "resolution": "Use an owned SERVER_MODE database and a controlled test seam to construct wrong ownership, then trace lookup result, VFID and cleanup. Do not infer current abort behavior from old comments."
+    },
+    {
+      "id": "C-014",
+      "text": "The pinned layout code still uses DB_PAGESIZE/4; this differs from the loaded normative physical-capacity target.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12365,
+          "end_line": 12430,
+          "symbol": "heap_attrinfo_determine_disk_layout"
+        }
+      ]
+    },
+    {
+      "id": "C-015",
+      "text": "The new wrappers implement ordinary/probe/final modes; final mode assumes a previous successful probe.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12790,
+          "end_line": 12854,
+          "symbol": "transform wrappers"
+        },
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 13317,
+          "end_line": 13356,
+          "symbol": "heap_attrinfo_transform_to_disk_internal"
+        }
+      ]
+    },
+    {
+      "id": "C-016",
+      "text": "The locator shares INSERT/UPDATE preparation, performs suppressed early routing when needed, and retains the ordinary no-demotion path.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/transaction/locator_sr.c",
+          "start_line": 7599,
+          "end_line": 7875,
+          "symbol": "locator_attribute_info_force"
+        },
+        {
+          "type": "source",
+          "path": "src/query/query_executor.c",
+          "start_line": 13620,
+          "end_line": 13644,
+          "symbol": "qexec_execute_insert"
+        }
+      ]
+    },
+    {
+      "id": "C-017",
+      "text": "Lower locators still route, lock and write; cross-partition UPDATE can move the record.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/transaction/locator_sr.c",
+          "start_line": 4984,
+          "end_line": 5079,
+          "symbol": "locator_insert_force"
+        },
+        {
+          "type": "source",
+          "path": "src/transaction/locator_sr.c",
+          "start_line": 5980,
+          "end_line": 6050,
+          "symbol": "locator_update_force"
+        }
+      ]
+    },
+    {
+      "id": "C-018",
+      "text": "Early and final routing should agree because the logical partition values are preserved across serialization modes.",
+      "kind": "inference",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/query/partition.c",
+          "start_line": 3496,
+          "end_line": 3514,
+          "symbol": "partition_find_partition_for_record"
+        },
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 13339,
+          "end_line": 13354,
+          "symbol": "increment pre-seeding"
+        },
+        {
+          "type": "source",
+          "path": "src/transaction/locator_sr.c",
+          "start_line": 7719,
+          "end_line": 7799,
+          "symbol": "locator_attribute_info_force"
+        }
+      ],
+      "rationale": "The same prepared DB_VALUEs underlie the inline probe and final image, and routing reads logical values. This supports agreement but is not exhaustive concurrency validation."
+    },
+    {
+      "id": "C-019",
+      "text": "Partition selection reads through root representation and adjusts the chosen child representation.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/query/partition.c",
+          "start_line": 3467,
+          "end_line": 3581,
+          "symbol": "partition_find_partition_for_record"
+        }
+      ]
+    },
+    {
+      "id": "C-020",
+      "text": "Ordinary suppression returns inline size before sorting and selection; oversized rows without eligible candidates need not demote.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12312,
+          "end_line": 12430,
+          "symbol": "heap_attrinfo_determine_disk_layout"
+        }
+      ]
+    },
+    {
+      "id": "C-021",
+      "text": "FORCE_OUTLINE suppression reports a hypothetical demotion and continues before mutating selection/payload/has_oos.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12338,
+          "end_line": 12363,
+          "symbol": "heap_attrinfo_determine_disk_layout"
+        }
+      ]
+    },
+    {
+      "id": "C-022",
+      "text": "Layout precedes OOS insertion, and OOS insertion precedes the buffer-writing retry loop.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 13317,
+          "end_line": 13450,
+          "symbol": "heap_attrinfo_transform_to_disk_internal"
+        },
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12632,
+          "end_line": 12776,
+          "symbol": "OOS request preparation and insertion"
+        }
+      ]
+    },
+    {
+      "id": "C-023",
+      "text": "The second PR commit added the forced-loop suppression and its small-value regression.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12343,
+          "end_line": 12352,
+          "symbol": "FORCE_OUTLINE suppression"
+        },
+        {
+          "type": "test",
+          "path": "unit_tests/oos/sql/test_oos_sql_show.cpp",
+          "start_line": 387,
+          "end_line": 456,
+          "symbol": "PartitionedForceOutlineStoresOosInPrunedHeap"
+        }
+      ]
+    },
+    {
+      "id": "C-024",
+      "text": "A per-call set prevents repeated fixed increments; final mode seeds a new set after a successful probe.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12964,
+          "end_line": 13035,
+          "symbol": "heap_attrinfo_transform_fixed_to_disk"
+        },
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 13339,
+          "end_line": 13354,
+          "symbol": "heap_attrinfo_transform_to_disk_internal"
+        }
+      ]
+    },
+    {
+      "id": "C-025",
+      "text": "Both inline and OOS serializers use the LOB-written state guard, which survives in attr_info across passes.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12545,
+          "end_line": 12647,
+          "symbol": "heap_attrinfo_dbvalue_to_recdes and serialize helper"
+        },
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 13123,
+          "end_line": 13201,
+          "symbol": "heap_attrinfo_transform_variable_to_disk"
+        }
+      ]
+    },
+    {
+      "id": "C-026",
+      "text": "REPLACE and ODKU use suppressed temporary key images while retaining their duplicate-search behavior and LOB modes.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/query/query_executor.c",
+          "start_line": 11920,
+          "end_line": 12143,
+          "symbol": "qexec_remove_duplicates_for_replace"
+        },
+        {
+          "type": "source",
+          "path": "src/query/query_executor.c",
+          "start_line": 12158,
+          "end_line": 12373,
+          "symbol": "qexec_oid_of_duplicate_key_update"
+        }
+      ]
+    },
+    {
+      "id": "C-027",
+      "text": "Copy-area cleanup is distinct from persistent-chain lifetime; the new final pass does not create a transaction boundary.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/transaction/locator_sr.c",
+          "start_line": 7747,
+          "end_line": 7875,
+          "symbol": "locator_attribute_info_force"
+        },
+        {
+          "type": "source",
+          "path": "src/storage/heap_oos.cpp",
+          "start_line": 674,
+          "end_line": 701,
+          "symbol": "heap_oos_delete_unreferenced contract"
+        },
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12727,
+          "end_line": 12776,
+          "symbol": "heap_attrinfo_insert_to_oos"
+        }
+      ]
+    },
+    {
+      "id": "C-028",
+      "text": "The OOS partition path adds serialization and routing work and can require a large temporary inline image.",
+      "kind": "inference",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/transaction/locator_sr.c",
+          "start_line": 7710,
+          "end_line": 7778,
+          "symbol": "locator_attribute_info_force"
+        },
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 13412,
+          "end_line": 13445,
+          "symbol": "buffer growth loop"
+        }
+      ],
+      "rationale": "Two explicit transformations and an early pruning call add work. The probe retains logical inline payload bytes. No latency or memory benchmark was performed."
+    },
+    {
+      "id": "C-029",
+      "text": "The pinned PR changes six implementation/header/test files, with 306 additions and 23 deletions.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.h",
+          "start_line": 505,
+          "end_line": 518,
+          "symbol": "new declarations"
+        },
+        {
+          "type": "source",
+          "path": "src/transaction/locator_sr.h",
+          "start_line": 83,
+          "end_line": 90,
+          "symbol": "allocator declaration"
+        }
+      ]
+    },
+    {
+      "id": "C-030",
+      "text": "The selected regression target uses GoogleTest and the standalone engine.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "config",
+          "path": "unit_tests/oos/sql/CMakeLists.txt",
+          "start_line": 21,
+          "end_line": 56,
+          "symbol": "SA test targets"
+        },
+        {
+          "type": "test",
+          "path": "unit_tests/oos/sql/test_oos_sql_common.hpp",
+          "start_line": 51,
+          "end_line": 86,
+          "symbol": "SqlServerEnv"
+        }
+      ]
+    },
+    {
+      "id": "C-031",
+      "text": "The existing recorded regression binary passed the selected test in a fresh private SA database.",
+      "kind": "runtime_observation",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "runtime",
+          "runtime_check": "R-001"
+        }
+      ]
+    },
+    {
+      "id": "C-032",
+      "text": "Runtime validation of the full UPDATE/LOB/increment/duplicate/vacuum/crash matrix remains open.",
+      "kind": "unknown",
+      "confidence": "medium",
+      "evidence": [],
+      "resolution": "Add/run the distinct focused experiments listed in chapter 7 in owned environments, recording actual state and ownership rather than only SQL equality."
+    },
+    {
+      "id": "C-033",
+      "text": "The interface is a stateful caller protocol that could be made more explicit in a future design.",
+      "kind": "inference",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12796,
+          "end_line": 12831,
+          "symbol": "probe and final wrappers"
+        },
+        {
+          "type": "source",
+          "path": "src/transaction/locator_sr.c",
+          "start_line": 7513,
+          "end_line": 7533,
+          "symbol": "mode dispatch"
+        }
+      ],
+      "rationale": "Mode depends on nullable pointers and prior mutation. A mode/prepared-state type is a possible design improvement, not implemented in this PR."
+    },
+    {
+      "id": "C-034",
+      "text": "Lazy OOS file creation uses a system operation with encryption policy, heap-header logging and page cleanup.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12446,
+          "end_line": 12542,
+          "symbol": "heap_oos_find_vfid"
+        }
+      ]
+    },
+    {
+      "id": "C-101",
+      "text": "REPLACE allocates a mode selector. Exact changes and commentary are in H01 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/query/query_executor.c",
+          "start_line": 11937,
+          "end_line": 11943,
+          "symbol": "REPLACE allocates a mode selector"
+        }
+      ]
+    },
+    {
+      "id": "C-102",
+      "text": "REPLACE suppresses discarded-image OOS writes. Exact changes and commentary are in H02 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/query/query_executor.c",
+          "start_line": 11952,
+          "end_line": 11962,
+          "symbol": "REPLACE suppresses discarded-image OOS writes"
+        }
+      ]
+    },
+    {
+      "id": "C-103",
+      "text": "ODKU allocates its mode selector. Exact changes and commentary are in H03 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/query/query_executor.c",
+          "start_line": 12175,
+          "end_line": 12181,
+          "symbol": "ODKU allocates its mode selector"
+        }
+      ]
+    },
+    {
+      "id": "C-104",
+      "text": "ODKU obtains an inline key image. Exact changes and commentary are in H04 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/query/query_executor.c",
+          "start_line": 12195,
+          "end_line": 12205,
+          "symbol": "ODKU obtains an inline key image"
+        }
+      ]
+    },
+    {
+      "id": "C-105",
+      "text": "Declare layout mode and verdict. Exact changes and commentary are in H05 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 694,
+          "end_line": 703,
+          "symbol": "Declare layout mode and verdict"
+        }
+      ]
+    },
+    {
+      "id": "C-106",
+      "text": "Declare the internal transformation protocol. Exact changes and commentary are in H06 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 783,
+          "end_line": 790,
+          "symbol": "Declare the internal transformation protocol"
+        }
+      ]
+    },
+    {
+      "id": "C-107",
+      "text": "Document hypothetical versus actual layout. Exact changes and commentary are in H07 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12299,
+          "end_line": 12309,
+          "symbol": "Document hypothetical versus actual layout"
+        }
+      ]
+    },
+    {
+      "id": "C-108",
+      "text": "Match the layout definition to its declaration. Exact changes and commentary are in H08 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12311,
+          "end_line": 12320,
+          "symbol": "Match the layout definition to its declaration"
+        }
+      ]
+    },
+    {
+      "id": "C-109",
+      "text": "Clear the verdict before planning. Exact changes and commentary are in H09 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12325,
+          "end_line": 12334,
+          "symbol": "Clear the verdict before planning"
+        }
+      ]
+    },
+    {
+      "id": "C-110",
+      "text": "Stop FORCE_OUTLINE selection inside a probe. Exact changes and commentary are in H10 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12343,
+          "end_line": 12357,
+          "symbol": "Stop FORCE_OUTLINE selection inside a probe"
+        }
+      ]
+    },
+    {
+      "id": "C-111",
+      "text": "Return full inline size for an ordinary probe. Exact changes and commentary are in H11 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12387,
+          "end_line": 12405,
+          "symbol": "Return full inline size for an ordinary probe"
+        }
+      ]
+    },
+    {
+      "id": "C-112",
+      "text": "Carry an owner without replacing attribute metadata. Exact changes and commentary are in H12 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12711,
+          "end_line": 12725,
+          "symbol": "Carry an owner without replacing attribute metadata"
+        }
+      ]
+    },
+    {
+      "id": "C-113",
+      "text": "Select the actual OOS owner at publication. Exact changes and commentary are in H13 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12759,
+          "end_line": 12765,
+          "symbol": "Select the actual OOS owner at publication"
+        }
+      ]
+    },
+    {
+      "id": "C-114",
+      "text": "Expose ordinary, probe and final wrappers. Exact changes and commentary are in H14 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12790,
+          "end_line": 12834,
+          "symbol": "Expose ordinary, probe and final wrappers"
+        }
+      ]
+    },
+    {
+      "id": "C-115",
+      "text": "Preserve the except-LOB entry point. Exact changes and commentary are in H15 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 12848,
+          "end_line": 12855,
+          "symbol": "Preserve the except-LOB entry point"
+        }
+      ]
+    },
+    {
+      "id": "C-116",
+      "text": "Specify the internal caller obligations. Exact changes and commentary are in H16 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 13306,
+          "end_line": 13322,
+          "symbol": "Specify the internal caller obligations"
+        }
+      ]
+    },
+    {
+      "id": "C-117",
+      "text": "Derive suppression and allocate an index variable. Exact changes and commentary are in H17 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 13324,
+          "end_line": 13331,
+          "symbol": "Derive suppression and allocate an index variable"
+        }
+      ]
+    },
+    {
+      "id": "C-118",
+      "text": "Reconstruct the increment guard for the second pass. Exact changes and commentary are in H18 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 13339,
+          "end_line": 13357,
+          "symbol": "Reconstruct the increment guard for the second pass"
+        }
+      ]
+    },
+    {
+      "id": "C-119",
+      "text": "Pass mode and verdict into layout calculation. Exact changes and commentary are in H19 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 13365,
+          "end_line": 13372,
+          "symbol": "Pass mode and verdict into layout calculation"
+        }
+      ]
+    },
+    {
+      "id": "C-120",
+      "text": "Forward the selected owner only when inserting OOS. Exact changes and commentary are in H20 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 13401,
+          "end_line": 13407,
+          "symbol": "Forward the selected owner only when inserting OOS"
+        }
+      ]
+    },
+    {
+      "id": "C-121",
+      "text": "Keep the unit-test bridge on its original owner. Exact changes and commentary are in H21 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.c",
+          "start_line": 28525,
+          "end_line": 28530,
+          "symbol": "Keep the unit-test bridge on its original owner"
+        }
+      ]
+    },
+    {
+      "id": "C-122",
+      "text": "Publish the two transformation interfaces. Exact changes and commentary are in H22 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/storage/heap_file.h",
+          "start_line": 507,
+          "end_line": 518,
+          "symbol": "Publish the two transformation interfaces"
+        }
+      ]
+    },
+    {
+      "id": "C-123",
+      "text": "Extend the copy-area adapter. Exact changes and commentary are in H23 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/transaction/locator_sr.c",
+          "start_line": 7475,
+          "end_line": 7492,
+          "symbol": "Extend the copy-area adapter"
+        }
+      ]
+    },
+    {
+      "id": "C-124",
+      "text": "Dispatch probe before owner before LOB mode. Exact changes and commentary are in H24 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/transaction/locator_sr.c",
+          "start_line": 7510,
+          "end_line": 7526,
+          "symbol": "Dispatch probe before owner before LOB mode"
+        }
+      ]
+    },
+    {
+      "id": "C-125",
+      "text": "Orchestrate probe, early routing and final serialization. Exact changes and commentary are in H25 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/transaction/locator_sr.c",
+          "start_line": 7708,
+          "end_line": 7770,
+          "symbol": "Orchestrate probe, early routing and final serialization"
+        }
+      ]
+    },
+    {
+      "id": "C-126",
+      "text": "Keep MVCC reevaluation on its existing path. Exact changes and commentary are in H26 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/transaction/locator_sr.c",
+          "start_line": 13851,
+          "end_line": 13857,
+          "symbol": "Keep MVCC reevaluation on its existing path"
+        }
+      ]
+    },
+    {
+      "id": "C-127",
+      "text": "Expose the adapter’s expanded signature. Exact changes and commentary are in H27 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/transaction/locator_sr.h",
+          "start_line": 83,
+          "end_line": 90,
+          "symbol": "Expose the adapter’s expanded signature"
+        }
+      ]
+    },
+    {
+      "id": "C-128",
+      "text": "Include the string type directly. Exact changes and commentary are in H28 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "unit_tests/oos/sql/test_oos_sql_show.cpp",
+          "start_line": 21,
+          "end_line": 27,
+          "symbol": "Include the string type directly"
+        }
+      ]
+    },
+    {
+      "id": "C-129",
+      "text": "Copy and normalize the diagnostic name. Exact changes and commentary are in H29 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "unit_tests/oos/sql/test_oos_sql_show.cpp",
+          "start_line": 155,
+          "end_line": 192,
+          "symbol": "Copy and normalize the diagnostic name"
+        }
+      ]
+    },
+    {
+      "id": "C-130",
+      "text": "Check value and all three heap owners. Exact changes and commentary are in H30 of chapter 6.",
+      "kind": "source_fact",
+      "confidence": "high",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "unit_tests/oos/sql/test_oos_sql_show.cpp",
+          "start_line": 384,
+          "end_line": 458,
+          "symbol": "Check value and all three heap owners"
+        }
+      ]
+    }
+  ],
+  "runtime_checks": [
+    {
+      "id": "R-001",
+      "question": "Does the recorded regression binary pass the selected ownership test in a fresh private SA database?",
+      "command": [
+        "python3",
+        "scripts/run-regression.py"
+      ],
+      "exit_code": 0,
+      "result_artifact": "evidence/regression.json",
+      "cleanup": "Owned private SA database and copied configuration retained at sandbox path for inspection; no server started or shared database touched."
+    }
+  ],
+  "unknowns": [
+    "C-013",
+    "C-032"
+  ],
+  "supplemental_sources": [
+    {
+      "path": "/home/vimkim/gh/cubrid-oos-context/OOS-CONTEXT.md",
+      "role": "normative specification; loaded earlier in this conversation and reconciled with pinned source"
+    },
+    {
+      "path": "/home/vimkim/gh/cubrid-manual/en/sql/partition.rst",
+      "revision": "3b6ae97bfbdc664b010ffa933ded5a05b291ae03",
+      "start_line": 1,
+      "end_line": 120,
+      "role": "partition terminology and range syntax"
+    },
+    {
+      "path": "/home/vimkim/gh/my-cubrid-docs/cbrd-27089/CBRD-27089-oos-chain-owner-b871ea3_codex.md",
+      "role": "earlier report; historical results, not newly executed"
+    },
+    {
+      "path": "/home/vimkim/gh/my-cubrid-jira/issues/CBRD-27089-partition-oos-owner_b871ea3_codex.md",
+      "role": "local issue intent and historical reproduction"
+    }
+  ]
+}

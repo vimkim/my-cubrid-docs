@@ -1,0 +1,134 @@
+diff --git a/src/storage/heap_file.c b/src/storage/heap_file.c
+index 81f5c2eea..9abad3c6b 100644
+--- a/src/storage/heap_file.c
++++ b/src/storage/heap_file.c
+@@ -26366,14 +26366,14 @@ heap_get_visible_version_from_log (THREAD_ENTRY * thread_p, RECDES * recdes, LOG
+     }
+ 
+   /* make sure prev_version_lsa is flushed from prior lsa list - wake up log flush thread if it's not flushed */
+-  oldest_prior_lsa = *log_get_append_lsa ();	/* TODO: fix atomicity issue on x86 */
++  lsa_atomic_load (&oldest_prior_lsa, log_get_append_lsa ());
+   if (LSA_LT (&oldest_prior_lsa, previous_version_lsa))
+     {
+       LOG_CS_ENTER (thread_p);
+       logpb_prior_lsa_append_all_list (thread_p);
+       LOG_CS_EXIT (thread_p);
+ 
+-      oldest_prior_lsa = *log_get_append_lsa ();
++      lsa_atomic_load (&oldest_prior_lsa, log_get_append_lsa ());
+       assert (!LSA_LT (&oldest_prior_lsa, previous_version_lsa));
+     }
+ 
+diff --git a/src/transaction/log_lsa.hpp b/src/transaction/log_lsa.hpp
+index 7112c5b22..9ad53d34c 100644
+--- a/src/transaction/log_lsa.hpp
++++ b/src/transaction/log_lsa.hpp
+@@ -32,6 +32,9 @@
+ #include <cstring>
+ #include <cinttypes>
+ #include <cstddef>
++#if defined (WINDOWS)
++#include <intrin.h>
++#endif
+ 
+ struct log_lsa
+ {
+@@ -74,6 +77,8 @@ constexpr log_lsa MAX_LSA = { MAX_LOG_LSA_PAGEID, MAX_LOG_LSA_OFFSET };
+ 
+ // functions
+ void lsa_to_string (char *buf, int buf_size, const log_lsa *lsa);
++inline void lsa_atomic_load (log_lsa *dest, const log_lsa *src);
++inline void lsa_atomic_store (log_lsa *dest, const log_lsa *src);
+ 
+ // log_lsa_queue
+ struct log_lsa_queue
+@@ -252,4 +257,39 @@ LSA_GT (const log_lsa *plsa1, const log_lsa *plsa2)
+   return *plsa1 > *plsa2;
+ }
+ 
++//
++// atomic copy of an LSA that one thread updates while other threads read it without a lock
++//
++// log_Gl.hdr.append_lsa is advanced under LOG_CS but copied without it by log_get_undo_record,
++// heap_get_visible_version_from_log and logpb_fetch_page. A plain copy lets the compiler access pageid and offset
++// separately, so a reader can pair the page id of one value with the offset of another (CBRD-27400). These helpers
++// copy the whole value with one 8-byte atomic access.
++//
++void
++lsa_atomic_load (log_lsa *dest, const log_lsa *src)
++{
++  assert (dest != NULL && src != NULL);
++#if defined (WINDOWS)
++  volatile std::int64_t *src_word = reinterpret_cast<volatile std::int64_t *> (const_cast<log_lsa *> (src));
++  std::int64_t word = _InterlockedCompareExchange64 (src_word, 0, 0);
++  std::memcpy (dest, &word, sizeof (word));
++#else
++  // the generic builtin takes non-const pointers (clang rejects const); *src is not modified
++  __atomic_load (const_cast<log_lsa *> (src), dest, __ATOMIC_ACQUIRE);
++#endif
++}
++
++void
++lsa_atomic_store (log_lsa *dest, const log_lsa *src)
++{
++  assert (dest != NULL && src != NULL);
++#if defined (WINDOWS)
++  std::int64_t word;
++  std::memcpy (&word, src, sizeof (word));
++  (void) _InterlockedExchange64 (reinterpret_cast<volatile std::int64_t *> (dest), word);
++#else
++  __atomic_store (dest, const_cast<log_lsa *> (src), __ATOMIC_RELEASE);
++#endif
++}
++
+ #endif  // _LOG_LSA_HPP_
+diff --git a/src/transaction/log_manager.c b/src/transaction/log_manager.c
+index bab2ffd65..563504f43 100644
+--- a/src/transaction/log_manager.c
++++ b/src/transaction/log_manager.c
+@@ -9878,7 +9878,7 @@ log_get_undo_record (THREAD_ENTRY * thread_p, LOG_PAGE * log_page_p, LOG_LSA pro
+   bool area_was_mallocated = false;
+ 
+   /* assert log record is not in prior list */
+-  oldest_prior_lsa = *log_get_append_lsa ();
++  lsa_atomic_load (&oldest_prior_lsa, log_get_append_lsa ());
+   assert (LSA_LT (&process_lsa, &oldest_prior_lsa));
+ 
+   log_rec_header = LOG_GET_LOG_RECORD_HEADER (log_page_p, &process_lsa);
+diff --git a/src/transaction/log_page_buffer.c b/src/transaction/log_page_buffer.c
+index 645f5c246..8dd57a8c3 100644
+--- a/src/transaction/log_page_buffer.c
++++ b/src/transaction/log_page_buffer.c
+@@ -1751,7 +1751,7 @@ logpb_fetch_page (THREAD_ENTRY * thread_p, const LOG_LSA * req_lsa, LOG_CS_ACCES
+ 
+   logpb_log ("called logpb_fetch_page with pageid = %lld\n", (long long int) req_lsa->pageid);
+ 
+-  LSA_COPY (&append_lsa, &log_Gl.hdr.append_lsa);
++  lsa_atomic_load (&append_lsa, &log_Gl.hdr.append_lsa);
+   LSA_COPY (&append_prev_lsa, &log_Gl.append.prev_lsa);
+ 
+   /*
+@@ -2633,6 +2633,7 @@ static void
+ logpb_next_append_page (THREAD_ENTRY * thread_p, LOG_SETDIRTY current_setdirty)
+ {
+   LOG_FLUSH_INFO *flush_info = &log_Gl.flush_info;
++  LOG_LSA next_append_lsa;
+   bool need_flush;
+ #if defined(SERVER_MODE)
+   int rv;
+@@ -2658,8 +2659,13 @@ logpb_next_append_page (THREAD_ENTRY * thread_p, LOG_SETDIRTY current_setdirty)
+ 
+   log_Gl.append.log_pgptr = NULL;
+ 
+-  log_Gl.hdr.append_lsa.pageid++;
+-  log_Gl.hdr.append_lsa.offset = 0;
++  /* Move to the next page with a single 8-byte store. log_get_undo_record, heap_get_visible_version_from_log and
++   * logpb_fetch_page copy append_lsa without LOG_CS; separate stores of pageid and offset would let them observe the old
++   * page paired with the new offset, or the new page paired with the old offset. */
++  LSA_COPY (&next_append_lsa, &log_Gl.hdr.append_lsa);
++  next_append_lsa.pageid++;
++  next_append_lsa.offset = 0;
++  lsa_atomic_store (&log_Gl.hdr.append_lsa, &next_append_lsa);
+ 
+   /*
+    * Is the next logical page to archive, currently located at the physical

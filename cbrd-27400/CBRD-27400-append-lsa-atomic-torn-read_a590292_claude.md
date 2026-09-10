@@ -4,7 +4,7 @@
 
 - JIRA: <https://jira.cubrid.org/browse/CBRD-27400> (상위 CBRD-26583 OOS M2 epic 의 sub-task, 태그 `[non-OOS]`)
 - 브랜치: `CBRD-27400-append-lsa-atomic` (base `develop`)
-- 소스 커밋: `14086ae`
+- 소스 커밋: `a590292`
 
 ## Purpose
 
@@ -111,7 +111,7 @@ store 1 과 store 2 사이에는 `(P+1, 예전 offset)` 이라는, 실제보다 
 
 ### Test Plan
 
-ns 단위 창은 ctest 나 JDBC 레벨 테스트로 고정할 수 없다. 그래서 재현 가능한 GDB 프로브로 검증했다. optdebug 빌드(`14086ae`, GCC 11.5)에서:
+ns 단위 창은 ctest 나 JDBC 레벨 테스트로 고정할 수 없다. 그래서 재현 가능한 GDB 프로브로 검증했다. optdebug 빌드(`a590292`, GCC 11.5)에서:
 
 1. **디스어셈블 확인**. 고친 `log_get_undo_record` 는 append 위치를 8바이트 load 하나(`mov (%rax),%rdx`)로 읽는다. 옛 빌드에 있던 둘째 offset load(`movzwl 0x6(%rax)`)가 사라졌다. `logpb_next_append_page` 는 새 값을 8바이트 store 하나(`mov %rax,0x118(%rbx)`)로 발행한다. 옛 빌드의 2바이트 store(`mov %ax,0x11e(%rbx)`)가 사라졌다.
 2. **GDB 프로브**. 첫 load 직후에 그 스레드를 멈춰, 다른 스레드가 페이지를 넘길 시간을 준다(진단 때 옛 코드에서 assert 를 강제로 터뜨린 것과 같은 스케줄). scenario 7 를 두 번 돌려, 옛 코드였다면 assert 가 터졌을 "창 안 페이지 전환" 을 합계 55회 잡았다(`would_fail_if_torn=55`). 고친 서버는 assert 분기에 0회 도달했고 core 를 남기지 않았다.

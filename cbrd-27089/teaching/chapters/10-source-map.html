@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>10. Source map and evidence ledger · PR 7600</title><style>:root {
+  color-scheme: light dark;
+  --bg: #f7f7f4;
+  --surface: #ffffff;
+  --text: #202522;
+  --muted: #5d6861;
+  --line: #d8ddd9;
+  --accent: #176b55;
+  --code-bg: #edf1ee;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151916;
+    --surface: #1e2420;
+    --text: #edf2ee;
+    --muted: #aeb9b1;
+    --line: #39443d;
+    --accent: #78d6b5;
+    --code-bg: #252d28;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.65 var(--font, inherit);
+}
+
+main,
+header,
+nav,
+footer {
+  width: min(960px, calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+header {
+  padding-block: 3rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+main {
+  padding-block: 2rem 4rem;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+h2 {
+  margin-top: 2.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--line);
+}
+
+a {
+  color: var(--accent);
+}
+
+code,
+pre {
+  background: var(--code-bg);
+  border-radius: 0.3rem;
+}
+
+code {
+  padding: 0.1rem 0.3rem;
+}
+
+pre {
+  overflow-x: auto;
+  padding: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  vertical-align: top;
+}
+
+th {
+  background: var(--code-bg);
+  text-align: left;
+}
+
+.claim,
+.callout {
+  margin-block: 1rem;
+  padding: 0.8rem 1rem;
+  background: var(--surface);
+  border-left: 0.3rem solid var(--accent);
+}
+
+.muted,
+.provenance {
+  color: var(--muted);
+}
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  nav {
+    display: none;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+:root { color-scheme: light; --bg:#f3f5f8; --surface:#fff; --text:#1b2b42; --muted:#506178; --line:#d6dfe9; --accent:#17604d; --code-bg:#edf1f6; }
+body { font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-size:17px; line-height:1.75; }
+header, main, footer { width:min(1020px,calc(100% - 40px)); }
+header { padding:3.5rem 0 2rem; }
+header h1 { font-size:clamp(2rem,5vw,3.8rem); max-width:850px; letter-spacing:-.04em; margin:.45rem 0 1rem; }
+.eyebrow { font-size:.8rem; letter-spacing:.13em; color:var(--accent); font-weight:750; text-transform:uppercase; }
+.subtitle { font-size:1.17rem; color:var(--muted); max-width:780px; }
+.badge { display:inline-block; padding:.2rem .7rem; border:1px solid var(--line); border-radius:30px; margin:.25rem .35rem .25rem 0; font-size:.8rem; background:#fff; }
+nav.toc { width:min(1020px,calc(100% - 40px)); margin:1.5rem auto; padding:1.2rem 1.5rem; background:var(--surface); border:1px solid var(--line); border-radius:12px; }
+nav.toc ol { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.3rem 2rem; padding-left:1.3rem; }
+nav.toc a { text-decoration:none; }
+article { background:var(--surface); border:1px solid var(--line); border-radius:14px; margin-bottom:2rem; padding:2rem 2.7rem; overflow-wrap:anywhere; }
+article h1 { font-size:2rem; margin-top:.3rem; }
+article h2 { font-size:1.4rem; }
+article h3 { font-size:1.12rem; margin-top:2rem; }
+article h1,article h2,article h3 { scroll-margin-top:2rem; }
+pre { font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; tab-size:4; white-space:pre; overflow-x:auto; overflow-wrap:normal; border:1px solid var(--line); }
+pre code { padding:0; background:transparent; }
+code { font-size:.88em; }
+.table-scroll { overflow-x:auto; margin:1.3rem 0; }
+table { font-size:.9rem; min-width:560px; }
+td, th { padding:.65rem .8rem; }
+figure { margin:1.5rem 0; padding:0; overflow-x:auto; }
+figure svg { display:block; width:100%; min-width:650px; height:auto; }
+figcaption { color:var(--muted); font-size:.85rem; padding:.5rem 0; }
+.claim-ref { white-space:nowrap; font-size:.72em; font-weight:650; text-decoration:none; }
+.chapter-nav { display:flex; justify-content:space-between; gap:1rem; border-top:1px solid var(--line); padding-top:1rem; margin-top:2rem; font-size:.85rem; }
+.source-kind { color:var(--muted); }
+.line-map { color:var(--muted); font-size:.86rem; }
+footer { padding:0 0 3rem; color:var(--muted); font-size:.9rem; }
+@media(max-width:650px) { header,main,footer,nav.toc { width:calc(100% - 24px); } article { padding:1.1rem; } article h1 { font-size:1.55rem; } nav.toc ol { grid-template-columns:1fr; } body { font-size:16px; } }
+@media print { :root { --text:#000; --bg:#fff; } body { font-size:10pt; } header,main,footer { width:100%; } header { padding-top:0; } article { border:0; padding:0; break-before:page; } figure { overflow:visible; break-inside:avoid; } figure svg { min-width:0; } pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:8pt; } table { min-width:0; font-size:9pt; } .table-scroll { overflow:visible; } .chapter-nav { display:none; } h2,h3 { break-after:avoid; } }
+</style></head>
+<body><header id="top"><div class="eyebrow">CUBRID · source reading course · PR 7600</div><h1>10. Source map and evidence ledger</h1><p class="subtitle">From heap pages and partition classes to every changed line of the two-pass OOS write path.</p><span class="badge">30 annotated hunks</span><span class="badge">6 changed files</span><span class="badge">Head b871ea386</span><span class="badge">Offline · Markdown + SVG</span><p class="provenance">Base 2940b1cfb · pinned on 2026-09-08 · English · basic C/C++ and SQL prerequisites</p></header>
+<nav class="toc" aria-label="Reading order"><a href="../index.html#chapter-10">Full book and reading map</a></nav><main><article><h1 id="chapter-10-10-source-map-and-evidence-ledger">10. Source map and evidence ledger</h1>
+<p>Claims below connect the narrative and diagrams to exact source intervals. All unmarked source intervals refer to the pinned head. History claims explicitly identify the base. Source facts describe code; inferences explain consequences; runtime observations apply to the recorded binary/input; unknowns name missing evidence.</p>
+<p>Head: <code>b871ea386d2c5419b7abae07dda58b9b7f36377a</code>. Base: <code>2940b1cfbc3c2d4d0fac3f9244a960350debd380</code>. Full SHA links remain usable after the PR changes. The captured source intervals are also in <code>evidence/source-excerpts.json</code> for offline inspection.</p>
+<h2 id="chapter-10-supplemental-reading">Supplemental reading</h2>
+<ul>
+<li>OOS normative context: <code>/home/vimkim/gh/cubrid-oos-context/OOS-CONTEXT.md</code>, last-updated label 2026-08-28. Its target policy differs from the pinned layout code; see chapter 2.</li>
+<li><a href="https://github.com/CUBRID/cubrid-manual/blob/3b6ae97bfbdc664b010ffa933ded5a05b291ae03/en/sql/partition.rst#L1-L120">CUBRID manual, partitioning</a>: local checkout at <code>3b6ae97bfbdc664b010ffa933ded5a05b291ae03</code>, lines 1–120; used for SQL concepts, not proof of OOS implementation.</li>
+<li><a href="https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-27089/CBRD-27089-oos-chain-owner-b871ea3_codex.md">Earlier PR report</a>: historical broader tests and issue narrative; no new CI or backup claim.</li>
+<li>Local issue draft: <code>/home/vimkim/gh/my-cubrid-jira/issues/CBRD-27089-partition-oos-owner_b871ea3_codex.md</code>; intent and prior results.</li>
+</ul>
+<h2 id="chapter-10-claims">Claims</h2>
+<p><a id="C-001"></a></p>
+<h3 id="chapter-10-c-001-source_fact">C-001 · source_fact</h3>
+<p>The selected class determines the heap whose OOS file receives serialized values.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_oos.cpp#L631-L660">src/storage/heap_oos.cpp:631–660</a> — <code>heap_oos_insert_serialized_values</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L199-L209">src/storage/heap_file.c:199–209</a> — <code>HEAP_HDR_STATS</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12759-L12768">src/storage/heap_file.c:12759–12768</a> — <code>heap_attrinfo_insert_to_oos</code></li>
+</ul>
+<p><a id="C-002"></a></p>
+<h3 id="chapter-10-c-002-source_fact">C-002 · source_fact</h3>
+<p>Before the PR ordinary serialization preceded lower-locator partition routing.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/transaction/locator_sr.c#L7692-L7725">src/transaction/locator_sr.c:7692–7725</a> — <code>locator_attribute_info_force</code> <strong>BASE history</strong></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.c#L12724-L12735">src/storage/heap_file.c:12724–12735</a> — <code>heap_attrinfo_insert_to_oos</code> <strong>BASE history</strong></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L4984-L4996">src/transaction/locator_sr.c:4984–4996</a> — <code>locator_insert_force</code></li>
+</ul>
+<p><a id="C-003"></a></p>
+<h3 id="chapter-10-c-003-source_fact">C-003 · source_fact</h3>
+<p>The added regression checks logical equality and root/p0/p1 OOS ownership.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/test_oos_sql_show.cpp#L387-L456">unit_tests/oos/sql/test_oos_sql_show.cpp:387–456</a> — <code>PartitionedForceOutlineStoresOosInPrunedHeap</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/test_oos_sql_show.cpp#L47-L67">unit_tests/oos/sql/test_oos_sql_show.cpp:47–67</a> — <code>show_heap_oos_query</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/test_oos_sql_show.cpp#L194-L214">unit_tests/oos/sql/test_oos_sql_show.cpp:194–214</a> — <code>OosSqlShow fixture</code></li>
+</ul>
+<p><a id="C-004"></a></p>
+<h3 id="chapter-10-c-004-source_fact">C-004 · source_fact</h3>
+<p>Partition routing evaluates a partition key and returns child class and heap identities.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/partition.c#L3467-L3581">src/query/partition.c:3467–3581</a> — <code>partition_find_partition_for_record</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/partition.c#L3605-L3689">src/query/partition.c:3605–3689</a> — <code>partition_prune_insert</code></li>
+</ul>
+<p><a id="C-005"></a></p>
+<h3 id="chapter-10-c-005-source_fact">C-005 · source_fact</h3>
+<p>Heap records use slotted pages; OID, VPID, VFID and HFID identify different storage objects.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/slotted_page.h#L85-L91">src/storage/slotted_page.h:85–91</a> — <code>SPAGE_SLOT</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/storage_common.h#L190-L231">src/storage/storage_common.h:190–231</a> — <code>HFID and RECDES</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/compat/dbtype_def.h#L956-L974">src/compat/dbtype_def.h:956–974</a> — <code>VPID and VFID</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/compat/dbtype_def.h#L1040-L1055">src/compat/dbtype_def.h:1040–1055</a> — <code>OID</code></li>
+</ul>
+<p><a id="C-006"></a></p>
+<h3 id="chapter-10-c-006-source_fact">C-006 · source_fact</h3>
+<p>The partitioned root holds no row data on the traced UPDATE path; child partitions supply heap identities.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/partition.c#L3755-L3777">src/query/partition.c:3755–3777</a> — <code>partition_prune_update</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/partition.c#L3550-L3570">src/query/partition.c:3550–3570</a> — <code>partition_find_partition_for_record</code></li>
+</ul>
+<p><a id="C-007"></a></p>
+<h3 id="chapter-10-c-007-source_fact">C-007 · source_fact</h3>
+<p>Attribute state, record descriptors and copy-area memory have distinct roles.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/storage_common.h#L220-L231">src/storage/storage_common.h:220–231</a> — <code>RECDES</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7490-L7562">src/transaction/locator_sr.c:7490–7562</a> — <code>locator_allocate_copy_area_by_attr_info</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13317-L13359">src/storage/heap_file.c:13317–13359</a> — <code>heap_attrinfo_transform_to_disk_internal</code></li>
+</ul>
+<p><a id="C-008"></a></p>
+<h3 id="chapter-10-c-008-source_fact">C-008 · source_fact</h3>
+<p>The allocator dispatches probe first, then explicit-owner final mode, then LOB-specific ordinary mode.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7490-L7562">src/transaction/locator_sr.c:7490–7562</a> — <code>locator_allocate_copy_area_by_attr_info</code></li>
+</ul>
+<p><a id="C-009"></a></p>
+<h3 id="chapter-10-c-009-source_fact">C-009 · source_fact</h3>
+<p>OOS uses a head-OID/length stub, attribute offset flag, record flag and linked chunk headers.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/base/object_representation.h#L448-L468">src/base/object_representation.h:448–468</a> — <code>OR_OOS_INLINE_SIZE</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/base/object_representation_constants.h#L159-L174">src/base/object_representation_constants.h:159–174</a> — <code>OR_RECORD_FLAG_HAS_OOS</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/oos_file.hpp#L28-L34">src/storage/oos_file.hpp:28–34</a> — <code>oos_record_header</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13088-L13122">src/storage/heap_file.c:13088–13122</a> — <code>heap_attrinfo_transform_variable_to_disk</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12869-L12910">src/storage/heap_file.c:12869–12910</a> — <code>heap_attrinfo_transform_header_to_disk</code></li>
+</ul>
+<p><a id="C-010"></a></p>
+<h3 id="chapter-10-c-010-source_fact">C-010 · source_fact</h3>
+<p>The transformer rejects OOS plus bigone before OOS insertion.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13386-L13410">src/storage/heap_file.c:13386–13410</a> — <code>heap_attrinfo_transform_to_disk_internal</code></li>
+</ul>
+<p><a id="C-011"></a></p>
+<h3 id="chapter-10-c-011-inference">C-011 · inference</h3>
+<p>Logical SELECT can succeed despite a wrong heap-owner association.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L10452-L10505">src/storage/heap_file.c:10452–10505</a> — <code>heap_attrvalue_read_oos_inline</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_oos.cpp#L631-L660">src/storage/heap_oos.cpp:631–660</a> — <code>heap_oos_insert_serialized_values</code></li>
+</ul>
+<p>Rationale: The read uses the parsed physical head OID directly, while write ownership is selected by class-to-heap lookup. A wrong owner can leave a readable physical chain. Earlier reports corroborate this but the old binary was not rerun.</p>
+<p><a id="C-012"></a></p>
+<h3 id="chapter-10-c-012-source_fact">C-012 · source_fact</h3>
+<p>At the pinned head, missing-file success and lookup failure take different branches in the vacuum helper.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12433-L12543">src/storage/heap_file.c:12433–12543</a> — <code>heap_oos_find_vfid</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/vacuum_oos.cpp#L401-L446">src/query/vacuum_oos.cpp:401–446</a> — <code>vacuum_oos_find_vfid_for_heap_record</code></li>
+</ul>
+<p><a id="C-013"></a></p>
+<h3 id="chapter-10-c-013-unknown">C-013 · unknown</h3>
+<p>The full current-server failure path of deliberately inconsistent ownership has not been reproduced here.</p>
+<p>Resolve by: Use an owned SERVER_MODE database and a controlled test seam to construct wrong ownership, then trace lookup result, VFID and cleanup. Do not infer current abort behavior from old comments.</p>
+<p><a id="C-014"></a></p>
+<h3 id="chapter-10-c-014-source_fact">C-014 · source_fact</h3>
+<p>The pinned layout code still uses DB_PAGESIZE/4; this differs from the loaded normative physical-capacity target.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12365-L12430">src/storage/heap_file.c:12365–12430</a> — <code>heap_attrinfo_determine_disk_layout</code></li>
+</ul>
+<p><a id="C-015"></a></p>
+<h3 id="chapter-10-c-015-source_fact">C-015 · source_fact</h3>
+<p>The new wrappers implement ordinary/probe/final modes; final mode assumes a previous successful probe.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12790-L12854">src/storage/heap_file.c:12790–12854</a> — <code>transform wrappers</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13317-L13356">src/storage/heap_file.c:13317–13356</a> — <code>heap_attrinfo_transform_to_disk_internal</code></li>
+</ul>
+<p><a id="C-016"></a></p>
+<h3 id="chapter-10-c-016-source_fact">C-016 · source_fact</h3>
+<p>The locator shares INSERT/UPDATE preparation, performs suppressed early routing when needed, and retains the ordinary no-demotion path.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7599-L7875">src/transaction/locator_sr.c:7599–7875</a> — <code>locator_attribute_info_force</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/query_executor.c#L13620-L13644">src/query/query_executor.c:13620–13644</a> — <code>qexec_execute_insert</code></li>
+</ul>
+<p><a id="C-017"></a></p>
+<h3 id="chapter-10-c-017-source_fact">C-017 · source_fact</h3>
+<p>Lower locators still route, lock and write; cross-partition UPDATE can move the record.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L4984-L5079">src/transaction/locator_sr.c:4984–5079</a> — <code>locator_insert_force</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L5980-L6050">src/transaction/locator_sr.c:5980–6050</a> — <code>locator_update_force</code></li>
+</ul>
+<p><a id="C-018"></a></p>
+<h3 id="chapter-10-c-018-inference">C-018 · inference</h3>
+<p>Early and final routing should agree because the logical partition values are preserved across serialization modes.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/partition.c#L3496-L3514">src/query/partition.c:3496–3514</a> — <code>partition_find_partition_for_record</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13339-L13354">src/storage/heap_file.c:13339–13354</a> — <code>increment pre-seeding</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7719-L7799">src/transaction/locator_sr.c:7719–7799</a> — <code>locator_attribute_info_force</code></li>
+</ul>
+<p>Rationale: The same prepared DB_VALUEs underlie the inline probe and final image, and routing reads logical values. This supports agreement but is not exhaustive concurrency validation.</p>
+<p><a id="C-019"></a></p>
+<h3 id="chapter-10-c-019-source_fact">C-019 · source_fact</h3>
+<p>Partition selection reads through root representation and adjusts the chosen child representation.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/partition.c#L3467-L3581">src/query/partition.c:3467–3581</a> — <code>partition_find_partition_for_record</code></li>
+</ul>
+<p><a id="C-020"></a></p>
+<h3 id="chapter-10-c-020-source_fact">C-020 · source_fact</h3>
+<p>Ordinary suppression returns inline size before sorting and selection; oversized rows without eligible candidates need not demote.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12312-L12430">src/storage/heap_file.c:12312–12430</a> — <code>heap_attrinfo_determine_disk_layout</code></li>
+</ul>
+<p><a id="C-021"></a></p>
+<h3 id="chapter-10-c-021-source_fact">C-021 · source_fact</h3>
+<p>FORCE_OUTLINE suppression reports a hypothetical demotion and continues before mutating selection/payload/has_oos.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12338-L12363">src/storage/heap_file.c:12338–12363</a> — <code>heap_attrinfo_determine_disk_layout</code></li>
+</ul>
+<p><a id="C-022"></a></p>
+<h3 id="chapter-10-c-022-source_fact">C-022 · source_fact</h3>
+<p>Layout precedes OOS insertion, and OOS insertion precedes the buffer-writing retry loop.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13317-L13450">src/storage/heap_file.c:13317–13450</a> — <code>heap_attrinfo_transform_to_disk_internal</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12632-L12776">src/storage/heap_file.c:12632–12776</a> — <code>OOS request preparation and insertion</code></li>
+</ul>
+<p><a id="C-023"></a></p>
+<h3 id="chapter-10-c-023-source_fact">C-023 · source_fact</h3>
+<p>The second PR commit added the forced-loop suppression and its small-value regression.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12343-L12352">src/storage/heap_file.c:12343–12352</a> — <code>FORCE_OUTLINE suppression</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/test_oos_sql_show.cpp#L387-L456">unit_tests/oos/sql/test_oos_sql_show.cpp:387–456</a> — <code>PartitionedForceOutlineStoresOosInPrunedHeap</code></li>
+</ul>
+<p><a id="C-024"></a></p>
+<h3 id="chapter-10-c-024-source_fact">C-024 · source_fact</h3>
+<p>A per-call set prevents repeated fixed increments; final mode seeds a new set after a successful probe.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12964-L13035">src/storage/heap_file.c:12964–13035</a> — <code>heap_attrinfo_transform_fixed_to_disk</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13339-L13354">src/storage/heap_file.c:13339–13354</a> — <code>heap_attrinfo_transform_to_disk_internal</code></li>
+</ul>
+<p><a id="C-025"></a></p>
+<h3 id="chapter-10-c-025-source_fact">C-025 · source_fact</h3>
+<p>Both inline and OOS serializers use the LOB-written state guard, which survives in attr_info across passes.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12545-L12647">src/storage/heap_file.c:12545–12647</a> — <code>heap_attrinfo_dbvalue_to_recdes and serialize helper</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13123-L13201">src/storage/heap_file.c:13123–13201</a> — <code>heap_attrinfo_transform_variable_to_disk</code></li>
+</ul>
+<p><a id="C-026"></a></p>
+<h3 id="chapter-10-c-026-source_fact">C-026 · source_fact</h3>
+<p>REPLACE and ODKU use suppressed temporary key images while retaining their duplicate-search behavior and LOB modes.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/query_executor.c#L11920-L12143">src/query/query_executor.c:11920–12143</a> — <code>qexec_remove_duplicates_for_replace</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/query_executor.c#L12158-L12373">src/query/query_executor.c:12158–12373</a> — <code>qexec_oid_of_duplicate_key_update</code></li>
+</ul>
+<p><a id="C-027"></a></p>
+<h3 id="chapter-10-c-027-source_fact">C-027 · source_fact</h3>
+<p>Copy-area cleanup is distinct from persistent-chain lifetime; the new final pass does not create a transaction boundary.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7747-L7875">src/transaction/locator_sr.c:7747–7875</a> — <code>locator_attribute_info_force</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_oos.cpp#L674-L701">src/storage/heap_oos.cpp:674–701</a> — <code>heap_oos_delete_unreferenced contract</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12727-L12776">src/storage/heap_file.c:12727–12776</a> — <code>heap_attrinfo_insert_to_oos</code></li>
+</ul>
+<p><a id="C-028"></a></p>
+<h3 id="chapter-10-c-028-inference">C-028 · inference</h3>
+<p>The OOS partition path adds serialization and routing work and can require a large temporary inline image.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7710-L7778">src/transaction/locator_sr.c:7710–7778</a> — <code>locator_attribute_info_force</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13412-L13445">src/storage/heap_file.c:13412–13445</a> — <code>buffer growth loop</code></li>
+</ul>
+<p>Rationale: Two explicit transformations and an early pruning call add work. The probe retains logical inline payload bytes. No latency or memory benchmark was performed.</p>
+<p><a id="C-029"></a></p>
+<h3 id="chapter-10-c-029-source_fact">C-029 · source_fact</h3>
+<p>The pinned PR changes six implementation/header/test files, with 306 additions and 23 deletions.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.h#L505-L518">src/storage/heap_file.h:505–518</a> — <code>new declarations</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.h#L83-L90">src/transaction/locator_sr.h:83–90</a> — <code>allocator declaration</code></li>
+</ul>
+<p><a id="C-030"></a></p>
+<h3 id="chapter-10-c-030-source_fact">C-030 · source_fact</h3>
+<p>The selected regression target uses GoogleTest and the standalone engine.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/CMakeLists.txt#L21-L56">unit_tests/oos/sql/CMakeLists.txt:21–56</a> — <code>SA test targets</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/test_oos_sql_common.hpp#L51-L86">unit_tests/oos/sql/test_oos_sql_common.hpp:51–86</a> — <code>SqlServerEnv</code></li>
+</ul>
+<p><a id="C-031"></a></p>
+<h3 id="chapter-10-c-031-runtime_observation">C-031 · runtime_observation</h3>
+<p>The existing recorded regression binary passed the selected test in a fresh private SA database.</p>
+<p>Runtime check R-001: <code>evidence/regression.json</code>.</p>
+<p><a id="C-032"></a></p>
+<h3 id="chapter-10-c-032-unknown">C-032 · unknown</h3>
+<p>Runtime validation of the full UPDATE/LOB/increment/duplicate/vacuum/crash matrix remains open.</p>
+<p>Resolve by: Add/run the distinct focused experiments listed in chapter 7 in owned environments, recording actual state and ownership rather than only SQL equality.</p>
+<p><a id="C-033"></a></p>
+<h3 id="chapter-10-c-033-inference">C-033 · inference</h3>
+<p>The interface is a stateful caller protocol that could be made more explicit in a future design.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12796-L12831">src/storage/heap_file.c:12796–12831</a> — <code>probe and final wrappers</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7513-L7533">src/transaction/locator_sr.c:7513–7533</a> — <code>mode dispatch</code></li>
+</ul>
+<p>Rationale: Mode depends on nullable pointers and prior mutation. A mode/prepared-state type is a possible design improvement, not implemented in this PR.</p>
+<p><a id="C-034"></a></p>
+<h3 id="chapter-10-c-034-source_fact">C-034 · source_fact</h3>
+<p>Lazy OOS file creation uses a system operation with encryption policy, heap-header logging and page cleanup.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12446-L12542">src/storage/heap_file.c:12446–12542</a> — <code>heap_oos_find_vfid</code></li>
+</ul>
+<p><a id="C-101"></a></p>
+<h3 id="chapter-10-c-101-source_fact">C-101 · source_fact</h3>
+<p>REPLACE allocates a mode selector. Exact changes and commentary are in H01 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/query_executor.c#L11937-L11943">src/query/query_executor.c:11937–11943</a> — <code>REPLACE allocates a mode selector</code></li>
+</ul>
+<p><a id="C-102"></a></p>
+<h3 id="chapter-10-c-102-source_fact">C-102 · source_fact</h3>
+<p>REPLACE suppresses discarded-image OOS writes. Exact changes and commentary are in H02 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/query_executor.c#L11952-L11962">src/query/query_executor.c:11952–11962</a> — <code>REPLACE suppresses discarded-image OOS writes</code></li>
+</ul>
+<p><a id="C-103"></a></p>
+<h3 id="chapter-10-c-103-source_fact">C-103 · source_fact</h3>
+<p>ODKU allocates its mode selector. Exact changes and commentary are in H03 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/query_executor.c#L12175-L12181">src/query/query_executor.c:12175–12181</a> — <code>ODKU allocates its mode selector</code></li>
+</ul>
+<p><a id="C-104"></a></p>
+<h3 id="chapter-10-c-104-source_fact">C-104 · source_fact</h3>
+<p>ODKU obtains an inline key image. Exact changes and commentary are in H04 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/query_executor.c#L12195-L12205">src/query/query_executor.c:12195–12205</a> — <code>ODKU obtains an inline key image</code></li>
+</ul>
+<p><a id="C-105"></a></p>
+<h3 id="chapter-10-c-105-source_fact">C-105 · source_fact</h3>
+<p>Declare layout mode and verdict. Exact changes and commentary are in H05 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L694-L703">src/storage/heap_file.c:694–703</a> — <code>Declare layout mode and verdict</code></li>
+</ul>
+<p><a id="C-106"></a></p>
+<h3 id="chapter-10-c-106-source_fact">C-106 · source_fact</h3>
+<p>Declare the internal transformation protocol. Exact changes and commentary are in H06 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L783-L790">src/storage/heap_file.c:783–790</a> — <code>Declare the internal transformation protocol</code></li>
+</ul>
+<p><a id="C-107"></a></p>
+<h3 id="chapter-10-c-107-source_fact">C-107 · source_fact</h3>
+<p>Document hypothetical versus actual layout. Exact changes and commentary are in H07 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12299-L12309">src/storage/heap_file.c:12299–12309</a> — <code>Document hypothetical versus actual layout</code></li>
+</ul>
+<p><a id="C-108"></a></p>
+<h3 id="chapter-10-c-108-source_fact">C-108 · source_fact</h3>
+<p>Match the layout definition to its declaration. Exact changes and commentary are in H08 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12311-L12320">src/storage/heap_file.c:12311–12320</a> — <code>Match the layout definition to its declaration</code></li>
+</ul>
+<p><a id="C-109"></a></p>
+<h3 id="chapter-10-c-109-source_fact">C-109 · source_fact</h3>
+<p>Clear the verdict before planning. Exact changes and commentary are in H09 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12325-L12334">src/storage/heap_file.c:12325–12334</a> — <code>Clear the verdict before planning</code></li>
+</ul>
+<p><a id="C-110"></a></p>
+<h3 id="chapter-10-c-110-source_fact">C-110 · source_fact</h3>
+<p>Stop FORCE_OUTLINE selection inside a probe. Exact changes and commentary are in H10 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12343-L12357">src/storage/heap_file.c:12343–12357</a> — <code>Stop FORCE_OUTLINE selection inside a probe</code></li>
+</ul>
+<p><a id="C-111"></a></p>
+<h3 id="chapter-10-c-111-source_fact">C-111 · source_fact</h3>
+<p>Return full inline size for an ordinary probe. Exact changes and commentary are in H11 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12387-L12405">src/storage/heap_file.c:12387–12405</a> — <code>Return full inline size for an ordinary probe</code></li>
+</ul>
+<p><a id="C-112"></a></p>
+<h3 id="chapter-10-c-112-source_fact">C-112 · source_fact</h3>
+<p>Carry an owner without replacing attribute metadata. Exact changes and commentary are in H12 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12711-L12725">src/storage/heap_file.c:12711–12725</a> — <code>Carry an owner without replacing attribute metadata</code></li>
+</ul>
+<p><a id="C-113"></a></p>
+<h3 id="chapter-10-c-113-source_fact">C-113 · source_fact</h3>
+<p>Select the actual OOS owner at publication. Exact changes and commentary are in H13 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12759-L12765">src/storage/heap_file.c:12759–12765</a> — <code>Select the actual OOS owner at publication</code></li>
+</ul>
+<p><a id="C-114"></a></p>
+<h3 id="chapter-10-c-114-source_fact">C-114 · source_fact</h3>
+<p>Expose ordinary, probe and final wrappers. Exact changes and commentary are in H14 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12790-L12834">src/storage/heap_file.c:12790–12834</a> — <code>Expose ordinary, probe and final wrappers</code></li>
+</ul>
+<p><a id="C-115"></a></p>
+<h3 id="chapter-10-c-115-source_fact">C-115 · source_fact</h3>
+<p>Preserve the except-LOB entry point. Exact changes and commentary are in H15 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12848-L12855">src/storage/heap_file.c:12848–12855</a> — <code>Preserve the except-LOB entry point</code></li>
+</ul>
+<p><a id="C-116"></a></p>
+<h3 id="chapter-10-c-116-source_fact">C-116 · source_fact</h3>
+<p>Specify the internal caller obligations. Exact changes and commentary are in H16 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13306-L13322">src/storage/heap_file.c:13306–13322</a> — <code>Specify the internal caller obligations</code></li>
+</ul>
+<p><a id="C-117"></a></p>
+<h3 id="chapter-10-c-117-source_fact">C-117 · source_fact</h3>
+<p>Derive suppression and allocate an index variable. Exact changes and commentary are in H17 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13324-L13331">src/storage/heap_file.c:13324–13331</a> — <code>Derive suppression and allocate an index variable</code></li>
+</ul>
+<p><a id="C-118"></a></p>
+<h3 id="chapter-10-c-118-source_fact">C-118 · source_fact</h3>
+<p>Reconstruct the increment guard for the second pass. Exact changes and commentary are in H18 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13339-L13357">src/storage/heap_file.c:13339–13357</a> — <code>Reconstruct the increment guard for the second pass</code></li>
+</ul>
+<p><a id="C-119"></a></p>
+<h3 id="chapter-10-c-119-source_fact">C-119 · source_fact</h3>
+<p>Pass mode and verdict into layout calculation. Exact changes and commentary are in H19 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13365-L13372">src/storage/heap_file.c:13365–13372</a> — <code>Pass mode and verdict into layout calculation</code></li>
+</ul>
+<p><a id="C-120"></a></p>
+<h3 id="chapter-10-c-120-source_fact">C-120 · source_fact</h3>
+<p>Forward the selected owner only when inserting OOS. Exact changes and commentary are in H20 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13401-L13407">src/storage/heap_file.c:13401–13407</a> — <code>Forward the selected owner only when inserting OOS</code></li>
+</ul>
+<p><a id="C-121"></a></p>
+<h3 id="chapter-10-c-121-source_fact">C-121 · source_fact</h3>
+<p>Keep the unit-test bridge on its original owner. Exact changes and commentary are in H21 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L28525-L28530">src/storage/heap_file.c:28525–28530</a> — <code>Keep the unit-test bridge on its original owner</code></li>
+</ul>
+<p><a id="C-122"></a></p>
+<h3 id="chapter-10-c-122-source_fact">C-122 · source_fact</h3>
+<p>Publish the two transformation interfaces. Exact changes and commentary are in H22 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.h#L507-L518">src/storage/heap_file.h:507–518</a> — <code>Publish the two transformation interfaces</code></li>
+</ul>
+<p><a id="C-123"></a></p>
+<h3 id="chapter-10-c-123-source_fact">C-123 · source_fact</h3>
+<p>Extend the copy-area adapter. Exact changes and commentary are in H23 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7475-L7492">src/transaction/locator_sr.c:7475–7492</a> — <code>Extend the copy-area adapter</code></li>
+</ul>
+<p><a id="C-124"></a></p>
+<h3 id="chapter-10-c-124-source_fact">C-124 · source_fact</h3>
+<p>Dispatch probe before owner before LOB mode. Exact changes and commentary are in H24 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7510-L7526">src/transaction/locator_sr.c:7510–7526</a> — <code>Dispatch probe before owner before LOB mode</code></li>
+</ul>
+<p><a id="C-125"></a></p>
+<h3 id="chapter-10-c-125-source_fact">C-125 · source_fact</h3>
+<p>Orchestrate probe, early routing and final serialization. Exact changes and commentary are in H25 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7708-L7770">src/transaction/locator_sr.c:7708–7770</a> — <code>Orchestrate probe, early routing and final serialization</code></li>
+</ul>
+<p><a id="C-126"></a></p>
+<h3 id="chapter-10-c-126-source_fact">C-126 · source_fact</h3>
+<p>Keep MVCC reevaluation on its existing path. Exact changes and commentary are in H26 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L13851-L13857">src/transaction/locator_sr.c:13851–13857</a> — <code>Keep MVCC reevaluation on its existing path</code></li>
+</ul>
+<p><a id="C-127"></a></p>
+<h3 id="chapter-10-c-127-source_fact">C-127 · source_fact</h3>
+<p>Expose the adapter’s expanded signature. Exact changes and commentary are in H27 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.h#L83-L90">src/transaction/locator_sr.h:83–90</a> — <code>Expose the adapter’s expanded signature</code></li>
+</ul>
+<p><a id="C-128"></a></p>
+<h3 id="chapter-10-c-128-source_fact">C-128 · source_fact</h3>
+<p>Include the string type directly. Exact changes and commentary are in H28 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/test_oos_sql_show.cpp#L21-L27">unit_tests/oos/sql/test_oos_sql_show.cpp:21–27</a> — <code>Include the string type directly</code></li>
+</ul>
+<p><a id="C-129"></a></p>
+<h3 id="chapter-10-c-129-source_fact">C-129 · source_fact</h3>
+<p>Copy and normalize the diagnostic name. Exact changes and commentary are in H29 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/test_oos_sql_show.cpp#L155-L192">unit_tests/oos/sql/test_oos_sql_show.cpp:155–192</a> — <code>Copy and normalize the diagnostic name</code></li>
+</ul>
+<p><a id="C-130"></a></p>
+<h3 id="chapter-10-c-130-source_fact">C-130 · source_fact</h3>
+<p>Check value and all three heap owners. Exact changes and commentary are in H30 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/test_oos_sql_show.cpp#L384-L458">unit_tests/oos/sql/test_oos_sql_show.cpp:384–458</a> — <code>Check value and all three heap owners</code></li>
+</ul></article></main><footer>Built from editable Markdown and SVG. Source claims use the pinned revision; the fresh runtime observation uses the separately hashed pre-existing binary. Study questions are answered separately in chapter 9. <a href="#top">Back to top</a></footer></body></html>

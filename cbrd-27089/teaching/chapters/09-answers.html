@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>9. Answers and teach-back rubric · PR 7600</title><style>:root {
+  color-scheme: light dark;
+  --bg: #f7f7f4;
+  --surface: #ffffff;
+  --text: #202522;
+  --muted: #5d6861;
+  --line: #d8ddd9;
+  --accent: #176b55;
+  --code-bg: #edf1ee;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151916;
+    --surface: #1e2420;
+    --text: #edf2ee;
+    --muted: #aeb9b1;
+    --line: #39443d;
+    --accent: #78d6b5;
+    --code-bg: #252d28;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.65 var(--font, inherit);
+}
+
+main,
+header,
+nav,
+footer {
+  width: min(960px, calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+header {
+  padding-block: 3rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+main {
+  padding-block: 2rem 4rem;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+h2 {
+  margin-top: 2.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--line);
+}
+
+a {
+  color: var(--accent);
+}
+
+code,
+pre {
+  background: var(--code-bg);
+  border-radius: 0.3rem;
+}
+
+code {
+  padding: 0.1rem 0.3rem;
+}
+
+pre {
+  overflow-x: auto;
+  padding: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  vertical-align: top;
+}
+
+th {
+  background: var(--code-bg);
+  text-align: left;
+}
+
+.claim,
+.callout {
+  margin-block: 1rem;
+  padding: 0.8rem 1rem;
+  background: var(--surface);
+  border-left: 0.3rem solid var(--accent);
+}
+
+.muted,
+.provenance {
+  color: var(--muted);
+}
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  nav {
+    display: none;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+:root { color-scheme: light; --bg:#f3f5f8; --surface:#fff; --text:#1b2b42; --muted:#506178; --line:#d6dfe9; --accent:#17604d; --code-bg:#edf1f6; }
+body { font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-size:17px; line-height:1.75; }
+header, main, footer { width:min(1020px,calc(100% - 40px)); }
+header { padding:3.5rem 0 2rem; }
+header h1 { font-size:clamp(2rem,5vw,3.8rem); max-width:850px; letter-spacing:-.04em; margin:.45rem 0 1rem; }
+.eyebrow { font-size:.8rem; letter-spacing:.13em; color:var(--accent); font-weight:750; text-transform:uppercase; }
+.subtitle { font-size:1.17rem; color:var(--muted); max-width:780px; }
+.badge { display:inline-block; padding:.2rem .7rem; border:1px solid var(--line); border-radius:30px; margin:.25rem .35rem .25rem 0; font-size:.8rem; background:#fff; }
+nav.toc { width:min(1020px,calc(100% - 40px)); margin:1.5rem auto; padding:1.2rem 1.5rem; background:var(--surface); border:1px solid var(--line); border-radius:12px; }
+nav.toc ol { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.3rem 2rem; padding-left:1.3rem; }
+nav.toc a { text-decoration:none; }
+article { background:var(--surface); border:1px solid var(--line); border-radius:14px; margin-bottom:2rem; padding:2rem 2.7rem; overflow-wrap:anywhere; }
+article h1 { font-size:2rem; margin-top:.3rem; }
+article h2 { font-size:1.4rem; }
+article h3 { font-size:1.12rem; margin-top:2rem; }
+article h1,article h2,article h3 { scroll-margin-top:2rem; }
+pre { font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; tab-size:4; white-space:pre; overflow-x:auto; overflow-wrap:normal; border:1px solid var(--line); }
+pre code { padding:0; background:transparent; }
+code { font-size:.88em; }
+.table-scroll { overflow-x:auto; margin:1.3rem 0; }
+table { font-size:.9rem; min-width:560px; }
+td, th { padding:.65rem .8rem; }
+figure { margin:1.5rem 0; padding:0; overflow-x:auto; }
+figure svg { display:block; width:100%; min-width:650px; height:auto; }
+figcaption { color:var(--muted); font-size:.85rem; padding:.5rem 0; }
+.claim-ref { white-space:nowrap; font-size:.72em; font-weight:650; text-decoration:none; }
+.chapter-nav { display:flex; justify-content:space-between; gap:1rem; border-top:1px solid var(--line); padding-top:1rem; margin-top:2rem; font-size:.85rem; }
+.source-kind { color:var(--muted); }
+.line-map { color:var(--muted); font-size:.86rem; }
+footer { padding:0 0 3rem; color:var(--muted); font-size:.9rem; }
+@media(max-width:650px) { header,main,footer,nav.toc { width:calc(100% - 24px); } article { padding:1.1rem; } article h1 { font-size:1.55rem; } nav.toc ol { grid-template-columns:1fr; } body { font-size:16px; } }
+@media print { :root { --text:#000; --bg:#fff; } body { font-size:10pt; } header,main,footer { width:100%; } header { padding-top:0; } article { border:0; padding:0; break-before:page; } figure { overflow:visible; break-inside:avoid; } figure svg { min-width:0; } pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:8pt; } table { min-width:0; font-size:9pt; } .table-scroll { overflow:visible; } .chapter-nav { display:none; } h2,h3 { break-after:avoid; } }
+</style></head>
+<body><header id="top"><div class="eyebrow">CUBRID · source reading course · PR 7600</div><h1>9. Answers and teach-back rubric</h1><p class="subtitle">From heap pages and partition classes to every changed line of the two-pass OOS write path.</p><span class="badge">30 annotated hunks</span><span class="badge">6 changed files</span><span class="badge">Head b871ea386</span><span class="badge">Offline · Markdown + SVG</span><p class="provenance">Base 2940b1cfb · pinned on 2026-09-08 · English · basic C/C++ and SQL prerequisites</p></header>
+<nav class="toc" aria-label="Reading order"><a href="../index.html#chapter-09">Full book and reading map</a></nav><main><article><h1 id="chapter-09-9-answers-and-teach-back-rubric">9. Answers and teach-back rubric</h1>
+<p>Attempt the questions before reading this chapter. These are model answers you can compare with your own; explaining the dependency in your own words matters more than reproducing a phrase.</p>
+<h2 id="chapter-09-chapter-1">Chapter 1</h2>
+<ol>
+<li><code>id=10</code> belongs to p1 because p0's upper bound is exclusive. Moving 1 to 20 changes the destination from p0 to p1.</li>
+<li>Class identity selects metadata and permissions; HFID selects the heap storage. A lookup connects them.</li>
+<li>No. A probe is serialized bytes in memory. A normal OOS transform may already have written chains even though the heap row has not yet been inserted.</li>
+<li>Root connects to two child classes; p0 connects to a heap page and row slot; p1 connects to its own heap. The root is not one page enclosing both heaps. <a class="claim-ref" href="../index.html#C-004">[C-004]</a> <a class="claim-ref" href="../index.html#C-006">[C-006]</a> <a class="claim-ref" href="../index.html#C-008">[C-008]</a></li>
+</ol>
+<h2 id="chapter-09-chapter-2">Chapter 2</h2>
+<ol>
+<li>The stub's physical OID may still reach the right bytes even if the OOS file belongs to the wrong heap.</li>
+<li>In p0's heap header <code>oos_vfid</code>, which identifies p0's associated OOS file.</li>
+<li>Inspect the return contract and actual branches at the pinned revision, then reproduce that path if making a runtime claim. True-with-null and false-on-error differ here.</li>
+<li>The heap record is the row representation, the chunk record is one physical piece of an OOS value, and a chain is the sequence of chunks comprising the complete serialized value. <a class="claim-ref" href="../index.html#C-009">[C-009]</a> <a class="claim-ref" href="../index.html#C-011">[C-011]</a> <a class="claim-ref" href="../index.html#C-012">[C-012]</a></li>
+</ol>
+<h2 id="chapter-09-chapter-3">Chapter 3</h2>
+<ol>
+<li>Two transforms, one early pruning call and another in the lower INSERT locator for the normal partitioned path.</li>
+<li>Retain the inline image and continue to the lower locator; skip the additional final transform.</li>
+<li>The image has served routing. Clearing its pointer prevents reuse and avoids retaining two copy areas unnecessarily; prepared attribute state is separate.</li>
+<li>p1's associated OOS file should receive the new chain.</li>
+<li>Internal suppression is computed from pointer presence, so null selects normal behavior despite the wrapper's name. <a class="claim-ref" href="../index.html#C-015">[C-015]</a> <a class="claim-ref" href="../index.html#C-016">[C-016]</a> <a class="claim-ref" href="../index.html#C-017">[C-017]</a></li>
+</ol>
+<h2 id="chapter-09-chapter-4">Chapter 4</h2>
+<ol>
+<li>Verdict true; <code>has_oos=false</code>; selection false. Final mode changes selection and flag.</li>
+<li>Plan selection, payload replacement accounting and <code>has_oos=true</code> would still execute.</li>
+<li>The local set survives retries within a call. A second call needs a new set seeded from the successful probe's history.</li>
+<li>The <code>HEAP_ATTRVALUE</code> inside the surviving attribute cache retains the state and updated DB_VALUE.</li>
+<li>Retrying buffer output should not publish another chain for the same prepared value. <a class="claim-ref" href="../index.html#C-020">[C-020]</a> <a class="claim-ref" href="../index.html#C-021">[C-021]</a> <a class="claim-ref" href="../index.html#C-022">[C-022]</a> <a class="claim-ref" href="../index.html#C-024">[C-024]</a> <a class="claim-ref" href="../index.html#C-025">[C-025]</a></li>
+</ol>
+<h2 id="chapter-09-chapter-5">Chapter 5</h2>
+<ol>
+<li>The non-null pointer selects suppression; duplicate lookup does not need to know whether an eventual write would demote.</li>
+<li>The attribute cache and its DB_VALUE changes survive; probe bytes do not.</li>
+<li>Database records and transaction logs have a separate lifetime from a process memory buffer.</li>
+<li>Final routing/representation handling, child locks, scan-cache selection and the move decision remain there.</li>
+<li>Measure serialization CPU, temporary peak memory and repeat routing cost as logical value sizes grow. <a class="claim-ref" href="../index.html#C-026">[C-026]</a> <a class="claim-ref" href="../index.html#C-027">[C-027]</a> <a class="claim-ref" href="../index.html#C-028">[C-028]</a></li>
+</ol>
+<h2 id="chapter-09-chapter-6">Chapter 6</h2>
+<p>Use the coverage table to identify the file and old/new interval of each hunk. Explain the pointer arguments before interpreting a wrapper name. For the large locator hunk, trace both the successful early-prune branch and the no-demotion branch. For the test, explain first-tuple positioning before the loop and why all three <code>saw_*</code> checks matter. Source listings and C-101 through C-130 supply the exact answer key.</p>
+<h2 id="chapter-09-chapter-7">Chapter 7</h2>
+<ol>
+<li>A result set that omitted p1 could pass all remaining per-row checks without proving p1 was inspected.</li>
+<li>It reaches the forced loop while avoiding the ordinary size gate; this distinguishes the second commit's missing suppression case.</li>
+<li>A value may have many chunks and a row may have many OOS-backed attributes.</li>
+<li>Begin from fresh p0 ownership, UPDATE the partition key to p1, then verify the logical row is in p1 and the new chain is associated with p1. Separate old-version retention from leaks; in SERVER_MODE account for vacuum and older snapshots before expecting old counts to vanish. <a class="claim-ref" href="../index.html#C-003">[C-003]</a> <a class="claim-ref" href="../index.html#C-032">[C-032]</a></li>
+</ol>
+<h2 id="chapter-09-chapter-8-counterfactual-review">Chapter 8: counterfactual review</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Edit</th>
+<th>Consequence to investigate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Remove <code>continue</code></td>
+<td>Probe can select/write forced OOS values before routing.</td>
+</tr>
+<tr>
+<td>2. Null probe pointer</td>
+<td>Ordinary transform can publish under the original class.</td>
+</tr>
+<tr>
+<td>3. Original class as final owner</td>
+<td>Correct routing can still be paired with wrong OOS ownership, especially cross-partition UPDATE.</td>
+</tr>
+<tr>
+<td>4. Final increment flag false</td>
+<td>A pending fixed increment can run twice.</td>
+</tr>
+<tr>
+<td>5. Always do second pass</td>
+<td>Unnecessary serialization/routing on no-demotion writes; correctness requires rechecking the side-effect protocol.</td>
+</tr>
+<tr>
+<td>6. Free attribute cache</td>
+<td>Final pass loses values/metadata and may access freed state.</td>
+</tr>
+<tr>
+<td>7. Ordinary duplicate probe</td>
+<td>Candidate images can create chains that no inserted row owns.</td>
+</tr>
+<tr>
+<td>8. Remove lower pruning</td>
+<td>Early outputs do not replace final class/HFID, representation and locking responsibilities.</td>
+</tr>
+<tr>
+<td>9. Equality-only test</td>
+<td>Correct bytes can mask wrong ownership.</td>
+</tr>
+<tr>
+<td>10. True implies existing file</td>
+<td>The documented true-with-null result is misinterpreted.</td>
+</tr>
+</tbody>
+</table></div>
+<p>These answers derive from the mode, writer and routing traces <a class="claim-ref" href="../index.html#C-008">[C-008]</a> <a class="claim-ref" href="../index.html#C-012">[C-012]</a> <a class="claim-ref" href="../index.html#C-016">[C-016]</a> <a class="claim-ref" href="../index.html#C-017">[C-017]</a> <a class="claim-ref" href="../index.html#C-024">[C-024]</a> <a class="claim-ref" href="../index.html#C-026">[C-026]</a>. A counterfactual is a prediction; no mutated engine was built for these exercises.</p>
+<h2 id="chapter-09-a-practical-rubric">A practical rubric</h2>
+<p>Score each of these five areas from 0 to 2: storage identities, old/new flow, side-effect lifetime, every-hunk explanation, and test evidence limits. Zero means recognition without explanation; one means you can explain with the source open; two means you can predict a changed input or missing line and then locate the evidence. A ten-point score requires explaining why SELECT success and a passing SA test have limited scope. Mark your own results in the progress file.</p></article></main><footer>Built from editable Markdown and SVG. Source claims use the pinned revision; the fresh runtime observation uses the separately hashed pre-existing binary. Study questions are answered separately in chapter 9. <a href="#top">Back to top</a></footer></body></html>

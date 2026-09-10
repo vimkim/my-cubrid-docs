@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" role="img" aria-labelledby="title desc">
+<title id="title">Source stays separate from destination ownership</title><desc id="desc">INSERT 9 selects p0, builds an OOS0-backed row, then final routing inserts in H0. UPDATE from 9 to 12 keeps source p0 and old record, selects p1 for OOS1, then final routing validates and moves the row to H1.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#506178"/></marker></defs>
+<rect width="900" height="380" rx="16" fill="#f3f5f8"/>
+<g font-family="system-ui,sans-serif" fill="#1b2b42">
+<text x="28" y="34" font-size="20" font-weight="700">Same pipeline · different source and destination</text>
+<text x="28" y="72" font-size="16" font-weight="700">INSERT: id 9, payload A</text>
+<g fill="white" stroke="#d6dfe9"><rect x="28" y="88" width="245" height="88" rx="10"/><rect x="326" y="88" width="245" height="88" rx="10"/><rect x="624" y="88" width="248" height="88" rx="10"/>
+<rect x="28" y="234" width="245" height="100" rx="10"/><rect x="326" y="234" width="245" height="100" rx="10"/><rect x="624" y="234" width="248" height="100" rx="10"/></g>
+<g font-size="17"><text x="45" y="119">Effective key 9 → p0</text><text x="45" y="150">No full payload probe</text><text x="343" y="119">A → OOS0</text><text x="343" y="150">Build row with its stub</text><text x="641" y="119">Final route → p0</text><text x="641" y="150">Agree, then insert in H0</text>
+<text x="28" y="214" font-weight="700">UPDATE: id 9 → 12, payload A → B</text>
+<text x="45" y="265">Source: p0 + old record</text><text x="45" y="301">Effective key 12 → p1</text><text x="343" y="265">B → OOS1</text><text x="343" y="301">Source cache stays p0</text><text x="641" y="265">Final route → p1</text><text x="641" y="301">Agree, then move to H1</text></g>
+<text x="28" y="363" font-size="15" fill="#17604d">New-chain placement does not prove old-chain reclamation is safe.</text></g>
+<g stroke="#506178" stroke-width="2" marker-end="url(#arrow)"><path d="M278 132H318"/><path d="M576 132H616"/><path d="M278 283H318"/><path d="M576 283H616"/></g>
+</svg>

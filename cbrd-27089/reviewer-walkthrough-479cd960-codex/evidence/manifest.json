@@ -1,0 +1,1045 @@
+{
+  "created_utc": "2026-09-10T08:13:40.714014+00:00",
+  "source_root": "/home/vimkim/gh/cb/CBRD-27089-has-oos-but-no-oos",
+  "head": "479cd960ec04196c92bf9789b1fc340af9046c2c",
+  "base": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+  "merge_base": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+  "pr_url": "https://github.com/CUBRID/cubrid/pull/7600",
+  "files": [
+    {
+      "path": "src/query/partition.c",
+      "additions": 227,
+      "deletions": 59
+    },
+    {
+      "path": "src/query/partition_sr.h",
+      "additions": 10,
+      "deletions": 0
+    },
+    {
+      "path": "src/query/query_executor.c",
+      "additions": 12,
+      "deletions": 2
+    },
+    {
+      "path": "src/storage/heap_file.c",
+      "additions": 250,
+      "deletions": 14
+    },
+    {
+      "path": "src/storage/heap_file.h",
+      "additions": 12,
+      "deletions": 0
+    },
+    {
+      "path": "src/transaction/locator_sr.c",
+      "additions": 131,
+      "deletions": 25
+    },
+    {
+      "path": "src/transaction/locator_sr.h",
+      "additions": 2,
+      "deletions": 1
+    },
+    {
+      "path": "unit_tests/oos/sql/CMakeLists.txt",
+      "additions": 3,
+      "deletions": 0
+    },
+    {
+      "path": "unit_tests/oos/sql/test_oos_sql_show.cpp",
+      "additions": 1312,
+      "deletions": 0
+    },
+    {
+      "path": "unit_tests/oos/test_oos_real_vacuum_server.cpp",
+      "additions": 44,
+      "deletions": 0
+    }
+  ],
+  "hunks": [
+    {
+      "id": 1,
+      "path": "src/query/partition.c",
+      "old": 155,
+      "old_count": 6,
+      "new": 155,
+      "new_count": 13,
+      "header": "@@ -155,6 +155,13 @@ static MATCH_STATUS partition_prune_list (PRUNING_CONTEXT * pinfo, const DB_VALU",
+      "title": "Declare routing seams",
+      "en": "Declare the extracted evaluator, stable-key initializer and shared INSERT implementation before use. These are internal seams; the public entry points are declared separately in partition_sr.h.",
+      "ko": "공통 evaluator, stable key 초기화, INSERT internal을 사용 전에 선언한다. 내부 경계이며 외부 entry point는 partition_sr.h에 따로 선언한다."
+    },
+    {
+      "id": 2,
+      "path": "src/query/partition.c",
+      "old": 3454,
+      "old_count": 64,
+      "new": 3461,
+      "new_count": 42,
+      "header": "@@ -3454,64 +3461,42 @@ error_exit:",
+      "title": "Separate evaluation from record decoding",
+      "en": "Rename the core to partition_find_partition_for_expr, accept an explicit thread and borrowed destination output, and remove decoding from this function. Decoding is relocated to the record adapter in H05. The evaluator can now consume either an effective key or a decoded record key without duplicating partition semantics.",
+      "ko": "공통 부분을 partition_find_partition_for_expr로 추출하고 thread와 borrowed destination output을 받는다. Decode는 H05의 record adapter로 옮긴다. Effective key와 record key가 같은 partition 의미를 사용하게 한다."
+    },
+    {
+      "id": 3,
+      "path": "src/query/partition.c",
+      "old": 3527,
+      "old_count": 8,
+      "new": 3512,
+      "new_count": 7,
+      "header": "@@ -3527,8 +3512,7 @@ partition_find_partition_for_record (PRUNING_CONTEXT * pinfo, const OID * class_",
+      "title": "Return missing-partition errors directly",
+      "en": "The evaluator no longer owns temporary record DB_VALUE cleanup. Return ER_PARTITION_NOT_EXIST directly on failed matching; the adapter that owns the key handles cleanup.",
+      "ko": "Evaluator가 임시 record value의 정리를 소유하지 않으므로 match 실패를 직접 반환한다. Key를 소유한 adapter가 정리한다."
+    },
+    {
+      "id": 4,
+      "path": "src/query/partition.c",
+      "old": 3546,
+      "old_count": 7,
+      "new": 3530,
+      "new_count": 7,
+      "header": "@@ -3546,7 +3530,7 @@ partition_find_partition_for_record (PRUNING_CONTEXT * pinfo, const OID * class_",
+      "title": "Preserve the non-single-result error",
+      "en": "Keep the original no-destination/internal-error choice, replacing a cleanup jump with a direct return. This does not relax the requirement for exactly one destination.",
+      "ko": "목적지 없음과 internal error를 구별하는 기존 코드는 유지하고 cleanup jump만 직접 return으로 바꾼다. 목적지가 정확히 하나여야 한다는 조건은 유지된다."
+    },
+    {
+      "id": 5,
+      "path": "src/query/partition.c",
+      "old": 3554,
+      "old_count": 8,
+      "new": 3538,
+      "new_count": 121,
+      "header": "@@ -3554,8 +3538,121 @@ partition_find_partition_for_record (PRUNING_CONTEXT * pinfo, const OID * class_",
+      "title": "Stable key slot and two adapters",
+      "en": "Return the context-owned OR_PARTITION, then add a reusable one-key slot and the attrinfo adapter. Clear stale key values before evaluation, mark the slot readable, prepare only the owned effective key, copy OID/HFID only after success and clear it on exit. Reintroduce the old record adapter: decode under root representation, restore the original ID, evaluate using the shared core, and retain destination representation patching.",
+      "ko": "Context 소유 OR_PARTITION을 반환하고 one-key slot과 attrinfo adapter를 추가한다. 이전 key를 clear → readable 표시 → 독립 effective key 준비 → 평가 성공 시 OID/HFID 복사 → value 정리 순서다. 기존 record adapter는 root representation으로 읽고 원래 ID를 복원한 뒤 공통 evaluator를 호출하며 destination representation patch를 유지한다."
+    },
+    {
+      "id": 6,
+      "path": "src/query/partition.c",
+      "old": 3566,
+      "old_count": 7,
+      "new": 3663,
+      "new_count": 7,
+      "header": "@@ -3566,7 +3663,7 @@ partition_find_partition_for_record (PRUNING_CONTEXT * pinfo, const OID * class_",
+      "title": "Use the returned partition representation",
+      "en": "Read rep_id from the returned partition instead of indexing with the evaluator's old local pos. The same selected descriptor supplies destination OID, HFID and representation ID.",
+      "ko": "Evaluator 내부의 pos 대신 반환받은 partition에서 rep_id를 읽는다. 같은 descriptor가 OID, HFID, representation ID를 제공한다."
+    },
+    {
+      "id": 7,
+      "path": "src/query/partition.c",
+      "old": 3580,
+      "old_count": 12,
+      "new": 3677,
+      "new_count": 12,
+      "header": "@@ -3580,12 +3677,12 @@ cleanup:",
+      "title": "Document the dual INSERT input",
+      "en": "Rename the internal documentation and describe attr_info as an optional alternative to recdes. Remove the stale scan_cache parameter description because this internal function does not take it.",
+      "ko": "INSERT 공통 internal 문서에서 attr_info가 recdes의 대체 입력임을 명시하고 실제 인자가 아닌 scan_cache 설명을 제거한다."
+    },
+    {
+      "id": 8,
+      "path": "src/query/partition.c",
+      "old": 3601,
+      "old_count": 10,
+      "new": 3698,
+      "new_count": 10,
+      "header": "@@ -3601,10 +3698,10 @@ cleanup:",
+      "title": "Share INSERT context management",
+      "en": "Make the implementation private and accept both recdes and attr_info. Public wrappers choose one; context loading, validation and cleanup remain shared.",
+      "ko": "구현을 private으로 만들고 recdes와 attr_info를 받는다. Public wrapper가 입력 하나를 선택하고 context 로드·검증·정리는 공유한다."
+    },
+    {
+      "id": 9,
+      "path": "src/query/partition.c",
+      "old": 3657,
+      "old_count": 7,
+      "new": 3754,
+      "new_count": 15,
+      "header": "@@ -3657,7 +3754,15 @@ partition_prune_insert (THREAD_ENTRY * thread_p, const OID * class_oid, RECDES *",
+      "title": "Select the INSERT input adapter",
+      "en": "A non-NULL attr_info routes a key with old_recdes=NULL; otherwise use the record adapter. Both feed the same later explicit-partition validation and cleanup path.",
+      "ko": "attr_info가 있으면 old_recdes=NULL인 key route를, 없으면 record route를 선택한다. 이후 explicit partition 검증과 cleanup은 동일하다."
+    },
+    {
+      "id": 10,
+      "path": "src/query/partition.c",
+      "old": 3689,
+      "old_count": 11,
+      "new": 3794,
+      "new_count": 41,
+      "header": "@@ -3689,11 +3794,41 @@ cleanup:",
+      "title": "Preserve public INSERT and expose early routing",
+      "en": "The original signature becomes a wrapper passing NULL attrinfo. The new by_attrinfo wrapper passes NULL recdes and asserts assignments exist. UPDATE documentation is also revised to distinguish supplied old row from final new row.",
+      "ko": "기존 INSERT signature는 NULL attrinfo를 넘기는 wrapper가 된다. 새 by_attrinfo는 NULL recdes와 실제 assignment를 넘긴다. UPDATE 문서도 key routing의 old row와 final routing의 new row를 구별한다."
+    },
+    {
+      "id": 11,
+      "path": "src/query/partition.c",
+      "old": 3708,
+      "old_count": 9,
+      "new": 3843,
+      "new_count": 10,
+      "header": "@@ -3708,9 +3843,10 @@ cleanup:",
+      "title": "Share UPDATE context management",
+      "en": "Add optional attrinfo to a private UPDATE internal. Source-child to root discovery and the caller-owned context requirements remain in this common implementation.",
+      "ko": "UPDATE internal에 optional attrinfo를 추가한다. Source child에서 root를 찾는 로직과 caller context의 조건은 공통 구현에 남긴다."
+    },
+    {
+      "id": 12,
+      "path": "src/query/partition.c",
+      "old": 3790,
+      "old_count": 7,
+      "new": 3926,
+      "new_count": 15,
+      "header": "@@ -3790,7 +3926,15 @@ partition_prune_update (THREAD_ENTRY * thread_p, const OID * class_oid, RECDES *",
+      "title": "Select the UPDATE input adapter",
+      "en": "In attrinfo mode, recdes is the supplied old row used for an unchanged key; in record mode it is the already serialized new row. Preserving this distinction avoids substituting current defaults for historical values.",
+      "ko": "attrinfo mode의 recdes는 변경하지 않은 key를 읽을 old row이고, record mode에서는 직렬화한 new row다. 이 구분으로 이전 값을 현재 default로 대체하지 않는다."
+    },
+    {
+      "id": 13,
+      "path": "src/query/partition.c",
+      "old": 3823,
+      "old_count": 6,
+      "new": 3967,
+      "new_count": 30,
+      "header": "@@ -3823,6 +3967,30 @@ cleanup:",
+      "title": "Expose early UPDATE without changing final route",
+      "en": "Keep the original UPDATE wrapper passing NULL attrinfo. Add by_attrinfo with explicit old_recdes. Both reuse validation and context lifetime; only the source of the key differs.",
+      "ko": "기존 UPDATE wrapper는 NULL attrinfo를 넘긴다. 새 by_attrinfo는 old_recdes를 명시한다. Key 입력만 다르고 검증과 context lifetime은 공유한다."
+    },
+    {
+      "id": 14,
+      "path": "src/query/partition_sr.h",
+      "old": 119,
+      "old_count": 6,
+      "new": 119,
+      "new_count": 16,
+      "header": "@@ -119,6 +119,16 @@ extern int partition_prune_update (THREAD_ENTRY * thread_p, const OID * class_oi",
+      "title": "Declare the early-routing APIs",
+      "en": "Expose INSERT and UPDATE by_attrinfo entry points to locator code; UPDATE includes the supplied old record. OID/HFID and optional superclass outputs match the existing routing interfaces.",
+      "ko": "Locator가 호출할 by_attrinfo API를 선언한다. UPDATE는 old record를 받으며 OID/HFID와 optional superclass output은 기존 routing 형태를 따른다."
+    },
+    {
+      "id": 15,
+      "path": "src/query/query_executor.c",
+      "old": 11937,
+      "old_count": 6,
+      "new": 11937,
+      "new_count": 7,
+      "header": "@@ -11937,6 +11937,7 @@ qexec_remove_duplicates_for_replace (THREAD_ENTRY * thread_p, HEAP_SCANCACHE * s",
+      "title": "REPLACE probe mode storage",
+      "en": "Add a local Boolean whose address selects suppression. False is an initial verdict, not a request to disable suppression.",
+      "ko": "주소를 넘겨 suppression을 선택할 Boolean을 추가한다. 초기 false는 결과 초기값이며 suppression 비활성화가 아니다."
+    },
+    {
+      "id": 16,
+      "path": "src/query/query_executor.c",
+      "old": 11951,
+      "old_count": 7,
+      "new": 11952,
+      "new_count": 11,
+      "header": "@@ -11951,7 +11952,11 @@ qexec_remove_duplicates_for_replace (THREAD_ENTRY * thread_p, HEAP_SCANCACHE * s",
+      "title": "Suppress REPLACE probe publication",
+      "en": "Pass NULL owner and a non-NULL verdict pointer when building the duplicate-search image. Preserve EXCLUDE_LOB. The image is never installed, so it must not create OOS chains.",
+      "ko": "Duplicate-search image에 NULL owner와 non-NULL verdict pointer를 넘긴다. EXCLUDE_LOB는 유지한다. 저장하지 않는 image이므로 OOS chain을 생성하지 않아야 한다."
+    },
+    {
+      "id": 17,
+      "path": "src/query/query_executor.c",
+      "old": 12170,
+      "old_count": 6,
+      "new": 12175,
+      "new_count": 7,
+      "header": "@@ -12170,6 +12175,7 @@ qexec_oid_of_duplicate_key_update (THREAD_ENTRY * thread_p, HEAP_SCANCACHE ** pr",
+      "title": "ODKU probe mode storage",
+      "en": "Add the corresponding verdict storage for duplicate-key UPDATE lookup. Mode is selected by pointer presence; the caller does not need the reported value afterward.",
+      "ko": "ODKU lookup에도 verdict storage를 추가한다. Pointer 존재로 mode를 선택하며 caller는 반환 Boolean을 이후 사용하지 않는다."
+    },
+    {
+      "id": 18,
+      "path": "src/query/query_executor.c",
+      "old": 12189,
+      "old_count": 7,
+      "new": 12195,
+      "new_count": 11,
+      "header": "@@ -12189,7 +12195,11 @@ qexec_oid_of_duplicate_key_update (THREAD_ENTRY * thread_p, HEAP_SCANCACHE ** pr",
+      "title": "Suppress ODKU probe publication",
+      "en": "Build the duplicate-key lookup image through suppression while retaining INCLUDE_LOB. This prevents OOS publication for the temporary image; it is not a promise of zero LOB preparation effects.",
+      "ko": "ODKU 임시 image의 OOS publication을 억제하면서 INCLUDE_LOB는 유지한다. OOS 생성 방지이며 LOB 준비까지 side effect가 없다는 뜻은 아니다."
+    },
+    {
+      "id": 19,
+      "path": "src/storage/heap_file.c",
+      "old": 694,
+      "old_count": 9,
+      "new": 694,
+      "new_count": 10,
+      "header": "@@ -694,9 +694,10 @@ struct heap_oos_column_plan",
+      "title": "Extend layout planning contract",
+      "en": "Thread suppress_oos and would_demote_oos through the private layout planner declaration. Actual placement and hypothetical demotion are distinct outputs.",
+      "ko": "Layout planner에 suppress_oos와 would_demote_oos를 추가한다. 실제 배치와 정상 mode에서의 demotion 예상은 다른 output이다."
+    },
+    {
+      "id": 20,
+      "path": "src/storage/heap_file.c",
+      "old": 782,
+      "old_count": 7,
+      "new": 783,
+      "new_count": 8,
+      "header": "@@ -782,7 +783,8 @@ static SCAN_CODE heap_attrinfo_transform_columns_to_disk (THREAD_ENTRY * thread_",
+      "title": "Extend the common transform contract",
+      "en": "Add destination owner, optional suppression output and second-pass increment state. Wrappers set these deliberately; default behavior must remain the normal first pass.",
+      "ko": "공통 변환에 owner, suppression output, second-pass increment state를 추가한다. Wrapper가 조합을 정하며 기본은 정상 first pass다."
+    },
+    {
+      "id": 21,
+      "path": "src/storage/heap_file.c",
+      "old": 12095,
+      "old_count": 6,
+      "new": 12097,
+      "new_count": 132,
+      "header": "@@ -12095,6 +12097,132 @@ exit_on_error:",
+      "title": "Compute an owned effective key",
+      "en": "Read an unchanged UPDATE key with an independent reader of the supplied old row; read omitted INSERT defaults on copied metadata; otherwise clone the source. Apply pending increments only to the copy, preserve NULL, then size/write/read with the domain codec. Use aligned scratch for small values and owned allocation for larger ones. Every failure clears a partial output. The guide's block table explains the branches; direct tests compare reference routing and assert source preservation.",
+      "ko": "UPDATE의 미지정 key는 supplied old row의 독립 reader로 읽고, INSERT default는 복사 metadata에서 읽으며, 주어진 값은 clone한다. 복사본에만 increment를 적용하고 NULL을 보존한 뒤 domain codec으로 size/write/read한다. 작은 값은 aligned scratch, 큰 값은 별도 할당을 쓴다. 실패 시 부분 output도 clear한다. 본문의 블록 표와 direct reference 테스트가 각 분기를 설명한다."
+    },
+    {
+      "id": 22,
+      "path": "src/storage/heap_file.c",
+      "old": 12297,
+      "old_count": 9,
+      "new": 12425,
+      "new_count": 11,
+      "header": "@@ -12297,9 +12425,11 @@ heap_attrinfo_get_record_header_size (HEAP_CACHE_ATTRINFO * attr_info, int paylo",
+      "title": "Document suppression outputs",
+      "en": "Document that suppression retains inline values and that would_demote is hypothetical. has_oos continues to describe the actual emitted layout.",
+      "ko": "Suppression은 inline을 유지하고 would_demote는 가정 결과임을 설명한다. has_oos는 실제 layout을 뜻한다."
+    },
+    {
+      "id": 23,
+      "path": "src/storage/heap_file.c",
+      "old": 12307,
+      "old_count": 9,
+      "new": 12437,
+      "new_count": 10,
+      "header": "@@ -12307,9 +12437,10 @@ heap_attrinfo_get_record_header_size (HEAP_CACHE_ATTRINFO * attr_info, int paylo",
+      "title": "Implement the extended planner signature",
+      "en": "Keep declaration, definition and caller consistent. Passing the mode separately allows layout decisions to avoid selecting any OOS plan entry.",
+      "ko": "선언·정의·호출을 일치시킨다. Mode를 받아 OOS plan entry를 선택하기 전에 suppression을 처리한다."
+    },
+    {
+      "id": 24,
+      "path": "src/storage/heap_file.c",
+      "old": 12320,
+      "old_count": 6,
+      "new": 12451,
+      "new_count": 10,
+      "header": "@@ -12320,6 +12451,10 @@ heap_attrinfo_determine_disk_layout (HEAP_CACHE_ATTRINFO * attr_info, bool is_mv",
+      "title": "Reset the per-call verdict",
+      "en": "Initialize has_oos false and clear a supplied would-demote output before scanning columns. A reused Boolean must not inherit the previous row's verdict.",
+      "ko": "Column 순회 전에 has_oos와 optional verdict를 false로 초기화한다. 이전 row의 결과가 재사용 Boolean에 남지 않게 한다."
+    },
+    {
+      "id": 25,
+      "path": "src/storage/heap_file.c",
+      "old": 12334,
+      "old_count": 6,
+      "new": 12469,
+      "new_count": 15,
+      "header": "@@ -12334,6 +12469,15 @@ heap_attrinfo_determine_disk_layout (HEAP_CACHE_ATTRINFO * attr_info, bool is_mv",
+      "title": "Suppress the forced policy before selection",
+      "en": "FORCE_OUTLINE runs before the ordinary size gate. Under suppression set would-demote and continue before plan.selected, payload subtraction and has_oos updates. This is the small-forced-value regression's decisive branch.",
+      "ko": "FORCE_OUTLINE은 일반 크기 gate보다 먼저 실행된다. Suppression에서는 verdict만 설정하고 selected·payload 축소·has_oos 설정 전에 continue한다. 작은 forced 값 회귀의 핵심 분기다."
+    },
+    {
+      "id": 26,
+      "path": "src/storage/heap_file.c",
+      "old": 12369,
+      "old_count": 6,
+      "new": 12513,
+      "new_count": 19,
+      "header": "@@ -12369,6 +12513,19 @@ heap_attrinfo_determine_disk_layout (HEAP_CACHE_ATTRINFO * attr_info, bool is_mv",
+      "title": "Suppress ordinary demotion",
+      "en": "After discovering ordinary eligible candidates, report whether candidates exist and return the fully inline size without sorting/selecting/demoting them. The fully inline temporary image can be larger than a heap slot.",
+      "ko": "일반 candidate 수집 뒤 존재 여부를 verdict로 기록하고 정렬·선택·demotion 없이 fully-inline 크기를 반환한다. 임시 image는 heap slot보다 클 수 있다."
+    },
+    {
+      "id": 27,
+      "path": "src/storage/heap_file.c",
+      "old": 12680,
+      "old_count": 11,
+      "new": 12837,
+      "new_count": 15,
+      "header": "@@ -12680,11 +12837,15 @@ static std::atomic<bool> heap_Test_fail_after_oos_publication_reset { false };",
+      "title": "Add explicit OOS owner at insertion boundary",
+      "en": "Extend heap_attrinfo_insert_to_oos with an optional class OID and document per-heap ownership. Retain source attrinfo for payload and LOB preparation.",
+      "ko": "OOS insert 경계에 optional class OID를 추가하고 heap 단위 소유권을 문서화한다. Payload와 LOB 준비에는 source attrinfo를 유지한다."
+    },
+    {
+      "id": 28,
+      "path": "src/storage/heap_file.c",
+      "old": 12724,
+      "old_count": 7,
+      "new": 12885,
+      "new_count": 7,
+      "header": "@@ -12724,7 +12885,7 @@ heap_attrinfo_insert_to_oos (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr",
+      "title": "Apply the selected owner",
+      "en": "Pass the override to heap_oos_insert_serialized_values, falling back to attrinfo class for legacy callers. This is where early destination selection becomes a different physical OOS file.",
+      "ko": "Override가 있으면 해당 class를 storage helper에 넘기고 없으면 기존 attrinfo class를 쓴다. Early destination이 물리적 OOS file 선택으로 연결되는 줄이다."
+    },
+    {
+      "id": 29,
+      "path": "src/storage/heap_file.c",
+      "old": 12755,
+      "old_count": 7,
+      "new": 12916,
+      "new_count": 61,
+      "header": "@@ -12755,7 +12916,61 @@ SCAN_CODE",
+      "title": "Separate transform modes explicitly",
+      "en": "Normal wrapper uses NULL owner/NULL verdict/false. Owner-aware first pass uses owner/NULL/false. Probe uses NULL/verdict/false. Retained second pass uses owner/NULL/true. The final true skips increments already applied by an earlier probe; it must not be used for the new main path's first transform.",
+      "ko": "Normal은 NULL/NULL/false, owner first pass는 owner/NULL/false, probe는 NULL/verdict/false, 잔존 second pass는 owner/NULL/true를 넘긴다. 마지막 true는 이전 probe가 적용한 increment를 건너뛰므로 새 main first transform에 쓰면 안 된다."
+    },
+    {
+      "id": 30,
+      "path": "src/storage/heap_file.c",
+      "old": 12775,
+      "old_count": 7,
+      "new": 12990,
+      "new_count": 8,
+      "header": "@@ -12775,7 +12990,8 @@ SCAN_CODE",
+      "title": "Preserve non-LOB normal transformation",
+      "en": "The except_lob wrapper supplies EXCLUDE_LOB with default owner, no suppression and first-pass increment behavior. This signature adaptation retains the existing contract.",
+      "ko": "except_lob는 EXCLUDE_LOB와 기본 owner, suppression 없음, first-pass increment를 지정한다. 기존 계약을 유지하는 signature 변경이다."
+    },
+    {
+      "id": 31,
+      "path": "src/storage/heap_file.c",
+      "old": 13232,
+      "old_count": 12,
+      "new": 13448,
+      "new_count": 17,
+      "header": "@@ -13232,12 +13448,17 @@ heap_attrinfo_transform_columns_to_disk (THREAD_ENTRY * thread_p, HEAP_CACHE_ATT",
+      "title": "Document and receive transform modes",
+      "en": "Document pointer-presence suppression, destination override and the retained second-pass flag in the common transformer. The definition matches the updated declaration.",
+      "ko": "Common transformer에 pointer 기반 suppression, owner override, 잔존 second-pass flag를 명시하고 정의를 선언과 맞춘다."
+    },
+    {
+      "id": 32,
+      "path": "src/storage/heap_file.c",
+      "old": 13245,
+      "old_count": 6,
+      "new": 13466,
+      "new_count": 8,
+      "header": "@@ -13245,6 +13466,8 @@ heap_attrinfo_transform_to_disk_internal (THREAD_ENTRY * thread_p, HEAP_CACHE_AT",
+      "title": "Derive suppression from the pointer",
+      "en": "Compute suppress_oos from would_demote_oos != NULL. Add an index variable for the retained second-pass premark loop; it is not the early key routing algorithm.",
+      "ko": "would_demote_oos != NULL로 suppression을 정한다. Index 변수는 잔존 second-pass premark loop용이며 early key routing 알고리즘이 아니다."
+    },
+    {
+      "id": 33,
+      "path": "src/storage/heap_file.c",
+      "old": 13258,
+      "old_count": 6,
+      "new": 13481,
+      "new_count": 19,
+      "header": "@@ -13258,6 +13481,19 @@ heap_attrinfo_transform_to_disk_internal (THREAD_ENTRY * thread_p, HEAP_CACHE_AT",
+      "title": "Retain second-pass increment protection",
+      "en": "When increments_already_applied is true, prefill the same set consulted by the fixed-column writer. Current owner-aware main writes pass false; buffer-retry protection in the normal writer remains independently necessary.",
+      "ko": "increments_already_applied가 true면 fixed writer가 확인하는 set을 미리 채운다. 현재 owner first pass는 false를 넘긴다. 정상 writer의 buffer retry 중복 방지는 별도로 필요하다."
+    },
+    {
+      "id": 34,
+      "path": "src/storage/heap_file.c",
+      "old": 13271,
+      "old_count": 8,
+      "new": 13507,
+      "new_count": 8,
+      "header": "@@ -13271,8 +13507,8 @@ heap_attrinfo_transform_to_disk_internal (THREAD_ENTRY * thread_p, HEAP_CACHE_AT",
+      "title": "Forward mode into layout planning",
+      "en": "Pass suppression and verdict to the planner while retaining actual has_oos and inline-size outputs. Later OOS writing is controlled by the actual has_oos result.",
+      "ko": "Suppression과 verdict를 planner에 전달하고 실제 has_oos와 inline size도 받는다. 이후 OOS 쓰기는 실제 has_oos가 제어한다."
+    },
+    {
+      "id": 35,
+      "path": "src/storage/heap_file.c",
+      "old": 13307,
+      "old_count": 7,
+      "new": 13543,
+      "new_count": 7,
+      "header": "@@ -13307,7 +13543,7 @@ heap_attrinfo_transform_to_disk_internal (THREAD_ENTRY * thread_p, HEAP_CACHE_AT",
+      "title": "Forward owner into OOS publication",
+      "en": "The transform sends oos_class_oid to the OOS insertion boundary only after the existing bigone rejection. This propagates the destination selected by locator without rewriting attrinfo identity.",
+      "ko": "기존 bigone 거절 이후 OOS insertion 경계에 owner를 전달한다. Attrinfo identity를 바꾸지 않고 locator의 선택을 연결한다."
+    },
+    {
+      "id": 36,
+      "path": "src/storage/heap_file.c",
+      "old": 28431,
+      "old_count": 6,
+      "new": 28667,
+      "new_count": 6,
+      "header": "@@ -28431,6 +28667,6 @@ bridge_heap_attrinfo_insert_to_oos (THREAD_ENTRY * thread_p, const OID * class_o",
+      "title": "Keep unit-test bridge default ownership",
+      "en": "Supply NULL for the new owner parameter in the pre-existing bridge. Its synthetic attrinfo class continues to determine ownership.",
+      "ko": "기존 unit-test bridge는 새 owner 인자에 NULL을 넣어 synthetic attrinfo class의 기존 소유권을 유지한다."
+    },
+    {
+      "id": 37,
+      "path": "src/storage/heap_file.h",
+      "old": 503,
+      "old_count": 10,
+      "new": 503,
+      "new_count": 22,
+      "header": "@@ -503,10 +503,22 @@ extern int heap_attrinfo_delete_lob (THREAD_ENTRY * thread_p, RECDES * recdes, H",
+      "title": "Expose key and transform APIs",
+      "en": "Declare the effective-key helper plus owner-first-pass, probe and retained rebuild wrappers. Old transformer declarations remain. This is an internal engine header change, not a client protocol change.",
+      "ko": "Effective key와 owner first pass·probe·잔존 rebuild를 선언한다. 기존 선언은 유지된다. 내부 engine header 변경이며 client protocol 변경이 아니다."
+    },
+    {
+      "id": 38,
+      "path": "src/transaction/locator_sr.c",
+      "old": 152,
+      "old_count": 7,
+      "new": 152,
+      "new_count": 7,
+      "header": "@@ -152,7 +152,7 @@ static int locator_update_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * cla",
+      "title": "Declare UPDATE's expected owner",
+      "en": "Extend the private locator_update_force declaration with an optional expected destination. Each caller must explicitly say whether it has an early decision to validate.",
+      "ko": "Private UPDATE force 선언에 expected destination을 추가한다. Caller마다 검증할 early decision이 있는지 명시해야 한다."
+    },
+    {
+      "id": 39,
+      "path": "src/transaction/locator_sr.c",
+      "old": 4924,
+      "old_count": 7,
+      "new": 4924,
+      "new_count": 7,
+      "header": "@@ -4924,7 +4924,7 @@ error3:",
+      "title": "Name the INSERT implementation",
+      "en": "Rename the comment to match the new private internal function. Behavior is provided by the surrounding signature and agreement-check changes.",
+      "ko": "새 private internal 이름에 맞춰 주석 이름을 바꾼다. 동작 변화는 인접 signature와 agreement check에 있다."
+    },
+    {
+      "id": 40,
+      "path": "src/transaction/locator_sr.c",
+      "old": 4944,
+      "old_count": 16,
+      "new": 4944,
+      "new_count": 17,
+      "header": "@@ -4944,16 +4944,17 @@ error3:",
+      "title": "Introduce private INSERT with expected destination",
+      "en": "Add expected_class_oid while keeping the old public API via H42. This avoids forcing unrelated callers to create an early destination.",
+      "ko": "Expected class를 받는 INSERT internal을 만들고 H42에서 기존 public API를 유지한다. 관련 없는 caller에게 early destination 생성을 강요하지 않는다."
+    },
+    {
+      "id": 41,
+      "path": "src/transaction/locator_sr.c",
+      "old": 4992,
+      "old_count": 6,
+      "new": 4993,
+      "new_count": 14,
+      "header": "@@ -4992,6 +4993,14 @@ locator_insert_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * class_oid, OID",
+      "title": "Reject INSERT destination disagreement",
+      "en": "After final record pruning succeeds, compare against the early owner. On mismatch return ER_GENERIC_ERROR through existing error handling before the following subclass/heap insertion path. Do not silently redirect already-prepared OOS chains.",
+      "ko": "최종 record pruning 뒤 early owner와 비교한다. 다르면 기존 error 경로로 ER_GENERIC_ERROR를 반환해 이후 subclass/heap insert로 가지 않는다. 준비한 chain을 둔 채 record만 다른 곳으로 보내지 않는다."
+    },
+    {
+      "id": 42,
+      "path": "src/transaction/locator_sr.c",
+      "old": 5283,
+      "old_count": 6,
+      "new": 5292,
+      "new_count": 21,
+      "header": "@@ -5283,6 +5292,21 @@ error2:",
+      "title": "Preserve legacy INSERT callers",
+      "en": "The original public locator_insert_force forwards all existing arguments plus NULL expected owner. Only the main attribute write invokes the private guarded variant directly.",
+      "ko": "기존 public locator_insert_force는 모든 인자와 NULL expected owner를 넘긴다. Main attribute write만 guarded internal을 직접 호출한다."
+    },
+    {
+      "id": 43,
+      "path": "src/transaction/locator_sr.c",
+      "old": 5457,
+      "old_count": 6,
+      "new": 5481,
+      "new_count": 7,
+      "header": "@@ -5457,6 +5481,7 @@ locator_move_record (THREAD_ENTRY * thread_p, HFID * old_hfid, OID * old_class_o",
+      "title": "Document UPDATE agreement",
+      "en": "Document that the optional early class must agree with final routing before the subsequent row heap/index mutation. This is a comparison contract, not a transaction-abort implementation.",
+      "ko": "Optional early class와 final routing의 일치를 이후 row heap/index 변경 전에 확인한다고 문서화한다. 비교 계약이며 transaction abort 구현은 아니다."
+    },
+    {
+      "id": 44,
+      "path": "src/transaction/locator_sr.c",
+      "old": 5466,
+      "old_count": 7,
+      "new": 5491,
+      "new_count": 7,
+      "header": "@@ -5466,7 +5491,7 @@ locator_update_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * class_oid, OID",
+      "title": "Receive UPDATE agreement input",
+      "en": "Extend the private definition to receive expected_class_oid. H45 consumes it after final routing; unrelated callers pass NULL.",
+      "ko": "Private 정의에 expected_class_oid를 추가한다. H45가 final routing 후 사용하며 다른 caller는 NULL을 넘긴다."
+    },
+    {
+      "id": 45,
+      "path": "src/transaction/locator_sr.c",
+      "old": 5993,
+      "old_count": 6,
+      "new": 6018,
+      "new_count": 14,
+      "header": "@@ -5993,6 +6018,14 @@ locator_update_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * class_oid, OID",
+      "title": "Reject UPDATE destination disagreement",
+      "en": "Compare final class with the early OOS owner before source-class reidentification and partition movement. Failure follows existing error cleanup; logged OOS work depends on the caller's rollback path.",
+      "ko": "Source class 재확인과 partition 이동 전에 final class와 early OOS owner를 비교한다. 실패는 기존 error cleanup으로 가며 logged OOS 작업은 caller rollback에 의존한다."
+    },
+    {
+      "id": 46,
+      "path": "src/transaction/locator_sr.c",
+      "old": 6749,
+      "old_count": 7,
+      "new": 6782,
+      "new_count": 7,
+      "header": "@@ -6749,7 +6782,7 @@ locator_force_for_multi_update (THREAD_ENTRY * thread_p, LC_COPYAREA * force_are",
+      "title": "Adapt multi-update force",
+      "en": "Append NULL expected class to the existing nonpartitioned multi-update caller. It has no early attrinfo routing result to certify.",
+      "ko": "기존 nonpartitioned multi-update caller에 NULL expected class를 추가한다. 인증할 early attrinfo routing 결과가 없다."
+    },
+    {
+      "id": 47,
+      "path": "src/transaction/locator_sr.c",
+      "old": 7139,
+      "old_count": 7,
+      "new": 7172,
+      "new_count": 8,
+      "header": "@@ -7139,7 +7172,8 @@ xlocator_repl_force (THREAD_ENTRY * thread_p, LC_COPYAREA * force_area, LC_COPYA",
+      "title": "Adapt replication force",
+      "en": "Append NULL to replication's existing record-based UPDATE call. This does not introduce effective-key preparation into the replication path.",
+      "ko": "Replication의 기존 record-based UPDATE 호출에 NULL을 추가한다. Replication에 effective-key 준비를 새로 도입한 것이 아니다."
+    },
+    {
+      "id": 48,
+      "path": "src/transaction/locator_sr.c",
+      "old": 7349,
+      "old_count": 7,
+      "new": 7383,
+      "new_count": 7,
+      "header": "@@ -7349,7 +7383,7 @@ xlocator_force (THREAD_ENTRY * thread_p, LC_COPYAREA * force_area, int num_ignor",
+      "title": "Adapt generic force",
+      "en": "Append NULL to xlocator_force's existing UPDATE call. Preserve behavior for callers that already supply serialized records.",
+      "ko": "xlocator_force의 기존 UPDATE에 NULL을 추가한다. 이미 직렬화한 record를 주는 caller의 동작을 유지한다."
+    },
+    {
+      "id": 49,
+      "path": "src/transaction/locator_sr.c",
+      "old": 7461,
+      "old_count": 7,
+      "new": 7495,
+      "new_count": 7,
+      "header": "@@ -7461,7 +7495,7 @@ error:",
+      "title": "Name the internal copy-area builder",
+      "en": "Rename the implementation comment; the public wrapper is reintroduced below. Allocation ownership stays with the existing copy-area API.",
+      "ko": "Implementation 주석 이름을 internal로 바꾸고 public wrapper를 아래에 다시 둔다. Allocation 소유권은 기존 copy-area API를 따른다."
+    },
+    {
+      "id": 50,
+      "path": "src/transaction/locator_sr.c",
+      "old": 7475,
+      "old_count": 12,
+      "new": 7509,
+      "new_count": 21,
+      "header": "@@ -7475,12 +7509,21 @@ error:",
+      "title": "Add first-pass owner mode",
+      "en": "Private builder receives owner, probe verdict and oos_first_pass. This extra private flag distinguishes a real first transform from the retained owner-after-probe rebuild contract.",
+      "ko": "Builder가 owner, probe verdict, oos_first_pass를 받는다. Private flag로 실제 첫 변환과 잔존 probe 후 rebuild 계약을 구분한다."
+    },
+    {
+      "id": 51,
+      "path": "src/transaction/locator_sr.c",
+      "old": 7504,
+      "old_count": 7,
+      "new": 7547,
+      "new_count": 23,
+      "header": "@@ -7504,7 +7547,23 @@ locator_allocate_copy_area_by_attr_info (THREAD_ENTRY * thread_p, HEAP_CACHE_ATT",
+      "title": "Dispatch copy-area transformation",
+      "en": "Priority is owner-first-pass, probe, retained owner-rebuild, except-LOB, normal. The first branch asserts owner exists and no probe output is present. Existing buffer growth and copy-area release behavior remain below; mode selection does not itself perform rollback.",
+      "ko": "분기 우선순위는 owner first pass → probe → 잔존 owner rebuild → except LOB → normal이다. First pass는 owner 존재와 probe output 부재를 assert한다. 아래 buffer 성장·해제는 기존대로이며 mode 선택 자체가 rollback은 아니다."
+    },
+    {
+      "id": 52,
+      "path": "src/transaction/locator_sr.c",
+      "old": 7545,
+      "old_count": 6,
+      "new": 7604,
+      "new_count": 19,
+      "header": "@@ -7545,6 +7604,19 @@ locator_allocate_copy_area_by_attr_info (THREAD_ENTRY * thread_p, HEAP_CACHE_ATT",
+      "title": "Expose normal/probe/rebuild wrapper",
+      "en": "The public builder forwards its expanded arguments with oos_first_pass=false. New main writes deliberately bypass it for the private first-pass owner mode.",
+      "ko": "Public builder는 확장 인자와 oos_first_pass=false를 넘긴다. 새 main write는 private owner first-pass mode를 직접 사용한다."
+    },
+    {
+      "id": 53,
+      "path": "src/transaction/locator_sr.c",
+      "old": 7595,
+      "old_count": 6,
+      "new": 7667,
+      "new_count": 7,
+      "header": "@@ -7595,6 +7667,7 @@ locator_attribute_info_force (THREAD_ENTRY * thread_p, const HFID * hfid, OID *",
+      "title": "Keep destination independent",
+      "en": "Initialize write_destination to NULL so nonpartitioned calls naturally have no expected destination. Preserve the existing local source class/HFID copies.",
+      "ko": "write_destination을 NULL로 초기화하여 nonpartitioned 호출은 expected destination이 없게 한다. 기존 source class/HFID 복사본은 유지한다."
+    },
+    {
+      "id": 54,
+      "path": "src/transaction/locator_sr.c",
+      "old": 7692,
+      "old_count": 9,
+      "new": 7765,
+      "new_count": 40,
+      "header": "@@ -7692,9 +7765,40 @@ locator_attribute_info_force (THREAD_ENTRY * thread_p, const HFID * hfid, OID *",
+      "title": "Route before the first full transform",
+      "en": "For partitioned writes initialize fallback destination identifiers, select INSERT or UPDATE key routing, and stop on error. Then build the row once with INCLUDE_LOB, selected owner and oos_first_pass=true. Leave source class untouched for final validation and movement. Nonpartitioned writes explicitly request the default modes.",
+      "ko": "Partitioned write는 destination 식별자를 초기화하고 INSERT/UPDATE key routing을 선택하며 오류면 중단한다. 성공 뒤 INCLUDE_LOB·선택 owner·oos_first_pass=true로 row를 한 번 준비한다. Source class는 final 검증과 이동을 위해 유지하고 nonpartitioned는 기본 mode를 명시한다."
+    },
+    {
+      "id": 55,
+      "path": "src/transaction/locator_sr.c",
+      "old": 7705,
+      "old_count": 9,
+      "new": 7809,
+      "new_count": 10,
+      "header": "@@ -7705,9 +7809,10 @@ locator_attribute_info_force (THREAD_ENTRY * thread_p, const HFID * hfid, OID *",
+      "title": "Carry expected owner into INSERT force",
+      "en": "Call the private INSERT variant and pass the selected destination unless NULL. Existing default use_bulk_logging=false is now explicit along with the other unchanged flags.",
+      "ko": "Private INSERT variant에 선택 destination을 넘긴다. NULL이면 expected owner도 NULL이다. 기존 기본값 use_bulk_logging=false와 나머지 flag를 명시한다."
+    },
+    {
+      "id": 56,
+      "path": "src/transaction/locator_sr.c",
+      "old": 7725,
+      "old_count": 7,
+      "new": 7830,
+      "new_count": 8,
+      "header": "@@ -7725,7 +7830,8 @@ locator_attribute_info_force (THREAD_ENTRY * thread_p, const HFID * hfid, OID *",
+      "title": "Carry expected owner into UPDATE force",
+      "en": "Pass the same selected destination into final UPDATE. An unchanged key and a moving key both require agreement with the OOS owner chosen before transformation.",
+      "ko": "선택 destination을 final UPDATE에도 전달한다. Key가 유지되든 이동하든 변환 전에 고른 OOS owner와 일치해야 한다."
+    },
+    {
+      "id": 57,
+      "path": "src/transaction/locator_sr.c",
+      "old": 13781,
+      "old_count": 7,
+      "new": 13887,
+      "new_count": 7,
+      "header": "@@ -13781,7 +13887,7 @@ locator_mvcc_reev_cond_assigns (THREAD_ENTRY * thread_p, OID * class_oid, const",
+      "title": "Retain reevaluation defaults",
+      "en": "The MVCC reevaluation copy-area call adds NULL owner and NULL probe output. This is signature adaptation, not evidence that all concurrent reevaluation paths have been validated by the new standalone tests.",
+      "ko": "MVCC reevaluation 호출에 NULL owner와 NULL probe를 추가한다. Signature 변경이며 새 standalone 테스트가 모든 동시 reevaluation 경로를 검증했다는 의미는 아니다."
+    },
+    {
+      "id": 58,
+      "path": "src/transaction/locator_sr.h",
+      "old": 83,
+      "old_count": 7,
+      "new": 83,
+      "new_count": 8,
+      "header": "@@ -83,7 +83,8 @@ extern int locator_attribute_info_force (THREAD_ENTRY * thread_p, const HFID * h",
+      "title": "Update the copy-area declaration",
+      "en": "Expose the added owner and suppression output parameters consistently with all callers. The private first-pass flag is deliberately not part of this public engine declaration.",
+      "ko": "모든 caller와 맞게 owner·suppression output을 선언한다. Private first-pass flag는 이 public engine 선언에 노출하지 않는다."
+    },
+    {
+      "id": 59,
+      "path": "unit_tests/oos/sql/CMakeLists.txt",
+      "old": 54,
+      "old_count": 3,
+      "new": 54,
+      "new_count": 6,
+      "header": "@@ -54,3 +54,6 @@ set_tests_properties(",
+      "title": "Allow diagnostic-heavy test execution",
+      "en": "Override only test_oos_sql_show's timeout to 300 seconds. Fault injection and routing errors collect debug stacks; fixture requirements and serial execution are unchanged.",
+      "ko": "test_oos_sql_show의 timeout만 300초로 바꾼다. Fault injection과 routing 오류가 debug stack을 수집하며 fixture 조건과 직렬 실행은 유지된다."
+    },
+    {
+      "id": 60,
+      "path": "unit_tests/oos/sql/test_oos_sql_show.cpp",
+      "old": 21,
+      "old_count": 11,
+      "new": 21,
+      "new_count": 36,
+      "header": "@@ -21,11 +21,36 @@",
+      "title": "Provide direct-interface test infrastructure",
+      "en": "Include routing, locator, OOS, logging, record and primitive APIs plus string support. Declare existing failure hooks. scoped_sa_server increments/decrements db_on_server around direct server calls so SA allocation follows server conventions; it does not start a SERVER_MODE process.",
+      "ko": "Routing·locator·OOS·logging·record·primitive API와 string을 include하고 기존 failure hook을 선언한다. scoped_sa_server는 db_on_server를 증감해 SA direct 호출의 allocator를 맞춘다. SERVER_MODE process를 시작하지는 않는다."
+    },
+    {
+      "id": 61,
+      "path": "unit_tests/oos/sql/test_oos_sql_show.cpp",
+      "old": 154,
+      "old_count": 6,
+      "new": 179,
+      "new_count": 64,
+      "header": "@@ -154,6 +179,64 @@ namespace",
+      "title": "Assert logical values and physical owners",
+      "en": "Add string extraction with DB_VALUE cleanup, schema-prefix removal, count queries and exact OOS file/chunk expectations. The physical helper checks a single row and closes its query result. Distinct logical and physical oracles catch the original bug that successful SELECT missed.",
+      "ko": "DB_VALUE 정리를 포함한 문자열 추출, schema prefix 제거, SQL count와 OOS file/chunk 검사 helper를 추가한다. 물리 helper는 결과 한 행을 확인하고 닫는다. 논리·물리 oracle을 나눠 SELECT만으로 놓친 원래 버그를 잡는다."
+    },
+    {
+      "id": 62,
+      "path": "unit_tests/oos/sql/test_oos_sql_show.cpp",
+      "old": 351,
+      "old_count": 6,
+      "new": 434,
+      "new_count": 1235,
+      "header": "@@ -351,6 +434,1235 @@ TEST_F (OosSqlShow, ShowAllHeapOosReportsPartitionRows)",
+      "title": "Add 28 discriminating SQL tests",
+      "en": "This large hunk contains 28 new tests, not one undifferentiated fixture. The test catalog below links each exact function and explains its distinguishing assertions, reference independence and limits. Four earlier SHOW tests remain unchanged.",
+      "ko": "이 큰 hunk는 28개 새 테스트로 구성된다. 아래 test catalog가 각 함수와 구별력 있는 assertion·독립 reference·한계를 연결한다. 기존 SHOW 테스트 4개는 유지된다."
+    },
+    {
+      "id": 63,
+      "path": "unit_tests/oos/test_oos_real_vacuum_server.cpp",
+      "old": 825,
+      "old_count": 6,
+      "new": 825,
+      "new_count": 50,
+      "header": "@@ -825,6 +825,50 @@ TEST_F (OosRealVacuum, ReVacuumAfterDrainIsIdempotent)",
+      "title": "Preserve the unresolved real-vacuum regression",
+      "en": "Add a DISABLED_ test: committed original and independent witness, replacement update and abort, successful pre-vacuum original read, committed witness delete, observed vacuum progress, then original readback. Allocate the witness before reclaimable versions to avoid aliasing a recycled OOS slot. Historical final readback fails; DISABLED_ keeps it out of normal runs pending CBRD-27237. This is not a partition-specific test or a passing lifecycle result.",
+      "ko": "DISABLED_ 테스트는 committed 원본과 witness → replacement UPDATE와 abort → vacuum 전 read → committed witness delete와 실제 진행 확인 → 원본 재읽기 순서다. Witness를 먼저 할당해 재사용 slot alias를 피한다. 과거 마지막 read가 실패했으며 CBRD-27237까지 기본 실행에서 제외한다. Partition 전용 테스트나 lifecycle 통과가 아니다."
+    }
+  ],
+  "tests": [
+    {
+      "name": "PartitionedForceOutlineStoresOosInPrunedHeap",
+      "start": 437,
+      "end": 504,
+      "en": "Force a 64-byte value; verify value equality and root/p0/p1 ownership (0/1/0 chunks). Small forced data isolates policy from the ordinary size gate.",
+      "ko": "64바이트 forced 값으로 논리값과 root/p0/p1의 chunk 0/1/0을 확인한다. 일반 크기 gate와 분리하여 policy를 검증한다."
+    },
+    {
+      "name": "PartitionRangeBoundaryAndNullOwnership",
+      "start": 506,
+      "end": 529,
+      "en": "Alternate keys 10, 9, 11 and NULL in one INSERT; assert both boundary placement and per-child two-chunk totals. Reused routing state must not leak between rows.",
+      "ko": "10·9·11·NULL을 한 INSERT에 교차 배치한다. 경계와 child별 2개 chunk를 검사하여 row 사이 context 오염을 찾는다."
+    },
+    {
+      "name": "PartitionListExpressionAndFailedBatchOwnership",
+      "start": 531,
+      "end": 565,
+      "en": "Route ABS(id) over LIST partitions, fail a batch after a valid first row, explicitly abort, then insert again. Check original values, ownership and successful recovery of reusable state.",
+      "ko": "ABS(id) LIST routing과 valid row 뒤 실패하는 batch를 검사한다. 명시적 abort 후 기존 값·owner를 확인하고 다음 INSERT 성공으로 state 회복을 검증한다."
+    },
+    {
+      "name": "PartitionHashNullOwnership",
+      "start": 567,
+      "end": 587,
+      "en": "Exercise HASH with repeated keys and NULL; verify known p0/p1 placements and owner counts. This tests the existing hash rule for the chosen integers, not a general hash formula.",
+      "ko": "반복 key와 NULL의 HASH 결과 및 owner count를 확인한다. 선택한 정수의 기존 규칙 테스트이며 범용 hash 공식의 증명은 아니다."
+    },
+    {
+      "name": "PartitionRangeExpressionValidationAndMovement",
+      "start": 589,
+      "end": 630,
+      "en": "Use RANGE(id+1), reject a missing destination and explicit-child mismatch for INSERT/UPDATE, then perform a root-targeted move. Error codes and unchanged pre-error data discriminate the contracts.",
+      "ko": "RANGE(id+1)의 목적지 없음과 explicit child mismatch를 INSERT/UPDATE로 검사한 뒤 root UPDATE 이동을 확인한다. Error code와 기존 데이터 보존이 핵심이다."
+    },
+    {
+      "name": "PartitionListRejectsNullWithoutDestination",
+      "start": 632,
+      "end": 655,
+      "en": "A LIST with no NULL destination rejects NULL before publishing any OOS file; a subsequent valid write creates only p1's file.",
+      "ko": "NULL 목적지가 없는 LIST는 OOS file 생성 전에 거절해야 한다. 이후 정상 write는 p1 file만 만든다."
+    },
+    {
+      "name": "PartitionUpdatePreservesDuplicateProbesAndNonKeyIncrement",
+      "start": 657,
+      "end": 675,
+      "en": "Combine non-key INCR, ODKU moving id=11 to 9 and REPLACE. Assert final values and no root OOS file. This does not enumerate every probe-side child orphan or SERVER_MODE lifecycle case.",
+      "ko": "Non-key INCR, 11→9 ODKU 이동, REPLACE를 결합한다. 최종 값과 root file 부재를 확인하지만 모든 child probe orphan과 server lifecycle을 열거하지는 않는다."
+    },
+    {
+      "name": "PartitionUpdateStringDomains",
+      "start": 677,
+      "end": 699,
+      "en": "Update case-insensitive VARCHAR keys and compressed expression keys across a length boundary. Check the logical key and owner, with only forced payload OOS in the DEFAULT-policy compressed-key case.",
+      "ko": "대소문자 비구분 VARCHAR와 압축 expression key의 길이 경계 이동을 검사한다. DEFAULT-policy 압축 key 사례에서는 forced payload만 OOS다."
+    },
+    {
+      "name": "PartitionUpdateLegalKeysAndNullMovement",
+      "start": 701,
+      "end": 746,
+      "en": "Loop 13 supported key specifications through default INSERT, unchanged-key UPDATE, NULL movement, reassignment and rollback. Explicit padded CHAR bounds distinguish stored-domain behavior.",
+      "ko": "13개 key 명세로 default INSERT·미변경 UPDATE·NULL 이동·재할당·rollback을 검사한다. CHAR 경계를 padding하여 저장 domain 효과를 드러낸다."
+    },
+    {
+      "name": "PartitionUpdateOldOosKeyAndRepresentation",
+      "start": 748,
+      "end": 772,
+      "en": "Use an OOS-backed string key, add a schema column, update payload then move key and abort. Check inherited default and multi-payload preservation across representation change.",
+      "ko": "OOS string key에 schema column을 추가하고 payload 갱신·key 이동·abort를 수행한다. Representation 변경 후 default와 여러 payload 보존을 확인한다."
+    },
+    {
+      "name": "PartitionUpdateLobLifecycle",
+      "start": 774,
+      "end": 795,
+      "en": "Move a row containing inline CLOB and forced BLOB locator, then change both LOBs and abort. Read external LOB contents and count two OOS chunks at destination; locator storage is distinct from external payload storage.",
+      "ko": "Inline CLOB와 forced BLOB locator를 가진 row를 이동하고 LOB 변경 뒤 abort한다. 외부 내용과 destination chunk 2개를 확인하며 locator와 외부 payload를 구분한다."
+    },
+    {
+      "name": "PartitionUpdateDedicatedIncrementsAndArithmetic",
+      "start": 797,
+      "end": 844,
+      "en": "Test INCR/DECR and ordinary arithmetic for SMALLINT/INT/BIGINT, including extrema where the dedicated increment behavior resets to zero. Ensure the same key used for routing is eventually stored.",
+      "ko": "SMALLINT·INT·BIGINT의 INCR/DECR·일반 산술과 극값에서 0이 되는 전용 연산 의미를 검사한다. Routing key와 실제 저장값이 일치해야 한다."
+    },
+    {
+      "name": "EffectiveUpdateRouteUsesMissingHistoricalKeyDefault",
+      "start": 846,
+      "end": 913,
+      "en": "Construct old serialized bytes before adding the key, then route an unchanged UPDATE using the missing-attribute default. Compare with an independent inline reference; no actual heap row is installed, isolating representation decoding from ALTER redistribution.",
+      "ko": "Key 추가 전 직렬화 bytes로 old row를 만들고 missing attribute default를 이용하는 UPDATE routing을 확인한다. 실제 heap row 없이 독립 inline reference와 비교해 ALTER redistribution과 분리한다."
+    },
+    {
+      "name": "EffectiveUpdateRoutePreservesOldKeyAndPendingIncrement",
+      "start": 915,
+      "end": 1000,
+      "en": "Prepare old key 10 and test unchanged, pending +1, pending -1 and assigned 9. Assert source state/representation/increment remain unchanged after repeated routing, then assert the real transform applies once and final OID/HFID agrees.",
+      "ko": "Old key 10에 미변경·+1·-1·9 할당을 시험한다. 반복 routing 후 원본 state·representation·pending 유지, 실제 transform에서 한 번 적용, final OID/HFID 일치를 검사한다."
+    },
+    {
+      "name": "PartitionPreparationFailuresRollBackAndAllowNextWrite",
+      "start": 1002,
+      "end": 1068,
+      "en": "Inject failures after one publication, after publication reset, before VFID lookup and during OID publication allocation, for INSERT and moving UPDATE. Disarm hooks, abort, check committed values/counts and retry successfully. Multi-chunk payload prevents a single small batch hiding partial progress.",
+      "ko": "INSERT와 moving UPDATE에 publication 이후·reset 이후·VFID 조회 전·OID allocation 실패를 주입한다. Hook 해제와 abort 뒤 값/count 보존 및 다음 성공을 검사한다. Multi-chunk로 부분 publication을 드러낸다."
+    },
+    {
+      "name": "PartitionLobPreparationAndIndexFailuresPreserveCommittedValues",
+      "start": 1070,
+      "end": 1111,
+      "en": "Fail LOB preparation before VFID lookup and fail a moving update on a unique key, with/without new LOB assignments. Abort and verify committed LOB contents and OOS counts, then prove a new write works.",
+      "ko": "VFID 조회 전 LOB 준비와 새 LOB 할당 유무에 따른 unique-key 이동 실패를 검사한다. Abort 후 LOB 내용·OOS count를 확인하고 다음 write 성공을 증명한다."
+    },
+    {
+      "name": "EffectiveKeyCodecFailureClearsOutputAndPreservesAssignment",
+      "start": 1113,
+      "end": 1203,
+      "en": "Swap in a failing scalar codec on private attribute/domain copies only. Fail write and partial read; expect a NULL output and unchanged source assignment, restore the codec and retry. It avoids mutating cached shared schema.",
+      "ko": "Private attribute/domain copy에만 codec 실패를 주입한다. Write 실패와 부분 read 실패 모두 output NULL·원본 보존을 확인하고 codec 복원 후 재시도한다. 공유 schema는 바꾸지 않는다."
+    },
+    {
+      "name": "EffectiveRoutingFailurePreservesAssignmentsAndPublication",
+      "start": 1205,
+      "end": 1272,
+      "en": "Seed OID/LSA publication containers and alternate valid/missing destinations in one pruning context. Assert routing preserves source assignments and both markers; reset test markers on exit. These are preparation-state assertions, not durability tests.",
+      "ko": "OID/LSA publication container에 marker를 넣고 같은 context에서 valid/missing 목적지를 교차한다. 원본 assignment와 두 marker 보존을 확인한 뒤 marker를 정리한다. Durability 테스트는 아니다."
+    },
+    {
+      "name": "EffectiveInsertRoutePreservesOmittedAssignments",
+      "start": 1274,
+      "end": 1340,
+      "en": "Route an omitted CHAR default before any full transform; all candidate slots remain uninitialized and NULL. A separate reference transform must select the same expected child and HFID, without any OOS files.",
+      "ko": "Omitted CHAR default를 전체 transform 전에 routing하고 candidate slot 모두 uninitialized·NULL인지 확인한다. 독립 reference가 같은 child/HFID를 고르며 OOS file은 없어야 한다."
+    },
+    {
+      "name": "EffectiveInsertRoutePreservesAssignedChar",
+      "start": 1342,
+      "end": 1417,
+      "en": "Assign an unpadded CHAR value and snapshot its bytes/state. Early routing must match a separately serialized reference while preserving those original bytes and the untouched payload slot.",
+      "ko": "Padding 전 CHAR를 할당하고 bytes/state를 보관한다. Early routing은 독립 직렬화 reference와 같고 원본 bytes 및 payload slot은 유지되어야 한다."
+    },
+    {
+      "name": "EffectiveInsertRouteLegalKeyDefaults",
+      "start": 1419,
+      "end": 1496,
+      "en": "Compare effective INSERT routing with an independent serialized reference across 13 default key types. Check source slots stay uninitialized and no root/child OOS publication occurs.",
+      "ko": "13개 default key 타입의 effective INSERT를 독립 serialized reference와 비교한다. 원본 slot과 root/child OOS 미생성을 확인한다."
+    },
+    {
+      "name": "PartitionInsertLegalKeySqlMatrix",
+      "start": 1498,
+      "end": 1546,
+      "en": "Execute assigned, NULL and omitted/default INSERTs across 13 types using HASH. Validate logical data, per-child row/chunk correspondence, and print literal partition results for a separate reference run; this test alone is not that separate run.",
+      "ko": "13개 타입의 assigned·NULL·default HASH INSERT를 수행한다. 논리값과 child row/chunk 대응을 검사하고 별도 reference 실행용 관측값을 출력한다. 자체가 별도 reference 실행은 아니다."
+    },
+    {
+      "name": "PartitionInsertOwnsExternalKeyAndMultiplePayloads",
+      "start": 1548,
+      "end": 1573,
+      "en": "Insert an externalized expression key plus forced small and ordinary large VARBIT payloads into both children. Three single-chunk values per row make the expected physical count exactly three per child.",
+      "ko": "OOS expression key와 작은 forced·큰 일반 VARBIT를 두 child에 넣는다. Row당 single-chunk 3개여서 child별 정확히 3개여야 한다."
+    },
+    {
+      "name": "PartitionInsertRetainsBigoneRejectionBeforeOos",
+      "start": 1575,
+      "end": 1593,
+      "en": "Force OOS beside BIT(140000), expect the exact bigone rejection and zero OOS files after abort, then prove the non-OOS whole-record overflow case remains valid with NULL payload.",
+      "ko": "BIT(140000) 옆 forced OOS를 넣어 정확한 bigone 오류와 abort 후 OOS file 부재를 검사한다. Payload NULL인 일반 whole-record overflow는 성공해야 한다."
+    },
+    {
+      "name": "PartitionInsertGeneratedKeysAndDomainConversion",
+      "start": 1595,
+      "end": 1611,
+      "en": "AUTO_INCREMENT produces 9 then 10 across a range boundary; string input '11' is converted to integer. Check values and owner counts 1/2 in the children.",
+      "ko": "AUTO_INCREMENT 9→10이 경계를 넘고 문자열 '11'이 정수로 변환된다. Child count 1/2와 값을 확인한다."
+    },
+    {
+      "name": "PartitionInsertDynamicDefault",
+      "start": 1613,
+      "end": 1630,
+      "en": "A CURRENT_DATE default is compared against an explicit CURRENT_DATE captured in the same INSERT. Assert logical equality and physical ownership rather than hard-coding today's date or hash destination.",
+      "ko": "CURRENT_DATE default를 같은 INSERT의 명시 CURRENT_DATE와 비교한다. 날짜나 hash 목적지를 고정하지 않고 값과 물리 owner를 확인한다."
+    },
+    {
+      "name": "PartitionInsertUsesColumnCollation",
+      "start": 1632,
+      "end": 1647,
+      "en": "Mix 'BETA', 'AlPhA' and 'beta' with utf8_en_ci LIST partitions. Case-insensitive routing must preserve payload identity and per-child chunk totals.",
+      "ko": "utf8_en_ci LIST에 BETA·AlPhA·beta를 섞어 넣는다. 대소문자 비구분 routing에서도 payload identity와 child chunk 합계가 맞아야 한다."
+    },
+    {
+      "name": "PartitionInsertCompressedExpressionKey",
+      "start": 1649,
+      "end": 1664,
+      "en": "Use forced compressed VARCHAR expression keys at lengths 2999/3000, plus forced payloads. Assert both value equality and two OOS chunks in each selected child.",
+      "ko": "길이 2999/3000의 forced compressed VARCHAR expression key와 forced payload를 사용한다. 값과 child별 OOS chunk 2개를 확인한다."
+    }
+  ],
+  "source_sha256": {
+    "src/query/partition.c": "0ce8c1457937f30bb4b96e26772e39283662deda16d1e0bfb8f8eb963a08eb2f",
+    "src/query/partition_sr.h": "e96a77e0f9f32b21bd0563d348d03b7db0642501c48e17c8ae5e862da1e0695a",
+    "src/query/query_executor.c": "8956fd49580e938f36155984f1d1529fa1c4269d62d7b6699b1fcc7fdabe27f9",
+    "src/storage/heap_file.c": "6e137364858c6e7c4ee563e1912a81061a198fec24de2b81c6cb0e5923248bec",
+    "src/storage/heap_file.h": "acaca4b1ba8b76d8803f5453d1776110a330e58fd7a13b76731a68f2f5a52577",
+    "src/transaction/locator_sr.c": "c73595f2ef1478b3aff663ad81cd159da9ddfe7bd1d5ef9c73f1b934709616a0",
+    "src/transaction/locator_sr.h": "86a1ab090219f3e59bd649116391b822310b26de181b2d683397cb9c402aa77e",
+    "unit_tests/oos/sql/CMakeLists.txt": "e779e09eec9d98f2682db27e4ea9bc9523b5014a69cc11efe07433b56a66935d",
+    "unit_tests/oos/sql/test_oos_sql_show.cpp": "1b2c2d530f2ff00a05c860ada9a28b80040d524437da643620b1be5fe5d28d00",
+    "unit_tests/oos/test_oos_real_vacuum_server.cpp": "2726162af0e5578b11d4872598d08b983647fd3eb7b33c218721cbd80a07ae40"
+  },
+  "skills": [
+    "warpdotdev/common-skills:.agents/skills/pr-walkthrough",
+    "nicobailon/visual-explainer:plugins/visual-explainer"
+  ],
+  "d3": {
+    "version": "7.9.0",
+    "url": "https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js",
+    "embedded": true,
+    "sha256": "f2094bbf6141b359722c4fe454eb6c4b0f0e42cc10cc7af921fc158fceb86539"
+  },
+  "engine_tests_run": false,
+  "notes": [
+    "English source first; Korean rendering follows user preference over visual-explainer default.",
+    "Uses pr-walkthrough helper, with generated-document styling/localization adaptations and embedded official D3 for offline use.",
+    "Review readiness is not merge acceptance.",
+    "Existing local CCI mismatch not included in source diff."
+  ]
+}

@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>8. Explain the design, then challenge it · PR 7600</title><style>:root {
+  color-scheme: light dark;
+  --bg: #f7f7f4;
+  --surface: #ffffff;
+  --text: #202522;
+  --muted: #5d6861;
+  --line: #d8ddd9;
+  --accent: #176b55;
+  --code-bg: #edf1ee;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151916;
+    --surface: #1e2420;
+    --text: #edf2ee;
+    --muted: #aeb9b1;
+    --line: #39443d;
+    --accent: #78d6b5;
+    --code-bg: #252d28;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.65 var(--font, inherit);
+}
+
+main,
+header,
+nav,
+footer {
+  width: min(960px, calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+header {
+  padding-block: 3rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+main {
+  padding-block: 2rem 4rem;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+h2 {
+  margin-top: 2.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--line);
+}
+
+a {
+  color: var(--accent);
+}
+
+code,
+pre {
+  background: var(--code-bg);
+  border-radius: 0.3rem;
+}
+
+code {
+  padding: 0.1rem 0.3rem;
+}
+
+pre {
+  overflow-x: auto;
+  padding: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  vertical-align: top;
+}
+
+th {
+  background: var(--code-bg);
+  text-align: left;
+}
+
+.claim,
+.callout {
+  margin-block: 1rem;
+  padding: 0.8rem 1rem;
+  background: var(--surface);
+  border-left: 0.3rem solid var(--accent);
+}
+
+.muted,
+.provenance {
+  color: var(--muted);
+}
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  nav {
+    display: none;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+:root { color-scheme: light; --bg:#f3f5f8; --surface:#fff; --text:#1b2b42; --muted:#506178; --line:#d6dfe9; --accent:#17604d; --code-bg:#edf1f6; }
+body { font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-size:17px; line-height:1.75; }
+header, main, footer { width:min(1020px,calc(100% - 40px)); }
+header { padding:3.5rem 0 2rem; }
+header h1 { font-size:clamp(2rem,5vw,3.8rem); max-width:850px; letter-spacing:-.04em; margin:.45rem 0 1rem; }
+.eyebrow { font-size:.8rem; letter-spacing:.13em; color:var(--accent); font-weight:750; text-transform:uppercase; }
+.subtitle { font-size:1.17rem; color:var(--muted); max-width:780px; }
+.badge { display:inline-block; padding:.2rem .7rem; border:1px solid var(--line); border-radius:30px; margin:.25rem .35rem .25rem 0; font-size:.8rem; background:#fff; }
+nav.toc { width:min(1020px,calc(100% - 40px)); margin:1.5rem auto; padding:1.2rem 1.5rem; background:var(--surface); border:1px solid var(--line); border-radius:12px; }
+nav.toc ol { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.3rem 2rem; padding-left:1.3rem; }
+nav.toc a { text-decoration:none; }
+article { background:var(--surface); border:1px solid var(--line); border-radius:14px; margin-bottom:2rem; padding:2rem 2.7rem; overflow-wrap:anywhere; }
+article h1 { font-size:2rem; margin-top:.3rem; }
+article h2 { font-size:1.4rem; }
+article h3 { font-size:1.12rem; margin-top:2rem; }
+article h1,article h2,article h3 { scroll-margin-top:2rem; }
+pre { font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; tab-size:4; white-space:pre; overflow-x:auto; overflow-wrap:normal; border:1px solid var(--line); }
+pre code { padding:0; background:transparent; }
+code { font-size:.88em; }
+.table-scroll { overflow-x:auto; margin:1.3rem 0; }
+table { font-size:.9rem; min-width:560px; }
+td, th { padding:.65rem .8rem; }
+figure { margin:1.5rem 0; padding:0; overflow-x:auto; }
+figure svg { display:block; width:100%; min-width:650px; height:auto; }
+figcaption { color:var(--muted); font-size:.85rem; padding:.5rem 0; }
+.claim-ref { white-space:nowrap; font-size:.72em; font-weight:650; text-decoration:none; }
+.chapter-nav { display:flex; justify-content:space-between; gap:1rem; border-top:1px solid var(--line); padding-top:1rem; margin-top:2rem; font-size:.85rem; }
+.source-kind { color:var(--muted); }
+.line-map { color:var(--muted); font-size:.86rem; }
+footer { padding:0 0 3rem; color:var(--muted); font-size:.9rem; }
+@media(max-width:650px) { header,main,footer,nav.toc { width:calc(100% - 24px); } article { padding:1.1rem; } article h1 { font-size:1.55rem; } nav.toc ol { grid-template-columns:1fr; } body { font-size:16px; } }
+@media print { :root { --text:#000; --bg:#fff; } body { font-size:10pt; } header,main,footer { width:100%; } header { padding-top:0; } article { border:0; padding:0; break-before:page; } figure { overflow:visible; break-inside:avoid; } figure svg { min-width:0; } pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:8pt; } table { min-width:0; font-size:9pt; } .table-scroll { overflow:visible; } .chapter-nav { display:none; } h2,h3 { break-after:avoid; } }
+</style></head>
+<body><header id="top"><div class="eyebrow">CUBRID · source reading course · PR 7600</div><h1>8. Explain the design, then challenge it</h1><p class="subtitle">From heap pages and partition classes to every changed line of the two-pass OOS write path.</p><span class="badge">30 annotated hunks</span><span class="badge">6 changed files</span><span class="badge">Head b871ea386</span><span class="badge">Offline · Markdown + SVG</span><p class="provenance">Base 2940b1cfb · pinned on 2026-09-08 · English · basic C/C++ and SQL prerequisites</p></header>
+<nav class="toc" aria-label="Reading order"><a href="../index.html#chapter-08">Full book and reading map</a></nav><main><article><h1 id="chapter-08-8-explain-the-design-then-challenge-it">8. Explain the design, then challenge it</h1>
+<h2 id="chapter-08-what-this-patch-buys">What this patch buys</h2>
+<p>The patch reuses the existing serializer and partition reader. The probe provides the byte representation that routing already understands, and an owner override lets final serialization keep using the original attribute metadata while selecting the destination heap. Its small interface additions connect query execution, locator orchestration and storage preparation. <a class="claim-ref" href="../index.html#C-015">[C-015]</a> <a class="claim-ref" href="../index.html#C-016">[C-016]</a></p>
+<p>The cost is a protocol spread across several parameters and mutable state. A nullable output pointer selects a mode; a wrapper silently assumes prior increment application; a LOB state enum carries history across calls. A future caller must know those preconditions. An explicit mode or prepared-write object could express them more directly, but adopting one would require reviewing all callers and retry behavior. That is a design option, not part of this PR. <a class="claim-ref" href="../index.html#C-033">[C-033]</a></p>
+<h2 id="chapter-08-an-end-to-end-explanation-you-should-be-able-to-give">An end-to-end explanation you should be able to give</h2>
+<p>For a root-targeted INSERT of <code>id=1</code>, the executor prepares attribute values and asks the locator to write them. The locator needs a record image before it can find p0. The probe produces inline bytes without OOS selection and reports that the forced value will need OOS. Pruning chooses p0 from the logical key. The locator discards probe memory but retains prepared attribute state. Final transformation uses p0's class OID for OOS-file lookup, creates the chain and puts its stub in the final image. The ordinary lower locator routes that image, locks and selects the child context, and stores the heap row. The regression checks value equality and root/p0/p1 file ownership. <a class="claim-ref" href="../index.html#C-001">[C-001]</a> <a class="claim-ref" href="../index.html#C-003">[C-003]</a> <a class="claim-ref" href="../index.html#C-016">[C-016]</a> <a class="claim-ref" href="../index.html#C-017">[C-017]</a></p>
+<p>For UPDATE, start with the existing child's old row, apply the new values during preparation and select the destination from the new record. If the partition key changes to 20, final OOS ownership should be p1; the lower update path can move the row. Old versions and their values remain subject to the existing MVCC/cleanup rules. <a class="claim-ref" href="../index.html#C-017">[C-017]</a> <a class="claim-ref" href="../index.html#C-027">[C-027]</a></p>
+<h2 id="chapter-08-review-exercises-change-one-line">Review exercises: change one line</h2>
+<p>For each hypothetical edit, identify the changed invariant, the expected observation and a test that would expose it.</p>
+<ol>
+<li>Remove <code>continue</code> from the forced-outline suppression branch.</li>
+<li>Pass null instead of <code>&amp;would_demote_oos</code> in the partitioned probe call.</li>
+<li>Pass <code>&amp;class_oid</code> instead of <code>&amp;pruned_class_oid</code> to the final allocator.</li>
+<li>Change the final wrapper's last argument from true to false.</li>
+<li>Delete <code>would_demote_oos</code> from the <code>copyarea != NULL &amp;&amp; would_demote_oos</code> condition.</li>
+<li>Free <code>attr_info</code> along with the probe copy area.</li>
+<li>Replace the duplicate-key helper's probe with an ordinary transform.</li>
+<li>Remove the lower locator's partition-pruning block because early pruning already ran.</li>
+<li>Assert only SELECT equality and remove SHOW ownership assertions.</li>
+<li>Treat a true return from <code>heap_oos_find_vfid(...,false)</code> as proof that an OOS file exists.</li>
+</ol>
+<h2 id="chapter-08-evidence-boundaries">Evidence boundaries</h2>
+<p>The source explanation is pinned to head <code>b871ea386d2c5419b7abae07dda58b9b7f36377a</code>, base <code>2940b1cfbc3c2d4d0fac3f9244a960350debd380</code>. The six diff files match the head. Unrelated working-tree and submodule changes are excluded. The hunk appendix includes every addition and deletion, and its coverage index is generated from the captured Git diff. <a class="claim-ref" href="../index.html#C-029">[C-029]</a></p>
+<p>The two substantive open boundaries are the current-server behavior of inconsistent ownership <a class="claim-ref" href="../index.html#C-013">[C-013]</a> and runtime coverage beyond the selected standalone regression <a class="claim-ref" href="../index.html#C-032">[C-032]</a>. Neither prevents understanding how the patch is constructed. Both limit operational claims such as “every possible vacuum failure is fixed” or “all side-effect paths were executed.”</p>
+<p><strong>READY WITHIN DECLARED SCOPE.</strong> The book supports the PR mechanism and the recorded regression. C-013 and C-032 remain explicit limits on broader correctness claims.</p>
+<h2 id="chapter-08-chapter-checkpoint">Chapter checkpoint</h2>
+<p>Give a five-minute explanation using only the diagrams. Then open chapter 6 and explain each hunk without its commentary. Record which questions remain in <code>learning-progress.md</code>; completion of this book does not automatically mark your mastery complete.</p></article></main><footer>Built from editable Markdown and SVG. Source claims use the pinned revision; the fresh runtime observation uses the separately hashed pre-existing binary. Study questions are answered separately in chapter 9. <a href="#top">Back to top</a></footer></body></html>

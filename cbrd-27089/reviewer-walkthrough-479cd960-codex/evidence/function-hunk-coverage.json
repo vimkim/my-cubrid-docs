@@ -1,0 +1,1842 @@
+[
+  {
+    "id": 1,
+    "path": "src/query/partition.c",
+    "functions": [],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 158,
+        "text": "static int partition_find_partition_for_expr (THREAD_ENTRY * thread_p, PRUNING_CONTEXT * pinfo, const OID * class_oid,"
+      },
+      {
+        "side": "head",
+        "line": 159,
+        "text": "\t\t\t\t\t      OR_PARTITION ** partition);"
+      },
+      {
+        "side": "head",
+        "line": 160,
+        "text": "static int partition_start_key_attrinfo (THREAD_ENTRY * thread_p, PRUNING_CONTEXT * pinfo);"
+      },
+      {
+        "side": "head",
+        "line": 161,
+        "text": "static int partition_prune_insert_internal (THREAD_ENTRY * thread_p, const OID * class_oid, RECDES * recdes,"
+      },
+      {
+        "side": "head",
+        "line": 162,
+        "text": "\t\t\t\t\t    HEAP_CACHE_ATTRINFO * attr_info, PRUNING_CONTEXT * pcontext,"
+      },
+      {
+        "side": "head",
+        "line": 163,
+        "text": "\t\t\t\t\t    int pruning_type, OID * pruned_class_oid, HFID * pruned_hfid,"
+      },
+      {
+        "side": "head",
+        "line": 164,
+        "text": "\t\t\t\t\t    OID * superclass_oid);"
+      }
+    ],
+    "non_function_explanation": "Declare the extracted evaluator, stable-key initializer and shared INSERT implementation before use. These are internal seams; the public entry points are declared separately in partition_sr.h."
+  },
+  {
+    "id": 2,
+    "path": "src/query/partition.c",
+    "functions": [
+      "partition_find_partition_for_expr",
+      "partition_find_partition_for_record"
+    ],
+    "non_function_changes": [
+      {
+        "side": "base",
+        "line": 3457,
+        "text": " * partition_find_partition_for_record () - find the partition in which a"
+      },
+      {
+        "side": "base",
+        "line": 3458,
+        "text": " *\t\t\t\t\t    record should be placed"
+      },
+      {
+        "side": "head",
+        "line": 3464,
+        "text": " * partition_find_partition_for_expr () - evaluate the bound partition expression"
+      },
+      {
+        "side": "head",
+        "line": 3465,
+        "text": " *                                       and find its single destination"
+      },
+      {
+        "side": "base",
+        "line": 3460,
+        "text": " * pinfo (in)\t  : pruning context"
+      },
+      {
+        "side": "base",
+        "line": 3461,
+        "text": " * class_oid (in) : OID of the root class"
+      },
+      {
+        "side": "base",
+        "line": 3462,
+        "text": " * recdes (in)\t  : record descriptor"
+      },
+      {
+        "side": "base",
+        "line": 3463,
+        "text": " * partition_oid (in/out) : OID of the partition in which the record fits"
+      },
+      {
+        "side": "base",
+        "line": 3464,
+        "text": " * partition_hfid (in/out): HFID of the partition in which the record fits"
+      },
+      {
+        "side": "head",
+        "line": 3467,
+        "text": " * thread_p (in) : thread entry from the pruning context"
+      },
+      {
+        "side": "head",
+        "line": 3468,
+        "text": " * pinfo (in/out) : loaded pruning context with a bound, readable key value"
+      },
+      {
+        "side": "head",
+        "line": 3469,
+        "text": " * class_oid (in) : class OID used for expression evaluation"
+      },
+      {
+        "side": "head",
+        "line": 3470,
+        "text": " * partition (out) : borrowed destination, valid until the context is cleared;"
+      },
+      {
+        "side": "head",
+        "line": 3471,
+        "text": " *                   written only on success"
+      },
+      {
+        "side": "head",
+        "line": 3472,
+        "text": " *"
+      },
+      {
+        "side": "head",
+        "line": 3473,
+        "text": " * The caller owns the bound attributes and their values, and supplies the"
+      },
+      {
+        "side": "head",
+        "line": 3474,
+        "text": " * evaluation instance OID in pinfo->attr_info.inst_oid. Evaluation may populate"
+      },
+      {
+        "side": "head",
+        "line": 3475,
+        "text": " * expression caches; it does not transfer ownership or clear values. Record"
+      },
+      {
+        "side": "head",
+        "line": 3476,
+        "text": " * decoding, representation changes and explicit-partition validation belong"
+      },
+      {
+        "side": "head",
+        "line": 3477,
+        "text": " * to callers."
+      }
+    ],
+    "non_function_explanation": "Rename the core to partition_find_partition_for_expr, accept an explicit thread and borrowed destination output, and remove decoding from this function. Decoding is relocated to the record adapter in H05. The evaluator can now consume either an effective key or a decoded record key without duplicating partition semantics."
+  },
+  {
+    "id": 3,
+    "path": "src/query/partition.c",
+    "functions": [
+      "partition_find_partition_for_expr",
+      "partition_find_partition_for_record"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "The evaluator no longer owns temporary record DB_VALUE cleanup. Return ER_PARTITION_NOT_EXIST directly on failed matching; the adapter that owns the key handles cleanup."
+  },
+  {
+    "id": 4,
+    "path": "src/query/partition.c",
+    "functions": [
+      "partition_find_partition_for_expr",
+      "partition_find_partition_for_record"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Keep the original no-destination/internal-error choice, replacing a cleanup jump with a direct return. This does not relax the requirement for exactly one destination."
+  },
+  {
+    "id": 5,
+    "path": "src/query/partition.c",
+    "functions": [
+      "partition_find_partition_for_attrinfo",
+      "partition_find_partition_for_expr",
+      "partition_find_partition_for_record",
+      "partition_start_key_attrinfo"
+    ],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 3544,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 3545,
+        "text": "/*"
+      },
+      {
+        "side": "head",
+        "line": 3546,
+        "text": " * partition_start_key_attrinfo () - bind the expression to the context-owned key slot"
+      },
+      {
+        "side": "head",
+        "line": 3547,
+        "text": " */"
+      },
+      {
+        "side": "head",
+        "line": 3565,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 3566,
+        "text": "/*"
+      },
+      {
+        "side": "head",
+        "line": 3567,
+        "text": " * partition_find_partition_for_attrinfo () - route one effective key without preparing the source row"
+      },
+      {
+        "side": "head",
+        "line": 3568,
+        "text": " */"
+      },
+      {
+        "side": "head",
+        "line": 3606,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 3607,
+        "text": "/*"
+      },
+      {
+        "side": "head",
+        "line": 3608,
+        "text": " * partition_find_partition_for_record () - find the partition in which a"
+      },
+      {
+        "side": "head",
+        "line": 3609,
+        "text": " *                                        record should be placed"
+      },
+      {
+        "side": "head",
+        "line": 3610,
+        "text": " * return : error code or NO_ERROR"
+      },
+      {
+        "side": "head",
+        "line": 3611,
+        "text": " * pinfo (in)     : pruning context"
+      },
+      {
+        "side": "head",
+        "line": 3612,
+        "text": " * class_oid (in) : OID of the root class or the source partition"
+      },
+      {
+        "side": "head",
+        "line": 3613,
+        "text": " * recdes (in)    : record descriptor"
+      },
+      {
+        "side": "head",
+        "line": 3614,
+        "text": " * partition_oid (in/out) : OID of the partition in which the record fits"
+      },
+      {
+        "side": "head",
+        "line": 3615,
+        "text": " * partition_hfid (in/out): HFID of the partition in which the record fits"
+      },
+      {
+        "side": "head",
+        "line": 3616,
+        "text": " */"
+      }
+    ],
+    "non_function_explanation": "Return the context-owned OR_PARTITION, then add a reusable one-key slot and the attrinfo adapter. Clear stale key values before evaluation, mark the slot readable, prepare only the owned effective key, copy OID/HFID only after success and clear it on exit. Reintroduce the old record adapter: decode under root representation, restore the original ID, evaluate using the shared core, and retain destination representation patching."
+  },
+  {
+    "id": 6,
+    "path": "src/query/partition.c",
+    "functions": [
+      "partition_find_partition_for_record"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Read rep_id from the returned partition instead of indexing with the evaluator's old local pos. The same selected descriptor supplies destination OID, HFID and representation ID."
+  },
+  {
+    "id": 7,
+    "path": "src/query/partition.c",
+    "functions": [],
+    "non_function_changes": [
+      {
+        "side": "base",
+        "line": 3583,
+        "text": " * partition_prune_insert () - perform pruning for insert"
+      },
+      {
+        "side": "head",
+        "line": 3680,
+        "text": " * partition_prune_insert_internal () - shared context and validation contract for INSERT routing"
+      },
+      {
+        "side": "base",
+        "line": 3588,
+        "text": " * scan_cache (in): Heap scan cache"
+      },
+      {
+        "side": "head",
+        "line": 3685,
+        "text": " * attr_info (in): source INSERT assignments, or NULL to route recdes instead"
+      }
+    ],
+    "non_function_explanation": "Rename the internal documentation and describe attr_info as an optional alternative to recdes. Remove the stale scan_cache parameter description because this internal function does not take it."
+  },
+  {
+    "id": 8,
+    "path": "src/query/partition.c",
+    "functions": [
+      "partition_prune_insert",
+      "partition_prune_insert_internal"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Make the implementation private and accept both recdes and attr_info. Public wrappers choose one; context loading, validation and cleanup remain shared."
+  },
+  {
+    "id": 9,
+    "path": "src/query/partition.c",
+    "functions": [
+      "partition_prune_insert",
+      "partition_prune_insert_internal"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "A non-NULL attr_info routes a key with old_recdes=NULL; otherwise use the record adapter. Both feed the same later explicit-partition validation and cleanup path."
+  },
+  {
+    "id": 10,
+    "path": "src/query/partition.c",
+    "functions": [
+      "partition_prune_insert",
+      "partition_prune_insert_by_attrinfo"
+    ],
+    "non_function_changes": [
+      {
+        "side": "base",
+        "line": 3692,
+        "text": " * partition_prune_update () - perform pruning on update statements"
+      },
+      {
+        "side": "head",
+        "line": 3797,
+        "text": " * partition_prune_insert () - route an already serialized INSERT record"
+      },
+      {
+        "side": "head",
+        "line": 3798,
+        "text": " */"
+      },
+      {
+        "side": "head",
+        "line": 3807,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 3808,
+        "text": "/*"
+      },
+      {
+        "side": "head",
+        "line": 3809,
+        "text": " * partition_prune_insert_by_attrinfo () - route an INSERT without changing its assignments"
+      },
+      {
+        "side": "head",
+        "line": 3810,
+        "text": " *"
+      },
+      {
+        "side": "head",
+        "line": 3811,
+        "text": " * Context ownership, explicit-partition validation and outputs match partition_prune_insert."
+      },
+      {
+        "side": "head",
+        "line": 3812,
+        "text": " * The key is owned by the routing context and cleared before returning; source assignments,"
+      },
+      {
+        "side": "head",
+        "line": 3813,
+        "text": " * LOB objects, OOS publication and the record representation are untouched."
+      },
+      {
+        "side": "head",
+        "line": 3814,
+        "text": " */"
+      },
+      {
+        "side": "head",
+        "line": 3824,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 3825,
+        "text": "/*"
+      },
+      {
+        "side": "head",
+        "line": 3826,
+        "text": " * partition_prune_update_internal () - shared context and validation contract for UPDATE routing"
+      },
+      {
+        "side": "base",
+        "line": 3696,
+        "text": " * recdes (in)\t  : Record describing the new object"
+      },
+      {
+        "side": "head",
+        "line": 3830,
+        "text": " * recdes (in)\t  : new record for record routing, supplied old record for attribute routing"
+      },
+      {
+        "side": "head",
+        "line": 3831,
+        "text": " * attr_info (in): source UPDATE assignments, or NULL to route the new record"
+      }
+    ],
+    "non_function_explanation": "The original signature becomes a wrapper passing NULL attrinfo. The new by_attrinfo wrapper passes NULL recdes and asserts assignments exist. UPDATE documentation is also revised to distinguish supplied old row from final new row."
+  },
+  {
+    "id": 11,
+    "path": "src/query/partition.c",
+    "functions": [
+      "partition_prune_update",
+      "partition_prune_update_internal"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Add optional attrinfo to a private UPDATE internal. Source-child to root discovery and the caller-owned context requirements remain in this common implementation."
+  },
+  {
+    "id": 12,
+    "path": "src/query/partition.c",
+    "functions": [
+      "partition_prune_update",
+      "partition_prune_update_internal"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "In attrinfo mode, recdes is the supplied old row used for an unchanged key; in record mode it is the already serialized new row. Preserving this distinction avoids substituting current defaults for historical values."
+  },
+  {
+    "id": 13,
+    "path": "src/query/partition.c",
+    "functions": [
+      "partition_prune_update",
+      "partition_prune_update_by_attrinfo"
+    ],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 3970,
+        "text": "/*"
+      },
+      {
+        "side": "head",
+        "line": 3971,
+        "text": " * partition_prune_update () - retain final record routing and representation patching"
+      },
+      {
+        "side": "head",
+        "line": 3972,
+        "text": " */"
+      },
+      {
+        "side": "head",
+        "line": 3980,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 3981,
+        "text": "/*"
+      },
+      {
+        "side": "head",
+        "line": 3982,
+        "text": " * partition_prune_update_by_attrinfo () - route assignments and the supplied old row without changing either"
+      },
+      {
+        "side": "head",
+        "line": 3983,
+        "text": " */"
+      },
+      {
+        "side": "head",
+        "line": 3993,
+        "text": ""
+      }
+    ],
+    "non_function_explanation": "Keep the original UPDATE wrapper passing NULL attrinfo. Add by_attrinfo with explicit old_recdes. Both reuse validation and context lifetime; only the source of the key differs."
+  },
+  {
+    "id": 14,
+    "path": "src/query/partition_sr.h",
+    "functions": [],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 122,
+        "text": "extern int partition_prune_insert_by_attrinfo (THREAD_ENTRY * thread_p, const OID * class_oid,"
+      },
+      {
+        "side": "head",
+        "line": 123,
+        "text": "\t\t\t\t\t       HEAP_CACHE_ATTRINFO * attr_info, PRUNING_CONTEXT * pcontext,"
+      },
+      {
+        "side": "head",
+        "line": 124,
+        "text": "\t\t\t\t\t       int pruning_type, OID * pruned_class_oid, HFID * pruned_hfid,"
+      },
+      {
+        "side": "head",
+        "line": 125,
+        "text": "\t\t\t\t\t       OID * superclass_oid);"
+      },
+      {
+        "side": "head",
+        "line": 126,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 127,
+        "text": "extern int partition_prune_update_by_attrinfo (THREAD_ENTRY * thread_p, const OID * class_oid,"
+      },
+      {
+        "side": "head",
+        "line": 128,
+        "text": "\t\t\t\t\t       HEAP_CACHE_ATTRINFO * attr_info, RECDES * old_recdes,"
+      },
+      {
+        "side": "head",
+        "line": 129,
+        "text": "\t\t\t\t\t       PRUNING_CONTEXT * pcontext, int pruning_type, OID * pruned_class_oid,"
+      },
+      {
+        "side": "head",
+        "line": 130,
+        "text": "\t\t\t\t\t       HFID * pruned_hfid, OID * superclass_oid);"
+      },
+      {
+        "side": "head",
+        "line": 131,
+        "text": ""
+      }
+    ],
+    "non_function_explanation": "Expose INSERT and UPDATE by_attrinfo entry points to locator code; UPDATE includes the supplied old record. OID/HFID and optional superclass outputs match the existing routing interfaces."
+  },
+  {
+    "id": 15,
+    "path": "src/query/query_executor.c",
+    "functions": [
+      "qexec_remove_duplicates_for_replace"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Add a local Boolean whose address selects suppression. False is an initial verdict, not a request to disable suppression."
+  },
+  {
+    "id": 16,
+    "path": "src/query/query_executor.c",
+    "functions": [
+      "qexec_remove_duplicates_for_replace"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Pass NULL owner and a non-NULL verdict pointer when building the duplicate-search image. Preserve EXCLUDE_LOB. The image is never installed, so it must not create OOS chains."
+  },
+  {
+    "id": 17,
+    "path": "src/query/query_executor.c",
+    "functions": [
+      "qexec_oid_of_duplicate_key_update"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Add the corresponding verdict storage for duplicate-key UPDATE lookup. Mode is selected by pointer presence; the caller does not need the reported value afterward."
+  },
+  {
+    "id": 18,
+    "path": "src/query/query_executor.c",
+    "functions": [
+      "qexec_oid_of_duplicate_key_update"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Build the duplicate-key lookup image through suppression while retaining INCLUDE_LOB. This prevents OOS publication for the temporary image; it is not a promise of zero LOB preparation effects."
+  },
+  {
+    "id": 19,
+    "path": "src/storage/heap_file.c",
+    "functions": [],
+    "non_function_changes": [
+      {
+        "side": "base",
+        "line": 697,
+        "text": "\t\t\t\t\t\tsize_t * offset_size_ptr,"
+      },
+      {
+        "side": "head",
+        "line": 697,
+        "text": "\t\t\t\t\t\tbool suppress_oos, size_t * offset_size_ptr,"
+      },
+      {
+        "side": "base",
+        "line": 699,
+        "text": "\t\t\t\t\t\tbool * has_oos, size_t * inline_size_after_oos_ptr);"
+      },
+      {
+        "side": "head",
+        "line": 699,
+        "text": "\t\t\t\t\t\tbool * has_oos, bool * would_demote_oos,"
+      },
+      {
+        "side": "head",
+        "line": 700,
+        "text": "\t\t\t\t\t\tsize_t * inline_size_after_oos_ptr);"
+      }
+    ],
+    "non_function_explanation": "Thread suppress_oos and would_demote_oos through the private layout planner declaration. Actual placement and hypothetical demotion are distinct outputs."
+  },
+  {
+    "id": 20,
+    "path": "src/storage/heap_file.c",
+    "functions": [],
+    "non_function_changes": [
+      {
+        "side": "base",
+        "line": 785,
+        "text": "\t\t\t\t\t\t\t   int lob_create_flag);"
+      },
+      {
+        "side": "head",
+        "line": 786,
+        "text": "\t\t\t\t\t\t\t   int lob_create_flag, const OID * oos_class_oid,"
+      },
+      {
+        "side": "head",
+        "line": 787,
+        "text": "\t\t\t\t\t\t\t   bool * would_demote_oos, bool increments_already_applied);"
+      }
+    ],
+    "non_function_explanation": "Add destination owner, optional suppression output and second-pass increment state. Wrappers set these deliberately; default behavior must remain the normal first pass."
+  },
+  {
+    "id": 21,
+    "path": "src/storage/heap_file.c",
+    "functions": [
+      "heap_attrinfo_get_effective_key"
+    ],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 12100,
+        "text": "/*"
+      },
+      {
+        "side": "head",
+        "line": 12101,
+        "text": " * heap_attrinfo_get_effective_key () - obtain the stored-value equivalent of a write's partition key"
+      },
+      {
+        "side": "head",
+        "line": 12102,
+        "text": " *   return: NO_ERROR or an error code"
+      },
+      {
+        "side": "head",
+        "line": 12103,
+        "text": " *   attr_info(in): source assignments; never initialized or otherwise modified here"
+      },
+      {
+        "side": "head",
+        "line": 12104,
+        "text": " *   attrid(in): a schema-validated partition-key attribute"
+      },
+      {
+        "side": "head",
+        "line": 12105,
+        "text": " *   old_recdes(in): the write path's old row, or NULL for INSERT"
+      },
+      {
+        "side": "head",
+        "line": 12106,
+        "text": " *   key(out): owned value, initially NULL; caller clears it"
+      },
+      {
+        "side": "head",
+        "line": 12107,
+        "text": " *"
+      },
+      {
+        "side": "head",
+        "line": 12108,
+        "text": " * Only the key is prepared. Omitted values use the same representation default"
+      },
+      {
+        "side": "head",
+        "line": 12109,
+        "text": " * reader as a normal INSERT. Unchanged UPDATE keys use an independent one-key"
+      },
+      {
+        "side": "head",
+        "line": 12110,
+        "text": " * reader of the supplied old representation. Pending increments affect only"
+      },
+      {
+        "side": "head",
+        "line": 12111,
+        "text": " * the owned key; the normal row transformer still applies the real mutation."
+      },
+      {
+        "side": "head",
+        "line": 12112,
+        "text": " * The scalar codec operates on an owned copy because sizing/writing may"
+      },
+      {
+        "side": "head",
+        "line": 12113,
+        "text": " * normalize CHAR padding or cache string compression."
+      },
+      {
+        "side": "head",
+        "line": 12114,
+        "text": " * No row image, LOB lifecycle operation, or OOS publication is performed."
+      },
+      {
+        "side": "head",
+        "line": 12115,
+        "text": " */"
+      },
+      {
+        "side": "head",
+        "line": 12225,
+        "text": ""
+      }
+    ],
+    "non_function_explanation": "Read an unchanged UPDATE key with an independent reader of the supplied old row; read omitted INSERT defaults on copied metadata; otherwise clone the source. Apply pending increments only to the copy, preserve NULL, then size/write/read with the domain codec. Use aligned scratch for small values and owned allocation for larger ones. Every failure clears a partial output. The guide's block table explains the branches; direct tests compare reference routing and assert source preservation."
+  },
+  {
+    "id": 22,
+    "path": "src/storage/heap_file.c",
+    "functions": [],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 12428,
+        "text": " *   suppress_oos(in): true to keep every column inline even when the record exceeds the OOS trigger"
+      },
+      {
+        "side": "head",
+        "line": 12432,
+        "text": " *   would_demote_oos(out): with suppress_oos, true if a normal layout would have demoted a column"
+      }
+    ],
+    "non_function_explanation": "Document that suppression retains inline values and that would_demote is hypothetical. has_oos continues to describe the actual emitted layout."
+  },
+  {
+    "id": 23,
+    "path": "src/storage/heap_file.c",
+    "functions": [
+      "heap_attrinfo_determine_disk_layout"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Keep declaration, definition and caller consistent. Passing the mode separately allows layout decisions to avoid selecting any OOS plan entry."
+  },
+  {
+    "id": 24,
+    "path": "src/storage/heap_file.c",
+    "functions": [
+      "heap_attrinfo_determine_disk_layout"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Initialize has_oos false and clear a supplied would-demote output before scanning columns. A reused Boolean must not inherit the previous row's verdict."
+  },
+  {
+    "id": 25,
+    "path": "src/storage/heap_file.c",
+    "functions": [
+      "heap_attrinfo_determine_disk_layout"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "FORCE_OUTLINE runs before the ordinary size gate. Under suppression set would-demote and continue before plan.selected, payload subtraction and has_oos updates. This is the small-forced-value regression's decisive branch."
+  },
+  {
+    "id": 26,
+    "path": "src/storage/heap_file.c",
+    "functions": [
+      "heap_attrinfo_determine_disk_layout"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "After discovering ordinary eligible candidates, report whether candidates exist and return the fully inline size without sorting/selecting/demoting them. The fully inline temporary image can be larger than a heap slot."
+  },
+  {
+    "id": 27,
+    "path": "src/storage/heap_file.c",
+    "functions": [
+      "heap_attrinfo_insert_to_oos"
+    ],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 12840,
+        "text": " *"
+      },
+      {
+        "side": "head",
+        "line": 12841,
+        "text": " * oos_class_oid designates the class whose heap receives the OOS value chains; NULL means"
+      },
+      {
+        "side": "head",
+        "line": 12842,
+        "text": " * attr_info->class_oid. A partitioned write must pass the pruned partition class, because the"
+      },
+      {
+        "side": "head",
+        "line": 12843,
+        "text": " * value chains must live in the OOS file of the heap that stores the record (CBRD-27089)."
+      }
+    ],
+    "non_function_explanation": "Extend heap_attrinfo_insert_to_oos with an optional class OID and document per-heap ownership. Retain source attrinfo for payload and LOB preparation."
+  },
+  {
+    "id": 28,
+    "path": "src/storage/heap_file.c",
+    "functions": [
+      "heap_attrinfo_insert_to_oos"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Pass the override to heap_oos_insert_serialized_values, falling back to attrinfo class for legacy callers. This is where early destination selection becomes a different physical OOS file."
+  },
+  {
+    "id": 29,
+    "path": "src/storage/heap_file.c",
+    "functions": [
+      "heap_attrinfo_transform_to_disk",
+      "heap_attrinfo_transform_to_disk_oos_class",
+      "heap_attrinfo_transform_to_disk_probe_oos",
+      "heap_attrinfo_transform_to_disk_with_oos_owner"
+    ],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 12922,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 12923,
+        "text": "/*"
+      },
+      {
+        "side": "head",
+        "line": 12924,
+        "text": " * heap_attrinfo_transform_to_disk_with_oos_owner () - normal first-pass transformation with a destination OOS heap"
+      },
+      {
+        "side": "head",
+        "line": 12925,
+        "text": " *"
+      },
+      {
+        "side": "head",
+        "line": 12926,
+        "text": " * Source representation and assignment identity stay in attr_info. Only OOS ownership is overridden;"
+      },
+      {
+        "side": "head",
+        "line": 12927,
+        "text": " * value preparation, LOB handling and pending increments use the normal first-pass contract."
+      },
+      {
+        "side": "head",
+        "line": 12928,
+        "text": " */"
+      },
+      {
+        "side": "head",
+        "line": 12938,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 12939,
+        "text": "/*"
+      },
+      {
+        "side": "head",
+        "line": 12940,
+        "text": " * heap_attrinfo_transform_to_disk_probe_oos () - Transform to disk with OOS demotion suppressed."
+      },
+      {
+        "side": "head",
+        "line": 12941,
+        "text": " *"
+      },
+      {
+        "side": "head",
+        "line": 12942,
+        "text": " *   would_demote_oos(out): true if a normal transform would have demoted at least one column"
+      },
+      {
+        "side": "head",
+        "line": 12943,
+        "text": " *"
+      },
+      {
+        "side": "head",
+        "line": 12944,
+        "text": " * Note: Every column stays inline, so the resulting recdes can be larger than a slotted-page"
+      },
+      {
+        "side": "head",
+        "line": 12945,
+        "text": " * record allows; it is meant for record routing and key extraction, not for direct insertion."
+      },
+      {
+        "side": "head",
+        "line": 12946,
+        "text": " * No OOS value chain is written. Side effects on attr_info (LOB copy, INCR/DECR application)"
+      },
+      {
+        "side": "head",
+        "line": 12947,
+        "text": " * still happen exactly once, so a subsequent heap_attrinfo_transform_to_disk_oos_class call"
+      },
+      {
+        "side": "head",
+        "line": 12948,
+        "text": " * completes the write without repeating them."
+      },
+      {
+        "side": "head",
+        "line": 12949,
+        "text": " */"
+      },
+      {
+        "side": "head",
+        "line": 12958,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 12959,
+        "text": "/*"
+      },
+      {
+        "side": "head",
+        "line": 12960,
+        "text": " * heap_attrinfo_transform_to_disk_oos_class () - Transform to disk, writing OOS value chains to the"
+      },
+      {
+        "side": "head",
+        "line": 12961,
+        "text": " *                                                heap of oos_class_oid instead of attr_info->class_oid."
+      },
+      {
+        "side": "head",
+        "line": 12962,
+        "text": " *"
+      },
+      {
+        "side": "head",
+        "line": 12963,
+        "text": " * Note: This is the second pass of a two-pass partitioned write; it assumes"
+      },
+      {
+        "side": "head",
+        "line": 12964,
+        "text": " * heap_attrinfo_transform_to_disk_probe_oos already ran on the same attr_info, so pending"
+      },
+      {
+        "side": "head",
+        "line": 12965,
+        "text": " * INCR/DECR assignments were already applied and are not applied again here."
+      },
+      {
+        "side": "head",
+        "line": 12966,
+        "text": " */"
+      }
+    ],
+    "non_function_explanation": "Normal wrapper uses NULL owner/NULL verdict/false. Owner-aware first pass uses owner/NULL/false. Probe uses NULL/verdict/false. Retained second pass uses owner/NULL/true. The final true skips increments already applied by an earlier probe; it must not be used for the new main path's first transform."
+  },
+  {
+    "id": 30,
+    "path": "src/storage/heap_file.c",
+    "functions": [
+      "heap_attrinfo_transform_to_disk_except_lob"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "The except_lob wrapper supplies EXCLUDE_LOB with default owner, no suppression and first-pass increment behavior. This signature adaptation retains the existing contract."
+  },
+  {
+    "id": 31,
+    "path": "src/storage/heap_file.c",
+    "functions": [
+      "heap_attrinfo_transform_to_disk_internal"
+    ],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 13451,
+        "text": " *   oos_class_oid(in): class whose heap receives the OOS value chains; NULL means attr_info->class_oid"
+      },
+      {
+        "side": "head",
+        "line": 13452,
+        "text": " *   would_demote_oos(out): non-NULL suppresses OOS demotion and reports whether it would have happened"
+      },
+      {
+        "side": "head",
+        "line": 13453,
+        "text": " *   increments_already_applied(in): true if a previous probe pass already applied INCR/DECR assignments"
+      }
+    ],
+    "non_function_explanation": "Document pointer-presence suppression, destination override and the retained second-pass flag in the common transformer. The definition matches the updated declaration."
+  },
+  {
+    "id": 32,
+    "path": "src/storage/heap_file.c",
+    "functions": [
+      "heap_attrinfo_transform_to_disk_internal"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Compute suppress_oos from would_demote_oos != NULL. Add an index variable for the retained second-pass premark loop; it is not the early key routing algorithm."
+  },
+  {
+    "id": 33,
+    "path": "src/storage/heap_file.c",
+    "functions": [
+      "heap_attrinfo_transform_to_disk_internal"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "When increments_already_applied is true, prefill the same set consulted by the fixed-column writer. Current owner-aware main writes pass false; buffer-retry protection in the normal writer remains independently necessary."
+  },
+  {
+    "id": 34,
+    "path": "src/storage/heap_file.c",
+    "functions": [
+      "heap_attrinfo_transform_to_disk_internal"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Pass suppression and verdict to the planner while retaining actual has_oos and inline-size outputs. Later OOS writing is controlled by the actual has_oos result."
+  },
+  {
+    "id": 35,
+    "path": "src/storage/heap_file.c",
+    "functions": [
+      "heap_attrinfo_transform_to_disk_internal"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "The transform sends oos_class_oid to the OOS insertion boundary only after the existing bigone rejection. This propagates the destination selected by locator without rewriting attrinfo identity."
+  },
+  {
+    "id": 36,
+    "path": "src/storage/heap_file.c",
+    "functions": [
+      "bridge_heap_attrinfo_insert_to_oos"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Supply NULL for the new owner parameter in the pre-existing bridge. Its synthetic attrinfo class continues to determine ownership."
+  },
+  {
+    "id": 37,
+    "path": "src/storage/heap_file.h",
+    "functions": [],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 506,
+        "text": "extern int heap_attrinfo_get_effective_key (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info, ATTR_ID attrid,"
+      },
+      {
+        "side": "head",
+        "line": 507,
+        "text": "\t\t\t\t\t    RECDES * old_recdes, DB_VALUE * key);"
+      },
+      {
+        "side": "head",
+        "line": 510,
+        "text": "extern SCAN_CODE heap_attrinfo_transform_to_disk_with_oos_owner (THREAD_ENTRY * thread_p,"
+      },
+      {
+        "side": "head",
+        "line": 511,
+        "text": "\t\t\t\t\t\t\t\t HEAP_CACHE_ATTRINFO * attr_info, RECDES * old_recdes,"
+      },
+      {
+        "side": "head",
+        "line": 512,
+        "text": "\t\t\t\t\t\t\t\t record_descriptor * new_recdes, int lob_create_flag,"
+      },
+      {
+        "side": "head",
+        "line": 513,
+        "text": "\t\t\t\t\t\t\t\t const OID * oos_class_oid);"
+      },
+      {
+        "side": "head",
+        "line": 516,
+        "text": "extern SCAN_CODE heap_attrinfo_transform_to_disk_probe_oos (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,"
+      },
+      {
+        "side": "head",
+        "line": 517,
+        "text": "\t\t\t\t\t\t\t    RECDES * old_recdes, record_descriptor * new_recdes,"
+      },
+      {
+        "side": "head",
+        "line": 518,
+        "text": "\t\t\t\t\t\t\t    int lob_create_flag, bool * would_demote_oos);"
+      },
+      {
+        "side": "head",
+        "line": 519,
+        "text": "extern SCAN_CODE heap_attrinfo_transform_to_disk_oos_class (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,"
+      },
+      {
+        "side": "head",
+        "line": 520,
+        "text": "\t\t\t\t\t\t\t    RECDES * old_recdes, record_descriptor * new_recdes,"
+      },
+      {
+        "side": "head",
+        "line": 521,
+        "text": "\t\t\t\t\t\t\t    int lob_create_flag, const OID * oos_class_oid);"
+      }
+    ],
+    "non_function_explanation": "Declare the effective-key helper plus owner-first-pass, probe and retained rebuild wrappers. Old transformer declarations remain. This is an internal engine header change, not a client protocol change."
+  },
+  {
+    "id": 38,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [],
+    "non_function_changes": [
+      {
+        "side": "base",
+        "line": 155,
+        "text": "\t\t\t\t bool need_locking);"
+      },
+      {
+        "side": "head",
+        "line": 155,
+        "text": "\t\t\t\t bool need_locking, const OID * expected_class_oid);"
+      }
+    ],
+    "non_function_explanation": "Extend the private locator_update_force declaration with an optional expected destination. Each caller must explicitly say whether it has an early decision to validate."
+  },
+  {
+    "id": 39,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [],
+    "non_function_changes": [
+      {
+        "side": "base",
+        "line": 4927,
+        "text": " * locator_insert_force () - Insert the given object on this heap"
+      },
+      {
+        "side": "head",
+        "line": 4927,
+        "text": " * locator_insert_force_internal () - Insert the given object on this heap"
+      }
+    ],
+    "non_function_explanation": "Rename the comment to match the new private internal function. Behavior is provided by the surrounding signature and agreement-check changes."
+  },
+  {
+    "id": 40,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [
+      "locator_insert_force",
+      "locator_insert_force_internal"
+    ],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 4947,
+        "text": " *   expected_class_oid(in): optional early destination; final routing must agree before inserting"
+      },
+      {
+        "side": "base",
+        "line": 4951,
+        "text": "int"
+      },
+      {
+        "side": "head",
+        "line": 4952,
+        "text": "static int"
+      }
+    ],
+    "non_function_explanation": "Add expected_class_oid while keeping the old public API via H42. This avoids forcing unrelated callers to create an early destination."
+  },
+  {
+    "id": 41,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [
+      "locator_insert_force_internal"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "After final record pruning succeeds, compare against the early owner. On mismatch return ER_GENERIC_ERROR through existing error handling before the following subclass/heap insertion path. Do not silently redirect already-prepared OOS chains."
+  },
+  {
+    "id": 42,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [
+      "locator_insert_force"
+    ],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 5295,
+        "text": "/*"
+      },
+      {
+        "side": "head",
+        "line": 5296,
+        "text": " * locator_insert_force () - retain the existing force interface for callers without an early destination"
+      },
+      {
+        "side": "head",
+        "line": 5297,
+        "text": " */"
+      },
+      {
+        "side": "head",
+        "line": 5309,
+        "text": ""
+      }
+    ],
+    "non_function_explanation": "The original public locator_insert_force forwards all existing arguments plus NULL expected owner. Only the main attribute write invokes the private guarded variant directly."
+  },
+  {
+    "id": 43,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 5484,
+        "text": " *   expected_class_oid(in): optional early destination; final routing must agree before heap/index mutation"
+      }
+    ],
+    "non_function_explanation": "Document that the optional early class must agree with final routing before the subsequent row heap/index mutation. This is a comparison contract, not a transaction-abort implementation."
+  },
+  {
+    "id": 44,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [
+      "locator_update_force"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Extend the private definition to receive expected_class_oid. H45 consumes it after final routing; unrelated callers pass NULL."
+  },
+  {
+    "id": 45,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [
+      "locator_update_force"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Compare final class with the early OOS owner before source-class reidentification and partition movement. Failure follows existing error cleanup; logged OOS work depends on the caller's rollback path."
+  },
+  {
+    "id": 46,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [
+      "locator_force_for_multi_update"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Append NULL expected class to the existing nonpartitioned multi-update caller. It has no early attrinfo routing result to certify."
+  },
+  {
+    "id": 47,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [
+      "xlocator_repl_force"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Append NULL to replication's existing record-based UPDATE call. This does not introduce effective-key preparation into the replication path."
+  },
+  {
+    "id": 48,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [
+      "xlocator_force"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Append NULL to xlocator_force's existing UPDATE call. Preserve behavior for callers that already supply serialized records."
+  },
+  {
+    "id": 49,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [],
+    "non_function_changes": [
+      {
+        "side": "base",
+        "line": 7464,
+        "text": " * locator_allocate_copy_area_by_attr_info () - Transforms attribute"
+      },
+      {
+        "side": "head",
+        "line": 7498,
+        "text": " * locator_allocate_copy_area_by_attr_info_internal () - Transforms attribute"
+      }
+    ],
+    "non_function_explanation": "Rename the implementation comment; the public wrapper is reintroduced below. Allocation ownership stays with the existing copy-area API."
+  },
+  {
+    "id": 50,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [
+      "locator_allocate_copy_area_by_attr_info",
+      "locator_allocate_copy_area_by_attr_info_internal"
+    ],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 7512,
+        "text": " *   oos_class_oid(in): class whose heap receives the OOS value chains; NULL means"
+      },
+      {
+        "side": "head",
+        "line": 7513,
+        "text": " *                      attr_info->class_oid. A partitioned write passes the pruned partition."
+      },
+      {
+        "side": "head",
+        "line": 7514,
+        "text": " *   probe_would_demote_oos(out): when non-NULL, suppress OOS demotion (build a fully-inline"
+      },
+      {
+        "side": "head",
+        "line": 7515,
+        "text": " *                                image, write no OOS value chain) and report whether a normal"
+      },
+      {
+        "side": "head",
+        "line": 7516,
+        "text": " *                                transform would have demoted a column."
+      },
+      {
+        "side": "head",
+        "line": 7517,
+        "text": " *   oos_first_pass(in): use normal preparation with the selected OOS owner, without a preceding probe"
+      }
+    ],
+    "non_function_explanation": "Private builder receives owner, probe verdict and oos_first_pass. This extra private flag distinguishes a real first transform from the retained owner-after-probe rebuild contract."
+  },
+  {
+    "id": 51,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [
+      "locator_allocate_copy_area_by_attr_info",
+      "locator_allocate_copy_area_by_attr_info_internal"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Priority is owner-first-pass, probe, retained owner-rebuild, except-LOB, normal. The first branch asserts owner exists and no probe output is present. Existing buffer growth and copy-area release behavior remain below; mode selection does not itself perform rollback."
+  },
+  {
+    "id": 52,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [
+      "locator_allocate_copy_area_by_attr_info"
+    ],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 7607,
+        "text": "/*"
+      },
+      {
+        "side": "head",
+        "line": 7608,
+        "text": " * locator_allocate_copy_area_by_attr_info () - preserve the existing normal/probe/rebuild interface"
+      },
+      {
+        "side": "head",
+        "line": 7609,
+        "text": " */"
+      },
+      {
+        "side": "head",
+        "line": 7619,
+        "text": ""
+      }
+    ],
+    "non_function_explanation": "The public builder forwards its expanded arguments with oos_first_pass=false. New main writes deliberately bypass it for the private first-pass owner mode."
+  },
+  {
+    "id": 53,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [
+      "locator_attribute_info_force"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Initialize write_destination to NULL so nonpartitioned calls naturally have no expected destination. Preserve the existing local source class/HFID copies."
+  },
+  {
+    "id": 54,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [
+      "locator_attribute_info_force"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "For partitioned writes initialize fallback destination identifiers, select INSERT or UPDATE key routing, and stop on error. Then build the row once with INCLUDE_LOB, selected owner and oos_first_pass=true. Leave source class untouched for final validation and movement. Nonpartitioned writes explicitly request the default modes."
+  },
+  {
+    "id": 55,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [
+      "locator_attribute_info_force"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Call the private INSERT variant and pass the selected destination unless NULL. Existing default use_bulk_logging=false is now explicit along with the other unchanged flags."
+  },
+  {
+    "id": 56,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [
+      "locator_attribute_info_force"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "Pass the same selected destination into final UPDATE. An unchanged key and a moving key both require agreement with the OOS owner chosen before transformation."
+  },
+  {
+    "id": 57,
+    "path": "src/transaction/locator_sr.c",
+    "functions": [
+      "locator_mvcc_reev_cond_assigns"
+    ],
+    "non_function_changes": [],
+    "non_function_explanation": "The MVCC reevaluation copy-area call adds NULL owner and NULL probe output. This is signature adaptation, not evidence that all concurrent reevaluation paths have been validated by the new standalone tests."
+  },
+  {
+    "id": 58,
+    "path": "src/transaction/locator_sr.h",
+    "functions": [],
+    "non_function_changes": [
+      {
+        "side": "base",
+        "line": 86,
+        "text": "\t\t\t\t\t\t\t     const int copyarea_length_hint, int lob_create_flag);"
+      },
+      {
+        "side": "head",
+        "line": 86,
+        "text": "\t\t\t\t\t\t\t     const int copyarea_length_hint, int lob_create_flag,"
+      },
+      {
+        "side": "head",
+        "line": 87,
+        "text": "\t\t\t\t\t\t\t     const OID * oos_class_oid, bool * probe_would_demote_oos);"
+      }
+    ],
+    "non_function_explanation": "Expose the added owner and suppression output parameters consistently with all callers. The private first-pass flag is deliberately not part of this public engine declaration."
+  },
+  {
+    "id": 59,
+    "path": "unit_tests/oos/sql/CMakeLists.txt",
+    "functions": [],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 57,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 58,
+        "text": "# Routing rejection and injected cleanup failures collect diagnostic stacks in debug builds."
+      },
+      {
+        "side": "head",
+        "line": 59,
+        "text": "set_tests_properties(test_oos_sql_show PROPERTIES TIMEOUT 300)"
+      }
+    ],
+    "non_function_explanation": "Override only test_oos_sql_show's timeout to 300 seconds. Fault injection and routing errors collect debug stacks; fixture requirements and serial execution are unchanged."
+  },
+  {
+    "id": 60,
+    "path": "unit_tests/oos/sql/test_oos_sql_show.cpp",
+    "functions": [
+      "scoped_sa_server",
+      "~scoped_sa_server"
+    ],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 24,
+        "text": "#include <string>"
+      },
+      {
+        "side": "head",
+        "line": 26,
+        "text": "#include \"partition_sr.h\""
+      },
+      {
+        "side": "head",
+        "line": 27,
+        "text": "#include \"locator_sr.h\""
+      },
+      {
+        "side": "head",
+        "line": 28,
+        "text": "#include \"heap_oos.hpp\""
+      },
+      {
+        "side": "head",
+        "line": 29,
+        "text": "#include \"log_impl.h\""
+      },
+      {
+        "side": "head",
+        "line": 30,
+        "text": "#include \"record_descriptor.hpp\""
+      },
+      {
+        "side": "head",
+        "line": 31,
+        "text": "#include \"object_primitive.h\""
+      },
+      {
+        "side": "head",
+        "line": 34,
+        "text": "// Direct server interfaces in SA must use server allocation, just like network_interface_cl.c."
+      },
+      {
+        "side": "head",
+        "line": 35,
+        "text": "extern unsigned int db_on_server;"
+      },
+      {
+        "side": "head",
+        "line": 36,
+        "text": "void bridge_heap_attrinfo_fail_after_oos_publication_reset_once ();"
+      },
+      {
+        "side": "head",
+        "line": 37,
+        "text": "void bridge_heap_attrinfo_disarm_publication_reset_failure ();"
+      },
+      {
+        "side": "head",
+        "line": 38,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 41,
+        "text": "  class scoped_sa_server"
+      },
+      {
+        "side": "head",
+        "line": 42,
+        "text": "  {"
+      },
+      {
+        "side": "head",
+        "line": 43,
+        "text": "    public:"
+      },
+      {
+        "side": "head",
+        "line": 52,
+        "text": "  };"
+      },
+      {
+        "side": "head",
+        "line": 53,
+        "text": ""
+      }
+    ],
+    "non_function_explanation": "Include routing, locator, OOS, logging, record and primitive APIs plus string support. Declare existing failure hooks. scoped_sa_server increments/decrements db_on_server around direct server calls so SA allocation follows server conventions; it does not start a SERVER_MODE process."
+  },
+  {
+    "id": 61,
+    "path": "unit_tests/oos/sql/test_oos_sql_show.cpp",
+    "functions": [
+      "expect_oos_records",
+      "expect_sql_count",
+      "get_string_column",
+      "unqualified_table_name"
+    ],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 182,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 207,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 214,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 223,
+        "text": ""
+      }
+    ],
+    "non_function_explanation": "Add string extraction with DB_VALUE cleanup, schema-prefix removal, count queries and exact OOS file/chunk expectations. The physical helper checks a single row and closes its query result. Distinct logical and physical oracles catch the original bug that successful SELECT missed."
+  },
+  {
+    "id": 62,
+    "path": "unit_tests/oos/sql/test_oos_sql_show.cpp",
+    "functions": [
+      "OosSqlShow.EffectiveInsertRouteLegalKeyDefaults",
+      "OosSqlShow.EffectiveInsertRoutePreservesAssignedChar",
+      "OosSqlShow.EffectiveInsertRoutePreservesOmittedAssignments",
+      "OosSqlShow.EffectiveKeyCodecFailureClearsOutputAndPreservesAssignment",
+      "OosSqlShow.EffectiveRoutingFailurePreservesAssignmentsAndPublication",
+      "OosSqlShow.EffectiveUpdateRoutePreservesOldKeyAndPendingIncrement",
+      "OosSqlShow.EffectiveUpdateRouteUsesMissingHistoricalKeyDefault",
+      "OosSqlShow.PartitionHashNullOwnership",
+      "OosSqlShow.PartitionInsertCompressedExpressionKey",
+      "OosSqlShow.PartitionInsertDynamicDefault",
+      "OosSqlShow.PartitionInsertGeneratedKeysAndDomainConversion",
+      "OosSqlShow.PartitionInsertLegalKeySqlMatrix",
+      "OosSqlShow.PartitionInsertOwnsExternalKeyAndMultiplePayloads",
+      "OosSqlShow.PartitionInsertRetainsBigoneRejectionBeforeOos",
+      "OosSqlShow.PartitionInsertUsesColumnCollation",
+      "OosSqlShow.PartitionListExpressionAndFailedBatchOwnership",
+      "OosSqlShow.PartitionListRejectsNullWithoutDestination",
+      "OosSqlShow.PartitionLobPreparationAndIndexFailuresPreserveCommittedValues",
+      "OosSqlShow.PartitionPreparationFailuresRollBackAndAllowNextWrite",
+      "OosSqlShow.PartitionRangeBoundaryAndNullOwnership",
+      "OosSqlShow.PartitionRangeExpressionValidationAndMovement",
+      "OosSqlShow.PartitionUpdateDedicatedIncrementsAndArithmetic",
+      "OosSqlShow.PartitionUpdateLegalKeysAndNullMovement",
+      "OosSqlShow.PartitionUpdateLobLifecycle",
+      "OosSqlShow.PartitionUpdateOldOosKeyAndRepresentation",
+      "OosSqlShow.PartitionUpdatePreservesDuplicateProbesAndNonKeyIncrement",
+      "OosSqlShow.PartitionUpdateStringDomains",
+      "OosSqlShow.PartitionedForceOutlineStoresOosInPrunedHeap",
+      "failing_codec"
+    ],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 505,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 530,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 566,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 588,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 631,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 656,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 676,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 700,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 747,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 773,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 796,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 845,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 914,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 1001,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 1069,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 1112,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 1204,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 1273,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 1341,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 1418,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 1497,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 1547,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 1574,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 1594,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 1612,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 1631,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 1648,
+        "text": ""
+      },
+      {
+        "side": "head",
+        "line": 1665,
+        "text": ""
+      }
+    ],
+    "non_function_explanation": "This large hunk contains 28 new tests, not one undifferentiated fixture. The test catalog below links each exact function and explains its distinguishing assertions, reference independence and limits. Four earlier SHOW tests remain unchanged."
+  },
+  {
+    "id": 63,
+    "path": "unit_tests/oos/test_oos_real_vacuum_server.cpp",
+    "functions": [
+      "OosRealVacuum.DISABLED_RolledBackUpdateKeepsCommittedOosAfterVacuum"
+    ],
+    "non_function_changes": [
+      {
+        "side": "head",
+        "line": 828,
+        "text": "/* A rolled-back replacement does not supersede the committed version. A"
+      },
+      {
+        "side": "head",
+        "line": 829,
+        "text": " * separate committed delete witnesses real vacuum progress before readback;"
+      },
+      {
+        "side": "head",
+        "line": 830,
+        "text": " * waking a daemon or freeing the replacement buffer alone proves nothing. */"
+      },
+      {
+        "side": "head",
+        "line": 831,
+        "text": "/* TODO (CBRD-27237): Remove DISABLED_ after the rollback/vacuum fix lands and"
+      },
+      {
+        "side": "head",
+        "line": 832,
+        "text": " * this regression passes with real vacuum progress. */"
+      },
+      {
+        "side": "head",
+        "line": 871,
+        "text": ""
+      }
+    ],
+    "non_function_explanation": "Add a DISABLED_ test: committed original and independent witness, replacement update and abort, successful pre-vacuum original read, committed witness delete, observed vacuum progress, then original readback. Allocate the witness before reclaimable versions to avoid aliasing a recycled OOS slot. Historical final readback fails; DISABLED_ keeps it out of normal runs pending CBRD-27237. This is not a partition-specific test or a passing lifecycle result."
+  }
+]

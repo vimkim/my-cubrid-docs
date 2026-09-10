@@ -1,0 +1,30 @@
+{
+  "source_revision": "b871ea386d2c5419b7abae07dda58b9b7f36377a",
+  "binary": "/home/vimkim/gh/cb/CBRD-27089-has-oos-but-no-oos/build_preset_debug_gcc/bin/test_oos_sql_show",
+  "binary_sha256": "7f4d174c4e74c204195ca64e8a2632c072c7d5d3e05e2408c2e3b9aa86822adc",
+  "sandbox": "/tmp/pr7600-teaching-o9jcjxr4",
+  "environment": {
+    "CUBRID": "/tmp/pr7600-teaching-o9jcjxr4/install",
+    "CUBRID_DATABASES": "/tmp/pr7600-teaching-o9jcjxr4/databases",
+    "LD_LIBRARY_PATH": "/tmp/pr7600-teaching-o9jcjxr4/install/lib:/home/vimkim/.local/opt/bison-3.0.5/lib:/home/vimkim/.cub/install/CBRD-27089-has-oos-but-no-oos/debug_gcc/cci/lib:/home/vimkim/.cub/install/CBRD-27089-has-oos-but-no-oos/debug_gcc/lib:/home/vimkim/CUB3LIB/lib:/usr/local/lib:"
+  },
+  "records": [
+    {
+      "command": [
+        "bash",
+        "/home/vimkim/gh/cb/CBRD-27089-has-oos-but-no-oos/unit_tests/oos/scripts/setup_unittestdb.sh"
+      ],
+      "exit_code": 0,
+      "output": "Creating database with 64.0M size using locale en_US.utf8. The total amount of disk space needed is 104.0M.\n\nCUBRID 11.5.0 (11.5.0.2635) (64 debug build)\n\n"
+    },
+    {
+      "command": [
+        "/home/vimkim/gh/cb/CBRD-27089-has-oos-but-no-oos/build_preset_debug_gcc/bin/test_oos_sql_show",
+        "--gtest_filter=OosSqlShow.PartitionedForceOutlineStoresOosInPrunedHeap"
+      ],
+      "exit_code": 0,
+      "output": "Note: Google Test filter = OosSqlShow.PartitionedForceOutlineStoresOosInPrunedHeap\n[==========] Running 1 test from 1 test suite.\n[----------] Global test environment set-up.\n##### Starting Server For OOS SQL Testing #####\nwill be written at ./test_oos_sql_log\n[----------] 1 test from OosSqlShow\n[ RUN      ] OosSqlShow.PartitionedForceOutlineStoresOosInPrunedHeap\n[       OK ] OosSqlShow.PartitionedForceOutlineStoresOosInPrunedHeap (29 ms)\n[----------] 1 test from OosSqlShow (29 ms total)\n\n[----------] Global test environment tear-down\n##### Stopping Server For OOS SQL Testing #####\n[==========] 1 test from 1 test suite ran. (389 ms total)\n[  PASSED  ] 1 test.\n"
+    }
+  ],
+  "cleanup": "Owned private SA database and copied configuration retained at sandbox path for inspection; no server started or shared database touched."
+}

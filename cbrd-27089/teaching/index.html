@@ -1,0 +1,2332 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Where the row goes, the OOS value follows · PR 7600</title><style>:root {
+  color-scheme: light dark;
+  --bg: #f7f7f4;
+  --surface: #ffffff;
+  --text: #202522;
+  --muted: #5d6861;
+  --line: #d8ddd9;
+  --accent: #176b55;
+  --code-bg: #edf1ee;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151916;
+    --surface: #1e2420;
+    --text: #edf2ee;
+    --muted: #aeb9b1;
+    --line: #39443d;
+    --accent: #78d6b5;
+    --code-bg: #252d28;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.65 var(--font, inherit);
+}
+
+main,
+header,
+nav,
+footer {
+  width: min(960px, calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+header {
+  padding-block: 3rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+main {
+  padding-block: 2rem 4rem;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+h2 {
+  margin-top: 2.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--line);
+}
+
+a {
+  color: var(--accent);
+}
+
+code,
+pre {
+  background: var(--code-bg);
+  border-radius: 0.3rem;
+}
+
+code {
+  padding: 0.1rem 0.3rem;
+}
+
+pre {
+  overflow-x: auto;
+  padding: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  vertical-align: top;
+}
+
+th {
+  background: var(--code-bg);
+  text-align: left;
+}
+
+.claim,
+.callout {
+  margin-block: 1rem;
+  padding: 0.8rem 1rem;
+  background: var(--surface);
+  border-left: 0.3rem solid var(--accent);
+}
+
+.muted,
+.provenance {
+  color: var(--muted);
+}
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  nav {
+    display: none;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+:root { color-scheme: light; --bg:#f3f5f8; --surface:#fff; --text:#1b2b42; --muted:#506178; --line:#d6dfe9; --accent:#17604d; --code-bg:#edf1f6; }
+body { font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-size:17px; line-height:1.75; }
+header, main, footer { width:min(1020px,calc(100% - 40px)); }
+header { padding:3.5rem 0 2rem; }
+header h1 { font-size:clamp(2rem,5vw,3.8rem); max-width:850px; letter-spacing:-.04em; margin:.45rem 0 1rem; }
+.eyebrow { font-size:.8rem; letter-spacing:.13em; color:var(--accent); font-weight:750; text-transform:uppercase; }
+.subtitle { font-size:1.17rem; color:var(--muted); max-width:780px; }
+.badge { display:inline-block; padding:.2rem .7rem; border:1px solid var(--line); border-radius:30px; margin:.25rem .35rem .25rem 0; font-size:.8rem; background:#fff; }
+nav.toc { width:min(1020px,calc(100% - 40px)); margin:1.5rem auto; padding:1.2rem 1.5rem; background:var(--surface); border:1px solid var(--line); border-radius:12px; }
+nav.toc ol { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.3rem 2rem; padding-left:1.3rem; }
+nav.toc a { text-decoration:none; }
+article { background:var(--surface); border:1px solid var(--line); border-radius:14px; margin-bottom:2rem; padding:2rem 2.7rem; overflow-wrap:anywhere; }
+article h1 { font-size:2rem; margin-top:.3rem; }
+article h2 { font-size:1.4rem; }
+article h3 { font-size:1.12rem; margin-top:2rem; }
+article h1,article h2,article h3 { scroll-margin-top:2rem; }
+pre { font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; tab-size:4; white-space:pre; overflow-x:auto; overflow-wrap:normal; border:1px solid var(--line); }
+pre code { padding:0; background:transparent; }
+code { font-size:.88em; }
+.table-scroll { overflow-x:auto; margin:1.3rem 0; }
+table { font-size:.9rem; min-width:560px; }
+td, th { padding:.65rem .8rem; }
+figure { margin:1.5rem 0; padding:0; overflow-x:auto; }
+figure svg { display:block; width:100%; min-width:650px; height:auto; }
+figcaption { color:var(--muted); font-size:.85rem; padding:.5rem 0; }
+.claim-ref { white-space:nowrap; font-size:.72em; font-weight:650; text-decoration:none; }
+.chapter-nav { display:flex; justify-content:space-between; gap:1rem; border-top:1px solid var(--line); padding-top:1rem; margin-top:2rem; font-size:.85rem; }
+.source-kind { color:var(--muted); }
+.line-map { color:var(--muted); font-size:.86rem; }
+footer { padding:0 0 3rem; color:var(--muted); font-size:.9rem; }
+@media(max-width:650px) { header,main,footer,nav.toc { width:calc(100% - 24px); } article { padding:1.1rem; } article h1 { font-size:1.55rem; } nav.toc ol { grid-template-columns:1fr; } body { font-size:16px; } }
+@media print { :root { --text:#000; --bg:#fff; } body { font-size:10pt; } header,main,footer { width:100%; } header { padding-top:0; } article { border:0; padding:0; break-before:page; } figure { overflow:visible; break-inside:avoid; } figure svg { min-width:0; } pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:8pt; } table { min-width:0; font-size:9pt; } .table-scroll { overflow:visible; } .chapter-nav { display:none; } h2,h3 { break-after:avoid; } }
+</style></head>
+<body><header id="top"><div class="eyebrow">CUBRID · source reading course · PR 7600</div><h1>Where the row goes, the OOS value follows</h1><p class="subtitle">From heap pages and partition classes to every changed line of the two-pass OOS write path.</p><span class="badge">30 annotated hunks</span><span class="badge">6 changed files</span><span class="badge">Head b871ea386</span><span class="badge">Offline · Markdown + SVG</span><p class="provenance">Base 2940b1cfb · pinned on 2026-09-08 · English · basic C/C++ and SQL prerequisites</p></header>
+<nav class="toc" aria-label="Reading order"><ol><li><a href="#chapter-01">From a SQL table to a stored record</a></li><li><a href="#chapter-02">Why correct SELECT results can conceal wrong ownership</a></li><li><a href="#chapter-03">Build a probe, choose the partition, then store the value</a></li><li><a href="#chapter-04">How suppression and exactly-once effects work</a></li><li><a href="#chapter-05">Duplicate probes, errors and lifetime</a></li><li><a href="#chapter-06">Every changed line, in its source context</a></li><li><a href="#chapter-07">Read the regression as a specification</a></li><li><a href="#chapter-08">Explain the design, then challenge it</a></li><li><a href="#chapter-09">Answers and teach-back rubric</a></li><li><a href="#chapter-10">Source map and evidence ledger</a></li></ol></nav><main><article id="chapter-01"><h1 id="chapter-01-1-from-a-sql-table-to-a-stored-record">1. From a SQL table to a stored record</h1>
+<p>PR #7600 makes a large value belong to the same partition heap as the row that refers to it. To understand why that requires two transformations, first distinguish a SQL name, a storage file, and a record buffer. <a class="claim-ref" href="#C-001">[C-001]</a> <a class="claim-ref" href="#C-002">[C-002]</a></p>
+<h2 id="chapter-01-what-this-book-covers">What this book covers</h2>
+<p>We follow the six-file PR diff from base <code>2940b1cfbc3c2d4d0fac3f9244a960350debd380</code> to head <code>b871ea386d2c5419b7abae07dda58b9b7f36377a</code>. The source worktree is <code>/home/vimkim/gh/cb/CBRD-27089-has-oos-but-no-oos</code>; the six changed files match that head. Unrelated local work is excluded. The scope is partition write preparation, its immediate dependencies and the regression; it does not certify the entire OOS subsystem. <a class="claim-ref" href="#C-029">[C-029]</a></p>
+<p>Read chapters 1–5 for the mental model, then chapter 6 for all 30 hunks. Chapters 7–8 develop test reasoning and review exercises. Chapter 9 holds answers and chapter 10 the evidence ledger. Claim links such as <a class="claim-ref" href="#C-001">[C-001]</a> jump to exact source references. Source links are supplementary; the lessons, code listings and SVGs work offline.</p>
+<h2 id="chapter-01-a-concrete-table">A concrete table</h2>
+<pre><code class="language-sql">CREATE TABLE t_oos_show_part (
+  id INT,
+  data_col BIT VARYING STORAGE FORCE_OUTLINE
+)
+PARTITION BY RANGE (id) (
+  PARTITION p0 VALUES LESS THAN (10),
+  PARTITION p1 VALUES LESS THAN MAXVALUE
+);
+INSERT INTO t_oos_show_part VALUES (1, REPEAT(X'EE', 64));
+</code></pre>
+<p>This is the table and input used by the added regression. The first partition accepts values below 10; the second accepts values from 10 upward. Our <code>id=1</code> row belongs to p0. The example deliberately uses a small value with a forced storage policy, so it exercises the path that ordinary large-row tests can miss. <code>REPEAT(X'EE',64)</code> constructs 64 repeated bytes; the serialized attribute may also carry type-specific overhead. <a class="claim-ref" href="#C-003">[C-003]</a></p>
+<p>The local manual describes partitions as independent physical units implemented as subclasses of the partitioned table. Its range-partition section specifies exclusive upper bounds and <code>MAXVALUE</code>. That explains SQL routing; source code establishes how the selected class maps to its heap. Manual provenance is recorded in the source map. <a class="claim-ref" href="#C-004">[C-004]</a></p>
+<h2 id="chapter-01-heap-means-row-storage-here">Heap means row storage here</h2>
+<p>A heap file holds table records in pages. A page is a fixed-sized unit managed by the storage layer. Within a slotted page, a slot directory identifies individual records: a slot points to a record's location and length within that page. This lets page contents be organized without requiring a table's rows to appear in primary-key order. A B-tree index provides a different structure for key-based access. Here, “heap” names database storage; it is separate from a C++ process's allocation heap. <a class="claim-ref" href="#C-005">[C-005]</a></p>
+<p>The SQL table is represented internally as a class. A partitioned root class describes the logical table and its partitions. Child classes represent p0 and p1 and each supplies a heap identifier. In the traced UPDATE implementation the root holds no row data; an existing row comes from a child. “The partition heap” means the heap belonging to that selected child class. It does not introduce a new slotted-page format. <a class="claim-ref" href="#C-004">[C-004]</a> <a class="claim-ref" href="#C-006">[C-006]</a></p>
+<p><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 440" role="img" aria-labelledby="partition-heaps-title partition-heaps-desc">
+<title id="partition-heaps-title">One logical table, two child heaps</title><desc id="partition-heaps-desc">The root class routes id 1 to p0. p0 has its own heap page and row slot; p1 has a different heap. The diagram is conceptual, not a physical page layout.</desc>
+<defs><marker id="partition-heaps-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="#50627b"/></marker></defs>
+<rect width="860" height="440" rx="16" fill="#f1f5fa"/>
+<g font-family="system-ui,sans-serif" fill="#172b46" font-size="18">
+<text x="28" y="36" font-size="22" font-weight="700">Logical table → selected child → physical row</text>
+<rect x="205" y="58" width="450" height="80" rx="12" fill="#e3dff3" stroke="#75629a"/>
+<text x="430" y="88" text-anchor="middle" font-weight="700">Root class: t_oos_show_part</text><text x="430" y="117" text-anchor="middle">Partition metadata · root class OID</text>
+<path d="M340 138V166H224V195" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#partition-heaps-arrow)"/><path d="M520 138V166H650V195" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#partition-heaps-arrow)"/>
+<rect x="40" y="197" width="368" height="207" rx="12" fill="#e2f3ec" stroke="#287e60" stroke-width="2"/>
+<text x="60" y="228" font-size="22" font-weight="700">p0 child class</text><text x="60" y="257">id &lt; 10 · its own HFID</text>
+<rect x="60" y="279" width="328" height="105" rx="8" fill="white" stroke="#287e60"/>
+<text x="78" y="307">Heap page</text><text x="78" y="339" font-weight="700">slot → [ id=1 | value ]</text><text x="78" y="367" font-size="16">Our row lives here</text>
+<rect x="450" y="197" width="368" height="207" rx="12" fill="#e4ecfa" stroke="#3f6cab"/>
+<text x="470" y="228" font-size="22" font-weight="700">p1 child class</text><text x="470" y="257">id ≥ 10 · a different HFID</text>
+<rect x="470" y="279" width="328" height="105" rx="8" fill="white" stroke="#3f6cab"/>
+<text x="488" y="310">Separate heap storage</text><text x="488" y="342">Would receive id=20</text><text x="488" y="370" font-size="16">No row from our INSERT</text>
+</g></svg>
+<figcaption>Root class, child classes, heap pages and row slots</figcaption></figure></p>
+<p>In the diagram, p0 owns the page containing our row; p1 is a different possible destination. A SQL query using the root name can access child data through partition-aware execution. Do not interpret the root box as one physical page containing both child heaps. <a class="claim-ref" href="#C-006">[C-006]</a></p>
+<h2 id="chapter-01-five-identifiers-and-two-record-representations">Five identifiers and two record representations</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Name</th>
+<th>What it identifies</th>
+<th>How it matters in this PR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OID</td>
+<td>An object address, with volume, page and slot components</td>
+<td>A row OID identifies a row; a class OID identifies a class object. Same type, different referent.</td>
+</tr>
+<tr>
+<td>Class OID</td>
+<td>The OID of a class</td>
+<td>The selected child's class OID is passed as the OOS owner.</td>
+</tr>
+<tr>
+<td>VPID</td>
+<td>A volume/page address</td>
+<td>Locates a physical page.</td>
+</tr>
+<tr>
+<td>VFID</td>
+<td>A volume/file identifier</td>
+<td>Identifies a database file, not a filesystem pathname.</td>
+</tr>
+<tr>
+<td>HFID</td>
+<td>A heap VFID plus its header page ID</td>
+<td>Leads to the heap header and its OOS VFID.</td>
+</tr>
+<tr>
+<td><code>HEAP_CACHE_ATTRINFO</code></td>
+<td>In-memory attribute values and representation metadata</td>
+<td>Survives both passes and carries their state.</td>
+</tr>
+<tr>
+<td><code>RECDES</code></td>
+<td>A byte buffer descriptor: data, length, allocated area, record type</td>
+<td>A probe can be valid serialized bytes without yet being a stored row.</td>
+</tr>
+</tbody>
+</table></div>
+<p>These types connect identity to storage. An HFID is not the class OID; the code must look up a class's HFID. An OOS value also has an OID, but that OID refers to an OOS chunk record rather than the table row. <a class="claim-ref" href="#C-005">[C-005]</a> <a class="claim-ref" href="#C-007">[C-007]</a></p>
+<p><code>DB_VALUE</code> represents a logical typed value in memory. Transformation serializes values into the byte layout expected by the engine. <code>record_descriptor</code> helps manage a buffer while <code>RECDES</code> describes its bytes. <code>LC_COPYAREA</code> supplies memory returned to the locator caller. These are stages in preparing data, not evidence that the row has already been inserted. <a class="claim-ref" href="#C-007">[C-007]</a> <a class="claim-ref" href="#C-008">[C-008]</a></p>
+<h2 id="chapter-01-predict-before-continuing">Predict before continuing</h2>
+<ol>
+<li>Where does <code>id=10</code> belong? Which destination changes if <code>id=1</code> becomes <code>id=20</code>?</li>
+<li>Why can a function receive both a class OID and an HFID?</li>
+<li>Does a successful transformation imply there is already a heap row?</li>
+<li>Draw the root, p0, p1 and the stored row without looking at the diagram.</li>
+</ol>
+<p>Answers are in chapter 9. Continue when you can distinguish class identity, file identity and record bytes.</p><div class="chapter-nav"><a href="#top">Reading map</a><a href="#chapter-02">Next chapter →</a></div></article><article id="chapter-02"><h1 id="chapter-02-2-why-correct-select-results-can-conceal-wrong-ownership">2. Why correct SELECT results can conceal wrong ownership</h1>
+<h2 id="chapter-02-a-row-can-refer-to-a-value-stored-elsewhere">A row can refer to a value stored elsewhere</h2>
+<p>OOS means Out-of-row Overflow Storage. Instead of keeping an eligible serialized value entirely inside a heap record, the engine stores that value in an OOS file and keeps an inline stub in the heap record. In this pinned revision the stub contains a head OOS OID and the full serialized value length. The OID leads to the first chunk; a value too large for one chunk uses a linked value chain. <a class="claim-ref" href="#C-009">[C-009]</a></p>
+<p>The record has two levels of marking. A record-level OOS flag says at least one attribute is represented out of row. A variable-offset-table entry marks the individual attribute that contains a stub. The VOT tells a reader where variable attributes begin; it is not itself the payload. The writer sets the attribute flag and writes the OID/length pair for a selected plan entry. <a class="claim-ref" href="#C-009">[C-009]</a></p>
+<p><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 440" role="img" aria-labelledby="record-layout-title record-layout-desc">
+<title id="record-layout-title">Inline bytes become a stub and an OOS value chain</title><desc id="record-layout-desc">A probe has a header, variable offsets, a fixed id and the full inline value. The final record marks OOS and stores an OID and length stub whose OID points to chunk zero in the selected heap's OOS file.</desc>
+<defs><marker id="record-layout-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="#287e60"/></marker></defs>
+<rect width="860" height="440" rx="16" fill="#f1f5fa"/>
+<g font-family="system-ui,sans-serif" font-size="18" fill="#172b46">
+<text x="26" y="35" font-weight="700" font-size="22">A record image is not yet a stored row</text>
+<text x="26" y="76" font-weight="700">Probe: all variable values inline</text>
+<g stroke="#718398"><rect x="26" y="93" width="150" height="56" fill="#fff"/><rect x="176" y="93" width="145" height="56" fill="#fff"/><rect x="321" y="93" width="105" height="56" fill="#fff"/><rect x="426" y="93" width="405" height="56" fill="#fceac8"/></g>
+<text x="43" y="127">Header</text><text x="192" y="127">VOT</text><text x="336" y="127">id=1</text><text x="444" y="127">Full serialized value bytes</text>
+<text x="26" y="199" font-weight="700">Final: OOS flag + marked VOT entry + inline stub</text>
+<g stroke="#718398"><rect x="26" y="217" width="150" height="60" fill="#e2f3ec"/><rect x="176" y="217" width="145" height="60" fill="#e2f3ec"/><rect x="321" y="217" width="105" height="60" fill="#fff"/><rect x="426" y="217" width="325" height="60" fill="#e2f3ec"/></g>
+<text x="40" y="253" font-size="16">HAS_OOS=1</text><text x="190" y="253" font-size="16">IS_OOS=1</text><text x="336" y="253">id=1</text><text x="441" y="253">Head OID + full length</text>
+<path d="M584 278V322" fill="none" stroke="#287e60" stroke-width="2" marker-end="url(#record-layout-arrow)"/>
+<rect x="270" y="325" width="562" height="83" rx="9" fill="white" stroke="#287e60" stroke-width="2"/>
+<text x="290" y="355" font-weight="700">p0's associated OOS file</text><text x="290" y="386">chunk 0: header + bytes → next chunk if needed</text>
+<text x="27" y="345" font-size="16">Conceptual layout;</text><text x="27" y="369" font-size="16">alignment omitted.</text><text x="27" y="393" font-size="16">Stub: 16B at this head.</text>
+</g></svg>
+<figcaption>Inline record versus an OOS-backed record</figcaption></figure></p>
+<p>The diagram omits alignment and exact header widths. It shows the key relationship: an OOS-backed row remains a heap record, while its large attribute bytes live in a separate file. Ordinary whole-record overflow (<code>REC_BIGONE</code>) is a distinct mechanism; the transformer rejects a record that would need both OOS and bigone in this revision. <a class="claim-ref" href="#C-009">[C-009]</a> <a class="claim-ref" href="#C-010">[C-010]</a></p>
+<h2 id="chapter-02-the-ownership-invariant">The ownership invariant</h2>
+<p>The heap header has an <code>oos_vfid</code> field. Given an owner class, <code>heap_oos_insert_serialized_values</code> obtains its HFID, finds or creates that heap's OOS file, and inserts the serialized requests there. Consequently the choice of class OID determines the owner heap of the new OOS chains. <a class="claim-ref" href="#C-001">[C-001]</a></p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Heap</th>
+<th>Contains our row?</th>
+<th>OOS file for this example?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Root</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>p0</td>
+<td>Yes</td>
+<td>Yes: contains the chain referenced by that row</td>
+</tr>
+<tr>
+<td>p1</td>
+<td>No</td>
+<td>No</td>
+</tr>
+</tbody>
+</table></div>
+<p>“Same owner” does not mean “same file.” The p0 heap file and its OOS file remain separate files. Their association is recorded in p0's heap header. <a class="claim-ref" href="#C-001">[C-001]</a> <a class="claim-ref" href="#C-003">[C-003]</a></p>
+<h2 id="chapter-02-follow-the-old-sequence">Follow the old sequence</h2>
+<p>Before the PR, <code>locator_attribute_info_force</code> built the record through an ordinary transform before calling the lower insert/update locator. The transform selected OOS values and inserted them using <code>attr_info-&gt;class_oid</code>. The lower locator subsequently pruned to the destination child and stored the record there. For a root-targeted INSERT that means the chain can be created under the root heap before the row is routed to p0. <a class="claim-ref" href="#C-002">[C-002]</a></p>
+<p><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 558" role="img" aria-labelledby="two-pass-title two-pass-desc">
+<title id="two-pass-title">Old and new ordering for the root-targeted INSERT</title><desc id="two-pass-desc">The old flow creates a root-owned chain before selecting p0. The new flow makes an inline probe, prunes to p0, writes a p0-owned chain, then uses ordinary locator routing and row insertion. The old owner mismatch is visible even when a direct OID read succeeds.</desc>
+<defs><marker id="two-pass-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="#50627b"/></marker></defs>
+<rect width="860" height="558" rx="16" fill="#f1f5fa"/>
+<g font-family="system-ui,sans-serif" font-size="18" fill="#172b46">
+<text x="28" y="36" font-size="22" font-weight="700">Route before choosing OOS ownership</text>
+<text x="38" y="81" font-weight="700" fill="#a44131">Before PR</text><text x="456" y="81" font-weight="700" fill="#287e60">After PR</text>
+<g stroke="#a95c4b" fill="#fff1ec"><rect x="28" y="104" width="372" height="77" rx="10"/><rect x="28" y="218" width="372" height="77" rx="10"/><rect x="28" y="332" width="372" height="77" rx="10"/></g>
+<text x="47" y="134">Ordinary transform</text><text x="47" y="163" font-weight="700">OOS chain → root heap owner</text>
+<text x="47" y="248">Lower locator prunes id=1</text><text x="47" y="277">Destination → p0</text>
+<text x="47" y="362">Store row in p0</text><text x="47" y="391" font-weight="700">Row owner ≠ chain owner</text>
+<path d="M214 182V211" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#two-pass-arrow)"/><path d="M214 296V325" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#two-pass-arrow)"/>
+<g stroke="#287e60" fill="#e2f3ec"><rect x="446" y="104" width="386" height="77" rx="10"/><rect x="446" y="218" width="386" height="77" rx="10"/><rect x="446" y="332" width="386" height="77" rx="10"/><rect x="446" y="446" width="386" height="77" rx="10"/></g>
+<text x="465" y="134">Probe transform</text><text x="465" y="163">Inline bytes; no OOS chain</text>
+<text x="465" y="248">Early pruning selects p0</text><text x="465" y="277">Keep class OID; free probe</text>
+<text x="465" y="362">Final transform</text><text x="465" y="391" font-weight="700">OOS chain → p0 heap owner</text>
+<text x="465" y="476">Lower locator still routes/locks</text><text x="465" y="505">Store row in p0</text>
+<path d="M639 182V211" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#two-pass-arrow)"/><path d="M639 296V325" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#two-pass-arrow)"/><path d="M639 410V439" fill="none" stroke="#50627b" stroke-width="2" marker-end="url(#two-pass-arrow)"/>
+<text x="38" y="466" font-size="16">Shown: partitioned write requiring OOS.</text><text x="38" y="493" font-size="16">No-demotion probes skip the final pass.</text>
+</g></svg>
+<figcaption>Old sequence and repaired sequence</figcaption></figure></p>
+<p>The head OOS OID can still point to readable bytes. The attribute reader parses that OID and calls <code>oos_read</code> directly; it does not first derive the chain's address from the row's heap header. This explains how a logical equality query can succeed even when the heap-level ownership relation is wrong. It is an inference from the two paths, corroborated by the earlier report's recorded result, not a new reproduction of the old binary. <a class="claim-ref" href="#C-011">[C-011]</a></p>
+<p>Vacuum's dependency is different: cleanup consults the heap's OOS VFID. An incorrect association can remain hidden during SELECT and emerge during reclamation. The added test deliberately checks ownership as well as value equality. <a class="claim-ref" href="#C-012">[C-012]</a> <a class="claim-ref" href="#C-003">[C-003]</a></p>
+<h2 id="chapter-02-read-executable-conditions-not-only-comments">Read executable conditions, not only comments</h2>
+<p>The historical issue says a missing OOS VFID led to temporary abort instrumentation. At the pinned head, <code>heap_oos_find_vfid(..., false)</code> returns success with a null VFID when no OOS file exists. <code>vacuum_oos_find_vfid_for_heap_record</code> returns early on that success; its abort is reached on the lookup-failure branch. Therefore “a null VFID always triggers this exact abort at this head” is not supported by the current condition. The wrong ownership remains the PR's problem, but the historical crash narrative must not be substituted for the current control flow. <a class="claim-ref" href="#C-012">[C-012]</a></p>
+<p>An error-message string and a nearby comment cannot prove the branch that executes. A current-server experiment with a deliberately inconsistent record would be needed to establish the full downstream failure path; we have not manufactured corruption for this book. <a class="claim-ref" href="#C-013">[C-013]</a></p>
+<h2 id="chapter-02-two-timelines-also-differ-in-storage-policy">Two timelines also differ in storage policy</h2>
+<p>The OOS normative context specifies a four-record physical-capacity target, 4,060 bytes for its described 16KB layout. The pinned PR source still compares against <code>DB_PAGESIZE / 4</code>. That is an implementation conformance gap relative to the loaded specification. We teach the literal comparison when walking this code. The 64-byte <code>FORCE_OUTLINE</code> regression does not depend on settling that threshold difference. <a class="claim-ref" href="#C-014">[C-014]</a></p>
+<h2 id="chapter-02-predict-before-continuing">Predict before continuing</h2>
+<ol>
+<li>Why is a value-equality SELECT insufficient as the only regression assertion?</li>
+<li>Where must the OOS file identifier be found for a row stored in p0?</li>
+<li>What evidence is needed before saying a missing VFID must abort at this revision?</li>
+<li>Distinguish a heap record, an OOS chunk record and an OOS value chain.</li>
+</ol><div class="chapter-nav"><a href="#chapter-01">← Previous chapter</a><a href="#chapter-03">Next chapter →</a></div></article><article id="chapter-03"><h1 id="chapter-03-3-build-a-probe-choose-the-partition-then-store-the-value">3. Build a probe, choose the partition, then store the value</h1>
+<p>Transformation has two jobs that used to run together: produce bytes usable by downstream code, and create the out-of-row values referenced by those bytes. Partition selection needs the first job before the destination is known. The PR introduces a mode that prepares a fully-inline record while reporting whether an ordinary transform would choose OOS. <a class="claim-ref" href="#C-015">[C-015]</a></p>
+<h2 id="chapter-03-trace-the-example-from-sql-execution">Trace the example from SQL execution</h2>
+<p>The SQL executor evaluates values into attribute information and calls <code>locator_attribute_info_force</code> for the write. For INSERT, <code>old_recdes</code> is null. For UPDATE, the function first obtains the old row representation and deliberately falls through to the shared transformation code. The <code>[[fallthrough]]</code> explains why code under the INSERT case labels also handles UPDATE. <a class="claim-ref" href="#C-016">[C-016]</a></p>
+<p>With a partitioned operation, the new branch does the following:</p>
+<ol>
+<li>Initialize <code>would_demote_oos=false</code> and pass its address to the allocator. The address selects suppression mode. The initial false value is not what enables suppression.</li>
+<li>Build a fully-inline probe. For our forced-outline value, the planner reports true but leaves the plan unselected and <code>has_oos=false</code>.</li>
+<li>If the copy area exists and demotion is needed, initialize output identifiers and call insert or update pruning with the probe bytes.</li>
+<li>Free the probe copy area, clear its pointer and descriptor fields, and check the pruning error.</li>
+<li>On success, build the final image with <code>&amp;pruned_class_oid</code> and a null probe output. OOS creation now uses p0 as owner.</li>
+<li>Continue into the existing <code>locator_insert_force</code> or <code>locator_update_force</code> path, then release the final copy area. <a class="claim-ref" href="#C-016">[C-016]</a></li>
+</ol>
+<h2 id="chapter-03-a-second-pruning-still-happens">A second pruning still happens</h2>
+<p>The new early pruning does not replace the lower locator's existing pruning. The lower insert locator prunes again, selects the appropriate scan cache, obtains the subclass lock and forms a heap insert context from the final class/HFID. It then calls <code>heap_insert_logical</code>. The UPDATE path may call <code>locator_move_record</code> if the final destination differs from the row's current class. <a class="claim-ref" href="#C-017">[C-017]</a></p>
+<p>The early outputs <code>pruned_hfid</code> and <code>superclass_oid</code> satisfy the pruning API; the final transform specifically consumes <code>pruned_class_oid</code>. The PR does not overwrite the outer class/HFID with these early outputs. The lower locator continues to own actual write routing, locking and representation adjustment. <a class="claim-ref" href="#C-016">[C-016]</a> <a class="claim-ref" href="#C-017">[C-017]</a></p>
+<p>A useful invariant is agreement between early and final routing. Both operate on the same logical values, even though the final bytes can contain stubs. The partition reader uses the attribute layer to obtain a logical key. Probe increments have already been applied before early routing, and final serialization avoids applying them again. These facts support agreement; exhaustive agreement under every concurrent schema change is beyond the single regression. <a class="claim-ref" href="#C-018">[C-018]</a></p>
+<h2 id="chapter-03-what-pruning-actually-reads">What pruning actually reads</h2>
+<p><code>partition_find_partition_for_record</code> initializes an attribute cache for the partition key, temporarily changes the record's representation ID to the root representation, reads key values and restores the original ID. It evaluates the partition expression, searches matching partitions and requires exactly one match. It copies the chosen class OID and HFID to outputs. If the class changed, it adjusts the record representation ID to the child's representation. <a class="claim-ref" href="#C-019">[C-019]</a></p>
+<p>Existing partition code can therefore consume the probe before storage. The final image still needs lower-level routing because the early probe whose representation was adjusted is freed. <a class="claim-ref" href="#C-019">[C-019]</a> <a class="claim-ref" href="#C-016">[C-016]</a></p>
+<h2 id="chapter-03-the-mode-table-is-the-api">The mode table is the API</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Call</th>
+<th>Owner override</th>
+<th>Verdict pointer</th>
+<th>Increments already applied</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ordinary</td>
+<td>Null</td>
+<td>Null</td>
+<td>False</td>
+<td>Normal policy; owner from attribute info</td>
+</tr>
+<tr>
+<td>Probe</td>
+<td>Null</td>
+<td>Non-null</td>
+<td>False</td>
+<td>Inline image; report demotion; apply attribute effects</td>
+</tr>
+<tr>
+<td>Final owner</td>
+<td>Selected class</td>
+<td>Null</td>
+<td>True</td>
+<td>Normal policy; selected owner; skip repeated increments</td>
+</tr>
+<tr>
+<td>Except-LOB</td>
+<td>Null</td>
+<td>Null</td>
+<td>False</td>
+<td>Ordinary policy with existing excluded-LOB behavior</td>
+</tr>
+</tbody>
+</table></div>
+<p>At the allocator boundary dispatch order is probe pointer first, owner pointer second, then LOB mode. If both pointers were non-null, probe wins. Intended changed callers pass only the meaningful pointer. The public probe wrapper does not assert a non-null verdict pointer: passing null would fail to select suppression internally. The final wrapper assumes a successful probe on the same attribute state. These are caller obligations, not compiler-enforced mode types. <a class="claim-ref" href="#C-008">[C-008]</a> <a class="claim-ref" href="#C-015">[C-015]</a></p>
+<h2 id="chapter-03-paths-that-do-less-work">Paths that do less work</h2>
+<p>For a nonpartitioned class both pointers are null and the previous ordinary transform is selected. For a partitioned record whose probe reports no demotion, the probe copy area is retained and passed into the ordinary lower locator. There is no second transform; normal routing still occurs downstream. An oversized record with no eligible OOS attribute can also report no demotion—record size alone is not the verdict. <a class="claim-ref" href="#C-016">[C-016]</a> <a class="claim-ref" href="#C-020">[C-020]</a></p>
+<h2 id="chapter-03-prediction-questions">Prediction questions</h2>
+<ol>
+<li>How many transforms and pruning calls occur for our forced-outline INSERT?</li>
+<li>What happens when a partitioned probe returns false?</li>
+<li>Why free the probe before constructing the final image?</li>
+<li>If an UPDATE changes <code>id=1</code> to <code>id=20</code>, which heap should receive the new chain?</li>
+<li>Why would passing null as the probe verdict pointer be dangerous?</li>
+</ol><div class="chapter-nav"><a href="#chapter-02">← Previous chapter</a><a href="#chapter-04">Next chapter →</a></div></article><article id="chapter-04"><h1 id="chapter-04-4-how-suppression-and-exactly-once-effects-work">4. How suppression and exactly-once effects work</h1>
+<h2 id="chapter-04-a-hypothetical-layout-is-different-from-a-chosen-layout">A hypothetical layout is different from a chosen layout</h2>
+<p><code>heap_attrinfo_determine_disk_layout</code> computes serialized column sizes, payload size, variable-offset width and header size. It begins with <code>*has_oos=false</code> and clears a provided verdict. A fresh <code>oos_plan</code> has no selected columns. These initial conditions prevent a probe from inheriting selection from a previous transformation. <a class="claim-ref" href="#C-020">[C-020]</a></p>
+<p>The forced-outline loop runs before the ordinary record-size gate. An eligible forced candidate is variable, not null, and larger than <code>OR_OOS_INLINE_SIZE</code>. In normal mode the loop selects it, subtracts its inline size, adds the stub size and sets <code>has_oos</code>. In suppressed mode the added block sets the verdict and executes <code>continue</code>, bypassing all those changes. <a class="claim-ref" href="#C-021">[C-021]</a></p>
+<p>The <code>continue</code> is essential. Merely reporting true and falling through would still select the column and later write its chain. The verdict answers “would this need OOS?”; <code>has_oos</code> answers “does this constructed layout actually contain OOS?” A probe can have the first true and the second false. <a class="claim-ref" href="#C-021">[C-021]</a></p>
+<p>For ordinary candidates the planner checks the size gate, collects eligible columns and checks suppression. If candidates exist it sets the verdict. It returns the full inline size immediately, before sorting and selection. If the list is empty it leaves any verdict already set by the forced loop intact. Normal mode sorts by storage preference and size, demotes until the target is reached or candidates run out, then recomputes header size. <a class="claim-ref" href="#C-020">[C-020]</a></p>
+<p><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 360" role="img" aria-labelledby="probe-state-title probe-state-desc">
+<title id="probe-state-title">State across the successful probe and final transform</title><desc id="probe-state-desc">A non-null verdict pointer selects the probe. It reports true for the forced value but leaves OOS selection false. The same attribute cache retains increments and LOB state for the final transform, which uses p0 as owner and enables normal selection.</desc>
+<rect width="860" height="360" rx="16" fill="#f1f5fa"/>
+<g font-family="system-ui,sans-serif" font-size="18" fill="#172b46">
+<text x="25" y="35" font-weight="700" font-size="22">Same attribute cache, two distinct layouts</text>
+<rect x="25" y="65" width="372" height="192" rx="10" fill="#fceac8" stroke="#a27120"/>
+<text x="43" y="96" font-weight="700">PROBE</text><text x="43" y="133">Verdict pointer: non-null</text><text x="43" y="166">would_demote_oos = true</text><text x="43" y="199">selected = false; has_oos = false</text><text x="43" y="232">Full value bytes in image</text>
+<rect x="463" y="65" width="372" height="192" rx="10" fill="#e2f3ec" stroke="#287e60"/>
+<text x="481" y="96" font-weight="700">FINAL</text><text x="481" y="133">Owner pointer: p0 class OID</text><text x="481" y="166">Verdict pointer: null</text><text x="481" y="199">selected = true; has_oos = true</text><text x="481" y="232">Stub refers to p0-owned chain</text>
+<path d="M405 160H453L443 153M453 160L443 167" stroke="#50627b" stroke-width="2" fill="none"/>
+<rect x="25" y="280" width="810" height="55" rx="8" fill="white" stroke="#50627b"/>
+<text x="43" y="314">Survives: updated DB_VALUEs + LOB state · Final re-seeds increment guard</text>
+</g></svg>
+<figcaption>Probe and final mode state</figcaption></figure></p>
+<p>The diagram shows the successful forced-outline example: the probe changes preparation state but leaves OOS selection empty; the final pass selects a value and writes its chain under p0. Its record-level flag is set when the header is serialized. <a class="claim-ref" href="#C-021">[C-021]</a> <a class="claim-ref" href="#C-022">[C-022]</a></p>
+<h2 id="chapter-04-why-the-second-commit-matters">Why the second commit matters</h2>
+<p>The first PR commit added suppression at the ordinary candidate path. The second added suppression inside the earlier forced-outline loop. A small forced value can bypass the size gate altogether. Without the second fix, that loop can create OOS selection even in a supposed probe and fail to request the final pass. The 64-byte regression targets precisely this ordering. <a class="claim-ref" href="#C-023">[C-023]</a></p>
+<h2 id="chapter-04-internal-transform-sequence">Internal transform sequence</h2>
+<p>MVCC means multi-version concurrency control: readers can see the appropriate version of a row for their snapshot while another transaction changes it. The record header can carry insert/delete IDs and a link to an older version through the log. Here those fields matter because layout calculation reserves enough space for header evolution. A representation ID is different: it identifies the schema layout needed to interpret a record's bytes. <a class="claim-ref" href="#C-009">[C-009]</a> <a class="claim-ref" href="#C-019">[C-019]</a> <a class="claim-ref" href="#C-022">[C-022]</a></p>
+<p>The internal transform rejects an uninitialized attribute structure, optionally seeds the increment set, and fills unset values from the old record or defaults. It determines MVCC treatment from the attribute class, computes layout and reserves header growth space. It rejects unsupported OOS-plus-bigone before chain insertion. Only <code>has_oos=true</code> reaches <code>heap_attrinfo_insert_to_oos</code>. <a class="claim-ref" href="#C-010">[C-010]</a> <a class="claim-ref" href="#C-022">[C-022]</a></p>
+<p>The insertion helper serializes selected payloads, builds requests pointing to each plan entry's OID output, and delegates to <code>heap_oos_insert_serialized_values</code>. The changed conditional expression chooses the owner override if supplied, otherwise the original attribute class. After insertion, the record writer uses resulting plan OIDs to emit stubs. <a class="claim-ref" href="#C-001">[C-001]</a> <a class="claim-ref" href="#C-022">[C-022]</a></p>
+<p>The buffer-writing loop grows the buffer by <code>DB_PAGESIZE</code> when header or column writing returns <code>S_DOESNT_FIT</code>. OOS insertion is outside this retry loop, so buffer growth does not itself reinsert chains. The increment set also outlives individual attempts within that transform. Success records the actual record length. <a class="claim-ref" href="#C-022">[C-022]</a></p>
+<h2 id="chapter-04-incr-and-decr-state-crosses-two-boundaries">INCR and DECR: state crosses two boundaries</h2>
+<p>The fixed-attribute writer checks <code>do_increment</code> and whether the current attribute index is in <code>incremented_attrids</code>. If needed it calls <code>qdata_increment_dbval</code>, modifying the <code>DB_VALUE</code>, then inserts the index into the set. This already prevents a buffer retry from incrementing again. <a class="claim-ref" href="#C-024">[C-024]</a></p>
+<p>Separate transforms have separate local sets. After a successful probe the updated <code>DB_VALUE</code> survives in <code>attr_info</code>, but the probe's set does not. The final wrapper passes <code>increments_already_applied=true</code>. The internal function seeds the new set with every index whose <code>do_increment</code> is nonzero. The unchanged fixed writer then skips the second increment. Despite the set's name, entries are array indices <code>i</code>, not necessarily schema attribute IDs. <a class="claim-ref" href="#C-024">[C-024]</a></p>
+<p>Example: a fixed value starts at 7 and carries an increment of 1. The probe produces 8. A buffer retry still writes 8. The final transform must also write 8. If the final wrapper passed false, a fresh empty set could produce 9. Calling the final wrapper first would pre-mark work that had never been done. <a class="claim-ref" href="#C-024">[C-024]</a></p>
+<h2 id="chapter-04-lob-copy-an-existing-state-marker-does-the-work">LOB copy: an existing state marker does the work</h2>
+<p>A BLOB/CLOB value contains an external-storage locator. OOS demotion concerns serialized locator bytes; it does not imply moving the external LOB payload into an OOS chain. Both the inline writer and OOS serializer gate LOB copying on <code>LOB_FLAG_INCLUDE_LOB</code> and <code>HEAP_WRITTEN_ATTRVALUE</code>. After preparing the copy they change state to <code>HEAP_WRITTEN_LOB_ATTRVALUE</code> and replace the DB_VALUE with the destination locator. <a class="claim-ref" href="#C-025">[C-025]</a></p>
+<p>The probe follows the inline writer and performs that transition. The final pass sees the changed state and skips copying again. The mechanism already existed for retries and now works across passes because attribute state survives. OOS suppression therefore does not mean “pure function.” LOB path metadata still uses the attribute class; the override specifically changes OOS-file ownership, not all class-dependent behavior. <a class="claim-ref" href="#C-025">[C-025]</a></p>
+<h2 id="chapter-04-predict-before-continuing">Predict before continuing</h2>
+<ol>
+<li>For the small forced value, state probe verdict, <code>has_oos</code> and plan selection.</li>
+<li>Which changes execute accidentally if <code>continue</code> is removed?</li>
+<li>Distinguish an intra-transform retry from a second transform for increments.</li>
+<li>Which object retains the LOB state marker across passes?</li>
+<li>Why put OOS insertion outside the serialization retry loop?</li>
+</ol><div class="chapter-nav"><a href="#chapter-03">← Previous chapter</a><a href="#chapter-05">Next chapter →</a></div></article><article id="chapter-05"><h1 id="chapter-05-5-duplicate-probes-errors-and-lifetime">5. Duplicate probes, errors and lifetime</h1>
+<h2 id="chapter-05-a-temporary-image-can-cause-a-permanent-mistake">A temporary image can cause a permanent mistake</h2>
+<p>REPLACE first needs to find conflicting unique keys so existing rows can be removed. ODKU (<code>INSERT ... ON DUPLICATE KEY UPDATE</code>) needs to find the row that would conflict before choosing its update behavior. Both paths construct a candidate record for key extraction. That candidate image is not itself the row finally inserted. <a class="claim-ref" href="#C-026">[C-026]</a></p>
+<p>The PR adds a local boolean and passes its address to the allocator in both helpers. Neither helper needs the resulting true/false verdict: the pointer's presence selects OOS suppression. This prevents the discarded key-probe image from creating an unowned chain. REPLACE preserves <code>LOB_FLAG_EXCLUDE_LOB</code>; ODKU preserves <code>LOB_FLAG_INCLUDE_LOB</code>. Suppression changes OOS publication, not the existing LOB policy. <a class="claim-ref" href="#C-026">[C-026]</a></p>
+<p>The rest of each helper still does real work. REPLACE loops over unique indexes, extracts keys, prunes index targets, calls <code>xbtree_find_unique</code>, and deletes conflicting rows when found. ODKU searches for a duplicate, records its OID and can select its partition scan cache. Calling the entire helper “side-effect free” would therefore be wrong. Only the temporary transformation's OOS creation is suppressed. <a class="claim-ref" href="#C-026">[C-026]</a></p>
+<h2 id="chapter-05-three-different-lifetimes">Three different lifetimes</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Object</th>
+<th>Owner and lifetime</th>
+<th>End of lifetime</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Probe/final <code>LC_COPYAREA</code></td>
+<td>Locator preparation owns transient bytes</td>
+<td>Freed after pruning or after lower write call</td>
+</tr>
+<tr>
+<td><code>attr_info</code> DB_VALUEs and state</td>
+<td>Caller-provided attribute cache survives both passes</td>
+<td>Released by its surrounding operation; not by freeing a copy area</td>
+</tr>
+<tr>
+<td>OOS value chains</td>
+<td>Persistent records associated with the selected heap</td>
+<td>Managed by transaction/recovery and reclamation paths, not <code>locator_free_copy_area</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The distinction is essential on errors. Freeing a copy area releases a memory buffer; it does not undo previously published database records. Before the final pass, suppression prevents OOS chains from being created for the probe. Once the final pass writes chains, a later failure must use the existing transaction/error machinery. <a class="claim-ref" href="#C-008">[C-008]</a> <a class="claim-ref" href="#C-016">[C-016]</a> <a class="claim-ref" href="#C-027">[C-027]</a></p>
+<h2 id="chapter-05-follow-each-failure-exit">Follow each failure exit</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Immediate action visible in the traced code</th>
+<th>What the caller must understand</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>First copy-area allocation fails</td>
+<td>Allocator returns null</td>
+<td>No transform ran</td>
+</tr>
+<tr>
+<td>Probe transform fails</td>
+<td>Allocator frees its copy area and returns null</td>
+<td>Attribute preparation may already have changed state; caller reports failure</td>
+</tr>
+<tr>
+<td>Early partition pruning fails</td>
+<td>Locator frees probe, clears pointer/area, breaks with pruning error</td>
+<td>No final OOS pass runs</td>
+</tr>
+<tr>
+<td>Final transform fails</td>
+<td>Allocator returns null; locator sets <code>ER_FAILED</code></td>
+<td>OOS work may have begun; memory cleanup is not rollback</td>
+</tr>
+<tr>
+<td>Unsupported OOS-plus-bigone layout</td>
+<td>Internal transform sets error and returns before insertion</td>
+<td>No chain is written by this transformation</td>
+</tr>
+<tr>
+<td>Buffer too small</td>
+<td>Internal loop enlarges and retries writing</td>
+<td>Increment set and LOB markers prevent repeated successful effects</td>
+</tr>
+<tr>
+<td>Lower insert/update fails</td>
+<td>Error is propagated, final copy area is freed</td>
+<td>Existing statement/transaction recovery obligations remain</td>
+</tr>
+</tbody>
+</table></div>
+<p>These are source control-flow facts, not a claim that every allocation failure was injected. One adjacent pre-existing path merits caution: after <code>release_buffer</code>, the allocator frees its original copy area and allocates a larger one; if that allocation fails, the shown return occurs before the explicit <code>free(allocated_data)</code>. We do not certify all allocation cleanup in this dependency. The book's scope is the PR ordering change. <a class="claim-ref" href="#C-008">[C-008]</a> <a class="claim-ref" href="#C-027">[C-027]</a></p>
+<h2 id="chapter-05-locks-persistence-and-ownership">Locks, persistence and ownership</h2>
+<p>A transaction groups database work that can commit or roll back. Write-ahead logging records changes needed for recovery; a successful memory allocation has no equivalent durability meaning. A lock coordinates logical access between transactions, while a page latch protects a brief physical page operation. The PR changes the order of preparation and routing within that existing machinery. <a class="claim-ref" href="#C-017">[C-017]</a> <a class="claim-ref" href="#C-027">[C-027]</a></p>
+<p>The new early phase selects a destination; it does not introduce a new locking protocol. The lower locator retains subclass locks, scan-cache selection and actual row operations. Any change to skip its second pruning would need to preserve those responsibilities and the representation-ID handling. The PR is also not a new commit boundary: successful OOS insertion is not equivalent to a committed SQL row. <a class="claim-ref" href="#C-017">[C-017]</a> <a class="claim-ref" href="#C-027">[C-027]</a></p>
+<p>One unchanged lower layer makes the persistence distinction concrete. If <code>heap_oos_find_vfid</code> must create a file, it starts a system operation, creates the OOS file, applies the class encryption policy, logs the heap-header update, marks the page dirty and completes the system operation. Errors abort that system operation and return failure. This file-creation operation is not the SQL transaction's final commit, and the PR adds no replacement for it. <a class="claim-ref" href="#C-034">[C-034]</a></p>
+<p>For MVCC, old row versions can still be visible to older transactions. Their out-of-row values cannot be reclaimed merely because the current SQL UPDATE has constructed new values. The unchanged eager-cleanup helper describes a separate non-MVCC path and compares old/new references. Full vacuum retry safety, chain identity and crash recovery are neighboring OOS concerns, not solved by choosing the correct partition owner. <a class="claim-ref" href="#C-027">[C-027]</a></p>
+<h2 id="chapter-05-costs-and-observable-behavior">Costs and observable behavior</h2>
+<p>Partitioned OOS writes now serialize a fully-inline probe and a compact final image, and prune early as well as through the ordinary lower path. The probe can be much larger than the stored record. This introduces extra CPU and transient memory work proportional to the logical values being serialized. No latency or peak-memory benchmark is reported here. Nonpartitioned writes retain the ordinary path, and no-demotion partition writes reuse their single probe image. <a class="claim-ref" href="#C-028">[C-028]</a></p>
+<p><code>SHOW ALL HEAP OOS</code> is useful because it reports separate root/child rows and per-file counts. Its <code>has_oos</code> diagnostic column means the heap has an OOS file; it must not be confused with a record's <code>HAS_OOS</code> flag. An empty-but-existing OOS file can still have a true file-existence indicator. This regression starts from a clean table, so zero file indicators have a precise meaning. <a class="claim-ref" href="#C-003">[C-003]</a></p>
+<p>Security: no new SQL authorization interface, parser rule or client protocol is introduced by these six files' diff. Existing locks and class lookup remain dependencies. This observation is limited to the patch; it is not an audit of all OOS access control or encryption. Network/restart experiments are not applicable to the fresh standalone observation, which opens an owned local database in process. <a class="claim-ref" href="#C-029">[C-029]</a></p>
+<h2 id="chapter-05-prediction-questions">Prediction questions</h2>
+<ol>
+<li>Why does a duplicate-key helper pass a verdict pointer and never read the verdict?</li>
+<li>What survives when the probe copy area is freed?</li>
+<li>Why does freeing the final buffer not undo its OOS writes?</li>
+<li>What responsibilities would be lost if you simply removed the lower locator's pruning block?</li>
+<li>Which cost would you measure for a multi-megabyte value even if the final heap record is small?</li>
+</ol><div class="chapter-nav"><a href="#chapter-04">← Previous chapter</a><a href="#chapter-06">Next chapter →</a></div></article><article id="chapter-06"><h1 id="chapter-06-6-every-changed-line-in-its-source-context">6. Every changed line, in its source context</h1>
+<p>This chapter covers all 30 default-context Git hunks. Read chapters 1–5 first, then use this appendix to connect every addition and deletion to the mechanism. The complete original diff is preserved in <code>evidence/pr-7600.patch</code>. Blank lines and brace-only changes are shown along with executable statements.</p>
+<p>Each listing shows <strong>old line | new line | diff sign | source text</strong>. A dash means that side has no line. <code>+</code> is added at the head, <code>-</code> is deleted from the base, and a blank sign is unchanged context. Source text is preserved apart from display tab expansion. Hunk headers come from Git and may name a preceding symbol; the commentary identifies the actual affected function.</p>
+<p>For each hunk: identify inputs, follow the described state changes, then explain what its omission would affect. Structural signature/include hunks make the changed code callable; they need not each produce an independent runtime effect.</p>
+<h2 id="chapter-06-coverage-index">Coverage index</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Hunk</th>
+<th>File</th>
+<th>Old lines</th>
+<th>New lines</th>
+<th>Lesson</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#h01">H01</a></td>
+<td><code>src/query/query_executor.c</code></td>
+<td>11937–11942</td>
+<td>11937–11943</td>
+<td>REPLACE allocates a mode selector</td>
+</tr>
+<tr>
+<td><a href="#h02">H02</a></td>
+<td><code>src/query/query_executor.c</code></td>
+<td>11951–11957</td>
+<td>11952–11962</td>
+<td>REPLACE suppresses discarded-image OOS writes</td>
+</tr>
+<tr>
+<td><a href="#h03">H03</a></td>
+<td><code>src/query/query_executor.c</code></td>
+<td>12170–12175</td>
+<td>12175–12181</td>
+<td>ODKU allocates its mode selector</td>
+</tr>
+<tr>
+<td><a href="#h04">H04</a></td>
+<td><code>src/query/query_executor.c</code></td>
+<td>12189–12195</td>
+<td>12195–12205</td>
+<td>ODKU obtains an inline key image</td>
+</tr>
+<tr>
+<td><a href="#h05">H05</a></td>
+<td><code>src/storage/heap_file.c</code></td>
+<td>694–702</td>
+<td>694–703</td>
+<td>Declare layout mode and verdict</td>
+</tr>
+<tr>
+<td><a href="#h06">H06</a></td>
+<td><code>src/storage/heap_file.c</code></td>
+<td>782–788</td>
+<td>783–790</td>
+<td>Declare the internal transformation protocol</td>
+</tr>
+<tr>
+<td><a href="#h07">H07</a></td>
+<td><code>src/storage/heap_file.c</code></td>
+<td>12297–12305</td>
+<td>12299–12309</td>
+<td>Document hypothetical versus actual layout</td>
+</tr>
+<tr>
+<td><a href="#h08">H08</a></td>
+<td><code>src/storage/heap_file.c</code></td>
+<td>12307–12315</td>
+<td>12311–12320</td>
+<td>Match the layout definition to its declaration</td>
+</tr>
+<tr>
+<td><a href="#h09">H09</a></td>
+<td><code>src/storage/heap_file.c</code></td>
+<td>12320–12325</td>
+<td>12325–12334</td>
+<td>Clear the verdict before planning</td>
+</tr>
+<tr>
+<td><a href="#h10">H10</a></td>
+<td><code>src/storage/heap_file.c</code></td>
+<td>12334–12339</td>
+<td>12343–12357</td>
+<td>Stop FORCE_OUTLINE selection inside a probe</td>
+</tr>
+<tr>
+<td><a href="#h11">H11</a></td>
+<td><code>src/storage/heap_file.c</code></td>
+<td>12369–12374</td>
+<td>12387–12405</td>
+<td>Return full inline size for an ordinary probe</td>
+</tr>
+<tr>
+<td><a href="#h12">H12</a></td>
+<td><code>src/storage/heap_file.c</code></td>
+<td>12680–12690</td>
+<td>12711–12725</td>
+<td>Carry an owner without replacing attribute metadata</td>
+</tr>
+<tr>
+<td><a href="#h13">H13</a></td>
+<td><code>src/storage/heap_file.c</code></td>
+<td>12724–12730</td>
+<td>12759–12765</td>
+<td>Select the actual OOS owner at publication</td>
+</tr>
+<tr>
+<td><a href="#h14">H14</a></td>
+<td><code>src/storage/heap_file.c</code></td>
+<td>12755–12761</td>
+<td>12790–12834</td>
+<td>Expose ordinary, probe and final wrappers</td>
+</tr>
+<tr>
+<td><a href="#h15">H15</a></td>
+<td><code>src/storage/heap_file.c</code></td>
+<td>12775–12781</td>
+<td>12848–12855</td>
+<td>Preserve the except-LOB entry point</td>
+</tr>
+<tr>
+<td><a href="#h16">H16</a></td>
+<td><code>src/storage/heap_file.c</code></td>
+<td>13232–13243</td>
+<td>13306–13322</td>
+<td>Specify the internal caller obligations</td>
+</tr>
+<tr>
+<td><a href="#h17">H17</a></td>
+<td><code>src/storage/heap_file.c</code></td>
+<td>13245–13250</td>
+<td>13324–13331</td>
+<td>Derive suppression and allocate an index variable</td>
+</tr>
+<tr>
+<td><a href="#h18">H18</a></td>
+<td><code>src/storage/heap_file.c</code></td>
+<td>13258–13263</td>
+<td>13339–13357</td>
+<td>Reconstruct the increment guard for the second pass</td>
+</tr>
+<tr>
+<td><a href="#h19">H19</a></td>
+<td><code>src/storage/heap_file.c</code></td>
+<td>13271–13278</td>
+<td>13365–13372</td>
+<td>Pass mode and verdict into layout calculation</td>
+</tr>
+<tr>
+<td><a href="#h20">H20</a></td>
+<td><code>src/storage/heap_file.c</code></td>
+<td>13307–13313</td>
+<td>13401–13407</td>
+<td>Forward the selected owner only when inserting OOS</td>
+</tr>
+<tr>
+<td><a href="#h21">H21</a></td>
+<td><code>src/storage/heap_file.c</code></td>
+<td>28431–28436</td>
+<td>28525–28530</td>
+<td>Keep the unit-test bridge on its original owner</td>
+</tr>
+<tr>
+<td><a href="#h22">H22</a></td>
+<td><code>src/storage/heap_file.h</code></td>
+<td>507–512</td>
+<td>507–518</td>
+<td>Publish the two transformation interfaces</td>
+</tr>
+<tr>
+<td><a href="#h23">H23</a></td>
+<td><code>src/transaction/locator_sr.c</code></td>
+<td>7475–7486</td>
+<td>7475–7492</td>
+<td>Extend the copy-area adapter</td>
+</tr>
+<tr>
+<td><a href="#h24">H24</a></td>
+<td><code>src/transaction/locator_sr.c</code></td>
+<td>7504–7510</td>
+<td>7510–7526</td>
+<td>Dispatch probe before owner before LOB mode</td>
+</tr>
+<tr>
+<td><a href="#h25">H25</a></td>
+<td><code>src/transaction/locator_sr.c</code></td>
+<td>7692–7700</td>
+<td>7708–7770</td>
+<td>Orchestrate probe, early routing and final serialization</td>
+</tr>
+<tr>
+<td><a href="#h26">H26</a></td>
+<td><code>src/transaction/locator_sr.c</code></td>
+<td>13781–13787</td>
+<td>13851–13857</td>
+<td>Keep MVCC reevaluation on its existing path</td>
+</tr>
+<tr>
+<td><a href="#h27">H27</a></td>
+<td><code>src/transaction/locator_sr.h</code></td>
+<td>83–89</td>
+<td>83–90</td>
+<td>Expose the adapter’s expanded signature</td>
+</tr>
+<tr>
+<td><a href="#h28">H28</a></td>
+<td><code>unit_tests/oos/sql/test_oos_sql_show.cpp</code></td>
+<td>21–26</td>
+<td>21–27</td>
+<td>Include the string type directly</td>
+</tr>
+<tr>
+<td><a href="#h29">H29</a></td>
+<td><code>unit_tests/oos/sql/test_oos_sql_show.cpp</code></td>
+<td>154–159</td>
+<td>155–192</td>
+<td>Copy and normalize the diagnostic name</td>
+</tr>
+<tr>
+<td><a href="#h30">H30</a></td>
+<td><code>unit_tests/oos/sql/test_oos_sql_show.cpp</code></td>
+<td>351–356</td>
+<td>384–458</td>
+<td>Check value and all three heap owners</td>
+</tr>
+</tbody>
+</table></div>
+<p><a id="h01"></a></p>
+<h2 id="chapter-06-h01-replace-allocates-a-mode-selector">H01. REPLACE allocates a mode selector</h2>
+<p><a class="claim-ref" href="#C-101">[C-101]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/query_executor.c#L11937-L11943">src/query/query_executor.c:11937–11943</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/query/query_executor.c#L11937-L11942">src/query/query_executor.c:11937–11942</a>.</p>
+<pre><code class="language-text"> 11937  11937     OID class_oid, pruned_oid;
+ 11938  11938     BTID btid;
+ 11939  11939     bool is_global_index;
+     —  11940 +   bool probe_would_demote_oos = false;
+ 11940  11941     HFID class_hfid, pruned_hfid;
+ 11941  11942     int local_op_type = SINGLE_ROW_DELETE;
+ 11942  11943     HEAP_SCANCACHE *local_scan_cache = NULL;
+</code></pre>
+<p>The new local bool starts false. Its address is passed below to select probe mode. Its value is not consumed later: the helper needs suppression, not a demotion decision. Its lifetime covers the synchronous allocator call. Without an addressable object the caller could not select the pointer-based mode.</p>
+<p><a id="h02"></a></p>
+<h2 id="chapter-06-h02-replace-suppresses-discarded-image-oos-writes">H02. REPLACE suppresses discarded-image OOS writes</h2>
+<p><a class="claim-ref" href="#C-102">[C-102]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/query_executor.c#L11952-L11962">src/query/query_executor.c:11952–11962</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/query/query_executor.c#L11951-L11957">src/query/query_executor.c:11951–11957</a>.</p>
+<pre><code class="language-text"> 11951  11952         goto error_exit;
+ 11952  11953       }
+ 11953  11954   
+ 11954      — -   copyarea = locator_allocate_copy_area_by_attr_info (thread_p, attr_info, NULL, &amp;new_recdes, -1, LOB_FLAG_EXCLUDE_LOB);
+     —  11955 +   /* This record image is only probed for duplicate keys, never inserted: suppress OOS demotion so
+     —  11956 +    * no OOS value chain is written (and later orphaned) for it. */
+     —  11957 +   copyarea =
+     —  11958 +     locator_allocate_copy_area_by_attr_info (thread_p, attr_info, NULL, &amp;new_recdes, -1, LOB_FLAG_EXCLUDE_LOB, NULL,
+     —  11959 +                          &amp;probe_would_demote_oos);
+ 11955  11960     if (copyarea == NULL)
+ 11956  11961       {
+ 11957  11962         goto error_exit;
+</code></pre>
+<p>The deleted call used the ordinary transform. The new comment identifies this image as a duplicate-key candidate, and the replacement call appends NULL owner plus &amp;probe_would_demote_oos. The owner argument does not choose a heap in probe mode. LOB_FLAG_EXCLUDE_LOB is preserved. The existing null-result check still goes to error_exit. No duplicate-search/deletion logic is replaced by this hunk.</p>
+<p><a id="h03"></a></p>
+<h2 id="chapter-06-h03-odku-allocates-its-mode-selector">H03. ODKU allocates its mode selector</h2>
+<p><a class="claim-ref" href="#C-103">[C-103]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/query_executor.c#L12175-L12181">src/query/query_executor.c:12175–12181</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/query/query_executor.c#L12170-L12175">src/query/query_executor.c:12170–12175</a>.</p>
+<pre><code class="language-text"> 12170  12175     OID class_oid;
+ 12171  12176     HFID class_hfid;
+ 12172  12177     bool is_global_index = false;
+     —  12178 +   bool probe_would_demote_oos = false;
+ 12173  12179     int local_op_type = SINGLE_ROW_UPDATE;
+ 12174  12180     BTREE_SEARCH r;
+ 12175  12181   
+</code></pre>
+<p>This second local bool belongs to the duplicate-OID lookup helper, not the final UPDATE. Starting at false avoids stale state; pointer presence selects suppression. It remains alive until the allocator returns and is intentionally not used to decide whether an UPDATE should occur.</p>
+<p><a id="h04"></a></p>
+<h2 id="chapter-06-h04-odku-obtains-an-inline-key-image">H04. ODKU obtains an inline key image</h2>
+<p><a class="claim-ref" href="#C-104">[C-104]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/query_executor.c#L12195-L12205">src/query/query_executor.c:12195–12205</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/query/query_executor.c#L12189-L12195">src/query/query_executor.c:12189–12195</a>.</p>
+<pre><code class="language-text"> 12189  12195         goto error_exit;
+ 12190  12196       }
+ 12191  12197   
+ 12192      — -   copyarea = locator_allocate_copy_area_by_attr_info (thread_p, attr_info, NULL, &amp;recdes, -1, LOB_FLAG_INCLUDE_LOB);
+     —  12198 +   /* This record image is only probed for unique-index duplicates, never inserted: suppress OOS
+     —  12199 +    * demotion so no OOS value chain is written (and later orphaned) for it. */
+     —  12200 +   copyarea =
+     —  12201 +     locator_allocate_copy_area_by_attr_info (thread_p, attr_info, NULL, &amp;recdes, -1, LOB_FLAG_INCLUDE_LOB, NULL,
+     —  12202 +                          &amp;probe_would_demote_oos);
+ 12193  12203     if (copyarea == NULL)
+ 12194  12204       {
+ 12195  12205         goto error_exit;
+</code></pre>
+<p>The new comment explains why this candidate must not publish OOS chains. The call keeps old_recdes=NULL because it describes candidate INSERT values, keeps the default copy-area hint -1, and retains LOB_FLAG_INCLUDE_LOB. NULL and the verdict address select probe mode. The existing failure jump is unchanged. The helper then reads key values and finds a duplicate OID; the surrounding executor decides whether to update or insert.</p>
+<p><a id="h05"></a></p>
+<h2 id="chapter-06-h05-declare-layout-mode-and-verdict">H05. Declare layout mode and verdict</h2>
+<p><a class="claim-ref" href="#C-105">[C-105]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L694-L703">src/storage/heap_file.c:694–703</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.c#L694-L702">src/storage/heap_file.c:694–702</a>.</p>
+<pre><code class="language-text">   694    694     DB_BIGINT length = 0;
+   695    695   };
+   696    696   static int heap_attrinfo_determine_disk_layout (HEAP_CACHE_ATTRINFO * attr_info, bool is_mvcc_class,
+   697      — -                         size_t * offset_size_ptr,
+     —    697 +                         bool suppress_oos, size_t * offset_size_ptr,
+   698    698                           std::vector&lt;heap_oos_column_plan&gt; * oos_plan,
+   699      — -                         bool * has_oos, size_t * inline_size_after_oos_ptr);
+     —    699 +                         bool * has_oos, bool * would_demote_oos,
+     —    700 +                         size_t * inline_size_after_oos_ptr);
+   700    701   // *INDENT-ON*
+   701    702   
+   702    703   static void heap_attrvalue_point_fixed (RECDES * recdes, HEAP_CACHE_ATTRINFO * attr_info, OR_ATTRIBUTE * attrepr,
+</code></pre>
+<p>The static declaration gains suppress_oos before offset_size_ptr and would_demote_oos before the final size output. The existing vector parameter still carries actual per-column selections. These are distinct concepts: suppress_oos controls selection, would_demote_oos reports a hypothetical selection, and has_oos reports actual selected content. The line splits align a longer declaration; they do not change the vector type.</p>
+<p><a id="h06"></a></p>
+<h2 id="chapter-06-h06-declare-the-internal-transformation-protocol">H06. Declare the internal transformation protocol</h2>
+<p><a class="claim-ref" href="#C-106">[C-106]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L783-L790">src/storage/heap_file.c:783–790</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.c#L782-L788">src/storage/heap_file.c:782–788</a>.</p>
+<pre><code class="language-text">   782    783   
+   783    784   static SCAN_CODE heap_attrinfo_transform_to_disk_internal (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,
+   784    785                                  RECDES * old_recdes, record_descriptor * new_recdes,
+   785      — -                                int lob_create_flag);
+     —    786 +                                int lob_create_flag, const OID * oos_class_oid,
+     —    787 +                                bool * would_demote_oos, bool increments_already_applied);
+   786    788   
+   787    789   static int heap_update_statistics (THREAD_ENTRY * thread_p, const HFID * hfid, HEAP_HDR_STATS * heap_hdr,
+   788    790                      PGBUF_WATCHER * header_watcher);
+</code></pre>
+<p>The internal declaration now receives an optional owner, an optional verdict and increments_already_applied after the LOB mode. Every wrapper must provide all three. The pointer types preserve caller data: const OID prevents this function from modifying the chosen identity; bool* permits reporting and also selects suppression. The final bool conveys successful prior preparation, not a request to increment.</p>
+<p><a id="h07"></a></p>
+<h2 id="chapter-06-h07-document-hypothetical-versus-actual-layout">H07. Document hypothetical versus actual layout</h2>
+<p><a class="claim-ref" href="#C-107">[C-107]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12299-L12309">src/storage/heap_file.c:12299–12309</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.c#L12297-L12305">src/storage/heap_file.c:12297–12305</a>.</p>
+<pre><code class="language-text"> 12297  12299    *   return: NO_ERROR, or error code
+ 12298  12300    *   attr_info(in/out): The attribute information structure
+ 12299  12301    *   is_mvcc_class(in): true, if MVCC class
+     —  12302 +  *   suppress_oos(in): true to keep every column inline even when the record exceeds the OOS trigger
+ 12300  12303    *   offset_size_ptr(out): offset size
+ 12301  12304    *   oos_plan(out): selected columns are demoted to OOS
+ 12302  12305    *   has_oos(out): true if any column is demoted to OOS
+     —  12306 +  *   would_demote_oos(out): with suppress_oos, true if a normal layout would have demoted a column
+ 12303  12307    *   inline_size_after_oos_ptr(out): inline heap record size after OOS demotion
+ 12304  12308    *
+ 12305  12309    * Note: Choose the OOS layout and compute the inline heap record size. This size is not the logical
+</code></pre>
+<p>The two added parameter comments describe suppression and the verdict. Existing has_oos and oos_plan outputs remain actual-layout outputs. The word trigger in the suppression comment must be read with the forced-outline branch below: suppression also applies below the ordinary size threshold. Comments specify intent; the two guarded branches implement it.</p>
+<p><a id="h08"></a></p>
+<h2 id="chapter-06-h08-match-the-layout-definition-to-its-declaration">H08. Match the layout definition to its declaration</h2>
+<p><a class="claim-ref" href="#C-108">[C-108]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12311-L12320">src/storage/heap_file.c:12311–12320</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.c#L12307-L12315">src/storage/heap_file.c:12307–12315</a>.</p>
+<pre><code class="language-text"> 12307  12311    */
+ 12308  12312   // *INDENT-OFF*
+ 12309  12313   static int
+ 12310      — - heap_attrinfo_determine_disk_layout (HEAP_CACHE_ATTRINFO * attr_info, bool is_mvcc_class, size_t * offset_size_ptr,
+     —  12314 + heap_attrinfo_determine_disk_layout (HEAP_CACHE_ATTRINFO * attr_info, bool is_mvcc_class, bool suppress_oos,
+     —  12315 +                          size_t * offset_size_ptr,
+ 12311  12316                            std::vector&lt;heap_oos_column_plan&gt; * oos_plan, bool * has_oos,
+ 12312      — -                          size_t * inline_size_after_oos_ptr)
+     —  12317 +                          bool * would_demote_oos, size_t * inline_size_after_oos_ptr)
+ 12313  12318   // *INDENT-ON*
+ 12314  12319   {
+ 12315  12320   // *INDENT-OFF*
+</code></pre>
+<p>The definition accepts suppress_oos and would_demote_oos in the same order as the declaration. offset_size_ptr still receives the VOT offset width. The new parameters are then available inside the function; this signature hunk alone does not suppress any effects. The surrounding INDENT directives delimit existing C++-formatted declarations.</p>
+<p><a id="h09"></a></p>
+<h2 id="chapter-06-h09-clear-the-verdict-before-planning">H09. Clear the verdict before planning</h2>
+<p><a class="claim-ref" href="#C-109">[C-109]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12325-L12334">src/storage/heap_file.c:12325–12334</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.c#L12320-L12325">src/storage/heap_file.c:12320–12325</a>.</p>
+<pre><code class="language-text"> 12320  12325     int i;
+ 12321  12326   
+ 12322  12327     *has_oos = false;
+     —  12328 +   if (would_demote_oos != NULL)
+     —  12329 +     {
+     —  12330 +       *would_demote_oos = false;
+     —  12331 +     }
+ 12323  12332   
+ 12324  12333     /* calcuate the entire size of columns */
+ 12325  12334     payload_size = heap_attrinfo_get_record_payload_size (attr_info, &amp;column_size);
+</code></pre>
+<p>has_oos is still reset unconditionally. The added null check protects the optional pointer, and its assignment starts each planning call with a false hypothetical verdict. The braces make that assignment conditional. Later forced and ordinary candidates can set it true. Not resetting it would allow a reused caller bool to falsely request a final pass for a no-demotion row.</p>
+<p><a id="h10"></a></p>
+<h2 id="chapter-06-h10-stop-force_outline-selection-inside-a-probe">H10. Stop FORCE_OUTLINE selection inside a probe</h2>
+<p><a class="claim-ref" href="#C-110">[C-110]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12343-L12357">src/storage/heap_file.c:12343–12357</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.c#L12334-L12339">src/storage/heap_file.c:12334–12339</a>.</p>
+<pre><code class="language-text"> 12334  12343         &amp;&amp; attr_info-&gt;values[i].last_attrepr-&gt;oos_storage == OR_ATTRIBUTE_OOS_STORAGE_FORCE_OUTLINE
+ 12335  12344         &amp;&amp; !db_value_is_null (&amp;attr_info-&gt;values[i].dbvalue) &amp;&amp; column_size[i] &gt; OR_OOS_INLINE_SIZE)
+ 12336  12345       {
+     —  12346 +       if (suppress_oos)
+     —  12347 +         {
+     —  12348 +           if (would_demote_oos != NULL)
+     —  12349 +         {
+     —  12350 +           *would_demote_oos = true;
+     —  12351 +         }
+     —  12352 +           continue;
+     —  12353 +         }
+     —  12354 + 
+ 12337  12355         (*oos_plan)[i].selected = true;
+ 12338  12356         payload_size -= column_size[i];
+ 12339  12357         payload_size += OR_OOS_INLINE_SIZE;
+</code></pre>
+<p>The surrounding condition has already established a non-null variable forced value larger than a stub. The added if(suppress_oos) detects the probe; the nested pointer check guards the output write; true reports that a final transform will need OOS. continue jumps to the next attribute before selected=true, payload subtraction, stub-size addition and has_oos=true. It also avoids doing ordinary selection merely because the forced policy bypasses the normal size gate. This is the second commit’s decisive fix.</p>
+<p><a id="h11"></a></p>
+<h2 id="chapter-06-h11-return-full-inline-size-for-an-ordinary-probe">H11. Return full inline size for an ordinary probe</h2>
+<p><a class="claim-ref" href="#C-111">[C-111]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12387-L12405">src/storage/heap_file.c:12387–12405</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.c#L12369-L12374">src/storage/heap_file.c:12369–12374</a>.</p>
+<pre><code class="language-text"> 12369  12387           }
+ 12370  12388       }
+ 12371  12389   
+     —  12390 +       if (suppress_oos)
+     —  12391 +     {
+     —  12392 +       /* The caller only wants a fully-inline image plus the demotion verdict (e.g. to route a
+     —  12393 +        * partitioned write before the target heap of its OOS value chains is known). */
+     —  12394 +       if (would_demote_oos != NULL &amp;&amp; !oos_candidates.empty ())
+     —  12395 +         {
+     —  12396 +           *would_demote_oos = true;
+     —  12397 +         }
+     —  12398 + 
+     —  12399 +       *inline_size_after_oos_ptr = header_size + payload_size;
+     —  12400 +       return NO_ERROR;
+     —  12401 +     }
+     —  12402 + 
+ 12372  12403         // *INDENT-OFF*
+ 12373  12404         /* Demote order: columns flagged STORAGE PREFER_INLINE sink to the tail and are externalized
+ 12374  12405          * only as a last resort; within each priority class, largest first. The idx-descending
+</code></pre>
+<p>This block runs after candidate collection inside the record-size gate. suppress_oos selects it. The nonempty check reports a possible demotion only if an eligible variable value exists; an oversized fixed-only record does not qualify. It does not reset a true result from the forced loop. The size assignment uses the unchanged payload plus current header; it is an output-buffer size, not a guarantee that a slotted page can hold it. return NO_ERROR exits before sorting and plan mutation. Normal mode falls through to the old demotion loop.</p>
+<p><a id="h12"></a></p>
+<h2 id="chapter-06-h12-carry-an-owner-without-replacing-attribute-metadata">H12. Carry an owner without replacing attribute metadata</h2>
+<p><a class="claim-ref" href="#C-112">[C-112]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12711-L12725">src/storage/heap_file.c:12711–12725</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.c#L12680-L12690">src/storage/heap_file.c:12680–12690</a>.</p>
+<pre><code class="language-text"> 12680  12711    * the BLOB/CLOB ELO-locator copy step, with the inline record writer. This logical heap boundary
+ 12681  12712    * begins OOS insert publication before any fallible preparation; heap_oos.cpp owns the paired-reset
+ 12682  12713    * internals, OOS file lookup, and the batched OOS insert call.
+     —  12714 +  *
+     —  12715 +  * oos_class_oid designates the class whose heap receives the OOS value chains; NULL means
+     —  12716 +  * attr_info-&gt;class_oid. A partitioned write must pass the pruned partition class, because the
+     —  12717 +  * value chains must live in the OOS file of the heap that stores the record (CBRD-27089).
+ 12683  12718    */
+ 12684  12719   // *INDENT-OFF*
+ 12685  12720   static SCAN_CODE
+ 12686  12721   heap_attrinfo_insert_to_oos (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info, int lob_create_flag,
+ 12687      — -                  std::vector&lt;heap_oos_column_plan&gt; * oos_plan)
+     —  12722 +                  const OID * oos_class_oid, std::vector&lt;heap_oos_column_plan&gt; * oos_plan)
+ 12688  12723   // *INDENT-ON*
+ 12689  12724   
+ 12690  12725   {
+</code></pre>
+<p>The added comment states the same-heap ownership rule and NULL fallback. The signature adds const OID* before the existing plan vector. The original attr_info remains the source of values, schema representation, MVCC classification and LOB serialization context. Only the downstream OOS file selection is redirected; changing attr_info-&gt;class_oid globally would have a wider effect.</p>
+<p><a id="h13"></a></p>
+<h2 id="chapter-06-h13-select-the-actual-oos-owner-at-publication">H13. Select the actual OOS owner at publication</h2>
+<p><a class="claim-ref" href="#C-113">[C-113]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12759-L12765">src/storage/heap_file.c:12759–12765</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.c#L12724-L12730">src/storage/heap_file.c:12724–12730</a>.</p>
+<pre><code class="language-text"> 12724  12759         goto cleanup;
+ 12725  12760       }
+ 12726  12761   
+ 12727      — -   if (heap_oos_insert_serialized_values (thread_p, &amp;attr_info-&gt;class_oid,
+     —  12762 +   if (heap_oos_insert_serialized_values (thread_p, oos_class_oid != NULL ? oos_class_oid : &amp;attr_info-&gt;class_oid,
+ 12728  12763                        cubbase::span &lt; oos_insert_request &gt; (requests.data (), requests.size ()))
+ 12729  12764         != S_SUCCESS)
+ 12730  12765       {
+</code></pre>
+<p>The old expression always passed &amp;attr_info-&gt;class_oid. The ternary now passes oos_class_oid when non-null, otherwise that original address. requests remains a span over the same prepared request vector, whose output OID pointers update plan entries. The existing failure condition still sends execution to cleanup. This one expression is where the early pruning decision becomes a storage-owner choice.</p>
+<p><a id="h14"></a></p>
+<h2 id="chapter-06-h14-expose-ordinary-probe-and-final-wrappers">H14. Expose ordinary, probe and final wrappers</h2>
+<p><a class="claim-ref" href="#C-114">[C-114]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12790-L12834">src/storage/heap_file.c:12790–12834</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.c#L12755-L12761">src/storage/heap_file.c:12755–12761</a>.</p>
+<pre><code class="language-text"> 12755  12790   heap_attrinfo_transform_to_disk (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info, RECDES * old_recdes,
+ 12756  12791                    record_descriptor * new_recdes)
+ 12757  12792   {
+ 12758      — -   return heap_attrinfo_transform_to_disk_internal (thread_p, attr_info, old_recdes, new_recdes, LOB_FLAG_INCLUDE_LOB);
+     —  12793 +   return heap_attrinfo_transform_to_disk_internal (thread_p, attr_info, old_recdes, new_recdes, LOB_FLAG_INCLUDE_LOB,
+     —  12794 +                            NULL, NULL, false);
+     —  12795 + }
+     —  12796 + 
+     —  12797 + /*
+     —  12798 +  * heap_attrinfo_transform_to_disk_probe_oos () - Transform to disk with OOS demotion suppressed.
+     —  12799 +  *
+     —  12800 +  *   would_demote_oos(out): true if a normal transform would have demoted at least one column
+     —  12801 +  *
+     —  12802 +  * Note: Every column stays inline, so the resulting recdes can be larger than a slotted-page
+     —  12803 +  * record allows; it is meant for record routing and key extraction, not for direct insertion.
+     —  12804 +  * No OOS value chain is written. Side effects on attr_info (LOB copy, INCR/DECR application)
+     —  12805 +  * still happen exactly once, so a subsequent heap_attrinfo_transform_to_disk_oos_class call
+     —  12806 +  * completes the write without repeating them.
+     —  12807 +  */
+     —  12808 + SCAN_CODE
+     —  12809 + heap_attrinfo_transform_to_disk_probe_oos (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,
+     —  12810 +                        RECDES * old_recdes, record_descriptor * new_recdes, int lob_create_flag,
+     —  12811 +                        bool * would_demote_oos)
+     —  12812 + {
+     —  12813 +   return heap_attrinfo_transform_to_disk_internal (thread_p, attr_info, old_recdes, new_recdes, lob_create_flag,
+     —  12814 +                            NULL, would_demote_oos, false);
+     —  12815 + }
+     —  12816 + 
+     —  12817 + /*
+     —  12818 +  * heap_attrinfo_transform_to_disk_oos_class () - Transform to disk, writing OOS value chains to the
+     —  12819 +  *                                                heap of oos_class_oid instead of attr_info-&gt;class_oid.
+     —  12820 +  *
+     —  12821 +  * Note: This is the second pass of a two-pass partitioned write; it assumes
+     —  12822 +  * heap_attrinfo_transform_to_disk_probe_oos already ran on the same attr_info, so pending
+     —  12823 +  * INCR/DECR assignments were already applied and are not applied again here.
+     —  12824 +  */
+     —  12825 + SCAN_CODE
+     —  12826 + heap_attrinfo_transform_to_disk_oos_class (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,
+     —  12827 +                        RECDES * old_recdes, record_descriptor * new_recdes, int lob_create_flag,
+     —  12828 +                        const OID * oos_class_oid)
+     —  12829 + {
+     —  12830 +   return heap_attrinfo_transform_to_disk_internal (thread_p, attr_info, old_recdes, new_recdes, lob_create_flag,
+     —  12831 +                            oos_class_oid, NULL, true);
+ 12759  12832   }
+ 12760  12833   
+ 12761  12834   /*
+</code></pre>
+<p>The ordinary wrapper appends NULL,NULL,false, preserving ordinary layout and normal increment application. The first added documentation block explains that a probe image may exceed a page and writes no OOS chain; it still prepares DB_VALUE state. The probe wrapper forwards its LOB flag, no owner, the caller’s verdict pointer and false. A non-null verdict is a required caller convention. The second block documents the final wrapper’s successful-probe prerequisite. Its wrapper forwards the selected owner, NULL verdict and true. That disables suppression, restores normal policy and tells the internal writer not to repeat increments. All wrappers return SCAN_CODE directly, preserving error/status propagation; they introduce no local allocation or cleanup.</p>
+<h3 id="chapter-06-statement-by-statement-reading-guide">Statement-by-statement reading guide</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Head lines</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>12793–12794</td>
+<td>Ordinary mode forwards include-LOB, no owner override, no verdict and no prior increment application.</td>
+</tr>
+<tr>
+<td>12797–12807</td>
+<td>Probe contract: inline bytes may exceed page capacity; OOS publication is suppressed but attribute preparation still occurs.</td>
+</tr>
+<tr>
+<td>12808–12811</td>
+<td>Public SCAN_CODE signature exposes the shared inputs and caller-owned verdict output.</td>
+</tr>
+<tr>
+<td>12813–12814</td>
+<td>Forward the verdict address to select suppression; false allows first-time increment application.</td>
+</tr>
+<tr>
+<td>12817–12824</td>
+<td>Final-pass contract requires the successful probe on the same attr_info; the selected class controls OOS ownership.</td>
+</tr>
+<tr>
+<td>12825–12828</td>
+<td>Final signature replaces the probe verdict with a const owner-class pointer.</td>
+</tr>
+<tr>
+<td>12830–12831</td>
+<td>Forward owner, NULL verdict and true: normal OOS policy, selected heap and seeded increment guard.</td>
+</tr>
+</tbody>
+</table></div>
+<p><a id="h15"></a></p>
+<h2 id="chapter-06-h15-preserve-the-except-lob-entry-point">H15. Preserve the except-LOB entry point</h2>
+<p><a class="claim-ref" href="#C-115">[C-115]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12848-L12855">src/storage/heap_file.c:12848–12855</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.c#L12775-L12781">src/storage/heap_file.c:12775–12781</a>.</p>
+<pre><code class="language-text"> 12775  12848   heap_attrinfo_transform_to_disk_except_lob (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,
+ 12776  12849                           RECDES * old_recdes, record_descriptor * new_recdes)
+ 12777  12850   {
+ 12778      — -   return heap_attrinfo_transform_to_disk_internal (thread_p, attr_info, old_recdes, new_recdes, LOB_FLAG_EXCLUDE_LOB);
+     —  12851 +   return heap_attrinfo_transform_to_disk_internal (thread_p, attr_info, old_recdes, new_recdes, LOB_FLAG_EXCLUDE_LOB,
+     —  12852 +                            NULL, NULL, false);
+ 12779  12853   }
+ 12780  12854   
+ 12781  12855   /*
+</code></pre>
+<p>The existing except-LOB wrapper gains NULL,NULL,false. It still passes LOB_FLAG_EXCLUDE_LOB, chooses no alternate owner and performs no probe. Updating this wrapper is necessary to match the longer internal signature, and preserves the existing behavior for callers that deliberately exclude LOB copying.</p>
+<p><a id="h16"></a></p>
+<h2 id="chapter-06-h16-specify-the-internal-caller-obligations">H16. Specify the internal caller obligations</h2>
+<p><a class="claim-ref" href="#C-116">[C-116]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13306-L13322">src/storage/heap_file.c:13306–13322</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.c#L13232-L13243">src/storage/heap_file.c:13232–13243</a>.</p>
+<pre><code class="language-text"> 13232  13306    *   old_recdes(in): where the object's disk format is deposited
+ 13233  13307    *   new_recdes(in):
+ 13234  13308    *   lob_create_flag(in):
+     —  13309 +  *   oos_class_oid(in): class whose heap receives the OOS value chains; NULL means attr_info-&gt;class_oid
+     —  13310 +  *   would_demote_oos(out): non-NULL suppresses OOS demotion and reports whether it would have happened
+     —  13311 +  *   increments_already_applied(in): true if a previous probe pass already applied INCR/DECR assignments
+ 13235  13312    *
+ 13236  13313    * Note: Transform the object represented by attr_info to disk format
+ 13237  13314    */
+ 13238  13315   static SCAN_CODE
+ 13239  13316   heap_attrinfo_transform_to_disk_internal (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,
+ 13240      — -                       RECDES * old_recdes, record_descriptor * new_recdes, int lob_create_flag)
+     —  13317 +                       RECDES * old_recdes, record_descriptor * new_recdes, int lob_create_flag,
+     —  13318 +                       const OID * oos_class_oid, bool * would_demote_oos,
+     —  13319 +                       bool increments_already_applied)
+ 13241  13320   {
+ 13242  13321     OR_BUF buf;
+ 13243  13322     size_t inline_size_after_oos, mvcc_extra;
+</code></pre>
+<p>Three parameter descriptions are added together with matching definition arguments. oos_class_oid picks storage owner with a NULL fallback; would_demote_oos selects suppressed mode when non-null; increments_already_applied says preparation already ran. The comments and definition must agree with both wrappers and the static declaration. The function continues to return SCAN_CODE; no new error enum is introduced.</p>
+<p><a id="h17"></a></p>
+<h2 id="chapter-06-h17-derive-suppression-and-allocate-an-index-variable">H17. Derive suppression and allocate an index variable</h2>
+<p><a class="claim-ref" href="#C-117">[C-117]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13324-L13331">src/storage/heap_file.c:13324–13331</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.c#L13245-L13250">src/storage/heap_file.c:13245–13250</a>.</p>
+<pre><code class="language-text"> 13245  13324     SCAN_CODE status;
+ 13246  13325     bool is_mvcc_class, is_update;
+ 13247  13326     bool has_oos;
+     —  13327 +   bool suppress_oos = would_demote_oos != NULL;
+     —  13328 +   int i;
+ 13248  13329     // *INDENT-OFF*
+ 13249  13330     std::vector&lt;heap_oos_column_plan&gt; oos_plan (attr_info-&gt;num_values);
+ 13250  13331     std::set&lt;int&gt; incremented_attrids;
+</code></pre>
+<p>bool suppress_oos = would_demote_oos != NULL tests the pointer, not the pointed-to value. int i supports the pre-seeding loop below. The existing oos_plan and incremented_attrids remain fresh per-call containers. Therefore a false value behind a non-null pointer still suppresses OOS, while a null pointer does not suppress it.</p>
+<p><a id="h18"></a></p>
+<h2 id="chapter-06-h18-reconstruct-the-increment-guard-for-the-second-pass">H18. Reconstruct the increment guard for the second pass</h2>
+<p><a class="claim-ref" href="#C-118">[C-118]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13339-L13357">src/storage/heap_file.c:13339–13357</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.c#L13258-L13263">src/storage/heap_file.c:13258–13263</a>.</p>
+<pre><code class="language-text"> 13258  13339         return S_ERROR;
+ 13259  13340       }
+ 13260  13341   
+     —  13342 +   if (increments_already_applied)
+     —  13343 +     {
+     —  13344 +       /* a probe pass already applied the pending INCR/DECR assignments to the dbvalues; pre-mark
+     —  13345 +        * them so the column writer below does not apply them a second time */
+     —  13346 +       for (i = 0; i &lt; attr_info-&gt;num_values; i++)
+     —  13347 +     {
+     —  13348 +       if (attr_info-&gt;values[i].do_increment != 0)
+     —  13349 +         {
+     —  13350 +           incremented_attrids.insert (i);
+     —  13351 +         }
+     —  13352 +     }
+     —  13353 +     }
+     —  13354 + 
+ 13261  13355     /* get any of the values that have not been set/read */
+ 13262  13356     if (heap_attrinfo_set_uninitialized (thread_p, &amp;attr_info-&gt;inst_oid, old_recdes, attr_info) != NO_ERROR)
+ 13263  13357       {
+</code></pre>
+<p>Only increments_already_applied enters this block. The loop visits each current attribute index, tests nonzero do_increment and inserts that index into the new set. It does not modify the DB_VALUE again or clear do_increment. The unchanged fixed writer later sees membership and skips qdata_increment_dbval. Braces delimit the mode guard, iteration and per-attribute guard. The successful probe on the same attr_info is essential: otherwise this set would falsely claim work had happened.</p>
+<p><a id="h19"></a></p>
+<h2 id="chapter-06-h19-pass-mode-and-verdict-into-layout-calculation">H19. Pass mode and verdict into layout calculation</h2>
+<p><a class="claim-ref" href="#C-119">[C-119]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13365-L13372">src/storage/heap_file.c:13365–13372</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.c#L13271-L13278">src/storage/heap_file.c:13271–13278</a>.</p>
+<pre><code class="language-text"> 13271  13365     is_mvcc_class = !mvcc_is_mvcc_disabled_class (&amp;(attr_info-&gt;class_oid));
+ 13272  13366   
+ 13273  13367     /* determine the layout and the size */
+ 13274      — -   if (heap_attrinfo_determine_disk_layout (attr_info, is_mvcc_class, &amp;offset_size, &amp;oos_plan, &amp;has_oos,
+ 13275      — -                        &amp;inline_size_after_oos) != NO_ERROR)
+     —  13368 +   if (heap_attrinfo_determine_disk_layout (attr_info, is_mvcc_class, suppress_oos, &amp;offset_size, &amp;oos_plan, &amp;has_oos,
+     —  13369 +                        would_demote_oos, &amp;inline_size_after_oos) != NO_ERROR)
+ 13276  13370       {
+ 13277  13371         return S_ERROR;
+ 13278  13372       }
+</code></pre>
+<p>The call adds suppress_oos after is_mvcc_class and the verdict before the size output, matching the new declaration. offset_size, plan and has_oos still receive concrete layout information. The existing comparison with NO_ERROR and S_ERROR return remain intact. Suppression is decided before layout, not patched into an already serialized record.</p>
+<p><a id="h20"></a></p>
+<h2 id="chapter-06-h20-forward-the-selected-owner-only-when-inserting-oos">H20. Forward the selected owner only when inserting OOS</h2>
+<p><a class="claim-ref" href="#C-120">[C-120]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13401-L13407">src/storage/heap_file.c:13401–13407</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.c#L13307-L13313">src/storage/heap_file.c:13307–13313</a>.</p>
+<pre><code class="language-text"> 13307  13401     if (has_oos)
+ 13308  13402       {
+ 13309  13403         /* insert big columns to OOS */
+ 13310      — -       status = heap_attrinfo_insert_to_oos (thread_p, attr_info, lob_create_flag, &amp;oos_plan);
+     —  13404 +       status = heap_attrinfo_insert_to_oos (thread_p, attr_info, lob_create_flag, oos_class_oid, &amp;oos_plan);
+ 13311  13405         if (status != S_SUCCESS)
+ 13312  13406       {
+ 13313  13407         return S_ERROR;
+</code></pre>
+<p>The call inside if(has_oos) adds oos_class_oid. A successful suppressed layout never enters this branch. Normal/final layouts use it to reach the conditional owner expression in the insertion helper. The existing S_SUCCESS check still returns S_ERROR on failure. This hunk does not move chain insertion into the buffer retry loop.</p>
+<p><a id="h21"></a></p>
+<h2 id="chapter-06-h21-keep-the-unit-test-bridge-on-its-original-owner">H21. Keep the unit-test bridge on its original owner</h2>
+<p><a class="claim-ref" href="#C-121">[C-121]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L28525-L28530">src/storage/heap_file.c:28525–28530</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.c#L28431-L28436">src/storage/heap_file.c:28431–28436</a>.</p>
+<pre><code class="language-text"> 28431  28525   
+ 28432  28526     COPY_OID (&amp;attr_info.class_oid, class_oid);
+ 28433  28527     attr_info.num_values = 0;
+ 28434      — -   return heap_attrinfo_insert_to_oos (thread_p, &amp;attr_info, LOB_FLAG_INCLUDE_LOB, &amp;oos_plan);
+     —  28528 +   return heap_attrinfo_insert_to_oos (thread_p, &amp;attr_info, LOB_FLAG_INCLUDE_LOB, NULL, &amp;oos_plan);
+ 28435  28529   }
+ 28436  28530   #endif /* CUBRID_UNIT_TEST_ENABLED */
+</code></pre>
+<p>The bridge constructs attribute info with the provided class OID and no attribute values, then invokes the private helper. The new NULL argument means use the class already copied into attr_info. It is an API-compatibility adjustment for this test seam; it does not activate partition probing or force a second pass.</p>
+<p><a id="h22"></a></p>
+<h2 id="chapter-06-h22-publish-the-two-transformation-interfaces">H22. Publish the two transformation interfaces</h2>
+<p><a class="claim-ref" href="#C-122">[C-122]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.h#L507-L518">src/storage/heap_file.h:507–518</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.h#L507-L512">src/storage/heap_file.h:507–512</a>.</p>
+<pre><code class="language-text">   507    507                             RECDES * old_recdes, record_descriptor * new_recdes);
+   508    508   extern SCAN_CODE heap_attrinfo_transform_to_disk_except_lob (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,
+   509    509                                    RECDES * old_recdes, record_descriptor * new_recdes);
+     —    510 + extern SCAN_CODE heap_attrinfo_transform_to_disk_probe_oos (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,
+     —    511 +                                 RECDES * old_recdes, record_descriptor * new_recdes,
+     —    512 +                                 int lob_create_flag, bool * would_demote_oos);
+     —    513 + extern SCAN_CODE heap_attrinfo_transform_to_disk_oos_class (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,
+     —    514 +                                 RECDES * old_recdes, record_descriptor * new_recdes,
+     —    515 +                                 int lob_create_flag, const OID * oos_class_oid);
+   510    516   
+   511    517   extern DB_VALUE *heap_attrinfo_generate_key (THREAD_ENTRY * thread_p, int n_atts, int *att_ids, int *atts_prefix_length,
+   512    518                            HEAP_CACHE_ATTRINFO * attr_info, RECDES * recdes, DB_VALUE * dbvalue,
+</code></pre>
+<p>The two extern declarations let locator_sr.c call the probe and final wrappers. Both retain thread, mutable attribute info, optional old record and managed output descriptor. Both accept the LOB flag. The last argument is a bool output for probe versus const class identity for final, reflecting their different contracts. Ordinary and except-LOB declarations remain available. These additions affect internal engine source interfaces, not a new SQL statement.</p>
+<p><a id="h23"></a></p>
+<h2 id="chapter-06-h23-extend-the-copy-area-adapter">H23. Extend the copy-area adapter</h2>
+<p><a class="claim-ref" href="#C-123">[C-123]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7475-L7492">src/transaction/locator_sr.c:7475–7492</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/transaction/locator_sr.c#L7475-L7486">src/transaction/locator_sr.c:7475–7486</a>.</p>
+<pre><code class="language-text">  7475   7475    *   copyarea_length_hint(in): An estimated size for the LC_COPYAREA or -1 if
+  7476   7476    *                             an estimated size is not known.
+  7477   7477    *   lob_create_flag(in) :
+     —   7478 +  *   oos_class_oid(in): class whose heap receives the OOS value chains; NULL means
+     —   7479 +  *                      attr_info-&gt;class_oid. A partitioned write passes the pruned partition.
+     —   7480 +  *   probe_would_demote_oos(out): when non-NULL, suppress OOS demotion (build a fully-inline
+     —   7481 +  *                                image, write no OOS value chain) and report whether a normal
+     —   7482 +  *                                transform would have demoted a column.
+  7478   7483    *
+  7479   7484    * Note: The allocated should be freed by using locator_free_copy_area ()
+  7480   7485    */
+  7481   7486   LC_COPYAREA *
+  7482   7487   locator_allocate_copy_area_by_attr_info (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info, RECDES * old_recdes,
+  7483      — -                      RECDES * new_recdes, const int copyarea_length_hint, int lob_create_flag)
+     —   7488 +                      RECDES * new_recdes, const int copyarea_length_hint, int lob_create_flag,
+     —   7489 +                      const OID * oos_class_oid, bool * probe_would_demote_oos)
+  7484   7490   {
+  7485   7491     LC_COPYAREA *copyarea = NULL;
+  7486   7492     int copyarea_length = copyarea_length_hint &lt;= 0 ? DB_PAGESIZE : copyarea_length_hint;
+</code></pre>
+<p>The parameter comments explain the two pointer protocols. The function definition appends optional OOS owner and probe output arguments after lob_create_flag. Existing allocation size hint semantics are unchanged. The returned copy area still must be released by locator_free_copy_area; new_recdes describes bytes whose lifetime follows that area. Signature changes require all call sites and the header declaration to agree.</p>
+<p><a id="h24"></a></p>
+<h2 id="chapter-06-h24-dispatch-probe-before-owner-before-lob-mode">H24. Dispatch probe before owner before LOB mode</h2>
+<p><a class="claim-ref" href="#C-124">[C-124]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7510-L7526">src/transaction/locator_sr.c:7510–7526</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/transaction/locator_sr.c#L7504-L7510">src/transaction/locator_sr.c:7504–7510</a>.</p>
+<pre><code class="language-text">  7504   7510     new_recdes-&gt;data = copyarea-&gt;mem;
+  7505   7511     new_recdes-&gt;area_size = copyarea-&gt;length;
+  7506   7512   
+  7507      — -   if (lob_create_flag == LOB_FLAG_EXCLUDE_LOB)
+     —   7513 +   if (probe_would_demote_oos != NULL)
+     —   7514 +     {
+     —   7515 +       scan = heap_attrinfo_transform_to_disk_probe_oos (thread_p, attr_info, old_recdes, &amp;build_record,
+     —   7516 +                             lob_create_flag, probe_would_demote_oos);
+     —   7517 +     }
+     —   7518 +   else if (oos_class_oid != NULL)
+     —   7519 +     {
+     —   7520 +       scan = heap_attrinfo_transform_to_disk_oos_class (thread_p, attr_info, old_recdes, &amp;build_record,
+     —   7521 +                             lob_create_flag, oos_class_oid);
+     —   7522 +     }
+     —   7523 +   else if (lob_create_flag == LOB_FLAG_EXCLUDE_LOB)
+  7508   7524       {
+  7509   7525         scan = heap_attrinfo_transform_to_disk_except_lob (thread_p, attr_info, old_recdes, &amp;build_record);
+  7510   7526       }
+</code></pre>
+<p>The new first if tests probe_would_demote_oos and forwards it to the probe wrapper. The else-if tests oos_class_oid and invokes the final-owner wrapper. The former top-level LOB condition becomes a later else-if, preserving the ordinary except-LOB branch. Both new calls pass the same attr_info and build_record so value state and buffer handling remain centralized. Probe has priority if both pointers are set; intended callers avoid that combination. The shared scan-status check below handles every branch.</p>
+<p><a id="h25"></a></p>
+<h2 id="chapter-06-h25-orchestrate-probe-early-routing-and-final-serialization">H25. Orchestrate probe, early routing and final serialization</h2>
+<p><a class="claim-ref" href="#C-125">[C-125]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7708-L7770">src/transaction/locator_sr.c:7708–7770</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/transaction/locator_sr.c#L7692-L7700">src/transaction/locator_sr.c:7692–7700</a>.</p>
+<pre><code class="language-text">  7692   7708       case LC_FLUSH_INSERT:
+  7693   7709       case LC_FLUSH_INSERT_PRUNE:
+  7694   7710       case LC_FLUSH_INSERT_PRUNE_VERIFY:
+  7695      — -       copyarea =
+  7696      — -     locator_allocate_copy_area_by_attr_info (thread_p, attr_info, old_recdes, &amp;new_recdes, -1,
+  7697      — -                          LOB_FLAG_INCLUDE_LOB);
+     —   7711 +       if (pruning_type != DB_NOT_PARTITIONED_CLASS)
+     —   7712 +     {
+     —   7713 +       bool would_demote_oos = false;
+     —   7714 + 
+     —   7715 +       /* An OOS value chain must live in the OOS file of the heap that stores its record, and the
+     —   7716 +        * target heap of a partitioned write is only known after pruning. Build the record with OOS
+     —   7717 +        * demotion suppressed, prune with that fully-inline image, and when demotion is needed
+     —   7718 +        * rebuild the record with its OOS value chains written to the pruned partition's heap
+     —   7719 +        * (CBRD-27089). */
+     —   7720 +       copyarea =
+     —   7721 +         locator_allocate_copy_area_by_attr_info (thread_p, attr_info, old_recdes, &amp;new_recdes, -1,
+     —   7722 +                              LOB_FLAG_INCLUDE_LOB, NULL, &amp;would_demote_oos);
+     —   7723 +       if (copyarea != NULL &amp;&amp; would_demote_oos)
+     —   7724 +         {
+     —   7725 +           OID pruned_class_oid;
+     —   7726 +           HFID pruned_hfid;
+     —   7727 +           OID superclass_oid;
+     —   7728 + 
+     —   7729 +           COPY_OID (&amp;pruned_class_oid, &amp;class_oid);
+     —   7730 +           HFID_COPY (&amp;pruned_hfid, &amp;class_hfid);
+     —   7731 +           OID_SET_NULL (&amp;superclass_oid);
+     —   7732 + 
+     —   7733 +           if (LC_IS_FLUSH_INSERT (operation))
+     —   7734 +         {
+     —   7735 +           error_code =
+     —   7736 +             partition_prune_insert (thread_p, &amp;class_oid, &amp;new_recdes, scan_cache, pcontext, pruning_type,
+     —   7737 +                         &amp;pruned_class_oid, &amp;pruned_hfid, &amp;superclass_oid);
+     —   7738 +         }
+     —   7739 +           else
+     —   7740 +         {
+     —   7741 +           assert (LC_IS_FLUSH_UPDATE (operation));
+     —   7742 +           error_code =
+     —   7743 +             partition_prune_update (thread_p, &amp;class_oid, &amp;new_recdes, pcontext, pruning_type,
+     —   7744 +                         &amp;pruned_class_oid, &amp;pruned_hfid, &amp;superclass_oid);
+     —   7745 +         }
+     —   7746 + 
+     —   7747 +           locator_free_copy_area (copyarea);
+     —   7748 +           copyarea = NULL;
+     —   7749 +           new_recdes.data = NULL;
+     —   7750 +           new_recdes.area_size = 0;
+     —   7751 + 
+     —   7752 +           if (error_code != NO_ERROR)
+     —   7753 +         {
+     —   7754 +           break;
+     —   7755 +         }
+     —   7756 + 
+     —   7757 +           copyarea =
+     —   7758 +         locator_allocate_copy_area_by_attr_info (thread_p, attr_info, old_recdes, &amp;new_recdes, -1,
+     —   7759 +                              LOB_FLAG_INCLUDE_LOB, &amp;pruned_class_oid, NULL);
+     —   7760 +         }
+     —   7761 +     }
+     —   7762 +       else
+     —   7763 +     {
+     —   7764 +       copyarea =
+     —   7765 +         locator_allocate_copy_area_by_attr_info (thread_p, attr_info, old_recdes, &amp;new_recdes, -1,
+     —   7766 +                              LOB_FLAG_INCLUDE_LOB, NULL, NULL);
+     —   7767 +     }
+  7698   7768         if (copyarea == NULL)
+  7699   7769       {
+  7700   7770         error_code = ER_FAILED;
+</code></pre>
+<p>The deleted unconditional allocator call becomes a partition-mode branch. The local bool and explanatory comment establish why routing precedes OOS publication. The probe call uses INCLUDE_LOB,NULL,&amp;would_demote_oos. Short-circuiting copyarea != NULL &amp;&amp; would_demote_oos avoids reading a failed probe as usable output and avoids a second pass when OOS is unnecessary. Three stack identifiers hold pruning outputs; COPY_OID/HFID_COPY seed them and OID_SET_NULL initializes the superclass. LC_IS_FLUSH_INSERT selects insert pruning; otherwise the assert establishes UPDATE and the update-pruning call is used. Both receive the fully-inline new_recdes. The probe is freed regardless of pruning success, then copyarea and descriptor pointer/capacity are cleared. On pruning failure break exits the operation switch before any final pass. On success the final allocation passes &amp;pruned_class_oid and NULL verdict. The outer else preserves ordinary nonpartitioned allocation with both pointers NULL. The existing copyarea-null check below still handles either failed allocation. Important surrounding lines: UPDATE falls through into this code; lower locator_insert_force/locator_update_force still run; their ordinary pruning is not removed. The early HFID/superclass outputs do not overwrite the outer write context.</p>
+<h3 id="chapter-06-statement-by-statement-reading-guide_1">Statement-by-statement reading guide</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Head lines</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>7711–7713</td>
+<td>Enter only for partitioned operation modes; create the addressable false verdict.</td>
+</tr>
+<tr>
+<td>7715–7719</td>
+<td>Explain the ownership invariant and ordering requirement in the source comment.</td>
+</tr>
+<tr>
+<td>7720–7722</td>
+<td>Pass old/new records and same attribute cache; -1 requests the default area hint; INCLUDE_LOB, NULL, &amp;verdict selects preparation with suppression.</td>
+</tr>
+<tr>
+<td>7723–7724</td>
+<td>Only a successful probe that would demote requires early routing plus another transform.</td>
+</tr>
+<tr>
+<td>7725–7727</td>
+<td>Declare selected child class, selected heap and root/superclass outputs.</td>
+</tr>
+<tr>
+<td>7729</td>
+<td>Initialize class output from the current class as a safe starting value for pruning.</td>
+</tr>
+<tr>
+<td>7730</td>
+<td>Initialize heap output from the current heap.</td>
+</tr>
+<tr>
+<td>7731</td>
+<td>Initialize superclass to null so missing output cannot be read as a real class.</td>
+</tr>
+<tr>
+<td>7733–7737</td>
+<td>INSERT predicate selects insert pruning; capture status and all three output identities.</td>
+</tr>
+<tr>
+<td>7739–7744</td>
+<td>The alternative must be UPDATE, established by assert; call its pruning API, which lacks the insert scan-cache parameter.</td>
+</tr>
+<tr>
+<td>7747</td>
+<td>Release only the probe byte area, not attr_info or the old row.</td>
+</tr>
+<tr>
+<td>7748</td>
+<td>Null the owning copyarea pointer after free.</td>
+</tr>
+<tr>
+<td>7749</td>
+<td>Null the RECDES data pointer that referred to the freed bytes.</td>
+</tr>
+<tr>
+<td>7750</td>
+<td>Set advertised buffer capacity to zero; length is not reused before a new successful allocation.</td>
+</tr>
+<tr>
+<td>7752–7755</td>
+<td>A pruning error exits the operation switch; no final chain publication follows.</td>
+</tr>
+<tr>
+<td>7757–7759</td>
+<td>Rebuild using the selected child as OOS owner; NULL verdict restores normal selection and allocator dispatch chooses the final wrapper.</td>
+</tr>
+<tr>
+<td>7760–7761</td>
+<td>Close the second-pass condition and partition-mode branch; a false verdict kept the first copy area.</td>
+</tr>
+<tr>
+<td>7762–7767</td>
+<td>Nonpartitioned branch uses ordinary transform with both extra pointers null.</td>
+</tr>
+<tr>
+<td>7768–7772</td>
+<td>Unchanged shared failure guard translates a null copyarea into ER_FAILED and exits the switch.</td>
+</tr>
+</tbody>
+</table></div>
+<p><a id="h26"></a></p>
+<h2 id="chapter-06-h26-keep-mvcc-reevaluation-on-its-existing-path">H26. Keep MVCC reevaluation on its existing path</h2>
+<p><a class="claim-ref" href="#C-126">[C-126]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L13851-L13857">src/transaction/locator_sr.c:13851–13857</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/transaction/locator_sr.c#L13781-L13787">src/transaction/locator_sr.c:13781–13787</a>.</p>
+<pre><code class="language-text"> 13781  13851       }
+ 13782  13852         mvcc_reev_data-&gt;copyarea =
+ 13783  13853       locator_allocate_copy_area_by_attr_info (thread_p, mvcc_reev_data-&gt;curr_attrinfo, recdes,
+ 13784      — -                          mvcc_reev_data-&gt;new_recdes, -1, LOB_FLAG_INCLUDE_LOB);
+     —  13854 +                          mvcc_reev_data-&gt;new_recdes, -1, LOB_FLAG_INCLUDE_LOB, NULL, NULL);
+ 13785  13855         if (mvcc_reev_data-&gt;copyarea == NULL)
+ 13786  13856       {
+ 13787  13857         ev_res = V_ERROR;
+</code></pre>
+<p>The reevaluation copy-area call gains NULL,NULL after INCLUDE_LOB. It therefore selects ordinary transformation, preserving prior behavior and satisfying the new signature. The adjacent null-result handling remains V_ERROR. This hunk is not evidence that all reevaluation paths gained the new two-pass protocol; it only shows the chosen mode at this particular call site.</p>
+<p><a id="h27"></a></p>
+<h2 id="chapter-06-h27-expose-the-adapters-expanded-signature">H27. Expose the adapter’s expanded signature</h2>
+<p><a class="claim-ref" href="#C-127">[C-127]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.h#L83-L90">src/transaction/locator_sr.h:83–90</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/transaction/locator_sr.h#L83-L89">src/transaction/locator_sr.h:83–89</a>.</p>
+<pre><code class="language-text">    83     83                        bool need_locking);
+    84     84   extern LC_COPYAREA *locator_allocate_copy_area_by_attr_info (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,
+    85     85                                    RECDES * old_recdes, RECDES * new_recdes,
+    86      — -                                  const int copyarea_length_hint, int lob_create_flag);
+     —     86 +                                  const int copyarea_length_hint, int lob_create_flag,
+     —     87 +                                  const OID * oos_class_oid, bool * probe_would_demote_oos);
+    87     88   extern int locator_other_insert_delete (THREAD_ENTRY * thread_p, HFID * hfid, OID * oid, BTID * btid,
+    88     89                       bool btid_dup_key_locked, HFID * newhfid, OID * newoid,
+    89     90                       HEAP_CACHE_ATTRINFO * attr_info, HEAP_SCANCACHE * scan_cache, int *force_count,
+</code></pre>
+<p>The public internal declaration appends const OID<em> and bool</em> in the same order as the definition. Every source caller now supplies an owner override or probe output, or two NULLs. The split line preserves the existing copy-area size hint and LOB arguments. Missing this hunk would leave callers and declaration inconsistent.</p>
+<p><a id="h28"></a></p>
+<h2 id="chapter-06-h28-include-the-string-type-directly">H28. Include the string type directly</h2>
+<p><a class="claim-ref" href="#C-128">[C-128]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/test_oos_sql_show.cpp#L21-L27">unit_tests/oos/sql/test_oos_sql_show.cpp:21–27</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/unit_tests/oos/sql/test_oos_sql_show.cpp#L21-L26">unit_tests/oos/sql/test_oos_sql_show.cpp:21–26</a>.</p>
+<pre><code class="language-text">    21     21    */
+    22     22   
+    23     23   #include &lt;algorithm&gt;
+     —     24 + #include &lt;string&gt;
+    24     25   
+    25     26   #include &quot;test_oos_sql_common.hpp&quot;
+    26     27   
+</code></pre>
+<p>The test now uses std::string for diagnostic names. Including <string> declares that dependency explicitly instead of relying on an incidental transitive include. Existing algorithm and common-test includes remain in their original order.</p>
+<p><a id="h29"></a></p>
+<h2 id="chapter-06-h29-copy-and-normalize-the-diagnostic-name">H29. Copy and normalize the diagnostic name</h2>
+<p><a class="claim-ref" href="#C-129">[C-129]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/test_oos_sql_show.cpp#L155-L192">unit_tests/oos/sql/test_oos_sql_show.cpp:155–192</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/unit_tests/oos/sql/test_oos_sql_show.cpp#L154-L159">unit_tests/oos/sql/test_oos_sql_show.cpp:154–159</a>.</p>
+<pre><code class="language-text">   154    155       db_value_clear (&amp;val);
+   155    156       return rc;
+   156    157     }
+     —    158 + 
+     —    159 +   static int
+     —    160 +   get_string_column (DB_QUERY_RESULT *result, int column, std::string *out_val)
+     —    161 +   {
+     —    162 +     DB_VALUE val;
+     —    163 +     int rc;
+     —    164 + 
+     —    165 +     db_make_null (&amp;val);
+     —    166 +     rc = db_query_get_tuple_value (result, column, &amp;val);
+     —    167 +     if (rc == NO_ERROR)
+     —    168 +       {
+     —    169 +     const char *str = db_get_string (&amp;val);
+     —    170 +     if (str == nullptr)
+     —    171 +       {
+     —    172 +         rc = ER_FAILED;
+     —    173 +       }
+     —    174 +     else
+     —    175 +       {
+     —    176 +         *out_val = str;
+     —    177 +       }
+     —    178 +       }
+     —    179 + 
+     —    180 +     db_value_clear (&amp;val);
+     —    181 +     return rc;
+     —    182 +   }
+     —    183 + 
+     —    184 +   static std::string
+     —    185 +   unqualified_table_name (const std::string &amp;table_name)
+     —    186 +   {
+     —    187 +     std::string::size_type separator = table_name.rfind ('.');
+     —    188 +     return separator == std::string::npos ? table_name : table_name.substr (separator + 1);
+     —    189 +   }
+   157    190   }
+   158    191   
+   159    192   class OosSqlShow : public ::testing::Test
+</code></pre>
+<p>get_string_column declares a DB_VALUE and status, initializes the value to null, fetches the requested column, and only reads a string on NO_ERROR. A null string produces ER_FAILED; a valid string is copied into the caller’s std::string before db_value_clear releases temporary storage. The unconditional clear and returned rc preserve cleanup/status for this helper. unqualified_table_name uses rfind to locate the last dot; npos returns the original name, otherwise substr(separator+1) returns the unqualified suffix. It is sufficient for the simple fixture names and is not a general SQL identifier parser. The helpers are in the existing anonymous namespace.</p>
+<p><a id="h30"></a></p>
+<h2 id="chapter-06-h30-check-value-and-all-three-heap-owners">H30. Check value and all three heap owners</h2>
+<p><a class="claim-ref" href="#C-130">[C-130]</a> Head: <a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/test_oos_sql_show.cpp#L384-L458">unit_tests/oos/sql/test_oos_sql_show.cpp:384–458</a>. Base: <a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/unit_tests/oos/sql/test_oos_sql_show.cpp#L351-L356">unit_tests/oos/sql/test_oos_sql_show.cpp:351–356</a>.</p>
+<pre><code class="language-text">   351    384     db_query_end (result);
+   352    385   }
+   353    386   
+     —    387 + TEST_F (OosSqlShow, PartitionedForceOutlineStoresOosInPrunedHeap)
+     —    388 + {
+     —    389 +   int rc = exec_sql (&quot;CREATE TABLE t_oos_show_part (&quot;
+     —    390 +              &quot;id INT, data_col BIT VARYING STORAGE FORCE_OUTLINE) &quot;
+     —    391 +              &quot;PARTITION BY RANGE (id) (&quot;
+     —    392 +              &quot;PARTITION p0 VALUES LESS THAN (10), &quot;
+     —    393 +              &quot;PARTITION p1 VALUES LESS THAN MAXVALUE)&quot;);
+     —    394 +   ASSERT_GE (rc, 0);
+     —    395 +   rc = exec_sql (&quot;INSERT INTO t_oos_show_part VALUES (1, REPEAT(X'EE', 64))&quot;);
+     —    396 +   ASSERT_GE (rc, 0);
+     —    397 +   db_commit_transaction ();
+     —    398 + 
+     —    399 +   int value_matches = 0;
+     —    400 +   rc = fetch_single_int (&quot;SELECT data_col = CAST(REPEAT(X'EE', 64) AS BIT VARYING) &quot;
+     —    401 +              &quot;FROM t_oos_show_part WHERE id = 1&quot;, &amp;value_matches);
+     —    402 +   ASSERT_EQ (rc, NO_ERROR);
+     —    403 +   EXPECT_EQ (value_matches, 1);
+     —    404 + 
+     —    405 +   DB_QUERY_RESULT *result = nullptr;
+     —    406 +   rc = show_heap_oos_query (&quot;SHOW ALL HEAP OOS OF t_oos_show_part&quot;, &amp;result);
+     —    407 +   ASSERT_EQ (rc, NO_ERROR);
+     —    408 +   ASSERT_NE (result, nullptr);
+     —    409 + 
+     —    410 +   bool saw_root = false;
+     —    411 +   bool saw_p0 = false;
+     —    412 +   bool saw_p1 = false;
+     —    413 +   do
+     —    414 +     {
+     —    415 +       std::string table_name;
+     —    416 +       int has_oos = -1;
+     —    417 +       int num_recs = -1;
+     —    418 + 
+     —    419 +       rc = get_string_column (result, COL_TABLE_NAME, &amp;table_name);
+     —    420 +       ASSERT_EQ (rc, NO_ERROR);
+     —    421 +       rc = get_int_column (result, COL_HAS_OOS_FILE, &amp;has_oos);
+     —    422 +       ASSERT_EQ (rc, NO_ERROR);
+     —    423 +       rc = get_int_column (result, COL_OOS_NUM_RECS, &amp;num_recs);
+     —    424 +       ASSERT_EQ (rc, NO_ERROR);
+     —    425 + 
+     —    426 +       table_name = unqualified_table_name (table_name);
+     —    427 +       if (table_name == &quot;t_oos_show_part&quot;)
+     —    428 +     {
+     —    429 +       saw_root = true;
+     —    430 +       EXPECT_EQ (has_oos, 0);
+     —    431 +       EXPECT_EQ (num_recs, 0);
+     —    432 +     }
+     —    433 +       else if (table_name == &quot;t_oos_show_part__p__p0&quot;)
+     —    434 +     {
+     —    435 +       saw_p0 = true;
+     —    436 +       EXPECT_EQ (has_oos, 1);
+     —    437 +       EXPECT_EQ (num_recs, 1);
+     —    438 +     }
+     —    439 +       else if (table_name == &quot;t_oos_show_part__p__p1&quot;)
+     —    440 +     {
+     —    441 +       saw_p1 = true;
+     —    442 +       EXPECT_EQ (has_oos, 0);
+     —    443 +       EXPECT_EQ (num_recs, 0);
+     —    444 +     }
+     —    445 +     }
+     —    446 +   while ((rc = db_query_next_tuple (result)) == DB_CURSOR_SUCCESS);
+     —    447 + 
+     —    448 +   EXPECT_EQ (rc, DB_CURSOR_END);
+     —    449 +   EXPECT_TRUE (saw_root);
+     —    450 +   EXPECT_TRUE (saw_p0);
+     —    451 +   EXPECT_TRUE (saw_p1);
+     —    452 + 
+     —    453 +   db_query_end (result);
+     —    454 + }
+     —    455 + 
+   354    456   int
+   355    457   main (int argc, char **argv)
+   356    458   {
+</code></pre>
+<p>The TEST_F declaration uses existing SetUp/TearDown table cleanup. Adjacent SQL string literals form one CREATE statement; FORCE_OUTLINE plus a 64-byte value exercises demotion below the normal threshold. ASSERT_GE checks successful SQL execution, and db_commit_transaction makes the write visible to later queries without asserting its return. The equality SELECT fills value_matches; ASSERT_EQ validates fetching and EXPECT_EQ checks true. The SHOW helper positions the first tuple, so do begins by inspecting that row. Three saw flags start false; per-row sentinels -1 prevent unnoticed default success. get_string_column and two get_int_column calls each have fatal status checks. Name normalization allows an optional schema prefix. Root expects zero file/records; p0 expects one file/record; p1 expects zero. Each matched branch marks its saw flag. db_query_next_tuple advances until not-success; DB_CURSOR_END must then be the reason for termination. All three saw flags must be true, and db_query_end releases the result on normal completion. The test does not reject additional unknown names, assert exact total row count, execute UPDATE or run a SERVER_MODE vacuum cycle. Its OOS_NUM_RECS expectation is for a small single-chunk value, not every row size.</p>
+<h3 id="chapter-06-statement-by-statement-reading-guide_2">Statement-by-statement reading guide</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Head lines</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>387–388</td>
+<td>Register the test with the existing table-cleanup fixture.</td>
+</tr>
+<tr>
+<td>389–393</td>
+<td>Concatenate CREATE statement fragments: fixed id, forced variable value, range expression and both child bounds.</td>
+</tr>
+<tr>
+<td>394</td>
+<td>Require a nonnegative SQL result before using the table.</td>
+</tr>
+<tr>
+<td>395–396</td>
+<td>Insert the below-threshold forced value in p0 and require success.</td>
+</tr>
+<tr>
+<td>397</td>
+<td>Commit; this line does not check the commit return value.</td>
+</tr>
+<tr>
+<td>399</td>
+<td>Start equality output at false so missing assignment cannot look like true.</td>
+</tr>
+<tr>
+<td>400–401</td>
+<td>Fetch the boolean SQL equality as an integer for the id=1 row.</td>
+</tr>
+<tr>
+<td>402–403</td>
+<td>Require successful fetch, then nonfatally expect equality 1.</td>
+</tr>
+<tr>
+<td>405</td>
+<td>Initialize the query-result handle to null.</td>
+</tr>
+<tr>
+<td>406–408</td>
+<td>Request all heap OOS rows; require success and a real result handle.</td>
+</tr>
+<tr>
+<td>410–412</td>
+<td>Track whether root and both child rows were actually seen.</td>
+</tr>
+<tr>
+<td>413–417</td>
+<td>Inspect the already-positioned first tuple; initialize a string and sentinel numeric outputs per iteration.</td>
+</tr>
+<tr>
+<td>419–420</td>
+<td>Read and validate the name before branching on it.</td>
+</tr>
+<tr>
+<td>421–422</td>
+<td>Read the heap OOS-file indicator, not the row-level HAS_OOS bit.</td>
+</tr>
+<tr>
+<td>423–424</td>
+<td>Read OOS chunk-record count and require a valid typed result.</td>
+</tr>
+<tr>
+<td>426</td>
+<td>Remove a possible schema prefix from the simple fixture name.</td>
+</tr>
+<tr>
+<td>427–432</td>
+<td>Recognize root, record its presence, and expect neither file nor OOS records.</td>
+</tr>
+<tr>
+<td>433–438</td>
+<td>Recognize p0, record its presence, and expect exactly one file indicator and one chunk record.</td>
+</tr>
+<tr>
+<td>439–444</td>
+<td>Recognize p1, record its presence, and expect no OOS allocation.</td>
+</tr>
+<tr>
+<td>445–446</td>
+<td>Advance the cursor only after examining the current row; keep looping on SUCCESS.</td>
+</tr>
+<tr>
+<td>448</td>
+<td>Check that iteration stopped at END rather than a cursor error.</td>
+</tr>
+<tr>
+<td>449–451</td>
+<td>Require all three named rows; no order assumption is needed.</td>
+</tr>
+<tr>
+<td>453–454</td>
+<td>Close the query result and finish the normal test path.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="chapter-06-hunk-checkpoint">Hunk checkpoint</h2>
+<p>Explain H10 without using the word “flag” ambiguously. Then trace H25 for both a successful forced-outline INSERT and a probe that reports false. Finally, walk H30 from the first tuple through cursor termination and explain the lifetime of each temporary value.</p><div class="chapter-nav"><a href="#chapter-05">← Previous chapter</a><a href="#chapter-07">Next chapter →</a></div></article><article id="chapter-07"><h1 id="chapter-07-7-read-the-regression-as-a-specification">7. Read the regression as a specification</h1>
+<p>The added test is <code>OosSqlShow.PartitionedForceOutlineStoresOosInPrunedHeap</code>. Although the directory-level guidance describes many Catch2 tests, this particular target links <code>GTest::gtest</code> and uses <code>TEST_F</code>, <code>ASSERT_*</code> and <code>EXPECT_*</code>. Its SQL test environment links <code>cubridsa</code> and opens <code>unittestdb</code> in process under SA_MODE. Read the target's own CMake and test helper to determine its execution model. <a class="claim-ref" href="#C-030">[C-030]</a></p>
+<h2 id="chapter-07-what-each-phase-establishes">What each phase establishes</h2>
+<p>The fixture first drops any previous test tables and commits. The new test creates a two-child range table with forced-outline storage and inserts the small binary value. <code>ASSERT_GE(rc,0)</code> accepts successful SQL statuses or affected-row counts; it is not a comparison against only <code>NO_ERROR</code>. The test commits before querying. The commit's return is not separately asserted in this test. <a class="claim-ref" href="#C-003">[C-003]</a></p>
+<p>The equality SELECT must return 1. That checks logical bytes, but cannot distinguish right-owner storage from an otherwise readable wrong-owner chain. The next query, <code>SHOW ALL HEAP OOS</code>, supplies the physical ownership check. Its helper has already moved to the first tuple, which is why the loop is <code>do ... while</code> rather than fetching a new tuple first. <a class="claim-ref" href="#C-003">[C-003]</a></p>
+<p>For each diagnostic row, the test reads the table name, file-existence flag and OOS record count. It removes a schema qualifier from the name before matching the root and generated child names. <code>saw_root</code>, <code>saw_p0</code> and <code>saw_p1</code> prevent a missing result row from accidentally passing the assertions. The expected values are root 0/0, p0 1/1, p1 0/0. <a class="claim-ref" href="#C-003">[C-003]</a></p>
+<p><code>num_recs</code> counts OOS chunk records, not SQL rows in general. A large value could span multiple chunks. The one-record expectation is meaningful for this small value. The loop expects <code>DB_CURSOR_END</code>; another cursor failure is not accepted as completion. <code>db_query_end</code> releases the result on the normal path. Fatal assertions may return early from the test, so do not treat the success cleanup as a proof of all assertion-failure cleanup. <a class="claim-ref" href="#C-003">[C-003]</a></p>
+<p><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 330" role="img" aria-labelledby="ownership-test-title ownership-test-desc">
+<title id="ownership-test-title">Three physical observations plus a logical value check</title><desc id="ownership-test-desc">The test expects the root to have no OOS file or records, p0 to have a file and one chunk record, and p1 to have neither. SELECT equality is checked separately. Presence flags require all three diagnostic rows.</desc>
+<rect width="860" height="330" rx="16" fill="#f1f5fa"/>
+<g font-family="system-ui,sans-serif" font-size="18" fill="#172b46">
+<text x="25" y="35" font-size="22" font-weight="700">The regression checks ownership, not just readability</text>
+<rect x="25" y="66" width="250" height="161" rx="10" fill="#e3dff3" stroke="#75629a"/><rect x="305" y="66" width="250" height="161" rx="10" fill="#e2f3ec" stroke="#287e60"/><rect x="585" y="66" width="250" height="161" rx="10" fill="#e4ecfa" stroke="#3f6cab"/>
+<text x="44" y="100" font-weight="700">Root</text><text x="44" y="138">has_oos file: 0</text><text x="44" y="173">OOS records: 0</text><text x="44" y="206">saw_root: true</text>
+<text x="324" y="100" font-weight="700">p0 · selected</text><text x="324" y="138">has_oos file: 1</text><text x="324" y="173">OOS records: 1</text><text x="324" y="206">saw_p0: true</text>
+<text x="604" y="100" font-weight="700">p1</text><text x="604" y="138">has_oos file: 0</text><text x="604" y="173">OOS records: 0</text><text x="604" y="206">saw_p1: true</text>
+<text x="25" y="267">SELECT equality = 1 · Cursor must reach DB_CURSOR_END</text><text x="25" y="302" font-size="16">Counts apply to this fresh table and small single-chunk forced value.</text>
+</g></svg>
+<figcaption>The regression's three ownership observations</figcaption></figure></p>
+<p>The diagram presents expected state for this isolated example. A test that checks only p0's positive value would miss some duplicate-write errors; checking root and p1 for absence helps distinguish the intended owner. The three presence booleans additionally guard the diagnostic output shape. <a class="claim-ref" href="#C-003">[C-003]</a></p>
+<h2 id="chapter-07-fresh-observation-in-this-book">Fresh observation in this book</h2>
+<p>On 2026-09-08, <code>scripts/run-regression.py</code> created a new private database registry and private copy of the installed configuration under <code>/tmp/pr7600-teaching-*</code>. It ran the existing setup fixture and then the existing binary with this filter:</p>
+<pre><code class="language-text">test_oos_sql_show --gtest_filter=OosSqlShow.PartitionedForceOutlineStoresOosInPrunedHeap
+</code></pre>
+<p>The selected test passed: <strong>1 test, 0 failures</strong>. Its equality and three ownership branches completed successfully. The standalone engine shut down cleanly. The full command arguments, output, environment paths and SHA-256 of the pre-existing binary are in <code>evidence/regression.json</code>. This session did not rebuild that binary; its passing behavior is a runtime observation of the recorded binary, while source claims use the pinned Git head. <a class="claim-ref" href="#C-031">[C-031]</a></p>
+<p>The script retains its owned database and configuration for inspection, starts no server daemon and never targets the shared <code>unittestdb</code> registry. The existing test fixture drops its own test tables on teardown. No CUBRID source instrumentation was added. The retained sandbox path and cleanup status are in the evidence file. A rerun allocates a fresh temporary environment. <a class="claim-ref" href="#C-031">[C-031]</a></p>
+<h2 id="chapter-07-what-remains-unproved">What remains unproved</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Evidence we have</th>
+<th>Additional discriminating experiment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Is the INSERT owner correct for this forced value?</td>
+<td>Added test source and fresh passing binary</td>
+<td>Covered for this input</td>
+</tr>
+<tr>
+<td>Does UPDATE move chains to another child?</td>
+<td>Source routing trace</td>
+<td>Update partition key, inspect all heap OOS rows and value equality</td>
+</tr>
+<tr>
+<td>Are increments applied once in two passes?</td>
+<td>Writer guard and final-pass pre-seeding</td>
+<td>Partitioned OOS UPDATE with a supported increment assignment</td>
+</tr>
+<tr>
+<td>Is a LOB copied once?</td>
+<td>Shared state guard in both writers</td>
+<td>Observe locator creation/count across a two-pass write and retry</td>
+</tr>
+<tr>
+<td>Do REPLACE/ODKU leave no probe chains?</td>
+<td>Suppressed call sites</td>
+<td>Dedicated duplicate-hit/miss cases with ownership and chunk counts</td>
+</tr>
+<tr>
+<td>Does server vacuum reclaim correctly?</td>
+<td>Correct owner prerequisite and bounded cleanup trace</td>
+<td>SERVER_MODE committed delete with eventual reclamation checks</td>
+</tr>
+<tr>
+<td>What happens on crash or allocation failure?</td>
+<td>Error/order source trace</td>
+<td>Isolated fault injection with transaction and restart observations</td>
+</tr>
+</tbody>
+</table></div>
+<p>These are coverage limits <a class="claim-ref" href="#C-032">[C-032]</a>, not assertions that the implementation fails. The earlier report records broader tests and a 999-row workload; those results were not rerun here. Its backup step failed because of a name collision and must not be cited as successful backup/restart verification.</p>
+<h2 id="chapter-07-exercises">Exercises</h2>
+<ol>
+<li>Remove the <code>saw_p1</code> check mentally. What missing-output mistake could become invisible?</li>
+<li>Why use a forced value below the normal threshold?</li>
+<li>Why is one OOS record not a universal expectation for one SQL row?</li>
+<li>Design an UPDATE experiment whose observations would distinguish “readable value” from “correct new owner.”</li>
+</ol><div class="chapter-nav"><a href="#chapter-06">← Previous chapter</a><a href="#chapter-08">Next chapter →</a></div></article><article id="chapter-08"><h1 id="chapter-08-8-explain-the-design-then-challenge-it">8. Explain the design, then challenge it</h1>
+<h2 id="chapter-08-what-this-patch-buys">What this patch buys</h2>
+<p>The patch reuses the existing serializer and partition reader. The probe provides the byte representation that routing already understands, and an owner override lets final serialization keep using the original attribute metadata while selecting the destination heap. Its small interface additions connect query execution, locator orchestration and storage preparation. <a class="claim-ref" href="#C-015">[C-015]</a> <a class="claim-ref" href="#C-016">[C-016]</a></p>
+<p>The cost is a protocol spread across several parameters and mutable state. A nullable output pointer selects a mode; a wrapper silently assumes prior increment application; a LOB state enum carries history across calls. A future caller must know those preconditions. An explicit mode or prepared-write object could express them more directly, but adopting one would require reviewing all callers and retry behavior. That is a design option, not part of this PR. <a class="claim-ref" href="#C-033">[C-033]</a></p>
+<h2 id="chapter-08-an-end-to-end-explanation-you-should-be-able-to-give">An end-to-end explanation you should be able to give</h2>
+<p>For a root-targeted INSERT of <code>id=1</code>, the executor prepares attribute values and asks the locator to write them. The locator needs a record image before it can find p0. The probe produces inline bytes without OOS selection and reports that the forced value will need OOS. Pruning chooses p0 from the logical key. The locator discards probe memory but retains prepared attribute state. Final transformation uses p0's class OID for OOS-file lookup, creates the chain and puts its stub in the final image. The ordinary lower locator routes that image, locks and selects the child context, and stores the heap row. The regression checks value equality and root/p0/p1 file ownership. <a class="claim-ref" href="#C-001">[C-001]</a> <a class="claim-ref" href="#C-003">[C-003]</a> <a class="claim-ref" href="#C-016">[C-016]</a> <a class="claim-ref" href="#C-017">[C-017]</a></p>
+<p>For UPDATE, start with the existing child's old row, apply the new values during preparation and select the destination from the new record. If the partition key changes to 20, final OOS ownership should be p1; the lower update path can move the row. Old versions and their values remain subject to the existing MVCC/cleanup rules. <a class="claim-ref" href="#C-017">[C-017]</a> <a class="claim-ref" href="#C-027">[C-027]</a></p>
+<h2 id="chapter-08-review-exercises-change-one-line">Review exercises: change one line</h2>
+<p>For each hypothetical edit, identify the changed invariant, the expected observation and a test that would expose it.</p>
+<ol>
+<li>Remove <code>continue</code> from the forced-outline suppression branch.</li>
+<li>Pass null instead of <code>&amp;would_demote_oos</code> in the partitioned probe call.</li>
+<li>Pass <code>&amp;class_oid</code> instead of <code>&amp;pruned_class_oid</code> to the final allocator.</li>
+<li>Change the final wrapper's last argument from true to false.</li>
+<li>Delete <code>would_demote_oos</code> from the <code>copyarea != NULL &amp;&amp; would_demote_oos</code> condition.</li>
+<li>Free <code>attr_info</code> along with the probe copy area.</li>
+<li>Replace the duplicate-key helper's probe with an ordinary transform.</li>
+<li>Remove the lower locator's partition-pruning block because early pruning already ran.</li>
+<li>Assert only SELECT equality and remove SHOW ownership assertions.</li>
+<li>Treat a true return from <code>heap_oos_find_vfid(...,false)</code> as proof that an OOS file exists.</li>
+</ol>
+<h2 id="chapter-08-evidence-boundaries">Evidence boundaries</h2>
+<p>The source explanation is pinned to head <code>b871ea386d2c5419b7abae07dda58b9b7f36377a</code>, base <code>2940b1cfbc3c2d4d0fac3f9244a960350debd380</code>. The six diff files match the head. Unrelated working-tree and submodule changes are excluded. The hunk appendix includes every addition and deletion, and its coverage index is generated from the captured Git diff. <a class="claim-ref" href="#C-029">[C-029]</a></p>
+<p>The two substantive open boundaries are the current-server behavior of inconsistent ownership <a class="claim-ref" href="#C-013">[C-013]</a> and runtime coverage beyond the selected standalone regression <a class="claim-ref" href="#C-032">[C-032]</a>. Neither prevents understanding how the patch is constructed. Both limit operational claims such as “every possible vacuum failure is fixed” or “all side-effect paths were executed.”</p>
+<p><strong>READY WITHIN DECLARED SCOPE.</strong> The book supports the PR mechanism and the recorded regression. C-013 and C-032 remain explicit limits on broader correctness claims.</p>
+<h2 id="chapter-08-chapter-checkpoint">Chapter checkpoint</h2>
+<p>Give a five-minute explanation using only the diagrams. Then open chapter 6 and explain each hunk without its commentary. Record which questions remain in <code>learning-progress.md</code>; completion of this book does not automatically mark your mastery complete.</p><div class="chapter-nav"><a href="#chapter-07">← Previous chapter</a><a href="#chapter-09">Next chapter →</a></div></article><article id="chapter-09"><h1 id="chapter-09-9-answers-and-teach-back-rubric">9. Answers and teach-back rubric</h1>
+<p>Attempt the questions before reading this chapter. These are model answers you can compare with your own; explaining the dependency in your own words matters more than reproducing a phrase.</p>
+<h2 id="chapter-09-chapter-1">Chapter 1</h2>
+<ol>
+<li><code>id=10</code> belongs to p1 because p0's upper bound is exclusive. Moving 1 to 20 changes the destination from p0 to p1.</li>
+<li>Class identity selects metadata and permissions; HFID selects the heap storage. A lookup connects them.</li>
+<li>No. A probe is serialized bytes in memory. A normal OOS transform may already have written chains even though the heap row has not yet been inserted.</li>
+<li>Root connects to two child classes; p0 connects to a heap page and row slot; p1 connects to its own heap. The root is not one page enclosing both heaps. <a class="claim-ref" href="#C-004">[C-004]</a> <a class="claim-ref" href="#C-006">[C-006]</a> <a class="claim-ref" href="#C-008">[C-008]</a></li>
+</ol>
+<h2 id="chapter-09-chapter-2">Chapter 2</h2>
+<ol>
+<li>The stub's physical OID may still reach the right bytes even if the OOS file belongs to the wrong heap.</li>
+<li>In p0's heap header <code>oos_vfid</code>, which identifies p0's associated OOS file.</li>
+<li>Inspect the return contract and actual branches at the pinned revision, then reproduce that path if making a runtime claim. True-with-null and false-on-error differ here.</li>
+<li>The heap record is the row representation, the chunk record is one physical piece of an OOS value, and a chain is the sequence of chunks comprising the complete serialized value. <a class="claim-ref" href="#C-009">[C-009]</a> <a class="claim-ref" href="#C-011">[C-011]</a> <a class="claim-ref" href="#C-012">[C-012]</a></li>
+</ol>
+<h2 id="chapter-09-chapter-3">Chapter 3</h2>
+<ol>
+<li>Two transforms, one early pruning call and another in the lower INSERT locator for the normal partitioned path.</li>
+<li>Retain the inline image and continue to the lower locator; skip the additional final transform.</li>
+<li>The image has served routing. Clearing its pointer prevents reuse and avoids retaining two copy areas unnecessarily; prepared attribute state is separate.</li>
+<li>p1's associated OOS file should receive the new chain.</li>
+<li>Internal suppression is computed from pointer presence, so null selects normal behavior despite the wrapper's name. <a class="claim-ref" href="#C-015">[C-015]</a> <a class="claim-ref" href="#C-016">[C-016]</a> <a class="claim-ref" href="#C-017">[C-017]</a></li>
+</ol>
+<h2 id="chapter-09-chapter-4">Chapter 4</h2>
+<ol>
+<li>Verdict true; <code>has_oos=false</code>; selection false. Final mode changes selection and flag.</li>
+<li>Plan selection, payload replacement accounting and <code>has_oos=true</code> would still execute.</li>
+<li>The local set survives retries within a call. A second call needs a new set seeded from the successful probe's history.</li>
+<li>The <code>HEAP_ATTRVALUE</code> inside the surviving attribute cache retains the state and updated DB_VALUE.</li>
+<li>Retrying buffer output should not publish another chain for the same prepared value. <a class="claim-ref" href="#C-020">[C-020]</a> <a class="claim-ref" href="#C-021">[C-021]</a> <a class="claim-ref" href="#C-022">[C-022]</a> <a class="claim-ref" href="#C-024">[C-024]</a> <a class="claim-ref" href="#C-025">[C-025]</a></li>
+</ol>
+<h2 id="chapter-09-chapter-5">Chapter 5</h2>
+<ol>
+<li>The non-null pointer selects suppression; duplicate lookup does not need to know whether an eventual write would demote.</li>
+<li>The attribute cache and its DB_VALUE changes survive; probe bytes do not.</li>
+<li>Database records and transaction logs have a separate lifetime from a process memory buffer.</li>
+<li>Final routing/representation handling, child locks, scan-cache selection and the move decision remain there.</li>
+<li>Measure serialization CPU, temporary peak memory and repeat routing cost as logical value sizes grow. <a class="claim-ref" href="#C-026">[C-026]</a> <a class="claim-ref" href="#C-027">[C-027]</a> <a class="claim-ref" href="#C-028">[C-028]</a></li>
+</ol>
+<h2 id="chapter-09-chapter-6">Chapter 6</h2>
+<p>Use the coverage table to identify the file and old/new interval of each hunk. Explain the pointer arguments before interpreting a wrapper name. For the large locator hunk, trace both the successful early-prune branch and the no-demotion branch. For the test, explain first-tuple positioning before the loop and why all three <code>saw_*</code> checks matter. Source listings and C-101 through C-130 supply the exact answer key.</p>
+<h2 id="chapter-09-chapter-7">Chapter 7</h2>
+<ol>
+<li>A result set that omitted p1 could pass all remaining per-row checks without proving p1 was inspected.</li>
+<li>It reaches the forced loop while avoiding the ordinary size gate; this distinguishes the second commit's missing suppression case.</li>
+<li>A value may have many chunks and a row may have many OOS-backed attributes.</li>
+<li>Begin from fresh p0 ownership, UPDATE the partition key to p1, then verify the logical row is in p1 and the new chain is associated with p1. Separate old-version retention from leaks; in SERVER_MODE account for vacuum and older snapshots before expecting old counts to vanish. <a class="claim-ref" href="#C-003">[C-003]</a> <a class="claim-ref" href="#C-032">[C-032]</a></li>
+</ol>
+<h2 id="chapter-09-chapter-8-counterfactual-review">Chapter 8: counterfactual review</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Edit</th>
+<th>Consequence to investigate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Remove <code>continue</code></td>
+<td>Probe can select/write forced OOS values before routing.</td>
+</tr>
+<tr>
+<td>2. Null probe pointer</td>
+<td>Ordinary transform can publish under the original class.</td>
+</tr>
+<tr>
+<td>3. Original class as final owner</td>
+<td>Correct routing can still be paired with wrong OOS ownership, especially cross-partition UPDATE.</td>
+</tr>
+<tr>
+<td>4. Final increment flag false</td>
+<td>A pending fixed increment can run twice.</td>
+</tr>
+<tr>
+<td>5. Always do second pass</td>
+<td>Unnecessary serialization/routing on no-demotion writes; correctness requires rechecking the side-effect protocol.</td>
+</tr>
+<tr>
+<td>6. Free attribute cache</td>
+<td>Final pass loses values/metadata and may access freed state.</td>
+</tr>
+<tr>
+<td>7. Ordinary duplicate probe</td>
+<td>Candidate images can create chains that no inserted row owns.</td>
+</tr>
+<tr>
+<td>8. Remove lower pruning</td>
+<td>Early outputs do not replace final class/HFID, representation and locking responsibilities.</td>
+</tr>
+<tr>
+<td>9. Equality-only test</td>
+<td>Correct bytes can mask wrong ownership.</td>
+</tr>
+<tr>
+<td>10. True implies existing file</td>
+<td>The documented true-with-null result is misinterpreted.</td>
+</tr>
+</tbody>
+</table></div>
+<p>These answers derive from the mode, writer and routing traces <a class="claim-ref" href="#C-008">[C-008]</a> <a class="claim-ref" href="#C-012">[C-012]</a> <a class="claim-ref" href="#C-016">[C-016]</a> <a class="claim-ref" href="#C-017">[C-017]</a> <a class="claim-ref" href="#C-024">[C-024]</a> <a class="claim-ref" href="#C-026">[C-026]</a>. A counterfactual is a prediction; no mutated engine was built for these exercises.</p>
+<h2 id="chapter-09-a-practical-rubric">A practical rubric</h2>
+<p>Score each of these five areas from 0 to 2: storage identities, old/new flow, side-effect lifetime, every-hunk explanation, and test evidence limits. Zero means recognition without explanation; one means you can explain with the source open; two means you can predict a changed input or missing line and then locate the evidence. A ten-point score requires explaining why SELECT success and a passing SA test have limited scope. Mark your own results in the progress file.</p><div class="chapter-nav"><a href="#chapter-08">← Previous chapter</a><a href="#chapter-10">Next chapter →</a></div></article><article id="chapter-10"><h1 id="chapter-10-10-source-map-and-evidence-ledger">10. Source map and evidence ledger</h1>
+<p>Claims below connect the narrative and diagrams to exact source intervals. All unmarked source intervals refer to the pinned head. History claims explicitly identify the base. Source facts describe code; inferences explain consequences; runtime observations apply to the recorded binary/input; unknowns name missing evidence.</p>
+<p>Head: <code>b871ea386d2c5419b7abae07dda58b9b7f36377a</code>. Base: <code>2940b1cfbc3c2d4d0fac3f9244a960350debd380</code>. Full SHA links remain usable after the PR changes. The captured source intervals are also in <code>evidence/source-excerpts.json</code> for offline inspection.</p>
+<h2 id="chapter-10-supplemental-reading">Supplemental reading</h2>
+<ul>
+<li>OOS normative context: <code>/home/vimkim/gh/cubrid-oos-context/OOS-CONTEXT.md</code>, last-updated label 2026-08-28. Its target policy differs from the pinned layout code; see chapter 2.</li>
+<li><a href="https://github.com/CUBRID/cubrid-manual/blob/3b6ae97bfbdc664b010ffa933ded5a05b291ae03/en/sql/partition.rst#L1-L120">CUBRID manual, partitioning</a>: local checkout at <code>3b6ae97bfbdc664b010ffa933ded5a05b291ae03</code>, lines 1–120; used for SQL concepts, not proof of OOS implementation.</li>
+<li><a href="https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-27089/CBRD-27089-oos-chain-owner-b871ea3_codex.md">Earlier PR report</a>: historical broader tests and issue narrative; no new CI or backup claim.</li>
+<li>Local issue draft: <code>/home/vimkim/gh/my-cubrid-jira/issues/CBRD-27089-partition-oos-owner_b871ea3_codex.md</code>; intent and prior results.</li>
+</ul>
+<h2 id="chapter-10-claims">Claims</h2>
+<p><a id="C-001"></a></p>
+<h3 id="chapter-10-c-001-source_fact">C-001 · source_fact</h3>
+<p>The selected class determines the heap whose OOS file receives serialized values.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_oos.cpp#L631-L660">src/storage/heap_oos.cpp:631–660</a> — <code>heap_oos_insert_serialized_values</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L199-L209">src/storage/heap_file.c:199–209</a> — <code>HEAP_HDR_STATS</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12759-L12768">src/storage/heap_file.c:12759–12768</a> — <code>heap_attrinfo_insert_to_oos</code></li>
+</ul>
+<p><a id="C-002"></a></p>
+<h3 id="chapter-10-c-002-source_fact">C-002 · source_fact</h3>
+<p>Before the PR ordinary serialization preceded lower-locator partition routing.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/transaction/locator_sr.c#L7692-L7725">src/transaction/locator_sr.c:7692–7725</a> — <code>locator_attribute_info_force</code> <strong>BASE history</strong></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/2940b1cfbc3c2d4d0fac3f9244a960350debd380/src/storage/heap_file.c#L12724-L12735">src/storage/heap_file.c:12724–12735</a> — <code>heap_attrinfo_insert_to_oos</code> <strong>BASE history</strong></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L4984-L4996">src/transaction/locator_sr.c:4984–4996</a> — <code>locator_insert_force</code></li>
+</ul>
+<p><a id="C-003"></a></p>
+<h3 id="chapter-10-c-003-source_fact">C-003 · source_fact</h3>
+<p>The added regression checks logical equality and root/p0/p1 OOS ownership.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/test_oos_sql_show.cpp#L387-L456">unit_tests/oos/sql/test_oos_sql_show.cpp:387–456</a> — <code>PartitionedForceOutlineStoresOosInPrunedHeap</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/test_oos_sql_show.cpp#L47-L67">unit_tests/oos/sql/test_oos_sql_show.cpp:47–67</a> — <code>show_heap_oos_query</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/test_oos_sql_show.cpp#L194-L214">unit_tests/oos/sql/test_oos_sql_show.cpp:194–214</a> — <code>OosSqlShow fixture</code></li>
+</ul>
+<p><a id="C-004"></a></p>
+<h3 id="chapter-10-c-004-source_fact">C-004 · source_fact</h3>
+<p>Partition routing evaluates a partition key and returns child class and heap identities.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/partition.c#L3467-L3581">src/query/partition.c:3467–3581</a> — <code>partition_find_partition_for_record</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/partition.c#L3605-L3689">src/query/partition.c:3605–3689</a> — <code>partition_prune_insert</code></li>
+</ul>
+<p><a id="C-005"></a></p>
+<h3 id="chapter-10-c-005-source_fact">C-005 · source_fact</h3>
+<p>Heap records use slotted pages; OID, VPID, VFID and HFID identify different storage objects.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/slotted_page.h#L85-L91">src/storage/slotted_page.h:85–91</a> — <code>SPAGE_SLOT</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/storage_common.h#L190-L231">src/storage/storage_common.h:190–231</a> — <code>HFID and RECDES</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/compat/dbtype_def.h#L956-L974">src/compat/dbtype_def.h:956–974</a> — <code>VPID and VFID</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/compat/dbtype_def.h#L1040-L1055">src/compat/dbtype_def.h:1040–1055</a> — <code>OID</code></li>
+</ul>
+<p><a id="C-006"></a></p>
+<h3 id="chapter-10-c-006-source_fact">C-006 · source_fact</h3>
+<p>The partitioned root holds no row data on the traced UPDATE path; child partitions supply heap identities.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/partition.c#L3755-L3777">src/query/partition.c:3755–3777</a> — <code>partition_prune_update</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/partition.c#L3550-L3570">src/query/partition.c:3550–3570</a> — <code>partition_find_partition_for_record</code></li>
+</ul>
+<p><a id="C-007"></a></p>
+<h3 id="chapter-10-c-007-source_fact">C-007 · source_fact</h3>
+<p>Attribute state, record descriptors and copy-area memory have distinct roles.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/storage_common.h#L220-L231">src/storage/storage_common.h:220–231</a> — <code>RECDES</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7490-L7562">src/transaction/locator_sr.c:7490–7562</a> — <code>locator_allocate_copy_area_by_attr_info</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13317-L13359">src/storage/heap_file.c:13317–13359</a> — <code>heap_attrinfo_transform_to_disk_internal</code></li>
+</ul>
+<p><a id="C-008"></a></p>
+<h3 id="chapter-10-c-008-source_fact">C-008 · source_fact</h3>
+<p>The allocator dispatches probe first, then explicit-owner final mode, then LOB-specific ordinary mode.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7490-L7562">src/transaction/locator_sr.c:7490–7562</a> — <code>locator_allocate_copy_area_by_attr_info</code></li>
+</ul>
+<p><a id="C-009"></a></p>
+<h3 id="chapter-10-c-009-source_fact">C-009 · source_fact</h3>
+<p>OOS uses a head-OID/length stub, attribute offset flag, record flag and linked chunk headers.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/base/object_representation.h#L448-L468">src/base/object_representation.h:448–468</a> — <code>OR_OOS_INLINE_SIZE</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/base/object_representation_constants.h#L159-L174">src/base/object_representation_constants.h:159–174</a> — <code>OR_RECORD_FLAG_HAS_OOS</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/oos_file.hpp#L28-L34">src/storage/oos_file.hpp:28–34</a> — <code>oos_record_header</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13088-L13122">src/storage/heap_file.c:13088–13122</a> — <code>heap_attrinfo_transform_variable_to_disk</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12869-L12910">src/storage/heap_file.c:12869–12910</a> — <code>heap_attrinfo_transform_header_to_disk</code></li>
+</ul>
+<p><a id="C-010"></a></p>
+<h3 id="chapter-10-c-010-source_fact">C-010 · source_fact</h3>
+<p>The transformer rejects OOS plus bigone before OOS insertion.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13386-L13410">src/storage/heap_file.c:13386–13410</a> — <code>heap_attrinfo_transform_to_disk_internal</code></li>
+</ul>
+<p><a id="C-011"></a></p>
+<h3 id="chapter-10-c-011-inference">C-011 · inference</h3>
+<p>Logical SELECT can succeed despite a wrong heap-owner association.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L10452-L10505">src/storage/heap_file.c:10452–10505</a> — <code>heap_attrvalue_read_oos_inline</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_oos.cpp#L631-L660">src/storage/heap_oos.cpp:631–660</a> — <code>heap_oos_insert_serialized_values</code></li>
+</ul>
+<p>Rationale: The read uses the parsed physical head OID directly, while write ownership is selected by class-to-heap lookup. A wrong owner can leave a readable physical chain. Earlier reports corroborate this but the old binary was not rerun.</p>
+<p><a id="C-012"></a></p>
+<h3 id="chapter-10-c-012-source_fact">C-012 · source_fact</h3>
+<p>At the pinned head, missing-file success and lookup failure take different branches in the vacuum helper.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12433-L12543">src/storage/heap_file.c:12433–12543</a> — <code>heap_oos_find_vfid</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/vacuum_oos.cpp#L401-L446">src/query/vacuum_oos.cpp:401–446</a> — <code>vacuum_oos_find_vfid_for_heap_record</code></li>
+</ul>
+<p><a id="C-013"></a></p>
+<h3 id="chapter-10-c-013-unknown">C-013 · unknown</h3>
+<p>The full current-server failure path of deliberately inconsistent ownership has not been reproduced here.</p>
+<p>Resolve by: Use an owned SERVER_MODE database and a controlled test seam to construct wrong ownership, then trace lookup result, VFID and cleanup. Do not infer current abort behavior from old comments.</p>
+<p><a id="C-014"></a></p>
+<h3 id="chapter-10-c-014-source_fact">C-014 · source_fact</h3>
+<p>The pinned layout code still uses DB_PAGESIZE/4; this differs from the loaded normative physical-capacity target.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12365-L12430">src/storage/heap_file.c:12365–12430</a> — <code>heap_attrinfo_determine_disk_layout</code></li>
+</ul>
+<p><a id="C-015"></a></p>
+<h3 id="chapter-10-c-015-source_fact">C-015 · source_fact</h3>
+<p>The new wrappers implement ordinary/probe/final modes; final mode assumes a previous successful probe.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12790-L12854">src/storage/heap_file.c:12790–12854</a> — <code>transform wrappers</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13317-L13356">src/storage/heap_file.c:13317–13356</a> — <code>heap_attrinfo_transform_to_disk_internal</code></li>
+</ul>
+<p><a id="C-016"></a></p>
+<h3 id="chapter-10-c-016-source_fact">C-016 · source_fact</h3>
+<p>The locator shares INSERT/UPDATE preparation, performs suppressed early routing when needed, and retains the ordinary no-demotion path.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7599-L7875">src/transaction/locator_sr.c:7599–7875</a> — <code>locator_attribute_info_force</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/query_executor.c#L13620-L13644">src/query/query_executor.c:13620–13644</a> — <code>qexec_execute_insert</code></li>
+</ul>
+<p><a id="C-017"></a></p>
+<h3 id="chapter-10-c-017-source_fact">C-017 · source_fact</h3>
+<p>Lower locators still route, lock and write; cross-partition UPDATE can move the record.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L4984-L5079">src/transaction/locator_sr.c:4984–5079</a> — <code>locator_insert_force</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L5980-L6050">src/transaction/locator_sr.c:5980–6050</a> — <code>locator_update_force</code></li>
+</ul>
+<p><a id="C-018"></a></p>
+<h3 id="chapter-10-c-018-inference">C-018 · inference</h3>
+<p>Early and final routing should agree because the logical partition values are preserved across serialization modes.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/partition.c#L3496-L3514">src/query/partition.c:3496–3514</a> — <code>partition_find_partition_for_record</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13339-L13354">src/storage/heap_file.c:13339–13354</a> — <code>increment pre-seeding</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7719-L7799">src/transaction/locator_sr.c:7719–7799</a> — <code>locator_attribute_info_force</code></li>
+</ul>
+<p>Rationale: The same prepared DB_VALUEs underlie the inline probe and final image, and routing reads logical values. This supports agreement but is not exhaustive concurrency validation.</p>
+<p><a id="C-019"></a></p>
+<h3 id="chapter-10-c-019-source_fact">C-019 · source_fact</h3>
+<p>Partition selection reads through root representation and adjusts the chosen child representation.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/partition.c#L3467-L3581">src/query/partition.c:3467–3581</a> — <code>partition_find_partition_for_record</code></li>
+</ul>
+<p><a id="C-020"></a></p>
+<h3 id="chapter-10-c-020-source_fact">C-020 · source_fact</h3>
+<p>Ordinary suppression returns inline size before sorting and selection; oversized rows without eligible candidates need not demote.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12312-L12430">src/storage/heap_file.c:12312–12430</a> — <code>heap_attrinfo_determine_disk_layout</code></li>
+</ul>
+<p><a id="C-021"></a></p>
+<h3 id="chapter-10-c-021-source_fact">C-021 · source_fact</h3>
+<p>FORCE_OUTLINE suppression reports a hypothetical demotion and continues before mutating selection/payload/has_oos.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12338-L12363">src/storage/heap_file.c:12338–12363</a> — <code>heap_attrinfo_determine_disk_layout</code></li>
+</ul>
+<p><a id="C-022"></a></p>
+<h3 id="chapter-10-c-022-source_fact">C-022 · source_fact</h3>
+<p>Layout precedes OOS insertion, and OOS insertion precedes the buffer-writing retry loop.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13317-L13450">src/storage/heap_file.c:13317–13450</a> — <code>heap_attrinfo_transform_to_disk_internal</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12632-L12776">src/storage/heap_file.c:12632–12776</a> — <code>OOS request preparation and insertion</code></li>
+</ul>
+<p><a id="C-023"></a></p>
+<h3 id="chapter-10-c-023-source_fact">C-023 · source_fact</h3>
+<p>The second PR commit added the forced-loop suppression and its small-value regression.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12343-L12352">src/storage/heap_file.c:12343–12352</a> — <code>FORCE_OUTLINE suppression</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/test_oos_sql_show.cpp#L387-L456">unit_tests/oos/sql/test_oos_sql_show.cpp:387–456</a> — <code>PartitionedForceOutlineStoresOosInPrunedHeap</code></li>
+</ul>
+<p><a id="C-024"></a></p>
+<h3 id="chapter-10-c-024-source_fact">C-024 · source_fact</h3>
+<p>A per-call set prevents repeated fixed increments; final mode seeds a new set after a successful probe.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12964-L13035">src/storage/heap_file.c:12964–13035</a> — <code>heap_attrinfo_transform_fixed_to_disk</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13339-L13354">src/storage/heap_file.c:13339–13354</a> — <code>heap_attrinfo_transform_to_disk_internal</code></li>
+</ul>
+<p><a id="C-025"></a></p>
+<h3 id="chapter-10-c-025-source_fact">C-025 · source_fact</h3>
+<p>Both inline and OOS serializers use the LOB-written state guard, which survives in attr_info across passes.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12545-L12647">src/storage/heap_file.c:12545–12647</a> — <code>heap_attrinfo_dbvalue_to_recdes and serialize helper</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13123-L13201">src/storage/heap_file.c:13123–13201</a> — <code>heap_attrinfo_transform_variable_to_disk</code></li>
+</ul>
+<p><a id="C-026"></a></p>
+<h3 id="chapter-10-c-026-source_fact">C-026 · source_fact</h3>
+<p>REPLACE and ODKU use suppressed temporary key images while retaining their duplicate-search behavior and LOB modes.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/query_executor.c#L11920-L12143">src/query/query_executor.c:11920–12143</a> — <code>qexec_remove_duplicates_for_replace</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/query_executor.c#L12158-L12373">src/query/query_executor.c:12158–12373</a> — <code>qexec_oid_of_duplicate_key_update</code></li>
+</ul>
+<p><a id="C-027"></a></p>
+<h3 id="chapter-10-c-027-source_fact">C-027 · source_fact</h3>
+<p>Copy-area cleanup is distinct from persistent-chain lifetime; the new final pass does not create a transaction boundary.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7747-L7875">src/transaction/locator_sr.c:7747–7875</a> — <code>locator_attribute_info_force</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_oos.cpp#L674-L701">src/storage/heap_oos.cpp:674–701</a> — <code>heap_oos_delete_unreferenced contract</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12727-L12776">src/storage/heap_file.c:12727–12776</a> — <code>heap_attrinfo_insert_to_oos</code></li>
+</ul>
+<p><a id="C-028"></a></p>
+<h3 id="chapter-10-c-028-inference">C-028 · inference</h3>
+<p>The OOS partition path adds serialization and routing work and can require a large temporary inline image.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7710-L7778">src/transaction/locator_sr.c:7710–7778</a> — <code>locator_attribute_info_force</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13412-L13445">src/storage/heap_file.c:13412–13445</a> — <code>buffer growth loop</code></li>
+</ul>
+<p>Rationale: Two explicit transformations and an early pruning call add work. The probe retains logical inline payload bytes. No latency or memory benchmark was performed.</p>
+<p><a id="C-029"></a></p>
+<h3 id="chapter-10-c-029-source_fact">C-029 · source_fact</h3>
+<p>The pinned PR changes six implementation/header/test files, with 306 additions and 23 deletions.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.h#L505-L518">src/storage/heap_file.h:505–518</a> — <code>new declarations</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.h#L83-L90">src/transaction/locator_sr.h:83–90</a> — <code>allocator declaration</code></li>
+</ul>
+<p><a id="C-030"></a></p>
+<h3 id="chapter-10-c-030-source_fact">C-030 · source_fact</h3>
+<p>The selected regression target uses GoogleTest and the standalone engine.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/CMakeLists.txt#L21-L56">unit_tests/oos/sql/CMakeLists.txt:21–56</a> — <code>SA test targets</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/test_oos_sql_common.hpp#L51-L86">unit_tests/oos/sql/test_oos_sql_common.hpp:51–86</a> — <code>SqlServerEnv</code></li>
+</ul>
+<p><a id="C-031"></a></p>
+<h3 id="chapter-10-c-031-runtime_observation">C-031 · runtime_observation</h3>
+<p>The existing recorded regression binary passed the selected test in a fresh private SA database.</p>
+<p>Runtime check R-001: <code>evidence/regression.json</code>.</p>
+<p><a id="C-032"></a></p>
+<h3 id="chapter-10-c-032-unknown">C-032 · unknown</h3>
+<p>Runtime validation of the full UPDATE/LOB/increment/duplicate/vacuum/crash matrix remains open.</p>
+<p>Resolve by: Add/run the distinct focused experiments listed in chapter 7 in owned environments, recording actual state and ownership rather than only SQL equality.</p>
+<p><a id="C-033"></a></p>
+<h3 id="chapter-10-c-033-inference">C-033 · inference</h3>
+<p>The interface is a stateful caller protocol that could be made more explicit in a future design.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12796-L12831">src/storage/heap_file.c:12796–12831</a> — <code>probe and final wrappers</code></li>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7513-L7533">src/transaction/locator_sr.c:7513–7533</a> — <code>mode dispatch</code></li>
+</ul>
+<p>Rationale: Mode depends on nullable pointers and prior mutation. A mode/prepared-state type is a possible design improvement, not implemented in this PR.</p>
+<p><a id="C-034"></a></p>
+<h3 id="chapter-10-c-034-source_fact">C-034 · source_fact</h3>
+<p>Lazy OOS file creation uses a system operation with encryption policy, heap-header logging and page cleanup.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12446-L12542">src/storage/heap_file.c:12446–12542</a> — <code>heap_oos_find_vfid</code></li>
+</ul>
+<p><a id="C-101"></a></p>
+<h3 id="chapter-10-c-101-source_fact">C-101 · source_fact</h3>
+<p>REPLACE allocates a mode selector. Exact changes and commentary are in H01 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/query_executor.c#L11937-L11943">src/query/query_executor.c:11937–11943</a> — <code>REPLACE allocates a mode selector</code></li>
+</ul>
+<p><a id="C-102"></a></p>
+<h3 id="chapter-10-c-102-source_fact">C-102 · source_fact</h3>
+<p>REPLACE suppresses discarded-image OOS writes. Exact changes and commentary are in H02 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/query_executor.c#L11952-L11962">src/query/query_executor.c:11952–11962</a> — <code>REPLACE suppresses discarded-image OOS writes</code></li>
+</ul>
+<p><a id="C-103"></a></p>
+<h3 id="chapter-10-c-103-source_fact">C-103 · source_fact</h3>
+<p>ODKU allocates its mode selector. Exact changes and commentary are in H03 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/query_executor.c#L12175-L12181">src/query/query_executor.c:12175–12181</a> — <code>ODKU allocates its mode selector</code></li>
+</ul>
+<p><a id="C-104"></a></p>
+<h3 id="chapter-10-c-104-source_fact">C-104 · source_fact</h3>
+<p>ODKU obtains an inline key image. Exact changes and commentary are in H04 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/query_executor.c#L12195-L12205">src/query/query_executor.c:12195–12205</a> — <code>ODKU obtains an inline key image</code></li>
+</ul>
+<p><a id="C-105"></a></p>
+<h3 id="chapter-10-c-105-source_fact">C-105 · source_fact</h3>
+<p>Declare layout mode and verdict. Exact changes and commentary are in H05 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L694-L703">src/storage/heap_file.c:694–703</a> — <code>Declare layout mode and verdict</code></li>
+</ul>
+<p><a id="C-106"></a></p>
+<h3 id="chapter-10-c-106-source_fact">C-106 · source_fact</h3>
+<p>Declare the internal transformation protocol. Exact changes and commentary are in H06 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L783-L790">src/storage/heap_file.c:783–790</a> — <code>Declare the internal transformation protocol</code></li>
+</ul>
+<p><a id="C-107"></a></p>
+<h3 id="chapter-10-c-107-source_fact">C-107 · source_fact</h3>
+<p>Document hypothetical versus actual layout. Exact changes and commentary are in H07 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12299-L12309">src/storage/heap_file.c:12299–12309</a> — <code>Document hypothetical versus actual layout</code></li>
+</ul>
+<p><a id="C-108"></a></p>
+<h3 id="chapter-10-c-108-source_fact">C-108 · source_fact</h3>
+<p>Match the layout definition to its declaration. Exact changes and commentary are in H08 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12311-L12320">src/storage/heap_file.c:12311–12320</a> — <code>Match the layout definition to its declaration</code></li>
+</ul>
+<p><a id="C-109"></a></p>
+<h3 id="chapter-10-c-109-source_fact">C-109 · source_fact</h3>
+<p>Clear the verdict before planning. Exact changes and commentary are in H09 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12325-L12334">src/storage/heap_file.c:12325–12334</a> — <code>Clear the verdict before planning</code></li>
+</ul>
+<p><a id="C-110"></a></p>
+<h3 id="chapter-10-c-110-source_fact">C-110 · source_fact</h3>
+<p>Stop FORCE_OUTLINE selection inside a probe. Exact changes and commentary are in H10 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12343-L12357">src/storage/heap_file.c:12343–12357</a> — <code>Stop FORCE_OUTLINE selection inside a probe</code></li>
+</ul>
+<p><a id="C-111"></a></p>
+<h3 id="chapter-10-c-111-source_fact">C-111 · source_fact</h3>
+<p>Return full inline size for an ordinary probe. Exact changes and commentary are in H11 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12387-L12405">src/storage/heap_file.c:12387–12405</a> — <code>Return full inline size for an ordinary probe</code></li>
+</ul>
+<p><a id="C-112"></a></p>
+<h3 id="chapter-10-c-112-source_fact">C-112 · source_fact</h3>
+<p>Carry an owner without replacing attribute metadata. Exact changes and commentary are in H12 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12711-L12725">src/storage/heap_file.c:12711–12725</a> — <code>Carry an owner without replacing attribute metadata</code></li>
+</ul>
+<p><a id="C-113"></a></p>
+<h3 id="chapter-10-c-113-source_fact">C-113 · source_fact</h3>
+<p>Select the actual OOS owner at publication. Exact changes and commentary are in H13 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12759-L12765">src/storage/heap_file.c:12759–12765</a> — <code>Select the actual OOS owner at publication</code></li>
+</ul>
+<p><a id="C-114"></a></p>
+<h3 id="chapter-10-c-114-source_fact">C-114 · source_fact</h3>
+<p>Expose ordinary, probe and final wrappers. Exact changes and commentary are in H14 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12790-L12834">src/storage/heap_file.c:12790–12834</a> — <code>Expose ordinary, probe and final wrappers</code></li>
+</ul>
+<p><a id="C-115"></a></p>
+<h3 id="chapter-10-c-115-source_fact">C-115 · source_fact</h3>
+<p>Preserve the except-LOB entry point. Exact changes and commentary are in H15 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L12848-L12855">src/storage/heap_file.c:12848–12855</a> — <code>Preserve the except-LOB entry point</code></li>
+</ul>
+<p><a id="C-116"></a></p>
+<h3 id="chapter-10-c-116-source_fact">C-116 · source_fact</h3>
+<p>Specify the internal caller obligations. Exact changes and commentary are in H16 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13306-L13322">src/storage/heap_file.c:13306–13322</a> — <code>Specify the internal caller obligations</code></li>
+</ul>
+<p><a id="C-117"></a></p>
+<h3 id="chapter-10-c-117-source_fact">C-117 · source_fact</h3>
+<p>Derive suppression and allocate an index variable. Exact changes and commentary are in H17 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13324-L13331">src/storage/heap_file.c:13324–13331</a> — <code>Derive suppression and allocate an index variable</code></li>
+</ul>
+<p><a id="C-118"></a></p>
+<h3 id="chapter-10-c-118-source_fact">C-118 · source_fact</h3>
+<p>Reconstruct the increment guard for the second pass. Exact changes and commentary are in H18 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13339-L13357">src/storage/heap_file.c:13339–13357</a> — <code>Reconstruct the increment guard for the second pass</code></li>
+</ul>
+<p><a id="C-119"></a></p>
+<h3 id="chapter-10-c-119-source_fact">C-119 · source_fact</h3>
+<p>Pass mode and verdict into layout calculation. Exact changes and commentary are in H19 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13365-L13372">src/storage/heap_file.c:13365–13372</a> — <code>Pass mode and verdict into layout calculation</code></li>
+</ul>
+<p><a id="C-120"></a></p>
+<h3 id="chapter-10-c-120-source_fact">C-120 · source_fact</h3>
+<p>Forward the selected owner only when inserting OOS. Exact changes and commentary are in H20 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L13401-L13407">src/storage/heap_file.c:13401–13407</a> — <code>Forward the selected owner only when inserting OOS</code></li>
+</ul>
+<p><a id="C-121"></a></p>
+<h3 id="chapter-10-c-121-source_fact">C-121 · source_fact</h3>
+<p>Keep the unit-test bridge on its original owner. Exact changes and commentary are in H21 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.c#L28525-L28530">src/storage/heap_file.c:28525–28530</a> — <code>Keep the unit-test bridge on its original owner</code></li>
+</ul>
+<p><a id="C-122"></a></p>
+<h3 id="chapter-10-c-122-source_fact">C-122 · source_fact</h3>
+<p>Publish the two transformation interfaces. Exact changes and commentary are in H22 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/storage/heap_file.h#L507-L518">src/storage/heap_file.h:507–518</a> — <code>Publish the two transformation interfaces</code></li>
+</ul>
+<p><a id="C-123"></a></p>
+<h3 id="chapter-10-c-123-source_fact">C-123 · source_fact</h3>
+<p>Extend the copy-area adapter. Exact changes and commentary are in H23 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7475-L7492">src/transaction/locator_sr.c:7475–7492</a> — <code>Extend the copy-area adapter</code></li>
+</ul>
+<p><a id="C-124"></a></p>
+<h3 id="chapter-10-c-124-source_fact">C-124 · source_fact</h3>
+<p>Dispatch probe before owner before LOB mode. Exact changes and commentary are in H24 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7510-L7526">src/transaction/locator_sr.c:7510–7526</a> — <code>Dispatch probe before owner before LOB mode</code></li>
+</ul>
+<p><a id="C-125"></a></p>
+<h3 id="chapter-10-c-125-source_fact">C-125 · source_fact</h3>
+<p>Orchestrate probe, early routing and final serialization. Exact changes and commentary are in H25 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L7708-L7770">src/transaction/locator_sr.c:7708–7770</a> — <code>Orchestrate probe, early routing and final serialization</code></li>
+</ul>
+<p><a id="C-126"></a></p>
+<h3 id="chapter-10-c-126-source_fact">C-126 · source_fact</h3>
+<p>Keep MVCC reevaluation on its existing path. Exact changes and commentary are in H26 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.c#L13851-L13857">src/transaction/locator_sr.c:13851–13857</a> — <code>Keep MVCC reevaluation on its existing path</code></li>
+</ul>
+<p><a id="C-127"></a></p>
+<h3 id="chapter-10-c-127-source_fact">C-127 · source_fact</h3>
+<p>Expose the adapter’s expanded signature. Exact changes and commentary are in H27 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/transaction/locator_sr.h#L83-L90">src/transaction/locator_sr.h:83–90</a> — <code>Expose the adapter’s expanded signature</code></li>
+</ul>
+<p><a id="C-128"></a></p>
+<h3 id="chapter-10-c-128-source_fact">C-128 · source_fact</h3>
+<p>Include the string type directly. Exact changes and commentary are in H28 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/test_oos_sql_show.cpp#L21-L27">unit_tests/oos/sql/test_oos_sql_show.cpp:21–27</a> — <code>Include the string type directly</code></li>
+</ul>
+<p><a id="C-129"></a></p>
+<h3 id="chapter-10-c-129-source_fact">C-129 · source_fact</h3>
+<p>Copy and normalize the diagnostic name. Exact changes and commentary are in H29 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/test_oos_sql_show.cpp#L155-L192">unit_tests/oos/sql/test_oos_sql_show.cpp:155–192</a> — <code>Copy and normalize the diagnostic name</code></li>
+</ul>
+<p><a id="C-130"></a></p>
+<h3 id="chapter-10-c-130-source_fact">C-130 · source_fact</h3>
+<p>Check value and all three heap owners. Exact changes and commentary are in H30 of chapter 6.</p>
+<ul>
+<li><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/unit_tests/oos/sql/test_oos_sql_show.cpp#L384-L458">unit_tests/oos/sql/test_oos_sql_show.cpp:384–458</a> — <code>Check value and all three heap owners</code></li>
+</ul><div class="chapter-nav"><a href="#chapter-09">← Previous chapter</a><a href="#top">Reading map</a></div></article></main><footer>Built from editable Markdown and SVG. Source claims use the pinned revision; the fresh runtime observation uses the separately hashed pre-existing binary. Study questions are answered separately in chapter 9. <a href="#top">Back to top</a></footer></body></html>

@@ -1,0 +1,1029 @@
+{
+  "meta": {
+    "title": "PR #7600 · OOS owner를 먼저 결정하기",
+    "prUrl": "https://github.com/CUBRID/cubrid/pull/7600",
+    "baseRef": "feat/oos @ f4299ac0cd",
+    "headRef": "479cd960ec",
+    "summary": "기본 구조 → 데이터 흐름 → 코드 의존 → SQL 관찰. 각 관점에서 Next tour step으로 진행하고, 오른쪽에서 근거와 전체 diff를 연다."
+  },
+  "graphs": [
+    {
+      "id": "system-overview",
+      "label": "System overview",
+      "color": "#c0872a",
+      "summary": "기본 구조: record·partition·OOS·transform·lifetime",
+      "nodes": [
+        {
+          "id": "row",
+          "title": "Heap record와 attribute",
+          "summary": "Heap은 row를 저장한다. 가변 attribute는 inline 값 또는 OOS inline stub으로 표현된다. Record의 HAS_OOS는 stub 존재를 나타낸다.",
+          "details": [
+            "Row의 논리값과 heap에 저장되는 bytes는 다를 수 있다.",
+            "작은 heap record를 읽은 뒤 필요한 큰 값만 attribute layer에서 Resolve한다."
+          ],
+          "kind": "기본 개념",
+          "x": 0,
+          "y": 0,
+          "width": 340,
+          "height": 205,
+          "summaryLines": 7
+        },
+        {
+          "id": "partition",
+          "title": "Root와 child heap",
+          "summary": "Partition root는 공통 schema와 routing 규칙을 제공한다. 실제 row는 선택된 child heap에 저장된다. Root와 child의 heap 식별자는 서로 다르다.",
+          "details": [
+            "Partition expression의 결과를 RANGE·LIST·HASH 규칙에 적용한다.",
+            "Root를 대상으로 한 문장과 특정 child를 명시한 문장은 검증 조건이 다르다."
+          ],
+          "kind": "기본 개념",
+          "x": 420,
+          "y": 0,
+          "width": 340,
+          "height": 205,
+          "summaryLines": 7
+        },
+        {
+          "id": "chain",
+          "title": "OOS file과 value chain",
+          "summary": "Heap 하나에 OOS file이 최대 하나 연결된다. 하나의 serialized attribute가 한 개 이상의 chunk record로 저장되며 stub이 head OOS OID를 가진다.",
+          "details": [
+            "HFID는 heap, VFID는 file, OID는 object 주소다.",
+            "OOS locator bytes와 외부 BLOB/CLOB payload는 다른 저장 객체다."
+          ],
+          "kind": "기본 개념",
+          "x": 0,
+          "y": 245,
+          "width": 340,
+          "height": 205,
+          "summaryLines": 7
+        },
+        {
+          "id": "transform",
+          "title": "준비와 직렬화",
+          "summary": "Assignment, default, 이전 record의 값을 모아 저장 형식으로 바꾼다. Type codec, pending increment, LOB locator copy가 이 경계와 결합되어 있다.",
+          "details": [
+            "준비 과정은 memory allocation과 값의 상태 변경을 수반할 수 있다.",
+            "읽을 기준인 class identity와 실제 저장할 목적지는 별개의 역할이다."
+          ],
+          "kind": "기본 개념",
+          "x": 420,
+          "y": 245,
+          "width": 340,
+          "height": 205,
+          "summaryLines": 7
+        },
+        {
+          "id": "lifetime",
+          "title": "Transaction과 vacuum",
+          "summary": "MVCC의 이전 version은 old reader에게 필요할 수 있다. Transaction rollback과 vacuum은 서로 다른 시점과 이유로 저장 객체의 수명을 처리한다.",
+          "details": [
+            "Logical value를 읽는 것과 물리적 file 소유권을 검사하는 것은 다른 관찰이다.",
+            "SA 실행과 SERVER_MODE의 concurrent reader·vacuum 실행은 검증 범위가 다르다."
+          ],
+          "kind": "기본 개념",
+          "x": 0,
+          "y": 490,
+          "width": 340,
+          "height": 205,
+          "summaryLines": 7
+        }
+      ],
+      "edges": [],
+      "tour": [
+        {
+          "nodeId": "row",
+          "title": "Heap record와 attribute",
+          "body": "Heap은 row를 저장한다. 가변 attribute는 inline 값 또는 OOS inline stub으로 표현된다. Record의 HAS_OOS는 stub 존재를 나타낸다."
+        },
+        {
+          "nodeId": "partition",
+          "title": "Root와 child heap",
+          "body": "Partition root는 공통 schema와 routing 규칙을 제공한다. 실제 row는 선택된 child heap에 저장된다. Root와 child의 heap 식별자는 서로 다르다."
+        },
+        {
+          "nodeId": "chain",
+          "title": "OOS file과 value chain",
+          "body": "Heap 하나에 OOS file이 최대 하나 연결된다. 하나의 serialized attribute가 한 개 이상의 chunk record로 저장되며 stub이 head OOS OID를 가진다."
+        },
+        {
+          "nodeId": "transform",
+          "title": "준비와 직렬화",
+          "body": "Assignment, default, 이전 record의 값을 모아 저장 형식으로 바꾼다. Type codec, pending increment, LOB locator copy가 이 경계와 결합되어 있다."
+        },
+        {
+          "nodeId": "lifetime",
+          "title": "Transaction과 vacuum",
+          "body": "MVCC의 이전 version은 old reader에게 필요할 수 있다. Transaction rollback과 vacuum은 서로 다른 시점과 이유로 저장 객체의 수명을 처리한다."
+        }
+      ]
+    },
+    {
+      "id": "data-flow",
+      "label": "Data flow graph",
+      "color": "#34895c",
+      "summary": "Key에서 목적지 owner와 최종 record까지",
+      "nodes": [
+        {
+          "id": "intent",
+          "title": "출발점: 소유권 일치",
+          "summary": "새 record의 child heap과 OOS chain의 owner heap이 같아야 한다.",
+          "details": [
+            "이전 transform-first 경로는 root에 chain을 쓴 뒤 record를 child로 보낼 수 있었다.",
+            "이번 diff에는 변경된 spec 파일이 없다. 외부 JIRA와 accepted ADR은 배경 근거이며 최신 실행 순서는 HEAD 소스로 확인한다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "src/transaction/locator_sr.c:7768",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-ec3d8025f8499bd30088bfbed87d31b183b63f1a59807b539239e26e80b78ea4R7768",
+              "note": "Main write의 새로운 순서"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H54",
+              "url": "review.ko.html#hunk-54"
+            }
+          ],
+          "x": 0,
+          "y": 0,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        },
+        {
+          "id": "key",
+          "title": "Key만 독립적으로 준비",
+          "summary": "Assignment·default·old key 중 실제 저장될 값을 복사본으로 만든다.",
+          "details": [
+            "Pending INCR/DECR는 복사본에만 적용한다. 원본 state와 pending 연산은 실제 transform을 위해 남긴다.",
+            "Scalar codec write/read가 CHAR padding 등 저장 의미를 맞춘다. Old OOS key의 Resolve에는 I/O가 있을 수 있다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "src/storage/heap_file.c:12117",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-86bbecbbdf80125cc10e0d00b46f94b13fe8f79247048ccf9598bd9e2bc39d10R12117",
+              "note": "Effective key helper"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H21",
+              "url": "review.ko.html#hunk-21"
+            }
+          ],
+          "x": 420,
+          "y": 0,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        },
+        {
+          "id": "bind",
+          "title": "Context의 stable slot에 바인딩",
+          "summary": "이전 key를 clear하고 readable slot에 effective key를 넣는다.",
+          "details": [
+            "Expression cache는 context 소유 slot에 연결된다. 임시 stack DB_VALUE로 바꾸지 않는다.",
+            "Duplicate probe가 남긴 값을 제거하고 평가 뒤 value를 정리한다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "src/query/partition.c:3571",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-46f188b77e6527d920b050934f1a39f2d606d402d0a573a5221aa7b79f5aac24R3571",
+              "note": "Attrinfo adapter"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H05",
+              "url": "review.ko.html#hunk-05"
+            }
+          ],
+          "x": 0,
+          "y": 245,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        },
+        {
+          "id": "select",
+          "title": "Expression으로 child를 선택",
+          "summary": "같은 evaluator가 기존 record route와 새 key route를 처리한다.",
+          "details": [
+            "NULL은 PO_IS_NULL로 처리한다. 목적지가 정확히 하나여야 한다.",
+            "공통 wrapper가 explicit child와의 일치 및 context lifetime을 검증한다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "src/query/partition.c:3479",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-46f188b77e6527d920b050934f1a39f2d606d402d0a573a5221aa7b79f5aac24R3479",
+              "note": "Shared evaluator"
+            },
+            {
+              "path": "src/query/partition.c:3757",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-46f188b77e6527d920b050934f1a39f2d606d402d0a573a5221aa7b79f5aac24R3757",
+              "note": "INSERT adapter 선택"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H09",
+              "url": "review.ko.html#hunk-09"
+            }
+          ],
+          "x": 420,
+          "y": 245,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        },
+        {
+          "id": "owner",
+          "title": "선택한 owner로 전체 row 변환",
+          "summary": "Source attrinfo를 유지하고 OOS file 선택에만 destination을 넘긴다.",
+          "details": [
+            "Main path는 owner-aware first pass다. 전체 inline probe 후 rebuild가 아니다.",
+            "기존 bigone 거절, payload·LOB 준비, publication reset 경계를 유지한다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "src/storage/heap_file.c:12927",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-86bbecbbdf80125cc10e0d00b46f94b13fe8f79247048ccf9598bd9e2bc39d10R12927",
+              "note": "Owner-aware first pass"
+            },
+            {
+              "path": "src/storage/heap_file.c:12888",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-86bbecbbdf80125cc10e0d00b46f94b13fe8f79247048ccf9598bd9e2bc39d10R12888",
+              "note": "Physical owner 전달"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H29",
+              "url": "review.ko.html#hunk-29"
+            }
+          ],
+          "x": 0,
+          "y": 490,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        },
+        {
+          "id": "verify",
+          "title": "Final record routing과 비교",
+          "summary": "직렬화된 record로 다시 고른 destination이 early owner와 일치해야 한다.",
+          "details": [
+            "다르면 ER_GENERIC_ERROR로 반환한다. 이미 기록한 chain을 둔 채 record를 다른 heap으로 보내지 않는다.",
+            "Final route는 representation ID patch와 기존 validation을 유지한다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "src/transaction/locator_sr.c:4996",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-ec3d8025f8499bd30088bfbed87d31b183b63f1a59807b539239e26e80b78ea4R4996",
+              "note": "INSERT agreement"
+            },
+            {
+              "path": "src/transaction/locator_sr.c:6021",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-ec3d8025f8499bd30088bfbed87d31b183b63f1a59807b539239e26e80b78ea4R6021",
+              "note": "UPDATE agreement"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H41",
+              "url": "review.ko.html#hunk-41"
+            }
+          ],
+          "x": 420,
+          "y": 490,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        },
+        {
+          "id": "write",
+          "title": "Heap/index 저장 또는 이동",
+          "summary": "같은 child이면 기존 UPDATE를, 다른 child이면 기존 move path를 사용한다.",
+          "details": [
+            "Move helper는 destination insert 뒤 source delete를 수행한다. Source identity는 이 단계까지 필요하다.",
+            "오류를 반환하는 것과 즉시 모든 chain을 회수하는 것은 다르다. Logged 작업은 rollback 경로에 의존한다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "src/transaction/locator_sr.c:6051",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-ec3d8025f8499bd30088bfbed87d31b183b63f1a59807b539239e26e80b78ea4R6051",
+              "note": "Movement 선택"
+            },
+            {
+              "path": "src/transaction/locator_sr.c:5402",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-ec3d8025f8499bd30088bfbed87d31b183b63f1a59807b539239e26e80b78ea4R5402",
+              "note": "기존 move helper"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H56",
+              "url": "review.ko.html#hunk-56"
+            }
+          ],
+          "x": 0,
+          "y": 735,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        },
+        {
+          "id": "proof",
+          "title": "물리적 관찰과 검증 한계",
+          "summary": "SQL 값과 root/child의 OOS chunk count를 함께 확인한다.",
+          "details": [
+            "기존 review: 988a4d2에서 SQL 32/32 통과. 이번 문서 작성에서 engine test는 실행하지 않았다.",
+            "Rollback 뒤 실제 vacuum readback regression은 DISABLED 상태이며 full lifecycle acceptance는 열려 있다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "unit_tests/oos/sql/test_oos_sql_show.cpp:437",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-7fdae0e381b6e45764169b71c10fbf166556914aac1c9afb4e4ba9aab483aa38R437",
+              "note": "Root 0 / p0 1 / p1 0 oracle"
+            },
+            {
+              "path": "unit_tests/oos/test_oos_real_vacuum_server.cpp:833",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-e2892f2dbab3c1bae4d87c4fa1b9f7d0cdc5463a2fa1ba9ee94983c13c26b0eeR833",
+              "note": "Disabled lifecycle regression"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H63",
+              "url": "review.ko.html#hunk-63"
+            }
+          ],
+          "comments": [
+            {
+              "author": "vimkim · 기존 review 요약",
+              "body": "988a4d2 검토: 새 routing correctness defect는 확인되지 않았지만 SERVER_MODE lifecycle, control performance, integrated evidence는 미완료. 현재 HEAD는 rollback/vacuum regression을 DISABLED로 보관한다.",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600#issuecomment-5599750448"
+            }
+          ],
+          "x": 420,
+          "y": 735,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        }
+      ],
+      "edges": [
+        {
+          "source": "intent",
+          "target": "key",
+          "label": "key 입력 준비",
+          "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-ec3d8025f8499bd30088bfbed87d31b183b63f1a59807b539239e26e80b78ea4R7768"
+        },
+        {
+          "source": "key",
+          "target": "bind",
+          "label": "stable slot 채움",
+          "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-ec3d8025f8499bd30088bfbed87d31b183b63f1a59807b539239e26e80b78ea4R7768"
+        },
+        {
+          "source": "bind",
+          "target": "select",
+          "label": "expression 평가",
+          "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-ec3d8025f8499bd30088bfbed87d31b183b63f1a59807b539239e26e80b78ea4R7768"
+        },
+        {
+          "source": "select",
+          "target": "owner",
+          "label": "owner 전달",
+          "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-ec3d8025f8499bd30088bfbed87d31b183b63f1a59807b539239e26e80b78ea4R7768"
+        },
+        {
+          "source": "owner",
+          "target": "verify",
+          "label": "record 검증",
+          "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-ec3d8025f8499bd30088bfbed87d31b183b63f1a59807b539239e26e80b78ea4R7768"
+        },
+        {
+          "source": "verify",
+          "target": "write",
+          "label": "일치하면 저장",
+          "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-ec3d8025f8499bd30088bfbed87d31b183b63f1a59807b539239e26e80b78ea4R7768"
+        },
+        {
+          "source": "write",
+          "target": "proof",
+          "label": "결과 관찰",
+          "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-ec3d8025f8499bd30088bfbed87d31b183b63f1a59807b539239e26e80b78ea4R7768"
+        }
+      ],
+      "tour": [
+        {
+          "nodeId": "intent",
+          "title": "출발점: 소유권 일치",
+          "body": "새 record의 child heap과 OOS chain의 owner heap이 같아야 한다. 이전 transform-first 경로는 root에 chain을 쓴 뒤 record를 child로 보낼 수 있었다."
+        },
+        {
+          "nodeId": "key",
+          "title": "Key만 독립적으로 준비",
+          "body": "Assignment·default·old key 중 실제 저장될 값을 복사본으로 만든다. Pending INCR/DECR는 복사본에만 적용한다. 원본 state와 pending 연산은 실제 transform을 위해 남긴다."
+        },
+        {
+          "nodeId": "bind",
+          "title": "Context의 stable slot에 바인딩",
+          "body": "이전 key를 clear하고 readable slot에 effective key를 넣는다. Expression cache는 context 소유 slot에 연결된다. 임시 stack DB_VALUE로 바꾸지 않는다."
+        },
+        {
+          "nodeId": "select",
+          "title": "Expression으로 child를 선택",
+          "body": "같은 evaluator가 기존 record route와 새 key route를 처리한다. NULL은 PO_IS_NULL로 처리한다. 목적지가 정확히 하나여야 한다."
+        },
+        {
+          "nodeId": "owner",
+          "title": "선택한 owner로 전체 row 변환",
+          "body": "Source attrinfo를 유지하고 OOS file 선택에만 destination을 넘긴다. Main path는 owner-aware first pass다. 전체 inline probe 후 rebuild가 아니다."
+        },
+        {
+          "nodeId": "verify",
+          "title": "Final record routing과 비교",
+          "body": "직렬화된 record로 다시 고른 destination이 early owner와 일치해야 한다. 다르면 ER_GENERIC_ERROR로 반환한다. 이미 기록한 chain을 둔 채 record를 다른 heap으로 보내지 않는다."
+        },
+        {
+          "nodeId": "write",
+          "title": "Heap/index 저장 또는 이동",
+          "body": "같은 child이면 기존 UPDATE를, 다른 child이면 기존 move path를 사용한다. Move helper는 destination insert 뒤 source delete를 수행한다. Source identity는 이 단계까지 필요하다."
+        },
+        {
+          "nodeId": "proof",
+          "title": "물리적 관찰과 검증 한계",
+          "body": "SQL 값과 root/child의 OOS chunk count를 함께 확인한다. 기존 review: 988a4d2에서 SQL 32/32 통과. 이번 문서 작성에서 engine test는 실행하지 않았다."
+        }
+      ]
+    },
+    {
+      "id": "code-dependency",
+      "label": "Code dependency graph",
+      "color": "#2e5d9e",
+      "summary": "어떤 모듈이 어떤 계약을 제공하는가",
+      "nodes": [
+        {
+          "id": "locator",
+          "title": "locator_sr.c · 순서와 합의",
+          "summary": "Early destination을 먼저 구하고 owner transform과 final force를 연결한다.",
+          "details": [
+            "write_destination은 source class와 독립된 local 값이다.",
+            "Nonpartitioned와 기존 serialized-record caller는 NULL/default 인자로 이전 경로를 유지한다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "src/transaction/locator_sr.c:7655",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-ec3d8025f8499bd30088bfbed87d31b183b63f1a59807b539239e26e80b78ea4R7655",
+              "note": "Orchestration"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H54",
+              "url": "review.ko.html#hunk-54"
+            }
+          ],
+          "x": 0,
+          "y": 0,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        },
+        {
+          "id": "partition",
+          "title": "partition.c · 공통 evaluator",
+          "summary": "Key와 record adapter가 같은 partition 의미를 사용한다.",
+          "details": [
+            "Header는 두 by_attrinfo API를 노출한다.",
+            "Record decode와 representation patch는 record adapter에 남고 expression 평가만 공통화한다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "src/query/partition.c:3479",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-46f188b77e6527d920b050934f1a39f2d606d402d0a573a5221aa7b79f5aac24R3479",
+              "note": "Evaluator"
+            },
+            {
+              "path": "src/query/partition_sr.h:122",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-867d8cafbd04828c54bbe2f2bb3b25eaef8781ac2fb5fd4648c5139a2f5de245R122",
+              "note": "새 API 선언"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H05",
+              "url": "review.ko.html#hunk-05"
+            }
+          ],
+          "x": 420,
+          "y": 0,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        },
+        {
+          "id": "heap",
+          "title": "heap_file.c · effective key와 transform",
+          "summary": "Key codec과 row serialization 경계가 실제 저장 의미를 제공한다.",
+          "details": [
+            "heap_file.h는 effective key 및 transform mode를 선언한다.",
+            "Owner first pass와 retained second pass의 increment flag를 혼동하면 안 된다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "src/storage/heap_file.c:12117",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-86bbecbbdf80125cc10e0d00b46f94b13fe8f79247048ccf9598bd9e2bc39d10R12117",
+              "note": "Key codec"
+            },
+            {
+              "path": "src/storage/heap_file.h:506",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-97b72d043d15b8fe701fcee25ec78c565308941aa7e3d2bf0fbb37664fafa9d3R506",
+              "note": "API 선언"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H21",
+              "url": "review.ko.html#hunk-21"
+            }
+          ],
+          "x": 0,
+          "y": 245,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        },
+        {
+          "id": "oos",
+          "title": "heap_oos.cpp · 기존 storage 경계",
+          "summary": "Class를 HFID/OOS VFID로 바꾸고 serialized values를 저장한다.",
+          "details": [
+            "이 파일은 PR diff에 포함되지 않는 dependency다. Source identity를 바꾸지 않고 호출 인자의 owner만 바뀐다.",
+            "기존 publication reset과 transactional cleanup을 재사용한다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "src/storage/heap_file.c:12888",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-86bbecbbdf80125cc10e0d00b46f94b13fe8f79247048ccf9598bd9e2bc39d10R12888",
+              "note": "변경된 caller: owner 전달"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H28",
+              "url": "review.ko.html#hunk-28"
+            },
+            {
+              "label": "변경되지 않은 dependency 소스",
+              "url": "https://github.com/CUBRID/cubrid/blob/479cd960ec04196c92bf9789b1fc340af9046c2c/src/storage/heap_oos.cpp#L631"
+            }
+          ],
+          "x": 420,
+          "y": 245,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        },
+        {
+          "id": "duplicates",
+          "title": "query_executor.c · 임시 key probe",
+          "summary": "REPLACE·ODKU의 lookup image가 chain을 만들지 않게 한다.",
+          "details": [
+            "Probe helper는 남아 있으며 main write의 early key route와 역할이 다르다.",
+            "FORCE_OUTLINE의 크기 gate 밖 경로도 suppression을 따라야 한다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "src/query/query_executor.c:11955",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-9bedce9f6f01d1dd366be206555b8f76561e570ccaba901b4cdda27cdc231768R11955",
+              "note": "REPLACE"
+            },
+            {
+              "path": "src/query/query_executor.c:12198",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-9bedce9f6f01d1dd366be206555b8f76561e570ccaba901b4cdda27cdc231768R12198",
+              "note": "ODKU"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H16",
+              "url": "review.ko.html#hunk-16"
+            }
+          ],
+          "x": 0,
+          "y": 490,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        },
+        {
+          "id": "sql",
+          "title": "SQL 테스트와 timeout",
+          "summary": "28개 추가 테스트가 routing·source 보존·owner·실패 정리를 구별한다.",
+          "details": [
+            "Direct test reference는 별도 attrinfo를 transform한다. Candidate와 공유하면 보존 검증이 약해진다.",
+            "Debug diagnostic 비용 때문에 test_oos_sql_show timeout을 300초로 조정한다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "unit_tests/oos/sql/test_oos_sql_show.cpp:437",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-7fdae0e381b6e45764169b71c10fbf166556914aac1c9afb4e4ba9aab483aa38R437",
+              "note": "추가 테스트 시작"
+            },
+            {
+              "path": "unit_tests/oos/sql/CMakeLists.txt:57",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-3275cf29164ab3fd22b8f905a3bf3fb643804e52b44926cf725e5897598cf408R57",
+              "note": "Timeout"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H62",
+              "url": "review.ko.html#hunk-62"
+            }
+          ],
+          "x": 420,
+          "y": 490,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        },
+        {
+          "id": "vacuum",
+          "title": "Real-vacuum regression",
+          "summary": "기존 lifecycle 결함의 oracle을 DISABLED로 보존한다.",
+          "details": [
+            "Committed delete witness를 기다린 뒤 원본을 다시 읽는다.",
+            "이 테스트는 partition 전용이 아니며 성공 결과도 아니다. 별도 lifecycle repair가 필요하다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "unit_tests/oos/test_oos_real_vacuum_server.cpp:833",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-e2892f2dbab3c1bae4d87c4fa1b9f7d0cdc5463a2fa1ba9ee94983c13c26b0eeR833",
+              "note": "DISABLED test"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H63",
+              "url": "review.ko.html#hunk-63"
+            }
+          ],
+          "x": 0,
+          "y": 735,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        }
+      ],
+      "edges": [
+        {
+          "source": "locator",
+          "target": "partition",
+          "label": "early/final route 호출",
+          "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-ec3d8025f8499bd30088bfbed87d31b183b63f1a59807b539239e26e80b78ea4R7787"
+        },
+        {
+          "source": "partition",
+          "target": "heap",
+          "label": "effective key 요청",
+          "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-46f188b77e6527d920b050934f1a39f2d606d402d0a573a5221aa7b79f5aac24R3594"
+        },
+        {
+          "source": "locator",
+          "target": "heap",
+          "label": "owner transform 요청",
+          "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-ec3d8025f8499bd30088bfbed87d31b183b63f1a59807b539239e26e80b78ea4R7793"
+        },
+        {
+          "source": "heap",
+          "target": "oos",
+          "label": "selected class 전달",
+          "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-86bbecbbdf80125cc10e0d00b46f94b13fe8f79247048ccf9598bd9e2bc39d10R12888"
+        },
+        {
+          "source": "duplicates",
+          "target": "locator",
+          "label": "probe image 요청",
+          "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-9bedce9f6f01d1dd366be206555b8f76561e570ccaba901b4cdda27cdc231768R11958"
+        },
+        {
+          "source": "sql",
+          "target": "locator",
+          "label": "SQL 및 직접 API 실행",
+          "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-7fdae0e381b6e45764169b71c10fbf166556914aac1c9afb4e4ba9aab483aa38R1274"
+        },
+        {
+          "source": "vacuum",
+          "target": "oos",
+          "label": "value lifetime 관찰",
+          "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-e2892f2dbab3c1bae4d87c4fa1b9f7d0cdc5463a2fa1ba9ee94983c13c26b0eeR833"
+        }
+      ],
+      "tour": [
+        {
+          "nodeId": "locator",
+          "title": "locator_sr.c · 순서와 합의",
+          "body": "Early destination을 먼저 구하고 owner transform과 final force를 연결한다. write_destination은 source class와 독립된 local 값이다."
+        },
+        {
+          "nodeId": "partition",
+          "title": "partition.c · 공통 evaluator",
+          "body": "Key와 record adapter가 같은 partition 의미를 사용한다. Header는 두 by_attrinfo API를 노출한다."
+        },
+        {
+          "nodeId": "heap",
+          "title": "heap_file.c · effective key와 transform",
+          "body": "Key codec과 row serialization 경계가 실제 저장 의미를 제공한다. heap_file.h는 effective key 및 transform mode를 선언한다."
+        },
+        {
+          "nodeId": "oos",
+          "title": "heap_oos.cpp · 기존 storage 경계",
+          "body": "Class를 HFID/OOS VFID로 바꾸고 serialized values를 저장한다. 이 파일은 PR diff에 포함되지 않는 dependency다. Source identity를 바꾸지 않고 호출 인자의 owner만 바뀐다."
+        },
+        {
+          "nodeId": "duplicates",
+          "title": "query_executor.c · 임시 key probe",
+          "body": "REPLACE·ODKU의 lookup image가 chain을 만들지 않게 한다. Probe helper는 남아 있으며 main write의 early key route와 역할이 다르다."
+        },
+        {
+          "nodeId": "sql",
+          "title": "SQL 테스트와 timeout",
+          "body": "28개 추가 테스트가 routing·source 보존·owner·실패 정리를 구별한다. Direct test reference는 별도 attrinfo를 transform한다. Candidate와 공유하면 보존 검증이 약해진다."
+        },
+        {
+          "nodeId": "vacuum",
+          "title": "Real-vacuum regression",
+          "body": "기존 lifecycle 결함의 oracle을 DISABLED로 보존한다. Committed delete witness를 기다린 뒤 원본을 다시 읽는다."
+        }
+      ]
+    },
+    {
+      "id": "user-action",
+      "label": "User action graph",
+      "color": "#754dac",
+      "summary": "SQL과 물리적 관찰을 연결하는 발표 순서",
+      "nodes": [
+        {
+          "id": "insert",
+          "title": "SQL: 작은 forced INSERT",
+          "summary": "id=1과 64바이트 forced 값을 root table에 INSERT한다.",
+          "details": [
+            "RANGE의 p0 경계는 10이다. 일반 큰 record 조건 없이도 FORCE_OUTLINE이 OOS를 선택한다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "unit_tests/oos/sql/test_oos_sql_show.cpp:437",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-7fdae0e381b6e45764169b71c10fbf166556914aac1c9afb4e4ba9aab483aa38R437",
+              "note": "최소 ownership 회귀"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H62",
+              "url": "review.ko.html#hunk-62"
+            }
+          ],
+          "x": 0,
+          "y": 0,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        },
+        {
+          "id": "observe",
+          "title": "관찰: 값과 owner",
+          "summary": "값 비교가 true이고 p0에만 OOS file/chunk가 있어야 한다.",
+          "details": [
+            "SELECT 성공만으로 소유권은 증명되지 않는다. SHOW ALL HEAP OOS가 root와 child를 구별한다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "unit_tests/oos/sql/test_oos_sql_show.cpp:460",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-7fdae0e381b6e45764169b71c10fbf166556914aac1c9afb4e4ba9aab483aa38R460",
+              "note": "논리값 확인과 물리 owner 순회"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H62",
+              "url": "review.ko.html#hunk-62"
+            }
+          ],
+          "x": 420,
+          "y": 0,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        },
+        {
+          "id": "move",
+          "title": "SQL: 경계를 넘는 UPDATE",
+          "summary": "Root 대상으로 key를 9에서 10으로 옮겨 child가 달라진다.",
+          "details": [
+            "Early key와 최종 stored key가 같은 destination을 선택해야 한다.",
+            "Child를 직접 명시했다면 밖으로 이동시키는 대신 검증 오류를 기대한다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "unit_tests/oos/sql/test_oos_sql_show.cpp:589",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-7fdae0e381b6e45764169b71c10fbf166556914aac1c9afb4e4ba9aab483aa38R589",
+              "note": "Expression·explicit partition·movement"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H54",
+              "url": "review.ko.html#hunk-54"
+            }
+          ],
+          "x": 0,
+          "y": 245,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        },
+        {
+          "id": "duplicate",
+          "title": "SQL: REPLACE와 ODKU",
+          "summary": "Unique index를 먼저 찾는 임시 image는 저장되지 않는다.",
+          "details": [
+            "Lookup용 image의 OOS demotion을 억제한다.",
+            "ODKU가 실제 UPDATE를 선택하면 main write가 별도로 destination을 구한다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "src/query/query_executor.c:11955",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-9bedce9f6f01d1dd366be206555b8f76561e570ccaba901b4cdda27cdc231768R11955",
+              "note": "Suppressed lookup"
+            },
+            {
+              "path": "unit_tests/oos/sql/test_oos_sql_show.cpp:657",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-7fdae0e381b6e45764169b71c10fbf166556914aac1c9afb4e4ba9aab483aa38R657",
+              "note": "복합 SQL 테스트"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H18",
+              "url": "review.ko.html#hunk-18"
+            }
+          ],
+          "x": 420,
+          "y": 245,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        },
+        {
+          "id": "error",
+          "title": "SQL: 실패와 다음 write",
+          "summary": "목적지 없음·할당 실패·unique 충돌 뒤 abort하고 재시도한다.",
+          "details": [
+            "명시적 abort 후 committed 값·owner count가 보존되는지 검사한다.",
+            "단순 error 반환만으로 즉시 모든 물리 정리가 끝났다고 판단하지 않는다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "unit_tests/oos/sql/test_oos_sql_show.cpp:1002",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-7fdae0e381b6e45764169b71c10fbf166556914aac1c9afb4e4ba9aab483aa38R1002",
+              "note": "Publication failure matrix"
+            },
+            {
+              "path": "unit_tests/oos/sql/test_oos_sql_show.cpp:1070",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-7fdae0e381b6e45764169b71c10fbf166556914aac1c9afb4e4ba9aab483aa38R1070",
+              "note": "LOB/index failure matrix"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H62",
+              "url": "review.ko.html#hunk-62"
+            }
+          ],
+          "x": 0,
+          "y": 490,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        },
+        {
+          "id": "later",
+          "title": "시간이 지난 뒤: vacuum",
+          "summary": "Committed 원본이 rollback 뒤 vacuum을 거쳐도 읽혀야 한다.",
+          "details": [
+            "별도 witness가 실제 vacuum 진행을 증명한다.",
+            "이 oracle의 과거 실패와 DISABLED 상태를 발표에서 명확히 구분한다."
+          ],
+          "kind": "구현 설명",
+          "files": [
+            {
+              "path": "unit_tests/oos/test_oos_real_vacuum_server.cpp:833",
+              "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-e2892f2dbab3c1bae4d87c4fa1b9f7d0cdc5463a2fa1ba9ee94983c13c26b0eeR833",
+              "note": "보관된 regression"
+            }
+          ],
+          "links": [
+            {
+              "label": "전체 diff와 설명 · H63",
+              "url": "review.ko.html#hunk-63"
+            }
+          ],
+          "x": 420,
+          "y": 490,
+          "width": 340,
+          "height": 160,
+          "summaryLines": 5
+        }
+      ],
+      "edges": [
+        {
+          "source": "insert",
+          "target": "observe",
+          "label": "다음 확인",
+          "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-7fdae0e381b6e45764169b71c10fbf166556914aac1c9afb4e4ba9aab483aa38R437"
+        },
+        {
+          "source": "observe",
+          "target": "move",
+          "label": "다음 확인",
+          "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-7fdae0e381b6e45764169b71c10fbf166556914aac1c9afb4e4ba9aab483aa38R437"
+        },
+        {
+          "source": "move",
+          "target": "duplicate",
+          "label": "다음 확인",
+          "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-7fdae0e381b6e45764169b71c10fbf166556914aac1c9afb4e4ba9aab483aa38R437"
+        },
+        {
+          "source": "duplicate",
+          "target": "error",
+          "label": "다음 확인",
+          "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-7fdae0e381b6e45764169b71c10fbf166556914aac1c9afb4e4ba9aab483aa38R437"
+        },
+        {
+          "source": "error",
+          "target": "later",
+          "label": "다음 확인",
+          "url": "https://github.com/CUBRID/cubrid/pull/7600/files#diff-7fdae0e381b6e45764169b71c10fbf166556914aac1c9afb4e4ba9aab483aa38R437"
+        }
+      ],
+      "tour": [
+        {
+          "nodeId": "insert",
+          "title": "SQL: 작은 forced INSERT",
+          "body": "id=1과 64바이트 forced 값을 root table에 INSERT한다. RANGE의 p0 경계는 10이다. 일반 큰 record 조건 없이도 FORCE_OUTLINE이 OOS를 선택한다."
+        },
+        {
+          "nodeId": "observe",
+          "title": "관찰: 값과 owner",
+          "body": "값 비교가 true이고 p0에만 OOS file/chunk가 있어야 한다. SELECT 성공만으로 소유권은 증명되지 않는다. SHOW ALL HEAP OOS가 root와 child를 구별한다."
+        },
+        {
+          "nodeId": "move",
+          "title": "SQL: 경계를 넘는 UPDATE",
+          "body": "Root 대상으로 key를 9에서 10으로 옮겨 child가 달라진다. Early key와 최종 stored key가 같은 destination을 선택해야 한다."
+        },
+        {
+          "nodeId": "duplicate",
+          "title": "SQL: REPLACE와 ODKU",
+          "body": "Unique index를 먼저 찾는 임시 image는 저장되지 않는다. Lookup용 image의 OOS demotion을 억제한다."
+        },
+        {
+          "nodeId": "error",
+          "title": "SQL: 실패와 다음 write",
+          "body": "목적지 없음·할당 실패·unique 충돌 뒤 abort하고 재시도한다. 명시적 abort 후 committed 값·owner count가 보존되는지 검사한다."
+        },
+        {
+          "nodeId": "later",
+          "title": "시간이 지난 뒤: vacuum",
+          "body": "Committed 원본이 rollback 뒤 vacuum을 거쳐도 읽혀야 한다. 별도 witness가 실제 vacuum 진행을 증명한다."
+        }
+      ]
+    }
+  ]
+}

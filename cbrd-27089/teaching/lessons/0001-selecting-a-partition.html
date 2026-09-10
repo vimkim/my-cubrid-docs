@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>01 · Selecting a partition</title><link rel="stylesheet" href="../assets/report.css"><link rel="stylesheet" href="../assets/book.css"></head>
+<body><header><p class="eyebrow">PR 7600 · One concept</p><h1>Selecting a partition</h1><p>For an insert, pruning selects the destination of the new row.</p></header>
+<main><article><h2 id="rule">Apply the rule</h2><p>Our example has two partitions: <code>p0</code> accepts <code>id &lt; 10</code>; <code>p1</code> accepts <code>id ≥ 10</code>. A row with id = 10 belongs in p1.</p>
+<img src="../assets/insert-routing.svg" width="600" style="max-width:100%;height:auto" alt="The row id = 10 selects p1 and excludes p0 as a destination.">
+<p>Pruning does not delete rows or remove partitions. For this insert, it rules out a destination. For a read, pruning instead rules out partitions that cannot contribute matching rows.</p>
+<h2 id="practice">Recall before revealing</h2><p>Under these rules, where does a row with id = 9 belong?</p><details><summary>Check your answer</summary><p>p0: 9 is less than 10. For an insert, p1 is excluded as a destination.</p></details>
+<h2 id="source">Primary source</h2><p><a href="https://github.com/CUBRID/cubrid/blob/b871ea386d2c5419b7abae07dda58b9b7f36377a/src/query/partition.c#L3583">partition_prune_insert</a> describes its output as the partition to insert into and calls partition_find_partition_for_record. The numeric rules here are a teaching example.</p>
+<p>Ask the agent a follow-up whenever wording is unclear.</p><nav class="chapter-nav"><a href="../reference/partition-vocabulary.html#pruning">Quick reference</a><a href="../chapters/01-foundations.html">Existing foundations chapter</a></nav></article></main></body></html>

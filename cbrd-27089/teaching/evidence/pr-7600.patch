@@ -1,0 +1,581 @@
+diff --git a/src/query/query_executor.c b/src/query/query_executor.c
+index 2f62b5d2e..0ca3e2add 100644
+--- a/src/query/query_executor.c
++++ b/src/query/query_executor.c
+@@ -11937,6 +11937,7 @@ qexec_remove_duplicates_for_replace (THREAD_ENTRY * thread_p, HEAP_SCANCACHE * s
+   OID class_oid, pruned_oid;
+   BTID btid;
+   bool is_global_index;
++  bool probe_would_demote_oos = false;
+   HFID class_hfid, pruned_hfid;
+   int local_op_type = SINGLE_ROW_DELETE;
+   HEAP_SCANCACHE *local_scan_cache = NULL;
+@@ -11951,7 +11952,11 @@ qexec_remove_duplicates_for_replace (THREAD_ENTRY * thread_p, HEAP_SCANCACHE * s
+       goto error_exit;
+     }
+ 
+-  copyarea = locator_allocate_copy_area_by_attr_info (thread_p, attr_info, NULL, &new_recdes, -1, LOB_FLAG_EXCLUDE_LOB);
++  /* This record image is only probed for duplicate keys, never inserted: suppress OOS demotion so
++   * no OOS value chain is written (and later orphaned) for it. */
++  copyarea =
++    locator_allocate_copy_area_by_attr_info (thread_p, attr_info, NULL, &new_recdes, -1, LOB_FLAG_EXCLUDE_LOB, NULL,
++					     &probe_would_demote_oos);
+   if (copyarea == NULL)
+     {
+       goto error_exit;
+@@ -12170,6 +12175,7 @@ qexec_oid_of_duplicate_key_update (THREAD_ENTRY * thread_p, HEAP_SCANCACHE ** pr
+   OID class_oid;
+   HFID class_hfid;
+   bool is_global_index = false;
++  bool probe_would_demote_oos = false;
+   int local_op_type = SINGLE_ROW_UPDATE;
+   BTREE_SEARCH r;
+ 
+@@ -12189,7 +12195,11 @@ qexec_oid_of_duplicate_key_update (THREAD_ENTRY * thread_p, HEAP_SCANCACHE ** pr
+       goto error_exit;
+     }
+ 
+-  copyarea = locator_allocate_copy_area_by_attr_info (thread_p, attr_info, NULL, &recdes, -1, LOB_FLAG_INCLUDE_LOB);
++  /* This record image is only probed for unique-index duplicates, never inserted: suppress OOS
++   * demotion so no OOS value chain is written (and later orphaned) for it. */
++  copyarea =
++    locator_allocate_copy_area_by_attr_info (thread_p, attr_info, NULL, &recdes, -1, LOB_FLAG_INCLUDE_LOB, NULL,
++					     &probe_would_demote_oos);
+   if (copyarea == NULL)
+     {
+       goto error_exit;
+diff --git a/src/storage/heap_file.c b/src/storage/heap_file.c
+index 81f5c2eea..18d47ec8c 100644
+--- a/src/storage/heap_file.c
++++ b/src/storage/heap_file.c
+@@ -694,9 +694,10 @@ struct heap_oos_column_plan
+   DB_BIGINT length = 0;
+ };
+ static int heap_attrinfo_determine_disk_layout (HEAP_CACHE_ATTRINFO * attr_info, bool is_mvcc_class,
+-						size_t * offset_size_ptr,
++						bool suppress_oos, size_t * offset_size_ptr,
+ 						std::vector<heap_oos_column_plan> * oos_plan,
+-						bool * has_oos, size_t * inline_size_after_oos_ptr);
++						bool * has_oos, bool * would_demote_oos,
++						size_t * inline_size_after_oos_ptr);
+ // *INDENT-ON*
+ 
+ static void heap_attrvalue_point_fixed (RECDES * recdes, HEAP_CACHE_ATTRINFO * attr_info, OR_ATTRIBUTE * attrepr,
+@@ -782,7 +783,8 @@ static SCAN_CODE heap_attrinfo_transform_columns_to_disk (THREAD_ENTRY * thread_
+ 
+ static SCAN_CODE heap_attrinfo_transform_to_disk_internal (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,
+ 							   RECDES * old_recdes, record_descriptor * new_recdes,
+-							   int lob_create_flag);
++							   int lob_create_flag, const OID * oos_class_oid,
++							   bool * would_demote_oos, bool increments_already_applied);
+ 
+ static int heap_update_statistics (THREAD_ENTRY * thread_p, const HFID * hfid, HEAP_HDR_STATS * heap_hdr,
+ 				   PGBUF_WATCHER * header_watcher);
+@@ -12297,9 +12299,11 @@ heap_attrinfo_get_record_header_size (HEAP_CACHE_ATTRINFO * attr_info, int paylo
+  *   return: NO_ERROR, or error code
+  *   attr_info(in/out): The attribute information structure
+  *   is_mvcc_class(in): true, if MVCC class
++ *   suppress_oos(in): true to keep every column inline even when the record exceeds the OOS trigger
+  *   offset_size_ptr(out): offset size
+  *   oos_plan(out): selected columns are demoted to OOS
+  *   has_oos(out): true if any column is demoted to OOS
++ *   would_demote_oos(out): with suppress_oos, true if a normal layout would have demoted a column
+  *   inline_size_after_oos_ptr(out): inline heap record size after OOS demotion
+  *
+  * Note: Choose the OOS layout and compute the inline heap record size. This size is not the logical
+@@ -12307,9 +12311,10 @@ heap_attrinfo_get_record_header_size (HEAP_CACHE_ATTRINFO * attr_info, int paylo
+  */
+ // *INDENT-OFF*
+ static int
+-heap_attrinfo_determine_disk_layout (HEAP_CACHE_ATTRINFO * attr_info, bool is_mvcc_class, size_t * offset_size_ptr,
++heap_attrinfo_determine_disk_layout (HEAP_CACHE_ATTRINFO * attr_info, bool is_mvcc_class, bool suppress_oos,
++					     size_t * offset_size_ptr,
+ 					     std::vector<heap_oos_column_plan> * oos_plan, bool * has_oos,
+-					     size_t * inline_size_after_oos_ptr)
++					     bool * would_demote_oos, size_t * inline_size_after_oos_ptr)
+ // *INDENT-ON*
+ {
+ // *INDENT-OFF*
+@@ -12320,6 +12325,10 @@ heap_attrinfo_determine_disk_layout (HEAP_CACHE_ATTRINFO * attr_info, bool is_mv
+   int i;
+ 
+   *has_oos = false;
++  if (would_demote_oos != NULL)
++    {
++      *would_demote_oos = false;
++    }
+ 
+   /* calcuate the entire size of columns */
+   payload_size = heap_attrinfo_get_record_payload_size (attr_info, &column_size);
+@@ -12334,6 +12343,15 @@ heap_attrinfo_determine_disk_layout (HEAP_CACHE_ATTRINFO * attr_info, bool is_mv
+ 	  && attr_info->values[i].last_attrepr->oos_storage == OR_ATTRIBUTE_OOS_STORAGE_FORCE_OUTLINE
+ 	  && !db_value_is_null (&attr_info->values[i].dbvalue) && column_size[i] > OR_OOS_INLINE_SIZE)
+ 	{
++	  if (suppress_oos)
++	    {
++	      if (would_demote_oos != NULL)
++		{
++		  *would_demote_oos = true;
++		}
++	      continue;
++	    }
++
+ 	  (*oos_plan)[i].selected = true;
+ 	  payload_size -= column_size[i];
+ 	  payload_size += OR_OOS_INLINE_SIZE;
+@@ -12369,6 +12387,19 @@ heap_attrinfo_determine_disk_layout (HEAP_CACHE_ATTRINFO * attr_info, bool is_mv
+ 	    }
+ 	}
+ 
++      if (suppress_oos)
++	{
++	  /* The caller only wants a fully-inline image plus the demotion verdict (e.g. to route a
++	   * partitioned write before the target heap of its OOS value chains is known). */
++	  if (would_demote_oos != NULL && !oos_candidates.empty ())
++	    {
++	      *would_demote_oos = true;
++	    }
++
++	  *inline_size_after_oos_ptr = header_size + payload_size;
++	  return NO_ERROR;
++	}
++
+       // *INDENT-OFF*
+       /* Demote order: columns flagged STORAGE PREFER_INLINE sink to the tail and are externalized
+        * only as a last resort; within each priority class, largest first. The idx-descending
+@@ -12680,11 +12711,15 @@ static std::atomic<bool> heap_Test_fail_after_oos_publication_reset { false };
+  * the BLOB/CLOB ELO-locator copy step, with the inline record writer. This logical heap boundary
+  * begins OOS insert publication before any fallible preparation; heap_oos.cpp owns the paired-reset
+  * internals, OOS file lookup, and the batched OOS insert call.
++ *
++ * oos_class_oid designates the class whose heap receives the OOS value chains; NULL means
++ * attr_info->class_oid. A partitioned write must pass the pruned partition class, because the
++ * value chains must live in the OOS file of the heap that stores the record (CBRD-27089).
+  */
+ // *INDENT-OFF*
+ static SCAN_CODE
+ heap_attrinfo_insert_to_oos (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info, int lob_create_flag,
+-			     std::vector<heap_oos_column_plan> * oos_plan)
++			     const OID * oos_class_oid, std::vector<heap_oos_column_plan> * oos_plan)
+ // *INDENT-ON*
+ 
+ {
+@@ -12724,7 +12759,7 @@ heap_attrinfo_insert_to_oos (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr
+       goto cleanup;
+     }
+ 
+-  if (heap_oos_insert_serialized_values (thread_p, &attr_info->class_oid,
++  if (heap_oos_insert_serialized_values (thread_p, oos_class_oid != NULL ? oos_class_oid : &attr_info->class_oid,
+ 					 cubbase::span < oos_insert_request > (requests.data (), requests.size ()))
+       != S_SUCCESS)
+     {
+@@ -12755,7 +12790,45 @@ SCAN_CODE
+ heap_attrinfo_transform_to_disk (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info, RECDES * old_recdes,
+ 				 record_descriptor * new_recdes)
+ {
+-  return heap_attrinfo_transform_to_disk_internal (thread_p, attr_info, old_recdes, new_recdes, LOB_FLAG_INCLUDE_LOB);
++  return heap_attrinfo_transform_to_disk_internal (thread_p, attr_info, old_recdes, new_recdes, LOB_FLAG_INCLUDE_LOB,
++						   NULL, NULL, false);
++}
++
++/*
++ * heap_attrinfo_transform_to_disk_probe_oos () - Transform to disk with OOS demotion suppressed.
++ *
++ *   would_demote_oos(out): true if a normal transform would have demoted at least one column
++ *
++ * Note: Every column stays inline, so the resulting recdes can be larger than a slotted-page
++ * record allows; it is meant for record routing and key extraction, not for direct insertion.
++ * No OOS value chain is written. Side effects on attr_info (LOB copy, INCR/DECR application)
++ * still happen exactly once, so a subsequent heap_attrinfo_transform_to_disk_oos_class call
++ * completes the write without repeating them.
++ */
++SCAN_CODE
++heap_attrinfo_transform_to_disk_probe_oos (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,
++					   RECDES * old_recdes, record_descriptor * new_recdes, int lob_create_flag,
++					   bool * would_demote_oos)
++{
++  return heap_attrinfo_transform_to_disk_internal (thread_p, attr_info, old_recdes, new_recdes, lob_create_flag,
++						   NULL, would_demote_oos, false);
++}
++
++/*
++ * heap_attrinfo_transform_to_disk_oos_class () - Transform to disk, writing OOS value chains to the
++ *                                                heap of oos_class_oid instead of attr_info->class_oid.
++ *
++ * Note: This is the second pass of a two-pass partitioned write; it assumes
++ * heap_attrinfo_transform_to_disk_probe_oos already ran on the same attr_info, so pending
++ * INCR/DECR assignments were already applied and are not applied again here.
++ */
++SCAN_CODE
++heap_attrinfo_transform_to_disk_oos_class (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,
++					   RECDES * old_recdes, record_descriptor * new_recdes, int lob_create_flag,
++					   const OID * oos_class_oid)
++{
++  return heap_attrinfo_transform_to_disk_internal (thread_p, attr_info, old_recdes, new_recdes, lob_create_flag,
++						   oos_class_oid, NULL, true);
+ }
+ 
+ /*
+@@ -12775,7 +12848,8 @@ SCAN_CODE
+ heap_attrinfo_transform_to_disk_except_lob (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,
+ 					    RECDES * old_recdes, record_descriptor * new_recdes)
+ {
+-  return heap_attrinfo_transform_to_disk_internal (thread_p, attr_info, old_recdes, new_recdes, LOB_FLAG_EXCLUDE_LOB);
++  return heap_attrinfo_transform_to_disk_internal (thread_p, attr_info, old_recdes, new_recdes, LOB_FLAG_EXCLUDE_LOB,
++						   NULL, NULL, false);
+ }
+ 
+ /*
+@@ -13232,12 +13306,17 @@ heap_attrinfo_transform_columns_to_disk (THREAD_ENTRY * thread_p, HEAP_CACHE_ATT
+  *   old_recdes(in): where the object's disk format is deposited
+  *   new_recdes(in):
+  *   lob_create_flag(in):
++ *   oos_class_oid(in): class whose heap receives the OOS value chains; NULL means attr_info->class_oid
++ *   would_demote_oos(out): non-NULL suppresses OOS demotion and reports whether it would have happened
++ *   increments_already_applied(in): true if a previous probe pass already applied INCR/DECR assignments
+  *
+  * Note: Transform the object represented by attr_info to disk format
+  */
+ static SCAN_CODE
+ heap_attrinfo_transform_to_disk_internal (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,
+-					  RECDES * old_recdes, record_descriptor * new_recdes, int lob_create_flag)
++					  RECDES * old_recdes, record_descriptor * new_recdes, int lob_create_flag,
++					  const OID * oos_class_oid, bool * would_demote_oos,
++					  bool increments_already_applied)
+ {
+   OR_BUF buf;
+   size_t inline_size_after_oos, mvcc_extra;
+@@ -13245,6 +13324,8 @@ heap_attrinfo_transform_to_disk_internal (THREAD_ENTRY * thread_p, HEAP_CACHE_AT
+   SCAN_CODE status;
+   bool is_mvcc_class, is_update;
+   bool has_oos;
++  bool suppress_oos = would_demote_oos != NULL;
++  int i;
+   // *INDENT-OFF*
+   std::vector<heap_oos_column_plan> oos_plan (attr_info->num_values);
+   std::set<int> incremented_attrids;
+@@ -13258,6 +13339,19 @@ heap_attrinfo_transform_to_disk_internal (THREAD_ENTRY * thread_p, HEAP_CACHE_AT
+       return S_ERROR;
+     }
+ 
++  if (increments_already_applied)
++    {
++      /* a probe pass already applied the pending INCR/DECR assignments to the dbvalues; pre-mark
++       * them so the column writer below does not apply them a second time */
++      for (i = 0; i < attr_info->num_values; i++)
++	{
++	  if (attr_info->values[i].do_increment != 0)
++	    {
++	      incremented_attrids.insert (i);
++	    }
++	}
++    }
++
+   /* get any of the values that have not been set/read */
+   if (heap_attrinfo_set_uninitialized (thread_p, &attr_info->inst_oid, old_recdes, attr_info) != NO_ERROR)
+     {
+@@ -13271,8 +13365,8 @@ heap_attrinfo_transform_to_disk_internal (THREAD_ENTRY * thread_p, HEAP_CACHE_AT
+   is_mvcc_class = !mvcc_is_mvcc_disabled_class (&(attr_info->class_oid));
+ 
+   /* determine the layout and the size */
+-  if (heap_attrinfo_determine_disk_layout (attr_info, is_mvcc_class, &offset_size, &oos_plan, &has_oos,
+-					   &inline_size_after_oos) != NO_ERROR)
++  if (heap_attrinfo_determine_disk_layout (attr_info, is_mvcc_class, suppress_oos, &offset_size, &oos_plan, &has_oos,
++					   would_demote_oos, &inline_size_after_oos) != NO_ERROR)
+     {
+       return S_ERROR;
+     }
+@@ -13307,7 +13401,7 @@ heap_attrinfo_transform_to_disk_internal (THREAD_ENTRY * thread_p, HEAP_CACHE_AT
+   if (has_oos)
+     {
+       /* insert big columns to OOS */
+-      status = heap_attrinfo_insert_to_oos (thread_p, attr_info, lob_create_flag, &oos_plan);
++      status = heap_attrinfo_insert_to_oos (thread_p, attr_info, lob_create_flag, oos_class_oid, &oos_plan);
+       if (status != S_SUCCESS)
+ 	{
+ 	  return S_ERROR;
+@@ -28431,6 +28525,6 @@ bridge_heap_attrinfo_insert_to_oos (THREAD_ENTRY * thread_p, const OID * class_o
+ 
+   COPY_OID (&attr_info.class_oid, class_oid);
+   attr_info.num_values = 0;
+-  return heap_attrinfo_insert_to_oos (thread_p, &attr_info, LOB_FLAG_INCLUDE_LOB, &oos_plan);
++  return heap_attrinfo_insert_to_oos (thread_p, &attr_info, LOB_FLAG_INCLUDE_LOB, NULL, &oos_plan);
+ }
+ #endif /* CUBRID_UNIT_TEST_ENABLED */
+diff --git a/src/storage/heap_file.h b/src/storage/heap_file.h
+index b68928080..da2739418 100644
+--- a/src/storage/heap_file.h
++++ b/src/storage/heap_file.h
+@@ -507,6 +507,12 @@ extern SCAN_CODE heap_attrinfo_transform_to_disk (THREAD_ENTRY * thread_p, HEAP_
+ 						  RECDES * old_recdes, record_descriptor * new_recdes);
+ extern SCAN_CODE heap_attrinfo_transform_to_disk_except_lob (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,
+ 							     RECDES * old_recdes, record_descriptor * new_recdes);
++extern SCAN_CODE heap_attrinfo_transform_to_disk_probe_oos (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,
++							    RECDES * old_recdes, record_descriptor * new_recdes,
++							    int lob_create_flag, bool * would_demote_oos);
++extern SCAN_CODE heap_attrinfo_transform_to_disk_oos_class (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,
++							    RECDES * old_recdes, record_descriptor * new_recdes,
++							    int lob_create_flag, const OID * oos_class_oid);
+ 
+ extern DB_VALUE *heap_attrinfo_generate_key (THREAD_ENTRY * thread_p, int n_atts, int *att_ids, int *atts_prefix_length,
+ 					     HEAP_CACHE_ATTRINFO * attr_info, RECDES * recdes, DB_VALUE * dbvalue,
+diff --git a/src/transaction/locator_sr.c b/src/transaction/locator_sr.c
+index 06bea591e..37da37a2f 100644
+--- a/src/transaction/locator_sr.c
++++ b/src/transaction/locator_sr.c
+@@ -7475,12 +7475,18 @@ error:
+  *   copyarea_length_hint(in): An estimated size for the LC_COPYAREA or -1 if
+  *                             an estimated size is not known.
+  *   lob_create_flag(in) :
++ *   oos_class_oid(in): class whose heap receives the OOS value chains; NULL means
++ *                      attr_info->class_oid. A partitioned write passes the pruned partition.
++ *   probe_would_demote_oos(out): when non-NULL, suppress OOS demotion (build a fully-inline
++ *                                image, write no OOS value chain) and report whether a normal
++ *                                transform would have demoted a column.
+  *
+  * Note: The allocated should be freed by using locator_free_copy_area ()
+  */
+ LC_COPYAREA *
+ locator_allocate_copy_area_by_attr_info (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info, RECDES * old_recdes,
+-					 RECDES * new_recdes, const int copyarea_length_hint, int lob_create_flag)
++					 RECDES * new_recdes, const int copyarea_length_hint, int lob_create_flag,
++					 const OID * oos_class_oid, bool * probe_would_demote_oos)
+ {
+   LC_COPYAREA *copyarea = NULL;
+   int copyarea_length = copyarea_length_hint <= 0 ? DB_PAGESIZE : copyarea_length_hint;
+@@ -7504,7 +7510,17 @@ locator_allocate_copy_area_by_attr_info (THREAD_ENTRY * thread_p, HEAP_CACHE_ATT
+   new_recdes->data = copyarea->mem;
+   new_recdes->area_size = copyarea->length;
+ 
+-  if (lob_create_flag == LOB_FLAG_EXCLUDE_LOB)
++  if (probe_would_demote_oos != NULL)
++    {
++      scan = heap_attrinfo_transform_to_disk_probe_oos (thread_p, attr_info, old_recdes, &build_record,
++							lob_create_flag, probe_would_demote_oos);
++    }
++  else if (oos_class_oid != NULL)
++    {
++      scan = heap_attrinfo_transform_to_disk_oos_class (thread_p, attr_info, old_recdes, &build_record,
++							lob_create_flag, oos_class_oid);
++    }
++  else if (lob_create_flag == LOB_FLAG_EXCLUDE_LOB)
+     {
+       scan = heap_attrinfo_transform_to_disk_except_lob (thread_p, attr_info, old_recdes, &build_record);
+     }
+@@ -7692,9 +7708,63 @@ locator_attribute_info_force (THREAD_ENTRY * thread_p, const HFID * hfid, OID *
+     case LC_FLUSH_INSERT:
+     case LC_FLUSH_INSERT_PRUNE:
+     case LC_FLUSH_INSERT_PRUNE_VERIFY:
+-      copyarea =
+-	locator_allocate_copy_area_by_attr_info (thread_p, attr_info, old_recdes, &new_recdes, -1,
+-						 LOB_FLAG_INCLUDE_LOB);
++      if (pruning_type != DB_NOT_PARTITIONED_CLASS)
++	{
++	  bool would_demote_oos = false;
++
++	  /* An OOS value chain must live in the OOS file of the heap that stores its record, and the
++	   * target heap of a partitioned write is only known after pruning. Build the record with OOS
++	   * demotion suppressed, prune with that fully-inline image, and when demotion is needed
++	   * rebuild the record with its OOS value chains written to the pruned partition's heap
++	   * (CBRD-27089). */
++	  copyarea =
++	    locator_allocate_copy_area_by_attr_info (thread_p, attr_info, old_recdes, &new_recdes, -1,
++						     LOB_FLAG_INCLUDE_LOB, NULL, &would_demote_oos);
++	  if (copyarea != NULL && would_demote_oos)
++	    {
++	      OID pruned_class_oid;
++	      HFID pruned_hfid;
++	      OID superclass_oid;
++
++	      COPY_OID (&pruned_class_oid, &class_oid);
++	      HFID_COPY (&pruned_hfid, &class_hfid);
++	      OID_SET_NULL (&superclass_oid);
++
++	      if (LC_IS_FLUSH_INSERT (operation))
++		{
++		  error_code =
++		    partition_prune_insert (thread_p, &class_oid, &new_recdes, scan_cache, pcontext, pruning_type,
++					    &pruned_class_oid, &pruned_hfid, &superclass_oid);
++		}
++	      else
++		{
++		  assert (LC_IS_FLUSH_UPDATE (operation));
++		  error_code =
++		    partition_prune_update (thread_p, &class_oid, &new_recdes, pcontext, pruning_type,
++					    &pruned_class_oid, &pruned_hfid, &superclass_oid);
++		}
++
++	      locator_free_copy_area (copyarea);
++	      copyarea = NULL;
++	      new_recdes.data = NULL;
++	      new_recdes.area_size = 0;
++
++	      if (error_code != NO_ERROR)
++		{
++		  break;
++		}
++
++	      copyarea =
++		locator_allocate_copy_area_by_attr_info (thread_p, attr_info, old_recdes, &new_recdes, -1,
++							 LOB_FLAG_INCLUDE_LOB, &pruned_class_oid, NULL);
++	    }
++	}
++      else
++	{
++	  copyarea =
++	    locator_allocate_copy_area_by_attr_info (thread_p, attr_info, old_recdes, &new_recdes, -1,
++						     LOB_FLAG_INCLUDE_LOB, NULL, NULL);
++	}
+       if (copyarea == NULL)
+ 	{
+ 	  error_code = ER_FAILED;
+@@ -13781,7 +13851,7 @@ locator_mvcc_reev_cond_assigns (THREAD_ENTRY * thread_p, OID * class_oid, const
+ 	}
+       mvcc_reev_data->copyarea =
+ 	locator_allocate_copy_area_by_attr_info (thread_p, mvcc_reev_data->curr_attrinfo, recdes,
+-						 mvcc_reev_data->new_recdes, -1, LOB_FLAG_INCLUDE_LOB);
++						 mvcc_reev_data->new_recdes, -1, LOB_FLAG_INCLUDE_LOB, NULL, NULL);
+       if (mvcc_reev_data->copyarea == NULL)
+ 	{
+ 	  ev_res = V_ERROR;
+diff --git a/src/transaction/locator_sr.h b/src/transaction/locator_sr.h
+index c3c5a0489..e38d7e9e6 100644
+--- a/src/transaction/locator_sr.h
++++ b/src/transaction/locator_sr.h
+@@ -83,7 +83,8 @@ extern int locator_attribute_info_force (THREAD_ENTRY * thread_p, const HFID * h
+ 					 bool need_locking);
+ extern LC_COPYAREA *locator_allocate_copy_area_by_attr_info (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,
+ 							     RECDES * old_recdes, RECDES * new_recdes,
+-							     const int copyarea_length_hint, int lob_create_flag);
++							     const int copyarea_length_hint, int lob_create_flag,
++							     const OID * oos_class_oid, bool * probe_would_demote_oos);
+ extern int locator_other_insert_delete (THREAD_ENTRY * thread_p, HFID * hfid, OID * oid, BTID * btid,
+ 					bool btid_dup_key_locked, HFID * newhfid, OID * newoid,
+ 					HEAP_CACHE_ATTRINFO * attr_info, HEAP_SCANCACHE * scan_cache, int *force_count,
+diff --git a/unit_tests/oos/sql/test_oos_sql_show.cpp b/unit_tests/oos/sql/test_oos_sql_show.cpp
+index b93900fc1..036631a9c 100644
+--- a/unit_tests/oos/sql/test_oos_sql_show.cpp
++++ b/unit_tests/oos/sql/test_oos_sql_show.cpp
+@@ -21,6 +21,7 @@
+  */
+ 
+ #include <algorithm>
++#include <string>
+ 
+ #include "test_oos_sql_common.hpp"
+ 
+@@ -154,6 +155,38 @@ namespace
+     db_value_clear (&val);
+     return rc;
+   }
++
++  static int
++  get_string_column (DB_QUERY_RESULT *result, int column, std::string *out_val)
++  {
++    DB_VALUE val;
++    int rc;
++
++    db_make_null (&val);
++    rc = db_query_get_tuple_value (result, column, &val);
++    if (rc == NO_ERROR)
++      {
++	const char *str = db_get_string (&val);
++	if (str == nullptr)
++	  {
++	    rc = ER_FAILED;
++	  }
++	else
++	  {
++	    *out_val = str;
++	  }
++      }
++
++    db_value_clear (&val);
++    return rc;
++  }
++
++  static std::string
++  unqualified_table_name (const std::string &table_name)
++  {
++    std::string::size_type separator = table_name.rfind ('.');
++    return separator == std::string::npos ? table_name : table_name.substr (separator + 1);
++  }
+ }
+ 
+ class OosSqlShow : public ::testing::Test
+@@ -351,6 +384,75 @@ TEST_F (OosSqlShow, ShowAllHeapOosReportsPartitionRows)
+   db_query_end (result);
+ }
+ 
++TEST_F (OosSqlShow, PartitionedForceOutlineStoresOosInPrunedHeap)
++{
++  int rc = exec_sql ("CREATE TABLE t_oos_show_part ("
++		     "id INT, data_col BIT VARYING STORAGE FORCE_OUTLINE) "
++		     "PARTITION BY RANGE (id) ("
++		     "PARTITION p0 VALUES LESS THAN (10), "
++		     "PARTITION p1 VALUES LESS THAN MAXVALUE)");
++  ASSERT_GE (rc, 0);
++  rc = exec_sql ("INSERT INTO t_oos_show_part VALUES (1, REPEAT(X'EE', 64))");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  int value_matches = 0;
++  rc = fetch_single_int ("SELECT data_col = CAST(REPEAT(X'EE', 64) AS BIT VARYING) "
++			 "FROM t_oos_show_part WHERE id = 1", &value_matches);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (value_matches, 1);
++
++  DB_QUERY_RESULT *result = nullptr;
++  rc = show_heap_oos_query ("SHOW ALL HEAP OOS OF t_oos_show_part", &result);
++  ASSERT_EQ (rc, NO_ERROR);
++  ASSERT_NE (result, nullptr);
++
++  bool saw_root = false;
++  bool saw_p0 = false;
++  bool saw_p1 = false;
++  do
++    {
++      std::string table_name;
++      int has_oos = -1;
++      int num_recs = -1;
++
++      rc = get_string_column (result, COL_TABLE_NAME, &table_name);
++      ASSERT_EQ (rc, NO_ERROR);
++      rc = get_int_column (result, COL_HAS_OOS_FILE, &has_oos);
++      ASSERT_EQ (rc, NO_ERROR);
++      rc = get_int_column (result, COL_OOS_NUM_RECS, &num_recs);
++      ASSERT_EQ (rc, NO_ERROR);
++
++      table_name = unqualified_table_name (table_name);
++      if (table_name == "t_oos_show_part")
++	{
++	  saw_root = true;
++	  EXPECT_EQ (has_oos, 0);
++	  EXPECT_EQ (num_recs, 0);
++	}
++      else if (table_name == "t_oos_show_part__p__p0")
++	{
++	  saw_p0 = true;
++	  EXPECT_EQ (has_oos, 1);
++	  EXPECT_EQ (num_recs, 1);
++	}
++      else if (table_name == "t_oos_show_part__p__p1")
++	{
++	  saw_p1 = true;
++	  EXPECT_EQ (has_oos, 0);
++	  EXPECT_EQ (num_recs, 0);
++	}
++    }
++  while ((rc = db_query_next_tuple (result)) == DB_CURSOR_SUCCESS);
++
++  EXPECT_EQ (rc, DB_CURSOR_END);
++  EXPECT_TRUE (saw_root);
++  EXPECT_TRUE (saw_p0);
++  EXPECT_TRUE (saw_p1);
++
++  db_query_end (result);
++}
++
+ int
+ main (int argc, char **argv)
+ {

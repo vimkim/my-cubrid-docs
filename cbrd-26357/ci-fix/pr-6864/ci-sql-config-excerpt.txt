@@ -1,0 +1,110 @@
+[SQL] CONFIG FILE: /home/cubrid-testtools/CTP/conf/sql.conf
+[sql/cubrid.conf]
+max_plan_cache_entries=1000
+unicode_input_normalization=no
+ha_mode=yes
+java_stored_procedure=yes
+test_mode=yes
+lock_timeout=10sec
+cubrid_port_id=1822
+
+[sql/cubrid_broker.conf]
+
+[sql/cubrid_broker.conf/%query_editor]
+SERVICE=OFF
+
+[sql/cubrid_broker.conf/%BROKER1]
+BROKER_PORT=33120
+APPL_SERVER_SHM_ID=33120
+
+[sql/cubrid_ha.conf]
+ha_port_id=59901
+ha_apply_max_mem_size=300
+ha_mode=yes
+
+[sql/cubrid_broker.conf/broker]
+MASTER_SHM_ID=33122
+
+[sql]
+need_make_locale=yes
+scenario=${HOME}/cubrid-testcases/sql
+test_category=sql
+db_charset=en_US
+testcase_exclude_from_file=${CTP_HOME}/conf/exclusions.txt
+enable_memory_leak=no
+jdbc_config_file=test_default.xml
+
+
+----------END OF FILE----------
+stop database basic
+Could not connect to master server on localhost
+delete database basic
+Database "basic" is unknown, or the file "databases.txt" cannot be accessed.
+Filtering out deprecated parameters for CUBRID 11.5+
+start config ha
+make locale now
+ Running make_locale.sh with parameters:
+         BUILD_TARGET    = 64bit
+         BUILD_MODE      = debug
+         SELECTED_LOCALE = all_locales
+
+Generating locale C file for all_locales
+Compiling locale library
+Building shared object for platform 64bit, in debug mode, with tag all_locales
+Done.
+Moving /home/CUBRID/locales/loclib/libcubrid_all_locales.so to /home/CUBRID/lib
+Done.
+Removing locale C source file /home/CUBRID/locales/loclib/locale.c
+Done.
+The library for selected locale(s) has been created at /home/CUBRID/lib/libcubrid_all_locales.so
+To check compatibility and synchronize your existing databases, run:
+	cubrid synccolldb <database-name>
+MAKE basic DATABASE (default size)...
+cubrid createdb  basic en_US.utf8
+Load Java Stored Procedure Classes
+rm: cannot remove `*.class': No such file or directory
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: SpTest6.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+Load jdbc_cubrid415.class...
+Load SpTest1.class...
+Load SpTest2.class...
+Load SpTest3.class...
+Load SpTest4bit64.class...
+Load SpTest4.class...
+Load SpTest5.class...
+Load SpTest6.class...
+Load SpTest7.class...
+Load SpTest8.class...
+Load SpTest9.class...
+Load SpTest.class...
+start database basic
+++ cubrid service is not running.
+@ cubrid master start
+++ cubrid master start: success
+@ cubrid broker start
+++ cubrid broker start: success
+start database basic
+restart broker...
+Result Root Dir:/home/cubrid-testtools/CTP/sql/result/y2026/m9/schedule_linux_sql_64bit_0818082923_11.5.0.2648-f4299ac
+
+
+---------------execute begin--------------------
+[18:08:31] Testing /home/cubrid-testcases/sql/_03_object_oriented/_01_user_defined_type/_001_class/cases/1001.sql (1/2091 0.05%) [OK]
+[18:08:31] Testing /home/cubrid-testcases/sql/_03_object_oriented/_01_user_defined_type/_001_class/cases/1002.sql (2/2091 0.10%) [OK]
+[18:08:31] Testing /home/cubrid-testcases/sql/_03_object_oriented/_01_user_defined_type/_001_class/cases/1003.sql (3/2091 0.14%) [OK]
+[18:08:31] Testing /home/cubrid-testcases/sql/_03_object_oriented/_01_user_defined_type/_001_class/cases/1004.sql (4/2091 0.19%) [OK]
+[18:08:31] Testing /home/cubrid-testcases/sql/_03_object_oriented/_01_user_defined_type/_001_class/cases/1005.sql (5/2091 0.24%) [OK]
+[18:08:31] Testing /home/cubrid-testcases/sql/_03_object_oriented/_01_user_defined_type/_001_class/cases/1006.sql (6/2091 0.29%) [OK]
+[18:08:31] Testing /home/cubrid-testcases/sql/_03_object_oriented/_01_user_defined_type/_001_class/cases/1007.sql (7/2091 0.33%) [OK]
+[18:08:31] Testing /home/cubrid-testcases/sql/_03_object_oriented/_01_user_defined_type/_001_class/cases/1008.sql (8/2091 0.38%) [OK]
+[18:08:31] Testing /home/cubrid-testcases/sql/_03_object_oriented/_01_user_defined_type/_001_class/cases/1009.sql (9/2091 0.43%) [OK]
+[18:08:31] Testing /home/cubrid-testcases/sql/_03_object_oriented/_01_user_defined_type/_001_class/cases/1010.sql (10/2091 0.48%) [OK]
+[18:08:31] Testing /home/cubrid-testcases/sql/_03_object_oriented/_01_user_defined_type/_001_class/cases/1011.sql (11/2091 0.53%) [OK]
+[18:08:31] Testing /home/cubrid-testcases/sql/_03_object_oriented/_01_user_defined_type/_001_class/cases/1012.sql (12/2091 0.57%) [OK]
+[18:08:31] Testing /home/cubrid-testcases/sql/_03_object_oriented/_01_user_defined_type/_001_class/cases/1013.sql (13/2091 0.62%) [OK]
+[18:08:31] Testing /home/cubrid-testcases/sql/_03_object_oriented/_01_user_defined_type/_001_class/cases/1014.sql (14/2091 0.67%) [OK]
+[18:08:31] Testing /home/cubrid-testcases/sql/_03_object_oriented/_01_user_defined_type/_001_class/cases/1015.sql (15/2091 0.72%) [OK]
+[18:08:31] Testing /home/cubrid-testcases/sql/_03_object_oriented/_01_user_defined_type/_002_virtual_class/cases/1001.sql (16/2091 0.77%) [OK]
+[18:08:31] Testing /home/cubrid-

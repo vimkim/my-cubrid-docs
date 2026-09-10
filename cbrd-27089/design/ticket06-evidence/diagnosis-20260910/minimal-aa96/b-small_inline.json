@@ -1,0 +1,1414 @@
+{
+  "provenance": {
+    "label": "b-small_inline",
+    "side": "b",
+    "workload": "small_inline",
+    "source": "/home/vimkim/gh/cb/pr7600-timing-base988",
+    "head": "988a4d2fa258222aef792a2a6afde9641b8c5228",
+    "source_status": " m cubrid-cci\n M src/query/partition.c\n M src/query/partition_sr.h\n M src/storage/heap_file.c\n M src/storage/heap_file.h\n M src/transaction/locator_sr.c\n M unit_tests/oos/sql/CMakeLists.txt\n M unit_tests/oos/sql/test_oos_sql_show.cpp\n?? unit_tests/oos/sql/test_oos_sql_pr7600_minimal.cpp\n?? unit_tests/oos/sql/test_oos_sql_pr7600_no_payload.cpp\n?? unit_tests/oos/sql/test_oos_sql_pr7600_stream.cpp\n",
+    "engine_diff": "diff --git a/src/query/partition.c b/src/query/partition.c\nindex 840d7f4cb..af10ec727 100644\n--- a/src/query/partition.c\n+++ b/src/query/partition.c\n@@ -155,13 +155,6 @@ static MATCH_STATUS partition_prune_list (PRUNING_CONTEXT * pinfo, const DB_VALU\n \t\t\t\t\t  PRUNING_BITSET * pruned);\n static MATCH_STATUS partition_prune_hash (PRUNING_CONTEXT * pinfo, const DB_VALUE * val, const PRUNING_OP op,\n \t\t\t\t\t  PRUNING_BITSET * pruned);\n-static int partition_find_partition_for_expr (THREAD_ENTRY * thread_p, PRUNING_CONTEXT * pinfo, const OID * class_oid,\n-\t\t\t\t\t      OR_PARTITION ** partition);\n-static int partition_start_key_attrinfo (THREAD_ENTRY * thread_p, PRUNING_CONTEXT * pinfo);\n-static int partition_prune_insert_internal (THREAD_ENTRY * thread_p, const OID * class_oid, RECDES * recdes,\n-\t\t\t\t\t    HEAP_CACHE_ATTRINFO * attr_info, PRUNING_CONTEXT * pcontext,\n-\t\t\t\t\t    int pruning_type, OID * pruned_class_oid, HFID * pruned_hfid,\n-\t\t\t\t\t    OID * superclass_oid);\n static int partition_find_partition_for_record (PRUNING_CONTEXT * pinfo, const OID * class_oid, RECDES * recdes,\n \t\t\t\t\t\tOID * partition_oid, HFID * partition_hfid);\n #if defined (ENABLE_UNUSED_FUNCTION)\n@@ -3461,42 +3454,64 @@ error_exit:\n }\n \n /*\n- * partition_find_partition_for_expr () - evaluate the bound partition expression\n- *                                       and find its single destination\n+ * partition_find_partition_for_record () - find the partition in which a\n+ *\t\t\t\t\t    record should be placed\n  * return : error code or NO_ERROR\n- * thread_p (in) : thread entry from the pruning context\n- * pinfo (in/out) : loaded pruning context with a bound, readable key value\n- * class_oid (in) : class OID used for expression evaluation\n- * partition (out) : borrowed destination, valid until the context is cleared;\n- *                   written only on success\n- *\n- * The caller owns the bound attributes and their values, and supplies the\n- * evaluation instance OID in pinfo->attr_info.inst_oid. Evaluation may populate\n- * expression caches; it does not transfer ownership or clear values. Record\n- * decoding, representation changes and explicit-partition validation belong\n- * to callers.\n+ * pinfo (in)\t  : pruning context\n+ * class_oid (in) : OID of the root class\n+ * recdes (in)\t  : record descriptor\n+ * partition_oid (in/out) : OID of the partition in which the record fits\n+ * partition_hfid (in/out): HFID of the partition in which the record fits\n  */\n static int\n-partition_find_partition_for_expr (THREAD_ENTRY * thread_p, PRUNING_CONTEXT * pinfo, const OID * class_oid,\n-\t\t\t\t   OR_PARTITION ** partition)\n+partition_find_partition_for_record (PRUNING_CONTEXT * pinfo, const OID * class_oid, RECDES * recdes,\n+\t\t\t\t     OID * partition_oid, HFID * partition_hfid)\n {\n   PRUNING_BITSET pruned;\n   PRUNING_BITSET_ITERATOR it;\n+  bool clear_dbvalues = false;\n   DB_VALUE *result = NULL;\n   MATCH_STATUS status = MATCH_NOT_FOUND;\n   int error = NO_ERROR, count = 0, pos;\n   PRUNING_OP op = PO_EQ;\n+  REPR_ID repr_id = NULL_REPRID;\n \n-  assert (partition != NULL);\n+  assert (partition_oid != NULL);\n+  assert (partition_hfid != NULL);\n \n   pruningset_init (&pruned, PARTITIONS_COUNT (pinfo));\n \n+  if (pinfo->is_attr_info_inited == false)\n+    {\n+      error = heap_attrinfo_start (pinfo->thread_p, &pinfo->root_oid, 1, &pinfo->attr_id, &pinfo->attr_info);\n+      if (error != NO_ERROR)\n+\t{\n+\t  goto cleanup;\n+\t}\n+\n+      partition_set_cache_info_for_expr (pinfo->partition_pred->func_regu, pinfo->attr_id, &pinfo->attr_info);\n+      pinfo->is_attr_info_inited = true;\n+    }\n+\n+  /* set root representation id to the recdes so that we can read the value as belonging to the partitioned table */\n+  repr_id = or_rep_id (recdes);\n+  or_set_rep_id (recdes, pinfo->root_repr_id);\n+\n+  error = heap_attrinfo_read_dbvalues (pinfo->thread_p, &pinfo->attr_info.inst_oid, recdes, &pinfo->attr_info);\n+\n+  or_set_rep_id (recdes, repr_id);\n+  if (error != NO_ERROR)\n+    {\n+      goto cleanup;\n+    }\n+  clear_dbvalues = true;\n+\n   error =\n-    fetch_peek_dbval (thread_p, pinfo->partition_pred->func_regu, NULL, (OID *) class_oid,\n+    fetch_peek_dbval (pinfo->thread_p, pinfo->partition_pred->func_regu, NULL, (OID *) class_oid,\n \t\t      &pinfo->attr_info.inst_oid, NULL, &result);\n   if (error != NO_ERROR)\n     {\n-      return error;\n+      goto cleanup;\n     }\n \n   assert (result != NULL);\n@@ -3512,7 +3527,8 @@ partition_find_partition_for_expr (THREAD_ENTRY * thread_p, PRUNING_CONTEXT * pi\n   if (status != MATCH_OK)\n     {\n       er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_PARTITION_NOT_EXIST, 0);\n-      return ER_PARTITION_NOT_EXIST;\n+      error = ER_PARTITION_NOT_EXIST;\n+      goto cleanup;\n     }\n \n   if (count != 1)\n@@ -3530,7 +3546,7 @@ partition_find_partition_for_expr (THREAD_ENTRY * thread_p, PRUNING_CONTEXT * pi\n \t  /* This is an internal *error (allocation, etc). Error was set by the calls above, just set *error code */\n \t  error = pinfo->error_code;\n \t}\n-      return error;\n+      goto cleanup;\n     }\n \n   pruningset_iterator_init (&pruned, &it);\n@@ -3538,121 +3554,8 @@ partition_find_partition_for_expr (THREAD_ENTRY * thread_p, PRUNING_CONTEXT * pi\n   pos = pruningset_iterator_next (&it);\n   assert_release (pos >= 0);\n \n-  *partition = &pinfo->partitions[pos + 1];\n-  return NO_ERROR;\n-}\n-\n-/*\n- * partition_start_key_attrinfo () - bind the expression to the context-owned key slot\n- */\n-static int\n-partition_start_key_attrinfo (THREAD_ENTRY * thread_p, PRUNING_CONTEXT * pinfo)\n-{\n-  int error;\n-\n-  if (!pinfo->is_attr_info_inited)\n-    {\n-      error = heap_attrinfo_start (thread_p, &pinfo->root_oid, 1, &pinfo->attr_id, &pinfo->attr_info);\n-      if (error != NO_ERROR)\n-\t{\n-\t  return error;\n-\t}\n-      partition_set_cache_info_for_expr (pinfo->partition_pred->func_regu, pinfo->attr_id, &pinfo->attr_info);\n-      pinfo->is_attr_info_inited = true;\n-    }\n-  return NO_ERROR;\n-}\n-\n-/*\n- * partition_find_partition_for_attrinfo () - route one effective key without preparing the source row\n- */\n-static int\n-partition_find_partition_for_attrinfo (THREAD_ENTRY * thread_p, PRUNING_CONTEXT * pcontext, const OID * class_oid,\n-\t\t\t\t       HEAP_CACHE_ATTRINFO * attr_info, RECDES * old_recdes,\n-\t\t\t\t       OID * pruned_class_oid, HFID * pruned_hfid)\n-{\n-  int error = partition_start_key_attrinfo (thread_p, pcontext);\n-  if (error != NO_ERROR)\n-    {\n-      return error;\n-    }\n-\n-  /* Expression bindings must use the existing stable slot, not a stack DB_VALUE. */\n-  HEAP_ATTRVALUE *key = &pcontext->attr_info.values[0];\n-  OR_PARTITION *partition = NULL;\n-  assert (pcontext->attr_info.num_values == 1 && key->attrid == pcontext->attr_id);\n-  /* A duplicate-key index probe can leave its key in this same context. Retain the slot/bindings,\n-   * but release that previous value before preparing this write's key. Source assignments are separate. */\n-  assert (attr_info != &pcontext->attr_info);\n-  error = heap_attrinfo_clear_dbvalues (&pcontext->attr_info);\n-  if (error != NO_ERROR)\n-    {\n-      return error;\n-    }\n-  key->state = HEAP_READ_ATTRVALUE;\n-  error = heap_attrinfo_get_effective_key (thread_p, attr_info, pcontext->attr_id, old_recdes, &key->dbvalue);\n-  if (error == NO_ERROR)\n-    {\n-      error = partition_find_partition_for_expr (thread_p, pcontext, class_oid, &partition);\n-    }\n-  if (error == NO_ERROR)\n-    {\n-      COPY_OID (pruned_class_oid, &partition->class_oid);\n-      HFID_COPY (pruned_hfid, &partition->class_hfid);\n-    }\n-  heap_attrinfo_clear_dbvalues (&pcontext->attr_info);\n-  return error;\n-}\n-\n-/*\n- * partition_find_partition_for_record () - find the partition in which a\n- *                                        record should be placed\n- * return : error code or NO_ERROR\n- * pinfo (in)     : pruning context\n- * class_oid (in) : OID of the root class or the source partition\n- * recdes (in)    : record descriptor\n- * partition_oid (in/out) : OID of the partition in which the record fits\n- * partition_hfid (in/out): HFID of the partition in which the record fits\n- */\n-static int\n-partition_find_partition_for_record (PRUNING_CONTEXT * pinfo, const OID * class_oid, RECDES * recdes,\n-\t\t\t\t     OID * partition_oid, HFID * partition_hfid)\n-{\n-  bool clear_dbvalues = false;\n-  int error = NO_ERROR;\n-  REPR_ID repr_id = NULL_REPRID;\n-  OR_PARTITION *partition = NULL;\n-\n-  assert (partition_oid != NULL);\n-  assert (partition_hfid != NULL);\n-\n-  error = partition_start_key_attrinfo (pinfo->thread_p, pinfo);\n-  if (error != NO_ERROR)\n-    {\n-      goto cleanup;\n-    }\n-\n-  /* set root representation id to the recdes so that we can read the value as belonging to the partitioned table */\n-  repr_id = or_rep_id (recdes);\n-  or_set_rep_id (recdes, pinfo->root_repr_id);\n-\n-  error = heap_attrinfo_read_dbvalues (pinfo->thread_p, &pinfo->attr_info.inst_oid, recdes, &pinfo->attr_info);\n-\n-  or_set_rep_id (recdes, repr_id);\n-  if (error != NO_ERROR)\n-    {\n-      goto cleanup;\n-    }\n-  clear_dbvalues = true;\n-\n-  error = partition_find_partition_for_expr (pinfo->thread_p, pinfo, class_oid, &partition);\n-  if (error != NO_ERROR)\n-    {\n-      goto cleanup;\n-    }\n-\n-  COPY_OID (partition_oid, &partition->class_oid);\n-  HFID_COPY (partition_hfid, &partition->class_hfid);\n+  COPY_OID (partition_oid, &pinfo->partitions[pos + 1].class_oid);\n+  HFID_COPY (partition_hfid, &pinfo->partitions[pos + 1].class_hfid);\n \n   if (!OID_EQ (class_oid, partition_oid))\n     {\n@@ -3663,7 +3566,7 @@ partition_find_partition_for_record (PRUNING_CONTEXT * pinfo, const OID * class_\n        * will be exactly the same. Because of this, we can take a shortcut here and only update the bits from the\n        * representation id */\n \n-      repr_id = partition->rep_id;\n+      repr_id = pinfo->partitions[pos + 1].rep_id;\n       error = or_set_rep_id (recdes, repr_id);\n     }\n \n@@ -3677,12 +3580,12 @@ cleanup:\n }\n \n /*\n- * partition_prune_insert_internal () - shared context and validation contract for INSERT routing\n+ * partition_prune_insert () - perform pruning for insert\n  * return : error code or NO_ERROR\n  * thread_p (in)  : thread entry\n  * class_oid (in) : OID of the root class\n  * recdes (in)\t  : Record describing the new object\n- * attr_info (in): source INSERT assignments, or NULL to route recdes instead\n+ * scan_cache (in): Heap scan cache\n  * pcontext (in)  : pruning context\n  * pruning_type (in) : pruning type\n  * pruned_class_oid (in/out) : partition to insert into\n@@ -3698,10 +3601,10 @@ cleanup:\n  * partition_init_pruning_context) and pass it to this function for each\n  * insert operation in the query.\n  */\n-static int\n-partition_prune_insert_internal (THREAD_ENTRY * thread_p, const OID * class_oid, RECDES * recdes,\n-\t\t\t\t HEAP_CACHE_ATTRINFO * attr_info, PRUNING_CONTEXT * pcontext, int pruning_type,\n-\t\t\t\t OID * pruned_class_oid, HFID * pruned_hfid, OID * superclass_oid)\n+int\n+partition_prune_insert (THREAD_ENTRY * thread_p, const OID * class_oid, RECDES * recdes, HEAP_SCANCACHE * scan_cache,\n+\t\t\tPRUNING_CONTEXT * pcontext, int pruning_type, OID * pruned_class_oid, HFID * pruned_hfid,\n+\t\t\tOID * superclass_oid)\n {\n   PRUNING_CONTEXT pinfo;\n   bool keep_pruning_context = false;\n@@ -3754,15 +3657,7 @@ partition_prune_insert_internal (THREAD_ENTRY * thread_p, const OID * class_oid,\n       goto cleanup;\n     }\n \n-  if (attr_info != NULL)\n-    {\n-      error = partition_find_partition_for_attrinfo (thread_p, pcontext, class_oid, attr_info, NULL,\n-\t\t\t\t\t\t     pruned_class_oid, pruned_hfid);\n-    }\n-  else\n-    {\n-      error = partition_find_partition_for_record (pcontext, class_oid, recdes, pruned_class_oid, pruned_hfid);\n-    }\n+  error = partition_find_partition_for_record (pcontext, class_oid, recdes, pruned_class_oid, pruned_hfid);\n   if (error != NO_ERROR)\n     {\n       goto cleanup;\n@@ -3794,41 +3689,11 @@ cleanup:\n }\n \n /*\n- * partition_prune_insert () - route an already serialized INSERT record\n- */\n-int\n-partition_prune_insert (THREAD_ENTRY * thread_p, const OID * class_oid, RECDES * recdes, HEAP_SCANCACHE * scan_cache,\n-\t\t\tPRUNING_CONTEXT * pcontext, int pruning_type, OID * pruned_class_oid, HFID * pruned_hfid,\n-\t\t\tOID * superclass_oid)\n-{\n-  return partition_prune_insert_internal (thread_p, class_oid, recdes, NULL, pcontext, pruning_type,\n-\t\t\t\t\t  pruned_class_oid, pruned_hfid, superclass_oid);\n-}\n-\n-/*\n- * partition_prune_insert_by_attrinfo () - route an INSERT without changing its assignments\n- *\n- * Context ownership, explicit-partition validation and outputs match partition_prune_insert.\n- * The key is owned by the routing context and cleared before returning; source assignments,\n- * LOB objects, OOS publication and the record representation are untouched.\n- */\n-int\n-partition_prune_insert_by_attrinfo (THREAD_ENTRY * thread_p, const OID * class_oid, HEAP_CACHE_ATTRINFO * attr_info,\n-\t\t\t\t    PRUNING_CONTEXT * pcontext, int pruning_type, OID * pruned_class_oid,\n-\t\t\t\t    HFID * pruned_hfid, OID * superclass_oid)\n-{\n-  assert (attr_info != NULL);\n-  return partition_prune_insert_internal (thread_p, class_oid, NULL, attr_info, pcontext, pruning_type,\n-\t\t\t\t\t  pruned_class_oid, pruned_hfid, superclass_oid);\n-}\n-\n-/*\n- * partition_prune_update_internal () - shared context and validation contract for UPDATE routing\n+ * partition_prune_update () - perform pruning on update statements\n  * return : error code or NO_ERROR\n  * thread_p (in)  : thread entry\n  * class_oid (in) : OID of the root class\n- * recdes (in)\t  : new record for record routing, supplied old record for attribute routing\n- * attr_info (in): source UPDATE assignments, or NULL to route the new record\n+ * recdes (in)\t  : Record describing the new object\n  * pcontext (in)  : pruning context\n  * pruning_type (in) : pruning type\n  * pruned_class_oid (in/out) : partition to insert into\n@@ -3843,10 +3708,9 @@ partition_prune_insert_by_attrinfo (THREAD_ENTRY * thread_p, const OID * class_o\n  * caller should initialize a PRUNING_CONTEXT object (by calling\n  * partition_init_pruning_context) and pass it to this function.\n  */\n-static int\n-partition_prune_update_internal (THREAD_ENTRY * thread_p, const OID * class_oid, RECDES * recdes,\n-\t\t\t\t HEAP_CACHE_ATTRINFO * attr_info, PRUNING_CONTEXT * pcontext,\n-\t\t\t\t int pruning_type, OID * pruned_class_oid, HFID * pruned_hfid, OID * superclass_oid)\n+int\n+partition_prune_update (THREAD_ENTRY * thread_p, const OID * class_oid, RECDES * recdes, PRUNING_CONTEXT * pcontext,\n+\t\t\tint pruning_type, OID * pruned_class_oid, HFID * pruned_hfid, OID * superclass_oid)\n {\n   PRUNING_CONTEXT pinfo;\n   int error = NO_ERROR;\n@@ -3926,15 +3790,7 @@ partition_prune_update_internal (THREAD_ENTRY * thread_p, const OID * class_oid,\n       goto cleanup;\n     }\n \n-  if (attr_info != NULL)\n-    {\n-      error = partition_find_partition_for_attrinfo (thread_p, pcontext, class_oid, attr_info, recdes,\n-\t\t\t\t\t\t     pruned_class_oid, pruned_hfid);\n-    }\n-  else\n-    {\n-      error = partition_find_partition_for_record (pcontext, class_oid, recdes, pruned_class_oid, pruned_hfid);\n-    }\n+  error = partition_find_partition_for_record (pcontext, class_oid, recdes, pruned_class_oid, pruned_hfid);\n   if (error != NO_ERROR)\n     {\n       goto cleanup;\n@@ -3967,30 +3823,6 @@ cleanup:\n   return error;\n }\n \n-/*\n- * partition_prune_update () - retain final record routing and representation patching\n- */\n-int\n-partition_prune_update (THREAD_ENTRY * thread_p, const OID * class_oid, RECDES * recdes, PRUNING_CONTEXT * pcontext,\n-\t\t\tint pruning_type, OID * pruned_class_oid, HFID * pruned_hfid, OID * superclass_oid)\n-{\n-  return partition_prune_update_internal (thread_p, class_oid, recdes, NULL, pcontext, pruning_type,\n-\t\t\t\t\t  pruned_class_oid, pruned_hfid, superclass_oid);\n-}\n-\n-/*\n- * partition_prune_update_by_attrinfo () - route assignments and the supplied old row without changing either\n- */\n-int\n-partition_prune_update_by_attrinfo (THREAD_ENTRY * thread_p, const OID * class_oid, HEAP_CACHE_ATTRINFO * attr_info,\n-\t\t\t\t    RECDES * old_recdes, PRUNING_CONTEXT * pcontext, int pruning_type,\n-\t\t\t\t    OID * pruned_class_oid, HFID * pruned_hfid, OID * superclass_oid)\n-{\n-  assert (attr_info != NULL);\n-  return partition_prune_update_internal (thread_p, class_oid, old_recdes, attr_info, pcontext, pruning_type,\n-\t\t\t\t\t  pruned_class_oid, pruned_hfid, superclass_oid);\n-}\n-\n /*\n  * partition_get_scancache () - get scan_cache for a partition\n  * return : cached object or NULL\ndiff --git a/src/query/partition_sr.h b/src/query/partition_sr.h\nindex f48effd34..6de32d1b8 100644\n--- a/src/query/partition_sr.h\n+++ b/src/query/partition_sr.h\n@@ -119,16 +119,6 @@ extern int partition_prune_update (THREAD_ENTRY * thread_p, const OID * class_oi\n \t\t\t\t   PRUNING_CONTEXT * pcontext, int pruning_type, OID * pruned_class_oid,\n \t\t\t\t   HFID * pruned_hfid, OID * superclass_oid);\n \n-extern int partition_prune_insert_by_attrinfo (THREAD_ENTRY * thread_p, const OID * class_oid,\n-\t\t\t\t\t       HEAP_CACHE_ATTRINFO * attr_info, PRUNING_CONTEXT * pcontext,\n-\t\t\t\t\t       int pruning_type, OID * pruned_class_oid, HFID * pruned_hfid,\n-\t\t\t\t\t       OID * superclass_oid);\n-\n-extern int partition_prune_update_by_attrinfo (THREAD_ENTRY * thread_p, const OID * class_oid,\n-\t\t\t\t\t       HEAP_CACHE_ATTRINFO * attr_info, RECDES * old_recdes,\n-\t\t\t\t\t       PRUNING_CONTEXT * pcontext, int pruning_type, OID * pruned_class_oid,\n-\t\t\t\t\t       HFID * pruned_hfid, OID * superclass_oid);\n-\n extern int partition_prune_unique_btid (PRUNING_CONTEXT * pcontext, DB_VALUE * key, OID * class_oid, HFID * class_hfid,\n \t\t\t\t\tBTID * btid);\n \ndiff --git a/src/storage/heap_file.c b/src/storage/heap_file.c\nindex cb60dd269..18d47ec8c 100644\n--- a/src/storage/heap_file.c\n+++ b/src/storage/heap_file.c\n@@ -12097,132 +12097,6 @@ exit_on_error:\n   return (ret == NO_ERROR && (ret = er_errid ()) == NO_ERROR) ? ER_FAILED : ret;\n }\n \n-/*\n- * heap_attrinfo_get_effective_key () - obtain the stored-value equivalent of a write's partition key\n- *   return: NO_ERROR or an error code\n- *   attr_info(in): source assignments; never initialized or otherwise modified here\n- *   attrid(in): a schema-validated partition-key attribute\n- *   old_recdes(in): the write path's old row, or NULL for INSERT\n- *   key(out): owned value, initially NULL; caller clears it\n- *\n- * Only the key is prepared. Omitted values use the same representation default\n- * reader as a normal INSERT. Unchanged UPDATE keys use an independent one-key\n- * reader of the supplied old representation. Pending increments affect only\n- * the owned key; the normal row transformer still applies the real mutation.\n- * The scalar codec operates on an owned copy because sizing/writing may\n- * normalize CHAR padding or cache string compression.\n- * No row image, LOB lifecycle operation, or OOS publication is performed.\n- */\n-int\n-heap_attrinfo_get_effective_key (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info, ATTR_ID attrid,\n-\t\t\t\t RECDES * old_recdes, DB_VALUE * key)\n-{\n-  HEAP_ATTRVALUE *value;\n-  HEAP_ATTRVALUE omitted;\n-  DB_VALUE prepared;\n-  const PR_TYPE *pr_type;\n-  OR_BUF buf;\n-  char scratch[64 + MAX_ALIGNMENT];\n-  char *data = PTR_ALIGN (scratch, MAX_ALIGNMENT);\n-  char *allocated = NULL;\n-  int length;\n-  int error = NO_ERROR;\n-\n-  assert (DB_IS_NULL (key));\n-  db_make_null (&prepared);\n-  value = heap_attrvalue_locate (attrid, attr_info);\n-  if (value == NULL)\n-    {\n-      return er_errid () != NO_ERROR ? er_errid () : ER_FAILED;\n-    }\n-  if (value->state == HEAP_UNINIT_ATTRVALUE && old_recdes != NULL && old_recdes->data != NULL)\n-    {\n-      HEAP_CACHE_ATTRINFO old_key;\n-\n-      error = heap_attrinfo_start (thread_p, &attr_info->class_oid, 1, &attrid, &old_key);\n-      if (error != NO_ERROR)\n-\t{\n-\t  goto cleanup;\n-\t}\n-      error = heap_attrinfo_read_dbvalues_without_oid (thread_p, old_recdes, &old_key);\n-      if (error == NO_ERROR)\n-\t{\n-\t  error = pr_clone_value (&old_key.values[0].dbvalue, &prepared);\n-\t}\n-      heap_attrinfo_end (thread_p, &old_key);\n-    }\n-  else if (value->state == HEAP_UNINIT_ATTRVALUE)\n-    {\n-      omitted = *value;\n-      db_make_null (&omitted.dbvalue);\n-      error = heap_attrvalue_read (NULL, &omitted, attr_info);\n-      if (error == NO_ERROR)\n-\t{\n-\t  error = pr_clone_value (&omitted.dbvalue, &prepared);\n-\t}\n-      pr_clear_value (&omitted.dbvalue);\n-    }\n-  else\n-    {\n-      error = pr_clone_value (&value->dbvalue, &prepared);\n-    }\n-  if (error != NO_ERROR)\n-    {\n-      goto cleanup;\n-    }\n-  if (value->do_increment != 0)\n-    {\n-      error = qdata_increment_dbval (&prepared, &prepared, value->do_increment);\n-      if (error != NO_ERROR)\n-\t{\n-\t  goto cleanup;\n-\t}\n-    }\n-  if (DB_IS_NULL (&prepared))\n-    {\n-      error = pr_clone_value (&prepared, key);\n-      goto cleanup;\n-    }\n-\n-  pr_type = value->last_attrepr->domain->type;\n-  length = pr_type->get_disk_size_of_value (&prepared);\n-  if (length <= 0)\n-    {\n-      error = er_errid () != NO_ERROR ? er_errid () : ER_FAILED;\n-      goto cleanup;\n-    }\n-  if (length > 64)\n-    {\n-      allocated = (char *) db_private_alloc (thread_p, length);\n-      if (allocated == NULL)\n-\t{\n-\t  error = ER_OUT_OF_VIRTUAL_MEMORY;\n-\t  goto cleanup;\n-\t}\n-      data = allocated;\n-    }\n-  or_init (&buf, data, length);\n-  error = pr_type->data_writeval (&buf, &prepared);\n-  if (error == NO_ERROR)\n-    {\n-      length = CAST_BUFLEN (buf.ptr - data);\n-      or_init (&buf, data, length);\n-      error = pr_type->data_readval (&buf, key, value->last_attrepr->domain, length, true, NULL, 0);\n-    }\n-\n-cleanup:\n-  pr_clear_value (&prepared);\n-  if (allocated != NULL)\n-    {\n-      db_private_free_and_init (thread_p, allocated);\n-    }\n-  if (error != NO_ERROR)\n-    {\n-      pr_clear_value (key);\n-    }\n-  return error;\n-}\n-\n /*\n  * heap_attrinfo_set_uninitialized () - Read unitialized attributes\n  *   return: NO_ERROR\n@@ -12920,22 +12794,6 @@ heap_attrinfo_transform_to_disk (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO *\n \t\t\t\t\t\t   NULL, NULL, false);\n }\n \n-/*\n- * heap_attrinfo_transform_to_disk_with_oos_owner () - normal first-pass transformation with a destination OOS heap\n- *\n- * Source representation and assignment identity stay in attr_info. Only OOS ownership is overridden;\n- * value preparation, LOB handling and pending increments use the normal first-pass contract.\n- */\n-SCAN_CODE\n-heap_attrinfo_transform_to_disk_with_oos_owner (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,\n-\t\t\t\t\t\tRECDES * old_recdes, record_descriptor * new_recdes,\n-\t\t\t\t\t\tint lob_create_flag, const OID * oos_class_oid)\n-{\n-  assert (oos_class_oid != NULL);\n-  return heap_attrinfo_transform_to_disk_internal (thread_p, attr_info, old_recdes, new_recdes, lob_create_flag,\n-\t\t\t\t\t\t   oos_class_oid, NULL, false);\n-}\n-\n /*\n  * heap_attrinfo_transform_to_disk_probe_oos () - Transform to disk with OOS demotion suppressed.\n  *\ndiff --git a/src/storage/heap_file.h b/src/storage/heap_file.h\nindex 57c702460..da2739418 100644\n--- a/src/storage/heap_file.h\n+++ b/src/storage/heap_file.h\n@@ -503,14 +503,8 @@ extern int heap_attrinfo_delete_lob (THREAD_ENTRY * thread_p, RECDES * recdes, H\n extern DB_VALUE *heap_attrinfo_access (ATTR_ID attrid, HEAP_CACHE_ATTRINFO * attr_info);\n extern int heap_attrinfo_set (const OID * inst_oid, ATTR_ID attrid, DB_VALUE * attr_val,\n \t\t\t      HEAP_CACHE_ATTRINFO * attr_info);\n-extern int heap_attrinfo_get_effective_key (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info, ATTR_ID attrid,\n-\t\t\t\t\t    RECDES * old_recdes, DB_VALUE * key);\n extern SCAN_CODE heap_attrinfo_transform_to_disk (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,\n \t\t\t\t\t\t  RECDES * old_recdes, record_descriptor * new_recdes);\n-extern SCAN_CODE heap_attrinfo_transform_to_disk_with_oos_owner (THREAD_ENTRY * thread_p,\n-\t\t\t\t\t\t\t\t HEAP_CACHE_ATTRINFO * attr_info, RECDES * old_recdes,\n-\t\t\t\t\t\t\t\t record_descriptor * new_recdes, int lob_create_flag,\n-\t\t\t\t\t\t\t\t const OID * oos_class_oid);\n extern SCAN_CODE heap_attrinfo_transform_to_disk_except_lob (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,\n \t\t\t\t\t\t\t     RECDES * old_recdes, record_descriptor * new_recdes);\n extern SCAN_CODE heap_attrinfo_transform_to_disk_probe_oos (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,\ndiff --git a/src/transaction/locator_sr.c b/src/transaction/locator_sr.c\nindex f9c3f05fa..37da37a2f 100644\n--- a/src/transaction/locator_sr.c\n+++ b/src/transaction/locator_sr.c\n@@ -152,7 +152,7 @@ static int locator_update_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * cla\n \t\t\t\t HEAP_SCANCACHE * scan_cache, int *force_count, bool not_check_fk,\n \t\t\t\t REPL_INFO_TYPE repl_info_type, int pruning_type, PRUNING_CONTEXT * pcontext,\n \t\t\t\t MVCC_REEV_DATA * mvcc_reev_data, UPDATE_INPLACE_STYLE force_in_place,\n-\t\t\t\t bool need_locking, const OID * expected_class_oid);\n+\t\t\t\t bool need_locking);\n static int locator_move_record (THREAD_ENTRY * thread_p, HFID * old_hfid, OID * old_class_oid, OID * obj_oid,\n \t\t\t\tOID * new_class_oid, HFID * new_class_hfid, RECDES * recdes,\n \t\t\t\tHEAP_SCANCACHE * scan_cache, int op_type, int has_index, int *force_count,\n@@ -4924,7 +4924,7 @@ error3:\n }\n \n /*\n- * locator_insert_force_internal () - Insert the given object on this heap\n+ * locator_insert_force () - Insert the given object on this heap\n  *\n  * return: NO_ERROR if all OK, ER_ status otherwise\n  *\n@@ -4944,17 +4944,16 @@ error3:\n  *   pcontext(in): partition pruning context\n  *   func_preds(in): cached function index expressions\n  *   force_in_place:\n- *   expected_class_oid(in): optional early destination; final routing must agree before inserting\n  *\n  * Note: The given object is inserted on this heap and all appropriate\n  *              index entries are inserted.\n  */\n-static int\n-locator_insert_force_internal (THREAD_ENTRY * thread_p, HFID * hfid, OID * class_oid, OID * oid, RECDES * recdes,\n-\t\t\t       int has_index, int op_type, HEAP_SCANCACHE * scan_cache, int *force_count,\n-\t\t\t       int pruning_type, PRUNING_CONTEXT * pcontext, FUNC_PRED_UNPACK_INFO * func_preds,\n-\t\t\t       UPDATE_INPLACE_STYLE force_in_place, PGBUF_WATCHER * home_hint_p, bool has_BU_lock,\n-\t\t\t       bool dont_check_fk, bool use_bulk_logging, const OID * expected_class_oid)\n+int\n+locator_insert_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * class_oid, OID * oid, RECDES * recdes, int has_index,\n+\t\t      int op_type, HEAP_SCANCACHE * scan_cache, int *force_count, int pruning_type,\n+\t\t      PRUNING_CONTEXT * pcontext, FUNC_PRED_UNPACK_INFO * func_preds,\n+\t\t      UPDATE_INPLACE_STYLE force_in_place, PGBUF_WATCHER * home_hint_p, bool has_BU_lock,\n+\t\t      bool dont_check_fk, bool use_bulk_logging)\n {\n #if 0\t\t\t\t/* TODO - dead code; do not delete me */\n   OID rep_dir = { NULL_PAGEID, NULL_SLOTID, NULL_VOLID };\n@@ -4993,14 +4992,6 @@ locator_insert_force_internal (THREAD_ENTRY * thread_p, HFID * hfid, OID * class\n \t{\n \t  goto error2;\n \t}\n-      if (expected_class_oid != NULL && !OID_EQ (expected_class_oid, &real_class_oid))\n-\t{\n-\t  /* OOS chains may already belong to the early destination. Never redirect them to another heap.\n-\t   * Return through the ordinary statement-error path so logged OOS inserts are rolled back. */\n-\t  er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_GENERIC_ERROR, 0);\n-\t  error_code = ER_GENERIC_ERROR;\n-\t  goto error2;\n-\t}\n       if (!OID_ISNULL (&superclass_oid))\n \t{\n \t  granted = lock_subclass (thread_p, &real_class_oid, &superclass_oid, IX_LOCK, LK_UNCOND_LOCK);\n@@ -5292,21 +5283,6 @@ error2:\n   return error_code;\n }\n \n-/*\n- * locator_insert_force () - retain the existing force interface for callers without an early destination\n- */\n-int\n-locator_insert_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * class_oid, OID * oid, RECDES * recdes, int has_index,\n-\t\t      int op_type, HEAP_SCANCACHE * scan_cache, int *force_count, int pruning_type,\n-\t\t      PRUNING_CONTEXT * pcontext, FUNC_PRED_UNPACK_INFO * func_preds,\n-\t\t      UPDATE_INPLACE_STYLE force_in_place, PGBUF_WATCHER * home_hint_p, bool has_BU_lock,\n-\t\t      bool dont_check_fk, bool use_bulk_logging)\n-{\n-  return locator_insert_force_internal (thread_p, hfid, class_oid, oid, recdes, has_index, op_type, scan_cache,\n-\t\t\t\t\tforce_count, pruning_type, pcontext, func_preds, force_in_place, home_hint_p,\n-\t\t\t\t\thas_BU_lock, dont_check_fk, use_bulk_logging, NULL);\n-}\n-\n int\n locator_oos_insert_force (THREAD_ENTRY * thread_p, OID * class_oid, RECDES * recdes)\n {\n@@ -5481,7 +5457,6 @@ locator_move_record (THREAD_ENTRY * thread_p, HFID * old_hfid, OID * old_class_o\n  *\t\t\t and the update style will be decided in this function.\n  *\t\t\t Otherwise the update of the instance will be made in\n  *\t\t\t place and according to provided style.\n- *   expected_class_oid(in): optional early destination; final routing must agree before heap/index mutation\n  *\n  * Note: The given object is updated on this heap and all appropriate\n  *              index entries are updated.\n@@ -5491,7 +5466,7 @@ locator_update_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * class_oid, OID\n \t\t      RECDES * recdes, int has_index, ATTR_ID * att_id, int n_att_id, int op_type,\n \t\t      HEAP_SCANCACHE * scan_cache, int *force_count, bool not_check_fk, REPL_INFO_TYPE repl_info_type,\n \t\t      int pruning_type, PRUNING_CONTEXT * pcontext, MVCC_REEV_DATA * mvcc_reev_data,\n-\t\t      UPDATE_INPLACE_STYLE force_in_place, bool need_locking, const OID * expected_class_oid)\n+\t\t      UPDATE_INPLACE_STYLE force_in_place, bool need_locking)\n {\n   OID rep_dir = { NULL_PAGEID, NULL_SLOTID, NULL_VOLID };\n   char *rep_dir_offset;\n@@ -6018,14 +5993,6 @@ locator_update_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * class_oid, OID\n \t      goto error;\n \t    }\n \n-\t  /* Final record routing must agree with the heap chosen for OOS preparation. */\n-\t  if (expected_class_oid != NULL && !OID_EQ (&real_class_oid, expected_class_oid))\n-\t    {\n-\t      er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_GENERIC_ERROR, 0);\n-\t      error_code = ER_GENERIC_ERROR;\n-\t      goto error;\n-\t    }\n-\n \t  /* make sure we use the correct class oid - we could be dealing with a classoid resulted from a unique btid\n \t   * pruning */\n \t  if (heap_get_class_oid (thread_p, oid, class_oid) != S_SUCCESS)\n@@ -6782,7 +6749,7 @@ locator_force_for_multi_update (THREAD_ENTRY * thread_p, LC_COPYAREA * force_are\n \t  error_code =\n \t    locator_update_force (thread_p, &obj->hfid, &obj->class_oid, &obj->oid, NULL, &recdes,\n \t\t\t\t  has_index, NULL, 0, MULTI_ROW_UPDATE, &scan_cache, &force_count, false, repl_info,\n-\t\t\t\t  DB_NOT_PARTITIONED_CLASS, NULL, NULL, UPDATE_INPLACE_NONE, true, NULL);\n+\t\t\t\t  DB_NOT_PARTITIONED_CLASS, NULL, NULL, UPDATE_INPLACE_NONE, true);\n \t  if (error_code != NO_ERROR)\n \t    {\n \t      /*\n@@ -7172,8 +7139,7 @@ xlocator_repl_force (THREAD_ENTRY * thread_p, LC_COPYAREA * force_area, LC_COPYA\n \t      error_code =\n \t\tlocator_update_force (thread_p, &obj->hfid, &obj->class_oid, &obj->oid, NULL, &recdes, has_index,\n \t\t\t\t      NULL, 0, SINGLE_ROW_UPDATE, force_scancache, &force_count, false,\n-\t\t\t\t      REPL_INFO_TYPE_RBR_NORMAL, pruning_type, NULL, NULL, UPDATE_INPLACE_NONE, true,\n-\t\t\t\t      NULL);\n+\t\t\t\t      REPL_INFO_TYPE_RBR_NORMAL, pruning_type, NULL, NULL, UPDATE_INPLACE_NONE, true);\n \n \t      if (error_code == NO_ERROR)\n \t\t{\n@@ -7383,7 +7349,7 @@ xlocator_force (THREAD_ENTRY * thread_p, LC_COPYAREA * force_area, int num_ignor\n \t  error_code =\n \t    locator_update_force (thread_p, &obj->hfid, &obj->class_oid, &obj->oid, NULL, &recdes,\n \t\t\t\t  has_index, NULL, 0, SINGLE_ROW_UPDATE, force_scancache, &force_count, false,\n-\t\t\t\t  REPL_INFO_TYPE_RBR_NORMAL, pruning_type, NULL, NULL, UPDATE_INPLACE_NONE, true, NULL);\n+\t\t\t\t  REPL_INFO_TYPE_RBR_NORMAL, pruning_type, NULL, NULL, UPDATE_INPLACE_NONE, true);\n \n \t  if (error_code == NO_ERROR)\n \t    {\n@@ -7495,7 +7461,7 @@ error:\n }\n \n /*\n- * locator_allocate_copy_area_by_attr_info_internal () - Transforms attribute\n+ * locator_allocate_copy_area_by_attr_info () - Transforms attribute\n  *              information into a disk representation and allocates a\n  *              LC_COPYAREA big enough to fit the representation\n  *\n@@ -7514,16 +7480,13 @@ error:\n  *   probe_would_demote_oos(out): when non-NULL, suppress OOS demotion (build a fully-inline\n  *                                image, write no OOS value chain) and report whether a normal\n  *                                transform would have demoted a column.\n- *   oos_first_pass(in): use normal preparation with the selected OOS owner, without a preceding probe\n  *\n  * Note: The allocated should be freed by using locator_free_copy_area ()\n  */\n-static LC_COPYAREA *\n-locator_allocate_copy_area_by_attr_info_internal (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info,\n-\t\t\t\t\t\t  RECDES * old_recdes, RECDES * new_recdes,\n-\t\t\t\t\t\t  const int copyarea_length_hint, int lob_create_flag,\n-\t\t\t\t\t\t  const OID * oos_class_oid, bool * probe_would_demote_oos,\n-\t\t\t\t\t\t  bool oos_first_pass)\n+LC_COPYAREA *\n+locator_allocate_copy_area_by_attr_info (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info, RECDES * old_recdes,\n+\t\t\t\t\t RECDES * new_recdes, const int copyarea_length_hint, int lob_create_flag,\n+\t\t\t\t\t const OID * oos_class_oid, bool * probe_would_demote_oos)\n {\n   LC_COPYAREA *copyarea = NULL;\n   int copyarea_length = copyarea_length_hint <= 0 ? DB_PAGESIZE : copyarea_length_hint;\n@@ -7547,13 +7510,7 @@ locator_allocate_copy_area_by_attr_info_internal (THREAD_ENTRY * thread_p, HEAP_\n   new_recdes->data = copyarea->mem;\n   new_recdes->area_size = copyarea->length;\n \n-  if (oos_first_pass)\n-    {\n-      assert (oos_class_oid != NULL && probe_would_demote_oos == NULL);\n-      scan = heap_attrinfo_transform_to_disk_with_oos_owner (thread_p, attr_info, old_recdes, &build_record,\n-\t\t\t\t\t\t\t     lob_create_flag, oos_class_oid);\n-    }\n-  else if (probe_would_demote_oos != NULL)\n+  if (probe_would_demote_oos != NULL)\n     {\n       scan = heap_attrinfo_transform_to_disk_probe_oos (thread_p, attr_info, old_recdes, &build_record,\n \t\t\t\t\t\t\tlob_create_flag, probe_would_demote_oos);\n@@ -7604,19 +7561,6 @@ locator_allocate_copy_area_by_attr_info_internal (THREAD_ENTRY * thread_p, HEAP_\n   return copyarea;\n }\n \n-/*\n- * locator_allocate_copy_area_by_attr_info () - preserve the existing normal/probe/rebuild interface\n- */\n-LC_COPYAREA *\n-locator_allocate_copy_area_by_attr_info (THREAD_ENTRY * thread_p, HEAP_CACHE_ATTRINFO * attr_info, RECDES * old_recdes,\n-\t\t\t\t\t RECDES * new_recdes, const int copyarea_length_hint, int lob_create_flag,\n-\t\t\t\t\t const OID * oos_class_oid, bool * probe_would_demote_oos)\n-{\n-  return locator_allocate_copy_area_by_attr_info_internal (thread_p, attr_info, old_recdes, new_recdes,\n-\t\t\t\t\t\t\t   copyarea_length_hint, lob_create_flag, oos_class_oid,\n-\t\t\t\t\t\t\t   probe_would_demote_oos, false);\n-}\n-\n /*\n  * locator_attribute_info_force () - Force an object represented by attribute\n  *                                   information structure\n@@ -7667,7 +7611,6 @@ locator_attribute_info_force (THREAD_ENTRY * thread_p, const HFID * hfid, OID *\n   int error_code = NO_ERROR;\n   HFID class_hfid;\n   OID class_oid;\n-  OID write_destination = OID_INITIALIZER;\n   MVCC_SNAPSHOT *saved_mvcc_snapshot = NULL;\n \n   /*\n@@ -7767,31 +7710,54 @@ locator_attribute_info_force (THREAD_ENTRY * thread_p, const HFID * hfid, OID *\n     case LC_FLUSH_INSERT_PRUNE_VERIFY:\n       if (pruning_type != DB_NOT_PARTITIONED_CLASS)\n \t{\n-\t  HFID pruned_hfid;\n+\t  bool would_demote_oos = false;\n \n-\t  COPY_OID (&write_destination, &class_oid);\n-\t  HFID_COPY (&pruned_hfid, &class_hfid);\n-\t  if (LC_IS_FLUSH_INSERT (operation))\n-\t    {\n-\t      error_code = partition_prune_insert_by_attrinfo (thread_p, &class_oid, attr_info, pcontext, pruning_type,\n-\t\t\t\t\t\t\t       &write_destination, &pruned_hfid, NULL);\n-\t    }\n-\t  else\n-\t    {\n-\t      assert (LC_IS_FLUSH_UPDATE (operation));\n-\t      error_code = partition_prune_update_by_attrinfo (thread_p, &class_oid, attr_info, old_recdes, pcontext,\n-\t\t\t\t\t\t\t       pruning_type, &write_destination, &pruned_hfid, NULL);\n-\t    }\n-\t  if (error_code != NO_ERROR)\n+\t  /* An OOS value chain must live in the OOS file of the heap that stores its record, and the\n+\t   * target heap of a partitioned write is only known after pruning. Build the record with OOS\n+\t   * demotion suppressed, prune with that fully-inline image, and when demotion is needed\n+\t   * rebuild the record with its OOS value chains written to the pruned partition's heap\n+\t   * (CBRD-27089). */\n+\t  copyarea =\n+\t    locator_allocate_copy_area_by_attr_info (thread_p, attr_info, old_recdes, &new_recdes, -1,\n+\t\t\t\t\t\t     LOB_FLAG_INCLUDE_LOB, NULL, &would_demote_oos);\n+\t  if (copyarea != NULL && would_demote_oos)\n \t    {\n-\t      break;\n-\t    }\n+\t      OID pruned_class_oid;\n+\t      HFID pruned_hfid;\n+\t      OID superclass_oid;\n \n-\t  /* Prepare the full row once, writing OOS values to the selected heap. Keep the source class\n-\t   * unchanged: final force still performs routing, validation, representation patching and movement. */\n-\t  copyarea = locator_allocate_copy_area_by_attr_info_internal (thread_p, attr_info, old_recdes, &new_recdes, -1,\n-\t\t\t\t\t\t\t\t       LOB_FLAG_INCLUDE_LOB, &write_destination, NULL,\n-\t\t\t\t\t\t\t\t       true);\n+\t      COPY_OID (&pruned_class_oid, &class_oid);\n+\t      HFID_COPY (&pruned_hfid, &class_hfid);\n+\t      OID_SET_NULL (&superclass_oid);\n+\n+\t      if (LC_IS_FLUSH_INSERT (operation))\n+\t\t{\n+\t\t  error_code =\n+\t\t    partition_prune_insert (thread_p, &class_oid, &new_recdes, scan_cache, pcontext, pruning_type,\n+\t\t\t\t\t    &pruned_class_oid, &pruned_hfid, &superclass_oid);\n+\t\t}\n+\t      else\n+\t\t{\n+\t\t  assert (LC_IS_FLUSH_UPDATE (operation));\n+\t\t  error_code =\n+\t\t    partition_prune_update (thread_p, &class_oid, &new_recdes, pcontext, pruning_type,\n+\t\t\t\t\t    &pruned_class_oid, &pruned_hfid, &superclass_oid);\n+\t\t}\n+\n+\t      locator_free_copy_area (copyarea);\n+\t      copyarea = NULL;\n+\t      new_recdes.data = NULL;\n+\t      new_recdes.area_size = 0;\n+\n+\t      if (error_code != NO_ERROR)\n+\t\t{\n+\t\t  break;\n+\t\t}\n+\n+\t      copyarea =\n+\t\tlocator_allocate_copy_area_by_attr_info (thread_p, attr_info, old_recdes, &new_recdes, -1,\n+\t\t\t\t\t\t\t LOB_FLAG_INCLUDE_LOB, &pruned_class_oid, NULL);\n+\t    }\n \t}\n       else\n \t{\n@@ -7809,10 +7775,9 @@ locator_attribute_info_force (THREAD_ENTRY * thread_p, const HFID * hfid, OID *\n       if (LC_IS_FLUSH_INSERT (operation))\n \t{\n \t  error_code =\n-\t    locator_insert_force_internal (thread_p, &class_hfid, &class_oid, oid, &new_recdes, true, op_type,\n-\t\t\t\t\t   scan_cache, force_count, pruning_type, pcontext, func_preds,\n-\t\t\t\t\t   UPDATE_INPLACE_NONE, NULL, false, false, false,\n-\t\t\t\t\t   OID_ISNULL (&write_destination) ? NULL : &write_destination);\n+\t    locator_insert_force (thread_p, &class_hfid, &class_oid, oid, &new_recdes, true, op_type, scan_cache,\n+\t\t\t\t  force_count, pruning_type, pcontext, func_preds, UPDATE_INPLACE_NONE, NULL, false,\n+\t\t\t\t  false);\n \t}\n       else\n \t{\n@@ -7830,8 +7795,7 @@ locator_attribute_info_force (THREAD_ENTRY * thread_p, const HFID * hfid, OID *\n \t  error_code =\n \t    locator_update_force (thread_p, &class_hfid, &class_oid, oid, old_recdes, &new_recdes, has_index,\n \t\t\t\t  att_id, n_att_id, op_type, scan_cache, force_count, not_check_fk, repl_info,\n-\t\t\t\t  pruning_type, pcontext, mvcc_reev_data, force_update_inplace, need_locking,\n-\t\t\t\t  OID_ISNULL (&write_destination) ? NULL : &write_destination);\n+\t\t\t\t  pruning_type, pcontext, mvcc_reev_data, force_update_inplace, need_locking);\n \t  if (error_code != NO_ERROR)\n \t    {\n \t      ASSERT_ERROR ();\n",
+    "cci": "bd86063a5bd481f0e22bf07c8a76bf736f86443a cubrid-cci (v11.2.0.0029-19-gbd86063)",
+    "binary": "/home/vimkim/gh/cb/pr7600-timing-base988/build_preset_release_gcc/bin/test_oos_sql_pr7600_minimal",
+    "binary_sha256": "35a653465a2f9469d449c1a84fadf00e27a2cf106c54728091abfe01aff27036",
+    "library": "/home/vimkim/.cub/install/pr7600-timing-base988/release_gcc/lib/libcubridsa.so.11.5",
+    "library_sha256": "58def6650b767a8ef919331d918a8ea90d51bedd33b668317e130f95229eb932",
+    "harness_sha256": "30f85b66ee6fd15e4b572c2c7b18a41032094d593c1a7fa96a360652c9cb8fad",
+    "fixture": "/tmp/pr7600-head988-aa-fixtures/b-small_inline",
+    "setup": [
+      "bash",
+      "/home/vimkim/gh/cb/pr7600-timing-base988/unit_tests/oos/scripts/setup_unittestdb.sh"
+    ],
+    "cache_sha256": "d8d2a64fd688669ee8279495a30be5f7c5183bc50833f67421ac3d0718d50e52",
+    "command": [
+      "setarch",
+      "x86_64",
+      "-R",
+      "/home/vimkim/gh/cb/pr7600-timing-base988/build_preset_release_gcc/bin/test_oos_sql_pr7600_minimal",
+      "--gtest_filter=Pr7600Measure.Matrix",
+      "--gtest_output=xml:/home/vimkim/gh/my-cubrid-docs/cbrd-27089/design/ticket06-evidence/diagnosis-20260910/minimal-aa96/b-small_inline.xml"
+    ],
+    "engine_mapping": [
+      "7ffff7000000-7ffff71e2000 r--p 00000000 fd:02 11818604621                /home/vimkim/.cub/install/pr7600-timing-base988/release_gcc/lib/libcubridsa.so.11.5",
+      "7ffff71e2000-7ffff7b0b000 r-xp 001e2000 fd:02 11818604621                /home/vimkim/.cub/install/pr7600-timing-base988/release_gcc/lib/libcubridsa.so.11.5",
+      "7ffff7b0b000-7ffff7d6a000 r--p 00b0b000 fd:02 11818604621                /home/vimkim/.cub/install/pr7600-timing-base988/release_gcc/lib/libcubridsa.so.11.5",
+      "7ffff7d6a000-7ffff7db8000 r--p 00d69000 fd:02 11818604621                /home/vimkim/.cub/install/pr7600-timing-base988/release_gcc/lib/libcubridsa.so.11.5",
+      "7ffff7db8000-7ffff7de1000 rw-p 00db7000 fd:02 11818604621                /home/vimkim/.cub/install/pr7600-timing-base988/release_gcc/lib/libcubridsa.so.11.5"
+    ]
+  },
+  "samples": [
+    {
+      "workload": "small_inline",
+      "rep": -2,
+      "rows": 256,
+      "cpu_seconds": 0.011066795,
+      "elapsed_seconds": 0.011105018
+    },
+    {
+      "workload": "small_inline",
+      "rep": -1,
+      "rows": 256,
+      "cpu_seconds": 0.010871479,
+      "elapsed_seconds": 0.010924771
+    },
+    {
+      "workload": "small_inline",
+      "rep": 0,
+      "rows": 256,
+      "cpu_seconds": 0.010795231,
+      "elapsed_seconds": 0.010829542
+    },
+    {
+      "workload": "small_inline",
+      "rep": 1,
+      "rows": 256,
+      "cpu_seconds": 0.010805553,
+      "elapsed_seconds": 0.010841234
+    },
+    {
+      "workload": "small_inline",
+      "rep": 2,
+      "rows": 256,
+      "cpu_seconds": 0.010700563,
+      "elapsed_seconds": 0.010742613
+    },
+    {
+      "workload": "small_inline",
+      "rep": 3,
+      "rows": 256,
+      "cpu_seconds": 0.010651034,
+      "elapsed_seconds": 0.010683921
+    },
+    {
+      "workload": "small_inline",
+      "rep": 4,
+      "rows": 256,
+      "cpu_seconds": 0.010634189,
+      "elapsed_seconds": 0.010671299
+    },
+    {
+      "workload": "small_inline",
+      "rep": 5,
+      "rows": 256,
+      "cpu_seconds": 0.010689723,
+      "elapsed_seconds": 0.010724204
+    },
+    {
+      "workload": "small_inline",
+      "rep": 6,
+      "rows": 256,
+      "cpu_seconds": 0.010762378,
+      "elapsed_seconds": 0.010827363
+    },
+    {
+      "workload": "small_inline",
+      "rep": 7,
+      "rows": 256,
+      "cpu_seconds": 0.010598073,
+      "elapsed_seconds": 0.010637676
+    },
+    {
+      "workload": "small_inline",
+      "rep": 8,
+      "rows": 256,
+      "cpu_seconds": 0.010693641,
+      "elapsed_seconds": 0.010731144
+    },
+    {
+      "workload": "small_inline",
+      "rep": 9,
+      "rows": 256,
+      "cpu_seconds": 0.010588899,
+      "elapsed_seconds": 0.010623656
+    },
+    {
+      "workload": "small_inline",
+      "rep": 10,
+      "rows": 256,
+      "cpu_seconds": 0.010924669,
+      "elapsed_seconds": 0.010961523
+    },
+    {
+      "workload": "small_inline",
+      "rep": 11,
+      "rows": 256,
+      "cpu_seconds": 0.010712441,
+      "elapsed_seconds": 0.010759744
+    },
+    {
+      "workload": "small_inline",
+      "rep": 12,
+      "rows": 256,
+      "cpu_seconds": 0.010665186,
+      "elapsed_seconds": 0.010706714
+    },
+    {
+      "workload": "small_inline",
+      "rep": 13,
+      "rows": 256,
+      "cpu_seconds": 0.010700663,
+      "elapsed_seconds": 0.010739051
+    },
+    {
+      "workload": "small_inline",
+      "rep": 14,
+      "rows": 256,
+      "cpu_seconds": 0.010671739,
+      "elapsed_seconds": 0.010709669
+    },
+    {
+      "workload": "small_inline",
+      "rep": 15,
+      "rows": 256,
+      "cpu_seconds": 0.010678767,
+      "elapsed_seconds": 0.010713823
+    },
+    {
+      "workload": "small_inline",
+      "rep": 16,
+      "rows": 256,
+      "cpu_seconds": 0.010530421,
+      "elapsed_seconds": 0.010567299
+    },
+    {
+      "workload": "small_inline",
+      "rep": 17,
+      "rows": 256,
+      "cpu_seconds": 0.010915395,
+      "elapsed_seconds": 0.010959636
+    },
+    {
+      "workload": "small_inline",
+      "rep": 18,
+      "rows": 256,
+      "cpu_seconds": 0.010668959,
+      "elapsed_seconds": 0.010706727
+    },
+    {
+      "workload": "small_inline",
+      "rep": 19,
+      "rows": 256,
+      "cpu_seconds": 0.010707818,
+      "elapsed_seconds": 0.010741864
+    },
+    {
+      "workload": "small_inline",
+      "rep": 20,
+      "rows": 256,
+      "cpu_seconds": 0.010661438,
+      "elapsed_seconds": 0.010708417
+    },
+    {
+      "workload": "small_inline",
+      "rep": 21,
+      "rows": 256,
+      "cpu_seconds": 0.010606462,
+      "elapsed_seconds": 0.01064025
+    },
+    {
+      "workload": "small_inline",
+      "rep": 22,
+      "rows": 256,
+      "cpu_seconds": 0.010603743,
+      "elapsed_seconds": 0.010654502
+    },
+    {
+      "workload": "small_inline",
+      "rep": 23,
+      "rows": 256,
+      "cpu_seconds": 0.010658499,
+      "elapsed_seconds": 0.010692981
+    },
+    {
+      "workload": "small_inline",
+      "rep": 24,
+      "rows": 256,
+      "cpu_seconds": 0.010741115,
+      "elapsed_seconds": 0.010783114
+    },
+    {
+      "workload": "small_inline",
+      "rep": 25,
+      "rows": 256,
+      "cpu_seconds": 0.010623572,
+      "elapsed_seconds": 0.010666795
+    },
+    {
+      "workload": "small_inline",
+      "rep": 26,
+      "rows": 256,
+      "cpu_seconds": 0.010633005,
+      "elapsed_seconds": 0.010674447
+    },
+    {
+      "workload": "small_inline",
+      "rep": 27,
+      "rows": 256,
+      "cpu_seconds": 0.010643418,
+      "elapsed_seconds": 0.010677722
+    },
+    {
+      "workload": "small_inline",
+      "rep": 28,
+      "rows": 256,
+      "cpu_seconds": 0.010759754,
+      "elapsed_seconds": 0.010812188
+    },
+    {
+      "workload": "small_inline",
+      "rep": 29,
+      "rows": 256,
+      "cpu_seconds": 0.010776638,
+      "elapsed_seconds": 0.010816236
+    },
+    {
+      "workload": "small_inline",
+      "rep": 30,
+      "rows": 256,
+      "cpu_seconds": 0.010563734,
+      "elapsed_seconds": 0.010605502
+    },
+    {
+      "workload": "small_inline",
+      "rep": 31,
+      "rows": 256,
+      "cpu_seconds": 0.0106836,
+      "elapsed_seconds": 0.010721112
+    },
+    {
+      "workload": "small_inline",
+      "rep": 32,
+      "rows": 256,
+      "cpu_seconds": 0.010805538,
+      "elapsed_seconds": 0.01084254
+    },
+    {
+      "workload": "small_inline",
+      "rep": 33,
+      "rows": 256,
+      "cpu_seconds": 0.010813513,
+      "elapsed_seconds": 0.010855515
+    },
+    {
+      "workload": "small_inline",
+      "rep": 34,
+      "rows": 256,
+      "cpu_seconds": 0.010669058,
+      "elapsed_seconds": 0.010702446
+    },
+    {
+      "workload": "small_inline",
+      "rep": 35,
+      "rows": 256,
+      "cpu_seconds": 0.010687884,
+      "elapsed_seconds": 0.010723692
+    },
+    {
+      "workload": "small_inline",
+      "rep": 36,
+      "rows": 256,
+      "cpu_seconds": 0.010667234,
+      "elapsed_seconds": 0.010703784
+    },
+    {
+      "workload": "small_inline",
+      "rep": 37,
+      "rows": 256,
+      "cpu_seconds": 0.010689637,
+      "elapsed_seconds": 0.010731622
+    },
+    {
+      "workload": "small_inline",
+      "rep": 38,
+      "rows": 256,
+      "cpu_seconds": 0.010693734,
+      "elapsed_seconds": 0.010731571
+    },
+    {
+      "workload": "small_inline",
+      "rep": 39,
+      "rows": 256,
+      "cpu_seconds": 0.010711746,
+      "elapsed_seconds": 0.010754283
+    },
+    {
+      "workload": "small_inline",
+      "rep": 40,
+      "rows": 256,
+      "cpu_seconds": 0.010615745,
+      "elapsed_seconds": 0.010653126
+    },
+    {
+      "workload": "small_inline",
+      "rep": 41,
+      "rows": 256,
+      "cpu_seconds": 0.010706791,
+      "elapsed_seconds": 0.010743233
+    },
+    {
+      "workload": "small_inline",
+      "rep": 42,
+      "rows": 256,
+      "cpu_seconds": 0.010674989,
+      "elapsed_seconds": 0.010713924
+    },
+    {
+      "workload": "small_inline",
+      "rep": 43,
+      "rows": 256,
+      "cpu_seconds": 0.010634937,
+      "elapsed_seconds": 0.010669223
+    },
+    {
+      "workload": "small_inline",
+      "rep": 44,
+      "rows": 256,
+      "cpu_seconds": 0.010796908,
+      "elapsed_seconds": 0.010838359
+    },
+    {
+      "workload": "small_inline",
+      "rep": 45,
+      "rows": 256,
+      "cpu_seconds": 0.010710252,
+      "elapsed_seconds": 0.010760634
+    },
+    {
+      "workload": "small_inline",
+      "rep": 46,
+      "rows": 256,
+      "cpu_seconds": 0.010714262,
+      "elapsed_seconds": 0.010762125
+    },
+    {
+      "workload": "small_inline",
+      "rep": 47,
+      "rows": 256,
+      "cpu_seconds": 0.010782824,
+      "elapsed_seconds": 0.010828962
+    },
+    {
+      "workload": "small_inline",
+      "rep": 48,
+      "rows": 256,
+      "cpu_seconds": 0.010655219,
+      "elapsed_seconds": 0.0106933
+    },
+    {
+      "workload": "small_inline",
+      "rep": 49,
+      "rows": 256,
+      "cpu_seconds": 0.010541905,
+      "elapsed_seconds": 0.010582254
+    },
+    {
+      "workload": "small_inline",
+      "rep": 50,
+      "rows": 256,
+      "cpu_seconds": 0.010627941,
+      "elapsed_seconds": 0.010665547
+    },
+    {
+      "workload": "small_inline",
+      "rep": 51,
+      "rows": 256,
+      "cpu_seconds": 0.010608474,
+      "elapsed_seconds": 0.010643817
+    },
+    {
+      "workload": "small_inline",
+      "rep": 52,
+      "rows": 256,
+      "cpu_seconds": 0.010852127,
+      "elapsed_seconds": 0.010895246
+    },
+    {
+      "workload": "small_inline",
+      "rep": 53,
+      "rows": 256,
+      "cpu_seconds": 0.010546367,
+      "elapsed_seconds": 0.010585365
+    },
+    {
+      "workload": "small_inline",
+      "rep": 54,
+      "rows": 256,
+      "cpu_seconds": 0.010643108,
+      "elapsed_seconds": 0.010678883
+    },
+    {
+      "workload": "small_inline",
+      "rep": 55,
+      "rows": 256,
+      "cpu_seconds": 0.010684292,
+      "elapsed_seconds": 0.010770518
+    },
+    {
+      "workload": "small_inline",
+      "rep": 56,
+      "rows": 256,
+      "cpu_seconds": 0.010692306,
+      "elapsed_seconds": 0.010731141
+    },
+    {
+      "workload": "small_inline",
+      "rep": 57,
+      "rows": 256,
+      "cpu_seconds": 0.010680383,
+      "elapsed_seconds": 0.010720544
+    },
+    {
+      "workload": "small_inline",
+      "rep": 58,
+      "rows": 256,
+      "cpu_seconds": 0.010596982,
+      "elapsed_seconds": 0.010633895
+    },
+    {
+      "workload": "small_inline",
+      "rep": 59,
+      "rows": 256,
+      "cpu_seconds": 0.010844414,
+      "elapsed_seconds": 0.010881187
+    },
+    {
+      "workload": "small_inline",
+      "rep": 60,
+      "rows": 256,
+      "cpu_seconds": 0.010794234,
+      "elapsed_seconds": 0.010833881
+    },
+    {
+      "workload": "small_inline",
+      "rep": 61,
+      "rows": 256,
+      "cpu_seconds": 0.010806317,
+      "elapsed_seconds": 0.010843205
+    },
+    {
+      "workload": "small_inline",
+      "rep": 62,
+      "rows": 256,
+      "cpu_seconds": 0.010600533,
+      "elapsed_seconds": 0.010636278
+    },
+    {
+      "workload": "small_inline",
+      "rep": 63,
+      "rows": 256,
+      "cpu_seconds": 0.010659708,
+      "elapsed_seconds": 0.010705081
+    },
+    {
+      "workload": "small_inline",
+      "rep": 64,
+      "rows": 256,
+      "cpu_seconds": 0.010695866,
+      "elapsed_seconds": 0.010734096
+    },
+    {
+      "workload": "small_inline",
+      "rep": 65,
+      "rows": 256,
+      "cpu_seconds": 0.01064822,
+      "elapsed_seconds": 0.010683892
+    },
+    {
+      "workload": "small_inline",
+      "rep": 66,
+      "rows": 256,
+      "cpu_seconds": 0.010708733,
+      "elapsed_seconds": 0.01076226
+    },
+    {
+      "workload": "small_inline",
+      "rep": 67,
+      "rows": 256,
+      "cpu_seconds": 0.010620047,
+      "elapsed_seconds": 0.010656755
+    },
+    {
+      "workload": "small_inline",
+      "rep": 68,
+      "rows": 256,
+      "cpu_seconds": 0.010795799,
+      "elapsed_seconds": 0.010831999
+    },
+    {
+      "workload": "small_inline",
+      "rep": 69,
+      "rows": 256,
+      "cpu_seconds": 0.010417466,
+      "elapsed_seconds": 0.010451474
+    },
+    {
+      "workload": "small_inline",
+      "rep": 70,
+      "rows": 256,
+      "cpu_seconds": 0.010707602,
+      "elapsed_seconds": 0.010764385
+    },
+    {
+      "workload": "small_inline",
+      "rep": 71,
+      "rows": 256,
+      "cpu_seconds": 0.010586787,
+      "elapsed_seconds": 0.010632963
+    },
+    {
+      "workload": "small_inline",
+      "rep": 72,
+      "rows": 256,
+      "cpu_seconds": 0.010672847,
+      "elapsed_seconds": 0.010707761
+    },
+    {
+      "workload": "small_inline",
+      "rep": 73,
+      "rows": 256,
+      "cpu_seconds": 0.010648412,
+      "elapsed_seconds": 0.01068254
+    },
+    {
+      "workload": "small_inline",
+      "rep": 74,
+      "rows": 256,
+      "cpu_seconds": 0.010817833,
+      "elapsed_seconds": 0.010866405
+    },
+    {
+      "workload": "small_inline",
+      "rep": 75,
+      "rows": 256,
+      "cpu_seconds": 0.010780691,
+      "elapsed_seconds": 0.010841386
+    },
+    {
+      "workload": "small_inline",
+      "rep": 76,
+      "rows": 256,
+      "cpu_seconds": 0.010840266,
+      "elapsed_seconds": 0.010882739
+    },
+    {
+      "workload": "small_inline",
+      "rep": 77,
+      "rows": 256,
+      "cpu_seconds": 0.010603843,
+      "elapsed_seconds": 0.010637046
+    },
+    {
+      "workload": "small_inline",
+      "rep": 78,
+      "rows": 256,
+      "cpu_seconds": 0.010776819,
+      "elapsed_seconds": 0.010825832
+    },
+    {
+      "workload": "small_inline",
+      "rep": 79,
+      "rows": 256,
+      "cpu_seconds": 0.010994595,
+      "elapsed_seconds": 0.011030133
+    },
+    {
+      "workload": "small_inline",
+      "rep": 80,
+      "rows": 256,
+      "cpu_seconds": 0.01068359,
+      "elapsed_seconds": 0.010777553
+    },
+    {
+      "workload": "small_inline",
+      "rep": 81,
+      "rows": 256,
+      "cpu_seconds": 0.010695441,
+      "elapsed_seconds": 0.010731004
+    },
+    {
+      "workload": "small_inline",
+      "rep": 82,
+      "rows": 256,
+      "cpu_seconds": 0.010685138,
+      "elapsed_seconds": 0.010722365
+    },
+    {
+      "workload": "small_inline",
+      "rep": 83,
+      "rows": 256,
+      "cpu_seconds": 0.010719019,
+      "elapsed_seconds": 0.010757371
+    },
+    {
+      "workload": "small_inline",
+      "rep": 84,
+      "rows": 256,
+      "cpu_seconds": 0.010633793,
+      "elapsed_seconds": 0.01067165
+    },
+    {
+      "workload": "small_inline",
+      "rep": 85,
+      "rows": 256,
+      "cpu_seconds": 0.010694854,
+      "elapsed_seconds": 0.010728106
+    },
+    {
+      "workload": "small_inline",
+      "rep": 86,
+      "rows": 256,
+      "cpu_seconds": 0.010657087,
+      "elapsed_seconds": 0.010692273
+    },
+    {
+      "workload": "small_inline",
+      "rep": 87,
+      "rows": 256,
+      "cpu_seconds": 0.010633,
+      "elapsed_seconds": 0.010664336
+    },
+    {
+      "workload": "small_inline",
+      "rep": 88,
+      "rows": 256,
+      "cpu_seconds": 0.010658882,
+      "elapsed_seconds": 0.010690333
+    },
+    {
+      "workload": "small_inline",
+      "rep": 89,
+      "rows": 256,
+      "cpu_seconds": 0.010783256,
+      "elapsed_seconds": 0.010828268
+    },
+    {
+      "workload": "small_inline",
+      "rep": 90,
+      "rows": 256,
+      "cpu_seconds": 0.010699834,
+      "elapsed_seconds": 0.010737181
+    },
+    {
+      "workload": "small_inline",
+      "rep": 91,
+      "rows": 256,
+      "cpu_seconds": 0.010932035,
+      "elapsed_seconds": 0.010969136
+    },
+    {
+      "workload": "small_inline",
+      "rep": 92,
+      "rows": 256,
+      "cpu_seconds": 0.01080221,
+      "elapsed_seconds": 0.010836628
+    },
+    {
+      "workload": "small_inline",
+      "rep": 93,
+      "rows": 256,
+      "cpu_seconds": 0.010680918,
+      "elapsed_seconds": 0.010718176
+    },
+    {
+      "workload": "small_inline",
+      "rep": 94,
+      "rows": 256,
+      "cpu_seconds": 0.010919365,
+      "elapsed_seconds": 0.010959502
+    },
+    {
+      "workload": "small_inline",
+      "rep": 95,
+      "rows": 256,
+      "cpu_seconds": 0.010798906,
+      "elapsed_seconds": 0.010832378
+    },
+    {
+      "workload": "small_inline",
+      "rep": 96,
+      "rows": 256,
+      "cpu_seconds": 0.01071571,
+      "elapsed_seconds": 0.010752385
+    },
+    {
+      "workload": "small_inline",
+      "rep": 97,
+      "rows": 256,
+      "cpu_seconds": 0.010635688,
+      "elapsed_seconds": 0.010675625
+    },
+    {
+      "workload": "small_inline",
+      "rep": 98,
+      "rows": 256,
+      "cpu_seconds": 0.010811199,
+      "elapsed_seconds": 0.0108457
+    },
+    {
+      "workload": "small_inline",
+      "rep": 99,
+      "rows": 256,
+      "cpu_seconds": 0.01070534,
+      "elapsed_seconds": 0.010744024
+    },
+    {
+      "workload": "small_inline",
+      "rep": 100,
+      "rows": 256,
+      "cpu_seconds": 0.010684712,
+      "elapsed_seconds": 0.01072357
+    },
+    {
+      "workload": "small_inline",
+      "rep": 101,
+      "rows": 256,
+      "cpu_seconds": 0.010748257,
+      "elapsed_seconds": 0.010790726
+    },
+    {
+      "workload": "small_inline",
+      "rep": 102,
+      "rows": 256,
+      "cpu_seconds": 0.010849635,
+      "elapsed_seconds": 0.010896533
+    },
+    {
+      "workload": "small_inline",
+      "rep": 103,
+      "rows": 256,
+      "cpu_seconds": 0.01170851,
+      "elapsed_seconds": 0.011788266
+    },
+    {
+      "workload": "small_inline",
+      "rep": 104,
+      "rows": 256,
+      "cpu_seconds": 0.010756357,
+      "elapsed_seconds": 0.010791934
+    },
+    {
+      "workload": "small_inline",
+      "rep": 105,
+      "rows": 256,
+      "cpu_seconds": 0.010911073,
+      "elapsed_seconds": 0.010976535
+    },
+    {
+      "workload": "small_inline",
+      "rep": 106,
+      "rows": 256,
+      "cpu_seconds": 0.010937899,
+      "elapsed_seconds": 0.010976112
+    },
+    {
+      "workload": "small_inline",
+      "rep": 107,
+      "rows": 256,
+      "cpu_seconds": 0.010657831,
+      "elapsed_seconds": 0.01069388
+    },
+    {
+      "workload": "small_inline",
+      "rep": 108,
+      "rows": 256,
+      "cpu_seconds": 0.01081754,
+      "elapsed_seconds": 0.010851778
+    },
+    {
+      "workload": "small_inline",
+      "rep": 109,
+      "rows": 256,
+      "cpu_seconds": 0.010752779,
+      "elapsed_seconds": 0.010789619
+    },
+    {
+      "workload": "small_inline",
+      "rep": 110,
+      "rows": 256,
+      "cpu_seconds": 0.010801905,
+      "elapsed_seconds": 0.010849681
+    },
+    {
+      "workload": "small_inline",
+      "rep": 111,
+      "rows": 256,
+      "cpu_seconds": 0.010696927,
+      "elapsed_seconds": 0.010736101
+    },
+    {
+      "workload": "small_inline",
+      "rep": 112,
+      "rows": 256,
+      "cpu_seconds": 0.010834013,
+      "elapsed_seconds": 0.010889806
+    },
+    {
+      "workload": "small_inline",
+      "rep": 113,
+      "rows": 256,
+      "cpu_seconds": 0.010520604,
+      "elapsed_seconds": 0.010559466
+    },
+    {
+      "workload": "small_inline",
+      "rep": 114,
+      "rows": 256,
+      "cpu_seconds": 0.010610875,
+      "elapsed_seconds": 0.010642386
+    },
+    {
+      "workload": "small_inline",
+      "rep": 115,
+      "rows": 256,
+      "cpu_seconds": 0.010995328,
+      "elapsed_seconds": 0.0110324
+    },
+    {
+      "workload": "small_inline",
+      "rep": 116,
+      "rows": 256,
+      "cpu_seconds": 0.010911702,
+      "elapsed_seconds": 0.01095416
+    },
+    {
+      "workload": "small_inline",
+      "rep": 117,
+      "rows": 256,
+      "cpu_seconds": 0.010944687,
+      "elapsed_seconds": 0.010985422
+    },
+    {
+      "workload": "small_inline",
+      "rep": 118,
+      "rows": 256,
+      "cpu_seconds": 0.010841995,
+      "elapsed_seconds": 0.010878931
+    },
+    {
+      "workload": "small_inline",
+      "rep": 119,
+      "rows": 256,
+      "cpu_seconds": 0.010668319,
+      "elapsed_seconds": 0.010703364
+    },
+    {
+      "workload": "small_inline",
+      "rep": 120,
+      "rows": 256,
+      "cpu_seconds": 0.01075611,
+      "elapsed_seconds": 0.010790494
+    },
+    {
+      "workload": "small_inline",
+      "rep": 121,
+      "rows": 256,
+      "cpu_seconds": 0.010605925,
+      "elapsed_seconds": 0.010638229
+    },
+    {
+      "workload": "small_inline",
+      "rep": 122,
+      "rows": 256,
+      "cpu_seconds": 0.010717963,
+      "elapsed_seconds": 0.010755226
+    },
+    {
+      "workload": "small_inline",
+      "rep": 123,
+      "rows": 256,
+      "cpu_seconds": 0.010730685,
+      "elapsed_seconds": 0.010765572
+    },
+    {
+      "workload": "small_inline",
+      "rep": 124,
+      "rows": 256,
+      "cpu_seconds": 0.010856414,
+      "elapsed_seconds": 0.010900036
+    },
+    {
+      "workload": "small_inline",
+      "rep": 125,
+      "rows": 256,
+      "cpu_seconds": 0.010746396,
+      "elapsed_seconds": 0.010788425
+    },
+    {
+      "workload": "small_inline",
+      "rep": 126,
+      "rows": 256,
+      "cpu_seconds": 0.010703521,
+      "elapsed_seconds": 0.010744673
+    },
+    {
+      "workload": "small_inline",
+      "rep": 127,
+      "rows": 256,
+      "cpu_seconds": 0.010836218,
+      "elapsed_seconds": 0.010874583
+    },
+    {
+      "workload": "small_inline",
+      "rep": 128,
+      "rows": 256,
+      "cpu_seconds": 0.010830787,
+      "elapsed_seconds": 0.010872485
+    },
+    {
+      "workload": "small_inline",
+      "rep": 129,
+      "rows": 256,
+      "cpu_seconds": 0.010933701,
+      "elapsed_seconds": 0.010972254
+    },
+    {
+      "workload": "small_inline",
+      "rep": 130,
+      "rows": 256,
+      "cpu_seconds": 0.011050128,
+      "elapsed_seconds": 0.011089463
+    },
+    {
+      "workload": "small_inline",
+      "rep": 131,
+      "rows": 256,
+      "cpu_seconds": 0.01075551,
+      "elapsed_seconds": 0.01079617
+    },
+    {
+      "workload": "small_inline",
+      "rep": 132,
+      "rows": 256,
+      "cpu_seconds": 0.010681377,
+      "elapsed_seconds": 0.010731811
+    },
+    {
+      "workload": "small_inline",
+      "rep": 133,
+      "rows": 256,
+      "cpu_seconds": 0.010581402,
+      "elapsed_seconds": 0.01061233
+    },
+    {
+      "workload": "small_inline",
+      "rep": 134,
+      "rows": 256,
+      "cpu_seconds": 0.010840241,
+      "elapsed_seconds": 0.010880619
+    },
+    {
+      "workload": "small_inline",
+      "rep": 135,
+      "rows": 256,
+      "cpu_seconds": 0.010639748,
+      "elapsed_seconds": 0.010668005
+    },
+    {
+      "workload": "small_inline",
+      "rep": 136,
+      "rows": 256,
+      "cpu_seconds": 0.010651323,
+      "elapsed_seconds": 0.010686575
+    },
+    {
+      "workload": "small_inline",
+      "rep": 137,
+      "rows": 256,
+      "cpu_seconds": 0.010644223,
+      "elapsed_seconds": 0.01067827
+    },
+    {
+      "workload": "small_inline",
+      "rep": 138,
+      "rows": 256,
+      "cpu_seconds": 0.010793959,
+      "elapsed_seconds": 0.010835279
+    },
+    {
+      "workload": "small_inline",
+      "rep": 139,
+      "rows": 256,
+      "cpu_seconds": 0.010692606,
+      "elapsed_seconds": 0.010730252
+    },
+    {
+      "workload": "small_inline",
+      "rep": 140,
+      "rows": 256,
+      "cpu_seconds": 0.010975522,
+      "elapsed_seconds": 0.011022297
+    },
+    {
+      "workload": "small_inline",
+      "rep": 141,
+      "rows": 256,
+      "cpu_seconds": 0.0109514,
+      "elapsed_seconds": 0.010993927
+    },
+    {
+      "workload": "small_inline",
+      "rep": 142,
+      "rows": 256,
+      "cpu_seconds": 0.010917604,
+      "elapsed_seconds": 0.01095309
+    },
+    {
+      "workload": "small_inline",
+      "rep": 143,
+      "rows": 256,
+      "cpu_seconds": 0.010882861,
+      "elapsed_seconds": 0.010923712
+    },
+    {
+      "workload": "small_inline",
+      "rep": 144,
+      "rows": 256,
+      "cpu_seconds": 0.01074808,
+      "elapsed_seconds": 0.01091019
+    },
+    {
+      "workload": "small_inline",
+      "rep": 145,
+      "rows": 256,
+      "cpu_seconds": 0.01109458,
+      "elapsed_seconds": 0.011136392
+    },
+    {
+      "workload": "small_inline",
+      "rep": 146,
+      "rows": 256,
+      "cpu_seconds": 0.010732799,
+      "elapsed_seconds": 0.01078013
+    },
+    {
+      "workload": "small_inline",
+      "rep": 147,
+      "rows": 256,
+      "cpu_seconds": 0.010664807,
+      "elapsed_seconds": 0.010707112
+    },
+    {
+      "workload": "small_inline",
+      "rep": 148,
+      "rows": 256,
+      "cpu_seconds": 0.010638186,
+      "elapsed_seconds": 0.010671944
+    },
+    {
+      "workload": "small_inline",
+      "rep": 149,
+      "rows": 256,
+      "cpu_seconds": 0.010672396,
+      "elapsed_seconds": 0.010709174
+    },
+    {
+      "workload": "small_inline",
+      "rep": 150,
+      "rows": 256,
+      "cpu_seconds": 0.010651616,
+      "elapsed_seconds": 0.010698256
+    },
+    {
+      "workload": "small_inline",
+      "rep": 151,
+      "rows": 256,
+      "cpu_seconds": 0.010631168,
+      "elapsed_seconds": 0.010664148
+    },
+    {
+      "workload": "small_inline",
+      "rep": 152,
+      "rows": 256,
+      "cpu_seconds": 0.015486752,
+      "elapsed_seconds": 0.015556595
+    },
+    {
+      "workload": "small_inline",
+      "rep": 153,
+      "rows": 256,
+      "cpu_seconds": 0.010864893,
+      "elapsed_seconds": 0.010910842
+    },
+    {
+      "workload": "small_inline",
+      "rep": 154,
+      "rows": 256,
+      "cpu_seconds": 0.010794715,
+      "elapsed_seconds": 0.010830276
+    },
+    {
+      "workload": "small_inline",
+      "rep": 155,
+      "rows": 256,
+      "cpu_seconds": 0.01064672,
+      "elapsed_seconds": 0.010678088
+    },
+    {
+      "workload": "small_inline",
+      "rep": 156,
+      "rows": 256,
+      "cpu_seconds": 0.010706665,
+      "elapsed_seconds": 0.010737522
+    },
+    {
+      "workload": "small_inline",
+      "rep": 157,
+      "rows": 256,
+      "cpu_seconds": 0.010704005,
+      "elapsed_seconds": 0.010781107
+    },
+    {
+      "workload": "small_inline",
+      "rep": 158,
+      "rows": 256,
+      "cpu_seconds": 0.010837995,
+      "elapsed_seconds": 0.010878946
+    },
+    {
+      "workload": "small_inline",
+      "rep": 159,
+      "rows": 256,
+      "cpu_seconds": 0.010825686,
+      "elapsed_seconds": 0.010868097
+    },
+    {
+      "workload": "small_inline",
+      "rep": 160,
+      "rows": 256,
+      "cpu_seconds": 0.01070066,
+      "elapsed_seconds": 0.010738244
+    },
+    {
+      "workload": "small_inline",
+      "rep": 161,
+      "rows": 256,
+      "cpu_seconds": 0.010842162,
+      "elapsed_seconds": 0.01087946
+    },
+    {
+      "workload": "small_inline",
+      "rep": 162,
+      "rows": 256,
+      "cpu_seconds": 0.010682503,
+      "elapsed_seconds": 0.010722149
+    },
+    {
+      "workload": "small_inline",
+      "rep": 163,
+      "rows": 256,
+      "cpu_seconds": 0.010806268,
+      "elapsed_seconds": 0.010840354
+    },
+    {
+      "workload": "small_inline",
+      "rep": 164,
+      "rows": 256,
+      "cpu_seconds": 0.010853974,
+      "elapsed_seconds": 0.010890142
+    },
+    {
+      "workload": "small_inline",
+      "rep": 165,
+      "rows": 256,
+      "cpu_seconds": 0.010714284,
+      "elapsed_seconds": 0.010749093
+    },
+    {
+      "workload": "small_inline",
+      "rep": 166,
+      "rows": 256,
+      "cpu_seconds": 0.010810057,
+      "elapsed_seconds": 0.010847658
+    },
+    {
+      "workload": "small_inline",
+      "rep": 167,
+      "rows": 256,
+      "cpu_seconds": 0.010750801,
+      "elapsed_seconds": 0.010788467
+    },
+    {
+      "workload": "small_inline",
+      "rep": 168,
+      "rows": 256,
+      "cpu_seconds": 0.010749479,
+      "elapsed_seconds": 0.010786282
+    },
+    {
+      "workload": "small_inline",
+      "rep": 169,
+      "rows": 256,
+      "cpu_seconds": 0.010695676,
+      "elapsed_seconds": 0.010734974
+    },
+    {
+      "workload": "small_inline",
+      "rep": 170,
+      "rows": 256,
+      "cpu_seconds": 0.010716031,
+      "elapsed_seconds": 0.010755593
+    },
+    {
+      "workload": "small_inline",
+      "rep": 171,
+      "rows": 256,
+      "cpu_seconds": 0.010628487,
+      "elapsed_seconds": 0.010661795
+    },
+    {
+      "workload": "small_inline",
+      "rep": 172,
+      "rows": 256,
+      "cpu_seconds": 0.010834221,
+      "elapsed_seconds": 0.010869437
+    },
+    {
+      "workload": "small_inline",
+      "rep": 173,
+      "rows": 256,
+      "cpu_seconds": 0.010731408,
+      "elapsed_seconds": 0.010769689
+    },
+    {
+      "workload": "small_inline",
+      "rep": 174,
+      "rows": 256,
+      "cpu_seconds": 0.010840394,
+      "elapsed_seconds": 0.010875953
+    },
+    {
+      "workload": "small_inline",
+      "rep": 175,
+      "rows": 256,
+      "cpu_seconds": 0.010821339,
+      "elapsed_seconds": 0.010854634
+    },
+    {
+      "workload": "small_inline",
+      "rep": 176,
+      "rows": 256,
+      "cpu_seconds": 0.010632403,
+      "elapsed_seconds": 0.010664844
+    },
+    {
+      "workload": "small_inline",
+      "rep": 177,
+      "rows": 256,
+      "cpu_seconds": 0.010713832,
+      "elapsed_seconds": 0.010753269
+    },
+    {
+      "workload": "small_inline",
+      "rep": 178,
+      "rows": 256,
+      "cpu_seconds": 0.010736807,
+      "elapsed_seconds": 0.010771738
+    },
+    {
+      "workload": "small_inline",
+      "rep": 179,
+      "rows": 256,
+      "cpu_seconds": 0.010703439,
+      "elapsed_seconds": 0.010741924
+    },
+    {
+      "workload": "small_inline",
+      "rep": 180,
+      "rows": 256,
+      "cpu_seconds": 0.010849721,
+      "elapsed_seconds": 0.010884398
+    },
+    {
+      "workload": "small_inline",
+      "rep": 181,
+      "rows": 256,
+      "cpu_seconds": 0.010642432,
+      "elapsed_seconds": 0.010677759
+    },
+    {
+      "workload": "small_inline",
+      "rep": 182,
+      "rows": 256,
+      "cpu_seconds": 0.010792191,
+      "elapsed_seconds": 0.010856352
+    },
+    {
+      "workload": "small_inline",
+      "rep": 183,
+      "rows": 256,
+      "cpu_seconds": 0.010770466,
+      "elapsed_seconds": 0.010806444
+    },
+    {
+      "workload": "small_inline",
+      "rep": 184,
+      "rows": 256,
+      "cpu_seconds": 0.010839183,
+      "elapsed_seconds": 0.010877853
+    },
+    {
+      "workload": "small_inline",
+      "rep": 185,
+      "rows": 256,
+      "cpu_seconds": 0.010701436,
+      "elapsed_seconds": 0.010733863
+    },
+    {
+      "workload": "small_inline",
+      "rep": 186,
+      "rows": 256,
+      "cpu_seconds": 0.010846788,
+      "elapsed_seconds": 0.010884928
+    },
+    {
+      "workload": "small_inline",
+      "rep": 187,
+      "rows": 256,
+      "cpu_seconds": 0.010764306,
+      "elapsed_seconds": 0.010800018
+    },
+    {
+      "workload": "small_inline",
+      "rep": 188,
+      "rows": 256,
+      "cpu_seconds": 0.010717479,
+      "elapsed_seconds": 0.010756869
+    },
+    {
+      "workload": "small_inline",
+      "rep": 189,
+      "rows": 256,
+      "cpu_seconds": 0.010728122,
+      "elapsed_seconds": 0.010768447
+    },
+    {
+      "workload": "small_inline",
+      "rep": 190,
+      "rows": 256,
+      "cpu_seconds": 0.010738019,
+      "elapsed_seconds": 0.01077736
+    },
+    {
+      "workload": "small_inline",
+      "rep": 191,
+      "rows": 256,
+      "cpu_seconds": 0.010942767,
+      "elapsed_seconds": 0.010983064
+    },
+    {
+      "workload": "small_inline",
+      "rep": 192,
+      "rows": 256,
+      "cpu_seconds": 0.011031682,
+      "elapsed_seconds": 0.011079269
+    },
+    {
+      "workload": "small_inline",
+      "rep": 193,
+      "rows": 256,
+      "cpu_seconds": 0.010889105,
+      "elapsed_seconds": 0.010941684
+    }
+  ],
+  "output": "Note: Google Test filter = Pr7600Measure.Matrix\n[==========] Running 1 test from 1 test suite.\n[----------] Global test environment set-up.\n##### Starting Server For OOS SQL Testing #####\nwill be written at ./test_oos_sql_log\n[----------] 1 test from Pr7600Measure\n[ RUN      ] Pr7600Measure.Matrix\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":-2,\"rows\":256,\"cpu_seconds\":0.011066795,\"elapsed_seconds\":0.011105018}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":-1,\"rows\":256,\"cpu_seconds\":0.010871479,\"elapsed_seconds\":0.010924771}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":0,\"rows\":256,\"cpu_seconds\":0.010795231,\"elapsed_seconds\":0.010829542}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":1,\"rows\":256,\"cpu_seconds\":0.010805553,\"elapsed_seconds\":0.010841234}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":2,\"rows\":256,\"cpu_seconds\":0.010700563,\"elapsed_seconds\":0.010742613}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":3,\"rows\":256,\"cpu_seconds\":0.010651034,\"elapsed_seconds\":0.010683921}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":4,\"rows\":256,\"cpu_seconds\":0.010634189,\"elapsed_seconds\":0.010671299}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":5,\"rows\":256,\"cpu_seconds\":0.010689723,\"elapsed_seconds\":0.010724204}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":6,\"rows\":256,\"cpu_seconds\":0.010762378,\"elapsed_seconds\":0.010827363}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":7,\"rows\":256,\"cpu_seconds\":0.010598073,\"elapsed_seconds\":0.010637676}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":8,\"rows\":256,\"cpu_seconds\":0.010693641,\"elapsed_seconds\":0.010731144}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":9,\"rows\":256,\"cpu_seconds\":0.010588899,\"elapsed_seconds\":0.010623656}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":10,\"rows\":256,\"cpu_seconds\":0.010924669,\"elapsed_seconds\":0.010961523}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":11,\"rows\":256,\"cpu_seconds\":0.010712441,\"elapsed_seconds\":0.010759744}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":12,\"rows\":256,\"cpu_seconds\":0.010665186,\"elapsed_seconds\":0.010706714}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":13,\"rows\":256,\"cpu_seconds\":0.010700663,\"elapsed_seconds\":0.010739051}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":14,\"rows\":256,\"cpu_seconds\":0.010671739,\"elapsed_seconds\":0.010709669}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":15,\"rows\":256,\"cpu_seconds\":0.010678767,\"elapsed_seconds\":0.010713823}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":16,\"rows\":256,\"cpu_seconds\":0.010530421,\"elapsed_seconds\":0.010567299}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":17,\"rows\":256,\"cpu_seconds\":0.010915395,\"elapsed_seconds\":0.010959636}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":18,\"rows\":256,\"cpu_seconds\":0.010668959,\"elapsed_seconds\":0.010706727}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":19,\"rows\":256,\"cpu_seconds\":0.010707818,\"elapsed_seconds\":0.010741864}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":20,\"rows\":256,\"cpu_seconds\":0.010661438,\"elapsed_seconds\":0.010708417}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":21,\"rows\":256,\"cpu_seconds\":0.010606462,\"elapsed_seconds\":0.010640250}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":22,\"rows\":256,\"cpu_seconds\":0.010603743,\"elapsed_seconds\":0.010654502}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":23,\"rows\":256,\"cpu_seconds\":0.010658499,\"elapsed_seconds\":0.010692981}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":24,\"rows\":256,\"cpu_seconds\":0.010741115,\"elapsed_seconds\":0.010783114}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":25,\"rows\":256,\"cpu_seconds\":0.010623572,\"elapsed_seconds\":0.010666795}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":26,\"rows\":256,\"cpu_seconds\":0.010633005,\"elapsed_seconds\":0.010674447}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":27,\"rows\":256,\"cpu_seconds\":0.010643418,\"elapsed_seconds\":0.010677722}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":28,\"rows\":256,\"cpu_seconds\":0.010759754,\"elapsed_seconds\":0.010812188}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":29,\"rows\":256,\"cpu_seconds\":0.010776638,\"elapsed_seconds\":0.010816236}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":30,\"rows\":256,\"cpu_seconds\":0.010563734,\"elapsed_seconds\":0.010605502}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":31,\"rows\":256,\"cpu_seconds\":0.010683600,\"elapsed_seconds\":0.010721112}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":32,\"rows\":256,\"cpu_seconds\":0.010805538,\"elapsed_seconds\":0.010842540}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":33,\"rows\":256,\"cpu_seconds\":0.010813513,\"elapsed_seconds\":0.010855515}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":34,\"rows\":256,\"cpu_seconds\":0.010669058,\"elapsed_seconds\":0.010702446}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":35,\"rows\":256,\"cpu_seconds\":0.010687884,\"elapsed_seconds\":0.010723692}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":36,\"rows\":256,\"cpu_seconds\":0.010667234,\"elapsed_seconds\":0.010703784}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":37,\"rows\":256,\"cpu_seconds\":0.010689637,\"elapsed_seconds\":0.010731622}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":38,\"rows\":256,\"cpu_seconds\":0.010693734,\"elapsed_seconds\":0.010731571}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":39,\"rows\":256,\"cpu_seconds\":0.010711746,\"elapsed_seconds\":0.010754283}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":40,\"rows\":256,\"cpu_seconds\":0.010615745,\"elapsed_seconds\":0.010653126}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":41,\"rows\":256,\"cpu_seconds\":0.010706791,\"elapsed_seconds\":0.010743233}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":42,\"rows\":256,\"cpu_seconds\":0.010674989,\"elapsed_seconds\":0.010713924}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":43,\"rows\":256,\"cpu_seconds\":0.010634937,\"elapsed_seconds\":0.010669223}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":44,\"rows\":256,\"cpu_seconds\":0.010796908,\"elapsed_seconds\":0.010838359}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":45,\"rows\":256,\"cpu_seconds\":0.010710252,\"elapsed_seconds\":0.010760634}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":46,\"rows\":256,\"cpu_seconds\":0.010714262,\"elapsed_seconds\":0.010762125}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":47,\"rows\":256,\"cpu_seconds\":0.010782824,\"elapsed_seconds\":0.010828962}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":48,\"rows\":256,\"cpu_seconds\":0.010655219,\"elapsed_seconds\":0.010693300}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":49,\"rows\":256,\"cpu_seconds\":0.010541905,\"elapsed_seconds\":0.010582254}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":50,\"rows\":256,\"cpu_seconds\":0.010627941,\"elapsed_seconds\":0.010665547}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":51,\"rows\":256,\"cpu_seconds\":0.010608474,\"elapsed_seconds\":0.010643817}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":52,\"rows\":256,\"cpu_seconds\":0.010852127,\"elapsed_seconds\":0.010895246}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":53,\"rows\":256,\"cpu_seconds\":0.010546367,\"elapsed_seconds\":0.010585365}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":54,\"rows\":256,\"cpu_seconds\":0.010643108,\"elapsed_seconds\":0.010678883}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":55,\"rows\":256,\"cpu_seconds\":0.010684292,\"elapsed_seconds\":0.010770518}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":56,\"rows\":256,\"cpu_seconds\":0.010692306,\"elapsed_seconds\":0.010731141}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":57,\"rows\":256,\"cpu_seconds\":0.010680383,\"elapsed_seconds\":0.010720544}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":58,\"rows\":256,\"cpu_seconds\":0.010596982,\"elapsed_seconds\":0.010633895}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":59,\"rows\":256,\"cpu_seconds\":0.010844414,\"elapsed_seconds\":0.010881187}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":60,\"rows\":256,\"cpu_seconds\":0.010794234,\"elapsed_seconds\":0.010833881}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":61,\"rows\":256,\"cpu_seconds\":0.010806317,\"elapsed_seconds\":0.010843205}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":62,\"rows\":256,\"cpu_seconds\":0.010600533,\"elapsed_seconds\":0.010636278}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":63,\"rows\":256,\"cpu_seconds\":0.010659708,\"elapsed_seconds\":0.010705081}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":64,\"rows\":256,\"cpu_seconds\":0.010695866,\"elapsed_seconds\":0.010734096}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":65,\"rows\":256,\"cpu_seconds\":0.010648220,\"elapsed_seconds\":0.010683892}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":66,\"rows\":256,\"cpu_seconds\":0.010708733,\"elapsed_seconds\":0.010762260}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":67,\"rows\":256,\"cpu_seconds\":0.010620047,\"elapsed_seconds\":0.010656755}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":68,\"rows\":256,\"cpu_seconds\":0.010795799,\"elapsed_seconds\":0.010831999}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":69,\"rows\":256,\"cpu_seconds\":0.010417466,\"elapsed_seconds\":0.010451474}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":70,\"rows\":256,\"cpu_seconds\":0.010707602,\"elapsed_seconds\":0.010764385}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":71,\"rows\":256,\"cpu_seconds\":0.010586787,\"elapsed_seconds\":0.010632963}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":72,\"rows\":256,\"cpu_seconds\":0.010672847,\"elapsed_seconds\":0.010707761}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":73,\"rows\":256,\"cpu_seconds\":0.010648412,\"elapsed_seconds\":0.010682540}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":74,\"rows\":256,\"cpu_seconds\":0.010817833,\"elapsed_seconds\":0.010866405}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":75,\"rows\":256,\"cpu_seconds\":0.010780691,\"elapsed_seconds\":0.010841386}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":76,\"rows\":256,\"cpu_seconds\":0.010840266,\"elapsed_seconds\":0.010882739}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":77,\"rows\":256,\"cpu_seconds\":0.010603843,\"elapsed_seconds\":0.010637046}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":78,\"rows\":256,\"cpu_seconds\":0.010776819,\"elapsed_seconds\":0.010825832}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":79,\"rows\":256,\"cpu_seconds\":0.010994595,\"elapsed_seconds\":0.011030133}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":80,\"rows\":256,\"cpu_seconds\":0.010683590,\"elapsed_seconds\":0.010777553}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":81,\"rows\":256,\"cpu_seconds\":0.010695441,\"elapsed_seconds\":0.010731004}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":82,\"rows\":256,\"cpu_seconds\":0.010685138,\"elapsed_seconds\":0.010722365}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":83,\"rows\":256,\"cpu_seconds\":0.010719019,\"elapsed_seconds\":0.010757371}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":84,\"rows\":256,\"cpu_seconds\":0.010633793,\"elapsed_seconds\":0.010671650}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":85,\"rows\":256,\"cpu_seconds\":0.010694854,\"elapsed_seconds\":0.010728106}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":86,\"rows\":256,\"cpu_seconds\":0.010657087,\"elapsed_seconds\":0.010692273}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":87,\"rows\":256,\"cpu_seconds\":0.010633000,\"elapsed_seconds\":0.010664336}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":88,\"rows\":256,\"cpu_seconds\":0.010658882,\"elapsed_seconds\":0.010690333}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":89,\"rows\":256,\"cpu_seconds\":0.010783256,\"elapsed_seconds\":0.010828268}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":90,\"rows\":256,\"cpu_seconds\":0.010699834,\"elapsed_seconds\":0.010737181}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":91,\"rows\":256,\"cpu_seconds\":0.010932035,\"elapsed_seconds\":0.010969136}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":92,\"rows\":256,\"cpu_seconds\":0.010802210,\"elapsed_seconds\":0.010836628}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":93,\"rows\":256,\"cpu_seconds\":0.010680918,\"elapsed_seconds\":0.010718176}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":94,\"rows\":256,\"cpu_seconds\":0.010919365,\"elapsed_seconds\":0.010959502}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":95,\"rows\":256,\"cpu_seconds\":0.010798906,\"elapsed_seconds\":0.010832378}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":96,\"rows\":256,\"cpu_seconds\":0.010715710,\"elapsed_seconds\":0.010752385}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":97,\"rows\":256,\"cpu_seconds\":0.010635688,\"elapsed_seconds\":0.010675625}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":98,\"rows\":256,\"cpu_seconds\":0.010811199,\"elapsed_seconds\":0.010845700}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":99,\"rows\":256,\"cpu_seconds\":0.010705340,\"elapsed_seconds\":0.010744024}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":100,\"rows\":256,\"cpu_seconds\":0.010684712,\"elapsed_seconds\":0.010723570}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":101,\"rows\":256,\"cpu_seconds\":0.010748257,\"elapsed_seconds\":0.010790726}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":102,\"rows\":256,\"cpu_seconds\":0.010849635,\"elapsed_seconds\":0.010896533}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":103,\"rows\":256,\"cpu_seconds\":0.011708510,\"elapsed_seconds\":0.011788266}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":104,\"rows\":256,\"cpu_seconds\":0.010756357,\"elapsed_seconds\":0.010791934}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":105,\"rows\":256,\"cpu_seconds\":0.010911073,\"elapsed_seconds\":0.010976535}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":106,\"rows\":256,\"cpu_seconds\":0.010937899,\"elapsed_seconds\":0.010976112}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":107,\"rows\":256,\"cpu_seconds\":0.010657831,\"elapsed_seconds\":0.010693880}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":108,\"rows\":256,\"cpu_seconds\":0.010817540,\"elapsed_seconds\":0.010851778}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":109,\"rows\":256,\"cpu_seconds\":0.010752779,\"elapsed_seconds\":0.010789619}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":110,\"rows\":256,\"cpu_seconds\":0.010801905,\"elapsed_seconds\":0.010849681}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":111,\"rows\":256,\"cpu_seconds\":0.010696927,\"elapsed_seconds\":0.010736101}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":112,\"rows\":256,\"cpu_seconds\":0.010834013,\"elapsed_seconds\":0.010889806}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":113,\"rows\":256,\"cpu_seconds\":0.010520604,\"elapsed_seconds\":0.010559466}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":114,\"rows\":256,\"cpu_seconds\":0.010610875,\"elapsed_seconds\":0.010642386}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":115,\"rows\":256,\"cpu_seconds\":0.010995328,\"elapsed_seconds\":0.011032400}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":116,\"rows\":256,\"cpu_seconds\":0.010911702,\"elapsed_seconds\":0.010954160}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":117,\"rows\":256,\"cpu_seconds\":0.010944687,\"elapsed_seconds\":0.010985422}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":118,\"rows\":256,\"cpu_seconds\":0.010841995,\"elapsed_seconds\":0.010878931}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":119,\"rows\":256,\"cpu_seconds\":0.010668319,\"elapsed_seconds\":0.010703364}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":120,\"rows\":256,\"cpu_seconds\":0.010756110,\"elapsed_seconds\":0.010790494}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":121,\"rows\":256,\"cpu_seconds\":0.010605925,\"elapsed_seconds\":0.010638229}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":122,\"rows\":256,\"cpu_seconds\":0.010717963,\"elapsed_seconds\":0.010755226}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":123,\"rows\":256,\"cpu_seconds\":0.010730685,\"elapsed_seconds\":0.010765572}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":124,\"rows\":256,\"cpu_seconds\":0.010856414,\"elapsed_seconds\":0.010900036}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":125,\"rows\":256,\"cpu_seconds\":0.010746396,\"elapsed_seconds\":0.010788425}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":126,\"rows\":256,\"cpu_seconds\":0.010703521,\"elapsed_seconds\":0.010744673}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":127,\"rows\":256,\"cpu_seconds\":0.010836218,\"elapsed_seconds\":0.010874583}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":128,\"rows\":256,\"cpu_seconds\":0.010830787,\"elapsed_seconds\":0.010872485}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":129,\"rows\":256,\"cpu_seconds\":0.010933701,\"elapsed_seconds\":0.010972254}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":130,\"rows\":256,\"cpu_seconds\":0.011050128,\"elapsed_seconds\":0.011089463}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":131,\"rows\":256,\"cpu_seconds\":0.010755510,\"elapsed_seconds\":0.010796170}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":132,\"rows\":256,\"cpu_seconds\":0.010681377,\"elapsed_seconds\":0.010731811}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":133,\"rows\":256,\"cpu_seconds\":0.010581402,\"elapsed_seconds\":0.010612330}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":134,\"rows\":256,\"cpu_seconds\":0.010840241,\"elapsed_seconds\":0.010880619}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":135,\"rows\":256,\"cpu_seconds\":0.010639748,\"elapsed_seconds\":0.010668005}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":136,\"rows\":256,\"cpu_seconds\":0.010651323,\"elapsed_seconds\":0.010686575}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":137,\"rows\":256,\"cpu_seconds\":0.010644223,\"elapsed_seconds\":0.010678270}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":138,\"rows\":256,\"cpu_seconds\":0.010793959,\"elapsed_seconds\":0.010835279}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":139,\"rows\":256,\"cpu_seconds\":0.010692606,\"elapsed_seconds\":0.010730252}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":140,\"rows\":256,\"cpu_seconds\":0.010975522,\"elapsed_seconds\":0.011022297}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":141,\"rows\":256,\"cpu_seconds\":0.010951400,\"elapsed_seconds\":0.010993927}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":142,\"rows\":256,\"cpu_seconds\":0.010917604,\"elapsed_seconds\":0.010953090}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":143,\"rows\":256,\"cpu_seconds\":0.010882861,\"elapsed_seconds\":0.010923712}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":144,\"rows\":256,\"cpu_seconds\":0.010748080,\"elapsed_seconds\":0.010910190}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":145,\"rows\":256,\"cpu_seconds\":0.011094580,\"elapsed_seconds\":0.011136392}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":146,\"rows\":256,\"cpu_seconds\":0.010732799,\"elapsed_seconds\":0.010780130}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":147,\"rows\":256,\"cpu_seconds\":0.010664807,\"elapsed_seconds\":0.010707112}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":148,\"rows\":256,\"cpu_seconds\":0.010638186,\"elapsed_seconds\":0.010671944}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":149,\"rows\":256,\"cpu_seconds\":0.010672396,\"elapsed_seconds\":0.010709174}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":150,\"rows\":256,\"cpu_seconds\":0.010651616,\"elapsed_seconds\":0.010698256}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":151,\"rows\":256,\"cpu_seconds\":0.010631168,\"elapsed_seconds\":0.010664148}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":152,\"rows\":256,\"cpu_seconds\":0.015486752,\"elapsed_seconds\":0.015556595}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":153,\"rows\":256,\"cpu_seconds\":0.010864893,\"elapsed_seconds\":0.010910842}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":154,\"rows\":256,\"cpu_seconds\":0.010794715,\"elapsed_seconds\":0.010830276}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":155,\"rows\":256,\"cpu_seconds\":0.010646720,\"elapsed_seconds\":0.010678088}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":156,\"rows\":256,\"cpu_seconds\":0.010706665,\"elapsed_seconds\":0.010737522}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":157,\"rows\":256,\"cpu_seconds\":0.010704005,\"elapsed_seconds\":0.010781107}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":158,\"rows\":256,\"cpu_seconds\":0.010837995,\"elapsed_seconds\":0.010878946}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":159,\"rows\":256,\"cpu_seconds\":0.010825686,\"elapsed_seconds\":0.010868097}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":160,\"rows\":256,\"cpu_seconds\":0.010700660,\"elapsed_seconds\":0.010738244}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":161,\"rows\":256,\"cpu_seconds\":0.010842162,\"elapsed_seconds\":0.010879460}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":162,\"rows\":256,\"cpu_seconds\":0.010682503,\"elapsed_seconds\":0.010722149}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":163,\"rows\":256,\"cpu_seconds\":0.010806268,\"elapsed_seconds\":0.010840354}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":164,\"rows\":256,\"cpu_seconds\":0.010853974,\"elapsed_seconds\":0.010890142}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":165,\"rows\":256,\"cpu_seconds\":0.010714284,\"elapsed_seconds\":0.010749093}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":166,\"rows\":256,\"cpu_seconds\":0.010810057,\"elapsed_seconds\":0.010847658}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":167,\"rows\":256,\"cpu_seconds\":0.010750801,\"elapsed_seconds\":0.010788467}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":168,\"rows\":256,\"cpu_seconds\":0.010749479,\"elapsed_seconds\":0.010786282}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":169,\"rows\":256,\"cpu_seconds\":0.010695676,\"elapsed_seconds\":0.010734974}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":170,\"rows\":256,\"cpu_seconds\":0.010716031,\"elapsed_seconds\":0.010755593}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":171,\"rows\":256,\"cpu_seconds\":0.010628487,\"elapsed_seconds\":0.010661795}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":172,\"rows\":256,\"cpu_seconds\":0.010834221,\"elapsed_seconds\":0.010869437}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":173,\"rows\":256,\"cpu_seconds\":0.010731408,\"elapsed_seconds\":0.010769689}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":174,\"rows\":256,\"cpu_seconds\":0.010840394,\"elapsed_seconds\":0.010875953}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":175,\"rows\":256,\"cpu_seconds\":0.010821339,\"elapsed_seconds\":0.010854634}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":176,\"rows\":256,\"cpu_seconds\":0.010632403,\"elapsed_seconds\":0.010664844}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":177,\"rows\":256,\"cpu_seconds\":0.010713832,\"elapsed_seconds\":0.010753269}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":178,\"rows\":256,\"cpu_seconds\":0.010736807,\"elapsed_seconds\":0.010771738}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":179,\"rows\":256,\"cpu_seconds\":0.010703439,\"elapsed_seconds\":0.010741924}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":180,\"rows\":256,\"cpu_seconds\":0.010849721,\"elapsed_seconds\":0.010884398}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":181,\"rows\":256,\"cpu_seconds\":0.010642432,\"elapsed_seconds\":0.010677759}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":182,\"rows\":256,\"cpu_seconds\":0.010792191,\"elapsed_seconds\":0.010856352}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":183,\"rows\":256,\"cpu_seconds\":0.010770466,\"elapsed_seconds\":0.010806444}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":184,\"rows\":256,\"cpu_seconds\":0.010839183,\"elapsed_seconds\":0.010877853}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":185,\"rows\":256,\"cpu_seconds\":0.010701436,\"elapsed_seconds\":0.010733863}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":186,\"rows\":256,\"cpu_seconds\":0.010846788,\"elapsed_seconds\":0.010884928}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":187,\"rows\":256,\"cpu_seconds\":0.010764306,\"elapsed_seconds\":0.010800018}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":188,\"rows\":256,\"cpu_seconds\":0.010717479,\"elapsed_seconds\":0.010756869}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":189,\"rows\":256,\"cpu_seconds\":0.010728122,\"elapsed_seconds\":0.010768447}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":190,\"rows\":256,\"cpu_seconds\":0.010738019,\"elapsed_seconds\":0.010777360}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":191,\"rows\":256,\"cpu_seconds\":0.010942767,\"elapsed_seconds\":0.010983064}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":192,\"rows\":256,\"cpu_seconds\":0.011031682,\"elapsed_seconds\":0.011079269}\nPR7600_DONE\nPR7600_READY\nPR7600_SAMPLE {\"workload\":\"small_inline\",\"rep\":193,\"rows\":256,\"cpu_seconds\":0.010889105,\"elapsed_seconds\":0.010941684}\nPR7600_DONE\nPR7600_READY\n[       OK ] Pr7600Measure.Matrix (11791 ms)\n[----------] 1 test from Pr7600Measure (11791 ms total)\n\n[----------] Global test environment tear-down\n##### Stopping Server For OOS SQL Testing #####\n[==========] 1 test from 1 test suite ran. (12028 ms total)\n[  PASSED  ] 1 test.\n",
+  "exit_code": 0
+}

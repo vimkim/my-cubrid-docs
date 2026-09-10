@@ -1,0 +1,39 @@
+1788856085.494931 probe start: mode=count &append_lsa=0x7f6302c86db8 &prior_lsa=0x7f6302c86cf0 max_wait=0.200s
+1788856085.756041 breakpoints set; resuming all threads
+1788856090.044083 [TERMINAL] assert branch reached on lwp=129
+1788856090.045552 [TERMINAL-KIND] assert-branch(+117)
+1788856090.045657 [STOP] thread=(18, 129, 0) pc=0x7f63024d5595 log_get_undo_record
+1788856090.045739 [ASSERT-INPUTS] rcx@+117=0x0198000000000000 (= word1 XOR process_lsa) ; word1(first load)=0x3ff00000000000b6 -> (182, 16368) ; second load offset(esi)=712 ; process_lsa=0x3e680000000000b6 -> (182, 15976) ; coherent append_lsa now=(183, 712) ; prior_lsa now=(183, 712)
+1788856090.045751 [ASSERT-INPUTS] effective compared value = (pageid from word1, offset from second load) = (182,712) ; assert needs process_lsa (182, 15976) < that
+1788856090.418947 [BT]
+#0  0x00007f63024d5595 in log_get_undo_record (thread_p=thread_p@entry=0x7f6301d980a8, log_page_p=log_page_p@entry=0x7f629ed1f1b0, process_lsa=..., recdes=recdes@entry=0x7f629ed23710) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/transaction/log_manager.c:9856
+#1  0x00007f63024037a6 in heap_get_visible_version_from_log (thread_p=thread_p@entry=0x7f6301d980a8, recdes=0x7f629ed23710, previous_version_lsa=previous_version_lsa@entry=0x7f629ed23228, scan_cache=0x7f6134005570, has_chn=-1) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/storage/heap_file.c:26399
+#2  0x00007f630240a2be in heap_get_visible_version_internal (thread_p=thread_p@entry=0x7f6301d980a8, context=context@entry=0x7f629ed23270, is_heap_scan=is_heap_scan@entry=false) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/storage/heap_file.c:26743
+#3  0x00007f630240a37a in heap_get_visible_version (thread_p=thread_p@entry=0x7f6301d980a8, oid=<optimized out>, class_oid=class_oid@entry=0x0, recdes=recdes@entry=0x7f629ed23710, scan_cache=scan_cache@entry=0x7f6134005570, ispeeking=<optimized out>, old_chn=-1, recdes_consumption_policy=HEAP_RECDES_DONT_CONSUME_RAW_BYTES) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/storage/heap_file.c:26484
+#4  0x00007f630227e3de in scan_next_index_lookup_heap (isolation=<optimized out>, data_filter=0x7f629ed23770, isidp=0x7f6134005168, scan_id=0x7f6134005118, thread_p=0x7f6301d980a8) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/scan_manager.c:6814
+#5  scan_next_index_scan (scan_id=0x7f6134005118, thread_p=0x7f6301d980a8) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/scan_manager.c:6713
+#6  scan_next_scan_local (thread_p=0x7f6301d980a8, scan_id=0x7f6134005118) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/scan_manager.c:5743
+#7  0x00007f63022781d2 in scan_handle_single_scan (thread_p=thread_p@entry=0x7f6301d980a8, s_id=0x7f6134005118, next_scan=next_scan@entry=0x7f630227d420 <scan_next_scan_local(THREAD_ENTRY*, SCAN_ID*)>) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/scan_manager.c:7702
+#8  0x00007f6302283c7c in scan_next_scan (thread_p=thread_p@entry=0x7f6301d980a8, s_id=<optimized out>) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/scan_manager.c:7838
+#9  0x00007f630225a22c in qexec_intprt_fnc (thread_p=0x7f6301d980a8, xasl=0x7f6134003b28, xasl_state=0x7f629ed240d0, tplrec=0x7f629ed23b90, next_scan_fnc=0x5608ba84a7a8) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/query_executor.c:9496
+#10 0x00007f63022550bf in qexec_execute_mainblock_internal (p_class_instance_lock_info=<optimized out>, xasl_state=0x7f629ed240d0, xasl=0x7f629ed240d0, thread_p=0x7f6301d980a8) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/query_executor.c:16730
+#11 qexec_execute_mainblock (thread_p=thread_p@entry=0x7f6301d980a8, xasl=xasl@entry=0x7f6134003b28, xstate=xstate@entry=0x7f629ed240d0, p_class_instance_lock_info=p_class_instance_lock_info@entry=0x7f629ed23d64) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/query_executor.c:15780
+#12 0x00007f630225b4b2 in qexec_execute_update (thread_p=thread_p@entry=0x7f6301d980a8, xasl=xasl@entry=0x7f6134002b60, has_delete=has_delete@entry=false, xasl_state=xasl_state@entry=0x7f629ed240d0) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/query_executor.c:10492
+#13 0x00007f63022525b1 in qexec_execute_mainblock_internal (p_class_instance_lock_info=0x0, xasl_state=0x7f629ed240d0, xasl=0x7f6134002b60, thread_p=0x7f6301d980a8) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/query_executor.c:15989
+#14 qexec_execute_mainblock (thread_p=thread_p@entry=0x7f6301d980a8, xasl=xasl@entry=0x7f6134002b60, xstate=xstate@entry=0x7f629ed240d0, p_class_instance_lock_info=p_class_instance_lock_info@entry=0x0) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/query_executor.c:15780
+#15 0x00007f630225f946 in qexec_execute_query (thread_p=thread_p@entry=0x7f6301d980a8, xasl=0x7f6134002b60, dbval_cnt=dbval_cnt@entry=2, dbval_ptr=dbval_ptr@entry=0x5608ba84a2c0, query_id=7) at /home/vimkim/gh/cb/oos-bug-bts-4633/src/query/query_executor.c:17351
+
+1788856090.419189 [REGS]
+rax            0xb6                182
+rcx            0x198000000000000   114841790497947648
+rdx            0x3e68              15976
+rsi            0x2c8               712
+rbp            0x7f629ed1f120      0x7f629ed1f120
+
+1788856090.430390 [GLOBALS]
+$1 = {pageid = 183, offset = 712}
+$2 = {pageid = 183, offset = 712}
+$3 = {pageid = 183, offset = 672}
+
+1788856090.430442 [FINAL-STATS] mode=count hits=34 same_page=34 candidates=1 rollovers_in_window=0 would_fail=0 rollover_bp_count=8 elapsed_s=4.7
+1788856090.544865 detached
