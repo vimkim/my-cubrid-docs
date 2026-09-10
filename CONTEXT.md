@@ -42,6 +42,10 @@ _Avoid_: Bug, failure, known issue
 The stable identifier of one campaign requirement. Issued once, never renumbered or reused; only its citation, status and observations change.
 _Avoid_: Test ID, scenario number, case number
 
+**Requirement status**:
+Whether a requirement's expectation may be asserted at the pinned engine: assertable, observation-only, UNSUPPORTED (an accepted design absent at the pin, a Capability gap) or BLOCKED (a Specification gap). The last two words are also the outcomes such a requirement's cases record.
+_Avoid_: State, maturity, implemented, unimplemented
+
 **Normative citation**:
 The single source a requirement cites for its required behavior, with the pinned revision and content hash: a context heading, an ADR, or an explicitly accepted CBRD design.
 _Avoid_: Reference, link, source behavior
@@ -60,7 +64,7 @@ _Avoid_: Soft assertion, warning, informational test
 
 **OOS-path evidence**:
 Proof that a case's intended out-of-row path executed, recorded separately from the case's outcome.
-_Avoid_: Coverage, activation, large input, DISK_SIZE
+_Avoid_: Activation, covered, large input, DISK_SIZE
 
 **Outcome**:
 The result of one executed attempt: PASS, FAIL, SKIP with reason, UNSUPPORTED, or BLOCKED.
@@ -75,7 +79,7 @@ A mismatch between a manifest's expected case identities or counts and what was 
 _Avoid_: Infrastructure failure, flaky run, harness error
 
 **Coverage matrix**:
-The cross-invocation aggregation of requirement, case, configuration, run, OOS-path evidence and finding, with flakiness, known-issue link and attribution kept apart.
+The cross-invocation aggregation of requirement, case, configuration, run, OOS-path evidence and finding, with flakiness, ticket link and attribution kept apart.
 _Avoid_: Test matrix, results table, dashboard
 
 **Attempt record**:
@@ -87,7 +91,7 @@ The bulky per-attempt evidence set whose every item is marked present, missing o
 _Avoid_: Artifacts, logs, dump, evidence folder
 
 **Accepted exclusion**:
-A dated coverage-matrix entry by which the user, and only the user, converts incomplete coverage into an accepted deferral.
+A dated coverage-matrix entry by which the user, and only the user, removes a requirement or scope from the coverage the campaign still owes.
 _Avoid_: Skip, waiver, deferral, exemption
 
 **Flagged promotion**:
