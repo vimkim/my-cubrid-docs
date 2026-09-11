@@ -12,7 +12,7 @@
 
 ## Current stage
 
-Attribution completed: all 19 SQL/medium failures reproduce on the baseline, with byte-identical paired local outputs. Acceptance remains open pending shell execution and required-check applicability. Implementation and scoped commits are authorized by the implement request; no new CI comment has been posted by this session.
+Attribution completed: all 19 SQL/medium failures reproduce on the baseline, with byte-identical paired local outputs. Acceptance remains open pending shell execution and final matrix reconciliation. Implementation and scoped commits are authorized by the implement request; no new CI comment has been posted by this session.
 
 ## Remote attempts
 
@@ -20,7 +20,7 @@ Attribution completed: all 19 SQL/medium failures reproduce on the baseline, wit
 - SQL154502: 17,459 tests, 17,443 success, 16 failure, zero error/unknown/skipped.
 - Shell154506: workflow job is blocked on download-build154505 (`not_running`, no start time). Exact workflow and pipeline metadata prove the same engine SHA. Shell testcase revision is not established because checkout has not executed.
 - GitHub Actions34576869752: five static checks succeeded. CircleCI release154503 and debug154501 succeeded.
-- Required branch-check visibility: GitHub protection endpoint returned HTTP404; completeness unknown.
+- Required branch-check applicability resolved 2026-09-11 09:00 UTC: branch metadata disables protection and lists no required checks; effective branch rules are empty. Ruleset2956843 applies only to cubvec/*, not feat/oos. Initial protection-endpoint404 retained in evidence history. Task-required runtime suites remain mandatory.
 - Existing `/run all`: https://github.com/CUBRID/cubrid/pull/7927#issuecomment-5631371023. Do not duplicate while prerequisite is pending.
 
 ## Evidence
@@ -31,4 +31,4 @@ Attribution completed: all 19 SQL/medium failures reproduce on the baseline, wit
 
 ## Next action
 
-Monitor existing download-build154505 and shell154506; once they run, collect the exact testcase revision and classify their results. Required-check visibility remains unresolved (HTTP404). No new engine fix is indicated by the 19 baseline-equivalent failures. See [snapshot report](../../ci_analysis_report_be7c01a_codex.md) and [paired comparisons](local-verification.json). Final configured CTest:27/27,137.15s; source change is verification documentation only.
+Monitor existing download-build154505 and shell154506; once they run, collect the exact testcase revision and classify their results. GitHub-enforced check applicability is resolved; no such checks apply to feat/oos, and the specification still requires shell evidence. No new engine fix is indicated by the 19 baseline-equivalent failures. See [snapshot report](../../ci_analysis_report_be7c01a_codex.md) and [paired comparisons](local-verification.json). Final configured CTest:27/27,137.15s; source change is verification documentation only.

@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-**Acceptance remains open.** SQL has 16 failures and medium has 3; all **19 failure cases reproduce independently on baseline `f4299ac0c`**, and all 19 local baseline/candidate actual-result files are byte-identical. No introduced failure is identified in this available snapshot. This is not a remote pass: shell has not executed, and branch-protection required-check visibility is unavailable.
+**Acceptance remains open.** SQL has 16 failures and medium has 3; all **19 failure cases reproduce independently on baseline `f4299ac0c`**, and all 19 local baseline/candidate actual-result files are byte-identical. No introduced failure is identified in this available snapshot. This is not a remote pass: shell has not executed. A follow-up branch/ruleset query confirms no GitHub-enforced status checks apply to `feat/oos`; the specification still requires shell evidence.
 
 ## CI Snapshot
 
@@ -95,9 +95,13 @@ The published [producer/resource matrix](CBRD-27089-deferred-write_be7c01a_codex
 
 1. PR author/CI operator: allow `download-build`154505 on `cubrid/ramdisk` to execute successfully; then collect shell154506, its actual testcase revision, counts and failures. Its queue cause is unknown; an unstarted job is not evidence that a specific runner is offline. Existing [run-all comment](https://github.com/CUBRID/cubrid/pull/7927#issuecomment-5631371023) already requested this work. No duplicate trigger was posted.
 2. PR author/test maintainers: assess the reproduced baseline expectations against the intended OOS testcase branch. Creating/pushing a new testcase branch or rerunning CI is separate work; none occurred here.
-3. Repository maintainer: establish required-check applicability. GitHub branch-protection required-status-check lookup returned HTTP404, so required-check completeness is not proven.
+3. Required-check applicability resolved at 2026-09-11 09:00 UTC: branch metadata reports `protected=false`, protection disabled and empty required status contexts/checks; `/rules/branches/feat%2Foos` returns an empty list. The only repository ruleset,2956843, applies to `refs/heads/cubvec/*` and contains deletion/non-fast-forward rules. The earlier protection endpoint HTTP404 is retained as history, not an unresolved visibility blocker. No GitHub-enforced check requirement applies to this target; the task's SQL/medium/shell requirements remain binding.
 4. Reconcile all required terminal evidence with the producer/resource matrix before closing V21-CI/V21-ACCEPT. Any later engine change needs an explicit evidence identity update; the documentation-only follow-up does not assert remote verification of a new head.
 
 ## Evidence and Limitations
 
 Reviewed manifests, both suite summaries, all 19 failure metadata/messages/diffs, raw result counts, log/artifact/source indexes, checkout logs, exact testcase bytes, local paired XML/results/diffs, baseline source error constants and existing OOS reports. No binary core downloads. No conclusion about unexecuted shell cases, vacuum convergence, no-logging durability, multi-node heartbeat failover, release throughput or exhaustive concurrency is added. Local baseline reproduction is evidence for attribution, not a waiver of failed remote checks.
+
+## Follow-up Evidence — 2026-09-11 09:00 UTC
+
+The same workflow was re-read at08:59:40 UTC: download-build154505 remains `not_running` without a start time and shell154506 remains `blocked`. PR head remains the pinned be7c01a revision. The separate API bundle now includes `branch-details.json`, `branch-rules.json`, `rulesets.json`, `ruleset-2956843.json`, and `workflow-jobs-085940.json`. These resolve GitHub-enforced check applicability but supply no new runtime result. Acceptance remains open solely on outstanding task-required verification and its final assessment.
