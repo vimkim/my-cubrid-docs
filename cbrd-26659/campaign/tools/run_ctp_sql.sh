@@ -39,7 +39,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 . "${here}/campaign_env.sh"
 
 declarations="" build="" manifest_id="" attempt_ids="" evidence_dir="" scenario_override="" kind=original
-activation=yes tier=fast producer_version="" promotions="" reserve_bytes=$((2 * 1024 * 1024 * 1024))
+activation=yes tier=fast producer_version="" promotions="" reserve_bytes=$((2 * 1024 * 1024 * 1024)) cap_override=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --declarations) declarations=$2; shift 2 ;;
@@ -54,6 +54,7 @@ while [ $# -gt 0 ]; do
         --producer-version) producer_version=$2; shift 2 ;;
         --promotions) promotions=$2; shift 2 ;;
         --reserve-bytes) reserve_bytes=$2; shift 2 ;;
+        --cap-override) cap_override=$2; shift 2 ;;
         *) die "unknown argument $1" ;;
     esac
 done
@@ -83,6 +84,7 @@ case_dir=$(find "${scenario}" -type d -name cases | head -1)
 [ -n "${case_dir}" ] || die "no cases/ directory under ${scenario}"
 answer_dir="$(dirname "${case_dir}")/answers"
 [ "${tier}" = fast ] && inv_cap=900 || { [ "${tier}" = scheduled ] && inv_cap=7200 || inv_cap=28800; }
+[ -n "${cap_override}" ] && inv_cap=${cap_override}   # cap-enforcement control only; recorded in the manifest
 
 # --- preflight -----------------------------------------------------------------------------------
 campaign_check_namespace
@@ -174,6 +176,7 @@ started_at=$(date -Is)
     echo "cubrid_rel=${CAMPAIGN_CUBRID_REL}"
     sha256sum "${CUBRID}/lib/libcubrid.so" "${CUBRID}/lib/libcubridsa.so" "${CUBRID}/bin/cub_server" "${CUBRID}/bin/csql" "${CUBRID}/jdbc/cubrid_jdbc.jar"
     echo "ctp_home=${CTP_HOME}"
+    echo "java_home=${JAVA_HOME}"
     sha256sum "${CTP_HOME}/sql/lib/cubridqa-cqt.jar" "${CTP_HOME}/common/lib/cubridqa-common.jar"
     echo "testcase_repository=${decl_repository}"
     echo "testcase_branch=${tc_branch}"
@@ -285,6 +288,7 @@ act_args=()
 for spec in ${decl_activation:-}; do c=${spec%%:*}; [ -d "${bundle}/activation/${c}" ] && act_args+=(--activation "${c}=${bundle}/activation/${c}"); done
 extra=()
 [ ${cap_reached} -eq 1 ] && extra+=(--cap-reached)
+[ -n "${cap_override}" ] && extra+=(--cap-seconds "${cap_override}")
 [ -n "${promotions}" ] && extra+=(--promotions "${promotions}")
 [ -n "${producer_version}" ] && extra+=(--producer-version "${producer_version}")
 log "launcher exit ${launcher_status} (recorded, not trusted); building records"

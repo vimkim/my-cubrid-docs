@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "manifest_id": "inv-T14-0003",
+  "producer": {
+    "kind": "wrapper",
+    "name": "CBRD-26659 campaign tooling (ticket 15)",
+    "version": "regenerated from the retained run_attempt.sh bundle att-T14-0029"
+  },
+  "invocation": {
+    "started_at": "2026-09-11T17:38:03+09:00",
+    "ended_at": "2026-09-11T17:38:23+09:00",
+    "tier": "fast",
+    "caps": {
+      "invocation_seconds": 900,
+      "per_case_seconds": 120,
+      "invocation_cap_reached": false
+    },
+    "resources": {
+      "cpus": 8,
+      "memory_gib": 16,
+      "storage_gib": 0.01,
+      "storage_root": "/home/vimkim/.cub/campaign/cbrd-26659/ticket14"
+    },
+    "engine": {
+      "baseline_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+      "worktree": "/home/vimkim/gh/cb/oos-baseline-f4299ac0c",
+      "modified": false,
+      "install_prefix": "/home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc",
+      "version_string": "CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit release build for Linux) (Sep 10 2026 16:19:43)",
+      "library_hashes": {
+        "libcubrid.so": "sha256:a3256a7a40748752165e65a395b8aebcf8d85e00b87ee62e68bf75e1a5c85444",
+        "libcubridsa.so": "sha256:8009c322633055df41af045fe560a86f1f8171648863d11f2e44d949e3cdd76e"
+      }
+    },
+    "testcase": {
+      "repository": "testcases-private-ex",
+      "branch": "CBRD-26659-oos-testcases-handover",
+      "commit": "c4fe45173ddbfccc6dc59212670ec91e94b8f6f1",
+      "base_commit": "e9c2d86874b9c08cdd72b120c2ead84f525e15fc",
+      "worktree": "/home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659"
+    },
+    "context": {
+      "revision": "f6543de680b91ae357466b72a983f982892859cd",
+      "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698",
+      "snapshot": "cbrd-26659/campaign/ticket11-evidence/normative-snapshot/"
+    },
+    "catalogue": {
+      "path": "cbrd-26659/campaign/catalogue/requirements.json",
+      "hash": "sha256:0cc33c82cfc472daece8e168f92d153d86d4c1feb0690ceffca786b0c8a8c5dd"
+    },
+    "page_size": 16384,
+    "build_mode": "release",
+    "run_mode": "client-server",
+    "services": [
+      {
+        "kind": "cub_master",
+        "identity": "started and crashed by the case; port 26659",
+        "port": 26659,
+        "owned": true
+      },
+      {
+        "kind": "cub_server",
+        "identity": "t26659dur01, created, crashed, restarted and dropped by the case",
+        "port": null,
+        "owned": true
+      },
+      {
+        "kind": "other",
+        "identity": "cub_pl for t26659dur01, started by the server and killed with it",
+        "port": null,
+        "owned": true
+      }
+    ],
+    "instrumentation": null,
+    "seed": null,
+    "runner": {
+      "kind": "ctp-shell",
+      "ctp_fingerprint": "sha256:e7c8ef04ee377d5fd33d82ad237210ee0c0c509c7b643787ba5f2137d69e6347",
+      "command": "campaign_ns.sh /home/vimkim/CTP/bin/ctp.sh shell -c /home/vimkim/.cub/campaign/cbrd-26659/ticket14/attempts/att-T14-0029/shell_cbrd26659.conf",
+      "scenario_selection": "/home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659/shell/_06_issues/_26_2h/cbrd_26659_oos_dur01"
+    }
+  },
+  "expected": {
+    "case_list": "cbrd-26659/campaign/evidence/ticket15/regenerated/ticket14/inv-T14-0003/case-list.txt",
+    "case_list_hash": "sha256:61faead502795bb75ce73ba979cd3616e17b1a0c64b557ea890af4415be022e3",
+    "case_count": 1,
+    "assertion_count": 17
+  },
+  "discovered": {
+    "case_count": 1,
+    "case_names": [
+      "cbrd_26659_oos_dur01"
+    ]
+  },
+  "executed": {
+    "case_count": 1,
+    "assertion_count": 17
+  },
+  "proof": {
+    "verdict": "proven",
+    "launcher_exit_status": 0,
+    "setup_log": "cbrd-26659/campaign/evidence/ticket15/regenerated/ticket14/inv-T14-0003/summary.txt",
+    "mismatches": []
+  },
+  "cases": [
+    {
+      "case": {
+        "repository": "testcases-private-ex",
+        "path": "shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh",
+        "name": "cbrd_26659_oos_dur01"
+      },
+      "requirements": [
+        "OOS-DUR-01"
+      ],
+      "outcome": "PASS",
+      "skip_reason": null,
+      "assertions": {
+        "expected": 17,
+        "executed": 17,
+        "failed": 0
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "other",
+        "reference": "cbrd-26659/campaign/evidence/ticket15/regenerated/ticket14/att-T14-0029/recovery_log_excerpt.txt",
+        "applicability": {
+          "fixture": "Identical, because it is the same run: the four rows of (id INT, v BIT VARYING) at 4,036 / 16,284 / 4,011 / 4,036 bytes that the assertions judge are the rows SHOW HEAP OOS counted and whose log records recovery replayed, in a database the case created, owns exclusively and drops.",
+          "execution_path": "Identical: every observation was taken in the same CTP invocation against the same client-server server process. Two channels under `other`: SHOW HEAP OOS after the committed INSERT and after the restart (insert-side demotion and the chains' presence after recovery), and the server's own recovery log (exactly one new REDO phase with at least one record to redo), which is what shows the recovery path ran. Neither certifies a vacuum or reclaim path.",
+          "engine_configuration": "Pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, unmodified install of the build under test, 16 KiB pages read back from spacedb, async_commit=n and group_commit_interval_in_msecs=0 read back from paramdump.",
+          "conditions": "Single session, no concurrency, no fault injection, empty table at the start, one deliberate kill -9 between the two SHOW HEAP OOS observations; exclusive ownership of the table and the database attributes the chunk count and the replayed records to this workload.",
+          "source_manifest": "inv-T14-0003"
+        }
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T14-0029",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket15/regenerated/ticket14/att-T14-0029.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket14/attempts/att-T14-0029",
+          "bundle_hash": "sha256:a1c36ec1fe5476e7d94d0e814f12bad6fe9d0056ad389da8521f6ec7d365a983"
+        }
+      ],
+      "outstanding": null
+    }
+  ],
+  "outstanding_coverage": {
+    "cases_not_executed": [],
+    "configurations_not_run": [
+      "4096/release/standalone",
+      "4096/release/client-server",
+      "4096/debug/standalone",
+      "4096/debug/client-server",
+      "8192/release/standalone",
+      "8192/release/client-server",
+      "8192/debug/standalone",
+      "8192/debug/client-server",
+      "16384/release/standalone",
+      "16384/debug/standalone",
+      "16384/debug/client-server"
+    ],
+    "requirements_without_executed_case": [
+      "OOS-REP-01",
+      "OOS-REP-02",
+      "OOS-REP-04",
+      "OOS-REP-06",
+      "OOS-REP-07",
+      "OOS-REP-08",
+      "OOS-REP-09",
+      "OOS-REP-10",
+      "OOS-REP-11",
+      "OOS-REP-12",
+      "OOS-SQL-01",
+      "OOS-SQL-02",
+      "OOS-SQL-03",
+      "OOS-SQL-05",
+      "OOS-SQL-06",
+      "OOS-RD-01",
+      "OOS-RD-02",
+      "OOS-RD-03",
+      "OOS-SCH-01",
+      "OOS-SCH-02",
+      "OOS-SCH-03",
+      "OOS-SCH-04",
+      "OOS-SCH-05",
+      "OOS-SCH-06",
+      "OOS-CL-01",
+      "OOS-CL-02",
+      "OOS-CL-03",
+      "OOS-CL-04",
+      "OOS-CL-05",
+      "OOS-CL-06",
+      "OOS-CL-09",
+      "OOS-CL-10",
+      "OOS-CL-11",
+      "OOS-CL-13",
+      "OOS-DUR-02",
+      "OOS-DUR-03",
+      "OOS-DUR-04",
+      "OOS-DUR-05",
+      "OOS-DUR-06",
+      "OOS-DUR-08",
+      "OOS-OPS-01",
+      "OOS-OPS-02",
+      "OOS-OPS-04",
+      "OOS-OPS-06",
+      "OOS-RES-01",
+      "OOS-RES-02",
+      "OOS-RES-03",
+      "OOS-RES-04",
+      "OOS-RES-05",
+      "OOS-RES-06"
+    ],
+    "note": "GENERATED by ctp_shell_records.py. PROOF: declared case count == dispatched == total_executed_case_count in test_status.data; every declared case left a .result file with at least one OK or NOK line; the launcher exit status is recorded but never used as proof (ticket 14 finding b). ASSERTION COUNTS ARE MEASURED: one `<case>-<n> : OK|NOK` line per assertion; SKIP lines share the numbering and are never counted (ticket 14 finding a). THE CASE OUTCOME IS THE CASE'S OWN (case_outcome file), never CTP's success count; any NOK is FAIL. CONFIGURATIONS_NOT_RUN RULE (ticket 35 F4): every page-size x build-mode x run-mode combination of the 12-combination domain that the CTP case did not run in this invocation; this invocation ran 16384/release/client-server. REQUIREMENTS_WITHOUT_EXECUTED_CASE RULE: every catalogue requirement with status assertable or observation-only not cited by a case executed in this invocation (50 of 51); BLOCKED and UNSUPPORTED requirements are not listed. RECOVERY-LOG CHANNEL: recorded as `other` with an explicit reference until ticket 12 decides on a `recovery-log` enum value (ticket 14 section 10, request 4)."
+  },
+  "answer_promotions": []
+}

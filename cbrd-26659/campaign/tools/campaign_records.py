@@ -263,8 +263,12 @@ def testcase_identity(repository: str, worktree: str | None = None) -> dict:
     }
 
 
-def ctp_fingerprint(runner_kind: str) -> str:
-    return sha256_prefixed(CTP_FINGERPRINT_FILES[runner_kind])
+def ctp_fingerprint(runner_kind: str, ctp_home=None) -> str:
+    """sha256 of the runner's jar in the CTP tree that ran (identity.txt's ctp_home), not of a
+    tree assumed from a constant: two CTP checkouts with different jars exist on this host."""
+    home = Path(ctp_home) if ctp_home else CTP_HOME
+    rel = CTP_FINGERPRINT_FILES[runner_kind].relative_to(CTP_HOME)
+    return sha256_prefixed(home / rel)
 
 
 # --- configuration domain -------------------------------------------------------------------

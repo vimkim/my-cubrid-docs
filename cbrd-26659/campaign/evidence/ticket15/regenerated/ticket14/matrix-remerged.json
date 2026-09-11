@@ -1,0 +1,211 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-11T17:46:47+09:00",
+  "catalogue": {
+    "path": "cbrd-26659/campaign/catalogue/requirements.json",
+    "hash": "sha256:0cc33c82cfc472daece8e168f92d153d86d4c1feb0690ceffca786b0c8a8c5dd"
+  },
+  "rows": [
+    {
+      "row_id": "OOS-DUR-01/cbrd_26659_oos_dur01/16384-release-cs",
+      "requirement": "OOS-DUR-01",
+      "family": "Durability",
+      "case": {
+        "repository": "testcases-private-ex",
+        "path": "shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh",
+        "name": "cbrd_26659_oos_dur01"
+      },
+      "configuration": {
+        "page_size": 16384,
+        "build_mode": "release",
+        "run_mode": "client-server",
+        "instrumentation_id": null,
+        "services": [
+          "cub_master:26659",
+          "cub_server:t26659dur01",
+          "cub_pl:t26659dur01"
+        ]
+      },
+      "run": {
+        "manifest_id": "inv-T14-0003",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket14/inv-T14-0003.json",
+        "manifest_hash": "sha256:98d7b181c0b2c7b46336a73be2d785eab8eb73ff773781ff9fb5ac39370a4017",
+        "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+        "testcase_commit": "c4fe45173ddbfccc6dc59212670ec91e94b8f6f1",
+        "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "other",
+        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0029/recovery_log_excerpt.txt",
+        "applicability": {
+          "fixture": "Identical, because it is the same run: the four rows of (id INT, v BIT VARYING) at 4,036 AA / 16,284 BB / 4,011 CC / 4,036 DD that the assertions judge are the rows SHOW HEAP OOS counted and the rows whose log records recovery replayed, in a database the case created, owns exclusively and deletes.",
+          "execution_path": "IDENTICAL, which is why this is proven and not reused: every observation was taken in the same CTP invocation, against the same client-server server process, in the same session sequence as the assertions it supports. TWO CHANNELS, recorded under channel `other` because the schema carries one channel per row. (1) SHOW HEAP OOS after the committed INSERT and again after the restart (show_heap_oos_after_insert.out, show_heap_oos_after_recovery.out beside the reference) certifies the INSERT-side demotion -- one OOS file, four chunk records for four rows -- and the presence of the chains after recovery. (2) The server's own recovery log for this database ($CUBRID/log/server/<db>_*.err, copied into the bundle as case-evidence/server_log/ and excerpted in the reference) certifies that the RECOVERY PATH RAN AND REPLAYED WORK: exactly one new 'Log recovery: REDO Phase is started' line after the restart, with 'Log pages to redo: 2, Log records to redo: 83', and 'Log pages to undo: 0, transactions to undo: 0'. Channel (2) is what the independent review's F1 asked for: without it the values could have survived because the pages were flushed before the kill -9, and the specification says proof of an insert path never certifies a recovery path. Neither channel certifies a vacuum or reclaim path, which is why the post-recovery chunk count is asserted as a range.",
+          "engine_configuration": "Pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, the release install, 16 KiB pages read back from spacedb, unmodified build, no instrumentation, async_commit=n and group_commit_interval_in_msecs=0 read back from paramdump. The debug-only oos.log channel does not exist on this build, which is the one skipped assertion (18).",
+          "conditions": "Single session, no concurrency, no fault injection, an empty table at the start, and one deliberate crash between the two SHOW HEAP OOS observations. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture; the recovery log is per database, so exclusive ownership of the database is what makes the replayed records attributable to this workload. Oos_recs_sumlen is recorded but never asserted (pinned 16-byte versus accepted 24-byte chunk header, OOS-REP-05 / CBRD-26950); the redo and undo counts are recorded, and only 'exactly one REDO phase with at least one record' is asserted.",
+          "source_manifest": "inv-T14-0003"
+        }
+      },
+      "finding": {
+        "latest_outcome": "PASS",
+        "ever_failed": false,
+        "history": [
+          {
+            "manifest_id": "inv-T14-0001",
+            "attempt_id": "att-T14-0026",
+            "outcome": "PASS",
+            "at": "2026-09-11T15:06:27+09:00"
+          },
+          {
+            "manifest_id": "inv-T14-0003",
+            "attempt_id": "att-T14-0029",
+            "outcome": "PASS",
+            "at": "2026-09-11T17:38:23+09:00"
+          }
+        ],
+        "gap_kind": "none",
+        "summary": "Committed INSERT, UPDATE and DELETE of OOS-backed rows, including the multi-chunk row, survived kill -9 of the whole instance and a controlled restart with every surviving value whole and exact (MD5, octet length, bit length, disk size and a direct SQL equality on all three rows), the deleted row absent and checkdb clean, judged against an external journal in which all three transactions were acknowledged before the crash under a durable-commit configuration read back from paramdump. REVISION 8 (ticket 34, closing the independent review's F1): the case now also asserts that RECOVERY RAN AND REPLAYED WORK -- the server's own log carries exactly one new 'Log recovery: REDO Phase is started' line after the restart, with 2 pages and 83 log records to redo and 0 transactions to undo -- so the row's proven evidence covers the recovery path the requirement names, not only the insert path and a post-recovery state. The channel is recorded as `other` because two channels support it (SHOW HEAP OOS and the recovery log) and the schema's channel enum has no recovery-log value; extending it is ticket 12's decision. 17 of the case's 18 assertions executed on this build; the eighteenth is debug-only and was recorded as SKIP. History: revision 7 (att-T14-0026, 16 or 17 assertions, no recovery-log assertion) and revision 8 (att-T14-0029); both PASS."
+      },
+      "flakiness": {
+        "attempts": 2,
+        "failures": 0,
+        "intermittent": false,
+        "consecutive_fresh_fixture_reproductions": 0,
+        "deterministic_claim": false
+      },
+      "known_issue": {
+        "ticket": null,
+        "relation": "none"
+      },
+      "attribution": {
+        "target": "unknown",
+        "evidence": null,
+        "note": "Nothing to attribute: the outcome is PASS. The field stays 'unknown' because the taxonomy has no value for 'no failure', and 'engine' would require failure evidence."
+      },
+      "attempt_records": [
+        "cbrd-26659/campaign/evidence/ticket14/att-T14-0026.json",
+        "cbrd-26659/campaign/evidence/ticket14/att-T14-0029.json"
+      ]
+    },
+    {
+      "row_id": "OOS-DUR-01/cbrd_26659_oos_dur01/16384-debug-cs",
+      "requirement": "OOS-DUR-01",
+      "family": "Durability",
+      "case": {
+        "repository": "testcases-private-ex",
+        "path": "shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh",
+        "name": "cbrd_26659_oos_dur01"
+      },
+      "configuration": {
+        "page_size": 16384,
+        "build_mode": "debug",
+        "run_mode": "client-server",
+        "instrumentation_id": null,
+        "services": [
+          "cub_master:26659",
+          "cub_server:t26659dur01",
+          "cub_pl:t26659dur01"
+        ]
+      },
+      "run": {
+        "manifest_id": "inv-T14-0004",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket14/inv-T14-0004.json",
+        "manifest_hash": "sha256:df0b05bce28d9b491ebeb9851dfb2ca1b9829a4623f2a0421e423bffe7f58a1c",
+        "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+        "testcase_commit": "c4fe45173ddbfccc6dc59212670ec91e94b8f6f1",
+        "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "other",
+        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0030/recovery_log_excerpt.txt",
+        "applicability": {
+          "fixture": "Identical, because it is the same run: the four rows of (id INT, v BIT VARYING) at 4,036 AA / 16,284 BB / 4,011 CC / 4,036 DD that the assertions judge are the rows SHOW HEAP OOS counted and the rows whose log records recovery replayed, in a database the case created, owns exclusively and deletes.",
+          "execution_path": "IDENTICAL, which is why this is proven and not reused: every observation was taken in the same CTP invocation, against the same client-server server process, in the same session sequence as the assertions it supports. TWO CHANNELS, recorded under channel `other` because the schema carries one channel per row. (1) SHOW HEAP OOS after the committed INSERT and again after the restart (show_heap_oos_after_insert.out, show_heap_oos_after_recovery.out beside the reference) certifies the INSERT-side demotion -- one OOS file, four chunk records for four rows -- and the presence of the chains after recovery. (2) The server's own recovery log for this database ($CUBRID/log/server/<db>_*.err, copied into the bundle as case-evidence/server_log/ and excerpted in the reference) certifies that the RECOVERY PATH RAN AND REPLAYED WORK: exactly one new 'Log recovery: REDO Phase is started' line after the restart, with 'Log pages to redo: 2, Log records to redo: 83', and 'Log pages to undo: 0, transactions to undo: 0'. Channel (2) is what the independent review's F1 asked for: without it the values could have survived because the pages were flushed before the kill -9, and the specification says proof of an insert path never certifies a recovery path. Neither channel certifies a vacuum or reclaim path, which is why the post-recovery chunk count is asserted as a range.",
+          "engine_configuration": "Pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, the debug install, 16 KiB pages read back from spacedb, unmodified build, no instrumentation, async_commit=n and group_commit_interval_in_msecs=0 read back from paramdump. All SHOW HEAP OOS observations and both recovery counts agree with the release build's, so nothing here is release- or debug-specific; the debug build additionally executes assertion 18 (delete-side oos.log).",
+          "conditions": "Single session, no concurrency, no fault injection, an empty table at the start, and one deliberate crash between the two SHOW HEAP OOS observations. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture; the recovery log is per database, so exclusive ownership of the database is what makes the replayed records attributable to this workload. Oos_recs_sumlen is recorded but never asserted (pinned 16-byte versus accepted 24-byte chunk header, OOS-REP-05 / CBRD-26950); the redo and undo counts are recorded, and only 'exactly one REDO phase with at least one record' is asserted.",
+          "source_manifest": "inv-T14-0004"
+        }
+      },
+      "finding": {
+        "latest_outcome": "PASS",
+        "ever_failed": false,
+        "history": [
+          {
+            "manifest_id": "inv-T14-0002",
+            "attempt_id": "att-T14-0027",
+            "outcome": "PASS",
+            "at": "2026-09-11T15:06:54+09:00"
+          },
+          {
+            "manifest_id": "inv-T14-0004",
+            "attempt_id": "att-T14-0030",
+            "outcome": "PASS",
+            "at": "2026-09-11T17:38:50+09:00"
+          }
+        ],
+        "gap_kind": "none",
+        "summary": "Committed INSERT, UPDATE and DELETE of OOS-backed rows, including the multi-chunk row, survived kill -9 of the whole instance and a controlled restart with every surviving value whole and exact (MD5, octet length, bit length, disk size and a direct SQL equality on all three rows), the deleted row absent and checkdb clean, judged against an external journal in which all three transactions were acknowledged before the crash under a durable-commit configuration read back from paramdump. REVISION 8 (ticket 34, closing the independent review's F1): the case now also asserts that RECOVERY RAN AND REPLAYED WORK -- the server's own log carries exactly one new 'Log recovery: REDO Phase is started' line after the restart, with 2 pages and 83 log records to redo and 0 transactions to undo -- so the row's proven evidence covers the recovery path the requirement names, not only the insert path and a post-recovery state. The channel is recorded as `other` because two channels support it (SHOW HEAP OOS and the recovery log) and the schema's channel enum has no recovery-log value; extending it is ticket 12's decision. 18 of the case's 18 assertions executed on this build, including the delete-side debug oos.log. History: revision 7 (att-T14-0027, 16 or 17 assertions, no recovery-log assertion) and revision 8 (att-T14-0030); both PASS."
+      },
+      "flakiness": {
+        "attempts": 2,
+        "failures": 0,
+        "intermittent": false,
+        "consecutive_fresh_fixture_reproductions": 0,
+        "deterministic_claim": false
+      },
+      "known_issue": {
+        "ticket": null,
+        "relation": "none"
+      },
+      "attribution": {
+        "target": "unknown",
+        "evidence": null,
+        "note": "Nothing to attribute: the outcome is PASS. The field stays 'unknown' because the taxonomy has no value for 'no failure', and 'engine' would require failure evidence."
+      },
+      "attempt_records": [
+        "cbrd-26659/campaign/evidence/ticket14/att-T14-0027.json",
+        "cbrd-26659/campaign/evidence/ticket14/att-T14-0030.json"
+      ]
+    },
+    {
+      "row_id": "OOS-REP-07/-/claim-withdrawn",
+      "requirement": "OOS-REP-07",
+      "family": "Representation",
+      "case": null,
+      "configuration": null,
+      "run": null,
+      "oos_evidence": {
+        "status": "missing",
+        "channel": null,
+        "reference": null,
+        "applicability": null
+      },
+      "finding": {
+        "latest_outcome": null,
+        "ever_failed": false,
+        "history": [],
+        "gap_kind": "Delivery gap",
+        "summary": "CLAIM WITHDRAWN (ticket 34, closing the independent review's F2). Until 2026-09-11 this matrix carried two PASS rows for OOS-REP-07 against cbrd_26659_oos_dur01 (att-T14-0026 release and att-T14-0027 debug, testcase commit adbd8b745), with gap_kind none. The catalogue statement in full reads: 'A value larger than one page's maximum single-chunk payload is stored as a chain of chunk records, inserted tail first, and is read back complete and byte-identical; total_data_length excludes every chunk header.' The case's oracle quoted it with the two emphasised clauses removed, and neither is assertable at the private shell seam: chunk insertion order is not observable, and total_data_length is observable only through Oos_recs_sumlen, which the case deliberately declines to assert while the pinned 16-byte chunk header differs from the accepted 24-byte one (OOS-REP-05 / CBRD-26950). A PASS against a statement quoted with its hard half removed is an overclaim, so the rows are withdrawn rather than scoped: the multi-chunk row the case inserts is mandated by OOS-DUR-01's own 'including multi-chunk values' clause and stays covered there. Nothing is erased from history -- both withdrawn rows were PASS, their attempt records remain, and OOS-DUR-01's rows list them. WHO OWNS THIS REQUIREMENT NOW: the catalogue assigns OOS-REP-07 seam public-sql; ticket 18 (public Representation boundaries) covers the single-to-multi-chunk boundary and inherits the two clauses this case could not assert, of which 'total_data_length excludes every chunk header' is withheld at the pin under OOS-REP-05 and must not be promoted from engine output. Until an executed public case exists this is a Delivery gap; it is not a Specification gap (the statement is clear) and not a Capability gap of the engine (the chain is written and read back correctly)."
+      },
+      "flakiness": {
+        "attempts": 0,
+        "failures": 0,
+        "intermittent": false,
+        "consecutive_fresh_fixture_reproductions": 0,
+        "deterministic_claim": false
+      },
+      "known_issue": {
+        "ticket": null,
+        "relation": "none"
+      },
+      "attribution": {
+        "target": "unknown",
+        "evidence": null,
+        "note": "Nothing to attribute: no requirement failure exists, and no case at the requirement's own seam has run yet."
+      },
+      "attempt_records": []
+    }
+  ],
+  "accepted_exclusions": []
+}

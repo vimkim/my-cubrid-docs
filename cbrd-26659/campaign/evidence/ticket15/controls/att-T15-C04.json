@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "attempt_id": "att-T15-C04",
+  "kind": "original",
+  "parent_attempt": null,
+  "finding_id": null,
+  "case": {
+    "repository": "testcases-private-ex",
+    "path": "control: <ticket15 storage>/scenarios/c04-skiponly/t15_skip_only/cases/t15_skip_only.sh (not in the repository)",
+    "name": "t15_skip_only"
+  },
+  "requirements": [
+    "OOS-DUR-01"
+  ],
+  "manifest_id": "inv-T15-C04-skiponly",
+  "configuration": {
+    "page_size": 16384,
+    "build_mode": "release",
+    "run_mode": "client-server",
+    "instrumentation_id": null,
+    "seed": null
+  },
+  "started_at": "2026-09-11T22:40:39+09:00",
+  "ended_at": "2026-09-11T22:40:46+09:00",
+  "deadline": {
+    "seconds": 120,
+    "reached": false,
+    "evidence_captured_on_timeout": null
+  },
+  "outcome": "SKIP",
+  "skip_reason": "control: every assertion skipped; the out-of-row path was never observed, so this run is not OOS coverage",
+  "assertions": {
+    "executed": 0,
+    "failed": 0
+  },
+  "expected_versus_actual": "/home/vimkim/.cub/campaign/cbrd-26659/ticket15/attempts/inv-T15-C04-skiponly/expected_vs_actual.txt",
+  "oos_evidence": {
+    "status": "missing",
+    "channel": null,
+    "reference": null,
+    "applicability": null
+  },
+  "barriers": [],
+  "injections": [],
+  "resources_owned": {
+    "databases": [
+      "the database(s) the case creates and drops (see workload.sh)"
+    ],
+    "processes": [
+      "cub_master started by the case",
+      "cub_server of the case's database",
+      "cub_pl of the case's database"
+    ],
+    "ports": [
+      26659,
+      33120,
+      33121,
+      33122
+    ],
+    "directories": [
+      "/home/vimkim/.cub/campaign/cbrd-26659/ticket15",
+      "/home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659/shell/_06_issues/_26_2h"
+    ]
+  },
+  "cleanup": {
+    "performed": true,
+    "scope_verified": true,
+    "evidence_preserved_first": true,
+    "evidence": "The whole invocation ran under campaign_ns.sh (unshare --user --map-current-user --pid --fork --mount-proc --ipc), so the CTP helpers' unscoped `pkill cub` and `ipcrm` sweep could reach only processes and IPC segments this invocation started, and the launcher's exit tore them all down. HOME was redirected to a campaign-owned directory seeded from the pinned install so CTP's reset of $CUBRID/conf could not install a foreign configuration. Install hygiene by hashing before and after: install_conf_drift_lines=0, install_databases_drift_lines=0, user_shell_fm_drift_lines=0, worktree_drift_lines=0. Launcher artifacts, the case's result and evidence files were copied into the bundle before the install's conf and databases were restored verbatim."
+  },
+  "bundle": {
+    "path": "/home/vimkim/.cub/campaign/cbrd-26659/ticket15/attempts/inv-T15-C04-skiponly",
+    "hash": "sha256:2e9c159af0441d6da5c3de51dc0bf138415d728ab263b9ae51e1cab8b91347be"
+  },
+  "reproduction": {
+    "fresh_fixture": true,
+    "consecutive_reproductions_so_far": 0,
+    "failure_reproduced": false
+  },
+  "notes": "original attempt of t15_skip_only, CTP shell runner, release build, client-server, 16384 B pages. Measured: 0 executed assertions (0 OK, 0 NOK), 3 SKIP line(s); case time 0 s; case_outcome file: SKIP|control: every assertion skipped; the out-of-row path was never observed, so this run is not OOS coverage; expected-versus-actual NO-ORACLE. OOS-path evidence: the case skipped: the activation channel was not observed, so this run is not OOS coverage. "
+}

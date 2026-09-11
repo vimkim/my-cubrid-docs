@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "bundle_id": "bundle-att-T15-C03",
+  "attempt_id": "att-T15-C03",
+  "created_at": "2026-09-11T22:50:30+09:00",
+  "root_path": "/home/vimkim/.cub/campaign/cbrd-26659/ticket15/attempts/inv-T15-C03-negctl",
+  "total_bytes": 336668473,
+  "complete": true,
+  "items": {
+    "workload": {
+      "state": "present",
+      "path": "workload.sh",
+      "hash": "sha256:969594e686417cc87b5a242cf31c0a0c6fa250d99381d2872c8ed5541555ecbc",
+      "note": "the case exactly as executed (testcase commit c4fe45173; identity.txt records the committed file's hash beside it)"
+    },
+    "seed_and_generator_version": {
+      "state": "not-applicable",
+      "path": null,
+      "hash": null,
+      "note": "fixed deterministic workload; no generator and no seed"
+    },
+    "session_and_barrier_trace": {
+      "state": "present",
+      "path": "case-evidence/operations.journal",
+      "hash": "sha256:2010e29f0a5503511f30142a75ce36f9550448c29dfe10b2ec20d02edf1ea3bd",
+      "note": "the case's ordered external operation journal: request and acknowledgement per transaction, crash, restart, observations, final outcome; single-session, so no participant barrier"
+    },
+    "injection_acknowledgements": {
+      "state": "not-applicable",
+      "path": null,
+      "hash": null,
+      "note": "unmodified engine, no fault armed"
+    },
+    "engine_identity": {
+      "state": "present",
+      "path": "identity.txt",
+      "hash": "sha256:7ada92d5e2e98a52107ea765e551f6d59f862bb23112666a18acf304873014ca",
+      "note": "baseline commit, install prefix, cubrid_rel and the sha256 of libcubrid.so, libcubridsa.so, cub_server and csql, verified against ticket 11 before the launcher started; CTP jar and init.sh hashes"
+    },
+    "testcase_identity": {
+      "state": "present",
+      "path": "identity.txt",
+      "hash": "sha256:7ada92d5e2e98a52107ea765e551f6d59f862bb23112666a18acf304873014ca",
+      "note": "repository testcases-private-ex, branch, commit c4fe45173, base commit e9c2d8687"
+    },
+    "specification_identity": {
+      "state": "present",
+      "path": "identity.txt",
+      "hash": "sha256:7ada92d5e2e98a52107ea765e551f6d59f862bb23112666a18acf304873014ca",
+      "note": "context revision and content hash, catalogue hash"
+    },
+    "build_and_configuration_identity": {
+      "state": "present",
+      "path": "shell_inv-T15-C03-negctl.conf",
+      "hash": "sha256:3b3cf336001e92d83972e40839dabc0d101db7cfe31e3e8fb8879c784a7783f2",
+      "note": "the CTP shell configuration used (scenario, no update, no retry, campaign ports); release build; the case's own createdb sets the 16384 B page size; install_conf_backup/ holds the pinned install's configuration as found"
+    },
+    "instrumentation_identity": {
+      "state": "not-applicable",
+      "path": null,
+      "hash": null,
+      "note": "unmodified engine; no instrumentation worktree"
+    },
+    "fixture_identity": {
+      "state": "present",
+      "path": "case-evidence/createdb.out",
+      "hash": "sha256:6317947b1a4ca9e7fe4b9fd2a58e88eacd934635f8c9a0e99008e7534698d927",
+      "note": "the case's createdb output: database name, page size and volume options; fixture sizes are constants in workload.sh"
+    },
+    "expected_versus_actual": {
+      "state": "present",
+      "path": "expected_vs_actual.txt",
+      "hash": "sha256:9ce4ff78d4820abeccabb2e99e3be61f6ded8fde9f4143108e365a4c10929b03",
+      "note": "expected side from the oracle's ordered assertion table (18 rows), actual side the .result file, compared by number, status and full name; verdict MATCH"
+    },
+    "logs": {
+      "state": "present",
+      "path": "case-evidence/server_log/t26659negc_20260911_2240.err",
+      "hash": "sha256:18a5522876b9d26aab41e2e8ed177ce9f6b3eed8a3be1acd17ca9188012a808d",
+      "note": "the server's own error log for the case's database (recovery lines included); CTP runtime logs and the PTY transcript sit beside it"
+    },
+    "cores": {
+      "state": "not-applicable",
+      "path": null,
+      "hash": null,
+      "note": "no core file: a kill -9 produces none and the post-run scan found none"
+    },
+    "replay_command_with_prerequisites": {
+      "state": "present",
+      "path": "replay.sh",
+      "hash": "sha256:9f992a2d16ee289a68054f17b6d39e8e59fb7f2e2627ac37b941d094ac7e6ff5",
+      "note": "the replay command and the prerequisites it does not create: pinned install and hashes, CTP, the testcase worktree at the recorded commit, the four free campaign ports, unprivileged user namespaces"
+    }
+  },
+  "uncommitted_snapshots": [
+    {
+      "what": "OOS-CONTEXT.md at the pinned content hash (uncommitted in the context repository at pin time, ticket 11 section 3)",
+      "path": "cbrd-26659/campaign/ticket11-evidence/normative-snapshot/OOS-CONTEXT.md",
+      "hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+    }
+  ],
+  "retention": {
+    "class": "success-bulky",
+    "expires_on": "2026-09-18",
+    "hold_reason": null
+  },
+  "minimization": null
+}

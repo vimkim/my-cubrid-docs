@@ -133,8 +133,10 @@ def declared_case_list_text(decl: dict) -> str:
 # --- skeletons ------------------------------------------------------------------------------------
 def manifest_skeleton(manifest_id, producer_version, started_at, ended_at, tier, cap_reached,
                       storage_gib, storage_root, engine, testcase, page_size, build_mode, run_mode,
-                      services, runner, seed=None, instrumentation=None):
+                      services, runner, seed=None, instrumentation=None, inv_cap_override=None):
     inv_cap, case_cap = TIER_CAPS[tier]
+    if inv_cap_override:
+        inv_cap = int(inv_cap_override)  # a deliberately lowered cap (cap-enforcement control) is recorded as run
     return {
         "schema_version": 1,
         "manifest_id": manifest_id,

@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "attempt_id": "att-T15-C03",
+  "kind": "checker-validation",
+  "parent_attempt": null,
+  "finding_id": null,
+  "case": {
+    "repository": "testcases-private-ex",
+    "path": "generated: <output-root>/oos_dur01_negative_control/cases/oos_dur01_negative_control.sh, derived from shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh by cases/make_negative_control.sh (two textual mutations: multi-chunk expectation one byte short; distinct database name)",
+    "name": "oos_dur01_negative_control"
+  },
+  "requirements": [
+    "OOS-DUR-01"
+  ],
+  "manifest_id": "none: checker-validation attempts have no manifest and no matrix row (schemas document section 11)",
+  "configuration": {
+    "page_size": 16384,
+    "build_mode": "release",
+    "run_mode": "client-server",
+    "instrumentation_id": null,
+    "seed": null
+  },
+  "started_at": "2026-09-11T22:40:16+09:00",
+  "ended_at": "2026-09-11T22:40:33+09:00",
+  "deadline": {
+    "seconds": 120,
+    "reached": false,
+    "evidence_captured_on_timeout": null
+  },
+  "outcome": "FAIL",
+  "skip_reason": null,
+  "assertions": {
+    "executed": 17,
+    "failed": 1
+  },
+  "expected_versus_actual": "/home/vimkim/.cub/campaign/cbrd-26659/ticket15/attempts/inv-T15-C03-negctl/expected_vs_actual.txt",
+  "oos_evidence": {
+    "status": "not-applicable",
+    "channel": null,
+    "reference": null,
+    "applicability": null
+  },
+  "barriers": [],
+  "injections": [],
+  "resources_owned": {
+    "databases": [
+      "t26659negc, created by the control with --db-page-size=16384 under the control's case directory and dropped by it; its recovered image is preserved under case-evidence/failed_database when the case fails"
+    ],
+    "processes": [
+      "cub_master started by the case's `cubrid server start` and killed with kill -9",
+      "cub_server t26659negc, killed with kill -9 and restarted",
+      "cub_pl t26659negc, killed with the server"
+    ],
+    "ports": [
+      26659,
+      33120,
+      33121,
+      33122
+    ],
+    "directories": [
+      "/home/vimkim/.cub/campaign/cbrd-26659/ticket15"
+    ]
+  },
+  "cleanup": {
+    "performed": true,
+    "scope_verified": true,
+    "evidence_preserved_first": true,
+    "evidence": "The whole invocation ran under campaign_ns.sh (unshare --user --map-current-user --pid --fork --mount-proc --ipc), so the CTP helpers' unscoped `pkill cub` and `ipcrm` sweep could reach only processes and IPC segments this invocation started, and the launcher's exit tore them all down. HOME was redirected to a campaign-owned directory seeded from the pinned install so CTP's reset of $CUBRID/conf could not install a foreign configuration. Install hygiene by hashing before and after: install_conf_drift_lines=0, install_databases_drift_lines=0, user_shell_fm_drift_lines=0, worktree_drift_lines=0. Launcher artifacts, the case's result and evidence files were copied into the bundle before the install's conf and databases were restored verbatim."
+  },
+  "bundle": {
+    "path": "/home/vimkim/.cub/campaign/cbrd-26659/ticket15/attempts/inv-T15-C03-negctl",
+    "hash": "sha256:0ec9ab6d8dc0d948c6f514b04db68e2b907dc58faf269648eda84787f9e7d05a"
+  },
+  "reproduction": {
+    "fresh_fixture": true,
+    "consecutive_reproductions_so_far": 0,
+    "failure_reproduced": false
+  },
+  "notes": "checker-validation attempt of oos_dur01_negative_control, CTP shell runner, release build, client-server, 16384 B pages. Measured: 17 executed assertions (16 OK, 1 NOK), 1 SKIP line(s); case time 11 s; case_outcome file: FAIL|1 assertion(s) failed; expected-versus-actual MATCH. OOS-path evidence: a checker-validation attempt certifies the checker, not the requirement; its observations count as coverage of nothing. "
+}

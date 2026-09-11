@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "attempt_id": "att-T13-0002",
+  "kind": "original",
+  "parent_attempt": null,
+  "finding_id": null,
+  "case": {
+    "repository": "testcases",
+    "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql",
+    "name": "cbrd_26659_oos_rep02_largest_first"
+  },
+  "requirements": [
+    "OOS-REP-01",
+    "OOS-REP-02",
+    "OOS-SQL-01"
+  ],
+  "manifest_id": "inv-T13-0002",
+  "configuration": {
+    "page_size": 16384,
+    "build_mode": "release",
+    "run_mode": "client-server",
+    "instrumentation_id": null,
+    "seed": null
+  },
+  "started_at": "2026-09-10T20:41:25+09:00",
+  "ended_at": "2026-09-10T20:42:05+09:00",
+  "deadline": {
+    "seconds": 120,
+    "reached": false,
+    "evidence_captured_on_timeout": null
+  },
+  "outcome": "PASS",
+  "skip_reason": null,
+  "assertions": {
+    "executed": null,
+    "failed": 0
+  },
+  "expected_versus_actual": "/home/vimkim/.cub/campaign/cbrd-26659/attempts/att-T13-0002/expected_vs_actual.diff",
+  "oos_evidence": {
+    "status": "reused",
+    "channel": "show-heap-oos",
+    "reference": "/home/vimkim/gh/my-cubrid-docs/cbrd-26659/campaign/evidence/ticket13/check-release/assertions.txt",
+    "applicability": {
+      "fixture": "Same two rows of (id INT PRIMARY KEY, big BIT VARYING, small BIT VARYING) with the same byte patterns and sizes as the case, inserted in the same order, on a table the checker owns exclusively in its own database.",
+      "execution_path": "The checker ran in a different run mode from the CTP case (declared applicability for that situation only). Same OOS operation, INSERT-side demotion; certifies no scan, recovery or vacuum path. Accepted reading of 'execution path must match' = same OOS operation, not same run mode (user decision O2, ticket 35).",
+      "engine_configuration": "Same pinned engine commit and install, same page size, unmodified build, no instrumentation.",
+      "conditions": "Single session, no concurrency, no fault injection, empty table at the start, no vacuum or restart in between; SHOW HEAP OOS reports per class, so exclusive ownership of the table attributes the chunk count to this fixture.",
+      "source_manifest": "inv-T13-0002"
+    }
+  },
+  "barriers": [],
+  "injections": [],
+  "resources_owned": {
+    "databases": [
+      "basic (CTP-created under the campaign-private CUBRID_DATABASES recorded in identity.txt)",
+      "t15chk16k (paired activation checker)"
+    ],
+    "processes": [
+      "cub_master port 26659",
+      "cub_server basic",
+      "broker BROKER1 port 33120"
+    ],
+    "ports": [
+      26659,
+      33120,
+      59901
+    ],
+    "directories": [
+      "/home/vimkim/.cub/campaign/cbrd-26659"
+    ]
+  },
+  "cleanup": {
+    "performed": true,
+    "scope_verified": false,
+    "evidence_preserved_first": true,
+    "evidence": "Namespace: unknown. The invocation did not run under campaign_ns.sh; CTP's `pkill cub` was unscoped and only the kernel's EPERM protected other users' processes (ticket 13 att-T13-0002 cleanup note). Install hygiene by hashing before and after: conf drift None, databases drift None, testcase worktree drift None (None = not measured by this bundle's producer). All launcher artifacts were copied into the bundle before the install and worktree were restored."
+  },
+  "bundle": {
+    "path": "/home/vimkim/.cub/campaign/cbrd-26659/attempts/att-T13-0002",
+    "hash": "sha256:c9e02293f8d38a6252f38301960e78be77dc2359f6602e2d25a0729869318f20"
+  },
+  "reproduction": {
+    "fresh_fixture": true,
+    "consecutive_reproductions_so_far": 0,
+    "failure_reproduced": false
+  },
+  "notes": "original attempt of cbrd_26659_oos_rep02_largest_first, CTP SQL runner, release build, client-server, 16384 B pages. CTP listed the case in okList with totalTime 69 ms; expected-versus-actual MATCH. assertions.executed is null because the CTP SQL runner has no assertion counter (ticket 35 F3); the declared hand-derived count is 27 (hand-derived from expected-oracle.md revision 2: 11 scalars per row group x 2 row groups + 3 in the final aggregate + 2 INSERT affected-row counts; justified only because CTP compares the whole result text, so a byte-identical .result entails that all 27 matched). OOS-path evidence: the activation checker ran standalone while the case ran client-server: recorded as reused under the declared applicability block. "
+}

@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "attempt_id": "att-T15-0002",
+  "kind": "original",
+  "parent_attempt": null,
+  "finding_id": null,
+  "case": {
+    "repository": "testcases-private-ex",
+    "path": "shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh",
+    "name": "cbrd_26659_oos_dur01"
+  },
+  "requirements": [
+    "OOS-DUR-01"
+  ],
+  "manifest_id": "inv-T15-0002",
+  "configuration": {
+    "page_size": 16384,
+    "build_mode": "release",
+    "run_mode": "client-server",
+    "instrumentation_id": null,
+    "seed": null
+  },
+  "started_at": "2026-09-11T22:36:35+09:00",
+  "ended_at": "2026-09-11T22:36:52+09:00",
+  "deadline": {
+    "seconds": 120,
+    "reached": false,
+    "evidence_captured_on_timeout": null
+  },
+  "outcome": "PASS",
+  "skip_reason": null,
+  "assertions": {
+    "executed": 17,
+    "failed": 0
+  },
+  "expected_versus_actual": "/home/vimkim/.cub/campaign/cbrd-26659/ticket15/attempts/inv-T15-0002/expected_vs_actual.txt",
+  "oos_evidence": {
+    "status": "proven",
+    "channel": "other",
+    "reference": "cbrd-26659/campaign/evidence/ticket15/att-T15-0002/recovery_log_excerpt.txt",
+    "applicability": {
+      "fixture": "Identical, because it is the same run: the four rows of (id INT, v BIT VARYING) at 4,036 / 16,284 / 4,011 / 4,036 bytes that the assertions judge are the rows SHOW HEAP OOS counted and whose log records recovery replayed, in a database the case created, owns exclusively and drops.",
+      "execution_path": "Identical: every observation was taken in the same CTP invocation against the same client-server server process. Two channels under `other`: SHOW HEAP OOS after the committed INSERT and after the restart (insert-side demotion and the chains' presence after recovery), and the server's own recovery log (exactly one new REDO phase with at least one record to redo), which is what shows the recovery path ran. Neither certifies a vacuum or reclaim path.",
+      "engine_configuration": "Pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, unmodified install of the build under test, 16 KiB pages read back from spacedb, async_commit=n and group_commit_interval_in_msecs=0 read back from paramdump.",
+      "conditions": "Single session, no concurrency, no fault injection, empty table at the start, one deliberate kill -9 between the two SHOW HEAP OOS observations; exclusive ownership of the table and the database attributes the chunk count and the replayed records to this workload.",
+      "source_manifest": "inv-T15-0002"
+    }
+  },
+  "barriers": [],
+  "injections": [],
+  "resources_owned": {
+    "databases": [
+      "t26659dur01, created by the case with --db-page-size=16384 under the case directory of the campaign testcase worktree, and dropped by it"
+    ],
+    "processes": [
+      "cub_master started by the case's `cubrid server start` and killed with kill -9",
+      "cub_server t26659dur01, killed with kill -9 and restarted",
+      "cub_pl t26659dur01, killed with the server"
+    ],
+    "ports": [
+      26659,
+      33120,
+      33121,
+      33122
+    ],
+    "directories": [
+      "/home/vimkim/.cub/campaign/cbrd-26659/ticket15",
+      "/home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659/shell/_06_issues/_26_2h/cbrd_26659_oos_dur01"
+    ]
+  },
+  "cleanup": {
+    "performed": true,
+    "scope_verified": true,
+    "evidence_preserved_first": true,
+    "evidence": "The whole invocation ran under campaign_ns.sh (unshare --user --map-current-user --pid --fork --mount-proc --ipc), so the CTP helpers' unscoped `pkill cub` and `ipcrm` sweep could reach only processes and IPC segments this invocation started, and the launcher's exit tore them all down. HOME was redirected to a campaign-owned directory seeded from the pinned install so CTP's reset of $CUBRID/conf could not install a foreign configuration. Install hygiene by hashing before and after: install_conf_drift_lines=0, install_databases_drift_lines=0, user_shell_fm_drift_lines=0, worktree_drift_lines=0. Launcher artifacts, the case's result and evidence files were copied into the bundle before the install's conf and databases were restored verbatim."
+  },
+  "bundle": {
+    "path": "/home/vimkim/.cub/campaign/cbrd-26659/ticket15/attempts/inv-T15-0002",
+    "hash": "sha256:f486b72810b70f18106e6948c705e2e1e007c2c8acdbfcb77619bfa105a3bedd"
+  },
+  "reproduction": {
+    "fresh_fixture": true,
+    "consecutive_reproductions_so_far": 0,
+    "failure_reproduced": false
+  },
+  "notes": "original attempt of cbrd_26659_oos_dur01, CTP shell runner, release build, client-server, 16384 B pages. Measured: 17 executed assertions (17 OK, 0 NOK), 1 SKIP line(s); case time 12 s; case_outcome file: PASS|all executed assertions passed and the out-of-row path was observed; expected-versus-actual MATCH. OOS-path evidence: activation markers all matched in this run's own evidence: operations.journal ~ /\\|observation\\|after_insert\\|has_oos=1\\|chunks=4\\|/, operations.journal ~ /\\|observation\\|recovery\\|OK\\|pages=[0-9]+\\|records=[1-9][0-9]*\\|/, operations.journal ~ /\\|observation\\|after_recovery\\|has_oos=1\\|chunks=[3-5]\\|/, recovery_log_excerpt.txt ~ /REDO Phase is started/. 1 assertion(s) skipped on this release build and recorded as SKIP lines, never OK: #18 debug_oos_log_records_chain_delete: release build: oos_debug and oos_trace are compiled out under NDEBUG, so $CUBRID/log/oos.log is never written"
+}

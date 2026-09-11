@@ -183,6 +183,7 @@ def main(argv=None) -> int:
     b.add_argument("--producer-version", default=TOOL_VERSION)
     b.add_argument("--tier", default="fast", choices=list(TIER_CAPS))
     b.add_argument("--cap-reached", action="store_true")
+    b.add_argument("--cap-seconds", type=int, help="invocation cap actually enforced when it differs from the tier's")
     b.add_argument("--launcher-exit", type=int, default=None)
     b.add_argument("--build-mode", choices=["release", "debug"])
     b.add_argument("--run-mode", default="client-server", choices=["client-server", "standalone"])
@@ -207,8 +208,14 @@ def build(args) -> int:
     repository = decl["repository"]
     ident = parse_identity(bundle / "identity.txt")
     timing = read_kv(bundle / "timing.txt")
-    main_info = parse_main_info(result_dir)
-    summary = parse_summary_info(result_dir)
+    if (result_dir / "main.info").exists():
+        main_info = parse_main_info(result_dir)
+        summary = parse_summary_info(result_dir)
+        no_result_dir = False
+    else:
+        main_info = {"execute_case": 0, "success": 0, "fail": 0, "total": 0, "cubrid_rel": None}
+        summary = {}
+        no_result_dir = True
     conf_path = next(iter(sorted(bundle.glob("sql_*.conf"))), None)
     if conf_path is None:
         raise RecordError(f"no sql_*.conf (the CTP configuration used) in {bundle}")
@@ -222,7 +229,7 @@ def build(args) -> int:
         raise RecordError("timing.txt must carry started_at and ended_at")
     launcher_exit = args.launcher_exit if args.launcher_exit is not None else (
         int(timing["ctp_exit"]) if "ctp_exit" in timing else None)
-    engine = engine_identity_from(ident, build_mode, main_info.get("cubrid_rel"))
+    engine = engine_identity_from(ident, build_mode, main_info.get("cubrid_rel") or ident.get("cubrid_rel"))
     testcase = testcase_identity_from(ident, repository)
     worktree = Path(testcase["worktree"])
     scenario_abs = conf["scenario"] or str(worktree / decl["scenario"])
@@ -266,7 +273,9 @@ def build(args) -> int:
         mismatches.append({"kind": "case-not-discovered",
                            "detail": f"main.info total={main_info['total']} differs from the declared count {len(declared)}"})
     if launcher_exit not in (0, None):
-        mismatches.append({"kind": "launcher-exit-mismatch", "detail": f"launcher exit status {launcher_exit}"})
+        mismatches.append({"kind": "launcher-exit-mismatch", "detail": f"launcher exit status {launcher_exit}" + (" (124: the wrapper's invocation-cap timeout ended the launcher)" if launcher_exit == 124 else "")})
+    if no_result_dir:
+        mismatches.append({"kind": "setup-log-error", "detail": "CTP wrote no result directory (no main.info): the launcher did not reach execution" + (" because the invocation cap ended it" if args.cap_reached else "")})
     ctp_log = bundle / "ctp.log"
     if ctp_log.exists():
         text = ctp_log.read_text(errors="replace")
@@ -292,10 +301,11 @@ def build(args) -> int:
         case_identity = {"repository": repository, "path": c["path"], "name": n}
         entry = summary.get(n)
         if entry is None or entry["list"] == "notRun":
-            reason = "prerequisite-missing" if entry is not None else "not-discovered"
+            reason = "prerequisite-missing" if entry is not None else ("cap-reached" if args.cap_reached else "not-discovered")
             detail = ("CTP found no .answer file for the case and put it in notRunList without executing it; "
                       "bootstrap the case with an empty .answer (ticket 13 finding a)" if entry is not None
-                      else "the case was not discovered by CTP; see proof.mismatches")
+                      else ("the invocation cap ended the launcher before the case was reached; evidence captured so far is in the bundle"
+                            if args.cap_reached else "the case was not discovered by CTP; see proof.mismatches"))
             cases_out.append({"case": case_identity, "requirements": c["requirements"], "outcome": None,
                               "skip_reason": None,
                               "assertions": {"expected": c.get("expected_assertions"), "executed": None, "failed": 0},
@@ -441,11 +451,12 @@ def build(args) -> int:
     services = [{"kind": "cub_master", "identity": f"CTP-owned master, port {conf['cubrid_port_id']}", "port": conf["cubrid_port_id"], "owned": True},
                 {"kind": "cub_server", "identity": "basic", "port": None, "owned": True},
                 {"kind": "broker", "identity": f"BROKER1 port {conf['broker_port']}", "port": conf["broker_port"], "owned": True}]
-    runner = {"kind": "ctp-sql", "ctp_fingerprint": ctp_fingerprint("ctp-sql"),
+    runner = {"kind": "ctp-sql", "ctp_fingerprint": ctp_fingerprint("ctp-sql", ident.get("ctp_home")),
               "command": ident.get("command", f"ctp.sh sql -c {conf_path}"), "scenario_selection": scenario_abs}
     manifest = manifest_skeleton(args.manifest_id, args.producer_version, started_at, ended_at, args.tier, args.cap_reached,
                                  gib(bundle_total_bytes(bundle)), ident.get("storage_root", str(bundle.parent.parent)),
-                                 engine, testcase, page_size, build_mode, run_mode, services, runner)
+                                 engine, testcase, page_size, build_mode, run_mode, services, runner,
+                                 inv_cap_override=args.cap_seconds)
     setup_log_rel = None
     if ctp_log.exists():
         dest_dir = evidence_dir / args.manifest_id

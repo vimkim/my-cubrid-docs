@@ -39,7 +39,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 . "${here}/campaign_env.sh"
 
 declarations="" build="" manifest_id="" attempt_ids="" evidence_dir="" scenario_override="" kind=original
-oracle="" planted=() tier=fast producer_version="" reserve_bytes=$((2 * 1024 * 1024 * 1024))
+oracle="" planted=() tier=fast producer_version="" reserve_bytes=$((2 * 1024 * 1024 * 1024)) cap_override=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --declarations) declarations=$2; shift 2 ;;
@@ -54,6 +54,7 @@ while [ $# -gt 0 ]; do
         --tier) tier=$2; shift 2 ;;
         --producer-version) producer_version=$2; shift 2 ;;
         --reserve-bytes) reserve_bytes=$2; shift 2 ;;
+        --cap-override) cap_override=$2; shift 2 ;;
         *) die "unknown argument $1" ;;
     esac
 done
@@ -76,6 +77,7 @@ esac
 scenario=${scenario_override:-${worktree}/${decl_scenario}}
 [ -d "${scenario}" ] || die "scenario ${scenario} does not exist"
 [ "${tier}" = fast ] && inv_cap=900 || { [ "${tier}" = scheduled ] && inv_cap=7200 || inv_cap=28800; }
+[ -n "${cap_override}" ] && inv_cap=${cap_override}   # cap-enforcement control only; recorded in the manifest
 
 campaign_check_namespace
 campaign_check_ports
@@ -142,6 +144,7 @@ started_at=$(date -Is)
     echo "cubrid_rel=${CAMPAIGN_CUBRID_REL}"
     sha256sum "${CUBRID}/lib/libcubrid.so" "${CUBRID}/lib/libcubridsa.so" "${CUBRID}/bin/cub_server" "${CUBRID}/bin/csql"
     echo "ctp_home=${CTP_HOME}"
+    echo "java_home=${JAVA_HOME}"
     sha256sum "${CTP_HOME}/shell/lib/cubridqa-shell.jar" "${CTP_HOME}/common/lib/cubridqa-common.jar" "${CTP_HOME}/shell/init_path/init.sh"
     echo "testcase_repository=${decl_repository}"
     echo "testcase_branch=${tc_branch}"
@@ -255,6 +258,7 @@ chmod +x "${bundle}/replay.sh"
 
 extra=()
 [ ${cap_reached} -eq 1 ] && extra+=(--cap-reached)
+[ -n "${cap_override}" ] && extra+=(--cap-seconds "${cap_override}")
 [ -n "${oracle}" ] && extra+=(--oracle "${oracle}")
 [ -n "${producer_version}" ] && extra+=(--producer-version "${producer_version}")
 log "launcher exit ${launcher_status} (recorded, not trusted); building records"
@@ -262,6 +266,9 @@ python3 "${here}/ctp_shell_records.py" build --bundle "${bundle}" --declarations
     --manifest-id "${manifest_id}" --attempt-ids "${attempt_ids}" --evidence-dir "${evidence_dir}" \
     --kind "${kind}" --tier "${tier}" "${planted[@]}" "${extra[@]}"
 rc=$?
+# CTP snapshots the whole install into $HOME/.CUBRID_SHELL_FM on the first case (about 430 MiB per
+# run). The redirected HOME is not evidence -- the before/after hashes above are -- so it is removed.
+rm -rf "${fake_home}"
 echo "bundle: ${bundle}"
 echo "install drift: conf=${conf_drift} databases=${db_drift} user_shell_fm=${fm_drift}; worktree drift: ${tree_drift}"
 exit ${rc}

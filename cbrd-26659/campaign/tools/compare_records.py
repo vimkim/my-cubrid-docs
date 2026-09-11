@@ -70,6 +70,8 @@ def walk(a, b, path=""):
                 yield from walk(a[i] if i < len(a) else "<absent>", b[i] if i < len(b) else "<absent>", f"{path}[{i}]")
         else:
             yield (path, a, b)
+    else:
+        yield (path, a, b)
 
 
 def align_key(items):

@@ -25,9 +25,14 @@ CAMPAIGN_PORT_ID=26659
 CAMPAIGN_BROKER1_PORT=33120
 CAMPAIGN_BROKER2_PORT=33121
 CAMPAIGN_HA_PORT=33122
-CTP_HOME=${CTP_HOME:-/home/vimkim/CTP}
+# The campaign's CTP tree is PINNED, never inherited: the login environment on this host carries
+# CTP_HOME=/home/vimkim/gh/ctp/run-sql/CTP (a different CTP checkout with different jars), and the
+# manifest's runner fingerprint must name the tree that actually ran. Tickets 13 and 14 ran
+# /home/vimkim/CTP (cubridqa-cqt.jar 456cabff…, cubridqa-shell.jar e7c8ef04…). Override only
+# through CAMPAIGN_CTP_HOME, which is then recorded in identity.txt and fingerprinted.
+CTP_HOME=${CAMPAIGN_CTP_HOME:-/home/vimkim/CTP}
 export CTP_HOME
-export JAVA_HOME="${JAVA_HOME:-/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8}"
+export JAVA_HOME="${CAMPAIGN_JAVA_HOME:-/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8}"
 TOOLS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 DOCS_CAMPAIGN_DIR=$(cd "${TOOLS_DIR}/.." && pwd)
 

@@ -163,6 +163,7 @@ def main(argv=None) -> int:
     b.add_argument("--producer-version", default=TOOL_VERSION)
     b.add_argument("--tier", default="fast", choices=list(TIER_CAPS))
     b.add_argument("--cap-reached", action="store_true")
+    b.add_argument("--cap-seconds", type=int, help="invocation cap actually enforced when it differs from the tier's")
     b.add_argument("--bundle-path-recorded")
     args = ap.parse_args(argv)
     try:
@@ -254,7 +255,9 @@ def build(args) -> int:
             cases_out.append({"case": case_identity, "requirements": c["requirements"], "outcome": None, "skip_reason": None,
                               "assertions": {"expected": exp_count, "executed": None, "failed": 0},
                               "oos_evidence": evidence_block("missing"), "attempts": [],
-                              "outstanding": {"reason": "not-discovered", "detail": "CTP did not dispatch the case or it left no .result file; see proof.mismatches"}})
+                              "outstanding": ({"reason": "cap-reached", "detail": f"the invocation cap ended the launcher before {n} completed; evidence captured so far is in the bundle"}
+                                              if args.cap_reached else
+                                              {"reason": "not-discovered", "detail": "CTP did not dispatch the case or it left no .result file; see proof.mismatches"})})
             if n in discovered:
                 mismatches.append({"kind": "case-not-executed", "detail": f"{n} was dispatched but left no .result file"})
             continue
@@ -267,10 +270,14 @@ def build(args) -> int:
         case_outcome_file = ev_dir / "case_outcome"
         notes_extra = []
         skip_reason = None
-        if result["executed"] == 0:
-            mismatches.append({"kind": "case-not-executed", "detail": f"{n} produced no `OK` or `NOK` assertion line; CTP treats a blank result as a failure and so does the campaign"})
+        co_raw = case_outcome_file.read_text().strip() if case_outcome_file.exists() else ""
+        co_word = co_raw.partition("|")[0]
+        if result["nok"] > 0:
             outcome = "FAIL"
-        elif result["nok"] > 0:
+        elif result["executed"] == 0 and not (co_word == "SKIP" and result["skipped"] > 0):
+            # no assertion executed and the case did not declare a reasoned SKIP: CTP treats a blank
+            # result as a failure and so does the campaign; a reasoned all-SKIP run is handled below
+            mismatches.append({"kind": "case-not-executed", "detail": f"{n} produced no `OK` or `NOK` assertion line and no reasoned SKIP outcome; CTP treats a blank result as a failure and so does the campaign"})
             outcome = "FAIL"
         elif case_outcome_file.exists():
             raw = case_outcome_file.read_text().strip()
@@ -445,12 +452,13 @@ def build(args) -> int:
         {"kind": "cub_master", "identity": f"started (and crashed where the case does so) by the case; port {CAMPAIGN_PORTS[0]}", "port": CAMPAIGN_PORTS[0], "owned": True},
         {"kind": "cub_server", "identity": "the case's own database server", "port": None, "owned": True},
         {"kind": "other", "identity": "cub_pl of the case's database, started by the server", "port": None, "owned": True}]
-    runner = {"kind": "ctp-shell", "ctp_fingerprint": ctp_fingerprint("ctp-shell"),
+    runner = {"kind": "ctp-shell", "ctp_fingerprint": ctp_fingerprint("ctp-shell", ident.get("ctp_home")),
               "command": ident.get("command", f"campaign_ns.sh {sys.argv[0] and ''}/home/vimkim/CTP/bin/ctp.sh shell -c {conf_path}"),
               "scenario_selection": scenario_abs}
     manifest = manifest_skeleton(args.manifest_id, args.producer_version, started_at, ended_at, args.tier, args.cap_reached,
                                  gib(bundle_total_bytes(bundle)), ident.get("storage_root", str(bundle.parent.parent)),
-                                 engine, testcase, page_size, build_mode, run_mode, services, runner)
+                                 engine, testcase, page_size, build_mode, run_mode, services, runner,
+                                 inv_cap_override=args.cap_seconds)
     dest_dir = evidence_dir / args.manifest_id
     setup_log_rel = None
     if args.kind == "original":
