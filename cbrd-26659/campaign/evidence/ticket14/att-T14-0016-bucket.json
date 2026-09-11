@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "attempt_id": "att-T14-0016-bucket",
+  "kind": "coexistence",
+  "parent_attempt": null,
+  "finding_id": null,
+  "case": {
+    "repository": "testcases-private-ex",
+    "path": "shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh",
+    "name": "cbrd_26659_oos_dur01"
+  },
+  "requirements": [
+    "OOS-DUR-01"
+  ],
+  "manifest_id": "none: a coexistence check is not an invocation of the campaign suite, produces no manifest and has no matrix row",
+  "configuration": {
+    "page_size": 16384,
+    "build_mode": "release",
+    "run_mode": "client-server",
+    "instrumentation_id": null,
+    "seed": null
+  },
+  "started_at": "2026-09-11T14:13:59+09:00",
+  "ended_at": "2026-09-11T14:20:39+09:00",
+  "deadline": {
+    "seconds": 120,
+    "reached": false,
+    "evidence_captured_on_timeout": null
+  },
+  "outcome": "PASS",
+  "skip_reason": "Assertion 17 (revision 3's numbering), debug_oos_log_records_chain_delete, skipped on this release build; recorded as a SKIP line, never as OK.",
+  "assertions": {
+    "executed": 16,
+    "failed": 0
+  },
+  "expected_versus_actual": null,
+  "oos_evidence": {
+    "status": "not-applicable",
+    "channel": null,
+    "reference": null,
+    "applicability": null
+  },
+  "barriers": [],
+  "injections": [],
+  "resources_owned": {
+    "databases": [
+      "t26659dur01 (this case; created and dropped by it) and the databases the ten sibling cases of shell/_06_issues/_26_2h create and drop, owned by the invocation rather than by this case"
+    ],
+    "processes": [
+      "every cub_master, cub_server and cub_pl the eleven cases started inside the invocation's process namespace"
+    ],
+    "ports": [
+      26659,
+      33120,
+      33121,
+      33122
+    ],
+    "directories": [
+      "/home/vimkim/.cub/campaign/cbrd-26659/ticket14",
+      "/home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659/shell/_06_issues/_26_2h"
+    ]
+  },
+  "cleanup": {
+    "performed": true,
+    "scope_verified": true,
+    "evidence_preserved_first": true,
+    "evidence": "Scope was established before the run rather than argued after it: the whole invocation ran inside `unshare --user --map-current-user --pid --fork --mount-proc --ipc` (campaign_ns.sh), which makes processes and IPC segments outside the invocation unaddressable to the CTP helpers' unscoped `pkill cub` and `ipcrm` sweep (isolation/isolation_check.sh demonstrated it with matched controls on 2026-09-11). This case's operations.journal in the bucket run records pre_existing_masters=[]: no master outside the namespace was visible. The case's own crash step kills only the server, its cub_pl and the master it started. EVIDENCE BEFORE CLEANUP: the recovery log is copied into the evidence directory after the restart on every run (revision 8), the first failed assertion captures processes, journals, server status and the CUBRID logs, and cleanup copies the recovered database and the server logs aside when anything failed, every step checked. Install hygiene verified by hashing before and after: install_conf_drift_lines=0, install_databases_drift_lines=0, user_shell_fm_drift_lines=0. Each of the eleven cases deleted its own database; the testcase worktree was left clean."
+  },
+  "bundle": {
+    "path": "/home/vimkim/.cub/campaign/cbrd-26659/ticket14/attempts/att-T14-0016-bucket",
+    "hash": "sha256:181e93bf7e61a29218c4b0fef1e3be28196c344647d357d1d98b6ed8ee0a60a3"
+  },
+  "reproduction": {
+    "fresh_fixture": true,
+    "consecutive_reproductions_so_far": 0,
+    "failure_reproduced": false
+  },
+  "notes": "COEXISTENCE CHECK, NOT A CAMPAIGN ATTEMPT -- RECORDED AFTER THE FACT on 2026-09-11 by ticket 34 (independent review F4). One CTP invocation ran this case together with all ten existing cases of its issue bucket shell/_06_issues/_26_2h: 11 expected, 11 discovered, 11 executed, 9 succeeded, 2 failed, 397 s wall time. THIS CASE: 16 executed, 16 OK, 0 NOK, 1 SKIP, case_outcome PASS, 12 s -- identical to its isolated run, and the install configuration and the testcase worktree came back unchanged (drift lines 0/0/0). WHICH REVISION: the invocation exercised REVISION 3 of the case; the committed case was revision 7 when ticket 14 closed and is revision 8 now. att-T14-0016-bucket/README.txt confines the revision-3-to-7 delta to paths this run never entered (the failure-preservation branch, the SHOW HEAP OOS failure classification, and column lookup by name) and ships case-version-delta.diff; revision 8 adds the recovery-log assertion, which this run therefore did not exercise (the independent review's F5 asked for this qualifier in the summary, and ticket 14's Outcome now carries it). THE TWO SIBLING FAILURES, cbrd_26777 ('Failed to start cubrid manager', a prerequisite this pinned install does not provide) and cbrd_27097 (assertions 16 and 17), failed identically in two earlier bucket runs and both ran before this case in dispatch order; they are an observation for whichever tickets own those requirements and are not attributed here. WHY kind=coexistence WITH NO MATRIX ROW: the run adds no coverage and the campaign's taxonomy has nothing to say about a mixed invocation; the record exists so that every executed attempt with a campaign attempt id is visible to validate_records.py. oos_evidence is not-applicable for the same reason; expected_versus_actual is null because finalize_bundle.sh was never run on this bundle. Deadline 120 s is the case's own cap; the invocation's 900 s launcher timeout was not approached by any case."
+}

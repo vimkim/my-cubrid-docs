@@ -9,7 +9,7 @@
   "properties": {
     "schema_version": {"const": 1},
     "attempt_id": {"type": "string", "pattern": "^[A-Za-z0-9._:-]+$"},
-    "kind": {"enum": ["original", "rerun", "minimized", "reproduction"], "description": "original: first attempt of a scenario in an invocation. rerun: same workload again. minimized: reduced derivative that must keep both the failure and the OOS path. reproduction: fresh-fixture run counted toward a deterministic claim."},
+    "kind": {"enum": ["original", "rerun", "minimized", "reproduction", "checker-validation", "coexistence"], "description": "original: first attempt of a scenario in an invocation. rerun: same workload again. minimized: reduced derivative that must keep both the failure and the OOS path. reproduction: fresh-fixture run counted toward a deterministic claim. checker-validation: a controlled wrong-result run that validates a checking mechanism; it is recorded per the outcome taxonomy but has no manifest and no matrix row, and its FAIL is the checker working, never a finding. coexistence: a mixed invocation run to verify a case beside its neighbours; no manifest, no matrix row, no coverage."},
     "parent_attempt": {"type": ["string", "null"], "description": "Required for rerun, minimized and reproduction attempts."},
     "finding_id": {"type": ["string", "null"], "description": "Groups attempts of one scenario/finding across invocations."},
     "case": {

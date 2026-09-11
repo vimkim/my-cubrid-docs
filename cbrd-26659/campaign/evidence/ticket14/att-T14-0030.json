@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "attempt_id": "att-T14-0030",
+  "kind": "original",
+  "parent_attempt": null,
+  "finding_id": null,
+  "case": {
+    "repository": "testcases-private-ex",
+    "path": "shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh",
+    "name": "cbrd_26659_oos_dur01"
+  },
+  "requirements": [
+    "OOS-DUR-01"
+  ],
+  "manifest_id": "inv-T14-0004",
+  "configuration": {
+    "page_size": 16384,
+    "build_mode": "debug",
+    "run_mode": "client-server",
+    "instrumentation_id": null,
+    "seed": null
+  },
+  "started_at": "2026-09-11T17:38:23+09:00",
+  "ended_at": "2026-09-11T17:38:50+09:00",
+  "deadline": {
+    "seconds": 120,
+    "reached": false,
+    "evidence_captured_on_timeout": null
+  },
+  "outcome": "PASS",
+  "skip_reason": null,
+  "assertions": {
+    "executed": 18,
+    "failed": 0
+  },
+  "expected_versus_actual": "/home/vimkim/.cub/campaign/cbrd-26659/ticket14/attempts/att-T14-0030/expected_vs_actual.txt",
+  "oos_evidence": {
+    "status": "proven",
+    "channel": "other",
+    "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0030/recovery_log_excerpt.txt",
+    "applicability": {
+      "fixture": "Identical, because it is the same run: the four rows of (id INT, v BIT VARYING) at 4,036 AA / 16,284 BB / 4,011 CC / 4,036 DD that the assertions judge are the rows SHOW HEAP OOS counted and the rows whose log records recovery replayed, in a database the case created, owns exclusively and deletes.",
+      "execution_path": "IDENTICAL, which is why this is proven and not reused: every observation was taken in the same CTP invocation, against the same client-server server process, in the same session sequence as the assertions it supports. TWO CHANNELS, recorded under channel `other` because the schema carries one channel per row. (1) SHOW HEAP OOS after the committed INSERT and again after the restart (show_heap_oos_after_insert.out, show_heap_oos_after_recovery.out beside the reference) certifies the INSERT-side demotion -- one OOS file, four chunk records for four rows -- and the presence of the chains after recovery. (2) The server's own recovery log for this database ($CUBRID/log/server/<db>_*.err, copied into the bundle as case-evidence/server_log/ and excerpted in the reference) certifies that the RECOVERY PATH RAN AND REPLAYED WORK: exactly one new 'Log recovery: REDO Phase is started' line after the restart, with 'Log pages to redo: 2, Log records to redo: 83', and 'Log pages to undo: 0, transactions to undo: 0'. Channel (2) is what the independent review's F1 asked for: without it the values could have survived because the pages were flushed before the kill -9, and the specification says proof of an insert path never certifies a recovery path. Neither channel certifies a vacuum or reclaim path, which is why the post-recovery chunk count is asserted as a range.",
+      "engine_configuration": "Pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, the debug install, 16 KiB pages read back from spacedb, unmodified build, no instrumentation, async_commit=n and group_commit_interval_in_msecs=0 read back from paramdump. All SHOW HEAP OOS observations and both recovery counts agree with the release build's, so nothing here is release- or debug-specific; the debug build additionally executes assertion 18 (delete-side oos.log).",
+      "conditions": "Single session, no concurrency, no fault injection, an empty table at the start, and one deliberate crash between the two SHOW HEAP OOS observations. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture; the recovery log is per database, so exclusive ownership of the database is what makes the replayed records attributable to this workload. Oos_recs_sumlen is recorded but never asserted (pinned 16-byte versus accepted 24-byte chunk header, OOS-REP-05 / CBRD-26950); the redo and undo counts are recorded, and only 'exactly one REDO phase with at least one record' is asserted.",
+      "source_manifest": "inv-T14-0004"
+    }
+  },
+  "barriers": [],
+  "injections": [],
+  "resources_owned": {
+    "databases": [
+      "t26659dur01, created by the case with --db-page-size=16384 under the case directory of the campaign testcase worktree, and dropped by it"
+    ],
+    "processes": [
+      "cub_master started by the case's `cubrid server start` and killed with kill -9",
+      "cub_server t26659dur01, killed with kill -9 and restarted",
+      "cub_pl t26659dur01, killed with the server"
+    ],
+    "ports": [
+      26659,
+      33120,
+      33121,
+      33122
+    ],
+    "directories": [
+      "/home/vimkim/.cub/campaign/cbrd-26659/ticket14",
+      "/home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659/shell/_06_issues/_26_2h/cbrd_26659_oos_dur01"
+    ]
+  },
+  "cleanup": {
+    "performed": true,
+    "scope_verified": true,
+    "evidence_preserved_first": true,
+    "evidence": "Scope was established before the run rather than argued after it: the whole invocation ran inside `unshare --user --map-current-user --pid --fork --mount-proc --ipc` (campaign_ns.sh), which makes processes and IPC segments outside the invocation unaddressable to the CTP helpers' unscoped `pkill cub` and `ipcrm` sweep (isolation/isolation_check.sh demonstrated it with matched controls on 2026-09-11). This run's operations.journal records pre_existing_masters=[]: no master outside the namespace was visible. The case's own crash step kills only the server, its cub_pl and the master it started. EVIDENCE BEFORE CLEANUP: the recovery log is copied into the evidence directory after the restart on every run (revision 8), the first failed assertion captures processes, journals, server status and the CUBRID logs, and cleanup copies the recovered database and the server logs aside when anything failed, every step checked. Install hygiene verified by hashing before and after: install_conf_drift_lines=0, install_databases_drift_lines=0, user_shell_fm_drift_lines=0. The case deleted its own database; the testcase worktree was left clean."
+  },
+  "bundle": {
+    "path": "/home/vimkim/.cub/campaign/cbrd-26659/ticket14/attempts/att-T14-0030",
+    "hash": "sha256:3f5256fe44128452508f9aa57c67d1ace4396c7ab1abdc01c4dfcd3a5baf3502"
+  },
+  "reproduction": {
+    "fresh_fixture": true,
+    "consecutive_reproductions_so_far": 0,
+    "failure_reproduced": false
+  },
+  "notes": "Revision 8 of the private tracer bullet on the debug build (testcase commit c4fe45173), run by ticket 34 to close the independent review's findings on ticket 14. WHAT CHANGED IN THE CASE: assertion 10, recovery_redo_phase_replayed_log_records, reads the engine's own recovery lines from $CUBRID/log/server/<db>_*.err -- it counts REDO-phase lines before the crash and asserts the restart added exactly one whose 'Log records to redo' is at least 1, journals the page, record and undo-transaction counts, and copies the log files into the bundle on every run (F1); the OOS-REP-07 claim is withdrawn (F2); former assertions 10 to 17 are 11 to 18. THIS RUN: 18 of 18 executed, all OK, no skips; recovery replayed 83 log records over 2 pages with 0 transactions to undo; SHOW HEAP OOS reported 4 chunk records after the INSERT and 5 after recovery; case_outcome PASS; case time 17 s. THE NEW READER IS VALIDATED: tools/checker_validation_recovery_log.sh puts ten shapes through the verbatim functions (the real sequence accepted with pages 2 / records 83; no REDO phase, an empty log, zero records, a stale second phase, an unparsable line and the utility's unconditional banner all rejected; failures=0), and tools/recovery_log_discriminates.sh shows every rejected shape passes revision 7's post-restart judgement, which never read the log. deadline.evidence_captured_on_timeout is null because the deadline was not reached. The revision-7 attempt att-T14-0027 stays recorded; this attempt is appended to the matrix row's history, not substituted for it."
+}

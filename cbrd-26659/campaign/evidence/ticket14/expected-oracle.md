@@ -29,18 +29,40 @@
 > **For tickets 18 to 22 and 23 to 32: probe format on a fixture that is not the case's
 > fixture.** It costs nothing and it keeps the stronger claim available.
 > All four probes, their scripts and a note on what each settled are in [`probes/`](probes/).
+>
+> **Revision 8 (2026-09-11, ticket 34), written before the revision-8 runs.** The specification's
+> [independent review](../../CBRD-26659-ticket14-independent-review_f4299ac_claude.md) found (F1) that
+> nothing here showed the recovery path had run, and (F2) that `OOS-REP-07` was quoted with its two
+> hard clauses removed. Assertion 10, `recovery_redo_phase_replayed_log_records`, is added and the
+> former 10 to 17 become 11 to 18 (section 5); the `OOS-REP-07` claim is withdrawn (section 1); the
+> recovery-log reader gets its controlled failure examples (section 7). No size, digest or count
+> above changes.
 
 ## 1. Requirements under test
 
 | ID | Statement (catalogue, sha256 `0cc33c82…`) | Policy |
 |---|---|---|
 | `OOS-DUR-01` | Committed INSERT, UPDATE and DELETE of OOS-backed rows, including multi-chunk values, are present with exact values after `kill -9` and restart. | assert |
-| `OOS-REP-07` | A value larger than one page's maximum single-chunk payload is stored as a chain of chunk records and is read back complete and byte-identical. | assert |
 
-Both cite `OOS-CONTEXT.md` at revision `f6543de680b91ae357466b72a983f982892859cd`,
-content hash `sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698`
-(`OOS-DUR-01` → §4 Recovery & Replication Invariants, invariant 1; `OOS-REP-07` → §2
-Multi-Chunk OOS Chain). Both are `assertable` with `gap_kind: null`.
+The statement is quoted in full. It cites `OOS-CONTEXT.md` at revision
+`f6543de680b91ae357466b72a983f982892859cd`, content hash
+`sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698` (§4 Recovery &
+Replication Invariants, invariant 1, WAL completeness), and is `assertable` with `gap_kind: null`.
+
+**Claim withdrawn in revision 8: `OOS-REP-07`.** Revisions 1 to 7 also listed `OOS-REP-07` and
+quoted it as "…is stored as a chain of chunk records and is read back complete and
+byte-identical". The catalogue statement in full is: "A value larger than one page's maximum
+single-chunk payload is stored as a chain of chunk records, **inserted tail first**, and is read
+back complete and byte-identical; **`total_data_length` excludes every chunk header**." Neither
+emphasised clause is assertable by this case: chunk insertion order is not observable at either
+seam, and `total_data_length` is observable only through `Oos_recs_sumlen`, which section 3
+deliberately declines to assert while the pinned 16-byte chunk header differs from the accepted
+24-byte one (`OOS-REP-05` / CBRD-26950). A PASS recorded against a statement quoted with its hard
+half removed is the overclaim the independent review's F2 named, and the review's option 1 —
+drop the claim — costs the case nothing, because `OOS-DUR-01`'s own statement already mandates
+"including multi-chunk values". So the multi-chunk row stays and this oracle claims exactly one
+requirement. `OOS-REP-07` is a `public-sql` requirement in the catalogue and belongs to the
+campaign's public Representation ticket (18), which owns the single-to-multi-chunk boundary.
 
 ## 2. Fixture and why each size was chosen
 
@@ -63,7 +85,7 @@ output must never become an expectation (ticket 11 §5.2).
 | Row | N (logical bytes of `v`) | Pattern | Placement | Why this N |
 |---:|---:|---|---|---|
 | `id = 1` | 4,036 | `AA` | OOS, 1 chunk | Smallest N demoted under **both** accountings (pinned 4,036; normative 4,012). Disputed demotion band \[4,012, 4,035] is avoided by taking the larger. |
-| `id = 2` | 16,284 | `BB` | OOS, 2 chunks | Smallest N needing two chunks under **both** (pinned 16,284; normative 16,276). Disputed split band \[16,276, 16,283] avoided the same way. This row is what makes the case cover `OOS-REP-07`. |
+| `id = 2` | 16,284 | `BB` | OOS, 2 chunks | Smallest N needing two chunks under **both** (pinned 16,284; normative 16,276). Disputed split band \[16,276, 16,283] avoided the same way. This row exercises `OOS-DUR-01`'s "including multi-chunk values" clause; the `OOS-REP-07` claim it carried until revision 7 is withdrawn (section 1). |
 | `id = 3` | 4,011 | `CC` | inline | Largest N that stays inline under **both** (one below the *normative* trigger 4,012, not below the pinned 4,036). The inline comparator that separates OOS-specific failure from general SQL or harness failure. |
 | `id = 4` | 4,036 | `DD` | OOS, 1 chunk | Same size as `id = 1`; exists only to be deleted and committed before the crash, so that the committed DELETE half of `OOS-DUR-01` is covered. |
 
@@ -181,28 +203,49 @@ numbering.
 | 7 | `delete_transaction_acknowledged` | journal: T3 ack, 1 row affected | — |
 | 8 | `server_crashed_by_kill_9` | `cub_server`/`cub_pl`/`cub_master` pids extracted (extraction failure is a failure, never a silent pass), killed, and gone within 30 s | — |
 | 9 | `server_restarted_within_deadline` | `cubrid server start` succeeds and a probe query answers within 60 s | — |
-| 10 | `recovered_row_count_is_3` | `SELECT COUNT(*)` = 3 | — |
-| 11 | `recovered_value_id1_single_chunk_oos` | MD5 `b3f48c…`, OCTET_LENGTH 4,036, BIT_LENGTH 32,288, DISK_SIZE 4,044, equality flag 1 | — |
-| 12 | `recovered_value_id2_multi_chunk_oos` | MD5 `02b6cc…`, OCTET_LENGTH 16,284, BIT_LENGTH 130,272, DISK_SIZE 16,292, equality flag 1 | — |
-| 13 | `recovered_value_id3_inline_comparator` | MD5 `42db23…`, OCTET_LENGTH 4,011, BIT_LENGTH 32,088, DISK_SIZE 4,016, equality flag 1 | — |
-| 14 | `committed_delete_survived_recovery` | no row with `id = 4` | — |
-| 15 | `oos_activation_after_recovery` | `Has_oos_file = 1` and `3 ≤ Oos_num_recs ≤ 5` | `SHOW HEAP OOS` not supported |
-| 16 | `checkdb_after_recovery_is_clean` | `cubrid checkdb -S` exits 0 and prints no failure text | — |
-| 17 | `debug_oos_log_records_chain_delete` | after a standalone-mode update of `id = 1`, `$CUBRID/log/oos.log` contains an `oos_delete` line | release build: `oos_debug` is compiled out under `NDEBUG` |
+| 10 | `recovery_redo_phase_replayed_log_records` | the server's own error log for the database (`$CUBRID/log/server/<db>_*.err`, regular files only) carries exactly one more `Log recovery: REDO Phase is started` line than it did before the crash, and that line's `Log records to redo` is at least 1; the redo page and record counts and the UNDO line's `transactions to undo` are journalled as observations, and the log files are copied into the evidence directory on every run | — |
+| 11 | `recovered_row_count_is_3` | `SELECT COUNT(*)` = 3 | — |
+| 12 | `recovered_value_id1_single_chunk_oos` | MD5 `b3f48c…`, OCTET_LENGTH 4,036, BIT_LENGTH 32,288, DISK_SIZE 4,044, equality flag 1 | — |
+| 13 | `recovered_value_id2_multi_chunk_oos` | MD5 `02b6cc…`, OCTET_LENGTH 16,284, BIT_LENGTH 130,272, DISK_SIZE 16,292, equality flag 1 | — |
+| 14 | `recovered_value_id3_inline_comparator` | MD5 `42db23…`, OCTET_LENGTH 4,011, BIT_LENGTH 32,088, DISK_SIZE 4,016, equality flag 1 | — |
+| 15 | `committed_delete_survived_recovery` | no row with `id = 4` | — |
+| 16 | `oos_activation_after_recovery` | `Has_oos_file = 1` and `3 ≤ Oos_num_recs ≤ 5` | `SHOW HEAP OOS` not supported |
+| 17 | `checkdb_after_recovery_is_clean` | `cubrid checkdb -S` exits 0 and prints no failure text | — |
+| 18 | `debug_oos_log_records_chain_delete` | after a standalone-mode update of `id = 1`, `$CUBRID/log/oos.log` contains an `oos_delete` line | release build: `oos_debug` is compiled out under `NDEBUG` |
 
-**Expected assertion count: 17.** On the pinned **release** build, 16 are executed and #17 is
-skipped; on the pinned **debug** build all 17 are executed. A skipped assertion takes its own
-number in the result file, so the file stays contiguously numbered 1 to 17 the way `write_ok`
+**Expected assertion count: 18** (17 until revision 8). On the pinned **release** build, 17 are
+executed and #18 is skipped; on the pinned **debug** build all 18 are executed. A skipped assertion
+takes its own number in the result file, so the file stays contiguously numbered 1 to 18 the way `write_ok`
 numbers it, but the line reads `SKIP` rather than `OK` or `NOK`. Unlike the SQL runner, the CTP
 shell runner does give a real per-assertion counter — the `.result` file has one
 `<case>-<n> : OK|NOK` line per assertion and `feedback.log` reproduces them — so
 `executed` is measured, not derived. (This closes, for the shell seam, the counting defect
 ticket 13 recorded as `P4`.)
 
+**Why #10 exists, and what it does not claim.** Assertion 9 shows a server came back up; it does
+not show that recovery replayed anything. Had every dirty page been flushed before the `kill -9`,
+assertions 11 to 17 would pass on an engine that never logged an OOS operation — which is the
+invariant this case cites — and the specification rules that inference out explicitly ("proof of
+an insert path never certifies an unrelated scan, recovery or vacuum path"). The engine writes
+its recovery progress at NOTIFICATION severity, on release and debug builds alike, into
+`$CUBRID/log/server/<db>_<date>_<time>.err` (`log_recovery.c` through `cubrid.msg` entries 1128,
+1129 and 1296 to 1301). Two facts shape the reader and are measured rather than assumed: a fresh
+database's first start writes no recovery lines, and a restart within the same minute as the
+first start appends to the same file. So the case counts REDO-phase lines across the database's
+regular `.err` files before the crash and asserts the restart added **exactly one** — a stale
+phase must not be read as the restart's — whose `Log records to redo` is **at least 1**, because a
+REDO phase with nothing to replay is precisely the ambiguity the assertion exists to remove. The
+exact counts are observations (the pinned release run seen by the independent review replayed 83
+records over 2 pages; the number depends on what the workload logged and is not portable across
+layouts). The `transactions to undo` count is journalled and not asserted: `OOS-DUR-02` is not
+claimed, and the honest statement `OOS-DUR-01` can make about its sibling's territory is to
+record the engine's own count. `server_restart.out` is not a substitute: it holds the utility's
+unconditional "This may take a long time" banner and is byte-identical to `server_start.out`.
+
 ### The case-level outcome
 
 CTP decides PASS or FAIL per case and has no third verdict, so assertion-level skips are not
-enough on their own: on a build without `SHOW HEAP OOS`, assertions #5 and #15 would both
+enough on their own: on a build without `SHOW HEAP OOS`, assertions #5 and #16 would both
 skip and the case would still report `[OK]` — a pass with **no activation evidence at all**,
 which is precisely what the campaign forbids ("a case counts as OOS coverage only when
 correct results are paired with evidence that its intended OOS path executed").
@@ -220,7 +263,7 @@ from:
 On both pinned builds the outcome is `PASS`. The `SKIP` branch is what keeps a future run on
 a non-OOS build from being counted as coverage.
 
-### Why #17 uses the standalone path
+### Why #18 uses the standalone path
 
 Ticket 11 §6 found that at the pin the debug `oos.log` carries **delete-side lines only**:
 the SQL INSERT path calls `oos_insert_many`, which has no `oos_debug` call. The probe for
@@ -228,7 +271,7 @@ this ticket added a second fact: in **client-server** mode a committed UPDATE an
 wrote nothing to `oos.log` within three seconds, because the chains are reclaimed by vacuum
 asynchronously; the same statements in **standalone** mode wrote `heap_recdes_get_oos_oids`,
 `oos_delete` and `oos_delete_chain` lines synchronously, through the SA_MODE eager path
-(`heap_oos_delete_unreferenced`, OOS-CONTEXT §4). So assertion #17 runs its update in
+(`heap_oos_delete_unreferenced`, OOS-CONTEXT §4). So assertion #18 runs its update in
 standalone mode after all durability assertions have finished, which makes it deterministic
 instead of racing vacuum. It is an evidence assertion, not a durability assertion: it runs
 last and mutates only data the case has already judged.
@@ -275,3 +318,16 @@ error and a connection failure must both yield `affected=0` with `errors≥1`. T
 because `csql` was observed exiting 0 while printing `ERROR: Failed to connect`, so a parser
 that read those shapes as success would let a transaction that never ran be journalled as
 acknowledged.
+
+**The recovery-log reader (revision 8).** The case's fourth checking mechanism turns the server's
+error log into the verdict of assertion #10. Its controlled failure examples are in
+`tools/checker_validation_recovery_log.sh` (output: `checker-validation-recovery-log.txt`): the
+real five-line recovery sequence from a pinned release run is accepted with pages 2 and records
+83, and each of these is rejected — the analysis lines with no REDO phase, an empty log, a REDO
+phase with zero records, a second REDO phase when none existed before (a stale phase must not
+pass as the restart's), a line whose counts do not parse, and the utility's unconditional
+"This may take a long time" banner. Two REDO phases with one counted before the crash are
+accepted with the last line's counts. `tools/recovery_log_discriminates.sh` shows the shapes
+discriminate by running them against the code they were written to catch: revision 7's
+post-restart judgement (exit status 0 and a probe query answered) passes every rejected shape,
+because it never read the log (output: `recovery-log-discriminates.txt`).

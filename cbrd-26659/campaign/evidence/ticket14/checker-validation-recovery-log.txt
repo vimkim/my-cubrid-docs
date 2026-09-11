@@ -1,0 +1,14 @@
+ok   1 the real recovery sequence, before=0 -> OK|pages=2|records=83
+ok   2 analysis lines only, no REDO phase -> NOK|expected exactly one REDO phase added by the restart, found 0 (before=0, after=0)
+ok   3 an empty log -> NOK|expected exactly one REDO phase added by the restart, found 0 (before=0, after=0)
+ok   4 a REDO phase with nothing to redo -> NOK|recovery found nothing to redo (records=0): the values may have survived because the pages were already flushed, not because redo restored them
+ok   5 two REDO phases, none before -> NOK|expected exactly one REDO phase added by the restart, found 2 (before=0, after=2)
+ok   6 two REDO phases, one before -> OK|pages=2|records=83
+ok   7 a REDO line whose counts do not parse -> NOK|the REDO line carries no parsable page and record counts
+ok   8 the utility's unconditional banner -> NOK|expected exactly one REDO phase added by the restart, found 0 (before=0, after=0)
+ok   9 undo counts from the real sequence = [0 0]
+ok   9 undo counts when absent = []
+ok   10 before is not a number -> OK|pages=2|records=83
+ok   redo counts from the real sequence = [2 83]
+ok   redo counts take the LAST line = [2 83]
+failures=0

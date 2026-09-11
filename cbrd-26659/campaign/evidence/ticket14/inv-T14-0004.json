@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "manifest_id": "inv-T14-0004",
+  "producer": {
+    "kind": "hand-written",
+    "name": "Claude Fable 5.1, campaign ticket 34 (session 6f4722b1)",
+    "version": "revision 8 of the case, after the specification's independent review of ticket 14"
+  },
+  "invocation": {
+    "started_at": "2026-09-11T17:38:23+09:00",
+    "ended_at": "2026-09-11T17:38:50+09:00",
+    "tier": "fast",
+    "caps": {
+      "invocation_seconds": 900,
+      "per_case_seconds": 120,
+      "invocation_cap_reached": false
+    },
+    "resources": {
+      "cpus": 8,
+      "memory_gib": 16,
+      "storage_gib": 0.01,
+      "storage_root": "/home/vimkim/.cub/campaign/cbrd-26659/ticket14"
+    },
+    "engine": {
+      "baseline_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+      "worktree": "/home/vimkim/gh/cb/oos-baseline-f4299ac0c",
+      "modified": false,
+      "install_prefix": "/home/vimkim/.cub/install/oos-baseline-f4299ac0c/debug_gcc",
+      "version_string": "CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit debug build for Linux) (Sep 10 2026 16:15:40)",
+      "library_hashes": {
+        "libcubrid.so": "sha256:27399fae11a5ef134ba303e5ac6d672748b224bdf593504a2d4fae533a357253",
+        "libcubridsa.so": "sha256:9a3db918bc01738666bbb1ede762da973a714090c15e6709c78b7dc9c825ba69"
+      }
+    },
+    "testcase": {
+      "repository": "testcases-private-ex",
+      "branch": "CBRD-26659-oos-testcases-handover",
+      "commit": "c4fe45173ddbfccc6dc59212670ec91e94b8f6f1",
+      "base_commit": "e9c2d86874b9c08cdd72b120c2ead84f525e15fc",
+      "worktree": "/home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659"
+    },
+    "context": {
+      "revision": "f6543de680b91ae357466b72a983f982892859cd",
+      "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698",
+      "snapshot": "cbrd-26659/campaign/ticket11-evidence/normative-snapshot/"
+    },
+    "catalogue": {
+      "path": "cbrd-26659/campaign/catalogue/requirements.json",
+      "hash": "sha256:0cc33c82cfc472daece8e168f92d153d86d4c1feb0690ceffca786b0c8a8c5dd"
+    },
+    "page_size": 16384,
+    "build_mode": "debug",
+    "run_mode": "client-server",
+    "services": [
+      {
+        "kind": "cub_master",
+        "identity": "started and crashed by the case; port 26659",
+        "port": 26659,
+        "owned": true
+      },
+      {
+        "kind": "cub_server",
+        "identity": "t26659dur01, created, crashed, restarted and dropped by the case",
+        "port": null,
+        "owned": true
+      },
+      {
+        "kind": "other",
+        "identity": "cub_pl for t26659dur01, started by the server and killed with it",
+        "port": null,
+        "owned": true
+      }
+    ],
+    "instrumentation": null,
+    "seed": null,
+    "runner": {
+      "kind": "ctp-shell",
+      "ctp_fingerprint": "sha256:e7c8ef04ee377d5fd33d82ad237210ee0c0c509c7b643787ba5f2137d69e6347",
+      "command": "run_attempt.sh att-T14-0030 debug_gcc <scenario>, which runs: unshare --user --map-current-user --pid --fork --mount-proc --ipc -- /home/vimkim/CTP/bin/ctp.sh shell -c <bundle>/shell_cbrd26659.conf",
+      "scenario_selection": "/home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659/shell/_06_issues/_26_2h/cbrd_26659_oos_dur01"
+    }
+  },
+  "expected": {
+    "case_list": "cbrd-26659/campaign/evidence/ticket14/att-T14-0030/dispatch_tc_ALL.txt",
+    "case_list_hash": "sha256:432dbdd88c341034a0c2729121e5b0c5966af653534f4a896d8b63a5e8f98a13",
+    "case_count": 1,
+    "assertion_count": 18
+  },
+  "discovered": {
+    "case_count": 1,
+    "case_names": [
+      "cbrd_26659_oos_dur01"
+    ]
+  },
+  "executed": {
+    "case_count": 1,
+    "assertion_count": 18
+  },
+  "proof": {
+    "verdict": "proven",
+    "launcher_exit_status": 0,
+    "setup_log": "cbrd-26659/campaign/evidence/ticket14/att-T14-0030/summary.txt",
+    "mismatches": []
+  },
+  "cases": [
+    {
+      "case": {
+        "repository": "testcases-private-ex",
+        "path": "shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh",
+        "name": "cbrd_26659_oos_dur01"
+      },
+      "requirements": [
+        "OOS-DUR-01"
+      ],
+      "outcome": "PASS",
+      "skip_reason": null,
+      "assertions": {
+        "expected": 18,
+        "executed": 18,
+        "failed": 0
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "other",
+        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0030/recovery_log_excerpt.txt",
+        "applicability": {
+          "fixture": "Identical, because it is the same run: the four rows of (id INT, v BIT VARYING) at 4,036 AA / 16,284 BB / 4,011 CC / 4,036 DD that the assertions judge are the rows SHOW HEAP OOS counted and the rows whose log records recovery replayed, in a database the case created, owns exclusively and deletes.",
+          "execution_path": "IDENTICAL, which is why this is proven and not reused: every observation was taken in the same CTP invocation, against the same client-server server process, in the same session sequence as the assertions it supports. TWO CHANNELS, recorded under channel `other` because the schema carries one channel per row. (1) SHOW HEAP OOS after the committed INSERT and again after the restart (show_heap_oos_after_insert.out, show_heap_oos_after_recovery.out beside the reference) certifies the INSERT-side demotion -- one OOS file, four chunk records for four rows -- and the presence of the chains after recovery. (2) The server's own recovery log for this database ($CUBRID/log/server/<db>_*.err, copied into the bundle as case-evidence/server_log/ and excerpted in the reference) certifies that the RECOVERY PATH RAN AND REPLAYED WORK: exactly one new 'Log recovery: REDO Phase is started' line after the restart, with 'Log pages to redo: 2, Log records to redo: 83', and 'Log pages to undo: 0, transactions to undo: 0'. Channel (2) is what the independent review's F1 asked for: without it the values could have survived because the pages were flushed before the kill -9, and the specification says proof of an insert path never certifies a recovery path. Neither channel certifies a vacuum or reclaim path, which is why the post-recovery chunk count is asserted as a range.",
+          "engine_configuration": "Pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, the debug install, 16 KiB pages read back from spacedb, unmodified build, no instrumentation, async_commit=n and group_commit_interval_in_msecs=0 read back from paramdump. All SHOW HEAP OOS observations and both recovery counts agree with the release build's, so nothing here is release- or debug-specific; the debug build additionally executes assertion 18 (delete-side oos.log).",
+          "conditions": "Single session, no concurrency, no fault injection, an empty table at the start, and one deliberate crash between the two SHOW HEAP OOS observations. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture; the recovery log is per database, so exclusive ownership of the database is what makes the replayed records attributable to this workload. Oos_recs_sumlen is recorded but never asserted (pinned 16-byte versus accepted 24-byte chunk header, OOS-REP-05 / CBRD-26950); the redo and undo counts are recorded, and only 'exactly one REDO phase with at least one record' is asserted.",
+          "source_manifest": "inv-T14-0004"
+        }
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T14-0030",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket14/att-T14-0030.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket14/attempts/att-T14-0030",
+          "bundle_hash": "sha256:3f5256fe44128452508f9aa57c67d1ace4396c7ab1abdc01c4dfcd3a5baf3502"
+        }
+      ],
+      "outstanding": null
+    }
+  ],
+  "outstanding_coverage": {
+    "cases_not_executed": [],
+    "configurations_not_run": [
+      "4096/release/standalone",
+      "4096/release/client-server",
+      "4096/debug/standalone",
+      "4096/debug/client-server",
+      "8192/release/standalone",
+      "8192/release/client-server",
+      "8192/debug/standalone",
+      "8192/debug/client-server",
+      "16384/release/standalone",
+      "16384/release/client-server",
+      "16384/debug/standalone"
+    ],
+    "requirements_without_executed_case": [
+      "OOS-REP-01",
+      "OOS-REP-02",
+      "OOS-REP-04",
+      "OOS-REP-06",
+      "OOS-REP-07",
+      "OOS-REP-08",
+      "OOS-REP-09",
+      "OOS-REP-10",
+      "OOS-REP-11",
+      "OOS-REP-12",
+      "OOS-SQL-01",
+      "OOS-SQL-02",
+      "OOS-SQL-03",
+      "OOS-SQL-05",
+      "OOS-SQL-06",
+      "OOS-RD-01",
+      "OOS-RD-02",
+      "OOS-RD-03",
+      "OOS-SCH-01",
+      "OOS-SCH-02",
+      "OOS-SCH-03",
+      "OOS-SCH-04",
+      "OOS-SCH-05",
+      "OOS-SCH-06",
+      "OOS-CL-01",
+      "OOS-CL-02",
+      "OOS-CL-03",
+      "OOS-CL-04",
+      "OOS-CL-05",
+      "OOS-CL-06",
+      "OOS-CL-09",
+      "OOS-CL-10",
+      "OOS-CL-11",
+      "OOS-CL-13",
+      "OOS-DUR-02",
+      "OOS-DUR-03",
+      "OOS-DUR-04",
+      "OOS-DUR-05",
+      "OOS-DUR-06",
+      "OOS-DUR-08",
+      "OOS-OPS-01",
+      "OOS-OPS-02",
+      "OOS-OPS-04",
+      "OOS-OPS-06",
+      "OOS-RES-01",
+      "OOS-RES-02",
+      "OOS-RES-03",
+      "OOS-RES-04",
+      "OOS-RES-05",
+      "OOS-RES-06"
+    ],
+    "note": "REVISION 8 of the private tracer bullet's debug configuration, run on 2026-09-11 by ticket 34 after the specification's independent review of ticket 14 (CBRD-26659-ticket14-independent-review_f4299ac_claude.md). Two blocking findings changed what this manifest records. F1: the case now asserts that recovery replayed work -- exactly one new 'Log recovery: REDO Phase is started' line in the server's own log after the restart, with at least one log record to redo (this run: 2 pages, 83 records; transactions to undo: 0) -- and copies the log into the bundle on every run; the evidence channel is therefore two-fold and recorded as `other` (SHOW HEAP OOS plus the recovery log), because the schema has one channel per row and extending its enum with a `recovery-log` value is ticket 12's decision, not this ticket's (decision request in the ticket 14 report, section 11). F2: the OOS-REP-07 claim is withdrawn -- its statement's clauses 'inserted tail first' and 'total_data_length excludes every chunk header' are not assertable at this seam -- so this case cites one requirement and OOS-REP-07 joins requirements_without_executed_case (50 entries, the 49 of inv-T14-0001 plus OOS-REP-07). ASSERTION COUNTS ARE MEASURED: 18 of 18 executed on this build (one '<case>-<n> : OK|NOK' line per assertion). CONFIGURATIONS_NOT_RUN RULE (ticket 35, F4, adopted here): every page-size x build-mode x run-mode combination of the 12-combination domain that THE CTP CASE DID NOT RUN IN THIS INVOCATION; this invocation ran 16384/debug/client-server, so 11 are listed (inv-T14-0001 and -0002 listed 10 by treating the sibling invocation as run; that reading is superseded by the rule). THE CASE OUTCOME IS THE CASE'S OWN (case_outcome file: PASS), not CTP's success count. FOR TICKET 17: case time 17 s, invocation wall 27 s (started_at to ended_at, collection included); the recovery-log read added no measurable time. FOR TICKET 15: read test_status.data and the case_outcome file, never the launcher exit status (0 on the failed negative control att-T14-0031 as well); the shell seam's assertion counter is real; the expected side of expected_vs_actual.txt is now built from expected-oracle.md section 5 by finalize_bundle.sh revision 8 (F3), so a wrapper can reuse that parser. HISTORY: the revision-7 run att-T14-0027 (inv-T14-0002) remains recorded and is the first entry of the matrix rows' history; this manifest does not replace it."
+  },
+  "answer_promotions": []
+}

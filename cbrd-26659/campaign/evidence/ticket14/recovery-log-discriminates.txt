@@ -1,0 +1,4 @@
+revision 7 (adbd8b745) lines that read the recovery messages: 0   <- none: the check did not exist
+revision 7 lines that mention log/server at all: 3   <- only the failure-preservation COPY of the directory, never a read
+revision 7 post-restart judgement, verbatim:
+    667:if [ ${restart_rc} -eq 0 ] && wait_for ${restart_deadline} "csql -u dba -c 'SELECT 1 FROM db_root;' ${db_name} 2>&1 | grep -q 'row selected'"; then

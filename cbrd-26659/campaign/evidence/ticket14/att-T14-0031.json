@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "attempt_id": "att-T14-0031",
+  "kind": "checker-validation",
+  "parent_attempt": null,
+  "finding_id": null,
+  "case": {
+    "repository": "testcases-private-ex",
+    "path": "~/.cub/campaign/cbrd-26659/ticket14/negctl/oos_dur01_negative_control/cases/oos_dur01_negative_control.sh (generated from shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh by make_negative_control.sh; outside every scenario root a regression invocation is pointed at)",
+    "name": "oos_dur01_negative_control"
+  },
+  "requirements": [
+    "OOS-DUR-01"
+  ],
+  "manifest_id": "none: checker validation is not an invocation of the suite, produces no manifest and has no matrix row",
+  "configuration": {
+    "page_size": 16384,
+    "build_mode": "release",
+    "run_mode": "client-server",
+    "instrumentation_id": null,
+    "seed": null
+  },
+  "started_at": "2026-09-11T17:38:51+09:00",
+  "ended_at": "2026-09-11T17:39:10+09:00",
+  "deadline": {
+    "seconds": 120,
+    "reached": false,
+    "evidence_captured_on_timeout": null
+  },
+  "outcome": "FAIL",
+  "skip_reason": "Assertion 18, debug_oos_log_records_chain_delete, skipped on this release build (oos.log is compiled out under NDEBUG); recorded as a SKIP line and in skipped.journal, never as OK.",
+  "assertions": {
+    "executed": 17,
+    "failed": 1
+  },
+  "expected_versus_actual": "/home/vimkim/.cub/campaign/cbrd-26659/ticket14/attempts/att-T14-0031/expected_vs_actual.txt",
+  "oos_evidence": {
+    "status": "not-applicable",
+    "channel": null,
+    "reference": null,
+    "applicability": null
+  },
+  "barriers": [],
+  "injections": [],
+  "resources_owned": {
+    "databases": [
+      "t26659negc, created by the control with --db-page-size=16384 under the control's case directory and dropped by it; its recovered image was preserved under case-evidence/failed_database before deletion because the case failed"
+    ],
+    "processes": [
+      "cub_master started by the case's `cubrid server start` and killed with kill -9",
+      "cub_server t26659negc, killed with kill -9 and restarted",
+      "cub_pl t26659negc, killed with the server"
+    ],
+    "ports": [
+      26659,
+      33120,
+      33121,
+      33122
+    ],
+    "directories": [
+      "/home/vimkim/.cub/campaign/cbrd-26659/ticket14"
+    ]
+  },
+  "cleanup": {
+    "performed": true,
+    "scope_verified": true,
+    "evidence_preserved_first": true,
+    "evidence": "Scope was established before the run rather than argued after it: the whole invocation ran inside `unshare --user --map-current-user --pid --fork --mount-proc --ipc` (campaign_ns.sh), which makes processes and IPC segments outside the invocation unaddressable to the CTP helpers' unscoped `pkill cub` and `ipcrm` sweep (isolation/isolation_check.sh demonstrated it with matched controls on 2026-09-11). This run's operations.journal records pre_existing_masters=[]: no master outside the namespace was visible. The case's own crash step kills only the server, its cub_pl and the master it started. EVIDENCE BEFORE CLEANUP: the recovery log is copied into the evidence directory after the restart on every run (revision 8), the first failed assertion captures processes, journals, server status and the CUBRID logs, and cleanup copies the recovered database and the server logs aside when anything failed, every step checked. Install hygiene verified by hashing before and after: install_conf_drift_lines=0, install_databases_drift_lines=0, user_shell_fm_drift_lines=0. The control preserved its recovered database and server logs (preservation|ok in operations.journal) and then deleted its own database; the testcase worktree was left clean."
+  },
+  "bundle": {
+    "path": "/home/vimkim/.cub/campaign/cbrd-26659/ticket14/attempts/att-T14-0031",
+    "hash": "sha256:314ab1f6a20c32f1d9129cf6e3c7be3b29cde461e9f01b25045820fa2fc4d84a"
+  },
+  "reproduction": {
+    "fresh_fixture": true,
+    "consecutive_reproductions_so_far": 0,
+    "failure_reproduced": false
+  },
+  "notes": "CHECKER VALIDATION, NOT A CAMPAIGN ATTEMPT -- the revision-8 negative control, generated from the committed case (commit c4fe45173) by make_negative_control.sh with exactly two textual mutations: the expected size of the multi-chunk row made one byte short (16,283 for a row holding 16,284) and a distinct database name. WHAT IT PROVES: the whole-value checker detects the planted defect on every axis at once -- assertion 13, recovered_value_id2_multi_chunk_oos, reported NOK with the MD5, octet length, bit length, disk size and SQL equality flag all diverging -- and the case as a whole failed (case_outcome FAIL, test_status.data total_fail_case_count=1) while the launcher still exited 0. The other 16 executed assertions passed, so the control is narrow. It also exercised the revision-8 recovery-log reader on a real run: assertion 10 OK with 2 pages and 83 records replayed, two server log files (the first start and the restart fell in different minutes, so the count-across-files reader was needed and worked). The failure-evidence path ran: preservation|ok, the recovered database image (about 330 MiB) and server logs kept under case-evidence/failed_database. WHY kind=checker-validation AND outcome=FAIL: the specification's outcome taxonomy is per executed attempt, and this attempt executed and failed -- as it must; recording it under a distinct kind, with no manifest and no matrix row, is what keeps that FAIL out of every requirement's coverage history, which is the reason ticket 14 gave for recording nothing and the independent review's F4 said argued for a record, not for none. oos_evidence is not-applicable: a checker-validation attempt certifies the checker, not the requirement, so its activation and recovery observations (both present in its bundle) count as coverage of nothing. expected_vs_actual.txt is built by finalize_bundle.sh revision 8 with the planted assertion's expectation set to NOK, and reads MATCH. RETENTION: success-bulky; the preserved image validated the preservation path and is not an unresolved finding, so it may expire with the bundle."
+}
