@@ -19,6 +19,13 @@
 # defect in, so its header states that run's real expectation. Each oracle row is then set
 # against the actual line with the same number, by full name, and the verdict is MATCH only
 # when every row matches and no unexpected numbered line exists.
+# Known limit (delta review of ticket 34): expected_status recognises only the "release build" and
+# "debug build" skip conditions of the oracle's "skips when" column. On a build without SHOW HEAP OOS
+# the oracle's assertions 5 and 16 would compare as expected OK against actual SKIP, and the case-level
+# "SKIP case_outcome" line would be listed as a numbered line the oracle does not know, so the verdict
+# would be MISMATCH: conservative, never a false MATCH. A MISMATCH on a capability-gap run is therefore
+# not a defect in the comparison; ticket 15's tooling should either keep and document this or extend
+# the skip-condition matching.
 set -u
 
 if [ "$#" -lt 4 ]; then

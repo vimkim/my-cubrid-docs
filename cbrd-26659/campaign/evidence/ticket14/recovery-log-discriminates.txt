@@ -2,3 +2,11 @@ revision 7 (adbd8b745) lines that read the recovery messages: 0   <- none: the c
 revision 7 lines that mention log/server at all: 3   <- only the failure-preservation COPY of the directory, never a read
 revision 7 post-restart judgement, verbatim:
     667:if [ ${restart_rc} -eq 0 ] && wait_for ${restart_deadline} "csql -u dba -c 'SELECT 1 FROM db_root;' ${db_name} 2>&1 | grep -q 'row selected'"; then
+
+shape                                          judged by a successful restart (rc=0, probe answered)
+  no REDO phase (analysis lines only)           revision 7: OK   revision 8: NOK  discriminates
+  empty server log                              revision 7: OK   revision 8: NOK  discriminates
+  REDO phase with nothing to redo               revision 7: OK   revision 8: NOK  discriminates
+  the utility's unconditional banner            revision 7: OK   revision 8: NOK  discriminates
+
+shapes=4 discriminating=4
