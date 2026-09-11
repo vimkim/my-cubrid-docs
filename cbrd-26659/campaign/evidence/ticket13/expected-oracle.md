@@ -109,10 +109,13 @@ is the chunk count and the fact that the sum identifies `big` rather than `small
 
 ## Negative control expectation
 
-> **Superseded.** This is revision 1's wording, kept for the record. The control actually run
-> against the revised case flips one hex digit of the OOS-backed row's `big_md5` instead
-> (`56d1d803…` → `56d2d803…`, answer line 23); see "Negative control as run" at the end of
-> this file (revision 3, ticket 35, finding F5 of the independent review).
+> **Revision 1's control; revision 2's differs.** This wording describes the control revision 1 ran
+> at commit `37b1ceff8` (result dir `1020251150`, `Fail:1`: the control's answer, sha256 `828edfa8…`,
+> differs from the promoted revision-1 answer `bd64083a…` only on line 23, `big_ok` `0` against `1`).
+> Revision 2 replaced it with a one-hex-digit flip of the OOS-backed row's `big_md5`
+> (`56d1d803…` → `56d2d803…`, answer line 23), the stronger control the digest columns made
+> available; see "Negative control as run" at the end of this file (revision 3, ticket 35, F5,
+> corrected per the delta review's D2).
 
 One deliberately wrong expected value (`big_ok` of the OOS-backed row changed from `1` to
 `0`) must make the CTP comparison report a failure. If CTP reports success, the checking
@@ -229,9 +232,14 @@ answer in exactly one hex digit: line 23, `big_md5` of the OOS-backed row,
 `56d1d803c5f755f96819a2996fb65e43` → `56d2d803c5f755f96819a2996fb65e43`. CTP reported
 `Fail:1 Success:0 Total:1` against it (result dir `schedule_linux_sql_64bit_1020463816`;
 revision 1's control at commit `37b1ceff8` likewise failed, result dir `1020251150`). The
-revision-1 wording above ("`big_ok` … from `1` to `0`") describes a control that was planned,
-not the one run. A flipped digest is the stronger control: it shows that a wrong value is
-visible in the answer rather than collapsing into a silent `0`.
+revision-1 wording above ("`big_ok` … from `1` to `0`") describes the control revision 1 actually
+ran at commit `37b1ceff8`: result dir `1020251150` retains that control's answer (sha256
+`828edfa8…`), which differs from the promoted revision-1 answer (`bd64083a…`) only on line 23,
+`big_ok` `0` against `1`. Revision 2 replaced it with the digest flip once the digest columns
+existed, because a flipped digest is the stronger control: it shows that a wrong value is
+visible in the answer rather than collapsing into a silent `0`. (An earlier version of this
+paragraph called revision 1's control "planned, not run"; the delta review of ticket 35, D2,
+corrected it from the retained result directory.)
 
 The other two checking mechanisms have their own controls, recorded in the ticket 13 report §9
 (P3): the activation checker fails exactly its discriminating assertion when the expected sum
