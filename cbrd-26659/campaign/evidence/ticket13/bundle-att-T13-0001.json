@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "bundle_id": "bundle-att-T13-0001",
+  "attempt_id": "att-T13-0001",
+  "created_at": "2026-09-11T16:59:20+09:00",
+  "root_path": "/home/vimkim/.cub/campaign/cbrd-26659/attempts/att-T13-0001",
+  "total_bytes": 29594,
+  "complete": true,
+  "items": {
+    "workload": {
+      "state": "present",
+      "path": "workload.sql",
+      "hash": "sha256:b086bf7f0627febd78ee59e0e449e05b5a9b3320b95fc088f44a6813ddf810c8",
+      "note": "The case file as committed at testcase commit 37b1ceff8 (revision 1, uppercase keywords, no digest columns)."
+    },
+    "seed_and_generator_version": {
+      "state": "not-applicable",
+      "path": null,
+      "hash": null,
+      "note": "Fixed deterministic workload; no generator and no seed."
+    },
+    "session_and_barrier_trace": {
+      "state": "not-applicable",
+      "path": "barrier_trace.txt",
+      "hash": "sha256:91a843c08c33346640479488757f3c5c17ea168a3cffe74ef3ec2e13b9c9ee8b",
+      "note": "Single session, no concurrency, so there is no schedule to acknowledge."
+    },
+    "injection_acknowledgements": {
+      "state": "not-applicable",
+      "path": "injections.txt",
+      "hash": "sha256:3ecdf478db43fab08138f412c1665618dcbeb68ee103b6e0770b71f0c0b74e30",
+      "note": "No fault was armed in this case."
+    },
+    "engine_identity": {
+      "state": "present",
+      "path": "identity.txt",
+      "hash": "sha256:3e01db82955d5a59d8136d7e9d508c4a1a3364f873bd25a1370314530cf915dd",
+      "note": "Pinned commit, install prefix, both library sha256 values (identical to ticket 11's), and the JDBC client artifact's version and gitlink provenance (its own sha256 was first recorded in the revision-2 bundle)."
+    },
+    "testcase_identity": {
+      "state": "present",
+      "path": "identity.txt",
+      "hash": "sha256:3e01db82955d5a59d8136d7e9d508c4a1a3364f873bd25a1370314530cf915dd",
+      "note": "Repository, branch, commit 37b1ceff8 and verified base commit b94995abf."
+    },
+    "specification_identity": {
+      "state": "present",
+      "path": "identity.txt",
+      "hash": "sha256:3e01db82955d5a59d8136d7e9d508c4a1a3364f873bd25a1370314530cf915dd",
+      "note": "Context revision f6543de plus content hash c9daf3c4."
+    },
+    "build_and_configuration_identity": {
+      "state": "present",
+      "path": "sql_cbrd26659.conf",
+      "hash": "sha256:00c7d1d5618ae96f9179b3c9fc6ad2cffe301bb9cd6b7ab4127ea26e2e9784b6",
+      "note": "The exact CTP configuration used, including the createdb options that set the 16 KiB page size; release build, client-server."
+    },
+    "instrumentation_identity": {
+      "state": "not-applicable",
+      "path": null,
+      "hash": null,
+      "note": "Unmodified engine; no instrumentation worktree involved."
+    },
+    "fixture_identity": {
+      "state": "present",
+      "path": "identity.txt",
+      "hash": "sha256:3e01db82955d5a59d8136d7e9d508c4a1a3364f873bd25a1370314530cf915dd",
+      "note": "Database basic created by CTP under a campaign-private CUBRID_DATABASES (createdb options in sql_cbrd26659.conf); revision 1's two passive activation databases t13oos16k and t13oosd16k retained under ~/.cub/campaign/cbrd-26659/db."
+    },
+    "expected_versus_actual": {
+      "state": "present",
+      "path": "expected_vs_actual.diff",
+      "hash": "sha256:f38c9c84882abdafcefd8f093e052e1f52c618d601c543a3038077c3078b128f",
+      "note": "Empty diff: candidate.result and expected.answer are both sha256 bd64083a..., proving revision 1's promotion was a rename and not an edit. This answer was superseded by revision 2's the same day."
+    },
+    "logs": {
+      "state": "present",
+      "path": "ctp.log",
+      "hash": "sha256:859b79f7a34d6002a452955cfd4ef4301c541cb1c220dc29ca5e2b0fcd26515c",
+      "note": "Green run (result dir schedule_linux_sql_64bit_1020240166). The bundle also holds ctp_bootstrap.log (the empty-answer run that produced the candidate, result dir 1020225647, Fail:1), ctp_negcontrol.log (revision 1's planted defect, result dir 1020251150, Fail:1) with its sql_negcontrol.conf, and timing.txt (39 s, ctp_exit=0). No activation-collector output is in this bundle: revision 1's passive collector ran but its outputs were not preserved; the validated checker's outputs live in the revision-2 evidence."
+    },
+    "cores": {
+      "state": "not-applicable",
+      "path": null,
+      "hash": null,
+      "note": "No core was produced; CTP's core scan found none, which is why it proceeded to do_clean."
+    },
+    "replay_command_with_prerequisites": {
+      "state": "present",
+      "path": "replay_command.txt",
+      "hash": "sha256:f3082cf8a2d1971e47b1d6b8a5d351c60a7163d6f06f8ed7c2be9976858e284e",
+      "note": "Names this bundle's own directory and commit 37b1ceff8 correctly. It also names activation_evidence.sh, revision 1's passive collector, which revision 2 replaced with activation_check.sh (docs commit ed6a843); a replay today uses the checker. The bundle is sealed by SHA256SUMS (15 files, verified 2026-09-11) and was not edited to fix this."
+    }
+  },
+  "uncommitted_snapshots": [],
+  "retention": {
+    "class": "success-bulky",
+    "expires_on": "2026-09-17",
+    "hold_reason": null
+  },
+  "minimization": null
+}

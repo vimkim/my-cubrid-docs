@@ -109,6 +109,11 @@ is the chunk count and the fact that the sum identifies `big` rather than `small
 
 ## Negative control expectation
 
+> **Superseded.** This is revision 1's wording, kept for the record. The control actually run
+> against the revised case flips one hex digit of the OOS-backed row's `big_md5` instead
+> (`56d1d803…` → `56d2d803…`, answer line 23); see "Negative control as run" at the end of
+> this file (revision 3, ticket 35, finding F5 of the independent review).
+
 One deliberately wrong expected value (`big_ok` of the OOS-backed row changed from `1` to
 `0`) must make the CTP comparison report a failure. If CTP reports success, the checking
 mechanism itself is not trustworthy and no result from it may be promoted. The control and
@@ -206,3 +211,35 @@ and `execute_case`). The manifest therefore records this count as **derived** fr
 whole-text match — a byte-identical `.result` entails that every one of the 27 scalars
 matched — and not as an independently measured execution count. Ticket 15's wrapper is
 where a real counter belongs.
+
+---
+
+# Revision 3 — bookkeeping after the independent review (2026-09-11, ticket 35; written after all runs)
+
+Nothing above changes. This part records, after the fact, what the specification's
+independent review found stale in this file (finding F5) and what the controls actually were.
+It is not a pre-run expectation and does not claim to be one.
+
+## Negative control as run
+
+The CTP comparison's control is the scenario copy at
+`~/.cub/campaign/cbrd-26659/negative-control/cbrd_26659_nc/`, outside the repository. Its case
+file is byte-identical to the committed case (`cmp` clean). Its answer differs from the committed
+answer in exactly one hex digit: line 23, `big_md5` of the OOS-backed row,
+`56d1d803c5f755f96819a2996fb65e43` → `56d2d803c5f755f96819a2996fb65e43`. CTP reported
+`Fail:1 Success:0 Total:1` against it (result dir `schedule_linux_sql_64bit_1020463816`;
+revision 1's control at commit `37b1ceff8` likewise failed, result dir `1020251150`). The
+revision-1 wording above ("`big_ok` … from `1` to `0`") describes a control that was planned,
+not the one run. A flipped digest is the stronger control: it shows that a wrong value is
+visible in the answer rather than collapsing into a silent `0`.
+
+The other two checking mechanisms have their own controls, recorded in the ticket 13 report §9
+(P3): the activation checker fails exactly its discriminating assertion when the expected sum
+is set to the smallest-first value 1,224 (`check-negcontrol/assertions.txt`, exit 1), and
+`derive_case_sizes.py --self-test` rejects both fixtures placed inside the disputed bands.
+
+## Assertion counts, restated
+
+Revision 1: 15. Revision 2: 27. Both are derived from the case text; CTP measures neither, so
+every manifest and attempt record of this ticket carries `executed: null` and the derivation
+lives in the manifest note (report §13, F3).

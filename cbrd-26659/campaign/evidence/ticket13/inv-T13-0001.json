@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "manifest_id": "inv-T13-0002",
+  "manifest_id": "inv-T13-0001",
   "producer": {
     "kind": "hand-written",
-    "name": "Claude Opus 5 (1M context), campaign ticket 13",
-    "version": "revision 2, after the two-axis review"
+    "name": "Claude Fable 5.1, campaign ticket 35 (session 6f4722b1), recording ticket 13's revision-1 run from its retained bundle",
+    "version": "revision 1 run of 2026-09-10, recorded after the fact on 2026-09-11 (independent review finding F6)"
   },
   "invocation": {
-    "started_at": "2026-09-10T20:41:25+09:00",
-    "ended_at": "2026-09-10T20:42:05+09:00",
+    "started_at": "2026-09-10T20:23:30+09:00",
+    "ended_at": "2026-09-10T20:24:09+09:00",
     "tier": "fast",
     "caps": {
       "invocation_seconds": 900,
@@ -35,7 +35,7 @@
     "testcase": {
       "repository": "testcases",
       "branch": "CBRD-26659-oos-testcases-handover",
-      "commit": "e64c16481d1d65aeac0650edf32594d979c47a52",
+      "commit": "37b1ceff804b8b79e77ac69b2f524bd8eef886b6",
       "base_commit": "b94995abfc7b196fb753aac158d52512288513a6",
       "worktree": "/home/vimkim/gh/tc/cubrid-testcases-cbrd-26659"
     },
@@ -76,15 +76,15 @@
     "runner": {
       "kind": "ctp-sql",
       "ctp_fingerprint": "sha256:456cabffff33abe4c5cd4695d40b33a713b8e53d86b6158fd87f94148e17f078",
-      "command": "ctp.sh sql -c ~/.cub/campaign/cbrd-26659/attempts/att-T13-0002/sql_cbrd26659.conf",
+      "command": "ctp.sh sql -c ~/.cub/campaign/cbrd-26659/attempts/att-T13-0001/sql_cbrd26659.conf",
       "scenario_selection": "/home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659"
     }
   },
   "expected": {
-    "case_list": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002/case-list.txt",
+    "case_list": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0001/case-list.txt",
     "case_list_hash": "sha256:14620df17d4a422732839a5c96981a1bee3c48ec1cb805871d3a6869a7a61bfb",
     "case_count": 1,
-    "assertion_count": 27
+    "assertion_count": 15
   },
   "discovered": {
     "case_count": 1,
@@ -99,7 +99,7 @@
   "proof": {
     "verdict": "proven",
     "launcher_exit_status": 0,
-    "setup_log": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002/setup.log",
+    "setup_log": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0001/setup.log",
     "mismatches": []
   },
   "cases": [
@@ -117,7 +117,7 @@
       "outcome": "PASS",
       "skip_reason": null,
       "assertions": {
-        "expected": 27,
+        "expected": 15,
         "executed": null,
         "failed": 0
       },
@@ -126,7 +126,7 @@
         "channel": "show-heap-oos",
         "reference": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002/activation_release.txt",
         "applicability": {
-          "fixture": "Identical: the same two rows of (id INT PRIMARY KEY, big BIT VARYING, small BIT VARYING) with the same byte patterns and sizes, inserted in the same order, on a table the activation run owns exclusively in its own database.",
+          "fixture": "Identical fixture: the same (id INT PRIMARY KEY, big BIT VARYING, small BIT VARYING) table, the same two rows with the same byte patterns and sizes, inserted in the same order, on a table the activation run owns exclusively in its own database. Revision 1 of the case (commit 37b1ceff8) differs from revision 2 (e64c16481) only in SQL keyword case and in the SELECT projections (revision 2 adds OCTET_LENGTH, BIT_LENGTH and MD5 columns); the CREATE TABLE and both INSERTs are the same statements, so the INSERT-side placement decision the evidence certifies is the same. The evidence referenced is revision 2's validated checker output; revision 1's own passive collector (activation_evidence.sh, docs commit a953d6f) ran on both installs but its outputs were not preserved, which is why this record points at the checker's.",
           "execution_path": "DIFFERENT run mode, which is why this is reused and not proven. The CTP invocation ran client-server over JDBC; the activation checker ran standalone under csql -S. The heap write path under test is server-side and identical in both, but the client transport and session layer are not. Certifies the INSERT-side demotion decision only; certifies no scan, recovery or vacuum path. ACCEPTED INTERPRETATION (user decision 2026-09-11, recorded in ticket 35, O2): the specification's 'execution path must match' is read as 'same OOS operation (insert, scan, recovery, vacuum), not same run mode'. Under that reading this evidence is applicable to the case; the run-mode mismatch is recorded here rather than quietly upgraded, and `reused` remains the correct status for ticket 13's rows. The map stays closed: this is the accepted interpretation of an existing rule, not a new design choice. Tickets 18 to 22 run their activation checks client-server under campaign_ns.sh in the case's own run mode, so the question stops arising for public SQL.",
           "engine_configuration": "Same pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, same release install, same 16 KiB page size, unmodified build, no instrumentation. All nine assertions also pass identically on the pinned debug install (activation_debug.txt), so the observation is not release-specific.",
           "conditions": "Single session, no concurrency, no fault injection, empty table at the start, no vacuum or restart in between. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture.",
@@ -135,10 +135,10 @@
       },
       "attempts": [
         {
-          "attempt_id": "att-T13-0002",
-          "attempt_record": "cbrd-26659/campaign/evidence/ticket13/att-T13-0002.json",
-          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/attempts/att-T13-0002",
-          "bundle_hash": "sha256:00c906fa39bf7d753a1ebcda6e0911b8452f8f5a0400e51fec72d2e25a44853b"
+          "attempt_id": "att-T13-0001",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket13/att-T13-0001.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/attempts/att-T13-0001",
+          "bundle_hash": "sha256:59c49a51b0d7a0fa2ab451330f44e6718b66f1e453960876f1a71c41da37abd3"
         }
       ],
       "outstanding": null
@@ -204,15 +204,15 @@
       "OOS-RES-04",
       "OOS-RES-06"
     ],
-    "note": "Ticket 13 is the public tracer bullet: one case proving the public seam end to end, not coverage. ASSERTION COUNT IS DERIVED, NOT MEASURED, AND executed.assertion_count IS THEREFORE NULL: CTP reports only Total, Success, Fail and execute_case, and has no assertion counter, so recording executed 27 would have manufactured a measurement and made the comparison against expected 27 vacuous. The independent review identified this as a schema defect (expected was nullable but executed was not), and the manifest schema has been widened so a seam that cannot count records null. The 27 is counted by hand from the case (11 scalars per row group x 2, plus 3 in the final aggregate, plus 2 INSERT affected-row counts) and is justified only because CTP compares the whole result text: a byte-identical .result entails that all 27 matched. proof.verdict remains 'proven' because it now rests on what was actually observed: expected case count 1 == discovered 1 == executed 1, execute_case:1 in main.info, and a byte-identical whole-result comparison against the reviewed answer. Ticket 15 must add a real counter before any invocation records a non-null executed assertion count. The 43 assertable requirements without an executed case are the Delivery gap that tickets 18 to 22 (public SQL) and 23 to 32 (private shell) close. UNSUPPORTED and BLOCKED requirements are deliberately absent from this list. REGRESSION-POWER LIMIT: the committed CTP asset cannot detect a largest-first regression, because no portable SQL exposes per-attribute placement and DISK_SIZE reports the logical serialized size regardless of placement (ticket 11 section 5.2). An engine demoting `small` instead of `big` would produce a byte-identical answer. The discrimination is supplied only by the paired activation checker, which is not part of the public regression suite; that residual gap is recorded as a Delivery gap row against OOS-REP-02 in the matrix. CONFIGURATIONS_NOT_RUN RULE (ticket 35, F4): the list enumerates every page-size x build-mode x run-mode combination of the configuration domain (4096/8192/16384 x release/debug x standalone/client-server, 12 in all) that THE CTP CASE DID NOT RUN IN THIS INVOCATION; the invocation ran exactly one, 16384/release/client-server, so 11 are listed. The two standalone activation-checker runs (release and debug, 16 KiB) are evidence runs of the checker, not executions of the case, and are treated alike: neither removes an entry. Ticket 15's wrapper generates this field from the same rule."
+    "note": "RECORDED AFTER THE FACT. This manifest describes ticket 13's revision-1 CTP invocation (case commit 37b1ceff8, green: Total:1 Success:1 Fail:0, execute_case:1, 39 s wall clock from 20:23:30 to 20:24:09, result directory schedule_linux_sql_64bit_1020240166, summary.info totalTime 67 ms). It was written on 2026-09-11 by ticket 35 from the retained bundle att-T13-0001, whose SHA256SUMS verifies, after the independent review of ticket 13 found (F6) that a complete, green, promoted attempt had a replay bundle and no record. Revision 1's oracle (expected-oracle.md, first part) fixed the assertion count at 15: 5 scalars per row group x 2, 3 in the final aggregate, and the two INSERT affected-row counts. executed.assertion_count IS NULL because CTP reports only Total, Success, Fail and execute_case and has no assertion counter; the 15 is derived from the case text and is justified only because CTP compares the whole result text (a byte-identical .result entails that all 15 matched). proof.verdict is 'proven' on what was observed: expected case count 1 == discovered 1 == executed 1, execute_case:1 in main.info, launcher exit 0, and a byte-identical comparison against the reviewed answer (candidate.result and expected.answer both sha256 bd64083a...). SUPERSESSION: revision 1's answer was replaced the same day by revision 2's (commit e64c16481, manifest inv-T13-0002) after the two-axis review; that is a revision of the case, not a failure of this attempt, so the attempt stays PASS and no matrix row records a FAIL for it. hasAnswer in this run's summary.info reads false although the answer existed and matched (ticket 13 report, finding d). CONFIGURATIONS_NOT_RUN RULE (ticket 35, F4): the list enumerates every page-size x build-mode x run-mode combination of the configuration domain (4096/8192/16384 x release/debug x standalone/client-server, 12 in all) that THE CTP CASE DID NOT RUN IN THIS INVOCATION; the invocation ran exactly one, 16384/release/client-server, so 11 are listed. The two standalone activation-checker runs (release and debug, 16 KiB) are evidence runs of the checker, not executions of the case, and are treated alike: neither removes an entry. Ticket 15's wrapper generates this field from the same rule. The 43 assertable requirements without an executed case are the same Delivery gap inv-T13-0002 lists."
   },
   "answer_promotions": [
     {
       "case": "cbrd_26659_oos_rep02_largest_first",
       "action": "promoted",
       "flagged_for_user": false,
-      "review_note": "Expected values were written to expected-oracle.md revision 2 before this revision of the case was run. The four MD5 digests were computed independently in Python (CUBRID's MD5 of a BIT VARYING digests its lowercase hex form), and OCTET_LENGTH and BIT_LENGTH were predicted as N and N*8; none was taken from an engine run. The first-run candidate matched the justification value for value: DISK_SIZE 1008/508 and 3008/1208, OCTET_LENGTH 1000/500 and 3000/1200, BIT_LENGTH 8000/4000 and 24000/9600, all four digests, all four equality flags 1, and 2/2/0. Promoted by rename; the retained candidate and the promoted answer are byte-identical. All three requirements are assertable with policy assert and neither fixture row lies in a disputed band, so the promotion is unflagged and needs independent agent review only, not user sign-off.",
-      "reviewer": "Claude Opus 5 (1M context), campaign ticket 13 (authoring session, 2026-09-10). The specification's independent agent review was performed 2026-09-11 by a session that authored none of these artifacts (CBRD-26659-ticket13-independent-review_f4299ac_claude.md): all nine criteria met, the unflagged classification re-verified, the promotion accepted; its findings on the record and matrix were closed by ticket 35."
+      "review_note": "Revision 1's first-run candidate matched the revision-1 oracle value for value (DISK_SIZE 1008/508 and 3008/1208, all four equality flags 1, n_rows/n_exact/n_aliased 2/2/0, two affected-row counts of 1) and was promoted by rename; the retained candidate.result and the promoted expected.answer both hash sha256 bd64083a55d61329c1b2060ca1cd1fbc5cb1aad5daaddf7f70e97427be3b94ea, and the answer was committed as 37b1ceff8. The three cited requirements are assertable with policy assert and neither fixture row lies in a disputed band, so the promotion was unflagged. SUPERSEDED the same day by revision 2's answer (sha256 b38a24b5..., commit e64c16481), which added OCTET_LENGTH, BIT_LENGTH and MD5 columns after the two-axis review's finding P2; the supersession is a revision of the case, not a defect in this answer. This promotion went unrecorded until ticket 35 (2026-09-11) closed the independent review's finding F6.",
+      "reviewer": "Claude Opus 5 (1M context), campaign ticket 13 (authoring session, 2026-09-10). Recorded after the fact by Claude Fable 5.1, ticket 35. The specification's independent review of 2026-09-11 (CBRD-26659-ticket13-independent-review_f4299ac_claude.md) covered this attempt under F6 and found the bundle complete and its answer identical to the promoted file."
     }
   ]
 }

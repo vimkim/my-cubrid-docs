@@ -56,7 +56,7 @@
       "additionalProperties": false,
       "required": ["executed", "failed"],
       "properties": {
-        "executed": {"type": "integer", "minimum": 0},
+        "executed": {"type": ["integer", "null"], "minimum": 0, "description": "Assertions the invocation actually executed, as reported by the runner. NULL when the runner reports no assertion counter of its own (the CTP SQL runner reports only total, success, fail and execute_case): recording a number the runner never produced manufactures a measurement and makes the comparison against `expected` vacuous. When this is null the proof rests on the case counts, the launcher artifacts and the whole-result comparison instead, and the derivation of any hand-counted figure belongs in outstanding_coverage.note. In an attempt record the hand-counted figure, if any, belongs in notes."},
         "failed": {"type": "integer", "minimum": 0}
       }
     },

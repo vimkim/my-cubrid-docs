@@ -4,6 +4,7 @@
 > Author: Claude Opus 5 (1M context), for the [Adversarial OOS testcase campaign](/home/vimkim/gh/cb/CBRD-26659-oos-testcases-handover/.scratch/oos-adversarial/spec.md) ticket 13.
 > Records: [`evidence/ticket13/`](evidence/ticket13/) — manifest, matrix, attempt record, replay-bundle index, the pre-run oracle, the derivation script and the activation-evidence script.
 > Companions: [engine baseline](CBRD-26659-engine-baseline_f4299ac_claude.md), [requirement catalogue](CBRD-26659-requirement-catalogue_f4299ac_claude.md), [traceability schemas](CBRD-26659-traceability-schemas_f4299ac_claude.md).
+> Revision 3 (2026-09-11) by Claude Fable 5.1, session 6f4722b1, for [ticket 35](/home/vimkim/gh/cb/CBRD-26659-oos-testcases-handover/.scratch/oos-adversarial/issues/35-ticket13-review-findings.md): closes the findings F1 to F6 of the specification's [independent review](CBRD-26659-ticket13-independent-review_f4299ac_claude.md) and records its observations O1 and O2; §13 lists every change. §9, §10 and §12 describe passes commissioned by the authoring session — none of them is that review.
 
 Vocabulary follows the [docs glossary](../../CONTEXT.md). This ticket is the public suite's critical path: tickets 18 to 22 are blocked on it. It delivers **one** case; it is a proof that the seam works, not coverage.
 
@@ -17,7 +18,8 @@ Vocabulary follows the [docs glossary](../../CONTEXT.md). This ticket is the pub
 | Case | `sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql` |
 | Reviewed answer | `sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_rep02_largest_first.answer` |
 | Negative controls | CTP comparison: `~/.cub/campaign/cbrd-26659/negative-control/`, **outside** the repository entirely. Activation checker: `activation_check.sh` run with a wrong expected sum. Derivation gate: `derive_case_sizes.py --self-test`. |
-| Replay bundle | `~/.cub/campaign/cbrd-26659/attempts/att-T13-0002`, sha256 `00c906fa…` (19 files, every hash verified) |
+| Replay bundle, revision 2 | `~/.cub/campaign/cbrd-26659/attempts/att-T13-0002`, sha256 `00c906fa…` (19 files, every hash verified) |
+| Replay bundle, revision 1 | `~/.cub/campaign/cbrd-26659/attempts/att-T13-0001`, sha256 `59c49a51…` (15 files, every hash verified). Its manifest `inv-T13-0001`, attempt record `att-T13-0001` and bundle index `bundle-att-T13-0001` were written in revision 3 (§13, F6) |
 
 Existing worktrees of the public repository (`cubrid-testcases` on `tc/pr-6864`, `cubrid-testcases-feat-oos`, `oos-ctp` with its two `.sql.disable` files, `oos-ci-error-codes-sql`) were not touched.
 
@@ -34,7 +36,7 @@ Schema `(id INT PRIMARY KEY, big BIT VARYING, small BIT VARYING)` at 16 KiB page
 
 **Why the case discriminates.** `small` is 1,208 B serialized, far above both eligibility floors (16 B pinned, 24 B normative). It stays inline because the largest-first loop stopped, not because it was ineligible. An engine that demoted the *smallest* candidate first would also stop after one demotion (record after = 3,072 B ≤ 4,086 B) and would still report one chunk — so the chunk **count** cannot separate the two. `Oos_recs_sumlen` can: 3,024 for `big` against 1,224 for `small`.
 
-The expected output was written and justified in [`evidence/ticket13/expected-oracle.md`](evidence/ticket13/expected-oracle.md) **before** the engine was run, statement by statement, with the assertion count fixed at 15.
+The expected output was written and justified in [`evidence/ticket13/expected-oracle.md`](evidence/ticket13/expected-oracle.md) **before** the engine was run, statement by statement. Revision 1 of the oracle fixed the assertion count at 15; revision 2 re-derived it as 27 after the length and digest columns were added (`expected-oracle.md`, "Revised assertion count"). Both counts are derived from the case text, not measured by CTP (§5 finding a, §13 F3).
 
 ## 3. Execution, promotion and the negative control
 
@@ -47,7 +49,7 @@ The expected output was written and justified in [`evidence/ticket13/expected-or
 | Green run | `Total:1 Success:1 Fail:0`, `execute_case:1`, 39 s |
 | Negative control | one hex digit of the OOS-backed row's `big_md5` changed; CTP reported `Fail:1`, so the comparison detects the planted defect |
 
-The promotion is **unflagged**: `OOS-REP-01`, `OOS-REP-02` and `OOS-SQL-01` are all `assertable` with policy `assert`, and neither row lies in a disputed band. It still needs independent agent review, per the spec; the authoring session's review is not that review.
+The promotion is **unflagged**: `OOS-REP-01`, `OOS-REP-02` and `OOS-SQL-01` are all `assertable` with policy `assert`, and neither row lies in a disputed band. The specification's independent agent review of it is the [record of 2026-09-11](CBRD-26659-ticket13-independent-review_f4299ac_claude.md), performed by a session that authored none of this; it re-verified the unflagged classification and accepted the promotion. The passes recorded in §9, §10 and §12 were commissioned by the authoring session and are not that review.
 
 ## 4. Activation evidence, and why it is `reused` rather than `proven`
 
@@ -61,11 +63,13 @@ The promotion is **unflagged**: `OOS-REP-01`, `OOS-REP-02` and `OOS-SQL-01` are 
 
 Identical on the pinned release and debug installs; `checkdb -S` exit 0 on both.
 
-The ticket asked for status `proven`. It is recorded as **`reused`**, deliberately, and the independent Spec review confirmed this is the correct call rather than under-claiming. The CTP invocation ran client-server over JDBC; the activation run ran standalone under `csql`. The server-side write path is the same, but the execution path is not identical, and the schema's `applicability` block exists precisely to force that distinction to be written down instead of assumed. Recording it as `proven` would have overclaimed. The evidence certifies the INSERT-side demotion decision only; it certifies no scan, recovery or vacuum path.
+The ticket asked for status `proven`. It is recorded as **`reused`**, deliberately, and both the commissioned Spec pass (§9) and the specification's independent review (O2, below) confirmed this is the correct call rather than under-claiming. The CTP invocation ran client-server over JDBC; the activation run ran standalone under `csql`. The server-side write path is the same, but the execution path is not identical, and the schema's `applicability` block exists precisely to force that distinction to be written down instead of assumed. Recording it as `proven` would have overclaimed. The evidence certifies the INSERT-side demotion decision only; it certifies no scan, recovery or vacuum path.
+
+**Accepted interpretation of the reuse rule (user decision, 2026-09-11).** The specification says activation evidence "is reused only when fixture, execution path, engine configuration and tested conditions match". This ticket read "execution path" as the OOS operation (insert, scan, recovery, vacuum), not the run mode, and reused standalone evidence for a client-server run on that reading. The independent review agreed with the reading and with `reused` over `proven`, but observed (O2) that a campaign-wide interpretation had been settled inside an implementation ticket, which the specification's reopening rule forbids, and put three options to the user. The user chose the reviewer's recommendation: the reading is recorded here and in the `applicability.execution_path` text of the three case rows, both manifests and both attempt records as the accepted interpretation of an existing rule covering ticket 13, so the map stays closed; and tickets 18 to 22 run their activation checks client-server under `campaign_ns.sh`, in the case's own run mode, so the question stops arising for public SQL. `reused` remains the correct status for this ticket's rows: the run mode did differ, and the record says so instead of upgrading the word.
 
 `Oos_recs_sumlen` 3,024 carries the pinned 16-byte chunk header where the accepted 24-byte header would give 3,032. That is a Capability gap (`OOS-REP-05`, CBRD-26950), recorded against the evidence channel in its own matrix row and never written into an answer. Ticket 13's expectations were chosen outside every band where the two layouts disagree, so the gap does not weaken them.
 
-## 5. Three findings the next tickets need
+## 5. Four findings the next tickets need
 
 **a. CTP will not run a case that has no answer, and still exits 0.** `ConsoleAgent` hardcodes `MODE_RESULT` (`ConsoleAgent.java:116`) and `ConsoleBO` sets `shouldRun=false` when the answer file is missing (`ConsoleBO.java:367-375`). The case then lands in `notRunList` with **`isSuccessFul=true`** and `execute_case:0`, while the launcher exits 0 and prints `Total:1`. A reader trusting the exit status, or the word "successful", would record a pass for a case that never ran — exactly the hazard the specification names. Every new case must be bootstrapped with an empty `.answer`, which makes the run report `Fail:1` and write the candidate `.result`. **This is why the manifest compares `execute_case` against the expected count.**
 
@@ -73,13 +77,15 @@ The ticket asked for status `proven`. It is recorded as **`reused`**, deliberate
 
 **c. The pinned installs had no JDBC driver.** Ticket 11 initialised only the `cubrid-cci` submodule, so CTP could not load `cubrid.sql.CUBRIDOID`; it discovered the case and executed nothing. The driver was built from the pin's *own* submodule (`936df5f97a540ff92b1e623d5bab4fa94fe073b3`, version 11.4.0.0077) and installed as a client artifact under `<install>/jdbc/`. **All four engine library sha256 values were re-verified against ticket 11 afterwards and are unchanged**, so the engine identity of every ticket 11 citation still holds. The sibling install `oos-ci-f4299ac` was *not* borrowed from: despite its name it sits at commit `1efcabd2`, not the pin.
 
+**d. CTP's serialized `hasAnswer` is `false` on every run.** `summary.info` in all seven result directories this ticket produced — revision 1's bootstrap, green and negative-control runs (`1020225647`, `1020240166`, `1020251150`) and revision 2's bootstrap, green, negative-control and final runs (`1020410056`, `1020415767`, `1020463816`, `1020515363`) — carries `<hasAnswer>false</hasAnswer>` beside `<shouldRun>true</shouldRun>`, including the four runs that compared against an answer that existed and matched or mismatched it. `ConsoleBO.java:411` looks as if it should write `true`; the independent review (O1) reported the value as reproducible and unexplained, and this revision re-checked all seven files. Ticket 15's tooling must therefore detect the missing-answer trap of finding (a) from `notRunList` and `execute_case` in `main.info`, never from `hasAnswer`.
+
 ## 6. Timing and budget (for ticket 17)
 
 | Quantity | Value |
 |---|---|
-| **First representative fast-tier timing** | **39 s** wall clock for a one-case invocation, setup included |
+| **First representative fast-tier timing** | **39 s** wall clock for a one-case invocation, setup included — identical for both revisions (`timing.txt`: 20:23:30 to 20:24:09 and 20:41:25 to 20:42:05) |
 | Of which CTP fixed overhead | ~37 s (`pkill`, createdb at 16 KiB, service start, broker restart, teardown) |
-| Case execution | `totalTime:67` ms |
+| Case execution | `totalTime:69` ms for the revision-2 green run (`summary.info`, result dir `schedule_linux_sql_64bit_1020415767`). Revision 1's three runs recorded 61 / 67 / 257 ms and revision 2's four 59 / 69 / 54 / 55 ms; the 67 previously quoted here was revision 1's green run |
 | Invocation cap | 900 s — not approached |
 | Per-case cap | 120 s — not approached |
 | Storage | 454 MiB under `/home/vimkim/.cub/campaign/cbrd-26659`; `/home` had 2.3 TiB free |
@@ -103,18 +109,22 @@ The dominant cost is per-invocation, not per-case: a fast-tier invocation should
 ## 8. Hand-offs
 
 - **Tickets 18 to 22 (public SQL cases):** unblocked. Reuse `derive_case_sizes.py` for every new fixture, bootstrap each new case with an empty `.answer` (finding a), and batch cases into one invocation (§6). The scenario directory, the CTP configuration and the activation-evidence script are all reusable as they stand.
+  **Matrix rule (independent review F2, §13):** a matrix row whose only OOS-path evidence is a checker outside every executed suite — today `activation_check.sh` — says so on the row and never carries `gap_kind: none`. When the case executes no clause of the requirement at the seam, use the two-row form F2 gave `OOS-REP-01`: a case row scoped to the executed attempt plus a caseless companion row with `latest_outcome: null` and `gap_kind: Delivery gap`, so that no outcome filter counts the requirement as covered.
+  **Activation checks (user decision O2, §4):** run them client-server under `/home/vimkim/.cub/campaign/cbrd-26659/ticket14/tools/campaign_ns.sh`, in the same run mode as the case, so the evidence can be `proven` where fixture and conditions otherwise match and the reuse question does not arise.
 - **Ticket 14 (private shell tracer):** the JDBC-driver prerequisite (finding c) and the `pkill cub` isolation requirement apply to the private runner too; check both before assuming a clean run.
-- **Ticket 15 (tooling):** implement `execute_case` versus expected comparison and read `main.info` rather than the exit status (findings a and b). The four records here are hand-written examples of exactly the shapes the wrappers must generate.
+- **Ticket 15 (tooling):** implement `execute_case` versus expected comparison and read `main.info` rather than the exit status (findings a and b). The records here are hand-written examples of exactly the shapes the wrappers must generate — since revision 3, seven of them: two manifests, two attempt records, two bundle indexes and the matrix. Also from the independent review: never read `hasAnswer` (finding d); executed assertion counts stay `null` until a real counter exists (F3); generate `configurations_not_run` from the one rule the manifests now state (F4); and every executed attempt, including a first revision's, gets a manifest, an attempt record and a bundle index (F6).
 - **Ticket 17 (timings):** 39 s is the first fast-tier data point; the per-invocation/per-case split in §6 is the number that should drive tier placement.
-- **Independent review (spec requirement):** the answer promotion in §3 needs an independent agent's review. It is unflagged, so it does not need the user's sign-off.
+- **Independent review (spec requirement):** done 2026-09-11 by a session that authored none of this — [record](CBRD-26659-ticket13-independent-review_f4299ac_claude.md). All nine criteria met; the promotion is unflagged and accepted, so it needs no user sign-off. Its six findings and two observations are closed in §13.
 - **User action:** the idle `cub_master` of the `develop` debug install (pid 551535) was stopped cleanly before the run, on the user's instruction. Restart it when convenient:
   `CUBRID=$HOME/.cub/install/develop/debug_gcc CUBRID_DATABASES=$HOME/.cub/db/develop/commondb $CUBRID/bin/cubrid service start`
+  Status at revision 3 (2026-09-11): still down. Port 1523 was held by the `CBRD-27398-pgbuf-inspector-contract` debug install's live `cub_master` (pid 487844, with a running `cub_server demodb`), and the `develop` debug install is also configured for `cubrid_port_id=1523`, so a `service start` would have collided; the user chose not to restart it yet. Check `ss -ltnp | grep :1523` in the terminal you would start it from.
 
 ---
 
 ## 9. Revision 2 — what the two-axis review changed
 
-Revision 1 was reviewed on both axes before commit. The Standards axis returned COMMENT
+Revision 1 was reviewed on both axes before commit, by two passes the authoring session
+commissioned and briefed (see the note that opens §10). The Standards axis returned COMMENT
 (no blocking issue); the Spec axis returned REVISE with four findings. All were accepted
 and fixed; none of revision 1's arithmetic was wrong, and the reviewer's independent hand
 calculation reproduced every size, gate comparison and the 3,024 sum exactly.
@@ -143,28 +153,47 @@ revealed it. Fixed, then verified in both directions — good path exit 0, contr
 | Assertion count (derived) | 27 |
 | Activation checker assertions | 9, all passing on release and on debug |
 | Fast-tier timing | 39 s, unchanged |
-| Matrix rows | 5: three PASS rows, one Delivery gap on `OOS-REP-02`, two Capability gaps (`OOS-REP-05` chunk header, `debug-oos-log` channel) |
+| Matrix rows | 6 at revision 2 after R4's split, re-derived from `matrix.json` in revision 3 (this row said 5): three PASS case rows, of which the `OOS-REP-02` row carries a Delivery gap; one caseless Delivery-gap row (`OOS-REP-02` placement discrimination); two Capability gaps (`OOS-REP-05` chunk header, `debug-oos-log` channel). 7 at revision 3 (§13) |
 
 ### Still outstanding
 
-- The spec's **independent agent review** of the answer promotion. The two-axis review
-  above was commissioned by the authoring session and does not satisfy that requirement.
+- ~~The spec's **independent agent review** of the answer promotion.~~ Done 2026-09-11, by a
+  session that authored none of this: [record](CBRD-26659-ticket13-independent-review_f4299ac_claude.md). The two-axis review above was
+  commissioned by the authoring session and does not satisfy that requirement; the record's
+  findings are closed in §13.
 - Wiring `activation_check.sh` into a scheduled invocation, so that the largest-first
   discrimination becomes part of an executed suite rather than a manual step. That is the
   Delivery gap recorded against `OOS-REP-02`, and it belongs to tickets 15 and 22.
 
 ---
 
-## 10. Independent agent review (2026-09-10)
+## 10. Commissioned review pass, part one (2026-09-10) — not the specification's independent review
 
 The campaign specification requires that "an independent agent session, never the authoring
 session, reviews Standards and Spec conformance per repository, validates the
-negative-control checkers, and audits replay and cleanup evidence before acceptance". That
-review has now run, in a session with no access to this one's reasoning, read-only.
+negative-control checkers, and audits replay and cleanup evidence before acceptance".
+**This section does not record that review, and cannot.** The pass it describes was
+commissioned by the authoring session: I wrote the brief (which, as §12 discloses, contained
+a false premise about what was running on the host), chose which artifacts and which commit
+it covered, and decided which findings to act on and how. That is the same principle as not
+signing off on one's own authoring output, one level up, and it holds however many defects
+the pass found — arguably more strongly the more it found, because a long list of fixed
+findings is exactly what makes a change look cleared. Revisions 1 and 2 of this section
+called the pass "independent" and recorded an ACCEPT verdict on the promotion; both
+statements were wrong and are withdrawn.
 
-**Verdict: ACCEPT WITH CONDITIONS. The answer promotion is accepted.**
+The specification's independent review is the separate [record of 2026-09-11](CBRD-26659-ticket13-independent-review_f4299ac_claude.md),
+performed by a session that authored none of these artifacts and read §9 to §12 only after
+forming its findings; its verdict, and nothing below, is what stands on the promotion. The
+places where the briefs I wrote steered attention, and so where that independent look was
+worth most: the classification of the promotion as **unflagged**, which no commissioned pass
+challenged (the independent review re-verified it and it holds); the **`reused`** framing of
+the activation evidence, which I proposed and which rests on a specification interpretation
+that was not this ticket's to settle (§4, O2); and the choice of **`OOS-REP-01`, `OOS-REP-02`
+and `OOS-SQL-01`** as the requirements this case covers, which nothing in §9 to §12 examined
+and where the independent review found the `OOS-REP-01` row to be an overclaim (§13, F2).
 
-What it re-verified independently, and which held: the promotion is a pure rename (all
+What the pass re-verified, and which held: the promotion is a pure rename (all
 three copies of the answer hash identically); all four MD5 digests reproduce in Python and
 match the committed answer byte for byte; the activation checker passes nine assertions on
 the good path and fails on exactly the discriminating assertion under its control; the
@@ -190,7 +219,7 @@ drift behind. The lesson for tickets 14 to 32 is that the hand-written records n
 same re-derivation discipline on a revision as on a first write — or, better, that ticket
 15's tooling should generate the hashes and counts that drifted here.
 
-**Condition on acceptance:** the independent review is advisory on the two items it could
+**Limits of the pass:** it was advisory on the two items it could
 not settle — the spec reserves acceptance of incomplete coverage to the user alone. The
 `OOS-REP-02` placement gap is proposed for tickets 15 and 22, not accepted; only the user
 converts a coverage gap into an accepted exclusion.
@@ -214,9 +243,9 @@ converts a coverage gap into an accepted exclusion.
   control. They are disposable, but they are referenced by the attempt record's
   `resources_owned`, so delete them only when the retention class expires.
 
-## 12. The rest of the independent review: two further findings and its limits
+## 12. Commissioned review pass, part two: two further findings and its limits
 
-The review's report arrived in two parts. The second part confirmed that the `OOS-REP-02`
+The commissioned pass's report arrived in two parts. The second part confirmed that the `OOS-REP-02`
 row split above is exactly the fix it wanted, and added two findings and an important
 correction to the brief it was given.
 
@@ -231,7 +260,9 @@ assertion counter is *obliged* to invent one.
 Fixed at the source, as a minimal backward-compatible widening of ticket 12's schema (an
 existing integer still validates): `executed.assertion_count` and
 `case_result.assertions.executed` now accept null, with a description saying when null is
-required and where the hand-counted figure belongs. This manifest now records **null**,
+required and where the hand-counted figure belongs. The attempt record and its schema were
+missed by this fix and carried the 27 as if measured until revision 3 closed the gap (§13,
+F3). This manifest now records **null**,
 and `proof.verdict` stays `proven` on what was genuinely observed — expected case count
 1 = discovered 1 = executed 1, `execute_case:1`, and a byte-identical whole-result
 comparison. Ticket 15 still owns a real counter.
@@ -249,7 +280,7 @@ statement, `csql_grammar.y:7379`), its full row carries volatile physical identi
 cannot go in an answer file, and `DISK_SIZE` is placement-blind. Tickets 15 and 22 need the
 tested constraint, not the assertion.
 
-### What the review could not verify, and one thing I got wrong
+### What the pass could not verify, and one thing I got wrong
 
 **The brief I gave the reviewer contained a false premise.** I told it "it is expected that
 no unrelated user cub process is running right now". By the time it ran, `pgrep` showed
@@ -279,4 +310,52 @@ Also outside what it could confirm, and recorded as such:
 | Split the `OOS-REP-02` matrix row | done, as the reviewer specified (R4) |
 | Relax the schema's executed-count field before any ticket claims a measured count | done now rather than deferred (R5) |
 
-**The answer promotion is accepted.** None of the conditions blocked it.
+None of the conditions blocked the engineering. Whether the promotion stands was never this
+pass's to say: that is the specification's independent review, recorded separately and
+closed in §13.
+
+---
+
+## 13. Revision 3 — closing the specification's independent review (ticket 35, 2026-09-11)
+
+The [independent review](CBRD-26659-ticket13-independent-review_f4299ac_claude.md) of 2026-09-11 was performed by a session that authored
+none of the artifacts above and read §9 to §12 only after forming its findings. It found all
+nine criteria met, accepted the unflagged promotion, and returned two blocking findings on
+the record and matrix, four non-blocking ones and two observations. This revision closes
+them. **No case, answer or branch changed, and no CTP run was made** (an unnecessary
+invocation costs an unscoped `pkill cub` on a shared host); every change is in this
+repository. The ticket 13 review record itself was not edited.
+
+| # | Finding | What changed | Where |
+|---|---|---|---|
+| F1 (blocking) | §10 and §12 declared the specification's independent review done and the promotion accepted; both passes were commissioned by the authoring session | §10 and §12 retitled as commissioned passes; the ACCEPT verdict and both "the answer promotion is accepted" sentences removed; §10 opens by naming the record that is the specification's review, where the author's briefs steered attention (the unflagged classification, the `reused` framing, the choice of `OOS-REP-01`, `OOS-REP-02` and `OOS-SQL-01`), and why a long list of fixed findings is not a clearance; §3, §8 and §9 point at the record | this file |
+| F2 (blocking) | `OOS-REP-01` carried `gap_kind: none` on evidence no executed suite produces | Split as R4 split `OOS-REP-02`: the case row keeps `PASS` for the executed attempts but carries `gap_kind: Delivery gap` and a scope note saying the case observes none of the requirement's three clauses (`DISK_SIZE` is placement-blind, so a wrongly demoted comparator would leave the answer byte-identical); a caseless companion row `OOS-REP-01/-/inline-placement-observation` with `latest_outcome: null` carries the gap and the tested obstacle. `OOS-SQL-01` gains one sentence naming the non-executed checker as the source of its OOS-backed premise. The rule for tickets 18 to 22 is in §8 and on the companion row | `matrix.json` |
+| F3 | The R5 widening reached the manifest schema but not the attempt record or its schema, so `att-T13-0002.json` still manufactured `executed: 27` | `attempt-record.schema.json` widens `assertions.executed` to integer or null with the manifest's description; `att-T13-0002.json` records null; the traceability-schemas document records both widenings as deliberate edits to ticket 12's contract (its §11); `check_campaign_records.py` and `render_docs.py --check` pass | `schemas/`, `att-T13-0002.json`, schemas document |
+| F4 | `configurations_not_run` had 10 entries and matched no rule | Regenerated from one stated rule, "configurations the CTP case did not run in this invocation": 11 of the 12 page-size × build-mode × run-mode combinations; the two standalone activation-checker runs are treated alike as checker runs, not case executions; the rule is named in each manifest's note | `inv-T13-0002.json`, `inv-T13-0001.json` |
+| F5 | Four stale numbers of the class R3 had reported fixed | Re-derived from the artifacts and cited beside each: §2 assertion count from `expected-oracle.md` (15 in revision 1, 27 in revision 2); §9 matrix-row count from `matrix.json` (6 at revision 2, 7 now); §6 case time from the revision-2 green run's `summary.info` (69 ms; the 67 was revision 1's green run); `expected-oracle.md` marks its revision-1 negative-control wording superseded and describes the control actually run (one hex digit of `big_md5`, `56d1d803…` → `56d2d803…`, answer line 23) | this file, `expected-oracle.md` |
+| F6 | `att-T13-0001`, revision 1's green and promoted run, had a bundle and no record | `inv-T13-0001.json`, `att-T13-0001.json` and `bundle-att-T13-0001.json` written from the retained bundle (`SHA256SUMS` verified; bundle hash `59c49a51…`; 15 files, 29,594 bytes; `candidate.result` and `expected.answer` both `bd64083a…`; 39 s; `execute_case:1`); its promotion recorded in that manifest's `answer_promotions` and marked superseded by revision 2's answer; both attempts listed in every case row's `finding.history`, `flakiness.attempts` 2, both attempt records linked. Revision 1 stays PASS: the supersession is a revision of the case, not a failure. Caseless rows have no attempts and their history stays empty | `evidence/ticket13/` |
+| O1 | CTP's serialized `hasAnswer` reads `false` on every run | Recorded as finding (d) in §5, re-checked on all seven result directories of both revisions | this file |
+| O2 (decided) | The evidence-reuse interpretation was settled inside an implementation ticket | The user's decision of 2026-09-11 recorded in §4 and in the `applicability.execution_path` text of the three case rows, both manifests and both attempt records; tickets 18 to 22 each carry the client-server activation-check line | this file, `matrix.json`, manifests, attempt records, tickets 18 to 22 |
+
+Also aligned while the same records were open: `deadline.evidence_captured_on_timeout` is
+`null` in both attempt records, as the schema's description asks when the deadline was not
+reached (revision 2 had written `false`); and `inv-T13-0002`'s `answer_promotions[].reviewer`
+no longer says the independent review is outstanding.
+
+### Numbers at revision 3
+
+| Quantity | Value | Source |
+|---|---|---|
+| Assertion count (derived from the case text, not measured) | 27 (revision 2); 15 (revision 1) | `expected-oracle.md` |
+| Executed attempts recorded | 2: `att-T13-0001` (revision 1, green, answer later superseded) and `att-T13-0002` (revision 2, green, committed answer) | `evidence/ticket13/` |
+| Matrix rows | 7: three case rows (`OOS-REP-01`, `OOS-REP-02`, `OOS-SQL-01`, all PASS on both attempts; the first two carry Delivery gap), two caseless Delivery-gap rows (`OOS-REP-01` inline placement, `OOS-REP-02` placement discrimination), two Capability-gap rows (`OOS-REP-05` chunk header, `debug-oos-log` channel) | `matrix.json` |
+| Fast-tier timing | 39 s wall clock, both revisions | `timing.txt` in each bundle |
+| Case execution | 69 ms, revision-2 green run | `summary.info`, result dir `1020415767` |
+
+### What the independent review found sound, and is not re-litigated here
+
+The dual-accounting derivation and its self-test; the four Python-reproducible digests; the
+promotion-by-rename proof; the whole-text CTP comparison and the derived-27 argument; all
+three negative controls; the `SHOW HEAP OOS` substitution for the debug log and its
+Capability-gap row; the `reused` status; the cleanup disclosure; and the unflagged
+classification of the promotion. The review record lists these with its reasoning.

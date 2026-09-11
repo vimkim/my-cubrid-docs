@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-09-10T20:50:00+09:00",
+  "generated_at": "2026-09-11T16:59:20+09:00",
   "catalogue": {
     "path": "cbrd-26659/campaign/catalogue/requirements.json",
     "hash": "sha256:0cc33c82cfc472daece8e168f92d153d86d4c1feb0690ceffca786b0c8a8c5dd"
@@ -29,7 +29,7 @@
       "run": {
         "manifest_id": "inv-T13-0002",
         "manifest_path": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002.json",
-        "manifest_hash": "sha256:cbc536088d28da3731a4c5b7a158437e73f0811f6f231515a9ecd821cdfec3ba",
+        "manifest_hash": "sha256:2666774ac6c003d3c0529c23eabc4015493379ae7af83941b47060f681b1f2ad",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
         "testcase_commit": "e64c16481d1d65aeac0650edf32594d979c47a52",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
@@ -40,7 +40,7 @@
         "reference": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002/activation_release.txt",
         "applicability": {
           "fixture": "Identical: the same two rows of (id INT PRIMARY KEY, big BIT VARYING, small BIT VARYING) with the same byte patterns and sizes, inserted in the same order, on a table the activation run owns exclusively in its own database.",
-          "execution_path": "DIFFERENT, which is why this is reused and not proven. The CTP invocation ran client-server over JDBC; the activation checker ran standalone under csql -S. The heap write path under test is server-side and identical in both, but the client transport and session layer are not. Certifies the INSERT-side demotion decision only; certifies no scan, recovery or vacuum path.",
+          "execution_path": "DIFFERENT run mode, which is why this is reused and not proven. The CTP invocation ran client-server over JDBC; the activation checker ran standalone under csql -S. The heap write path under test is server-side and identical in both, but the client transport and session layer are not. Certifies the INSERT-side demotion decision only; certifies no scan, recovery or vacuum path. ACCEPTED INTERPRETATION (user decision 2026-09-11, recorded in ticket 35, O2): the specification's 'execution path must match' is read as 'same OOS operation (insert, scan, recovery, vacuum), not same run mode'. Under that reading this evidence is applicable to the case; the run-mode mismatch is recorded here rather than quietly upgraded, and `reused` remains the correct status for ticket 13's rows. The map stays closed: this is the accepted interpretation of an existing rule, not a new design choice. Tickets 18 to 22 run their activation checks client-server under campaign_ns.sh in the case's own run mode, so the question stops arising for public SQL.",
           "engine_configuration": "Same pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, same release install, same 16 KiB page size, unmodified build, no instrumentation. All nine assertions also pass identically on the pinned debug install (activation_debug.txt), so the observation is not release-specific.",
           "conditions": "Single session, no concurrency, no fault injection, empty table at the start, no vacuum or restart in between. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture.",
           "source_manifest": "inv-T13-0002"
@@ -51,17 +51,23 @@
         "ever_failed": false,
         "history": [
           {
+            "manifest_id": "inv-T13-0001",
+            "attempt_id": "att-T13-0001",
+            "outcome": "PASS",
+            "at": "2026-09-10T20:24:09+09:00"
+          },
+          {
             "manifest_id": "inv-T13-0002",
             "attempt_id": "att-T13-0002",
             "outcome": "PASS",
             "at": "2026-09-10T20:42:05+09:00"
           }
         ],
-        "gap_kind": "none",
-        "summary": "The comparator row (record 1,564 B, below both the pinned 4,086 B gate and the normative 4,060 B target) stayed inline: the activation checker asserted Has_oos_file 0 and Oos_num_recs 0 after it was inserted, so the class had no OOS file until the first demotion. Values verified by digest and length as well as equality."
+        "gap_kind": "Delivery gap",
+        "summary": "SCOPE OF THIS ROW: the attempt, not the requirement. The case inserts the comparator row (record 1,564 B, below both the pinned 4,086 B gate and the normative 4,060 B target) and reads it back byte-identical, verified by digest and length as well as equality -- which is consistent with inline storage but observes NONE of the three clauses of OOS-REP-01 ('no attribute is demoted, HAS_OOS stays clear, and a class that has never demoted a value has no OOS file'): DISK_SIZE reports 1,008 for the comparator's `big` whether or not it was demoted (ticket 11 section 5.2), so an engine that wrongly demoted it would produce a byte-identical answer and CTP would report success. Every clause is evidenced only by activation_check.sh's first two SHOW HEAP OOS observations (Has_oos_file 0, Oos_num_recs 0 after CREATE TABLE and after the comparator row), a validated checker that is in no executed suite. latest_outcome PASS refers to the executed attempts and MUST NOT be read as coverage of OOS-REP-01; gap_kind is Delivery gap for that reason, and the companion row OOS-REP-01/-/inline-placement-observation, whose latest_outcome is null, carries the gap so that no outcome filter counts the requirement as covered. Split this way by ticket 35 (independent review finding F2), mirroring the OOS-REP-02 split (R4)."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 2,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -77,8 +83,47 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
+        "cbrd-26659/campaign/evidence/ticket13/att-T13-0001.json",
         "cbrd-26659/campaign/evidence/ticket13/att-T13-0002.json"
       ]
+    },
+    {
+      "row_id": "OOS-REP-01/-/inline-placement-observation",
+      "requirement": "OOS-REP-01",
+      "family": "Representation",
+      "case": null,
+      "configuration": null,
+      "run": null,
+      "oos_evidence": {
+        "status": "missing",
+        "channel": null,
+        "reference": null,
+        "applicability": null
+      },
+      "finding": {
+        "latest_outcome": null,
+        "ever_failed": false,
+        "history": [],
+        "gap_kind": "Delivery gap",
+        "summary": "NO EXECUTED SUITE OBSERVES INLINE PLACEMENT. Recorded as its own row with a null outcome, as R4 did for OOS-REP-02's placement half, because the companion case row's PASS would otherwise let a reader filtering on outcome conclude that OOS-REP-01 is covered. Unlike OOS-REP-02, the public case executes no clause of this requirement at all: 'no attribute is demoted', 'HAS_OOS stays clear' and 'a class that has never demoted a value has no OOS file' are all placement facts, and the public SQL seam cannot observe placement -- SHOW cannot be projected (csql_grammar.y:7379), its full row carries volatile physical identifiers, and DISK_SIZE is placement-blind (ticket 11 section 5.2; the constraints tested on the OOS-REP-02/-/placement-discrimination row). The observation exists and is validated: evidence/ticket13/activation_check.sh asserts Has_oos_file 0, Oos_num_recs 0 and Oos_recs_sumlen 0 after CREATE TABLE and again after the comparator row, on the release and debug installs (inv-T13-0002/activation_release.txt, activation_debug.txt), and exits non-zero on mismatch. It is a manually invoked script outside every CTP suite, so nothing in the campaign's executed coverage fails when a below-gate record is wrongly demoted. RULE FOR TICKETS 18 TO 22: a matrix row whose only OOS-path evidence is a checker outside every executed suite says so on the row and never carries gap_kind none. Closing this requires the same wiring as the OOS-REP-02 placement row (tickets 15 and 22) or a client-server activation check run under campaign_ns.sh in the case's own run mode (O2)."
+      },
+      "flakiness": {
+        "attempts": 0,
+        "failures": 0,
+        "intermittent": false,
+        "consecutive_fresh_fixture_reproductions": 0,
+        "deterministic_claim": false
+      },
+      "known_issue": {
+        "ticket": null,
+        "relation": "none"
+      },
+      "attribution": {
+        "target": "harness",
+        "evidence": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002/activation_release.txt",
+        "note": "Not an engine failure: the engine kept the comparator inline. The gap is that the public SQL seam cannot observe placement, so the check lives outside the executed suite."
+      },
+      "attempt_records": []
     },
     {
       "row_id": "OOS-REP-02/cbrd_26659_oos_rep02_largest_first/16384-release-cs",
@@ -103,7 +148,7 @@
       "run": {
         "manifest_id": "inv-T13-0002",
         "manifest_path": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002.json",
-        "manifest_hash": "sha256:cbc536088d28da3731a4c5b7a158437e73f0811f6f231515a9ecd821cdfec3ba",
+        "manifest_hash": "sha256:2666774ac6c003d3c0529c23eabc4015493379ae7af83941b47060f681b1f2ad",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
         "testcase_commit": "e64c16481d1d65aeac0650edf32594d979c47a52",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
@@ -114,7 +159,7 @@
         "reference": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002/activation_release.txt",
         "applicability": {
           "fixture": "Identical: the same two rows of (id INT PRIMARY KEY, big BIT VARYING, small BIT VARYING) with the same byte patterns and sizes, inserted in the same order, on a table the activation run owns exclusively in its own database.",
-          "execution_path": "DIFFERENT, which is why this is reused and not proven. The CTP invocation ran client-server over JDBC; the activation checker ran standalone under csql -S. The heap write path under test is server-side and identical in both, but the client transport and session layer are not. Certifies the INSERT-side demotion decision only; certifies no scan, recovery or vacuum path.",
+          "execution_path": "DIFFERENT run mode, which is why this is reused and not proven. The CTP invocation ran client-server over JDBC; the activation checker ran standalone under csql -S. The heap write path under test is server-side and identical in both, but the client transport and session layer are not. Certifies the INSERT-side demotion decision only; certifies no scan, recovery or vacuum path. ACCEPTED INTERPRETATION (user decision 2026-09-11, recorded in ticket 35, O2): the specification's 'execution path must match' is read as 'same OOS operation (insert, scan, recovery, vacuum), not same run mode'. Under that reading this evidence is applicable to the case; the run-mode mismatch is recorded here rather than quietly upgraded, and `reused` remains the correct status for ticket 13's rows. The map stays closed: this is the accepted interpretation of an existing rule, not a new design choice. Tickets 18 to 22 run their activation checks client-server under campaign_ns.sh in the case's own run mode, so the question stops arising for public SQL.",
           "engine_configuration": "Same pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, same release install, same 16 KiB page size, unmodified build, no instrumentation. All nine assertions also pass identically on the pinned debug install (activation_debug.txt), so the observation is not release-specific.",
           "conditions": "Single session, no concurrency, no fault injection, empty table at the start, no vacuum or restart in between. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture.",
           "source_manifest": "inv-T13-0002"
@@ -125,6 +170,12 @@
         "ever_failed": false,
         "history": [
           {
+            "manifest_id": "inv-T13-0001",
+            "attempt_id": "att-T13-0001",
+            "outcome": "PASS",
+            "at": "2026-09-10T20:24:09+09:00"
+          },
+          {
             "manifest_id": "inv-T13-0002",
             "attempt_id": "att-T13-0002",
             "outcome": "PASS",
@@ -132,10 +183,10 @@
           }
         ],
         "gap_kind": "Delivery gap",
-        "summary": "SCOPE OF THIS ROW: the logical half of OOS-REP-02 only. The OOS-backed row (record 4,264 B) was accepted and both values read back exactly, verified by digest and length as well as by equality; the paired activation checker asserted one chunk with Oos_recs_sumlen 3,024 = 3,008 payload + one 16-byte chunk header, which identifies the moved-out value as `big` (moving `small` would give 1,224). latest_outcome PASS refers to that executed attempt and MUST NOT be read as full coverage of OOS-REP-02: the placement half is not covered by any executed suite, for the tested reasons recorded on that row. See the companion row OOS-REP-02/-/placement-discrimination, whose latest_outcome is null, for that gap. gap_kind is Delivery gap on both rows for exactly this reason."
+        "summary": "SCOPE OF THIS ROW: the logical half of OOS-REP-02 only. The OOS-backed row (record 4,264 B) was accepted and both values read back exactly, verified by digest and length as well as by equality; the paired activation checker asserted one chunk with Oos_recs_sumlen 3,024 = 3,008 payload + one 16-byte chunk header, which identifies the moved-out value as `big` (moving `small` would give 1,224). latest_outcome PASS refers to that executed attempt and MUST NOT be read as full coverage of OOS-REP-02: the placement half is not covered by any executed suite, for the tested reasons recorded on that row. See the companion row OOS-REP-02/-/placement-discrimination, whose latest_outcome is null, for that gap. gap_kind is Delivery gap on both rows for exactly this reason. History lists both executed attempts: revision 1 (att-T13-0001, commit 37b1ceff8, answer later superseded) and revision 2 (att-T13-0002); neither failed."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 2,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -151,6 +202,7 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
+        "cbrd-26659/campaign/evidence/ticket13/att-T13-0001.json",
         "cbrd-26659/campaign/evidence/ticket13/att-T13-0002.json"
       ]
     },
@@ -177,7 +229,7 @@
       "run": {
         "manifest_id": "inv-T13-0002",
         "manifest_path": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002.json",
-        "manifest_hash": "sha256:cbc536088d28da3731a4c5b7a158437e73f0811f6f231515a9ecd821cdfec3ba",
+        "manifest_hash": "sha256:2666774ac6c003d3c0529c23eabc4015493379ae7af83941b47060f681b1f2ad",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
         "testcase_commit": "e64c16481d1d65aeac0650edf32594d979c47a52",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
@@ -188,7 +240,7 @@
         "reference": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002/activation_release.txt",
         "applicability": {
           "fixture": "Identical: the same two rows of (id INT PRIMARY KEY, big BIT VARYING, small BIT VARYING) with the same byte patterns and sizes, inserted in the same order, on a table the activation run owns exclusively in its own database.",
-          "execution_path": "DIFFERENT, which is why this is reused and not proven. The CTP invocation ran client-server over JDBC; the activation checker ran standalone under csql -S. The heap write path under test is server-side and identical in both, but the client transport and session layer are not. Certifies the INSERT-side demotion decision only; certifies no scan, recovery or vacuum path.",
+          "execution_path": "DIFFERENT run mode, which is why this is reused and not proven. The CTP invocation ran client-server over JDBC; the activation checker ran standalone under csql -S. The heap write path under test is server-side and identical in both, but the client transport and session layer are not. Certifies the INSERT-side demotion decision only; certifies no scan, recovery or vacuum path. ACCEPTED INTERPRETATION (user decision 2026-09-11, recorded in ticket 35, O2): the specification's 'execution path must match' is read as 'same OOS operation (insert, scan, recovery, vacuum), not same run mode'. Under that reading this evidence is applicable to the case; the run-mode mismatch is recorded here rather than quietly upgraded, and `reused` remains the correct status for ticket 13's rows. The map stays closed: this is the accepted interpretation of an existing rule, not a new design choice. Tickets 18 to 22 run their activation checks client-server under campaign_ns.sh in the case's own run mode, so the question stops arising for public SQL.",
           "engine_configuration": "Same pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, same release install, same 16 KiB page size, unmodified build, no instrumentation. All nine assertions also pass identically on the pinned debug install (activation_debug.txt), so the observation is not release-specific.",
           "conditions": "Single session, no concurrency, no fault injection, empty table at the start, no vacuum or restart in between. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture.",
           "source_manifest": "inv-T13-0002"
@@ -199,6 +251,12 @@
         "ever_failed": false,
         "history": [
           {
+            "manifest_id": "inv-T13-0001",
+            "attempt_id": "att-T13-0001",
+            "outcome": "PASS",
+            "at": "2026-09-10T20:24:09+09:00"
+          },
+          {
             "manifest_id": "inv-T13-0002",
             "attempt_id": "att-T13-0002",
             "outcome": "PASS",
@@ -206,10 +264,10 @@
           }
         ],
         "gap_kind": "none",
-        "summary": "Both rows read back byte-identical after the OOS-backed row was inserted. Checked three independent ways rather than by equality alone: OCTET_LENGTH (1,000/500 and 3,000/1,200), BIT_LENGTH (8,000/4,000 and 24,000/9,600) and MD5 over the whole value, every expected digest computed outside CUBRID before the run."
+        "summary": "Both rows read back byte-identical after the OOS-backed row was inserted. Checked three independent ways rather than by equality alone: OCTET_LENGTH (1,000/500 and 3,000/1,200), BIT_LENGTH (8,000/4,000 and 24,000/9,600) and MD5 over the whole value, every expected digest computed outside CUBRID before the run. OOS-BACKED PREMISE: that row 1 was in fact OOS-backed when it was read back comes from the same non-executed checker, activation_check.sh (via the reused evidence on this row), not from anything the CTP case observes; the value-correctness half of the requirement is what the case executes at the seam, and it is the substantive half (ticket 35, independent review F2)."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 2,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -225,6 +283,7 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
+        "cbrd-26659/campaign/evidence/ticket13/att-T13-0001.json",
         "cbrd-26659/campaign/evidence/ticket13/att-T13-0002.json"
       ]
     },

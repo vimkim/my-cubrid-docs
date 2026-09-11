@@ -301,7 +301,7 @@ Tooling (ticket 15) must add what a schema cannot express:
 | `outcome` | enum: `PASS`, `FAIL`, `SKIP`, `UNSUPPORTED`, `BLOCKED` | yes | Fixed per-attempt taxonomy. |
 | `skip_reason` | string/null | yes |  |
 | `assertions` | object | yes |  |
-| `assertions.executed` | integer | yes |  |
+| `assertions.executed` | integer/null | yes | Assertions the invocation actually executed, as reported by the runner. NULL when the runner reports no assertion counter of its own (the CTP SQL runner reports only total, success, fail and execute_case): recording a number the runner never produced manufactures a measurement and makes the comparison against `expected` vacuous. When this is null the proof rests on the case counts, the launcher artifacts and the whole-result comparison instead, and the derivation of any hand-counted figure belongs in outstanding_coverage.note. In an attempt record the hand-counted figure, if any, belongs in notes. |
 | `assertions.failed` | integer | yes |  |
 | `expected_versus_actual` | string/null | yes | Path of the expected-versus-actual comparison (CTP result/answer diff or shell assertion log). |
 | `oos_evidence` | object | yes |  |
@@ -527,3 +527,14 @@ The checker needs only the Python standard library; `tools/minischema.py` implem
 | Matrix schema: requirement, case, configuration, run, OOS-path evidence, finding, plus separate flakiness, known-issue link and attribution fields, and dated accepted-exclusion entries only the user may add | §5, `matrix.schema.json`, checker `matrix-*` |
 | Attempt-record and replay-bundle content lists follow the spec's Outcomes, replay and minimization section, including "missing" as a recordable state per item | §6, §7, checker `replay-items`, `replay-item-state` |
 | Committed in the campaign folder; vocabulary committed on its own | docs repository history |
+
+## 11. Deliberate widenings after ticket 12
+
+The schemas are the campaign's contract, so every edit made after ticket 12 closed is listed here. Both edits below are backward compatible: an existing integer still validates, the valid examples and the negative controls are unchanged, and `tools/check_campaign_records.py` passes.
+
+| Date | Schema and field | Change | Why | Raised by |
+|---|---|---|---|---|
+| 2026-09-10 | `manifest.schema.json`: `executed.assertion_count` and `$defs.case_result.assertions.executed` | `integer` → `integer` or `null`, with a description saying when null is required | `expected.assertion_count` was nullable but the executed count was not, so a runner with no assertion counter (the CTP SQL runner reports only total, success, fail and execute_case) was obliged to invent one | ticket 13's commissioned review pass, finding R5 (docs commit `c1a3c14`) |
+| 2026-09-11 | `attempt-record.schema.json`: `assertions.executed` | the same widening, with the same description | the R5 fix reached the manifest but not the attempt record, so `att-T13-0002.json` still carried a manufactured 27 | the independent review of ticket 13, finding F3; closed by ticket 35 |
+
+Rule for tooling (ticket 15): a runner that reports no assertion counter writes `null` in both records and puts any hand-derived count, with its derivation, in the manifest's `outstanding_coverage.note`. The CTP shell runner does have a counter (one `<case>-<n> : OK|NOK` line per assertion), so private shell records carry measured integers.

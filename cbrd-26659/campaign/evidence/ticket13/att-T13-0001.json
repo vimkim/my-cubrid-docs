@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "attempt_id": "att-T13-0001",
+  "kind": "original",
+  "parent_attempt": null,
+  "finding_id": null,
+  "case": {
+    "repository": "testcases",
+    "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql",
+    "name": "cbrd_26659_oos_rep02_largest_first"
+  },
+  "requirements": [
+    "OOS-REP-01",
+    "OOS-REP-02",
+    "OOS-SQL-01"
+  ],
+  "manifest_id": "inv-T13-0001",
+  "configuration": {
+    "page_size": 16384,
+    "build_mode": "release",
+    "run_mode": "client-server",
+    "instrumentation_id": null,
+    "seed": null
+  },
+  "started_at": "2026-09-10T20:23:30+09:00",
+  "ended_at": "2026-09-10T20:24:09+09:00",
+  "deadline": {
+    "seconds": 120,
+    "reached": false,
+    "evidence_captured_on_timeout": null
+  },
+  "outcome": "PASS",
+  "skip_reason": null,
+  "assertions": {
+    "executed": null,
+    "failed": 0
+  },
+  "expected_versus_actual": "/home/vimkim/.cub/campaign/cbrd-26659/attempts/att-T13-0001/expected_vs_actual.diff",
+  "oos_evidence": {
+    "status": "reused",
+    "channel": "show-heap-oos",
+    "reference": "cbrd-26659/campaign/evidence/ticket13/inv-T13-0002/activation_release.txt",
+    "applicability": {
+      "fixture": "Identical fixture: the same (id INT PRIMARY KEY, big BIT VARYING, small BIT VARYING) table, the same two rows with the same byte patterns and sizes, inserted in the same order, on a table the activation run owns exclusively in its own database. Revision 1 of the case (commit 37b1ceff8) differs from revision 2 (e64c16481) only in SQL keyword case and in the SELECT projections (revision 2 adds OCTET_LENGTH, BIT_LENGTH and MD5 columns); the CREATE TABLE and both INSERTs are the same statements, so the INSERT-side placement decision the evidence certifies is the same. The evidence referenced is revision 2's validated checker output; revision 1's own passive collector (activation_evidence.sh, docs commit a953d6f) ran on both installs but its outputs were not preserved, which is why this record points at the checker's.",
+      "execution_path": "DIFFERENT run mode, which is why this is reused and not proven. The CTP invocation ran client-server over JDBC; the activation checker ran standalone under csql -S. The heap write path under test is server-side and identical in both, but the client transport and session layer are not. Certifies the INSERT-side demotion decision only; certifies no scan, recovery or vacuum path. ACCEPTED INTERPRETATION (user decision 2026-09-11, recorded in ticket 35, O2): the specification's 'execution path must match' is read as 'same OOS operation (insert, scan, recovery, vacuum), not same run mode'. Under that reading this evidence is applicable to the case; the run-mode mismatch is recorded here rather than quietly upgraded, and `reused` remains the correct status for ticket 13's rows. The map stays closed: this is the accepted interpretation of an existing rule, not a new design choice. Tickets 18 to 22 run their activation checks client-server under campaign_ns.sh in the case's own run mode, so the question stops arising for public SQL.",
+      "engine_configuration": "Same pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, same release install, same 16 KiB page size, unmodified build, no instrumentation. All nine assertions also pass identically on the pinned debug install (activation_debug.txt), so the observation is not release-specific.",
+      "conditions": "Single session, no concurrency, no fault injection, empty table at the start, no vacuum or restart in between. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture.",
+      "source_manifest": "inv-T13-0002"
+    }
+  },
+  "barriers": [],
+  "injections": [],
+  "resources_owned": {
+    "databases": [
+      "basic (CTP-created, under ~/.cub/campaign/cbrd-26659/ctpdb)",
+      "t13oos16k, t13oosd16k (revision 1's passive activation collector activation_evidence.sh, docs commit a953d6f, default database name t13oos16k; both retained under ~/.cub/campaign/cbrd-26659/db)"
+    ],
+    "processes": [
+      "cub_master port 26659",
+      "cub_server basic",
+      "broker BROKER1 port 33120"
+    ],
+    "ports": [
+      26659,
+      33120,
+      59901
+    ],
+    "directories": [
+      "/home/vimkim/.cub/campaign/cbrd-26659"
+    ]
+  },
+  "cleanup": {
+    "performed": true,
+    "scope_verified": true,
+    "evidence_preserved_first": true,
+    "evidence": "CTP's do_clean stopped and deleted its own database `basic`, ran the unscoped `pkill cub`, and swept this user's shared-memory segments. ctp.log records 4 'Operation not permitted' lines over 2 unique pids (134751 and 1952369), both EPERM, so neither belonged to this user; the outcome 'no unrelated process was killed' holds because the kernel refused the signal, not because CTP scoped its kill (the same qualification att-T13-0002 records). The user's idle develop debug cub_master (pid 551535) had been stopped by hand before this run on the user's instruction. Ports are those of sql_cbrd26659.conf (cubrid_port_id 26659, BROKER_PORT 33120, ha_port_id 59901; no HA service ran). All CTP result artifacts were copied into the bundle before cleanup; the bundle's SHA256SUMS verified with sha256sum -c when this record was written (2026-09-11)."
+  },
+  "bundle": {
+    "path": "/home/vimkim/.cub/campaign/cbrd-26659/attempts/att-T13-0001",
+    "hash": "sha256:59c49a51b0d7a0fa2ab451330f44e6718b66f1e453960876f1a71c41da37abd3"
+  },
+  "reproduction": {
+    "fresh_fixture": true,
+    "consecutive_reproductions_so_far": 0,
+    "failure_reproduced": false
+  },
+  "notes": "Revision 1 of the tracer bullet: the first CTP run of the case at commit 37b1ceff8, green, 39 s, promoted by rename (candidate and answer both sha256 bd64083a...). RECORDED AFTER THE FACT on 2026-09-11 by ticket 35 from the retained bundle, closing the independent review's finding F6 (a complete, green, promoted attempt had a replay bundle and no record). The answer this attempt promoted was superseded the same day by revision 2's (att-T13-0002, commit e64c16481); that is a revision of the case, not a failure of this attempt, so the outcome stays PASS. assertions.executed is null under the attempt-record schema widened by ticket 35 (F3), for the reason inv-T13-0001 gives: CTP has no assertion counter and the hand-derived 15 belongs in the manifest note, not here. The bundle's replay_command.txt names activation_evidence.sh, revision 1's passive collector, which revision 2 replaced with the validated checker activation_check.sh; the bundle is sealed by its SHA256SUMS and was not edited."
+}
