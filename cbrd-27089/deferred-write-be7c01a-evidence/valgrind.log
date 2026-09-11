@@ -1,0 +1,30 @@
+direnv: loading source/.envrc
+Preset Mode: debug_gcc
+Install Dir: installation
+DB Dir: local-path/commondb
+Build Dir: source/build_preset_debug_gcc
+fixture: fixtures/oos-loader17-2m5tsuld
+valgrind exit: 0
+==2250772== Memcheck, a memory error detector
+==2250772== Copyright (C) 2002-2024, and GNU GPL'd, by Julian Seward et al.
+==2250772== Using Valgrind-3.24.0 and LibVEX; rerun with -h for copyright info
+==2250772== Command: source/build_preset_debug_gcc/bin/test_oos_sql_show --gtest_filter=OosSqlShow.PreparationMemoryAndMoveAssignmentPreserveValues:OosSqlShow.LoaderQueueRetainsClearedInputsAndRollsBackBulkFailure:OosSqlShow.AllocationAndStorageFailureLeaveNextInsertUsable
+==2250772== Parent PID: 2249635
+==2250772== 
+==2250772== 
+==2250772== HEAP SUMMARY:
+==2250772==     in use at exit: 185,300 bytes in 235 blocks
+==2250772==   total heap usage: 46,793 allocs, 46,558 frees, 248,566,344 bytes allocated
+==2250772== 
+==2250772== LEAK SUMMARY:
+==2250772==    definitely lost: 0 bytes in 0 blocks
+==2250772==    indirectly lost: 0 bytes in 0 blocks
+==2250772==      possibly lost: 0 bytes in 0 blocks
+==2250772==    still reachable: 185,300 bytes in 235 blocks
+==2250772==         suppressed: 0 bytes in 0 blocks
+==2250772== Reachable blocks (those to which a pointer was found) are not shown.
+==2250772== To see them, rerun with: --leak-check=full --show-leak-kinds=all
+==2250772== 
+==2250772== For lists of detected and suppressed errors, rerun with: -s
+==2250772== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+

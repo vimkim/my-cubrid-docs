@@ -1,0 +1,35 @@
+{
+  "fixture": "fixtures/oos-deferred-base-yqbf5c1s",
+  "head": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+  "commands": [
+    {
+      "command": [
+        "cubrid",
+        "createdb",
+        "--db-volume-size=64M",
+        "--log-volume-size=64M",
+        "-F",
+        "fixtures/oos-deferred-base-yqbf5c1s/data",
+        "-L",
+        "fixtures/oos-deferred-base-yqbf5c1s/logs",
+        "oos_deferred_base",
+        "en_US.utf8"
+      ],
+      "returncode": 0,
+      "log": "baseline-0.log"
+    },
+    {
+      "command": [
+        "csql",
+        "-S",
+        "-u",
+        "dba",
+        "-i",
+        "fixtures/oos-deferred-base-yqbf5c1s/repro.sql",
+        "oos_deferred_base"
+      ],
+      "returncode": 0,
+      "log": "baseline-1.log"
+    }
+  ]
+}
