@@ -1,0 +1,19 @@
+# Proof that shape 15 of the classifier validation is a control and not a tautology.
+#
+# Shape 15 -- two headers, the data row belonging to the second -- is meant to pin the
+# header divergence the Standards confirmation pass found in revision 6: the index lookup
+# exited on the FIRST header while the row selector took its width from the NEAREST header
+# above the row, so a position from one header was applied to a row laid out by another.
+# Revision 7 collapses the two into a single awk pass, which makes the divergence
+# impossible. A shape that passes on both revisions would prove nothing, so here is the
+# same shape run against revision 6's functions, extracted from commit c3d1e7146:
+
+REVISION 6 (split functions), shape 15:
+  index from the FIRST header : Oos_num_recs -> 11
+  oos_field Oos_num_recs      : 16344   <- wrong, that is Oos_page_size's slot
+  correct value               : 4
+
+# And on the shipped revision 7 (from checker_validation_classifier.sh):
+#   15 two headers, row under the second -> 0
+#   15 chunks from the second header = 4
+#   15 has_oos from the second header = 1

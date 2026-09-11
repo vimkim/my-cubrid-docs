@@ -10,7 +10,7 @@ of this session's implementation workflow, and it is recorded here rather than c
 coverage.
 
 WHICH VERSION OF THE CASE THIS EXERCISED, and why it was not re-run. This invocation ran
-the case as committed at revision 3; the committed case is revision 6. The whole
+the case as committed at revision 3; the committed case is revision 7. The whole
 difference is in two paths this run never entered, and case-version-delta.diff carries it
 so the claim is checkable rather than asserted:
 
@@ -25,12 +25,13 @@ so the claim is checkable rather than asserted:
     revision-6 runs journalled has_oos=1, chunks=4, sumlen=24444, user_pages=4 and
     oos_page_size=16344, identical to what the by-position code read from the same
     fixture, which is the cross-check that the change is behaviour-preserving on a row
-    the engine really produces.
+    the engine really produces. Revision 7 then merged the row selector and the column
+    lookup into one awk pass; the revision-7 runs journalled the same five values again.
 
 Re-running the bucket would have cost seven minutes and proved nothing the diff does not.
-Both changed paths have their own direct evidence: att-T14-0025 exercised the preservation
+Both changed paths have their own direct evidence: att-T14-0028 exercised the preservation
 path and journalled preservation|ok, and tools/checker_validation_classifier.sh exercises
-all twelve classification shapes.
+all sixteen classification shapes.
 
 Result (summary.txt):
 

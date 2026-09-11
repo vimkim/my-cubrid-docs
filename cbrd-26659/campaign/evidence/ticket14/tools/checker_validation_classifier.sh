@@ -2,7 +2,7 @@
 # CBRD-26659 campaign ticket 14 -- checker validation for the third checking mechanism:
 # the SHOW HEAP OOS output classifier and the field extraction that follows it.
 #
-# Why it has fourteen shapes. The classifier has been wrong three times, and each time the
+# Why it has sixteen shapes. The classifier has been wrong three times, and each time the
 # defect passed every green run:
 #   1. two outcomes and a catch-all, so any non-syntax failure was reported as a missing
 #      capability -- a SKIP, which passes the case with no activation evidence.
@@ -25,24 +25,32 @@
 # The function bodies below are extracted verbatim from the case, so the test cannot
 # drift away from what it validates. Exit status 0 only when every shape is correct.
 #
-# Shapes 13 and 14 pin interactions rather than defects: 13 is the only construction in
-# which a column located by name could point past the row, and 14 locks the name
-# comparison to exact field equality, because a substring match would reintroduce by-name
-# the wrong-column bug that was just removed by-position.
-oos_data_row()
+# Shapes 13 to 16 pin interactions rather than defects. 13 is the only construction in
+# which a column located by name could point past the row. 14 locks the name comparison to
+# exact field equality, because a substring match would reintroduce by-name the
+# wrong-column bug that was removed by-position. 15 is the header divergence: the position
+# and the value must come from the SAME header, which is why the row selector and the index
+# lookup were collapsed into one awk pass. 16 is the visible marker an observation gets
+# when its column is outside oos_required_columns and the header does not carry it, since
+# nothing inspects oos_field's status inside a command substitution.
+oos_field()
 {
-    echo "$1" | awk -v cls="'dba.oos_dur01'" '
-        /Table_name/ && /Has_oos_file/ { cols = NF; next }
-        cols && index($0, cls) && NF >= cols { print; exit }'
-}
-oos_column_index()
-{
-    # oos_column_index <show output> <column name>
-    echo "$1" | awk -v want="$2" '
+    # oos_field <show output> <column name> -> the value, or nothing and status 1
+    local v
+    v=`echo "$1" | awk -v cls="'dba.oos_dur01'" -v want="$2" '
         /Table_name/ && /Has_oos_file/ {
-            for (i = 1; i <= NF; i++) { if ($i == want) { print i; exit } }
-            exit
-        }'
+            idx = 0
+            for (i = 1; i <= NF; i++) { if ($i == want) { idx = i; break } }
+            cols = NF
+            next
+        }
+        cols && index($0, cls) && NF >= cols { if (idx) { print $idx }; exit }'`
+    [ -n "${v}" ] || return 1
+    echo "${v}"
+}
+oos_observed()
+{
+    oos_field "$1" "$2" || echo "UNRESOLVED($2)"
 }
 oos_required_columns="Has_oos_file Oos_num_recs Oos_recs_sumlen Oos_num_user_pages Oos_page_size"
 classify_oos_output()
@@ -55,22 +63,13 @@ classify_oos_output()
     # carries no NOK, passes the case and leaves activation_observed at 0 -- the exact
     # failure mode this classification exists to remove.
     echo "$1" | grep -qi "syntax error" && return 1
-    [ -n "`oos_data_row "$1"`" ] || return 2
+    # Deliberate word-split on a space-separated list of literal column names: none
+    # contains a space or a glob character, and no IFS is set anywhere in this case or in
+    # the CTP helpers it sources.
     for col in ${oos_required_columns}; do
-        [ -n "`oos_column_index "$1" "${col}"`" ] || return 2
+        oos_field "$1" "${col}" > /dev/null || return 2
     done
     return 0
-}
-oos_field()
-{
-    # oos_field <show output> <column name>. oos_data_row returns at most one line -- awk's
-    # exit with no END block stops after the first match -- so the result is a single
-    # value: a multi-line value would turn the numeric comparisons below into a shell error
-    # instead of a failed assertion.
-    local idx
-    idx=`oos_column_index "$1" "$2"`
-    [ -n "${idx}" ] || return 1
-    oos_data_row "$1" | awk -v f="${idx}" '{print $f}'
 }
 
 fails=0
@@ -177,6 +176,29 @@ val "14 Oos_recs_sumlen is its own column"   "$(oos_field "$ROW" Oos_recs_sumlen
 val "14 Oos_num_user_pages is its own column" "$(oos_field "$ROW" Oos_num_user_pages)" 4
 val "14 a name that is only a fragment resolves to nothing" "$(oos_field "$ROW" volume_id)" ""
 val "14 a name that is only a prefix resolves to nothing"    "$(oos_field "$ROW" Oos_num)" ""
+
+# 15: two headers, the row belonging to the SECOND. The second header moves Oos_num_recs
+# from position 11 to position 4. When the row selector and the index lookup were separate
+# functions, the lookup exited on the first header and the row took its width from the
+# nearest one above it, so this read position 11 of a row laid out in the second header's
+# order. One awk pass makes the position and the value come from the same header.
+TWOHDR="
+$HDR
+  'dba.nothing_here'    '(0|1|1)'                          1             1                    1             0           NULL         NULL                   0          16344             0                     0                     0                     0
+
+  Table_name            Class_oid             Has_oos_file  Oos_num_recs  Heap_volume_id  Heap_file_id  Heap_header_page_id  Oos_volume_id  Oos_file_id  Oos_num_user_pages  Oos_page_size  Oos_recs_sumlen    Oos_physical_bytes      Oos_unused_bytes
+============
+  'dba.oos_dur01'       '(0|209|2)'                      1             4               1           576                  577              1          640                   4          16344             24444                 65376                 40932
+"
+chk "15 two headers, row under the second" "$TWOHDR" 0
+val "15 chunks from the second header"  "$(oos_field "$TWOHDR" Oos_num_recs)" 4
+val "15 has_oos from the second header" "$(oos_field "$TWOHDR" Has_oos_file)" 1
+
+# 16: an observation whose column the header does not carry. oos_field signals it with
+# status 1 and empty output, which no command substitution inspects, so oos_observed turns
+# it into a marker the journal will show instead of an empty value.
+val "16 a missing observation column is marked" "$(oos_observed "$ROW" Oos_no_such_column)" "UNRESOLVED(Oos_no_such_column)"
+val "16 a present observation column is not"    "$(oos_observed "$ROW" Oos_recs_sumlen)" 24444
 
 echo
 val "field extraction from the real row (has_oos)" "$(oos_field "$ROW" Has_oos_file)" 1

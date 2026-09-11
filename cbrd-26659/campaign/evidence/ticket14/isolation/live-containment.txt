@@ -1,36 +1,30 @@
 # Live containment evidence -- unrelated CUBRID instances that ran through the invocations
-# captured 2026-09-11T14:55:20+09:00
+# captured 2026-09-11T15:09:09+09:00
 
 This host carries other sessions' CUBRID instances, owned by the same UNIX user. The CTP
 shell helpers call an unscoped 'pkill cub' in both init() and finish(), so every invocation
-of this ticket issued two such sweeps. The demodb master below has been up since 12:51:39,
-before the first invocation of this ticket, and was still up after the last. A second
-session began cycling its own instances at 14:43 -- CUBRID=CBRD-27089-oos-deferred-write,
-cwd under /tmp/oos-loader17-* -- straight through this ticket's revision 5 and 6 runs. This
-is the containment working on real neighbours rather than on a decoy.
+of this ticket issued two such sweeps. A second session began cycling its own instances at
+14:43 -- CUBRID=CBRD-27089-oos-deferred-write, cwd under /tmp/oos-loader17-* -- straight
+through revisions 5, 6 and 7 of this ticket. Containment on real neighbours, not a decoy.
 
     PID    PPID     ELAPSED                  STARTED COMMAND
- 487844       1    02:03:40 Fri Sep 11 12:51:39 2026 cub_master
- 659733       1    01:38:06 Fri Sep 11 13:17:14 2026 cub_server
- 659748  659733    01:38:06 Fri Sep 11 13:17:14 2026 cub_pl
-1480288 1480286       00:01 Fri Sep 11 14:55:18 2026 cub_pl
-1480400 1480398       00:00 Fri Sep 11 14:55:19 2026 cub_pl
+ 487844       1    02:17:29 Fri Sep 11 12:51:39 2026 cub_master
+ 659733       1    01:51:54 Fri Sep 11 13:17:14 2026 cub_server
+ 659748  659733    01:51:54 Fri Sep 11 13:17:14 2026 cub_pl
 
 namespace of the campaign shell : pid:[4026531836] ipc:[4026531839]
-(the campaign shell shares the host namespaces; only the CTP invocations are unshared)
 
-End times of the runs recorded at revision 6:
-  att-T14-0023 ended_at=2026-09-11T14:52:38+09:00
-  att-T14-0024 ended_at=2026-09-11T14:53:04+09:00
-  att-T14-0025 ended_at=2026-09-11T14:53:25+09:00
+End times of the runs recorded at revision 7:
+  att-T14-0026 ended_at=2026-09-11T15:06:27+09:00
+  att-T14-0027 ended_at=2026-09-11T15:06:54+09:00
+  att-T14-0028 ended_at=2026-09-11T15:07:14+09:00
   att-T14-0016-bucket ended_at=2026-09-11T14:20:39+09:00
 
-Every case's operations.journal recorded pre_existing_masters=[] -- from inside the namespace
-those masters are not merely protected, they are invisible:
-  att-T14-0023: 2026-09-11T14:52:17+09:00|environment|pre_existing_masters=[]
-  att-T14-0024: 2026-09-11T14:52:42+09:00|environment|pre_existing_masters=[]
-  att-T14-0025: 2026-09-11T14:53:08+09:00|environment|pre_existing_masters=[]
+Every case's operations.journal recorded pre_existing_masters=[]:
+  att-T14-0026: 2026-09-11T15:06:06+09:00|environment|pre_existing_masters=[]
+  att-T14-0027: 2026-09-11T15:06:32+09:00|environment|pre_existing_masters=[]
+  att-T14-0028: 2026-09-11T15:06:58+09:00|environment|pre_existing_masters=[]
   att-T14-0016-bucket: 2026-09-11T14:20:19+09:00|environment|pre_existing_masters=[]
 
-Earlier revisions' invocations (att-T14-0001 through att-T14-0022) ran under the same
-wrapper and are retained in the bundles; every neighbour survived all of them too.
+Earlier revisions' invocations (att-T14-0001 through att-T14-0025) ran under the same
+wrapper and are retained in the bundles; every neighbour survived all of them.
