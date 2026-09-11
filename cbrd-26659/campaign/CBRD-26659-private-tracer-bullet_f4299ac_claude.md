@@ -88,12 +88,19 @@ Four design points worth naming:
 
 All on the pinned unmodified installs, 16 KiB pages, client-server, under the namespace. Library hashes are re-verified against ticket 11 before the launcher is allowed to start, because a CUBRID binary reports whichever library the loader resolves.
 
-| Attempt | Build | Cases | Assertions | Skips | Case | Verdict |
+**The two campaign attempts** — these are the only runs with a manifest, an attempt record, a replay-bundle index and matrix rows:
+
+| Attempt | Build | Cases | Assertions | Skips | Case | Outcome |
 |---|---|---|---|---|---|---|
 | `att-T14-0013` (`inv-T14-0001`) | release | expected 1, discovered 1, executed 1 | 16 executed, 16 OK, 0 NOK | 1 | 14 s (23 s invocation) | **PASS** |
 | `att-T14-0014` (`inv-T14-0002`) | debug | expected 1, discovered 1, executed 1 | 17 executed, 17 OK, 0 NOK | 0 | 17 s (26 s invocation) | **PASS** |
-| `att-T14-0015` (negative control) | release | expected 1, discovered 1, executed 1 | 16 executed, 15 OK, **1 NOK** | 1 | 13 s (19 s invocation) | **FAIL**, as required |
-| `att-T14-0016-bucket` (coexistence) | release | expected 11, discovered 11, executed 11 | this case: 16 OK, 0 NOK | 1 | 12 s (397 s invocation) | this case **PASS**; 2 sibling cases failed, see below |
+
+**Two supporting runs, neither of which is a campaign attempt.** They have no manifest, no attempt record and no matrix row, on purpose — one is checker validation and the other is a verification step — so their verdicts below are results, not coverage. Each directory carries a README saying why:
+
+| Run | Build | Cases | Assertions | Skips | Case | Result |
+|---|---|---|---|---|---|---|
+| `att-T14-0015` — checker validation | release | expected 1, discovered 1, executed 1 | 16 executed, 15 OK, **1 NOK** | 1 | 13 s (19 s invocation) | **FAIL**, as required of a negative control |
+| `att-T14-0016-bucket` — coexistence | release | expected 11, discovered 11, executed 11 | this case: 16 OK, 0 NOK | 1 | 12 s (397 s invocation) | this case **PASS**; 2 sibling cases failed, see below |
 
 Each run also verified, by hashing before and after, that the pinned install's `conf` and `databases` came back byte-identical and that the user's own `~/.CUBRID_SHELL_FM` was neither read nor written: `install_conf_drift_lines=0`, `install_databases_drift_lines=0`, `user_shell_fm_drift_lines=0`. The testcase worktree was left with zero untracked files after every run.
 

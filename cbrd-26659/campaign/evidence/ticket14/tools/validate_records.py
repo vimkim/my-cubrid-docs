@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """Validate the ticket 14 campaign records against ticket 12's schemas.
 
-Uses the campaign's own minischema evaluator, so the records are judged by the same
-code check_campaign_records.py judges the schemas' own examples with.
+Not a duplicate of campaign/tools/check_campaign_records.py, which validates the
+requirement catalogue, the schemas themselves and the schemas' own valid and invalid
+examples -- it never looks at a ticket's records. This validates *this ticket's* manifests,
+attempt records, replay-bundle indexes and matrix against those schemas, using the same
+minischema evaluator, so the records are judged by exactly the code that judges the
+examples. Both are run; both must pass.
 """
 import json
 import sys
