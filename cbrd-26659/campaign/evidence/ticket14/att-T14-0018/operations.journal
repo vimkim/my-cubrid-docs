@@ -1,0 +1,16 @@
+2026-09-11T14:32:38+09:00|case|start|cbrd_26659_oos_dur01
+2026-09-11T14:32:38+09:00|environment|pre_existing_masters=[]
+2026-09-11T14:32:38+09:00|environment|cubrid_rel= CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit debug build for Linux) (Sep 10 2026 16:15:40)  
+2026-09-11T14:32:45+09:00|request|t1_insert
+2026-09-11T14:32:45+09:00|ack|t1_insert|rc=0|affected=4|errors=0
+2026-09-11T14:32:45+09:00|observation|after_insert|has_oos=1|chunks=4|sumlen=24444|user_pages=4|oos_page_size=16344
+2026-09-11T14:32:45+09:00|request|t2_update
+2026-09-11T14:32:45+09:00|ack|t2_update|rc=0|affected=1|errors=0
+2026-09-11T14:32:45+09:00|request|t3_delete
+2026-09-11T14:32:45+09:00|ack|t3_delete|rc=0|affected=1|errors=0
+2026-09-11T14:32:45+09:00|crash|server=[1732 ]|pl=[1735 ]|master=[1730 ]
+2026-09-11T14:32:45+09:00|restart|request
+2026-09-11T14:32:48+09:00|restart|ack|rc=0
+2026-09-11T14:32:48+09:00|observation|after_recovery|has_oos=1|chunks=5|sumlen=28504|user_pages=4|oos_page_size=16344
+2026-09-11T14:32:53+09:00|observation|oos_log_delete_lines|before=4|after=6
+2026-09-11T14:32:53+09:00|case|end|outcome=PASS|failed=0|skipped=0|reason=all executed assertions passed and the out-of-row path was observed

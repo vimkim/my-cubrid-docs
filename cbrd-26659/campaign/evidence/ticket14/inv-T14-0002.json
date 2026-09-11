@@ -4,11 +4,11 @@
   "producer": {
     "kind": "hand-written",
     "name": "Claude Opus 5 (1M context), campaign ticket 14",
-    "version": "revision 3, after the Standards and Spec axes of the two-axis review"
+    "version": "revision 4, after both review axes confirmed their findings closed"
   },
   "invocation": {
-    "started_at": "2026-09-11T14:13:12+09:00",
-    "ended_at": "2026-09-11T14:13:38+09:00",
+    "started_at": "2026-09-11T14:32:34+09:00",
+    "ended_at": "2026-09-11T14:32:59+09:00",
     "tier": "fast",
     "caps": {
       "invocation_seconds": 900,
@@ -35,7 +35,7 @@
     "testcase": {
       "repository": "testcases-private-ex",
       "branch": "CBRD-26659-oos-testcases-handover",
-      "commit": "1a4afcb3589e5029c9d04ea6939cbd674f55a72d",
+      "commit": "8d4f189acf885c24cada57922187b242440d79b2",
       "base_commit": "e9c2d86874b9c08cdd72b120c2ead84f525e15fc",
       "worktree": "/home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659"
     },
@@ -76,12 +76,12 @@
     "runner": {
       "kind": "ctp-shell",
       "ctp_fingerprint": "sha256:e7c8ef04ee377d5fd33d82ad237210ee0c0c509c7b643787ba5f2137d69e6347",
-      "command": "run_attempt.sh att-T14-0014 debug_gcc <scenario>, which runs: unshare --user --map-current-user --pid --fork --mount-proc --ipc -- /home/vimkim/CTP/bin/ctp.sh shell -c <bundle>/shell_cbrd26659.conf",
+      "command": "run_attempt.sh att-T14-0018 debug_gcc <scenario>, which runs: unshare --user --map-current-user --pid --fork --mount-proc --ipc -- /home/vimkim/CTP/bin/ctp.sh shell -c <bundle>/shell_cbrd26659.conf",
       "scenario_selection": "/home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659/shell/_06_issues/_26_2h/cbrd_26659_oos_dur01"
     }
   },
   "expected": {
-    "case_list": "cbrd-26659/campaign/evidence/ticket14/att-T14-0014/dispatch_tc_ALL.txt",
+    "case_list": "cbrd-26659/campaign/evidence/ticket14/att-T14-0018/dispatch_tc_ALL.txt",
     "case_list_hash": "sha256:432dbdd88c341034a0c2729121e5b0c5966af653534f4a896d8b63a5e8f98a13",
     "case_count": 1,
     "assertion_count": 17
@@ -99,7 +99,7 @@
   "proof": {
     "verdict": "proven",
     "launcher_exit_status": 0,
-    "setup_log": "cbrd-26659/campaign/evidence/ticket14/att-T14-0014/summary.txt",
+    "setup_log": "cbrd-26659/campaign/evidence/ticket14/att-T14-0018/summary.txt",
     "mismatches": []
   },
   "cases": [
@@ -123,7 +123,7 @@
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0014/show_heap_oos_after_insert.out",
+        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0018/show_heap_oos_after_insert.out",
         "applicability": {
           "fixture": "Identical, because it is the same run: the four rows of (id INT, v BIT VARYING) at 4,036 AA / 16,284 BB / 4,011 CC / 4,036 DD that the assertions judge are the rows SHOW HEAP OOS counted, in a database the case created, owns exclusively and deletes.",
           "execution_path": "IDENTICAL, which is why this is proven and not reused. The SHOW HEAP OOS statement ran in the same CTP invocation, against the same client-server server process, in the same session sequence as the INSERT it certifies -- once immediately after the committed INSERT and once after the restart. It certifies the INSERT-side demotion and the survival of the chains across recovery; it certifies no vacuum or reclaim path, which is why the post-recovery count is asserted as a range.",
@@ -134,10 +134,10 @@
       },
       "attempts": [
         {
-          "attempt_id": "att-T14-0014",
-          "attempt_record": "cbrd-26659/campaign/evidence/ticket14/att-T14-0014.json",
-          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket14/attempts/att-T14-0014",
-          "bundle_hash": "sha256:f6186f1993126a58f663a94eb2136ca33bea4eb58ff7c47a3b75196a594b8c50"
+          "attempt_id": "att-T14-0018",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket14/att-T14-0018.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket14/attempts/att-T14-0018",
+          "bundle_hash": "sha256:0a2cd5eb3e31b520ffc47a889b95692c591c3873cd266b27cd389aa727277a32"
         }
       ],
       "outstanding": null
@@ -208,7 +208,7 @@
       "OOS-RES-05",
       "OOS-RES-06"
     ],
-    "note": "The debug configuration of the same tracer-bullet case, run so that the one capability-gated assertion inv-T14-0001 had to skip actually executes. All 17 ran and passed, and the OOS activation evidence is proven in this invocation too, from this invocation's own SHOW HEAP OOS output. One observation worth carrying forward for the reclaim and vacuum tickets: this run's oos.log already held four oos_delete lines from vacuum before the case's standalone step ran, so on the debug build vacuum did reclaim the two dead chains within roughly three seconds of the restart, whereas the earlier probe on the same build saw nothing within three seconds. The assertion is written as an increase over the pre-step count precisely because vacuum timing is not something a durability case may depend on. The requirements listed as without an executed case are the same 49 as in inv-T14-0001 and for the same reason; this manifest adds a configuration, not coverage. THE CASE OUTCOME IN THIS MANIFEST IS THE CASE'S OWN, not CTP's success count: CTP has only PASS and FAIL per case, so the case writes PASS, FAIL or SKIP with a reason into <evidence>/case_outcome and the runner surfaces it. A run where SHOW HEAP OOS was unavailable would record SKIP there even with every executed assertion passing, because durability would be proved while the out-of-row path was never observed. This run's file reads PASS."
+    "note": "The debug configuration of the same tracer-bullet case, run so that the one capability-gated assertion inv-T14-0001 had to skip actually executes. All 17 ran and passed, and the OOS activation evidence is proven in this invocation too, from this invocation's own SHOW HEAP OOS output. One observation worth carrying forward for the reclaim and vacuum tickets: this run's oos.log already held four oos_delete lines from vacuum before the case's standalone step ran, so on the debug build vacuum did reclaim the two dead chains within roughly three seconds of the restart, whereas the earlier probe on the same build saw nothing within three seconds. The assertion is written as an increase over the pre-step count precisely because vacuum timing is not something a durability case may depend on. The requirements listed as without an executed case are the same 49 as in inv-T14-0001 and for the same reason; this manifest adds a configuration, not coverage. THE CASE OUTCOME IN THIS MANIFEST IS THE CASE'S OWN, not CTP's success count: CTP has only PASS and FAIL per case, so the case writes PASS, FAIL or SKIP with a reason into <evidence>/case_outcome and the runner surfaces it. A run where SHOW HEAP OOS was unavailable would record SKIP there even with every executed assertion passing, because durability would be proved while the out-of-row path was never observed. This run's file reads PASS. The failure-preservation copy is itself checked in this revision: every step's exit status is tested and a failure is reported as a further NOK, because with CTP's snapshot channel switched off this copy is the only image a failing run leaves behind. att-T14-0019 exercised the path and journalled preservation|ok."
   },
   "answer_promotions": []
 }

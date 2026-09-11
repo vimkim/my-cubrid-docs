@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-09-11T14:30:00+09:00",
+  "generated_at": "2026-09-11T14:40:00+09:00",
   "catalogue": {
     "path": "cbrd-26659/campaign/catalogue/requirements.json",
     "hash": "sha256:0cc33c82cfc472daece8e168f92d153d86d4c1feb0690ceffca786b0c8a8c5dd"
@@ -29,15 +29,15 @@
       "run": {
         "manifest_id": "inv-T14-0001",
         "manifest_path": "cbrd-26659/campaign/evidence/ticket14/inv-T14-0001.json",
-        "manifest_hash": "sha256:75304cb97805a6ed39cb6dca747a0afb05aebbde1ee1f22ceb7db06f0fb904d2",
+        "manifest_hash": "sha256:9a48660171e15df341c5e253f43bfea0e07368eb6ee1aad0695a3ade289009ee",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "1a4afcb3589e5029c9d04ea6939cbd674f55a72d",
+        "testcase_commit": "8d4f189acf885c24cada57922187b242440d79b2",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0013/show_heap_oos_after_insert.out",
+        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0017/show_heap_oos_after_insert.out",
         "applicability": {
           "fixture": "Identical, because it is the same run: the four rows of (id INT, v BIT VARYING) at 4,036 AA / 16,284 BB / 4,011 CC / 4,036 DD that the assertions judge are the rows SHOW HEAP OOS counted, in a database the case created, owns exclusively and deletes.",
           "execution_path": "IDENTICAL, which is why this is proven and not reused. The SHOW HEAP OOS statement ran in the same CTP invocation, against the same client-server server process, in the same session sequence as the INSERT it certifies -- once immediately after the committed INSERT and once after the restart. It certifies the INSERT-side demotion and the survival of the chains across recovery; it certifies no vacuum or reclaim path, which is why the post-recovery count is asserted as a range.",
@@ -52,9 +52,9 @@
         "history": [
           {
             "manifest_id": "inv-T14-0001",
-            "attempt_id": "att-T14-0013",
+            "attempt_id": "att-T14-0017",
             "outcome": "PASS",
-            "at": "2026-09-11T14:13:12+09:00"
+            "at": "2026-09-11T14:32:34+09:00"
           }
         ],
         "gap_kind": "none",
@@ -77,7 +77,7 @@
         "note": "Nothing to attribute: the outcome is PASS. The field stays 'unknown' because the taxonomy has no value for 'no failure', and 'engine' would require failure evidence."
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket14/att-T14-0013.json"
+        "cbrd-26659/campaign/evidence/ticket14/att-T14-0017.json"
       ]
     },
     {
@@ -103,15 +103,15 @@
       "run": {
         "manifest_id": "inv-T14-0002",
         "manifest_path": "cbrd-26659/campaign/evidence/ticket14/inv-T14-0002.json",
-        "manifest_hash": "sha256:9e854a1eec0ccb247702c86a464d33fa08adbdc4430796c6471d772882f5cb2e",
+        "manifest_hash": "sha256:8956d41ae75168bfe89592b54a3263d381cebc76f526fb035bf64e9e9cd4d9ec",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "1a4afcb3589e5029c9d04ea6939cbd674f55a72d",
+        "testcase_commit": "8d4f189acf885c24cada57922187b242440d79b2",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0014/show_heap_oos_after_insert.out",
+        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0018/show_heap_oos_after_insert.out",
         "applicability": {
           "fixture": "Identical, because it is the same run: the four rows of (id INT, v BIT VARYING) at 4,036 AA / 16,284 BB / 4,011 CC / 4,036 DD that the assertions judge are the rows SHOW HEAP OOS counted, in a database the case created, owns exclusively and deletes.",
           "execution_path": "IDENTICAL, which is why this is proven and not reused. The SHOW HEAP OOS statement ran in the same CTP invocation, against the same client-server server process, in the same session sequence as the INSERT it certifies -- once immediately after the committed INSERT and once after the restart. It certifies the INSERT-side demotion and the survival of the chains across recovery; it certifies no vacuum or reclaim path, which is why the post-recovery count is asserted as a range.",
@@ -126,9 +126,9 @@
         "history": [
           {
             "manifest_id": "inv-T14-0002",
-            "attempt_id": "att-T14-0014",
+            "attempt_id": "att-T14-0018",
             "outcome": "PASS",
-            "at": "2026-09-11T14:13:38+09:00"
+            "at": "2026-09-11T14:32:59+09:00"
           }
         ],
         "gap_kind": "none",
@@ -151,7 +151,7 @@
         "note": "Nothing to attribute: the outcome is PASS. The field stays 'unknown' because the taxonomy has no value for 'no failure', and 'engine' would require failure evidence."
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket14/att-T14-0014.json"
+        "cbrd-26659/campaign/evidence/ticket14/att-T14-0018.json"
       ]
     },
     {
@@ -177,15 +177,15 @@
       "run": {
         "manifest_id": "inv-T14-0001",
         "manifest_path": "cbrd-26659/campaign/evidence/ticket14/inv-T14-0001.json",
-        "manifest_hash": "sha256:75304cb97805a6ed39cb6dca747a0afb05aebbde1ee1f22ceb7db06f0fb904d2",
+        "manifest_hash": "sha256:9a48660171e15df341c5e253f43bfea0e07368eb6ee1aad0695a3ade289009ee",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "1a4afcb3589e5029c9d04ea6939cbd674f55a72d",
+        "testcase_commit": "8d4f189acf885c24cada57922187b242440d79b2",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0013/show_heap_oos_after_insert.out",
+        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0017/show_heap_oos_after_insert.out",
         "applicability": {
           "fixture": "Identical, because it is the same run: the four rows of (id INT, v BIT VARYING) at 4,036 AA / 16,284 BB / 4,011 CC / 4,036 DD that the assertions judge are the rows SHOW HEAP OOS counted, in a database the case created, owns exclusively and deletes.",
           "execution_path": "IDENTICAL, which is why this is proven and not reused. The SHOW HEAP OOS statement ran in the same CTP invocation, against the same client-server server process, in the same session sequence as the INSERT it certifies -- once immediately after the committed INSERT and once after the restart. It certifies the INSERT-side demotion and the survival of the chains across recovery; it certifies no vacuum or reclaim path, which is why the post-recovery count is asserted as a range.",
@@ -200,9 +200,9 @@
         "history": [
           {
             "manifest_id": "inv-T14-0001",
-            "attempt_id": "att-T14-0013",
+            "attempt_id": "att-T14-0017",
             "outcome": "PASS",
-            "at": "2026-09-11T14:13:12+09:00"
+            "at": "2026-09-11T14:32:34+09:00"
           }
         ],
         "gap_kind": "none",
@@ -225,7 +225,7 @@
         "note": "Nothing to attribute: the outcome is PASS. The field stays 'unknown' because the taxonomy has no value for 'no failure', and 'engine' would require failure evidence."
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket14/att-T14-0013.json"
+        "cbrd-26659/campaign/evidence/ticket14/att-T14-0017.json"
       ]
     },
     {
@@ -251,15 +251,15 @@
       "run": {
         "manifest_id": "inv-T14-0002",
         "manifest_path": "cbrd-26659/campaign/evidence/ticket14/inv-T14-0002.json",
-        "manifest_hash": "sha256:9e854a1eec0ccb247702c86a464d33fa08adbdc4430796c6471d772882f5cb2e",
+        "manifest_hash": "sha256:8956d41ae75168bfe89592b54a3263d381cebc76f526fb035bf64e9e9cd4d9ec",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "1a4afcb3589e5029c9d04ea6939cbd674f55a72d",
+        "testcase_commit": "8d4f189acf885c24cada57922187b242440d79b2",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0014/show_heap_oos_after_insert.out",
+        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0018/show_heap_oos_after_insert.out",
         "applicability": {
           "fixture": "Identical, because it is the same run: the four rows of (id INT, v BIT VARYING) at 4,036 AA / 16,284 BB / 4,011 CC / 4,036 DD that the assertions judge are the rows SHOW HEAP OOS counted, in a database the case created, owns exclusively and deletes.",
           "execution_path": "IDENTICAL, which is why this is proven and not reused. The SHOW HEAP OOS statement ran in the same CTP invocation, against the same client-server server process, in the same session sequence as the INSERT it certifies -- once immediately after the committed INSERT and once after the restart. It certifies the INSERT-side demotion and the survival of the chains across recovery; it certifies no vacuum or reclaim path, which is why the post-recovery count is asserted as a range.",
@@ -274,9 +274,9 @@
         "history": [
           {
             "manifest_id": "inv-T14-0002",
-            "attempt_id": "att-T14-0014",
+            "attempt_id": "att-T14-0018",
             "outcome": "PASS",
-            "at": "2026-09-11T14:13:38+09:00"
+            "at": "2026-09-11T14:32:59+09:00"
           }
         ],
         "gap_kind": "none",
@@ -299,7 +299,7 @@
         "note": "Nothing to attribute: the outcome is PASS. The field stays 'unknown' because the taxonomy has no value for 'no failure', and 'engine' would require failure evidence."
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket14/att-T14-0014.json"
+        "cbrd-26659/campaign/evidence/ticket14/att-T14-0018.json"
       ]
     }
   ],

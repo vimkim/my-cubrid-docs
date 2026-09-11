@@ -1,0 +1,50 @@
+--- /home/vimkim/.cub/campaign/cbrd-26659/ticket14/attempts/att-T14-0013/workload.sh	2026-09-11 14:21:55.521980592 +0900
++++ /home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659/shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh	2026-09-11 14:32:05.500278903 +0900
+@@ -394,15 +394,41 @@
+     done
+ }
+ 
++# The recovered database is the evidence a failed value assertion or a failed checkdb
++# needs, and it is about to be deleted, so it is copied aside first. Every step here is
++# checked, because this copy is the ONLY image of a failing run: the case sets
++# SKIP_CHECK_RECOVERY_ERROR=TRUE on its post-crash utilities, which switches off CTP's own
++# installation-snapshot channel. A silent `cp` failure -- a full filesystem, a permission
++# problem -- would leave an empty directory and nobody told, which is the one outcome a
++# campaign about unproven claims must not produce. This runs only when the case has
++# already failed, so reporting a failed preservation as a further NOK cannot change the
++# verdict; it can only stop the loss from being silent.
++preserve_failure_database()
++{
++    local dest=${evidence_dir}/failed_database
++    local errs=0
++
++    mkdir -p "${dest}" || errs=`expr ${errs} + 1`
++    cp -a "${cur_path}/${db_name}" "${dest}/" || errs=`expr ${errs} + 1`
++    if [ -d "${CUBRID}/log/server" ]; then
++        cp -a "${CUBRID}/log/server" "${dest}/server_log" || errs=`expr ${errs} + 1`
++    else
++        journal "preservation|note|no ${CUBRID}/log/server directory to copy"
++    fi
++
++    if [ ${errs} -eq 0 ]; then
++        journal "preservation|ok|database and server logs copied to ${dest}"
++    else
++        journal "preservation|FAILED|${errs} copy step(s) failed; the only image of this failing run may be missing"
++        fail "failure_database_preserved : ${errs} copy step(s) failed, so the only image of this failing run may be missing from ${dest}"
++    fi
++}
++
+ do_cleanup()
+ {
+     cubrid server stop ${db_name} >/dev/null 2>&1
+-    if [ ${nok_count} -gt 0 ]; then
+-        # The recovered database itself is the evidence a failed value assertion or a
+-        # failed checkdb needs, and it is about to be deleted, so copy it first.
+-        mkdir -p "${evidence_dir}/failed_database"
+-        cp -a "${cur_path}/${db_name}" "${evidence_dir}/failed_database/" 2>/dev/null
+-        cp -a ${CUBRID}/log/server "${evidence_dir}/failed_database/server_log" 2>/dev/null
++    if [ ${nok_count} -gt 0 ] && [ -d "${cur_path}/${db_name}" ]; then
++        preserve_failure_database
+     fi
+     cubrid deletedb ${db_name} >/dev/null 2>&1
+     rm -rf "${cur_path:?}/${db_name:?}"

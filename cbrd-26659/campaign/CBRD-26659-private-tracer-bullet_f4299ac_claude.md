@@ -2,7 +2,7 @@
 
 > Observed: 2026-09-11 (KST). Engine baseline `f4299ac0cd777a2a964c1f197ae5ebf9841a4936` (ticket 11); normative context `f6543de` + sha256 `c9daf3c4…`; requirement catalogue sha256 `0cc33c82…` (ticket 12).
 > Author: Claude Opus 5 (1M context), for the [Adversarial OOS testcase campaign](/home/vimkim/gh/cb/CBRD-26659-oos-testcases-handover/.scratch/oos-adversarial/spec.md) ticket 14.
-> Revision 3, after both axes of a two-axis review; §8 lists what the review changed and everything was re-run.
+> Revision 4, after both axes of a two-axis review and their confirmation passes; §8 lists what the reviews changed and everything was re-run.
 > Records: [`evidence/ticket14/`](evidence/ticket14/) — the oracle and its derivation, the isolation demonstration and its live counterpart, two manifests, two attempt records, two replay-bundle indexes, four matrix rows, two checker validations, the format probes, and the per-attempt evidence.
 
 Vocabulary follows the [docs glossary](../../CONTEXT.md). This is the private suite's runner smoke check; all ten private case tickets (23 to 32) were blocked on it.
@@ -13,7 +13,7 @@ Vocabulary follows the [docs glossary](../../CONTEXT.md). This is the private su
 |---|---|
 | Private worktree | `/home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659`, branch `CBRD-26659-oos-testcases-handover` |
 | Base | `origin/develop` = `e9c2d86874b9c08cdd72b120c2ead84f525e15fc`, verified with `git ls-remote` **and** `git fetch` returning the same object before the worktree was created |
-| Testcase commit | `1a4afcb3589e5029c9d04ea6939cbd674f55a72d`, local only. Nothing pushed, no pull request |
+| Testcase commit | `8d4f189acf885c24cada57922187b242440d79b2`, local only. Nothing pushed, no pull request |
 | Case | `shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh`, covering `OOS-DUR-01` and `OOS-REP-07` |
 | Checker validation | `…/cbrd_26659_oos_dur01/cases/make_negative_control.sh` (a helper, never discovered as a case) |
 | Untouched | The canonical clone `/home/vimkim/cubrid-testcases-private-ex` is still on `develop` at `6eb3b19ba`; the three existing private worktrees (`tc/pr-6864`, `CBRD-27403-oos-error-code-answers`, `CBRD-27398-pgbuf-inspector-fixtures`) and their uncommitted changes were not read or written |
@@ -79,7 +79,7 @@ Four design points worth naming:
 - **Correct results are not accepted as OOS coverage.** `SHOW HEAP OOS OF oos_dur01` must report one OOS file and exactly four chunk records before the crash, on a table the case owns exclusively. Without it the case would pass identically on an engine that stored everything inline.
 - **`Oos_recs_sumlen` is recorded, never asserted.** The pinned run reported 24,444, matching the derivation exactly (4,044 + 16, 16,292 + 2×16, 4,044 + 16). The accepted 24-byte chunk header would give 24,476. That divergence is the `OOS-REP-05` / CBRD-26950 Capability gap, so the number belongs in the journal, not in an expectation.
 - **The post-recovery chunk count is a range, 3 to 5.** Three live chunks plus the two dead chains that vacuum reclaims asynchronously. A point value would make the case flaky for a reason that has nothing to do with durability.
-- **The post-crash `cubrid server start` and `checkdb` run with `SKIP_CHECK_RECOVERY_ERROR=TRUE`.** CTP's `cubrid` wrapper archives the whole installation and adds a NOK line of its own when one of those utilities exits non-zero. This case crashes on purpose and reports its own verdict, so the wrapper's archive would be noise. It is the convention `cbrd_27229` established and five other private cases use. **Because that switches off CTP's snapshot channel, the case preserves its own failure evidence**: the first failed assertion captures processes, journals, server status and the CUBRID logs, and cleanup copies the recovered database and the server logs aside before deleting them. Without that, a failed value assertion — the most valuable thing this case can find — would have left nothing but a result line. The negative control exercises the path and preserved a 259 MiB database image.
+- **The post-crash `cubrid server start` and `checkdb` run with `SKIP_CHECK_RECOVERY_ERROR=TRUE`.** CTP's `cubrid` wrapper archives the whole installation and adds a NOK line of its own when one of those utilities exits non-zero. This case crashes on purpose and reports its own verdict, so the wrapper's archive would be noise. It is the convention `cbrd_27229` established and five other private cases use. **Because that switches off CTP's snapshot channel, the case preserves its own failure evidence**: the first failed assertion captures processes, journals, server status and the CUBRID logs, and cleanup copies the recovered database and the server logs aside before deleting them. Without that, a failed value assertion — the most valuable thing this case can find — would have left nothing but a result line. Every copy step's exit status is checked and a failed copy is reported as a further NOK, so a lost image cannot be silent. The negative control exercises the path: it journalled `preservation|ok` and preserved a 259 MiB database image.
 - **The case states a campaign outcome of its own.** CTP has only PASS and FAIL per case, so assertion-level skips are not enough: on a build without `SHOW HEAP OOS`, assertions 5 and 15 would both skip and the case would still report `[OK]` — a pass with no activation evidence at all, which is exactly what the campaign forbids. The case therefore writes `PASS`, `FAIL` or `SKIP` with a reason into `<evidence>/case_outcome`, the runner surfaces it, and the manifest's case outcome comes from it. A run that proved durability but never observed the out-of-row path is recorded as SKIP and is not counted as coverage. On both pinned builds the file reads `PASS`.
 
 **Transaction-state model.** `OOS-DUR-01`'s authority note forbids judging recovery by "a missing acknowledgement means rollback". The case keeps an external journal — a request line before each transaction and an acknowledgement line after it carrying the `csql` exit status, the affected-row count and the error count — and takes the crash only after the third acknowledgement, so the permitted state is a single one: all three committed. `OOS-DUR-03`, where an outcome is genuinely unknown, is a different requirement and is not claimed here. The durable-commit configuration is read back from `cubrid paramdump -S` rather than assumed: `async_commit=n`, `group_commit_interval_in_msecs=0`, `auto_restart_server=n`.
@@ -92,14 +92,14 @@ All on the pinned unmodified installs, 16 KiB pages, client-server, under the na
 
 | Attempt | Build | Cases | Assertions | Skips | Case | Outcome |
 |---|---|---|---|---|---|---|
-| `att-T14-0013` (`inv-T14-0001`) | release | expected 1, discovered 1, executed 1 | 16 executed, 16 OK, 0 NOK | 1 | 14 s (23 s invocation) | **PASS** |
-| `att-T14-0014` (`inv-T14-0002`) | debug | expected 1, discovered 1, executed 1 | 17 executed, 17 OK, 0 NOK | 0 | 17 s (26 s invocation) | **PASS** |
+| `att-T14-0017` (`inv-T14-0001`) | release | expected 1, discovered 1, executed 1 | 16 executed, 16 OK, 0 NOK | 1 | 11 s (20 s invocation) | **PASS** |
+| `att-T14-0018` (`inv-T14-0002`) | debug | expected 1, discovered 1, executed 1 | 17 executed, 17 OK, 0 NOK | 0 | 16 s (25 s invocation) | **PASS** |
 
 **Two supporting runs, neither of which is a campaign attempt.** They have no manifest, no attempt record and no matrix row, on purpose — one is checker validation and the other is a verification step — so their verdicts below are results, not coverage. Each directory carries a README saying why:
 
 | Run | Build | Cases | Assertions | Skips | Case | Result |
 |---|---|---|---|---|---|---|
-| `att-T14-0015` — checker validation | release | expected 1, discovered 1, executed 1 | 16 executed, 15 OK, **1 NOK** | 1 | 13 s (19 s invocation) | **FAIL**, as required of a negative control |
+| `att-T14-0019` — checker validation | release | expected 1, discovered 1, executed 1 | 16 executed, 15 OK, **1 NOK** | 1 | 11 s (19 s invocation) | **FAIL**, as required of a negative control |
 | `att-T14-0016-bucket` — coexistence | release | expected 11, discovered 11, executed 11 | this case: 16 OK, 0 NOK | 1 | 12 s (397 s invocation) | this case **PASS**; 2 sibling cases failed, see below |
 
 Each run also verified, by hashing before and after, that the pinned install's `conf` and `databases` came back byte-identical and that the user's own `~/.CUBRID_SHELL_FM` was neither read nor written: `install_conf_drift_lines=0`, `install_databases_drift_lines=0`, `user_shell_fm_drift_lines=0`. The testcase worktree was left with zero untracked files after every run.
@@ -149,11 +149,11 @@ The case was also run in one invocation with all ten existing cases of its issue
 
 | | Case time | Invocation wall time |
 |---|---:|---:|
-| Release | 14 s | 23 s |
-| Debug | 17 s | 26 s |
+| Release | 11 s | 20 s |
+| Debug | 16 s | 25 s |
 | Whole 11-case bucket | — | 397 s |
 
-A crash-and-recovery case at 16 KiB costs well under 30 seconds end to end, so **this workload belongs in the fast tier**, not the scheduled one: 14 s against a 120 s per-case cap and a 900 s invocation cap. That is the second fast-tier data point after ticket 13's 39 s SQL case, and the first for the shell seam. The bucket figure is a useful second number for ticket 17: the whole existing `_26_2h` bucket plus this case runs in under seven minutes, so a fast-tier invocation that selects a whole issue bucket is still inside the 15-minute cap.
+A crash-and-recovery case at 16 KiB costs well under 30 seconds end to end, so **this workload belongs in the fast tier**, not the scheduled one: 11 s against a 120 s per-case cap and a 900 s invocation cap. That is the second fast-tier data point after ticket 13's 39 s SQL case, and the first for the shell seam. The bucket figure is a useful second number for ticket 17: the whole existing `_26_2h` bucket plus this case runs in under seven minutes, so a fast-tier invocation that selects a whole issue bucket is still inside the 15-minute cap.
 
 One deviation to record rather than hide: the launcher's own `testcase_timeout_in_secs` was set to 900, not to the tier's 120 s per-case cap, deliberately — CTP enforces its timeout with a kill, and a crash-recovery case truncated mid-restart would leave a running server and destroy its own evidence. The campaign cap is therefore currently judged from the measured time rather than enforced by the harness. **Enforcing caps with evidence capture belongs to ticket 15.**
 
@@ -189,7 +189,7 @@ Storage: the whole ticket occupies about 280 MiB under, almost all of it the neg
 | One negative control produces a failed assertion and a failed case, kept outside the regression cases | met (§4) — one NOK, case failed, non-discovery demonstrated with CTP's own rule; a second control covers the journal parser |
 | Activation evidence from a debug-build run recorded with applicability conditions | met (§4) — `inv-T14-0002`; evidence is `proven` rather than `reused` in both configurations |
 | Hand-written manifest and matrix row per ticket 12's schemas, in the evidence home; run time recorded for ticket 17 | met — two manifests, two attempt records, two replay-bundle indexes and four matrix rows, all validating; `tools/check_campaign_records.py` passes |
-| Work committed locally; nothing pushed | met — testcase commit `1a4afcb35`, no push, no pull request |
+| Work committed locally; nothing pushed | met — testcase commit `8d4f189ac`, no push, no pull request |
 
 ## 8. What the review changed
 
@@ -220,6 +220,12 @@ The Spec reviewer independently re-derived the sizes, the digests, the chunk cou
 
 Two smaller points were also acted on: the `applicability` block is now filled in on every evidence record rather than left null, which is what criterion 7's "recorded with applicability conditions" asks for; and the coexistence run, which no criterion asked for, is labelled as the implementation workflow's verification step rather than as coverage.
 
+### Confirmation passes
+
+Both reviewers then verified their findings against the artifacts rather than against my report, and both closed their axes. Three of their own recommendations were withdrawn in the process, which is worth recording because in each case the disposition that survived was better than the one originally proposed: deleting the probe scripts would have destroyed the evidence of the provenance overclaim the Spec axis went on to find; the negative control's missing attempt record was a legibility gap, fixed by a README and by splitting the runs table, not by fabricating a FAIL attempt; and `validate_records.py` is not a duplicate of `check_campaign_records.py`, which never reads a ticket's records. One correction went the other way: the Standards report said a non-zero `cubrid server start` triggers `do_save_snapshot_by_type`, when it fires only if `should_save_snapshot_for_recovery` matches the failure text — accepted, and it does not change the fix.
+
+The Spec axis left one residual, minor and non-blocking, which is fixed in revision 4: `do_cleanup`'s preservation copies discarded their errors with `2>/dev/null`, so a full filesystem or a permission problem would have left an empty directory and nobody told. Every step is now checked and a failed copy is reported as a further NOK. Because that copy is the only image a failing run leaves behind, a silent loss there is precisely the failure mode this campaign exists to prevent — so it was fixed here rather than deferred to the tickets that inherit the helper.
+
 ## 9. What this does not claim
 
 - **It does not claim coverage.** Two requirements of the sixty-three are executed. Forty-nine assertable or observation-only requirements still have no executed case, and they are listed in both manifests; tickets 18 to 22 and 23 to 32 close them.
@@ -231,6 +237,6 @@ Two smaller points were also acted on: the `applicability` block is now filled i
 
 ## 10. Decision requests
 
-1. **Fast-tier placement of crash-recovery workloads.** §5 measures 14 s and 17 s. Ticket 17 should decide whether crash and restart cases sit in the fast tier on that evidence, given that they take a server down and back up.
+1. **Fast-tier placement of crash-recovery workloads.** §5 measures 11 s and 16 s. Ticket 17 should decide whether crash and restart cases sit in the fast tier on that evidence, given that they take a server down and back up.
 2. **Cap enforcement.** The launcher timeout is deliberately above the campaign's per-case cap so that CTP cannot destroy a crash case's evidence. Ticket 15 owns enforcing the cap with evidence capture instead; until it does, caps on the shell seam are measured, not enforced.
 3. **Namespace isolation as a campaign-wide rule.** It worked here without privileges and it removes the need to stop unrelated CUBRID processes by hand, which ticket 13 had to do. Recommend making `campaign_ns.sh` a precondition of every private shell invocation, and of public SQL invocations too. Ports remain allocated rather than isolated.

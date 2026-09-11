@@ -9,6 +9,16 @@ invocation. No ticket criterion asked for it either; it was run as the verificat
 of this session's implementation workflow, and it is recorded here rather than claimed as
 coverage.
 
+WHICH VERSION OF THE CASE THIS EXERCISED, and why it was not re-run. This invocation ran
+the case as committed at revision 3; the committed case is revision 4. The whole
+difference between them is the failure-preservation path, which is guarded by
+`[ ${nok_count} -gt 0 ]` and which this run never entered, because the case passed. The
+diff is in case-version-delta.diff, so the claim is checkable rather than asserted: it
+adds preserve_failure_database() and replaces the two unchecked `cp -a … 2>/dev/null`
+calls inside that branch. Re-running the bucket would have cost seven minutes and proved
+nothing the diff does not; the failure path itself is exercised by att-T14-0019, which
+journalled preservation|ok.
+
 Result (summary.txt):
 
   Total Case 11, Execution 11, Success 9, Fail 2, Skip 0, 397 s wall time
