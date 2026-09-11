@@ -1,0 +1,33 @@
+{
+  "declaration_version": 1,
+  "description": "Declared case list for REVISION 1 of ticket 13's public tracer bullet (testcase commit 37b1ceff8), used only to regenerate inv-T13-0001 from its retained bundle: revision 1's oracle fixed the hand-derived assertion count at 15 (5 scalars per row group x 2, 3 in the aggregate, 2 INSERT counts). The declared count is per case revision, which is why this file exists beside ticket13-public-tracer.json.",
+  "repository": "testcases",
+  "runner": "ctp-sql",
+  "scenario": "sql/_36_guava/cbrd_26659",
+  "tier": "fast",
+  "page_size": 16384,
+  "run_mode": "client-server",
+  "cases": {
+    "cbrd_26659_oos_rep02_largest_first": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql",
+      "requirements": ["OOS-REP-01", "OOS-REP-02", "OOS-SQL-01"],
+      "expected_assertions": 15,
+      "assertion_count_derivation": "hand-derived from expected-oracle.md revision 1: 5 scalars per row group x 2 row groups + 3 in the final aggregate + 2 INSERT affected-row counts",
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_cs.sh",
+        "args": ["t15chk16k", "3024"],
+        "channel": "show-heap-oos",
+        "database": "t15chk16k",
+        "applicability": {
+          "fixture": "Same CREATE TABLE and the same two INSERT statements as revision 1 of the case (revision 2 changed only keyword case and the SELECT projections), on a table the checker owns exclusively in its own database.",
+          "execution_path": "The checker ran in a different run mode from the CTP case (declared applicability for that situation only). Same OOS operation, INSERT-side demotion; certifies no scan, recovery or vacuum path. Accepted reading of 'execution path must match' = same OOS operation, not same run mode (user decision O2, ticket 35).",
+          "engine_configuration": "Same pinned engine commit and install, same page size, unmodified build, no instrumentation.",
+          "conditions": "Single session, no concurrency, no fault injection, empty table at the start, no vacuum or restart in between.",
+          "source_manifest": "the manifest of the invocation that ran the checker"
+        }
+      }
+    }
+  }
+}

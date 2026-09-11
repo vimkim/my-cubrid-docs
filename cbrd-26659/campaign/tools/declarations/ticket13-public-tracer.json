@@ -1,0 +1,33 @@
+{
+  "declaration_version": 1,
+  "description": "Declared case list for ticket 13's public tracer-bullet scenario. Tooling input only: the testcase repository does not depend on it. Requirement IDs come from the case's own header and expected-oracle.md; the hand-derived assertion count is recorded here because the CTP SQL runner has no counter (ticket 35 F3).",
+  "repository": "testcases",
+  "runner": "ctp-sql",
+  "scenario": "sql/_36_guava/cbrd_26659",
+  "tier": "fast",
+  "page_size": 16384,
+  "run_mode": "client-server",
+  "cases": {
+    "cbrd_26659_oos_rep02_largest_first": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql",
+      "requirements": ["OOS-REP-01", "OOS-REP-02", "OOS-SQL-01"],
+      "expected_assertions": 27,
+      "assertion_count_derivation": "hand-derived from expected-oracle.md revision 2: 11 scalars per row group x 2 row groups + 3 in the final aggregate + 2 INSERT affected-row counts; justified only because CTP compares the whole result text, so a byte-identical .result entails that all 27 matched",
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_cs.sh",
+        "args": ["t15chk16k", "3024"],
+        "channel": "show-heap-oos",
+        "database": "t15chk16k",
+        "applicability": {
+          "fixture": "Same two rows of (id INT PRIMARY KEY, big BIT VARYING, small BIT VARYING) with the same byte patterns and sizes as the case, inserted in the same order, on a table the checker owns exclusively in its own database.",
+          "execution_path": "The checker ran in a different run mode from the CTP case (declared applicability for that situation only). Same OOS operation, INSERT-side demotion; certifies no scan, recovery or vacuum path. Accepted reading of 'execution path must match' = same OOS operation, not same run mode (user decision O2, ticket 35).",
+          "engine_configuration": "Same pinned engine commit and install, same page size, unmodified build, no instrumentation.",
+          "conditions": "Single session, no concurrency, no fault injection, empty table at the start, no vacuum or restart in between; SHOW HEAP OOS reports per class, so exclusive ownership of the table attributes the chunk count to this fixture.",
+          "source_manifest": "the manifest of the invocation that ran the checker"
+        }
+      }
+    }
+  }
+}

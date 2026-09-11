@@ -1,0 +1,22 @@
+{
+  "declaration_version": 1,
+  "description": "CONTROL C04 (ticket 15 criterion 3): a synthetic shell case under the ticket 15 storage whose every assertion is a SKIP with a reason and whose case_outcome is SKIP. CTP counts it as a success (no NOK); the tooling must record SKIP, never PASS, with the reason, and its OOS-path evidence must stay missing. The requirement id is any valid catalogue id; the run is a control and never reaches the matrix.",
+  "repository": "testcases-private-ex",
+  "runner": "ctp-shell",
+  "scenario": "shell/_06_issues/_26_2h",
+  "tier": "fast",
+  "page_size": 16384,
+  "run_mode": "client-server",
+  "cases": {
+    "t15_skip_only": {
+      "path": "control: <ticket15 storage>/scenarios/c04-skiponly/t15_skip_only/cases/t15_skip_only.sh (not in the repository)",
+      "requirements": ["OOS-DUR-01"],
+      "expected_assertions": 0,
+      "single_session": true,
+      "oos_evidence": {
+        "channel": "other",
+        "activation_markers": [{"file": "operations.journal", "regex": "never-present"}]
+      }
+    }
+  }
+}

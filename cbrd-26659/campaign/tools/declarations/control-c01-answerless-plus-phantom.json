@@ -1,0 +1,23 @@
+{
+  "declaration_version": 1,
+  "description": "CONTROL C01 (ticket 15 criterion 2 and ticket 22's need): the declared list names two cases; the scenario copy under the ticket 15 storage carries the real case WITHOUT its .answer (CTP then lists it in notRunList with isSuccessFul=true and execute_case:0, ticket 13 finding a) and does not carry the second, phantom case at all. Both must surface as failures of proof: case-not-executed and case-not-discovered. Never a pass.",
+  "repository": "testcases",
+  "runner": "ctp-sql",
+  "scenario": "sql/_36_guava/cbrd_26659",
+  "tier": "fast",
+  "page_size": 16384,
+  "run_mode": "client-server",
+  "cases": {
+    "cbrd_26659_oos_rep02_largest_first": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql",
+      "requirements": ["OOS-REP-01", "OOS-REP-02", "OOS-SQL-01"],
+      "expected_assertions": 27,
+      "single_session": true
+    },
+    "cbrd_26659_oos_phantom_removed_case": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_phantom_removed_case.sql",
+      "requirements": ["OOS-SQL-01"],
+      "single_session": true
+    }
+  }
+}
