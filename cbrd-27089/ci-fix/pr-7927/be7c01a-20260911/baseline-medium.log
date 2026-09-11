@@ -1,0 +1,100 @@
+
+CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit debug build for Linux) (Sep 10 2026 16:15:40)
+
+0edcc7a3947688886688f45bffcaeebc75ad2e9dc846f04a04b58b7abd2d24ac  /mnt/bin/cub_server
+9a3db918bc01738666bbb1ede762da973a714090c15e6709c78b7dc9c825ba69  /mnt/lib/libcubridsa.so
+
+====================================== MEDIUM ==========================================
+[MEDIUM] TEST STARTED (Fri Sep 11 17:50:39 KST 2026)
+
+[MEDIUM] CONFIG FILE: /home/vimkim/.cache/codex/pr7927-be7c01a/baseline/medium.conf
+[sql/cubrid.conf]
+max_plan_cache_entries=1000
+unicode_input_normalization=no
+ha_mode=yes
+test_mode=yes
+lock_timeout=10sec
+cubrid_port_id=1822
+
+[sql/cubrid_ha.conf]
+ha_mode=yes
+ha_apply_max_mem_size=300
+ha_port_id=59901
+
+[sql/cubrid_broker.conf]
+
+[sql/cubrid_broker.conf/%BROKER1]
+APPL_SERVER_SHM_ID=33120
+BROKER_PORT=33120
+
+[sql]
+need_make_locale=no
+enable_memory_leak=no
+jdbc_config_file=test_default.xml
+testcase_update_yn=false
+data_file=/home/vimkim/temp/pr7927-testcases-b10727d/medium/files/mdb.tar.gz
+test_category=medium
+testcase_exclude_from_file=/home/vimkim/.cache/codex/pr7927-be7c01a/medium-exclude.txt
+db_charset=en_US
+scenario=/home/vimkim/temp/pr7927-testcases-b10727d/medium
+
+[sql/cubrid_broker.conf/%query_editor]
+SERVICE=OFF
+
+[sql/cubrid_broker.conf/broker]
+MASTER_SHM_ID=33122
+
+
+----------END OF FILE----------
+stop database mdb
+Could not connect to master server on localhost
+cubrid manager server is not installed.
+delete database mdb
+Database "mdb" is unknown, or the file "databases.txt" cannot be accessed.
+Filtering out deprecated parameters for CUBRID 11.5+
+start config ha
+Don't need  make locale since you configure need_make_locale=no !
+MAKE mdb DATABASE (default size)...
+cubrid createdb  mdb en_US
+Load Initial Data...
+mdb_indexes
+tar: mdb_indexes: Cannot change ownership to uid 1106, gid 1003: Invalid argument
+mdb_objects
+tar: mdb_objects: Cannot change ownership to uid 1106, gid 1003: Invalid argument
+mdb_schema
+tar: mdb_schema: Cannot change ownership to uid 1106, gid 1003: Invalid argument
+tar: Exiting with failure status due to previous errors
+optimizedb mdb...
+start database mdb
+++ cubrid service is not running.
+@ cubrid master start
+++ cubrid master start: success
+@ cubrid broker start
+++ cubrid broker start: success
+start database mdb
+restart broker...
+Result Root Dir:/home/vimkim/.cache/codex/pr7927-be7c01a/baseline/CTP/sql/result/y2026/m9/schedule_linux_medium_64bit_1117511931_11.5.0.2648-f4299ac
+
+
+---------------execute begin--------------------
+[17:51:20] Testing /home/vimkim/temp/pr7927-testcases-b10727d/medium/_02_xtests/cases/to_char_order_by.sql (1/3 33.33%) [NOK]
+[17:51:20] Testing /home/vimkim/temp/pr7927-testcases-b10727d/medium/_02_xtests/cases/to_number_order_by.sql (2/3 66.67%) [NOK]
+[17:51:20] Testing /home/vimkim/temp/pr7927-testcases-b10727d/medium/_02_xtests/cases/to_timestamp_order_by.sql (3/3 100.00%) [NOK]
+---------------execute end  --------------------
+
+-----------------------
+Fail:3
+Success:0
+Total:3
+Elapse Time:168
+Test Log:/home/vimkim/.cache/codex/pr7927-be7c01a/baseline/CTP/sql/log/medium_11.5.0.2648-f4299ac_1789116639.log
+Test Result Directory:/home/vimkim/.cache/codex/pr7927-be7c01a/baseline/CTP/sql/result/y2026/m9/schedule_linux_medium_64bit_1117511931_11.5.0.2648-f4299ac
+-----------------------
+
+stop database mdb
+delete database mdb
+-----------------------
+Testing End!
+-----------------------
+[MEDIUM] TEST END (Fri Sep 11 17:51:28 KST 2026)
+[MEDIUM] ELAPSE TIME: 49 seconds

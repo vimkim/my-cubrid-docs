@@ -1,0 +1,123 @@
+
+CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit debug build for Linux) (Sep 10 2026 16:15:40)
+
+0edcc7a3947688886688f45bffcaeebc75ad2e9dc846f04a04b58b7abd2d24ac  /mnt/bin/cub_server
+9a3db918bc01738666bbb1ede762da973a714090c15e6709c78b7dc9c825ba69  /mnt/lib/libcubridsa.so
+
+====================================== SQL ==========================================
+[SQL] TEST STARTED (Fri Sep 11 17:48:45 KST 2026)
+
+[SQL] CONFIG FILE: /home/vimkim/.cache/codex/pr7927-be7c01a/baseline/sql.conf
+[sql/cubrid_broker.conf/%BROKER1]
+APPL_SERVER_SHM_ID=33120
+APPL_SERVER_MAX_SIZE=100M
+BROKER_PORT=33120
+
+[sql/cubrid_broker.conf/broker]
+MASTER_SHM_ID=33122
+
+[sql]
+need_make_locale=no
+jdbc_config_file=test_default.xml
+scenario=/home/vimkim/temp/pr7927-testcases-b10727d/sql
+enable_memory_leak=no
+test_category=sql
+testcase_update_yn=false
+db_charset=en_US
+testcase_exclude_from_file=/home/vimkim/.cache/codex/pr7927-be7c01a/sql-exclude.txt
+
+[sql/cubrid.conf]
+cubrid_port_id=1822
+test_mode=yes
+ha_mode=yes
+unicode_input_normalization=no
+lock_timeout=10sec
+java_stored_procedure=yes
+max_plan_cache_entries=1000
+
+[sql/cubrid_broker.conf]
+
+[sql/cubrid_ha.conf]
+ha_apply_max_mem_size=300
+ha_port_id=59901
+ha_mode=yes
+
+[sql/cubrid_broker.conf/%query_editor]
+SERVICE=OFF
+
+
+----------END OF FILE----------
+stop database basic
+Could not connect to master server on localhost
+cubrid manager server is not installed.
+delete database basic
+Database "basic" is unknown, or the file "databases.txt" cannot be accessed.
+Filtering out deprecated parameters for CUBRID 11.5+
+start config ha
+Don't need  make locale since you configure need_make_locale=no !
+MAKE basic DATABASE (default size)...
+cubrid createdb  basic en_US.utf8
+Load Java Stored Procedure Classes
+rm: cannot remove '*.class': No such file or directory
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: SpTest6.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+Load jdbc_cubrid415.class...
+Load SpTest1.class...
+Load SpTest2.class...
+Load SpTest3.class...
+Load SpTest4bit64.class...
+Load SpTest4.class...
+Load SpTest5.class...
+Load SpTest6.class...
+Load SpTest7.class...
+Load SpTest8.class...
+Load SpTest9.class...
+Load SpTest.class...
+start database basic
+++ cubrid service is not running.
+@ cubrid master start
+++ cubrid master start: success
+@ cubrid broker start
+++ cubrid broker start: success
+start database basic
+restart broker...
+Result Root Dir:/home/vimkim/.cache/codex/pr7927-be7c01a/baseline/CTP/sql/result/y2026/m9/schedule_linux_sql_64bit_1117492431_11.5.0.2648-f4299ac
+
+
+---------------execute begin--------------------
+[17:49:39] Testing /home/vimkim/temp/pr7927-testcases-b10727d/sql/_05_plcsql/_01_testspec/_05_bug_fix/cases/19_user_cursor_system_view.sql (1/16 6.25%) [NOK]
+[17:49:41] Testing /home/vimkim/temp/pr7927-testcases-b10727d/sql/_13_issues/_14_1h/cases/bug_bts_10516.sql (2/16 12.50%) [NOK]
+[17:49:48] Testing /home/vimkim/temp/pr7927-testcases-b10727d/sql/_13_issues/_14_1h/cases/bug_bts_13199.sql (3/16 18.75%) [NOK]
+[17:49:52] Testing /home/vimkim/temp/pr7927-testcases-b10727d/sql/_13_issues/_14_1h/cases/bug_bts_13884.sql (4/16 25.00%) [NOK]
+[17:49:53] Testing /home/vimkim/temp/pr7927-testcases-b10727d/sql/_13_issues/_14_1h/cases/bug_bts_6494.sql (5/16 31.25%) [NOK]
+[17:49:53] Testing /home/vimkim/temp/pr7927-testcases-b10727d/sql/_13_issues/_23_1h/cases/cbrd_24843_1.sql (6/16 37.50%) [NOK]
+[17:49:54] Testing /home/vimkim/temp/pr7927-testcases-b10727d/sql/_13_issues/_23_1h/cases/cbrd_24906_1.sql (7/16 43.75%) [NOK]
+[17:49:55] Testing /home/vimkim/temp/pr7927-testcases-b10727d/sql/_13_issues/_23_1h/cases/cbrd_24906_2.sql (8/16 50.00%) [NOK]
+[17:49:57] Testing /home/vimkim/temp/pr7927-testcases-b10727d/sql/_15_fbo/_02_qa_test/cases/fbo_ddl02.sql (9/16 56.25%) [NOK]
+[17:50:05] Testing /home/vimkim/temp/pr7927-testcases-b10727d/sql/_22_news_service_mysql_compatibility/_03_hint_rewriting/cases/_09_join_1.sql (10/16 62.50%) [NOK]
+[17:50:05] Testing /home/vimkim/temp/pr7927-testcases-b10727d/sql/_33_elderberry/cbrd_24011/cases/nullable_outer_join.sql (11/16 68.75%) [NOK]
+[17:50:06] Testing /home/vimkim/temp/pr7927-testcases-b10727d/sql/_33_elderberry/cbrd_24011/cases/on_cond.sql (12/16 75.00%) [NOK]
+[17:50:06] Testing /home/vimkim/temp/pr7927-testcases-b10727d/sql/_33_elderberry/cbrd_24042/cbrd_24182/cases/dnf.sql (13/16 81.25%) [NOK]
+[17:50:06] Testing /home/vimkim/temp/pr7927-testcases-b10727d/sql/_35_fig_cake/cbrd_24044/cbrd_25214/cases/cbrd_25214.sql (14/16 87.50%) [NOK]
+[17:50:07] Testing /home/vimkim/temp/pr7927-testcases-b10727d/sql/_35_fig_cake/cbrd_25382/cases/cbrd_25382_1.sql (15/16 93.75%) [NOK]
+[17:50:10] Testing /home/vimkim/temp/pr7927-testcases-b10727d/sql/_36_guava/cbrd_26599/cases/cbrd_26599.sql (16/16 100.00%) [NOK]
+---------------execute end  --------------------
+
+-----------------------
+Fail:16
+Success:0
+Total:16
+Elapse Time:35148
+Test Log:/home/vimkim/.cache/codex/pr7927-be7c01a/baseline/CTP/sql/log/sql_11.5.0.2648-f4299ac_1789116525.log
+Test Result Directory:/home/vimkim/.cache/codex/pr7927-be7c01a/baseline/CTP/sql/result/y2026/m9/schedule_linux_sql_64bit_1117492431_11.5.0.2648-f4299ac
+-----------------------
+
+stop database basic
+delete database basic
+-----------------------
+Testing End!
+-----------------------
+[SQL] TEST END (Fri Sep 11 17:50:23 KST 2026)
+[SQL] ELAPSE TIME: 98 seconds

@@ -1,0 +1,19 @@
+--- expected
++++ baseline-and-candidate
+@@ -1163,7 +1163,7 @@
+ Query plan:
+ hash-join (inner join)
+     edge:  term[?]
+-    outer: hash-join (inner join)
++    outer: nl-join (inner join)
+                edge:  term[?]
+                outer: nl-join (inner join)
+                           edge:  term[?]
+@@ -1178,6 +1178,7 @@
+                           cost:  ? card ?
+                inner: sscan
+                           class: cust node[?]
++                          sargs: term[?]
+                           cost:  ? card ?
+                cost:  ? card ?
+     inner: sscan

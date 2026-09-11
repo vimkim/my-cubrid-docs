@@ -1,0 +1,34 @@
+--- expected
++++ baseline-and-candidate
+@@ -138,13 +138,14 @@
+ Query stmt:
+ (select tab_b.col_a from tab_b tab_b group by tab_b.col_a)
+ Query plan:
+-hash-join (left outer join)
++nl-join (left outer join)
+     edge:  term[?]
+     outer: sscan
+                class: a node[?]
+                cost:  ? card ?
+     inner: sscan
+                class: b node[?]
++               sargs: term[?] AND term[?]
+                cost:  ? card ?
+     after: term[?]
+     cost:  ? card ?
+@@ -166,13 +167,14 @@
+ Query stmt:
+ (select b.col_a from tab_b b group by b.col_a)
+ Query plan:
+-hash-join (left outer join)
++nl-join (left outer join)
+     edge:  term[?]
+     outer: sscan
+                class: a node[?]
+                cost:  ? card ?
+     inner: sscan
+                class: b node[?]
++               sargs: term[?] AND term[?]
+                cost:  ? card ?
+     after: term[?]
+     cost:  ? card ?

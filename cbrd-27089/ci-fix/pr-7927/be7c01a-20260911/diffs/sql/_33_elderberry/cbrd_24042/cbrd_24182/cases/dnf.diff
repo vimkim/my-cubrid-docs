@@ -1,0 +1,21 @@
+--- expected
++++ baseline-and-candidate
+@@ -26,14 +26,13 @@
+ Query plan:
+ idx-join (inner join)
+     outer: iscan
+-               class: b node[?]
+-               index: idx term[?] (covers)
++               class: a node[?]
++               index: idx_a term[?] AND term[?]
+                cost:  ? card ?
+     inner: iscan
+-               class: a node[?]
+-               index: idx term[?] AND term[?]
++               class: b node[?]
++               index: idx term[?] AND term[?] (covers)
+                filtr: term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?] AND term[?]
+-               sargs: term[?]
+                cost:  ? card ?
+     cost:  ? card ?
+ Query stmt:

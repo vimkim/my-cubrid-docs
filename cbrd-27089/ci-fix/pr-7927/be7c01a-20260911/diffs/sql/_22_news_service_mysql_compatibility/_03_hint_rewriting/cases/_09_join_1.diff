@@ -1,0 +1,30 @@
+--- expected
++++ baseline-and-candidate
+@@ -59,11 +59,11 @@
+                subplan: idx-join (inner join)
+                             outer: iscan
+                                        class: t? node[?]
+-                                       index: i?_abcd term[?] (covers)
++                                       index: i?_a term[?]
+                                        cost:  ? card ?
+                             inner: iscan
+                                        class: t? node[?]
+-                                       index: i?_a term[?]
++                                       index: i?_abcd term[?] (covers)
+                                        filtr: term[?]
+                                        cost:  ? card ?
+                             cost:  ? card ?
+@@ -92,11 +92,11 @@
+                subplan: idx-join (inner join)
+                             outer: iscan
+                                        class: t? node[?]
+-                                       index: i?_abcd term[?] (covers)
++                                       index: i?_a term[?]
+                                        cost:  ? card ?
+                             inner: iscan
+                                        class: t? node[?]
+-                                       index: i?_a term[?]
++                                       index: i?_abcd term[?] (covers)
+                                        filtr: term[?]
+                                        cost:  ? card ?
+                             cost:  ? card ?
