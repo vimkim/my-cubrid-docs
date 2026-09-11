@@ -4,11 +4,11 @@
   "producer": {
     "kind": "hand-written",
     "name": "Claude Opus 5 (1M context), campaign ticket 14",
-    "version": "revision 5, after both reviewers' confirmation passes"
+    "version": "revision 6, after both reviewers verified the revised code"
   },
   "invocation": {
-    "started_at": "2026-09-11T14:40:19+09:00",
-    "ended_at": "2026-09-11T14:40:44+09:00",
+    "started_at": "2026-09-11T14:52:38+09:00",
+    "ended_at": "2026-09-11T14:53:04+09:00",
     "tier": "fast",
     "caps": {
       "invocation_seconds": 900,
@@ -35,7 +35,7 @@
     "testcase": {
       "repository": "testcases-private-ex",
       "branch": "CBRD-26659-oos-testcases-handover",
-      "commit": "f59074bc5744392ec36a1269f7886feeeba0cbde",
+      "commit": "c3d1e71466f93c8a4bc3ef7e0d3ee904f78b3122",
       "base_commit": "e9c2d86874b9c08cdd72b120c2ead84f525e15fc",
       "worktree": "/home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659"
     },
@@ -76,12 +76,12 @@
     "runner": {
       "kind": "ctp-shell",
       "ctp_fingerprint": "sha256:e7c8ef04ee377d5fd33d82ad237210ee0c0c509c7b643787ba5f2137d69e6347",
-      "command": "run_attempt.sh att-T14-0021 debug_gcc <scenario>, which runs: unshare --user --map-current-user --pid --fork --mount-proc --ipc -- /home/vimkim/CTP/bin/ctp.sh shell -c <bundle>/shell_cbrd26659.conf",
+      "command": "run_attempt.sh att-T14-0024 debug_gcc <scenario>, which runs: unshare --user --map-current-user --pid --fork --mount-proc --ipc -- /home/vimkim/CTP/bin/ctp.sh shell -c <bundle>/shell_cbrd26659.conf",
       "scenario_selection": "/home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659/shell/_06_issues/_26_2h/cbrd_26659_oos_dur01"
     }
   },
   "expected": {
-    "case_list": "cbrd-26659/campaign/evidence/ticket14/att-T14-0021/dispatch_tc_ALL.txt",
+    "case_list": "cbrd-26659/campaign/evidence/ticket14/att-T14-0024/dispatch_tc_ALL.txt",
     "case_list_hash": "sha256:432dbdd88c341034a0c2729121e5b0c5966af653534f4a896d8b63a5e8f98a13",
     "case_count": 1,
     "assertion_count": 17
@@ -99,7 +99,7 @@
   "proof": {
     "verdict": "proven",
     "launcher_exit_status": 0,
-    "setup_log": "cbrd-26659/campaign/evidence/ticket14/att-T14-0021/summary.txt",
+    "setup_log": "cbrd-26659/campaign/evidence/ticket14/att-T14-0024/summary.txt",
     "mismatches": []
   },
   "cases": [
@@ -123,7 +123,7 @@
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0021/show_heap_oos_after_insert.out",
+        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0024/show_heap_oos_after_insert.out",
         "applicability": {
           "fixture": "Identical, because it is the same run: the four rows of (id INT, v BIT VARYING) at 4,036 AA / 16,284 BB / 4,011 CC / 4,036 DD that the assertions judge are the rows SHOW HEAP OOS counted, in a database the case created, owns exclusively and deletes.",
           "execution_path": "IDENTICAL, which is why this is proven and not reused. The SHOW HEAP OOS statement ran in the same CTP invocation, against the same client-server server process, in the same session sequence as the INSERT it certifies -- once immediately after the committed INSERT and once after the restart. It certifies the INSERT-side demotion and the survival of the chains across recovery; it certifies no vacuum or reclaim path, which is why the post-recovery count is asserted as a range.",
@@ -134,10 +134,10 @@
       },
       "attempts": [
         {
-          "attempt_id": "att-T14-0021",
-          "attempt_record": "cbrd-26659/campaign/evidence/ticket14/att-T14-0021.json",
-          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket14/attempts/att-T14-0021",
-          "bundle_hash": "sha256:426be3ce9008faed504d38360e52c0b38e5ee81be901b6e3b28728b27fbf1383"
+          "attempt_id": "att-T14-0024",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket14/att-T14-0024.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket14/attempts/att-T14-0024",
+          "bundle_hash": "sha256:a1d6a97719a21a414905c9d250f50e0ddca24b5502c97cbce3b7229b3ae10e6d"
         }
       ],
       "outstanding": null
@@ -208,7 +208,7 @@
       "OOS-RES-05",
       "OOS-RES-06"
     ],
-    "note": "The debug configuration of the same tracer-bullet case, run so that the one capability-gated assertion inv-T14-0001 had to skip actually executes. All 17 ran and passed, and the OOS activation evidence is proven in this invocation too, from this invocation's own SHOW HEAP OOS output. One observation worth carrying forward for the reclaim and vacuum tickets: this run's oos.log already held four oos_delete lines from vacuum before the case's standalone step ran, so on the debug build vacuum did reclaim the two dead chains within roughly three seconds of the restart, whereas the earlier probe on the same build saw nothing within three seconds. The assertion is written as an increase over the pre-step count precisely because vacuum timing is not something a durability case may depend on. The requirements listed as without an executed case are the same 49 as in inv-T14-0001 and for the same reason; this manifest adds a configuration, not coverage. THE CASE OUTCOME IN THIS MANIFEST IS THE CASE'S OWN, not CTP's success count: CTP has only PASS and FAIL per case, so the case writes PASS, FAIL or SKIP with a reason into <evidence>/case_outcome and the runner surfaces it. A run where SHOW HEAP OOS was unavailable would record SKIP there even with every executed assertion passing, because durability would be proved while the out-of-row path was never observed. This run's file reads PASS. The failure-preservation copy is itself checked in this revision: every step's exit status is tested and a failure is reported as a further NOK, because with CTP's snapshot channel switched off this copy is the only image a failing run leaves behind. att-T14-0022 exercised the path and journalled preservation|ok. The activation channel's own failure classifier has three outcomes, not two: only a syntax error is a capability gap, anything else is a failure of this case. Its controlled failure examples are in tools/checker_validation_classifier.sh."
+    "note": "The debug configuration of the same tracer-bullet case, run so that the one capability-gated assertion inv-T14-0001 had to skip actually executes. All 17 ran and passed, and the OOS activation evidence is proven in this invocation too, from this invocation's own SHOW HEAP OOS output. One observation worth carrying forward for the reclaim and vacuum tickets: this run's oos.log already held four oos_delete lines from vacuum before the case's standalone step ran, so on the debug build vacuum did reclaim the two dead chains within roughly three seconds of the restart, whereas the earlier probe on the same build saw nothing within three seconds. The assertion is written as an increase over the pre-step count precisely because vacuum timing is not something a durability case may depend on. The requirements listed as without an executed case are the same 49 as in inv-T14-0001 and for the same reason; this manifest adds a configuration, not coverage. THE CASE OUTCOME IN THIS MANIFEST IS THE CASE'S OWN, not CTP's success count: CTP has only PASS and FAIL per case, so the case writes PASS, FAIL or SKIP with a reason into <evidence>/case_outcome and the runner surfaces it. A run where SHOW HEAP OOS was unavailable would record SKIP there even with every executed assertion passing, because durability would be proved while the out-of-row path was never observed. This run's file reads PASS. The failure-preservation copy is itself checked in this revision: every step's exit status is tested and a failure is reported as a further NOK, because with CTP's snapshot channel switched off this copy is the only image a failing run leaves behind. att-T14-0025 exercised the path and journalled preservation|ok. The activation channel's own failure classifier has three outcomes, not two: only a syntax error is a capability gap, anything else is a failure of this case. Its controlled failure examples are in tools/checker_validation_classifier.sh. The activation channel reads its column positions from the output's own header, so a reordering in the engine's show_meta.c cannot be read silently as the wrong columns."
   },
   "answer_promotions": []
 }

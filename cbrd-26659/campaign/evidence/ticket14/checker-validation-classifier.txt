@@ -1,12 +1,23 @@
-ok   a real answer row -> 0
-ok   a parser lacking the statement -> 1
-ok   a connection failure -> 2
-ok   an authorization error -> 2
-ok   unknown class naming this very class -> 2
-ok   a truncated row (fewer columns) -> 2
-ok   empty output -> 2
+ok   1 a real answer row -> 0
+ok   2 a parser lacking the statement -> 1
+ok   3 a connection failure -> 2
+ok   4 an authorization error -> 2
+ok   5 unknown class naming this very class -> 2
+ok   6 a truncated row -> 2
+ok   7 empty output -> 2
+ok   8 a class with no OOS file -> 0
+ok   8 has_oos on that row = 0
+ok   8 chunks on that row = 0
+ok   9 the columns reordered -> 0
+ok   9 has_oos read by name = 1
+ok   9 chunks read by name = 4
+ok   10 Oos_num_recs renamed -> 2
+ok   11 a row with no header -> 2
+ok   12 a near-miss class name -> 2
 
-field extraction from the real row: has_oos=1 chunks=4 sumlen=24444
-field extraction from an error:     []
+ok   field extraction from the real row (has_oos) = 1
+ok   field extraction from the real row (chunks) = 4
+ok   field extraction from the real row (sumlen) = 24444
+ok   field extraction from an error = 
 failures=0
 exit=0

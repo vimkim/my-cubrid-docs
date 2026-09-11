@@ -2,7 +2,7 @@
 
 > Observed: 2026-09-11 (KST). Engine baseline `f4299ac0cd777a2a964c1f197ae5ebf9841a4936` (ticket 11); normative context `f6543de` + sha256 `c9daf3c4…`; requirement catalogue sha256 `0cc33c82…` (ticket 12).
 > Author: Claude Opus 5 (1M context), for the [Adversarial OOS testcase campaign](/home/vimkim/gh/cb/CBRD-26659-oos-testcases-handover/.scratch/oos-adversarial/spec.md) ticket 14.
-> Revision 5, after both axes of a two-axis review and both confirmation passes; §8 lists what the reviews changed and everything was re-run.
+> Revision 6, after both axes of a two-axis review and three confirmation passes; §8 lists what the reviews changed and everything was re-run.
 > Records: [`evidence/ticket14/`](evidence/ticket14/) — the oracle and its derivation, the isolation demonstration and its live counterpart, two manifests, two attempt records, two replay-bundle indexes, four matrix rows, two checker validations, the format probes, and the per-attempt evidence.
 
 Vocabulary follows the [docs glossary](../../CONTEXT.md). This is the private suite's runner smoke check; all ten private case tickets (23 to 32) were blocked on it.
@@ -13,7 +13,7 @@ Vocabulary follows the [docs glossary](../../CONTEXT.md). This is the private su
 |---|---|
 | Private worktree | `/home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659`, branch `CBRD-26659-oos-testcases-handover` |
 | Base | `origin/develop` = `e9c2d86874b9c08cdd72b120c2ead84f525e15fc`, verified with `git ls-remote` **and** `git fetch` returning the same object before the worktree was created |
-| Testcase commit | `f59074bc5744392ec36a1269f7886feeeba0cbde`, local only. Nothing pushed, no pull request |
+| Testcase commit | `c3d1e71466f93c8a4bc3ef7e0d3ee904f78b3122`, local only. Nothing pushed, no pull request |
 | Case | `shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh`, covering `OOS-DUR-01` and `OOS-REP-07` |
 | Checker validation | `…/cbrd_26659_oos_dur01/cases/make_negative_control.sh` (a helper, never discovered as a case) |
 | Untouched | The canonical clone `/home/vimkim/cubrid-testcases-private-ex` is still on `develop` at `6eb3b19ba`; the three existing private worktrees (`tc/pr-6864`, `CBRD-27403-oos-error-code-answers`, `CBRD-27398-pgbuf-inspector-fixtures`) and their uncommitted changes were not read or written |
@@ -92,14 +92,14 @@ All on the pinned unmodified installs, 16 KiB pages, client-server, under the na
 
 | Attempt | Build | Cases | Assertions | Skips | Case | Outcome |
 |---|---|---|---|---|---|---|
-| `att-T14-0020` (`inv-T14-0001`) | release | expected 1, discovered 1, executed 1 | 16 executed, 16 OK, 0 NOK | 1 | 12 s (20 s invocation) | **PASS** |
-| `att-T14-0021` (`inv-T14-0002`) | debug | expected 1, discovered 1, executed 1 | 17 executed, 17 OK, 0 NOK | 0 | 16 s (25 s invocation) | **PASS** |
+| `att-T14-0023` (`inv-T14-0001`) | release | expected 1, discovered 1, executed 1 | 16 executed, 16 OK, 0 NOK | 1 | 14 s (25 s invocation) | **PASS** |
+| `att-T14-0024` (`inv-T14-0002`) | debug | expected 1, discovered 1, executed 1 | 17 executed, 17 OK, 0 NOK | 0 | 18 s (26 s invocation) | **PASS** |
 
 **Two supporting runs, neither of which is a campaign attempt.** They have no manifest, no attempt record and no matrix row, on purpose — one is checker validation and the other is a verification step — so their verdicts below are results, not coverage. Each directory carries a README saying why:
 
 | Run | Build | Cases | Assertions | Skips | Case | Result |
 |---|---|---|---|---|---|---|
-| `att-T14-0022` — checker validation | release | expected 1, discovered 1, executed 1 | 16 executed, 15 OK, **1 NOK** | 1 | 11 s (20 s invocation) | **FAIL**, as required of a negative control |
+| `att-T14-0025` — checker validation | release | expected 1, discovered 1, executed 1 | 16 executed, 15 OK, **1 NOK** | 1 | 13 s (20 s invocation) | **FAIL**, as required of a negative control |
 | `att-T14-0016-bucket` — coexistence | release | expected 11, discovered 11, executed 11 | this case: 16 OK, 0 NOK | 1 | 12 s (397 s invocation) | this case **PASS**; 2 sibling cases failed, see below |
 
 Each run also verified, by hashing before and after, that the pinned install's `conf` and `databases` came back byte-identical and that the user's own `~/.CUBRID_SHELL_FM` was neither read nor written: `install_conf_drift_lines=0`, `install_databases_drift_lines=0`, `user_shell_fm_drift_lines=0`. The testcase worktree was left with zero untracked files after every run.
@@ -131,7 +131,16 @@ Exactly one assertion failed and the case failed; the other fifteen still passed
 
 **It is kept outside the regression cases, and that is demonstrated rather than asserted.** CTP discovers a case iff the file name equals its **grandparent directory name plus `.sh`** — `Dispatch.getAllTestCaseScripts` runs `find … -name "*.sh" | awk -F / '{ if ($(NF-2)".sh" == $NF) print }'` — *not* because the directory is called `cases`. `make_negative_control.sh` does not match, which is the same reason the 272 other helper scripts that live inside a `cases/` directory in this repository are never run as cases. [`discovery.txt`](evidence/ticket14/discovery.txt) runs that exact command over the whole `_26_2h` bucket and shows the generator absent from all eleven discovered cases.
 
-**The activation channel's failure classifier.** A `SHOW HEAP OOS` that does not answer is classified three ways, not two: only a syntax error means the build lacks the statement and skips, and anything else — a disconnect, an authorization error, a renamed column, a class-name mismatch — is this case's problem and fails. Collapsing them would record a real failure as a capability gap, and since a SKIP line carries no NOK the case would pass with no activation evidence: the inverse of what the case is for. [`tools/checker_validation_classifier.sh`](evidence/ticket14/tools/checker_validation_classifier.sh) puts seven output shapes through it, including the one that caught a defect in the fix itself before it shipped — matching the bare class name also matches `ERROR: Unknown class "dba.oos_dur01".`, so an error read as an answer and fields were extracted from the error text. The shipped selector requires the quoted class name and the full column count, and feeds both the classification and the extraction so they cannot disagree about which line is the row. Output in [`checker-validation-classifier.txt`](evidence/ticket14/checker-validation-classifier.txt), `failures=0`.
+**The activation channel's failure classifier.** A `SHOW HEAP OOS` that does not answer is classified three ways, not two: only a syntax error means the build lacks the statement and skips, and anything else — a disconnect, an authorization error, a renamed column, a class-name mismatch — is this case's problem and fails. Collapsing them would record a real failure as a capability gap, and since a SKIP line carries no NOK the case would pass with no activation evidence: the inverse of what the case is for. [`tools/checker_validation_classifier.sh`](evidence/ticket14/tools/checker_validation_classifier.sh) puts **twelve** output shapes through it, and it has earned every one: the classifier has been wrong four times, and each defect would have passed a green run.
+
+| Defect | Caught by |
+|---|---|
+| Two outcomes and a catch-all, so any non-syntax failure read as a missing capability | the Standards confirmation pass |
+| Matching the bare class name, which also matches `ERROR: Unknown class "dba.oos_dur01".`, so an error read as an answer and fields came out of the error text | shape 5, while writing the fix for the first |
+| Hardcoded column positions — a row wide enough is not a row whose field 11 is still `Oos_num_recs`; a reordering in `show_meta.c` read silently as `has_oos=577`, `chunks=16344` | the Standards confirmation pass, second round |
+| A shell-quoting error in that fix, which made the class-name match look for a doubly-quoted name so no real row matched at all | shape 1, before it shipped |
+
+The shipped version requires the single-quoted class name (matched with `index()`, so the dots are not a regex), a header seen first, and a row at least as wide as that header; it reads each column by **name** from the output's own header rather than by position; and one selector feeds both the classification and the extraction so the two cannot disagree about which line is the row. A column the case needs that the header does not have is a failure, not a capability gap. Shape 8 — a class with no OOS file — is the one shape no run of this case can produce, so it is constructed from the engine source instead: `heap_oos.cpp` makes only `Oos_volume_id` and `Oos_file_id` null when `has_oos_file` is 0, and csql renders a NULL as the literal token `NULL`, so the row keeps its full width. That is precisely the shape where a wrong field count would have turned a real finding into a capability gap. Output in [`checker-validation-classifier.txt`](evidence/ticket14/checker-validation-classifier.txt), `failures=0`.
 
 **The acknowledgement parser.** The case's third checking mechanism turns `csql` output into the affected-row and error counts that `assert_txn` judges a committed transaction by. [`tools/checker_validation_journal.sh`](evidence/ticket14/tools/checker_validation_journal.sh) gives it controlled failures: a SQL error and a connection failure must both yield `affected=0` with `errors ≥ 1`. That matters because `csql` was observed exiting **0** while printing `ERROR: Failed to connect`, so a parser that read those shapes as success would let a transaction that never ran be journalled as acknowledged. Output in [`checker-validation-journal.txt`](evidence/ticket14/checker-validation-journal.txt), eleven checks, `failures=0`.
 
@@ -151,11 +160,11 @@ The case was also run in one invocation with all ten existing cases of its issue
 
 | | Case time | Invocation wall time |
 |---|---:|---:|
-| Release | 12 s | 20 s |
-| Debug | 16 s | 25 s |
+| Release | 14 s | 25 s |
+| Debug | 18 s | 26 s |
 | Whole 11-case bucket | — | 397 s |
 
-A crash-and-recovery case at 16 KiB costs well under 30 seconds end to end, so **this workload belongs in the fast tier**, not the scheduled one: 12 s against a 120 s per-case cap and a 900 s invocation cap. That is the second fast-tier data point after ticket 13's 39 s SQL case, and the first for the shell seam. The bucket figure is a useful second number for ticket 17: the whole existing `_26_2h` bucket plus this case runs in under seven minutes, so a fast-tier invocation that selects a whole issue bucket is still inside the 15-minute cap.
+A crash-and-recovery case at 16 KiB costs well under 30 seconds end to end, so **this workload belongs in the fast tier**, not the scheduled one: 14 s against a 120 s per-case cap and a 900 s invocation cap. That is the second fast-tier data point after ticket 13's 39 s SQL case, and the first for the shell seam. The bucket figure is a useful second number for ticket 17: the whole existing `_26_2h` bucket plus this case runs in under seven minutes, so a fast-tier invocation that selects a whole issue bucket is still inside the 15-minute cap.
 
 One deviation to record rather than hide: the launcher's own `testcase_timeout_in_secs` was set to 900, not to the tier's 120 s per-case cap, deliberately — CTP enforces its timeout with a kill, and a crash-recovery case truncated mid-restart would leave a running server and destroy its own evidence. The campaign cap is therefore currently judged from the measured time rather than enforced by the harness. **Enforcing caps with evidence capture belongs to ticket 15.**
 
@@ -179,7 +188,7 @@ Storage: the whole ticket occupies about 280 MiB under, almost all of it the neg
 
 **h. CTP's discovery rule is about the file name, not the directory name.** A script is a case iff its name equals its grandparent directory name plus `.sh`. Two consequences: a helper inside `cases/` is never run (272 already exist in this repository), and a case file renamed without renaming its directory silently stops being discovered.
 
-**i. A selector must match the shape of the row, not the name of the thing it carries.** This one cost two defects in one function and will recur in every case that reads a `SHOW` statement at the SQL seam. The activation check first decided "did `SHOW HEAP OOS` answer?" with `grep -q "dba.oos_dur01"`. That is a substring test against the class *name*, and the name also appears in `ERROR: Unknown class "dba.oos_dur01".` — so an error classified as an answer, and the field extraction then read columns out of the error text. The shipped selector requires the form csql actually prints for a data row, the **single-quoted** class name plus the full fourteen-column count, and one selector feeds both the classification and the extraction so the two cannot disagree about which line is the row. Generalized by the Standards confirmation pass, whose framing this is: match the shape of the row, and never let the code that decides "is there a row" differ from the code that reads it.
+**i. A selector must match the shape of the row, not the name of the thing it carries — and not its position either.** This one cost four defects in one small function and will recur in every case that reads a `SHOW` statement at the SQL seam. Three layers, each of which looked fine until it was attacked: matching the class *name* also matches `ERROR: Unknown class "dba.oos_dur01".`, so an error classified as an answer; matching a *field count* proves a row is wide enough but not that field 11 is still `Oos_num_recs`, and the column order lives one line away in `src/parser/show_meta.c`; and the code that decides "is there a row" must be the same code that reads it, or the two drift. The shipped form: the single-quoted class name matched literally, a header seen first, a row at least as wide as that header, and every column located by **name** from that header. Generalized by the Standards confirmation pass, whose framing this is. The corollary is the practical one — **write the controlled failure example for the fix, not just for the thing being fixed**: two of those four defects were in a fix, and both were caught by the shapes written to validate it rather than by any run of the case.
 
 **j. Ticket 13 left three `.forFun` files in the pinned release install's `conf/`** (`cubrid.conf.forFun`, `cubrid_broker.conf.forFun`, `cubrid_ha.conf.forFun`), copied in from the user's `~/.CUBRID_SHELL_FM` snapshot by finding (c). They are inert — CUBRID reads only `cubrid.conf` — and were left in place rather than removed, since they are part of the state ticket 13's audit recorded. The debug install has none. Noted so a later drift check does not read them as new.
 
@@ -195,7 +204,7 @@ Storage: the whole ticket occupies about 280 MiB under, almost all of it the neg
 | One negative control produces a failed assertion and a failed case, kept outside the regression cases | met (§4) — one NOK, case failed, non-discovery demonstrated with CTP's own rule; a second control covers the journal parser |
 | Activation evidence from a debug-build run recorded with applicability conditions | met (§4) — `inv-T14-0002`; evidence is `proven` rather than `reused` in both configurations |
 | Hand-written manifest and matrix row per ticket 12's schemas, in the evidence home; run time recorded for ticket 17 | met — two manifests, two attempt records, two replay-bundle indexes and four matrix rows, all validating; `tools/check_campaign_records.py` passes |
-| Work committed locally; nothing pushed | met — testcase commit `f59074bc5`, no push, no pull request |
+| Work committed locally; nothing pushed | met — testcase commit `c3d1e7146`, no push, no pull request |
 
 ## 8. What the review changed
 
@@ -230,7 +239,7 @@ Two smaller points were also acted on: the `applicability` block is now filled i
 
 Both reviewers then verified their findings against the artifacts rather than against my report, and both closed their axes. Three of their own recommendations were withdrawn in the process, which is worth recording because in each case the disposition that survived was better than the one originally proposed: deleting the probe scripts would have destroyed the evidence of the provenance overclaim the Spec axis went on to find; the negative control's missing attempt record was a legibility gap, fixed by a README and by splitting the runs table, not by fabricating a FAIL attempt; and `validate_records.py` is not a duplicate of `check_campaign_records.py`, which never reads a ticket's records. One correction went the other way: the Standards report said a non-zero `cubrid server start` triggers `do_save_snapshot_by_type`, when it fires only if `should_save_snapshot_for_recovery` matches the failure text — accepted, and it does not change the fix.
 
-The Standards axis then confirmed all seven mechanical points against the new commit — including that nothing was half-wrapped, that the numbering really is contiguous in both result files, and that the case-level SKIP branch is genuinely reachable rather than lost to a subshell — and found one new MEDIUM defect the quoting fix had not touched: the activation channel's failure classifier collapsed three outcomes into two, so any non-syntax `SHOW HEAP OOS` failure was reported as a missing capability. That is fixed in revision 5, and writing its controlled failure example caught a second defect in my own fix before it shipped (see the classifier paragraph in §4). Both are the kind of defect that passes every green run, which is exactly why the controlled failures exist.
+The Standards axis then confirmed all seven mechanical points against the new commit — including that nothing was half-wrapped, that the numbering really is contiguous in both result files, and that the case-level SKIP branch is genuinely reachable rather than lost to a subshell — and found one new MEDIUM defect the quoting fix had not touched: the activation channel's failure classifier collapsed three outcomes into two, so any non-syntax `SHOW HEAP OOS` failure was reported as a missing capability. That is fixed in revision 5, and writing its controlled failure example caught a second defect in my own fix before it shipped. A third confirmation pass, scoped to the revised code that no reviewer had yet read, then found that the new selector still trusted hardcoded column positions and settled from the engine source the one row shape no run of this case can produce; revision 6 reads every column by name from the output's own header, and a twelfth shape caught a shell-quoting error in *that* fix. Four defects in one small function, none of which any green run would have revealed — see the classifier table in §4, which is the clearest argument in this ticket for the campaign's rule that every checking mechanism needs a controlled failure.
 
 The Spec axis left one residual, minor and non-blocking, which is fixed in revision 4: `do_cleanup`'s preservation copies discarded their errors with `2>/dev/null`, so a full filesystem or a permission problem would have left an empty directory and nobody told. Every step is now checked and a failed copy is reported as a further NOK. Because that copy is the only image a failing run leaves behind, a silent loss there is precisely the failure mode this campaign exists to prevent — so it was fixed here rather than deferred to the tickets that inherit the helper.
 
@@ -245,6 +254,6 @@ The Spec axis left one residual, minor and non-blocking, which is fixed in revis
 
 ## 10. Decision requests
 
-1. **Fast-tier placement of crash-recovery workloads.** §5 measures 12 s and 16 s. Ticket 17 should decide whether crash and restart cases sit in the fast tier on that evidence, given that they take a server down and back up.
+1. **Fast-tier placement of crash-recovery workloads.** §5 measures 14 s and 18 s. Ticket 17 should decide whether crash and restart cases sit in the fast tier on that evidence, given that they take a server down and back up.
 2. **Cap enforcement.** The launcher timeout is deliberately above the campaign's per-case cap so that CTP cannot destroy a crash case's evidence. Ticket 15 owns enforcing the cap with evidence capture instead; until it does, caps on the shell seam are measured, not enforced.
 3. **Namespace isolation as a campaign-wide rule.** It worked here without privileges and it removes the need to stop unrelated CUBRID processes by hand, which ticket 13 had to do. Recommend making `campaign_ns.sh` a precondition of every private shell invocation, and of public SQL invocations too. Ports remain allocated rather than isolated.

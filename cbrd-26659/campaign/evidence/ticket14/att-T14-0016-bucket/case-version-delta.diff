@@ -1,5 +1,5 @@
 --- /home/vimkim/.cub/campaign/cbrd-26659/ticket14/attempts/att-T14-0013/workload.sh	2026-09-11 14:21:55.521980592 +0900
-+++ /home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659/shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh	2026-09-11 14:39:39.924950912 +0900
++++ /home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659/shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh	2026-09-11 14:51:49.910277562 +0900
 @@ -79,7 +79,9 @@
  Outcomes:
    A capability this build lacks is recorded as SKIP with a reason, never as OK. Test 17
@@ -19,11 +19,12 @@
  pre_existing_masters=""
  
  # --- helpers ---------------------------------------------------------------
-@@ -332,26 +335,51 @@
+@@ -332,44 +335,116 @@
      csql -u dba -c "SHOW HEAP OOS OF oos_dur01;" ${db_name} 2>&1
  }
  
 -oos_supported()
+-{
 +# THREE outcomes, not two. A SHOW HEAP OOS that fails for any reason other than the build
 +# not knowing the statement is a FAILURE of this case, not a capability gap. Collapsing the
 +# two would report a server disconnect, an authorization error, a renamed column or a
@@ -33,24 +34,67 @@
 +#   0  answered: a row for this class is present, so the counts can be asserted
 +#   1  the build's parser does not know the statement, which is a real capability gap
 +#   2  it failed some other way, which is this case's problem and must be reported
-+# The data row csql prints for this class, or nothing. The class name is a string column,
-+# so csql quotes it, and the row carries the fourteen columns SHOW HEAP OOS returns.
-+# Matching the bare name would also match an error that merely mentions the class --
-+# `ERROR: Unknown class "dba.oos_dur01".` contains it -- and would then read a failure as
-+# an answer and extract fields from the error text. The same selector feeds oos_field, so
-+# the classification and the extraction cannot disagree about which line is the row.
++# Every awk program below is single-quoted and contains no `$`, no backtick and no
++# backslash, so the shell cannot touch it: values come in through -v. KEEP IT THAT WAY --
++# the obvious later "clarification" of `{ print; exit }` to `{ print $0; exit }` would let
++# the shell expand $0 to the script path and awk would die on a syntax error.
++
++# The data row csql prints for this class, or nothing. Three things make it a row rather
++# than a line that mentions the class:
++#   * the SINGLE-QUOTED class name, because csql quotes a string column. Matching the bare
++#     name would also match `ERROR: Unknown class "dba.oos_dur01".` and would then read
++#     fields out of the error text. index() is a literal match, so the dots are not a
++#     regex either.
++#   * a header seen first, so an output with no header cannot yield a row.
++#   * at least as many fields as the header has columns, which rejects a truncated row
++#     without hardcoding how many columns SHOW HEAP OOS happens to return today.
++# The same selector feeds oos_field, so the classification and the extraction cannot
++# disagree about which line is the row.
 +oos_data_row()
 +{
-+    echo "$1" | awk "/'dba.oos_dur01'/ && NF >= 14 { print; exit }"
++    echo "$1" | awk -v cls="'dba.oos_dur01'" '
++        /Table_name/ && /Has_oos_file/ { cols = NF; next }
++        cols && index($0, cls) && NF >= cols { print; exit }'
 +}
 +
++# The position of a named column, read from the output's own header row. Positions are NOT
++# hardcoded: a row being wide enough does not make field 11 Oos_num_recs. The column order
++# lives in the engine's show_meta.c, one line away from a reordering, and reading the wrong
++# columns would be silent -- the two assertions here would only fail because their expected
++# ranges happen to be narrow, which is luck rather than design. This is oos_data_row's rule
++# one level further in: match the shape, not the position.
++oos_column_index()
++{
++    # oos_column_index <show output> <column name>
++    echo "$1" | awk -v want="$2" '
++        /Table_name/ && /Has_oos_file/ {
++            for (i = 1; i <= NF; i++) { if ($i == want) { print i; exit } }
++            exit
++        }'
++}
++
++# The columns the activation assertions and observations need. A missing one means the
++# output is not the shape this case knows how to read, which is a failure of the case and
++# not a capability gap -- the "renamed column" half of the classification below.
++oos_required_columns="Has_oos_file Oos_num_recs Oos_recs_sumlen Oos_num_user_pages Oos_page_size"
++
 +classify_oos_output()
- {
++{
++    local col
++    # Order does not matter here because the two tests are mutually exclusive: a single
++    # csql -c statement either parses or it does not, and no successful output can contain
++    # "syntax error" when the only string columns are a class name and an OID. If they
++    # ever did overlap, 2 would be the conservative answer, not 1: a 1 is a SKIP, which
++    # carries no NOK, passes the case and leaves activation_observed at 0 -- the exact
++    # failure mode this classification exists to remove.
      echo "$1" | grep -qi "syntax error" && return 1
 -    echo "$1" | grep -q "dba.oos_dur01" && return 0
 -    return 1
-+    [ -n "`oos_data_row "$1"`" ] && return 0
-+    return 2
++    [ -n "`oos_data_row "$1"`" ] || return 2
++    for col in ${oos_required_columns}; do
++        [ -n "`oos_column_index "$1" "${col}"`" ] || return 2
++    done
++    return 0
  }
  
 -# Both activation checks read the same two fields from the same statement and skip for the
@@ -79,8 +123,18 @@
 +        return ${rc}
      fi
      activation_observed=1
-     has_oos=`oos_field "${out}" 6`
-@@ -366,10 +394,10 @@
+-    has_oos=`oos_field "${out}" 6`
+-    num_recs=`oos_field "${out}" 11`
++    has_oos=`oos_field "${out}" Has_oos_file`
++    num_recs=`oos_field "${out}" Oos_num_recs`
+     # Oos_recs_sumlen is recorded and never asserted: the chunk header is 16 bytes on a
+     # build that predates CBRD-26950 and 24 bytes on one that implements it, so the
+     # payload sum is not a portable expectation. The chunk count is the same under both,
+     # which is why only the count is asserted.
+-    journal "observation|$1|has_oos=${has_oos}|chunks=${num_recs}|sumlen=`oos_field "${out}" 12`|user_pages=`oos_field "${out}" 9`|oos_page_size=`oos_field "${out}" 10`"
++    journal "observation|$1|has_oos=${has_oos}|chunks=${num_recs}|sumlen=`oos_field "${out}" Oos_recs_sumlen`|user_pages=`oos_field "${out}" Oos_num_user_pages`|oos_page_size=`oos_field "${out}" Oos_page_size`"
+     return 0
+ }
  
  oos_field()
  {
@@ -88,14 +142,18 @@
 -    # even if the output ever carried more than one matching row: a multi-line value would
 -    # turn the numeric comparisons below into a shell error instead of a failed assertion.
 -    echo "$1" | grep "dba.oos_dur01" | awk -v f=$2 '{print $f}' | head -1
-+    # oos_field <show output> <awk field number>. oos_data_row returns at most one line, so
-+    # the result is a single value: a multi-line value would turn the numeric comparisons
-+    # below into a shell error instead of a failed assertion.
-+    oos_data_row "$1" | awk -v f=$2 '{print $f}'
++    # oos_field <show output> <column name>. oos_data_row returns at most one line -- awk's
++    # exit with no END block stops after the first match -- so the result is a single
++    # value: a multi-line value would turn the numeric comparisons below into a shell error
++    # instead of a failed assertion.
++    local idx
++    idx=`oos_column_index "$1" "$2"`
++    [ -n "${idx}" ] || return 1
++    oos_data_row "$1" | awk -v f="${idx}" '{print $f}'
  }
  
  is_number()
-@@ -394,15 +422,41 @@
+@@ -394,15 +469,41 @@
      done
  }
  
@@ -143,7 +201,7 @@
      fi
      cubrid deletedb ${db_name} >/dev/null 2>&1
      rm -rf "${cur_path:?}/${db_name:?}"
-@@ -489,11 +543,12 @@
+@@ -489,11 +590,12 @@
  
  # --- 5. the out-of-row path really ran -------------------------------------
  
@@ -161,7 +219,7 @@
  
  # --- 6, 7. committed UPDATE and DELETE -------------------------------------
  
-@@ -575,16 +630,19 @@
+@@ -575,16 +677,19 @@
  
  # --- 15. the recovered database still holds its chains ---------------------
  
