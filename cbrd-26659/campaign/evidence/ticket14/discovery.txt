@@ -1,0 +1,35 @@
+# CTP shell case discovery over the CBRD-26659 case directory and its bucket.
+# Rule (Dispatch.getAllTestCaseScripts at the installed CTP):
+#   find <dir> -name "*.sh" -type f -print | xargs -i echo {} | awk -F "/" '{ if( $(NF-2)".sh"== $NF) print }'
+# A script is a case iff its file name is its GRANDPARENT directory name plus .sh. The
+# directory being called 'cases' is not what makes it one, which is why a helper inside
+# cases/ is never run as a case.
+
+## every .sh file present under the case directory
+shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh
+shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/make_negative_control.sh
+
+## what the discovery rule selects from the case directory
+shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh
+
+## what the discovery rule selects from the whole _26_2h bucket
+shell/_06_issues/_26_2h/cbrd_26586/cases/cbrd_26586.sh
+shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh
+shell/_06_issues/_26_2h/cbrd_26777/cases/cbrd_26777.sh
+shell/_06_issues/_26_2h/cbrd_27007/cases/cbrd_27007.sh
+shell/_06_issues/_26_2h/cbrd_27007_rename/cases/cbrd_27007_rename.sh
+shell/_06_issues/_26_2h/cbrd_27016/cases/cbrd_27016.sh
+shell/_06_issues/_26_2h/cbrd_27093/cases/cbrd_27093.sh
+shell/_06_issues/_26_2h/cbrd_27097/cases/cbrd_27097.sh
+shell/_06_issues/_26_2h/cbrd_27172/cases/cbrd_27172.sh
+shell/_06_issues/_26_2h/cbrd_27229/cases/cbrd_27229.sh
+shell/_06_issues/_26_2h/cbrd_27300/cases/cbrd_27300.sh
+
+## precedent: helper scripts that live inside a cases/ directory and are never selected
+## (count across the whole shell tree, and the first five)
+272
+shell/_01_utility/_01_sqlx/bug_xdbms154/cases/Print.sh
+shell/_01_utility/_18_unloaddb/itrack_10004/cases/itrack_10014.sh
+shell/_01_utility/_18_unloaddb/itrack_10009/cases/result_make_file.sh
+shell/_01_utility/_32_uc/itrack_10001/cases/check_program.sh
+shell/_01_utility/_32_uc/itrack_10001/cases/create_schema.sh

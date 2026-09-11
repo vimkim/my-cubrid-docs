@@ -1,0 +1,214 @@
+{
+  "schema_version": 1,
+  "manifest_id": "inv-T14-0002",
+  "producer": {
+    "kind": "hand-written",
+    "name": "Claude Opus 5 (1M context), campaign ticket 14",
+    "version": "revision 3, after the Standards and Spec axes of the two-axis review"
+  },
+  "invocation": {
+    "started_at": "2026-09-11T14:13:12+09:00",
+    "ended_at": "2026-09-11T14:13:38+09:00",
+    "tier": "fast",
+    "caps": {
+      "invocation_seconds": 900,
+      "per_case_seconds": 120,
+      "invocation_cap_reached": false
+    },
+    "resources": {
+      "cpus": 8,
+      "memory_gib": 16,
+      "storage_gib": 0.01,
+      "storage_root": "/home/vimkim/.cub/campaign/cbrd-26659/ticket14"
+    },
+    "engine": {
+      "baseline_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+      "worktree": "/home/vimkim/gh/cb/oos-baseline-f4299ac0c",
+      "modified": false,
+      "install_prefix": "/home/vimkim/.cub/install/oos-baseline-f4299ac0c/debug_gcc",
+      "version_string": "CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit debug build for Linux) (Sep 10 2026 16:15:40)",
+      "library_hashes": {
+        "libcubrid.so": "sha256:27399fae11a5ef134ba303e5ac6d672748b224bdf593504a2d4fae533a357253",
+        "libcubridsa.so": "sha256:9a3db918bc01738666bbb1ede762da973a714090c15e6709c78b7dc9c825ba69"
+      }
+    },
+    "testcase": {
+      "repository": "testcases-private-ex",
+      "branch": "CBRD-26659-oos-testcases-handover",
+      "commit": "1a4afcb3589e5029c9d04ea6939cbd674f55a72d",
+      "base_commit": "e9c2d86874b9c08cdd72b120c2ead84f525e15fc",
+      "worktree": "/home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659"
+    },
+    "context": {
+      "revision": "f6543de680b91ae357466b72a983f982892859cd",
+      "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698",
+      "snapshot": "cbrd-26659/campaign/ticket11-evidence/normative-snapshot/"
+    },
+    "catalogue": {
+      "path": "cbrd-26659/campaign/catalogue/requirements.json",
+      "hash": "sha256:0cc33c82cfc472daece8e168f92d153d86d4c1feb0690ceffca786b0c8a8c5dd"
+    },
+    "page_size": 16384,
+    "build_mode": "debug",
+    "run_mode": "client-server",
+    "services": [
+      {
+        "kind": "cub_master",
+        "identity": "started and crashed by the case; port 26659",
+        "port": 26659,
+        "owned": true
+      },
+      {
+        "kind": "cub_server",
+        "identity": "t26659dur01, created, crashed, restarted and dropped by the case",
+        "port": null,
+        "owned": true
+      },
+      {
+        "kind": "other",
+        "identity": "cub_pl for t26659dur01, started by the server and killed with it",
+        "port": null,
+        "owned": true
+      }
+    ],
+    "instrumentation": null,
+    "seed": null,
+    "runner": {
+      "kind": "ctp-shell",
+      "ctp_fingerprint": "sha256:e7c8ef04ee377d5fd33d82ad237210ee0c0c509c7b643787ba5f2137d69e6347",
+      "command": "run_attempt.sh att-T14-0014 debug_gcc <scenario>, which runs: unshare --user --map-current-user --pid --fork --mount-proc --ipc -- /home/vimkim/CTP/bin/ctp.sh shell -c <bundle>/shell_cbrd26659.conf",
+      "scenario_selection": "/home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659/shell/_06_issues/_26_2h/cbrd_26659_oos_dur01"
+    }
+  },
+  "expected": {
+    "case_list": "cbrd-26659/campaign/evidence/ticket14/att-T14-0014/dispatch_tc_ALL.txt",
+    "case_list_hash": "sha256:432dbdd88c341034a0c2729121e5b0c5966af653534f4a896d8b63a5e8f98a13",
+    "case_count": 1,
+    "assertion_count": 17
+  },
+  "discovered": {
+    "case_count": 1,
+    "case_names": [
+      "cbrd_26659_oos_dur01"
+    ]
+  },
+  "executed": {
+    "case_count": 1,
+    "assertion_count": 17
+  },
+  "proof": {
+    "verdict": "proven",
+    "launcher_exit_status": 0,
+    "setup_log": "cbrd-26659/campaign/evidence/ticket14/att-T14-0014/summary.txt",
+    "mismatches": []
+  },
+  "cases": [
+    {
+      "case": {
+        "repository": "testcases-private-ex",
+        "path": "shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh",
+        "name": "cbrd_26659_oos_dur01"
+      },
+      "requirements": [
+        "OOS-DUR-01",
+        "OOS-REP-07"
+      ],
+      "outcome": "PASS",
+      "skip_reason": null,
+      "assertions": {
+        "expected": 17,
+        "executed": 17,
+        "failed": 0
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0014/show_heap_oos_after_insert.out",
+        "applicability": {
+          "fixture": "Identical, because it is the same run: the four rows of (id INT, v BIT VARYING) at 4,036 AA / 16,284 BB / 4,011 CC / 4,036 DD that the assertions judge are the rows SHOW HEAP OOS counted, in a database the case created, owns exclusively and deletes.",
+          "execution_path": "IDENTICAL, which is why this is proven and not reused. The SHOW HEAP OOS statement ran in the same CTP invocation, against the same client-server server process, in the same session sequence as the INSERT it certifies -- once immediately after the committed INSERT and once after the restart. It certifies the INSERT-side demotion and the survival of the chains across recovery; it certifies no vacuum or reclaim path, which is why the post-recovery count is asserted as a range.",
+          "engine_configuration": "Pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, the debug install, 16 KiB pages read back from spacedb, unmodified build, no instrumentation, async_commit=n and group_commit_interval_in_msecs=0 read back from paramdump. All nine SHOW HEAP OOS observations agree with the release build's, so nothing here is release- or debug-specific.",
+          "conditions": "Single session, no concurrency, no fault injection, an empty table at the start, and one deliberate crash between the two observations. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture. Oos_recs_sumlen is recorded but never asserted, because it differs between the pinned 16-byte chunk header and the accepted 24-byte one (OOS-REP-05 / CBRD-26950).",
+          "source_manifest": "inv-T14-0002"
+        }
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T14-0014",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket14/att-T14-0014.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket14/attempts/att-T14-0014",
+          "bundle_hash": "sha256:f6186f1993126a58f663a94eb2136ca33bea4eb58ff7c47a3b75196a594b8c50"
+        }
+      ],
+      "outstanding": null
+    }
+  ],
+  "outstanding_coverage": {
+    "cases_not_executed": [],
+    "configurations_not_run": [
+      "4096/release/standalone",
+      "4096/release/client-server",
+      "4096/debug/standalone",
+      "4096/debug/client-server",
+      "8192/release/standalone",
+      "8192/release/client-server",
+      "8192/debug/standalone",
+      "8192/debug/client-server",
+      "16384/release/standalone",
+      "16384/debug/standalone"
+    ],
+    "requirements_without_executed_case": [
+      "OOS-REP-01",
+      "OOS-REP-02",
+      "OOS-REP-04",
+      "OOS-REP-06",
+      "OOS-REP-08",
+      "OOS-REP-09",
+      "OOS-REP-10",
+      "OOS-REP-11",
+      "OOS-REP-12",
+      "OOS-SQL-01",
+      "OOS-SQL-02",
+      "OOS-SQL-03",
+      "OOS-SQL-05",
+      "OOS-SQL-06",
+      "OOS-RD-01",
+      "OOS-RD-02",
+      "OOS-RD-03",
+      "OOS-SCH-01",
+      "OOS-SCH-02",
+      "OOS-SCH-03",
+      "OOS-SCH-04",
+      "OOS-SCH-05",
+      "OOS-SCH-06",
+      "OOS-CL-01",
+      "OOS-CL-02",
+      "OOS-CL-03",
+      "OOS-CL-04",
+      "OOS-CL-05",
+      "OOS-CL-06",
+      "OOS-CL-09",
+      "OOS-CL-10",
+      "OOS-CL-11",
+      "OOS-CL-13",
+      "OOS-DUR-02",
+      "OOS-DUR-03",
+      "OOS-DUR-04",
+      "OOS-DUR-05",
+      "OOS-DUR-06",
+      "OOS-DUR-08",
+      "OOS-OPS-01",
+      "OOS-OPS-02",
+      "OOS-OPS-04",
+      "OOS-OPS-06",
+      "OOS-RES-01",
+      "OOS-RES-02",
+      "OOS-RES-03",
+      "OOS-RES-04",
+      "OOS-RES-05",
+      "OOS-RES-06"
+    ],
+    "note": "The debug configuration of the same tracer-bullet case, run so that the one capability-gated assertion inv-T14-0001 had to skip actually executes. All 17 ran and passed, and the OOS activation evidence is proven in this invocation too, from this invocation's own SHOW HEAP OOS output. One observation worth carrying forward for the reclaim and vacuum tickets: this run's oos.log already held four oos_delete lines from vacuum before the case's standalone step ran, so on the debug build vacuum did reclaim the two dead chains within roughly three seconds of the restart, whereas the earlier probe on the same build saw nothing within three seconds. The assertion is written as an increase over the pre-step count precisely because vacuum timing is not something a durability case may depend on. The requirements listed as without an executed case are the same 49 as in inv-T14-0001 and for the same reason; this manifest adds a configuration, not coverage. THE CASE OUTCOME IN THIS MANIFEST IS THE CASE'S OWN, not CTP's success count: CTP has only PASS and FAIL per case, so the case writes PASS, FAIL or SKIP with a reason into <evidence>/case_outcome and the runner surfaces it. A run where SHOW HEAP OOS was unavailable would record SKIP there even with every executed assertion passing, because durability would be proved while the out-of-row path was never observed. This run's file reads PASS."
+  },
+  "answer_promotions": []
+}

@@ -1,0 +1,43 @@
+=== spacedb -S ===
+Space description for database 't14fmt' with pagesize 16.0K. (log pagesize: 16.0K)
+
+
+type                purpose            volume_count         used_size           free_size           total_size
+PERMANENT           PERMANENT DATA                2            75.0 M             117.0 M              192.0 M
+PERMANENT           TEMPORARY DATA                0             0.0 M               0.0 M                0.0 M
+TEMPORARY           TEMPORARY DATA                0             0.0 M               0.0 M                0.0 M
+-                   -                             2            75.0 M             117.0 M              192.0 M
+
+Space description for all volumes:
+volid               type                purpose             used_size           free_size           total_size         volume_name
+    0               PERMANENT           PERMANENT DATA         64.0 M               0.0 M               64.0 M         /home/vimkim/.cub/campaign/cbrd-26659/ticket14/db/t14fmt/t14fmt 
+spacedb rc=0
+=== extraction query ===
+$
+=== <Result of SELECT Command in Line 1> ===$
+$
+  'OOSROW|'|| cast(id as varchar)||'|'|| md5(v)||'|'|| cast( octet_length(v) as varchar)||'|'|| cast( bit_length(v) as varchar)||'|'|| cast( disk_size(v) as varchar)||'|'|| cast(case when v= cast( repeat('AA', 4036) as bit varying) then 1 else 0 end as varchar)$
+======================$
+  'OOSROW|1|44c5c2a376ce6478c16b3b446e60e806|4036|32288|4044|1'$
+  'OOSROW|2|02b6cc6daae92bb402016271b353e192|16284|130272|16292|0'$
+$
+2 rows selected. (0.004000 sec) Committed. (0.000000 sec) $
+=== extraction, greppable ===
+OOSROW|
+OOSROW|1|44c5c2a376ce6478c16b3b446e60e806|4036
+OOSROW|2|02b6cc6daae92bb402016271b353e192|16284
+=== count query ===
+CNT|
+CNT|2
+=== show heap oos row parse ===
+has_oos=1 pages=3 pagesize=16344 recs=3 sumlen=20384
+=== show heap oos on a missing table ===
+
+In line 1, column 33,
+
+ERROR: Unknown class "dba.nosuchtable_t14".
+
+rc=0
+=== checkdb ===
+checkdb rc=0
+done

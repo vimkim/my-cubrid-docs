@@ -1,0 +1,42 @@
+13:06:01 createdb
+13:06:03 start
+13:06:07 start rc=0
+13:06:07 ddl rc=0 out=[Execute OK. (0.009000 sec) Committed. (0.001000 sec) 1 row affected. (0.002000 sec) Committed. (0.000000 sec) ]
+13:06:07 crash: server=[19] pl=[22] master=[17]
+13:06:07 after crash: server=[] master=[]
+13:06:07 restart
+13:06:10 restart rc=0
+  restart: @ cubrid master start
+  restart: ++ cubrid master start: success
+  restart: @ cubrid server start: t14rprobe
+  restart: 
+  restart: This may take a long time depending on the amount of recovery works to do.
+  restart: 
+  restart: CUBRID 11.5.0 (11.5.0.2648) (64 debug build)
+  restart: 
+  restart: ++ cubrid server start: success
+13:06:10 select
+13:06:10 select rc=0
+  select: 
+  select: === <Result of SELECT Command in Line 1> ===
+  select: 
+  select:             i
+  select: =============
+  select:             7
+  select: 
+  select: 1 row selected. (0.003000 sec) Committed. (0.000000 sec) 
+13:06:10 csql exit status on a deliberately bad query:
+  bad rc=1
+  bad: 
+  bad: In line 1, column 8,
+  bad: 
+  bad: ERROR: before '  FROM p;'
+  bad: Attribute "nosuchcolumn" was not found.
+  bad: 
+13:06:10 csql exit status against a nonexistent database:
+  nodb rc=1
+  nodb: 
+  nodb: ERROR: Failed to connect to database server, 'nosuchdb_t14', on the following host(s): localhost
+  nodb: 
+13:06:10 teardown
+13:06:11 done

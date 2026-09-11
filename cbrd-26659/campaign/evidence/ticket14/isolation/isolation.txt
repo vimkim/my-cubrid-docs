@@ -1,0 +1,22 @@
+== isolation demonstration for CBRD-26659 ticket 14 ==
+date          : 2026-09-11T12:56:32+09:00
+host          : Linux 5.14.0-570.30.1.el9_6.x86_64 x86_64
+unshare       : unshare from util-linux 2.42.2
+user          : vimkim uid=1000
+namespace cmd : unshare --user --map-current-user --pid --fork --mount-proc --ipc
+
+decoy started outside the namespace: pid=519275 comm=cubdecoy
+  inside: processes visible to ps -u $(id -un): bash bash ps tr
+  inside: sweep finished
+  inside: /proc/519275 is not visible
+  inside: direct kill -> /bin/bash: line 6: kill: (519275) - No such process
+[OK]  process_containment : outside decoy pid 519275 survived pkill/ps-sweep/direct kill run inside the namespace
+[OK]  process_control : a decoy started inside the namespace was killed by the same sweep
+segment created outside the namespace: shmid=41
+  inside: ipcs -m rows for this user: 0
+  inside: direct ipcrm -> ipcrm: invalid id (41)
+[OK]  ipc_containment : outside segment 41 survived the ipcrm sweep and a direct ipcrm run inside the namespace
+[OK]  ipc_control : a segment created inside the namespace was listed and destroyed by the same sweep
+
+failures=0
+exit=0

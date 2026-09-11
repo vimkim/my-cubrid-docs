@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "bundle_id": "bundle-att-T14-0013",
+  "attempt_id": "att-T14-0013",
+  "created_at": "2026-09-11T14:13:12+09:00",
+  "root_path": "/home/vimkim/.cub/campaign/cbrd-26659/ticket14/attempts/att-T14-0013",
+  "total_bytes": 581091,
+  "complete": true,
+  "items": {
+    "workload": {
+      "state": "present",
+      "path": "workload.sh",
+      "hash": "sha256:557815691ed8c5697dbc7f6538f6261b0adb522e5db41e77afcdca5843813132",
+      "note": "The case exactly as executed; its sha256 matches the file committed at testcase commit 1a4afcb35, which identity.txt records beside it."
+    },
+    "seed_and_generator_version": {
+      "state": "not-applicable",
+      "path": null,
+      "hash": null,
+      "note": "Fixed deterministic workload: four rows at three derived sizes with fixed byte patterns. No generator and no seed."
+    },
+    "session_and_barrier_trace": {
+      "state": "present",
+      "path": "case-evidence/operations.journal",
+      "hash": "sha256:eb135043ae1064aec0789f0087f270691accd59c62bb7e981c433e9f952f3412",
+      "note": "The case is single-session, so there is no barrier to acknowledge between participants. What the journal does carry is the ordered external operation trace OOS-DUR-01 requires: a request line before each transaction and an acknowledgement line after it with the csql exit status, the affected-row count and the error count, plus the crash and restart steps, the recorded observations and the final case outcome."
+    },
+    "injection_acknowledgements": {
+      "state": "not-applicable",
+      "path": null,
+      "hash": null,
+      "note": "No fault was armed: this is an unmodified-engine regression, and fault injection belongs to ticket 16's instrumentation worktree, not this one."
+    },
+    "engine_identity": {
+      "state": "present",
+      "path": "identity.txt",
+      "hash": "sha256:ddde5d68df76cbf11dcaa175551c2489c172e4a21365312bba83b1c86dd558c3",
+      "note": "Pinned baseline commit, install prefix, the release build's version string and the sha256 of libcubrid.so, libcubridsa.so, cub_server and csql, all re-verified against ticket 11 by run_attempt.sh before the launcher was allowed to start, plus the CTP jar and init.sh hashes."
+    },
+    "testcase_identity": {
+      "state": "present",
+      "path": "identity.txt",
+      "hash": "sha256:ddde5d68df76cbf11dcaa175551c2489c172e4a21365312bba83b1c86dd558c3",
+      "note": "Repository, branch CBRD-26659-oos-testcases-handover, commit 1a4afcb35 and verified base commit e9c2d8687, appended after the case was committed together with the hash that shows the executed workload and the committed file are byte-identical."
+    },
+    "specification_identity": {
+      "state": "present",
+      "path": "identity.txt",
+      "hash": "sha256:ddde5d68df76cbf11dcaa175551c2489c172e4a21365312bba83b1c86dd558c3",
+      "note": "Context revision f6543de with content hash c9daf3c4 and the catalogue hash 0cc33c82, the same pin ticket 11 and ticket 12 recorded."
+    },
+    "build_and_configuration_identity": {
+      "state": "present",
+      "path": "shell_cbrd26659.conf",
+      "hash": "sha256:e5a0235b02fe2c371eba9df57a96da0f93a4c700f3aeb35509dee5fd70b27222",
+      "note": "The exact CTP configuration used: scenario, no testcase update, no retry, and the campaign's own ports. The release build and 16 KiB pages are fixed by the install named in identity.txt and by the case's own --db-page-size=16384, which assertion 2 reads back from spacedb; the durable-commit parameters are read back from paramdump by assertion 3. The pinned install's configuration as found is in install_conf_backup/."
+    },
+    "instrumentation_identity": {
+      "state": "not-applicable",
+      "path": null,
+      "hash": null,
+      "note": "Unmodified engine. No patch, no instrumentation worktree, no fault-disabled control needed."
+    },
+    "fixture_identity": {
+      "state": "present",
+      "path": "case-evidence/createdb.out",
+      "hash": "sha256:adfe5efd6d184d5446ab488a21ca28a0893ace5e3a5e7998ce0894a7cf581601",
+      "note": "Database t26659dur01, created by the case with --db-page-size=16384 --db-volume-size=64M --log-volume-size=64M. The fixture's generation inputs -- the three payload sizes and their byte patterns -- are constants at the top of workload.sh, derived by derive_case_sizes.py."
+    },
+    "expected_versus_actual": {
+      "state": "present",
+      "path": "expected_vs_actual.txt",
+      "hash": "sha256:d829179cfb5ce95c54e72f31c373e3edd959f70cf1edce54cb4518777ccf7dc2",
+      "note": "The pre-derived oracle's ordered assertion list set against the result file the run produced, with the OK, NOK and SKIP tally. The case is its own comparator: every assertion names itself and prints expected and actual on failure, as the negative control shows."
+    },
+    "logs": {
+      "state": "present",
+      "path": "transcript.log",
+      "hash": "sha256:af94a8f2afc9372a52a851a51279a47560233f056d3595950ae42ac86754ef18",
+      "note": "CTP runtime logs (feedback.log, test_local.log, test_status.data, test-shell.xml, dispatch lists), the PTY transcript, and the case's own per-step outputs: createdb, server start, restart and stop, paramdump, spacedb, checkdb and the three transaction outputs. No debug oos.log: this is a release build, which is the skipped assertion."
+    },
+    "cores": {
+      "state": "not-applicable",
+      "path": null,
+      "hash": null,
+      "note": "No core file. The crash is a kill -9, which produces none, and a search of the bundle and of the install found zero core files after the run."
+    },
+    "replay_command_with_prerequisites": {
+      "state": "present",
+      "path": "replay.sh",
+      "hash": "sha256:e241c07edd021c6e174856e689a3dc6784db64589cd20ade8815e05e41b7cab5",
+      "note": "The replay command and the prerequisites it does not create: the pinned install and its library hashes, the CTP install, the testcase worktree at the recorded commit, the four free ports, and unprivileged user namespaces for the containment."
+    }
+  },
+  "uncommitted_snapshots": [
+    {
+      "what": "OOS-CONTEXT.md at the pinned content hash, which was uncommitted in the context repository working copy when ticket 11 pinned it",
+      "path": "cbrd-26659/campaign/ticket11-evidence/normative-snapshot/OOS-CONTEXT.md",
+      "hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+    }
+  ],
+  "retention": {
+    "class": "success-bulky",
+    "expires_on": "2026-09-18",
+    "hold_reason": null
+  },
+  "minimization": null
+}

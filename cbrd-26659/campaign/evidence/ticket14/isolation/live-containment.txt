@@ -1,0 +1,30 @@
+# Live containment evidence -- an unrelated CUBRID instance that ran through the invocations
+# captured 2026-09-11T14:24:54+09:00
+
+This host carries another session's CUBRID instance serving demodb, owned by the same UNIX
+user. The CTP shell helpers call an unscoped 'pkill cub' in both init() and finish(), so every
+invocation of this ticket issued two such sweeps. The cub_master below has been up since
+12:51:39, before the first invocation, and was still up after the last. This is the containment
+working on a real neighbour rather than on a decoy.
+
+    PID    PPID     ELAPSED                  STARTED COMMAND         COMMAND
+ 487844       1    01:33:14 Fri Sep 11 12:51:39 2026 cub_master      cub_master
+ 659733       1    01:07:39 Fri Sep 11 13:17:14 2026 cub_server      cub_server demodb
+ 659748  659733    01:07:39 Fri Sep 11 13:17:14 2026 cub_pl          cub_pl demodb
+
+namespace of the unrelated master : pid:[4026531836] ipc:[4026531839]
+namespace of the campaign shell   : pid:[4026531836] ipc:[4026531839]
+(the campaign shell shares the host namespaces; only the CTP invocations are unshared)
+
+End times of the recorded attempts:
+  att-T14-0013 ended_at=2026-09-11T14:13:12+09:00
+  att-T14-0014 ended_at=2026-09-11T14:13:38+09:00
+  att-T14-0015 ended_at=2026-09-11T14:13:58+09:00
+  att-T14-0016-bucket ended_at=2026-09-11T14:20:39+09:00
+
+Every case's operations.journal recorded pre_existing_masters=[] -- from inside the namespace
+the master above is not merely protected, it is invisible:
+  att-T14-0013: 2026-09-11T14:12:53+09:00|environment|pre_existing_masters=[]
+  att-T14-0014: 2026-09-11T14:13:16+09:00|environment|pre_existing_masters=[]
+  att-T14-0015: 2026-09-11T14:13:42+09:00|environment|pre_existing_masters=[]
+  att-T14-0016-bucket: 2026-09-11T14:20:19+09:00|environment|pre_existing_masters=[]

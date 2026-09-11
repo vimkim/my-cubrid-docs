@@ -1,0 +1,48 @@
+# expected versus actual -- att-T14-0013
+# expected: the 17 assertions of expected-oracle.md section 5, in order,
+#           each OK, with #17 skipped on a release build.
+# actual  : cbrd_26659_oos_dur01.result as written by the case.
+
+## actual
+cbrd_26659_oos_dur01-1 : OK  engine_identity_recorded
+cbrd_26659_oos_dur01-2 : OK  database_page_size_is_16384
+cbrd_26659_oos_dur01-3 : OK  durable_commit_configuration_verified
+cbrd_26659_oos_dur01-4 : OK  insert_transaction_acknowledged
+cbrd_26659_oos_dur01-5 : OK  oos_activation_after_insert
+cbrd_26659_oos_dur01-6 : OK  update_transaction_acknowledged
+cbrd_26659_oos_dur01-7 : OK  delete_transaction_acknowledged
+cbrd_26659_oos_dur01-8 : OK  server_crashed_by_kill_9
+cbrd_26659_oos_dur01-9 : OK  server_restarted_within_deadline
+cbrd_26659_oos_dur01-10 : OK  recovered_row_count_is_3
+cbrd_26659_oos_dur01-11 : OK  recovered_value_id1_single_chunk_oos
+cbrd_26659_oos_dur01-12 : OK  recovered_value_id2_multi_chunk_oos
+cbrd_26659_oos_dur01-13 : OK  recovered_value_id3_inline_comparator
+cbrd_26659_oos_dur01-14 : OK  committed_delete_survived_recovery
+cbrd_26659_oos_dur01-15 : OK  oos_activation_after_recovery
+cbrd_26659_oos_dur01-16 : OK  checkdb_after_recovery_is_clean
+cbrd_26659_oos_dur01-17 : SKIP debug_oos_log_records_chain_delete : release build: oos_debug and oos_trace are compiled out under NDEBUG, so $CUBRID/log/oos.log is never written
+14:13:06----/home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659/shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases--- time=14
+
+## tally
+executed(OK|NOK) = 16
+OK               = 16
+NOK              = 0
+SKIP             = 1
+
+## assertion names in the order the oracle lists them
+cbrd_26659_oos_dur01-1 : OK  engine_identity_recorded
+cbrd_26659_oos_dur01-2 : OK  database_page_size_is_
+cbrd_26659_oos_dur01-3 : OK  durable_commit_configuration_verified
+cbrd_26659_oos_dur01-4 : OK  insert_transaction_acknowledged
+cbrd_26659_oos_dur01-5 : OK  oos_activation_after_insert
+cbrd_26659_oos_dur01-6 : OK  update_transaction_acknowledged
+cbrd_26659_oos_dur01-7 : OK  delete_transaction_acknowledged
+cbrd_26659_oos_dur01-8 : OK  server_crashed_by_kill_
+cbrd_26659_oos_dur01-9 : OK  server_restarted_within_deadline
+cbrd_26659_oos_dur01-10 : OK  recovered_row_count_is_
+cbrd_26659_oos_dur01-11 : OK  recovered_value_id
+cbrd_26659_oos_dur01-12 : OK  recovered_value_id
+cbrd_26659_oos_dur01-13 : OK  recovered_value_id
+cbrd_26659_oos_dur01-14 : OK  committed_delete_survived_recovery
+cbrd_26659_oos_dur01-15 : OK  oos_activation_after_recovery
+cbrd_26659_oos_dur01-16 : OK  checkdb_after_recovery_is_clean

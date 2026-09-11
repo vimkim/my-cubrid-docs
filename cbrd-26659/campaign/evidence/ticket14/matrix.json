@@ -1,0 +1,307 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-11T14:30:00+09:00",
+  "catalogue": {
+    "path": "cbrd-26659/campaign/catalogue/requirements.json",
+    "hash": "sha256:0cc33c82cfc472daece8e168f92d153d86d4c1feb0690ceffca786b0c8a8c5dd"
+  },
+  "rows": [
+    {
+      "row_id": "OOS-DUR-01/cbrd_26659_oos_dur01/16384-release-cs",
+      "requirement": "OOS-DUR-01",
+      "family": "Durability",
+      "case": {
+        "repository": "testcases-private-ex",
+        "path": "shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh",
+        "name": "cbrd_26659_oos_dur01"
+      },
+      "configuration": {
+        "page_size": 16384,
+        "build_mode": "release",
+        "run_mode": "client-server",
+        "instrumentation_id": null,
+        "services": [
+          "cub_master:26659",
+          "cub_server:t26659dur01",
+          "cub_pl:t26659dur01"
+        ]
+      },
+      "run": {
+        "manifest_id": "inv-T14-0001",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket14/inv-T14-0001.json",
+        "manifest_hash": "sha256:75304cb97805a6ed39cb6dca747a0afb05aebbde1ee1f22ceb7db06f0fb904d2",
+        "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+        "testcase_commit": "1a4afcb3589e5029c9d04ea6939cbd674f55a72d",
+        "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0013/show_heap_oos_after_insert.out",
+        "applicability": {
+          "fixture": "Identical, because it is the same run: the four rows of (id INT, v BIT VARYING) at 4,036 AA / 16,284 BB / 4,011 CC / 4,036 DD that the assertions judge are the rows SHOW HEAP OOS counted, in a database the case created, owns exclusively and deletes.",
+          "execution_path": "IDENTICAL, which is why this is proven and not reused. The SHOW HEAP OOS statement ran in the same CTP invocation, against the same client-server server process, in the same session sequence as the INSERT it certifies -- once immediately after the committed INSERT and once after the restart. It certifies the INSERT-side demotion and the survival of the chains across recovery; it certifies no vacuum or reclaim path, which is why the post-recovery count is asserted as a range.",
+          "engine_configuration": "Pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, the release install, 16 KiB pages read back from spacedb, unmodified build, no instrumentation, async_commit=n and group_commit_interval_in_msecs=0 read back from paramdump. The debug-only oos.log channel does not exist on this build, which is the one skipped assertion.",
+          "conditions": "Single session, no concurrency, no fault injection, an empty table at the start, and one deliberate crash between the two observations. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture. Oos_recs_sumlen is recorded but never asserted, because it differs between the pinned 16-byte chunk header and the accepted 24-byte one (OOS-REP-05 / CBRD-26950).",
+          "source_manifest": "inv-T14-0001"
+        }
+      },
+      "finding": {
+        "latest_outcome": "PASS",
+        "ever_failed": false,
+        "history": [
+          {
+            "manifest_id": "inv-T14-0001",
+            "attempt_id": "att-T14-0013",
+            "outcome": "PASS",
+            "at": "2026-09-11T14:13:12+09:00"
+          }
+        ],
+        "gap_kind": "none",
+        "summary": "Committed INSERT, UPDATE and DELETE of OOS-backed rows survived kill -9 of the whole instance and a controlled restart, with every surviving value whole and exact: MD5, octet length, bit length, disk size and a direct SQL equality, on all three rows, plus the absence of the deleted row and a clean checkdb. Judged against an external journal in which all three transactions were acknowledged before the crash, under a durable-commit configuration read back from paramdump rather than assumed. 16 of the case's 17 assertions executed; the seventeenth is debug-only and was recorded as SKIP."
+      },
+      "flakiness": {
+        "attempts": 1,
+        "failures": 0,
+        "intermittent": false,
+        "consecutive_fresh_fixture_reproductions": 0,
+        "deterministic_claim": false
+      },
+      "known_issue": {
+        "ticket": null,
+        "relation": "none"
+      },
+      "attribution": {
+        "target": "unknown",
+        "evidence": null,
+        "note": "Nothing to attribute: the outcome is PASS. The field stays 'unknown' because the taxonomy has no value for 'no failure', and 'engine' would require failure evidence."
+      },
+      "attempt_records": [
+        "cbrd-26659/campaign/evidence/ticket14/att-T14-0013.json"
+      ]
+    },
+    {
+      "row_id": "OOS-DUR-01/cbrd_26659_oos_dur01/16384-debug-cs",
+      "requirement": "OOS-DUR-01",
+      "family": "Durability",
+      "case": {
+        "repository": "testcases-private-ex",
+        "path": "shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh",
+        "name": "cbrd_26659_oos_dur01"
+      },
+      "configuration": {
+        "page_size": 16384,
+        "build_mode": "debug",
+        "run_mode": "client-server",
+        "instrumentation_id": null,
+        "services": [
+          "cub_master:26659",
+          "cub_server:t26659dur01",
+          "cub_pl:t26659dur01"
+        ]
+      },
+      "run": {
+        "manifest_id": "inv-T14-0002",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket14/inv-T14-0002.json",
+        "manifest_hash": "sha256:9e854a1eec0ccb247702c86a464d33fa08adbdc4430796c6471d772882f5cb2e",
+        "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+        "testcase_commit": "1a4afcb3589e5029c9d04ea6939cbd674f55a72d",
+        "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0014/show_heap_oos_after_insert.out",
+        "applicability": {
+          "fixture": "Identical, because it is the same run: the four rows of (id INT, v BIT VARYING) at 4,036 AA / 16,284 BB / 4,011 CC / 4,036 DD that the assertions judge are the rows SHOW HEAP OOS counted, in a database the case created, owns exclusively and deletes.",
+          "execution_path": "IDENTICAL, which is why this is proven and not reused. The SHOW HEAP OOS statement ran in the same CTP invocation, against the same client-server server process, in the same session sequence as the INSERT it certifies -- once immediately after the committed INSERT and once after the restart. It certifies the INSERT-side demotion and the survival of the chains across recovery; it certifies no vacuum or reclaim path, which is why the post-recovery count is asserted as a range.",
+          "engine_configuration": "Pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, the debug install, 16 KiB pages read back from spacedb, unmodified build, no instrumentation, async_commit=n and group_commit_interval_in_msecs=0 read back from paramdump. All nine SHOW HEAP OOS observations agree with the release build's, so nothing here is release- or debug-specific.",
+          "conditions": "Single session, no concurrency, no fault injection, an empty table at the start, and one deliberate crash between the two observations. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture. Oos_recs_sumlen is recorded but never asserted, because it differs between the pinned 16-byte chunk header and the accepted 24-byte one (OOS-REP-05 / CBRD-26950).",
+          "source_manifest": "inv-T14-0002"
+        }
+      },
+      "finding": {
+        "latest_outcome": "PASS",
+        "ever_failed": false,
+        "history": [
+          {
+            "manifest_id": "inv-T14-0002",
+            "attempt_id": "att-T14-0014",
+            "outcome": "PASS",
+            "at": "2026-09-11T14:13:38+09:00"
+          }
+        ],
+        "gap_kind": "none",
+        "summary": "The same requirement on the debug build, where all 17 assertions execute. The extra one is the delete-side debug oos.log, which confirms that reading and deleting an OOS chain after recovery goes through oos_delete rather than through an inline value."
+      },
+      "flakiness": {
+        "attempts": 1,
+        "failures": 0,
+        "intermittent": false,
+        "consecutive_fresh_fixture_reproductions": 0,
+        "deterministic_claim": false
+      },
+      "known_issue": {
+        "ticket": null,
+        "relation": "none"
+      },
+      "attribution": {
+        "target": "unknown",
+        "evidence": null,
+        "note": "Nothing to attribute: the outcome is PASS. The field stays 'unknown' because the taxonomy has no value for 'no failure', and 'engine' would require failure evidence."
+      },
+      "attempt_records": [
+        "cbrd-26659/campaign/evidence/ticket14/att-T14-0014.json"
+      ]
+    },
+    {
+      "row_id": "OOS-REP-07/cbrd_26659_oos_dur01/16384-release-cs",
+      "requirement": "OOS-REP-07",
+      "family": "Representation",
+      "case": {
+        "repository": "testcases-private-ex",
+        "path": "shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh",
+        "name": "cbrd_26659_oos_dur01"
+      },
+      "configuration": {
+        "page_size": 16384,
+        "build_mode": "release",
+        "run_mode": "client-server",
+        "instrumentation_id": null,
+        "services": [
+          "cub_master:26659",
+          "cub_server:t26659dur01",
+          "cub_pl:t26659dur01"
+        ]
+      },
+      "run": {
+        "manifest_id": "inv-T14-0001",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket14/inv-T14-0001.json",
+        "manifest_hash": "sha256:75304cb97805a6ed39cb6dca747a0afb05aebbde1ee1f22ceb7db06f0fb904d2",
+        "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+        "testcase_commit": "1a4afcb3589e5029c9d04ea6939cbd674f55a72d",
+        "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0013/show_heap_oos_after_insert.out",
+        "applicability": {
+          "fixture": "Identical, because it is the same run: the four rows of (id INT, v BIT VARYING) at 4,036 AA / 16,284 BB / 4,011 CC / 4,036 DD that the assertions judge are the rows SHOW HEAP OOS counted, in a database the case created, owns exclusively and deletes.",
+          "execution_path": "IDENTICAL, which is why this is proven and not reused. The SHOW HEAP OOS statement ran in the same CTP invocation, against the same client-server server process, in the same session sequence as the INSERT it certifies -- once immediately after the committed INSERT and once after the restart. It certifies the INSERT-side demotion and the survival of the chains across recovery; it certifies no vacuum or reclaim path, which is why the post-recovery count is asserted as a range.",
+          "engine_configuration": "Pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, the release install, 16 KiB pages read back from spacedb, unmodified build, no instrumentation, async_commit=n and group_commit_interval_in_msecs=0 read back from paramdump. The debug-only oos.log channel does not exist on this build, which is the one skipped assertion.",
+          "conditions": "Single session, no concurrency, no fault injection, an empty table at the start, and one deliberate crash between the two observations. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture. Oos_recs_sumlen is recorded but never asserted, because it differs between the pinned 16-byte chunk header and the accepted 24-byte one (OOS-REP-05 / CBRD-26950).",
+          "source_manifest": "inv-T14-0001"
+        }
+      },
+      "finding": {
+        "latest_outcome": "PASS",
+        "ever_failed": false,
+        "history": [
+          {
+            "manifest_id": "inv-T14-0001",
+            "attempt_id": "att-T14-0013",
+            "outcome": "PASS",
+            "at": "2026-09-11T14:13:12+09:00"
+          }
+        ],
+        "gap_kind": "none",
+        "summary": "The multi-chunk row (16,284 bytes, two chunk records under both the pinned and the normative chunk header) was written as a chain, survived the crash and was read back byte-identical. SHOW HEAP OOS reported the expected four chunk records for the four rows before the crash, which is what distinguishes a real chain from a large inline value."
+      },
+      "flakiness": {
+        "attempts": 1,
+        "failures": 0,
+        "intermittent": false,
+        "consecutive_fresh_fixture_reproductions": 0,
+        "deterministic_claim": false
+      },
+      "known_issue": {
+        "ticket": null,
+        "relation": "none"
+      },
+      "attribution": {
+        "target": "unknown",
+        "evidence": null,
+        "note": "Nothing to attribute: the outcome is PASS. The field stays 'unknown' because the taxonomy has no value for 'no failure', and 'engine' would require failure evidence."
+      },
+      "attempt_records": [
+        "cbrd-26659/campaign/evidence/ticket14/att-T14-0013.json"
+      ]
+    },
+    {
+      "row_id": "OOS-REP-07/cbrd_26659_oos_dur01/16384-debug-cs",
+      "requirement": "OOS-REP-07",
+      "family": "Representation",
+      "case": {
+        "repository": "testcases-private-ex",
+        "path": "shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh",
+        "name": "cbrd_26659_oos_dur01"
+      },
+      "configuration": {
+        "page_size": 16384,
+        "build_mode": "debug",
+        "run_mode": "client-server",
+        "instrumentation_id": null,
+        "services": [
+          "cub_master:26659",
+          "cub_server:t26659dur01",
+          "cub_pl:t26659dur01"
+        ]
+      },
+      "run": {
+        "manifest_id": "inv-T14-0002",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket14/inv-T14-0002.json",
+        "manifest_hash": "sha256:9e854a1eec0ccb247702c86a464d33fa08adbdc4430796c6471d772882f5cb2e",
+        "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+        "testcase_commit": "1a4afcb3589e5029c9d04ea6939cbd674f55a72d",
+        "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0014/show_heap_oos_after_insert.out",
+        "applicability": {
+          "fixture": "Identical, because it is the same run: the four rows of (id INT, v BIT VARYING) at 4,036 AA / 16,284 BB / 4,011 CC / 4,036 DD that the assertions judge are the rows SHOW HEAP OOS counted, in a database the case created, owns exclusively and deletes.",
+          "execution_path": "IDENTICAL, which is why this is proven and not reused. The SHOW HEAP OOS statement ran in the same CTP invocation, against the same client-server server process, in the same session sequence as the INSERT it certifies -- once immediately after the committed INSERT and once after the restart. It certifies the INSERT-side demotion and the survival of the chains across recovery; it certifies no vacuum or reclaim path, which is why the post-recovery count is asserted as a range.",
+          "engine_configuration": "Pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, the debug install, 16 KiB pages read back from spacedb, unmodified build, no instrumentation, async_commit=n and group_commit_interval_in_msecs=0 read back from paramdump. All nine SHOW HEAP OOS observations agree with the release build's, so nothing here is release- or debug-specific.",
+          "conditions": "Single session, no concurrency, no fault injection, an empty table at the start, and one deliberate crash between the two observations. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture. Oos_recs_sumlen is recorded but never asserted, because it differs between the pinned 16-byte chunk header and the accepted 24-byte one (OOS-REP-05 / CBRD-26950).",
+          "source_manifest": "inv-T14-0002"
+        }
+      },
+      "finding": {
+        "latest_outcome": "PASS",
+        "ever_failed": false,
+        "history": [
+          {
+            "manifest_id": "inv-T14-0002",
+            "attempt_id": "att-T14-0014",
+            "outcome": "PASS",
+            "at": "2026-09-11T14:13:38+09:00"
+          }
+        ],
+        "gap_kind": "none",
+        "summary": "As on the release build, with the chunk count confirmed from this invocation's own SHOW HEAP OOS output."
+      },
+      "flakiness": {
+        "attempts": 1,
+        "failures": 0,
+        "intermittent": false,
+        "consecutive_fresh_fixture_reproductions": 0,
+        "deterministic_claim": false
+      },
+      "known_issue": {
+        "ticket": null,
+        "relation": "none"
+      },
+      "attribution": {
+        "target": "unknown",
+        "evidence": null,
+        "note": "Nothing to attribute: the outcome is PASS. The field stays 'unknown' because the taxonomy has no value for 'no failure', and 'engine' would require failure evidence."
+      },
+      "attempt_records": [
+        "cbrd-26659/campaign/evidence/ticket14/att-T14-0014.json"
+      ]
+    }
+  ],
+  "accepted_exclusions": []
+}

@@ -1,0 +1,157 @@
+== identity ==
+
+CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit debug build for Linux) (Sep 10 2026 16:15:40)
+
+27399fae11a5ef134ba303e5ac6d672748b224bdf593504a2d4fae533a357253  /home/vimkim/.cub/install/oos-baseline-f4299ac0c/debug_gcc/lib/libcubrid.so
+9a3db918bc01738666bbb1ede762da973a714090c15e6709c78b7dc9c825ba69  /home/vimkim/.cub/install/oos-baseline-f4299ac0c/debug_gcc/lib/libcubridsa.so
+== createdb ==
+Creating database with 64.0M size using locale en_US.utf8. The total amount of disk space needed is 192.0M.
+
+CUBRID 11.5.0 (11.5.0.2648) (64 debug build)
+
+createdb exit=0
+== paramdump (durability-relevant) ==
+== start server ==
+@ cubrid master start
+++ cubrid master start: success
+@ cubrid server start: t14probe
+
+This may take a long time depending on the amount of recovery works to do.
+
+CUBRID 11.5.0 (11.5.0.2648) (64 debug build)
+
+++ cubrid server start: success
+start exit=0
+== workload ==
+Execute OK. (0.009001 sec) Committed. (0.001000 sec) 
+ddl exit=0
+1 row affected. (0.003000 sec) 
+1 row affected. (0.001000 sec) 
+1 row affected. (0.001000 sec) 
+Execute OK. (0.000000 sec) 
+insert exit=0
+== SHOW HEAP OOS format ==
+
+=== <Result of SELECT Command in Line 1> ===
+
+  Table_name            Class_oid             Heap_volume_id  Heap_file_id  Heap_header_page_id  Has_oos_file  Oos_volume_id  Oos_file_id  Oos_num_user_pages  Oos_page_size  Oos_num_recs       Oos_recs_sumlen    Oos_physical_bytes      Oos_unused_bytes
+============================================================================================================================================================================================================================================================
+  'dba.t14'             '(0|209|2)'                        1           576                  577             1              1          640                   3          16344             3                 20384                 49032                 28648
+
+1 row selected. (0.001000 sec) Committed. (0.000000 sec) 
+show exit=0
+== MD5 / lengths format ==
+
+=== <Result of SELECT Command in Line 1> ===
+
+           id   md5(v)                octet_length(v)   bit_length(v)   disk_size(v)
+====================================================================================
+            1  '44c5c2a376ce6478c16b3b446e60e806'              4036           32288           4044
+            2  '02b6cc6daae92bb402016271b353e192'             16284          130272          16292
+            3  '42db23afb2f04edfa44f7a5f840e7a09'              4011           32088           4016
+
+3 rows selected. (0.003000 sec) Committed. (0.000000 sec) 
+== independently computed md5 ==
+N=4036 md5=44c5c2a376ce6478c16b3b446e60e806
+N=16284 md5=7ab2740532335b6841bb00ee9a64dfec
+N=4011 md5=795c092b16dfc3936fc107db9d09c3c5
+-- via coreutils for AA/BB/CC patterns --
+aa x 4036 -> 44c5c2a376ce6478c16b3b446e60e806
+bb x 16284 -> 02b6cc6daae92bb402016271b353e192
+cc x 4011 -> 42db23afb2f04edfa44f7a5f840e7a09
+== crash ==
+cub_server pids=[16]
+
+This may take a long time depending on the amount of recovery works to do.
+
+CUBRID 11.5.0 (11.5.0.2648) (64 debug build)
+
+after kill: [338 ]
+server status:
+@ cubrid server status
+ Server t14probe (rel 11.5.0, pid 338)
+== restart ==
+@ cubrid server start: t14probe
+++ cubrid server 't14probe' is running.
+restart exit=1
+
+=== <Result of SELECT Command in Line 1> ===
+
+              count(*)
+======================
+                     3
+
+1 row selected. (0.003000 sec) Committed. (0.000000 sec) 
+
+=== <Result of SELECT Command in Line 1> ===
+
+           id   md5(v)             
+===================================
+            1  '44c5c2a376ce6478c16b3b446e60e806'
+            2  '02b6cc6daae92bb402016271b353e192'
+            3  '42db23afb2f04edfa44f7a5f840e7a09'
+
+3 rows selected. (0.003000 sec) Committed. (0.000000 sec) 
+
+=== <Result of SELECT Command in Line 1> ===
+
+  Table_name            Class_oid             Heap_volume_id  Heap_file_id  Heap_header_page_id  Has_oos_file  Oos_volume_id  Oos_file_id  Oos_num_user_pages  Oos_page_size  Oos_num_recs       Oos_recs_sumlen    Oos_physical_bytes      Oos_unused_bytes
+============================================================================================================================================================================================================================================================
+  'dba.t14'             '(0|209|2)'                        1           576                  577             1              1          640                   3          16344             3                 20384                 49032                 28648
+
+1 row selected. (0.001000 sec) Committed. (0.000000 sec) 
+== update + delete then vacuum-ish wait, oos.log check ==
+1 row affected. (0.003000 sec) 
+1 row affected. (0.001000 sec) 
+Execute OK. (0.001000 sec) 
+dml exit=0
+-- oos.log --
+-rw-------. 1 vimkim vimkim 1027 Sep 10 16:25 /home/vimkim/.cub/install/oos-baseline-f4299ac0c/debug_gcc/log/oos.log
+[16:25:06] OOS [DEBUG](heap_recdes_get_oos_oids:28364): there exists an OOS with OID 1|962|0 at offset 13 index 0
+[16:25:06] OOS [DEBUG](heap_recdes_get_oos_oids:28388): Total 1 found. OOS OIDs: {(1|962|0)}
+[16:25:06] OOS [DEBUG](heap_recdes_get_oos_oids:28364): there exists an OOS with OID 1|963|0 at offset 13 index 0
+[16:25:06] OOS [DEBUG](heap_recdes_get_oos_oids:28388): Total 1 found. OOS OIDs: {(1|963|0)}
+[16:25:06] OOS [DEBUG](oos_delete:3236): arguments: oid={vol=1,page=962,slot=0}
+[16:25:06] OOS [DEBUG](oos_delete_chain:3135): deleted chunk at oid={vol=1,page=962,slot=0}, next={vol=-1,page=-1,slot=-1}
+[16:25:06] OOS [DEBUG](heap_recdes_get_oos_oids:28364): there exists an OOS with OID 1|770|0 at offset 13 index 0
+[16:25:06] OOS [DEBUG](heap_recdes_get_oos_oids:28388): Total 1 found. OOS OIDs: {(1|770|0)}
+[16:25:06] OOS [DEBUG](oos_delete:3236): arguments: oid={vol=1,page=770,slot=0}
+[16:25:06] OOS [DEBUG](oos_delete_chain:3135): deleted chunk at oid={vol=1,page=770,slot=0}, next={vol=-1,page=-1,slot=-1}
+== standalone eager path ==
+@ cubrid server stop: t14probe
+
+Server t14probe notified of shutdown.
+This may take several minutes. Please wait.
+++ cubrid server stop: success
+stop exit=0
+1 row affected. (0.002000 sec) Committed. (0.001000 sec) 
+sa update exit=0
+-- oos.log after standalone update --
+-rw-------. 1 vimkim vimkim 2054 Sep 11 12:58 /home/vimkim/.cub/install/oos-baseline-f4299ac0c/debug_gcc/log/oos.log
+[16:25:06] OOS [DEBUG](heap_recdes_get_oos_oids:28364): there exists an OOS with OID 1|962|0 at offset 13 index 0
+[16:25:06] OOS [DEBUG](heap_recdes_get_oos_oids:28388): Total 1 found. OOS OIDs: {(1|962|0)}
+[16:25:06] OOS [DEBUG](heap_recdes_get_oos_oids:28364): there exists an OOS with OID 1|963|0 at offset 13 index 0
+[16:25:06] OOS [DEBUG](heap_recdes_get_oos_oids:28388): Total 1 found. OOS OIDs: {(1|963|0)}
+[16:25:06] OOS [DEBUG](oos_delete:3236): arguments: oid={vol=1,page=962,slot=0}
+[16:25:06] OOS [DEBUG](oos_delete_chain:3135): deleted chunk at oid={vol=1,page=962,slot=0}, next={vol=-1,page=-1,slot=-1}
+[16:25:06] OOS [DEBUG](heap_recdes_get_oos_oids:28364): there exists an OOS with OID 1|770|0 at offset 13 index 0
+[16:25:06] OOS [DEBUG](heap_recdes_get_oos_oids:28388): Total 1 found. OOS OIDs: {(1|770|0)}
+[16:25:06] OOS [DEBUG](oos_delete:3236): arguments: oid={vol=1,page=770,slot=0}
+[16:25:06] OOS [DEBUG](oos_delete_chain:3135): deleted chunk at oid={vol=1,page=770,slot=0}, next={vol=-1,page=-1,slot=-1}
+[12:58:10] OOS [DEBUG](heap_recdes_get_oos_oids:28364): there exists an OOS with OID 1|642|0 at offset 13 index 0
+[12:58:10] OOS [DEBUG](heap_recdes_get_oos_oids:28388): Total 1 found. OOS OIDs: {(1|642|0)}
+[12:58:10] OOS [DEBUG](oos_delete:3236): arguments: oid={vol=1,page=642,slot=0}
+[12:58:10] OOS [DEBUG](oos_delete_chain:3135): deleted chunk at oid={vol=1,page=642,slot=0}, next={vol=-1,page=-1,slot=-1}
+[12:58:11] OOS [DEBUG](heap_recdes_get_oos_oids:28364): there exists an OOS with OID 1|644|0 at offset 13 index 0
+[12:58:11] OOS [DEBUG](heap_recdes_get_oos_oids:28388): Total 1 found. OOS OIDs: {(1|644|0)}
+[12:58:11] OOS [DEBUG](heap_recdes_get_oos_oids:28364): there exists an OOS with OID 1|642|0 at offset 13 index 0
+[12:58:11] OOS [DEBUG](heap_recdes_get_oos_oids:28388): Total 1 found. OOS OIDs: {(1|642|0)}
+[12:58:11] OOS [DEBUG](oos_delete:3236): arguments: oid={vol=1,page=644,slot=0}
+[12:58:11] OOS [DEBUG](oos_delete_chain:3135): deleted chunk at oid={vol=1,page=644,slot=0}, next={vol=-1,page=-1,slot=-1}
+== checkdb ==
+checkdb exit=0
+== cleanup ==
+@ cubrid server stop: t14probe
+++ cubrid server 't14probe' is not running.
+deletedb exit=0
+done
