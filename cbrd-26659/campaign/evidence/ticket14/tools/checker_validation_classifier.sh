@@ -2,7 +2,7 @@
 # CBRD-26659 campaign ticket 14 -- checker validation for the third checking mechanism:
 # the SHOW HEAP OOS output classifier and the field extraction that follows it.
 #
-# Why it has twelve shapes. The classifier has been wrong three times, and each time the
+# Why it has fourteen shapes. The classifier has been wrong three times, and each time the
 # defect passed every green run:
 #   1. two outcomes and a catch-all, so any non-syntax failure was reported as a missing
 #      capability -- a SKIP, which passes the case with no activation evidence.
@@ -24,6 +24,11 @@
 #
 # The function bodies below are extracted verbatim from the case, so the test cannot
 # drift away from what it validates. Exit status 0 only when every shape is correct.
+#
+# Shapes 13 and 14 pin interactions rather than defects: 13 is the only construction in
+# which a column located by name could point past the row, and 14 locks the name
+# comparison to exact field equality, because a substring match would reintroduce by-name
+# the wrong-column bug that was just removed by-position.
 oos_data_row()
 {
     echo "$1" | awk -v cls="'dba.oos_dur01'" '
@@ -145,6 +150,33 @@ chk "12 a near-miss class name" "
 $HDR
   'dbaXoos_dur01'       '(0|209|2)'                        1           576                  577             1              1          640                   4          16344             4                 24444                 65376                 40932
 " 2
+
+# 13: the header is wider than the data row, which is the only construction in which a
+# column located by name could point past the row's last field. oos_data_row requires
+# NF >= cols so the row is not selected at all and the classification is 2 -- it fails
+# closed. Pinned rather than reasoned about, because this is the one place where "located
+# by name" and "wide enough" have to agree: an index comes from the header (so idx <= cols)
+# and a row is only selected when NF >= cols, therefore idx <= NF always, but that is an
+# argument and this is a test.
+chk "13 header wider than the row" "
+$HDR
+  'dba.oos_dur01'       '(0|209|2)'                        1           576                  577             1              1          640                   4          16344             4
+" 2
+
+# 14: column names must be compared by EXACT field equality, never by substring. This
+# header carries both Heap_volume_id and Oos_volume_id, and Oos_num_recs shares fragments
+# with Oos_recs_sumlen and Oos_num_user_pages. A substring or regex match on the name side
+# would reintroduce by-name exactly the wrong-column bug that was just removed by-position,
+# and every value below would come from the wrong field. Suggested by the Standards
+# confirmation pass as a guess about code it had not read; the code was already exact, so
+# this shape exists to keep it that way.
+val "14 Oos_volume_id is not Heap_volume_id" "$(oos_field "$ROW" Oos_volume_id)" 1
+val "14 Heap_volume_id is its own column"    "$(oos_field "$ROW" Heap_volume_id)" 1
+val "14 Oos_num_recs is not Oos_recs_sumlen" "$(oos_field "$ROW" Oos_num_recs)" 4
+val "14 Oos_recs_sumlen is its own column"   "$(oos_field "$ROW" Oos_recs_sumlen)" 24444
+val "14 Oos_num_user_pages is its own column" "$(oos_field "$ROW" Oos_num_user_pages)" 4
+val "14 a name that is only a fragment resolves to nothing" "$(oos_field "$ROW" volume_id)" ""
+val "14 a name that is only a prefix resolves to nothing"    "$(oos_field "$ROW" Oos_num)" ""
 
 echo
 val "field extraction from the real row (has_oos)" "$(oos_field "$ROW" Has_oos_file)" 1
