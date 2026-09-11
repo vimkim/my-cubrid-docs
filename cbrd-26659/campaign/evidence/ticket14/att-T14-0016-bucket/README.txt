@@ -10,14 +10,21 @@ of this session's implementation workflow, and it is recorded here rather than c
 coverage.
 
 WHICH VERSION OF THE CASE THIS EXERCISED, and why it was not re-run. This invocation ran
-the case as committed at revision 3; the committed case is revision 4. The whole
-difference between them is the failure-preservation path, which is guarded by
-`[ ${nok_count} -gt 0 ]` and which this run never entered, because the case passed. The
-diff is in case-version-delta.diff, so the claim is checkable rather than asserted: it
-adds preserve_failure_database() and replaces the two unchecked `cp -a … 2>/dev/null`
-calls inside that branch. Re-running the bucket would have cost seven minutes and proved
-nothing the diff does not; the failure path itself is exercised by att-T14-0019, which
-journalled preservation|ok.
+the case as committed at revision 3; the committed case is revision 5. The whole
+difference is in two paths this run never entered, and case-version-delta.diff carries it
+so the claim is checkable rather than asserted:
+
+  * the failure-preservation path, guarded by `[ ${nok_count} -gt 0 ]`, which a passing
+    run does not reach. It gained preserve_failure_database() in place of two unchecked
+    `cp -a … 2>/dev/null` calls.
+  * the SHOW HEAP OOS failure classification, reached only when the statement does not
+    answer. This run's SHOW HEAP OOS answered, twice, which is recorded in its
+    operations.journal.
+
+Re-running the bucket would have cost seven minutes and proved nothing the diff does not.
+Both changed paths have their own direct evidence: att-T14-0022 exercised the preservation
+path and journalled preservation|ok, and tools/checker_validation_classifier.sh exercises
+all seven classification outcomes.
 
 Result (summary.txt):
 

@@ -1,6 +1,101 @@
 --- /home/vimkim/.cub/campaign/cbrd-26659/ticket14/attempts/att-T14-0013/workload.sh	2026-09-11 14:21:55.521980592 +0900
-+++ /home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659/shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh	2026-09-11 14:32:05.500278903 +0900
-@@ -394,15 +394,41 @@
++++ /home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659/shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh	2026-09-11 14:39:39.924950912 +0900
+@@ -79,7 +79,9 @@
+ Outcomes:
+   A capability this build lacks is recorded as SKIP with a reason, never as OK. Test 17
+   skips on a release build, where the OOS debug log is compiled out under NDEBUG, and
+-  tests 5 and 15 skip on a build whose parser does not know SHOW HEAP OOS. A skip takes
++  tests 5 and 15 skip on a build whose parser does not know SHOW HEAP OOS -- but only on
++  that, because a SHOW HEAP OOS that fails any other way is this case's problem and is
++  reported as a failure rather than as a missing capability. A skip takes
+   its own assertion number but says SKIP rather than OK or NOK, so the result file stays
+   contiguously numbered and the skip is visible without inflating the pass count; it is
+   also listed in the case's skip journal.
+@@ -153,6 +155,7 @@
+ nok_count=0
+ skip_count=0
+ activation_observed=0       # set when SHOW HEAP OOS answered at least once
++oos_failure_output=""       # what SHOW HEAP OOS said when it did not answer
+ pre_existing_masters=""
+ 
+ # --- helpers ---------------------------------------------------------------
+@@ -332,26 +335,51 @@
+     csql -u dba -c "SHOW HEAP OOS OF oos_dur01;" ${db_name} 2>&1
+ }
+ 
+-oos_supported()
++# THREE outcomes, not two. A SHOW HEAP OOS that fails for any reason other than the build
++# not knowing the statement is a FAILURE of this case, not a capability gap. Collapsing the
++# two would report a server disconnect, an authorization error, a renamed column or a
++# class-name mismatch as "this build does not answer SHOW HEAP OOS" -- asserting a cause
++# that was never established -- and because a SKIP line carries no NOK the case would pass
++# with no activation evidence at all. That is the exact inverse of what this case is for.
++#   0  answered: a row for this class is present, so the counts can be asserted
++#   1  the build's parser does not know the statement, which is a real capability gap
++#   2  it failed some other way, which is this case's problem and must be reported
++# The data row csql prints for this class, or nothing. The class name is a string column,
++# so csql quotes it, and the row carries the fourteen columns SHOW HEAP OOS returns.
++# Matching the bare name would also match an error that merely mentions the class --
++# `ERROR: Unknown class "dba.oos_dur01".` contains it -- and would then read a failure as
++# an answer and extract fields from the error text. The same selector feeds oos_field, so
++# the classification and the extraction cannot disagree about which line is the row.
++oos_data_row()
++{
++    echo "$1" | awk "/'dba.oos_dur01'/ && NF >= 14 { print; exit }"
++}
++
++classify_oos_output()
+ {
+     echo "$1" | grep -qi "syntax error" && return 1
+-    echo "$1" | grep -q "dba.oos_dur01" && return 0
+-    return 1
++    [ -n "`oos_data_row "$1"`" ] && return 0
++    return 2
+ }
+ 
+-# Both activation checks read the same two fields from the same statement and skip for the
+-# same reason, so the read, the record and the skip live in one place; only the judgement
+-# differs between them. Sets has_oos and num_recs and returns 0 when the build answered.
++# Both activation checks read the same two fields from the same statement and classify a
++# failure the same way, so the read, the record and the classification live in one place;
++# only the judgement differs between them. Sets has_oos, num_recs and, on a non-answer,
++# oos_failure_output; returns classify_oos_output's code.
+ read_oos_activation()
+ {
+     # read_oos_activation <phase tag> <output file>
+-    local out
++    local out rc
+     out=`show_heap_oos`
+     echo "${out}" > "$2"
+-    if ! oos_supported "${out}"; then
++    classify_oos_output "${out}"
++    rc=$?
++    if [ ${rc} -ne 0 ]; then
+         has_oos=""
+         num_recs=""
+-        return 1
++        oos_failure_output=`echo "${out}" | tr '\n' ' ' | cut -c1-300`
++        journal "observation|$1|show_heap_oos_not_answered|class=${rc}|output=${oos_failure_output}"
++        return ${rc}
+     fi
+     activation_observed=1
+     has_oos=`oos_field "${out}" 6`
+@@ -366,10 +394,10 @@
+ 
+ oos_field()
+ {
+-    # oos_field <show output> <awk field number>. head -1 keeps the result a single value
+-    # even if the output ever carried more than one matching row: a multi-line value would
+-    # turn the numeric comparisons below into a shell error instead of a failed assertion.
+-    echo "$1" | grep "dba.oos_dur01" | awk -v f=$2 '{print $f}' | head -1
++    # oos_field <show output> <awk field number>. oos_data_row returns at most one line, so
++    # the result is a single value: a multi-line value would turn the numeric comparisons
++    # below into a shell error instead of a failed assertion.
++    oos_data_row "$1" | awk -v f=$2 '{print $f}'
+ }
+ 
+ is_number()
+@@ -394,15 +422,41 @@
      done
  }
  
@@ -48,3 +143,51 @@
      fi
      cubrid deletedb ${db_name} >/dev/null 2>&1
      rm -rf "${cur_path:?}/${db_name:?}"
+@@ -489,11 +543,12 @@
+ 
+ # --- 5. the out-of-row path really ran -------------------------------------
+ 
+-if read_oos_activation after_insert ${evidence_dir}/show_heap_oos_after_insert.out; then
+-    assert_eq "oos_activation_after_insert" "has_oos=1 chunks=${expect_oos_num_recs}" "has_oos=${has_oos} chunks=${num_recs}"
+-else
+-    skip "oos_activation_after_insert" "this build does not answer SHOW HEAP OOS OF <class>, so out-of-row placement cannot be observed at the SQL seam"
+-fi
++read_oos_activation after_insert ${evidence_dir}/show_heap_oos_after_insert.out
++case $? in
++    0) assert_eq "oos_activation_after_insert" "has_oos=1 chunks=${expect_oos_num_recs}" "has_oos=${has_oos} chunks=${num_recs}" ;;
++    1) skip "oos_activation_after_insert" "this build's parser does not know SHOW HEAP OOS OF <class>, so out-of-row placement cannot be observed at the SQL seam" ;;
++    *) fail "oos_activation_after_insert : SHOW HEAP OOS neither answered nor reported a syntax error, so its failure is this case's problem and not a capability gap: [${oos_failure_output}]" ;;
++esac
+ 
+ # --- 6, 7. committed UPDATE and DELETE -------------------------------------
+ 
+@@ -575,16 +630,19 @@
+ 
+ # --- 15. the recovered database still holds its chains ---------------------
+ 
+-if read_oos_activation after_recovery ${evidence_dir}/show_heap_oos_after_recovery.out; then
+-    if [ "${has_oos}" = "1" ] && is_number "${num_recs}" \
+-       && [ "${num_recs}" -ge "${expect_oos_recs_min}" ] && [ "${num_recs}" -le "${expect_oos_recs_max}" ]; then
+-        write_ok "oos_activation_after_recovery"
+-    else
+-        fail "oos_activation_after_recovery : expected Has_oos_file 1 and ${expect_oos_recs_min} to ${expect_oos_recs_max} chunk records, got [${has_oos}] [${num_recs}]"
+-    fi
+-else
+-    skip "oos_activation_after_recovery" "this build does not answer SHOW HEAP OOS OF <class>, so the recovered chains cannot be observed at the SQL seam"
+-fi
++read_oos_activation after_recovery ${evidence_dir}/show_heap_oos_after_recovery.out
++case $? in
++    0)
++        if [ "${has_oos}" = "1" ] && is_number "${num_recs}" \
++           && [ "${num_recs}" -ge "${expect_oos_recs_min}" ] && [ "${num_recs}" -le "${expect_oos_recs_max}" ]; then
++            write_ok "oos_activation_after_recovery"
++        else
++            fail "oos_activation_after_recovery : expected Has_oos_file 1 and ${expect_oos_recs_min} to ${expect_oos_recs_max} chunk records, got [${has_oos}] [${num_recs}]"
++        fi
++        ;;
++    1) skip "oos_activation_after_recovery" "this build's parser does not know SHOW HEAP OOS OF <class>, so the recovered chains cannot be observed at the SQL seam" ;;
++    *) fail "oos_activation_after_recovery : SHOW HEAP OOS neither answered nor reported a syntax error, so its failure is this case's problem and not a capability gap: [${oos_failure_output}]" ;;
++esac
+ 
+ # --- 16. consistency, with the utility's exit status asserted --------------
+ 

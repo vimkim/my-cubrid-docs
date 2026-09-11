@@ -1,5 +1,5 @@
 # Live containment evidence -- an unrelated CUBRID instance that ran through the invocations
-# captured 2026-09-11T14:37:13+09:00
+# captured 2026-09-11T14:43:14+09:00
 
 This host carries another session's CUBRID instance serving demodb, owned by the same UNIX
 user. The CTP shell helpers call an unscoped 'pkill cub' in both init() and finish(), so every
@@ -8,26 +8,27 @@ invocation of this ticket issued two such sweeps. The cub_master below has been 
 the containment working on a real neighbour rather than on a decoy.
 
     PID    PPID     ELAPSED                  STARTED COMMAND         COMMAND
- 487844       1    01:45:33 Fri Sep 11 12:51:39 2026 cub_master      cub_master
- 659733       1    01:19:58 Fri Sep 11 13:17:14 2026 cub_server      cub_server demodb
- 659748  659733    01:19:58 Fri Sep 11 13:17:14 2026 cub_pl          cub_pl demodb
+ 487844       1    01:51:34 Fri Sep 11 12:51:39 2026 cub_master      cub_master
+ 659733       1    01:25:59 Fri Sep 11 13:17:14 2026 cub_server      cub_server demodb
+ 659748  659733    01:25:59 Fri Sep 11 13:17:14 2026 cub_pl          cub_pl demodb
+1295525 1294834       00:03 Fri Sep 11 14:43:10 2026 cub_master      cub_master
 
 namespace of the unrelated master : pid:[4026531836] ipc:[4026531839]
 namespace of the campaign shell   : pid:[4026531836] ipc:[4026531839]
 (the campaign shell shares the host namespaces; only the CTP invocations are unshared)
 
-End times of the runs recorded at revision 4:
-  att-T14-0017 ended_at=2026-09-11T14:32:34+09:00
-  att-T14-0018 ended_at=2026-09-11T14:32:59+09:00
-  att-T14-0019 ended_at=2026-09-11T14:33:19+09:00
+End times of the runs recorded at revision 5:
+  att-T14-0020 ended_at=2026-09-11T14:40:19+09:00
+  att-T14-0021 ended_at=2026-09-11T14:40:44+09:00
+  att-T14-0022 ended_at=2026-09-11T14:41:04+09:00
   att-T14-0016-bucket ended_at=2026-09-11T14:20:39+09:00
 
 Every case's operations.journal recorded pre_existing_masters=[] -- from inside the namespace
 the master above is not merely protected, it is invisible:
-  att-T14-0017: 2026-09-11T14:32:18+09:00|environment|pre_existing_masters=[]
-  att-T14-0018: 2026-09-11T14:32:38+09:00|environment|pre_existing_masters=[]
-  att-T14-0019: 2026-09-11T14:33:03+09:00|environment|pre_existing_masters=[]
+  att-T14-0020: 2026-09-11T14:40:03+09:00|environment|pre_existing_masters=[]
+  att-T14-0021: 2026-09-11T14:40:23+09:00|environment|pre_existing_masters=[]
+  att-T14-0022: 2026-09-11T14:40:48+09:00|environment|pre_existing_masters=[]
   att-T14-0016-bucket: 2026-09-11T14:20:19+09:00|environment|pre_existing_masters=[]
 
-Earlier revisions' invocations (att-T14-0001 through att-T14-0015) ran under the same wrapper
+Earlier revisions' invocations (att-T14-0001 through att-T14-0019) ran under the same wrapper
 and are retained in the bundles; the master survived all of them too.

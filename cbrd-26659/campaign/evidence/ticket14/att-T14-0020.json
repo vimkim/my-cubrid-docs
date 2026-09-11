@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "attempt_id": "att-T14-0020",
+  "kind": "original",
+  "parent_attempt": null,
+  "finding_id": null,
+  "case": {
+    "repository": "testcases-private-ex",
+    "path": "shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh",
+    "name": "cbrd_26659_oos_dur01"
+  },
+  "requirements": [
+    "OOS-DUR-01",
+    "OOS-REP-07"
+  ],
+  "manifest_id": "inv-T14-0001",
+  "configuration": {
+    "page_size": 16384,
+    "build_mode": "release",
+    "run_mode": "client-server",
+    "instrumentation_id": null,
+    "seed": null
+  },
+  "started_at": "2026-09-11T14:39:59+09:00",
+  "ended_at": "2026-09-11T14:40:19+09:00",
+  "deadline": {
+    "seconds": 120,
+    "reached": false,
+    "evidence_captured_on_timeout": null
+  },
+  "outcome": "PASS",
+  "skip_reason": "Assertion 17 of 17, debug_oos_log_records_chain_delete, was skipped: on a release build oos_debug and oos_trace are compiled out under NDEBUG, so $CUBRID/log/oos.log is never written. Recorded as a SKIP line in the result file on assertion 17's own number, and in skipped.journal; never as an OK. The case's own case_outcome file reads PASS, because the activation channel that matters, SHOW HEAP OOS, did answer.",
+  "assertions": {
+    "executed": 16,
+    "failed": 0
+  },
+  "expected_versus_actual": "/home/vimkim/.cub/campaign/cbrd-26659/ticket14/attempts/att-T14-0020/expected_vs_actual.txt",
+  "oos_evidence": {
+    "status": "proven",
+    "channel": "show-heap-oos",
+    "reference": "cbrd-26659/campaign/evidence/ticket14/att-T14-0020/show_heap_oos_after_insert.out",
+    "applicability": {
+      "fixture": "Identical, because it is the same run: the four rows of (id INT, v BIT VARYING) at 4,036 AA / 16,284 BB / 4,011 CC / 4,036 DD that the assertions judge are the rows SHOW HEAP OOS counted, in a database the case created, owns exclusively and deletes.",
+      "execution_path": "IDENTICAL, which is why this is proven and not reused. The SHOW HEAP OOS statement ran in the same CTP invocation, against the same client-server server process, in the same session sequence as the INSERT it certifies -- once immediately after the committed INSERT and once after the restart. It certifies the INSERT-side demotion and the survival of the chains across recovery; it certifies no vacuum or reclaim path, which is why the post-recovery count is asserted as a range.",
+      "engine_configuration": "Pinned engine commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, the release install, 16 KiB pages read back from spacedb, unmodified build, no instrumentation, async_commit=n and group_commit_interval_in_msecs=0 read back from paramdump. The debug-only oos.log channel does not exist on this build, which is the one skipped assertion.",
+      "conditions": "Single session, no concurrency, no fault injection, an empty table at the start, and one deliberate crash between the two observations. SHOW HEAP OOS reports per class, so exclusive ownership of the table is what makes the chunk count attributable to this fixture. Oos_recs_sumlen is recorded but never asserted, because it differs between the pinned 16-byte chunk header and the accepted 24-byte one (OOS-REP-05 / CBRD-26950).",
+      "source_manifest": "inv-T14-0001"
+    }
+  },
+  "barriers": [],
+  "injections": [],
+  "resources_owned": {
+    "databases": [
+      "t26659dur01, created by the case with --db-page-size=16384 under the case directory of the campaign testcase worktree, and dropped by it"
+    ],
+    "processes": [
+      "cub_master started by the case's `cubrid server start` and killed with kill -9",
+      "cub_server t26659dur01, killed with kill -9 and restarted",
+      "cub_pl t26659dur01, killed with the server"
+    ],
+    "ports": [
+      26659,
+      33120,
+      33121,
+      33122
+    ],
+    "directories": [
+      "/home/vimkim/.cub/campaign/cbrd-26659/ticket14",
+      "/home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659/shell/_06_issues/_26_2h/cbrd_26659_oos_dur01"
+    ]
+  },
+  "cleanup": {
+    "performed": true,
+    "scope_verified": true,
+    "evidence_preserved_first": true,
+    "evidence": "Scope was established before the run rather than argued after it. The CTP shell helpers run `cubrid service stop` and an unscoped `pkill cub` in init and finish, and sweep every System V segment this UNIX user owns in release_broker_sharedmemory; the whole invocation therefore ran inside `unshare --user --map-current-user --pid --fork --mount-proc --ipc`, which makes processes and IPC segments outside the invocation unaddressable rather than merely protected. isolation_check.sh demonstrates this with two matched pairs -- a cub-named process and a System V segment created outside survive the same sweep that kills and destroys their counterparts created inside -- so the containment check is shown to discriminate; it passed with failures=0 on this host before the run (isolation/isolation.txt). The case's own crash step is additionally scoped: it snapshots the cub_master pids that already exist before it starts anything and kills only masters absent from that snapshot, so it is safe even outside the namespace. This run's operations.journal records pre_existing_masters=[], which is the containment working: an unrelated cub_master and cub_server serving demodb (another session's, same UNIX user) ran on this host throughout and were invisible, untouched and still running afterwards (isolation/live-containment.txt). EVIDENCE BEFORE CLEANUP: the first failed assertion captures processes, journals, server status and the CUBRID logs, and cleanup copies the recovered database and the server logs aside before deleting them. That is not decorative -- this case sets SKIP_CHECK_RECOVERY_ERROR=TRUE on its post-crash `cubrid server start` and `checkdb`, which switches off CTP's own installation-snapshot channel, so without it a failed value assertion would leave nothing but a result line. Every copy step is checked and a failed copy is reported as a further NOK, so a lost image cannot be silent. The negative control att-T14-0022 exercises the path: it journalled preservation|ok and preserved a 259 MiB database image plus an 88 KiB first-failure snapshot. Two further scope items, both verified by hashing before and after: CTP rewrites $CUBRID/conf from ~/.CUBRID_SHELL_FM and writes its ports into cubrid.conf, cubrid_broker.conf and cubrid_ha.conf, so HOME was redirected to a campaign-owned directory seeded from the pinned install and the install's conf and databases were restored verbatim afterwards (install_conf_drift_lines=0, install_databases_drift_lines=0); and the user's own ~/.CUBRID_SHELL_FM was neither read nor written (user_shell_fm_drift_lines=0). The case deletes its own database and leaves the testcase worktree with zero untracked files."
+  },
+  "bundle": {
+    "path": "/home/vimkim/.cub/campaign/cbrd-26659/ticket14/attempts/att-T14-0020",
+    "hash": "sha256:3aac943a5c0ccbef6c2851d1b9489edc1b508bcbc93c0f54c942d845d810b847"
+  },
+  "reproduction": {
+    "fresh_fixture": true,
+    "consecutive_reproductions_so_far": 0,
+    "failure_reproduced": false
+  },
+  "notes": "The private-shell tracer bullet's regression configuration. Four things a reader should carry forward. (1) THE LAUNCHER EXIT STATUS IS NOT A VERDICT ON THE SHELL SIDE EITHER: the negative control att-T14-0022 reported Total Fail Case:1 with launcher exit status 0, exactly as ticket 13 found on the SQL side, so tooling must read result/shell/current_runtime_logs/test_status.data. (2) BUT THE SHELL SEAM DOES HAVE A REAL ASSERTION COUNTER, unlike the SQL seam: the case writes one '<case>-<n> : OK|NOK' line per assertion into its .result file and CTP reproduces them in feedback.log, so executed=16 here is measured. Count with grep -cE '^<case>-[0-9]+ : (OK|NOK)', which excludes the SKIP lines that share the numbering. (3) CTP DISCOVERS A CASE IFF THE FILE NAME EQUALS ITS GRANDPARENT DIRECTORY NAME PLUS .sh (Dispatch.getAllTestCaseScripts), not because the directory is called 'cases'. That is what keeps the negative-control generator out of every regression invocation even though it lives inside cases/, and discovery.txt demonstrates it over the whole issue bucket. (4) CTP RESETS $CUBRID/conf FROM ~/.CUBRID_SHELL_FM BEFORE EVERY CASE and writes its own ports in afterwards without restoring them; the user's snapshot is a whole foreign install carrying cubrid_port_id = 1523, so an unguarded run would have replaced the pinned install's configuration with it. REVISION 3, after both axes of the two-axis review. The Standards axis produced five fixes (generator moved into cases/ as a non-discovered helper, SKIP_CHECK_RECOVERY_ERROR on the post-crash start and checkdb, the skip line taking its own assertion number, a guard that never deletes a caller-supplied evidence directory, and oos_field taking a single row). The Spec axis produced four more, all fixed here: (i) THE ORACLE'S PROVENANCE CLAIM WAS WITHDRAWN -- probes/probe_format.sh had already run the case's own fixture, sizes, update, crash and restart before expected-oracle.md was written, so the oracle's independence rests on its derivation and not on the ordering, and the corrected text and probes/README.txt now say so; (ii) failure evidence is preserved before cleanup, as described in the cleanup field; (iii) the case's internal deadlines were lowered to 30 s and 60 s so that a run reaching both still finishes inside the declared 120 s per-case cap, which the previous 180 s restart deadline contradicted; (iv) the case now states a campaign outcome of its own, so a build without SHOW HEAP OOS records SKIP instead of a pass with no activation evidence. The Spec axis also confirmed independently that the derived sizes, the digests, the chunk counts, the non-discovery argument and the 'proven' evidence status all hold. Revisions 1 and 2 (att-T14-0001 to att-T14-0012-bucket) are retained as history and cited by no manifest. The declared deadline of 120 seconds is the campaign's fast-tier per-case cap. The case's own waits are 30 seconds for the killed processes to disappear and 60 seconds for the restart to answer a query, chosen so that a run which reaches both still finishes inside that cap; measured, they were under a second and about three seconds. REVISION 4: the failure-preservation copy is now checked step by step instead of discarding its errors, and a failed copy is reported as a further NOK. That was the Spec reviewer's one residual point after it verified revision 3, and it matters because with SKIP_CHECK_RECOVERY_ERROR=TRUE suppressing CTP's snapshot channel this copy is the only image a failing run leaves behind, so losing it silently is exactly the outcome this campaign exists to prevent. att-T14-0022 exercised the path and journalled preservation|ok. REVISION 5: the SHOW HEAP OOS output classifier now has three outcomes instead of two. The Standards reviewer's confirmation pass found that a catch-all made any non-syntax failure -- a disconnect, an authorization error, a renamed column, a class-name mismatch -- indistinguishable from 'this build lacks the statement', so a real failure would have been recorded as a capability gap and, because a SKIP line carries no NOK, the case would have passed with no activation evidence: the inverse of what this case is for. Only a syntax error now skips; anything else fails. Writing the controlled failure example for the new classifier then caught a second defect in the fix before it shipped -- matching the bare class name also matches `ERROR: Unknown class \"dba.oos_dur01\".`, so an error was read as an answer and fields were extracted from the error text. The shipped selector requires the quoted class name and the full column count, and feeds both the classification and the extraction so they cannot disagree. Seven cases in tools/checker_validation_classifier.sh, failures=0."
+}
