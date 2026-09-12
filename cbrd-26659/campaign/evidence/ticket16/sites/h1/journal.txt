@@ -1,0 +1,15 @@
+18:07:20.598 === site=h1 mode=fault db=t16_h1_f install=/home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc
+CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit debug build for Linux) (Sep 11 2026 17:04:32)
+dec89384db7c133da28437079951c3ffc365a6551f57b9675372886513799c29  /home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc/lib/libcubrid.so
+18:07:20.935 port 26671 already held by cub_master pid pid=2591098 (campaign master, reused)
+18:07:23.839 createdb t16_h1_f rc=0 (2.9 s)
+18:07:25.973 server start (1) rc=0 server_pid=2629341 master_pid=2591098 (2.1 s)
+18:07:26.045 csql w rc=1 (0.07 s)
+18:07:26.048 server pid 2629341 gone after 0 s
+18:07:28.193 server start (2) rc=1 server_pid=2629671 master_pid=2591098 (2.1 s)
+18:07:28.230 csql v rc=0 (0.03 s)
+18:07:30.301 server stop (2) rc=0; still listed: 0
+18:07:30.310 acks: 1
+  Time: 09/11/26 18:07:26.014 - NOTIFICATION *** file /home/vimkim/gh/cb/oos-instr-f4299ac0c/src/storage/heap_file.c, line 12742  CODE = -588, Tran = 1, CLIENT = dev2:csql(2629670), EID = 3
+  INTERNAL ERROR: Assertion 'FAULT INJECTION ACK site=heap_attrinfo_insert_to_oos code=700007 target_operation="after all OOS chunks of a record are inserted and published, before the heap insert" requested_action="crash (_exit or abort)" reach=1 fired=1 fire_at=1' failed.
+18:07:30.319 === done site=h1 mode=fault code=700007 fire_at=1 wall=9.7 s

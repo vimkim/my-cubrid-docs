@@ -1,0 +1,15 @@
+18:05:25.897 === site=e1 mode=fault db=t16_e1_f install=/home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc
+CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit debug build for Linux) (Sep 11 2026 17:04:32)
+dec89384db7c133da28437079951c3ffc365a6551f57b9675372886513799c29  /home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc/lib/libcubrid.so
+18:05:26.226 port 26671 already held by cub_master pid pid=2591098 (campaign master, reused)
+18:05:30.881 createdb t16_e1_f rc=0 (4.6 s)
+18:05:33.016 server start (1) rc=0 server_pid=2619692 master_pid=2591098 (2.1 s)
+18:06:04.692 csql w rc=1 (31.67 s)
+18:06:04.695 server pid 2619692 gone after 0 s
+18:06:06.839 server start (2) rc=1 server_pid=2621927 master_pid=2591098 (2.1 s)
+18:06:06.884 csql v rc=0 (0.04 s)
+18:06:08.959 server stop (2) rc=0; still listed: 0
+18:06:08.968 acks: 1
+  Time: 09/11/26 18:05:33.056 - NOTIFICATION *** file /home/vimkim/gh/cb/oos-instr-f4299ac0c/src/transaction/log_page_buffer.c, line 2332  CODE = -588, Tran = 0, CLIENT = :(0), EID = 3
+  INTERNAL ERROR: Assertion 'FAULT INJECTION ACK site=logpb_write_page_to_disk code=700004 target_operation="disk write of an active log page (log I/O)" requested_action="fail the write with ER_IO_WRITE (fatal for the server)" reach=1 fired=1 fire_at=1' failed.
+18:06:08.976 === done site=e1 mode=fault code=700004 fire_at=1 wall=43.1 s

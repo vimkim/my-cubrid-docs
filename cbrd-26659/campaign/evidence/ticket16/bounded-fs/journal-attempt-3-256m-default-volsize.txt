@@ -1,0 +1,48 @@
+17:07:51 === variant A: tmpfs in an unprivileged user+mount+pid namespace
+17:08:20 variant A namespace exited rc=0 ; inner log: /home/vimkim/.cub/campaign/cbrd-26659/ticket16/boundedfs/out/A-inner.txt
+    inside: uid=0 pid=1
+    Filesystem     1B-blocks  Used     Avail Mounted on
+    tmpfs          268435456     0 268435456 /home/vimkim/.cub/campaign/cbrd-26659/ticket16/boundedfs/mnt
+    createdb rc=254
+    268435456 89767936 178667520
+    total 87664
+    drwxr-xr-x. 3 root root      220 Sep 12 17:07 .
+    drwxrwxrwt. 3 root root       60 Sep 12 17:07 ..
+    -rw-------. 1 root root 67108864 Sep 12 17:07 bfs
+    -rw-------. 1 root root  1048576 Sep 12 17:07 bfs_dwb
+    -rw-------. 1 root root       65 Sep 12 17:07 bfs_keys
+    -rw-------. 1 root root 20971520 Sep 12 17:07 bfs_lgar_t
+    -rw-------. 1 root root 20971520 Sep 12 17:07 bfs_lgat
+    -rw-------. 1 root root       22 Sep 12 17:07 bfs_lgat__lock
+    -rw-------. 1 root root      257 Sep 12 17:07 bfs_lginf
+    -rw-------. 1 root root      388 Sep 12 17:07 bfs_vinf
+    drwx------. 2 root root       40 Sep 12 17:07 lob
+    /home/vimkim/.cub/campaign/cbrd-26659/ticket16/boundedfs/inner_A.sh: line 18:    29 Aborted                 (core dumped) csql -S -u dba bfs -i "$OUT/A-fill.sql" > "$OUT/A-fill.out" 2>&1
+    fill csql rc=134
+    --- fill outcome (first error and tail):
+    csql: /home/vimkim/gh/cb/oos-instr-f4299ac0c/src/storage/disk_manager.c:4274: DISK_ISVALID disk_is_sector_reserved(THREAD_ENTRY*, const DISK_VOLUME_HEADER*, SECTID, bool): Assertion `!debug_crash' failed.
+    --- rows inserted: 0
+    268435456 89767936 178667520
+    total 87664
+    drwxr-xr-x. 3 root root      220 Sep 12 17:07 .
+    drwxrwxrwt. 3 root root       60 Sep 12 17:07 ..
+    -rw-------. 1 root root 67108864 Sep 12 17:07 bfs
+    -rw-------. 1 root root  1048576 Sep 12 17:07 bfs_dwb
+    -rw-------. 1 root root       65 Sep 12 17:07 bfs_keys
+    -rw-------. 1 root root 20971520 Sep 12 17:07 bfs_lgar_t
+    -rw-------. 1 root root 20971520 Sep 12 17:07 bfs_lgat
+    -rw-------. 1 root root       23 Sep 12 17:07 bfs_lgat__lock
+    -rw-------. 1 root root      257 Sep 12 17:07 bfs_lginf
+    -rw-------. 1 root root      388 Sep 12 17:07 bfs_vinf
+    drwx------. 2 root root       40 Sep 12 17:07 lob
+    /home/vimkim/.cub/campaign/cbrd-26659/ticket16/boundedfs/inner_A.sh: line 25:   182 Aborted                 (core dumped) csql -S -u dba bfs -c "SELECT COUNT(*) FROM t; SHOW HEAP OOS OF t;" > "$OUT/A-readback.out" 2>&1
+    readback rc=134
+    csql: /home/vimkim/gh/cb/oos-instr-f4299ac0c/src/storage/disk_manager.c:4274: DISK_ISVALID disk_is_sector_reserved(THREAD_ENTRY*, const DISK_VOLUME_HEADER*, SECTID, bool): Assertion `!debug_crash' failed.
+    inside-done
+17:08:21 outside after: mnt entries=0 ; /home used before=3560143556608 after=3560477315072
+17:08:21 tmpfs visible outside the namespace: 0 mount(s)
+17:08:21 === variant B: CUBRID-level bound (16 MiB primary volume on disk, no filesystem bound)
+17:08:22 createdb bdisk rc=0
+17:08:25 variant B fill rc=0 ; 1500 rows
+17:08:25 volumes after: bdisk 67108864;bdisk_x001 134217728;
+17:08:25 done

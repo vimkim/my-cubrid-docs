@@ -1,0 +1,5 @@
+CREATE TABLE t (id INT, v BIT VARYING);
+SET SYSTEM PARAMETERS 'fault_injection_ids=700003; fault_injection_fire_at_occurrence=1';
+INSERT INTO t SELECT ROWNUM, CAST(REPEAT('EE', 12000) AS BIT VARYING) FROM db_class a, db_class b LIMIT 1500;
+SELECT COUNT(*), SUM(v = CAST(REPEAT('EE', 12000) AS BIT VARYING)) AS n_equal FROM t;
+SHOW HEAP OOS OF t;

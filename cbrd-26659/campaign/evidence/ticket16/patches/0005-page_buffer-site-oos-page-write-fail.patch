@@ -1,0 +1,40 @@
+diff --git a/src/storage/page_buffer.c b/src/storage/page_buffer.c
+index 058401498..025ea3755 100644
+--- a/src/storage/page_buffer.c
++++ b/src/storage/page_buffer.c
+@@ -36,6 +36,7 @@
+ #include "memory_alloc.h"
+ #include "system_parameter.h"
+ #include "error_manager.h"
++#include "fault_injection.h"
+ #include "file_io.h"
+ #include "lockfree_circular_queue.hpp"
+ #include "log_append.hpp"
+@@ -10766,8 +10767,25 @@ copy_unflushed_lsa:
+       write_mode = (dwb_is_created () == true ? FILEIO_WRITE_NO_COMPENSATE_WRITE : FILEIO_WRITE_DEFAULT_WRITE);
+ 
+       perfmon_inc_stat (thread_p, PSTAT_PB_NUM_IOWRITES);
+-      if (fileio_write (thread_p, fileio_get_volume_descriptor (bufptr->vpid.volid), iopage, bufptr->vpid.pageid,
+-			IO_PAGESIZE, write_mode) == NULL)
++#if !defined(NDEBUG)
++      if (iopage->prv.ptype == PAGE_OOS)
++	{
++	  /* CBRD-26659 campaign site (group: data I/O error): the write fails as fileio_write would on an I/O error.
++	   * Reached only on the direct write path, so the double write buffer must be off (double_write_buffer_size=0). */
++	  static FI_SITE_DESC fi_desc = { FI_TEST_OOS_PAGE_WRITE_FAIL, "pgbuf_bcb_flush_with_wal",
++	    "disk write of a dirty PAGE_OOS page (data I/O)", "fail the write with ER_IO_WRITE", 0, 0
++	  };
++	  if (FI_TEST_ARG (thread_p, FI_TEST_OOS_PAGE_WRITE_FAIL, &fi_desc, 0) != NO_ERROR)
++	    {
++	      er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_IO_WRITE, 2, bufptr->vpid.pageid,
++		      fileio_get_volume_label (bufptr->vpid.volid, PEEK));
++	      error = ER_FAILED;
++	    }
++	}
++#endif
++      if (error == NO_ERROR
++	  && fileio_write (thread_p, fileio_get_volume_descriptor (bufptr->vpid.volid), iopage, bufptr->vpid.pageid,
++			   IO_PAGESIZE, write_mode) == NULL)
+ 	{
+ 	  error = ER_FAILED;
+ 	}

@@ -1,0 +1,83 @@
+18:05:50 === variant A: tmpfs in an unprivileged user+mount+pid namespace
+18:05:50 variant A namespace exited rc=0 ; inner log: /home/vimkim/.cub/campaign/cbrd-26659/ticket16/boundedfs/out/A-inner.txt
+    inside: uid=0 pid=1
+    Filesystem     1B-blocks  Used    Avail Mounted on
+    tmpfs           50331648     0 50331648 /home/vimkim/.cub/campaign/cbrd-26659/ticket16/boundedfs/mnt
+    createdb rc=1
+     50331648     0 50331648
+    total 0
+    drwxr-xr-x. 2 root root 40 Sep 11 18:05 .
+    drwxrwxrwt. 3 root root 60 Sep 11 18:05 ..
+    fill csql rc=1
+    --- fill outcome (first error and tail):
+    1-
+    2:ERROR: Database "bfs" is unknown, or the file "databases.txt" cannot be accessed.
+    3-
+    
+    ERROR: Database "bfs" is unknown, or the file "databases.txt" cannot be accessed.
+    
+    --- rows inserted: 0
+     50331648     0 50331648
+    total 0
+    drwxr-xr-x. 2 root root 40 Sep 11 18:05 .
+    drwxrwxrwt. 3 root root 60 Sep 11 18:05 ..
+    readback rc=1
+    
+    ERROR: Database "bfs" is unknown, or the file "databases.txt" cannot be accessed.
+    
+    inside-done
+18:05:50 outside after: mnt entries=0 ; /home used before=3531674255360 after=3531674927104
+18:05:50 tmpfs visible outside the namespace: 0 mount(s)
+18:05:50 === variant B: CUBRID-level bound (16 MiB primary volume on disk, no filesystem bound)
+18:05:50 createdb bdisk rc=1
+18:05:50 variant B fill rc=1 ;  rows
+18:05:50 volumes after: 
+18:05:50 done
+22:36:50 === variant A: tmpfs in an unprivileged user+mount+pid namespace
+22:37:19 variant A namespace exited rc=0 ; inner log: /home/vimkim/.cub/campaign/cbrd-26659/ticket16/boundedfs/out/A-inner.txt
+    inside: uid=0 pid=1
+    Filesystem     1B-blocks  Used     Avail Mounted on
+    tmpfs          134217728     0 134217728 /home/vimkim/.cub/campaign/cbrd-26659/ticket16/boundedfs/mnt
+    createdb rc=254
+    134217728 89767936 44449792
+    total 87664
+    drwxr-xr-x. 3 root root      220 Sep 11 22:36 .
+    drwxrwxrwt. 3 root root       60 Sep 11 22:36 ..
+    -rw-------. 1 root root 67108864 Sep 11 22:36 bfs
+    -rw-------. 1 root root  1048576 Sep 11 22:36 bfs_dwb
+    -rw-------. 1 root root       65 Sep 11 22:36 bfs_keys
+    -rw-------. 1 root root 20971520 Sep 11 22:36 bfs_lgar_t
+    -rw-------. 1 root root 20971520 Sep 11 22:36 bfs_lgat
+    -rw-------. 1 root root       22 Sep 11 22:36 bfs_lgat__lock
+    -rw-------. 1 root root      257 Sep 11 22:36 bfs_lginf
+    -rw-------. 1 root root      388 Sep 11 22:36 bfs_vinf
+    drwx------. 2 root root       40 Sep 11 22:36 lob
+    /home/vimkim/.cub/campaign/cbrd-26659/ticket16/boundedfs/inner_A.sh: line 18:    29 Aborted                 (core dumped) csql -S -u dba bfs -i "$OUT/A-fill.sql" > "$OUT/A-fill.out" 2>&1
+    fill csql rc=134
+    --- fill outcome (first error and tail):
+    csql: /home/vimkim/gh/cb/oos-instr-f4299ac0c/src/storage/disk_manager.c:4274: DISK_ISVALID disk_is_sector_reserved(THREAD_ENTRY*, const DISK_VOLUME_HEADER*, SECTID, bool): Assertion `!debug_crash' failed.
+    --- rows inserted: 0
+    134217728 89767936 44449792
+    total 87664
+    drwxr-xr-x. 3 root root      220 Sep 11 22:36 .
+    drwxrwxrwt. 3 root root       60 Sep 11 22:36 ..
+    -rw-------. 1 root root 67108864 Sep 11 22:36 bfs
+    -rw-------. 1 root root  1048576 Sep 11 22:36 bfs_dwb
+    -rw-------. 1 root root       65 Sep 11 22:36 bfs_keys
+    -rw-------. 1 root root 20971520 Sep 11 22:36 bfs_lgar_t
+    -rw-------. 1 root root 20971520 Sep 11 22:36 bfs_lgat
+    -rw-------. 1 root root       23 Sep 11 22:36 bfs_lgat__lock
+    -rw-------. 1 root root      257 Sep 11 22:36 bfs_lginf
+    -rw-------. 1 root root      388 Sep 11 22:36 bfs_vinf
+    drwx------. 2 root root       40 Sep 11 22:36 lob
+    /home/vimkim/.cub/campaign/cbrd-26659/ticket16/boundedfs/inner_A.sh: line 25:   182 Aborted                 (core dumped) csql -S -u dba bfs -c "SELECT COUNT(*) FROM t; SHOW HEAP OOS OF t;" > "$OUT/A-readback.out" 2>&1
+    readback rc=134
+    csql: /home/vimkim/gh/cb/oos-instr-f4299ac0c/src/storage/disk_manager.c:4274: DISK_ISVALID disk_is_sector_reserved(THREAD_ENTRY*, const DISK_VOLUME_HEADER*, SECTID, bool): Assertion `!debug_crash' failed.
+    inside-done
+22:37:19 outside after: mnt entries=0 ; /home used before=3551518941184 after=3551848341504
+22:37:19 tmpfs visible outside the namespace: 0 mount(s)
+22:37:19 === variant B: CUBRID-level bound (16 MiB primary volume on disk, no filesystem bound)
+22:37:21 createdb bdisk rc=0
+22:37:24 variant B fill rc=0 ; 1500 rows
+22:37:24 volumes after: bdisk 67108864;bdisk_x001 134217728;
+22:37:24 done

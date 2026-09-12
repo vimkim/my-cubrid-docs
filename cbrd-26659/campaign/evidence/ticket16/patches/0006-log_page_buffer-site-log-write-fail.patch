@@ -1,0 +1,43 @@
+diff --git a/src/transaction/log_page_buffer.c b/src/transaction/log_page_buffer.c
+index 645f5c246..f9fa14dd2 100644
+--- a/src/transaction/log_page_buffer.c
++++ b/src/transaction/log_page_buffer.c
+@@ -76,6 +76,7 @@
+ #include "page_buffer.h"
+ #include "double_write_buffer.hpp"
+ #include "file_io.h"
++#include "fault_injection.h"
+ #include "disk_manager.h"
+ #include "error_manager.h"
+ #include "xserver_interface.h"
+@@ -2275,6 +2276,7 @@ logpb_write_page_to_disk (THREAD_ENTRY * thread_p, LOG_PAGE * log_pgptr, LOG_PAG
+   FILEIO_WRITE_MODE write_mode;
+   char enc_pgbuf[IO_MAX_PAGE_SIZE + MAX_ALIGNMENT];
+   LOG_PAGE *enc_pgptr = NULL;
++  bool fi_write_fails = false;
+ 
+   enc_pgptr = (LOG_PAGE *) PTR_ALIGN (enc_pgbuf, MAX_ALIGNMENT);
+ 
+@@ -2321,7 +2323,21 @@ logpb_write_page_to_disk (THREAD_ENTRY * thread_p, LOG_PAGE * log_pgptr, LOG_PAG
+ 	}
+     }
+ 
+-  if (fileio_write (thread_p, log_Gl.append.vdes, log_pgptr, phy_pageid, LOG_PAGESIZE, write_mode) == NULL)
++#if !defined(NDEBUG)
++  {
++    /* CBRD-26659 campaign site (group: log I/O error): the write fails as fileio_write would on an I/O error */
++    static FI_SITE_DESC fi_desc = { FI_TEST_OOS_LOG_WRITE_FAIL, "logpb_write_page_to_disk",
++      "disk write of an active log page (log I/O)", "fail the write with ER_IO_WRITE (fatal for the server)", 0, 0
++    };
++    if (FI_TEST_ARG (thread_p, FI_TEST_OOS_LOG_WRITE_FAIL, &fi_desc, 0) != NO_ERROR)
++      {
++	er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_IO_WRITE, 2, phy_pageid, log_Name_active);
++	fi_write_fails = true;
++      }
++  }
++#endif
++  if (fi_write_fails
++      || fileio_write (thread_p, log_Gl.append.vdes, log_pgptr, phy_pageid, LOG_PAGESIZE, write_mode) == NULL)
+     {
+       if (er_errid () == ER_IO_WRITE_OUT_OF_SPACE)
+ 	{

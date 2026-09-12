@@ -1,0 +1,29 @@
+diff --git a/src/storage/heap_oos.cpp b/src/storage/heap_oos.cpp
+index 4cd85c1eb..dc7a60668 100644
+--- a/src/storage/heap_oos.cpp
++++ b/src/storage/heap_oos.cpp
+@@ -29,6 +29,7 @@
+ #include "deduplicate_key.h"
+ #include "error_code.h"
+ #include "error_manager.h"
++#include "fault_injection.h"
+ #include "file_manager.h"
+ #include "heap_file.h"
+ #include "heap_show_scan_context.hpp"
+@@ -536,6 +537,16 @@ heap_oos_read_grouped_payloads (THREAD_ENTRY *thread_p, RECDES *recdes, HEAP_CAC
+ 
+   try
+     {
++#if !defined(NDEBUG)
++      /* CBRD-26659 campaign site (group: allocation during expansion / read) */
++      static FI_SITE_DESC fi_desc = { FI_TEST_OOS_READ_GROUPED_BAD_ALLOC, "heap_oos_read_grouped_payloads",
++				      "grouped Resolve prefetch buffers of an OOS-bearing record (read/expansion)",
++				      "throw std::bad_alloc", 0, 0 };
++      if (FI_TEST_ARG (thread_p, FI_TEST_OOS_READ_GROUPED_BAD_ALLOC, &fi_desc, 0) != NO_ERROR)
++	{
++	  throw std::bad_alloc ();
++	}
++#endif
+       oos_payloads.resize ((std::size_t) attr_info->num_values, empty_payload);
+       requests.reserve ((std::size_t) requested_oos_count);
+     }

@@ -1,0 +1,235 @@
+diff --git a/src/base/fault_injection.c b/src/base/fault_injection.c
+index 8f1e3c2d7..a69da2117 100644
+--- a/src/base/fault_injection.c
++++ b/src/base/fault_injection.c
+@@ -35,6 +35,7 @@
+ #endif /* defined (SERVER_MODE) || defined (SA_MODE) */
+ 
+ #include <assert.h>
++#include <stdio.h>
+ // XXX: SHOULD BE THE LAST INCLUDE HEADER
+ #include "memory_wrapper.hpp"
+ 
+@@ -45,6 +46,9 @@ static int fi_handler_random_exit (THREAD_ENTRY * thread_p, void *arg, const cha
+ static int fi_handler_random_fail (THREAD_ENTRY * thread_p, void *arg, const char *caller_file, const int caller_line);
+ static int fi_handler_hang (THREAD_ENTRY * thread_p, void *arg, const char *caller_file, const int caller_line);
+ static int fi_handler_hold (THREAD_ENTRY * thread_p, void *arg, const char *caller_file, const int caller_line);
++static int fi_handler_ack_fail (THREAD_ENTRY * thread_p, void *arg, const char *caller_file, const int caller_line);
++static int fi_handler_ack_crash (THREAD_ENTRY * thread_p, void *arg, const char *caller_file, const int caller_line);
++static bool fi_site_fire_and_acknowledge (void *arg, const char *caller_file, const int caller_line);
+ 
+ /* how long fi_handler_hold stays in place when the caller passes no argument */
+ #define FI_HOLD_DEFAULT_SECONDS 3
+@@ -76,7 +80,20 @@ FI_TEST_ITEM fi_Test_array[] = {
+   {FI_TEST_DBLINK_2PC_CRASH_BETWEEN_1_2, fi_handler_exit, FI_INIT_STATE},
+   {FI_TEST_DBLINK_2PC_CRASH_BETWEEN_2_4, fi_handler_exit, FI_INIT_STATE},
+   {FI_TEST_DBLINK_2PC_CRASH_BETWEEN_4_6, fi_handler_exit, FI_INIT_STATE},
+-  {FI_TEST_DBLINK_2PC_CRASH_BETWEEN_6_7, fi_handler_exit, FI_INIT_STATE}
++  {FI_TEST_DBLINK_2PC_CRASH_BETWEEN_6_7, fi_handler_exit, FI_INIT_STATE},
++  /* OOS -- CBRD-26659 campaign sites: deterministic, acknowledged in the server error log */
++  {FI_TEST_OOS_PUBLISH_OID_BAD_ALLOC, fi_handler_ack_fail, FI_INIT_STATE},
++  {FI_TEST_OOS_READ_GROUPED_BAD_ALLOC, fi_handler_ack_fail, FI_INIT_STATE},
++  {FI_TEST_OOS_DELETE_HINT_BAD_ALLOC, fi_handler_ack_fail, FI_INIT_STATE},
++  {FI_TEST_OOS_PAGE_WRITE_FAIL, fi_handler_ack_fail, FI_INIT_STATE},
++  {FI_TEST_OOS_LOG_WRITE_FAIL, fi_handler_ack_fail, FI_INIT_STATE},
++  {FI_TEST_OOS_INSERT_MANY_FAIL, fi_handler_ack_fail, FI_INIT_STATE},
++  {FI_TEST_OOS_CRASH_BETWEEN_CHUNKS, fi_handler_ack_crash, FI_INIT_STATE},
++  {FI_TEST_OOS_CRASH_BEFORE_HEAP_PUBLICATION, fi_handler_ack_crash, FI_INIT_STATE},
++  {FI_TEST_OOS_RV_UNDO_INSERT_FAIL, fi_handler_ack_fail, FI_INIT_STATE},
++  {FI_TEST_OOS_VACUUM_DELETE_FAIL, fi_handler_ack_fail, FI_INIT_STATE},
++  {FI_TEST_OOS_RECLAIM_WRITE_FIX_SKIP, fi_handler_ack_fail, FI_INIT_STATE},
++  {FI_TEST_OOS_RV_REDO_INSERT_FAIL, fi_handler_ack_fail, FI_INIT_STATE}
+ };
+ 
+ const FI_TEST_CODE fi_Group_none[] = {
+@@ -522,4 +539,88 @@ fi_handler_random_fail (THREAD_ENTRY * thread_p, void *arg, const char *caller_f
+ 
+   return NO_ERROR;
+ }
++
++/*
++ * fi_site_fire_and_acknowledge - count a reach of a deterministic site, decide whether this reach fires and,
++ *   when it does, write the acknowledgement to the server error log (CBRD-26659 campaign).
++ *
++ * return: true when the site must act, false when it must behave normally
++ *
++ *   arg(in): the site's FI_SITE_DESC
++ *   caller_file(in), caller_line(in): the site
++ *
++ * Note: The acknowledgement is a notification, not an error of the calling thread; the error state is cleared
++ *       afterwards and the site sets whatever error its action requires. With fault_injection_fire_at_occurrence
++ *       = 0 every reach fires; with k > 0 only the k-th reach since the server started fires (one-shot).
++ */
++static bool
++fi_site_fire_and_acknowledge (void *arg, const char *caller_file, const int caller_line)
++{
++  FI_SITE_DESC *desc = (FI_SITE_DESC *) arg;
++  char msg[512];
++  int reach, fired, fire_at;
++
++  if (desc == NULL)
++    {
++      assert (desc != NULL);
++      return false;
++    }
++
++  reach = ATOMIC_INC_32 (&desc->reach_count, 1);
++  fire_at = prm_get_integer_value (PRM_ID_FAULT_INJECTION_FIRE_AT_OCCURRENCE);
++  if (fire_at > 0 && reach != fire_at)
++    {
++      return false;
++    }
++
++  fired = ATOMIC_INC_32 (&desc->fired_count, 1);
++  snprintf (msg, sizeof (msg),
++	    "FAULT INJECTION ACK site=%s code=%d target_operation=\"%s\" requested_action=\"%s\" reach=%d fired=%d "
++	    "fire_at=%d", desc->site, (int) desc->code, desc->target_operation, desc->requested_action, reach, fired,
++	    fire_at);
++  er_set (ER_NOTIFICATION_SEVERITY, caller_file, caller_line, ER_FAILED_ASSERTION, 1, msg);
++  er_clear ();
++
++  return true;
++}
++
++/*
++ * fi_handler_ack_fail - acknowledge and tell the site to fail (the site chooses how: error return, throw, skip)
++ *
++ * return: ER_FAILED when the site must act, NO_ERROR otherwise
++ */
++static int
++fi_handler_ack_fail (THREAD_ENTRY * thread_p, void *arg, const char *caller_file, const int caller_line)
++{
++  if (fi_site_fire_and_acknowledge (arg, caller_file, caller_line))
++    {
++      return ER_FAILED;
++    }
++
++  return NO_ERROR;
++}
++
++/*
++ * fi_handler_ack_crash - acknowledge and terminate the process at once, like fi_handler_random_exit but
++ *   deterministically; fault_injection_action_prefer_abort_to_exit selects abort () or _exit ().
++ *
++ * return: NO_ERROR when the site does not fire (it never returns when it fires)
++ */
++static int
++fi_handler_ack_crash (THREAD_ENTRY * thread_p, void *arg, const char *caller_file, const int caller_line)
++{
++  if (fi_site_fire_and_acknowledge (arg, caller_file, caller_line))
++    {
++      if (prm_get_bool_value (PRM_ID_FAULT_INJECTION_ACTION_PREFER_ABORT_TO_EXIT))
++	{
++	  abort ();
++	}
++      else
++	{
++	  _exit (0);
++	}
++    }
++
++  return NO_ERROR;
++}
+ #endif
+diff --git a/src/base/fault_injection.h b/src/base/fault_injection.h
+index 8fc510c65..9b23adfb3 100644
+--- a/src/base/fault_injection.h
++++ b/src/base/fault_injection.h
+@@ -91,6 +91,24 @@ typedef enum
+   FI_TEST_DBLINK_2PC_CRASH_BETWEEN_4_6 = 600003,	/* after (4),(3) before (5) enqueue to daemon */
+   FI_TEST_DBLINK_2PC_CRASH_BETWEEN_6_7 = 600004,	/* after (6) send decision, before (7) DELETE row */
+ 
++  /* OOS -- CBRD-26659 adversarial testcase campaign (700000 ~ 700099)
++   * Deterministic sites. Each passes an FI_SITE_DESC as the FI_TEST_ARG argument; the acknowledging handler
++   * (fi_handler_ack_fail, fi_handler_ack_crash) writes a "FAULT INJECTION ACK" line to the server error log
++   * when it fires. fault_injection_fire_at_occurrence selects the reach at which an armed site fires.
++   */
++  FI_TEST_OOS_PUBLISH_OID_BAD_ALLOC = 700000,	/* allocation: OOS OID publication during insert */
++  FI_TEST_OOS_READ_GROUPED_BAD_ALLOC = 700001,	/* allocation: grouped Resolve prefetch during read */
++  FI_TEST_OOS_DELETE_HINT_BAD_ALLOC = 700002,	/* allocation: reclaim hint list during chain delete */
++  FI_TEST_OOS_PAGE_WRITE_FAIL = 700003,	/* data I/O: disk write of a PAGE_OOS page fails */
++  FI_TEST_OOS_LOG_WRITE_FAIL = 700004,	/* log I/O: disk write of an active log page fails */
++  FI_TEST_OOS_INSERT_MANY_FAIL = 700005,	/* interruption: oos_insert_many fails between publications */
++  FI_TEST_OOS_CRASH_BETWEEN_CHUNKS = 700006,	/* interruption: crash between the chunk inserts of one chain */
++  FI_TEST_OOS_CRASH_BEFORE_HEAP_PUBLICATION = 700007,	/* interruption: crash after the chunks, before the heap insert */
++  FI_TEST_OOS_RV_UNDO_INSERT_FAIL = 700008,	/* rollback: undo of RVOOS_INSERT fails at run time */
++  FI_TEST_OOS_VACUUM_DELETE_FAIL = 700009,	/* vacuum: forward-walk delete of a value chain fails */
++  FI_TEST_OOS_RECLAIM_WRITE_FIX_SKIP = 700010,	/* reclamation: write fix of a reclaim candidate is skipped */
++  FI_TEST_OOS_RV_REDO_INSERT_FAIL = 700011,	/* recovery: redo of RVOOS_INSERT fails during restart */
++
+   /* etc .... */
+ 
+ } FI_TEST_CODE;
+@@ -104,6 +122,24 @@ typedef enum
+ 
+ #define FI_INIT_STATE 0
+ 
++/*
++ * FI_SITE_DESC - identity of a deterministic fault-injection site. The site passes one static descriptor as the
++ * FI_TEST_ARG argument. The acknowledging handler counts the reaches, decides whether this reach fires
++ * (fault_injection_fire_at_occurrence: 0 = every reach, k > 0 = the k-th reach only) and, when it fires, logs
++ * "FAULT INJECTION ACK site=... code=... target_operation=... requested_action=... reach=... fired=..." as a
++ * notification in the server error log, so a test can prove that the fault fired and how often.
++ */
++typedef struct fi_site_desc FI_SITE_DESC;
++struct fi_site_desc
++{
++  FI_TEST_CODE code;		/* code the site is armed with */
++  const char *site;		/* function that hosts the site */
++  const char *target_operation;	/* operation the fault interrupts */
++  const char *requested_action;	/* what the site does when the handler fires */
++  volatile int reach_count;	/* times the armed site was reached */
++  volatile int fired_count;	/* times the handler told the site to act */
++};
++
+ 
+ typedef int (*FI_HANDLER_FUNC) (THREAD_ENTRY * thread_p, void *arg, const char *caller_file, const int caller_line);
+ 
+diff --git a/src/base/system_parameter.c b/src/base/system_parameter.c
+index f67a660b9..97498a361 100644
+--- a/src/base/system_parameter.c
++++ b/src/base/system_parameter.c
+@@ -645,6 +645,7 @@ static const char sysprm_ha_conf_file_name[] = "cubrid_ha.conf";
+ #define PRM_NAME_FAULT_INJECTION_IDS "fault_injection_ids"
+ #define PRM_NAME_FAULT_INJECTION_TEST "fault_injection_test"
+ #define PRM_NAME_FAULT_INJECTION_ACTION_PREFER_ABORT_TO_EXIT "fault_injection_action_prefer_abort_to_exit"
++#define PRM_NAME_FAULT_INJECTION_FIRE_AT_OCCURRENCE "fault_injection_fire_at_occurrence"
+ 
+ #define PRM_NAME_HA_REPL_FILTER_TYPE "ha_repl_filter_type"
+ #define PRM_NAME_HA_REPL_FILTER_FILE "ha_repl_filter_file"
+@@ -5542,6 +5543,19 @@ SYSPRM_PARAM prm_Def[] = {
+    (char *) NULL,
+    (DUP_PRM_FUNC) NULL,
+    (DUP_PRM_FUNC) NULL},
++  /* CBRD-26659 campaign: reach at which an armed deterministic fault-injection site fires (0 = every reach) */
++  {PRM_ID_FAULT_INJECTION_FIRE_AT_OCCURRENCE,
++   PRM_NAME_FAULT_INJECTION_FIRE_AT_OCCURRENCE,
++   (PRM_USER_CHANGE | PRM_FOR_SERVER | PRM_HIDDEN),
++   PRM_INTEGER,
++   PRM_CLEAR_DYNAMIC_FLAG,
++   {false, {.i = 0}},
++   {false, {.i = 0}},
++   NULL_SYSPRM_PARAM_VALUE,
++   {false, {.i = 0}},
++   (char *) NULL,
++   (DUP_PRM_FUNC) NULL,
++   (DUP_PRM_FUNC) NULL},
+ };
+ 
+ /* The PL server (cub_pl) is a separate Java process that hard-codes the ordinals of the
+diff --git a/src/base/system_parameter.h b/src/base/system_parameter.h
+index 4373048ca..50220bbea 100644
+--- a/src/base/system_parameter.h
++++ b/src/base/system_parameter.h
+@@ -551,8 +551,10 @@ enum param_id
+ 
+   PRM_ID_PLAN_CACHE_BIND_SENSITIVITY,
+ 
++  PRM_ID_FAULT_INJECTION_FIRE_AT_OCCURRENCE,
++
+   /* change PRM_LAST_ID when adding new system parameters */
+-  PRM_LAST_ID = PRM_ID_PLAN_CACHE_BIND_SENSITIVITY
++  PRM_LAST_ID = PRM_ID_FAULT_INJECTION_FIRE_AT_OCCURRENCE
+ };
+ typedef enum param_id PARAM_ID;
+ 

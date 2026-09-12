@@ -1,0 +1,154 @@
+diff --git a/src/storage/oos_file.cpp b/src/storage/oos_file.cpp
+index 123c8e103..25fcb7bf5 100644
+--- a/src/storage/oos_file.cpp
++++ b/src/storage/oos_file.cpp
+@@ -29,6 +29,7 @@
+ #include "byte_span_writer.hpp"
+ #include "error_code.h"
+ #include "error_manager.h"
++#include "fault_injection.h"
+ #include "file_manager.h"
+ #include "log_manager.h"
+ #include "memory_alloc.h"
+@@ -1485,6 +1486,20 @@ oos_reclaim_fix_candidate (THREAD_ENTRY *thread_p, const VPID &vpid, PGBUF_LATCH
+       return NO_ERROR;
+     }
+ #endif
++#if !defined(NDEBUG)
++  if (latch_mode == PGBUF_LATCH_WRITE)
++    {
++      /* CBRD-26659 campaign site (group: failure during reclamation) */
++      static FI_SITE_DESC fi_desc = { FI_TEST_OOS_RECLAIM_WRITE_FIX_SKIP, "oos_reclaim_fix_candidate",
++				      "write fix of an empty-page reclaim candidate",
++				      "skip the candidate (page_out = NULL, NO_ERROR)", 0, 0 };
++      if (FI_TEST_ARG (thread_p, FI_TEST_OOS_RECLAIM_WRITE_FIX_SKIP, &fi_desc, 0) != NO_ERROR)
++	{
++	  page_out = NULL;
++	  return NO_ERROR;
++	}
++    }
++#endif
+ 
+   page_out = pgbuf_fix (thread_p, &vpid, OLD_PAGE_MAYBE_DEALLOCATED, latch_mode, PGBUF_CONDITIONAL_LATCH);
+   if (page_out == NULL)
+@@ -2063,6 +2078,18 @@ oos_publish_oos_oid (THREAD_ENTRY *thread_p, const OID &oid)
+     {
+       throw std::bad_alloc ();
+     }
++#endif
++#if !defined(NDEBUG)
++  {
++    /* CBRD-26659 campaign site (group: allocation during value construction) */
++    static FI_SITE_DESC fi_desc = { FI_TEST_OOS_PUBLISH_OID_BAD_ALLOC, "oos_publish_oos_oid",
++				    "OOS OID publication during insert (value construction)",
++				    "throw std::bad_alloc", 0, 0 };
++    if (FI_TEST_ARG (thread_p, FI_TEST_OOS_PUBLISH_OID_BAD_ALLOC, &fi_desc, 0) != NO_ERROR)
++      {
++	throw std::bad_alloc ();
++      }
++  }
+ #endif
+   thread_p->oos_oids.push_back (oid);
+ }
+@@ -2237,6 +2264,20 @@ oos_insert_many (THREAD_ENTRY *thread_p, const VFID &oos_vfid, cubbase::span<oos
+ 	      return ER_GENERIC_ERROR;
+ 	    }
+ #endif
++#if !defined(NDEBUG)
++	  {
++	    /* CBRD-26659 campaign site (group: interruption between chunk operations). Reached once per loop
++	     * iteration, so the k-th reach fails after k - 1 iterations have published their values. */
++	    static FI_SITE_DESC fi_desc = { FI_TEST_OOS_INSERT_MANY_FAIL, "oos_insert_many",
++					    "next chunk insert of oos_insert_many, after the preceding publications",
++					    "fail with ER_GENERIC_ERROR", 0, 0 };
++	    if (FI_TEST_ARG (thread_p, FI_TEST_OOS_INSERT_MANY_FAIL, &fi_desc, 0) != NO_ERROR)
++	      {
++		er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_GENERIC_ERROR, 0);
++		return ER_GENERIC_ERROR;
++	      }
++	  }
++#endif
+ 
+ 	  if (requests[pos].src.size () > (std::size_t) max_chunk_size)
+ 	    {
+@@ -2389,6 +2430,17 @@ oos_insert_across_pages (THREAD_ENTRY *thread_p, const VFID &oos_vfid, oos_buffe
+ 	  return error_code;
+ 	}
+ 
++#if !defined(NDEBUG)
++      {
++	/* CBRD-26659 campaign site (group: interruption between chunk operations). Chunks are inserted tail
++	 * first, so the k-th reach crashes after k chunks of the chain exist and before the next one. */
++	static FI_SITE_DESC fi_desc = { FI_TEST_OOS_CRASH_BETWEEN_CHUNKS, "oos_insert_across_pages",
++					"between two chunk inserts of one multi-chunk OOS value chain",
++					"crash (_exit or abort)", 0, 0 };
++	(void) FI_TEST_ARG (thread_p, FI_TEST_OOS_CRASH_BETWEEN_CHUNKS, &fi_desc, 0);
++      }
++#endif
++
+       if (track_repl && i == required_page_nums - 1)
+ 	{
+ 	  LSA_COPY (&tail_chunk_lsa, &tdes->tail_lsa);
+@@ -3118,6 +3170,16 @@ oos_delete_chain (THREAD_ENTRY *thread_p, const VFID &oos_vfid, const OID &oid,
+ 	{
+ 	  try
+ 	    {
++#if !defined(NDEBUG)
++	      /* CBRD-26659 campaign site (group: allocation during cleanup) */
++	      static FI_SITE_DESC fi_desc = { FI_TEST_OOS_DELETE_HINT_BAD_ALLOC, "oos_delete_chain",
++					      "reclaim hint list growth while deleting an OOS value chain (cleanup)",
++					      "throw std::bad_alloc", 0, 0 };
++	      if (FI_TEST_ARG (thread_p, FI_TEST_OOS_DELETE_HINT_BAD_ALLOC, &fi_desc, 0) != NO_ERROR)
++		{
++		  throw std::bad_alloc ();
++		}
++#endif
+ 	      touched_vpids->push_back (vpid);
+ 	    }
+ 	  catch (std::bad_alloc &)
+@@ -3277,6 +3339,22 @@ oos_rv_redo_delete (THREAD_ENTRY *thread_p, LOG_RCV *rcv)
+ {
+   INT16 slotid;
+ 
++#if !defined(NDEBUG)
++  if (LOG_ISRESTARTED ())
++    {
++      /* CBRD-26659 campaign site (group: failure during rollback). At run time this function is the undo of
++       * RVOOS_INSERT, so it runs when a transaction that inserted OOS chunks rolls back. */
++      static FI_SITE_DESC fi_desc = { FI_TEST_OOS_RV_UNDO_INSERT_FAIL, "oos_rv_redo_delete",
++				      "undo of RVOOS_INSERT during a transaction rollback",
++				      "fail with ER_GENERIC_ERROR", 0, 0 };
++      if (FI_TEST_ARG (thread_p, FI_TEST_OOS_RV_UNDO_INSERT_FAIL, &fi_desc, 0) != NO_ERROR)
++	{
++	  er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_GENERIC_ERROR, 0);
++	  return ER_GENERIC_ERROR;
++	}
++    }
++#endif
++
+   slotid = rcv->offset;
+   PGSLOTID deleted_slotid = spage_delete (thread_p, rcv->pgptr, slotid);
+   if (deleted_slotid == NULL_SLOTID)
+@@ -3306,6 +3384,22 @@ oos_rv_redo_insert (THREAD_ENTRY *thread_p, LOG_RCV *rcv)
+   RECDES recdes;
+   int sp_success;
+ 
++#if !defined(NDEBUG)
++  if (!LOG_ISRESTARTED ())
++    {
++      /* CBRD-26659 campaign site (group: failure during recovery). During restart recovery this function is the
++       * redo of RVOOS_INSERT (and the undo of RVOOS_DELETE); a failure here is fatal for the restart. */
++      static FI_SITE_DESC fi_desc = { FI_TEST_OOS_RV_REDO_INSERT_FAIL, "oos_rv_redo_insert",
++				      "redo of RVOOS_INSERT (or undo of RVOOS_DELETE) during restart recovery",
++				      "fail with ER_GENERIC_ERROR", 0, 0 };
++      if (FI_TEST_ARG (thread_p, FI_TEST_OOS_RV_REDO_INSERT_FAIL, &fi_desc, 0) != NO_ERROR)
++	{
++	  er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_GENERIC_ERROR, 0);
++	  return ER_GENERIC_ERROR;
++	}
++    }
++#endif
++
+   slotid = rcv->offset;
+   recdes.type = * (INT16 *) (rcv->data);
+   recdes.data = (char *) (rcv->data) + sizeof (recdes.type);

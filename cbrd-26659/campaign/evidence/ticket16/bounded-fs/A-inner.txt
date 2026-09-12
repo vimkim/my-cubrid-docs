@@ -1,0 +1,55 @@
+inside: uid=0 pid=1
+Filesystem     1B-blocks  Used     Avail Mounted on
+tmpfs          268435456     0 268435456 /home/vimkim/.cub/campaign/cbrd-26659/ticket16/boundedfs/mnt
+createdb rc=0
+268435456 225210368 43225088
+total 219932
+drwxr-xr-x. 3 root root      220 Sep 12 17:11 .
+drwxrwxrwt. 3 root root       60 Sep 12 17:11 ..
+-rw-------. 1 root root 67108864 Sep 12 17:11 bfs
+-rw-------. 1 root root       65 Sep 12 17:11 bfs_keys
+-rw-------. 1 root root 20971520 Sep 12 17:11 bfs_lgar_t
+-rw-------. 1 root root 20971520 Sep 12 17:11 bfs_lgat
+-rw-------. 1 root root      257 Sep 12 17:11 bfs_lginf
+-rw-------. 1 root root      544 Sep 12 17:11 bfs_vinf
+-rw-------. 1 root root 67108864 Sep 12 17:11 bfs_x001
+-rw-------. 1 root root 67108864 Sep 12 17:11 bfs_x002
+drwx------. 2 root root       40 Sep 12 17:11 lob
+/home/vimkim/.cub/campaign/cbrd-26659/ticket16/boundedfs/inner_A.sh: line 18:    29 Aborted                 (core dumped) csql -S -u dba bfs -i "$OUT/A-fill.sql" > "$OUT/A-fill.out" 2>&1
+fill csql rc=134
+--- fill outcome (first error and tail):
+1 row affected. (0.001000 sec) Committed. (0.000000 sec) 
+1 row affected. (0.000000 sec) Committed. (0.000000 sec) 
+1 row affected. (0.002000 sec) Committed. (0.000000 sec) 
+1 row affected. (0.001000 sec) Committed. (0.000000 sec) 
+csql: /home/vimkim/gh/cb/oos-instr-f4299ac0c/src/storage/oos_file.cpp:2868: auto_unfix_page_ptr oos_file_alloc_new(THREAD_ENTRY*, const VFID&, VPID&): Assertion `false' failed.
+--- rows inserted: 7422
+268435456 231981056 36454400
+total 226544
+drwxr-xr-x. 3 root root      260 Sep 12 17:11 .
+drwxrwxrwt. 3 root root       60 Sep 12 17:11 ..
+-rw-------. 1 root root 67108864 Sep 12 17:11 bfs
+-rw-------. 1 root root  1048576 Sep 12 17:11 bfs_dwb
+-rw-------. 1 root root       65 Sep 12 17:11 bfs_keys
+-rw-------. 1 root root 20971520 Sep 12 17:11 bfs_lgar_t
+-rw-------. 1 root root 20971520 Sep 12 17:11 bfs_lgat
+-rw-r--r--. 1 root root       23 Sep 12 17:11 bfs_lgat__lock
+-rw-------. 1 root root      257 Sep 12 17:11 bfs_lginf
+-rw-------. 1 root root      544 Sep 12 17:11 bfs_vinf
+-rw-------. 1 root root 67108864 Sep 12 17:11 bfs_x001
+-rw-------. 1 root root 67108864 Sep 12 17:11 bfs_x002
+drwx------. 2 root root       40 Sep 12 17:11 lob
+readback rc=0
+======================
+                  7422
+
+1 row selected. (0.006000 sec) Committed. (0.000000 sec) 
+
+=== <Result of SELECT Command in Line 1> ===
+
+  Table_name            Class_oid             Heap_volume_id  Heap_file_id  Heap_header_page_id  Has_oos_file  Oos_volume_id  Oos_file_id  Oos_num_user_pages  Oos_page_size  Oos_num_recs       Oos_recs_sumlen    Oos_physical_bytes      Oos_unused_bytes
+============================================================================================================================================================================================================================================================
+  'dba.t'               '(0|209|2)'                        1           576                  577             1              1          640                7423          16344          7422              89242128             121321512              32079384
+
+1 row selected. (0.090001 sec) Committed. (0.000000 sec) 
+inside-done

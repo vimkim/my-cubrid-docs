@@ -1,0 +1,33 @@
+diff --git a/src/query/vacuum_oos.cpp b/src/query/vacuum_oos.cpp
+index 7a726915a..49c64a3b5 100644
+--- a/src/query/vacuum_oos.cpp
++++ b/src/query/vacuum_oos.cpp
+@@ -23,6 +23,7 @@
+ #include "vacuum_oos.hpp"
+ 
+ #include "error_manager.h"
++#include "fault_injection.h"
+ #include "file_manager.h"
+ #include "heap_file.h"
+ #include "log_manager.h"
+@@ -187,6 +188,20 @@ vacuum_forward_walk_oos_delete_atomic (THREAD_ENTRY *thread_p, const VFID *oos_v
+ 	{
+ 	  continue;
+ 	}
++#if !defined(NDEBUG)
++      {
++	/* CBRD-26659 campaign site (group: failure during vacuum) */
++	static FI_SITE_DESC fi_desc = { FI_TEST_OOS_VACUUM_DELETE_FAIL, "vacuum_forward_walk_oos_delete_atomic",
++					"vacuum forward-walk delete of an old row version's OOS value chain",
++					"fail with ER_GENERIC_ERROR (the forward-walk sysop is aborted)", 0, 0 };
++	if (FI_TEST_ARG (thread_p, FI_TEST_OOS_VACUUM_DELETE_FAIL, &fi_desc, 0) != NO_ERROR)
++	  {
++	    er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_GENERIC_ERROR, 0);
++	    error_code = ER_GENERIC_ERROR;
++	    break;
++	  }
++      }
++#endif
+       error_code = oos_delete (thread_p, *oos_vfid, oid, &touched_pages);
+       if (error_code != NO_ERROR)
+ 	{

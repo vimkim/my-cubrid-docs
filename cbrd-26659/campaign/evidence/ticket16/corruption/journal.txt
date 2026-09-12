@@ -1,0 +1,40 @@
+22:35:12 createdb c16k rc=0
+22:35:14 createdb c16kcr rc=0
+22:35:17 c16k build csql rc=0
+22:35:25 c16kcr: csql -S pid 3267648 killed with SIGKILL after the committed inserts (crash image)
+22:35:26 source hashes recorded
+22:35:26 [E0] raw copy of c16k -> /home/vimkim/.cub/campaign/cbrd-26659/ticket16/corruption/copies/E0/c16k (own databases.txt; _vinf paths rewritten)
+22:35:26 [E0] PAGE_OOS pages in the primary volume: []
+22:35:26 [E0] PAGE_OOS pages in volume x001: [(641, 640, 783482881), (642, 8008, 0), (643, 20008, 0), (644, 8008, 0)]
+22:35:28 [E0] checkdb -S rc=0
+22:35:30 [E0] csql -S read rc=0 ; eq columns:  1 1 0 0; 2 0 1 0; 3 0 0 1;
+22:35:31 target pages in volume c16k_x001: row-1 chunk page=642, row-2 head chunk page=643
+22:35:31 [E1] raw copy of c16k -> /home/vimkim/.cub/campaign/cbrd-26659/ticket16/corruption/copies/E1/c16k (own databases.txt; _vinf paths rewritten)
+    {"file": "/home/vimkim/.cub/campaign/cbrd-26659/ticket16/corruption/copies/E1/c16k/c16k_x001", "offset": 10522608, "length": 32, "before": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "after": "5555555555555555555555555555555555555555555555555555555555555555"}
+22:35:33 [E1] checkdb -S rc=0
+22:35:35 [E1] csql -S read rc=0 ; eq columns:  1 0 0 0; 2 0 1 0; 3 0 0 1;
+22:35:35 [E2] raw copy of c16k -> /home/vimkim/.cub/campaign/cbrd-26659/ticket16/corruption/copies/E2/c16k (own databases.txt; _vinf paths rewritten)
+    {"file": "/home/vimkim/.cub/campaign/cbrd-26659/ticket16/corruption/copies/E2/c16k/c16k_x001", "offset": 10534976, "before": "284e0000", "after_int": 4660}
+22:35:37 [E2] checkdb -S rc=0
+22:35:56 [E2] csql -S read rc=1 ; eq columns: 
+    /home/vimkim/.cub/campaign/cbrd-26659/ticket16/corruption/out/E2-read.out:ERROR: Internal error: out-of-row storage record metadata is inconsistent or corrupted.
+22:35:56 [E3] raw copy of c16k -> /home/vimkim/.cub/campaign/cbrd-26659/ticket16/corruption/copies/E3/c16k (own databases.txt; _vinf paths rewritten)
+    {"file": "/home/vimkim/.cub/campaign/cbrd-26659/ticket16/corruption/copies/E3/c16k/c16k_x001", "offset": 10518560, "length": 4, "before": "02000200", "after": "fdfffdff"}
+22:35:59 [E3] checkdb -S rc=0
+22:36:20 [E3] csql -S read rc=134 ; eq columns: 
+    /home/vimkim/.cub/campaign/cbrd-26659/ticket16/corruption/out/E3-read.out:/home/vimkim/.cub/campaign/cbrd-26659/ticket16/tools/t16_corruption.sh: line 76: 3269332 Aborted                 (core dumped) csql -S -u dba "$db" -c "$READS"
+22:36:20 [E4c] raw copy of c16kcr -> /home/vimkim/.cub/campaign/cbrd-26659/ticket16/corruption/copies/E4c/c16kcr (own databases.txt; _vinf paths rewritten)
+22:36:22 [E4c] checkdb -S rc=0
+22:36:24 [E4c] csql -S read rc=0 ; eq columns:  1 1 0 0; 2 0 1 0; 3 0 0 1;
+22:36:24 [E4] raw copy of c16kcr -> /home/vimkim/.cub/campaign/cbrd-26659/ticket16/corruption/copies/E4/c16kcr (own databases.txt; _vinf paths rewritten)
+22:36:25 [E4] last non-zero active log page: 177
+    {"file": "/home/vimkim/.cub/campaign/cbrd-26659/ticket16/corruption/copies/E4/c16kcr/c16kcr_lgat", "offset": 2904064, "length": 64, "before": "0e00000080020000000001000300000003000000ffffffff000000ffffffffff000000ffffffffffb00000000000d00fb00000000000d00fb000000000007010", "after": "f1ffffff7ffdfffffffffefffcfffffffcffffff00000000ffffff0000000000ffffff00000000004fffffffffff2ff04fffffffffff2ff04fffffffffff8fef"}
+22:36:36 [E4] checkdb -S rc=254
+22:36:48 [E4] csql -S read rc=134 ; eq columns: 
+    /home/vimkim/.cub/campaign/cbrd-26659/ticket16/corruption/out/E4-read.out:*** FATAL ERROR *** 
+    /home/vimkim/.cub/campaign/cbrd-26659/ticket16/corruption/out/E4-read.out:LOG FATAL ERROR: log_recovery_analysis
+    /home/vimkim/.cub/campaign/cbrd-26659/ticket16/corruption/out/E4-read.out:Please consult error_log file = ./csql.err for additional information
+    /home/vimkim/.cub/campaign/cbrd-26659/ticket16/corruption/out/E4-read.out:/home/vimkim/.cub/campaign/cbrd-26659/ticket16/tools/t16_corruption.sh: line 76: 3270792 Aborted                 (core dumped) csql -S -u dba "$db" -c "$READS"
+    /home/vimkim/.cub/campaign/cbrd-26659/ticket16/corruption/out/E4-checkdb.out:*** FATAL ERROR *** 
+22:36:50 source images unchanged (hashes identical before and after)
+22:36:50 done

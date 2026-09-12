@@ -1,0 +1,24 @@
+# identity of the PATCHED build (patch set t16-set1) in the instrumentation worktree
+date=2026-09-11T17:56:56+09:00
+worktree=/home/vimkim/gh/cb/oos-instr-f4299ac0c HEAD=f4299ac0cd777a2a964c1f197ae5ebf9841a4936
+git diff --stat HEAD:
+ 11 files changed, 324 insertions(+), 5 deletions(-)
+
+#define BUILD_TYPE debug
+#define VERSION_STRING "11.5.0.2648-f4299ac"
+CUBRID=/home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc
+
+
+dec89384db7c133da28437079951c3ffc365a6551f57b9675372886513799c29  /home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc/lib/libcubrid.so
+a457e0ff6d39202c71e06b1a0e01c0d08c82b187fab313d61976f4445fcf427e  /home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc/lib/libcubridsa.so
+b626ea552a2b348c72aa42d3dd0773606aebfae3f62314d1f1f3fcfe693e3fb4  /home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc/bin/cub_server
+d865f62bf38655e7e1044145dfce02e16668a9f62fc3943cde41031af09e3adb  /home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc/bin/csql
+
+CMAKE_BUILD_TYPE:STRING=Debug
+CMAKE_CXX_FLAGS_DEBUG:STRING=-O0 -ggdb3 -fno-omit-frame-pointer -Wno-error=format -Wno-error -Wno-error=maybe-uninitialized -Wno-error=parentheses
+CMAKE_INSTALL_PREFIX:PATH=/home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc
+UNIT_TESTS:BOOL=OFF
+UNIT_TEST_OOS:BOOL=ON
+
+strings check (version embedded in library):
+11.5.0.2648-f4299ac

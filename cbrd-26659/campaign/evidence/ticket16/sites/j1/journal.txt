@@ -1,0 +1,15 @@
+18:18:34.606 === site=j1 mode=fault db=t16_j1_f install=/home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc
+CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit debug build for Linux) (Sep 11 2026 17:04:32)
+dec89384db7c133da28437079951c3ffc365a6551f57b9675372886513799c29  /home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc/lib/libcubrid.so
+18:18:34.970 port 26671 already held by cub_master pid pid=2655984 (campaign master, reused)
+18:18:35.128 previous database t16_j1_f deleted (rc=0) before re-creation
+18:18:37.644 createdb t16_j1_f rc=0 (2.5 s)
+18:18:39.778 server start (1) rc=0 server_pid=2662294 master_pid=2655984 (2.1 s)
+18:18:50.070 csql w1 rc=0 (10.28 s)
+18:18:50.102 ack seen while polling (recs=9) after 0 s
+18:18:53.133 final SHOW HEAP OOS:  Oos_num_user_pages : 9; Oos_num_recs : 9;
+18:18:55.202 server stop (1) rc=0; still listed: 0
+18:18:55.215 acks: 1
+  Time: 09/11/26 18:18:39.865 - NOTIFICATION *** file /home/vimkim/gh/cb/oos-instr-f4299ac0c/src/query/vacuum_oos.cpp, line 197  CODE = -588, Tran = 0, CLIENT = :(0), EID = 3
+  INTERNAL ERROR: Assertion 'FAULT INJECTION ACK site=vacuum_forward_walk_oos_delete_atomic code=700009 target_operation="vacuum forward-walk delete of an old row version's OOS value chain" requested_action="fail with ER_GENERIC_ERROR (the forward-walk sysop is aborted)" reach=1 fired=1 fire_at=1' failed.
+18:18:55.224 === done site=j1 mode=fault code=700009 fire_at=1 wall=20.6 s

@@ -1,0 +1,12 @@
+##### t16_j1_f_20260911_1818.err (excerpt; full file hashed in SHA256SUMS-bulky.txt)
+2157-
+2158-Time: 09/11/26 18:18:39.865 - NOTIFICATION *** file /home/vimkim/gh/cb/oos-instr-f4299ac0c/src/query/vacuum_oos.cpp, line 197  CODE = -588, Tran = 0, CLIENT = :(0), EID = 3
+2159:INTERNAL ERROR: Assertion 'FAULT INJECTION ACK site=vacuum_forward_walk_oos_delete_atomic code=700009 target_operation="vacuum forward-walk delete of an old row version's OOS value chain" requested_action="fail with ER_GENERIC_ERROR (the forward-walk sysop is aborted)" reach=1 fired=1 fire_at=1' failed.
+2160-
+2161-Time: 09/11/26 18:18:39.866 - ERROR *** file /home/vimkim/gh/cb/oos-instr-f4299ac0c/src/query/vacuum_oos.cpp, line 199 ERROR CODE = -2, Tran = 0, CLIENT = :(0), EID = 4
+2162-Internal system failure: no more specific information is available.
+..... engine reaction lines:
+2162:Internal system failure: no more specific information is available.
+2163-[21] 0x000000000076f05f: er_dump_call_stack_internal(print_output&) at /home/vimkim/gh/cb/oos-instr-f4299ac0c/src/base/stack_dump.c:388
+2189:VACUUM ERROR (thr=4195, trid=-1409283200): forward-walk oos cleanup failed; leaving OOS unreclaimed (bounded leak) heap_vfid=1|576 oos_vfid=1|640 err=-2
+2190-
