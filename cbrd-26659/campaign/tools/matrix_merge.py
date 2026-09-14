@@ -15,9 +15,12 @@ Rules encoded (sources in brackets):
   `ever_failed` monotonically; a later pass never erases an earlier failure; never drop a row
   because a later invocation passed [ticket 12 section 3; decision 07].
 * Never write `accepted_exclusions`; preserve every entry verbatim [spec "Review, sign-off"].
-* Caseless rows (`case: null`), such as `OOS-REP-07/-/claim-withdrawn` or
-  `OOS-REP-01/-/inline-placement-observation`, are hand-maintained: no manifest produces them
-  and they are preserved verbatim, never regenerated [ticket 34 delta review].
+* A row carrying `hand_maintained: true` is preserved verbatim and never regenerated or
+  resurrected [ticket 36 item 6]. The field replaces recognition by row id: the withdrawn
+  `OOS-REP-07` claim used to be known by its `/claim-withdrawn` suffix, which encoded meaning
+  in a string. A caseless row (`case: null`) is hand-maintained whether or not it carries the
+  field, because no manifest produces one. Matrices written before the field existed are still
+  read by the old suffix, which the merge reports each time it falls back to it.
 * `flakiness`, `known_issue` and `attribution` are preserved on existing rows; the tool only
   updates the counts it can measure (attempts, failures, intermittent) and never touches
   `consecutive_fresh_fixture_reproductions`, `deterministic_claim`, `known_issue` or
@@ -35,10 +38,9 @@ Rules encoded (sources in brackets):
 * Provisional gap kinds for non-PASS latest outcomes: SKIP -> Delivery gap (the coverage was
   not delivered), UNSUPPORTED -> Capability gap, BLOCKED -> Specification gap when the
   requirement's catalogue status is BLOCKED else Capability gap, FAIL -> Engine defect only
-  when the row's attribution is `engine` (hand-set, with evidence), otherwise Delivery gap
-  with an UNTRIAGED marker in the summary: an unexplained failure is not automatically an
-  engine defect [decision 07]. The glossary has no "under triage" kind; see the ticket 15
-  record's decision requests.
+  when the row's attribution is `engine` (hand-set, with evidence), otherwise `Under triage`:
+  an unexplained failure is not automatically an engine defect [decision 07], and it is not a
+  Delivery gap either, which would say the case was never delivered [ticket 36 item 5].
 * Attempts of kind checker-validation or coexistence never reach the matrix: they have no
   manifest [schemas document section 11].
 
@@ -61,6 +63,16 @@ def row_key(req, case_name, cfg):
     return (req, case_name, cfg["page_size"], cfg["build_mode"], cfg["run_mode"], cfg.get("instrumentation_id"))
 
 
+def is_hand_maintained(row) -> bool:
+    """Ticket 36 item 6: a hand-owned row, preserved verbatim and never regenerated.
+
+    The row says so with `hand_maintained: true`. A caseless row is hand-owned whether or not
+    it carries the field, because no manifest produces a row without a case; that is a fact
+    about the row's shape, not a reading of its id.
+    """
+    return row.get("hand_maintained") is True or row.get("case") is None or row.get("configuration") is None
+
+
 def provisional_gap_kind(outcome, evidence_status, req_id, attribution_target):
     if outcome == "PASS":
         return "none" if evidence_status in ("proven", "reused") else "Delivery gap"
@@ -71,7 +83,7 @@ def provisional_gap_kind(outcome, evidence_status, req_id, attribution_target):
     if outcome == "BLOCKED":
         return "Specification gap" if requirement(req_id)["status"] == "BLOCKED" else "Capability gap"
     if outcome == "FAIL":
-        return "Engine defect" if attribution_target == "engine" else "Delivery gap"
+        return "Engine defect" if attribution_target == "engine" else "Under triage"
     return "Delivery gap"
 
 
@@ -87,8 +99,10 @@ def generated_summary(outcome, evidence, req_id, case_name, gap_kind, from_check
     elif outcome == "PASS":
         base += ". Logical success without OOS-path evidence is not OOS coverage; gap_kind Delivery gap until the activation evidence is captured."
     elif outcome == "FAIL":
-        base += (f". UNTRIAGED FAIL: attribution unknown, so gap_kind {gap_kind} is provisional; an unexplained failure is not automatically an "
-                 "Engine defect (decision 07). The failure stays in history and ever_failed whatever later runs show.")
+        base += (f". gap_kind {gap_kind}: the attribution is not yet established, and an unexplained failure is neither automatically an "
+                 "Engine defect (decision 07) nor a Delivery gap, which would say the case was never delivered (ticket 36 item 5). "
+                 "Triage sets attribution.target, with evidence for `engine`, and the gap kind follows. The failure stays in history "
+                 "and ever_failed whatever later runs show.")
     elif outcome == "SKIP":
         base += ". A SKIP is never PASS; the coverage this row owes was not delivered in the latest attempt."
     else:
@@ -181,16 +195,28 @@ def merge(args) -> int:
     matrix["catalogue"] = catalogue_identity()
     rows_by_key = {}
     preserved = []
+    hand_keys = set()      # hand-maintained rows that do name a case and a configuration
+    hand_owned = set()     # requirements whose coverage a hand-maintained row owns
     for row in matrix["rows"]:
-        if row.get("case") is None or row.get("configuration") is None:
-            preserved.append(row)  # hand-maintained caseless row: verbatim
+        if is_hand_maintained(row):
+            preserved.append(row)  # verbatim: never regenerated, never merged into
+            if row.get("case") is not None and row.get("configuration") is not None:
+                hand_keys.add(row_key(row["requirement"], row["case"]["name"], row["configuration"]))
             continue
         rows_by_key[row_key(row["requirement"], row["case"]["name"], row["configuration"])] = row
     exclusions_before = list(matrix.get("accepted_exclusions", []))
-    # A hand-maintained caseless row whose id ends in /claim-withdrawn records that a requirement's
-    # claim was withdrawn from a case (ticket 34, OOS-REP-07): manifests that still cite it must not
-    # resurrect PASS rows for it. Convention on row_id; an explicit field is a ticket 12 decision.
-    withdrawn = {row["requirement"] for row in preserved if str(row.get("row_id", "")).endswith("/claim-withdrawn")}
+    # A hand-maintained caseless row stands in place of the case row a human removed -- ticket 34
+    # withdrew the OOS-REP-07 claim and left one -- so a manifest that still cites the requirement
+    # must not resurrect a case row for it. The field says which rows those are; a matrix written
+    # before the field existed is still read by the `/claim-withdrawn` suffix it used then, and the
+    # fallback is reported so the row can be given the field.
+    for row in preserved:
+        if row.get("hand_maintained") is True:
+            hand_owned.add(row["requirement"])
+        elif str(row.get("row_id", "")).endswith("/claim-withdrawn"):
+            hand_owned.add(row["requirement"])
+            print(f"[matrix_merge] note: row {row['row_id']} is read as hand-maintained by its row id, the reading "
+                  "ticket 36 replaced; add \"hand_maintained\": true to the row")
     merged_attempts = 0
     for mpath in sorted(args.manifest):
         mpath = Path(mpath)
@@ -215,14 +241,19 @@ def merge(args) -> int:
                         break
                 att_rel = docs_relative(att_path) if att_path else attempt["attempt_record"]
                 for req_id in case_entry["requirements"]:
-                    if req_id in withdrawn and not any(k[0] == req_id for k in rows_by_key):
-                        print(f"[matrix_merge] {manifest['manifest_id']}: {case_entry['case']['name']} cites {req_id}, whose claim is withdrawn "
-                              f"({req_id}/-/claim-withdrawn); no case row is created for it")
+                    if req_id in hand_owned and not any(k[0] == req_id for k in rows_by_key):
+                        print(f"[matrix_merge] {manifest['manifest_id']}: {case_entry['case']['name']} cites {req_id}, whose coverage a "
+                              f"hand-maintained row owns and which has no case row; no case row is created for it. If this run should "
+                              f"cover {req_id}, write the row by hand or drop hand_maintained from the row that owns it")
                         continue
                     cfg = {"page_size": manifest["invocation"]["page_size"], "build_mode": manifest["invocation"]["build_mode"],
                            "run_mode": manifest["invocation"]["run_mode"],
                            "instrumentation_id": (manifest["invocation"].get("instrumentation") or {}).get("patch_id")}
                     key = row_key(req_id, case_entry["case"]["name"], cfg)
+                    if key in hand_keys:
+                        print(f"[matrix_merge] {manifest['manifest_id']}: {case_entry['case']['name']} would merge into the "
+                              f"hand-maintained row for {req_id}; it is preserved verbatim and no attempt is merged into it")
+                        continue
                     row = rows_by_key.get(key)
                     if row is None:
                         row = new_row(req_id, case_entry, manifest, mpath, attempt["attempt_id"], att_rel, at)
@@ -233,7 +264,7 @@ def merge(args) -> int:
     ordered = []
     seen = set()
     for row in matrix["rows"]:
-        if row.get("case") is None or row.get("configuration") is None:
+        if is_hand_maintained(row):
             ordered.append(row)
             continue
         k = row_key(row["requirement"], row["case"]["name"], row["configuration"])
@@ -249,7 +280,7 @@ def merge(args) -> int:
     matrix["generated_at"] = args.generated_at or now_iso()
     write_record(matrix, "matrix", args.out)
     print(f"[matrix_merge] merged {merged_attempts} attempt(s) from {len(args.manifest)} manifest(s); "
-          f"{len(ordered) - len(preserved)} case row(s), {len(preserved)} caseless row(s) preserved verbatim, "
+          f"{len(ordered) - len(preserved)} case row(s), {len(preserved)} hand-maintained row(s) preserved verbatim, "
           f"{len(exclusions_before)} accepted exclusion(s) preserved; wrote {args.out}")
     return 0
 

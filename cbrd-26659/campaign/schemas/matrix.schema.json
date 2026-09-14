@@ -25,7 +25,7 @@
     "requirement_id": {"type": "string", "pattern": "^OOS-(REP|SQL|RD|SCH|CL|DUR|OPS|RES)-[0-9]{2}$"},
     "outcome": {"enum": ["PASS", "FAIL", "SKIP", "UNSUPPORTED", "BLOCKED"], "description": "Fixed per-attempt taxonomy."},
     "evidence_status": {"enum": ["proven", "reused", "missing", "not-applicable"]},
-    "gap_kind": {"enum": ["none", "Delivery gap", "Capability gap", "Specification gap", "Engine defect"], "description": "Glossary classification of a non-pass. 'none' only when the latest outcome is PASS with proven or reused OOS evidence."},
+    "gap_kind": {"enum": ["none", "Delivery gap", "Capability gap", "Specification gap", "Engine defect", "Under triage"], "description": "Glossary classification of a non-pass. 'none' only when the latest outcome is PASS with proven or reused OOS evidence. 'Under triage' is a FAIL whose attribution is not yet established: the case was written and executed, the harness reached it and the authority is clear, so none of the other four applies, and calling it a Delivery gap would say the case was never delivered (ticket 36 item 5)."},
     "case_identity": {
       "type": "object",
       "additionalProperties": false,
@@ -68,7 +68,7 @@
       "required": ["status", "channel", "reference", "applicability"],
       "properties": {
         "status": {"$ref": "#/$defs/evidence_status"},
-        "channel": {"enum": [null, "show-heap-oos", "diagdb-owner-descriptor", "debug-oos-log", "instrumentation-counter", "injection-acknowledgement", "unit-test-seam", "other"]},
+        "channel": {"enum": [null, "show-heap-oos", "diagdb-owner-descriptor", "debug-oos-log", "instrumentation-counter", "injection-acknowledgement", "unit-test-seam", "recovery-log", "other"]},
         "reference": {"type": ["string", "null"]},
         "applicability": {
           "type": ["object", "null"],
@@ -149,6 +149,7 @@
       "required": ["row_id", "requirement", "family", "case", "configuration", "run", "oos_evidence", "finding", "flakiness", "known_issue", "attribution", "attempt_records"],
       "properties": {
         "row_id": {"type": "string"},
+        "hand_maintained": {"const": true, "description": "Optional. Present and true on a row a human wrote and owns: tooling preserves it verbatim and never regenerates or resurrects it. It covers a withdrawn claim and every other caseless row, and replaces recognition by row id, which encoded meaning in a string (ticket 36 item 6)."},
         "requirement": {"$ref": "#/$defs/requirement_id"},
         "family": {"enum": ["Representation", "SQL operations", "Read paths", "Schema and utilities", "Concurrent lifetime", "Durability", "Operational features", "Resource pressure"]},
         "case": {"anyOf": [{"$ref": "#/$defs/case_identity"}, {"type": "null"}], "description": "Null when no case exists yet for the requirement (Delivery gap row)."},

@@ -30,6 +30,12 @@ What it reads, and the rules encoded (sources in brackets):
 * The SQL runner has no assertion counter: `executed.assertion_count` and the per-case
   `assertions.executed` are null; a hand-derived count from the declaration goes into
   `outstanding_coverage.note` with its derivation [ticket 35 F3, schemas document section 11].
+  `assertions.failed` is null for the same reason on every outcome but PASS, where a
+  byte-identical whole-result comparison entails zero [ticket 36 item 3].
+* An `answer_promotions` entry with action `promoted` is written by this tool, never copied
+  from `--promotions` unverified: the rename proof (the promoted answer's hash equal to the
+  retained candidate's) is mechanical and is checked here, and the entry is refused without a
+  hand-supplied review note [ticket 36 item 8].
 * `configurations_not_run` enumerates the 12-combination domain minus what the CTP case ran
   in this invocation [ticket 35 F4].
 * The paired activation check is read from its output directory; `proven` only when it ran
@@ -113,6 +119,48 @@ def find_one(bundle: Path, names, case_name=None):
             if p.exists() and any(n.endswith(ext) for n in names):
                 return p
     return None
+
+
+def verified_promotions(entries, bundle: Path, declared) -> list:
+    """Write the answer promotions, verifying the mechanical half (ticket 36 item 8).
+
+    A `promoted` entry claims the reviewed answer is the retained candidate renamed. That
+    proof -- the two files hashing equal -- is mechanical and was hand-asserted twice, so it
+    is checked here instead. The judgement is not mechanical, so the human still supplies the
+    review note and the flag, and an entry without them is refused. A refusal raises: nothing
+    invalid is ever written.
+    """
+    out = []
+    for raw in entries:
+        entry = dict(raw)
+        case = entry.get("case")
+        if entry.get("action") != "promoted":
+            out.append(entry)
+            continue
+        note = (entry.get("review_note") or "").strip()
+        if not note:
+            raise RecordError(f"answer promotion for {case!r}: action 'promoted' requires a hand-supplied "
+                              "review note; the tooling verifies the rename, it does not review the answer")
+        if not isinstance(entry.get("flagged_for_user"), bool):
+            raise RecordError(f"answer promotion for {case!r}: action 'promoted' requires an explicit "
+                              "flagged_for_user, which only a reviewer can set")
+        if case not in declared:
+            raise RecordError(f"answer promotion for {case!r}: the case is not declared in this invocation")
+        answer = find_one(bundle, ["expected.answer"], case)
+        candidate = find_one(bundle, ["candidate.result", "actual.result"], case)
+        if answer is None or candidate is None:
+            missing = "the promoted answer" if answer is None else "the retained candidate"
+            raise RecordError(f"answer promotion for {case!r}: {missing} is not in the bundle, so the rename "
+                              "cannot be verified")
+        answer_hash, candidate_hash = sha256_file(answer), sha256_file(candidate)
+        if answer_hash != candidate_hash:
+            raise RecordError(f"answer promotion for {case!r}: the promoted answer ({answer.name}, sha256 "
+                              f"{answer_hash[:12]}) does not equal the retained candidate ({candidate.name}, "
+                              f"sha256 {candidate_hash[:12]}); the rename is unproven")
+        entry["review_note"] = (f"{note} RENAME VERIFIED by ctp_sql_records.py: {answer.name} and "
+                                f"{candidate.name} both sha256 {answer_hash}.")
+        out.append(entry)
+    return out
 
 
 def parse_ctp_conf(conf_path: Path) -> dict:
@@ -291,7 +339,7 @@ def build(args) -> int:
     # --- per case ---------------------------------------------------------------------------
     attempt_ids = [a for a in args.attempt_ids.split(",") if a]
     activation_dirs = dict(a.split("=", 1) for a in args.activation)
-    promotions = load_json(args.promotions) if args.promotions else []
+    promotions = verified_promotions(load_json(args.promotions) if args.promotions else [], bundle, set(declared))
     cases_out, attempt_records, bundle_indexes = [], [], []
     executed_reqs = set()
     ran_configs = set()
@@ -308,7 +356,7 @@ def build(args) -> int:
                             if args.cap_reached else "the case was not discovered by CTP; see proof.mismatches"))
             cases_out.append({"case": case_identity, "requirements": c["requirements"], "outcome": None,
                               "skip_reason": None,
-                              "assertions": {"expected": c.get("expected_assertions"), "executed": None, "failed": 0},
+                              "assertions": {"expected": c.get("expected_assertions"), "executed": None, "failed": None},
                               "oos_evidence": evidence_block("missing"), "attempts": [],
                               "outstanding": {"reason": reason, "detail": detail}})
             continue
@@ -342,7 +390,12 @@ def build(args) -> int:
         if verdict == "MATCH" and outcome == "FAIL":
             notes_extra.append("CTP listed the case as failed although the retained expected.answer and result are identical: "
                                "the retained files may not be the pair CTP compared; FAIL is kept")
-        failed = 0 if outcome == "PASS" else 1
+        # The CTP SQL runner has no per-assertion counter, so "how many assertions failed" is
+        # unknowable at this seam: null, for the same reason `executed` is null. Writing 1 to mean
+        # "at least one" manufactures a measurement the runner never produced [ticket 36 item 3].
+        # A PASS is the one outcome the whole-result comparison settles: a byte-identical result
+        # and answer entail no failed assertion, so 0 there is entailed, not manufactured.
+        failed = 0 if outcome == "PASS" else None
         # activation evidence
         act_dir = activation_dirs.get(n)
         oos, act_note = read_activation(act_dir, run_mode, c.get("activation_check"))

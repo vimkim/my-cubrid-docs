@@ -38,6 +38,10 @@ _Avoid_: Gap, open question, TBD
 A campaign finding attributed to the engine with supporting evidence. Distinct from an unexplained failure.
 _Avoid_: Bug, failure, known issue
 
+**Under triage**:
+A campaign failure whose attribution is not yet established, and therefore none of the four gap kinds: the case was written and executed, so it is no Delivery gap; the harness reached it, so it is no Capability gap; its authority is clear, so it is no Specification gap; and an Engine defect needs evidence. A transient state with a window in the retention rules, carried in the final report as a line beside the gap counts, never a section of its own.
+_Avoid_: Delivery gap, unexplained failure, flaky, TBD, untriaged
+
 **Requirement ID**:
 The stable identifier of one campaign requirement. Issued once, never renumbered or reused; only its citation, status and observations change.
 _Avoid_: Test ID, scenario number, case number

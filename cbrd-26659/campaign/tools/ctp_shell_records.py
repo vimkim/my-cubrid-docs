@@ -253,7 +253,7 @@ def build(args) -> int:
         result_path = bundle / f"{n}.result"
         if n not in discovered or not result_path.exists():
             cases_out.append({"case": case_identity, "requirements": c["requirements"], "outcome": None, "skip_reason": None,
-                              "assertions": {"expected": exp_count, "executed": None, "failed": 0},
+                              "assertions": {"expected": exp_count, "executed": None, "failed": None},
                               "oos_evidence": evidence_block("missing"), "attempts": [],
                               "outstanding": ({"reason": "cap-reached", "detail": f"the invocation cap ended the launcher before {n} completed; evidence captured so far is in the bundle"}
                                               if args.cap_reached else

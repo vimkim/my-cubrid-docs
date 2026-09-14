@@ -57,7 +57,7 @@
       "required": ["executed", "failed"],
       "properties": {
         "executed": {"type": ["integer", "null"], "minimum": 0, "description": "Assertions the invocation actually executed, as reported by the runner. NULL when the runner reports no assertion counter of its own (the CTP SQL runner reports only total, success, fail and execute_case): recording a number the runner never produced manufactures a measurement and makes the comparison against `expected` vacuous. When this is null the proof rests on the case counts, the launcher artifacts and the whole-result comparison instead, and the derivation of any hand-counted figure belongs in outstanding_coverage.note. In an attempt record the hand-counted figure, if any, belongs in notes."},
-        "failed": {"type": "integer", "minimum": 0}
+        "failed": {"type": ["integer", "null"], "minimum": 0, "description": "Assertions the invocation reported as failed, as reported by the runner. NULL when the runner reports no per-assertion counter of its own (the CTP SQL runner reports only total, success, fail and execute_case): writing 1 on a FAIL to mean 'at least one' manufactures a measurement the runner never produced, exactly as a manufactured `executed` count does. A FAIL with a null count still carries the outcome and the whole-result comparison (ticket 36 item 3)."}
       }
     },
     "expected_versus_actual": {"type": ["string", "null"], "description": "Path of the expected-versus-actual comparison (CTP result/answer diff or shell assertion log)."},
@@ -67,7 +67,7 @@
       "required": ["status", "channel", "reference", "applicability"],
       "properties": {
         "status": {"$ref": "#/$defs/evidence_status"},
-        "channel": {"enum": [null, "show-heap-oos", "diagdb-owner-descriptor", "debug-oos-log", "instrumentation-counter", "injection-acknowledgement", "unit-test-seam", "other"]},
+        "channel": {"enum": [null, "show-heap-oos", "diagdb-owner-descriptor", "debug-oos-log", "instrumentation-counter", "injection-acknowledgement", "unit-test-seam", "recovery-log", "other"]},
         "reference": {"type": ["string", "null"]},
         "applicability": {
           "type": ["object", "null"],
@@ -108,7 +108,8 @@
         "properties": {
           "site": {"type": "string"},
           "target_operation": {"type": "string"},
-          "occurrence_count": {"type": "integer", "minimum": 0},
+          "occurrence_count": {"type": "integer", "minimum": 0, "description": "The number of times the armed site actually fired. Not the occurrence at which it was armed to fire: that reach belongs in armed_at_occurrence (ticket 36 item 9)."},
+          "armed_at_occurrence": {"type": "integer", "minimum": 0, "description": "Optional. The occurrence the site was armed to fire at (the engine's fault_injection_fire_at_occurrence reach). Recorded beside occurrence_count because the fired-site acknowledgement carries both numbers."},
           "requested_action": {"type": "string"},
           "fired": {"type": "boolean"},
           "acknowledgement": {"type": ["string", "null"], "description": "Path of the fired-site acknowledgement evidence."}
@@ -143,7 +144,7 @@
       "description": "Null only for a PASS whose bulky artifacts expired; the attempt record itself is kept.",
       "additionalProperties": false,
       "required": ["path", "hash"],
-      "properties": {"path": {"type": "string"}, "hash": {"$ref": "#/$defs/sha256"}}
+      "properties": {"path": {"type": "string"}, "hash": {"$ref": "#/$defs/sha256", "description": "The campaign's bundle hash: sha256 of a SHA256SUMS file listing every file in the bundle, paths relative to its root, in bytewise (LC_ALL=C) order (ticket 36 item 1). Hashes recorded before that convention stay as recorded."}}
     },
     "reproduction": {
       "type": ["object", "null"],

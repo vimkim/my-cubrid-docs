@@ -31,7 +31,7 @@ coverage matrix (cross-invocation) ── one row per (requirement, case, config
 |---|---|---|
 | Outcome (per executed attempt) | `PASS`, `FAIL`, `SKIP`, `UNSUPPORTED`, `BLOCKED` | Fixed taxonomy from the reproduction decision. SKIP carries a reason. A skip recorded as OK, an unfired hook or an unreached phase never maps to PASS. A documented Engine defect still records FAIL. |
 | OOS-path evidence status | `proven`, `reused`, `missing`, `not-applicable` | Separate from the outcome. `reused` requires applicability (fixture, execution path, engine configuration, conditions, source manifest). Logical success with `missing` evidence is not OOS coverage. |
-| Gap kind (matrix finding) | `none`, `Delivery gap`, `Capability gap`, `Specification gap`, `Engine defect` | Glossary terms, used exactly. `none` only for PASS with proven or reused evidence. |
+| Gap kind (matrix finding) | `none`, `Delivery gap`, `Capability gap`, `Specification gap`, `Engine defect`, `Under triage` | Glossary terms, used exactly. `none` only for PASS with proven or reused evidence. `Under triage` is a FAIL whose attribution is not yet established: none of the four other kinds fits, and it is never a resting place — it becomes `Engine defect` when attribution carries evidence, or another kind when triage finds one. |
 | Attribution target | `unknown`, `engine`, `harness`, `instrumentation`, `setup`, `specification` | Separate from the outcome. `engine` requires evidence; an unexplained failure stays `unknown`. |
 | Proof verdict (manifest) | `proven`, `failure-of-proof` | Any mismatch between expected and discovered/executed cases or assertion counts is a failure of proof, never a pass. |
 | Replay item state | `present`, `missing`, `not-applicable` | Missing evidence is recorded as missing with a note. |
@@ -84,7 +84,7 @@ Tooling (ticket 15) must add what a schema cannot express:
 | `invocation.resources` | object | yes |  |
 | `invocation.resources.cpus` | integer | yes |  |
 | `invocation.resources.memory_gib` | number | yes |  |
-| `invocation.resources.storage_gib` | number | yes |  |
+| `invocation.resources.storage_gib` | number | yes | This invocation's own storage footprint, beside cpus and memory_gib, which are also the invocation's. Not the storage root's total usage and not the campaign's cap, which lives in the execution-budget decision (ticket 36 item 4). |
 | `invocation.resources.storage_root` | string `^/home/` | yes | Fixtures, logs and cores live under /home. |
 | `invocation.engine` | object | yes | Pinned engine identity proven by binary, not by build directory. |
 | `invocation.engine.baseline_commit` | string `^[0-9a-f]{40}$` | yes |  |
@@ -160,10 +160,10 @@ Tooling (ticket 15) must add what a schema cannot express:
 | `cases[].assertions` | object | yes |  |
 | `cases[].assertions.expected` | integer/null | yes |  |
 | `cases[].assertions.executed` | integer/null | yes | Null when the runner reports no assertion counter; see executed.assertion_count. |
-| `cases[].assertions.failed` | integer | yes |  |
+| `cases[].assertions.failed` | integer/null | yes | Assertions the invocation reported as failed, as reported by the runner. Null when the runner reports no per-assertion counter; see executed.assertion_count. Writing 1 on a FAIL to mean 'at least one' manufactures a measurement the runner never produced, exactly as a manufactured executed count does (ticket 36 item 3). |
 | `cases[].oos_evidence` | object | yes |  |
 | `cases[].oos_evidence.status` | enum: `proven`, `reused`, `missing`, `not-applicable` | yes | proven: activation evidence captured in this run. reused: matching evidence from another run with recorded applicability. missing: logical checks ran without OOS-path evidence (not OOS coverage). not-applicable: the case asserts a non-activation property (for example a rejection). |
-| `cases[].oos_evidence.channel` | enum: null, `show-heap-oos`, `diagdb-owner-descriptor`, `debug-oos-log`, `instrumentation-counter`, `injection-acknowledgement`, `unit-test-seam`, `other` | yes |  |
+| `cases[].oos_evidence.channel` | enum: null, `show-heap-oos`, `diagdb-owner-descriptor`, `debug-oos-log`, `instrumentation-counter`, `injection-acknowledgement`, `unit-test-seam`, `recovery-log`, `other` | yes |  |
 | `cases[].oos_evidence.reference` | string/null | yes | Path (and hash where bulky) of the captured evidence. |
 | `cases[].oos_evidence.applicability` | object/null | yes | Required content when status is reused: what must match for the evidence to transfer. |
 | `cases[].oos_evidence.applicability.fixture` | string | yes |  |
@@ -206,6 +206,7 @@ Tooling (ticket 15) must add what a schema cannot express:
 | `catalogue.hash` | string `^sha256:[0-9a-f]{64}$` | yes |  |
 | `rows` | array of object | yes |  |
 | `rows[].row_id` | string | yes |  |
+| `rows[].hand_maintained` | const `True` | no | Optional. Present and true on a row a human wrote and owns: tooling preserves it verbatim and never regenerates or resurrects it. It covers a withdrawn claim and every other caseless row, and replaces recognition by row id, which encoded meaning in a string (ticket 36 item 6). |
 | `rows[].requirement` | string `^OOS-(REP\|SQL\|RD\|SCH\|CL\|DUR\|OPS\|RES)-[0-9]{2}$` | yes |  |
 | `rows[].family` | enum: `Representation`, `SQL operations`, `Read paths`, `Schema and utilities`, `Concurrent lifetime`, `Durability`, `Operational features`, `Resource pressure` | yes |  |
 | `rows[].case` | object or null | yes | Null when no case exists yet for the requirement (Delivery gap row). |
@@ -227,7 +228,7 @@ Tooling (ticket 15) must add what a schema cannot express:
 | `rows[].run.context_content_hash` | string `^sha256:[0-9a-f]{64}$` | yes |  |
 | `rows[].oos_evidence` | object | yes |  |
 | `rows[].oos_evidence.status` | enum: `proven`, `reused`, `missing`, `not-applicable` | yes |  |
-| `rows[].oos_evidence.channel` | enum: null, `show-heap-oos`, `diagdb-owner-descriptor`, `debug-oos-log`, `instrumentation-counter`, `injection-acknowledgement`, `unit-test-seam`, `other` | yes |  |
+| `rows[].oos_evidence.channel` | enum: null, `show-heap-oos`, `diagdb-owner-descriptor`, `debug-oos-log`, `instrumentation-counter`, `injection-acknowledgement`, `unit-test-seam`, `recovery-log`, `other` | yes |  |
 | `rows[].oos_evidence.reference` | string/null | yes |  |
 | `rows[].oos_evidence.applicability` | object/null | yes |  |
 | `rows[].oos_evidence.applicability.fixture` | string | yes |  |
@@ -243,7 +244,7 @@ Tooling (ticket 15) must add what a schema cannot express:
 | `rows[].finding.history[].attempt_id` | string | yes |  |
 | `rows[].finding.history[].outcome` | enum: `PASS`, `FAIL`, `SKIP`, `UNSUPPORTED`, `BLOCKED` | yes | Fixed per-attempt taxonomy. |
 | `rows[].finding.history[].at` | string `^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(Z\|[+-][0-9]{2}:[0-9]{2})$` | yes |  |
-| `rows[].finding.gap_kind` | enum: `none`, `Delivery gap`, `Capability gap`, `Specification gap`, `Engine defect` | yes | Glossary classification of a non-pass. 'none' only when the latest outcome is PASS with proven or reused OOS evidence. |
+| `rows[].finding.gap_kind` | enum: `none`, `Delivery gap`, `Capability gap`, `Specification gap`, `Engine defect`, `Under triage` | yes | Glossary classification of a non-pass. 'none' only when the latest outcome is PASS with proven or reused OOS evidence. 'Under triage' is a FAIL whose attribution is not yet established: the case was written and executed, the harness reached it and the authority is clear, so none of the other four applies, and calling it a Delivery gap would say the case was never delivered (ticket 36 item 5). |
 | `rows[].finding.summary` | string/null | yes |  |
 | `rows[].flakiness` | object | yes | Separate from the outcome: counts and reproduction status. |
 | `rows[].flakiness.attempts` | integer | yes |  |
@@ -302,11 +303,11 @@ Tooling (ticket 15) must add what a schema cannot express:
 | `skip_reason` | string/null | yes |  |
 | `assertions` | object | yes |  |
 | `assertions.executed` | integer/null | yes | Assertions the invocation actually executed, as reported by the runner. NULL when the runner reports no assertion counter of its own (the CTP SQL runner reports only total, success, fail and execute_case): recording a number the runner never produced manufactures a measurement and makes the comparison against `expected` vacuous. When this is null the proof rests on the case counts, the launcher artifacts and the whole-result comparison instead, and the derivation of any hand-counted figure belongs in outstanding_coverage.note. In an attempt record the hand-counted figure, if any, belongs in notes. |
-| `assertions.failed` | integer | yes |  |
+| `assertions.failed` | integer/null | yes | Assertions the invocation reported as failed, as reported by the runner. NULL when the runner reports no per-assertion counter of its own (the CTP SQL runner reports only total, success, fail and execute_case): writing 1 on a FAIL to mean 'at least one' manufactures a measurement the runner never produced, exactly as a manufactured `executed` count does. A FAIL with a null count still carries the outcome and the whole-result comparison (ticket 36 item 3). |
 | `expected_versus_actual` | string/null | yes | Path of the expected-versus-actual comparison (CTP result/answer diff or shell assertion log). |
 | `oos_evidence` | object | yes |  |
 | `oos_evidence.status` | enum: `proven`, `reused`, `missing`, `not-applicable` | yes |  |
-| `oos_evidence.channel` | enum: null, `show-heap-oos`, `diagdb-owner-descriptor`, `debug-oos-log`, `instrumentation-counter`, `injection-acknowledgement`, `unit-test-seam`, `other` | yes |  |
+| `oos_evidence.channel` | enum: null, `show-heap-oos`, `diagdb-owner-descriptor`, `debug-oos-log`, `instrumentation-counter`, `injection-acknowledgement`, `unit-test-seam`, `recovery-log`, `other` | yes |  |
 | `oos_evidence.reference` | string/null | yes |  |
 | `oos_evidence.applicability` | object/null | yes |  |
 | `oos_evidence.applicability.fixture` | string | yes |  |
@@ -322,7 +323,8 @@ Tooling (ticket 15) must add what a schema cannot express:
 | `injections` | array of object | yes | One entry per armed fault; an unfired hook provides no coverage. |
 | `injections[].site` | string | yes |  |
 | `injections[].target_operation` | string | yes |  |
-| `injections[].occurrence_count` | integer | yes |  |
+| `injections[].occurrence_count` | integer | yes | The number of times the armed site actually fired. Not the occurrence at which it was armed to fire: that reach belongs in armed_at_occurrence (ticket 36 item 9). |
+| `injections[].armed_at_occurrence` | integer | no | Optional. The occurrence the site was armed to fire at (the engine's fault_injection_fire_at_occurrence reach). Recorded beside occurrence_count because the fired-site acknowledgement carries both numbers. |
 | `injections[].requested_action` | string | yes |  |
 | `injections[].fired` | boolean | yes |  |
 | `injections[].acknowledgement` | string/null | yes | Path of the fired-site acknowledgement evidence. |
@@ -338,7 +340,7 @@ Tooling (ticket 15) must add what a schema cannot express:
 | `cleanup.evidence` | string/null | yes |  |
 | `bundle` | object/null | yes | Null only for a PASS whose bulky artifacts expired; the attempt record itself is kept. |
 | `bundle.path` | string | yes |  |
-| `bundle.hash` | string `^sha256:[0-9a-f]{64}$` | yes |  |
+| `bundle.hash` | string `^sha256:[0-9a-f]{64}$` | yes | The campaign's bundle hash: sha256 of a SHA256SUMS file listing every file in the bundle, paths relative to its root, in bytewise (LC_ALL=C) order (ticket 36 item 1). Hashes recorded before that convention stay as recorded. |
 | `reproduction` | object/null | yes |  |
 | `reproduction.fresh_fixture` | boolean | yes |  |
 | `reproduction.consecutive_reproductions_so_far` | integer | yes |  |
@@ -358,7 +360,7 @@ Tooling (ticket 15) must add what a schema cannot express:
 | `attempt_id` | string | yes |  |
 | `created_at` | string `^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(Z\|[+-][0-9]{2}:[0-9]{2})$` | yes |  |
 | `root_path` | string `^/home/` | yes | Bundle directory under /home; the temporary filesystem is unsuitable. |
-| `total_bytes` | integer | yes |  |
+| `total_bytes` | integer | yes | Sum of the sizes of the regular files under root_path. Not du(1)'s figure, which counts directory inodes and rounds to blocks (ticket 36 item 1). The bundle's own hash, recorded by the attempt record and the manifest, is the sha256 of a SHA256SUMS file listing every one of those files, paths relative to root_path, in bytewise (LC_ALL=C) order. |
 | `complete` | boolean | yes | True only when no item is in state missing. |
 | `items` | object | yes | One entry per specification item. |
 | `items.workload` | object | yes | Exact SQL/workload files as executed. |
@@ -527,15 +529,46 @@ The checker needs only the Python standard library; `tools/minischema.py` implem
 | Matrix schema: requirement, case, configuration, run, OOS-path evidence, finding, plus separate flakiness, known-issue link and attribution fields, and dated accepted-exclusion entries only the user may add | §5, `matrix.schema.json`, checker `matrix-*` |
 | Attempt-record and replay-bundle content lists follow the spec's Outcomes, replay and minimization section, including "missing" as a recordable state per item | §6, §7, checker `replay-items`, `replay-item-state` |
 | Committed in the campaign folder; vocabulary committed on its own | docs repository history |
-
 ## 11. Deliberate widenings after ticket 12
 
-The schemas are the campaign's contract, so every edit made after ticket 12 closed is listed here. Both edits below are backward compatible: an existing integer still validates, the valid examples and the negative controls are unchanged, and `tools/check_campaign_records.py` passes.
+The schemas are the campaign's contract, so every edit made after ticket 12 closed is listed here. Every edit below is backward compatible: an existing record still validates, the valid examples and the negative controls are unchanged, and `tools/check_campaign_records.py` passes. The 64 records written by tickets 13, 14 and 15 were revalidated against the widened schemas and are unchanged.
 
-| Date | Schema and field | Change | Why | Raised by |
-|---|---|---|---|---|
-| 2026-09-10 | `manifest.schema.json`: `executed.assertion_count` and `$defs.case_result.assertions.executed` | `integer` → `integer` or `null`, with a description saying when null is required | `expected.assertion_count` was nullable but the executed count was not, so a runner with no assertion counter (the CTP SQL runner reports only total, success, fail and execute_case) was obliged to invent one | ticket 13's commissioned review pass, finding R5 (docs commit `c1a3c14`) |
-| 2026-09-11 | `attempt-record.schema.json`: `assertions.executed` | the same widening, with the same description extended by one sentence saying where the hand-counted figure belongs in an attempt record | the R5 fix reached the manifest but not the attempt record, so `att-T13-0002.json` still carried a manufactured 27 | the independent review of ticket 13, finding F3; closed by ticket 35 |
-| 2026-09-11 | `attempt-record.schema.json`: `kind` | enum gains `checker-validation` and `coexistence`, each described as having no manifest and no matrix row | the negative control and the coexistence run of ticket 14 were executed attempts with campaign attempt ids and no record; the taxonomy is per executed attempt, and the alternative — a fabricated FAIL as an `original` attempt — would have put a planted failure into a requirement's coverage history | the independent review of ticket 14, finding F4; closed by ticket 34 |
+The first three rows were made inside implementation tickets, which the specification forbids ("Decisions are never settled inside an implementation ticket"). [Ticket 36](/home/vimkim/gh/cb/CBRD-26659-oos-testcases-handover/.scratch/oos-adversarial/issues/36-record-contract-conventions.md) ratified all three on 2026-09-14 and is their authority; the ticket and finding that raised each is kept beside it.
 
-Rule for tooling (ticket 15): a checker-validation or coexistence attempt gets an attempt record and no manifest or matrix row, and its outcome is never merged into a requirement's history. A runner that reports no assertion counter writes `null` in both records and puts any hand-derived count, with its derivation, in the manifest's `outstanding_coverage.note`. The CTP shell runner does have a counter (one `<case>-<n> : OK|NOK` line per assertion), so private shell records carry measured integers.
+| Date | Schema and field | Change | Why | Authority | Raised by |
+|---|---|---|---|---|---|
+| 2026-09-10 | `manifest.schema.json`: `executed.assertion_count` and `$defs.case_result.assertions.executed` | `integer` → `integer` or `null`, with a description saying when null is required | `expected.assertion_count` was nullable but the executed count was not, so a runner with no assertion counter (the CTP SQL runner reports only total, success, fail and execute_case) was obliged to invent one | ticket 36 item 2 (ratified 2026-09-14) | ticket 13's commissioned review pass, finding R5 (docs commit `c1a3c14`) |
+| 2026-09-11 | `attempt-record.schema.json`: `assertions.executed` | the same widening, with the same description extended by one sentence saying where the hand-counted figure belongs in an attempt record | the R5 fix reached the manifest but not the attempt record, so `att-T13-0002.json` still carried a manufactured 27 | ticket 36 item 2 (ratified 2026-09-14) | the independent review of ticket 13, finding F3; closed by ticket 35 |
+| 2026-09-11 | `attempt-record.schema.json`: `kind` | enum gains `checker-validation` and `coexistence`, each described as having no manifest and no matrix row | the negative control and the coexistence run of ticket 14 were executed attempts with campaign attempt ids and no record; the taxonomy is per executed attempt, and the alternative — a fabricated FAIL as an `original` attempt — would have put a planted failure into a requirement's coverage history | ticket 36 item 2 (ratified 2026-09-14) | the independent review of ticket 14, finding F4; closed by ticket 34 |
+| 2026-09-14 | `matrix.schema.json`: `$defs.gap_kind` | enum gains `Under triage` | a FAIL whose attribution is not yet established is none of the four glossary kinds: the case was written and executed, the harness reached it, and the authority is clear. The tooling wrote `Delivery gap` with an UNTRIAGED marker, which tells a reader the case was never delivered — the opposite of what happened | ticket 36 item 5 | ticket 15's decision request D6 |
+| 2026-09-14 | `matrix.schema.json`: `$defs.row.hand_maintained` | new optional field, `const: true` | ticket 34's withdrawn `OOS-REP-07` claim and ticket 13's four caseless rows were recognised by a suffix in `row_id`, which encoded meaning in a string. One field now says it for every hand-owned row: tooling preserves it verbatim and never regenerates or resurrects it | ticket 36 item 6 | ticket 15's decision request D7 |
+| 2026-09-14 | `manifest.schema.json`, `matrix.schema.json`, `attempt-record.schema.json`: `oos_evidence.channel` | enum gains `recovery-log` | ticket 34 recorded the recovery log under `other`, which the schema permits. Every crash case in tickets 23 to 32 will use that channel, and `other` erases the distinction in the family where it matters most | ticket 36 item 2 | ticket 15's decision request D2; ticket 14's request 4 |
+| 2026-09-14 | `manifest.schema.json`: `$defs.case_result.assertions.failed`; `attempt-record.schema.json`: `assertions.failed` | `integer` → `integer` or `null`, with the reason `executed` already carries | the CTP SQL runner reports no per-assertion count, so the tooling wrote 1 on a FAIL to mean "at least one". That manufactures a measurement the runner never produced — the trap `executed` was corrected for twice. A FAIL with a null count still carries the outcome and the whole-result comparison | ticket 36 item 3 | ticket 15's decision request D4 |
+| 2026-09-14 | `manifest.schema.json`: `invocation.resources.storage_gib` | description only: the invocation's own footprint | the schema did not say whether the number was the campaign's cap, the storage root's usage or this invocation's footprint. It sits beside `cpus` and `memory_gib`, which are the invocation's; the cap lives in decision ticket 08. Ticket 13 recorded the root's usage and stays as recorded, with a note | ticket 36 item 4 | ticket 15's decision request D5 |
+| 2026-09-14 | `attempt-record.schema.json`: `injections[].occurrence_count`, new optional `injections[].armed_at_occurrence` | description fixes the meaning (the number of firings); the new field carries the reach the site was armed at | ticket 16 recorded the reach in a field whose name says count. The fired-site acknowledgement carries both numbers, so both get a field. No attempt record with an `injections` entry exists yet, so nothing needed correcting; ticket 30 is the first that will write one | ticket 36 item 9 | ticket 16's request 4 |
+| 2026-09-14 | `replay-bundle.schema.json`: `total_bytes`; `attempt-record.schema.json`: `bundle.hash` | description only: the campaign's bundle conventions, stated where the fields are defined | three bundle-hash shapes and two `total_bytes` shapes were in use across tickets 13, 14 and 15. The convention is now written beside the fields that carry it, not only in this change log | ticket 36 item 1 | ticket 15's decision request D1 |
+
+### The campaign's bundle conventions
+
+**Bundle hash.** The sha256 of a `SHA256SUMS` file that lists every regular file in the bundle, as `<sha256>  <path>` with paths relative to the bundle root, in bytewise (`LC_ALL=C`) order. It survives a locale change and a move of the bundle, a human can verify it with `sha256sum -c`, and the per-file hashes stay readable. `tools/campaign_records.py` (`bundle_files`, `sha256sums_text`, `bundle_hash`) is the implementation; `SHA256SUMS` itself is excluded from the listing it contains.
+
+**`total_bytes`.** The sum of the regular files' sizes, `SHA256SUMS` included. Not `du -sb`, which counts directory inodes and rounds to filesystem blocks.
+
+**Hashes already recorded stay as recorded**, being sealed evidence; the convention binds new bundles. Which recorded bundles used another shape:
+
+| Bundles | Hash shape used | `total_bytes` shape used |
+|---|---|---|
+| Ticket 13 (`bundle-att-T13-0001`, `-0002`) | the `SHA256SUMS` shape in **locale order**, not bytewise. The per-file lines are identical as a set to what the tool computes; only the aggregate differs | sum of the regular files' sizes — already the campaign's shape (46,360 reproduced exactly) |
+| Ticket 14 (`bundle-att-T14-0029`, `-0030`, `-0031`, and the earlier T14 bundles) | `find \| sort \| xargs sha256sum \| sha256sum`, which hashes **absolute** paths and reproduces only under `LANG=en_US.UTF-8` — locale- and path-dependent, and it collapses the per-file evidence into one opaque digest | `du -sb` (676,012; 768,138; 336,698,606 against the tool's 659,535; 751,661; 336,664,766) |
+| Ticket 15 (`inv-T15-*`, `att-T15-*` bundles) | the campaign's convention | the campaign's convention |
+
+`campaign_records.bundle_hash_legacy_t14` recomputes ticket 14's shape so an old bundle can still be verified against the hash its record cites; it is never used to write a new one.
+
+### Rule for tooling (ticket 15)
+
+- A checker-validation or coexistence attempt gets an attempt record and no manifest or matrix row, and its outcome is never merged into a requirement's history.
+- A runner that reports no assertion counter writes `null` for `executed` in both records, and `null` for `failed` on every outcome but PASS, where a byte-identical whole-result comparison entails zero failed assertions and the figure is therefore entailed rather than manufactured. A case that was never executed carries `null` for both. Any hand-derived count, with its derivation, goes in the manifest's `outstanding_coverage.note`. The CTP shell runner does have a counter (one `<case>-<n> : OK|NOK` line per assertion), so private shell records carry measured integers for both.
+- A row carrying `hand_maintained: true` is preserved verbatim: never regenerated, never resurrected, and never merged into. Recognition by `row_id` suffix is gone.
+- An untriaged FAIL is `Under triage`, not `Delivery gap`. It becomes `Engine defect` only when a hand-set `attribution.target` of `engine` carries evidence.
+- An observation-only requirement without an executed case counts as uncovered in `requirements_without_executed_case`; only UNSUPPORTED and BLOCKED requirements are excluded from that ledger.
+- An `answer_promotions` entry with `action: promoted` is written by the tooling, which first verifies the rename mechanically (the promoted answer's hash equal to the retained candidate's), and is refused without a hand-supplied review note and flag.

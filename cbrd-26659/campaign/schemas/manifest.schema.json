@@ -138,7 +138,8 @@
             "storage_gib": {
               "type": "number",
               "minimum": 0,
-              "maximum": 100
+              "maximum": 100,
+              "description": "This invocation's own storage footprint, beside cpus and memory_gib, which are also the invocation's. Not the storage root's total usage and not the campaign's cap, which lives in the execution-budget decision (ticket 36 item 4)."
             },
             "storage_root": {
               "type": "string",
@@ -721,6 +722,7 @@
             "instrumentation-counter",
             "injection-acknowledgement",
             "unit-test-seam",
+            "recovery-log",
             "other"
           ]
         },
@@ -833,8 +835,12 @@
               "description": "Null when the runner reports no assertion counter; see executed.assertion_count."
             },
             "failed": {
-              "type": "integer",
-              "minimum": 0
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "description": "Assertions the invocation reported as failed, as reported by the runner. Null when the runner reports no per-assertion counter; see executed.assertion_count. Writing 1 on a FAIL to mean 'at least one' manufactures a measurement the runner never produced, exactly as a manufactured executed count does (ticket 36 item 3)."
             }
           }
         },

@@ -17,7 +17,10 @@ before use. The checks, each one rule the merge must add beyond the schema:
   4. accepted_exclusions and caseless rows in an existing matrix come out verbatim;
   5. a hand-set gap kind (Delivery gap) on a row that keeps passing is preserved, never
      upgraded to `none`;
-  6. a checker-validation attempt record beside a manifest is refused.
+  6. a checker-validation attempt record beside a manifest is refused;
+  7. a row carrying `hand_maintained: true` is preserved verbatim even when it names a case
+     and a configuration a manifest would otherwise merge into, and no duplicate is created
+     beside it (ticket 36 item 6).
 
 Exit 0 when every check holds.
 """
@@ -109,7 +112,8 @@ def main(argv=None) -> int:
     r2b = row(mx2b)
     check("2b a later FAIL moves gap_kind off none", r2b["finding"]["gap_kind"] != "none")
     check("2c the earlier PASS stays in history", [h["outcome"] for h in r2b["finding"]["history"]] == ["PASS", "FAIL"])
-    check("2d an untriaged FAIL is not classified as Engine defect", r2b["finding"]["gap_kind"] != "Engine defect" and "UNTRIAGED" in r2b["finding"]["summary"])
+    check("2d an untriaged FAIL is Under triage: not Engine defect, not Delivery gap",
+          r2b["finding"]["gap_kind"] == "Under triage" and "attribution is not yet established" in r2b["finding"]["summary"])
     # 3. idempotent
     mx3 = merge(tmp, [m_fail, m_pass], existing=tmp / "m1.json", out="m3.json")
     a, b = load_json(tmp / "m1.json"), mx3
@@ -150,6 +154,16 @@ def main(argv=None) -> int:
     (tmp / "att-SELFTEST-02.json").write_text(json.dumps(att, indent=1))
     rc = matrix_merge.main(["--manifest", str(m_pass), "--attempt-records-dir", str(tmp), "--out", str(tmp / "m6.json")])
     check("6  a checker-validation attempt record is refused by the merge", rc != 0)
+    # 7. hand_maintained: a row that names a case and a configuration is still hand-owned
+    seed7 = copy.deepcopy(mx2)
+    r7 = row(seed7)
+    r7["hand_maintained"] = True
+    r7["finding"]["summary"] = "HAND-MAINTAINED: scoped by its author; the merge owns nothing here"
+    write_record(seed7, "matrix", tmp / "seed7.json")
+    mx7 = merge(tmp, [m_fail_later], existing=tmp / "seed7.json", out="m7.json")
+    check("7a a hand-maintained case row comes out verbatim", mx7["rows"] == seed7["rows"])
+    check("7b no attempt is merged into a hand-maintained row", len(row(mx7)["finding"]["history"]) == 1)
+    check("7c and no duplicate row is created beside it", len([r_ for r_ in mx7["rows"] if r_["requirement"] == "OOS-REP-02"]) == 1)
     print(f"[selftest_matrix_merge] {len(fails)} failing check(s); files under {tmp}")
     return 1 if fails else 0
 
