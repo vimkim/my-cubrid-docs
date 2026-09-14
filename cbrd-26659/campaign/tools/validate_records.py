@@ -17,7 +17,9 @@ Beyond the schema, the rules a schema cannot express (ticket 12 section 3) are c
   manifest       proof.verdict is failure-of-proof iff proof.mismatches is non-empty; a case
                  with outcome null has outstanding set and vice versa; every SKIP has a reason;
                  configurations_not_run has no duplicates and stays inside the 12-combination
-                 domain; requirement ids exist in the catalogue.
+                 domain; requirement ids exist in the catalogue; the engine's library hashes
+                 name a build the campaign knows -- the current one or the superseded ticket 11
+                 one, which stays recognised for replaying the records that cite it.
   attempt        checker-validation and coexistence attempts name no real manifest; a reached
                  deadline is not PASS (also schema-enforced); requirement ids exist.
   bundle         complete equals "no item is missing"; a success-bulky bundle has an expiry;
@@ -39,7 +41,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from campaign_records import (  # noqa: E402
-    BUILD_MODES, PAGE_SIZES, RUN_MODES, load_catalogue, sha256_prefixed, validate_record,
+    BUILD_MODES, PAGE_SIZES, RUN_MODES, load_catalogue, recognised_build, sha256_prefixed, validate_record,
 )
 
 VALID_CONFIGS = {f"{p}/{b}/{r}" for p in PAGE_SIZES for b in BUILD_MODES for r in RUN_MODES}
@@ -81,6 +83,14 @@ def rule_checks(kind, rec, path: Path, known_reqs: set) -> list:
                 errs.append(f"configurations_not_run entry {cfg!r} is outside the 12-combination domain")
         if p["verdict"] == "proven" and rec["executed"]["case_count"] != rec["expected"]["case_count"]:
             errs.append("proven verdict but executed.case_count differs from expected.case_count")
+        # The engine a manifest cites must be a build the campaign can name: the current one
+        # (ticket 41) or the superseded ticket 11 one, which stays recognised so the records
+        # written against it still resolve when their bundles are replayed. Anything else is an
+        # engine nobody can identify, and the manifest's identity proves nothing.
+        engine = rec["invocation"]["engine"]
+        if recognised_build(rec["invocation"]["build_mode"], engine["library_hashes"]) is None:
+            errs.append(f"engine library hashes match neither the campaign's {rec['invocation']['build_mode']} build "
+                        f"nor the superseded ticket 11 one: {engine['install_prefix']}")
     elif kind == "attempt-record":
         if rec["kind"] in ("checker-validation", "coexistence") and not str(rec["manifest_id"]).startswith("none"):
             errs.append(f"{rec['kind']} attempt names manifest {rec['manifest_id']!r}; it must have none")

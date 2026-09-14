@@ -71,6 +71,10 @@ LIBRARY_HASHES = {
     },
 }
 BUILD_DIRS = {"release": "release_gcc_nounit", "debug": "debug_gcc_nounit"}
+#: The shell wrappers gate a run before any Python here executes, so campaign_env.sh carries
+#: the same four hashes and the same two build directories in campaign_expected_hash and
+#: campaign_build_dir. A re-pin must change BOTH files; the baseline record's revision is the
+#: authority both transcribe.
 #: ticket 11, section 2: the superseded build. Four recorded invocations cite it, so it stays
 #: recognised for replaying one of their bundles and is never used for a new run (ticket 41).
 LEGACY_LIBRARY_HASHES = {
@@ -99,14 +103,10 @@ CTP_FINGERPRINT_FILES = {
     "ctp-shell": CTP_HOME / "shell" / "lib" / "cubridqa-shell.jar",
 }
 #: ticket 37 item 1: the runner jars and init.sh join the engine hashes in the identity list,
-#: so a swapped CTP tree is caught the way a swapped library is. Recorded in the baseline
-#: record's revision (ticket 41).
-CTP_IDENTITY_HASHES = {
-    "sql/lib/cubridqa-cqt.jar": "456cabffff33abe4c5cd4695d40b33a713b8e53d86b6158fd87f94148e17f078",
-    "shell/lib/cubridqa-shell.jar": "e7c8ef04ee377d5fd33d82ad237210ee0c0c509c7b643787ba5f2137d69e6347",
-    "common/lib/cubridqa-common.jar": "2d89d3a03b48675c8dfea4d312a01953b90c2f9a04750e65a9e53655b8ff7074",
-    "shell/init_path/init.sh": "14fcc2aa5d707569b855a40081b13e9cc21dd35794791fc57accb06c663470c9",
-}
+#: so a swapped CTP tree is caught the way a swapped library is. The expected hashes live in
+#: ONE place, campaign_env.sh's campaign_check_ctp, which gates every wrapper run before any
+#: Python here executes; the baseline record's revision 2 documents them. Python records the
+#: tree that actually ran through ctp_fingerprint rather than re-asserting the expectation.
 REPOSITORY_WORKTREES = {
     "testcases": "/home/vimkim/gh/tc/cubrid-testcases-cbrd-26659",
     "testcases-private-ex": "/home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659",
@@ -246,42 +246,23 @@ def install_prefix(build_mode: str) -> Path:
     return INSTALL_ROOT / BUILD_DIRS[build_mode]
 
 
-def legacy_install_prefix(build_mode: str) -> Path:
-    """The superseded ticket 11 install. Only a replay of a bundle recorded against it."""
-    return INSTALL_ROOT / LEGACY_BUILD_DIRS[build_mode]
-
-
-def recognised_build(build_mode: str, prefix) -> str | None:
-    """Which recorded build an install prefix holds, by its library hashes.
+def recognised_build(build_mode: str, library_hashes: dict) -> str | None:
+    """Which recorded build a pair of library hashes names.
 
     `'repin'` is the campaign's build, the only one a new run may use. `'ticket11'` is the
-    superseded build carrying the unit-test seams, kept recognisable so a bundle recorded
-    against it can still be replayed and verified (ticket 41). `None` is neither.
+    superseded build carrying the unit-test seams, kept recognisable so a record written
+    against it still resolves when its bundle is replayed (ticket 41). `None` is neither, and
+    a record whose engine matches neither build cites an engine the campaign cannot identify.
+
+    Takes the hashes rather than a prefix, with or without the `sha256:` the records carry, so
+    it reads a recorded manifest as readily as an install on disk.
     """
-    prefix = Path(prefix)
-    got = {lib: sha256_file(prefix / "lib" / lib) for lib in ("libcubrid.so", "libcubridsa.so")}
-    if got == LIBRARY_HASHES[build_mode]:
+    got = {lib: h.split(":")[-1] for lib, h in library_hashes.items()}
+    if got == LIBRARY_HASHES.get(build_mode):
         return "repin"
-    if got == LEGACY_LIBRARY_HASHES[build_mode]:
+    if got == LEGACY_LIBRARY_HASHES.get(build_mode):
         return "ticket11"
     return None
-
-
-def verify_ctp_tree(ctp_home=None) -> dict:
-    """Hash the CTP runner jars and init.sh and compare with the recorded tree (ticket 37 item 1).
-
-    Returns the hashes for the record. Raises when the tree is not the campaign's: a swapped
-    CTP tree must stop a run before the launcher starts, the way a swapped library does.
-    """
-    home = Path(ctp_home) if ctp_home else CTP_HOME
-    out = {}
-    for rel, want in CTP_IDENTITY_HASHES.items():
-        got = sha256_file(home / rel)
-        if got != want:
-            raise RecordError(f"{home}/{rel} hashes {got}, not the campaign's CTP tree {want} "
-                              "(ticket 37 item 1); refusing to run against a tree that is not the recorded one")
-        out[rel] = "sha256:" + got
-    return out
 
 
 def verify_install(build_mode: str) -> dict:

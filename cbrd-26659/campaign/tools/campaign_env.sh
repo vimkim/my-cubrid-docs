@@ -55,6 +55,9 @@ campaign_build_dir() {
 }
 
 # campaign_expected_hash release|debug libcubrid.so|libcubridsa.so   (ticket 41, re-pinned build)
+# These four hashes and campaign_build_dir above are also in campaign_records.py
+# (LIBRARY_HASHES, BUILD_DIRS): the shell gates a run before any Python runs, so both need
+# them. A re-pin must change BOTH files; the baseline record's revision is the authority.
 campaign_expected_hash() {
     case "$1/$2" in
         release/libcubrid.so)   echo 1bbbe44663c79d069181b0d812df95c7f7d793b7f16f2850ab4e8af899986b7c ;;
