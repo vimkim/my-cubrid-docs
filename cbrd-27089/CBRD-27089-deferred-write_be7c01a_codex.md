@@ -2,6 +2,8 @@
 
 https://jira.cubrid.org/browse/CBRD-27089
 
+> 초기 본문은 `be7c01a6d` 게시 시점의 기록이다. 최신 source와 검증 상태는 문서 끝의 **Integration verification — 2026-09-15 KST**를 따른다.
+
 ## Purpose
 
 - AS-IS: 목적지 파티션을 고르기 전에 OOS value chain (큰 컬럼 값을 저장하는 연결된 레코드)을 root heap 에 기록한다. 행은 child heap 에 기록되어, SELECT 값은 맞아도 물리적 소유 heap 이 다를 수 있다.
@@ -129,3 +131,44 @@ loader는 OOS 기록을 뒤로 미루기 때문에 baseline보다 payload를 오
 - [ ] **V21-ACCEPT:** V21-CI 결과와 이 문서의 producer/resource matrix를 함께 검토하고 parent acceptance를 갱신한다. baseline 문제와 기능 범위 밖 검증을 성공으로 간주하거나 이 checklist에서 조용히 삭제하지 않는다.
 
 기존 PR7600은 draft/open과 기존 head를 유지한다. CCI generated changes와 private database는 source/docs commit에 포함하지 않는다. 공개 evidence는 fixture 경로를 상대 식별자로 치환한 SQL/config/text/JSON만 포함하며 DB volume이나 credentials를 포함하지 않는다. manifest는 원본 및 게시본 SHA-256을 함께 보존한다.
+
+
+## Integration verification — 2026-09-15 KST
+
+게시 source는 `512b361a7a34a4857cd8ad91c496c7e0e94c0769`이다. Bootstrap 수정 `6acfbb823` 이후 최신 target `38093ea85`를 merge했고, 위16B baseline 본문의 검증을 새24B format에 그대로 적용하지 않았다. 두 부모와 source/binary 해시는 [provenance](deferred-write-512b361-evidence/provenance.json)에 보존한다. commit hook은 모든 incoming/수정 source의 format을 통과했고 파일을 바꾸지 않았다. 기존 generated CCI 변경과 JDBC checkout은 별도로 보존하여 commit에 넣지 않았다.
+
+이전 원격 `878f18b`의25개 실패 중23개는 당시 parent `9c768e4`에서 독립 재현했다. 한 건은 올바른 invalid partition 거절, 한 건은 도입된4KB catalog bootstrap 결함이었다. 이는 이전 source의 분류이며 새 target의 baseline/CI pass를 뜻하지 않는다. 원격 medium154806, SQL154803, shell154805의 실패 이력은 유지한다.
+
+Bootstrap 중에는 catalog OID cache가 없어 `_db_authorization`이 ordinary row로 분류되었다. catalog가 활성화되기 전에는 complete-record preparation과 오류 cleanup을 우회하도록 수정했다. 새 merged build도 원래 CTP case를 변경 없이1/1 통과한다.
+
+24B format 통합에는 별도 수정이 필요했다. text merge 후 기존 prepared-owner50KB readback이-1384로 실패했다. 준비된 request가 안정적인 plan storage에 head identity stamp를 받고, finalizer가 OID·length 뒤에 packed stamp를 기록하도록 연결한 뒤 같은 회귀가 성공했다. Replica는 이미 incoming code의 replica-local stamp fixup을 사용한다.
+
+| 검증 | 새 source 결과 | 증거 |
+|---|---|---|
+| Configured CTest | **35/35 성공**,201.68초; identity, no-logging, crash recovery 포함 | [전체 로그](deferred-write-512b361-evidence/full-tests-final.log) |
+| Prepared owner readback | 통합 전-1384 재현 → 수정 후 성공 | [red](deferred-write-512b361-evidence/red-test.log), [green](deferred-write-512b361-evidence/green-test.log) |
+| Loader/bulk/filtered errors/concurrency | mixed600행,9MiB행, 실패 rollback, concurrent load, 기존 SA no-logging readback 성공 | [loader](deferred-write-512b361-evidence/loader.log) |
+| Replication/HA loader | 값·이동·publication 순서·source/replica 실패 cleanup 성공 | [HA](deferred-write-512b361-evidence/replication.log) |
+| MVCC/recovery/serial | snapshot, committed redo, uncommitted undo, multi-chunk equality, serial persistence 성공 | [recovery](deferred-write-512b361-evidence/transactions-barrier.log) |
+| Catalog bootstrap | 새4KB DB utility 및 기존 CTP case1/1 성공 | [utility](deferred-write-512b361-evidence/bootstrap.log), [CTP](deferred-write-512b361-evidence/ctp-feedback.log) |
+| Scoped Valgrind3.24.0 |3개 실제 lifetime/failure 테스트 성공; errors0, definitely/indirectly/possibly lost0B | [Valgrind](deferred-write-512b361-evidence/valgrind.log), [test output](deferred-write-512b361-evidence/memory-test.log) |
+| Standards / Spec | 남은 actionable finding 각0 | [review](deferred-write-512b361-evidence/review.md) |
+
+최초 full suite는3개 duplicate-probe fixture가 실패했다.20자 key가 새24B stub보다 작아져 더 이상 outline되지 않았기 때문이다.26자로 늘려 모든 기존 assertion과 partition 경계를 유지했다. 회귀를 pass시키려고 expected OOS count를 낮추지 않았다.
+
+Recovery runner의 최초 실행은 killed process 종료와 master registration 제거 사이의 race로 restart가 실패했다. [실패 로그](deferred-write-512b361-evidence/transactions.log)를 보존하고, master의 등록 제거를 bounded polling으로 기다린 뒤 기존 one-shot restart를 실행하도록 수정했다. 실제 recovery 오류를 재시도로 숨기지 않는다. command별 timeout이 있어10초의 strict wall-clock bound는 아니다.
+
+Resource 비교는 새 parent `38093ea85`와 merged candidate에서 동일한4개 workload를 각각3회 실행했다. 단위는 KiB이며 새 허용 threshold를 정의하지 않는다.
+
+| Workload | Parent server peak / growth | Candidate server peak / growth | Parent / candidate client peak |
+|---|---:|---:|---:|
+| SQL10,000×32B |351916 /8296 |352640 /8936 |19200 /19200 |
+| SQL1,000×50,000B |392320 /49280 |393600 /49280 |19840 /19840 |
+| Loader600 mixed32/4000/50000B |479484 /135804 |486496 /142888 |59872 /59880 |
+| Loader1,000×50,000B |665628 /321332 |672608 /328928 |212768 /212836 |
+
+[Parent samples](deferred-write-512b361-evidence/memory-38093ea.json)와 [candidate samples](deferred-write-512b361-evidence/memory-identity-merged.json)는 총24개이며 binary 변경 여부도 검사한다. Loader growth 차이는7084/7596KiB로, canonical payload를 더 오래 보유하는 비용과 일치하는 방향이다. 직접 accounting은50KB owner50392B,64행 큐3225600B를 기록한다. RSS를 정확한 live queue 계수로 해석하지 않으며 per-worker8MiB budget이 process cap이라고 주장하지 않는다. Valgrind는 `--undef-value-errors=no` 조건이므로 undefined-value cleanliness를 증명하지 않는다.
+
+현재 새 source의 GitHub static checks5/5는 성공했다. SQL·medium·shell은 [한 번의 /run all 요청](https://github.com/CUBRID/cubrid/pull/7927#issuecomment-5666059284)으로 실행을 요청했고 build prerequisites가 진행 중이다. [trigger receipt](deferred-write-512b361-evidence/trigger-receipt.json)는 요청 대상 source와 comment 식별자를 기록한다. 새 source의 runtime CI pass는 아직 없다. CTP testcase/tool revision과 실제 terminal job 결과를 수집하여 V21-CI/V21-ACCEPT를 갱신해야 한다.
+
+**V21-CI, V21-ACCEPT 및 parent/map은 열린 상태다.** Baseline 결함과 vacuum convergence, no-logging crash durability, multi-node heartbeat failover 등의 범위 한계를 조용히 제거하지 않는다. 새35-test suite에 포함된 특정 vacuum/no-logging/recovery 테스트 성공을 subsystem 전체 보증으로 확대하지 않는다. 공개 파일은 [manifest](deferred-write-512b361-evidence/manifest.json)의 원본/게시본 해시를 보존하고 local path만 치환했다.

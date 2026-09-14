@@ -1,0 +1,49 @@
+[0mdirenv: loading ~/gh/cb/CBRD-27089-oos-deferred-write/.envrc
+Preset Mode: debug_gcc
+Install Dir: <candidate-install>
+DB Dir: <home>/.cub/db/CBRD-27089-oos-deferred-write/commondb
+Build Dir: <source-worktree>/build_preset_debug_gcc
+Internal ctest changing into directory: <source-worktree>/build_preset_debug_gcc
+Test project <source-worktree>/build_preset_debug_gcc
+    Start  1: oos_setup_db
+1/3 Test  #1: oos_setup_db .....................   Passed    2.94 sec
+    Start 33: test_oos_sql_show
+2/3 Test #33: test_oos_sql_show ................***Failed   21.27 sec
+Note: Google Test filter = OosSqlShow.PreparationMemoryAndMoveAssignmentPreserveValues
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+##### Starting Server For OOS SQL Testing #####
+will be written at ./test_oos_sql_log
+[----------] 1 test from OosSqlShow
+[ RUN      ] OosSqlShow.PreparationMemoryAndMoveAssignmentPreserveValues
+preparation payload=32 retained=440 final_record=68
+preparation payload=4000 retained=8376 final_record=4036
+preparation payload=50000 retained=50392 final_record=52
+<source-worktree>/unit_tests/oos/sql/test_oos_sql_show.cpp:1020: Failure
+Expected equality of these values:
+  fetch_single_int (sql.c_str (), &matches)
+    Which is: -1384
+  0
+
+[  FAILED  ] OosSqlShow.PreparationMemoryAndMoveAssignmentPreserveValues (20922 ms)
+[----------] 1 test from OosSqlShow (20922 ms total)
+
+[----------] Global test environment tear-down
+##### Stopping Server For OOS SQL Testing #####
+[==========] 1 test from 1 test suite ran. (21250 ms total)
+[  PASSED  ] 0 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] OosSqlShow.PreparationMemoryAndMoveAssignmentPreserveValues
+
+ 1 FAILED TEST
+
+    Start  2: oos_cleanup_db
+3/3 Test  #2: oos_cleanup_db ...................   Passed    0.47 sec
+
+67% tests passed, 1 tests failed out of 3
+
+Total Test time (real) =  24.69 sec
+
+The following tests FAILED:
+	 33 - test_oos_sql_show (Failed)
+Errors while running CTest

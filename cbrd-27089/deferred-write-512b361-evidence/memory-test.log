@@ -1,0 +1,23 @@
+Note: Google Test filter = OosSqlShow.PreparationMemoryAndMoveAssignmentPreserveValues:OosSqlShow.LoaderQueueRetainsClearedInputsAndRollsBackBulkFailure:OosSqlShow.AllocationAndStorageFailureLeaveNextInsertUsable
+[==========] Running 3 tests from 1 test suite.
+[----------] Global test environment set-up.
+##### Starting Server For OOS SQL Testing #####
+will be written at ./test_oos_sql_log
+[----------] 3 tests from OosSqlShow
+[ RUN      ] OosSqlShow.LoaderQueueRetainsClearedInputsAndRollsBackBulkFailure
+prepared queue rows=64 payload_per_row=50000 retained=3225600
+prepared queue rows=64 payload_per_row=50000 retained=3225600
+[       OK ] OosSqlShow.LoaderQueueRetainsClearedInputsAndRollsBackBulkFailure (3695 ms)
+[ RUN      ] OosSqlShow.PreparationMemoryAndMoveAssignmentPreserveValues
+preparation payload=32 retained=440 final_record=68
+preparation payload=4000 retained=8376 final_record=4036
+preparation payload=50000 retained=50392 final_record=52
+[       OK ] OosSqlShow.PreparationMemoryAndMoveAssignmentPreserveValues (278 ms)
+[ RUN      ] OosSqlShow.AllocationAndStorageFailureLeaveNextInsertUsable
+[       OK ] OosSqlShow.AllocationAndStorageFailureLeaveNextInsertUsable (1969 ms)
+[----------] 3 tests from OosSqlShow (5950 ms total)
+
+[----------] Global test environment tear-down
+##### Stopping Server For OOS SQL Testing #####
+[==========] 3 tests from 1 test suite ran. (7884 ms total)
+[  PASSED  ] 3 tests.
