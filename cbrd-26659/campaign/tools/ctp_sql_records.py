@@ -30,8 +30,7 @@ What it reads, and the rules encoded (sources in brackets):
 * The SQL runner has no assertion counter: `executed.assertion_count` and the per-case
   `assertions.executed` are null; a hand-derived count from the declaration goes into
   `outstanding_coverage.note` with its derivation [ticket 35 F3, schemas document section 11].
-  `assertions.failed` is null for the same reason on every outcome but PASS, where a
-  byte-identical whole-result comparison entails zero [ticket 36 item 3].
+  `assertions.failed` is null on every outcome for the same reason [ticket 36 item 3].
 * An `answer_promotions` entry with action `promoted` is written by this tool, never copied
   from `--promotions` unverified: the rename proof (the promoted answer's hash equal to the
   retained candidate's) is mechanical and is checked here, and the entry is refused without a
@@ -390,12 +389,12 @@ def build(args) -> int:
         if verdict == "MATCH" and outcome == "FAIL":
             notes_extra.append("CTP listed the case as failed although the retained expected.answer and result are identical: "
                                "the retained files may not be the pair CTP compared; FAIL is kept")
-        # The CTP SQL runner has no per-assertion counter, so "how many assertions failed" is
-        # unknowable at this seam: null, for the same reason `executed` is null. Writing 1 to mean
-        # "at least one" manufactures a measurement the runner never produced [ticket 36 item 3].
-        # A PASS is the one outcome the whole-result comparison settles: a byte-identical result
-        # and answer entail no failed assertion, so 0 there is entailed, not manufactured.
-        failed = 0 if outcome == "PASS" else None
+        # The CTP SQL runner has no per-assertion counter, so `failed` is null on every outcome,
+        # "exactly as `executed` already is, for the same reason" [ticket 36 item 3]. Not even a
+        # PASS earns a 0: the whole-result comparison that would entail "no assertion failed"
+        # equally entails "every expected assertion ran", and `executed` is still null, so a 0
+        # here would be the same manufactured measurement wearing a different face.
+        failed = None
         # activation evidence
         act_dir = activation_dirs.get(n)
         oos, act_note = read_activation(act_dir, run_mode, c.get("activation_check"))

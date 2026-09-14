@@ -15,12 +15,18 @@ Rules encoded (sources in brackets):
   `ever_failed` monotonically; a later pass never erases an earlier failure; never drop a row
   because a later invocation passed [ticket 12 section 3; decision 07].
 * Never write `accepted_exclusions`; preserve every entry verbatim [spec "Review, sign-off"].
-* A row carrying `hand_maintained: true` is preserved verbatim and never regenerated or
-  resurrected [ticket 36 item 6]. The field replaces recognition by row id: the withdrawn
-  `OOS-REP-07` claim used to be known by its `/claim-withdrawn` suffix, which encoded meaning
-  in a string. A caseless row (`case: null`) is hand-maintained whether or not it carries the
-  field, because no manifest produces one. Matrices written before the field existed are still
-  read by the old suffix, which the merge reports each time it falls back to it.
+* A row carrying `hand_maintained: true` is preserved verbatim: never regenerated, never
+  merged into, and never duplicated by a new row with the same key [ticket 36 item 6]. The
+  field replaces recognition by row id FOR PRESERVATION, which is what ticket 36 decided: it
+  says a human owns THIS row. A caseless row (`case: null`) is preserved whether or not it
+  carries the field, because no manifest produces one.
+* Withdrawal is a different rule and still has its own marker. A caseless row whose id ends
+  `/claim-withdrawn` stands in place of a case row a human REMOVED (ticket 34, `OOS-REP-07`),
+  so a manifest that still cites the requirement must not create one. `hand_maintained` cannot
+  carry this: ticket 13's four caseless rows are hand-owned too, and `OOS-REP-05/-/-` is a
+  plain "no case written yet" placeholder whose first real case row must not be suppressed.
+  Giving withdrawal a field of its own is a new design choice, so it is not settled here; see
+  the decision request in the ticket 41 record.
 * `flakiness`, `known_issue` and `attribution` are preserved on existing rows; the tool only
   updates the counts it can measure (attempts, failures, intermittent) and never touches
   `consecutive_fresh_fixture_reproductions`, `deterministic_claim`, `known_issue` or
@@ -196,7 +202,7 @@ def merge(args) -> int:
     rows_by_key = {}
     preserved = []
     hand_keys = set()      # hand-maintained rows that do name a case and a configuration
-    hand_owned = set()     # requirements whose coverage a hand-maintained row owns
+    withdrawn = set()      # requirements whose case row a human removed; never resurrected
     for row in matrix["rows"]:
         if is_hand_maintained(row):
             preserved.append(row)  # verbatim: never regenerated, never merged into
@@ -205,18 +211,13 @@ def merge(args) -> int:
             continue
         rows_by_key[row_key(row["requirement"], row["case"]["name"], row["configuration"])] = row
     exclusions_before = list(matrix.get("accepted_exclusions", []))
-    # A hand-maintained caseless row stands in place of the case row a human removed -- ticket 34
-    # withdrew the OOS-REP-07 claim and left one -- so a manifest that still cites the requirement
-    # must not resurrect a case row for it. The field says which rows those are; a matrix written
-    # before the field existed is still read by the `/claim-withdrawn` suffix it used then, and the
-    # fallback is reported so the row can be given the field.
-    for row in preserved:
-        if row.get("hand_maintained") is True:
-            hand_owned.add(row["requirement"])
-        elif str(row.get("row_id", "")).endswith("/claim-withdrawn"):
-            hand_owned.add(row["requirement"])
-            print(f"[matrix_merge] note: row {row['row_id']} is read as hand-maintained by its row id, the reading "
-                  "ticket 36 replaced; add \"hand_maintained\": true to the row")
+    # Withdrawal, not preservation. `hand_maintained` says a human owns a row; it does NOT say the
+    # requirement's coverage was withdrawn. Reading it that way would suppress the first real case
+    # row of every caseless placeholder -- OOS-REP-05/-/- among them, which is waiting for a case,
+    # not refusing one. Only a row standing in place of a case row a human removed carries the
+    # rule, and `/claim-withdrawn` is still the only marker that says so.
+    withdrawn = {row["requirement"] for row in preserved
+                 if str(row.get("row_id", "")).endswith("/claim-withdrawn")}
     merged_attempts = 0
     for mpath in sorted(args.manifest):
         mpath = Path(mpath)
@@ -241,10 +242,10 @@ def merge(args) -> int:
                         break
                 att_rel = docs_relative(att_path) if att_path else attempt["attempt_record"]
                 for req_id in case_entry["requirements"]:
-                    if req_id in hand_owned and not any(k[0] == req_id for k in rows_by_key):
-                        print(f"[matrix_merge] {manifest['manifest_id']}: {case_entry['case']['name']} cites {req_id}, whose coverage a "
-                              f"hand-maintained row owns and which has no case row; no case row is created for it. If this run should "
-                              f"cover {req_id}, write the row by hand or drop hand_maintained from the row that owns it")
+                    if req_id in withdrawn and not any(k[0] == req_id for k in rows_by_key):
+                        print(f"[matrix_merge] {manifest['manifest_id']}: {case_entry['case']['name']} cites {req_id}, whose claim was "
+                              f"withdrawn from its case ({req_id}/-/claim-withdrawn) and which has no case row; no case row is created "
+                              f"for it")
                         continue
                     cfg = {"page_size": manifest["invocation"]["page_size"], "build_mode": manifest["invocation"]["build_mode"],
                            "run_mode": manifest["invocation"]["run_mode"],

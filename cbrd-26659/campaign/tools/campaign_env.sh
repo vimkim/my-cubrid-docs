@@ -69,8 +69,10 @@ campaign_expected_hash() {
 }
 
 # campaign_legacy_hash release|debug libcubrid.so|libcubridsa.so   (ticket 11, superseded)
-# Recognised only so a bundle recorded against the old build can still be replayed and
-# verified; a new run never uses it.
+# Recognised only so a run pointed at the old install is refused by name rather than by an
+# anonymous mismatch; a new run never uses it. Unlike campaign_expected_hash this one echoes
+# an empty string instead of calling die on an unknown argument: it is a probe asking "is this
+# the old build?", and "no" is an answer, not an error.
 campaign_legacy_hash() {
     case "$1/$2" in
         release/libcubrid.so)   echo a3256a7a40748752165e65a395b8aebcf8d85e00b87ee62e68bf75e1a5c85444 ;;
