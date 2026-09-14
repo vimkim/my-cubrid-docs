@@ -4,7 +4,12 @@
 # Sourced by run_ctp_sql.sh, run_ctp_shell.sh and activation_check_cs.sh. Everything here is
 # a fact established by an earlier ticket, cited beside it:
 #
-#   pinned installs and library hashes      ticket 11, section 2 (binary identity)
+#   pinned installs and library hashes      ticket 41 (re-pin without the unit-test seams,
+#                                            carrying out ticket 39 item 1); ticket 11
+#                                            section 2 holds the superseded build, kept only
+#                                            for replaying the bundles that cite it
+#   CTP jar and init.sh hashes               ticket 37 item 1 (a swapped tree is caught the
+#                                            way a swapped library is)
 #   campaign ports 26659/33120/33121/33122   ticket 14, section 2 (ports are allocated, not
 #                                            isolated: an unprivileged namespace cannot bring
 #                                            up loopback); ticket 16 uses 26671/33140-33142;
@@ -40,24 +45,53 @@ die() { echo "[FATAL] $*" >&2; exit 1; }
 log() { echo "[$(date +%H:%M:%S)] $*" >&2; }
 manifest_of() { find "$1" -type f 2>/dev/null | LC_ALL=C sort | xargs -r sha256sum 2>/dev/null; }
 
-# campaign_build_dir release|debug -> release_gcc|debug_gcc
+# campaign_build_dir release|debug -> release_gcc_nounit|debug_gcc_nounit  (ticket 41)
 campaign_build_dir() {
     case "$1" in
-        release) echo release_gcc ;;
-        debug) echo debug_gcc ;;
+        release) echo release_gcc_nounit ;;
+        debug) echo debug_gcc_nounit ;;
         *) die "build mode must be release or debug, got '$1'" ;;
     esac
 }
 
-# campaign_expected_hash release|debug libcubrid.so|libcubridsa.so   (ticket 11, section 2)
+# campaign_expected_hash release|debug libcubrid.so|libcubridsa.so   (ticket 41, re-pinned build)
 campaign_expected_hash() {
+    case "$1/$2" in
+        release/libcubrid.so)   echo 1bbbe44663c79d069181b0d812df95c7f7d793b7f16f2850ab4e8af899986b7c ;;
+        release/libcubridsa.so) echo 559a955ea2c46ae3de15efc572fd6a8dbaef7751e38b6c418656437d7a158179 ;;
+        debug/libcubrid.so)     echo 30c520623ea5ab4661a1e1151e41922698e149f71f84a3dce669e24ffb34661f ;;
+        debug/libcubridsa.so)   echo bc0de923e72f2c0464a69df20de9a58715d370382bc58274f85a2cf9e31a1931 ;;
+        *) die "no ticket 41 hash for $1/$2" ;;
+    esac
+}
+
+# campaign_legacy_hash release|debug libcubrid.so|libcubridsa.so   (ticket 11, superseded)
+# Recognised only so a bundle recorded against the old build can still be replayed and
+# verified; a new run never uses it.
+campaign_legacy_hash() {
     case "$1/$2" in
         release/libcubrid.so)   echo a3256a7a40748752165e65a395b8aebcf8d85e00b87ee62e68bf75e1a5c85444 ;;
         release/libcubridsa.so) echo 8009c322633055df41af045fe560a86f1f8171648863d11f2e44d949e3cdd76e ;;
         debug/libcubrid.so)     echo 27399fae11a5ef134ba303e5ac6d672748b224bdf593504a2d4fae533a357253 ;;
         debug/libcubridsa.so)   echo 9a3db918bc01738666bbb1ede762da973a714090c15e6709c78b7dc9c825ba69 ;;
-        *) die "no ticket 11 hash for $1/$2" ;;
+        *) echo "" ;;
     esac
+}
+
+# campaign_check_ctp -- the CTP tree must be the campaign's (ticket 37 item 1)
+campaign_check_ctp() {
+    local rel got want
+    while read -r want rel; do
+        [ -n "${rel}" ] || continue
+        [ -f "${CTP_HOME}/${rel}" ] || die "${CTP_HOME}/${rel} is missing; this is not the campaign's CTP tree"
+        got=$(sha256sum "${CTP_HOME}/${rel}" | cut -d' ' -f1)
+        [ "${got}" = "${want}" ] || die "${CTP_HOME}/${rel} hashes ${got}, not the campaign's ${want} (ticket 37 item 1)"
+    done <<'EOF'
+456cabffff33abe4c5cd4695d40b33a713b8e53d86b6158fd87f94148e17f078 sql/lib/cubridqa-cqt.jar
+e7c8ef04ee377d5fd33d82ad237210ee0c0c509c7b643787ba5f2137d69e6347 shell/lib/cubridqa-shell.jar
+2d89d3a03b48675c8dfea4d312a01953b90c2f9a04750e65a9e53655b8ff7074 common/lib/cubridqa-common.jar
+14fcc2aa5d707569b855a40081b13e9cc21dd35794791fc57accb06c663470c9 shell/init_path/init.sh
+EOF
 }
 
 # campaign_check_ports -- every campaign port must be free before a launcher starts
@@ -77,7 +111,8 @@ campaign_check_namespace() {
 }
 
 # campaign_set_engine release|debug -- point CUBRID/PATH/LD_LIBRARY_PATH at the pinned install
-# and verify the two library hashes against ticket 11 before anything starts.
+# and verify the two library hashes against the campaign's build (ticket 41) before anything
+# starts. An install holding the superseded ticket 11 build is named as such in the refusal.
 campaign_set_engine() {
     local mode=$1 lib got want
     CAMPAIGN_INSTALL="${CAMPAIGN_INSTALL_ROOT}/$(campaign_build_dir "${mode}")"
@@ -88,7 +123,12 @@ campaign_set_engine() {
     for lib in libcubrid.so libcubridsa.so; do
         got=$(sha256sum "${CUBRID}/lib/${lib}" | cut -d' ' -f1)
         want=$(campaign_expected_hash "${mode}" "${lib}")
-        [ "${got}" = "${want}" ] || die "${CUBRID}/lib/${lib} hashes ${got}, not ticket 11's ${mode} build ${want}"
+        if [ "${got}" != "${want}" ]; then
+            if [ "${got}" = "$(campaign_legacy_hash "${mode}" "${lib}")" ]; then
+                die "${CUBRID}/lib/${lib} is the superseded ticket 11 ${mode} build, which carries the unit-test seams; the campaign's build is ${want} (ticket 41)"
+            fi
+            die "${CUBRID}/lib/${lib} hashes ${got}, not the campaign's ${mode} build ${want} (ticket 41)"
+        fi
     done
     CAMPAIGN_CUBRID_REL=$(cubrid_rel | tr -d '\r' | tr -s '[:space:]' ' ' | sed 's/^ //; s/ $//')
     case "${CAMPAIGN_CUBRID_REL}" in

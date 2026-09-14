@@ -20,7 +20,10 @@ before use. The checks, each one rule the merge must add beyond the schema:
   6. a checker-validation attempt record beside a manifest is refused;
   7. a row carrying `hand_maintained: true` is preserved verbatim even when it names a case
      and a configuration a manifest would otherwise merge into, and no duplicate is created
-     beside it (ticket 36 item 6).
+     beside it (ticket 36 item 6);
+  8. a hand-maintained caseless row standing in for a case row the hand removed is not
+     resurrected by a manifest that still cites the requirement -- recognised by the field,
+     and, for a matrix written before the field existed, by the old `/claim-withdrawn` row id.
 
 Exit 0 when every check holds.
 """
@@ -164,6 +167,29 @@ def main(argv=None) -> int:
     check("7a a hand-maintained case row comes out verbatim", mx7["rows"] == seed7["rows"])
     check("7b no attempt is merged into a hand-maintained row", len(row(mx7)["finding"]["history"]) == 1)
     check("7c and no duplicate row is created beside it", len([r_ for r_ in mx7["rows"] if r_["requirement"] == "OOS-REP-02"]) == 1)
+    # 8. a hand-maintained caseless row standing in for a removed case row is not resurrected,
+    #    by the field and, for a matrix written before the field existed, by the old row id
+    def withdrawn_seed(row_id, field):
+        seed = copy.deepcopy(mx2)
+        w = copy.deepcopy(caseless)
+        w.update({"row_id": row_id, "requirement": "OOS-REP-02", "family": "Representation",
+                  "finding": dict(caseless["finding"], summary="SELFTEST claim withdrawn from the case")})
+        if field:
+            w["hand_maintained"] = True
+        seed["rows"] = [w]          # the case row is gone: the hand removed it
+        seed["accepted_exclusions"] = []
+        return seed
+
+    # a manifest of its own: check 6 left a checker-validation record beside att-SELFTEST-02
+    m_pass3 = make_manifest(tmp, "inv-SELFTEST-05", "att-SELFTEST-05", "PASS", "2026-09-11T14:00:00+09:00")
+    for label, row_id, field in (("8a by hand_maintained", "OOS-REP-02/-/SELFTEST-withdrawn", True),
+                                 ("8b by the legacy /claim-withdrawn row id", "OOS-REP-02/-/claim-withdrawn", False)):
+        seed8 = withdrawn_seed(row_id, field)
+        out = f"m8{'a' if field else 'b'}.json"
+        write_record(seed8, "matrix", tmp / f"seed-{out}")
+        mx8 = merge(tmp, [m_pass3], existing=tmp / f"seed-{out}", out=out)
+        check(f"8  a removed case row is not resurrected ({label})",
+              [r_["row_id"] for r_ in mx8["rows"]] == [row_id])
     print(f"[selftest_matrix_merge] {len(fails)} failing check(s); files under {tmp}")
     return 1 if fails else 0
 

@@ -2,14 +2,15 @@
 # CBRD-26659 ticket 16 -- run every site scenario in fault and control mode, sequentially, then stop the
 # campaign master (port 26671) that the runs started. Only pids recorded by the runs are signalled.
 set -u
-T16=/home/vimkim/.cub/campaign/cbrd-26659/ticket16
+T16=${T16_ROOT:-/home/vimkim/.cub/campaign/cbrd-26659/ticket16}
+TOOLS=${T16_TOOLS:-/home/vimkim/.cub/campaign/cbrd-26659/ticket16/tools}   # one runner, whatever the root
 LOG=$T16/sites/run-all.log
 mkdir -p "$T16/sites"
 : > "$LOG"
 for site in a1 b1 c1 d1 e1 f1 g1 h1 i1 j1 k1 l1; do
   for mode in fault control; do
     echo "##### $(date -Is) $site $mode" >> "$LOG"
-    bash "$T16/tools/t16_run.sh" "$site" "$mode" >> "$LOG" 2>&1
+    T16_ROOT="$T16" bash "$TOOLS/t16_run.sh" "$site" "$mode" >> "$LOG" 2>&1
     echo "##### rc=$?" >> "$LOG"
   done
 done

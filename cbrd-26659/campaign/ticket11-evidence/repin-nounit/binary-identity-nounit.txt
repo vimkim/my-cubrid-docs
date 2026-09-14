@@ -1,0 +1,45 @@
+# Binary identity of the re-pinned builds without the unit-test seams (generated 2026-09-14)
+# Ticket 41, carrying out ticket 39 item 1. Same worktree and the same commit as ticket 11;
+# only the configure options differ: UNIT_TESTS, UNIT_TEST_OOS, UNIT_TEST_SPAGE and
+# UNIT_TEST_PAGE_BUFFER are all OFF, so with_unit_tests() is false and CUBRID_UNIT_TEST_ENABLED
+# is not compiled into the engine. The old installs are left in place and stay valid for the four
+# invocations that cite them; these are new prefixes.
+# cubrid_rel and every CUBRID executable load the version string from the shared library the dynamic
+# loader resolves, so identity checks run with the install's own CUBRID, PATH and LD_LIBRARY_PATH.
+
+## release_gcc_nounit  (/home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc_nounit)
+version.h: #define BUILD_TYPE release #define VERSION_STRING "11.5.0.2648-f4299ac" 
+cubrid_rel (with CUBRID/PATH/LD_LIBRARY_PATH set to this install): CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit release build for Linux) (Sep 14 2026 22:45:25)
+runtime version string in lib/libcubridsa.so: 11.5.0.2648-f4299ac
+runtime version string in lib/libcubrid.so: 11.5.0.2648-f4299ac
+824083bfac3d5d6d3d9094777366a5ffea632b92d913a3a313c2ebe908666851  bin/cub_server
+4a25ee3bc735e18299ef4c67df66a6a385a3cbf6f3b8a3490004a638c1fb7679  bin/csql
+8f9daa1e775a34e604a7bd5b9b7fd44a8044f2426e954a2df262a269989cb21c  bin/cubrid_rel
+1bbbe44663c79d069181b0d812df95c7f7d793b7f16f2850ab4e8af899986b7c  lib/libcubrid.so
+559a955ea2c46ae3de15efc572fd6a8dbaef7751e38b6c418656437d7a158179  lib/libcubridsa.so
+test seams exported, nm -D lib/libcubrid.so   | grep -c 'oos_test_\|heap_oos_test_': 0   [ticket 11 build: 11]
+test seams exported, nm -D lib/libcubridsa.so | grep -c 'oos_test_\|heap_oos_test_': 0   [ticket 11 build: 11]
+CUBRID_UNIT_TEST_ENABLED occurrences in build.ninja: 0   [ticket 11 build: 1246]
+configure log with_unit_tests() line: '==== with_unit_tests() = '  (empty right-hand side = false)
+configure options: CMAKE_BUILD_TYPE:STRING=RelWithDebInfo CUBVEC_TEAM_BUILD:UNINITIALIZED=ON ENABLE_CUBVEC_LOG:UNINITIALIZED=ON UNIT_TESTS:BOOL=OFF UNIT_TEST_OOS:BOOL=OFF UNIT_TEST_PAGE_BUFFER:UNINITIALIZED=OFF UNIT_TEST_SPAGE:UNINITIALIZED=OFF VIMKIM_BUILD:UNINITIALIZED=ON WITH_CCI:BOOL=true 
+
+## debug_gcc_nounit  (/home/vimkim/.cub/install/oos-baseline-f4299ac0c/debug_gcc_nounit)
+version.h: #define BUILD_TYPE debug #define VERSION_STRING "11.5.0.2648-f4299ac" 
+cubrid_rel (with CUBRID/PATH/LD_LIBRARY_PATH set to this install): CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit debug build for Linux) (Sep 14 2026 22:47:39)
+runtime version string in lib/libcubridsa.so: 11.5.0.2648-f4299ac
+runtime version string in lib/libcubrid.so: 11.5.0.2648-f4299ac
+4bb61423363e4a93d4347324f54ac1add9d271c5b3f4eef87392efe659802456  bin/cub_server
+91315d4d236619f370772b3155fc1baa0052ae38b36693e12fb98d7ebc824245  bin/csql
+230fdf11a62e4dd16d057d120dbca9742dc6fe0d0b95c33443dad7cb55f20713  bin/cubrid_rel
+30c520623ea5ab4661a1e1151e41922698e149f71f84a3dce669e24ffb34661f  lib/libcubrid.so
+bc0de923e72f2c0464a69df20de9a58715d370382bc58274f85a2cf9e31a1931  lib/libcubridsa.so
+test seams exported, nm -D lib/libcubrid.so   | grep -c 'oos_test_\|heap_oos_test_': 0   [ticket 11 build: 11]
+test seams exported, nm -D lib/libcubridsa.so | grep -c 'oos_test_\|heap_oos_test_': 0   [ticket 11 build: 11]
+CUBRID_UNIT_TEST_ENABLED occurrences in build.ninja: 0   [ticket 11 build: 1246]
+configure log with_unit_tests() line: '==== with_unit_tests() = '  (empty right-hand side = false)
+configure options: CMAKE_BUILD_TYPE:STRING=Debug CUBVEC_TEAM_BUILD:UNINITIALIZED=ON ENABLE_CUBVEC_LOG:UNINITIALIZED=ON UNIT_TESTS:BOOL=OFF UNIT_TEST_OOS:BOOL=OFF UNIT_TEST_PAGE_BUFFER:UNINITIALIZED=OFF UNIT_TEST_SPAGE:UNINITIALIZED=OFF VIMKIM_BUILD:UNINITIALIZED=ON WITH_CCI:BOOL=true 
+
+## pinned worktree (unchanged; the commit is the same as ticket 11's)
+f4299ac0cd777a2a964c1f197ae5ebf9841a4936
+ m cubrid-cci
+git diff --stat HEAD:  1 file changed, 0 insertions(+), 0 deletions(-)

@@ -30,9 +30,10 @@ Rules encoded (sources in brackets):
 * OOS-path evidence is `proven` only when the case PASSed and every declared activation
   marker (a regex the case's own evidence must match) is present in this run's evidence
   [spec: activation evidence captured in this run; ticket 14 section 4]. A SKIP never has
-  proven evidence. The recovery-log observation is recorded under channel `other` with an
-  explicit reference until ticket 12 decides on a `recovery-log` enum value [ticket 14
-  section 10, request 4].
+  proven evidence. `recovery-log` is now a channel of its own [ticket 36 item 2, applied by
+  ticket 40], and a case whose OOS-path evidence IS the recovery log declares it. Ticket 14's
+  case keeps `other` with an explicit reference because its evidence is two channels at once,
+  SHOW HEAP OOS and the recovery log, and the field holds one [ticket 14 section 10, request 4].
 * The expected side of expected_vs_actual.txt is built from the oracle's ordered assertion
   table when an oracle is given, never re-grepped from the result file [ticket 34 F3].
 * `configurations_not_run` and `requirements_without_executed_case` follow the same rules

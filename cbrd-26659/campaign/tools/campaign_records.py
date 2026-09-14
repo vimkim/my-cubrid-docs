@@ -55,8 +55,25 @@ from minischema import validate as _schema_validate  # noqa: E402
 ENGINE_BASELINE_COMMIT = "f4299ac0cd777a2a964c1f197ae5ebf9841a4936"
 ENGINE_WORKTREE = "/home/vimkim/gh/cb/oos-baseline-f4299ac0c"
 INSTALL_ROOT = Path("/home/vimkim/.cub/install/oos-baseline-f4299ac0c")
-#: ticket 11, section 2: sha256 of the two engine libraries per build mode.
+#: sha256 of the two engine libraries per build mode, for the build a NEW run must use.
+#: Ticket 41 re-pinned the build under ticket 39 item 1: the same worktree and the same commit
+#: (nothing about the engine source changed), configured with UNIT_TESTS, UNIT_TEST_OOS,
+#: UNIT_TEST_SPAGE and UNIT_TEST_PAGE_BUFFER all OFF, so CUBRID_UNIT_TEST_ENABLED is not
+#: compiled in and the engine exports no OOS test seams (11 before, 0 after).
 LIBRARY_HASHES = {
+    "release": {
+        "libcubrid.so": "1bbbe44663c79d069181b0d812df95c7f7d793b7f16f2850ab4e8af899986b7c",
+        "libcubridsa.so": "559a955ea2c46ae3de15efc572fd6a8dbaef7751e38b6c418656437d7a158179",
+    },
+    "debug": {
+        "libcubrid.so": "30c520623ea5ab4661a1e1151e41922698e149f71f84a3dce669e24ffb34661f",
+        "libcubridsa.so": "bc0de923e72f2c0464a69df20de9a58715d370382bc58274f85a2cf9e31a1931",
+    },
+}
+BUILD_DIRS = {"release": "release_gcc_nounit", "debug": "debug_gcc_nounit"}
+#: ticket 11, section 2: the superseded build. Four recorded invocations cite it, so it stays
+#: recognised for replaying one of their bundles and is never used for a new run (ticket 41).
+LEGACY_LIBRARY_HASHES = {
     "release": {
         "libcubrid.so": "a3256a7a40748752165e65a395b8aebcf8d85e00b87ee62e68bf75e1a5c85444",
         "libcubridsa.so": "8009c322633055df41af045fe560a86f1f8171648863d11f2e44d949e3cdd76e",
@@ -66,7 +83,7 @@ LIBRARY_HASHES = {
         "libcubridsa.so": "9a3db918bc01738666bbb1ede762da973a714090c15e6709c78b7dc9c825ba69",
     },
 }
-BUILD_DIRS = {"release": "release_gcc", "debug": "debug_gcc"}
+LEGACY_BUILD_DIRS = {"release": "release_gcc", "debug": "debug_gcc"}
 STORAGE_ROOT = Path("/home/vimkim/.cub/campaign/cbrd-26659")
 STORAGE_LIMIT_BYTES = 100 * 1024 ** 3
 CAMPAIGN_PORTS = [26659, 33120, 33121, 33122]
@@ -80,6 +97,15 @@ CTP_HOME = Path("/home/vimkim/CTP")
 CTP_FINGERPRINT_FILES = {
     "ctp-sql": CTP_HOME / "sql" / "lib" / "cubridqa-cqt.jar",
     "ctp-shell": CTP_HOME / "shell" / "lib" / "cubridqa-shell.jar",
+}
+#: ticket 37 item 1: the runner jars and init.sh join the engine hashes in the identity list,
+#: so a swapped CTP tree is caught the way a swapped library is. Recorded in the baseline
+#: record's revision (ticket 41).
+CTP_IDENTITY_HASHES = {
+    "sql/lib/cubridqa-cqt.jar": "456cabffff33abe4c5cd4695d40b33a713b8e53d86b6158fd87f94148e17f078",
+    "shell/lib/cubridqa-shell.jar": "e7c8ef04ee377d5fd33d82ad237210ee0c0c509c7b643787ba5f2137d69e6347",
+    "common/lib/cubridqa-common.jar": "2d89d3a03b48675c8dfea4d312a01953b90c2f9a04750e65a9e53655b8ff7074",
+    "shell/init_path/init.sh": "14fcc2aa5d707569b855a40081b13e9cc21dd35794791fc57accb06c663470c9",
 }
 REPOSITORY_WORKTREES = {
     "testcases": "/home/vimkim/gh/tc/cubrid-testcases-cbrd-26659",
@@ -220,19 +246,61 @@ def install_prefix(build_mode: str) -> Path:
     return INSTALL_ROOT / BUILD_DIRS[build_mode]
 
 
-def verify_install(build_mode: str) -> dict:
-    """Hash the two libraries of the pinned install and compare with ticket 11.
+def legacy_install_prefix(build_mode: str) -> Path:
+    """The superseded ticket 11 install. Only a replay of a bundle recorded against it."""
+    return INSTALL_ROOT / LEGACY_BUILD_DIRS[build_mode]
 
-    Returns the engine identity block for a manifest. Raises when the install is not ticket
-    11's build: a wrong library must stop a run before the launcher starts (ticket 11
-    section 2, identity-check pitfall).
+
+def recognised_build(build_mode: str, prefix) -> str | None:
+    """Which recorded build an install prefix holds, by its library hashes.
+
+    `'repin'` is the campaign's build, the only one a new run may use. `'ticket11'` is the
+    superseded build carrying the unit-test seams, kept recognisable so a bundle recorded
+    against it can still be replayed and verified (ticket 41). `None` is neither.
+    """
+    prefix = Path(prefix)
+    got = {lib: sha256_file(prefix / "lib" / lib) for lib in ("libcubrid.so", "libcubridsa.so")}
+    if got == LIBRARY_HASHES[build_mode]:
+        return "repin"
+    if got == LEGACY_LIBRARY_HASHES[build_mode]:
+        return "ticket11"
+    return None
+
+
+def verify_ctp_tree(ctp_home=None) -> dict:
+    """Hash the CTP runner jars and init.sh and compare with the recorded tree (ticket 37 item 1).
+
+    Returns the hashes for the record. Raises when the tree is not the campaign's: a swapped
+    CTP tree must stop a run before the launcher starts, the way a swapped library does.
+    """
+    home = Path(ctp_home) if ctp_home else CTP_HOME
+    out = {}
+    for rel, want in CTP_IDENTITY_HASHES.items():
+        got = sha256_file(home / rel)
+        if got != want:
+            raise RecordError(f"{home}/{rel} hashes {got}, not the campaign's CTP tree {want} "
+                              "(ticket 37 item 1); refusing to run against a tree that is not the recorded one")
+        out[rel] = "sha256:" + got
+    return out
+
+
+def verify_install(build_mode: str) -> dict:
+    """Hash the two libraries of the pinned install and compare with the campaign's build.
+
+    Returns the engine identity block for a manifest. Raises when the install is not the
+    re-pinned build of ticket 41: a wrong library must stop a run before the launcher starts
+    (ticket 11 section 2, identity-check pitfall). A prefix holding the superseded ticket 11
+    build is named as such in the refusal, because that is the likely mistake.
     """
     prefix = install_prefix(build_mode)
     hashes = {}
     for lib, want in LIBRARY_HASHES[build_mode].items():
         got = sha256_file(prefix / "lib" / lib)
         if got != want:
-            raise RecordError(f"{prefix}/lib/{lib} hashes {got}, not ticket 11's {build_mode} build {want}")
+            legacy = LEGACY_LIBRARY_HASHES[build_mode][lib]
+            extra = (" -- that is the superseded ticket 11 build, which carries the unit-test seams and is kept "
+                     "only for replaying the bundles that cite it (ticket 41)" if got == legacy else "")
+            raise RecordError(f"{prefix}/lib/{lib} hashes {got}, not the campaign's {build_mode} build {want}{extra}")
         hashes[lib] = "sha256:" + got
     env = dict(os.environ)
     env["CUBRID"] = str(prefix)

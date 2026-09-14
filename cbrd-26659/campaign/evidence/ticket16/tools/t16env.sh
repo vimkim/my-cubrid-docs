@@ -1,8 +1,15 @@
 # CBRD-26659 campaign ticket 16 -- environment for the instrumentation install. Source this file.
 # Everything here points at ticket-16-owned paths. The pinned install (~/.cub/install/oos-baseline-f4299ac0c)
 # is never referenced.
-export T16=/home/vimkim/.cub/campaign/cbrd-26659/ticket16
-export CUBRID=/home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc
+# T16_ROOT lets a later ticket re-verify the sites without writing over ticket 16's sealed
+# bulky evidence under the default root (ticket 41).
+export T16=${T16_ROOT:-/home/vimkim/.cub/campaign/cbrd-26659/ticket16}
+# Ticket 41 rebuilt the instrumentation worktree with UNIT_TESTS, UNIT_TEST_OOS, UNIT_TEST_SPAGE and
+# UNIT_TEST_PAGE_BUFFER all OFF, so instrumented and regression runs now differ only by the patches.
+# The fault-injection facility is gated on NDEBUG (fault_injection.h:33), not on the unit-test seams,
+# so the sites survive the change. The superseded install stays in place for replaying ticket 16's own
+# bundles: source this file with T16_INSTALL=/home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc.
+export CUBRID=${T16_INSTALL:-/home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc_nounit}
 export CUBRID_DATABASES=$T16/db
 export PATH=$CUBRID/bin:$PATH
 export LD_LIBRARY_PATH=$CUBRID/lib:$CUBRID/cci/lib

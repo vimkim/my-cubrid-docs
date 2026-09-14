@@ -1,0 +1,29 @@
+# identity of the PATCHED build (patch set t16-set1) REBUILT WITHOUT THE UNIT-TEST SEAMS (ticket 41)
+date=2026-09-14T23:08:31+09:00
+worktree=/home/vimkim/gh/cb/oos-instr-f4299ac0c HEAD=f4299ac0cd777a2a964c1f197ae5ebf9841a4936
+git diff --stat HEAD:
+ 11 files changed, 324 insertions(+), 5 deletions(-)
+
+#define BUILD_TYPE debug
+#define VERSION_STRING "11.5.0.2648-f4299ac"
+CUBRID=/home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc_nounit
+
+
+2b109c9d1f14cd36e917a749d7c98f1e86f587752314511fbe137217f13c1c5d  /home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc_nounit/lib/libcubrid.so
+11f1d728bb83b9349f2ff9c7059ef6718e151fa274bd9ca53319c506e22cbd66  /home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc_nounit/lib/libcubridsa.so
+4948524438dde8983e3c79a0f61639bab9657efb30f4768e102b650cb2580294  /home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc_nounit/bin/cub_server
+c94cdee4bb57b046dd94cc07974a7fd1d947552892957b21e5128f9078a440b8  /home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc_nounit/bin/csql
+
+CMAKE_BUILD_TYPE:STRING=Debug
+CMAKE_CXX_FLAGS_DEBUG:STRING=-O0 -ggdb3 -fno-omit-frame-pointer -Wno-error=format -Wno-error -Wno-error=maybe-uninitialized -Wno-error=parentheses
+CMAKE_INSTALL_PREFIX:PATH=/home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc_nounit
+UNIT_TESTS:BOOL=OFF
+UNIT_TEST_OOS:BOOL=OFF
+UNIT_TEST_PAGE_BUFFER:UNINITIALIZED=OFF
+UNIT_TEST_SPAGE:UNINITIALIZED=OFF
+
+strings check (version embedded in library):
+11.5.0.2648-f4299ac
+
+test seams exported, nm -D lib/libcubrid.so | grep -c 'oos_test_\|heap_oos_test_': 0   [old patched build: 11]
+fault-injection symbols still exported (facility is gated on NDEBUG, not on the seams): 11   [old patched build: 11]

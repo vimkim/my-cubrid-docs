@@ -1,0 +1,17 @@
+23:08:46.560 === site=d1 mode=fault db=t16_d1_f install=/home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc_nounit
+CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit debug build for Linux) (Sep 14 2026 22:56:52)
+2b109c9d1f14cd36e917a749d7c98f1e86f587752314511fbe137217f13c1c5d  /home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc_nounit/lib/libcubrid.so
+23:08:46.919 port 26671 already held by cub_master pid pid=3035402 (campaign master, reused)
+23:08:48.969 createdb t16_d1_f rc=0 (2.0 s)
+23:08:51.104 server start (1) rc=0 server_pid=3040317 master_pid=3035402 (2.1 s)
+23:09:12.002 csql w rc=0 (20.89 s)
+23:09:12.008 ack observed after 0 s
+23:09:14.081 server stop (1) rc=0; still listed: 0
+23:09:15.199 checkdb -S rc=0
+23:09:17.339 server start (2) rc=0 server_pid=3042602 master_pid=3035402 (2.1 s)
+23:09:17.454 csql v rc=0 (0.11 s)
+23:09:19.529 server stop (2) rc=0; still listed: 0
+23:09:19.544 acks: 1
+  Time: 09/14/26 23:08:51.346 - NOTIFICATION *** file /home/vimkim/gh/cb/oos-instr-f4299ac0c/src/storage/page_buffer.c, line 10778  CODE = -588, Tran = 0, CLIENT = :(0), EID = 174
+  INTERNAL ERROR: Assertion 'FAULT INJECTION ACK site=pgbuf_bcb_flush_with_wal code=700003 target_operation="disk write of a dirty PAGE_OOS page (data I/O)" requested_action="fail the write with ER_IO_WRITE" reach=1 fired=1 fire_at=1' failed.
+23:09:19.552 === done site=d1 mode=fault code=700003 fire_at=1 wall=33.0 s

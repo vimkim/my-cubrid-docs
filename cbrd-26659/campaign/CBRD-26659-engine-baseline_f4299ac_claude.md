@@ -23,6 +23,8 @@ Every campaign run cites this record for its engine identity. Vocabulary follows
 
 ## 2. Unmodified builds and binary identity
 
+> **Superseded for new runs (2026-09-14, ticket 41).** The two installs recorded in this section carry the unit-test seams. Ticket 39 item 1 decided the campaign's unmodified build has none, so both were rebuilt at the same commit with the four `UNIT_TEST_*` options OFF and installed to new prefixes. **Every identity below stays valid for the four invocations that cite it** (`inv-T13-0001`, `inv-T13-0002`, `inv-T14-*`, `inv-T15-*`); a new run uses the identity in [§10](#10-revision-2-2026-09-14-the-re-pinned-build-without-the-unit-test-seams).
+
 Both builds come from the pinned worktree, the same source tree, the same toolchain (gcc 11.5.0, cmake 3.26.5, ninja 1.10.2, ccache) and the same configure options; only the CMake build type and its flags differ.
 
 | | Release | Debug |
@@ -217,3 +219,74 @@ Tooling note (personal environment, not project workflow): the worktree bootstra
 - **Ticket 17 (timings, configuration domain):** client-server at 4 and 8 KiB, and standalone versus client-server timings, remain to be measured. Databases and the probe script above are reusable.
 - **Decision requests for the map (not settled here):** whether the campaign's "unmodified release" must be configured with `-DUNIT_TEST_OOS=OFF`; whether `STORAGE PREFER_INLINE` / `FORCE_OUTLINE` coverage is in scope given they exceed accepted policy.
 - **User action:** commit the 2026-09-09 `OOS-CONTEXT.md` working copy and ADR-0004 in the context repository; report the -1375 → -1382 error-code drift and the stale "pending merge" reclaim note to the context maintainer.
+
+## 10. Revision 2 (2026-09-14): the re-pinned build without the unit-test seams
+
+> Author: Claude Opus 5, session `41260474`, for [ticket 41](/home/vimkim/gh/cb/CBRD-26659-oos-testcases-handover/.scratch/oos-adversarial/issues/41-repin-build-without-unit-test-seams.md), carrying out [ticket 39](/home/vimkim/gh/cb/CBRD-26659-oos-testcases-handover/.scratch/oos-adversarial/issues/39-build-configuration-and-scope.md) item 1.
+> Evidence: [`ticket11-evidence/repin-nounit/`](ticket11-evidence/repin-nounit/) (identity file and both configure logs).
+
+**Why.** §2 recorded that `UNIT_TEST_OOS` is ON by default in the pinned source and that any enabled `UNIT_TEST_*` option compiles `CUBRID_UNIT_TEST_ENABLED` into the whole engine, so both "unmodified" installs exported the OOS test seams. That was raised as a decision request in §9 and settled by ticket 39: the campaign's unmodified build has no unit-test seams compiled in. `-DUNIT_TEST_OOS=OFF` alone is not enough — `with_unit_tests()` (`CMakeLists.txt:22-25`) matches *any* `UNIT_TEST_*` variable that is ON, and the personal preset also sets `UNIT_TEST_SPAGE` and `UNIT_TEST_PAGE_BUFFER` — so all four are OFF.
+
+**What did not change.** The engine baseline **commit is the same**: `f4299ac0cd777a2a964c1f197ae5ebf9841a4936`, from the same worktree, with the same `git diff --stat HEAD` (clean apart from the CCI submodule's generated header). Every requirement citation, the normative context revision and hash of §3, the catalogue, the boundary table of §5 and the conformance observations of §4 stand untouched. Only the build identity changes.
+
+**Configure options.** Identical to §2's except the four: `UNIT_TESTS=OFF`, `UNIT_TEST_OOS=OFF`, `UNIT_TEST_SPAGE=OFF`, `UNIT_TEST_PAGE_BUFFER=OFF`; `WITH_CCI=true`, `VIMKIM_BUILD=ON`, `CUBVEC_TEAM_BUILD=ON`, `ENABLE_CUBVEC_LOG=ON` unchanged. The two builds were configured through presets that *inherit* `release_gcc` and `debug_gcc`, so "nothing else changed" is structural rather than transcribed.
+
+| | Release (revision 2) | Debug (revision 2) |
+|---|---|---|
+| Configure preset | `release_gcc_nounit` (inherits `release_gcc`) | `debug_gcc_nounit` (inherits `debug_gcc`) |
+| Build directory | `oos-baseline-f4299ac0c/build_preset_release_gcc_nounit` | `oos-baseline-f4299ac0c/build_preset_debug_gcc_nounit` |
+| Install prefix (`$CUBRID`) | `~/.cub/install/oos-baseline-f4299ac0c/release_gcc_nounit` | `~/.cub/install/oos-baseline-f4299ac0c/debug_gcc_nounit` |
+| `VERSION_STRING` | `11.5.0.2648-f4299ac`, `BUILD_TYPE release` | `11.5.0.2648-f4299ac`, `BUILD_TYPE debug` |
+| `cubrid_rel` output | `CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit release build for Linux) (Sep 14 2026 22:45:25)` | `CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit debug build for Linux) (Sep 14 2026 22:47:39)` |
+| sha256 `bin/cub_server` | `824083bfac3d5d6d3d9094777366a5ffea632b92d913a3a313c2ebe908666851` | `4bb61423363e4a93d4347324f54ac1add9d271c5b3f4eef87392efe659802456` |
+| sha256 `bin/csql` | `4a25ee3bc735e18299ef4c67df66a6a385a3cbf6f3b8a3490004a638c1fb7679` | `91315d4d236619f370772b3155fc1baa0052ae38b36693e12fb98d7ebc824245` |
+| sha256 `lib/libcubrid.so` | `1bbbe44663c79d069181b0d812df95c7f7d793b7f16f2850ab4e8af899986b7c` | `30c520623ea5ab4661a1e1151e41922698e149f71f84a3dce669e24ffb34661f` |
+| sha256 `lib/libcubridsa.so` | `559a955ea2c46ae3de15efc572fd6a8dbaef7751e38b6c418656437d7a158179` | `bc0de923e72f2c0464a69df20de9a58715d370382bc58274f85a2cf9e31a1931` |
+
+**The seams are gone, proven rather than assumed.** On both builds and both libraries, `nm -D lib/libcubrid.so | grep -c 'oos_test_\|heap_oos_test_'` is **0**, where the §2 builds export **11**. `CUBRID_UNIT_TEST_ENABLED` appears **0** times in `build.ninja`, against **1246** in the §2 build directories. Both configure logs print `==== with_unit_tests() = ` with an empty right-hand side, CMake's rendering of false, against `= 1` before. One further consequence, recorded because it is visible: the §2 installs carry a `lib64/` with gtest and gmock static libraries, which the revision-2 installs do not — those were installed only because the unit tests were enabled.
+
+**CTP tree identity** ([ticket 37](/home/vimkim/gh/cb/CBRD-26659-oos-testcases-handover/.scratch/oos-adversarial/issues/37-invocation-contract.md) item 1). The runner jars and `init.sh` of the campaign's CTP tree (`/home/vimkim/CTP`) join this identity list, so a swapped tree is caught the way a swapped library is. `campaign_env.sh`'s `campaign_check_ctp` verifies them before either wrapper starts a launcher.
+
+| File under `/home/vimkim/CTP` | sha256 |
+|---|---|
+| `sql/lib/cubridqa-cqt.jar` | `456cabffff33abe4c5cd4695d40b33a713b8e53d86b6158fd87f94148e17f078` |
+| `shell/lib/cubridqa-shell.jar` | `e7c8ef04ee377d5fd33d82ad237210ee0c0c509c7b643787ba5f2137d69e6347` |
+| `common/lib/cubridqa-common.jar` | `2d89d3a03b48675c8dfea4d312a01953b90c2f9a04750e65a9e53655b8ff7074` |
+| `shell/init_path/init.sh` | `14fcc2aa5d707569b855a40081b13e9cc21dd35794791fc57accb06c663470c9` |
+
+**Instrumentation build (ticket 16).** The instrumentation worktree `/home/vimkim/gh/cb/oos-instr-f4299ac0c` was rebuilt with the same four options OFF, to `~/.cub/install/oos-instr-f4299ac0c/debug_gcc_nounit`, so instrumented and regression runs differ only by the patches. Patch set `t16-set1` is unchanged (`11 files changed, 324 insertions(+), 5 deletions(-)`, as ticket 16 recorded). New identity: `libcubrid.so` `2b109c9d…`, `libcubridsa.so` `11f1d728…`, `cub_server` `49485244…`, `csql` `c94cdee4…` ([`evidence/ticket16/identity/identity-patched-set1-nounit.txt`](evidence/ticket16/identity/identity-patched-set1-nounit.txt)). The fault-injection facility is gated on `NDEBUG` (`fault_injection.h:33`), not on the seams, and exports the same 11 symbols as before.
+
+**Status of the two identities.**
+
+- **Revision 2 is the identity every new run must use.** `campaign_records.LIBRARY_HASHES`, `BUILD_DIRS` and `campaign_env.sh`'s `campaign_expected_hash` / `campaign_build_dir` name it, and both wrappers refuse to start against anything else.
+- **Revision 1 (§2) is superseded for new runs and stays valid for the records that cite it.** Its installs are left in place, untouched, so the recorded invocations remain replayable. `campaign_records.LEGACY_LIBRARY_HASHES` and `campaign_env.sh`'s `campaign_legacy_hash` keep it recognisable, and a run that points at it is refused with a message naming it — for replay only, never for a new run.
+
+**Reproduction.**
+
+```bash
+# configure and build (presets inherit release_gcc / debug_gcc; only the four options differ)
+cd /home/vimkim/gh/cb/oos-baseline-f4299ac0c
+for preset in release_gcc_nounit debug_gcc_nounit; do
+  printf 'PRESET_MODE=%s\n' "$preset" > .env && direnv allow .
+  just configure && just build          # installs to ~/.cub/install/oos-baseline-f4299ac0c/$preset
+done
+
+# the seams are gone
+for b in release_gcc_nounit debug_gcc_nounit; do
+  C=~/.cub/install/oos-baseline-f4299ac0c/$b
+  nm -D $C/lib/libcubrid.so | grep -c 'oos_test_\|heap_oos_test_'      # expect 0 (the §2 builds give 11)
+  grep -c CUBRID_UNIT_TEST_ENABLED build_preset_$b/build.ninja          # expect 0 (the §2 builds give 1246)
+done
+
+# identity, with the loader environment pointed at the install under test (as in section 7)
+for b in release_gcc_nounit debug_gcc_nounit; do
+  C=~/.cub/install/oos-baseline-f4299ac0c/$b
+  CUBRID=$C PATH=$C/bin:$PATH LD_LIBRARY_PATH=$C/lib:$C/cci/lib $C/bin/cubrid_rel
+  (cd $C && sha256sum bin/cub_server bin/csql lib/libcubrid.so lib/libcubridsa.so)
+done
+# compare with ticket11-evidence/repin-nounit/binary-identity-nounit.txt
+
+# instrumentation worktree, same four options, same runner
+cd /home/vimkim/gh/cb/oos-instr-f4299ac0c
+printf 'PRESET_MODE=debug_gcc_nounit\n' > .env && direnv allow . && just configure && just build
+```

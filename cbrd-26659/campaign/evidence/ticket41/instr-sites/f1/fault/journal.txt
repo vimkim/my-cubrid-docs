@@ -1,0 +1,12 @@
+23:10:38.964 === site=f1 mode=fault db=t16_f1_f install=/home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc_nounit
+CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit debug build for Linux) (Sep 14 2026 22:56:52)
+2b109c9d1f14cd36e917a749d7c98f1e86f587752314511fbe137217f13c1c5d  /home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc_nounit/lib/libcubrid.so
+23:10:39.318 port 26671 already held by cub_master pid pid=3035402 (campaign master, reused)
+23:10:46.098 createdb t16_f1_f rc=0 (6.8 s)
+23:10:48.256 server start (1) rc=0 server_pid=3060151 master_pid=3035402 (2.2 s)
+23:11:12.777 csql w rc=0 (24.51 s)
+23:11:14.854 server stop (1) rc=0; still listed: 0
+23:11:14.863 acks: 1
+  Time: 09/14/26 23:10:48.307 - NOTIFICATION *** file /home/vimkim/gh/cb/oos-instr-f4299ac0c/src/storage/oos_file.cpp, line 2274  CODE = -588, Tran = 1, CLIENT = dev2:csql(3061121), EID = 3
+  INTERNAL ERROR: Assertion 'FAULT INJECTION ACK site=oos_insert_many code=700005 target_operation="next chunk insert of oos_insert_many, after the preceding publications" requested_action="fail with ER_GENERIC_ERROR" reach=2 fired=1 fire_at=2' failed.
+23:11:14.874 === done site=f1 mode=fault code=700005 fire_at=2 wall=35.9 s

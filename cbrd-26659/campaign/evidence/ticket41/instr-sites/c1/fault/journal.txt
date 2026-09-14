@@ -1,0 +1,14 @@
+23:08:27.892 === site=c1 mode=fault db=t16_c1_f install=/home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc_nounit
+CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit debug build for Linux) (Sep 14 2026 22:56:52)
+2b109c9d1f14cd36e917a749d7c98f1e86f587752314511fbe137217f13c1c5d  /home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc_nounit/lib/libcubrid.so
+23:08:28.248 port 26671 already held by cub_master pid pid=3035402 (campaign master, reused)
+23:08:31.495 createdb t16_c1_f rc=0 (3.2 s)
+23:08:33.634 server start (1) rc=0 server_pid=3038458 master_pid=3035402 (2.1 s)
+23:08:33.824 csql w1 rc=0 (0.18 s)
+23:08:33.859 ack seen while polling (recs=8) after 0 s
+23:08:36.891 final SHOW HEAP OOS:  Oos_num_user_pages : 9; Oos_num_recs : 8;
+23:08:38.967 server stop (1) rc=0; still listed: 0
+23:08:38.978 acks: 1
+  Time: 09/14/26 23:08:33.745 - NOTIFICATION *** file /home/vimkim/gh/cb/oos-instr-f4299ac0c/src/storage/oos_file.cpp, line 3178  CODE = -588, Tran = 0, CLIENT = :(0), EID = 3
+  INTERNAL ERROR: Assertion 'FAULT INJECTION ACK site=oos_delete_chain code=700002 target_operation="reclaim hint list growth while deleting an OOS value chain (cleanup)" requested_action="throw std::bad_alloc" reach=1 fired=1 fire_at=1' failed.
+23:08:38.987 === done site=c1 mode=fault code=700002 fire_at=1 wall=11.1 s

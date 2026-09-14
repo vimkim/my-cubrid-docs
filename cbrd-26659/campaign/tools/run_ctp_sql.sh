@@ -19,7 +19,8 @@
 #                ticket 13 had to stop an unrelated master by hand instead].
 #   ports        26659/33120/33121/33122 are verified free first [ticket 14 section 2].
 #   identity     CUBRID/PATH/LD_LIBRARY_PATH point at the pinned install and both library
-#                hashes are checked against ticket 11 before anything starts [ticket 11 s2].
+#                hashes are checked against the campaign's re-pinned build before anything starts,
+#                and so are the CTP tree's jars and init.sh [ticket 41; ticket 37 item 1].
 #   install      $CUBRID/conf and $CUBRID/databases are backed up, hashed before and after and
 #                restored verbatim: CTP's run.sh writes the invocation's ports into cubrid.conf
 #                and keeps .forFun copies [ticket 13 section 11]. CUBRID_DATABASES is the
@@ -89,6 +90,7 @@ answer_dir="$(dirname "${case_dir}")/answers"
 # --- preflight -----------------------------------------------------------------------------------
 campaign_check_namespace
 campaign_check_ports
+campaign_check_ctp
 campaign_set_engine "${build}"
 [ -f "${CUBRID}/jdbc/cubrid_jdbc.jar" ] || die "${CUBRID}/jdbc/cubrid_jdbc.jar is missing; CTP needs the JDBC client artifact (ticket 13 finding c)"
 campaign_admit "${reserve_bytes}"
@@ -177,7 +179,7 @@ started_at=$(date -Is)
     sha256sum "${CUBRID}/lib/libcubrid.so" "${CUBRID}/lib/libcubridsa.so" "${CUBRID}/bin/cub_server" "${CUBRID}/bin/csql" "${CUBRID}/jdbc/cubrid_jdbc.jar"
     echo "ctp_home=${CTP_HOME}"
     echo "java_home=${JAVA_HOME}"
-    sha256sum "${CTP_HOME}/sql/lib/cubridqa-cqt.jar" "${CTP_HOME}/common/lib/cubridqa-common.jar"
+    sha256sum "${CTP_HOME}/sql/lib/cubridqa-cqt.jar" "${CTP_HOME}/common/lib/cubridqa-common.jar" "${CTP_HOME}/shell/init_path/init.sh"
     echo "testcase_repository=${decl_repository}"
     echo "testcase_branch=${tc_branch}"
     echo "testcase_commit=${tc_commit}"

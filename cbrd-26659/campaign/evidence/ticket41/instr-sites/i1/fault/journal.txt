@@ -1,0 +1,15 @@
+23:12:05.038 === site=i1 mode=fault db=t16_i1_f install=/home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc_nounit
+CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit debug build for Linux) (Sep 14 2026 22:56:52)
+2b109c9d1f14cd36e917a749d7c98f1e86f587752314511fbe137217f13c1c5d  /home/vimkim/.cub/install/oos-instr-f4299ac0c/debug_gcc_nounit/lib/libcubrid.so
+23:12:05.393 port 26671 already held by cub_master pid pid=3035402 (campaign master, reused)
+23:12:08.802 createdb t16_i1_f rc=0 (3.4 s)
+23:12:10.945 server start (1) rc=0 server_pid=3079834 master_pid=3035402 (2.1 s)
+23:13:06.397 csql w rc=1 (55.44 s)
+23:13:06.400 server pid 3079834 gone after 0 s
+23:13:08.604 server start (2) rc=1 server_pid=3087682 master_pid=3035402 (2.1 s)
+23:13:08.643 csql v rc=0 (0.03 s)
+23:13:10.718 server stop (2) rc=0; still listed: 0
+23:13:10.728 acks: 1
+  Time: 09/14/26 23:12:10.983 - NOTIFICATION *** file /home/vimkim/gh/cb/oos-instr-f4299ac0c/src/storage/oos_file.cpp, line 3350  CODE = -588, Tran = 1, CLIENT = dev2:csql(3080290), EID = 3
+  INTERNAL ERROR: Assertion 'FAULT INJECTION ACK site=oos_rv_redo_delete code=700008 target_operation="undo of RVOOS_INSERT during a transaction rollback" requested_action="fail with ER_GENERIC_ERROR" reach=1 fired=1 fire_at=1' failed.
+23:13:10.736 === done site=i1 mode=fault code=700008 fire_at=1 wall=65.7 s

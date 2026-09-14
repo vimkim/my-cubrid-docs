@@ -81,6 +81,7 @@ scenario=${scenario_override:-${worktree}/${decl_scenario}}
 
 campaign_check_namespace
 campaign_check_ports
+campaign_check_ctp
 campaign_set_engine "${build}"
 campaign_admit "${reserve_bytes}"
 
