@@ -145,6 +145,12 @@ for the 4,200 B fixture row; **100 chunks and 457,600** for the bulk-100 group; 
 and 23,564** for the reused workload's first row, which is where its multi-chunk topology stops
 being an inference; and one chunk and 4,224 on the mirror table the trigger writes.
 
+Each check also runs `checkdb -S` on the database it built. **All eighteen exited 0** — nine on
+the release build and nine on the debug build, the latter being the one that would abort on a
+failed internal assertion. Ticket 16 recorded that `checkdb` does not examine OOS payloads or
+chunk headers, so this is not a statement about OOS contents; it is a statement that none of
+these workloads left the heap, the indexes or the file tables inconsistent.
+
 ## 5. Finding T19-F1 — the OOS record gate is applied only on the server-side DML path
 
 The first bootstrap's activation check refused the trigger case: its rows were not OOS-backed at
