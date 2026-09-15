@@ -2,7 +2,7 @@
 
 https://jira.cubrid.org/browse/CBRD-27089
 
-> 초기 본문은 `be7c01a6d` 게시 시점의 기록이다. 최신 source와 검증 상태는 문서 끝의 **Integration verification — 2026-09-15 KST**를 따른다.
+> 초기 본문은 `be7c01a6d` 게시 시점의 기록이다. 최신 source와 검증 상태는 문서 끝의 **Acceptance decision — 2026-09-15 KST**를 따른다.
 
 ## Purpose
 
@@ -172,3 +172,15 @@ Resource 비교는 새 parent `38093ea85`와 merged candidate에서 동일한4�
 현재 새 source의 GitHub static checks5/5는 성공했다. SQL·medium·shell은 [한 번의 /run all 요청](https://github.com/CUBRID/cubrid/pull/7927#issuecomment-5666059284)으로 실행을 요청했고 build prerequisites가 진행 중이다. [trigger receipt](deferred-write-512b361-evidence/trigger-receipt.json)는 요청 대상 source와 comment 식별자를 기록한다. 새 source의 runtime CI pass는 아직 없다. CTP testcase/tool revision과 실제 terminal job 결과를 수집하여 V21-CI/V21-ACCEPT를 갱신해야 한다.
 
 **V21-CI, V21-ACCEPT 및 parent/map은 열린 상태다.** Baseline 결함과 vacuum convergence, no-logging crash durability, multi-node heartbeat failover 등의 범위 한계를 조용히 제거하지 않는다. 새35-test suite에 포함된 특정 vacuum/no-logging/recovery 테스트 성공을 subsystem 전체 보증으로 확대하지 않는다. 공개 파일은 [manifest](deferred-write-512b361-evidence/manifest.json)의 원본/게시본 해시를 보존하고 local path만 치환했다.
+
+## Acceptance decision — 2026-09-15 KST
+
+검증 source는 `512b361a7a34a4857cd8ad91c496c7e0e94c0769`, 비교 parent는 `38093ea859a8a08e20405b72b0cb395205bedb2f`다. 이전 pending 기록을 이 결정으로 대체한다. **V21-CI와 V21-ACCEPT를 완료하고 destination-owned deferred-write 교체를 해당 범위에서 수용한다.** CI 전체 성공이나 OOS subsystem 전체 결함 해결을 선언하지 않는다.
+
+[전체 CI 분석](ci_analysis_report_512b361_codex.md)과 [25건 분류](deferred-write-512b361-acceptance/classification.json)에 source·job·testcase·baseline 재현을 연결했다. Medium155215는3/975 실패, SQL155214는2/17463 실패, shell155217은20/3277 실패와30skip이다. Error/unknown은0이며 static5/5 및 release/debug/download build는 성공했다. **24개 실패는 최신 parent에서 독립 재현**, 한 건은 잘못된 partition 입력의 의도된 거절이다. 기존 bootstrap 결함의 원래 testcase는 새 CI에서 성공했다.
+
+실제 candidate/parent CTP pair는 SQL2·medium3의 actual output이 모두 byte-identical이다. Shell은 새4건 pair 각각3실패/1성공, 나머지16건은 parent15실패/1성공과 candidate16실패다. Index capacity는 Debug89/88page 성공을 보존하고, CI와 같은 OptDebug parent에서104page로100미만 조건 위반을 재현했다(CI112page). CDC의 count/target 변동과 extraction rc=-10을 보존하며 정확한 내부 원인이나 crash-stack 동일성을 주장하지 않는다. Invalid-partition probe는 rollback 후0행·live OOS0과 다음 정상 insert 성공을 확인했다.
+
+Producer matrix는 새35/35 CTest와 loader·HA·MVCC/recovery·bootstrap·Valgrind3개 테스트의 현재 source 증거로 충족한다. 새 parent 대비24개 memory sample에서 loader growth 증가는7084/7596KiB다. 목적지 결정까지 canonical payload를 보유하는 비용으로 이 측정 증가를 수용한다.50KB owner50392B와64행 queue3225600B의 직접 accounting이 이를 뒷받침하지만 RSS를 정확한 live payload 계수로 해석하지 않는다. Full-inline 임시 행과 finalization용 payload 중복 복사는 없으며 새 비율 threshold나 process 전체8MiB cap을 도입하지 않는다.
+
+Baseline 결함, vacuum convergence, no-logging crash durability, multi-node heartbeat failover 및 undefined-value cleanliness의 기존 범위 제한을 유지한다. 공개 [evidence manifest](deferred-write-512b361-acceptance/manifest.json)는 원본/게시본 해시와 경로 치환을 기록하며 private testcase source·DB volume·credential을 포함하지 않는다. 기존 PR7600은 보존한다.

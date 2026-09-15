@@ -1,0 +1,278 @@
+[
+  {
+    "test": "shell/_36_damson/cbrd_23608_tde/tbl_enc_14/cases/tbl_enc_14.sh",
+    "evidence": "artifacts/node-7/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "tbl_enc_14-1 : NOK",
+      "diff result.log result.answer failed",
+      "< \t\ttime_creation = ?, type = OUT_OF_LINE_OVERFLOW_STORAGE ",
+      "< CLASS_OID:     |       |     (dba.ttt), OOS for HFID:        |    |       ",
+      "> \t\ttime_creation = ?, type = MULTIPAGE_OBJECT_HEAP ",
+      "> Overflow for HFID:        |    |       ",
+      "----------------- 1 : NOK"
+    ]
+  },
+  {
+    "test": "shell/_36_damson/cbrd_23608_tde/file_enc_05/cases/file_enc_05.sh",
+    "evidence": "artifacts/node-36/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "file_enc_05-1 : NOK",
+      "diff result.log result.answer failed",
+      "< TDE: pgbuf_dealloc_page(): clear tde bit in pflag, VPID = |, tde_algorithm = AES",
+      "< TDE: pgbuf_dealloc_page(): clear tde bit in pflag, VPID = |, tde_algorithm = AES",
+      "< TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = NONE",
+      "< TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = NONE",
+      "----------------- 1 : NOK"
+    ]
+  },
+  {
+    "test": "shell/_36_damson/cbrd_23608_tde/file_enc_04/cases/file_enc_04.sh",
+    "evidence": "artifacts/node-30/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "file_enc_04-1 : NOK",
+      "diff result.log result.answer failed",
+      "< TDE: file_apply_tde_algorithm(): VFID = |, # of encrypting (user) pages = , tde algorithm = AES",
+      "< TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = AES",
+      "< TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = AES",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = NONE",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = NONE",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = NONE",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = NONE",
+      "----------------- 1 : NOK"
+    ]
+  },
+  {
+    "test": "shell/_36_damson/cbrd_23608_tde/log_enc_04/cases/log_enc_04.sh",
+    "evidence": "artifacts/node-5/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "log_enc_04-1 : NOK",
+      "----------------- 1 : NOK"
+    ]
+  },
+  {
+    "test": "shell/_37_elderberry/cbrd_23842_cdc/bug/cbrd_27064/cases/cbrd_27064.sh",
+    "evidence": "artifacts/node-27/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "cbrd_27064-2 : NOK",
+      "EXTRACT_ERROR: rc=-10 target=10",
+      "cbrd_27064-3 : NOK",
+      "EXTRACT_ERROR: rc=-10 target=0",
+      "----------------- 2 : NOK",
+      "----------------- 3 : NOK"
+    ]
+  },
+  {
+    "test": "shell/_36_damson/cbrd_23608_tde/file_enc_02/cases/file_enc_02.sh",
+    "evidence": "artifacts/node-20/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "file_enc_02-1 : NOK",
+      "diff result.log result.answer failed",
+      "< TDE: file_alloc(): set tde bit in pflag, VFID = |, VPID = |, tde_algorithm of the file = AES, previous tde algorithm of the page = NONE",
+      "< TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = AES",
+      "----------------- 1 : NOK"
+    ]
+  },
+  {
+    "test": "shell/_36_damson/cbrd_23608_tde/temp_enc_09/cases/temp_enc_09.sh",
+    "evidence": "artifacts/node-20/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "temp_enc_09-1 : NOK",
+      "diff result.log result.answer failed",
+      "> TDE: sort_listfile(): tde_encrypted = 0",
+      "> TDE: sort_listfile(): tde_encrypted = 1",
+      "----------------- 1 : NOK"
+    ]
+  },
+  {
+    "test": "shell/_06_issues/_14_2h/bug_bts_14120/cases/bug_bts_14120.sh",
+    "evidence": "artifacts/node-48/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "bug_bts_14120-1 : NOK",
+      "diff bug_bts_14120_1.output bug_bts_14120_1.answer failed",
+      "< [S*] call_stack_dump_activation_list=-2,-7,-13,-14,-17,-19,-21,-22,-45,-46,-48,-50,-1382,-1384,-1385,-51,-52,-76,-78,-79,-81,-90,-96,-97,-313,-314,-407,-415,-416,-417,-583,-603,-836,-859,-890,-891,-976,-1040,-1075,-1131,-1084 ()",
+      "> [S*] call_stack_dump_activation_list=-2,-7,-13,-14,-17,-19,-21,-22,-45,-46,-48,-50,-51,-52,-76,-78,-79,-81,-90,-96,-97,-313,-314,-407,-415,-416,-417,-583,-603,-836,-859,-890,-891,-976,-1040,-1075,-1131,-1084 ()",
+      "----------------- 1 : NOK"
+    ]
+  },
+  {
+    "test": "shell/_35_cherry/issue_21654_server_side_loaddb/bigPageSize/cases/bigPageSize.sh",
+    "evidence": "artifacts/node-48/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "bigPageSize-1 : NOK",
+      "diff csql1.log csql2.log failed",
+      "<         cl                                    : file:4609046085/ces_076/dba.t.00001789409659682682_3835",
+      "<         bl                                    : file:4609046084/ces_291/dba.t.00001789409659682636_9414",
+      ">         cl                                    : file:4609046085/ces_765/dba.t.00001789409659728949_1714",
+      ">         bl                                    : file:4609046084/ces_363/dba.t.00001789409659728902_5104",
+      "----------------- 1 : NOK"
+    ]
+  },
+  {
+    "test": "shell/_36_damson/cbrd_23608_tde/file_enc_01/cases/file_enc_01.sh",
+    "evidence": "artifacts/node-48/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "file_enc_01-1 : NOK",
+      "diff result.log result.answer failed",
+      "> TDE: file_apply_tde_algorithm(): VFID = |, # of encrypting (user) pages = , tde algorithm = NONE",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = NONE",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = NONE",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = NONE",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = NONE",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = NONE",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = NONE",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = NONE",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = NONE",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = NONE",
+      "> TDE: file_apply_tde_algorithm(): VFID = |, # of encrypting (user) pages = , tde algorithm = AES",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = AES",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = AES",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = AES",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = AES",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = AES",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = AES",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = AES",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = AES",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = AES",
+      "----------------- 1 : NOK"
+    ]
+  },
+  {
+    "test": "shell/_06_issues/_15_1h/bug_bts_15489/cases/bug_bts_15489.sh",
+    "evidence": "artifacts/node-10/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "bug_bts_15489-1 : NOK",
+      "Total Pages:112",
+      "----------------- 1 : NOK"
+    ]
+  },
+  {
+    "test": "shell/_36_damson/cbrd_23608_tde/file_enc_07/cases/file_enc_07.sh",
+    "evidence": "artifacts/node-34/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "file_enc_07-2 : NOK",
+      "diff result.log result.answer failed",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = AES",
+      "> TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = AES",
+      "----------------- 2 : NOK"
+    ]
+  },
+  {
+    "test": "shell/_36_damson/cbrd_23608_tde/tbl_enc_08/cases/tbl_enc_08.sh",
+    "evidence": "artifacts/node-0/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "tbl_enc_08-1 : NOK",
+      "diff result.log result.answer failed",
+      "< \t\ttime_creation = ?, type = OUT_OF_LINE_OVERFLOW_STORAGE ",
+      "< CLASS_OID:     |       |     (dba.ttt), OOS for HFID:        |    |       ",
+      "> \t\ttime_creation = ?, type = MULTIPAGE_OBJECT_HEAP ",
+      "> Overflow for HFID:        |    |       ",
+      "----------------- 1 : NOK"
+    ]
+  },
+  {
+    "test": "shell/_06_issues/_11_2h/bug_bts_5423/cases/bug_bts_5423.sh",
+    "evidence": "artifacts/node-33/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "bug_bts_5423-6 : NOK",
+      "diff bug_bts_5423.answer bug_bts_5423.log failed",
+      "> [S ] index_build_buffer_size=2.0M (2.0M)",
+      "----------------- 6 : NOK"
+    ]
+  },
+  {
+    "test": "shell/_37_elderberry/cbrd_23842_cdc/bug/cbrd_27075/cases/cbrd_27075.sh",
+    "evidence": "artifacts/node-33/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "cbrd_27075-1 : NOK",
+      "config 4K: FINAL_SEQ=2000 CORRUPTION=0 DRIVER[FIND_OK=30 FIND_NOTFOUND=0 FIND_ERR=0 EXTRACT_ERR=4 TOTAL_ITEMS=305]",
+      "config 8K: FINAL_SEQ=2000 CORRUPTION=0 DRIVER[FIND_OK=30 FIND_NOTFOUND=0 FIND_ERR=0 EXTRACT_ERR=4 TOTAL_ITEMS=302]",
+      "config 16K: FINAL_SEQ=2000 CORRUPTION=0 DRIVER[FIND_OK=30 FIND_NOTFOUND=0 FIND_ERR=0 EXTRACT_ERR=4 TOTAL_ITEMS=300]",
+      "CONFIGS_OK=0",
+      "TOTAL_CORRUPTION=0",
+      "----------------- 1 : NOK"
+    ]
+  },
+  {
+    "test": "shell/_06_issues/_26_1h/cbrd_26527/cases/cbrd_26527.sh",
+    "evidence": "artifacts/node-29/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "cbrd_26527-4 : NOK Case 4: Failed to extract MULTIPAGE HFID for dba.tbl from diagdb_before.log",
+      "----------------- 4 : NOK Case 4: Failed to extract MULTIPAGE HFID for dba.tbl from diagdb_before.log"
+    ]
+  },
+  {
+    "test": "shell/_39_fig_cake/cbrd_24044_enhance_optimizer/cbrd_25080/cases/cbrd_25080.sh",
+    "evidence": "artifacts/node-16/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "cbrd_25080-3 : NOK",
+      "diff no_limit_test.log no_limit_test.answer failed",
+      "cbrd_25080-4 : NOK",
+      "diff limit_test.log limit_test.answer failed",
+      "cbrd_25080-5 : NOK",
+      "diff limit_count_test.log limit_count_test.answer failed",
+      "< term[?]: [dba.tbl].col_c='??' (sel ?.?) (sarg term) (not-join eligible) (indexable col_c[?]) (loc ?)",
+      "> term[?]: [dba.tbl].col_c='??' (sel ?.??????) (sarg term) (not-join eligible) (indexable col_c[?]) (loc ?)",
+      "<     cost:  ???? card ?????",
+      ">     cost:  ???? card ????",
+      "----------------- 3 : NOK",
+      "< term[?]: [dba.tbl].col_c='??' (sel ?.?) (sarg term) (not-join eligible) (indexable col_c[?]) (loc ?)",
+      "> term[?]: [dba.tbl].col_c='??' (sel ?.??????) (sarg term) (not-join eligible) (indexable col_c[?]) (loc ?)",
+      "<     cost:  ???? card ?????",
+      ">     cost:  ???? card ????",
+      "----------------- 4 : NOK",
+      "< term[?]: [dba.tbl].col_c='??' (sel ?.?) (sarg term) (not-join eligible) (indexable col_c[?]) (loc ?)",
+      "> term[?]: [dba.tbl].col_c='??' (sel ?.??????) (sarg term) (not-join eligible) (indexable col_c[?]) (loc ?)",
+      "<     cost:  ???? card ?????",
+      ">     cost:  ???? card ????",
+      "----------------- 5 : NOK"
+    ]
+  },
+  {
+    "test": "shell/_06_issues/_12_2h/bug_bts_9836/cases/bug_bts_9836.sh",
+    "evidence": "artifacts/node-18/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "bug_bts_9836-2 : NOK",
+      "diff log2.txt log2.answer failed",
+      "bug_bts_9836-3 : NOK",
+      "diff log3.txt log3.answer failed",
+      "< [C*] call_stack_dump_activation_list=-3,-2,-7,-13,-14,-17,-19,-21,-22,-45,-46,-48,-50,-1382,-1384,-1385,-51,-52,-76,-78,-79,-81,-90,-96,-97,-313,-314,-407,-415,-416,-417,-583,-603,-836,-859,-890,-891,-976,-1040,-1075,-1131,-1084,-4 ()",
+      "< [S*] call_stack_dump_activation_list=-3,-2,-7,-13,-14,-17,-19,-21,-22,-45,-46,-48,-50,-1382,-1384,-1385,-51,-52,-76,-78,-79,-81,-90,-96,-97,-313,-314,-407,-415,-416,-417,-583,-603,-836,-859,-890,-891,-976,-1040,-1075,-1131,-1084,-4 ()",
+      "> [C*] call_stack_dump_activation_list=-3,-2,-7,-13,-14,-17,-19,-21,-22,-45,-46,-48,-50,-51,-52,-76,-78,-79,-81,-90,-96,-97,-313,-314,-407,-415,-416,-417,-583,-603,-836,-859,-890,-891,-976,-1040,-1075,-1131,-1084,-4 ()",
+      "> [S*] call_stack_dump_activation_list=-3,-2,-7,-13,-14,-17,-19,-21,-22,-45,-46,-48,-50,-51,-52,-76,-78,-79,-81,-90,-96,-97,-313,-314,-407,-415,-416,-417,-583,-603,-836,-859,-890,-891,-976,-1040,-1075,-1131,-1084,-4 ()",
+      "----------------- 2 : NOK",
+      "< [S*] call_stack_dump_activation_list=-2,-7,-13,-14,-17,-19,-21,-22,-45,-46,-48,-50,-1382,-1384,-1385,-51,-52,-76,-78,-79,-81,-90,-96,-97,-313,-314,-407,-415,-416,-417,-583,-603,-836,-859,-890,-891,-976,-1040,-1075,-1131,-1084 ()",
+      "> [S*] call_stack_dump_activation_list=-2,-7,-13,-14,-17,-19,-21,-22,-45,-46,-48,-50,-51,-52,-76,-78,-79,-81,-90,-96,-97,-313,-314,-407,-415,-416,-417,-583,-603,-836,-859,-890,-891,-976,-1040,-1075,-1131,-1084 ()",
+      "----------------- 3 : NOK"
+    ]
+  },
+  {
+    "test": "shell/_36_damson/cbrd_23608_tde/file_enc_03/cases/file_enc_03.sh",
+    "evidence": "artifacts/node-18/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "file_enc_03-1 : NOK",
+      "diff result.log result.answer failed",
+      "< TDE: pgbuf_set_tde_algorithm(): VPID = |, tde_algorithm = AES",
+      "< TDE: pgbuf_dealloc_page(): clear tde bit in pflag, VPID = |, tde_algorithm = AES",
+      "----------------- 1 : NOK"
+    ]
+  },
+  {
+    "test": "shell/_35_cherry/issue_21654_server_side_loaddb/partition_tbls/cases/partition_tbls.sh",
+    "evidence": "artifacts/node-23/tmp/logs/test-shell.xml",
+    "signature_lines": [
+      "partition_tbls-1 : NOK",
+      "diff bug_bts_11093.output_sorted bug_bts_11093.answer_sorted failed",
+      "> ",
+      "> ",
+      "> Class dba.t",
+      "> Class dba.t__p__p0",
+      "> *** Closing the database ***",
+      "> dba.t__p__p0 2 instances committed",
+      "< Line 6:Appropriate partition does not exist.",
+      "< Total 0 object(s) inserted, 1 object(s) failed.",
+      "> Total 2 object(s) inserted, 0 object(s) failed.",
+      "> *** Updating class statistics ***",
+      "----------------- 1 : NOK"
+    ]
+  }
+]

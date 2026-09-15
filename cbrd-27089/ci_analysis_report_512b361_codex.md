@@ -2,101 +2,94 @@
 
 ## Executive Summary
 
-All requested runtime suites finished: medium3, SQL2 and shell20 failures, with zero error/unknown records. Shell has30 skips. Builds and five static checks passed. The repaired cbrd_20683 bootstrap case now passes remotely. Acceptance remains open: four shell failures are new relative to878f18b and require investigation. All three collector bundles are complete; fresh-parent attribution and acceptance reconciliation remain in progress.
+All runtime suites are terminal:25 failures, zero error/unknown records,30 shell skips. Twenty-four failure signatures independently reproduce on the current parent38093ea. The remaining partition-loader case expects acceptance of invalid input; candidate rejection, batch rollback and subsequent usability were verified. No introduced defect is identified in this inventory. This does not make failed CI jobs green.
+
+All local counterparts are terminal. The acceptance decision below reconciles this inventory with the current producer/resource evidence. The repaired4KB bootstrap testcase cbrd_20683 passes remotely.
 
 ## CI Snapshot
 
-| Suite | Job | Total | Success | Failure | Skipped | Error | Unknown |
+| Suite | CircleCI job | Total | Success | Failure | Skip | Error | Unknown |
 |---|---|---:|---:|---:|---:|---:|---:|
-| medium | [job 155215](https://circleci.com/gh/CUBRID/cubrid/155215) | 975 | 972 | 3 | 0 | 0 | 0 |
-| sql | [job 155214](https://circleci.com/gh/CUBRID/cubrid/155214) | 17463 | 17461 | 2 | 0 | 0 | 0 |
-| shell | [job 155217](https://circleci.com/gh/CUBRID/cubrid/155217) | 3277 | 3227 | 20 | 30 | 0 | 0 |
+| medium | [155215](https://circleci.com/gh/CUBRID/cubrid/155215) | 975 | 972 | 3 | 0 | 0 | 0 |
+| sql | [155214](https://circleci.com/gh/CUBRID/cubrid/155214) | 17463 | 17461 | 2 | 0 | 0 | 0 |
+| shell | [155217](https://circleci.com/gh/CUBRID/cubrid/155217) | 3277 | 3227 | 20 | 30 | 0 | 0 |
+
+Release155218, debug155213 and download-build155216 succeeded. GitHub static checks5/5 succeeded. These jobs belong to workflow20f7ce36-11b5-4ce1-94e1-838aec4803b7. Single trigger comment5666059284 was retained without duplicates.
 
 ## Evidence Scope
 
-Pinned source `512b361a7a34a4857cd8ad91c496c7e0e94c0769`, PR https://github.com/CUBRID/cubrid/pull/7927. Current local and remote heads were reverified. Collection date2026-09-15 KST. Job identity metadata confirms this revision and workflow20f7ce36-11b5-4ce1-94e1-838aec4803b7.
+- PR: https://github.com/CUBRID/cubrid/pull/7927
+- Engine:512b361a7a34a4857cd8ad91c496c7e0e94c0769; current parent38093ea859a8a08e20405b72b0cb395205bedb2f.
+- Public tests:6ab786aa9145489ce1e1336dd829779e9de8c58a; all10 failing case/answer files match downloaded sources byte-for-byte.
+- Private tests:6ce89517e700f8f41e9fa451e3df24cf9e52d7a0; tools a1bec8762644f58dc48c99a8dfb227fa0bcc70ca. All50 shell checkout logs agree. Private directories were extracted from exact local Git objects because collector links did not carry immutable revisions.
+- Collector0.1.0 (3e9502f72350), text/source mode, no wait: all three exit0. Shell165 text artifacts/181208528 bytes; no core downloads.
+- Collection/replay date:2026-09-15 KST.
 
-Collector0.1.0 (3e9502f72350): medium and SQL bundles completed with exit0; shell collection also completed with exit0 (165 text artifacts,181208528 bytes). Separate read-only v1.1 API test inventories supply interim counts; that endpoint returns the complete tests array, without a pagination token. Durable roots:
-
-- `/home/vimkim/gh/cubrid-circleci-analyzer/data/CBRD-27089/512b361`
-- `/home/vimkim/gh/cubrid-circleci-analyzer/data/CBRD-27089/512b361-api-20260914`
+Durable collector root: `/home/vimkim/gh/cubrid-circleci-analyzer/data/CBRD-27089/512b361`. Separate read-only API evidence: sibling `512b361-api-20260914`, including complete50-node checkout observations and shell-observed-signatures.json. Normalized summaries, all failed-test messages/diffs, source indices, node XML and targeted feedback logs were inspected. Counts reconcile with all25 rows below.
 
 ## Failure Inventory
 
-Every failure in the three API inventories appears once below. Unknown attribution is intentional while evidence collection and paired replay are incomplete.
-
-| Suite | Test | Observed signature | Category | PR relation |
+| Suite | Test | Observed signature | Category | Attribution |
 |---|---|---|---|---|
-| medium | `medium/_02_xtests/cases/to_char_order_by.sql` | Same values in a different order; failing SELECT lacks ORDER BY | Ordering expectation | unlikely; new-parent replay pending |
-| medium | `medium/_02_xtests/cases/to_number_order_by.sql` | Same values in a different order; failing SELECT lacks ORDER BY | Ordering expectation | unlikely; new-parent replay pending |
-| medium | `medium/_02_xtests/cases/to_timestamp_order_by.sql` | Same values in a different order; failing SELECT lacks ORDER BY | Ordering expectation | unlikely; new-parent replay pending |
-| sql | `sql/_13_issues/_14_1h/cases/bug_bts_10516.sql` | Test failed; artifact/source analysis pending | Unclassified | unknown |
-| sql | `sql/_15_fbo/_02_qa_test/cases/fbo_ddl02.sql` | Test failed; artifact/source analysis pending | Unclassified | unknown |
-| shell | `shell/_36_damson/cbrd_23608_tde/tbl_enc_08/cases/tbl_enc_08.sh` | Test failed; artifact/source analysis pending | Unclassified | unknown |
-| shell | `shell/_36_damson/cbrd_23608_tde/log_enc_04/cases/log_enc_04.sh` | Test failed; artifact/source analysis pending | Unclassified | unknown |
-| shell | `shell/_36_damson/cbrd_23608_tde/tbl_enc_14/cases/tbl_enc_14.sh` | Test failed; artifact/source analysis pending | Unclassified | unknown |
-| shell | `shell/_06_issues/_15_1h/bug_bts_15489/cases/bug_bts_15489.sh` | Index has112 pages; testcase requires0 < pages <100 after60 seconds | Index capacity / reclamation | unknown |
-| shell | `shell/_39_fig_cake/cbrd_24044_enhance_optimizer/cbrd_25080/cases/cbrd_25080.sh` | Test failed; artifact/source analysis pending | Unclassified | unknown |
-| shell | `shell/_06_issues/_12_2h/bug_bts_9836/cases/bug_bts_9836.sh` | Test failed; artifact/source analysis pending | Unclassified | unknown |
-| shell | `shell/_36_damson/cbrd_23608_tde/file_enc_03/cases/file_enc_03.sh` | Test failed; artifact/source analysis pending | Unclassified | unknown |
-| shell | `shell/_36_damson/cbrd_23608_tde/file_enc_02/cases/file_enc_02.sh` | Test failed; artifact/source analysis pending | Unclassified | unknown |
-| shell | `shell/_36_damson/cbrd_23608_tde/temp_enc_09/cases/temp_enc_09.sh` | Two expected sort_listfile encryption diagnostic lines are absent | TDE diagnostic expectation | unknown |
-| shell | `shell/_35_cherry/issue_21654_server_side_loaddb/partition_tbls/cases/partition_tbls.sh` | Test failed; artifact/source analysis pending | Unclassified | unknown |
-| shell | `shell/_37_elderberry/cbrd_23842_cdc/bug/cbrd_27064/cases/cbrd_27064.sh` | Test failed; artifact/source analysis pending | Unclassified | unknown |
-| shell | `shell/_06_issues/_26_1h/cbrd_26527/cases/cbrd_26527.sh` | Test failed; artifact/source analysis pending | Unclassified | unknown |
-| shell | `shell/_36_damson/cbrd_23608_tde/file_enc_04/cases/file_enc_04.sh` | Test failed; artifact/source analysis pending | Unclassified | unknown |
-| shell | `shell/_06_issues/_11_2h/bug_bts_5423/cases/bug_bts_5423.sh` | Extra index_build_buffer_size=2.0M parameter in utility output | Expected parameter list | unlikely; parent parameter exists |
-| shell | `shell/_37_elderberry/cbrd_23842_cdc/bug/cbrd_27075/cases/cbrd_27075.sh` | Test failed; artifact/source analysis pending | Unclassified | unknown |
-| shell | `shell/_36_damson/cbrd_23608_tde/file_enc_07/cases/file_enc_07.sh` | Test failed; artifact/source analysis pending | Unclassified | unknown |
-| shell | `shell/_36_damson/cbrd_23608_tde/file_enc_05/cases/file_enc_05.sh` | Test failed; artifact/source analysis pending | Unclassified | unknown |
-| shell | `shell/_06_issues/_14_2h/bug_bts_14120/cases/bug_bts_14120.sh` | Test failed; artifact/source analysis pending | Unclassified | unknown |
-| shell | `shell/_35_cherry/issue_21654_server_side_loaddb/bigPageSize/cases/bigPageSize.sh` | Test failed; artifact/source analysis pending | Unclassified | unknown |
-| shell | `shell/_36_damson/cbrd_23608_tde/file_enc_01/cases/file_enc_01.sh` | Test failed; artifact/source analysis pending | Unclassified | unknown |
+| medium | `medium/_02_xtests/cases/to_char_order_by.sql` | Conversion SELECT without ORDER BY returns a different permutation | Ordering | Parent-reproduced |
+| medium | `medium/_02_xtests/cases/to_number_order_by.sql` | Conversion SELECT without ORDER BY returns a different permutation | Ordering | Parent-reproduced |
+| medium | `medium/_02_xtests/cases/to_timestamp_order_by.sql` | Conversion SELECT without ORDER BY returns a different permutation | Ordering | Parent-reproduced |
+| sql | `sql/_13_issues/_14_1h/cases/bug_bts_10516.sql` | Wide LOB insert returns-1383; later operations see zero rows | OOS/bigone boundary | Parent-reproduced |
+| sql | `sql/_15_fbo/_02_qa_test/cases/fbo_ddl02.sql` | Wide LOB insert returns-1383; later operations see zero rows | OOS/bigone boundary | Parent-reproduced |
+| shell | `shell/_36_damson/cbrd_23608_tde/tbl_enc_08/cases/tbl_enc_08.sh` | TDE page/file/sort diagnostics differ from expected storage layout | Physical storage expectation | Parent-reproduced |
+| shell | `shell/_36_damson/cbrd_23608_tde/log_enc_04/cases/log_enc_04.sh` | Expected RVHF_INSERT_NEWHOME log record is missing | Physical storage expectation | Parent-reproduced |
+| shell | `shell/_36_damson/cbrd_23608_tde/tbl_enc_14/cases/tbl_enc_14.sh` | TDE page/file/sort diagnostics differ from expected storage layout | Physical storage expectation | Parent-reproduced |
+| shell | `shell/_06_issues/_15_1h/bug_bts_15489/cases/bug_bts_15489.sh` | CI112pages; OptDebug parent104pages; both violate below100 | Index reclamation threshold | Parent-reproduced |
+| shell | `shell/_39_fig_cake/cbrd_24044_enhance_optimizer/cbrd_25080/cases/cbrd_25080.sh` | Selectivity/cardinality diagnostic differences | Optimizer expectations | Parent-reproduced |
+| shell | `shell/_06_issues/_12_2h/bug_bts_9836/cases/bug_bts_9836.sh` | Additional OOS errors-1382/-1384/-1385 | Default error list | Parent-reproduced |
+| shell | `shell/_36_damson/cbrd_23608_tde/file_enc_03/cases/file_enc_03.sh` | TDE page/file/sort diagnostics differ from expected storage layout | Physical storage expectation | Parent-reproduced |
+| shell | `shell/_36_damson/cbrd_23608_tde/file_enc_02/cases/file_enc_02.sh` | TDE page/file/sort diagnostics differ from expected storage layout | Physical storage expectation | Parent-reproduced |
+| shell | `shell/_36_damson/cbrd_23608_tde/temp_enc_09/cases/temp_enc_09.sh` | TDE page/file/sort diagnostics differ from expected storage layout | Physical storage expectation | Parent-reproduced |
+| shell | `shell/_35_cherry/issue_21654_server_side_loaddb/partition_tbls/cases/partition_tbls.sh` | Invalid partition row rejected; expected answer accepts2 rows | Intended routing correction | Intended rejection; CI remains failed |
+| shell | `shell/_37_elderberry/cbrd_23842_cdc/bug/cbrd_27064/cases/cbrd_27064.sh` | Extraction rc=-10, including zero/small targets in CI | CDC extraction | Parent-reproduced |
+| shell | `shell/_06_issues/_26_1h/cbrd_26527/cases/cbrd_26527.sh` | Expected MULTIPAGE HFID cannot be extracted | Physical storage expectation | Parent-reproduced |
+| shell | `shell/_36_damson/cbrd_23608_tde/file_enc_04/cases/file_enc_04.sh` | TDE page/file/sort diagnostics differ from expected storage layout | Physical storage expectation | Parent-reproduced |
+| shell | `shell/_06_issues/_11_2h/bug_bts_5423/cases/bug_bts_5423.sh` | Additional index_build_buffer_size=2.0M | Parameter list | Parent-reproduced |
+| shell | `shell/_37_elderberry/cbrd_23842_cdc/bug/cbrd_27075/cases/cbrd_27075.sh` | Extraction errors at4K/8K/16K despite2000 updates and zero corruption | CDC extraction | Parent-reproduced |
+| shell | `shell/_36_damson/cbrd_23608_tde/file_enc_07/cases/file_enc_07.sh` | TDE page/file/sort diagnostics differ from expected storage layout | Physical storage expectation | Parent-reproduced |
+| shell | `shell/_36_damson/cbrd_23608_tde/file_enc_05/cases/file_enc_05.sh` | TDE page/file/sort diagnostics differ from expected storage layout | Physical storage expectation | Parent-reproduced |
+| shell | `shell/_06_issues/_14_2h/bug_bts_14120/cases/bug_bts_14120.sh` | Additional OOS errors-1382/-1384/-1385 | Default error list | Parent-reproduced |
+| shell | `shell/_35_cherry/issue_21654_server_side_loaddb/bigPageSize/cases/bigPageSize.sh` | Compared dumps contain different external LOB locators | LOB output identity | Parent-reproduced |
+| shell | `shell/_36_damson/cbrd_23608_tde/file_enc_01/cases/file_enc_01.sh` | TDE page/file/sort diagnostics differ from expected storage layout | Physical storage expectation | Parent-reproduced |
 
 ## Root-Cause Analysis
 
-Medium uses public testcase revision6ab786aa9145489ce1e1336dd829779e9de8c58a. All three downloaded case files and all three answer files are byte-identical to the retained b10727db4 fixtures. The diffs show only ordering changes in conversion queries without ORDER BY. This supports an ordering-expectation diagnosis, but old9c768e4 replay is not a fresh38093ea baseline result.
+**Ordering (3).** The failing conversion SELECTs lack ORDER BY. Exact case/answer bytes are unchanged from historical fixtures, but fresh38093ea/512b361 CTP replays were performed. All three fail with byte-identical local actual outputs. CI permutations need not match local permutations. Confidence is high for the expectation mismatch; adding an explicit ordering contract would falsify that explanation.
 
-New shell failures relative to878f18b are bug_bts_5423, bug_bts_15489, temp_enc_09, and cbrd_27075. The first exposes an additional parameter already present in target38093ea;15489 records112 index pages against a below100 threshold, and temp_enc_09 lacks two expected sort diagnostic lines. CDC27075 currently has only a generic failure message in the test inventory and needs its artifacts before diagnosis.
+**OOS/bigone boundary (2).** Initial wide LOB insertion returns-1383, followed by zero-row cascades. Both cases fail identically on the fresh pair. This is preexisting OOS/ordinary-overflow compatibility behavior, not evidence that destination-owned preparation newly lost successful rows. Any boundary-policy repair is separate work; expected answers were not changed.
 
-Four previous shell failures now pass: bug_bts_5048, cbrd_20683, cbrd_20145_1, and issue_11161_volume. Passing these cases does not imply subsystem-wide correctness or classify the remaining failures.
+**Physical storage, diagnostic and optimizer expectations.** Parent replay reproduces OOS-versus-MULTIPAGE layout, encryption diagnostic, missing RVHF_INSERT_NEWHOME, default error-list, parameter-list, external LOB locator and optimizer selectivity/cardinality signatures. This establishes preexistence with high confidence, not a claim that every underlying expectation should be changed. TDE diagnostics do not by themselves prove encrypted-data leakage. Review the intended physical/diagnostic contract before changing tests. For LOB output, differing generated locators require a stable comparison of logical values and row identity.
 
-## Recommended Actions
+**Index reclamation (1).** CI observes112 pages against0 < pages <100 after60 seconds. Debug parent/candidate pass at89/88. An unchanged testcase on fresh OptDebug parent fails at104. The recorded btree compiler command uses-O2 and-DCUBRID_OPTDEBUG with assertions enabled, matching CI's build mode rather than local-O0. Confidence is high that the threshold failure predates this branch; the precise vacuum/tree cause and exact page count remain unknown. Preserve the earlier passes and investigate convergence separately before tightening or relaxing the threshold.
 
-Collector session1966 finished successfully. Inspect all failure artifacts and exact private testcase/testtools checkout revisions. Prioritize CDC27075 and index-capacity15489; reproduce on fresh pinned parent38093ea and candidate512b361 where needed. Repair introduced failures, verify, and reconcile the producer/resource acceptance matrix. Do not alter expected answers merely to make CI green.
+**CDC extraction (2).** CDC27064 reproduces rc=-10 on the current parent; timing-dependent targets differ from CI. CDC27075 fails on both builds at every page size, with all2000 updates completed, zero corruption and nonzero extracted items. Parent error counts3/3/3; candidate4/4/2. Captured4K/8K driver logs show rc=-10. Remote feedback and final XML retain different2-versus4-error observations; neither is discarded. Preexistence is established, but exact internal causes and remote crash-stack equivalence are not. Inspect extraction return-path diagnostics before attributing either failure to a particular historical assertion.
 
-## Evidence and Limitations
+**Partition routing (1).** Parent accepts the testcase's invalid row, while destination routing rejects it. A fresh merged-candidate probe verifies nonzero load status, zero surviving rows/live OOS records after failed batch, and successful subsequent valid insert. Retained empty OOS capacity is not a live-chain leak. This is intended rejection, not a baseline failure or an unavailable check; remote CI remains failed.
 
-Medium summary, all medium failure messages/diffs and source hashes, complete API test inventories, exact job identities, and four new shell messages were inspected. SQL diffs show initial error-1383 on the wide LOB insert, followed by zero-row cascading results. Both case/answer pairs are byte-identical to retained b10727db4 fixtures, but a fresh38093ea baseline is still needed. Remaining shell root causes are not yet assessed. Source/testcase changes prevent carrying the previous23-baseline classification forward. Historical waiting snapshot is superseded by these terminal results. V21-CI and V21-ACCEPT remain open. This report is local and unpublished.
+## Local Evidence
 
-## Replay preparation — 2026-09-15 KST
+- `~/.cache/codex/pr7927-512b361-sql`: exact2SQL/3medium cases fail on both; all five actual-result hashes match in paired-output.json. Candidate engine hashes match published integration provenance despite its embedded pre-merge6acfbb8 version string. Source hashes were revalidated against512b361. Preserved installed JDBC jars differ and are explicitly recorded; do not claim identical complete installations. CTP source files match the pinned tools commit; eight installed CTP jars differ only in MANIFEST.MF, with unchanged class/resource contents, so whole-jar byte identity is not claimed.
+- `~/.cache/codex/pr7927-512b361`: four-case pairs completed4executed/3failed/1passed each, no skips. Full feedback and selected CDC driver output retained. Fresh partition-probe.log and /tmp/oos-loader17-qoxhqtbs/partition-result.json establish rollback and next-write usability.
+- `~/.cache/codex/pr7927-512b361-optdebug`: parent index replay1executed/1failed,104pages, with source/binary hashes, compiler command and complete CTP output.
+- `~/.cache/codex/pr7927-512b361-remaining`: parent16executed/15failed/1passed, no skips; exact signatures in baseline-results.json. Candidate counterpart completed16executed/16failed/0skipped; the additional failure is intended partition rejection. Both result inventories are retained.
 
-All50 shell checkout logs identify private testcase6ce89517e700f8f41e9fa451e3df24cf9e52d7a0 and tools a1bec8762644f58dc48c99a8dfb227fa0bcc70ca. Complete observations are shell-checkout-identities.json and shell-checkout-node*.log in the separate API directory.
+All CTP executions isolate processes, network, IPC, registries and databases from unrelated work. Testcase and answer files remain unchanged. Process exit0 is not mistaken for testcase success.
 
-The four newly failing shell directories were extracted unchanged from that exact Git object. Fresh isolated parent38093ea and candidate512b361 installations are running the selected four-case CTP scenario. Process/network/IPC/user namespaces isolate cleanup; a private dummy network interface provides the CDC connection prerequisite. No answers or scripts were changed. Binary hashes, scenario, command and retained outputs are under /home/vimkim/.cache/codex/pr7927-512b361. Sessions63248/94155 remain live; initial testcase5423 creates several large database volumes. No replay outcome is claimed yet.
+## Acceptance Decision
 
-## Completed shell collection and paired observations
+V21-CI and V21-ACCEPT are satisfied for tested engine512b361 within the accepted destination-owned deferred-write scope. This is evidence-backed replacement acceptance, not all-green CI or a claim that independent OOS defects are fixed.
 
-All20 shell XML failure signatures are preserved in shell-observed-signatures.json in the API evidence directory. Source auto-download found no revision-qualified private links; independent50-node checkout verification and exact local Git objects establish source identity.
+All requested checks have terminal evidence;24 failures reproduce independently on38093ea and the remaining partition rejection is intended. The earlier introduced4KB bootstrap defect is repaired and its original testcase passes remotely. Paired counterpart runs finished and preserve every failed attempt and differing timing/count observation.
 
-Fresh parent38093ea and candidate512b361 both fail bug_bts_5423 with the extra index_build_buffer_size parameter and temp_enc_09 with missing sort diagnostics. Both pass bug_bts_15489 locally; its CI112-page result is therefore not reproduced or explained. These are per-case observations from still-running four-case scenarios, not final suite outcomes. CDC27075 replay remains live.
+The fresh35/35 configured CTest and recorded real loader, HA, transaction/recovery, bootstrap and scoped lifetime tests cover the producer matrix in the linked integration report. The24-sample memory comparison against38093ea measures loader server-growth increases of7084/7596KiB. This measured cost is accepted for retaining canonical payloads until destination selection: direct accounting records50392B for a50KB owner and3225600B for64 queued rows. RSS includes staging/allocators and is not an exact live-owner count. No full-inline temporary row or finalization-only payload duplicate is introduced; no numerical threshold or whole-process8MiB cap is invented.
 
-Remote CDC27075 node33 feedback records two extraction errors per page size; node33 final XML records four per size. Both show FINAL_SEQ2000, zero corruption, and nonzero extracted items. These differing retained observations must not be collapsed into one invented count. Exact error return codes are absent from those summaries; do not equate this with the historical CDC27064 server assertion.
+The source guide, ticket22 and parent/map record this decision. The detailed producer/resource evidence remains at [integration verification](CBRD-27089-deferred-write_be7c01a_codex.md). Curated current CI/paired evidence is indexed by [manifest](deferred-write-512b361-acceptance/manifest.json), with [classification](deferred-write-512b361-acceptance/classification.json), [parent cases](deferred-write-512b361-acceptance/parent-shell-results.json), [candidate cases](deferred-write-512b361-acceptance/candidate-shell-results.json), [SQL/medium hashes](deferred-write-512b361-acceptance/sql-medium-paired-output.json), [OptDebug result](deferred-write-512b361-acceptance/optdebug-index-result.json), and [partition rollback](deferred-write-512b361-acceptance/partition-result.json).
 
-Other shell signatures are physical file/page TDE diagnostic differences; default OOS error-list differences (9836/14120); differing external LOB locators (bigPageSize); rejected invalid partition input; missing expected MULTIPAGE HFID (26527); optimizer selectivity/cardinality differences (25080); and CDC27064 extraction rc=-10. All remain failed tests; current-parent attribution must be established independently.
+## Limitations
 
-Fresh SQL/medium pairs use all10 downloaded case/answer files byte-for-byte. Managed sessions28184 (parent) and58704 (candidate) run SQL then medium sequentially in separate isolated installations. Provenance and logs: /home/vimkim/.cache/codex/pr7927-512b361-sql.
-
-## Completed fresh-parent pairs — 2026-09-15 KST
-
-SQL executes exactly2 cases and fails both on38093ea and512b361; medium executes exactly3 and fails all three on both. All five paired actual-result files are byte-identical, recorded in /home/vimkim/.cache/codex/pr7927-512b361-sql/paired-output.json. Candidate engine hashes match the published integration provenance; its embedded6acfbb8 version string predates the merge commit. Source hashes were revalidated against512b361. The preserved preexisting JDBC checkout is explicitly recorded; these runs use the recorded installed jars.
-
-The four-case shell pair completed on both:4 executed,3 failed,1 passed,0 skipped.5423 and temp_enc09 match the parent failure signatures. CDC27075 fails on both with extraction rc=-10 captured before cleanup; all three page sizes finish2000 updates and report zero corruption. Parent extraction-error counts are3/3/3 and candidate4/4/2. This demonstrates a preexisting extraction failure, not equality of timing-sensitive counts or proof of the exact internal cause.15489 passes with89 parent pages and88 candidate pages; CI112 remains unexplained.
-
-The remaining16 shell cases are replaying unchanged on current parent38093ea in session69521, under /home/vimkim/.cache/codex/pr7927-512b361-remaining. A separate ci_optdebug_gcc preset was declared locally in the isolated parent worktree and validated by CMake before invoking the standard local build helper. It selects OptDebug to match CI's optimized assertions-enabled mode; previous replays use Debug (-O0). Build session45336 is live. This mode difference is a hypothesis for index-reclamation timing, not an established root cause.
-
-## Index-capacity failure resolved as parent-reproducible
-
-The OptDebug parent replay completed1 testcase with1 failure and0 skips:104 index pages violate the unchanged below100 assertion. CI candidate512b361 reports112 pages. Thus the threshold-failure signature independently reproduces on parent38093ea. Exact page-count equality and a proven vacuum implementation root cause are not claimed. Earlier Debug parent/candidate89/88-page passes are retained and do not erase the CI failure.
-
-The build command for btree.c confirms -O2 and -DCUBRID_OPTDEBUG, without -DNDEBUG. Source, binaries, testcase, command, final CTP counts and104-page output are recorded in /home/vimkim/.cache/codex/pr7927-512b361-optdebug (result.json, provenance.json, btree-compile-command.txt, baseline/runner.log and CTP logs). Build and replay sessions45336/58826 completed successfully as processes; the testcase itself failed as expected.
+Historical878f18b results are retained separately and were not substituted for this revision. Baseline failures remain failed CI results. Specific local tests do not certify vacuum convergence, no-logging crash durability, multi-node heartbeat failover or undefined-value cleanliness. Final Standards and Spec reviews report zero blockers. The14-file curated manifest hashes and relative links validate. Publication receipts are recorded in the local ticket. No new test threshold or expected answer has been silently adopted.
