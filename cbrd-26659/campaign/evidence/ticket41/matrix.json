@@ -680,5 +680,14 @@
       "hand_maintained": true
     }
   ],
-  "accepted_exclusions": []
+  "accepted_exclusions": [],
+  "withdrawn_claims": [
+    {
+      "requirement": "OOS-REP-07",
+      "cases": [
+        "cbrd_26659_oos_dur01"
+      ],
+      "note": "Ticket 34 finding F2: the case's oracle quoted the OOS-REP-07 statement with two clauses removed -- values are 'inserted tail first', and 'total_data_length excludes every chunk header' -- and neither is assertable at the private shell seam, so a PASS against the full statement was an overclaim. The two PASS rows (att-T14-0026 release, att-T14-0027 debug) were withdrawn and the multi-chunk coverage stays on OOS-DUR-01's own 'including multi-chunk values' clause. inv-T14-0001 and inv-T14-0002 are sealed evidence and still cite OOS-REP-07, so this entry is what keeps them from resurrecting the rows. It names this case only: ticket 18 owns OOS-REP-07 at the public seam (ticket 39 item 3) and its case row is unaffected. Declared under ticket 42; applied by ticket 43."
+    }
+  ]
 }

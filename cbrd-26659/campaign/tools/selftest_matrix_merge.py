@@ -21,10 +21,14 @@ before use. The checks, each one rule the merge must add beyond the schema:
   7. a row carrying `hand_maintained: true` is preserved verbatim even when it names a case
      and a configuration a manifest would otherwise merge into, and no duplicate is created
      beside it (ticket 36 item 6);
-  8. withdrawal and preservation are different rules: a row standing in place of a case row a
-     human removed (`/claim-withdrawn`) stops the row being resurrected, while a merely
-     hand-maintained caseless placeholder does not suppress the requirement's first case row
-     and is still preserved verbatim.
+  8. withdrawal and preservation are different rules (ticket 42): withdrawal is a property of a
+     (case, requirement) pair, declared once at matrix level in `withdrawn_claims`, so the named
+     case never gets a row while ANOTHER case covering the same requirement still does; a merely
+     hand-maintained caseless placeholder suppresses nothing and is preserved verbatim; and no
+     meaning is read from a row id, so an unmatched `/claim-withdrawn` row is a hard error rather
+     than a silent fallback to requirement scope;
+  9. the never-written guard for a hand-maintained matrix-level list keeps a COPY as its baseline,
+     so an in-place edit is visible to it; read live it would compare the list with itself.
 
 Exit 0 when every check holds.
 """
@@ -44,13 +48,14 @@ import matrix_merge  # noqa: E402
 EXAMPLE = SCHEMAS_DIR / "examples" / "valid" / "manifest.example.json"
 
 
-def make_manifest(tmp: Path, mid: str, attempt_id: str, outcome: str, ended: str, evidence="proven") -> Path:
+def make_manifest(tmp: Path, mid: str, attempt_id: str, outcome: str, ended: str, evidence="proven",
+                  case_name="SELFTEST_case") -> Path:
     m = copy.deepcopy(load_json(EXAMPLE))
     m["manifest_id"] = mid
     m["invocation"]["started_at"] = ended
     m["invocation"]["ended_at"] = ended
     c = m["cases"][0]
-    c["case"]["name"] = "SELFTEST_case"
+    c["case"]["name"] = case_name
     c["outcome"] = outcome
     c["skip_reason"] = "SELFTEST skip" if outcome == "SKIP" else None
     c["oos_evidence"]["status"] = evidence
@@ -168,8 +173,10 @@ def main(argv=None) -> int:
     check("7a a hand-maintained case row comes out verbatim", mx7["rows"] == seed7["rows"])
     check("7b no attempt is merged into a hand-maintained row", len(row(mx7)["finding"]["history"]) == 1)
     check("7c and no duplicate row is created beside it", len([r_ for r_ in mx7["rows"] if r_["requirement"] == "OOS-REP-02"]) == 1)
-    # 8. withdrawal and preservation are different rules, and only withdrawal suppresses a row
-    def caseless_seed(row_id, field):
+    # 8. withdrawal and preservation are different rules (ticket 42). Withdrawal is a property of
+    #    a (case, requirement) pair, declared once at matrix level; `hand_maintained` carries
+    #    preservation only; no meaning is read from a row id.
+    def caseless_seed(row_id, field, withdrawn_claims=None):
         """A matrix whose only row is one caseless row: the requirement has no case row."""
         seed = copy.deepcopy(mx2)
         w = copy.deepcopy(caseless)
@@ -179,16 +186,20 @@ def main(argv=None) -> int:
             w["hand_maintained"] = True
         seed["rows"] = [w]
         seed["accepted_exclusions"] = []
+        if withdrawn_claims is not None:
+            seed["withdrawn_claims"] = withdrawn_claims
         return seed
 
+    withdrawn_claims = [{"requirement": "OOS-REP-02", "cases": ["SELFTEST_case"],
+                         "note": "SELFTEST: a human removed this case's claim; ticket 42's shape."}]
     # a manifest of its own: check 6 left a checker-validation record beside att-SELFTEST-02
     m_pass3 = make_manifest(tmp, "inv-SELFTEST-05", "att-SELFTEST-05", "PASS", "2026-09-11T14:00:00+09:00")
-    seed8a = caseless_seed("OOS-REP-02/-/claim-withdrawn", True)
+    seed8a = caseless_seed("OOS-REP-02/-/claim-withdrawn", True, withdrawn_claims)
     write_record(seed8a, "matrix", tmp / "seed-m8a.json")
     mx8a = merge(tmp, [m_pass3], existing=tmp / "seed-m8a.json", out="m8a.json")
-    check("8a a case row a human removed is not resurrected (/claim-withdrawn)",
+    check("8a a case named in withdrawn_claims gets no row for that requirement",
           [r_["row_id"] for r_ in mx8a["rows"]] == ["OOS-REP-02/-/claim-withdrawn"])
-    # the regression this check exists for: a hand-maintained placeholder is NOT a withdrawal.
+    # the regression 8b exists for: a hand-maintained placeholder is NOT a withdrawal.
     # OOS-REP-05/-/- in the campaign's matrix is a row waiting for a case, not refusing one.
     seed8b = caseless_seed("OOS-REP-02/-/SELFTEST-placeholder", True)
     write_record(seed8b, "matrix", tmp / "seed-m8b.json")
@@ -199,6 +210,38 @@ def main(argv=None) -> int:
           and any(r_["case"] is not None for r_ in mx8b["rows"]))
     check("8c and the placeholder itself still comes out verbatim",
           next(r_ for r_ in mx8b["rows"] if r_["case"] is None) == seed8b["rows"][0])
+    # ticket 42's own regression: withdrawal names a CASE, so a DIFFERENT case covering the same
+    # requirement still gets its row. Ticket 18 is that other case for OOS-REP-07, and a
+    # requirement-scoped rule would have dropped its row silently.
+    m_other = make_manifest(tmp, "inv-SELFTEST-06", "att-SELFTEST-06", "PASS", "2026-09-11T15:00:00+09:00",
+                            case_name="SELFTEST_other_case")
+    seed8d = caseless_seed("OOS-REP-02/-/claim-withdrawn", True, withdrawn_claims)
+    write_record(seed8d, "matrix", tmp / "seed-m8d.json")
+    mx8d = merge(tmp, [m_other], existing=tmp / "seed-m8d.json", out="m8d.json")
+    case_rows8d = [r_ for r_ in mx8d["rows"] if r_["case"] is not None]
+    check("8d a DIFFERENT case citing a withdrawn requirement still gets its row",
+          len(case_rows8d) == 1 and case_rows8d[0]["case"]["name"] == "SELFTEST_other_case")
+    check("8e withdrawn_claims comes out verbatim; the tool never writes it",
+          mx8a.get("withdrawn_claims") == withdrawn_claims)
+    # no meaning is read from a row id: an unmatched /claim-withdrawn row is refused outright,
+    # never fallen back on, because the fallback would be requirement scope (ticket 42 item 3).
+    seed8f = caseless_seed("OOS-REP-02/-/claim-withdrawn", True)
+    write_record(seed8f, "matrix", tmp / "seed-m8f.json")
+    rc8f = matrix_merge.main(["--manifest", str(m_pass3), "--existing", str(tmp / "seed-m8f.json"),
+                              "--out", str(tmp / "m8f.json"), "--generated-at", "2026-09-11T23:00:00+09:00"])
+    check("8f a /claim-withdrawn row with no withdrawn_claims entry is refused, not fallen back on",
+          rc8f != 0)
+    # 9. the never-written guard's baseline is a COPY. Read live, it would compare the list with
+    #    itself and could never fire on an in-place edit -- the one thing it exists to catch.
+    #    This shipped once for withdrawn_claims and was caught in review; this is its regression.
+    for key in ("accepted_exclusions", "withdrawn_claims"):
+        probe = {key: [{"SELFTEST": 1}]}
+        present, before = matrix_merge.hand_maintained_list(probe, key)
+        probe[key].append({"SELFTEST": 2})
+        check(f"9  {key}: the guard's baseline is a copy, so an in-place append is visible to it",
+              present is True and len(before) == 1 and probe[key] != before)
+    check("9  an absent hand-maintained list reads as absent, not as an empty one to be written",
+          matrix_merge.hand_maintained_list({}, "withdrawn_claims") == (False, []))
     print(f"[selftest_matrix_merge] {len(fails)} failing check(s); files under {tmp}")
     return 1 if fails else 0
 

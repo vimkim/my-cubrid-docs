@@ -20,13 +20,20 @@ Rules encoded (sources in brackets):
   field replaces recognition by row id FOR PRESERVATION, which is what ticket 36 decided: it
   says a human owns THIS row. A caseless row (`case: null`) is preserved whether or not it
   carries the field, because no manifest produces one.
-* Withdrawal is a different rule and still has its own marker. A caseless row whose id ends
-  `/claim-withdrawn` stands in place of a case row a human REMOVED (ticket 34, `OOS-REP-07`),
-  so a manifest that still cites the requirement must not create one. `hand_maintained` cannot
-  carry this: ticket 13's four caseless rows are hand-owned too, and `OOS-REP-05/-/-` is a
-  plain "no case written yet" placeholder whose first real case row must not be suppressed.
-  Giving withdrawal a field of its own is a new design choice, so it is not settled here; see
-  the decision request in the ticket 41 record.
+* Withdrawal is a different rule with a home of its own: the matrix-level `withdrawn_claims`
+  list, hand-maintained and never written here, exactly as `accepted_exclusions` is [ticket 42].
+  An entry says a named CASE no longer claims a named requirement, so no manifest creates a row
+  for that (requirement, case) pair however the manifest still reads -- `inv-T14-0001` and
+  `inv-T14-0002` are sealed evidence and cite `OOS-REP-07` forever. Withdrawal is scoped to
+  cases because that is what the fact is about: `cbrd_26659_oos_dur01` does not claim
+  `OOS-REP-07`, which says nothing about any other case. A requirement-scoped rule would drop
+  the `OOS-REP-07` case row ticket 39 item 3 requires of ticket 18, so a different case citing
+  the requirement still gets its row. `hand_maintained` carries preservation only: ticket 13's
+  four caseless rows are hand-owned too, and `OOS-REP-05/-/-` is a plain "no case written yet"
+  placeholder whose first real case row must not be suppressed.
+* No meaning is read from a row id anywhere [ticket 42, completing ticket 36 item 6]. A row
+  whose id ends `/claim-withdrawn` with no matching `withdrawn_claims` entry is REFUSED, not
+  fallen back on: the fallback would be requirement scope, which is the defect above.
 * `flakiness`, `known_issue` and `attribution` are preserved on existing rows; the tool only
   updates the counts it can measure (attempts, failures, intermittent) and never touches
   `consecutive_fresh_fixture_reproductions`, `deterministic_claim`, `known_issue` or
@@ -63,6 +70,16 @@ from campaign_records import (  # noqa: E402
     RecordError, catalogue_identity, docs_relative, load_json, now_iso, requirement, row_configuration_suffix,
     sha256_prefixed, write_record,
 )
+
+
+def hand_maintained_list(matrix, key):
+    """A matrix-level list a human owns: `accepted_exclusions`, `withdrawn_claims`.
+
+    Returns (present, copy). The copy is what the never-written guard compares against at the end
+    of the merge. Reading the live list instead would compare the object with itself, so the guard
+    could never fire on an in-place edit -- which is the one thing it exists to catch.
+    """
+    return key in matrix, list(matrix.get(key, []))
 
 
 def row_key(req, case_name, cfg):
@@ -202,7 +219,6 @@ def merge(args) -> int:
     rows_by_key = {}
     preserved = []
     hand_keys = set()      # hand-maintained rows that do name a case and a configuration
-    withdrawn = set()      # requirements whose case row a human removed; never resurrected
     for row in matrix["rows"]:
         if is_hand_maintained(row):
             preserved.append(row)  # verbatim: never regenerated, never merged into
@@ -210,14 +226,25 @@ def merge(args) -> int:
                 hand_keys.add(row_key(row["requirement"], row["case"]["name"], row["configuration"]))
             continue
         rows_by_key[row_key(row["requirement"], row["case"]["name"], row["configuration"])] = row
-    exclusions_before = list(matrix.get("accepted_exclusions", []))
-    # Withdrawal, not preservation. `hand_maintained` says a human owns a row; it does NOT say the
-    # requirement's coverage was withdrawn. Reading it that way would suppress the first real case
-    # row of every caseless placeholder -- OOS-REP-05/-/- among them, which is waiting for a case,
-    # not refusing one. Only a row standing in place of a case row a human removed carries the
-    # rule, and `/claim-withdrawn` is still the only marker that says so.
-    withdrawn = {row["requirement"] for row in preserved
-                 if str(row.get("row_id", "")).endswith("/claim-withdrawn")}
+    exclusions_present, exclusions_before = hand_maintained_list(matrix, "accepted_exclusions")
+    withdrawn_present, withdrawn_before = hand_maintained_list(matrix, "withdrawn_claims")
+    # Withdrawal, not preservation, and scoped to the cases the claim was withdrawn from
+    # (ticket 42). `hand_maintained` says a human owns THIS row; it does not say a claim was
+    # withdrawn, and reading it that way suppressed the first real case row of every caseless
+    # placeholder -- OOS-REP-05/-/- among them, which is waiting for a case, not refusing one.
+    withdrawn_pairs = {(entry["requirement"], case)
+                       for entry in withdrawn_before for case in entry["cases"]}
+    # A row id is not a marker. A `/claim-withdrawn` row with no entry behind it would otherwise
+    # fall back to the requirement-scoped rule this replaces, so it is refused instead. The row is
+    # caseless, so its requirement is the only key an entry can be matched on; the pair set is not
+    # consulted here, because re-deriving requirement scope from it is the defect being removed.
+    for row in preserved:
+        if str(row.get("row_id", "")).endswith("/claim-withdrawn") and \
+                not any(entry["requirement"] == row["requirement"] for entry in withdrawn_before):
+            raise RecordError(
+                f"row {row['row_id']} reads as a withdrawal but no withdrawn_claims entry names "
+                f"{row['requirement']}; withdrawal is declared at matrix level and names the cases "
+                f"it was withdrawn from (ticket 42), and a row id is never read as a marker")
     merged_attempts = 0
     for mpath in sorted(args.manifest):
         mpath = Path(mpath)
@@ -242,10 +269,10 @@ def merge(args) -> int:
                         break
                 att_rel = docs_relative(att_path) if att_path else attempt["attempt_record"]
                 for req_id in case_entry["requirements"]:
-                    if req_id in withdrawn and not any(k[0] == req_id for k in rows_by_key):
-                        print(f"[matrix_merge] {manifest['manifest_id']}: {case_entry['case']['name']} cites {req_id}, whose claim was "
-                              f"withdrawn from its case ({req_id}/-/claim-withdrawn) and which has no case row; no case row is created "
-                              f"for it")
+                    if (req_id, case_entry["case"]["name"]) in withdrawn_pairs:
+                        print(f"[matrix_merge] {manifest['manifest_id']}: {case_entry['case']['name']} cites {req_id}, whose claim a "
+                              f"human withdrew from this case (withdrawn_claims); no row is created for the pair. Another case "
+                              f"citing {req_id} is unaffected")
                         continue
                     cfg = {"page_size": manifest["invocation"]["page_size"], "build_mode": manifest["invocation"]["build_mode"],
                            "run_mode": manifest["invocation"]["run_mode"],
@@ -275,14 +302,18 @@ def merge(args) -> int:
         if k not in seen:
             ordered.append(row)
     matrix["rows"] = ordered
-    if matrix.get("accepted_exclusions", []) != exclusions_before:
-        raise RecordError("accepted_exclusions changed during the merge; the tool must never write them")
-    matrix["accepted_exclusions"] = exclusions_before
+    for key, present, before in (("accepted_exclusions", exclusions_present, exclusions_before),
+                                 ("withdrawn_claims", withdrawn_present, withdrawn_before)):
+        if matrix.get(key, []) != before:
+            raise RecordError(f"{key} changed during the merge; the tool must never write them")
+        if present:
+            matrix[key] = before
     matrix["generated_at"] = args.generated_at or now_iso()
     write_record(matrix, "matrix", args.out)
     print(f"[matrix_merge] merged {merged_attempts} attempt(s) from {len(args.manifest)} manifest(s); "
           f"{len(ordered) - len(preserved)} case row(s), {len(preserved)} hand-maintained row(s) preserved verbatim, "
-          f"{len(exclusions_before)} accepted exclusion(s) preserved; wrote {args.out}")
+          f"{len(exclusions_before)} accepted exclusion(s) and {len(withdrawn_before)} withdrawn claim(s) "
+          f"preserved; wrote {args.out}")
     return 0
 
 

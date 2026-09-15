@@ -16,7 +16,8 @@
       "properties": {"path": {"type": "string"}, "hash": {"$ref": "#/$defs/sha256"}}
     },
     "rows": {"type": "array", "items": {"$ref": "#/$defs/row"}},
-    "accepted_exclusions": {"type": "array", "items": {"$ref": "#/$defs/accepted_exclusion"}}
+    "accepted_exclusions": {"type": "array", "items": {"$ref": "#/$defs/accepted_exclusion"}},
+    "withdrawn_claims": {"type": "array", "default": [], "items": {"$ref": "#/$defs/withdrawn_claim"}, "description": "Optional, default []. Hand-maintained and never written by tooling, exactly as accepted_exclusions is. Each entry says that a named case no longer claims a named requirement, so the merge creates no row for that pair (ticket 42)."}
   },
   "$defs": {
     "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
@@ -149,7 +150,7 @@
       "required": ["row_id", "requirement", "family", "case", "configuration", "run", "oos_evidence", "finding", "flakiness", "known_issue", "attribution", "attempt_records"],
       "properties": {
         "row_id": {"type": "string"},
-        "hand_maintained": {"const": true, "description": "Optional. Present and true on a row a human wrote and owns: tooling preserves it verbatim and never regenerates or resurrects it. It covers a withdrawn claim and every other caseless row, and replaces recognition by row id, which encoded meaning in a string (ticket 36 item 6)."},
+        "hand_maintained": {"const": true, "description": "Optional. Present and true on a row a human wrote and owns: tooling preserves it verbatim and never regenerates or resurrects it. It carries PRESERVATION only and covers every caseless row (ticket 36 item 6). It does not say a claim was withdrawn: that is a property of a (case, requirement) pair and is declared in withdrawn_claims (ticket 42)."},
         "requirement": {"$ref": "#/$defs/requirement_id"},
         "family": {"enum": ["Representation", "SQL operations", "Read paths", "Schema and utilities", "Concurrent lifetime", "Durability", "Operational features", "Resource pressure"]},
         "case": {"anyOf": [{"$ref": "#/$defs/case_identity"}, {"type": "null"}], "description": "Null when no case exists yet for the requirement (Delivery gap row)."},
@@ -166,6 +167,17 @@
         {"if": {"properties": {"flakiness": {"properties": {"deterministic_claim": {"const": true}}, "required": ["deterministic_claim"]}}, "required": ["flakiness"]}, "then": {"properties": {"flakiness": {"properties": {"consecutive_fresh_fixture_reproductions": {"minimum": 3}}}}}},
         {"if": {"properties": {"attribution": {"properties": {"target": {"const": "engine"}}, "required": ["target"]}}, "required": ["attribution"]}, "then": {"properties": {"attribution": {"properties": {"evidence": {"type": "string", "minLength": 1}}}}}}
       ]
+    },
+    "withdrawn_claim": {
+      "type": "object",
+      "description": "A named case no longer claims a named requirement: a human removed the claim, so no manifest may create a row for that (requirement, case) pair, however the manifest still reads. Withdrawal is scoped to cases, never to a requirement and never to a configuration: another case covering the same requirement gets its row as usual (ticket 42). Hand-maintained; tooling preserves entries verbatim and never writes one.",
+      "additionalProperties": false,
+      "required": ["requirement", "cases", "note"],
+      "properties": {
+        "requirement": {"$ref": "#/$defs/requirement_id"},
+        "cases": {"type": "array", "minItems": 1, "items": {"type": "string"}, "description": "Case names the claim was withdrawn from."},
+        "note": {"type": "string", "minLength": 1, "description": "Why the claim was withdrawn, and where it is recorded."}
+      }
     },
     "accepted_exclusion": {
       "type": "object",

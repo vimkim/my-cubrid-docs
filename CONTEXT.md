@@ -98,6 +98,10 @@ _Avoid_: Artifacts, logs, dump, evidence folder
 A dated coverage-matrix entry by which the user, and only the user, removes a requirement or scope from the coverage the campaign still owes.
 _Avoid_: Skip, waiver, deferral, exemption
 
+**Withdrawn claim**:
+A named case no longer claims a named requirement, because a human removed the claim; the coverage matrix creates no row for that pair, however the case's own records still read. Scoped to cases, never to a requirement: another case covering the same requirement is unaffected. Distinct from an accepted exclusion, which the user alone writes and which drops coverage the campaign owes, and from a hand-maintained row, which is only a row tooling must preserve verbatim.
+_Avoid_: Dropped requirement, removed coverage, waiver
+
 **Flagged promotion**:
 An answer promotion whose case touches a Specification gap or an observed-versus-normative disagreement, requiring the user's sign-off.
 _Avoid_: Review, approval, sign-off (for unflagged promotions)
