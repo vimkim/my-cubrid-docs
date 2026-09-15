@@ -239,20 +239,30 @@ kind needs no flag to survive, which the re-merge check demonstrates.
 
 ## 9. Timing and budget (for ticket 17)
 
+Two different quantities are easy to confuse here, so both are given. `elapsed_seconds` in
+`timing.txt` is the CTP launcher alone — the number ticket 13 reported as 39 s and ticket 15 as
+44 s. `started_at` to `ended_at` is the whole invocation, which also contains the paired
+activation checks, one per case.
+
 | Quantity | Value |
 |---|---|
-| **Fast-tier invocation, nine cases** | **40 s** wall clock (41, 40, 40, 40, 42, 41 across six invocations) |
-| Ticket 13's invocation, one case | 39 s |
+| **CTP launcher, nine cases** | **40 s** (`elapsed_seconds` 41, 40, 40, 40, 42, 41 across six invocations) |
+| Ticket 13's launcher, one case | 39 s; ticket 15's, one case, 44 s |
 | **All nine cases' execution** | **1,099 ms** total (`summary.info` `totalTime`; the SQL runner reports no per-case time, only this total) |
-| Paired activation checks | ~8 s each, nine per invocation, ~75 s; they dominate the wall clock above the launcher |
-| Invocation cap | 900 s — not approached |
-| Per-case cap | 120 s — not approached; the whole suite is under 1.1 s |
+| Whole invocation, `started_at` to `ended_at` | **114 s** for the green release run (16:54:06 → 16:56:00) |
+| Of which the nine paired activation checks | ~74 s, about 8 s each — each one creates a database and starts and stops a server. They, not the launcher, are what grows with the case count |
+| Invocation cap | 900 s — the cap applies to the launcher (40 s), and the whole invocation is still well inside it |
+| Per-case cap | 120 s — not approached; the whole suite executes in under 1.1 s |
 | Storage | 3.4 GiB for ticket 19; campaign total 46.3 of 100 GiB |
 
-**This is the number ticket 17 needs.** Ticket 13 measured 39 s for one case and inferred the
-cost was per-invocation. Nine cases now measure 40 s, of which the cases themselves are 1.1 s.
-The public suite should be one invocation, and there is room for roughly two orders of magnitude
-more case time before the fast tier's 15-minute cap is a constraint.
+**This is the number ticket 17 needs.** Ticket 13 measured 39 s of launcher time for one case
+and inferred the cost was per-invocation. Nine cases now measure 40 s of launcher time, of which
+the cases themselves are 1.1 s — so the launcher's cost really is fixed, and the public suite
+should be one invocation. The quantity that does scale with the case count is the paired
+activation checks at about 8 s each, because each creates its own database and starts and stops
+its own server; at nine cases they are already twice the launcher. If tickets 20 to 22 bring the
+public suite to several dozen cases, batching the checks into fewer databases is the change that
+matters, not splitting the CTP run.
 
 ## 10. Ticket 19 criteria checklist
 
