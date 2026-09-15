@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "bundle_id": "bundle-att-T19-0074",
+  "attempt_id": "att-T19-0074",
+  "created_at": "2026-09-15T17:23:21+09:00",
+  "root_path": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0008",
+  "total_bytes": 351629,
+  "complete": true,
+  "items": {
+    "workload": {
+      "state": "present",
+      "path": "workload/cbrd_26659_oos_sql02_mixed_chunks.sql",
+      "hash": "sha256:a00777fe22bbdce12059c3cac7fb7077714a9dc67b7def95bd3a410a36ab2ab8",
+      "note": "the case file as executed (testcase commit 94bb3cb5a)"
+    },
+    "seed_and_generator_version": {
+      "state": "not-applicable",
+      "path": null,
+      "hash": null,
+      "note": "fixed deterministic workload; no generator and no seed"
+    },
+    "session_and_barrier_trace": {
+      "state": "not-applicable",
+      "path": null,
+      "hash": null,
+      "note": "single-session SQL case: no barrier to acknowledge"
+    },
+    "injection_acknowledgements": {
+      "state": "not-applicable",
+      "path": null,
+      "hash": null,
+      "note": "unmodified engine, no fault armed"
+    },
+    "engine_identity": {
+      "state": "present",
+      "path": "identity.txt",
+      "hash": "sha256:043e0814e74ff504e59639b89809d1905fd3009a7d6c4cb3c95cf29352aac899",
+      "note": "baseline commit, install prefix, cubrid_rel, library sha256 values verified against ticket 11 before the launcher started"
+    },
+    "testcase_identity": {
+      "state": "present",
+      "path": "identity.txt",
+      "hash": "sha256:043e0814e74ff504e59639b89809d1905fd3009a7d6c4cb3c95cf29352aac899",
+      "note": "repository testcases, branch, commit 94bb3cb5a, base commit b94995abf"
+    },
+    "specification_identity": {
+      "state": "present",
+      "path": "identity.txt",
+      "hash": "sha256:043e0814e74ff504e59639b89809d1905fd3009a7d6c4cb3c95cf29352aac899",
+      "note": "context revision and content hash, catalogue hash"
+    },
+    "build_and_configuration_identity": {
+      "state": "present",
+      "path": "sql_inv-T19-0008.conf",
+      "hash": "sha256:62388d24adada34be59ddf0ba90a75b215e303ec1372fd892eec5b95a70f5e57",
+      "note": "the CTP SQL configuration used (createdb options set the 16384 B page size; ports); release build, client-server"
+    },
+    "instrumentation_identity": {
+      "state": "not-applicable",
+      "path": null,
+      "hash": null,
+      "note": "unmodified engine; no instrumentation worktree"
+    },
+    "fixture_identity": {
+      "state": "present",
+      "path": "identity.txt",
+      "hash": "sha256:043e0814e74ff504e59639b89809d1905fd3009a7d6c4cb3c95cf29352aac899",
+      "note": "CTP database `basic` created with --db-volume-size=128M --log-volume-size=64M --db-page-size=16384 --log-page-size=16384 under the campaign-private CUBRID_DATABASES named in identity.txt"
+    },
+    "expected_versus_actual": {
+      "state": "present",
+      "path": "expected_vs_actual_cbrd_26659_oos_sql02_mixed_chunks.diff",
+      "hash": "sha256:51874795d43c6082cde8aa97c670ff6d8f16106c5381f4d7e79e460c151ddfee",
+      "note": "answer versus result: MATCH; expected.answer and the retained result file sit beside it"
+    },
+    "logs": {
+      "state": "present",
+      "path": "ctp.log",
+      "hash": "sha256:bd16e67abdabf335195fbdf5d6ef602c4e5ff72cb44df9d198ecc62e328aa76a",
+      "note": "the launcher transcript (setup, discovery, execution, do_clean); ctp_result/ holds main.info and summary.info"
+    },
+    "cores": {
+      "state": "not-applicable",
+      "path": null,
+      "hash": null,
+      "note": "no core file: the launcher's core scan found none (it proceeded to do_clean)"
+    },
+    "replay_command_with_prerequisites": {
+      "state": "present",
+      "path": "replay.sh",
+      "hash": "sha256:4076dc9517159ab8b1a8648e3d318779def7e33e943f3ef76af8533606f240ec",
+      "note": "the replay command and the prerequisites it does not create (pinned install with the JDBC client artifact, CTP, the testcase worktree at the recorded commit, free campaign ports, unprivileged user namespaces)"
+    }
+  },
+  "uncommitted_snapshots": [
+    {
+      "what": "OOS-CONTEXT.md at the pinned content hash (uncommitted in the context repository at pin time, ticket 11 section 3)",
+      "path": "cbrd-26659/campaign/ticket11-evidence/normative-snapshot/OOS-CONTEXT.md",
+      "hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
+    }
+  ],
+  "retention": {
+    "class": "success-bulky",
+    "expires_on": "2026-09-22",
+    "hold_reason": null
+  },
+  "minimization": null
+}

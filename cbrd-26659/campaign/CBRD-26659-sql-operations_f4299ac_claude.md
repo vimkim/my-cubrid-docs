@@ -4,9 +4,10 @@
 > without the unit-test seams by ticket 41 (`release_gcc_nounit`, `debug_gcc_nounit`); normative
 > context `f6543de` + sha256 `c9daf3c4…`; requirement catalogue sha256 `0cc33c82…` (ticket 12).
 > Author: Claude Opus 5, for the [Adversarial OOS testcase campaign](/home/vimkim/gh/cb/CBRD-26659-oos-testcases-handover/.scratch/oos-adversarial/spec.md) ticket 19.
-> Records: [`evidence/ticket19/`](evidence/ticket19/) — five manifests, 46 attempt records, 46
+> Records: [`evidence/ticket19/`](evidence/ticket19/) — nine manifests, 83 attempt records, 83
 > replay-bundle indexes, the coverage matrix, the pre-run oracle, the derivation and its
 > self-test, the candidate review and its control, and the eight activation specs.
+> Revision 2 (2026-09-15) closes the two-axis review of revision 1; §12 lists every change.
 > Companions: [engine baseline](CBRD-26659-engine-baseline_f4299ac_claude.md),
 > [requirement catalogue](CBRD-26659-requirement-catalogue_f4299ac_claude.md),
 > [traceability schemas](CBRD-26659-traceability-schemas_f4299ac_claude.md),
@@ -20,8 +21,8 @@ Vocabulary follows the [docs glossary](../../CONTEXT.md).
 | Item | Where |
 |---|---|
 | Eight new public SQL cases | `sql/_36_guava/cbrd_26659/cases/` on `CBRD-26659-oos-testcases-handover` |
-| Reviewed answers | the matching `answers/` directory, promoted by rename from `inv-T19-0003` |
-| Testcase commits (local only, nothing pushed) | `4a2590f36` → `38128e190` → `5c6c1264a` → `0eb64fc87`; base `b94995abf` (the verified `origin/develop` tip ticket 13 branched from) |
+| Reviewed answers | the matching `answers/` directory, promoted by rename from `inv-T19-0003` (the update case re-promoted from `inv-T19-0008` after its relabelling) |
+| Testcase commits (local only, nothing pushed) | `4a2590f36` → `38128e190` → `5c6c1264a` → `0eb64fc87` → `94bb3cb5a` → `35c815943`; base `b94995abf` (the verified `origin/develop` tip ticket 13 branched from) |
 | Fixture derivation and its self-test | [`evidence/ticket19/derive_ticket19_sizes.py`](evidence/ticket19/derive_ticket19_sizes.py) |
 | Case generator | [`evidence/ticket19/gen_ticket19_cases.py`](evidence/ticket19/gen_ticket19_cases.py) |
 | Pre-run oracle | [`evidence/ticket19/expected-oracle.md`](evidence/ticket19/expected-oracle.md) |
@@ -94,6 +95,11 @@ Six invocations, all on the re-pinned build, 16 KiB pages, client-server, under
 | `inv-T19-0004` | release | green run with the promoted answers | **9 of 9 PASS**, proof `proven`, 0 mismatches |
 | `inv-T19-0005` | debug | paired debug run | **9 of 9 PASS**, same answers, proof `proven` |
 | `inv-T19-C001` | release | negative control, two planted defects | **FAIL, as a control must** (§7) |
+| `inv-T19-0006` | release | after adding the bulk-1000 activation phase | **9 of 9 PASS**; 1,000 chunks and 4,169,540 observed, matching the derivation |
+| `inv-T19-0008` | release | bootstrap after the review's case changes | **8 of 9 PASS** against the unchanged answers, 1 FAIL — the update case, whose step label changed. The eight byte-identical answers are what prove the lower-casing altered no value |
+| `inv-T19-0009` | release | final green run, promotions recorded | **9 of 9 PASS**, proof `proven` |
+| `inv-T19-0010` | debug | final paired debug run | **9 of 9 PASS**, proof `proven` |
+| `inv-T19-C002` | release | the control re-run from the portable declaration | **FAIL, as a control must** |
 
 Every new case was bootstrapped with an empty `.answer`, which is what makes CTP execute it and
 write a candidate rather than skipping it and still exiting 0 (ticket 13 finding a).
@@ -102,9 +108,23 @@ write a candidate rather than skipping it and still exiting 0 (ticket 13 finding
 1,190 (length, digest) pairs the derivation computes in Python without the engine, requires
 every `*_ok` equality flag to be 1, requires each digest to agree with *its own* length column,
 requires the aggregate totals and row counts the oracle names, and allows only the three error
-identities derived from the engine's message catalogue before it ran. All eight promotions are
-**unflagged**: every requirement they cite is `assertable` with policy `assert`, and no fixture
-lies in a band where the two accountings disagree. The rename is proven mechanically — each
+identities derived from the engine's message catalogue before it ran. **Two of the eight promotions are flagged for the user's sign-off**, which the specification
+requires of "every answer promotion whose case touches a Specification gap or an
+observed-versus-normative disagreement":
+
+- `cbrd_26659_oos_sql06_triggers` — this is the case finding T19-F1 came out of, and its sixth
+  group deliberately exercises the deviating path, where the pin contradicts OOS-REP-02's
+  normative record gate.
+- `cbrd_26659_oos_sql02_update` — its third group is the inline-attribute-only UPDATE, exactly
+  where the pin (a fresh chain per record version, OOS-SQL-03) and the accepted CBRD-27230
+  design (OOS-SQL-04, withheld) disagree, and its activation spec is the matrix's cited
+  observation source for OOS-SQL-03.
+
+Neither answer encodes the disagreement — both assert values only, which hold under either
+reading — but the rule is about the case, not the answer. **These two promotions are not
+accepted until the user signs off.** The other six are unflagged: every requirement they cite is
+`assertable` with policy `assert`, and no fixture lies in a band where the two accountings
+disagree. The rename is proven mechanically — each
 promoted answer hashes identically to its retained candidate, and `ctp_sql_records.py` appends
 that proof to the review note.
 
@@ -141,9 +161,25 @@ settled at the pin, and the spec states the expected value beside it. Two kinds 
   asserting a count right after a DELETE would assert a race rather than the requirement.
 
 What the checks do assert, all derived and all confirmed: one chunk and `Oos_recs_sumlen` 4,224
-for the 4,200 B fixture row; **100 chunks and 457,600** for the bulk-100 group; **three chunks
-and 23,564** for the reused workload's first row, which is where its multi-chunk topology stops
-being an inference; and one chunk and 4,224 on the mirror table the trigger writes.
+for the 4,200 B fixture row; **100 chunks and 457,600** for the bulk-100 group and **1,000
+chunks and 4,169,540** for the bulk-1000 group; **three chunks and 23,564** for the reused
+workload's first row, which is where its multi-chunk topology stops being an inference; and one
+chunk and 4,224 on the mirror table the trigger writes.
+
+**Evidence follows the execution path, not the case.** Finding T19-F1 is precisely a path that
+skips the record gate, so a phase that proves `INSERT … VALUES` demotes proves nothing about the
+other paths a case uses. Four more phases were added for that reason, each on its own table so
+its chunk count is unambiguous rather than mixed with the dead chains of earlier steps:
+
+| Phase | Path it proves runs the gate | Asserts |
+|---|---|---|
+| `sql01/copy` | `INSERT … SELECT` between tables | 100 chunks, 457,600 |
+| `rep06/copy` | `INSERT … SELECT` carrying five LOB locators | 1 chunk, 4,224 |
+| `sql02/subquery_update` | UPDATE whose value is a subquery over another table | 1 chunk, 4,624 |
+| `sql02/join_update` | multi-table UPDATE | 1 chunk, 4,624 |
+
+Each of the last two starts from an inline row on a fresh table, so the single chunk afterwards
+is the one that write created.
 
 Each check also runs `checkdb -S` on the database it built. **All eighteen exited 0** — nine on
 the release build and nine on the debug build, the latter being the one that would abort on a
@@ -209,9 +245,15 @@ is a hazard for every ticket that writes a commented case file**, not only this 
 
 | Control | Mechanism under test | Planted defect | Result |
 |---|---|---|---|
-| `inv-T19-C001` (a) | the CTP comparison | one hex digit of the multi-chunk value's digest in the answer | case reported FAIL; attempt `FAIL`, which is what a `checker-validation` attempt must be |
-| `inv-T19-C001` (b) | `activation_check_spec.sh` | `Oos_recs_sumlen` for row 1 set to 23,565 instead of 23,564 | `RESULT: activation NOT proven -- 1 assertion(s) failed`; evidence recorded `missing` |
+| `inv-T19-C001`/`C002` (a) | the CTP comparison | one hex digit of the multi-chunk value's digest in the answer | case reported FAIL; attempt `FAIL`, which is what a `checker-validation` attempt must be |
+| `inv-T19-C001`/`C002` (b) | `activation_check_spec.sh` | `Oos_recs_sumlen` for row 1 set to 23,565 instead of 23,564 | `RESULT: activation NOT proven -- 1 assertion(s) failed`; evidence recorded `missing` |
 | C2 (local) | `review_candidates.py` | one `tag_ok` flag flipped to 0; one hex digit of a digest changed | both reported; `RESULT: 2 problem(s)` |
+
+The control is reproducible from a clone: `evidence/ticket19/make_control_c1.sh` builds the
+planted scenario by reading the promoted answer and flipping the last hex digit of the digest it
+finds under the `multi1_md5` column — located by column name, so a later re-promotion cannot
+turn the control into a no-op — and the planted spec is checked in beside it. The script only
+ever reads from the testcase repository.
 
 The control attempt gets no manifest and never reaches the matrix, per the record contract.
 Its bundle is `success-bulky` because a checker-validation attempt that FAILs is the checker
@@ -243,7 +285,37 @@ and `evidence/ticket19/apply_matrix_scoping.py` records it as code rather than a
 ticket 19's two invocations and silently drop every later run of the same case; a hand-set gap
 kind needs no flag to survive, which the re-merge check demonstrates.
 
-## 9. Timing and budget (for ticket 17)
+## 9. Factors covered, and what is excluded
+
+The specification asks that "selected factors, feasible combinations and exclusions are listed
+so the claim is auditable". For this family:
+
+| Factor | Levels covered |
+|---|---|
+| operation | INSERT, INSERT … SELECT, UPDATE (direct, subquery, join), DELETE (by key, by OOS-column predicate, all), TRUNCATE, ROLLBACK, savepoint rollback, statement failure |
+| row count per statement | 1, 3, 100, 1,000 |
+| value size | 3,000 B inline comparator; 4,100–5,000 B single chunk; 20,000–22,000 B two chunks |
+| column shape | one demoted column beside one inline eligible column; two demoted beside one inline (reused workload); five LOB locators beside a demoted column |
+| build mode | release and debug, every case, every invocation |
+| page size | 16 KiB only |
+| run mode | client-server only |
+
+Excluded, each for a stated reason rather than by omission:
+
+- **Prepared statements with host variables** (an attack dimension of OOS-SQL-01 and OOS-SQL-02).
+  A CTP SQL case is a file of statements; the runner exposes no way to bind host variables, so
+  the seam cannot express it. It belongs to the private shell seam, where a client program can
+  be written. **Not covered anywhere in the campaign yet.**
+- **4 and 8 KiB pages.** The fast tier is 16 KiB by the budget decision; ticket 11 left
+  client-server at 4 and 8 KiB to ticket 17.
+- **Standalone mode.** OOS-SQL-05's physical clause is explicitly mode-dependent, and the public
+  suite runs client-server only.
+- **More than five LOB locator columns.** The ticket asks for "many locator columns"; four BLOBs
+  and one CLOB is what these cases carry. A record built from ten or more locators and nothing
+  else is the fixture that would make a locator the largest candidate, and that is the
+  OOS-REP-06 locator-demotion row's work, which §8 assigns to ticket 18.
+
+## 10. Timing and budget (for ticket 17)
 
 Two different quantities are easy to confuse here, so both are given. `elapsed_seconds` in
 `timing.txt` is the CTP launcher alone — the number ticket 13 reported as 39 s and ticket 15 as
@@ -252,14 +324,14 @@ activation checks, one per case.
 
 | Quantity | Value |
 |---|---|
-| **CTP launcher, nine cases** | **40 s** (`elapsed_seconds` 41, 40, 40, 40, 42, 41 across six invocations) |
+| **CTP launcher, nine cases** | **40–55 s** (`elapsed_seconds` 41, 40, 40, 40, 42, 41, 41, 55, 42 across nine invocations; the 55 is the one run that shared the host with another build) |
 | Ticket 13's launcher, one case | 39 s; ticket 15's, one case, 44 s |
 | **All nine cases' execution** | **1,099 ms** total (`summary.info` `totalTime`; the SQL runner reports no per-case time, only this total) |
-| Whole invocation, `started_at` to `ended_at` | **114 s** for the green release run (16:54:06 → 16:56:00) |
-| Of which the nine paired activation checks | ~74 s, about 8 s each — each one creates a database and starts and stops a server. They, not the launcher, are what grows with the case count |
+| Whole invocation, `started_at` to `ended_at` | **114 s** for the first green release run; **137 s** for the final one, which added four activation phases (17:24:00 → 17:26:17) |
+| Of which the nine paired activation checks | ~74 s initially and ~82 s at the end, about 8–9 s each — each one creates a database and starts and stops a server. They, not the launcher, are what grows with the case count |
 | Invocation cap | 900 s — the cap applies to the launcher (40 s), and the whole invocation is still well inside it |
 | Per-case cap | 120 s — not approached; the whole suite executes in under 1.1 s |
-| Storage | 3.4 GiB for ticket 19; campaign total 46.3 of 100 GiB |
+| Storage | 3.4 GiB for ticket 19; campaign total 36 of 100 GiB |
 
 **This is the number ticket 17 needs.** Ticket 13 measured 39 s of launcher time for one case
 and inferred the cost was per-invocation. Nine cases now measure 40 s of launcher time, of which
@@ -270,7 +342,7 @@ its own server; at nine cases they are already twice the launcher. If tickets 20
 public suite to several dozen cases, batching the checks into fewer databases is the change that
 matters, not splitting the CTP run.
 
-## 10. Ticket 19 criteria checklist
+## 11. Ticket 19 criteria checklist
 
 | Criterion | Status |
 |---|---|
@@ -282,11 +354,15 @@ matters, not splitting the CTP run.
 | Inline comparators; activation evidence per case; negative controls for new mechanisms | met (§4, §7) |
 | Promotions reviewed; manifest and matrix updated through the tooling; each case under two minutes; committed locally only | met (§3, §8, §9); nothing pushed |
 
-## 11. Open items and hand-offs
+## 12. Open items and hand-offs
 
+- **The user's sign-off is owed on two promotions**, `cbrd_26659_oos_sql06_triggers` and
+  `cbrd_26659_oos_sql02_update` (§3). Until it is given, those two answers are promoted in the
+  repository but not accepted by the campaign.
 - **The specification's independent agent review is owed.** The acceptance decision requires a
-  session that authored none of these artifacts to review them. It has not happened; the
-  promotion reviewer field says so.
+  session that authored none of these artifacts to review them. A two-axis review was
+  commissioned by the authoring session and its findings are closed in §13; that is not the
+  review the specification requires, and the promotion reviewer field says so.
 - **Three decisions this ticket made that the review should look at.** (1) The bootstrap
   invocations `inv-T19-0001..0003` executed the cases and their FAIL outcomes were **not merged
   into the matrix**: an empty answer is the mechanism by which a candidate is produced, not a
@@ -304,3 +380,38 @@ matters, not splitting the CTP run.
 - **The engine team**: finding T19-F1 (§5). Repair is out of the campaign's scope; the row keeps
   it visible.
 - **Ticket 17**: §9.
+
+## 13. Revision 2 — closing the commissioned two-axis review (2026-09-15)
+
+A Standards and a Spec review were commissioned by the authoring session over revision 1. They
+are not the specification's independent review (§12), but their findings were real and are
+closed here.
+
+| # | Axis | Finding | Resolution |
+|---|---|---|---|
+| S1 | Spec | Activation evidence covered `INSERT … VALUES` only, while the matrix claimed `proven` for rows resting on `INSERT … SELECT`, subquery UPDATE and join UPDATE. Finding T19-F1 is itself proof that the path decides whether the gate runs | **Blocking, fixed.** Four phases added (§4), each on its own table. All four assert and all four hold |
+| S2 | Spec | No factor list or exclusions, so the coverage claim was not auditable; prepared statements with host variables were silently absent | **Fixed.** §9 lists factors and levels, and four exclusions with reasons. Host variables are recorded as not covered anywhere in the campaign yet |
+| S3 | Spec | The user sign-off gate was skipped: all eight promotions were `flagged_for_user: false` | **Fixed.** Two are now flagged with the reason in the promotion record (§3). Six remain unflagged |
+| S4 | Spec | `cbrd_26659_oos_sql02_update` printed "the OOS-backed value must not move" into its **promoted answer**, and "must not move" is CBRD-27230 reuse, which the catalogue withholds — at the pin it does move | **Blocking, fixed.** Relabelled to "still reads back exactly", which holds under both readings, and the answer re-promoted from `inv-T19-0008` |
+| S5 | Spec | The triggers case earned OOS-SQL-01 rows at `gap_kind: none` although its sixth group is on the path that is not OOS-backed | **Fixed.** Those two rows now say which groups carry the coverage and that group 6 contributes none |
+| T1 | Standards | The shared header block said `tag` and quoted an `'aa' * 4200` example in the reused four-column workload, which has neither | **Fixed.** The two facts that differ per schema are now parameters; every case's example names a value that case contains |
+| T2 | Standards | `apply_matrix_scoping.py` wrote the matrix raw, bypassing `write_record`'s validate-before-write gate | **Fixed.** It writes through `write_record` |
+| T3 | Standards | Absolute machine paths in both declarations, so the control could not be replayed from a clone | **Fixed.** The checker resolves a relative spec against the campaign directory; both declarations carry repository paths, and `make_control_c1.sh` rebuilds the control |
+| T4 | Standards | `review_candidates.py` documented a `--strict` flag that does not exist | **Fixed**, and a sixth check added: a case yielding no equality flag at all now fails, so a rename that stopped the flags being recognised cannot pass silently |
+| T5 | Standards | Uppercase SQL, while the case already in this directory and the dominant style of `sql/_36_guava` are lower case | **Fixed.** `lowercase_sql` leaves comments and string literals alone; eight of the nine answers came back byte-identical from `inv-T19-0008`, which is the proof it changed no value |
+
+Two findings were considered and deliberately not acted on:
+
+- **`activation_check_spec.sh` duplicates about 54 lines of `activation_check_cs.sh`**, and the
+  older one is a one-phase special case of the newer. Retiring it would be right on the merits,
+  but tickets 13, 15 and 41's sealed records cite it by name and by hash, and ticket 13's case
+  still runs it in this ticket's declaration. The duplication is boilerplate — server start,
+  port refusal, identity file — and is left in place rather than destabilising sealed evidence.
+- **Building that checker here at all**, when ticket 15 owns the campaign tooling. Ticket 15 is
+  resolved and its checker replays exactly one hard-coded fixture; eight cases need eight. The
+  new checker is spec-driven and is handed to tickets 20 to 22 in §12, which is the shape ticket
+  15's own hand-off asked for.
+
+`bit_length` was also noted as dropped relative to ticket 13's case. It is redundant with
+`octet_length` — the same fact times eight — and its absence is not claimed otherwise in any
+header. No change.

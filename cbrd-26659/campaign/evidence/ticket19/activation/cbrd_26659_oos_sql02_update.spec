@@ -20,3 +20,20 @@ PHASE update_tag_only t_cbrd_26659_sql02 1 - -
 UPDATE t_cbrd_26659_sql02 SET tag = CAST(REPEAT('7', 600) AS BIT VARYING) WHERE id = 1;
 PHASE update_multichunk t_cbrd_26659_sql02 1 - -
 UPDATE t_cbrd_26659_sql02 SET payload = CAST(REPEAT('f', 40000) AS BIT VARYING) WHERE id = 1;
+# The last two steps of the case write through two further execution paths: an UPDATE whose
+# value comes from a subquery, and a multi-table UPDATE.  Finding T19-F1 is exactly a path that
+# silently skips the record gate, so neither is inherited from the phases above; each runs on
+# its own fresh table, starting from an inline row, so the count after it is unambiguous.
+PHASE subquery_update t_cbrd_26659_sql02_chk_sub 1 1 4624
+DROP TABLE IF EXISTS t_cbrd_26659_sql02_chk_sub;
+DROP TABLE IF EXISTS t_cbrd_26659_sql02_chk_src;
+CREATE TABLE t_cbrd_26659_sql02_chk_sub (id INT PRIMARY KEY, payload BIT VARYING, tag BIT VARYING);
+CREATE TABLE t_cbrd_26659_sql02_chk_src (id INT PRIMARY KEY, payload BIT VARYING, tag BIT VARYING);
+INSERT INTO t_cbrd_26659_sql02_chk_src VALUES (1, CAST(REPEAT('d', 9200) AS BIT VARYING), CAST(REPEAT('5', 600) AS BIT VARYING));
+INSERT INTO t_cbrd_26659_sql02_chk_sub VALUES (1, CAST(REPEAT('c', 6000) AS BIT VARYING), CAST(REPEAT('d', 600) AS BIT VARYING));
+UPDATE t_cbrd_26659_sql02_chk_sub SET payload = (SELECT payload FROM t_cbrd_26659_sql02_chk_src WHERE id = 1) WHERE id = 1;
+PHASE join_update t_cbrd_26659_sql02_chk_join 1 1 4624
+DROP TABLE IF EXISTS t_cbrd_26659_sql02_chk_join;
+CREATE TABLE t_cbrd_26659_sql02_chk_join (id INT PRIMARY KEY, payload BIT VARYING, tag BIT VARYING);
+INSERT INTO t_cbrd_26659_sql02_chk_join VALUES (1, CAST(REPEAT('c', 6000) AS BIT VARYING), CAST(REPEAT('d', 600) AS BIT VARYING));
+UPDATE t_cbrd_26659_sql02_chk_join a, t_cbrd_26659_sql02_chk_src b SET a.payload = b.payload, a.tag = b.tag WHERE a.id = 1 AND b.id = 1;

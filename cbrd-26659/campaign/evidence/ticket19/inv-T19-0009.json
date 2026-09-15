@@ -1,0 +1,530 @@
+{
+  "schema_version": 1,
+  "manifest_id": "inv-T19-0009",
+  "producer": {
+    "kind": "wrapper",
+    "name": "CBRD-26659 campaign tooling (ticket 15)",
+    "version": "ticket15-1.0"
+  },
+  "invocation": {
+    "started_at": "2026-09-15T17:24:00+09:00",
+    "ended_at": "2026-09-15T17:26:17+09:00",
+    "tier": "fast",
+    "caps": {
+      "invocation_seconds": 900,
+      "per_case_seconds": 120,
+      "invocation_cap_reached": false
+    },
+    "resources": {
+      "cpus": 8,
+      "memory_gib": 16,
+      "storage_gib": 0.01,
+      "storage_root": "/home/vimkim/.cub/campaign/cbrd-26659"
+    },
+    "engine": {
+      "baseline_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+      "worktree": "/home/vimkim/gh/cb/oos-baseline-f4299ac0c",
+      "modified": false,
+      "install_prefix": "/home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc_nounit",
+      "version_string": "CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit release build for Linux) (Sep 14 2026 22:45:25)",
+      "library_hashes": {
+        "libcubrid.so": "sha256:1bbbe44663c79d069181b0d812df95c7f7d793b7f16f2850ab4e8af899986b7c",
+        "libcubridsa.so": "sha256:559a955ea2c46ae3de15efc572fd6a8dbaef7751e38b6c418656437d7a158179"
+      }
+    },
+    "testcase": {
+      "repository": "testcases",
+      "branch": "CBRD-26659-oos-testcases-handover",
+      "commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
+      "base_commit": "b94995abfc7b196fb753aac158d52512288513a6",
+      "worktree": "/home/vimkim/gh/tc/cubrid-testcases-cbrd-26659"
+    },
+    "context": {
+      "revision": "f6543de680b91ae357466b72a983f982892859cd",
+      "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698",
+      "snapshot": "cbrd-26659/campaign/ticket11-evidence/normative-snapshot/"
+    },
+    "catalogue": {
+      "path": "cbrd-26659/campaign/catalogue/requirements.json",
+      "hash": "sha256:0cc33c82cfc472daece8e168f92d153d86d4c1feb0690ceffca786b0c8a8c5dd"
+    },
+    "page_size": 16384,
+    "build_mode": "release",
+    "run_mode": "client-server",
+    "services": [
+      {
+        "kind": "cub_master",
+        "identity": "CTP-owned master, port 26659",
+        "port": 26659,
+        "owned": true
+      },
+      {
+        "kind": "cub_server",
+        "identity": "basic",
+        "port": null,
+        "owned": true
+      },
+      {
+        "kind": "broker",
+        "identity": "BROKER1 port 33120",
+        "port": 33120,
+        "owned": true
+      }
+    ],
+    "instrumentation": null,
+    "seed": null,
+    "runner": {
+      "kind": "ctp-sql",
+      "ctp_fingerprint": "sha256:456cabffff33abe4c5cd4695d40b33a713b8e53d86b6158fd87f94148e17f078",
+      "command": "timeout --foreground -k 20 900 /home/vimkim/.cub/campaign/cbrd-26659/ticket14/tools/campaign_ns.sh /home/vimkim/CTP/bin/ctp.sh sql -c /home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0009/sql_inv-T19-0009.conf",
+      "scenario_selection": "/home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659"
+    }
+  },
+  "expected": {
+    "case_list": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/case-list.txt",
+    "case_list_hash": "sha256:9b77ce0b052cdadd94d7493bf165853b65e67726cb09582cae0e8e105fde093f",
+    "case_count": 9,
+    "assertion_count": null
+  },
+  "discovered": {
+    "case_count": 9,
+    "case_names": [
+      "cbrd_26659_oos_rep02_largest_first",
+      "cbrd_26659_oos_rep06_lob_neighbours",
+      "cbrd_26659_oos_sql01_insert_select",
+      "cbrd_26659_oos_sql02_mixed_chunks",
+      "cbrd_26659_oos_sql02_update",
+      "cbrd_26659_oos_sql05_delete",
+      "cbrd_26659_oos_sql06_constraints",
+      "cbrd_26659_oos_sql06_rollback",
+      "cbrd_26659_oos_sql06_triggers"
+    ]
+  },
+  "executed": {
+    "case_count": 9,
+    "assertion_count": null
+  },
+  "proof": {
+    "verdict": "proven",
+    "launcher_exit_status": 0,
+    "setup_log": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/setup.log",
+    "mismatches": []
+  },
+  "cases": [
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql",
+        "name": "cbrd_26659_oos_rep02_largest_first"
+      },
+      "requirements": [
+        "OOS-REP-01",
+        "OOS-REP-02",
+        "OOS-SQL-01"
+      ],
+      "outcome": "PASS",
+      "skip_reason": null,
+      "assertions": {
+        "expected": 27,
+        "executed": null,
+        "failed": null
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_rep02_largest_first_release.txt",
+        "applicability": null
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T19-0081",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket19/att-T19-0081.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0009",
+          "bundle_hash": "sha256:975a5373f5892a3e81574c1e4215459a19bc019b48d116b02bf8225b9425d677"
+        }
+      ],
+      "outstanding": null
+    },
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep06_lob_neighbours.sql",
+        "name": "cbrd_26659_oos_rep06_lob_neighbours"
+      },
+      "requirements": [
+        "OOS-REP-06",
+        "OOS-SQL-01",
+        "OOS-SQL-05"
+      ],
+      "outcome": "PASS",
+      "skip_reason": null,
+      "assertions": {
+        "expected": null,
+        "executed": null,
+        "failed": null
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_rep06_lob_neighbours_release.txt",
+        "applicability": null
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T19-0082",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket19/att-T19-0082.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0009",
+          "bundle_hash": "sha256:1bc69bc2c0934a7c9eabb5b6d6cf635396537357e5943ae64f757b0adc43269c"
+        }
+      ],
+      "outstanding": null
+    },
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql01_insert_select.sql",
+        "name": "cbrd_26659_oos_sql01_insert_select"
+      },
+      "requirements": [
+        "OOS-SQL-01"
+      ],
+      "outcome": "PASS",
+      "skip_reason": null,
+      "assertions": {
+        "expected": null,
+        "executed": null,
+        "failed": null
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_sql01_insert_select_release.txt",
+        "applicability": null
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T19-0083",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket19/att-T19-0083.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0009",
+          "bundle_hash": "sha256:c82a817682fba20f79c36863d124d1023ee21a0de3a00c709b1d9ec6cbc5dbb1"
+        }
+      ],
+      "outstanding": null
+    },
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql02_mixed_chunks.sql",
+        "name": "cbrd_26659_oos_sql02_mixed_chunks"
+      },
+      "requirements": [
+        "OOS-SQL-01",
+        "OOS-SQL-02"
+      ],
+      "outcome": "PASS",
+      "skip_reason": null,
+      "assertions": {
+        "expected": null,
+        "executed": null,
+        "failed": null
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_sql02_mixed_chunks_release.txt",
+        "applicability": null
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T19-0084",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket19/att-T19-0084.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0009",
+          "bundle_hash": "sha256:a44c216ebf7433faaec1479f5586f900358b1c80d3e48a30dea2e83f4fb5f92d"
+        }
+      ],
+      "outstanding": null
+    },
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql02_update.sql",
+        "name": "cbrd_26659_oos_sql02_update"
+      },
+      "requirements": [
+        "OOS-SQL-02"
+      ],
+      "outcome": "PASS",
+      "skip_reason": null,
+      "assertions": {
+        "expected": null,
+        "executed": null,
+        "failed": null
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_sql02_update_release.txt",
+        "applicability": null
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T19-0085",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket19/att-T19-0085.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0009",
+          "bundle_hash": "sha256:5320de99491f23c141c0a0891e7d4e2f8641ccd9efdf761fe2a73544259d47a0"
+        }
+      ],
+      "outstanding": null
+    },
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql05_delete.sql",
+        "name": "cbrd_26659_oos_sql05_delete"
+      },
+      "requirements": [
+        "OOS-SQL-05"
+      ],
+      "outcome": "PASS",
+      "skip_reason": null,
+      "assertions": {
+        "expected": null,
+        "executed": null,
+        "failed": null
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_sql05_delete_release.txt",
+        "applicability": null
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T19-0086",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket19/att-T19-0086.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0009",
+          "bundle_hash": "sha256:5d4fd745aa6511d77fd323b8cdb90eb5f7cfcf487d8d392159b4331dcb8c7f6d"
+        }
+      ],
+      "outstanding": null
+    },
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_constraints.sql",
+        "name": "cbrd_26659_oos_sql06_constraints"
+      },
+      "requirements": [
+        "OOS-SQL-06"
+      ],
+      "outcome": "PASS",
+      "skip_reason": null,
+      "assertions": {
+        "expected": null,
+        "executed": null,
+        "failed": null
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_sql06_constraints_release.txt",
+        "applicability": null
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T19-0087",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket19/att-T19-0087.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0009",
+          "bundle_hash": "sha256:5767869bf6beac6252b7444066db6aa10e8848f563fa72562a5ea864cfb662e3"
+        }
+      ],
+      "outstanding": null
+    },
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_rollback.sql",
+        "name": "cbrd_26659_oos_sql06_rollback"
+      },
+      "requirements": [
+        "OOS-SQL-06"
+      ],
+      "outcome": "PASS",
+      "skip_reason": null,
+      "assertions": {
+        "expected": null,
+        "executed": null,
+        "failed": null
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_sql06_rollback_release.txt",
+        "applicability": null
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T19-0088",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket19/att-T19-0088.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0009",
+          "bundle_hash": "sha256:8b4eb98b73ecf10f624ba20e6e26eb504902f58e3aea6b092f1d1fba5baa40f6"
+        }
+      ],
+      "outstanding": null
+    },
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_triggers.sql",
+        "name": "cbrd_26659_oos_sql06_triggers"
+      },
+      "requirements": [
+        "OOS-SQL-06",
+        "OOS-SQL-01"
+      ],
+      "outcome": "PASS",
+      "skip_reason": null,
+      "assertions": {
+        "expected": null,
+        "executed": null,
+        "failed": null
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_sql06_triggers_release.txt",
+        "applicability": null
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T19-0089",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket19/att-T19-0089.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0009",
+          "bundle_hash": "sha256:9fead7aff12d47d12a16c7c9d78f162e4b6b6a6acd3ef911852602fc666ad23a"
+        }
+      ],
+      "outstanding": null
+    }
+  ],
+  "outstanding_coverage": {
+    "cases_not_executed": [],
+    "configurations_not_run": [
+      "4096/release/standalone",
+      "4096/release/client-server",
+      "4096/debug/standalone",
+      "4096/debug/client-server",
+      "8192/release/standalone",
+      "8192/release/client-server",
+      "8192/debug/standalone",
+      "8192/debug/client-server",
+      "16384/release/standalone",
+      "16384/debug/standalone",
+      "16384/debug/client-server"
+    ],
+    "requirements_without_executed_case": [
+      "OOS-REP-04",
+      "OOS-REP-07",
+      "OOS-REP-08",
+      "OOS-REP-09",
+      "OOS-REP-10",
+      "OOS-REP-11",
+      "OOS-REP-12",
+      "OOS-SQL-03",
+      "OOS-RD-01",
+      "OOS-RD-02",
+      "OOS-RD-03",
+      "OOS-SCH-01",
+      "OOS-SCH-02",
+      "OOS-SCH-03",
+      "OOS-SCH-04",
+      "OOS-SCH-05",
+      "OOS-SCH-06",
+      "OOS-CL-01",
+      "OOS-CL-02",
+      "OOS-CL-03",
+      "OOS-CL-04",
+      "OOS-CL-05",
+      "OOS-CL-06",
+      "OOS-CL-09",
+      "OOS-CL-10",
+      "OOS-CL-11",
+      "OOS-CL-13",
+      "OOS-DUR-01",
+      "OOS-DUR-02",
+      "OOS-DUR-03",
+      "OOS-DUR-04",
+      "OOS-DUR-05",
+      "OOS-DUR-06",
+      "OOS-DUR-08",
+      "OOS-OPS-01",
+      "OOS-OPS-02",
+      "OOS-OPS-04",
+      "OOS-OPS-06",
+      "OOS-RES-01",
+      "OOS-RES-02",
+      "OOS-RES-03",
+      "OOS-RES-04",
+      "OOS-RES-05",
+      "OOS-RES-06"
+    ],
+    "note": "GENERATED by ctp_sql_records.py. PROOF: expected case count == discovered == executed (execute_case in main.info) with no notRunList entry; the launcher exit status is recorded but never used as proof (ticket 13 findings a, b); hasAnswer is never read (finding d). ASSERTION COUNTS: executed.assertion_count is null because the CTP SQL runner reports only total, success, fail and execute_case (ticket 35 F3); cbrd_26659_oos_rep02_largest_first: declared 27 (ticket 13's hand-derived count, unchanged: 11 scalars per row group x 2 row groups + 3 in the final aggregate + 2 INSERT affected-row counts). CONFIGURATIONS_NOT_RUN RULE (ticket 35 F4): every page-size x build-mode x run-mode combination of the 12-combination domain that the CTP case did not run in this invocation; this invocation ran 16384/release/client-server. REQUIREMENTS_WITHOUT_EXECUTED_CASE RULE: every catalogue requirement with status assertable or observation-only not cited by a case executed in this invocation (44 of 51); BLOCKED and UNSUPPORTED requirements are gaps of another kind and are not listed."
+  },
+  "answer_promotions": [
+    {
+      "case": "cbrd_26659_oos_rep06_lob_neighbours",
+      "action": "promoted",
+      "flagged_for_user": false,
+      "review_note": "Reviewed against expected-oracle.md section 9 (OOS-REP-06, OOS-SQL-01, OOS-SQL-05). Every BLOB reports 64 bytes and the CLOB 31 on both rows, before and after the source rows were deleted, and every equality flag is 1 -- which is the clause that would fail if the INSERT ... SELECT copy had borrowed the source's external file instead of copying it. The OOS-backed payload's (length, digest) pairs are the ones derived in Python. RENAME VERIFIED by ctp_sql_records.py: cbrd_26659_oos_rep06_lob_neighbours.answer and cbrd_26659_oos_rep06_lob_neighbours.result both sha256 6bb3265c532c40f1c7e570dcee8c7c6a2323e7885740bd79f625df9180ca4c96.",
+      "reviewer": "Claude Opus 5, campaign ticket 19 (authoring session, 2026-09-15). Reviewed mechanically by review_candidates.py against expected-oracle.md, which was written before any CTP invocation of these cases, and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine. The specification's independent agent review is still owed and is recorded as outstanding in the ticket 19 report."
+    },
+    {
+      "case": "cbrd_26659_oos_sql01_insert_select",
+      "action": "promoted",
+      "flagged_for_user": false,
+      "review_note": "Reviewed against expected-oracle.md section 3 (OOS-SQL-01). The three aggregate totals are the derived ones (455350 over 100 rows, 4147025 over 1000, helper exactly 1..1000), distinct_payloads equals the row count in both groups so the aggregates cannot be passing on identical rows, and all six sampled digests match the Python derivation. RENAME VERIFIED by ctp_sql_records.py: cbrd_26659_oos_sql01_insert_select.answer and cbrd_26659_oos_sql01_insert_select.result both sha256 9892370557468abd038f8ad28f8ef898943b8b537b813b9a5558a42a06a8ea5d.",
+      "reviewer": "Claude Opus 5, campaign ticket 19 (authoring session, 2026-09-15). Reviewed mechanically by review_candidates.py against expected-oracle.md, which was written before any CTP invocation of these cases, and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine. The specification's independent agent review is still owed and is recorded as outstanding in the ticket 19 report."
+    },
+    {
+      "case": "cbrd_26659_oos_sql02_mixed_chunks",
+      "action": "promoted",
+      "flagged_for_user": false,
+      "review_note": "Reviewed against expected-oracle.md section 10 (OOS-SQL-01, OOS-SQL-02). All nine equality flags across the three row groups are 1 and every (length, digest) pair is derived. The two ER_PT_SYNTAX lines the previous candidate carried are gone: they came from the CTP statement splitter reading a semicolon at the end of a comment line as a boundary, not from the engine, and the case no longer has such a line. RENAME VERIFIED by ctp_sql_records.py: cbrd_26659_oos_sql02_mixed_chunks.answer and cbrd_26659_oos_sql02_mixed_chunks.result both sha256 a73727086892f99830a5c80e9d527a3d30f8c8a893e373d0fde5aa675f0c4429.",
+      "reviewer": "Claude Opus 5, campaign ticket 19 (authoring session, 2026-09-15). Reviewed mechanically by review_candidates.py against expected-oracle.md, which was written before any CTP invocation of these cases, and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine. The specification's independent agent review is still owed and is recorded as outstanding in the ticket 19 report."
+    },
+    {
+      "case": "cbrd_26659_oos_sql02_update",
+      "action": "promoted",
+      "flagged_for_user": true,
+      "review_note": "Reviewed against expected-oracle.md section 4 (OOS-SQL-02). Each of the ten steps reads back the value that step wrote, including the single-chunk to two-chunk transition at 20000 B and back, the fiftieth repeated update, and the inline-attribute-only update after which the untouched OOS-backed value still carries its derived digest. FLAGGED FOR THE USER'S SIGN-OFF. The specification requires it for every answer promotion whose case touches an observed-versus-normative disagreement. This case's third group is the inline-attribute-only UPDATE, which is exactly where the pin (a fresh chain per record version, OOS-SQL-03, observation-only) and the accepted CBRD-27230 design (reuse of the chains of attributes the statement does not assign, OOS-SQL-04, withheld) disagree, and this case's activation spec is the matrix's cited observation source for OOS-SQL-03. The answer asserts only that the untouched value still reads back exactly, which holds under both, and its label was reworded from 'must not move' for that reason -- but the case touches the disagreement, so the promotion is the user's to accept. RENAME VERIFIED by ctp_sql_records.py: cbrd_26659_oos_sql02_update.answer and cbrd_26659_oos_sql02_update.result both sha256 cb262de19167d7b6ea863010986ec96bfa175e230f563b6b8f0e7f91ebc8ed9d.",
+      "reviewer": "Claude Opus 5, campaign ticket 19 (authoring session, 2026-09-15). Reviewed mechanically by review_candidates.py against expected-oracle.md, which was written before any CTP invocation of these cases, and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine. The specification's independent agent review is still owed and is recorded as outstanding in the ticket 19 report."
+    },
+    {
+      "case": "cbrd_26659_oos_sql05_delete",
+      "action": "promoted",
+      "flagged_for_user": false,
+      "review_note": "Reviewed against expected-oracle.md section 5 (OOS-SQL-05). Affected-row counts are 1, 1 and 2 as derived; the delete whose predicate reads the OOS-backed column matches exactly one row; the table empties and re-fills byte-exactly after both DELETE and TRUNCATE, with four distinct payloads and no aliasing. RENAME VERIFIED by ctp_sql_records.py: cbrd_26659_oos_sql05_delete.answer and cbrd_26659_oos_sql05_delete.result both sha256 6d6400bf4ced8b85de80f9098a6869f5aa6ce17ebd87a6f52fe9cca589f8aad9.",
+      "reviewer": "Claude Opus 5, campaign ticket 19 (authoring session, 2026-09-15). Reviewed mechanically by review_candidates.py against expected-oracle.md, which was written before any CTP invocation of these cases, and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine. The specification's independent agent review is still owed and is recorded as outstanding in the ticket 19 report."
+    },
+    {
+      "case": "cbrd_26659_oos_sql06_constraints",
+      "action": "promoted",
+      "flagged_for_user": false,
+      "review_note": "Reviewed against expected-oracle.md section 7 (OOS-SQL-06). The four error identities are -670, -670, -631, -670 in order, exactly the codes derived from src/base/error_code.h and the pinned default of print_key_value_on_unique_error before the engine ran. After every failure the table is still exactly the two-row fixture, including the three-row INSERT whose last row collides -- neither of its first two rows was stored. RENAME VERIFIED by ctp_sql_records.py: cbrd_26659_oos_sql06_constraints.answer and cbrd_26659_oos_sql06_constraints.result both sha256 69a95beb72f323f3b5b43a94a1b8ff976fd637313bcc4f7bc172d52a2da15f4e.",
+      "reviewer": "Claude Opus 5, campaign ticket 19 (authoring session, 2026-09-15). Reviewed mechanically by review_candidates.py against expected-oracle.md, which was written before any CTP invocation of these cases, and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine. The specification's independent agent review is still owed and is recorded as outstanding in the ticket 19 report."
+    },
+    {
+      "case": "cbrd_26659_oos_sql06_rollback",
+      "action": "promoted",
+      "flagged_for_user": false,
+      "review_note": "Reviewed against expected-oracle.md section 6 (OOS-SQL-06). The writer sees its own uncommitted OOS writes; after ROLLBACK the row carries the original 4200 B value and its derived digest, not merely a value of the right length; and after ROLLBACK TO SAVEPOINT the 4600 B value written before the savepoint survives while the 4700 B update and the row inserted after it are gone. RENAME VERIFIED by ctp_sql_records.py: cbrd_26659_oos_sql06_rollback.answer and cbrd_26659_oos_sql06_rollback.result both sha256 ffbfe7ad0fcd0f0786b16e461695300b4afca756ec3b705dbe62eec8e1d70cc6.",
+      "reviewer": "Claude Opus 5, campaign ticket 19 (authoring session, 2026-09-15). Reviewed mechanically by review_candidates.py against expected-oracle.md, which was written before any CTP invocation of these cases, and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine. The specification's independent agent review is still owed and is recorded as outstanding in the ticket 19 report."
+    },
+    {
+      "case": "cbrd_26659_oos_sql06_triggers",
+      "action": "promoted",
+      "flagged_for_user": true,
+      "review_note": "Reviewed against expected-oracle.md section 8 (OOS-SQL-06, OOS-SQL-01). The reading trigger logged 4200 and the derived digest of the OOS-backed value; the writing trigger produced a byte-identical copy; the rejected UPDATE returned Error:-517, left the stored value unchanged and fired neither AFTER trigger (log 2 rows, mirror 1, unchanged from the step before). Placement is not asserted anywhere in this answer: finding T19-F1 is recorded by the activation check and the report instead. FLAGGED FOR THE USER'S SIGN-OFF. The specification requires it for every answer promotion whose case touches an observed-versus-normative disagreement, and this case is where finding T19-F1 was found and where its sixth group deliberately exercises the deviating path: at the pin an INSERT into a table carrying an INSERT trigger is stored fully inline, which contradicts the normative record gate of OOS-REP-02. The answer asserts values only and encodes nothing about placement, but the case touches the disagreement, so the promotion is the user's to accept. RENAME VERIFIED by ctp_sql_records.py: cbrd_26659_oos_sql06_triggers.answer and cbrd_26659_oos_sql06_triggers.result both sha256 13deb99cf9f85c7657d1d1f88970bec3c05ad4b32bc7499f3b6ee648d1679fc4.",
+      "reviewer": "Claude Opus 5, campaign ticket 19 (authoring session, 2026-09-15). Reviewed mechanically by review_candidates.py against expected-oracle.md, which was written before any CTP invocation of these cases, and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine. The specification's independent agent review is still owed and is recorded as outstanding in the ticket 19 report."
+    }
+  ]
+}

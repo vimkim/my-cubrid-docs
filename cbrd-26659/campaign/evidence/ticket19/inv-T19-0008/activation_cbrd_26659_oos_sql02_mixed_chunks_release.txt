@@ -1,0 +1,13 @@
+PASS     create/t_cbrd_26659_sql02_mixed: Has_oos_file        expected 0        got 0
+PASS     create/t_cbrd_26659_sql02_mixed: Oos_num_recs        expected 0        got 0
+PASS     create/t_cbrd_26659_sql02_mixed: Oos_recs_sumlen     expected 0        got 0
+PASS     row1/t_cbrd_26659_sql02_mixed: Has_oos_file          expected 1        got 1
+PASS     row1/t_cbrd_26659_sql02_mixed: Oos_num_recs          expected 3        got 3
+PASS     row1/t_cbrd_26659_sql02_mixed: Oos_recs_sumlen       expected 23564    got 23564
+PASS     row2/t_cbrd_26659_sql02_mixed: Has_oos_file          expected 1        got 1
+PASS     row2/t_cbrd_26659_sql02_mixed: Oos_num_recs          expected 6        got 6
+PASS     row2/t_cbrd_26659_sql02_mixed: Oos_recs_sumlen       expected 48228    got 48228
+
+run_mode: client-server (csql over the cub_master on port 26659, cub_server t19mixed)
+observations (not assertions): 0
+RESULT: activation proven -- every asserted SHOW HEAP OOS observation holds.

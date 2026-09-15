@@ -34,6 +34,9 @@ import json
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
+from campaign_records import write_record  # noqa: E402
+
 FAMILY = {"OOS-SQL": "SQL operations", "OOS-REP": "Representation"}
 
 # ---------------------------------------------------------------------------------------------
@@ -66,6 +69,18 @@ KEEP_NONE = {
         "OOS-SQL-04), so nothing is left to the checker but the OOS-backed premise, which "
         "tools/activation_check_spec.sh supplies. gap_kind none under the ticket 35 D1 "
         "qualification."),
+}
+
+# Per-(requirement, case) additions to the text above, where one case needs saying more than
+# the requirement's own summary does.
+PER_CASE = {
+    ("OOS-SQL-01", "cbrd_26659_oos_sql06_triggers"):
+        " WHICH PART OF THIS CASE CARRIES THE COVERAGE: groups 1 to 5. Their fixture is built "
+        "before any trigger exists, so it takes the server-side path and really is OOS-backed, "
+        "which the paired check asserts at that phase. Group 6 inserts into a table that already "
+        "carries an INSERT trigger and therefore, by finding T19-F1, produces a row that is NOT "
+        "OOS-backed; it asserts the values that path does store correctly and contributes no OOS "
+        "coverage at all. Read this row as covering groups 1 to 5 only.",
 }
 
 # ---------------------------------------------------------------------------------------------
@@ -268,10 +283,10 @@ def main():
         if req in SCOPED:
             gap, summary = SCOPED[req]
             row["finding"]["gap_kind"] = gap
-            row["finding"]["summary"] = summary
+            row["finding"]["summary"] = summary + PER_CASE.get((req, case), "")
             scoped += 1
         elif req in KEEP_NONE:
-            row["finding"]["summary"] = KEEP_NONE[req]
+            row["finding"]["summary"] = KEEP_NONE[req] + PER_CASE.get((req, case), "")
             kept += 1
 
     have = {r["row_id"] for r in m["rows"]}
@@ -288,7 +303,9 @@ def main():
         m["rows"].append(blank_row(row_id, req, gap, status, channel, summary))
         added += 1
 
-    args.matrix.write_text(json.dumps(m, indent=2) + "\n")
+    # Through the campaign's own writer, so an edit that breaks the schema is refused rather
+    # than written and caught later by a separate validation pass.
+    write_record(m, "matrix", args.matrix)
     print(f"scoped {scoped} case row(s), kept gap_kind none on {kept} with a stated reason, "
           f"added {added} caseless row(s); {len(m['rows'])} rows total")
     return 0

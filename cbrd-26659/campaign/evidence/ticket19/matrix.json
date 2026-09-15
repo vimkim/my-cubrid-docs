@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-09-15T17:06:07+09:00",
+  "generated_at": "2026-09-15T17:30:03+09:00",
   "catalogue": {
     "path": "cbrd-26659/campaign/catalogue/requirements.json",
     "hash": "sha256:0cc33c82cfc472daece8e168f92d153d86d4c1feb0690ceffca786b0c8a8c5dd"
@@ -27,17 +27,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0004",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004.json",
-        "manifest_hash": "sha256:32b4ac9fa46cb059bef31a52adc4091723e9ce5cd6e27e0543ba2d831f8ff051",
+        "manifest_id": "inv-T19-0009",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009.json",
+        "manifest_hash": "sha256:8fc87144c5d57a4b2c988f412d0ee540db8b7dd7cba3331e1a54a16d8b201b88",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004/activation_cbrd_26659_oos_rep02_largest_first_release.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_rep02_largest_first_release.txt",
         "applicability": null
       },
       "finding": {
@@ -79,13 +79,25 @@
             "attempt_id": "att-T19-0031",
             "outcome": "PASS",
             "at": "2026-09-15T16:56:00+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0006",
+            "attempt_id": "att-T19-0051",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:15:39+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0009",
+            "attempt_id": "att-T19-0081",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:26:17+09:00"
           }
         ],
         "gap_kind": "Delivery gap",
         "summary": "SCOPE OF THIS ROW: the attempt, not the requirement. The case inserts the comparator row (record 1,564 B, below both the pinned 4,086 B gate and the normative 4,060 B target) and reads it back byte-identical, verified by digest and length as well as equality -- which is consistent with inline storage but observes NONE of the three clauses of OOS-REP-01 ('no attribute is demoted, HAS_OOS stays clear, and a class that has never demoted a value has no OOS file'): DISK_SIZE reports 1,008 for the comparator's `big` whether or not it was demoted (ticket 11 section 5.2), so an engine that wrongly demoted it would produce a byte-identical answer and CTP would report success. Every clause is evidenced only by activation_check.sh's first two SHOW HEAP OOS observations (Has_oos_file 0, Oos_num_recs 0 after CREATE TABLE and after the comparator row), a validated checker that is in no executed suite. latest_outcome PASS refers to the executed attempts and MUST NOT be read as coverage of OOS-REP-01; gap_kind is Delivery gap for that reason, and the companion row OOS-REP-01/-/inline-placement-observation, whose latest_outcome is null, carries the gap so that no outcome filter counts the requirement as covered. Split this way by ticket 35 (independent review finding F2), mirroring the OOS-REP-02 split (R4)."
       },
       "flakiness": {
-        "attempts": 6,
+        "attempts": 8,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -106,7 +118,9 @@
         "cbrd-26659/campaign/evidence/ticket15/att-T15-0001.json",
         "cbrd-26659/campaign/evidence/ticket15/att-T15-0003.json",
         "cbrd-26659/campaign/evidence/ticket41/att-T41-0001.json",
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0031.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0031.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0051.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0081.json"
       ]
     },
     {
@@ -169,17 +183,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0004",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004.json",
-        "manifest_hash": "sha256:32b4ac9fa46cb059bef31a52adc4091723e9ce5cd6e27e0543ba2d831f8ff051",
+        "manifest_id": "inv-T19-0009",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009.json",
+        "manifest_hash": "sha256:8fc87144c5d57a4b2c988f412d0ee540db8b7dd7cba3331e1a54a16d8b201b88",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004/activation_cbrd_26659_oos_rep02_largest_first_release.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_rep02_largest_first_release.txt",
         "applicability": null
       },
       "finding": {
@@ -221,13 +235,25 @@
             "attempt_id": "att-T19-0031",
             "outcome": "PASS",
             "at": "2026-09-15T16:56:00+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0006",
+            "attempt_id": "att-T19-0051",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:15:39+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0009",
+            "attempt_id": "att-T19-0081",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:26:17+09:00"
           }
         ],
         "gap_kind": "Delivery gap",
         "summary": "SCOPE OF THIS ROW: the logical half of OOS-REP-02 only. The OOS-backed row (record 4,264 B) was accepted and both values read back exactly, verified by digest and length as well as by equality; the paired activation checker asserted one chunk with Oos_recs_sumlen 3,024 = 3,008 payload + one 16-byte chunk header, which identifies the moved-out value as `big` (moving `small` would give 1,224). latest_outcome PASS refers to that executed attempt and MUST NOT be read as full coverage of OOS-REP-02: the placement half is not covered by any executed suite, for the tested reasons recorded on that row. See the companion row OOS-REP-02/-/placement-discrimination, whose latest_outcome is null, for that gap. gap_kind is Delivery gap on both rows for exactly this reason. History lists both executed attempts: revision 1 (att-T13-0001, commit 37b1ceff8, answer later superseded) and revision 2 (att-T13-0002); neither failed."
       },
       "flakiness": {
-        "attempts": 6,
+        "attempts": 8,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -248,7 +274,9 @@
         "cbrd-26659/campaign/evidence/ticket15/att-T15-0001.json",
         "cbrd-26659/campaign/evidence/ticket15/att-T15-0003.json",
         "cbrd-26659/campaign/evidence/ticket41/att-T41-0001.json",
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0031.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0031.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0051.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0081.json"
       ]
     },
     {
@@ -272,17 +300,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0004",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004.json",
-        "manifest_hash": "sha256:32b4ac9fa46cb059bef31a52adc4091723e9ce5cd6e27e0543ba2d831f8ff051",
+        "manifest_id": "inv-T19-0009",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009.json",
+        "manifest_hash": "sha256:8fc87144c5d57a4b2c988f412d0ee540db8b7dd7cba3331e1a54a16d8b201b88",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004/activation_cbrd_26659_oos_rep02_largest_first_release.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_rep02_largest_first_release.txt",
         "applicability": null
       },
       "finding": {
@@ -324,13 +352,25 @@
             "attempt_id": "att-T19-0031",
             "outcome": "PASS",
             "at": "2026-09-15T16:56:00+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0006",
+            "attempt_id": "att-T19-0051",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:15:39+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0009",
+            "attempt_id": "att-T19-0081",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:26:17+09:00"
           }
         ],
         "gap_kind": "none",
         "summary": "Both rows read back byte-identical after the OOS-backed row was inserted. Checked three independent ways rather than by equality alone: OCTET_LENGTH (1,000/500 and 3,000/1,200), BIT_LENGTH (8,000/4,000 and 24,000/9,600) and MD5 over the whole value, every expected digest computed outside CUBRID before the run. OOS-BACKED PREMISE: that row 1 was in fact OOS-backed when it was read back comes from the same non-executed checker, activation_check.sh (via the reused evidence on this row), not from anything the CTP case observes; the value-correctness half of the requirement is what the case executes at the seam, and it is the substantive half (ticket 35, independent review F2)."
       },
       "flakiness": {
-        "attempts": 6,
+        "attempts": 8,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -351,7 +391,9 @@
         "cbrd-26659/campaign/evidence/ticket15/att-T15-0001.json",
         "cbrd-26659/campaign/evidence/ticket15/att-T15-0003.json",
         "cbrd-26659/campaign/evidence/ticket41/att-T41-0001.json",
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0031.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0031.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0051.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0081.json"
       ]
     },
     {
@@ -721,17 +763,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0004",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004.json",
-        "manifest_hash": "sha256:32b4ac9fa46cb059bef31a52adc4091723e9ce5cd6e27e0543ba2d831f8ff051",
+        "manifest_id": "inv-T19-0009",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009.json",
+        "manifest_hash": "sha256:8fc87144c5d57a4b2c988f412d0ee540db8b7dd7cba3331e1a54a16d8b201b88",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004/activation_cbrd_26659_oos_rep06_lob_neighbours_release.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_rep06_lob_neighbours_release.txt",
         "applicability": null
       },
       "finding": {
@@ -743,13 +785,25 @@
             "attempt_id": "att-T19-0032",
             "outcome": "PASS",
             "at": "2026-09-15T16:56:00+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0006",
+            "attempt_id": "att-T19-0052",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:15:39+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0009",
+            "attempt_id": "att-T19-0082",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:26:17+09:00"
           }
         ],
         "gap_kind": "Delivery gap",
         "summary": "SCOPE OF THIS ROW: the LOB copy-semantics half only. OOS-REP-06 states that 'eligibility depends only on the value being variable-length and larger than the floor; BLOB/CLOB locator values demote like any other variable value with LOB copy semantics preserved, and deleting or vacuuming a demoted locator never removes the external LOB payload'. The case asserts that a row carrying four BLOB locators, a CLOB locator and an OOS-backed BIT VARYING column reads every one of them back exactly, that INSERT ... SELECT copies all of them, and that deleting the source rows leaves every one of the copy's external payloads readable -- the clause that would fail if the copy had borrowed the source's external file rather than copying it. It does NOT assert that a locator was demoted: beside a 4,200 B payload the largest-first loop stops long before a ~60-byte locator becomes the largest candidate, and portable SQL cannot see per-attribute placement anyway. So the eligibility clause, and with it the 'deleting or vacuuming a DEMOTED locator' clause, are untested here. The companion row OOS-REP-06/-/locator-demotion carries the gap."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 3,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -765,7 +819,9 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0032.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0032.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0052.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0082.json"
       ]
     },
     {
@@ -789,17 +845,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0004",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004.json",
-        "manifest_hash": "sha256:32b4ac9fa46cb059bef31a52adc4091723e9ce5cd6e27e0543ba2d831f8ff051",
+        "manifest_id": "inv-T19-0009",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009.json",
+        "manifest_hash": "sha256:8fc87144c5d57a4b2c988f412d0ee540db8b7dd7cba3331e1a54a16d8b201b88",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004/activation_cbrd_26659_oos_rep06_lob_neighbours_release.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_rep06_lob_neighbours_release.txt",
         "applicability": null
       },
       "finding": {
@@ -811,13 +867,25 @@
             "attempt_id": "att-T19-0032",
             "outcome": "PASS",
             "at": "2026-09-15T16:56:00+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0006",
+            "attempt_id": "att-T19-0052",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:15:39+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0009",
+            "attempt_id": "att-T19-0082",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:26:17+09:00"
           }
         ],
         "gap_kind": "none",
         "summary": "EVERY CLAUSE ASSERTED AT THE SEAM. OOS-SQL-01 states that an inserted OOS-backed row reads back byte-identical 'for single rows and bulk inserts of varying sizes', and the case asserts exactly that: one row, 100 rows of 4,207..4,900 B and 1,000 rows of 4,100..4,196 B, each verified by whole-value equality, by OCTET_LENGTH and by an MD5 computed independently in Python, with COUNT(DISTINCT MD5(payload)) equal to the row count so the aggregates cannot pass on identical rows. The one thing the seam cannot see is the premise that the rows were OOS-backed at all; that comes from tools/activation_check_spec.sh, a validated checker outside every executed suite, which asserts Oos_num_recs and Oos_recs_sumlen against figures derived from the pinned engine's record accounting. Under the ticket 35 D1 qualification that is the OOS-SQL-01 situation and the row keeps gap_kind none."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 3,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -833,7 +901,9 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0032.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0032.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0052.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0082.json"
       ]
     },
     {
@@ -857,17 +927,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0004",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004.json",
-        "manifest_hash": "sha256:32b4ac9fa46cb059bef31a52adc4091723e9ce5cd6e27e0543ba2d831f8ff051",
+        "manifest_id": "inv-T19-0009",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009.json",
+        "manifest_hash": "sha256:8fc87144c5d57a4b2c988f412d0ee540db8b7dd7cba3331e1a54a16d8b201b88",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004/activation_cbrd_26659_oos_rep06_lob_neighbours_release.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_rep06_lob_neighbours_release.txt",
         "applicability": null
       },
       "finding": {
@@ -879,13 +949,25 @@
             "attempt_id": "att-T19-0032",
             "outcome": "PASS",
             "at": "2026-09-15T16:56:00+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0006",
+            "attempt_id": "att-T19-0052",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:15:39+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0009",
+            "attempt_id": "att-T19-0082",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:26:17+09:00"
           }
         ],
         "gap_kind": "Delivery gap",
         "summary": "SCOPE OF THIS ROW: the clauses the case executes, not the whole requirement. OOS-SQL-05 has four clauses. The case asserts two of them -- a deleted OOS-backed row is gone for the deleter and for later readers (three deletes, including one whose predicate reads the OOS-backed column itself, each with its affected-row count), and the table stays reusable (delete-all and TRUNCATE, each followed by a re-INSERT that reads back byte-exactly). It asserts NEITHER of the other two. 'The deleted record keeps its stubs and its value chains are not removed at delete time in MVCC mode' is invisible to portable SQL; the paired activation check reaches it but deliberately OBSERVES rather than asserts it, because the moment vacuum reclaims a chain is a background event and an assertion there would be an assertion against a race. 'Earlier snapshots can still read the value' needs a second session and belongs to OOS-CL-01 on the private shell seam. latest_outcome PASS refers to the executed attempts and must not be read as coverage of OOS-SQL-05; the companion row OOS-SQL-05/-/physical-half carries the gap with a null outcome."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 3,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -901,7 +983,9 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0032.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0032.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0052.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0082.json"
       ]
     },
     {
@@ -925,17 +1009,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0004",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004.json",
-        "manifest_hash": "sha256:32b4ac9fa46cb059bef31a52adc4091723e9ce5cd6e27e0543ba2d831f8ff051",
+        "manifest_id": "inv-T19-0009",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009.json",
+        "manifest_hash": "sha256:8fc87144c5d57a4b2c988f412d0ee540db8b7dd7cba3331e1a54a16d8b201b88",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004/activation_cbrd_26659_oos_sql01_insert_select_release.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_sql01_insert_select_release.txt",
         "applicability": null
       },
       "finding": {
@@ -947,13 +1031,25 @@
             "attempt_id": "att-T19-0033",
             "outcome": "PASS",
             "at": "2026-09-15T16:56:00+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0006",
+            "attempt_id": "att-T19-0053",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:15:39+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0009",
+            "attempt_id": "att-T19-0083",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:26:17+09:00"
           }
         ],
         "gap_kind": "none",
         "summary": "EVERY CLAUSE ASSERTED AT THE SEAM. OOS-SQL-01 states that an inserted OOS-backed row reads back byte-identical 'for single rows and bulk inserts of varying sizes', and the case asserts exactly that: one row, 100 rows of 4,207..4,900 B and 1,000 rows of 4,100..4,196 B, each verified by whole-value equality, by OCTET_LENGTH and by an MD5 computed independently in Python, with COUNT(DISTINCT MD5(payload)) equal to the row count so the aggregates cannot pass on identical rows. The one thing the seam cannot see is the premise that the rows were OOS-backed at all; that comes from tools/activation_check_spec.sh, a validated checker outside every executed suite, which asserts Oos_num_recs and Oos_recs_sumlen against figures derived from the pinned engine's record accounting. Under the ticket 35 D1 qualification that is the OOS-SQL-01 situation and the row keeps gap_kind none."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 3,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -969,7 +1065,9 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0033.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0033.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0053.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0083.json"
       ]
     },
     {
@@ -993,17 +1091,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0004",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004.json",
-        "manifest_hash": "sha256:32b4ac9fa46cb059bef31a52adc4091723e9ce5cd6e27e0543ba2d831f8ff051",
+        "manifest_id": "inv-T19-0009",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009.json",
+        "manifest_hash": "sha256:8fc87144c5d57a4b2c988f412d0ee540db8b7dd7cba3331e1a54a16d8b201b88",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004/activation_cbrd_26659_oos_sql02_mixed_chunks_release.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_sql02_mixed_chunks_release.txt",
         "applicability": null
       },
       "finding": {
@@ -1015,13 +1113,25 @@
             "attempt_id": "att-T19-0034",
             "outcome": "PASS",
             "at": "2026-09-15T16:56:00+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0006",
+            "attempt_id": "att-T19-0054",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:15:39+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0009",
+            "attempt_id": "att-T19-0084",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:26:17+09:00"
           }
         ],
         "gap_kind": "none",
         "summary": "EVERY CLAUSE ASSERTED AT THE SEAM. OOS-SQL-01 states that an inserted OOS-backed row reads back byte-identical 'for single rows and bulk inserts of varying sizes', and the case asserts exactly that: one row, 100 rows of 4,207..4,900 B and 1,000 rows of 4,100..4,196 B, each verified by whole-value equality, by OCTET_LENGTH and by an MD5 computed independently in Python, with COUNT(DISTINCT MD5(payload)) equal to the row count so the aggregates cannot pass on identical rows. The one thing the seam cannot see is the premise that the rows were OOS-backed at all; that comes from tools/activation_check_spec.sh, a validated checker outside every executed suite, which asserts Oos_num_recs and Oos_recs_sumlen against figures derived from the pinned engine's record accounting. Under the ticket 35 D1 qualification that is the OOS-SQL-01 situation and the row keeps gap_kind none."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 3,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -1037,7 +1147,9 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0034.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0034.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0054.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0084.json"
       ]
     },
     {
@@ -1061,17 +1173,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0004",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004.json",
-        "manifest_hash": "sha256:32b4ac9fa46cb059bef31a52adc4091723e9ce5cd6e27e0543ba2d831f8ff051",
+        "manifest_id": "inv-T19-0009",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009.json",
+        "manifest_hash": "sha256:8fc87144c5d57a4b2c988f412d0ee540db8b7dd7cba3331e1a54a16d8b201b88",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004/activation_cbrd_26659_oos_sql02_mixed_chunks_release.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_sql02_mixed_chunks_release.txt",
         "applicability": null
       },
       "finding": {
@@ -1083,13 +1195,25 @@
             "attempt_id": "att-T19-0034",
             "outcome": "PASS",
             "at": "2026-09-15T16:56:00+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0006",
+            "attempt_id": "att-T19-0054",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:15:39+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0009",
+            "attempt_id": "att-T19-0084",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:26:17+09:00"
           }
         ],
         "gap_kind": "none",
         "summary": "EVERY CLAUSE ASSERTED AT THE SEAM. OOS-SQL-02 states that after an UPDATE of an OOS-backed attribute, or of an inline attribute in an OOS-backed record, the updater and every later reader see the exact new value, and that repeated updates leave the final value correct. The case asserts all of it: the OOS-backed attribute updated, the inline attribute updated alone with the OOS-backed one still exact afterwards, three and fifty repeated updates with the final value checked, the single-chunk to two-chunk transition at 20,000 B and back, an UPDATE whose value comes from a subquery over another table's OOS-backed column, and an UPDATE through a join. Chain ownership is explicitly not this requirement's (its authority note assigns it to OOS-SQL-03 and OOS-SQL-04), so nothing is left to the checker but the OOS-backed premise, which tools/activation_check_spec.sh supplies. gap_kind none under the ticket 35 D1 qualification."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 3,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -1105,7 +1229,9 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0034.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0034.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0054.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0084.json"
       ]
     },
     {
@@ -1129,17 +1255,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0004",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004.json",
-        "manifest_hash": "sha256:32b4ac9fa46cb059bef31a52adc4091723e9ce5cd6e27e0543ba2d831f8ff051",
+        "manifest_id": "inv-T19-0009",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009.json",
+        "manifest_hash": "sha256:8fc87144c5d57a4b2c988f412d0ee540db8b7dd7cba3331e1a54a16d8b201b88",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004/activation_cbrd_26659_oos_sql02_update_release.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_sql02_update_release.txt",
         "applicability": null
       },
       "finding": {
@@ -1151,13 +1277,25 @@
             "attempt_id": "att-T19-0035",
             "outcome": "PASS",
             "at": "2026-09-15T16:56:00+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0006",
+            "attempt_id": "att-T19-0055",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:15:39+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0009",
+            "attempt_id": "att-T19-0085",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:26:17+09:00"
           }
         ],
         "gap_kind": "none",
         "summary": "EVERY CLAUSE ASSERTED AT THE SEAM. OOS-SQL-02 states that after an UPDATE of an OOS-backed attribute, or of an inline attribute in an OOS-backed record, the updater and every later reader see the exact new value, and that repeated updates leave the final value correct. The case asserts all of it: the OOS-backed attribute updated, the inline attribute updated alone with the OOS-backed one still exact afterwards, three and fifty repeated updates with the final value checked, the single-chunk to two-chunk transition at 20,000 B and back, an UPDATE whose value comes from a subquery over another table's OOS-backed column, and an UPDATE through a join. Chain ownership is explicitly not this requirement's (its authority note assigns it to OOS-SQL-03 and OOS-SQL-04), so nothing is left to the checker but the OOS-backed premise, which tools/activation_check_spec.sh supplies. gap_kind none under the ticket 35 D1 qualification."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 3,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -1173,7 +1311,9 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0035.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0035.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0055.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0085.json"
       ]
     },
     {
@@ -1197,17 +1337,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0004",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004.json",
-        "manifest_hash": "sha256:32b4ac9fa46cb059bef31a52adc4091723e9ce5cd6e27e0543ba2d831f8ff051",
+        "manifest_id": "inv-T19-0009",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009.json",
+        "manifest_hash": "sha256:8fc87144c5d57a4b2c988f412d0ee540db8b7dd7cba3331e1a54a16d8b201b88",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004/activation_cbrd_26659_oos_sql05_delete_release.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_sql05_delete_release.txt",
         "applicability": null
       },
       "finding": {
@@ -1219,13 +1359,25 @@
             "attempt_id": "att-T19-0036",
             "outcome": "PASS",
             "at": "2026-09-15T16:56:00+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0006",
+            "attempt_id": "att-T19-0056",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:15:39+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0009",
+            "attempt_id": "att-T19-0086",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:26:17+09:00"
           }
         ],
         "gap_kind": "Delivery gap",
         "summary": "SCOPE OF THIS ROW: the clauses the case executes, not the whole requirement. OOS-SQL-05 has four clauses. The case asserts two of them -- a deleted OOS-backed row is gone for the deleter and for later readers (three deletes, including one whose predicate reads the OOS-backed column itself, each with its affected-row count), and the table stays reusable (delete-all and TRUNCATE, each followed by a re-INSERT that reads back byte-exactly). It asserts NEITHER of the other two. 'The deleted record keeps its stubs and its value chains are not removed at delete time in MVCC mode' is invisible to portable SQL; the paired activation check reaches it but deliberately OBSERVES rather than asserts it, because the moment vacuum reclaims a chain is a background event and an assertion there would be an assertion against a race. 'Earlier snapshots can still read the value' needs a second session and belongs to OOS-CL-01 on the private shell seam. latest_outcome PASS refers to the executed attempts and must not be read as coverage of OOS-SQL-05; the companion row OOS-SQL-05/-/physical-half carries the gap with a null outcome."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 3,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -1241,7 +1393,9 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0036.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0036.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0056.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0086.json"
       ]
     },
     {
@@ -1265,17 +1419,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0004",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004.json",
-        "manifest_hash": "sha256:32b4ac9fa46cb059bef31a52adc4091723e9ce5cd6e27e0543ba2d831f8ff051",
+        "manifest_id": "inv-T19-0009",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009.json",
+        "manifest_hash": "sha256:8fc87144c5d57a4b2c988f412d0ee540db8b7dd7cba3331e1a54a16d8b201b88",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004/activation_cbrd_26659_oos_sql06_constraints_release.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_sql06_constraints_release.txt",
         "applicability": null
       },
       "finding": {
@@ -1287,13 +1441,25 @@
             "attempt_id": "att-T19-0037",
             "outcome": "PASS",
             "at": "2026-09-15T16:56:00+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0006",
+            "attempt_id": "att-T19-0057",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:15:39+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0009",
+            "attempt_id": "att-T19-0087",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:26:17+09:00"
           }
         ],
         "gap_kind": "Delivery gap",
         "summary": "SCOPE OF THIS ROW: the clauses the case executes, not the whole requirement. OOS-SQL-06 states that ROLLBACK, savepoint rollback and statement failure restore the previous record as-is, 'including its OOS inline stubs whose head OIDs still reference live chains', with 'no partial effect and no orphan chain remains from the aborted work'. The three cases assert the logical half completely: the writer sees its own uncommitted OOS writes, a ROLLBACK restores the original 4,200 B value by digest and not merely by length, a partial rollback keeps the pre-savepoint value and discards everything after it, and four failing statements -- primary key, secondary unique, NOT NULL and a three-row INSERT colliding on its last row -- each store nothing at all. The two physical clauses are asserted nowhere: 'whose head OIDs still reference live chains' and 'no orphan chain remains' are not observable from portable SQL, and the requirement's own authority note assigns orphan-chain cleanup to OOS-CL-02 on the private shell seam. The companion row OOS-SQL-06/-/chain-clauses carries the gap."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 3,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -1309,7 +1475,9 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0037.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0037.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0057.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0087.json"
       ]
     },
     {
@@ -1333,17 +1501,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0004",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004.json",
-        "manifest_hash": "sha256:32b4ac9fa46cb059bef31a52adc4091723e9ce5cd6e27e0543ba2d831f8ff051",
+        "manifest_id": "inv-T19-0009",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009.json",
+        "manifest_hash": "sha256:8fc87144c5d57a4b2c988f412d0ee540db8b7dd7cba3331e1a54a16d8b201b88",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004/activation_cbrd_26659_oos_sql06_rollback_release.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_sql06_rollback_release.txt",
         "applicability": null
       },
       "finding": {
@@ -1355,13 +1523,25 @@
             "attempt_id": "att-T19-0038",
             "outcome": "PASS",
             "at": "2026-09-15T16:56:00+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0006",
+            "attempt_id": "att-T19-0058",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:15:39+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0009",
+            "attempt_id": "att-T19-0088",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:26:17+09:00"
           }
         ],
         "gap_kind": "Delivery gap",
         "summary": "SCOPE OF THIS ROW: the clauses the case executes, not the whole requirement. OOS-SQL-06 states that ROLLBACK, savepoint rollback and statement failure restore the previous record as-is, 'including its OOS inline stubs whose head OIDs still reference live chains', with 'no partial effect and no orphan chain remains from the aborted work'. The three cases assert the logical half completely: the writer sees its own uncommitted OOS writes, a ROLLBACK restores the original 4,200 B value by digest and not merely by length, a partial rollback keeps the pre-savepoint value and discards everything after it, and four failing statements -- primary key, secondary unique, NOT NULL and a three-row INSERT colliding on its last row -- each store nothing at all. The two physical clauses are asserted nowhere: 'whose head OIDs still reference live chains' and 'no orphan chain remains' are not observable from portable SQL, and the requirement's own authority note assigns orphan-chain cleanup to OOS-CL-02 on the private shell seam. The companion row OOS-SQL-06/-/chain-clauses carries the gap."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 3,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -1377,7 +1557,9 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0038.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0038.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0058.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0088.json"
       ]
     },
     {
@@ -1401,17 +1583,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0004",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004.json",
-        "manifest_hash": "sha256:32b4ac9fa46cb059bef31a52adc4091723e9ce5cd6e27e0543ba2d831f8ff051",
+        "manifest_id": "inv-T19-0009",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009.json",
+        "manifest_hash": "sha256:8fc87144c5d57a4b2c988f412d0ee540db8b7dd7cba3331e1a54a16d8b201b88",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004/activation_cbrd_26659_oos_sql06_triggers_release.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_sql06_triggers_release.txt",
         "applicability": null
       },
       "finding": {
@@ -1423,13 +1605,25 @@
             "attempt_id": "att-T19-0039",
             "outcome": "PASS",
             "at": "2026-09-15T16:56:00+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0006",
+            "attempt_id": "att-T19-0059",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:15:39+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0009",
+            "attempt_id": "att-T19-0089",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:26:17+09:00"
           }
         ],
         "gap_kind": "Delivery gap",
         "summary": "SCOPE OF THIS ROW: the clauses the case executes, not the whole requirement. OOS-SQL-06 states that ROLLBACK, savepoint rollback and statement failure restore the previous record as-is, 'including its OOS inline stubs whose head OIDs still reference live chains', with 'no partial effect and no orphan chain remains from the aborted work'. The three cases assert the logical half completely: the writer sees its own uncommitted OOS writes, a ROLLBACK restores the original 4,200 B value by digest and not merely by length, a partial rollback keeps the pre-savepoint value and discards everything after it, and four failing statements -- primary key, secondary unique, NOT NULL and a three-row INSERT colliding on its last row -- each store nothing at all. The two physical clauses are asserted nowhere: 'whose head OIDs still reference live chains' and 'no orphan chain remains' are not observable from portable SQL, and the requirement's own authority note assigns orphan-chain cleanup to OOS-CL-02 on the private shell seam. The companion row OOS-SQL-06/-/chain-clauses carries the gap."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 3,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -1445,7 +1639,9 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0039.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0039.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0059.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0089.json"
       ]
     },
     {
@@ -1469,17 +1665,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0004",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004.json",
-        "manifest_hash": "sha256:32b4ac9fa46cb059bef31a52adc4091723e9ce5cd6e27e0543ba2d831f8ff051",
+        "manifest_id": "inv-T19-0009",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009.json",
+        "manifest_hash": "sha256:8fc87144c5d57a4b2c988f412d0ee540db8b7dd7cba3331e1a54a16d8b201b88",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004/activation_cbrd_26659_oos_sql06_triggers_release.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0009/activation_cbrd_26659_oos_sql06_triggers_release.txt",
         "applicability": null
       },
       "finding": {
@@ -1491,13 +1687,25 @@
             "attempt_id": "att-T19-0039",
             "outcome": "PASS",
             "at": "2026-09-15T16:56:00+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0006",
+            "attempt_id": "att-T19-0059",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:15:39+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0009",
+            "attempt_id": "att-T19-0089",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:26:17+09:00"
           }
         ],
         "gap_kind": "none",
-        "summary": "EVERY CLAUSE ASSERTED AT THE SEAM. OOS-SQL-01 states that an inserted OOS-backed row reads back byte-identical 'for single rows and bulk inserts of varying sizes', and the case asserts exactly that: one row, 100 rows of 4,207..4,900 B and 1,000 rows of 4,100..4,196 B, each verified by whole-value equality, by OCTET_LENGTH and by an MD5 computed independently in Python, with COUNT(DISTINCT MD5(payload)) equal to the row count so the aggregates cannot pass on identical rows. The one thing the seam cannot see is the premise that the rows were OOS-backed at all; that comes from tools/activation_check_spec.sh, a validated checker outside every executed suite, which asserts Oos_num_recs and Oos_recs_sumlen against figures derived from the pinned engine's record accounting. Under the ticket 35 D1 qualification that is the OOS-SQL-01 situation and the row keeps gap_kind none."
+        "summary": "EVERY CLAUSE ASSERTED AT THE SEAM. OOS-SQL-01 states that an inserted OOS-backed row reads back byte-identical 'for single rows and bulk inserts of varying sizes', and the case asserts exactly that: one row, 100 rows of 4,207..4,900 B and 1,000 rows of 4,100..4,196 B, each verified by whole-value equality, by OCTET_LENGTH and by an MD5 computed independently in Python, with COUNT(DISTINCT MD5(payload)) equal to the row count so the aggregates cannot pass on identical rows. The one thing the seam cannot see is the premise that the rows were OOS-backed at all; that comes from tools/activation_check_spec.sh, a validated checker outside every executed suite, which asserts Oos_num_recs and Oos_recs_sumlen against figures derived from the pinned engine's record accounting. Under the ticket 35 D1 qualification that is the OOS-SQL-01 situation and the row keeps gap_kind none. WHICH PART OF THIS CASE CARRIES THE COVERAGE: groups 1 to 5. Their fixture is built before any trigger exists, so it takes the server-side path and really is OOS-backed, which the paired check asserts at that phase. Group 6 inserts into a table that already carries an INSERT trigger and therefore, by finding T19-F1, produces a row that is NOT OOS-backed; it asserts the values that path does store correctly and contributes no OOS coverage at all. Read this row as covering groups 1 to 5 only."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 3,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -1513,7 +1721,9 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0039.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0039.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0059.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0089.json"
       ]
     },
     {
@@ -1537,17 +1747,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0005",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005.json",
-        "manifest_hash": "sha256:b6c599364ce10fd609bd46f19f23de8703b78b2c981996d218222d4ecdea6377",
+        "manifest_id": "inv-T19-0010",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010.json",
+        "manifest_hash": "sha256:0d740c4bc78b5db4aaaf03c32c7ec8067c84b6517ba1989d8c3827be51a668e8",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005/activation_cbrd_26659_oos_rep02_largest_first_debug.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010/activation_cbrd_26659_oos_rep02_largest_first_debug.txt",
         "applicability": null
       },
       "finding": {
@@ -1559,13 +1769,19 @@
             "attempt_id": "att-T19-0041",
             "outcome": "PASS",
             "at": "2026-09-15T16:59:33+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0010",
+            "attempt_id": "att-T19-0091",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:28:37+09:00"
           }
         ],
         "gap_kind": "none",
         "summary": "GENERATED by matrix_merge.py for cbrd_26659_oos_rep02_largest_first: latest outcome PASS, OOS-path evidence proven over channel show-heap-oos. gap_kind none under the schema rule (PASS with proven or reused evidence). SCOPE TO BE CONFIRMED BY THE AUTHOR: if any clause of the requirement's stated behaviour is evidenced solely by a checker outside every executed suite, set gap_kind to Delivery gap and say so here (qualified rule, ticket 13 report section 8); the merge preserves a hand-set gap kind."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 2,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -1581,7 +1797,8 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0041.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0041.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0091.json"
       ]
     },
     {
@@ -1605,17 +1822,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0005",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005.json",
-        "manifest_hash": "sha256:b6c599364ce10fd609bd46f19f23de8703b78b2c981996d218222d4ecdea6377",
+        "manifest_id": "inv-T19-0010",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010.json",
+        "manifest_hash": "sha256:0d740c4bc78b5db4aaaf03c32c7ec8067c84b6517ba1989d8c3827be51a668e8",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005/activation_cbrd_26659_oos_rep02_largest_first_debug.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010/activation_cbrd_26659_oos_rep02_largest_first_debug.txt",
         "applicability": null
       },
       "finding": {
@@ -1627,13 +1844,19 @@
             "attempt_id": "att-T19-0041",
             "outcome": "PASS",
             "at": "2026-09-15T16:59:33+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0010",
+            "attempt_id": "att-T19-0091",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:28:37+09:00"
           }
         ],
         "gap_kind": "none",
         "summary": "GENERATED by matrix_merge.py for cbrd_26659_oos_rep02_largest_first: latest outcome PASS, OOS-path evidence proven over channel show-heap-oos. gap_kind none under the schema rule (PASS with proven or reused evidence). SCOPE TO BE CONFIRMED BY THE AUTHOR: if any clause of the requirement's stated behaviour is evidenced solely by a checker outside every executed suite, set gap_kind to Delivery gap and say so here (qualified rule, ticket 13 report section 8); the merge preserves a hand-set gap kind."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 2,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -1649,7 +1872,8 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0041.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0041.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0091.json"
       ]
     },
     {
@@ -1673,17 +1897,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0005",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005.json",
-        "manifest_hash": "sha256:b6c599364ce10fd609bd46f19f23de8703b78b2c981996d218222d4ecdea6377",
+        "manifest_id": "inv-T19-0010",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010.json",
+        "manifest_hash": "sha256:0d740c4bc78b5db4aaaf03c32c7ec8067c84b6517ba1989d8c3827be51a668e8",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005/activation_cbrd_26659_oos_rep02_largest_first_debug.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010/activation_cbrd_26659_oos_rep02_largest_first_debug.txt",
         "applicability": null
       },
       "finding": {
@@ -1695,13 +1919,19 @@
             "attempt_id": "att-T19-0041",
             "outcome": "PASS",
             "at": "2026-09-15T16:59:33+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0010",
+            "attempt_id": "att-T19-0091",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:28:37+09:00"
           }
         ],
         "gap_kind": "none",
         "summary": "GENERATED by matrix_merge.py for cbrd_26659_oos_rep02_largest_first: latest outcome PASS, OOS-path evidence proven over channel show-heap-oos. gap_kind none under the schema rule (PASS with proven or reused evidence). SCOPE TO BE CONFIRMED BY THE AUTHOR: if any clause of the requirement's stated behaviour is evidenced solely by a checker outside every executed suite, set gap_kind to Delivery gap and say so here (qualified rule, ticket 13 report section 8); the merge preserves a hand-set gap kind."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 2,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -1717,7 +1947,8 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0041.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0041.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0091.json"
       ]
     },
     {
@@ -1741,17 +1972,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0005",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005.json",
-        "manifest_hash": "sha256:b6c599364ce10fd609bd46f19f23de8703b78b2c981996d218222d4ecdea6377",
+        "manifest_id": "inv-T19-0010",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010.json",
+        "manifest_hash": "sha256:0d740c4bc78b5db4aaaf03c32c7ec8067c84b6517ba1989d8c3827be51a668e8",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005/activation_cbrd_26659_oos_rep06_lob_neighbours_debug.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010/activation_cbrd_26659_oos_rep06_lob_neighbours_debug.txt",
         "applicability": null
       },
       "finding": {
@@ -1763,13 +1994,19 @@
             "attempt_id": "att-T19-0042",
             "outcome": "PASS",
             "at": "2026-09-15T16:59:33+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0010",
+            "attempt_id": "att-T19-0092",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:28:37+09:00"
           }
         ],
         "gap_kind": "Delivery gap",
         "summary": "SCOPE OF THIS ROW: the LOB copy-semantics half only. OOS-REP-06 states that 'eligibility depends only on the value being variable-length and larger than the floor; BLOB/CLOB locator values demote like any other variable value with LOB copy semantics preserved, and deleting or vacuuming a demoted locator never removes the external LOB payload'. The case asserts that a row carrying four BLOB locators, a CLOB locator and an OOS-backed BIT VARYING column reads every one of them back exactly, that INSERT ... SELECT copies all of them, and that deleting the source rows leaves every one of the copy's external payloads readable -- the clause that would fail if the copy had borrowed the source's external file rather than copying it. It does NOT assert that a locator was demoted: beside a 4,200 B payload the largest-first loop stops long before a ~60-byte locator becomes the largest candidate, and portable SQL cannot see per-attribute placement anyway. So the eligibility clause, and with it the 'deleting or vacuuming a DEMOTED locator' clause, are untested here. The companion row OOS-REP-06/-/locator-demotion carries the gap."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 2,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -1785,7 +2022,8 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0042.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0042.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0092.json"
       ]
     },
     {
@@ -1809,17 +2047,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0005",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005.json",
-        "manifest_hash": "sha256:b6c599364ce10fd609bd46f19f23de8703b78b2c981996d218222d4ecdea6377",
+        "manifest_id": "inv-T19-0010",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010.json",
+        "manifest_hash": "sha256:0d740c4bc78b5db4aaaf03c32c7ec8067c84b6517ba1989d8c3827be51a668e8",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005/activation_cbrd_26659_oos_rep06_lob_neighbours_debug.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010/activation_cbrd_26659_oos_rep06_lob_neighbours_debug.txt",
         "applicability": null
       },
       "finding": {
@@ -1831,13 +2069,19 @@
             "attempt_id": "att-T19-0042",
             "outcome": "PASS",
             "at": "2026-09-15T16:59:33+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0010",
+            "attempt_id": "att-T19-0092",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:28:37+09:00"
           }
         ],
         "gap_kind": "none",
         "summary": "EVERY CLAUSE ASSERTED AT THE SEAM. OOS-SQL-01 states that an inserted OOS-backed row reads back byte-identical 'for single rows and bulk inserts of varying sizes', and the case asserts exactly that: one row, 100 rows of 4,207..4,900 B and 1,000 rows of 4,100..4,196 B, each verified by whole-value equality, by OCTET_LENGTH and by an MD5 computed independently in Python, with COUNT(DISTINCT MD5(payload)) equal to the row count so the aggregates cannot pass on identical rows. The one thing the seam cannot see is the premise that the rows were OOS-backed at all; that comes from tools/activation_check_spec.sh, a validated checker outside every executed suite, which asserts Oos_num_recs and Oos_recs_sumlen against figures derived from the pinned engine's record accounting. Under the ticket 35 D1 qualification that is the OOS-SQL-01 situation and the row keeps gap_kind none."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 2,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -1853,7 +2097,8 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0042.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0042.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0092.json"
       ]
     },
     {
@@ -1877,17 +2122,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0005",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005.json",
-        "manifest_hash": "sha256:b6c599364ce10fd609bd46f19f23de8703b78b2c981996d218222d4ecdea6377",
+        "manifest_id": "inv-T19-0010",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010.json",
+        "manifest_hash": "sha256:0d740c4bc78b5db4aaaf03c32c7ec8067c84b6517ba1989d8c3827be51a668e8",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005/activation_cbrd_26659_oos_rep06_lob_neighbours_debug.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010/activation_cbrd_26659_oos_rep06_lob_neighbours_debug.txt",
         "applicability": null
       },
       "finding": {
@@ -1899,13 +2144,19 @@
             "attempt_id": "att-T19-0042",
             "outcome": "PASS",
             "at": "2026-09-15T16:59:33+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0010",
+            "attempt_id": "att-T19-0092",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:28:37+09:00"
           }
         ],
         "gap_kind": "Delivery gap",
         "summary": "SCOPE OF THIS ROW: the clauses the case executes, not the whole requirement. OOS-SQL-05 has four clauses. The case asserts two of them -- a deleted OOS-backed row is gone for the deleter and for later readers (three deletes, including one whose predicate reads the OOS-backed column itself, each with its affected-row count), and the table stays reusable (delete-all and TRUNCATE, each followed by a re-INSERT that reads back byte-exactly). It asserts NEITHER of the other two. 'The deleted record keeps its stubs and its value chains are not removed at delete time in MVCC mode' is invisible to portable SQL; the paired activation check reaches it but deliberately OBSERVES rather than asserts it, because the moment vacuum reclaims a chain is a background event and an assertion there would be an assertion against a race. 'Earlier snapshots can still read the value' needs a second session and belongs to OOS-CL-01 on the private shell seam. latest_outcome PASS refers to the executed attempts and must not be read as coverage of OOS-SQL-05; the companion row OOS-SQL-05/-/physical-half carries the gap with a null outcome."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 2,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -1921,7 +2172,8 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0042.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0042.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0092.json"
       ]
     },
     {
@@ -1945,17 +2197,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0005",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005.json",
-        "manifest_hash": "sha256:b6c599364ce10fd609bd46f19f23de8703b78b2c981996d218222d4ecdea6377",
+        "manifest_id": "inv-T19-0010",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010.json",
+        "manifest_hash": "sha256:0d740c4bc78b5db4aaaf03c32c7ec8067c84b6517ba1989d8c3827be51a668e8",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005/activation_cbrd_26659_oos_sql01_insert_select_debug.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010/activation_cbrd_26659_oos_sql01_insert_select_debug.txt",
         "applicability": null
       },
       "finding": {
@@ -1967,13 +2219,19 @@
             "attempt_id": "att-T19-0043",
             "outcome": "PASS",
             "at": "2026-09-15T16:59:33+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0010",
+            "attempt_id": "att-T19-0093",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:28:37+09:00"
           }
         ],
         "gap_kind": "none",
         "summary": "EVERY CLAUSE ASSERTED AT THE SEAM. OOS-SQL-01 states that an inserted OOS-backed row reads back byte-identical 'for single rows and bulk inserts of varying sizes', and the case asserts exactly that: one row, 100 rows of 4,207..4,900 B and 1,000 rows of 4,100..4,196 B, each verified by whole-value equality, by OCTET_LENGTH and by an MD5 computed independently in Python, with COUNT(DISTINCT MD5(payload)) equal to the row count so the aggregates cannot pass on identical rows. The one thing the seam cannot see is the premise that the rows were OOS-backed at all; that comes from tools/activation_check_spec.sh, a validated checker outside every executed suite, which asserts Oos_num_recs and Oos_recs_sumlen against figures derived from the pinned engine's record accounting. Under the ticket 35 D1 qualification that is the OOS-SQL-01 situation and the row keeps gap_kind none."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 2,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -1989,7 +2247,8 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0043.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0043.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0093.json"
       ]
     },
     {
@@ -2013,17 +2272,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0005",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005.json",
-        "manifest_hash": "sha256:b6c599364ce10fd609bd46f19f23de8703b78b2c981996d218222d4ecdea6377",
+        "manifest_id": "inv-T19-0010",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010.json",
+        "manifest_hash": "sha256:0d740c4bc78b5db4aaaf03c32c7ec8067c84b6517ba1989d8c3827be51a668e8",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005/activation_cbrd_26659_oos_sql02_mixed_chunks_debug.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010/activation_cbrd_26659_oos_sql02_mixed_chunks_debug.txt",
         "applicability": null
       },
       "finding": {
@@ -2035,13 +2294,19 @@
             "attempt_id": "att-T19-0044",
             "outcome": "PASS",
             "at": "2026-09-15T16:59:33+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0010",
+            "attempt_id": "att-T19-0094",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:28:37+09:00"
           }
         ],
         "gap_kind": "none",
         "summary": "EVERY CLAUSE ASSERTED AT THE SEAM. OOS-SQL-01 states that an inserted OOS-backed row reads back byte-identical 'for single rows and bulk inserts of varying sizes', and the case asserts exactly that: one row, 100 rows of 4,207..4,900 B and 1,000 rows of 4,100..4,196 B, each verified by whole-value equality, by OCTET_LENGTH and by an MD5 computed independently in Python, with COUNT(DISTINCT MD5(payload)) equal to the row count so the aggregates cannot pass on identical rows. The one thing the seam cannot see is the premise that the rows were OOS-backed at all; that comes from tools/activation_check_spec.sh, a validated checker outside every executed suite, which asserts Oos_num_recs and Oos_recs_sumlen against figures derived from the pinned engine's record accounting. Under the ticket 35 D1 qualification that is the OOS-SQL-01 situation and the row keeps gap_kind none."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 2,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -2057,7 +2322,8 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0044.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0044.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0094.json"
       ]
     },
     {
@@ -2081,17 +2347,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0005",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005.json",
-        "manifest_hash": "sha256:b6c599364ce10fd609bd46f19f23de8703b78b2c981996d218222d4ecdea6377",
+        "manifest_id": "inv-T19-0010",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010.json",
+        "manifest_hash": "sha256:0d740c4bc78b5db4aaaf03c32c7ec8067c84b6517ba1989d8c3827be51a668e8",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005/activation_cbrd_26659_oos_sql02_mixed_chunks_debug.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010/activation_cbrd_26659_oos_sql02_mixed_chunks_debug.txt",
         "applicability": null
       },
       "finding": {
@@ -2103,13 +2369,19 @@
             "attempt_id": "att-T19-0044",
             "outcome": "PASS",
             "at": "2026-09-15T16:59:33+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0010",
+            "attempt_id": "att-T19-0094",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:28:37+09:00"
           }
         ],
         "gap_kind": "none",
         "summary": "EVERY CLAUSE ASSERTED AT THE SEAM. OOS-SQL-02 states that after an UPDATE of an OOS-backed attribute, or of an inline attribute in an OOS-backed record, the updater and every later reader see the exact new value, and that repeated updates leave the final value correct. The case asserts all of it: the OOS-backed attribute updated, the inline attribute updated alone with the OOS-backed one still exact afterwards, three and fifty repeated updates with the final value checked, the single-chunk to two-chunk transition at 20,000 B and back, an UPDATE whose value comes from a subquery over another table's OOS-backed column, and an UPDATE through a join. Chain ownership is explicitly not this requirement's (its authority note assigns it to OOS-SQL-03 and OOS-SQL-04), so nothing is left to the checker but the OOS-backed premise, which tools/activation_check_spec.sh supplies. gap_kind none under the ticket 35 D1 qualification."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 2,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -2125,7 +2397,8 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0044.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0044.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0094.json"
       ]
     },
     {
@@ -2149,17 +2422,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0005",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005.json",
-        "manifest_hash": "sha256:b6c599364ce10fd609bd46f19f23de8703b78b2c981996d218222d4ecdea6377",
+        "manifest_id": "inv-T19-0010",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010.json",
+        "manifest_hash": "sha256:0d740c4bc78b5db4aaaf03c32c7ec8067c84b6517ba1989d8c3827be51a668e8",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005/activation_cbrd_26659_oos_sql02_update_debug.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010/activation_cbrd_26659_oos_sql02_update_debug.txt",
         "applicability": null
       },
       "finding": {
@@ -2171,13 +2444,19 @@
             "attempt_id": "att-T19-0045",
             "outcome": "PASS",
             "at": "2026-09-15T16:59:33+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0010",
+            "attempt_id": "att-T19-0095",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:28:37+09:00"
           }
         ],
         "gap_kind": "none",
         "summary": "EVERY CLAUSE ASSERTED AT THE SEAM. OOS-SQL-02 states that after an UPDATE of an OOS-backed attribute, or of an inline attribute in an OOS-backed record, the updater and every later reader see the exact new value, and that repeated updates leave the final value correct. The case asserts all of it: the OOS-backed attribute updated, the inline attribute updated alone with the OOS-backed one still exact afterwards, three and fifty repeated updates with the final value checked, the single-chunk to two-chunk transition at 20,000 B and back, an UPDATE whose value comes from a subquery over another table's OOS-backed column, and an UPDATE through a join. Chain ownership is explicitly not this requirement's (its authority note assigns it to OOS-SQL-03 and OOS-SQL-04), so nothing is left to the checker but the OOS-backed premise, which tools/activation_check_spec.sh supplies. gap_kind none under the ticket 35 D1 qualification."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 2,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -2193,7 +2472,8 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0045.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0045.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0095.json"
       ]
     },
     {
@@ -2217,17 +2497,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0005",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005.json",
-        "manifest_hash": "sha256:b6c599364ce10fd609bd46f19f23de8703b78b2c981996d218222d4ecdea6377",
+        "manifest_id": "inv-T19-0010",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010.json",
+        "manifest_hash": "sha256:0d740c4bc78b5db4aaaf03c32c7ec8067c84b6517ba1989d8c3827be51a668e8",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005/activation_cbrd_26659_oos_sql05_delete_debug.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010/activation_cbrd_26659_oos_sql05_delete_debug.txt",
         "applicability": null
       },
       "finding": {
@@ -2239,13 +2519,19 @@
             "attempt_id": "att-T19-0046",
             "outcome": "PASS",
             "at": "2026-09-15T16:59:33+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0010",
+            "attempt_id": "att-T19-0096",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:28:37+09:00"
           }
         ],
         "gap_kind": "Delivery gap",
         "summary": "SCOPE OF THIS ROW: the clauses the case executes, not the whole requirement. OOS-SQL-05 has four clauses. The case asserts two of them -- a deleted OOS-backed row is gone for the deleter and for later readers (three deletes, including one whose predicate reads the OOS-backed column itself, each with its affected-row count), and the table stays reusable (delete-all and TRUNCATE, each followed by a re-INSERT that reads back byte-exactly). It asserts NEITHER of the other two. 'The deleted record keeps its stubs and its value chains are not removed at delete time in MVCC mode' is invisible to portable SQL; the paired activation check reaches it but deliberately OBSERVES rather than asserts it, because the moment vacuum reclaims a chain is a background event and an assertion there would be an assertion against a race. 'Earlier snapshots can still read the value' needs a second session and belongs to OOS-CL-01 on the private shell seam. latest_outcome PASS refers to the executed attempts and must not be read as coverage of OOS-SQL-05; the companion row OOS-SQL-05/-/physical-half carries the gap with a null outcome."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 2,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -2261,7 +2547,8 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0046.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0046.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0096.json"
       ]
     },
     {
@@ -2285,17 +2572,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0005",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005.json",
-        "manifest_hash": "sha256:b6c599364ce10fd609bd46f19f23de8703b78b2c981996d218222d4ecdea6377",
+        "manifest_id": "inv-T19-0010",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010.json",
+        "manifest_hash": "sha256:0d740c4bc78b5db4aaaf03c32c7ec8067c84b6517ba1989d8c3827be51a668e8",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005/activation_cbrd_26659_oos_sql06_constraints_debug.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010/activation_cbrd_26659_oos_sql06_constraints_debug.txt",
         "applicability": null
       },
       "finding": {
@@ -2307,13 +2594,19 @@
             "attempt_id": "att-T19-0047",
             "outcome": "PASS",
             "at": "2026-09-15T16:59:33+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0010",
+            "attempt_id": "att-T19-0097",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:28:37+09:00"
           }
         ],
         "gap_kind": "Delivery gap",
         "summary": "SCOPE OF THIS ROW: the clauses the case executes, not the whole requirement. OOS-SQL-06 states that ROLLBACK, savepoint rollback and statement failure restore the previous record as-is, 'including its OOS inline stubs whose head OIDs still reference live chains', with 'no partial effect and no orphan chain remains from the aborted work'. The three cases assert the logical half completely: the writer sees its own uncommitted OOS writes, a ROLLBACK restores the original 4,200 B value by digest and not merely by length, a partial rollback keeps the pre-savepoint value and discards everything after it, and four failing statements -- primary key, secondary unique, NOT NULL and a three-row INSERT colliding on its last row -- each store nothing at all. The two physical clauses are asserted nowhere: 'whose head OIDs still reference live chains' and 'no orphan chain remains' are not observable from portable SQL, and the requirement's own authority note assigns orphan-chain cleanup to OOS-CL-02 on the private shell seam. The companion row OOS-SQL-06/-/chain-clauses carries the gap."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 2,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -2329,7 +2622,8 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0047.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0047.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0097.json"
       ]
     },
     {
@@ -2353,17 +2647,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0005",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005.json",
-        "manifest_hash": "sha256:b6c599364ce10fd609bd46f19f23de8703b78b2c981996d218222d4ecdea6377",
+        "manifest_id": "inv-T19-0010",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010.json",
+        "manifest_hash": "sha256:0d740c4bc78b5db4aaaf03c32c7ec8067c84b6517ba1989d8c3827be51a668e8",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005/activation_cbrd_26659_oos_sql06_rollback_debug.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010/activation_cbrd_26659_oos_sql06_rollback_debug.txt",
         "applicability": null
       },
       "finding": {
@@ -2375,13 +2669,19 @@
             "attempt_id": "att-T19-0048",
             "outcome": "PASS",
             "at": "2026-09-15T16:59:33+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0010",
+            "attempt_id": "att-T19-0098",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:28:37+09:00"
           }
         ],
         "gap_kind": "Delivery gap",
         "summary": "SCOPE OF THIS ROW: the clauses the case executes, not the whole requirement. OOS-SQL-06 states that ROLLBACK, savepoint rollback and statement failure restore the previous record as-is, 'including its OOS inline stubs whose head OIDs still reference live chains', with 'no partial effect and no orphan chain remains from the aborted work'. The three cases assert the logical half completely: the writer sees its own uncommitted OOS writes, a ROLLBACK restores the original 4,200 B value by digest and not merely by length, a partial rollback keeps the pre-savepoint value and discards everything after it, and four failing statements -- primary key, secondary unique, NOT NULL and a three-row INSERT colliding on its last row -- each store nothing at all. The two physical clauses are asserted nowhere: 'whose head OIDs still reference live chains' and 'no orphan chain remains' are not observable from portable SQL, and the requirement's own authority note assigns orphan-chain cleanup to OOS-CL-02 on the private shell seam. The companion row OOS-SQL-06/-/chain-clauses carries the gap."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 2,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -2397,7 +2697,8 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0048.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0048.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0098.json"
       ]
     },
     {
@@ -2421,17 +2722,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0005",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005.json",
-        "manifest_hash": "sha256:b6c599364ce10fd609bd46f19f23de8703b78b2c981996d218222d4ecdea6377",
+        "manifest_id": "inv-T19-0010",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010.json",
+        "manifest_hash": "sha256:0d740c4bc78b5db4aaaf03c32c7ec8067c84b6517ba1989d8c3827be51a668e8",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005/activation_cbrd_26659_oos_sql06_triggers_debug.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010/activation_cbrd_26659_oos_sql06_triggers_debug.txt",
         "applicability": null
       },
       "finding": {
@@ -2443,13 +2744,19 @@
             "attempt_id": "att-T19-0049",
             "outcome": "PASS",
             "at": "2026-09-15T16:59:33+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0010",
+            "attempt_id": "att-T19-0099",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:28:37+09:00"
           }
         ],
         "gap_kind": "Delivery gap",
         "summary": "SCOPE OF THIS ROW: the clauses the case executes, not the whole requirement. OOS-SQL-06 states that ROLLBACK, savepoint rollback and statement failure restore the previous record as-is, 'including its OOS inline stubs whose head OIDs still reference live chains', with 'no partial effect and no orphan chain remains from the aborted work'. The three cases assert the logical half completely: the writer sees its own uncommitted OOS writes, a ROLLBACK restores the original 4,200 B value by digest and not merely by length, a partial rollback keeps the pre-savepoint value and discards everything after it, and four failing statements -- primary key, secondary unique, NOT NULL and a three-row INSERT colliding on its last row -- each store nothing at all. The two physical clauses are asserted nowhere: 'whose head OIDs still reference live chains' and 'no orphan chain remains' are not observable from portable SQL, and the requirement's own authority note assigns orphan-chain cleanup to OOS-CL-02 on the private shell seam. The companion row OOS-SQL-06/-/chain-clauses carries the gap."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 2,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -2465,7 +2772,8 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0049.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0049.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0099.json"
       ]
     },
     {
@@ -2489,17 +2797,17 @@
         ]
       },
       "run": {
-        "manifest_id": "inv-T19-0005",
-        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005.json",
-        "manifest_hash": "sha256:b6c599364ce10fd609bd46f19f23de8703b78b2c981996d218222d4ecdea6377",
+        "manifest_id": "inv-T19-0010",
+        "manifest_path": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010.json",
+        "manifest_hash": "sha256:0d740c4bc78b5db4aaaf03c32c7ec8067c84b6517ba1989d8c3827be51a668e8",
         "engine_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
-        "testcase_commit": "0eb64fc87785d6640c6c179b03a866978936c6f1",
+        "testcase_commit": "35c81594333c49e4faf8b645d2019cfca8aa1422",
         "context_content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698"
       },
       "oos_evidence": {
         "status": "proven",
         "channel": "show-heap-oos",
-        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0005/activation_cbrd_26659_oos_sql06_triggers_debug.txt",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0010/activation_cbrd_26659_oos_sql06_triggers_debug.txt",
         "applicability": null
       },
       "finding": {
@@ -2511,13 +2819,19 @@
             "attempt_id": "att-T19-0049",
             "outcome": "PASS",
             "at": "2026-09-15T16:59:33+09:00"
+          },
+          {
+            "manifest_id": "inv-T19-0010",
+            "attempt_id": "att-T19-0099",
+            "outcome": "PASS",
+            "at": "2026-09-15T17:28:37+09:00"
           }
         ],
         "gap_kind": "none",
-        "summary": "EVERY CLAUSE ASSERTED AT THE SEAM. OOS-SQL-01 states that an inserted OOS-backed row reads back byte-identical 'for single rows and bulk inserts of varying sizes', and the case asserts exactly that: one row, 100 rows of 4,207..4,900 B and 1,000 rows of 4,100..4,196 B, each verified by whole-value equality, by OCTET_LENGTH and by an MD5 computed independently in Python, with COUNT(DISTINCT MD5(payload)) equal to the row count so the aggregates cannot pass on identical rows. The one thing the seam cannot see is the premise that the rows were OOS-backed at all; that comes from tools/activation_check_spec.sh, a validated checker outside every executed suite, which asserts Oos_num_recs and Oos_recs_sumlen against figures derived from the pinned engine's record accounting. Under the ticket 35 D1 qualification that is the OOS-SQL-01 situation and the row keeps gap_kind none."
+        "summary": "EVERY CLAUSE ASSERTED AT THE SEAM. OOS-SQL-01 states that an inserted OOS-backed row reads back byte-identical 'for single rows and bulk inserts of varying sizes', and the case asserts exactly that: one row, 100 rows of 4,207..4,900 B and 1,000 rows of 4,100..4,196 B, each verified by whole-value equality, by OCTET_LENGTH and by an MD5 computed independently in Python, with COUNT(DISTINCT MD5(payload)) equal to the row count so the aggregates cannot pass on identical rows. The one thing the seam cannot see is the premise that the rows were OOS-backed at all; that comes from tools/activation_check_spec.sh, a validated checker outside every executed suite, which asserts Oos_num_recs and Oos_recs_sumlen against figures derived from the pinned engine's record accounting. Under the ticket 35 D1 qualification that is the OOS-SQL-01 situation and the row keeps gap_kind none. WHICH PART OF THIS CASE CARRIES THE COVERAGE: groups 1 to 5. Their fixture is built before any trigger exists, so it takes the server-side path and really is OOS-backed, which the paired check asserts at that phase. Group 6 inserts into a table that already carries an INSERT trigger and therefore, by finding T19-F1, produces a row that is NOT OOS-backed; it asserts the values that path does store correctly and contributes no OOS coverage at all. Read this row as covering groups 1 to 5 only."
       },
       "flakiness": {
-        "attempts": 1,
+        "attempts": 2,
         "failures": 0,
         "intermittent": false,
         "consecutive_fresh_fixture_reproductions": 0,
@@ -2533,7 +2847,8 @@
         "note": "no failure to attribute"
       },
       "attempt_records": [
-        "cbrd-26659/campaign/evidence/ticket19/att-T19-0049.json"
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0049.json",
+        "cbrd-26659/campaign/evidence/ticket19/att-T19-0099.json"
       ]
     },
     {

@@ -1,0 +1,19 @@
+PASS     create/t_cbrd_26659_sql01: Has_oos_file              expected 0        got 0
+PASS     create/t_cbrd_26659_sql01: Oos_num_recs              expected 0        got 0
+PASS     create/t_cbrd_26659_sql01: Oos_recs_sumlen           expected 0        got 0
+PASS     comparator/t_cbrd_26659_sql01: Has_oos_file          expected 0        got 0
+PASS     comparator/t_cbrd_26659_sql01: Oos_num_recs          expected 0        got 0
+PASS     comparator/t_cbrd_26659_sql01: Oos_recs_sumlen       expected 0        got 0
+PASS     oosbacked/t_cbrd_26659_sql01: Has_oos_file           expected 1        got 1
+PASS     oosbacked/t_cbrd_26659_sql01: Oos_num_recs           expected 1        got 1
+PASS     oosbacked/t_cbrd_26659_sql01: Oos_recs_sumlen        expected 4224     got 4224
+PASS     bulk100/t_cbrd_26659_sql01_b100: Has_oos_file        expected 1        got 1
+PASS     bulk100/t_cbrd_26659_sql01_b100: Oos_num_recs        expected 100      got 100
+PASS     bulk100/t_cbrd_26659_sql01_b100: Oos_recs_sumlen     expected 457600   got 457600
+PASS     bulk1000/t_cbrd_26659_sql01_b1000: Has_oos_file      expected 1        got 1
+PASS     bulk1000/t_cbrd_26659_sql01_b1000: Oos_num_recs      expected 1000     got 1000
+PASS     bulk1000/t_cbrd_26659_sql01_b1000: Oos_recs_sumlen   expected 4169540  got 4169540
+
+run_mode: client-server (csql over the cub_master on port 26659, cub_server t19sql01)
+observations (not assertions): 0
+RESULT: activation proven -- every asserted SHOW HEAP OOS observation holds.

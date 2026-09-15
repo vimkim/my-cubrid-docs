@@ -45,13 +45,20 @@ set -u
 
 INSTALL=${1:?install dir}
 OUT=$(mkdir -p "${2:?output dir}" && cd "$2" && pwd)
-SPEC=${3:?spec file}
+SPEC_ARG=${3:?spec file}
 DB=${4:-t19chk}
+# A relative spec resolves against the campaign directory (this script's parent), so a
+# declaration carries a repository path rather than one machine's absolute layout.
+CAMPAIGN_DIR=$(cd "$(dirname "$0")/.." && pwd)
+case "${SPEC_ARG}" in
+  /*) SPEC=${SPEC_ARG} ;;
+  *)  SPEC=${CAMPAIGN_DIR}/${SPEC_ARG} ;;
+esac
 PAGE=${ACTIVATION_PAGE_SIZE:-16384}
 PORT=${CAMPAIGN_PORT_ID:-26659}
 CAMPAIGN_TICKET_ROOT=${CAMPAIGN_TICKET_ROOT:-/home/vimkim/.cub/campaign/cbrd-26659/ticket19}
 
-[ -r "$SPEC" ] || { echo "spec $SPEC is not readable" >&2; exit 2; }
+[ -r "$SPEC" ] || { echo "spec ${SPEC_ARG} is not readable (resolved to $SPEC)" >&2; exit 2; }
 
 export CUBRID="$INSTALL"
 export CUBRID_DATABASES="${CAMPAIGN_TICKET_ROOT}/db"
@@ -74,6 +81,7 @@ fi
   echo "run_mode=client-server"
   echo "cubrid_port_id=$PORT"
   echo "spec=$SPEC"
+  echo "spec_arg=$SPEC_ARG"
   echo "spec_sha256=$(sha256sum "$SPEC" | cut -d' ' -f1)"
   echo "cubrid_rel=$(cubrid_rel | tr -d '\r' | tr -s '[:space:]' ' ')"
   sha256sum "$CUBRID/lib/libcubrid.so" "$CUBRID/lib/libcubridsa.so"

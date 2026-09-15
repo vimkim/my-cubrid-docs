@@ -82,8 +82,15 @@ def chunks_note(n):
 # SQL fragments
 # ---------------------------------------------------------------------------------------------
 
-HEADER_COMMON = """\
- * Sizes.  BIT VARYING is used rather than a character type because character values are
+def header_common(inline_neighbour, md5_char, md5_bytes):
+    """The paragraphs every case header shares, with the two facts that differ filled in.
+
+    They differ because the family has two schemas: seven cases carry a 300 B `tag` beside the
+    demoted column, the reused CBRD-27006 workload carries a 3,400..3,500 B `single2`.  A single
+    fixed block said `tag` in both, and quoted an `'aa' * 4200` example that exists in seven of
+    the eight files -- the kind of copy that is right when written and wrong a case later.
+    """
+    return f""" * Sizes.  BIT VARYING is used rather than a character type because character values are
  * compressed, which makes their stored size unpredictable and useless as a size boundary.
  * CAST(REPEAT('<hex digit>', 2N) AS BIT VARYING) is exactly N bytes of that repeated nibble.
  * The serialized size of such a value is ALIGN(5 + N, 4), which is what DISK_SIZE reports.
@@ -93,17 +100,25 @@ HEADER_COMMON = """\
  * 4060 B under the four-record physical target accepted in CBRD-27057.  Every size below was
  * derived by cbrd-26659/campaign/evidence/ticket19/derive_ticket19_sizes.py, which refuses any
  * size the two accountings disagree about, so this answer is stable rather than specific to
- * one revision.  `tag` is 300 B (308 B serialized): far above both eligibility floors (16 B
- * pinned, 24 B normative), so it stays inline because the largest-first loop already stopped,
- * not because it was too small to qualify.
+ * one revision.  {inline_neighbour}
  *
  * Value checks are deliberately redundant and independent.  Whole-value equality alone would
  * ask the engine to compare a value it read back against one it built itself, so a fault that
  * truncated both identically would go unnoticed.  OCTET_LENGTH pins the size and MD5 pins the
  * content through a different code path; CUBRID's MD5 of a BIT VARYING digests its lowercase
  * hexadecimal form, so every digest in the answer is reproducible outside CUBRID, for example
- *   python3 -c "import hashlib; print(hashlib.md5(('aa'*4200).encode()).hexdigest())"
+ *   python3 -c "import hashlib; print(hashlib.md5(('{md5_char * 2}'*{md5_bytes}).encode()).hexdigest())"
 """
+
+
+MIXED_NEIGHBOUR = ("`single2` is 3,400 to 3,500 B: far above both eligibility floors (16 B\n"
+                   " * pinned, 24 B normative), so it stays inline because the largest-first loop "
+                   "already\n * stopped, not because it was too small to qualify.")
+
+TAG_NEIGHBOUR = ("`tag` is 300 B (308 B serialized): far above both eligibility floors (16 B\n"
+                 " * pinned, 24 B normative), so it stays inline because the largest-first loop "
+                 "already stopped,\n * not because it was too small to qualify.")
+
 
 
 def select_row(table, rid, payload_expr, tag_expr, alias_prefix=""):
@@ -186,7 +201,7 @@ def case_sql01():
  * {g100.n_rows} and all {g1000.n_rows} values are distinct.  COUNT(DISTINCT MD5(payload)) asserts exactly that,
  * which is what stops the aggregate checks from passing on a table of identical rows.
  *
-{HEADER_COMMON} */
+{header_common(TAG_NEIGHBOUR, 'a', 4200)} */
 
 DROP TABLE IF EXISTS {tc};
 DROP TABLE IF EXISTS {b100};
@@ -305,7 +320,7 @@ def case_sql02():
  * are not visible to portable SQL.  The paired activation check observes the chunk growth of
  * step 2 as an observation; no answer file carries it.
  *
-{HEADER_COMMON} */
+{header_common(TAG_NEIGHBOUR, 'a', 4200)} */
 
 DROP TABLE IF EXISTS {src};
 DROP TABLE IF EXISTS {t};
@@ -325,7 +340,7 @@ INSERT INTO {src} VALUES (1, {val('d', psub)}, {val('5', TAG)});
 UPDATE {t} SET payload = {val('e', p1)} WHERE id = 1;
 {select_row(t, 1, val('e', p1), val('b', TAG))}
 
-{evaluate('[TEST 3] UPDATE of the inline attribute only: the OOS-backed value must not move')}
+{evaluate('[TEST 3] UPDATE of the inline attribute only: the OOS-backed value still reads back exactly')}
 UPDATE {t} SET tag = {val('7', TAG)} WHERE id = 1;
 {select_row(t, 1, val('e', p1), val('7', TAG))}
 
@@ -409,7 +424,7 @@ def case_sql05():
  * synchronously (ticket 11 section 6).  The paired activation check carries that half, and
  * the matrix row says so.
  *
-{HEADER_COMMON} */
+{header_common(TAG_NEIGHBOUR, 'a', 4200)} */
 
 DROP TABLE IF EXISTS {t};
 CREATE TABLE {t} (id INT PRIMARY KEY, payload BIT VARYING, tag BIT VARYING);
@@ -501,7 +516,7 @@ def case_sql06_rollback():
  * chains is OOS-CL-02 on the private shell seam, and the paired activation check records the
  * chunk counts this case leaves behind as an observation.
  *
-{HEADER_COMMON} */
+{header_common(TAG_NEIGHBOUR, 'a', 4200)} */
 
 AUTOCOMMIT OFF;
 
@@ -601,7 +616,7 @@ def case_sql06_constraints():
  * The primary key is the INT column, never the OOS-backed one, so a violation message can
  * never embed a multi-kilobyte key.
  *
-{HEADER_COMMON} */
+{header_common(TAG_NEIGHBOUR, 'a', 4200)} */
 
 DROP TABLE IF EXISTS {tn};
 DROP TABLE IF EXISTS {t};
@@ -703,7 +718,7 @@ def case_sql06_triggers():
  * BEFORE because message 520 of the same catalogue states REJECT cannot be used with AFTER or
  * DEFERRED.
  *
-{HEADER_COMMON} */
+{header_common(TAG_NEIGHBOUR, 'a', 4200)} */
 
 DROP TABLE IF EXISTS {inslog};
 DROP TABLE IF EXISTS {tins};
@@ -832,7 +847,7 @@ def case_rep06_lob():
  * demoted.  Portable SQL cannot see it, and with a {p1} B neighbour the largest-first loop
  * stops long before a locator becomes the largest candidate.
  *
-{HEADER_COMMON} */
+{header_common(TAG_NEIGHBOUR, 'a', 4200)} */
 
 DROP TABLE IF EXISTS {tc};
 DROP TABLE IF EXISTS {t};
@@ -970,7 +985,7 @@ def case_mixed_chunks():
  * The activation check is unaffected -- the two columns being the same size, the chunk count
  * and the payload sum are identical whichever one moved.
  *
-{HEADER_COMMON} */
+{header_common(MIXED_NEIGHBOUR, '1', rows[1][0])} */
 
 DROP TABLE IF EXISTS {t};
 CREATE TABLE {t}
@@ -1032,9 +1047,11 @@ SPEC_HEADER = """\
 
 def spec_sql01():
     t, b100 = "t_cbrd_26659_sql01", "t_cbrd_26659_sql01_b100"
+    b1000, tc = "t_cbrd_26659_sql01_b1000", "t_cbrd_26659_sql01_copy"
     n10, n1000 = "n10_cbrd_26659_sql01", "n1000_cbrd_26659_sql01"
-    g = d.BULK_100
+    g, g1k = d.BULK_100, d.BULK_1000
     bulk_total = sumlen(*[g.size(i) for i in g.ids()])
+    bulk1k_total = sumlen(*[g1k.size(i) for i in g1k.ids()])
     return "cbrd_26659_oos_sql01_insert_select", f"""{SPEC_HEADER.format(case='cbrd_26659_oos_sql01_insert_select')}
 PHASE create {t} 0 0 0
 DROP TABLE IF EXISTS {t};
@@ -1044,6 +1061,7 @@ INSERT INTO {t} VALUES (2, {val('c', 3000)}, {val('d', TAG)});
 PHASE oosbacked {t} 1 1 {sumlen(4200)}
 INSERT INTO {t} VALUES (1, {val('a', 4200)}, {val('b', TAG)});
 PHASE bulk100 {b100} 1 {g.n_rows} {bulk_total}
+DROP TABLE IF EXISTS {b1000};
 DROP TABLE IF EXISTS {b100};
 DROP TABLE IF EXISTS {n1000};
 DROP TABLE IF EXISTS {n10};
@@ -1054,11 +1072,27 @@ INSERT INTO {n1000} SELECT a.i * 100 + b.i * 10 + c.i + 1 FROM {n10} a, {n10} b,
 CREATE TABLE {b100} (id INT PRIMARY KEY, payload BIT VARYING, tag BIT VARYING);
 INSERT INTO {b100}
   SELECT i, {g.value_sql('i')}, {val('7', TAG)} FROM {n1000} WHERE i <= {g.n_rows};
+# The thousand-row group too: without this phase its OOS-backed premise would be derived and
+# never observed, while the case's answer asserts all thousand values read back exactly.
+PHASE bulk1000 {b1000} 1 {g1k.n_rows} {bulk1k_total}
+CREATE TABLE {b1000} (id INT PRIMARY KEY, payload BIT VARYING, tag BIT VARYING);
+INSERT INTO {b1000}
+  SELECT i, {g1k.value_sql('i')}, {val('7', TAG)} FROM {n1000};
+# INSERT ... SELECT is a different execution path from INSERT ... VALUES -- CUBRID decides them
+# separately (execute_statement.c, INSERT_SELECT versus INSERT_VALUES) -- and finding T19-F1
+# proves the path, not the size, decides whether the record gate runs at all.  So the copy the
+# case makes is observed on its own table rather than inherited from the group it copies.
+PHASE copy {tc} 1 {g.n_rows} {bulk_total}
+DROP TABLE IF EXISTS {tc};
+CREATE TABLE {tc} (id INT PRIMARY KEY, payload BIT VARYING, tag BIT VARYING);
+INSERT INTO {tc} SELECT id, payload, tag FROM {b100};
 """
 
 
 def spec_sql02():
     t = "t_cbrd_26659_sql02"
+    tsub, tsrc = f"{t}_chk_sub", f"{t}_chk_src"
+    tjoin = f"{t}_chk_join"
     return "cbrd_26659_oos_sql02_update", f"""{SPEC_HEADER.format(case='cbrd_26659_oos_sql02_update')}
 PHASE create {t} 0 0 0
 DROP TABLE IF EXISTS {t};
@@ -1076,6 +1110,23 @@ PHASE update_tag_only {t} 1 - -
 UPDATE {t} SET tag = {val('7', TAG)} WHERE id = 1;
 PHASE update_multichunk {t} 1 - -
 UPDATE {t} SET payload = {val('f', 20000)} WHERE id = 1;
+# The last two steps of the case write through two further execution paths: an UPDATE whose
+# value comes from a subquery, and a multi-table UPDATE.  Finding T19-F1 is exactly a path that
+# silently skips the record gate, so neither is inherited from the phases above; each runs on
+# its own fresh table, starting from an inline row, so the count after it is unambiguous.
+PHASE subquery_update {tsub} 1 1 {sumlen(4600)}
+DROP TABLE IF EXISTS {tsub};
+DROP TABLE IF EXISTS {tsrc};
+CREATE TABLE {tsub} (id INT PRIMARY KEY, payload BIT VARYING, tag BIT VARYING);
+CREATE TABLE {tsrc} (id INT PRIMARY KEY, payload BIT VARYING, tag BIT VARYING);
+INSERT INTO {tsrc} VALUES (1, {val('d', 4600)}, {val('5', TAG)});
+INSERT INTO {tsub} VALUES (1, {val('c', 3000)}, {val('d', TAG)});
+UPDATE {tsub} SET payload = (SELECT payload FROM {tsrc} WHERE id = 1) WHERE id = 1;
+PHASE join_update {tjoin} 1 1 {sumlen(4600)}
+DROP TABLE IF EXISTS {tjoin};
+CREATE TABLE {tjoin} (id INT PRIMARY KEY, payload BIT VARYING, tag BIT VARYING);
+INSERT INTO {tjoin} VALUES (1, {val('c', 3000)}, {val('d', TAG)});
+UPDATE {tjoin} a, {tsrc} b SET a.payload = b.payload, a.tag = b.tag WHERE a.id = 1 AND b.id = 1;
 """
 
 
@@ -1179,7 +1230,7 @@ INSERT INTO {tins} VALUES (1, {val('a', 4200)}, {val('b', TAG)});
 
 
 def spec_rep06_lob():
-    t = "t_cbrd_26659_rep06_lob"
+    t, tc = "t_cbrd_26659_rep06_lob", "t_cbrd_26659_rep06_lob_copy"
     lob_bytes, clob_text = 64, "cbrd-26659-oos-clob-neighbour"
     blobs = ", ".join(
         f"BIT_TO_BLOB(CAST(REPEAT('{p}', {lob_bytes}) AS BIT VARYING))"
@@ -1194,6 +1245,16 @@ CREATE TABLE {t} (id INT PRIMARY KEY, payload BIT VARYING, tag BIT VARYING,
 PHASE oosbacked {t} 1 1 {sumlen(4200)}
 INSERT INTO {t} VALUES (1, {val('a', 4200)}, {val('b', TAG)},
                         {blobs}, CHAR_TO_CLOB('{clob_text}-1'));
+INSERT INTO {t} VALUES (2, {val('c', 3000)}, {val('d', TAG)},
+                        {blobs}, CHAR_TO_CLOB('{clob_text}-2'));
+# The copy, on the INSERT ... SELECT path, carrying five locators with it.  One chunk, because
+# only row 1 is above the gate; the locators are eligible but far too short to be the largest
+# candidate beside a 4200 B payload.
+PHASE copy {tc} 1 1 {sumlen(4200)}
+DROP TABLE IF EXISTS {tc};
+CREATE TABLE {tc} (id INT PRIMARY KEY, payload BIT VARYING, tag BIT VARYING,
+                   b1 BLOB, b2 BLOB, b3 BLOB, b4 BLOB, c1 CLOB);
+INSERT INTO {tc} SELECT id, payload, tag, b1, b2, b3, b4, c1 FROM {t};
 """
 
 
@@ -1227,6 +1288,47 @@ CASES = [case_sql01, case_sql02, case_sql05, case_sql06_rollback, case_sql06_con
 SPEC_DIR = Path(__file__).resolve().parent / "activation"
 
 
+def lowercase_sql(body: str) -> str:
+    """Lower-case the SQL outside comments and string literals.
+
+    The scenario directory's first case was deliberately lower-cased
+    (`cbrd_26659_oos_rep02_largest_first.sql`, commit e64c16481) and lower case is the dominant
+    style in `sql/_36_guava`, so these cases follow it rather than leaving one directory reading
+    two ways.  No keyword list: every identifier, alias and hex pattern these cases emit is
+    already lower case, so lower-casing everything outside comments and literals touches exactly
+    the keywords.  Comments carry prose and literals carry the EVALUATE labels the answer prints,
+    so both are left alone -- which is also what makes the transformation answer-neutral, and the
+    answers coming back byte-identical is the proof.
+    """
+    out, i, n = [], 0, len(body)
+    in_block, in_str = False, False
+    while i < n:
+        c = body[i]
+        if in_block:
+            out.append(c)
+            if body.startswith("*/", i):
+                out.append(body[i + 1])
+                i += 2
+                in_block = False
+                continue
+        elif in_str:
+            out.append(c)
+            if c == "'":
+                in_str = False
+        elif body.startswith("/*", i):
+            out.append(body[i:i + 2])
+            i += 2
+            in_block = True
+            continue
+        elif c == "'":
+            out.append(c)
+            in_str = True
+        else:
+            out.append(c.lower())
+        i += 1
+    return "".join(out)
+
+
 def check_no_semicolon_terminated_comment_line(name: str, body: str):
     """Refuse a case whose header comment has a line ending in `;`.
 
@@ -1255,6 +1357,8 @@ def emit(out: Path, spec_dir: Path | None = None):
     written = []
     for fn in CASES:
         name, body = fn()
+        body = lowercase_sql(body)
+        assert lowercase_sql(body) == body, f"{name}: lowercase_sql is not idempotent"
         check_no_semicolon_terminated_comment_line(name, body)
         path = out / f"{name}.sql"
         path.write_text(body)

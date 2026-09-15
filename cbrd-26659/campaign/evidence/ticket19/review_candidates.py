@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Review ticket 19's candidate .result files against the pre-run oracle, before promotion.
 
-    review_candidates.py --bundle <bundle dir> [--strict]
+    review_candidates.py --bundle <bundle dir>
 
 The campaign forbids promoting a CTP first-run result because it exists: "The first `.result`
 is a candidate; review it against the requirement, then promote by rename."  This is that
@@ -16,7 +16,9 @@ review, done against values derived without the engine rather than by eye:
      happened to collide with another literal's would still be caught;
   4. the specific scalars the oracle names -- aggregate totals, row counts, error identities --
      appear exactly as expected;
-  5. no unexpected `Error:` line appears anywhere.
+  5. no unexpected `Error:` line appears anywhere;
+  6. every case yields at least one equality flag, so a rename in the case generator that
+     stopped the flags being recognised would fail here instead of passing silently.
 
 Exit 0 only when every case passes every check.  Nothing here writes into the bundle or the
 testcase repository.
@@ -147,6 +149,14 @@ def review(case, text, table):
                 if (n, digest) not in table:
                     problems.append(f"{case}: ({n} B, {digest}) in {h} is not a "
                                     "(length, digest) pair the derivation predicts")
+
+    # 6: the checks above are only as good as the column protocol they assume
+    flags = sum(1 for header, rows in parse_tables(text) for h in header if h.endswith("_ok")
+                for _r in rows)
+    if flags == 0:
+        problems.append(f"{case}: no *_ok equality flag was recognised in any result table; "
+                        "either the case stopped asserting whole-value equality or this "
+                        "reviewer no longer understands the result format")
 
     # 2: no unexpected errors; 4: the expected ones, in order
     got_errors = [int(m.group(1)) for line in text.splitlines()

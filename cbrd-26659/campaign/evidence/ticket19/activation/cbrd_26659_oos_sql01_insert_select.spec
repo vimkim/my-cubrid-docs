@@ -12,6 +12,7 @@ INSERT INTO t_cbrd_26659_sql01 VALUES (2, CAST(REPEAT('c', 6000) AS BIT VARYING)
 PHASE oosbacked t_cbrd_26659_sql01 1 1 4224
 INSERT INTO t_cbrd_26659_sql01 VALUES (1, CAST(REPEAT('a', 8400) AS BIT VARYING), CAST(REPEAT('b', 600) AS BIT VARYING));
 PHASE bulk100 t_cbrd_26659_sql01_b100 1 100 457600
+DROP TABLE IF EXISTS t_cbrd_26659_sql01_b1000;
 DROP TABLE IF EXISTS t_cbrd_26659_sql01_b100;
 DROP TABLE IF EXISTS n1000_cbrd_26659_sql01;
 DROP TABLE IF EXISTS n10_cbrd_26659_sql01;
@@ -22,3 +23,17 @@ INSERT INTO n1000_cbrd_26659_sql01 SELECT a.i * 100 + b.i * 10 + c.i + 1 FROM n1
 CREATE TABLE t_cbrd_26659_sql01_b100 (id INT PRIMARY KEY, payload BIT VARYING, tag BIT VARYING);
 INSERT INTO t_cbrd_26659_sql01_b100
   SELECT i, CAST(REPEAT(SUBSTR('123456789abcdef', MOD(i, 15) + 1, 1), 2 * (4200 + 7 * i)) AS BIT VARYING), CAST(REPEAT('7', 600) AS BIT VARYING) FROM n1000_cbrd_26659_sql01 WHERE i <= 100;
+# The thousand-row group too: without this phase its OOS-backed premise would be derived and
+# never observed, while the case's answer asserts all thousand values read back exactly.
+PHASE bulk1000 t_cbrd_26659_sql01_b1000 1 1000 4169540
+CREATE TABLE t_cbrd_26659_sql01_b1000 (id INT PRIMARY KEY, payload BIT VARYING, tag BIT VARYING);
+INSERT INTO t_cbrd_26659_sql01_b1000
+  SELECT i, CAST(REPEAT(SUBSTR('123456789abcdef', MOD(i, 15) + 1, 1), 2 * (4100 + MOD(i, 97))) AS BIT VARYING), CAST(REPEAT('7', 600) AS BIT VARYING) FROM n1000_cbrd_26659_sql01;
+# INSERT ... SELECT is a different execution path from INSERT ... VALUES -- CUBRID decides them
+# separately (execute_statement.c, INSERT_SELECT versus INSERT_VALUES) -- and finding T19-F1
+# proves the path, not the size, decides whether the record gate runs at all.  So the copy the
+# case makes is observed on its own table rather than inherited from the group it copies.
+PHASE copy t_cbrd_26659_sql01_copy 1 100 457600
+DROP TABLE IF EXISTS t_cbrd_26659_sql01_copy;
+CREATE TABLE t_cbrd_26659_sql01_copy (id INT PRIMARY KEY, payload BIT VARYING, tag BIT VARYING);
+INSERT INTO t_cbrd_26659_sql01_copy SELECT id, payload, tag FROM t_cbrd_26659_sql01_b100;

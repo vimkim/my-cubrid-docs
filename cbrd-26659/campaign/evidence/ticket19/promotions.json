@@ -23,8 +23,8 @@
   {
     "case": "cbrd_26659_oos_sql02_update",
     "action": "promoted",
-    "flagged_for_user": false,
-    "review_note": "Reviewed against expected-oracle.md section 4 (OOS-SQL-02). Each of the ten steps reads back the value that step wrote, including the single-chunk to two-chunk transition at 20000 B and back, the fiftieth repeated update, and the inline-attribute-only update after which the untouched OOS-backed value still carries its derived digest.",
+    "flagged_for_user": true,
+    "review_note": "Reviewed against expected-oracle.md section 4 (OOS-SQL-02). Each of the ten steps reads back the value that step wrote, including the single-chunk to two-chunk transition at 20000 B and back, the fiftieth repeated update, and the inline-attribute-only update after which the untouched OOS-backed value still carries its derived digest. FLAGGED FOR THE USER'S SIGN-OFF. The specification requires it for every answer promotion whose case touches an observed-versus-normative disagreement. This case's third group is the inline-attribute-only UPDATE, which is exactly where the pin (a fresh chain per record version, OOS-SQL-03, observation-only) and the accepted CBRD-27230 design (reuse of the chains of attributes the statement does not assign, OOS-SQL-04, withheld) disagree, and this case's activation spec is the matrix's cited observation source for OOS-SQL-03. The answer asserts only that the untouched value still reads back exactly, which holds under both, and its label was reworded from 'must not move' for that reason -- but the case touches the disagreement, so the promotion is the user's to accept.",
     "reviewer": "Claude Opus 5, campaign ticket 19 (authoring session, 2026-09-15). Reviewed mechanically by review_candidates.py against expected-oracle.md, which was written before any CTP invocation of these cases, and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine. The specification's independent agent review is still owed and is recorded as outstanding in the ticket 19 report."
   },
   {
@@ -51,8 +51,8 @@
   {
     "case": "cbrd_26659_oos_sql06_triggers",
     "action": "promoted",
-    "flagged_for_user": false,
-    "review_note": "Reviewed against expected-oracle.md section 8 (OOS-SQL-06, OOS-SQL-01). The reading trigger logged 4200 and the derived digest of the OOS-backed value; the writing trigger produced a byte-identical copy; the rejected UPDATE returned Error:-517, left the stored value unchanged and fired neither AFTER trigger (log 2 rows, mirror 1, unchanged from the step before). Placement is not asserted anywhere in this answer: finding T19-F1 is recorded by the activation check and the report instead.",
+    "flagged_for_user": true,
+    "review_note": "Reviewed against expected-oracle.md section 8 (OOS-SQL-06, OOS-SQL-01). The reading trigger logged 4200 and the derived digest of the OOS-backed value; the writing trigger produced a byte-identical copy; the rejected UPDATE returned Error:-517, left the stored value unchanged and fired neither AFTER trigger (log 2 rows, mirror 1, unchanged from the step before). Placement is not asserted anywhere in this answer: finding T19-F1 is recorded by the activation check and the report instead. FLAGGED FOR THE USER'S SIGN-OFF. The specification requires it for every answer promotion whose case touches an observed-versus-normative disagreement, and this case is where finding T19-F1 was found and where its sixth group deliberately exercises the deviating path: at the pin an INSERT into a table carrying an INSERT trigger is stored fully inline, which contradicts the normative record gate of OOS-REP-02. The answer asserts values only and encodes nothing about placement, but the case touches the disagreement, so the promotion is the user's to accept.",
     "reviewer": "Claude Opus 5, campaign ticket 19 (authoring session, 2026-09-15). Reviewed mechanically by review_candidates.py against expected-oracle.md, which was written before any CTP invocation of these cases, and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine. The specification's independent agent review is still owed and is recorded as outstanding in the ticket 19 report."
   }
 ]
