@@ -51,7 +51,8 @@ and the normative four-record target (CBRD-27057 = 4,060 B) agree about, and tha
 pinned inline stub and the 24-byte normative stub (CBRD-26950) do not separate.
 `derive_ticket19_sizes.classify()` enforces exactly that, and `gen_ticket19_cases.py` routes
 **every** fixture row through it, so a size the campaign may not assert cannot reach a case
-file. 1,179 OOS-backed rows and 7 inline comparator rows were verified this way.
+file. 1,178 OOS-backed rows and 7 inline comparator rows were verified this way (the count fell
+by one when the trigger case was restructured; see section 8).
 
 Schema C — `(id INT PRIMARY KEY, payload BIT VARYING, tag BIT VARYING)` — carries seven of the
 eight cases. `tag` is always 300 B (308 B serialized), far above both eligibility floors (16 B
