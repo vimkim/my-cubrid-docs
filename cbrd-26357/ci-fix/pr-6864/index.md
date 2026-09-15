@@ -1,5 +1,13 @@
 # PR 6864 CI repair
 
+## Current stage — 2026-09-15
+
+Work item86 resumes at engine38093ea859a8a08e20405b72b0cb395205bedb2f. User explicitly defers CDC; current repair scope is seven non-CDC tests. Stage: awaiting-fix-approval for the concrete six-test patch, with optimizer diagnosis continuing separately. No source/test file changed. [Current proposal, full diffs and verification criteria](non-cdc-38093ea-plan-v1.md). [Current validated CI report](../../ci_analysis_report_38093ea_codex.md).
+
+Next: user reviews proposal v1; apply only approved edits in isolated testcase worktrees, preserve RED/GREEN evidence, then seek approval for the verified publication set. Historical approval/publication below applies to the earlier f4299ac effort only. Current CDC occurrences are accepted-outside-scope per user direction; testcase merge gate remains reported separately.
+
+## Historical record — through 2026-09-09
+
 ## Identity and scope
 
 - Work tracker: 86; actor: codex-01a084d8.
