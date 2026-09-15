@@ -1,0 +1,30 @@
+{
+  "declaration_version": 1,
+  "description": "CONTROL C1 (ticket 19): one case, with two defects planted on purpose -- one hex digit of the multi-chunk value's digest in the answer, and a chunk-payload sum one byte wrong in the activation spec. Both must be detected: CTP must report the case as a failure, and the spec-driven activation checker must report activation NOT proven. Never a pass.",
+  "repository": "testcases",
+  "runner": "ctp-sql",
+  "scenario": "sql/_36_guava/cbrd_26659",
+  "tier": "fast",
+  "page_size": 16384,
+  "run_mode": "client-server",
+  "cases": {
+    "cbrd_26659_oos_sql02_mixed_chunks": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql02_mixed_chunks.sql",
+      "requirements": [
+        "OOS-SQL-01",
+        "OOS-SQL-02"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/controls/c1/cbrd_26659_oos_sql02_mixed_chunks.spec",
+          "t19ctl1"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t19ctl1"
+      }
+    }
+  }
+}

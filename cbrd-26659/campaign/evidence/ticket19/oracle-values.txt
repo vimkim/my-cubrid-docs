@@ -1,0 +1,97 @@
+# Expected scalars of every literal value the ticket-19 cases use
+
+Derived, never observed: DISK_SIZE is ALIGN(5 + N, 4) (or_varbit_length_internal),
+OCTET_LENGTH is N, and MD5 is the digest of the value's lowercase hexadecimal form,
+which is the 2N-character string the case writes.
+
+SQL literal                                    bytes  DISK_SIZE  OCTET_LENGTH                                MD5
+----------------------------------------------------------------------------------------------------------------
+REPEAT('1', 600)                                 300        308           300   5f2bad4a0266eaa839079a2b275236f9
+REPEAT('5', 600)                                 300        308           300   43aa0db7b95dfaefa60c1827b308a100
+REPEAT('6', 600)                                 300        308           300   27b46a35fe6e802a41a7137b460ceb6d
+REPEAT('7', 600)                                 300        308           300   c4a9a5dbe42d59ca26e33784010bc49a
+REPEAT('8', 600)                                 300        308           300   697b5cd5ef35b9eeb62c82312669da8b
+REPEAT('9', 600)                                 300        308           300   ae11d3013eb7436bac3c765fc4193ab8
+REPEAT('b', 600)                                 300        308           300   95a13d4df13e9b2c95fb54d06d74ebaf
+REPEAT('d', 600)                                 300        308           300   11ff9da43a6c8cfddf24a2bf4006fbe6
+REPEAT('c', 6000)                               3000       3008          3000   a64b7d985873a2ea7374eb2be148b463
+REPEAT('9', 6600)                               3300       3308          3300   7052451cd7d023d7660a7e4b34955711
+REPEAT('6', 6800)                               3400       3408          3400   588dd2880841dfe2a4ae03a4e1dfdafb
+REPEAT('1', 7000)                               3500       3508          3500   b29acb0f1cc3d25bae2e8fa8ed6446d2
+REPEAT('3', 7000)                               3500       3508          3500   3c45ac32f51e64116226a1bf412456a3
+REPEAT('4', 7200)                               3600       3608          3600   50edbb252ba75d4dbf36f8195bc9acf8
+REPEAT('7', 7400)                               3700       3708          3700   a3f33dd2e43a2768de9d176ea53c5bba
+REPEAT('a', 8400)                               4200       4208          4200   1e895dba5e680251ad3db6a20449ca21
+REPEAT('2', 8420)                               4210       4216          4210   94969be21170cc4540a2b6c529715705
+REPEAT('3', 8440)                               4220       4228          4220   4a55610e5691254a745db526b79fa7bc
+REPEAT('4', 8460)                               4230       4236          4230   bac13fbb33e7299873569e37a82d4b6d
+REPEAT('5', 8480)                               4240       4248          4240   557509222922381f5b4f21c384e994fc
+REPEAT('6', 8500)                               4250       4256          4250   a4b4a5a102801bfca18069ef8086b19b
+REPEAT('7', 8520)                               4260       4268          4260   0816661c0d9650ca604bd4816e5ac470
+REPEAT('8', 8540)                               4270       4276          4270   af84b86f351ce4327d6742295f4f6ea0
+REPEAT('9', 8560)                               4280       4288          4280   ae4f705297c068c12c1b1a1747ea06d4
+REPEAT('a', 8580)                               4290       4296          4290   1625580c12510f36bd3d9eee1fc96669
+REPEAT('1', 8600)                               4300       4308          4300   6fdcde1519ac0b5bfe06d5d015330b09
+REPEAT('b', 8600)                               4300       4308          4300   afbb53515b534f9912ee6f39058ff026
+REPEAT('e', 8600)                               4300       4308          4300   5f9349ce0a798f1b05dd3d844b2ceea5
+REPEAT('c', 8620)                               4310       4316          4310   95d241f4bf29bd9e5fc92ac0c44c6c01
+REPEAT('d', 8640)                               4320       4328          4320   9e84167a2a1ffcfebfdaa55574f2d8a0
+REPEAT('e', 8660)                               4330       4336          4330   8722c70decc54dc583bb33a94875904a
+REPEAT('f', 8680)                               4340       4348          4340   f62a008f87a58b2bec7904e50b723efc
+REPEAT('1', 8700)                               4350       4356          4350   84266f5e7abac1efd985fa98518cb4fb
+REPEAT('2', 8720)                               4360       4368          4360   942dd8c8b3d76715a0a69c8a1b4acfb3
+REPEAT('3', 8740)                               4370       4376          4370   e95e940d5b69cca65237dc7507ab2331
+REPEAT('4', 8760)                               4380       4388          4380   307905e673cf9189b609428692028f1b
+REPEAT('5', 8780)                               4390       4396          4390   bd3462d8ff255ea26eff08e473dff072
+REPEAT('6', 8800)                               4400       4408          4400   9c54825bf803d2abc3e0936334ca6bd2
+REPEAT('9', 8800)                               4400       4408          4400   cc4706ab217b1c4c78cb21f802543076
+REPEAT('e', 8800)                               4400       4408          4400   282780c0642dcfd9153c7fe928c0d574
+REPEAT('f', 8800)                               4400       4408          4400   2f3b9e1e04e71491d9d6ff7ae79b0446
+REPEAT('7', 8820)                               4410       4416          4410   c28651d2b128045a6d7d27d19f0251cb
+REPEAT('8', 8840)                               4420       4428          4420   a1fb203f95f7961e0db8f161139fef46
+REPEAT('9', 8860)                               4430       4436          4430   c0c99b8cb3a40438ec2296a5e064da6e
+REPEAT('a', 8880)                               4440       4448          4440   172e43dd07186ec9d136392e93275cfc
+REPEAT('b', 8900)                               4450       4456          4450   e50ab88851ae4491f8f22ee30a5c846f
+REPEAT('c', 8920)                               4460       4468          4460   2bc485a8f84d7ce765d0c95098820d9a
+REPEAT('d', 8940)                               4470       4476          4470   0074cf44419db677757f987f88f86a62
+REPEAT('e', 8960)                               4480       4488          4480   b498140fc4db21019d476756a6429732
+REPEAT('f', 8980)                               4490       4496          4490   94626d6083bbbb6e566320f2b0c6e1b6
+REPEAT('1', 9000)                               4500       4508          4500   601f0c9deb7f620fb8822d327ca0646d
+REPEAT('2', 9000)                               4500       4508          4500   48579d9ee798e5f5f44c0fe056cad70f
+REPEAT('6', 9000)                               4500       4508          4500   ddfb85f96c43949aa426a674cf2fec8a
+REPEAT('2', 9020)                               4510       4516          4510   892df386d218df76af2000921d241dcc
+REPEAT('3', 9040)                               4520       4528          4520   906b238dfd786536b0cceea4bb255d47
+REPEAT('4', 9060)                               4530       4536          4530   08fcb5db471b4731b69733deb024fffa
+REPEAT('5', 9080)                               4540       4548          4540   5021c51c1d6dbe34aec1b52da2257d8d
+REPEAT('6', 9100)                               4550       4556          4550   17ba3c759c10da08ec9582e4b191b38e
+REPEAT('7', 9120)                               4560       4568          4560   e1473963f77010ae54aa62d1d2089987
+REPEAT('8', 9140)                               4570       4576          4570   ab5eebfa1ba18ac2be0d8c07d7338f6f
+REPEAT('9', 9160)                               4580       4588          4580   8936c5b2dde942df4d5fffa0cef7e219
+REPEAT('a', 9180)                               4590       4596          4590   1dbb87ce4c9ab6316d091a3c6750e304
+REPEAT('2', 9200)                               4600       4608          4600   12fd691bc11afd60228e50040ce61b95
+REPEAT('8', 9200)                               4600       4608          4600   97b3beabd53fae7ec558fde236207f36
+REPEAT('b', 9200)                               4600       4608          4600   b709bbd8a8f1d488859f3e86ceb83cb5
+REPEAT('d', 9200)                               4600       4608          4600   33d0cfb89e2d37ea9be0a3e40200296b
+REPEAT('f', 9200)                               4600       4608          4600   e6ac005d5b8b5191b480a5a0091012ad
+REPEAT('c', 9220)                               4610       4616          4610   f66a3907be4d86dbfcac5a2cac77b1d9
+REPEAT('d', 9240)                               4620       4628          4620   06b3ac8295939bb7288aac8b4c018036
+REPEAT('e', 9260)                               4630       4636          4630   f82501152621dc166a7cf0592b7149f8
+REPEAT('f', 9280)                               4640       4648          4640   2c5e9649c91fdeb6a73ccbb71f9f31a3
+REPEAT('1', 9300)                               4650       4656          4650   9439233d4881e383005d46c10099bb68
+REPEAT('2', 9320)                               4660       4668          4660   ed8511210c5b2e30792c3c1f7da6b069
+REPEAT('3', 9340)                               4670       4676          4670   eb288a4d6fece7588c93e00a9760f07a
+REPEAT('4', 9360)                               4680       4688          4680   2ccb4ffd19c792d23a035756e84a4c69
+REPEAT('5', 9380)                               4690       4696          4690   ee0e188e4ee25eb9e1a0b61949e10802
+REPEAT('3', 9400)                               4700       4708          4700   2d4796f6edaa741b23e85ebaa998834b
+REPEAT('6', 9400)                               4700       4708          4700   c7b1f3c69157f11d23f35250de9c43f6
+REPEAT('9', 9400)                               4700       4708          4700   3d377a2ee8a79672144500316ad907aa
+REPEAT('f', 9600)                               4800       4808          4800   a0d9335029c73f01e56423e40de59015
+REPEAT('7', 10000)                              5000       5008          5000   d5359cb59f7c64c32c9ba94cd7c6e40f
+REPEAT('e', 10000)                              5000       5008          5000   671bea2aef111343e3b962b6a4c8d51c
+REPEAT('f', 10000)                              5000       5008          5000   3fc5d545bd3e5cee9c35f6361a71d3bb
+REPEAT('2', 40000)                             20000      20008         20000   797ca5d0134f9d3f7bc4cf4a85f1cb68
+REPEAT('f', 40000)                             20000      20008         20000   b5f63998fd2419a0f87ffec3fc00eddb
+REPEAT('5', 42000)                             21000      21008         21000   7265f29ec8456d40d31bec686cf1924d
+REPEAT('8', 44000)                             22000      22008         22000   2302b85395862a7b6eac5830f5aafbd2
+
+87 distinct literal values.

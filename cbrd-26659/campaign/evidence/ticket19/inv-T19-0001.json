@@ -1,0 +1,530 @@
+{
+  "schema_version": 1,
+  "manifest_id": "inv-T19-0001",
+  "producer": {
+    "kind": "wrapper",
+    "name": "CBRD-26659 campaign tooling (ticket 15)",
+    "version": "ticket15-1.0"
+  },
+  "invocation": {
+    "started_at": "2026-09-15T16:38:07+09:00",
+    "ended_at": "2026-09-15T16:40:00+09:00",
+    "tier": "fast",
+    "caps": {
+      "invocation_seconds": 900,
+      "per_case_seconds": 120,
+      "invocation_cap_reached": false
+    },
+    "resources": {
+      "cpus": 8,
+      "memory_gib": 16,
+      "storage_gib": 0.01,
+      "storage_root": "/home/vimkim/.cub/campaign/cbrd-26659"
+    },
+    "engine": {
+      "baseline_commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+      "worktree": "/home/vimkim/gh/cb/oos-baseline-f4299ac0c",
+      "modified": false,
+      "install_prefix": "/home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc_nounit",
+      "version_string": "CUBRID 11.5.0 (11.5.0.2648-f4299ac) (64bit release build for Linux) (Sep 14 2026 22:45:25)",
+      "library_hashes": {
+        "libcubrid.so": "sha256:1bbbe44663c79d069181b0d812df95c7f7d793b7f16f2850ab4e8af899986b7c",
+        "libcubridsa.so": "sha256:559a955ea2c46ae3de15efc572fd6a8dbaef7751e38b6c418656437d7a158179"
+      }
+    },
+    "testcase": {
+      "repository": "testcases",
+      "branch": "CBRD-26659-oos-testcases-handover",
+      "commit": "4a2590f36695e0ee07f4919c3a5ed6be97520d62",
+      "base_commit": "b94995abfc7b196fb753aac158d52512288513a6",
+      "worktree": "/home/vimkim/gh/tc/cubrid-testcases-cbrd-26659"
+    },
+    "context": {
+      "revision": "f6543de680b91ae357466b72a983f982892859cd",
+      "content_hash": "sha256:c9daf3c4ed25e16356ebf3c79c55f6bb7391d76c5664675a9aaf55cd5ac11698",
+      "snapshot": "cbrd-26659/campaign/ticket11-evidence/normative-snapshot/"
+    },
+    "catalogue": {
+      "path": "cbrd-26659/campaign/catalogue/requirements.json",
+      "hash": "sha256:0cc33c82cfc472daece8e168f92d153d86d4c1feb0690ceffca786b0c8a8c5dd"
+    },
+    "page_size": 16384,
+    "build_mode": "release",
+    "run_mode": "client-server",
+    "services": [
+      {
+        "kind": "cub_master",
+        "identity": "CTP-owned master, port 26659",
+        "port": 26659,
+        "owned": true
+      },
+      {
+        "kind": "cub_server",
+        "identity": "basic",
+        "port": null,
+        "owned": true
+      },
+      {
+        "kind": "broker",
+        "identity": "BROKER1 port 33120",
+        "port": 33120,
+        "owned": true
+      }
+    ],
+    "instrumentation": null,
+    "seed": null,
+    "runner": {
+      "kind": "ctp-sql",
+      "ctp_fingerprint": "sha256:456cabffff33abe4c5cd4695d40b33a713b8e53d86b6158fd87f94148e17f078",
+      "command": "timeout --foreground -k 20 900 /home/vimkim/.cub/campaign/cbrd-26659/ticket14/tools/campaign_ns.sh /home/vimkim/CTP/bin/ctp.sh sql -c /home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0001/sql_inv-T19-0001.conf",
+      "scenario_selection": "/home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659"
+    }
+  },
+  "expected": {
+    "case_list": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0001/case-list.txt",
+    "case_list_hash": "sha256:9b77ce0b052cdadd94d7493bf165853b65e67726cb09582cae0e8e105fde093f",
+    "case_count": 9,
+    "assertion_count": null
+  },
+  "discovered": {
+    "case_count": 9,
+    "case_names": [
+      "cbrd_26659_oos_rep02_largest_first",
+      "cbrd_26659_oos_rep06_lob_neighbours",
+      "cbrd_26659_oos_sql01_insert_select",
+      "cbrd_26659_oos_sql02_mixed_chunks",
+      "cbrd_26659_oos_sql02_update",
+      "cbrd_26659_oos_sql05_delete",
+      "cbrd_26659_oos_sql06_constraints",
+      "cbrd_26659_oos_sql06_rollback",
+      "cbrd_26659_oos_sql06_triggers"
+    ]
+  },
+  "executed": {
+    "case_count": 9,
+    "assertion_count": null
+  },
+  "proof": {
+    "verdict": "proven",
+    "launcher_exit_status": 0,
+    "setup_log": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0001/setup.log",
+    "mismatches": []
+  },
+  "cases": [
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql",
+        "name": "cbrd_26659_oos_rep02_largest_first"
+      },
+      "requirements": [
+        "OOS-REP-01",
+        "OOS-REP-02",
+        "OOS-SQL-01"
+      ],
+      "outcome": "PASS",
+      "skip_reason": null,
+      "assertions": {
+        "expected": 27,
+        "executed": null,
+        "failed": null
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0001/activation_cbrd_26659_oos_rep02_largest_first_release.txt",
+        "applicability": null
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T19-0001",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket19/att-T19-0001.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0001",
+          "bundle_hash": "sha256:f06a6846d5862ba0deeb6e1a5f06f3f0bb193e56636e9860d03e82087134b1c8"
+        }
+      ],
+      "outstanding": null
+    },
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep06_lob_neighbours.sql",
+        "name": "cbrd_26659_oos_rep06_lob_neighbours"
+      },
+      "requirements": [
+        "OOS-REP-06",
+        "OOS-SQL-01",
+        "OOS-SQL-05"
+      ],
+      "outcome": "FAIL",
+      "skip_reason": null,
+      "assertions": {
+        "expected": null,
+        "executed": null,
+        "failed": null
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0001/activation_cbrd_26659_oos_rep06_lob_neighbours_release.txt",
+        "applicability": null
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T19-0002",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket19/att-T19-0002.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0001",
+          "bundle_hash": "sha256:37a64ef0c249a9a5d4ffb90399ddd1553a8e7e5dfec6c76c726d5a625252cfd9"
+        }
+      ],
+      "outstanding": null
+    },
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql01_insert_select.sql",
+        "name": "cbrd_26659_oos_sql01_insert_select"
+      },
+      "requirements": [
+        "OOS-SQL-01"
+      ],
+      "outcome": "FAIL",
+      "skip_reason": null,
+      "assertions": {
+        "expected": null,
+        "executed": null,
+        "failed": null
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0001/activation_cbrd_26659_oos_sql01_insert_select_release.txt",
+        "applicability": null
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T19-0003",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket19/att-T19-0003.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0001",
+          "bundle_hash": "sha256:e44a792bbf0d99611309a444f92897e3f7c15105cf6063b4f8f391e9a32796ff"
+        }
+      ],
+      "outstanding": null
+    },
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql02_mixed_chunks.sql",
+        "name": "cbrd_26659_oos_sql02_mixed_chunks"
+      },
+      "requirements": [
+        "OOS-SQL-01",
+        "OOS-SQL-02"
+      ],
+      "outcome": "FAIL",
+      "skip_reason": null,
+      "assertions": {
+        "expected": null,
+        "executed": null,
+        "failed": null
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0001/activation_cbrd_26659_oos_sql02_mixed_chunks_release.txt",
+        "applicability": null
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T19-0004",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket19/att-T19-0004.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0001",
+          "bundle_hash": "sha256:50f5c4401f9438626bab04d7971092926f82b0fa80f36e2351b515cd6f819c71"
+        }
+      ],
+      "outstanding": null
+    },
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql02_update.sql",
+        "name": "cbrd_26659_oos_sql02_update"
+      },
+      "requirements": [
+        "OOS-SQL-02"
+      ],
+      "outcome": "FAIL",
+      "skip_reason": null,
+      "assertions": {
+        "expected": null,
+        "executed": null,
+        "failed": null
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0001/activation_cbrd_26659_oos_sql02_update_release.txt",
+        "applicability": null
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T19-0005",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket19/att-T19-0005.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0001",
+          "bundle_hash": "sha256:7c55a265ff43a48ba48a7fe4bf98bd8027cad61460c8a7cfafb12d264b6e144f"
+        }
+      ],
+      "outstanding": null
+    },
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql05_delete.sql",
+        "name": "cbrd_26659_oos_sql05_delete"
+      },
+      "requirements": [
+        "OOS-SQL-05"
+      ],
+      "outcome": "FAIL",
+      "skip_reason": null,
+      "assertions": {
+        "expected": null,
+        "executed": null,
+        "failed": null
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0001/activation_cbrd_26659_oos_sql05_delete_release.txt",
+        "applicability": null
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T19-0006",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket19/att-T19-0006.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0001",
+          "bundle_hash": "sha256:c00eef568aa050824c662c9110b8950dca297e1db29a3f97db39130b2ace9f2f"
+        }
+      ],
+      "outstanding": null
+    },
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_constraints.sql",
+        "name": "cbrd_26659_oos_sql06_constraints"
+      },
+      "requirements": [
+        "OOS-SQL-06"
+      ],
+      "outcome": "FAIL",
+      "skip_reason": null,
+      "assertions": {
+        "expected": null,
+        "executed": null,
+        "failed": null
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0001/activation_cbrd_26659_oos_sql06_constraints_release.txt",
+        "applicability": null
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T19-0007",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket19/att-T19-0007.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0001",
+          "bundle_hash": "sha256:9479006f5a84e09ef76bc4428fc23dee6c10343384d27cea0694577585c86945"
+        }
+      ],
+      "outstanding": null
+    },
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_rollback.sql",
+        "name": "cbrd_26659_oos_sql06_rollback"
+      },
+      "requirements": [
+        "OOS-SQL-06"
+      ],
+      "outcome": "FAIL",
+      "skip_reason": null,
+      "assertions": {
+        "expected": null,
+        "executed": null,
+        "failed": null
+      },
+      "oos_evidence": {
+        "status": "proven",
+        "channel": "show-heap-oos",
+        "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0001/activation_cbrd_26659_oos_sql06_rollback_release.txt",
+        "applicability": null
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T19-0008",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket19/att-T19-0008.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0001",
+          "bundle_hash": "sha256:859c890afd155886ff380b8fe2597e65eaf9bbc81e26bd1a50b203ef2e20362d"
+        }
+      ],
+      "outstanding": null
+    },
+    {
+      "case": {
+        "repository": "testcases",
+        "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_triggers.sql",
+        "name": "cbrd_26659_oos_sql06_triggers"
+      },
+      "requirements": [
+        "OOS-SQL-06",
+        "OOS-SQL-01"
+      ],
+      "outcome": "FAIL",
+      "skip_reason": null,
+      "assertions": {
+        "expected": null,
+        "executed": null,
+        "failed": null
+      },
+      "oos_evidence": {
+        "status": "missing",
+        "channel": "show-heap-oos",
+        "reference": null,
+        "applicability": null
+      },
+      "attempts": [
+        {
+          "attempt_id": "att-T19-0009",
+          "attempt_record": "cbrd-26659/campaign/evidence/ticket19/att-T19-0009.json",
+          "bundle": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0001",
+          "bundle_hash": "sha256:f28b82370b328223d439d597fa528254699cd66f71f561bc399d442d399cdef0"
+        }
+      ],
+      "outstanding": null
+    }
+  ],
+  "outstanding_coverage": {
+    "cases_not_executed": [],
+    "configurations_not_run": [
+      "4096/release/standalone",
+      "4096/release/client-server",
+      "4096/debug/standalone",
+      "4096/debug/client-server",
+      "8192/release/standalone",
+      "8192/release/client-server",
+      "8192/debug/standalone",
+      "8192/debug/client-server",
+      "16384/release/standalone",
+      "16384/debug/standalone",
+      "16384/debug/client-server"
+    ],
+    "requirements_without_executed_case": [
+      "OOS-REP-04",
+      "OOS-REP-07",
+      "OOS-REP-08",
+      "OOS-REP-09",
+      "OOS-REP-10",
+      "OOS-REP-11",
+      "OOS-REP-12",
+      "OOS-SQL-03",
+      "OOS-RD-01",
+      "OOS-RD-02",
+      "OOS-RD-03",
+      "OOS-SCH-01",
+      "OOS-SCH-02",
+      "OOS-SCH-03",
+      "OOS-SCH-04",
+      "OOS-SCH-05",
+      "OOS-SCH-06",
+      "OOS-CL-01",
+      "OOS-CL-02",
+      "OOS-CL-03",
+      "OOS-CL-04",
+      "OOS-CL-05",
+      "OOS-CL-06",
+      "OOS-CL-09",
+      "OOS-CL-10",
+      "OOS-CL-11",
+      "OOS-CL-13",
+      "OOS-DUR-01",
+      "OOS-DUR-02",
+      "OOS-DUR-03",
+      "OOS-DUR-04",
+      "OOS-DUR-05",
+      "OOS-DUR-06",
+      "OOS-DUR-08",
+      "OOS-OPS-01",
+      "OOS-OPS-02",
+      "OOS-OPS-04",
+      "OOS-OPS-06",
+      "OOS-RES-01",
+      "OOS-RES-02",
+      "OOS-RES-03",
+      "OOS-RES-04",
+      "OOS-RES-05",
+      "OOS-RES-06"
+    ],
+    "note": "GENERATED by ctp_sql_records.py. PROOF: expected case count == discovered == executed (execute_case in main.info) with no notRunList entry; the launcher exit status is recorded but never used as proof (ticket 13 findings a, b); hasAnswer is never read (finding d). ASSERTION COUNTS: executed.assertion_count is null because the CTP SQL runner reports only total, success, fail and execute_case (ticket 35 F3); cbrd_26659_oos_rep02_largest_first: declared 27 (ticket 13's hand-derived count, unchanged: 11 scalars per row group x 2 row groups + 3 in the final aggregate + 2 INSERT affected-row counts). CONFIGURATIONS_NOT_RUN RULE (ticket 35 F4): every page-size x build-mode x run-mode combination of the 12-combination domain that the CTP case did not run in this invocation; this invocation ran 16384/release/client-server. REQUIREMENTS_WITHOUT_EXECUTED_CASE RULE: every catalogue requirement with status assertable or observation-only not cited by a case executed in this invocation (44 of 51); BLOCKED and UNSUPPORTED requirements are gaps of another kind and are not listed."
+  },
+  "answer_promotions": [
+    {
+      "case": "cbrd_26659_oos_rep06_lob_neighbours",
+      "action": "candidate",
+      "flagged_for_user": false,
+      "review_note": "the answer was empty (bootstrap run): the first-run result is retained as a candidate in the bundle and must be reviewed against its requirements before promotion by rename",
+      "reviewer": null
+    },
+    {
+      "case": "cbrd_26659_oos_sql01_insert_select",
+      "action": "candidate",
+      "flagged_for_user": false,
+      "review_note": "the answer was empty (bootstrap run): the first-run result is retained as a candidate in the bundle and must be reviewed against its requirements before promotion by rename",
+      "reviewer": null
+    },
+    {
+      "case": "cbrd_26659_oos_sql02_mixed_chunks",
+      "action": "candidate",
+      "flagged_for_user": false,
+      "review_note": "the answer was empty (bootstrap run): the first-run result is retained as a candidate in the bundle and must be reviewed against its requirements before promotion by rename",
+      "reviewer": null
+    },
+    {
+      "case": "cbrd_26659_oos_sql02_update",
+      "action": "candidate",
+      "flagged_for_user": false,
+      "review_note": "the answer was empty (bootstrap run): the first-run result is retained as a candidate in the bundle and must be reviewed against its requirements before promotion by rename",
+      "reviewer": null
+    },
+    {
+      "case": "cbrd_26659_oos_sql05_delete",
+      "action": "candidate",
+      "flagged_for_user": false,
+      "review_note": "the answer was empty (bootstrap run): the first-run result is retained as a candidate in the bundle and must be reviewed against its requirements before promotion by rename",
+      "reviewer": null
+    },
+    {
+      "case": "cbrd_26659_oos_sql06_constraints",
+      "action": "candidate",
+      "flagged_for_user": false,
+      "review_note": "the answer was empty (bootstrap run): the first-run result is retained as a candidate in the bundle and must be reviewed against its requirements before promotion by rename",
+      "reviewer": null
+    },
+    {
+      "case": "cbrd_26659_oos_sql06_rollback",
+      "action": "candidate",
+      "flagged_for_user": false,
+      "review_note": "the answer was empty (bootstrap run): the first-run result is retained as a candidate in the bundle and must be reviewed against its requirements before promotion by rename",
+      "reviewer": null
+    },
+    {
+      "case": "cbrd_26659_oos_sql06_triggers",
+      "action": "candidate",
+      "flagged_for_user": false,
+      "review_note": "the answer was empty (bootstrap run): the first-run result is retained as a candidate in the bundle and must be reviewed against its requirements before promotion by rename",
+      "reviewer": null
+    }
+  ]
+}

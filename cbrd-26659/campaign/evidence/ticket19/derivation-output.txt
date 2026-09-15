@@ -1,0 +1,96 @@
+# Ticket 19 fixture derivation (page size 16384 B)
+
+pinned record gate            =   4086 B  (heap_file.c:12350,12383)
+normative record target       =   4060 B  (OOS-CONTEXT section 1, CBRD-27057)
+pinned max chunk payload      =  16288 B
+normative max chunk payload   =  16280 B
+pinned eligibility floor      =     16 B  (value must be strictly greater)
+normative eligibility floor   =     24 B
+
+## Placement: does each fixture row demote the same columns under both accountings?
+
+fixture                                                  variable columns (B)  record            pinned         normative    verdict
+------------------------------------------------------------------------------------------------------------------------------------
+sql01/sql02/sql05/sql06 OOS-backed row                               4200,300    4564           payload           payload ASSERTABLE
+sql01/sql02/sql05/sql06 inline comparator row                        3000,300    3364           nothing           nothing ASSERTABLE
+sql02 replacement value (still single-chunk)                         5000,300    5364           payload           payload ASSERTABLE
+sql02 multi-chunk value                                             20000,300   20364           payload           payload ASSERTABLE
+sql02 back to single-chunk value                                     4400,300    4764           payload           payload ASSERTABLE
+sql01 bulk-100 smallest row (i = 1)                                  4207,300    4568           payload           payload ASSERTABLE
+sql01 bulk-100 largest row (i = 100)                                 4900,300    5264           payload           payload ASSERTABLE
+sql01 bulk-1000 smallest row (i mod 97 = 0)                          4100,300    4464           payload           payload ASSERTABLE
+sql01 bulk-1000 largest row (i mod 97 = 96)                          4196,300    4560           payload           payload ASSERTABLE
+rep06 LOB-neighbour OOS row                                          4200,300    4564           payload           payload ASSERTABLE
+mixed-chunks row 1 (reused CBRD-27006 sizes)                  3500,20000,3500   27072    multi1+single2    multi1+single2        TIE
+mixed-chunks row 2 (reused CBRD-27006 sizes)                  3600,21000,3400   28072    single1+multi1    single1+multi1 ASSERTABLE
+mixed-chunks row 1 after the UPDATE (reused sizes)            3700,22000,3300   29072    single1+multi1    single1+multi1 ASSERTABLE
+
+TIE means the two accountings agree with each other, but the fixture has two
+equal-size eligible columns, so which of them moved is not settled by the
+normative text.  No case asserts the identity of the moved column for:
+  - mixed-chunks row 1 (reused CBRD-27006 sizes)
+
+## The demotion loop stops: an eligible column is left inline in every OOS fixture
+
+A 300 B `tag` serializes to 308 B and a 3,400 B `single2` to 3408 B; both are far above
+both eligibility floors (16 B pinned, 24 B normative), so each stays inline because the
+largest-first loop already reached the target, not because it was ineligible.
+  every OOS fixture leaves at least one eligible column inline under both accountings.
+
+## Chunk topology: is the single/multi-chunk claim the same under both chunk headers?
+
+value                                                        bytes  serialized   pinned  normative    verdict
+-------------------------------------------------------------------------------------------------------------
+sql02 initial payload (single chunk)                          4200        4208        1          1 ASSERTABLE
+sql02 replacement payload (single chunk)                      5000        5008        1          1 ASSERTABLE
+sql02 multi-chunk payload                                    20000       20008        2          2 ASSERTABLE
+sql02 payload after shrinking back (single chunk)             4400        4408        1          1 ASSERTABLE
+mixed-chunks single1 / single2 (single chunk)                 3500        3508        1          1 ASSERTABLE
+mixed-chunks multi1 (multi chunk)                            20000       20008        2          2 ASSERTABLE
+bulk-100 largest payload (single chunk)                       4900        4908        1          1 ASSERTABLE
+
+## Chunk payload sums the activation checker asserts (Oos_recs_sumlen)
+
+Oos_recs_sumlen counts serialized payload plus one chunk header per chunk record, at
+the PINNED 16-byte header.  The 24-byte normative header would give a different
+number; that difference is the Capability gap already recorded against OOS-REP-05, and
+no answer file carries these figures -- only the checker does.
+
+fixture row                                                   demoted (B)  chunks    sumlen
+--------------------------------------------------------------------------------------------
+sql01/sql02/sql05/sql06 OOS-backed row                               4200       1      4224
+sql02 replacement value (still single-chunk)                         5000       1      5024
+sql02 multi-chunk value                                             20000       2     20040
+sql02 back to single-chunk value                                     4400       1      4424
+sql01 bulk-100 smallest row (i = 1)                                  4207       1      4228
+sql01 bulk-100 largest row (i = 100)                                 4900       1      4924
+sql01 bulk-1000 smallest row (i mod 97 = 0)                          4100       1      4124
+sql01 bulk-1000 largest row (i mod 97 = 96)                          4196       1      4220
+rep06 LOB-neighbour OOS row                                          4200       1      4224
+mixed-chunks row 1 (reused CBRD-27006 sizes)                   20000,3500       3     23564
+mixed-chunks row 2 (reused CBRD-27006 sizes)                   3600,21000       3     24664
+mixed-chunks row 1 after the UPDATE (reused sizes)             3700,22000       3     25764
+
+## Expected MD5 digests (derivable outside CUBRID)
+
+value                                                       char   bytes                                md5
+----------------------------------------------------------------------------------------------------------
+sql01 single OOS-backed payload                                a    4200   1e895dba5e680251ad3db6a20449ca21
+sql01 single OOS-backed tag                                    b     300   95a13d4df13e9b2c95fb54d06d74ebaf
+sql01 inline comparator payload                                c    3000   a64b7d985873a2ea7374eb2be148b463
+sql01 inline comparator tag                                    d     300   11ff9da43a6c8cfddf24a2bf4006fbe6
+sql02 initial payload                                          a    4200   1e895dba5e680251ad3db6a20449ca21
+sql02 payload after the first UPDATE                           e    5000   671bea2aef111343e3b962b6a4c8d51c
+sql02 multi-chunk payload                                      f   20000   b5f63998fd2419a0f87ffec3fc00eddb
+sql02 payload after shrinking back                             9    4400   cc4706ab217b1c4c78cb21f802543076
+sql06 payload before ROLLBACK                                  a    4200   1e895dba5e680251ad3db6a20449ca21
+sql06 payload the ROLLBACK must restore                        a    4200   1e895dba5e680251ad3db6a20449ca21
+
+## Bulk-group arithmetic the aggregate assertions depend on
+
+bulk-100: rows 100, sizes 4207..4900, distinct values 100, sum(OCTET_LENGTH) 455350, sum(BIT_LENGTH) 3642800
+bulk-1000: rows 1000, sizes 4100..4196, distinct values 1000, sum(OCTET_LENGTH) 4147025, sum(BIT_LENGTH) 33176200
+bulk-100 sampled rows: i=1 -> char '2', 4207 B, md5 fe9a95e8f4ef30b0786b190dc13e2b94, i=50 -> char '6', 4550 B, md5 17ba3c759c10da08ec9582e4b191b38e, i=100 -> char 'b', 4900 B, md5 32badabf72dc71e7306e874bab4bc8ab
+bulk-1000 sampled rows: i=1 -> char '2', 4101 B, md5 f103a64ccac79fd90fd3baa02da1fac5, i=500 -> char '6', 4115 B, md5 275d2a2cf5ad3946107f94fe7b54d3f2, i=1000 -> char 'b', 4130 B, md5 52e965b79bc742b2be02890f3fd823c6
+
+RESULT: every ticket-19 fixture is assertable under both accountings

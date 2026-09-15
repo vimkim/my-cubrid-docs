@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "attempt_id": "att-T19-0037",
+  "kind": "original",
+  "parent_attempt": null,
+  "finding_id": null,
+  "case": {
+    "repository": "testcases",
+    "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_constraints.sql",
+    "name": "cbrd_26659_oos_sql06_constraints"
+  },
+  "requirements": [
+    "OOS-SQL-06"
+  ],
+  "manifest_id": "inv-T19-0004",
+  "configuration": {
+    "page_size": 16384,
+    "build_mode": "release",
+    "run_mode": "client-server",
+    "instrumentation_id": null,
+    "seed": null
+  },
+  "started_at": "2026-09-15T16:54:06+09:00",
+  "ended_at": "2026-09-15T16:56:00+09:00",
+  "deadline": {
+    "seconds": 120,
+    "reached": false,
+    "evidence_captured_on_timeout": null
+  },
+  "outcome": "PASS",
+  "skip_reason": null,
+  "assertions": {
+    "executed": null,
+    "failed": null
+  },
+  "expected_versus_actual": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0004/expected_vs_actual_cbrd_26659_oos_sql06_constraints.diff",
+  "oos_evidence": {
+    "status": "proven",
+    "channel": "show-heap-oos",
+    "reference": "cbrd-26659/campaign/evidence/ticket19/inv-T19-0004/activation_cbrd_26659_oos_sql06_constraints_release.txt",
+    "applicability": null
+  },
+  "barriers": [],
+  "injections": [],
+  "resources_owned": {
+    "databases": [
+      "basic (CTP-created under the campaign-private CUBRID_DATABASES /home/vimkim/.cub/campaign/cbrd-26659/ticket19/ctpdb)",
+      "t19sql06c (paired activation checker)"
+    ],
+    "processes": [
+      "cub_master port 26659",
+      "cub_server basic",
+      "broker BROKER1 port 33120"
+    ],
+    "ports": [
+      26659,
+      33120,
+      33122
+    ],
+    "directories": [
+      "/home/vimkim/.cub/campaign/cbrd-26659/ticket19"
+    ]
+  },
+  "cleanup": {
+    "performed": true,
+    "scope_verified": true,
+    "evidence_preserved_first": true,
+    "evidence": "Namespace: campaign_ns.sh. The whole invocation ran under campaign_ns.sh (unshare --user --map-current-user --pid --fork --mount-proc --ipc), so CTP's unscoped `pkill cub` and ipcrm sweep could reach only processes and segments this invocation started; the launcher's exit tore the namespace down. Install hygiene by hashing before and after: conf drift 0, databases drift 0, testcase worktree drift 0 (None = not measured by this bundle's producer). All launcher artifacts were copied into the bundle before the install and worktree were restored."
+  },
+  "bundle": {
+    "path": "/home/vimkim/.cub/campaign/cbrd-26659/ticket19/attempts/inv-T19-0004",
+    "hash": "sha256:c54ab49fe0361c60bb8cc427ac8218eeaa9bae2078af1882bce7b7a6e0802645"
+  },
+  "reproduction": {
+    "fresh_fixture": true,
+    "consecutive_reproductions_so_far": 0,
+    "failure_reproduced": false
+  },
+  "notes": "original attempt of cbrd_26659_oos_sql06_constraints, CTP SQL runner, release build, client-server, 16384 B pages. CTP listed the case in okList with totalTime 61 ms; expected-versus-actual MATCH. assertions.executed is null because the CTP SQL runner has no assertion counter (ticket 35 F3); OOS-path evidence: activation proven by the paired checker in the case's own run mode (client-server), same fixture, same install, same page size. "
+}

@@ -1,0 +1,173 @@
+{
+  "declaration_version": 1,
+  "description": "Declared case list for ticket 19's public SQL-operations family, plus ticket 13's tracer-bullet case, which shares the scenario directory and is therefore discovered and executed by the same invocation. Tooling input only: the testcase repository does not depend on it. Requirement IDs come from each case's own header and from expected-oracle.md. No hand-derived assertion count is declared for the eight new cases: the SQL seam has no counter (ticket 35 F3, so executed.assertion_count is null either way), a count would have to be a hand tally of result cells across statements that return 1, 3 and 4 rows, and CTP compares the whole result text, so a byte-identical .result already entails that every cell matched. Ticket 13's case keeps the 27 it has always declared.",
+  "repository": "testcases",
+  "runner": "ctp-sql",
+  "scenario": "sql/_36_guava/cbrd_26659",
+  "tier": "fast",
+  "page_size": 16384,
+  "run_mode": "client-server",
+  "cases": {
+    "cbrd_26659_oos_rep02_largest_first": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql",
+      "requirements": [
+        "OOS-REP-01",
+        "OOS-REP-02",
+        "OOS-SQL-01"
+      ],
+      "expected_assertions": 27,
+      "assertion_count_derivation": "ticket 13's hand-derived count, unchanged: 11 scalars per row group x 2 row groups + 3 in the final aggregate + 2 INSERT affected-row counts",
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_cs.sh",
+        "args": [
+          "t19rep02",
+          "3024"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t19rep02"
+      }
+    },
+    "cbrd_26659_oos_rep06_lob_neighbours": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep06_lob_neighbours.sql",
+      "requirements": [
+        "OOS-REP-06",
+        "OOS-SQL-01",
+        "OOS-SQL-05"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "/home/vimkim/gh/my-cubrid-docs/cbrd-26659/campaign/evidence/ticket19/activation/cbrd_26659_oos_rep06_lob_neighbours.spec",
+          "t19lob"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t19lob"
+      }
+    },
+    "cbrd_26659_oos_sql01_insert_select": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql01_insert_select.sql",
+      "requirements": [
+        "OOS-SQL-01"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "/home/vimkim/gh/my-cubrid-docs/cbrd-26659/campaign/evidence/ticket19/activation/cbrd_26659_oos_sql01_insert_select.spec",
+          "t19sql01"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t19sql01"
+      }
+    },
+    "cbrd_26659_oos_sql02_mixed_chunks": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql02_mixed_chunks.sql",
+      "requirements": [
+        "OOS-SQL-01",
+        "OOS-SQL-02"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "/home/vimkim/gh/my-cubrid-docs/cbrd-26659/campaign/evidence/ticket19/activation/cbrd_26659_oos_sql02_mixed_chunks.spec",
+          "t19mixed"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t19mixed"
+      }
+    },
+    "cbrd_26659_oos_sql02_update": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql02_update.sql",
+      "requirements": [
+        "OOS-SQL-02"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "/home/vimkim/gh/my-cubrid-docs/cbrd-26659/campaign/evidence/ticket19/activation/cbrd_26659_oos_sql02_update.spec",
+          "t19sql02"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t19sql02"
+      }
+    },
+    "cbrd_26659_oos_sql05_delete": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql05_delete.sql",
+      "requirements": [
+        "OOS-SQL-05"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "/home/vimkim/gh/my-cubrid-docs/cbrd-26659/campaign/evidence/ticket19/activation/cbrd_26659_oos_sql05_delete.spec",
+          "t19sql05"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t19sql05"
+      }
+    },
+    "cbrd_26659_oos_sql06_constraints": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_constraints.sql",
+      "requirements": [
+        "OOS-SQL-06"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "/home/vimkim/gh/my-cubrid-docs/cbrd-26659/campaign/evidence/ticket19/activation/cbrd_26659_oos_sql06_constraints.spec",
+          "t19sql06c"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t19sql06c"
+      }
+    },
+    "cbrd_26659_oos_sql06_rollback": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_rollback.sql",
+      "requirements": [
+        "OOS-SQL-06"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "/home/vimkim/gh/my-cubrid-docs/cbrd-26659/campaign/evidence/ticket19/activation/cbrd_26659_oos_sql06_rollback.spec",
+          "t19sql06r"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t19sql06r"
+      }
+    },
+    "cbrd_26659_oos_sql06_triggers": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_triggers.sql",
+      "requirements": [
+        "OOS-SQL-06",
+        "OOS-SQL-01"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "/home/vimkim/gh/my-cubrid-docs/cbrd-26659/campaign/evidence/ticket19/activation/cbrd_26659_oos_sql06_triggers.spec",
+          "t19sql06t"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t19sql06t"
+      }
+    }
+  }
+}

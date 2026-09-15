@@ -1,0 +1,58 @@
+[
+  {
+    "case": "cbrd_26659_oos_rep06_lob_neighbours",
+    "action": "promoted",
+    "flagged_for_user": false,
+    "review_note": "Reviewed against expected-oracle.md section 9 (OOS-REP-06, OOS-SQL-01, OOS-SQL-05). Every BLOB reports 64 bytes and the CLOB 31 on both rows, before and after the source rows were deleted, and every equality flag is 1 -- which is the clause that would fail if the INSERT ... SELECT copy had borrowed the source's external file instead of copying it. The OOS-backed payload's (length, digest) pairs are the ones derived in Python.",
+    "reviewer": "Claude Opus 5, campaign ticket 19 (authoring session, 2026-09-15). Reviewed mechanically by review_candidates.py against expected-oracle.md, which was written before any CTP invocation of these cases, and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine. The specification's independent agent review is still owed and is recorded as outstanding in the ticket 19 report."
+  },
+  {
+    "case": "cbrd_26659_oos_sql01_insert_select",
+    "action": "promoted",
+    "flagged_for_user": false,
+    "review_note": "Reviewed against expected-oracle.md section 3 (OOS-SQL-01). The three aggregate totals are the derived ones (455350 over 100 rows, 4147025 over 1000, helper exactly 1..1000), distinct_payloads equals the row count in both groups so the aggregates cannot be passing on identical rows, and all six sampled digests match the Python derivation.",
+    "reviewer": "Claude Opus 5, campaign ticket 19 (authoring session, 2026-09-15). Reviewed mechanically by review_candidates.py against expected-oracle.md, which was written before any CTP invocation of these cases, and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine. The specification's independent agent review is still owed and is recorded as outstanding in the ticket 19 report."
+  },
+  {
+    "case": "cbrd_26659_oos_sql02_mixed_chunks",
+    "action": "promoted",
+    "flagged_for_user": false,
+    "review_note": "Reviewed against expected-oracle.md section 10 (OOS-SQL-01, OOS-SQL-02). All nine equality flags across the three row groups are 1 and every (length, digest) pair is derived. The two ER_PT_SYNTAX lines the previous candidate carried are gone: they came from the CTP statement splitter reading a semicolon at the end of a comment line as a boundary, not from the engine, and the case no longer has such a line.",
+    "reviewer": "Claude Opus 5, campaign ticket 19 (authoring session, 2026-09-15). Reviewed mechanically by review_candidates.py against expected-oracle.md, which was written before any CTP invocation of these cases, and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine. The specification's independent agent review is still owed and is recorded as outstanding in the ticket 19 report."
+  },
+  {
+    "case": "cbrd_26659_oos_sql02_update",
+    "action": "promoted",
+    "flagged_for_user": false,
+    "review_note": "Reviewed against expected-oracle.md section 4 (OOS-SQL-02). Each of the ten steps reads back the value that step wrote, including the single-chunk to two-chunk transition at 20000 B and back, the fiftieth repeated update, and the inline-attribute-only update after which the untouched OOS-backed value still carries its derived digest.",
+    "reviewer": "Claude Opus 5, campaign ticket 19 (authoring session, 2026-09-15). Reviewed mechanically by review_candidates.py against expected-oracle.md, which was written before any CTP invocation of these cases, and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine. The specification's independent agent review is still owed and is recorded as outstanding in the ticket 19 report."
+  },
+  {
+    "case": "cbrd_26659_oos_sql05_delete",
+    "action": "promoted",
+    "flagged_for_user": false,
+    "review_note": "Reviewed against expected-oracle.md section 5 (OOS-SQL-05). Affected-row counts are 1, 1 and 2 as derived; the delete whose predicate reads the OOS-backed column matches exactly one row; the table empties and re-fills byte-exactly after both DELETE and TRUNCATE, with four distinct payloads and no aliasing.",
+    "reviewer": "Claude Opus 5, campaign ticket 19 (authoring session, 2026-09-15). Reviewed mechanically by review_candidates.py against expected-oracle.md, which was written before any CTP invocation of these cases, and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine. The specification's independent agent review is still owed and is recorded as outstanding in the ticket 19 report."
+  },
+  {
+    "case": "cbrd_26659_oos_sql06_constraints",
+    "action": "promoted",
+    "flagged_for_user": false,
+    "review_note": "Reviewed against expected-oracle.md section 7 (OOS-SQL-06). The four error identities are -670, -670, -631, -670 in order, exactly the codes derived from src/base/error_code.h and the pinned default of print_key_value_on_unique_error before the engine ran. After every failure the table is still exactly the two-row fixture, including the three-row INSERT whose last row collides -- neither of its first two rows was stored.",
+    "reviewer": "Claude Opus 5, campaign ticket 19 (authoring session, 2026-09-15). Reviewed mechanically by review_candidates.py against expected-oracle.md, which was written before any CTP invocation of these cases, and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine. The specification's independent agent review is still owed and is recorded as outstanding in the ticket 19 report."
+  },
+  {
+    "case": "cbrd_26659_oos_sql06_rollback",
+    "action": "promoted",
+    "flagged_for_user": false,
+    "review_note": "Reviewed against expected-oracle.md section 6 (OOS-SQL-06). The writer sees its own uncommitted OOS writes; after ROLLBACK the row carries the original 4200 B value and its derived digest, not merely a value of the right length; and after ROLLBACK TO SAVEPOINT the 4600 B value written before the savepoint survives while the 4700 B update and the row inserted after it are gone.",
+    "reviewer": "Claude Opus 5, campaign ticket 19 (authoring session, 2026-09-15). Reviewed mechanically by review_candidates.py against expected-oracle.md, which was written before any CTP invocation of these cases, and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine. The specification's independent agent review is still owed and is recorded as outstanding in the ticket 19 report."
+  },
+  {
+    "case": "cbrd_26659_oos_sql06_triggers",
+    "action": "promoted",
+    "flagged_for_user": false,
+    "review_note": "Reviewed against expected-oracle.md section 8 (OOS-SQL-06, OOS-SQL-01). The reading trigger logged 4200 and the derived digest of the OOS-backed value; the writing trigger produced a byte-identical copy; the rejected UPDATE returned Error:-517, left the stored value unchanged and fired neither AFTER trigger (log 2 rows, mirror 1, unchanged from the step before). Placement is not asserted anywhere in this answer: finding T19-F1 is recorded by the activation check and the report instead.",
+    "reviewer": "Claude Opus 5, campaign ticket 19 (authoring session, 2026-09-15). Reviewed mechanically by review_candidates.py against expected-oracle.md, which was written before any CTP invocation of these cases, and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine. The specification's independent agent review is still owed and is recorded as outstanding in the ticket 19 report."
+  }
+]
