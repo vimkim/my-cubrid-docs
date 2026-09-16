@@ -64,6 +64,14 @@ ACCOUNTINGS = (
 SCHEMA_C = ("id", "payload", "tag")
 SCHEMA_D = ("id", "single1", "multi1", "single2")
 
+# The reused CBRD-27006 workload's own sizes, quoted verbatim from commit 1fdcaf935.  One home:
+# the FIXTURES table below, `gen_ticket19_cases.case_mixed_chunks()` and the tie-invariance
+# self-test all read them from here.  They were typed out in all three, so an edit that made row
+# 1's two single-chunk columns unequal would have destroyed the documented tie while the
+# self-test kept passing on a copy of the old sizes (ticket 44 F5).
+REUSED_27006_ROWS = {1: [3500, 20000, 3500], 2: [3600, 21000, 3400]}
+REUSED_27006_UPDATE = [3700, 22000, 3300]
+
 # Every fixture row the family depends on:
 #   (label, column names, variable-column byte sizes, expected demoted column names)
 FIXTURES = [
@@ -83,11 +91,11 @@ FIXTURES = [
     # equal sizes.  The sizes are kept verbatim for provenance; the tie is recorded instead of
     # being engineered away, and no case asserts which column moved.  See the tie-invariance
     # check below: `Oos_recs_sumlen` is the same either way, so the activation evidence is sound.
-    ("mixed-chunks row 1 (reused CBRD-27006 sizes)", SCHEMA_D, [3500, 20000, 3500],
+    ("mixed-chunks row 1 (reused CBRD-27006 sizes)", SCHEMA_D, list(REUSED_27006_ROWS[1]),
      ["multi1", "single1|single2"]),
-    ("mixed-chunks row 2 (reused CBRD-27006 sizes)", SCHEMA_D, [3600, 21000, 3400],
+    ("mixed-chunks row 2 (reused CBRD-27006 sizes)", SCHEMA_D, list(REUSED_27006_ROWS[2]),
      ["multi1", "single1"]),
-    ("mixed-chunks row 1 after the UPDATE (reused sizes)", SCHEMA_D, [3700, 22000, 3300],
+    ("mixed-chunks row 1 after the UPDATE (reused sizes)", SCHEMA_D, list(REUSED_27006_UPDATE),
      ["multi1", "single1"]),
 ]
 
@@ -386,14 +394,38 @@ def self_test():
 
     # The tied fixture's activation assertion must not depend on the tie: demoting single1 or
     # single2 has to give the same chunk count and the same Oos_recs_sumlen, or the checker
-    # would be asserting the tie-break the specification does not fix.
+    # would be asserting the tie-break the specification does not fix.  Both demotion sets are
+    # DERIVED from the workload's own sizes, not re-typed: the earlier form compared one literal
+    # with itself, so an edit that made the two columns unequal would have removed the tie and
+    # left this passing (ticket 44 F5).
     hdr = ob.OOS_RECORD_HEADER_SIZE_PINNED
     def sumlen(sizes):
         return sum(varbit(n) + chunks(n, hdr) * hdr for n in sizes)
-    check("tie-invariant sumlen (multi1+single1 vs multi1+single2)",
-          sumlen([20000, 3500]), sumlen([20000, 3500]))
-    check("tie-invariant chunk count",
-          sum(chunks(n, hdr) for n in [20000, 3500]), 3)
+
+    row1 = list(REUSED_27006_ROWS[1])
+    row1_names = list(SCHEMA_D[1:])
+    demoted_1, _a1, _o1, _v1 = row_layout(row1, ob.gate_pinned(PAGE_SIZE), ob.OR_OOS_INLINE_SIZE_PINNED)
+    moved = sorted(demoted_1)
+    # what the tie-break could have moved instead: an inline column the same size as one that
+    # moved.  While single1 and single2 are equal there is exactly one such alternative; make
+    # them unequal and there is none, and this check -- not a comparison of a literal with
+    # itself -- is what fails.
+    alternatives = [sorted((set(moved) - {out}) | {into})
+                    for out in moved
+                    for into in range(len(row1))
+                    if into not in moved and row1[into] == row1[out]]
+    check("the reused workload's row 1 still has a tie to be invariant under", len(alternatives), 1)
+
+    def render(idxs):
+        return "+".join(row1_names[i] for i in idxs)
+
+    for alt in alternatives:
+        check(f"tie-invariant sumlen ({render(moved)} vs {render(alt)})",
+              sumlen([row1[i] for i in moved]), sumlen([row1[i] for i in alt]))
+        check(f"tie-invariant chunk count ({render(moved)} vs {render(alt)})",
+              sum(chunks(row1[i], hdr) for i in moved), sum(chunks(row1[i], hdr) for i in alt))
+    check("the reused workload's row 1 occupies three chunks",
+          sum(chunks(row1[i], hdr) for i in moved), 3)
     # and a guard that the invariance is a property of the equal sizes, not of the function:
     check("unequal sizes would NOT be tie-invariant", sumlen([20000, 3500]) == sumlen([20000, 3600]),
           False)

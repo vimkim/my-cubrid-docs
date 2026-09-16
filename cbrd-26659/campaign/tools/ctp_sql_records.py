@@ -34,7 +34,10 @@ What it reads, and the rules encoded (sources in brackets):
 * An `answer_promotions` entry with action `promoted` is written by this tool, never copied
   from `--promotions` unverified: the rename proof (the promoted answer's hash equal to the
   retained candidate's) is mechanical and is checked here, and the entry is refused without a
-  hand-supplied review note [ticket 36 item 8].
+  hand-supplied review note [ticket 36 item 8]. Its `flagged_for_user` must equal the one the
+  declaration carries for that case, and a promoted case whose declaration omits the field is
+  refused: the declaration is the portable input a regeneration reads, so a flag that lives only
+  in the promotion record is a sign-off gate a regeneration drops in silence [ticket 44 F2].
 * `configurations_not_run` enumerates the 12-combination domain minus what the CTP case ran
   in this invocation [ticket 35 F4].
 * The paired activation check is read from its output directory; `proven` only when it ran
@@ -120,7 +123,7 @@ def find_one(bundle: Path, names, case_name=None):
     return None
 
 
-def verified_promotions(entries, bundle: Path, declared) -> list:
+def verified_promotions(entries, bundle: Path, declared, declared_cases) -> list:
     """Write the answer promotions, verifying the mechanical half (ticket 36 item 8).
 
     A `promoted` entry claims the reviewed answer is the retained candidate renamed. That
@@ -128,6 +131,13 @@ def verified_promotions(entries, bundle: Path, declared) -> list:
     is checked here instead. The judgement is not mechanical, so the human still supplies the
     review note and the flag, and an entry without them is refused. A refusal raises: nothing
     invalid is ever written.
+
+    The flag is also cross-checked against the declaration (ticket 44 F2). The declaration is
+    the portable input a manifest is regenerated from, so a flag that lives only in the
+    promotion record is a sign-off gate a regeneration can silently drop -- which is what
+    ticket 19's two flagged promotions did for a day. The two files must not be able to
+    disagree, so a `promoted` case whose declaration omits `flagged_for_user`, or carries a
+    different one, is refused here rather than reconciled.
     """
     out = []
     for raw in entries:
@@ -145,6 +155,15 @@ def verified_promotions(entries, bundle: Path, declared) -> list:
                               "flagged_for_user, which only a reviewer can set")
         if case not in declared:
             raise RecordError(f"answer promotion for {case!r}: the case is not declared in this invocation")
+        declared_flag = (declared_cases.get(case) or {}).get("flagged_for_user")
+        if declared_flag is None:
+            raise RecordError(f"answer promotion for {case!r}: the declaration carries no flagged_for_user, so a "
+                              "manifest regenerated from the declaration alone would drop the sign-off gate; "
+                              "declare the flag beside the case (ticket 44 F2)")
+        if bool(declared_flag) != entry["flagged_for_user"]:
+            raise RecordError(f"answer promotion for {case!r}: the promotion record says flagged_for_user="
+                              f"{entry['flagged_for_user']} and the declaration says {bool(declared_flag)}; "
+                              "the sign-off gate must not differ between the two inputs (ticket 44 F2)")
         answer = find_one(bundle, ["expected.answer"], case)
         candidate = find_one(bundle, ["candidate.result", "actual.result"], case)
         if answer is None or candidate is None:
@@ -338,7 +357,8 @@ def build(args) -> int:
     # --- per case ---------------------------------------------------------------------------
     attempt_ids = [a for a in args.attempt_ids.split(",") if a]
     activation_dirs = dict(a.split("=", 1) for a in args.activation)
-    promotions = verified_promotions(load_json(args.promotions) if args.promotions else [], bundle, set(declared))
+    promotions = verified_promotions(load_json(args.promotions) if args.promotions else [], bundle, set(declared),
+                                     decl["cases"])
     cases_out, attempt_records, bundle_indexes = [], [], []
     executed_reqs = set()
     ran_configs = set()

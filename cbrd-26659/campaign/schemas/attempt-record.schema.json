@@ -141,10 +141,10 @@
     },
     "bundle": {
       "type": ["object", "null"],
-      "description": "Null only for a PASS whose bulky artifacts expired; the attempt record itself is kept.",
+      "description": "Null only for a PASS whose bulky artifacts expired; the attempt record itself is kept. One bundle belongs to one INVOCATION, not to one attempt (ticket 44 F3): every attempt of an invocation records the same root_path and the same hash, which is the finished bundle's. The specification's \"Each attempt retains one replay bundle\" is satisfied by reference -- an attempt that cannot name a complete bundle of its own workload, logs and expected-versus-actual has no replay evidence, and one shared per-invocation bundle gives every attempt exactly that.",
       "additionalProperties": false,
       "required": ["path", "hash"],
-      "properties": {"path": {"type": "string"}, "hash": {"$ref": "#/$defs/sha256", "description": "The campaign's bundle hash: sha256 of a SHA256SUMS file listing every file in the bundle, paths relative to its root, in bytewise (LC_ALL=C) order (ticket 36 item 1). Hashes recorded before that convention stay as recorded."}}
+      "properties": {"path": {"type": "string"}, "hash": {"$ref": "#/$defs/sha256", "description": "The campaign's bundle hash: sha256 of a SHA256SUMS file listing every file in the bundle, paths relative to its root, in bytewise (LC_ALL=C) order (ticket 36 item 1). Hashes recorded before that convention stay as recorded. The digest is the FINISHED bundle's, taken after the last file of the invocation is written; a digest taken while the directory was still growing names no bundle that ever existed and is corrected, saying so, rather than kept (ticket 44 F3)."}}
     },
     "reproduction": {
       "type": ["object", "null"],

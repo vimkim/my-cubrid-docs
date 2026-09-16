@@ -16,7 +16,9 @@ Every identifier carries SELFTEST so nothing here can be mistaken for campaign e
   3. the same entry without an explicit flagged_for_user is refused;
   4. an entry whose answer and candidate differ is refused: the rename is unproven;
   5. an entry whose candidate is not in the bundle is refused;
-  6. a candidate or retained-as-failure-evidence entry passes through untouched.
+  6. a candidate or retained-as-failure-evidence entry passes through untouched;
+  7. a promoted entry whose declaration omits `flagged_for_user` is refused (ticket 44 F2);
+  8. a promoted entry whose flag disagrees with the declaration's is refused (ticket 44 F2).
 
 Exit 0 when every check holds.
 """
@@ -33,6 +35,11 @@ import ctp_sql_records  # noqa: E402
 
 CASE = "SELFTEST_case"
 NOTE = "SELFTEST: reviewed against OOS-REP-02 and promoted"
+# The declaration is the portable input a manifest is regenerated from, so the flag lives there
+# too and the two must agree (ticket 44 F2).
+DECLARED_UNFLAGGED = {CASE: {"flagged_for_user": False}}
+DECLARED_FLAGGED = {CASE: {"flagged_for_user": True}}
+DECLARED_SILENT = {CASE: {}}
 
 
 def bundle_with(tmp: Path, name: str, answer: str, candidate) -> Path:
@@ -44,10 +51,11 @@ def bundle_with(tmp: Path, name: str, answer: str, candidate) -> Path:
     return b
 
 
-def refused(entry, bundle) -> str:
+def refused(entry, bundle, declared_cases=None) -> str:
     """Return the refusal message, or '' when the call was accepted."""
     try:
-        ctp_sql_records.verified_promotions([entry], bundle, {CASE})
+        ctp_sql_records.verified_promotions([entry], bundle, {CASE},
+                                            DECLARED_UNFLAGGED if declared_cases is None else declared_cases)
     except RecordError as exc:
         return str(exc)
     return ""
@@ -72,7 +80,7 @@ def main(argv=None) -> int:
     promoted = {"case": CASE, "action": "promoted", "flagged_for_user": False, "review_note": NOTE, "reviewer": "SELFTEST reviewer"}
 
     # 1. accepted, with the proof written by the tool
-    out = ctp_sql_records.verified_promotions([dict(promoted)], matching, {CASE})
+    out = ctp_sql_records.verified_promotions([dict(promoted)], matching, {CASE}, DECLARED_UNFLAGGED)
     check("1a a proven rename is written", len(out) == 1 and out[0]["action"] == "promoted")
     check("1b the hand-supplied review note is kept", out[0]["review_note"].startswith(NOTE))
     check("1c the tool appends the rename proof", "RENAME VERIFIED" in out[0]["review_note"]
@@ -91,7 +99,18 @@ def main(argv=None) -> int:
     others = [{"case": CASE, "action": "candidate", "flagged_for_user": False, "review_note": None, "reviewer": None},
               {"case": CASE, "action": "retained-as-failure-evidence", "flagged_for_user": False, "review_note": None, "reviewer": None}]
     check("6  candidate and retained entries pass through untouched",
-          ctp_sql_records.verified_promotions([dict(e) for e in others], no_candidate, {CASE}) == others)
+          ctp_sql_records.verified_promotions([dict(e) for e in others], no_candidate, {CASE},
+                                              DECLARED_SILENT) == others)
+
+    # 7..8. the declaration and the promotion record must not be able to disagree (ticket 44 F2)
+    check("7  refused when the declaration carries no flagged_for_user",
+          "sign-off gate" in refused(dict(promoted), matching, DECLARED_SILENT))
+    check("8  refused when the flag disagrees with the declaration",
+          "must not differ" in refused(dict(promoted), matching, DECLARED_FLAGGED))
+    flagged = dict(promoted, flagged_for_user=True)
+    check("8b a flag both files agree on is accepted",
+          ctp_sql_records.verified_promotions([flagged], matching, {CASE},
+                                              DECLARED_FLAGGED)[0]["flagged_for_user"] is True)
 
     print(f"[selftest_promotions] {len(fails)} failing check(s); files under {tmp}")
     return 1 if fails else 0

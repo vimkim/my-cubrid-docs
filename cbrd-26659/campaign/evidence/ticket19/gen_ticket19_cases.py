@@ -916,11 +916,9 @@ DROP TABLE {t};
 def case_mixed_chunks():
     t = "t_cbrd_26659_sql02_mixed"
     names = ["single1", "multi1", "single2"]
-    rows = {
-        1: [3500, 20000, 3500],
-        2: [3600, 21000, 3400],
-    }
-    upd = [3700, 22000, 3300]
+    # the sizes live in derive_ticket19_sizes.py, which the tie-invariance self-test reads too
+    rows = {rid: list(sizes) for rid, sizes in d.REUSED_27006_ROWS.items()}
+    upd = list(d.REUSED_27006_UPDATE)
     for rid, sizes in rows.items():
         d.classify(sizes, names)
     d.classify(upd, names)

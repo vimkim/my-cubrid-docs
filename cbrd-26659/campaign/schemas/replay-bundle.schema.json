@@ -11,8 +11,8 @@
     "bundle_id": {"type": "string", "pattern": "^[A-Za-z0-9._:-]+$"},
     "attempt_id": {"type": "string"},
     "created_at": {"$ref": "#/$defs/timestamp"},
-    "root_path": {"type": "string", "pattern": "^/home/", "description": "Bundle directory under /home; the temporary filesystem is unsuitable."},
-    "total_bytes": {"type": "integer", "minimum": 0, "description": "Sum of the sizes of the regular files under root_path. Not du(1)'s figure, which counts directory inodes and rounds to blocks (ticket 36 item 1). The bundle's own hash, recorded by the attempt record and the manifest, is the sha256 of a SHA256SUMS file listing every one of those files, paths relative to root_path, in bytewise (LC_ALL=C) order."},
+    "root_path": {"type": "string", "pattern": "^/home/", "description": "Bundle directory under /home; the temporary filesystem is unsuitable. One bundle belongs to one INVOCATION, not to one attempt (ticket 44 F3): every attempt of an invocation records the same root_path and the same hash, which is the finished bundle's. The specification's \"Each attempt retains one replay bundle\" is satisfied by reference -- an attempt that cannot name a complete bundle of its own workload, logs and expected-versus-actual has no replay evidence, and one shared per-invocation bundle gives every attempt exactly that."},
+    "total_bytes": {"type": "integer", "minimum": 0, "description": "Sum of the sizes of the regular files under root_path. Not du(1)'s figure, which counts directory inodes and rounds to blocks (ticket 36 item 1). The bundle's own hash, recorded by the attempt record and the manifest, is the sha256 of a SHA256SUMS file listing every one of those files, paths relative to root_path, in bytewise (LC_ALL=C) order. Like the hash, it is the finished bundle's: the indexes of one invocation all carry the same figure (ticket 44 F3)."},
     "complete": {"type": "boolean", "description": "True only when no item is in state missing."},
     "items": {
       "type": "object",

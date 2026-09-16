@@ -6,8 +6,9 @@
 > Author: Claude Opus 5, for the [Adversarial OOS testcase campaign](/home/vimkim/gh/cb/CBRD-26659-oos-testcases-handover/.scratch/oos-adversarial/spec.md) ticket 19.
 > Records: [`evidence/ticket19/`](evidence/ticket19/) — nine manifests, 83 attempt records, 83
 > replay-bundle indexes, the coverage matrix, the pre-run oracle, the derivation and its
-> self-test, the candidate review and its control, and the eight activation specs.
-> Revision 2 (2026-09-15) closes the two-axis review of revision 1; §12 lists every change.
+> self-test, the candidate review and its control, and the eight OOS-path evidence specs.
+> Revision 2 (2026-09-15) closes the two-axis review of revision 1; §13 lists every change.
+> Revision 3 (2026-09-16) closes the specification's independent review; §14 lists every change.
 > Companions: [engine baseline](CBRD-26659-engine-baseline_f4299ac_claude.md),
 > [requirement catalogue](CBRD-26659-requirement-catalogue_f4299ac_claude.md),
 > [traceability schemas](CBRD-26659-traceability-schemas_f4299ac_claude.md),
@@ -27,9 +28,9 @@ Vocabulary follows the [docs glossary](../../CONTEXT.md).
 | Case generator | [`evidence/ticket19/gen_ticket19_cases.py`](evidence/ticket19/gen_ticket19_cases.py) |
 | Pre-run oracle | [`evidence/ticket19/expected-oracle.md`](evidence/ticket19/expected-oracle.md) |
 | Candidate review | [`evidence/ticket19/review_candidates.py`](evidence/ticket19/review_candidates.py) |
-| Spec-driven activation checker | [`tools/activation_check_spec.sh`](tools/activation_check_spec.sh) + eight specs under `evidence/ticket19/activation/` |
+| Spec-driven OOS-path evidence checker | [`tools/activation_check_spec.sh`](tools/activation_check_spec.sh) + eight specs under `evidence/ticket19/activation/` |
 | Coverage matrix | [`evidence/ticket19/matrix.json`](evidence/ticket19/matrix.json) — 44 rows |
-| Replay bundles | `~/.cub/campaign/cbrd-26659/ticket19/attempts/` (3.4 GiB; campaign total 46.3 of 100 GiB) |
+| Replay bundles | `~/.cub/campaign/cbrd-26659/ticket19/attempts/` (3.4 GiB; campaign total **36** of 100 GiB — disk usage, as §10) |
 
 The eight cases, with the requirements each cites:
 
@@ -70,7 +71,7 @@ accountings.
    `single1` and `single2` are both 3,500 B — so which one the largest-first loop demotes is not
    settled by the normative text, which says only "sort candidates by size descending". The
    sizes are kept verbatim, because the point of reusing a workload is to reuse it; the tie is
-   recorded and no case asserts the identity of the moved column. The activation check is
+   recorded and no case asserts the identity of the moved column. The OOS-path evidence check is
    unaffected: the two columns being the same size, the chunk count and payload sum are
    identical whichever moved, which the self-test asserts together with a guard that the
    invariance comes from the equal sizes and not from the function.
@@ -84,20 +85,21 @@ accountings.
 
 ## 3. Execution, review and promotion
 
-Six invocations, all on the re-pinned build, 16 KiB pages, client-server, under
-`campaign_ns.sh`, every one leaving `install conf drift 0, databases drift 0, worktree drift 0`:
+Eleven invocations — nine that produced a manifest and two negative controls, which get none —
+all on the re-pinned build, 16 KiB pages, client-server, under `campaign_ns.sh`, every one
+leaving `install conf drift 0, databases drift 0, worktree drift 0`:
 
 | Invocation | Build | Purpose | Outcome |
 |---|---|---|---|
-| `inv-T19-0001` | release | first bootstrap, empty answers | 8 FAIL + 1 PASS as designed; **the trigger case's activation check refused it** (§5) |
+| `inv-T19-0001` | release | first bootstrap, empty answers | 8 FAIL + 1 PASS as designed; **the trigger case's OOS-path evidence check refused it** (§5) |
 | `inv-T19-0002` | release | bootstrap after restructuring the trigger case | 8 FAIL + 1 PASS; candidate review found two unexplained `Error:-493` (§6) |
 | `inv-T19-0003` | release | bootstrap after the splitter fix | 8 FAIL + 1 PASS; **every candidate matched the oracle** |
-| `inv-T19-0004` | release | green run with the promoted answers | **9 of 9 PASS**, proof `proven`, 0 mismatches |
+| `inv-T19-0004` | release | first run against the promoted answers | **9 of 9 PASS**, proof `proven`, 0 mismatches |
 | `inv-T19-0005` | debug | paired debug run | **9 of 9 PASS**, same answers, proof `proven` |
 | `inv-T19-C001` | release | negative control, two planted defects | **FAIL, as a control must** (§7) |
-| `inv-T19-0006` | release | after adding the bulk-1000 activation phase | **9 of 9 PASS**; 1,000 chunks and 4,169,540 observed, matching the derivation |
+| `inv-T19-0006` | release | after adding the bulk-1000 OOS-path evidence phase | **9 of 9 PASS**; 1,000 chunks and 4,169,540 observed, matching the derivation |
 | `inv-T19-0008` | release | bootstrap after the review's case changes | **8 of 9 PASS** against the unchanged answers, 1 FAIL — the update case, whose step label changed. The eight byte-identical answers are what prove the lower-casing altered no value |
-| `inv-T19-0009` | release | final green run, promotions recorded | **9 of 9 PASS**, proof `proven` |
+| `inv-T19-0009` | release | final run, promotions recorded | **9 of 9 PASS**, proof `proven` |
 | `inv-T19-0010` | debug | final paired debug run | **9 of 9 PASS**, proof `proven` |
 | `inv-T19-C002` | release | the control re-run from the portable declaration | **FAIL, as a control must** |
 
@@ -117,7 +119,7 @@ observed-versus-normative disagreement":
   normative record gate.
 - `cbrd_26659_oos_sql02_update` — its third group is the inline-attribute-only UPDATE, exactly
   where the pin (a fresh chain per record version, OOS-SQL-03) and the accepted CBRD-27230
-  design (OOS-SQL-04, withheld) disagree, and its activation spec is the matrix's cited
+  design (OOS-SQL-04, withheld) disagree, and its OOS-path evidence spec is the matrix's cited
   observation source for OOS-SQL-03.
 
 Neither answer encodes the disagreement — both assert values only, which hold under either
@@ -139,7 +141,7 @@ Error identities were derived from the pin **before** the run and all four match
 CTP renders a failed statement as `Error:-<code>` and nothing else, so the answers carry the
 identity and never the message text, whose B-tree and class OIDs differ between runs.
 
-## 4. Activation evidence
+## 4. OOS-path evidence
 
 Ticket 13's checker replays one hard-coded fixture. Eight cases need eight, so
 `tools/activation_check_spec.sh` takes the fixture from a spec file and is otherwise the same
@@ -189,8 +191,8 @@ these workloads left the heap, the indexes or the file tables inconsistent.
 
 ## 5. Finding T19-F1 — the OOS record gate is applied only on the server-side DML path
 
-The first bootstrap's activation check refused the trigger case: its rows were not OOS-backed at
-all. Isolating it produced a clean result.
+The first bootstrap's OOS-path evidence check refused the trigger case: its rows were not
+OOS-backed at all. Isolating it produced a clean result.
 
 | Probe (identical 4,564 B record each time) | `Has_oos_file` | `Oos_num_recs` | `Oos_recs_sumlen` |
 |---|---:|---:|---:|
@@ -261,11 +263,19 @@ working, not a finding.
 
 ## 8. Coverage matrix
 
-44 rows: 32 case rows, every one PASS with `proven` evidence, and 12 caseless rows. Of the 24
-case rows that belong to ticket 19's own cases, 12 keep `gap_kind: none` and 12 are scoped. Of
-the 12 caseless rows, 5 are ticket 41's, preserved verbatim along with the one withdrawn claim,
-and 7 are new here. Re-merging the two manifests into the result is a no-op — 0 rows differ —
-which is what demonstrates the hand-owned judgements survive the tooling.
+44 rows: 32 case rows, every one with a latest outcome of PASS and `proven` evidence, and 12
+caseless rows. Of the 24 case rows that belong to ticket 19's own cases, 12 keep `gap_kind: none`
+and 12 are scoped. Of the 12 caseless rows, 5 are ticket 41's, preserved verbatim along with the
+one withdrawn claim, and 7 are new here. Re-merging every manifest into the result is a no-op —
+0 rows differ — which is what demonstrates the hand-owned judgements survive the tooling.
+
+**One row records a failure** (ticket 44 F1, 2026-09-16).
+`OOS-SQL-02/cbrd_26659_oos_sql02_update/16384-release-cs` carries `ever_failed: true` and one
+failure in four attempts, from `att-T19-0075` of `inv-T19-0008`. Its latest outcome is still
+PASS, because `inv-T19-0009` is later; its `attribution.target` is `harness` and says the cause
+was this revision's relabelling of the case's third step against an answer not yet re-promoted,
+explicitly not the engine. The invocation was missing from the matrix altogether until ticket 44
+merged it — see §14.
 
 Applying the ticket 35 F2 rule (as qualified by the delta review's D1) is the hand-owned part,
 and `evidence/ticket19/apply_matrix_scoping.py` records it as code rather than as an edit:
@@ -320,25 +330,25 @@ Excluded, each for a stated reason rather than by omission:
 Two different quantities are easy to confuse here, so both are given. `elapsed_seconds` in
 `timing.txt` is the CTP launcher alone — the number ticket 13 reported as 39 s and ticket 15 as
 44 s. `started_at` to `ended_at` is the whole invocation, which also contains the paired
-activation checks, one per case.
+OOS-path evidence checks, one per case.
 
 | Quantity | Value |
 |---|---|
 | **CTP launcher, nine cases** | **40–55 s** (`elapsed_seconds` 41, 40, 40, 40, 42, 41, 41, 55, 42 across nine invocations; the 55 is the one run that shared the host with another build) |
 | Ticket 13's launcher, one case | 39 s; ticket 15's, one case, 44 s |
 | **All nine cases' execution** | **1,099 ms** total (`summary.info` `totalTime`; the SQL runner reports no per-case time, only this total) |
-| Whole invocation, `started_at` to `ended_at` | **114 s** for the first green release run; **137 s** for the final one, which added four activation phases (17:24:00 → 17:26:17) |
-| Of which the nine paired activation checks | ~74 s initially and ~82 s at the end, about 8–9 s each — each one creates a database and starts and stops a server. They, not the launcher, are what grows with the case count |
+| Whole invocation, `started_at` to `ended_at` | **114 s** for the first all-PASS release run; **137 s** for the final one, which added four OOS-path evidence phases (17:24:00 → 17:26:17) |
+| Of which the nine paired OOS-path evidence checks | ~74 s initially and ~82 s at the end, about 8–9 s each — each one creates a database and starts and stops a server. They, not the launcher, are what grows with the case count |
 | Invocation cap | 900 s — the cap applies to the launcher (40 s), and the whole invocation is still well inside it |
 | Per-case cap | 120 s — not approached; the whole suite executes in under 1.1 s |
-| Storage | 3.4 GiB for ticket 19; campaign total 36 of 100 GiB |
+| Storage | 3.4 GiB for ticket 19; campaign total 36 of 100 GiB. **Disk usage** (`du`), which is what the budget decision's 100 GiB working-storage cap measures. Apparent size (`du --apparent-size`) reads 4.0 and 46.3 GiB, because CUBRID's volumes are sparse; §1 carried the apparent figure for the campaign beside the disk figure for ticket 19 until ticket 44 F7 |
 
 **This is the number ticket 17 needs.** Ticket 13 measured 39 s of launcher time for one case
 and inferred the cost was per-invocation. Nine cases now measure 40 s of launcher time, of which
 the cases themselves are 1.1 s — so the launcher's cost really is fixed, and the public suite
 should be one invocation. The quantity that does scale with the case count is the paired
-activation checks at about 8 s each, because each creates its own database and starts and stops
-its own server; at nine cases they are already twice the launcher. If tickets 20 to 22 bring the
+OOS-path evidence checks at about 8 s each, because each creates its own database and starts
+and stops its own server; at nine cases they are already twice the launcher. If tickets 20 to 22 bring the
 public suite to several dozen cases, batching the checks into fewer databases is the change that
 matters, not splitting the CTP run.
 
@@ -349,9 +359,9 @@ matters, not splitting the CTP run.
 | Cases for INSERT, UPDATE, DELETE, inline-only UPDATE, repeated updates (3 and 50), multi-chunk UPDATE, DELETE with count, delete-all then reinsert, ROLLBACK of INSERT+UPDATE, UPDATE then ROLLBACK, savepoints, bulk 100 and 1000+ | met (§1) |
 | Constraint and trigger interactions; INSERT … SELECT; UPDATE through a join or subquery | met (§1); the trigger clause is qualified by finding T19-F1 (§5) |
 | LOB locator columns per the demotion ADR: many locators, insert-select copying, delete not removing external payload | met (§1); locator **demotion** itself is not asserted and carries its own matrix row (§8) |
-| The public CBRD-27006 workload reused with provenance, its missing topology coverage not inherited | met — provenance in the case header and §1; topology derived and asserted by the activation check, and the equal-size tie recorded rather than engineered away (§2) |
+| The public CBRD-27006 workload reused with provenance, its missing topology coverage not inherited | met — provenance in the case header and §1; topology derived and asserted by the OOS-path evidence check, and the equal-size tie recorded rather than engineered away (§2) |
 | Each case cites requirement IDs; expectations justified before running; whole-value checks are the oracle | met (§3), oracle in `expected-oracle.md` |
-| Inline comparators; activation evidence per case; negative controls for new mechanisms | met (§4, §7) |
+| Inline comparators; OOS-path evidence per case; negative controls for new mechanisms | met (§4, §7) |
 | Promotions reviewed; manifest and matrix updated through the tooling; each case under two minutes; committed locally only | met (§3, §8, §9); nothing pushed |
 
 ## 12. Open items and hand-offs
@@ -359,19 +369,28 @@ matters, not splitting the CTP run.
 - **The user's sign-off is owed on two promotions**, `cbrd_26659_oos_sql06_triggers` and
   `cbrd_26659_oos_sql02_update` (§3). Until it is given, those two answers are promoted in the
   repository but not accepted by the campaign.
-- **The specification's independent agent review is owed.** The acceptance decision requires a
-  session that authored none of these artifacts to review them. A two-axis review was
-  commissioned by the authoring session and its findings are closed in §13; that is not the
-  review the specification requires, and the promotion reviewer field says so.
-- **Three decisions this ticket made that the review should look at.** (1) The bootstrap
-  invocations `inv-T19-0001..0003` executed the cases and their FAIL outcomes were **not merged
-  into the matrix**: an empty answer is the mechanism by which a candidate is produced, not a
-  finding, and merging them would set `ever_failed` on every row and report three failures in
-  five attempts. Their manifests and attempt records are retained, and this is the only place the
-  campaign has excluded an executed `original` attempt from the matrix. (2) No hand-derived
-  assertion count is declared for the eight new cases; the reasoning is in the declaration.
-  (3) `gap_kind` for the OOS-SQL-03 observation row is `Delivery gap` rather than `none`,
-  because the schema allows `none` only for a latest PASS with proven evidence.
+- ~~**The specification's independent agent review is owed.**~~ Done 2026-09-15 by a session that
+  authored none of these artifacts: verdict **REVISE**, seven of seven criteria substantively met,
+  all three negative controls validated by re-execution, two blocking findings. Its record is
+  [`CBRD-26659-ticket19-independent-review_f4299ac_claude.md`](CBRD-26659-ticket19-independent-review_f4299ac_claude.md)
+  and its findings are closed by campaign ticket 44 in §14. The two-axis review closed in §13 was
+  commissioned by the authoring session and is not that review, which is what the promotion
+  reviewer field says.
+- **Three decisions this ticket made that the review looked at.** (1) **Four** invocations, not
+  three, had their executed `original` attempts left out of the matrix, and revision 2 of this
+  section said three. The bootstrap invocations `inv-T19-0001..0003` are the three the stated
+  justification covers: an empty answer is the mechanism by which a candidate is produced, not a
+  finding, and merging them would set `ever_failed` on every row of the family and report three
+  failures in five attempts. `inv-T19-0008` is the fourth, and **its answers were not empty** —
+  it ran the lower-cased cases against the answers promoted from `inv-T19-0003`, eight of them
+  came back byte-identical, which is what §13's T5 row rests on, and it is the invocation the
+  promoted update answer was re-promoted from. Nothing excused it, and the independent review's
+  F1 found it. Since 2026-09-16 `inv-T19-0008` is merged and the three bootstraps are a dated
+  `accepted_exclusions` entry the user accepted, so the matrix now carries every executed
+  attempt or names the exclusion (§14). (2) No hand-derived assertion count is declared for the
+  eight new cases; the reasoning is in the declaration. (3) `gap_kind` for the OOS-SQL-03
+  observation row is `Delivery gap` rather than `none`, because the schema allows `none` only for
+  a latest PASS with proven evidence.
 - **Ticket 18** owns the OOS-REP-06 locator-demotion fixture (§8) and the `OOS-REP-07`
   clause-level rows that ticket 39 item 3 requires of it.
 - **Tickets 20 to 22** can reuse `tools/activation_check_spec.sh` and its spec format as they
@@ -389,7 +408,7 @@ closed here.
 
 | # | Axis | Finding | Resolution |
 |---|---|---|---|
-| S1 | Spec | Activation evidence covered `INSERT … VALUES` only, while the matrix claimed `proven` for rows resting on `INSERT … SELECT`, subquery UPDATE and join UPDATE. Finding T19-F1 is itself proof that the path decides whether the gate runs | **Blocking, fixed.** Four phases added (§4), each on its own table. All four assert and all four hold |
+| S1 | Spec | OOS-path evidence covered `INSERT … VALUES` only, while the matrix claimed `proven` for rows resting on `INSERT … SELECT`, subquery UPDATE and join UPDATE. Finding T19-F1 is itself proof that the path decides whether the gate runs | **Blocking, fixed.** Four phases added (§4), each on its own table. All four assert and all four hold |
 | S2 | Spec | No factor list or exclusions, so the coverage claim was not auditable; prepared statements with host variables were silently absent | **Fixed.** §9 lists factors and levels, and four exclusions with reasons. Host variables are recorded as not covered anywhere in the campaign yet |
 | S3 | Spec | The user sign-off gate was skipped: all eight promotions were `flagged_for_user: false` | **Fixed.** Two are now flagged with the reason in the promotion record (§3). Six remain unflagged |
 | S4 | Spec | `cbrd_26659_oos_sql02_update` printed "the OOS-backed value must not move" into its **promoted answer**, and "must not move" is CBRD-27230 reuse, which the catalogue withholds — at the pin it does move | **Blocking, fixed.** Relabelled to "still reads back exactly", which holds under both readings, and the answer re-promoted from `inv-T19-0008` |
@@ -415,3 +434,38 @@ Two findings were considered and deliberately not acted on:
 `bit_length` was also noted as dropped relative to ticket 13's case. It is redundant with
 `octet_length` — the same fact times eight — and its absence is not claimed otherwise in any
 header. No change.
+
+## 14. Revision 3 — closing the specification's independent review (2026-09-16)
+
+The review the specification requires ran on 2026-09-15, by a session that authored none of these
+artifacts and reached them without this report's framing. Verdict **REVISE**: seven of seven
+criteria substantively met, all three negative controls validated by re-execution, replay and
+cleanup evidence complete, drift zero on all eleven invocations under an independent re-diff, and
+two blocking findings. Its record is
+[`CBRD-26659-ticket19-independent-review_f4299ac_claude.md`](CBRD-26659-ticket19-independent-review_f4299ac_claude.md).
+Campaign ticket 44 carries its findings; every change below is in this repository. **No case,
+answer or testcase commit changed and no CTP invocation was made**: commits `4a2590f36` through
+`35c815943` stand exactly as they were, and `gen_ticket19_cases.py --check` still reports all
+eight cases identical to the checked-in files.
+
+| # | Finding | Resolution |
+|---|---|---|
+| F1 | **Blocking.** `inv-T19-0008` executed nine cases, one FAILed, and none of its nine attempt records appeared in any matrix row — while §12 said the three bootstraps were the only executed `original` attempts the campaign had excluded | **Fixed.** Merged through `tools/matrix_merge.py`: 15 (requirement, case) rows gain an attempt, and `OOS-SQL-02/cbrd_26659_oos_sql02_update/16384-release-cs` takes `ever_failed: true` with one failure in four (§8). `evidence/ticket19/apply_ticket44_findings.py` writes the `harness` attribution the merge cannot decide. §12 is corrected from three excluded invocations to four, with the bootstrap justification stated only for the three it covers |
+| F2 | **Blocking.** `tools/declarations/ticket19-public-sql-operations.json` said `flagged_for_user: false` on all nine cases while `promotions.json` and `inv-T19-0009` said `true` for two, so a manifest regenerated from the portable declaration would carry no sign-off gate | **Fixed**, and made unrepeatable. The declaration carries `true` and the reason for both cases, and `ctp_sql_records.verified_promotions` now refuses a `promoted` entry whose flag differs from the declaration's, or whose declaration omits it. `tools/selftest_promotions.py` carries both refusals |
+| F3 | 64 of 83 recorded bundle hashes no longer verified: nine attempts share one bundle root and each record's digest was taken while the directory was still growing | **Fixed**, after the contract question it rests on was settled. The user chose **one bundle per invocation, referenced by its attempt records** on 2026-09-16; it is recorded in the traceability-schemas change log and in the two schemas' field descriptions. `evidence/ticket19/apply_ticket44_record_corrections.py` corrects the 64 attempt records and bundle indexes, the 64 matching `bundle_hash` entries in eight manifests, and the 30 matrix `run.manifest_hash` seals over those manifests. Each attempt record's `notes` say what it used to carry; nothing was re-hashed silently and no bundle was touched |
+| F4 | The bootstrap exclusion was reasoned in prose and `accepted_exclusions` was `[]` | **Accepted by the user on 2026-09-16.** Seven dated entries, one per requirement the bootstrap cases cite, each naming the attempt ids it excludes and derived from the three manifests rather than typed |
+| F5 | `derive_ticket19_sizes.py`'s tie-invariance check compared one literal with itself and re-typed the fixture's sizes | **Fixed.** The reused CBRD-27006 sizes have one home, `REUSED_27006_ROWS`, which the `FIXTURES` table, `gen_ticket19_cases.case_mixed_chunks()` and the self-test all read. The self-test derives both demotion sets from it and asserts the tie still exists; making the two columns unequal now fails the self-test, which was checked |
+| F6 | The report used "activation" 24 times and the glossary's *OOS-path evidence* zero, and "green" three times | **Fixed.** Fifteen prose occurrences, the §4 heading among them, use the canonical term; the eight filename and path occurrences and the checker's literal `RESULT: activation NOT proven` output are unchanged, because sealed records of tickets 13, 15 and 41 cite the checker by name and hash. "Green" is gone from §3 and §10 |
+| F7 | Three numbers did not hold: §3's "Six invocations" above a table of eleven; §1's 46.3 GiB against §10's 36; and the promotion records' claim that the oracle "was written before any CTP invocation", which no artifact can show | **Fixed.** §3 says eleven, nine with manifests and two controls. §1 says 36 GiB and both places now name the measure: disk usage, which is what the budget's 100 GiB cap is in — 46.3 was the apparent size of the same tree, inflated by the holes in CUBRID's sparse volumes. All 24 promotion reviewer notes drop the unfalsifiable clause, say they dropped it, and rest on the checkable half of the same sentence: the derivation reproduces each answer's `(length, digest)` pairs without the engine. Sealing the oracle in a bundle belongs to the next invocation that runs |
+| O1 | The record checker validates shapes, so nothing mechanical could have caught F1 | **Landed** in ticket 15's checker: `check_matrix_completeness` requires every retained `original` attempt to reach a matrix history or a dated exclusion naming the attempt id. `tools/selftest_matrix_completeness.py` plants F1's defect back and requires the check to report it. **It reports one item on the current tree and it is not ticket 19's**: `att-T15-C04`, a ticket 15 control recorded as `original` with a manifest while its two siblings are `checker-validation` without one. Left reported rather than narrowed away; ticket 15 owns it |
+| O2 | Whether the sign-off gates the promotion or the acceptance, and who supplies the review note and flag | **Settled by the user on 2026-09-16: acceptance**, as this ticket read it. Tickets 20 to 22 promote under that reading. The deviation from ticket 36 decision 8 — an agent supplied the review note and the flag for these eight promotions — is **ratified** as a disclosed one-off; the flag now lives in the declaration as well, which is what makes it checkable |
+
+**Still owed, and owed to the user alone.** The sign-off on `cbrd_26659_oos_sql06_triggers` and
+`cbrd_26659_oos_sql02_update` (§3, §12). Until it is given those two answers are promoted in the
+repository and not accepted by the campaign, which is unchanged by this revision.
+
+**For tickets 20 to 22.** Two of the review's blocking findings were consequences of revision 2
+itself: `inv-T19-0008` was created *by* that revision, and the declaration and the promotion
+records were repaired in the same pass without being checked against each other. A revision that
+adds records is the moment to re-run the completeness checks, not only the schema ones — which is
+now a check rather than a note (O1), and should be run before their matrices are merged.

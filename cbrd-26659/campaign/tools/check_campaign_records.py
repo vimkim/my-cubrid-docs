@@ -21,6 +21,7 @@ CAMPAIGN = Path(__file__).resolve().parent.parent
 CATALOGUE = CAMPAIGN / "catalogue" / "requirements.json"
 SCENARIO_MAP = CAMPAIGN / "catalogue" / "scenario-map.json"
 SCHEMAS = CAMPAIGN / "schemas"
+EVIDENCE = CAMPAIGN / "evidence"
 
 # --- fixed vocabulary from the campaign specification and ticket 11 --------------------
 FAMILIES = [
@@ -367,6 +368,89 @@ def check_record_schemas():
             fail("negative-control", f"no negative control for {name}")
 
 
+# --- every executed attempt is accounted for ----------------------------------------------
+ATTEMPT_ID_RE = re.compile(r"\batt-[A-Za-z0-9]+-[A-Za-z0-9]+\b")
+
+
+def check_matrix_completeness(evidence=EVIDENCE, campaign=CAMPAIGN):
+    """Ticket 44 O1: every retained `original` attempt reaches a matrix, or a dated exclusion.
+
+    The other checks here validate shapes. A record can be perfectly shaped and still be
+    invisible: ticket 19's `inv-T19-0008` executed nine cases, one of them FAILed, and none of
+    its nine attempt records appeared in any matrix row's history. Nothing mechanical noticed,
+    because no check asked the question. This one does.
+
+    > Specification, *Outcomes, replay and minimization*: "A later pass never erases an earlier
+    > failure."
+    > Specification, *Campaign manifest*: "The manifest feeds the coverage matrix; the matrix is
+    > the cross-invocation aggregation."
+    > Specification, *Review, sign-off and deferral*: "Only the user converts incomplete coverage
+    > into an accepted exclusion, as a dated entry in the coverage matrix naming the requirement
+    > and reason."
+
+    So an `original` attempt is accounted for in exactly two ways: a matrix `finding.history`
+    entry carries its id, or a dated, user-accepted `accepted_exclusions` entry names it in
+    `scope`. Three deliberate choices:
+
+    * **`scope`, not `reason`.** `scope` is the field that says what an exclusion covers, and an
+      id has to be written there to count. Reading `reason` too would let a passing mention in
+      unrelated prose account for an attempt, which is the prose the specification's rule exists
+      to replace.
+    * **Every canonical matrix, pooled.** A ticket's records are not always aggregated by a
+      matrix in its own directory: `evidence/ticket15/regenerated/ticket13/att-T13-0001.json` is
+      a regenerated copy of ticket 13's record and ticket 13's matrix is where it belongs.
+      `evidence/*/matrix.json` is the canonical set; seeds, demos and re-merges carry other names
+      on purpose and are not read here.
+    * **Every attempt record below `evidence/`, at any depth**, so `controls/` subdirectories are
+      examined rather than skipped. Attempts of kind `checker-validation` and `coexistence` never
+      reach a matrix by contract (schemas document section 11), so they are seen and then not
+      asked for.
+
+    Pooling is only sound while an attempt id names one attempt, so that is checked rather than
+    assumed: an id carried by two `original` records must agree on its invocation and its case.
+    Two records may legitimately share an id -- ticket 15 regenerated ticket 13's and ticket 14's
+    to prove its tooling reproduces them -- but two *different* attempts sharing one would let an
+    exclusion written for one excuse the other.
+    """
+    matrices = sorted(evidence.glob("*/matrix.json"))
+    if not matrices:
+        fail("matrix-completeness", f"no coverage matrix under {evidence}")
+        return
+    merged, excluded = set(), set()
+    for path in matrices:
+        matrix = load_json(path)
+        for row in matrix.get("rows", []):
+            for entry in row.get("finding", {}).get("history", []):
+                merged.add(entry.get("attempt_id"))
+        for exclusion in matrix.get("accepted_exclusions", []):
+            if exclusion.get("accepted_by") != "user" or not exclusion.get("date"):
+                fail("matrix-completeness",
+                     f"{path.relative_to(campaign)}: the accepted exclusion for "
+                     f"{exclusion.get('requirement')!r} is not a dated, user-accepted entry, so it "
+                     f"excludes nothing")
+                continue
+            excluded.update(ATTEMPT_ID_RE.findall(exclusion.get("scope") or ""))
+    identities = {}
+    for path in sorted(evidence.rglob("att-*.json")):
+        record = load_json(path)
+        if record.get("kind") != "original":
+            continue
+        attempt_id = record.get("attempt_id")
+        identity = (record.get("manifest_id"), (record.get("case") or {}).get("name"))
+        seen_at, seen_identity = identities.get(attempt_id, (None, identity))
+        if seen_identity != identity:
+            fail("matrix-completeness",
+                 f"{path.relative_to(campaign)}: {attempt_id} also names a different attempt in "
+                 f"{seen_at}, so no matrix history entry or exclusion can be read as naming one of them")
+        identities.setdefault(attempt_id, (path.relative_to(campaign), identity))
+        if attempt_id in merged or attempt_id in excluded:
+            continue
+        fail("matrix-completeness",
+             f"{path.relative_to(campaign)}: {attempt_id} ({record.get('manifest_id')}, "
+             f"outcome {record.get('outcome')}) is an executed 'original' attempt that no matrix "
+             f"history carries and no dated accepted_exclusions entry names in its scope")
+
+
 # --- rendered documents are fresh ---------------------------------------------------------
 def check_documents():
     import render_docs
@@ -387,6 +471,7 @@ def main():
     catalogue = check_catalogue()
     check_scenario_map(catalogue)
     check_record_schemas()
+    check_matrix_completeness()
     check_documents()
     if failures:
         print(f"FAIL: {len(failures)} problem(s)")
