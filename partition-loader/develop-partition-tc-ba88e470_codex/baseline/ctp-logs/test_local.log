@@ -1,0 +1,749 @@
+BEGIN TO UPGRADE CTP
+SKIP CTP UPDATE FOR LOCAL TEST!
+grep: conf/common.conf: No such file or directory
+export CTP_BRANCH_NAME="master"
+export CTP_HOME="/home/vimkim/CTP"
+export CTP_SKIP_UPDATE="1"
+export CUBRID="/home/vimkim/CUBRID"
+export CUBRID_DATABASES="/home/vimkim/CUBRID/databases"
+export CUBRID_JAVA_HOME="/home/vimkim/java"
+export HOME="/home/vimkim"
+export JAVA_HOME="/home/vimkim/java"
+export LANG="en_US.UTF-8"
+export LD_LIBRARY_PATH="/home/vimkim/CUBRID/lib:/home/vimkim/CUBRID/cci/lib"
+export LOGNAME="root"
+export OLDPWD="/home/vimkim/CTP"
+export PATH="/home/vimkim/CTP/bin:/home/vimkim/CTP/common/script:/home/vimkim/CUBRID/bin:/home/vimkim/CTP/shell/init_path:/home/vimkim/CTP/common/script:/home/vimkim/java/bin:/usr/local/bin:/usr/bin:/bin"
+export PWD="/home/vimkim/CTP"
+export SHELL="/bin/bash"
+export SHLVL="3"
+export TERM="xterm"
+export USER="root"
+export init_path="/home/vimkim/CTP/shell/init_path"
+[INFO] SKIP TO UPDATE
+DONE
+/home/vimkim
+Skip build installation since cubrid_download_url is not configured!!
+
+
+[TESTCASE] cubrid-testcases-private-ex/shell/_35_cherry/issue_21654_server_side_loaddb/partition_tbls/cases/partition_tbls.sh
+[INFO] CLEAN PROCESSES: @ cubrid broker stop
+++ cubrid broker is not running.
+@ cubrid manager server stop
+@ cubrid master stop
+++ cubrid master is not running.
+UID          PID    PPID  C STIME TTY          TIME CMD
+root           1       0  0 15:31 ?        00:00:00 bwrap --ro-bind / / --bind /home/vimkim/.cache/codex/develop-partition-ba88e470/baseline/home /home/vimkim --ro-bind /home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8 /home/vimkim/java --tmpfs /tmp --dev /dev --proc /proc --unshare-user --uid 0 --gid 0 --unshare-pid --unshare-ipc --unshare-net --cap-add CAP_NET_ADMIN --unshare-uts --hostname localhost --die-with-parent --chdir /home/vimkim /usr/bin/env -i HOME=/home/vimkim USER=root LOGNAME=root SHELL=/bin/bash TERM=xterm LANG=en_US.UTF-8 PATH=/usr/bin:/bin /bin/bash --noprofile --norc -c  set -eu /usr/sbin/ip link add ctp0 type dummy /usr/sbin/ip address add 192.0.2.27/24 dev ctp0 /usr/sbin/ip link set ctp0 up source /home/vimkim/.bash_profile ulimit -c 0 cubrid_rel command -v cubrid csql sha256sum "$CUBRID/bin/cub_server" "$CUBRID/lib/libcubridsa.so" "$CUBRID/lib/libcubrid.so" ldd "$CUBRID/bin/cub_server" exec /usr/bin/script -qefc "bash /home/vimkim/CTP/bin/ctp.sh shell -c /home/vimkim/shell.conf" /home/vimkim/transcript.log 
+root           2       1  0 15:31 ?        00:00:00 /usr/bin/script -qefc bash /home/vimkim/CTP/bin/ctp.sh shell -c /home/vimkim/shell.conf /home/vimkim/transcript.log
+root          14       2  0 15:31 pts/0    00:00:00 bash /home/vimkim/CTP/bin/ctp.sh shell -c /home/vimkim/shell.conf
+root          19      14 13 15:31 pts/0    00:00:00 /home/vimkim/java/bin/java -cp /home/vimkim/CTP/common/lib/cubridqa-common.jar com.navercorp.cubridqa.ctp.CTP shell -c /home/vimkim/shell.conf
+root          20      14  0 15:31 pts/0    00:00:00 tee /home/vimkim/CTP/.output_2026091515311789453866.log
+root        1157      19  1 15:31 pts/0    00:00:00 sh /tmp/.localexec1504925952325513943.sh 2>&1
+root        1347    1157  0 15:31 pts/0    00:00:00 ps -u root -f
+root           1       0  0 15:31 ?        00:00:00 bwrap --ro-bind / / --bind /home/vimkim/.cache/codex/develop-partition-ba88e470/baseline/home /home/vimkim --ro-bind /home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8 /home/vimkim/java --tmpfs /tmp --dev /dev --proc /proc --unshare-user --uid 0 --gid 0 --unshare-pid --unshare-ipc --unshare-net --cap-add CAP_NET_ADMIN --unshare-uts --hostname localhost --die-with-parent --chdir /home/vimkim /usr/bin/env -i HOME=/home/vimkim USER=root LOGNAME=root SHELL=/bin/bash TERM=xterm LANG=en_US.UTF-8 PATH=/usr/bin:/bin /bin/bash --noprofile --norc -c  set -eu /usr/sbin/ip link add ctp0 type dummy /usr/sbin/ip address add 192.0.2.27/24 dev ctp0 /usr/sbin/ip link set ctp0 up source /home/vimkim/.bash_profile ulimit -c 0 cubrid_rel command -v cubrid csql sha256sum "$CUBRID/bin/cub_server" "$CUBRID/lib/libcubridsa.so" "$CUBRID/lib/libcubrid.so" ldd "$CUBRID/bin/cub_server" exec /usr/bin/script -qefc "bash /home/vimkim/CTP/bin/ctp.sh shell -c /home/vimkim/shell.conf" /home/vimkim/transcript.log 
+root          19      14 13 15:31 pts/0    00:00:00 /home/vimkim/java/bin/java -cp /home/vimkim/CTP/common/lib/cubridqa-common.jar com.navercorp.cubridqa.ctp.CTP shell -c /home/vimkim/shell.conf
+root        1349    1157  0 15:31 pts/0    00:00:00 grep cub
+Active Internet connections (servers and established)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       User       Inode      PID/Program name    
+Active UNIX domain sockets (servers and established)
+Proto RefCnt Flags       Type       State         I-Node   PID/Program name     Path
+Active Bluetooth connections (servers and established)
+Proto  Destination       Source            State         PSM DCID   SCID      IMTU    OMTU Security
+Proto  Destination       Source            State     Channel
+
+------ Message Queues --------
+key        msqid      owner      perms      used-bytes   messages    
+
+------ Shared Memory Segments --------
+key        shmid      owner      perms      bytes      nattch     status      
+
+------ Semaphore Arrays --------
+key        semid      owner      perms      nsems
+[INFO] Reset CUBRID: 
+++ begin_time=0
+++ end_time=0
+++ need_count_time=1
+++ cubrid_major=
+++ cubrid_minor=
+++ IGNORE_TEST_PERFORMANCE=
+++ '[' '!' -n en_US ']'
++++ get_os
+++++ uname
++++ osname=Linux
++++ case "$osname" in
++++ echo Linux
+++ export OS=Linux
+++ OS=Linux
+++ '[' Linux = Windows_NT ']'
+++ source /home/vimkim/CTP/shell/init_path/shell_utils.sh
++ init test
+++ date
++ echo '[INFO] TEST START (Tue Sep 15 03:31:09 PM KST 2026)'
+[INFO] TEST START (Tue Sep 15 03:31:09 PM KST 2026)
+++ pwd
++ cur_path=/home/vimkim/cubrid-testcases-private-ex/shell/_35_cherry/issue_21654_server_side_loaddb/partition_tbls/cases
++ cd /home/vimkim/cubrid-testcases-private-ex/shell/_35_cherry/issue_21654_server_side_loaddb/partition_tbls/cases
++ case_no=1
++ full_name=partition_tbls.sh
++ answer_no=1
++ mode=test
++ '[' 1 -eq 1 ']'
+++ get_curr_second
++++ date +%s
+++ str=1789453869
+++ echo 1789453869
++ begin_time=1789453869
+++ date +%Y-%m-%d
++ date_str=2026-09-15
+++ date +%H:%M:%S
++ time_str=15:31:09
++ echo 15:31:09----/home/vimkim/cubrid-testcases-private-ex/shell/_35_cherry/issue_21654_server_side_loaddb/partition_tbls/cases---- test start
+/home/vimkim/CTP/shell/init_path/init.sh: line 708: /home/vimkim/cubrid-testcases-private-ex/shell/_35_cherry/issue_21654_server_side_loaddb/partition_tbls/cases/: Is a directory
++ '[' Linux = Windows_NT ']'
++ export REAL_INIT_PATH=/home/vimkim/CTP/shell/init_path
++ REAL_INIT_PATH=/home/vimkim/CTP/shell/init_path
+++ cubrid_rel
+++ grep 32bit
+++ wc -l
++ is_cubrid_32bits=0
++ '[' 0 == 1 ']'
++ CUBRID_BITS=64
++ export CUBRID_BITS
++ rm -rf /home/vimkim/CUBRID/log/broker /home/vimkim/CUBRID/log/server
++ '[' Linux = AIX ']'
++ objext=_objects
++ schext=_schema
++ idxext=_indexes
++ trgext=_trigger
++ PATH=/home/vimkim/CTP/shell/init_path/../../bin:/home/vimkim/CTP/shell/init_path/../../common/script:/home/vimkim/CTP/bin:/home/vimkim/CTP/common/script:/home/vimkim/CUBRID/bin:/home/vimkim/CTP/shell/init_path:/home/vimkim/CTP/common/script:/home/vimkim/java/bin:/usr/local/bin:/usr/bin:/bin
++ '[' Linux = Windows_NT ']'
++ CLASSPATH=/home/vimkim/CUBRID/jdbc/cubrid_jdbc.jar:/home/vimkim/CTP/shell/init_path/commonforjdbc.jar:.
++ LD_LIBRARY_PATH=/home/vimkim/CTP/shell/init_path/commonforc/lib:/home/vimkim/CUBRID/lib:/home/vimkim/CUBRID/cci/lib
++ rm '/home/vimkim/CUBRID/log/server/*.err'
++ cubrid service stop
+@ cubrid broker stop
+++ cubrid broker is not running.
+@ cubrid manager server stop
+cubrid manager server is not installed.
+@ cubrid master stop
+++ cubrid master is not running.
++ pkill cub
++ chmod u+x /home/vimkim/CTP/shell/init_path/cubrid
++ PATH=/home/vimkim/CTP/shell/init_path:/home/vimkim/java/bin:/home/vimkim/CTP/shell/init_path/../../bin:/home/vimkim/CTP/shell/init_path/../../common/script:/home/vimkim/CTP/bin:/home/vimkim/CTP/common/script:/home/vimkim/CUBRID/bin:/home/vimkim/CTP/shell/init_path:/home/vimkim/CTP/common/script:/home/vimkim/java/bin:/usr/local/bin:/usr/bin:/bin
++ export PATH
++ export CLASSPATH
++ export LD_LIBRARY_PATH
++ export LIBRARY_PATH
+++ ini.sh -s %BROKER1 /home/vimkim/CUBRID/conf/cubrid_broker.conf SERVICE
+++ grep -iw ON
+++ grep -v grep
+++ wc -l
++ isAvailableServiceForBroker1=1
++ '[' 1 -ne 0 ']'
+++ ini.sh -s %BROKER1 /home/vimkim/CUBRID/conf/cubrid_broker.conf BROKER_PORT
++ broker_port=13091
++ sed -i 's@<port>[0-9]*</port>@<port>13091</port>@g' /home/vimkim/CTP/shell/init_path/shell_config.xml
++ '[' test = test ']'
++ run_mode=1
+++ echo partition_tbls
++ case_name=partition_tbls
++ result_file=partition_tbls.result
++ '[' -f partition_tbls.tar ']'
++ '[' 1 -eq 1 ']'
++ '[' -f partition_tbls.result ']'
++ rm partition_tbls.result
++ touch partition_tbls.result
++ export OS
++ set -x
++ db_name=db11903
++ sfile=db11903_schema
++ ofile=db11903_objects
++ res=bug_bts_11093.output
++ ans=bug_bts_11093.answer
++ cubrid service stop
+@ cubrid broker stop
+++ cubrid broker is not running.
+@ cubrid manager server stop
+cubrid manager server is not installed.
+@ cubrid master stop
+++ cubrid master is not running.
++ rm -f db11903_objects
++ rm -f db11903_schema
++ rm -f bug_bts_11093.output
++ recreate_db
++ cubrid server stop db11903
+@ cubrid server stop: db11903
+++ cubrid server 'db11903' is not running.
+Could not connect to master server on localhost
++ cubrid deletedb db11903
++ rm -rf db11903
++ mkdir db11903
++ cd db11903
++ cubrid_createdb --db-volume-size=20M --log-volume-size=20M -r db11903
++ parse_build_version
+++ cubrid_rel
+++ grep CUBRID
+++ awk -F '(' '{print $2}'
+++ sed 's/)//g'
++ build_ver='11.5.0.2575-ba88e47 '
++ cubrid_major=11
+++ echo 11.5.0.2575-ba88e47
+++ awk -F . '{print $2}'
++ cubrid_minor=5
+++ cubrid_rel
+++ grep debug
+++ wc -l
++ isDebug=1
++ '[' 1 -eq 1 ']'
++ IGNORE_TEST_PERFORMANCE=TRUE
++ '[' 11 -ge 9 -a 5 -gt 1 ']'
++ cubrid createdb --db-volume-size=20M --log-volume-size=20M -r db11903 en_US
+Creating database with 64.0M size using locale en_US. The total amount of disk space needed is 104.0M.
+
+CUBRID 11.5.0 (11.5.0.2575) (64 debug build)
+
++ cd ..
++ cubrid server start db11903
+@ cubrid master start
+++ cubrid master start: success
+@ cubrid server start: db11903
+
+This may take a long time depending on the amount of recovery works to do.
+
+CUBRID 11.5.0 (11.5.0.2575) (64 debug build)
+
+++ cubrid server start: success
++ csql -u dba -c 'create table t(i int) partition by hash (i) partitions 5' db11903
+Execute OK. (0.056542 sec) Committed. (0.002485 sec) 
++ csql -u dba -c 'insert into t select rownum from _db_class limit 40;' db11903
+40 rows affected. (0.010233 sec) Committed. (0.000013 sec) 
++ cubrid unloaddb db11903
++ recreate_db
++ cubrid server stop db11903
+@ cubrid server stop: db11903
+
+Server db11903 notified of shutdown.
+This may take several minutes. Please wait.
+++ cubrid server stop: success
++ cubrid deletedb db11903
++ rm -rf db11903
++ mkdir db11903
++ cd db11903
++ cubrid_createdb --db-volume-size=20M --log-volume-size=20M -r db11903
++ parse_build_version
+++ cubrid_rel
+++ grep CUBRID
+++ awk -F '(' '{print $2}'
+++ sed 's/)//g'
++ build_ver='11.5.0.2575-ba88e47 '
++ cubrid_major=11
+++ echo 11.5.0.2575-ba88e47
+++ awk -F . '{print $2}'
++ cubrid_minor=5
+++ cubrid_rel
+++ grep debug
+++ wc -l
++ isDebug=1
++ '[' 1 -eq 1 ']'
++ IGNORE_TEST_PERFORMANCE=TRUE
++ '[' 11 -ge 9 -a 5 -gt 1 ']'
++ cubrid createdb --db-volume-size=20M --log-volume-size=20M -r db11903 en_US
+Creating database with 64.0M size using locale en_US. The total amount of disk space needed is 104.0M.
+
+CUBRID 11.5.0 (11.5.0.2575) (64 debug build)
+
++ cd ..
++ cubrid server start db11903
+@ cubrid server start: db11903
+
+This may take a long time depending on the amount of recovery works to do.
+
+CUBRID 11.5.0 (11.5.0.2575) (64 debug build)
+
+++ cubrid server start: success
++ echo '========== test1 =========='
++ cubrid loaddb -C -v -u dba -s db11903_schema -d db11903_objects db11903
++ recreate_db
++ cubrid server stop db11903
+@ cubrid server stop: db11903
+
+Server db11903 notified of shutdown.
+This may take several minutes. Please wait.
+++ cubrid server stop: success
++ cubrid deletedb db11903
++ rm -rf db11903
++ mkdir db11903
++ cd db11903
++ cubrid_createdb --db-volume-size=20M --log-volume-size=20M -r db11903
++ parse_build_version
+++ cubrid_rel
+++ grep CUBRID
+++ awk -F '(' '{print $2}'
+++ sed 's/)//g'
++ build_ver='11.5.0.2575-ba88e47 '
++ cubrid_major=11
+++ echo 11.5.0.2575-ba88e47
+++ awk -F . '{print $2}'
++ cubrid_minor=5
+++ cubrid_rel
+++ grep debug
+++ wc -l
++ isDebug=1
++ '[' 1 -eq 1 ']'
++ IGNORE_TEST_PERFORMANCE=TRUE
++ '[' 11 -ge 9 -a 5 -gt 1 ']'
++ cubrid createdb --db-volume-size=20M --log-volume-size=20M -r db11903 en_US
+Creating database with 64.0M size using locale en_US. The total amount of disk space needed is 104.0M.
+
+CUBRID 11.5.0 (11.5.0.2575) (64 debug build)
+
++ cd ..
++ cubrid server start db11903
+@ cubrid server start: db11903
+
+This may take a long time depending on the amount of recovery works to do.
+
+CUBRID 11.5.0 (11.5.0.2575) (64 debug build)
+
+++ cubrid server start: success
++ csql -u dba -c 'create table t(i int) partition by range(i) (partition p0 values less than (10));' db11903
+Execute OK. (0.053098 sec) Committed. (0.049966 sec) 
++ csql -u dba -c 'insert into t values(1);' db11903
+1 row affected. (0.075399 sec) Committed. (0.000017 sec) 
++ cubrid unloaddb db11903
++ echo 100
++ recreate_db
++ cubrid server stop db11903
+@ cubrid server stop: db11903
+
+Server db11903 notified of shutdown.
+This may take several minutes. Please wait.
+++ cubrid server stop: success
++ cubrid deletedb db11903
++ rm -rf db11903
++ mkdir db11903
++ cd db11903
++ cubrid_createdb --db-volume-size=20M --log-volume-size=20M -r db11903
++ parse_build_version
+++ cubrid_rel
+++ grep CUBRID
+++ awk -F '(' '{print $2}'
+++ sed 's/)//g'
++ build_ver='11.5.0.2575-ba88e47 '
++ cubrid_major=11
+++ echo 11.5.0.2575-ba88e47
+++ awk -F . '{print $2}'
++ cubrid_minor=5
+++ cubrid_rel
+++ grep debug
+++ wc -l
++ isDebug=1
++ '[' 1 -eq 1 ']'
++ IGNORE_TEST_PERFORMANCE=TRUE
++ '[' 11 -ge 9 -a 5 -gt 1 ']'
++ cubrid createdb --db-volume-size=20M --log-volume-size=20M -r db11903 en_US
+Creating database with 64.0M size using locale en_US. The total amount of disk space needed is 104.0M.
+
+CUBRID 11.5.0 (11.5.0.2575) (64 debug build)
+
++ cd ..
++ cubrid server start db11903
+@ cubrid server start: db11903
+
+This may take a long time depending on the amount of recovery works to do.
+
+CUBRID 11.5.0 (11.5.0.2575) (64 debug build)
+
+++ cubrid server start: success
++ echo '========== test2 =========='
++ cubrid loaddb -C -v -u dba -s db11903_schema -d db11903_objects db11903
++ recreate_db
++ cubrid server stop db11903
+@ cubrid server stop: db11903
+
+Server db11903 notified of shutdown.
+This may take several minutes. Please wait.
+++ cubrid server stop: success
++ cubrid deletedb db11903
++ rm -rf db11903
++ mkdir db11903
++ cd db11903
++ cubrid_createdb --db-volume-size=20M --log-volume-size=20M -r db11903
++ parse_build_version
+++ cubrid_rel
+++ grep CUBRID
+++ awk -F '(' '{print $2}'
+++ sed 's/)//g'
++ build_ver='11.5.0.2575-ba88e47 '
++ cubrid_major=11
+++ echo 11.5.0.2575-ba88e47
+++ awk -F . '{print $2}'
++ cubrid_minor=5
+++ cubrid_rel
+++ grep debug
+++ wc -l
++ isDebug=1
++ '[' 1 -eq 1 ']'
++ IGNORE_TEST_PERFORMANCE=TRUE
++ '[' 11 -ge 9 -a 5 -gt 1 ']'
++ cubrid createdb --db-volume-size=20M --log-volume-size=20M -r db11903 en_US
+Creating database with 64.0M size using locale en_US. The total amount of disk space needed is 104.0M.
+
+CUBRID 11.5.0 (11.5.0.2575) (64 debug build)
+
++ cd ..
++ cubrid server start db11903
+@ cubrid server start: db11903
+
+This may take a long time depending on the amount of recovery works to do.
+
+CUBRID 11.5.0 (11.5.0.2575) (64 debug build)
+
+++ cubrid server start: success
++ csql -u dba -c 'create table t(i int) partition by hash(i) partitions 20;' db11903
+Execute OK. (0.168552 sec) Committed. (0.002597 sec) 
++ csql -u dba -c 'insert into t select rownum from _db_class a, _db_class b, _db_class c limit 10000;' db11903
+10000 rows affected. (0.310036 sec) Committed. (0.000020 sec) 
++ cubrid unloaddb db11903
++ recreate_db
++ cubrid server stop db11903
+@ cubrid server stop: db11903
+
+Server db11903 notified of shutdown.
+This may take several minutes. Please wait.
+++ cubrid server stop: success
++ cubrid deletedb db11903
++ rm -rf db11903
++ mkdir db11903
++ cd db11903
++ cubrid_createdb --db-volume-size=20M --log-volume-size=20M -r db11903
++ parse_build_version
+++ cubrid_rel
+++ grep CUBRID
+++ awk -F '(' '{print $2}'
+++ sed 's/)//g'
++ build_ver='11.5.0.2575-ba88e47 '
++ cubrid_major=11
+++ echo 11.5.0.2575-ba88e47
+++ awk -F . '{print $2}'
++ cubrid_minor=5
+++ cubrid_rel
+++ grep debug
+++ wc -l
++ isDebug=1
++ '[' 1 -eq 1 ']'
++ IGNORE_TEST_PERFORMANCE=TRUE
++ '[' 11 -ge 9 -a 5 -gt 1 ']'
++ cubrid createdb --db-volume-size=20M --log-volume-size=20M -r db11903 en_US
+Creating database with 64.0M size using locale en_US. The total amount of disk space needed is 104.0M.
+
+CUBRID 11.5.0 (11.5.0.2575) (64 debug build)
+
++ cd ..
++ cubrid server start db11903
+@ cubrid server start: db11903
+
+This may take a long time depending on the amount of recovery works to do.
+
+CUBRID 11.5.0 (11.5.0.2575) (64 debug build)
+
+++ cubrid server start: success
++ echo '========== test3 =========='
++ cubrid loaddb -C -c 100 -u dba -s db11903_schema -d db11903_objects db11903
++ compare_result_between_files bug_bts_11093.output bug_bts_11093.answer sort
++ cci_driver=
++ server=
++ '[' 3 -lt 2 ']'
++ '[' -f /home/vimkim/CUBRID/qa.conf ']'
+++ get_best_compat_file bug_bts_11093.output
+++ suffix_os=
+++ best_driver=
+++ best_server=
+++ fileName=bug_bts_11093.output
+++ current_server=
+++ cci_driver=
+++ newfilename=
+++ '[' Linux = Windows_NT ']'
+++ '[' Linux = AIX ']'
+++ ls -l 'bug_bts_11093.output*_D*'
+++ grep -E '_D[0-9\.]+'
+++ awk -F _D '{print $NF}'
+ls: cannot access 'bug_bts_11093.output*_D*': No such file or directory
++++ cat listdrv
++++ wc -l
+++ '[' 0 -eq 0 ']'
+++ '[' -f bug_bts_11093.output ']'
+++ newfilename=bug_bts_11093.output
+++ echo bug_bts_11093.output
+++ return 1
++ left=bug_bts_11093.output
+++ get_best_compat_file bug_bts_11093.answer
+++ suffix_os=
+++ best_driver=
+++ best_server=
+++ fileName=bug_bts_11093.answer
+++ current_server=
+++ cci_driver=
+++ newfilename=
+++ '[' Linux = Windows_NT ']'
+++ '[' Linux = AIX ']'
+++ ls -l 'bug_bts_11093.answer*_D*'
+++ grep -E '_D[0-9\.]+'
+++ awk -F _D '{print $NF}'
+ls: cannot access 'bug_bts_11093.answer*_D*': No such file or directory
++++ cat listdrv
++++ wc -l
+++ '[' 0 -eq 0 ']'
+++ '[' -f bug_bts_11093.answer ']'
+++ newfilename=bug_bts_11093.answer
+++ echo bug_bts_11093.answer
+++ return 1
++ right=bug_bts_11093.answer
++ '[' bug_bts_11093.output == '' ']'
++ '[' bug_bts_11093.answer == '' ']'
++ dos2unix bug_bts_11093.output
+dos2unix: converting file bug_bts_11093.output to Unix format...
++ dos2unix bug_bts_11093.answer
+dos2unix: converting file bug_bts_11093.answer to Unix format...
++ echo 'start to compare files: diff bug_bts_11093.output bug_bts_11093.answer'
+start to compare files: diff bug_bts_11093.output bug_bts_11093.answer
++ '[' sort = error ']'
++ '[' sort = sort ']'
++ '[' '' = error ']'
++ '[' sort = error ']'
++ '[' sort = sort ']'
++ sorted_left=bug_bts_11093.output_sorted
++ sorted_right=bug_bts_11093.answer_sorted
++ sort bug_bts_11093.output
++ sort bug_bts_11093.answer
++ diff_ignore_lineno bug_bts_11093.output_sorted bug_bts_11093.answer_sorted -b
++ local f1=bug_bts_11093.output_sorted
++ local f2=bug_bts_11093.answer_sorted
++ local op=-b
++ local tmp1=bug_bts_11093.output_sorted_temp_diff
++ local tmp2=bug_bts_11093.answer_sorted_temp_diff
++ cp -rf bug_bts_11093.output_sorted bug_bts_11093.output_sorted_temp_diff
++ cp -rf bug_bts_11093.answer_sorted bug_bts_11093.answer_sorted_temp_diff
++ local 'reg=s/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g'
++ sed -i 's/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g' bug_bts_11093.output_sorted_temp_diff
++ sed -i 's/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g' bug_bts_11093.answer_sorted_temp_diff
++ reg='s/In the command from line[ 0-9]*/In the command from line ?/g'
++ sed -i 's/In the command from line[ 0-9]*/In the command from line ?/g' bug_bts_11093.output_sorted_temp_diff
++ sed -i 's/In the command from line[ 0-9]*/In the command from line ?/g' bug_bts_11093.answer_sorted_temp_diff
++ reg='s/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g'
++ sed -i 's/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g' bug_bts_11093.output_sorted_temp_diff
++ sed -i 's/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g' bug_bts_11093.answer_sorted_temp_diff
++ reg='s/In schema[0-9]* line [0-9]*/In schema? line ?/g'
++ sed -i 's/In schema[0-9]* line [0-9]*/In schema? line ?/g' bug_bts_11093.output_sorted_temp_diff
++ sed -i 's/In schema[0-9]* line [0-9]*/In schema? line ?/g' bug_bts_11093.answer_sorted_temp_diff
++ reg='s/In indexes[0-9]* line [0-9]*/In indexes? line ?/g'
++ sed -i 's/In indexes[0-9]* line [0-9]*/In indexes? line ?/g' bug_bts_11093.output_sorted_temp_diff
++ sed -i 's/In indexes[0-9]* line [0-9]*/In indexes? line ?/g' bug_bts_11093.answer_sorted_temp_diff
++ diff bug_bts_11093.output_sorted_temp_diff bug_bts_11093.answer_sorted_temp_diff -b
++ write_ok
++ '[' -z '' ']'
++ echo '----------------- 1 : OK'
+----------------- 1 : OK
++ echo 'partition_tbls-1 : OK'
++ let 'case_no = case_no + 1'
++ rm -f bug_bts_11093.output_sorted bug_bts_11093.answer_sorted
++ echo ';sc t'
++ csql -u dba db11903
++ csql -u dba db11903 -c ' select count(*) from t;'
++ format_csql_output test.log
++ '[' -n test.log ']'
++ sed -i '/SQL statement execution time/d' test.log
++ sed -i '/(.* sec)/d' test.log
++ sed -i /Committed./d test.log
++ compare_result_between_files test.log test.answer
++ cci_driver=
++ server=
++ '[' 2 -lt 2 ']'
++ '[' -f /home/vimkim/CUBRID/qa.conf ']'
+++ get_best_compat_file test.log
+++ suffix_os=
+++ best_driver=
+++ best_server=
+++ fileName=test.log
+++ current_server=
+++ cci_driver=
+++ newfilename=
+++ '[' Linux = Windows_NT ']'
+++ '[' Linux = AIX ']'
+++ ls -l 'test.log*_D*'
+++ grep -E '_D[0-9\.]+'
+++ awk -F _D '{print $NF}'
+ls: cannot access 'test.log*_D*': No such file or directory
++++ cat listdrv
++++ wc -l
+++ '[' 0 -eq 0 ']'
+++ '[' -f test.log ']'
+++ newfilename=test.log
+++ echo test.log
+++ return 1
++ left=test.log
+++ get_best_compat_file test.answer
+++ suffix_os=
+++ best_driver=
+++ best_server=
+++ fileName=test.answer
+++ current_server=
+++ cci_driver=
+++ newfilename=
+++ '[' Linux = Windows_NT ']'
+++ '[' Linux = AIX ']'
+++ ls -l 'test.answer*_D*'
+++ grep -E '_D[0-9\.]+'
+++ awk -F _D '{print $NF}'
+ls: cannot access 'test.answer*_D*': No such file or directory
++++ cat listdrv
++++ wc -l
+++ '[' 0 -eq 0 ']'
+++ '[' -f test.answer ']'
+++ newfilename=test.answer
+++ echo test.answer
+++ return 1
++ right=test.answer
++ '[' test.log == '' ']'
++ '[' test.answer == '' ']'
++ dos2unix test.log
+dos2unix: converting file test.log to Unix format...
++ dos2unix test.answer
+dos2unix: converting file test.answer to Unix format...
++ echo 'start to compare files: diff test.log test.answer'
+start to compare files: diff test.log test.answer
++ '[' '' = error ']'
++ '[' '' = sort ']'
++ '[' '' = error ']'
++ '[' '' = sort ']'
++ diff_ignore_lineno test.log test.answer -b
++ local f1=test.log
++ local f2=test.answer
++ local op=-b
++ local tmp1=test.log_temp_diff
++ local tmp2=test.answer_temp_diff
++ cp -rf test.log test.log_temp_diff
++ cp -rf test.answer test.answer_temp_diff
++ local 'reg=s/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g'
++ sed -i 's/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g' test.log_temp_diff
++ sed -i 's/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g' test.answer_temp_diff
++ reg='s/In the command from line[ 0-9]*/In the command from line ?/g'
++ sed -i 's/In the command from line[ 0-9]*/In the command from line ?/g' test.log_temp_diff
++ sed -i 's/In the command from line[ 0-9]*/In the command from line ?/g' test.answer_temp_diff
++ reg='s/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g'
++ sed -i 's/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g' test.log_temp_diff
++ sed -i 's/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g' test.answer_temp_diff
++ reg='s/In schema[0-9]* line [0-9]*/In schema? line ?/g'
++ sed -i 's/In schema[0-9]* line [0-9]*/In schema? line ?/g' test.log_temp_diff
++ sed -i 's/In schema[0-9]* line [0-9]*/In schema? line ?/g' test.answer_temp_diff
++ reg='s/In indexes[0-9]* line [0-9]*/In indexes? line ?/g'
++ sed -i 's/In indexes[0-9]* line [0-9]*/In indexes? line ?/g' test.log_temp_diff
++ sed -i 's/In indexes[0-9]* line [0-9]*/In indexes? line ?/g' test.answer_temp_diff
++ diff test.log_temp_diff test.answer_temp_diff -b
++ write_ok
++ '[' -z '' ']'
++ echo '----------------- 2 : OK'
+----------------- 2 : OK
++ echo 'partition_tbls-2 : OK'
++ let 'case_no = case_no + 1'
++ let 'answer_no = answer_no + 1'
++ cubrid service stop
+@ cubrid broker stop
+++ cubrid broker is not running.
+@ cubrid manager server stop
+cubrid manager server is not installed.
+@ cubrid master stop
+++ cubrid master stop: success
++ cubrid deletedb db11903
++ rm db11903_objects db11903_schema
++ rm -rf
++ rm db11903_loaddb.log db11903_unloaddb.log test.log
++ finish
++ rm -f 'userver.err.*'
++ rm -f 'uclient.err.*'
++ rm -f 'client.err.*'
++ rm -rf ./lob
++ cubrid service stop
+@ cubrid broker stop
+++ cubrid broker is not running.
+@ cubrid manager server stop
+cubrid manager server is not installed.
+@ cubrid master stop
+++ cubrid master is not running.
++ pkill cub
++ '[' 1 -eq 1 ']'
++ count_time
+++ get_curr_second
++++ date +%s
+++ str=1789453917
+++ echo 1789453917
++ end_time=1789453917
++ duration=48
+++ date +%Y-%m-%d
++ date_str=2026-09-15
+++ date +%H:%M:%S
++ time_str=15:31:57
++ echo 15:31:57----/home/vimkim/cubrid-testcases-private-ex/shell/_35_cherry/issue_21654_server_side_loaddb/partition_tbls/cases--- time=48
++ '[' 48 -gt 7200 ']'
++ '[' 48 -gt 3600 ']'
++ '[' 48 -gt 1800 ']'
++ '[' 48 -gt 600 ']'
++ release_broker_sharedmemory
++ '[' Linux == Linux -o Linux == AIX ']'
+++ ipcs
+++ grep root
+++ awk '{print $2}'
++ broker_sid=
++ '[' -n '' ']'
++ delete_ini
++ '[' Linux = Windows_NT ']'
++ cp /home/vimkim/CUBRID/conf/cubrid.conf.org /home/vimkim/CUBRID/conf/cubrid.conf
+cp: cannot stat '/home/vimkim/CUBRID/conf/cubrid.conf.org': No such file or directory
++ restore_all_conf
++ restore_db_conf
++ '[' -f /home/vimkim/CUBRID/conf/cubrid.conf.org ']'
++ restore_broker_conf
++ '[' -f /home/vimkim/CUBRID/conf/cubrid_broker.conf.org ']'
++ restore_gateway_conf
++ '[' -f /home/vimkim/CUBRID/conf/cubrid_gateway.conf.org ']'
++ restore_ha_conf
++ '[' -f /home/vimkim/CUBRID/conf/cubrid_ha.conf.org ']'
+++ date
++ echo '[INFO] TEST STOP (Tue Sep 15 03:31:57 PM KST 2026)'
+[INFO] TEST STOP (Tue Sep 15 03:31:57 PM KST 2026)
+partition_tbls-1 : OK
+partition_tbls-2 : OK
+15:31:57----/home/vimkim/cubrid-testcases-private-ex/shell/_35_cherry/issue_21654_server_side_loaddb/partition_tbls/cases--- time=48
+
+[INFO] CLEAN PROCESSES: @ cubrid broker stop
+++ cubrid broker is not running.
+@ cubrid manager server stop
+@ cubrid master stop
+++ cubrid master is not running.
+UID          PID    PPID  C STIME TTY          TIME CMD
+root           1       0  0 15:31 ?        00:00:00 bwrap --ro-bind / / --bind /home/vimkim/.cache/codex/develop-partition-ba88e470/baseline/home /home/vimkim --ro-bind /home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8 /home/vimkim/java --tmpfs /tmp --dev /dev --proc /proc --unshare-user --uid 0 --gid 0 --unshare-pid --unshare-ipc --unshare-net --cap-add CAP_NET_ADMIN --unshare-uts --hostname localhost --die-with-parent --chdir /home/vimkim /usr/bin/env -i HOME=/home/vimkim USER=root LOGNAME=root SHELL=/bin/bash TERM=xterm LANG=en_US.UTF-8 PATH=/usr/bin:/bin /bin/bash --noprofile --norc -c  set -eu /usr/sbin/ip link add ctp0 type dummy /usr/sbin/ip address add 192.0.2.27/24 dev ctp0 /usr/sbin/ip link set ctp0 up source /home/vimkim/.bash_profile ulimit -c 0 cubrid_rel command -v cubrid csql sha256sum "$CUBRID/bin/cub_server" "$CUBRID/lib/libcubridsa.so" "$CUBRID/lib/libcubrid.so" ldd "$CUBRID/bin/cub_server" exec /usr/bin/script -qefc "bash /home/vimkim/CTP/bin/ctp.sh shell -c /home/vimkim/shell.conf" /home/vimkim/transcript.log 
+root           2       1  0 15:31 ?        00:00:00 /usr/bin/script -qefc bash /home/vimkim/CTP/bin/ctp.sh shell -c /home/vimkim/shell.conf /home/vimkim/transcript.log
+root          14       2  0 15:31 pts/0    00:00:00 bash /home/vimkim/CTP/bin/ctp.sh shell -c /home/vimkim/shell.conf
+root          19      14  1 15:31 pts/0    00:00:00 /home/vimkim/java/bin/java -cp /home/vimkim/CTP/common/lib/cubridqa-common.jar com.navercorp.cubridqa.ctp.CTP shell -c /home/vimkim/shell.conf
+root          20      14  0 15:31 pts/0    00:00:00 tee /home/vimkim/CTP/.output_2026091515311789453866.log
+root        3755      19  0 15:31 pts/0    00:00:00 sh /tmp/.localexec8781913431986251113.sh 2>&1
+root        3944    3755  0 15:31 pts/0    00:00:00 ps -u root -f
+root           1       0  0 15:31 ?        00:00:00 bwrap --ro-bind / / --bind /home/vimkim/.cache/codex/develop-partition-ba88e470/baseline/home /home/vimkim --ro-bind /home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8 /home/vimkim/java --tmpfs /tmp --dev /dev --proc /proc --unshare-user --uid 0 --gid 0 --unshare-pid --unshare-ipc --unshare-net --cap-add CAP_NET_ADMIN --unshare-uts --hostname localhost --die-with-parent --chdir /home/vimkim /usr/bin/env -i HOME=/home/vimkim USER=root LOGNAME=root SHELL=/bin/bash TERM=xterm LANG=en_US.UTF-8 PATH=/usr/bin:/bin /bin/bash --noprofile --norc -c  set -eu /usr/sbin/ip link add ctp0 type dummy /usr/sbin/ip address add 192.0.2.27/24 dev ctp0 /usr/sbin/ip link set ctp0 up source /home/vimkim/.bash_profile ulimit -c 0 cubrid_rel command -v cubrid csql sha256sum "$CUBRID/bin/cub_server" "$CUBRID/lib/libcubridsa.so" "$CUBRID/lib/libcubrid.so" ldd "$CUBRID/bin/cub_server" exec /usr/bin/script -qefc "bash /home/vimkim/CTP/bin/ctp.sh shell -c /home/vimkim/shell.conf" /home/vimkim/transcript.log 
+root          19      14  1 15:31 pts/0    00:00:00 /home/vimkim/java/bin/java -cp /home/vimkim/CTP/common/lib/cubridqa-common.jar com.navercorp.cubridqa.ctp.CTP shell -c /home/vimkim/shell.conf
+root        3946    3755  0 15:31 pts/0    00:00:00 grep cub
+Active Internet connections (servers and established)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       User       Inode      PID/Program name    
+Active UNIX domain sockets (servers and established)
+Proto RefCnt Flags       Type       State         I-Node   PID/Program name     Path
+Active Bluetooth connections (servers and established)
+Proto  Destination       Source            State         PSM DCID   SCID      IMTU    OMTU Security
+Proto  Destination       Source            State     Channel
+
+------ Message Queues --------
+key        msqid      owner      perms      used-bytes   messages    
+
+------ Shared Memory Segments --------
+key        shmid      owner      perms      bytes      nattch     status      
+
+------ Semaphore Arrays --------
+key        semid      owner      perms      nsems
