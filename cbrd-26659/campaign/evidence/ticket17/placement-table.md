@@ -1,0 +1,18 @@
+| Workload | Coverage family | Seam | Per case | Cases / invocation | Invocation | Tier | Headroom (case / invocation) | Basis |
+|---|---|---|---:|---:|---:|---|---|---|
+| Fixed deterministic public SQL cases, each with its paired OOS-path evidence check | Representation, SQL operations, Read paths, Schema and utilities | public SQL | 8.28 s | 9 | 111.83 s | fast | 93.1% / 87.6% | measured (inv-T17-0002, inv-T19-0001..0010) |
+| Bulk and churn SQL groups (100 and 1,000 out-of-row rows) | SQL operations | public SQL | 8.28 s | 1 | 49.28 s | fast | 93.1% / 94.5% | measured (inv-T17-0002, inv-T19-0001..0010) |
+| The public SQL suite projected to forty cases (tickets 18 to 22) | Representation, SQL operations, Read paths, Schema and utilities | public SQL | 8.28 s | 40 | 372.2 s | fast | 93.1% / 58.6% | derived |
+| Crash and recover (kill -9, restart, recovery-log assertion) | Durability | private shell | 19.27 s | 1 | 26.45 s | fast | 83.9% / 97.1% | measured (inv-T17-0003, inv-T17-0004, inv-T41-0002, inv-T41-0003) |
+| A whole private issue bucket, eleven cases, the campaign case among them | Durability | private shell | 111.9 s | 11 | 432 s | fast | 6.8% / 52.0% | measured (att-T14-0008-bucket, att-T14-0012-bucket, att-T14-0016-bucket) |
+| The four required multi-session schedule families, each four participants over three acknowledged barriers | Concurrent lifetime | private shell | 24.88 s | 4 | 103.62 s | scheduled | 97.2% / 98.6% | derived |
+| Randomized out-of-row churn, ten fixed seeds, fresh fixture per seed | Concurrent lifetime, Durability | private shell | 55.0 s | 1 | 62.27 s | scheduled | 93.9% / 99.1% | measured (seeds-10-fresh, seeds-100-fresh) |
+| Randomized out-of-row churn, one hundred recorded seeds, fresh fixture per seed | Concurrent lifetime, Durability | private shell | 550.0 s | 1 | 554.16 s | extended | 84.7% / 98.1% | measured (seeds-100-fresh) |
+| The same hundred seeds on one fixture reused across them | Concurrent lifetime, Durability | private shell | 10.2 s | 1 | 20.82 s | scheduled | 98.9% / 99.7% | measured (seeds-100-reused) |
+| One instrumented fault site, fault run plus its fault-disabled control | Resource pressure | private shell (instrumented configuration) | 79.3 s | 1 | 83.4 s | scheduled | 91.2% / 98.8% | measured (t17-instr-a1, evidence/ticket41/instr-sites/run-all.log) |
+| The whole validated fault campaign, twelve sites, fault plus control | Resource pressure | private shell (instrumented configuration) | 79.3 s | 12 | 456.5 s | extended | 97.8% / 98.4% | measured (evidence/ticket41/instr-sites/run-all.log) |
+| Corruption detection on copied database, page and log images, six experiments | Resource pressure | private shell (instrumented configuration) | 98.0 s | 1 | 102.1 s | scheduled | 89.1% / 98.6% | measured (ticket 16 section 12: 98 s for six experiments) |
+| Bounded test filesystem exhaustion | Resource pressure | private shell (instrumented configuration) | 31.0 s | 1 | 35.1 s | scheduled | 96.6% / 99.5% | measured (ticket 16 section 12: 31 s) |
+| The twelve-cell configuration sweep (4/8/16 KiB x release/debug x SA/CS) | Representation | neither (a probe, not a case) | 5.33 s | 12 | 50.37 s | fast | 95.6% / 94.4% | measured (evidence/ticket17/config-domain/) |
+| HA replica correctness (dedicated scenario, prerequisites declared) | Operational features | private shell | 30.0 s | 1 | 34.1 s | scheduled | 96.7% / 99.5% | derived |
+| CDC/flashback and encryption (dedicated scenarios, prerequisites declared) | Operational features | private shell | 38.54 s | 1 | 42.64 s | scheduled | 95.7% / 99.4% | derived |

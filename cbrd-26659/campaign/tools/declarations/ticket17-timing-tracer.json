@@ -1,0 +1,33 @@
+{
+    "declaration_version": 1,
+    "description": "Campaign ticket 17, representative timing R1: ticket 13's public tracer case ALONE, so that the SQL seam's per-invocation cost and this case's own cost can be separated. The case, its answer and its activation check are ticket 19's verbatim; only the scenario root (a copy under the ticket 17 storage, never the repository) and the checker's database name differ, so that the timing run cannot disturb ticket 19's databases. Tooling input only.",
+    "repository": "testcases",
+    "runner": "ctp-sql",
+    "scenario": "sql/_36_guava/cbrd_26659",
+    "tier": "fast",
+    "page_size": 16384,
+    "run_mode": "client-server",
+    "cases": {
+        "cbrd_26659_oos_rep02_largest_first": {
+            "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql",
+            "requirements": [
+                "OOS-REP-01",
+                "OOS-REP-02",
+                "OOS-SQL-01"
+            ],
+            "expected_assertions": 27,
+            "assertion_count_derivation": "ticket 13's hand-derived count, unchanged: 11 scalars per row group x 2 row groups + 3 in the final aggregate + 2 INSERT affected-row counts",
+            "single_session": true,
+            "flagged_for_user": false,
+            "activation_check": {
+                "script": "activation_check_cs.sh",
+                "args": [
+                    "t17rep02",
+                    "3024"
+                ],
+                "channel": "show-heap-oos",
+                "database": "t17rep02"
+            }
+        }
+    }
+}

@@ -1,0 +1,254 @@
+{
+  "caps": {
+    "fast": {
+      "invocation_seconds": 900,
+      "per_case_seconds": 120
+    },
+    "scheduled": {
+      "invocation_seconds": 7200,
+      "per_case_seconds": 900
+    },
+    "extended": {
+      "invocation_seconds": 28800,
+      "per_case_seconds": 3600
+    }
+  },
+  "workloads": [
+    {
+      "id": "public-sql-deterministic",
+      "name": "Fixed deterministic public SQL cases, each with its paired OOS-path evidence check",
+      "family": "Representation, SQL operations, Read paths, Schema and utilities",
+      "seam": "public SQL",
+      "basis": "measured",
+      "evidence": [
+        "inv-T17-0002",
+        "inv-T19-0001..0010"
+      ],
+      "per_case_seconds": 8.28,
+      "cases_per_invocation": 9,
+      "invocation_fixed_seconds": 41.0,
+      "invocation_measured_seconds": 111.83,
+      "proposed_tier": "fast"
+    },
+    {
+      "id": "public-sql-bulk-churn",
+      "name": "Bulk and churn SQL groups (100 and 1,000 out-of-row rows)",
+      "family": "SQL operations",
+      "seam": "public SQL",
+      "basis": "measured",
+      "evidence": [
+        "inv-T17-0002",
+        "inv-T19-0001..0010"
+      ],
+      "per_case_seconds": 8.28,
+      "cases_per_invocation": 1,
+      "invocation_fixed_seconds": 41.0,
+      "proposed_tier": "fast"
+    },
+    {
+      "id": "public-sql-suite-projected-40",
+      "name": "The public SQL suite projected to forty cases (tickets 18 to 22)",
+      "family": "Representation, SQL operations, Read paths, Schema and utilities",
+      "seam": "public SQL",
+      "basis": "derived",
+      "derivation": "the measured per-case cost of the nine-case suite (8.28 s: worst case execution 0.95 s plus one 7.33 s OOS-path evidence check) multiplied by forty cases, over the measured 41.0 s launcher cost, which nine invocations show does not grow with the case count",
+      "per_case_seconds": 8.28,
+      "cases_per_invocation": 40,
+      "invocation_fixed_seconds": 41.0,
+      "proposed_tier": "fast"
+    },
+    {
+      "id": "shell-crash-recover",
+      "name": "Crash and recover (kill -9, restart, recovery-log assertion)",
+      "family": "Durability",
+      "seam": "private shell",
+      "basis": "measured",
+      "evidence": [
+        "inv-T17-0003",
+        "inv-T17-0004",
+        "inv-T41-0002",
+        "inv-T41-0003"
+      ],
+      "per_case_seconds": 19.27,
+      "cases_per_invocation": 1,
+      "invocation_fixed_seconds": 4.1,
+      "invocation_measured_seconds": 26.45,
+      "proposed_tier": "fast"
+    },
+    {
+      "id": "shell-issue-bucket",
+      "name": "A whole private issue bucket, eleven cases, the campaign case among them",
+      "family": "Durability",
+      "seam": "private shell",
+      "basis": "measured",
+      "evidence": [
+        "att-T14-0008-bucket",
+        "att-T14-0012-bucket",
+        "att-T14-0016-bucket"
+      ],
+      "per_case_seconds": 111.9,
+      "cases_per_invocation": 11,
+      "invocation_fixed_seconds": 4.1,
+      "invocation_measured_seconds": 432,
+      "proposed_tier": "fast"
+    },
+    {
+      "id": "multi-session-barrier",
+      "name": "The four required multi-session schedule families, each four participants over three acknowledged barriers",
+      "family": "Concurrent lifetime",
+      "seam": "private shell",
+      "basis": "derived",
+      "derivation": "NO SCENARIO EXISTS: ticket 23 owns concurrent-lifetime schedules and is blocked by this ticket, so the scenario is a Delivery gap and this row is an estimate. What is measured is the MECHANISM, by tools/barrier_cost_probe.sh: 5.614 s for four participants over three acknowledged barriers, fixture included. The estimate adds the measured crash-and-recover cost (19.27 s), because a concurrent-lifetime schedule that survives a restart pays both.",
+      "per_case_seconds": 24.88,
+      "cases_per_invocation": 4,
+      "invocation_fixed_seconds": 4.1,
+      "proposed_tier": "scheduled"
+    },
+    {
+      "id": "churn-seeded-scheduled",
+      "name": "Randomized out-of-row churn, ten fixed seeds, fresh fixture per seed",
+      "family": "Concurrent lifetime, Durability",
+      "seam": "private shell",
+      "basis": "measured",
+      "evidence": [
+        "seeds-10-fresh",
+        "seeds-100-fresh"
+      ],
+      "seeds": 10,
+      "per_seed_seconds": 5.5,
+      "cases_per_invocation": 1,
+      "invocation_fixed_seconds": 4.1,
+      "invocation_measured_seconds": 62.27,
+      "proposed_tier": "scheduled"
+    },
+    {
+      "id": "churn-seeded-extended",
+      "name": "Randomized out-of-row churn, one hundred recorded seeds, fresh fixture per seed",
+      "family": "Concurrent lifetime, Durability",
+      "seam": "private shell",
+      "basis": "measured",
+      "evidence": [
+        "seeds-100-fresh"
+      ],
+      "seeds": 100,
+      "per_seed_seconds": 5.5,
+      "cases_per_invocation": 1,
+      "invocation_fixed_seconds": 4.1,
+      "invocation_measured_seconds": 554.16,
+      "proposed_tier": "extended"
+    },
+    {
+      "id": "churn-seeded-extended-amortized",
+      "name": "The same hundred seeds on one fixture reused across them",
+      "family": "Concurrent lifetime, Durability",
+      "seam": "private shell",
+      "basis": "measured",
+      "evidence": [
+        "seeds-100-reused"
+      ],
+      "seeds": 100,
+      "per_seed_seconds": 0.102,
+      "cases_per_invocation": 1,
+      "invocation_fixed_seconds": 4.1,
+      "invocation_measured_seconds": 20.82,
+      "proposed_tier": "scheduled"
+    },
+    {
+      "id": "instrumented-fault-site",
+      "name": "One instrumented fault site, fault run plus its fault-disabled control",
+      "family": "Resource pressure",
+      "seam": "private shell (instrumented configuration)",
+      "basis": "measured",
+      "evidence": [
+        "t17-instr-a1",
+        "evidence/ticket41/instr-sites/run-all.log"
+      ],
+      "per_case_seconds": 79.3,
+      "cases_per_invocation": 1,
+      "invocation_fixed_seconds": 4.1,
+      "proposed_tier": "scheduled"
+    },
+    {
+      "id": "instrumented-fault-campaign",
+      "name": "The whole validated fault campaign, twelve sites, fault plus control",
+      "family": "Resource pressure",
+      "seam": "private shell (instrumented configuration)",
+      "basis": "measured",
+      "evidence": [
+        "evidence/ticket41/instr-sites/run-all.log"
+      ],
+      "per_case_seconds": 79.3,
+      "cases_per_invocation": 12,
+      "invocation_fixed_seconds": 4.1,
+      "invocation_measured_seconds": 456.5,
+      "proposed_tier": "extended"
+    },
+    {
+      "id": "corruption-detection",
+      "name": "Corruption detection on copied database, page and log images, six experiments",
+      "family": "Resource pressure",
+      "seam": "private shell (instrumented configuration)",
+      "basis": "measured",
+      "evidence": [
+        "ticket 16 section 12: 98 s for six experiments"
+      ],
+      "per_case_seconds": 98.0,
+      "cases_per_invocation": 1,
+      "invocation_fixed_seconds": 4.1,
+      "proposed_tier": "scheduled"
+    },
+    {
+      "id": "bounded-fs-exhaustion",
+      "name": "Bounded test filesystem exhaustion",
+      "family": "Resource pressure",
+      "seam": "private shell (instrumented configuration)",
+      "basis": "measured",
+      "evidence": [
+        "ticket 16 section 12: 31 s"
+      ],
+      "per_case_seconds": 31.0,
+      "cases_per_invocation": 1,
+      "invocation_fixed_seconds": 4.1,
+      "proposed_tier": "scheduled"
+    },
+    {
+      "id": "configuration-sweep",
+      "name": "The twelve-cell configuration sweep (4/8/16 KiB x release/debug x SA/CS)",
+      "family": "Representation",
+      "seam": "neither (a probe, not a case)",
+      "basis": "measured",
+      "evidence": [
+        "evidence/ticket17/config-domain/"
+      ],
+      "per_case_seconds": 5.33,
+      "cases_per_invocation": 12,
+      "invocation_fixed_seconds": 0,
+      "invocation_measured_seconds": 50.37,
+      "proposed_tier": "fast"
+    },
+    {
+      "id": "ops-ha",
+      "name": "HA replica correctness (dedicated scenario, prerequisites declared)",
+      "family": "Operational features",
+      "seam": "private shell",
+      "basis": "derived",
+      "derivation": "NO SCENARIO EXISTS and nothing about HA has been measured by this campaign. The figure is a LOWER BOUND, not an estimate of the real cost: an HA scenario pays at least two database fixtures and two server starts (2 x the measured 3.89 s) plus a replication wait of unknown length. Ticket 17 records it as unmeasured; the tickets that write the scenario owe the measurement.",
+      "per_case_seconds": 30.0,
+      "cases_per_invocation": 1,
+      "invocation_fixed_seconds": 4.1,
+      "proposed_tier": "scheduled"
+    },
+    {
+      "id": "ops-cdc-encryption",
+      "name": "CDC/flashback and encryption (dedicated scenarios, prerequisites declared)",
+      "family": "Operational features",
+      "seam": "private shell",
+      "basis": "derived",
+      "derivation": "NO SCENARIO EXISTS and nothing about CDC, flashback or encryption has been measured by this campaign. The figure is a LOWER BOUND: one database fixture, one server start and one restart, which the crash-and-recover case measures at 19.27 s, plus the extra service each needs. Unmeasured; the tickets that write the scenarios owe the measurement.",
+      "per_case_seconds": 38.54,
+      "cases_per_invocation": 1,
+      "invocation_fixed_seconds": 4.1,
+      "proposed_tier": "scheduled"
+    }
+  ]
+}

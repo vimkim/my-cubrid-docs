@@ -1,0 +1,247 @@
+{
+  "host": "dev2 (80 logical CPUs, 251 GiB RAM, /home 1.4 TiB free at the time of measuring)",
+  "engine": {
+    "commit": "f4299ac0cd777a2a964c1f197ae5ebf9841a4936",
+    "builds": [
+      "release_gcc_nounit",
+      "debug_gcc_nounit"
+    ],
+    "instrumentation": "oos-instr-f4299ac0c/debug_gcc_nounit, patch set t16-set1"
+  },
+  "ctp_sql": {
+    "invocations": 18,
+    "launcher_seconds": {
+      "min": 39,
+      "max": 55,
+      "median": 41.0,
+      "n": 18
+    },
+    "fixed_seconds_per_invocation": {
+      "min": 38.901,
+      "max": 54.136,
+      "median": 40.055,
+      "n": 18
+    },
+    "case_milliseconds": {
+      "min": 26,
+      "max": 950,
+      "median": 63,
+      "n": 97
+    },
+    "bulk_case_seconds": {
+      "min": 0.231,
+      "max": 0.95,
+      "median": 0.278,
+      "n": 10
+    },
+    "paired_oos_path_evidence_check": {
+      "whole_invocation_seconds": 110.0,
+      "launcher_seconds": 44,
+      "cases_checked": 9,
+      "per_check_seconds": 7.33
+    }
+  },
+  "ctp_shell": {
+    "invocations": 39,
+    "launcher_seconds": {
+      "min": 7,
+      "max": 432,
+      "median": 17,
+      "n": 39
+    },
+    "fixed_seconds_per_invocation": {
+      "min": 1.816,
+      "max": 11.649,
+      "median": 4.055,
+      "n": 39
+    },
+    "case_seconds": {
+      "min": 1.363,
+      "max": 111.927,
+      "median": 14.513,
+      "n": 69
+    },
+    "crash_recover_case_seconds": {
+      "release": {
+        "min": 11.65,
+        "max": 19.273,
+        "median": 12.988,
+        "n": 17
+      },
+      "debug": {
+        "min": 16.174,
+        "max": 19.141,
+        "median": 17.353,
+        "n": 11
+      }
+    },
+    "eleven_case_bucket": [
+      {
+        "invocation": "att-T14-0008-bucket",
+        "launcher_seconds": 432,
+        "case_seconds_total": 420.8,
+        "slowest_case_seconds": 111.9
+      },
+      {
+        "invocation": "att-T14-0012-bucket",
+        "launcher_seconds": 404,
+        "case_seconds_total": 394.6,
+        "slowest_case_seconds": 92.6
+      },
+      {
+        "invocation": "att-T14-0016-bucket",
+        "launcher_seconds": 397,
+        "case_seconds_total": 385.4,
+        "slowest_case_seconds": 96.2
+      }
+    ]
+  },
+  "configuration_domain": {
+    "cells": 12,
+    "runnable": 12,
+    "capability_gaps": [],
+    "wall_seconds": {
+      "min": 3.24,
+      "max": 5.33,
+      "median": 3.995,
+      "n": 12
+    }
+  },
+  "seeded_churn": {
+    "ten_seeds_fresh": {
+      "total_seconds": 58.17,
+      "per_seed_seconds": {
+        "min": 5.439,
+        "max": 6.686,
+        "mean": 5.813,
+        "median": 5.74
+      },
+      "phases_median": {
+        "createdb": 2.189,
+        "server_start": 2.032,
+        "workload": 0.117,
+        "teardown": 1.361
+      }
+    },
+    "hundred_seeds_fresh": {
+      "total_seconds": 550.06,
+      "per_seed_seconds": {
+        "min": 5.333,
+        "max": 7.682,
+        "mean": 5.5,
+        "median": 5.371
+      }
+    },
+    "hundred_seeds_reused": {
+      "total_seconds": 16.72,
+      "per_seed_seconds": {
+        "min": 0.096,
+        "max": 0.117,
+        "mean": 0.102,
+        "median": 0.101
+      }
+    }
+  },
+  "barrier_mechanism": {
+    "participants": 4,
+    "rounds": 3,
+    "createdb_seconds": 1.801,
+    "server_start_seconds": 3.036,
+    "fixture_seconds": 4.837,
+    "sessions_establish_and_acknowledge_seconds": 0.107,
+    "round_seconds": [
+      0.204,
+      0.204,
+      0.104
+    ],
+    "round_seconds_mean": 0.171,
+    "round_seconds_max": 0.204,
+    "total_seconds": 5.614,
+    "note": "release-to-all-acknowledged per round; the poll interval paces the wait and never proves ordering"
+  },
+  "instrumented_sites": {
+    "sites": 12,
+    "fault_plus_control_seconds": {
+      "min": 14.7,
+      "max": 79.3,
+      "median": 37.9,
+      "n": 12
+    },
+    "whole_campaign_seconds": 456.5,
+    "source": "evidence/ticket41/instr-sites/run-all.log, the re-verification on the re-pinned build"
+  },
+  "resources": {
+    "barrier-4p-3r": {
+      "wall_seconds": 7.69,
+      "peak_cpus": 2.379,
+      "mean_cpus": 0.274,
+      "peak_rss_gib": 0.636,
+      "peak_processes": 13,
+      "storage_delta_gib": 0.222
+    },
+    "inv-T17-0001": {
+      "wall_seconds": 52.3,
+      "peak_cpus": 2.379,
+      "mean_cpus": 0.126,
+      "peak_rss_gib": 0.763,
+      "peak_processes": 21,
+      "storage_delta_gib": 0.222
+    },
+    "inv-T17-0002": {
+      "wall_seconds": 111.83,
+      "peak_cpus": 7.668,
+      "mean_cpus": 0.227,
+      "peak_rss_gib": 0.836,
+      "peak_processes": 21,
+      "storage_delta_gib": 2.745
+    },
+    "inv-T17-0003": {
+      "wall_seconds": 21.79,
+      "peak_cpus": 1.386,
+      "mean_cpus": 0.336,
+      "peak_rss_gib": 0.705,
+      "peak_processes": 15,
+      "storage_delta_gib": 0.001
+    },
+    "inv-T17-0004": {
+      "wall_seconds": 26.45,
+      "peak_cpus": 1.405,
+      "mean_cpus": 0.33,
+      "peak_rss_gib": 0.856,
+      "peak_processes": 15,
+      "storage_delta_gib": 0.001
+    },
+    "seeds-10-fresh": {
+      "wall_seconds": 58.84,
+      "peak_cpus": 1.313,
+      "mean_cpus": 0.258,
+      "peak_rss_gib": 0.66,
+      "peak_processes": 8,
+      "storage_delta_gib": 0.0
+    },
+    "seeds-100-fresh": {
+      "wall_seconds": 550.73,
+      "peak_cpus": 0.697,
+      "mean_cpus": 0.246,
+      "peak_rss_gib": 0.66,
+      "peak_processes": 8,
+      "storage_delta_gib": 0.0
+    },
+    "seeds-100-reused": {
+      "wall_seconds": 17.43,
+      "peak_cpus": 0.766,
+      "mean_cpus": 0.521,
+      "peak_rss_gib": 0.654,
+      "peak_processes": 7,
+      "storage_delta_gib": 0.0
+    },
+    "t17-instr-a1": {
+      "wall_seconds": 13.95,
+      "peak_cpus": 1.136,
+      "mean_cpus": 0.225,
+      "peak_rss_gib": 0.428,
+      "peak_processes": 7,
+      "storage_delta_gib": 0.506
+    }
+  }
+}
