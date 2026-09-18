@@ -1,7 +1,7 @@
 # [CBRD-27441] Validate partition range in server-side loaddb
 
 - JIRA: https://jira.cubrid.org/browse/CBRD-27441
-- Source commit: `f7f53fb` (branch `CBRD-27441-cs-loaddb-bugfix`)
+- Source commit: `109f16a` (branch `CBRD-27441-cs-loaddb-bugfix`)
 - Base: `develop`
 
 ## Purpose
