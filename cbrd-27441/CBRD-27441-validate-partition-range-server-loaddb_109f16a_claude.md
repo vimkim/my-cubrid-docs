@@ -13,6 +13,80 @@ client-server 방식(`loaddb -C`)에서 개별 파티션을 대상으로 행을 
 - **AS-IS**: `i < 10` 범위의 파티션 `t__p__p0` 에 값 `100` 을 load하면 오류 없이 성공 커밋된다. 같은 값을 일반 SQL `INSERT` 로 넣으면 `Appropriate partition does not exist` 오류로 거부된다. 즉 loaddb 경로만 파티션 정의를 위반한 데이터를 허용했다.
 - **TO-BE**: 범위를 벗어난 행은 파티션 오류로 거부하고(종료 코드 0이 아님), 중간 커밋이 없는 실패 배치의 행은 남기지 않는다(부모·개별 파티션 모두 0행). 이후 정상 데이터 load는 정상 동작한다.
 
+### Reproduction (AS-IS / TO-BE)
+
+JIRA 이슈의 repro 스크립트를 같은 debug 빌드(11.5.0.2597)에서 수정 전/후로 실행한 실제 출력이다(로컬 경로 배너만 제거, 나머지 그대로). 빈 줄 뒤의 숫자 줄은 순서대로 오류 load 직후 `select i from t`, `select i from t__p__p0`, 그리고 정상 load 후 `select i from t` 결과다.
+
+**AS-IS (수정 전, 버그): 범위 밖 값 `100` 이 성공 커밋되고 이후에도 남는다.**
+
+```text
+Execute OK. (0.018221 sec) Committed. (0.000698 sec)
+invalid load exit=0
+
+Start object loading.
+t__p__p0 2 instances committed
+Total 2 object(s) inserted, 0 object(s) failed.
+
+*** Updating class statistics ***
+Class dba.t__p__p0
+
+*** Closing the database ***
+1
+100
+
+1
+100
+
+valid load exit=0
+
+Start object loading.
+t__p__p0 1 instances committed
+Total 1 object(s) inserted, 0 object(s) failed.
+
+*** Closing the database ***
+1
+1
+100
+
+SQL INSERT exit=1
+
+In the command from line 1,
+
+ERROR: Appropriate partition does not exist.
+```
+
+`invalid load exit=0`, `Total 2 object(s) inserted`, 오류 직후 조회 `1 / 100` (부모·파티션 모두), 정상 load 후에도 `1 / 1 / 100` 로 `100` 이 남는다. 반면 같은 값의 SQL `INSERT` 는 `exit=1` 로 거부한다 — loaddb 경로만 검증이 빠졌음을 보여준다.
+
+**TO-BE (수정 후): 범위 밖 값은 거부되고 아무 행도 남지 않으며, 이후 정상 load는 성공한다.**
+
+```text
+Execute OK. (0.016087 sec) Committed. (0.002184 sec)
+invalid load exit=3
+
+Start object loading.
+Line 3:Appropriate partition does not exist.
+Total 0 object(s) inserted, 1 object(s) failed.
+valid load exit=0
+
+Start object loading.
+t__p__p0 1 instances committed
+Total 1 object(s) inserted, 0 object(s) failed.
+
+*** Updating class statistics ***
+Class dba.t__p__p0
+
+*** Closing the database ***
+1
+
+SQL INSERT exit=1
+
+In the command from line 1,
+
+ERROR: Appropriate partition does not exist.
+```
+
+`invalid load exit=3` 와 `Appropriate partition does not exist`, 오류 직후 두 조회 모두 빈 결과(행 없음), 정상 load 후 `select i from t` 는 `1` 한 행. loaddb 경로가 이제 SQL `INSERT` 와 동일하게 파티션 정의를 강제한다.
+
 ## Implementation
 
 서버 로더는 일반 SQL `INSERT` 와 다른 삽입 경로를 쓴다. 근본 원인은 `server_object_loader::flush_records` 가 `pruning_type` (삽입 시 파티션 라우팅·검증 방식을 정하는 값) 을 `DB_NOT_PARTITIONED_CLASS`(=0) 로 고정해 넘긴 데 있다. 그 결과 `locator_insert_force` 의 파티션 검증 분기(`src/transaction/locator_sr.c` 의 `pruning_type != DB_NOT_PARTITIONED_CLASS` 조건)가 건너뛰어지고, 행은 `%class` 가 지정한 힙에 검증 없이 그대로 들어갔다.
