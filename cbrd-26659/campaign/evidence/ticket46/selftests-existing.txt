@@ -1,0 +1,105 @@
+=== selftest_matrix_merge.py ===
+[matrix_merge] REFUSED: /home/vimkim/tmp/selftest-matrix-ebyujgkd/att-SELFTEST-02.json: checker-validation attempts never reach the matrix
+[matrix_merge] REFUSED: row OOS-REP-02/-/claim-withdrawn reads as a withdrawal but no withdrawn_claims entry names OOS-REP-02; withdrawal is declared at matrix level and names the cases it was withdrawn from (ticket 42), and a row id is never read as a marker
+[matrix_merge] merged 2 attempt(s) from 2 manifest(s); 1 case row(s), 0 hand-maintained row(s) preserved verbatim, 0 accepted exclusion(s) and 0 withdrawn claim(s) preserved; wrote /home/vimkim/tmp/selftest-matrix-ebyujgkd/m1.json
+PASS  1a history keeps both attempts in time order
+PASS  1b ever_failed stays true after a later PASS
+PASS  1c latest_outcome is PASS
+PASS  1d flakiness 2 attempts / 1 failure / intermittent
+PASS  1e run points at the latest manifest
+[matrix_merge] merged 1 attempt(s) from 1 manifest(s); 1 case row(s), 0 hand-maintained row(s) preserved verbatim, 0 accepted exclusion(s) and 0 withdrawn claim(s) preserved; wrote /home/vimkim/tmp/selftest-matrix-ebyujgkd/m2a.json
+PASS  2a a PASS with proven evidence starts at gap_kind none
+[matrix_merge] merged 1 attempt(s) from 1 manifest(s); 1 case row(s), 0 hand-maintained row(s) preserved verbatim, 0 accepted exclusion(s) and 0 withdrawn claim(s) preserved; wrote /home/vimkim/tmp/selftest-matrix-ebyujgkd/m2b.json
+PASS  2b a later FAIL moves gap_kind off none
+PASS  2c the earlier PASS stays in history
+PASS  2d a FAIL with no established attribution is Under triage: not Engine defect, not Delivery gap
+[matrix_merge] merged 0 attempt(s) from 2 manifest(s); 1 case row(s), 0 hand-maintained row(s) preserved verbatim, 0 accepted exclusion(s) and 0 withdrawn claim(s) preserved; wrote /home/vimkim/tmp/selftest-matrix-ebyujgkd/m3.json
+PASS  3  merging the same manifests again changes nothing
+[matrix_merge] merged 0 attempt(s) from 1 manifest(s); 1 case row(s), 1 hand-maintained row(s) preserved verbatim, 1 accepted exclusion(s) and 0 withdrawn claim(s) preserved; wrote /home/vimkim/tmp/selftest-matrix-ebyujgkd/m4.json
+PASS  4a accepted_exclusions come out verbatim
+PASS  4b the caseless row comes out verbatim and in place
+[matrix_merge] merged 1 attempt(s) from 1 manifest(s); 1 case row(s), 0 hand-maintained row(s) preserved verbatim, 0 accepted exclusion(s) and 0 withdrawn claim(s) preserved; wrote /home/vimkim/tmp/selftest-matrix-ebyujgkd/m5.json
+PASS  5a a hand-set Delivery gap survives a later PASS (never upgraded to none)
+PASS  5b the hand-written summary survives
+PASS  5c the later PASS was still appended
+PASS  6  a checker-validation attempt record is refused by the merge
+[matrix_merge] inv-SELFTEST-03: SELFTEST_case would merge into the hand-maintained row for OOS-REP-02; it is preserved verbatim and no attempt is merged into it
+[matrix_merge] merged 0 attempt(s) from 1 manifest(s); 0 case row(s), 1 hand-maintained row(s) preserved verbatim, 0 accepted exclusion(s) and 0 withdrawn claim(s) preserved; wrote /home/vimkim/tmp/selftest-matrix-ebyujgkd/m7.json
+PASS  7a a hand-maintained case row comes out verbatim
+PASS  7b no attempt is merged into a hand-maintained row
+PASS  7c and no duplicate row is created beside it
+[matrix_merge] inv-SELFTEST-05: SELFTEST_case cites OOS-REP-02, whose claim a human withdrew from this case (withdrawn_claims); no row is created for the pair. Another case citing OOS-REP-02 is unaffected
+[matrix_merge] merged 0 attempt(s) from 1 manifest(s); 0 case row(s), 1 hand-maintained row(s) preserved verbatim, 0 accepted exclusion(s) and 1 withdrawn claim(s) preserved; wrote /home/vimkim/tmp/selftest-matrix-ebyujgkd/m8a.json
+PASS  8a a case named in withdrawn_claims gets no row for that requirement
+[matrix_merge] merged 1 attempt(s) from 1 manifest(s); 1 case row(s), 1 hand-maintained row(s) preserved verbatim, 0 accepted exclusion(s) and 0 withdrawn claim(s) preserved; wrote /home/vimkim/tmp/selftest-matrix-ebyujgkd/m8b.json
+PASS  8b a hand_maintained placeholder does not suppress the requirement's first case row
+PASS  8c and the placeholder itself still comes out verbatim
+[matrix_merge] merged 1 attempt(s) from 1 manifest(s); 1 case row(s), 1 hand-maintained row(s) preserved verbatim, 0 accepted exclusion(s) and 1 withdrawn claim(s) preserved; wrote /home/vimkim/tmp/selftest-matrix-ebyujgkd/m8d.json
+PASS  8d a DIFFERENT case citing a withdrawn requirement still gets its row
+PASS  8e withdrawn_claims comes out verbatim; the tool never writes it
+PASS  8f a /claim-withdrawn row with no withdrawn_claims entry is refused, not fallen back on
+PASS  9  accepted_exclusions: the guard's baseline is a copy, so an in-place append is visible to it
+PASS  9  withdrawn_claims: the guard's baseline is a copy, so an in-place append is visible to it
+PASS  9  an absent hand-maintained list reads as absent, not as an empty one to be written
+[selftest_matrix_merge] 0 failing check(s); files under /home/vimkim/tmp/selftest-matrix-ebyujgkd
+rc=0
+=== selftest_promotions.py ===
+PASS  1a a proven rename is written
+PASS  1b the hand-supplied review note is kept
+PASS  1c the tool appends the rename proof
+PASS  1d the flag is left as the reviewer set it
+PASS  2  refused without a review note
+PASS  3  refused without an explicit flagged_for_user
+PASS  4  refused when the answer and the candidate differ
+PASS  5  refused when the candidate is not in the bundle
+PASS  6  candidate and retained entries pass through untouched
+PASS  7  refused when the declaration carries no flagged_for_user
+PASS  8  refused when the flag disagrees with the declaration
+PASS  8b a flag both files agree on is accepted
+[selftest_promotions] 0 failing check(s); files under /home/vimkim/tmp/selftest-promotions-7x_yx4ht
+rc=0
+=== selftest_matrix_completeness.py ===
+PASS  1  a merged original attempt is accounted for
+PASS  2  THE PLANTED DEFECT: an unmerged original attempt is reported
+PASS  3  a dated exclusion naming the attempt accounts for it
+PASS  4  an exclusion naming only the invocation does not account for it
+PASS  5  a checker-validation attempt is never asked for
+PASS  5  a coexistence attempt is never asked for
+PASS  6  an id named only in the free-form reason does not account for it
+PASS  7  an undated exclusion is itself reported, and accounts for nothing
+PASS  7  an exclusion the user did not accept is itself reported, and accounts for nothing
+PASS  8  an attempt record under controls/ is examined, not skipped
+PASS  9a a regenerated copy of the same attempt is not a collision
+PASS  9b two different attempts sharing one id are reported
+[selftest_matrix_completeness] 0 failing check(s); files under /home/vimkim/tmp/selftest-completeness-ogf6j86x
+rc=0
+=== selftest_config_domain.py ===
+PASS  1   a complete domain of twelve proven cells reports no problem
+PASS  2   a missing cell is reported by name
+PASS  3   a 'runnable' cell whose workload never reached the OOS path is reported
+PASS  4   a cell whose database was not created at the declared page size is reported
+PASS  5   a cell that does not name the binary that ran it is reported
+PASS  6   a cell measured against another engine commit is reported
+PASS  7   a Capability gap with no recorded reason is reported
+PASS  8   a Capability gap that names its reason is accepted without OOS evidence
+PASS  9   a 'runnable' cell whose value did not read back byte-identical is reported
+[selftest_config_domain] 0 failing check(s)
+rc=0
+=== selftest_tier_placement.py ===
+PASS  1   a table whose every workload fits its proposed tier reports no problem
+PASS  2   a nine-case public SQL invocation is computed, not asserted: 44 + 9 x 7.5 = 111.5 s
+PASS  3   the smallest fitting tier is named beside the proposal
+PASS  4   a workload whose per-case time exceeds its proposed tier's per-case cap is reported
+PASS  5   a workload whose invocation time exceeds its proposed tier's invocation cap is reported
+PASS  6   a workload that fits no tier is recorded as fitting none, never squeezed into one
+PASS  7   a derived figure with no derivation recorded is reported
+PASS  8   a derived figure that records its derivation is accepted without an attempt id
+PASS  9   a seeded workload is costed under BOTH readings of 'seeds per workload': 10 x 5.8 = 58 s in one case, and 5.8 s per case across ten cases
+PASS  10  the caps are inputs: lowering the fast per-case cap moves the placement
+PASS  11  a proposal larger than necessary is allowed; a proposal the workload does not fit is not
+PASS  13  a workload whose whole invocation was measured uses the measurement, and carries the worst-case-uniform figure beside it rather than instead of it
+PASS  14  a measured invocation that fits while its worst-case-uniform figure does not is a recorded risk, not a problem: the measurement places it, the risk is not hidden
+PASS  15  a measured invocation over the proposed tier's cap is still a problem
+PASS  12  the extended tier's hundred seeds are costed from the measured per-seed time: 580 s
+[selftest_tier_placement] 0 failing check(s)
+rc=0

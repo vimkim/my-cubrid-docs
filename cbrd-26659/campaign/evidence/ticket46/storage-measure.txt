@@ -1,0 +1,36 @@
+# Storage measure under /home/vimkim/.cub/campaign/cbrd-26659, captured 2026-09-19 before any demotion (campaign ticket 46, checklist item 3)
+# retention.py status reports campaign_records.storage_used_bytes = sum of st_size (apparent size); du reports allocated blocks (disk usage).
+# The two are computed here over the same walk (regular files, symlinks excluded), plus du for comparison.
+
+regular files: 63024
+apparent size, sum of st_size (what retention.py status and admit report): 50.82 GiB
+disk usage, sum of st_blocks*512 (what du reports, the measure ticket 44 F7 settled the cap in): 39.75 GiB
+gap: 11.08 GiB, of which 11.24 GiB is in 106 sparse files with more than 1 MiB of holes each
+
+top-level directory    apparent GiB   disk GiB  sparse gap GiB
+ticket16                      13.95      10.20            3.75
+ticket41-instr                13.84       8.33            5.50
+ticket14                      12.22      12.00            0.36
+ticket17                       4.50       3.80            0.71
+ticket19                       4.00       3.39            0.62
+db                             1.75       1.55            0.20
+ticket15                       0.57       0.48            0.09
+attempts                       0.00       0.00            0.00
+negative-control               0.00       0.00            0.00
+ctpdb                          0.00       0.00            0.00
+
+largest holes (gap MiB, apparent MiB, disk MiB, path):
+   2129.6    3273.0    1143.4  ticket16/cores/core.transaction.2658615.dev2.1789118297
+   2100.2    3229.4    1129.2  ticket41-instr/cores/core.transaction.3079834.dev2.1789395185
+   2099.8    3245.2    1145.5  ticket41-instr/cores/core.log-flush.3048720.dev2.1789395023
+     61.3      64.0       2.7  ticket19/db/t19ctl1_lgar_t
+     61.3      64.0       2.7  ticket17/db/t19sql06r_lgar_t
+     61.3      64.0       2.7  ticket17/db/t19sql06c_lgar_t
+     61.3      64.0       2.7  ticket17/db/t19sql05_lgar_t
+     61.3      64.0       2.7  ticket17/db/t19mixed_lgar_t
+     61.3      64.0       2.7  ticket15/attempts/inv-T15-C03-negctl/case-evidence/failed_database/t26659negc/t26659negc_lgar_t
+     61.3      64.0       2.7  ticket14/attempts/att-T14-0031/case-evidence/failed_database/t26659negc/t26659negc_lgar_t
+
+# du on the same root:
+40G	/home/vimkim/.cub/campaign/cbrd-26659
+51G	/home/vimkim/.cub/campaign/cbrd-26659

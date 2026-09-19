@@ -22,9 +22,11 @@ Rules encoded here and where they come from:
   which hashes absolute paths and therefore changes when a bundle is moved. Both legacy
   conventions can be recomputed for comparison (bundle_hash_legacy_t14).
 * Retention classes (spec "Execution tiers, configurations and budgets"; decision ticket
-  08): success-bulky expires seven days after creation; failure bundles expire thirty
-  days after triage, so their expiry is null with a hold reason until retention.py
-  records the triage date; minimized reproducers never expire.
+  08): success-bulky expires seven days after creation, after which retention.py expire
+  demotes the bundle to its core -- the fourteen items, SHA256SUMS and the index -- and
+  never deletes it or nulls the attempt record's reference (ticket 45 item 5); failure
+  bundles expire thirty days after triage, so their expiry is null with a hold reason until
+  retention.py records the triage date; minimized reproducers never expire.
 * Storage: everything lives under /home/vimkim/.cub/campaign/cbrd-26659 (spec: under
   /home, never the temporary filesystem); the aggregate limit is 100 GiB.
 
@@ -393,6 +395,15 @@ def bundle_files(root) -> list:
 def sha256sums_text(root) -> str:
     root = Path(root)
     return "".join(f"{sha256_file(root / rel)}  {rel}\n" for rel in bundle_files(root))
+
+
+def sha256sums_entries(path) -> dict:
+    """The `<sha256>  <relative path>` lines of a SHA256SUMS file as {path: sha256 hex}."""
+    out = {}
+    for line in Path(path).read_text(errors="replace").splitlines():
+        if len(line) > 66 and line[64:66] == "  ":
+            out[line[66:]] = line[:64]
+    return out
 
 
 def bundle_hash(root, write_sums: bool) -> str:

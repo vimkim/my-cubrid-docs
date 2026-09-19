@@ -53,8 +53,13 @@
       "properties": {
         "class": {"enum": ["success-bulky", "failure", "minimized-reproducer"], "description": "success-bulky: seven days. failure: through triage plus thirty days. minimized-reproducer: kept."},
         "expires_on": {"anyOf": [{"$ref": "#/$defs/date"}, {"type": "null"}]},
-        "hold_reason": {"type": ["string", "null"], "description": "Set when an unresolved finding still needs the bundle past its expiry."}
-      }
+        "hold_reason": {"type": ["string", "null"], "description": "Set when an unresolved finding still needs the bundle past its expiry. Also carries the expired-by-policy note when retention.py expire could not keep the bundle's core (ticket 45 item 5)."},
+        "state": {"enum": ["full", "core-only"], "default": "full", "description": "Absent or full: every file SHA256SUMS lists is on disk. core-only: retention.py expire removed what no index of this bundle directory enumerates and kept the core -- the fourteen items, SHA256SUMS and the index -- so the bundle hash, the per-item hashes and complete are as recorded (ticket 45 item 5, applied by ticket 46). A passing bundle is demoted, never deleted, and the attempt record's bundle reference is never nulled."},
+        "demoted_on": {"$ref": "#/$defs/date", "description": "The day retention.py expire applied the core rule to this bundle. With state core-only, the day the bulk was removed. With state full, the day the rule found it could not keep the core (root missing, SHA256SUMS or an enumerated item gone): recorded as expired-by-policy in hold_reason, with nothing deleted."}
+      },
+      "allOf": [
+        {"if": {"properties": {"state": {"const": "core-only"}}, "required": ["state"]}, "then": {"required": ["demoted_on"]}}
+      ]
     },
     "minimization": {
       "type": ["object", "null"],

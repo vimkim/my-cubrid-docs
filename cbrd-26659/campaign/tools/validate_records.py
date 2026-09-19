@@ -24,7 +24,10 @@ Beyond the schema, the rules a schema cannot express (ticket 12 section 3) are c
                  deadline is not PASS (also schema-enforced); requirement ids exist.
   bundle         complete equals "no item is missing"; a success-bulky bundle has an expiry;
                  when the bundle root exists, every present item's path exists under it and
-                 its hash matches the file.
+                 its hash matches the file. A core-only index (demoted by retention.py expire,
+                 ticket 45 item 5) must still have its root and SHA256SUMS, SHA256SUMS must
+                 still list every present item with the hash the index records, and the bundle
+                 hash the paired attempt record cites must still be sha256(SHA256SUMS).
   matrix         gap_kind none only for latest PASS with proven or reused evidence;
                  ever_failed is true iff history has a FAIL; flakiness.attempts equals the
                  history length and failures the FAIL count; caseless rows have an empty
@@ -41,7 +44,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from campaign_records import (  # noqa: E402
-    BUILD_MODES, PAGE_SIZES, RUN_MODES, load_catalogue, recognised_build, sha256_prefixed, validate_record,
+    BUILD_MODES, PAGE_SIZES, RUN_MODES, load_catalogue, load_json, recognised_build, sha256_prefixed, sha256sums_entries,
+    validate_record,
 )
 
 VALID_CONFIGS = {f"{p}/{b}/{r}" for p in PAGE_SIZES for b in BUILD_MODES for r in RUN_MODES}
@@ -105,9 +109,35 @@ def rule_checks(kind, rec, path: Path, known_reqs: set) -> list:
         missing = [k for k, v in rec["items"].items() if v["state"] == "missing"]
         if rec["complete"] != (not missing):
             errs.append(f"complete={rec['complete']} but missing items: {missing}")
-        if rec["retention"]["class"] == "success-bulky" and not rec["retention"]["expires_on"]:
+        ret = rec["retention"]
+        if ret["class"] == "success-bulky" and not ret["expires_on"]:
             errs.append("success-bulky bundle without expires_on")
         root = Path(rec["root_path"])
+        if ret.get("state") == "core-only":
+            # A demoted bundle keeps exactly its core (ticket 45 item 5): the root and SHA256SUMS
+            # are still there, every present item still hashes as recorded (checked below with
+            # every other bundle), SHA256SUMS still lists the items with those hashes, and the
+            # bundle hash the attempt record beside this index cites is still sha256(SHA256SUMS).
+            if ret["class"] != "success-bulky":
+                errs.append(f"core-only state on a {ret['class']} bundle; only success-bulky bundles are demoted")
+            if not ret.get("demoted_on"):
+                errs.append("core-only without demoted_on")
+            if not root.exists():
+                errs.append(f"core-only bundle but its root {root} does not exist")
+            elif not (root / "SHA256SUMS").exists():
+                errs.append("core-only bundle without SHA256SUMS")
+            else:
+                listed = sha256sums_entries(root / "SHA256SUMS")
+                for k, v in rec["items"].items():
+                    if v["state"] == "present" and v.get("path") and v.get("hash") \
+                            and listed.get(v["path"]) != v["hash"].split(":")[-1]:
+                        errs.append(f"item {k}: SHA256SUMS no longer lists {v['path']} with the hash the index records")
+                att = path.parent / f"{rec['attempt_id']}.json"
+                if att.exists():
+                    cited = (load_json(att).get("bundle") or {}).get("hash")
+                    got = sha256_prefixed(root / "SHA256SUMS")
+                    if cited and cited != got:
+                        errs.append(f"SHA256SUMS hashes {got}; the attempt record {att.name} cites {cited}")
         if root.exists():
             for k, v in rec["items"].items():
                 if v["state"] == "present" and v.get("path"):

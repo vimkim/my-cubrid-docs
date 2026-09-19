@@ -1,0 +1,25 @@
+PASS  1   the dry run lists the demotion of the expired passing bundle and its bulk
+PASS  1b  the dry run changes nothing: bulk present, every index and attempt record byte-identical
+PASS  2   --apply removed the bulk and kept the item and SHA256SUMS
+PASS  2b  the bundle hash (sha256 of SHA256SUMS) is equal before and after
+PASS  2c  `complete` is still true and every item is as recorded
+PASS  2d  the attempt record is byte-identical: `bundle` never nulled
+PASS  2e  the index is core-only with demoted_on = today
+PASS  2f  the run output says what it did, per bundle and in total
+PASS  3   validate_records accepts the core-only index and its attempt record
+PASS  3b  a core-only index whose SHA256SUMS no longer hashes as the attempt record cites is refused
+PASS  3c  a core-only index whose kept item is gone is refused
+PASS  3d  restored, it validates again
+PASS  4   a failure bundle is untouched: bulk present, index and attempt record byte-identical
+PASS  5   an expired bundle under a protected prefix is untouched and reported PROTECTED
+PASS  6   a directory shared with a failure index is left whole and the passing index stays full
+PASS  7   a directory cited only by expired passing indexes is demoted once, keeping the union of their items
+PASS  7b  every index of that directory is marked core-only
+PASS  8   a bundle whose directory is gone is recorded expired-by-policy, hash kept, attempt record intact
+PASS  9   a bundle whose enumerated item is gone is recorded expired-by-policy and nothing is deleted
+PASS  10  a bundle whose SHA256SUMS does not hash to what its attempt record cites is refused and untouched
+PASS  11  a second --apply skips the core-only indexes and rewrites nothing
+PASS  12  an unexpired passing bundle is untouched and unmentioned
+PASS  13  the schema requires demoted_on on a core-only index
+PASS  13b the whole fixture still validates apart from the planted item loss (F) the rule recorded
+[selftest_retention] 0 failing check(s); files under /home/vimkim/.cub/campaign/selftest/selftest-retention-e64hnr1t
