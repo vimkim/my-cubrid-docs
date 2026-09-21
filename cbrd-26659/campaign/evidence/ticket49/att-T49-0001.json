@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "attempt_id": "att-T49-0001",
+  "kind": "coexistence",
+  "parent_attempt": null,
+  "finding_id": null,
+  "case": {
+    "repository": "testcases-private-ex",
+    "path": "shell/_06_issues/_18_2h/bug_bts_22449/cases/bug_bts_22449.sh",
+    "name": "bug_bts_22449"
+  },
+  "requirements": [
+    "OOS-CL-01",
+    "OOS-CL-03",
+    "OOS-CL-04"
+  ],
+  "manifest_id": "none: coexistence attempts have no manifest and no matrix row (schemas document section 11)",
+  "configuration": {
+    "page_size": 16384,
+    "build_mode": "release",
+    "run_mode": "client-server",
+    "instrumentation_id": null,
+    "seed": null
+  },
+  "started_at": "2026-09-21T14:34:25+09:00",
+  "ended_at": "2026-09-21T14:36:45+09:00",
+  "deadline": {
+    "seconds": 120,
+    "reached": true,
+    "evidence_captured_on_timeout": true
+  },
+  "outcome": "FAIL",
+  "skip_reason": null,
+  "assertions": {
+    "executed": 1,
+    "failed": 0
+  },
+  "expected_versus_actual": "/home/vimkim/.cub/campaign/cbrd-26659/ticket49/attempts/inv-T49-0001/expected_vs_actual.txt",
+  "oos_evidence": {
+    "status": "not-applicable",
+    "channel": null,
+    "reference": null,
+    "applicability": null
+  },
+  "barriers": [],
+  "injections": [],
+  "resources_owned": {
+    "databases": [
+      "ctldb, created by CTP's isolation ctltool prepare.sh under $CUBRID/databases and dropped by the case (cubrid deletedb)"
+    ],
+    "processes": [
+      "cub_master started by prepare.sh and stopped by the case",
+      "cub_server ctldb",
+      "qactl and four qacsql clients (C1..C4) of 22449.ctl, killed by clean.sh",
+      "gcc/make compiling qactl and qacsql in /home/vimkim/CTP/isolation/ctltool (build products removed afterwards by ticket 49, listing hashed before and after)"
+    ],
+    "ports": [
+      26659,
+      33120,
+      33121,
+      33122
+    ],
+    "directories": [
+      "/home/vimkim/.cub/campaign/cbrd-26659/ticket49",
+      "/home/vimkim/.cub/campaign/cbrd-26659/ticket49/scenarios/barrier/bug_bts_22449 (the scenario copy the case writes run.log, result/, runone.log, .test.log and 22449.result into)",
+      "/home/vimkim/CTP/isolation/ctltool (object files and the two binaries the case builds)"
+    ]
+  },
+  "cleanup": {
+    "performed": true,
+    "scope_verified": false,
+    "evidence_preserved_first": true,
+    "evidence": "The whole invocation ran under campaign_ns.sh (unshare --user --map-current-user --pid --fork --mount-proc --ipc), so the CTP helpers' unscoped `pkill cub` and `ipcrm` sweep could reach only processes and IPC segments this invocation started, and the launcher's exit tore them all down. HOME was redirected to a campaign-owned directory seeded from the pinned install so CTP's reset of $CUBRID/conf could not install a foreign configuration. Install hygiene by hashing before and after: install_conf_drift_lines=0, install_databases_drift_lines=0, user_shell_fm_drift_lines=0, worktree_drift_lines=8. Launcher artifacts, the case's result and evidence files were copied into the bundle before the install's conf and databases were restored verbatim."
+  },
+  "bundle": {
+    "path": "/home/vimkim/.cub/campaign/cbrd-26659/ticket49/attempts/inv-T49-0001",
+    "hash": "sha256:59e8115d5a6778a5a2b810a93e60b99f38ee3e4d1c5999ecf6341a4e338ee256"
+  },
+  "reproduction": {
+    "fresh_fixture": true,
+    "consecutive_reproductions_so_far": 0,
+    "failure_reproduced": false
+  },
+  "notes": "coexistence attempt of bug_bts_22449, CTP shell runner, release build, client-server, 16384 B pages. Measured: 1 executed assertions (1 OK, 0 NOK), 0 SKIP line(s); case time 131 s; case_outcome file: absent; expected-versus-actual NO-ORACLE. OOS-path evidence: a coexistence attempt certifies the checker, not the requirement; its observations count as coverage of nothing. the case wrote no case_outcome file; outcome derived from the OK/NOK lines alone and the OOS-path evidence stays missing unless declared markers match case time 131 s exceeds the 120 s per-case cap: a reached deadline never reports success"
+}

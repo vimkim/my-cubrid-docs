@@ -23,6 +23,12 @@ What it computes for each workload:
     workload are one case or N cases, and the two readings differ by a factor of N against the
     per-case cap. The ambiguity is reported rather than resolved here: settling it is a map
     decision, not an implementation ticket's (spec, Reopening rule).
+  * `invocation_basis`: what the `Invocation` figure is. `computed` when the row carries no
+    `invocation_measured_seconds` (fixed cost plus cases x per case); otherwise the row's
+    `invocation_measurement`, which must be `measured-whole` (one wall clock over the whole
+    invocation) or `composite` (assembled from separately measured parts, named in
+    `composition`). A measured figure without the label is a problem: five of ticket 17's eight
+    were composites presented as measurements (ticket 17's independent review, F5).
 
 `problems()` is what `selftest_tier_placement.py` plants mistakes against. Standard library only.
 """
@@ -34,6 +40,9 @@ import sys
 from pathlib import Path
 
 TIER_ORDER = ("fast", "scheduled", "extended")
+INVOCATION_MEASUREMENTS = ("measured-whole", "composite")
+INVOCATION_BASIS_LABELS = {"measured-whole": "measured whole", "composite": "composite", "computed": "computed",
+                           "unlabelled": "**unlabelled**"}
 
 
 def _fits(caps, per_case, invocation):
@@ -63,6 +72,19 @@ def place(model: dict) -> dict:
         row["invocation_worst_case_seconds"] = round(w.get("invocation_fixed_seconds", 0) + cases * per_case, 3)
         measured = w.get("invocation_measured_seconds")
         row["invocation_seconds"] = round(measured, 3) if measured is not None else row["invocation_worst_case_seconds"]
+        if measured is None:
+            row["invocation_basis"] = "computed"
+        else:
+            label = w.get("invocation_measurement")
+            if label not in INVOCATION_MEASUREMENTS:
+                problems.append(
+                    f"{w['id']}: carries invocation_measured_seconds ({measured} s) without invocation_measurement "
+                    f"({' or '.join(INVOCATION_MEASUREMENTS)}); a figure assembled from parts and presented as a "
+                    f"measurement is the defect ticket 17's review named (F5)")
+                label = "unlabelled"
+            elif label == "composite" and not w.get("composition"):
+                problems.append(f"{w['id']}: a composite invocation figure must say what it is composed of (composition)")
+            row["invocation_basis"] = label
 
         smallest = None
         for tier in TIER_ORDER:
@@ -116,8 +138,8 @@ def place(model: dict) -> dict:
 
 def table_markdown(result: dict) -> str:
     lines = [
-        "| Workload | Coverage family | Seam | Per case | Cases / invocation | Invocation | Tier | Headroom (case / invocation) | Basis |",
-        "|---|---|---|---:|---:|---:|---|---|---|",
+        "| Workload | Coverage family | Seam | Per case | Cases / invocation | Invocation | Invocation basis | Tier | Headroom (case / invocation) | Per-case basis |",
+        "|---|---|---|---:|---:|---:|---|---|---|---|",
     ]
     for w in result["workloads"]:
         tier = w.get("proposed_tier") or w["smallest_fitting_tier"] or "**fits no tier**"
@@ -128,7 +150,8 @@ def table_markdown(result: dict) -> str:
             basis += f" ({', '.join(w.get('evidence', []))})"
         lines.append(
             f"| {w['name']} | {w['family']} | {w['seam']} | {w['per_case_seconds']} s | "
-            f"{w.get('cases_per_invocation', 1)} | {w['invocation_seconds']} s | {tier} | {hrs} | {basis} |")
+            f"{w.get('cases_per_invocation', 1)} | {w['invocation_seconds']} s | "
+            f"{INVOCATION_BASIS_LABELS[w['invocation_basis']]} | {tier} | {hrs} | {basis} |")
     return "\n".join(lines)
 
 

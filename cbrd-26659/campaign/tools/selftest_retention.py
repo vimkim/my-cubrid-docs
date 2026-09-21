@@ -184,7 +184,12 @@ def run(tmp: Path) -> int:
     d2 = case("0005", "d", d1["root"], {"workload": "workload/d2.sql"}, FAILURE)
     d1["hash"] = d2["hash"]
     write_attempt(evd / "d", "0004", d1["root"], d2["hash"])
+    # the first index was written before the directory was resealed with d2, so its total_bytes
+    # described a bundle that no longer exists -- the very defect validate_records now
+    # cross-checks (ticket 49 F2); the fixture must carry the finished directory's figures
+    write_index(evd / "d", "0004", d1["root"], {"workload": "workload/d1.sql"}, EXPIRED)
     d1["attempt_bytes"] = d1["attempt"].read_bytes()
+    d1["index_bytes"] = d1["index"].read_bytes()
     e = case("0006", "e", tmp / "bundles" / "inv-SELFTEST-E", {"workload": "workload.sql"}, EXPIRED)
     shutil.rmtree(e["root"])
     f = case("0007", "f", tmp / "bundles" / "inv-SELFTEST-F", {"workload": "workload.sql"}, EXPIRED)
@@ -196,7 +201,9 @@ def run(tmp: Path) -> int:
     h2 = case("0010", "h", h1["root"], {"workload": "workload/h2.sql", "logs": "logs/h.log"}, EXPIRED)
     h1["hash"] = h2["hash"]
     write_attempt(evd / "h", "0009", h1["root"], h2["hash"])
+    write_index(evd / "h", "0009", h1["root"], {"workload": "workload/h1.sql", "logs": "logs/h.log"}, EXPIRED)
     h1["attempt_bytes"] = h1["attempt"].read_bytes()
+    h1["index_bytes"] = h1["index"].read_bytes()
     j = case("0011", "j", tmp / "bundles" / "inv-SELFTEST-J", {"workload": "workload.sql"}, EXPIRED,
              attempt_hash="sha256:" + "0" * 64)
 
@@ -303,8 +310,13 @@ def run(tmp: Path) -> int:
     check(13, "the schema requires demoted_on on a core-only index",
           any("demoted_on" in err for err in validate_record(bad, "replay-bundle")))
     rc, out = validate(evd)
-    check("13b", "the whole fixture still validates apart from the planted item loss (F) the rule recorded",
-          rc == 1 and out.count("[FAIL]") == 1 and "bundle-att-SELFTEST-0007" in out)
+    # Three reports, all planted: F's item loss (its index, twice: the item check and, since
+    # ticket 49 F2, the finished-bundle cross-check on its total_bytes) and J's attempt record,
+    # whose digest is the zero digest the hash-mismatch control plants (check 10).
+    check("13b", "the whole fixture still validates apart from the planted item loss (F) the rule recorded and the "
+                 "planted digest mismatch (J) the cross-check reports",
+          rc == 1 and out.count("[FAIL]") == 3 and out.count("bundle-att-SELFTEST-0007") == 2
+          and "att-SELFTEST-0011.json (bundle cross-check)" in out)
 
     print(f"[selftest_retention] {len(FAILS)} failing check(s); files under {tmp}")
     for fl in FAILS:

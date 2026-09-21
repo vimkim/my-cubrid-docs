@@ -11,6 +11,17 @@ a checker at the last two links.
 
 A row whose basis is `derived` carries a `derivation` sentence saying what it was derived from;
 `tier_placement.py` refuses a derived row without one. Standard library only.
+
+Ticket 49 (closing ticket 17's independent review) applies three corrections to the rows through
+`apply_ticket49_model_corrections.apply_to_workloads`, so that this script and that one agree row
+for row: the multi-session barrier row records the Capability gap the two ticket 49 runs of the
+private suite's barrier scenario established (F1), every whole-invocation figure says whether it
+was measured as a whole or assembled from parts (F5), and the two ticket 16 citations name section
+11 (F7). Reproducibility caveat, recorded by ticket 49: on 2026-09-19 ticket 46's demotion removed
+`ctp_result/` and `ctp_runtime_logs/` from six ticket 15 bundles, so `extract_ctp_timings.collect`
+now finds 51 of the 57 bundles ticket 17 read; the seam statistics this script writes from the tree
+today differ from `measurements.json` as sealed on 2026-09-18, which stays as recorded (ticket 48
+item 48.7 owns what a demoted core keeps).
 """
 from __future__ import annotations
 
@@ -23,7 +34,9 @@ from pathlib import Path
 
 TOOLS = Path(__file__).resolve().parent.parent.parent / "tools"
 sys.path.insert(0, str(TOOLS))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from extract_ctp_timings import collect  # noqa: E402
+from apply_ticket49_model_corrections import apply_to_workloads  # noqa: E402
 
 BUNDLE_ROOTS = [
     "/home/vimkim/.cub/campaign/cbrd-26659/attempts",
@@ -219,13 +232,9 @@ def main(argv=None):
         {"id": "multi-session-barrier", "name": "The four required multi-session schedule families, each four participants over three acknowledged barriers",
          "family": "Concurrent lifetime", "seam": "private shell",
          "basis": "derived",
-         "derivation": (f"NO SCENARIO EXISTS: ticket 23 owns concurrent-lifetime schedules and is blocked by this "
-                        f"ticket, so the scenario is a Delivery gap and this row is an estimate. What is measured is "
-                        f"the MECHANISM, by tools/barrier_cost_probe.sh: "
-                        + (f"{bar_total} s for four participants over three acknowledged barriers, fixture included. "
-                           if bar_total else "(probe not yet run). ")
-                        + f"The estimate adds the measured crash-and-recover cost ({dur_worst} s), because a "
-                          f"concurrent-lifetime schedule that survives a restart pays both."),
+         # the derivation text and the Capability gap are written by apply_to_workloads below (ticket 49 F1)
+         "derivation": (f"derived from the barrier mechanism probe: {bar_total} s for four participants over three "
+                        f"acknowledged barriers plus the crash-and-recover cost ({dur_worst} s)"),
          "per_case_seconds": round((bar_total or 0) + dur_worst, 2), "cases_per_invocation": 4,
          "invocation_fixed_seconds": shfix, "proposed_tier": "scheduled"},
         {"id": "churn-seeded-scheduled", "name": "Randomized out-of-row churn, ten fixed seeds, fresh fixture per seed",
@@ -262,12 +271,12 @@ def main(argv=None):
          "proposed_tier": "extended"},
         {"id": "corruption-detection", "name": "Corruption detection on copied database, page and log images, six experiments",
          "family": "Resource pressure", "seam": "private shell (instrumented configuration)",
-         "basis": "measured", "evidence": ["ticket 16 section 12: 98 s for six experiments"],
+         "basis": "measured", "evidence": ["ticket 16 section 11 (Hand-offs): 98 s for six experiments"],
          "per_case_seconds": 98.0, "cases_per_invocation": 1,
          "invocation_fixed_seconds": shfix, "proposed_tier": "scheduled"},
         {"id": "bounded-fs-exhaustion", "name": "Bounded test filesystem exhaustion",
          "family": "Resource pressure", "seam": "private shell (instrumented configuration)",
-         "basis": "measured", "evidence": ["ticket 16 section 12: 31 s"],
+         "basis": "measured", "evidence": ["ticket 16 section 11 (Hand-offs): 31 s"],
          "per_case_seconds": 31.0, "cases_per_invocation": 1,
          "invocation_fixed_seconds": shfix, "proposed_tier": "scheduled"},
         {"id": "configuration-sweep", "name": "The twelve-cell configuration sweep (4/8/16 KiB x release/debug x SA/CS)",
@@ -297,6 +306,7 @@ def main(argv=None):
          "per_case_seconds": round(dur_worst * 2, 2), "cases_per_invocation": 1,
          "invocation_fixed_seconds": shfix, "proposed_tier": "scheduled"},
     ]
+    apply_to_workloads(workloads, bar_total=bar_total, dur_worst=dur_worst)    # ticket 49: F1, F5, F7
     Path(args.out_model).write_text(json.dumps({"caps": CAPS, "workloads": workloads}, indent=2) + "\n")
     print(f"[build_model] {len(workloads)} workloads; measurements from {len(sql)} SQL and {len(shell)} shell "
           f"bundles, {len(cells)} configuration cells, "

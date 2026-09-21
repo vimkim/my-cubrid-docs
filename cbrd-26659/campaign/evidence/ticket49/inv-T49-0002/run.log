@@ -1,0 +1,157 @@
+++ date
++ echo '################[Date] Mon Sep 21 02:41:21 PM KST 2026'
+################[Date] Mon Sep 21 02:41:21 PM KST 2026
++ sh /home/vimkim/CTP/shell/init_path/../../isolation/ctltool/runone.sh 22449.ctl 120
++ casename=
++ casedir=
++ curanswer=
++ retry=1
++ getopts :tnhr: opt
++ shift 0
++ db=ctldb
++ casepath=22449.ctl
++ timeout=120
++ '[' 22449.ctl = '' ']'
++ '[' 120 = '' ']'
++ '[' 1 -le 0 ']'
++ '[' '' = '' ']'
++ client=qacsql
++ controller=qactl
+++ dirname 22449.ctl
++ casedir=.
+++ basename 22449.ctl
+++ sed s/.ctl//g
++ casename=22449
+++ basename 22449.ctl
+++ awk -F. '{print $2}'
++ '[' actl '!=' actl ']'
+++ echo
++ '[' a = a ']'
++++ readlink -f /home/vimkim/CTP/shell/init_path/../../isolation/ctltool/runone.sh
+++ dirname /home/vimkim/CTP/isolation/ctltool/runone.sh
++ ctlpath=/home/vimkim/CTP/isolation/ctltool
++ i=0
++ (( i < 1 ))
++ echo 'Testing 22449.ctl (retry count: 0)'
++ tee .test.log
+Testing 22449.ctl (retry count: 0)
++ run_test_case
++ removeCoreAndLog
++ find /home/vimkim/CTP/isolation/ctltool /home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc_nounit . -name 'core.*' -type f
++ grep -v core.log
++ xargs -i rm -rf '{}'
++ find /home/vimkim/.cub/campaign/cbrd-26659/ticket49/home/inv-T49-0002/CUBRID/log -type f -print
++ xargs -i sh -c 'echo>{}'
+find: ‘/home/vimkim/.cub/campaign/cbrd-26659/ticket49/home/inv-T49-0002/CUBRID/log’: No such file or directory
++ '[' qacsql = qacsql ']'
++ '[' '!' -f /home/vimkim/CTP/isolation/ctltool/qactl ']'
+++ cubrid server status
+++ grep ctldb
+++ wc -l
++ '[' 0 -eq 0 ']'
++ sh /home/vimkim/CTP/isolation/ctltool/prepare.sh qacsql ctldb log
+cubrid manager server is not installed.
+Database "ctldb" is unknown, or the file "databases.txt" cannot be accessed.
+make: *** No rule to make target 'clean'.  Stop.
+rm: cannot remove 'timeout.log': No such file or directory
+rm: cannot remove 'core.log': No such file or directory
++ '[' -f ./22449.sql ']'
++ '[' '!' -d ./result ']'
++ mkdir ./result
+++ date +%s%N
++ START=1789969287617182600
++ /home/vimkim/CTP/isolation/ctltool/timeout3.sh -t 120 /home/vimkim/CTP/isolation/ctltool/qactl ctldb 22449.ctl /home/vimkim/CTP/isolation/ctltool/qacsql
++ '[' 7 -eq 7 -o 7 -eq 143 ']'
++ date
++ echo '/home/vimkim/CTP/isolation/ctltool/qactl ctldb 22449.ctl /home/vimkim/CTP/isolation/ctltool/qacsql'
++ timed_out=yes
+++ date +%s%N
++ END=1789969408309607485
+++ expr '(' 1789969408309607485 - 1789969287617182600 ')' / 1000000
++ elapse=120692
++ echo 'elapse: 120692'
++ echo '22449.ctl 120692'
++ '[' -f ./result/22449.result ']'
++ cp ./result/22449.result ./result/22449.log
++ format_ctl_result ./result/22449.log
++ '[' -n ./result/22449.log ']'
++ sed -i '/Success to commit the transaction/d' ./result/22449.log
++ sed -i '/Success to rollback the transaction/d' ./result/22449.log
++ sed -i '/Transaction index/d' ./result/22449.log
++ sed -i '/^QACTL/d' ./result/22449.log
++ sed -i '/shutting down/d' ./result/22449.log
++ sed -i '/set transaction/d' ./result/22449.log
++ sed -i '/^| Ope_no =/,+1d' ./result/22449.log
++ sed -i '/;$/d' ./result/22449.log
++ sed -i '/^INFO/d' ./result/22449.log
++ sed -i '/restart master client/d' ./result/22449.log
++ sed -i '/^$/d' ./result/22449.log
++ sed -i 's/(.*) has been unilaterally aborted by the system/has been unilaterally aborted by the system/g' ./result/22449.log
++ sed -i 's/STATUS: forcefully killing pid [0-9]*/STATUS: forcefully killing pid ?/g' ./result/22449.log
++ sed -i 's/key: [0-9]*(OID:/key: ?(OID:/g' ./result/22449.log
++ sed -i 's/\: [0-9]*|[0-9]*|[0-9]*/\: ?/g' ./result/22449.log
+++ cat -n ./result/22449.log
+++ grep -E '(ERROR RETURNED|timed out waiting on)'
+++ grep 'You are waiting for user'
+++ awk '{print $1}'
++ '[' qacsql = qaoracle ']'
+++ pwd
++ currentdir=/home/vimkim/.cub/campaign/cbrd-26659/ticket49/scenarios/barrier-r2/bug_bts_22449/cases
++ '[' -f ./22449.sh ']'
++ flag=false
++ curanswer=
+++ ls './answer/22449.answer*'
+ls: cannot access './answer/22449.answer*': No such file or directory
++ '[' false = true ']'
++ '[' '' = true ']'
++ write_nok
++ echo 'flag: NOK '
++ echo '22449:NOK '
++ '[' -f '' ']'
++ '[' '' '!=' true ']'
++ checkCoreAndFatalError
++ find /home/vimkim/CTP/isolation/ctltool /home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc_nounit . -name 'core.*' -type f
++ grep -v core.log
+++ cat .isolation_temp_log
+++ wc -l
++ core_dump_cnt=0
+++ wc -l
+++ grep -r 'FATAL ERROR' /home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc_nounit/log/ctldb_createdb.access /home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc_nounit/log/ctldb_createdb.err /home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc_nounit/log/ctldb_deletedb.access /home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc_nounit/log/ctldb_deletedb.err /home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc_nounit/log/cub_client.err /home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc_nounit/log/cubrid_utility.log /home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc_nounit/log/cub_server.access /home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc_nounit/log/cub_server.err /home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc_nounit/log/dev2_master.err /home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc_nounit/log/pl /home/vimkim/.cub/install/oos-baseline-f4299ac0c/release_gcc_nounit/log/server
++ fatal_err_cnt=0
++ '[' 0 -gt 0 ']'
++ '[' 0 -gt 0 ']'
+++ whoami
++ pkill -u vimkim -9 sleep
++ sh /home/vimkim/CTP/isolation/ctltool/clean.sh qacsql ctldb
+
+In the command from line 1,
+
+ERROR: Cannot remove user INFORMATION_SCHEMA from the database.
+
++ grep 'flag: OK' .test.log
++ cat .test.log
+Testing 22449.ctl (retry count: 0)
+dbtype: qacsql
+@ cubrid broker stop
+++ cubrid broker is not running.
+@ cubrid manager server stop
+@ cubrid master stop
+++ cubrid master is not running.
+Creating database with 64.0M size using locale en_US. The total amount of disk space needed is 164.0M.
+
+CUBRID 11.5.0
+
+@ cubrid master start
+++ cubrid master start: success
+@ cubrid server start: ctldb
+
+This may take a long time depending on the amount of recovery works to do.
+
+CUBRID 11.5.0
+
+++ cubrid server start: success
+elapse: 120692
+flag: NOK 
+dbtype: qacsql
++ let ++i
++ (( i < 1 ))

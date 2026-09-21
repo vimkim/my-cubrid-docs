@@ -121,6 +121,15 @@ def main():
                  "10 x 5.8 = 58 s in one case, and 5.8 s per case across ten cases",
               abs(churn["seeds_all_in_one_case"]["per_case_seconds"] - 58.0) < 0.01
               and abs(churn["seed_per_case"]["per_case_seconds"] - 5.8) < 0.01)
+        # Ticket 17's independent review, F3: check 9 reads the two readings, which are computed on
+        # their own lines, and nothing read `per_case_seconds`, the figure the placement and the
+        # headroom actually use -- so `per_case = per_seed` in place of `seeds * per_seed` left
+        # every check passing while the published table lost a factor of ten.
+        check("9b", "the per-case figure the placement and the headroom use IS the seed arithmetic: "
+                    "58 s per case, 17 + 58 = 75 s worst-case invocation, 93.6% per-case headroom",
+              abs(churn["per_case_seconds"] - 58.0) < 0.01
+              and abs(churn["invocation_worst_case_seconds"] - 75.0) < 0.01
+              and churn["headroom"]["per_case_percent"] == round(100 * (1 - 58.0 / 900), 1))
 
         m7 = model()
         m7["caps"]["fast"]["per_case_seconds"] = 5              # the cap, not the table, changes
@@ -139,6 +148,7 @@ def main():
         m10 = model()
         m10["workloads"][0]["cases_per_invocation"] = 11
         m10["workloads"][0]["invocation_measured_seconds"] = 432.0
+        m10["workloads"][0]["invocation_measurement"] = "measured-whole"
         out10 = tier_placement.place(m10)
         rows10 = {w["id"]: w for w in out10["workloads"]}
         check(13, "a workload whose whole invocation was measured uses the measurement, and carries the "
@@ -151,6 +161,7 @@ def main():
         m11["workloads"][0]["cases_per_invocation"] = 11
         m11["workloads"][0]["per_case_seconds"] = 112.0        # 44 + 11 x 112 = 1276 s, over the fast cap
         m11["workloads"][0]["invocation_measured_seconds"] = 432.0
+        m11["workloads"][0]["invocation_measurement"] = "measured-whole"
         out11 = tier_placement.place(m11)
         rows11 = {w["id"]: w for w in out11["workloads"]}
         check(14, "a measured invocation that fits while its worst-case-uniform figure does not is a recorded "
@@ -161,6 +172,7 @@ def main():
 
         m12 = model()
         m12["workloads"][0]["invocation_measured_seconds"] = 5000.0   # measured, and over the fast cap
+        m12["workloads"][0]["invocation_measurement"] = "measured-whole"
         out12 = tier_placement.place(m12)
         check(15, "a measured invocation over the proposed tier's cap is still a problem",
               any("sql-fixed" in p and "invocation cap" in p for p in out12["problems"]))
@@ -170,6 +182,41 @@ def main():
         rows9 = {w["id"]: w for w in tier_placement.place(m9)["workloads"]}
         check(12, "the extended tier's hundred seeds are costed from the measured per-seed time: 580 s",
               abs(rows9["churn-10"]["seeds_all_in_one_case"]["per_case_seconds"] - 580.0) < 0.01)
+
+        # Ticket 17's independent review, F5: an invocation figure says what it is.
+        m13 = model()
+        m13["workloads"][0]["invocation_measured_seconds"] = 111.83      # a figure, and nothing saying what it is
+        out13 = tier_placement.place(m13)
+        check(16, "a whole-invocation figure that does not say whether it was measured as a whole or assembled from "
+                  "parts is reported, and rendered as unlabelled",
+              any("sql-fixed" in p and "invocation_measurement" in p for p in out13["problems"])
+              and {w["id"]: w for w in out13["workloads"]}["sql-fixed"]["invocation_basis"] == "unlabelled")
+
+        m14 = model()
+        m14["workloads"][2]["invocation_measured_seconds"] = 75.0
+        m14["workloads"][2]["invocation_measurement"] = "composite"     # composed of what?
+        out14 = tier_placement.place(m14)
+        check(17, "a composite invocation figure without its composition is reported",
+              any("churn-10" in p and "composition" in p for p in out14["problems"]))
+
+        m15 = model()
+        m15["workloads"][0]["invocation_measured_seconds"] = 111.83
+        m15["workloads"][0]["invocation_measurement"] = "measured-whole"
+        m15["workloads"][2]["invocation_measured_seconds"] = 75.0
+        m15["workloads"][2]["invocation_measurement"] = "composite"
+        m15["workloads"][2]["composition"] = "the probe's 58 s plus the seam's 17 s fixed cost"
+        out15 = tier_placement.place(m15)
+        rows15 = {w["id"]: w for w in out15["workloads"]}
+        table15 = tier_placement.table_markdown(out15)
+        check(18, "the rendered table carries an Invocation basis column reading measured whole, computed or composite "
+                  "per row, so a reader can tell a measured invocation from an assembled or a computed one",
+              out15["problems"] == []
+              and rows15["sql-fixed"]["invocation_basis"] == "measured-whole"
+              and rows15["shell-crash"]["invocation_basis"] == "computed"
+              and rows15["churn-10"]["invocation_basis"] == "composite"
+              and "| Invocation basis |" in table15
+              and "| 111.83 s | measured whole |" in table15 and "| 75.0 s | composite |" in table15
+              and " s | computed |" in table15)
 
     print(f"[selftest_tier_placement] {len(FAILS)} failing check(s)")
     for f in FAILS:

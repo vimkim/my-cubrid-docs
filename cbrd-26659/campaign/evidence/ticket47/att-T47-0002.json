@@ -71,12 +71,12 @@
   },
   "bundle": {
     "path": "/home/vimkim/.cub/campaign/cbrd-26659/ticket47/attempts/inv-T47-0001",
-    "hash": "sha256:7a48dbd5f4bc6d20ccdabab32e333c3b18fa8d9581702a2fd381cfa196c43f7f"
+    "hash": "sha256:784b951a949dbd77b666d035780630344bc76b57aeb91d65c4bc04e1049b8f40"
   },
   "reproduction": {
     "fresh_fixture": true,
     "consecutive_reproductions_so_far": 0,
     "failure_reproduced": false
   },
-  "notes": "original attempt of cbrd_26659_oos_rep06_lob_neighbours, CTP SQL runner, release build, client-server, 16384 B pages. CTP listed the case in okList with totalTime 689 ms; expected-versus-actual MATCH. assertions.executed is null because the CTP SQL runner has no assertion counter (ticket 35 F3); OOS-path evidence: activation proven by the paired checker in the case's own run mode (client-server), same fixture, same install, same page size. "
+  "notes": "original attempt of cbrd_26659_oos_rep06_lob_neighbours, CTP SQL runner, release build, client-server, 16384 B pages. CTP listed the case in okList with totalTime 689 ms; expected-versus-actual MATCH. assertions.executed is null because the CTP SQL runner has no assertion counter (ticket 35 F3); OOS-path evidence: activation proven by the paired checker in the case's own run mode (client-server), same fixture, same install, same page size. BUNDLE HASH CORRECTED by ticket 49 F2 on 2026-09-21: the recorded digest sha256:7a48dbd5f4bc6d20ccdabab32e333c3b18fa8d9581702a2fd381cfa196c43f7f is replaced by the finished bundle's sha256:784b951a949dbd77b666d035780630344bc76b57aeb91d65c4bc04e1049b8f40; and the replay-bundle index's total_bytes 321575 is replaced by 324504. Both were taken while this invocation's shared bundle directory was still being written, so they described no bundle that ever existed on disk -- the defect ticket 44 F3 corrected in ticket 19's records on the user's 2026-09-16 decision (one bundle per invocation; the digest and the size are the finished bundle's), reintroduced by the post-processors sealing inside their per-case loop and found again by ticket 17's independent review (F2). The bundle is unchanged and was not re-hashed silently: the new digest is the sha256 of the SHA256SUMS the bundle carries, which `sha256sum -c` verifies, and the new size is the sum of the files it lists. The tooling now seals a shared root once, after the invocation's last file (ticket 49)."
 }

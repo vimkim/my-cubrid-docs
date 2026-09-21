@@ -13,7 +13,11 @@ Capability gap**.
 
 This module owns what "proven" means, so that the probe cannot decide it about itself:
 
-  * the cell names the engine commit it ran and the sha256 of the four binaries that ran it;
+  * the cell names the engine commit it ran and the sha256 of the four binaries that ran it,
+    and the two library hashes ARE the campaign's pinned ones (ticket 41's, held in
+    campaign_records.LIBRARY_HASHES) while `cubrid_rel`, the one field read out of the running
+    binary, names the pinned commit and the cell's build -- naming four hashes is not proof of a
+    matching binary any more than a build directory is (ticket 17's independent review, F4);
   * the database really was created at the declared page size, read back from the engine;
   * the workload reached the OOS path (SHOW HEAP OOS reports a file and at least one record) --
     a cell that ran SQL without ever leaving the row proves nothing about OOS at that page size;
@@ -23,7 +27,8 @@ A cell that cannot be run is a Capability gap and must name its reason; it then 
 evidence, because there is none to carry.
 
 `problems()` returns one line per defect and is what `selftest_config_domain.py` plants defects
-against. Standard library only.
+against. Standard library plus campaign_records, which holds the pinned hashes (one home; a re-pin
+changes it and campaign_env.sh together).
 """
 from __future__ import annotations
 
@@ -32,12 +37,18 @@ import json
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from campaign_records import ENGINE_BASELINE_COMMIT, LIBRARY_HASHES  # noqa: E402
+
 PAGE_SIZES = (4096, 8192, 16384)
 BUILDS = ("release", "debug")
 RUN_MODES = ("standalone", "client-server")
 MODE_TAG = {"standalone": "sa", "client-server": "cs"}
-ENGINE_COMMIT = "f4299ac0cd777a2a964c1f197ae5ebf9841a4936"
+ENGINE_COMMIT = ENGINE_BASELINE_COMMIT
+PINNED_ABBREV = ENGINE_COMMIT[:7]
 REQUIRED_BINARIES = ("libcubrid.so", "libcubridsa.so", "csql", "cub_server")
+#: the two hashes a cell must carry for its build; csql and cub_server are recorded, not pinned
+PINNED_LIBRARIES = LIBRARY_HASHES
 
 
 def cell_id(page_size: int, build: str, run_mode: str) -> str:
@@ -58,7 +69,8 @@ def load_cells(results_dir) -> dict:
 
 def problems(cells: dict) -> list:
     out = []
-    for want in expected_cells():
+    for page, build, mode in [(p, b, m) for p in PAGE_SIZES for b in BUILDS for m in RUN_MODES]:
+        want = cell_id(page, build, mode)
         cell = cells.get(want)
         if cell is None:
             out.append(f"{want}: no probe result -- the cell is neither proven runnable nor recorded as a Capability gap")
@@ -76,6 +88,22 @@ def problems(cells: dict) -> list:
         missing = [b for b in REQUIRED_BINARIES if not cell.get("binaries", {}).get(b)]
         if missing:
             out.append(f"{want}: does not name the binaries that ran it ({', '.join(missing)} absent); a build directory is not proof of a matching binary")
+        # ticket 17's independent review, F4: naming four hashes is not proof either -- the two
+        # library hashes must BE the pinned build's, and the one field read out of the running
+        # binary must name the pinned commit and this cell's build
+        for lib, pinned in PINNED_LIBRARIES[build].items():
+            got = (cell.get("binaries") or {}).get(lib)
+            if got and got != pinned:
+                out.append(f"{want}: {lib} hashes {got[:12]}…, not the campaign's {build} build {pinned[:12]}… (ticket 41); "
+                           "a cell that names a binary other than the pinned one proves nothing about the pinned engine")
+        rel = cell.get("cubrid_rel") or ""
+        if PINNED_ABBREV not in rel:
+            out.append(f"{want}: cubrid_rel {rel!r} does not name the pinned commit {PINNED_ABBREV}; the engine that answered is not the one the cell claims")
+        elif f"{build} build" not in rel:
+            out.append(f"{want}: cubrid_rel {rel!r} does not name a {build} build")
+        for field, expect in (("page_size", page), ("build", build), ("run_mode", mode)):
+            if cell.get(field) != expect:
+                out.append(f"{want}: field {field} reads {cell.get(field)!r}, not the {expect!r} its cell id declares")
         if cell.get("page_size_readback") != cell.get("page_size"):
             out.append(f"{want}: the database's page size reads back as {cell.get('page_size_readback')!r}, not the declared {cell.get('page_size')}")
         ev = cell.get("oos_evidence") or {}

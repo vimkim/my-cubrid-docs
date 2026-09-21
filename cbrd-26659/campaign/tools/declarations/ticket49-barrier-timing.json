@@ -1,0 +1,30 @@
+{
+    "declaration_version": 1,
+    "description": "Campaign ticket 49 (closing ticket 17's independent review, F1): time the multi-session barrier SCENARIO that exists in the private suite, bug_bts_22449 -- four participants under CTP's isolation ctltool (runone.sh, qactl, qacsql, present in the pinned CTP tree), a coordinator that releases them, explicit `MC: wait until Cn blocked|ready|unblocked` barriers on state each participant established with real database operations, C1 holding a transaction open while C2, C3 and C4 block on its locks. It is a PRE-EXISTING case of the private repository (commit c4fe45173, unchanged at 66b66f1), not a campaign case: it asserts nothing about out-of-row storage and its one CTP assertion is the isolation tool's core-file check. It is timed here the way ticket 17 timed the eleven-case private bucket -- the pre-existing cbrd_27229 of that bucket is what binds the fast tier -- so that the placement row ticket 23 inherits rests on a measured four-participant barrier schedule at the seam rather than on a derivation from the token-file mechanism probe (ticket 17 section 5.6; review O1). RECORD KIND: coexistence, the campaign's kind for an executed attempt that adds no coverage (ticket 14's eleven-case bucket, att-T14-0016-bucket): no manifest, no matrix row, OOS-path evidence not-applicable. REQUIREMENTS CITED: the declaration format and the attempt-record schema require at least one catalogue id, so the three Concurrent-lifetime requirements of the schedule families the placement row is for are named -- OOS-CL-01 (snapshot survival), OOS-CL-03 (rollback survival) and OOS-CL-04 (slot reuse and cleanup retry); interrupted recovery is the Durability family's. The case asserts NONE of them; as a coexistence attempt it is coverage of nothing, and no matrix row cites it. Whether a timing run of a pre-existing scenario deserves a kind of its own is a decision request in ticket 49's Answer, not something settled here. SCENARIO ROOT: a byte-identical copy of the case directory under the ticket 49 storage (sha256 of bug_bts_22449.sh 6138c126..., of 22449.ctl 979f9e8c..., both equal to the committed blobs), as ticket 17 section 5.1 did for the public tracer, because the case leaves its isolation-tool outputs (run.log, result/, runone.log) in its own directory and the repository worktree must come back unchanged. Tooling input only.",
+    "repository": "testcases-private-ex",
+    "runner": "ctp-shell",
+    "scenario": "shell/_06_issues/_18_2h/bug_bts_22449",
+    "tier": "fast",
+    "page_size": 16384,
+    "run_mode": "client-server",
+    "services": [
+        {"kind": "cub_master", "identity": "started by the isolation tool's prepare.sh (cubrid server start) and stopped by the case; port 26659 (the one block the wrappers know; ticket 37 item 5's private block 26660 is ticket 50's to apply)", "port": 26659, "owned": true},
+        {"kind": "cub_server", "identity": "ctldb, created by prepare.sh under $CUBRID/databases with the engine's default 16 KiB page size (--db-volume-size=50M --log-volume-size=50M), dropped by the case; the wrapper restores $CUBRID/databases verbatim by hash", "port": null, "owned": true},
+        {"kind": "other", "identity": "qactl (the isolation controller) and four qacsql client processes, compiled by the case from the pinned CTP tree's isolation/ctltool sources against the pinned install's libcubridcs; killed by clean.sh", "port": null, "owned": true}
+    ],
+    "cases": {
+        "bug_bts_22449": {
+            "path": "shell/_06_issues/_18_2h/bug_bts_22449/cases/bug_bts_22449.sh",
+            "requirements": ["OOS-CL-01", "OOS-CL-03", "OOS-CL-04"],
+            "expected_assertions": 1,
+            "assertion_count_derivation": "bug_bts_22449.sh writes exactly one CTP assertion: write_ok, or write_nok when `grep 'NOK found core file' run.log` finds the isolation tool's core-file report; the isolation tool's own answer comparison (runone.sh, no answer/ directory exists for this case) writes into result/22449.result and is not a CTP assertion line",
+            "single_session": false,
+            "resources_owned": {
+                "databases": ["ctldb, created by CTP's isolation ctltool prepare.sh under $CUBRID/databases and dropped by the case (cubrid deletedb)"],
+                "processes": ["cub_master started by prepare.sh and stopped by the case", "cub_server ctldb", "qactl and four qacsql clients (C1..C4) of 22449.ctl, killed by clean.sh", "gcc/make compiling qactl and qacsql in /home/vimkim/CTP/isolation/ctltool (build products removed afterwards by ticket 49, listing hashed before and after)"],
+                "ports": [26659, 33120, 33121, 33122],
+                "directories": ["/home/vimkim/.cub/campaign/cbrd-26659/ticket49", "/home/vimkim/.cub/campaign/cbrd-26659/ticket49/scenarios/barrier/bug_bts_22449 (the scenario copy the case writes run.log, result/, runone.log, .test.log and 22449.result into)", "/home/vimkim/CTP/isolation/ctltool (object files and the two binaries the case builds)"]
+            }
+        }
+    }
+}

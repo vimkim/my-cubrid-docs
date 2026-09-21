@@ -60,10 +60,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from campaign_records import (  # noqa: E402
-    CAMPAIGN_PORTS, RecordError, TIER_CAPS, TOOL_VERSION, assertable_requirement_ids, bundle_hash,
+    CAMPAIGN_PORTS, SEAL_PENDING_HASH, RecordError, TIER_CAPS, TOOL_VERSION, assertable_requirement_ids,
     bundle_total_bytes, configuration_label, configurations_not_run, ctp_fingerprint, docs_relative,
-    gib, item, load_json, not_applicable, now_iso, read_kv, requirement, retention_block, sha256_bytes,
-    sha256_file, sha256_prefixed, write_record,
+    gib, item, load_json, not_applicable, now_iso, read_kv, requirement, retention_block, seal_bundle_records,
+    sha256_bytes, sha256_file, sha256_prefixed, write_record,
 )
 from record_builders import (  # noqa: E402
     retention_for,
@@ -466,14 +466,11 @@ def build(args) -> int:
                                                       "the replay command and the prerequisites it does not create (pinned install with the JDBC client artifact, CTP, the testcase worktree at the recorded commit, free campaign ports, unprivileged user namespaces)"),
         }
         complete = not any(v["state"] == "missing" for v in items.values())
-        if not args.read_only:
-            bhash = bundle_hash(bundle, write_sums=True)
-            # SHA256SUMS changed total bytes; recompute after writing
-        else:
-            bhash = bundle_hash(bundle, write_sums=False)
+        # the digest and the size are the FINISHED bundle's: sealed once, after the loop (ticket 44 F3)
+        bhash = SEAL_PENDING_HASH
         bundle_index = {
             "schema_version": 1, "bundle_id": f"bundle-{attempt_id}", "attempt_id": attempt_id,
-            "created_at": created_at, "root_path": bundle_path_recorded, "total_bytes": bundle_total_bytes(bundle),
+            "created_at": created_at, "root_path": bundle_path_recorded, "total_bytes": 0,
             "complete": complete, "items": items,
             "uncommitted_snapshots": [{"what": "OOS-CONTEXT.md at the pinned content hash (uncommitted in the context repository at pin time, ticket 11 section 3)",
                                        "path": "cbrd-26659/campaign/ticket11-evidence/normative-snapshot/OOS-CONTEXT.md",
@@ -517,6 +514,9 @@ def build(args) -> int:
                           "attempts": [{"attempt_id": attempt_id, "attempt_record": docs_relative(evidence_dir / f"{attempt_id}.json"),
                                         "bundle": bundle_path_recorded, "bundle_hash": bhash}],
                           "outstanding": None})
+
+    # --- seal the shared bundle root ONCE, after the invocation's last file is written ---------
+    seal_bundle_records(bundle, attempt_records, bundle_indexes, cases_out, write_sums=not args.read_only)
 
     # --- manifest ---------------------------------------------------------------------------
     verdict = "failure-of-proof" if mismatches else "proven"

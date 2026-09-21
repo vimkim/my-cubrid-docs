@@ -429,6 +429,39 @@ def bundle_total_bytes(root) -> int:
         (Path(root) / "SHA256SUMS").stat().st_size if (Path(root) / "SHA256SUMS").exists() else 0)
 
 
+#: What a record carries for the bundle digest and size until the invocation is sealed. Schema-valid
+#: in shape, so that an unsealed record is caught by seal_bundle_records, never by the validator.
+SEAL_PENDING_HASH = "sha256:" + "0" * 64
+
+
+def seal_bundle_records(bundle, attempt_records, bundle_indexes, cases_out, write_sums: bool) -> tuple:
+    """Seal a shared bundle root ONCE and write the finished digest and size into every record.
+
+    One bundle belongs to one invocation (ticket 44 F3, user decision 2026-09-16), so the digest
+    and the `total_bytes` a record carries are the FINISHED bundle's, computed after the
+    invocation's last file is written. Sealing as each record was built -- which both
+    post-processors did until campaign ticket 49 -- wrote the digest of a directory that was
+    still growing into every record but the last: 64 of ticket 19's 83 records, then 8 of
+    ticket 17's 12 and 8 of ticket 47's 10, each verifying against nothing (ticket 44 F3;
+    ticket 17's independent review, F2). The post-processors therefore build every record with
+    SEAL_PENDING_HASH and a total of 0 and call this once, after the loop, before writing.
+    Returns (bundle_hash, total_bytes).
+    """
+    bhash = bundle_hash(bundle, write_sums=write_sums)
+    total = bundle_total_bytes(bundle)
+    for att in attempt_records:
+        if att["bundle"]["hash"] != SEAL_PENDING_HASH:
+            raise RecordError(f"{att['attempt_id']}: bundle hash was sealed before the invocation's last file "
+                              "was written; records are sealed once, after the loop (ticket 44 F3)")
+        att["bundle"]["hash"] = bhash
+    for bi in bundle_indexes:
+        bi["total_bytes"] = total
+    for case in cases_out:
+        for entry in case.get("attempts", []):
+            entry["bundle_hash"] = bhash
+    return bhash, total
+
+
 def item(root, rel_path, note, state=None):
     """Bundle-index item: present when the file exists, else missing with the note."""
     root = Path(root)

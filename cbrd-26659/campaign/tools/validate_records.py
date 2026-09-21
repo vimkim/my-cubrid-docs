@@ -28,6 +28,15 @@ Beyond the schema, the rules a schema cannot express (ticket 12 section 3) are c
                  ticket 45 item 5) must still have its root and SHA256SUMS, SHA256SUMS must
                  still list every present item with the hash the index records, and the bundle
                  hash the paired attempt record cites must still be sha256(SHA256SUMS).
+  cross-check    for every bundle index whose root_path exists (ticket 49 F2): sha256 of its
+                 SHA256SUMS -- or, for a bundle sealed without one, the digest of the listing
+                 the convention would write -- equals the hash EVERY attempt record citing that
+                 root carries, and a full (not core-only) bundle's total_bytes equals the sum of
+                 its regular files. A digest that verifies against nothing was taken while the
+                 invocation's shared bundle was still being written (ticket 44 F3). Bundles under
+                 retention.py's protected prefixes were sealed under an older convention (tickets
+                 13 and 14) and stay as recorded (ticket 36 item 1): they are reported as notes,
+                 never failed and never corrected.
   matrix         gap_kind none only for latest PASS with proven or reused evidence;
                  ever_failed is true iff history has a FAIL; flakiness.attempts equals the
                  history length and failures the FAIL count; caseless rows have an empty
@@ -44,9 +53,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from campaign_records import (  # noqa: E402
-    BUILD_MODES, PAGE_SIZES, RUN_MODES, load_catalogue, load_json, recognised_build, sha256_prefixed, sha256sums_entries,
-    validate_record,
+    BUILD_MODES, PAGE_SIZES, RUN_MODES, bundle_hash, bundle_total_bytes, load_catalogue, load_json, recognised_build,
+    sha256_prefixed, sha256sums_entries, validate_record,
 )
+from retention import PROTECTED_PREFIXES  # noqa: E402
 
 VALID_CONFIGS = {f"{p}/{b}/{r}" for p in PAGE_SIZES for b in BUILD_MODES for r in RUN_MODES}
 
@@ -171,6 +181,58 @@ def rule_checks(kind, rec, path: Path, known_reqs: set) -> list:
     return errs
 
 
+def cross_check_bundles(attempts: list, indexes: list) -> tuple:
+    """Ticket 49 F2: every record citing an existing bundle root carries the finished bundle's digest.
+
+    `attempts` is [(path, record)] of every attempt record validated in this run and `indexes`
+    [(path, record)] of every bundle index. The truth for a root is sha256 of its SHA256SUMS; a
+    bundle sealed without one (a read-only regeneration) is judged by the digest the convention
+    would write, computed in memory. Ticket 17 wrote eight records of `inv-T17-0002` -- and
+    ticket 47 eight of `inv-T47-0001` -- while the shared root was still growing, so their hash
+    and `total_bytes` described no bundle that ever existed; the schema could not see it because
+    the numbers were well-formed. Returns (failures, notes): a failure is [(path, message)]; a
+    note is the same for a root under a protected prefix, whose records are sealed evidence of an
+    older hash convention and stay as recorded (ticket 36 item 1).
+    """
+    truth: dict = {}
+
+    def digest_of(root: Path):
+        key = str(root)
+        if key not in truth:
+            sums = root / "SHA256SUMS"
+            truth[key] = sha256_prefixed(sums) if sums.exists() else bundle_hash(root, write_sums=False)
+        return truth[key]
+
+    def protected(root: Path) -> bool:
+        return any(str(root).startswith(p) for p in PROTECTED_PREFIXES)
+
+    failures, notes = [], []
+
+    def report(root: Path, path: Path, message: str):
+        (notes if protected(root) else failures).append((path, message))
+
+    for path, rec in attempts:
+        bundle = rec.get("bundle") or {}
+        root = Path(bundle.get("path") or "")
+        if not bundle or not root.is_dir():
+            continue
+        got = digest_of(root)
+        if bundle.get("hash") != got:
+            report(root, path, f"cites bundle hash {bundle.get('hash')} for {root}, whose finished bundle hashes {got}: "
+                               "a digest that verifies against nothing (ticket 44 F3: sealed once, after the last file)")
+    for path, rec in indexes:
+        root = Path(rec["root_path"])
+        if not root.is_dir():
+            continue
+        if (rec.get("retention") or {}).get("state") == "core-only":
+            continue  # its bulk is gone by design; the hash check above still holds through SHA256SUMS
+        total = bundle_total_bytes(root)
+        if rec["total_bytes"] != total:
+            report(root, path, f"total_bytes {rec['total_bytes']} but the finished bundle's regular files sum to {total} "
+                               "(ticket 44 F3: the size is the finished bundle's)")
+    return failures, notes
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("paths", nargs="+")
@@ -191,6 +253,7 @@ def main(argv=None) -> int:
         return 1
     failures = 0
     counts = {}
+    attempts, indexes = [], []
     for f in files:
         try:
             rec = json.loads(f.read_text())
@@ -202,6 +265,10 @@ def main(argv=None) -> int:
         if kind is None:
             print(f"[SKIP] {f}: not a campaign record")
             continue
+        if kind == "attempt-record":
+            attempts.append((f, rec))
+        elif kind == "replay-bundle":
+            indexes.append((f, rec))
         errors = validate_record(rec, kind)
         if not args.schema_only:
             errors += rule_checks(kind, rec, f, known)
@@ -213,6 +280,15 @@ def main(argv=None) -> int:
                 print(f"       {e}")
         elif not args.quiet:
             print(f"[ OK ] {f} ({kind})")
+    if not args.schema_only:
+        cross_failures, cross_notes = cross_check_bundles(attempts, indexes)
+        for f, message in cross_failures:
+            print(f"[FAIL] {f} (bundle cross-check)\n       {message}")
+        for f, message in cross_notes:
+            print(f"[NOTE] {f} (bundle cross-check, protected prefix, sealed as recorded)\n       {message}")
+        failures += len(cross_failures)
+        print(f"[validate_records] bundle cross-check: {len(attempts)} attempt record(s) and {len(indexes)} bundle index(es) "
+              f"read; {len(cross_failures)} failing; {len(cross_notes)} note(s) on protected prefixes")
     print(f"[validate_records] {sum(counts.values())} record(s) checked ({', '.join(f'{v} {k}' for k, v in sorted(counts.items()))}); {failures} failing")
     return 1 if failures else 0
 

@@ -1,0 +1,31 @@
+## F3: selftest_tier_placement.py against tier_placement.py with the review's mutation planted (per_case = per_seed)
+PASS  1   a table whose every workload fits its proposed tier reports no problem
+PASS  2   a nine-case public SQL invocation is computed, not asserted: 44 + 9 x 7.5 = 111.5 s
+PASS  3   the smallest fitting tier is named beside the proposal
+PASS  4   a workload whose per-case time exceeds its proposed tier's per-case cap is reported
+PASS  5   a workload whose invocation time exceeds its proposed tier's invocation cap is reported
+PASS  6   a workload that fits no tier is recorded as fitting none, never squeezed into one
+PASS  7   a derived figure with no derivation recorded is reported
+PASS  8   a derived figure that records its derivation is accepted without an attempt id
+PASS  9   a seeded workload is costed under BOTH readings of 'seeds per workload': 10 x 5.8 = 58 s in one case, and 5.8 s per case across ten cases
+FAIL  9b  the per-case figure the placement and the headroom use IS the seed arithmetic: 58 s per case, 17 + 58 = 75 s worst-case invocation, 93.6% per-case headroom
+PASS  10  the caps are inputs: lowering the fast per-case cap moves the placement
+PASS  11  a proposal larger than necessary is allowed; a proposal the workload does not fit is not
+PASS  13  a workload whose whole invocation was measured uses the measurement, and carries the worst-case-uniform figure beside it rather than instead of it
+PASS  14  a measured invocation that fits while its worst-case-uniform figure does not is a recorded risk, not a problem: the measurement places it, the risk is not hidden
+PASS  15  a measured invocation over the proposed tier's cap is still a problem
+PASS  12  the extended tier's hundred seeds are costed from the measured per-seed time: 580 s
+[selftest_tier_placement] 1 failing check(s)
+  9b the per-case figure the placement and the headroom use IS the seed arithmetic: 58 s per case, 17 + 58 = 75 s worst-case invocation, 93.6% per-case headroom
+rc=1
+
+## F4: config_domain.py check against copies of the twelve real cells with the review's planted defects A (8192-release-cs: four hashes dead...beef) and B (4096-debug-sa: cubrid_rel names 11.5.0.0001-deadbee)
+PROBLEM: 4096-debug-sa: cubrid_rel 'CUBRID 11.5.0 (11.5.0.0001-deadbee) (64bit debug build for Linux) (Sep 14 2026 22:45:25)' does not name the pinned commit f4299ac; the engine that answered is not the one the cell claims
+PROBLEM: 8192-release-cs: libcubrid.so hashes deadbeefbeef…, not the campaign's release build 1bbbe44663c7… (ticket 41); a cell that names a binary other than the pinned one proves nothing about the pinned engine
+PROBLEM: 8192-release-cs: libcubridsa.so hashes deadbeefbeef…, not the campaign's release build 559a955ea2c4… (ticket 41); a cell that names a binary other than the pinned one proves nothing about the pinned engine
+[config_domain] 12 cell(s) read, 12 expected, 3 problem(s)
+rc=1
+
+## the unplanted cells, for contrast
+[config_domain] 12 cell(s) read, 12 expected, 0 problem(s)
+rc=0

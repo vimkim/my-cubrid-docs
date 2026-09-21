@@ -3,13 +3,18 @@
 #
 #   barrier_cost_probe.sh --build release|debug --page-size N --participants P --rounds R --out DIR
 #
-# Ticket 17 criterion 1 asks for a timed "multi-session barrier scenario". None exists: `barrier`
-# appears in the campaign only as a record field (`session_and_barrier_trace`, `barriers: []`),
-# never as a scenario, and ticket 23, which owns concurrent-lifetime schedules, is blocked by this
-# ticket. The scenario is therefore recorded as a gap. What can still be measured, and is measured
-# here, is the MECHANISM such a scenario is built from, so that ticket 23 inherits a number rather
-# than a guess and the placement table's row for it is a derivation from measurement rather than
-# an invention.
+# Ticket 17 criterion 1 asks for a timed "multi-session barrier scenario". The campaign's four
+# required schedule families have no case at either seam (a Delivery gap, ticket 23's), and this
+# header used to add that no barrier scenario existed anywhere; that was wrong (the independent
+# review of ticket 17, F1): the private suite's shell/_06_issues/_18_2h/bug_bts_22449 is a
+# four-participant, coordinator-released barrier scenario driven through CTP's isolation ctltool,
+# and ticket 49 ran it at the seam twice -- it does not complete at the pinned engine (its fourth
+# participant stays blocked for the tool's whole barrier wait), so its cost is a Capability gap
+# (ticket 17 record, section 5.6). What this probe measures is the MECHANISM such a scenario is
+# built from -- and only its uncontended floor: each participant runs a fresh csql per round on its
+# own table with every statement autocommitting, so nothing is held across a barrier and no two
+# participants contend (review O1). The placement table's row for the families is derived from it
+# with that caveat, and ticket 23 owes the measurement with real schedules.
 #
 # The mechanism is the one decision ticket 05 requires: "Every participant acknowledges an explicit
 # barrier after establishing its state; the coordinator releases the next participant... Sleeps pace
