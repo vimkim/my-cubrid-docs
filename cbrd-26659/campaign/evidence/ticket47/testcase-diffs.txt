@@ -1,0 +1,52 @@
+# ticket 47: proof that both testcase diffs are comment-only, taken before the commits (2026-09-21)
+# rule: every changed line must be a comment line -- ' * ' or ' *' in the SQL headers, '#' in the shell case
+
+## public worktree /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659 (HEAD 35c815943)
+$ git status --short
+ M sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql
+ M sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep06_lob_neighbours.sql
+ M sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql01_insert_select.sql
+ M sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql02_mixed_chunks.sql
+ M sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql02_update.sql
+ M sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql05_delete.sql
+ M sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_constraints.sql
+ M sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_rollback.sql
+ M sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_triggers.sql
+$ git diff --stat
+ .../cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql       | 2 ++
+ .../cbrd_26659/cases/cbrd_26659_oos_rep06_lob_neighbours.sql      | 8 ++++++--
+ .../cbrd_26659/cases/cbrd_26659_oos_sql01_insert_select.sql       | 8 ++++++--
+ .../cbrd_26659/cases/cbrd_26659_oos_sql02_mixed_chunks.sql        | 8 ++++++--
+ sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql02_update.sql    | 8 ++++++--
+ sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql05_delete.sql    | 8 ++++++--
+ .../cbrd_26659/cases/cbrd_26659_oos_sql06_constraints.sql         | 8 ++++++--
+ sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_rollback.sql  | 8 ++++++--
+ sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_triggers.sql  | 8 ++++++--
+ 9 files changed, 50 insertions(+), 16 deletions(-)
+$ git diff -U0 | grep '^[+-]' | grep -v '^[+-][+-]' | sort | uniq -c
+      9 + *
+      8 + * are derived from that accounting, not chosen.  Hand-maintained from that date.
+      8 - * derived by cbrd-26659/campaign/evidence/ticket19/derive_ticket19_sizes.py, which refuses any
+      8 + * derived from the engine's record accounting under both, and a size the two disagree about
+      8 + * Provenance.  Generated once by the CBRD-26659 campaign on 2026-09-19 from the pinned engine's
+      1 + * Provenance.  Hand-written for the CBRD-26659 campaign, not generated.
+      8 + * record accounting at commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, so the fixture sizes
+      8 - * size the two accountings disagree about, so this answer is stable rather than specific to
+      8 + * was refused rather than asserted, so this answer is stable rather than specific to
+$ ... | grep -v '^[+-] \*\( .*\)\?$'   (changed lines that are not comment lines)
+(none)
+$ grep -rn 'my-cubrid-docs\|cbrd-26659/campaign\|\.py\|do not edit' sql/_36_guava/cbrd_26659/
+(none)
+$ grep -n '^ \*.*;$' cases/*.sql   (semicolon-terminated header lines, finding T19-F2)
+(none)
+
+## private worktree /home/vimkim/gh/tc/cubrid-testcases-private-ex-cbrd-26659 (HEAD c4fe45173)
+$ git status --short
+ M shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/cases/cbrd_26659_oos_dur01.sh
+$ git diff -U0 | grep '^[+-]' | grep -v '^[+-][+-]'
+-# Derived by derive_case_sizes.py (CBRD-26659 campaign evidence, ticket 14) from the
++# Derived by the CBRD-26659 campaign (ticket 14) from the
+$ ... | grep -v '^[+-]#'   (changed lines that are not comment lines)
+(none)
+$ grep -rn 'derive_case_sizes\|my-cubrid-docs\|cbrd-26659/campaign' shell/_06_issues/_26_2h/cbrd_26659_oos_dur01/
+(none)

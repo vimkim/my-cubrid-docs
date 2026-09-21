@@ -14,6 +14,12 @@ the generator is needed to run or read the cases.
 `--check` regenerates into a temporary directory and compares, so CI or a reviewer can prove
 the checked-in cases are exactly what this script produces.  Exit status 0 when they match.
 
+Not delivered (campaign ticket 45 item 1).  The eight cases cross into `cubrid-testcases` on
+their own, each carrying a dated provenance statement in its header instead of a pointer here
+(ticket 45 item 2, applied by ticket 47), and they are hand-maintained on arrival.  So `--check`
+is meaningful only against this campaign's checked-in copy of the cases: a case edited on the
+CUBRID side is not detected by anything, which is the decision's accepted cost.
+
 Default output: /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases
 """
 from __future__ import annotations
@@ -28,6 +34,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import derive_ticket19_sizes as d  # noqa: E402
 
 DEFAULT_OUT = Path("/home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases")
+
+# The date in every emitted case's provenance statement (ticket 45 item 2): the day the checked-in
+# cases were emitted, from which they are hand-maintained.  A later emission that changes a case
+# is a new generation and sets this to its own date.
+PROVENANCE_DATE = "2026-09-19"
 
 SCHEMA_C_NAMES = ["payload", "tag"]
 TAG = 300  # every schema-C row's inline neighbour, 308 B serialized: eligible, never demoted
@@ -98,8 +109,8 @@ def header_common(inline_neighbour, md5_char, md5_bytes):
  * At a 16 KiB page size the record gate is 4086 B on CUBRID feat/oos
  * f4299ac0cd777a2a964c1f197ae5ebf9841a4936, the revision this answer was generated on, and
  * 4060 B under the four-record physical target accepted in CBRD-27057.  Every size below was
- * derived by cbrd-26659/campaign/evidence/ticket19/derive_ticket19_sizes.py, which refuses any
- * size the two accountings disagree about, so this answer is stable rather than specific to
+ * derived from the engine's record accounting under both, and a size the two disagree about
+ * was refused rather than asserted, so this answer is stable rather than specific to
  * one revision.  {inline_neighbour}
  *
  * Value checks are deliberately redundant and independent.  Whole-value equality alone would
@@ -108,6 +119,10 @@ def header_common(inline_neighbour, md5_char, md5_bytes):
  * content through a different code path; CUBRID's MD5 of a BIT VARYING digests its lowercase
  * hexadecimal form, so every digest in the answer is reproducible outside CUBRID, for example
  *   python3 -c "import hashlib; print(hashlib.md5(('{md5_char * 2}'*{md5_bytes}).encode()).hexdigest())"
+ *
+ * Provenance.  Generated once by the CBRD-26659 campaign on {PROVENANCE_DATE} from the pinned engine's
+ * record accounting at commit f4299ac0cd777a2a964c1f197ae5ebf9841a4936, so the fixture sizes
+ * are derived from that accounting, not chosen.  Hand-maintained from that date.
 """
 
 

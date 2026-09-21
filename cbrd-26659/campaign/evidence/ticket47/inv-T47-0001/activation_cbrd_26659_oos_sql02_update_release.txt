@@ -1,0 +1,28 @@
+PASS     create/t_cbrd_26659_sql02: Has_oos_file              expected 0        got 0
+PASS     create/t_cbrd_26659_sql02: Oos_num_recs              expected 0        got 0
+PASS     create/t_cbrd_26659_sql02: Oos_recs_sumlen           expected 0        got 0
+PASS     oosbacked/t_cbrd_26659_sql02: Has_oos_file           expected 1        got 1
+PASS     oosbacked/t_cbrd_26659_sql02: Oos_num_recs           expected 1        got 1
+PASS     oosbacked/t_cbrd_26659_sql02: Oos_recs_sumlen        expected 4224     got 4224
+PASS     comparator/t_cbrd_26659_sql02: Has_oos_file          expected 1        got 1
+PASS     comparator/t_cbrd_26659_sql02: Oos_num_recs          expected 1        got 1
+PASS     comparator/t_cbrd_26659_sql02: Oos_recs_sumlen       expected 4224     got 4224
+PASS     update_payload/t_cbrd_26659_sql02: Has_oos_file      expected 1        got 1
+OBSERVE  update_payload/t_cbrd_26659_sql02: Oos_num_recs      2
+OBSERVE  update_payload/t_cbrd_26659_sql02: Oos_recs_sumlen   9248
+PASS     update_tag_only/t_cbrd_26659_sql02: Has_oos_file     expected 1        got 1
+OBSERVE  update_tag_only/t_cbrd_26659_sql02: Oos_num_recs     3
+OBSERVE  update_tag_only/t_cbrd_26659_sql02: Oos_recs_sumlen  14272
+PASS     update_multichunk/t_cbrd_26659_sql02: Has_oos_file   expected 1        got 1
+OBSERVE  update_multichunk/t_cbrd_26659_sql02: Oos_num_recs   5
+OBSERVE  update_multichunk/t_cbrd_26659_sql02: Oos_recs_sumlen 34312
+PASS     subquery_update/t_cbrd_26659_sql02_chk_sub: Has_oos_file expected 1        got 1
+PASS     subquery_update/t_cbrd_26659_sql02_chk_sub: Oos_num_recs expected 1        got 1
+PASS     subquery_update/t_cbrd_26659_sql02_chk_sub: Oos_recs_sumlen expected 4624     got 4624
+PASS     join_update/t_cbrd_26659_sql02_chk_join: Has_oos_file expected 1        got 1
+PASS     join_update/t_cbrd_26659_sql02_chk_join: Oos_num_recs expected 1        got 1
+PASS     join_update/t_cbrd_26659_sql02_chk_join: Oos_recs_sumlen expected 4624     got 4624
+
+run_mode: client-server (csql over the cub_master on port 26659, cub_server t19sql02)
+observations (not assertions): 6
+RESULT: activation proven -- every asserted SHOW HEAP OOS observation holds.

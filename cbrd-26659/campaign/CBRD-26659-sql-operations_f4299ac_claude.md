@@ -469,3 +469,36 @@ itself: `inv-T19-0008` was created *by* that revision, and the declaration and t
 records were repaired in the same pass without being checked against each other. A revision that
 adds records is the moment to re-run the completeness checks, not only the schema ones — which is
 now a check rather than a note (O1), and should be run before their matrices are merged.
+
+## 15. Revision 4 — the delivered cases say what they are (2026-09-21)
+
+Campaign ticket 45 item 2 decided on 2026-09-18 that the generator is not delivered and that the
+cases it emitted say so themselves, once, dated and without a pointer; campaign ticket 47 applied
+it. Every generated case's header now ends with a provenance paragraph — generated once by the
+campaign on 2026-09-19 from the pinned engine's record accounting at
+`f4299ac0cd777a2a964c1f197ae5ebf9841a4936`, fixture sizes derived from that accounting rather than
+chosen, hand-maintained from that date — and the sentence that named `derive_ticket19_sizes.py` by
+path keeps its derivation statement and loses the path, under the same rule: a pointer into this
+repository advertises a dependency a CUBRID reviewer cannot follow. It does not say "do not edit",
+because from that date nothing but a person maintains the cases. The hand-written ninth case,
+`cbrd_26659_oos_rep02_largest_first`, says it is hand-written, so the directory reads one way. The
+private case's fixture comment lost its `derive_case_sizes.py` pointer the same way.
+`gen_ticket19_cases.py` emits the statement from one dated constant and its docstring now records
+that it is not delivered; `--check` still reports all eight cases identical to the checked-in files
+and the activation specs it also emits are byte-unchanged. **No case body, no answer and no
+promotion changed**; the sign-off owed in §12 is exactly as it was.
+
+The change is comment lines only — no statement, literal or whitespace outside a comment — so the
+proof is the one §13's T5 rested on: the scenario ran once more through `run_ctp_sql.sh` on the
+pinned release build, `inv-T47-0001` (2026-09-19, CTP invocation 43 s), all nine cases in `okList`,
+every result byte-identical to its answer, OOS-path evidence `proven` on all nine, drift zero; the
+private case ran once through `run_ctp_shell.sh`, `inv-T47-0002` (2026-09-21, 17 s), PASS with the
+same 17 executed, 17 OK, 1 SKIP as `inv-T41-0002`. Both runs used the one port block the wrappers
+know, so they ran one after the other rather than in ticket 37's two lanes. Testcase commits
+`4f06f9bdd` (public, after `35c815943`) and `66b66f1f0` (private, after `c4fe45173`), nothing
+pushed. Records are under `evidence/ticket47/`, and both manifests were merged into a **per-ticket
+copy** of this ticket's matrix, `evidence/ticket47/matrix.json` — 44 rows before and after, 16
+rows gain one history entry, no gap kind or hand-set field changed — because which matrix file is
+canonical is ticket 48 item 48.6's decision to make, so `evidence/ticket19/matrix.json` is as it
+was. §1's table still names the generator and the derivation as this repository's artifacts, which
+they remain; what changed is that the delivered cases no longer cite them.
