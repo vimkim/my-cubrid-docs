@@ -153,6 +153,6 @@ Paths are relative to the evidence directory, under `providers/github-actions/ru
 
 Action 1 was carried out on 2026-09-23:
 
--  : merged  as . No conflicts. The partition_tbls / bug_bts_11093 changes from  were kept.
--  : merged  as . No conflicts. Cherry-picked  as . The tip checks out:  expects , and  and  match .
-- CI was re-triggered with `/run all` at 2026-09-23T09:20:58Z on head : https://github.com/CUBRID/cubrid/pull/7927#issuecomment-5792263699
+- `cubrid-testcases-private-ex` `tc/pr-7927`: merged `origin/develop` as `527ebeafb`. No conflicts. The partition_tbls / bug_bts_11093 changes from `4bff89b6a` were kept.
+- `cubrid-testcases` `tc/pr-7927`: merged `origin/develop` as `10d3f5a06`. No conflicts. Cherry-picked `8be3e498c` as `ca8d15a4c`. The tip checks out: `cbrd_24337.answer` expects `Error:-493`, and `bug_bts_10516.answer` and `fbo_ddl02.answer` match `8be3e498c`.
+- CI was re-triggered with `/run all` at 2026-09-23T09:20:58Z on head `34a9072a1`: https://github.com/CUBRID/cubrid/pull/7927#issuecomment-5792263699
