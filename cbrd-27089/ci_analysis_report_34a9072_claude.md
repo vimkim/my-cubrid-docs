@@ -165,3 +165,23 @@ The number of failures went from 20 to 11: sql 2/17468, medium 3/975, shell 6/32
 - `bug_bts_10516` and `fbo_ddl02`: the expected error `-1383` from `8be3e498c` was out of date. At `34a9072a1`, `ER_HEAP_OOS_OVERPASS_MAXOBJ_SIZE` is `-1384`, because the CBRD-26459 merge added `-1382`. Both answers were updated to `-1384` on `cubrid-testcases` `tc/pr-7927` as `6f553dd2a`.
 - New failure `cbrd_27378` (shell): the testcase came in with the develop testcase merge. Its engine fix, `1e619ee62` (CBRD-27378, DBLink NATURAL JOIN), is on develop but not in the PR head. This is not a PR regression. It clears once the feature branch merges develop.
 - Still failing, as in the first run: the 3 medium `*_order_by` cases, and the shell cases bug_bts_9836, bug_bts_14120, cbrd_27064, cbrd_27075, and cbrd_25080.
+
+### `bug_bts_6938`: suspected flaky test, not a PR regression (local check, 2026-09-23)
+
+Verdict: **suspected flaky**. The core in the first CI run comes from an old race in temp-file teardown. The race is on the parent `b8f3c4807` too, and PR #7927 does not change the code in the crash path.
+
+Evidence:
+
+- CI: the case check passed (`bug_bts_6938-1 : OK`). The NOK came only from a `cub_server` core that the harness found after the test. The CI re-run (run 35842406580) passed the case.
+- Native testkit (`cubrid-test-shell-run`, debug build, unchanged TC, default settings): 9/9 OK on `34a9072a1` and 3/3 OK on `b8f3c4807`, with no core. The systemd-coredump journal and the test logs show no `cub_server` crash or assertion during these runs.
+- `src/storage/file_manager.c`, `src/storage/disk_manager.c`, and `src/query/query_manager.c` are the same in `b8f3c4807` and `34a9072a1`.
+- Stress loop with the TC steps (start server and broker, 100-thread JDBC client, `kill -9` client, `cubrid service stop`), plus `max_pages_in_temp_file_cache=100` and `max_entries_in_temp_file_cache=10` so that more temp files get destroyed. The server aborts within 5 iterations in 4/4 runs on unchanged builds: 2 on `34a9072a1`, 2 on `b8f3c4807`. The message is the same as in CI: `file_manager.c:4321: int file_destroy(...): Assertion 'false' failed.` Some runs also hit `file_manager.c:4159 Assertion '!is_temp'`, which has the same cause.
+
+Mechanism (confirmed with temporary logging):
+
+1. `cubrid service stop` stops the broker. Each running query gets an interrupt, stops, and destroys its query temp files.
+2. `file_destroy` turns off interrupts for temp files (`file_manager.c:4140`).
+3. Many threads wait for the latch on the temp volume header page (`32766|0`). During the wait, `pgbuf_timed_sleep` turns interrupts on again.
+4. The server shutdown interrupts the waiting threads. The page fix returns `ER_INTERRUPTED` (-4), `disk_unreserve_ordered_sectors` fails, and `assert_release (false)` aborts the server.
+
+The crash needs this timing, so the test fails only sometimes. File it as a separate issue against temp-file teardown, not against CBRD-27089.
