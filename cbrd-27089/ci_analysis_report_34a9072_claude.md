@@ -156,3 +156,12 @@ Action 1 was carried out on 2026-09-23:
 - `cubrid-testcases-private-ex` `tc/pr-7927`: merged `origin/develop` as `527ebeafb`. No conflicts. The partition_tbls / bug_bts_11093 changes from `4bff89b6a` were kept.
 - `cubrid-testcases` `tc/pr-7927`: merged `origin/develop` as `10d3f5a06`. No conflicts. Cherry-picked `8be3e498c` as `ca8d15a4c`. The tip checks out: `cbrd_24337.answer` expects `Error:-493`, and `bug_bts_10516.answer` and `fbo_ddl02.answer` match `8be3e498c`.
 - CI was re-triggered with `/run all` at 2026-09-23T09:20:58Z on head `34a9072a1`: https://github.com/CUBRID/cubrid/pull/7927#issuecomment-5792263699
+
+### Re-run result (run 35842406580)
+
+The number of failures went from 20 to 11: sql 2/17468, medium 3/975, shell 6/3258.
+
+- Cleared: `cbrd_24337`, `bug_bts_6938`, and 9 other shell cases (bug_bts_15912, 16378, 14305, cbrd_25478, issue_11202, and the 3 show_log_header cases).
+- `bug_bts_10516` and `fbo_ddl02`: the expected error `-1383` from `8be3e498c` was out of date. At `34a9072a1`, `ER_HEAP_OOS_OVERPASS_MAXOBJ_SIZE` is `-1384`, because the CBRD-26459 merge added `-1382`. Both answers were updated to `-1384` on `cubrid-testcases` `tc/pr-7927` as `6f553dd2a`.
+- New failure `cbrd_27378` (shell): the testcase came in with the develop testcase merge. Its engine fix, `1e619ee62` (CBRD-27378, DBLink NATURAL JOIN), is on develop but not in the PR head. This is not a PR regression. It clears once the feature branch merges develop.
+- Still failing, as in the first run: the 3 medium `*_order_by` cases, and the shell cases bug_bts_9836, bug_bts_14120, cbrd_27064, cbrd_27075, and cbrd_25080.
