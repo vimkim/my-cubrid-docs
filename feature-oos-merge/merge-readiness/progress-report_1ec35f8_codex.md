@@ -26,13 +26,17 @@ PR #7990의 현재 원격 head는 `1ec35f86c5e43b9ca86d81e202c68899f8ce4f21`이�
 
 선행 PR #7927의 현재 head `34a9072`도 같은 절차로 검증했다. medium 3건, SQL 1건, shell 10건이 실패한다. 이 중 CDC는 2건이며 나머지 12건은 증상과 처리 과제가 남아 있다. 오래된 head의 통과 기록으로 대체하지 않는다. [#7927 전체 실패표](ci-verified-pr7927_34a9072_codex.md).
 
-이 CI 결과는 새 통합 후보 `fb567a6`의 CI가 아니다. 후보 게시와 해당 head의 새 검증이 필요하다.
+이 CI 결과는 새 통합 후보 `fb567a6`의 CI가 아니다. 후보 게시와 해당 head와 갱신한 testcase SHA 조합의 새 검증이 필요하다.
 
 ## 통합 후보의 로컬 검증
 
 현재 develop을 실제 merge commit으로 통합했다. 충돌이 없었고 Standards/Spec 병렬 검토에서 새 통합 지적은 각각 0건이다. 이는 develop의 모든 변경을 재검토했거나 전체 준비를 완료했다는 뜻이 아니다. [통합 검토](integration-review_fb567a6_codex.md).
 
 I01의 원본 `reorganization_select_01.ctl`과 answer를 public testcase `89d4ec2`에서 그대로 사용했다. debug와 release에서 각각 1개를 실행해 성공 1, 실패 0, skip 0을 확인했다. 원래 기대값의 100000행과 그룹 결과를 유지했다. 병렬/hash 실행 경로를 따로 관측하지 않았으므로 I01의 전체 수용 조건은 아직 완료가 아니다. [로컬 검증 근거](local-validation_fb567a6_codex.md).
+
+## Testcase 브랜치 갱신 필요
+
+원격 확인 결과 두 저장소의 `tc/pr-7990`은 각각 testcase `feature/oos-merge`와 이미 일치한다. 다만 최신 testcase develop에서 public 8개·private 6개 커밋이 아직 통합되지 않았다. 엔진 동기화와 함께 이 변경을 검토·통합한 뒤 OOS sync 도구로 PR testcase 브랜치를 맞추고 CI를 실행해야 한다. 관련 기대값 변경은 기존 실패를 재검토할 근거이며 자동 해결 판정은 아니다. PR #7927의 testcase 원격도 과거 CI 실행 이후 바뀌었다. [브랜치 상태와 처리 순서](testcase-sync_20260929_codex.md).
 
 ## 실패 처리 원칙
 

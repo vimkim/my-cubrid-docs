@@ -6,6 +6,7 @@
 - [최신 실패 원장](failure-ledger_1ec35f8_codex.md)
 - [통합 후보 Standards/Spec 검토](integration-review_fb567a6_codex.md)
 - [통합 후보 로컬 검증](local-validation_fb567a6_codex.md)
+- [Testcase 브랜치 갱신과 동기화](testcase-sync_20260929_codex.md)
 - [현재 PR #7990 CI](ci-verified-pr7990_1ec35f8_codex.md)
 - [선행 PR #7927 CI](ci-verified-pr7927_34a9072_codex.md)
 - [준비된 소스 게시 대상과 승인 조건](source-publication_fb567a6_codex.md)
