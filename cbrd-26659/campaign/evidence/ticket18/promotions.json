@@ -1,0 +1,65 @@
+[
+ {
+  "case": "cbrd_26659_oos_rep01_gate_boundary",
+  "action": "promoted",
+  "flagged_for_user": true,
+  "review_note": "Reviewed against expected-oracle.md section 3 (OOS-REP-01, OOS-REP-02). The four payload lengths are 3699, 3700, 3723 and 3724 and each digest is the one the derivation computes for its own length; the aggregate is 4 rows, 4 exact, 4 distinct payloads, 0 aliased. The two assertable rows sit one byte outside the disagreement band on either side, which the self-test re-derives rather than remembers. FLAGGED FOR THE USER. The case's third and fourth groups sit inside the band where the pinned record gate (DB_PAGESIZE/4 = 4,086 B) and the accepted four-record physical target of CBRD-27057 (4,060 B) place the value differently. The paired OOS-path evidence observed Has_oos_file 0 on both band rows, where the accepted target requires 1 -- the conformance gap OOS-REP-03 records. The answer asserts values only, which hold under either reading, but the specification's rule is about the case, not the answer, so this promotion is not accepted until the user signs off.",
+  "reviewer": "Claude Opus 5, campaign ticket 18 (authoring session, 2026-09-21). Reviewed mechanically by evidence/ticket18/review_candidates.py against expected-oracle.md and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine, which is the checkable claim; the review found and corrected two defects in the oracle itself before promotion (T18-F2, the error identity, and T18-F3, the fixed-filler digests). The specification's independent agent review is a later ticket and is recorded as outstanding in the ticket 18 report."
+ },
+ {
+  "case": "cbrd_26659_oos_rep02_demotion_order",
+  "action": "promoted",
+  "flagged_for_user": false,
+  "review_note": "Reviewed against expected-oracle.md section 4 (OOS-REP-02). Every one of the fifteen per-column rows carries its own (length, digest) pair from the Python derivation and ok=1; the tie group prints two equal-length, different-digest values with n_aliased 0, and the answer nowhere names which of them moved. The paired OOS-path evidence asserted Oos_recs_sumlen 2024 on the unequal group, which 1924 -- the smaller candidate -- would have failed.",
+  "reviewer": "Claude Opus 5, campaign ticket 18 (authoring session, 2026-09-21). Reviewed mechanically by evidence/ticket18/review_candidates.py against expected-oracle.md and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine, which is the checkable claim; the review found and corrected two defects in the oracle itself before promotion (T18-F2, the error identity, and T18-F3, the fixed-filler digests). The specification's independent agent review is a later ticket and is recorded as outstanding in the ticket 18 report."
+ },
+ {
+  "case": "cbrd_26659_oos_rep04_eligibility_floor",
+  "action": "promoted",
+  "flagged_for_user": true,
+  "review_note": "Reviewed against expected-oracle.md section 5 (OOS-REP-04, OOS-REP-02). All thirteen per-column rows match the derivation, including the three 5,000 B fixed fillers whose digests follow the same rule as a BIT VARYING's. The discriminating observation is in the paired check, not the answer: Oos_num_recs 1 for the 15 B value and 2 for the 24 B one, on records that are still 5,080 B after demotion. FLAGGED FOR THE USER. The case's fourth group sits inside the band where the pinned 16-byte inline stub and the 24-byte stub of the accepted CBRD-26950 identity layout place the value differently. The paired OOS-path evidence observed Oos_num_recs 2 and Oos_recs_sumlen 4264 on the band row, where the accepted layout requires 1 and 4224 -- the conformance gap OOS-REP-05 records. The answer asserts values only, which hold under either reading, but the rule is about the case, not the answer, so this promotion is not accepted until the user signs off.",
+  "reviewer": "Claude Opus 5, campaign ticket 18 (authoring session, 2026-09-21). Reviewed mechanically by evidence/ticket18/review_candidates.py against expected-oracle.md and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine, which is the checkable claim; the review found and corrected two defects in the oracle itself before promotion (T18-F2, the error identity, and T18-F3, the fixed-filler digests). The specification's independent agent review is a later ticket and is recorded as outstanding in the ticket 18 report."
+ },
+ {
+  "case": "cbrd_26659_oos_rep07_chunk_boundary",
+  "action": "promoted",
+  "flagged_for_user": false,
+  "review_note": "Reviewed against expected-oracle.md section 6 (OOS-REP-07). The four payload lengths are 3000, 16275, 16284 and 32576, the aggregate total is the derived 68135, and every digest is the Python one -- including the 32,576-byte value, whose digest the syntax smoke independently reproduced. The chunk counts 1, 2 and 3 are asserted by the paired check and appear in no answer. Two clauses of the requirement are not claimed and carry their own matrix rows.",
+  "reviewer": "Claude Opus 5, campaign ticket 18 (authoring session, 2026-09-21). Reviewed mechanically by evidence/ticket18/review_candidates.py against expected-oracle.md and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine, which is the checkable claim; the review found and corrected two defects in the oracle itself before promotion (T18-F2, the error identity, and T18-F3, the fixed-filler digests). The specification's independent agent review is a later ticket and is recorded as outstanding in the ticket 18 report."
+ },
+ {
+  "case": "cbrd_26659_oos_rep08_bigone_rejection",
+  "action": "promoted",
+  "flagged_for_user": false,
+  "review_note": "Reviewed against expected-oracle.md section 7 (OOS-REP-08). The only error in the result is Error:-1382, the identity derived from error_code.h:1782 before the run; the rejected table reports 0 rows and the three neighbouring tables 1 each. The clause the case cannot see -- that no chunk is written before the rejection -- is asserted by the paired check as Has_oos_file 0 on the rejected class.",
+  "reviewer": "Claude Opus 5, campaign ticket 18 (authoring session, 2026-09-21). Reviewed mechanically by evidence/ticket18/review_candidates.py against expected-oracle.md and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine, which is the checkable claim; the review found and corrected two defects in the oracle itself before promotion (T18-F2, the error identity, and T18-F3, the fixed-filler digests). The specification's independent agent review is a later ticket and is recorded as outstanding in the ticket 18 report."
+ },
+ {
+  "case": "cbrd_26659_oos_rep09_null_empty",
+  "action": "promoted",
+  "flagged_for_user": false,
+  "review_note": "Reviewed against expected-oracle.md section 8 (OOS-REP-09). NULL and zero-length are distinguished in both directions: nullable_is_null 1 with a NULL octet length beside empty_is_null 0 with 0 octets and empty_ok 1, before and after the column was set to NULL and back. The paired check asserted Oos_num_recs 1, so neither of them was demoted.",
+  "reviewer": "Claude Opus 5, campaign ticket 18 (authoring session, 2026-09-21). Reviewed mechanically by evidence/ticket18/review_candidates.py against expected-oracle.md and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine, which is the checkable claim; the review found and corrected two defects in the oracle itself before promotion (T18-F2, the error identity, and T18-F3, the fixed-filler digests). The specification's independent agent review is a later ticket and is recorded as outstanding in the ticket 18 report."
+ },
+ {
+  "case": "cbrd_26659_oos_rep10_many_stubs",
+  "action": "promoted",
+  "flagged_for_user": false,
+  "review_note": "Reviewed against expected-oracle.md section 9 (OOS-REP-10). Thirty-six per-column rows, every length and digest the derived one, 18 distinct digests over 18 columns -- the check that stops the group passing on eighteen identical values -- and the two-row totals 730 and 560. The paired check asserted Oos_num_recs 12 and Oos_recs_sumlen 8016, which names which twelve of the eighteen moved and not only how many.",
+  "reviewer": "Claude Opus 5, campaign ticket 18 (authoring session, 2026-09-21). Reviewed mechanically by evidence/ticket18/review_candidates.py against expected-oracle.md and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine, which is the checkable claim; the review found and corrected two defects in the oracle itself before promotion (T18-F2, the error identity, and T18-F3, the fixed-filler digests). The specification's independent agent review is a later ticket and is recorded as outstanding in the ticket 18 report."
+ },
+ {
+  "case": "cbrd_26659_oos_rep11_transitions",
+  "action": "promoted",
+  "flagged_for_user": false,
+  "review_note": "Reviewed against expected-oracle.md section 10 (OOS-REP-11, OOS-REP-01). The row crosses the gate four times and its value is asserted at every step; the two VOT-width rows differ by one byte of one column and nothing else. The width itself is not in the answer and is not claimed anywhere: it is a derived property of the header, not an observable of this seam.",
+  "reviewer": "Claude Opus 5, campaign ticket 18 (authoring session, 2026-09-21). Reviewed mechanically by evidence/ticket18/review_candidates.py against expected-oracle.md and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine, which is the checkable claim; the review found and corrected two defects in the oracle itself before promotion (T18-F2, the error identity, and T18-F3, the fixed-filler digests). The specification's independent agent review is a later ticket and is recorded as outstanding in the ticket 18 report."
+ },
+ {
+  "case": "cbrd_26659_oos_rep13_placement_hints",
+  "action": "promoted",
+  "flagged_for_user": false,
+  "review_note": "Reviewed against expected-oracle.md section 11 (OOS-REP-13). This case's recorded outcome is BLOCKED, not PASS, and its answer carries no placement claim: it carries values, the refused DDL's Error:-495 and n_classes 0, all of which hold whatever the placement policy turns out to be. The engine's placement under each of the three hints is in the paired check as four observations and is asserted nowhere. Unflagged because nothing here is promoted as an expectation that the open question could overturn -- the BLOCKED outcome is itself the record that the question is open (ticket 39 item 2).",
+  "reviewer": "Claude Opus 5, campaign ticket 18 (authoring session, 2026-09-21). Reviewed mechanically by evidence/ticket18/review_candidates.py against expected-oracle.md and against the (length, digest) table derive_ticket19_sizes.py computes in Python without the engine, which is the checkable claim; the review found and corrected two defects in the oracle itself before promotion (T18-F2, the error identity, and T18-F3, the fixed-filler digests). The specification's independent agent review is a later ticket and is recorded as outstanding in the ticket 18 report."
+ }
+]

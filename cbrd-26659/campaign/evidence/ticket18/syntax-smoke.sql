@@ -1,0 +1,28 @@
+drop table if exists s_empty;
+create table s_empty (id int primary key, e bit varying, n bit varying);
+insert into s_empty values (1, cast('' as bit varying), null);
+select id, e is null as e_is_null, octet_length(e) as e_octets, e = cast('' as bit varying) as e_ok,
+       n is null as n_is_null, octet_length(n) as n_octets from s_empty;
+drop table if exists s_bigfixed;
+create table s_bigfixed (id int primary key, f bit(160000), s bit varying);
+insert into s_bigfixed values (1, cast(repeat('e', 40000) as bit(160000)), cast(repeat('f', 20) as bit varying));
+select id, octet_length(f) as f_octets, octet_length(s) as s_octets from s_bigfixed;
+drop table if exists s_hint;
+create table s_hint (id int primary key, h bit varying storage force_outline, p bit varying storage prefer_inline, q bit varying storage prefer_outline);
+insert into s_hint values (1, cast(repeat('a', 80) as bit varying), cast(repeat('b', 80) as bit varying), cast(repeat('c', 80) as bit varying));
+select id, octet_length(h) as h_octets, md5(h) as h_md5 from s_hint;
+alter table s_hint modify h bit varying storage default;
+select id, octet_length(h) as h_octets from s_hint;
+create table s_badhint (id int primary key, n int storage force_outline);
+select count(*) as n_classes from db_class where class_name = 's_badhint';
+evaluate '[MARKER] csql reached the end of the file after the error above';
+drop table if exists s_big;
+create table s_big (id int primary key, payload bit varying, tag bit varying);
+insert into s_big values (1, cast(repeat('a', 65152) as bit varying), cast(repeat('b', 600) as bit varying));
+select id, octet_length(payload) as p_octets, disk_size(payload) as p_disk, md5(payload) as p_md5 from s_big;
+show heap oos of s_big;
+drop table if exists s_rej;
+create table s_rej (id int primary key, f bit(129416), v bit varying);
+insert into s_rej values (1, cast(repeat('a', 32354) as bit(129416)), cast(repeat('b', 128) as bit varying));
+select count(*) as n_rows from s_rej;
+evaluate '[MARKER] end of smoke';

@@ -1,0 +1,60 @@
+scoped   OOS-REP-01/cbrd_26659_oos_rep01_gate_boundary/16384-release-cs             Under triage -> Delivery gap
+scoped   OOS-REP-02/cbrd_26659_oos_rep01_gate_boundary/16384-release-cs             Under triage -> Delivery gap
+scoped   OOS-REP-02/cbrd_26659_oos_rep02_demotion_order/16384-release-cs            Under triage -> Delivery gap
+scoped   OOS-REP-04/cbrd_26659_oos_rep04_eligibility_floor/16384-release-cs         Under triage -> Delivery gap
+scoped   OOS-REP-02/cbrd_26659_oos_rep04_eligibility_floor/16384-release-cs         Under triage -> Delivery gap
+scoped   OOS-REP-07/cbrd_26659_oos_rep07_chunk_boundary/16384-release-cs            Under triage -> Delivery gap
+scoped   OOS-REP-08/cbrd_26659_oos_rep08_bigone_rejection/16384-release-cs          Under triage -> Delivery gap
+scoped   OOS-REP-09/cbrd_26659_oos_rep09_null_empty/16384-release-cs                Under triage -> Delivery gap
+scoped   OOS-REP-10/cbrd_26659_oos_rep10_many_stubs/16384-release-cs                Under triage -> Delivery gap
+scoped   OOS-REP-02/cbrd_26659_oos_rep10_many_stubs/16384-release-cs                Under triage -> Delivery gap
+scoped   OOS-REP-11/cbrd_26659_oos_rep11_transitions/16384-release-cs               Under triage -> none
+scoped   OOS-REP-01/cbrd_26659_oos_rep11_transitions/16384-release-cs               Under triage -> Delivery gap
+scoped   OOS-REP-13/cbrd_26659_oos_rep13_placement_hints/16384-release-cs           Specification gap -> Specification gap
+scoped   OOS-REP-01/cbrd_26659_oos_rep01_gate_boundary/16384-debug-cs               none -> Delivery gap
+scoped   OOS-REP-02/cbrd_26659_oos_rep01_gate_boundary/16384-debug-cs               none -> Delivery gap
+scoped   OOS-REP-02/cbrd_26659_oos_rep02_demotion_order/16384-debug-cs              none -> Delivery gap
+scoped   OOS-REP-04/cbrd_26659_oos_rep04_eligibility_floor/16384-debug-cs           none -> Delivery gap
+scoped   OOS-REP-02/cbrd_26659_oos_rep04_eligibility_floor/16384-debug-cs           none -> Delivery gap
+scoped   OOS-REP-07/cbrd_26659_oos_rep07_chunk_boundary/16384-debug-cs              none -> Delivery gap
+scoped   OOS-REP-08/cbrd_26659_oos_rep08_bigone_rejection/16384-debug-cs            none -> Delivery gap
+scoped   OOS-REP-09/cbrd_26659_oos_rep09_null_empty/16384-debug-cs                  none -> Delivery gap
+scoped   OOS-REP-10/cbrd_26659_oos_rep10_many_stubs/16384-debug-cs                  none -> Delivery gap
+scoped   OOS-REP-02/cbrd_26659_oos_rep10_many_stubs/16384-debug-cs                  none -> Delivery gap
+scoped   OOS-REP-11/cbrd_26659_oos_rep11_transitions/16384-debug-cs                 none -> none
+scoped   OOS-REP-01/cbrd_26659_oos_rep11_transitions/16384-debug-cs                 none -> Delivery gap
+scoped   OOS-REP-13/cbrd_26659_oos_rep13_placement_hints/16384-debug-cs             Specification gap -> Specification gap
+added    OOS-REP-03/-/quarter-page-gate
+added    OOS-REP-05/-/boundary-bands
+added    OOS-REP-07/-/tail-first-insertion
+added    OOS-REP-07/-/total-data-length-excludes-headers
+added    OOS-REP-04/-/floor-placement
+added    OOS-REP-08/-/pre-write-rejection
+added    OOS-REP-09/-/null-empty-placement
+added    OOS-REP-10/-/is-oos-vot-flags
+added    OOS-REP-12/-/placement-hint-observation
+retired  OOS-REP-07/-/claim-withdrawn
+
+26 row(s) scoped, 9 caseless row(s) added, 1 retired; 78 rows total
+Traceback (most recent call last):
+  File "/home/vimkim/gh/my-cubrid-docs/cbrd-26659/campaign/evidence/ticket18/apply_matrix_scoping.py", line 390, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/home/vimkim/gh/my-cubrid-docs/cbrd-26659/campaign/evidence/ticket18/apply_matrix_scoping.py", line 384, in main
+    write_record(matrix, args.matrix, "matrix")
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/vimkim/gh/my-cubrid-docs/cbrd-26659/campaign/tools/campaign_records.py", line 366, in write_record
+    errors = validate_record(record, schema_name)
+  File "/home/vimkim/gh/my-cubrid-docs/cbrd-26659/campaign/tools/campaign_records.py", line 361, in validate_record
+    return list(_schema_validate(record, load_schema(schema_name)))
+                                         ~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/home/vimkim/gh/my-cubrid-docs/cbrd-26659/campaign/tools/campaign_records.py", line 356, in load_schema
+    _schema_cache[name] = json.loads((SCHEMAS_DIR / f"{name}.schema.json").read_text())
+                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/linuxbrew/.linuxbrew/Cellar/python@3.14/3.14.7/lib/python3.14/pathlib/__init__.py", line 787, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/linuxbrew/.linuxbrew/Cellar/python@3.14/3.14.7/lib/python3.14/pathlib/__init__.py", line 771, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/vimkim/gh/my-cubrid-docs/cbrd-26659/campaign/evidence/ticket18/matrix.json.schema.json'

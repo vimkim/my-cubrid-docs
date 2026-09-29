@@ -1,0 +1,123 @@
+Script started on 2026-09-21 16:02:51+09:00 [COMMAND="/home/vimkim/.cub/campaign/cbrd-26659/ticket14/tools/campaign_ns.sh /home/vimkim/CTP/bin/ctp.sh sql -c /home/vimkim/.cub/campaign/cbrd-26659/ticket18/attempts/inv-T18-0002/sql_inv-T18-0002.conf" <not executed on terminal>]
+
+====================================== SQL ==========================================
+[SQL] TEST STARTED (Mon Sep 21 16:02:51 KST 2026)
+
+[SQL] CONFIG FILE: /home/vimkim/.cub/campaign/cbrd-26659/ticket18/attempts/inv-T18-0002/sql_inv-T18-0002.conf
+[sql/cubrid_broker.conf/%BROKER1]
+APPL_SERVER_SHM_ID=33120
+APPL_SERVER_MAX_SIZE=100M
+BROKER_PORT=33120
+
+[sql/cubrid_broker.conf/broker]
+MASTER_SHM_ID=33122
+
+[sql]
+need_make_locale=no
+jdbc_config_file=test_default.xml
+scenario=/home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659
+enable_memory_leak=no
+test_category=sql
+cubrid_createdb_opts=--db-volume-size=128M --log-volume-size=64M --db-page-size=16384 --log-page-size=16384
+db_charset=en_US
+testcase_exclude_from_file=${CTP_HOME}/conf/exclusions.txt
+
+[sql/cubrid.conf]
+cubrid_port_id=26659
+test_mode=yes
+ha_mode=yes
+unicode_input_normalization=no
+lock_timeout=10sec
+java_stored_procedure=yes
+max_plan_cache_entries=1000
+
+[sql/cubrid_broker.conf]
+
+[sql/cubrid_ha.conf]
+ha_apply_max_mem_size=300
+ha_port_id=33122
+ha_mode=yes
+
+[sql/cubrid_broker.conf/%query_editor]
+SERVICE=OFF
+
+
+----------END OF FILE----------
+stop database basic
+Could not connect to master server on localhost
+cubrid manager server is not installed.
+delete database basic
+Database "basic" is unknown, or the file "databases.txt" cannot be accessed.
+Filtering out deprecated parameters for CUBRID 11.5+
+start config ha
+Don't need  make locale since you configure need_make_locale=no !
+MAKE basic DATABASE (default size)...
+cubrid createdb --db-volume-size=128M --log-volume-size=64M --db-page-size=16384 --log-page-size=16384 basic en_US.utf8
+Load Java Stored Procedure Classes
+rm: cannot remove '*.class': No such file or directory
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: SpTest6.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+Load jdbc_cubrid415.class...
+Load SpTest1.class...
+Load SpTest2.class...
+Load SpTest3.class...
+Load SpTest4bit64.class...
+Load SpTest4.class...
+Load SpTest5.class...
+Load SpTest6.class...
+Load SpTest7.class...
+Load SpTest8.class...
+Load SpTest9.class...
+Load SpTest.class...
+start database basic
+++ cubrid service is not running.
+@ cubrid master start
+++ cubrid master start: success
+@ cubrid broker start
+++ cubrid broker start: success
+start database basic
+restart broker...
+Result Root Dir:/home/vimkim/CTP/sql/result/y2026/m9/schedule_linux_sql_64bit_2116032419_11.5.0.2648-f4299ac
+
+
+---------------execute begin--------------------
+[16:03:25] Testing /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep01_gate_boundary.sql (1/18 5.56%) [NOK]
+[16:03:25] Testing /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_demotion_order.sql (2/18 11.11%) [NOK]
+[16:03:25] Testing /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql (3/18 16.67%) [OK]
+[16:03:25] Testing /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep04_eligibility_floor.sql (4/18 22.22%) [NOK]
+[16:03:25] Testing /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep06_lob_neighbours.sql (5/18 27.78%) [OK]
+[16:03:25] Testing /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep07_chunk_boundary.sql (6/18 33.33%) [NOK]
+[16:03:25] Testing /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep08_bigone_rejection.sql (7/18 38.89%) [NOK]
+[16:03:25] Testing /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep09_null_empty.sql (8/18 44.44%) [NOK]
+[16:03:25] Testing /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep10_many_stubs.sql (9/18 50.00%) [NOK]
+[16:03:25] Testing /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep11_transitions.sql (10/18 55.56%) [NOK]
+[16:03:25] Testing /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep13_placement_hints.sql (11/18 61.11%) [NOK]
+[16:03:25] Testing /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql01_insert_select.sql (12/18 66.67%) [OK]
+[16:03:26] Testing /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql02_mixed_chunks.sql (13/18 72.22%) [OK]
+[16:03:26] Testing /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql02_update.sql (14/18 77.78%) [OK]
+[16:03:26] Testing /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql05_delete.sql (15/18 83.33%) [OK]
+[16:03:26] Testing /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_constraints.sql (16/18 88.89%) [OK]
+[16:03:26] Testing /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_rollback.sql (17/18 94.44%) [OK]
+[16:03:26] Testing /home/vimkim/gh/tc/cubrid-testcases-cbrd-26659/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_triggers.sql (18/18 100.00%) [OK]
+---------------execute end  --------------------
+
+-----------------------
+Fail:9
+Success:9
+Total:18
+Elapse Time:1127
+Test Log:/home/vimkim/CTP/sql/log/sql_11.5.0.2648-f4299ac_1789974171.log
+Test Result Directory:/home/vimkim/CTP/sql/result/y2026/m9/schedule_linux_sql_64bit_2116032419_11.5.0.2648-f4299ac
+-----------------------
+
+stop database basic
+delete database basic
+-----------------------
+Testing End!
+-----------------------
+[SQL] TEST END (Mon Sep 21 16:03:34 KST 2026)
+[SQL] ELAPSE TIME: 42 seconds
+
+Script done on 2026-09-21 16:03:34+09:00 [COMMAND_EXIT_CODE="0"]

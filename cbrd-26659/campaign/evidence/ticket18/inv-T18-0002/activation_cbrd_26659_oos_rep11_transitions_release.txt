@@ -1,0 +1,19 @@
+PASS     vot_inline/t_cbrd_26659_rep11_chk_vot: Has_oos_file  expected 0        got 0
+PASS     vot_inline/t_cbrd_26659_rep11_chk_vot: Oos_num_recs  expected 0        got 0
+PASS     vot_inline/t_cbrd_26659_rep11_chk_vot: Oos_recs_sumlen expected 0        got 0
+PASS     vot_narrowed/t_cbrd_26659_rep11_chk_narrow: Has_oos_file expected 1        got 1
+PASS     vot_narrowed/t_cbrd_26659_rep11_chk_narrow: Oos_num_recs expected 1        got 1
+PASS     vot_narrowed/t_cbrd_26659_rep11_chk_narrow: Oos_recs_sumlen expected 4224     got 4224
+PASS     inline_before/t_cbrd_26659_rep11_chk_trans: Has_oos_file expected 0        got 0
+PASS     inline_before/t_cbrd_26659_rep11_chk_trans: Oos_num_recs expected 0        got 0
+PASS     inline_before/t_cbrd_26659_rep11_chk_trans: Oos_recs_sumlen expected 0        got 0
+PASS     crossed_up/t_cbrd_26659_rep11_chk_trans: Has_oos_file expected 1        got 1
+PASS     crossed_up/t_cbrd_26659_rep11_chk_trans: Oos_num_recs expected 1        got 1
+PASS     crossed_up/t_cbrd_26659_rep11_chk_trans: Oos_recs_sumlen expected 4224     got 4224
+OBSERVE  crossed_down/t_cbrd_26659_rep11_chk_trans: Has_oos_file 1
+OBSERVE  crossed_down/t_cbrd_26659_rep11_chk_trans: Oos_num_recs 1
+OBSERVE  crossed_down/t_cbrd_26659_rep11_chk_trans: Oos_recs_sumlen 4224
+
+run_mode: client-server (csql over the cub_master on port 26659, cub_server t18rep11)
+observations (not assertions): 3
+RESULT: activation proven -- every asserted SHOW HEAP OOS observation holds.

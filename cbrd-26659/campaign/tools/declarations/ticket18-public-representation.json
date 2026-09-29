@@ -1,0 +1,336 @@
+{
+  "declaration_version": 1,
+  "description": "Declared case list for the whole sql/_36_guava/cbrd_26659 scenario as ticket 18 leaves it: ticket 13's tracer-bullet case, ticket 19's eight SQL-operations cases and ticket 18's nine Representation cases, which share one directory and are therefore discovered and executed by one invocation. Running the whole scenario rather than overriding it to one case is what campaign ticket 48 item 48.3 requires until ctp_sql_records.py learns --scenario-dir. Tooling input only: the testcase repository does not depend on it. Requirement IDs come from each case's own header and from the two expected-oracle.md documents. No hand-derived assertion count is declared for the seventeen generated cases: the SQL seam has no counter (ticket 35 F3, so executed.assertion_count is null either way), and CTP compares the whole result text, so a byte-identical .result already entails that every cell matched. Ticket 13's case keeps the 27 it has always declared. cbrd_26659_oos_rep13_placement_hints declares BLOCKED because the catalogue gives its only cited requirement, OOS-REP-13, that status (ticket 39 item 2).",
+  "repository": "testcases",
+  "runner": "ctp-sql",
+  "scenario": "sql/_36_guava/cbrd_26659",
+  "tier": "fast",
+  "page_size": 16384,
+  "run_mode": "client-server",
+  "cases": {
+    "cbrd_26659_oos_rep01_gate_boundary": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep01_gate_boundary.sql",
+      "requirements": [
+        "OOS-REP-01",
+        "OOS-REP-02"
+      ],
+      "single_session": true,
+      "flagged_for_user": true,
+      "flagged_for_user_reason": "Specification, Review, sign-off and deferral: the user signs off on every answer promotion whose case touches a Specification gap or an observed-versus-normative disagreement. This case's third and fourth groups sit inside the band where the pinned record gate (DB_PAGESIZE/4 = 4,086 B) and the accepted four-record physical target of CBRD-27057 (4,060 B) place the value differently -- OOS-REP-03, UNSUPPORTED, policy withhold. The answer asserts values only, which hold under either reading, but the rule is about the case, not the answer. Kept here as well as in promotions.json so a manifest regenerated from this declaration alone cannot drop the gate (ticket 44 F2).",
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "evidence/ticket18/activation/cbrd_26659_oos_rep01_gate_boundary.spec",
+          "t18rep01"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t18rep01"
+      }
+    },
+    "cbrd_26659_oos_rep02_demotion_order": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_demotion_order.sql",
+      "requirements": [
+        "OOS-REP-02"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "evidence/ticket18/activation/cbrd_26659_oos_rep02_demotion_order.spec",
+          "t18rep02"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t18rep02"
+      }
+    },
+    "cbrd_26659_oos_rep02_largest_first": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep02_largest_first.sql",
+      "requirements": [
+        "OOS-REP-01",
+        "OOS-REP-02",
+        "OOS-SQL-01"
+      ],
+      "expected_assertions": 27,
+      "assertion_count_derivation": "ticket 13's hand-derived count, unchanged: 11 scalars per row group x 2 row groups + 3 in the final aggregate + 2 INSERT affected-row counts",
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_cs.sh",
+        "args": [
+          "t19rep02",
+          "3024"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t19rep02"
+      }
+    },
+    "cbrd_26659_oos_rep04_eligibility_floor": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep04_eligibility_floor.sql",
+      "requirements": [
+        "OOS-REP-04",
+        "OOS-REP-02"
+      ],
+      "single_session": true,
+      "flagged_for_user": true,
+      "flagged_for_user_reason": "Specification, Review, sign-off and deferral: the user signs off on every answer promotion whose case touches a Specification gap or an observed-versus-normative disagreement. This case's fourth group sits inside the band where the pinned 16-byte inline stub and the 24-byte stub of the accepted CBRD-26950 identity layout place the value differently -- OOS-REP-05, UNSUPPORTED, policy withhold. The answer asserts values only, which hold under either reading, but the rule is about the case, not the answer. Kept here as well as in promotions.json so a manifest regenerated from this declaration alone cannot drop the gate (ticket 44 F2).",
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "evidence/ticket18/activation/cbrd_26659_oos_rep04_eligibility_floor.spec",
+          "t18rep04"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t18rep04"
+      }
+    },
+    "cbrd_26659_oos_rep06_lob_neighbours": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep06_lob_neighbours.sql",
+      "requirements": [
+        "OOS-REP-06",
+        "OOS-SQL-01",
+        "OOS-SQL-05"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "evidence/ticket19/activation/cbrd_26659_oos_rep06_lob_neighbours.spec",
+          "t19lob"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t19lob"
+      }
+    },
+    "cbrd_26659_oos_rep07_chunk_boundary": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep07_chunk_boundary.sql",
+      "requirements": [
+        "OOS-REP-07"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "evidence/ticket18/activation/cbrd_26659_oos_rep07_chunk_boundary.spec",
+          "t18rep07"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t18rep07"
+      }
+    },
+    "cbrd_26659_oos_rep08_bigone_rejection": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep08_bigone_rejection.sql",
+      "requirements": [
+        "OOS-REP-08"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "evidence/ticket18/activation/cbrd_26659_oos_rep08_bigone_rejection.spec",
+          "t18rep08"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t18rep08"
+      }
+    },
+    "cbrd_26659_oos_rep09_null_empty": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep09_null_empty.sql",
+      "requirements": [
+        "OOS-REP-09"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "evidence/ticket18/activation/cbrd_26659_oos_rep09_null_empty.spec",
+          "t18rep09"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t18rep09"
+      }
+    },
+    "cbrd_26659_oos_rep10_many_stubs": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep10_many_stubs.sql",
+      "requirements": [
+        "OOS-REP-10",
+        "OOS-REP-02"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "evidence/ticket18/activation/cbrd_26659_oos_rep10_many_stubs.spec",
+          "t18rep10"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t18rep10"
+      }
+    },
+    "cbrd_26659_oos_rep11_transitions": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep11_transitions.sql",
+      "requirements": [
+        "OOS-REP-11",
+        "OOS-REP-01"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "evidence/ticket18/activation/cbrd_26659_oos_rep11_transitions.spec",
+          "t18rep11"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t18rep11"
+      }
+    },
+    "cbrd_26659_oos_rep13_placement_hints": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep13_placement_hints.sql",
+      "requirements": [
+        "OOS-REP-13"
+      ],
+      "single_session": true,
+      "declared_outcome": "BLOCKED",
+      "declared_outcome_reason": "Ticket 39 item 2 (user decision 2026-09-14): the placement hints get ONE observation case in ticket 18, recorded against OOS-REP-13 with the BLOCKED outcome and a Specification-gap row. OOS-REP-13's catalogue status is BLOCKED and its policy is withhold, so the case records what the pinned engine does and asserts no placement.",
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "evidence/ticket18/activation/cbrd_26659_oos_rep13_placement_hints.spec",
+          "t18rep13"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t18rep13"
+      }
+    },
+    "cbrd_26659_oos_sql01_insert_select": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql01_insert_select.sql",
+      "requirements": [
+        "OOS-SQL-01"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "evidence/ticket19/activation/cbrd_26659_oos_sql01_insert_select.spec",
+          "t19sql01"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t19sql01"
+      }
+    },
+    "cbrd_26659_oos_sql02_mixed_chunks": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql02_mixed_chunks.sql",
+      "requirements": [
+        "OOS-SQL-01",
+        "OOS-SQL-02"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "evidence/ticket19/activation/cbrd_26659_oos_sql02_mixed_chunks.spec",
+          "t19mixed"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t19mixed"
+      }
+    },
+    "cbrd_26659_oos_sql02_update": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql02_update.sql",
+      "requirements": [
+        "OOS-SQL-02"
+      ],
+      "single_session": true,
+      "flagged_for_user": true,
+      "flagged_for_user_reason": "Specification, Review, sign-off and deferral: the user signs off on every answer promotion whose case touches a Specification gap or an observed-versus-normative disagreement. This case's third group is the inline-attribute-only UPDATE, exactly where the pin (a fresh chain per record version, OOS-SQL-03, observation-only) and the accepted CBRD-27230 design (OOS-SQL-04, withheld) disagree, and its OOS-path evidence spec is the matrix's cited observation source for OOS-SQL-03. Kept here as well as in promotions.json so a manifest regenerated from this declaration alone cannot drop the gate (ticket 44 F2).",
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "evidence/ticket19/activation/cbrd_26659_oos_sql02_update.spec",
+          "t19sql02"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t19sql02"
+      }
+    },
+    "cbrd_26659_oos_sql05_delete": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql05_delete.sql",
+      "requirements": [
+        "OOS-SQL-05"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "evidence/ticket19/activation/cbrd_26659_oos_sql05_delete.spec",
+          "t19sql05"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t19sql05"
+      }
+    },
+    "cbrd_26659_oos_sql06_constraints": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_constraints.sql",
+      "requirements": [
+        "OOS-SQL-06"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "evidence/ticket19/activation/cbrd_26659_oos_sql06_constraints.spec",
+          "t19sql06c"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t19sql06c"
+      }
+    },
+    "cbrd_26659_oos_sql06_rollback": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_rollback.sql",
+      "requirements": [
+        "OOS-SQL-06"
+      ],
+      "single_session": true,
+      "flagged_for_user": false,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "evidence/ticket19/activation/cbrd_26659_oos_sql06_rollback.spec",
+          "t19sql06r"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t19sql06r"
+      }
+    },
+    "cbrd_26659_oos_sql06_triggers": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_triggers.sql",
+      "requirements": [
+        "OOS-SQL-06",
+        "OOS-SQL-01"
+      ],
+      "single_session": true,
+      "flagged_for_user": true,
+      "flagged_for_user_reason": "Specification, Review, sign-off and deferral: the user signs off on every answer promotion whose case touches a Specification gap or an observed-versus-normative disagreement. This is the case finding T19-F1 came out of, and its sixth group deliberately exercises the path where the pin contradicts OOS-REP-02's normative record gate. Kept here as well as in promotions.json so a manifest regenerated from this declaration alone cannot drop the gate (ticket 44 F2).",
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "evidence/ticket19/activation/cbrd_26659_oos_sql06_triggers.spec",
+          "t19sql06t"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t19sql06t"
+      }
+    }
+  }
+}

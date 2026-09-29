@@ -1,0 +1,16 @@
+PASS     comparator/t_cbrd_26659_rep04_chk_cmp: Has_oos_file  expected 0        got 0
+PASS     comparator/t_cbrd_26659_rep04_chk_cmp: Oos_num_recs  expected 0        got 0
+PASS     comparator/t_cbrd_26659_rep04_chk_cmp: Oos_recs_sumlen expected 0        got 0
+PASS     below_floor/t_cbrd_26659_rep04_chk_below: Has_oos_file expected 1        got 1
+PASS     below_floor/t_cbrd_26659_rep04_chk_below: Oos_num_recs expected 1        got 1
+PASS     below_floor/t_cbrd_26659_rep04_chk_below: Oos_recs_sumlen expected 4224     got 4224
+PASS     above_floor/t_cbrd_26659_rep04_chk_above: Has_oos_file expected 1        got 1
+PASS     above_floor/t_cbrd_26659_rep04_chk_above: Oos_num_recs expected 2        got 2
+PASS     above_floor/t_cbrd_26659_rep04_chk_above: Oos_recs_sumlen expected 4268     got 4268
+OBSERVE  floor_band/t_cbrd_26659_rep04_chk_band: Has_oos_file 1
+OBSERVE  floor_band/t_cbrd_26659_rep04_chk_band: Oos_num_recs 2
+OBSERVE  floor_band/t_cbrd_26659_rep04_chk_band: Oos_recs_sumlen 4264
+
+run_mode: client-server (csql over the cub_master on port 26659, cub_server t18rep04)
+observations (not assertions): 3
+RESULT: activation proven -- every asserted SHOW HEAP OOS observation holds.

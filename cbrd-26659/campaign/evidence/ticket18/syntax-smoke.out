@@ -1,0 +1,106 @@
+Execute OK. (0.000000 sec) Committed. (0.000000 sec) 
+Execute OK. (0.002001 sec) Committed. (0.000000 sec) 
+1 row affected. (0.000000 sec) Committed. (0.000000 sec) 
+
+=== <Result of SELECT Command in Line 4> ===
+
+           id    e_is_null     e_octets         e_ok    n_is_null     n_octets
+==============================================================================
+            1            0            0            1            1         NULL
+
+1 row selected. (0.001000 sec) Committed. (0.000000 sec) 
+Execute OK. (0.000000 sec) Committed. (0.000000 sec) 
+Execute OK. (0.001000 sec) Committed. (0.000000 sec) 
+1 row affected. (0.001000 sec) Committed. (0.000000 sec) 
+
+=== <Result of SELECT Command in Line 9> ===
+
+           id     f_octets     s_octets
+=======================================
+            1        20000           10
+
+1 row selected. (0.000000 sec) Committed. (0.000000 sec) 
+Execute OK. (0.000000 sec) Committed. (0.000000 sec) 
+Execute OK. (0.002000 sec) Committed. (0.000000 sec) 
+1 row affected. (0.000000 sec) Committed. (0.000000 sec) 
+
+=== <Result of SELECT Command in Line 13> ===
+
+           id     h_octets  h_md5               
+================================================
+            1           40  'b15af9cdabbaea0516866a33d8fd0f98'
+
+1 row selected. (0.001000 sec) Committed. (0.000000 sec) 
+Execute OK. (0.000000 sec) Committed. (0.000000 sec) 
+
+=== <Result of SELECT Command in Line 15> ===
+
+           id     h_octets
+==========================
+            1           40
+
+1 row selected. (0.000000 sec) Committed. (0.000000 sec) 
+
+In line 16, column 51,
+
+ERROR: before ' ); '
+STORAGE options can be set only on variable-type normal attributes of a class: 'n'.
+
+
+=== <Result of SELECT Command in Line 17> ===
+
+             n_classes
+======================
+                     0
+
+1 row selected. (0.004000 sec) Committed. (0.000000 sec) 
+
+=== <Result of EVALUATE Command in Line 18> ===
+
+  Result              
+======================
+  '[MARKER] csql reached the end of the file after the error above'
+
+Execute OK. (0.000000 sec) Committed. (0.000000 sec) 
+Execute OK. (0.000000 sec) Committed. (0.000000 sec) 
+Execute OK. (0.001000 sec) Committed. (0.000000 sec) 
+1 row affected. (0.001000 sec) Committed. (0.000000 sec) 
+
+=== <Result of SELECT Command in Line 22> ===
+
+           id     p_octets       p_disk  p_md5               
+=============================================================
+            1        32576        32584  '03b79d1800b1e7b602cbe85e0c07c830'
+
+1 row selected. (0.000000 sec) Committed. (0.000000 sec) 
+
+=== <Result of SELECT Command in Line 23> ===
+
+  Table_name            Class_oid             Heap_volume_id  Heap_file_id  Heap_header_page_id  Has_oos_file  Oos_volume_id  Oos_file_id  Oos_num_user_pages  Oos_page_size  Oos_num_recs       Oos_recs_sumlen    Oos_physical_bytes      Oos_unused_bytes
+============================================================================================================================================================================================================================================================
+  'dba.s_big'           '(0|209|5)'                        0          5184                 5185             1              0         5248                   4          16344             3                 32632                 65376                 32744
+
+1 row selected. (0.000000 sec) Committed. (0.000000 sec) 
+Execute OK. (0.000000 sec) Committed. (0.000000 sec) 
+Execute OK. (0.001000 sec) Committed. (0.000000 sec) 
+
+In the command from line 26,
+
+ERROR: The record cannot be stored because its size (16237 bytes) still exceeds the maximum record size (16236 bytes) even after moving large variable-length columns to out-of-row storage (OOS). Reduce the size of fixed-length or non-eligible columns.
+
+
+=== <Result of SELECT Command in Line 27> ===
+
+                n_rows
+======================
+                     0
+
+1 row selected. (0.001000 sec) Committed. (0.000000 sec) 
+
+=== <Result of EVALUATE Command in Line 28> ===
+
+  Result              
+======================
+  '[MARKER] end of smoke'
+
+Execute OK. (0.000000 sec) Committed. (0.000000 sec) 

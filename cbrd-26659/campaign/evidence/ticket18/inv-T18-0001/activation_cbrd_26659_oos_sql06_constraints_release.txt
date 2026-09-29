@@ -1,0 +1,13 @@
+PASS     create/t_cbrd_26659_sql06c: Has_oos_file             expected 0        got 0
+PASS     create/t_cbrd_26659_sql06c: Oos_num_recs             expected 0        got 0
+PASS     create/t_cbrd_26659_sql06c: Oos_recs_sumlen          expected 0        got 0
+PASS     fixture/t_cbrd_26659_sql06c: Has_oos_file            expected 1        got 1
+PASS     fixture/t_cbrd_26659_sql06c: Oos_num_recs            expected 1        got 1
+PASS     fixture/t_cbrd_26659_sql06c: Oos_recs_sumlen         expected 4224     got 4224
+PASS     after_pk_violation/t_cbrd_26659_sql06c: Has_oos_file expected 1        got 1
+OBSERVE  after_pk_violation/t_cbrd_26659_sql06c: Oos_num_recs 1
+OBSERVE  after_pk_violation/t_cbrd_26659_sql06c: Oos_recs_sumlen 4224
+
+run_mode: client-server (csql over the cub_master on port 26659, cub_server t19sql06c)
+observations (not assertions): 2
+RESULT: activation proven -- every asserted SHOW HEAP OOS observation holds.

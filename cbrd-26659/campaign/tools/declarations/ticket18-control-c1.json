@@ -1,0 +1,29 @@
+{
+  "declaration_version": 1,
+  "description": "Negative control C1 for ticket 18: the ONE case cbrd_26659_oos_rep10_many_stubs, run against a generated scenario carrying two planted defects, one per checking mechanism this ticket relies on. (a) The CTP comparison: one hex digit of the eighteen-column record's v18 digest is changed in a copy of the promoted answer -- v18 is one of the six columns that stay INLINE, so a comparison that only looked at demoted values would pass. (b) The spec-driven OOS-path evidence checker: the expected chunk count for that record is 11 instead of 12 in evidence/ticket18/controls/. Both must fail. Rebuild the scenario with evidence/ticket18/make_control_c1.sh, which only ever reads from the testcase repository. A checker-validation attempt gets no manifest and never reaches the coverage matrix.",
+  "repository": "testcases",
+  "runner": "ctp-sql",
+  "scenario": "sql/_36_guava/cbrd_26659",
+  "tier": "fast",
+  "page_size": 16384,
+  "run_mode": "client-server",
+  "cases": {
+    "cbrd_26659_oos_rep10_many_stubs": {
+      "path": "sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_rep10_many_stubs.sql",
+      "requirements": [
+        "OOS-REP-10",
+        "OOS-REP-02"
+      ],
+      "single_session": true,
+      "activation_check": {
+        "script": "activation_check_spec.sh",
+        "args": [
+          "evidence/ticket18/controls/cbrd_26659_oos_rep10_many_stubs.spec",
+          "t18c1"
+        ],
+        "channel": "show-heap-oos",
+        "database": "t18c1"
+      }
+    }
+  }
+}

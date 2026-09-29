@@ -1,0 +1,16 @@
+PASS     create/t_cbrd_26659_sql06t: Has_oos_file             expected 0        got 0
+PASS     create/t_cbrd_26659_sql06t: Oos_num_recs             expected 0        got 0
+PASS     create/t_cbrd_26659_sql06t: Oos_recs_sumlen          expected 0        got 0
+PASS     pre_trigger_inserts/t_cbrd_26659_sql06t: Has_oos_file expected 1        got 1
+PASS     pre_trigger_inserts/t_cbrd_26659_sql06t: Oos_num_recs expected 1        got 1
+PASS     pre_trigger_inserts/t_cbrd_26659_sql06t: Oos_recs_sumlen expected 4224     got 4224
+PASS     after_triggered_update/t_cbrd_26659_sql06t: Has_oos_file expected 1        got 1
+OBSERVE  after_triggered_update/t_cbrd_26659_sql06t: Oos_num_recs 1
+OBSERVE  after_triggered_update/t_cbrd_26659_sql06t: Oos_recs_sumlen 4224
+OBSERVE  insert_trigger_table/t_cbrd_26659_sql06t_ins: Has_oos_file 0
+OBSERVE  insert_trigger_table/t_cbrd_26659_sql06t_ins: Oos_num_recs 0
+OBSERVE  insert_trigger_table/t_cbrd_26659_sql06t_ins: Oos_recs_sumlen 0
+
+run_mode: client-server (csql over the cub_master on port 26659, cub_server t19sql06t)
+observations (not assertions): 5
+RESULT: activation proven -- every asserted SHOW HEAP OOS observation holds.
