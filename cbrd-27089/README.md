@@ -10,7 +10,7 @@ and in-place finalization. For the remaining medium failures, read the local
 diagnosis and bestspace assessment: the `f3144ab` / `fb567a6` comparison reproduces
 three ordering differences, but their upstream cause remains unconfirmed.
 
-Index updated: **2026-10-08 (Asia/Seoul)**. Documents retain their recorded source
+Index updated: **2026-10-13 (Asia/Seoul)**. Documents retain their recorded source
 revisions and verification limits; dates below describe each document's history.
 
 ## PR7927 design and reviewer documents
@@ -53,3 +53,9 @@ These explain earlier decisions. Older marker, raw-pointer and routing-probe des
 | [Routing-probe alternative research](design/probe-rebuild-research-b871ea386-codex.md) | Effective-key adapter proposal, feasibility and proof obligations | 2026-09-10 | 2026-09-10 | Preserve ticket context, navigation and verification evidence |
 | [Withdrawn inline RECDES POC](CBRD-27089-inline-recdes-poc_b81d943d2_codex.md) | Alternative implementation, bounded checks and decision limits | 2026-10-06 | 2026-10-07 | Preserve ticket context, navigation and verification evidence |
 | [PR7600 teaching book](teaching/report.md) | Consolidated explanation of partition routing, OOS ownership and the diff | 2026-09-10 | 2026-09-10 | Preserve ticket context, navigation and verification evidence |
+
+## Integrated analysis and decisions
+
+| File | What it contains | Created | Last modified | Why it was created |
+| --- | --- | --- | --- | --- |
+| [PR #7927: validated CI failure inventory and baseline alignment](ci_analysis_report_34a9072_codex.md) | PR #7927: validated CI failure inventory and baseline alignment | 2026-09-30 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |

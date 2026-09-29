@@ -1,139 +1,104 @@
-# PR #7927 CI evidence warning — `34a9072a`
+# PR #7927: validated CI failure inventory and baseline alignment
 
-## Decision boundary
+Updated 2026-09-30 KST. This report supersedes the earlier warning-only snapshots, retained in Git history.
 
-**This snapshot does not support a regression or root-cause conclusion.** It cannot safely determine whether the shell failures in gha-ci run [35857219636](https://github.com/CUBRID/cubrid/actions/runs/35857219636) are caused by CBRD-27089, the testcase branch, or unrelated/flaky behavior.
+## Decision
 
-The PR and exact commit identity are established. The collector returned a schema-v2 command result and manifest, but the installed collector predates the append-only observation format required by the current analyzer. It created no matching `observations/<id>/request.json` and `result.json`. In addition, all three raw indexes lack the current required `summary_sha256` binding. The analyzer safety gate therefore selected `warning` with `regression_conclusions_allowed=false`.
+**The 14 failures are not all ordering failures.** Three medium cases show row permutations. Nine cases have obsolete testcase expectations; the remaining two are CDC extraction failures also observed on the latest OOS integration run. No engine ordering repair is established yet.
 
-The raw records do show four shell failures, none of whose testcase paths is the CBRD-27089 testcase. That fact alone is not enough to classify causality: an engine change can break older tests, and the missing observation/integrity binding prevents treating this bundle as validated evidence.
+The user requested preserving existing unordered SELECT behavior and explicitly rejected adding ORDER BY merely to make these tests pass. The next controlled experiment aligns both testcase branches exactly to the latest OOS baseline and merges that engine baseline into PR #7927 before a fresh full CI run.
 
-## Identity
+## Validated evidence
 
-| Field | Value |
-|---|---|
-| Repository | `CUBRID/cubrid` |
-| PR | [#7927](https://github.com/CUBRID/cubrid/pull/7927) |
-| Title | `[CBRD-27089] Defer OOS writes until destination heap selection` |
-| Exact head | `34a9072a19fdd5baf420273992c136119e719503` |
-| Status snapshot | `2026-09-25T05:36:13Z` |
-| Collection result | `2026-09-25T05:36:21.111549505Z`, exit `0` |
-| Collector | `cubrid-ci 0.2.0 (31bd609fda78, release)` |
-| Evidence directory | `/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-7927/34a9072a19fdd5baf420273992c136119e719503` |
+- PR engine: `34a9072a19fdd5baf420273992c136119e719503`, [run 36102128913](https://github.com/CUBRID/cubrid/actions/runs/36102128913), attempt 1.
+- Current integration engine: `fb567a629cdb390fff920542173fa36f454c74a0`, [run 36570256001](https://github.com/CUBRID/cubrid/actions/runs/36570256001), attempt 1. This is newer than the PR's exact pre-change base `b8f3c4807470dbeb30b5113acb7dd99d2340347c`; it is not an exact-parent control.
+- Collector: `cubrid-ci 0.2.0 (45944012aaaa, release)`; PR collection at `2026-09-29T23:28:58.248231891Z`, integration collection at `2026-09-29T23:31:28.133735372Z`.
+- Each collection has a matching schema-valid terminal observation, command and manifest equality, summary identities/counts, metadata and declared files. All 780 raw files per bundle pass length and SHA-256 verification. The executable report gate permits `full` for both bundles.
+- Installation first encountered the old incompatible cache. That failed attempt is retained separately in `pr7927-20260930-evidence/result.json`; a new evidence root reacquired the remote data without altering the old bundle.
+- PR testcase revisions: public `7fb227854a00daca5a3ccd3a74160de4b7e1254a`, private `018fc45bb12a63d24f4d85315790437cbf7cdaae`.
+- Integration testcase revisions: public `bdba62aee0faec05abdd861518824c69b6c1b3c5`, private `c4b9d482fbd491a68510b2552df2c3cac91911fc`.
+- Exact testcase source objects for all failures are available locally. No binary/core collection was requested.
 
-The status snapshot, command result, and manifest all name the same PR and 40-character head SHA.
-
-## Raw suite states
-
-The following values are reported by the bundle but are not accepted as validated suite evidence because the observation is absent and the raw indexes fail the current schema.
-
-| Suite | Run / attempt | Raw verdict | Raw counts | Testcase revision |
-|---|---:|---|---|---|
-| `test_medium` | `35857219636 / 1` | pass | 444 passed; 0 failed; 444 total | public `7fb227854a00daca5a3ccd3a74160de4b7e1254a` |
-| `test_shell` | `35857219636 / 1` | fail | 1 passed; 4 failed; 5 total | private `018fc45bb12a63d24f4d85315790437cbf7cdaae` |
-| `test_sql` | `35857219636 / 1` | pass | 1,866 passed; 0 failed; 1,866 total | public `7fb227854a00daca5a3ccd3a74160de4b7e1254a` |
-
-The live status snapshot also reports both builds, medium, SQL, code style, cppcheck, license, memory-monitor, and PR-style as successful for the exact head. Shell is the only current failing gha-ci context.
-
-## Raw shell records
-
-These are observations from unvalidated raw files, not causal classifications.
-
-| Testcase | Recorded signature | Classification |
-|---|---|---|
-| `shell/_06_issues/_12_2h/bug_bts_9836/cases/bug_bts_9836.sh` | server `call_stack_dump_activation_list` output differs in cases 2 and 3 | PR relation `unknown`; confidence unavailable |
-| `shell/_06_issues/_14_2h/bug_bts_14120/cases/bug_bts_14120.sh` | server `call_stack_dump_activation_list` output differs in case 1 | PR relation `unknown`; confidence unavailable |
-| `shell/_37_elderberry/cbrd_23842_cdc/bug/cbrd_27064/cases/cbrd_27064.sh` | CDC delete/update extraction reports `rc=-10`, zero target records | PR relation `unknown`; confidence unavailable |
-| `shell/_37_elderberry/cbrd_23842_cdc/bug/cbrd_27075/cases/cbrd_27075.sh` | CDC extraction errors occur at all three tested page sizes; corruption count remains zero | PR relation `unknown`; confidence unavailable |
-
-The raw rerun planned five shell cases and recorded one pass plus these four failures. It does not expose a validated comparison run or repeat history sufficient to label any case flaky.
-
-## Validation and acquisition ledger
-
-| Check | Outcome |
-|---|---|
-| PR/commit identity | established |
-| Command result schema | valid |
-| Manifest schema | valid |
-| Three suite-summary schemas | individually valid |
-| Four shell failure-metadata schemas | individually valid; declared message/diff files exist |
-| Matching terminal observation | missing; no `observations/` directory exists |
-| Command-result/observation equality | not established |
-| Requested-suite reconciliation against observation | not established |
-| Raw-index schemas | invalid; each lacks required `summary_sha256` |
-| Acquisition ledger | unavailable because the observation is missing |
-| Binary evidence | not requested |
-| Analyzer report mode | `warning`; regression conclusions prohibited |
-
-No suite or shard can be labeled `retained`, `failed`, or `not_attempted` at acquisition level without the required observation ledger. The manifest reports all three suites as completed, but that is not a substitute for invocation-level acquisition proof.
-
-## Unknowns
-
-- Whether the collected raw responses are integrity-bound to the summaries and this exact collector invocation.
-- Whether any of the four shell failures is reproducible on the exact engine/testcase pair.
-- Whether each failure is introduced by the engine PR, by testcase-branch state, or is a pre-existing/flaky failure.
-- Whether a validated baseline run at the same testcase revisions produces the same signatures.
-
-## Required next action
-
-Install a `cubrid-ci` build containing the observation/integrity hardening at local commit `4594401` or newer, then take one fresh status snapshot and collect this same exact head again. The new bundle must contain a unique matching terminal observation and schema-valid raw indexes before the failures can be assigned to CBRD-27089, the testcase branch, or unrelated/flaky behavior.
-
-This action only recollects existing CI evidence; it does not rerun CI.
-
-
-## 2026-09-30 KST snapshot: run 36102128913
-
-**Warning: this collection is unvalidated. No regression or root-cause conclusion is supported.**
-
-This update supersedes the earlier snapshot for current-run inventory only. The earlier report is retained above. The user requested all-failure attribution and preservation of existing SELECT scan order; those causal/design conclusions remain unfinished.
-
-Exact commit: `34a9072a19fdd5baf420273992c136119e719503`. Collected at `2026-09-29T23:12:39.146191807Z` using `cubrid-ci 0.2.0 (31bd609fda78, release)`. Collection exit 0; analyzer gate returned `warning` and `regression_conclusions_allowed=false`.
-
-[Requested trigger](https://github.com/CUBRID/cubrid/pull/7927#issuecomment-5827803591); [selected run](https://github.com/CUBRID/cubrid/actions/runs/36102128913), attempt 1. Public HTML shows the September 25 `/run all` comment; exact comment-to-run linkage was not independently established by a collection observation.
-
-| Suite | Reported state/verdict | Planned | Run | Passed | Failures | Errors | Skipped |
+| Run | Suite | Planned | Run | Passed | Failures | Errors | Skipped |
 |---|---|---:|---:|---:|---:|---:|---:|
-| test_medium | completed / fail | 975 | 975 | 972 | 3 | 0 | 0 |
-| test_shell | completed / fail | 3286 | 3256 | 3246 | 10 | 0 | 30 |
-| test_sql | completed / fail | 17466 | 17466 | 17465 | 1 | 0 | 0 |
+| PR | test_medium | 975 | 975 | 972 | 3 | 0 | 0 |
+| PR | test_shell | 3286 | 3256 | 3246 | 10 | 0 | 30 |
+| PR | test_sql | 17466 | 17466 | 17465 | 1 | 0 | 0 |
+| Integration | test_medium | 975 | 975 | 975 | 0 | 0 | 0 |
+| Integration | test_shell | 3289 | 3259 | 3254 | 5 | 0 | 30 |
+| Integration | test_sql | 17471 | 17471 | 17471 | 0 | 0 | 0 |
 
-### Raw failure signatures — not causal classifications
+## All PR failures
 
-**The raw inventory contains more than row-permutation signatures:** error-code, utility usage, log-header, parameter-output and CDC extraction differences are recorded. This observation does not establish which changes introduced them.
-
-| Testcase | Recorded signature | Evidence |
+| Suite / testcase | Observed signature | PR relation / confidence |
 |---|---|---|
-| `medium/_02_xtests/cases/to_char_order_by.sql` | Recorded unordered SELECT row permutation differs. | [message](/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-7927/34a9072a19fdd5baf420273992c136119e719503/providers/github-actions/runs/36102128913/attempts/1/test_medium/failures/medium_02_xtests_cases_to_char_order_by_sql-81a7176eb9/message.txt) |
-| `medium/_02_xtests/cases/to_number_order_by.sql` | Recorded unordered SELECT row permutation differs. | [message](/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-7927/34a9072a19fdd5baf420273992c136119e719503/providers/github-actions/runs/36102128913/attempts/1/test_medium/failures/medium_02_xtests_cases_to_number_order_by_sql-2914e2cc1a/message.txt) |
-| `medium/_02_xtests/cases/to_timestamp_order_by.sql` | Recorded unordered SELECT row permutation differs. | [message](/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-7927/34a9072a19fdd5baf420273992c136119e719503/providers/github-actions/runs/36102128913/attempts/1/test_medium/failures/medium_02_xtests_cases_to_timestamp_order_by_sql-f88d9035bb/message.txt) |
-| `shell/_37_elderberry/cbrd_23842_cdc/bug/cbrd_27075/cases/cbrd_27075.sh` | CDC extraction errors at 4K/8K/16K; CONFIGS_OK=0; corruption=0. | [message](/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-7927/34a9072a19fdd5baf420273992c136119e719503/providers/github-actions/runs/36102128913/attempts/1/test_shell/failures/shell_37_elderberry_cbrd_23842_cdc_bug_cbrd_27075_cases_cbrd_27075_sh-f42063033e/message.txt) |
-| `shell/_06_issues/_15_1h/bug_bts_15912/cases/bug_bts_15912.sh` | Extra `upgradedb` entry in actual utility usage. | [message](/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-7927/34a9072a19fdd5baf420273992c136119e719503/providers/github-actions/runs/36102128913/attempts/1/test_shell/failures/shell_06_issues_15_1h_bug_bts_15912_cases_bug_bts_15912_sh-807266212f/message.txt) |
-| `shell/_32_features_930/issue_12504_show_log_header/_01_show_log_header/_02_relative_path/_01_csql/cases/_01_csql.sh` | Extra `System_metadata_version` field in actual log-header output. | [message](/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-7927/34a9072a19fdd5baf420273992c136119e719503/providers/github-actions/runs/36102128913/attempts/1/test_shell/failures/shell_32_features_930_issue_12504_show_log_header_01_show_log_header_02_relative-bd5f046f99/message.txt) |
-| `shell/_06_issues/_14_2h/bug_bts_14120/cases/bug_bts_14120.sh` | `call_stack_dump_activation_list` output mismatch. | [message](/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-7927/34a9072a19fdd5baf420273992c136119e719503/providers/github-actions/runs/36102128913/attempts/1/test_shell/failures/shell_06_issues_14_2h_bug_bts_14120_cases_bug_bts_14120_sh-2917c23aa5/message.txt) |
-| `shell/_06_issues/_12_2h/bug_bts_9836/cases/bug_bts_9836.sh` | `call_stack_dump_activation_list` output mismatch. | [message](/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-7927/34a9072a19fdd5baf420273992c136119e719503/providers/github-actions/runs/36102128913/attempts/1/test_shell/failures/shell_06_issues_12_2h_bug_bts_9836_cases_bug_bts_9836_sh-74957cfea4/message.txt) |
-| `shell/_32_features_930/issue_12504_show_log_header/_01_show_log_header/_03_absolute_path/_01_self_log/cases/_01_self_log.sh` | Extra `System_metadata_version` field in actual log-header output. | [message](/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-7927/34a9072a19fdd5baf420273992c136119e719503/providers/github-actions/runs/36102128913/attempts/1/test_shell/failures/shell_32_features_930_issue_12504_show_log_header_01_show_log_header_03_absolute-b71bf934be/message.txt) |
-| `shell/_06_issues/_25_1h/cbrd_25478/cases/cbrd_25478.sh` | Extra `System_metadata_version` field in actual log-header output. | [message](/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-7927/34a9072a19fdd5baf420273992c136119e719503/providers/github-actions/runs/36102128913/attempts/1/test_shell/failures/shell_06_issues_25_1h_cbrd_25478_cases_cbrd_25478_sh-b94dc3fbd6/message.txt) |
-| `shell/_32_features_930/issue_12504_show_log_header/_01_show_log_header/_01_basic_log/cases/_01_basic_log.sh` | Extra `System_metadata_version` field in actual log-header output. | [message](/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-7927/34a9072a19fdd5baf420273992c136119e719503/providers/github-actions/runs/36102128913/attempts/1/test_shell/failures/shell_32_features_930_issue_12504_show_log_header_01_show_log_header_01_basic_lo-ae20658d46/message.txt) |
-| `shell/_06_issues/_15_1h/bug_bts_16378/cases/bug_bts_16378.sh` | Extra `System_metadata_version` field in actual log-header output. | [message](/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-7927/34a9072a19fdd5baf420273992c136119e719503/providers/github-actions/runs/36102128913/attempts/1/test_shell/failures/shell_06_issues_15_1h_bug_bts_16378_cases_bug_bts_16378_sh-b38545cb8f/message.txt) |
-| `shell/_37_elderberry/cbrd_23842_cdc/bug/cbrd_27064/cases/cbrd_27064.sh` | CDC extraction `rc=-10`; delete 4/700, update 1/2400. | [message](/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-7927/34a9072a19fdd5baf420273992c136119e719503/providers/github-actions/runs/36102128913/attempts/1/test_shell/failures/shell_37_elderberry_cbrd_23842_cdc_bug_cbrd_27064_cases_cbrd_27064_sh-1e79382118/message.txt) |
-| `sql/_33_elderberry/cbrd_23844/cbrd_24337/cases/cbrd_24337.sql` | `create table _db_class`: expected -494, actual -493. | [message](/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-7927/34a9072a19fdd5baf420273992c136119e719503/providers/github-actions/runs/36102128913/attempts/1/test_sql/failures/sql_33_elderberry_cbrd_23844_cbrd_24337_cases_cbrd_24337_sql-c0d5024efe/message.txt) |
+| `medium/_02_xtests/cases/to_char_order_by.sql` | Unordered conversion SELECT returns a different permutation | unknown / high confidence in symptom, causal attribution pending |
+| `medium/_02_xtests/cases/to_number_order_by.sql` | Unordered conversion SELECT returns a different permutation | unknown / high confidence in symptom, causal attribution pending |
+| `medium/_02_xtests/cases/to_timestamp_order_by.sql` | Unordered conversion SELECT returns a different permutation | unknown / high confidence in symptom, causal attribution pending |
+| `shell/_37_elderberry/cbrd_23842_cdc/bug/cbrd_27075/cases/cbrd_27075.sh` | CDC extraction errors at all three page sizes | unlikely / high (also observed on integration) |
+| `shell/_06_issues/_15_1h/bug_bts_15912/cases/bug_bts_15912.sh` | Extra `upgradedb` utility entry | unlikely / high (stale answer) |
+| `shell/_32_features_930/issue_12504_show_log_header/_01_show_log_header/_02_relative_path/_01_csql/cases/_01_csql.sh` | Extra `System_metadata_version` field | unlikely / high (stale answer) |
+| `shell/_06_issues/_14_2h/bug_bts_14120/cases/bug_bts_14120.sh` | Old OOS error numbers in call-stack activation list answer | unlikely / high (stale answer) |
+| `shell/_06_issues/_12_2h/bug_bts_9836/cases/bug_bts_9836.sh` | Old OOS error numbers in call-stack activation list answer | unlikely / high (stale answer) |
+| `shell/_32_features_930/issue_12504_show_log_header/_01_show_log_header/_03_absolute_path/_01_self_log/cases/_01_self_log.sh` | Extra `System_metadata_version` field | unlikely / high (stale answer) |
+| `shell/_06_issues/_25_1h/cbrd_25478/cases/cbrd_25478.sh` | Extra `System_metadata_version` field | unlikely / high (stale answer) |
+| `shell/_32_features_930/issue_12504_show_log_header/_01_show_log_header/_01_basic_log/cases/_01_basic_log.sh` | Extra `System_metadata_version` field | unlikely / high (stale answer) |
+| `shell/_06_issues/_15_1h/bug_bts_16378/cases/bug_bts_16378.sh` | Extra `System_metadata_version` field | unlikely / high (stale answer) |
+| `shell/_37_elderberry/cbrd_23842_cdc/bug/cbrd_27064/cases/cbrd_27064.sh` | CDC delete/update extraction returns -10 | unlikely / high (also observed on integration) |
+| `sql/_33_elderberry/cbrd_23844/cbrd_24337/cases/cbrd_24337.sql` | `create table _db_class`: expected -494, actual -493 | unlikely / high (stale answer) |
 
-### Validation and acquisition limitations
+## Attribution and falsifiers
 
-- Command result, manifest, three summaries, and all fourteen failure metadata objects individually pass their current schemas. Declared message/diff files exist beneath their suite directories. All count equations reconcile and summary run/attempt identities match the command result.
-- No `observations/*/result.json` exists. There is no matching request/result pair, invocation acquisition ledger, or result-to-observation equality proof.
-- All three raw indexes fail the current schema: `summary_sha256` is required but absent. Individually valid summaries do not establish a validated evidence bundle.
-- All acquisition shard states remain unknown; absent observations cannot be reconstructed as retained/failed/not_attempted facts.
-- Binaries were not requested. No binary-budget or binary-presence conclusion is made.
-- Reported testcase revisions: public `7fb227854a00daca5a3ccd3a74160de4b7e1254a`; private `018fc45bb12a63d24f4d85315790437cbf7cdaae`. Both are reported as `tc/pr-7927`.
-- Reported build SHA matches the head; build provenance names run `35836821909`, while the selected test execution is `36102128913`. Build reuse needs preservation in a validated provenance record.
-- No exact-base paired reproduction was run. The user-reported two-CDC-only baseline is not independently verified in this snapshot.
+### Nine stale expectations — separate from ordering
 
-### Required next work
+**Observed:** The exact failed testcase revision differs from both the current PR testcase branch and integration testcase branch at the relevant expected output. The current answers add `upgradedb`, include/normalize `System_metadata_version`, expect -493 for `create table _db_class`, and replace OOS activation-list error numbers -1382/-1384/-1385 with -1383/-1385/-1386. The defining engine files (`src/base/error_code.h`, `src/base/system_parameter.c`, `src/parser/show_meta.c`, `src/transaction/log_manager.c`) are unchanged between exact base b8f3c4807 and PR head `34a9072a1`. The latest integration run does not list these nine failures.
 
-1. Obtain a collector installation compatible with the current observation and raw-index schemas; perform a new explicitly scoped collection. Do not fabricate missing observations or hashes to make the old snapshot pass.
-2. Validate the new terminal bundle and inspect exact testcase/answer revisions before assigning PR relations.
-3. Establish a paired reproduction on the PR and exact base using identical testcase revisions and database setup. Preserve current unordered SELECT behavior as the acceptance requirement; do not add ORDER BY to dismiss the difference.
-4. Review record serialization, MVCC sizing, insertion/relocation and heap page-selection differences only after the ordering symptom has a reproducible pass/fail loop. No specific engine fix is established here.
+**Inference:** These nine reported mismatches arise from stale testcase expectations, not SELECT order; a deferred-write regression is unlikely (high confidence). The PR itself does not introduce the printed constants or metadata field.
 
-Evidence root: `/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-7927/34a9072a19fdd5baf420273992c136119e719503`. Invocation receipts and validator assessment: `/tmp/pr7927-ci-analysis/`. Engine/testcase worktrees were unchanged; existing `cubrid-cci`, `cubrid-jdbc`, and `repro.sh` changes were preserved.
+**Unknown:** No new local replay of all nine shell/SQL cases was performed in this session. **Falsifier:** They continue to produce the same mismatches when the exact synchronized TC revisions run on the aligned engine. **Next action:** Inspect the freshly authorized full CI results using recorded testcase identities.
+
+### Two CDC failures — inherited integration scope
+
+**Observed:** Both exact testcase directories are unchanged between the recorded PR and integration revisions. Both runs show extraction errors for cbrd_27064 and cbrd_27075; cbrd_27064 returns -10 for delete/update extraction, and cbrd_27075 records extraction errors across 4K/8K/16K pages. The normative OOS context explicitly defers durable CDC history and leaves these cases enabled.
+
+**Inference:** The failures are unlikely to be introduced by this PR (high confidence for baseline overlap, not a fresh root-cause proof). **Unknown:** Exact-parent runtime reproduction and internal CDC failure sites remain outside this comparison. **Falsifier:** Matched base/head executions isolate a new PR-only CDC failure mechanism. **Next action:** Keep these visible and report any changed signature independently.
+
+### Three medium permutations — still require matched reproduction
+
+**Observed:** to_char_order_by, to_number_order_by, and to_timestamp_order_by each insert five small values and compare an unordered conversion SELECT before their explicitly ordered queries. The entire medium/_02_xtests directory has no diff between the failed testcase revision, current PR testcase branch, and current integration testcase branch. The integration run passes all 975 medium cases; the PR run fails these three.
+
+**Inference:** The symptom is real, but the two CI runs differ in engine revision and execution context. These observations do not isolate a deferred-write cause. PR relation unknown. **Falsifier for a PR-only explanation:** A matched exact-base/head run yields identical unordered outputs. **Next action:** Use the aligned CI run, then reproduce any remaining permutations with identical database initialization and testcase order; compare record bytes, OIDs/page placement and the actual query path before proposing an engine change. Do not change ORDER BY or expected row order as a workaround.
+
+## Current base has five shell failures
+
+The newest integration run has five failures, not only two CDC failures. In addition to cbrd_27064 and cbrd_27075, it records hide_cubrid_replay (masking-output difference), bug_bts_15156 (NOK), and cbrd_26349 (DBLink authentication/error-output differences). These three are not in the 14-failure PR inventory and are not attributed to this PR. Medium and SQL pass completely.
+
+## Testcase synchronization
+
+The user-supplied checker fetched published refs and found both PR testcase branches 15 integration-only commits behind, with 2 TC-only commits. The failed run predates even those PR tips: it tested `7fb227854`/`018fc45bb`, whereas the pre-reset published tips were `9fae5aa61`/`44a541c78`.
+
+At the user’s explicit instruction, both local and published `tc/pr-7927` branches were reset to their corresponding `origin/feature/oos-merge` tips. Force pushes used exact leases. Backup branches `backup/pr7927-before-reset-20260930-local` and `backup/pr7927-before-reset-20260930-published` retain the previous local and published tips in each TC repository. The post-reset checker passes with TC-only=0 and OOS-only=0 for both.
+
+This removes the PR-specific testcase commits from the new comparison, including its partition-loader expectation adjustment. A failure caused by that deliberately removed expectation must be distinguished from an engine regression.
+
+## Evidence inventory
+
+- PR bundle: `/home/vimkim/.local/share/cubrid-ci-data-observation-v1/github-actions/CUBRID-cubrid/pr-7927/34a9072a19fdd5baf420273992c136119e719503`
+- Integration bundle: `/home/vimkim/.local/share/cubrid-ci-data-observation-v1/github-actions/CUBRID-cubrid/pr-7990/fb567a629cdb390fff920542173fa36f454c74a0`
+- Each bundle: observations/<id>/{request,result}.json; manifest.json; providers/github-actions/runs/<run>/attempts/1/<suite>/summary.json; raw/index.json; failures/<stable_id>/{metadata.json,message.txt,diff.txt}.
+- Committed companion receipts: `pr7927-20260930-evidence/` contains result/assessment/inventory records, testcase comparisons, and before/after sync output. Full raw evidence remains in the local collector store.
+- Local medium attempt on `34a9072a1`: `/home/vimkim/tmp/pr7927-ordering/head-01`; native contained runner verified all 444 cases in the complete `_02_xtests` directory passed. All three ordering result files are byte-identical to their unchanged answers. This is not a full 975-case CI replay or an exact-base pair. Contained archive ownership warnings occurred, but all required verdict artifacts passed verification. The archive SHA-256 is recorded in the companion evidence.
+
+## Engine baseline merge
+
+The user authorized merging `origin/feature/oos-merge` into the PR workspace and retriggering CI. Merge `9232f111a7e7b6c71dbfa451db2812ae14766041` has parents `34a9072a1` and `fb567a629` and completed without conflicts. The stable patch ID of the PR-only diff is identical before and after merge (`0f31161dac4d8ba7ebc5aa59514fb1afb0f0826a`), preserving the deferred-write change while updating the baseline. The original workspace was fast-forwarded to this merge; its existing submodule working contents and `repro.sh` were verified unchanged.
+
+## Aligned CI handoff
+
+- Debug build and installation passed for merged engine `9232f111a`; all 35 configured CTest targets passed in 198.61 seconds. PR-only diff whitespace check passed.
+- Pushed `vimkim/cubrid:feat/oos-deferred-write` to `9232f111a7e7b6c71dbfa451db2812ae14766041`.
+- Posted exactly one [`/run all`](https://github.com/CUBRID/cubrid/pull/7927#issuecomment-5901188637) after checking that no same-PR run was active and no competing trigger had appeared.
+- Pickup verified in [run 36646767174](https://github.com/CUBRID/cubrid/actions/runs/36646767174): both debug/release builds and medium/SQL/shell contexts are pending on the pushed head. No stable gha-ci context is missing. `gh pr checks --required` reports no required checks for this branch; this does not imply CI passed.
+- Expected TC inputs are public `bdba62aee0faec05abdd861518824c69b6c1b3c5` and private `c4b9d482fbd491a68510b2552df2c3cac91911fc`. Validate the actual checkout receipts when the run completes.
+- Work item 242 remains waiting on this controlled CI run. Next action: collect its exact-head terminal evidence, classify remaining non-ordering failures separately, then investigate any reproduced ordering drift without changing the test queries.
+- Cleanup limitation: `git worktree remove /home/vimkim/gh/cb/pr7927-order-head` refused because the worktree contains submodules, even after clean deinitialization. The worktree and `investigate/pr7927-order-head` branch remain; no forced removal was used. The unused exact-parent worktree `/home/vimkim/gh/cb/pr7927-order-base` remains available for follow-up reproduction.
