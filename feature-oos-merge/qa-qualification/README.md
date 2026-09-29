@@ -19,10 +19,16 @@ Start with the [prioritized action report](qa_source_triage_1ec35f8_codex.md). T
 | [Develop-fix investigation](triage-develop-fixes_1ec35f8_codex.md) | Five missing baseline commits; direct CBRD-27407 match and integration dependencies. |
 | [RQG investigation](triage-rqg-vacuum_1ec35f8_codex.md) | Five analyzed server cores, heap-page lifecycle boundaries, ranked untested predictions, and required core/WAL evidence. |
 | [Expectation review](triage-expectations_1ec35f8_codex.md) | Justified diagnostic/layout candidates and assertions that must be preserved. |
+| [S04 reproduction follow-up](s04-reproduction_1ec35f8_codex.md) | Six later local attempts reproduced the selected feature cardinalities; develop also failed the assertions, so OOS-specific attribution remains unresolved. |
 | [Comparison JSON](comparison_1ec35f8_codex.json) | Complete parsed suite/testcase identities, findings, classifications and archived-page references for both snapshots. |
 | [Comparison parser](compare_qa_1ec35f8_codex.py) | Recompute inventory from authenticated fetcher snapshots, preserving suite identity and Java method names. |
 
 Source and testcase citations use pinned GitHub revisions. QA links point to the authenticated portal; private testcase links require repository access. The QA testcase deployment SHA remains unknown, so local testcase snapshots are supporting evidence only. Context citations point to committed revision `75f8b586`; the locally consulted OOS context contained additional working-tree notes, which are outside this publication.
+
+The comparison and source-triage reports describe the initial read-only investigation. The S04
+follow-up records a later reproduction batch and its native-runner evidence limits; it does not
+establish merge qualification. During repository cleanup on 2026-09-29, rerunning the parser
+against the retained raw archives reproduced the committed comparison JSON exactly.
 
 ## Integration contract
 
