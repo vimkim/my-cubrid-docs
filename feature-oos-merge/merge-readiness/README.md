@@ -6,6 +6,7 @@
 - [최신 실패 원장](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/failure-ledger_1ec35f8_codex.md)
 - [통합 후보 Standards/Spec 검토](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/integration-review_fb567a6_codex.md)
 - [통합 후보 로컬 검증](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/local-validation_fb567a6_codex.md)
+- [Testcase 브랜치 갱신과 동기화](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/testcase-sync_20260929_codex.md)
 - [현재 PR #7990 CI](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/ci-verified-pr7990_1ec35f8_codex.md)
 - [선행 PR #7927 CI](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/ci-verified-pr7927_34a9072_codex.md)
 - [준비된 소스 게시 대상과 승인 조건](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/source-publication_fb567a6_codex.md)

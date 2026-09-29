@@ -19,3 +19,9 @@ Historical analyses and accepted decisions retain their original revision and ve
 | [OOS 진행 상황과 테스트 실패 보고](merge-readiness/progress-report_1ec35f8_codex.md) | OOS 진행 상황과 테스트 실패 보고 | 2026-09-29 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
 | [OOS 완료 보고와 머지 준비 — 인터뷰](merge-readiness/review.md) | OOS 완료 보고와 머지 준비 — 인터뷰 | 2026-09-29 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
 | [develop 동기화 커밋 게시 준비](merge-readiness/source-publication_fb567a6_codex.md) | develop 동기화 커밋 게시 준비 | 2026-09-29 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+
+## Integrated analysis and decisions
+
+| File | What it contains | Created | Last modified | Why it was created |
+| --- | --- | --- | --- | --- |
+| [Testcase 브랜치 갱신과 CI 동기화](merge-readiness/testcase-sync_20260929_codex.md) | Testcase 브랜치 갱신과 CI 동기화 | 2026-09-29 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
