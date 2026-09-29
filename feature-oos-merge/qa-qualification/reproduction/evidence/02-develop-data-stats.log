@@ -1,0 +1,86 @@
+
+CLASS STATISTICS
+****************
+ Class name: t1 Timestamp: Tue Sep 29 16:36:53 2026
+ Total pages in class heap: 461
+ Total objects: 100000
+ Number of attributes: 7
+ Attribute: col7 (character varying)
+    Number of Distinct Values: 500
+    B+tree statistics:
+        Index: idx6 , BTID: { 0 , 6464 }
+        Cardinality: 500 (500) , Total pages: 526 , Leaf pages: 24 , Height: 2
+
+ Attribute: col6 (character varying)
+    Number of Distinct Values: 100
+    B+tree statistics:
+        Index: idx5 , BTID: { 0 , 6144 }
+        Cardinality: 100 (100) , Total pages: 307 , Leaf pages: 5 , Height: 2
+
+ Attribute: col5 (character varying)
+    Number of Distinct Values: 2
+    B+tree statistics:
+        Index: idx3 , BTID: { 0 , 5952 }
+        Cardinality: 2 (2) , Total pages: 153 , Leaf pages: 1 , Height: 2
+
+ Attribute: col4 (character varying)
+    Number of Distinct Values: 4
+    B+tree statistics:
+        Index: idx2 , BTID: { 0 , 5760 }
+        Cardinality: 4 (4) , Total pages: 155 , Leaf pages: 1 , Height: 2
+
+ Attribute: col3 (character varying)
+    Number of Distinct Values: 10
+    B+tree statistics:
+        Index: idx1 , BTID: { 0 , 5568 }
+        Cardinality: 10 (10) , Total pages: 163 , Leaf pages: 1 , Height: 2
+
+ Attribute: col2 (character varying)
+    Number of Distinct Values: 99298
+    B+tree statistics:
+        Index: idx4 , BTID: { 0 , 5376 }
+        Cardinality: 100000 (100000) , Total pages: 132 , Leaf pages: 130 , Height: 2
+
+ Attribute: col1 (character varying)
+    Number of Distinct Values: 99298
+    B+tree statistics:
+        Index: idx , BTID: { 0 , 5120 }
+        Cardinality: 100000 (100000,100000,100000) , Total pages: 211 , Leaf pages: 209 , Height: 2
+
+
+
+
+CLASS STATISTICS
+****************
+ Class name: t2 Timestamp: Tue Sep 29 16:36:53 2026
+ Total pages in class heap: 5
+ Total objects: 500
+ Number of attributes: 2
+ Attribute: col2 (character varying)
+    Number of Distinct Values: 500
+
+ Attribute: col1 (character varying)
+    Number of Distinct Values: 500
+    B+tree statistics:
+        Index: idx , BTID: { 0 , 7104 }
+        Cardinality: 500 (500,500) , Total pages: 4 , Leaf pages: 2 , Height: 2
+
+
+
+Execute OK. (0.000040 sec) Committed. (0.000063 sec) 
+
+=== <Result of SELECT Command in Line 4> ===
+
+              count(*)  count(distinct col1)  count(distinct col2)  count(distinct col3)  count(distinct col4)  count(distinct col5)  count(distinct col6)  count(distinct col7)           count(col1)           count(col2)           count(col3)           count(col4)           count(col5)           count(col6)           count(col7)
+==========================================================================================================================================================================================================================================================================================================================================
+                100000                100000                100000                    10                     4                     2                   100                   500                100000                100000                100000                100000                100000                100000                100000
+
+1 row selected. (0.509900 sec) Committed. (0.000016 sec) 
+
+=== <Result of SELECT Command in Line 8> ===
+
+              count(*)  count(distinct col1)  count(distinct col2)           count(col1)           count(col2)
+==============================================================================================================
+                   500                   500                   500                   500                   500
+
+1 row selected. (0.006550 sec) Committed. (0.000007 sec) 
