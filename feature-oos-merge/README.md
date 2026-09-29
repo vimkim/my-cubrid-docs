@@ -25,3 +25,10 @@ Historical analyses and accepted decisions retain their original revision and ve
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
 | [Testcase 브랜치 갱신과 CI 동기화](merge-readiness/testcase-sync_20260929_codex.md) | Testcase 브랜치 갱신과 CI 동기화 | 2026-09-29 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+
+## Integrated analysis and decisions
+
+| File | What it contains | Created | Last modified | Why it was created |
+| --- | --- | --- | --- | --- |
+| [새 통합 조합 CI 시작](merge-readiness/ci-start_fb567a6_codex.md) | 새 통합 조합 CI 시작 | 2026-09-29 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [OOS 진행 상황 요약](merge-readiness/team-lead-summary_20260929_codex.md) | OOS 진행 상황 요약 | 2026-09-29 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |

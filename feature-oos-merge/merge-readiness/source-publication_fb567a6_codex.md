@@ -1,6 +1,8 @@
 # develop 동기화 커밋 게시 준비
 
-현재 원격 `feature/oos-merge`는 `1ec35f86c5e43b9ca86d81e202c68899f8ce4f21`, develop은 `f1bd99ed43a134383bc0be1d766a6f121601a499`이다. 2026-09-29 21:30 KST에 다시 확인했다.
+**게시 완료:** 사용자 “do them” 승인에 따라 엔진 `fb567a629cdb390fff920542173fa36f454c74a0`을 origin/feature/oos-merge에 일반 push하고 원격 PR head 일치를 확인했다. 첫 source push 승인 조건은 충족됐다. 최초 push는 임시 로컬 브랜치의 PR base 설정이 없어 hook에서 중단됐고, 확인된 base develop을 일회성 환경 변수로 지정해 같은 검사를 통과했다. hook은 비활성화하지 않았다.
+
+아래는 게시 전 준비 기록이다. 당시 원격 `feature/oos-merge`는 `1ec35f86c5e43b9ca86d81e202c68899f8ce4f21`, develop은 `f1bd99ed43a134383bc0be1d766a6f121601a499`이다. 2026-09-29 21:30 KST에 다시 확인했다.
 
 게시 대상은 로컬 `integration/oos-readiness-221`의 `fb567a629cdb390fff920542173fa36f454c74a0`이다. 두 부모는 위 OOS head와 develop이다. 목적은 develop의 11개 커밋을 기존 OOS 이력을 보존해 통합하는 것이다. 별도 기능 패치와 테스트 실행기 수정은 없다. 새 기능 선행 PR은 이후 정해진 순서로 처리한다.
 

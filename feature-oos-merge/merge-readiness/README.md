@@ -1,13 +1,15 @@
 # OOS 기술적 머지 준비 — 2026-09-29
 
-**현재 준비 미완료.** 원격 PR #7990은 `1ec35f8`, 로컬 develop 통합 후보는 `fb567a6`이다. 실제 develop 머지와 테스트 실행기 수정은 범위에서 제외한다.
+**현재 준비 미완료.** 원격 PR #7990은 `fb567a6`이며 testcase 동기화 후 전체 CI를 요청했다. 실제 develop 머지와 테스트 실행기 수정은 범위에서 제외한다.
 
+- [팀장님용 간략 보고](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/team-lead-summary_20260929_codex.md)
 - [진행 상황과 전체 실패 보고](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/progress-report_1ec35f8_codex.md)
 - [최신 실패 원장](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/failure-ledger_1ec35f8_codex.md)
 - [통합 후보 Standards/Spec 검토](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/integration-review_fb567a6_codex.md)
 - [통합 후보 로컬 검증](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/local-validation_fb567a6_codex.md)
 - [Testcase 브랜치 갱신과 동기화](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/testcase-sync_20260929_codex.md)
-- [현재 PR #7990 CI](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/ci-verified-pr7990_1ec35f8_codex.md)
+- [새 통합 조합 CI 시작](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/ci-start_fb567a6_codex.md)
+- [이전 head PR #7990 CI](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/ci-verified-pr7990_1ec35f8_codex.md)
 - [선행 PR #7927 CI](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/ci-verified-pr7927_34a9072_codex.md)
 - [준비된 소스 게시 대상과 승인 조건](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/source-publication_fb567a6_codex.md)
 - [확정 실행 계약](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/execution-contract.md)
