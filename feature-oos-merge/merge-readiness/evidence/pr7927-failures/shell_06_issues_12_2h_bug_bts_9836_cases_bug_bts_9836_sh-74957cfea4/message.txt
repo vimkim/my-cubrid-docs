@@ -1,0 +1,661 @@
+
+EnvIdentify: EnvId=local[parallel-25]
+Hostname: cubrid-arc-586zc-runner-h6fhh-workflow
+bug_bts_9836-1 : OK
+bug_bts_9836-2 : NOK
+diff log2.txt log2.answer failed
+[C*] call_stack_dump_activation_list=-3,-2,-7,-13,-14,-17,-19 |	[C*] call_stack_dump_activation_list=-3,-2,-7,-13,-14,-17,-19
+[S*] call_stack_dump_activation_list=-3,-2,-7,-13,-14,-17,-19 |	[S*] call_stack_dump_activation_list=-3,-2,-7,-13,-14,-17,-19
+bug_bts_9836-3 : NOK
+diff log3.txt log3.answer failed
+[C ] call_stack_dump_activation_list= ()			[C ] call_stack_dump_activation_list= ()
+[S*] call_stack_dump_activation_list=-2,-7,-13,-14,-17,-19,-2 |	[S*] call_stack_dump_activation_list=-2,-7,-13,-14,-17,-19,-2
+15:46:56----/home/cubrid-testcases-private-ex/shell/_06_issues/_12_2h/bug_bts_9836/cases--- time=59
+============================= CONSOLE OUTPUT =============================
+++ begin_time=0
+++ end_time=0
+++ need_count_time=1
+++ cubrid_major=
+++ cubrid_minor=
+++ IGNORE_TEST_PERFORMANCE=
+++ '[' '!' -n en_US ']'
++++ get_os
+++++ uname
++++ osname=Linux
++++ case "$osname" in
++++ echo Linux
+++ export OS=Linux
+++ OS=Linux
+++ '[' Linux = Windows_NT ']'
+++ source /home/cubrid-testtools/CTP/shell/init_path/shell_utils.sh
++ init test
+++ date
++ echo '[INFO] TEST START (Fri Sep 25 15:45:57 KST 2026)'
+[INFO] TEST START (Fri Sep 25 15:45:57 KST 2026)
+++ pwd
++ cur_path=/home/cubrid-testcases-private-ex/shell/_06_issues/_12_2h/bug_bts_9836/cases
++ cd /home/cubrid-testcases-private-ex/shell/_06_issues/_12_2h/bug_bts_9836/cases
++ case_no=1
++ full_name=bug_bts_9836.sh
++ answer_no=1
++ mode=test
++ '[' 1 -eq 1 ']'
+++ get_curr_second
++++ date +%s
+++ str=1790318757
+++ echo 1790318757
++ begin_time=1790318757
+++ date +%Y-%m-%d
++ date_str=2026-09-25
+++ date +%H:%M:%S
++ time_str=15:45:57
++ echo 15:45:57----/home/cubrid-testcases-private-ex/shell/_06_issues/_12_2h/bug_bts_9836/cases---- test start
+/home/cubrid-testtools/CTP/shell/init_path/init.sh: line 750: /home/cubrid-testcases-private-ex/shell/_06_issues/_12_2h/bug_bts_9836/cases/: Is a directory
++ '[' Linux = Windows_NT ']'
++ export REAL_INIT_PATH=/home/cubrid-testtools/CTP/shell/init_path
++ REAL_INIT_PATH=/home/cubrid-testtools/CTP/shell/init_path
+++ cubrid_rel
+++ grep 32bit
+++ wc -l
++ is_cubrid_32bits=0
++ '[' 0 == 1 ']'
++ CUBRID_BITS=64
++ export CUBRID_BITS
++ rm -rf /home/CUBRID/log/manager /home/CUBRID/log/pl
++ '[' Linux = AIX ']'
++ objext=_objects
++ schext=_schema
++ idxext=_indexes
++ trgext=_trigger
++ PATH=/home/cubrid-testtools/CTP/shell/init_path/../../bin:/home/cubrid-testtools/CTP/shell/init_path/../../common/script:/home/cubrid-testtools/CTP/bin:/home/cubrid-testtools/CTP/common/script:/home/CUBRID/bin:/usr/sbin:/home/cubrid-testtools/CTP/bin:/home/cubrid-testtools/CTP/common/script:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
++ '[' Linux = Windows_NT ']'
++ CLASSPATH=/home/CUBRID/jdbc/cubrid_jdbc.jar:/home/cubrid-testtools/CTP/shell/init_path/commonforjdbc.jar:.
++ LD_LIBRARY_PATH=/home/cubrid-testtools/CTP/shell/init_path/commonforc/lib:/home/CUBRID/lib:/home/CUBRID/cci/lib:
++ rm '/home/CUBRID/log/server/*.err'
++ cubrid service stop
+++ cubrid service is not running.
++ pkill cub
++ chmod u+x /home/cubrid-testtools/CTP/shell/init_path/cubrid
++ PATH=/home/cubrid-testtools/CTP/shell/init_path:/usr/lib/jvm/java-1.8.0/bin:/home/cubrid-testtools/CTP/shell/init_path/../../bin:/home/cubrid-testtools/CTP/shell/init_path/../../common/script:/home/cubrid-testtools/CTP/bin:/home/cubrid-testtools/CTP/common/script:/home/CUBRID/bin:/usr/sbin:/home/cubrid-testtools/CTP/bin:/home/cubrid-testtools/CTP/common/script:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
++ export PATH
++ export CLASSPATH
++ export LD_LIBRARY_PATH
++ export LIBRARY_PATH
+++ ini.sh -s %BROKER1 /home/CUBRID/conf/cubrid_broker.conf SERVICE
+++ grep -v grep
+++ grep -iw ON
+++ wc -l
++ isAvailableServiceForBroker1=1
++ '[' 1 -ne 0 ']'
+++ ini.sh -s %BROKER1 /home/CUBRID/conf/cubrid_broker.conf BROKER_PORT
++ broker_port=13091
++ sed -i 's@<port>[0-9]*</port>@<port>13091</port>@g' /home/cubrid-testtools/CTP/shell/init_path/shell_config.xml
++ '[' test = test ']'
++ run_mode=1
+++ echo bug_bts_9836
++ case_name=bug_bts_9836
++ result_file=bug_bts_9836.result
++ '[' -f bug_bts_9836.tar ']'
++ '[' 1 -eq 1 ']'
++ '[' -f bug_bts_9836.result ']'
++ rm bug_bts_9836.result
++ touch bug_bts_9836.result
++ export OS
++ set -x
++ rm -f /home/CUBRID/log/cub_server.err
++ db_name=bug_9836
++ mkdir bug_9836
++ cd bug_9836
++ cubrid_createdb --db-volume-size=20M bug_9836
++ parse_build_version
+++ cubrid_rel
+++ grep CUBRID
+++ awk -F '(' '{print $2}'
+++ sed 's/)//g'
++ build_ver='11.5.0.2632-34a9072 '
++ cubrid_major=11
+++ echo 11.5.0.2632-34a9072
+++ awk -F . '{print $2}'
++ cubrid_minor=5
+++ grep debug
+++ cubrid_rel
+++ wc -l
++ isDebug=1
++ '[' 1 -eq 1 ']'
++ IGNORE_TEST_PERFORMANCE=TRUE
++ '[' 11 -ge 9 -a 5 -gt 1 ']'
++ cubrid createdb --db-volume-size=20M bug_9836 en_US
+Creating database with 64.0M size using locale en_US. The total amount of disk space needed is 1.1G.
+
+CUBRID 11.5.0 (11.5.0.2632) (64 optdebug build)
+
++ cd ..
++ change_db_parameter call_stack_dump_activation_list=-5,-15
++ '[' Linux = Windows_NT ']'
++ '[' -f /home/CUBRID/conf/cubrid.conf.org ']'
++ cp /home/CUBRID/conf/cubrid.conf /home/CUBRID/conf/cubrid.conf.org
++ change_parameter /home/CUBRID/conf/cubrid.conf call_stack_dump_activation_list=-5,-15
++ filename=/home/CUBRID/conf/cubrid.conf
++ parameter=call_stack_dump_activation_list=-5,-15
++ key=call_stack_dump_activation_list
++ value=-5,-15
+++ echo call_stack_dump_activation_list
+++ sed 's/^ *//g'
++ key=call_stack_dump_activation_list
+++ echo call_stack_dump_activation_list
+++ sed 's/ *$//g'
++ key=call_stack_dump_activation_list
++ '[' -f /home/CUBRID/conf/cubrid.conf ']'
++ '[' call_stack_dump_activation_list '!=' '' ']'
++ cat /home/CUBRID/conf/cubrid.conf
++ grep -v '^call_stack_dump_activation_list *='
++ echo call_stack_dump_activation_list=-5,-15
++ cat /home/CUBRID/conf/cubrid.conf.bak
++ rm /home/CUBRID/conf/cubrid.conf.bak
++ change_db_parameter call_stack_dump_on_error=no
++ '[' Linux = Windows_NT ']'
++ '[' -f /home/CUBRID/conf/cubrid.conf.org ']'
++ change_parameter /home/CUBRID/conf/cubrid.conf call_stack_dump_on_error=no
++ filename=/home/CUBRID/conf/cubrid.conf
++ parameter=call_stack_dump_on_error=no
++ key=call_stack_dump_on_error
++ value=no
+++ echo call_stack_dump_on_error
+++ sed 's/^ *//g'
++ key=call_stack_dump_on_error
+++ echo call_stack_dump_on_error
+++ sed 's/ *$//g'
++ key=call_stack_dump_on_error
++ '[' -f /home/CUBRID/conf/cubrid.conf ']'
++ '[' call_stack_dump_on_error '!=' '' ']'
++ cat /home/CUBRID/conf/cubrid.conf
++ grep -v '^call_stack_dump_on_error *='
++ echo call_stack_dump_on_error=no
++ cat /home/CUBRID/conf/cubrid.conf.bak
++ rm /home/CUBRID/conf/cubrid.conf.bak
++ cubrid service restart
+++ cubrid service is not running.
+@ cubrid master start
+++ cubrid master start: success
+@ cubrid broker start
+++ cubrid broker start: success
+@ cubrid manager server start
+++ cubrid manager server start: success
++ cubrid server start bug_9836
+@ cubrid server start: bug_9836
+
+This may take a long time depending on the amount of recovery works to do.
+
+CUBRID 11.5.0 (11.5.0.2632) (64 optdebug build)
+
+++ cubrid server start: success
++ sleep 5
++ cubrid paramdump bug_9836
++ grep call_stack_dump_activation_list
++ sleep 5
++ compare_result_between_files log1.txt log1.answer
++ cci_driver=
++ server=
++ '[' 2 -lt 2 ']'
++ '[' -f /home/CUBRID/qa.conf ']'
+++ get_best_compat_file log1.txt
+++ suffix_os=
+++ best_driver=
+++ best_server=
+++ fileName=log1.txt
+++ current_server=
+++ cci_driver=
+++ newfilename=
+++ '[' Linux = Windows_NT ']'
+++ '[' Linux = AIX ']'
+++ awk -F _D '{print $NF}'
+++ grep -E '_D[0-9\.]+'
+++ ls -l 'log1.txt*_D*'
+ls: cannot access 'log1.txt*_D*': No such file or directory
++++ cat listdrv
++++ wc -l
+++ '[' 0 -eq 0 ']'
+++ '[' -f log1.txt ']'
+++ newfilename=log1.txt
+++ echo log1.txt
+++ return 1
++ left=log1.txt
+++ get_best_compat_file log1.answer
+++ suffix_os=
+++ best_driver=
+++ best_server=
+++ fileName=log1.answer
+++ current_server=
+++ cci_driver=
+++ newfilename=
+++ '[' Linux = Windows_NT ']'
+++ '[' Linux = AIX ']'
+++ ls -l 'log1.answer*_D*'
+++ grep -E '_D[0-9\.]+'
+++ awk -F _D '{print $NF}'
+ls: cannot access 'log1.answer*_D*': No such file or directory
++++ cat listdrv
++++ wc -l
+++ '[' 0 -eq 0 ']'
+++ '[' -f log1.answer ']'
+++ newfilename=log1.answer
+++ echo log1.answer
+++ return 1
++ right=log1.answer
++ '[' log1.txt == '' ']'
++ '[' log1.answer == '' ']'
++ dos2unix log1.txt
+dos2unix: converting file log1.txt to Unix format...
++ dos2unix log1.answer
+dos2unix: converting file log1.answer to Unix format...
++ echo 'start to compare files: diff log1.txt log1.answer'
+start to compare files: diff log1.txt log1.answer
++ '[' '' = error ']'
++ '[' '' = sort ']'
++ '[' '' = error ']'
++ '[' '' = sort ']'
++ diff_ignore_lineno log1.txt log1.answer -b
++ local f1=log1.txt
++ local f2=log1.answer
++ local op=-b
++ local tmp1=log1.txt_temp_diff
++ local tmp2=log1.answer_temp_diff
++ cp -f log1.txt log1.txt_temp_diff
++ cp -f log1.answer log1.answer_temp_diff
++ mask_exprs=(-e "s/Command in Line[[:space:]]*[0-9][0-9]*/Command in Line ?/g" -e "s/의[[:space:]]*결과,[[:space:]]*명령어[[:space:]]*라인[[:space:]]*[0-9][0-9]*/의 결과, 명령어 라인 ?/g" -e 's/��[[:space:]]*���,[[:space:]]*��ɾ�[[:space:]]*����[[:space:]]*[0-9][0-9]*/�� ���, ��ɾ� ���� ?/g' -e "s/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g" -e "s/라인[[:space:]]*[0-9][0-9]*,[[:space:]]*열[[:space:]]*[0-9][0-9]*,/라인 ?, 열 ?,/g" -e 's/����[[:space:]]*[0-9][0-9]*,[[:space:]]*��[[:space:]]*[0-9][0-9]*,/���� ?, �� ?,/g' -e "s/In the command from line[ 0-9]*/In the command from line ?/g" -e "s/라인[[:space:]]*[0-9][0-9]*,/라인 ?,/g" -e 's/����[[:space:]]*[0-9][0-9]*,/���� ?,/g' -e "s/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g" -e "s/In schema[0-9]* line [0-9]*/In schema? line ?/g" -e "s/In indexes[0-9]* line [0-9]*/In indexes? line ?/g")
++ local -a mask_exprs
++ LC_ALL=C
++ sed -i -e 's/Command in Line[[:space:]]*[0-9][0-9]*/Command in Line ?/g' -e 's/의[[:space:]]*결과,[[:space:]]*명령어[[:space:]]*라인[[:space:]]*[0-9][0-9]*/의 결과, 명령어 라인 ?/g' -e 's/��[[:space:]]*���,[[:space:]]*��ɾ�[[:space:]]*����[[:space:]]*[0-9][0-9]*/�� ���, ��ɾ� ���� ?/g' -e 's/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,[[:space:]]*열[[:space:]]*[0-9][0-9]*,/라인 ?, 열 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,[[:space:]]*��[[:space:]]*[0-9][0-9]*,/���� ?, �� ?,/g' -e 's/In the command from line[ 0-9]*/In the command from line ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,/라인 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,/���� ?,/g' -e 's/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g' -e 's/In schema[0-9]* line [0-9]*/In schema? line ?/g' -e 's/In indexes[0-9]* line [0-9]*/In indexes? line ?/g' log1.txt_temp_diff
++ LC_ALL=C
++ sed -i -e 's/Command in Line[[:space:]]*[0-9][0-9]*/Command in Line ?/g' -e 's/의[[:space:]]*결과,[[:space:]]*명령어[[:space:]]*라인[[:space:]]*[0-9][0-9]*/의 결과, 명령어 라인 ?/g' -e 's/��[[:space:]]*���,[[:space:]]*��ɾ�[[:space:]]*����[[:space:]]*[0-9][0-9]*/�� ���, ��ɾ� ���� ?/g' -e 's/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,[[:space:]]*열[[:space:]]*[0-9][0-9]*,/라인 ?, 열 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,[[:space:]]*��[[:space:]]*[0-9][0-9]*,/���� ?, �� ?,/g' -e 's/In the command from line[ 0-9]*/In the command from line ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,/라인 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,/���� ?,/g' -e 's/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g' -e 's/In schema[0-9]* line [0-9]*/In schema? line ?/g' -e 's/In indexes[0-9]* line [0-9]*/In indexes? line ?/g' log1.answer_temp_diff
++ diff log1.txt_temp_diff log1.answer_temp_diff -b
++ write_ok
++ '[' -z '' ']'
++ echo '----------------- 1 : OK'
+----------------- 1 : OK
++ echo 'bug_bts_9836-1 : OK'
++ let 'case_no = case_no + 1'
++ let 'answer_no = answer_no + 1'
++ change_db_parameter call_stack_dump_activation_list=-3,default,-4
++ '[' Linux = Windows_NT ']'
++ '[' -f /home/CUBRID/conf/cubrid.conf.org ']'
++ change_parameter /home/CUBRID/conf/cubrid.conf call_stack_dump_activation_list=-3,default,-4
++ filename=/home/CUBRID/conf/cubrid.conf
++ parameter=call_stack_dump_activation_list=-3,default,-4
++ key=call_stack_dump_activation_list
++ value=-3,default,-4
+++ echo call_stack_dump_activation_list
+++ sed 's/^ *//g'
++ key=call_stack_dump_activation_list
+++ echo call_stack_dump_activation_list
+++ sed 's/ *$//g'
++ key=call_stack_dump_activation_list
++ '[' -f /home/CUBRID/conf/cubrid.conf ']'
++ '[' call_stack_dump_activation_list '!=' '' ']'
++ cat /home/CUBRID/conf/cubrid.conf
++ grep -v '^call_stack_dump_activation_list *='
++ echo call_stack_dump_activation_list=-3,default,-4
++ cat /home/CUBRID/conf/cubrid.conf.bak
++ rm /home/CUBRID/conf/cubrid.conf.bak
++ change_db_parameter call_stack_dump_on_error=no
++ '[' Linux = Windows_NT ']'
++ '[' -f /home/CUBRID/conf/cubrid.conf.org ']'
++ change_parameter /home/CUBRID/conf/cubrid.conf call_stack_dump_on_error=no
++ filename=/home/CUBRID/conf/cubrid.conf
++ parameter=call_stack_dump_on_error=no
++ key=call_stack_dump_on_error
++ value=no
+++ sed 's/^ *//g'
+++ echo call_stack_dump_on_error
++ key=call_stack_dump_on_error
+++ echo call_stack_dump_on_error
+++ sed 's/ *$//g'
++ key=call_stack_dump_on_error
++ '[' -f /home/CUBRID/conf/cubrid.conf ']'
++ '[' call_stack_dump_on_error '!=' '' ']'
++ cat /home/CUBRID/conf/cubrid.conf
++ grep -v '^call_stack_dump_on_error *='
++ echo call_stack_dump_on_error=no
++ cat /home/CUBRID/conf/cubrid.conf.bak
++ rm /home/CUBRID/conf/cubrid.conf.bak
++ cubrid service restart
+@ cubrid broker stop
+++ cubrid broker stop: success
+@ cubrid manager server stop
+++ cubrid manager server stop: success
+@ cubrid master stop
+++ cubrid master stop: success
+@ cubrid master start
+++ cubrid master start: success
+@ cubrid broker start
+++ cubrid broker start: success
+@ cubrid manager server start
+++ cubrid manager server start: success
++ cubrid server start bug_9836
+@ cubrid server start: bug_9836
+
+This may take a long time depending on the amount of recovery works to do.
+
+CUBRID 11.5.0 (11.5.0.2632) (64 optdebug build)
+
+++ cubrid server start: success
++ sleep 5
++ cubrid paramdump bug_9836
++ grep call_stack_dump_activation_list
++ sleep 5
++ compare_result_between_files log2.txt log2.answer
++ cci_driver=
++ server=
++ '[' 2 -lt 2 ']'
++ '[' -f /home/CUBRID/qa.conf ']'
+++ get_best_compat_file log2.txt
+++ suffix_os=
+++ best_driver=
+++ best_server=
+++ fileName=log2.txt
+++ current_server=
+++ cci_driver=
+++ newfilename=
+++ '[' Linux = Windows_NT ']'
+++ '[' Linux = AIX ']'
+++ ls -l 'log2.txt*_D*'
+++ grep -E '_D[0-9\.]+'
+++ awk -F _D '{print $NF}'
+ls: cannot access 'log2.txt*_D*': No such file or directory
++++ wc -l
++++ cat listdrv
+++ '[' 0 -eq 0 ']'
+++ '[' -f log2.txt ']'
+++ newfilename=log2.txt
+++ echo log2.txt
+++ return 1
++ left=log2.txt
+++ get_best_compat_file log2.answer
+++ suffix_os=
+++ best_driver=
+++ best_server=
+++ fileName=log2.answer
+++ current_server=
+++ cci_driver=
+++ newfilename=
+++ '[' Linux = Windows_NT ']'
+++ '[' Linux = AIX ']'
+++ grep -E '_D[0-9\.]+'
+++ ls -l 'log2.answer*_D*'
+++ awk -F _D '{print $NF}'
+ls: cannot access 'log2.answer*_D*': No such file or directory
++++ wc -l
++++ cat listdrv
+++ '[' 0 -eq 0 ']'
+++ '[' -f log2.answer ']'
+++ newfilename=log2.answer
+++ echo log2.answer
+++ return 1
++ right=log2.answer
++ '[' log2.txt == '' ']'
++ '[' log2.answer == '' ']'
++ dos2unix log2.txt
+dos2unix: converting file log2.txt to Unix format...
++ dos2unix log2.answer
+dos2unix: converting file log2.answer to Unix format...
++ echo 'start to compare files: diff log2.txt log2.answer'
+start to compare files: diff log2.txt log2.answer
++ '[' '' = error ']'
++ '[' '' = sort ']'
++ '[' '' = error ']'
++ '[' '' = sort ']'
++ diff_ignore_lineno log2.txt log2.answer -b
++ local f1=log2.txt
++ local f2=log2.answer
++ local op=-b
++ local tmp1=log2.txt_temp_diff
++ local tmp2=log2.answer_temp_diff
++ cp -f log2.txt log2.txt_temp_diff
++ cp -f log2.answer log2.answer_temp_diff
++ mask_exprs=(-e "s/Command in Line[[:space:]]*[0-9][0-9]*/Command in Line ?/g" -e "s/의[[:space:]]*결과,[[:space:]]*명령어[[:space:]]*라인[[:space:]]*[0-9][0-9]*/의 결과, 명령어 라인 ?/g" -e 's/��[[:space:]]*���,[[:space:]]*��ɾ�[[:space:]]*����[[:space:]]*[0-9][0-9]*/�� ���, ��ɾ� ���� ?/g' -e "s/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g" -e "s/라인[[:space:]]*[0-9][0-9]*,[[:space:]]*열[[:space:]]*[0-9][0-9]*,/라인 ?, 열 ?,/g" -e 's/����[[:space:]]*[0-9][0-9]*,[[:space:]]*��[[:space:]]*[0-9][0-9]*,/���� ?, �� ?,/g' -e "s/In the command from line[ 0-9]*/In the command from line ?/g" -e "s/라인[[:space:]]*[0-9][0-9]*,/라인 ?,/g" -e 's/����[[:space:]]*[0-9][0-9]*,/���� ?,/g' -e "s/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g" -e "s/In schema[0-9]* line [0-9]*/In schema? line ?/g" -e "s/In indexes[0-9]* line [0-9]*/In indexes? line ?/g")
++ local -a mask_exprs
++ LC_ALL=C
++ sed -i -e 's/Command in Line[[:space:]]*[0-9][0-9]*/Command in Line ?/g' -e 's/의[[:space:]]*결과,[[:space:]]*명령어[[:space:]]*라인[[:space:]]*[0-9][0-9]*/의 결과, 명령어 라인 ?/g' -e 's/��[[:space:]]*���,[[:space:]]*��ɾ�[[:space:]]*����[[:space:]]*[0-9][0-9]*/�� ���, ��ɾ� ���� ?/g' -e 's/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,[[:space:]]*열[[:space:]]*[0-9][0-9]*,/라인 ?, 열 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,[[:space:]]*��[[:space:]]*[0-9][0-9]*,/���� ?, �� ?,/g' -e 's/In the command from line[ 0-9]*/In the command from line ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,/라인 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,/���� ?,/g' -e 's/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g' -e 's/In schema[0-9]* line [0-9]*/In schema? line ?/g' -e 's/In indexes[0-9]* line [0-9]*/In indexes? line ?/g' log2.txt_temp_diff
++ LC_ALL=C
++ sed -i -e 's/Command in Line[[:space:]]*[0-9][0-9]*/Command in Line ?/g' -e 's/의[[:space:]]*결과,[[:space:]]*명령어[[:space:]]*라인[[:space:]]*[0-9][0-9]*/의 결과, 명령어 라인 ?/g' -e 's/��[[:space:]]*���,[[:space:]]*��ɾ�[[:space:]]*����[[:space:]]*[0-9][0-9]*/�� ���, ��ɾ� ���� ?/g' -e 's/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,[[:space:]]*열[[:space:]]*[0-9][0-9]*,/라인 ?, 열 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,[[:space:]]*��[[:space:]]*[0-9][0-9]*,/���� ?, �� ?,/g' -e 's/In the command from line[ 0-9]*/In the command from line ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,/라인 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,/���� ?,/g' -e 's/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g' -e 's/In schema[0-9]* line [0-9]*/In schema? line ?/g' -e 's/In indexes[0-9]* line [0-9]*/In indexes? line ?/g' log2.answer_temp_diff
++ diff log2.txt_temp_diff log2.answer_temp_diff -b
+1,2c1,2
+< [C*] call_stack_dump_activation_list=-3,-2,-7,-13,-14,-17,-19,-21,-22,-45,-46,-48,-50,-1383,-1385,-1386,-51,-52,-76,-78,-79,-81,-90,-96,-97,-313,-314,-407,-415,-416,-417,-583,-603,-836,-859,-890,-891,-976,-1040,-1075,-1131,-1084,-4 ()
+< [S*] call_stack_dump_activation_list=-3,-2,-7,-13,-14,-17,-19,-21,-22,-45,-46,-48,-50,-1383,-1385,-1386,-51,-52,-76,-78,-79,-81,-90,-96,-97,-313,-314,-407,-415,-416,-417,-583,-603,-836,-859,-890,-891,-976,-1040,-1075,-1131,-1084,-4 ()
+---
+> [C*] call_stack_dump_activation_list=-3,-2,-7,-13,-14,-17,-19,-21,-22,-45,-46,-48,-50,-1382,-1384,-1385,-51,-52,-76,-78,-79,-81,-90,-96,-97,-313,-314,-407,-415,-416,-417,-583,-603,-836,-859,-890,-891,-976,-1040,-1075,-1131,-1084,-4 ()
+> [S*] call_stack_dump_activation_list=-3,-2,-7,-13,-14,-17,-19,-21,-22,-45,-46,-48,-50,-1382,-1384,-1385,-51,-52,-76,-78,-79,-81,-90,-96,-97,-313,-314,-407,-415,-416,-417,-583,-603,-836,-859,-890,-891,-976,-1040,-1075,-1131,-1084,-4 ()
++ write_nok
++ '[' -z '' ']'
++ echo '----------------- 2 : NOK'
+----------------- 2 : NOK
++ echo 'bug_bts_9836-2 : NOK'
+++ wc -l
+++ grep 'Internal Error' /home/CUBRID/log/server/bug_9836_20260925_1546.err /home/CUBRID/log/server/bug_9836_latest.err
++ internal_err=0
++ '[' 0 -gt 0 ']'
++ let 'case_no = case_no + 1'
++ echo 'diff log2.txt log2.answer failed'
++ diff_ignore_lineno log2.txt log2.answer -y
++ local f1=log2.txt
++ local f2=log2.answer
++ local op=-y
++ local tmp1=log2.txt_temp_diff
++ tee -a /home/cubrid-testcases-private-ex/shell/_06_issues/_12_2h/bug_bts_9836/cases/bug_bts_9836.result
++ local tmp2=log2.answer_temp_diff
++ cp -f log2.txt log2.txt_temp_diff
++ cp -f log2.answer log2.answer_temp_diff
++ mask_exprs=(-e "s/Command in Line[[:space:]]*[0-9][0-9]*/Command in Line ?/g" -e "s/의[[:space:]]*결과,[[:space:]]*명령어[[:space:]]*라인[[:space:]]*[0-9][0-9]*/의 결과, 명령어 라인 ?/g" -e 's/��[[:space:]]*���,[[:space:]]*��ɾ�[[:space:]]*����[[:space:]]*[0-9][0-9]*/�� ���, ��ɾ� ���� ?/g' -e "s/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g" -e "s/라인[[:space:]]*[0-9][0-9]*,[[:space:]]*열[[:space:]]*[0-9][0-9]*,/라인 ?, 열 ?,/g" -e 's/����[[:space:]]*[0-9][0-9]*,[[:space:]]*��[[:space:]]*[0-9][0-9]*,/���� ?, �� ?,/g' -e "s/In the command from line[ 0-9]*/In the command from line ?/g" -e "s/라인[[:space:]]*[0-9][0-9]*,/라인 ?,/g" -e 's/����[[:space:]]*[0-9][0-9]*,/���� ?,/g' -e "s/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g" -e "s/In schema[0-9]* line [0-9]*/In schema? line ?/g" -e "s/In indexes[0-9]* line [0-9]*/In indexes? line ?/g")
++ local -a mask_exprs
++ LC_ALL=C
++ sed -i -e 's/Command in Line[[:space:]]*[0-9][0-9]*/Command in Line ?/g' -e 's/의[[:space:]]*결과,[[:space:]]*명령어[[:space:]]*라인[[:space:]]*[0-9][0-9]*/의 결과, 명령어 라인 ?/g' -e 's/��[[:space:]]*���,[[:space:]]*��ɾ�[[:space:]]*����[[:space:]]*[0-9][0-9]*/�� ���, ��ɾ� ���� ?/g' -e 's/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,[[:space:]]*열[[:space:]]*[0-9][0-9]*,/라인 ?, 열 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,[[:space:]]*��[[:space:]]*[0-9][0-9]*,/���� ?, �� ?,/g' -e 's/In the command from line[ 0-9]*/In the command from line ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,/라인 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,/���� ?,/g' -e 's/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g' -e 's/In schema[0-9]* line [0-9]*/In schema? line ?/g' -e 's/In indexes[0-9]* line [0-9]*/In indexes? line ?/g' log2.txt_temp_diff
++ LC_ALL=C
++ sed -i -e 's/Command in Line[[:space:]]*[0-9][0-9]*/Command in Line ?/g' -e 's/의[[:space:]]*결과,[[:space:]]*명령어[[:space:]]*라인[[:space:]]*[0-9][0-9]*/의 결과, 명령어 라인 ?/g' -e 's/��[[:space:]]*���,[[:space:]]*��ɾ�[[:space:]]*����[[:space:]]*[0-9][0-9]*/�� ���, ��ɾ� ���� ?/g' -e 's/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,[[:space:]]*열[[:space:]]*[0-9][0-9]*,/라인 ?, 열 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,[[:space:]]*��[[:space:]]*[0-9][0-9]*,/���� ?, �� ?,/g' -e 's/In the command from line[ 0-9]*/In the command from line ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,/라인 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,/���� ?,/g' -e 's/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g' -e 's/In schema[0-9]* line [0-9]*/In schema? line ?/g' -e 's/In indexes[0-9]* line [0-9]*/In indexes? line ?/g' log2.answer_temp_diff
++ diff log2.txt_temp_diff log2.answer_temp_diff -y
+[C*] call_stack_dump_activation_list=-3,-2,-7,-13,-14,-17,-19 |	[C*] call_stack_dump_activation_list=-3,-2,-7,-13,-14,-17,-19
+[S*] call_stack_dump_activation_list=-3,-2,-7,-13,-14,-17,-19 |	[S*] call_stack_dump_activation_list=-3,-2,-7,-13,-14,-17,-19
++ let 'answer_no = answer_no + 1'
++ sed -i '/^call_stack_dump_activation_list/d' /home/CUBRID/conf/cubrid.conf
++ sed -i '/^call_stack_dump_on_error/d' /home/CUBRID/conf/cubrid.conf
++ cubrid service restart
+@ cubrid broker stop
+++ cubrid broker stop: success
+@ cubrid manager server stop
+++ cubrid manager server stop: success
+@ cubrid master stop
+++ cubrid master stop: success
+@ cubrid master start
+++ cubrid master start: success
+@ cubrid broker start
+++ cubrid broker start: success
+@ cubrid manager server start
+++ cubrid manager server start: success
++ cubrid server start bug_9836
+@ cubrid server start: bug_9836
+
+This may take a long time depending on the amount of recovery works to do.
+
+CUBRID 11.5.0 (11.5.0.2632) (64 optdebug build)
+
+++ cubrid server start: success
++ sleep 5
++ cubrid paramdump bug_9836
++ grep call_stack_dump_activation_list
++ sleep 5
++ compare_result_between_files log3.txt log3.answer
++ cci_driver=
++ server=
++ '[' 2 -lt 2 ']'
++ '[' -f /home/CUBRID/qa.conf ']'
+++ get_best_compat_file log3.txt
+++ suffix_os=
+++ best_driver=
+++ best_server=
+++ fileName=log3.txt
+++ current_server=
+++ cci_driver=
+++ newfilename=
+++ '[' Linux = Windows_NT ']'
+++ '[' Linux = AIX ']'
+++ grep -E '_D[0-9\.]+'
+++ ls -l 'log3.txt*_D*'
+++ awk -F _D '{print $NF}'
+ls: cannot access 'log3.txt*_D*': No such file or directory
++++ cat listdrv
++++ wc -l
+++ '[' 0 -eq 0 ']'
+++ '[' -f log3.txt ']'
+++ newfilename=log3.txt
+++ echo log3.txt
+++ return 1
++ left=log3.txt
+++ get_best_compat_file log3.answer
+++ suffix_os=
+++ best_driver=
+++ best_server=
+++ fileName=log3.answer
+++ current_server=
+++ cci_driver=
+++ newfilename=
+++ '[' Linux = Windows_NT ']'
+++ '[' Linux = AIX ']'
+++ ls -l 'log3.answer*_D*'
+++ grep -E '_D[0-9\.]+'
+++ awk -F _D '{print $NF}'
+ls: cannot access 'log3.answer*_D*': No such file or directory
++++ cat listdrv
++++ wc -l
+++ '[' 0 -eq 0 ']'
+++ '[' -f log3.answer ']'
+++ newfilename=log3.answer
+++ echo log3.answer
+++ return 1
++ right=log3.answer
++ '[' log3.txt == '' ']'
++ '[' log3.answer == '' ']'
++ dos2unix log3.txt
+dos2unix: converting file log3.txt to Unix format...
++ dos2unix log3.answer
+dos2unix: converting file log3.answer to Unix format...
++ echo 'start to compare files: diff log3.txt log3.answer'
+start to compare files: diff log3.txt log3.answer
++ '[' '' = error ']'
++ '[' '' = sort ']'
++ '[' '' = error ']'
++ '[' '' = sort ']'
++ diff_ignore_lineno log3.txt log3.answer -b
++ local f1=log3.txt
++ local f2=log3.answer
++ local op=-b
++ local tmp1=log3.txt_temp_diff
++ local tmp2=log3.answer_temp_diff
++ cp -f log3.txt log3.txt_temp_diff
++ cp -f log3.answer log3.answer_temp_diff
++ mask_exprs=(-e "s/Command in Line[[:space:]]*[0-9][0-9]*/Command in Line ?/g" -e "s/의[[:space:]]*결과,[[:space:]]*명령어[[:space:]]*라인[[:space:]]*[0-9][0-9]*/의 결과, 명령어 라인 ?/g" -e 's/��[[:space:]]*���,[[:space:]]*��ɾ�[[:space:]]*����[[:space:]]*[0-9][0-9]*/�� ���, ��ɾ� ���� ?/g' -e "s/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g" -e "s/라인[[:space:]]*[0-9][0-9]*,[[:space:]]*열[[:space:]]*[0-9][0-9]*,/라인 ?, 열 ?,/g" -e 's/����[[:space:]]*[0-9][0-9]*,[[:space:]]*��[[:space:]]*[0-9][0-9]*,/���� ?, �� ?,/g' -e "s/In the command from line[ 0-9]*/In the command from line ?/g" -e "s/라인[[:space:]]*[0-9][0-9]*,/라인 ?,/g" -e 's/����[[:space:]]*[0-9][0-9]*,/���� ?,/g' -e "s/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g" -e "s/In schema[0-9]* line [0-9]*/In schema? line ?/g" -e "s/In indexes[0-9]* line [0-9]*/In indexes? line ?/g")
++ local -a mask_exprs
++ LC_ALL=C
++ sed -i -e 's/Command in Line[[:space:]]*[0-9][0-9]*/Command in Line ?/g' -e 's/의[[:space:]]*결과,[[:space:]]*명령어[[:space:]]*라인[[:space:]]*[0-9][0-9]*/의 결과, 명령어 라인 ?/g' -e 's/��[[:space:]]*���,[[:space:]]*��ɾ�[[:space:]]*����[[:space:]]*[0-9][0-9]*/�� ���, ��ɾ� ���� ?/g' -e 's/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,[[:space:]]*열[[:space:]]*[0-9][0-9]*,/라인 ?, 열 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,[[:space:]]*��[[:space:]]*[0-9][0-9]*,/���� ?, �� ?,/g' -e 's/In the command from line[ 0-9]*/In the command from line ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,/라인 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,/���� ?,/g' -e 's/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g' -e 's/In schema[0-9]* line [0-9]*/In schema? line ?/g' -e 's/In indexes[0-9]* line [0-9]*/In indexes? line ?/g' log3.txt_temp_diff
++ LC_ALL=C
++ sed -i -e 's/Command in Line[[:space:]]*[0-9][0-9]*/Command in Line ?/g' -e 's/의[[:space:]]*결과,[[:space:]]*명령어[[:space:]]*라인[[:space:]]*[0-9][0-9]*/의 결과, 명령어 라인 ?/g' -e 's/��[[:space:]]*���,[[:space:]]*��ɾ�[[:space:]]*����[[:space:]]*[0-9][0-9]*/�� ���, ��ɾ� ���� ?/g' -e 's/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,[[:space:]]*열[[:space:]]*[0-9][0-9]*,/라인 ?, 열 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,[[:space:]]*��[[:space:]]*[0-9][0-9]*,/���� ?, �� ?,/g' -e 's/In the command from line[ 0-9]*/In the command from line ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,/라인 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,/���� ?,/g' -e 's/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g' -e 's/In schema[0-9]* line [0-9]*/In schema? line ?/g' -e 's/In indexes[0-9]* line [0-9]*/In indexes? line ?/g' log3.answer_temp_diff
++ diff log3.txt_temp_diff log3.answer_temp_diff -b
+2c2
+< [S*] call_stack_dump_activation_list=-2,-7,-13,-14,-17,-19,-21,-22,-45,-46,-48,-50,-1383,-1385,-1386,-51,-52,-76,-78,-79,-81,-90,-96,-97,-313,-314,-407,-415,-416,-417,-583,-603,-836,-859,-890,-891,-976,-1040,-1075,-1131,-1084 ()
+---
+> [S*] call_stack_dump_activation_list=-2,-7,-13,-14,-17,-19,-21,-22,-45,-46,-48,-50,-1382,-1384,-1385,-51,-52,-76,-78,-79,-81,-90,-96,-97,-313,-314,-407,-415,-416,-417,-583,-603,-836,-859,-890,-891,-976,-1040,-1075,-1131,-1084 ()
++ write_nok
++ '[' -z '' ']'
++ echo '----------------- 3 : NOK'
+----------------- 3 : NOK
++ echo 'bug_bts_9836-3 : NOK'
+++ wc -l
+++ grep 'Internal Error' /home/CUBRID/log/server/bug_9836_20260925_1546.err /home/CUBRID/log/server/bug_9836_latest.err
++ internal_err=0
++ '[' 0 -gt 0 ']'
++ let 'case_no = case_no + 1'
++ echo 'diff log3.txt log3.answer failed'
++ diff_ignore_lineno log3.txt log3.answer -y
++ local f1=log3.txt
++ local f2=log3.answer
++ local op=-y
++ tee -a /home/cubrid-testcases-private-ex/shell/_06_issues/_12_2h/bug_bts_9836/cases/bug_bts_9836.result
++ local tmp1=log3.txt_temp_diff
++ local tmp2=log3.answer_temp_diff
++ cp -f log3.txt log3.txt_temp_diff
++ cp -f log3.answer log3.answer_temp_diff
++ mask_exprs=(-e "s/Command in Line[[:space:]]*[0-9][0-9]*/Command in Line ?/g" -e "s/의[[:space:]]*결과,[[:space:]]*명령어[[:space:]]*라인[[:space:]]*[0-9][0-9]*/의 결과, 명령어 라인 ?/g" -e 's/��[[:space:]]*���,[[:space:]]*��ɾ�[[:space:]]*����[[:space:]]*[0-9][0-9]*/�� ���, ��ɾ� ���� ?/g' -e "s/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g" -e "s/라인[[:space:]]*[0-9][0-9]*,[[:space:]]*열[[:space:]]*[0-9][0-9]*,/라인 ?, 열 ?,/g" -e 's/����[[:space:]]*[0-9][0-9]*,[[:space:]]*��[[:space:]]*[0-9][0-9]*,/���� ?, �� ?,/g' -e "s/In the command from line[ 0-9]*/In the command from line ?/g" -e "s/라인[[:space:]]*[0-9][0-9]*,/라인 ?,/g" -e 's/����[[:space:]]*[0-9][0-9]*,/���� ?,/g' -e "s/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g" -e "s/In schema[0-9]* line [0-9]*/In schema? line ?/g" -e "s/In indexes[0-9]* line [0-9]*/In indexes? line ?/g")
++ local -a mask_exprs
++ LC_ALL=C
++ sed -i -e 's/Command in Line[[:space:]]*[0-9][0-9]*/Command in Line ?/g' -e 's/의[[:space:]]*결과,[[:space:]]*명령어[[:space:]]*라인[[:space:]]*[0-9][0-9]*/의 결과, 명령어 라인 ?/g' -e 's/��[[:space:]]*���,[[:space:]]*��ɾ�[[:space:]]*����[[:space:]]*[0-9][0-9]*/�� ���, ��ɾ� ���� ?/g' -e 's/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,[[:space:]]*열[[:space:]]*[0-9][0-9]*,/라인 ?, 열 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,[[:space:]]*��[[:space:]]*[0-9][0-9]*,/���� ?, �� ?,/g' -e 's/In the command from line[ 0-9]*/In the command from line ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,/라인 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,/���� ?,/g' -e 's/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g' -e 's/In schema[0-9]* line [0-9]*/In schema? line ?/g' -e 's/In indexes[0-9]* line [0-9]*/In indexes? line ?/g' log3.txt_temp_diff
++ LC_ALL=C
++ sed -i -e 's/Command in Line[[:space:]]*[0-9][0-9]*/Command in Line ?/g' -e 's/의[[:space:]]*결과,[[:space:]]*명령어[[:space:]]*라인[[:space:]]*[0-9][0-9]*/의 결과, 명령어 라인 ?/g' -e 's/��[[:space:]]*���,[[:space:]]*��ɾ�[[:space:]]*����[[:space:]]*[0-9][0-9]*/�� ���, ��ɾ� ���� ?/g' -e 's/In[\t ]*line[\t 0-9]*,[\t ]*column[\t 0-9]*/In      line    ?,      column  ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,[[:space:]]*열[[:space:]]*[0-9][0-9]*,/라인 ?, 열 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,[[:space:]]*��[[:space:]]*[0-9][0-9]*,/���� ?, �� ?,/g' -e 's/In the command from line[ 0-9]*/In the command from line ?/g' -e 's/라인[[:space:]]*[0-9][0-9]*,/라인 ?,/g' -e 's/����[[:space:]]*[0-9][0-9]*,/���� ?,/g' -e 's/Commit transaction at line[ 0-9]*/Commit transaction at line ?/g' -e 's/In schema[0-9]* line [0-9]*/In schema? line ?/g' -e 's/In indexes[0-9]* line [0-9]*/In indexes? line ?/g' log3.answer_temp_diff
++ diff log3.txt_temp_diff log3.answer_temp_diff -y
+[C ] call_stack_dump_activation_list= ()			[C ] call_stack_dump_activation_list= ()
+[S*] call_stack_dump_activation_list=-2,-7,-13,-14,-17,-19,-2 |	[S*] call_stack_dump_activation_list=-2,-7,-13,-14,-17,-19,-2
++ let 'answer_no = answer_no + 1'
++ cubrid broker stop
+@ cubrid broker stop
+++ cubrid broker stop: success
++ cubrid server stop bug_9836
+@ cubrid server stop: bug_9836
+
+Server bug_9836 notified of shutdown.
+This may take several minutes. Please wait.
+++ cubrid server stop: success
++ cubrid deletedb bug_9836
++ restore_db_conf
++ '[' -f /home/CUBRID/conf/cubrid.conf.org ']'
++ cp /home/CUBRID/conf/cubrid.conf.org /home/CUBRID/conf/cubrid.conf
++ rm -rf bug_9836
++ finish
++ rm -f 'userver.err.*'
++ rm -f 'uclient.err.*'
++ rm -f 'client.err.*'
++ rm -rf ./lob
++ cubrid service stop
+@ cubrid broker stop
+++ cubrid broker is not running.
+@ cubrid manager server stop
+++ cubrid manager server stop: success
+@ cubrid master stop
+++ cubrid master stop: success
++ pkill cub
++ '[' 1 -eq 1 ']'
++ count_time
+++ get_curr_second
++++ date +%s
+++ str=1790318816
+++ echo 1790318816
++ end_time=1790318816
++ duration=59
+++ date +%Y-%m-%d
++ date_str=2026-09-25
+++ date +%H:%M:%S
++ time_str=15:46:56
++ echo 15:46:56----/home/cubrid-testcases-private-ex/shell/_06_issues/_12_2h/bug_bts_9836/cases--- time=59
++ '[' 59 -gt 7200 ']'
++ '[' 59 -gt 3600 ']'
++ '[' 59 -gt 1800 ']'
++ '[' 59 -gt 600 ']'
++ release_broker_sharedmemory
++ '[' Linux == Linux -o Linux == AIX ']'
+++ ipcs
+++ grep root
+++ awk '{print $2}'
++ broker_sid=
++ '[' -n '' ']'
++ delete_ini
++ '[' Linux = Windows_NT ']'
++ cp /home/CUBRID/conf/cubrid.conf.org /home/CUBRID/conf/cubrid.conf
++ restore_all_conf
++ restore_db_conf
++ '[' -f /home/CUBRID/conf/cubrid.conf.org ']'
++ cp /home/CUBRID/conf/cubrid.conf.org /home/CUBRID/conf/cubrid.conf
++ restore_broker_conf
++ '[' -f /home/CUBRID/conf/cubrid_broker.conf.org ']'
++ restore_gateway_conf
++ '[' -f /home/CUBRID/conf/cubrid_gateway.conf.org ']'
++ restore_ha_conf
++ '[' -f /home/CUBRID/conf/cubrid_ha.conf.org ']'
+++ date
++ echo '[INFO] TEST STOP (Fri Sep 25 15:46:56 KST 2026)'
+[INFO] TEST STOP (Fri Sep 25 15:46:56 KST 2026)

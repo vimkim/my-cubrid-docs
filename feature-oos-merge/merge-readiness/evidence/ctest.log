@@ -1,0 +1,288 @@
+[0mdirenv: loading ~/gh/cb/oos-readiness-221/.envrc
+Preset Mode: debug_gcc
+Install Dir: /home/vimkim/.cub/install/oos-readiness-221/debug_gcc
+DB Dir: /home/vimkim/.cub/db/6d73fa4a/commondb
+Build Dir: /home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc
+bash ~/my-cubrid/bin/cubrid-test-socket-preflight.sh
+~/my-cubrid/bin/cubrid-build-coordinator.sh runtime 300 -- ctest --test-dir "$CUBRID_BUILD_DIR" --output-on-failure --verbose
+Internal ctest changing into directory: /home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc
+UpdateCTestConfiguration  from :/home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/DartConfiguration.tcl
+UpdateCTestConfiguration  from :/home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/DartConfiguration.tcl
+Test project /home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 1
+      Start  1: oos_setup_db
+
+1: Test command: /usr/bin/cmake "-E" "env" "CUBRID=/home/vimkim/.cub/install/oos-readiness-221/debug_gcc" "CUBRID_DATABASES=" "PATH=/home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/vm/jdk8/bin:/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.local/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/share/Modules/bin:/usr/lib64/ccache:/home/vimkim/.codex/packages/standalone/releases/0.159.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0oUMT4N:/home/vimkim/.codex/tmp/arg0/codex-arg0Sdrd24:/home/vimkim/.codex/packages/standalone/releases/0.158.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0mOvekQ:/home/vimkim/.codex/packages/standalone/releases/0.157.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0jzxIFn:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lJR4wu:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/shims:/home/vimkim/.cargo/bin/:/opt/bison-3.0.5/bin/:/home/vimkim/.local/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/vimkim/.config/my-scripts/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin" "bash" "/home/vimkim/gh/cb/oos-readiness-221/unit_tests/oos/scripts/setup_unittestdb.sh"
+1: Working Directory: /home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/unit_tests/oos
+1: Test timeout computed to be: 10000000
+1: /home/vimkim/gh/cb/oos-readiness-221/unit_tests/oos/scripts/oos_db_common.sh: line 33: CUBRID_DATABASES: CUBRID_DATABASES must be set
+ 1/35 Test  #1: oos_setup_db .....................***Failed    0.01 sec
+/home/vimkim/gh/cb/oos-readiness-221/unit_tests/oos/scripts/oos_db_common.sh: line 33: CUBRID_DATABASES: CUBRID_DATABASES must be set
+
+test 7
+      Start  7: test_oos
+Failed test dependencies: oos_setup_db
+ 2/35 Test  #7: test_oos .........................***Not Run   0.00 sec
+test 8
+      Start  8: test_oos_delete
+Failed test dependencies: oos_setup_db
+ 3/35 Test  #8: test_oos_delete ..................***Not Run   0.00 sec
+test 9
+      Start  9: test_oos_identity_stamp
+Failed test dependencies: oos_setup_db
+ 4/35 Test  #9: test_oos_identity_stamp ..........***Not Run   0.00 sec
+test 10
+      Start 10: test_oos_eager_diagnostics
+Failed test dependencies: oos_setup_db
+ 5/35 Test #10: test_oos_eager_diagnostics .......***Not Run   0.00 sec
+test 12
+      Start 12: test_oos_remove_file
+Failed test dependencies: oos_setup_db
+ 6/35 Test #12: test_oos_remove_file .............***Not Run   0.00 sec
+test 13
+      Start 13: test_oos_bestspace
+Failed test dependencies: oos_setup_db
+ 7/35 Test #13: test_oos_bestspace ...............***Not Run   0.00 sec
+test 14
+      Start 14: test_oos_growth_sweep
+Failed test dependencies: oos_setup_db
+ 8/35 Test #14: test_oos_growth_sweep ............***Not Run   0.00 sec
+test 18
+      Start 18: test_oos_server
+Failed test dependencies: oos_setup_db
+ 9/35 Test #18: test_oos_server ..................***Not Run   0.00 sec
+test 19
+      Start 19: test_oos_delete_server
+Failed test dependencies: oos_setup_db
+10/35 Test #19: test_oos_delete_server ...........***Not Run   0.00 sec
+test 20
+      Start 20: test_oos_remove_file_server
+Failed test dependencies: oos_setup_db
+11/35 Test #20: test_oos_remove_file_server ......***Not Run   0.00 sec
+test 21
+      Start 21: test_oos_mock_vacuum_server
+Failed test dependencies: oos_setup_db
+12/35 Test #21: test_oos_mock_vacuum_server ......***Not Run   0.00 sec
+test 22
+      Start 22: test_oos_vacuum_server
+Failed test dependencies: oos_setup_db
+13/35 Test #22: test_oos_vacuum_server ...........***Not Run   0.00 sec
+test 23
+      Start 23: test_oos_real_vacuum_server
+Failed test dependencies: oos_setup_db
+14/35 Test #23: test_oos_real_vacuum_server ......***Not Run   0.00 sec
+test 24
+      Start 24: test_oos_sql_crud
+Failed test dependencies: oos_setup_db
+15/35 Test #24: test_oos_sql_crud ................***Not Run   0.00 sec
+test 25
+      Start 25: test_oos_sql_ddl
+Failed test dependencies: oos_setup_db
+16/35 Test #25: test_oos_sql_ddl .................***Not Run   0.00 sec
+test 26
+      Start 26: test_oos_sql_delete
+Failed test dependencies: oos_setup_db
+17/35 Test #26: test_oos_sql_delete ..............***Not Run   0.00 sec
+test 27
+      Start 27: test_oos_sql_boundary
+Failed test dependencies: oos_setup_db
+18/35 Test #27: test_oos_sql_boundary ............***Not Run   0.00 sec
+test 28
+      Start 28: test_oos_sql_update_delete
+Failed test dependencies: oos_setup_db
+19/35 Test #28: test_oos_sql_update_delete .......***Not Run   0.00 sec
+test 29
+      Start 29: test_oos_sql_txn
+Failed test dependencies: oos_setup_db
+20/35 Test #29: test_oos_sql_txn .................***Not Run   0.00 sec
+test 30
+      Start 30: test_oos_sql_bigone
+Failed test dependencies: oos_setup_db
+21/35 Test #30: test_oos_sql_bigone ..............***Not Run   0.00 sec
+test 31
+      Start 31: test_oos_sql_eager_cleanup
+Failed test dependencies: oos_setup_db
+22/35 Test #31: test_oos_sql_eager_cleanup .......***Not Run   0.00 sec
+test 32
+      Start 32: test_oos_sql_storage
+Failed test dependencies: oos_setup_db
+23/35 Test #32: test_oos_sql_storage .............***Not Run   0.00 sec
+test 33
+      Start 33: test_oos_sql_show
+Failed test dependencies: oos_setup_db
+24/35 Test #33: test_oos_sql_show ................***Not Run   0.00 sec
+test 34
+      Start 34: test_oos_sql_visible_version
+Failed test dependencies: oos_setup_db
+25/35 Test #34: test_oos_sql_visible_version .....***Not Run   0.00 sec
+test 2
+      Start  2: oos_cleanup_db
+
+2: Test command: /usr/bin/cmake "-E" "env" "CUBRID=/home/vimkim/.cub/install/oos-readiness-221/debug_gcc" "CUBRID_DATABASES=" "PATH=/home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/vm/jdk8/bin:/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.local/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/share/Modules/bin:/usr/lib64/ccache:/home/vimkim/.codex/packages/standalone/releases/0.159.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0oUMT4N:/home/vimkim/.codex/tmp/arg0/codex-arg0Sdrd24:/home/vimkim/.codex/packages/standalone/releases/0.158.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0mOvekQ:/home/vimkim/.codex/packages/standalone/releases/0.157.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0jzxIFn:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lJR4wu:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/shims:/home/vimkim/.cargo/bin/:/opt/bison-3.0.5/bin/:/home/vimkim/.local/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/vimkim/.config/my-scripts/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin" "bash" "/home/vimkim/gh/cb/oos-readiness-221/unit_tests/oos/scripts/cleanup_unittestdb.sh"
+2: Working Directory: /home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/unit_tests/oos
+2: Test timeout computed to be: 30
+2: /home/vimkim/gh/cb/oos-readiness-221/unit_tests/oos/scripts/oos_db_common.sh: line 33: CUBRID_DATABASES: CUBRID_DATABASES must be set
+26/35 Test  #2: oos_cleanup_db ...................***Failed    0.01 sec
+/home/vimkim/gh/cb/oos-readiness-221/unit_tests/oos/scripts/oos_db_common.sh: line 33: CUBRID_DATABASES: CUBRID_DATABASES must be set
+
+test 3
+      Start  3: oos_setup_no_logging_db
+
+3: Test command: /usr/bin/cmake "-E" "env" "CUBRID=/home/vimkim/.cub/install/oos-readiness-221/debug_gcc" "CUBRID_DATABASES=" "PATH=/home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/vm/jdk8/bin:/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.local/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/share/Modules/bin:/usr/lib64/ccache:/home/vimkim/.codex/packages/standalone/releases/0.159.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0oUMT4N:/home/vimkim/.codex/tmp/arg0/codex-arg0Sdrd24:/home/vimkim/.codex/packages/standalone/releases/0.158.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0mOvekQ:/home/vimkim/.codex/packages/standalone/releases/0.157.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0jzxIFn:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lJR4wu:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/shims:/home/vimkim/.cargo/bin/:/opt/bison-3.0.5/bin/:/home/vimkim/.local/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/vimkim/.config/my-scripts/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin" "bash" "/home/vimkim/gh/cb/oos-readiness-221/unit_tests/oos/scripts/setup_isolated_db.sh" "oosnologdb"
+3: Working Directory: /home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/unit_tests/oos
+3: Test timeout computed to be: 180
+3: /home/vimkim/gh/cb/oos-readiness-221/unit_tests/oos/scripts/oos_db_common.sh: line 33: CUBRID_DATABASES: CUBRID_DATABASES must be set
+27/35 Test  #3: oos_setup_no_logging_db ..........***Failed    0.02 sec
+/home/vimkim/gh/cb/oos-readiness-221/unit_tests/oos/scripts/oos_db_common.sh: line 33: CUBRID_DATABASES: CUBRID_DATABASES must be set
+
+test 11
+      Start 11: test_oos_no_logging
+Failed test dependencies: oos_setup_no_logging_db
+28/35 Test #11: test_oos_no_logging ..............***Not Run   0.00 sec
+test 4
+      Start  4: oos_cleanup_no_logging_db
+
+4: Test command: /usr/bin/cmake "-E" "env" "CUBRID=/home/vimkim/.cub/install/oos-readiness-221/debug_gcc" "CUBRID_DATABASES=" "PATH=/home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/vm/jdk8/bin:/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.local/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/share/Modules/bin:/usr/lib64/ccache:/home/vimkim/.codex/packages/standalone/releases/0.159.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0oUMT4N:/home/vimkim/.codex/tmp/arg0/codex-arg0Sdrd24:/home/vimkim/.codex/packages/standalone/releases/0.158.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0mOvekQ:/home/vimkim/.codex/packages/standalone/releases/0.157.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0jzxIFn:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lJR4wu:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/shims:/home/vimkim/.cargo/bin/:/opt/bison-3.0.5/bin/:/home/vimkim/.local/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/vimkim/.config/my-scripts/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin" "bash" "/home/vimkim/gh/cb/oos-readiness-221/unit_tests/oos/scripts/cleanup_isolated_db.sh" "oosnologdb"
+4: Working Directory: /home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/unit_tests/oos
+4: Test timeout computed to be: 60
+4: /home/vimkim/gh/cb/oos-readiness-221/unit_tests/oos/scripts/oos_db_common.sh: line 33: CUBRID_DATABASES: CUBRID_DATABASES must be set
+29/35 Test  #4: oos_cleanup_no_logging_db ........***Failed    0.01 sec
+/home/vimkim/gh/cb/oos-readiness-221/unit_tests/oos/scripts/oos_db_common.sh: line 33: CUBRID_DATABASES: CUBRID_DATABASES must be set
+
+test 5
+      Start  5: oos_setup_recovery_db
+
+5: Test command: /usr/bin/cmake "-E" "env" "CUBRID=/home/vimkim/.cub/install/oos-readiness-221/debug_gcc" "CUBRID_DATABASES=" "PATH=/home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/vm/jdk8/bin:/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.local/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/share/Modules/bin:/usr/lib64/ccache:/home/vimkim/.codex/packages/standalone/releases/0.159.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0oUMT4N:/home/vimkim/.codex/tmp/arg0/codex-arg0Sdrd24:/home/vimkim/.codex/packages/standalone/releases/0.158.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0mOvekQ:/home/vimkim/.codex/packages/standalone/releases/0.157.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0jzxIFn:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lJR4wu:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/shims:/home/vimkim/.cargo/bin/:/opt/bison-3.0.5/bin/:/home/vimkim/.local/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/vimkim/.config/my-scripts/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin" "bash" "/home/vimkim/gh/cb/oos-readiness-221/unit_tests/oos/scripts/setup_isolated_db.sh" "oosrecoverydb"
+5: Working Directory: /home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/unit_tests/oos
+5: Test timeout computed to be: 180
+5: /home/vimkim/gh/cb/oos-readiness-221/unit_tests/oos/scripts/oos_db_common.sh: line 33: CUBRID_DATABASES: CUBRID_DATABASES must be set
+30/35 Test  #5: oos_setup_recovery_db ............***Failed    0.01 sec
+/home/vimkim/gh/cb/oos-readiness-221/unit_tests/oos/scripts/oos_db_common.sh: line 33: CUBRID_DATABASES: CUBRID_DATABASES must be set
+
+test 35
+      Start 35: test_oos_sql_crash_recovery
+Failed test dependencies: oos_setup_recovery_db
+31/35 Test #35: test_oos_sql_crash_recovery ......***Not Run   0.00 sec
+test 6
+      Start  6: oos_cleanup_recovery_db
+
+6: Test command: /usr/bin/cmake "-E" "env" "CUBRID=/home/vimkim/.cub/install/oos-readiness-221/debug_gcc" "CUBRID_DATABASES=" "PATH=/home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/vm/jdk8/bin:/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.local/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/share/Modules/bin:/usr/lib64/ccache:/home/vimkim/.codex/packages/standalone/releases/0.159.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0oUMT4N:/home/vimkim/.codex/tmp/arg0/codex-arg0Sdrd24:/home/vimkim/.codex/packages/standalone/releases/0.158.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0mOvekQ:/home/vimkim/.codex/packages/standalone/releases/0.157.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0jzxIFn:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lJR4wu:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/shims:/home/vimkim/.cargo/bin/:/opt/bison-3.0.5/bin/:/home/vimkim/.local/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/vimkim/.config/my-scripts/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin" "bash" "/home/vimkim/gh/cb/oos-readiness-221/unit_tests/oos/scripts/cleanup_isolated_db.sh" "oosrecoverydb"
+6: Working Directory: /home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/unit_tests/oos
+6: Test timeout computed to be: 60
+6: /home/vimkim/gh/cb/oos-readiness-221/unit_tests/oos/scripts/oos_db_common.sh: line 33: CUBRID_DATABASES: CUBRID_DATABASES must be set
+32/35 Test  #6: oos_cleanup_recovery_db ..........***Failed    0.01 sec
+/home/vimkim/gh/cb/oos-readiness-221/unit_tests/oos/scripts/oos_db_common.sh: line 33: CUBRID_DATABASES: CUBRID_DATABASES must be set
+
+test 15
+      Start 15: test_oos_record_flags
+
+15: Test command: /home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/bin/test_oos_record_flags
+15: Working Directory: /home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/unit_tests/oos
+15: Test timeout computed to be: 10000000
+15: [==========] Running 1 test from 1 test suite.
+15: [----------] Global test environment set-up.
+15: [----------] 1 test from OosRecordFlags
+15: [ RUN      ] OosRecordFlags.OosFlagIsSeparateFromMvccFlags
+15: [       OK ] OosRecordFlags.OosFlagIsSeparateFromMvccFlags (0 ms)
+15: [----------] 1 test from OosRecordFlags (0 ms total)
+15: 
+15: [----------] Global test environment tear-down
+15: [==========] 1 test from 1 test suite ran. (0 ms total)
+15: [  PASSED  ] 1 test.
+33/35 Test #15: test_oos_record_flags ............   Passed    0.02 sec
+test 16
+      Start 16: test_byte_span_writer
+
+16: Test command: /home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/bin/test_byte_span_writer
+16: Working Directory: /home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/unit_tests/oos
+16: Test timeout computed to be: 10000000
+16: [==========] Running 7 tests from 1 test suite.
+16: [----------] Global test environment set-up.
+16: [----------] 7 tests from ByteSpanWriter
+16: [ RUN      ] ByteSpanWriter.EmptyState
+16: [       OK ] ByteSpanWriter.EmptyState (0 ms)
+16: [ RUN      ] ByteSpanWriter.AppendWithinCapacityAdvancesCursorAndCopies
+16: [       OK ] ByteSpanWriter.AppendWithinCapacityAdvancesCursorAndCopies (0 ms)
+16: [ RUN      ] ByteSpanWriter.AppendOverflowFailsAndDoesNotWrite
+16: [       OK ] ByteSpanWriter.AppendOverflowFailsAndDoesNotWrite (0 ms)
+16: [ RUN      ] ByteSpanWriter.RecoveryAfterFailedAppend
+16: [       OK ] ByteSpanWriter.RecoveryAfterFailedAppend (0 ms)
+16: [ RUN      ] ByteSpanWriter.FullWriterRejectsNonZeroAppendButAcceptsZero
+16: [       OK ] ByteSpanWriter.FullWriterRejectsNonZeroAppendButAcceptsZero (0 ms)
+16: [ RUN      ] ByteSpanWriter.ZeroCapacitySpanIsImmediatelyFull
+16: [       OK ] ByteSpanWriter.ZeroCapacitySpanIsImmediatelyFull (0 ms)
+16: [ RUN      ] ByteSpanWriter.OverflowByExactlyOneByteIsCaught
+16: [       OK ] ByteSpanWriter.OverflowByExactlyOneByteIsCaught (0 ms)
+16: [----------] 7 tests from ByteSpanWriter (0 ms total)
+16: 
+16: [----------] Global test environment tear-down
+16: [==========] 7 tests from 1 test suite ran. (0 ms total)
+16: [  PASSED  ] 7 tests.
+34/35 Test #16: test_byte_span_writer ............   Passed    0.02 sec
+test 17
+      Start 17: test_oos_tde_gate
+
+17: Test command: /home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/bin/test_oos_tde_gate
+17: Working Directory: /home/vimkim/gh/cb/oos-readiness-221/build_preset_debug_gcc/unit_tests/oos
+17: Test timeout computed to be: 10000000
+17: [==========] Running 3 tests from 1 test suite.
+17: [----------] Global test environment set-up.
+17: [----------] 3 tests from TdeUserDataGate
+17: [ RUN      ] TdeUserDataGate.OosForwardDeleteIsEncryptedRcvindex
+17: [       OK ] TdeUserDataGate.OosForwardDeleteIsEncryptedRcvindex (0 ms)
+17: [ RUN      ] TdeUserDataGate.SiblingAndBaselineDeletePathsAreGated
+17: [       OK ] TdeUserDataGate.SiblingAndBaselineDeletePathsAreGated (0 ms)
+17: [ RUN      ] TdeUserDataGate.MetadataOnlyHeapOpIsNotGated
+17: [       OK ] TdeUserDataGate.MetadataOnlyHeapOpIsNotGated (0 ms)
+17: [----------] 3 tests from TdeUserDataGate (0 ms total)
+17: 
+17: [----------] Global test environment tear-down
+17: [==========] 3 tests from 1 test suite ran. (0 ms total)
+17: [  PASSED  ] 3 tests.
+35/35 Test #17: test_oos_tde_gate ................   Passed    0.02 sec
+
+9% tests passed, 32 tests failed out of 35
+
+Total Test time (real) =   0.14 sec
+
+The following tests FAILED:
+	  1 - oos_setup_db (Failed)
+	  2 - oos_cleanup_db (Failed)
+	  3 - oos_setup_no_logging_db (Failed)
+	  4 - oos_cleanup_no_logging_db (Failed)
+	  5 - oos_setup_recovery_db (Failed)
+	  6 - oos_cleanup_recovery_db (Failed)
+	  7 - test_oos (Not Run)
+	  8 - test_oos_delete (Not Run)
+	  9 - test_oos_identity_stamp (Not Run)
+	 10 - test_oos_eager_diagnostics (Not Run)
+	 11 - test_oos_no_logging (Not Run)
+	 12 - test_oos_remove_file (Not Run)
+	 13 - test_oos_bestspace (Not Run)
+	 14 - test_oos_growth_sweep (Not Run)
+	 18 - test_oos_server (Not Run)
+	 19 - test_oos_delete_server (Not Run)
+	 20 - test_oos_remove_file_server (Not Run)
+	 21 - test_oos_mock_vacuum_server (Not Run)
+	 22 - test_oos_vacuum_server (Not Run)
+	 23 - test_oos_real_vacuum_server (Not Run)
+	 24 - test_oos_sql_crud (Not Run)
+	 25 - test_oos_sql_ddl (Not Run)
+	 26 - test_oos_sql_delete (Not Run)
+	 27 - test_oos_sql_boundary (Not Run)
+	 28 - test_oos_sql_update_delete (Not Run)
+	 29 - test_oos_sql_txn (Not Run)
+	 30 - test_oos_sql_bigone (Not Run)
+	 31 - test_oos_sql_eager_cleanup (Not Run)
+	 32 - test_oos_sql_storage (Not Run)
+	 33 - test_oos_sql_show (Not Run)
+	 34 - test_oos_sql_visible_version (Not Run)
+	 35 - test_oos_sql_crash_recovery (Not Run)
+Errors while running CTest
+error: recipe `ctest` failed on line 208 with exit code 8
