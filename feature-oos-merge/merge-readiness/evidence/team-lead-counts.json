@@ -1,0 +1,151 @@
+{
+  "source": "qa-refreshed.json",
+  "build": {
+    "build_id": "5328",
+    "build_text": "11.5.0.2625-1ec35f8",
+    "function_url": "showFuntionRes.nhn?tree_id=5328&buildId=11.5.0.2625-1ec35f8",
+    "group_id": "4923",
+    "group_text": "RB-11.5.0-Manual",
+    "showstat_url": "showstat.nhn?treeId=5328&treeName=11.5.0.2625-1ec35f8"
+  },
+  "count_unit": "suite/testcase; release and debug counted separately",
+  "table": [
+    {
+      "label": "SQL·medium·단위 테스트",
+      "suites": [
+        "sql",
+        "sql_debug",
+        "medium",
+        "medium_debug",
+        "unittest",
+        "unittest_debug"
+      ],
+      "failures": 0,
+      "candidates": 0
+    },
+    {
+      "label": "SQL-by-CCI",
+      "suites": [
+        "sql_by_cci"
+      ],
+      "failures": 11,
+      "candidates": 2
+    },
+    {
+      "label": "일반 shell (release/debug)",
+      "suites": [
+        "shell",
+        "shell_debug"
+      ],
+      "failures": 45,
+      "candidates": 20
+    },
+    {
+      "label": "고부하·장시간 shell",
+      "suites": [
+        "shell_heavy",
+        "shell_long"
+      ],
+      "failures": 6,
+      "candidates": 3
+    },
+    {
+      "label": "CCI API (release/debug)",
+      "suites": [
+        "cci",
+        "cci_debug"
+      ],
+      "failures": 3,
+      "candidates": 2
+    },
+    {
+      "label": "HA shell·복제 debug",
+      "suites": [
+        "ha_shell",
+        "ha_repl_debug"
+      ],
+      "failures": 16,
+      "candidates": 14
+    },
+    {
+      "label": "동시 실행 isolation (release/debug)",
+      "suites": [
+        "isolation",
+        "isolation_debug"
+      ],
+      "failures": 3,
+      "candidates": 3
+    },
+    {
+      "label": "JDBC",
+      "suites": [
+        "jdbc"
+      ],
+      "failures": 4,
+      "candidates": 1
+    },
+    {
+      "label": "성능 shell",
+      "suites": [
+        "shell_perf"
+      ],
+      "failures": 3,
+      "candidates": 2
+    },
+    {
+      "label": "무작위 SQL / vacuum (RQG)",
+      "suites": [
+        "RQG"
+      ],
+      "failures": 1,
+      "candidates": 1
+    },
+    {
+      "label": "CDC 복제",
+      "suites": [
+        "cdc_repl"
+      ],
+      "failures": 47,
+      "candidates": 0
+    }
+  ],
+  "summary_failures": 139,
+  "identified_records": 136,
+  "missing_identities": 3,
+  "non_cdc_candidates": 48,
+  "distinct_candidate_testcase_identities": 37,
+  "classification_counts": {
+    "feature-only-candidate": 48,
+    "baseline-testcase-needs-symptom-comparison": 37,
+    "excluded-cdc": 51
+  },
+  "oos_change_link_strong_count": 3,
+  "oos_change_link_strong_cases": [
+    {
+      "suite": "shell",
+      "testcase": "shell/_25_unstable/_06_issues/_14_2h/bug_bts_15529/cases/bug_bts_15529.sh"
+    },
+    {
+      "suite": "shell_debug",
+      "testcase": "shell/_25_unstable/_06_issues/_14_2h/bug_bts_15529/cases/bug_bts_15529.sh"
+    },
+    {
+      "suite": "ha_shell",
+      "testcase": "HA/shell/_40_guava/cbrd_26374_ha/cases/cbrd_26374_ha.sh"
+    }
+  ],
+  "strong_count_basis": "Source/output match in qa-qualification/triage-expectations: two error-default-list cases and one HA +8-byte heap-header offset case. These are expectation-change candidates, not proven engine defects.",
+  "cause_groups": {
+    "oos_expectation_change": 3,
+    "missing_upstream_groupby_fix": 2,
+    "upstream_testcase_or_behavior_mismatch_candidates": 17,
+    "rqg_page_lifecycle_unknown": 1,
+    "other_unresolved": 25
+  },
+  "handling_counts": {
+    "tc_fix_expected_not_yet_runtime_verified": 11,
+    "related_tc_changes_integrated_but_causality_unresolved": 9,
+    "upstream_engine_fix_integrated": 2,
+    "unresolved": 26
+  }
+}
