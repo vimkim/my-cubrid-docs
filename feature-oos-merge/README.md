@@ -1,0 +1,21 @@
+# feature-oos-merge documentation
+
+Last modified: 2026-10-13 (Asia/Seoul).
+
+Historical analyses and accepted decisions retain their original revision and verification scope.
+
+## Integrated analysis and decisions
+
+| File | What it contains | Created | Last modified | Why it was created |
+| --- | --- | --- | --- | --- |
+| [OOS 머지 준비](merge-readiness/CONTEXT.md) | OOS 머지 준비 | 2026-09-29 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [OOS 기술적 머지 준비 — 2026-09-29](merge-readiness/README.md) | OOS 기술적 머지 준비 — 2026-09-29 | 2026-09-29 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [PR #7927 CI 검증 결과 — 34a9072](merge-readiness/ci-verified-pr7927_34a9072_codex.md) | PR #7927 CI 검증 결과 — 34a9072 | 2026-09-29 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [PR #7990 CI 검증 결과 — 1ec35f8](merge-readiness/ci-verified-pr7990_1ec35f8_codex.md) | PR #7990 CI 검증 결과 — 1ec35f8 | 2026-09-29 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [OOS 완료 보고와 기술적 머지 준비 — 실행 계약](merge-readiness/execution-contract.md) | OOS 완료 보고와 기술적 머지 준비 — 실행 계약 | 2026-09-29 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [OOS 최신 QA 실패 원장](merge-readiness/failure-ledger_1ec35f8_codex.md) | OOS 최신 QA 실패 원장 | 2026-09-29 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [develop 통합 후보 검토](merge-readiness/integration-review_fb567a6_codex.md) | develop 통합 후보 검토 | 2026-09-29 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [통합 후보 로컬 검증](merge-readiness/local-validation_fb567a6_codex.md) | 통합 후보 로컬 검증 | 2026-09-29 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [OOS 진행 상황과 테스트 실패 보고](merge-readiness/progress-report_1ec35f8_codex.md) | OOS 진행 상황과 테스트 실패 보고 | 2026-09-29 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [OOS 완료 보고와 머지 준비 — 인터뷰](merge-readiness/review.md) | OOS 완료 보고와 머지 준비 — 인터뷰 | 2026-09-29 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [develop 동기화 커밋 게시 준비](merge-readiness/source-publication_fb567a6_codex.md) | develop 동기화 커밋 게시 준비 | 2026-09-29 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
