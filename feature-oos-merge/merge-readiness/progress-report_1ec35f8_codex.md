@@ -1,6 +1,12 @@
 # OOS 진행 상황과 테스트 실패 보고
 
-확인일: 2026-09-29. 작업 221. **현재 기술적 머지 준비는 미완료다.**
+확인일: 2026-09-29. 작업 221.
+
+[팀장님용 간략 보고](team-lead-summary_20260929_codex.md)
+
+**최신 진행:** 엔진 `fb567a6`, public testcase `bdba62aee0fa`, private testcase `c4b9d482fbd4`를 게시했다. 양쪽 `tc/pr-7990` 동기화 완료 후 [전체 CI를 요청](https://github.com/CUBRID/cubrid/pull/7990#issuecomment-5890577215)했다. 결과는 대기 중이다. 현재 `Check TC PRs` 필수 체크는 OOS testcase 변경이 testcase develop에 아직 없어서 실패한다. 이것은 브랜치 동기화 실패가 아니라 최종 병합 순서의 차단이며, testcase develop 병합은 이번 동기화 작업에 포함하지 않았다.
+
+ **현재 기술적 머지 준비는 미완료다.**
 
 QA 자료 갱신과 전체 실패 목록 정리, develop 통합 후보의 debug/release 빌드와 focused isolation 검증까지 진행했다. 선행 기능 수정, 원인 불명 테스트, 전체 검증 증거가 남아 있다. 실제 develop 머지와 테스트 실행기 수정은 이번 작업에 포함하지 않는다.
 
@@ -10,23 +16,23 @@ QA 자료 갱신과 전체 실패 목록 정리, develop 통합 후보의 debug/
 |---|---|
 | 기존 조사 | 비CDC 추가 후보 46행/35개 테스트 조사 및 S04 원본 20개 하위 사례의 6회 실행 완료. 원인 확정이나 전체 검증 완료는 아님 |
 | QA 새 자료 | feature `1ec35f8`, develop `e1c3db1` 자료를 다시 수집. 비CDC 추가 후보는 식별된 항목 기준 48행. 새 장시간 테스트 3행 추가, 기존 CCI 1행은 공통 실패로 이동 |
-| develop 통합 준비 | 현재 develop `f1bd99ed43a134383bc0be1d766a6f121601a499`를 별도 worktree에 실제 merge commit `fb567a629cdb390fff920542173fa36f454c74a0`으로 통합. 원격 PR은 아직 `1ec35f8` |
+| develop 통합 준비 | 현재 develop `f1bd99ed43a134383bc0be1d766a6f121601a499`를 별도 worktree에 실제 merge commit `fb567a629cdb390fff920542173fa36f454c74a0`으로 통합. 원격 PR도 `fb567a6`으로 게시 완료 |
 | 로컬 검증 | 통합 후보 debug/release 빌드·설치 완료. debug/release CTest 각각 35/35 통과. 원본 isolation 사례는 두 모드 모두 1/1 통과 |
 | 기능 선행 조건 | PR #7927은 OPEN, PR #7462도 OPEN. 현재 PR #7990 코드에는 raw DB_PAGESIZE/4와 vacuum forward-walk가 남아 있음. commit-conditional OOS 알림 발행 구현 확인 안 됨 |
-| 전체 검증 | HA release·shell_ext, RQG 비교, shell_long 세부 누락 등 차단 유지. 새 통합 후보의 QA·CI 증거는 아직 없음 |
+| 전체 검증 | HA release·shell_ext, RQG 비교, shell_long 세부 누락 등 차단 유지. 새 통합 후보 CI 요청 완료, 결과 대기. 전체 QA 미완료 |
 | 외부 승인 | CDC 두 건의 maintainer/admin 예외 확보 여부 미확인. 기술적 준비와 별도로 표시 |
 
 CBRD-27230/27237은 실시간 JIRA 조회에서도 Open이다. 오래된 이슈 본문의 20바이트 stub 등은 현행 OOS 명세의 24바이트 기준을 대체하지 않는다. rollback/vacuum 결함은 과거 런타임 재현 기록과 현재 경로 잔존을 구분하며, 이번 실행에서 재현했다고 주장하지 않는다.
 
-## PR CI 검증
+## 이전 head의 PR CI 검증
 
-PR #7990의 현재 원격 head는 `1ec35f86c5e43b9ca86d81e202c68899f8ce4f21`이고 draft, REVIEW_REQUIRED다. 현재 head의 CI는 medium 975 통과, SQL 17470 통과, shell 3256 통과·2실패·30 skip이다. shell 실패는 합의된 CDC 두 건이다. 과거 `bug_bts_13242`를 현재 실패로 반복 기재하지 않는다.
+게시 전 분석한 PR #7990의 원격 head는 `1ec35f86c5e43b9ca86d81e202c68899f8ce4f21`이고 draft, REVIEW_REQUIRED다. 현재 head의 CI는 medium 975 통과, SQL 17470 통과, shell 3256 통과·2실패·30 skip이다. shell 실패는 합의된 CDC 두 건이다. 과거 `bug_bts_13242`를 현재 실패로 반복 기재하지 않는다.
 
 최초 수집기 결과는 필수 observation 및 summary hash가 없어 warning이었다. 이 기록을 보존하고, 기존 수집기 소스 `45944012aaaa`를 빌드해 별도 빈 저장소에 다시 수집했다. 수집기·테스트 실행기 소스 수정은 없다. 새 증거는 exact-head, schema, observation, summary/raw hash, shard 및 집계를 검증해 **full** 분석 모드가 됐다. [#7990 검증 보고서](ci-verified-pr7990_1ec35f8_codex.md).
 
 선행 PR #7927의 현재 head `34a9072`도 같은 절차로 검증했다. medium 3건, SQL 1건, shell 10건이 실패한다. 이 중 CDC는 2건이며 나머지 12건은 증상과 처리 과제가 남아 있다. 오래된 head의 통과 기록으로 대체하지 않는다. [#7927 전체 실패표](ci-verified-pr7927_34a9072_codex.md).
 
-이 CI 결과는 새 통합 후보 `fb567a6`의 CI가 아니다. 후보 게시와 해당 head와 갱신한 testcase SHA 조합의 새 검증이 필요하다.
+이 CI 결과는 새 통합 후보 `fb567a6`의 CI가 아니다. 후보 게시와 testcase 갱신은 완료했으며 새 조합의 CI 결과를 기다린다.
 
 ## 통합 후보의 로컬 검증
 
@@ -113,7 +119,7 @@ CDC의 cbrd_27064와 cbrd_27075는 활성 상태의 실패를 유지한다. QA�
 
 ## 이어서 할 일
 
-1. 로컬 통합 후보 `fb567a6`의 최초 source push 승인을 처리한 뒤 exact-head CI를 실행한다. I01은 원본 isolation 두 모드에서 통과했지만 병렬/hash 경로 검증 전까지 해결로 표시하지 않는다.
+1. 게시된 통합 후보 `fb567a6`과 갱신한 testcase 조합의 CI 결과를 확인한다. I01은 원본 isolation 두 모드에서 통과했지만 병렬/hash 경로 검증 전까지 해결로 표시하지 않는다.
 2. 선행 기능 PR의 실제 수정·리뷰·검증 상태를 확인해 통합 준비를 진행한다. rollback/vacuum 데이터 손실 조건은 별도 기능 수정과 회귀 검증이 필요하다.
 3. 전체 실패 원장의 각 항목을 증거에 따라 처리한다. 자료가 부족한 항목은 부족한 파일·환경을 정확히 기록하고, 진행 가능한 다른 항목을 계속 처리한다.
 4. 최종 통합 커밋의 전체 Linux QA와 필수 CI 근거를 확보한다. 과거 커밋의 성공은 새 커밋의 성공을 대신하지 않는다.

@@ -1,6 +1,8 @@
 # Testcase 브랜치 갱신과 CI 동기화
 
-2026-09-29 원격 fetch 후 확인했다. `cubrid-pr-tc-sync-check-oos` 실행 결과 양쪽 저장소에서 `feature/oos-merge`와 `tc/pr-7990`은 이미 같은 커밋이다. 원격 또는 로컬 testcase 브랜치를 이동시키지 않았다.
+**후속 처리 완료:** 사용자 승인 후 두 develop 통합을 실제 merge commit으로 게시했다. public `bdba62aee0fa`, private `c4b9d482fbd4`이며 각각 `feature/oos-merge`와 `tc/pr-7990`의 원격 SHA가 일치한다. 충돌 없이 통합됐고 OOS 전용 파일 5개/19개를 그대로 보존했다. 변경된 shell 16개는 bash 구문 검사에 통과했다. 엔진 `fb567a6` 게시 후 `/run all`을 요청했다. [통합 검증](evidence/tc-merge-validation.json) · [동기화 실행](evidence/tc-sync-publish.log) · [CI 요청](evidence/ci-trigger-receipt.json).
+
+아래는 실행 전 확인 기록이다. 2026-09-29 원격 fetch 후 확인했다. `cubrid-pr-tc-sync-check-oos` 실행 결과 양쪽 저장소에서 `feature/oos-merge`와 `tc/pr-7990`은 이미 같은 커밋이다. 원격 또는 로컬 testcase 브랜치를 이동시키지 않았다.
 
 | 저장소 | feature/oos-merge = tc/pr-7990 | 최신 develop | 아직 통합되지 않은 develop 커밋 |
 |---|---|---|---|
