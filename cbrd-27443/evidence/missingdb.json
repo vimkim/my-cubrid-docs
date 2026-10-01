@@ -1,0 +1,53 @@
+{
+  "mode": "missingdb",
+  "version": "cubrid (CUBRID utilities)\nCUBRID 11.5.0 (11.5.0.2602-a0026f9) (64bit debug build for Linux) (Sep 22 2026 14:54:01)\nCopyright (C) 2008 Search Solution Corporation.\nCopyright (C) 2016 CUBRID Corporation.",
+  "commands": [
+    {
+      "argv": [
+        "cubrid",
+        "service",
+        "stop"
+      ],
+      "rc": 0
+    }
+  ],
+  "targets": {
+    "lock": "/home/vimkim/.cache/cbrd27443-missingdb.5Tfv0O/caller.lock",
+    "stdout": "pipe:[420194705]",
+    "stderr": "pipe:[420194706]"
+  },
+  "launcher_pid": 23,
+  "observer_pgid": 0,
+  "launcher_rc": 1,
+  "launcher_elapsed_s": 2.105,
+  "eof_after_exit_plus_2s": {
+    "stdout": false,
+    "stderr": false
+  },
+  "lock_available_while_running": false,
+  "holders_after_exit": [
+    {
+      "pid": 24,
+      "name": "cub_master",
+      "pgid": 0,
+      "sid": 0,
+      "fds": {
+        "1": "pipe:[420194705]",
+        "2": "pipe:[420194706]",
+        "3": "/home/vimkim/.cache/cbrd27443-missingdb.5Tfv0O/caller.lock",
+        "4": "/home/vimkim/.cache/cbrd27443-missingdb.5Tfv0O/root/log/cub_server.err",
+        "6": "/home/vimkim/.cache/cbrd27443-missingdb.5Tfv0O/root/log/dev2_master.err"
+      }
+    }
+  ],
+  "eof_after_service_stop": {
+    "stdout": true,
+    "stderr": true
+  },
+  "lock_available_after_service_stop": true,
+  "holders_after_service_stop": [],
+  "output": {
+    "stdout": "@ cubrid master start\n++ cubrid master start: success\n@ cubrid server start: no_such_db\n\nThis may take a long time depending on the amount of recovery works to do.\n++ cubrid server start: fail\n",
+    "stderr": "Unable to restart/initialize the database server. Database \"no_such_db\" is unknown, or the file \"databases.txt\" cannot be accessed.\n"
+  }
+}

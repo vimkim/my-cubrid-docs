@@ -1,0 +1,186 @@
+{
+  "mode": "revive",
+  "version": "cubrid (CUBRID utilities)\nCUBRID 11.5.0 (11.5.0.2602-a0026f9) (64bit debug build for Linux) (Sep 22 2026 14:54:01)\nCopyright (C) 2008 Search Solution Corporation.\nCopyright (C) 2016 CUBRID Corporation.",
+  "commands": [
+    {
+      "argv": [
+        "cubrid",
+        "createdb",
+        "--db-volume-size=20M",
+        "--log-volume-size=20M",
+        "-F",
+        "/home/vimkim/.cache/cbrd27443-revive.QaUfoz",
+        "-L",
+        "/home/vimkim/.cache/cbrd27443-revive.QaUfoz",
+        "fdtest",
+        "en_US.utf8"
+      ],
+      "rc": 0
+    },
+    {
+      "argv": [
+        "cubrid",
+        "server",
+        "stop",
+        "fdtest"
+      ],
+      "rc": 0
+    },
+    {
+      "argv": [
+        "cubrid",
+        "service",
+        "stop"
+      ],
+      "rc": 0
+    },
+    {
+      "argv": [
+        "cubrid",
+        "deletedb",
+        "fdtest"
+      ],
+      "rc": 0
+    }
+  ],
+  "targets": {
+    "lock": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/caller.lock",
+    "stdout": "pipe:[419946417]",
+    "stderr": "pipe:[419946418]"
+  },
+  "launcher_pid": 25,
+  "observer_pgid": 0,
+  "launcher_rc": 0,
+  "launcher_elapsed_s": 3.108,
+  "eof_after_exit_plus_2s": {
+    "stdout": false,
+    "stderr": false
+  },
+  "lock_available_while_running": false,
+  "holders_after_exit": [
+    {
+      "pid": 26,
+      "name": "cub_master",
+      "pgid": 0,
+      "sid": 0,
+      "fds": {
+        "1": "pipe:[419946417]",
+        "2": "pipe:[419946418]",
+        "3": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/caller.lock",
+        "4": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/root/log/cub_server.err",
+        "6": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/root/log/dev2_master.err"
+      }
+    },
+    {
+      "pid": 29,
+      "name": "cub_server",
+      "pgid": 29,
+      "sid": 29,
+      "fds": {
+        "1": "pipe:[419946417]",
+        "2": "pipe:[419946418]",
+        "3": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/caller.lock",
+        "4": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/root/log/cub_server.err",
+        "6": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/root/log/server/fdtest_20261001_1758.err",
+        "112": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/fdtest_lgat"
+      }
+    },
+    {
+      "pid": 32,
+      "name": "cub_pl",
+      "pgid": 32,
+      "sid": 32,
+      "fds": {
+        "1": "pipe:[419946417]",
+        "2": "pipe:[419946418]",
+        "3": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/caller.lock",
+        "4": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/root/log/cub_server.err",
+        "6": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/root/log/server/fdtest_20261001_1758.err",
+        "9": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/fdtest_lgat",
+        "10": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/root/log/pl/fdtest_pl.err"
+      }
+    }
+  ],
+  "killed_server_pid": 29,
+  "holders_after_revive": [
+    {
+      "pid": 26,
+      "name": "cub_master",
+      "pgid": 0,
+      "sid": 0,
+      "fds": {
+        "1": "pipe:[419946417]",
+        "2": "pipe:[419946418]",
+        "3": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/caller.lock",
+        "4": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/root/log/cub_server.err",
+        "6": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/root/log/dev2_master.err"
+      }
+    },
+    {
+      "pid": 276,
+      "name": "cub_server",
+      "pgid": 276,
+      "sid": 276,
+      "fds": {
+        "1": "pipe:[419946417]",
+        "2": "pipe:[419946418]",
+        "3": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/caller.lock",
+        "4": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/root/log/cub_server.err",
+        "6": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/root/log/dev2_master.err",
+        "7": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/root/log/server/fdtest_20261001_1759.err",
+        "112": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/fdtest_lgat"
+      }
+    },
+    {
+      "pid": 278,
+      "name": "cub_pl",
+      "pgid": 278,
+      "sid": 278,
+      "fds": {
+        "1": "pipe:[419946417]",
+        "2": "pipe:[419946418]",
+        "3": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/caller.lock",
+        "4": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/root/log/cub_server.err",
+        "6": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/root/log/dev2_master.err",
+        "7": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/root/log/server/fdtest_20261001_1759.err",
+        "10": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/fdtest_lgat",
+        "11": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/root/log/pl/fdtest_pl.err"
+      }
+    }
+  ],
+  "eof_after_revive": {
+    "stdout": false,
+    "stderr": false
+  },
+  "lock_available_after_revive": false,
+  "eof_after_server_stop": {
+    "stdout": false,
+    "stderr": false
+  },
+  "lock_available_after_server_stop": false,
+  "holders_after_server_stop": [
+    {
+      "pid": 26,
+      "name": "cub_master",
+      "pgid": 0,
+      "sid": 0,
+      "fds": {
+        "1": "pipe:[419946417]",
+        "2": "pipe:[419946418]",
+        "3": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/caller.lock",
+        "4": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/root/log/cub_server.err",
+        "6": "/home/vimkim/.cache/cbrd27443-revive.QaUfoz/root/log/dev2_master.err"
+      }
+    }
+  ],
+  "eof_after_service_stop": {
+    "stdout": true,
+    "stderr": true
+  },
+  "lock_available_after_service_stop": true,
+  "holders_after_service_stop": [],
+  "output": {
+    "stdout": "@ cubrid master start\n++ cubrid master start: success\n@ cubrid server start: fdtest\n\nThis may take a long time depending on the amount of recovery works to do.\n\nCUBRID 11.5.0 (11.5.0.2602) (64 debug build)\n\n++ cubrid server start: success\n\nThis may take a long time depending on the amount of recovery works to do.\n\nCUBRID 11.5.0 (11.5.0.2602) (64 debug build)\n\n",
+    "stderr": ""
+  }
+}

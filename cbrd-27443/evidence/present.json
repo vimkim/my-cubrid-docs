@@ -1,0 +1,132 @@
+{
+  "mode": "present",
+  "version": "cubrid (CUBRID utilities)\nCUBRID 11.5.0 (11.5.0.2602-a0026f9) (64bit debug build for Linux) (Sep 22 2026 14:54:01)\nCopyright (C) 2008 Search Solution Corporation.\nCopyright (C) 2016 CUBRID Corporation.",
+  "commands": [
+    {
+      "argv": [
+        "cubrid",
+        "createdb",
+        "--db-volume-size=20M",
+        "--log-volume-size=20M",
+        "-F",
+        "/home/vimkim/.cache/cbrd27443-present.y0uftg",
+        "-L",
+        "/home/vimkim/.cache/cbrd27443-present.y0uftg",
+        "fdtest",
+        "en_US.utf8"
+      ],
+      "rc": 0
+    },
+    {
+      "argv": [
+        "cub_master"
+      ],
+      "rc": 0
+    },
+    {
+      "argv": [
+        "cubrid",
+        "server",
+        "stop",
+        "fdtest"
+      ],
+      "rc": 0
+    },
+    {
+      "argv": [
+        "cubrid",
+        "service",
+        "stop"
+      ],
+      "rc": 0
+    },
+    {
+      "argv": [
+        "cubrid",
+        "deletedb",
+        "fdtest"
+      ],
+      "rc": 0
+    }
+  ],
+  "targets": {
+    "lock": "/home/vimkim/.cache/cbrd27443-present.y0uftg/caller.lock",
+    "stdout": "pipe:[420246557]",
+    "stderr": "pipe:[420246558]"
+  },
+  "launcher_pid": 28,
+  "observer_pgid": 0,
+  "launcher_rc": 0,
+  "launcher_elapsed_s": 2.106,
+  "eof_after_exit_plus_2s": {
+    "stdout": false,
+    "stderr": false
+  },
+  "lock_available_while_running": false,
+  "holders_after_exit": [
+    {
+      "pid": 26,
+      "name": "cub_master",
+      "pgid": 26,
+      "sid": 26,
+      "fds": {
+        "3": "/home/vimkim/.cache/cbrd27443-present.y0uftg/root/log/dev2_master.err"
+      }
+    },
+    {
+      "pid": 30,
+      "name": "cub_server",
+      "pgid": 30,
+      "sid": 30,
+      "fds": {
+        "1": "pipe:[420246557]",
+        "2": "pipe:[420246558]",
+        "3": "/home/vimkim/.cache/cbrd27443-present.y0uftg/caller.lock",
+        "4": "/home/vimkim/.cache/cbrd27443-present.y0uftg/root/log/cub_server.err",
+        "6": "/home/vimkim/.cache/cbrd27443-present.y0uftg/root/log/server/fdtest_20261001_1757.err",
+        "112": "/home/vimkim/.cache/cbrd27443-present.y0uftg/fdtest_lgat"
+      }
+    },
+    {
+      "pid": 33,
+      "name": "cub_pl",
+      "pgid": 33,
+      "sid": 33,
+      "fds": {
+        "1": "pipe:[420246557]",
+        "2": "pipe:[420246558]",
+        "3": "/home/vimkim/.cache/cbrd27443-present.y0uftg/caller.lock",
+        "4": "/home/vimkim/.cache/cbrd27443-present.y0uftg/root/log/cub_server.err",
+        "6": "/home/vimkim/.cache/cbrd27443-present.y0uftg/root/log/server/fdtest_20261001_1757.err",
+        "9": "/home/vimkim/.cache/cbrd27443-present.y0uftg/fdtest_lgat",
+        "10": "/home/vimkim/.cache/cbrd27443-present.y0uftg/root/log/pl/fdtest_pl.err"
+      }
+    }
+  ],
+  "eof_after_server_stop": {
+    "stdout": true,
+    "stderr": true
+  },
+  "lock_available_after_server_stop": true,
+  "holders_after_server_stop": [
+    {
+      "pid": 26,
+      "name": "cub_master",
+      "pgid": 26,
+      "sid": 26,
+      "fds": {
+        "3": "/home/vimkim/.cache/cbrd27443-present.y0uftg/root/log/dev2_master.err"
+      }
+    }
+  ],
+  "eof_after_service_stop": {
+    "stdout": true,
+    "stderr": true
+  },
+  "lock_available_after_service_stop": true,
+  "holders_after_service_stop": [],
+  "output": {
+    "stdout": "@ cubrid server start: fdtest\n\nThis may take a long time depending on the amount of recovery works to do.\n\nCUBRID 11.5.0 (11.5.0.2602) (64 debug build)\n\n++ cubrid server start: success\n",
+    "stderr": ""
+  }
+}
