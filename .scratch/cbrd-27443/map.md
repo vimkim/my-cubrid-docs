@@ -18,4 +18,4 @@ Shell worktree: `/home/vimkim/gh/cubrid-testcases-private-ex/CBRD-27443-fd-clean
 
 One fresh worker per ticket, numeric order, one active worker. Main performs Standards and Spec review against each dispatch base and the original base for final integration. No additional reviewer agents.
 
-Baseline preparation uses debug_gcc and the retained namespace probe with PID-1 reaping. Historical probe results do not qualify the new build. Tickets 01–05 have accepted fixed-binary evidence; tickets 06–08 remain outstanding.
+Baseline preparation uses debug_gcc and the retained namespace probe with PID-1 reaping. Historical probe results do not qualify the new build. Tickets01–05 and07 have accepted fixed-binary evidence. Ticket06 compatibility correction and ticket08 integration remain outstanding.
