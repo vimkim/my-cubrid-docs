@@ -1,0 +1,21 @@
+# Ticket 04 main review (in progress)
+
+Dispatch fixed points: engine `74ee7520a76dd5c1635bed9e75a06c233026115a`, shell `8b00d634cfb36d654c88d747114aa126efa866c6`. Main performs Standards and Spec review directly under the approved one-worker-per-ticket topology.
+
+Initial source `ac7f26091` is not accepted. Rotation baseline retained at `/home/vimkim/.cache/cbrd27443-04-red`: the old active file grows past the proposed 1 MiB limit. Native final evidence is outstanding.
+
+## Standards
+
+Pending corrections: legacy C++ default argument declaration needs personal-policy indent guards. New helper state must reset between attempts. Initial inline log helper is shared by launcher marker and relay, avoiding inconsistent rotation policy; POSIX-only build linkage remains explicit.
+
+## Spec
+
+Pending findings sent to worker04:
+
+- Process-associated F_SETLK locks do not serialize concurrent threads, and closing another same-inode descriptor can release their locks. Use locking that covers both process and thread writer concurrency.
+- Renaming an oversized existing active file merely creates an oversized archive. Define and verify retention migration for existing oversized files.
+- Replace unbounded anonymous startup spools without truncating diagnostics; bounded pipes must be drained fairly during every original readiness wait, and finish must drain before waiting for acknowledgement. Preserve registration checks and existing timing criteria.
+- Verify actual executable-generated stdout/stderr, including startup failure larger than archive retention. Observer writes to producer pipe endpoints are supplemental evidence.
+- Runtime failure records must remain bounded and survive successful writes by other relays. Test observable failures and consider SIGXFSZ rather than relying solely on write returning errno. No claim assumes an unavailable filesystem and unavailable system logger can guarantee persistence.
+
+Final acceptance requires all seven ticket checkboxes, clean source/test commits, exact installed/copied identities, native verdict and regression results. No completion claim yet.
