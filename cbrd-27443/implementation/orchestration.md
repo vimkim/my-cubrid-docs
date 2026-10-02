@@ -8,7 +8,7 @@ Work-tracker item: 261. Handoff contract: `/tmp/handoff-cbrd-27443-orchestrated-
 - User-confirmed implementation base: `15e7dc8b5b56fd8751d56ccae1fdf87d315bd35d`. User confirmed this new base and exclusive worktree availability after an external fast-forward. Never include the earlier upstream advance as our implementation diff.
 - Shell tests: `/home/vimkim/gh/cubrid-testcases-private-ex/CBRD-27443-fd-clean`, branch `tc/CBRD-27443-fd-clean`, original base `dfb7da195`.
 - Documentation: `/home/vimkim/gh/my-cubrid-docs-cbrd-27443-implementation`, branch `docs/cbrd-27443-implementation`, original base `ece982c`.
-- Main alone edits ticket status, map and docs. One fresh implementation worker per ticket, numeric order, no nested workers. Tickets01–02 accepted. Latest engine `11ad631c56b35675a96c7c9c15fc66025fb0aab0`, shell `7df0ede4bb5e76f59f644a1d6c7df03cfcd2e93c`. See per-ticket report/review files. Current worker: `/root/ticket03`, dispatch engine base `11ad631c56b35675a96c7c9c15fc66025fb0aab0`, shell base `7df0ede4bb5e76f59f644a1d6c7df03cfcd2e93c`.
+- Main alone edits ticket status, map and docs. One fresh implementation worker per ticket, numeric order, no nested workers. Tickets01–05 accepted; ticket06 active; tickets07–08 pending. See per-ticket report/review files and the latest dispatch checkpoint below. Current worker: `/root/ticket06`, dispatch engine base `8aa8fcab689088b3cd24ad6e44e567e3915eae7e`, shell base `992b4076c3a8d8f8e2ee1aee7495ed8fe562b004`.
 
 ## Preparation evidence
 
@@ -75,3 +75,9 @@ HA fixture finding: `ha_node_list=fdtest@localhost` is not equivalent to an actu
 Ticket05 accepted at source8aa8fcab6/test992b4076c: UE7ABw native1/0/0,1,034 checks including152 HA,9 matching binaries, clean/released. Internal cub_commdb missing-exec acknowledgement0→255 is explicit; public heartbeat0/1 and registration timing preserved. Shared background producer SIGCHLD defaults while parent auto-reaping is unchanged; copy/apply internal child qualification and direct local creation remain06.
 
 Ticket06 dispatch: engine8aa8fcab689088b3cd24ad6e44e567e3915eae7e, shell992b4076c3a8d8f8e2ee1aee7495ed8fe562b004. Fresh worker06 exclusively owns source/tests/build for two-node replication. Main owns docs/tracker. Direct local copy/apply launches still use legacy asynchronous proc_execute; preserve current-attempt diagnostics through existing liveness/registration waits when applying bounded channels. Require actual replicated changes before and after separate copy/apply restart, not process presence alone.
+
+## Ticket 06 design checkpoint
+
+Local copylogdb/applylogdb starts will keep a batch of bounded startup channels through their existing HB_START_WAITING_TIME and PID checks, pump all channels fairly, and finalize every owned channel on all returns. Remote `-h` launches remain synchronous cub_commdb IPC followed by the existing registration checks; the master-managed spawn and automatic recovery already use ticket05 policy. Direct local producers already reset SIGCHLD to default in legacy proc_execute_internal; the changed disposition versus old raw master spawning therefore applies only to master-managed creation/recovery. Qualify actual copy/apply functionality at both boundaries.
+
+Proposed runtime topology: separate private per-node network, UTS and mount namespaces with a private veth pair, private roots/configuration/DB/log paths, and an outer PID1 reaper. Require exact replicated rows before and after separate copylogdb and applylogdb restarts. This checkpoint records a design, not execution or acceptance.
