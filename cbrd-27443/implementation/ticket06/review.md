@@ -1,4 +1,4 @@
-# Ticket 06 main review — verification and decision pending
+# Ticket 06 main review — verified candidate; decision pending
 
 Dispatch fixed points: engine `8aa8fcab689088b3cd24ad6e44e567e3915eae7e`, shell `992b4076c3a8d8f8e2ee1aee7495ed8fe562b004`. Candidate engine `41ac0c2ce39590349e8e5759dc376f88e1cb660b`, shell `8c1a1bc791e5e29174fd5f6e78d98d6cec02f7bb`. Main performs Standards and Spec review directly under the approved one-worker topology. This is not ticket acceptance.
 
@@ -14,6 +14,6 @@ Two material findings are recorded separately. First, exact8aa baseline local mi
 
 Second, initial batch pumping spliced short concurrent diagnostics. Baseline red4 capture10 had430000 stderr bytes and2000 intact lines per producer; green2 had equal bytes but only1994/1995 intact markers. Main required a source fix rather than weaker byte-only tests. Focused green3 on09a now has exactly2000 whole short lines per producer on both streams, independently counted by main, plus complete long newline-free payloads and unterminated tails. Candidate41 is a formatting-only successor; full native verification remains required.
 
-## Pending evidence
+## Verified evidence and remaining decision
 
-Native candidate `.cache/cbrd27443-06-41ac0c2.FvYAKF` is still running. Earlier probes, baseline reproductions and partially successful NOK runs do not replace its final verdict. Archive final report, assertions, installed/copied and per-node identities, clean statuses and retained baseline summary before handoff. Ticket07 may proceed independently after worker06 releases clean worktrees; ticket06 acceptance remains pending the external-contract decision.
+Exact native `.cache/cbrd27443-06-41ac0c2.FvYAKF` passed1 case with0 failures/skips and1326 assertions:121 original +216 master +76 restart +383 boundary +96 rotation +152 HA +282 replication, plus the present probe. Main independently reran the focused verdict verifier and checked every assertion, all11 replicated records, both distinct automatic restarts, both remote launches, and all10 installed/copied/both-node identities. Both worktrees are clean and worker06 released ownership. See report.md and evidence/ for compact data, complete assertion lists and retained baseline/regression distinctions. Ticket07 proceeds independently under its accepted01 dependency; ticket06 remains unresolved solely for the public missing-executable exit-code decision. No approval is inferred from test success.
