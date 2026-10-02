@@ -13,9 +13,9 @@ Shell worktree: `/home/vimkim/gh/cubrid-testcases-private-ex/CBRD-27443-fd-clean
 | 04 | 01 | resolved: 731b39e0f, native 1 pass / 889 checks |
 | 05 | 02 | resolved: 8aa8fcab6, native 1 pass / 1,034 checks |
 | 06 | 05 | resolved:b0f569011; native1pass/1843 checks; legacy exit codes preserved |
-| 07 | 01 | reopened:32CAS/soft128 EMFILE regression confirmed during08 |
-| 08 | 03, 04, 06, 07 | claimed: integration paused for original07 scaling correction |
+| 07 | 01 | resolved:0809a480d scaling correction;1076 focused checks; fullnative final08 |
+| 08 | 03, 04, 06, 07 | claimed: resumed from0809a480d/test27c82c071 |
 
 One fresh worker per ticket, numeric order, one active worker. Main performs Standards and Spec review against each dispatch base and the original base for final integration. No additional reviewer agents.
 
-Baseline preparation uses debug_gcc and the retained namespace probe with PID-1 reaping. Historical probe results do not qualify the new build. Tickets01–06 have accepted fixed-binary evidence. Ticket07 is reopened by the final review scaling reproduction; ticket08 integration remains outstanding.
+Baseline preparation uses debug_gcc and the retained namespace probe with PID-1 reaping. Historical probe results do not qualify the new build. Tickets01–07 are accepted for final integration. Ticket07 correction has exact focused CLI evidence; ticket08 must provide the final native verdict and remaining interaction coverage.
