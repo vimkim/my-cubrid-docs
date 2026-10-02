@@ -1,4 +1,4 @@
-# Ticket07 review — acceptance pending
+# Ticket07 main review — accepted with named coverage limits
 
 Main performs the Standards and Spec axes directly, as authorized by the handoff's one-worker-per-ticket topology. No extra review agents were used. Engine dispatch base: `41ac0c2ce39590349e8e5759dc376f88e1cb660b`; testcase dispatch base: `8c1a1bc791e5e29174fd5f6e78d98d6cec02f7bb`. Parent spec and ticket07 remain authoritative.
 
@@ -21,3 +21,7 @@ Exact baseline41 failure contracts remain: missing broker1, ordinary missing CAS
 ## Retained unsuccessful native attempt
 
 `/home/vimkim/.cache/cbrd27443-07-00edb90.PvHSSd`: candidate00edb90df/test9a06fe217, intentionally canceled during master matrix after the rollback finding. Native artifacts record0pass/1fail/context-canceled even though runner returned0. It does not qualify the correction and is not attributed as a demonstrated engine failure.
+
+## Final acceptance
+
+Accepted engine928e3e5038b07dd554851cb668987118b202c51a/testb55b16a3594a6a65d162d86b03da9394f1440b58. Main inspected the rollback correction, independently ran the native verifier (1success/0fail), checked all1,822 passing assertions, and independently hashed all18 installed/copied objects plus90 actual files across three broker fixtures and both replication nodes. Nine supplemental restart/output assertions pass. Actual final recovery records2 proxy/22 CAS failed exec attempts per~2.302s followed by SQL. Expanded failure matrix117 checks includes two enabled brokers and a trailing disabled entry, no surviving broker processes/IPC after failure, fresh startup and SQL through both ports. Both worktrees and dispatch-range diff checks are clean. No outstanding Standards or Spec finding within the qualified ordinary/SHARD Linux scope; gateway backend and Windows build/runtime limits remain explicit. Earlier pending paragraphs describe the review sequence and are superseded by this result.

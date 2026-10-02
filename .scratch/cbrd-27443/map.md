@@ -13,7 +13,7 @@ Shell worktree: `/home/vimkim/gh/cubrid-testcases-private-ex/CBRD-27443-fd-clean
 | 04 | 01 | resolved: 731b39e0f, native 1 pass / 889 checks |
 | 05 | 02 | resolved: 8aa8fcab6, native 1 pass / 1,034 checks |
 | 06 | 05 | verified candidate41ac0c2ce:1326 checks; legacy exit-code correction queued after07 |
-| 07 | 01 | claimed; dispatch base41ac0c2ce |
+| 07 | 01 | resolved:928e3e503; native1pass/1822 checks |
 | 08 | 03, 04, 06, 07 | ready-for-agent |
 
 One fresh worker per ticket, numeric order, one active worker. Main performs Standards and Spec review against each dispatch base and the original base for final integration. No additional reviewer agents.
