@@ -1,0 +1,113 @@
+[
+  {
+    "artifact": "/home/vimkim/.cache/cbrd27443-04-red/rot.json",
+    "source": "74ee7520a",
+    "checks": [
+      {
+        "name": "command: cubrid createdb --db-volume-size=20M --log-volume-size=20M -F /home/vimkim/.cache/fd-rot.nT3v6t -L /home/vimkim/.cache/fd-rot.nT3v6t fdtest en_US.utf8",
+        "pass": true
+      },
+      {
+        "name": "separate: collection command exited",
+        "pass": true
+      },
+      {
+        "name": "separate: every captured stream EOF before stopping server",
+        "pass": true
+      },
+      {
+        "name": "separate: no caller FD or lock retained",
+        "pass": true
+      },
+      {
+        "name": "rotation: real server starts",
+        "pass": true
+      },
+      {
+        "name": "both producer streams reach current log",
+        "pass": true
+      },
+      {
+        "name": "active console log bounded to 1MiB",
+        "pass": false
+      }
+    ],
+    "capture_codes": [
+      0
+    ]
+  },
+  {
+    "artifact": "/home/vimkim/.cache/cbrd27443-04-red-fsize/rot.json",
+    "source": "5604e9e04",
+    "checks": [
+      {
+        "name": "command: cubrid createdb --db-volume-size=20M --log-volume-size=20M -F /home/vimkim/.cache/fd-rot.qGDdXo -L /home/vimkim/.cache/fd-rot.qGDdXo fdtest en_US.utf8",
+        "pass": true
+      },
+      {
+        "name": "separate: collection command exited",
+        "pass": true
+      },
+      {
+        "name": "separate: every captured stream EOF before stopping server",
+        "pass": true
+      },
+      {
+        "name": "separate: no caller FD or lock retained",
+        "pass": true
+      },
+      {
+        "name": "rotation: real server starts",
+        "pass": true
+      },
+      {
+        "name": "both producer streams reach current log",
+        "pass": true
+      },
+      {
+        "name": "active console log bounded to 1MiB",
+        "pass": true
+      },
+      {
+        "name": "three bounded console archives",
+        "pass": true
+      },
+      {
+        "name": "console retention at most 4MiB",
+        "pass": true
+      },
+      {
+        "name": "all console files private and owned by launcher UID",
+        "pass": true
+      },
+      {
+        "name": "no writer remains on deleted console inode",
+        "pass": true
+      },
+      {
+        "name": "command: cubrid server stop fdtest",
+        "pass": true
+      },
+      {
+        "name": "separate: collection command exited",
+        "pass": true
+      },
+      {
+        "name": "separate: every captured stream EOF before stopping server",
+        "pass": true
+      },
+      {
+        "name": "separate: no caller FD or lock retained",
+        "pass": true
+      },
+      {
+        "name": "startup console write limit reports failure instead of SIGXFSZ termination",
+        "pass": false
+      }
+    ],
+    "capture_codes": [
+      0,
+      -25
+    ]
+  }
+]

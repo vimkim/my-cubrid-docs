@@ -1,29 +1,21 @@
-# Ticket 04 main review (in progress)
+# Ticket 04 main review
 
-Dispatch fixed points: engine `74ee7520a76dd5c1635bed9e75a06c233026115a`, shell `8b00d634cfb36d654c88d747114aa126efa866c6`. Main performs Standards and Spec review directly under the approved one-worker-per-ticket topology.
-
-Initial source `ac7f26091` is not accepted. Rotation baseline retained at `/home/vimkim/.cache/cbrd27443-04-red`: the old active file grows past the proposed 1 MiB limit. Native final evidence is outstanding.
+Accepted at engine `731b39e0f976a97f0dac62374aba976b9dca37f9`, shell `28d75755d9dd69ef61a1d80a80a37aabade3a7ab`. Dispatch fixed points: engine `74ee7520a76dd5c1635bed9e75a06c233026115a`, shell `8b00d634cfb36d654c88d747114aa126efa866c6`. Main performed Standards and Spec review directly under the approved one-worker-per-ticket topology.
 
 ## Standards
 
-Pending corrections: legacy C++ default argument declaration needs personal-policy indent guards. New helper state must reset between attempts. Initial inline log helper is shared by launcher marker and relay, avoiding inconsistent rotation policy; POSIX-only build linkage remains explicit.
+No outstanding finding within the reviewed scope. The shared console helper coordinates markers and relay appends through independently opened flock descriptions, covering separate processes and threads. The child-before-exec path remains preparation-free; logging and signal masking occur in the parent or executed relay. Legacy C++ declarations have indent guards. Normal formatting hooks, build/install and diff checks passed; source/tests are clean. Non-Linux socket setup has a fallback, but no non-Linux build/runtime is claimed.
 
 ## Spec
 
-Pending findings sent to worker04:
+All seven ticket criteria accepted. Permanent retention is active plus three archives, each at most 1 MiB; existing oversized files retain their newest 1 MiB under lock. Private regular files use mode0600. Reopening under the same lock avoids writing deleted archives. A fixed256-byte latest-failure record and nonblocking syslog expose logging errors; success does not clear another writer's failure. Failed bytes are discarded while draining continues, with later writes retried. Reporting cannot be guaranteed if neither filesystem nor logger accepts data.
 
-- Process-associated F_SETLK locks do not serialize concurrent threads, and closing another same-inode descriptor can release their locks. Use locking that covers both process and thread writer concurrency.
-- Renaming an oversized existing active file merely creates an oversized archive. Define and verify retention migration for existing oversized files.
-- Replace unbounded anonymous startup spools without truncating diagnostics; bounded pipes must be drained fairly during every original readiness wait, and finish must drain before waiting for acknowledgement. Preserve registration checks and existing timing criteria.
-- Verify actual executable-generated stdout/stderr, including startup failure larger than archive retention. Observer writes to producer pipe endpoints are supplemental evidence.
-- Runtime failure records must remain bounded and survive successful writes by other relays. Test observable failures and consider SIGXFSZ rather than relying solely on write returning errno. No claim assumes an unavailable filesystem and unavailable system logger can guarantee persistence.
+Bounded startup pipes replace unbounded spools. Existing readiness waits pump both streams fairly and finish drains them before acknowledgement; registration criteria are unchanged. Exact current-attempt stdout/stderr token counts beyond archive retention survive concurrent successful/failed starts without contamination. Startup SIGXFSZ is handled in the calling thread while preserving caller signal policy; runtime handling belongs to the relay.
 
-Final acceptance requires all seven ticket checkboxes, clean source/test commits, exact installed/copied identities, native verdict and regression results. No completion claim yet.
+Resolved review findings: process-associated locks failed thread exclusion; oversized existing archives violated the size policy; startup file limits terminated the launcher; initial endpoint injection needed actual executable producers; fault capture depended on host syslog. Each was corrected by worker04. The final fixture creates a private device tree with real bound character devices and its own initially absent syslog endpoint. Caller-crash tests require an actual producer before terminating its launcher.
 
-## Review corrections through 731b39e0f
+## Evidence and limits
 
-Worker replaced process-associated locks with flock on each independently opened lock description, bounded existing active/archives by retaining their newest 1 MiB under the same lock, reset per-attempt output error state, and guarded the legacy C++ declaration. The status record is fixed at 256 bytes and successful writers do not clear it. Relay reopens current log under lock for every append. Linux socket creation has a non-Linux fcntl fallback.
+Final exact native `cbrd27443-04-731b39e.S8CNvN`: 1 success, 0 failures/skips, 889 checks (121 original +216 master +76 restart +380 boundary +96 rotation), plus present probe. Main independently checked every matrix, verdict, clean source/test tips and all nine installed/copied executable/library identities. Retained `ZSmpsh` was also a full pass before the testcase portability revision. Original rotation and startup-file-limit RED observations remain separately identified.
 
-Focused source5604e9e04 rotation probe passed 87 checks. A further startup RLIMIT_FSIZE probe reproduced launcher termination by SIGXFSZ; source731b39e0f now blocks that synchronous signal only in the logging thread, consumes newly pending logging-generated signal and restores the prior mask/disposition. Relay handles its own SIGXFSZ as a write error. Both corrections still require final exact native evidence. Private syslog capture now precedes fault injection; full generated startup streams are counted separately for concurrent successful and failed attempts.
-
-Current native attempt `cbrd27443-04-731b39e.ZSmpsh` has passed original121/master216 and is progressing through restart/boundary/rotation. It uses engine731b39e0f/test6193aee65 with clean exact installation match. Worker identified and main requested removal of a testcase dependency on pre-existing `/dev/log`: a private device directory with preserved essential devices and private syslog socket will replace it. Retain the current attempt and require final native evidence on the corrected committed fixture.
+See [report](report.md), [safe final evidence](evidence/safe-summary.json), and [baseline summary](evidence/baseline-summary.json). Linux focused verification does not establish Windows/non-Linux runtime, CTest (disabled), whole-corpus QA or later HA/broker qualification. External callers must consume their pipes; ordinary filesystem stalls are not bounded by the lock retry policy. The stable lock inode must not be replaced while relays run. Final all-service combination belongs to ticket08.
