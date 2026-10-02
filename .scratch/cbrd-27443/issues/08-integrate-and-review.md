@@ -4,7 +4,7 @@
 
 **Blocked by:** 03: 서버·PL 재시작과 상속 FD 경계 조건 처리; 04: 별도 출력 로그의 용량 제한과 회전; 06: 2-node 복제 프로세스 시작·재시작 처리; 07: broker·CAS·proxy 생성 경로 호환성 확보.
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 **Parent:** CBRD-27443 — [합의된 스펙](../spec.md). 착수 전에 전체 스펙의 외부 계약·시험 원칙과 이 티켓에 해당하는 근거를 읽는다.
 

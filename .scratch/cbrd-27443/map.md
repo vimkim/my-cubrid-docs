@@ -14,7 +14,7 @@ Shell worktree: `/home/vimkim/gh/cubrid-testcases-private-ex/CBRD-27443-fd-clean
 | 05 | 02 | resolved: 8aa8fcab6, native 1 pass / 1,034 checks |
 | 06 | 05 | resolved:b0f569011; native1pass/1843 checks; legacy exit codes preserved |
 | 07 | 01 | resolved:928e3e503; native1pass/1822 checks |
-| 08 | 03, 04, 06, 07 | ready-for-agent |
+| 08 | 03, 04, 06, 07 | claimed: final integration fromb0f569011/test26ab88a35 |
 
 One fresh worker per ticket, numeric order, one active worker. Main performs Standards and Spec review against each dispatch base and the original base for final integration. No additional reviewer agents.
 
