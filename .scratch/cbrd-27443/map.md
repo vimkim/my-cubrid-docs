@@ -1,13 +1,13 @@
 # CBRD-27443 implementation map
 
 Work-tracker: 261. Main orchestrator owns this map and ticket statuses.
-Engine base: `c63a3b993be552ef6ad3ce244c386d5081147958`.
+Engine implementation base: `15e7dc8b5b56fd8751d56ccae1fdf87d315bd35d`, adopted with user confirmation after an external fast-forward on 2026-10-02. Earlier fresh baseline at `c63a3b993` is retained separately.
 Engine worktree: `/home/vimkim/gh/cb/CBRD-27443-fd-clean`.
 Shell worktree: `/home/vimkim/gh/cubrid-testcases-private-ex/CBRD-27443-fd-clean`, branch `tc/CBRD-27443-fd-clean`, base `dfb7da195`.
 
 | Ticket | Blocked by | Status |
 |---|---|---|
-| 01 | none | claimed; awaiting concurrent worktree clarification |
+| 01 | none | claimed; implementation and regression in progress |
 | 02 | 01 | ready-for-agent |
 | 03 | 02 | ready-for-agent |
 | 04 | 01 | ready-for-agent |
