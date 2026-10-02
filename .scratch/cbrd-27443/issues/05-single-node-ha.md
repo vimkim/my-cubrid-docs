@@ -4,20 +4,24 @@
 
 **Blocked by:** 02: master가 없는 환경과 직접 daemon master 시작 처리.
 
-**Status:** claimed
+**Status:** resolved
 
 **Parent:** CBRD-27443 — [합의된 스펙](../spec.md). 착수 전에 전체 스펙의 외부 계약·시험 원칙과 이 티켓에 해당하는 근거를 읽는다.
 
 **Acceptance coverage:** A14; A03–A06의 HA 영향 경계.
 
-- [ ] master가 수행하는 HA 생성·재시작·관리 유틸리티 경계를 조사하고 공통 생성 정책의 직접·간접 영향을 기록한다. 동기 대기 여부만으로 장기 실행 자손을 제외하지 않는다.
-- [ ] 필요한 경계에 출력 대상과 FD 보존 정책을 적용하고, 이미 올바른 경계는 소스 근거와 실행 결과로 적용 상태를 입증한다.
-- [ ] 격리된 single-node HA에서 시작·재시작 후 호출자 출력 수집 종료, 기존 결과와 종료 코드, 불필요한 FD·잠금 미상속을 확인한다.
-- [ ] HA 상태 전이, 서버 연결/SQL 기능, heartbeat stop의 기존 결과와 출력 완료를 함께 확인한다. 이전 시작 파이프의 대기와 stop 명령 자체를 별도로 측정한다.
-- [ ] 관련 시작 실패에서 기존 진단과 실패 코드를 보존하고 출력 수집을 마칠 수 있음을 검증한다.
-- [ ] native 회귀 결과와 실제 바이너리 식별자를 남긴다. 기존 리뷰어의 single-node HA 보고와 이번 독립 실행 결과를 구분한다.
-- [ ] 실행 불가 또는 미검증 경계가 있으면 사유와 다음 검증을 남기며 전체 HA 검증 완료로 처리하지 않는다.
+- [x] master가 수행하는 HA 생성·재시작·관리 유틸리티 경계를 조사하고 공통 생성 정책의 직접·간접 영향을 기록한다. 동기 대기 여부만으로 장기 실행 자손을 제외하지 않는다.
+- [x] 필요한 경계에 출력 대상과 FD 보존 정책을 적용하고, 이미 올바른 경계는 소스 근거와 실행 결과로 적용 상태를 입증한다.
+- [x] 격리된 single-node HA에서 시작·재시작 후 호출자 출력 수집 종료, 기존 결과와 종료 코드, 불필요한 FD·잠금 미상속을 확인한다.
+- [x] HA 상태 전이, 서버 연결/SQL 기능, heartbeat stop의 기존 결과와 출력 완료를 함께 확인한다. 이전 시작 파이프의 대기와 stop 명령 자체를 별도로 측정한다.
+- [x] 관련 시작 실패에서 기존 진단과 실패 코드를 보존하고 출력 수집을 마칠 수 있음을 검증한다.
+- [x] native 회귀 결과와 실제 바이너리 식별자를 남긴다. 기존 리뷰어의 single-node HA 보고와 이번 독립 실행 결과를 구분한다.
+- [x] 실행 불가 또는 미검증 경계가 있으면 사유와 다음 검증을 남기며 전체 HA 검증 완료로 처리하지 않는다.
 
 ## Implementation notes
 
 02의 master 생성과 진단 대상 계약을 기반으로 한다. 일반 서버 모니터의 재시작을 다루는 03과는 별도 경로이며 승인된 선행 관계에 포함하지 않는다.
+
+## Answer
+
+Engine `8aa8fcab689088b3cd24ad6e44e567e3915eae7e`, shell `992b4076c3a8d8f8e2ee1aee7495ed8fe562b004`. Final native1 success,0 failures/skips,1,034 checks including152 HA checks. Main accepted Standards and Spec; see [report](../../../cbrd-27443/implementation/ticket05/report.md) and [review](../../../cbrd-27443/implementation/ticket05/review.md). Public heartbeat0/1 preserved; internal missing-exec management acknowledgement corrected0→255. Two-node replication remains06.

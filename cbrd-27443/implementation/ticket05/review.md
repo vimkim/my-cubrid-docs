@@ -1,23 +1,23 @@
-# Ticket 05 main review (in progress)
+# Ticket 05 main review
 
-Dispatch fixed points: engine `731b39e0f976a97f0dac62374aba976b9dca37f9`, shell `28d75755d9dd69ef61a1d80a80a37aabade3a7ab`. Main performs Standards and Spec review directly under the approved topology.
+Accepted at engine `8aa8fcab689088b3cd24ad6e44e567e3915eae7e`, shell `992b4076c3a8d8f8e2ee1aee7495ed8fe562b004`. Dispatch fixed points: engine `731b39e0f976a97f0dac62374aba976b9dca37f9`, shell `28d75755d9dd69ef61a1d80a80a37aabade3a7ab`. Main performed Standards and Spec review directly under the approved topology.
 
 ## Standards
 
-Initial source `8aa8fcab6` changes only master_heartbeat.c. Parent-only bounded tokenization and stack storage replace child-side preparation; all child exec/failure handling goes through the shared explicit launcher. No child branch returns to master cleanup. Existing HB registration confirmation, state update and one-second failed-spawn requeue remain. CMake util:57–60 includes this file only for UNIX; no Windows runtime claim. Diff check passed; final build and clean state are pending.
+No outstanding finding within this ticket. Source changes are scoped to master_heartbeat.c: bounded parent argument preparation and shared explicit launch replace both raw child branches. Failed exec cannot run master cleanup or return into parent flow. Existing HA state assignments, registration confirmation jobs and retry timing remain. Normal hooks, build/install, syntax and diff checks passed; source/tests are clean. Existing CMake excludes this HA source from Windows; no Windows/non-Linux runtime is claimed.
+
+The shared helper preserves master/parent auto-reaping but resets producer SIGCHLD to default, whereas old raw HA exec inherited SIG_IGN. This matches initial helper-launched service producers; PL reinstates its explicit legacy policy. Server/PL behavior is tested here; actual copy/apply internal child behavior remains ticket06 qualification.
 
 ## Spec
 
-Retained dispatch baseline `cbrd27443-05-red2/ha.json` independently shows HA automatic restart inheriting the master error log and an identical socket target. Baseline `05-red4/ha.json` shows a managed utility inheriting the master error log and two sockets through actual cub_commdb IPC. Its missing-executable launch acknowledgement returned0; the new checked spawn may change this internal acknowledgement to failure. Public heartbeat failure code/messages/EOF and success registration semantics still require explicit verification.
+All seven acceptance areas accepted within single-node scope. Baseline red2 shows restarted server inheritance of master.err and an actual socket; red4 shows managed utility inheritance of master.err and two sockets. Fixed immediate/pre-dispatch snapshots prove clean descriptor ownership, dedicated stdio, no extra failed child/relay and a surviving master. The internal missing-exec acknowledgement changes from0 to ER_FAILED/255; public heartbeat retains success0/failure1 and original diagnostics. This correction is explicit, not hidden as unchanged raw behavior.
 
-First HA fixture used localhost and unexpectedly launched copy/apply because utility local-host recognition compares the node name with gethostname (including hostname-prefix equivalence), unlike master address normalization. Those caller-FD leaks are retained in05-red for ticket06; corrected single-node tests use the actual hostname mapped to private loopback. Red3 was only an installed-command spelling error and must not be presented as product failure.
+Final tests verify startup/restart idle→standby→to-be-active→active transitions, exact SQL/PL result rows after EOF and recovery, high FD4096 above lowered soft1024, six capture forms, independent heartbeat-stop EOF/state, public missing-DB/exec/log-open failures, and live-service failure cleanup. HA recovery retains its first-registration basis: observed30.186s to first restart,17.130s from kill, then3 failed attempts over2.209s before recovery.
 
-All seven acceptance areas and final native evidence remain pending. The proposed server-console destination for HA server and managed utilities reuses ticket04 retention. Direct local copy/apply creation and real two-node replication remain ticket06 scope.
+Fixture corrections remain distinguished from product defects: local-host spelling unexpectedly launched copy/apply; exiting-process /proc races now use a bounded same-PID retry without hiding live failures; soft128 exhausted legitimate server FDs; raw255 was initially mistaken for public1; warning filtering hid failed-spawn messages; recovery timing was initially measured from the wrong event. No product timing/severity was changed to fit those observations.
 
-## Fixture review during focused iteration
+## Evidence and limits
 
-Keep product failure evidence separate from fixture corrections: an exiting PID can transiently deny /proc FD access before becoming Z, so the shared scanner now retries that same PID for at most200ms and still fails persistent unreadable live processes; final cleanup remains strict. A soft limit128 exhausted the server's own event/timer descriptors, so HA uses duplicated FD4096 above a viable lowered soft limit1024. Raw cub_commdb failure is255, while public heartbeat failure remains1.
+Final exact native `cbrd27443-05-8aa8fca.UE7ABw`: 1 success, 0 failures/skips; 1,034 assertions (121 original +216 master +75 restart +374 boundary +96 rotation +152 HA), plus present probe. Main independently checked matrices, exact verdict/counts, all nine installed/copied hash pairs and clean source/test tips. See [report](report.md), [final evidence](evidence/safe-summary.json), and [baseline summary](evidence/baseline-summary.json).
 
-Immediate managed-parent snapshots can still contain intentionally prepared producer pipes before parent cleanup. The fixture verifies dedicated child stdio first, then excludes only that declared handoff when comparing immediate parent internals with child non-stdio targets, retaining pre-dispatch evidence too.
-
-HA recovery delay is measured from proc->frtime, assigned at first registration, not from the later SIGKILL timestamp. Source timers remain unchanged. Enable existing error_log_warning in the private config to observe ER_WARNING_SEVERITY failed-spawn diagnostics; do not change product severity to fit a test. Expanded proof includes post-restart SQL/PL, managed failures while master stays live, heartbeat-stop state and separate EOF, public startup failures and all capture modes. Final native evidence is still pending.
+Actual two-node replication and local direct copy/apply launch remain applicable ticket06 work. The changed shared master boundaries are not proof of data replication. Their output uses the existing bounded server-console policy; existing error logs remain separate. No CTest (disabled), Windows/non-Linux runtime, whole-corpus QA or broker qualification claim.

@@ -11,11 +11,11 @@ Shell worktree: `/home/vimkim/gh/cubrid-testcases-private-ex/CBRD-27443-fd-clean
 | 02 | 01 | resolved: 11ad631c5, native 1 pass / 216 master + 121 existing checks |
 | 03 | 02 | resolved: 74ee7520a, native 1 pass / 767 checks |
 | 04 | 01 | resolved: 731b39e0f, native 1 pass / 889 checks |
-| 05 | 02 | claimed; dispatch base 731b39e0f |
+| 05 | 02 | resolved: 8aa8fcab6, native 1 pass / 1,034 checks |
 | 06 | 05 | ready-for-agent |
 | 07 | 01 | ready-for-agent |
 | 08 | 03, 04, 06, 07 | ready-for-agent |
 
 One fresh worker per ticket, numeric order, one active worker. Main performs Standards and Spec review against each dispatch base and the original base for final integration. No additional reviewer agents.
 
-Baseline preparation uses debug_gcc and the retained namespace probe with PID-1 reaping. Historical probe results do not qualify the new build. Tickets 01–04 have accepted fixed-binary evidence; tickets 05–08 remain outstanding.
+Baseline preparation uses debug_gcc and the retained namespace probe with PID-1 reaping. Historical probe results do not qualify the new build. Tickets 01–05 have accepted fixed-binary evidence; tickets 06–08 remain outstanding.

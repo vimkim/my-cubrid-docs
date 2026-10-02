@@ -1,0 +1,508 @@
+[
+  {
+    "artifact": "/home/vimkim/.cache/cbrd27443-05-red/ha.json",
+    "source": "731b39e0f",
+    "checks": [
+      {
+        "name": "HA fixture path fits restart registration",
+        "pass": true
+      },
+      {
+        "name": "command: cubrid createdb --db-volume-size=20M --log-volume-size=20M -F /home/vimkim/.cache/fd-ha.46m06Z -L /home/vimkim/.cache/fd-ha.46m06Z fdtest en_US.utf8",
+        "pass": true
+      },
+      {
+        "name": "separate: collection command exited",
+        "pass": true
+      },
+      {
+        "name": "separate: every captured stream EOF before stopping server",
+        "pass": false
+      }
+    ],
+    "internal_boundaries": [],
+    "managed_missing_rc": null,
+    "capture_codes": [
+      0
+    ]
+  },
+  {
+    "artifact": "/home/vimkim/.cache/cbrd27443-05-red2/ha.json",
+    "source": "731b39e0f",
+    "checks": [
+      {
+        "name": "HA fixture path fits restart registration",
+        "pass": true
+      },
+      {
+        "name": "command: cubrid createdb --db-volume-size=20M --log-volume-size=20M -F /home/vimkim/.cache/fd-ha.mKhYAF -L /home/vimkim/.cache/fd-ha.mKhYAF fdtest en_US.utf8",
+        "pass": true
+      },
+      {
+        "name": "separate: collection command exited",
+        "pass": true
+      },
+      {
+        "name": "separate: every captured stream EOF before stopping server",
+        "pass": true
+      },
+      {
+        "name": "separate: no caller FD or lock retained",
+        "pass": true
+      },
+      {
+        "name": "HA start result preserved",
+        "pass": true
+      },
+      {
+        "name": "HA server reaches active state",
+        "pass": true
+      },
+      {
+        "name": "command: csql -u dba -c select 27443; fdtest@localhost",
+        "pass": true
+      },
+      {
+        "name": "HA server automatically recreated",
+        "pass": true
+      },
+      {
+        "name": "HA server reaches active state",
+        "pass": true
+      },
+      {
+        "name": "HA automatic restart: parent has internal resources",
+        "pass": true
+      },
+      {
+        "name": "HA automatic restart: no master internal target inherited",
+        "pass": false
+      }
+    ],
+    "internal_boundaries": [
+      {
+        "label": "HA automatic restart",
+        "parent": {
+          "pid": 10,
+          "name": "cub_master",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[483891782]",
+            "2": "pipe:[483891783]",
+            "3": "/home/vimkim/.cache/fd-ha.mKhYAF/root/log/dev2_master.err",
+            "4": "socket:[483990718]",
+            "5": "socket:[483990719]",
+            "6": "socket:[483990720]",
+            "8": "socket:[484019892]"
+          },
+          "state": "S",
+          "sid": 0,
+          "pgid": 0
+        },
+        "child": {
+          "pid": 271,
+          "name": "cub_server",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[483891782]",
+            "2": "pipe:[483891783]",
+            "3": "/home/vimkim/.cache/fd-ha.mKhYAF/root/log/dev2_master.err",
+            "4": "/home/vimkim/.cache/fd-ha.mKhYAF/root/log/server/fdtest_20261002_2327.err",
+            "5": "/home/vimkim/.cache/fd-ha.mKhYAF/root/log/server/fdtest_20261002_2327.access",
+            "6": "socket:[483990720]",
+            "7": "/home/vimkim/.cache/fd-ha.mKhYAF/root/log/server/fdtest_20261002_2327.event",
+            "8": "socket:[484006585]",
+            "9": "socket:[484006587]",
+            "10": "anon_inode:[eventpoll]",
+            "11": "anon_inode:[eventfd]",
+            "12": "/dev/shm/cubbase_dmrb_271_0 (deleted)",
+            "13": "/dev/shm/cubbase_dmrb_271_1 (deleted)",
+            "14": "/dev/shm/cubbase_dmrb_271_2 (deleted)",
+            "15": "/dev/shm/cubbase_dmrb_271_3 (deleted)",
+            "16": "/dev/shm/cubbase_dmrb_271_4 (deleted)",
+            "17": "/dev/shm/cubbase_dmrb_271_5 (deleted)",
+            "18": "/dev/shm/cubbase_dmrb_271_6 (deleted)",
+            "19": "/dev/shm/cubbase_dmrb_271_7 (deleted)",
+            "20": "/dev/shm/cubbase_dmrb_271_8 (deleted)",
+            "21": "/dev/shm/cubbase_dmrb_271_9 (deleted)",
+            "22": "/dev/shm/cubbase_dmrb_271_10 (deleted)",
+            "23": "/dev/shm/cubbase_dmrb_271_11 (deleted)",
+            "24": "/dev/shm/cubbase_dmrb_271_12 (deleted)",
+            "25": "/dev/shm/cubbase_dmrb_271_13 (deleted)",
+            "26": "/dev/shm/cubbase_dmrb_271_14 (deleted)",
+            "27": "/dev/shm/cubbase_dmrb_271_15 (deleted)",
+            "28": "/dev/shm/cubbase_dmrb_271_16 (deleted)",
+            "29": "/dev/shm/cubbase_dmrb_271_17 (deleted)",
+            "30": "/dev/shm/cubbase_dmrb_271_18 (deleted)",
+            "31": "/dev/shm/cubbase_dmrb_271_19 (deleted)",
+            "32": "/dev/shm/cubbase_dmrb_271_20 (deleted)",
+            "33": "/dev/shm/cubbase_dmrb_271_21 (deleted)",
+            "34": "/dev/shm/cubbase_dmrb_271_22 (deleted)",
+            "35": "/dev/shm/cubbase_dmrb_271_23 (deleted)",
+            "36": "/dev/shm/cubbase_dmrb_271_24 (deleted)",
+            "37": "/dev/shm/cubbase_dmrb_271_25 (deleted)",
+            "38": "/dev/shm/cubbase_dmrb_271_26 (deleted)",
+            "39": "/dev/shm/cubbase_dmrb_271_27 (deleted)",
+            "40": "/dev/shm/cubbase_dmrb_271_28 (deleted)",
+            "41": "/dev/shm/cubbase_dmrb_271_29 (deleted)",
+            "42": "/dev/shm/cubbase_dmrb_271_30 (deleted)",
+            "43": "/dev/shm/cubbase_dmrb_271_31 (deleted)",
+            "44": "/dev/shm/cubbase_dmrb_271_32 (deleted)",
+            "45": "/dev/shm/cubbase_dmrb_271_33 (deleted)",
+            "46": "/dev/shm/cubbase_dmrb_271_34 (deleted)",
+            "47": "/dev/shm/cubbase_dmrb_271_35 (deleted)",
+            "48": "/dev/shm/cubbase_dmrb_271_36 (deleted)",
+            "49": "/dev/shm/cubbase_dmrb_271_37 (deleted)",
+            "50": "/dev/shm/cubbase_dmrb_271_38 (deleted)",
+            "51": "/dev/shm/cubbase_dmrb_271_39 (deleted)",
+            "52": "/dev/shm/cubbase_dmrb_271_40 (deleted)",
+            "53": "/dev/shm/cubbase_dmrb_271_41 (deleted)",
+            "54": "/dev/shm/cubbase_dmrb_271_42 (deleted)",
+            "55": "/dev/shm/cubbase_dmrb_271_43 (deleted)",
+            "56": "/dev/shm/cubbase_dmrb_271_44 (deleted)",
+            "57": "/dev/shm/cubbase_dmrb_271_45 (deleted)",
+            "58": "/dev/shm/cubbase_dmrb_271_46 (deleted)",
+            "59": "/dev/shm/cubbase_dmrb_271_47 (deleted)",
+            "60": "/dev/shm/cubbase_dmrb_271_48 (deleted)",
+            "61": "/dev/shm/cubbase_dmrb_271_49 (deleted)",
+            "62": "/dev/shm/cubbase_dmrb_271_50 (deleted)",
+            "63": "/dev/shm/cubbase_dmrb_271_51 (deleted)",
+            "64": "/dev/shm/cubbase_dmrb_271_52 (deleted)",
+            "65": "/dev/shm/cubbase_dmrb_271_53 (deleted)",
+            "66": "/dev/shm/cubbase_dmrb_271_54 (deleted)",
+            "67": "/dev/shm/cubbase_dmrb_271_55 (deleted)",
+            "68": "/dev/shm/cubbase_dmrb_271_56 (deleted)",
+            "69": "/dev/shm/cubbase_dmrb_271_57 (deleted)",
+            "70": "/dev/shm/cubbase_dmrb_271_58 (deleted)",
+            "71": "/dev/shm/cubbase_dmrb_271_59 (deleted)",
+            "72": "/dev/shm/cubbase_dmrb_271_60 (deleted)",
+            "73": "/dev/shm/cubbase_dmrb_271_61 (deleted)",
+            "74": "/dev/shm/cubbase_dmrb_271_62 (deleted)",
+            "75": "/dev/shm/cubbase_dmrb_271_63 (deleted)",
+            "76": "/dev/shm/cubbase_dmrb_271_64 (deleted)",
+            "77": "/dev/shm/cubbase_dmrb_271_65 (deleted)",
+            "78": "/dev/shm/cubbase_dmrb_271_66 (deleted)",
+            "79": "/dev/shm/cubbase_dmrb_271_67 (deleted)",
+            "80": "/dev/shm/cubbase_dmrb_271_68 (deleted)",
+            "81": "/dev/shm/cubbase_dmrb_271_69 (deleted)",
+            "82": "/dev/shm/cubbase_dmrb_271_70 (deleted)",
+            "83": "/dev/shm/cubbase_dmrb_271_71 (deleted)",
+            "84": "/dev/shm/cubbase_dmrb_271_72 (deleted)",
+            "85": "/dev/shm/cubbase_dmrb_271_73 (deleted)",
+            "86": "/dev/shm/cubbase_dmrb_271_74 (deleted)",
+            "87": "/dev/shm/cubbase_dmrb_271_75 (deleted)",
+            "88": "/dev/shm/cubbase_dmrb_271_76 (deleted)",
+            "89": "/dev/shm/cubbase_dmrb_271_77 (deleted)",
+            "90": "/dev/shm/cubbase_dmrb_271_78 (deleted)",
+            "91": "/dev/shm/cubbase_dmrb_271_79 (deleted)",
+            "92": "/dev/shm/cubbase_dmrb_271_80 (deleted)",
+            "93": "/dev/shm/cubbase_dmrb_271_81 (deleted)",
+            "94": "/dev/shm/cubbase_dmrb_271_82 (deleted)",
+            "95": "/dev/shm/cubbase_dmrb_271_83 (deleted)",
+            "96": "/dev/shm/cubbase_dmrb_271_84 (deleted)",
+            "97": "/dev/shm/cubbase_dmrb_271_85 (deleted)",
+            "98": "/dev/shm/cubbase_dmrb_271_86 (deleted)",
+            "99": "/dev/shm/cubbase_dmrb_271_87 (deleted)",
+            "100": "/dev/shm/cubbase_dmrb_271_88 (deleted)",
+            "101": "/dev/shm/cubbase_dmrb_271_89 (deleted)",
+            "102": "/dev/shm/cubbase_dmrb_271_90 (deleted)",
+            "103": "/dev/shm/cubbase_dmrb_271_91 (deleted)",
+            "104": "/dev/shm/cubbase_dmrb_271_92 (deleted)",
+            "105": "/dev/shm/cubbase_dmrb_271_93 (deleted)",
+            "106": "/dev/shm/cubbase_dmrb_271_94 (deleted)",
+            "107": "/dev/shm/cubbase_dmrb_271_95 (deleted)",
+            "108": "/dev/shm/cubbase_dmrb_271_96 (deleted)",
+            "109": "/dev/shm/cubbase_dmrb_271_97 (deleted)",
+            "110": "/dev/shm/cubbase_dmrb_271_98 (deleted)",
+            "111": "/dev/shm/cubbase_dmrb_271_99 (deleted)",
+            "112": "/home/vimkim/.cache/fd-ha.mKhYAF/fdtest_lgat",
+            "113": "/home/vimkim/.cache/fd-ha.mKhYAF/fdtest",
+            "114": "/home/vimkim/.cache/fd-ha.mKhYAF/fdtest_x001",
+            "115": "/home/vimkim/.cache/fd-ha.mKhYAF/fdtest_dwb",
+            "116": "/home/vimkim/.cache/fd-ha.mKhYAF/fdtest_lgar_t",
+            "117": "/dev/shm/cubbase_dmrb_271_100 (deleted)",
+            "118": "/dev/shm/cubbase_dmrb_271_101 (deleted)",
+            "119": "/dev/shm/cubbase_dmrb_271_102 (deleted)",
+            "120": "/dev/shm/cubbase_dmrb_271_103 (deleted)",
+            "121": "/dev/shm/cubbase_dmrb_271_104 (deleted)",
+            "122": "/dev/shm/cubbase_dmrb_271_105 (deleted)",
+            "123": "/dev/shm/cubbase_dmrb_271_106 (deleted)",
+            "124": "/dev/shm/cubbase_dmrb_271_107 (deleted)",
+            "125": "/dev/shm/cubbase_dmrb_271_108 (deleted)",
+            "126": "/dev/shm/cubbase_dmrb_271_109 (deleted)",
+            "127": "/dev/shm/cubbase_dmrb_271_110 (deleted)",
+            "128": "/dev/shm/cubbase_dmrb_271_111 (deleted)",
+            "129": "anon_inode:[eventpoll]",
+            "130": "anon_inode:[eventfd]",
+            "131": "anon_inode:[timerfd]",
+            "132": "anon_inode:[eventpoll]",
+            "133": "anon_inode:[eventfd]",
+            "134": "anon_inode:[timerfd]",
+            "135": "anon_inode:[eventpoll]",
+            "136": "anon_inode:[eventfd]",
+            "137": "anon_inode:[timerfd]",
+            "138": "anon_inode:[eventpoll]",
+            "139": "anon_inode:[eventfd]",
+            "140": "anon_inode:[timerfd]",
+            "141": "anon_inode:[eventpoll]",
+            "142": "anon_inode:[eventfd]",
+            "143": "anon_inode:[timerfd]",
+            "144": "anon_inode:[eventpoll]",
+            "145": "anon_inode:[eventfd]",
+            "146": "anon_inode:[timerfd]",
+            "147": "anon_inode:[eventpoll]",
+            "148": "anon_inode:[eventfd]",
+            "149": "anon_inode:[timerfd]",
+            "150": "anon_inode:[eventpoll]",
+            "151": "anon_inode:[eventfd]",
+            "152": "anon_inode:[timerfd]",
+            "153": "anon_inode:[eventpoll]",
+            "154": "anon_inode:[eventfd]",
+            "155": "anon_inode:[timerfd]",
+            "156": "anon_inode:[eventpoll]",
+            "157": "anon_inode:[eventfd]",
+            "158": "anon_inode:[timerfd]",
+            "159": "anon_inode:[eventpoll]",
+            "160": "anon_inode:[eventfd]",
+            "161": "anon_inode:[timerfd]",
+            "162": "anon_inode:[eventpoll]",
+            "163": "anon_inode:[eventfd]",
+            "164": "anon_inode:[timerfd]",
+            "165": "anon_inode:[eventpoll]",
+            "166": "anon_inode:[eventfd]",
+            "167": "anon_inode:[timerfd]",
+            "168": "anon_inode:[eventpoll]",
+            "169": "anon_inode:[eventfd]",
+            "170": "anon_inode:[timerfd]",
+            "171": "anon_inode:[eventpoll]",
+            "172": "anon_inode:[eventfd]",
+            "173": "anon_inode:[timerfd]",
+            "174": "anon_inode:[eventpoll]",
+            "175": "anon_inode:[eventfd]",
+            "176": "anon_inode:[timerfd]",
+            "177": "anon_inode:[eventpoll]",
+            "178": "anon_inode:[eventfd]",
+            "179": "anon_inode:[timerfd]",
+            "180": "anon_inode:[eventpoll]",
+            "181": "anon_inode:[eventfd]",
+            "182": "anon_inode:[timerfd]",
+            "183": "anon_inode:[eventpoll]",
+            "184": "anon_inode:[eventfd]",
+            "185": "anon_inode:[timerfd]",
+            "186": "anon_inode:[eventpoll]",
+            "187": "anon_inode:[eventfd]",
+            "188": "anon_inode:[timerfd]",
+            "189": "anon_inode:[eventpoll]",
+            "190": "anon_inode:[eventfd]",
+            "191": "anon_inode:[timerfd]",
+            "192": "anon_inode:[eventpoll]",
+            "193": "anon_inode:[eventfd]",
+            "194": "anon_inode:[timerfd]",
+            "195": "anon_inode:[eventpoll]",
+            "196": "anon_inode:[eventfd]",
+            "197": "anon_inode:[timerfd]",
+            "198": "anon_inode:[eventpoll]",
+            "199": "anon_inode:[eventfd]",
+            "200": "anon_inode:[timerfd]",
+            "201": "anon_inode:[eventpoll]",
+            "202": "anon_inode:[eventfd]",
+            "203": "anon_inode:[timerfd]",
+            "204": "anon_inode:[eventpoll]",
+            "205": "anon_inode:[eventfd]",
+            "206": "anon_inode:[timerfd]",
+            "207": "anon_inode:[eventpoll]",
+            "208": "anon_inode:[eventfd]",
+            "209": "anon_inode:[timerfd]",
+            "210": "anon_inode:[eventpoll]",
+            "211": "anon_inode:[eventfd]",
+            "212": "anon_inode:[timerfd]",
+            "213": "anon_inode:[eventpoll]",
+            "214": "anon_inode:[eventfd]",
+            "215": "anon_inode:[timerfd]",
+            "216": "anon_inode:[eventpoll]",
+            "217": "anon_inode:[eventfd]",
+            "218": "anon_inode:[timerfd]",
+            "219": "anon_inode:[eventpoll]",
+            "220": "anon_inode:[eventfd]",
+            "221": "anon_inode:[timerfd]",
+            "222": "anon_inode:[eventpoll]",
+            "223": "anon_inode:[eventfd]",
+            "224": "anon_inode:[timerfd]",
+            "225": "anon_inode:[eventpoll]",
+            "226": "anon_inode:[eventfd]",
+            "227": "anon_inode:[timerfd]",
+            "228": "anon_inode:[eventpoll]",
+            "229": "anon_inode:[eventfd]",
+            "230": "anon_inode:[timerfd]",
+            "231": "anon_inode:[eventpoll]",
+            "232": "anon_inode:[eventfd]",
+            "233": "anon_inode:[timerfd]",
+            "234": "anon_inode:[eventpoll]",
+            "235": "anon_inode:[eventfd]",
+            "236": "anon_inode:[timerfd]",
+            "237": "anon_inode:[eventpoll]",
+            "238": "anon_inode:[eventfd]",
+            "239": "anon_inode:[timerfd]",
+            "240": "anon_inode:[eventpoll]",
+            "241": "anon_inode:[eventfd]",
+            "242": "anon_inode:[timerfd]",
+            "243": "anon_inode:[eventpoll]",
+            "244": "anon_inode:[eventfd]",
+            "245": "anon_inode:[timerfd]",
+            "246": "anon_inode:[eventpoll]",
+            "247": "anon_inode:[eventfd]",
+            "248": "anon_inode:[timerfd]",
+            "249": "anon_inode:[eventpoll]",
+            "250": "anon_inode:[eventfd]",
+            "251": "anon_inode:[timerfd]",
+            "254": "socket:[483968903]"
+          },
+          "state": "S",
+          "sid": 271,
+          "pgid": 271
+        },
+        "targets": [
+          "/home/vimkim/.cache/fd-ha.mKhYAF/root/log/dev2_master.err",
+          "socket:[483990718]",
+          "socket:[483990719]",
+          "socket:[483990720]",
+          "socket:[484019892]"
+        ],
+        "leaked": [
+          "/home/vimkim/.cache/fd-ha.mKhYAF/root/log/dev2_master.err",
+          "socket:[483990720]"
+        ]
+      }
+    ],
+    "managed_missing_rc": null,
+    "capture_codes": [
+      0
+    ]
+  },
+  {
+    "artifact": "/home/vimkim/.cache/cbrd27443-05-red4/ha.json",
+    "source": "731b39e0f",
+    "checks": [
+      {
+        "name": "HA fixture path fits restart registration",
+        "pass": true
+      },
+      {
+        "name": "command: cubrid createdb --db-volume-size=20M --log-volume-size=20M -F /home/vimkim/.cache/fd-ha.ALH686 -L /home/vimkim/.cache/fd-ha.ALH686 fdtest en_US.utf8",
+        "pass": true
+      },
+      {
+        "name": "separate: collection command exited",
+        "pass": true
+      },
+      {
+        "name": "separate: every captured stream EOF before stopping server",
+        "pass": true
+      },
+      {
+        "name": "separate: no caller FD or lock retained",
+        "pass": true
+      },
+      {
+        "name": "HA start result preserved",
+        "pass": true
+      },
+      {
+        "name": "HA server reaches active state",
+        "pass": true
+      },
+      {
+        "name": "command: csql -u dba -c select 27443; fdtest@localhost",
+        "pass": true
+      },
+      {
+        "name": "separate: collection command exited",
+        "pass": true
+      },
+      {
+        "name": "separate: every captured stream EOF before stopping server",
+        "pass": true
+      },
+      {
+        "name": "separate: no caller FD or lock retained",
+        "pass": true
+      },
+      {
+        "name": "managed IPC start success acknowledgement",
+        "pass": true
+      },
+      {
+        "name": "managed utility executed through real master IPC",
+        "pass": true
+      },
+      {
+        "name": "separate: collection command exited",
+        "pass": true
+      },
+      {
+        "name": "separate: every captured stream EOF before stopping server",
+        "pass": true
+      },
+      {
+        "name": "separate: no caller FD or lock retained",
+        "pass": true
+      },
+      {
+        "name": "master managed utility: parent has internal resources",
+        "pass": true
+      },
+      {
+        "name": "master managed utility: no master internal target inherited",
+        "pass": false
+      }
+    ],
+    "internal_boundaries": [
+      {
+        "label": "master managed utility",
+        "parent": {
+          "pid": 10,
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[484074656]",
+            "2": "pipe:[484074657]",
+            "3": "/home/vimkim/.cache/fd-ha.ALH686/root/log/dev2_master.err",
+            "4": "socket:[484051366]",
+            "5": "socket:[484051367]",
+            "6": "socket:[484051368]",
+            "8": "socket:[484048297]"
+          }
+        },
+        "child": {
+          "pid": 272,
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[484074656]",
+            "2": "pipe:[484074657]",
+            "3": "/home/vimkim/.cache/fd-ha.ALH686/root/log/dev2_master.err",
+            "6": "socket:[484051368]",
+            "7": "socket:[484058489]",
+            "8": "socket:[484048297]"
+          }
+        },
+        "targets": [
+          "/home/vimkim/.cache/fd-ha.ALH686/root/log/dev2_master.err",
+          "socket:[484048297]",
+          "socket:[484051366]",
+          "socket:[484051367]",
+          "socket:[484051368]"
+        ],
+        "leaked": [
+          "/home/vimkim/.cache/fd-ha.ALH686/root/log/dev2_master.err",
+          "socket:[484048297]",
+          "socket:[484051368]"
+        ]
+      }
+    ],
+    "managed_missing_rc": 0,
+    "capture_codes": [
+      0,
+      0,
+      0
+    ]
+  }
+]
