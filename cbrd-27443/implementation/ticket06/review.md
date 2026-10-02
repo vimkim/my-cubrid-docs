@@ -1,4 +1,4 @@
-# Ticket 06 main review — verified candidate; decision pending
+# Ticket 06 main review — verified candidate; compatibility correction queued
 
 Dispatch fixed points: engine `8aa8fcab689088b3cd24ad6e44e567e3915eae7e`, shell `992b4076c3a8d8f8e2ee1aee7495ed8fe562b004`. Candidate engine `41ac0c2ce39590349e8e5759dc376f88e1cb660b`, shell `8c1a1bc791e5e29174fd5f6e78d98d6cec02f7bb`. Main performs Standards and Spec review directly under the approved one-worker topology. This is not ticket acceptance.
 
@@ -17,3 +17,7 @@ Second, initial batch pumping spliced short concurrent diagnostics. Baseline red
 ## Verified evidence and remaining decision
 
 Exact native `.cache/cbrd27443-06-41ac0c2.FvYAKF` passed1 case with0 failures/skips and1326 assertions:121 original +216 master +76 restart +383 boundary +96 rotation +152 HA +282 replication, plus the present probe. Main independently reran the focused verdict verifier and checked every assertion, all11 replicated records, both distinct automatic restarts, both remote launches, and all10 installed/copied/both-node identities. Both worktrees are clean and worker06 released ownership. See report.md and evidence/ for compact data, complete assertion lists and retained baseline/regression distinctions. Ticket07 proceeds independently under its accepted01 dependency; ticket06 remains unresolved solely for the public missing-executable exit-code decision. No approval is inferred from test success.
+
+## Current next step
+
+No exit-code exception was approved. Main will follow the existing spec by retaining legacy local missing-executable0 and caller diagnostics. The original06 worker receives that narrow correction after07 releases ownership, then requalifies the corrected integrated state before acceptance. The earlier0→1 candidate remains historical verified evidence, not an accepted contract change. This follows existing authorization rather than treating silence as an answer.
