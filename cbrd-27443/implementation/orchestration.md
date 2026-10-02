@@ -35,3 +35,9 @@ The user explicitly approved following the enforced repository formatter on 2026
 ## Ticket 02 checkpoint
 
 Service and direct daemon master use the explicit background helper. Preserve the existing PID1/NO_DAEMON foreground exceptions. Linux re-exec uses `/proc/self/exe` and carries actual PR_GET_NAME through a private last argument; original argv interpretation is preserved. The relay is included in Application installs. Final native `ticket02-final-11ad631c5.8gBHRC` passed 1 case, 216 master checks and 121 original checks. Earlier d031 native failure exposed comm restoration and a strict post-stop observation race; both were corrected and prior evidence retained. Source/test worktrees are clean and released. Ticket03 owns server/PL restart and internal FD cleanup; the basic present probe still visibly shows PL inheriting parent error-log/volume targets before that work.
+
+## Ticket 03 design checkpoint
+
+Main accepted the proposed explicit exec-boundary mapping: PL keeps valid existing stdout/stderr, takes null stdin, and drops unrelated parent descriptors. This preserves direct/SA output. Ordinary server restart uses the background relay and finishes its startup channel immediately; the existing monitor remains responsible for later registration confirmation. Legacy create_child_process remains unchanged to avoid assigning policies implicitly to other consumers. This is a proposed direction, not verified completion.
+
+Review constraints: map sources above every destination or validate the supported mapping count; do not rely solely on a parent-side open-FD snapshot in a multithreaded parent; failed exec children must report and exit rather than return to parent control flow. Closed-stdio cases must inspect actual targets because error-manager initialization before spawn can reuse closed standard numbers. Preserve direct/foreground output semantics when choosing the reservation boundary.
