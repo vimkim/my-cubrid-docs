@@ -27,3 +27,7 @@ Review constraints: no unbounded drain under continuous writers; preserve existi
 For each ticket, capture immutable dispatch base, require narrowly committed source/tests and native verdict-bearing evidence, review actual diff against both Standards and Spec, and resolve checkboxes only when evidence supports them. Return corrections to the same worker. Main performs the two review axes itself in place of stock code-review's extra reviewer agents.
 
 Current reports should be returned under `/home/vimkim/.cache/cbrd27443-ticketNN-report.md`; main copies meaningful results into this documentation worktree. No develop merge, push, PR, external CI or JIRA mutation is authorized. At completion, request one concrete local rebase/fast-forward approval covering relevant repositories, then clean only merged task worktrees/branches.
+
+## Formatting decision
+
+The user explicitly approved following the enforced repository formatter on 2026-10-02. The supplied AGENTS.md line133 says no tabs, but codestyle.sh line28 uses AStyle `-xT8`, which forces mixed tab/space indentation. Use the live formatter and normal commit hooks; no hook changes or bypass are authorized. This task-specific user decision resolves the conflict for subsequent workers.
