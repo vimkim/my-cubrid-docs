@@ -8,7 +8,7 @@ Work-tracker item: 261. Handoff contract: `/tmp/handoff-cbrd-27443-orchestrated-
 - User-confirmed implementation base: `15e7dc8b5b56fd8751d56ccae1fdf87d315bd35d`. User confirmed this new base and exclusive worktree availability after an external fast-forward. Never include the earlier upstream advance as our implementation diff.
 - Shell tests: `/home/vimkim/gh/cubrid-testcases-private-ex/CBRD-27443-fd-clean`, branch `tc/CBRD-27443-fd-clean`, original base `dfb7da195`.
 - Documentation: `/home/vimkim/gh/my-cubrid-docs-cbrd-27443-implementation`, branch `docs/cbrd-27443-implementation`, original base `ece982c`.
-- Main alone edits ticket status, map and docs. One fresh implementation worker per ticket, numeric order, no nested workers. Tickets01–02 accepted. Latest engine `11ad631c56b35675a96c7c9c15fc66025fb0aab0`, shell `7df0ede4bb5e76f59f644a1d6c7df03cfcd2e93c`. See per-ticket report/review files. Next dispatch: ticket03.
+- Main alone edits ticket status, map and docs. One fresh implementation worker per ticket, numeric order, no nested workers. Tickets01–02 accepted. Latest engine `11ad631c56b35675a96c7c9c15fc66025fb0aab0`, shell `7df0ede4bb5e76f59f644a1d6c7df03cfcd2e93c`. See per-ticket report/review files. Current worker: `/root/ticket03`, dispatch engine base `11ad631c56b35675a96c7c9c15fc66025fb0aab0`, shell base `7df0ede4bb5e76f59f644a1d6c7df03cfcd2e93c`.
 
 ## Preparation evidence
 

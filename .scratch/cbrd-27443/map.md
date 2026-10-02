@@ -9,7 +9,7 @@ Shell worktree: `/home/vimkim/gh/cubrid-testcases-private-ex/CBRD-27443-fd-clean
 |---|---|---|
 | 01 | none | resolved: c4e2bd910, native 1 pass / 121 checks |
 | 02 | 01 | resolved: 11ad631c5, native 1 pass / 216 master + 121 existing checks |
-| 03 | 02 | ready-for-agent |
+| 03 | 02 | claimed; dispatch base 11ad631c5 |
 | 04 | 01 | ready-for-agent |
 | 05 | 02 | ready-for-agent |
 | 06 | 05 | ready-for-agent |
