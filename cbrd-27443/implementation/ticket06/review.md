@@ -21,3 +21,11 @@ Exact native `.cache/cbrd27443-06-41ac0c2.FvYAKF` passed1 case with0 failures/sk
 ## Current next step
 
 No exit-code exception was approved. Main will follow the existing spec by retaining legacy local missing-executable0 and caller diagnostics. The original06 worker receives that narrow correction after07 releases ownership, then requalifies the corrected integrated state before acceptance. The earlier0→1 candidate remains historical verified evidence, not an accepted contract change. This follows existing authorization rather than treating silence as an answer.
+
+## Compatibility correction accepted
+
+Final engine `b0f569011731d37516f2f62dad9d3d4c76312291`, tests `26ab88a3545aaa08a2bb5ef461b03fb0192e8a6d`; native `cbrd27443-06c-b0f5690.RGZgmT` passes one case with no failures/skips,1,843 assertions including313 replication checks,495 broker checks and11 replicated records. Nine supplemental broker assertions pass. Main independently ran the native verifier, inspected every assertion, hashed18 installed/native objects and90 actual fixture files, and compared baseline8aa captures4/8 against final28/35: identical local copy/apply code0, stdout and stderr. Evidence is in [compatibility-evidence/final](compatibility-evidence/final/).
+
+Standards: the correction is confined to util_service.c and replication_matrix.py. Optional error classification is explicitly passed by callers; no unguarded C++ default arguments remain. Normal hooks and diff checks pass, and both worktrees are clean. Spec: invocation-local producer-exec classification preserves the original local and replication public codes without returning a failed child into parent code. Relay/log setup failures remain1, including after an earlier compatibility0 in the same request; final mixed fault restores the original PID set. Heartbeat-start remains1 and remote paths retain their checked result. Arbitrary baseline child interleavings and duplicate shutdown side effects are not reproduced, consistently with the safe-child-exit requirement.
+
+The prior proposed0-to1 exception received no approval and is no longer a blocker: this correction follows the original preservation contract. Ticket06 has no outstanding finding within its qualified Linux scope. Ticket08 still owns combined interaction verification; Windows and gateway-backend limitations are unchanged.
