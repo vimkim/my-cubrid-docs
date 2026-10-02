@@ -8,7 +8,7 @@ Work-tracker item: 261. Handoff contract: `/tmp/handoff-cbrd-27443-orchestrated-
 - User-confirmed implementation base: `15e7dc8b5b56fd8751d56ccae1fdf87d315bd35d`. User confirmed this new base and exclusive worktree availability after an external fast-forward. Never include the earlier upstream advance as our implementation diff.
 - Shell tests: `/home/vimkim/gh/cubrid-testcases-private-ex/CBRD-27443-fd-clean`, branch `tc/CBRD-27443-fd-clean`, original base `dfb7da195`.
 - Documentation: `/home/vimkim/gh/my-cubrid-docs-cbrd-27443-implementation`, branch `docs/cbrd-27443-implementation`, original base `ece982c`.
-- Main alone edits ticket status, map and docs. One fresh implementation worker per ticket, numeric order, no nested workers. Current worker: `/root/ticket02`, dispatch engine base `c4e2bd9106e94e08c3fd81d31e501c28bfc6429e`, testcase base `6c189443112f2931c8f49167ff5e982eadab44af`. Ticket01 accepted; see `ticket01/report.md` and `ticket01/review.md`.
+- Main alone edits ticket status, map and docs. One fresh implementation worker per ticket, numeric order, no nested workers. Tickets01–02 accepted. Latest engine `11ad631c56b35675a96c7c9c15fc66025fb0aab0`, shell `7df0ede4bb5e76f59f644a1d6c7df03cfcd2e93c`. See per-ticket report/review files. Next dispatch: ticket03.
 
 ## Preparation evidence
 
@@ -31,3 +31,7 @@ Current reports should be returned under `/home/vimkim/.cache/cbrd27443-ticketNN
 ## Formatting decision
 
 The user explicitly approved following the enforced repository formatter on 2026-10-02. The supplied AGENTS.md line133 says no tabs, but codestyle.sh line28 uses AStyle `-xT8`, which forces mixed tab/space indentation. Use the live formatter and normal commit hooks; no hook changes or bypass are authorized. This task-specific user decision resolves the conflict for subsequent workers.
+
+## Ticket 02 checkpoint
+
+Service and direct daemon master use the explicit background helper. Preserve the existing PID1/NO_DAEMON foreground exceptions. Linux re-exec uses `/proc/self/exe` and carries actual PR_GET_NAME through a private last argument; original argv interpretation is preserved. The relay is included in Application installs. Final native `ticket02-final-11ad631c5.8gBHRC` passed 1 case, 216 master checks and 121 original checks. Earlier d031 native failure exposed comm restoration and a strict post-stop observation race; both were corrected and prior evidence retained. Source/test worktrees are clean and released. Ticket03 owns server/PL restart and internal FD cleanup; the basic present probe still visibly shows PL inheriting parent error-log/volume targets before that work.

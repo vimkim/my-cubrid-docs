@@ -4,21 +4,25 @@
 
 **Blocked by:** 01: 기존 master 환경에서 서버 시작·실패 후 파이프 종료.
 
-**Status:** claimed
+**Status:** resolved
 
 **Parent:** CBRD-27443 — [합의된 스펙](../spec.md). 착수 전에 전체 스펙의 외부 계약·시험 원칙과 이 티켓에 해당하는 근거를 읽는다.
 
 **Acceptance coverage:** A01, A03, A04(master 없음), A05(master 시작 실패), A06(master 생성), A12; A02 회귀.
 
-- [ ] 01의 출력·FD 인계 계약을 master 생성 경계에 적용한다. 서비스 내부에서 daemon 초기화를 건너뛰는 경로와 직접 daemon master 시작을 각각 확인한다.
-- [ ] master가 없는 상태에서 정상 DB 시작 후 기존 성공 결과와 종료 코드, stdout·stderr EOF, SQL·PL 기능을 함께 확인한다. EOF를 얻기 위해 서버나 master를 종료하지 않는다.
-- [ ] 새 master를 만든 뒤 DB 시작이 실패해도 기존 진단과 실패 코드가 전달되고 두 출력 스트림이 종료된다. 살아남은 master는 호출자의 파이프·잠금 FD를 보유하지 않는다.
-- [ ] master 자체의 실행·초기화 실패에서 호출자 진단, 실패 코드, EOF, 실패 자식과 불필요한 FD 정리를 검증한다.
-- [ ] 직접 daemon master의 호출자는 출력 수집을 마칠 수 있고, daemon화된 master는 실제로 연결·서버 등록을 처리한다. daemon 부모의 종료 코드만으로 준비 완료를 판정하지 않는다.
-- [ ] master의 직접 stdout·stderr 메시지에 사용할 진단 대상을 기록하고 기존 오류 로그를 보존한다. foreground 출력 계약과 직접 서버 실행은 유지한다.
-- [ ] 일반 상속 FD·잠금 FD와 각 출력 수집 형태를 검사하고, master가 이미 있는 01의 경로를 회귀 검증한다.
-- [ ] 격리된 CLI 회귀 사례와 native testkit 판정에 baseline·수정본의 커밋/바이너리, 종료/EOF 관측, 살아 있는 프로세스를 기록한다.
+- [x] 01의 출력·FD 인계 계약을 master 생성 경계에 적용한다. 서비스 내부에서 daemon 초기화를 건너뛰는 경로와 직접 daemon master 시작을 각각 확인한다.
+- [x] master가 없는 상태에서 정상 DB 시작 후 기존 성공 결과와 종료 코드, stdout·stderr EOF, SQL·PL 기능을 함께 확인한다. EOF를 얻기 위해 서버나 master를 종료하지 않는다.
+- [x] 새 master를 만든 뒤 DB 시작이 실패해도 기존 진단과 실패 코드가 전달되고 두 출력 스트림이 종료된다. 살아남은 master는 호출자의 파이프·잠금 FD를 보유하지 않는다.
+- [x] master 자체의 실행·초기화 실패에서 호출자 진단, 실패 코드, EOF, 실패 자식과 불필요한 FD 정리를 검증한다.
+- [x] 직접 daemon master의 호출자는 출력 수집을 마칠 수 있고, daemon화된 master는 실제로 연결·서버 등록을 처리한다. daemon 부모의 종료 코드만으로 준비 완료를 판정하지 않는다.
+- [x] master의 직접 stdout·stderr 메시지에 사용할 진단 대상을 기록하고 기존 오류 로그를 보존한다. foreground 출력 계약과 직접 서버 실행은 유지한다.
+- [x] 일반 상속 FD·잠금 FD와 각 출력 수집 형태를 검사하고, master가 이미 있는 01의 경로를 회귀 검증한다.
+- [x] 격리된 CLI 회귀 사례와 native testkit 판정에 baseline·수정본의 커밋/바이너리, 종료/EOF 관측, 살아 있는 프로세스를 기록한다.
 
 ## Implementation notes
 
 01이 제공하는 별도 로그와 실패 진단 전달 계약을 재사용하므로 01 완료가 선행 조건이다. 프로세스 그룹이나 timeout 그룹 신호 정책을 바꾸는 작업은 포함하지 않는다.
+
+## Answer
+
+Engine `11ad631c56b35675a96c7c9c15fc66025fb0aab0`, shell tests `7df0ede4bb5e76f59f644a1d6c7df03cfcd2e93c`. Exact native shell: 1 success, 0 failures/skips; 216 master checks and 121 existing checks passed. Main accepted Standards and Spec against dispatch base `c4e2bd910`. See [report and retained evidence](../../../cbrd-27443/implementation/ticket02/report.md) and [main review](../../../cbrd-27443/implementation/ticket02/review.md). Original foreground/PID1 exceptions and direct daemon parent return semantics remain explicit.
