@@ -7,7 +7,7 @@ Shell worktree: `/home/vimkim/gh/cubrid-testcases-private-ex/CBRD-27443-fd-clean
 
 | Ticket | Blocked by | Status |
 |---|---|---|
-| 01 | none | claimed; implementation and regression in progress |
+| 01 | none | resolved: c4e2bd910, native 1 pass / 121 checks |
 | 02 | 01 | ready-for-agent |
 | 03 | 02 | ready-for-agent |
 | 04 | 01 | ready-for-agent |

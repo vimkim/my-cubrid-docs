@@ -1,0 +1,124 @@
+{
+  "mode": "present",
+  "version": "cubrid (CUBRID utilities)\nCUBRID 11.5.0 (11.5.0.2638-c4e2bd9) (64bit debug build for Linux) (Oct  2 2026 20:46:11)\nCopyright (C) 2008 Search Solution Corporation.\nCopyright (C) 2016 CUBRID Corporation.",
+  "commands": [
+    {
+      "argv": [
+        "cubrid",
+        "createdb",
+        "--db-volume-size=20M",
+        "--log-volume-size=20M",
+        "-F",
+        "/home/vimkim/.cache/cbrd27443-final-c4e2bd9-r2.mVkxfU/home/.cache/cbrd27443-present.DdE8w1",
+        "-L",
+        "/home/vimkim/.cache/cbrd27443-final-c4e2bd9-r2.mVkxfU/home/.cache/cbrd27443-present.DdE8w1",
+        "fdtest",
+        "en_US.utf8"
+      ],
+      "rc": 0
+    },
+    {
+      "argv": [
+        "cub_master"
+      ],
+      "rc": 0
+    },
+    {
+      "argv": [
+        "cubrid",
+        "server",
+        "stop",
+        "fdtest"
+      ],
+      "rc": 0
+    },
+    {
+      "argv": [
+        "cubrid",
+        "service",
+        "stop"
+      ],
+      "rc": 0
+    },
+    {
+      "argv": [
+        "cubrid",
+        "deletedb",
+        "fdtest"
+      ],
+      "rc": 0
+    }
+  ],
+  "targets": {
+    "lock": "/home/vimkim/.cache/cbrd27443-final-c4e2bd9-r2.mVkxfU/home/.cache/cbrd27443-present.DdE8w1/caller.lock",
+    "stdout": "pipe:[479063738]",
+    "stderr": "pipe:[479063739]"
+  },
+  "launcher_pid": 12,
+  "observer_pgid": 0,
+  "launcher_rc": 0,
+  "launcher_elapsed_s": 2.102,
+  "eof_after_exit_plus_2s": {
+    "stdout": true,
+    "stderr": true
+  },
+  "lock_available_while_running": true,
+  "holders_after_exit": [
+    {
+      "pid": 10,
+      "name": "cub_master",
+      "pgid": 10,
+      "sid": 10,
+      "fds": {
+        "3": "/home/vimkim/.cache/cbrd27443-final-c4e2bd9-r2.mVkxfU/home/.cache/cbrd27443-present.DdE8w1/root/log/dev2_master.err"
+      }
+    },
+    {
+      "pid": 15,
+      "name": "cub_server",
+      "pgid": 15,
+      "sid": 15,
+      "fds": {
+        "3": "/home/vimkim/.cache/cbrd27443-final-c4e2bd9-r2.mVkxfU/home/.cache/cbrd27443-present.DdE8w1/root/log/server/fdtest_20261002_2050.err",
+        "112": "/home/vimkim/.cache/cbrd27443-final-c4e2bd9-r2.mVkxfU/home/.cache/cbrd27443-present.DdE8w1/fdtest_lgat"
+      }
+    },
+    {
+      "pid": 18,
+      "name": "cub_pl",
+      "pgid": 18,
+      "sid": 18,
+      "fds": {
+        "3": "/home/vimkim/.cache/cbrd27443-final-c4e2bd9-r2.mVkxfU/home/.cache/cbrd27443-present.DdE8w1/root/log/server/fdtest_20261002_2050.err",
+        "6": "/home/vimkim/.cache/cbrd27443-final-c4e2bd9-r2.mVkxfU/home/.cache/cbrd27443-present.DdE8w1/fdtest_lgat",
+        "7": "/home/vimkim/.cache/cbrd27443-final-c4e2bd9-r2.mVkxfU/home/.cache/cbrd27443-present.DdE8w1/root/log/pl/fdtest_pl.err"
+      }
+    }
+  ],
+  "eof_after_server_stop": {
+    "stdout": true,
+    "stderr": true
+  },
+  "lock_available_after_server_stop": true,
+  "holders_after_server_stop": [
+    {
+      "pid": 10,
+      "name": "cub_master",
+      "pgid": 10,
+      "sid": 10,
+      "fds": {
+        "3": "/home/vimkim/.cache/cbrd27443-final-c4e2bd9-r2.mVkxfU/home/.cache/cbrd27443-present.DdE8w1/root/log/dev2_master.err"
+      }
+    }
+  ],
+  "eof_after_service_stop": {
+    "stdout": true,
+    "stderr": true
+  },
+  "lock_available_after_service_stop": true,
+  "holders_after_service_stop": [],
+  "output": {
+    "stdout": "@ cubrid server start: fdtest\n\nThis may take a long time depending on the amount of recovery works to do.\n\nCUBRID 11.5.0 (11.5.0.2638) (64 debug build)\n\n++ cubrid server start: success\n",
+    "stderr": ""
+  }
+}
