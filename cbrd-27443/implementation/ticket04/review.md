@@ -19,3 +19,9 @@ Pending findings sent to worker04:
 - Runtime failure records must remain bounded and survive successful writes by other relays. Test observable failures and consider SIGXFSZ rather than relying solely on write returning errno. No claim assumes an unavailable filesystem and unavailable system logger can guarantee persistence.
 
 Final acceptance requires all seven ticket checkboxes, clean source/test commits, exact installed/copied identities, native verdict and regression results. No completion claim yet.
+
+## Review corrections through 731b39e0f
+
+Worker replaced process-associated locks with flock on each independently opened lock description, bounded existing active/archives by retaining their newest 1 MiB under the same lock, reset per-attempt output error state, and guarded the legacy C++ declaration. The status record is fixed at 256 bytes and successful writers do not clear it. Relay reopens current log under lock for every append. Linux socket creation has a non-Linux fcntl fallback.
+
+Focused source5604e9e04 rotation probe passed 87 checks. A further startup RLIMIT_FSIZE probe reproduced launcher termination by SIGXFSZ; source731b39e0f now blocks that synchronous signal only in the logging thread, consumes newly pending logging-generated signal and restores the prior mask/disposition. Relay handles its own SIGXFSZ as a write error. Both corrections still require final exact native evidence. Private syslog capture now precedes fault injection; full generated startup streams are counted separately for concurrent successful and failed attempts.
