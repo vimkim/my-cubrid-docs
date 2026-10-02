@@ -12,7 +12,7 @@ Shell worktree: `/home/vimkim/gh/cubrid-testcases-private-ex/CBRD-27443-fd-clean
 | 03 | 02 | resolved: 74ee7520a, native 1 pass / 767 checks |
 | 04 | 01 | resolved: 731b39e0f, native 1 pass / 889 checks |
 | 05 | 02 | resolved: 8aa8fcab6, native 1 pass / 1,034 checks |
-| 06 | 05 | verified candidate41ac0c2ce:1326 checks; legacy exit-code correction queued after07 |
+| 06 | 05 | verified candidate41ac0c2ce:1326 checks; legacy exit-code correction active from928e3e503 |
 | 07 | 01 | resolved:928e3e503; native1pass/1822 checks |
 | 08 | 03, 04, 06, 07 | ready-for-agent |
 
