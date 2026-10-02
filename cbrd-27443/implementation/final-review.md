@@ -1,6 +1,6 @@
 # CBRD-27443 combined review
 
-Source review is complete; final native runtime acceptance is pending. The review compares engine `0809a480df55ac6767a905d03fa3d31edd40a93c` with the user-approved implementation base `15e7dc8b5b56fd8751d56ccae1fdf87d315bd35d`. Final tests are committed at `6bdbb89738088948c479a6d85662276126a31bb5`, based on `dfb7da1955173d6858703b15818fe030ff178d1e`.
+Source review and final focused Linux runtime acceptance are complete. The review compares engine `0809a480df55ac6767a905d03fa3d31edd40a93c` with the user-approved implementation base `15e7dc8b5b56fd8751d56ccae1fdf87d315bd35d`. Final tests are committed at `6bdbb89738088948c479a6d85662276126a31bb5`, based on `dfb7da1955173d6858703b15818fe030ff178d1e`.
 
 The main orchestrator performs the code-review skill's Standards and Spec axes directly, as required by the approved one-worker-per-ticket workflow. No additional review agents were used. The [orchestration record](orchestration.md) preserves intermediate findings, corrections, ownership and unsuccessful test attempts.
 
@@ -14,11 +14,11 @@ No outstanding source finding. The combined review covers all 22 changed engine 
 - Callers retain explicit signal and reaping ownership. Existing synchronous `proc_execute` behavior is unchanged. PL, direct server and SA preserve intentional output destinations.
 - Build/source guards preserve Windows-specific launch branches. This source inspection is not a Windows or non-Linux build result.
 
-New interfaces serve actual creation boundaries. The review found no unrelated refactoring required by the skill's code-smell heuristics. Normal commit hooks and diff checks were used.
+New interfaces serve actual creation boundaries. The review found no unrelated refactoring required by the skill's code-smell heuristics. Normal commit hooks were used. Engine full-range and ticket 08 testcase commit-range diff checks pass. The aggregate testcase diff retains one previously introduced extra blank line at `cli_fixture.py:163`; this minor style note is recorded without changing the qualified test state.
 
 ## Spec
 
-No outstanding source finding. Runtime acceptance still requires the final four-case native result at the exact commits above; earlier passing runs do not substitute for it.
+No outstanding source finding. The final four-case native run passed at the exact commits above; earlier passing runs were not added to its verdict.
 
 The implementation separates caller startup capture from long-lived output while retaining existing readiness checks and public result contracts. Each service console has an active file and three archives, each bounded to 1 MiB. Stable locking, reopening for each append and private file modes support multiple writers and restart rotation. Runtime logging failure records bounded diagnostics, continues draining, and retries later. This deliberately does not promise lossless output when storage is unavailable.
 
@@ -32,7 +32,11 @@ The final test diff retains every prior matrix and adds ordinary/PL, single-node
 
 ## Final qualification
 
-Pending: native attempt `/home/vimkim/.cache/cbrd27443-08.QVVajj`, four exact cases, one slot, unchanged 1,200-second per-case timeout, no retry/update/continuation. Preflight source/install identities and effective configuration were independently inspected. Main's final audit will check the native artifacts, every matrix, actual fixture hashes and the A01–A16 evidence mapping.
+Native attempt `/home/vimkim/.cache/cbrd27443-08.QVVajj` passed **4 cases, 0 failures, 0 skips** in 1,189 seconds. One slot and the unchanged 1,200-second per-case limit were used; the longest case took 569.315 seconds. No retries, updates or continuation were enabled.
+
+Main independently reran the native verifier and checked 2,566 matrix assertions plus nine supplemental observations; 179 background captures with EOF/lock release/no caller holders; one deliberately attached PID1 foreground-master capture; the separate present probe; twelve fresh active logging faults with service functionality; fifteen exact replicated records; eighteen installed/native-copy pairs and 252 actual fixture files. All fixtures completed strict process cleanup; broker fixtures also cleared their private shared memory.
+
+The [final report](ticket08/report.md) maps every A01–A16 condition to this run and names source-only/unverified boundaries. [Native artifacts, compact observations and independent audit](ticket08/evidence/README.md) are archived alongside the report. All eight implementation tickets are accepted within this qualified Linux scope; the limits below remain explicit.
 
 ## Limits
 

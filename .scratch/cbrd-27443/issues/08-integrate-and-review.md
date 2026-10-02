@@ -4,22 +4,28 @@
 
 **Blocked by:** 03: 서버·PL 재시작과 상속 FD 경계 조건 처리; 04: 별도 출력 로그의 용량 제한과 회전; 06: 2-node 복제 프로세스 시작·재시작 처리; 07: broker·CAS·proxy 생성 경로 호환성 확보.
 
-**Status:** claimed
+**Status:** resolved
 
 **Parent:** CBRD-27443 — [합의된 스펙](../spec.md). 착수 전에 전체 스펙의 외부 계약·시험 원칙과 이 티켓에 해당하는 근거를 읽는다.
 
 **Acceptance coverage:** A01, A02, A03, A04, A05, A06, A07, A08, A09, A10, A11, A12, A13, A14, A15, A16.
 
-- [ ] 모든 선행 티켓의 변경과 회귀 사례를 포함한 최종 커밋·설치 바이너리를 식별하고, 서로 다른 커밋의 개별 성공 결과를 최종 통합 통과로 합산하지 않는다.
-- [ ] 스펙의 A01–A16 각각을 실제 시험·결과·근거에 연결한다. 적용 제외에는 공통 도우미의 간접 영향까지 조사한 이유를 기록한다.
-- [ ] 대표 CLI에서 시작 명령 코드와 stdout·stderr EOF를 각각 확인하고, 서버를 멈추기 전에 SQL·PL 기능을 확인한다. master 없음/있음과 시작 실패를 모두 포함한다.
-- [ ] 04의 로그 회전을 최초 시작·일반/PL 재시작·적용되는 HA/broker 로그 경로와 조합해 검증한다. 회전 중 초기 실패 진단 전달과 실행 중 로그 장애의 결정된 계약을 확인한다.
-- [ ] 직접 서버 실행과 동기 관리 명령의 출력/코드, 직접 daemon master의 동작, 필요한 exec FD와 실행 중 소켓 전달을 최종 상태에서 보존한다.
-- [ ] 프로젝트 방식으로 적절한 빌드와 구성된 검사를 수행하고 native focused 회귀 결과를 기록한다. Linux 결과와 Windows 빌드/호환성 검토 범위를 구분한다.
-- [ ] code-review 흐름으로 문서화된 코딩 규칙과 이 스펙의 충족 여부를 검토하고, 발견한 결함을 수정한 뒤 영향 범위의 검사를 다시 수행한다.
-- [ ] baseline 결함, 수정본 결과, 알려진 실패와 미검증 항목을 구분한 최종 보고를 남긴다. 적용 대상의 실행 누락을 통과로 표기하거나 전체 QA 완료로 확대하지 않는다.
-- [ ] 엔진 변경과 의미 있는 검증 산출물을 각각의 작업 저장소에 커밋하고 상태를 확인한다. 부모 이슈의 종료나 수정은 이 티켓의 동작에 포함하지 않는다.
+- [x] 모든 선행 티켓의 변경과 회귀 사례를 포함한 최종 커밋·설치 바이너리를 식별하고, 서로 다른 커밋의 개별 성공 결과를 최종 통합 통과로 합산하지 않는다.
+- [x] 스펙의 A01–A16 각각을 실제 시험·결과·근거에 연결한다. 적용 제외에는 공통 도우미의 간접 영향까지 조사한 이유를 기록한다.
+- [x] 대표 CLI에서 시작 명령 코드와 stdout·stderr EOF를 각각 확인하고, 서버를 멈추기 전에 SQL·PL 기능을 확인한다. master 없음/있음과 시작 실패를 모두 포함한다.
+- [x] 04의 로그 회전을 최초 시작·일반/PL 재시작·적용되는 HA/broker 로그 경로와 조합해 검증한다. 회전 중 초기 실패 진단 전달과 실행 중 로그 장애의 결정된 계약을 확인한다.
+- [x] 직접 서버 실행과 동기 관리 명령의 출력/코드, 직접 daemon master의 동작, 필요한 exec FD와 실행 중 소켓 전달을 최종 상태에서 보존한다.
+- [x] 프로젝트 방식으로 적절한 빌드와 구성된 검사를 수행하고 native focused 회귀 결과를 기록한다. Linux 결과와 Windows 빌드/호환성 검토 범위를 구분한다.
+- [x] code-review 흐름으로 문서화된 코딩 규칙과 이 스펙의 충족 여부를 검토하고, 발견한 결함을 수정한 뒤 영향 범위의 검사를 다시 수행한다.
+- [x] baseline 결함, 수정본 결과, 알려진 실패와 미검증 항목을 구분한 최종 보고를 남긴다. 적용 대상의 실행 누락을 통과로 표기하거나 전체 QA 완료로 확대하지 않는다.
+- [x] 엔진 변경과 의미 있는 검증 산출물을 각각의 작업 저장소에 커밋하고 상태를 확인한다. 부모 이슈의 종료나 수정은 이 티켓의 동작에 포함하지 않는다.
 
 ## Implementation notes
 
 01·02·05는 명시된 선행 티켓을 통해 전이적으로 포함된다. 미검증 항목이 남으면 범위와 원인을 보고하되 전체 스펙 검증 완료를 선언하지 않는다. PR 생성·push·외부 CI 실행은 해당 작업의 별도 권한과 워크플로를 따른다.
+
+## Accepted result
+
+Engine `0809a480df55ac6767a905d03fa3d31edd40a93c`, tests `6bdbb89738088948c479a6d85662276126a31bb5`. Final native `QVVajj`: 4 passed / 0 failed / 0 skipped, 1,189 seconds, 2,566 matrix checks and nine supplemental observations. Main independently verified all assertions, 179 background capture contracts and the explicit foreground exception, twelve live logging faults, fifteen replicated records, eighteen installed/copied pairs and 252 actual fixture files. All task source/test changes are committed and clean.
+
+[Final report and A01–A16 mapping](../../../cbrd-27443/implementation/ticket08/report.md), [main Standards/Spec review](../../../cbrd-27443/implementation/final-review.md), and [durable evidence](../../../cbrd-27443/implementation/ticket08/evidence/README.md). Windows/non-Linux build/runtime, external ODBC gateway backend and whole-corpus QA remain unverified; resolution records completed focused Linux integration and an explicit limit report, not universal platform qualification. No integration/publication/JIRA action is authorized by this resolution.
