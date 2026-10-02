@@ -4,7 +4,7 @@
 
 **Blocked by:** 01: 기존 master 환경에서 서버 시작·실패 후 파이프 종료.
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 **Parent:** CBRD-27443 — [합의된 스펙](../spec.md). 착수 전에 전체 스펙의 외부 계약·시험 원칙과 이 티켓에 해당하는 근거를 읽는다.
 
