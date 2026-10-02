@@ -1,0 +1,2113 @@
+{
+  "checks": [
+    {
+      "name": "private SysV IPC namespace",
+      "pass": true
+    },
+    {
+      "name": "command: mount --bind /dev/null /home/vimkim/.cache/fd-s08.zvmt4i/private-dev/null",
+      "pass": true
+    },
+    {
+      "name": "command: mount --bind /dev/zero /home/vimkim/.cache/fd-s08.zvmt4i/private-dev/zero",
+      "pass": true
+    },
+    {
+      "name": "command: mount --bind /dev/random /home/vimkim/.cache/fd-s08.zvmt4i/private-dev/random",
+      "pass": true
+    },
+    {
+      "name": "command: mount --bind /dev/urandom /home/vimkim/.cache/fd-s08.zvmt4i/private-dev/urandom",
+      "pass": true
+    },
+    {
+      "name": "command: mount --rbind /home/vimkim/.cache/fd-s08.zvmt4i/private-dev /dev",
+      "pass": true
+    },
+    {
+      "name": "broker fault reporting cannot reach host syslog",
+      "pass": true
+    },
+    {
+      "name": "private real device endpoints",
+      "pass": true
+    },
+    {
+      "name": "qualified runtime object exists: bin/cubrid",
+      "pass": true
+    },
+    {
+      "name": "qualified runtime object exists: bin/cub_server",
+      "pass": true
+    },
+    {
+      "name": "qualified runtime object exists: bin/cub_master",
+      "pass": true
+    },
+    {
+      "name": "qualified runtime object exists: bin/cub_pl",
+      "pass": true
+    },
+    {
+      "name": "qualified runtime object exists: bin/cub_console",
+      "pass": true
+    },
+    {
+      "name": "qualified runtime object exists: bin/csql",
+      "pass": true
+    },
+    {
+      "name": "qualified runtime object exists: bin/cub_admin",
+      "pass": true
+    },
+    {
+      "name": "qualified runtime object exists: bin/cubrid_broker",
+      "pass": true
+    },
+    {
+      "name": "qualified runtime object exists: bin/cub_broker",
+      "pass": true
+    },
+    {
+      "name": "qualified runtime object exists: bin/cub_cas",
+      "pass": true
+    },
+    {
+      "name": "qualified runtime object exists: bin/cub_proxy",
+      "pass": true
+    },
+    {
+      "name": "qualified runtime object exists: bin/broker_monitor",
+      "pass": true
+    },
+    {
+      "name": "qualified runtime object exists: bin/broker_changer",
+      "pass": true
+    },
+    {
+      "name": "qualified runtime object exists: lib/libcubrid.so",
+      "pass": true
+    },
+    {
+      "name": "qualified runtime object exists: lib/libcubridsa.so",
+      "pass": true
+    },
+    {
+      "name": "qualified runtime object exists: lib/libcubridcs.so",
+      "pass": true
+    },
+    {
+      "name": "qualified runtime object exists: lib/libcascci.so",
+      "pass": true
+    },
+    {
+      "name": "qualified runtime object exists: lib/libbrokeradmin.so",
+      "pass": true
+    },
+    {
+      "name": "registered executable path fits127-byte field: cub_server",
+      "pass": true
+    },
+    {
+      "name": "registered executable path fits127-byte field: cub_admin",
+      "pass": true
+    },
+    {
+      "name": "command: cubrid createdb --db-volume-size=20M --log-volume-size=20M -F /home/vimkim/.cache/fd-s08.zvmt4i -L /home/vimkim/.cache/fd-s08.zvmt4i fdtest en_US.utf8",
+      "pass": true
+    },
+    {
+      "name": "command: cubrid server start fdtest",
+      "pass": true
+    },
+    {
+      "name": "separate: collection command exited",
+      "pass": true
+    },
+    {
+      "name": "launcher soft limit 128",
+      "pass": true
+    },
+    {
+      "name": "separate: collection command exited",
+      "pass": true
+    },
+    {
+      "name": "launcher soft limit 256",
+      "pass": true
+    },
+    {
+      "name": "all32 configured CAS are alive",
+      "pass": true
+    },
+    {
+      "name": "CCI connects through actual broker port",
+      "pass": true
+    },
+    {
+      "name": "CCI prepare through broker: b''",
+      "pass": true
+    },
+    {
+      "name": "CCI executes SQL",
+      "pass": true
+    },
+    {
+      "name": "CCI fetches SQL row",
+      "pass": true
+    },
+    {
+      "name": "actual broker-mediated SQL returns27443",
+      "pass": true
+    },
+    {
+      "name": "command: cubrid service stop",
+      "pass": true
+    },
+    {
+      "name": "command: cubrid deletedb fdtest",
+      "pass": true
+    },
+    {
+      "name": "all namespace service children and relays are reaped",
+      "pass": true
+    },
+    {
+      "name": "all private SysV shared memory is removed",
+      "pass": true
+    }
+  ],
+  "captures": [
+    {
+      "mode": "separate",
+      "db": "fdtest",
+      "rc": 1,
+      "exit_s": 2.472055390011519,
+      "eof_s": {
+        "stdout": 2.472,
+        "stderr": 2.4721
+      },
+      "output": {
+        "stdout": "@ cubrid broker start\n++ cubrid broker start: fail\n",
+        "stderr": "cub_cas: Too many open files\ncub_cas: Too many open files\ncub_cas: Too many open files\ncub_cas: Too many open files\ncub_cas: Too many open files\ncub_cas: Too many open files\ncub_cas: Too many open files\ncub_cas: Too many open files\ncub_cas: Too many open files\n\n"
+      },
+      "lock_available": true,
+      "processes": [
+        {
+          "pid": 14,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/master-console.log.lock",
+            "4": "pipe:[488005204]",
+            "5": "pipe:[488005205]"
+          },
+          "state": "S",
+          "sid": 0,
+          "pgid": 0
+        },
+        {
+          "pid": 15,
+          "name": "cub_master",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488005204]",
+            "2": "pipe:[488005205]",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/dev2_master.err",
+            "4": "socket:[488091780]",
+            "5": "socket:[488091781]",
+            "7": "socket:[488091788]"
+          },
+          "state": "S",
+          "sid": 0,
+          "pgid": 0
+        },
+        {
+          "pid": 18,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/server-console.log.lock",
+            "4": "pipe:[488005215]",
+            "5": "pipe:[488005216]"
+          },
+          "state": "S",
+          "sid": 0,
+          "pgid": 0
+        },
+        {
+          "pid": 19,
+          "name": "cub_server",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488005215]",
+            "2": "pipe:[488005216]",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/server/fdtest_20261003_0240.err",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/server/fdtest_20261003_0240.access",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/server/fdtest_20261003_0240.event",
+            "6": "socket:[488065807]",
+            "7": "socket:[488065809]",
+            "8": "anon_inode:[eventpoll]",
+            "9": "anon_inode:[eventfd]",
+            "10": "/dev/shm/cubbase_dmrb_19_0 (deleted)",
+            "11": "/dev/shm/cubbase_dmrb_19_1 (deleted)",
+            "12": "/dev/shm/cubbase_dmrb_19_2 (deleted)",
+            "13": "/dev/shm/cubbase_dmrb_19_3 (deleted)",
+            "14": "/dev/shm/cubbase_dmrb_19_4 (deleted)",
+            "15": "/dev/shm/cubbase_dmrb_19_5 (deleted)",
+            "16": "/dev/shm/cubbase_dmrb_19_6 (deleted)",
+            "17": "/dev/shm/cubbase_dmrb_19_7 (deleted)",
+            "18": "/dev/shm/cubbase_dmrb_19_8 (deleted)",
+            "19": "/dev/shm/cubbase_dmrb_19_9 (deleted)",
+            "20": "/dev/shm/cubbase_dmrb_19_10 (deleted)",
+            "21": "/dev/shm/cubbase_dmrb_19_11 (deleted)",
+            "22": "/dev/shm/cubbase_dmrb_19_12 (deleted)",
+            "23": "/dev/shm/cubbase_dmrb_19_13 (deleted)",
+            "24": "/dev/shm/cubbase_dmrb_19_14 (deleted)",
+            "25": "/dev/shm/cubbase_dmrb_19_15 (deleted)",
+            "26": "/dev/shm/cubbase_dmrb_19_16 (deleted)",
+            "27": "/dev/shm/cubbase_dmrb_19_17 (deleted)",
+            "28": "/dev/shm/cubbase_dmrb_19_18 (deleted)",
+            "29": "/dev/shm/cubbase_dmrb_19_19 (deleted)",
+            "30": "/dev/shm/cubbase_dmrb_19_20 (deleted)",
+            "31": "/dev/shm/cubbase_dmrb_19_21 (deleted)",
+            "32": "/dev/shm/cubbase_dmrb_19_22 (deleted)",
+            "33": "/dev/shm/cubbase_dmrb_19_23 (deleted)",
+            "34": "/dev/shm/cubbase_dmrb_19_24 (deleted)",
+            "35": "/dev/shm/cubbase_dmrb_19_25 (deleted)",
+            "36": "/dev/shm/cubbase_dmrb_19_26 (deleted)",
+            "37": "/dev/shm/cubbase_dmrb_19_27 (deleted)",
+            "38": "/dev/shm/cubbase_dmrb_19_28 (deleted)",
+            "39": "/dev/shm/cubbase_dmrb_19_29 (deleted)",
+            "40": "/dev/shm/cubbase_dmrb_19_30 (deleted)",
+            "41": "/dev/shm/cubbase_dmrb_19_31 (deleted)",
+            "42": "/dev/shm/cubbase_dmrb_19_32 (deleted)",
+            "43": "/dev/shm/cubbase_dmrb_19_33 (deleted)",
+            "44": "/dev/shm/cubbase_dmrb_19_34 (deleted)",
+            "45": "/dev/shm/cubbase_dmrb_19_35 (deleted)",
+            "46": "/dev/shm/cubbase_dmrb_19_36 (deleted)",
+            "47": "/dev/shm/cubbase_dmrb_19_37 (deleted)",
+            "48": "/dev/shm/cubbase_dmrb_19_38 (deleted)",
+            "49": "/dev/shm/cubbase_dmrb_19_39 (deleted)",
+            "50": "/dev/shm/cubbase_dmrb_19_40 (deleted)",
+            "51": "/dev/shm/cubbase_dmrb_19_41 (deleted)",
+            "52": "/dev/shm/cubbase_dmrb_19_42 (deleted)",
+            "53": "/dev/shm/cubbase_dmrb_19_43 (deleted)",
+            "54": "/dev/shm/cubbase_dmrb_19_44 (deleted)",
+            "55": "/dev/shm/cubbase_dmrb_19_45 (deleted)",
+            "56": "/dev/shm/cubbase_dmrb_19_46 (deleted)",
+            "57": "/dev/shm/cubbase_dmrb_19_47 (deleted)",
+            "58": "/dev/shm/cubbase_dmrb_19_48 (deleted)",
+            "59": "/dev/shm/cubbase_dmrb_19_49 (deleted)",
+            "60": "/dev/shm/cubbase_dmrb_19_50 (deleted)",
+            "61": "/dev/shm/cubbase_dmrb_19_51 (deleted)",
+            "62": "/dev/shm/cubbase_dmrb_19_52 (deleted)",
+            "63": "/dev/shm/cubbase_dmrb_19_53 (deleted)",
+            "64": "/dev/shm/cubbase_dmrb_19_54 (deleted)",
+            "65": "/dev/shm/cubbase_dmrb_19_55 (deleted)",
+            "66": "/dev/shm/cubbase_dmrb_19_56 (deleted)",
+            "67": "/dev/shm/cubbase_dmrb_19_57 (deleted)",
+            "68": "/dev/shm/cubbase_dmrb_19_58 (deleted)",
+            "69": "/dev/shm/cubbase_dmrb_19_59 (deleted)",
+            "70": "/dev/shm/cubbase_dmrb_19_60 (deleted)",
+            "71": "/dev/shm/cubbase_dmrb_19_61 (deleted)",
+            "72": "/dev/shm/cubbase_dmrb_19_62 (deleted)",
+            "73": "/dev/shm/cubbase_dmrb_19_63 (deleted)",
+            "74": "/dev/shm/cubbase_dmrb_19_64 (deleted)",
+            "75": "/dev/shm/cubbase_dmrb_19_65 (deleted)",
+            "76": "/dev/shm/cubbase_dmrb_19_66 (deleted)",
+            "77": "/dev/shm/cubbase_dmrb_19_67 (deleted)",
+            "78": "/dev/shm/cubbase_dmrb_19_68 (deleted)",
+            "79": "/dev/shm/cubbase_dmrb_19_69 (deleted)",
+            "80": "/dev/shm/cubbase_dmrb_19_70 (deleted)",
+            "81": "/dev/shm/cubbase_dmrb_19_71 (deleted)",
+            "82": "/dev/shm/cubbase_dmrb_19_72 (deleted)",
+            "83": "/dev/shm/cubbase_dmrb_19_73 (deleted)",
+            "84": "/dev/shm/cubbase_dmrb_19_74 (deleted)",
+            "85": "/dev/shm/cubbase_dmrb_19_75 (deleted)",
+            "86": "/dev/shm/cubbase_dmrb_19_76 (deleted)",
+            "87": "/dev/shm/cubbase_dmrb_19_77 (deleted)",
+            "88": "/dev/shm/cubbase_dmrb_19_78 (deleted)",
+            "89": "/dev/shm/cubbase_dmrb_19_79 (deleted)",
+            "90": "/dev/shm/cubbase_dmrb_19_80 (deleted)",
+            "91": "/dev/shm/cubbase_dmrb_19_81 (deleted)",
+            "92": "/dev/shm/cubbase_dmrb_19_82 (deleted)",
+            "93": "/dev/shm/cubbase_dmrb_19_83 (deleted)",
+            "94": "/dev/shm/cubbase_dmrb_19_84 (deleted)",
+            "95": "/dev/shm/cubbase_dmrb_19_85 (deleted)",
+            "96": "/dev/shm/cubbase_dmrb_19_86 (deleted)",
+            "97": "/dev/shm/cubbase_dmrb_19_87 (deleted)",
+            "98": "/dev/shm/cubbase_dmrb_19_88 (deleted)",
+            "99": "/dev/shm/cubbase_dmrb_19_89 (deleted)",
+            "100": "/dev/shm/cubbase_dmrb_19_90 (deleted)",
+            "101": "/dev/shm/cubbase_dmrb_19_91 (deleted)",
+            "102": "/dev/shm/cubbase_dmrb_19_92 (deleted)",
+            "103": "/dev/shm/cubbase_dmrb_19_93 (deleted)",
+            "104": "/dev/shm/cubbase_dmrb_19_94 (deleted)",
+            "105": "/dev/shm/cubbase_dmrb_19_95 (deleted)",
+            "106": "/dev/shm/cubbase_dmrb_19_96 (deleted)",
+            "107": "/dev/shm/cubbase_dmrb_19_97 (deleted)",
+            "108": "/dev/shm/cubbase_dmrb_19_98 (deleted)",
+            "109": "/dev/shm/cubbase_dmrb_19_99 (deleted)",
+            "110": "/dev/shm/cubbase_dmrb_19_100 (deleted)",
+            "111": "/dev/shm/cubbase_dmrb_19_101 (deleted)",
+            "112": "/home/vimkim/.cache/fd-s08.zvmt4i/fdtest_lgat",
+            "113": "/home/vimkim/.cache/fd-s08.zvmt4i/fdtest",
+            "114": "/home/vimkim/.cache/fd-s08.zvmt4i/fdtest_x001",
+            "115": "/home/vimkim/.cache/fd-s08.zvmt4i/fdtest_dwb",
+            "116": "/home/vimkim/.cache/fd-s08.zvmt4i/fdtest_lgar_t",
+            "117": "/dev/shm/cubbase_dmrb_19_102 (deleted)",
+            "118": "/dev/shm/cubbase_dmrb_19_103 (deleted)",
+            "119": "/dev/shm/cubbase_dmrb_19_104 (deleted)",
+            "120": "/dev/shm/cubbase_dmrb_19_105 (deleted)",
+            "121": "/dev/shm/cubbase_dmrb_19_106 (deleted)",
+            "122": "/dev/shm/cubbase_dmrb_19_107 (deleted)",
+            "123": "/dev/shm/cubbase_dmrb_19_108 (deleted)",
+            "124": "/dev/shm/cubbase_dmrb_19_109 (deleted)",
+            "125": "/dev/shm/cubbase_dmrb_19_110 (deleted)",
+            "126": "/dev/shm/cubbase_dmrb_19_111 (deleted)",
+            "127": "anon_inode:[eventpoll]",
+            "128": "anon_inode:[eventfd]",
+            "129": "anon_inode:[timerfd]",
+            "130": "anon_inode:[eventpoll]",
+            "131": "anon_inode:[eventfd]",
+            "132": "anon_inode:[timerfd]",
+            "133": "anon_inode:[eventpoll]",
+            "134": "anon_inode:[eventfd]",
+            "135": "anon_inode:[timerfd]",
+            "136": "anon_inode:[eventpoll]",
+            "137": "anon_inode:[eventfd]",
+            "138": "anon_inode:[timerfd]",
+            "139": "anon_inode:[eventpoll]",
+            "140": "anon_inode:[eventfd]",
+            "141": "anon_inode:[timerfd]",
+            "142": "anon_inode:[eventpoll]",
+            "143": "anon_inode:[eventfd]",
+            "144": "anon_inode:[timerfd]",
+            "145": "anon_inode:[eventpoll]",
+            "146": "anon_inode:[eventfd]",
+            "147": "anon_inode:[timerfd]",
+            "148": "anon_inode:[eventpoll]",
+            "149": "anon_inode:[eventfd]",
+            "150": "anon_inode:[timerfd]",
+            "151": "anon_inode:[eventpoll]",
+            "152": "anon_inode:[eventfd]",
+            "153": "anon_inode:[timerfd]",
+            "154": "anon_inode:[eventpoll]",
+            "155": "anon_inode:[eventfd]",
+            "156": "anon_inode:[timerfd]",
+            "157": "anon_inode:[eventpoll]",
+            "158": "anon_inode:[eventfd]",
+            "159": "anon_inode:[timerfd]",
+            "160": "anon_inode:[eventpoll]",
+            "161": "anon_inode:[eventfd]",
+            "162": "anon_inode:[timerfd]",
+            "163": "anon_inode:[eventpoll]",
+            "164": "anon_inode:[eventfd]",
+            "165": "anon_inode:[timerfd]",
+            "166": "anon_inode:[eventpoll]",
+            "167": "anon_inode:[eventfd]",
+            "168": "anon_inode:[timerfd]",
+            "169": "anon_inode:[eventpoll]",
+            "170": "anon_inode:[eventfd]",
+            "171": "anon_inode:[timerfd]",
+            "172": "anon_inode:[eventpoll]",
+            "173": "anon_inode:[eventfd]",
+            "174": "anon_inode:[timerfd]",
+            "175": "anon_inode:[eventpoll]",
+            "176": "anon_inode:[eventfd]",
+            "177": "anon_inode:[timerfd]",
+            "178": "anon_inode:[eventpoll]",
+            "179": "anon_inode:[eventfd]",
+            "180": "anon_inode:[timerfd]",
+            "181": "anon_inode:[eventpoll]",
+            "182": "anon_inode:[eventfd]",
+            "183": "anon_inode:[timerfd]",
+            "184": "anon_inode:[eventpoll]",
+            "185": "anon_inode:[eventfd]",
+            "186": "anon_inode:[timerfd]",
+            "187": "anon_inode:[eventpoll]",
+            "188": "anon_inode:[eventfd]",
+            "189": "anon_inode:[timerfd]",
+            "190": "anon_inode:[eventpoll]",
+            "191": "anon_inode:[eventfd]",
+            "192": "anon_inode:[timerfd]",
+            "193": "anon_inode:[eventpoll]",
+            "194": "anon_inode:[eventfd]",
+            "195": "anon_inode:[timerfd]",
+            "196": "anon_inode:[eventpoll]",
+            "197": "anon_inode:[eventfd]",
+            "198": "anon_inode:[timerfd]",
+            "199": "anon_inode:[eventpoll]",
+            "200": "anon_inode:[eventfd]",
+            "201": "anon_inode:[timerfd]",
+            "202": "anon_inode:[eventpoll]",
+            "203": "anon_inode:[eventfd]",
+            "204": "anon_inode:[timerfd]",
+            "205": "anon_inode:[eventpoll]",
+            "206": "anon_inode:[eventfd]",
+            "207": "anon_inode:[timerfd]",
+            "208": "anon_inode:[eventpoll]",
+            "209": "anon_inode:[eventfd]",
+            "210": "anon_inode:[timerfd]",
+            "211": "anon_inode:[eventpoll]",
+            "212": "anon_inode:[eventfd]",
+            "213": "anon_inode:[timerfd]",
+            "214": "anon_inode:[eventpoll]",
+            "215": "anon_inode:[eventfd]",
+            "216": "anon_inode:[timerfd]",
+            "217": "anon_inode:[eventpoll]",
+            "218": "anon_inode:[eventfd]",
+            "219": "anon_inode:[timerfd]",
+            "220": "anon_inode:[eventpoll]",
+            "221": "anon_inode:[eventfd]",
+            "222": "anon_inode:[timerfd]",
+            "223": "anon_inode:[eventpoll]",
+            "224": "anon_inode:[eventfd]",
+            "225": "anon_inode:[timerfd]",
+            "226": "anon_inode:[eventpoll]",
+            "227": "anon_inode:[eventfd]",
+            "228": "anon_inode:[timerfd]",
+            "229": "anon_inode:[eventpoll]",
+            "230": "anon_inode:[eventfd]",
+            "231": "anon_inode:[timerfd]",
+            "232": "anon_inode:[eventpoll]",
+            "233": "anon_inode:[eventfd]",
+            "234": "anon_inode:[timerfd]",
+            "235": "anon_inode:[eventpoll]",
+            "236": "anon_inode:[eventfd]",
+            "237": "anon_inode:[timerfd]",
+            "238": "anon_inode:[eventpoll]",
+            "239": "anon_inode:[eventfd]",
+            "240": "anon_inode:[timerfd]",
+            "241": "anon_inode:[eventpoll]",
+            "242": "anon_inode:[eventfd]",
+            "243": "anon_inode:[timerfd]",
+            "244": "anon_inode:[eventpoll]",
+            "245": "anon_inode:[eventfd]",
+            "246": "anon_inode:[timerfd]",
+            "247": "anon_inode:[eventpoll]",
+            "248": "anon_inode:[eventfd]",
+            "249": "anon_inode:[timerfd]",
+            "252": "socket:[488047302]"
+          },
+          "state": "S",
+          "sid": 19,
+          "pgid": 19
+        },
+        {
+          "pid": 22,
+          "name": "cub_pl",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488005215]",
+            "2": "pipe:[488005216]",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/pl/fdtest_pl.err",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/pl/fdtest_pl.access",
+            "5": "/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/jre/lib/rt.jar",
+            "6": "/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/jre/lib/jfr.jar",
+            "7": "/home/vimkim/.cache/cbrd27443-06c-b0f5690.RGZgmT/cubrid/vm/pl_server.jar",
+            "8": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/pl/fdtest_pl.log.lck",
+            "9": "socket:[488065797]",
+            "10": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/pl/fdtest_pl.log",
+            "11": "/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/jre/lib/jsse.jar",
+            "12": "/dev/random",
+            "13": "/dev/urandom",
+            "14": "/dev/random",
+            "15": "/dev/random",
+            "16": "/dev/urandom",
+            "17": "/dev/urandom",
+            "18": "socket:[488065803]",
+            "19": "socket:[488065805]",
+            "20": "/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/jre/lib/ext/cldrdata.jar",
+            "21": "/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/jre/lib/ext/localedata.jar",
+            "22": "socket:[488095826]",
+            "23": "socket:[488095824]"
+          },
+          "state": "S",
+          "sid": 22,
+          "pgid": 22
+        }
+      ],
+      "caller_targets": [
+        "/home/vimkim/.cache/fd-s08.zvmt4i/caller-0.lock",
+        "/home/vimkim/.cache/fd-s08.zvmt4i/caller-0.file",
+        "pipe:[487989952]",
+        "pipe:[487989953]"
+      ],
+      "caller_holders": [],
+      "launcher_rc": 1
+    },
+    {
+      "mode": "separate",
+      "db": "fdtest",
+      "rc": 0,
+      "exit_s": 0.9347217630129308,
+      "eof_s": {
+        "stdout": 0.9347,
+        "stderr": 0.9347
+      },
+      "output": {
+        "stdout": "@ cubrid broker start\n++ cubrid broker start: success\n",
+        "stderr": ""
+      },
+      "lock_available": true,
+      "processes": [
+        {
+          "pid": 14,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/master-console.log.lock",
+            "4": "pipe:[488005204]",
+            "5": "pipe:[488005205]"
+          },
+          "state": "S",
+          "sid": 0,
+          "pgid": 0
+        },
+        {
+          "pid": 15,
+          "name": "cub_master",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488005204]",
+            "2": "pipe:[488005205]",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/dev2_master.err",
+            "4": "socket:[488091780]",
+            "5": "socket:[488091781]",
+            "7": "socket:[488091788]"
+          },
+          "state": "S",
+          "sid": 0,
+          "pgid": 0
+        },
+        {
+          "pid": 18,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/server-console.log.lock",
+            "4": "pipe:[488005215]",
+            "5": "pipe:[488005216]"
+          },
+          "state": "S",
+          "sid": 0,
+          "pgid": 0
+        },
+        {
+          "pid": 19,
+          "name": "cub_server",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488005215]",
+            "2": "pipe:[488005216]",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/server/fdtest_20261003_0240.err",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/server/fdtest_20261003_0240.access",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/server/fdtest_20261003_0240.event",
+            "6": "socket:[488065807]",
+            "7": "socket:[488065809]",
+            "8": "anon_inode:[eventpoll]",
+            "9": "anon_inode:[eventfd]",
+            "10": "/dev/shm/cubbase_dmrb_19_0 (deleted)",
+            "11": "/dev/shm/cubbase_dmrb_19_1 (deleted)",
+            "12": "/dev/shm/cubbase_dmrb_19_2 (deleted)",
+            "13": "/dev/shm/cubbase_dmrb_19_3 (deleted)",
+            "14": "/dev/shm/cubbase_dmrb_19_4 (deleted)",
+            "15": "/dev/shm/cubbase_dmrb_19_5 (deleted)",
+            "16": "/dev/shm/cubbase_dmrb_19_6 (deleted)",
+            "17": "/dev/shm/cubbase_dmrb_19_7 (deleted)",
+            "18": "/dev/shm/cubbase_dmrb_19_8 (deleted)",
+            "19": "/dev/shm/cubbase_dmrb_19_9 (deleted)",
+            "20": "/dev/shm/cubbase_dmrb_19_10 (deleted)",
+            "21": "/dev/shm/cubbase_dmrb_19_11 (deleted)",
+            "22": "/dev/shm/cubbase_dmrb_19_12 (deleted)",
+            "23": "/dev/shm/cubbase_dmrb_19_13 (deleted)",
+            "24": "/dev/shm/cubbase_dmrb_19_14 (deleted)",
+            "25": "/dev/shm/cubbase_dmrb_19_15 (deleted)",
+            "26": "/dev/shm/cubbase_dmrb_19_16 (deleted)",
+            "27": "/dev/shm/cubbase_dmrb_19_17 (deleted)",
+            "28": "/dev/shm/cubbase_dmrb_19_18 (deleted)",
+            "29": "/dev/shm/cubbase_dmrb_19_19 (deleted)",
+            "30": "/dev/shm/cubbase_dmrb_19_20 (deleted)",
+            "31": "/dev/shm/cubbase_dmrb_19_21 (deleted)",
+            "32": "/dev/shm/cubbase_dmrb_19_22 (deleted)",
+            "33": "/dev/shm/cubbase_dmrb_19_23 (deleted)",
+            "34": "/dev/shm/cubbase_dmrb_19_24 (deleted)",
+            "35": "/dev/shm/cubbase_dmrb_19_25 (deleted)",
+            "36": "/dev/shm/cubbase_dmrb_19_26 (deleted)",
+            "37": "/dev/shm/cubbase_dmrb_19_27 (deleted)",
+            "38": "/dev/shm/cubbase_dmrb_19_28 (deleted)",
+            "39": "/dev/shm/cubbase_dmrb_19_29 (deleted)",
+            "40": "/dev/shm/cubbase_dmrb_19_30 (deleted)",
+            "41": "/dev/shm/cubbase_dmrb_19_31 (deleted)",
+            "42": "/dev/shm/cubbase_dmrb_19_32 (deleted)",
+            "43": "/dev/shm/cubbase_dmrb_19_33 (deleted)",
+            "44": "/dev/shm/cubbase_dmrb_19_34 (deleted)",
+            "45": "/dev/shm/cubbase_dmrb_19_35 (deleted)",
+            "46": "/dev/shm/cubbase_dmrb_19_36 (deleted)",
+            "47": "/dev/shm/cubbase_dmrb_19_37 (deleted)",
+            "48": "/dev/shm/cubbase_dmrb_19_38 (deleted)",
+            "49": "/dev/shm/cubbase_dmrb_19_39 (deleted)",
+            "50": "/dev/shm/cubbase_dmrb_19_40 (deleted)",
+            "51": "/dev/shm/cubbase_dmrb_19_41 (deleted)",
+            "52": "/dev/shm/cubbase_dmrb_19_42 (deleted)",
+            "53": "/dev/shm/cubbase_dmrb_19_43 (deleted)",
+            "54": "/dev/shm/cubbase_dmrb_19_44 (deleted)",
+            "55": "/dev/shm/cubbase_dmrb_19_45 (deleted)",
+            "56": "/dev/shm/cubbase_dmrb_19_46 (deleted)",
+            "57": "/dev/shm/cubbase_dmrb_19_47 (deleted)",
+            "58": "/dev/shm/cubbase_dmrb_19_48 (deleted)",
+            "59": "/dev/shm/cubbase_dmrb_19_49 (deleted)",
+            "60": "/dev/shm/cubbase_dmrb_19_50 (deleted)",
+            "61": "/dev/shm/cubbase_dmrb_19_51 (deleted)",
+            "62": "/dev/shm/cubbase_dmrb_19_52 (deleted)",
+            "63": "/dev/shm/cubbase_dmrb_19_53 (deleted)",
+            "64": "/dev/shm/cubbase_dmrb_19_54 (deleted)",
+            "65": "/dev/shm/cubbase_dmrb_19_55 (deleted)",
+            "66": "/dev/shm/cubbase_dmrb_19_56 (deleted)",
+            "67": "/dev/shm/cubbase_dmrb_19_57 (deleted)",
+            "68": "/dev/shm/cubbase_dmrb_19_58 (deleted)",
+            "69": "/dev/shm/cubbase_dmrb_19_59 (deleted)",
+            "70": "/dev/shm/cubbase_dmrb_19_60 (deleted)",
+            "71": "/dev/shm/cubbase_dmrb_19_61 (deleted)",
+            "72": "/dev/shm/cubbase_dmrb_19_62 (deleted)",
+            "73": "/dev/shm/cubbase_dmrb_19_63 (deleted)",
+            "74": "/dev/shm/cubbase_dmrb_19_64 (deleted)",
+            "75": "/dev/shm/cubbase_dmrb_19_65 (deleted)",
+            "76": "/dev/shm/cubbase_dmrb_19_66 (deleted)",
+            "77": "/dev/shm/cubbase_dmrb_19_67 (deleted)",
+            "78": "/dev/shm/cubbase_dmrb_19_68 (deleted)",
+            "79": "/dev/shm/cubbase_dmrb_19_69 (deleted)",
+            "80": "/dev/shm/cubbase_dmrb_19_70 (deleted)",
+            "81": "/dev/shm/cubbase_dmrb_19_71 (deleted)",
+            "82": "/dev/shm/cubbase_dmrb_19_72 (deleted)",
+            "83": "/dev/shm/cubbase_dmrb_19_73 (deleted)",
+            "84": "/dev/shm/cubbase_dmrb_19_74 (deleted)",
+            "85": "/dev/shm/cubbase_dmrb_19_75 (deleted)",
+            "86": "/dev/shm/cubbase_dmrb_19_76 (deleted)",
+            "87": "/dev/shm/cubbase_dmrb_19_77 (deleted)",
+            "88": "/dev/shm/cubbase_dmrb_19_78 (deleted)",
+            "89": "/dev/shm/cubbase_dmrb_19_79 (deleted)",
+            "90": "/dev/shm/cubbase_dmrb_19_80 (deleted)",
+            "91": "/dev/shm/cubbase_dmrb_19_81 (deleted)",
+            "92": "/dev/shm/cubbase_dmrb_19_82 (deleted)",
+            "93": "/dev/shm/cubbase_dmrb_19_83 (deleted)",
+            "94": "/dev/shm/cubbase_dmrb_19_84 (deleted)",
+            "95": "/dev/shm/cubbase_dmrb_19_85 (deleted)",
+            "96": "/dev/shm/cubbase_dmrb_19_86 (deleted)",
+            "97": "/dev/shm/cubbase_dmrb_19_87 (deleted)",
+            "98": "/dev/shm/cubbase_dmrb_19_88 (deleted)",
+            "99": "/dev/shm/cubbase_dmrb_19_89 (deleted)",
+            "100": "/dev/shm/cubbase_dmrb_19_90 (deleted)",
+            "101": "/dev/shm/cubbase_dmrb_19_91 (deleted)",
+            "102": "/dev/shm/cubbase_dmrb_19_92 (deleted)",
+            "103": "/dev/shm/cubbase_dmrb_19_93 (deleted)",
+            "104": "/dev/shm/cubbase_dmrb_19_94 (deleted)",
+            "105": "/dev/shm/cubbase_dmrb_19_95 (deleted)",
+            "106": "/dev/shm/cubbase_dmrb_19_96 (deleted)",
+            "107": "/dev/shm/cubbase_dmrb_19_97 (deleted)",
+            "108": "/dev/shm/cubbase_dmrb_19_98 (deleted)",
+            "109": "/dev/shm/cubbase_dmrb_19_99 (deleted)",
+            "110": "/dev/shm/cubbase_dmrb_19_100 (deleted)",
+            "111": "/dev/shm/cubbase_dmrb_19_101 (deleted)",
+            "112": "/home/vimkim/.cache/fd-s08.zvmt4i/fdtest_lgat",
+            "113": "/home/vimkim/.cache/fd-s08.zvmt4i/fdtest",
+            "114": "/home/vimkim/.cache/fd-s08.zvmt4i/fdtest_x001",
+            "115": "/home/vimkim/.cache/fd-s08.zvmt4i/fdtest_dwb",
+            "116": "/home/vimkim/.cache/fd-s08.zvmt4i/fdtest_lgar_t",
+            "117": "/dev/shm/cubbase_dmrb_19_102 (deleted)",
+            "118": "/dev/shm/cubbase_dmrb_19_103 (deleted)",
+            "119": "/dev/shm/cubbase_dmrb_19_104 (deleted)",
+            "120": "/dev/shm/cubbase_dmrb_19_105 (deleted)",
+            "121": "/dev/shm/cubbase_dmrb_19_106 (deleted)",
+            "122": "/dev/shm/cubbase_dmrb_19_107 (deleted)",
+            "123": "/dev/shm/cubbase_dmrb_19_108 (deleted)",
+            "124": "/dev/shm/cubbase_dmrb_19_109 (deleted)",
+            "125": "/dev/shm/cubbase_dmrb_19_110 (deleted)",
+            "126": "/dev/shm/cubbase_dmrb_19_111 (deleted)",
+            "127": "anon_inode:[eventpoll]",
+            "128": "anon_inode:[eventfd]",
+            "129": "anon_inode:[timerfd]",
+            "130": "anon_inode:[eventpoll]",
+            "131": "anon_inode:[eventfd]",
+            "132": "anon_inode:[timerfd]",
+            "133": "anon_inode:[eventpoll]",
+            "134": "anon_inode:[eventfd]",
+            "135": "anon_inode:[timerfd]",
+            "136": "anon_inode:[eventpoll]",
+            "137": "anon_inode:[eventfd]",
+            "138": "anon_inode:[timerfd]",
+            "139": "anon_inode:[eventpoll]",
+            "140": "anon_inode:[eventfd]",
+            "141": "anon_inode:[timerfd]",
+            "142": "anon_inode:[eventpoll]",
+            "143": "anon_inode:[eventfd]",
+            "144": "anon_inode:[timerfd]",
+            "145": "anon_inode:[eventpoll]",
+            "146": "anon_inode:[eventfd]",
+            "147": "anon_inode:[timerfd]",
+            "148": "anon_inode:[eventpoll]",
+            "149": "anon_inode:[eventfd]",
+            "150": "anon_inode:[timerfd]",
+            "151": "anon_inode:[eventpoll]",
+            "152": "anon_inode:[eventfd]",
+            "153": "anon_inode:[timerfd]",
+            "154": "anon_inode:[eventpoll]",
+            "155": "anon_inode:[eventfd]",
+            "156": "anon_inode:[timerfd]",
+            "157": "anon_inode:[eventpoll]",
+            "158": "anon_inode:[eventfd]",
+            "159": "anon_inode:[timerfd]",
+            "160": "anon_inode:[eventpoll]",
+            "161": "anon_inode:[eventfd]",
+            "162": "anon_inode:[timerfd]",
+            "163": "anon_inode:[eventpoll]",
+            "164": "anon_inode:[eventfd]",
+            "165": "anon_inode:[timerfd]",
+            "166": "anon_inode:[eventpoll]",
+            "167": "anon_inode:[eventfd]",
+            "168": "anon_inode:[timerfd]",
+            "169": "anon_inode:[eventpoll]",
+            "170": "anon_inode:[eventfd]",
+            "171": "anon_inode:[timerfd]",
+            "172": "anon_inode:[eventpoll]",
+            "173": "anon_inode:[eventfd]",
+            "174": "anon_inode:[timerfd]",
+            "175": "anon_inode:[eventpoll]",
+            "176": "anon_inode:[eventfd]",
+            "177": "anon_inode:[timerfd]",
+            "178": "anon_inode:[eventpoll]",
+            "179": "anon_inode:[eventfd]",
+            "180": "anon_inode:[timerfd]",
+            "181": "anon_inode:[eventpoll]",
+            "182": "anon_inode:[eventfd]",
+            "183": "anon_inode:[timerfd]",
+            "184": "anon_inode:[eventpoll]",
+            "185": "anon_inode:[eventfd]",
+            "186": "anon_inode:[timerfd]",
+            "187": "anon_inode:[eventpoll]",
+            "188": "anon_inode:[eventfd]",
+            "189": "anon_inode:[timerfd]",
+            "190": "anon_inode:[eventpoll]",
+            "191": "anon_inode:[eventfd]",
+            "192": "anon_inode:[timerfd]",
+            "193": "anon_inode:[eventpoll]",
+            "194": "anon_inode:[eventfd]",
+            "195": "anon_inode:[timerfd]",
+            "196": "anon_inode:[eventpoll]",
+            "197": "anon_inode:[eventfd]",
+            "198": "anon_inode:[timerfd]",
+            "199": "anon_inode:[eventpoll]",
+            "200": "anon_inode:[eventfd]",
+            "201": "anon_inode:[timerfd]",
+            "202": "anon_inode:[eventpoll]",
+            "203": "anon_inode:[eventfd]",
+            "204": "anon_inode:[timerfd]",
+            "205": "anon_inode:[eventpoll]",
+            "206": "anon_inode:[eventfd]",
+            "207": "anon_inode:[timerfd]",
+            "208": "anon_inode:[eventpoll]",
+            "209": "anon_inode:[eventfd]",
+            "210": "anon_inode:[timerfd]",
+            "211": "anon_inode:[eventpoll]",
+            "212": "anon_inode:[eventfd]",
+            "213": "anon_inode:[timerfd]",
+            "214": "anon_inode:[eventpoll]",
+            "215": "anon_inode:[eventfd]",
+            "216": "anon_inode:[timerfd]",
+            "217": "anon_inode:[eventpoll]",
+            "218": "anon_inode:[eventfd]",
+            "219": "anon_inode:[timerfd]",
+            "220": "anon_inode:[eventpoll]",
+            "221": "anon_inode:[eventfd]",
+            "222": "anon_inode:[timerfd]",
+            "223": "anon_inode:[eventpoll]",
+            "224": "anon_inode:[eventfd]",
+            "225": "anon_inode:[timerfd]",
+            "226": "anon_inode:[eventpoll]",
+            "227": "anon_inode:[eventfd]",
+            "228": "anon_inode:[timerfd]",
+            "229": "anon_inode:[eventpoll]",
+            "230": "anon_inode:[eventfd]",
+            "231": "anon_inode:[timerfd]",
+            "232": "anon_inode:[eventpoll]",
+            "233": "anon_inode:[eventfd]",
+            "234": "anon_inode:[timerfd]",
+            "235": "anon_inode:[eventpoll]",
+            "236": "anon_inode:[eventfd]",
+            "237": "anon_inode:[timerfd]",
+            "238": "anon_inode:[eventpoll]",
+            "239": "anon_inode:[eventfd]",
+            "240": "anon_inode:[timerfd]",
+            "241": "anon_inode:[eventpoll]",
+            "242": "anon_inode:[eventfd]",
+            "243": "anon_inode:[timerfd]",
+            "244": "anon_inode:[eventpoll]",
+            "245": "anon_inode:[eventfd]",
+            "246": "anon_inode:[timerfd]",
+            "247": "anon_inode:[eventpoll]",
+            "248": "anon_inode:[eventfd]",
+            "249": "anon_inode:[timerfd]",
+            "252": "socket:[488047302]"
+          },
+          "state": "S",
+          "sid": 19,
+          "pgid": 19
+        },
+        {
+          "pid": 22,
+          "name": "cub_pl",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488005215]",
+            "2": "pipe:[488005216]",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/pl/fdtest_pl.err",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/pl/fdtest_pl.access",
+            "5": "/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/jre/lib/rt.jar",
+            "6": "/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/jre/lib/jfr.jar",
+            "7": "/home/vimkim/.cache/cbrd27443-06c-b0f5690.RGZgmT/cubrid/vm/pl_server.jar",
+            "8": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/pl/fdtest_pl.log.lck",
+            "9": "socket:[488065797]",
+            "10": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/pl/fdtest_pl.log",
+            "11": "/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/jre/lib/jsse.jar",
+            "12": "/dev/random",
+            "13": "/dev/urandom",
+            "14": "/dev/random",
+            "15": "/dev/random",
+            "16": "/dev/urandom",
+            "17": "/dev/urandom",
+            "18": "socket:[488065803]",
+            "19": "socket:[488065805]",
+            "20": "/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/jre/lib/ext/cldrdata.jar",
+            "21": "/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/jre/lib/ext/localedata.jar",
+            "22": "socket:[488095826]",
+            "23": "socket:[488095824]"
+          },
+          "state": "S",
+          "sid": 22,
+          "pgid": 22
+        },
+        {
+          "pid": 328,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker-console.log.lock",
+            "4": "pipe:[488124961]",
+            "5": "pipe:[488124962]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 329,
+          "name": "cub_broker",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488124961]",
+            "2": "pipe:[488124962]",
+            "3": "socket:[488135716]",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 330,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488124969]",
+            "5": "pipe:[488124970]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 331,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488124969]",
+            "2": "pipe:[488124970]",
+            "3": "socket:[488122814]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_1.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_1.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 332,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488124977]",
+            "5": "pipe:[488124978]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 333,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488124977]",
+            "2": "pipe:[488124978]",
+            "3": "socket:[488126111]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_2.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_2.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 334,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488124985]",
+            "5": "pipe:[488124986]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 335,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488124985]",
+            "2": "pipe:[488124986]",
+            "3": "socket:[488117336]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_3.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_3.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 336,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488124993]",
+            "5": "pipe:[488124994]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 337,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488124993]",
+            "2": "pipe:[488124994]",
+            "3": "socket:[488135717]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_4.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_4.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 338,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125001]",
+            "5": "pipe:[488125002]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 339,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125001]",
+            "2": "pipe:[488125002]",
+            "3": "socket:[488071570]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_5.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_5.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 340,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125009]",
+            "5": "pipe:[488125010]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 341,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125009]",
+            "2": "pipe:[488125010]",
+            "3": "socket:[488042154]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_6.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_6.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 342,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125017]",
+            "5": "pipe:[488125018]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 343,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125017]",
+            "2": "pipe:[488125018]",
+            "3": "socket:[488062494]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_7.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_7.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 344,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125025]",
+            "5": "pipe:[488125026]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 345,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125025]",
+            "2": "pipe:[488125026]",
+            "3": "socket:[487840115]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_8.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_8.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 346,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125033]",
+            "5": "pipe:[488125034]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 347,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125033]",
+            "2": "pipe:[488125034]",
+            "3": "socket:[487967340]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_9.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_9.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 348,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125041]",
+            "5": "pipe:[488125042]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 349,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125041]",
+            "2": "pipe:[488125042]",
+            "3": "socket:[488095847]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_10.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_10.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 350,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125049]",
+            "5": "pipe:[488125050]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 351,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125049]",
+            "2": "pipe:[488125050]",
+            "3": "socket:[488060216]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_11.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_11.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 352,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125057]",
+            "5": "pipe:[488125058]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 353,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125057]",
+            "2": "pipe:[488125058]",
+            "3": "socket:[488033150]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_12.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_12.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 354,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125065]",
+            "5": "pipe:[488125066]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 355,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125065]",
+            "2": "pipe:[488125066]",
+            "3": "socket:[488005285]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_13.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_13.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 356,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125073]",
+            "5": "pipe:[488125074]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 357,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125073]",
+            "2": "pipe:[488125074]",
+            "3": "socket:[488071574]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_14.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_14.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 358,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125081]",
+            "5": "pipe:[488125082]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 359,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125081]",
+            "2": "pipe:[488125082]",
+            "3": "socket:[488015411]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_15.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_15.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 360,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125089]",
+            "5": "pipe:[488125090]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 361,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125089]",
+            "2": "pipe:[488125090]",
+            "3": "socket:[488062498]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_16.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_16.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 362,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125097]",
+            "5": "pipe:[488125098]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 363,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125097]",
+            "2": "pipe:[488125098]",
+            "3": "socket:[488121553]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_17.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_17.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 364,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125105]",
+            "5": "pipe:[488125106]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 365,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125105]",
+            "2": "pipe:[488125106]",
+            "3": "socket:[487948182]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_18.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_18.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 366,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125113]",
+            "5": "pipe:[488125114]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 367,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125113]",
+            "2": "pipe:[488125114]",
+            "3": "socket:[488090756]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_19.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_19.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 368,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125121]",
+            "5": "pipe:[488125122]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 369,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125121]",
+            "2": "pipe:[488125122]",
+            "3": "socket:[487880509]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_20.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_20.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 370,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125129]",
+            "5": "pipe:[488125130]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 371,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125129]",
+            "2": "pipe:[488125130]",
+            "3": "socket:[488060220]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_21.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_21.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 372,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125137]",
+            "5": "pipe:[488125138]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 373,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125137]",
+            "2": "pipe:[488125138]",
+            "3": "socket:[488133847]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_22.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_22.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 374,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125145]",
+            "5": "pipe:[488125146]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 375,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125145]",
+            "2": "pipe:[488125146]",
+            "3": "socket:[488042158]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_23.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_23.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 376,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125153]",
+            "5": "pipe:[488125154]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 377,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125153]",
+            "2": "pipe:[488125154]",
+            "3": "socket:[488061396]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_24.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_24.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 378,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125161]",
+            "5": "pipe:[488125162]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 379,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125161]",
+            "2": "pipe:[488125162]",
+            "3": "socket:[488062502]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_25.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_25.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 380,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125169]",
+            "5": "pipe:[488125170]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 381,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125169]",
+            "2": "pipe:[488125170]",
+            "3": "socket:[488121557]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_26.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_26.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 382,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125177]",
+            "5": "pipe:[488125178]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 383,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125177]",
+            "2": "pipe:[488125178]",
+            "3": "socket:[488015415]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_27.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_27.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 384,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125185]",
+            "5": "pipe:[488125186]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 385,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125185]",
+            "2": "pipe:[488125186]",
+            "3": "socket:[488131650]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_28.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_28.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 386,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125193]",
+            "5": "pipe:[488125194]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 387,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125193]",
+            "2": "pipe:[488125194]",
+            "3": "socket:[487922555]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_29.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_29.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 388,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125201]",
+            "5": "pipe:[488125202]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 389,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125201]",
+            "2": "pipe:[488125202]",
+            "3": "socket:[488060224]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_30.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_30.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 390,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488125209]",
+            "5": "pipe:[488125210]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 391,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488125209]",
+            "2": "pipe:[488125210]",
+            "3": "socket:[488065824]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_31.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_31.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 392,
+          "name": "cub_console",
+          "fds": {
+            "0": "/dev/null",
+            "1": "/dev/null",
+            "2": "/dev/null",
+            "3": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cas-console.log.lock",
+            "4": "pipe:[488095851]",
+            "5": "pipe:[488095852]"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        },
+        {
+          "pid": 393,
+          "name": "cub_cas",
+          "fds": {
+            "0": "/dev/null",
+            "1": "pipe:[488095851]",
+            "2": "pipe:[488095852]",
+            "3": "socket:[488042162]",
+            "4": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_32.sql.log",
+            "5": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/broker/sql_log/fdbr_32.slow.log",
+            "6": "/home/vimkim/.cache/fd-s08.zvmt4i/root/log/cub_client.err"
+          },
+          "state": "S",
+          "sid": 327,
+          "pgid": 327
+        }
+      ],
+      "caller_targets": [
+        "/home/vimkim/.cache/fd-s08.zvmt4i/caller-1.lock",
+        "/home/vimkim/.cache/fd-s08.zvmt4i/caller-1.file",
+        "pipe:[488136709]",
+        "pipe:[488136710]"
+      ],
+      "caller_holders": [],
+      "launcher_rc": 0
+    }
+  ],
+  "ipc": {
+    "host": "ipc:[4026531839]",
+    "private": "ipc:[4026537280]"
+  },
+  "commands": [
+    {
+      "argv": [
+        "mount",
+        "--bind",
+        "/dev/null",
+        "/home/vimkim/.cache/fd-s08.zvmt4i/private-dev/null"
+      ],
+      "rc": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "mount",
+        "--bind",
+        "/dev/zero",
+        "/home/vimkim/.cache/fd-s08.zvmt4i/private-dev/zero"
+      ],
+      "rc": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "mount",
+        "--bind",
+        "/dev/random",
+        "/home/vimkim/.cache/fd-s08.zvmt4i/private-dev/random"
+      ],
+      "rc": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "mount",
+        "--bind",
+        "/dev/urandom",
+        "/home/vimkim/.cache/fd-s08.zvmt4i/private-dev/urandom"
+      ],
+      "rc": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "mount",
+        "--rbind",
+        "/home/vimkim/.cache/fd-s08.zvmt4i/private-dev",
+        "/dev"
+      ],
+      "rc": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cubrid",
+        "createdb",
+        "--db-volume-size=20M",
+        "--log-volume-size=20M",
+        "-F",
+        "/home/vimkim/.cache/fd-s08.zvmt4i",
+        "-L",
+        "/home/vimkim/.cache/fd-s08.zvmt4i",
+        "fdtest",
+        "en_US.utf8"
+      ],
+      "rc": 0,
+      "stdout": "Creating database with 64.0M size using locale en_US.utf8. The total amount of disk space needed is 104.0M.\n\nCUBRID 11.5.0 (11.5.0.2658) (64 debug build)\n\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cubrid",
+        "server",
+        "start",
+        "fdtest"
+      ],
+      "rc": 0,
+      "stdout": "@ cubrid master start\n++ cubrid master start: success\n@ cubrid server start: fdtest\n\nThis may take a long time depending on the amount of recovery works to do.\n\nCUBRID 11.5.0 (11.5.0.2658) (64 debug build)\n\n++ cubrid server start: success\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cubrid",
+        "broker",
+        "stop"
+      ],
+      "rc": 1,
+      "stdout": "@ cubrid broker stop\n++ cubrid broker is not running.\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cubrid",
+        "broker",
+        "stop"
+      ],
+      "rc": 0,
+      "stdout": "@ cubrid broker stop\n++ cubrid broker stop: success\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cubrid",
+        "service",
+        "stop"
+      ],
+      "rc": 0,
+      "stdout": "@ cubrid server stop: fdtest\n\nServer fdtest notified of shutdown.\nThis may take several minutes. Please wait.\n++ cubrid server stop: success\n@ cubrid master stop\n++ cubrid master stop: success\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cubrid",
+        "deletedb",
+        "fdtest"
+      ],
+      "rc": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "binary_sha256": {
+    "bin/cubrid": "db051dd7844bf4fa48bde3687f857df8cf9c48979c0171e0410efc72e7d57344",
+    "bin/cub_server": "8eb26587bd27e1054ad498ee221656501c1f6a1a5d885b0d3ceb88a88a660ae6",
+    "bin/cub_master": "9f191ec2bd5a84f8cbf45933433ced0493da73ebd7673983eb07c3e13af252c4",
+    "bin/cub_pl": "753ab60b040727b4f380e82d672835b4e52b9d6f7a95102ab57ac41f36cb69ed",
+    "bin/cub_console": "140b59478302e158dd9074081161d72a89dd6d772d3aff80b563a0ef671c5468",
+    "bin/csql": "79baa974178e3a10baf76137f5bd32ad180dd342dc6d9a7bbb33bd1f28c9ae05",
+    "bin/cub_admin": "f20e75102a3b3f70bc2eb700d30d692556de68e6c570a1a0dff202cfa4a714e8",
+    "bin/cubrid_broker": "ff542f1e782e8494f6cf704140ca3e3922325569526a737d2f86619f81e7c759",
+    "bin/cub_broker": "2cd3b240b1e374c01315085824355a3c6b4fac81dd7919ba4c79a0fe71f1cb31",
+    "bin/cub_cas": "a1e7688c4f7f45157596688c501517591241a729d8cd165e340742182a03011b",
+    "bin/cub_proxy": "0cee790d24c1f0873560f185af01b307a09fde283ed35c46b0e310418f059d99",
+    "bin/broker_monitor": "2a17f85a539807ab2b8f20f5a7b07b236cc41359a5e3666b5de938cd6cd3c74d",
+    "bin/broker_changer": "806cb293eea845cbcf03bff739d625876bd6b17887e1262a5e1a0b3a2624fbc7",
+    "lib/libcubrid.so": "526650a82809718a68721bfaae558e1df9df9844e0f40e905f96d13f3fdb72b3",
+    "lib/libcubridsa.so": "7c25742ab8c44948bd50e6e025f949714fa939c016859d1e7f7c6bb693a663c5",
+    "lib/libcubridcs.so": "15d73c6e84a26ab00ea8f6b993454385a270f5674abeec2540fd9ecc68b71c6c",
+    "lib/libcascci.so": "9d8421a566e00b19ee25b155911dd108e8e66d8629f6b655b4b75bdaf1b7dba4",
+    "lib/libbrokeradmin.so": "260fb947bc83afe2e57ee99c8be5895a1137049e93abbabc36db87e9ee27b2b5"
+  },
+  "configuration": "[broker]\nMASTER_SHM_ID=35440\nADMIN_LOG_FILE=log/broker/cubrid_broker.log\n[%fdbr]\nSERVICE=ON\nBROKER_PORT=35441\nMIN_NUM_APPL_SERVER=32\nMAX_NUM_APPL_SERVER=32\nAPPL_SERVER_SHM_ID=35442\nLOG_DIR=log/broker/sql_log\nERROR_LOG_DIR=log/broker/error_log\nSQL_LOG=ON\nKEEP_CONNECTION=ON\nCCI_DEFAULT_AUTOCOMMIT=ON\nAUTO_ADD_APPL_SERVER=OFF\n",
+  "scaling": [
+    {
+      "limit": 128,
+      "launcher_rc": 1,
+      "cas_count": 0,
+      "eof_s": {
+        "stdout": 2.472,
+        "stderr": 2.4721
+      },
+      "lock_available": true,
+      "output": {
+        "stdout": "@ cubrid broker start\n++ cubrid broker start: fail\n",
+        "stderr": "cub_cas: Too many open files\ncub_cas: Too many open files\ncub_cas: Too many open files\ncub_cas: Too many open files\ncub_cas: Too many open files\ncub_cas: Too many open files\ncub_cas: Too many open files\ncub_cas: Too many open files\ncub_cas: Too many open files\n\n"
+      },
+      "sql_pass": false
+    },
+    {
+      "limit": 256,
+      "launcher_rc": 0,
+      "cas_count": 32,
+      "eof_s": {
+        "stdout": 0.9347,
+        "stderr": 0.9347
+      },
+      "lock_available": true,
+      "output": {
+        "stdout": "@ cubrid broker start\n++ cubrid broker start: success\n",
+        "stderr": ""
+      },
+      "sql_pass": true
+    }
+  ]
+}
