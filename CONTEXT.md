@@ -4,6 +4,18 @@ Canonical domain vocabulary for the design notes in this repository.
 
 ## Out-of-row overflow storage
 
+**Partitioned root**:
+The table through which a set of child partitions is addressed as one logical table. Naming the root as the input target does not identify the partition that will own a particular row.
+_Avoid_: Parent heap insertion when referring only to an insertion requested through the root
+
+**Child partition**:
+A member of a partitioned table that owns rows belonging to its partition domain. A row currently belonging to one child may move to another after its partition key changes.
+_Avoid_: Final destination when referring only to the row's current child
+
+**Destination heap**:
+The heap selected to own the row being stored. It is distinct from the input table identity and, for a moving row, from its previous heap.
+_Avoid_: Input class, source heap when referring to the selected storage destination
+
 **OOS chain identity**:
 The identity of one particular stored out-of-row value, distinct from the storage address that may later be reused for another value. Matching identity does not establish permission to reclaim that value.
 _Avoid_: Reclamation eligibility when referring only to identity matching
