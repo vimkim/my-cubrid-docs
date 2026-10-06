@@ -8,7 +8,7 @@ integrated `28b65d18a`, published head `1c660d22e`, the pinned PR7927 dependency
 and pending shared integration. Historical reports retain their original revision
 scope and do not establish later-head CI readiness.
 
-Index updated: **2026-10-08 (Asia/Seoul)**. Document dates below preserve the existing
+Index updated: **2026-10-13 (Asia/Seoul)**. Document dates below preserve the existing
 index metadata, with older dates taken from Git history.
 
 ## Reviewer documents
@@ -39,3 +39,12 @@ Each report applies only to the revision in its title; unresolved checks and att
 | [Implementation review (39d5e5e)](code_review_39d5e5e_fable.md) | Standards/Spec review after fixes and OOS dependency integration | 2026-09-18 | 2026-09-18 | Review merged OOS dependency compatibility |
 | [CI build failure (e24b458)](ci_analysis_report_e24b458_codex.md) | Unconditional Python dependency failure during release configuration | 2026-09-15 | 2026-09-15 | Preserve CI evidence for the original implementation |
 | [CI after Python repair (fe1a918)](ci_analysis_report_fe1a918_codex.md) | Verified build repair, SQL/medium results and pending shell coverage | 2026-09-15 | 2026-09-15 | Assess CI after the Python dependency change |
+
+## Integrated analysis and decisions
+
+| File | What it contains | Created | Last modified | Why it was created |
+| --- | --- | --- | --- | --- |
+| [PR #7925 published-head CI evidence warning](ci_analysis_report_91bfde02e_codex.md) | PR #7925 published-head CI evidence warning | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [PR #7925: attribution of the triggered CI failures](ci_analysis_report_f037616cd_codex.md) | PR #7925: attribution of the triggered CI failures | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [Exact-commit failure excerpts](ci_f037616cd/failure_excerpts.md) | Exact-commit failure excerpts | 2026-10-07 | 2026-10-13 | Substantiate the report with compact decisive excerpts |
+| [PR #7925 code review guide at `a142503dc`](code_review_guide_a142503dc_codex.md) | PR #7925 code review guide at `a142503dc` | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |

@@ -1,0 +1,2481 @@
+{
+  "schema_version": 1,
+  "repository": "CUBRID/CUBRID",
+  "pr": 7925,
+  "base": "fb567a629cdb390fff920542173fa36f454c74a0",
+  "head": "a142503dc1a6f85b498a425aa58d6a78136ccc6b",
+  "ci_head": "f037616cd17af92e1226afcde80fd2a6fff9121d",
+  "head_publication": "local only at authoring; pinned GitHub links may not resolve until publication",
+  "scope": "git diff merge-base..local HEAD; all eleven engine/test/build/script files",
+  "method": "Known-symbol extraction with lexical brace/parenthesis matching, followed by manual diff-hunk ownership audit; source ranges include forward declarations and definitions separately. A relocated struct has separate deleted/added file occurrences.",
+  "files": [
+    {
+      "file": "src/loaddb/load_server_loader.cpp",
+      "status": "M",
+      "symbol_ids": [
+        "src-loaddb-load-server-loader-cpp-server-object-loader-flush-records"
+      ],
+      "file_level_explanation": "Migrates the existing server loader’s individual insertion options to the force bitmask."
+    },
+    {
+      "file": "src/storage/heap_file.c",
+      "status": "M",
+      "symbol_ids": [
+        "src-storage-heap-file-c-heap-attrinfo-get-record-payload-size",
+        "src-storage-heap-file-c-heap-attrinfo-get-record-header-size",
+        "src-storage-heap-file-c-heap-oos-column-plan",
+        "src-storage-heap-file-c-heap-attrinfo-determine-disk-layout"
+      ],
+      "file_level_explanation": "Replaces attrinfo-only sizing/selection with an adapter; removes two private helpers and relocates the plan struct."
+    },
+    {
+      "file": "src/storage/heap_oos.cpp",
+      "status": "M",
+      "symbol_ids": [
+        "src-storage-heap-oos-cpp-heap-oos-record-header-size",
+        "src-storage-heap-oos-cpp-heap-oos-determine-disk-layout",
+        "src-storage-heap-oos-cpp-heap-oos-demote-workspace-record-internal",
+        "src-storage-heap-oos-cpp-heap-oos-demote-workspace-record"
+      ],
+      "file_level_explanation": "Adds representation-based shared sizing/selection and byte-preserving workspace demotion; object_domain.h supports fixed-domain disk sizing and algorithm supports candidate sorting/min/max."
+    },
+    {
+      "file": "src/storage/heap_oos.hpp",
+      "status": "M",
+      "symbol_ids": [
+        "src-storage-heap-oos-hpp-heap-oos-column-plan",
+        "src-storage-heap-oos-hpp-heap-oos-determine-disk-layout",
+        "src-storage-heap-oos-hpp-heap-oos-demote-workspace-record"
+      ],
+      "file_level_explanation": "Exports the shared metadata/size plan and the two storage entry points with output ownership documented."
+    },
+    {
+      "file": "src/transaction/locator_sr.c",
+      "status": "M",
+      "symbol_ids": [
+        "src-transaction-locator-sr-c-locator-oos-demote-workspace-record",
+        "src-transaction-locator-sr-c-locator-insert-force",
+        "src-transaction-locator-sr-c-locator-update-force",
+        "src-transaction-locator-sr-c-locator-move-record",
+        "src-transaction-locator-sr-c-locator-force-for-multi-update",
+        "src-transaction-locator-sr-c-xlocator-force",
+        "src-transaction-locator-sr-c-xlocator-repl-force",
+        "src-transaction-locator-sr-c-locator-attribute-info-force",
+        "src-transaction-locator-sr-c-redistribute-partition-data",
+        "src-transaction-locator-sr-c-locator-multi-insert-force"
+      ],
+      "file_level_explanation": "Adds heap_oos.hpp for the new storage call, the SA-only adapter, workspace provenance plumbing and force-flag call migrations."
+    },
+    {
+      "file": "src/transaction/locator_sr.h",
+      "status": "M",
+      "symbol_ids": [
+        "src-transaction-locator-sr-h-locator-force-flag",
+        "src-transaction-locator-sr-h-lc-force-flag-none",
+        "src-transaction-locator-sr-h-lc-force-flag-has-bu-lock",
+        "src-transaction-locator-sr-h-lc-force-flag-dont-check-fk",
+        "src-transaction-locator-sr-h-lc-force-flag-bulk-logging",
+        "src-transaction-locator-sr-h-lc-force-flag-from-workspace",
+        "src-transaction-locator-sr-h-locator-insert-force"
+      ],
+      "file_level_explanation": "Defines force option bits and changes the public insertion signature/default, retaining GNU-indent guards around C++ defaults."
+    },
+    {
+      "file": "unit_tests/oos/CMakeLists.txt",
+      "status": "M",
+      "symbol_ids": [],
+      "file_level_explanation": "Registers and builds the utility-level GoogleTest target test_oos_workspace in the established SA_MODE test list. The executable links cubridsa/GTest and uses existing compile definitions/includes. A new CTest entry is RUN_SERIAL with TIMEOUT 240; each GoogleTest case owns its private database/registry instead of unittestdb. No function, struct, or CMake function/macro definition is added or changed."
+    },
+    {
+      "file": "unit_tests/oos/scripts/benchmark_workspace_oos.sh",
+      "status": "A",
+      "symbol_ids": [],
+      "file_level_explanation": "Adds a manual Release benchmark outside CTest: INSTALL OUTPUT LABEL [REPEATS], three repeats by default, with 100,000 rows of 48-byte payloads and 10,000 rows of 5,000-byte payloads. Each sample has a private database/configuration, uses real loaddb -S, records elapsed/user/system CPU CSV through /usr/bin/time, verifies values/row bounds, saves SHOW HEAP OOS output, deletes successful sample databases, and retains inputs/outputs/measurements. mkdir requires a new output directory. There are no shell function definitions; the loops and awk programs are top-level script logic. The final local commit corrects its license template. Merely adding the script establishes no measured performance claim."
+    },
+    {
+      "file": "unit_tests/oos/sql/CMakeLists.txt",
+      "status": "M",
+      "symbol_ids": [],
+      "file_level_explanation": "Adds test_oos_sql_workspace_bytes to the registered SQL CTest entries and to the shared OOS_DB fixture-required, RUN_SERIAL, TIMEOUT 30 property group. The existing SQL source glob/target loop handles its build. No function, struct, or CMake function/macro definition is added or changed."
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "status": "A",
+      "symbol_ids": [
+        "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes",
+        "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-teardown",
+        "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-compare",
+        "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-compare-clear-values",
+        "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-check",
+        "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-tinynullandemptyvalues",
+        "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-largestfirstandpreferinline",
+        "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-equalsizetie",
+        "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-offsetwidthshrinksafterforceddemotion",
+        "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-compressedstringandjson",
+        "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-collectionserializedbytes",
+        "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-widevotandmanyattributes",
+        "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-olddiskrepresentationisconvertedbeforeworkspaceserialization",
+        "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacesizeboundary",
+        "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacesizeboundary-serializedsizesmatchvaluesizes",
+        "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-encodingandvotboundaries",
+        "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-main"
+      ],
+      "file_level_explanation": "Adds in-process byte/selection comparison coverage; existing SQL environment plus heap/workspace/primitive APIs provide independent writers and scope_exit provides decoded-collection cleanup."
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "status": "A",
+      "symbol_ids": [
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-read",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-write",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-run",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-sql",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-load",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-expect-chunks",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-check",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-seed-workspace",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-seed-references",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-seed-partitions",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-lob-files",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-setup",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-teardown",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-standaloneloaderstoresoos",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-loaderrejectsoosbigonebutkeepsordinarybigone",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-workspaceinsertusesreservedoid",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-loaderpreservesforwardandbackwardreferences",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-partitionsownseparateoosfiles",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-insertrollbackreclaimsflushedchain",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-workspaceupdaterollbackcommitanddelete",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-faileduniqueloadrollsbackwithoutorphans",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-filteredduplicateleavesnoorphanandcontinues",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-loaderhonorsstoragepolicy",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-workspaceupdatepreservesexternallobfiles",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-partitionmovementtransfersownership",
+        "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-successfulnologgingloadstoresoos",
+        "unit-tests-oos-test-oos-workspace-cpp-main"
+      ],
+      "file_level_explanation": "Adds real standalone utility coverage; filesystem/POSIX process headers support isolated execution and exact LOB evidence, and namespace fs aliases std::filesystem locally."
+    }
+  ],
+  "symbols": [
+    {
+      "file": "src/storage/heap_file.c",
+      "symbol": "heap_attrinfo_get_record_payload_size",
+      "kind": "function",
+      "status": "deleted",
+      "what": "The old private sizing helper computed each fixed or variable DB_VALUE column’s serialized size and returned their sum.",
+      "why_exists": "The old attrinfo-only OOS planner needed a payload total and a size for each demotion candidate.",
+      "why_changed": "Its DB_VALUE sizing work is now performed while filling heap_oos_column_plan in heap_attrinfo_determine_disk_layout; the shared planner sums those sizes. Removing this helper removes the dependency of selection policy on HEAP_CACHE_ATTRINFO. Both its forward declaration and body disappear.",
+      "base": {
+        "declarations": [
+          [
+            727,
+            727
+          ]
+        ],
+        "definitions": [
+          [
+            12719,
+            12745
+          ]
+        ],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": true
+      },
+      "guide_anchor": "src-storage-heap-file-c-heap-attrinfo-get-record-payload-size",
+      "guide_covered": true
+    },
+    {
+      "file": "src/storage/heap_file.c",
+      "symbol": "heap_attrinfo_get_record_header_size",
+      "kind": "function",
+      "status": "deleted",
+      "what": "The old private helper selected one-, two-, or four-byte variable-offset entries and counted the record header, VOT, and fixed-attribute bound bitmap.",
+      "why_exists": "Demotion decisions need the whole inline record size, and moving values out of row can narrow the VOT.",
+      "why_changed": "Its representation-based calculation moves to heap_oos_record_header_size in heap_oos.cpp, which accepts OR_CLASSREP and a payload size rather than an attrinfo object. Its declaration and definition are removed so both writers use one calculation.",
+      "base": {
+        "declarations": [
+          [
+            728,
+            729
+          ]
+        ],
+        "definitions": [
+          [
+            12756,
+            12782
+          ]
+        ],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": true
+      },
+      "guide_anchor": "src-storage-heap-file-c-heap-attrinfo-get-record-header-size",
+      "guide_covered": true
+    },
+    {
+      "file": "src/storage/heap_file.c",
+      "symbol": "heap_oos_column_plan",
+      "kind": "struct",
+      "status": "deleted",
+      "what": "The former file-local plan held selection, the resulting head OOS OID, full serialized length, and chain identity stamp for one attribute.",
+      "why_exists": "The heap writer needs to connect the planner’s decision with the OOS insert result and the later inline stub.",
+      "why_changed": "The type is relocated and extended in heap_oos.hpp. This deletion is a move, not removal of the concept: shared selection also needs the attribute metadata and already-known serialized disk size.",
+      "relocated_to": "src/storage/heap_oos.hpp",
+      "base": {
+        "declarations": [],
+        "definitions": [
+          [
+            730,
+            736
+          ]
+        ],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": true
+      },
+      "guide_anchor": "src-storage-heap-file-c-heap-oos-column-plan",
+      "guide_covered": true
+    },
+    {
+      "file": "src/storage/heap_file.c",
+      "symbol": "heap_attrinfo_determine_disk_layout",
+      "kind": "function",
+      "status": "modified",
+      "what": "The adapter from a heap attribute cache to the shared OOS plan. Its existing pointer-output signature and private declaration remain.",
+      "why_exists": "SQL/query-executor and other DB_VALUE writers still start from HEAP_CACHE_ATTRINFO rather than a serialized workspace record.",
+      "why_changed": "It now fills each plan entry with last_attrepr plus tp_domain_disk_size for fixed attributes or pr_data_writeval_disk_size for variable values, then delegates to heap_oos_determine_disk_layout. The previous forced-selection, candidate sorting, gate, and offset-width calculation leave this function. This deliberately makes policy shared while preserving the existing DB_VALUE writer entry point.",
+      "base": {
+        "declarations": [
+          [
+            737,
+            740
+          ]
+        ],
+        "definitions": [
+          [
+            12799,
+            12889
+          ]
+        ],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [
+          [
+            727,
+            730
+          ]
+        ],
+        "definitions": [
+          [
+            12706,
+            12722
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "src-storage-heap-file-c-heap-attrinfo-determine-disk-layout",
+      "guide_covered": true
+    },
+    {
+      "file": "src/storage/heap_oos.hpp",
+      "symbol": "heap_oos_column_plan",
+      "kind": "struct",
+      "status": "added",
+      "what": "Shared per-attribute state: attribute points to OR_ATTRIBUTE; disk_size is the existing serialized size; selected marks demotion; oid, length, and identity_stamp describe the newly inserted OOS value chain.",
+      "why_exists": "One plan must work for values measured through DB_VALUE and values measured from VOT spans without requiring either representation to be decoded.",
+      "why_changed": "The file-local struct moves here and gains attribute=nullptr and disk_size=0. Existing defaults remain selected=false, OID_INITIALIZER, length=0, NULL_LSA. Callers supply all metadata and sizes before invoking the planner; returned OIDs and stamps are subsequently used to write the 24-byte stub.",
+      "relocated_from": "src/storage/heap_file.c",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            66,
+            74
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "src-storage-heap-oos-hpp-heap-oos-column-plan",
+      "guide_covered": true
+    },
+    {
+      "file": "src/storage/heap_oos.hpp",
+      "symbol": "heap_oos_determine_disk_layout",
+      "kind": "function_declaration",
+      "status": "added",
+      "what": "The public declaration for metadata-and-size-based OOS selection; parameters expose representation, MVCC class state, a mutable plan, and references for offset width, inline size, and has_oos.",
+      "why_exists": "The DB_VALUE adapter in heap_file.c and workspace demoter in heap_oos.cpp need one policy boundary.",
+      "why_changed": "It makes the extracted planner callable across translation units. There are no default parameters; input metadata and sizes must already be populated. Its definition and detailed policy are covered under heap_oos.cpp.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [
+          [
+            76,
+            77
+          ]
+        ],
+        "definitions": [],
+        "source_available": true
+      },
+      "guide_anchor": "src-storage-heap-oos-hpp-heap-oos-determine-disk-layout",
+      "guide_covered": true
+    },
+    {
+      "file": "src/storage/heap_oos.hpp",
+      "symbol": "heap_oos_demote_workspace_record",
+      "kind": "function_declaration",
+      "status": "added",
+      "what": "The public storage entry point for applying OOS Demotion to an already serialized, current-representation workspace record.",
+      "why_exists": "Locator force needs storage-layer work without owning the binary-layout implementation.",
+      "why_changed": "The contract states that source bytes stay unchanged, result->data remains NULL when unchanged, and a new successful buffer belongs to the caller and must be freed with db_private_free. OOS writes belong to the caller’s existing force top operation. Its definition is covered under heap_oos.cpp.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [
+          [
+            82,
+            83
+          ]
+        ],
+        "definitions": [],
+        "source_available": true
+      },
+      "guide_anchor": "src-storage-heap-oos-hpp-heap-oos-demote-workspace-record",
+      "guide_covered": true
+    },
+    {
+      "file": "src/storage/heap_oos.cpp",
+      "symbol": "heap_oos_record_header_size",
+      "kind": "function",
+      "status": "added",
+      "what": "A private representation-based replacement for the deleted attrinfo header-size helper. It counts the MVCC/non-MVCC insert header, fixed bound bits, and VOT at the smallest fitting offset width.",
+      "why_exists": "Both writers must predict the same inline layout after demotion, including VOT width transitions.",
+      "why_changed": "It removes the need for HEAP_CACHE_ATTRINFO, uses size_t for payload/header accounting, starts at OR_BYTE_SIZE, widens past OR_MAX_BYTE and OR_MAX_SHORT, and returns the header size. The planner recalculates after forced demotion and after the largest-first loop; the loop itself retains its initial header estimate to preserve base policy.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            1070,
+            1089
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "src-storage-heap-oos-cpp-heap-oos-record-header-size",
+      "guide_covered": true
+    },
+    {
+      "file": "src/storage/heap_oos.cpp",
+      "symbol": "heap_oos_determine_disk_layout",
+      "kind": "function",
+      "status": "added",
+      "what": "The shared selection policy over OR_CLASSREP and a vector of serialized column sizes. It returns selected entries, offset width, compact inline size, and whether any OOS value is selected.",
+      "why_exists": "A workspace record already contains serialized values, so selection should use metadata and byte lengths without creating DB_VALUE objects or duplicating SQL policy.",
+      "why_changed": "It extracts the policy from heap_file.c: clear selection, sum payload, apply FORCE_OUTLINE only to variable values strictly larger than OR_OOS_INLINE_SIZE, then if the record plus MVCC growth exceeds the existing DB_PAGESIZE/4 gate, sort remaining candidates by ordinary-before-PREFER_INLINE, largest size first, then descending plan index. Demote until the conservative estimate fits or candidates run out, recompute the header, and translate candidate-vector bad_alloc into ER_OUT_OF_VIRTUAL_MEMORY. NULL values naturally fail the size floor; the DB_VALUE-specific null test is no longer needed.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            1091,
+            1153
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "src-storage-heap-oos-cpp-heap-oos-determine-disk-layout",
+      "guide_covered": true
+    },
+    {
+      "file": "src/storage/heap_oos.cpp",
+      "symbol": "heap_oos_demote_workspace_record_internal",
+      "kind": "function",
+      "status": "added",
+      "what": "The private byte-level implementation that validates a workspace RECDES, plans OOS Demotion, writes selected byte spans, and builds a fresh compact heap record.",
+      "why_exists": "Workspace serialization has already assigned references, copied LOB locators, and advanced CHN. Decoding and re-encoding every value adds cost and risks repeating side effects or changing a valid encoding.",
+      "why_changed": "It measures variable values from adjacent VOT offsets, supplies fixed sizes from domains, and maps attribute array indices to variable locations. It keeps a small ordinary record unchanged before allocating per-row arrays; FORCE_OUTLINE bypasses this shortcut. If selected, it rejects OOS+REC_BIGONE before writes, resets publication, batches original byte spans through heap_oos_insert_serialized_values, copies fixed/bound bytes and unselected spans exactly, writes 24-byte OOS inline stubs, rewrites VOT/flags, preserves CHN, and reserves MVCC growth room. It never frees source storage or begins a new transaction boundary.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            1158,
+            1328
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "src-storage-heap-oos-cpp-heap-oos-demote-workspace-record-internal",
+      "guide_covered": true
+    },
+    {
+      "file": "src/storage/heap_oos.cpp",
+      "symbol": "heap_oos_demote_workspace_record",
+      "kind": "function",
+      "status": "added",
+      "what": "The exported guard and lifetime wrapper around the private demoter.",
+      "why_exists": "Locator needs a CUBRID error-return boundary around representation-cache acquisition and potentially throwing vector operations.",
+      "why_changed": "It requires an empty result buffer, skips root-class metadata and records already marked HAS_OOS, acquires the current class representation, invokes the private helper, translates bad_alloc, always returns the representation to the cache, and frees any allocated result on error. On success, a NULL result means reuse source; a non-NULL result remains caller-owned. Transaction rollback, rather than this memory cleanup, undoes OOS writes.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            1330,
+            1361
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "src-storage-heap-oos-cpp-heap-oos-demote-workspace-record",
+      "guide_covered": true
+    },
+    {
+      "file": "src/transaction/locator_sr.h",
+      "symbol": "LOCATOR_FORCE_FLAG",
+      "kind": "enum",
+      "status": "added",
+      "what": "A named set of independent insert-force behavior bits, combined into the int force_flags parameter.",
+      "why_exists": "Insert force already had three independent boolean options; workspace provenance adds a fourth choice that must compose with bulk and foreign-key behavior.",
+      "why_changed": "It replaces the trailing positional booleans with explicit bit combinations and introduces FROM_WORKSPACE. This is a source-level API change in server/SA code; both public declaration and every affected caller in the diff are covered below.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            134,
+            142
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "src-transaction-locator-sr-h-locator-force-flag",
+      "guide_covered": true
+    },
+    {
+      "file": "src/transaction/locator_sr.h",
+      "symbol": "LC_FORCE_FLAG_NONE",
+      "kind": "enum_member",
+      "status": "added",
+      "what": "No optional insert-force behavior.",
+      "why_exists": "A zero value is needed for ordinary callers and conditional bit expressions.",
+      "why_changed": "The new default parameter uses it, preserving the former false/false/false combinations.",
+      "value": "0x00",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [
+          [
+            136,
+            136
+          ]
+        ],
+        "definitions": [],
+        "source_available": true
+      },
+      "guide_anchor": "src-transaction-locator-sr-h-lc-force-flag-none",
+      "guide_covered": true
+    },
+    {
+      "file": "src/transaction/locator_sr.h",
+      "symbol": "LC_FORCE_FLAG_HAS_BU_LOCK",
+      "kind": "enum_member",
+      "status": "added",
+      "what": "The transaction holds a BU_LOCK for bulk insertion.",
+      "why_exists": "Heap force distinguishes bulk operations when choosing locking/insertion behavior.",
+      "why_changed": "It encodes the former has_BU_lock boolean; loader and multi-insert callers preserve their lock-derived value.",
+      "value": "0x01",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [
+          [
+            137,
+            137
+          ]
+        ],
+        "definitions": [],
+        "source_available": true
+      },
+      "guide_anchor": "src-transaction-locator-sr-h-lc-force-flag-has-bu-lock",
+      "guide_covered": true
+    },
+    {
+      "file": "src/transaction/locator_sr.h",
+      "symbol": "LC_FORCE_FLAG_DONT_CHECK_FK",
+      "kind": "enum_member",
+      "status": "added",
+      "what": "Skip foreign-key rechecking at force time.",
+      "why_exists": "Some callers already validate foreign keys before force.",
+      "why_changed": "It replaces the former dont_check_fk boolean; server loaddb retains its explicit skip and multi-insert preserves its argument.",
+      "value": "0x02",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [
+          [
+            138,
+            138
+          ]
+        ],
+        "definitions": [],
+        "source_available": true
+      },
+      "guide_anchor": "src-transaction-locator-sr-h-lc-force-flag-dont-check-fk",
+      "guide_covered": true
+    },
+    {
+      "file": "src/transaction/locator_sr.h",
+      "symbol": "LC_FORCE_FLAG_BULK_LOGGING",
+      "kind": "enum_member",
+      "status": "added",
+      "what": "Use page-granularity bulk logging for the insert.",
+      "why_exists": "The multi-insert optimization supplies a page watcher and a different logging mode.",
+      "why_changed": "It replaces use_bulk_logging; only the existing bulk page insertion branch adds this bit.",
+      "value": "0x04",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [
+          [
+            139,
+            139
+          ]
+        ],
+        "definitions": [],
+        "source_available": true
+      },
+      "guide_anchor": "src-transaction-locator-sr-h-lc-force-flag-bulk-logging",
+      "guide_covered": true
+    },
+    {
+      "file": "src/transaction/locator_sr.h",
+      "symbol": "LC_FORCE_FLAG_FROM_WORKSPACE",
+      "kind": "enum_member",
+      "status": "added",
+      "what": "The RECDES came from workspace serialization and still needs force-time OOS Demotion.",
+      "why_exists": "Heap/query and replication writers must be distinguishable from the omitted SA workspace route.",
+      "why_changed": "xlocator_force sets it for workspace INSERT, and partition moves propagate it to destination INSERT. The helper gates actual demotion on SA_MODE; merely setting this bit on SERVER_MODE does not run the new demoter.",
+      "value": "0x08",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [
+          [
+            140,
+            140
+          ]
+        ],
+        "definitions": [],
+        "source_available": true
+      },
+      "guide_anchor": "src-transaction-locator-sr-h-lc-force-flag-from-workspace",
+      "guide_covered": true
+    },
+    {
+      "file": "src/transaction/locator_sr.h",
+      "symbol": "locator_insert_force",
+      "kind": "function_declaration",
+      "status": "modified",
+      "what": "The public declaration of the heap-and-index insert primitive.",
+      "why_exists": "Loader, locator, query-force and replication paths share the same insertion mechanism.",
+      "why_changed": "The trailing has_BU_lock, dont_check_fk, use_bulk_logging=false parameters become int force_flags=LC_FORCE_FLAG_NONE. This default supplies the former all-false behavior for callers that omit it. The C++ declaration is wrapped with INDENT-OFF/ON so GNU indent preserves the default parameter.",
+      "base": {
+        "declarations": [
+          [
+            132,
+            136
+          ]
+        ],
+        "definitions": [],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [
+          [
+            145,
+            149
+          ]
+        ],
+        "definitions": [],
+        "source_available": true
+      },
+      "guide_anchor": "src-transaction-locator-sr-h-locator-insert-force",
+      "guide_covered": true
+    },
+    {
+      "file": "src/transaction/locator_sr.c",
+      "symbol": "locator_oos_demote_workspace_record",
+      "kind": "function",
+      "status": "added",
+      "what": "A private locator adapter that may redirect its local RECDES pointer to a newly demoted buffer.",
+      "why_exists": "Insert and update force need the same SA-only storage call and a simple unchanged-record result.",
+      "why_changed": "In SA_MODE it invokes heap_oos_demote_workspace_record and redirects *recdes_p only on success with non-NULL output data. In SERVER_MODE it returns NO_ERROR without storage work. The caller retains workspace_recdes for cleanup; the source copyarea is never replaced or freed here.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            4939,
+            4953
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "src-transaction-locator-sr-c-locator-oos-demote-workspace-record",
+      "guide_covered": true
+    },
+    {
+      "file": "src/transaction/locator_sr.c",
+      "symbol": "locator_insert_force",
+      "kind": "function",
+      "status": "modified",
+      "what": "The primitive that chooses the insertion heap, creates a heap operation context, writes the object, and maintains indexes and related force state.",
+      "why_exists": "Multiple higher-level writers need one place to enforce heap, partition and index insertion semantics.",
+      "why_changed": "It decodes force_flags into the former three booleans plus from_workspace, adds an empty workspace_recdes, and invokes the SA demoter after partition_prune_insert has selected real_class_oid/real_hfid and before heap_create_insert_context. This ensures OOS chains belong to the destination heap. It frees the optional output at shared error2 cleanup on success or failure. Existing query/replication callers use zero flags and avoid new demotion.",
+      "base": {
+        "declarations": [],
+        "definitions": [
+          [
+            4951,
+            5284
+          ]
+        ],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            4982,
+            5329
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "src-transaction-locator-sr-c-locator-insert-force",
+      "guide_covered": true
+    },
+    {
+      "file": "src/transaction/locator_sr.c",
+      "symbol": "locator_update_force",
+      "kind": "function",
+      "status": "modified",
+      "what": "The private primitive for updating a forced object, including reserved-OID writes, instance indexes, class metadata, and possible partition movement.",
+      "why_exists": "A workspace flush may represent a logically new row as UPDATE because a forward reference has already reserved its permanent OID; row triggers also route SQL updates through workspace.",
+      "why_changed": "Its private declaration gains bool from_workspace=false, preserving all unchanged callers; the definition takes the explicit final boolean. It allocates workspace_recdes, passes provenance through locator_move_record when pruning selects another child, and for an in-heap instance update demotes after pruning and before index/heap writes. Cleanup frees the optional buffer. Root-class metadata is excluded by the heap wrapper. An INSERT-only fix would miss both reserved OIDs and workspace UPDATE.",
+      "base": {
+        "declarations": [
+          [
+            150,
+            155
+          ]
+        ],
+        "definitions": [
+          [
+            5464,
+            6174
+          ]
+        ],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [
+          [
+            153,
+            158
+          ]
+        ],
+        "definitions": [
+          [
+            5513,
+            6236
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "src-transaction-locator-sr-c-locator-update-force",
+      "guide_covered": true
+    },
+    {
+      "file": "src/transaction/locator_sr.c",
+      "symbol": "locator_move_record",
+      "kind": "function",
+      "status": "modified",
+      "what": "The private UPDATE helper that inserts a row into the selected child partition and deletes it from its previous heap.",
+      "why_exists": "Changing a partition key may change the destination heap, requiring insertion and deletion rather than an in-place update.",
+      "why_changed": "Both private declaration and definition gain a required final from_workspace boolean. Both destination insertion variants translate it to FROM_WORKSPACE or NONE, so demotion occurs in destination INSERT after ownership has been selected. It does not demote in the old child or introduce chain sharing between heaps.",
+      "base": {
+        "declarations": [
+          [
+            156,
+            159
+          ]
+        ],
+        "definitions": [
+          [
+            5364,
+            5431
+          ]
+        ],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [
+          [
+            160,
+            164
+          ]
+        ],
+        "definitions": [
+          [
+            5410,
+            5478
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "src-transaction-locator-sr-c-locator-move-record",
+      "guide_covered": true
+    },
+    {
+      "file": "src/transaction/locator_sr.c",
+      "symbol": "locator_force_for_multi_update",
+      "kind": "function",
+      "status": "modified",
+      "what": "The copyarea handler for batches of instance UPDATE operations performed through the client/workspace path.",
+      "why_exists": "Multi-row workspace updates have shared unique-statistics and force bookkeeping distinct from single-row flushes.",
+      "why_changed": "It adds an explicit true as locator_update_force’s final from_workspace argument. The already-existing need_locking=true remains the preceding boolean. This covers trigger-selected multi-row workspace UPDATE in SA; the SA_MODE adapter remains the effective mode gate.",
+      "base": {
+        "declarations": [
+          [
+            168,
+            168
+          ]
+        ],
+        "definitions": [
+          [
+            6633,
+            6810
+          ]
+        ],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [
+          [
+            173,
+            173
+          ]
+        ],
+        "definitions": [
+          [
+            6695,
+            6872
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "src-transaction-locator-sr-c-locator-force-for-multi-update",
+      "guide_covered": true
+    },
+    {
+      "file": "src/transaction/locator_sr.c",
+      "symbol": "xlocator_force",
+      "kind": "function",
+      "status": "modified",
+      "what": "The normal workspace copyarea dispatcher for INSERT, UPDATE and DELETE, owning an outer force top operation and optional per-object top operations.",
+      "why_exists": "It turns dirty workspace records into persistent heap/index changes and supports ignored object errors.",
+      "why_changed": "INSERT variants now pass FROM_WORKSPACE; UPDATE variants pass from_workspace=true. DELETE behavior stays as the existing code. New OOS writes therefore execute inside the existing outer top operation and, for filtered errors, the existing per-object rollback boundary. It also delegates multi-row updates to the separately changed handler.",
+      "base": {
+        "declarations": [],
+        "definitions": [
+          [
+            7253,
+            7464
+          ]
+        ],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            7315,
+            7526
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "src-transaction-locator-sr-c-xlocator-force",
+      "guide_covered": true
+    },
+    {
+      "file": "src/transaction/locator_sr.c",
+      "symbol": "xlocator_repl_force",
+      "kind": "function",
+      "status": "modified",
+      "what": "The replication apply copyarea dispatcher, including replica OOS handling and per-object apply errors.",
+      "why_exists": "Replication replays already prepared row/OOS state with its own publication and transaction handling.",
+      "why_changed": "The insert call drops the former explicit false/false arguments and relies on force_flags=NONE. This is an API migration only: it does not label replica data as workspace-originated or run the new SA demoter. Its transaction and OOS fixup logic is outside the PR’s semantic change.",
+      "base": {
+        "declarations": [],
+        "definitions": [
+          [
+            7020,
+            7241
+          ]
+        ],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            7082,
+            7303
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "src-transaction-locator-sr-c-xlocator-repl-force",
+      "guide_covered": true
+    },
+    {
+      "file": "src/transaction/locator_sr.c",
+      "symbol": "locator_attribute_info_force",
+      "kind": "function",
+      "status": "modified",
+      "what": "The force path that starts from HEAP_CACHE_ATTRINFO, transforms DB_VALUEs to a record, then inserts or updates heap/index storage.",
+      "why_exists": "SQL/query execution already has DB_VALUE-based serialization and OOS preparation.",
+      "why_changed": "Its insertion call omits the former false/false arguments and takes the new default NONE. It intentionally leaves FROM_WORKSPACE unset because its record has already passed the attrinfo writer and shared planner. Its UPDATE call keeps the new private default from_workspace=false.",
+      "base": {
+        "declarations": [],
+        "definitions": [
+          [
+            7585,
+            7766
+          ]
+        ],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            7647,
+            7827
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "src-transaction-locator-sr-c-locator-attribute-info-force",
+      "guide_covered": true
+    },
+    {
+      "file": "src/transaction/locator_sr.c",
+      "symbol": "redistribute_partition_data",
+      "kind": "function",
+      "status": "modified",
+      "what": "The existing internal partition-data redistribution routine that fetches rows and inserts them into the partition arrangement.",
+      "why_exists": "Partition DDL needs a specialized row-moving path preserving existing MVCC identity and storage semantics.",
+      "why_changed": "Its insert call drops false/false and takes force_flags=NONE, preserving UPDATE_INPLACE_OLD_MVCCID. This is a call-signature migration; the PR’s workspace-provenance path is not added to redistribution. Do not confuse this routine with workspace UPDATE’s changed locator_move_record.",
+      "base": {
+        "declarations": [
+          [
+            219,
+            219
+          ]
+        ],
+        "definitions": [
+          [
+            12906,
+            13140
+          ]
+        ],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [
+          [
+            224,
+            224
+          ]
+        ],
+        "definitions": [
+          [
+            12967,
+            13201
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "src-transaction-locator-sr-c-redistribute-partition-data",
+      "guide_covered": true
+    },
+    {
+      "file": "src/transaction/locator_sr.c",
+      "symbol": "locator_multi_insert_force",
+      "kind": "function",
+      "status": "modified",
+      "what": "The multi-record insert routine used by the server loader, with ordinary fallback and an optimized heap-page insertion branch.",
+      "why_exists": "Batch insertion can reduce per-row page and logging overhead while retaining individual-force fallbacks.",
+      "why_changed": "It composes force_flags from the actual BU lock and dont_check_fk argument once. Ordinary/fallback calls use those bits; the watcher-assisted bulk-page branch adds BULK_LOGGING. None of these calls sets FROM_WORKSPACE because the server loader already transforms its DB_VALUEs. Its own public signature stays the same.",
+      "base": {
+        "declarations": [],
+        "definitions": [
+          [
+            14026,
+            14163
+          ]
+        ],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            14087,
+            14226
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "src-transaction-locator-sr-c-locator-multi-insert-force",
+      "guide_covered": true
+    },
+    {
+      "file": "src/loaddb/load_server_loader.cpp",
+      "symbol": "server_object_loader::flush_records",
+      "kind": "method",
+      "status": "modified",
+      "what": "The cubload server loader method that forces the collected record batch, either individually for filtered errors/HA or through multi-insert.",
+      "why_exists": "Client-server loading prepares DB_VALUE-based records before force and needs lock, foreign-key, error-filter, and replication behavior preserved during batching.",
+      "why_changed": "It creates force_flags=DONT_CHECK_FK plus HAS_BU_LOCK when held, and passes this bitmask in the individual insertion call. This exactly represents the previous has_BU_lock,true,false arguments. It is an API migration caused by locator_insert_force’s change; it does not add SA workspace demotion to this already-prepared server loader path.",
+      "base": {
+        "declarations": [],
+        "definitions": [
+          [
+            736,
+            829
+          ]
+        ],
+        "source_available": true
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            736,
+            830
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "src-loaddb-load-server-loader-cpp-server-object-loader-flush-records",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest",
+      "kind": "class",
+      "status": "added",
+      "what": "The GoogleTest fixture for actual installed cubrid/csql utilities; each case owns a private temporary database, registry, configuration, command logs, deterministic payload, and sequence counter.",
+      "why_exists": "In-process db_execute tests alone cannot prove the standalone object-file loader took its real workspace route, and no-logging state must not contaminate another case.",
+      "why_changed": "It adds isolated utility-level coverage of loader/workspace storage ownership and errors. root owns evidence; payload is deterministic 5,000-byte VARBIT data; sequence gives unique command filenames; created guards successful cleanup. Failed cases retain their directory and database for investigation.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            44,
+            255
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest::read",
+      "kind": "method",
+      "status": "added",
+      "what": "Reads an evidence file as binary into a string and records an expectation if opening fails.",
+      "why_exists": "Command output and LOB bytes must be inspectable without text normalization.",
+      "why_changed": "It gives the new fixture a common reader for utility evidence and exact LOB snapshots.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            52,
+            57
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-read",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest::write",
+      "kind": "method",
+      "status": "added",
+      "what": "Writes generated SQL, object files, or configuration and asserts successful close.",
+      "why_exists": "Utility tests need literal fixtures and useful failure locations.",
+      "why_changed": "It creates inputs under the private fixture directory; callers use ASSERT_NO_FATAL_FAILURE where continuation would be invalid.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            59,
+            65
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-write",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest::run",
+      "kind": "method",
+      "status": "added",
+      "what": "Executes an argv vector through fork/execvp, pipes a saved input file to stdin, captures stdout/stderr, and validates termination/output.",
+      "why_exists": "The fixture must call real utilities while controlling environment, timeouts, and expected rejection.",
+      "why_changed": "The child alone sets its registry/configuration and LC_ALL=C, changes directory, and arms a 60-second alarm; the parent handles EINTR and waits. Defaults input=\"\" and expected_error=\"\" mean empty stdin and successful command. A nonempty expected_error requires nonzero exit plus a case-insensitive diagnostic match. Paths/SQL are never shell-interpolated.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            69,
+            134
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-run",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest::sql",
+      "kind": "method",
+      "status": "added",
+      "what": "Runs csql in standalone mode as DBA with explicit transactions and line output.",
+      "why_exists": "Readable SQL assertions must go through the installed SA utility against the private database.",
+      "why_changed": "It wraps run with -S, --no-auto-commit, and --line-output for the new utility fixture.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            136,
+            139
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-sql",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest::load",
+      "kind": "method",
+      "status": "added",
+      "what": "Writes a loaddb object file and runs cubrid loaddb -S with optional arguments and an expected-error expression.",
+      "why_exists": "A SQL INSERT would not establish standalone object-file loader coverage.",
+      "why_changed": "Default options={} and expected_error=\"\" select ordinary successful loading; callers can request --no-logging or an error-control file and expected rejection. The case’s generated object file is retained with evidence if failure occurs.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            141,
+            150
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-load",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest::expect_chunks",
+      "kind": "method",
+      "status": "added",
+      "what": "Extracts every Oos_num_recs field from SHOW HEAP OOS output and compares the ordered list of counts.",
+      "why_exists": "Logical value equality alone cannot prove OOS-path execution or detect orphan chunks.",
+      "why_changed": "It checks explicit physical chunk-count observations, including before/after rollback sequences and partition ownership.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            152,
+            162
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-expect-chunks",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest::check",
+      "kind": "method",
+      "status": "added",
+      "what": "Queries a value/row-count predicate and SHOW HEAP OOS, requiring VALUE_OK and an exact chunk count.",
+      "why_exists": "Each scenario needs both a logical oracle and independent OOS-path evidence.",
+      "why_changed": "It packages these two assertions; rows is the expected count and chunks counts physical chunk records, not logical value chains. Empty-table rejection uses an explicit zero-row query instead of this SUM-based helper.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            164,
+            174
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-check",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest::seed_workspace",
+      "kind": "method",
+      "status": "added",
+      "what": "Creates a primary-key table, chooses insert_execution_mode=0, inserts and commits a large VARBIT row, then verifies one OOS chunk.",
+      "why_exists": "Later rollback/error tests need a known committed workspace-produced baseline.",
+      "why_changed": "It also exercises reserved-OID handling through a direct workspace INSERT rather than the default query executor.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            176,
+            182
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-seed-workspace",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest::seed_references",
+      "kind": "method",
+      "status": "added",
+      "what": "Creates an object-reference table and loads two mutually referring rows using forward/backward object-file references.",
+      "why_exists": "OID reservation can change a pending flush from INSERT to UPDATE.",
+      "why_changed": "It proves permanent references and OOS values coexist before tests perform workspace updates and cleanup.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            184,
+            190
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-seed-references",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest::seed_partitions",
+      "kind": "method",
+      "status": "added",
+      "what": "Creates a two-child range-partitioned table and loads one large row into each child.",
+      "why_exists": "OOS writes must follow the destination heap rather than the input partitioned root.",
+      "why_changed": "It requires one chunk per child, correct row values, and zero chunks owned by the partitioned root.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            192,
+            200
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-seed-partitions",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest::lob_files",
+      "kind": "method",
+      "status": "added",
+      "what": "Snapshots the paths and binary contents of all regular files under the fixture’s external LOB directory.",
+      "why_exists": "A value query alone would miss duplicated, replaced, or modified external LOB files.",
+      "why_changed": "It provides an exact before/after filesystem oracle for workspace updates that demote another attribute.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            202,
+            213
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-lob-files",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest::SetUp",
+      "kind": "method",
+      "status": "added",
+      "what": "Creates a unique directory, isolated configuration, deterministic random VARBIT payload, LOB directory, and fresh 16KB-page database.",
+      "why_exists": "Each utility test must begin with independent persistent and no-logging state.",
+      "why_changed": "It uses 32MB initial data/log volumes and marks created only after successful setup; generated data avoids string-compression ambiguity.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            215,
+            234
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-setup",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest::TearDown",
+      "kind": "method",
+      "status": "added",
+      "what": "Deletes a successfully tested private database and directory; failed cases retain their evidence path.",
+      "why_exists": "Isolation needs cleanup, but a failing utility scenario needs its inputs, outputs, and database preserved.",
+      "why_changed": "It handles partial setup with root/created guards, runs deletedb only for a successful case, and prints the retained path after failure.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            236,
+            254
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-teardown",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest.StandaloneLoaderStoresOos",
+      "kind": "test_case",
+      "status": "added",
+      "what": "A one-row real SA loaddb scenario.",
+      "why_exists": "The reported defect is missing OOS Demotion in the standalone object loader.",
+      "why_changed": "It requires exact loaded VARBIT value and one physical OOS chunk, catching a successful but fully inline load.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            257,
+            262
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-standaloneloaderstoresoos",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest.LoaderRejectsOosBigoneButKeepsOrdinaryBigone",
+      "kind": "test_case",
+      "status": "added",
+      "what": "A paired OOS+large-fixed record rejection and ordinary fixed-only REC_BIGONE acceptance scenario.",
+      "why_exists": "The demoter must reject unsupported coexistence without banning ordinary overflow records.",
+      "why_changed": "It requires the first load to fail with a maximum-record diagnostic, leave zero rows/chunks, and the fixed-only load to succeed with correct value and zero OOS chunks.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            264,
+            276
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-loaderrejectsoosbigonebutkeepsordinarybigone",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest.WorkspaceInsertUsesReservedOid",
+      "kind": "test_case",
+      "status": "added",
+      "what": "A direct workspace INSERT through seed_workspace.",
+      "why_exists": "An existing permanent/reserved OID may send a logically new object through update force.",
+      "why_changed": "It adds a named regression requiring the row and OOS chain to be stored through the common workspace force route.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            278,
+            281
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-workspaceinsertusesreservedoid",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest.LoaderPreservesForwardAndBackwardReferences",
+      "kind": "test_case",
+      "status": "added",
+      "what": "Two mutually referencing loaddb rows.",
+      "why_exists": "Demotion must preserve previously fixed permanent object references and handle reserved-OID UPDATE.",
+      "why_changed": "It checks peer.id relationships, both large values, and exactly two OOS chunks.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            283,
+            286
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-loaderpreservesforwardandbackwardreferences",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest.PartitionsOwnSeparateOosFiles",
+      "kind": "test_case",
+      "status": "added",
+      "what": "Loads through a partitioned root and examines both children and root.",
+      "why_exists": "The destination heap is the OOS owner.",
+      "why_changed": "It requires child-owned storage and a root count of zero through seed_partitions.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            288,
+            291
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-partitionsownseparateoosfiles",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest.InsertRollbackReclaimsFlushedChain",
+      "kind": "test_case",
+      "status": "added",
+      "what": "Flushes an uncommitted workspace INSERT using SELECT, observes storage, then rolls back.",
+      "why_exists": "A row that merely stayed pending in workspace would not test OOS rollback.",
+      "why_changed": "It requires chunk counts 2 then 1 and preservation of the committed seed row/value.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            293,
+            302
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-insertrollbackreclaimsflushedchain",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest.WorkspaceUpdateRollbackCommitAndDelete",
+      "kind": "test_case",
+      "status": "added",
+      "what": "Forces a two-row workspace UPDATE with a row trigger, then separately tests rollback, committed replacement, and DELETE.",
+      "why_exists": "Both multi-update provenance and existing SA eager cleanup must stay inside transaction semantics.",
+      "why_changed": "It requires correct old values after rollback, replacement values after commit, stable two-chunk ownership, preserved references, and zero chunks after deletion.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            304,
+            318
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-workspaceupdaterollbackcommitanddelete",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest.FailedUniqueLoadRollsBackWithoutOrphans",
+      "kind": "test_case",
+      "status": "added",
+      "what": "Loads a new row followed by a duplicate primary key without an ignored-error rule.",
+      "why_exists": "A failing batch must undo previously inserted row/OOS state.",
+      "why_changed": "It expects a unique diagnostic and only the committed seed row and its one chunk afterward.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            320,
+            325
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-faileduniqueloadrollsbackwithoutorphans",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest.FilteredDuplicateLeavesNoOrphanAndContinues",
+      "kind": "test_case",
+      "status": "added",
+      "what": "Ignores ER_BTREE_UNIQUE_FAILED (-670), rejects a duplicate row, then loads a valid later row.",
+      "why_exists": "The per-object top operation must undo only the failed row’s OOS work and allow continued loading.",
+      "why_changed": "It requires both valid IDs, correct values, and two chunks rather than an orphan from the rejected duplicate.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            327,
+            335
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-filteredduplicateleavesnoorphanandcontinues",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest.LoaderHonorsStoragePolicy",
+      "kind": "test_case",
+      "status": "added",
+      "what": "Exercises NULL/empty/small values, a small FORCE_OUTLINE value, unequal largest-first candidates, and a 50,000-byte multichunk value.",
+      "why_exists": "The new workspace route must use the same selection policy and storage behavior as DB_VALUE writers.",
+      "why_changed": "It requires no OOS for the tiny table, one forced chunk, one largest-first chunk whose aggregate serialized size is just over 3,000 bytes, and four chunks for the multichunk case, while checking every logical value. This case does not independently test PREFER_INLINE; the byte fixture does.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            337,
+            363
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-loaderhonorsstoragepolicy",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest.WorkspaceUpdatePreservesExternalLobFiles",
+      "kind": "test_case",
+      "status": "added",
+      "what": "Updates a separate VARBIT attribute while permanent BLOB/CLOB locators remain on the row.",
+      "why_exists": "OOS Demotion must preserve serialized external locators without recopying external LOB data.",
+      "why_changed": "After trigger-selected rollback and commit it compares BLOB/CLOB values plus exact LOB file paths/bytes. It seeds LOBs through query execution because fresh workspace LOB INSERT has a separate pre-existing defect; it does not claim coverage of every locator-demotion combination.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            365,
+            382
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-workspaceupdatepreservesexternallobfiles",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest.PartitionMovementTransfersOwnership",
+      "kind": "test_case",
+      "status": "added",
+      "what": "Changes a partition key through a trigger-selected workspace UPDATE.",
+      "why_exists": "The FROM_WORKSPACE marker must survive movement to the destination insertion.",
+      "why_changed": "It requires zero chunks in the old child and two correct rows/chunks in the destination child, detecting OOS creation in the wrong heap or leaked source ownership.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            384,
+            391
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-partitionmovementtransfersownership",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "OosWorkspaceTest.SuccessfulNoLoggingLoadStoresOos",
+      "kind": "test_case",
+      "status": "added",
+      "what": "Runs --no-logging SA loaddb on a fresh private database and reads back the large value.",
+      "why_exists": "Successful no-logging bulk loading remains supported under the accepted OOS logging exception.",
+      "why_changed": "It requires the correct row and one chunk. It establishes successful storage/readback only; it does not establish crash recovery, failed-load rollback, or identity-stamp uniqueness without logging.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            393,
+            398
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-oosworkspacetest-successfulnologgingloadstoresoos",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "symbol": "main",
+      "kind": "function",
+      "status": "added",
+      "what": "The utility test binary’s GoogleTest entry point.",
+      "why_exists": "CTest needs an executable entry point that accepts GoogleTest filtering and reports its exit code.",
+      "why_changed": "It initializes GoogleTest and runs this fixture’s cases; database lifetime belongs to each case, so it does not add the shared SQL server environment.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            400,
+            405
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-test-oos-workspace-cpp-main",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "symbol": "OosWorkspaceBytes",
+      "kind": "class",
+      "status": "added",
+      "what": "The in-process GoogleTest fixture comparing a tf_mem_to_disk workspace record with the new demotion result, a DB_VALUE-based reference writer, and the query writer’s stored image.",
+      "why_exists": "CLI value/chunk counts cannot prove the demoter copied serialized spans exactly or selected the same columns at encoding/VOT boundaries.",
+      "why_changed": "It tracks an optional private output RECDES and whether a test sysop is active. All demotion writes stay in that sysop and teardown aborts them; the table and transaction are also cleaned up. It uses the established OOS SQL fixture infrastructure.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            41,
+            216
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "symbol": "OosWorkspaceBytes::TearDown",
+      "kind": "method",
+      "status": "added",
+      "what": "Frees the optional demoted buffer, aborts the test sysop when started, aborts the transaction, drops the test table, and commits cleanup.",
+      "why_exists": "Reference serialization and actual demotion create OOS chains during each comparison, and ASSERT failures may stop the test early.",
+      "why_changed": "The sysop flag and RECDES_INITIALIZER make cleanup safe after partial progress. Freeing memory and aborting persistent OOS writes are deliberately separate operations.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            47,
+            58
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-teardown",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "symbol": "OosWorkspaceBytes::compare",
+      "kind": "method",
+      "status": "added",
+      "what": "Compares record HAS_OOS, each variable column’s OOS selection, and its payload read either from an inline span or an actual OOS chain.",
+      "why_exists": "Different inserted chains have different physical OIDs/stamps; useful equivalence is selection and payload, with exact bytes where serialization should match.",
+      "why_changed": "domains supplies schema metadata for collection decoding. Default logical_collections=false requires exact serialized payload bytes for the workspace reference; true only for the independent query-writer comparison decodes set-like values and checks tp_value_compare==DB_EQ. SQL and workspace collection writers may include/omit an optional domain while representing the same value. This final oracle repair is in local a142503dc; selection equality and workspace byte checks remain strict.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            60,
+            119
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-compare",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "symbol": "OosWorkspaceBytes::compare::<clear_values>",
+      "kind": "lambda",
+      "status": "added",
+      "what": "The scope_exit cleanup lambda for the two decoded collection DB_VALUEs in compare.",
+      "why_exists": "An ASSERT inside collection decoding can return early, and decoded collections may own allocated memory.",
+      "why_changed": "It clears both initialized values on every exit from the decoding block. This accompanies the a142503dc logical-collection oracle repair, rather than a production serialization change.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            100,
+            104
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-compare-clear-values",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "symbol": "OosWorkspaceBytes::check",
+      "kind": "method",
+      "status": "added",
+      "what": "Builds one schema/value scenario, captures the query writer’s stored row, serializes a fetched workspace object, obtains a DB_VALUE reference, and demotes the same workspace source.",
+      "why_exists": "A single helper applies the two independent comparisons and source-preservation assertions consistently to many encodings.",
+      "why_changed": "Default alter=nullptr selects a current-schema comparison against the stored query image; a supplied ALTER exercises old-disk/current-workspace conversion and omits the incompatible stored-image comparison. It checks exact workspace-reference payloads, optional logical query collections, OOS selection, final width/length, preserved CHN, and unchanged source bytes. It captures actual stored OOS payloads rather than making a second copy of the input.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            121,
+            215
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-check",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "symbol": "OosWorkspaceBytes.TinyNullAndEmptyValues",
+      "kind": "test_case",
+      "status": "added",
+      "what": "An ordinary row containing NULL, empty VARCHAR, and empty VARBIT.",
+      "why_exists": "Zero-length and unprofitable values must avoid unnecessary OOS work.",
+      "why_changed": "It compares unchanged logical/serialized payloads and selection against both writers.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            218,
+            221
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-tinynullandemptyvalues",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "symbol": "OosWorkspaceBytes.LargestFirstAndPreferInline",
+      "kind": "test_case",
+      "status": "added",
+      "what": "A 3,500-byte PREFER_INLINE candidate with 3,000- and 600-byte ordinary candidates.",
+      "why_exists": "The largest value may need to stay inline because the soft policy puts ordinary candidates first.",
+      "why_changed": "It requires identical per-column selection and payloads across the shared workspace/DB_VALUE planners and stored query image.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            223,
+            227
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-largestfirstandpreferinline",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "symbol": "OosWorkspaceBytes.EqualSizeTie",
+      "kind": "test_case",
+      "status": "added",
+      "what": "Two equally sized 2,200-byte ordinary candidates.",
+      "why_exists": "A stable tie rule avoids writer-dependent selection.",
+      "why_changed": "It checks that the descending attribute-index tie behavior remains shared.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            229,
+            232
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-equalsizetie",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "symbol": "OosWorkspaceBytes.OffsetWidthShrinksAfterForcedDemotion",
+      "kind": "test_case",
+      "status": "added",
+      "what": "A forced 65,536-byte VARBIT next to a tiny value.",
+      "why_exists": "The input’s wide VOT can shrink after most bytes move out of row.",
+      "why_changed": "It compares compact offset width/length and exact payload bytes after forced demotion.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            234,
+            238
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-offsetwidthshrinksafterforceddemotion",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "symbol": "OosWorkspaceBytes.CompressedStringAndJson",
+      "kind": "test_case",
+      "status": "added",
+      "what": "Forced VARCHAR and JSON values plus a large VARBIT.",
+      "why_exists": "Serialized byte length, rather than text length or a fresh type conversion, must drive selection.",
+      "why_changed": "It compares compressed-string and JSON payloads as bytes, demonstrating the demoter does not recompress or reserialize them.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            240,
+            244
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-compressedstringandjson",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "symbol": "OosWorkspaceBytes.CollectionSerializedBytes",
+      "kind": "test_case",
+      "status": "added",
+      "what": "A forced SEQUENCE OF INTEGER plus a large VARBIT.",
+      "why_exists": "Collections have multiple valid serialized forms, while the demoter must retain the workspace form exactly.",
+      "why_changed": "The workspace-reference comparison remains byte-exact; the independent query comparison uses the final repaired logical collection oracle. Different optional domain bytes alone no longer fail the test.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            246,
+            250
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-collectionserializedbytes",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "symbol": "OosWorkspaceBytes.WideVotAndManyAttributes",
+      "kind": "test_case",
+      "status": "added",
+      "what": "One forced large VARBIT and seventy additional variable columns alternating NULL and tiny values.",
+      "why_exists": "Many VOT entries affect alignment and offset width independently of the largest payload.",
+      "why_changed": "It checks attribute-location mapping, fixed/header accounting, null spans, canonical output layout, and exact source payload preservation.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            252,
+            262
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-widevotandmanyattributes",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "symbol": "OosWorkspaceBytes.OldDiskRepresentationIsConvertedBeforeWorkspaceSerialization",
+      "kind": "test_case",
+      "status": "added",
+      "what": "Reads a row written before an ALTER adds a defaulted attribute, then serializes/demotes its current workspace form.",
+      "why_exists": "The new demoter intentionally accepts only current-representation workspace records.",
+      "why_changed": "It verifies that existing object fetch/serialization performs schema conversion before demotion; the old stored query image is deliberately not compared against the new schema.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            264,
+            268
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacebytes-olddiskrepresentationisconvertedbeforeworkspaceserialization",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "symbol": "OosWorkspaceSizeBoundary",
+      "kind": "class",
+      "status": "added",
+      "what": "A parameterized fixture inheriting OosWorkspaceBytes and WithParamInterface<int>, with no added methods or fields.",
+      "why_exists": "The same byte-preservation oracle should run over multiple profitable-size and encoding/VOT boundaries.",
+      "why_changed": "It reuses setup-free comparison and teardown behavior while supplying one payload byte count per runtime case.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            270,
+            272
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacesizeboundary",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "symbol": "OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes",
+      "kind": "test_template",
+      "status": "added",
+      "what": "The parameterized test body for a forced VARBIT of GetParam() bytes, a 200-byte VARBIT, and a 255-character VARCHAR beside a fixed integer.",
+      "why_exists": "Eligibility uses serialized disk size, and length prefixes/VOT sizes change near small and large encoding boundaries.",
+      "why_changed": "It calls the same check helper for all thirteen parameters; it does not assume the nominal VARBIT payload length equals its serialized span length.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            274,
+            278
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-oosworkspacesizeboundary-serializedsizesmatchvaluesizes",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "symbol": "EncodingAndVotBoundaries",
+      "kind": "test_instantiation",
+      "status": "added",
+      "what": "The registration of thirteen SerializedSizesMatchValueSizes cases with values 20,21,24,25,244,248,252,3800,4040,4060,32760,32768,65536.",
+      "why_exists": "A TEST_P declaration is not runnable without concrete instantiations, and boundary coverage needs an explicit finite inventory.",
+      "why_changed": "It makes each chosen size a real GoogleTest case. The guide lists the runtime names and size purpose below; 4060 is a tested value, not a claim that this HEAD implements the normative 4060-byte record target.",
+      "parameters": [
+        20,
+        21,
+        24,
+        25,
+        244,
+        248,
+        252,
+        3800,
+        4040,
+        4060,
+        32760,
+        32768,
+        65536
+      ],
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [
+          [
+            280,
+            281
+          ]
+        ],
+        "definitions": [],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-encodingandvotboundaries",
+      "guide_covered": true
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "symbol": "main",
+      "kind": "function",
+      "status": "added",
+      "what": "The byte-comparison binary’s GoogleTest entry point with the existing SqlServerEnv global environment.",
+      "why_exists": "The comparison calls engine/client APIs directly and therefore needs the established in-process SQL database initialization.",
+      "why_changed": "It initializes GoogleTest, installs SqlServerEnv, and runs the cases; it differs from the utility binary because that binary launches separate processes with private databases.",
+      "base": {
+        "declarations": [],
+        "definitions": [],
+        "source_available": false
+      },
+      "head": {
+        "declarations": [],
+        "definitions": [
+          [
+            283,
+            289
+          ]
+        ],
+        "source_available": true
+      },
+      "guide_anchor": "unit-tests-oos-sql-test-oos-sql-workspace-bytes-cpp-main",
+      "guide_covered": true
+    }
+  ],
+  "runtime_google_tests": [
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "suite": "OosWorkspaceTest",
+      "name": "StandaloneLoaderStoresOos",
+      "symbol": "OosWorkspaceTest.StandaloneLoaderStoresOos"
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "suite": "OosWorkspaceTest",
+      "name": "LoaderRejectsOosBigoneButKeepsOrdinaryBigone",
+      "symbol": "OosWorkspaceTest.LoaderRejectsOosBigoneButKeepsOrdinaryBigone"
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "suite": "OosWorkspaceTest",
+      "name": "WorkspaceInsertUsesReservedOid",
+      "symbol": "OosWorkspaceTest.WorkspaceInsertUsesReservedOid"
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "suite": "OosWorkspaceTest",
+      "name": "LoaderPreservesForwardAndBackwardReferences",
+      "symbol": "OosWorkspaceTest.LoaderPreservesForwardAndBackwardReferences"
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "suite": "OosWorkspaceTest",
+      "name": "PartitionsOwnSeparateOosFiles",
+      "symbol": "OosWorkspaceTest.PartitionsOwnSeparateOosFiles"
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "suite": "OosWorkspaceTest",
+      "name": "InsertRollbackReclaimsFlushedChain",
+      "symbol": "OosWorkspaceTest.InsertRollbackReclaimsFlushedChain"
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "suite": "OosWorkspaceTest",
+      "name": "WorkspaceUpdateRollbackCommitAndDelete",
+      "symbol": "OosWorkspaceTest.WorkspaceUpdateRollbackCommitAndDelete"
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "suite": "OosWorkspaceTest",
+      "name": "FailedUniqueLoadRollsBackWithoutOrphans",
+      "symbol": "OosWorkspaceTest.FailedUniqueLoadRollsBackWithoutOrphans"
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "suite": "OosWorkspaceTest",
+      "name": "FilteredDuplicateLeavesNoOrphanAndContinues",
+      "symbol": "OosWorkspaceTest.FilteredDuplicateLeavesNoOrphanAndContinues"
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "suite": "OosWorkspaceTest",
+      "name": "LoaderHonorsStoragePolicy",
+      "symbol": "OosWorkspaceTest.LoaderHonorsStoragePolicy"
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "suite": "OosWorkspaceTest",
+      "name": "WorkspaceUpdatePreservesExternalLobFiles",
+      "symbol": "OosWorkspaceTest.WorkspaceUpdatePreservesExternalLobFiles"
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "suite": "OosWorkspaceTest",
+      "name": "PartitionMovementTransfersOwnership",
+      "symbol": "OosWorkspaceTest.PartitionMovementTransfersOwnership"
+    },
+    {
+      "file": "unit_tests/oos/test_oos_workspace.cpp",
+      "suite": "OosWorkspaceTest",
+      "name": "SuccessfulNoLoggingLoadStoresOos",
+      "symbol": "OosWorkspaceTest.SuccessfulNoLoggingLoadStoresOos"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "OosWorkspaceBytes",
+      "name": "TinyNullAndEmptyValues",
+      "symbol": "OosWorkspaceBytes.TinyNullAndEmptyValues"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "OosWorkspaceBytes",
+      "name": "LargestFirstAndPreferInline",
+      "symbol": "OosWorkspaceBytes.LargestFirstAndPreferInline"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "OosWorkspaceBytes",
+      "name": "EqualSizeTie",
+      "symbol": "OosWorkspaceBytes.EqualSizeTie"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "OosWorkspaceBytes",
+      "name": "OffsetWidthShrinksAfterForcedDemotion",
+      "symbol": "OosWorkspaceBytes.OffsetWidthShrinksAfterForcedDemotion"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "OosWorkspaceBytes",
+      "name": "CompressedStringAndJson",
+      "symbol": "OosWorkspaceBytes.CompressedStringAndJson"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "OosWorkspaceBytes",
+      "name": "CollectionSerializedBytes",
+      "symbol": "OosWorkspaceBytes.CollectionSerializedBytes"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "OosWorkspaceBytes",
+      "name": "WideVotAndManyAttributes",
+      "symbol": "OosWorkspaceBytes.WideVotAndManyAttributes"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "OosWorkspaceBytes",
+      "name": "OldDiskRepresentationIsConvertedBeforeWorkspaceSerialization",
+      "symbol": "OosWorkspaceBytes.OldDiskRepresentationIsConvertedBeforeWorkspaceSerialization"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/0",
+      "parameter": 20,
+      "symbol": "OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/1",
+      "parameter": 21,
+      "symbol": "OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/2",
+      "parameter": 24,
+      "symbol": "OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/3",
+      "parameter": 25,
+      "symbol": "OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/4",
+      "parameter": 244,
+      "symbol": "OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/5",
+      "parameter": 248,
+      "symbol": "OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/6",
+      "parameter": 252,
+      "symbol": "OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/7",
+      "parameter": 3800,
+      "symbol": "OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/8",
+      "parameter": 4040,
+      "symbol": "OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/9",
+      "parameter": 4060,
+      "symbol": "OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/10",
+      "parameter": 32760,
+      "symbol": "OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/11",
+      "parameter": 32768,
+      "symbol": "OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes"
+    },
+    {
+      "file": "unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp",
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/12",
+      "parameter": 65536,
+      "symbol": "OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes"
+    }
+  ],
+  "counts": {
+    "changed_files": 11,
+    "file_symbol_occurrences": 74,
+    "by_kind": {
+      "function": 19,
+      "struct": 2,
+      "function_declaration": 3,
+      "enum": 1,
+      "enum_member": 5,
+      "method": 17,
+      "class": 3,
+      "test_case": 21,
+      "lambda": 1,
+      "test_template": 1,
+      "test_instantiation": 1
+    },
+    "by_status": {
+      "deleted": 3,
+      "modified": 12,
+      "added": 59
+    },
+    "runtime_google_tests": 34
+  },
+  "limitations": [
+    "The inventory is a manual-audited lexical inventory, not a compiler AST export. Generated GoogleTest implementation symbols are represented by their TEST_F/TEST_P declarations and runtime instances.",
+    "The guide explains source intent and review obligations; it is not a new formal standards/spec review and does not assert CI failure attribution."
+  ],
+  "normative_context": {
+    "path": "/home/vimkim/gh/cubrid-oos-context/OOS-CONTEXT.md",
+    "last_updated": "2026-09-22",
+    "repository_head": "75f8b58674ac901d478ba60f9b2cc2fff11f66f6",
+    "sha256": "8b42fe41a314cca6dcdeac90d32d40b51974a11177fd14f4f2ca0d590e912dc7"
+  }
+}
