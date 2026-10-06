@@ -71,3 +71,12 @@ These explain earlier decisions. Older marker, raw-pointer and routing-probe des
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
 | [PR #7927 terminal CI assessment — f3144ab](ci_analysis_report_f3144ab_codex.md) | PR #7927 terminal CI assessment — f3144ab | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+
+## Integrated analysis and decisions
+
+| File | What it contains | Created | Last modified | Why it was created |
+| --- | --- | --- | --- | --- |
+| [PR #7927 CI failure attribution — aecce0e12](ci_analysis_report_aecce0e_codex_71bcfef2_historical.md) | PR #7927 CI failure attribution — aecce0e12 | 2026-10-06 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [PR #7927 review package](review-aecce0e/README.md) | PR #7927 review package | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [PR #7927 code review guide — aecce0e12](review-aecce0e/code_review_guide.md) | PR #7927 code review guide — aecce0e12 | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [PR #7927 code review guide — aecce0e12](review-aecce0e/code_review_guide_71bcfef2_historical.md) | PR #7927 code review guide — aecce0e12 | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
