@@ -26,4 +26,13 @@ Keep docs locally committed; no docs push or local integration is part of this r
 ## Results
 
 Both testcase branches contain their latest feature/oos-merge baseline.
-Publication and CI pickup pending.
+Source push completed as a normal fast-forward; remote PR head verified as the source commit.
+PR body uploaded and exact text verified; title and draft status preserved.
+CI operation: `/run all`
+Receipt: https://github.com/CUBRID/cubrid/pull/7927#issuecomment-6016308476
+Requested at: 2026-10-06T12:31:56Z
+Tested PR head: aecce0e1216a813771621c13112c8f27d43df22e
+Pickup verified: release/debug build, test_sql, test_shell, test_medium all PENDING
+and linked to https://github.com/CUBRID/cubrid/actions/runs/37463919574.
+All four stable required gha-ci contexts are present; terminal results not awaited.
+Live required-check query reports no required checks configured for this branch.
