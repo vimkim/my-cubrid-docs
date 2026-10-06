@@ -1,6 +1,6 @@
 # PR7927 temporary OOS stub design interview
 
-Status: round 1 pending. Design discussion only; no engine implementation authorized by this interview.
+Status: in-place finalization and full replacement scope accepted; accessor provenance remains open. Design discussion only; no engine implementation authorized by this interview.
 Work tracker: 276. Source inspected: `feat/oos-deferred-write`, `9232f111a`.
 
 ## User objective
@@ -30,11 +30,31 @@ Update canonical `CONTEXT.md` only after terminology is agreed. No ADR yet: enco
 
 ## Round 1 frontier
 
-1. Self-contained access: should a pending RECDES be readable without threading an owner/context through existing readers? Recommend yes, conditionally: tagged process-local access plus an explicit lifetime owner and an enforceable transient-record boundary. Compare against slot indices with a passed context. Prove that copied/moved records retain access and persisted/corrupt records cannot trigger pointer dereferences.
-2. Replacement scope: replace prepared-row use across existing PR paths, or begin with ordinary INSERT and retain the old design elsewhere? Recommend one replacement covering existing supported paths, including UPDATE movement, duplicate probes, loader and HA; reduce implementation machinery rather than supported behavior.
+1. Self-contained access: original question remains open. User clarified a mandatory constraint: reuse the built RECDES and overwrite its OOS inline stubs in place with real OOS references. This is feasible with either accessor design and does not settle pointer versus context. Recommend self-contained access conditionally on an enforceable trusted transient-record boundary.
+2. Replacement scope: ACCEPTED by user Q2 "yes": replace prepared-row use across existing supported PR paths, including UPDATE movement, duplicate probes, loader and HA.
 
 ## Subsequent questions and proof obligations
 
 Exact encoding and transient trust boundary depend on question 1; sequencing depends on scope. Investigate stable payload ownership across vector moves, RECDES copying, retries, LOB exactly-once effects, grouped reads, key sizing, partial insertion rollback and publication/replication. These correctness facts are the agent's work, not questions asking the user to relax safety.
 
 Implementation requires explicit confirmation of shared design understanding under the invoked grilling skill. No build, DB experiment, push or PR modification performed.
+
+## Accepted in-place finalization constraint
+
+Serialize inline attributes once into the compact RECDES and reserve exactly one 24-byte field per selected OOS value. Once destination insertion returns the real chain references, overwrite those same fields with head OOS OID, full serialized length and identity stamp. Finalization must not reserialize ordinary attributes, allocate a replacement record or change its length or VOT offsets. Existing partition representation-ID changes are distinct from rebuilding the record.
+
+This constraint applies to finalization of the pending record, not all subsequent heap-layer MVCC/header manipulation. The current `heap_prepared_row::finalize` already demonstrates an in-place 24-byte overwrite (`src/storage/heap_file.c:14367`); the proposed change removes the larger owner/API design around it.
+
+## Rebuild and PR update direction
+
+User suggested starting over from `feature/oos-merge` and force-pushing rather than reworking the prepared-row implementation. Favor a fresh sibling source worktree from that integration branch while preserving the existing worktree/branch and its unrelated modifications for comparison. Implementation still follows shared-design confirmation; publication follows verification. Use an explicit expected-old-head lease so concurrent remote work is not overwritten.
+
+Live read-only checks: PR7927 targets `feature/oos-merge`; its head is `vimkim/cubrid:feat/oos-deferred-write` at `9232f111a7e7b6c71dbfa451db2812ae14766041`, routed through `vk`. Remote `origin/feature/oos-merge` matches local base at `fb567a629cdb390fff920542173fa36f454c74a0`. Recheck these before implementation/publication. No branch reset or push performed.
+
+## Round 2 frontier: transient descriptor provenance
+
+Q3: allow an in-memory-only discriminator in the existing `RECDES.type`, while preserving the descriptor structure, the allocated record buffer, length and VOT? Recommend yes. A locally prepared pending record may use a NULL-head/length/accessor temporary field and shared readers branch on the trusted descriptor discriminator. After successful destination insertion, overwrite the same 24-byte fields with ordinary chain references and restore the normal descriptor type before heap storage. Encoding details remain to be verified.
+
+Source evidence: `storage_common.h:226` has INT16 type; persisted slotted-page type is four bits (`slotted_page.h:90`). Pruning leaves type intact. Current INSERT normalizes type only after finalization (`locator_sr.c:5086`). UPDATE movement passes the descriptor through to destination INSERT. Copies preserve type.
+
+Correctness obligations: locator copy-area macros do not initialize type (`locator.h:55`, `75`), so initialize it per incoming row; prohibit transient descriptors through generic pack/unpack (`record_descriptor.cpp:327`, `334`) or physical storage; leave persistent NULL-reference validation intact. Stable allocated payload addresses, owner lifetime and bulk retained-byte accounting remain mandatory. No global pointer registry is needed if descriptor provenance is enforced. This is source-supported feasibility, not executed proof.
