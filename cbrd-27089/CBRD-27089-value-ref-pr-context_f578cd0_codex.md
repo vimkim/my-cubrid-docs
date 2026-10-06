@@ -29,3 +29,9 @@ Exact-source debug build and CTest passed35/35 (220.73 seconds). Real server loa
 The separately authorized source replacement succeeded with an explicit expected-old-head force-with-lease. GitHub confirms PR7927 head `f578cd0d0078eb026930380144ad503ab81bd040`; the PR remains open and draft. The source task worktree is clean. The previous local branch/worktree remains at `9232f111a7e7b6c71dbfa451db2812ae14766041`, including its unrelated submodule and script changes. The temporary server-loader database was stopped and deleted through the owned-database lifecycle.
 
 The GitHub body has not been changed. Publication of the prepared description awaits the user's review confirmation.
+
+## Confirmed body publication
+
+The user confirmed publication of the reviewed body in the conversation. Attempt body SHA-256: `77f8a18bd3c17a3f96726b9edecbd83fe9900c8bb6b67a7eb1776ba9c0f243dd`. Source and GitHub body freshness checks passed; publication result follows.
+
+Published successfully to https://github.com/CUBRID/cubrid/pull/7927. The fetched body matches the reviewed file exactly (SHA-256 `77f8a18bd3c17a3f96726b9edecbd83fe9900c8bb6b67a7eb1776ba9c0f243dd`). Source head, title, base/head branches and open/draft status were verified unchanged. No docs integration or push was included in this confirmation; retain the local docs task worktree.
