@@ -1,5 +1,76 @@
 # PR7927 temporary OOS stub design interview
 
+## Remove the pending record type — interview reopened 2026-10-07
+
+Work tracker: 281. Source pin: `aecce0e1216a813771621c13112c8f27d43df22e`,
+branch `feat/oos-deferred-write`, worktree
+`/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write`. The user invoked
+`grill-with-docs` and explicitly requires removing the new record type:
+"I do not want to add new rec type." This supersedes the October 6 permission
+to retain `REC_OOS_PENDING`. The earlier compact-record reuse, in-place
+finalization, destination-owned writes, and common memory/disk access decisions
+remain the starting constraints. This interview has not authorized a replacement
+implementation or remote publication.
+
+Source facts at the pin:
+
+- `storage_common.h:221` defines the local descriptor marker separately from
+  the existing record types. `heap_attrinfo_prepare_record` sets it on every
+  successful preparation, including rows without selected OOS values.
+- `heap_oos_value_ref::encode_memory` stores a payload address in the third
+  field of a null-head temporary stub. `decode` uses the descriptor marker to
+  permit interpreting that field as a memory pointer (`heap_oos.cpp:56–112`).
+  Removing that check alone would permit raw incoming bytes to supply a memory
+  address. A null head by itself cannot authorize memory access.
+- `heap_pending_record` already owns the compact buffer and retained values,
+  but its payload vector currently has no attribute-location lookup or
+  finalization-state API (`heap_pending_record.hpp:32–61`). Its move constructor
+  preserves the underlying allocations.
+- The marker also selects finalization (`heap_oos.cpp:139`), rejects heap
+  insertion/update (`heap_file.c:25141,25573`), and rejects transport packing
+  (`record_descriptor.cpp:329`). Each responsibility needs a replacement.
+- The bulk loader queues the owners and finalizes before latching bulk heap
+  pages (`load_server_loader.cpp:739–766`, `locator_sr.c:14184–14193`). Owner
+  lifetime, retained-byte accounting, and this latch ordering must survive.
+- Payload-list emptiness is not a complete state test: inline-only prepared
+  rows still need the per-row OOS publication reset, and successfully finalized
+  owners currently retain their payload allocations until destruction. Preserve
+  logical-row publication reset separately from whether any values need insertion.
+- Explicit owner propagation reaches routing and duplicate probes, including
+  grouped Resolve, composite-key size/value helpers, and the separate cache
+  created for a function-index expression. Binding only the main attribute cache
+  would miss that expression path. Post-finalization index writers can keep their
+  ordinary disk-only access contract.
+
+Proposed direction, not yet accepted: keep preparation state with the existing
+row owner; let pending-aware attribute access receive a borrowed owner context
+and obtain memory values from that owner's retained payloads. Ordinary fetched
+and received records use the existing disk-reference parser. Finalization takes
+the owner, writes into the selected destination, and replaces the same stub
+fields in place. A pending placeholder must remain invalid as a stored OOS
+reference, and storage/transport checks must reject it without a new record type.
+Exact placeholder encoding and owner bookkeeping are downstream decisions.
+
+### Round 1 frontier
+
+Q1 — OPEN: Should the shared `RECDES` layout remain unchanged as well, with
+prepared-row consumers receiving the existing owner explicitly?
+Recommendation: yes. This confines the new preparation contract to callers that
+actually process a prepared row, at the cost of passing the owner through routing,
+duplicate probes, and their attribute/key helpers. Adding a transient field to
+`RECDES` would preserve some signatures but extend initialization/copy/lifetime
+obligations across generic storage descriptors. The exact affected source seams
+were checked by two read-only source investigations; this is static feasibility,
+not runtime proof. The main seams are `locator_insert_force`/`update_force`/
+`move_record`, `partition_find_partition_for_record`, `heap_attrinfo_read_dbvalues`,
+`heap_attrvalue_get_key`, `heap_midxkey_get_oos_extra_size`, grouped Resolve, and
+`heap_eval_function_index`. The existing owner is available at the prepare-side
+callers in locator force, duplicate probes, redistribution, and server loaddb.
+
+No ADR is created for the unsettled, reversible implementation choice. The
+repository's canonical vocabulary remains in `CONTEXT.md` as required by its
+domain-doc layout.
+
 ## Simplification interview reopened — 2026-10-06
 
 Work tracker: 279. Source baseline: `feat/oos-deferred-write`, `b5b5eacbb`, in

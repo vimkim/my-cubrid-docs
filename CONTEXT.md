@@ -32,6 +32,10 @@ _Avoid_: Stored OOS value when no value chain exists yet
 A reference to one serialized out-of-row attribute value, either retained in memory before insertion or held in a stored OOS value chain.
 _Avoid_: OOS OID when referring to both alternatives
 
+**OOS finalization**:
+The completion of a prepared row's pending OOS values as stored value chains belonging to its selected destination heap.
+_Avoid_: Routing when referring to completing storage after the destination has been selected
+
 ## OOS testcase campaign
 
 **Campaign acceptance**:
