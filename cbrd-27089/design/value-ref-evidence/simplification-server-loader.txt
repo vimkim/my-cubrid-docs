@@ -1,0 +1,83 @@
+Verified source: aecce0e1216a813771621c13112c8f27d43df22e (working tree tested before commit)
+
+[0mdirenv: loading ~/gh/cb/CBRD-27089-oos-deferred-write/.envrc
+Preset Mode: debug_gcc
+Install Dir: /home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc
+DB Dir: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/.cub-workenv/databases
+Build Dir: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc
+@ cubrid server start: oos_simple279
+++ cubrid server 'oos_simple279' is running.
+PASS bulk payload lifetime and 8MiB batching, 9MiB row, partition routing, child rejection and next load
+@ cubrid server stop: oos_simple279
+
+Server oos_simple279 notified of shutdown.
+This may take several minutes. Please wait.
+++ cubrid server stop: success
+
+## after-failure-load.log
+
+Start object loading.
+Total 1 object(s) inserted, 0 object(s) failed.
+
+## after-failure-value.log
+240000
+
+
+## after-rejection.log
+800
+
+
+## bulk-values.log
+600
+
+
+## bulk.log
+
+Start object loading.
+Total 600 object(s) inserted, 0 object(s) failed.
+
+## child-p0.log
+400
+
+
+## child-p1.log
+400
+
+
+## oversized-row.log
+
+Start object loading.
+Total 1 object(s) inserted, 0 object(s) failed.
+
+## oversized-value.log
+75497472
+
+
+## partition-root.log
+
+Start object loading.
+Total 800 object(s) inserted, 0 object(s) failed.
+
+## schema.log
+
+## wrong-child.log
+
+Start object loading.
+Total 0 object(s) inserted, 1 object(s) failed.
+Line 2:Appropriate partition does not exist.
+
+## Final loaddb log
+
+Start object loading.
+Total 1 object(s) inserted, 0 object(s) failed.
+
+*** Closing the database ***
+
+## Task database cleanup
+[0mdirenv: loading ~/gh/cb/CBRD-27089-oos-deferred-write/.envrc
+Preset Mode: debug_gcc
+Install Dir: /home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc
+DB Dir: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/.cub-workenv/databases
+Build Dir: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc
+"${MY_CUBRID:-$HOME/my-cubrid}/bin/cubrid-workenv-db" delete "$database"
+Deleted oos_simple279; any remaining files are preserved at /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/.cub-workenv/db/oos_simple279

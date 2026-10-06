@@ -1,5 +1,163 @@
 # PR7927 temporary OOS stub design interview
 
+## Simplification interview reopened — 2026-10-06
+
+Work tracker: 279. Source baseline: `feat/oos-deferred-write`, `b5b5eacbb`, in
+`/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write`. The user requests
+`grill-with-docs` because the delivered implementation remains too complicated.
+The implementation and verification history below does not establish acceptance
+of its readability. The user confirmed the implementation summary with "okay";
+the agreed simplification is committed as `aecce0e1216a813771621c13112c8f27d43df22e`
+in the existing source worktree.
+
+The existing in-place finalization and common memory/disk access decisions remain
+accepted unless explicitly revised. `REC_OOS_PENDING` is an implementation choice;
+removing it is not an accepted decision. Existing canonical terms remain in the
+repository's `CONTEXT.md`; no new terminology or ADR has been ratified.
+
+Round 1 resolved — user answered "1 yes 2 yes":
+
+1. What should win when a shorter patch conflicts with a simpler caller contract?
+   Accepted: minimize the state and ordering obligations a caller must
+   understand; assess the result with one explainable prepare/read/finalize flow.
+   A small owner object is acceptable if it reduces caller coordination.
+2. Are compact-record reuse, in-place stub replacement, and common memory/disk
+   access fixed constraints for this simplification, or open to reconsideration?
+   Accepted: retain compact-record reuse, in-place stub replacement, and common
+   memory/disk access as constraints of this simplification.
+
+Read-only delegated investigation found separate record/payload ownership,
+nullable eager/deferred serialization, and a metadata/record rescan during
+finalization. The loader shares retained payload ownership across queued rows;
+consolidating ownership must preserve queue memory accounting and lifetimes.
+`REC_OOS_PENDING` currently authorizes memory-reference decoding, selects
+finalization, and prevents transport/storage of pending records. Its removal
+requires replacing all three responsibilities, not merely changing a stub tag.
+
+Round 2 resolved — user answered "yes":
+
+3. May already-inline workspace records remain inline through routing and undergo
+   OOS conversion only after the destination is known, while DB_VALUE producers
+   continue using compact pending records? Accepted: yes, provided both
+   paths share the applicable conversion logic and destination-owned write rules.
+   This does not permit rebuilding an already-prepared compact record. Determine
+   the exact integration ownership of PR7925 separately; no related-PR edits are
+   authorized by this question.
+
+Evidence: current `locator_prepare_client_row` (`locator_sr.c:6640`) adapts client
+records before routing through `heap_prepare_oos_record` (`heap_file.c:13291`).
+Related PR7925's `locator_oos_demote_workspace_record` (`locator_sr.c:4946` in
+`CBRD-27424-oos-loaddb-sa`) instead converts SA workspace records after routing,
+preserving CHN and avoiding repeated LOB copying. The two PRs have not been tested
+together. This establishes an alternative to investigate, not proven equivalence
+across all incoming-record paths.
+
+Round 3 — ownership direction accepted after clarification:
+
+4. Should each prepared row own its compact record and retained OOS payloads as
+   one movable unit, including when queued by the loader? The user initially
+   did not understand the loader/payload-pool terminology and requested Socratic
+   dialogue. After explaining that the current shared list saves its length to
+   release only a failed row's newly retained values, the user answered
+   "아하 그러면 나쁘지 않지." This accepts the direction of keeping a row and its
+   retained values together so discarding the row releases both. It does not yet
+   settle the full owner API or whether the owner performs finalization.
+   Proposed boundary:
+   ordinary readers keep a borrowed RECDES view, and the owner handles lifetime
+   and pending-entry bookkeeping. The tradeoff is per-row ownership metadata
+   instead of the loader's shared payload pool. This is a proposed ownership
+   boundary, not approval of a general row framework or a specific class API.
+   Exact copyarea integration and finalization plumbing remain under inspection.
+
+Current loader evidence (`load_server_loader.cpp:741–771`): callers save a payload
+pool mark, prepare a separate record, push that record into the queue, discard
+payloads back to the mark if queue insertion fails, and account separately for
+record and payload memory. A consolidated owner should make failed queue insertion
+clean up the whole row while preserving the queue's retained-memory bound.
+
+The next Socratic question asked whether this unit should only manage memory
+lifetime or also perform destination-owned writes and stub replacement. The user
+answered "최대한 간단하게 가자." Treat this as delegation of the routine interface
+choice under the agreed simplicity objective. Choose the smaller lifetime-only
+owner first: reuse the existing finalizer and common value reader, retaining
+the finalizer's schema/record scan rather than adding stored patch metadata and
+new context plumbing. This deliberately limits the first simplification; it is
+not a claim that every existing abstraction is necessary.
+
+Implementation summary confirmed by the user:
+
+- One row owner keeps its compact record and selected serialized OOS values
+  alive together; ordinary reads use the existing RECDES and common value access.
+- The loader queues the same owner and accounts for its retained bytes, removing
+  shared-pool rollback marks and paired lifetime management.
+- Existing finalization writes into the selected destination and patches the
+  compact record in place. Preserve its storage/transport provenance checks;
+  removing REC_OOS_PENDING is not a simplification requirement.
+- Already-inline workspace rows can route before conversion. Implement the
+  agreed conversion boundary in this task's worktree, checking PR7925 overlap
+  without editing or publishing that separate branch.
+- Preserve existing supported paths, rollback/LOB/header behavior and bulk latch
+  ordering. Validate the simplified code before claiming completion.
+
+Implemented result:
+
+- `heap_pending_record` replaces the payload-only owner. It owns the existing
+  `record_descriptor` plus selected serialized values, supports allocation-stable
+  moves, and reports their combined memory use. Failed preparation or enqueueing
+  is cleaned by destroying the row; callers no longer save shared-pool positions.
+- DB_VALUE force and duplicate probes prepare directly into this owner instead
+  of using LC_COPYAREA as temporary allocation. Redistribution and loader queues
+  use the same lifetime model. Common readers and the existing finalizer remain.
+- Copy-area insert/update passes its input origin through partition movement;
+  conversion occurs after destination selection, in both server and standalone
+  paths. Stored OOS references arriving in copy areas still get fresh
+  destination-owned chains. The input representation ID is restored after routing
+  to preserve the caller's image without copying its large values before routing.
+- PR7925's separate branch is unchanged. Its SA workspace conversion overlaps
+  this destination conversion and must be reconciled once when integrating the
+  branches; no combined-PR runtime verification is claimed.
+- Initial local verification exposed an invalid empty-record assertion, corrected
+  by initializing the row descriptor before preparation. A CMake compiler-change
+  cache reset also dropped unit-test options and left old test executables; a
+  second configuration with the same debug_gcc preset restored the options.
+  Both issues were resolved before the successful verification below.
+
+Further source evidence: ordinary DB_VALUE force paths use LC_COPYAREA only as
+temporary record allocation (`locator_sr.c:7800–7845`), so a record owner could
+remove that bookkeeping. Finalization still needs a deliberate interface choice:
+keeping its RECDES-only interface retains the metadata rescan, whereas using
+per-row pending-entry metadata requires passing that context to the post-routing
+write boundary. Absolute patch pointers are unsafe across MVCC header changes
+(`locator_sr.c:5920`, `object_representation_sr.c:4424–4434`); VOT locations or
+body-relative offsets can preserve the in-place constraint without caller repair.
+
+Verification of the working tree subsequently committed as `aecce0e12`:
+
+- Debug GCC build/install succeeded with unit-test instrumentation enabled.
+  [Configuration](value-ref-evidence/simplification-configure.txt),
+  [build](value-ref-evidence/simplification-build.txt).
+- Configured CTest: **35/35 passed**, 212.16 seconds. The SQL show suite includes
+  the new internal-workspace partition INSERT/movement case. The common-read
+  test now destroys the complete pending-row owner before reading copied finalized
+  record bytes, proving that persisted references no longer depend on retained
+  memory. [CTest output](value-ref-evidence/simplification-ctest.txt).
+- Real server loader: 600 × 20KB values, one 9MiB value, 800 partitioned rows
+  split 400/400, incorrect-child rejection, and a successful subsequent load.
+  Reused `value-ref-evidence/check-server-loader.py` against fresh task-owned
+  database `oos_simple279`; stopped and deleted the database afterward.
+  [Loader output and cleanup](value-ref-evidence/simplification-server-loader.txt).
+- Project formatters were idempotent and `git diff --check` passed. Source changes
+  are committed; original `cubrid-cci`, `cubrid-jdbc`, and `repro.sh` changes remain
+  untouched. No remote push or local integration merge performed.
+
+Limits: the separate PR7925 branch was inspected but not merged or tested together
+with this revision. Full SQL/shell/medium CI and HA qualification were not run.
+These local checks establish the simplification's tested behavior, not complete
+OOS merge readiness. The source integration base remains `feature/oos-merge` at
+`fb567a629cdb390fff920542173fa36f454c74a0`.
+
+The sections below retain the earlier interview and implementation history.
+
 Status: design direction and common read contract agreed; awaiting final shared-understanding confirmation before implementation. Exact encoding/provenance are implementation proof obligations. Design discussion only; no engine implementation authorized by this interview.
 Work tracker: 276. Source inspected: `feat/oos-deferred-write`, `9232f111a`.
 
