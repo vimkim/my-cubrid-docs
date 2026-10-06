@@ -1,6 +1,6 @@
 # PR #7927 alternative OOS insertion — design interview
 
-Status: Q1–Q3 settled; awaiting concrete POC design agreement
+Status: Q1–Q4 settled; POC implementation in progress
 
 ## Objective
 
@@ -67,7 +67,7 @@ Work item: 271. 기존 PR #7927의 CI 분석 item 242와 다른 작업이다. �
 
 이 방향에는 반대 비용이 있다. VOT·header 재조립과 선택 정책의 공통화가 필요하므로 기존 prepared-row보다 복잡해질 수도 있다. POC가 동작해도 전체 구현이 더 단순해지지 않으면 채택하지 않는 것이 추천이다. 제한된 지원 범위 때문에 짧아 보이는 효과는 단순화로 계산하지 않는다.
 
-사용자 답변: 미응답. 구현 전 이 구체적인 실험 방향의 공통 이해를 확인한다.
+사용자 답변: “그렇게 하자.”로 실험 방향 수락. 코드 단순화를 목적으로 구현·검증을 진행한다. 추가 요청으로 부모/자식 heap 호출 순서의 팀장 보고용 [코드 근거 보고서](../../cbrd-27089/CBRD-27089-partition-insert-call-flow_fb567a629_codex.md)를 작성했다.
 
 ## Recording policy
 
