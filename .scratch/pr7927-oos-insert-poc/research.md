@@ -59,6 +59,16 @@ locator_attribute_info_force
 - stub 기록과 LOB 처리: [`heap_file.c:13540`](https://github.com/CUBRID/cubrid/blob/fb567a629cdb390fff920542173fa36f454c74a0/src/storage/heap_file.c#L13540); CHN/increment: [`13314`](https://github.com/CUBRID/cubrid/blob/fb567a629cdb390fff920542173fa36f454c74a0/src/storage/heap_file.c#L13314).
 - publication reset: [`heap_oos.cpp:611`](https://github.com/CUBRID/cubrid/blob/fb567a629cdb390fff920542173fa36f454c74a0/src/storage/heap_oos.cpp#L611); replication 소비: [`locator_sr.c:8174`](https://github.com/CUBRID/cubrid/blob/fb567a629cdb390fff920542173fa36f454c74a0/src/transaction/locator_sr.c#L8174).
 
+## Follow-up: representation and common write boundary
+
+두 번의 DB_VALUE 직렬화는 필수가 아니다. 기존 [`heap_record_replace_oos_oids()`](https://github.com/CUBRID/cubrid/blob/fb567a629cdb390fff920542173fa36f454c74a0/src/storage/heap_oos.cpp#L344)는 VOT와 저장 바이트로 OOS stub을 원래 값으로 확장한다. 반대 방향으로 inline 값 구간을 OOS에 쓰고 stub으로 교체하는 구현을 검토할 수 있다. 기존 함수는 확장 전용이므로 그대로 재사용할 수 있다는 뜻은 아니다.
+
+이 후보는 header의 CHN/MVCC 정보와 fixed/NULL bitmap을 보존하고 VOT 폭·정렬·마지막 entry를 올바르게 재구성해야 한다. [`heap_attrinfo_determine_disk_layout()`](https://github.com/CUBRID/cubrid/blob/fb567a629cdb390fff920542173fa36f454c74a0/src/storage/heap_file.c#L12800)의 STORAGE 정책과 선택 순서를 복제하면 코드 단순화 목적에 어긋난다. 길이 수집과 선택 정책을 분리해 공유 가능한지 구현량으로 평가할 필요가 있다.
+
+공통 OOS 기록 함수를 부를 후보 지점은 INSERT의 목적지 선택 뒤 heap context 생성 전, 같은 heap UPDATE의 목적지 선택 뒤 index 갱신 전이다. 이동 UPDATE는 목적지 INSERT 경로를 사용한다. UPDATE가 full-inline 행을 유지하면 index reader가 반드시 OOS finalization 뒤에만 동작해야 하는 것은 아니지만, 앞서 완성하는 경계가 소비자 계약을 단순하게 유지하는 후보다.
+
+SQL 호출부의 명시적인 opt-in으로 제한된 실험을 격리할 수 있다. 기존 완성된 replica 행이나 주소 선할당을 pending 행으로 추측해서는 안 된다. 이 opt-in plumbing도 복잡도 비교에 포함한다. 정상 INSERT/UPDATE 일부만 구현하고 loader·복제·REPLACE/ODKU·재평가 경로가 빠진 결과를 PR #7927 전체보다 단순하다고 단정하지 않는다.
+
 ## Relationship to earlier designs
 
 기존 PR #7927의 `heap_prepared_row`가 유일한 해결책이라는 결론은 이 조사에서 도출되지 않는다. 새 POC는 root의 초기 기록을 피하면서, 기존 reader를 유지할 수 있는 더 좁은 계약이 가능한지 검토한다.
