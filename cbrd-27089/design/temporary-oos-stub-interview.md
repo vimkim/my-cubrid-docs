@@ -1,6 +1,6 @@
 # PR7927 temporary OOS stub design interview
 
-Status: in-place finalization and full replacement scope accepted; accessor provenance remains open. Design discussion only; no engine implementation authorized by this interview.
+Status: in-place finalization and full replacement scope accepted; user proposes discriminated memory/disk reference with a uniform interface. Exact placement and provenance remain open. Design discussion only; no engine implementation authorized by this interview.
 Work tracker: 276. Source inspected: `feat/oos-deferred-write`, `9232f111a`.
 
 ## User objective
@@ -58,3 +58,19 @@ Q3: allow an in-memory-only discriminator in the existing `RECDES.type`, while p
 Source evidence: `storage_common.h:226` has INT16 type; persisted slotted-page type is four bits (`slotted_page.h:90`). Pruning leaves type intact. Current INSERT normalizes type only after finalization (`locator_sr.c:5086`). UPDATE movement passes the descriptor through to destination INSERT. Copies preserve type.
 
 Correctness obligations: locator copy-area macros do not initialize type (`locator.h:55`, `75`), so initialize it per incoming row; prohibit transient descriptors through generic pack/unpack (`record_descriptor.cpp:327`, `334`) or physical storage; leave persistent NULL-reference validation intact. Stable allocated payload addresses, owner lifetime and bulk retained-byte accounting remain mandatory. No global pointer registry is needed if descriptor provenance is enforced. This is source-supported feasibility, not executed proof.
+
+## User steering: discriminated memory/disk reference
+
+User challenges situational decoder behavior and proposes a discriminated union exposing one OOS value-access interface regardless of memory or disk storage. Favor this direction: decode the packed field once into a proposed `heap_oos_value_ref` with explicit memory and disk alternatives. Expose one `read_into` contract so callers share copying, error and value-decoding behavior. Keep `oos_read` as the physical disk-chain reader; the memory alternative copies retained serialized bytes into the requested destination.
+
+This supersedes Q3 as a choice of making callers inspect `RECDES.type`. Such a field could still be an internal provenance mechanism, but it is not a required user-facing interface or an accepted encoding decision. A discriminated union centralizes representation dispatch; it does not by itself establish validity/lifetime of a memory accessor decoded from bytes. Resolve that inside construction/validation rather than spreading state tests through partitioning and indexes.
+
+The runtime C++ tagged union is distinct from the packed 24-byte record representation: do not memcpy an ABI-sized union or std::variant into the stub. Existing persisted layout remains OID/length/stamp. Pending packed encoding can use a reserved representation only after invalid/corrupt disk and incoming bytes are prevented from constructing a trusted memory reference. Finalization converts each pending packed field to the existing disk representation in place.
+
+Revised Q3 recommendation: put the memory/disk union and common read operation at the heap attribute-access seam, preserve disk-only `oos_read`, and keep partition/index callers representation-agnostic. This scope avoids rewriting physical OOS storage APIs while solving the two real access modes. Exact tag encoding and memory-owner mechanics remain implementation design facts to investigate.
+
+### Round 3 frontier: common access contract
+
+Q4: should both alternatives expose the same copy-into-caller-buffer operation rather than memory returning borrowed bytes and disk returning allocated bytes? Recommend yes for initial redesign: use caller scratch where available and preserve the existing DB_VALUE copy/free contract. This keeps representation and ownership branching out of callers. Direct borrowed access can be considered later only if measurements justify complicating that contract.
+
+Source investigation confirms the proposed union can stay at heap Resolve, with size inspection, single reads and grouped reads consuming it. Grouped disk reads should preserve batching. No compilation/runtime experiment performed.
