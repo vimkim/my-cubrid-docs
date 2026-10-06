@@ -75,7 +75,7 @@ Q4: ACCEPTED by user "yes". Should both alternatives expose the same copy-into-c
 
 Source investigation confirms the proposed union can stay at heap Resolve, with size inspection, single reads and grouped reads consuming it. Grouped disk reads should preserve batching. No compilation/runtime experiment performed.
 
-## Shared-understanding summary awaiting confirmation
+## Shared-understanding summary confirmed by user
 
 - Build from the current `feature/oos-merge` in a fresh sibling worktree; preserve the existing PR worktree for comparison.
 - Build one compact RECDES with ordinary inline values and fixed-size pending OOS stubs; retain only selected serialized OOS values in a small owner (suggested name `heap_pending_oos_values`).
@@ -86,3 +86,13 @@ Source investigation confirms the proposed union can stay at heap Resolve, with 
 - Build and run proportionate focused/regression checks, review total diff against integration base, and commit the replacement before remote PR-head replacement. Use an expected-head force-with-lease; no remote mutation during this design interview.
 
 No architectural decision record is needed yet: no persisted format is changed and encoding remains a reversible implementation choice. Canonical vocabulary now records the resolved memory-versus-stored OOS concepts in `CONTEXT.md`.
+
+## Implementation in progress
+
+The user confirmed the shared-understanding summary and authorized implementation. The replacement is being built in `/home/vimkim/gh/cb/CBRD-27089-oos-value-ref`, branch `CBRD-27089-oos-value-ref`, from `fb567a629cdb390fff920542173fa36f454c74a0`. The original worktree and PR head remain preserved.
+
+The implementation uses `heap_pending_oos_values` for payload ownership and `heap_oos_value_ref` for memory/disk dispatch. Partition and index callers retain their ordinary RECDES interfaces. A local-only descriptor type permits pending stub decoding; incoming copy areas initialize a normal type, and storage/transport boundaries reject pending records. Finalization inserts all pending values before changing the existing stub slots. Verification is in progress; no remote replacement has occurred.
+
+## Verified replacement
+
+Source commit `f578cd0d0078eb026930380144ad503ab81bd040` passes the debug build and35/35 configured tests. A real server-loader fixture verifies retained payload lifetime across600 rows, an oversized9MiB row,800 partitioned rows, wrong-child rejection and next-load usability. See `value-ref-evidence/` for the fixture and captured results, and `value-ref-review.md` for review findings and resolutions. The source diff against the integration base is780 added/81 removed lines, compared with1152/311 in the previous PR design.

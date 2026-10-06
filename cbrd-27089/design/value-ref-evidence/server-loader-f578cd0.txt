@@ -1,0 +1,52 @@
+Source: f578cd0d0078eb026930380144ad503ab81bd040
+PASS: 600x20KB bulk, 9MiB single row,800x20KB partition rows (400 per child), wrong-child rejection, next-load usability.
+
+=== bulk ===
+
+Start object loading.
+Total 600 object(s) inserted, 0 object(s) failed.
+
+=== bulk-values ===
+600
+
+
+=== oversized-row ===
+
+Start object loading.
+Total 1 object(s) inserted, 0 object(s) failed.
+
+=== oversized-value ===
+75497472
+
+
+=== partition-root ===
+
+Start object loading.
+Total 800 object(s) inserted, 0 object(s) failed.
+
+=== child-p0 ===
+400
+
+
+=== child-p1 ===
+400
+
+
+=== wrong-child ===
+
+Start object loading.
+Total 0 object(s) inserted, 1 object(s) failed.
+Line 2:Appropriate partition does not exist.
+
+=== after-rejection ===
+800
+
+
+=== after-failure-load ===
+
+Start object loading.
+Total 1 object(s) inserted, 0 object(s) failed.
+
+=== after-failure-value ===
+240000
+
