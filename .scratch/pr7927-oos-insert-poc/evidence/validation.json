@@ -1,0 +1,88 @@
+{
+  "date": "2026-10-06",
+  "base": "fb567a629cdb390fff920542173fa36f454c74a0",
+  "source_commit": "b81d943d2f1c07996d38619ebfd2ad67e71116f4",
+  "preset": "debug_gcc",
+  "build_and_install": "PASS",
+  "ctest": {
+    "result": "35/35 PASS",
+    "seconds": 187.12,
+    "test_results": [
+      " 1/35 Test  #1: oos_setup_db .....................   Passed    0.03 sec",
+      " 2/35 Test  #7: test_oos .........................   Passed   11.67 sec",
+      " 3/35 Test  #8: test_oos_delete ..................   Passed    5.43 sec",
+      " 4/35 Test  #9: test_oos_identity_stamp ..........   Passed   26.64 sec",
+      " 5/35 Test #10: test_oos_eager_diagnostics .......   Passed   10.59 sec",
+      " 6/35 Test #12: test_oos_remove_file .............   Passed    0.12 sec",
+      " 7/35 Test #13: test_oos_bestspace ...............   Passed    0.18 sec",
+      " 8/35 Test #14: test_oos_growth_sweep ............   Passed    0.18 sec",
+      " 9/35 Test #18: test_oos_server ..................   Passed   33.34 sec",
+      "10/35 Test #19: test_oos_delete_server ...........   Passed   10.31 sec",
+      "11/35 Test #20: test_oos_remove_file_server ......   Passed    1.30 sec",
+      "12/35 Test #21: test_oos_mock_vacuum_server ......   Passed    8.30 sec",
+      "13/35 Test #22: test_oos_vacuum_server ...........   Passed   19.30 sec",
+      "14/35 Test #23: test_oos_real_vacuum_server ......   Passed   30.32 sec",
+      "15/35 Test #24: test_oos_sql_crud ................   Passed    0.35 sec",
+      "16/35 Test #25: test_oos_sql_ddl .................   Passed    0.34 sec",
+      "17/35 Test #26: test_oos_sql_delete ..............   Passed    0.37 sec",
+      "18/35 Test #27: test_oos_sql_boundary ............   Passed    0.37 sec",
+      "19/35 Test #28: test_oos_sql_update_delete .......   Passed    0.35 sec",
+      "20/35 Test #29: test_oos_sql_txn .................   Passed    0.35 sec",
+      "21/35 Test #30: test_oos_sql_bigone ..............   Passed    0.27 sec",
+      "22/35 Test #31: test_oos_sql_eager_cleanup .......   Passed    0.61 sec",
+      "23/35 Test #32: test_oos_sql_storage .............   Passed    0.52 sec",
+      "24/35 Test #33: test_oos_sql_show ................   Passed   17.23 sec",
+      "25/35 Test #34: test_oos_sql_visible_version .....   Passed    0.26 sec",
+      "26/35 Test  #2: oos_cleanup_db ...................   Passed    0.33 sec",
+      "27/35 Test  #3: oos_setup_no_logging_db ..........   Passed    3.53 sec",
+      "28/35 Test #11: test_oos_no_logging ..............   Passed    0.15 sec",
+      "29/35 Test  #4: oos_cleanup_no_logging_db ........   Passed    0.18 sec",
+      "30/35 Test  #5: oos_setup_recovery_db ............   Passed    3.34 sec",
+      "31/35 Test #35: test_oos_sql_crash_recovery ......   Passed    0.56 sec",
+      "32/35 Test  #6: oos_cleanup_recovery_db ..........   Passed    0.20 sec",
+      "33/35 Test #15: test_oos_record_flags ............   Passed    0.02 sec",
+      "34/35 Test #16: test_byte_span_writer ............   Passed    0.02 sec",
+      "35/35 Test #17: test_oos_tde_gate ................   Passed    0.02 sec"
+    ],
+    "qualification": "Engine logic tested by full CTest; later engine edits were comment/declaration wrapping only. Rebuilt and reran focused tests with stronger statement rollback assertions."
+  },
+  "focused": {
+    "result": "3/3 PASS",
+    "log": [
+      "[==========] Running 3 tests from 1 test suite.",
+      "[----------] Global test environment set-up.",
+      "[----------] 3 tests from OosSqlShow",
+      "[ RUN      ] OosSqlShow.DestinationOosParentChildAndMovingUpdate",
+      "[       OK ] OosSqlShow.DestinationOosParentChildAndMovingUpdate (45 ms)",
+      "[ RUN      ] OosSqlShow.DestinationOosInlinePartitionKeyAndNulls",
+      "[       OK ] OosSqlShow.DestinationOosInlinePartitionKeyAndNulls (81 ms)",
+      "[ RUN      ] OosSqlShow.DestinationOosPartialInsertRollbackAndNormalUpdate",
+      "[       OK ] OosSqlShow.DestinationOosPartialInsertRollbackAndNormalUpdate (16342 ms)",
+      "[----------] 3 tests from OosSqlShow (16469 ms total)",
+      "[----------] Global test environment tear-down",
+      "[==========] 3 tests from 1 test suite ran. (16571 ms total)",
+      "[  PASSED  ] 3 tests."
+    ]
+  },
+  "server_sql": {
+    "exit_code": 0,
+    "query_rows": [
+      "initial_values\t2",
+      "dba.poc_dest\t(0|195|2)\t1\t640\t641\t0\tNULL\tNULL\t0\t16344\t0\t0\t0\t0",
+      "dba.poc_dest\t(0|195|2)\t1\t640\t641\t0\tNULL\tNULL\t0\t16344\t0\t0\t0\t0",
+      "dba.poc_dest__p__p0\t(0|195|5)\t1\t768\t769\t1\t1\t960\t5\t16344\t4\t40132\t81720\t41588",
+      "dba.poc_dest__p__p1\t(0|195|7)\t1\t896\t897\t1\t1\t1024\t2\t16344\t1\t52\t32688\t32636",
+      "moved_uncommitted\t1",
+      "rollback_values\t1",
+      "moved_committed\t1",
+      "same_heap_update\t1",
+      "dba.poc_dest\t(0|195|2)\t1\t640\t641\t0\tNULL\tNULL\t0\t16344\t0\t0\t0\t0"
+    ],
+    "oracle": "Five labeled counts matched 2,1,1,1,1; all three parent diagnostic rows report no OOS; both child rows report distinct OOS files and positive physical record counts."
+  },
+  "scope_limitations": [
+    "REPLACE/ODKU, loader, HA/raw and separate MVCC reevaluation are not opted into the POC.",
+    "No equivalent-workload performance or peak-memory comparison against prepared-row.",
+    "Configured CTest coverage is not whole-corpus CI equivalence."
+  ]
+}

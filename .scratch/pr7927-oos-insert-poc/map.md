@@ -1,6 +1,6 @@
 # PR #7927 alternative OOS insertion — design interview
 
-Status: Q1–Q4 settled; POC implementation in progress
+Status: Q1–Q4 settled; bounded POC complete, awaiting review
 
 ## Objective
 
@@ -17,7 +17,7 @@ Work item: 271. 기존 PR #7927의 CI 분석 item 242와 다른 작업이다. �
 - 정확한 base: `fb567a629cdb390fff920542173fa36f454c74a0`. 생성 시 로컬 `feature/oos-merge`와 fetch한 `origin/feature/oos-merge`가 일치했다.
 - docs worktree/branch: `my-cubrid-docs-pr7927-insert-poc` / `docs/pr7927-insert-poc`.
 - `grill-with-docs`를 사용한다. 사실 조사는 agent가 수행하고, 설계 선택은 질문과 추천 답안을 함께 제시한다. 구현 경계가 합의될 때까지 코드 구현을 시작하지 않는다.
-- 현재 수행한 것은 소스 조사와 worktree 생성이다. 빌드·DB 초기화·엔진 수정·실행 검증은 아직 없다.
+- POC 소스 커밋: `b81d943d2f1c07996d38619ebfd2ad67e71116f4`. Debug 빌드·설치, CTest 35/35, 보강한 집중 테스트 3/3, 실제 서버 SQL 검증을 완료했다. [결과와 한계](../../cbrd-27089/CBRD-27089-inline-recdes-poc_b81d943d2_codex.md)를 기록했다.
 
 ## Design tree
 
@@ -28,13 +28,14 @@ Work item: 271. 기존 PR #7927의 CI 분석 item 242와 다른 작업이다. �
 ├─ Q1: 원칙 고정, 함수 위치 유연 [확정: yes yes]
 ├─ Q2: 핵심 경로의 제한된 POC [확정: yes yes]
 ├─ Q3: 코드 단순화 우선, 정확성과 비용 확인 [확정]
-└─ Q1/Q2에 따른 다음 결정
-   ├─ 목적지 확정 전 값의 표현과 수명
-   ├─ normal/root/child 및 UPDATE 이동의 분기 기준
-   ├─ 완료된 OOS 행·주소 선할당·내부 행의 처리
-   ├─ 기존 부수 효과와 오류/롤백 경계 유지
-   ├─ 검증 oracle, 비교 대상과 POC 수용 기준
-   └─ 공유된 설계 이해 확인 → 구현 및 실행 검증
+└─ Q4: full-inline RECDES 실험 [확정 및 실행 완료]
+   ├─ 기존 copyarea 소유, 동기 호출 동안 기존 attrinfo를 빌림
+   ├─ 목적지 선택 뒤 INSERT/같은 heap UPDATE에서 공통 OOS 함수 호출
+   ├─ moving UPDATE는 목적지 INSERT로 위임하고 반환
+   ├─ SQL opt-in으로 raw/loader/HA/REPLACE/ODKU 입력 제외
+   ├─ 기존 선택 정책 재사용, 바이트를 같은 버퍼에서 축소
+   ├─ 값·소유 heap·statement/transaction rollback·서버 UPDATE 검증 완료
+   └─ 전체 PR 교체 채택은 미결정: 제한된 POC를 리뷰 대상으로 유지
 ```
 
 ## Round 1
