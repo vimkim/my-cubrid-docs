@@ -24,6 +24,14 @@ _Avoid_: Reclamation eligibility when referring only to identity matching
 The condition that an out-of-row value may be removed without invalidating a value still required by transaction visibility, rollback, or recovery. This is distinct from correctly identifying the value to remove.
 _Avoid_: Identity safety when referring to permission to reclaim
 
+**Pending OOS value**:
+An attribute value selected for out-of-row storage whose value chain has not yet been inserted into its destination heap's OOS file.
+_Avoid_: Stored OOS value when no value chain exists yet
+
+**OOS value reference**:
+A reference to one serialized out-of-row attribute value, either retained in memory before insertion or held in a stored OOS value chain.
+_Avoid_: OOS OID when referring to both alternatives
+
 ## OOS testcase campaign
 
 **Campaign acceptance**:

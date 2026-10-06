@@ -1,6 +1,6 @@
 # PR7927 temporary OOS stub design interview
 
-Status: in-place finalization and full replacement scope accepted; user proposes discriminated memory/disk reference with a uniform interface. Exact placement and provenance remain open. Design discussion only; no engine implementation authorized by this interview.
+Status: design direction and common read contract agreed; awaiting final shared-understanding confirmation before implementation. Exact encoding/provenance are implementation proof obligations. Design discussion only; no engine implementation authorized by this interview.
 Work tracker: 276. Source inspected: `feat/oos-deferred-write`, `9232f111a`.
 
 ## User objective
@@ -30,7 +30,7 @@ Update canonical `CONTEXT.md` only after terminology is agreed. No ADR yet: enco
 
 ## Round 1 frontier
 
-1. Self-contained access: original question remains open. User clarified a mandatory constraint: reuse the built RECDES and overwrite its OOS inline stubs in place with real OOS references. This is feasible with either accessor design and does not settle pointer versus context. Recommend self-contained access conditionally on an enforceable trusted transient-record boundary.
+1. Self-contained access: superseded by the agreed uniform memory/disk reference direction. User clarified a mandatory constraint: reuse the built RECDES and overwrite its OOS inline stubs in place with real OOS references. This is feasible with either accessor design and does not settle pointer versus context. Recommend self-contained access conditionally on an enforceable trusted transient-record boundary.
 2. Replacement scope: ACCEPTED by user Q2 "yes": replace prepared-row use across existing supported PR paths, including UPDATE movement, duplicate probes, loader and HA.
 
 ## Subsequent questions and proof obligations
@@ -53,7 +53,7 @@ Live read-only checks: PR7927 targets `feature/oos-merge`; its head is `vimkim/c
 
 ## Round 2 frontier: transient descriptor provenance
 
-Q3: allow an in-memory-only discriminator in the existing `RECDES.type`, while preserving the descriptor structure, the allocated record buffer, length and VOT? Recommend yes. A locally prepared pending record may use a NULL-head/length/accessor temporary field and shared readers branch on the trusted descriptor discriminator. After successful destination insertion, overwrite the same 24-byte fields with ordinary chain references and restore the normal descriptor type before heap storage. Encoding details remain to be verified.
+Historical Q3 (superseded by the union proposal, not separately accepted): allow an in-memory-only discriminator in the existing `RECDES.type`, while preserving the descriptor structure, the allocated record buffer, length and VOT? Recommend yes. A locally prepared pending record may use a NULL-head/length/accessor temporary field and shared readers branch on the trusted descriptor discriminator. After successful destination insertion, overwrite the same 24-byte fields with ordinary chain references and restore the normal descriptor type before heap storage. Encoding details remain to be verified.
 
 Source evidence: `storage_common.h:226` has INT16 type; persisted slotted-page type is four bits (`slotted_page.h:90`). Pruning leaves type intact. Current INSERT normalizes type only after finalization (`locator_sr.c:5086`). UPDATE movement passes the descriptor through to destination INSERT. Copies preserve type.
 
@@ -71,6 +71,18 @@ Revised Q3 recommendation: put the memory/disk union and common read operation a
 
 ### Round 3 frontier: common access contract
 
-Q4: should both alternatives expose the same copy-into-caller-buffer operation rather than memory returning borrowed bytes and disk returning allocated bytes? Recommend yes for initial redesign: use caller scratch where available and preserve the existing DB_VALUE copy/free contract. This keeps representation and ownership branching out of callers. Direct borrowed access can be considered later only if measurements justify complicating that contract.
+Q4: ACCEPTED by user "yes". Should both alternatives expose the same copy-into-caller-buffer operation rather than memory returning borrowed bytes and disk returning allocated bytes? Recommend yes for initial redesign: use caller scratch where available and preserve the existing DB_VALUE copy/free contract. This keeps representation and ownership branching out of callers. Direct borrowed access can be considered later only if measurements justify complicating that contract.
 
 Source investigation confirms the proposed union can stay at heap Resolve, with size inspection, single reads and grouped reads consuming it. Grouped disk reads should preserve batching. No compilation/runtime experiment performed.
+
+## Shared-understanding summary awaiting confirmation
+
+- Build from the current `feature/oos-merge` in a fresh sibling worktree; preserve the existing PR worktree for comparison.
+- Build one compact RECDES with ordinary inline values and fixed-size pending OOS stubs; retain only selected serialized OOS values in a small owner (suggested name `heap_pending_oos_values`).
+- Use an explicit memory/disk reference with one size/read-into-buffer interface at heap attribute access. Keep storage-level `oos_read` disk-only. Partition, duplicate/index and grouped readers use this common abstraction.
+- After destination selection, insert pending values into that heap's OOS file and overwrite the same stub fields in place with real OID/length/stamp. Preserve record buffer, length and offsets during finalization.
+- Replace prepared-row machinery across the current PR's supported paths, preserving serialization/LOB effects, ownership/rollback/replication and bulk-latch ordering.
+- Prove trusted construction and stable owner lifetime centrally. Do not let disk/client bytes directly authorize memory dereferences or let pending stubs reach storage/transport. Select the smallest correct internal encoding; reopen discussion if it requires broad descriptor/API changes or loses the intended simplicity.
+- Build and run proportionate focused/regression checks, review total diff against integration base, and commit the replacement before remote PR-head replacement. Use an expected-head force-with-lease; no remote mutation during this design interview.
+
+No architectural decision record is needed yet: no persisted format is changed and encoding remains a reversible implementation choice. Canonical vocabulary now records the resolved memory-versus-stored OOS concepts in `CONTEXT.md`.
