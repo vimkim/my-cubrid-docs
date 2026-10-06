@@ -23,3 +23,9 @@ Update PR7927's body with the reviewed body file. No title, draft state, comment
 ## Verification status
 
 Exact-source debug build and CTest passed35/35 (220.73 seconds). Real server loader passed bulk/lifetime/budget, oversized-row, partition routing, wrong-child rejection and next-load checks. Both spec review findings were corrected and rereviewed. This context does not authorize publication of the body.
+
+## Execution record
+
+The separately authorized source replacement succeeded with an explicit expected-old-head force-with-lease. GitHub confirms PR7927 head `f578cd0d0078eb026930380144ad503ab81bd040`; the PR remains open and draft. The source task worktree is clean. The previous local branch/worktree remains at `9232f111a7e7b6c71dbfa451db2812ae14766041`, including its unrelated submodule and script changes. The temporary server-loader database was stopped and deleted through the owned-database lifecycle.
+
+The GitHub body has not been changed. Publication of the prepared description awaits the user's review confirmation.
