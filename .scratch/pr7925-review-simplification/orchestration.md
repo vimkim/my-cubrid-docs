@@ -217,3 +217,11 @@ source identities, build/formatter logs, the first raw-copyarea red receipt,
 its origin-repair green receipt, the failed broader baseline and actual XML
 case counts. Failing fixture data remains under the paths printed by its logs.
 The agent source/worktree and all original user worktrees remain separate.
+
+
+A [temporary-object transplant check](evidence/combined-base/equal-tree-squash-transplant.json)
+simulated one dependency squash with exactly the `4be72fc20` tree over the
+common baseline. Replaying the four post-boundary commits through `b59f243fd`
+produced zero conflicts and the exact private tree, with no dependency commits
+replayed. No source/ref/worktree was changed. Actual later source changes still
+require their own comparison and verification.
