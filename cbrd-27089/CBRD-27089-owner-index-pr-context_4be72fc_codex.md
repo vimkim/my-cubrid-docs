@@ -1,6 +1,6 @@
 # PR7927 owner-index publication context
 
-Status: prepared for review; publication has not been authorized.
+Status: publication authorized; attempt started; PR write not yet performed.
 Prepared: 2026-10-07. Work-tracker: 295. Agent: codex.
 Current entry point: [CBRD-27089](README.md).
 
@@ -150,5 +150,23 @@ OOS는 큰 컬럼 값을 행 밖에 저장하고, 행에는 값을 찾을 참조
 
 ## Publication attempt and results
 
-No publication attempt has started. No source push, PR update, remote reply,
-CI trigger or docs integration/push was performed during preparation.
+Preparation performed no remote writes or integration. The user subsequently
+approved the saved body unchanged, preservation of title/ready status, local docs
+rebase and fast-forward integration (including execution records), and merged-task
+cleanup. Full exact-head CI and available-evidence analysis were separately
+requested under work-tracker 242. Reviewer replies remain local drafts.
+
+### Attempt 2026-10-07
+
+- Started: `2026-10-07T08:35:01.395373+00:00`.
+- Approved body SHA-256: `1e04627e7f1bee840e9f02b1f5f4a9cb3af739a7bc1563576fe024ab93464064` (exact file bytes).
+- Pre-write GitHub body SHA-256: `c404b1756f7382ac97024bdd276d9d04ff8e08f06ea8d958468a0d1ea1669424` (decoded UTF-8 body).
+- Reconciled source: local HEAD and remote PR head both `4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c`.
+  The already-published source was observed before this confirmation; no source
+  push is necessary or performed by this attempt.
+- Target remains PR7927, `vimkim/cubrid:feat/oos-deferred-write` to
+  `CUBRID/cubrid:feature/oos-merge`, OPEN and ready for review. Title unchanged.
+- Docs task successfully rebased onto clean local `main` at `5b2a98ba7cc1cc9939a4e0c81c4b81c3ede19bd1`.
+- Material checker passed and approved body fingerprint matched. PR write and
+  post-write verification remain pending at this attempt record.
+- No docs remote push or reviewer reply is authorized by this publication.
