@@ -1,0 +1,27 @@
+1: 
+4: cbrd_27064-1 : OK  insert overflow regression
+5: cbrd_27064-2 : NOK
+6: ===== delete overflow (type=2 expected=700) =====
+7: EXTRACT_START: start_lsa=407575766277039475 waited=3s target_type=2
+8: EXTRACT_ERROR: rc=-10 target=23
+9: TARGET_COUNT: 23/700 type=2
+10: DML_TOTAL: 178
+11: INSERT_COUNT: 155
+12: UPDATE_COUNT: 0
+13: DELETE_COUNT: 23
+14: EXTRACTOR_RC=1 (124=hang/timeout)
+15: CORRUPTION=0  TARGET_COUNT=23/700
+16: cbrd_27064-3 : NOK
+17: ===== update overflow round 1/3 (type=1 expected=2400) =====
+18: EXTRACT_START: start_lsa=911978924542539255 waited=14s target_type=1
+19: EXTRACT_ERROR: rc=-10 target=0
+20: TARGET_COUNT: 0/2400 type=1
+21: DML_TOTAL: 1
+22: INSERT_COUNT: 1
+23: UPDATE_COUNT: 0
+24: DELETE_COUNT: 0
+25: EXTRACTOR_RC=1 (124=hang/timeout)
+26: CORRUPTION=0  TARGET_COUNT=0/2400
+25975: + extractor_rc=0
+26043: + extractor_rc=1
+26114: + extractor_rc=1

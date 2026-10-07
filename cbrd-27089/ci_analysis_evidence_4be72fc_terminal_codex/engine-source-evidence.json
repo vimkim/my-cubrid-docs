@@ -1,0 +1,101 @@
+{
+  "head": "4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c",
+  "base": "fb567a629cdb390fff920542173fa36f454c74a0",
+  "excerpts": [
+    {
+      "path": "src/loaddb/load_server_loader.cpp",
+      "commit": "4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c",
+      "blob": "21faf201ce845936674432cc923be69021427116",
+      "excerpts": [
+        {
+          "first_line": 716,
+          "last_line": 774,
+          "text": "    if (attr_index < attr_size)\n      {\n\ter_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_LDR_MISSING_ATTRIBUTES, 2, attr_size, attr_index);\n\tm_error_handler.on_syntax_failure ();\n\treturn;\n      }\n  }\n\n  void\n  server_object_loader::finish_line ()\n  {\n    if (m_session.is_failed () || !m_scancache_started)\n      {\n\treturn;\n      }\n    if (!m_session.get_args ().syntax_check)\n      {\n\tif (m_error_handler.current_line_has_error ())\n\t  {\n\t    m_error_handler.set_error_on_current_line (false);\n\t  }\n\telse\n\t  {\n\t    heap_pending_record record;\n\t    if (heap_attrinfo_prepare_record (m_thread_ref, &m_attrinfo, nullptr, &record, false) != S_SUCCESS)\n\t      {\n\t\tm_error_handler.on_failure ();\n\t\tm_error_handler.set_error_on_current_line (false);\n\t\tclear_db_values ();\n\t\treturn;\n\t      }\n\t    const std::size_t record_bytes = record.retained_bytes ();\n\t    try\n\t      {\n\t\tm_recdes_collected.push_back (std::move (record));\n\t      }\n\t    catch (const std::bad_alloc &)\n\t      {\n\t\ter_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_OUT_OF_VIRTUAL_MEMORY, 1, record_bytes);\n\t\tm_error_handler.on_failure ();\n\t\tm_error_handler.set_error_on_current_line (false);\n\t\tclear_db_values ();\n\t\treturn;\n\t      }\n\t    m_retained_bytes += record_bytes;\n\t    // Bound the queue by both compact records and out-of-row payloads.\n\t    // A single large input may exceed the limit and is flushed immediately.\n\t    constexpr std::size_t retained_limit = 8 * 1024 * 1024;\n\t    if (m_retained_bytes + m_recdes_collected.capacity () * sizeof (heap_pending_record) >= retained_limit)\n\t      {\n\t\tflush_records ();\n\t      }\n\t  }\n      }\n    int64_t lineno = m_thread_ref->m_loaddb_driver->get_scanner ().lineno () + 1;\n    m_session.stats_update_current_line (lineno);\n    clear_db_values ();\n  }\n"
+        },
+        {
+          "first_line": 776,
+          "last_line": 847,
+          "text": "  server_object_loader::flush_records ()\n  {\n    int force_count = 0;\n    int pruning_type = m_pruning_type;\n    int op_type = MULTI_ROW_INSERT;\n    bool insert_errors_filtered = false;\n    OID dummy_oid;\n    bool has_BU_lock = lock_has_lock_on_object (&m_scancache.node.class_oid, oid_Root_class_oid, BU_LOCK);\n\n    // First check if we have any errors set.\n    if (m_session.is_failed ())\n      {\n\treturn;\n      }\n\n    if (m_session.get_args ().syntax_check)\n      {\n\t// Safeguard as we do not need to insert any records during syntax check.\n\tassert (m_recdes_collected.empty ());\n\treturn;\n      }\n\n    // Add the classname to the scancache.\n    if (m_class_entry != NULL)\n      {\n\tm_scancache.node.classname = m_class_entry->get_class_name ();\n      }\n\n    if (m_recdes_collected.empty ())\n      {\n\t// Nothing to flush.\n\treturn;\n      }\n\n    insert_errors_filtered = has_errors_filtered_for_insert (m_session.get_args().m_ignored_errors);\n\n    /* The locator_multi_insert_force() sometimes creates the data page-based log record instead of the record-based log record. In HA, it means that the replication log cannot have an accurate LSA for each insert by loaddb. */\n    if (insert_errors_filtered || !HA_DISABLED () || pruning_type != DB_NOT_PARTITIONED_CLASS)\n      {\n\t// In case of possible errors filtered for insert we disable the unique optimization\n\t// A routed row uses a partition scan cache whose multi-row unique stats are discarded with the pruning\n\t// context, so partitioned classes report unique stats per row instead.\n\tconst int row_op_type = pruning_type == DB_NOT_PARTITIONED_CLASS ? op_type : SINGLE_ROW_INSERT;\n\tfor (size_t i = 0; i < m_recdes_collected.size (); i++)\n\t  {\n\t    log_sysop_start (m_thread_ref);\n\t    RECDES local_record = m_recdes_collected[i].get_recdes ();\n\t    OID destination = m_class_entry->get_class_oid ();\n\t    HFID destination_heap = m_scancache.node.hfid;\n\t    PRUNING_CONTEXT pruning;\n\t    partition_init_pruning_context (&pruning);\n\t    int error_code = locator_insert_force (m_thread_ref, &destination_heap, &destination,\n\t\t\t\t\t\t   &dummy_oid, &local_record, true, row_op_type,\n\t\t\t\t\t\t   &m_scancache,\n\t\t\t\t\t\t   &force_count,\n\t\t\t\t\t\t   pruning_type,\n\t\t\t\t\t\t   pruning_type == DB_NOT_PARTITIONED_CLASS ? nullptr : &pruning,\n\t\t\t\t\t\t   NULL, UPDATE_INPLACE_NONE, NULL, has_BU_lock,\n\t\t\t\t\t\t   true, false, false, &m_recdes_collected[i]);\n\t    partition_clear_pruning_context (&pruning);\n\t    if (error_code != NO_ERROR)\n\t      {\n\t\tASSERT_ERROR ();\n\t\t(void) heap_oos_begin_insert_publication (m_thread_ref);\n\t\tm_error_handler.on_failure ();\n\t\tlog_sysop_abort (m_thread_ref);\n\n\t\tif (m_session.is_failed ())\n\t\t  {\n\t\t    // Error was not filtered, we abort everything.\n\t\t    return;\n\t\t  }"
+        },
+        {
+          "first_line": 1205,
+          "last_line": 1226,
+          "text": "  server_object_loader::start_attrinfo (const OID &class_oid)\n  {\n    int error_code = heap_attrinfo_start (m_thread_ref, &class_oid, -1, NULL, &m_attrinfo);\n    if (error_code != NO_ERROR)\n      {\n\tm_error_handler.on_failure_with_line (LOADDB_MSG_LOAD_FAIL);\n\treturn;\n      }\n\n    m_attrinfo_started = true;\n    m_pruning_type = DB_NOT_PARTITIONED_CLASS;\n    if (m_attrinfo.last_classrepr->has_partition_info)\n      {\n\tOID root_oid;\n\terror_code = partition_find_root_class_oid (m_thread_ref, &class_oid, &root_oid);\n\tif (error_code != NO_ERROR)\n\t  {\n\t    m_error_handler.on_failure_with_line (LOADDB_MSG_LOAD_FAIL);\n\t    return;\n\t  }\n\tm_pruning_type = OID_EQ (&root_oid, &class_oid) ? DB_PARTITIONED_CLASS : DB_PARTITION_CLASS;\n      }"
+        }
+      ]
+    },
+    {
+      "path": "src/storage/heap_file.c",
+      "commit": "4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c",
+      "blob": "7d9fc98af046483c72dfe1e894cde57184c68be5",
+      "excerpts": [
+        {
+          "first_line": 13279,
+          "last_line": 13308,
+          "text": "heap_attrinfo_prepare_record (THREAD_ENTRY *thread_p, HEAP_CACHE_ATTRINFO *attr_info, RECDES *old_recdes,\n                             heap_pending_record *pending, bool copy_lobs)\n{\n  record_descriptor *record = &pending->record ();\n  assert (record->get_recdes ().data == nullptr);\n  SCAN_CODE status = S_ERROR;\n  if (heap_oos_begin_insert_publication (thread_p) != S_SUCCESS)\n    {\n      return S_ERROR;\n    }\n#if defined(CUBRID_UNIT_TEST_ENABLED)\n  if (heap_Oos_fail_preparation.exchange (false))\n    {\n      er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_OUT_OF_VIRTUAL_MEMORY, 1, sizeof (heap_oos_column_plan));\n      return S_ERROR;\n    }\n#endif\n  try\n    {\n      status = heap_attrinfo_transform_to_disk_internal (thread_p, attr_info, old_recdes, record,\n                    copy_lobs ? LOB_FLAG_INCLUDE_LOB : LOB_FLAG_EXCLUDE_LOB, pending);\n    }\n  catch (const std::bad_alloc &)\n    {\n      er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_OUT_OF_VIRTUAL_MEMORY, 1, sizeof (heap_oos_column_plan));\n    }\n  if (status == S_SUCCESS)\n    {\n      record->set_type (REC_HOME);\n      pending->mark_prepared ();"
+        },
+        {
+          "first_line": 13316,
+          "last_line": 13330,
+          "text": "heap_prepare_oos_record (THREAD_ENTRY *thread_p, const OID *source_class, RECDES *source,\n                         heap_pending_record *pending)\n{\n  record_descriptor *record = &pending->record ();\n  HEAP_CACHE_ATTRINFO attr_info;\n  int error = heap_attrinfo_start (thread_p, source_class, -1, nullptr, &attr_info);\n  if (error != NO_ERROR)\n    {\n      return error;\n    }\n  error = heap_attrinfo_read_dbvalues (thread_p, &oid_Null_oid, source, &attr_info);\n  if (error == NO_ERROR\n      && heap_attrinfo_prepare_record (thread_p, &attr_info, nullptr, pending, false) != S_SUCCESS)\n    {\n      error = er_errid () == NO_ERROR ? ER_FAILED : er_errid ();"
+        }
+      ]
+    },
+    {
+      "path": "src/transaction/locator_sr.c",
+      "commit": "4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c",
+      "blob": "2dc6cb5cbcf293a1bb7c16ea1c5fbb75aa6790dc",
+      "excerpts": [
+        {
+          "first_line": 7810,
+          "last_line": 7835,
+          "text": "\n      [[fallthrough]];\n\n    case LC_FLUSH_INSERT:\n    case LC_FLUSH_INSERT_PRUNE:\n    case LC_FLUSH_INSERT_PRUNE_VERIFY:\n      if (heap_attrinfo_prepare_record (thread_p, attr_info, old_recdes, &pending) != S_SUCCESS)\n\t{\n\t  error_code = ER_FAILED;\n\t  break;\n\t}\n      /* *INDENT-OFF* */\n      new_recdes = pending.get_recdes ();\n      /* *INDENT-ON* */\n\n      /* Assume that it has indices */\n      if (LC_IS_FLUSH_INSERT (operation))\n\t{\n\t  error_code =\n\t    locator_insert_force (thread_p, &class_hfid, &class_oid, oid, &new_recdes, true, op_type, scan_cache,\n\t\t\t\t  force_count, pruning_type, pcontext, func_preds, UPDATE_INPLACE_NONE, NULL, false,\n\t\t\t\t  false, false, false, &pending);\n\t}\n      else\n\t{\n\t  int has_index;"
+        }
+      ]
+    }
+  ],
+  "unmodified_file_checks": [
+    {
+      "path": "src/storage/btree.c",
+      "path_exists": true,
+      "head_blob": "d87ad9190fb416859fd927fde785b142f32456d8",
+      "base_blob": "d87ad9190fb416859fd927fde785b142f32456d8",
+      "equal": true
+    },
+    {
+      "path": "src/storage/btree_load.c",
+      "path_exists": true,
+      "head_blob": "954a63a77bf0db9d31c07adbca6955813d76f691",
+      "base_blob": "954a63a77bf0db9d31c07adbca6955813d76f691",
+      "equal": true
+    },
+    {
+      "path": "src/loaddb/load_lexer.l",
+      "path_exists": true,
+      "head_blob": "43086b42d82ab1d124c65c49bdc005efee41fcfe",
+      "base_blob": "43086b42d82ab1d124c65c49bdc005efee41fcfe",
+      "equal": true
+    },
+    {
+      "path": "src/loaddb/load_error_handler.cpp",
+      "path_exists": true,
+      "head_blob": "f208ad6a73302a1201c365840c1d0312765f06ab",
+      "base_blob": "f208ad6a73302a1201c365840c1d0312765f06ab",
+      "equal": true
+    },
+    {
+      "path": "src/query/vacuum.c",
+      "path_exists": true,
+      "head_blob": "61142e5c1fdb08cb5338582ba66177d220bc28a7",
+      "base_blob": "61142e5c1fdb08cb5338582ba66177d220bc28a7",
+      "equal": true
+    },
+    {
+      "path": "src/loaddb/load_grammar.yy",
+      "path_exists": true,
+      "head_blob": "74586f2e4bb0d0b539350d1aa77fe150c761c72b",
+      "base_blob": "74586f2e4bb0d0b539350d1aa77fe150c761c72b",
+      "equal": true
+    }
+  ]
+}

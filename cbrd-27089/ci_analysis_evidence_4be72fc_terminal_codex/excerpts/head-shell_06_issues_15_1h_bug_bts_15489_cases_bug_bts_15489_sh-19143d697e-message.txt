@@ -1,0 +1,14 @@
+151: 46000 rows affected. (1.358402 sec) Committed. (0.000017 sec) 
+152: + sleep 60
+153: ++ csql -u dba db15489 -l -c 'show index capacity of public.foo.i_foo;'
+154: ++ grep Num_total_page
+155: ++ awk '{print $3}'
+156: + total_pages=100
+157: + echo 'Total Pages:100'
+158: Total Pages:100
+159: + '[' 100 -gt 0 -a 100 -lt 100 ']'
+160: + write_nok
+166: ++ wc -l
+167: + internal_err=0
+168: + '[' 0 -gt 0 ']'
+169: + let 'case_no = case_no + 1'

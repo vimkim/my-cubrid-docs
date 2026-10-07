@@ -1,0 +1,560 @@
+{
+  "schema_version": 2,
+  "observation_id": "20261007T084538.848699936Z-435175-0",
+  "finished_at": "2026-10-07T08:45:39.646715946Z",
+  "outcome": "complete",
+  "command": {
+    "schema_version": 3,
+    "ok": true,
+    "repository": "CUBRID/cubrid",
+    "selection": {
+      "observed_at": "2026-10-07T08:45:35.623207928Z",
+      "mode": "exact_commit_links",
+      "coverage": "all paginated exact-commit statuses and check runs; no repository-wide workflow scan",
+      "commit": "fb567a629cdb390fff920542173fa36f454c74a0",
+      "baseline": {
+        "pr_number": 7927,
+        "pr_url": "https://github.com/CUBRID/cubrid/pull/7927",
+        "head_ref": "feat/oos-deferred-write",
+        "head_sha": "4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c",
+        "target_ref": "feature/oos-merge",
+        "target_sha": "fb567a629cdb390fff920542173fa36f454c74a0",
+        "merge_base": "fb567a629cdb390fff920542173fa36f454c74a0",
+        "observed_at": "2026-10-07T08:39:49.900904685Z"
+      },
+      "candidates": [
+        {
+          "suite": "test_medium",
+          "source": "commit_status",
+          "id": 55172092483,
+          "run_id": 36570256001,
+          "reported_at": "2026-09-29T12:45:40Z",
+          "state": "PENDING",
+          "detail_url": "https://github.com/CUBRID/cubrid/actions/runs/36570256001"
+        },
+        {
+          "suite": "test_medium",
+          "source": "commit_status",
+          "id": 55176668073,
+          "run_id": 36570256001,
+          "reported_at": "2026-09-29T13:42:53Z",
+          "state": "SUCCESS",
+          "detail_url": "https://github.com/CUBRID/cubrid/actions/runs/36570256001"
+        },
+        {
+          "suite": "test_shell",
+          "source": "commit_status",
+          "id": 55172093207,
+          "run_id": 36570256001,
+          "reported_at": "2026-09-29T12:45:41Z",
+          "state": "PENDING",
+          "detail_url": "https://github.com/CUBRID/cubrid/actions/runs/36570256001"
+        },
+        {
+          "suite": "test_shell",
+          "source": "commit_status",
+          "id": 55176668686,
+          "run_id": 36570256001,
+          "reported_at": "2026-09-29T13:42:54Z",
+          "state": "FAILURE",
+          "detail_url": "https://github.com/CUBRID/cubrid/actions/runs/36570256001"
+        },
+        {
+          "suite": "test_sql",
+          "source": "commit_status",
+          "id": 55172094163,
+          "run_id": 36570256001,
+          "reported_at": "2026-09-29T12:45:41Z",
+          "state": "PENDING",
+          "detail_url": "https://github.com/CUBRID/cubrid/actions/runs/36570256001"
+        },
+        {
+          "suite": "test_sql",
+          "source": "commit_status",
+          "id": 55176669944,
+          "run_id": 36570256001,
+          "reported_at": "2026-09-29T13:42:55Z",
+          "state": "SUCCESS",
+          "detail_url": "https://github.com/CUBRID/cubrid/actions/runs/36570256001"
+        }
+      ],
+      "runs": {
+        "36570256001": {
+          "actor": {
+            "avatar_url": "https://avatars.githubusercontent.com/u/18080546?v=4",
+            "events_url": "https://api.github.com/users/vimkim/events{/privacy}",
+            "followers_url": "https://api.github.com/users/vimkim/followers",
+            "following_url": "https://api.github.com/users/vimkim/following{/other_user}",
+            "gists_url": "https://api.github.com/users/vimkim/gists{/gist_id}",
+            "gravatar_id": "",
+            "html_url": "https://github.com/vimkim",
+            "id": 18080546,
+            "login": "vimkim",
+            "node_id": "MDQ6VXNlcjE4MDgwNTQ2",
+            "organizations_url": "https://api.github.com/users/vimkim/orgs",
+            "received_events_url": "https://api.github.com/users/vimkim/received_events",
+            "repos_url": "https://api.github.com/users/vimkim/repos",
+            "site_admin": false,
+            "starred_url": "https://api.github.com/users/vimkim/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/vimkim/subscriptions",
+            "type": "User",
+            "url": "https://api.github.com/users/vimkim",
+            "user_view_type": "public"
+          },
+          "artifacts_url": "https://api.github.com/repos/CUBRID/cubrid/actions/runs/36570256001/artifacts",
+          "cancel_url": "https://api.github.com/repos/CUBRID/cubrid/actions/runs/36570256001/cancel",
+          "check_suite_id": 99028994409,
+          "check_suite_node_id": "CS_kwDOAxqu788AAAAXDpaJaQ",
+          "check_suite_url": "https://api.github.com/repos/CUBRID/cubrid/check-suites/99028994409",
+          "conclusion": "failure",
+          "created_at": "2026-09-29T12:45:26Z",
+          "display_title": "PR #7990 · [CBRD-26357] Add out-of-row overflow storage",
+          "event": "issue_comment",
+          "head_branch": "develop",
+          "head_commit": {
+            "author": {
+              "email": "70995854+xmilex-git@users.noreply.github.com",
+              "name": "Ilhan"
+            },
+            "committer": {
+              "email": "noreply@github.com",
+              "name": "GitHub"
+            },
+            "id": "f1bd99ed43a134383bc0be1d766a6f121601a499",
+            "message": "[CBRD-27485] Fix partitioned SEMI/ANTI inner scans in parallel workers (#8011)\n\nhttp://jira.cubrid.org/browse/CBRD-27485\n\nPurpose\nFix incorrect EXISTS and NOT EXISTS results when parallel-scan workers probe a partitioned SEMI/ANTI join inner, and prevent failures when tracing is enabled.\n\nImplementation\npx_scan_task.cpp\nPrune partitioned SEMI/ANTI inner scans in each worker clone regardless of tracing.\nRewind the inner scan for each outer row with qexec_reset_sa_inner_scan_block.\nRestore a NULL curr_spec to spec_list before closing the scan in finalize.\n\nquery_executor.c, query_executor.h\nExpose qexec_reset_sa_inner_scan_block for use by parallel-scan workers.\n\nRemarks\nAdd HASH and RANGE partition regression coverage for EXISTS and NOT EXISTS, including trace-enabled execution, in CUBRID/cubrid-testcases#3574.",
+            "timestamp": "2026-09-29T10:34:12Z",
+            "tree_id": "f642f710ca24c8ccc5f43cf9cb867e46aa92bf28"
+          },
+          "head_repository": {
+            "archive_url": "https://api.github.com/repos/CUBRID/cubrid/{archive_format}{/ref}",
+            "assignees_url": "https://api.github.com/repos/CUBRID/cubrid/assignees{/user}",
+            "blobs_url": "https://api.github.com/repos/CUBRID/cubrid/git/blobs{/sha}",
+            "branches_url": "https://api.github.com/repos/CUBRID/cubrid/branches{/branch}",
+            "collaborators_url": "https://api.github.com/repos/CUBRID/cubrid/collaborators{/collaborator}",
+            "comments_url": "https://api.github.com/repos/CUBRID/cubrid/comments{/number}",
+            "commits_url": "https://api.github.com/repos/CUBRID/cubrid/commits{/sha}",
+            "compare_url": "https://api.github.com/repos/CUBRID/cubrid/compare/{base}...{head}",
+            "contents_url": "https://api.github.com/repos/CUBRID/cubrid/contents/{+path}",
+            "contributors_url": "https://api.github.com/repos/CUBRID/cubrid/contributors",
+            "deployments_url": "https://api.github.com/repos/CUBRID/cubrid/deployments",
+            "description": "CUBRID is a comprehensive open source relational database management system highly optimized for Web Applications.",
+            "downloads_url": "https://api.github.com/repos/CUBRID/cubrid/downloads",
+            "events_url": "https://api.github.com/repos/CUBRID/cubrid/events",
+            "fork": false,
+            "forks_url": "https://api.github.com/repos/CUBRID/cubrid/forks",
+            "full_name": "CUBRID/cubrid",
+            "git_commits_url": "https://api.github.com/repos/CUBRID/cubrid/git/commits{/sha}",
+            "git_refs_url": "https://api.github.com/repos/CUBRID/cubrid/git/refs{/sha}",
+            "git_tags_url": "https://api.github.com/repos/CUBRID/cubrid/git/tags{/sha}",
+            "hooks_url": "https://api.github.com/repos/CUBRID/cubrid/hooks",
+            "html_url": "https://github.com/CUBRID/cubrid",
+            "id": 52080367,
+            "issue_comment_url": "https://api.github.com/repos/CUBRID/cubrid/issues/comments{/number}",
+            "issue_events_url": "https://api.github.com/repos/CUBRID/cubrid/issues/events{/number}",
+            "issues_url": "https://api.github.com/repos/CUBRID/cubrid/issues{/number}",
+            "keys_url": "https://api.github.com/repos/CUBRID/cubrid/keys{/key_id}",
+            "labels_url": "https://api.github.com/repos/CUBRID/cubrid/labels{/name}",
+            "languages_url": "https://api.github.com/repos/CUBRID/cubrid/languages",
+            "merges_url": "https://api.github.com/repos/CUBRID/cubrid/merges",
+            "milestones_url": "https://api.github.com/repos/CUBRID/cubrid/milestones{/number}",
+            "name": "cubrid",
+            "node_id": "MDEwOlJlcG9zaXRvcnk1MjA4MDM2Nw==",
+            "notifications_url": "https://api.github.com/repos/CUBRID/cubrid/notifications{?since,all,participating}",
+            "owner": {
+              "avatar_url": "https://avatars.githubusercontent.com/u/358322?v=4",
+              "events_url": "https://api.github.com/users/CUBRID/events{/privacy}",
+              "followers_url": "https://api.github.com/users/CUBRID/followers",
+              "following_url": "https://api.github.com/users/CUBRID/following{/other_user}",
+              "gists_url": "https://api.github.com/users/CUBRID/gists{/gist_id}",
+              "gravatar_id": "",
+              "html_url": "https://github.com/CUBRID",
+              "id": 358322,
+              "login": "CUBRID",
+              "node_id": "MDEyOk9yZ2FuaXphdGlvbjM1ODMyMg==",
+              "organizations_url": "https://api.github.com/users/CUBRID/orgs",
+              "received_events_url": "https://api.github.com/users/CUBRID/received_events",
+              "repos_url": "https://api.github.com/users/CUBRID/repos",
+              "site_admin": false,
+              "starred_url": "https://api.github.com/users/CUBRID/starred{/owner}{/repo}",
+              "subscriptions_url": "https://api.github.com/users/CUBRID/subscriptions",
+              "type": "Organization",
+              "url": "https://api.github.com/users/CUBRID",
+              "user_view_type": "public"
+            },
+            "private": false,
+            "pulls_url": "https://api.github.com/repos/CUBRID/cubrid/pulls{/number}",
+            "releases_url": "https://api.github.com/repos/CUBRID/cubrid/releases{/id}",
+            "stargazers_url": "https://api.github.com/repos/CUBRID/cubrid/stargazers",
+            "statuses_url": "https://api.github.com/repos/CUBRID/cubrid/statuses/{sha}",
+            "subscribers_url": "https://api.github.com/repos/CUBRID/cubrid/subscribers",
+            "subscription_url": "https://api.github.com/repos/CUBRID/cubrid/subscription",
+            "tags_url": "https://api.github.com/repos/CUBRID/cubrid/tags",
+            "teams_url": "https://api.github.com/repos/CUBRID/cubrid/teams",
+            "trees_url": "https://api.github.com/repos/CUBRID/cubrid/git/trees{/sha}",
+            "url": "https://api.github.com/repos/CUBRID/cubrid"
+          },
+          "head_sha": "f1bd99ed43a134383bc0be1d766a6f121601a499",
+          "html_url": "https://github.com/CUBRID/cubrid/actions/runs/36570256001",
+          "id": 36570256001,
+          "jobs_url": "https://api.github.com/repos/CUBRID/cubrid/actions/runs/36570256001/jobs",
+          "logs_url": "https://api.github.com/repos/CUBRID/cubrid/actions/runs/36570256001/logs",
+          "name": "PR #7990 · [CBRD-26357] Add out-of-row overflow storage",
+          "node_id": "WFR_kwLOAxqu788AAAAIg8HSgQ",
+          "path": ".github/workflows/gha-ci.yml",
+          "previous_attempt_url": null,
+          "pull_requests": [],
+          "referenced_workflows": [],
+          "repository": {
+            "archive_url": "https://api.github.com/repos/CUBRID/cubrid/{archive_format}{/ref}",
+            "assignees_url": "https://api.github.com/repos/CUBRID/cubrid/assignees{/user}",
+            "blobs_url": "https://api.github.com/repos/CUBRID/cubrid/git/blobs{/sha}",
+            "branches_url": "https://api.github.com/repos/CUBRID/cubrid/branches{/branch}",
+            "collaborators_url": "https://api.github.com/repos/CUBRID/cubrid/collaborators{/collaborator}",
+            "comments_url": "https://api.github.com/repos/CUBRID/cubrid/comments{/number}",
+            "commits_url": "https://api.github.com/repos/CUBRID/cubrid/commits{/sha}",
+            "compare_url": "https://api.github.com/repos/CUBRID/cubrid/compare/{base}...{head}",
+            "contents_url": "https://api.github.com/repos/CUBRID/cubrid/contents/{+path}",
+            "contributors_url": "https://api.github.com/repos/CUBRID/cubrid/contributors",
+            "deployments_url": "https://api.github.com/repos/CUBRID/cubrid/deployments",
+            "description": "CUBRID is a comprehensive open source relational database management system highly optimized for Web Applications.",
+            "downloads_url": "https://api.github.com/repos/CUBRID/cubrid/downloads",
+            "events_url": "https://api.github.com/repos/CUBRID/cubrid/events",
+            "fork": false,
+            "forks_url": "https://api.github.com/repos/CUBRID/cubrid/forks",
+            "full_name": "CUBRID/cubrid",
+            "git_commits_url": "https://api.github.com/repos/CUBRID/cubrid/git/commits{/sha}",
+            "git_refs_url": "https://api.github.com/repos/CUBRID/cubrid/git/refs{/sha}",
+            "git_tags_url": "https://api.github.com/repos/CUBRID/cubrid/git/tags{/sha}",
+            "hooks_url": "https://api.github.com/repos/CUBRID/cubrid/hooks",
+            "html_url": "https://github.com/CUBRID/cubrid",
+            "id": 52080367,
+            "issue_comment_url": "https://api.github.com/repos/CUBRID/cubrid/issues/comments{/number}",
+            "issue_events_url": "https://api.github.com/repos/CUBRID/cubrid/issues/events{/number}",
+            "issues_url": "https://api.github.com/repos/CUBRID/cubrid/issues{/number}",
+            "keys_url": "https://api.github.com/repos/CUBRID/cubrid/keys{/key_id}",
+            "labels_url": "https://api.github.com/repos/CUBRID/cubrid/labels{/name}",
+            "languages_url": "https://api.github.com/repos/CUBRID/cubrid/languages",
+            "merges_url": "https://api.github.com/repos/CUBRID/cubrid/merges",
+            "milestones_url": "https://api.github.com/repos/CUBRID/cubrid/milestones{/number}",
+            "name": "cubrid",
+            "node_id": "MDEwOlJlcG9zaXRvcnk1MjA4MDM2Nw==",
+            "notifications_url": "https://api.github.com/repos/CUBRID/cubrid/notifications{?since,all,participating}",
+            "owner": {
+              "avatar_url": "https://avatars.githubusercontent.com/u/358322?v=4",
+              "events_url": "https://api.github.com/users/CUBRID/events{/privacy}",
+              "followers_url": "https://api.github.com/users/CUBRID/followers",
+              "following_url": "https://api.github.com/users/CUBRID/following{/other_user}",
+              "gists_url": "https://api.github.com/users/CUBRID/gists{/gist_id}",
+              "gravatar_id": "",
+              "html_url": "https://github.com/CUBRID",
+              "id": 358322,
+              "login": "CUBRID",
+              "node_id": "MDEyOk9yZ2FuaXphdGlvbjM1ODMyMg==",
+              "organizations_url": "https://api.github.com/users/CUBRID/orgs",
+              "received_events_url": "https://api.github.com/users/CUBRID/received_events",
+              "repos_url": "https://api.github.com/users/CUBRID/repos",
+              "site_admin": false,
+              "starred_url": "https://api.github.com/users/CUBRID/starred{/owner}{/repo}",
+              "subscriptions_url": "https://api.github.com/users/CUBRID/subscriptions",
+              "type": "Organization",
+              "url": "https://api.github.com/users/CUBRID",
+              "user_view_type": "public"
+            },
+            "private": false,
+            "pulls_url": "https://api.github.com/repos/CUBRID/cubrid/pulls{/number}",
+            "releases_url": "https://api.github.com/repos/CUBRID/cubrid/releases{/id}",
+            "stargazers_url": "https://api.github.com/repos/CUBRID/cubrid/stargazers",
+            "statuses_url": "https://api.github.com/repos/CUBRID/cubrid/statuses/{sha}",
+            "subscribers_url": "https://api.github.com/repos/CUBRID/cubrid/subscribers",
+            "subscription_url": "https://api.github.com/repos/CUBRID/cubrid/subscription",
+            "tags_url": "https://api.github.com/repos/CUBRID/cubrid/tags",
+            "teams_url": "https://api.github.com/repos/CUBRID/cubrid/teams",
+            "trees_url": "https://api.github.com/repos/CUBRID/cubrid/git/trees{/sha}",
+            "url": "https://api.github.com/repos/CUBRID/cubrid"
+          },
+          "rerun_url": "https://api.github.com/repos/CUBRID/cubrid/actions/runs/36570256001/rerun",
+          "run_attempt": 1,
+          "run_number": 2400,
+          "run_started_at": "2026-09-29T12:45:26Z",
+          "status": "completed",
+          "triggering_actor": {
+            "avatar_url": "https://avatars.githubusercontent.com/u/18080546?v=4",
+            "events_url": "https://api.github.com/users/vimkim/events{/privacy}",
+            "followers_url": "https://api.github.com/users/vimkim/followers",
+            "following_url": "https://api.github.com/users/vimkim/following{/other_user}",
+            "gists_url": "https://api.github.com/users/vimkim/gists{/gist_id}",
+            "gravatar_id": "",
+            "html_url": "https://github.com/vimkim",
+            "id": 18080546,
+            "login": "vimkim",
+            "node_id": "MDQ6VXNlcjE4MDgwNTQ2",
+            "organizations_url": "https://api.github.com/users/vimkim/orgs",
+            "received_events_url": "https://api.github.com/users/vimkim/received_events",
+            "repos_url": "https://api.github.com/users/vimkim/repos",
+            "site_admin": false,
+            "starred_url": "https://api.github.com/users/vimkim/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/vimkim/subscriptions",
+            "type": "User",
+            "url": "https://api.github.com/users/vimkim",
+            "user_view_type": "public"
+          },
+          "updated_at": "2026-09-29T13:42:58Z",
+          "url": "https://api.github.com/repos/CUBRID/cubrid/actions/runs/36570256001",
+          "workflow_id": 341080125,
+          "workflow_url": "https://api.github.com/repos/CUBRID/cubrid/actions/workflows/341080125"
+        }
+      }
+    },
+    "commit": "fb567a629cdb390fff920542173fa36f454c74a0",
+    "collected_at": "2026-10-07T08:45:39.163359795Z",
+    "output_dir": "/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/commits/fb567a629cdb390fff920542173fa36f454c74a0",
+    "suites": {
+      "test_medium": {
+        "state": "completed",
+        "status": {
+          "state": "SUCCESS",
+          "reported_for_sha": "fb567a629cdb390fff920542173fa36f454c74a0",
+          "detail_url": "https://github.com/CUBRID/cubrid/actions/runs/36570256001",
+          "reported_at": "2026-09-29T13:42:53Z"
+        },
+        "execution": {
+          "run_id": 36570256001,
+          "attempt": 1
+        },
+        "summary": "providers/github-actions/runs/36570256001/attempts/1/test_medium/summary.json"
+      },
+      "test_shell": {
+        "state": "completed",
+        "status": {
+          "state": "FAILURE",
+          "reported_for_sha": "fb567a629cdb390fff920542173fa36f454c74a0",
+          "detail_url": "https://github.com/CUBRID/cubrid/actions/runs/36570256001",
+          "reported_at": "2026-09-29T13:42:54Z"
+        },
+        "execution": {
+          "run_id": 36570256001,
+          "attempt": 1
+        },
+        "summary": "providers/github-actions/runs/36570256001/attempts/1/test_shell/summary.json"
+      },
+      "test_sql": {
+        "state": "completed",
+        "status": {
+          "state": "SUCCESS",
+          "reported_for_sha": "fb567a629cdb390fff920542173fa36f454c74a0",
+          "detail_url": "https://github.com/CUBRID/cubrid/actions/runs/36570256001",
+          "reported_at": "2026-09-29T13:42:55Z"
+        },
+        "execution": {
+          "run_id": 36570256001,
+          "attempt": 1
+        },
+        "summary": "providers/github-actions/runs/36570256001/attempts/1/test_sql/summary.json"
+      }
+    },
+    "errors": []
+  },
+  "binary_budget": {
+    "configured_bytes": 536870912,
+    "consumed_bytes": 0,
+    "remaining_bytes": 536870912,
+    "artifacts": []
+  },
+  "acquisition": {
+    "test_medium": {
+      "shards": {
+        "00": {
+          "state": "retained"
+        }
+      }
+    },
+    "test_shell": {
+      "shards": {
+        "00": {
+          "state": "retained"
+        },
+        "01": {
+          "state": "retained"
+        },
+        "02": {
+          "state": "retained"
+        },
+        "03": {
+          "state": "retained"
+        },
+        "04": {
+          "state": "retained"
+        },
+        "05": {
+          "state": "retained"
+        },
+        "06": {
+          "state": "retained"
+        },
+        "07": {
+          "state": "retained"
+        },
+        "08": {
+          "state": "retained"
+        },
+        "09": {
+          "state": "retained"
+        },
+        "10": {
+          "state": "retained"
+        },
+        "11": {
+          "state": "retained"
+        },
+        "12": {
+          "state": "retained"
+        },
+        "13": {
+          "state": "retained"
+        },
+        "14": {
+          "state": "retained"
+        },
+        "15": {
+          "state": "retained"
+        },
+        "16": {
+          "state": "retained"
+        },
+        "17": {
+          "state": "retained"
+        },
+        "18": {
+          "state": "retained"
+        },
+        "19": {
+          "state": "retained"
+        },
+        "20": {
+          "state": "retained"
+        },
+        "21": {
+          "state": "retained"
+        },
+        "22": {
+          "state": "retained"
+        },
+        "23": {
+          "state": "retained"
+        },
+        "24": {
+          "state": "retained"
+        },
+        "25": {
+          "state": "retained"
+        },
+        "26": {
+          "state": "retained"
+        },
+        "27": {
+          "state": "retained"
+        },
+        "28": {
+          "state": "retained"
+        },
+        "29": {
+          "state": "retained"
+        },
+        "30": {
+          "state": "retained"
+        },
+        "31": {
+          "state": "retained"
+        },
+        "32": {
+          "state": "retained"
+        },
+        "33": {
+          "state": "retained"
+        },
+        "34": {
+          "state": "retained"
+        },
+        "35": {
+          "state": "retained"
+        },
+        "36": {
+          "state": "retained"
+        },
+        "37": {
+          "state": "retained"
+        },
+        "38": {
+          "state": "retained"
+        },
+        "39": {
+          "state": "retained"
+        },
+        "40": {
+          "state": "retained"
+        },
+        "41": {
+          "state": "retained"
+        },
+        "42": {
+          "state": "retained"
+        },
+        "43": {
+          "state": "retained"
+        },
+        "44": {
+          "state": "retained"
+        },
+        "45": {
+          "state": "retained"
+        },
+        "46": {
+          "state": "retained"
+        },
+        "47": {
+          "state": "retained"
+        },
+        "48": {
+          "state": "retained"
+        },
+        "49": {
+          "state": "retained"
+        }
+      }
+    },
+    "test_sql": {
+      "shards": {
+        "00": {
+          "state": "retained"
+        },
+        "01": {
+          "state": "retained"
+        },
+        "02": {
+          "state": "retained"
+        },
+        "03": {
+          "state": "retained"
+        },
+        "04": {
+          "state": "retained"
+        },
+        "05": {
+          "state": "retained"
+        },
+        "06": {
+          "state": "retained"
+        },
+        "07": {
+          "state": "retained"
+        },
+        "08": {
+          "state": "retained"
+        },
+        "09": {
+          "state": "retained"
+        }
+      }
+    }
+  }
+}
