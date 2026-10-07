@@ -1,6 +1,6 @@
 # PR7927: remove the pending record type and consolidate review documentation
 
-Status: ready-for-agent
+Status: implemented and verified locally
 Approved: 2026-10-07, user response "I approve" to the final design, verification seams and four-task breakdown.
 Work-tracker: 281 (design agreement), 284 (documentation and reviewer assessment).
 
@@ -73,6 +73,10 @@ documentation entry point with historical evidence and locally drafted replies.
 - At the three actual server LC_FETCH row-publication seams, reject residual OOS
   fields after Expand, before descriptor/count publication. Root-class metadata
   and no-content descriptors remain outside this row check.
+- Review addendum 2026-10-07: raw optional-neighbor prefetch is a fourth export
+  path predating this refactor. Skip OOS or malformed non-root neighbors before
+  publication while retaining inline/root neighbors; normal fetch expands OOS.
+  This closes the already-approved export guarantee without changing latch order.
 - Restore generic descriptor packing to its baseline arbitrary-byte semantics.
   Incoming replication rows never receive local owner arguments.
 - Keep fresh-chain behavior. Unchanged-chain reuse requires separate MVCC,

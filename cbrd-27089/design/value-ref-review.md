@@ -1,3 +1,5 @@
+> Historical review at f578cd0, status labeled 2026-10-07. Its generic-pack guard and marker design have been superseded. [Current entry point](../README.md). Original findings and evidence are preserved below.
+
 # PR7927 value-reference redesign review
 
 Reviewed `581a96332` against `fb567a629cdb390fff920542173fa36f454c74a0`; corrections committed as `f578cd0d0078eb026930380144ad503ab81bd040`.

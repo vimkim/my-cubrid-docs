@@ -1,3 +1,6 @@
+> Status updated 2026-10-07: Historical PR body at 9232f11; retained as publication evidence.
+> Current entry point: [CBRD-27089](README.md). Historical evidence below is preserved.
+
 https://jira.cubrid.org/browse/CBRD-27089
 
 ## Purpose

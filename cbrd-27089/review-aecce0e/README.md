@@ -1,3 +1,6 @@
+> Status updated 2026-10-07: Pinned remote-head review package at aecce0e, reused unchanged from docs commit71bcfef. It explains the former marker/raw-pointer design; local follow-up verification is separate.
+> Current entry point: [CBRD-27089](../README.md). Historical evidence below is preserved.
+
 # PR #7927 review package
 
 Pinned Engine HEAD: `aecce0e1216a813771621c13112c8f27d43df22e`.

@@ -1,170 +1,112 @@
-# PR7927 proposal without a pending record type
+# PR7927 destination-owned OOS writes without a temporary record type
 
-Status: design, transport contract, verification seams and four-task breakdown
-approved on 2026-10-07; implementation in progress. Work-tracker: 281 (design agreement). Reviewed source
-is `aecce0e1216a813771621c13112c8f27d43df22e`; its merge base with
-`feature/oos-merge` is `fb567a629cdb390fff920542173fa36f454c74a0`.
-The [interview](temporary-oos-stub-interview.md) records accepted constraints and
-open decisions. This note makes the interface direction concrete; code-level
-details remain proposals and verification obligations.
+Approved 2026-10-07. Work-tracker 281 records design agreement; 289 implements
+engine tasks; 284 records documentation and reviewer work. Enter through the
+[current CBRD-27089 index](../README.md). The [interview](temporary-oos-stub-interview.md)
+preserves questions and decisions; the [spec](../../.scratch/pr7927-oos-review-cleanup/spec.md)
+and [task map](../../.scratch/pr7927-oos-review-cleanup/map.md) record acceptance.
 
-## What the owner argument means
+The remote PR head used for comparison is
+`aecce0e1216a813771621c13112c8f27d43df22e`; its baseline is
+`fb567a629cdb390fff920542173fa36f454c74a0`. Local implementation begins with
+`c73f01c1d` and `29281a205`; the [verification record](no-record-type-verification.md)
+identifies the final local revision and its checks. Remote CI remains separate.
 
-`heap_pending_record` already owns the compact record allocation and the selected
-serialized OOS payload allocations. An **owner argument** is a borrowed pointer
-to that existing object, valid only while the caller keeps it alive. It would be
-passed through prepared-row readers, rather than encoded in the record or added
-to shared `RECDES`. It is an implementation parameter, not new domain vocabulary.
+## Owner and representation
 
-For a retained 6,000-byte value, the proposed temporary 24-byte stub is:
+The existing `heap_pending_record` owns the compact record allocation and selected
+serialized payload allocations. A borrowed owner argument points to that object
+while its caller keeps it alive. Preparation state belongs to this owner, with
+empty, prepared, finalized and failed states. Shared `RECDES` retains its baseline
+layout, and prepared rows use the existing `REC_HOME` type. `REC_OOS_PENDING` is
+removed with no replacement type.
 
-```text
-null head OOS OID | full length = 6000 | payload index = 0
-```
-
-The common value reader uses the supplied owner to find retained payload 0. It
-checks that the owner is prepared, that the record borrows the owner's allocation,
-and that the index and length match an owned payload before constructing a memory
-reference. Without the appropriate owner, the null head remains invalid. The
-current source instead encodes a raw address and authorizes it with
-`REC_OOS_PENDING` (`heap_oos.cpp:56-114`). The proposed index avoids putting a
-memory address in serialized bytes and needs no separate location-to-value map.
-
-After destination insertion, the same stub becomes:
+A temporary 24-byte OOS inline stub contains:
 
 ```text
-real head OOS OID | full length = 6000 | packed identity stamp
+null head OOS OID | full length | owner-local payload index
 ```
 
-Ordinary disk readers then use the stored chain. The existing common
-`length()`/`read_into()` contract remains; memory reads still copy into the
-caller's buffer.
+It contains no memory address. A prepared-row reader requires the supplied owner
+to be prepared, the record view to borrow its allocation, and the index and length
+to match a retained payload. A copied byte image or different owner cannot grant
+memory access. The common OOS value reference keeps `length()` and `read_into()`
+for memory and disk values; reading still copies into the caller's buffer.
 
-## Proposed call flow
-
-The existing owner is available in `locator_attribute_info_force`
-(`locator_sr.c:7701,7807-7840`) and both duplicate probes
-(`query_executor.c:12051,12271`). Proposed flow, not compilable final signatures:
+After insertion into the destination heap's OOS file, the same stub contains:
 
 ```text
-prepare into existing owner
-  -> pass borrowed RECDES plus owner through locator force
-  -> partition routing reads required values using that owner
-  -> finalizer(destination, current RECDES view, owner)
-  -> heap/index consumers receive completed disk references
+real head OOS OID | full length | packed chain identity stamp
 ```
 
-Required reader propagation includes `partition_prune_insert/update`,
-`partition_find_partition_for_record`, scalar/grouped attribute Resolve,
-`heap_attrvalue_get_key`, composite-key sizing/value reads, and function-index
-evaluation. A function index creates a different attribute cache, so forwarding
-context only to the outer cache would miss that path
-(`heap_file.c:15182,15219,19755-19815`). Explicit arguments avoid retaining a
-borrowed owner in reusable caches. Movement must forward the owner into
-destination INSERT.
+This is the existing disk representation. Identity identifies a chain occupant;
+it does not prove that vacuum may reclaim a shared chain.
 
-Copy-area rows already have routable values and continue routing first; their
-destination conversion creates its owner afterward. Redistribution and loader
-rows already have owners. Loader moves preserve allocations, byte accounting
-includes record and retained payload memory, and bulk finalization stays before
-heap-page latching.
+## Routing and finalization
 
-## State and header handling
+```text
+prepare into the existing row owner
+  -> route through a borrowed record view and explicit owner
+  -> finalize(destination heap, current record view, owner)
+  -> publish completed disk references to heap/index consumers
+```
 
-The owner must distinguish preparation from completed finalization independently
-of payload-list emptiness. Inline-only prepared rows still require the per-row
-OOS publication reset; a second call for an already-completed row must not clear
-a later row's publication queue. Failed finalization retains the existing
-rollback-required, non-retryable contract.
+Owner arguments reach scalar/grouped attribute reads, partition routing,
+composite-key sizing and reads, duplicate probes and the separate function-index
+attribute cache. They are not retained in reusable caches. A moving UPDATE passes
+the owner to destination INSERT. Client copy-area rows route before conversion;
+conversion creates a server-local owner afterward. Incoming replication bytes
+never acquire an owner.
 
-The finalizer receives the **current descriptor view** as well as the owner.
-UPDATE can move the body and change the borrowed view's length while adding an
-MVCC header (`locator_sr.c:5920-5959`,
-`base/object_representation_sr.c:4424-4434`). Owner provenance therefore cannot
-require equality with the owner's original descriptor length. Finalization uses
-the current representation/VOT walk to find stub locations; it stores no patch
-pointers that could become stale during header changes.
+Finalization locates stubs through the current descriptor's representation and
+variable-offset table, then patches only their 24 bytes. UPDATE can grow the MVCC
+header while retaining the allocation; owner association therefore checks the
+allocation and capacity rather than requiring its original record length.
+Finalization updates the owner's descriptor length to the current view. No saved
+patch address or complete row clone is required.
 
-## Accepted storage and transport contract
+Owner moves preserve payload allocations and retained-byte accounting. Server
+loader bulk insertion finalizes before heap-page latching. The per-row fallback
+for partitioning, HA or filtered insert errors also forwards its queued owner.
+Inline-only prepared rows reset per-row publication once. Repeated successful
+finalization does not clear later publication. Failure marks the owner failed;
+partial chain creation requires rollback and cannot be retried as a fresh row.
 
-Heap logical INSERT/UPDATE currently reject the descriptor marker
-(`heap_file.c:25141,25573`). Replace those guards with heap-row validation using
-the destination class representation. Accept legitimate disk references and
-reject null-head OOS placeholders before storage. A finalizer with no owner must
-also validate disk-only input before subsequent index/replication publication.
-Apply bounds checks before reading row headers or fields. Do not require a
-`LAST_ELEMENT` sentinel in legacy rows: the existing `heap_recdes_get_oos_refs`
-walk is prior art, but it lacks early header bounds checks, allocates, and aborts
-when the sentinel is absent. Generic slotted pages also hold non-row records, so
-these checks belong in heap-row write paths.
+## Storage and transport boundaries
 
-The production transport audit found no pending-row uses of
-`record_descriptor::pack`. Actual row transport uses `LC_COPYAREA`;
-`locator_send_copy_area` sends content unchanged (`locator.c:673–686`). That
-shared transport also carries flush requests, replication OOS payloads and
-key/error/message replies, which must not be parsed as heap rows.
+Logical heap INSERT/UPDATE and ownerless finalization validate heap-row headers,
+variable-offset bounds and OOS references against the class representation.
+Null-head placeholders are rejected before storage. Supported legacy rows need
+no new `LAST_ELEMENT` sentinel. Root metadata and address reservations retain
+their supported paths. Generic slotted-page records are not treated as heap rows.
 
-Recommend one heap-row export check at the three server `LC_FETCH` publication
-seams: `locator_return_object_assign` (`locator_sr.c:2185–2216`),
-`xlocator_fetch_all` (`2915–2925`) and `xlocator_lock_and_fetch_all`
-(`12247–12304`). Each knows the class and already requests raw-byte consumption,
-which expands OOS attributes. Safely reject a successful non-root row that still
-has the OOS header flag, before publishing its descriptor or incrementing the
-copy-area object count. This rejects copied temporary images and accidentally
-unexpanded persisted stubs, without schema parsing at export. Preserve root-class
-metadata and CHN/deleted/decache descriptors without row content.
+The three locator fetch producers already request OOS expansion. Their shared
+`locator_copyarea_add_fetch` guard rejects residual OOS or short non-root row
+headers before publishing a descriptor or incrementing the object count. CHN,
+deleted and decache descriptors have no row content and retain their paths.
 
-Restore generic `record_descriptor::pack/unpack` to their baseline arbitrary-byte
-contract. A generic byte copy does not supply an owner or authorize memory
-access. Its current direct-pack rejection test does not exercise production row
-transport; replace that assertion with a release-build rejection test at the
-actual row-export seam. Incoming flush/replication bytes remain disk-only and
-never acquire the local owner. Loader network batches carry source text; pending
-owners are created and queued server-side.
+Review also identified an inherited optional-neighbor prefetch path that copies
+raw slotted-page rows. It skips malformed or OOS-bearing non-root neighbors and
+continues collecting inline neighbors. OOS neighbors can be fetched normally
+through the expanding path. Expanding them while holding the heap-page latch
+would require a separate latch-order design.
 
-This accepted contract resolves the earlier ambiguous byte-pattern scan proposal.
-No new descriptor field, record type, generic serialization contract or global
-pointer registry is needed. Acceptance establishes the intended design;
-implementation and verification must establish the safety guarantee.
+Generic `record_descriptor::pack/unpack` retains its baseline arbitrary-byte
+contract. Storage and actual row export provide the guards. Shared copy-area
+transport also carries flush requests, replication OOS payloads and key/error
+replies; those payloads are not parsed as fetched heap rows.
 
-## Accepted verification seams
+## Verification and scope
 
-Prefer existing engine/SQL tests and their public behavior over new test-only
-accessors. Cover destination ownership, copy-area UPDATE, partition movement,
-scalar/grouped reads, composite and function-index keys, loader queuing and
-rollback, and replication group failure. Existing owner tests cover compact
-allocation reuse, in-place finalization, current MVCC header views and payload
-lifetime. Extend those to missing/wrong owner, invalid payload index/length,
-owner moves, and inline-only/repeated-finalization publication state.
+The [verification record](no-record-type-verification.md) reports debug build and
+configured CTest, focused storage/export/ownership checks with assertions disabled,
+real server-loader batching and routing, and the Standards/Spec review. It
+preserves failed reproductions and subsequent corrections. Historical reports
+apply only to their pinned revisions.
 
-At the actual export and logical-storage boundaries, reject temporary rows and
-copied byte images in release builds without publishing a copy-area descriptor,
-accept finalized/expanded rows, and retain supported root/non-row/legacy paths.
-Keep arbitrary-byte packing tests separate. Run the configured debug build and
-CTest suite, focused guard checks without assertions, and the established real
-server-loader fixture. Record results against the resulting local commit; old
-verification remains historical. No replacement build or runtime verification
-has been performed.
-
-## Approved task breakdown
-
-1. **Explicit-owner prepared-row access.** No blockers. Introduce the trusted
-   owner-index access path through all supported readers and current-view
-   finalization, with ownership and SQL coverage. Keep the existing marker only
-   as a migration guard until task 2; add no replacement type.
-2. **Remove the marker at storage/export boundaries.** Blocked by 1. Remove
-   `REC_OOS_PENDING`, enforce the row-aware storage/export contracts, restore
-   generic packing, and run the agreed build, CTest, guard and loader checks.
-3. **Reconcile reviewer dispositions and local replies.** Blocked by 2. Recheck
-   the two comments against the resulting local revision and fixed PR baseline,
-   preserving the evidence distinction between new adaptation cost and existing
-   fresh-chain behavior. Keep chain reuse outside this implementation.
-4. **Publish the current documentation entry point.** Blocked by 2 and 3. Align
-   vocabulary and task status, mark superseded narratives, preserve verification
-   evidence, repair links and expose current design/checks/replies from one index.
-
-The user confirmed the final design and this breakdown with "I approve".
-The [spec](../../.scratch/pr7927-oos-review-cleanup/spec.md) and
-[task map](../../.scratch/pr7927-oos-review-cleanup/map.md) record the authorized
-implementation and final two-axis review. Remote replies remain local drafts;
-pushes and integration merges require separate authorization.
+The [reviewer dispositions and Korean drafts](reviewer-comments-aecce0e.md)
+distinguish newly introduced client copy-area adaptation from existing client
+whole-row work and server fresh-chain UPDATE behavior. Total performance impact
+remains unmeasured. Unchanged-chain reuse remains separate CBRD-27230 work requiring
+MVCC ownership, commit-conditional reclamation and replication changes;
+CBRD-27237 vacuum correctness remains independent. Replies stay local drafts.

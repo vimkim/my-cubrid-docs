@@ -1,3 +1,6 @@
+> Status updated 2026-10-07: Historical PR body for remote head aecce0e; the new local owner-index design supersedes its temporary-reference explanation.
+> Current entry point: [CBRD-27089](README.md). Historical evidence below is preserved.
+
 https://jira.cubrid.org/browse/CBRD-27089
 
 ## Purpose

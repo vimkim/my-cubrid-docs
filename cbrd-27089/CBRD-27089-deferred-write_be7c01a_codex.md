@@ -1,3 +1,6 @@
+> Status updated 2026-10-07: Historical deferred-write acceptance record through 2026-09-15; its latest-source statements apply only to that dated snapshot.
+> Current entry point: [CBRD-27089](README.md). Historical evidence below is preserved.
+
 # [CBRD-27089] Destination-owned deferred OOS writes
 
 https://jira.cubrid.org/browse/CBRD-27089

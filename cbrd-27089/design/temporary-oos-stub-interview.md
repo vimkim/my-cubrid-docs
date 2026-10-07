@@ -1,5 +1,11 @@
 # PR7927 temporary OOS stub design interview
 
+Current outcome 2026-10-07: unchanged shared RECDES, existing borrowed owner and
+validated payload indices accepted and implemented at `6b53181d3`.
+[Current entry](../README.md), [verification](no-record-type-verification.md) and
+[resolved task map](../../.scratch/pr7927-oos-review-cleanup/map.md) supersede
+older proposals in this dated interview.
+
 ## Remove the pending record type — interview reopened 2026-10-07
 
 Work tracker: 281. Source pin: `aecce0e1216a813771621c13112c8f27d43df22e`,

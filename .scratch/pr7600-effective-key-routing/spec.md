@@ -1,3 +1,6 @@
+> Status updated 2026-10-07: Historical PR7600 specification; its routing and performance contract does not govern the current PR7927 refactor.
+> Current entry point: [CBRD-27089](../../cbrd-27089/README.md). Historical evidence below is preserved.
+
 # PR 7600: effective-key routing without a full inline row probe
 
 Status: ready-for-agent

@@ -1,3 +1,6 @@
+> Status updated 2026-10-07: Historical PR7600 work map; blocked/unmet acceptance remains historical evidence, not an active PR7927 dependency.
+> Current entry point: [CBRD-27089](../../cbrd-27089/README.md). Historical evidence below is preserved.
+
 # Effective-key routing work map
 
 [Parent spec](spec.md) is unchanged. Dependency readiness is not execution authorization.

@@ -1,3 +1,6 @@
+> Status updated 2026-10-07: Historical publication context at f578cd0; recorded operation status is not current authorization.
+> Current entry point: [CBRD-27089](README.md). Historical evidence below is preserved.
+
 # PR7927 replacement description review
 
 - Ticket: CBRD-27089

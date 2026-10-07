@@ -1,6 +1,6 @@
 # Design review: reuse the early partition destination?
 
-2026-09-09. Inspected source: `213ce80f54dc54130fcef22e616cb28f4835f6d5`. User authorized a design-only review, not implementation, experiments, or a validation waiver. Existing [ADR](../../../docs/adr/0001-pr7600-effective-key-routing.md) and specification remain unchanged.
+2026-09-09. Inspected source: `213ce80f54dc54130fcef22e616cb28f4835f6d5`. User authorized a design-only review, not implementation, experiments, or a validation waiver. Existing [ADR](../../docs/adr/0001-pr7600-effective-key-routing.md) and specification remain unchanged.
 
 ## Recommendation
 

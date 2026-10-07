@@ -1,3 +1,6 @@
+> Status updated 2026-10-07: Historical symbol guide at remote head aecce0e; identifiers and line numbers describe that pinned source.
+> Current entry point: [CBRD-27089](../README.md). Historical evidence below is preserved.
+
 # PR #7927 code review guide — aecce0e12
 
 Review [PR #7927](https://github.com/CUBRID/cubrid/pull/7927) at **`aecce0e1216a813771621c13112c8f27d43df22e`**, relative to exact merge base **`fb567a629cdb390fff920542173fa36f454c74a0`** on `feature/oos-merge`. This is the net PR diff: 19 files, 2,452 insertions and 138 deletions. Source links below are pinned to HEAD, not the moving branch.

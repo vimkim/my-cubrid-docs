@@ -1,0 +1,78 @@
+[0mdirenv: loading ~/gh/cb/CBRD-27089-oos-deferred-write/.envrc
+Preset Mode: debug_gcc
+Install Dir: /home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc
+DB Dir: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/.cub-workenv/databases
+Build Dir: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc
+Internal ctest changing into directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc
+Test project /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc
+    Start  1: oos_setup_db
+1/3 Test  #1: oos_setup_db .....................   Passed    2.14 sec
+    Start 33: test_oos_sql_show
+2/3 Test #33: test_oos_sql_show ................***Failed    3.24 sec
+Note: Google Test filter = OosSqlShow.PendingReferencesResolveAndFinalizeInPlace
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+##### Starting Server For OOS SQL Testing #####
+will be written at ./test_oos_sql_log
+[----------] 1 test from OosSqlShow
+[ RUN      ] OosSqlShow.PendingReferencesResolveAndFinalizeInPlace
+/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/unit_tests/oos/sql/test_oos_sql_show.cpp:731: Failure
+Expected equality of these values:
+  locator_copyarea_add_fetch (&class_oid, &oid_Null_oid, candidate, 0, &exported, &descriptor)
+    Which is: 0
+  -1383
+
+/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/unit_tests/oos/sql/test_oos_sql_show.cpp:733: Failure
+Expected equality of these values:
+  exported.num_objs
+    Which is: 1
+  0
+
+/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/unit_tests/oos/sql/test_oos_sql_show.cpp:734: Failure
+Expected equality of these values:
+  std::string ((char *) &descriptor, sizeof (descriptor))
+    Which is: "\0\0\0\0\0\0\0\0\xFF\xFF\xFF\xFF\xFF\xFFZZ\xFF\xFF\xFF\xFF\xC3\0\0\0\x2\0\0\0\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFFL\0\0\0\0\0\0\0"
+  untouched
+    Which is: "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"
+
+/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/unit_tests/oos/sql/test_oos_sql_show.cpp:731: Failure
+Expected equality of these values:
+  locator_copyarea_add_fetch (&class_oid, &oid_Null_oid, candidate, 0, &exported, &descriptor)
+    Which is: 0
+  -1383
+
+/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/unit_tests/oos/sql/test_oos_sql_show.cpp:733: Failure
+Expected equality of these values:
+  exported.num_objs
+    Which is: 2
+  0
+
+/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/unit_tests/oos/sql/test_oos_sql_show.cpp:734: Failure
+Expected equality of these values:
+  std::string ((char *) &descriptor, sizeof (descriptor))
+    Which is: "\0\0\0\0\0\0\0\0\xFF\xFF\xFF\xFF\xFF\xFFZZ\xFF\xFF\xFF\xFF\xC3\0\0\0\x2\0\0\0\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFFL\0\0\0\0\0\0\0"
+  untouched
+    Which is: "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"
+
+[  FAILED  ] OosSqlShow.PendingReferencesResolveAndFinalizeInPlace (3112 ms)
+[----------] 1 test from OosSqlShow (3112 ms total)
+
+[----------] Global test environment tear-down
+##### Stopping Server For OOS SQL Testing #####
+[==========] 1 test from 1 test suite ran. (3217 ms total)
+[  PASSED  ] 0 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] OosSqlShow.PendingReferencesResolveAndFinalizeInPlace
+
+ 1 FAILED TEST
+
+    Start  2: oos_cleanup_db
+3/3 Test  #2: oos_cleanup_db ...................   Passed    5.20 sec
+
+67% tests passed, 1 tests failed out of 3
+
+Total Test time (real) =  10.58 sec
+
+The following tests FAILED:
+	 33 - test_oos_sql_show (Failed)
+Errors while running CTest

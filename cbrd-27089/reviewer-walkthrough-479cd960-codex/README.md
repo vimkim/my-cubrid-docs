@@ -1,3 +1,6 @@
+> Status updated 2026-10-07: Historical PR7600 reviewer package at 479cd960; source links and checks apply to that revision.
+> Current entry point: [CBRD-27089](../README.md). Historical evidence below is preserved.
+
 [Function inventory: statuses, explanations and direct calls](functions.en.md)
 
 [Start here: short English guide](start-here.en.md) · [먼저 읽기: 한국어 안내](start-here.ko.html)

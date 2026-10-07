@@ -1,3 +1,6 @@
+> Status updated 2026-10-07: Historical acceptance ledger starting at be7c01a; its Current stage section is a dated snapshot, not current task status.
+> Current entry point: [CBRD-27089](../../README.md). Historical evidence below is preserved.
+
 # PR7927 remote acceptance record
 
 ## Identity and scope

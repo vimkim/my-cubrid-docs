@@ -1,3 +1,6 @@
+> Status updated 2026-10-07: Withdrawn full-inline POC (work item271); its source worktree/branch was removed. Results remain historical and do not establish support for the current design.
+> Current entry point: [CBRD-27089](README.md). Historical evidence below is preserved.
+
 # 목적지 선택 뒤 OOS를 기록하는 inline RECDES POC
 
 목적: PR #7927의 대안이 **코드를 단순화할 수 있는지** 확인한다. 성능 개선은 필수 조건으로 두지 않았다.

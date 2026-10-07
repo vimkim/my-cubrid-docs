@@ -1,3 +1,6 @@
+> Status updated 2026-10-07: Withdrawn work item271: full-inline POC was removed before the current owner-index design. The interview below is preserved as history; awaiting review is superseded.
+> Current entry point: [CBRD-27089](../../cbrd-27089/README.md). Historical evidence below is preserved.
+
 # PR #7927 alternative OOS insertion — design interview
 
 Status: Q1–Q4 settled; bounded POC complete, awaiting review

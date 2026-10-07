@@ -1,3 +1,6 @@
+> Status updated 2026-10-07: Historical explanation at bffe13b; preparation types, raw pointers and verification claims describe that implementation.
+> Current entry point: [CBRD-27089](README.md). Historical evidence below is preserved.
+
 # [CBRD-27089] Destination-owned deferred OOS write — 해설
 
 https://jira.cubrid.org/browse/CBRD-27089 · [PR #7927](https://github.com/CUBRID/cubrid/pull/7927)

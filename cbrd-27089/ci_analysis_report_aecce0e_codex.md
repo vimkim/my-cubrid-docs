@@ -1,3 +1,6 @@
+> Status updated 2026-10-07: Exact remote-head CI evidence for aecce0e; these results do not verify later local commits.
+> Current entry point: [CBRD-27089](README.md). Historical evidence below is preserved.
+
 # PR #7927 CI failure attribution — aecce0e12
 
 ## Decision

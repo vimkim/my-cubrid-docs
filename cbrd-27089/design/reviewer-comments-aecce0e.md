@@ -4,12 +4,21 @@ Work-tracker: 284. Source inspection on 2026-10-07 compares head
 `aecce0e1216a813771621c13112c8f27d43df22e` with merge base
 `fb567a629cdb390fff920542173fa36f454c74a0`. This is static source attribution;
 it contains no new performance measurements or runtime vacuum reproduction.
+The local follow-up removes the temporary record type and raw-address stubs,
+with the final source revision identified by [current verification](no-record-type-verification.md).
+The requested [summary snapshot](no-record-type-evidence/requested-summary.json),
+[inline snapshot](no-record-type-evidence/requested-inline.json), and
+[PR metadata](no-record-type-evidence/pr-metadata.json) were fetched again on
+2026-10-07; the remote head remains aecce0e. Both comments are attributable to
+that remote revision, not to an unpushed local commit.
 
 The [Greptile summary](https://github.com/CUBRID/cubrid/pull/7927#issuecomment-6022333419)
 and [inline comment](https://github.com/CUBRID/cubrid/pull/7927#discussion_r4198779522)
 concern the same partial UPDATE cost. The summary reports no merge-blocking
 finding; the inline recommendation proposes unchanged-chain reuse. The replies
 below are local drafts and have not been published or used to resolve a thread.
+
+Static claims can be checked in the [pinned source excerpts](no-record-type-evidence/reviewer-source-attribution.json).
 
 ## Attribution
 
@@ -71,6 +80,29 @@ fresh-chain semantics during this pending-state refactor, and handle reuse with
 the complete CBRD-27230 ownership/vacuum/replication contract. Keep CBRD-27237
 rollback/vacuum verification as an independent correctness requirement.
 
+## Disposition at the local follow-up
+
+| Exact concern | Disposition | Evidence and consequence |
+| --- | --- | --- |
+| Summary: high-risk storage refactor, no identified blocker, partial UPDATE cost | Acknowledge the risk and cost; no merge approval inferred from the bot summary. | Exact summary snapshot above; local build/loader/guard and two-axis review results are separate from the historical CI package. |
+| Inline: ordinary-column client UPDATE decodes and serializes all columns | Accepted as newly introduced server adaptation work. | Copy-area input provides the full inline row and no assigned-column metadata; `heap_prepare_oos_record` initializes an all-attribute cache and reads values. |
+| Inline: unchanged OOS values receive fresh chains | Accepted behavior, with path-specific attribution. | New for client copy-area server adaptation; existing for server DB_VALUE UPDATE at the pinned baseline. Destination movement continues writing destination-owned chains. |
+| Inline: every UPDATE entails full payload read/write and memory copy | Qualify source and mechanism. | Client fetch/serialization and physical OOS writes already copy bytes; adaptation adds server decode/serialization and retention. Finalization retains payload buffers and patches stubs; it does not rebuild a full row. An additional old-chain disk read is not inherent when input is already inline. |
+| Inline: reuse unchanged references | Defer to the complete ownership/vacuum/replication design. | Current vacuum deletes undo-image chains without subtracting live post-image references, and replica fixup expects fresh-chain publication. Identity matching does not make shared-chain reclamation safe. |
+
+The local refactor retains the same all-attribute copy-area conversion and
+fresh-chain policy. It adds class-representation validation on OOS logical writes
+and ownerless/completed finalization; this validation walk has an unmeasured cost
+and is not presented as an UPDATE optimization. Owner-index resolution replaces
+raw-pointer decoding. Export checks reject residual stubs, including an inherited
+optional prefetch path now skipped for OOS neighbors. These changes address
+lifetime and publication safety, not the requested reuse optimization.
+
+Current CI evidence at the remote head is preserved in the
+[exact aecce0e report](../ci_analysis_report_aecce0e_codex.md). Its medium-ordering
+attribution remains unresolved, and local engine checks do not replace company
+regressions. No new benchmark or unchanged-chain/vacuum qualification is claimed.
+
 ## Draft inline reply
 
 확인했습니다. client copy-area 경로에는 이 PR에서 모든 속성의 DB_VALUE 변환과
@@ -78,7 +110,10 @@ rollback/vacuum verification as an independent correctness requirement.
 client의 전체 행 fetch·직렬화·전송은 기존에도 있었고, 서버 DB_VALUE UPDATE의
 미할당 OOS 재적재도 기존 동작입니다. 현재 finalization은 보관한 payload를 그대로
 사용하고 24바이트 stub만 제자리에서 바꾸며, 전체 행을 다시 만들지는 않습니다.
-전체 성능 영향은 baseline 비교 측정 없이 단정하지 않겠습니다.
+전체 성능 영향은 baseline 비교 측정 없이 단정하지 않겠습니다. 현재 로컬 변경은
+REC_OOS_PENDING을 제거하고 기존 owner와 payload index를 명시적으로 전달합니다.
+OOS 행의 저장 경계 검증 비용도 추가되므로 이를 UPDATE 성능 개선으로 제시하지
+않겠습니다. 이 변경은 아직 원격 PR head에 반영하지 않았습니다.
 
 변경 없는 체인 재사용은 CBRD-27230 설계와 함께 다루는 것이 맞습니다. 현재 vacuum은
 UPDATE undo image의 체인을 모두 회수하므로 stub만 재사용하면 live 행의 체인까지

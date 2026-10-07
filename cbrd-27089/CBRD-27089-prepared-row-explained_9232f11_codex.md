@@ -1,3 +1,6 @@
+> Status updated 2026-10-07: Historical implementation explanation at 9232f11; superseded as the current design reference.
+> Current entry point: [CBRD-27089](README.md). Historical evidence below is preserved.
+
 https://jira.cubrid.org/browse/CBRD-27089
 
 # PR #7927 — 목적지 heap을 정한 뒤 OOS 값을 기록하는 이유와 구현

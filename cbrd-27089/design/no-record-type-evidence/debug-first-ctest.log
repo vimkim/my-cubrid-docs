@@ -1,0 +1,1283 @@
+[0mdirenv: loading ~/gh/cb/CBRD-27089-oos-deferred-write/.envrc
+Preset Mode: debug_gcc
+Install Dir: /home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc
+DB Dir: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/.cub-workenv/databases
+Build Dir: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc
+bash "${MY_CUBRID:-$HOME/my-cubrid}/bin/cubrid-test-socket-preflight.sh"
+"${MY_CUBRID:-$HOME/my-cubrid}/bin/cubrid-build-coordinator.sh" installation-use 300 -- ctest --test-dir "$CUBRID_BUILD_DIR" --output-on-failure --verbose
+Internal ctest changing into directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc
+UpdateCTestConfiguration  from :/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/DartConfiguration.tcl
+UpdateCTestConfiguration  from :/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/DartConfiguration.tcl
+Test project /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 1
+      Start  1: oos_setup_db
+
+1: Test command: /usr/bin/cmake "-E" "env" "CUBRID=/home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc" "CUBRID_DATABASES=/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/.cub-workenv/databases" "PATH=/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/vm/jdk8/bin:/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc/bin:/home/vimkim/.codex/packages/standalone/releases/0.160.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.config/my-scripts/bin:/home/vimkim/.local/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/share/Modules/bin:/usr/lib64/ccache:/home/vimkim/.codex/tmp/arg0/codex-arg0lnPnJk:/home/vimkim/.codex/tmp/arg0/codex-arg0e3Wmnf:/home/vimkim/.codex/packages/standalone/releases/0.160.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0rkaV8A:/home/vimkim/.codex/packages/standalone/releases/0.159.3-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Eiz5FQ:/home/vimkim/.codex/packages/standalone/releases/0.159.2-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0UZCYf0:/home/vimkim/.codex/packages/standalone/releases/0.159.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg006SEr5:/home/vimkim/.codex/packages/standalone/releases/0.159.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Sdrd24:/home/vimkim/.codex/packages/standalone/releases/0.158.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0mOvekQ:/home/vimkim/.codex/packages/standalone/releases/0.157.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0jzxIFn:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lJR4wu:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/installs/bun/latest/bin:/home/vimkim/.local/share/mise/installs/go/1.27.1/bin:/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/bin:/home/vimkim/.local/share/mise/installs/node/latest/bin:/home/vimkim/.local/share/mise/installs/python/latest/bin:/home/vimkim/.local/share/mise/shims:/opt/bison-3.0.5/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin" "bash" "/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/unit_tests/oos/scripts/setup_unittestdb.sh"
+1: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+1: Test timeout computed to be: 10000000
+1: Creating database with 64.0M size using locale en_US.utf8. The total amount of disk space needed is 104.0M.
+1: 
+1: CUBRID 11.5.0 (11.5.0.2640) (64 debug build)
+1: 
+ 1/35 Test  #1: oos_setup_db .....................   Passed    1.96 sec
+test 7
+      Start  7: test_oos
+
+7: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos
+7: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+7: Test timeout computed to be: 60
+7: [==========] Running 21 tests from 1 test suite.
+7: [----------] Global test environment set-up.
+7: ##### Starting Server For OOS Unit Testing (unittestdb) #####
+7: will be written at ./test_oos_log
+7: [----------] 21 tests from OosTest
+7: [ RUN      ] OosTest.OosCreateAndDestroy
+7: [       OK ] OosTest.OosCreateAndDestroy (0 ms)
+7: [ RUN      ] OosTest.OosCreateAndCreateAgain
+7: [       OK ] OosTest.OosCreateAndCreateAgain (0 ms)
+7: [ RUN      ] OosTest.OosInsertAndRead
+7: [       OK ] OosTest.OosInsertAndRead (0 ms)
+7: [ RUN      ] OosTest.OosInsertRejectsInvalidSource
+7: [       OK ] OosTest.OosInsertRejectsInvalidSource (2371 ms)
+7: [ RUN      ] OosTest.OosInsertLargerThanPageSize
+7: [       OK ] OosTest.OosInsertLargerThanPageSize (0 ms)
+7: [ RUN      ] OosTest.OosInsertLarge160KBString
+7: [       OK ] OosTest.OosInsertLarge160KBString (2 ms)
+7: [ RUN      ] OosTest.OosInsertAndRead100LargeStringsAroundMaxOosChunkSize
+7: [       OK ] OosTest.OosInsertAndRead100LargeStringsAroundMaxOosChunkSize (27 ms)
+7: [ RUN      ] OosTest.OosFindBestSpace
+7: [       OK ] OosTest.OosFindBestSpace (0 ms)
+7: [ RUN      ] OosTest.OosFindBestSpaceReturnsExistingPage
+7: [       OK ] OosTest.OosFindBestSpaceReturnsExistingPage (0 ms)
+7: [ RUN      ] OosTest.OosFixAndUnfixPage
+7: [       OK ] OosTest.OosFixAndUnfixPage (0 ms)
+7: [ RUN      ] OosTest.OosManualSlottedPageInsertAndGet
+7: [       OK ] OosTest.OosManualSlottedPageInsertAndGet (0 ms)
+7: [ RUN      ] OosTest.ShouldInsertIntoSamePage
+7: [       OK ] OosTest.ShouldInsertIntoSamePage (0 ms)
+7: [ RUN      ] OosTest.OosGetLengthWithinPage
+7: [       OK ] OosTest.OosGetLengthWithinPage (0 ms)
+7: [ RUN      ] OosTest.OosGetLengthAcrossPages
+7: [       OK ] OosTest.OosGetLengthAcrossPages (2 ms)
+7: [ RUN      ] OosTest.OosGetLengthAroundMaxChunkSize
+7: [       OK ] OosTest.OosGetLengthAroundMaxChunkSize (2 ms)
+7: [ RUN      ] OosTest.ShouldInsertIntoDifferentPages
+7: [       OK ] OosTest.ShouldInsertIntoDifferentPages (0 ms)
+7: [ RUN      ] OosTest.OosInlineFormatWriteAndReadBack
+7: [       OK ] OosTest.OosInlineFormatWriteAndReadBack (0 ms)
+7: [ RUN      ] OosTest.OosInlineFormatWithRealOosInsert
+7: [       OK ] OosTest.OosInlineFormatWithRealOosInsert (0 ms)
+7: [ RUN      ] OosTest.OosInlineLengthMatchesAcrossPages
+7: [       OK ] OosTest.OosInlineLengthMatchesAcrossPages (3 ms)
+7: [ RUN      ] OosTest.OosReadRejectsCallerLengthDisagreeingWithHeader
+7: [       OK ] OosTest.OosReadRejectsCallerLengthDisagreeingWithHeader (3183 ms)
+7: [ RUN      ] OosTest.HeapAttrvalueReadOosInlineCorruptHeader
+7: [       OK ] OosTest.HeapAttrvalueReadOosInlineCorruptHeader (3666 ms)
+7: [----------] 21 tests from OosTest (9263 ms total)
+7: 
+7: [----------] Global test environment tear-down
+7: ##### Stopping Server For OOS Unit Testing #####
+7: [==========] 21 tests from 1 test suite ran. (9387 ms total)
+7: [  PASSED  ] 21 tests.
+ 2/35 Test  #7: test_oos .........................   Passed    9.41 sec
+test 8
+      Start  8: test_oos_delete
+
+8: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_delete
+8: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+8: Test timeout computed to be: 30
+8: [==========] Running 9 tests from 1 test suite.
+8: [----------] Global test environment set-up.
+8: ##### Starting Server For OOS Unit Testing (unittestdb) #####
+8: will be written at ./test_oos_log
+8: [----------] 9 tests from OosDeleteTest
+8: [ RUN      ] OosDeleteTest.OosDeleteBasic
+8: [       OK ] OosDeleteTest.OosDeleteBasic (0 ms)
+8: [ RUN      ] OosDeleteTest.OosDeleteThenReadFails
+8: [       OK ] OosDeleteTest.OosDeleteThenReadFails (4755 ms)
+8: [ RUN      ] OosDeleteTest.OosDeleteMultiChunk
+8: [       OK ] OosDeleteTest.OosDeleteMultiChunk (0 ms)
+8: [ RUN      ] OosDeleteTest.OosUpdatePattern
+8: [       OK ] OosDeleteTest.OosUpdatePattern (18 ms)
+8: [ RUN      ] OosDeleteTest.OosDeleteRestoresFreeSpace
+8: [       OK ] OosDeleteTest.OosDeleteRestoresFreeSpace (0 ms)
+8: [ RUN      ] OosDeleteTest.OosDeleteLarge160KBMultiChunk
+8: [       OK ] OosDeleteTest.OosDeleteLarge160KBMultiChunk (19 ms)
+8: [ RUN      ] OosDeleteTest.OosDeleteSlotBecomesUnknown
+8: [       OK ] OosDeleteTest.OosDeleteSlotBecomesUnknown (0 ms)
+8: [ RUN      ] OosDeleteTest.EmptiedListSkipsPageThatStillHoldsRecords
+8: [       OK ] OosDeleteTest.EmptiedListSkipsPageThatStillHoldsRecords (0 ms)
+8: [ RUN      ] OosDeleteTest.EmptiedListReportsEachPageOfMultiPageChainOnce
+8: [       OK ] OosDeleteTest.EmptiedListReportsEachPageOfMultiPageChainOnce (0 ms)
+8: [----------] 9 tests from OosDeleteTest (4796 ms total)
+8: 
+8: [----------] Global test environment tear-down
+8: ##### Stopping Server For OOS Unit Testing #####
+8: [==========] 9 tests from 1 test suite ran. (4894 ms total)
+8: [  PASSED  ] 9 tests.
+ 3/35 Test  #8: test_oos_delete ..................   Passed    4.91 sec
+test 9
+      Start  9: test_oos_identity_stamp
+
+9: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_identity_stamp
+9: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+9: Test timeout computed to be: 60
+9: [==========] Running 33 tests from 2 test suites.
+9: [----------] Global test environment set-up.
+9: ##### Starting Server For OOS Unit Testing (unittestdb) #####
+9: will be written at ./test_oos_log
+9: [----------] 27 tests from OosIdentityStampTest
+9: [ RUN      ] OosIdentityStampTest.InsertReportsTheStampTheHeadChunkCarries
+9: [       OK ] OosIdentityStampTest.InsertReportsTheStampTheHeadChunkCarries (7 ms)
+9: [ RUN      ] OosIdentityStampTest.FreshPageIssuesNonNullStamp
+9: [       OK ] OosIdentityStampTest.FreshPageIssuesNonNullStamp (0 ms)
+9: [ RUN      ] OosIdentityStampTest.SuccessiveOccupantsOfOneSlotCarryDifferentStamps
+9: [       OK ] OosIdentityStampTest.SuccessiveOccupantsOfOneSlotCarryDifferentStamps (0 ms)
+9: [ RUN      ] OosIdentityStampTest.MultiPageInsertReportsTheHeadChunkStamp
+9: [       OK ] OosIdentityStampTest.MultiPageInsertReportsTheHeadChunkStamp (1 ms)
+9: [ RUN      ] OosIdentityStampTest.BatchInsertReportsOneStampPerRequest
+9: [       OK ] OosIdentityStampTest.BatchInsertReportsOneStampPerRequest (0 ms)
+9: [ RUN      ] OosIdentityStampTest.AccessorFailsForAbsentChunk
+9: [       OK ] OosIdentityStampTest.AccessorFailsForAbsentChunk (3575 ms)
+9: [ RUN      ] OosIdentityStampTest.ReadWithMatchingReferenceReturnsTheValue
+9: [       OK ] OosIdentityStampTest.ReadWithMatchingReferenceReturnsTheValue (0 ms)
+9: [ RUN      ] OosIdentityStampTest.ReadWithMismatchedStampFailsAsCorruptedRecordAndLeavesChainIntact
+9: [       OK ] OosIdentityStampTest.ReadWithMismatchedStampFailsAsCorruptedRecordAndLeavesChainIntact (3236 ms)
+9: [ RUN      ] OosIdentityStampTest.GroupedReadVerifiesEveryReference
+9: [       OK ] OosIdentityStampTest.GroupedReadVerifiesEveryReference (1082 ms)
+9: [ RUN      ] OosIdentityStampTest.DeleteWithMismatchedStampIsCleanNoOpThatLeavesOccupantIntact
+9: [       OK ] OosIdentityStampTest.DeleteWithMismatchedStampIsCleanNoOpThatLeavesOccupantIntact (2229 ms)
+9: [ RUN      ] OosIdentityStampTest.DeleteOfGoneHeadIsCleanNoOp
+9: [       OK ] OosIdentityStampTest.DeleteOfGoneHeadIsCleanNoOp (2169 ms)
+9: [ RUN      ] OosIdentityStampTest.StaleReferenceAfterSlotReuseKeepsTheLiveChain
+9: [       OK ] OosIdentityStampTest.StaleReferenceAfterSlotReuseKeepsTheLiveChain (0 ms)
+9: [ RUN      ] OosIdentityStampTest.StaleReferenceToDeallocatedAndReallocatedPageIsCleanNoOp
+9: [       OK ] OosIdentityStampTest.StaleReferenceToDeallocatedAndReallocatedPageIsCleanNoOp (1 ms)
+9: [ RUN      ] OosIdentityStampTest.OccupancyProbeCannotTellOccupantsApart
+9: [       OK ] OosIdentityStampTest.OccupancyProbeCannotTellOccupantsApart (0 ms)
+9: [ RUN      ] OosIdentityStampTest.StaleReadOfMissingSlotIsAControlledFailure
+9: [       OK ] OosIdentityStampTest.StaleReadOfMissingSlotIsAControlledFailure (2194 ms)
+9: [ RUN      ] OosIdentityStampTest.StaleReadOfDeallocatedPageIsAControlledFailure
+9: [       OK ] OosIdentityStampTest.StaleReadOfDeallocatedPageIsAControlledFailure (3220 ms)
+9: [ RUN      ] OosIdentityStampTest.StaleReadOfReusedHeadSlotDeliversNoBytesOfTheNewOccupant
+9: [       OK ] OosIdentityStampTest.StaleReadOfReusedHeadSlotDeliversNoBytesOfTheNewOccupant (41 ms)
+9: [ RUN      ] OosIdentityStampTest.StaleReferenceToSlotReusedByContinuationChunkFailsReadsAndSkipsDelete
+9: [       OK ] OosIdentityStampTest.StaleReferenceToSlotReusedByContinuationChunkFailsReadsAndSkipsDelete (42 ms)
+9: [ RUN      ] OosIdentityStampTest.MatchingNonHeadReferenceIsRejectedBeforeAnyDelete
+9: [       OK ] OosIdentityStampTest.MatchingNonHeadReferenceIsRejectedBeforeAnyDelete (2190 ms)
+9: [ RUN      ] OosIdentityStampTest.StaleReferenceToPageReusedAsFileMetadataSkipsDeleteAndFailsReads
+9: [       OK ] OosIdentityStampTest.StaleReferenceToPageReusedAsFileMetadataSkipsDeleteAndFailsReads (1126 ms)
+9: [ RUN      ] OosIdentityStampTest.DeleteOutcomeNamesEachSkipReason
+9: [       OK ] OosIdentityStampTest.DeleteOutcomeNamesEachSkipReason (1104 ms)
+9: [ RUN      ] OosIdentityStampTest.InterruptedDeleteAndReadReportTheInterruptNotASkip
+9: [       OK ] OosIdentityStampTest.InterruptedDeleteAndReadReportTheInterruptNotASkip (0 ms)
+9: [ RUN      ] OosIdentityStampTest.TransactionAbortRestoresTheStampTheChainWasCreatedWith
+9: [       OK ] OosIdentityStampTest.TransactionAbortRestoresTheStampTheChainWasCreatedWith (25 ms)
+9: [ RUN      ] OosIdentityStampTest.SysopAbortRestoresTheStampTheChainWasCreatedWith
+9: [       OK ] OosIdentityStampTest.SysopAbortRestoresTheStampTheChainWasCreatedWith (0 ms)
+9: [ RUN      ] OosIdentityStampTest.MultiChunkDeleteRolledBackRestoresEveryChunkAndByte
+9: [       OK ] OosIdentityStampTest.MultiChunkDeleteRolledBackRestoresEveryChunkAndByte (25 ms)
+9: [ RUN      ] OosIdentityStampTest.PartiallyAppliedDeleteRolledBackRestoresEveryChain
+9: [       OK ] OosIdentityStampTest.PartiallyAppliedDeleteRolledBackRestoresEveryChain (22 ms)
+9: [ RUN      ] OosIdentityStampTest.RecoveryCallbackWritesBackTheChunkImageStampIncluded
+9: [       OK ] OosIdentityStampTest.RecoveryCallbackWritesBackTheChunkImageStampIncluded (20 ms)
+9: [----------] 27 tests from OosIdentityStampTest (22319 ms total)
+9: 
+9: [----------] 6 tests from OosIdentityStampPureTest
+9: [ RUN      ] OosIdentityStampPureTest.PackedStubStampRoundTripsEveryValue
+9: [       OK ] OosIdentityStampPureTest.PackedStubStampRoundTripsEveryValue (0 ms)
+9: [ RUN      ] OosIdentityStampPureTest.ChunkHeaderAndStubAreEachTwentyFourBytes
+9: [       OK ] OosIdentityStampPureTest.ChunkHeaderAndStubAreEachTwentyFourBytes (0 ms)
+9: [ RUN      ] OosIdentityStampPureTest.StubWriteThenParseRoundTripsAtTwentyFourBytes
+9: [       OK ] OosIdentityStampPureTest.StubWriteThenParseRoundTripsAtTwentyFourBytes (0 ms)
+9: [ RUN      ] OosIdentityStampPureTest.ParseReadsEachStubFieldOfARecordWithinItsOwnBounds
+9: [       OK ] OosIdentityStampPureTest.ParseReadsEachStubFieldOfARecordWithinItsOwnBounds (0 ms)
+9: [ RUN      ] OosIdentityStampPureTest.ParseRejectsShortStubFieldBeforeAnotherAttribute
+9: [       OK ] OosIdentityStampPureTest.ParseRejectsShortStubFieldBeforeAnotherAttribute (1090 ms)
+9: [ RUN      ] OosIdentityStampPureTest.ParseRejectsStubFieldPastRecordEnd
+9: [       OK ] OosIdentityStampPureTest.ParseRejectsStubFieldPastRecordEnd (20 ms)
+9: [----------] 6 tests from OosIdentityStampPureTest (1111 ms total)
+9: 
+9: [----------] Global test environment tear-down
+9: ##### Stopping Server For OOS Unit Testing #####
+9: [==========] 33 tests from 2 test suites ran. (23522 ms total)
+9: [  PASSED  ] 33 tests.
+ 4/35 Test  #9: test_oos_identity_stamp ..........   Passed   23.54 sec
+test 10
+      Start 10: test_oos_eager_diagnostics
+
+10: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_eager_diagnostics
+10: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+10: Test timeout computed to be: 60
+10: [==========] Running 10 tests from 1 test suite.
+10: [----------] Global test environment set-up.
+10: ##### Starting Server For OOS Unit Testing (unittestdb) #####
+10: will be written at ./test_oos_log
+10: [----------] 10 tests from OosEagerDiagnostics
+10: [ RUN      ] OosEagerDiagnostics.DeleteCompletesAndDiagnosesAStampMismatch
+10: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/unit_tests/oos/test_oos_eager_diagnostics.cpp:254: Failure
+10: Expected equality of these values:
+10:   heap_insert_logical (thread_p, &ctx, __null)
+10:     Which is: -1383
+10:   0
+10: 
+ 5/35 Test #10: test_oos_eager_diagnostics .......SIGTRAP***Exception:   4.10 sec
+[==========] Running 10 tests from 1 test suite.
+[----------] Global test environment set-up.
+##### Starting Server For OOS Unit Testing (unittestdb) #####
+will be written at ./test_oos_log
+[----------] 10 tests from OosEagerDiagnostics
+[ RUN      ] OosEagerDiagnostics.DeleteCompletesAndDiagnosesAStampMismatch
+/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/unit_tests/oos/test_oos_eager_diagnostics.cpp:254: Failure
+Expected equality of these values:
+  heap_insert_logical (thread_p, &ctx, __null)
+    Which is: -1383
+  0
+
+
+test 12
+      Start 12: test_oos_remove_file
+
+12: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_remove_file
+12: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+12: Test timeout computed to be: 30
+12: [==========] Running 8 tests from 1 test suite.
+12: [----------] Global test environment set-up.
+12: ##### Starting Server For OOS Unit Testing (unittestdb) #####
+12: will be written at ./test_oos_log
+12: [----------] 8 tests from OosFileDestroyTest
+12: [ RUN      ] OosFileDestroyTest.OosFileDestroyBasic
+12: [       OK ] OosFileDestroyTest.OosFileDestroyBasic (0 ms)
+12: [ RUN      ] OosFileDestroyTest.OosFileDestroyWithData
+12: [       OK ] OosFileDestroyTest.OosFileDestroyWithData (0 ms)
+12: [ RUN      ] OosFileDestroyTest.OosFileDestroyWithMultiChunkData
+12: [       OK ] OosFileDestroyTest.OosFileDestroyWithMultiChunkData (0 ms)
+12: [ RUN      ] OosFileDestroyTest.OosFileDestroyCacheCleared
+12: [       OK ] OosFileDestroyTest.OosFileDestroyCacheCleared (0 ms)
+12: [ RUN      ] OosFileDestroyTest.OosPageReclaimBasic
+12: [       OK ] OosFileDestroyTest.OosPageReclaimBasic (8 ms)
+12: [ RUN      ] OosFileDestroyTest.OosPageReclaimLsaGateDefersUncommitted
+12: [       OK ] OosFileDestroyTest.OosPageReclaimLsaGateDefersUncommitted (71 ms)
+12: [ RUN      ] OosFileDestroyTest.OosPageReclaimStickyFirstPage
+12: [       OK ] OosFileDestroyTest.OosPageReclaimStickyFirstPage (0 ms)
+12: [ RUN      ] OosFileDestroyTest.OosFileDestroyMultipleFiles
+12: [       OK ] OosFileDestroyTest.OosFileDestroyMultipleFiles (0 ms)
+12: [----------] 8 tests from OosFileDestroyTest (80 ms total)
+12: 
+12: [----------] Global test environment tear-down
+12: ##### Stopping Server For OOS Unit Testing #####
+12: [==========] 8 tests from 1 test suite ran. (233 ms total)
+12: [  PASSED  ] 8 tests.
+ 6/35 Test #12: test_oos_remove_file .............   Passed    0.26 sec
+test 13
+      Start 13: test_oos_bestspace
+
+13: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_bestspace
+13: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+13: Test timeout computed to be: 30
+13: [==========] Running 23 tests from 1 test suite.
+13: [----------] Global test environment set-up.
+13: ##### Starting Server For OOS Unit Testing (unittestdb) #####
+13: will be written at ./test_oos_log
+13: [----------] 23 tests from OosBestspaceTest
+13: [ RUN      ] OosBestspaceTest.BestspaceReuseAfterDelete
+13: [       OK ] OosBestspaceTest.BestspaceReuseAfterDelete (0 ms)
+13: [ RUN      ] OosBestspaceTest.BestspaceFullPageAllocsNew
+13: [       OK ] OosBestspaceTest.BestspaceFullPageAllocsNew (0 ms)
+13: [ RUN      ] OosBestspaceTest.BestspaceMultipleFilesIsolation
+13: [       OK ] OosBestspaceTest.BestspaceMultipleFilesIsolation (0 ms)
+13: [ RUN      ] OosBestspaceTest.BestspaceManySmallInsertsConsolidate
+13: [       OK ] OosBestspaceTest.BestspaceManySmallInsertsConsolidate (1 ms)
+13: [ RUN      ] OosBestspaceTest.BestspaceInsertDeleteCycle
+13: [       OK ] OosBestspaceTest.BestspaceInsertDeleteCycle (1 ms)
+13: [ RUN      ] OosBestspaceTest.BestspaceStaleHintToNonOosPageIsRejected
+13: [       OK ] OosBestspaceTest.BestspaceStaleHintToNonOosPageIsRejected (0 ms)
+13: [ RUN      ] OosBestspaceTest.BestspaceStaleHintToForeignOosPageIsRejected
+13: [       OK ] OosBestspaceTest.BestspaceStaleHintToForeignOosPageIsRejected (0 ms)
+13: [ RUN      ] OosBestspaceTest.BestspaceFindBestPageBasic
+13: [       OK ] OosBestspaceTest.BestspaceFindBestPageBasic (0 ms)
+13: [ RUN      ] OosBestspaceTest.BestspaceFindBestPageConsecutiveCalls
+13: [       OK ] OosBestspaceTest.BestspaceFindBestPageConsecutiveCalls (0 ms)
+13: [ RUN      ] OosBestspaceTest.BestspaceDeleteThenFindReclaimsPage
+13: [       OK ] OosBestspaceTest.BestspaceDeleteThenFindReclaimsPage (0 ms)
+13: [ RUN      ] OosBestspaceTest.BestspaceMultiChunkDeleteReuse
+13: [       OK ] OosBestspaceTest.BestspaceMultiChunkDeleteReuse (0 ms)
+13: [ RUN      ] OosBestspaceTest.BestspaceCacheCleanedOnFileRemove
+13: [       OK ] OosBestspaceTest.BestspaceCacheCleanedOnFileRemove (0 ms)
+13: [ RUN      ] OosBestspaceTest.BestspaceBulkInsertDeleteReinsert
+13: [       OK ] OosBestspaceTest.BestspaceBulkInsertDeleteReinsert (4 ms)
+13: [ RUN      ] OosBestspaceTest.BestspaceArrayOverflowEviction
+13: [       OK ] OosBestspaceTest.BestspaceArrayOverflowEviction (7 ms)
+13: [ RUN      ] OosBestspaceTest.BestspaceStaleCacheEviction
+13: [       OK ] OosBestspaceTest.BestspaceStaleCacheEviction (0 ms)
+13: [ RUN      ] OosBestspaceTest.BestspaceHeaderPageNeverReturned
+13: [       OK ] OosBestspaceTest.BestspaceHeaderPageNeverReturned (0 ms)
+13: [ RUN      ] OosBestspaceTest.BestspaceSyncRefillsCache
+13: [       OK ] OosBestspaceTest.BestspaceSyncRefillsCache (0 ms)
+13: [ RUN      ] OosBestspaceTest.BestspaceSecondBestRingBuffer
+13: [       OK ] OosBestspaceTest.BestspaceSecondBestRingBuffer (0 ms)
+13: [ RUN      ] OosBestspaceTest.BestspaceFindPageIdxBadspace
+13: [       OK ] OosBestspaceTest.BestspaceFindPageIdxBadspace (0 ms)
+13: [ RUN      ] OosBestspaceTest.BestspaceExactMaxChunkBoundary
+13: [       OK ] OosBestspaceTest.BestspaceExactMaxChunkBoundary (0 ms)
+13: [ RUN      ] OosBestspaceTest.DeleteUpdatesBestspaceCacheDirectly
+13: [       OK ] OosBestspaceTest.DeleteUpdatesBestspaceCacheDirectly (0 ms)
+13: [ RUN      ] OosBestspaceTest.DeleteMultipleRecordsUpdatesAllPages
+13: [       OK ] OosBestspaceTest.DeleteMultipleRecordsUpdatesAllPages (2 ms)
+13: [ RUN      ] OosBestspaceTest.DeletePartialChainUpdatesBestspace
+13: [       OK ] OosBestspaceTest.DeletePartialChainUpdatesBestspace (1 ms)
+13: [----------] 23 tests from OosBestspaceTest (25 ms total)
+13: 
+13: [----------] Global test environment tear-down
+13: ##### Stopping Server For OOS Unit Testing #####
+13: [==========] 23 tests from 1 test suite ran. (140 ms total)
+13: [  PASSED  ] 23 tests.
+ 7/35 Test #13: test_oos_bestspace ...............   Passed    0.16 sec
+test 14
+      Start 14: test_oos_growth_sweep
+
+14: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_growth_sweep
+14: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+14: Test timeout computed to be: 30
+14: [==========] Running 11 tests from 1 test suite.
+14: [----------] Global test environment set-up.
+14: ##### Starting Server For OOS Unit Testing (unittestdb) #####
+14: will be written at ./test_oos_log
+14: [----------] 11 tests from OosGrowthSweepTest
+14: [ RUN      ] OosGrowthSweepTest.SweepReclaimsAfterCommittedDeleteBurst
+14: [       OK ] OosGrowthSweepTest.SweepReclaimsAfterCommittedDeleteBurst (1 ms)
+14: [ RUN      ] OosGrowthSweepTest.TransientWriteLatchMissKeepsReclaimDebt
+14: [       OK ] OosGrowthSweepTest.TransientWriteLatchMissKeepsReclaimDebt (1 ms)
+14: [ RUN      ] OosGrowthSweepTest.ConcurrentGrowerWaitsForActiveSweep
+14: [       OK ] OosGrowthSweepTest.ConcurrentGrowerWaitsForActiveSweep (0 ms)
+14: [ RUN      ] OosGrowthSweepTest.SweepLeavesAbortRestoredChunksAlone
+14: [       OK ] OosGrowthSweepTest.SweepLeavesAbortRestoredChunksAlone (10 ms)
+14: [ RUN      ] OosGrowthSweepTest.InsertRollbackRearmsGrowthSweep
+14: [       OK ] OosGrowthSweepTest.InsertRollbackRearmsGrowthSweep (2 ms)
+14: [ RUN      ] OosGrowthSweepTest.SweepIsIncrementalWithCursorContinuation
+14: [       OK ] OosGrowthSweepTest.SweepIsIncrementalWithCursorContinuation (3 ms)
+14: [ RUN      ] OosGrowthSweepTest.SweepCursorWrapsAcrossSectorBoundary
+14: [       OK ] OosGrowthSweepTest.SweepCursorWrapsAcrossSectorBoundary (19 ms)
+14: [ RUN      ] OosGrowthSweepTest.SweepCounterResetsOnCleanLapAndRearms
+14: [       OK ] OosGrowthSweepTest.SweepCounterResetsOnCleanLapAndRearms (2 ms)
+14: [ RUN      ] OosGrowthSweepTest.SweepDefersUncommittedDeletesButAllowsGrowth
+14: [       OK ] OosGrowthSweepTest.SweepDefersUncommittedDeletesButAllowsGrowth (2 ms)
+14: [ RUN      ] OosGrowthSweepTest.BootRuleSweepsUnconditionallyAfterRestart
+14: [       OK ] OosGrowthSweepTest.BootRuleSweepsUnconditionallyAfterRestart (2 ms)
+14: [ RUN      ] OosGrowthSweepTest.SweepSkipsRefilledPageAndNeverReclaimsHeader
+14: [       OK ] OosGrowthSweepTest.SweepSkipsRefilledPageAndNeverReclaimsHeader (2 ms)
+14: [----------] 11 tests from OosGrowthSweepTest (49 ms total)
+14: 
+14: [----------] Global test environment tear-down
+14: ##### Stopping Server For OOS Unit Testing #####
+14: [==========] 11 tests from 1 test suite ran. (142 ms total)
+14: [  PASSED  ] 11 tests.
+ 8/35 Test #14: test_oos_growth_sweep ............   Passed    0.16 sec
+test 18
+      Start 18: test_oos_server
+
+18: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_server
+18: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+18: Test timeout computed to be: 60
+18: [==========] Running 38 tests from 1 test suite.
+18: [----------] Global test environment set-up.
+18: ##### Starting SERVER_MODE Server For OOS Vacuum Testing #####
+18: SERVER_MODE server booted successfully (tran_index=1)
+18: [----------] 38 tests from OosServerTest
+18: [ RUN      ] OosServerTest.OosOwnerDescriptorSupportsDiagnosticsAndProtectedIteration
+18: [       OK ] OosServerTest.OosOwnerDescriptorSupportsDiagnosticsAndProtectedIteration (13 ms)
+18: [ RUN      ] OosServerTest.OosPublicationBeginClearsOidAndLsaTogether
+18: [       OK ] OosServerTest.OosPublicationBeginClearsOidAndLsaTogether (0 ms)
+18: [ RUN      ] OosServerTest.OosPublicationBeginMissingTdesLeavesBothSidesUntouched
+18: [       OK ] OosServerTest.OosPublicationBeginMissingTdesLeavesBothSidesUntouched (2736 ms)
+18: [ RUN      ] OosServerTest.OosLogicalPreparationFailureSeesCleanPublicationState
+18: [       OK ] OosServerTest.OosLogicalPreparationFailureSeesCleanPublicationState (2922 ms)
+18: [ RUN      ] OosServerTest.OosClassLookupFailureSeesCleanPublicationState
+18: [       OK ] OosServerTest.OosClassLookupFailureSeesCleanPublicationState (12702 ms)
+18: [ RUN      ] OosServerTest.OosVfidLookupFailureSeesCleanPublicationState
+18: [       OK ] OosServerTest.OosVfidLookupFailureSeesCleanPublicationState (1416 ms)
+18: [ RUN      ] OosServerTest.OosInsertManyPartialPublicationFailureClearsBothSides
+18: [       OK ] OosServerTest.OosInsertManyPartialPublicationFailureClearsBothSides (1487 ms)
+18: [ RUN      ] OosServerTest.OosInsertManyPublicationAllocationFailureIsConvertedAndCleared
+18: [       OK ] OosServerTest.OosInsertManyPublicationAllocationFailureIsConvertedAndCleared (0 ms)
+18: [ RUN      ] OosServerTest.OosInsertManyValidationFailureDoesNotClaimPublicationStart
+18: [       OK ] OosServerTest.OosInsertManyValidationFailureDoesNotClaimPublicationStart (1468 ms)
+18: [ RUN      ] OosServerTest.OosSuccessfulPublicationWithoutReplicationTrackingKeepsOidOnly
+18: [       OK ] OosServerTest.OosSuccessfulPublicationWithoutReplicationTrackingKeepsOidOnly (0 ms)
+18: [ RUN      ] OosServerTest.OosTrackedSingleChunkBatchKeepsPairedPublication
+18: [       OK ] OosServerTest.OosTrackedSingleChunkBatchKeepsPairedPublication (0 ms)
+18: [ RUN      ] OosServerTest.OosTrackedMixedBatchPreservesDummyAndHeadPairing
+18: [       OK ] OosServerTest.OosTrackedMixedBatchPreservesDummyAndHeadPairing (0 ms)
+18: [ RUN      ] OosServerTest.ReplicaOosItemsAccumulateAndFixupConsumesInOrder
+18: [       OK ] OosServerTest.ReplicaOosItemsAccumulateAndFixupConsumesInOrder (0 ms)
+18: [ RUN      ] OosServerTest.ReplicaFixupRejectsTruncatedStub
+18: [       OK ] OosServerTest.ReplicaFixupRejectsTruncatedStub (3752 ms)
+18: [ RUN      ] OosServerTest.ReplicaFixupRejectsShortFieldBeforeAnotherAttribute
+18: [       OK ] OosServerTest.ReplicaFixupRejectsShortFieldBeforeAnotherAttribute (27 ms)
+18: [ RUN      ] OosServerTest.ReplicaIncompleteOosGroupRollsBackAndUnwinds
+18: [       OK ] OosServerTest.ReplicaIncompleteOosGroupRollsBackAndUnwinds (1741 ms)
+18: [ RUN      ] OosServerTest.ReplicaRowFailureRollsBackItsAppliedOosItem
+18: [       OK ] OosServerTest.ReplicaRowFailureRollsBackItsAppliedOosItem (3457 ms)
+18: [ RUN      ] OosServerTest.ReplicaFixupRejectsInsufficientOids
+18: [       OK ] OosServerTest.ReplicaFixupRejectsInsufficientOids (31 ms)
+18: [ RUN      ] OosServerTest.ReplicaFixupRejectsExtraOids
+18: [       OK ] OosServerTest.ReplicaFixupRejectsExtraOids (1895 ms)
+18: [ RUN      ] OosServerTest.ReplicaScalarPublicationAllocationFailureInvalidatesAccumulator
+18: [       OK ] OosServerTest.ReplicaScalarPublicationAllocationFailureInvalidatesAccumulator (0 ms)
+18: [ RUN      ] OosServerTest.OosCreateAndDestroy
+18: [       OK ] OosServerTest.OosCreateAndDestroy (0 ms)
+18: [ RUN      ] OosServerTest.OosCreateAndCreateAgain
+18: [       OK ] OosServerTest.OosCreateAndCreateAgain (0 ms)
+18: [ RUN      ] OosServerTest.OosInsertAndRead
+18: [       OK ] OosServerTest.OosInsertAndRead (0 ms)
+18: [ RUN      ] OosServerTest.OosInsertManyKeepsSinglePageLocalityAndReadManyGroupsHeadPage
+18: [       OK ] OosServerTest.OosInsertManyKeepsSinglePageLocalityAndReadManyGroupsHeadPage (0 ms)
+18: [ RUN      ] OosServerTest.OosInsertManyReusesOnlyPageThatFitsWholeBatch
+18: [       OK ] OosServerTest.OosInsertManyReusesOnlyPageThatFitsWholeBatch (0 ms)
+18: [ RUN      ] OosServerTest.OosInsertManyAllocatesFreshPageInsteadOfScatteringBatch
+18: [       OK ] OosServerTest.OosInsertManyAllocatesFreshPageInsteadOfScatteringBatch (0 ms)
+18: [ RUN      ] OosServerTest.OosInsertManySplitsOversizedSingleChunkRun
+18: [       OK ] OosServerTest.OosInsertManySplitsOversizedSingleChunkRun (0 ms)
+18: [ RUN      ] OosServerTest.OosInsertManyPreservesMixedSingleAndMultiChunkPublicationOrder
+18: [       OK ] OosServerTest.OosInsertManyPreservesMixedSingleAndMultiChunkPublicationOrder (0 ms)
+18: [ RUN      ] OosServerTest.OosInsertLargerThanPageSize
+18: [       OK ] OosServerTest.OosInsertLargerThanPageSize (0 ms)
+18: [ RUN      ] OosServerTest.OosInsertLarge160KBString
+18: [       OK ] OosServerTest.OosInsertLarge160KBString (3 ms)
+18: [ RUN      ] OosServerTest.OosInsertAndRead100LargeStringsAroundMaxOosChunkSize
+18: [       OK ] OosServerTest.OosInsertAndRead100LargeStringsAroundMaxOosChunkSize (33 ms)
+18: [ RUN      ] OosServerTest.ShouldInsertIntoSamePage
+18: [       OK ] OosServerTest.ShouldInsertIntoSamePage (0 ms)
+18: [ RUN      ] OosServerTest.OosGetLengthWithinPage
+18: [       OK ] OosServerTest.OosGetLengthWithinPage (0 ms)
+18: [ RUN      ] OosServerTest.OosGetLengthAcrossPages
+18: [       OK ] OosServerTest.OosGetLengthAcrossPages (3 ms)
+18: [ RUN      ] OosServerTest.OosGetLengthAroundMaxChunkSize
+18: [       OK ] OosServerTest.OosGetLengthAroundMaxChunkSize (3 ms)
+18: [ RUN      ] OosServerTest.OosInlineFormatWriteAndReadBack
+18: [       OK ] OosServerTest.OosInlineFormatWriteAndReadBack (0 ms)
+18: [ RUN      ] OosServerTest.OosInlineFormatWithRealOosInsert
+18: [       OK ] OosServerTest.OosInlineFormatWithRealOosInsert (0 ms)
+18: [ RUN      ] OosServerTest.OosInlineLengthMatchesAcrossPages
+18: [       OK ] OosServerTest.OosInlineLengthMatchesAcrossPages (4 ms)
+18: [----------] 38 tests from OosServerTest (33706 ms total)
+18: 
+18: [----------] Global test environment tear-down
+18: ##### Stopping SERVER_MODE Server #####
+18: [==========] 38 tests from 1 test suite ran. (34846 ms total)
+18: [  PASSED  ] 38 tests.
+ 9/35 Test #18: test_oos_server ..................   Passed   35.36 sec
+test 19
+      Start 19: test_oos_delete_server
+
+19: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_delete_server
+19: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+19: Test timeout computed to be: 60
+19: [==========] Running 9 tests from 1 test suite.
+19: [----------] Global test environment set-up.
+19: ##### Starting SERVER_MODE Server For OOS Vacuum Testing #####
+19: SERVER_MODE server booted successfully (tran_index=1)
+19: [----------] 9 tests from OosDeleteServerTest
+19: [ RUN      ] OosDeleteServerTest.OosDeleteBasic
+19: [       OK ] OosDeleteServerTest.OosDeleteBasic (0 ms)
+19: [ RUN      ] OosDeleteServerTest.OosDeleteThenReadFails
+19: [       OK ] OosDeleteServerTest.OosDeleteThenReadFails (5504 ms)
+19: [ RUN      ] OosDeleteServerTest.OosDeleteMultiChunk
+19: [       OK ] OosDeleteServerTest.OosDeleteMultiChunk (0 ms)
+19: [ RUN      ] OosDeleteServerTest.OosUpdatePattern
+19: [       OK ] OosDeleteServerTest.OosUpdatePattern (19 ms)
+19: [ RUN      ] OosDeleteServerTest.OosDeleteRestoresFreeSpace
+19: [       OK ] OosDeleteServerTest.OosDeleteRestoresFreeSpace (0 ms)
+19: [ RUN      ] OosDeleteServerTest.OosDeleteLarge160KBMultiChunk
+19: [       OK ] OosDeleteServerTest.OosDeleteLarge160KBMultiChunk (22 ms)
+19: [ RUN      ] OosDeleteServerTest.OosDeleteSlotBecomesUnknown
+19: [       OK ] OosDeleteServerTest.OosDeleteSlotBecomesUnknown (0 ms)
+19: [ RUN      ] OosDeleteServerTest.OosDeleteStampMismatchAndGoneHeadAreCleanNoOps
+19: [       OK ] OosDeleteServerTest.OosDeleteStampMismatchAndGoneHeadAreCleanNoOps (2930 ms)
+19: [ RUN      ] OosDeleteServerTest.OosDeleteStaleReferenceAfterSlotReuseKeepsLiveChain
+19: [       OK ] OosDeleteServerTest.OosDeleteStaleReferenceAfterSlotReuseKeepsLiveChain (0 ms)
+19: [----------] 9 tests from OosDeleteServerTest (8479 ms total)
+19: 
+19: [----------] Global test environment tear-down
+19: ##### Stopping SERVER_MODE Server #####
+19: [==========] 9 tests from 1 test suite ran. (9613 ms total)
+19: [  PASSED  ] 9 tests.
+10/35 Test #19: test_oos_delete_server ...........   Passed   10.30 sec
+test 20
+      Start 20: test_oos_remove_file_server
+
+20: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_remove_file_server
+20: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+20: Test timeout computed to be: 60
+20: [==========] Running 7 tests from 1 test suite.
+20: [----------] Global test environment set-up.
+20: ##### Starting SERVER_MODE Server For OOS Vacuum Testing #####
+20: SERVER_MODE server booted successfully (tran_index=1)
+20: [----------] 7 tests from OosFileDestroyServerTest
+20: [ RUN      ] OosFileDestroyServerTest.OosFileDestroyBasic
+20: [       OK ] OosFileDestroyServerTest.OosFileDestroyBasic (0 ms)
+20: [ RUN      ] OosFileDestroyServerTest.OosFileDestroyWithData
+20: [       OK ] OosFileDestroyServerTest.OosFileDestroyWithData (0 ms)
+20: [ RUN      ] OosFileDestroyServerTest.OosFileDestroyWithMultiChunkData
+20: [       OK ] OosFileDestroyServerTest.OosFileDestroyWithMultiChunkData (0 ms)
+20: [ RUN      ] OosFileDestroyServerTest.OosFileDestroyCacheCleared
+20: [       OK ] OosFileDestroyServerTest.OosFileDestroyCacheCleared (0 ms)
+20: [ RUN      ] OosFileDestroyServerTest.OosPageReclaimBasic
+20: [       OK ] OosFileDestroyServerTest.OosPageReclaimBasic (1 ms)
+20: [ RUN      ] OosFileDestroyServerTest.OosPageReclaimLsaGateDefersUncommitted
+20: [       OK ] OosFileDestroyServerTest.OosPageReclaimLsaGateDefersUncommitted (13 ms)
+20: [ RUN      ] OosFileDestroyServerTest.OosFileDestroyMultipleFiles
+20: [       OK ] OosFileDestroyServerTest.OosFileDestroyMultipleFiles (0 ms)
+20: [----------] 7 tests from OosFileDestroyServerTest (16 ms total)
+20: 
+20: [----------] Global test environment tear-down
+20: ##### Stopping SERVER_MODE Server #####
+20: [==========] 7 tests from 1 test suite ran. (1118 ms total)
+20: [  PASSED  ] 7 tests.
+11/35 Test #20: test_oos_remove_file_server ......   Passed    1.35 sec
+test 21
+      Start 21: test_oos_mock_vacuum_server
+
+21: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_mock_vacuum_server
+21: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+21: Test timeout computed to be: 60
+21: [==========] Running 6 tests from 1 test suite.
+21: [----------] Global test environment set-up.
+21: ##### Starting SERVER_MODE Server For OOS Vacuum Testing #####
+21: SERVER_MODE server booted successfully (tran_index=1)
+21: [----------] 6 tests from OosVacuumServer
+21: [ RUN      ] OosVacuumServer.BasicInsertAndDelete
+21: [       OK ] OosVacuumServer.BasicInsertAndDelete (5767 ms)
+21: [ RUN      ] OosVacuumServer.MultiChunkDelete
+21: [       OK ] OosVacuumServer.MultiChunkDelete (26 ms)
+21: [ RUN      ] OosVacuumServer.LargeMultiPageDelete
+21: [       OK ] OosVacuumServer.LargeMultiPageDelete (44 ms)
+21: [ RUN      ] OosVacuumServer.MvccUpdateVacuumPattern
+21: [       OK ] OosVacuumServer.MvccUpdateVacuumPattern (35 ms)
+21: [ RUN      ] OosVacuumServer.BulkVacuumReclaimAndReuse
+21: [       OK ] OosVacuumServer.BulkVacuumReclaimAndReuse (3 ms)
+21: [ RUN      ] OosVacuumServer.MultiUpdateChurnVacuum
+21: [       OK ] OosVacuumServer.MultiUpdateChurnVacuum (11 ms)
+21: [----------] 6 tests from OosVacuumServer (5889 ms total)
+21: 
+21: [----------] Global test environment tear-down
+21: ##### Stopping SERVER_MODE Server #####
+21: [==========] 6 tests from 1 test suite ran. (7060 ms total)
+21: [  PASSED  ] 6 tests.
+12/35 Test #21: test_oos_mock_vacuum_server ......   Passed    7.30 sec
+test 22
+      Start 22: test_oos_vacuum_server
+
+22: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_vacuum_server
+22: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+22: Test timeout computed to be: 60
+22: [==========] Running 14 tests from 2 test suites.
+22: [----------] Global test environment set-up.
+22: ##### Starting SERVER_MODE Server For OOS Vacuum Testing #####
+22: SERVER_MODE server booted successfully (tran_index=1)
+22: [----------] 12 tests from OosVacuumCodePathServer
+22: [ RUN      ] OosVacuumCodePathServer.HeapRecdesContainsOos
+22: [       OK ] OosVacuumCodePathServer.HeapRecdesContainsOos (0 ms)
+22: [ RUN      ] OosVacuumCodePathServer.HeapRecdesGetOosRefsSingle
+22: [       OK ] OosVacuumCodePathServer.HeapRecdesGetOosRefsSingle (0 ms)
+22: [ RUN      ] OosVacuumCodePathServer.HeapRecdesGetOosRefsMultiple
+22: [       OK ] OosVacuumCodePathServer.HeapRecdesGetOosRefsMultiple (0 ms)
+22: [ RUN      ] OosVacuumCodePathServer.HeapRecdesGetOosRefsRejectsShortFieldBeforeAnotherAttribute
+22: [       OK ] OosVacuumCodePathServer.HeapRecdesGetOosRefsRejectsShortFieldBeforeAnotherAttribute (5622 ms)
+22: [ RUN      ] OosVacuumCodePathServer.HeapRecdesGetOosRefsRejectsStubFieldPastRecordEnd
+22: [       OK ] OosVacuumCodePathServer.HeapRecdesGetOosRefsRejectsStubFieldPastRecordEnd (28 ms)
+22: [ RUN      ] OosVacuumCodePathServer.VacuumHeapOosDeleteSingle
+22: [       OK ] OosVacuumCodePathServer.VacuumHeapOosDeleteSingle (5479 ms)
+22: [ RUN      ] OosVacuumCodePathServer.VacuumHeapOosDeleteMultipleColumns
+22: [       OK ] OosVacuumCodePathServer.VacuumHeapOosDeleteMultipleColumns (41 ms)
+22: [ RUN      ] OosVacuumCodePathServer.VacuumHeapOosDeleteMultiChunk
+22: [       OK ] OosVacuumCodePathServer.VacuumHeapOosDeleteMultiChunk (29 ms)
+22: [ RUN      ] OosVacuumCodePathServer.VacuumHeapOosDeleteLarge160KB
+22: [       OK ] OosVacuumCodePathServer.VacuumHeapOosDeleteLarge160KB (32 ms)
+22: [ RUN      ] OosVacuumCodePathServer.MultiUpdateVacuumReclaimFreeSpace
+22: [       OK ] OosVacuumCodePathServer.MultiUpdateVacuumReclaimFreeSpace (208 ms)
+22: [ RUN      ] OosVacuumCodePathServer.BulkVacuumReclaimAndReuse
+22: [       OK ] OosVacuumCodePathServer.BulkVacuumReclaimAndReuse (92 ms)
+22: [ RUN      ] OosVacuumCodePathServer.VacuumHeapOosDeleteReclaimsLiveReferenceAndSkipsStaleOne
+22: [       OK ] OosVacuumCodePathServer.VacuumHeapOosDeleteReclaimsLiveReferenceAndSkipsStaleOne (1682 ms)
+22: [----------] 12 tests from OosVacuumCodePathServer (13219 ms total)
+22: 
+22: [----------] 2 tests from OosVacuumHeapSeamServer
+22: [ RUN      ] OosVacuumHeapSeamServer.ForwardWalkReclaimsLiveReferenceAndSkipsStaleOne
+22: [       OK ] OosVacuumHeapSeamServer.ForwardWalkReclaimsLiveReferenceAndSkipsStaleOne (5986 ms)
+22: [ RUN      ] OosVacuumHeapSeamServer.EagerDeleteReclaimsLiveReferenceAndSkipsStaleOne
+22: [       OK ] OosVacuumHeapSeamServer.EagerDeleteReclaimsLiveReferenceAndSkipsStaleOne (25 ms)
+22: [----------] 2 tests from OosVacuumHeapSeamServer (6012 ms total)
+22: 
+22: [----------] Global test environment tear-down
+22: ##### Stopping SERVER_MODE Server #####
+22: [==========] 14 tests from 2 test suites ran. (20362 ms total)
+22: [  PASSED  ] 14 tests.
+13/35 Test #22: test_oos_vacuum_server ...........   Passed   21.39 sec
+test 23
+      Start 23: test_oos_real_vacuum_server
+
+23: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_real_vacuum_server
+23: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+23: Test timeout computed to be: 120
+23: [==========] Running 10 tests from 1 test suite.
+23: [----------] Global test environment set-up.
+23: ##### Starting SERVER_MODE Server For OOS Vacuum Testing #####
+23: SERVER_MODE server booted successfully (tran_index=1)
+23: [----------] 10 tests from OosRealVacuum
+23: [ RUN      ] OosRealVacuum.SingleRowDeleteDrainsCompletely
+23: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/unit_tests/oos/test_oos_real_vacuum_server.cpp:347: Failure
+23: Expected equality of these values:
+23:   heap_insert_mvcc (hfid, class_oid, scan_cache, heap_rec, heap_oid_out)
+23:     Which is: -1383
+23:   0
+23: 
+14/35 Test #23: test_oos_real_vacuum_server ......SIGTRAP***Exception:  11.52 sec
+[==========] Running 10 tests from 1 test suite.
+[----------] Global test environment set-up.
+##### Starting SERVER_MODE Server For OOS Vacuum Testing #####
+SERVER_MODE server booted successfully (tran_index=1)
+[----------] 10 tests from OosRealVacuum
+[ RUN      ] OosRealVacuum.SingleRowDeleteDrainsCompletely
+/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/unit_tests/oos/test_oos_real_vacuum_server.cpp:347: Failure
+Expected equality of these values:
+  heap_insert_mvcc (hfid, class_oid, scan_cache, heap_rec, heap_oid_out)
+    Which is: -1383
+  0
+
+
+test 24
+      Start 24: test_oos_sql_crud
+
+24: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_sql_crud
+24: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos/sql
+24: Test timeout computed to be: 30
+24: [==========] Running 8 tests from 1 test suite.
+24: [----------] Global test environment set-up.
+24: ##### Starting Server For OOS SQL Testing #####
+24: will be written at ./test_oos_sql_log
+24: [----------] 8 tests from OosSqlCrud
+24: [ RUN      ] OosSqlCrud.BasicInsertSelect
+24: [       OK ] OosSqlCrud.BasicInsertSelect (31 ms)
+24: [ RUN      ] OosSqlCrud.SmallRecordNoOos
+24: [       OK ] OosSqlCrud.SmallRecordNoOos (11 ms)
+24: [ RUN      ] OosSqlCrud.MultipleOosColumns
+24: [       OK ] OosSqlCrud.MultipleOosColumns (15 ms)
+24: [ RUN      ] OosSqlCrud.Cbrd27006MultiOosColumnSelectsAndUpdate
+24: [       OK ] OosSqlCrud.Cbrd27006MultiOosColumnSelectsAndUpdate (17 ms)
+24: [ RUN      ] OosSqlCrud.Cbrd27006MixedSingleChunkAndMultiChunkRow
+24: [       OK ] OosSqlCrud.Cbrd27006MixedSingleChunkAndMultiChunkRow (15 ms)
+24: [ RUN      ] OosSqlCrud.Cbrd27006ReadDispatchBatchesOnlyMultiOosProjections
+24: [       OK ] OosSqlCrud.Cbrd27006ReadDispatchBatchesOnlyMultiOosProjections (15 ms)
+24: [ RUN      ] OosSqlCrud.MultiChunkOos
+24: [       OK ] OosSqlCrud.MultiChunkOos (12 ms)
+24: [ RUN      ] OosSqlCrud.MixedChunkSizes
+24: [       OK ] OosSqlCrud.MixedChunkSizes (13 ms)
+24: [----------] 8 tests from OosSqlCrud (133 ms total)
+24: 
+24: [----------] Global test environment tear-down
+24: ##### Stopping Server For OOS SQL Testing #####
+24: [==========] 8 tests from 1 test suite ran. (257 ms total)
+24: [  PASSED  ] 8 tests.
+15/35 Test #24: test_oos_sql_crud ................   Passed    0.28 sec
+test 25
+      Start 25: test_oos_sql_ddl
+
+25: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_sql_ddl
+25: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos/sql
+25: Test timeout computed to be: 30
+25: [==========] Running 5 tests from 1 test suite.
+25: [----------] Global test environment set-up.
+25: ##### Starting Server For OOS SQL Testing #####
+25: will be written at ./test_oos_sql_log
+25: [----------] 5 tests from OosSqlDdl
+25: [ RUN      ] OosSqlDdl.AlterAddColumn
+25: [       OK ] OosSqlDdl.AlterAddColumn (38 ms)
+25: [ RUN      ] OosSqlDdl.AlterDropOosColumn
+25: [       OK ] OosSqlDdl.AlterDropOosColumn (19 ms)
+25: [ RUN      ] OosSqlDdl.CreateTableAsSelect
+25: [       OK ] OosSqlDdl.CreateTableAsSelect (22 ms)
+25: [ RUN      ] OosSqlDdl.DropAndRecreateSameName
+25: [       OK ] OosSqlDdl.DropAndRecreateSameName (22 ms)
+25: [ RUN      ] OosSqlDdl.DropCreateCycles
+25: [       OK ] OosSqlDdl.DropCreateCycles (33 ms)
+25: [----------] 5 tests from OosSqlDdl (136 ms total)
+25: 
+25: [----------] Global test environment tear-down
+25: ##### Stopping Server For OOS SQL Testing #####
+25: [==========] 5 tests from 1 test suite ran. (246 ms total)
+25: [  PASSED  ] 5 tests.
+16/35 Test #25: test_oos_sql_ddl .................   Passed    0.27 sec
+test 26
+      Start 26: test_oos_sql_delete
+
+26: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_sql_delete
+26: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos/sql
+26: Test timeout computed to be: 30
+26: [==========] Running 8 tests from 1 test suite.
+26: [----------] Global test environment set-up.
+26: ##### Starting Server For OOS SQL Testing #####
+26: will be written at ./test_oos_sql_log
+26: [----------] 8 tests from OosSqlDelete
+26: [ RUN      ] OosSqlDelete.DeleteSingleChunk
+26: [       OK ] OosSqlDelete.DeleteSingleChunk (34 ms)
+26: [ RUN      ] OosSqlDelete.DeleteMultiChunk
+26: [       OK ] OosSqlDelete.DeleteMultiChunk (13 ms)
+26: [ RUN      ] OosSqlDelete.DeleteLarge160KB
+26: [       OK ] OosSqlDelete.DeleteLarge160KB (17 ms)
+26: [ RUN      ] OosSqlDelete.DeleteSelectiveRowsIntact
+26: [       OK ] OosSqlDelete.DeleteSelectiveRowsIntact (14 ms)
+26: [ RUN      ] OosSqlDelete.DeleteAndReinsert
+26: [       OK ] OosSqlDelete.DeleteAndReinsert (14 ms)
+26: [ RUN      ] OosSqlDelete.DeleteMixedColumns
+26: [       OK ] OosSqlDelete.DeleteMixedColumns (17 ms)
+26: [ RUN      ] OosSqlDelete.UpdateOosColumn
+26: [       OK ] OosSqlDelete.UpdateOosColumn (12 ms)
+26: [ RUN      ] OosSqlDelete.DeleteAndReinsertMultiChunk
+26: [       OK ] OosSqlDelete.DeleteAndReinsertMultiChunk (18 ms)
+26: [----------] 8 tests from OosSqlDelete (144 ms total)
+26: 
+26: [----------] Global test environment tear-down
+26: ##### Stopping Server For OOS SQL Testing #####
+26: [==========] 8 tests from 1 test suite ran. (256 ms total)
+26: [  PASSED  ] 8 tests.
+17/35 Test #26: test_oos_sql_delete ..............   Passed    0.28 sec
+test 27
+      Start 27: test_oos_sql_boundary
+
+27: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_sql_boundary
+27: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos/sql
+27: Test timeout computed to be: 30
+27: [==========] Running 8 tests from 1 test suite.
+27: [----------] Global test environment set-up.
+27: ##### Starting Server For OOS SQL Testing #####
+27: will be written at ./test_oos_sql_log
+27: [----------] 8 tests from OosSqlBoundary
+27: [ RUN      ] OosSqlBoundary.NullOosColumn
+27: [       OK ] OosSqlBoundary.NullOosColumn (37 ms)
+27: [ RUN      ] OosSqlBoundary.DropTableWithOos
+27: [       OK ] OosSqlBoundary.DropTableWithOos (15 ms)
+27: [ RUN      ] OosSqlBoundary.DropAndRecreateOosFile
+27: [       OK ] OosSqlBoundary.DropAndRecreateOosFile (26 ms)
+27: [ RUN      ] OosSqlBoundary.IndexScanWithOos
+27: [       OK ] OosSqlBoundary.IndexScanWithOos (17 ms)
+27: [ RUN      ] OosSqlBoundary.MvccHeaderWithOos
+27: [       OK ] OosSqlBoundary.MvccHeaderWithOos (16 ms)
+27: [ RUN      ] OosSqlBoundary.CopyReadPath
+27: [       OK ] OosSqlBoundary.CopyReadPath (22 ms)
+27: [ RUN      ] OosSqlBoundary.InsertSelect
+27: [       OK ] OosSqlBoundary.InsertSelect (26 ms)
+27: [ RUN      ] OosSqlBoundary.MidSizeColumnsEligibleForOos
+27: [       OK ] OosSqlBoundary.MidSizeColumnsEligibleForOos (24 ms)
+27: [----------] 8 tests from OosSqlBoundary (186 ms total)
+27: 
+27: [----------] Global test environment tear-down
+27: ##### Stopping Server For OOS SQL Testing #####
+27: [==========] 8 tests from 1 test suite ran. (307 ms total)
+27: [  PASSED  ] 8 tests.
+18/35 Test #27: test_oos_sql_boundary ............   Passed    0.34 sec
+test 28
+      Start 28: test_oos_sql_update_delete
+
+28: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_sql_update_delete
+28: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos/sql
+28: Test timeout computed to be: 30
+28: [==========] Running 7 tests from 1 test suite.
+28: [----------] Global test environment set-up.
+28: ##### Starting Server For OOS SQL Testing #####
+28: will be written at ./test_oos_sql_log
+28: [----------] 7 tests from OosSqlUpdateDelete
+28: [ RUN      ] OosSqlUpdateDelete.UpdateOosValue
+28: [       OK ] OosSqlUpdateDelete.UpdateOosValue (37 ms)
+28: [ RUN      ] OosSqlUpdateDelete.UpdateNonOosColumn
+28: [       OK ] OosSqlUpdateDelete.UpdateNonOosColumn (15 ms)
+28: [ RUN      ] OosSqlUpdateDelete.RepeatedUpdates
+28: [       OK ] OosSqlUpdateDelete.RepeatedUpdates (25 ms)
+28: [ RUN      ] OosSqlUpdateDelete.SizeChangeChunkTransition
+28: [       OK ] OosSqlUpdateDelete.SizeChangeChunkTransition (19 ms)
+28: [ RUN      ] OosSqlUpdateDelete.DeleteOosRows
+28: [       OK ] OosSqlUpdateDelete.DeleteOosRows (18 ms)
+28: [ RUN      ] OosSqlUpdateDelete.TruncateAndReinsert
+28: [       OK ] OosSqlUpdateDelete.TruncateAndReinsert (22 ms)
+28: [ RUN      ] OosSqlUpdateDelete.UpdateMultiChunk
+28: [       OK ] OosSqlUpdateDelete.UpdateMultiChunk (22 ms)
+28: [----------] 7 tests from OosSqlUpdateDelete (160 ms total)
+28: 
+28: [----------] Global test environment tear-down
+28: ##### Stopping Server For OOS SQL Testing #####
+28: [==========] 7 tests from 1 test suite ran. (278 ms total)
+28: [  PASSED  ] 7 tests.
+19/35 Test #28: test_oos_sql_update_delete .......   Passed    0.31 sec
+test 29
+      Start 29: test_oos_sql_txn
+
+29: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_sql_txn
+29: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos/sql
+29: Test timeout computed to be: 30
+29: [==========] Running 8 tests from 1 test suite.
+29: [----------] Global test environment set-up.
+29: ##### Starting Server For OOS SQL Testing #####
+29: will be written at ./test_oos_sql_log
+29: [----------] 8 tests from OosSqlTxn
+29: [ RUN      ] OosSqlTxn.RollbackInsert
+29: [       OK ] OosSqlTxn.RollbackInsert (35 ms)
+29: [ RUN      ] OosSqlTxn.RollbackUpdate
+29: [       OK ] OosSqlTxn.RollbackUpdate (15 ms)
+29: [ RUN      ] OosSqlTxn.CommittedDataPersists
+29: [       OK ] OosSqlTxn.CommittedDataPersists (14 ms)
+29: [ RUN      ] OosSqlTxn.RollbackMultiChunk
+29: [       OK ] OosSqlTxn.RollbackMultiChunk (14 ms)
+29: [ RUN      ] OosSqlTxn.ComboThenCommit
+29: [       OK ] OosSqlTxn.ComboThenCommit (18 ms)
+29: [ RUN      ] OosSqlTxn.RollbackDelete
+29: [       OK ] OosSqlTxn.RollbackDelete (16 ms)
+29: [ RUN      ] OosSqlTxn.DeleteCommit
+29: [       OK ] OosSqlTxn.DeleteCommit (14 ms)
+29: [ RUN      ] OosSqlTxn.DeleteRollback
+29: [       OK ] OosSqlTxn.DeleteRollback (14 ms)
+29: [----------] 8 tests from OosSqlTxn (144 ms total)
+29: 
+29: [----------] Global test environment tear-down
+29: ##### Stopping Server For OOS SQL Testing #####
+29: [==========] 8 tests from 1 test suite ran. (261 ms total)
+29: [  PASSED  ] 8 tests.
+20/35 Test #29: test_oos_sql_txn .................   Passed    0.29 sec
+test 30
+      Start 30: test_oos_sql_bigone
+
+30: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_sql_bigone
+30: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos/sql
+30: Test timeout computed to be: 30
+30: [==========] Running 4 tests from 1 test suite.
+30: [----------] Global test environment set-up.
+30: ##### Starting Server For OOS SQL Testing #####
+30: will be written at ./test_oos_sql_log
+30: [----------] 4 tests from OosSqlBigone
+30: [ RUN      ] OosSqlBigone.OosColumnWithBigoneRejected
+30: [       OK ] OosSqlBigone.OosColumnWithBigoneRejected (46 ms)
+30: [ RUN      ] OosSqlBigone.BigoneWithoutOosColumnSucceeds
+30: [       OK ] OosSqlBigone.BigoneWithoutOosColumnSucceeds (21 ms)
+30: [ RUN      ] OosSqlBigone.OosColumnInlineBetween4kAnd16kSucceeds
+30: [       OK ] OosSqlBigone.OosColumnInlineBetween4kAnd16kSucceeds (19 ms)
+30: [ RUN      ] OosSqlBigone.UpdateIntoOosBigoneRejected
+30: [       OK ] OosSqlBigone.UpdateIntoOosBigoneRejected (19 ms)
+30: [----------] 4 tests from OosSqlBigone (106 ms total)
+30: 
+30: [----------] Global test environment tear-down
+30: ##### Stopping Server For OOS SQL Testing #####
+30: [==========] 4 tests from 1 test suite ran. (276 ms total)
+30: [  PASSED  ] 4 tests.
+21/35 Test #30: test_oos_sql_bigone ..............   Passed    0.30 sec
+test 31
+      Start 31: test_oos_sql_eager_cleanup
+
+31: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_sql_eager_cleanup
+31: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos/sql
+31: Test timeout computed to be: 30
+31: [==========] Running 12 tests from 1 test suite.
+31: [----------] Global test environment set-up.
+31: ##### Starting Server For OOS SQL Testing #####
+31: will be written at ./test_oos_sql_log
+31: [----------] 12 tests from OosEagerCleanup
+31: [ RUN      ] OosEagerCleanup.SingleUpdateCleansOldOos
+31: [       OK ] OosEagerCleanup.SingleUpdateCleansOldOos (38 ms)
+31: [ RUN      ] OosEagerCleanup.MultipleUpdatesPagesBounded
+31: [       OK ] OosEagerCleanup.MultipleUpdatesPagesBounded (28 ms)
+31: [ RUN      ] OosEagerCleanup.MultiOosColumnUpdateCleanup
+31: [       OK ] OosEagerCleanup.MultiOosColumnUpdateCleanup (25 ms)
+31: [ RUN      ] OosEagerCleanup.UpdateChurnStress
+31: [       OK ] OosEagerCleanup.UpdateChurnStress (97 ms)
+31: [ RUN      ] OosEagerCleanup.StepByStepLifecycleWithPageCounts
+31: [Step 1] After INSERT 10 rows:  5 OOS pages
+31: [Step 2] After UPDATE round 1: 5 OOS pages (should stay ~5)
+31: [Step 2] After UPDATE round 2: 5 OOS pages (should stay ~5)
+31: [Step 2] After UPDATE round 3: 5 OOS pages (should stay ~5)
+31: [       OK ] OosEagerCleanup.StepByStepLifecycleWithPageCounts (44 ms)
+31: [ RUN      ] OosEagerCleanup.UpdateVaryingOosSizes
+31: [       OK ] OosEagerCleanup.UpdateVaryingOosSizes (19 ms)
+31: [ RUN      ] OosEagerCleanup.MixedColumnsUpdateOnlyOos
+31: [       OK ] OosEagerCleanup.MixedColumnsUpdateOnlyOos (17 ms)
+31: [ RUN      ] OosEagerCleanup.SingleDeleteCleansOos
+31: [       OK ] OosEagerCleanup.SingleDeleteCleansOos (15 ms)
+31: [ RUN      ] OosEagerCleanup.InsertDeleteChurnPagesBounded
+31: [       OK ] OosEagerCleanup.InsertDeleteChurnPagesBounded (46 ms)
+31: [ RUN      ] OosEagerCleanup.MultiChunkDeleteCleansAllChunks
+31: [       OK ] OosEagerCleanup.MultiChunkDeleteCleansAllChunks (29 ms)
+31: [ RUN      ] OosEagerCleanup.MultiOosColumnDeleteCleanup
+31: [       OK ] OosEagerCleanup.MultiOosColumnDeleteCleanup (33 ms)
+31: [ RUN      ] OosEagerCleanup.MixedFillerDeleteChurnPagesBounded
+31: [       OK ] OosEagerCleanup.MixedFillerDeleteChurnPagesBounded (44 ms)
+31: [----------] 12 tests from OosEagerCleanup (442 ms total)
+31: 
+31: [----------] Global test environment tear-down
+31: ##### Stopping Server For OOS SQL Testing #####
+31: [==========] 12 tests from 1 test suite ran. (571 ms total)
+31: [  PASSED  ] 12 tests.
+22/35 Test #31: test_oos_sql_eager_cleanup .......   Passed    0.60 sec
+test 32
+      Start 32: test_oos_sql_storage
+
+32: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_sql_storage
+32: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos/sql
+32: Test timeout computed to be: 30
+32: [==========] Running 25 tests from 1 test suite.
+32: [----------] Global test environment set-up.
+32: ##### Starting Server For OOS SQL Testing #####
+32: will be written at ./test_oos_sql_log
+32: [----------] 25 tests from OosSqlStorage
+32: [ RUN      ] OosSqlStorage.CreateTablePersistsPreferInline
+32: [       OK ] OosSqlStorage.CreateTablePersistsPreferInline (35 ms)
+32: [ RUN      ] OosSqlStorage.CreateTablePersistsForceOutline
+32: [       OK ] OosSqlStorage.CreateTablePersistsForceOutline (10 ms)
+32: [ RUN      ] OosSqlStorage.DefaultColumnHasNoStorageClause
+32: [       OK ] OosSqlStorage.DefaultColumnHasNoStorageClause (10 ms)
+32: [ RUN      ] OosSqlStorage.ExplicitDefaultStorageClausesActAsDefault
+32: [       OK ] OosSqlStorage.ExplicitDefaultStorageClausesActAsDefault (11 ms)
+32: [ RUN      ] OosSqlStorage.CreateTableLikeCopiesPreferInline
+32: [       OK ] OosSqlStorage.CreateTableLikeCopiesPreferInline (18 ms)
+32: [ RUN      ] OosSqlStorage.CreateTableLikeCopiesForceOutline
+32: [       OK ] OosSqlStorage.CreateTableLikeCopiesForceOutline (18 ms)
+32: [ RUN      ] OosSqlStorage.SharedAttributeRejectsPreferInline
+32: [       OK ] OosSqlStorage.SharedAttributeRejectsPreferInline (1 ms)
+32: [ RUN      ] OosSqlStorage.CreateRejectsAllStorageSettingsForFixedTypes
+32: [       OK ] OosSqlStorage.CreateRejectsAllStorageSettingsForFixedTypes (8 ms)
+32: [ RUN      ] OosSqlStorage.CreateAcceptsStorageForPhysicalVariableTypes
+32: [       OK ] OosSqlStorage.CreateAcceptsStorageForPhysicalVariableTypes (9 ms)
+32: [ RUN      ] OosSqlStorage.VclassRejectsAllStorageSettings
+32: [       OK ] OosSqlStorage.VclassRejectsAllStorageSettings (6 ms)
+32: [ RUN      ] OosSqlStorage.AlterRejectsAllStorageSettingsForFixedTypes
+32: [       OK ] OosSqlStorage.AlterRejectsAllStorageSettingsForFixedTypes (11 ms)
+32: [ RUN      ] OosSqlStorage.AlterAddDuplicateAttributeKeepsDuplicateErrorPrecedence
+32: [       OK ] OosSqlStorage.AlterAddDuplicateAttributeKeepsDuplicateErrorPrecedence (9 ms)
+32: [ RUN      ] OosSqlStorage.AlterModifyClassAttributeReportsNonNormalAttributeError
+32: [       OK ] OosSqlStorage.AlterModifyClassAttributeReportsNonNormalAttributeError (9 ms)
+32: [ RUN      ] OosSqlStorage.AlterChangeClassAttributeReportsNonNormalAttributeError
+32: [       OK ] OosSqlStorage.AlterChangeClassAttributeReportsNonNormalAttributeError (9 ms)
+32: [ RUN      ] OosSqlStorage.AlterChangeClassAttributePreservesConstraintValidation
+32: [       OK ] OosSqlStorage.AlterChangeClassAttributePreservesConstraintValidation (9 ms)
+32: [ RUN      ] OosSqlStorage.ForceOutlineRejectsUnsupportedAttributes
+32: [       OK ] OosSqlStorage.ForceOutlineRejectsUnsupportedAttributes (12 ms)
+32: [ RUN      ] OosSqlStorage.AlterModifyAddsAndDropsPreferInline
+32: [       OK ] OosSqlStorage.AlterModifyAddsAndDropsPreferInline (21 ms)
+32: [ RUN      ] OosSqlStorage.AlterModifyPreservesAndTransitionsForceOutline
+32: [       OK ] OosSqlStorage.AlterModifyPreservesAndTransitionsForceOutline (27 ms)
+32: [ RUN      ] OosSqlStorage.AlterModifyDropsForceOutlineForFixedType
+32: [       OK ] OosSqlStorage.AlterModifyDropsForceOutlineForFixedType (9 ms)
+32: [ RUN      ] OosSqlStorage.AlterModifyDropsPreferInlineForFixedType
+32: [       OK ] OosSqlStorage.AlterModifyDropsPreferInlineForFixedType (9 ms)
+32: [ RUN      ] OosSqlStorage.FailedExplicitFixedTypeAlterPreservesSchemaAndData
+32: [       OK ] OosSqlStorage.FailedExplicitFixedTypeAlterPreservesSchemaAndData (10 ms)
+32: [ RUN      ] OosSqlStorage.ForceOutlineBypassesRecordGateOnlyAboveInlineStubSize
+32: [       OK ] OosSqlStorage.ForceOutlineBypassesRecordGateOnlyAboveInlineStubSize (15 ms)
+32: [ RUN      ] OosSqlStorage.AlterForceOutlineAppliesOnlyAfterRewrite
+32: [       OK ] OosSqlStorage.AlterForceOutlineAppliesOnlyAfterRewrite (14 ms)
+32: [ RUN      ] OosSqlStorage.ForceOutlineRemainsNonReservedIdentifier
+32: [       OK ] OosSqlStorage.ForceOutlineRemainsNonReservedIdentifier (8 ms)
+32: [ RUN      ] OosSqlStorage.PreferInlineColumnRoundTripsLargeValue
+32: [       OK ] OosSqlStorage.PreferInlineColumnRoundTripsLargeValue (14 ms)
+32: [----------] 25 tests from OosSqlStorage (323 ms total)
+32: 
+32: [----------] Global test environment tear-down
+32: ##### Stopping Server For OOS SQL Testing #####
+32: [==========] 25 tests from 1 test suite ran. (443 ms total)
+32: [  PASSED  ] 25 tests.
+23/35 Test #32: test_oos_sql_storage .............   Passed    0.47 sec
+test 33
+      Start 33: test_oos_sql_show
+
+33: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_sql_show
+33: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos/sql
+33: Test timeout computed to be: 90
+33: [==========] Running 39 tests from 2 test suites.
+33: [----------] Global test environment set-up.
+33: ##### Starting Server For OOS SQL Testing #####
+33: will be written at ./test_oos_sql_log
+33: [----------] 38 tests from OosSqlShow
+33: [ RUN      ] OosSqlShow.HeapWithoutOosReportsZeroStats
+33: [       OK ] OosSqlShow.HeapWithoutOosReportsZeroStats (34 ms)
+33: [ RUN      ] OosSqlShow.HeapWithOosReportsPositiveStats
+33: [       OK ] OosSqlShow.HeapWithOosReportsPositiveStats (11 ms)
+33: [ RUN      ] OosSqlShow.ShowAllHeapOosRunsForNonPartitionedClass
+33: [       OK ] OosSqlShow.ShowAllHeapOosRunsForNonPartitionedClass (12 ms)
+33: [ RUN      ] OosSqlShow.ShowAllHeapOosReportsPartitionRows
+33: [       OK ] OosSqlShow.ShowAllHeapOosReportsPartitionRows (29 ms)
+33: [ RUN      ] OosSqlShow.InsertOwnsOosInDestinationHeap
+33: [       OK ] OosSqlShow.InsertOwnsOosInDestinationHeap (27 ms)
+33: [ RUN      ] OosSqlShow.RawClientInsertOwnsDestinationOos
+33: [       OK ] OosSqlShow.RawClientInsertOwnsDestinationOos (10 ms)
+33: [ RUN      ] OosSqlShow.WorkspacePartitionInsertAndMovementOwnDestination
+33: [       OK ] OosSqlShow.WorkspacePartitionInsertAndMovementOwnDestination (32 ms)
+33: [ RUN      ] OosSqlShow.RedistributionRewritesMultichunkValuesAtDestination
+33: [       OK ] OosSqlShow.RedistributionRewritesMultichunkValuesAtDestination (58 ms)
+33: [ RUN      ] OosSqlShow.RawCopyAreaRoutesInsertAndMovementWithoutChangingPayload
+33: [       OK ] OosSqlShow.RawCopyAreaRoutesInsertAndMovementWithoutChangingPayload (32 ms)
+33: [ RUN      ] OosSqlShow.RawClientUpdatePreservesUnassignedValuesAndRollsBackFailure
+33: [       OK ] OosSqlShow.RawClientUpdatePreservesUnassignedValuesAndRollsBackFailure (19 ms)
+33: [ RUN      ] OosSqlShow.PendingReferencesResolveAndFinalizeInPlace
+33: [       OK ] OosSqlShow.PendingReferencesResolveAndFinalizeInPlace (17653 ms)
+33: [ RUN      ] OosSqlShow.FinalizationResetsPublicationOnceAndFailureCannotRetry
+33: [       OK ] OosSqlShow.FinalizationResetsPublicationOnceAndFailureCannotRetry (8883 ms)
+33: [ RUN      ] OosSqlShow.SerializedPreparationPreservesMvccAndOutlivesSource
+33: [       OK ] OosSqlShow.SerializedPreparationPreservesMvccAndOutlivesSource (21 ms)
+33: [ RUN      ] OosSqlShow.RedistributionFailurePreservesSourceAndNextOperation
+33: [       OK ] OosSqlShow.RedistributionFailurePreservesSourceAndNextOperation (27966 ms)
+33: [ RUN      ] OosSqlShow.InternalAndAddressReservationsBypassPreparation
+33: [       OK ] OosSqlShow.InternalAndAddressReservationsBypassPreparation (70 ms)
+33: [ RUN      ] OosSqlShow.ForcedOutlineKeyRoutesFromPreparedBytes
+33: [       OK ] OosSqlShow.ForcedOutlineKeyRoutesFromPreparedBytes (99 ms)
+33: [ RUN      ] OosSqlShow.RejectedDestinationCreatesNoOosAndNextInsertSucceeds
+33: [       OK ] OosSqlShow.RejectedDestinationCreatesNoOosAndNextInsertSucceeds (30195 ms)
+33: [ RUN      ] OosSqlShow.LobPreparationPreservesSourceAndDestinationValues
+33: [       OK ] OosSqlShow.LobPreparationPreservesSourceAndDestinationValues (86 ms)
+33: [ RUN      ] OosSqlShow.SupportedPartitionDomainsPreserveValuesAndOwnership
+33: [       OK ] OosSqlShow.SupportedPartitionDomainsPreserveValuesAndOwnership (1127 ms)
+33: [ RUN      ] OosSqlShow.LoaderQueueRetainsClearedInputsAndRollsBackBulkFailure
+33: [       OK ] OosSqlShow.LoaderQueueRetainsClearedInputsAndRollsBackBulkFailure (2876 ms)
+33: [ RUN      ] OosSqlShow.AllocationAndStorageFailureLeaveNextInsertUsable
+24/35 Test #33: test_oos_sql_show ................***Timeout  90.19 sec
+[==========] Running 39 tests from 2 test suites.
+[----------] Global test environment set-up.
+##### Starting Server For OOS SQL Testing #####
+will be written at ./test_oos_sql_log
+[----------] 38 tests from OosSqlShow
+[ RUN      ] OosSqlShow.HeapWithoutOosReportsZeroStats
+[       OK ] OosSqlShow.HeapWithoutOosReportsZeroStats (34 ms)
+[ RUN      ] OosSqlShow.HeapWithOosReportsPositiveStats
+[       OK ] OosSqlShow.HeapWithOosReportsPositiveStats (11 ms)
+[ RUN      ] OosSqlShow.ShowAllHeapOosRunsForNonPartitionedClass
+[       OK ] OosSqlShow.ShowAllHeapOosRunsForNonPartitionedClass (12 ms)
+[ RUN      ] OosSqlShow.ShowAllHeapOosReportsPartitionRows
+[       OK ] OosSqlShow.ShowAllHeapOosReportsPartitionRows (29 ms)
+[ RUN      ] OosSqlShow.InsertOwnsOosInDestinationHeap
+[       OK ] OosSqlShow.InsertOwnsOosInDestinationHeap (27 ms)
+[ RUN      ] OosSqlShow.RawClientInsertOwnsDestinationOos
+[       OK ] OosSqlShow.RawClientInsertOwnsDestinationOos (10 ms)
+[ RUN      ] OosSqlShow.WorkspacePartitionInsertAndMovementOwnDestination
+[       OK ] OosSqlShow.WorkspacePartitionInsertAndMovementOwnDestination (32 ms)
+[ RUN      ] OosSqlShow.RedistributionRewritesMultichunkValuesAtDestination
+[       OK ] OosSqlShow.RedistributionRewritesMultichunkValuesAtDestination (58 ms)
+[ RUN      ] OosSqlShow.RawCopyAreaRoutesInsertAndMovementWithoutChangingPayload
+[       OK ] OosSqlShow.RawCopyAreaRoutesInsertAndMovementWithoutChangingPayload (32 ms)
+[ RUN      ] OosSqlShow.RawClientUpdatePreservesUnassignedValuesAndRollsBackFailure
+[       OK ] OosSqlShow.RawClientUpdatePreservesUnassignedValuesAndRollsBackFailure (19 ms)
+[ RUN      ] OosSqlShow.PendingReferencesResolveAndFinalizeInPlace
+[       OK ] OosSqlShow.PendingReferencesResolveAndFinalizeInPlace (17653 ms)
+[ RUN      ] OosSqlShow.FinalizationResetsPublicationOnceAndFailureCannotRetry
+[       OK ] OosSqlShow.FinalizationResetsPublicationOnceAndFailureCannotRetry (8883 ms)
+[ RUN      ] OosSqlShow.SerializedPreparationPreservesMvccAndOutlivesSource
+[       OK ] OosSqlShow.SerializedPreparationPreservesMvccAndOutlivesSource (21 ms)
+[ RUN      ] OosSqlShow.RedistributionFailurePreservesSourceAndNextOperation
+[       OK ] OosSqlShow.RedistributionFailurePreservesSourceAndNextOperation (27966 ms)
+[ RUN      ] OosSqlShow.InternalAndAddressReservationsBypassPreparation
+[       OK ] OosSqlShow.InternalAndAddressReservationsBypassPreparation (70 ms)
+[ RUN      ] OosSqlShow.ForcedOutlineKeyRoutesFromPreparedBytes
+[       OK ] OosSqlShow.ForcedOutlineKeyRoutesFromPreparedBytes (99 ms)
+[ RUN      ] OosSqlShow.RejectedDestinationCreatesNoOosAndNextInsertSucceeds
+[       OK ] OosSqlShow.RejectedDestinationCreatesNoOosAndNextInsertSucceeds (30195 ms)
+[ RUN      ] OosSqlShow.LobPreparationPreservesSourceAndDestinationValues
+[       OK ] OosSqlShow.LobPreparationPreservesSourceAndDestinationValues (86 ms)
+[ RUN      ] OosSqlShow.SupportedPartitionDomainsPreserveValuesAndOwnership
+[       OK ] OosSqlShow.SupportedPartitionDomainsPreserveValuesAndOwnership (1127 ms)
+[ RUN      ] OosSqlShow.LoaderQueueRetainsClearedInputsAndRollsBackBulkFailure
+[       OK ] OosSqlShow.LoaderQueueRetainsClearedInputsAndRollsBackBulkFailure (2876 ms)
+[ RUN      ] OosSqlShow.AllocationAndStorageFailureLeaveNextInsertUsable
+
+test 34
+      Start 34: test_oos_sql_visible_version
+
+34: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_sql_visible_version
+34: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos/sql
+34: Test timeout computed to be: 30
+34: [==========] Running 2 tests from 1 test suite.
+34: [----------] Global test environment set-up.
+34: ##### Starting Server For OOS SQL Testing #####
+34: will be written at ./test_oos_sql_log
+34: [----------] 2 tests from OosSqlVisibleVersion
+34: [ RUN      ] OosSqlVisibleVersion.ScanrangeNextFirstObjectFetchDoesNotExpandWholeRecord
+34: [       OK ] OosSqlVisibleVersion.ScanrangeNextFirstObjectFetchDoesNotExpandWholeRecord (41 ms)
+34: [ RUN      ] OosSqlVisibleVersion.LargeOldRecordUpdateDoesNotExpandWholeRecord
+34: [       OK ] OosSqlVisibleVersion.LargeOldRecordUpdateDoesNotExpandWholeRecord (30 ms)
+34: [----------] 2 tests from OosSqlVisibleVersion (72 ms total)
+34: 
+34: [----------] Global test environment tear-down
+34: ##### Stopping Server For OOS SQL Testing #####
+34: [==========] 2 tests from 1 test suite ran. (405 ms total)
+34: [  PASSED  ] 2 tests.
+25/35 Test #34: test_oos_sql_visible_version .....   Passed    0.43 sec
+test 2
+      Start  2: oos_cleanup_db
+
+2: Test command: /usr/bin/cmake "-E" "env" "CUBRID=/home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc" "CUBRID_DATABASES=/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/.cub-workenv/databases" "PATH=/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/vm/jdk8/bin:/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc/bin:/home/vimkim/.codex/packages/standalone/releases/0.160.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.config/my-scripts/bin:/home/vimkim/.local/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/share/Modules/bin:/usr/lib64/ccache:/home/vimkim/.codex/tmp/arg0/codex-arg0lnPnJk:/home/vimkim/.codex/tmp/arg0/codex-arg0e3Wmnf:/home/vimkim/.codex/packages/standalone/releases/0.160.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0rkaV8A:/home/vimkim/.codex/packages/standalone/releases/0.159.3-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Eiz5FQ:/home/vimkim/.codex/packages/standalone/releases/0.159.2-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0UZCYf0:/home/vimkim/.codex/packages/standalone/releases/0.159.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg006SEr5:/home/vimkim/.codex/packages/standalone/releases/0.159.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Sdrd24:/home/vimkim/.codex/packages/standalone/releases/0.158.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0mOvekQ:/home/vimkim/.codex/packages/standalone/releases/0.157.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0jzxIFn:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lJR4wu:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/installs/bun/latest/bin:/home/vimkim/.local/share/mise/installs/go/1.27.1/bin:/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/bin:/home/vimkim/.local/share/mise/installs/node/latest/bin:/home/vimkim/.local/share/mise/installs/python/latest/bin:/home/vimkim/.local/share/mise/shims:/opt/bison-3.0.5/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin" "bash" "/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/unit_tests/oos/scripts/cleanup_unittestdb.sh"
+2: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+2: Test timeout computed to be: 30
+2: @ cubrid server stop: unittestdb
+2: ++ cubrid server 'unittestdb' is not running.
+26/35 Test  #2: oos_cleanup_db ...................   Passed    5.26 sec
+test 3
+      Start  3: oos_setup_no_logging_db
+
+3: Test command: /usr/bin/cmake "-E" "env" "CUBRID=/home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc" "CUBRID_DATABASES=/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/.cub-workenv/databases" "PATH=/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/vm/jdk8/bin:/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc/bin:/home/vimkim/.codex/packages/standalone/releases/0.160.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.config/my-scripts/bin:/home/vimkim/.local/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/share/Modules/bin:/usr/lib64/ccache:/home/vimkim/.codex/tmp/arg0/codex-arg0lnPnJk:/home/vimkim/.codex/tmp/arg0/codex-arg0e3Wmnf:/home/vimkim/.codex/packages/standalone/releases/0.160.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0rkaV8A:/home/vimkim/.codex/packages/standalone/releases/0.159.3-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Eiz5FQ:/home/vimkim/.codex/packages/standalone/releases/0.159.2-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0UZCYf0:/home/vimkim/.codex/packages/standalone/releases/0.159.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg006SEr5:/home/vimkim/.codex/packages/standalone/releases/0.159.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Sdrd24:/home/vimkim/.codex/packages/standalone/releases/0.158.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0mOvekQ:/home/vimkim/.codex/packages/standalone/releases/0.157.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0jzxIFn:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lJR4wu:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/installs/bun/latest/bin:/home/vimkim/.local/share/mise/installs/go/1.27.1/bin:/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/bin:/home/vimkim/.local/share/mise/installs/node/latest/bin:/home/vimkim/.local/share/mise/installs/python/latest/bin:/home/vimkim/.local/share/mise/shims:/opt/bison-3.0.5/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin" "bash" "/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/unit_tests/oos/scripts/setup_isolated_db.sh" "oosnologdb"
+3: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+3: Test timeout computed to be: 180
+3: @ cubrid server stop: oosnologdb
+3: ++ cubrid server 'oosnologdb' is not running.
+3: Creating database with 64.0M size using locale en_US.utf8. The total amount of disk space needed is 104.0M.
+3: 
+3: CUBRID 11.5.0 (11.5.0.2640) (64 debug build)
+3: 
+27/35 Test  #3: oos_setup_no_logging_db ..........   Passed    6.84 sec
+test 11
+      Start 11: test_oos_no_logging
+
+11: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_no_logging
+11: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+11: Test timeout computed to be: 120
+11: [==========] Running 1 test from 1 test suite.
+11: [----------] Global test environment set-up.
+11: ##### Starting Server For OOS Unit Testing (oosnologdb) #####
+11: will be written at ./test_oos_no_logging_log
+11: [----------] 1 test from OosNoLoggingTest
+11: [ RUN      ] OosNoLoggingTest.SlotReuseSeparatesStampsWithLoggingRepeatsThemWithoutAndLoadsStillReadBack
+11: [       OK ] OosNoLoggingTest.SlotReuseSeparatesStampsWithLoggingRepeatsThemWithoutAndLoadsStillReadBack (54 ms)
+11: [----------] 1 test from OosNoLoggingTest (54 ms total)
+11: 
+11: [----------] Global test environment tear-down
+11: ##### Stopping Server For OOS Unit Testing #####
+11: [==========] 1 test from 1 test suite ran. (239 ms total)
+11: [  PASSED  ] 1 test.
+28/35 Test #11: test_oos_no_logging ..............   Passed    0.28 sec
+test 4
+      Start  4: oos_cleanup_no_logging_db
+
+4: Test command: /usr/bin/cmake "-E" "env" "CUBRID=/home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc" "CUBRID_DATABASES=/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/.cub-workenv/databases" "PATH=/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/vm/jdk8/bin:/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc/bin:/home/vimkim/.codex/packages/standalone/releases/0.160.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.config/my-scripts/bin:/home/vimkim/.local/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/share/Modules/bin:/usr/lib64/ccache:/home/vimkim/.codex/tmp/arg0/codex-arg0lnPnJk:/home/vimkim/.codex/tmp/arg0/codex-arg0e3Wmnf:/home/vimkim/.codex/packages/standalone/releases/0.160.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0rkaV8A:/home/vimkim/.codex/packages/standalone/releases/0.159.3-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Eiz5FQ:/home/vimkim/.codex/packages/standalone/releases/0.159.2-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0UZCYf0:/home/vimkim/.codex/packages/standalone/releases/0.159.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg006SEr5:/home/vimkim/.codex/packages/standalone/releases/0.159.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Sdrd24:/home/vimkim/.codex/packages/standalone/releases/0.158.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0mOvekQ:/home/vimkim/.codex/packages/standalone/releases/0.157.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0jzxIFn:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lJR4wu:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/installs/bun/latest/bin:/home/vimkim/.local/share/mise/installs/go/1.27.1/bin:/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/bin:/home/vimkim/.local/share/mise/installs/node/latest/bin:/home/vimkim/.local/share/mise/installs/python/latest/bin:/home/vimkim/.local/share/mise/shims:/opt/bison-3.0.5/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin" "bash" "/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/unit_tests/oos/scripts/cleanup_isolated_db.sh" "oosnologdb"
+4: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+4: Test timeout computed to be: 60
+4: @ cubrid server stop: oosnologdb
+4: ++ cubrid server 'oosnologdb' is not running.
+29/35 Test  #4: oos_cleanup_no_logging_db ........   Passed    5.20 sec
+test 5
+      Start  5: oos_setup_recovery_db
+
+5: Test command: /usr/bin/cmake "-E" "env" "CUBRID=/home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc" "CUBRID_DATABASES=/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/.cub-workenv/databases" "PATH=/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/vm/jdk8/bin:/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc/bin:/home/vimkim/.codex/packages/standalone/releases/0.160.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.config/my-scripts/bin:/home/vimkim/.local/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/share/Modules/bin:/usr/lib64/ccache:/home/vimkim/.codex/tmp/arg0/codex-arg0lnPnJk:/home/vimkim/.codex/tmp/arg0/codex-arg0e3Wmnf:/home/vimkim/.codex/packages/standalone/releases/0.160.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0rkaV8A:/home/vimkim/.codex/packages/standalone/releases/0.159.3-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Eiz5FQ:/home/vimkim/.codex/packages/standalone/releases/0.159.2-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0UZCYf0:/home/vimkim/.codex/packages/standalone/releases/0.159.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg006SEr5:/home/vimkim/.codex/packages/standalone/releases/0.159.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Sdrd24:/home/vimkim/.codex/packages/standalone/releases/0.158.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0mOvekQ:/home/vimkim/.codex/packages/standalone/releases/0.157.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0jzxIFn:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lJR4wu:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/installs/bun/latest/bin:/home/vimkim/.local/share/mise/installs/go/1.27.1/bin:/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/bin:/home/vimkim/.local/share/mise/installs/node/latest/bin:/home/vimkim/.local/share/mise/installs/python/latest/bin:/home/vimkim/.local/share/mise/shims:/opt/bison-3.0.5/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin" "bash" "/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/unit_tests/oos/scripts/setup_isolated_db.sh" "oosrecoverydb"
+5: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+5: Test timeout computed to be: 180
+5: @ cubrid server stop: oosrecoverydb
+5: ++ cubrid server 'oosrecoverydb' is not running.
+5: Creating database with 64.0M size using locale en_US.utf8. The total amount of disk space needed is 104.0M.
+5: 
+5: CUBRID 11.5.0 (11.5.0.2640) (64 debug build)
+5: 
+30/35 Test  #5: oos_setup_recovery_db ............   Passed    7.34 sec
+test 35
+      Start 35: test_oos_sql_crash_recovery
+
+35: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_sql_crash_recovery
+35: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos/sql
+35: Test timeout computed to be: 180
+35: error log at ./test_oos_sql_crash_recovery_log
+35: [==========] Running 2 tests from 1 test suite.
+35: [----------] Global test environment set-up.
+35: [----------] 2 tests from OosCrashRecoveryTest
+35: [ RUN      ] OosCrashRecoveryTest.CleanRestartReadsEveryValueAndRunsNoRecovery
+35: [       OK ] OosCrashRecoveryTest.CleanRestartReadsEveryValueAndRunsNoRecovery (219 ms)
+35: [ RUN      ] OosCrashRecoveryTest.CommittedValuesSurviveCrashRedoThroughTheirPersistedStubIdentity
+35: [       OK ] OosCrashRecoveryTest.CommittedValuesSurviveCrashRedoThroughTheirPersistedStubIdentity (294 ms)
+35: [----------] 2 tests from OosCrashRecoveryTest (513 ms total)
+35: 
+35: [----------] Global test environment tear-down
+35: [==========] 2 tests from 1 test suite ran. (513 ms total)
+35: [  PASSED  ] 2 tests.
+31/35 Test #35: test_oos_sql_crash_recovery ......   Passed    0.55 sec
+test 6
+      Start  6: oos_cleanup_recovery_db
+
+6: Test command: /usr/bin/cmake "-E" "env" "CUBRID=/home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc" "CUBRID_DATABASES=/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/.cub-workenv/databases" "PATH=/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/vm/jdk8/bin:/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc/bin:/home/vimkim/.codex/packages/standalone/releases/0.160.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.config/my-scripts/bin:/home/vimkim/.local/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/share/Modules/bin:/usr/lib64/ccache:/home/vimkim/.codex/tmp/arg0/codex-arg0lnPnJk:/home/vimkim/.codex/tmp/arg0/codex-arg0e3Wmnf:/home/vimkim/.codex/packages/standalone/releases/0.160.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0rkaV8A:/home/vimkim/.codex/packages/standalone/releases/0.159.3-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Eiz5FQ:/home/vimkim/.codex/packages/standalone/releases/0.159.2-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0UZCYf0:/home/vimkim/.codex/packages/standalone/releases/0.159.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg006SEr5:/home/vimkim/.codex/packages/standalone/releases/0.159.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Sdrd24:/home/vimkim/.codex/packages/standalone/releases/0.158.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0mOvekQ:/home/vimkim/.codex/packages/standalone/releases/0.157.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0jzxIFn:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lJR4wu:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/installs/bun/latest/bin:/home/vimkim/.local/share/mise/installs/go/1.27.1/bin:/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/bin:/home/vimkim/.local/share/mise/installs/node/latest/bin:/home/vimkim/.local/share/mise/installs/python/latest/bin:/home/vimkim/.local/share/mise/shims:/opt/bison-3.0.5/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin" "bash" "/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/unit_tests/oos/scripts/cleanup_isolated_db.sh" "oosrecoverydb"
+6: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+6: Test timeout computed to be: 60
+6: @ cubrid server stop: oosrecoverydb
+6: ++ cubrid server 'oosrecoverydb' is not running.
+32/35 Test  #6: oos_cleanup_recovery_db ..........   Passed    5.18 sec
+test 15
+      Start 15: test_oos_record_flags
+
+15: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_record_flags
+15: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+15: Test timeout computed to be: 10000000
+15: [==========] Running 1 test from 1 test suite.
+15: [----------] Global test environment set-up.
+15: [----------] 1 test from OosRecordFlags
+15: [ RUN      ] OosRecordFlags.OosFlagIsSeparateFromMvccFlags
+15: [       OK ] OosRecordFlags.OosFlagIsSeparateFromMvccFlags (0 ms)
+15: [----------] 1 test from OosRecordFlags (0 ms total)
+15: 
+15: [----------] Global test environment tear-down
+15: [==========] 1 test from 1 test suite ran. (0 ms total)
+15: [  PASSED  ] 1 test.
+33/35 Test #15: test_oos_record_flags ............   Passed    0.02 sec
+test 16
+      Start 16: test_byte_span_writer
+
+16: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_byte_span_writer
+16: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+16: Test timeout computed to be: 10000000
+16: [==========] Running 7 tests from 1 test suite.
+16: [----------] Global test environment set-up.
+16: [----------] 7 tests from ByteSpanWriter
+16: [ RUN      ] ByteSpanWriter.EmptyState
+16: [       OK ] ByteSpanWriter.EmptyState (0 ms)
+16: [ RUN      ] ByteSpanWriter.AppendWithinCapacityAdvancesCursorAndCopies
+16: [       OK ] ByteSpanWriter.AppendWithinCapacityAdvancesCursorAndCopies (0 ms)
+16: [ RUN      ] ByteSpanWriter.AppendOverflowFailsAndDoesNotWrite
+16: [       OK ] ByteSpanWriter.AppendOverflowFailsAndDoesNotWrite (0 ms)
+16: [ RUN      ] ByteSpanWriter.RecoveryAfterFailedAppend
+16: [       OK ] ByteSpanWriter.RecoveryAfterFailedAppend (0 ms)
+16: [ RUN      ] ByteSpanWriter.FullWriterRejectsNonZeroAppendButAcceptsZero
+16: [       OK ] ByteSpanWriter.FullWriterRejectsNonZeroAppendButAcceptsZero (0 ms)
+16: [ RUN      ] ByteSpanWriter.ZeroCapacitySpanIsImmediatelyFull
+16: [       OK ] ByteSpanWriter.ZeroCapacitySpanIsImmediatelyFull (0 ms)
+16: [ RUN      ] ByteSpanWriter.OverflowByExactlyOneByteIsCaught
+16: [       OK ] ByteSpanWriter.OverflowByExactlyOneByteIsCaught (0 ms)
+16: [----------] 7 tests from ByteSpanWriter (0 ms total)
+16: 
+16: [----------] Global test environment tear-down
+16: [==========] 7 tests from 1 test suite ran. (0 ms total)
+16: [  PASSED  ] 7 tests.
+34/35 Test #16: test_byte_span_writer ............   Passed    0.02 sec
+test 17
+      Start 17: test_oos_tde_gate
+
+17: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_tde_gate
+17: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+17: Test timeout computed to be: 10000000
+17: [==========] Running 3 tests from 1 test suite.
+17: [----------] Global test environment set-up.
+17: [----------] 3 tests from TdeUserDataGate
+17: [ RUN      ] TdeUserDataGate.OosForwardDeleteIsEncryptedRcvindex
+17: [       OK ] TdeUserDataGate.OosForwardDeleteIsEncryptedRcvindex (0 ms)
+17: [ RUN      ] TdeUserDataGate.SiblingAndBaselineDeletePathsAreGated
+17: [       OK ] TdeUserDataGate.SiblingAndBaselineDeletePathsAreGated (0 ms)
+17: [ RUN      ] TdeUserDataGate.MetadataOnlyHeapOpIsNotGated
+17: [       OK ] TdeUserDataGate.MetadataOnlyHeapOpIsNotGated (0 ms)
+17: [----------] 3 tests from TdeUserDataGate (0 ms total)
+17: 
+17: [----------] Global test environment tear-down
+17: [==========] 3 tests from 1 test suite ran. (0 ms total)
+17: [  PASSED  ] 3 tests.
+35/35 Test #17: test_oos_tde_gate ................   Passed    0.02 sec
+
+91% tests passed, 3 tests failed out of 35
+
+Total Test time (real) = 256.21 sec
+
+The following tests FAILED:
+	 10 - test_oos_eager_diagnostics (SIGTRAP)
+	 23 - test_oos_real_vacuum_server (SIGTRAP)
+	 33 - test_oos_sql_show (Timeout)
+Errors while running CTest
+error: recipe `ctest` failed on line 207 with exit code 8

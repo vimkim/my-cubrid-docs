@@ -1,3 +1,6 @@
+> Status updated 2026-10-07: Historical PR7600 effective-key interview. Its choices do not add performance gates to the approved PR7927 owner-index work.
+> Current entry point: [CBRD-27089](../README.md). Historical evidence below is preserved.
+
 # PR 7600 design interview
 
 Status: interview complete. The user's invocation of `to-spec` after the final summary confirms shared understanding and authorizes specification synthesis. Implementation and experiments remain unauthorized.

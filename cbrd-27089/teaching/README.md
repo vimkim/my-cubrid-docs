@@ -1,3 +1,6 @@
+> Status updated 2026-10-07: Historical PR7600 teaching material; effective-key routing is not the current PR7927 design.
+> Current entry point: [CBRD-27089](../README.md). Historical evidence below is preserved.
+
 # PR 7600 teaching book
 
 Open [index.html](index.html) for the complete offline book. It embeds its stylesheet and five SVG diagrams and needs no server or network. Individual chapter HTML files provide shorter reading pages. The [combined Markdown](report.md) is a generated convenience copy.
