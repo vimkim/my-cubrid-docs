@@ -6,7 +6,7 @@ Contract: [approved specification](spec.md)
 
 | Ticket | What it delivers | Blocked by | Status |
 | --- | --- | --- | --- |
-| [01: Simplify SQL/workspace comparison tests](issues/01-simplify-stored-row-comparison.md) | Two real stored rows and independent expected results, with the extra conversion and its rollback machinery removed. | None. | ready-for-agent |
+| [01: Simplify SQL/workspace comparison tests](issues/01-simplify-stored-row-comparison.md) | Two real stored rows and independent expected results, with the extra conversion and its rollback machinery removed. | None. | claimed |
 | [02: Simplify converted-record memory ownership](issues/02-simplify-converted-record-ownership.md) | One clear memory lifetime across successful/failing workspace INSERT and UPDATE, fitting the accepted prerequisite interface. | External CBRD-27089 / PR #7927 accepted write/ownership interface available on the chosen base. | ready-for-agent |
 
 ## Work order and dependencies
@@ -29,3 +29,7 @@ The parent specification remains unchanged. This publication creates two local
 tickets and their map; neither source implementation nor new runtime test
 results are claimed. Local integration, pushing, CI, and remote publication are
 separate actions.
+
+Execution state, evidence and unresolved prerequisites are recorded in
+[orchestration.md](orchestration.md). Ticket 02 remains fully specified but
+cannot be dispatched until its interface is present on an authorized base.

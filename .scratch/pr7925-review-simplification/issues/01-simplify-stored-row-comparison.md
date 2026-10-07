@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] Keep the real SQL INSERT/commit and workspace flush/commit, and capture both stored rows by OID. Copy captured bytes before ending the heap scan cache; introduce no production test-only interface.
 - [ ] Remove the preliminary manual workspace serialization, its large scratch buffer, the third attrinfo conversion, and the system operation used only to clean up that conversion's OOS data. Retain ordinary fixture transaction/database cleanup.
@@ -33,3 +33,10 @@ production implementation and does not require ticket 02.
 
 Local source edits and verification are the deliverable. Push, CI triggering,
 remote publication, and integration merges remain separate actions.
+
+## Comments
+
+2026-10-07: Claimed by fresh clean-context agent `/root/ticket01` under the
+[orchestration record](../orchestration.md). Branch `task/pr7925-01-stored-rows`
+in `/home/vimkim/gh/cb/pr7925-01-stored-rows`, based on private integration
+`review/pr7925-simplification` at `1c660d22e4340ee707336ad08c8b4bf4b69744de`.
