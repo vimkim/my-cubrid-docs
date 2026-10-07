@@ -1,0 +1,483 @@
+{
+  "collected_at": "2026-10-07T21:52:42.485898+09:00",
+  "pr": {
+    "baseRefName": "feature/oos-merge",
+    "baseRefOid": "fb567a629cdb390fff920542173fa36f454c74a0",
+    "body": "https://jira.cubrid.org/browse/CBRD-27424\n\n## Purpose\n\nOOS는 큰 컬럼 값을 별도 페이지에 저장하는 기능입니다.\nstandalone 적재에서도 이 기능을 사용하도록 합니다.\n\n- AS-IS: `loaddb -S`와 일부 `csql -S` 쓰기가 OOS 변환을 건너뜁니다.\n- TO-BE: 같은 쓰기도 기존 정책에 따라 큰 값을 분리하고 원래 값을 유지합니다.\n- 주의(동작 변화): 기존 정책에는 CBRD-26937의 OOS+bigone 거부 규칙이 포함됩니다. 따라서 기존에 `REC_BIGONE`으로 적재되던 레코드(예: 거대 고정 길이 컬럼 + OOS 대상 가변 컬럼 조합)는 standalone 적재에서도 `ER_HEAP_OOS_OVERPASS_MAXOBJ_SIZE`(-1375)로 거부될 수 있습니다.\n\n## Implementation\n\n- standalone workspace의 공통 저장 경로에 기존 OOS 변환을 연결했습니다.\n- 실제 저장할 파티션을 정한 뒤 변환합니다.\n- 객체 참조와 캐시 변경 번호를 유지하고 임시 버퍼를 해제합니다.\n- 롤백과 무시한 적재 오류 뒤에 불필요한 OOS 데이터가 남지 않도록 합니다.\n- 실제 loader와 CSQL을 실행하는 회귀 테스트를 CTest에 추가했습니다.\n- `UNIT_TEST_OOS_WORKSPACE_CLI`는 기본 OFF이며, ON일 때 Python 3.7 이상을 필수로 요구합니다. 일반 빌드의 Python 의존성을 제거하고 기존 회귀 assertion은 유지했습니다.\n- 리뷰 반영(`736353fff`): `locator_insert_force`의 뒤쪽 bool 인자 4개를 `LOCATOR_FORCE_FLAG` 비트마스크 하나로 정리하고, OOS 변환 헬퍼를 `locator_oos_demote_workspace_record`로 개명해 잠금 demote와 구분했으며(recdes 교체도 헬퍼로 이동), 관련 함수 헤더 주석을 보완했습니다. 동작 의미는 변경하지 않았습니다.\n\n## Remarks\n\n- `feat/oos`를 기준으로 합니다. 최초 구현 시점에는 PR #7695의 변경을 포함하지 않았으나, 이후 최신 `feat/oos`(`38093ea85`) 머지로 #7695(CBRD-26950, `4f43198c2`)를 포함합니다.\n- 최초 엔진 수정(`e24b458`) 검증: GCC debug 빌드와 CTest 28/28개 통과(176.16초).\n- Python 의존성 후속 수정 검증: Python 탐색을 차단한 기본 OFF 구성 통과, ON 구성은 필수 의존성 오류로 실패; Python 3.14.3에서 ON 구성 통과.\n- 후속 수정의 전체 CTest 첫 실행은 27/28개 통과했습니다. 마지막 CLI 시나리오의 DB 생성이 `/tmp` 공간 부족으로 실패했으며, 충분한 공간의 `TMPDIR`에서 동일 테스트를 재실행하여 12개 시나리오 모두 통과했습니다(1/1 CTest, 60.74초). 이는 새로운 단일 실행 28/28 결과와 구분합니다.\n- SA/CS loader 및 일반 CSQL의 4개 경로 비교가 모두 통과했습니다.\n- PR #7695의 `eaf1165bb`에서도 동일 패치 빌드와 회귀 12개 시나리오가 통과했습니다.\n- 기존 외부 BLOB/CLOB 보존을 검증했으며, 별도 기존 LOB 생성 결함은 수정 범위에서 제외했습니다.\n- 코드 리뷰(2축: Standards/Spec) 결과와 반영 근거: [code_review_d4a155a_fable.md](https://github.com/vimkim/my-cubrid-docs/blob/861ad4fc647391b561ee156f9ae07d1104d5582b/cbrd-27424/code_review_d4a155a_fable.md). 리뷰 반영(`736353fff`)과 최신 `feat/oos` 머지(`39d5e5e5e`) 후 OOS CTest 36/36 통과를 확인했으며, 반영 커밋의 의미 보존(호출부 10곳의 인자 대응, recdes 교체 조건, SERVER/CS 모드 무변화)을 재검증했습니다.\n- 자세한 진단 및 검증 보고서: https://github.com/vimkim/my-cubrid-docs/blob/453f22daf1fc17e0dbf311be37d2ef6f6ac63f3b/cbrd-27424/CBRD-27424-sa-workspace-oos_e24b458_codex.md\n\n보고서의 후속 수정 상태는 로컬 검증 당시 기록입니다. 해당 Python 의존성 수정은 `fe1a918f9a31e8586e8160da4f7341978514538b`로 게시했으며, 새 CI 결과는 PR의 해당 커밋 체크에서 확인할 수 있습니다.\n",
+    "headRefName": "CBRD-27424-oos-loaddb-sa",
+    "headRefOid": "1c660d22e4340ee707336ad08c8b4bf4b69744de",
+    "headRepository": {
+      "id": "R_kgDOLwAkuw",
+      "name": "cubrid",
+      "nameWithOwner": "vimkim/cubrid"
+    },
+    "headRepositoryOwner": {
+      "id": "MDQ6VXNlcjE4MDgwNTQ2",
+      "name": "Daehyun Kim",
+      "login": "vimkim"
+    },
+    "isDraft": false,
+    "number": 7925,
+    "reviewDecision": "APPROVED",
+    "state": "OPEN",
+    "title": "[CBRD-27424] Support OOS in standalone workspace writes",
+    "url": "https://github.com/CUBRID/cubrid/pull/7925"
+  },
+  "checks": {
+    "baseRefName": "feature/oos-merge",
+    "baseRefOid": "fb567a629cdb390fff920542173fa36f454c74a0",
+    "headRefOid": "1c660d22e4340ee707336ad08c8b4bf4b69744de",
+    "isDraft": false,
+    "reviewDecision": "APPROVED",
+    "state": "OPEN",
+    "statusCheckRollup": [
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-07T05:09:11Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/CUBRID/cubrid/actions/runs/37574891910/job/112641451178",
+        "name": "license",
+        "startedAt": "2026-10-07T05:09:01Z",
+        "status": "COMPLETED",
+        "workflowName": "github-checks"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-07T05:09:09Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/CUBRID/cubrid/actions/runs/37574891910/job/112641451174",
+        "name": "pr-style",
+        "startedAt": "2026-10-07T05:09:01Z",
+        "status": "COMPLETED",
+        "workflowName": "github-checks"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-07T05:09:28Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/CUBRID/cubrid/actions/runs/37574891910/job/112641451312",
+        "name": "code-style",
+        "startedAt": "2026-10-07T05:09:01Z",
+        "status": "COMPLETED",
+        "workflowName": "github-checks"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-07T05:10:02Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/CUBRID/cubrid/actions/runs/37574891910/job/112641451130",
+        "name": "cppcheck",
+        "startedAt": "2026-10-07T05:09:01Z",
+        "status": "COMPLETED",
+        "workflowName": "github-checks"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-07T05:09:09Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/CUBRID/cubrid/actions/runs/37574891910/job/112641450886",
+        "name": "memory-monitor-check",
+        "startedAt": "2026-10-07T05:09:00Z",
+        "status": "COMPLETED",
+        "workflowName": "github-checks"
+      },
+      {
+        "__typename": "StatusContext",
+        "context": "gha-ci: test_shell",
+        "startedAt": "2026-10-07T06:23:27Z",
+        "state": "FAILURE",
+        "targetUrl": "https://github.com/CUBRID/cubrid/actions/runs/37574973482"
+      },
+      {
+        "__typename": "StatusContext",
+        "context": "gha-ci: build (debug)",
+        "startedAt": "2026-10-07T05:27:46Z",
+        "state": "SUCCESS",
+        "targetUrl": "https://github.com/CUBRID/cubrid/actions/runs/37574973482"
+      },
+      {
+        "__typename": "StatusContext",
+        "context": "gha-ci: build (release)",
+        "startedAt": "2026-10-07T05:27:45Z",
+        "state": "SUCCESS",
+        "targetUrl": "https://github.com/CUBRID/cubrid/actions/runs/37574973482"
+      },
+      {
+        "__typename": "StatusContext",
+        "context": "gha-ci: test_medium",
+        "startedAt": "2026-10-07T06:23:27Z",
+        "state": "SUCCESS",
+        "targetUrl": "https://github.com/CUBRID/cubrid/actions/runs/37574973482"
+      },
+      {
+        "__typename": "StatusContext",
+        "context": "gha-ci: test_sql",
+        "startedAt": "2026-10-07T06:23:30Z",
+        "state": "SUCCESS",
+        "targetUrl": "https://github.com/CUBRID/cubrid/actions/runs/37574973482"
+      }
+    ]
+  },
+  "comments": {
+    "inline": {
+      "pages": 1,
+      "item_count": 1,
+      "items": [
+        {
+          "id": 4198752049,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#discussion_r4198752049",
+          "body": "<a href=\"#\"><img alt=\"P2\" src=\"https://greptile-static-assets.s3.amazonaws.com/badges/p2.svg?v=9\" align=\"top\"></a> **고정된 명령 시간 제한** 각 테스트 사례는 새 DB를 만들고 여러 유틸리티를 실행하지만, 모든 자식 명령은 60초가 지나면 종료됩니다. CI 환경에서 정상적인 DB 생성이나 적재가 60초를 넘으면 엔진 동작과 무관하게 회귀 테스트가 실패할 수 있습니다. 작업별 시간 제한을 조정하거나 CTest의 전체 제한과 일관되게 관리해 주세요.\n\nNote: If this suggestion doesn't match your team's coding style, reply to this and let me know. I'll remember it for next time!",
+          "created_at": "2026-10-06T17:58:40Z",
+          "submitted_at": null,
+          "commit_id": "1c660d22e4340ee707336ad08c8b4bf4b69744de",
+          "path": "unit_tests/oos/test_oos_workspace.cpp",
+          "line": 100,
+          "original_line": 100,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "greptile-apps[bot]"
+        }
+      ]
+    },
+    "reviews": {
+      "pages": 1,
+      "item_count": 2,
+      "items": [
+        {
+          "id": 5432599265,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#pullrequestreview-5432599265",
+          "body": "",
+          "created_at": null,
+          "submitted_at": "2026-10-06T17:58:46Z",
+          "commit_id": "91bfde02e5699a2aaa0c5d549d7ef4d418c8bdb8",
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": "COMMENTED",
+          "author": "greptile-apps[bot]"
+        },
+        {
+          "id": 5439232086,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#pullrequestreview-5439232086",
+          "body": "",
+          "created_at": null,
+          "submitted_at": "2026-10-07T07:50:48Z",
+          "commit_id": "1c660d22e4340ee707336ad08c8b4bf4b69744de",
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": "APPROVED",
+          "author": "beyondykk9"
+        }
+      ]
+    },
+    "discussion": {
+      "pages": 1,
+      "item_count": 21,
+      "items": [
+        {
+          "id": 5630608155,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-5630608155",
+          "body": "/run all",
+          "created_at": "2026-09-11T06:48:24Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "vimkim"
+        },
+        {
+          "id": 5631980552,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-5631980552",
+          "body": "/run all",
+          "created_at": "2026-09-11T08:55:35Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "vimkim"
+        },
+        {
+          "id": 5633530945,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-5633530945",
+          "body": "/run all",
+          "created_at": "2026-09-11T11:08:36Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "vimkim"
+        },
+        {
+          "id": 5725064785,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-5725064785",
+          "body": "## Code Review (2-axis, head `d4a155a` 기준)\n\nPR 변경분(`origin/feat/oos...HEAD`, 내용 커밋 `e24b458bf` + `fe1a918f9`)에 대해 Standards / Spec 2축 리뷰를 수행했습니다. 상세 보고서: [code_review_d4a155a_fable.md](https://github.com/vimkim/my-cubrid-docs/blob/861ad4fc647391b561ee156f9ae07d1104d5582b/cbrd-27424/code_review_d4a155a_fable.md) (Claude Fable 5로 수행한 AI 리뷰이며, 아래 항목은 주장 인용이 아니라 코드 추적으로 확인한 결과입니다.)\n\n### Spec (이슈 대비 구현)\n\n코드 추적으로 확인된 항목: 파티션 결정(`partition_prune_insert`) 이후 변환 수행, CHN 보존(`OR_CHN_OFFSET` 복원), 모든 종료 경로에서 임시 copyarea 해제, 롤백·ignore-error topop 내부에서의 OOS 쓰기(고아 미잔존, 회귀 테스트가 실제로 검증), repl 경로 불변, CMake 게이트 기본 OFF. Scope creep 없음.\n\n보완 필요:\n\n1. **이슈/PR 본문 미기재 동작 변화** — 기존에 `REC_BIGONE`으로 적재되던 레코드(거대 고정 컬럼 + OOS 대상 가변 컬럼)가 CBRD-26937 정책 적용으로 SA loaddb에서 `ER_HEAP_OOS_OVERPASS_MAXOBJ_SIZE`로 실패할 수 있습니다. TO-BE 의도에 부합하지만 사용자 가시 실패 모드이므로 이슈와 PR 본문에 명시를 권장합니다.\n2. CTest 회귀는 SA 경로(`csql -S`, `loaddb -S`)만 실행하며, \"일반 SA/CS SQL INSERT와 CS loader 동작 확인\"의 CS 비교는 수동 검증 기록만 존재합니다. (minor)\n3. 스크립트 직접 실행 시 Python 버전 가드가 없어 3.6에서는 무관한 `TypeError`로 종료됩니다. (nit)\n\n### Standards (코딩 표준)\n\n준수 확인: `/* *INDENT-OFF/ON */` 래핑, GNU 스타일, C 주석 규칙, `er_set` 에러 모델, `free_and_init`/`locator_free_copy_area` 메모리 규칙, 신규 Python 파일의 Apache 헤더.\n\n보완 필요:\n\n1. `locator_sr.c`의 함수 헤더 주석 규칙(파라미터별 `arg(in):`) 대비, `locator_insert_force`/`locator_update_force`/`locator_move_record`에 추가된 `from_workspace` 미기재 및 신규 `locator_demote_workspace_record` 헤더의 `return:`/`arg(in):` 누락.\n2. judgement call: `locator_insert_force` 19개 파라미터 중 연속 bool 4개(`..., false, false, false, true)`)의 가독성, insert/update 양쪽의 demote-swap 블록 중복, Python 헬퍼 중복(rglob 스냅샷 3회, 동일 정규식 4회), 이 파일에서 \"demote\"가 락 demote와 중의적으로 쓰이는 점.\n\n### Summary\n\n| 축 | 건수 | 최상위 이슈 |\n|---|---|---|\n| Standards | 6 | 함수 헤더 주석 미갱신 |\n| Spec | 3 | SA loaddb의 신규 실패 모드(`ER_HEAP_OOS_OVERPASS_MAXOBJ_SIZE`) 미고지 |\n",
+          "created_at": "2026-09-18T04:15:50Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "vimkim"
+        },
+        {
+          "id": 5727898412,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-5727898412",
+          "body": "/run all",
+          "created_at": "2026-09-18T09:15:58Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "vimkim"
+        },
+        {
+          "id": 5728520579,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-5728520579",
+          "body": "## Code Review (2-axis, head `39d5e5e` 기준)\n\n이전 리뷰 반영(`736353fff`)과 최신 `feat/oos` 머지 이후 head에 대해 Standards / Spec 2축 리뷰를 다시 수행했습니다. Claude Fable 5.1 AI 리뷰이며 HEAD 소스 코드 추적으로 확인한 결과입니다. 상세: [code_review_39d5e5e_fable.md](https://github.com/vimkim/my-cubrid-docs/blob/8e5ed782b476f1c840f8df8984a9c89f8e47803f/cbrd-27424/code_review_39d5e5e_fable.md)\n\n- **Spec**: 누락·오구현·scope creep 없음. 파티션 결정 후 변환, CHN 복원, 모든 경로에서 buffer 해제, topop 내부 OOS 쓰기(고아 없음), `locator_insert_force` 호출부 10곳의 플래그 대응 동일함을 확인했습니다.\n- **Standards**: 하드 위반 없음. `codestyle.sh` 고정점, INDENT 래핑, 메모리 규칙 준수. 이전 리뷰 반영 4건 모두 해결되었습니다.\n\n선택적 보완:\n1. 고지한 `ER_HEAP_OOS_OVERPASS_MAXOBJ_SIZE`(-1375) 거부에 대한 `loaddb -S` 회귀 시나리오 추가.\n2. `locator_oos_demote_workspace_record` 전방 선언 추가, `LC_FORCE_FLAG_FROM_WORKSPACE` 주석에 SA 한정 명시, 미사용 `LOCATOR_FORCE_FLAG` typedef 이름 정리.\n\n병합을 막는 항목은 없습니다. head `39d5e5e5e` 의 CI 재실행은 별도로 필요합니다.\n",
+          "created_at": "2026-09-18T10:10:13Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "vimkim"
+        },
+        {
+          "id": 5759676880,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-5759676880",
+          "body": "/run all",
+          "created_at": "2026-09-21T11:23:11Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "vimkim"
+        },
+        {
+          "id": 5760106604,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-5760106604",
+          "body": "🗑️ **TC Branch Finalized** for `cubrid-testcases`\n\nEngine PR was closed (not merged).\n\n**Cleanup Results:**\n\nTC base branch is ready for the next PR.",
+          "created_at": "2026-09-21T11:57:47Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "github-actions[bot]"
+        },
+        {
+          "id": 5760106708,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-5760106708",
+          "body": "🗑️ **TC Branch Finalized** for `cubrid-testcases-private-ex`\n\nEngine PR was closed (not merged).\n\n**Cleanup Results:**\n\nTC base branch is ready for the next PR.",
+          "created_at": "2026-09-21T11:57:47Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "github-actions[bot]"
+        },
+        {
+          "id": 5760110083,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-5760110083",
+          "body": "/run all",
+          "created_at": "2026-09-21T11:58:06Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "vimkim"
+        },
+        {
+          "id": 5760125325,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-5760125325",
+          "body": "## 🧪 TC Test Environment Ready\n\n**CircleCI Testing:**\n- CircleCI will automatically test using the branches below.\n\n**TC Repositories & Branches:**\n- [cubrid-testcases Draft PR](https://github.com/CUBRID/cubrid-testcases/pull/3556) (Branch: `tc/pr-7925`)\n- [cubrid-testcases-private-ex Draft PR](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4222) (Branch: `tc/pr-7925`)\n\n**Next Steps:**\n1. Wait for CircleCI tests to complete\n2. If CircleCI tests failed, please check the test results and fix the issues.\n3. When ready to merge this PR, please merge the TC PR first, then merge this PR.",
+          "created_at": "2026-09-21T11:59:23Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "github-actions[bot]"
+        },
+        {
+          "id": 5901078523,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-5901078523",
+          "body": "/run all",
+          "created_at": "2026-09-29T23:33:37Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "vimkim"
+        },
+        {
+          "id": 5901113661,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-5901113661",
+          "body": "/run all",
+          "created_at": "2026-09-29T23:36:53Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "vimkim"
+        },
+        {
+          "id": 6016307496,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-6016307496",
+          "body": "/run all",
+          "created_at": "2026-10-06T12:31:53Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "vimkim"
+        },
+        {
+          "id": 6022044476,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-6022044476",
+          "body": "Code review guide: [PR #7925 at local HEAD `a142503dc`](https://github.com/vimkim/my-cubrid-docs/blob/e632f30a5abfb7ec9133c2cdbaba9262f87068fa/cbrd-27424/code_review_guide_a142503dc_codex.md).\n\nThe guide covers all **11 changed files and 74 symbol occurrences** against merge base `fb567a629`. Every added, deleted, or modified function/struct explains **what it is, why it exists, and why this PR changes it**. Methods, classes, declarations, force flags, test definitions, build registration, and the benchmark are included, with a linked machine-readable inventory and 34 concrete GoogleTest cases.\n\nThe suggested review path follows:\n\n1. Workspace provenance through INSERT, reserved-OID UPDATE, multi-update, and partition movement; destination heap selection occurs before demotion.\n2. The shared OOS selection planner and the byte-preserving workspace demoter, including serialized spans, record headers/VOT, output ownership, rollback boundaries, and OOS+REC_BIGONE rejection.\n3. Existing query/server-loader/replication callers migrating to the force flags, then the byte-comparison oracle and real standalone utility tests.\n\nThe guide also states the limits of LOB and no-logging coverage and identifies existing OOS specification/history work outside this change.\n\n[CI attribution report](https://github.com/vimkim/my-cubrid-docs/blob/e632f30a5abfb7ec9133c2cdbaba9262f87068fa/cbrd-27424/ci_analysis_report_f037616cd_codex.md): the triggered run at `f037616cd` passed 975 medium and 17,471 SQL cases. Of its three shell failures, `cbrd_27064` and `cbrd_27075` also fail on the exact merge base. `cbrd_20683` passes on base but reports higher used space after database creation on the PR commit; a workspace-allocation connection is plausible, while differing CTP revisions leave causality unresolved. The priority follow-up is a matched-harness base/head allocation comparison for that testcase.\n\nCommit scope: the guide covers local `a142503dc`, whose production source matches the executed `f037616cd`; it includes the later collection-test oracle and benchmark-header repair. The published PR head is currently `91bfde02e`, so these historical CI results are not a verdict for a newer head. The guide explicitly labels its unpublished source links and supplies local alternatives.\n",
+          "created_at": "2026-10-06T17:45:20Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "vimkim"
+        },
+        {
+          "id": 6022166245,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-6022166245",
+          "body": "/run all",
+          "created_at": "2026-10-06T17:52:09Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "vimkim"
+        },
+        {
+          "id": 6022283996,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-6022283996",
+          "body": "<!-- greptile_summary -->\n\n<p><a href=\"https://app.greptile.com/api/retrigger?id=66910365\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://greptile-static-assets.s3.amazonaws.com/badges/RetriggerDark.svg?v=2\"><source media=\"(prefers-color-scheme: light)\" srcset=\"https://greptile-static-assets.s3.amazonaws.com/badges/Retrigger.svg?v=2\"><img alt=\"Retrigger\" src=\"https://greptile-static-assets.s3.amazonaws.com/badges/Retrigger.svg?v=2\" align=\"right\"></picture></a><br clear=\"all\"></p>\n\n**[High risk]** Refactors core record storage and insertion logic for out\\-of\\-sequence data\\.\n\n확인된 엔진 동작상 차단 결함은 없으므로 병합 가능해 보이지만, 느린 환경의 테스트 오탐 위험은 개선할 가치가 있습니다.\n\n<sub>Reviews (1) · Last reviewed commit: [\"\\[CBRD-27424\\] Remove internal Markdown do...\"](https://github.com/cubrid/cubrid/commit/91bfde02e5699a2aaa0c5d549d7ef4d418c8bdb8)</sub>",
+          "created_at": "2026-10-06T17:58:33Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "greptile-apps[bot]"
+        },
+        {
+          "id": 6031143988,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-6031143988",
+          "body": "Published the [benchmark evidence and rationale for restoring the original workspace OOS implementation](https://github.com/vimkim/my-cubrid-docs/blob/b9752a333a6eb4ce279da00e063653bcf82fc4e5/cbrd-27424/CBRD-27424-workspace-oos-revert-rationale_a142503dc_codex.md).\n\nThe recorded Release comparison is **`90f3bd79e` (existing attrinfo/DB_VALUE conversion) versus the direct-byte revision committed as `f037616cd`**. It does not compare the PR merge-base with its head. Current head `a142503dc` has the same production source as the measured candidate.\n\n- Large workload: 10,000 rows × 5,000-byte VARBIT, three samples per side. Median elapsed increased **5.11 → 5.66 seconds (+10.8%)**; user + system CPU increased **3.47 → 4.03 seconds (+16.1%)**.\n- Every candidate large-load elapsed and CPU sample exceeds every baseline sample. All saved value checks passed, and all six large-load samples stored 10,000 OOS chunk records with identical OOS space statistics.\n- The report preserves both raw CSVs, fixture/hash verification, representative OOS outputs and measurement limits. These local sequential samples do not establish the internal cause of the slowdown.\n\nThe decision is to restore the original production implementation at `90f3bd79e`, retaining standalone workspace OOS support, GoogleTest coverage and useful later regressions. The direct-byte revision has not demonstrated its intended performance benefit. The source revert is the next step; this report/comment does not apply it or claim post-revert results. Build, correctness and matched Release performance verification are part of that follow-up.\n",
+          "created_at": "2026-10-07T04:48:34Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "vimkim"
+        },
+        {
+          "id": 6031371655,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-6031371655",
+          "body": "/run all",
+          "created_at": "2026-10-07T05:09:55Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "vimkim"
+        },
+        {
+          "id": 6031418768,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-6031418768",
+          "body": "Restored the production implementation from `90f3bd79e` as new commit [`1c660d22e`](https://github.com/vimkim/cubrid/commit/1c660d22e4340ee707336ad08c8b4bf4b69744de), following the [published revert rationale](https://github.com/vimkim/my-cubrid-docs/blob/b9752a333a6eb4ce279da00e063653bcf82fc4e5/cbrd-27424/CBRD-27424-workspace-oos-revert-rationale_a142503dc_codex.md). All four production files match that revision byte-for-byte. Workspace OOS support, force flags, partition ownership and external LOB preservation remain; unrelated CCI changes are excluded.\n\n- GCC Debug and matched optimized Release builds passed. Full configured CTest: **37/37 passed**, including the preserved **13 loader/workspace cases** and all **21 comparisons**, adapted to flush actual workspace objects through `locator_flush_instance`. These are GoogleTest cases.\n- Five alternating Release benchmark pairs compare direct-byte `a142503dc` with restored `1c660d22e`, using identical CMake caches, fixtures and CPU affinity. Large-load medians: elapsed **6.16 → 5.60 seconds (-9.1%)**, user + system CPU **3.89 → 3.44 seconds (-11.6%)**. CPU was lower in every large pair; all **20 samples** passed value checks, with identical large-workload OOS placement. Small-load measurements showed no consistent improvement. Shared-host load varied substantially; the report retains every sample, pair order and this limitation.\n- Review: **Spec 0 findings; Standards 1 inherited P2 allocation-exception handling gap**, documented and retained to preserve the requested production revision. The separate CBRD-27057 threshold gap remains outside this restoration.\n- One `/run all` was posted for exact head `1c660d22e4340ee707336ad08c8b4bf4b69744de`. Both builds and all three suites have verified pickup on [gha-ci run 37574973482](https://github.com/CUBRID/cubrid/actions/runs/37574973482); regression results remain pending. The five ordinary GitHub checks passed. `gh pr checks --required` reports no configured required checks; that does not establish merge readiness.\n\n[Restoration report, raw measurements, build identities, CTest evidence and CI receipt](https://github.com/vimkim/my-cubrid-docs/blob/0539f640f6c225ae1e38d678a55ed7eb5cfce353/cbrd-27424/CBRD-27424-workspace-oos-restoration_1c660d22e_codex.md). Work-tracker **286** covers this delivery; parent **267** remains waiting for exact-head CI results and broader PR readiness.\n",
+          "created_at": "2026-10-07T05:13:21Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "vimkim"
+        },
+        {
+          "id": 6031710154,
+          "html_url": "https://github.com/CUBRID/cubrid/pull/7925#issuecomment-6031710154",
+          "body": "Code review completed for `1c660d22e4340ee707336ad08c8b4bf4b69744de` against refreshed `feature/oos-merge` / merge-base `fb567a629cdb390fff920542173fa36f454c74a0`.\n\n- **Standards:** no hard violations; one optional ownership smell.\n- **Spec/correctness:** no confirmed newly introduced defects or missing functional requirements.\n- **Simplification:** consider using an owning `record_descriptor` directly instead of adapting the local converted record through `LC_COPYAREA`. Keep conversion after destination selection and inside the existing force operation; preserve CHN, LOB semantics, original bytes on non-demotion, and CUBRID allocation/error handling. This proposal is not implemented or runtime-validated.\n\nDiff whitespace and benchmark shell syntax checks passed. The report distinguishes the earlier exact-HEAD Debug/Release builds and 37/37 CTests from this source review; engine tests and benchmarks were not rerun. Inherited threshold and STL allocation concerns are documented separately from new PR findings.\n\nFull report: https://github.com/vimkim/my-cubrid-docs/blob/111dcd5b2b5ddff14a63a9042d592ce9f44db61a/cbrd-27424/code_review_1c660d22e_codex.md\n",
+          "created_at": "2026-10-07T05:37:02Z",
+          "submitted_at": null,
+          "commit_id": null,
+          "path": null,
+          "line": null,
+          "original_line": null,
+          "in_reply_to_id": null,
+          "state": null,
+          "author": "vimkim"
+        }
+      ]
+    }
+  },
+  "jira_live_query": "cubrid-jira search CBRD-27424",
+  "jira_status": "Develop",
+  "jira_resolution": "Unresolved",
+  "metadata_is_snapshot": true,
+  "local_head": "28b65d18a9302b17d49281e06cb4621b86e9f24d",
+  "merge_base": "fb567a629cdb390fff920542173fa36f454c74a0"
+}
