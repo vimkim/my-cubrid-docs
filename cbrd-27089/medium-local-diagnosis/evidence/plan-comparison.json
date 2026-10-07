@@ -1,0 +1,80 @@
+{
+  "to_char_order_by": {
+    "plans": {
+      "head": [
+        {
+          "plan": "sscan\n    class: foo node[?]\n    cost:  ? card ?",
+          "statement": "select  to_char(foo.f) from foo foo"
+        },
+        {
+          "plan": "sscan\n    class: foo node[?]\n    cost:  ? card ?",
+          "statement": "select  to_char(foo.f) from foo foo"
+        },
+        {
+          "plan": "sscan\n    class: foo node[?]\n    cost:  ? card ?",
+          "statement": "select  to_char(foo.f) from foo foo"
+        },
+        {
+          "plan": "sscan\n    class: foo node[?]\n    cost:  ? card ?",
+          "statement": "select  to_char(foo.f) from foo foo"
+        }
+      ],
+      "base": [
+        {
+          "plan": "sscan\n    class: foo node[?]\n    cost:  ? card ?",
+          "statement": "select  to_char(foo.f) from foo foo"
+        },
+        {
+          "plan": "sscan\n    class: foo node[?]\n    cost:  ? card ?",
+          "statement": "select  to_char(foo.f) from foo foo"
+        },
+        {
+          "plan": "sscan\n    class: foo node[?]\n    cost:  ? card ?",
+          "statement": "select  to_char(foo.f) from foo foo"
+        },
+        {
+          "plan": "sscan\n    class: foo node[?]\n    cost:  ? card ?",
+          "statement": "select  to_char(foo.f) from foo foo"
+        }
+      ]
+    },
+    "byte_equal": true,
+    "workload": "complete 114 fixed + complete 444 xtests"
+  },
+  "to_number_order_by": {
+    "plans": {
+      "head": [
+        {
+          "plan": "sscan\n    class: foo node[?]\n    cost:  ? card ?",
+          "statement": "select  to_number(foo.f) from foo foo"
+        }
+      ],
+      "base": [
+        {
+          "plan": "sscan\n    class: foo node[?]\n    cost:  ? card ?",
+          "statement": "select  to_number(foo.f) from foo foo"
+        }
+      ]
+    },
+    "byte_equal": true,
+    "workload": "complete 114 fixed + complete 444 xtests"
+  },
+  "to_timestamp_order_by": {
+    "plans": {
+      "head": [
+        {
+          "plan": "sscan\n    class: foo node[?]\n    cost:  ? card ?",
+          "statement": "select  to_timestamp(foo.f) from foo foo"
+        }
+      ],
+      "base": [
+        {
+          "plan": "sscan\n    class: foo node[?]\n    cost:  ? card ?",
+          "statement": "select  to_timestamp(foo.f) from foo foo"
+        }
+      ]
+    },
+    "byte_equal": true,
+    "workload": "complete 114 fixed + complete 444 xtests"
+  }
+}
