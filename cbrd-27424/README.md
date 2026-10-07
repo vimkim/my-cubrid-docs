@@ -48,3 +48,9 @@ Each report applies only to the revision in its title; unresolved checks and att
 | [PR #7925: attribution of the triggered CI failures](ci_analysis_report_f037616cd_codex.md) | PR #7925: attribution of the triggered CI failures | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
 | [Exact-commit failure excerpts](ci_f037616cd/failure_excerpts.md) | Exact-commit failure excerpts | 2026-10-07 | 2026-10-13 | Substantiate the report with compact decisive excerpts |
 | [PR #7925 code review guide at `a142503dc`](code_review_guide_a142503dc_codex.md) | PR #7925 code review guide at `a142503dc` | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+
+## Integrated analysis and decisions
+
+| File | What it contains | Created | Last modified | Why it was created |
+| --- | --- | --- | --- | --- |
+| [CBRD-27424: restore the attrinfo workspace OOS implementation](CBRD-27424-workspace-oos-restoration_1c660d22e_codex.md) | CBRD-27424: restore the attrinfo workspace OOS implementation | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
