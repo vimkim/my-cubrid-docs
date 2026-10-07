@@ -1,0 +1,1269 @@
+diff --git a/src/loaddb/load_server_loader.cpp b/src/loaddb/load_server_loader.cpp
+index 21faf201c..4b31b9d4a 100644
+--- a/src/loaddb/load_server_loader.cpp
++++ b/src/loaddb/load_server_loader.cpp
+@@ -781,6 +781,8 @@ namespace cubload
+     bool insert_errors_filtered = false;
+     OID dummy_oid;
+     bool has_BU_lock = lock_has_lock_on_object (&m_scancache.node.class_oid, oid_Root_class_oid, BU_LOCK);
++    // loaddb has already verified the foreign keys; skip re-checking them at force time.
++    int force_flags = LC_FORCE_FLAG_DONT_CHECK_FK | (has_BU_lock ? LC_FORCE_FLAG_HAS_BU_LOCK : LC_FORCE_FLAG_NONE);
+ 
+     // First check if we have any errors set.
+     if (m_session.is_failed ())
+@@ -830,8 +832,8 @@ namespace cubload
+ 						   &force_count,
+ 						   pruning_type,
+ 						   pruning_type == DB_NOT_PARTITIONED_CLASS ? nullptr : &pruning,
+-						   NULL, UPDATE_INPLACE_NONE, NULL, has_BU_lock,
+-						   true, false, false, &m_recdes_collected[i]);
++						   NULL, UPDATE_INPLACE_NONE, NULL, force_flags,
++						   false, &m_recdes_collected[i]);
+ 	    partition_clear_pruning_context (&pruning);
+ 	    if (error_code != NO_ERROR)
+ 	      {
+diff --git a/src/transaction/locator_sr.c b/src/transaction/locator_sr.c
+index 2dc6cb5cb..10edae10d 100644
+--- a/src/transaction/locator_sr.c
++++ b/src/transaction/locator_sr.c
+@@ -156,12 +156,14 @@ static int locator_update_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * cla
+ 				 HEAP_SCANCACHE * scan_cache, int *force_count, bool not_check_fk,
+ 				 REPL_INFO_TYPE repl_info_type, int pruning_type, PRUNING_CONTEXT * pcontext,
+ 				 MVCC_REEV_DATA * mvcc_reev_data, UPDATE_INPLACE_STYLE force_in_place,
+-				 bool need_locking, bool from_copyarea, heap_pending_record *pending = nullptr);
++				 bool need_locking, bool from_copyarea, heap_pending_record *pending = nullptr,
++                                 bool from_workspace = false);
+ static int locator_move_record (THREAD_ENTRY * thread_p, HFID * old_hfid, OID * old_class_oid, OID * obj_oid,
+ 				OID * new_class_oid, HFID * new_class_hfid, RECDES * recdes,
+ 				HEAP_SCANCACHE * scan_cache, int op_type, int has_index, int *force_count,
+ 				PRUNING_CONTEXT * context, MVCC_REEV_DATA * mvcc_reev_data, bool need_locking,
+-				bool from_copyarea, heap_pending_record *pending = nullptr);
++				bool from_copyarea, heap_pending_record *pending = nullptr,
++                                bool from_workspace = false);
+ /* *INDENT-ON* */
+ 
+ static int locator_delete_force_for_moving (THREAD_ENTRY * thread_p, HFID * hfid, OID * oid, int has_index, int op_type,
+@@ -4944,14 +4946,15 @@ error3:
+ 
+ /* *INDENT-OFF* */
+ /* Complete the row after destination selection, before heap/index writes.
+- * Copy-area adaptation preserves workspace LOB effects and the current header;
+- * the enclosing caller keeps the received owner and converted view alive. */
++ * Copy-area and explicit workspace inputs use the same received owner, preserving
++ * LOB effects and the current header. The enclosing caller keeps the owner and
++ * borrowed view alive; memory cleanup does not roll back the database writes. */
+ static int
+ locator_finalize_oos_record (THREAD_ENTRY *thread_p, const OID *class_oid, RECDES **record,
+-                            bool from_copyarea, heap_pending_record *pending,
++                            bool from_copyarea, bool from_workspace, heap_pending_record *pending,
+                             heap_pending_record *received, RECDES *converted)
+ {
+-  if (from_copyarea && catcls_Enable && !OID_IS_ROOTOID (class_oid)
++  if ((from_copyarea || from_workspace) && catcls_Enable && !OID_IS_ROOTOID (class_oid)
+       && !oid_is_system_class (class_oid) && (*record)->length > 0)
+     {
+       int error = heap_prepare_oos_record (thread_p, class_oid, *record, received);
+@@ -4960,6 +4963,23 @@ locator_finalize_oos_record (THREAD_ENTRY *thread_p, const OID *class_oid, RECDE
+ 	  return error;
+ 	}
+       *converted = received->get_recdes ();
++#if defined (SA_MODE)
++      if (from_workspace && pending == nullptr && !OR_RECORD_HAS_OOS ((*record)->data)
++          && !OR_RECORD_HAS_OOS (converted->data) && or_rep_id (*record) == or_rep_id (converted))
++        {
++          /* A current inline workspace row needs no replacement. Complete the
++           * inline publication transition before releasing the unused owner. */
++          error = heap_oos_finalize_record (thread_p, class_oid, converted, received);
++          if (error != NO_ERROR)
++            {
++              return error;
++            }
++          received->record ().set_external_buffer (nullptr, 0);
++          received->record ().set_record_length (0);
++          *converted = received->get_recdes ();
++          return heap_oos_validate_disk_record (thread_p, class_oid, *record);
++        }
++#endif
+       *record = converted;
+       pending = received;
+     }
+@@ -4988,6 +5008,8 @@ locator_finalize_oos_record (THREAD_ENTRY *thread_p, const OID *class_oid, RECDE
+  *   pcontext(in): partition pruning context
+  *   func_preds(in): cached function index expressions
+  *   force_in_place:
++ *   home_hint_p(in): if not NULL, the heap page watcher to use as the insertion target
++ *   force_flags(in): bitwise OR of LOCATOR_FORCE_FLAG values adjusting the force behavior
+  *
+  * Note: The given object is inserted on this heap and all appropriate
+  *              index entries are inserted.
+@@ -4996,8 +5018,8 @@ int
+ locator_insert_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * class_oid, OID * oid, RECDES * recdes, int has_index,
+ 		      int op_type, HEAP_SCANCACHE * scan_cache, int *force_count, int pruning_type,
+ 		      PRUNING_CONTEXT * pcontext, FUNC_PRED_UNPACK_INFO * func_preds,
+-		      UPDATE_INPLACE_STYLE force_in_place, PGBUF_WATCHER * home_hint_p, bool has_BU_lock,
+-		      bool dont_check_fk, bool use_bulk_logging, bool from_copyarea, heap_pending_record * pending)
++		      UPDATE_INPLACE_STYLE force_in_place, PGBUF_WATCHER * home_hint_p, int force_flags,
++		      bool from_copyarea, heap_pending_record * pending)
+ {
+   /* *INDENT-OFF* */
+   heap_pending_record received;
+@@ -5017,6 +5039,10 @@ locator_insert_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * class_oid, OID
+   FUNC_PRED_UNPACK_INFO *local_func_preds = NULL;
+   HEAP_OPERATION_CONTEXT context;
+   bool skip_checking_fk;
++  bool has_BU_lock = (force_flags & LC_FORCE_FLAG_HAS_BU_LOCK) != 0;
++  bool dont_check_fk = (force_flags & LC_FORCE_FLAG_DONT_CHECK_FK) != 0;
++  bool use_bulk_logging = (force_flags & LC_FORCE_FLAG_BULK_LOGGING) != 0;
++  bool from_workspace = (force_flags & LC_FORCE_FLAG_FROM_WORKSPACE) != 0;
+ 
+   assert (class_oid != NULL);
+   assert (!OID_ISNULL (class_oid));
+@@ -5092,7 +5118,7 @@ locator_insert_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * class_oid, OID
+ 	}
+     }
+ 
+-  error_code = locator_finalize_oos_record (thread_p, &real_class_oid, &recdes, from_copyarea,
++  error_code = locator_finalize_oos_record (thread_p, &real_class_oid, &recdes, from_copyarea, from_workspace,
+ 					    pending, &received, &converted);
+   if (error_code != NO_ERROR)
+     {
+@@ -5412,6 +5438,7 @@ locator_oos_insert_force (THREAD_ENTRY * thread_p, OID * class_oid, RECDES * rec
+  * context(in)	        : pruning context
+  * mvcc_reev_data(in)	: MVCC reevaluation data
+  * need_locking(in)	: true, if need locking
++ * from_workspace (in)	: true when recdes is a serialized workspace object (OOS demotion applies at insert)
+  *
+  * Note: this function calls locator_delete_force on the current object oid
+  * and locator_insert_force for the RECDES it receives. The record has already
+@@ -5422,7 +5449,7 @@ static int
+ locator_move_record (THREAD_ENTRY * thread_p, HFID * old_hfid, OID * old_class_oid, OID * obj_oid, OID * new_class_oid,
+ 		     HFID * new_class_hfid, RECDES * recdes, HEAP_SCANCACHE * scan_cache, int op_type, int has_index,
+ 		     int *force_count, PRUNING_CONTEXT * context, MVCC_REEV_DATA * mvcc_reev_data, bool need_locking,
+-		     bool from_copyarea, heap_pending_record * pending)
++		     bool from_copyarea, heap_pending_record * pending, bool from_workspace)
+ {
+   int error = NO_ERROR;
+   OID new_obj_oid;
+@@ -5448,7 +5475,8 @@ locator_move_record (THREAD_ENTRY * thread_p, HFID * old_hfid, OID * old_class_o
+       error =
+ 	locator_insert_force (thread_p, new_class_hfid, new_class_oid, &new_obj_oid, recdes, has_index, op_type,
+ 			      insert_cache, force_count, context->pruning_type, NULL, NULL, UPDATE_INPLACE_NONE, NULL,
+-			      false, false, false, from_copyarea, pending);
++			      from_workspace ? LC_FORCE_FLAG_FROM_WORKSPACE : LC_FORCE_FLAG_NONE,
++			      from_copyarea, pending);
+     }
+   else
+     {
+@@ -5465,7 +5493,8 @@ locator_move_record (THREAD_ENTRY * thread_p, HFID * old_hfid, OID * old_class_o
+       error =
+ 	locator_insert_force (thread_p, new_class_hfid, new_class_oid, &new_obj_oid, recdes, has_index, op_type,
+ 			      &insert_cache, force_count, DB_NOT_PARTITIONED_CLASS, NULL, NULL, UPDATE_INPLACE_NONE,
+-			      NULL, false, false, false, from_copyarea, pending);
++			      NULL, from_workspace ? LC_FORCE_FLAG_FROM_WORKSPACE : LC_FORCE_FLAG_NONE,
++			      from_copyarea, pending);
+       heap_scancache_end (thread_p, &insert_cache);
+     }
+ 
+@@ -5515,6 +5544,8 @@ locator_move_record (THREAD_ENTRY * thread_p, HFID * old_hfid, OID * old_class_o
+  *			 and the update style will be decided in this function.
+  *			 Otherwise the update of the instance will be made in
+  *			 place and according to provided style.
++ *   need_locking(in): true, if need locking
++ *   from_workspace(in): true when recdes is a serialized workspace object (OOS demotion applies before forcing)
+  *
+  * Note: The given object is updated on this heap and all appropriate
+  *              index entries are updated.
+@@ -5525,7 +5556,7 @@ locator_update_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * class_oid, OID
+ 		      HEAP_SCANCACHE * scan_cache, int *force_count, bool not_check_fk, REPL_INFO_TYPE repl_info_type,
+ 		      int pruning_type, PRUNING_CONTEXT * pcontext, MVCC_REEV_DATA * mvcc_reev_data,
+ 		      UPDATE_INPLACE_STYLE force_in_place, bool need_locking, bool from_copyarea,
+-		      heap_pending_record * pending)
++		      heap_pending_record * pending, bool from_workspace)
+ {
+   /* *INDENT-OFF* */
+   heap_pending_record received;
+@@ -6092,7 +6123,7 @@ locator_update_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * class_oid, OID
+ 	      error_code =
+ 		locator_move_record (thread_p, hfid, class_oid, oid, &real_class_oid, &real_hfid, recdes, scan_cache,
+ 				     op_type, has_index, force_count, pcontext, mvcc_reev_data, need_locking,
+-				     from_copyarea, pending);
++				     from_copyarea, pending, from_workspace);
+ 	      if (error_code == NO_ERROR)
+ 		{
+ 		  COPY_OID (class_oid, &real_class_oid);
+@@ -6102,7 +6133,7 @@ locator_update_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * class_oid, OID
+ 	    }
+ 	}
+ 
+-      error_code = locator_finalize_oos_record (thread_p, class_oid, &recdes, from_copyarea,
++      error_code = locator_finalize_oos_record (thread_p, class_oid, &recdes, from_copyarea, from_workspace,
+ 						pending, &received, &converted);
+       if (error_code != NO_ERROR)
+ 	{
+@@ -6823,7 +6854,7 @@ locator_force_for_multi_update (THREAD_ENTRY * thread_p, LC_COPYAREA * force_are
+ 	  error_code = locator_update_force (thread_p, &obj->hfid, &obj->class_oid, &obj->oid, NULL,
+ 					     &recdes, has_index, NULL, 0, MULTI_ROW_UPDATE, &scan_cache,
+ 					     &force_count, false, repl_info, DB_NOT_PARTITIONED_CLASS, NULL,
+-					     NULL, UPDATE_INPLACE_NONE, true, true);
++					     NULL, UPDATE_INPLACE_NONE, true, true, NULL, true);
+ 	  if (error_code != NO_ERROR)
+ 	    {
+ 	      (void) heap_oos_begin_insert_publication (thread_p);
+@@ -7213,7 +7244,7 @@ xlocator_repl_force (THREAD_ENTRY * thread_p, LC_COPYAREA * force_area, LC_COPYA
+ 	      error_code =
+ 		locator_insert_force (thread_p, &obj->hfid, &obj->class_oid, &obj->oid, &recdes, has_index,
+ 				      SINGLE_ROW_INSERT, force_scancache, &force_count, pruning_type, NULL, NULL,
+-				      UPDATE_INPLACE_NONE, NULL, false, false);
++				      UPDATE_INPLACE_NONE, NULL);
+ 
+ 	      if (error_code == NO_ERROR)
+ 		{
+@@ -7442,7 +7473,7 @@ xlocator_force (THREAD_ENTRY * thread_p, LC_COPYAREA * force_area, int num_ignor
+ 	  error_code =
+ 	    locator_insert_force (thread_p, &obj->hfid, &obj->class_oid, &obj->oid, &recdes, has_index,
+ 				  SINGLE_ROW_INSERT, force_scancache, &force_count, pruning_type, NULL, NULL,
+-				  UPDATE_INPLACE_NONE, NULL, false, false, false, true);
++				  UPDATE_INPLACE_NONE, NULL, LC_FORCE_FLAG_FROM_WORKSPACE, true);
+ 
+ 	  if (error_code == NO_ERROR)
+ 	    {
+@@ -7458,7 +7489,8 @@ xlocator_force (THREAD_ENTRY * thread_p, LC_COPYAREA * force_area, int num_ignor
+ 	  error_code =
+ 	    locator_update_force (thread_p, &obj->hfid, &obj->class_oid, &obj->oid, NULL, &recdes,
+ 				  has_index, NULL, 0, SINGLE_ROW_UPDATE, force_scancache, &force_count, false,
+-				  REPL_INFO_TYPE_RBR_NORMAL, pruning_type, NULL, NULL, UPDATE_INPLACE_NONE, true, true);
++				  REPL_INFO_TYPE_RBR_NORMAL, pruning_type, NULL, NULL, UPDATE_INPLACE_NONE, true, true,
++				  NULL, true);
+ 
+ 	  if (error_code == NO_ERROR)
+ 	    {
+@@ -7827,8 +7859,8 @@ locator_attribute_info_force (THREAD_ENTRY * thread_p, const HFID * hfid, OID *
+ 	{
+ 	  error_code =
+ 	    locator_insert_force (thread_p, &class_hfid, &class_oid, oid, &new_recdes, true, op_type, scan_cache,
+-				  force_count, pruning_type, pcontext, func_preds, UPDATE_INPLACE_NONE, NULL, false,
+-				  false, false, false, &pending);
++				  force_count, pruning_type, pcontext, func_preds, UPDATE_INPLACE_NONE, NULL,
++				  LC_FORCE_FLAG_NONE, false, &pending);
+ 	}
+       else
+ 	{
+@@ -13221,7 +13253,7 @@ redistribute_partition_data (THREAD_ENTRY * thread_p, OID * class_oid, int no_oi
+ 	      error =
+ 		locator_insert_force (thread_p, &class_hfid, &cls_oid, &oid, write_record, true, SINGLE_ROW_INSERT,
+ 				      &parent_scan_cache, &force_count, DB_PARTITIONED_CLASS, &pcontext, NULL,
+-				      UPDATE_INPLACE_OLD_MVCCID, NULL, false, false, false, false, &prepared);
++				      UPDATE_INPLACE_OLD_MVCCID, NULL, LC_FORCE_FLAG_NONE, false, &prepared);
+ 
+ 	      thread_p->no_supplemental_log = false;
+ 
+@@ -14170,6 +14202,8 @@ locator_multi_insert_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * class_oi
+   std::vector<VPID> heap_pages_array;
+   RECDES local_record;
+   bool has_BU_lock = lock_has_lock_on_object (class_oid, oid_Root_class_oid, BU_LOCK);
++  int force_flags = ((has_BU_lock ? LC_FORCE_FLAG_HAS_BU_LOCK : LC_FORCE_FLAG_NONE)
++		     | (dont_check_fk ? LC_FORCE_FLAG_DONT_CHECK_FK : LC_FORCE_FLAG_NONE));
+   size_t record_overhead = SPAGE_SLOT_SIZE;
+ 
+   // Early-out
+@@ -14213,7 +14247,7 @@ locator_multi_insert_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * class_oi
+ 	  // We insert other records normally.
+ 	  error_code = locator_insert_force (thread_p, hfid, class_oid, &dummy_oid, &local_record, has_index,
+ 					     op_type, scan_cache, force_count, pruning_type, pcontext, func_preds,
+-					     force_in_place, NULL, has_BU_lock, dont_check_fk, false);
++					     force_in_place, NULL, force_flags);
+ 	  if (error_code != NO_ERROR)
+ 	    {
+ 	      ASSERT_ERROR ();
+@@ -14244,8 +14278,8 @@ locator_multi_insert_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * class_oi
+ 		{
+ 		  error_code = locator_insert_force (thread_p, hfid, class_oid, &dummy_oid, &recdes_array[j], has_index,
+ 						     op_type, scan_cache, force_count, pruning_type, pcontext,
+-						     func_preds, force_in_place, &home_hint_p, has_BU_lock,
+-						     dont_check_fk, true);
++						     func_preds, force_in_place, &home_hint_p,
++						     force_flags | LC_FORCE_FLAG_BULK_LOGGING);
+ 		  if (error_code != NO_ERROR)
+ 		    {
+ 		      ASSERT_ERROR ();
+@@ -14299,7 +14333,7 @@ locator_multi_insert_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * class_oi
+       scan_cache->cache_last_fix_page = false;
+       error_code = locator_insert_force (thread_p, hfid, class_oid, &dummy_oid, &recdes_array[i], has_index, op_type,
+ 					 scan_cache, force_count, pruning_type, pcontext, func_preds, force_in_place,
+-					 NULL, has_BU_lock, dont_check_fk, false);
++					 NULL, force_flags);
+       if (error_code != NO_ERROR)
+ 	{
+ 	  ASSERT_ERROR ();
+diff --git a/src/transaction/locator_sr.h b/src/transaction/locator_sr.h
+index 3720cf2f1..78c0ddd9c 100644
+--- a/src/transaction/locator_sr.h
++++ b/src/transaction/locator_sr.h
+@@ -133,13 +133,25 @@ extern SCAN_CODE locator_get_object (THREAD_ENTRY * thread_p, const OID * oid, O
+ extern SCAN_OPERATION_TYPE locator_decide_operation_type (LOCK lock_mode, LC_FETCH_VERSION_TYPE fetch_version_type);
+ extern LOCK locator_get_lock_mode_from_op_type (SCAN_OPERATION_TYPE op_type);
+ 
++/* Bit flags adjusting the behavior of locator_insert_force (). Combine with bitwise OR into its force_flags
++ * argument. */
++typedef enum
++{
++  LC_FORCE_FLAG_NONE = 0x00,	/* default force behavior */
++  LC_FORCE_FLAG_HAS_BU_LOCK = 0x01,	/* the transaction inserts under BU_LOCK (bulk insert) */
++  LC_FORCE_FLAG_DONT_CHECK_FK = 0x02,	/* skip foreign key constraint checking */
++  LC_FORCE_FLAG_BULK_LOGGING = 0x04,	/* use bulk (page granularity) logging */
++  LC_FORCE_FLAG_FROM_WORKSPACE = 0x08	/* recdes was serialized from a workspace object; OOS demotion has not
++					 * been applied yet and must happen at force time */
++} LOCATOR_FORCE_FLAG;
++
+ /* *INDENT-OFF* */
+ extern int locator_insert_force (THREAD_ENTRY * thread_p, HFID * hfid, OID * class_oid, OID * oid, RECDES * recdes,
+ 				 int has_index, int op_type, HEAP_SCANCACHE * scan_cache, int *force_count,
+ 				 int pruning_type, PRUNING_CONTEXT * pcontext, FUNC_PRED_UNPACK_INFO * func_preds,
+-				 UPDATE_INPLACE_STYLE force_in_place, PGBUF_WATCHER * home_hint_p, bool has_BU_lock,
+-				 bool dont_check_fk, bool use_bulk_logging = false, bool from_copyarea = false,
+-                                heap_pending_record *pending = nullptr);
++				 UPDATE_INPLACE_STYLE force_in_place, PGBUF_WATCHER * home_hint_p,
++				 int force_flags = LC_FORCE_FLAG_NONE, bool from_copyarea = false,
++                                 heap_pending_record *pending = nullptr);
+ /* *INDENT-ON* */
+ 
+ extern int locator_oos_insert_force (THREAD_ENTRY * thread_p, OID * class_oid, RECDES * recdes);
+diff --git a/unit_tests/oos/CMakeLists.txt b/unit_tests/oos/CMakeLists.txt
+index 25db9205e..811fc9fe0 100644
+--- a/unit_tests/oos/CMakeLists.txt
++++ b/unit_tests/oos/CMakeLists.txt
+@@ -39,6 +39,7 @@ set(SA_MODE_TESTS
+   test_oos_record_flags
+   test_byte_span_writer
+   test_oos_tde_gate
++  test_oos_workspace
+ )
+ 
+ foreach(test_name ${SA_MODE_TESTS})
+@@ -199,3 +200,8 @@ set_tests_properties(
+ # - Since we do not need isolation here, we use add_test above.
+ 
+ add_subdirectory(sql)
++
++# Real standalone loader/workspace routes require installed utilities, like the DB fixtures.
++# Each GoogleTest case owns a private registry and database; never use shared unittestdb here.
++add_test(NAME test_oos_workspace COMMAND test_oos_workspace)
++set_tests_properties(test_oos_workspace PROPERTIES RUN_SERIAL TRUE TIMEOUT 240)
+diff --git a/unit_tests/oos/scripts/benchmark_workspace_oos.sh b/unit_tests/oos/scripts/benchmark_workspace_oos.sh
+new file mode 100644
+index 000000000..c954f1583
+--- /dev/null
++++ b/unit_tests/oos/scripts/benchmark_workspace_oos.sh
+@@ -0,0 +1,77 @@
++#!/bin/bash
++#
++#
++#  Copyright 2016 CUBRID Corporation
++#
++#   Licensed under the Apache License, Version 2.0 (the "License");
++#   you may not use this file except in compliance with the License.
++#   You may obtain a copy of the License at
++#
++#       http://www.apache.org/licenses/LICENSE-2.0
++#
++#   Unless required by applicable law or agreed to in writing, software
++#   distributed under the License is distributed on an "AS IS" BASIS,
++#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++#   See the License for the specific language governing permissions and
++#   limitations under the License.
++#
++
++# Manual Release benchmark, outside CTest. Each sample owns a private database.
++# Usage: bash benchmark_workspace_oos.sh INSTALL OUTPUT LABEL [REPEATS]
++# Retains fixtures, command output and measurements; deletes only successful sample databases.
++set -euo pipefail
++install=$(realpath "${1:?installation required}")
++output=$(realpath -m "${2:?new output directory required}")
++label=${3:?label required}
++repeats=${4:-3}
++mkdir "$output"
++export CUBRID="$install"
++export PATH="$install/bin:$PATH"
++export LD_LIBRARY_PATH="$install/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
++printf 'label,workload,rows,payload_bytes,repeat,elapsed,user_cpu,system_cpu\n' > "$output/results.csv"
++
++for workload in small large; do
++  if [[ $workload == small ]]; then
++    rows=100000
++    size=48
++  else
++    rows=10000
++    size=5000
++  fi
++  payload=$(awk -v size="$size" 'BEGIN {srand(27424); for(i=0;i<size;i++) printf "%02x", int(rand()*256)}')
++  fixture="$output/$workload.objects"
++  awk -v rows="$rows" -v payload="$payload" 'BEGIN {
++    print "%class bench (id v)";
++    for(i=0;i<rows;i++) printf "%d X\047%s\047\n", i, payload;
++  }' > "$fixture"
++  for ((repeat=0; repeat<repeats; repeat++)); do
++    root="$output/$workload-$repeat"
++    mkdir "$root"
++    export CUBRID_DATABASES="$root"
++    export CUBRID_CONF_FILE="$root/cubrid.conf"
++    printf '[common]\ndata_buffer_size=128M\nlog_buffer_size=32M\n' > "$CUBRID_CONF_FILE"
++    (
++      cd "$root"
++      cubrid createdb --db-volume-size=256M --log-volume-size=256M --db-page-size=16K \
++        -F "$root" bench en_US.utf8 > createdb.out 2>&1
++      csql -S -u dba -c 'CREATE TABLE bench(id INTEGER, v BIT VARYING); COMMIT;' bench > schema.out 2>&1
++      /usr/bin/time -f '%e,%U,%S' -o timing.csv \
++        cubrid loaddb -S -u dba -d "$fixture" bench > loaddb.out 2>&1
++      cat > check.sql <<SQL
++SELECT CASE WHEN COUNT(*)=$rows AND MIN(id)=0 AND MAX(id)=$((rows-1))
++AND SUM(CASE WHEN v=X'$payload' THEN 1 ELSE 0 END)=$rows
++THEN 'VALUE_OK' ELSE 'VALUE_BAD' END AS verdict FROM bench;
++SHOW HEAP OOS OF bench;
++SQL
++      csql -S -u dba -i check.sql bench > check.out 2>&1
++      grep -q "'VALUE_OK'" check.out
++      if grep -qE "ERROR:|'VALUE_BAD'" schema.out loaddb.out check.out; then
++        printf 'Verification failed: %s\n' "$root" >&2
++        exit 1
++      fi
++      cubrid deletedb bench > deletedb.out 2>&1
++      printf '%s,%s,%s,%s,%s,%s\n' "$label" "$workload" "$rows" "$size" "$repeat" "$(cat timing.csv)" \
++        | tee -a "$output/results.csv"
++    )
++  done
++done
+diff --git a/unit_tests/oos/sql/CMakeLists.txt b/unit_tests/oos/sql/CMakeLists.txt
+index a0a94d84f..38f000ed3 100644
+--- a/unit_tests/oos/sql/CMakeLists.txt
++++ b/unit_tests/oos/sql/CMakeLists.txt
+@@ -47,6 +47,7 @@ add_test(NAME test_oos_sql_storage COMMAND test_oos_sql_storage)
+ add_test(NAME test_oos_sql_show COMMAND test_oos_sql_show)
+ add_test(NAME test_oos_sql_deferred_write COMMAND test_oos_sql_deferred_write)
+ add_test(NAME test_oos_sql_visible_version COMMAND test_oos_sql_visible_version)
++add_test(NAME test_oos_sql_workspace_bytes COMMAND test_oos_sql_workspace_bytes)
+ 
+ set_tests_properties(
+   test_oos_sql_crud test_oos_sql_ddl test_oos_sql_delete
+@@ -57,6 +58,7 @@ set_tests_properties(
+   test_oos_sql_show
+   test_oos_sql_deferred_write
+   test_oos_sql_visible_version
++  test_oos_sql_workspace_bytes
+   PROPERTIES FIXTURES_REQUIRED OOS_DB RUN_SERIAL TRUE TIMEOUT 30
+ )
+ 
+diff --git a/unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp b/unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp
+new file mode 100644
+index 000000000..c83302872
+--- /dev/null
++++ b/unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp
+@@ -0,0 +1,398 @@
++/*
++ * Copyright 2008 Search Solution Corporation
++ * Copyright 2016 CUBRID Corporation
++ *
++ *  Licensed under the Apache License, Version 2.0 (the "License");
++ *  you may not use this file except in compliance with the License.
++ *  You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ *  Unless required by applicable law or agreed to in writing, software
++ *  distributed under the License is distributed on an "AS IS" BASIS,
++ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ *  See the License for the specific language governing permissions and
++ *  limitations under the License.
++ *
++ */
++
++#include "test_oos_sql_common.hpp"
++
++#include "heap_oos.hpp"
++#include "locator_cl.h"
++#include "log_impl.h"
++#include "object_domain.h"
++#include "object_primitive.h"
++#include "object_representation.h"
++#include "scope_exit.hpp"
++#include "work_space.h"
++
++#include <map>
++#include <string>
++#include <vector>
++
++// XXX: SHOULD BE THE LAST INCLUDE HEADER
++#include "memory_wrapper.hpp"
++
++class OosWorkspaceBytes : public ::testing::Test
++{
++  protected:
++    struct storage_expectation
++    {
++      std::vector<bool> selected;
++      int offset_size;
++      int first_value_size = 0;
++    };
++
++    void TearDown () override
++    {
++      db_abort_transaction ();
++      exec_sql ("DROP TABLE IF EXISTS ws_bytes");
++      db_commit_transaction ();
++    }
++
++    void capture (const OID &oid, OID class_oid, const HFID &hfid,
++		  std::vector<char> &bytes, RECDES &record)
++    {
++      auto *thread = thread_get_thread_entry_info ();
++      HEAP_SCANCACHE scan_cache;
++      ASSERT_EQ (heap_scancache_start (thread, &scan_cache, &hfid, &class_oid, true,
++				       logtb_get_mvcc_snapshot (thread)), NO_ERROR);
++      const SCAN_CODE scan = heap_get_visible_version (thread, &oid, &class_oid, &record,
++			     &scan_cache, COPY, NULL_CHN,
++			     HEAP_RECDES_DONT_CONSUME_RAW_BYTES);
++      if (scan == S_SUCCESS)
++	{
++	  // The scan cache owns the returned buffer. Copy it before ending the scan.
++	  bytes.assign (record.data, record.data + record.length);
++	}
++      EXPECT_EQ (heap_scancache_end (thread, &scan_cache), NO_ERROR);
++      ASSERT_EQ (scan, S_SUCCESS);
++      record.data = bytes.data ();
++      record.area_size = bytes.size ();
++    }
++
++    void expect_storage (const RECDES &record, const OID &class_oid, const storage_expectation &expected)
++    {
++      int cache_index = -1;
++      OR_CLASSREP *repr = heap_classrepr_get (thread_get_thread_entry_info (), &class_oid, nullptr,
++					      OR_GET_MVCC_REPID (record.data), &cache_index);
++      ASSERT_NE (repr, nullptr);
++      scope_exit free_repr ([&] ()
++      {
++	heap_classrepr_free (repr, &cache_index);
++      });
++      ASSERT_EQ (repr->n_variable, expected.selected.size ());
++      bool has_oos = false;
++
++      // Expectations follow declaration order of the variable columns. The
++      // fixtures declare fixed columns first; heap storage can reorder values.
++      const int fixed_count = repr->n_attributes - repr->n_variable;
++      for (int i = 0; i < repr->n_attributes; ++i)
++	{
++	  const OR_ATTRIBUTE &attribute = repr->attributes[i];
++	  if (attribute.is_fixed)
++	    {
++	      continue;
++	    }
++	  const int declared = attribute.def_order - fixed_count;
++	  ASSERT_GE (declared, 0);
++	  ASSERT_LT (declared, expected.selected.size ());
++	  SCOPED_TRACE (declared);
++	  int start;
++	  ASSERT_EQ (heap_recdes_get_var_offset_entry (&record, attribute.location, &start), NO_ERROR);
++	  EXPECT_EQ (bool (OR_IS_OOS (start)), expected.selected[declared]);
++	  has_oos = has_oos || expected.selected[declared];
++	  if (declared == 0 && expected.first_value_size > 0)
++	    {
++	      if (OR_IS_OOS (start))
++		{
++		  oos_chain_ref ref;
++		  DB_BIGINT length;
++		  ASSERT_EQ (heap_oos_parse_inline_ref (&record, attribute.location, &ref, &length), NO_ERROR);
++		  EXPECT_EQ (length, expected.first_value_size);
++		}
++	      else
++		{
++		  int end;
++		  ASSERT_EQ (heap_recdes_get_var_offset_entry (&record, attribute.location + 1, &end), NO_ERROR);
++		  EXPECT_EQ (OR_GET_VAR_OFFSET (end) - OR_GET_VAR_OFFSET (start), expected.first_value_size);
++		}
++	    }
++	}
++      EXPECT_EQ (bool (OR_RECORD_HAS_OOS (record.data)), has_oos);
++      EXPECT_EQ (OR_GET_OFFSET_SIZE (record.data), expected.offset_size);
++    }
++
++    void compare (const RECDES &a, const RECDES &b, const std::vector<const TP_DOMAIN *> &domains)
++    {
++      auto *thread = thread_get_thread_entry_info ();
++      EXPECT_EQ (OR_RECORD_HAS_OOS (a.data), OR_RECORD_HAS_OOS (b.data));
++      bool has_collection = false;
++      for (size_t i = 0; i < domains.size (); ++i)
++	{
++	  SCOPED_TRACE (i);
++	  std::vector<char> values[2];
++	  const RECDES *records[] = {&a, &b};
++	  bool selected[2];
++	  for (int j = 0; j < 2; ++j)
++	    {
++	      int start, end;
++	      ASSERT_EQ (heap_recdes_get_var_offset_entry (records[j], i, &start), NO_ERROR);
++	      ASSERT_EQ (heap_recdes_get_var_offset_entry (records[j], i + 1, &end), NO_ERROR);
++	      selected[j] = OR_IS_OOS (start);
++	      if (selected[j])
++		{
++		  oos_chain_ref ref;
++		  DB_BIGINT length;
++		  ASSERT_EQ (heap_oos_parse_inline_ref (records[j], i, &ref, &length), NO_ERROR);
++		  ASSERT_GT (length, 0);
++		  values[j].resize (length);
++		  ASSERT_EQ (oos_read (thread, ref, oos_buffer (values[j].data (), values[j].size ())), NO_ERROR);
++		}
++	      else
++		{
++		  const char *base = records[j]->data + OR_HEADER_SIZE (records[j]->data);
++		  values[j].assign (base + OR_GET_VAR_OFFSET (start), base + OR_GET_VAR_OFFSET (end));
++		}
++	    }
++	  EXPECT_EQ (selected[0], selected[1]);
++	  if (TP_IS_SET_TYPE (TP_DOMAIN_TYPE (domains[i])))
++	    {
++	      has_collection = true;
++	      // Collection writers may include or omit the optional domain. Decode
++	      // with the schema domain to compare their logical values.
++	      DB_VALUE decoded[2];
++	      db_make_null (&decoded[0]);
++	      db_make_null (&decoded[1]);
++	      scope_exit clear_values ([&] ()
++	      {
++		db_value_clear (&decoded[0]);
++		db_value_clear (&decoded[1]);
++	      });
++	      for (int j = 0; j < 2; ++j)
++		{
++		  OR_BUF buf;
++		  or_init (&buf, values[j].data (), values[j].size ());
++		  ASSERT_EQ (domains[i]->type->data_readval (&buf, &decoded[j], domains[i], values[j].size (),
++			     true, nullptr, 0), NO_ERROR);
++		}
++	      EXPECT_EQ (tp_value_compare (&decoded[0], &decoded[1], 0, 1), DB_EQ);
++	    }
++	  else
++	    {
++	      EXPECT_EQ (values[0], values[1]);
++	    }
++	}
++      EXPECT_EQ (OR_GET_OFFSET_SIZE (a.data), OR_GET_OFFSET_SIZE (b.data));
++      if (!has_collection)
++	{
++	  // Committed rows may have different MVCC headers. Collections can also
++	  // differ in size because their serialized domain is optional.
++	  EXPECT_EQ (a.length - OR_HEADER_SIZE (a.data), b.length - OR_HEADER_SIZE (b.data));
++	}
++    }
++
++    void check (const std::string &columns, const std::string &values, const std::string &predicate,
++		const storage_expectation &expected)
++    {
++      ASSERT_NO_FATAL_FAILURE (check (columns, values, predicate, expected, nullptr, expected));
++    }
++
++    void check (const std::string &columns, const std::string &values, const std::string &predicate,
++		const storage_expectation &current, const char *alter, const storage_expectation &old)
++    {
++      auto *thread = thread_get_thread_entry_info ();
++      ASSERT_GE (exec_sql (("CREATE TABLE ws_bytes(" + columns + ")").c_str ()), 0);
++      ASSERT_GE (exec_sql (("INSERT INTO ws_bytes VALUES(" + values + ")").c_str ()), 0);
++      ASSERT_EQ (db_commit_transaction (), NO_ERROR);
++      if (alter != nullptr)
++	{
++	  ASSERT_GE (exec_sql (alter), 0);
++	  ASSERT_EQ (db_commit_transaction (), NO_ERROR);
++	}
++      DB_OBJECT *class_mop = db_find_class ("ws_bytes");
++      ASSERT_NE (class_mop, nullptr);
++      DB_OBJLIST *objects = db_fetch_all_objects (class_mop, DB_FETCH_READ);
++      ASSERT_NE (objects, nullptr);
++      DB_OBJECT *query_object = objects->op;
++      db_objlist_free (objects);
++      const OID class_oid = *WS_OID (class_mop);
++      HFID hfid;
++      FILE_TYPE file_type;
++      ASSERT_EQ (heap_get_class_hfid (thread, &class_oid, &hfid, &file_type), NO_ERROR);
++      std::vector<char> sql_bytes;
++      RECDES stored = RECDES_INITIALIZER;
++      ASSERT_NO_FATAL_FAILURE (capture (*WS_OID (query_object), class_oid, hfid, sql_bytes, stored));
++
++      // Copy the query writer's logical values into a new workspace object.
++      // Flushing it exercises the real locator force path, independent of the
++      // particular OOS conversion helper used by the implementation.
++      DB_OBJECT *workspace_object = db_create (class_mop);
++      ASSERT_NE (workspace_object, nullptr);
++      for (DB_ATTRIBUTE *attribute = db_get_attributes (class_mop); attribute != nullptr;
++	   attribute = db_attribute_next (attribute))
++	{
++	  DB_VALUE value;
++	  db_make_null (&value);
++	  scope_exit clear_value ([&] ()
++	  {
++	    db_value_clear (&value);
++	  });
++	  const char *name = db_attribute_name (attribute);
++	  ASSERT_EQ (db_get (query_object, name, &value), NO_ERROR);
++	  ASSERT_EQ (db_put (workspace_object, name, &value), NO_ERROR);
++	}
++      ASSERT_EQ (locator_flush_instance (workspace_object), NO_ERROR);
++      ASSERT_EQ (db_commit_transaction (), NO_ERROR);
++      std::vector<char> workspace_bytes;
++      RECDES actual = RECDES_INITIALIZER;
++      ASSERT_NO_FATAL_FAILURE (capture (*WS_OID (workspace_object), class_oid, hfid, workspace_bytes, actual));
++      ASSERT_NO_FATAL_FAILURE (expect_storage (stored, class_oid, alter == nullptr ? current : old));
++      ASSERT_NO_FATAL_FAILURE (expect_storage (actual, class_oid, current));
++
++      // Fixture expectations are independent of equality between the writers.
++      int count;
++      ASSERT_EQ (fetch_single_int ("SELECT COUNT(*) FROM ws_bytes", &count), NO_ERROR);
++      EXPECT_EQ (count, 2);
++      ASSERT_EQ (fetch_single_int (("SELECT COUNT(*) FROM ws_bytes WHERE " + predicate).c_str (), &count), NO_ERROR)
++	  << db_error_string (1);
++      EXPECT_EQ (count, 2) << predicate;
++
++      if (alter != nullptr)
++	{
++	  // The SQL row still has its old representation. Its values and the new
++	  // default were checked above; only the workspace row has the new layout.
++	  EXPECT_NE (OR_GET_MVCC_REPID (stored.data), OR_GET_MVCC_REPID (actual.data));
++	  return;
++	}
++
++      // Read the schema domains only; no additional conversion or OOS writes.
++      HEAP_CACHE_ATTRINFO attrinfo;
++      ASSERT_EQ (heap_attrinfo_start (thread, &class_oid, -1, nullptr, &attrinfo), NO_ERROR);
++      scope_exit end_attrinfo ([&] ()
++      {
++	heap_attrinfo_end (thread, &attrinfo);
++      });
++      const int n_var = attrinfo.last_classrepr->n_variable;
++      std::vector<const TP_DOMAIN *> domains (n_var);
++      for (int i = 0; i < attrinfo.last_classrepr->n_attributes; ++i)
++	{
++	  const OR_ATTRIBUTE &attribute = attrinfo.last_classrepr->attributes[i];
++	  if (!attribute.is_fixed)
++	    {
++	      domains[attribute.location] = attribute.domain;
++	    }
++	}
++      ASSERT_NO_FATAL_FAILURE (compare (actual, stored, domains));
++    }
++};
++
++TEST_F (OosWorkspaceBytes, TinyNullAndEmptyValues)
++{
++  check ("id INT, a BIT VARYING, b VARCHAR, c BIT VARYING", "1, NULL, '', X''",
++  "id=1 AND a IS NULL AND b='' AND c=X''", {{false, false, false}, OR_BYTE_SIZE});
++}
++
++TEST_F (OosWorkspaceBytes, LargestFirstAndPreferInline)
++{
++  check ("id INT, a BIT VARYING STORAGE PREFER_INLINE, b BIT VARYING, c BIT VARYING",
++	 "1, REPEAT(X'AA', 3500), REPEAT(X'BB', 3000), REPEAT(X'CC', 600)",
++	 "id=1 AND a=CAST(REPEAT(X'AA', 3500) AS BIT VARYING)"
++	 " AND b=CAST(REPEAT(X'BB', 3000) AS BIT VARYING) AND c=CAST(REPEAT(X'CC', 600) AS BIT VARYING)",
++  {{false, true, true}, OR_SHORT_SIZE});
++}
++
++TEST_F (OosWorkspaceBytes, EqualSizeTie)
++{
++  // The legacy storage-index tiebreak selects a in this representation.
++  check ("a BIT VARYING, b BIT VARYING", "REPEAT(X'AA', 2200), REPEAT(X'BB', 2200)",
++	 "a=CAST(REPEAT(X'AA', 2200) AS BIT VARYING) AND b=CAST(REPEAT(X'BB', 2200) AS BIT VARYING)",
++  {{true, false}, OR_SHORT_SIZE});
++}
++
++TEST_F (OosWorkspaceBytes, OffsetWidthShrinksAfterForcedDemotion)
++{
++  check ("a BIT VARYING STORAGE FORCE_OUTLINE, b BIT VARYING",
++	 "REPEAT(X'AA', 65536), X'BB'", "a=CAST(REPEAT(X'AA', 65536) AS BIT VARYING) AND b=X'BB'",
++  {{true, false}, OR_BYTE_SIZE});
++}
++
++TEST_F (OosWorkspaceBytes, CompressedStringAndJson)
++{
++  check ("a VARCHAR STORAGE FORCE_OUTLINE, b JSON STORAGE FORCE_OUTLINE, c BIT VARYING",
++	 "REPEAT('abcdefgh', 10000), '{\"key\": [1,2,3,4,5,6,7,8,9,10]}', REPEAT(X'BB', 4500)",
++	 "a=REPEAT('abcdefgh', 10000)"
++	 " AND JSON_PRETTY(b)=JSON_PRETTY('{\"key\": [1,2,3,4,5,6,7,8,9,10]}')"
++	 " AND c=CAST(REPEAT(X'BB', 4500) AS BIT VARYING)",
++  {{true, true, true}, OR_BYTE_SIZE});
++}
++
++TEST_F (OosWorkspaceBytes, CollectionSerializedBytes)
++{
++  check ("a SEQUENCE OF INTEGER STORAGE FORCE_OUTLINE, b BIT VARYING",
++	 "{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}, REPEAT(X'AA', 5000)",
++	 "a={1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16} AND b=CAST(REPEAT(X'AA', 5000) AS BIT VARYING)",
++  {{true, true}, OR_BYTE_SIZE});
++}
++
++TEST_F (OosWorkspaceBytes, WideVotAndManyAttributes)
++{
++  std::string columns = "a BIT VARYING STORAGE FORCE_OUTLINE";
++  std::string values = "REPEAT(X'AA', 65536)";
++  std::string predicate = "a=CAST(REPEAT(X'AA', 65536) AS BIT VARYING)";
++  std::vector<bool> selected = {true};
++  for (int i = 0; i < 70; ++i)
++    {
++      columns += ", v" + std::to_string (i) + " BIT VARYING";
++      values += i % 2 == 0 ? ", NULL" : ", X'BB'";
++      predicate += " AND v" + std::to_string (i) + (i % 2 == 0 ? " IS NULL" : "=X'BB'");
++      selected.push_back (false);
++    }
++  check (columns, values, predicate, {selected, OR_SHORT_SIZE});
++}
++
++TEST_F (OosWorkspaceBytes, OldDiskRepresentationIsConvertedBeforeWorkspaceSerialization)
++{
++  const storage_expectation sql_row = {{true}, OR_BYTE_SIZE, 5008};
++  const storage_expectation workspace_row = {{true, false}, OR_BYTE_SIZE, 5008};
++  check ("a BIT VARYING", "REPEAT(X'AA', 5000)",
++	 "a=CAST(REPEAT(X'AA', 5000) AS BIT VARYING) AND BIT_LENGTH(a)=40000 AND b='new attribute'",
++	 workspace_row, "ALTER TABLE ws_bytes ADD b VARCHAR DEFAULT 'new attribute'", sql_row);
++}
++
++class OosWorkspaceSizeBoundary : public OosWorkspaceBytes, public ::testing::WithParamInterface<int>
++{
++};
++
++TEST_P (OosWorkspaceSizeBoundary, SerializedSizesMatchValueSizes)
++{
++  const std::string size = std::to_string (GetParam ());
++  const std::map<int, int> encoded_sizes =
++  {
++    {20, 24}, {21, 24}, {24, 28}, {25, 28}, {244, 252}, {248, 256}, {252, 260},
++    {3800, 3808}, {4040, 4048}, {4060, 4068}, {32760, 32768}, {32768, 32776}, {65536, 65544}
++  };
++  // The 20- and 21-byte VARBIT encodings fit in 24 bytes; later fixtures
++  // exceed the inline stub size and are selected by FORCE_OUTLINE.
++  const storage_expectation expected =
++  {
++    {GetParam () >= 24, false, false}, OR_SHORT_SIZE, encoded_sizes.at (GetParam ())
++  };
++  check ("id INT, a BIT VARYING STORAGE FORCE_OUTLINE, b BIT VARYING, c VARCHAR",
++	 "1, REPEAT(X'AA', " + size + "), REPEAT(X'BB', 200), REPEAT('C', 255)",
++	 "id=1 AND a=CAST(REPEAT(X'AA', " + size + ") AS BIT VARYING)"
++	 " AND b=CAST(REPEAT(X'BB', 200) AS BIT VARYING) AND c=REPEAT('C', 255)",
++	 expected);
++}
++
++INSTANTIATE_TEST_SUITE_P (EncodingAndVotBoundaries, OosWorkspaceSizeBoundary,
++			  ::testing::Values (20, 21, 24, 25, 244, 248, 252, 3800, 4040, 4060, 32760, 32768, 65536));
++
++int
++main (int argc, char **argv)
++{
++  ::testing::InitGoogleTest (&argc, argv);
++  ::testing::AddGlobalTestEnvironment (new SqlServerEnv ());
++  return RUN_ALL_TESTS ();
++}
+diff --git a/unit_tests/oos/test_oos_workspace.cpp b/unit_tests/oos/test_oos_workspace.cpp
+new file mode 100644
+index 000000000..767cdcd08
+--- /dev/null
++++ b/unit_tests/oos/test_oos_workspace.cpp
+@@ -0,0 +1,405 @@
++/*
++ * Copyright 2008 Search Solution Corporation
++ * Copyright 2016 CUBRID Corporation
++ *
++ *  Licensed under the Apache License, Version 2.0 (the "License");
++ *  you may not use this file except in compliance with the License.
++ *  You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ *  Unless required by applicable law or agreed to in writing, software
++ *  distributed under the License is distributed on an "AS IS" BASIS,
++ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ *  See the License for the specific language governing permissions and
++ *  limitations under the License.
++ *
++ */
++
++
++// Real utility coverage: db_execute() alone does not exercise the standalone object loader.
++// Each GoogleTest case owns a fresh database and registry, including the no-logging case.
++#include "gtest/gtest.h"
++
++#include <cerrno>
++#include <cstdio>
++#include <cstdlib>
++#include <filesystem>
++#include <fstream>
++#include <iostream>
++#include <iterator>
++#include <map>
++#include <random>
++#include <regex>
++#include <string>
++#include <sys/wait.h>
++#include <unistd.h>
++#include <vector>
++
++// XXX: SHOULD BE THE LAST INCLUDE HEADER
++#include "memory_wrapper.hpp"
++
++namespace fs = std::filesystem;
++
++class OosWorkspaceTest : public ::testing::Test
++{
++  protected:
++    fs::path root;
++    std::string payload;
++    unsigned sequence = 0;
++    bool created = false;
++
++    static std::string read (const fs::path &path)
++    {
++      std::ifstream stream (path, std::ios::binary);
++      EXPECT_TRUE (stream.is_open ()) << path;
++      return {std::istreambuf_iterator<char> (stream), std::istreambuf_iterator<char> ()};
++    }
++
++    void write (const fs::path &path, const std::string &text)
++    {
++      std::ofstream stream (path);
++      stream << text;
++      stream.close ();
++      ASSERT_TRUE (stream) << path;
++    }
++
++    // Use argv directly, so paths and SQL never pass through a shell. The child alone receives
++    // the private registry/configuration and a per-command timeout; the suite environment stays intact.
++    std::string run (std::vector<std::string> args, const std::string &input = "",
++		     const std::string &expected_error = "")
++    {
++      const auto stem = root / std::to_string (++sequence);
++      const std::string in = stem.string () + ".in";
++      const std::string out = stem.string () + ".out";
++      write (in, input);
++      if (HasFatalFailure ())
++	{
++	  return "";
++	}
++      std::vector<char *> argv;
++      for (auto &arg : args)
++	{
++	  argv.push_back (arg.data ());
++	}
++      argv.push_back (nullptr);
++      fflush (nullptr);
++      const pid_t pid = fork ();
++      if (pid == 0)
++	{
++	  if (chdir (root.c_str ()) != 0
++	      || setenv ("CUBRID_DATABASES", root.c_str (), 1) != 0
++	      || setenv ("CUBRID_CONF_FILE", (root / "cubrid.conf").c_str (), 1) != 0
++	      || setenv ("LC_ALL", "C", 1) != 0
++	      || freopen (in.c_str (), "r", stdin) == nullptr
++	      || freopen (out.c_str (), "w", stdout) == nullptr
++	      || dup2 (STDOUT_FILENO, STDERR_FILENO) < 0)
++	    {
++	      _exit (126);
++	    }
++	  alarm (60);
++	  execvp (argv[0], argv.data ());
++	  _exit (127);
++	}
++      if (pid < 0)
++	{
++	  ADD_FAILURE () << "fork failed: " << errno;
++	  return "";
++	}
++      int status = 0;
++      pid_t waited;
++      do
++	{
++	  waited = waitpid (pid, &status, 0);
++	}
++      while (waited < 0 && errno == EINTR);
++      const auto output = read (out);
++      EXPECT_EQ (waited, pid) << out;
++      EXPECT_TRUE (WIFEXITED (status)) << out << '\n' << output;
++      if (WIFEXITED (status))
++	{
++	  if (expected_error.empty ())
++	    {
++	      EXPECT_EQ (WEXITSTATUS (status), 0) << out << '\n' << output;
++	      EXPECT_EQ (output.find ("ERROR:"), std::string::npos) << out << '\n' << output;
++	    }
++	  else
++	    {
++	      EXPECT_NE (WEXITSTATUS (status), 0) << "load unexpectedly succeeded: " << out;
++	      EXPECT_TRUE (std::regex_search (output, std::regex (expected_error, std::regex::icase)))
++		  << out << '\n' << output;
++	    }
++	}
++      return output;
++    }
++
++    std::string sql (const std::string &text)
++    {
++      return run ({"csql", "-S", "-u", "dba", "--no-auto-commit", "--line-output", "workspace_oos"}, text);
++    }
++
++    void load (const std::string &text, const std::vector<std::string> &options = {},
++	       const std::string &expected_error = "")
++    {
++      const auto path = root / (std::to_string (++sequence) + ".objects");
++      ASSERT_NO_FATAL_FAILURE (write (path, text));
++      std::vector<std::string> args = {"cubrid", "loaddb", "-S", "-u", "dba", "-d", path.string ()};
++      args.insert (args.end (), options.begin (), options.end ());
++      args.push_back ("workspace_oos");
++      run (args, "", expected_error);
++    }
++
++    void expect_chunks (const std::string &output, const std::vector<int> &expected)
++    {
++      const std::regex pattern ("Oos_num_recs\\s*:\\s*(\\d+)");
++      std::vector<int> actual;
++      for (auto i = std::sregex_iterator (output.begin (), output.end (), pattern);
++	   i != std::sregex_iterator (); ++i)
++	{
++	  actual.push_back (std::stoi ((*i)[1]));
++	}
++      EXPECT_EQ (actual, expected) << output;
++    }
++
++    void check (const std::string &table, const std::string &predicate, int rows, int chunks)
++    {
++      const auto count = std::to_string (rows);
++      const auto output = sql ("SELECT CASE WHEN COUNT(*)=" + count
++			       + " AND SUM(CASE WHEN " + predicate + " THEN 1 ELSE 0 END)=" + count
++			       + " THEN 'VALUE_OK' ELSE 'VALUE_BAD' END AS verdict FROM " + table
++			       + ";\nSHOW HEAP OOS OF " + table + ";\n");
++      EXPECT_NE (output.find ("'VALUE_OK'"), std::string::npos) << output;
++      EXPECT_EQ (output.find ("'VALUE_BAD'"), std::string::npos) << output;
++      expect_chunks (output, {chunks});
++    }
++
++    void seed_workspace ()
++    {
++      sql ("CREATE TABLE t_sql(id INTEGER PRIMARY KEY, v BIT VARYING); COMMIT;\n"
++	   "SET SYSTEM PARAMETERS 'insert_execution_mode=0';\n"
++	   "INSERT INTO t_sql VALUES (1, X'" + payload + "'); COMMIT;\n");
++      check ("t_sql", "id=1 AND v=X'" + payload + "'", 1, 1);
++    }
++
++    void seed_references ()
++    {
++      sql ("CREATE TABLE t_refs(id INTEGER PRIMARY KEY, peer t_refs, v BIT VARYING) DONT_REUSE_OID; COMMIT;\n");
++      load ("%id t_refs 1\n%class t_refs (id peer v)\n1: 1 @1|2 X'" + payload
++	    + "'\n2: 2 @1|1 X'" + payload + "'\n");
++      check ("t_refs", "peer.id=3-id AND v=X'" + payload + "'", 2, 2);
++    }
++
++    void seed_partitions ()
++    {
++      sql ("CREATE TABLE t_parts(id INTEGER, v BIT VARYING) PARTITION BY RANGE(id) "
++	   "(PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN MAXVALUE); COMMIT;\n");
++      load ("%class t_parts (id v)\n1 X'" + payload + "'\n11 X'" + payload + "'\n");
++      check ("t_parts__p__p0", "id=1 AND v=X'" + payload + "'", 1, 1);
++      check ("t_parts__p__p1", "id=11 AND v=X'" + payload + "'", 1, 1);
++      check ("t_parts", "v=X'" + payload + "'", 2, 0);
++    }
++
++    std::map<fs::path, std::string> lob_files ()
++    {
++      std::map<fs::path, std::string> result;
++      for (const auto &entry : fs::recursive_directory_iterator (root / "lob"))
++	{
++	  if (entry.is_regular_file ())
++	    {
++	      result.emplace (entry.path (), read (entry.path ()));
++	    }
++	}
++      return result;
++    }
++
++    void SetUp () override
++    {
++      std::string name = (fs::temp_directory_path () / "cubrid-workspace-oos-XXXXXX").string ();
++      ASSERT_NE (mkdtemp (name.data ()), nullptr);
++      root = name;
++      fs::create_directory (root / "lob");
++      ASSERT_NO_FATAL_FAILURE (write (root / "cubrid.conf", "[common]\ndata_buffer_size=64M\nlog_buffer_size=16M\n"));
++      std::mt19937 rng (27424);
++      const char *hex = "0123456789abcdef";
++      for (int i = 0; i < 5000; ++i)
++	{
++	  const unsigned byte = rng () & 255;
++	  payload += hex[byte >> 4];
++	  payload += hex[byte & 15];
++	}
++      run ({"cubrid", "createdb", "--db-volume-size=32M", "--log-volume-size=32M", "--db-page-size=16K",
++	    "--lob-base-path=" + (root / "lob").string (), "-F", root.string (), "workspace_oos", "en_US.utf8"});
++      ASSERT_FALSE (HasFailure ()) << "Evidence: " << root;
++      created = true;
++    }
++
++    void TearDown () override
++    {
++      if (root.empty ())
++	{
++	  return;
++	}
++      if (created && !HasFailure ())
++	{
++	  run ({"cubrid", "deletedb", "workspace_oos"});
++	}
++      if (HasFailure ())
++	{
++	  std::cerr << "Workspace OOS evidence retained at " << root << '\n';
++	}
++      else
++	{
++	  fs::remove_all (root);
++	}
++    }
++};
++
++TEST_F (OosWorkspaceTest, StandaloneLoaderStoresOos)
++{
++  sql ("CREATE TABLE t_load(v BIT VARYING); COMMIT;\n");
++  load ("%class t_load (v)\nX'" + payload + "'\n");
++  check ("t_load", "v=X'" + payload + "'", 1, 1);
++}
++
++TEST_F (OosWorkspaceTest, LoaderRejectsOosBigoneButKeepsOrdinaryBigone)
++{
++  sql ("CREATE TABLE t_guard(a BIT(140000), b BIT VARYING); "
++       "CREATE TABLE t_plain(a BIT(140000)); COMMIT;\n");
++  load ("%class t_guard (a b)\nB'1' X'" + payload + "'\n", {}, "maximum record size");
++  const auto output = sql ("SELECT CASE WHEN COUNT(*)=0 THEN 'VALUE_OK' ELSE 'VALUE_BAD' END AS verdict "
++			   "FROM t_guard;\nSHOW HEAP OOS OF t_guard;\n");
++  EXPECT_NE (output.find ("'VALUE_OK'"), std::string::npos) << output;
++  EXPECT_EQ (output.find ("'VALUE_BAD'"), std::string::npos) << output;
++  expect_chunks (output, {0});
++  load ("%class t_plain (a)\nB'1'\n");
++  check ("t_plain", "a=CAST(B'1' AS BIT(140000))", 1, 0);
++}
++
++TEST_F (OosWorkspaceTest, WorkspaceInsertUsesReservedOid)
++{
++  seed_workspace ();
++}
++
++TEST_F (OosWorkspaceTest, LoaderPreservesForwardAndBackwardReferences)
++{
++  seed_references ();
++}
++
++TEST_F (OosWorkspaceTest, PartitionsOwnSeparateOosFiles)
++{
++  seed_partitions ();
++}
++
++TEST_F (OosWorkspaceTest, InsertRollbackReclaimsFlushedChain)
++{
++  seed_workspace ();
++  // SELECT flushes the pending workspace INSERT before storage is observed and rolled back.
++  const auto output = sql ("SET SYSTEM PARAMETERS 'insert_execution_mode=0';\n"
++			   "INSERT INTO t_sql VALUES (2, X'" + payload + "');\n"
++			   "SELECT COUNT(*) FROM t_sql;\nSHOW HEAP OOS OF t_sql;\nROLLBACK;\nSHOW HEAP OOS OF t_sql;\n");
++  expect_chunks (output, {2, 1});
++  check ("t_sql", "id=1 AND v=X'" + payload + "'", 1, 1);
++}
++
++TEST_F (OosWorkspaceTest, WorkspaceUpdateRollbackCommitAndDelete)
++{
++  seed_references ();
++  const std::string replacement (10000, '5');
++  // A row trigger selects the workspace UPDATE route, including multi-row flushing.
++  sql ("CREATE TRIGGER refs_update BEFORE UPDATE ON t_refs EXECUTE PRINT 'workspace update'; COMMIT;\n");
++  const auto output = sql ("UPDATE t_refs SET v=X'" + replacement + "';\nSELECT COUNT(*) FROM t_refs;\n"
++			   "SHOW HEAP OOS OF t_refs;\nROLLBACK;\nSHOW HEAP OOS OF t_refs;\n");
++  expect_chunks (output, {2, 2});
++  check ("t_refs", "peer.id=3-id AND v=X'" + payload + "'", 2, 2);
++  sql ("UPDATE t_refs SET v=X'" + replacement + "'; COMMIT;\n");
++  check ("t_refs", "peer.id=3-id AND v=X'" + replacement + "'", 2, 2);
++  sql ("DELETE FROM t_refs; COMMIT;\n");
++  expect_chunks (sql ("SHOW HEAP OOS OF t_refs;\n"), {0});
++}
++
++TEST_F (OosWorkspaceTest, FailedUniqueLoadRollsBackWithoutOrphans)
++{
++  seed_workspace ();
++  load ("%class t_sql (id v)\n2 X'" + payload + "'\n1 X'" + payload + "'\n", {}, "unique");
++  check ("t_sql", "id=1 AND v=X'" + payload + "'", 1, 1);
++}
++
++TEST_F (OosWorkspaceTest, FilteredDuplicateLeavesNoOrphanAndContinues)
++{
++  seed_workspace ();
++  const auto errors = root / "ignored-errors.txt";
++  ASSERT_NO_FATAL_FAILURE (write (errors, "-670\n")); // ER_BTREE_UNIQUE_FAILED
++  load ("%class t_sql (id v)\n1 X'" + payload + "'\n3 X'" + payload + "'\n",
++  {"--error-control-file=" + errors.string ()});
++  check ("t_sql", "id IN (1,3) AND v=X'" + payload + "'", 2, 2);
++}
++
++TEST_F (OosWorkspaceTest, LoaderHonorsStoragePolicy)
++{
++  const std::string small (32, 'a');
++  const std::string forced (256, 'c');
++  std::string multi;
++  for (int i = 0; i < 10; ++i)
++    {
++      multi += payload;
++    }
++  sql ("CREATE TABLE t_small(id INTEGER, v BIT VARYING); "
++       "CREATE TABLE t_forced(v BIT VARYING STORAGE FORCE_OUTLINE); "
++       "CREATE TABLE t_largest(a BIT VARYING, b BIT VARYING); "
++       "CREATE TABLE t_multi(v BIT VARYING); COMMIT;\n");
++  load ("%class t_small (id v)\n1 NULL\n2 X''\n3 X'" + small
++	+ "'\n%class t_forced (v)\nX'" + forced
++	+ "'\n%class t_largest (a b)\nX'" + payload.substr (0, 6000) + "' X'" + payload.substr (0, 4000)
++	+ "'\n%class t_multi (v)\nX'" + multi + "'\n");
++  check ("t_small", "(id=1 AND v IS NULL) OR (id=2 AND v=X'') OR (id=3 AND v=X'" + small + "')", 3, 0);
++  check ("t_forced", "v=X'" + forced + "'", 1, 1);
++  check ("t_largest", "a=X'" + payload.substr (0, 6000) + "' AND b=X'" + payload.substr (0, 4000) + "'", 1, 1);
++  const auto output = sql ("SHOW HEAP OOS OF t_largest;\n");
++  std::smatch size;
++  ASSERT_TRUE (std::regex_search (output, size, std::regex ("Oos_recs_sumlen\\s*:\\s*(\\d+)"))) << output;
++  EXPECT_GT (std::stoi (size[1]), 3000);
++  EXPECT_LT (std::stoi (size[1]), 3100);
++  check ("t_multi", "v=X'" + multi + "'", 1, 4);
++}
++
++TEST_F (OosWorkspaceTest, WorkspaceUpdatePreservesExternalLobFiles)
++{
++  // Seed permanent locators via the query executor: fresh workspace LOB INSERT has a preexisting defect.
++  sql ("CREATE TABLE t_lob(id INTEGER, b BLOB, c CLOB, v BIT VARYING); COMMIT;\n"
++       "INSERT INTO t_lob VALUES (1, BIT_TO_BLOB(X'abcd'), CHAR_TO_CLOB('lob value'), X'ab'); COMMIT;\n");
++  const std::string predicate = "id=1 AND BLOB_TO_BIT(b)=X'abcd' AND CLOB_TO_CHAR(c)='lob value' AND v=X'";
++  check ("t_lob", predicate + "ab'", 1, 0);
++  const auto files = lob_files ();
++  ASSERT_EQ (files.size (), 2u);
++  sql ("CREATE TRIGGER lob_update BEFORE UPDATE ON t_lob EXECUTE PRINT 'workspace LOB update'; COMMIT;\n"
++       "UPDATE t_lob SET v=X'" + payload + "'; SELECT COUNT(*) FROM t_lob; ROLLBACK;\n");
++  check ("t_lob", predicate + "ab'", 1, 0);
++  EXPECT_EQ (lob_files (), files);
++  const std::string replacement (10000, '5');
++  sql ("UPDATE t_lob SET v=X'" + replacement + "'; COMMIT;\n");
++  check ("t_lob", predicate + replacement + "'", 1, 1);
++  EXPECT_EQ (lob_files (), files);
++}
++
++TEST_F (OosWorkspaceTest, PartitionMovementTransfersOwnership)
++{
++  seed_partitions ();
++  sql ("CREATE TRIGGER parts_update BEFORE UPDATE ON t_parts EXECUTE PRINT 'partition update'; COMMIT;\n"
++       "UPDATE t_parts SET id=12 WHERE id=1; COMMIT;\n");
++  expect_chunks (sql ("SHOW HEAP OOS OF t_parts__p__p0;\n"), {0});
++  check ("t_parts__p__p1", "id IN (11,12) AND v=X'" + payload + "'", 2, 2);
++}
++
++TEST_F (OosWorkspaceTest, SuccessfulNoLoggingLoadStoresOos)
++{
++  sql ("CREATE TABLE t_nolog(v BIT VARYING); COMMIT;\n");
++  load ("%class t_nolog (v)\nX'" + payload + "'\n", {"--no-logging"});
++  check ("t_nolog", "v=X'" + payload + "'", 1, 1);
++}
++
++int
++main (int argc, char **argv)
++{
++  ::testing::InitGoogleTest (&argc, argv);
++  return RUN_ALL_TESTS ();
++}

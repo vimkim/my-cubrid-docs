@@ -30,7 +30,7 @@ current ticket bodies were reread before dispatch.
 | Ticket | Agent | Branch and worktree | Base | State |
 | --- | --- | --- | --- | --- |
 | 01 | `/root/ticket01`, `fork_turns=none` | `task/pr7925-01-stored-rows`; `/home/vimkim/gh/cb/pr7925-01-stored-rows` | `1c660d22e4340ee707336ad08c8b4bf4b69744de` | Resolved at `625b193745959d0ab047f26f4354e9aacb48160d`; privately integrated, final checks/reviews passed |
-| 02 | `/root/ticket02`, `fork_turns=none` | `task/pr7925-02-record-owner`; `/home/vimkim/gh/cb/pr7925-02-record-owner` | `b59f243fd0f30bb94344558ffa1755c37c43d2d4`, contains accepted `4be72fc20` | Claimed; first commit `9ba5e42ad` privately integrated; whole-spec review repair and final verification active |
+| 02 | `/root/ticket02`, `fork_turns=none` | `task/pr7925-02-record-owner`; `/home/vimkim/gh/cb/pr7925-02-record-owner` | `b59f243fd0f30bb94344558ffa1755c37c43d2d4`, contains accepted `4be72fc20` | Claimed; repaired commit `1932b3ec` privately integrated; final source reviews pass; final runtime checks active |
 
 Each implementer owns only its assigned ticket. The coordinator owns scheduling, tracker edits,
 private linear integration, evidence review and overall status. Any replacement
@@ -272,3 +272,44 @@ A [five-commit equal-tree squash simulation](evidence/ticket02-initial/equal-tre
 replayed only the post-`4be72fc20` series through `9ba5e42ad`: zero conflicts,
 identical final tree, zero prerequisite commits replayed. It changed no refs or
 worktrees. Actual later dependency/shared changes still require verification.
+
+
+## Repaired fixed point and final checks in progress
+
+Commit `1932b3ec3d1b83bec83b7de1a6dd482f3a03b63d` addresses the whole-spec finding
+in the same ticket 02 context. It retains a standalone explicit-workspace input
+when no supplied owner exists, both source and prepared record are inline, and
+the source is already in the current representation. The received record is
+finalized first to preserve publication/error semantics, then its unused local
+memory and borrowed view are cleared. The original active descriptor is validated
+without replacement. Old/OOS/supplied-owner/server inputs keep accepted adaptation.
+No prerequisite storage source or interface changed.
+
+Repair focus passed 32/32 GoogleTests (21 comparison, six dependency controls,
+five utility controls), 5/5 CTests with no skips/disabled. Both final independent
+source reviews pass: [Standards](evidence/whole-review-final/standards.md) has zero
+breaches/actionable smells, and [Spec](evidence/whole-review-final/spec.md) has zero
+remaining source findings/scope creep. Initial reports remain available. Their
+pending-runtime limitations will be resolved only by exact-commit final receipts.
+
+The final committed build and repeated measurements passed in the ticket tree.
+Three-sample final elapsed/user CPU medians are small 3.63/2.28s and OOS
+6.73/4.06s, compared with baseline 3.92/2.51s and 7.40/4.63s. Ranges overlap;
+no reproducible regression or runtime improvement is claimed. The agent rebased
+onto private `9ba5e42ad` (no-op), and the coordinator fast-forwarded the private
+integration branch to the same `1932b3ec`. Coordinator build/install passed.
+Final full configured suite and coordinator unfiltered 70-case focus are running.
+
+The historical `9ba5e42ad` full run passed 38/38 CTests and 374/374 GoogleTests
+in 32 XML files, with zero failures/skips/disabled, independently audited in the
+[coordinator receipt](evidence/combined-final/coordinator-full-9ba5e42ad.json).
+It is not substituted for the repaired-revision checks.
+
+[Final source contract](evidence/combined-final/source-contract-1932b3ec.json)
+checks the unchanged prerequisite storage tree, final 01 source hash, unchanged
+13-case utility source, linear post-dependency series and preserved original
+branches/dirty CCI. Task-only and whole-PR diffs retain separate dependency context.
+The [six-commit squash simulation](evidence/combined-final/equal-tree-squash-transplant-1932b3ec.json)
+also yields zero conflicts and an identical private tree without replaying any
+prerequisite commits or changing refs/worktrees. Actual shared inclusion and
+partition acceptance remain pending; the parent spec remains unchanged.
