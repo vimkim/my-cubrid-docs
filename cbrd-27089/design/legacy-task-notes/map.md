@@ -1,10 +1,10 @@
-> Preserved source task note. [Current entry point](/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/.scratch/oos-deferred-write/../../README.md).
+> Preserved source task note. [Current entry point](../../README.md).
 
 > Historical snapshot, status updated 2026-10-07. This note describes the earlier
 > deferred-write implementation and its original authorization. Current PR7927 work
-> is tracked by items281/284/289 and the approved four-task map in
-> `/home/vimkim/gh/my-cubrid-docs-pr7927-temporary-oos-stub/.scratch/pr7927-oos-review-cleanup/map.md`.
-> Current documentation entry: `/home/vimkim/gh/my-cubrid-docs-pr7927-temporary-oos-stub/cbrd-27089/README.md`.
+> is tracked by items281/284/289 and the
+> [approved task map](../../../.scratch/pr7927-oos-review-cleanup/map.md).
+> Current documentation entry: [CBRD-27089 / PR7927](../../README.md).
 > Earlier HEAD/base, remaining tasks and publication permissions below are historical.
 
 # Replace early OOS routing with destination-owned deferred writes
