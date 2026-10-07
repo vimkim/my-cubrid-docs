@@ -1,0 +1,245 @@
+[0mdirenv: loading ~/gh/cb/pr7925-simplification-integration/.envrc
+Preset Mode: debug_gcc
+Install Dir: /home/vimkim/.cub/install/pr7925-simplification-integration/debug_gcc
+DB Dir: /home/vimkim/gh/cb/pr7925-simplification-integration/.cub-workenv/databases
+Build Dir: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc
+Internal ctest changing into directory: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc
+UpdateCTestConfiguration  from :/home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/DartConfiguration.tcl
+UpdateCTestConfiguration  from :/home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/DartConfiguration.tcl
+Test project /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added setup test oos_setup_db required by fixture OOS_DB
+Added cleanup test oos_cleanup_db required by fixture OOS_DB
+Added 2 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 1
+    Start  1: oos_setup_db
+
+1: Test command: /usr/bin/cmake "-E" "env" "CUBRID=/home/vimkim/.cub/install/pr7925-simplification-integration/debug_gcc" "CUBRID_DATABASES=/home/vimkim/gh/cb/pr7925-simplification-integration/.cub-workenv/databases" "PATH=/home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/vm/jdk8/bin:/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.cub/install/pr7925-simplification-integration/debug_gcc/bin:/home/vimkim/.config/my-scripts/bin:/home/vimkim/.local/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/share/Modules/bin:/usr/lib64/ccache:/home/vimkim/.codex/packages/standalone/releases/0.160.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lnPnJk:/home/vimkim/.codex/tmp/arg0/codex-arg0e3Wmnf:/home/vimkim/.codex/packages/standalone/releases/0.160.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0rkaV8A:/home/vimkim/.codex/packages/standalone/releases/0.159.3-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Eiz5FQ:/home/vimkim/.codex/packages/standalone/releases/0.159.2-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0UZCYf0:/home/vimkim/.codex/packages/standalone/releases/0.159.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg006SEr5:/home/vimkim/.codex/packages/standalone/releases/0.159.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Sdrd24:/home/vimkim/.codex/packages/standalone/releases/0.158.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0mOvekQ:/home/vimkim/.codex/packages/standalone/releases/0.157.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0jzxIFn:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lJR4wu:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/installs/bun/latest/bin:/home/vimkim/.local/share/mise/installs/go/1.27.1/bin:/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/bin:/home/vimkim/.local/share/mise/installs/node/latest/bin:/home/vimkim/.local/share/mise/installs/python/latest/bin:/home/vimkim/.local/share/mise/shims:/opt/bison-3.0.5/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin" "bash" "/home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/scripts/setup_unittestdb.sh"
+1: Working Directory: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/unit_tests/oos
+1: Test timeout computed to be: 10000000
+1: Creating database with 64.0M size using locale en_US.utf8. The total amount of disk space needed is 104.0M.
+1: 
+1: CUBRID 11.5.0 (11.5.0.2650) (64 debug build)
+1: 
+1/5 Test  #1: oos_setup_db .....................   Passed    2.43 sec
+test 35
+    Start 35: test_oos_sql_deferred_write
+
+35: Test command: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/bin/test_oos_sql_deferred_write
+35: Working Directory: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/unit_tests/oos/sql
+35: Test timeout computed to be: 180
+35: [==========] Running 36 tests from 2 test suites.
+35: [----------] Global test environment set-up.
+35: ##### Starting Server For OOS SQL Testing #####
+35: will be written at ./test_oos_sql_log
+35: [----------] 35 tests from OosSqlDeferredWrite
+35: [ RUN      ] OosSqlDeferredWrite.InsertOwnsOosInDestinationHeap
+35: [       OK ] OosSqlDeferredWrite.InsertOwnsOosInDestinationHeap (32 ms)
+35: [ RUN      ] OosSqlDeferredWrite.RawClientInsertOwnsDestinationOos
+35: [       OK ] OosSqlDeferredWrite.RawClientInsertOwnsDestinationOos (9 ms)
+35: [ RUN      ] OosSqlDeferredWrite.WorkspacePartitionInsertAndMovementOwnDestination
+35: [       OK ] OosSqlDeferredWrite.WorkspacePartitionInsertAndMovementOwnDestination (27 ms)
+35: [ RUN      ] OosSqlDeferredWrite.RedistributionRewritesMultichunkValuesAtDestination
+35: [       OK ] OosSqlDeferredWrite.RedistributionRewritesMultichunkValuesAtDestination (49 ms)
+35: [ RUN      ] OosSqlDeferredWrite.RawCopyAreaRoutesInsertAndMovementWithoutChangingPayload
+35: [       OK ] OosSqlDeferredWrite.RawCopyAreaRoutesInsertAndMovementWithoutChangingPayload (35 ms)
+35: [ RUN      ] OosSqlDeferredWrite.RawClientUpdatePreservesUnassignedValuesAndRollsBackFailure
+35: [       OK ] OosSqlDeferredWrite.RawClientUpdatePreservesUnassignedValuesAndRollsBackFailure (17 ms)
+35: [ RUN      ] OosSqlDeferredWrite.PrefetchSkipsUnexpandedOosNeighbors
+35: [       OK ] OosSqlDeferredWrite.PrefetchSkipsUnexpandedOosNeighbors (7 ms)
+35: [ RUN      ] OosSqlDeferredWrite.PendingReferencesResolveAndFinalizeInPlace
+35: [       OK ] OosSqlDeferredWrite.PendingReferencesResolveAndFinalizeInPlace (14357 ms)
+35: [ RUN      ] OosSqlDeferredWrite.FinalizationResetsPublicationOnceAndFailureCannotRetry
+35: [       OK ] OosSqlDeferredWrite.FinalizationResetsPublicationOnceAndFailureCannotRetry (3811 ms)
+35: [ RUN      ] OosSqlDeferredWrite.SerializedPreparationPreservesMvccAndOutlivesSource
+35: [       OK ] OosSqlDeferredWrite.SerializedPreparationPreservesMvccAndOutlivesSource (6 ms)
+35: [ RUN      ] OosSqlDeferredWrite.RedistributionFailurePreservesSourceAndNextOperation
+35: [       OK ] OosSqlDeferredWrite.RedistributionFailurePreservesSourceAndNextOperation (11816 ms)
+35: [ RUN      ] OosSqlDeferredWrite.InternalAndAddressReservationsBypassPreparation
+35: [       OK ] OosSqlDeferredWrite.InternalAndAddressReservationsBypassPreparation (15 ms)
+35: [ RUN      ] OosSqlDeferredWrite.ForcedOutlineKeyRoutesFromPreparedBytes
+35: [       OK ] OosSqlDeferredWrite.ForcedOutlineKeyRoutesFromPreparedBytes (23 ms)
+35: [ RUN      ] OosSqlDeferredWrite.RejectedDestinationCreatesNoOosAndNextInsertSucceeds
+35: [       OK ] OosSqlDeferredWrite.RejectedDestinationCreatesNoOosAndNextInsertSucceeds (10977 ms)
+35: [ RUN      ] OosSqlDeferredWrite.LobPreparationPreservesSourceAndDestinationValues
+35: [       OK ] OosSqlDeferredWrite.LobPreparationPreservesSourceAndDestinationValues (24 ms)
+35: [ RUN      ] OosSqlDeferredWrite.SupportedPartitionDomainsPreserveValuesAndOwnership
+35: [       OK ] OosSqlDeferredWrite.SupportedPartitionDomainsPreserveValuesAndOwnership (298 ms)
+35: [ RUN      ] OosSqlDeferredWrite.LoaderQueueRetainsClearedInputsAndRollsBackBulkFailure
+35: [       OK ] OosSqlDeferredWrite.LoaderQueueRetainsClearedInputsAndRollsBackBulkFailure (986 ms)
+35: [ RUN      ] OosSqlDeferredWrite.AllocationAndStorageFailureLeaveNextInsertUsable
+35: [       OK ] OosSqlDeferredWrite.AllocationAndStorageFailureLeaveNextInsertUsable (2252 ms)
+35: [ RUN      ] OosSqlDeferredWrite.ConstraintFailureAfterOosAllowsNextInsert
+35: [       OK ] OosSqlDeferredWrite.ConstraintFailureAfterOosAllowsNextInsert (13 ms)
+35: [ RUN      ] OosSqlDeferredWrite.DuplicateProbesDoNotPersistCandidateValues
+35: [       OK ] OosSqlDeferredWrite.DuplicateProbesDoNotPersistCandidateValues (65 ms)
+35: [ RUN      ] OosSqlDeferredWrite.DuplicateProbesReadCompositeKeys
+35: [       OK ] OosSqlDeferredWrite.DuplicateProbesReadCompositeKeys (21 ms)
+35: [ RUN      ] OosSqlDeferredWrite.DuplicateProbesPreserveFunctionIndexesAndCompressedCompositeKeys
+35: [       OK ] OosSqlDeferredWrite.DuplicateProbesPreserveFunctionIndexesAndCompressedCompositeKeys (81 ms)
+35: [ RUN      ] OosSqlDeferredWrite.AbandonedDuplicateCandidateDoesNotWriteOos
+35: [       OK ] OosSqlDeferredWrite.AbandonedDuplicateCandidateDoesNotWriteOos (54 ms)
+35: [ RUN      ] OosSqlDeferredWrite.DuplicateProbeFailuresLeaveNextWriteUsable
+35: [       OK ] OosSqlDeferredWrite.DuplicateProbeFailuresLeaveNextWriteUsable (3510 ms)
+35: [ RUN      ] OosSqlDeferredWrite.DuplicateProbesPreserveLobValuesAndRollback
+35: [       OK ] OosSqlDeferredWrite.DuplicateProbesPreserveLobValuesAndRollback (42 ms)
+35: [ RUN      ] OosSqlDeferredWrite.ReplaceProbeReadsOutlinedCandidateAgainstInlineExistingKey
+35: [       OK ] OosSqlDeferredWrite.ReplaceProbeReadsOutlinedCandidateAgainstInlineExistingKey (13 ms)
+35: [ RUN      ] OosSqlDeferredWrite.DuplicateProbesPreserveMultipleUniqueConstraintsAndForeignKeys
+35: [       OK ] OosSqlDeferredWrite.DuplicateProbesPreserveMultipleUniqueConstraintsAndForeignKeys (59 ms)
+35: [ RUN      ] OosSqlDeferredWrite.UpdateMovementAllocatesOnlyAtDestination
+35: [       OK ] OosSqlDeferredWrite.UpdateMovementAllocatesOnlyAtDestination (29 ms)
+35: [ RUN      ] OosSqlDeferredWrite.UpdateDomainsPreserveUnassignedValuesThroughMovementAndRollback
+35: [       OK ] OosSqlDeferredWrite.UpdateDomainsPreserveUnassignedValuesThroughMovementAndRollback (491 ms)
+35: [ RUN      ] OosSqlDeferredWrite.UpdateForcedKeyUsesCanonicalValueAndRejectsWrongPartition
+35: [       OK ] OosSqlDeferredWrite.UpdateForcedKeyUsesCanonicalValueAndRejectsWrongPartition (31 ms)
+35: [ RUN      ] OosSqlDeferredWrite.UpdateLayoutGrowthAndLobOverwritePreserveValues
+35: [       OK ] OosSqlDeferredWrite.UpdateLayoutGrowthAndLobOverwritePreserveValues (54 ms)
+35: [ RUN      ] OosSqlDeferredWrite.UpdateFailureClearsPublicationAndRollsBackBothDestinations
+35: [       OK ] OosSqlDeferredWrite.UpdateFailureClearsPublicationAndRollsBackBothDestinations (5192 ms)
+35: [ RUN      ] OosSqlDeferredWrite.UpdateIndexFailureRollsBackMovementAndNonmovement
+35: [       OK ] OosSqlDeferredWrite.UpdateIndexFailureRollsBackMovementAndNonmovement (35 ms)
+35: [ RUN      ] OosSqlDeferredWrite.NonpartitionedUpdateChecksForeignKeysAfterFinalization
+35: [       OK ] OosSqlDeferredWrite.NonpartitionedUpdateChecksForeignKeysAfterFinalization (24 ms)
+35: [ RUN      ] OosSqlDeferredWrite.RollbackPreservesMultiChunkValuesAndLiveOwnership
+35: [       OK ] OosSqlDeferredWrite.RollbackPreservesMultiChunkValuesAndLiveOwnership (56 ms)
+35: [----------] 35 tests from OosSqlDeferredWrite (54528 ms total)
+35: 
+35: [----------] 1 test from OosSqlPacking
+35: [ RUN      ] OosSqlPacking.GenericDescriptorsPreserveArbitraryBytes
+35: [       OK ] OosSqlPacking.GenericDescriptorsPreserveArbitraryBytes (0 ms)
+35: [----------] 1 test from OosSqlPacking (0 ms total)
+35: 
+35: [----------] Global test environment tear-down
+35: ##### Stopping Server For OOS SQL Testing #####
+35: [==========] 36 tests from 2 test suites ran. (54699 ms total)
+35: [  PASSED  ] 36 tests.
+2/5 Test #35: test_oos_sql_deferred_write ......   Passed   54.72 sec
+test 37
+    Start 37: test_oos_sql_workspace_bytes
+
+37: Test command: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/bin/test_oos_sql_workspace_bytes
+37: Working Directory: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/unit_tests/oos/sql
+37: Test timeout computed to be: 30
+37: [==========] Running 21 tests from 2 test suites.
+37: [----------] Global test environment set-up.
+37: ##### Starting Server For OOS SQL Testing #####
+37: will be written at ./test_oos_sql_log
+37: [----------] 8 tests from OosWorkspaceBytes
+37: [ RUN      ] OosWorkspaceBytes.TinyNullAndEmptyValues
+37: [       OK ] OosWorkspaceBytes.TinyNullAndEmptyValues (49 ms)
+37: [ RUN      ] OosWorkspaceBytes.LargestFirstAndPreferInline
+37: [       OK ] OosWorkspaceBytes.LargestFirstAndPreferInline (10 ms)
+37: [ RUN      ] OosWorkspaceBytes.EqualSizeTie
+37: [       OK ] OosWorkspaceBytes.EqualSizeTie (8 ms)
+37: [ RUN      ] OosWorkspaceBytes.OffsetWidthShrinksAfterForcedDemotion
+37: [       OK ] OosWorkspaceBytes.OffsetWidthShrinksAfterForcedDemotion (11 ms)
+37: [ RUN      ] OosWorkspaceBytes.CompressedStringAndJson
+37: [       OK ] OosWorkspaceBytes.CompressedStringAndJson (11 ms)
+37: [ RUN      ] OosWorkspaceBytes.CollectionSerializedBytes
+37: [       OK ] OosWorkspaceBytes.CollectionSerializedBytes (9 ms)
+37: [ RUN      ] OosWorkspaceBytes.WideVotAndManyAttributes
+37: [       OK ] OosWorkspaceBytes.WideVotAndManyAttributes (71 ms)
+37: [ RUN      ] OosWorkspaceBytes.OldDiskRepresentationIsConvertedBeforeWorkspaceSerialization
+37: [       OK ] OosWorkspaceBytes.OldDiskRepresentationIsConvertedBeforeWorkspaceSerialization (10 ms)
+37: [----------] 8 tests from OosWorkspaceBytes (184 ms total)
+37: 
+37: [----------] 13 tests from EncodingAndVotBoundaries/OosWorkspaceSizeBoundary
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/0
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/0 (10 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/1
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/1 (10 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/2
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/2 (11 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/3
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/3 (11 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/4
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/4 (11 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/5
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/5 (11 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/6
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/6 (11 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/7
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/7 (10 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/8
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/8 (10 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/9
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/9 (11 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/10
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/10 (11 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/11
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/11 (12 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/12
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/12 (13 ms)
+37: [----------] 13 tests from EncodingAndVotBoundaries/OosWorkspaceSizeBoundary (149 ms total)
+37: 
+37: [----------] Global test environment tear-down
+37: ##### Stopping Server For OOS SQL Testing #####
+37: [==========] 21 tests from 2 test suites ran. (435 ms total)
+37: [  PASSED  ] 21 tests.
+3/5 Test #37: test_oos_sql_workspace_bytes .....   Passed    0.46 sec
+test 2
+    Start  2: oos_cleanup_db
+
+2: Test command: /usr/bin/cmake "-E" "env" "CUBRID=/home/vimkim/.cub/install/pr7925-simplification-integration/debug_gcc" "CUBRID_DATABASES=/home/vimkim/gh/cb/pr7925-simplification-integration/.cub-workenv/databases" "PATH=/home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/vm/jdk8/bin:/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.cub/install/pr7925-simplification-integration/debug_gcc/bin:/home/vimkim/.config/my-scripts/bin:/home/vimkim/.local/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/share/Modules/bin:/usr/lib64/ccache:/home/vimkim/.codex/packages/standalone/releases/0.160.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lnPnJk:/home/vimkim/.codex/tmp/arg0/codex-arg0e3Wmnf:/home/vimkim/.codex/packages/standalone/releases/0.160.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0rkaV8A:/home/vimkim/.codex/packages/standalone/releases/0.159.3-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Eiz5FQ:/home/vimkim/.codex/packages/standalone/releases/0.159.2-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0UZCYf0:/home/vimkim/.codex/packages/standalone/releases/0.159.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg006SEr5:/home/vimkim/.codex/packages/standalone/releases/0.159.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Sdrd24:/home/vimkim/.codex/packages/standalone/releases/0.158.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0mOvekQ:/home/vimkim/.codex/packages/standalone/releases/0.157.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0jzxIFn:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lJR4wu:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/installs/bun/latest/bin:/home/vimkim/.local/share/mise/installs/go/1.27.1/bin:/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/bin:/home/vimkim/.local/share/mise/installs/node/latest/bin:/home/vimkim/.local/share/mise/installs/python/latest/bin:/home/vimkim/.local/share/mise/shims:/opt/bison-3.0.5/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin" "bash" "/home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/scripts/cleanup_unittestdb.sh"
+2: Working Directory: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/unit_tests/oos
+2: Test timeout computed to be: 30
+2: @ cubrid server stop: unittestdb
+2: ++ cubrid server 'unittestdb' is not running.
+4/5 Test  #2: oos_cleanup_db ...................   Passed    0.22 sec
+test 24
+    Start 24: test_oos_workspace
+
+24: Test command: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/bin/test_oos_workspace
+24: Working Directory: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/unit_tests/oos
+24: Test timeout computed to be: 240
+24: [==========] Running 13 tests from 1 test suite.
+24: [----------] Global test environment set-up.
+24: [----------] 13 tests from OosWorkspaceTest
+24: [ RUN      ] OosWorkspaceTest.StandaloneLoaderStoresOos
+24: [       OK ] OosWorkspaceTest.StandaloneLoaderStoresOos (6723 ms)
+24: [ RUN      ] OosWorkspaceTest.LoaderRejectsOosBigoneButKeepsOrdinaryBigone
+24: [       OK ] OosWorkspaceTest.LoaderRejectsOosBigoneButKeepsOrdinaryBigone (9252 ms)
+24: [ RUN      ] OosWorkspaceTest.WorkspaceInsertUsesReservedOid
+24: [       OK ] OosWorkspaceTest.WorkspaceInsertUsesReservedOid (5674 ms)
+24: [ RUN      ] OosWorkspaceTest.LoaderPreservesForwardAndBackwardReferences
+24: [       OK ] OosWorkspaceTest.LoaderPreservesForwardAndBackwardReferences (6564 ms)
+24: [ RUN      ] OosWorkspaceTest.PartitionsOwnSeparateOosFiles
+24: [       OK ] OosWorkspaceTest.PartitionsOwnSeparateOosFiles (9817 ms)
+24: [ RUN      ] OosWorkspaceTest.InsertRollbackReclaimsFlushedChain
+24: [       OK ] OosWorkspaceTest.InsertRollbackReclaimsFlushedChain (8375 ms)
+24: [ RUN      ] OosWorkspaceTest.WorkspaceUpdateRollbackCommitAndDelete
+24: [       OK ] OosWorkspaceTest.WorkspaceUpdateRollbackCommitAndDelete (14852 ms)
+24: [ RUN      ] OosWorkspaceTest.FailedUniqueLoadRollsBackWithoutOrphans
+24: [       OK ] OosWorkspaceTest.FailedUniqueLoadRollsBackWithoutOrphans (7940 ms)
+24: [ RUN      ] OosWorkspaceTest.FilteredDuplicateLeavesNoOrphanAndContinues
+24: [       OK ] OosWorkspaceTest.FilteredDuplicateLeavesNoOrphanAndContinues (7827 ms)
+24: [ RUN      ] OosWorkspaceTest.LoaderHonorsStoragePolicy
+24: [       OK ] OosWorkspaceTest.LoaderHonorsStoragePolicy (11795 ms)
+24: [ RUN      ] OosWorkspaceTest.WorkspaceUpdatePreservesExternalLobFiles
+24: [       OK ] OosWorkspaceTest.WorkspaceUpdatePreservesExternalLobFiles (10230 ms)
+24: [ RUN      ] OosWorkspaceTest.PartitionMovementTransfersOwnership
+24: [       OK ] OosWorkspaceTest.PartitionMovementTransfersOwnership (13671 ms)
+24: [ RUN      ] OosWorkspaceTest.SuccessfulNoLoggingLoadStoresOos
+24: [       OK ] OosWorkspaceTest.SuccessfulNoLoggingLoadStoresOos (8358 ms)
+24: [----------] 13 tests from OosWorkspaceTest (121083 ms total)
+24: 
+24: [----------] Global test environment tear-down
+24: [==========] 13 tests from 1 test suite ran. (121084 ms total)
+24: [  PASSED  ] 13 tests.
+5/5 Test #24: test_oos_workspace ...............   Passed  121.11 sec
+
+The following tests passed:
+	oos_setup_db
+	test_oos_sql_deferred_write
+	test_oos_sql_workspace_bytes
+	oos_cleanup_db
+	test_oos_workspace
+
+100% tests passed, 0 tests failed out of 5
+
+Total Test time (real) = 178.95 sec

@@ -1,0 +1,413 @@
+{
+  "prerequisite": "4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c",
+  "configuration": {
+    "preset": "debug_gcc",
+    "installation": "/home/vimkim/.cub/install/pr7925-02-record-owner/debug_gcc",
+    "data_buffer_size": "64M",
+    "log_buffer_size": "16M",
+    "config_sha256": "e4155723876e4cb25701bf8e23edd0482603e7b39c0b225afe643657dca337ea",
+    "benchmark_script_sha256": "b37a66e91502cd6743c7cb90467722e7322ab607fa3a3e60f1512c7031d1b2e7",
+    "ordered_phases": [
+      "baseline",
+      "historical_first_commit",
+      "final_repair"
+    ],
+    "no_runtime_improvement_claim": true
+  },
+  "phases": {
+    "baseline": {
+      "source_commit": "b59f243fd0f30bb94344558ffa1755c37c43d2d4",
+      "script_phase_argument": "baseline",
+      "receipts": "/home/vimkim/tmp/pr7925-ticket02-evidence/benchmark-baseline",
+      "workloads": {
+        "small": {
+          "rows": 50000,
+          "payload_bytes": 48,
+          "samples": [
+            {
+              "phase": "baseline",
+              "workload": "small",
+              "rows": "50000",
+              "payload_bytes": "48",
+              "repeat": "0",
+              "elapsed": "3.92",
+              "user_cpu": "2.69",
+              "system_cpu": "0.12"
+            },
+            {
+              "phase": "baseline",
+              "workload": "small",
+              "rows": "50000",
+              "payload_bytes": "48",
+              "repeat": "1",
+              "elapsed": "3.76",
+              "user_cpu": "2.51",
+              "system_cpu": "0.13"
+            },
+            {
+              "phase": "baseline",
+              "workload": "small",
+              "rows": "50000",
+              "payload_bytes": "48",
+              "repeat": "2",
+              "elapsed": "4.71",
+              "user_cpu": "2.44",
+              "system_cpu": "0.12"
+            }
+          ],
+          "elapsed": {
+            "median": 3.92,
+            "range": [
+              3.76,
+              4.71
+            ]
+          },
+          "user_cpu": {
+            "median": 2.51,
+            "range": [
+              2.44,
+              2.69
+            ]
+          },
+          "system_cpu": {
+            "median": 0.12,
+            "range": [
+              0.12,
+              0.13
+            ]
+          },
+          "fixture_sha256": [
+            "1ebe743bf4f92eabe21a41631881a54202e357d929500ae8a2b10026e3a825de",
+            "d8f490e807d83a9ee789c97439ca04165511a7ea403943bf30c42fedf8ecfc66",
+            "9cf9c489681a9d38ce9edc55d95715a7fb687791a4e321a17601539d89e50758"
+          ]
+        },
+        "oos": {
+          "rows": 5000,
+          "payload_bytes": 5000,
+          "samples": [
+            {
+              "phase": "baseline",
+              "workload": "oos",
+              "rows": "5000",
+              "payload_bytes": "5000",
+              "repeat": "0",
+              "elapsed": "6.43",
+              "user_cpu": "4.70",
+              "system_cpu": "0.24"
+            },
+            {
+              "phase": "baseline",
+              "workload": "oos",
+              "rows": "5000",
+              "payload_bytes": "5000",
+              "repeat": "1",
+              "elapsed": "7.40",
+              "user_cpu": "4.57",
+              "system_cpu": "0.24"
+            },
+            {
+              "phase": "baseline",
+              "workload": "oos",
+              "rows": "5000",
+              "payload_bytes": "5000",
+              "repeat": "2",
+              "elapsed": "7.76",
+              "user_cpu": "4.63",
+              "system_cpu": "0.24"
+            }
+          ],
+          "elapsed": {
+            "median": 7.4,
+            "range": [
+              6.43,
+              7.76
+            ]
+          },
+          "user_cpu": {
+            "median": 4.63,
+            "range": [
+              4.57,
+              4.7
+            ]
+          },
+          "system_cpu": {
+            "median": 0.24,
+            "range": [
+              0.24,
+              0.24
+            ]
+          },
+          "fixture_sha256": [
+            "ded23f44c4008e2f8825ac163bcaa343e83b28edce464070816a5698b8c09f70",
+            "eaf7ae54663025be815448abdab1c21a521f5024a45b7c73da0b92c5123b98fd",
+            "9df7147d7a9c6a2385e9e466288e560e9946379dbaf0f86bb6fc7dc00c028862"
+          ]
+        }
+      }
+    },
+    "historical_first_commit": {
+      "source_commit": "9ba5e42ad6dfaa74cc9062f6fe55a459ba088924",
+      "script_phase_argument": "final",
+      "receipts": "/home/vimkim/tmp/pr7925-ticket02-evidence/benchmark-9ba5e42ad",
+      "workloads": {
+        "small": {
+          "rows": 50000,
+          "payload_bytes": 48,
+          "samples": [
+            {
+              "phase": "final",
+              "workload": "small",
+              "rows": "50000",
+              "payload_bytes": "48",
+              "repeat": "0",
+              "elapsed": "3.44",
+              "user_cpu": "2.20",
+              "system_cpu": "0.15"
+            },
+            {
+              "phase": "final",
+              "workload": "small",
+              "rows": "50000",
+              "payload_bytes": "48",
+              "repeat": "1",
+              "elapsed": "3.47",
+              "user_cpu": "2.22",
+              "system_cpu": "0.14"
+            },
+            {
+              "phase": "final",
+              "workload": "small",
+              "rows": "50000",
+              "payload_bytes": "48",
+              "repeat": "2",
+              "elapsed": "3.88",
+              "user_cpu": "2.47",
+              "system_cpu": "0.16"
+            }
+          ],
+          "elapsed": {
+            "median": 3.47,
+            "range": [
+              3.44,
+              3.88
+            ]
+          },
+          "user_cpu": {
+            "median": 2.22,
+            "range": [
+              2.2,
+              2.47
+            ]
+          },
+          "system_cpu": {
+            "median": 0.15,
+            "range": [
+              0.14,
+              0.16
+            ]
+          },
+          "fixture_sha256": [
+            "1ebe743bf4f92eabe21a41631881a54202e357d929500ae8a2b10026e3a825de",
+            "d8f490e807d83a9ee789c97439ca04165511a7ea403943bf30c42fedf8ecfc66",
+            "9cf9c489681a9d38ce9edc55d95715a7fb687791a4e321a17601539d89e50758"
+          ]
+        },
+        "oos": {
+          "rows": 5000,
+          "payload_bytes": 5000,
+          "samples": [
+            {
+              "phase": "final",
+              "workload": "oos",
+              "rows": "5000",
+              "payload_bytes": "5000",
+              "repeat": "0",
+              "elapsed": "7.52",
+              "user_cpu": "4.58",
+              "system_cpu": "0.24"
+            },
+            {
+              "phase": "final",
+              "workload": "oos",
+              "rows": "5000",
+              "payload_bytes": "5000",
+              "repeat": "1",
+              "elapsed": "7.72",
+              "user_cpu": "4.74",
+              "system_cpu": "0.23"
+            },
+            {
+              "phase": "final",
+              "workload": "oos",
+              "rows": "5000",
+              "payload_bytes": "5000",
+              "repeat": "2",
+              "elapsed": "7.87",
+              "user_cpu": "4.88",
+              "system_cpu": "0.28"
+            }
+          ],
+          "elapsed": {
+            "median": 7.72,
+            "range": [
+              7.52,
+              7.87
+            ]
+          },
+          "user_cpu": {
+            "median": 4.74,
+            "range": [
+              4.58,
+              4.88
+            ]
+          },
+          "system_cpu": {
+            "median": 0.24,
+            "range": [
+              0.23,
+              0.28
+            ]
+          },
+          "fixture_sha256": [
+            "ded23f44c4008e2f8825ac163bcaa343e83b28edce464070816a5698b8c09f70",
+            "eaf7ae54663025be815448abdab1c21a521f5024a45b7c73da0b92c5123b98fd",
+            "9df7147d7a9c6a2385e9e466288e560e9946379dbaf0f86bb6fc7dc00c028862"
+          ]
+        }
+      }
+    },
+    "final_repair": {
+      "source_commit": "1932b3ec3d1b83bec83b7de1a6dd482f3a03b63d",
+      "script_phase_argument": "repair",
+      "receipts": "/home/vimkim/tmp/pr7925-ticket02-evidence/benchmark-repair",
+      "workloads": {
+        "small": {
+          "rows": 50000,
+          "payload_bytes": 48,
+          "samples": [
+            {
+              "phase": "repair",
+              "workload": "small",
+              "rows": "50000",
+              "payload_bytes": "48",
+              "repeat": "0",
+              "elapsed": "3.63",
+              "user_cpu": "2.41",
+              "system_cpu": "0.13"
+            },
+            {
+              "phase": "repair",
+              "workload": "small",
+              "rows": "50000",
+              "payload_bytes": "48",
+              "repeat": "1",
+              "elapsed": "4.22",
+              "user_cpu": "2.01",
+              "system_cpu": "0.10"
+            },
+            {
+              "phase": "repair",
+              "workload": "small",
+              "rows": "50000",
+              "payload_bytes": "48",
+              "repeat": "2",
+              "elapsed": "3.55",
+              "user_cpu": "2.28",
+              "system_cpu": "0.15"
+            }
+          ],
+          "elapsed": {
+            "median": 3.63,
+            "range": [
+              3.55,
+              4.22
+            ]
+          },
+          "user_cpu": {
+            "median": 2.28,
+            "range": [
+              2.01,
+              2.41
+            ]
+          },
+          "system_cpu": {
+            "median": 0.13,
+            "range": [
+              0.1,
+              0.15
+            ]
+          },
+          "fixture_sha256": [
+            "1ebe743bf4f92eabe21a41631881a54202e357d929500ae8a2b10026e3a825de",
+            "d8f490e807d83a9ee789c97439ca04165511a7ea403943bf30c42fedf8ecfc66",
+            "9cf9c489681a9d38ce9edc55d95715a7fb687791a4e321a17601539d89e50758"
+          ]
+        },
+        "oos": {
+          "rows": 5000,
+          "payload_bytes": 5000,
+          "samples": [
+            {
+              "phase": "repair",
+              "workload": "oos",
+              "rows": "5000",
+              "payload_bytes": "5000",
+              "repeat": "0",
+              "elapsed": "5.61",
+              "user_cpu": "4.06",
+              "system_cpu": "0.18"
+            },
+            {
+              "phase": "repair",
+              "workload": "oos",
+              "rows": "5000",
+              "payload_bytes": "5000",
+              "repeat": "1",
+              "elapsed": "7.50",
+              "user_cpu": "4.77",
+              "system_cpu": "0.22"
+            },
+            {
+              "phase": "repair",
+              "workload": "oos",
+              "rows": "5000",
+              "payload_bytes": "5000",
+              "repeat": "2",
+              "elapsed": "6.73",
+              "user_cpu": "3.99",
+              "system_cpu": "0.21"
+            }
+          ],
+          "elapsed": {
+            "median": 6.73,
+            "range": [
+              5.61,
+              7.5
+            ]
+          },
+          "user_cpu": {
+            "median": 4.06,
+            "range": [
+              3.99,
+              4.77
+            ]
+          },
+          "system_cpu": {
+            "median": 0.21,
+            "range": [
+              0.18,
+              0.22
+            ]
+          },
+          "fixture_sha256": [
+            "ded23f44c4008e2f8825ac163bcaa343e83b28edce464070816a5698b8c09f70",
+            "eaf7ae54663025be815448abdab1c21a521f5024a45b7c73da0b92c5123b98fd",
+            "9df7147d7a9c6a2385e9e466288e560e9946379dbaf0f86bb6fc7dc00c028862"
+          ]
+        }
+      }
+    }
+  },
+  "identical_fixture_hashes": true
+}

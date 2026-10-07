@@ -1,0 +1,26 @@
+
+Time: 10/07/26 19:24:00.617 - FATAL ERROR *** file /home/vimkim/gh/cb/pr7925-02-record-owner/src/transaction/log_page_buffer.c, line 6978 ERROR CODE = -84, Tran = -1, EID = 1
+Length of prefix logname "t02_baseline_small" is too long; the length must be less than 17.
+[17] 0x0000000000816d78: er_dump_call_stack_internal(print_output&) at /home/vimkim/gh/cb/pr7925-02-record-owner/src/base/stack_dump.c:388
+[16] 0x0000000000817237: er_dump_call_stack(_IO_FILE*) at /home/vimkim/gh/cb/pr7925-02-record-owner/src/base/stack_dump.c:520
+[15] 0x00000000007bf891: er_call_stack_dump_on_error(int, int) at /home/vimkim/gh/cb/pr7925-02-record-owner/src/base/error_manager.c:1369
+[14] 0x00000000007bfdb7: er_set_internal(int, char const*, int, int, int, bool, _IO_FILE*, __va_list_tag (*) [1]) at /home/vimkim/gh/cb/pr7925-02-record-owner/src/base/error_manager.c:1510
+[13] 0x00000000007bf51d: er_set at /home/vimkim/gh/cb/pr7925-02-record-owner/src/base/error_manager.c:1234
+[12] 0x0000000000f4fa18: logpb_verify_length(char const*, char const*, char const*) at /home/vimkim/gh/cb/pr7925-02-record-owner/src/transaction/log_page_buffer.c:6978
+[11] 0x0000000000f4fb7b: logpb_initialize_log_names(cubthread::entry*, char const*, char const*, char const*) at /home/vimkim/gh/cb/pr7925-02-record-owner/src/transaction/log_page_buffer.c:7051
+[10] 0x0000000000f56d58: logpb_check_exist_any_volumes(cubthread::entry*, char const*, char const*, char const*, char*, bool*) at /home/vimkim/gh/cb/pr7925-02-record-owner/src/transaction/log_page_buffer.c:11134
+[09] 0x0000000000ed7b6b: xboot_initialize_server(boot_client_credential const*, boot_db_path_info*, bool, char const*, int, short, int, short, db_identifier*, hfid*, int, DB_TRAN_ISOLATION) at /home/vimkim/gh/cb/pr7925-02-record-owner/src/transaction/boot_sr.c:1721
+[08] 0x00000000008898a2: boot_initialize_server(boot_client_credential const*, boot_db_path_info*, bool, char const*, int, short, int, short, db_identifier*, hfid*, int, DB_TRAN_ISOLATION) at /home/vimkim/gh/cb/pr7925-02-record-owner/src/communication/network_interface_cl.c:3949
+[07] 0x0000000000ed4cab: boot_initialize_client(boot_client_credential*, boot_db_path_info*, bool, char const*, int, short, int, short, char const*) at /home/vimkim/gh/cb/pr7925-02-record-owner/src/transaction/boot_cl.c:1037
+[06] 0x0000000000722a08: db_init(char const*, int, char const*, char const*, char const*, char const*, char const*, char const*, bool, char const*, char const*, int, int, int, int, char const*) at /home/vimkim/gh/cb/pr7925-02-record-owner/src/compat/db_admin.c:278
+[05] 0x00000000006df7fb: createdb at /home/vimkim/gh/cb/pr7925-02-record-owner/src/executables/util_sa.c:739
+[04] 0x0000561326a725fd: unknown function at /home/vimkim/.cub/install/pr7925-02-record-owner/debug_gcc/bin/cubrid
+[03] 0x00000000000295d0: __libc_start_call_main at ??:?
+[02] 0x0000000000029680: __libc_start_main_alias_2 at :?
+[01] 0x0000561326a72265: unknown function at /home/vimkim/.cub/install/pr7925-02-record-owner/debug_gcc/bin/cubrid
+
+Time: 10/07/26 19:24:01.705 - FATAL ERROR *** file /home/vimkim/gh/cb/pr7925-02-record-owner/src/transaction/log_page_buffer.c, line 7055 ERROR CODE = -644, Tran = -1, EID = 2
+LOG FATAL ERROR: logpb_initialize_log_names
+
+*** The previous error message is the last one. ***
+

@@ -31,8 +31,8 @@ results are claimed. Local integration, pushing, CI, and remote publication are
 separate actions.
 
 Execution state, evidence and unresolved prerequisites are recorded in
-[orchestration.md](orchestration.md). Ticket 02 remains fully specified but
-cannot be dispatched until its interface is present on an authorized base.
+[orchestration.md](orchestration.md). The initial dispatch gate required its interface on an authorized base. The
+approved private combination and current verification are recorded below.
 
 
 2026-10-07 execution checkpoint: 01 is resolved at `625b193745`, with final
@@ -46,3 +46,14 @@ at `b59f243fd0f30bb94344558ffa1755c37c43d2d4`. The accepted owner interface is
 present; 02 is claimed for its own new clean-context agent/worktree. Shared
 integration acceptance remains an external gate, with future squash-transplant
 procedure recorded in orchestration.md.
+
+
+2026-10-07 final private checkpoint: both selected implementations are integrated
+at `1932b3ec3d1b83bec83b7de1a6dd482f3a03b63d` on `review/pr7925-combined`, using
+accepted prerequisite `4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c`. Full 38/38 CTests
+and 374/374 actual GoogleTests pass, and coordinator 70/70 focused cases pass,
+with no failures/skips/disabled. Final whole-spec Standards and Spec reviews have
+zero remaining source findings. 01 remains resolved. 02 remains claimed with
+local implementation/verification complete and final shared partition acceptance
+pending. The parent spec and work item 292 remain unfinished until that external
+gate is satisfied; existing source/shared/default branches are unchanged.

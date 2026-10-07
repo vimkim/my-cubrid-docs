@@ -1,0 +1,2829 @@
+{
+  "files": [
+    {
+      "file": "test_byte_span_writer.xml",
+      "cases": 7,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos.xml",
+      "cases": 21,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_bestspace.xml",
+      "cases": 23,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_delete.xml",
+      "cases": 9,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_delete_server.xml",
+      "cases": 9,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_eager_diagnostics.xml",
+      "cases": 10,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_growth_sweep.xml",
+      "cases": 11,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_identity_stamp.xml",
+      "cases": 33,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_mock_vacuum_server.xml",
+      "cases": 6,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_no_logging.xml",
+      "cases": 1,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_real_vacuum_server.xml",
+      "cases": 10,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_record_flags.xml",
+      "cases": 1,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_remove_file.xml",
+      "cases": 8,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_remove_file_server.xml",
+      "cases": 7,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_server.xml",
+      "cases": 38,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_sql_bigone.xml",
+      "cases": 4,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_sql_boundary.xml",
+      "cases": 8,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_sql_crash_recovery.xml",
+      "cases": 2,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_sql_crud.xml",
+      "cases": 8,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_sql_ddl.xml",
+      "cases": 5,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_sql_deferred_write.xml",
+      "cases": 36,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_sql_delete.xml",
+      "cases": 8,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_sql_eager_cleanup.xml",
+      "cases": 12,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_sql_show.xml",
+      "cases": 4,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_sql_storage.xml",
+      "cases": 25,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_sql_txn.xml",
+      "cases": 8,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_sql_update_delete.xml",
+      "cases": 7,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_sql_visible_version.xml",
+      "cases": 2,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_sql_workspace_bytes.xml",
+      "cases": 21,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_tde_gate.xml",
+      "cases": 3,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_vacuum_server.xml",
+      "cases": 14,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "file": "test_oos_workspace.xml",
+      "cases": 13,
+      "failures": 0,
+      "skipped": 0
+    }
+  ],
+  "rows": [
+    {
+      "suite": "ByteSpanWriter",
+      "name": "EmptyState",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "ByteSpanWriter",
+      "name": "AppendWithinCapacityAdvancesCursorAndCopies",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "ByteSpanWriter",
+      "name": "AppendOverflowFailsAndDoesNotWrite",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "ByteSpanWriter",
+      "name": "RecoveryAfterFailedAppend",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "ByteSpanWriter",
+      "name": "FullWriterRejectsNonZeroAppendButAcceptsZero",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "ByteSpanWriter",
+      "name": "ZeroCapacitySpanIsImmediatelyFull",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "ByteSpanWriter",
+      "name": "OverflowByExactlyOneByteIsCaught",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "OosCreateAndDestroy",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "OosCreateAndCreateAgain",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "OosInsertAndRead",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "OosInsertRejectsInvalidSource",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "OosInsertLargerThanPageSize",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "OosInsertLarge160KBString",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "OosInsertAndRead100LargeStringsAroundMaxOosChunkSize",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "OosFindBestSpace",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "OosFindBestSpaceReturnsExistingPage",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "OosFixAndUnfixPage",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "OosManualSlottedPageInsertAndGet",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "ShouldInsertIntoSamePage",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "OosGetLengthWithinPage",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "OosGetLengthAcrossPages",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "OosGetLengthAroundMaxChunkSize",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "ShouldInsertIntoDifferentPages",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "OosInlineFormatWriteAndReadBack",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "OosInlineFormatWithRealOosInsert",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "OosInlineLengthMatchesAcrossPages",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "OosReadRejectsCallerLengthDisagreeingWithHeader",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosTest",
+      "name": "HeapAttrvalueReadOosInlineCorruptHeader",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceReuseAfterDelete",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceFullPageAllocsNew",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceMultipleFilesIsolation",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceManySmallInsertsConsolidate",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceInsertDeleteCycle",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceStaleHintToNonOosPageIsRejected",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceStaleHintToForeignOosPageIsRejected",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceFindBestPageBasic",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceFindBestPageConsecutiveCalls",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceDeleteThenFindReclaimsPage",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceMultiChunkDeleteReuse",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceCacheCleanedOnFileRemove",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceBulkInsertDeleteReinsert",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceArrayOverflowEviction",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceStaleCacheEviction",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceHeaderPageNeverReturned",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceSyncRefillsCache",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceSecondBestRingBuffer",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceFindPageIdxBadspace",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "BestspaceExactMaxChunkBoundary",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "DeleteUpdatesBestspaceCacheDirectly",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "DeleteMultipleRecordsUpdatesAllPages",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosBestspaceTest",
+      "name": "DeletePartialChainUpdatesBestspace",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosDeleteTest",
+      "name": "OosDeleteBasic",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosDeleteTest",
+      "name": "OosDeleteThenReadFails",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosDeleteTest",
+      "name": "OosDeleteMultiChunk",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosDeleteTest",
+      "name": "OosUpdatePattern",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosDeleteTest",
+      "name": "OosDeleteRestoresFreeSpace",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosDeleteTest",
+      "name": "OosDeleteLarge160KBMultiChunk",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosDeleteTest",
+      "name": "OosDeleteSlotBecomesUnknown",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosDeleteTest",
+      "name": "EmptiedListSkipsPageThatStillHoldsRecords",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosDeleteTest",
+      "name": "EmptiedListReportsEachPageOfMultiPageChainOnce",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosDeleteServerTest",
+      "name": "OosDeleteBasic",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosDeleteServerTest",
+      "name": "OosDeleteThenReadFails",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosDeleteServerTest",
+      "name": "OosDeleteMultiChunk",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosDeleteServerTest",
+      "name": "OosUpdatePattern",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosDeleteServerTest",
+      "name": "OosDeleteRestoresFreeSpace",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosDeleteServerTest",
+      "name": "OosDeleteLarge160KBMultiChunk",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosDeleteServerTest",
+      "name": "OosDeleteSlotBecomesUnknown",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosDeleteServerTest",
+      "name": "OosDeleteStampMismatchAndGoneHeadAreCleanNoOps",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosDeleteServerTest",
+      "name": "OosDeleteStaleReferenceAfterSlotReuseKeepsLiveChain",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerDiagnostics",
+      "name": "DeleteCompletesAndDiagnosesAStampMismatch",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerDiagnostics",
+      "name": "UpdateCompletesAndDiagnosesAStampMismatch",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerDiagnostics",
+      "name": "DeleteDiagnosesAHeadSlotAlreadyEmpty",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerDiagnostics",
+      "name": "DeleteDiagnosesADeallocatedAndAReusedHeadPage",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerDiagnostics",
+      "name": "LiveReferenceIsReclaimedWithoutADiagnostic",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerDiagnostics",
+      "name": "UpdateKeepsAChainTheNewImageStillReferencesAndDiagnosesOnlyTheDropped",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerDiagnostics",
+      "name": "RelocatedUpdateAndDeleteDiagnoseTheForwardRecordsStaleStub",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerDiagnostics",
+      "name": "ThreeStaleChainsInOneRecordAreOneNotification",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerDiagnostics",
+      "name": "MatchingNonHeadReferenceFailsTheDelete",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerDiagnostics",
+      "name": "InterruptedCleanupIsAnErrorNotASkip",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosGrowthSweepTest",
+      "name": "SweepReclaimsAfterCommittedDeleteBurst",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosGrowthSweepTest",
+      "name": "TransientWriteLatchMissKeepsReclaimDebt",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosGrowthSweepTest",
+      "name": "ConcurrentGrowerWaitsForActiveSweep",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosGrowthSweepTest",
+      "name": "SweepLeavesAbortRestoredChunksAlone",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosGrowthSweepTest",
+      "name": "InsertRollbackRearmsGrowthSweep",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosGrowthSweepTest",
+      "name": "SweepIsIncrementalWithCursorContinuation",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosGrowthSweepTest",
+      "name": "SweepCursorWrapsAcrossSectorBoundary",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosGrowthSweepTest",
+      "name": "SweepCounterResetsOnCleanLapAndRearms",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosGrowthSweepTest",
+      "name": "SweepDefersUncommittedDeletesButAllowsGrowth",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosGrowthSweepTest",
+      "name": "BootRuleSweepsUnconditionallyAfterRestart",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosGrowthSweepTest",
+      "name": "SweepSkipsRefilledPageAndNeverReclaimsHeader",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "InsertReportsTheStampTheHeadChunkCarries",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "FreshPageIssuesNonNullStamp",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "SuccessiveOccupantsOfOneSlotCarryDifferentStamps",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "MultiPageInsertReportsTheHeadChunkStamp",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "BatchInsertReportsOneStampPerRequest",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "AccessorFailsForAbsentChunk",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "ReadWithMatchingReferenceReturnsTheValue",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "ReadWithMismatchedStampFailsAsCorruptedRecordAndLeavesChainIntact",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "GroupedReadVerifiesEveryReference",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "DeleteWithMismatchedStampIsCleanNoOpThatLeavesOccupantIntact",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "DeleteOfGoneHeadIsCleanNoOp",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "StaleReferenceAfterSlotReuseKeepsTheLiveChain",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "StaleReferenceToDeallocatedAndReallocatedPageIsCleanNoOp",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "OccupancyProbeCannotTellOccupantsApart",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "StaleReadOfMissingSlotIsAControlledFailure",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "StaleReadOfDeallocatedPageIsAControlledFailure",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "StaleReadOfReusedHeadSlotDeliversNoBytesOfTheNewOccupant",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "StaleReferenceToSlotReusedByContinuationChunkFailsReadsAndSkipsDelete",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "MatchingNonHeadReferenceIsRejectedBeforeAnyDelete",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "StaleReferenceToPageReusedAsFileMetadataSkipsDeleteAndFailsReads",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "DeleteOutcomeNamesEachSkipReason",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "InterruptedDeleteAndReadReportTheInterruptNotASkip",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "TransactionAbortRestoresTheStampTheChainWasCreatedWith",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "SysopAbortRestoresTheStampTheChainWasCreatedWith",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "MultiChunkDeleteRolledBackRestoresEveryChunkAndByte",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "PartiallyAppliedDeleteRolledBackRestoresEveryChain",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampTest",
+      "name": "RecoveryCallbackWritesBackTheChunkImageStampIncluded",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampPureTest",
+      "name": "PackedStubStampRoundTripsEveryValue",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampPureTest",
+      "name": "ChunkHeaderAndStubAreEachTwentyFourBytes",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampPureTest",
+      "name": "StubWriteThenParseRoundTripsAtTwentyFourBytes",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampPureTest",
+      "name": "ParseReadsEachStubFieldOfARecordWithinItsOwnBounds",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampPureTest",
+      "name": "ParseRejectsShortStubFieldBeforeAnotherAttribute",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosIdentityStampPureTest",
+      "name": "ParseRejectsStubFieldPastRecordEnd",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumServer",
+      "name": "BasicInsertAndDelete",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumServer",
+      "name": "MultiChunkDelete",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumServer",
+      "name": "LargeMultiPageDelete",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumServer",
+      "name": "MvccUpdateVacuumPattern",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumServer",
+      "name": "BulkVacuumReclaimAndReuse",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumServer",
+      "name": "MultiUpdateChurnVacuum",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosNoLoggingTest",
+      "name": "SlotReuseSeparatesStampsWithLoggingRepeatsThemWithoutAndLoadsStillReadBack",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosRealVacuum",
+      "name": "SingleRowDeleteDrainsCompletely",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosRealVacuum",
+      "name": "MultiChunkChainsDrainCompletely",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosRealVacuum",
+      "name": "UpdateStaleVersionDrainsNewSurvives",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosRealVacuum",
+      "name": "SnapshotBlocksReclaimThenDrains",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosRealVacuum",
+      "name": "TwoReadersOldestSnapshotGatesReclaim",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosRealVacuum",
+      "name": "UpdateSnapshotBlocksOldVersionReclaim",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosRealVacuum",
+      "name": "LiveRowNeverReclaimed",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosRealVacuum",
+      "name": "MultiVersionForwardChainDrains",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosRealVacuum",
+      "name": "ChunkBoundaryExactSizes",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosRealVacuum",
+      "name": "ReVacuumAfterDrainIsIdempotent",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosRecordFlags",
+      "name": "OosFlagIsSeparateFromMvccFlags",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosFileDestroyTest",
+      "name": "OosFileDestroyBasic",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosFileDestroyTest",
+      "name": "OosFileDestroyWithData",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosFileDestroyTest",
+      "name": "OosFileDestroyWithMultiChunkData",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosFileDestroyTest",
+      "name": "OosFileDestroyCacheCleared",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosFileDestroyTest",
+      "name": "OosPageReclaimBasic",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosFileDestroyTest",
+      "name": "OosPageReclaimLsaGateDefersUncommitted",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosFileDestroyTest",
+      "name": "OosPageReclaimStickyFirstPage",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosFileDestroyTest",
+      "name": "OosFileDestroyMultipleFiles",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosFileDestroyServerTest",
+      "name": "OosFileDestroyBasic",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosFileDestroyServerTest",
+      "name": "OosFileDestroyWithData",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosFileDestroyServerTest",
+      "name": "OosFileDestroyWithMultiChunkData",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosFileDestroyServerTest",
+      "name": "OosFileDestroyCacheCleared",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosFileDestroyServerTest",
+      "name": "OosPageReclaimBasic",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosFileDestroyServerTest",
+      "name": "OosPageReclaimLsaGateDefersUncommitted",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosFileDestroyServerTest",
+      "name": "OosFileDestroyMultipleFiles",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosOwnerDescriptorSupportsDiagnosticsAndProtectedIteration",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosPublicationBeginClearsOidAndLsaTogether",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosPublicationBeginMissingTdesLeavesBothSidesUntouched",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosLogicalPreparationFailureSeesCleanPublicationState",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosClassLookupFailureSeesCleanPublicationState",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosVfidLookupFailureSeesCleanPublicationState",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosInsertManyPartialPublicationFailureClearsBothSides",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosInsertManyPublicationAllocationFailureIsConvertedAndCleared",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosInsertManyValidationFailureDoesNotClaimPublicationStart",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosSuccessfulPublicationWithoutReplicationTrackingKeepsOidOnly",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosTrackedSingleChunkBatchKeepsPairedPublication",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosTrackedMixedBatchPreservesDummyAndHeadPairing",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "ReplicaOosItemsAccumulateAndFixupConsumesInOrder",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "ReplicaFixupRejectsTruncatedStub",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "ReplicaFixupRejectsShortFieldBeforeAnotherAttribute",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "ReplicaIncompleteOosGroupRollsBackAndUnwinds",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "ReplicaRowFailureRollsBackItsAppliedOosItem",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "ReplicaFixupRejectsInsufficientOids",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "ReplicaFixupRejectsExtraOids",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "ReplicaScalarPublicationAllocationFailureInvalidatesAccumulator",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosCreateAndDestroy",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosCreateAndCreateAgain",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosInsertAndRead",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosInsertManyKeepsSinglePageLocalityAndReadManyGroupsHeadPage",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosInsertManyReusesOnlyPageThatFitsWholeBatch",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosInsertManyAllocatesFreshPageInsteadOfScatteringBatch",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosInsertManySplitsOversizedSingleChunkRun",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosInsertManyPreservesMixedSingleAndMultiChunkPublicationOrder",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosInsertLargerThanPageSize",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosInsertLarge160KBString",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosInsertAndRead100LargeStringsAroundMaxOosChunkSize",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "ShouldInsertIntoSamePage",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosGetLengthWithinPage",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosGetLengthAcrossPages",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosGetLengthAroundMaxChunkSize",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosInlineFormatWriteAndReadBack",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosInlineFormatWithRealOosInsert",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosServerTest",
+      "name": "OosInlineLengthMatchesAcrossPages",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlBigone",
+      "name": "OosColumnWithBigoneRejected",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlBigone",
+      "name": "BigoneWithoutOosColumnSucceeds",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlBigone",
+      "name": "OosColumnInlineBetween4kAnd16kSucceeds",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlBigone",
+      "name": "UpdateIntoOosBigoneRejected",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlBoundary",
+      "name": "NullOosColumn",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlBoundary",
+      "name": "DropTableWithOos",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlBoundary",
+      "name": "DropAndRecreateOosFile",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlBoundary",
+      "name": "IndexScanWithOos",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlBoundary",
+      "name": "MvccHeaderWithOos",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlBoundary",
+      "name": "CopyReadPath",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlBoundary",
+      "name": "InsertSelect",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlBoundary",
+      "name": "MidSizeColumnsEligibleForOos",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosCrashRecoveryTest",
+      "name": "CleanRestartReadsEveryValueAndRunsNoRecovery",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosCrashRecoveryTest",
+      "name": "CommittedValuesSurviveCrashRedoThroughTheirPersistedStubIdentity",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlCrud",
+      "name": "BasicInsertSelect",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlCrud",
+      "name": "SmallRecordNoOos",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlCrud",
+      "name": "MultipleOosColumns",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlCrud",
+      "name": "Cbrd27006MultiOosColumnSelectsAndUpdate",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlCrud",
+      "name": "Cbrd27006MixedSingleChunkAndMultiChunkRow",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlCrud",
+      "name": "Cbrd27006ReadDispatchBatchesOnlyMultiOosProjections",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlCrud",
+      "name": "MultiChunkOos",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlCrud",
+      "name": "MixedChunkSizes",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDdl",
+      "name": "AlterAddColumn",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDdl",
+      "name": "AlterDropOosColumn",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDdl",
+      "name": "CreateTableAsSelect",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDdl",
+      "name": "DropAndRecreateSameName",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDdl",
+      "name": "DropCreateCycles",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "InsertOwnsOosInDestinationHeap",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "RawClientInsertOwnsDestinationOos",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "WorkspacePartitionInsertAndMovementOwnDestination",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "RedistributionRewritesMultichunkValuesAtDestination",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "RawCopyAreaRoutesInsertAndMovementWithoutChangingPayload",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "RawClientUpdatePreservesUnassignedValuesAndRollsBackFailure",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "PrefetchSkipsUnexpandedOosNeighbors",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "PendingReferencesResolveAndFinalizeInPlace",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "FinalizationResetsPublicationOnceAndFailureCannotRetry",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "SerializedPreparationPreservesMvccAndOutlivesSource",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "RedistributionFailurePreservesSourceAndNextOperation",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "InternalAndAddressReservationsBypassPreparation",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "ForcedOutlineKeyRoutesFromPreparedBytes",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "RejectedDestinationCreatesNoOosAndNextInsertSucceeds",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "LobPreparationPreservesSourceAndDestinationValues",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "SupportedPartitionDomainsPreserveValuesAndOwnership",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "LoaderQueueRetainsClearedInputsAndRollsBackBulkFailure",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "AllocationAndStorageFailureLeaveNextInsertUsable",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "ConstraintFailureAfterOosAllowsNextInsert",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "DuplicateProbesDoNotPersistCandidateValues",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "DuplicateProbesReadCompositeKeys",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "DuplicateProbesPreserveFunctionIndexesAndCompressedCompositeKeys",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "AbandonedDuplicateCandidateDoesNotWriteOos",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "DuplicateProbeFailuresLeaveNextWriteUsable",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "DuplicateProbesPreserveLobValuesAndRollback",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "ReplaceProbeReadsOutlinedCandidateAgainstInlineExistingKey",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "DuplicateProbesPreserveMultipleUniqueConstraintsAndForeignKeys",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "UpdateMovementAllocatesOnlyAtDestination",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "UpdateDomainsPreserveUnassignedValuesThroughMovementAndRollback",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "UpdateForcedKeyUsesCanonicalValueAndRejectsWrongPartition",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "UpdateLayoutGrowthAndLobOverwritePreserveValues",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "UpdateFailureClearsPublicationAndRollsBackBothDestinations",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "UpdateIndexFailureRollsBackMovementAndNonmovement",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "NonpartitionedUpdateChecksForeignKeysAfterFinalization",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDeferredWrite",
+      "name": "RollbackPreservesMultiChunkValuesAndLiveOwnership",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlPacking",
+      "name": "GenericDescriptorsPreserveArbitraryBytes",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDelete",
+      "name": "DeleteSingleChunk",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDelete",
+      "name": "DeleteMultiChunk",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDelete",
+      "name": "DeleteLarge160KB",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDelete",
+      "name": "DeleteSelectiveRowsIntact",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDelete",
+      "name": "DeleteAndReinsert",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDelete",
+      "name": "DeleteMixedColumns",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDelete",
+      "name": "UpdateOosColumn",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlDelete",
+      "name": "DeleteAndReinsertMultiChunk",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerCleanup",
+      "name": "SingleUpdateCleansOldOos",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerCleanup",
+      "name": "MultipleUpdatesPagesBounded",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerCleanup",
+      "name": "MultiOosColumnUpdateCleanup",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerCleanup",
+      "name": "UpdateChurnStress",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerCleanup",
+      "name": "StepByStepLifecycleWithPageCounts",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerCleanup",
+      "name": "UpdateVaryingOosSizes",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerCleanup",
+      "name": "MixedColumnsUpdateOnlyOos",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerCleanup",
+      "name": "SingleDeleteCleansOos",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerCleanup",
+      "name": "InsertDeleteChurnPagesBounded",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerCleanup",
+      "name": "MultiChunkDeleteCleansAllChunks",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerCleanup",
+      "name": "MultiOosColumnDeleteCleanup",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosEagerCleanup",
+      "name": "MixedFillerDeleteChurnPagesBounded",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlShow",
+      "name": "HeapWithoutOosReportsZeroStats",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlShow",
+      "name": "HeapWithOosReportsPositiveStats",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlShow",
+      "name": "ShowAllHeapOosRunsForNonPartitionedClass",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlShow",
+      "name": "ShowAllHeapOosReportsPartitionRows",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "CreateTablePersistsPreferInline",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "CreateTablePersistsForceOutline",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "DefaultColumnHasNoStorageClause",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "ExplicitDefaultStorageClausesActAsDefault",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "CreateTableLikeCopiesPreferInline",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "CreateTableLikeCopiesForceOutline",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "SharedAttributeRejectsPreferInline",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "CreateRejectsAllStorageSettingsForFixedTypes",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "CreateAcceptsStorageForPhysicalVariableTypes",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "VclassRejectsAllStorageSettings",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "AlterRejectsAllStorageSettingsForFixedTypes",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "AlterAddDuplicateAttributeKeepsDuplicateErrorPrecedence",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "AlterModifyClassAttributeReportsNonNormalAttributeError",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "AlterChangeClassAttributeReportsNonNormalAttributeError",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "AlterChangeClassAttributePreservesConstraintValidation",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "ForceOutlineRejectsUnsupportedAttributes",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "AlterModifyAddsAndDropsPreferInline",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "AlterModifyPreservesAndTransitionsForceOutline",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "AlterModifyDropsForceOutlineForFixedType",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "AlterModifyDropsPreferInlineForFixedType",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "FailedExplicitFixedTypeAlterPreservesSchemaAndData",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "ForceOutlineBypassesRecordGateOnlyAboveInlineStubSize",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "AlterForceOutlineAppliesOnlyAfterRewrite",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "ForceOutlineRemainsNonReservedIdentifier",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlStorage",
+      "name": "PreferInlineColumnRoundTripsLargeValue",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlTxn",
+      "name": "RollbackInsert",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlTxn",
+      "name": "RollbackUpdate",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlTxn",
+      "name": "CommittedDataPersists",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlTxn",
+      "name": "RollbackMultiChunk",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlTxn",
+      "name": "ComboThenCommit",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlTxn",
+      "name": "RollbackDelete",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlTxn",
+      "name": "DeleteCommit",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlTxn",
+      "name": "DeleteRollback",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlUpdateDelete",
+      "name": "UpdateOosValue",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlUpdateDelete",
+      "name": "UpdateNonOosColumn",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlUpdateDelete",
+      "name": "RepeatedUpdates",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlUpdateDelete",
+      "name": "SizeChangeChunkTransition",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlUpdateDelete",
+      "name": "DeleteOosRows",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlUpdateDelete",
+      "name": "TruncateAndReinsert",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlUpdateDelete",
+      "name": "UpdateMultiChunk",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlVisibleVersion",
+      "name": "ScanrangeNextFirstObjectFetchDoesNotExpandWholeRecord",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosSqlVisibleVersion",
+      "name": "LargeOldRecordUpdateDoesNotExpandWholeRecord",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceBytes",
+      "name": "TinyNullAndEmptyValues",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceBytes",
+      "name": "LargestFirstAndPreferInline",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceBytes",
+      "name": "EqualSizeTie",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceBytes",
+      "name": "OffsetWidthShrinksAfterForcedDemotion",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceBytes",
+      "name": "CompressedStringAndJson",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceBytes",
+      "name": "CollectionSerializedBytes",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceBytes",
+      "name": "WideVotAndManyAttributes",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceBytes",
+      "name": "OldDiskRepresentationIsConvertedBeforeWorkspaceSerialization",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/0",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/1",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/2",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/3",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/4",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/5",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/6",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/7",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/8",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/9",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/10",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/11",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "EncodingAndVotBoundaries/OosWorkspaceSizeBoundary",
+      "name": "SerializedSizesMatchValueSizes/12",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "TdeUserDataGate",
+      "name": "OosForwardDeleteIsEncryptedRcvindex",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "TdeUserDataGate",
+      "name": "SiblingAndBaselineDeletePathsAreGated",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "TdeUserDataGate",
+      "name": "MetadataOnlyHeapOpIsNotGated",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumCodePathServer",
+      "name": "HeapRecdesContainsOos",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumCodePathServer",
+      "name": "HeapRecdesGetOosRefsSingle",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumCodePathServer",
+      "name": "HeapRecdesGetOosRefsMultiple",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumCodePathServer",
+      "name": "HeapRecdesGetOosRefsRejectsShortFieldBeforeAnotherAttribute",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumCodePathServer",
+      "name": "HeapRecdesGetOosRefsRejectsStubFieldPastRecordEnd",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumCodePathServer",
+      "name": "VacuumHeapOosDeleteSingle",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumCodePathServer",
+      "name": "VacuumHeapOosDeleteMultipleColumns",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumCodePathServer",
+      "name": "VacuumHeapOosDeleteMultiChunk",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumCodePathServer",
+      "name": "VacuumHeapOosDeleteLarge160KB",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumCodePathServer",
+      "name": "MultiUpdateVacuumReclaimFreeSpace",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumCodePathServer",
+      "name": "BulkVacuumReclaimAndReuse",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumCodePathServer",
+      "name": "VacuumHeapOosDeleteReclaimsLiveReferenceAndSkipsStaleOne",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumHeapSeamServer",
+      "name": "ForwardWalkReclaimsLiveReferenceAndSkipsStaleOne",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosVacuumHeapSeamServer",
+      "name": "EagerDeleteReclaimsLiveReferenceAndSkipsStaleOne",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceTest",
+      "name": "StandaloneLoaderStoresOos",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceTest",
+      "name": "LoaderRejectsOosBigoneButKeepsOrdinaryBigone",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceTest",
+      "name": "WorkspaceInsertUsesReservedOid",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceTest",
+      "name": "LoaderPreservesForwardAndBackwardReferences",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceTest",
+      "name": "PartitionsOwnSeparateOosFiles",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceTest",
+      "name": "InsertRollbackReclaimsFlushedChain",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceTest",
+      "name": "WorkspaceUpdateRollbackCommitAndDelete",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceTest",
+      "name": "FailedUniqueLoadRollsBackWithoutOrphans",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceTest",
+      "name": "FilteredDuplicateLeavesNoOrphanAndContinues",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceTest",
+      "name": "LoaderHonorsStoragePolicy",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceTest",
+      "name": "WorkspaceUpdatePreservesExternalLobFiles",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceTest",
+      "name": "PartitionMovementTransfersOwnership",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    },
+    {
+      "suite": "OosWorkspaceTest",
+      "name": "SuccessfulNoLoggingLoadStoresOos",
+      "run": true,
+      "failure": false,
+      "skipped": false
+    }
+  ],
+  "summary": {
+    "xml_files": 32,
+    "cases": 374,
+    "run": 374,
+    "failures": 0,
+    "skipped": 0,
+    "disabled": 0
+  },
+  "source_commit": "1932b3ec3d1b83bec83b7de1a6dd482f3a03b63d",
+  "xml_directory": "/home/vimkim/tmp/pr7925-ticket02-evidence/gtest-full",
+  "dependency_boundary": "4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c",
+  "focused_baseline_identities_retained": true,
+  "focused_baseline_case_count": 70
+}

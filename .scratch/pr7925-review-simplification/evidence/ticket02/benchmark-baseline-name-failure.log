@@ -1,0 +1,18 @@
+[0mdirenv: loading ~/gh/cb/pr7925-02-record-owner/.envrc
+Preset Mode: debug_gcc
+Install Dir: /home/vimkim/.cub/install/pr7925-02-record-owner/debug_gcc
+DB Dir: /home/vimkim/gh/cb/pr7925-02-record-owner/.cub-workenv/databases
+Build Dir: /home/vimkim/gh/cb/pr7925-02-record-owner/build_preset_debug_gcc
+Traceback (most recent call last):
+  File "/home/vimkim/tmp/pr7925-ticket02-evidence/benchmark.py", line 39, in <module>
+    run(['cub-workenv', 'create-db', name, '--worktree', str(worktree), '--path', str(dbpath)], workload + '-create')
+    ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/vimkim/tmp/pr7925-ticket02-evidence/benchmark.py", line 25, in run
+    subprocess.run(argv, input=input_text, text=True, stdout=log,
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                   stderr=subprocess.STDOUT, check=True, timeout=180, cwd=worktree)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/vimkim/.local/share/mise/installs/python/3.14.6/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['cub-workenv', 'create-db', 't02_baseline_small', '--worktree', '/home/vimkim/gh/cb/pr7925-02-record-owner', '--path', '/home/vimkim/gh/cb/pr7925-02-record-owner/.cub-workenv/ticket02-benchmark/t02_baseline_small']' returned non-zero exit status 1.

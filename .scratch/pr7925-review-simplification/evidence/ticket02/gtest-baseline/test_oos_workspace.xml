@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="13" failures="4" disabled="0" errors="0" time="139.802" timestamp="2026-10-07T19:21:14.974" name="AllTests">
+  <testsuite name="OosWorkspaceTest" tests="13" failures="4" disabled="0" skipped="0" errors="0" time="139.802" timestamp="2026-10-07T19:21:14.974">
+    <testcase name="StandaloneLoaderStoresOos" file="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp" line="257" status="run" result="completed" time="7.217" timestamp="2026-10-07T19:21:14.974" classname="OosWorkspaceTest" />
+    <testcase name="LoaderRejectsOosBigoneButKeepsOrdinaryBigone" file="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp" line="264" status="run" result="completed" time="9.792" timestamp="2026-10-07T19:21:22.192" classname="OosWorkspaceTest" />
+    <testcase name="WorkspaceInsertUsesReservedOid" file="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp" line="278" status="run" result="completed" time="6.259" timestamp="2026-10-07T19:21:31.985" classname="OosWorkspaceTest" />
+    <testcase name="LoaderPreservesForwardAndBackwardReferences" file="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp" line="283" status="run" result="completed" time="7.533" timestamp="2026-10-07T19:21:38.244" classname="OosWorkspaceTest">
+      <failure message="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp:161&#x0A;Expected equality of these values:&#x0A;  actual&#x0A;    Which is: { 4 }&#x0A;  expected&#x0A;    Which is: { 2 }&#x0A;&#x0A;=== &lt;Result of SELECT Command in Line 1&gt; ===&#x0A;&#x0A;&lt;00001&gt; verdict: &apos;VALUE_OK&apos;&#x0A;&#x0A;1 row selected. (0.002617 sec) &#x0A;&#x0A;=== &lt;Result of SELECT Command in Line 4&gt; ===&#x0A;&#x0A;&lt;00001&gt; Table_name         : &apos;dba.t_refs&apos;&#x0A;        Class_oid          : &apos;(0|195|2)&apos;&#x0A;        Heap_volume_id     : 1&#x0A;        Heap_file_id       : 640&#x0A;        Heap_header_page_id: 641&#x0A;        Has_oos_file       : 1&#x0A;        Oos_volume_id      : 1&#x0A;        Oos_file_id        : 704&#x0A;        Oos_num_user_pages : 3&#x0A;        Oos_page_size      : 16344&#x0A;        Oos_num_recs       : 4&#x0A;        Oos_recs_sumlen    : 20128&#x0A;        Oos_physical_bytes : 49032&#x0A;        Oos_unused_bytes   : 28904&#x0A;&#x0A;1 row selected. (0.000625 sec) &#x0A;&#x0A;" type=""><![CDATA[/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp:161
+Expected equality of these values:
+  actual
+    Which is: { 4 }
+  expected
+    Which is: { 2 }
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> verdict: 'VALUE_OK'
+
+1 row selected. (0.002617 sec) 
+
+=== <Result of SELECT Command in Line 4> ===
+
+<00001> Table_name         : 'dba.t_refs'
+        Class_oid          : '(0|195|2)'
+        Heap_volume_id     : 1
+        Heap_file_id       : 640
+        Heap_header_page_id: 641
+        Has_oos_file       : 1
+        Oos_volume_id      : 1
+        Oos_file_id        : 704
+        Oos_num_user_pages : 3
+        Oos_page_size      : 16344
+        Oos_num_recs       : 4
+        Oos_recs_sumlen    : 20128
+        Oos_physical_bytes : 49032
+        Oos_unused_bytes   : 28904
+
+1 row selected. (0.000625 sec) 
+
+]]></failure>
+    </testcase>
+    <testcase name="PartitionsOwnSeparateOosFiles" file="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp" line="288" status="run" result="completed" time="9.615" timestamp="2026-10-07T19:21:45.778" classname="OosWorkspaceTest" />
+    <testcase name="InsertRollbackReclaimsFlushedChain" file="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp" line="293" status="run" result="completed" time="8.547" timestamp="2026-10-07T19:21:55.394" classname="OosWorkspaceTest" />
+    <testcase name="WorkspaceUpdateRollbackCommitAndDelete" file="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp" line="304" status="run" result="completed" time="14.956" timestamp="2026-10-07T19:22:03.941" classname="OosWorkspaceTest">
+      <failure message="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp:161&#x0A;Expected equality of these values:&#x0A;  actual&#x0A;    Which is: { 4 }&#x0A;  expected&#x0A;    Which is: { 2 }&#x0A;&#x0A;=== &lt;Result of SELECT Command in Line 1&gt; ===&#x0A;&#x0A;&lt;00001&gt; verdict: &apos;VALUE_OK&apos;&#x0A;&#x0A;1 row selected. (0.002753 sec) &#x0A;&#x0A;=== &lt;Result of SELECT Command in Line 4&gt; ===&#x0A;&#x0A;&lt;00001&gt; Table_name         : &apos;dba.t_refs&apos;&#x0A;        Class_oid          : &apos;(0|195|2)&apos;&#x0A;        Heap_volume_id     : 1&#x0A;        Heap_file_id       : 640&#x0A;        Heap_header_page_id: 641&#x0A;        Has_oos_file       : 1&#x0A;        Oos_volume_id      : 1&#x0A;        Oos_file_id        : 704&#x0A;        Oos_num_user_pages : 3&#x0A;        Oos_page_size      : 16344&#x0A;        Oos_num_recs       : 4&#x0A;        Oos_recs_sumlen    : 20128&#x0A;        Oos_physical_bytes : 49032&#x0A;        Oos_unused_bytes   : 28904&#x0A;&#x0A;1 row selected. (0.000613 sec) &#x0A;&#x0A;" type=""><![CDATA[/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp:161
+Expected equality of these values:
+  actual
+    Which is: { 4 }
+  expected
+    Which is: { 2 }
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> verdict: 'VALUE_OK'
+
+1 row selected. (0.002753 sec) 
+
+=== <Result of SELECT Command in Line 4> ===
+
+<00001> Table_name         : 'dba.t_refs'
+        Class_oid          : '(0|195|2)'
+        Heap_volume_id     : 1
+        Heap_file_id       : 640
+        Heap_header_page_id: 641
+        Has_oos_file       : 1
+        Oos_volume_id      : 1
+        Oos_file_id        : 704
+        Oos_num_user_pages : 3
+        Oos_page_size      : 16344
+        Oos_num_recs       : 4
+        Oos_recs_sumlen    : 20128
+        Oos_physical_bytes : 49032
+        Oos_unused_bytes   : 28904
+
+1 row selected. (0.000613 sec) 
+
+]]></failure>
+      <failure message="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp:161&#x0A;Expected equality of these values:&#x0A;  actual&#x0A;    Which is: { 6, 4 }&#x0A;  expected&#x0A;    Which is: { 2, 2 }&#x0A;workspace update&#x0A;workspace update&#x0A;2 rows affected. (0.002990 sec) &#x0A;&#x0A;=== &lt;Result of SELECT Command in Line 4&gt; ===&#x0A;&#x0A;&lt;00001&gt; count(*): 2&#x0A;&#x0A;1 row selected. (0.000370 sec) &#x0A;&#x0A;=== &lt;Result of SELECT Command in Line 5&gt; ===&#x0A;&#x0A;&lt;00001&gt; Table_name         : &apos;dba.t_refs&apos;&#x0A;        Class_oid          : &apos;(0|195|2)&apos;&#x0A;        Heap_volume_id     : 1&#x0A;        Heap_file_id       : 640&#x0A;        Heap_header_page_id: 641&#x0A;        Has_oos_file       : 1&#x0A;        Oos_volume_id      : 1&#x0A;        Oos_file_id        : 704&#x0A;        Oos_num_user_pages : 4&#x0A;        Oos_page_size      : 16344&#x0A;        Oos_num_recs       : 6&#x0A;        Oos_recs_sumlen    : 30192&#x0A;        Oos_physical_bytes : 65376&#x0A;        Oos_unused_bytes   : 35184&#x0A;&#x0A;1 row selected. (0.000448 sec) &#x0A;Execute OK. (0.000193 sec) &#x0A;&#x0A;=== &lt;Result of SELECT Command in Line 7&gt; ===&#x0A;&#x0A;&lt;00001&gt; Table_name         : &apos;dba.t_refs&apos;&#x0A;        Class_oid          : &apos;(0|195|2)&apos;&#x0A;        Heap_volume_id     : 1&#x0A;        Heap_file_id       : 640&#x0A;        Heap_header_page_id: 641&#x0A;        Has_oos_file       : 1&#x0A;        Oos_volume_id      : 1&#x0A;        Oos_file_id        : 704&#x0A;        Oos_num_user_pages : 4&#x0A;        Oos_page_size      : 16344&#x0A;        Oos_num_recs       : 4&#x0A;        Oos_recs_sumlen    : 20128&#x0A;        Oos_physical_bytes : 65376&#x0A;        Oos_unused_bytes   : 45248&#x0A;&#x0A;1 row selected. (0.000343 sec) &#x0A;&#x0A;" type=""><![CDATA[/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp:161
+Expected equality of these values:
+  actual
+    Which is: { 6, 4 }
+  expected
+    Which is: { 2, 2 }
+workspace update
+workspace update
+2 rows affected. (0.002990 sec) 
+
+=== <Result of SELECT Command in Line 4> ===
+
+<00001> count(*): 2
+
+1 row selected. (0.000370 sec) 
+
+=== <Result of SELECT Command in Line 5> ===
+
+<00001> Table_name         : 'dba.t_refs'
+        Class_oid          : '(0|195|2)'
+        Heap_volume_id     : 1
+        Heap_file_id       : 640
+        Heap_header_page_id: 641
+        Has_oos_file       : 1
+        Oos_volume_id      : 1
+        Oos_file_id        : 704
+        Oos_num_user_pages : 4
+        Oos_page_size      : 16344
+        Oos_num_recs       : 6
+        Oos_recs_sumlen    : 30192
+        Oos_physical_bytes : 65376
+        Oos_unused_bytes   : 35184
+
+1 row selected. (0.000448 sec) 
+Execute OK. (0.000193 sec) 
+
+=== <Result of SELECT Command in Line 7> ===
+
+<00001> Table_name         : 'dba.t_refs'
+        Class_oid          : '(0|195|2)'
+        Heap_volume_id     : 1
+        Heap_file_id       : 640
+        Heap_header_page_id: 641
+        Has_oos_file       : 1
+        Oos_volume_id      : 1
+        Oos_file_id        : 704
+        Oos_num_user_pages : 4
+        Oos_page_size      : 16344
+        Oos_num_recs       : 4
+        Oos_recs_sumlen    : 20128
+        Oos_physical_bytes : 65376
+        Oos_unused_bytes   : 45248
+
+1 row selected. (0.000343 sec) 
+
+]]></failure>
+      <failure message="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp:161&#x0A;Expected equality of these values:&#x0A;  actual&#x0A;    Which is: { 4 }&#x0A;  expected&#x0A;    Which is: { 2 }&#x0A;&#x0A;=== &lt;Result of SELECT Command in Line 1&gt; ===&#x0A;&#x0A;&lt;00001&gt; verdict: &apos;VALUE_OK&apos;&#x0A;&#x0A;1 row selected. (0.002787 sec) &#x0A;&#x0A;=== &lt;Result of SELECT Command in Line 4&gt; ===&#x0A;&#x0A;&lt;00001&gt; Table_name         : &apos;dba.t_refs&apos;&#x0A;        Class_oid          : &apos;(0|195|2)&apos;&#x0A;        Heap_volume_id     : 1&#x0A;        Heap_file_id       : 640&#x0A;        Heap_header_page_id: 641&#x0A;        Has_oos_file       : 1&#x0A;        Oos_volume_id      : 1&#x0A;        Oos_file_id        : 704&#x0A;        Oos_num_user_pages : 4&#x0A;        Oos_page_size      : 16344&#x0A;        Oos_num_recs       : 4&#x0A;        Oos_recs_sumlen    : 20128&#x0A;        Oos_physical_bytes : 65376&#x0A;        Oos_unused_bytes   : 45248&#x0A;&#x0A;1 row selected. (0.000642 sec) &#x0A;&#x0A;" type=""><![CDATA[/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp:161
+Expected equality of these values:
+  actual
+    Which is: { 4 }
+  expected
+    Which is: { 2 }
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> verdict: 'VALUE_OK'
+
+1 row selected. (0.002787 sec) 
+
+=== <Result of SELECT Command in Line 4> ===
+
+<00001> Table_name         : 'dba.t_refs'
+        Class_oid          : '(0|195|2)'
+        Heap_volume_id     : 1
+        Heap_file_id       : 640
+        Heap_header_page_id: 641
+        Has_oos_file       : 1
+        Oos_volume_id      : 1
+        Oos_file_id        : 704
+        Oos_num_user_pages : 4
+        Oos_page_size      : 16344
+        Oos_num_recs       : 4
+        Oos_recs_sumlen    : 20128
+        Oos_physical_bytes : 65376
+        Oos_unused_bytes   : 45248
+
+1 row selected. (0.000642 sec) 
+
+]]></failure>
+      <failure message="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp:161&#x0A;Expected equality of these values:&#x0A;  actual&#x0A;    Which is: { 6 }&#x0A;  expected&#x0A;    Which is: { 2 }&#x0A;&#x0A;=== &lt;Result of SELECT Command in Line 1&gt; ===&#x0A;&#x0A;&lt;00001&gt; verdict: &apos;VALUE_OK&apos;&#x0A;&#x0A;1 row selected. (0.002789 sec) &#x0A;&#x0A;=== &lt;Result of SELECT Command in Line 4&gt; ===&#x0A;&#x0A;&lt;00001&gt; Table_name         : &apos;dba.t_refs&apos;&#x0A;        Class_oid          : &apos;(0|195|2)&apos;&#x0A;        Heap_volume_id     : 1&#x0A;        Heap_file_id       : 640&#x0A;        Heap_header_page_id: 641&#x0A;        Has_oos_file       : 1&#x0A;        Oos_volume_id      : 1&#x0A;        Oos_file_id        : 704&#x0A;        Oos_num_user_pages : 4&#x0A;        Oos_page_size      : 16344&#x0A;        Oos_num_recs       : 6&#x0A;        Oos_recs_sumlen    : 30192&#x0A;        Oos_physical_bytes : 65376&#x0A;        Oos_unused_bytes   : 35184&#x0A;&#x0A;1 row selected. (0.000762 sec) &#x0A;&#x0A;" type=""><![CDATA[/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp:161
+Expected equality of these values:
+  actual
+    Which is: { 6 }
+  expected
+    Which is: { 2 }
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> verdict: 'VALUE_OK'
+
+1 row selected. (0.002789 sec) 
+
+=== <Result of SELECT Command in Line 4> ===
+
+<00001> Table_name         : 'dba.t_refs'
+        Class_oid          : '(0|195|2)'
+        Heap_volume_id     : 1
+        Heap_file_id       : 640
+        Heap_header_page_id: 641
+        Has_oos_file       : 1
+        Oos_volume_id      : 1
+        Oos_file_id        : 704
+        Oos_num_user_pages : 4
+        Oos_page_size      : 16344
+        Oos_num_recs       : 6
+        Oos_recs_sumlen    : 30192
+        Oos_physical_bytes : 65376
+        Oos_unused_bytes   : 35184
+
+1 row selected. (0.000762 sec) 
+
+]]></failure>
+      <failure message="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp:161&#x0A;Expected equality of these values:&#x0A;  actual&#x0A;    Which is: { 4 }&#x0A;  expected&#x0A;    Which is: { 0 }&#x0A;&#x0A;=== &lt;Result of SELECT Command in Line 1&gt; ===&#x0A;&#x0A;&lt;00001&gt; Table_name         : &apos;dba.t_refs&apos;&#x0A;        Class_oid          : &apos;(0|195|2)&apos;&#x0A;        Heap_volume_id     : 1&#x0A;        Heap_file_id       : 640&#x0A;        Heap_header_page_id: 641&#x0A;        Has_oos_file       : 1&#x0A;        Oos_volume_id      : 1&#x0A;        Oos_file_id        : 704&#x0A;        Oos_num_user_pages : 4&#x0A;        Oos_page_size      : 16344&#x0A;        Oos_num_recs       : 4&#x0A;        Oos_recs_sumlen    : 20128&#x0A;        Oos_physical_bytes : 65376&#x0A;        Oos_unused_bytes   : 45248&#x0A;&#x0A;1 row selected. (0.001301 sec) &#x0A;&#x0A;" type=""><![CDATA[/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp:161
+Expected equality of these values:
+  actual
+    Which is: { 4 }
+  expected
+    Which is: { 0 }
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> Table_name         : 'dba.t_refs'
+        Class_oid          : '(0|195|2)'
+        Heap_volume_id     : 1
+        Heap_file_id       : 640
+        Heap_header_page_id: 641
+        Has_oos_file       : 1
+        Oos_volume_id      : 1
+        Oos_file_id        : 704
+        Oos_num_user_pages : 4
+        Oos_page_size      : 16344
+        Oos_num_recs       : 4
+        Oos_recs_sumlen    : 20128
+        Oos_physical_bytes : 65376
+        Oos_unused_bytes   : 45248
+
+1 row selected. (0.001301 sec) 
+
+]]></failure>
+    </testcase>
+    <testcase name="FailedUniqueLoadRollsBackWithoutOrphans" file="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp" line="320" status="run" result="completed" time="12.003" timestamp="2026-10-07T19:22:18.898" classname="OosWorkspaceTest" />
+    <testcase name="FilteredDuplicateLeavesNoOrphanAndContinues" file="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp" line="327" status="run" result="completed" time="14.71" timestamp="2026-10-07T19:22:30.901" classname="OosWorkspaceTest" />
+    <testcase name="LoaderHonorsStoragePolicy" file="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp" line="337" status="run" result="completed" time="16.664" timestamp="2026-10-07T19:22:45.612" classname="OosWorkspaceTest" />
+    <testcase name="WorkspaceUpdatePreservesExternalLobFiles" file="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp" line="365" status="run" result="completed" time="11.987" timestamp="2026-10-07T19:23:02.276" classname="OosWorkspaceTest">
+      <failure message="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp:161&#x0A;Expected equality of these values:&#x0A;  actual&#x0A;    Which is: { 2 }&#x0A;  expected&#x0A;    Which is: { 1 }&#x0A;&#x0A;=== &lt;Result of SELECT Command in Line 1&gt; ===&#x0A;&#x0A;&lt;00001&gt; verdict: &apos;VALUE_OK&apos;&#x0A;&#x0A;1 row selected. (0.002500 sec) &#x0A;&#x0A;=== &lt;Result of SELECT Command in Line 4&gt; ===&#x0A;&#x0A;&lt;00001&gt; Table_name         : &apos;dba.t_lob&apos;&#x0A;        Class_oid          : &apos;(0|195|2)&apos;&#x0A;        Heap_volume_id     : 1&#x0A;        Heap_file_id       : 576&#x0A;        Heap_header_page_id: 577&#x0A;        Has_oos_file       : 1&#x0A;        Oos_volume_id      : 1&#x0A;        Oos_file_id        : 640&#x0A;        Oos_num_user_pages : 2&#x0A;        Oos_page_size      : 16344&#x0A;        Oos_num_recs       : 2&#x0A;        Oos_recs_sumlen    : 10064&#x0A;        Oos_physical_bytes : 32688&#x0A;        Oos_unused_bytes   : 22624&#x0A;&#x0A;1 row selected. (0.000660 sec) &#x0A;&#x0A;" type=""><![CDATA[/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp:161
+Expected equality of these values:
+  actual
+    Which is: { 2 }
+  expected
+    Which is: { 1 }
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> verdict: 'VALUE_OK'
+
+1 row selected. (0.002500 sec) 
+
+=== <Result of SELECT Command in Line 4> ===
+
+<00001> Table_name         : 'dba.t_lob'
+        Class_oid          : '(0|195|2)'
+        Heap_volume_id     : 1
+        Heap_file_id       : 576
+        Heap_header_page_id: 577
+        Has_oos_file       : 1
+        Oos_volume_id      : 1
+        Oos_file_id        : 640
+        Oos_num_user_pages : 2
+        Oos_page_size      : 16344
+        Oos_num_recs       : 2
+        Oos_recs_sumlen    : 10064
+        Oos_physical_bytes : 32688
+        Oos_unused_bytes   : 22624
+
+1 row selected. (0.000660 sec) 
+
+]]></failure>
+    </testcase>
+    <testcase name="PartitionMovementTransfersOwnership" file="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp" line="384" status="run" result="completed" time="13.171" timestamp="2026-10-07T19:23:14.264" classname="OosWorkspaceTest">
+      <failure message="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp:161&#x0A;Expected equality of these values:&#x0A;  actual&#x0A;    Which is: { 1 }&#x0A;  expected&#x0A;    Which is: { 0 }&#x0A;&#x0A;=== &lt;Result of SELECT Command in Line 1&gt; ===&#x0A;&#x0A;&lt;00001&gt; Table_name         : &apos;dba.t_parts__p__p0&apos;&#x0A;        Class_oid          : &apos;(0|195|5)&apos;&#x0A;        Heap_volume_id     : 1&#x0A;        Heap_file_id       : 640&#x0A;        Heap_header_page_id: 641&#x0A;        Has_oos_file       : 1&#x0A;        Oos_volume_id      : 1&#x0A;        Oos_file_id        : 832&#x0A;        Oos_num_user_pages : 3&#x0A;        Oos_page_size      : 16344&#x0A;        Oos_num_recs       : 1&#x0A;        Oos_recs_sumlen    : 5032&#x0A;        Oos_physical_bytes : 49032&#x0A;        Oos_unused_bytes   : 44000&#x0A;&#x0A;1 row selected. (0.001214 sec) &#x0A;&#x0A;" type=""><![CDATA[/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp:161
+Expected equality of these values:
+  actual
+    Which is: { 1 }
+  expected
+    Which is: { 0 }
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> Table_name         : 'dba.t_parts__p__p0'
+        Class_oid          : '(0|195|5)'
+        Heap_volume_id     : 1
+        Heap_file_id       : 640
+        Heap_header_page_id: 641
+        Has_oos_file       : 1
+        Oos_volume_id      : 1
+        Oos_file_id        : 832
+        Oos_num_user_pages : 3
+        Oos_page_size      : 16344
+        Oos_num_recs       : 1
+        Oos_recs_sumlen    : 5032
+        Oos_physical_bytes : 49032
+        Oos_unused_bytes   : 44000
+
+1 row selected. (0.001214 sec) 
+
+]]></failure>
+    </testcase>
+    <testcase name="SuccessfulNoLoggingLoadStoresOos" file="/home/vimkim/gh/cb/pr7925-02-record-owner/unit_tests/oos/test_oos_workspace.cpp" line="393" status="run" result="completed" time="7.341" timestamp="2026-10-07T19:23:27.435" classname="OosWorkspaceTest" />
+  </testsuite>
+</testsuites>

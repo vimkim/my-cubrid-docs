@@ -30,7 +30,7 @@ current ticket bodies were reread before dispatch.
 | Ticket | Agent | Branch and worktree | Base | State |
 | --- | --- | --- | --- | --- |
 | 01 | `/root/ticket01`, `fork_turns=none` | `task/pr7925-01-stored-rows`; `/home/vimkim/gh/cb/pr7925-01-stored-rows` | `1c660d22e4340ee707336ad08c8b4bf4b69744de` | Resolved at `625b193745959d0ab047f26f4354e9aacb48160d`; privately integrated, final checks/reviews passed |
-| 02 | `/root/ticket02`, `fork_turns=none` | `task/pr7925-02-record-owner`; `/home/vimkim/gh/cb/pr7925-02-record-owner` | `b59f243fd0f30bb94344558ffa1755c37c43d2d4`, contains accepted `4be72fc20` | Claimed; repaired commit `1932b3ec` privately integrated; final source reviews pass; final runtime checks active |
+| 02 | `/root/ticket02`, `fork_turns=none` | `task/pr7925-02-record-owner`; `/home/vimkim/gh/cb/pr7925-02-record-owner` | `b59f243fd0f30bb94344558ffa1755c37c43d2d4`, contains accepted `4be72fc20` | Claimed; Local implementation/verification complete at `1932b3ec`; final shared partition acceptance pending (status claimed) |
 
 Each implementer owns only its assigned ticket. The coordinator owns scheduling, tracker edits,
 private linear integration, evidence review and overall status. Any replacement
@@ -313,3 +313,63 @@ The [six-commit squash simulation](evidence/combined-final/equal-tree-squash-tra
 also yields zero conflicts and an identical private tree without replaying any
 prerequisite commits or changing refs/worktrees. Actual shared inclusion and
 partition acceptance remain pending; the parent spec remains unchanged.
+
+
+## Final local verification and resumable state
+
+The selected implementations are committed and privately integrated at
+`1932b3ec3d1b83bec83b7de1a6dd482f3a03b63d` on `review/pr7925-combined` in
+`/home/vimkim/gh/cb/pr7925-simplification-integration`. Both ticket agents were
+new `fork_turns=none` contexts; each repair stayed with its originating ticket.
+No production owner beyond accepted `heap_pending_record` was introduced.
+
+| Final verification | Result | Evidence |
+| --- | --- | --- |
+| Ticket 02 committed debug_gcc build/install and formatter | PASS | [Report](evidence/ticket02/report.md) |
+| Ticket 02 full configured OOS suite | 38/38 CTests, 374/374 GoogleTests, 32 XML files; 348.55s | [Receipt](evidence/ticket02/oos-full-final.log), [verification](evidence/ticket02/verification-final.json) |
+| Coordinator integration build/install | PASS at the same exact commit | [Receipt](evidence/combined-final/build-integrated-final-1932b3ec.log) |
+| Coordinator unfiltered focused selection | 5/5 CTests, 70/70 cases (21 comparison, 13 utility, 36 dependency); 178.95s | [Receipt](evidence/combined-final/focused-integrated-1932b3ec.log), [XML audit](evidence/combined-final/coordinator-focus-1932b3ec.json) |
+| Independent final full XML audit | All 374 cases ran; zero failures/skips/disabled; all 70 original focused identities retained | [Audit](evidence/combined-final/coordinator-full-1932b3ec.json) |
+| Whole-spec Standards review | 0 documented breaches, 0 actionable judgment findings | [Final report](evidence/whole-review-final/standards.md) |
+| Whole-spec Spec review | 0 remaining source findings, 0 scope creep; initial no-demotion finding resolved | [Final report](evidence/whole-review-final/spec.md) |
+| Proportionate small/OOS loader screening | No reproducible regression within observed spread; no improvement claim | [Exact phase/source/configuration receipts](evidence/ticket02/benchmark-summary-final.json) |
+
+All final XML receipts have zero failures, skips and disabled cases. Source has
+not changed after the final reviews/checks. Their review-time runtime limitations
+are resolved by these receipts. The final source contract and task/whole-PR diffs
+remain linked above. The original PR #7925 tip and dirty CCI bytes are preserved;
+the dependency/shared branches are unchanged. The parent spec blob remains
+`89a4c2d242e9fc0bcb5580971370b359d28a6b79`, with no parent closure.
+
+Ticket 01 is resolved. Ticket 02's local source/private runtime work is complete,
+but it remains claimed and its shared-integration criterion stays unchecked.
+PR #7927 is still open at the selected `4be72fc20`; the shared target remains
+`fb567a629cdb390fff920542173fa36f454c74a0`. Work item 292 must wait for actual
+prerequisite inclusion and final shared partition acceptance. The next source
+step is to compare the actual squash result, preserve the tested branch, and
+transplant only the six post-boundary task commits onto a separately approved
+updated base. Then verify the resulting diff and relevant combined partition
+checks before ticket resolution or original-PR promotion. The existing PR,
+shared/default branch and remote publication gates remain separate.
+
+Ticket 02's [stable evidence](evidence/ticket02/report.md) is copied with
+[copy provenance](evidence/ticket02/COPY-NOTES.md). The report and source manifest
+are byte-identical. Bulk generated benchmark inputs are retained outside the
+docs repository with paths/sizes/hashes and a reproducible generator; no native
+DB volumes, build directory or installation were copied or deleted.
+
+Cleanup was inspected and stopped. Ticket 02 tip is contained in the private
+integration branch, but its [doctor receipt](evidence/ticket02/workenv-doctor-final.log)
+reports seven unconfirmed socket entries and 2,422 inaccessible host PIDs. No
+inactivity or disposal claim follows. Seven benchmark registrations, the failed
+long-name storage, four failed baseline utility databases, source worktree/branch,
+install/build, logs, TMP and allocation are retained with
+[inventory](evidence/ticket02/retained-inventory.json). Ticket 01 remains retained
+for its previously recorded ownership uncertainty. No process/IPC/socket/database
+or worktree was removed, and no unrelated files or worktrees were changed.
+
+The private engine result remains available for review, with clean source/owned
+CCI status. The docs task branch is `docs/pr7925-orchestration` in
+`/home/vimkim/gh/my-cubrid-docs-pr7925-orchestration`; committed evidence awaits
+its own user confirmation before rebase/fast-forward into current docs `main`.
+No push, CI, external comment, JIRA change or PR publication was performed.
