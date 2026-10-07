@@ -1,0 +1,856 @@
+[0mdirenv: loading ~/gh/cb/pr7925-simplification-integration/.envrc
+Preset Mode: debug_gcc
+Install Dir: /home/vimkim/.cub/install/pr7925-simplification-integration/debug_gcc
+DB Dir: /home/vimkim/gh/cb/pr7925-simplification-integration/.cub-workenv/databases
+Build Dir: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc
+Internal ctest changing into directory: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc
+UpdateCTestConfiguration  from :/home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/DartConfiguration.tcl
+UpdateCTestConfiguration  from :/home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/DartConfiguration.tcl
+Test project /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added setup test oos_setup_db required by fixture OOS_DB
+Added cleanup test oos_cleanup_db required by fixture OOS_DB
+Added 2 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 1
+    Start  1: oos_setup_db
+
+1: Test command: /usr/bin/cmake "-E" "env" "CUBRID=/home/vimkim/.cub/install/pr7925-simplification-integration/debug_gcc" "CUBRID_DATABASES=/home/vimkim/gh/cb/pr7925-simplification-integration/.cub-workenv/databases" "PATH=/home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/vm/jdk8/bin:/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.cub/install/pr7925-simplification-integration/debug_gcc/bin:/home/vimkim/.config/my-scripts/bin:/home/vimkim/.local/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/share/Modules/bin:/usr/lib64/ccache:/home/vimkim/.codex/packages/standalone/releases/0.160.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lnPnJk:/home/vimkim/.codex/tmp/arg0/codex-arg0e3Wmnf:/home/vimkim/.codex/packages/standalone/releases/0.160.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0rkaV8A:/home/vimkim/.codex/packages/standalone/releases/0.159.3-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Eiz5FQ:/home/vimkim/.codex/packages/standalone/releases/0.159.2-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0UZCYf0:/home/vimkim/.codex/packages/standalone/releases/0.159.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg006SEr5:/home/vimkim/.codex/packages/standalone/releases/0.159.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Sdrd24:/home/vimkim/.codex/packages/standalone/releases/0.158.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0mOvekQ:/home/vimkim/.codex/packages/standalone/releases/0.157.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0jzxIFn:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lJR4wu:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/installs/bun/latest/bin:/home/vimkim/.local/share/mise/installs/go/1.27.1/bin:/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/bin:/home/vimkim/.local/share/mise/installs/node/latest/bin:/home/vimkim/.local/share/mise/installs/python/latest/bin:/home/vimkim/.local/share/mise/shims:/opt/bison-3.0.5/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin" "bash" "/home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/scripts/setup_unittestdb.sh"
+1: Working Directory: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/unit_tests/oos
+1: Test timeout computed to be: 10000000
+1: Creating database with 64.0M size using locale en_US.utf8. The total amount of disk space needed is 104.0M.
+1: 
+1: CUBRID 11.5.0 (11.5.0.2650) (64 debug build)
+1: 
+1/5 Test  #1: oos_setup_db .....................   Passed    3.52 sec
+test 35
+    Start 35: test_oos_sql_deferred_write
+
+35: Test command: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/bin/test_oos_sql_deferred_write
+35: Working Directory: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/unit_tests/oos/sql
+35: Test timeout computed to be: 180
+35: [==========] Running 36 tests from 2 test suites.
+35: [----------] Global test environment set-up.
+35: ##### Starting Server For OOS SQL Testing #####
+35: will be written at ./test_oos_sql_log
+35: [----------] 35 tests from OosSqlDeferredWrite
+35: [ RUN      ] OosSqlDeferredWrite.InsertOwnsOosInDestinationHeap
+35: [       OK ] OosSqlDeferredWrite.InsertOwnsOosInDestinationHeap (29 ms)
+35: [ RUN      ] OosSqlDeferredWrite.RawClientInsertOwnsDestinationOos
+35: [       OK ] OosSqlDeferredWrite.RawClientInsertOwnsDestinationOos (9 ms)
+35: [ RUN      ] OosSqlDeferredWrite.WorkspacePartitionInsertAndMovementOwnDestination
+35: [       OK ] OosSqlDeferredWrite.WorkspacePartitionInsertAndMovementOwnDestination (26 ms)
+35: [ RUN      ] OosSqlDeferredWrite.RedistributionRewritesMultichunkValuesAtDestination
+35: [       OK ] OosSqlDeferredWrite.RedistributionRewritesMultichunkValuesAtDestination (51 ms)
+35: [ RUN      ] OosSqlDeferredWrite.RawCopyAreaRoutesInsertAndMovementWithoutChangingPayload
+35: [       OK ] OosSqlDeferredWrite.RawCopyAreaRoutesInsertAndMovementWithoutChangingPayload (34 ms)
+35: [ RUN      ] OosSqlDeferredWrite.RawClientUpdatePreservesUnassignedValuesAndRollsBackFailure
+35: [       OK ] OosSqlDeferredWrite.RawClientUpdatePreservesUnassignedValuesAndRollsBackFailure (19 ms)
+35: [ RUN      ] OosSqlDeferredWrite.PrefetchSkipsUnexpandedOosNeighbors
+35: [       OK ] OosSqlDeferredWrite.PrefetchSkipsUnexpandedOosNeighbors (7 ms)
+35: [ RUN      ] OosSqlDeferredWrite.PendingReferencesResolveAndFinalizeInPlace
+35: [       OK ] OosSqlDeferredWrite.PendingReferencesResolveAndFinalizeInPlace (14757 ms)
+35: [ RUN      ] OosSqlDeferredWrite.FinalizationResetsPublicationOnceAndFailureCannotRetry
+35: [       OK ] OosSqlDeferredWrite.FinalizationResetsPublicationOnceAndFailureCannotRetry (3955 ms)
+35: [ RUN      ] OosSqlDeferredWrite.SerializedPreparationPreservesMvccAndOutlivesSource
+35: [       OK ] OosSqlDeferredWrite.SerializedPreparationPreservesMvccAndOutlivesSource (7 ms)
+35: [ RUN      ] OosSqlDeferredWrite.RedistributionFailurePreservesSourceAndNextOperation
+35: [       OK ] OosSqlDeferredWrite.RedistributionFailurePreservesSourceAndNextOperation (12487 ms)
+35: [ RUN      ] OosSqlDeferredWrite.InternalAndAddressReservationsBypassPreparation
+35: [       OK ] OosSqlDeferredWrite.InternalAndAddressReservationsBypassPreparation (18 ms)
+35: [ RUN      ] OosSqlDeferredWrite.ForcedOutlineKeyRoutesFromPreparedBytes
+35: [       OK ] OosSqlDeferredWrite.ForcedOutlineKeyRoutesFromPreparedBytes (28 ms)
+35: [ RUN      ] OosSqlDeferredWrite.RejectedDestinationCreatesNoOosAndNextInsertSucceeds
+35: [       OK ] OosSqlDeferredWrite.RejectedDestinationCreatesNoOosAndNextInsertSucceeds (11359 ms)
+35: [ RUN      ] OosSqlDeferredWrite.LobPreparationPreservesSourceAndDestinationValues
+35: [       OK ] OosSqlDeferredWrite.LobPreparationPreservesSourceAndDestinationValues (26 ms)
+35: [ RUN      ] OosSqlDeferredWrite.SupportedPartitionDomainsPreserveValuesAndOwnership
+35: [       OK ] OosSqlDeferredWrite.SupportedPartitionDomainsPreserveValuesAndOwnership (300 ms)
+35: [ RUN      ] OosSqlDeferredWrite.LoaderQueueRetainsClearedInputsAndRollsBackBulkFailure
+35: [       OK ] OosSqlDeferredWrite.LoaderQueueRetainsClearedInputsAndRollsBackBulkFailure (998 ms)
+35: [ RUN      ] OosSqlDeferredWrite.AllocationAndStorageFailureLeaveNextInsertUsable
+35: [       OK ] OosSqlDeferredWrite.AllocationAndStorageFailureLeaveNextInsertUsable (2166 ms)
+35: [ RUN      ] OosSqlDeferredWrite.ConstraintFailureAfterOosAllowsNextInsert
+35: [       OK ] OosSqlDeferredWrite.ConstraintFailureAfterOosAllowsNextInsert (14 ms)
+35: [ RUN      ] OosSqlDeferredWrite.DuplicateProbesDoNotPersistCandidateValues
+35: [       OK ] OosSqlDeferredWrite.DuplicateProbesDoNotPersistCandidateValues (67 ms)
+35: [ RUN      ] OosSqlDeferredWrite.DuplicateProbesReadCompositeKeys
+35: [       OK ] OosSqlDeferredWrite.DuplicateProbesReadCompositeKeys (20 ms)
+35: [ RUN      ] OosSqlDeferredWrite.DuplicateProbesPreserveFunctionIndexesAndCompressedCompositeKeys
+35: [       OK ] OosSqlDeferredWrite.DuplicateProbesPreserveFunctionIndexesAndCompressedCompositeKeys (78 ms)
+35: [ RUN      ] OosSqlDeferredWrite.AbandonedDuplicateCandidateDoesNotWriteOos
+35: [       OK ] OosSqlDeferredWrite.AbandonedDuplicateCandidateDoesNotWriteOos (55 ms)
+35: [ RUN      ] OosSqlDeferredWrite.DuplicateProbeFailuresLeaveNextWriteUsable
+35: [       OK ] OosSqlDeferredWrite.DuplicateProbeFailuresLeaveNextWriteUsable (3798 ms)
+35: [ RUN      ] OosSqlDeferredWrite.DuplicateProbesPreserveLobValuesAndRollback
+35: [       OK ] OosSqlDeferredWrite.DuplicateProbesPreserveLobValuesAndRollback (48 ms)
+35: [ RUN      ] OosSqlDeferredWrite.ReplaceProbeReadsOutlinedCandidateAgainstInlineExistingKey
+35: [       OK ] OosSqlDeferredWrite.ReplaceProbeReadsOutlinedCandidateAgainstInlineExistingKey (15 ms)
+35: [ RUN      ] OosSqlDeferredWrite.DuplicateProbesPreserveMultipleUniqueConstraintsAndForeignKeys
+35: [       OK ] OosSqlDeferredWrite.DuplicateProbesPreserveMultipleUniqueConstraintsAndForeignKeys (60 ms)
+35: [ RUN      ] OosSqlDeferredWrite.UpdateMovementAllocatesOnlyAtDestination
+35: [       OK ] OosSqlDeferredWrite.UpdateMovementAllocatesOnlyAtDestination (30 ms)
+35: [ RUN      ] OosSqlDeferredWrite.UpdateDomainsPreserveUnassignedValuesThroughMovementAndRollback
+35: [       OK ] OosSqlDeferredWrite.UpdateDomainsPreserveUnassignedValuesThroughMovementAndRollback (572 ms)
+35: [ RUN      ] OosSqlDeferredWrite.UpdateForcedKeyUsesCanonicalValueAndRejectsWrongPartition
+35: [       OK ] OosSqlDeferredWrite.UpdateForcedKeyUsesCanonicalValueAndRejectsWrongPartition (32 ms)
+35: [ RUN      ] OosSqlDeferredWrite.UpdateLayoutGrowthAndLobOverwritePreserveValues
+35: [       OK ] OosSqlDeferredWrite.UpdateLayoutGrowthAndLobOverwritePreserveValues (64 ms)
+35: [ RUN      ] OosSqlDeferredWrite.UpdateFailureClearsPublicationAndRollsBackBothDestinations
+35: [       OK ] OosSqlDeferredWrite.UpdateFailureClearsPublicationAndRollsBackBothDestinations (5766 ms)
+35: [ RUN      ] OosSqlDeferredWrite.UpdateIndexFailureRollsBackMovementAndNonmovement
+35: [       OK ] OosSqlDeferredWrite.UpdateIndexFailureRollsBackMovementAndNonmovement (44 ms)
+35: [ RUN      ] OosSqlDeferredWrite.NonpartitionedUpdateChecksForeignKeysAfterFinalization
+35: [       OK ] OosSqlDeferredWrite.NonpartitionedUpdateChecksForeignKeysAfterFinalization (30 ms)
+35: [ RUN      ] OosSqlDeferredWrite.RollbackPreservesMultiChunkValuesAndLiveOwnership
+35: [       OK ] OosSqlDeferredWrite.RollbackPreservesMultiChunkValuesAndLiveOwnership (71 ms)
+35: [----------] 35 tests from OosSqlDeferredWrite (57059 ms total)
+35: 
+35: [----------] 1 test from OosSqlPacking
+35: [ RUN      ] OosSqlPacking.GenericDescriptorsPreserveArbitraryBytes
+35: [       OK ] OosSqlPacking.GenericDescriptorsPreserveArbitraryBytes (0 ms)
+35: [----------] 1 test from OosSqlPacking (0 ms total)
+35: 
+35: [----------] Global test environment tear-down
+35: ##### Stopping Server For OOS SQL Testing #####
+35: [==========] 36 tests from 2 test suites ran. (57248 ms total)
+35: [  PASSED  ] 36 tests.
+2/5 Test #35: test_oos_sql_deferred_write ......   Passed   57.27 sec
+test 37
+    Start 37: test_oos_sql_workspace_bytes
+
+37: Test command: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/bin/test_oos_sql_workspace_bytes
+37: Working Directory: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/unit_tests/oos/sql
+37: Test timeout computed to be: 30
+37: [==========] Running 21 tests from 2 test suites.
+37: [----------] Global test environment set-up.
+37: ##### Starting Server For OOS SQL Testing #####
+37: will be written at ./test_oos_sql_log
+37: [----------] 8 tests from OosWorkspaceBytes
+37: [ RUN      ] OosWorkspaceBytes.TinyNullAndEmptyValues
+37: [       OK ] OosWorkspaceBytes.TinyNullAndEmptyValues (49 ms)
+37: [ RUN      ] OosWorkspaceBytes.LargestFirstAndPreferInline
+37: [       OK ] OosWorkspaceBytes.LargestFirstAndPreferInline (13 ms)
+37: [ RUN      ] OosWorkspaceBytes.EqualSizeTie
+37: [       OK ] OosWorkspaceBytes.EqualSizeTie (10 ms)
+37: [ RUN      ] OosWorkspaceBytes.OffsetWidthShrinksAfterForcedDemotion
+37: [       OK ] OosWorkspaceBytes.OffsetWidthShrinksAfterForcedDemotion (14 ms)
+37: [ RUN      ] OosWorkspaceBytes.CompressedStringAndJson
+37: [       OK ] OosWorkspaceBytes.CompressedStringAndJson (13 ms)
+37: [ RUN      ] OosWorkspaceBytes.CollectionSerializedBytes
+37: [       OK ] OosWorkspaceBytes.CollectionSerializedBytes (11 ms)
+37: [ RUN      ] OosWorkspaceBytes.WideVotAndManyAttributes
+37: [       OK ] OosWorkspaceBytes.WideVotAndManyAttributes (87 ms)
+37: [ RUN      ] OosWorkspaceBytes.OldDiskRepresentationIsConvertedBeforeWorkspaceSerialization
+37: [       OK ] OosWorkspaceBytes.OldDiskRepresentationIsConvertedBeforeWorkspaceSerialization (12 ms)
+37: [----------] 8 tests from OosWorkspaceBytes (215 ms total)
+37: 
+37: [----------] 13 tests from EncodingAndVotBoundaries/OosWorkspaceSizeBoundary
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/0
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/0 (12 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/1
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/1 (12 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/2
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/2 (12 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/3
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/3 (12 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/4
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/4 (12 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/5
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/5 (12 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/6
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/6 (12 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/7
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/7 (12 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/8
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/8 (13 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/9
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/9 (13 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/10
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/10 (14 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/11
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/11 (14 ms)
+37: [ RUN      ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/12
+37: [       OK ] EncodingAndVotBoundaries/OosWorkspaceSizeBoundary.SerializedSizesMatchValueSizes/12 (16 ms)
+37: [----------] 13 tests from EncodingAndVotBoundaries/OosWorkspaceSizeBoundary (174 ms total)
+37: 
+37: [----------] Global test environment tear-down
+37: ##### Stopping Server For OOS SQL Testing #####
+37: [==========] 21 tests from 2 test suites ran. (500 ms total)
+37: [  PASSED  ] 21 tests.
+3/5 Test #37: test_oos_sql_workspace_bytes .....   Passed    0.52 sec
+test 2
+    Start  2: oos_cleanup_db
+
+2: Test command: /usr/bin/cmake "-E" "env" "CUBRID=/home/vimkim/.cub/install/pr7925-simplification-integration/debug_gcc" "CUBRID_DATABASES=/home/vimkim/gh/cb/pr7925-simplification-integration/.cub-workenv/databases" "PATH=/home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/vm/jdk8/bin:/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.cub/install/pr7925-simplification-integration/debug_gcc/bin:/home/vimkim/.config/my-scripts/bin:/home/vimkim/.local/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/share/Modules/bin:/usr/lib64/ccache:/home/vimkim/.codex/packages/standalone/releases/0.160.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lnPnJk:/home/vimkim/.codex/tmp/arg0/codex-arg0e3Wmnf:/home/vimkim/.codex/packages/standalone/releases/0.160.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0rkaV8A:/home/vimkim/.codex/packages/standalone/releases/0.159.3-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Eiz5FQ:/home/vimkim/.codex/packages/standalone/releases/0.159.2-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0UZCYf0:/home/vimkim/.codex/packages/standalone/releases/0.159.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg006SEr5:/home/vimkim/.codex/packages/standalone/releases/0.159.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Sdrd24:/home/vimkim/.codex/packages/standalone/releases/0.158.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0mOvekQ:/home/vimkim/.codex/packages/standalone/releases/0.157.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0jzxIFn:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lJR4wu:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/installs/bun/latest/bin:/home/vimkim/.local/share/mise/installs/go/1.27.1/bin:/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/bin:/home/vimkim/.local/share/mise/installs/node/latest/bin:/home/vimkim/.local/share/mise/installs/python/latest/bin:/home/vimkim/.local/share/mise/shims:/opt/bison-3.0.5/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin" "bash" "/home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/scripts/cleanup_unittestdb.sh"
+2: Working Directory: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/unit_tests/oos
+2: Test timeout computed to be: 30
+2: @ cubrid server stop: unittestdb
+2: ++ cubrid server 'unittestdb' is not running.
+4/5 Test  #2: oos_cleanup_db ...................   Passed    0.25 sec
+test 24
+    Start 24: test_oos_workspace
+
+24: Test command: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/bin/test_oos_workspace
+24: Working Directory: /home/vimkim/gh/cb/pr7925-simplification-integration/build_preset_debug_gcc/unit_tests/oos
+24: Test timeout computed to be: 240
+24: [==========] Running 13 tests from 1 test suite.
+24: [----------] Global test environment set-up.
+24: [----------] 13 tests from OosWorkspaceTest
+24: [ RUN      ] OosWorkspaceTest.StandaloneLoaderStoresOos
+24: [       OK ] OosWorkspaceTest.StandaloneLoaderStoresOos (7298 ms)
+24: [ RUN      ] OosWorkspaceTest.LoaderRejectsOosBigoneButKeepsOrdinaryBigone
+24: [       OK ] OosWorkspaceTest.LoaderRejectsOosBigoneButKeepsOrdinaryBigone (9628 ms)
+24: [ RUN      ] OosWorkspaceTest.WorkspaceInsertUsesReservedOid
+24: [       OK ] OosWorkspaceTest.WorkspaceInsertUsesReservedOid (6064 ms)
+24: [ RUN      ] OosWorkspaceTest.LoaderPreservesForwardAndBackwardReferences
+24: /home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/test_oos_workspace.cpp:161: Failure
+24: Expected equality of these values:
+24:   actual
+24:     Which is: { 4 }
+24:   expected
+24:     Which is: { 2 }
+24: 
+24: === <Result of SELECT Command in Line 1> ===
+24: 
+24: <00001> verdict: 'VALUE_OK'
+24: 
+24: 1 row selected. (0.002592 sec) 
+24: 
+24: === <Result of SELECT Command in Line 4> ===
+24: 
+24: <00001> Table_name         : 'dba.t_refs'
+24:         Class_oid          : '(0|195|2)'
+24:         Heap_volume_id     : 1
+24:         Heap_file_id       : 640
+24:         Heap_header_page_id: 641
+24:         Has_oos_file       : 1
+24:         Oos_volume_id      : 1
+24:         Oos_file_id        : 704
+24:         Oos_num_user_pages : 3
+24:         Oos_page_size      : 16344
+24:         Oos_num_recs       : 4
+24:         Oos_recs_sumlen    : 20128
+24:         Oos_physical_bytes : 49032
+24:         Oos_unused_bytes   : 28904
+24: 
+24: 1 row selected. (0.000593 sec) 
+24: 
+24: 
+24: Workspace OOS evidence retained at "/home/vimkim/tmp/cubrid-workspace-oos-hnZAtR"
+24: [  FAILED  ] OosWorkspaceTest.LoaderPreservesForwardAndBackwardReferences (7131 ms)
+24: [ RUN      ] OosWorkspaceTest.PartitionsOwnSeparateOosFiles
+24: [       OK ] OosWorkspaceTest.PartitionsOwnSeparateOosFiles (9491 ms)
+24: [ RUN      ] OosWorkspaceTest.InsertRollbackReclaimsFlushedChain
+24: [       OK ] OosWorkspaceTest.InsertRollbackReclaimsFlushedChain (8347 ms)
+24: [ RUN      ] OosWorkspaceTest.WorkspaceUpdateRollbackCommitAndDelete
+24: /home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/test_oos_workspace.cpp:161: Failure
+24: Expected equality of these values:
+24:   actual
+24:     Which is: { 4 }
+24:   expected
+24:     Which is: { 2 }
+24: 
+24: === <Result of SELECT Command in Line 1> ===
+24: 
+24: <00001> verdict: 'VALUE_OK'
+24: 
+24: 1 row selected. (0.002731 sec) 
+24: 
+24: === <Result of SELECT Command in Line 4> ===
+24: 
+24: <00001> Table_name         : 'dba.t_refs'
+24:         Class_oid          : '(0|195|2)'
+24:         Heap_volume_id     : 1
+24:         Heap_file_id       : 640
+24:         Heap_header_page_id: 641
+24:         Has_oos_file       : 1
+24:         Oos_volume_id      : 1
+24:         Oos_file_id        : 704
+24:         Oos_num_user_pages : 3
+24:         Oos_page_size      : 16344
+24:         Oos_num_recs       : 4
+24:         Oos_recs_sumlen    : 20128
+24:         Oos_physical_bytes : 49032
+24:         Oos_unused_bytes   : 28904
+24: 
+24: 1 row selected. (0.000629 sec) 
+24: 
+24: 
+24: /home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/test_oos_workspace.cpp:161: Failure
+24: Expected equality of these values:
+24:   actual
+24:     Which is: { 6, 4 }
+24:   expected
+24:     Which is: { 2, 2 }
+24: workspace update
+24: workspace update
+24: 2 rows affected. (0.003263 sec) 
+24: 
+24: === <Result of SELECT Command in Line 4> ===
+24: 
+24: <00001> count(*): 2
+24: 
+24: 1 row selected. (0.000422 sec) 
+24: 
+24: === <Result of SELECT Command in Line 5> ===
+24: 
+24: <00001> Table_name         : 'dba.t_refs'
+24:         Class_oid          : '(0|195|2)'
+24:         Heap_volume_id     : 1
+24:         Heap_file_id       : 640
+24:         Heap_header_page_id: 641
+24:         Has_oos_file       : 1
+24:         Oos_volume_id      : 1
+24:         Oos_file_id        : 704
+24:         Oos_num_user_pages : 4
+24:         Oos_page_size      : 16344
+24:         Oos_num_recs       : 6
+24:         Oos_recs_sumlen    : 30192
+24:         Oos_physical_bytes : 65376
+24:         Oos_unused_bytes   : 35184
+24: 
+24: 1 row selected. (0.000708 sec) 
+24: Execute OK. (0.000310 sec) 
+24: 
+24: === <Result of SELECT Command in Line 7> ===
+24: 
+24: <00001> Table_name         : 'dba.t_refs'
+24:         Class_oid          : '(0|195|2)'
+24:         Heap_volume_id     : 1
+24:         Heap_file_id       : 640
+24:         Heap_header_page_id: 641
+24:         Has_oos_file       : 1
+24:         Oos_volume_id      : 1
+24:         Oos_file_id        : 704
+24:         Oos_num_user_pages : 4
+24:         Oos_page_size      : 16344
+24:         Oos_num_recs       : 4
+24:         Oos_recs_sumlen    : 20128
+24:         Oos_physical_bytes : 65376
+24:         Oos_unused_bytes   : 45248
+24: 
+24: 1 row selected. (0.000545 sec) 
+24: 
+24: 
+24: /home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/test_oos_workspace.cpp:161: Failure
+24: Expected equality of these values:
+24:   actual
+24:     Which is: { 4 }
+24:   expected
+24:     Which is: { 2 }
+24: 
+24: === <Result of SELECT Command in Line 1> ===
+24: 
+24: <00001> verdict: 'VALUE_OK'
+24: 
+24: 1 row selected. (0.002697 sec) 
+24: 
+24: === <Result of SELECT Command in Line 4> ===
+24: 
+24: <00001> Table_name         : 'dba.t_refs'
+24:         Class_oid          : '(0|195|2)'
+24:         Heap_volume_id     : 1
+24:         Heap_file_id       : 640
+24:         Heap_header_page_id: 641
+24:         Has_oos_file       : 1
+24:         Oos_volume_id      : 1
+24:         Oos_file_id        : 704
+24:         Oos_num_user_pages : 4
+24:         Oos_page_size      : 16344
+24:         Oos_num_recs       : 4
+24:         Oos_recs_sumlen    : 20128
+24:         Oos_physical_bytes : 65376
+24:         Oos_unused_bytes   : 45248
+24: 
+24: 1 row selected. (0.000600 sec) 
+24: 
+24: 
+24: /home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/test_oos_workspace.cpp:161: Failure
+24: Expected equality of these values:
+24:   actual
+24:     Which is: { 6 }
+24:   expected
+24:     Which is: { 2 }
+24: 
+24: === <Result of SELECT Command in Line 1> ===
+24: 
+24: <00001> verdict: 'VALUE_OK'
+24: 
+24: 1 row selected. (0.002231 sec) 
+24: 
+24: === <Result of SELECT Command in Line 4> ===
+24: 
+24: <00001> Table_name         : 'dba.t_refs'
+24:         Class_oid          : '(0|195|2)'
+24:         Heap_volume_id     : 1
+24:         Heap_file_id       : 640
+24:         Heap_header_page_id: 641
+24:         Has_oos_file       : 1
+24:         Oos_volume_id      : 1
+24:         Oos_file_id        : 704
+24:         Oos_num_user_pages : 4
+24:         Oos_page_size      : 16344
+24:         Oos_num_recs       : 6
+24:         Oos_recs_sumlen    : 30192
+24:         Oos_physical_bytes : 65376
+24:         Oos_unused_bytes   : 35184
+24: 
+24: 1 row selected. (0.000562 sec) 
+24: 
+24: 
+24: /home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/test_oos_workspace.cpp:161: Failure
+24: Expected equality of these values:
+24:   actual
+24:     Which is: { 4 }
+24:   expected
+24:     Which is: { 0 }
+24: 
+24: === <Result of SELECT Command in Line 1> ===
+24: 
+24: <00001> Table_name         : 'dba.t_refs'
+24:         Class_oid          : '(0|195|2)'
+24:         Heap_volume_id     : 1
+24:         Heap_file_id       : 640
+24:         Heap_header_page_id: 641
+24:         Has_oos_file       : 1
+24:         Oos_volume_id      : 1
+24:         Oos_file_id        : 704
+24:         Oos_num_user_pages : 4
+24:         Oos_page_size      : 16344
+24:         Oos_num_recs       : 4
+24:         Oos_recs_sumlen    : 20128
+24:         Oos_physical_bytes : 65376
+24:         Oos_unused_bytes   : 45248
+24: 
+24: 1 row selected. (0.001022 sec) 
+24: 
+24: 
+24: Workspace OOS evidence retained at "/home/vimkim/tmp/cubrid-workspace-oos-bCWpmk"
+24: [  FAILED  ] OosWorkspaceTest.WorkspaceUpdateRollbackCommitAndDelete (15217 ms)
+24: [ RUN      ] OosWorkspaceTest.FailedUniqueLoadRollsBackWithoutOrphans
+24: [       OK ] OosWorkspaceTest.FailedUniqueLoadRollsBackWithoutOrphans (7979 ms)
+24: [ RUN      ] OosWorkspaceTest.FilteredDuplicateLeavesNoOrphanAndContinues
+24: [       OK ] OosWorkspaceTest.FilteredDuplicateLeavesNoOrphanAndContinues (8737 ms)
+24: [ RUN      ] OosWorkspaceTest.LoaderHonorsStoragePolicy
+24: [       OK ] OosWorkspaceTest.LoaderHonorsStoragePolicy (12089 ms)
+24: [ RUN      ] OosWorkspaceTest.WorkspaceUpdatePreservesExternalLobFiles
+24: /home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/test_oos_workspace.cpp:161: Failure
+24: Expected equality of these values:
+24:   actual
+24:     Which is: { 2 }
+24:   expected
+24:     Which is: { 1 }
+24: 
+24: === <Result of SELECT Command in Line 1> ===
+24: 
+24: <00001> verdict: 'VALUE_OK'
+24: 
+24: 1 row selected. (0.002290 sec) 
+24: 
+24: === <Result of SELECT Command in Line 4> ===
+24: 
+24: <00001> Table_name         : 'dba.t_lob'
+24:         Class_oid          : '(0|195|2)'
+24:         Heap_volume_id     : 1
+24:         Heap_file_id       : 576
+24:         Heap_header_page_id: 577
+24:         Has_oos_file       : 1
+24:         Oos_volume_id      : 1
+24:         Oos_file_id        : 640
+24:         Oos_num_user_pages : 2
+24:         Oos_page_size      : 16344
+24:         Oos_num_recs       : 2
+24:         Oos_recs_sumlen    : 10064
+24:         Oos_physical_bytes : 32688
+24:         Oos_unused_bytes   : 22624
+24: 
+24: 1 row selected. (0.000601 sec) 
+24: 
+24: 
+24: Workspace OOS evidence retained at "/home/vimkim/tmp/cubrid-workspace-oos-rCLs7Y"
+24: [  FAILED  ] OosWorkspaceTest.WorkspaceUpdatePreservesExternalLobFiles (10131 ms)
+24: [ RUN      ] OosWorkspaceTest.PartitionMovementTransfersOwnership
+24: /home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/test_oos_workspace.cpp:161: Failure
+24: Expected equality of these values:
+24:   actual
+24:     Which is: { 1 }
+24:   expected
+24:     Which is: { 0 }
+24: 
+24: === <Result of SELECT Command in Line 1> ===
+24: 
+24: <00001> Table_name         : 'dba.t_parts__p__p0'
+24:         Class_oid          : '(0|195|5)'
+24:         Heap_volume_id     : 1
+24:         Heap_file_id       : 640
+24:         Heap_header_page_id: 641
+24:         Has_oos_file       : 1
+24:         Oos_volume_id      : 1
+24:         Oos_file_id        : 832
+24:         Oos_num_user_pages : 3
+24:         Oos_page_size      : 16344
+24:         Oos_num_recs       : 1
+24:         Oos_recs_sumlen    : 5032
+24:         Oos_physical_bytes : 49032
+24:         Oos_unused_bytes   : 44000
+24: 
+24: 1 row selected. (0.001853 sec) 
+24: 
+24: 
+24: Workspace OOS evidence retained at "/home/vimkim/tmp/cubrid-workspace-oos-BTxhMF"
+24: [  FAILED  ] OosWorkspaceTest.PartitionMovementTransfersOwnership (19012 ms)
+24: [ RUN      ] OosWorkspaceTest.SuccessfulNoLoggingLoadStoresOos
+24: [       OK ] OosWorkspaceTest.SuccessfulNoLoggingLoadStoresOos (10884 ms)
+24: [----------] 13 tests from OosWorkspaceTest (132015 ms total)
+24: 
+24: [----------] Global test environment tear-down
+24: [==========] 13 tests from 1 test suite ran. (132015 ms total)
+24: [  PASSED  ] 9 tests.
+24: [  FAILED  ] 4 tests, listed below:
+24: [  FAILED  ] OosWorkspaceTest.LoaderPreservesForwardAndBackwardReferences
+24: [  FAILED  ] OosWorkspaceTest.WorkspaceUpdateRollbackCommitAndDelete
+24: [  FAILED  ] OosWorkspaceTest.WorkspaceUpdatePreservesExternalLobFiles
+24: [  FAILED  ] OosWorkspaceTest.PartitionMovementTransfersOwnership
+24: 
+24:  4 FAILED TESTS
+5/5 Test #24: test_oos_workspace ...............***Failed  132.05 sec
+[==========] Running 13 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 13 tests from OosWorkspaceTest
+[ RUN      ] OosWorkspaceTest.StandaloneLoaderStoresOos
+[       OK ] OosWorkspaceTest.StandaloneLoaderStoresOos (7298 ms)
+[ RUN      ] OosWorkspaceTest.LoaderRejectsOosBigoneButKeepsOrdinaryBigone
+[       OK ] OosWorkspaceTest.LoaderRejectsOosBigoneButKeepsOrdinaryBigone (9628 ms)
+[ RUN      ] OosWorkspaceTest.WorkspaceInsertUsesReservedOid
+[       OK ] OosWorkspaceTest.WorkspaceInsertUsesReservedOid (6064 ms)
+[ RUN      ] OosWorkspaceTest.LoaderPreservesForwardAndBackwardReferences
+/home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/test_oos_workspace.cpp:161: Failure
+Expected equality of these values:
+  actual
+    Which is: { 4 }
+  expected
+    Which is: { 2 }
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> verdict: 'VALUE_OK'
+
+1 row selected. (0.002592 sec) 
+
+=== <Result of SELECT Command in Line 4> ===
+
+<00001> Table_name         : 'dba.t_refs'
+        Class_oid          : '(0|195|2)'
+        Heap_volume_id     : 1
+        Heap_file_id       : 640
+        Heap_header_page_id: 641
+        Has_oos_file       : 1
+        Oos_volume_id      : 1
+        Oos_file_id        : 704
+        Oos_num_user_pages : 3
+        Oos_page_size      : 16344
+        Oos_num_recs       : 4
+        Oos_recs_sumlen    : 20128
+        Oos_physical_bytes : 49032
+        Oos_unused_bytes   : 28904
+
+1 row selected. (0.000593 sec) 
+
+
+Workspace OOS evidence retained at "/home/vimkim/tmp/cubrid-workspace-oos-hnZAtR"
+[  FAILED  ] OosWorkspaceTest.LoaderPreservesForwardAndBackwardReferences (7131 ms)
+[ RUN      ] OosWorkspaceTest.PartitionsOwnSeparateOosFiles
+[       OK ] OosWorkspaceTest.PartitionsOwnSeparateOosFiles (9491 ms)
+[ RUN      ] OosWorkspaceTest.InsertRollbackReclaimsFlushedChain
+[       OK ] OosWorkspaceTest.InsertRollbackReclaimsFlushedChain (8347 ms)
+[ RUN      ] OosWorkspaceTest.WorkspaceUpdateRollbackCommitAndDelete
+/home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/test_oos_workspace.cpp:161: Failure
+Expected equality of these values:
+  actual
+    Which is: { 4 }
+  expected
+    Which is: { 2 }
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> verdict: 'VALUE_OK'
+
+1 row selected. (0.002731 sec) 
+
+=== <Result of SELECT Command in Line 4> ===
+
+<00001> Table_name         : 'dba.t_refs'
+        Class_oid          : '(0|195|2)'
+        Heap_volume_id     : 1
+        Heap_file_id       : 640
+        Heap_header_page_id: 641
+        Has_oos_file       : 1
+        Oos_volume_id      : 1
+        Oos_file_id        : 704
+        Oos_num_user_pages : 3
+        Oos_page_size      : 16344
+        Oos_num_recs       : 4
+        Oos_recs_sumlen    : 20128
+        Oos_physical_bytes : 49032
+        Oos_unused_bytes   : 28904
+
+1 row selected. (0.000629 sec) 
+
+
+/home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/test_oos_workspace.cpp:161: Failure
+Expected equality of these values:
+  actual
+    Which is: { 6, 4 }
+  expected
+    Which is: { 2, 2 }
+workspace update
+workspace update
+2 rows affected. (0.003263 sec) 
+
+=== <Result of SELECT Command in Line 4> ===
+
+<00001> count(*): 2
+
+1 row selected. (0.000422 sec) 
+
+=== <Result of SELECT Command in Line 5> ===
+
+<00001> Table_name         : 'dba.t_refs'
+        Class_oid          : '(0|195|2)'
+        Heap_volume_id     : 1
+        Heap_file_id       : 640
+        Heap_header_page_id: 641
+        Has_oos_file       : 1
+        Oos_volume_id      : 1
+        Oos_file_id        : 704
+        Oos_num_user_pages : 4
+        Oos_page_size      : 16344
+        Oos_num_recs       : 6
+        Oos_recs_sumlen    : 30192
+        Oos_physical_bytes : 65376
+        Oos_unused_bytes   : 35184
+
+1 row selected. (0.000708 sec) 
+Execute OK. (0.000310 sec) 
+
+=== <Result of SELECT Command in Line 7> ===
+
+<00001> Table_name         : 'dba.t_refs'
+        Class_oid          : '(0|195|2)'
+        Heap_volume_id     : 1
+        Heap_file_id       : 640
+        Heap_header_page_id: 641
+        Has_oos_file       : 1
+        Oos_volume_id      : 1
+        Oos_file_id        : 704
+        Oos_num_user_pages : 4
+        Oos_page_size      : 16344
+        Oos_num_recs       : 4
+        Oos_recs_sumlen    : 20128
+        Oos_physical_bytes : 65376
+        Oos_unused_bytes   : 45248
+
+1 row selected. (0.000545 sec) 
+
+
+/home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/test_oos_workspace.cpp:161: Failure
+Expected equality of these values:
+  actual
+    Which is: { 4 }
+  expected
+    Which is: { 2 }
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> verdict: 'VALUE_OK'
+
+1 row selected. (0.002697 sec) 
+
+=== <Result of SELECT Command in Line 4> ===
+
+<00001> Table_name         : 'dba.t_refs'
+        Class_oid          : '(0|195|2)'
+        Heap_volume_id     : 1
+        Heap_file_id       : 640
+        Heap_header_page_id: 641
+        Has_oos_file       : 1
+        Oos_volume_id      : 1
+        Oos_file_id        : 704
+        Oos_num_user_pages : 4
+        Oos_page_size      : 16344
+        Oos_num_recs       : 4
+        Oos_recs_sumlen    : 20128
+        Oos_physical_bytes : 65376
+        Oos_unused_bytes   : 45248
+
+1 row selected. (0.000600 sec) 
+
+
+/home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/test_oos_workspace.cpp:161: Failure
+Expected equality of these values:
+  actual
+    Which is: { 6 }
+  expected
+    Which is: { 2 }
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> verdict: 'VALUE_OK'
+
+1 row selected. (0.002231 sec) 
+
+=== <Result of SELECT Command in Line 4> ===
+
+<00001> Table_name         : 'dba.t_refs'
+        Class_oid          : '(0|195|2)'
+        Heap_volume_id     : 1
+        Heap_file_id       : 640
+        Heap_header_page_id: 641
+        Has_oos_file       : 1
+        Oos_volume_id      : 1
+        Oos_file_id        : 704
+        Oos_num_user_pages : 4
+        Oos_page_size      : 16344
+        Oos_num_recs       : 6
+        Oos_recs_sumlen    : 30192
+        Oos_physical_bytes : 65376
+        Oos_unused_bytes   : 35184
+
+1 row selected. (0.000562 sec) 
+
+
+/home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/test_oos_workspace.cpp:161: Failure
+Expected equality of these values:
+  actual
+    Which is: { 4 }
+  expected
+    Which is: { 0 }
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> Table_name         : 'dba.t_refs'
+        Class_oid          : '(0|195|2)'
+        Heap_volume_id     : 1
+        Heap_file_id       : 640
+        Heap_header_page_id: 641
+        Has_oos_file       : 1
+        Oos_volume_id      : 1
+        Oos_file_id        : 704
+        Oos_num_user_pages : 4
+        Oos_page_size      : 16344
+        Oos_num_recs       : 4
+        Oos_recs_sumlen    : 20128
+        Oos_physical_bytes : 65376
+        Oos_unused_bytes   : 45248
+
+1 row selected. (0.001022 sec) 
+
+
+Workspace OOS evidence retained at "/home/vimkim/tmp/cubrid-workspace-oos-bCWpmk"
+[  FAILED  ] OosWorkspaceTest.WorkspaceUpdateRollbackCommitAndDelete (15217 ms)
+[ RUN      ] OosWorkspaceTest.FailedUniqueLoadRollsBackWithoutOrphans
+[       OK ] OosWorkspaceTest.FailedUniqueLoadRollsBackWithoutOrphans (7979 ms)
+[ RUN      ] OosWorkspaceTest.FilteredDuplicateLeavesNoOrphanAndContinues
+[       OK ] OosWorkspaceTest.FilteredDuplicateLeavesNoOrphanAndContinues (8737 ms)
+[ RUN      ] OosWorkspaceTest.LoaderHonorsStoragePolicy
+[       OK ] OosWorkspaceTest.LoaderHonorsStoragePolicy (12089 ms)
+[ RUN      ] OosWorkspaceTest.WorkspaceUpdatePreservesExternalLobFiles
+/home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/test_oos_workspace.cpp:161: Failure
+Expected equality of these values:
+  actual
+    Which is: { 2 }
+  expected
+    Which is: { 1 }
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> verdict: 'VALUE_OK'
+
+1 row selected. (0.002290 sec) 
+
+=== <Result of SELECT Command in Line 4> ===
+
+<00001> Table_name         : 'dba.t_lob'
+        Class_oid          : '(0|195|2)'
+        Heap_volume_id     : 1
+        Heap_file_id       : 576
+        Heap_header_page_id: 577
+        Has_oos_file       : 1
+        Oos_volume_id      : 1
+        Oos_file_id        : 640
+        Oos_num_user_pages : 2
+        Oos_page_size      : 16344
+        Oos_num_recs       : 2
+        Oos_recs_sumlen    : 10064
+        Oos_physical_bytes : 32688
+        Oos_unused_bytes   : 22624
+
+1 row selected. (0.000601 sec) 
+
+
+Workspace OOS evidence retained at "/home/vimkim/tmp/cubrid-workspace-oos-rCLs7Y"
+[  FAILED  ] OosWorkspaceTest.WorkspaceUpdatePreservesExternalLobFiles (10131 ms)
+[ RUN      ] OosWorkspaceTest.PartitionMovementTransfersOwnership
+/home/vimkim/gh/cb/pr7925-simplification-integration/unit_tests/oos/test_oos_workspace.cpp:161: Failure
+Expected equality of these values:
+  actual
+    Which is: { 1 }
+  expected
+    Which is: { 0 }
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> Table_name         : 'dba.t_parts__p__p0'
+        Class_oid          : '(0|195|5)'
+        Heap_volume_id     : 1
+        Heap_file_id       : 640
+        Heap_header_page_id: 641
+        Has_oos_file       : 1
+        Oos_volume_id      : 1
+        Oos_file_id        : 832
+        Oos_num_user_pages : 3
+        Oos_page_size      : 16344
+        Oos_num_recs       : 1
+        Oos_recs_sumlen    : 5032
+        Oos_physical_bytes : 49032
+        Oos_unused_bytes   : 44000
+
+1 row selected. (0.001853 sec) 
+
+
+Workspace OOS evidence retained at "/home/vimkim/tmp/cubrid-workspace-oos-BTxhMF"
+[  FAILED  ] OosWorkspaceTest.PartitionMovementTransfersOwnership (19012 ms)
+[ RUN      ] OosWorkspaceTest.SuccessfulNoLoggingLoadStoresOos
+[       OK ] OosWorkspaceTest.SuccessfulNoLoggingLoadStoresOos (10884 ms)
+[----------] 13 tests from OosWorkspaceTest (132015 ms total)
+
+[----------] Global test environment tear-down
+[==========] 13 tests from 1 test suite ran. (132015 ms total)
+[  PASSED  ] 9 tests.
+[  FAILED  ] 4 tests, listed below:
+[  FAILED  ] OosWorkspaceTest.LoaderPreservesForwardAndBackwardReferences
+[  FAILED  ] OosWorkspaceTest.WorkspaceUpdateRollbackCommitAndDelete
+[  FAILED  ] OosWorkspaceTest.WorkspaceUpdatePreservesExternalLobFiles
+[  FAILED  ] OosWorkspaceTest.PartitionMovementTransfersOwnership
+
+ 4 FAILED TESTS
+
+
+The following tests passed:
+	oos_setup_db
+	test_oos_sql_deferred_write
+	test_oos_sql_workspace_bytes
+	oos_cleanup_db
+
+80% tests passed, 1 tests failed out of 5
+
+Total Test time (real) = 193.62 sec
+
+The following tests FAILED:
+	 24 - test_oos_workspace (Failed)
+Errors while running CTest
+error: recipe `selected` failed with exit code 8

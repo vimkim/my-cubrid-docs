@@ -30,7 +30,7 @@ current ticket bodies were reread before dispatch.
 | Ticket | Agent | Branch and worktree | Base | State |
 | --- | --- | --- | --- | --- |
 | 01 | `/root/ticket01`, `fork_turns=none` | `task/pr7925-01-stored-rows`; `/home/vimkim/gh/cb/pr7925-01-stored-rows` | `1c660d22e4340ee707336ad08c8b4bf4b69744de` | Resolved at `625b193745959d0ab047f26f4354e9aacb48160d`; privately integrated, final checks/reviews passed |
-| 02 | Not dispatched | Not allocated | No authorized prerequisite-containing base selected | Externally blocked; ready-for-agent describes specification completeness only |
+| 02 | `/root/ticket02`, `fork_turns=none` | `task/pr7925-02-record-owner`; `/home/vimkim/gh/cb/pr7925-02-record-owner` | `b59f243fd0f30bb94344558ffa1755c37c43d2d4`, contains accepted `4be72fc20` | Claimed; own baseline verification required before edits |
 
 The implementer owns only 01. The coordinator owns scheduling, tracker edits,
 private linear integration, evidence review and overall status. Any replacement
@@ -51,10 +51,10 @@ borrowed view; moving UPDATE forwards its owner to destination INSERT. Sources:
 `cbrd-27089/design/no-record-type-design.md` and `review-simplification.md`.
 The candidate accepted interface revision is the current `4be72fc20` above.
 
-That revision is not an ancestor of PR #7925, and its interface is absent on the
-private integration base. An open PR or separate dependency worktree does not
-satisfy ticket 02. No source-branch merge, prerequisite copy or partition repair
-has been performed. Independently ready 01 is now complete. The precise base/integration decision
+Initially that revision was not an ancestor of PR #7925, and its interface
+was absent on the original private integration base. An open PR or separate dependency worktree does not
+satisfy ticket 02. No existing source branch was changed, and no partition repair was made
+here. The later authorized private combination is recorded below. Independently ready 01 is now complete. The precise base/integration decision
 for 02 is recorded below. Final partition acceptance still
 requires prerequisite inclusion in the shared integration branch.
 
@@ -131,29 +131,89 @@ under [ticket evidence](evidence/ticket01/report.md). No process, IPC, socket,
 install, TMP or allocation was removed. The private integration and docs
 worktrees remain reviewable.
 
-## Required decision for ticket 02
+## Approved private combination and ticket 02 preparation
 
-Authorize use of the pinned PR #7927 revision
-`4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c` as a **private combined base**, with
-linear rebase and conflict resolution of PR #7925's retained changes and the
-completed 01 commits. This is the recommended next step, subject to the user's
-base decision. The expected conflicts are loader/locator force interfaces;
-the accepted ownership and workspace-origin behavior must be preserved.
-The coordinator will record the original heads and resulting combined commit,
-verify that `heap_pending_record` is actually present, and then dispatch 02 to
-its own new clean-context agent and worktree. If a different accepted base is
-chosen, record its identity before dispatch.
+The user authorized combining the pinned PR #7927 revision
+`4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c` with the retained PR #7925 changes,
+resolving conflicts and then assigning 02 to a new clean-context agent.
+That approval covers private integration only. Item 292 is active again.
 
-The handoff explicitly says: “Do not copy the partition fix into this PR or
-interpret this dependency declaration as permission to merge the source
-branches.” That gate is why the base decision needs confirmation. Permission
-for this private combination would not promote either existing PR branch or
-the shared/default branches. Final partition acceptance still requires the
-prerequisite in the shared integration branch; private passes are interim.
+The original `review/pr7925-simplification` remains at `625b193745`.
+The same integration worktree now checks out `review/pr7925-combined`.
+An exact-tree snapshot of final PR #7925 (`1c660d22e`) over the common baseline
+was made as `15d0b0d95ac620a7c5a8fb00322d896b914777c8`; its tree equals the
+original final implementation. This avoids replaying withdrawn intermediate
+implementations. Both ticket 01 commits were replayed separately. The private
+series was then rebased onto `4be72fc20`, resolving loader/locator conflicts.
+The first completed combination is `29ea2ed13`; baseline verification exposed an origin-handling integration regression.
 
-Ticket 02 is unclaimed and has no assigned agent or worktree. Item 292 remains
-unfinished and awaits this decision. After 02, the full selected specification
-still requires final Standards and Spec review and final combined verification.
-Existing PR/shared/default branch promotion requires a separate confirmation;
-push, external publication and CI require separate authorization. Parent spec
-is unchanged and unresolved.
+Conflict resolution preserves the accepted destination routing and pending
+owner arguments, plus PR #7925 force flags and workspace-origin propagation.
+The original workspace conversion helper and force flags were initially
+retained alongside the prerequisite received owner. Suppressing that owner
+for standalone copy-area inputs proved incorrect: such inputs may already
+contain stored references and still need destination-owned chains. The
+existing raw copy-area test reproduced input mutation and wrong ownership
+in 3.27 seconds. Removing that suppression restored the prerequisite path;
+raw copy-area plus failing workspace UPDATE checks then passed 3/3 CTests
+in 3.25 seconds. No assertions or prerequisite code were changed.
+No partition-selection algorithm or prerequisite storage implementation was
+changed. Comparison source bytes equal ticket 01's final hash.
+
+The correction is scoped commit `b59f243fd0f30bb94344558ffa1755c37c43d2d4`.
+This is the frozen ticket 02 base, with committed-base verification active.
+Its storage sources equal `4be72fc20`; comparison source equals final 01.
+Ticket 02 is claimed for a new clean-context agent on its own worktree, which
+must establish its own baseline before implementation. The agent owns only
+the ownership simplification and its verification.
+Final partition acceptance still requires prerequisite inclusion in the shared
+integration branch. Private combined results are interim evidence.
+
+## Following a future PR #7927 squash merge
+
+PR #7927 is expected to be squash merged into `feature/oos-merge`. Preserve
+`4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c` as the exact dependency boundary.
+Every private PR #7925 implementation/test/ownership commit follows that
+boundary. Once the actual squash commit is available, transplant **only this
+post-boundary series** onto the approved updated integration base:
+
+```sh
+git rebase --onto <approved-updated-feature-tip> 4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c <private-task-branch>
+```
+
+Use a separate review branch/worktree and retain the tested private result
+until the transplant is verified. Do not replay the prerequisite's individual
+commits. If the squash tree preserves the selected dependency code, ancestry
+changes alone should not add substantive conflict; later dependency or shared
+changes may require reconciliation. Inspect the task-only diff against the
+actual new base and rerun appropriate checks before source promotion.
+This procedure does not authorize that promotion in advance.
+
+After 02, the full selected specification still requires final Standards and
+Spec review and final combined verification. Existing PR/shared/default branch
+promotion requires a separate confirmation; push, external publication and CI
+require separate authorization. Parent spec is unchanged and unresolved.
+
+
+## Frozen-base verification and active work
+
+The exact committed base `b59f243fd0f30bb94344558ffa1755c37c43d2d4` built and
+installed successfully. Its final focused selection executed all 70 requested
+GoogleTests: 36/36 dependency and 21/21 comparison passed; 9/13 utility cases
+passed. Four utility cases failed exact OOS chunk-count assertions after UPDATE:
+reference preservation, rollback/commit/delete, external LOB UPDATE, and
+partition movement. Their value/reference predicates passed. Five CTests ran;
+four passed, with test_oos_workspace failing (193.62s).
+
+The ticket 02 agent identified possible duplicate conversion on UPDATE:
+the legacy eager workspace helper runs before the prerequisite received-owner
+preparation/finalization. Removing redundant conversion is within 02; chain
+reuse and general partition repair remain excluded. The agent will establish
+its own baseline and verify the unchanged assertions before attribution. This
+checkpoint claims no combined full-suite pass.
+
+[Combined-base evidence](evidence/combined-base/source-contract.json) preserves
+source identities, build/formatter logs, the first raw-copyarea red receipt,
+its origin-repair green receipt, the failed broader baseline and actual XML
+case counts. Failing fixture data remains under the paths printed by its logs.
+The agent source/worktree and all original user worktrees remain separate.

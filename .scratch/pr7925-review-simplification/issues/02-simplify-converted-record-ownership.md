@@ -4,7 +4,7 @@
 
 **Blocked by:** External prerequisite CBRD-27089 / PR #7927: its accepted write/ownership interface must be available on the chosen implementation base. Ticket 01 is not a blocker. Final partition acceptance additionally requires the dependency's integration into the shared integration branch.
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] Identify and record the accepted CBRD-27089 revision and interface used by this task. Reuse an existing owner if it already manages the workspace conversion buffer; do not add a duplicate owner or preparation path.
 - [ ] If a separate owner remains necessary, keep the record description and cached copyarea together in one private, non-copyable owner with non-throwing automatic memory cleanup. INSERT and UPDATE follow the same lifetime rule on all exits.
@@ -53,3 +53,15 @@ loader and locator force interfaces. The coordinator must obtain the base
 integration decision described in [orchestration.md](../orchestration.md),
 verify the accepted interface on that base, then assign this ticket to a new
 `fork_turns=none` agent. No prerequisite code was copied or merged.
+
+
+2026-10-07: Private combination authorized by the user. Accepted dependency
+`4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c` is now an ancestor of the chosen base
+`b59f243fd0f30bb94344558ffa1755c37c43d2d4`; its storage owner implementation is
+unchanged. Claimed for new clean-context agent `/root/ticket02`, branch
+`task/pr7925-02-record-owner`, worktree
+`/home/vimkim/gh/cb/pr7925-02-record-owner`. The coordinator's combined build
+passed, and the focused raw copy-area/failing-update checks passed after the
+integration-only origin correction. Final committed-base build/full focused
+verification is in progress; the agent must establish its own baseline before
+source edits. Shared-branch partition acceptance remains deferred.

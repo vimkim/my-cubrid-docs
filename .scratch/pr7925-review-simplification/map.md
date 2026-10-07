@@ -7,7 +7,7 @@ Contract: [approved specification](spec.md)
 | Ticket | What it delivers | Blocked by | Status |
 | --- | --- | --- | --- |
 | [01: Simplify SQL/workspace comparison tests](issues/01-simplify-stored-row-comparison.md) | Two real stored rows and independent expected results, with the extra conversion and its rollback machinery removed. | None. | resolved |
-| [02: Simplify converted-record memory ownership](issues/02-simplify-converted-record-ownership.md) | One clear memory lifetime across successful/failing workspace INSERT and UPDATE, fitting the accepted prerequisite interface. | External CBRD-27089 / PR #7927 accepted write/ownership interface available on the chosen base. | ready-for-agent |
+| [02: Simplify converted-record memory ownership](issues/02-simplify-converted-record-ownership.md) | One clear memory lifetime across successful/failing workspace INSERT and UPDATE, fitting the accepted prerequisite interface. | External CBRD-27089 / PR #7927 accepted write/ownership interface available on the chosen base. | claimed |
 
 ## Work order and dependencies
 
@@ -39,3 +39,10 @@ cannot be dispatched until its interface is present on an authorized base.
 37/37 CTests and 336/336 GoogleTests and zero findings on both review axes.
 02 remains externally blocked and unclaimed. See the orchestration record for
 the exact base decision; the parent contract remains unchanged and unfinished.
+
+
+2026-10-07 continuation: private prerequisite combination approved and frozen
+at `b59f243fd0f30bb94344558ffa1755c37c43d2d4`. The accepted owner interface is
+present; 02 is claimed for its own new clean-context agent/worktree. Shared
+integration acceptance remains an external gate, with future squash-transplant
+procedure recorded in orchestration.md.

@@ -1,0 +1,297 @@
+diff --cc src/transaction/locator_sr.c
+index 2dc6cb5cb,0d591d5c5..000000000
+--- a/src/transaction/locator_sr.c
++++ b/src/transaction/locator_sr.c
+@@@ -156,14 -154,13 +156,27 @@@ static int locator_update_force (THREAD
+  				 HEAP_SCANCACHE * scan_cache, int *force_count, bool not_check_fk,
+  				 REPL_INFO_TYPE repl_info_type, int pruning_type, PRUNING_CONTEXT * pcontext,
+  				 MVCC_REEV_DATA * mvcc_reev_data, UPDATE_INPLACE_STYLE force_in_place,
+++<<<<<<< HEAD
+ +				 bool need_locking, bool from_copyarea, heap_pending_record *pending = nullptr);
+++||||||| parent of c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+++				 bool need_locking);
+++=======
++ 				 bool need_locking, bool from_workspace = false);
++ /* *INDENT-ON* */
+++>>>>>>> c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+  static int locator_move_record (THREAD_ENTRY * thread_p, HFID * old_hfid, OID * old_class_oid, OID * obj_oid,
+  				OID * new_class_oid, HFID * new_class_hfid, RECDES * recdes,
+  				HEAP_SCANCACHE * scan_cache, int op_type, int has_index, int *force_count,
+  				PRUNING_CONTEXT * context, MVCC_REEV_DATA * mvcc_reev_data, bool need_locking,
+++<<<<<<< HEAD
+ +				bool from_copyarea, heap_pending_record *pending = nullptr);
+ +/* *INDENT-ON* */
+ +
+++||||||| parent of c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+++				PRUNING_CONTEXT * context, MVCC_REEV_DATA * mvcc_reev_data, bool need_locking);
+++=======
++ 				bool from_workspace);
+++>>>>>>> c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+  static int locator_delete_force_for_moving (THREAD_ENTRY * thread_p, HFID * hfid, OID * oid, int has_index, int op_type,
+  					    HEAP_SCANCACHE * scan_cache, int *force_count,
+  					    MVCC_REEV_DATA * mvcc_reev_data, OID * new_obj_oid, OID * partition_oid,
+@@@ -4942,31 -4927,68 +4955,93 @@@ error3
+    goto end;
+  }
+  
+ +/* *INDENT-OFF* */
+ +/* Complete the row after destination selection, before heap/index writes.
+ + * Copy-area adaptation preserves workspace LOB effects and the current header;
+ + * the enclosing caller keeps the received owner and converted view alive. */
+ +static int
+ +locator_finalize_oos_record (THREAD_ENTRY *thread_p, const OID *class_oid, RECDES **record,
+ +                            bool from_copyarea, heap_pending_record *pending,
+ +                            heap_pending_record *received, RECDES *converted)
+ +{
+ +  if (from_copyarea && catcls_Enable && !OID_IS_ROOTOID (class_oid)
+ +      && !oid_is_system_class (class_oid) && (*record)->length > 0)
+ +    {
+ +      int error = heap_prepare_oos_record (thread_p, class_oid, *record, received);
+ +      if (error != NO_ERROR)
+ +	{
+ +	  return error;
+ +	}
+ +      *converted = received->get_recdes ();
+ +      *record = converted;
+ +      pending = received;
+ +    }
+ +  return heap_oos_finalize_record (thread_p, class_oid, *record, pending);
+ +}
+ +/* *INDENT-ON* */
+ +
++ /*
++  * locator_demote_workspace_record () - Apply OOS planning to a standalone workspace record.
++  *
++  * The caller has selected the destination heap and owns the force top operation. OOS creation and the
++  * subsequent heap/index write must remain in that operation, including on filtered-error paths.
++  * Workspace serialization already copied LOB locators and assigned object references; only their disk
++  * representation is changed here. The caller releases copyarea, if returned, after forcing the record.
++  */
++ static int
++ locator_demote_workspace_record (THREAD_ENTRY * thread_p, OID * class_oid, RECDES * recdes,
++ 				 RECDES * new_recdes, LC_COPYAREA ** copyarea)
++ {
++ #if defined (SA_MODE)
++   HEAP_CACHE_ATTRINFO attr_info;
++   int error_code;
++ 
++   assert (*copyarea == NULL);
++   if (OID_IS_ROOTOID (class_oid) || OR_RECORD_HAS_OOS (recdes->data))
++     {
++       return NO_ERROR;
++     }
++ 
++   error_code = heap_attrinfo_start (thread_p, class_oid, -1, NULL, &attr_info);
++   if (error_code != NO_ERROR)
++     {
++       return error_code;
++     }
++ 
++   if (attr_info.last_classrepr->n_variable == 0)
++     {
++       heap_attrinfo_end (thread_p, &attr_info);
++       return NO_ERROR;
++     }
++ 
++   error_code = heap_attrinfo_read_dbvalues_without_oid (thread_p, recdes, &attr_info);
++   if (error_code == NO_ERROR)
++     {
++       *copyarea = locator_allocate_copy_area_by_attr_info (thread_p, &attr_info, NULL, new_recdes,
++ 							   recdes->length, LOB_FLAG_EXCLUDE_LOB);
++       if (*copyarea == NULL)
++ 	{
++ 	  ASSERT_ERROR_AND_SET (error_code);
++ 	}
++       else if (!OR_RECORD_HAS_OOS (new_recdes->data))
++ 	{
++ 	  /* No demotion was selected. Keep the original workspace representation and header. */
++ 	  locator_free_copy_area (*copyarea);
++ 	  *copyarea = NULL;
++ 	}
++       else
++ 	{
++ 	  /* tf_mem_to_disk already advanced CHN for the workspace object. Do not advance it again. */
++ 	  OR_PUT_INT (new_recdes->data + OR_CHN_OFFSET, or_chn (recdes));
++ 	}
++     }
++   heap_attrinfo_end (thread_p, &attr_info);
++   return error_code;
++ #else
++   return NO_ERROR;
++ #endif
++ }
++ 
+  /*
+   * locator_insert_force () - Insert the given object on this heap
+   *
+@@@ -4997,12 -5019,8 +5072,18 @@@ locator_insert_force (THREAD_ENTRY * th
+  		      int op_type, HEAP_SCANCACHE * scan_cache, int *force_count, int pruning_type,
+  		      PRUNING_CONTEXT * pcontext, FUNC_PRED_UNPACK_INFO * func_preds,
+  		      UPDATE_INPLACE_STYLE force_in_place, PGBUF_WATCHER * home_hint_p, bool has_BU_lock,
+++<<<<<<< HEAD
+ +		      bool dont_check_fk, bool use_bulk_logging, bool from_copyarea, heap_pending_record * pending)
+++||||||| parent of c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+++		      bool dont_check_fk, bool use_bulk_logging)
+++=======
++ 		      bool dont_check_fk, bool use_bulk_logging, bool from_workspace)
+++>>>>>>> c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+  {
+ +  /* *INDENT-OFF* */
+ +  heap_pending_record received;
+ +  RECDES converted;
+ +  /* *INDENT-ON* */
+  #if 0				/* TODO - dead code; do not delete me */
+    OID rep_dir = { NULL_PAGEID, NULL_SLOTID, NULL_VOLID };
+  #endif
+@@@ -5422,7 -5452,7 +5524,13 @@@ static in
+  locator_move_record (THREAD_ENTRY * thread_p, HFID * old_hfid, OID * old_class_oid, OID * obj_oid, OID * new_class_oid,
+  		     HFID * new_class_hfid, RECDES * recdes, HEAP_SCANCACHE * scan_cache, int op_type, int has_index,
+  		     int *force_count, PRUNING_CONTEXT * context, MVCC_REEV_DATA * mvcc_reev_data, bool need_locking,
+++<<<<<<< HEAD
+ +		     bool from_copyarea, heap_pending_record * pending)
+++||||||| parent of c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+++		     int *force_count, PRUNING_CONTEXT * context, MVCC_REEV_DATA * mvcc_reev_data, bool need_locking)
+++=======
++ 		     bool from_workspace)
+++>>>>>>> c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+  {
+    int error = NO_ERROR;
+    OID new_obj_oid;
+@@@ -5448,7 -5478,7 +5556,13 @@@
+        error =
+  	locator_insert_force (thread_p, new_class_hfid, new_class_oid, &new_obj_oid, recdes, has_index, op_type,
+  			      insert_cache, force_count, context->pruning_type, NULL, NULL, UPDATE_INPLACE_NONE, NULL,
+++<<<<<<< HEAD
+ +			      false, false, false, from_copyarea, pending);
+++||||||| parent of c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+++			      false, false);
+++=======
++ 			      false, false, false, from_workspace);
+++>>>>>>> c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+      }
+    else
+      {
+@@@ -5465,7 -5495,7 +5579,13 @@@
+        error =
+  	locator_insert_force (thread_p, new_class_hfid, new_class_oid, &new_obj_oid, recdes, has_index, op_type,
+  			      &insert_cache, force_count, DB_NOT_PARTITIONED_CLASS, NULL, NULL, UPDATE_INPLACE_NONE,
+++<<<<<<< HEAD
+ +			      NULL, false, false, false, from_copyarea, pending);
+++||||||| parent of c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+++			      NULL, false, false);
+++=======
++ 			      NULL, false, false, false, from_workspace);
+++>>>>>>> c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+        heap_scancache_end (thread_p, &insert_cache);
+      }
+  
+@@@ -5524,13 -5554,8 +5644,19 @@@ locator_update_force (THREAD_ENTRY * th
+  		      RECDES * recdes, int has_index, ATTR_ID * att_id, int n_att_id, int op_type,
+  		      HEAP_SCANCACHE * scan_cache, int *force_count, bool not_check_fk, REPL_INFO_TYPE repl_info_type,
+  		      int pruning_type, PRUNING_CONTEXT * pcontext, MVCC_REEV_DATA * mvcc_reev_data,
+++<<<<<<< HEAD
+ +		      UPDATE_INPLACE_STYLE force_in_place, bool need_locking, bool from_copyarea,
+ +		      heap_pending_record * pending)
+++||||||| parent of c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+++		      UPDATE_INPLACE_STYLE force_in_place, bool need_locking)
+++=======
++ 		      UPDATE_INPLACE_STYLE force_in_place, bool need_locking, bool from_workspace)
+++>>>>>>> c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+  {
+ +  /* *INDENT-OFF* */
+ +  heap_pending_record received;
+ +  RECDES converted;
+ +  /* *INDENT-ON* */
+    OID rep_dir = { NULL_PAGEID, NULL_SLOTID, NULL_VOLID };
+    char *rep_dir_offset;
+    char *classname = NULL;	/* Classname to update */
+@@@ -6092,7 -6116,7 +6220,13 @@@
+  	      error_code =
+  		locator_move_record (thread_p, hfid, class_oid, oid, &real_class_oid, &real_hfid, recdes, scan_cache,
+  				     op_type, has_index, force_count, pcontext, mvcc_reev_data, need_locking,
+++<<<<<<< HEAD
+ +				     from_copyarea, pending);
+++||||||| parent of c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+++				     op_type, has_index, force_count, pcontext, mvcc_reev_data, need_locking);
+++=======
++ 				     from_workspace);
+++>>>>>>> c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+  	      if (error_code == NO_ERROR)
+  		{
+  		  COPY_OID (class_oid, &real_class_oid);
+@@@ -6102,11 -6126,18 +6236,27 @@@
+  	    }
+  	}
+  
+++<<<<<<< HEAD
+ +      error_code = locator_finalize_oos_record (thread_p, class_oid, &recdes, from_copyarea,
+ +						pending, &received, &converted);
+ +      if (error_code != NO_ERROR)
+ +	{
+ +	  goto error;
+++||||||| parent of c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+++=======
++       if (from_workspace)
++ 	{
++ 	  error_code = locator_demote_workspace_record (thread_p, class_oid, recdes, &workspace_recdes,
++ 							&workspace_copyarea);
++ 	  if (error_code != NO_ERROR)
++ 	    {
++ 	      goto error;
++ 	    }
++ 	  if (workspace_copyarea != NULL)
++ 	    {
++ 	      recdes = &workspace_recdes;
++ 	    }
+++>>>>>>> c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+  	}
+  
+        /* AN INSTANCE: Update indices if any */
+@@@ -6820,14 -6855,11 +6975,28 @@@ locator_force_for_multi_update (THREAD_
+  	      goto error;
+  	    }
+  
+++<<<<<<< HEAD
+ +	  error_code = locator_update_force (thread_p, &obj->hfid, &obj->class_oid, &obj->oid, NULL,
+ +					     &recdes, has_index, NULL, 0, MULTI_ROW_UPDATE, &scan_cache,
+ +					     &force_count, false, repl_info, DB_NOT_PARTITIONED_CLASS, NULL,
+ +					     NULL, UPDATE_INPLACE_NONE, true, true);
+ +	  if (error_code != NO_ERROR)
+ +	    {
+ +	      (void) heap_oos_begin_insert_publication (thread_p);
+ +	    }
+++||||||| parent of c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+++	  /* update */
+++	  error_code =
+++	    locator_update_force (thread_p, &obj->hfid, &obj->class_oid, &obj->oid, NULL, &recdes,
+++				  has_index, NULL, 0, MULTI_ROW_UPDATE, &scan_cache, &force_count, false, repl_info,
+++				  DB_NOT_PARTITIONED_CLASS, NULL, NULL, UPDATE_INPLACE_NONE, true);
+++=======
++ 	  /* update */
++ 	  error_code =
++ 	    locator_update_force (thread_p, &obj->hfid, &obj->class_oid, &obj->oid, NULL, &recdes,
++ 				  has_index, NULL, 0, MULTI_ROW_UPDATE, &scan_cache, &force_count, false, repl_info,
++ 				  DB_NOT_PARTITIONED_CLASS, NULL, NULL, UPDATE_INPLACE_NONE, true, true);
+++>>>>>>> c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+  	  if (error_code != NO_ERROR)
+  	    {
+  	      /*
+diff --cc src/transaction/locator_sr.h
+index 3720cf2f1,ec8feabc6..000000000
+--- a/src/transaction/locator_sr.h
++++ b/src/transaction/locator_sr.h
+@@@ -138,8 -134,7 +138,14 @@@ extern int locator_insert_force (THREAD
+  				 int has_index, int op_type, HEAP_SCANCACHE * scan_cache, int *force_count,
+  				 int pruning_type, PRUNING_CONTEXT * pcontext, FUNC_PRED_UNPACK_INFO * func_preds,
+  				 UPDATE_INPLACE_STYLE force_in_place, PGBUF_WATCHER * home_hint_p, bool has_BU_lock,
+++<<<<<<< HEAD
+ +				 bool dont_check_fk, bool use_bulk_logging = false, bool from_copyarea = false,
+ +                                heap_pending_record *pending = nullptr);
+++||||||| parent of c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+++				 bool dont_check_fk, bool use_bulk_logging = false);
+++=======
++ 				 bool dont_check_fk, bool use_bulk_logging = false, bool from_workspace = false);
+++>>>>>>> c47103271 ([CBRD-27424] Support OOS in standalone workspace writes)
+  /* *INDENT-ON* */
+  
+  extern int locator_oos_insert_force (THREAD_ENTRY * thread_p, OID * class_oid, RECDES * recdes);
