@@ -30,9 +30,9 @@ current ticket bodies were reread before dispatch.
 | Ticket | Agent | Branch and worktree | Base | State |
 | --- | --- | --- | --- | --- |
 | 01 | `/root/ticket01`, `fork_turns=none` | `task/pr7925-01-stored-rows`; `/home/vimkim/gh/cb/pr7925-01-stored-rows` | `1c660d22e4340ee707336ad08c8b4bf4b69744de` | Resolved at `625b193745959d0ab047f26f4354e9aacb48160d`; privately integrated, final checks/reviews passed |
-| 02 | `/root/ticket02`, `fork_turns=none` | `task/pr7925-02-record-owner`; `/home/vimkim/gh/cb/pr7925-02-record-owner` | `b59f243fd0f30bb94344558ffa1755c37c43d2d4`, contains accepted `4be72fc20` | Claimed; own baseline verification required before edits |
+| 02 | `/root/ticket02`, `fork_turns=none` | `task/pr7925-02-record-owner`; `/home/vimkim/gh/cb/pr7925-02-record-owner` | `b59f243fd0f30bb94344558ffa1755c37c43d2d4`, contains accepted `4be72fc20` | Claimed; first commit `9ba5e42ad` privately integrated; whole-spec review repair and final verification active |
 
-The implementer owns only 01. The coordinator owns scheduling, tracker edits,
+Each implementer owns only its assigned ticket. The coordinator owns scheduling, tracker edits,
 private linear integration, evidence review and overall status. Any replacement
 or repair assignment remains scoped to its originating ticket.
 
@@ -225,3 +225,50 @@ common baseline. Replaying the four post-boundary commits through `b59f243fd`
 produced zero conflicts and the exact private tree, with no dependency commits
 replayed. No source/ref/worktree was changed. Actual later source changes still
 require their own comparison and verification.
+
+
+## Ticket 02 first fixed point and whole-spec review repair
+
+Ticket 02 reproduced the same frozen-base result: 66/70 cases passed with the
+same four utility count failures. Commit `9ba5e42ad6dfaa74cc9062f6fe55a459ba088924`
+removes the redundant eager workspace converter, its separate descriptor/copyarea
+and manual frees. It uses the existing received owner, and preserves explicit
+workspace-flag semantics with the shared preparation path. The storage sources,
+tests and public force interface are unchanged by this commit.
+
+All four previously failing utility cases and four ownership/header/error
+controls passed (8/8 GoogleTests, 4/4 CTests). Exact-commit build/install passed.
+The implementer rebased onto private `b59f243fd` (no-op), and the coordinator
+fast-forwarded `review/pr7925-combined` to that exact commit. Final runtime
+acceptance is pending; the first full-suite run is in progress.
+
+Initial same-configuration measurements use three samples each: small-row
+elapsed/user CPU medians changed from 3.92/2.51s to 3.47/2.22s, and OOS medians
+from 7.40/4.63s to 7.72/4.74s. Ranges overlap; no runtime improvement is claimed.
+Raw data and methodology are in [initial evidence](evidence/ticket02-initial/report.md).
+These measurements concern `9ba5e42ad`; a subsequent memory-lifetime repair
+requires its own proportionate verification.
+
+Independent whole-spec reviewers inspected all eight retained files against
+accepted dependency boundary `4be72fc20`, separating inherited prerequisite
+changes from original-head simplification and whole-PR context:
+
+- [Standards](evidence/whole-review-round-1/standards.md): zero documented breaches
+  and zero actionable judgment findings.
+- [Spec](evidence/whole-review-round-1/spec.md): one resulting no-demotion
+  conformance gap, inherited through the combined adaptation. Inline workspace
+  inputs should retain their active original descriptor/header and promptly
+  release unused local conversion memory. No allocator-policy finding or scope
+  creep is asserted.
+
+The same ticket 02 implementer owns this repair. It must preserve necessary
+adaptation for old representations and existing OOS references, supplied owner
+lifetimes, and finalizer/publication semantics. No storage-interface redesign or
+new serialization/testing seam is authorized. The parent spec remains unchanged,
+and final shared partition acceptance remains gated by actual prerequisite
+inclusion. No ticket or whole-spec completion is claimed at this checkpoint.
+
+A [five-commit equal-tree squash simulation](evidence/ticket02-initial/equal-tree-squash-transplant-9ba5e42ad.json)
+replayed only the post-`4be72fc20` series through `9ba5e42ad`: zero conflicts,
+identical final tree, zero prerequisite commits replayed. It changed no refs or
+worktrees. Actual later dependency/shared changes still require verification.
