@@ -1,6 +1,6 @@
 # PR7927 owner-index publication context
 
-Status: publication authorized; attempt started; PR write not yet performed.
+Status: published and verified; local docs execution records ready for final integration.
 Prepared: 2026-10-07. Work-tracker: 295. Agent: codex.
 Current entry point: [CBRD-27089](README.md).
 
@@ -170,3 +170,22 @@ requested under work-tracker 242. Reviewer replies remain local drafts.
 - Material checker passed and approved body fingerprint matched. PR write and
   post-write verification remain pending at this attempt record.
 - No docs remote push or reviewer reply is authorized by this publication.
+
+### Verified publication result
+
+- PR body updated and verified at `2026-10-07T08:35:27.409596+00:00`: [PR7927](https://github.com/CUBRID/cubrid/pull/7927).
+- Published decoded body SHA-256: `1e04627e7f1bee840e9f02b1f5f4a9cb3af739a7bc1563576fe024ab93464064`.
+  Published UTF-8 bytes exactly equal the approved body file, including its final
+  newline. The approved body was not rewritten.
+- Source remains `4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c`. No source push occurred in this attempt.
+- Title remains `[CBRD-27089] Defer OOS writes until destination heap selection`; PR remains OPEN and ready for review
+  (`draft=false`). Head repository/branch and base remain unchanged.
+- Preparation and attempt records fast-forwarded into local docs `main` at
+  `4e35909b2ed0791b45726829792dec4f52f4ed03`; the destination was clean.
+- This result record and the README publication status will be committed, rebased
+  and fast-forwarded into local `main` under the same confirmation. Cleanup follows
+  verified inclusion of the task tip and inspection of uncommitted/ignored files.
+  Final integration and cleanup receipt is recorded in work-tracker 295.
+- Docs remote was not pushed. Reviewer replies remain in the local draft file.
+- Full CI and its snapshot analysis follow publication under work-tracker 242;
+  they do not retroactively change the verification claims in the approved body.

@@ -7,7 +7,7 @@ The no-record-type implementation, scoped verification, review and documentation
 
 | Read next | Purpose |
 | --- | --- |
-| [Publication body draft](CBRD-27089-owner-index-pr-body_4be72fc_codex.md) and [publication context](CBRD-27089-owner-index-pr-context_4be72fc_codex.md) | Proposed PR7927 update for local `4be72fc20`; source push and body update await explicit review confirmation |
+| [Published PR body](CBRD-27089-owner-index-pr-body_4be72fc_codex.md) and [publication context](CBRD-27089-owner-index-pr-context_4be72fc_codex.md) | PR7927 body published unchanged for remote `4be72fc20`; exact body, title and ready status verified |
 | [Current design](design/no-record-type-design.md) | Existing row owner, payload indices, explicit reader arguments, storage/export guards |
 | [Latest simplification verification](design/review-simplification.md), [original no-record-type verification](design/no-record-type-verification.md) and [its two-axis review](design/no-record-type-review.md) | Exact local revisions, commands, results and limits |
 | [Reviewer dispositions and Korean reply drafts](design/reviewer-comments-aecce0e.md) | The two requested comments, baseline attribution and reuse guarantees |
@@ -18,8 +18,8 @@ The no-record-type implementation, scoped verification, review and documentation
 The original [PR](https://github.com/CUBRID/cubrid/pull/7927) comment assessment used
 `aecce0e1216a813771621c13112c8f27d43df22e`, baseline
 `fb567a629cdb390fff920542173fa36f454c74a0`. On 2026-10-07 the remote was subsequently
-observed at `6b53181d31d6d6d2615b18b4f914623bb017d7c4`; the latest local refinement is
-`4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c`. Their evidence is recorded separately.
+observed at `6b53181d31d6d6d2615b18b4f914623bb017d7c4`; remote and local heads now match
+`4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c`, and the approved publication body is live. Their revision-specific evidence is recorded separately.
 Work-tracker 281 covers the completed design; 289 covers
 implementation; 284 covers documentation and comments; 293 covers the review simplifications. No remote replies have been
 posted by this follow-up.
