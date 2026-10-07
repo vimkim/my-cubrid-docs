@@ -71,6 +71,41 @@ No ADR is created for the unsettled, reversible implementation choice. The
 repository's canonical vocabulary remains in `CONTEXT.md` as required by its
 domain-doc layout.
 
+### Resume and source investigations — 2026-10-07
+
+The user resumed items 281 and 284 with three goals: remove the record type,
+establish one current documentation entry point while preserving historical
+verification, and assess the two current-head Greptile comments. After design
+agreement, the user requests local specification/tickets, implementation,
+appropriate verification and two-axis review. Remote replies remain local drafts.
+
+The resumed Q1 is still open. The user asked what "owner context" means and
+requested concrete implementation-design details rather than accepting or
+rejecting the proposal. It means a borrowed argument referring to the existing
+row owner, not an owner pointer in shared `RECDES`. The
+[concrete proposal](no-record-type-design.md) records payload-index lookup,
+reader propagation, current-view finalization and the open transport contract.
+Three read-only investigations inspected representation, reviewer feedback and
+documentation navigation. They made no source changes or runtime claims.
+
+The [comment assessment and draft replies](reviewer-comments-aecce0e.md)
+distinguish newly added client adaptation work from existing server fresh-chain
+UPDATE behavior. Unchanged-chain reuse is not a safe isolated optimization under
+the current vacuum/replication design. That disposition is source-backed; total
+performance impact remains unmeasured.
+
+Documentation cleanup will add a single current index, label pin-specific
+narratives and old task entry points as historical, and retain their evidence.
+The source-local ignored `.scratch/oos-deferred-write/` includes database/core
+artifacts and must be preserved; its stale session/map are not the new tracker.
+The configured durable tracker is the docs repository's local Markdown.
+The exact-head CI/review package at docs commit `71bcfef` is on a separate clean
+branch and should be reused, not recreated or treated as already present here.
+
+The dated sections below are historical interview and implementation records.
+Their earlier permission to retain `REC_OOS_PENDING` is superseded by the opening
+section. Their verification claims apply only to their recorded revisions.
+
 ## Simplification interview reopened — 2026-10-06
 
 Work tracker: 279. Source baseline: `feat/oos-deferred-write`, `b5b5eacbb`, in
