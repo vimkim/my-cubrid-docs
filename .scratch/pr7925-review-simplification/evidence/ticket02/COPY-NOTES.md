@@ -16,3 +16,8 @@ The original evidence manifest includes original bulk inputs and therefore is a
 seal of the source evidence, not a claim that every original file is copied here.
 No database volume, build directory, installation, socket, or retained native data
 was copied or deleted by this operation.
+
+Immutable native receipts retain their original spacing, line endings and source
+snapshot formatting. A repository-wide whitespace check reports those raw files;
+authored Markdown, Python and just recipes pass their scoped whitespace check.
+No receipt was normalized, so copied bytes continue to match the original seal.

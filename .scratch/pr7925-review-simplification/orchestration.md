@@ -373,3 +373,10 @@ CCI status. The docs task branch is `docs/pr7925-orchestration` in
 `/home/vimkim/gh/my-cubrid-docs-pr7925-orchestration`; committed evidence awaits
 its own user confirmation before rebase/fast-forward into current docs `main`.
 No push, CI, external comment, JIRA change or PR publication was performed.
+
+
+Documentation links and authored Markdown/Python/just whitespace checks pass;
+[docs verification](evidence/docs-verification.json) records the exact check scope.
+Immutable raw receipts retain native spacing/CSV line endings and source snapshot
+formatting, so the unfiltered whitespace check reports those preserved bytes.
+The original evidence seal and byte-identical copy audit remain intact.
