@@ -7,6 +7,7 @@ The no-record-type implementation, scoped verification, review and documentation
 
 | Read next | Purpose |
 | --- | --- |
+| [Korean reviewer guide](review-guide-ko.md) | Full PR prepare/destination/finalize flow, class lifetimes, symbol navigation and testcase decisions |
 | [Testcase assessment](testcase-assessment/assessment.md) | Selected failure contracts, justified partition-loader testcase correction, exact native results and remaining limits |
 | [Published PR body](CBRD-27089-owner-index-pr-body_4be72fc_codex.md) and [publication context](CBRD-27089-owner-index-pr-context_4be72fc_codex.md) | PR7927 body published unchanged for remote `4be72fc20`; exact body, title and ready status verified |
 | [Current design](design/no-record-type-design.md) | Existing row owner, payload indices, explicit reader arguments, storage/export guards |
@@ -778,6 +779,10 @@ Dates below use the Git creation and modification dates for each path in Asia/Se
 | [review-d08a169-claude/README.md](review-d08a169-claude/README.md) | Section entry point and navigation | 2026-09-18 | 2026-09-18 | Preserve ticket context, navigation and verification evidence |
 | [review-d08a169-claude/spec.md](review-d08a169-claude/spec.md) | PR #7927 — Spec review | 2026-09-18 | 2026-09-18 | Preserve ticket context, navigation and verification evidence |
 | [review-d08a169-claude/standards.md](review-d08a169-claude/standards.md) | PR #7927 — Standards review | 2026-09-18 | 2026-09-18 | Preserve ticket context, navigation and verification evidence |
+| [review-guide-ko-coverage.json](review-guide-ko-coverage.json) | Pinned full-PR symbol, hunk, source-link and navigation coverage audit | 2026-10-07 | 2026-10-07 | Explain and independently verify the final PR7927 reviewer deliverables |
+| [review-guide-ko-orchestration.json](review-guide-ko-orchestration.json) | Independent engine/testcase/guide verification and approved local integration receipt | 2026-10-07 | 2026-10-07 | Explain and independently verify the final PR7927 reviewer deliverables |
+| [review-guide-ko-type-traits.json](review-guide-ko-type-traits.json) | Exact compiler inputs and eight copy/move ownership trait checks | 2026-10-07 | 2026-10-07 | Explain and independently verify the final PR7927 reviewer deliverables |
+| [review-guide-ko.md](review-guide-ko.md) | Korean full-PR reviewer guide with exact revisions, symbol sections and testcase decisions | 2026-10-07 | 2026-10-07 | Explain and independently verify the final PR7927 reviewer deliverables |
 | [reviewer-walkthrough-479cd960-codex/README.md](reviewer-walkthrough-479cd960-codex/README.md) | Section entry point and navigation | 2026-09-10 | 2026-10-07 | Preserve ticket context, navigation and verification evidence |
 | [reviewer-walkthrough-479cd960-codex/assets/d3-7.9.0.min.js](reviewer-walkthrough-479cd960-codex/assets/d3-7.9.0.min.js) | Supporting historical evidence and verification artifact | 2026-09-10 | 2026-09-10 | Preserve ticket context, navigation and verification evidence |
 | [reviewer-walkthrough-479cd960-codex/authoring/annotations.py](reviewer-walkthrough-479cd960-codex/authoring/annotations.py) | Supporting reproduction, inspection or verification source | 2026-09-10 | 2026-09-10 | Preserve ticket context, navigation and verification evidence |
@@ -1159,3 +1164,4 @@ Dates below use the Git creation and modification dates for each path in Asia/Se
 | [testcase-assessment/partition_contract_probe.py](testcase-assessment/partition_contract_probe.py) | Fresh partition routing, rollback and recovery oracle | 2026-10-07 | 2026-10-07 | Assess selected PR7927 failures without weakening existing contracts |
 | [testcase-assessment/replay_native.py](testcase-assessment/replay_native.py) | Isolated native medium and shell reproduction procedure | 2026-10-07 | 2026-10-07 | Assess selected PR7927 failures without weakening existing contracts |
 | [testcase-assessment/retain_evidence.py](testcase-assessment/retain_evidence.py) | Bounded native evidence collection procedure | 2026-10-07 | 2026-10-07 | Assess selected PR7927 failures without weakening existing contracts |
+| [verify-review-guide-ko.py](verify-review-guide-ko.py) | Reproducible pinned source, symbol, hunk and guide navigation audit | 2026-10-07 | 2026-10-07 | Explain and independently verify the final PR7927 reviewer deliverables |
