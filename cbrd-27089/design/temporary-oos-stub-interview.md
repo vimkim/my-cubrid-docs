@@ -9,8 +9,9 @@ branch `feat/oos-deferred-write`, worktree
 "I do not want to add new rec type." This supersedes the October 6 permission
 to retain `REC_OOS_PENDING`. The earlier compact-record reuse, in-place
 finalization, destination-owned writes, and common memory/disk access decisions
-remain the starting constraints. This interview has not authorized a replacement
-implementation or remote publication.
+remain the starting constraints. The user approved the final replacement design,
+test seams and task breakdown on 2026-10-07. Implementation is authorized;
+remote publication is not.
 
 Source facts at the pin:
 
@@ -107,7 +108,7 @@ branch and should be reused, not recreated or treated as already present here.
 
 ### Round 2 frontier
 
-Q2 — OPEN, factual prerequisites resolved: accept heap-row checks at the actual
+Q2 — ACCEPTED by the user's "I approve": accept heap-row checks at the actual
 `LC_FETCH` export boundaries while preserving generic packing semantics?
 Recommendation: yes. Production rows use `LC_COPYAREA`, not
 `record_descriptor::pack`. The three server row producers already request OOS
@@ -125,8 +126,11 @@ fixture, followed by two-axis review. The proposed four tasks are explicit-owner
 access, marker removal with publication guards, current-revision reviewer
 dispositions/local replies, and one current documentation entry point. Their
 dependencies are recorded in the [proposal](no-record-type-design.md). These
-test seams and task granularity await user confirmation; no source changes or
-ready-for-agent tickets have been created.
+test seams and task granularity were approved with the final design. The
+[spec](../../.scratch/pr7927-oos-review-cleanup/spec.md) and separate tickets are
+now published in the configured local Markdown tracker. Explicit-owner access
+is claimed first. The design frontier is closed; implementation proceeds under
+the user's original staged-workflow authorization.
 
 The dated sections below are historical interview and implementation records.
 Their earlier permission to retain `REC_OOS_PENDING` is superseded by the opening

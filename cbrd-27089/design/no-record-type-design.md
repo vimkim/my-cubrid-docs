@@ -1,7 +1,7 @@
 # PR7927 proposal without a pending record type
 
-Status: explicit existing-owner arguments and unchanged shared `RECDES` accepted
-on 2026-10-07; transport contract open; not implemented. Work-tracker: 281. Reviewed source
+Status: design, transport contract, verification seams and four-task breakdown
+approved on 2026-10-07; implementation in progress. Work-tracker: 281 (design agreement). Reviewed source
 is `aecce0e1216a813771621c13112c8f27d43df22e`; its merge base with
 `feature/oos-merge` is `fb567a629cdb390fff920542173fa36f454c74a0`.
 The [interview](temporary-oos-stub-interview.md) records accepted constraints and
@@ -85,7 +85,7 @@ require equality with the owner's original descriptor length. Finalization uses
 the current representation/VOT walk to find stub locations; it stores no patch
 pointers that could become stale during header changes.
 
-## Recommended storage and transport contract — awaiting confirmation
+## Accepted storage and transport contract
 
 Heap logical INSERT/UPDATE currently reject the descriptor marker
 (`heap_file.c:25141,25573`). Replace those guards with heap-row validation using
@@ -122,12 +122,12 @@ actual row-export seam. Incoming flush/replication bytes remain disk-only and
 never acquire the local owner. Loader network batches carry source text; pending
 owners are created and queued server-side.
 
-This recommendation resolves the earlier ambiguous byte-pattern scan proposal.
+This accepted contract resolves the earlier ambiguous byte-pattern scan proposal.
 No new descriptor field, record type, generic serialization contract or global
-pointer registry is needed. The export placement remains the final design
-decision to confirm, rather than an executed safety guarantee.
+pointer registry is needed. Acceptance establishes the intended design;
+implementation and verification must establish the safety guarantee.
 
-## Proposed verification seams
+## Accepted verification seams
 
 Prefer existing engine/SQL tests and their public behavior over new test-only
 accessors. Cover destination ownership, copy-area UPDATE, partition movement,
@@ -146,7 +146,7 @@ server-loader fixture. Record results against the resulting local commit; old
 verification remains historical. No replacement build or runtime verification
 has been performed.
 
-## Proposed task breakdown — awaiting confirmation
+## Approved task breakdown
 
 1. **Explicit-owner prepared-row access.** No blockers. Introduce the trusted
    owner-index access path through all supported readers and current-view
@@ -163,7 +163,8 @@ has been performed.
    vocabulary and task status, mark superseded narratives, preserve verification
    evidence, repair links and expose current design/checks/replies from one index.
 
-The user requested specification, small dependency-bearing tickets,
-implementation and final two-axis review after design agreement. This breakdown
-has not yet been approved or published as ready-for-agent tickets. Source
-changes, remote replies, pushes and merges have not been performed.
+The user confirmed the final design and this breakdown with "I approve".
+The [spec](../../.scratch/pr7927-oos-review-cleanup/spec.md) and
+[task map](../../.scratch/pr7927-oos-review-cleanup/map.md) record the authorized
+implementation and final two-axis review. Remote replies remain local drafts;
+pushes and integration merges require separate authorization.
