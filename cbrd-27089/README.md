@@ -65,3 +65,9 @@ These explain earlier decisions. Older marker, raw-pointer and routing-probe des
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
 | [PR7927 CI analysis — 4be72fc20](ci_analysis_report_4be72fc_codex.md) | PR7927 CI analysis — 4be72fc20 | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+
+## Integrated analysis and decisions
+
+| File | What it contains | Created | Last modified | Why it was created |
+| --- | --- | --- | --- | --- |
+| [PR #7927 terminal CI assessment — f3144ab](ci_analysis_report_f3144ab_codex.md) | PR #7927 terminal CI assessment — f3144ab | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
