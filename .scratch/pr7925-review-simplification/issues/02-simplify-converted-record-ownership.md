@@ -41,3 +41,15 @@ turning that preference into a false blocking edge.
 
 Local source edits and verification are the deliverable. Push, CI triggering,
 remote publication, and integration merges remain separate actions.
+
+
+## Comments
+
+2026-10-07: Not claimed or dispatched. PR #7927 remains open/unmerged at
+`4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c`; its accepted `heap_pending_record`
+interface is absent from the authorized private base. Ticket 01 has been
+resolved independently. A read-only combination preview found conflicts in
+loader and locator force interfaces. The coordinator must obtain the base
+integration decision described in [orchestration.md](../orchestration.md),
+verify the accepted interface on that base, then assign this ticket to a new
+`fork_turns=none` agent. No prerequisite code was copied or merged.

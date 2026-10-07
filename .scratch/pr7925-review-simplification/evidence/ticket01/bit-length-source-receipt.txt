@@ -1,0 +1,41 @@
+Revision: 625b193745959d0ab047f26f4354e9aacb48160d
+
+src/parser/keyword.c:690
+690:   {0, "index_cardinality", PT_INDEX_CARDINALITY},
+691:   {0, "inst_num", PT_INST_NUM},
+692:   {0, "instr", PT_INSTR},
+693:   {0, "instrb", PT_INSTR},
+694:   {0, "last_day", PT_LAST_DAY},
+695:   {0, "length", PT_CHAR_LENGTH},
+696:   {0, "lengthb", PT_CHAR_LENGTH},
+697:   {0, "least", PT_LEAST},
+698:   {0, "like_match_lower_bound", PT_LIKE_LOWER_BOUND},
+
+src/parser/xasl_generation.c:8808
+8808: 		case PT_OCTET_LENGTH:
+8809: 		  regu = pt_make_regu_arith (r1, r2, NULL, T_OCTET_LENGTH, domain);
+8810: 		  break;
+8811: 
+8812: 		case PT_BIT_LENGTH:
+8813: 		  regu = pt_make_regu_arith (r1, r2, NULL, T_BIT_LENGTH, domain);
+8814: 		  break;
+8815: 
+8816: 		case PT_CHAR_LENGTH:
+8817: 		  regu = pt_make_regu_arith (r1, r2, NULL, T_CHAR_LENGTH, domain);
+8818: 		  break;
+
+src/query/fetch.c:1900
+1900:     case T_BIT_LENGTH:
+1901:       if (DB_IS_NULL (peek_right))
+1902: 	{
+1903: 	  PRIM_SET_NULL (arithptr->value);
+1904: 	}
+1905:       else if (DB_VALUE_DOMAIN_TYPE (peek_right) == DB_TYPE_BIT || DB_VALUE_DOMAIN_TYPE (peek_right) == DB_TYPE_VARBIT)
+1906: 	{
+1907: 	  int len = 0;
+1908: 
+1909: 	  db_get_bit (peek_right, &len);
+1910: 	  db_make_int (arithptr->value, len);
+1911: 	}
+1912:       else if (DB_VALUE_DOMAIN_TYPE (peek_right) == DB_TYPE_BLOB)
+1913: 	{

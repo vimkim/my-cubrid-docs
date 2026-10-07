@@ -1,0 +1,106 @@
+diff --git a/unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp b/unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp
+index f3d392869..fae632a48 100644
+--- a/unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp
++++ b/unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp
+@@ -52,8 +52,8 @@ class OosWorkspaceBytes : public ::testing::Test
+       ASSERT_EQ (heap_scancache_start (thread, &scan_cache, &hfid, &class_oid, true,
+ 				       logtb_get_mvcc_snapshot (thread)), NO_ERROR);
+       const SCAN_CODE scan = heap_get_visible_version (thread, &oid, &class_oid, &record,
+-						      &scan_cache, COPY, NULL_CHN,
+-						      HEAP_RECDES_DONT_CONSUME_RAW_BYTES);
++			     &scan_cache, COPY, NULL_CHN,
++			     HEAP_RECDES_DONT_CONSUME_RAW_BYTES);
+       if (scan == S_SUCCESS)
+ 	{
+ 	  // The scan cache owns the returned buffer. Copy it before ending the scan.
+@@ -70,7 +70,7 @@ class OosWorkspaceBytes : public ::testing::Test
+     {
+       int cache_index = -1;
+       OR_CLASSREP *repr = heap_classrepr_get (thread_get_thread_entry_info (), &class_oid, nullptr,
+-					    OR_GET_MVCC_REPID (record.data), &cache_index);
++					      OR_GET_MVCC_REPID (record.data), &cache_index);
+       ASSERT_NE (repr, nullptr);
+       scope_exit free_repr ([&] ()
+       {
+@@ -238,7 +238,7 @@ class OosWorkspaceBytes : public ::testing::Test
+       RECDES actual = RECDES_INITIALIZER;
+       ASSERT_NO_FATAL_FAILURE (capture (*WS_OID (workspace_object), class_oid, hfid, workspace_bytes, actual));
+       ASSERT_NO_FATAL_FAILURE (expect_storage (stored, class_oid, alter == nullptr ? selected : old_selected,
+-					      offset_size, first_value_size));
++			       offset_size, first_value_size));
+       ASSERT_NO_FATAL_FAILURE (expect_storage (actual, class_oid, selected, offset_size, first_value_size));
+ 
+       // Fixture expectations are independent of equality between the writers.
+@@ -246,7 +246,7 @@ class OosWorkspaceBytes : public ::testing::Test
+       ASSERT_EQ (fetch_single_int ("SELECT COUNT(*) FROM ws_bytes", &count), NO_ERROR);
+       EXPECT_EQ (count, 2);
+       ASSERT_EQ (fetch_single_int (("SELECT COUNT(*) FROM ws_bytes WHERE " + predicate).c_str (), &count), NO_ERROR)
+-	<< db_error_string (1);
++	  << db_error_string (1);
+       EXPECT_EQ (count, 2) << predicate;
+ 
+       if (alter != nullptr)
+@@ -290,7 +290,7 @@ TEST_F (OosWorkspaceBytes, LargestFirstAndPreferInline)
+ 	 "1, REPEAT(X'AA', 3500), REPEAT(X'BB', 3000), REPEAT(X'CC', 600)",
+ 	 "id=1 AND a=CAST(REPEAT(X'AA', 3500) AS BIT VARYING)"
+ 	 " AND b=CAST(REPEAT(X'BB', 3000) AS BIT VARYING) AND c=CAST(REPEAT(X'CC', 600) AS BIT VARYING)",
+-	 {false, true, true}, OR_SHORT_SIZE);
++  {false, true, true}, OR_SHORT_SIZE);
+ }
+ 
+ TEST_F (OosWorkspaceBytes, EqualSizeTie)
+@@ -298,14 +298,14 @@ TEST_F (OosWorkspaceBytes, EqualSizeTie)
+   // The legacy storage-index tiebreak selects a in this representation.
+   check ("a BIT VARYING, b BIT VARYING", "REPEAT(X'AA', 2200), REPEAT(X'BB', 2200)",
+ 	 "a=CAST(REPEAT(X'AA', 2200) AS BIT VARYING) AND b=CAST(REPEAT(X'BB', 2200) AS BIT VARYING)",
+-	 {true, false}, OR_SHORT_SIZE);
++  {true, false}, OR_SHORT_SIZE);
+ }
+ 
+ TEST_F (OosWorkspaceBytes, OffsetWidthShrinksAfterForcedDemotion)
+ {
+   check ("a BIT VARYING STORAGE FORCE_OUTLINE, b BIT VARYING",
+ 	 "REPEAT(X'AA', 65536), X'BB'", "a=CAST(REPEAT(X'AA', 65536) AS BIT VARYING) AND b=X'BB'",
+-	 {true, false}, OR_BYTE_SIZE);
++  {true, false}, OR_BYTE_SIZE);
+ }
+ 
+ TEST_F (OosWorkspaceBytes, CompressedStringAndJson)
+@@ -315,7 +315,7 @@ TEST_F (OosWorkspaceBytes, CompressedStringAndJson)
+ 	 "a=REPEAT('abcdefgh', 10000)"
+ 	 " AND JSON_PRETTY(b)=JSON_PRETTY('{\"key\": [1,2,3,4,5,6,7,8,9,10]}')"
+ 	 " AND c=CAST(REPEAT(X'BB', 4500) AS BIT VARYING)",
+-	 {true, true, true}, OR_BYTE_SIZE);
++  {true, true, true}, OR_BYTE_SIZE);
+ }
+ 
+ TEST_F (OosWorkspaceBytes, CollectionSerializedBytes)
+@@ -323,7 +323,7 @@ TEST_F (OosWorkspaceBytes, CollectionSerializedBytes)
+   check ("a SEQUENCE OF INTEGER STORAGE FORCE_OUTLINE, b BIT VARYING",
+ 	 "{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}, REPEAT(X'AA', 5000)",
+ 	 "a={1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16} AND b=CAST(REPEAT(X'AA', 5000) AS BIT VARYING)",
+-	 {true, true}, OR_BYTE_SIZE);
++  {true, true}, OR_BYTE_SIZE);
+ }
+ 
+ TEST_F (OosWorkspaceBytes, WideVotAndManyAttributes)
+@@ -346,8 +346,8 @@ TEST_F (OosWorkspaceBytes, OldDiskRepresentationIsConvertedBeforeWorkspaceSerial
+ {
+   check ("a BIT VARYING", "REPEAT(X'AA', 5000)",
+ 	 "a=CAST(REPEAT(X'AA', 5000) AS BIT VARYING) AND BIT_LENGTH(a)=40000 AND b='new attribute'",
+-	 {true, false}, OR_BYTE_SIZE,
+-	 "ALTER TABLE ws_bytes ADD b VARCHAR DEFAULT 'new attribute'", {true}, 5008);
++  {true, false}, OR_BYTE_SIZE,
++  "ALTER TABLE ws_bytes ADD b VARCHAR DEFAULT 'new attribute'", {true}, 5008);
+ }
+ 
+ class OosWorkspaceSizeBoundary : public OosWorkspaceBytes, public ::testing::WithParamInterface<int>
+@@ -368,7 +368,7 @@ TEST_P (OosWorkspaceSizeBoundary, SerializedSizesMatchValueSizes)
+ 	 "1, REPEAT(X'AA', " + size + "), REPEAT(X'BB', 200), REPEAT('C', 255)",
+ 	 "id=1 AND a=CAST(REPEAT(X'AA', " + size + ") AS BIT VARYING)"
+ 	 " AND b=CAST(REPEAT(X'BB', 200) AS BIT VARYING) AND c=REPEAT('C', 255)",
+-	 {GetParam () >= 24, false, false}, OR_SHORT_SIZE, nullptr, {}, encoded_sizes.at (GetParam ()));
++  {GetParam () >= 24, false, false}, OR_SHORT_SIZE, nullptr, {}, encoded_sizes.at (GetParam ()));
+ }
+ 
+ INSTANTIATE_TEST_SUITE_P (EncodingAndVotBoundaries, OosWorkspaceSizeBoundary,

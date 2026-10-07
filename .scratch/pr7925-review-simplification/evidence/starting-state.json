@@ -1,0 +1,85 @@
+{
+  "observed_at": "2026-10-07T08:39:27.489002+00:00",
+  "source_head": "1c660d22e4340ee707336ad08c8b4bf4b69744de",
+  "review_base": "fb567a629cdb390fff920542173fa36f454c74a0",
+  "dependency_candidate": "4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c",
+  "private_integration_branch": "review/pr7925-simplification",
+  "dependency_integrated": false,
+  "prs": [
+    {
+      "command": [
+        "gh",
+        "pr",
+        "view",
+        "7925",
+        "--repo",
+        "CUBRID/cubrid",
+        "--json",
+        "number,url,state,headRefName,headRefOid,headRepository,baseRefName,mergedAt"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"baseRefName\":\"feature/oos-merge\",\"headRefName\":\"CBRD-27424-oos-loaddb-sa\",\"headRefOid\":\"1c660d22e4340ee707336ad08c8b4bf4b69744de\",\"headRepository\":{\"id\":\"R_kgDOLwAkuw\",\"name\":\"cubrid\",\"nameWithOwner\":\"vimkim/cubrid\"},\"mergedAt\":null,\"number\":7925,\"state\":\"OPEN\",\"url\":\"https://github.com/CUBRID/cubrid/pull/7925\"}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "gh",
+        "pr",
+        "view",
+        "7927",
+        "--repo",
+        "CUBRID/cubrid",
+        "--json",
+        "number,url,state,headRefName,headRefOid,headRepository,baseRefName,mergedAt"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"baseRefName\":\"feature/oos-merge\",\"headRefName\":\"feat/oos-deferred-write\",\"headRefOid\":\"4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c\",\"headRepository\":{\"id\":\"R_kgDOLwAkuw\",\"name\":\"cubrid\",\"nameWithOwner\":\"vimkim/cubrid\"},\"mergedAt\":null,\"number\":7927,\"state\":\"OPEN\",\"url\":\"https://github.com/CUBRID/cubrid/pull/7927\"}\n",
+      "stderr": ""
+    }
+  ],
+  "states": {
+    "/home/vimkim/gh/cb/CBRD-27424-oos-loaddb-sa": {
+      "command": [
+        "git",
+        "status",
+        "--short"
+      ],
+      "exit_code": 0,
+      "stdout": " m cubrid-cci\n",
+      "stderr": ""
+    },
+    "/home/vimkim/gh/cb/feature-oos-merge": {
+      "command": [
+        "git",
+        "status",
+        "--short"
+      ],
+      "exit_code": 0,
+      "stdout": " M AGENTS.md\n M cubrid-cci\n",
+      "stderr": ""
+    },
+    "/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write": {
+      "command": [
+        "git",
+        "status",
+        "--short"
+      ],
+      "exit_code": 0,
+      "stdout": " m cubrid-cci\n M cubrid-jdbc\n",
+      "stderr": ""
+    }
+  },
+  "dependency_ancestry": {
+    "command": [
+      "git",
+      "merge-base",
+      "--is-ancestor",
+      "4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c",
+      "1c660d22e4340ee707336ad08c8b4bf4b69744de"
+    ],
+    "exit_code": 1,
+    "stdout": "",
+    "stderr": ""
+  },
+  "preserved_cci_version_sha256": "f9766b68dab0c3f615a02cf29368396a43e887b8bc052e0fba321add407259a3"
+}

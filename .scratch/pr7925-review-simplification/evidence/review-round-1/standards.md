@@ -1,0 +1,9 @@
+Standards review of `ba308c529a65d25f64897f7733ff167e2f6c1745`, using `git diff 1c660d22e4340ee707336ad08c8b4bf4b69744de...HEAD`.
+
+Documented-standard breaches: **0**. Reviewed `/home/vimkim/.codex/AGENTS.md`, `/home/vimkim/my-cubrid/CUBRID.md`, `CONTRIBUTING.md`, `unit_tests/AGENTS.md`, `unit_tests/oos/AGENTS.md`, and the normative OOS context. The explicit OOS GoogleTest exception applies. `AGENTS.user.md` is absent. Formatter-enforced issues were excluded.
+
+Judgment findings: **1**.
+
+- **Possible Data Clumps — low severity**, `unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp:190–192`, with the resulting call at line 371. The new signature carries `"const std::vector<bool> &selected, int offset_size"` and `"const std::vector<bool> &old_selected = {}, int first_value_size = 0"`. The related storage expectations travel from every fixture through `check` to `expect_storage`; the boundary fixture must write `"OR_SHORT_SIZE, nullptr, {}, encoded_sizes.at (GetParam ())"` to supply its size expectation. This makes the independent oracle harder to read and leaves several positional arguments easy to confuse. A small fixture-local storage-expectation type containing expected OOS selections, offset width, and optional first serialized size would make those relationships explicit; schema evolution can supply a separate old-row expectation. This is a maintainability heuristic, not a hard rule or an observed functional defect.
+
+Whole-PR context against `fb567a629cdb390fff920542173fa36f454c74a0` was inspected; this finding concerns only the new ticket delta. Production code is unchanged by this commit. The task branch has no PR (`gh-pr-info` reported no match). No source edits or database tests were performed. Committed-revision verification remains the coordinator's responsibility; the supplied evidence records earlier passing runs. OOS environment validation reported only a missing root compile-command symlink; textual review was unaffected.

@@ -1,0 +1,12 @@
+# Ticket01 final Spec review
+
+Reviewed `625b193745959d0ab047f26f4354e9aacb48160d` against pinned base `1c660d22e4340ee707336ad08c8b4bf4b69744de` and repair parent `ba308c529a65d25f64897f7733ff167e2f6c1745`. Comparison source SHA-256: `adc506598e3e69e4346e2392611b95cb00dbda8c060f9e3260e42f90c305feb6`.
+
+**Findings: 0.** No missing or incorrectly implemented ticket01 requirement, weakened assertion, or scope creep found.
+
+- Ticket line 11 requires “Preserve all 21 comparison cases” with their intended assertions. All eight named identities and 13 boundary parameters match both revisions. Every string literal and prior assertion remains; the repair adds only a fatal-failure guard around the common-case overload. [Grouped expectations](/home/vimkim/gh/cb/pr7925-01-stored-rows/unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp:40) preserve the previous storage-assertion body exactly after member-name substitution.
+- Ticket lines 12–14 require explicit values/OOS selections and meaningful collection/layout checks. [The common-case overload](/home/vimkim/gh/cb/pr7925-01-stored-rows/unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp:196) uses the same expectation for both writes. Schema evolution passes distinct old/current expectations. Independent value predicates, placement bits, encoded sizes, offset widths, decoded collection equality, and MVCC-adjusted body lengths retain their semantics.
+- Ticket line 15 requires the “original 5,000-byte value,” added default, and actual OOS storage. [Explicit old/current oracles](/home/vimkim/gh/cb/pr7925-01-stored-rows/unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp:355) both retain 5,008-byte serialized-size checks; current-column selection includes inline default `b`. Exact value, 40,000-bit length, default, OOS, and differing representation IDs remain checked without raw-layout equality.
+- OID capture, copied-buffer lifetime, comparison, and ordinary cleanup are unchanged from the independently inspected first commit. All 13 utility scenarios remain byte-identical to the pinned base. Production and the whole-PR production delta remain unchanged.
+
+Evidence: repaired committed build/install passed. The prior committed revision passed 37/37 CTests and 336/336 cases. Repair-focused and full verification were still running at review; final acceptance under ticket line 17 awaits their exact receipts and the implementation report's commit/hash refresh. Deferred ticket02 and prerequisite partition acceptance remain outside this ticket-scoped conclusion.

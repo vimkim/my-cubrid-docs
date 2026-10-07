@@ -1,0 +1,19 @@
+_cwe_old_install=${CUBRID:-}
+for _cwe_var in PATH LD_LIBRARY_PATH; do
+    _cwe_value=${!_cwe_var:-}
+    _cwe_result=
+    IFS=: read -r -a _cwe_parts <<< "$_cwe_value"
+    for _cwe_part in "${_cwe_parts[@]}"; do
+        if [[ -n "$_cwe_old_install" && ( "$_cwe_part" == "$_cwe_old_install/bin" || "$_cwe_part" == "$_cwe_old_install/lib" || "$_cwe_part" == "$_cwe_old_install/cci/lib" ) ]]; then
+            continue
+        fi
+        _cwe_result=${_cwe_result:+$_cwe_result:}$_cwe_part
+    done
+    export "$_cwe_var=$_cwe_result"
+done
+for _cwe_name in ${!CUBRID@}; do
+    [[ "$_cwe_name" == CUBRID_BUILD_DIR ]] || unset "$_cwe_name"
+done
+unset _cwe_old_install _cwe_var _cwe_value _cwe_result _cwe_parts _cwe_part _cwe_name LD_PRELOAD
+export CUBRID_RUNTIME_READY=0
+source /home/vimkim/gh/cb/pr7925-01-stored-rows/.cub-workenv/env.sh

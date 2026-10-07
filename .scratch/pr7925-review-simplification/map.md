@@ -6,7 +6,7 @@ Contract: [approved specification](spec.md)
 
 | Ticket | What it delivers | Blocked by | Status |
 | --- | --- | --- | --- |
-| [01: Simplify SQL/workspace comparison tests](issues/01-simplify-stored-row-comparison.md) | Two real stored rows and independent expected results, with the extra conversion and its rollback machinery removed. | None. | claimed |
+| [01: Simplify SQL/workspace comparison tests](issues/01-simplify-stored-row-comparison.md) | Two real stored rows and independent expected results, with the extra conversion and its rollback machinery removed. | None. | resolved |
 | [02: Simplify converted-record memory ownership](issues/02-simplify-converted-record-ownership.md) | One clear memory lifetime across successful/failing workspace INSERT and UPDATE, fitting the accepted prerequisite interface. | External CBRD-27089 / PR #7927 accepted write/ownership interface available on the chosen base. | ready-for-agent |
 
 ## Work order and dependencies
@@ -33,3 +33,9 @@ separate actions.
 Execution state, evidence and unresolved prerequisites are recorded in
 [orchestration.md](orchestration.md). Ticket 02 remains fully specified but
 cannot be dispatched until its interface is present on an authorized base.
+
+
+2026-10-07 execution checkpoint: 01 is resolved at `625b193745`, with final
+37/37 CTests and 336/336 GoogleTests and zero findings on both review axes.
+02 remains externally blocked and unclaimed. See the orchestration record for
+the exact base decision; the parent contract remains unchanged and unfinished.
