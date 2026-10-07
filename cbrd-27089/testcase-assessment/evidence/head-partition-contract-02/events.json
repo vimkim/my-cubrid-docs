@@ -1,0 +1,306 @@
+[
+  {
+    "label": "engine_revision",
+    "command": [
+      "git",
+      "-C",
+      "/home/vimkim/gh/cb/pr7927-assessment-head",
+      "rev-parse",
+      "HEAD"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "engine_release",
+    "command": [
+      "cubrid_rel"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "create",
+    "command": [
+      "cub-workenv",
+      "create-db",
+      "probe7927b",
+      "--worktree",
+      "/home/vimkim/gh/cb/pr7927-assessment-head"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "start",
+    "command": [
+      "cubrid",
+      "server",
+      "start",
+      "probe7927b"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "schema",
+    "command": [
+      "csql",
+      "-C",
+      "-u",
+      "dba",
+      "-t",
+      "-N",
+      "-c",
+      "create table t(i int) partition by range(i) (partition p0 values less than(10)); insert into t values(1);",
+      "probe7927b"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "unload",
+    "command": [
+      "cubrid",
+      "unloaddb",
+      "-u",
+      "dba",
+      "probe7927b"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "empty_before_invalid",
+    "command": [
+      "csql",
+      "-C",
+      "-u",
+      "dba",
+      "-t",
+      "-N",
+      "-c",
+      "delete from t;",
+      "probe7927b"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "generated_invalid_child",
+    "command": [
+      "cubrid",
+      "loaddb",
+      "-C",
+      "-v",
+      "-u",
+      "dba",
+      "-c",
+      "100",
+      "-d",
+      "/home/vimkim/tmp/pr7927-assessment-20261007/head-partition-contract-02/probe7927b_objects",
+      "probe7927b"
+    ],
+    "exit": 3
+  },
+  {
+    "label": "rollback_t",
+    "command": [
+      "csql",
+      "-C",
+      "-u",
+      "dba",
+      "-t",
+      "-N",
+      "-c",
+      "select count(*) from t",
+      "probe7927b"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "rollback_t__p__p0",
+    "command": [
+      "csql",
+      "-C",
+      "-u",
+      "dba",
+      "-t",
+      "-N",
+      "-c",
+      "select count(*) from t__p__p0",
+      "probe7927b"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "generated_valid_child",
+    "command": [
+      "cubrid",
+      "loaddb",
+      "-C",
+      "-v",
+      "-u",
+      "dba",
+      "-c",
+      "100",
+      "-d",
+      "/home/vimkim/tmp/pr7927-assessment-20261007/head-partition-contract-02/valid.objects",
+      "probe7927b"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "recovery_t",
+    "command": [
+      "csql",
+      "-C",
+      "-u",
+      "dba",
+      "-t",
+      "-N",
+      "-c",
+      "select case when count(*)=1 and min(i)=1 and max(i)=1 then 1 else 0 end from t",
+      "probe7927b"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "recovery_t__p__p0",
+    "command": [
+      "csql",
+      "-C",
+      "-u",
+      "dba",
+      "-t",
+      "-N",
+      "-c",
+      "select case when count(*)=1 and min(i)=1 and max(i)=1 then 1 else 0 end from t__p__p0",
+      "probe7927b"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "routing_schema",
+    "command": [
+      "csql",
+      "-C",
+      "-u",
+      "dba",
+      "-t",
+      "-N",
+      "-c",
+      "create table tr(i int) partition by range(i) (partition p0 values less than(10), partition p1 values less than(20));",
+      "probe7927b"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "root_valid",
+    "command": [
+      "cubrid",
+      "loaddb",
+      "-C",
+      "-v",
+      "-u",
+      "dba",
+      "-c",
+      "100",
+      "-d",
+      "/home/vimkim/tmp/pr7927-assessment-20261007/head-partition-contract-02/root_valid.objects",
+      "probe7927b"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "child_valid",
+    "command": [
+      "cubrid",
+      "loaddb",
+      "-C",
+      "-v",
+      "-u",
+      "dba",
+      "-c",
+      "100",
+      "-d",
+      "/home/vimkim/tmp/pr7927-assessment-20261007/head-partition-contract-02/child_valid.objects",
+      "probe7927b"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "before_failure_tr",
+    "command": [
+      "csql",
+      "-C",
+      "-u",
+      "dba",
+      "-t",
+      "-N",
+      "-c",
+      "select case when count(*)=3 and min(i)=1 and max(i)=11 then 1 else 0 end from tr",
+      "probe7927b"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "before_failure_tr__p__p0",
+    "command": [
+      "csql",
+      "-C",
+      "-u",
+      "dba",
+      "-t",
+      "-N",
+      "-c",
+      "select case when count(*)=2 and min(i)=1 and max(i)=2 then 1 else 0 end from tr__p__p0",
+      "probe7927b"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "before_failure_tr__p__p1",
+    "command": [
+      "csql",
+      "-C",
+      "-u",
+      "dba",
+      "-t",
+      "-N",
+      "-c",
+      "select case when count(*)=1 and min(i)=11 and max(i)=11 then 1 else 0 end from tr__p__p1",
+      "probe7927b"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "child_invalid_sibling",
+    "command": [
+      "cubrid",
+      "loaddb",
+      "-C",
+      "-v",
+      "-u",
+      "dba",
+      "-c",
+      "100",
+      "-d",
+      "/home/vimkim/tmp/pr7927-assessment-20261007/head-partition-contract-02/child_invalid_sibling.objects",
+      "probe7927b"
+    ],
+    "exit": 3
+  },
+  {
+    "label": "stop",
+    "command": [
+      "cubrid",
+      "server",
+      "stop",
+      "probe7927b"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "service_stop",
+    "command": [
+      "cubrid",
+      "service",
+      "stop"
+    ],
+    "exit": 0
+  }
+]

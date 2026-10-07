@@ -1,0 +1,37 @@
+1628:----------------- 1 : NOK test2: expected child partition input was not generated
+1693:Line 6:Appropriate partition does not exist.
+1694:Total 0 object(s) inserted, 1 object(s) failed.
+1699:----------------- 2 : OK  test2: invalid partition load failed
+1702:+ grep -q 'Appropriate partition does not exist' test2_invalid.output
+1706:----------------- 3 : OK  test2: partition error reported
+1713:----------------- 4 : OK  test2: failed batch reports zero inserted and one failed object
+1723:----------------- 5 : OK  test2: t failed batch rolled back
+1733:----------------- 6 : OK  test2: t__p__p0 failed batch rolled back
+1741:----------------- 7 : OK  test2: next valid load succeeded
+1751:----------------- 8 : OK  test2: t contains exactly the next valid row
+1761:----------------- 9 : OK  test2: t__p__p0 contains exactly the next valid row
+1785:----------------- 10 : OK  test2: route_root.objects has the expected load verdict and counts
+1801:----------------- 11 : OK  test2: route_child.objects has the expected load verdict and counts
+1815:----------------- 12 : OK  test2: t_route has the expected committed rows
+1826:----------------- 13 : OK  test2: t_route__p__p0 has the expected committed rows
+1837:----------------- 14 : OK  test2: t_route__p__p1 has the expected committed rows
+1842:+ check_partition_load route_child_invalid.objects 0 1 'Invalid value for partition definition'
+1843:+ local objects=route_child_invalid.objects inserted=0 failed=1 'diagnostic=Invalid value for partition definition'
+1850:+ grep -q 'Invalid value for partition definition' route_load.output
+1857:----------------- 15 : OK  test2: route_child_invalid.objects has the expected load verdict and counts
+1868:----------------- 16 : OK  test2: t_route has the expected committed rows
+1879:----------------- 17 : OK  test2: t_route__p__p0 has the expected committed rows
+1890:----------------- 18 : OK  test2: t_route__p__p1 has the expected committed rows
+1896:+ check_partition_load route_root_invalid.objects 0 1 'Appropriate partition does not exist'
+1897:+ local objects=route_root_invalid.objects inserted=0 failed=1 'diagnostic=Appropriate partition does not exist'
+1904:+ grep -q 'Appropriate partition does not exist' route_load.output
+1911:----------------- 19 : OK  test2: route_root_invalid.objects has the expected load verdict and counts
+1922:----------------- 20 : OK  test2: t_route has the expected committed rows
+1933:----------------- 21 : OK  test2: t_route__p__p0 has the expected committed rows
+1944:----------------- 22 : OK  test2: t_route__p__p1 has the expected committed rows
+1960:----------------- 23 : OK  test2: route_recovery.objects has the expected load verdict and counts
+1971:----------------- 24 : OK  test2: t_route has the expected committed rows
+1982:----------------- 25 : OK  test2: t_route__p__p0 has the expected committed rows
+1993:----------------- 26 : OK  test2: t_route__p__p1 has the expected committed rows
+2174:----------------- 27 : OK
+2265:----------------- 28 : OK

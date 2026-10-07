@@ -1,0 +1,11 @@
+
+CREATE CLASS [dba].[t] REUSE_OID, COLLATE utf8_bin;
+
+ALTER CLASS [dba].[t] ADD ATTRIBUTE
+       [i] integer;
+
+ALTER CLASS [dba].[t] 
+PARTITION BY RANGE ( [i] ) 
+  ( PARTITION [p0]  VALUES LESS THAN (10) ) ;
+
+COMMIT WORK;

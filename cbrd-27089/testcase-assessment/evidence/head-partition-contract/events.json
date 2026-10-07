@@ -1,0 +1,57 @@
+[
+  {
+    "label": "create",
+    "command": [
+      "cub-workenv",
+      "create-db",
+      "probe7927",
+      "--worktree",
+      "/home/vimkim/gh/cb/pr7927-assessment-head"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "start",
+    "command": [
+      "cubrid",
+      "server",
+      "start",
+      "probe7927"
+    ],
+    "exit": 0
+  },
+  {
+    "label": "schema",
+    "command": [
+      "csql",
+      "-C",
+      "-u",
+      "dba",
+      "-t",
+      "-N",
+      "-c",
+      "create table t(i int) partition by range(i) (partition p0 values less than(10)); insert into t values(1);",
+      "probe7927"
+    ],
+    "exit": 1
+  },
+  {
+    "label": "stop",
+    "command": [
+      "cubrid",
+      "server",
+      "stop",
+      "probe7927"
+    ],
+    "exit": 1
+  },
+  {
+    "label": "service_stop",
+    "command": [
+      "cubrid",
+      "service",
+      "stop"
+    ],
+    "exit": 1
+  }
+]
