@@ -10,7 +10,7 @@ The remote PR head used for comparison is
 `aecce0e1216a813771621c13112c8f27d43df22e`; its baseline is
 `fb567a629cdb390fff920542173fa36f454c74a0`. Local implementation begins with
 `c73f01c1d` and `29281a205`; the [verification record](no-record-type-verification.md)
-identifies the final local revision and its checks. Remote CI remains separate.
+identifies that implementation revision and its checks. The later [review simplification](review-simplification.md) retains this design and records its own source revision and checks. Remote CI remains separate.
 
 ## Owner and representation
 

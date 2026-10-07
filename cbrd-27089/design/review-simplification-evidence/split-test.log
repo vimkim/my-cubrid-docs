@@ -1,0 +1,166 @@
+[0mdirenv: loading ~/gh/cb/CBRD-27089-oos-deferred-write/.envrc
+Preset Mode: debug_gcc
+Install Dir: /home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc
+DB Dir: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/.cub-workenv/databases
+Build Dir: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc
+Internal ctest changing into directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc
+UpdateCTestConfiguration  from :/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/DartConfiguration.tcl
+UpdateCTestConfiguration  from :/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/DartConfiguration.tcl
+Test project /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added setup test oos_setup_db required by fixture OOS_DB
+Added cleanup test oos_cleanup_db required by fixture OOS_DB
+Added 2 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 1
+    Start  1: oos_setup_db
+
+1: Test command: /usr/bin/cmake "-E" "env" "CUBRID=/home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc" "CUBRID_DATABASES=/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/.cub-workenv/databases" "PATH=/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/vm/jdk8/bin:/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc/bin:/home/vimkim/.codex/packages/standalone/releases/0.160.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.config/my-scripts/bin:/home/vimkim/.local/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/share/Modules/bin:/usr/lib64/ccache:/home/vimkim/.codex/tmp/arg0/codex-arg0lnPnJk:/home/vimkim/.codex/tmp/arg0/codex-arg0e3Wmnf:/home/vimkim/.codex/packages/standalone/releases/0.160.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0rkaV8A:/home/vimkim/.codex/packages/standalone/releases/0.159.3-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Eiz5FQ:/home/vimkim/.codex/packages/standalone/releases/0.159.2-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0UZCYf0:/home/vimkim/.codex/packages/standalone/releases/0.159.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg006SEr5:/home/vimkim/.codex/packages/standalone/releases/0.159.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Sdrd24:/home/vimkim/.codex/packages/standalone/releases/0.158.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0mOvekQ:/home/vimkim/.codex/packages/standalone/releases/0.157.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0jzxIFn:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lJR4wu:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/installs/bun/latest/bin:/home/vimkim/.local/share/mise/installs/go/1.27.1/bin:/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/bin:/home/vimkim/.local/share/mise/installs/node/latest/bin:/home/vimkim/.local/share/mise/installs/python/latest/bin:/home/vimkim/.local/share/mise/shims:/opt/bison-3.0.5/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin" "bash" "/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/unit_tests/oos/scripts/setup_unittestdb.sh"
+1: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+1: Test timeout computed to be: 10000000
+1: Creating database with 64.0M size using locale en_US.utf8. The total amount of disk space needed is 104.0M.
+1: 
+1: CUBRID 11.5.0 (11.5.0.2646) (64 debug build)
+1: 
+1/4 Test  #1: oos_setup_db .....................   Passed    3.38 sec
+test 33
+    Start 33: test_oos_sql_show
+
+33: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_sql_show
+33: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos/sql
+33: Test timeout computed to be: 30
+33: [==========] Running 4 tests from 1 test suite.
+33: [----------] Global test environment set-up.
+33: ##### Starting Server For OOS SQL Testing #####
+33: will be written at ./test_oos_sql_log
+33: [----------] 4 tests from OosSqlShow
+33: [ RUN      ] OosSqlShow.HeapWithoutOosReportsZeroStats
+33: [       OK ] OosSqlShow.HeapWithoutOosReportsZeroStats (31 ms)
+33: [ RUN      ] OosSqlShow.HeapWithOosReportsPositiveStats
+33: [       OK ] OosSqlShow.HeapWithOosReportsPositiveStats (21 ms)
+33: [ RUN      ] OosSqlShow.ShowAllHeapOosRunsForNonPartitionedClass
+33: [       OK ] OosSqlShow.ShowAllHeapOosRunsForNonPartitionedClass (22 ms)
+33: [ RUN      ] OosSqlShow.ShowAllHeapOosReportsPartitionRows
+33: [       OK ] OosSqlShow.ShowAllHeapOosReportsPartitionRows (34 ms)
+33: [----------] 4 tests from OosSqlShow (109 ms total)
+33: 
+33: [----------] Global test environment tear-down
+33: ##### Stopping Server For OOS SQL Testing #####
+33: [==========] 4 tests from 1 test suite ran. (258 ms total)
+33: [  PASSED  ] 4 tests.
+2/4 Test #33: test_oos_sql_show ................   Passed    0.29 sec
+test 34
+    Start 34: test_oos_sql_deferred_write
+
+34: Test command: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/bin/test_oos_sql_deferred_write
+34: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos/sql
+34: Test timeout computed to be: 180
+34: [==========] Running 36 tests from 2 test suites.
+34: [----------] Global test environment set-up.
+34: ##### Starting Server For OOS SQL Testing #####
+34: will be written at ./test_oos_sql_log
+34: [----------] 35 tests from OosSqlDeferredWrite
+34: [ RUN      ] OosSqlDeferredWrite.InsertOwnsOosInDestinationHeap
+34: [       OK ] OosSqlDeferredWrite.InsertOwnsOosInDestinationHeap (32 ms)
+34: [ RUN      ] OosSqlDeferredWrite.RawClientInsertOwnsDestinationOos
+34: [       OK ] OosSqlDeferredWrite.RawClientInsertOwnsDestinationOos (9 ms)
+34: [ RUN      ] OosSqlDeferredWrite.WorkspacePartitionInsertAndMovementOwnDestination
+34: [       OK ] OosSqlDeferredWrite.WorkspacePartitionInsertAndMovementOwnDestination (28 ms)
+34: [ RUN      ] OosSqlDeferredWrite.RedistributionRewritesMultichunkValuesAtDestination
+34: [       OK ] OosSqlDeferredWrite.RedistributionRewritesMultichunkValuesAtDestination (58 ms)
+34: [ RUN      ] OosSqlDeferredWrite.RawCopyAreaRoutesInsertAndMovementWithoutChangingPayload
+34: [       OK ] OosSqlDeferredWrite.RawCopyAreaRoutesInsertAndMovementWithoutChangingPayload (30 ms)
+34: [ RUN      ] OosSqlDeferredWrite.RawClientUpdatePreservesUnassignedValuesAndRollsBackFailure
+34: [       OK ] OosSqlDeferredWrite.RawClientUpdatePreservesUnassignedValuesAndRollsBackFailure (20 ms)
+34: [ RUN      ] OosSqlDeferredWrite.PrefetchSkipsUnexpandedOosNeighbors
+34: [       OK ] OosSqlDeferredWrite.PrefetchSkipsUnexpandedOosNeighbors (9 ms)
+34: [ RUN      ] OosSqlDeferredWrite.PendingReferencesResolveAndFinalizeInPlace
+34: [       OK ] OosSqlDeferredWrite.PendingReferencesResolveAndFinalizeInPlace (13914 ms)
+34: [ RUN      ] OosSqlDeferredWrite.FinalizationResetsPublicationOnceAndFailureCannotRetry
+34: [       OK ] OosSqlDeferredWrite.FinalizationResetsPublicationOnceAndFailureCannotRetry (3649 ms)
+34: [ RUN      ] OosSqlDeferredWrite.SerializedPreparationPreservesMvccAndOutlivesSource
+34: [       OK ] OosSqlDeferredWrite.SerializedPreparationPreservesMvccAndOutlivesSource (6 ms)
+34: [ RUN      ] OosSqlDeferredWrite.RedistributionFailurePreservesSourceAndNextOperation
+34: [       OK ] OosSqlDeferredWrite.RedistributionFailurePreservesSourceAndNextOperation (12507 ms)
+34: [ RUN      ] OosSqlDeferredWrite.InternalAndAddressReservationsBypassPreparation
+34: [       OK ] OosSqlDeferredWrite.InternalAndAddressReservationsBypassPreparation (362 ms)
+34: [ RUN      ] OosSqlDeferredWrite.ForcedOutlineKeyRoutesFromPreparedBytes
+34: [       OK ] OosSqlDeferredWrite.ForcedOutlineKeyRoutesFromPreparedBytes (50 ms)
+34: [ RUN      ] OosSqlDeferredWrite.RejectedDestinationCreatesNoOosAndNextInsertSucceeds
+34: [       OK ] OosSqlDeferredWrite.RejectedDestinationCreatesNoOosAndNextInsertSucceeds (10468 ms)
+34: [ RUN      ] OosSqlDeferredWrite.LobPreparationPreservesSourceAndDestinationValues
+34: [       OK ] OosSqlDeferredWrite.LobPreparationPreservesSourceAndDestinationValues (22 ms)
+34: [ RUN      ] OosSqlDeferredWrite.SupportedPartitionDomainsPreserveValuesAndOwnership
+34: [       OK ] OosSqlDeferredWrite.SupportedPartitionDomainsPreserveValuesAndOwnership (304 ms)
+34: [ RUN      ] OosSqlDeferredWrite.LoaderQueueRetainsClearedInputsAndRollsBackBulkFailure
+34: [       OK ] OosSqlDeferredWrite.LoaderQueueRetainsClearedInputsAndRollsBackBulkFailure (1040 ms)
+34: [ RUN      ] OosSqlDeferredWrite.AllocationAndStorageFailureLeaveNextInsertUsable
+34: [       OK ] OosSqlDeferredWrite.AllocationAndStorageFailureLeaveNextInsertUsable (2320 ms)
+34: [ RUN      ] OosSqlDeferredWrite.ConstraintFailureAfterOosAllowsNextInsert
+34: [       OK ] OosSqlDeferredWrite.ConstraintFailureAfterOosAllowsNextInsert (12 ms)
+34: [ RUN      ] OosSqlDeferredWrite.DuplicateProbesDoNotPersistCandidateValues
+34: [       OK ] OosSqlDeferredWrite.DuplicateProbesDoNotPersistCandidateValues (59 ms)
+34: [ RUN      ] OosSqlDeferredWrite.DuplicateProbesReadCompositeKeys
+34: [       OK ] OosSqlDeferredWrite.DuplicateProbesReadCompositeKeys (20 ms)
+34: [ RUN      ] OosSqlDeferredWrite.DuplicateProbesPreserveFunctionIndexesAndCompressedCompositeKeys
+34: [       OK ] OosSqlDeferredWrite.DuplicateProbesPreserveFunctionIndexesAndCompressedCompositeKeys (77 ms)
+34: [ RUN      ] OosSqlDeferredWrite.AbandonedDuplicateCandidateDoesNotWriteOos
+34: [       OK ] OosSqlDeferredWrite.AbandonedDuplicateCandidateDoesNotWriteOos (49 ms)
+34: [ RUN      ] OosSqlDeferredWrite.DuplicateProbeFailuresLeaveNextWriteUsable
+34: [       OK ] OosSqlDeferredWrite.DuplicateProbeFailuresLeaveNextWriteUsable (3507 ms)
+34: [ RUN      ] OosSqlDeferredWrite.DuplicateProbesPreserveLobValuesAndRollback
+34: [       OK ] OosSqlDeferredWrite.DuplicateProbesPreserveLobValuesAndRollback (48 ms)
+34: [ RUN      ] OosSqlDeferredWrite.ReplaceProbeReadsOutlinedCandidateAgainstInlineExistingKey
+34: [       OK ] OosSqlDeferredWrite.ReplaceProbeReadsOutlinedCandidateAgainstInlineExistingKey (15 ms)
+34: [ RUN      ] OosSqlDeferredWrite.DuplicateProbesPreserveMultipleUniqueConstraintsAndForeignKeys
+34: [       OK ] OosSqlDeferredWrite.DuplicateProbesPreserveMultipleUniqueConstraintsAndForeignKeys (62 ms)
+34: [ RUN      ] OosSqlDeferredWrite.UpdateMovementAllocatesOnlyAtDestination
+34: [       OK ] OosSqlDeferredWrite.UpdateMovementAllocatesOnlyAtDestination (30 ms)
+34: [ RUN      ] OosSqlDeferredWrite.UpdateDomainsPreserveUnassignedValuesThroughMovementAndRollback
+34: [       OK ] OosSqlDeferredWrite.UpdateDomainsPreserveUnassignedValuesThroughMovementAndRollback (556 ms)
+34: [ RUN      ] OosSqlDeferredWrite.UpdateForcedKeyUsesCanonicalValueAndRejectsWrongPartition
+34: [       OK ] OosSqlDeferredWrite.UpdateForcedKeyUsesCanonicalValueAndRejectsWrongPartition (32 ms)
+34: [ RUN      ] OosSqlDeferredWrite.UpdateLayoutGrowthAndLobOverwritePreserveValues
+34: [       OK ] OosSqlDeferredWrite.UpdateLayoutGrowthAndLobOverwritePreserveValues (65 ms)
+34: [ RUN      ] OosSqlDeferredWrite.UpdateFailureClearsPublicationAndRollsBackBothDestinations
+34: [       OK ] OosSqlDeferredWrite.UpdateFailureClearsPublicationAndRollsBackBothDestinations (5228 ms)
+34: [ RUN      ] OosSqlDeferredWrite.UpdateIndexFailureRollsBackMovementAndNonmovement
+34: [       OK ] OosSqlDeferredWrite.UpdateIndexFailureRollsBackMovementAndNonmovement (47 ms)
+34: [ RUN      ] OosSqlDeferredWrite.NonpartitionedUpdateChecksForeignKeysAfterFinalization
+34: [       OK ] OosSqlDeferredWrite.NonpartitionedUpdateChecksForeignKeysAfterFinalization (31 ms)
+34: [ RUN      ] OosSqlDeferredWrite.RollbackPreservesMultiChunkValuesAndLiveOwnership
+34: [       OK ] OosSqlDeferredWrite.RollbackPreservesMultiChunkValuesAndLiveOwnership (73 ms)
+34: [----------] 35 tests from OosSqlDeferredWrite (54757 ms total)
+34: 
+34: [----------] 1 test from OosSqlPacking
+34: [ RUN      ] OosSqlPacking.GenericDescriptorsPreserveArbitraryBytes
+34: [       OK ] OosSqlPacking.GenericDescriptorsPreserveArbitraryBytes (0 ms)
+34: [----------] 1 test from OosSqlPacking (0 ms total)
+34: 
+34: [----------] Global test environment tear-down
+34: ##### Stopping Server For OOS SQL Testing #####
+34: [==========] 36 tests from 2 test suites ran. (54940 ms total)
+34: [  PASSED  ] 36 tests.
+3/4 Test #34: test_oos_sql_deferred_write ......   Passed   54.97 sec
+test 2
+    Start  2: oos_cleanup_db
+
+2: Test command: /usr/bin/cmake "-E" "env" "CUBRID=/home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc" "CUBRID_DATABASES=/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/.cub-workenv/databases" "PATH=/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/vm/jdk8/bin:/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.cub/install/CBRD-27089-oos-deferred-write/debug_gcc/bin:/home/vimkim/.codex/packages/standalone/releases/0.160.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.config/my-scripts/bin:/home/vimkim/.local/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/share/Modules/bin:/usr/lib64/ccache:/home/vimkim/.codex/tmp/arg0/codex-arg0lnPnJk:/home/vimkim/.codex/tmp/arg0/codex-arg0e3Wmnf:/home/vimkim/.codex/packages/standalone/releases/0.160.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0rkaV8A:/home/vimkim/.codex/packages/standalone/releases/0.159.3-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Eiz5FQ:/home/vimkim/.codex/packages/standalone/releases/0.159.2-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0UZCYf0:/home/vimkim/.codex/packages/standalone/releases/0.159.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg006SEr5:/home/vimkim/.codex/packages/standalone/releases/0.159.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0Sdrd24:/home/vimkim/.codex/packages/standalone/releases/0.158.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0mOvekQ:/home/vimkim/.codex/packages/standalone/releases/0.157.1-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0jzxIFn:/home/vimkim/.codex/packages/standalone/releases/0.157.0-x86_64-unknown-linux-musl/codex-path:/home/vimkim/.codex/tmp/arg0/codex-arg0lJR4wu:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/installs/bun/latest/bin:/home/vimkim/.local/share/mise/installs/go/1.27.1/bin:/home/vimkim/.local/share/mise/installs/java/temurin-8.0.462+8/bin:/home/vimkim/.local/share/mise/installs/node/latest/bin:/home/vimkim/.local/share/mise/installs/python/latest/bin:/home/vimkim/.local/share/mise/shims:/opt/bison-3.0.5/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin" "bash" "/home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/unit_tests/oos/scripts/cleanup_unittestdb.sh"
+2: Working Directory: /home/vimkim/gh/cb/CBRD-27089-oos-deferred-write/build_preset_debug_gcc/unit_tests/oos
+2: Test timeout computed to be: 30
+2: @ cubrid server stop: unittestdb
+2: ++ cubrid server 'unittestdb' is not running.
+4/4 Test  #2: oos_cleanup_db ...................   Passed    0.26 sec
+
+The following tests passed:
+	oos_setup_db
+	test_oos_sql_show
+	test_oos_sql_deferred_write
+	oos_cleanup_db
+
+100% tests passed, 0 tests failed out of 4
+
+Total Test time (real) =  58.90 sec

@@ -3,22 +3,24 @@
 Current entry point, updated 2026-10-07. The approved local design removes
 `REC_OOS_PENDING` without another record type or a shared `RECDES` layout change.
 Destination-owned writes, compact-buffer reuse and in-place finalization remain.
-Implementation, scoped verification, review and documentation cleanup are complete locally. The task map records all four resolved tasks.
+The no-record-type implementation, scoped verification, review and documentation cleanup are complete locally. The original task map records four resolved tasks. The subsequent [review simplification](design/review-simplification.md) records the selected finalizer, locator and test-organization refinements.
 
 | Read next | Purpose |
 | --- | --- |
 | [Current design](design/no-record-type-design.md) | Existing row owner, payload indices, explicit reader arguments, storage/export guards |
-| [Current verification](design/no-record-type-verification.md) and [two-axis review](design/no-record-type-review.md) | Exact local revision, commands, results and limits |
+| [Latest simplification verification](design/review-simplification.md), [original no-record-type verification](design/no-record-type-verification.md) and [its two-axis review](design/no-record-type-review.md) | Exact local revisions, commands, results and limits |
 | [Reviewer dispositions and Korean reply drafts](design/reviewer-comments-aecce0e.md) | The two requested comments, baseline attribution and reuse guarantees |
 | [Approved spec](../.scratch/pr7927-oos-review-cleanup/spec.md) and [four-task map](../.scratch/pr7927-oos-review-cleanup/map.md) | Dependencies, acceptance criteria and task status |
 | [Interview and decisions](design/temporary-oos-stub-interview.md) | Historical rounds followed by accepted 2026-10-07 decisions |
 | [Canonical vocabulary](../CONTEXT.md) | Destination heap, pending OOS value, OOS value reference and finalization |
 
-The [PR](https://github.com/CUBRID/cubrid/pull/7927) remote head was observed as
+The original [PR](https://github.com/CUBRID/cubrid/pull/7927) comment assessment used
 `aecce0e1216a813771621c13112c8f27d43df22e`, baseline
-`fb567a629cdb390fff920542173fa36f454c74a0`. Local follow-up commits and verification
-are listed separately. Work-tracker 281 covers the completed design; 289 covers
-implementation; 284 covers documentation and comments. No remote replies have been
+`fb567a629cdb390fff920542173fa36f454c74a0`. On 2026-10-07 the remote was subsequently
+observed at `6b53181d31d6d6d2615b18b4f914623bb017d7c4`; the latest local refinement is
+`4be72fc209ae9cb8aa1709573d7d0ae7fc06df7c`. Their evidence is recorded separately.
+Work-tracker 281 covers the completed design; 289 covers
+implementation; 284 covers documentation and comments; 293 covers the review simplifications. No remote replies have been
 posted by this follow-up.
 
 ## Historical evidence

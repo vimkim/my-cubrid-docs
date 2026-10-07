@@ -5,12 +5,17 @@ Work-tracker: 284. Source inspection on 2026-10-07 compares head
 `fb567a629cdb390fff920542173fa36f454c74a0`. This is static source attribution;
 it contains no new performance measurements or runtime vacuum reproduction.
 The local follow-up removes the temporary record type and raw-address stubs,
-with the final source revision identified by [current verification](no-record-type-verification.md).
+with its source revision identified by [original verification](no-record-type-verification.md).
+The later [review simplification](review-simplification.md) records current local
+source `4be72fc20`; it preserves the same conversion, fresh-chain ownership and
+vacuum/replication behavior, so the dispositions below still apply.
 The requested [summary snapshot](no-record-type-evidence/requested-summary.json),
 [inline snapshot](no-record-type-evidence/requested-inline.json), and
 [PR metadata](no-record-type-evidence/pr-metadata.json) were fetched again on
-2026-10-07; the remote head remains aecce0e. Both comments are attributable to
-that remote revision, not to an unpushed local commit.
+2026-10-07, when the remote head was aecce0e. That snapshot remains pinned.
+The [latest metadata](review-simplification-evidence/pr-metadata.json) subsequently
+observed remote head `6b53181d3` on the same date. The comments were assessed against
+the original pinned revision; the newer local revisions are identified separately.
 
 The [Greptile summary](https://github.com/CUBRID/cubrid/pull/7927#issuecomment-6022333419)
 and [inline comment](https://github.com/CUBRID/cubrid/pull/7927#discussion_r4198779522)
@@ -98,7 +103,7 @@ raw-pointer decoding. Export checks reject residual stubs, including an inherite
 optional prefetch path now skipped for OOS neighbors. These changes address
 lifetime and publication safety, not the requested reuse optimization.
 
-Current CI evidence at the remote head is preserved in the
+Historical CI evidence at the assessed revision is preserved in the
 [exact aecce0e report](../ci_analysis_report_aecce0e_codex.md). Its medium-ordering
 attribution remains unresolved, and local engine checks do not replace company
 regressions. No new benchmark or unchanged-chain/vacuum qualification is claimed.
@@ -110,10 +115,12 @@ regressions. No new benchmark or unchanged-chain/vacuum qualification is claimed
 client의 전체 행 fetch·직렬화·전송은 기존에도 있었고, 서버 DB_VALUE UPDATE의
 미할당 OOS 재적재도 기존 동작입니다. 현재 finalization은 보관한 payload를 그대로
 사용하고 24바이트 stub만 제자리에서 바꾸며, 전체 행을 다시 만들지는 않습니다.
-전체 성능 영향은 baseline 비교 측정 없이 단정하지 않겠습니다. 현재 로컬 변경은
-REC_OOS_PENDING을 제거하고 기존 owner와 payload index를 명시적으로 전달합니다.
+전체 성능 영향은 baseline 비교 측정 없이 단정하지 않겠습니다. 현재 원격
+PR head에는 REC_OOS_PENDING 제거와 기존 owner·payload index의 명시적 전달이
+반영되어 있습니다. 이번 추가 단순화는 finalizer의 값별 상태와 locator handoff를
+정리하고 write 검증을 별도 모듈로 옮깁니다.
 OOS 행의 저장 경계 검증 비용도 추가되므로 이를 UPDATE 성능 개선으로 제시하지
-않겠습니다. 이 변경은 아직 원격 PR head에 반영하지 않았습니다.
+않겠습니다. 이번 추가 단순화는 아직 원격 PR head에 반영하지 않았습니다.
 
 변경 없는 체인 재사용은 CBRD-27230 설계와 함께 다루는 것이 맞습니다. 현재 vacuum은
 UPDATE undo image의 체인을 모두 회수하므로 stub만 재사용하면 live 행의 체인까지
