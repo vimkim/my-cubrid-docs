@@ -1,6 +1,6 @@
 # BCB 래치 대기자의 소유자 추적과 무한 대기 진단 가능성
 
-조사일: 2026-10-07 (Asia/Seoul). 대상: `/home/vimkim/gh/cb/develop`, `develop`, 소스 커밋 `a9f07558634bd84250452149029e85d5fb170e37`. 입력 브리핑: `/tmp/cub_ctp.md` — 파일명과 달리 본문은 `cub_ctv`의 critical-section 관측 도구 설명이다. Work Tracker: #300.
+조사일: 2026-10-07 (Asia/Seoul). 대상: `/home/vimkim/gh/cb/develop`, `develop`, 소스 커밋 `a9f07558634bd84250452149029e85d5fb170e37`. 입력 브리핑: `/tmp/cub_ctv.md` — `cub_ctv`의 critical-section 관측 도구 설명이다. Work Tracker: #300.
 
 이 문서는 현재 소스에서 확인한 사실과 후속 설계 제안을 구분한다. 실제 hang을 재현하거나 특정 장애의 원인을 판정한 결과는 아니다. 엔진과 모니터링 도구의 구현은 변경하지 않았다.
 
@@ -171,7 +171,7 @@ block 시점의 자기 holder snapshot은 raw 타 thread 순회를 피하는 작
 
 ## 8. 조사 및 검증 기록
 
-- 필수 personal CUBRID 정책과 source/docs의 적용 지침, `/tmp/cub_ctp.md`를 읽었다. 기존 knowledge base의 page-buffer/inspector 조사도 검색하고 현재 소스로 다시 확인했다.
+- 필수 personal CUBRID 정책과 source/docs의 적용 지침, `/tmp/cub_ctv.md`를 읽었다. 기존 knowledge base의 page-buffer/inspector 조사도 검색하고 현재 소스로 다시 확인했다.
 - `gh-pr-info`는 현재 `develop`에 여러 과거 PR이 매칭되어 exit 2였다. 이 조사에 해당하는 단일 PR identity/head repository/headRefName/baseRefName을 선택하지 않았다. “PR 없음”과 다른 lookup 결과이다.
 - `rg`, `nl -ba`, 함수 주변 source 읽기로 구조체·grant·wait·wakeup·unfix·promotion·timeout·Debug guard를 확인했다. research background agent가 ownership와 snapshot 전이를 별도로 검토했다.
 - 통합 보고서의 58개 source 링크(9개 파일)는 고정 commit과 유효한 줄 범위를 확인했고, code fence 및 staged diff 공백 검사를 통과했다. background agent가 통합 문서의 snapshot·현재 stack·MVP 한계도 재검토하여 수정이 필요한 source overclaim을 찾지 못했다.
