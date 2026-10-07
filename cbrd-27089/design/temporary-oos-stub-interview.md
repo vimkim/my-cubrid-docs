@@ -42,18 +42,21 @@ Source facts at the pin:
   would miss that expression path. Post-finalization index writers can keep their
   ordinary disk-only access contract.
 
-Proposed direction, not yet accepted: keep preparation state with the existing
-row owner; let pending-aware attribute access receive a borrowed owner context
-and obtain memory values from that owner's retained payloads. Ordinary fetched
-and received records use the existing disk-reference parser. Finalization takes
-the owner, writes into the selected destination, and replaces the same stub
-fields in place. A pending placeholder must remain invalid as a stored OOS
-reference, and storage/transport checks must reject it without a new record type.
-Exact placeholder encoding and owner bookkeeping are downstream decisions.
+Accepted direction on 2026-10-07: keep shared `RECDES` unchanged and pass the
+existing row owner explicitly to prepared-row consumers. Pending-aware attribute
+access receives a borrowed owner argument and obtains memory values from its
+retained payloads. Ordinary fetched and received records use disk references.
+Finalization takes the owner and current descriptor view, writes into the
+selected destination, and replaces the same stub fields in place. A pending
+placeholder must remain invalid as a stored OOS reference, and storage/transport
+checks must reject it without a new record type. Exact placeholder encoding,
+owner bookkeeping and transport validation remain downstream proof obligations
+or decisions; this acceptance is not final shared-understanding confirmation.
 
 ### Round 1 frontier
 
-Q1 — OPEN: Should the shared `RECDES` layout remain unchanged as well, with
+Q1 — ACCEPTED by the user's "yes" after the concrete owner-argument explanation:
+Should the shared `RECDES` layout remain unchanged as well, with
 prepared-row consumers receiving the existing owner explicitly?
 Recommendation: yes. This confines the new preparation contract to callers that
 actually process a prepared row, at the cost of passing the owner through routing,
@@ -79,10 +82,10 @@ verification, and assess the two current-head Greptile comments. After design
 agreement, the user requests local specification/tickets, implementation,
 appropriate verification and two-axis review. Remote replies remain local drafts.
 
-The resumed Q1 is still open. The user asked what "owner context" means and
-requested concrete implementation-design details rather than accepting or
-rejecting the proposal. It means a borrowed argument referring to the existing
-row owner, not an owner pointer in shared `RECDES`. The
+The user first asked what "owner context" means and requested concrete
+implementation-design details. After that explanation, the user answered "yes"
+to explicit owner arguments with unchanged `RECDES`. The argument refers to the
+existing row owner; it is not a new field in shared `RECDES`. The
 [concrete proposal](no-record-type-design.md) records payload-index lookup,
 reader propagation, current-view finalization and the open transport contract.
 Three read-only investigations inspected representation, reviewer feedback and
@@ -101,6 +104,29 @@ artifacts and must be preserved; its stale session/map are not the new tracker.
 The configured durable tracker is the docs repository's local Markdown.
 The exact-head CI/review package at docs commit `71bcfef` is on a separate clean
 branch and should be reused, not recreated or treated as already present here.
+
+### Round 2 frontier
+
+Q2 — OPEN, factual prerequisites resolved: accept heap-row checks at the actual
+`LC_FETCH` export boundaries while preserving generic packing semantics?
+Recommendation: yes. Production rows use `LC_COPYAREA`, not
+`record_descriptor::pack`. The three server row producers already request OOS
+Expand and know the class; reject residual OOS fields before publishing a
+non-root row descriptor. Preserve root metadata, no-content descriptors,
+replication OOS payloads and error replies. Logical heap INSERT/UPDATE and
+ownerless finalization separately validate stored references against the class
+representation. No new descriptor field/type or legacy sentinel requirement is
+needed. The concrete proposal records exact source evidence and the replacement
+test seam.
+
+For final shared-understanding confirmation, propose the existing SQL/owner/
+replication tests, release boundary rejection checks and real server-loader
+fixture, followed by two-axis review. The proposed four tasks are explicit-owner
+access, marker removal with publication guards, current-revision reviewer
+dispositions/local replies, and one current documentation entry point. Their
+dependencies are recorded in the [proposal](no-record-type-design.md). These
+test seams and task granularity await user confirmation; no source changes or
+ready-for-agent tickets have been created.
 
 The dated sections below are historical interview and implementation records.
 Their earlier permission to retain `REC_OOS_PENDING` is superseded by the opening

@@ -1,10 +1,12 @@
 # PR7927 proposal without a pending record type
 
-Status: proposed, not accepted or implemented. Work-tracker: 281. Reviewed source
+Status: explicit existing-owner arguments and unchanged shared `RECDES` accepted
+on 2026-10-07; transport contract open; not implemented. Work-tracker: 281. Reviewed source
 is `aecce0e1216a813771621c13112c8f27d43df22e`; its merge base with
 `feature/oos-merge` is `fb567a629cdb390fff920542173fa36f454c74a0`.
 The [interview](temporary-oos-stub-interview.md) records accepted constraints and
-open decisions. This note makes the proposed interface concrete.
+open decisions. This note makes the interface direction concrete; code-level
+details remain proposals and verification obligations.
 
 ## What the owner argument means
 
@@ -83,32 +85,85 @@ require equality with the owner's original descriptor length. Finalization uses
 the current representation/VOT walk to find stub locations; it stores no patch
 pointers that could become stale during header changes.
 
-## Storage and transport proof obligation
+## Recommended storage and transport contract — awaiting confirmation
 
 Heap logical INSERT/UPDATE currently reject the descriptor marker
-(`heap_file.c:25141,25573`). Their replacement can inspect heap-row fields and
-reject null-head OOS placeholders before storage. Generic slotted pages also
-hold non-row records, so those checks belong in heap-row write paths.
+(`heap_file.c:25141,25573`). Replace those guards with heap-row validation using
+the destination class representation. Accept legitimate disk references and
+reject null-head OOS placeholders before storage. A finalizer with no owner must
+also validate disk-only input before subsequent index/replication publication.
+Apply bounds checks before reading row headers or fields. Do not require a
+`LAST_ELEMENT` sentinel in legacy rows: the existing `heap_recdes_get_oos_refs`
+walk is prior art, but it lacks early header bounds checks, allocates, and aborts
+when the sentinel is absent. Generic slotted pages also hold non-row records, so
+these checks belong in heap-row write paths.
 
-All newly prepared rows emit a `LAST_ELEMENT` VOT sentinel
-(`heap_file.c:13807`). A copied pending byte image retains its placeholders.
-A bounded, allocation-free scan can recognize and reject a complete modern
-temporary heap-row image before a row packer writes its first byte. The existing
-`heap_recdes_get_oos_refs` traversal is prior art, not a ready-made universal
-validator: it lacks early header bounds checks, allocates, and aborts for a
-missing sentinel. Legacy images must retain their existing supported behavior.
+The production transport audit found no pending-row uses of
+`record_descriptor::pack`. Actual row transport uses `LC_COPYAREA`;
+`locator_send_copy_area` sends content unchanged (`locator.c:673–686`). That
+shared transport also carries flush requests, replication OOS payloads and
+key/error/message replies, which must not be parsed as heap rows.
 
-**Open transport contract:** `record_descriptor` also represents arbitrary byte
-buffers. A shared-header flag alone does not prove a buffer is a heap row, and
-copied bytes lose external provenance. A byte-only check cannot both permit every
-arbitrary sequence and reject that identical sequence as a pending heap row.
-The implementation must either make heap-row export explicit, or explicitly
-reserve/reject the complete temporary heap-row byte pattern during packing.
-Neither choice is yet accepted. This is not a reason to interpret arbitrary
-data as heap metadata or silently reject legacy formats.
+Recommend one heap-row export check at the three server `LC_FETCH` publication
+seams: `locator_return_object_assign` (`locator_sr.c:2185–2216`),
+`xlocator_fetch_all` (`2915–2925`) and `xlocator_lock_and_fetch_all`
+(`12247–12304`). Each knows the class and already requests raw-byte consumption,
+which expands OOS attributes. Safely reject a successful non-root row that still
+has the OOS header flag, before publishing its descriptor or incrementing the
+copy-area object count. This rejects copied temporary images and accidentally
+unexpanded persisted stubs, without schema parsing at export. Preserve root-class
+metadata and CHN/deleted/decache descriptors without row content.
 
-Verification must cover no/wrong owner, invalid index/length, owner moves, scalar,
-grouped, composite and function reads, header growth, inline-only publication
-reset, copied-view packing with untouched output on rejection, and ordinary
-disk/non-row/legacy export. No replacement build or runtime verification has
-been performed.
+Restore generic `record_descriptor::pack/unpack` to their baseline arbitrary-byte
+contract. A generic byte copy does not supply an owner or authorize memory
+access. Its current direct-pack rejection test does not exercise production row
+transport; replace that assertion with a release-build rejection test at the
+actual row-export seam. Incoming flush/replication bytes remain disk-only and
+never acquire the local owner. Loader network batches carry source text; pending
+owners are created and queued server-side.
+
+This recommendation resolves the earlier ambiguous byte-pattern scan proposal.
+No new descriptor field, record type, generic serialization contract or global
+pointer registry is needed. The export placement remains the final design
+decision to confirm, rather than an executed safety guarantee.
+
+## Proposed verification seams
+
+Prefer existing engine/SQL tests and their public behavior over new test-only
+accessors. Cover destination ownership, copy-area UPDATE, partition movement,
+scalar/grouped reads, composite and function-index keys, loader queuing and
+rollback, and replication group failure. Existing owner tests cover compact
+allocation reuse, in-place finalization, current MVCC header views and payload
+lifetime. Extend those to missing/wrong owner, invalid payload index/length,
+owner moves, and inline-only/repeated-finalization publication state.
+
+At the actual export and logical-storage boundaries, reject temporary rows and
+copied byte images in release builds without publishing a copy-area descriptor,
+accept finalized/expanded rows, and retain supported root/non-row/legacy paths.
+Keep arbitrary-byte packing tests separate. Run the configured debug build and
+CTest suite, focused guard checks without assertions, and the established real
+server-loader fixture. Record results against the resulting local commit; old
+verification remains historical. No replacement build or runtime verification
+has been performed.
+
+## Proposed task breakdown — awaiting confirmation
+
+1. **Explicit-owner prepared-row access.** No blockers. Introduce the trusted
+   owner-index access path through all supported readers and current-view
+   finalization, with ownership and SQL coverage. Keep the existing marker only
+   as a migration guard until task 2; add no replacement type.
+2. **Remove the marker at storage/export boundaries.** Blocked by 1. Remove
+   `REC_OOS_PENDING`, enforce the row-aware storage/export contracts, restore
+   generic packing, and run the agreed build, CTest, guard and loader checks.
+3. **Reconcile reviewer dispositions and local replies.** Blocked by 2. Recheck
+   the two comments against the resulting local revision and fixed PR baseline,
+   preserving the evidence distinction between new adaptation cost and existing
+   fresh-chain behavior. Keep chain reuse outside this implementation.
+4. **Publish the current documentation entry point.** Blocked by 2 and 3. Align
+   vocabulary and task status, mark superseded narratives, preserve verification
+   evidence, repair links and expose current design/checks/replies from one index.
+
+The user requested specification, small dependency-bearing tickets,
+implementation and final two-axis review after design agreement. This breakdown
+has not yet been approved or published as ready-for-agent tickets. Source
+changes, remote replies, pushes and merges have not been performed.
