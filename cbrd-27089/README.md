@@ -7,6 +7,7 @@ The no-record-type implementation, scoped verification, review and documentation
 
 | Read next | Purpose |
 | --- | --- |
+| [Publication body draft](CBRD-27089-owner-index-pr-body_4be72fc_codex.md) and [publication context](CBRD-27089-owner-index-pr-context_4be72fc_codex.md) | Proposed PR7927 update for local `4be72fc20`; source push and body update await explicit review confirmation |
 | [Current design](design/no-record-type-design.md) | Existing row owner, payload indices, explicit reader arguments, storage/export guards |
 | [Latest simplification verification](design/review-simplification.md), [original no-record-type verification](design/no-record-type-verification.md) and [its two-axis review](design/no-record-type-review.md) | Exact local revisions, commands, results and limits |
 | [Reviewer dispositions and Korean reply drafts](design/reviewer-comments-aecce0e.md) | The two requested comments, baseline attribution and reuse guarantees |
