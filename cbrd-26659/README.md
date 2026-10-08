@@ -2,7 +2,7 @@
 
 Last modified: 2026-10-08 (Asia/Seoul).
 
-Start with the approved plan and current behavior coverage table. Developers create and validate public SQL and private shell cases locally, initially using optdebug. SQL and shell timing is separate; roughly ten minutes each is informal guidance. The 14-ticket implementation is authorized and underway; Ticket01's logical SQL delivery has passed. The HA follow-up gap remains explicit. External publication is outside this local delivery.
+Start with the approved plan and current behavior coverage table. Developers create and validate public SQL and private shell cases locally, initially using optdebug. SQL and shell timing is separate; roughly ten minutes each is informal guidance. The 14-ticket implementation is authorized and underway; Ticket01's logical SQL delivery and Ticket02's separate shell owner/DROP subset have passed. The HA follow-up gap remains explicit. External publication is outside this local delivery.
 
 The coordinating engine branch has no associated PR at source `fb567a629cdb390fff920542173fa36f454c74a0`. Research inspected testcase integration snapshots named `tc/pr-7990` (and private `tc/pr-7925`); those supply integration context. They are not a PR for this planning branch.
 
@@ -52,3 +52,4 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 | [13-tde-wal.md](ci-replan/tickets/13-tde-wal.md) | Validate OOS TDE attribution and WAL behavior | 2026-10-08 | 2026-10-08 | Define an approved complete testcase-delivery slice |
 | [14-complete-local-validation.md](ci-replan/tickets/14-complete-local-validation.md) | Validate the complete delivered SQL and shell sets locally | 2026-10-08 | 2026-10-08 | Define an approved complete testcase-delivery slice |
 | [01-sql-value-copy.md](ci-replan/delivery/01-sql-value-copy.md) | Verified compact SQL copy values, negative control, cleanup and measured cost | 2026-10-08 | 2026-10-08 | Record the first native logical SQL delivery and its physical limits |
+| [02-shell-owner-drop.md](ci-replan/delivery/02-shell-owner-drop.md) | Verified owner-file DROP, diagnostic joins, survivor safety and native red/green receipts | 2026-10-08 | 2026-10-08 | Record the first physical shell companion with scoped coverage and cleanup |
