@@ -2,7 +2,7 @@
 
 Last modified: 2026-10-08 (Asia/Seoul).
 
-Start with the current proposed plan and behavior coverage table. Developers now create and validate public SQL and private shell cases locally, initially using optdebug. SQL and shell timing is separate; roughly ten minutes each is informal guidance. The direction and HA follow-up gap are agreed; the 14-ticket granularity/dependency breakdown is approved. No testcase implementation or external publication belongs to this planning phase.
+Start with the approved plan and current behavior coverage table. Developers create and validate public SQL and private shell cases locally, initially using optdebug. SQL and shell timing is separate; roughly ten minutes each is informal guidance. The 14-ticket implementation is authorized and underway; Ticket01's logical SQL delivery has passed. The HA follow-up gap remains explicit. External publication is outside this local delivery.
 
 The coordinating engine branch has no associated PR at source `fb567a629cdb390fff920542173fa36f454c74a0`. Research inspected testcase integration snapshots named `tc/pr-7990` (and private `tc/pr-7925`); those supply integration context. They are not a PR for this planning branch.
 
@@ -13,7 +13,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 | [plan.md](ci-replan/plan.md) | Agreed direction, sequence and approved-ticket boundary | 2026-10-08 | 2026-10-08 | Review the developer-owned local regression plan |
 | [spec.md](ci-replan/spec.md) | Agreed external behavior, decisions and validation contract | 2026-10-08 | 2026-10-08 | Turn the settled plan into an implementation specification |
 | [implementation-tickets.md](ci-replan/implementation-tickets.md) | Approved 14-ticket breakdown and genuine blocking edges | 2026-10-08 | 2026-10-08 | Sequence independently verifiable testcase delivery |
-| [coverage.md](ci-replan/coverage.md) | 31 evidence-linked behavior and disposition rows | 2026-10-08 | 2026-10-08 | Connect expected behavior to SQL/shell actions and gaps |
+| [coverage.md](ci-replan/coverage.md) | 31 behavior rows with limited verified delivery and remaining gaps | 2026-10-08 | 2026-10-08 | Connect expected behavior to SQL/shell actions and gaps |
 | [issue-inventory.md](ci-replan/issue-inventory.md) | Live hierarchy, linked defects and curated 150-issue ledger | 2026-10-08 | 2026-10-08 | Replace stale issue assumptions with bounded live evidence |
 | [spec-and-unit-inventory.md](ci-replan/spec-and-unit-inventory.md) | Accepted contract, exact source and all 29 binaries / 302 tests | 2026-10-08 | 2026-10-08 | Identify conformance and external observability gaps |
 | [public-sql-inventory.md](ci-replan/public-sql-inventory.md) | Nine recovered pairs, integration differences and reuse limits | 2026-10-08 | 2026-10-08 | Select useful SQL assets without inheriting historical passes |
@@ -51,3 +51,4 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 | [12-utility-roundtrips.md](ci-replan/tickets/12-utility-roundtrips.md) | Validate utility and backup round trips | 2026-10-08 | 2026-10-08 | Define an approved complete testcase-delivery slice |
 | [13-tde-wal.md](ci-replan/tickets/13-tde-wal.md) | Validate OOS TDE attribution and WAL behavior | 2026-10-08 | 2026-10-08 | Define an approved complete testcase-delivery slice |
 | [14-complete-local-validation.md](ci-replan/tickets/14-complete-local-validation.md) | Validate the complete delivered SQL and shell sets locally | 2026-10-08 | 2026-10-08 | Define an approved complete testcase-delivery slice |
+| [01-sql-value-copy.md](ci-replan/delivery/01-sql-value-copy.md) | Verified compact SQL copy values, negative control, cleanup and measured cost | 2026-10-08 | 2026-10-08 | Record the first native logical SQL delivery and its physical limits |
