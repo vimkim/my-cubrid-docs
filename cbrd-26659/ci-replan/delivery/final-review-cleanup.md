@@ -1,16 +1,22 @@
 # CBRD-26659: final-review lifecycle and cleanup correction
 
-The corrected shell selection passes **14/14 cases, zero failures/skips, all 336 required assertions and 941 mandatory artifacts** in one fresh native contained invocation. The final independent review had found that four shell companions could delete a preexisting registered database after setup failed. A second, independent Standards review identified duplicated lifecycle and checked-command code across those cases and transactions. The correction shares that code in `shell/_40_guava/oos_common/oos_lifecycle.sh` and requires explicit directory and registry ownership before destructive cleanup.
+Date: 2026-10-08 (Asia/Seoul).
 
-The source change is private testcase commit `f5fc1fa815fbc6eec71135f506e377c0b1096da3`, based on reviewed integration `f16dd0ba9d041cbe6c1d4486feb78108262dd2e5`. Public input, fixture values, physical models, assertion phase labels and expected results are unchanged. The source engine remains `fb567a629cdb390fff920542173fa36f454c74a0`; no engine correction is included. This report supplements [complete selected validation](14-complete-local-validation.md), whose original receipt remains intact.
+The corrected shell selection passes **14/14 cases, zero failures/skips, all 336 required assertions and 941 mandatory artifacts** in one fresh native contained invocation. The final independent review had found that four shell companions could delete a preexisting registered database after setup failed. A separate, independent Standards review identified duplicated lifecycle and checked-command code across those cases and transactions. The correction shares that code in `shell/_40_guava/oos_common/oos_lifecycle.sh` and requires explicit directory and registry ownership before destructive cleanup.
 
-## Separate review findings
+The source change is private testcase commit `f5fc1fa815fbc6eec71135f506e377c0b1096da3`, based on reviewed integration `f16dd0ba9d041cbe6c1d4486feb78108262dd2e5`. Public input, fixture values, physical models, assertion phase labels and expected results are unchanged. The source engine remains `fb567a629cdb390fff920542173fa36f454c74a0` on `CBRD-26659-oos-testcases-handover`; `gh-pr-info` found no associated PR. No engine correction is included. This report supplements [complete selected validation](14-complete-local-validation.md), whose original receipt remains intact.
 
-The Spec finding concerned ownership: owner-drop, representation/chunks, DML transitions and read paths promoted their created state when a fixed database name appeared in the registry, even when mkdir failed and the case never created that directory. Native slot containment does not make that registry entry case-owned.
+## Standards
 
-The Standards review found no documented-standard violations and one P2 duplication heuristic. Separate cleanup and checked-command implementations already differed in ownership adoption and TERM-to-KILL timeout behavior. Transactions had a directory guard, but still adopted partial creations by name without checking the registered path. It now uses the same lifecycle implementation as the other four companions.
+The Standards axis originally reported **0 documented-standard violations, 1 P2 duplication heuristic; worst severity P2**. Separate lifecycle and checked-command implementations already differed in ownership adoption and TERM-to-KILL timeout behavior. Transactions had a directory guard, but still adopted partial creations by name without checking the registered path. All five companions now use one shared lifecycle implementation.
 
-Both original reviewers independently rechecked the committed correction. The Standards closure reports zero documented violations and zero remaining heuristics; the Spec closure resolves the original P2 and reports zero new findings. These are source and ownership-control reviews, separate from native execution credit. The read-only closure reports are retained at `final-review/standards-closure.md` and `final-review/spec-closure.md` under the external evidence root.
+The same original Standards reviewer independently rechecked the committed correction: **0 documented violations, 0 remaining/new heuristics; worst current severity none**. Its read-only closure is retained at `final-review/standards-closure.md`. This closes the duplication finding from source/control evidence, separately from native execution credit.
+
+## Spec
+
+The Spec axis originally reported **1 finding, P2; worst severity P2**. Owner-drop, representation/chunks, DML transitions and read paths promoted their created state when a fixed database name appeared in the registry, even when mkdir failed and the case never created that directory. Native slot containment does not make that registry entry case-owned.
+
+The same original Spec reviewer independently rechecked the committed correction: **original P2 resolved, 0 new or remaining findings; worst current severity none identified**. Its read-only closure is retained at `final-review/spec-closure.md`. This closes the ownership finding from source/control evidence, separately from native execution credit. Standards and Spec ran in parallel as separate axes; their counts and closure scope are not combined or reranked.
 
 ## Required preservation behavior
 
