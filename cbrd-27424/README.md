@@ -60,3 +60,9 @@ Each report applies only to the revision in its title; unresolved checks and att
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
 | [PR7925 / 28b65d18a CI 수집 중단 보고서](ci_analysis_report_28b65d18a_codex.md) | PR7925 / 28b65d18a CI 수집 중단 보고서 | 2026-10-08 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+
+## Integrated analysis and decisions
+
+| File | What it contains | Created | Last modified | Why it was created |
+| --- | --- | --- | --- | --- |
+| [Why PR7925 depends on PR7927 now](PR7925-PR7927-dependency_b755678cd_codex.md) | Why PR7925 depends on PR7927 now | 2026-10-08 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
