@@ -1,68 +1,32 @@
 # CBRD-27424: standalone workspace OOS
 
-[PR #7925](https://github.com/CUBRID/cubrid/pull/7925) supports OOS storage in
-standalone object loading and CSQL workspace writes.
+Last modified: 2026-10-13 (Asia/Seoul).
 
-Start with the Korean reviewer guide. Its **2026-10-07 snapshot** explains locally
-integrated `28b65d18a`, published head `1c660d22e`, the pinned PR7927 dependency,
-and pending shared integration. Historical reports retain their original revision
-scope and do not establish later-head CI readiness.
+[PR #7925](https://github.com/CUBRID/cubrid/pull/7925) supports OOS storage in standalone object loading and CSQL workspace writes.
 
-Index updated: **2026-10-13 (Asia/Seoul)**. Document dates below preserve the existing
-index metadata, with older dates taken from Git history.
+Start with the [Korean reviewer guide](/home/vimkim/gh/my-cubrid-docs/cbrd-27424/review-guide-pr7925-28b65d18a-ko.md), covering locally integrated `28b65d18a` and both completed review simplifications. It distinguishes the published PR HEAD `1c660d22e`, the pinned PR7927 dependency, and pending shared integration. Snapshot: 2026-10-07, Asia/Seoul.
 
-## Reviewer documents
+The [orchestration record](/home/vimkim/gh/my-cubrid-docs/.scratch/pr7925-review-simplification/orchestration.md) preserves implementation decisions, earlier exact-revision receipts, independent reviews and the shared partition gate. Historical reports below retain their original revision scope; they do not establish current-head CI readiness.
 
-The guide explains the integrated implementation; the review records the preceding published-head assessment.
+Read the [accessible Korean explanation](/home/vimkim/gh/my-cubrid-docs/cbrd-27424/PR7925-PR7927-dependency_b755678cd_ko.md) for why the original fix can stand alone and the current implementation uses PR #7927. The [detailed dependency assessment](/home/vimkim/gh/my-cubrid-docs/cbrd-27424/PR7925-PR7927-dependency_b755678cd_codex.md) retains source comparisons and historical evidence. Both cover `b755678cd`; snapshot: 2026-10-08.
 
-| File | What it contains | Created | Last modified | Why it was created |
-| --- | --- | --- | --- | --- |
-| [Korean reviewer guide (28b65d18a)](review-guide-pr7925-28b65d18a-ko.md) | Workspace OOS flow, buffer ownership and both completed simplifications | 2026-10-07 | 2026-10-07 | Help reviewers follow workspace OOS behavior and both simplifications |
-| [Published-head review (1c660d22e)](code_review_1c660d22e_codex.md) | Correctness, standards and the proposed ownership simplification | 2026-10-07 | 2026-10-07 | Separate preserved behavior from optional ownership cleanup |
+## File index
 
-## Background and implementation decisions
-
-Read these for the original defect, the first repair, and the measured restoration decision.
+Dates for older unindexed files come from their Git history. Raw logs retain native formatting.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [Standalone loader diagnosis (f4299ac)](CBRD-27424-sa-loaddb-diagnosis_f4299ac_codex.md) | Reproduction and debugger evidence for the missing OOS conversion path | 2026-09-15 | 2026-09-15 | Explain the original missing OOS conversion path |
-| [Original implementation (e24b458)](CBRD-27424-sa-workspace-oos_e24b458_codex.md) | Workspace background, conversion boundary, reproduction and regression checks | 2026-09-11 | 2026-09-11 | Document standalone workspace OOS implementation |
-| [Attrinfo restoration rationale (a142503dc)](CBRD-27424-workspace-oos-revert-rationale_a142503dc_codex.md) | Direct-byte benchmark, restoration decision and measurement limits | 2026-10-07 | 2026-10-07 | Explain the measured decision to restore attrinfo conversion |
-
-## Historical review and CI reports
-
-Each report applies only to the revision in its title; unresolved checks and attribution limits remain part of that record.
-
-| File | What it contains | Created | Last modified | Why it was created |
-| --- | --- | --- | --- | --- |
-| [Implementation review (39d5e5e)](code_review_39d5e5e_fable.md) | Standards/Spec review after fixes and OOS dependency integration | 2026-09-18 | 2026-09-18 | Review merged OOS dependency compatibility |
-| [CI build failure (e24b458)](ci_analysis_report_e24b458_codex.md) | Unconditional Python dependency failure during release configuration | 2026-09-15 | 2026-09-15 | Preserve CI evidence for the original implementation |
-| [CI after Python repair (fe1a918)](ci_analysis_report_fe1a918_codex.md) | Verified build repair, SQL/medium results and pending shell coverage | 2026-09-15 | 2026-09-15 | Assess CI after the Python dependency change |
-
-## Integrated analysis and decisions
-
-| File | What it contains | Created | Last modified | Why it was created |
-| --- | --- | --- | --- | --- |
-| [PR #7925 published-head CI evidence warning](ci_analysis_report_91bfde02e_codex.md) | PR #7925 published-head CI evidence warning | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
-| [PR #7925: attribution of the triggered CI failures](ci_analysis_report_f037616cd_codex.md) | PR #7925: attribution of the triggered CI failures | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
-| [Exact-commit failure excerpts](ci_f037616cd/failure_excerpts.md) | Exact-commit failure excerpts | 2026-10-07 | 2026-10-13 | Substantiate the report with compact decisive excerpts |
-| [PR #7925 code review guide at `a142503dc`](code_review_guide_a142503dc_codex.md) | PR #7925 code review guide at `a142503dc` | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
-
-## Integrated analysis and decisions
-
-| File | What it contains | Created | Last modified | Why it was created |
-| --- | --- | --- | --- | --- |
-| [CBRD-27424: restore the attrinfo workspace OOS implementation](CBRD-27424-workspace-oos-restoration_1c660d22e_codex.md) | CBRD-27424: restore the attrinfo workspace OOS implementation | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
-
-## Integrated analysis and decisions
-
-| File | What it contains | Created | Last modified | Why it was created |
-| --- | --- | --- | --- | --- |
-| [PR7925 / 28b65d18a CI 수집 중단 보고서](ci_analysis_report_28b65d18a_codex.md) | PR7925 / 28b65d18a CI 수집 중단 보고서 | 2026-10-08 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
-
-## Integrated analysis and decisions
-
-| File | What it contains | Created | Last modified | Why it was created |
-| --- | --- | --- | --- | --- |
-| [Why PR7925 depends on PR7927 now](PR7925-PR7927-dependency_b755678cd_codex.md) | Why PR7925 depends on PR7927 now | 2026-10-08 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [PR7925-PR7927-dependency_b755678cd_ko.md](PR7925-PR7927-dependency_b755678cd_ko.md) | 쉬운 한글 설명: 독립 수정 가능성과 현재 구현의 의존성 | 2026-10-08 | 2026-10-08 | PR7927을 먼저 통합하는 이유와 대안을 리뷰어에게 설명 |
+| [PR7925-PR7927-dependency_b755678cd_codex.md](PR7925-PR7927-dependency_b755678cd_codex.md) | Original fix versus current PR7927 implementation dependency | 2026-10-08 | 2026-10-08 | Explain whether PR7927 must merge and the available alternatives |
+| [CBRD-27424-sa-loaddb-diagnosis_f4299ac_codex.md](CBRD-27424-sa-loaddb-diagnosis_f4299ac_codex.md) | Historical standalone loader diagnosis at f4299ac | 2026-09-15 | 2026-09-15 | Explain the original missing OOS conversion path |
+| [CBRD-27424-sa-workspace-oos_e24b458_codex.md](CBRD-27424-sa-workspace-oos_e24b458_codex.md) | Historical implementation and reproduction at e24b458 | 2026-09-11 | 2026-09-11 | Document standalone workspace OOS implementation |
+| [CBRD-27424-workspace-oos-revert-rationale_a142503dc_codex.md](CBRD-27424-workspace-oos-revert-rationale_a142503dc_codex.md) | Historical direct-byte benchmark and restoration rationale | 2026-10-07 | 2026-10-07 | Explain the measured decision to restore attrinfo conversion |
+| [README.md](README.md) | Ticket overview and file index | 2026-10-07 | 2026-10-08 | Help readers find the ticket documents and evidence |
+| [ci-fix/pr-7925/index.md](ci-fix/pr-7925/index.md) | Historical local CI-repair index | 2026-09-15 | 2026-09-15 | Explain retained repair artifacts |
+| [ci_analysis_report_e24b458_codex.md](ci_analysis_report_e24b458_codex.md) | Historical exact-revision CI analysis at e24b458 | 2026-09-15 | 2026-09-15 | Preserve CI evidence for the original implementation |
+| [ci_analysis_report_fe1a918_codex.md](ci_analysis_report_fe1a918_codex.md) | Historical exact-revision CI analysis at fe1a918 | 2026-09-15 | 2026-09-15 | Assess CI after the Python dependency change |
+| [code_review_1c660d22e_codex.md](code_review_1c660d22e_codex.md) | Published-head correctness and simplification review at 1c660d22e | 2026-10-07 | 2026-10-07 | Separate preserved behavior from optional ownership cleanup |
+| [code_review_39d5e5e_fable.md](code_review_39d5e5e_fable.md) | Historical Standards/Spec review at 39d5e5e | 2026-09-18 | 2026-09-18 | Review merged OOS dependency compatibility |
+| [code_review_d4a155a_fable.md](code_review_d4a155a_fable.md) | Historical Standards/Spec review at d4a155a | 2026-09-18 | 2026-09-18 | Record implementation review and follow-ups |
+| [review-guide-evidence-28b65d18a/source-map.md](review-guide-evidence-28b65d18a/source-map.md) | Local-only immutable commit/path/line source lookups | 2026-10-07 | 2026-10-07 | Support guide claims without inventing unpublished source URLs |
+| [review-guide-pr7925-28b65d18a-ko.md](review-guide-pr7925-28b65d18a-ko.md) | Current Korean guide for the locally integrated 28b65d18a tree | 2026-10-07 | 2026-10-07 | Help reviewers follow workspace OOS behavior and both simplifications |
