@@ -54,3 +54,9 @@ Each report applies only to the revision in its title; unresolved checks and att
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
 | [CBRD-27424: restore the attrinfo workspace OOS implementation](CBRD-27424-workspace-oos-restoration_1c660d22e_codex.md) | CBRD-27424: restore the attrinfo workspace OOS implementation | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+
+## Integrated analysis and decisions
+
+| File | What it contains | Created | Last modified | Why it was created |
+| --- | --- | --- | --- | --- |
+| [PR7925 / 28b65d18a CI 수집 중단 보고서](ci_analysis_report_28b65d18a_codex.md) | PR7925 / 28b65d18a CI 수집 중단 보고서 | 2026-10-08 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
