@@ -1,6 +1,8 @@
 # CBRD-26659 testcase PR proposal
 
-Prepared: 2026-10-10 (Asia/Seoul). Agent: codex. Parent implementation work item: 306; integration/publication work item: 314. Status: bodies ready for human review; no remote publication yet.
+Prepared: 2026-10-10 (Asia/Seoul). Agent: codex. Parent implementation work item: 306; integration/publication work item: 314. Status: superseded standalone publication proposal; no remote publication occurred. The user selected an engine coordinator PR and bot-created TC PRs instead.
+
+The operations below are historical and must not be executed. Follow the [engine coordinator proposal](CBRD-26659-oos-tc-coordinator-pr-context_a5da823_codex.md). Preserve this payload body and validated task snapshot; prepare the actual bot PR identity and integrated source revision before proposing its push/body update.
 
 ## Identity and proposed destination
 
