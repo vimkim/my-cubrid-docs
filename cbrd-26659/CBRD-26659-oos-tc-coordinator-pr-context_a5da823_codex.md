@@ -1,6 +1,6 @@
 # CBRD-26659 engine coordinator PR proposal
 
-Prepared: 2026-10-10 (Asia/Seoul). Agent: codex. Implementation work item: 306 (done); publication work item: 314. Status: saved material ready for review; no remote writes.
+Prepared: 2026-10-10 (Asia/Seoul). Agent: codex. Implementation work item: 306 (done); publication work item: 314. Status: reviewed engine draft published and automatic TC branch creation verified. Testcase payload publication remains pending.
 
 ## Source and destination
 
@@ -46,3 +46,18 @@ The original standalone TC publication contexts are superseded. Their body files
 - Before requesting full CI, select an explicit disposition for the five retained reproducers. Preserve the failing expectations and evidence; do not silently disable, relocate or weaken them to report a green full suite.
 
 This context is a proposal, not an approval token. Publication requires confirmation of the saved body and exact operations from the conversation.
+
+## Verified execution results
+
+The user confirmed this saved body and the exact publication operations on 2026-10-10. These records describe the completed attempt and do not authorize later source or body changes.
+
+- Engine branch was pushed to `vimkim/cubrid` and verified at `a5da823b2a84e95b4b22d48abe4a3f9fd601c176` without force. The freshness hook passed after configuring the branch's PR base as `origin/feature/oos-merge`.
+- Created [CUBRID/cubrid#8128](https://github.com/CUBRID/cubrid/pull/8128), draft, assigned to `vimkim`, title `[CBRD-26659] Initialize OOS testcase review`, head `vimkim:CBRD-26659-oos-testcases-handover`, base `feature/oos-merge`, exactly one commit and zero changed files.
+- Uploaded body matched the saved UTF-8 bytes exactly; SHA-256: `c6bad70a3f14f07b2aa70716c691a52b460494bd95771bde9f4efda8b5a32755`.
+- Automatic [TC Branch Sync run 38042501431](https://github.com/CUBRID/cubrid/actions/runs/38042501431) completed successfully. Both creation jobs and the engine-PR comment job passed. No manual `gha-ci` request was made.
+- Public [CUBRID/cubrid-testcases#3688](https://github.com/CUBRID/cubrid-testcases/pull/3688): draft, head `tc/pr-8128` at `003d9e2d619ea2293096d9ce2298d9e72286961c`, base `feature/oos-merge` at `bdba62aee0faec05abdd861518824c69b6c1b3c5`.
+- Private [CUBRID/cubrid-testcases-private-ex#4365](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4365): draft, head `tc/pr-8128` at `b383bca5b6fc1315b85beef7b8c3c4db5f8dc6fd`, base `feature/oos-merge` at `c4b9d482fbd491a68510b2552df2c3cac91911fc`.
+- Both bot TC heads have exactly one empty initialization commit, their feature base as their sole parent, an identical base tree and zero changed files. Both existing titles are `[CBRD-26659] Draft: TC changes for PR CUBRID/cubrid#8128`; the original decoded bot body SHA-256 is `45f7617d999bca5cd772dfc02fdfe169264351ad7db995feddae266b7fc8d1f9`.
+- The validated public/private task snapshots and the engine's unrelated CCI changes remain preserved. The TC PRs have not received our payload or description updates; no PR was merged or closed, and no remote branch was deleted.
+
+The approved local docs integration includes these verified records, the saved bodies/contexts and the curated index. The final integration commit is discoverable from Git history; no docs push is proposed.
