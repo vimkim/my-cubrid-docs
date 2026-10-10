@@ -1,6 +1,6 @@
 # CBRD-26659 private bot TC PR update proposal
 
-Prepared: 2026-10-10 (Asia/Seoul). Agent: codex. Work item: 314. Status: local TC integration and saved description ready for review; no TC push or body update yet.
+Prepared: 2026-10-10 (Asia/Seoul). Agent: codex. Work item: 314. Status: approved public/private TC head pushes and exact reviewed description updates completed; separately requested full CI pickup verified.
 
 ## Identity and freshness baseline
 
@@ -37,3 +37,14 @@ All 44 changed private paths retain their Git blob and mode from the original pa
 The full payload contains 18 shell entrypoints; the prior passing selected result covers 14. `partition_owner`, `snapshots_reclaim`, `cbrd_27237_rollback_vacuum` and `utility_sa_physical` remain failing or inconclusive reproducers in normal discovery paths. The proposed update publishes those known limitations explicitly and does not claim whole-corpus or company-CI success. Full CI still needs an explicit disposition of these four cases and the public failing partition case. No expectations were weakened or cases silently disabled.
 
 This context records a proposal, not an approval token. The conversation must establish confirmation of these saved descriptions and operations before publishing.
+
+## Verified execution results
+
+- The user confirmed both prepared TC head pushes after reviewing the combined operation proposal, then separately instructed one `/run all` on engine draft PR8128. No follow-up fix, push or rerun was requested.
+- Private `origin/tc/pr-8128` was fast-forward pushed and verified at `27db3d6b6d966056de474af277ee40735190f00c`. [Private PR4365](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4365) now reports that head, base `feature/oos-merge` and 44 changed files.
+- The reviewed private body was uploaded unchanged. Published UTF-8 SHA-256: `bb2bbe9343b602887d731b29212defa0c28d5c250776838883c48ef534d17eab`; original title, assignees and open/draft status were preserved.
+- Public `origin/tc/pr-8128` and [PR3688](https://github.com/CUBRID/cubrid-testcases/pull/3688) were verified at `1a556a0752073aaad573bf87d53f3eb75f398138`, with 34 changed files and the exact reviewed public body; see its companion context.
+- `cubrid-pr-tc-base-check --pr 8128` passed for both published heads against the latest fetched corresponding `feature/oos-merge` tips. Engine head remained `a5da823b2a84e95b4b22d48abe4a3f9fd601c176`; no prior same-PR gha-ci run or `/run` request existed.
+- Posted one bare [`/run all` comment](https://github.com/CUBRID/cubrid/pull/8128#issuecomment-6096391890). [gha-ci run38043651879](https://github.com/CUBRID/cubrid/actions/runs/38043651879) was picked up: both build contexts and SQL/shell/medium contexts pointed to this one run and were pending at the initial pickup observation. This is a historical pickup receipt; consult the run for later or terminal results.
+- The full run includes the published payload unchanged, including the five retained failing/inconclusive normal-discovery reproducers. The user's explicit request selected that full scope; none were silently disabled, relocated or given weaker expectations.
+- Local docs integration covers these verified publication records, the four saved body/context files and the curated README. No docs remote push, PR merge/close, base merge, remote deletion or JIRA publication was performed. Source TC worktrees and original snapshots remain available for teammate review; the original unrelated Rope and CCI changes remain preserved.
