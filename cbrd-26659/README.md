@@ -1,6 +1,6 @@
 # CBRD-26659 documentation
 
-Last modified: 2026-10-08 (Asia/Seoul).
+Last modified: 2026-10-10 (Asia/Seoul).
 
 Start with the approved plan and current behavior coverage table. Developers create and validate public SQL and private shell cases locally, initially using optdebug. SQL and shell timing is separate; roughly ten minutes each is informal guidance. All 14 supported automation deliveries are complete. The separate Standards and Spec findings are independently closed; the lifecycle correction and current native qualification pass with retained SQL16 and fresh corrected shell14, separate timings and owned cleanup. Physically unmet criteria and engine/capability gaps retain partial or unverified dispositions. The HA follow-up gap remains explicit. External publication is outside this local delivery.
 
@@ -66,3 +66,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 | [13-tde-wal.md](ci-replan/delivery/13-tde-wal.md) | Verified lazy AES ownership, OOS WAL encrypted flags and graceful reopen; existing-file application remains open | 2026-10-08 | 2026-10-08 | Record supported TDE delivery while preserving existing-file, ciphertext, crash and HA gaps |
 | [14-complete-local-validation.md](ci-replan/delivery/14-complete-local-validation.md) | Complete selected SQL16/shell14 native receipt,336 assertions, separate timings, cleanup and all31 truthful dispositions | 2026-10-08 | 2026-10-08 | Qualify the complete supported local selection without hiding remaining engine/capability gaps |
 | [final-review-cleanup.md](ci-replan/delivery/final-review-cleanup.md) | Separate Standards/Spec closures, owned lifecycle correction and current shell14 native qualification | 2026-10-08 | 2026-10-08 | Record corrected cleanup ownership and fresh qualification while retaining initial receipts and engine gaps |
+| [CBRD-26659-oos-sql-regressions-pr-body_c949615_codex.md](CBRD-26659-oos-sql-regressions-pr-body_c949615_codex.md) | Proposed public SQL testcase PR body with exact validation scope | 2026-10-10 | 2026-10-10 | Prepare public testcase review against feature/oos-merge |
+| [CBRD-26659-oos-sql-regressions-pr-context_c949615_codex.md](CBRD-26659-oos-sql-regressions-pr-context_c949615_codex.md) | Public PR source/base identity and exact proposed publication operations | 2026-10-10 | 2026-10-10 | Resume reviewed public testcase PR publication safely |
+| [CBRD-26659-oos-shell-regressions-pr-body_f5fc1fa_codex.md](CBRD-26659-oos-shell-regressions-pr-body_f5fc1fa_codex.md) | Proposed private shell testcase PR body with cleanup and coverage limits | 2026-10-10 | 2026-10-10 | Prepare private testcase review against feature/oos-merge |
+| [CBRD-26659-oos-shell-regressions-pr-context_f5fc1fa_codex.md](CBRD-26659-oos-shell-regressions-pr-context_f5fc1fa_codex.md) | Private PR source/base identity and exact proposed publication operations | 2026-10-10 | 2026-10-10 | Resume reviewed private testcase PR publication safely |
