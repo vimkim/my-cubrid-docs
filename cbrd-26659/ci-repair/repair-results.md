@@ -87,7 +87,9 @@ Local Debug/native runtime을 CI-equivalent라고 부르지 않는다. 최신 CI
 
 ## 게시 전 리뷰와 CI
 
-Engine 비교 기준은 `a5da823b2a84e95b4b22d48abe4a3f9fd601c176`, Spec은 [합의된 계획](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-repair/plan.md)이다. 최종 local 검증 후 독립 agent 두 개로 `code-review`를 수행했다. **Standards 0건 / Spec 0건**이다. Standards는 개인 정책·유효한 subdirectory 지침·CONTRIBUTING·문서 index 기준과 smell baseline을 확인했다. Spec은 각 fresh DB 생성/단일 case XML/verifier/cleanup, 복사 SQL·answer·fixture 해시, 원래 72개 실제 순서와 complete XML identity/verdict, 최소 계측 전후 경로를 확인했다. 문서의 runtime 차이와 제외 범위도 유지하며 게시 전 준비를 충족한다고 판단했다. Public TC README만 scoped 기록을 게시하고 private TC는 변경하지 않는다. Engine head가 변경되므로 한 번의 `/run all`을 실행한 뒤 terminal 결과를 기록한다. 현재는 게시와 CI trigger 전이다.
+Engine 비교 기준은 `a5da823b2a84e95b4b22d48abe4a3f9fd601c176`, Spec은 [합의된 계획](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-repair/plan.md)이다. 최종 local 검증 후 독립 agent 두 개로 `code-review`를 수행했다. **Standards 0건 / Spec 0건**이다. Standards는 개인 정책·유효한 subdirectory 지침·CONTRIBUTING·문서 index 기준과 smell baseline을 확인했다. Spec은 각 fresh DB 생성/단일 case XML/verifier/cleanup, 복사 SQL·answer·fixture 해시, 원래 72개 실제 순서와 complete XML identity/verdict, 최소 계측 전후 경로를 확인했다. 문서의 runtime 차이와 제외 범위도 유지하며 게시 전 준비를 충족한다고 판단했다.
+
+Engine `1ef86a7efa34002e971b1b30bcf5d451e9db441b`과 public TC README `d7bec2fdeb6a19573300e1a624e03e0b87eb9e96`를 각각 PR head branch에 게시했다. Private TC는 `a2054f965a20241b87dc9577585ccc8a8cb6ab97` 그대로다. TC baseline ancestry 검사를 두 repository에서 통과한 뒤 [단일 `/run all` receipt](https://github.com/CUBRID/cubrid/pull/8128#issuecomment-6127511688)를 남겼다. 다섯 gha-ci context가 같은 [run38271660063, attempt 1](https://github.com/CUBRID/cubrid/actions/runs/38271660063)을 가리키는 pickup을 확인했다. 현재 이 실행의 terminal 결과를 기다린다. 추가 trigger나 rerun은 하지 않았다.
 
 ## 보존된 제외 항목
 

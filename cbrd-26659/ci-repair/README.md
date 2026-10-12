@@ -3,7 +3,7 @@
 범위 결정: 2026-10-12, work item 331. 마지막 갱신: 2026-10-13, Asia/Seoul. 실행 work item 332.
 관련 PR: [Engine #8128](https://github.com/CUBRID/cubrid/pull/8128), [public TC #3688](https://github.com/CUBRID/cubrid-testcases/pull/3688), [private TC #4365](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4365).
 
-이 문서는 최신 실패 TC의 수리 대상 여부와 검증 상태를 추적한다. 사용자는 SQL와 shell의 실패 전체를 검토하고 아래 제외 규칙을 적용한 뒤 남는 SQL 14개를 모두 정상화하는 범위에 동의했다. 범위 합의와 실행 완료를 구분한다. 현재 최종 Engine `1ef86a7`의 대상 14개 fresh DB 독립 검증은 모두 통과했고, 원래 72-case 순서 검증도 72/72 통과했다. 단일 CI qualification은 게시 전 리뷰 후 수행한다.
+이 문서는 최신 실패 TC의 수리 대상 여부와 검증 상태를 추적한다. 사용자는 SQL와 shell의 실패 전체를 검토하고 아래 제외 규칙을 적용한 뒤 남는 SQL 14개를 모두 정상화하는 범위에 동의했다. 범위 합의와 실행 완료를 구분한다. 현재 최종 Engine `1ef86a7`의 대상 14개 fresh DB 독립 검증은 모두 통과했고, 원래 72-case 순서 검증도 72/72 통과했다. 게시 전 리뷰와 scoped push를 마치고 [단일 CI run38271660063](https://github.com/CUBRID/cubrid/actions/runs/38271660063)의 terminal 결과를 기다린다.
 
 공유 이해는 2026-10-12에 최종 확인했다. 실행 절차와 완료 기준은 [합의된 수리 계획](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-repair/plan.md)에 정리한다.
 
