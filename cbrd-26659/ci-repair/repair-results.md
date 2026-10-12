@@ -2,7 +2,7 @@
 
 작성·갱신: 2026-10-13, Asia/Seoul. Work item 332.
 
-Engine PR8128의 partition HA replication assertion을 수리했다. 대상 SQL 14개는 최종 커밋의 새 DB 독립 실행에서 모두 통과했다. 원래 72-case 순서 검증과 한 번의 CI qualification은 진행 중이며, 완료 결과를 아래에 추가한다. 합의된 제외 규칙과 기존 정답·assertion은 보존했다.
+Engine PR8128의 partition HA replication assertion을 수리했다. 대상 SQL 14개는 최종 커밋의 새 DB 독립 실행에서 모두 통과했다. 원래 72-case 순서도 모두 통과했다. 게시 전 리뷰와 한 번의 CI qualification을 수행하고 그 결과를 아래에 추가한다. 합의된 제외 규칙과 기존 정답·assertion은 보존했다.
 
 ## 수리 원인과 변경
 
@@ -62,24 +62,24 @@ Local Debug/native runtime을 CI-equivalent라고 부르지 않는다. 최신 CI
 
 | Target case | Fresh DB attempt | Golden / artifact / cleanup | 원래 72-case / CI |
 | --- | --- | --- | --- |
-| `cbrd_26659_oos_partition_routing.sql` | `/home/vimkim/tmp/s332-final-01` | PASS / 1 success, 0 fail / 0 | 진행 중 |
-| `cbrd_26659_oos_representation.sql` | `/home/vimkim/tmp/s332-final-02` | PASS / 1 success, 0 fail / 0 | 진행 중 |
-| `cbrd_26659_oos_schema.sql` | `/home/vimkim/tmp/s332-final-03` | PASS / 1 success, 0 fail / 0 | 진행 중 |
-| `cbrd_26659_oos_sql01_insert_select.sql` | `/home/vimkim/tmp/s332-final-04` | PASS / 1 success, 0 fail / 0 | 진행 중 |
-| `cbrd_26659_oos_sql04_delete.sql` | `/home/vimkim/tmp/s332-final-05` | PASS / 1 success, 0 fail / 0 | 진행 중 |
-| `cbrd_26659_oos_sql04_update.sql` | `/home/vimkim/tmp/s332-final-06` | PASS / 1 success, 0 fail / 0 | 진행 중 |
-| `cbrd_26659_oos_sql05_bigone.sql` | `/home/vimkim/tmp/s332-final-07` | PASS / 1 success, 0 fail / 0 | 진행 중 |
-| `cbrd_26659_oos_sql05_constraints.sql` | `/home/vimkim/tmp/s332-final-08` | PASS / 1 success, 0 fail / 0 | 진행 중 |
-| `cbrd_26659_oos_sql05_transactions.sql` | `/home/vimkim/tmp/s332-final-09` | PASS / 1 success, 0 fail / 0 | 진행 중 |
-| `cbrd_26659_oos_sql06_triggers.sql` | `/home/vimkim/tmp/s332-final-10` | PASS / 1 success, 0 fail / 0 | 진행 중 |
-| `cbrd_26659_oos_sql07_read_paths.sql` | `/home/vimkim/tmp/s332-final-11` | PASS / 1 success, 0 fail / 0 | 진행 중 |
-| `cbrd_26659_oos_sql09_lob_copy.sql` | `/home/vimkim/tmp/s332-final-12` | PASS / 1 success, 0 fail / 0 | 진행 중 |
-| `cbrd_26659_oos_sql09_lob_maxcols.sql` | `/home/vimkim/tmp/s332-final-13` | PASS / 1 success, 0 fail / 0 | 진행 중 |
-| `cbrd_26659_oos_storage_policy.sql` | `/home/vimkim/tmp/s332-final-14` | PASS / 1 success, 0 fail / 0 | 진행 중 |
+| `cbrd_26659_oos_partition_routing.sql` | `/home/vimkim/tmp/s332-final-01` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
+| `cbrd_26659_oos_representation.sql` | `/home/vimkim/tmp/s332-final-02` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
+| `cbrd_26659_oos_schema.sql` | `/home/vimkim/tmp/s332-final-03` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
+| `cbrd_26659_oos_sql01_insert_select.sql` | `/home/vimkim/tmp/s332-final-04` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
+| `cbrd_26659_oos_sql04_delete.sql` | `/home/vimkim/tmp/s332-final-05` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
+| `cbrd_26659_oos_sql04_update.sql` | `/home/vimkim/tmp/s332-final-06` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
+| `cbrd_26659_oos_sql05_bigone.sql` | `/home/vimkim/tmp/s332-final-07` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
+| `cbrd_26659_oos_sql05_constraints.sql` | `/home/vimkim/tmp/s332-final-08` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
+| `cbrd_26659_oos_sql05_transactions.sql` | `/home/vimkim/tmp/s332-final-09` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
+| `cbrd_26659_oos_sql06_triggers.sql` | `/home/vimkim/tmp/s332-final-10` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
+| `cbrd_26659_oos_sql07_read_paths.sql` | `/home/vimkim/tmp/s332-final-11` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
+| `cbrd_26659_oos_sql09_lob_copy.sql` | `/home/vimkim/tmp/s332-final-12` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
+| `cbrd_26659_oos_sql09_lob_maxcols.sql` | `/home/vimkim/tmp/s332-final-13` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
+| `cbrd_26659_oos_storage_policy.sql` | `/home/vimkim/tmp/s332-final-14` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
 
 ## 원래 72-case 순서 검증
 
-진행 중: `/home/vimkim/tmp/s332-f72`. Latest CI shard에서 추출한 72개 실제 순서를 `original72.txt`에 보존했다. 이 순서는 native lexical discovery와 동일함을 확인했다. Cases/answers와 fixtures를 복사한 실제 selection을 사용하며 expected-case list로 임의 순서를 주입하지 않았다.
+`/home/vimkim/tmp/s332-f72`: **72 success / 0 fail**, runner exit 0, verifier 0, cleanup 0; 617.50초. Latest CI shard에서 추출한 72개 실제 순서를 `original72.txt`에 보존했다. 이 순서는 native lexical discovery와 동일하다. Expected manifest와 실제 로그의 72개 identity·순서가 일치하고, complete XML의 case set·각 verdict도 일치한다. XML의 내부 배열 순서는 실행 순서로 해석하지 않았다. 대상 14개는 각각 44–57번에서 PASS였다 (`final72-verified-targets14.json`). Excluded full partition도 43번에서 원래 logical golden을 통과했다. Cases/answers와 fixtures를 복사한 실제 selection을 사용하며 expected-case list로 임의 순서를 주입하지 않았다.
 
 ## CMake 검사
 

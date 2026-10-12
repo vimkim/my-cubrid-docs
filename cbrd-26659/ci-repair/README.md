@@ -3,7 +3,7 @@
 범위 결정: 2026-10-12, work item 331. 마지막 갱신: 2026-10-13, Asia/Seoul. 실행 work item 332.
 관련 PR: [Engine #8128](https://github.com/CUBRID/cubrid/pull/8128), [public TC #3688](https://github.com/CUBRID/cubrid-testcases/pull/3688), [private TC #4365](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4365).
 
-이 문서는 최신 실패 TC의 수리 대상 여부와 검증 상태를 추적한다. 사용자는 SQL와 shell의 실패 전체를 검토하고 아래 제외 규칙을 적용한 뒤 남는 SQL 14개를 모두 정상화하는 범위에 동의했다. 범위 합의와 실행 완료를 구분한다. 현재 최종 Engine `1ef86a7`의 대상 14개 fresh DB 독립 검증은 모두 통과했고, 원래 72-case 순서와 단일 CI qualification은 진행 중이다.
+이 문서는 최신 실패 TC의 수리 대상 여부와 검증 상태를 추적한다. 사용자는 SQL와 shell의 실패 전체를 검토하고 아래 제외 규칙을 적용한 뒤 남는 SQL 14개를 모두 정상화하는 범위에 동의했다. 범위 합의와 실행 완료를 구분한다. 현재 최종 Engine `1ef86a7`의 대상 14개 fresh DB 독립 검증은 모두 통과했고, 원래 72-case 순서 검증도 72/72 통과했다. 단일 CI qualification은 게시 전 리뷰 후 수행한다.
 
 공유 이해는 2026-10-12에 최종 확인했다. 실행 절차와 완료 기준은 [합의된 수리 계획](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-repair/plan.md)에 정리한다.
 
@@ -32,21 +32,21 @@
 
 | 순서 | TC basename | 수리 판정 | 최신 관측 | 상태와 다음 검증 |
 | --- | --- | --- | --- | --- |
-| 43 | `cbrd_26659_oos_partition.sql` | 제외: 기존 예상 실패 | Partition UPDATE `-21019`, `repl_log_insert`, `replication.c:468` assertion | 제외 유지; source DELETE의 OOS 큐 재소비 원인 입증 및 guard 수리. Local original partition 포함 4/4 pass; 최종 순서·CI 별도 확인 |
-| 44 | `cbrd_26659_oos_partition_routing.sql` | 대상 | 초기 DROP `-581`; JDBC reconnect 실패 | Fresh F01: golden·artifact PASS(1/1), cleanup 0; 원래 72-case·CI 진행 중 |
-| 45 | `cbrd_26659_oos_representation.sql` | 대상 | 초기 DROP `-581` | Fresh F02: golden·artifact PASS(1/1), cleanup 0; 원래 72-case·CI 진행 중 |
-| 46 | `cbrd_26659_oos_schema.sql` | 대상 | 초기 DROP `-581` | Fresh F03: golden·artifact PASS(1/1), cleanup 0; 원래 72-case·CI 진행 중 |
-| 47 | `cbrd_26659_oos_sql01_insert_select.sql` | 대상 | 초기 DROP `-581` | Fresh F04: golden·artifact PASS(1/1), cleanup 0; 원래 72-case·CI 진행 중 |
-| 48 | `cbrd_26659_oos_sql04_delete.sql` | 대상 | 초기 DROP `-581` | Fresh F05: golden·artifact PASS(1/1), cleanup 0; 원래 72-case·CI 진행 중 |
-| 49 | `cbrd_26659_oos_sql04_update.sql` | 대상 | 초기 DROP `-581` | Fresh F06: golden·artifact PASS(1/1), cleanup 0; 원래 72-case·CI 진행 중 |
-| 50 | `cbrd_26659_oos_sql05_bigone.sql` | 대상 | 초기 DROP `-581` | Fresh F07: golden·artifact PASS(1/1), cleanup 0; 원래 72-case·CI 진행 중 |
-| 51 | `cbrd_26659_oos_sql05_constraints.sql` | 대상 | 초기 DROP VIEW `-581` | Fresh F08: golden·artifact PASS(1/1), cleanup 0; 원래 72-case·CI 진행 중 |
-| 52 | `cbrd_26659_oos_sql05_transactions.sql` | 대상 | `autocommit off` 후 초기 DROP `-581` | Fresh F09: golden·artifact PASS(1/1), cleanup 0; 원래 72-case·CI 진행 중 |
-| 53 | `cbrd_26659_oos_sql06_triggers.sql` | 대상 | 초기 DROP `-581` | Fresh F10: golden·artifact PASS(1/1), cleanup 0; 원래 72-case·CI 진행 중 |
-| 54 | `cbrd_26659_oos_sql07_read_paths.sql` | 대상 | 초기 DROP VIEW `-581` | Fresh F11: golden·artifact PASS(1/1), cleanup 0; 원래 72-case·CI 진행 중 |
-| 55 | `cbrd_26659_oos_sql09_lob_copy.sql` | 대상 | 초기 DROP `-581` | Fresh F12: golden·artifact PASS(1/1), cleanup 0; 원래 72-case·CI 진행 중 |
-| 56 | `cbrd_26659_oos_sql09_lob_maxcols.sql` | 대상 | 초기 DROP `-581` | Fresh F13: golden·artifact PASS(1/1), cleanup 0; 원래 72-case·CI 진행 중 |
-| 57 | `cbrd_26659_oos_storage_policy.sql` | 대상 | 초기 DROP `-581` | Fresh F14: golden·artifact PASS(1/1), cleanup 0; 원래 72-case·CI 진행 중 |
+| 43 | `cbrd_26659_oos_partition.sql` | 제외: 기존 예상 실패 | Partition UPDATE `-21019`, `repl_log_insert`, `replication.c:468` assertion | 제외 유지; source DELETE의 OOS 큐 재소비 원인 입증 및 guard 수리. Local original partition 포함 4/4 pass; 최종 순서 43번 logical PASS(72/72); CI 대기 |
+| 44 | `cbrd_26659_oos_partition_routing.sql` | 대상 | 초기 DROP `-581`; JDBC reconnect 실패 | Fresh F01: golden·artifact PASS(1/1), cleanup 0; 원래 72-case 위치 44–57: golden·artifact PASS(72/72), cleanup 0; CI 대기 |
+| 45 | `cbrd_26659_oos_representation.sql` | 대상 | 초기 DROP `-581` | Fresh F02: golden·artifact PASS(1/1), cleanup 0; 원래 72-case 위치 44–57: golden·artifact PASS(72/72), cleanup 0; CI 대기 |
+| 46 | `cbrd_26659_oos_schema.sql` | 대상 | 초기 DROP `-581` | Fresh F03: golden·artifact PASS(1/1), cleanup 0; 원래 72-case 위치 44–57: golden·artifact PASS(72/72), cleanup 0; CI 대기 |
+| 47 | `cbrd_26659_oos_sql01_insert_select.sql` | 대상 | 초기 DROP `-581` | Fresh F04: golden·artifact PASS(1/1), cleanup 0; 원래 72-case 위치 44–57: golden·artifact PASS(72/72), cleanup 0; CI 대기 |
+| 48 | `cbrd_26659_oos_sql04_delete.sql` | 대상 | 초기 DROP `-581` | Fresh F05: golden·artifact PASS(1/1), cleanup 0; 원래 72-case 위치 44–57: golden·artifact PASS(72/72), cleanup 0; CI 대기 |
+| 49 | `cbrd_26659_oos_sql04_update.sql` | 대상 | 초기 DROP `-581` | Fresh F06: golden·artifact PASS(1/1), cleanup 0; 원래 72-case 위치 44–57: golden·artifact PASS(72/72), cleanup 0; CI 대기 |
+| 50 | `cbrd_26659_oos_sql05_bigone.sql` | 대상 | 초기 DROP `-581` | Fresh F07: golden·artifact PASS(1/1), cleanup 0; 원래 72-case 위치 44–57: golden·artifact PASS(72/72), cleanup 0; CI 대기 |
+| 51 | `cbrd_26659_oos_sql05_constraints.sql` | 대상 | 초기 DROP VIEW `-581` | Fresh F08: golden·artifact PASS(1/1), cleanup 0; 원래 72-case 위치 44–57: golden·artifact PASS(72/72), cleanup 0; CI 대기 |
+| 52 | `cbrd_26659_oos_sql05_transactions.sql` | 대상 | `autocommit off` 후 초기 DROP `-581` | Fresh F09: golden·artifact PASS(1/1), cleanup 0; 원래 72-case 위치 44–57: golden·artifact PASS(72/72), cleanup 0; CI 대기 |
+| 53 | `cbrd_26659_oos_sql06_triggers.sql` | 대상 | 초기 DROP `-581` | Fresh F10: golden·artifact PASS(1/1), cleanup 0; 원래 72-case 위치 44–57: golden·artifact PASS(72/72), cleanup 0; CI 대기 |
+| 54 | `cbrd_26659_oos_sql07_read_paths.sql` | 대상 | 초기 DROP VIEW `-581` | Fresh F11: golden·artifact PASS(1/1), cleanup 0; 원래 72-case 위치 44–57: golden·artifact PASS(72/72), cleanup 0; CI 대기 |
+| 55 | `cbrd_26659_oos_sql09_lob_copy.sql` | 대상 | 초기 DROP `-581` | Fresh F12: golden·artifact PASS(1/1), cleanup 0; 원래 72-case 위치 44–57: golden·artifact PASS(72/72), cleanup 0; CI 대기 |
+| 56 | `cbrd_26659_oos_sql09_lob_maxcols.sql` | 대상 | 초기 DROP `-581` | Fresh F13: golden·artifact PASS(1/1), cleanup 0; 원래 72-case 위치 44–57: golden·artifact PASS(72/72), cleanup 0; CI 대기 |
+| 57 | `cbrd_26659_oos_storage_policy.sql` | 대상 | 초기 DROP `-581` | Fresh F14: golden·artifact PASS(1/1), cleanup 0; 원래 72-case 위치 44–57: golden·artifact PASS(72/72), cleanup 0; CI 대기 |
 
 15개는 43–57번에 연속한다. 42번 chunk-boundaries와 58번 VOT-many-attributes는 통과했다. 뒤 14개는 초기 DDL부터 실패했으므로 연쇄 실패가 의심되지만, 이를 각 TC의 확정 원인으로 기록하지 않는다. 재실행 범위는 `sql/_36_guava` 전체 72개이며, 세 기존 실패 파일만의 실행이 아니다.
 
