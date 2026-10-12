@@ -2,7 +2,7 @@
 
 작성·갱신: 2026-10-13, Asia/Seoul. Work item 332.
 
-Engine PR8128의 partition HA replication assertion을 수리했다. 대상 SQL 14개는 최종 커밋의 새 DB 독립 실행에서 모두 통과했다. 원래 72-case 순서도 모두 통과했다. 게시 전 리뷰와 한 번의 CI qualification을 수행하고 그 결과를 아래에 추가한다. 합의된 제외 규칙과 기존 정답·assertion은 보존했다.
+Engine PR8128의 partition HA replication assertion을 수리했다. 대상 SQL 14개는 최종 커밋의 새 DB 독립 실행, 원래 72-case 순서와 단일 CI에서 모두 통과했다. 전체 CI는 shell 7개 실패로 FAILURE다. 합의된 제외 규칙과 기존 정답·assertion은 보존했다. Work item 332의 필수 SQL 수리·검증과 terminal 보고를 완료하고 다음 인간 지시를 기다린다.
 
 ## 수리 원인과 변경
 
@@ -62,20 +62,20 @@ Local Debug/native runtime을 CI-equivalent라고 부르지 않는다. 최신 CI
 
 | Target case | Fresh DB attempt | Golden / artifact / cleanup | 원래 72-case / CI |
 | --- | --- | --- | --- |
-| `cbrd_26659_oos_partition_routing.sql` | `/home/vimkim/tmp/s332-final-01` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
-| `cbrd_26659_oos_representation.sql` | `/home/vimkim/tmp/s332-final-02` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
-| `cbrd_26659_oos_schema.sql` | `/home/vimkim/tmp/s332-final-03` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
-| `cbrd_26659_oos_sql01_insert_select.sql` | `/home/vimkim/tmp/s332-final-04` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
-| `cbrd_26659_oos_sql04_delete.sql` | `/home/vimkim/tmp/s332-final-05` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
-| `cbrd_26659_oos_sql04_update.sql` | `/home/vimkim/tmp/s332-final-06` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
-| `cbrd_26659_oos_sql05_bigone.sql` | `/home/vimkim/tmp/s332-final-07` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
-| `cbrd_26659_oos_sql05_constraints.sql` | `/home/vimkim/tmp/s332-final-08` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
-| `cbrd_26659_oos_sql05_transactions.sql` | `/home/vimkim/tmp/s332-final-09` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
-| `cbrd_26659_oos_sql06_triggers.sql` | `/home/vimkim/tmp/s332-final-10` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
-| `cbrd_26659_oos_sql07_read_paths.sql` | `/home/vimkim/tmp/s332-final-11` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
-| `cbrd_26659_oos_sql09_lob_copy.sql` | `/home/vimkim/tmp/s332-final-12` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
-| `cbrd_26659_oos_sql09_lob_maxcols.sql` | `/home/vimkim/tmp/s332-final-13` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
-| `cbrd_26659_oos_storage_policy.sql` | `/home/vimkim/tmp/s332-final-14` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI 대기 |
+| `cbrd_26659_oos_partition_routing.sql` | `/home/vimkim/tmp/s332-final-01` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI PASS (run38271660063, shard09) |
+| `cbrd_26659_oos_representation.sql` | `/home/vimkim/tmp/s332-final-02` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI PASS (run38271660063, shard09) |
+| `cbrd_26659_oos_schema.sql` | `/home/vimkim/tmp/s332-final-03` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI PASS (run38271660063, shard09) |
+| `cbrd_26659_oos_sql01_insert_select.sql` | `/home/vimkim/tmp/s332-final-04` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI PASS (run38271660063, shard09) |
+| `cbrd_26659_oos_sql04_delete.sql` | `/home/vimkim/tmp/s332-final-05` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI PASS (run38271660063, shard09) |
+| `cbrd_26659_oos_sql04_update.sql` | `/home/vimkim/tmp/s332-final-06` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI PASS (run38271660063, shard09) |
+| `cbrd_26659_oos_sql05_bigone.sql` | `/home/vimkim/tmp/s332-final-07` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI PASS (run38271660063, shard09) |
+| `cbrd_26659_oos_sql05_constraints.sql` | `/home/vimkim/tmp/s332-final-08` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI PASS (run38271660063, shard09) |
+| `cbrd_26659_oos_sql05_transactions.sql` | `/home/vimkim/tmp/s332-final-09` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI PASS (run38271660063, shard09) |
+| `cbrd_26659_oos_sql06_triggers.sql` | `/home/vimkim/tmp/s332-final-10` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI PASS (run38271660063, shard09) |
+| `cbrd_26659_oos_sql07_read_paths.sql` | `/home/vimkim/tmp/s332-final-11` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI PASS (run38271660063, shard09) |
+| `cbrd_26659_oos_sql09_lob_copy.sql` | `/home/vimkim/tmp/s332-final-12` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI PASS (run38271660063, shard09) |
+| `cbrd_26659_oos_sql09_lob_maxcols.sql` | `/home/vimkim/tmp/s332-final-13` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI PASS (run38271660063, shard09) |
+| `cbrd_26659_oos_storage_policy.sql` | `/home/vimkim/tmp/s332-final-14` | PASS / 1 success, 0 fail / 0 | 원래 순서 PASS; CI PASS (run38271660063, shard09) |
 
 ## 원래 72-case 순서 검증
 
@@ -89,7 +89,41 @@ Local Debug/native runtime을 CI-equivalent라고 부르지 않는다. 최신 CI
 
 Engine 비교 기준은 `a5da823b2a84e95b4b22d48abe4a3f9fd601c176`, Spec은 [합의된 계획](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-repair/plan.md)이다. 최종 local 검증 후 독립 agent 두 개로 `code-review`를 수행했다. **Standards 0건 / Spec 0건**이다. Standards는 개인 정책·유효한 subdirectory 지침·CONTRIBUTING·문서 index 기준과 smell baseline을 확인했다. Spec은 각 fresh DB 생성/단일 case XML/verifier/cleanup, 복사 SQL·answer·fixture 해시, 원래 72개 실제 순서와 complete XML identity/verdict, 최소 계측 전후 경로를 확인했다. 문서의 runtime 차이와 제외 범위도 유지하며 게시 전 준비를 충족한다고 판단했다.
 
-Engine `1ef86a7efa34002e971b1b30bcf5d451e9db441b`과 public TC README `d7bec2fdeb6a19573300e1a624e03e0b87eb9e96`를 각각 PR head branch에 게시했다. Private TC는 `a2054f965a20241b87dc9577585ccc8a8cb6ab97` 그대로다. TC baseline ancestry 검사를 두 repository에서 통과한 뒤 [단일 `/run all` receipt](https://github.com/CUBRID/cubrid/pull/8128#issuecomment-6127511688)를 남겼다. 다섯 gha-ci context가 같은 [run38271660063, attempt 1](https://github.com/CUBRID/cubrid/actions/runs/38271660063)을 가리키는 pickup을 확인했다. 현재 이 실행의 terminal 결과를 기다린다. 추가 trigger나 rerun은 하지 않았다.
+Engine `1ef86a7efa34002e971b1b30bcf5d451e9db441b`과 public TC README `d7bec2fdeb6a19573300e1a624e03e0b87eb9e96`를 각각 PR head branch에 게시했다. Private TC는 `a2054f965a20241b87dc9577585ccc8a8cb6ab97` 그대로다. TC baseline ancestry 검사를 두 repository에서 통과한 뒤 [단일 `/run all` receipt](https://github.com/CUBRID/cubrid/pull/8128#issuecomment-6127511688)를 남겼다. 다섯 gha-ci context가 같은 [run38271660063, attempt 1](https://github.com/CUBRID/cubrid/actions/runs/38271660063)을 가리키는 pickup을 확인했다. 이 실행은 2026-10-13 02:32:56 KST에 **FAILURE**로 종료했다. 사용자 요청에 따라 후반 상태 확인은 10분 간격으로 수행했다. 추가 수정·push·CI trigger/rerun은 하지 않았다.
+
+### Terminal counts와 provenance
+
+| Suite | Planned / tests | Run | Passed | Failures | Errors | Skipped | Unrun | Verdict |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| SQL | 17488 | 17488 | 17488 | 0 | 0 | 0 | 0 | PASS |
+| Shell | 3307 | 3277 | 3270 | 7 | 0 | 30 | 0 | FAIL |
+| Medium | 975 | 975 | 975 | 0 | 0 | 0 | 0 | PASS |
+
+Release와 Debug build context 모두 SUCCESS다. 세 suite의 모든 shard가 Engine `1ef86a7`, build mode `debug`, build run38271660063/attempt1, namespace `pr`을 보고했다. SQL/medium은 public TC `d7bec2f`, shell은 private TC `a2054f9`, 모두 branch `tc/pr-8128`이다. SQL/answer/fixture 내용은 local qualification 때와 같고 public README만 추가 게시했다. Shell의 30 skipped와 0 unrun을 별도로 기록하며 skipped를 실행 통과로 세지 않는다.
+
+`cubrid-ci collect 8128 --commit 1ef86a7efa34002e971b1b30bcf5d451e9db441b --wait --json`은 exit 0으로 세 suite의 complete evidence를 수집했다. 이는 수집 성공이며 전체 CI 성공을 뜻하지 않는다. Command-result/manifest v2, matching observation request/result v1, suite-summary/raw-index/failure v2 schema를 검증했다. Request/result의 identity, exact SHA·run/attempt, manifest 일치, 모든 raw 파일의 길이·SHA-256, summary digest, count reconciliation, failure metadata/message/diff 존재를 확인했다. GitHub `collect` job의 `Guard 3 of 3, and the summary` 단계도 FAILURE였다. 이 guard는 failed count가 양수이면 실패시키므로 수집한 shell 7 fail과 일치한다.
+
+Retained bundle: `/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-8128/1ef86a7efa34002e971b1b30bcf5d451e9db441b`. Matching observation은 `observations/20261012T173334.412317894Z-2803200-0`이다. 검증 명령은 `/usr/bin/python3 /home/vimkim/tmp/oos-sql-repair-332/validate-ci.py`, 결과는 같은 root의 `validated-terminal.json`이다.
+
+대상 14개는 complete SQL JUnit의 shard **09**에 각각 정확히 한 번 존재하며 모두 failure/error/skipped가 없는 **PASS**다. 원래 72개 identity도 같은 shard에서 각각 한 번 존재하고 **72/72 PASS**다. 이는 실패 목록에 없다는 추정이 아니라 실제 positive testcase records를 검증한 결과다. 실행 순서의 증거는 앞 절의 native `s332-f72` manifest·actual log이며, JUnit 배열 순서를 실행 순서로 해석하지 않는다. CI XML은 bundle의 `providers/github-actions/runs/38271660063/attempts/1/test_sql/raw/shards/09/linux_sql_64bit.xml`에 보존한다.
+
+### 제외·추가 실패와 TC Merge Gate
+
+합의된 shell 제외 5개는 이번에도 모두 FAIL이다. Full partition은 logical JUnit PASS이며 기존 제외 분류와 별도 physical defect 상태를 유지한다.
+
+| Shell case basename | 이번 실제 관측 | 판정 |
+| --- | --- | --- |
+| `cbrd_27064.sh` | Delete 700건과 update 2400건의 extractor `rc=-10`, target count 0 | 합의된 기존 CDC 제외 유지 |
+| `cbrd_26659_partition_owner.sh` | Destination ownership mismatch, retained CBRD-27089 | 합의된 예상 실패 제외 유지 |
+| `cbrd_26659_snapshots_reclaim.sh` | Snapshot/reclaim controller exit 1 | 합의된 예상 실패 제외 유지; 이번 underlying page-return 원인은 재진단하지 않음 |
+| `cbrd_26659_utility_sa_physical.sh` | Source values/schema/checkdb와 LOB transfer는 OK, utility controller status 1 | 합의된 예상 실패 제외 유지; 이번 underlying destination placement 원인은 재진단하지 않음 |
+| `cbrd_27237_rollback_vacuum.sh` | Rollback-after-vacuum pre-image controller exit 1 | 합의된 예상 실패 제외 유지; 이번 underlying corruption 원인은 재진단하지 않음 |
+| `cbrd_27075.sh` | Subcheck 1 NOK; 4K·8K `EXTRACT_ERR=1`, 16K는 0; total corruption 0 | 추가 관측된 기존 CDC 실패. Base run36570256001도 subcheck 1과 extraction errors를 보고했고 ADR-0005의 deferred gap이다. 실행과 올바른 기대를 유지하며 SQL14 수리와 구분 |
+| `hide_cubrid_replay.sh` | Subcheck 6 NOK, `qa8.answer` mismatch | 추가 잔여 실패, 원인 미확정. Base의 subcheck 7 / `qa9.answer`, 이전 full head의 `qa9`·`qa10`과 signature가 달라 동일 baseline 원인으로 제외하지 않음 |
+
+추가 두 항목의 전체 경로와 역사적 비교는 [추적 표](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-repair/README.md)에 기록했다. 이번 run의 per-case evidence는 위 bundle의 `providers/github-actions/runs/38271660063/attempts/1/test_shell/failures/` 아래 metadata/message/diff다. 비교 결과는 `/home/vimkim/tmp/oos-sql-repair-332/additional-failure-comparison.json`이다. SQL 대상 잔여 실패는 **0**이며 shell 잔여를 이 수리의 완료나 전체 CI green으로 바꾸지 않는다.
+
+[Public TC #3688](https://github.com/CUBRID/cubrid-testcases/pull/3688)와 [private TC #4365](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4365)는 둘 다 **OPEN draft**이고 base는 `feature/oos-merge`다. 개인 정책에 따른 **TC Merge Gate는 미해제**이며 인간의 merge 또는 close가 필요하다. Live PR checks에는 이름이 `TC Merge Gate`인 context가 없었고 `gh pr checks --required`도 `no required checks reported`(exit 1)를 반환했다. 이 관측을 정책상 merge 허용으로 해석하지 않는다. TC PR merge/close나 branch 삭제는 수행하지 않았다.
 
 ## 보존된 제외 항목
 
