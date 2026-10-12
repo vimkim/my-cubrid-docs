@@ -5,6 +5,8 @@
 
 이 문서는 최신 실패 TC의 수리 대상 여부와 검증 상태를 추적한다. 사용자는 SQL와 shell의 실패 전체를 검토하고 아래 제외 규칙을 적용한 뒤 남는 SQL 14개를 모두 정상화하는 범위에 동의했다. 이 범위 합의는 원인 확정이나 수리 완료를 뜻하지 않는다.
 
+공유 이해는 2026-10-12에 최종 확인했다. 실행 절차와 완료 기준은 [합의된 수리 계획](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-repair/plan.md)에 정리한다.
+
 ## 합의된 제외 규칙
 
 1. `feature/oos-merge`의 기존 TC 구성에서 이미 관측된 동일 증상 실패는 이번 수리 대상에서 제외한다. 새 TC가 동일 Engine 소스에서도 실패한다는 이유만으로 자동 제외하지 않는다.
@@ -60,9 +62,11 @@
 | `shell/_40_guava/cbrd_26659_utility_sa_physical/cases/cbrd_26659_utility_sa_physical.sh` | 제외: 기존 예상 실패 | SA logical load와 별개로 destination OOS physical placement 미달 |
 | `shell/_40_guava/cbrd_27237_rollback_vacuum/cases/cbrd_27237_rollback_vacuum.sh` | 제외: 기존 예상 실패 | Vacuum 뒤 rollback pre-image read에서 OOS metadata corruption 관측 |
 
-## 미결정 사항과 갱신 방법
+## 합의된 완료 기준과 갱신 방법
 
-독립 실행/순서 실행의 완료 증거 범위는 인터뷰에서 최종 확인한다. 최종 CI는 개인 CUBRID PR 정책과 출발 핸드오프의 운영 경계를 따른다. Scoped 변경과 필요한 TC 변경을 게시한 뒤 CI를 한 번 실행하고, terminal 결과와 제외/잔여 실패를 보고한 뒤 다음 인간 지시를 기다린다. Engine 변경 시 `/run all`, Engine이 그대로인 TC 변경 시 유효성을 확인한 failure replay를 선택한다.
+SQL 14개 모두 새 DB의 독립 실행에서 정답과 비교해 통과하고, partition을 포함한 최신 CI의 원래 72-case 순서에서도 대상 14개가 통과해야 한다. 각 결과의 실제 로그, 정답 비교와 artifact verdict를 남긴다. 제외 항목의 실패는 별도로 기록하며, 대상 14개의 검증을 대체하지 않는다.
+
+최종 CI는 개인 CUBRID PR 정책과 출발 핸드오프의 운영 경계를 따른다. Scoped 변경과 필요한 TC 변경을 게시한 뒤 CI를 한 번 실행하고, terminal 결과와 제외/잔여 실패를 보고한 뒤 다음 인간 지시를 기다린다. Engine 변경 시 `/run all`, Engine이 그대로인 TC 변경 시 유효성을 확인한 failure replay를 선택한다. CI에서 대상 실패가 남으면 수리 완료로 기록하지 않는다.
 
 새 검증을 수행하면 해당 행의 상태를 갱신하면서 Engine/TC revision, 실행 조건, attempt/run 식별자, 실제 artifact verdict와 근거 위치를 함께 남긴다. 기존 관측은 run 식별자를 유지한다. 독립 실행 통과만으로 순서 실행의 실패를 해결했다고 기록하지 않으며, 제외 항목을 자동으로 해결 완료로 바꾸지 않는다. 새 실패는 먼저 두 제외 규칙의 근거를 확인한 뒤 표에 추가한다.
 

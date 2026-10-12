@@ -8,8 +8,6 @@ The coordinating [engine PR is CUBRID/cubrid#8128](https://github.com/CUBRID/cub
 
 Current `tc/pr-8128` payloads are public `1a556a0752073aaad573bf87d53f3eb75f398138` and private `5f049c52c477aef8aa277e978276af4f233d20fd`. The earlier private 27db3d6 payload remains the conversion baseline; its Python-based local receipts are historical. The [shell conversion record](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-replan/shell-conversion-results-20261012.md) records the three pushed commits, final 14/14 native pass in 305.251934s, independent 356-assertion proof, actual-image tool samples and four preserved shell failures. Public SQL/answer bytes and retained SQL16 evidence are unchanged. The original saved descriptions were uploaded unchanged and preserve the separate historical native verdicts and the five failing/inconclusive normal-discovery candidates. Both original published heads passed the recorded feature-baseline check; the conversion commits descend from that verified private head. The user's separate `/run all` request started [gha-ci run38043651879](https://github.com/CUBRID/cubrid/actions/runs/38043651879), with all five build/suite contexts verified at pickup; it finished failure and its [validated analysis](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci_analysis_report_a5da823_codex.md) remains historical. The current conversion phase does not trigger another CI run. The user obtains teammate review and the agent never merges or closes the TC PRs.
 
-The separately authorized qualification run [38223008491](https://github.com/CUBRID/cubrid/actions/runs/38223008491) completed with shell 8 failures, SQL 3 failures, medium 975/975 passing and both build checks passing. Its [run-specific analysis](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci_analysis_report_a5da823_run38223008491_codex.md) covers all 11 failures, the snapshot controller pruning gap, four retained candidates, the previous run and exact merge-base evidence. It proposes focused reproduction and repairs; the analysis performs no testcase/source changes or CI rerun. The earlier report remains historical.
-
 The `campaign/` documents are historical evidence. They describe older engine/runner/layout decisions and cannot establish current passing coverage. Their supporting artifacts remain linked from the relevant report; no historical cleanup is included here.
 
 | File | What it contains | Created | Last modified | Why it was created |
@@ -26,9 +24,10 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 | [ci-environment.md](ci-replan/ci-environment.md) | Company runner configuration and compatibility context | 2026-10-08 | 2026-10-08 | Check future integration conventions without a GHA gate |
 | [shell-conventions-20261012.md](ci-replan/shell-conventions-20261012.md) | Recent private TC conventions, measured image tools and 36 parser controls | 2026-10-12 | 2026-10-12 | Select supported shell mechanisms before replacing new Python helpers |
 | [shell-conversion-results-20261012.md](ci-replan/shell-conversion-results-20261012.md) | Convention-based conversion jobs, fresh qualification, review and remaining limits | 2026-10-12 | 2026-10-12 | Replace unverified Python dependency without weakening OOS expectations |
+| [TC repair status](ci-repair/README.md) | Agreed exclusions, all 20 latest failures, 14 in-scope SQL cases and pending verification | 2026-10-12 | 2026-10-12 | Track PR8128 repair decisions and testcase outcomes without losing excluded defects |
+| [SQL repair plan](ci-repair/plan.md) | Confirmed repair scope, shared-cause exception, fresh/ordered validation and one-CI boundary | 2026-10-12 | 2026-10-12 | Preserve the completed design interview as an executable next-session plan |
 | [ci_analysis_report_a5da823_codex.md](ci_analysis_report_a5da823_codex.md) | Historical CI comparison and current shell-conversion remedy | 2026-10-12 | 2026-10-12 | Explain CI prerequisite failures and direct convention-based conversion |
-| [ci_analysis_report_a5da823_run38223008491_codex.md](ci_analysis_report_a5da823_run38223008491_codex.md) | Run38223008491: all 11 failures, shard dependency, candidates and exact-base comparison | 2026-10-12 | 2026-10-12 | Analyze the post-conversion CI result and prioritize focused follow-up |
-| [GLOSSARY.md](ci-replan/GLOSSARY.md) | Terms for delivery, configurations and verified coverage | 2026-10-08 | 2026-10-08 | Separate this delivery from historical campaign terminology |
+| [GLOSSARY.md](ci-replan/GLOSSARY.md) | Terms for delivery, coverage, existing baseline failures and retained expected-failing cases | 2026-10-08 | 2026-10-12 | Separate this delivery from historical campaign terminology |
 | [0001-developer-owned-ci-regressions.md](ci-replan/docs/adr/0001-developer-owned-ci-regressions.md) | Accepted developer ownership and local separate timing guidance | 2026-10-08 | 2026-10-08 | Record the settled direction and superseded budget assumptions |
 | [CBRD-26659-engine-baseline_f4299ac_claude.md](campaign/CBRD-26659-engine-baseline_f4299ac_claude.md) | Historical engine pin and boundary derivation | 2026-09-10 | 2026-09-14 | Establish the old campaign source and layout |
 | [CBRD-26659-injection-site-validation_f4299ac_claude.md](campaign/CBRD-26659-injection-site-validation_f4299ac_claude.md) | Historical instrumented fault-site analysis | 2026-09-12 | 2026-09-14 | Validate old campaign injection reachability |
@@ -84,15 +83,3 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 | [CBRD-26659-oos-sql-regressions-pr-context_1a556a0_codex.md](CBRD-26659-oos-sql-regressions-pr-context_1a556a0_codex.md) | Verified public3688 publication, exact body hash and separately requested CI pickup | 2026-10-10 | 2026-10-10 | Publish the two reviewed TC payloads without replacing bot history |
 | [CBRD-26659-oos-shell-regressions-pr-body_27db3d6_codex.md](CBRD-26659-oos-shell-regressions-pr-body_27db3d6_codex.md) | Published private4365 description for the actual integrated TC head | 2026-10-10 | 2026-10-10 | Review the bot private TC payload and owned cleanup/coverage limits |
 | [CBRD-26659-oos-shell-regressions-pr-context_27db3d6_codex.md](CBRD-26659-oos-shell-regressions-pr-context_27db3d6_codex.md) | Verified private4365 publication, exact body hash and separately requested CI pickup | 2026-10-10 | 2026-10-10 | Publish the two reviewed TC payloads without replacing bot history |
-
-## Integrated analysis and decisions
-
-| File | What it contains | Created | Last modified | Why it was created |
-| --- | --- | --- | --- | --- |
-| [CBRD-26659 / PR 8128: expected failures and CI runtime gap](ci_analysis_report_a5da823_codex_cb5cd1e0_historical.md) | CBRD-26659 / PR 8128: expected failures and CI runtime gap | 2026-10-12 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
-
-## Integrated analysis and decisions
-
-| File | What it contains | Created | Last modified | Why it was created |
-| --- | --- | --- | --- | --- |
-| [PR8128 testcase 수리 범위와 상태](ci-repair/README.md) | PR8128 testcase 수리 범위와 상태 | 2026-10-12 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
