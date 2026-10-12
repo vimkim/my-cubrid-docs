@@ -14,6 +14,8 @@
 
 원인 검증용 가설 패치를 허용한다. 최종 게시에는 올바른 정답과 assertion을 보존하고, 원인을 설명하는 경로 증거와 패치 전후 대조 실행을 확보한다. 모든 큐 연산의 추적을 의무화하지 않는다.
 
+예상 실패인 partition 결함이 대상 SQL 14개의 연쇄 실패 원인으로 입증되면, 14개 정상화에 필요한 공통 원인 수리를 허용한다. Partition 자체의 모든 기존 결함을 해결할 의무로 범위를 넓히지 않으며, 다른 제외 항목의 수리는 기존 범위를 유지한다.
+
 ## 판정에 사용한 실행과 리비전
 
 - 최신 결과: [run38245729674, attempt 1](https://github.com/CUBRID/cubrid/actions/runs/38245729674). SQL 72개 중 57 pass / 15 fail, shell replay 8개 중 3 pass / 5 fail. Medium은 이전 통과 결과를 유지했고 이 run에서 재실행하지 않았다.
@@ -28,7 +30,7 @@
 
 | 순서 | TC basename | 수리 판정 | 최신 관측 | 상태와 다음 검증 |
 | --- | --- | --- | --- | --- |
-| 43 | `cbrd_26659_oos_partition.sql` | 제외: 기존 예상 실패 | Partition UPDATE `-21019`, `repl_log_insert`, `replication.c:468` assertion | 알려진 실패 유지; 뒤 TC에 미치는 영향의 처리 방침은 미결정 |
+| 43 | `cbrd_26659_oos_partition.sql` | 제외: 기존 예상 실패 | Partition UPDATE `-21019`, `repl_log_insert`, `replication.c:468` assertion | 원인 미확정; 대상 SQL 14개를 복구하는 데 필요한 공통 원인은 입증 후 수리 허용 |
 | 44 | `cbrd_26659_oos_partition_routing.sql` | 대상 | 초기 DROP `-581`; JDBC reconnect 실패 | 미검증; 독립 실행과 순서 실행의 증상 비교 필요 |
 | 45 | `cbrd_26659_oos_representation.sql` | 대상 | 초기 DROP `-581` | 미검증; 별도의 representation target 재현기와 구분 |
 | 46 | `cbrd_26659_oos_schema.sql` | 대상 | 초기 DROP `-581` | 미검증; fixture 생성과 본래 assertion 도달 확인 |
@@ -60,7 +62,7 @@
 
 ## 미결정 사항과 갱신 방법
 
-예상 실패인 partition이 수리 대상 SQL 14개를 오염시킨다면, 해당 TC를 별도 실행으로 격리할지 또는 대상 TC를 복구하기 위한 공통 원인 수리를 허용할지 아직 결정하지 않았다. 독립 실행/순서 실행의 증거 범위와 최종 CI 운영 경계도 인터뷰에서 정한다.
+독립 실행/순서 실행의 완료 증거 범위는 인터뷰에서 최종 확인한다. 최종 CI는 개인 CUBRID PR 정책과 출발 핸드오프의 운영 경계를 따른다. Scoped 변경과 필요한 TC 변경을 게시한 뒤 CI를 한 번 실행하고, terminal 결과와 제외/잔여 실패를 보고한 뒤 다음 인간 지시를 기다린다. Engine 변경 시 `/run all`, Engine이 그대로인 TC 변경 시 유효성을 확인한 failure replay를 선택한다.
 
 새 검증을 수행하면 해당 행의 상태를 갱신하면서 Engine/TC revision, 실행 조건, attempt/run 식별자, 실제 artifact verdict와 근거 위치를 함께 남긴다. 기존 관측은 run 식별자를 유지한다. 독립 실행 통과만으로 순서 실행의 실패를 해결했다고 기록하지 않으며, 제외 항목을 자동으로 해결 완료로 바꾸지 않는다. 새 실패는 먼저 두 제외 규칙의 근거를 확인한 뒤 표에 추가한다.
 
