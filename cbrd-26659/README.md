@@ -90,3 +90,9 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
 | [CBRD-26659 / PR 8128: expected failures and CI runtime gap](ci_analysis_report_a5da823_codex_cb5cd1e0_historical.md) | CBRD-26659 / PR 8128: expected failures and CI runtime gap | 2026-10-12 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+
+## Integrated analysis and decisions
+
+| File | What it contains | Created | Last modified | Why it was created |
+| --- | --- | --- | --- | --- |
+| [PR8128 testcase 수리 범위와 상태](ci-repair/README.md) | PR8128 testcase 수리 범위와 상태 | 2026-10-12 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |

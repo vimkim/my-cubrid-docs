@@ -1,0 +1,77 @@
+# PR8128 testcase 수리 범위와 상태
+
+결정일 및 마지막 갱신: 2026-10-12, Asia/Seoul. Work item 331.
+관련 PR: [Engine #8128](https://github.com/CUBRID/cubrid/pull/8128), [public TC #3688](https://github.com/CUBRID/cubrid-testcases/pull/3688), [private TC #4365](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4365).
+
+이 문서는 최신 실패 TC의 수리 대상 여부와 검증 상태를 추적한다. 사용자는 SQL와 shell의 실패 전체를 검토하고 아래 제외 규칙을 적용한 뒤 남는 SQL 14개를 모두 정상화하는 범위에 동의했다. 이 범위 합의는 원인 확정이나 수리 완료를 뜻하지 않는다.
+
+## 합의된 제외 규칙
+
+1. `feature/oos-merge`의 기존 TC 구성에서 이미 관측된 동일 증상 실패는 이번 수리 대상에서 제외한다. 새 TC가 동일 Engine 소스에서도 실패한다는 이유만으로 자동 제외하지 않는다.
+2. 이전 delivery에서 올바른 성공 기대를 유지한 채 알려진 결함의 재현기로 남긴 예상 실패 TC는 이번 수리 대상에서 제외한다.
+
+이 규칙은 이번 수리 작업의 범위를 정한다. 제외된 결함은 미해결로 기록하고, 실행 생략이나 정답 변경은 별도 결정으로 다룬다. 정상적인 오류를 검증하는 SQL 문장은 passing testcase의 검증 조건이므로 제외 대상이 아니다.
+
+원인 검증용 가설 패치를 허용한다. 최종 게시에는 올바른 정답과 assertion을 보존하고, 원인을 설명하는 경로 증거와 패치 전후 대조 실행을 확보한다. 모든 큐 연산의 추적을 의무화하지 않는다.
+
+## 판정에 사용한 실행과 리비전
+
+- 최신 결과: [run38245729674, attempt 1](https://github.com/CUBRID/cubrid/actions/runs/38245729674). SQL 72개 중 57 pass / 15 fail, shell replay 8개 중 3 pass / 5 fail. Medium은 이전 통과 결과를 유지했고 이 run에서 재실행하지 않았다.
+- Engine: `a5da823b2a84e95b4b22d48abe4a3f9fd601c176`.
+- Public TC: `1a556a0752073aaad573bf87d53f3eb75f398138`. Private TC: `a2054f965a20241b87dc9577585ccc8a8cb6ab97`.
+- 기존 기준 실행: [run36570256001, attempt 1](https://github.com/CUBRID/cubrid/actions/runs/36570256001), Engine `fb567a629cdb390fff920542173fa36f454c74a0`. 새 OOS TC는 이 실행의 기존 corpus에 없었다.
+- 현재 `feature/oos-merge`와 PR8128의 Engine source tree는 동일하다. 이 사실만으로 testcase 구성, 빌드 및 실행 조건의 동등성을 주장하지 않는다.
+
+## SQL 실패 15개
+
+모든 경로는 public repository의 `sql/_36_guava/cbrd_26659/cases/` 아래이다. 순서는 최신 72-case shard의 실제 실행 위치이다. `대상 / 미검증`은 정상화 작업에 포함되지만 원인과 수리 결과는 아직 입증되지 않았음을 뜻한다.
+
+| 순서 | TC basename | 수리 판정 | 최신 관측 | 상태와 다음 검증 |
+| --- | --- | --- | --- | --- |
+| 43 | `cbrd_26659_oos_partition.sql` | 제외: 기존 예상 실패 | Partition UPDATE `-21019`, `repl_log_insert`, `replication.c:468` assertion | 알려진 실패 유지; 뒤 TC에 미치는 영향의 처리 방침은 미결정 |
+| 44 | `cbrd_26659_oos_partition_routing.sql` | 대상 | 초기 DROP `-581`; JDBC reconnect 실패 | 미검증; 독립 실행과 순서 실행의 증상 비교 필요 |
+| 45 | `cbrd_26659_oos_representation.sql` | 대상 | 초기 DROP `-581` | 미검증; 별도의 representation target 재현기와 구분 |
+| 46 | `cbrd_26659_oos_schema.sql` | 대상 | 초기 DROP `-581` | 미검증; fixture 생성과 본래 assertion 도달 확인 |
+| 47 | `cbrd_26659_oos_sql01_insert_select.sql` | 대상 | 초기 DROP `-581` | 미검증; fixture 생성과 본래 assertion 도달 확인 |
+| 48 | `cbrd_26659_oos_sql04_delete.sql` | 대상 | 초기 DROP `-581` | 미검증; fixture 생성과 본래 assertion 도달 확인 |
+| 49 | `cbrd_26659_oos_sql04_update.sql` | 대상 | 초기 DROP `-581` | 미검증; fixture 생성과 본래 assertion 도달 확인 |
+| 50 | `cbrd_26659_oos_sql05_bigone.sql` | 대상 | 초기 DROP `-581` | 미검증; 정상적인 거부 오류와 초기 실행 실패 구분 |
+| 51 | `cbrd_26659_oos_sql05_constraints.sql` | 대상 | 초기 DROP VIEW `-581` | 미검증; 정상적인 제약 오류와 초기 실행 실패 구분 |
+| 52 | `cbrd_26659_oos_sql05_transactions.sql` | 대상 | `autocommit off` 후 초기 DROP `-581` | 미검증; fixture와 transaction 상태 확인 |
+| 53 | `cbrd_26659_oos_sql06_triggers.sql` | 대상 | 초기 DROP `-581` | 미검증; fixture 생성과 본래 assertion 도달 확인 |
+| 54 | `cbrd_26659_oos_sql07_read_paths.sql` | 대상 | 초기 DROP VIEW `-581` | 미검증; fixture 생성과 본래 assertion 도달 확인 |
+| 55 | `cbrd_26659_oos_sql09_lob_copy.sql` | 대상 | 초기 DROP `-581` | 미검증; fixture 생성과 본래 assertion 도달 확인 |
+| 56 | `cbrd_26659_oos_sql09_lob_maxcols.sql` | 대상 | 초기 DROP `-581` | 미검증; fixture 생성과 본래 assertion 도달 확인 |
+| 57 | `cbrd_26659_oos_storage_policy.sql` | 대상 | 초기 DROP `-581` | 미검증; fixture 생성과 본래 assertion 도달 확인 |
+
+15개는 43–57번에 연속한다. 42번 chunk-boundaries와 58번 VOT-many-attributes는 통과했다. 뒤 14개는 초기 DDL부터 실패했으므로 연쇄 실패가 의심되지만, 이를 각 TC의 확정 원인으로 기록하지 않는다. 재실행 범위는 `sql/_36_guava` 전체 72개이며, 세 기존 실패 파일만의 실행이 아니다.
+
+## Shell 실패 5개
+
+모든 경로는 private repository 기준이다. 현재 다섯 항목은 모두 제외 규칙에 해당하므로 이번에 반드시 수리할 shell 잔여 항목은 없다.
+
+| TC path | 수리 판정 | 근거와 미해결 상태 |
+| --- | --- | --- |
+| `shell/_37_elderberry/cbrd_23842_cdc/bug/cbrd_27064/cases/cbrd_27064.sh` | 제외: 기존 기준 실패 | 기존 TC 구성에서도 delete/update extractor `rc=-10` 관측; 부분 건수는 실행마다 다름 |
+| `shell/_40_guava/cbrd_26659_partition_owner/cases/cbrd_26659_partition_owner.sh` | 제외: 기존 예상 실패 | Destination child ownership/descriptor 검증 실패 재현기 |
+| `shell/_40_guava/cbrd_26659_snapshots_reclaim/cases/cbrd_26659_snapshots_reclaim.sh` | 제외: 기존 예상 실패 | Chunk drain 뒤 positive page return 미달; downstream churn 검증 미완료 |
+| `shell/_40_guava/cbrd_26659_utility_sa_physical/cases/cbrd_26659_utility_sa_physical.sh` | 제외: 기존 예상 실패 | SA logical load와 별개로 destination OOS physical placement 미달 |
+| `shell/_40_guava/cbrd_27237_rollback_vacuum/cases/cbrd_27237_rollback_vacuum.sh` | 제외: 기존 예상 실패 | Vacuum 뒤 rollback pre-image read에서 OOS metadata corruption 관측 |
+
+## 미결정 사항과 갱신 방법
+
+예상 실패인 partition이 수리 대상 SQL 14개를 오염시킨다면, 해당 TC를 별도 실행으로 격리할지 또는 대상 TC를 복구하기 위한 공통 원인 수리를 허용할지 아직 결정하지 않았다. 독립 실행/순서 실행의 증거 범위와 최종 CI 운영 경계도 인터뷰에서 정한다.
+
+새 검증을 수행하면 해당 행의 상태를 갱신하면서 Engine/TC revision, 실행 조건, attempt/run 식별자, 실제 artifact verdict와 근거 위치를 함께 남긴다. 기존 관측은 run 식별자를 유지한다. 독립 실행 통과만으로 순서 실행의 실패를 해결했다고 기록하지 않으며, 제외 항목을 자동으로 해결 완료로 바꾸지 않는다. 새 실패는 먼저 두 제외 규칙의 근거를 확인한 뒤 표에 추가한다.
+
+## 근거 문서와 retained artifacts
+
+- [기존 예상 실패 5개와 passing selection](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-replan/delivery/14-complete-local-validation.md), 특히 `Five correct tracked candidates` 및 SQL selection 표.
+- [Shell conversion의 retained candidate 상태](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-replan/shell-conversion-results-20261012.md).
+- [Representation의 passing TC와 별도 target 재현기](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-replan/delivery/03-representation-chunks.md).
+- [기존 CDC 증상 비교](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci_analysis_report_a5da823_codex.md), `Existing CDC` 및 exact-base 비교. 최신 run과 역사적 비교를 혼동하지 않는다.
+- 최신 receipt: `/home/vimkim/tmp/oos-ci-8128-controller-repair-20261012.8P6hTT/terminal-receipt.json`.
+- 순서/assertion/reconnect: 같은 디렉터리의 `shard-sql-00.log`, 1015–1109행. Replay selection: `plan.log`, 740–743행 및 1036–1045행.
+- Per-case artifacts: `/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-8128/a5da823b2a84e95b4b22d48abe4a3f9fd601c176/providers/github-actions/runs/38245729674/attempts/1/`.
+
+TC 옆 요약은 public checkout의 `sql/_36_guava/cbrd_26659/README.md`에 둔다. 이 문서가 전체 실패 목록과 근거를 관리하고, TC README는 합의된 범위와 탐색 위치를 안내한다.
