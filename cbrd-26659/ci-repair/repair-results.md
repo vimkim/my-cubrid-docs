@@ -87,7 +87,7 @@ Local Debug/native runtime을 CI-equivalent라고 부르지 않는다. 최신 CI
 
 ## 게시 전 리뷰와 CI
 
-Engine 비교 기준은 `a5da823b2a84e95b4b22d48abe4a3f9fd601c176`, Spec은 [합의된 계획](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-repair/plan.md)이다. Standards/Spec 두 축 code-review는 최종 local 검증 이후 진행한다. Public TC README만 scoped 기록을 게시하고 private TC는 변경하지 않는다. Engine head가 변경되므로 한 번의 `/run all`을 실행한 뒤 terminal 결과를 기록한다. 현재는 게시와 CI trigger 전이다.
+Engine 비교 기준은 `a5da823b2a84e95b4b22d48abe4a3f9fd601c176`, Spec은 [합의된 계획](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-repair/plan.md)이다. 최종 local 검증 후 독립 agent 두 개로 `code-review`를 수행했다. **Standards 0건 / Spec 0건**이다. Standards는 개인 정책·유효한 subdirectory 지침·CONTRIBUTING·문서 index 기준과 smell baseline을 확인했다. Spec은 각 fresh DB 생성/단일 case XML/verifier/cleanup, 복사 SQL·answer·fixture 해시, 원래 72개 실제 순서와 complete XML identity/verdict, 최소 계측 전후 경로를 확인했다. 문서의 runtime 차이와 제외 범위도 유지하며 게시 전 준비를 충족한다고 판단했다. Public TC README만 scoped 기록을 게시하고 private TC는 변경하지 않는다. Engine head가 변경되므로 한 번의 `/run all`을 실행한 뒤 terminal 결과를 기록한다. 현재는 게시와 CI trigger 전이다.
 
 ## 보존된 제외 항목
 
