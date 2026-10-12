@@ -1,5 +1,7 @@
 # CBRD-26659 / PR 8128: expected failures and CI runtime gap
 
+Historical snapshot from docs commit `cb5cd1e0`, before shell conversion and the later SQL repair. Its proposed next actions are superseded by the [current analysis](ci_analysis_report_a5da823_codex.md) and [SQL repair record](ci-repair/repair-results.md).
+
 Created: 2026-10-12 (Asia/Seoul). Engine revision: `a5da823b2a84e95b4b22d48abe4a3f9fd601c176`. Collector: `cubrid-ci 0.2.0 (16d7252122d1, release)`.
 
 Some red results were anticipated because the published corpus deliberately retains five failing or unfinished reproducers. All 18 added shell entrypoints failing was outside the successful local qualification. Nine explicitly report `python3 unavailable`; seven Python controller wrappers exit 127; two crash wrappers fail at their Python schedule invocation. They complete in roughly 1–2 seconds. The highest-priority action is to make a compatible Python 3 runtime available to the CI shell cases and verify their prerequisites in the actual CI test image before another qualification run.
@@ -71,7 +73,7 @@ The nine explicit prerequisite failures, seven status-127 wrappers, two crash wr
 
 ### SQL partition reproducer: 1 case
 
-**Observed:** the partition move `update oos08_part set id=12 where id=1` yields `Error:-21019` where the independent answer expects success. Subsequent statements preserve id 1 instead of 12 and produce additional errors. The saved [SQL shard 09 log](/home/vimkim/tmp/oos-developer-regressions-publication-20261010/CI-8128-sql-09-clean.log) records a `repl_log_insert` assertion in `replication.c:468` during this case. This case was explicitly excluded from the 16-case native passing selection in the [reviewed SQL PR body](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/CBRD-26659-oos-sql-regressions-pr-body_1a556a0_codex.md).
+**Observed:** the partition move `update oos08_part set id=12 where id=1` yields `Error:-21019` where the independent answer expects success. Subsequent statements preserve id 1 instead of 12 and produce additional errors. The saved [SQL shard 09 log](/home/vimkim/tmp/oos-developer-regressions-publication-20261010/CI-8128-sql-09-clean.log) records a `repl_log_insert` assertion in `replication.c:468` during this case. This case was explicitly excluded from the 16-case native passing selection in the [reviewed SQL PR body](CBRD-26659-oos-sql-regressions-pr-body_1a556a0_codex.md).
 
 **Inference:** a red result for this retained reproducer was anticipated. The precise assertion cause remains unassigned. Relation is direct through newly exercised coverage, with high confidence in the observed failure and no exact-baseline execution of this new case.
 

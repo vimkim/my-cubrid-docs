@@ -6,7 +6,7 @@
 
 This establishes pre-existing failure signatures, not proof that all underlying causes or runtime conditions are identical. The runs use different testcase revisions. The four currently failing shell testcase directories are byte-identical between those revisions; exact SQL source identity could not be checked locally. Do not require this PR to solve all pre-existing failures, and do not dismiss the two additional failures without checking their output/process assumptions.
 
-The prior 18-failure snapshot is preserved in [the original-run report](/home/vimkim/gh/my-cubrid-docs/cbrd-27443/ci_analysis_report_0809a48_run37182000341_codex.md). Its evidence sidecar remains unchanged. This report supersedes its lack of baseline evidence.
+The prior 18-failure snapshot is preserved in [the original-run report](ci_analysis_report_0809a48_run37182000341_codex.md). Its evidence sidecar remains unchanged. This report supersedes its lack of baseline evidence.
 
 ## Runs and counts
 

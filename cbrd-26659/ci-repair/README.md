@@ -5,7 +5,7 @@
 
 이 문서는 실패 TC의 수리 대상 여부와 검증 상태를 추적한다. 사용자는 SQL와 shell의 실패 전체를 검토하고 아래 제외 규칙을 적용한 뒤 남는 SQL 14개를 모두 정상화하는 범위에 동의했다. **대상 14개는 수리·검증 완료**다. 최종 Engine `1ef86a7`의 fresh DB 독립 검증 14/14, 원래 72-case 순서 72/72와 [단일 CI run38271660063](https://github.com/CUBRID/cubrid/actions/runs/38271660063)의 대상 14개 JUnit PASS를 확인했다. 전체 CI는 shell 7 fail로 FAILURE다. 합의된 shell 제외 5개와 추가 관측 2개를 아래에 별도로 남기며, terminal 보고 뒤 추가 수리를 수행하지 않는다.
 
-공유 이해는 2026-10-12에 최종 확인했다. 실행 절차와 완료 기준은 [합의된 수리 계획](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-repair/plan.md)에 정리한다.
+공유 이해는 2026-10-12에 최종 확인했다. 실행 절차와 완료 기준은 [합의된 수리 계획](plan.md)에 정리한다.
 
 ## 합의된 제외 규칙
 
@@ -36,13 +36,13 @@
 | Shell | 3307 | 3277 | 3270 | 7 / 0 | 30 | 0 |
 | Medium | 975 | 975 | 975 | 0 / 0 | 0 | 0 |
 
-대상 14개와 excluded full partition을 포함한 72개 identity는 CI shard09의 complete XML에 각각 정확히 한 번 있고 모두 PASS다. XML은 retained bundle의 `providers/github-actions/runs/38271660063/attempts/1/test_sql/raw/shards/09/linux_sql_64bit.xml`이다. Bundle root는 `/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-8128/1ef86a7efa34002e971b1b30bcf5d451e9db441b`이다. Schema·identity·raw hash·counts 검증과 모든 per-case positive record는 `/home/vimkim/tmp/oos-sql-repair-332/validated-terminal.json`에 보존한다. Local/native와 CI runtime의 차이 및 원래 72개 실제 실행 순서 증거는 [수리 검증 기록](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-repair/repair-results.md)에 둔다.
+대상 14개와 excluded full partition을 포함한 72개 identity는 CI shard09의 complete XML에 각각 정확히 한 번 있고 모두 PASS다. XML은 retained bundle의 `providers/github-actions/runs/38271660063/attempts/1/test_sql/raw/shards/09/linux_sql_64bit.xml`이다. Bundle root는 `/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-8128/1ef86a7efa34002e971b1b30bcf5d451e9db441b`이다. Schema·identity·raw hash·counts 검증과 모든 per-case positive record는 `/home/vimkim/tmp/oos-sql-repair-332/validated-terminal.json`에 보존한다. Local/native와 CI runtime의 차이 및 원래 72개 실제 실행 순서 증거는 [수리 검증 기록](repair-results.md)에 둔다.
 
 Public TC #3688와 private TC #4365는 OPEN draft다. **개인 정책의 TC Merge Gate는 미해제**이며 인간의 merge/close가 필요하다. Live checks에 해당 이름의 context는 없고 `--required`도 configured required checks를 보고하지 않았다. 이를 merge 허용으로 해석하지 않는다.
 
 ## 범위 합의 당시 SQL 실패 15개
 
-모든 경로는 public repository의 `sql/_36_guava/cbrd_26659/cases/` 아래이다. 순서는 최신 72-case shard의 실제 실행 위치이다. 최신 관측 열은 역사적 run38245729674의 실패를 보존한다. 현재 검증의 identity·명령·결과는 [수리 검증 기록](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-repair/repair-results.md)에 둔다. 아래 Fresh `F01`–`F14`는 `/home/vimkim/tmp/s332-final-01`–`14`이며 모두 Engine `1ef86a7efa34002e971b1b30bcf5d451e9db441b`, public TC `1dec9d147547d8d404b6705b742e6e6fa0a58b98`, native Debug/HA/JDBC와 동일 runner SHA를 사용한다. 각 `verify.log`, XML, copied `.result`와 `cleanup.exit`가 실제 근거다.
+모든 경로는 public repository의 `sql/_36_guava/cbrd_26659/cases/` 아래이다. 순서는 최신 72-case shard의 실제 실행 위치이다. 최신 관측 열은 역사적 run38245729674의 실패를 보존한다. 현재 검증의 identity·명령·결과는 [수리 검증 기록](repair-results.md)에 둔다. 아래 Fresh `F01`–`F14`는 `/home/vimkim/tmp/s332-final-01`–`14`이며 모두 Engine `1ef86a7efa34002e971b1b30bcf5d451e9db441b`, public TC `1dec9d147547d8d404b6705b742e6e6fa0a58b98`, native Debug/HA/JDBC와 동일 runner SHA를 사용한다. 각 `verify.log`, XML, copied `.result`와 `cleanup.exit`가 실제 근거다.
 
 | 순서 | TC basename | 수리 판정 | 역사적 관측(run38245729674) | 현재 수리·검증 결과 |
 | --- | --- | --- | --- | --- |
@@ -97,14 +97,14 @@ SQL 14개 모두 새 DB의 독립 실행에서 정답과 비교해 통과하고,
 
 ## 근거 문서와 retained artifacts
 
-- [기존 예상 실패 5개와 passing selection](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-replan/delivery/14-complete-local-validation.md), 특히 `Five correct tracked candidates` 및 SQL selection 표.
-- [Shell conversion의 retained candidate 상태](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-replan/shell-conversion-results-20261012.md).
-- [Representation의 passing TC와 별도 target 재현기](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-replan/delivery/03-representation-chunks.md).
-- [기존 CDC 증상 비교](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci_analysis_report_a5da823_codex.md), `Existing CDC` 및 exact-base 비교. 최신 run과 역사적 비교를 혼동하지 않는다.
+- [기존 예상 실패 5개와 passing selection](../ci-replan/delivery/14-complete-local-validation.md), 특히 `Five correct tracked candidates` 및 SQL selection 표.
+- [Shell conversion의 retained candidate 상태](../ci-replan/shell-conversion-results-20261012.md).
+- [Representation의 passing TC와 별도 target 재현기](../ci-replan/delivery/03-representation-chunks.md).
+- [기존 CDC 증상 비교](../ci_analysis_report_a5da823_codex.md), `Existing CDC` 및 exact-base 비교. 최신 run과 역사적 비교를 혼동하지 않는다.
 - 최신 receipt: `/home/vimkim/tmp/oos-ci-8128-controller-repair-20261012.8P6hTT/terminal-receipt.json`.
 - 순서/assertion/reconnect: 같은 디렉터리의 `shard-sql-00.log`, 1015–1109행. Replay selection: `plan.log`, 740–743행 및 1036–1045행.
 - Per-case artifacts: `/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-8128/a5da823b2a84e95b4b22d48abe4a3f9fd601c176/providers/github-actions/runs/38245729674/attempts/1/`.
 
-최종 수리의 path evidence, retained attempts, 14개 independent/ordered 결과와 CI receipt는 [수리 검증 기록](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-repair/repair-results.md)에 보존한다.
+최종 수리의 path evidence, retained attempts, 14개 independent/ordered 결과와 CI receipt는 [수리 검증 기록](repair-results.md)에 보존한다.
 
 TC 옆 요약은 public checkout의 `sql/_36_guava/cbrd_26659/README.md`에 둔다. 이 문서가 전체 실패 목록과 근거를 관리하고, TC README는 합의된 범위와 탐색 위치를 안내한다.

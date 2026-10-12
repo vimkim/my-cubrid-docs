@@ -1,6 +1,6 @@
 # Developer-owned OOS regression work
 
-Terms for developer-created SQL and shell regression coverage. Canonical storage terms remain defined in [the normative OOS context](/home/vimkim/gh/cubrid-oos-context/OOS-CONTEXT.md) and the repository's existing [CUBRID vocabulary](/home/vimkim/gh/my-cubrid-docs/CONTEXT.md).
+Terms for developer-created SQL and shell regression coverage. Canonical storage terms remain defined in [the normative OOS context](/home/vimkim/gh/cubrid-oos-context/OOS-CONTEXT.md) and the repository's existing [CUBRID vocabulary](../../CONTEXT.md).
 
 ## Language
 

@@ -1,6 +1,6 @@
 # OOS 완료 보고와 기술적 머지 준비 — 실행 계약
 
-작성: 2026-09-29. 작업 220의 Q1–Q6 결정에 따른 계약이다. 사용자가 최종 확인에 `yes`로 답하여 전체 공동 이해와 이 범위의 실행을 승인했다. [결정 기록](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/review.md) · [용어집](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/CONTEXT.md).
+작성: 2026-09-29. 작업 220의 Q1–Q6 결정에 따른 계약이다. 사용자가 최종 확인에 `yes`로 답하여 전체 공동 이해와 이 범위의 실행을 승인했다. [결정 기록](review.md) · [용어집](CONTEXT.md).
 
 ## 목표와 경계
 

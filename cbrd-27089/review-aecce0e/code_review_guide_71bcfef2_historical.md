@@ -1,5 +1,7 @@
 # PR #7927 code review guide — aecce0e12
 
+Original report snapshot from docs commit `71bcfef`, before later historical-context annotations. The [annotated historical entry](code_review_guide.md) identifies its relationship to subsequent work; this copy preserves the originally authored report.
+
 Review [PR #7927](https://github.com/CUBRID/cubrid/pull/7927) at **`aecce0e1216a813771621c13112c8f27d43df22e`**, relative to exact merge base **`fb567a629cdb390fff920542173fa36f454c74a0`** on `feature/oos-merge`. This is the net PR diff: 19 files, 2,452 insertions and 138 deletions. Source links below are pinned to HEAD, not the moving branch.
 
 The bug is physical ownership: serialization used to write OOS chains into the input/root heap before partition selection, while the row subsequently went into a child heap. SELECT can still succeed by following its stub, but vacuum looks for the OOS file in the row's owning heap. The change retains selected serialized values in memory, routes the compact row, then publishes those values into the destination heap's OOS file.
@@ -43,7 +45,7 @@ flowchart TD
 
 ## CI findings to bring into the review
 
-The [exact-head CI analysis](/home/vimkim/gh/my-cubrid-docs/cbrd-27089/ci_analysis_report_aecce0e_codex.md) records six failed cases: three medium queries differing only in unordered row presentation, one loader case directly affected by child-domain validation, and two CDC failure categories also observed on the exact merge base. The medium result is not enough to attribute drift to the engine: CTP revisions differ between runs. The loader's rejection is intentional according to the PR description, but its legacy answer must still be reconciled with the intended partition contract. No all-green CI or whole-OOS acceptance is claimed.
+The [exact-head CI analysis](../ci_analysis_report_aecce0e_codex.md) records six failed cases: three medium queries differing only in unordered row presentation, one loader case directly affected by child-domain validation, and two CDC failure categories also observed on the exact merge base. The medium result is not enough to attribute drift to the engine: CTP revisions differ between runs. The loader's rejection is intentional according to the PR description, but its legacy answer must still be reconciled with the intended partition contract. No all-green CI or whole-OOS acceptance is claimed.
 
 ## Every changed definition
 
@@ -985,6 +987,6 @@ The following declarations refer to symbols explained above. New function bodies
 
 ## Coverage and verification boundary
 
-[Symbol inventory](/home/vimkim/gh/my-cubrid-docs/cbrd-27089/review-aecce0e/evidence/symbols.json) was extracted from both exact Git revisions with tree-sitter C++ and a GNU top-level function-boundary fallback for conditionally compiled `.c` functions. [Authoring/coverage script](/home/vimkim/gh/my-cubrid-docs/cbrd-27089/review-aecce0e/evidence/build_guide.py) requires an individual three-part explanation for every inventory symbol, including inline methods, deleted copy operations, nested types, newly exposed existing counter declarations and the six new cleanup lambdas. Existing lambdas merely shifted by added lines are not counted as changed.
+[Symbol inventory](evidence/symbols.json) was extracted from both exact Git revisions with tree-sitter C++ and a GNU top-level function-boundary fallback for conditionally compiled `.c` functions. [Authoring/coverage script](evidence/build_guide.py) requires an individual three-part explanation for every inventory symbol, including inline methods, deleted copy operations, nested types, newly exposed existing counter declarations and the six new cleanup lambdas. Existing lambdas merely shifted by added lines are not counted as changed.
 
-[Hunk audit](/home/vimkim/gh/my-cubrid-docs/cbrd-27089/review-aecce0e/evidence/hunk-coverage.json) independently checks the definition inventory against the zero-context net diff. Non-definition hunks are classified as includes, declarations, build wiring or comments/whitespace. This is an explanation guide, not an independent Standards/Spec review verdict. CI builds passed at this HEAD; the PR body's older local CTest/loader claims were not rerun or promoted into new verification claims during this documentation task.
+[Hunk audit](evidence/hunk-coverage.json) independently checks the definition inventory against the zero-context net diff. Non-definition hunks are classified as includes, declarations, build wiring or comments/whitespace. This is an explanation guide, not an independent Standards/Spec review verdict. CI builds passed at this HEAD; the PR body's older local CTest/loader claims were not rerun or promoted into new verification claims during this documentation task.

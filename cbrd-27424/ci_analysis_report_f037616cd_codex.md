@@ -6,9 +6,9 @@ Analysis date: 2026-10-07 KST. PR: [#7925 — Support OOS in standalone workspac
 
 **The two CDC failures were already observed at the exact merge base. The space-accounting failure is a plausible PR-related candidate whose cause is not established.** The available evidence does not justify saying that every failure is unrelated to this PR, or that the PR has introduced an engine correctness defect.
 
-The triggered regression run tested **`f037616cd17af92e1226afcde80fd2a6fff9121d`**, not the current local checkout `a142503dc1a6f85b498a425aa58d6a78136ccc6b`. Both commits have the identical `src/` tree, `0ca5248c8e1567c385847e941d150bc318e0fd5f`. The intervening changes removed four internal Markdown files and corrected a unit-test collection oracle and benchmark license header. This permits discussing the same production code; it does not establish regression-CI success for the newer commit. The [review guide](/home/vimkim/gh/my-cubrid-docs/cbrd-27424/code_review_guide_a142503dc_codex.md) covers the local checkout.
+The triggered regression run tested **`f037616cd17af92e1226afcde80fd2a6fff9121d`**, not the current local checkout `a142503dc1a6f85b498a425aa58d6a78136ccc6b`. Both commits have the identical `src/` tree, `0ca5248c8e1567c385847e941d150bc318e0fd5f`. The intervening changes removed four internal Markdown files and corrected a unit-test collection oracle and benchmark license header. This permits discussing the same production code; it does not establish regression-CI success for the newer commit. The [review guide](code_review_guide_a142503dc_codex.md) covers the local checkout.
 
-The published PR was at `91bfde02e5699a2aaa0c5d549d7ef4d418c8bdb8` in the status snapshot. Its own regression-suite collection is `not_observed` for all three suites and has a separate [bounded warning report](/home/vimkim/gh/my-cubrid-docs/cbrd-27424/ci_analysis_report_91bfde02e_codex.md). This document analyzes the independently validated historical run, rather than promoting its verdict to a newer head.
+The published PR was at `91bfde02e5699a2aaa0c5d549d7ef4d418c8bdb8` in the status snapshot. Its own regression-suite collection is `not_observed` for all three suites and has a separate [bounded warning report](ci_analysis_report_91bfde02e_codex.md). This document analyzes the independently validated historical run, rather than promoting its verdict to a newer head.
 
 ## Run identity and results
 
@@ -38,7 +38,7 @@ All paths below are relative to `CUBRID/cubrid-testcases-private-ex` at `c4b9d48
 | [`shell/_37_elderberry/cbrd_23842_cdc/bug/cbrd_27064/cases/cbrd_27064.sh`](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/c4b9d482fbd491a68510b2552df2c3cac91911fc/shell/_37_elderberry/cbrd_23842_cdc/bug/cbrd_27064/cases/cbrd_27064.sh) | INSERT passes. DELETE extraction returns `rc=-10` at 10/700; UPDATE returns `rc=-10` at 4/2,400. Both report zero log-page corruption. | `also_observed_on_base`: INSERT passes there too; DELETE fails at 23/700 and UPDATE at 0/2,400 with `rc=-10`, zero corruption. Same assertion and error family; extracted row counts vary. | CDC historical-value extraction | **Unlikely** to have been introduced by this PR. Consistent with the pre-existing OOS history limitation. | High for pre-existence; medium for history-lifetime cause in this particular run |
 | [`shell/_37_elderberry/cbrd_23842_cdc/bug/cbrd_27075/cases/cbrd_27075.sh`](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/c4b9d482fbd491a68510b2552df2c3cac91911fc/shell/_37_elderberry/cbrd_23842_cdc/bug/cbrd_27075/cases/cbrd_27075.sh) | All page sizes reach `FINAL_SEQ=2000`. The 4K configuration has `EXTRACT_ERR=1`; 8K/16K have zero. `CONFIGS_OK=2/3`, total corruption zero. | `also_observed_on_base`: all workloads finish, but all three sizes have `EXTRACT_ERR=4`, `CONFIGS_OK=0/3`, zero corruption. The common 4K extraction-error signature exists on both sides. | CDC historical-value extraction | **Unlikely** to have been introduced by this PR. Fewer errors in one run do not prove a repair. | High for pre-existence; medium for precise cause |
 
-Failure messages, including the actual numeric output diff, are cited in [the retained excerpts](/home/vimkim/gh/my-cubrid-docs/cbrd-27424/ci_f037616cd/failure_excerpts.md). The collector's `diff.txt` for the CDC cases contains NOK markers; their substantive error signatures come from `message.txt`, not from treating that short diff as a complete diagnostic.
+Failure messages, including the actual numeric output diff, are cited in [the retained excerpts](ci_f037616cd/failure_excerpts.md). The collector's `diff.txt` for the CDC cases contains NOK markers; their substantive error signatures come from `message.txt`, not from treating that short diff as a complete diagnostic.
 
 Reconciliation of the three PR failures: **two shared signatures, zero established comparable additional failures, one uncomparable head-only candidate**. There are three baseline-only failures, reported separately below. The formal classification does not hide the fact that `cbrd_20683` passed on the exact base and failed on the tested PR commit.
 
@@ -97,7 +97,7 @@ Three failures are **baseline-only observations** and pass in the PR run:
 | `shell/_06_issues/_15_1h/bug_bts_15156/cases/bug_bts_15156.sh` | Failure | Passed |
 | `shell/_40_guava/cbrd_26349/cases/cbrd_26349.sh` | Failure | Passed |
 
-Their passing observations do not mean this PR fixed those unrelated mechanisms. Prior analysis of the base run is [available separately](/home/vimkim/gh/my-cubrid-docs/cbrd-26357/ci_analysis_report_fb567a6_codex.md).
+Their passing observations do not mean this PR fixed those unrelated mechanisms. Prior analysis of the base run is [available separately](../cbrd-26357/ci_analysis_report_fb567a6_codex.md).
 
 ## Evidence integrity and review boundary
 
@@ -117,6 +117,6 @@ Durable bundle roots:
 /home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/commits/fb567a629cdb390fff920542173fa36f454c74a0
 ```
 
-The [validation receipt](/home/vimkim/tmp/docs-main-integration-20261013-025904/original-worktree-files/docs--pr7925-ci-guide-a142503dc/cbrd-27424/ci_f037616cd/validation.json) records exact observation paths, summary/message digests, every failure, opposite-side JUnit coverage, count reconciliation, and known input differences. The [failure excerpts](/home/vimkim/gh/my-cubrid-docs/cbrd-27424/ci_f037616cd/failure_excerpts.md) retain the human-readable signatures. Raw evidence remains in collector-owned directories rather than being duplicated into the documentation repository.
+The [validation receipt](/home/vimkim/tmp/docs-main-integration-20261013-025904/original-worktree-files/docs--pr7925-ci-guide-a142503dc/cbrd-27424/ci_f037616cd/validation.json) records exact observation paths, summary/message digests, every failure, opposite-side JUnit coverage, count reconciliation, and known input differences. The [failure excerpts](ci_f037616cd/failure_excerpts.md) retain the human-readable signatures. Raw evidence remains in collector-owned directories rather than being duplicated into the documentation repository.
 
 The highest-priority PR-specific follow-up is the matched `cbrd_20683` allocation experiment. This analysis made no engine/testcase changes, repairs, reruns, CI triggers, or remote publication. The locally completed 37/37 CTest result at `a142503dc` is a separate verification result and does not replace the three external regression suites.

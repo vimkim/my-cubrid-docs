@@ -39,7 +39,7 @@ Totals: planned 21,757 = run 21,727 + skipped 30 + unrun 0; run 21,727 = passed 
 - All nine failed shell sources and relevant fixtures were read with `git show` at the recorded private SHA. Engine source was read at the exact tested head. Diff against local base `15e7dc8b5` contains 22 files and no changes to query/parallel join or TDE algorithms; unchanged algorithms do not rule out indirect effects from startup/lifecycle changes.
 - Binary collection was not requested; budget consumption is zero. Crash analysis uses the embedded textual core stacks, not downloaded cores or interactive debugging.
 - No unchanged-base comparison or local reproduction was performed. Three suite summaries are complete; there is no incomplete-collection warning. The limitations concern causality/source availability, not missing testcase verdicts.
-- Supporting analysis outputs: [failure inventory](/home/vimkim/gh/my-cubrid-docs/cbrd-27443/ci_analysis_0809a48/failure_inventory.json), [validation record](/home/vimkim/gh/my-cubrid-docs/cbrd-27443/ci_analysis_0809a48/validation.json).
+- Supporting analysis outputs: [failure inventory](ci_analysis_0809a48/failure_inventory.json), [validation record](ci_analysis_0809a48/validation.json).
 
 ## Failure inventory
 

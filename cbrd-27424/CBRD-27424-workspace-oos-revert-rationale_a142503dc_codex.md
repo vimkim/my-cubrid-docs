@@ -17,7 +17,7 @@ This report records the decision and its evidence. It does not execute the sourc
 
 **This is a comparison between two implementations within PR #7925. It is not a measurement of the total PR cost relative to its merge-base.** Restoring `90f3bd79e` retains the original fix that makes standalone loader and workspace writes use OOS; it does not restore the omission present before that fix.
 
-The original CSV identifies the candidate as `raw-record`. The contemporaneous [publication snapshot](https://github.com/CUBRID/cubrid/blob/f037616cd17af92e1226afcde80fd2a6fff9121d/docs/workspace-oos-mode-comparison.md#publication-validation-snapshot) associates those measurements with the source committed as `f037616cd`. The CSV itself contains no binary-to-commit attestation. That distinction is preserved in the [verification record](/home/vimkim/gh/my-cubrid-docs/cbrd-27424/evidence/workspace-oos-benchmark-2026-10-06/verification.json).
+The original CSV identifies the candidate as `raw-record`. The contemporaneous [publication snapshot](https://github.com/CUBRID/cubrid/blob/f037616cd17af92e1226afcde80fd2a6fff9121d/docs/workspace-oos-mode-comparison.md#publication-validation-snapshot) associates those measurements with the source committed as `f037616cd`. The CSV itself contains no binary-to-commit attestation. That distinction is preserved in the [verification record](evidence/workspace-oos-benchmark-2026-10-06/verification.json).
 
 ## Workloads and method
 
@@ -32,9 +32,9 @@ The harness uses deterministic payload generation, a private database registry a
 
 The preserved CSVs are unmodified copies of local evidence:
 
-- [Before: `90f3bd79e`](/home/vimkim/gh/my-cubrid-docs/cbrd-27424/evidence/workspace-oos-benchmark-2026-10-06/before.csv), originally `build_preset_release_gcc/benchmark-shell-before/results.csv` in the source worktree.
-- [After: `raw-record`](/home/vimkim/gh/my-cubrid-docs/cbrd-27424/evidence/workspace-oos-benchmark-2026-10-06/after.csv), originally `build_preset_release_gcc/benchmark-shell-after/results.csv`.
-- [Verification record](/home/vimkim/gh/my-cubrid-docs/cbrd-27424/evidence/workspace-oos-benchmark-2026-10-06/verification.json): CSV and fixture hashes, recomputed medians, saved value-check outcomes and OOS statistics.
+- [Before: `90f3bd79e`](evidence/workspace-oos-benchmark-2026-10-06/before.csv), originally `build_preset_release_gcc/benchmark-shell-before/results.csv` in the source worktree.
+- [After: `raw-record`](evidence/workspace-oos-benchmark-2026-10-06/after.csv), originally `build_preset_release_gcc/benchmark-shell-after/results.csv`.
+- [Verification record](evidence/workspace-oos-benchmark-2026-10-06/verification.json): CSV and fixture hashes, recomputed medians, saved value-check outcomes and OOS statistics.
 
 ## Recorded results
 
@@ -54,7 +54,7 @@ For the large workload, every candidate elapsed sample exceeds every baseline el
 
 Reinspection on 2026-10-07 confirmed that all twelve saved post-load checks report `VALUE_OK`, with no `ERROR:` or `VALUE_BAD` marker in their schema, loader or check outputs. This checks the expected row count, ID endpoints and exact payload equality.
 
-All six large-load samples also report the same physical OOS statistics: **10,000 OOS chunk records**, `Oos_recs_sumlen=50,320,000`, 3,335 OOS user pages and `Oos_physical_bytes=54,507,240`. `Oos_recs_sumlen` includes chunk headers and is not the raw payload length. Representative complete outputs are preserved [before](/home/vimkim/gh/my-cubrid-docs/cbrd-27424/evidence/workspace-oos-benchmark-2026-10-06/before-large-0-check.txt) and [after](/home/vimkim/gh/my-cubrid-docs/cbrd-27424/evidence/workspace-oos-benchmark-2026-10-06/after-large-0-check.txt), with trailing spaces removed for documentation; the verification JSON records both the original-output hashes and exported-file hashes. These observations rule out a simple explanation that one side skipped OOS storage or loaded fewer rows in this fixture; they do not identify the CPU hotspot.
+All six large-load samples also report the same physical OOS statistics: **10,000 OOS chunk records**, `Oos_recs_sumlen=50,320,000`, 3,335 OOS user pages and `Oos_physical_bytes=54,507,240`. `Oos_recs_sumlen` includes chunk headers and is not the raw payload length. Representative complete outputs are preserved [before](evidence/workspace-oos-benchmark-2026-10-06/before-large-0-check.txt) and [after](evidence/workspace-oos-benchmark-2026-10-06/after-large-0-check.txt), with trailing spaces removed for documentation; the verification JSON records both the original-output hashes and exported-file hashes. These observations rule out a simple explanation that one side skipped OOS storage or loaded fewer rows in this fixture; they do not identify the CPU hotspot.
 
 ## Why restore the earlier implementation
 
@@ -110,4 +110,4 @@ The `ask-matt` route is **continue in the current session → `/implement` for t
 
 ## Restoration follow-up, 2026-10-07
 
-The requested restoration is implemented as new source commit `1c660d22e`, with all four production files byte-identical to `90f3bd79e`. Debug and matched optimized Release builds passed; the full configured CTest run passed 37/37, retaining all 21 comparison cases and 13 workspace/loader cases. Five alternating benchmark pairs show restored large-load medians 9.1% lower for elapsed time and 11.6% lower for user + system CPU; every large pair uses less CPU. Shared-host variability and the inherited allocation-exception review finding are recorded in the [restoration and verification report](/home/vimkim/gh/my-cubrid-docs/cbrd-27424/CBRD-27424-workspace-oos-restoration_1c660d22e_codex.md). The historical measurements and limits above remain the record of the earlier experiment.
+The requested restoration is implemented as new source commit `1c660d22e`, with all four production files byte-identical to `90f3bd79e`. Debug and matched optimized Release builds passed; the full configured CTest run passed 37/37, retaining all 21 comparison cases and 13 workspace/loader cases. Five alternating benchmark pairs show restored large-load medians 9.1% lower for elapsed time and 11.6% lower for user + system CPU; every large pair uses less CPU. Shared-host variability and the inherited allocation-exception review finding are recorded in the [restoration and verification report](CBRD-27424-workspace-oos-restoration_1c660d22e_codex.md). The historical measurements and limits above remain the record of the earlier experiment.

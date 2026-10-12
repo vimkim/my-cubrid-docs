@@ -53,6 +53,6 @@
 - 수정한 CBRD-27443 신규 TC는 정확한 `c1a50b94f`에서 4/4 통과했다. 축소된 shell/CCI 검증 범위의 통과이며 과거 Python suite 전체 coverage를 다시 입증한 것은 아니다.
 - 우선순위는 관련 의심 2개의 프로세스 선택·출력 위치를 검증하는 것이다. 기존 병렬 쿼리 실패는 별도 추적하고 기대 답안을 일괄 변경하여 통과시키지 않는다.
 
-수집·검증 방식, suite별 전체 수치, 원본 failure inventory는 [상세 CI 비교 보고서](/home/vimkim/gh/my-cubrid-docs/cbrd-27443/ci_analysis_report_0809a48_codex.md), [검증 결과](/home/vimkim/tmp/docs-main-integration-20261013-025904/original-worktree-files/docs--cbrd-27443-base-ci/cbrd-27443/ci_analysis_0809a48_run37416284168/validation.json), [전체 비교 데이터](/home/vimkim/tmp/docs-main-integration-20261013-025904/original-worktree-files/docs--cbrd-27443-base-ci/cbrd-27443/ci_analysis_0809a48_run37416284168/comparison-cases.json)에 있다. 이 문서는 그 검증 결과를 재사용하며 새 collection 결과로 표현하지 않는다.
+수집·검증 방식, suite별 전체 수치, 원본 failure inventory는 [상세 CI 비교 보고서](ci_analysis_report_0809a48_codex.md), [검증 결과](/home/vimkim/tmp/docs-main-integration-20261013-025904/original-worktree-files/docs--cbrd-27443-base-ci/cbrd-27443/ci_analysis_0809a48_run37416284168/validation.json), [전체 비교 데이터](/home/vimkim/tmp/docs-main-integration-20261013-025904/original-worktree-files/docs--cbrd-27443-base-ci/cbrd-27443/ci_analysis_0809a48_run37416284168/comparison-cases.json)에 있다. 이 문서는 그 검증 결과를 재사용하며 새 collection 결과로 표현하지 않는다.
 
 PR에 게시한 [요약 댓글](https://github.com/CUBRID/cubrid/pull/8094#issuecomment-6011483180)도 동일한 판단과 한계를 명시한다.

@@ -38,6 +38,6 @@ develop 동기화는 실제 merge commit으로 진행하고 통합 브랜치 이
   - QA 자산 동일성: 기존 reproduction/spec.md의 합의를 유지한다. 과거 배포 자산의 정확한 동일성을 모르는 상태에서도 버전을 고정한 로컬 비교는 가능하나 전체 QA 동일성이나 과거 QA 회귀의 재현을 입증한 것으로 표시하지 않는다. 재질문하지 않는다.
   - Q6: 기존 Linux QA 전체 범위 + 필수 PR CI, 적합한 완료 증거 재사용 (확정)
 
-모든 정책 질문에 답을 받았다. [실행 계약](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/execution-contract.md)과 [용어집](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/CONTEXT.md)을 작성한 뒤 사용자 `yes`로 계약 전체를 확인받았다. 승인된 범위로 실행한다.
+모든 정책 질문에 답을 받았다. [실행 계약](execution-contract.md)과 [용어집](CONTEXT.md)을 작성한 뒤 사용자 `yes`로 계약 전체를 확인받았다. 승인된 범위로 실행한다.
 
 새 실행은 전체 합의 확인 후 진행한다. 현재 기록은 설계 인터뷰이며 엔진 수정, 테스트 실행, 원격 게시 또는 실제 머지를 수행했다는 뜻이 아니다. 결정은 검토 기록에 남기며, 아직 별도 아키텍처 ADR이 필요한 새 구조적 결정은 없다.

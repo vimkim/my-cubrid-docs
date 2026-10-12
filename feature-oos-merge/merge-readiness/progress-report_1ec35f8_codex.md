@@ -2,7 +2,7 @@
 
 확인일: 2026-09-29. 작업 221.
 
-[팀장님용 간략 보고](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/team-lead-summary_20260929_codex.md)
+[팀장님용 간략 보고](team-lead-summary_20260929_codex.md)
 
 **최신 진행:** 엔진 `fb567a6`, public testcase `bdba62aee0fa`, private testcase `c4b9d482fbd4`를 게시했다. 양쪽 `tc/pr-7990` 동기화 완료 후 [전체 CI를 요청](https://github.com/CUBRID/cubrid/pull/7990#issuecomment-5890577215)했다. 결과는 대기 중이다. 현재 `Check TC PRs` 필수 체크는 OOS testcase 변경이 testcase develop에 아직 없어서 실패한다. 이것은 브랜치 동기화 실패가 아니라 최종 병합 순서의 차단이며, testcase develop 병합은 이번 동기화 작업에 포함하지 않았다.
 
@@ -28,21 +28,21 @@ CBRD-27230/27237은 실시간 JIRA 조회에서도 Open이다. 오래된 이슈 
 
 게시 전 분석한 PR #7990의 원격 head는 `1ec35f86c5e43b9ca86d81e202c68899f8ce4f21`이고 draft, REVIEW_REQUIRED다. 현재 head의 CI는 medium 975 통과, SQL 17470 통과, shell 3256 통과·2실패·30 skip이다. shell 실패는 합의된 CDC 두 건이다. 과거 `bug_bts_13242`를 현재 실패로 반복 기재하지 않는다.
 
-최초 수집기 결과는 필수 observation 및 summary hash가 없어 warning이었다. 이 기록을 보존하고, 기존 수집기 소스 `45944012aaaa`를 빌드해 별도 빈 저장소에 다시 수집했다. 수집기·테스트 실행기 소스 수정은 없다. 새 증거는 exact-head, schema, observation, summary/raw hash, shard 및 집계를 검증해 **full** 분석 모드가 됐다. [#7990 검증 보고서](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/ci-verified-pr7990_1ec35f8_codex.md).
+최초 수집기 결과는 필수 observation 및 summary hash가 없어 warning이었다. 이 기록을 보존하고, 기존 수집기 소스 `45944012aaaa`를 빌드해 별도 빈 저장소에 다시 수집했다. 수집기·테스트 실행기 소스 수정은 없다. 새 증거는 exact-head, schema, observation, summary/raw hash, shard 및 집계를 검증해 **full** 분석 모드가 됐다. [#7990 검증 보고서](ci-verified-pr7990_1ec35f8_codex.md).
 
-선행 PR #7927의 현재 head `34a9072`도 같은 절차로 검증했다. medium 3건, SQL 1건, shell 10건이 실패한다. 이 중 CDC는 2건이며 나머지 12건은 증상과 처리 과제가 남아 있다. 오래된 head의 통과 기록으로 대체하지 않는다. [#7927 전체 실패표](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/ci-verified-pr7927_34a9072_codex.md).
+선행 PR #7927의 현재 head `34a9072`도 같은 절차로 검증했다. medium 3건, SQL 1건, shell 10건이 실패한다. 이 중 CDC는 2건이며 나머지 12건은 증상과 처리 과제가 남아 있다. 오래된 head의 통과 기록으로 대체하지 않는다. [#7927 전체 실패표](ci-verified-pr7927_34a9072_codex.md).
 
 이 CI 결과는 새 통합 후보 `fb567a6`의 CI가 아니다. 후보 게시와 testcase 갱신은 완료했으며 새 조합의 CI 결과를 기다린다.
 
 ## 통합 후보의 로컬 검증
 
-현재 develop을 실제 merge commit으로 통합했다. 충돌이 없었고 Standards/Spec 병렬 검토에서 새 통합 지적은 각각 0건이다. 이는 develop의 모든 변경을 재검토했거나 전체 준비를 완료했다는 뜻이 아니다. [통합 검토](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/integration-review_fb567a6_codex.md).
+현재 develop을 실제 merge commit으로 통합했다. 충돌이 없었고 Standards/Spec 병렬 검토에서 새 통합 지적은 각각 0건이다. 이는 develop의 모든 변경을 재검토했거나 전체 준비를 완료했다는 뜻이 아니다. [통합 검토](integration-review_fb567a6_codex.md).
 
-I01의 원본 `reorganization_select_01.ctl`과 answer를 public testcase `89d4ec2`에서 그대로 사용했다. debug와 release에서 각각 1개를 실행해 성공 1, 실패 0, skip 0을 확인했다. 원래 기대값의 100000행과 그룹 결과를 유지했다. 병렬/hash 실행 경로를 따로 관측하지 않았으므로 I01의 전체 수용 조건은 아직 완료가 아니다. [로컬 검증 근거](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/local-validation_fb567a6_codex.md).
+I01의 원본 `reorganization_select_01.ctl`과 answer를 public testcase `89d4ec2`에서 그대로 사용했다. debug와 release에서 각각 1개를 실행해 성공 1, 실패 0, skip 0을 확인했다. 원래 기대값의 100000행과 그룹 결과를 유지했다. 병렬/hash 실행 경로를 따로 관측하지 않았으므로 I01의 전체 수용 조건은 아직 완료가 아니다. [로컬 검증 근거](local-validation_fb567a6_codex.md).
 
 ## Testcase 브랜치 갱신 필요
 
-원격 확인 결과 두 저장소의 `tc/pr-7990`은 각각 testcase `feature/oos-merge`와 이미 일치한다. 다만 최신 testcase develop에서 public 8개·private 6개 커밋이 아직 통합되지 않았다. 엔진 동기화와 함께 이 변경을 검토·통합한 뒤 OOS sync 도구로 PR testcase 브랜치를 맞추고 CI를 실행해야 한다. 관련 기대값 변경은 기존 실패를 재검토할 근거이며 자동 해결 판정은 아니다. PR #7927의 testcase 원격도 과거 CI 실행 이후 바뀌었다. [브랜치 상태와 처리 순서](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/testcase-sync_20260929_codex.md).
+원격 확인 결과 두 저장소의 `tc/pr-7990`은 각각 testcase `feature/oos-merge`와 이미 일치한다. 다만 최신 testcase develop에서 public 8개·private 6개 커밋이 아직 통합되지 않았다. 엔진 동기화와 함께 이 변경을 검토·통합한 뒤 OOS sync 도구로 PR testcase 브랜치를 맞추고 CI를 실행해야 한다. 관련 기대값 변경은 기존 실패를 재검토할 근거이며 자동 해결 판정은 아니다. PR #7927의 testcase 원격도 과거 CI 실행 이후 바뀌었다. [브랜치 상태와 처리 순서](testcase-sync_20260929_codex.md).
 
 ## 실패 처리 원칙
 
@@ -56,29 +56,29 @@ CDC의 cbrd_27064와 cbrd_27075는 활성 상태의 실패를 유지한다. QA�
 
 | 그룹·기존 행 수 | 관측 실패 | develop 비교·분류 | 신뢰도 | 처리 결정·남은 일 | 증거 |
 |---|---|---|---|---|---|
-| C01 · 1 | 두 번째 클라이언트 로그가 비어 있음 | develop에도 동일 테스트 실패 | 증상 동등성 미확정 | 차단 유지. 양쪽 worker 종료·연결·오류 로그 비교 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| C02 · 2 | CCI 시간 초과 또는 빈 결과 | 원인 불명 | 낮음 | 차단 유지. 완료된 develop 비교 및 broker·driver·호출 단계 확인 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| H01 · 1 | 대체 호스트 Java 테스트 FAIL | 원인 불명 | 낮음 | 차단 유지. 실패 assertion과 failover·driver 증거 확보 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| H02 · 1 | HA 모드 변경·연결 실패 | 원인 불명 | 낮음~중간 | 차단 유지. 동일 topology에서 전환과 서버 오류 확인 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| H03 · 1 | heartbeat에 예상하지 않은 노드 표시 | 환경 차이 후보 | 관측 높음 | 차단 유지. 초기 구성과 실제 membership 검증 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| H04 · 2 | HA online index 두 테스트 실패 | 기능 회귀 후보 | 낮음 | 차단 유지. master/replica 출력·행·인덱스 일관성 확보 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| H05 · 1 | heap header의 물리 offset +8 차이 | 기대값 차이 후보 | 레이아웃 설명 높음 | 차단 유지. 전체 HA 소스와 논리 검증 후 정확한 offset만 수정 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| H06 · 1 | HA 테스트 실패 | 기능 회귀 후보 | 낮음 | 차단 유지. 전체 assertion·master/replica 결과 확보 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| H07 · 7 | HA 복제 debug 7개 추가 후보 | 원인 불명 | 낮음 | 차단 유지. 각 사례의 master/replica 출력·schema·locale 확보 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| I01 · 2 | 병렬 GROUP BY 서버 종료 | develop 수정이 로컬 후보에 통합됨 | 원본 focused 사례 두 모드 통과, 경로 관측 미완료 | 차단 유지. 원격 통합·병렬/hash 경로 증거·최종 head 전체 검증 필요 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| I02 · 1 | 동시 DML affected-row 메시지 순서 차이 | 순서 차이 후보 | 중간~높음 | 차단 유지. client별 결과·barrier·최종 행과 인덱스 유지 확인 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| J01 · 1 | JDBC testBlob01 Java heap 부족 | 환경·driver 후보 | 중간 | 차단 유지. JVM heap·실행 순서·LOB 보존과 메모리 귀속 확인 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| P01 · 1 | 47000행은 맞으나 시간 차 8초가 >8 조건 실패 | 성능 판정 미완료 | 증상 높음 | 차단 유지. 동일 host·버전·설정 반복 측정; 임계값 유지 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| P02 · 1 | 일본어 prefix-key 결과 파일 불일치 | 기능 회귀 후보 | 낮음 | 차단 유지. 전체 diff·collation·계획·그룹 결과 비교 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| Q01 · 1 | AUTO_INCREMENT 예상값과 실제 21 차이 | 기능 회귀 후보 | 원인 낮음 | 차단 유지. serial cache·카탈로그·세션 상태를 고정해 재현 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| Q02 · 1 | 행 결과는 같으나 SHOW TRACE 누락 | 원인 불명 | trace 경로 후보 중간 | 차단 유지. CCI 버전·세션·문장 순서·trace 생성과 소비 확인 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| R01 · 1 | vacuum·인덱스 경로 코어와 checkdb 실패 | 원인 불명·비교 미완료 | OOS 원인 낮음 | 차단 유지. 원본 코어·일치 바이너리·DB/WAL·워크로드 확보 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| S01 · 2 | 오류 진단 기본 목록 차이 | 기대값 차이 후보 | 소스·출력 일치 높음 | 차단 유지. 정확한 기본값만 반영할 테스트 수정 및 양 모드 검증 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| S02 · 8 | DBLink 계획의 마스킹된 cost 자릿수 차이 | 표현 차이 후보 | 일부 debug 증거 높음 | 차단 유지. 모든 backend·모드의 값·DML·계획 조건 보존 확인 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| S03 · 6 | DBLink 결과·오류·테이블 상태 차이 | 기능 회귀 후보 | 원인 낮음 | 차단 유지. 외부 DB 버전과 초기 상태 고정 후 실패문 재현 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| S04 · 2 | 원본 card 기대값 불일치; 로컬 두 브랜치 모두 실패 | 원인 불명 | 증상 높음, OOS 원인 미확정 | 차단 유지. 200000 기대 조건과 99986/100000 차이를 별도 조사; 실행기 증거 한계 유지 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/s04-reproduction_1ec35f8_codex.md) |
-| S05 · 1 | loaddb 중단 테스트에서 적재가 먼저 완료됨 | 타이밍 차이 후보 | 중간 | 차단 유지. 실제 적재 중 신호 전달과 부분 적재 조건 확인 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
-| S06 · 1 | SSL 설정의 중첩 SQL 실행 시간 초과 | 원인 불명 | 낮음 | 차단 유지. 내부 실행 로그·정확한 자산·정지 단계 확보 | [기존 분석](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| C01 · 1 | 두 번째 클라이언트 로그가 비어 있음 | develop에도 동일 테스트 실패 | 증상 동등성 미확정 | 차단 유지. 양쪽 worker 종료·연결·오류 로그 비교 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| C02 · 2 | CCI 시간 초과 또는 빈 결과 | 원인 불명 | 낮음 | 차단 유지. 완료된 develop 비교 및 broker·driver·호출 단계 확인 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| H01 · 1 | 대체 호스트 Java 테스트 FAIL | 원인 불명 | 낮음 | 차단 유지. 실패 assertion과 failover·driver 증거 확보 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| H02 · 1 | HA 모드 변경·연결 실패 | 원인 불명 | 낮음~중간 | 차단 유지. 동일 topology에서 전환과 서버 오류 확인 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| H03 · 1 | heartbeat에 예상하지 않은 노드 표시 | 환경 차이 후보 | 관측 높음 | 차단 유지. 초기 구성과 실제 membership 검증 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| H04 · 2 | HA online index 두 테스트 실패 | 기능 회귀 후보 | 낮음 | 차단 유지. master/replica 출력·행·인덱스 일관성 확보 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| H05 · 1 | heap header의 물리 offset +8 차이 | 기대값 차이 후보 | 레이아웃 설명 높음 | 차단 유지. 전체 HA 소스와 논리 검증 후 정확한 offset만 수정 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| H06 · 1 | HA 테스트 실패 | 기능 회귀 후보 | 낮음 | 차단 유지. 전체 assertion·master/replica 결과 확보 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| H07 · 7 | HA 복제 debug 7개 추가 후보 | 원인 불명 | 낮음 | 차단 유지. 각 사례의 master/replica 출력·schema·locale 확보 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| I01 · 2 | 병렬 GROUP BY 서버 종료 | develop 수정이 로컬 후보에 통합됨 | 원본 focused 사례 두 모드 통과, 경로 관측 미완료 | 차단 유지. 원격 통합·병렬/hash 경로 증거·최종 head 전체 검증 필요 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| I02 · 1 | 동시 DML affected-row 메시지 순서 차이 | 순서 차이 후보 | 중간~높음 | 차단 유지. client별 결과·barrier·최종 행과 인덱스 유지 확인 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| J01 · 1 | JDBC testBlob01 Java heap 부족 | 환경·driver 후보 | 중간 | 차단 유지. JVM heap·실행 순서·LOB 보존과 메모리 귀속 확인 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| P01 · 1 | 47000행은 맞으나 시간 차 8초가 >8 조건 실패 | 성능 판정 미완료 | 증상 높음 | 차단 유지. 동일 host·버전·설정 반복 측정; 임계값 유지 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| P02 · 1 | 일본어 prefix-key 결과 파일 불일치 | 기능 회귀 후보 | 낮음 | 차단 유지. 전체 diff·collation·계획·그룹 결과 비교 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| Q01 · 1 | AUTO_INCREMENT 예상값과 실제 21 차이 | 기능 회귀 후보 | 원인 낮음 | 차단 유지. serial cache·카탈로그·세션 상태를 고정해 재현 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| Q02 · 1 | 행 결과는 같으나 SHOW TRACE 누락 | 원인 불명 | trace 경로 후보 중간 | 차단 유지. CCI 버전·세션·문장 순서·trace 생성과 소비 확인 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| R01 · 1 | vacuum·인덱스 경로 코어와 checkdb 실패 | 원인 불명·비교 미완료 | OOS 원인 낮음 | 차단 유지. 원본 코어·일치 바이너리·DB/WAL·워크로드 확보 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| S01 · 2 | 오류 진단 기본 목록 차이 | 기대값 차이 후보 | 소스·출력 일치 높음 | 차단 유지. 정확한 기본값만 반영할 테스트 수정 및 양 모드 검증 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| S02 · 8 | DBLink 계획의 마스킹된 cost 자릿수 차이 | 표현 차이 후보 | 일부 debug 증거 높음 | 차단 유지. 모든 backend·모드의 값·DML·계획 조건 보존 확인 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| S03 · 6 | DBLink 결과·오류·테이블 상태 차이 | 기능 회귀 후보 | 원인 낮음 | 차단 유지. 외부 DB 버전과 초기 상태 고정 후 실패문 재현 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| S04 · 2 | 원본 card 기대값 불일치; 로컬 두 브랜치 모두 실패 | 원인 불명 | 증상 높음, OOS 원인 미확정 | 차단 유지. 200000 기대 조건과 99986/100000 차이를 별도 조사; 실행기 증거 한계 유지 | [기존 분석](../qa-qualification/s04-reproduction_1ec35f8_codex.md) |
+| S05 · 1 | loaddb 중단 테스트에서 적재가 먼저 완료됨 | 타이밍 차이 후보 | 중간 | 차단 유지. 실제 적재 중 신호 전달과 부분 적재 조건 확인 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
+| S06 · 1 | SSL 설정의 중첩 SQL 실행 시간 초과 | 원인 불명 | 낮음 | 차단 유지. 내부 실행 로그·정확한 자산·정지 단계 확보 | [기존 분석](../qa-qualification/qa_source_triage_1ec35f8_codex.md) |
 
 ## 새로 확인한 범위
 
@@ -126,11 +126,11 @@ CDC의 cbrd_27064와 cbrd_27075는 활성 상태의 실패를 유지한다. QA�
 
 ## 증거와 재현 정보
 
-- [최신 실패 원장](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/failure-ledger_1ec35f8_codex.md): 추가 후보·공통 실패·CDC를 모두 보존한다.
+- [최신 실패 원장](failure-ledger_1ec35f8_codex.md): 추가 후보·공통 실패·CDC를 모두 보존한다.
 - [QA 수집·비교 데이터](/home/vimkim/tmp/docs-main-integration-20261013-025904/original-worktree-files/docs--oos-readiness-221/feature-oos-merge/merge-readiness/evidence/qa-refreshed.json): 원본 run 및 page 경로, suite 집계와 집계 불일치 포함.
 - [최초 CI 자료 검증 한계](/home/vimkim/tmp/docs-main-integration-20261013-025904/original-worktree-files/docs--oos-readiness-221/feature-oos-merge/merge-readiness/evidence/ci-validation.json) 및 [새 자료 검증](/home/vimkim/tmp/docs-main-integration-20261013-025904/original-worktree-files/docs--oos-readiness-221/feature-oos-merge/merge-readiness/evidence/ci-clean-validation.json).
-- [실행 계약](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/execution-contract.md): 실제 develop 머지와 실행기 수정 제외.
-- [기존 QA 보고서](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/qa-qualification/README.md).
+- [실행 계약](execution-contract.md): 실제 develop 머지와 실행기 수정 제외.
+- [기존 QA 보고서](../qa-qualification/README.md).
 - [PR #7990](https://github.com/CUBRID/cubrid/pull/7990), [선행 PR #7927](https://github.com/CUBRID/cubrid/pull/7927), [이전 target PR #7462](https://github.com/CUBRID/cubrid/pull/7462).
 
 새 QA 원본은 `/home/vimkim/gh/cubrid-qahome-fetcher/runs/20260929-210608-1ec35f8`와 `20260929-210608-e1c3db1`이다. 기존 run과 원본 실행 로그는 수정하지 않았다. 보고서 작성·수집은 새로운 테스트 실행을 의미하지 않는다.

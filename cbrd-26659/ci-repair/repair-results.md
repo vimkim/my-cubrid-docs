@@ -87,7 +87,7 @@ Local Debug/native runtime을 CI-equivalent라고 부르지 않는다. 최신 CI
 
 ## 게시 전 리뷰와 CI
 
-Engine 비교 기준은 `a5da823b2a84e95b4b22d48abe4a3f9fd601c176`, Spec은 [합의된 계획](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-repair/plan.md)이다. 최종 local 검증 후 독립 agent 두 개로 `code-review`를 수행했다. **Standards 0건 / Spec 0건**이다. Standards는 개인 정책·유효한 subdirectory 지침·CONTRIBUTING·문서 index 기준과 smell baseline을 확인했다. Spec은 각 fresh DB 생성/단일 case XML/verifier/cleanup, 복사 SQL·answer·fixture 해시, 원래 72개 실제 순서와 complete XML identity/verdict, 최소 계측 전후 경로를 확인했다. 문서의 runtime 차이와 제외 범위도 유지하며 게시 전 준비를 충족한다고 판단했다.
+Engine 비교 기준은 `a5da823b2a84e95b4b22d48abe4a3f9fd601c176`, Spec은 [합의된 계획](plan.md)이다. 최종 local 검증 후 독립 agent 두 개로 `code-review`를 수행했다. **Standards 0건 / Spec 0건**이다. Standards는 개인 정책·유효한 subdirectory 지침·CONTRIBUTING·문서 index 기준과 smell baseline을 확인했다. Spec은 각 fresh DB 생성/단일 case XML/verifier/cleanup, 복사 SQL·answer·fixture 해시, 원래 72개 실제 순서와 complete XML identity/verdict, 최소 계측 전후 경로를 확인했다. 문서의 runtime 차이와 제외 범위도 유지하며 게시 전 준비를 충족한다고 판단했다.
 
 Engine `1ef86a7efa34002e971b1b30bcf5d451e9db441b`과 public TC README `d7bec2fdeb6a19573300e1a624e03e0b87eb9e96`를 각각 PR head branch에 게시했다. Private TC는 `a2054f965a20241b87dc9577585ccc8a8cb6ab97` 그대로다. TC baseline ancestry 검사를 두 repository에서 통과한 뒤 [단일 `/run all` receipt](https://github.com/CUBRID/cubrid/pull/8128#issuecomment-6127511688)를 남겼다. 다섯 gha-ci context가 같은 [run38271660063, attempt 1](https://github.com/CUBRID/cubrid/actions/runs/38271660063)을 가리키는 pickup을 확인했다. 이 실행은 2026-10-13 02:32:56 KST에 **FAILURE**로 종료했다. 사용자 요청에 따라 후반 상태 확인은 10분 간격으로 수행했다. 추가 수정·push·CI trigger/rerun은 하지 않았다.
 
@@ -121,7 +121,7 @@ Retained bundle: `/home/vimkim/.local/share/cubrid-ci-data/github-actions/CUBRID
 | `cbrd_27075.sh` | Subcheck 1 NOK; 4K·8K `EXTRACT_ERR=1`, 16K는 0; total corruption 0 | 추가 관측된 기존 CDC 실패. Base run36570256001도 subcheck 1과 extraction errors를 보고했고 ADR-0005의 deferred gap이다. 실행과 올바른 기대를 유지하며 SQL14 수리와 구분 |
 | `hide_cubrid_replay.sh` | Subcheck 6 NOK, `qa8.answer` mismatch | 추가 잔여 실패, 원인 미확정. Base의 subcheck 7 / `qa9.answer`, 이전 full head의 `qa9`·`qa10`과 signature가 달라 동일 baseline 원인으로 제외하지 않음 |
 
-추가 두 항목의 전체 경로와 역사적 비교는 [추적 표](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-repair/README.md)에 기록했다. 이번 run의 per-case evidence는 위 bundle의 `providers/github-actions/runs/38271660063/attempts/1/test_shell/failures/` 아래 metadata/message/diff다. 비교 결과는 `/home/vimkim/tmp/oos-sql-repair-332/additional-failure-comparison.json`이다. SQL 대상 잔여 실패는 **0**이며 shell 잔여를 이 수리의 완료나 전체 CI green으로 바꾸지 않는다.
+추가 두 항목의 전체 경로와 역사적 비교는 [추적 표](README.md)에 기록했다. 이번 run의 per-case evidence는 위 bundle의 `providers/github-actions/runs/38271660063/attempts/1/test_shell/failures/` 아래 metadata/message/diff다. 비교 결과는 `/home/vimkim/tmp/oos-sql-repair-332/additional-failure-comparison.json`이다. SQL 대상 잔여 실패는 **0**이며 shell 잔여를 이 수리의 완료나 전체 CI green으로 바꾸지 않는다.
 
 [Public TC #3688](https://github.com/CUBRID/cubrid-testcases/pull/3688)와 [private TC #4365](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4365)는 둘 다 **OPEN draft**이고 base는 `feature/oos-merge`다. 개인 정책에 따른 **TC Merge Gate는 미해제**이며 인간의 merge 또는 close가 필요하다. Live PR checks에는 이름이 `TC Merge Gate`인 context가 없었고 `gh pr checks --required`도 `no required checks reported`(exit 1)를 반환했다. 이 관측을 정책상 merge 허용으로 해석하지 않는다. TC PR merge/close나 branch 삭제는 수행하지 않았다.
 

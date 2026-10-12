@@ -2,7 +2,7 @@
 
 Analysis date: 2026-10-07 KST. Published head: `91bfde02e5699a2aaa0c5d549d7ef4d418c8bdb8`. PR: [#7925](https://github.com/CUBRID/cubrid/pull/7925). Local guide head is the newer, unpublished `a142503dc1a6f85b498a425aa58d6a78136ccc6b`.
 
-**This exact-head snapshot supports no regression or root-cause conclusion.** None of the three requested regression suites has an observed run at this published commit. The older triggered run is analyzed independently in [the historical exact-commit report](/home/vimkim/gh/my-cubrid-docs/cbrd-27424/ci_analysis_report_f037616cd_codex.md); its outcomes are not current-head verdicts.
+**This exact-head snapshot supports no regression or root-cause conclusion.** None of the three requested regression suites has an observed run at this published commit. The older triggered run is analyzed independently in [the historical exact-commit report](ci_analysis_report_f037616cd_codex.md); its outcomes are not current-head verdicts.
 
 ## Observation outcome
 

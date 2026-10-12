@@ -2,16 +2,16 @@
 
 **현재 준비 미완료.** 원격 PR #7990은 `fb567a6`이며 testcase 동기화 후 전체 CI를 요청했다. 실제 develop 머지와 테스트 실행기 수정은 범위에서 제외한다.
 
-- [팀장님용 간략 보고](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/team-lead-summary_20260929_codex.md)
-- [진행 상황과 전체 실패 보고](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/progress-report_1ec35f8_codex.md)
-- [최신 실패 원장](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/failure-ledger_1ec35f8_codex.md)
-- [통합 후보 Standards/Spec 검토](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/integration-review_fb567a6_codex.md)
-- [통합 후보 로컬 검증](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/local-validation_fb567a6_codex.md)
-- [Testcase 브랜치 갱신과 동기화](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/testcase-sync_20260929_codex.md)
-- [새 통합 조합 CI 시작](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/ci-start_fb567a6_codex.md)
-- [이전 head PR #7990 CI](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/ci-verified-pr7990_1ec35f8_codex.md)
-- [선행 PR #7927 CI](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/ci-verified-pr7927_34a9072_codex.md)
-- [준비된 소스 게시 대상과 승인 조건](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/source-publication_fb567a6_codex.md)
-- [확정 실행 계약](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/execution-contract.md)
+- [팀장님용 간략 보고](team-lead-summary_20260929_codex.md)
+- [진행 상황과 전체 실패 보고](progress-report_1ec35f8_codex.md)
+- [최신 실패 원장](failure-ledger_1ec35f8_codex.md)
+- [통합 후보 Standards/Spec 검토](integration-review_fb567a6_codex.md)
+- [통합 후보 로컬 검증](local-validation_fb567a6_codex.md)
+- [Testcase 브랜치 갱신과 동기화](testcase-sync_20260929_codex.md)
+- [새 통합 조합 CI 시작](ci-start_fb567a6_codex.md)
+- [이전 head PR #7990 CI](ci-verified-pr7990_1ec35f8_codex.md)
+- [선행 PR #7927 CI](ci-verified-pr7927_34a9072_codex.md)
+- [준비된 소스 게시 대상과 승인 조건](source-publication_fb567a6_codex.md)
+- [확정 실행 계약](execution-contract.md)
 
 요약과 CI 실패 message/diff, 검증 결과를 함께 보존한다. 전체 CI archive·QA 원본·로컬 실행 archive는 각 문서에 기재한 절대 경로에 보존한다. 그 절대 경로는 이 작업 환경에서만 열 수 있으며 원격 공유 시 별도 전달이 필요하다. 모든 과거 성공을 최종 통합 후보의 성공으로 재사용하지 않는다.

@@ -4,7 +4,7 @@
 
 따라서 정확한 설명은 **“현재 구현을 유지하려면 #7927의 코드를 함께 통합해야 하며, 두 PR의 역할을 구분하려면 #7927을 먼저 병합하는 순서가 적절하다”**이다. “원래 버그는 #7927 없이는 고칠 수 없다”라고 설명하면 사실과 다르다.
 
-작성·확인일: 2026-10-08, Asia/Seoul. 이 문서는 두 PR의 의존성에 집중하며, 전체 PR의 리뷰 가이드는 [기존 한글 가이드](/home/vimkim/gh/my-cubrid-docs/cbrd-27424/review-guide-pr7925-28b65d18a-ko.md)를 참고한다.
+작성·확인일: 2026-10-08, Asia/Seoul. 이 문서는 두 PR의 의존성에 집중하며, 전체 PR의 리뷰 가이드는 [기존 한글 가이드](review-guide-pr7925-28b65d18a-ko.md)를 참고한다.
 
 | 비교 대상 | 고정된 소스 리비전 |
 | --- | --- |
@@ -82,14 +82,14 @@ workspace에서 직렬화한 행
 
 큰 값이 아직 메모리에만 있을 때도 파티션 선택이나 키 검사에서 그 값을 읽을 수 있어야 한다. #7927은 읽는 쪽에도 보관 객체를 전달하고, 그 객체에 있는 바이트를 읽을 수 있도록 한다. 실제 OOS 저장은 목적지를 정한 뒤 수행한다. [메모리 값의 보관](https://github.com/vimkim/cubrid/blob/b755678cd9a3ab465215228d5664f7f1edf24846/src/storage/heap_file.c#L13935-L13965), [목적지 기준 최종 저장](https://github.com/vimkim/cubrid/blob/b755678cd9a3ab465215228d5664f7f1edf24846/src/storage/heap_oos.cpp#L120-L240).
 
-여기서 두 종류의 소유권을 구분해야 한다. **저장 소유권**은 행과 OOS 값이 어느 heap에 속하는지를 뜻한다. **메모리 소유권**은 누가 임시 버퍼를 보관하고 해제하는지를 뜻한다. `heap_pending_record`가 메모리를 해제한다고 해서 이미 쓴 DB 페이지까지 롤백되는 것은 아니다. DB 변경 취소는 기존 트랜잭션·force 작업 범위가 담당한다. [객체의 메모리 해제](https://github.com/vimkim/cubrid/blob/b755678cd9a3ab465215228d5664f7f1edf24846/src/storage/heap_pending_record.cpp#L51-L58), [기존 가이드의 롤백 설명](/home/vimkim/gh/my-cubrid-docs/cbrd-27424/review-guide-pr7925-28b65d18a-ko.md#memory-versus-rollback).
+여기서 두 종류의 소유권을 구분해야 한다. **저장 소유권**은 행과 OOS 값이 어느 heap에 속하는지를 뜻한다. **메모리 소유권**은 누가 임시 버퍼를 보관하고 해제하는지를 뜻한다. `heap_pending_record`가 메모리를 해제한다고 해서 이미 쓴 DB 페이지까지 롤백되는 것은 아니다. DB 변경 취소는 기존 트랜잭션·force 작업 범위가 담당한다. [객체의 메모리 해제](https://github.com/vimkim/cubrid/blob/b755678cd9a3ab465215228d5664f7f1edf24846/src/storage/heap_pending_record.cpp#L51-L58), [기존 가이드의 롤백 설명](review-guide-pr7925-28b65d18a-ko.md#memory-versus-rollback).
 
 이 공통 API들은 기준 브랜치 `fb567a629`와 이전 독립 구현 `1c660d22e`에는 없다. 따라서 **현재 workspace 코드만 떼어 기준 브랜치에 적용하면 필요한 API가 빠진다.** 의존성을 없애려면 이전 독립 변환 경로를 되살리거나, 그에 해당하는 처리를 별도로 구현하고 검증해야 한다.
 
 <a id="merge-order"></a>
 ## #7927을 먼저 병합하면 무엇이 좋아지는가?
 
-첫째, 같은 입력을 변환하는 경로를 하나로 정리할 수 있다. workspace 전용 변환과 #7927의 공통 준비 경로를 함께 유지하면, 어떤 입력이 어느 단계에서 변환되는지와 버퍼를 누가 해제하는지를 두 군데에서 확인해야 한다. 현재 구현은 기존 force-local 보관 객체를 재사용하므로 이 책임을 공통 경로에서 확인할 수 있다. [변환 레코드 소유권 설명](/home/vimkim/gh/my-cubrid-docs/cbrd-27424/review-guide-pr7925-28b65d18a-ko.md#received-owner).
+첫째, 같은 입력을 변환하는 경로를 하나로 정리할 수 있다. workspace 전용 변환과 #7927의 공통 준비 경로를 함께 유지하면, 어떤 입력이 어느 단계에서 변환되는지와 버퍼를 누가 해제하는지를 두 군데에서 확인해야 한다. 현재 구현은 기존 force-local 보관 객체를 재사용하므로 이 책임을 공통 경로에서 확인할 수 있다. [변환 레코드 소유권 설명](review-guide-pr7925-28b65d18a-ko.md#received-owner).
 
 둘째, 두 이슈의 리뷰 범위를 구분할 수 있다. #7927에서 일반 SQL·loader·파티션의 목적지 및 OOS 소유권 문제를 먼저 검토하고, #7925에서는 workspace 입력을 그 경로에 연결하는 변경을 검토한다. 현재 #7925의 전체 diff는 기준 브랜치 대비 29개 파일이지만, #7927의 현재 소스를 기준으로 비교하면 8개 파일이다. **병합 순서를 나누는 이유는 현재 설계의 공통 코드를 한 번 통합하고, 각 PR의 책임을 명확히 하기 위해서다.** 이 부분은 확인한 소스 차이에 근거한 통합 순서 판단이다.
 
@@ -115,7 +115,7 @@ git diff f3144ab4b b755678cd -- src/storage/heap_file.c src/storage/heap_oos.cpp
 git diff --stat f3144ab4b b755678cd
 ```
 
-추가 근거와 이전 통합 과정의 검증 범위는 [상세 조사 기록](/home/vimkim/gh/my-cubrid-docs/cbrd-27424/PR7925-PR7927-dependency_b755678cd_codex.md)에 정리되어 있다. 그 기록의 절대 경로 링크는 로컬 서버에 보관된 자료를 가리키며, 외부 독자는 이 문서의 GitHub 소스·공개 검증 링크로 핵심 설명을 확인할 수 있다.
+추가 근거와 이전 통합 과정의 검증 범위는 [상세 조사 기록](PR7925-PR7927-dependency_b755678cd_codex.md)에 정리되어 있다. 그 기록의 절대 경로 링크는 로컬 서버에 보관된 자료를 가리키며, 외부 독자는 이 문서의 GitHub 소스·공개 검증 링크로 핵심 설명을 확인할 수 있다.
 
 <a id="reviewer-questions"></a>
 ## 리뷰어 질문 찾아보기

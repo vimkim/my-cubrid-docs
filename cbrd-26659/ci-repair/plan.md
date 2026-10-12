@@ -3,7 +3,7 @@
 상태: 합의 완료. 확인일: 2026-10-12, Asia/Seoul. 계획 합의 작업: work item 331.
 관련 PR: [Engine #8128](https://github.com/CUBRID/cubrid/pull/8128), [public TC #3688](https://github.com/CUBRID/cubrid-testcases/pull/3688), [private TC #4365](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4365).
 
-목표는 run38245729674의 실패 전체에서 합의된 두 제외 규칙을 적용한 뒤 남는 SQL 14개를 정상화하는 것이다. 개별 TC의 수리 판정과 실제 검증 상태는 [전체 추적 표](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-repair/README.md)를 기준으로 갱신한다. 이 계획의 합의와 실제 수리 완료를 구분한다.
+목표는 run38245729674의 실패 전체에서 합의된 두 제외 규칙을 적용한 뒤 남는 SQL 14개를 정상화하는 것이다. 개별 TC의 수리 판정과 실제 검증 상태는 [전체 추적 표](README.md)를 기준으로 갱신한다. 이 계획의 합의와 실제 수리 완료를 구분한다.
 
 ## 수리 범위
 
@@ -18,7 +18,7 @@ SQL 14개는 모두 정상화 대상이다. 제외된 partition의 결함이 이
 1. `/home/vimkim/my-cubrid/CUBRID.md`와 관련 worktree 지침을 읽고 PR identity, head repository/ref, base ref와 모든 관련 checkout의 상태를 새로 확인한다. Engine의 기존 CCI 변경과 documentation main의 기존 변경을 보존한다.
 2. Engine checkout `/home/vimkim/gh/cb/CBRD-26659-oos-testcases-handover`와 authoritative TC checkout의 `tc/pr-8128`을 재사용한다. Public TC에는 이번 인터뷰에서 로컬로 추가한 README 커밋이 있으며, 실제 게시 여부와 live head를 확인한다.
 3. 실행을 시작할 때 새로운 work-tracker 항목을 등록한다. 331은 계획 합의와 문서 기록의 작업으로 유지하며, 기존 controller 수리/CI 작업 329·330 및 분석 324의 완료 기록을 변경하지 않는다.
-4. 최신 receipt, per-case diff, actual shard order를 확보하고 [추적 표](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-repair/README.md)의 20개 판정을 확인한다. 최신 실행의 실패 원인을 이전 실행의 관측으로 대신 확정하지 않는다.
+4. 최신 receipt, per-case diff, actual shard order를 확보하고 [추적 표](README.md)의 20개 판정을 확인한다. 최신 실행의 실패 원인을 이전 실행의 관측으로 대신 확정하지 않는다.
 
 ## 진단과 검증 순서
 
@@ -48,4 +48,4 @@ Engine 변경에는 `cubrid-build`를 적용하고 실제 설치 리비전을 �
 
 > PR8128의 합의된 SQL 정상화 계획 `cbrd-26659/ci-repair/plan.md`를 실행해 주세요. 전체 추적 표의 두 제외 규칙을 유지하고 SQL 14개를 모두 정상화하세요. 제외된 partition이 그 연쇄 실패의 원인으로 입증되면 필요한 공통 원인을 수리할 수 있습니다. 가설 패치로 원인을 검증하되 올바른 정답과 assertion을 보존하고 원인 증거와 패치 전후 결과를 남기세요. 14개 모두 새 DB의 독립 실행 및 partition을 포함한 원래 72-case 순서에서 통과를 확인하세요. Scoped Engine/필요 TC 변경을 게시한 뒤 한 번의 CI를 실행하고 terminal 결과와 제외/잔여 실패 및 TC gate 상태를 보고한 다음 멈추세요.
 
-출발 핸드오프 `/home/vimkim/tmp/handoff-pr8128-sql-partition-repair-20261012-6m9i2c77.md`의 retained artifacts와 환경 보존 계약을 참고한다. 범위와 완료 기준은 이 최종 합의와 [추적 표](/home/vimkim/gh/my-cubrid-docs/cbrd-26659/ci-repair/README.md)를 적용한다.
+출발 핸드오프 `/home/vimkim/tmp/handoff-pr8128-sql-partition-repair-20261012-6m9i2c77.md`의 retained artifacts와 환경 보존 계약을 참고한다. 범위와 완료 기준은 이 최종 합의와 [추적 표](README.md)를 적용한다.

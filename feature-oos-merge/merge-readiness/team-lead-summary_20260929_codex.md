@@ -64,4 +64,4 @@ Manual QA 건수와 별개로, 기존에 등록된 OOS 수정 과제가 남아 �
 
 다음은 **새 테스트 결과 확인 → 데이터 안전성 수정 → 전체 QA 완료** 순서입니다. 기술적 준비 완료 시점은 남은 실패 원인과 검증 결과를 확인한 뒤 판단하겠습니다. CDC의 합의된 연기는 [CBRD-27064](http://jira.cubrid.org/browse/CBRD-27064)·[CBRD-27075](http://jira.cubrid.org/browse/CBRD-27075) 두 테스트에 한하며, CDC 관련 실패 51건 전체의 예외 승인을 뜻하지 않습니다.
 
-[상세 보고서](/home/vimkim/gh/my-cubrid-docs/feature-oos-merge/merge-readiness/progress-report_1ec35f8_codex.md) · [집계 근거](/home/vimkim/tmp/docs-main-integration-20261013-025904/original-worktree-files/docs--oos-readiness-221/feature-oos-merge/merge-readiness/evidence/team-lead-counts.json) · [Manual QA 원본](http://qahome.cubrid.org/qaresult/showFuntionRes.nhn?tree_id=5328&buildId=11.5.0.2625-1ec35f8)
+[상세 보고서](progress-report_1ec35f8_codex.md) · [집계 근거](/home/vimkim/tmp/docs-main-integration-20261013-025904/original-worktree-files/docs--oos-readiness-221/feature-oos-merge/merge-readiness/evidence/team-lead-counts.json) · [Manual QA 원본](http://qahome.cubrid.org/qaresult/showFuntionRes.nhn?tree_id=5328&buildId=11.5.0.2625-1ec35f8)

@@ -157,7 +157,7 @@ Three **base-only observed cases** are separate from the eight head failures. Th
 4. Reconcile the partition-loader legacy answer after checking valid routing and invalid-load rollback/retained counts.
 5. Preserve both CDC failures as visible follow-up work under the accepted history-scope decision, and retain the three separate base-only observations. Prior signatures do not waive CUBRID CI requirements.
 
-These are next actions, not authorized CI triggers, repairs, testcase edits or local reproductions performed by this analysis. The current terminal evidence acquisition/report request is complete; broader causality and ordering-preservation work remains pending. Existing source/submodule changes and testcase worktrees/indexes are preserved. Reviewer replies remain in [the existing local draft](/home/vimkim/gh/my-cubrid-docs/cbrd-27089/design/reviewer-comments-aecce0e.md), unchanged and unpublished.
+These are next actions, not authorized CI triggers, repairs, testcase edits or local reproductions performed by this analysis. The current terminal evidence acquisition/report request is complete; broader causality and ordering-preservation work remains pending. Existing source/submodule changes and testcase worktrees/indexes are preserved. Reviewer replies remain in [the existing local draft](design/reviewer-comments-aecce0e.md), unchanged and unpublished.
 
 ## Evidence inventory
 

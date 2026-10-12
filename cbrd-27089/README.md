@@ -58,25 +58,10 @@ These explain earlier decisions. Older marker, raw-pointer and routing-probe des
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [PR #7927: validated CI failure inventory and baseline alignment](ci_analysis_report_34a9072_codex.md) | PR #7927: validated CI failure inventory and baseline alignment | 2026-09-30 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
-
-## Integrated analysis and decisions
-
-| File | What it contains | Created | Last modified | Why it was created |
-| --- | --- | --- | --- | --- |
-| [PR7927 CI analysis — 4be72fc20](ci_analysis_report_4be72fc_codex.md) | PR7927 CI analysis — 4be72fc20 | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
-
-## Integrated analysis and decisions
-
-| File | What it contains | Created | Last modified | Why it was created |
-| --- | --- | --- | --- | --- |
-| [PR #7927 terminal CI assessment — f3144ab](ci_analysis_report_f3144ab_codex.md) | PR #7927 terminal CI assessment — f3144ab | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
-
-## Integrated analysis and decisions
-
-| File | What it contains | Created | Last modified | Why it was created |
-| --- | --- | --- | --- | --- |
-| [PR #7927 CI failure attribution — aecce0e12](ci_analysis_report_aecce0e_codex_71bcfef2_historical.md) | PR #7927 CI failure attribution — aecce0e12 | 2026-10-06 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [PR #7927: validated CI failure inventory and baseline alignment](ci_analysis_report_34a9072_codex.md) | Pinned CI counts, failures, provenance and attribution limits | 2026-09-30 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [PR7927 CI analysis — 4be72fc20](ci_analysis_report_4be72fc_codex.md) | Pinned CI counts, failures, provenance and attribution limits | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [PR #7927 terminal CI assessment — f3144ab](ci_analysis_report_f3144ab_codex.md) | Pinned CI counts, failures, provenance and attribution limits | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [PR #7927 CI failure attribution — aecce0e12](ci_analysis_report_aecce0e_codex_71bcfef2_historical.md) | Pinned CI counts, failures, provenance and attribution limits | 2026-10-06 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
 | [PR #7927 review package](review-aecce0e/README.md) | PR #7927 review package | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
-| [PR #7927 code review guide — aecce0e12](review-aecce0e/code_review_guide.md) | PR #7927 code review guide — aecce0e12 | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
-| [PR #7927 code review guide — aecce0e12](review-aecce0e/code_review_guide_71bcfef2_historical.md) | PR #7927 code review guide — aecce0e12 | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [PR #7927 code review guide — aecce0e12](review-aecce0e/code_review_guide.md) | Changed symbols, invariants, tests and reviewer navigation | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [PR #7927 code review guide — aecce0e12](review-aecce0e/code_review_guide_71bcfef2_historical.md) | Changed symbols, invariants, tests and reviewer navigation | 2026-10-07 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |

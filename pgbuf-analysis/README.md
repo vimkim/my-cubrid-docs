@@ -8,4 +8,4 @@ Historical analyses and accepted decisions retain their original revision and ve
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [Page buffer performance and refactoring issue candidates](report-2026-10-02.md) | Page buffer performance and refactoring issue candidates | 2026-10-02 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
+| [Page buffer performance and refactoring issue candidates](report-2026-10-02.md) | Source-backed page-buffer improvement candidates and measurement limits | 2026-10-02 | 2026-10-13 | Preserve revision-specific analysis and decisions for reviewers |
