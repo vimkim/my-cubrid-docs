@@ -70,4 +70,8 @@ git diff --check c4b9d482fbd491a68510b2552df2c3cac91911fc...10f3500291c3d3f5c7bc
 
 이번 리뷰에서는 DB 테스트와 CI를 새로 실행하지 않았다. 기존 Linux 결과를 Windows 또는 현재 엔진 `9ba5b9b`의 실행 검증으로 확대하지 않는다. fixture는 INT 값만 사용하므로 OOS value chain의 물리적 소유 heap, vacuum 또는 복제까지 검증하는 TC는 아니다. 해당 범위는 엔진 PR의 별도 검증 증거를 확인해야 한다. TC 저장소는 수정하지 않았다.
 
+## PR 게시 결과
+
+2026-10-14에 검토한 head/base가 그대로임을 다시 확인한 뒤 [리뷰 요약](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4335#pullrequestreview-5514039736)을 `COMMENT` 이벤트로 게시했다. API readback으로 본문, `COMMENTED` 상태와 검토 커밋 `10f3500291c3d3f5c7bcf6ed5c90142a6ed0f532`가 일치함을 확인했다.
+
 **집계: Standards 0건(최고 심각도 없음), Spec 0건(최고 심각도 없음).**

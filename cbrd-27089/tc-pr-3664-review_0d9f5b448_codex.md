@@ -61,4 +61,8 @@ native 근거는 `/home/vimkim/tmp/pr7927-medium-order-fix-20261008.BhPiQA/paire
 
 이번 리뷰에서는 DB 테스트와 CI를 새로 실행하지 않았다. 기존 PASS는 엔진 `f3144ab` 결과이며 현재 head `9ba5b9b`의 실행 결과가 아니다. [bestspace 분석](PR7927-medium-bestspace-divergence-ko.md)의 원인 확정 한계도 유지한다. TC 저장소는 수정하지 않았다.
 
+## PR 게시 결과
+
+2026-10-14에 검토한 head/base가 그대로임을 다시 확인한 뒤 [리뷰 요약](https://github.com/CUBRID/cubrid-testcases/pull/3664#pullrequestreview-5514039030)을 `COMMENT` 이벤트로 게시했다. API readback으로 본문, `COMMENTED` 상태와 검토 커밋 `0d9f5b448c36d6f0a33d9a62bd4048de02e6bd5b`가 일치함을 확인했다.
+
 **집계: Standards 0건(최고 심각도 없음), Spec 0건(최고 심각도 없음).**
