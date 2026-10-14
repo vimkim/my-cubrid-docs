@@ -6,11 +6,12 @@ the destination heap. Earlier work is recorded under
 
 Start with the Korean reviewer guide, then the approved design. The design removes
 `REC_OOS_PENDING`, keeps the shared `RECDES` layout, and retains compact-buffer reuse
-and in-place finalization. For the remaining medium failures, read the local
+and in-place finalization. The TC PR reviews cover the medium ordering correction
+and partition-loader validation. For the ordering history, read the local
 diagnosis and bestspace assessment: the `f3144ab` / `fb567a6` comparison reproduces
 three ordering differences, but their upstream cause remains unconfirmed.
 
-Index updated: **2026-10-13 (Asia/Seoul)**. Documents retain their recorded source
+Index updated: **2026-10-14 (Asia/Seoul)**. Documents retain their recorded source
 revisions and verification limits; dates below describe each document's history.
 
 ## PR7927 design and reviewer documents
@@ -33,6 +34,8 @@ Local checks are scoped to their pinned revisions and remain separate from remot
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [Public TC PR #3664 review](tc-pr-3664-review_0d9f5b448_codex.md) | Standards/Spec review of deterministic conversion output at 0d9f5b448, with execution evidence limits | 2026-10-14 | 2026-10-14 | Review and report the public testcase changes associated with PR7927 |
+| [Private TC PR #4335 review](tc-pr-4335-review_10f350029_codex.md) | Standards/Spec review of partition-loader validation and rollback at 10f350029, with Windows and revision limits | 2026-10-14 | 2026-10-14 | Review and report the private testcase changes associated with PR7927 |
 | [Native medium diagnosis (f3144ab / fb567a6)](medium-local-diagnosis/report.md) | 558-case head/base comparison, heap placement and remaining causal gap | 2026-10-07 | 2026-10-07 | Explain reproduced ordering and the remaining causal boundary |
 | [Bestspace assessment (Korean)](PR7927-medium-bestspace-divergence-ko.md) | Reusable heap state and page selection evidence with causal limits | 2026-10-08 | 2026-10-08 | Share the evidence-backed assessment and its remaining causal limits with PR readers |
 | [Testcase assessment](testcase-assessment/assessment.md) | Failure contracts, justified partition-loader correction and native results | 2026-10-07 | 2026-10-07 | Assess selected PR7927 failures without weakening existing contracts |
