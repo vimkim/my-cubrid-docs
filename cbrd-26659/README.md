@@ -1,6 +1,6 @@
 # CBRD-26659 documentation
 
-Last modified: 2026-10-13 (Asia/Seoul).
+Last modified: 2026-10-15 (Asia/Seoul).
 
 Start with the approved plan and current behavior coverage table. Developers create and validate public SQL and private shell cases locally, initially using optdebug. SQL and shell timing is separate; roughly ten minutes each is informal guidance. All 14 supported automation deliveries are complete. The original Standards/Spec closures and Python-based native receipts remain historical. The [2026-10-12 shell conversion](ci-replan/shell-conversion-results-20261012.md) and [recent convention study](ci-replan/shell-conventions-20261012.md) identify replacement qualification, current reviews, image probes and retained SQL evidence. Physically unmet criteria and engine/capability gaps retain partial or unverified dispositions. The HA follow-up gap remains explicit. TC head publication and current local document integration are recorded in the conversion report.
 
@@ -16,6 +16,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [tc-category-explanation-ko.md](tc-category-explanation-ko.md) | Korean five-minute guide to seven TC categories, evidence layers and remaining gaps | 2026-10-15 | 2026-10-15 | Explain the 31 behavior rows to teammates with dated representative evidence |
 | [plan.md](ci-replan/plan.md) | Agreed direction, sequence and approved-ticket boundary | 2026-10-08 | 2026-10-08 | Review the developer-owned local regression plan |
 | [spec.md](ci-replan/spec.md) | Agreed external behavior, decisions and validation contract | 2026-10-08 | 2026-10-08 | Turn the settled plan into an implementation specification |
 | [implementation-tickets.md](ci-replan/implementation-tickets.md) | Approved 14-ticket breakdown and genuine blocking edges | 2026-10-08 | 2026-10-08 | Sequence independently verifiable testcase delivery |
