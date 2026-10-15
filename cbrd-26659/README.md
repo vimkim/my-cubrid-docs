@@ -16,7 +16,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [tc-category-explanation-ko.md](tc-category-explanation-ko.md) | Korean five-minute guide to seven TC categories, evidence layers and remaining gaps | 2026-10-15 | 2026-10-15 | Explain the 31 behavior rows to teammates with dated representative evidence |
+| [tc-category-explanation-ko.md](tc-category-explanation-ko.md) | Plain Korean summary and detailed HTML guide to why each TC category is needed | 2026-10-15 | 2026-10-15 | Explain the 31 behavior rows to teammates with dated representative evidence |
 | [plan.md](ci-replan/plan.md) | Agreed direction, sequence and approved-ticket boundary | 2026-10-08 | 2026-10-08 | Review the developer-owned local regression plan |
 | [spec.md](ci-replan/spec.md) | Agreed external behavior, decisions and validation contract | 2026-10-08 | 2026-10-08 | Turn the settled plan into an implementation specification |
 | [implementation-tickets.md](ci-replan/implementation-tickets.md) | Approved 14-ticket breakdown and genuine blocking edges | 2026-10-08 | 2026-10-08 | Sequence independently verifiable testcase delivery |
