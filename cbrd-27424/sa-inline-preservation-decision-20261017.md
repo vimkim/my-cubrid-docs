@@ -50,6 +50,95 @@ Memory cleanup does not undo database writes.
 8. Publish scoped source changes and trigger one new full CI cycle after focused checks pass.
 9. Wait for CI, report its result and merge gates, then stop for human direction.
 
-These are required checks, not completed results.
+The results below record the completed local checks.
 The completed baseline [CI report](ci_analysis_report_b755678cd_run38861566581_codex.md) does not test this change.
-Final verification results will identify the changed engine revision and exact testcase inputs.
+
+## Implementation and local verification
+
+Changed engine: `6a487cdb6cbda36ac94ad9b22009cea6cb58aa2f`.
+The source change removes the late SA branch in `locator_finalize_oos_record`.
+The common path selects the prepared record and retains its received owner.
+The comparison fixture also checks each committed row's CHN against the workspace object after its flush.
+The change adds no test case and removes no test case.
+
+The selected configuration is `debug_gcc`.
+The changed source compiled and installed successfully in both SA and server builds.
+After the commit, reconfiguration and another build refreshed the installed revision metadata.
+Native preflight then proved that the source and installed revisions match.
+The initial metadata preflight stopped before testcase execution. The native runner used no mismatch bypass.
+
+| Check | Result | Evidence scope |
+| --- | --- | --- |
+| Configured CTests | 38/38 pass in 351.05 seconds | Exact changed source before its packaging commit |
+| GoogleTest XML | 374 pass, zero failures/errors/disabled/skips | Case names match the baseline inventory exactly |
+| Stored-row comparisons | 21/21 pass | Includes the new CHN assertions in all fixtures |
+| Real loader/workspace cases | 13/13 pass | Includes rollback, ignored errors, LOBs, partitions, and successful no-logging loads |
+| Native partition loader | 1/1 case, 28/28 assertions pass | Containment enabled, strict artifact verifier passes |
+| Source and formatting | Pass | Tested source hashes match the commit and the formatter left the test unchanged |
+
+The native shell testcase is `shell/_35_cherry/issue_21654_server_side_loaddb/partition_tbls/cases/partition_tbls.sh`.
+Its private TC revision is `a261508a624efc7115ac181073d40bca7fc9448c`.
+The public TC head remains `26f964b8a6e222c33765fa317eaaf4fe666d5f44`.
+Both feature-baseline ancestry checks pass. This source change needs no additional TC changes.
+
+### Standards
+
+The independent Standards review found zero findings in `b755678cd...6a487cdb6`.
+The deletion preserves the existing error style and formatter guards.
+The CHN assertion follows the established GoogleTest fixture.
+
+### Spec
+
+The independent Spec review found zero findings in the same diff.
+INSERT and UPDATE retain function-local received owners through heap, index, foreign-key processing, and all success/error exits.
+Foreign-key replacement can select another record without a destructor restoring an obsolete pointer.
+The common finalization call, publication reset, header transfer, and error propagation remain intact.
+Actual dependency integration and combined acceptance remain under WI393.
+
+## Matched loader measurements
+
+Five alternating before/after pairs ran each workload on logical CPU 79.
+The installations contain baseline `b755678cd` and changed `6a487cdb6`, using the same debug configuration.
+Each sample creates a private database and times only standalone `cubrid loaddb`.
+No local build or test ran concurrently with measurement.
+The host remains shared. CPU affinity does not reserve the CPU or storage.
+
+The existing benchmark harness supplies 100,000 rows with a 48-byte value and 10,000 rows with a 5,000-byte value.
+A retained harness copy adds peak RSS to the existing elapsed and CPU measurements.
+All 20 timed loads pass independent row-count and value checks.
+Every small sample has no OOS file. Every large sample has 10,000 OOS records.
+
+| Workload | Elapsed median, before → after | CPU median, before → after | Peak RSS in every sample |
+| --- | --- | --- | --- |
+| Small inline rows | 5.51 → 5.45 seconds | 4.35 → 4.30 seconds | 194,560 KiB on both versions |
+| OOS rows | 10.19 → 10.15 seconds | 8.96 → 8.91 seconds | 264,960 KiB on both versions |
+
+The comparison shows no observed regression in these workloads.
+The small timing differences do not establish a production speed improvement.
+These debug measurements do not replace release qualification or an allocation profile.
+The prepared buffer still lives longer on the changed inline path, even though process peak RSS matches.
+
+## Evidence and remaining gates
+
+Raw receipts remain outside the documentation repository:
+`/mnt/nvme/data-5/tmp/wi397-pr7925-20261017.FGB89ikS`.
+The selected summaries are `ctest-verification.json`, `native-shell-summary.json`, `review-summary.json`, and `benchmark-summary.json`.
+The directory also retains build logs, execution logs, XML, source hashes, benchmark order, installation hashes, and per-sample placement checks.
+
+The pre-existing CCI change remains outside the source commit.
+Its `win/cci_version.h` SHA-256 remains `f9766b68dab0c3f615a02cf29368396a43e887b8bc052e0fba321add407259a3`.
+No shared source integration, TC merge/closure, or documentation-main merge occurred during these checks.
+Human TC disposition remains pending at this checkpoint.
+
+## Published source and one CI cycle
+
+Commit `6a487cdb6` reached `vimkim/cubrid:CBRD-27424-oos-loaddb-sa` through a normal fast-forward push.
+The pre-push freshness check confirmed that it contains the latest target tip.
+Both testcase branches contain their current feature baselines.
+No source merge or TC publication occurred in this step.
+
+The agent posted exactly one new [`/run all` request](https://github.com/CUBRID/cubrid/pull/7925#issuecomment-6220855678).
+All five gha-ci contexts selected [run 38938588691](https://github.com/CUBRID/cubrid/actions/runs/38938588691), attempt 1, for this source head.
+The contexts initially reported pending.
+The requested terminal result remains pending at this checkpoint.
+After reporting that result, the agent must stop before another fix, push, or rerun until directed.
