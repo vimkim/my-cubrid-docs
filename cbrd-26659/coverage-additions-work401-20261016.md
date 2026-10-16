@@ -78,7 +78,7 @@ Raw 실행/빌드 로그와 disposable runner script는 repository에 추가하�
 | `replication-2` | 기본 transport 이후 failover/promotion/rejoin qualification 후속이다. 단일 DB crash로 대체하지 않는다. |
 | `replication-3` | ADR0005의 deferred CDC/flashback history. 기존 cbrd_27064/27075를 비활성화하거나 기대값을 바꾸지 않는다. |
 | `security-2` | 기존 OOS file의 NONE→AES 적용은 accepted 요구로 유지한다. manual `3b6ae97b`, `en/security.rst:374` 는 기존 table의 TDE ALTER를 지원하지 않는다고 명시한다. SQL/utility 제어가 없는 제품 proof gap이며 lazy AES/coexisting NONE로 대체하지 않는다. |
-| `security-3` | 실제 AES crash committed/undo, owner header와 exact bytes를 보강했다. ciphertext/plaintext absence, key rotation/independent restore는 여전히 미검증이다. 전체 row를 완전으로 올리지 않는다. |
+| `security-3` | 실제 AES crash committed/undo, owner header와 exact bytes 및 mapped OOS-volume/active-log의 bounded plaintext sentinel 검사를 보강했다. 일반적인 전체 plaintext/ciphertext 감사와 key rotation/independent restore는 여전히 미검증이다. 전체 row를 완전으로 올리지 않는다. |
 | `operations-2` | granted ordinary reader의 값과 DBA-only SHOW 거부를 새로 검증한다. 첫 실패 출력도 보강한다. busy-page conditional-latch undercount는 별도 internal/product scheduling gap이다. |
 | `operations-3` | product/operator runbook 전체는 기존 delivery 합의에 포함되지 않은 운영 문서 후속이다. 기존 utility 검증 절차와 backup 경계는 유지한다. |
 | `performance-1` | inline baseline 대비 projection/cache benchmark 미실행. testcase runtime이나 unit counter를 성능 수치로 바꾸지 않는다. |
@@ -90,6 +90,6 @@ Raw 실행/빌드 로그와 disposable runner script는 repository에 추가하�
 
 ## 검토와 통합 경계
 
-Standards/Spec를 고정 시작점 `9a075340f` → `2af262014` 에 대해 독립 agent로 검토했으며 양쪽 모두 지적 사항이 없었다. Sentinel delta `2af262014` → `f0336b370` 도 양쪽 지적 사항이 없었다. 후속 `5c9d8de1a` 는 범위 주석 정정과 검사 artifact hash의 stdout 보존만 추가했으며 clean revision에서 `sentinel03` 을 통과했다. Bash syntax, warning-level shellcheck, `git diff --check`, 29개 disposition set 및 문서 local link/index 점검을 완료했다. Local source/TC commits는 허용되어 있으나 이번 재개에는 push, GHA trigger, JIRA 갱신, 엔진/TC merge 또는 배포 승인이 없다. TC PR의 merge/close는 기존 합의대로 사람이 수행한다. 문서 topic worktree의 local merge destination은 `main` 이며 승인 전에는 합치지 않는다.
+Standards/Spec를 고정 시작점 `9a075340f` → `2af262014` 에 대해 독립 agent로 검토했으며 양쪽 모두 지적 사항이 없었다. Sentinel delta `2af262014` → `f0336b370` 도 양쪽 지적 사항이 없었다. 후속 `5c9d8de1a` 는 범위 주석 정정과 검사 artifact hash의 stdout 보존만 추가했으며 clean revision에서 `sentinel03` 을 통과했다. Bash syntax, warning-level shellcheck, `git diff --check`, 29개 disposition set 및 문서 local link/index 점검을 완료했다. 2026-10-16 사용자는 이 문서 topic branch를 현재 local `main` 에 rebase/merge하고 `main` 을 push하는 것을 승인했다. 이 승인은 GHA trigger, JIRA 갱신, 엔진/TC merge·push 또는 배포로 확대하지 않는다. TC PR의 merge/close는 기존 합의대로 사람이 수행한다.
 
-Work401은 실행 가능한 보강과 이 검증을 커밋했지만, 남은 required engine behavior의 검증을 완료로 표시하지 않는다. 다음 진행 조건은 Work393/397·PR7925/7927 등 실제 engine 통합/수리 revision이다. 그 입력에서 네 보존 회귀, 4060/4064 target 및 accepted reuse/notification proof를 다시 다뤄야 한다. unavailable product controls와 HA topology는 각각 명시적인 후속이며 broader readiness Work371과 구분한다. 문서 local integration도 승인 대기다.
+Work401은 실행 가능한 보강과 이 검증을 커밋했지만, 남은 required engine behavior의 검증을 완료로 표시하지 않는다. 다음 진행 조건은 Work393/397·PR7925/7927 등 실제 engine 통합/수리 revision이다. 그 입력에서 네 보존 회귀, 4060/4064 target 및 accepted reuse/notification proof를 다시 다뤄야 한다. unavailable product controls와 HA topology는 각각 명시적인 후속이며 broader readiness Work371과 구분한다. 문서 통합 승인이 이 engine 의존성을 해소하지 않는다.
