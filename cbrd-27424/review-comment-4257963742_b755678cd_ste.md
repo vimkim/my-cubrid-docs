@@ -18,6 +18,8 @@ The workspace writer encodes an object as a row. A heap stores that encoded row.
 OOS stores selected large values outside the row. The row then contains references to those values.
 An inline value stays inside the row.
 
+An owner controls the lifetime of a buffer. A view refers to the buffer without owning its memory.
+
 SA means standalone execution. Client/server execution uses the server version of this function.
 That server version uses `SERVER_MODE`. The client library's `CS_MODE` does not compile this server function.
 The review's reference to CS describes client/server operation.
@@ -59,6 +61,7 @@ The two modes therefore select different buffers for the same class of input.
 
 The reviewer compared several data types. He reports equal values and differences only in unused padding.
 Padding occupies space but does not represent a column value.
+A bound bit records whether a fixed attribute has a non-NULL value.
 For example, one fixed attribute uses one meaningful bound bit. Its aligned bound-bit area occupies four bytes.
 The remaining bits do not describe additional attributes.
 
@@ -94,7 +97,7 @@ The [workspace writer](https://github.com/vimkim/cubrid/blob/b755678cd9a3ab46521
 copies the workspace's bound-bit area into the encoded row.
 These paths explain why meaningful bits can match while unused bits differ.
 
-The source also preserves the input header during preparation.
+CHN means cache change number. The source also preserves the input header during preparation.
 `heap_prepare_oos_record` reads the input header and restores it to the prepared row.
 It adjusts the representation ID and OOS flag for the prepared representation.
 The header operations include CHN, transaction identifiers, and the previous-version address.
@@ -136,6 +139,10 @@ Both the current SA branch and the existing normal path call finalization once a
 Removing the SA branch must retain the normal finalization call and its errors.
 Releasing memory does not undo database changes.
 [Source: finalization](https://github.com/vimkim/cubrid/blob/b755678cd9a3ab465215228d5664f7f1edf24846/src/storage/heap_oos.cpp#L120).
+
+For a row without OOS references, `heap_oos_validate_disk_record` checks basic header bounds and returns.
+It does not decode the columns again. Removing that call saves only this header check.
+[Source: inline validation](https://github.com/vimkim/cubrid/blob/b755678cd9a3ab465215228d5664f7f1edf24846/src/storage/heap_oos.cpp#L58).
 
 **The earlier check is a different change**
 
