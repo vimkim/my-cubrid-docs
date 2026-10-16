@@ -3,7 +3,8 @@
 Accepted: 2026-10-17, Asia/Seoul. Work Item 397. Related Work Item 393.
 Starting engine revision: `b755678cd9a3ab465215228d5664f7f1edf24846`.
 
-The user accepted the proposed implementation sequence after reading the plain-English HTML explanation and the [review assessment](review-comment-4257963742_b755678cd_ste.md).
+The user accepted the proposed implementation sequence after the plain-English HTML explanation.
+The [review assessment](review-comment-4257963742_b755678cd_ste.md) supplies the supporting analysis.
 Use the common prepared-row path when preparation is necessary.
 Remove the late SA-only branch that discards the prepared inline row.
 
@@ -133,7 +134,7 @@ Human TC disposition remains pending at this checkpoint.
 ## Published source and one CI cycle
 
 Commit `6a487cdb6` reached `vimkim/cubrid:CBRD-27424-oos-loaddb-sa` through a normal fast-forward push.
-The pre-push freshness check confirmed that it contains the latest target tip.
+The pre-push freshness check passed against the latest target tip.
 Both testcase branches contain their current feature baselines.
 No source merge or TC publication occurred in this step.
 
