@@ -1,6 +1,6 @@
 # CBRD-27424: standalone workspace OOS
 
-Last modified: 2026-10-16 (Asia/Seoul).
+Last modified: 2026-10-17 (Asia/Seoul).
 
 [PR #7925](https://github.com/CUBRID/cubrid/pull/7925) supports OOS storage in standalone object loading and CSQL workspace writes.
 
@@ -18,10 +18,13 @@ The [SA inline-row review assessment](review-comment-4257963742_b755678cd_ste.md
 
 ## File index
 
+The [accepted SA preservation decision](sa-inline-preservation-decision-20261017.md) revises the original-byte guarantee for prepared workspace rows. It records the selected common path and required verification. Accepted: 2026-10-17.
+
 Dates for older unindexed files come from their Git history. Raw logs retain native formatting.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [sa-inline-preservation-decision-20261017.md](sa-inline-preservation-decision-20261017.md) | Accepted preservation guarantee, common prepared-row path, and verification boundary | 2026-10-17 | 2026-10-17 | Record the user's selected response to the SA-only retention review |
 | [ci_analysis_report_b755678cd_run38861566581_codex.md](ci_analysis_report_b755678cd_run38861566581_codex.md) | Full run after TC updates, three shell failures, exact-baseline comparison | 2026-10-16 | 2026-10-16 | Record the requested full CI result before the SA review change |
 | [review-comment-4257963742_b755678cd_ste.md](review-comment-4257963742_b755678cd_ste.md) | SA inline-row review, source evidence, and tradeoffs | 2026-10-16 | 2026-10-16 | Assess the review before changing the accepted preservation contract |
 | [PR7925-PR7927-dependency_b755678cd_ko.md](PR7925-PR7927-dependency_b755678cd_ko.md) | 쉬운 한글 설명: 독립 수정 가능성과 현재 구현의 의존성 | 2026-10-08 | 2026-10-08 | PR7927을 먼저 통합하는 이유와 대안을 리뷰어에게 설명 |
@@ -29,7 +32,7 @@ Dates for older unindexed files come from their Git history. Raw logs retain nat
 | [CBRD-27424-sa-loaddb-diagnosis_f4299ac_codex.md](CBRD-27424-sa-loaddb-diagnosis_f4299ac_codex.md) | Historical standalone loader diagnosis at f4299ac | 2026-09-15 | 2026-09-15 | Explain the original missing OOS conversion path |
 | [CBRD-27424-sa-workspace-oos_e24b458_codex.md](CBRD-27424-sa-workspace-oos_e24b458_codex.md) | Historical implementation and reproduction at e24b458 | 2026-09-11 | 2026-09-11 | Document standalone workspace OOS implementation |
 | [CBRD-27424-workspace-oos-revert-rationale_a142503dc_codex.md](CBRD-27424-workspace-oos-revert-rationale_a142503dc_codex.md) | Historical direct-byte benchmark and restoration rationale | 2026-10-07 | 2026-10-07 | Explain the measured decision to restore attrinfo conversion |
-| [README.md](README.md) | Ticket overview and file index | 2026-10-07 | 2026-10-16 | Help readers find the ticket documents and evidence |
+| [README.md](README.md) | Ticket overview and file index | 2026-10-07 | 2026-10-17 | Help readers find the ticket documents and evidence |
 | [ci-fix/pr-7925/index.md](ci-fix/pr-7925/index.md) | Historical local CI-repair index | 2026-09-15 | 2026-09-15 | Explain retained repair artifacts |
 | [ci_analysis_report_e24b458_codex.md](ci_analysis_report_e24b458_codex.md) | Historical exact-revision CI analysis at e24b458 | 2026-09-15 | 2026-09-15 | Preserve CI evidence for the original implementation |
 | [ci_analysis_report_fe1a918_codex.md](ci_analysis_report_fe1a918_codex.md) | Historical exact-revision CI analysis at fe1a918 | 2026-09-15 | 2026-09-15 | Assess CI after the Python dependency change |
