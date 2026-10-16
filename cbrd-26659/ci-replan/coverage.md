@@ -4,6 +4,20 @@ Updated: 2026-10-12 (Asia/Seoul). Original delivery source: `fb567a629cdb390fff9
 
 Developers create and validate the selected public SQL and private shell cases locally, initially using optdebug. SQL and shell are timed separately; roughly ten minutes each is informal guidance. Only completed selections have measured runtimes; proposed groups remain unmeasured. Historical source/runner/build-dependent times below do not establish current execution cost.
 
+## Work 401 추가 검증 (2026-10-16)
+
+[Coverage 보강과 29개 누락·부분·실패 row의 처분](../coverage-additions-work401-20261016.md)은 engine `1ef86a7` / private TC `2af262014` / sentinel `5c9d8de1a` 에서 실제 JDBC 저장/읽기, AES crash recovery와 mapped OOS-volume/active-log의 bounded plaintext sentinel 검사를 추가한다. 기존 표의 2026-10-12 관측과 그 이전 Final14 기록은 해당 revision의 역사적 증거로 유지한다. 새 통과나 첫 실패 단계는 과거 회사 CI 결과를 소급 변경하지 않는다.
+
+| Behavior | 새로운 증명과 한계 |
+| --- | --- |
+| R13 / R16 | 실제 JDBC prepared-write 4행의 전체 바이트, 동일 JDBC heap의 6청크/57372 slot bytes, 복사 후 원본 DROP과 survivor owner를 검증한다. Granted ordinary reader의 값과 CSQL `SHOW HEAP OOS` / `SHOW ALL HEAP OOS` DBA 전용 오류를 분리한다. 전체 public JDBC 실행의 소급 배치, busy-page 및 모든 workspace 경로는 증명하지 않는다. |
+| R17 / R18 / R27 | AES OOS owner/header를 실제 crash 전후에 연결하고 committed/undo 모델을 독립적으로 검사한다. OOS REDO 및 미커밋 시 UNDO trace를 요구한다. 별도 sentinel case는 실제 OOS volume과 active log의 plain positive control/AES sentinel 부재와 exact reopen을 확인한다. 기존 graceful reopen보다 넓은 subset이며, 특정 `RVOOS_DELETE` replay·mid-reclaim·key/backup 전체는 미검증이다. |
+| R20 | 정답 rollback/vacuum 회귀는 실패로 유지한다. 새 controller 진단은 vacuum barrier 이후 exact pre-image CSQL의 40초 timeout/exit124를 드러냈다. 과거 corruption과 원인이 같다고 확정하지 않는다. |
+| R23 | Chunk drain 이후 positive page reduction assertion이 여전히 실패한다. Page-return과 downstream churn/restart debt의 credit을 주지 않는다. |
+| R15 / R25 | Partition의 실제 root/child SHOW 및 owner parser 결과, SA-loaded 목적지의 실제 OOS file 부재를 NOK artifact에 보존한다. 정답과 현재 실패를 유지하며 Work393/397 및 PR7925/7927 통합을 후속으로 둔다. |
+
+최종 선택과 시도별 exact receipt·negative control·timing·검토는 연결된 Work401 보고서를 따른다. 변경하지 않은 public SQL/answer와 module receipt를 새 실행으로 표기하지 않는다. 남은 required engine behavior와 unavailable product oracle는 명시적인 미완이며, Matrix의 성능·운영 rubric을 이 testcase delivery의 새 acceptance로 바꾸지 않는다.
+
 ## Conversion qualification boundary (2026-10-12)
 
 The current work removes Python runtime calls from 18 new shell entrypoints and 11 helpers while preserving all 14 reviewed private SQL/JSON fixtures and all 34 public SQL/answer inputs. Bash/awk/jq handle database logic; a small GCC-built Linux process adapter supplies descendant adoption and launch ownership gates. Tool compatibility was sampled in the resolved actual CI image, separately from native OptDebug database execution. The [conversion record](shell-conversion-results-20261012.md) owns final pass counts, dynamic process receipts, candidate outcomes and publication identity. The replacement receives no passing credit from old Python execution alone.

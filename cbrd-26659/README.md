@@ -1,6 +1,6 @@
 # CBRD-26659 documentation
 
-Last modified: 2026-10-15 (Asia/Seoul).
+Last modified: 2026-10-16 (Asia/Seoul).
 
 Start with the approved plan and current behavior coverage table. Developers create and validate public SQL and private shell cases locally, initially using optdebug. SQL and shell timing is separate; roughly ten minutes each is informal guidance. All 14 supported automation deliveries are complete. The original Standards/Spec closures and Python-based native receipts remain historical. The [2026-10-12 shell conversion](ci-replan/shell-conversion-results-20261012.md) and [recent convention study](ci-replan/shell-conventions-20261012.md) identify replacement qualification, current reviews, image probes and retained SQL evidence. Physically unmet criteria and engine/capability gaps retain partial or unverified dispositions. The HA follow-up gap remains explicit. TC head publication and current local document integration are recorded in the conversion report.
 
@@ -14,15 +14,18 @@ The [SQL repair record](ci-repair/repair-results.md) completes work item 332 at 
 
 The [latest shell blocker assessment](ci_analysis_report_1ef86a7_run38291753662_shell_codex.md) covers run38291753662 at the same Engine `1ef86a7`, public TC `df8596dd9` and private TC `9a075340f`. Shell has 3,272 passes, 7 failures and 30 skips; SQL17,489/17,489 and medium975/975 pass. The newly failing `bug_bts_6279` includes its test launcher in a broad PID kill selection; interruption is the leading explanation for its blank result. Four retained OOS candidates remain blocked, with current controller/physical details bounded by missing logs; the two CDC deferrals remain separate. The current head evidence is fully validated, while the one exact-base collection remains unavailable after the bounded local ancestry download was stopped; historical base evidence is kept separate. The historical replay failure is now an observed PASS without repair credit. Work Item383 records the assessment and next owners/actions; Item371 remains the actual merge milestone.
 
+The [Work401 coverage additions](coverage-additions-work401-20261016.md) add direct JDBC storage/reader-permission checks, AES crash recovery and bounded plaintext-sentinel inspection, preserve correct known failures with command diagnostics, and record dispositions for all 29 missing/partial/failed matrix rows. These local additions do not establish engine readiness or authorize publication.
+
 The `campaign/` documents are historical evidence. They describe older engine/runner/layout decisions and cannot establish current passing coverage. Their supporting artifacts remain linked from the relevant report; no historical cleanup is included here.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [coverage-additions-work401-20261016.md](coverage-additions-work401-20261016.md) | Direct JDBC, AES crash/sentinel regressions, native receipts, failure diagnostics and all 29 dispositions | 2026-10-16 | 2026-10-16 | Turn the accepted coverage assessment into executable evidence without concealing engine gaps |
 | [tc-category-explanation-ko.md](tc-category-explanation-ko.md) | Table of 17 SQL and 18 shell TCs linking to plain Korean details and source files | 2026-10-15 | 2026-10-15 | Explain the 31 behavior rows to teammates with dated representative evidence |
 | [plan.md](ci-replan/plan.md) | Agreed direction, sequence and approved-ticket boundary | 2026-10-08 | 2026-10-08 | Review the developer-owned local regression plan |
 | [spec.md](ci-replan/spec.md) | Agreed external behavior, decisions and validation contract | 2026-10-08 | 2026-10-08 | Turn the settled plan into an implementation specification |
 | [implementation-tickets.md](ci-replan/implementation-tickets.md) | Approved 14-ticket breakdown and genuine blocking edges | 2026-10-08 | 2026-10-08 | Sequence independently verifiable testcase delivery |
-| [coverage.md](ci-replan/coverage.md) | 31 behavior rows, historical delivery and new conversion qualification boundary | 2026-10-08 | 2026-10-12 | Connect expected behavior to SQL/shell actions and gaps |
+| [coverage.md](ci-replan/coverage.md) | 31 behavior rows, historical qualification and Work401 additive evidence | 2026-10-08 | 2026-10-16 | Connect expected behavior to SQL/shell actions and gaps |
 | [issue-inventory.md](ci-replan/issue-inventory.md) | Live hierarchy, linked defects and curated 150-issue ledger | 2026-10-08 | 2026-10-08 | Replace stale issue assumptions with bounded live evidence |
 | [spec-and-unit-inventory.md](ci-replan/spec-and-unit-inventory.md) | Accepted contract, exact source and all 29 binaries / 302 tests | 2026-10-08 | 2026-10-08 | Identify conformance and external observability gaps |
 | [public-sql-inventory.md](ci-replan/public-sql-inventory.md) | Nine recovered pairs, integration differences and reuse limits | 2026-10-08 | 2026-10-08 | Select useful SQL assets without inheriting historical passes |
