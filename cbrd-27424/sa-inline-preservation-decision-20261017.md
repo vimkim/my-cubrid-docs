@@ -141,5 +141,10 @@ No source merge or TC publication occurred in this step.
 The agent posted exactly one new [`/run all` request](https://github.com/CUBRID/cubrid/pull/7925#issuecomment-6220855678).
 All five gha-ci contexts selected [run 38938588691](https://github.com/CUBRID/cubrid/actions/runs/38938588691), attempt 1, for this source head.
 The contexts initially reported pending.
-The requested terminal result remains pending at this checkpoint.
-After reporting that result, the agent must stop before another fix, push, or rerun until directed.
+The workflow finished with failure.
+GitHub reports both builds, SQL, and medium successful, and shell failed.
+Shell has six failed shard jobs. These are job results, not a trustworthy testcase failure count.
+The collector returned an incomplete observation because retained markers use `test_rc`, while it expects `ctp_rc`.
+The [bounded CI warning](ci_analysis_report_6a487cdb6_codex.md) records the statuses, acquisition limits, and remaining gates.
+It supports no testcase-level regression conclusion.
+After reporting this result, the agent stops before another fix, push, or rerun until directed.

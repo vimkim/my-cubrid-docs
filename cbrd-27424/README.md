@@ -10,7 +10,9 @@ The [orchestration record](../.scratch/pr7925-review-simplification/orchestratio
 
 Read the [accessible Korean explanation](PR7925-PR7927-dependency_b755678cd_ko.md) for why the original fix can stand alone and the current implementation uses PR #7927. The [detailed dependency assessment](PR7925-PR7927-dependency_b755678cd_codex.md) retains source comparisons and historical evidence. Both cover `b755678cd`; snapshot: 2026-10-08.
 
-The latest [full CI report for run 38861566581](ci_analysis_report_b755678cd_run38861566581_codex.md) covers unchanged engine `b755678cd` with both updated TC heads. Medium passes 975/975 and SQL passes 17,471/17,471. Shell records three failures and 30 skips. Actual dependency integration and human TC disposition remain pending. Snapshot: 2026-10-16, Asia/Seoul.
+The latest fully validated [full CI report for run 38861566581](ci_analysis_report_b755678cd_run38861566581_codex.md) covers unchanged engine `b755678cd` with both updated TC heads. Medium passes 975/975 and SQL passes 17,471/17,471. Shell records three failures and 30 skips. Actual dependency integration and human TC disposition remain pending. Snapshot: 2026-10-16, Asia/Seoul.
+
+The newer [CI warning for `6a487cdb6`](ci_analysis_report_6a487cdb6_codex.md) records failed workflow 38938588691. GitHub reports successful builds, SQL, and medium, with six failed shell shard jobs. A shard-marker contract difference prevents trustworthy testcase summaries. The warning supports no testcase-level regression conclusion. Snapshot: 2026-10-17.
 
 이전 TC 수정 전 결과는 [run 37747856853 분석](ci_analysis_report_b755678cd_run37747856853_codex.md)에 보존한다. Medium 3건·shell 4건을 평가한 과거 기록이다. Snapshot: 2026-10-15, Asia/Seoul.
 
@@ -24,6 +26,7 @@ Dates for older unindexed files come from their Git history. Raw logs retain nat
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [ci_analysis_report_6a487cdb6_codex.md](ci_analysis_report_6a487cdb6_codex.md) | Terminal CI statuses, incomplete collection, and remaining gates | 2026-10-17 | 2026-10-17 | Record the requested CI result without unsupported testcase attribution |
 | [sa-inline-preservation-decision-20261017.md](sa-inline-preservation-decision-20261017.md) | Accepted guarantee, source change, local verification, and loader measurements | 2026-10-17 | 2026-10-17 | Record the user's selected response to the SA-only retention review |
 | [ci_analysis_report_b755678cd_run38861566581_codex.md](ci_analysis_report_b755678cd_run38861566581_codex.md) | Full run after TC updates, three shell failures, exact-baseline comparison | 2026-10-16 | 2026-10-16 | Record the requested full CI result before the SA review change |
 | [review-comment-4257963742_b755678cd_ste.md](review-comment-4257963742_b755678cd_ste.md) | SA inline-row review, source evidence, and tradeoffs | 2026-10-16 | 2026-10-16 | Assess the review before changing the accepted preservation contract |
