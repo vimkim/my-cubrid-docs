@@ -10,7 +10,9 @@ The [orchestration record](../.scratch/pr7925-review-simplification/orchestratio
 
 Read the [accessible Korean explanation](PR7925-PR7927-dependency_b755678cd_ko.md) for why the original fix can stand alone and the current implementation uses PR #7927. The [detailed dependency assessment](PR7925-PR7927-dependency_b755678cd_codex.md) retains source comparisons and historical evidence. Both cover `b755678cd`; snapshot: 2026-10-08.
 
-현재 `b755678cd`의 CI 판정과 TC 수정 적용성은 [run 37747856853 분석](ci_analysis_report_b755678cd_run37747856853_codex.md)을 참고한다. Medium 3건·shell 4건을 평가하며, 수정 TC 재검증과 실제 통합은 남아 있다. Snapshot: 2026-10-15, Asia/Seoul.
+The latest [full CI report for run 38861566581](ci_analysis_report_b755678cd_run38861566581_codex.md) covers unchanged engine `b755678cd` with both updated TC heads. Medium passes 975/975 and SQL passes 17,471/17,471. Shell records three failures and 30 skips. Actual dependency integration and human TC disposition remain pending. Snapshot: 2026-10-16, Asia/Seoul.
+
+이전 TC 수정 전 결과는 [run 37747856853 분석](ci_analysis_report_b755678cd_run37747856853_codex.md)에 보존한다. Medium 3건·shell 4건을 평가한 과거 기록이다. Snapshot: 2026-10-15, Asia/Seoul.
 
 The [SA inline-row review assessment](review-comment-4257963742_b755678cd_ste.md) explains review comment 4257963742 in plain English. It separates confirmed source behavior, the reviewer's experiments, preservation requirements, and the benefits and costs of accepting the proposed change. Snapshot: 2026-10-16.
 
@@ -20,6 +22,7 @@ Dates for older unindexed files come from their Git history. Raw logs retain nat
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [ci_analysis_report_b755678cd_run38861566581_codex.md](ci_analysis_report_b755678cd_run38861566581_codex.md) | Full run after TC updates, three shell failures, exact-baseline comparison | 2026-10-16 | 2026-10-16 | Record the requested full CI result before the SA review change |
 | [review-comment-4257963742_b755678cd_ste.md](review-comment-4257963742_b755678cd_ste.md) | SA inline-row review, source evidence, and tradeoffs | 2026-10-16 | 2026-10-16 | Assess the review before changing the accepted preservation contract |
 | [PR7925-PR7927-dependency_b755678cd_ko.md](PR7925-PR7927-dependency_b755678cd_ko.md) | 쉬운 한글 설명: 독립 수정 가능성과 현재 구현의 의존성 | 2026-10-08 | 2026-10-08 | PR7927을 먼저 통합하는 이유와 대안을 리뷰어에게 설명 |
 | [PR7925-PR7927-dependency_b755678cd_codex.md](PR7925-PR7927-dependency_b755678cd_codex.md) | Original fix versus current PR7927 implementation dependency | 2026-10-08 | 2026-10-08 | Explain whether PR7927 must merge and the available alternatives |
@@ -40,7 +43,7 @@ Dates for older unindexed files come from their Git history. Raw logs retain nat
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [PR7925 b755 / run 37747856853 CI 분석](ci_analysis_report_b755678cd_run37747856853_codex.md) | 현재 7개 실패, exact-base 비교 한계, ORDER BY·partition TC 적용성·후속 담당 | 2026-10-15 | 2026-10-15 | 실제 OOS 통합을 위한 현재 HEAD 실패 처분과 재검증 범위 확정 |
+| [PR7925 b755 / run 37747856853 CI 분석](ci_analysis_report_b755678cd_run37747856853_codex.md) | TC 수정 전 7개 실패, exact-base 비교 한계, ORDER BY·partition TC 적용성·후속 담당 | 2026-10-15 | 2026-10-15 | 실제 OOS 통합을 위한 당시 HEAD 실패 처분과 재검증 범위 확정 |
 | [CBRD-27424: restore the attrinfo workspace OOS implementation](CBRD-27424-workspace-oos-restoration_1c660d22e_codex.md) | Restored workspace behavior and matched benchmark results | 2026-10-07 | 2026-10-13 | Record implementation checks and restoration evidence |
 | [PR7925 / 28b65d18a CI 수집 중단 보고서](ci_analysis_report_28b65d18a_codex.md) | Pinned CI counts, failures, provenance and attribution limits | 2026-10-08 | 2026-10-13 | Preserve exact-revision verification and its limits |
 | [PR #7925 published-head CI evidence warning](ci_analysis_report_91bfde02e_codex.md) | Pinned CI counts, failures, provenance and attribution limits | 2026-10-07 | 2026-10-13 | Preserve exact-revision verification and its limits |

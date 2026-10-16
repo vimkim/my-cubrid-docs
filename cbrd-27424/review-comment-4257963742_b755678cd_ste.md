@@ -202,9 +202,11 @@ All five contexts selected [run 38861566581](https://github.com/CUBRID/cubrid/ac
 The engine input is `b755678cd9a3ab465215228d5664f7f1edf24846`.
 The selected published public TC head is `26f964b8a6e222c33765fa317eaaf4fe666d5f44`.
 The selected published private TC head is `a261508a624efc7115ac181073d40bca7fc9448c`.
-The terminal report must check the actual consumed revisions.
-At 15:36 KST, the medium shard passed. The 60 SQL and shell shards remained queued.
-That job snapshot does not establish terminal suite verdicts.
+The terminal evidence records all three consumed revisions.
+Medium passes 975/975. SQL passes 17,471/17,471.
+Shell records 3,256 passes, three failures, and 30 skips.
+Both build checks pass through artifact reuse. The overall workflow fails.
+The [complete CI report](ci_analysis_report_b755678cd_run38861566581_codex.md) records the failures, exact baseline, and attribution limits.
 CI on this unchanged source cannot establish that branch removal is safe.
 
 The final implementation check should cover these conditions.
