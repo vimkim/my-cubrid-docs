@@ -10,6 +10,21 @@ Created: 2026-10-16 KST. Last modified: 2026-10-19 KST.
 | --- | --- | --- | --- | --- |
 | [briefing-2026-10-19.md](briefing-2026-10-19.md) | 상위 3개 제안, 현재 근거, 결정 요청과 전체 subtask 링크 | 2026-10-16 | 2026-10-16 | 10/19 회의에서 우선순위·담당자·첫 조치를 결정하기 위해 |
 
+## Page buffer 벤치마크 비교 PPT — 10/19
+
+[PowerPoint 발표 파일](pagebuffer-benchmark-comparison-2026-10-19.pptx)과 [HTML 원본·미리보기](pagebuffer-benchmark-comparison-2026-10-19.html)는 CUBRID·MySQL(InnoDB)·PostgreSQL의 page buffer hit/miss를 추적하고 같은 부하에서 비교하기 위한 **25장**의 한국어 자료다. 본편 1–22장과 근거·수집 명령 부록 23–25장으로 구성했다. 특정 PR의 성능 결과가 아니며, CBRD-27193의 측정 전략과 [CBRD-27423의 기존 첫 실험 제안](../CBRD-27423/benchmark-strategy-2026-10-19.md)을 연결한다.
+
+- **선정 기준:** sysbench·YCSB·TPC-C/TPROC-C·공통 JDBC 부하·pgbench의 특징, 장단점, CUBRID 연동 범위와 실행 시간 예산을 비교한다. 공통 읽기 부하로 기준선을 만들고 hot-set/scan, 쓰기·트랜잭션 부하로 확장하는 순서를 제안한다. 미지원 driver 이식과 JDBC 호환성 검증을 완료된 작업처럼 표시하지 않는다.
+- **측정·공정성:** 엔진 buffer miss와 OS cache/장치 I/O를 구분한다. DB별 raw counter·구간 차이·비율 공식·집계 범위, 동일 업무·총 자원 비교와 동일 working-set/buffer 비율 진단의 차이, 처리량·p95/p99·read/op·장치 bytes/op·CPU·오류·반복 편차를 담는다.
+- **시간:** 단순 읽기 1회 13–20분, TPC-C 계열 개발 비교 40–90분은 제안 예산이다. 정식 TPC-C의 최소 측정 120분만 규격값이다. 기본 읽기 부하 1종·동시성 1개를 가정한 3 DB × 3 비율 × 3 반복 × 15분은 **6시간 45분**이며, CUBRID 후보 빌드 추가 시 총 9시간이다. 적재·index·통계 준비와 연동 개발은 별도다.
+- **근거·범위:** 2026-10-19에 확인한 공식 도구 저장소와 매뉴얼을 슬라이드에 연결하고 발표자 노트에 근거·해석 한계를 남겼다. CUBRID manual은 `develop`의 `3b6ae97bfbdc664b010ffa933ded5a05b291ae03`; 기본 CUBRID 지원 여부에 사용한 HammerDB README와 BenchBase `DatabaseType`은 각각 `2611d3c`·`1aae257`의 고정 링크다. 실제 엔진 revision·driver·서버 버전은 실행 전에 선정해야 한다. 이번 제작에서 benchmark·engine build·driver 호환성 실행은 하지 않았으며 DB 성능 순위·가상 실측 그래프는 없다. 작업 374의 회의 합의나 작업 269의 POC 완료를 뜻하지 않는다.
+
+PPTX는 16:9 정적 발표 파일이며 **텍스트와 도형을 편집할 수 있다**. HTML이 원본이며 키보드 이동·목차·도움말·직접 링크·위치 복원을 제공한다. PowerPoint에는 HTML의 읽기 조작·반응형 동작이 포함되지 않는다. `Noto Sans CJK KR`가 없는 환경에서 글꼴 대체로 줄바꿈이 달라질 수 있다.
+
+**검증:** headless Chromium에서 25장 모두 1600×900·1920×1080·1366×768·1280×720·1024×600의 text overflow와 요소 경계 검사, reduced motion, 키보드·목차·도움말·초점·직접 링크와 복원을 확인했다. console 오류·외부 의존 요청이 없고 JavaScript 미사용 상태에도 25장이 존재한다. PPTX의 slide·발표자 노트가 각각 25개이며 편집 가능한 text run 490개와 도형 좌표의 페이지 경계를 검사했다. LibreOffice headless로 PPTX를 다시 열어 PDF 25장을 만들고 슬라이드 원문과 추출 텍스트를 대조했다. 텍스트 누락과 페이지 밖 텍스트가 없으며 전체 축소 화면과 대표 장의 한글·표·수식을 확인했다. HTML 인쇄 결과도 25장이다. Microsoft PowerPoint 데스크톱에서의 직접 열람은 하지 않았다. 상대 링크·README 인덱스와 Git diff·incoming history의 문서 선택도 확인했다.
+
+HTML과 요청된 PPTX는 독자가 읽고 사용하는 최종 문서로 보존한다. PPTX는 요청된 전달 형식이며 HTML은 편집·탐색 가능한 원본이므로 둘 다 필요하다. 생성·검사 스크립트, 의존 패키지, 화면, 인쇄·렌더링 PDF와 임시 로그는 기존 `/.scratch/` 규칙 아래 `.scratch/buffer-benchmark-ppt/`에만 보관한다.
+
 ## 발표 슬라이드 — 10/19
 
 [triage-presentation-2026-10-19.html](triage-presentation-2026-10-19.html)은 팀장과 우선순위·담당·승인 후 첫 조치를 정하기 위한 독립 HTML이다. 본편 15장은 10–15분 설명을 가정했으며, 실제 발표 시간이나 승인 결과를 확정하지 않는다. 전체 79장 중 본편은 1–15장, 이슈 바로 찾기는 16–18장, 각 이슈의 문제·착수안·근거는 19–75장, 공통 용어·확인 범위는 76–79장이다. 예를 들어 [CBRD-27356 근거·한계](triage-presentation-2026-10-19.html#slide-21)로 바로 열 수 있다.
