@@ -1,14 +1,30 @@
 # CBRD-27193 — page buffer EPIC
 
-Created: 2026-10-16 KST. Last modified: 2026-10-16 KST.
+Created: 2026-10-16 KST. Last modified: 2026-10-19 KST.
 
-[JIRA EPIC](https://jira.cubrid.org/browse/CBRD-27193)의 정확성·운영성·성능 개선을 위한 회의 자료다. 10/19 회의는 상위 3개 항목의 우선순위·담당자·다음 조치를 결정하는 자리다.
+[JIRA EPIC](https://jira.cubrid.org/browse/CBRD-27193)의 정확성·운영성·성능 개선을 위한 회의 자료다. **10/19 17:00 KST 회의용 최신 자료는 [전체 19건 triage HTML](triage-2026-10-19.html)**이다. 모든 하위 이슈의 쉬운 설명·버그 수정/기능 구현 분류·제안 순서·담당 제안·첫 조치를 담았다. 기존 상위 3개 Markdown 브리핑은 10/16 기준의 제안으로 보존한다.
 
-관련 PR: 상위 3개 이슈 번호로 검색한 직접 관련 PR은 이번 조회에서 발견하지 못했다. 주변 변경은 [#8169](https://github.com/CUBRID/cubrid/pull/8169), [#7592](https://github.com/CUBRID/cubrid/pull/7592), [#7940](https://github.com/CUBRID/cubrid/pull/7940), [#7630](https://github.com/CUBRID/cubrid/pull/7630)을 대조했다. EPIC 전체를 대표하는 단일 PR 번호를 지정하지 않는다.
+10/16 관련 PR 기록: 당시 상위 3개 이슈 번호로 검색한 직접 관련 PR은 이번 조회에서 발견하지 못했다. 주변 변경은 [#8169](https://github.com/CUBRID/cubrid/pull/8169), [#7592](https://github.com/CUBRID/cubrid/pull/7592), [#7940](https://github.com/CUBRID/cubrid/pull/7940), [#7630](https://github.com/CUBRID/cubrid/pull/7630)을 대조했다. EPIC 전체를 대표하는 단일 PR 번호를 지정하지 않는다.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
 | [briefing-2026-10-19.md](briefing-2026-10-19.md) | 상위 3개 제안, 현재 근거, 결정 요청과 전체 subtask 링크 | 2026-10-16 | 2026-10-16 | 10/19 회의에서 우선순위·담당자·첫 조치를 결정하기 위해 |
+
+## 전체 이슈 triage HTML — 10/19 갱신
+
+[triage-2026-10-19.html](triage-2026-10-19.html)은 10/19 17시 회의에서 전체 이슈의 우선순위·담당·첫 조치를 결정하기 위한 독립 HTML이다. 2026-10-19 16:01–16:05 KST에 새로 읽은 JIRA 본문·댓글·PR 및 소스를 기준으로 작성했다. 제안 순서는 JIRA 변경이나 회의 승인이 아니다.
+
+- **전체 집합:** parent JQL `total=19`, 반환 19건과 EPIC의 연결 집합이 일치했다. 19건 모두 Open·Minor이며, CBRD-27370만 Daehyun Kim 담당이다. 댓글도 반환 수와 전체 수가 일치했다.
+- **분류·제안:** 버그 수정 12건(결함 후보의 안전성 조사·설명 정리 포함), 기능 구현 7건(조사·설계 포함). 먼저 6건·다음 7건·후속 6건이며, 순번은 검토 순서다. CBRD-27356의 9/29 debug 서버 중단 댓글을 반영해 첫 후보로 올렸고, CBRD-27263·27370이 뒤따른다. 기존 후보 CBRD-27262는 먼저 4번으로 유지했다.
+- **현재 소스:** 원격 develop `1dceac8add1801aef564b27624b8fbb5b6f62d59`는 기존 `4adcd409072b189f5d965bde5750c53176d90de0`보다 13커밋 앞이다. `page_buffer.c`, `page_buffer.h`, `double_write_buffer.cpp`는 두 revision에서 동일하며 읽은 로컬 파일도 HEAD와 일치했다. `system_parameter.c`의 차이는 무관한 빈 줄이다. 보고된 vacuum·postpone 실패 지점은 최신 소스로 대조했다.
+- **변경 상태 대조:** #7630의 국소 수정 병합과 CBRD-27356의 공통 정책 문제를 구분했다. #7592의 SHOW 카운터 폐기·NULL 반환을 반영해 CBRD-27266의 낡은 전제를 그대로 반복하지 않았다. CBRD-27267에는 실제 big 큐 생산 경로가 있어 “항상 비어 있음”으로 기술하지 않았다. CBRD-27630의 Lean 반례는 실제 엔진 재현과 구분했다.
+- **비어 있는 본문:** CBRD-27316·27398은 live JIRA 본문과 댓글이 없다. 27316의 조사 범위는 제안으로 표시했고, 27398은 Open·Draft [PR #7940](https://github.com/CUBRID/cubrid/pull/7940), HEAD `6bf4753eaa136fb87a4632deac44dc403ad0538e`의 설명과 잔여 검증을 사용했다. 19개 번호별 PR 검색에서 27356은 #7630, 27398은 #7940이 반환됐으며 다른 번호는 0건이었다. 번호 검색만으로 관련 수정 부재를 증명하지 않는다.
+
+**문서 검증:** headless Chromium에서 JIRA 집합=표=상세 19건, 분류 12/7건, 단계 6/7/6건을 확인했다. 검색·필터 초기화·이슈 이동·전체 펼치기/접기, 320·390·768·1024·1440px 화면의 페이지 가로 넘침 없음, 밝은/어두운 화면과 console 오류 없음, 외부 의존 요청 없음, JavaScript 없이 전체 목록과 기본 펼치기 동작을 확인했다. 필터·접힘 상태와 무관한 인쇄를 검사했고, JavaScript 사용/미사용 PDF 모두 19건의 문제·영향·변경·근거·불확실성·결정·첫 조치가 원문대로 포함됨을 추출 텍스트로 대조했다. README Markdown 검사, 보존 문서 링크와 기존 Markdown 인덱스 coverage도 통과했다.
+
+HTML은 독자가 직접 읽는 최종 회의 자료이며 CSS·JavaScript·favicon을 포함한다. 별도 지원 파일이나 중복 보고서는 추가하지 않았다. 원시 응답·본문 캐시·생성 스크립트·브라우저 검사·이미지·PDF는 ignored `.scratch/triage-20261019/`에만 보관한다. 기존 `/.scratch/` 규칙을 재사용하며 Git 추적 파일이 아님을 확인한다.
+
+이번 준비에서 엔진 빌드·재현·오류 주입·CI·벤치마크·Lean 검증은 새로 실행하지 않았다. 과거 결과의 기준 빌드·미확정 도달성·배포 범위를 HTML에 구분했다. 작업 373의 실제 회의 결정과 작업 374의 벤치마크 전략 합의는 아직 별도 결과다.
 
 ## 검증 기록
 
