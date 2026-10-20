@@ -1,6 +1,6 @@
 # CBRD-27424: standalone workspace OOS
 
-Last modified: 2026-10-17 (Asia/Seoul).
+Last modified: 2026-10-21 (Asia/Seoul).
 
 [PR #7925](https://github.com/CUBRID/cubrid/pull/7925) supports OOS storage in standalone object loading and CSQL workspace writes.
 
@@ -20,6 +20,8 @@ The [recovered analysis for the same run](ci_analysis_report_6a487cdb6_collector
 
 The [SA inline-row review assessment](review-comment-4257963742_b755678cd_ste.md) explains review comment 4257963742 in plain English. It separates confirmed source behavior, the reviewer's experiments, preservation requirements, and the benefits and costs of accepting the proposed change. Snapshot: 2026-10-16.
 
+같은 댓글의 전체 맥락은 [한글 인터랙티브 HTML 해설](pr7925-review-comment-context-ko-20261021.html)에서 볼 수 있습니다. 원래 문제부터 원본 A와 재인코딩 결과 B의 선택, 사실과 주장, 추론의 한계, 보존 계약 변경과 후속 검증을 설명합니다. 저장 경로 비교 버튼과 버퍼 생존 기간·패딩 비트 그림을 포함합니다. 댓글 당시 `b755678cd`와 후속 변경 `6a487cdb6`를 구분하며, 문서 작성 중 엔진 테스트를 재실행하지 않았습니다. Created: 2026-10-21, Asia/Seoul.
+
 ## File index
 
 The [accepted SA preservation decision](sa-inline-preservation-decision-20261017.md) revises the original-byte guarantee for prepared workspace rows. It records changed engine `6a487cdb6`, the passing local checks, and matched loader measurements. Accepted: 2026-10-17.
@@ -38,7 +40,7 @@ Dates for older unindexed files come from their Git history. Raw logs retain nat
 | [CBRD-27424-sa-loaddb-diagnosis_f4299ac_codex.md](CBRD-27424-sa-loaddb-diagnosis_f4299ac_codex.md) | Historical standalone loader diagnosis at f4299ac | 2026-09-15 | 2026-09-15 | Explain the original missing OOS conversion path |
 | [CBRD-27424-sa-workspace-oos_e24b458_codex.md](CBRD-27424-sa-workspace-oos_e24b458_codex.md) | Historical implementation and reproduction at e24b458 | 2026-09-11 | 2026-09-11 | Document standalone workspace OOS implementation |
 | [CBRD-27424-workspace-oos-revert-rationale_a142503dc_codex.md](CBRD-27424-workspace-oos-revert-rationale_a142503dc_codex.md) | Historical direct-byte benchmark and restoration rationale | 2026-10-07 | 2026-10-07 | Explain the measured decision to restore attrinfo conversion |
-| [README.md](README.md) | Ticket overview and file index | 2026-10-07 | 2026-10-17 | Help readers find the ticket documents and evidence |
+| [README.md](README.md) | Ticket overview and file index | 2026-10-07 | 2026-10-21 | Help readers find the ticket documents and evidence |
 | [ci-fix/pr-7925/index.md](ci-fix/pr-7925/index.md) | Historical local CI-repair index | 2026-09-15 | 2026-09-15 | Explain retained repair artifacts |
 | [ci_analysis_report_e24b458_codex.md](ci_analysis_report_e24b458_codex.md) | Historical exact-revision CI analysis at e24b458 | 2026-09-15 | 2026-09-15 | Preserve CI evidence for the original implementation |
 | [ci_analysis_report_fe1a918_codex.md](ci_analysis_report_fe1a918_codex.md) | Historical exact-revision CI analysis at fe1a918 | 2026-09-15 | 2026-09-15 | Assess CI after the Python dependency change |

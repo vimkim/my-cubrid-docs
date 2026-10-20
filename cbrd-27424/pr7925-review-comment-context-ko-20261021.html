@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="CUBRID PR #7925의 원래 행 유지 분기: 배경, 실행 흐름, 리뷰 댓글의 사실과 주장, 논리의 한계와 후속 변경을 설명합니다.">
+  <title>PR #7925 리뷰 댓글, 처음부터 이해하기</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%23255b7a'/%3E%3Cpath d='M15 18h34M15 32h34M15 46h20' stroke='%23fff' stroke-width='5'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      --bg:#f2f5f7; --surface:#fff; --surface2:#eaf0f4; --border:#cbd7df;
+      --text:#203344; --text-dim:#506778; --accent:#255b7a; --accent-soft:#e4eff6;
+      --green:#246950; --green-soft:#e7f3ec; --amber:#8b5c13; --amber-soft:#fbf0db;
+      --red:#9a403c; --red-soft:#faeeec;
+      --font-body:'Noto Sans CJK KR','Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+      --font-mono:'IBM Plex Mono','Noto Sans Mono',Consolas,monospace;
+    }
+    @media(prefers-color-scheme:dark) {
+      :root {
+        --bg:#111b23; --surface:#182630; --surface2:#213440; --border:#3b5263;
+        --text:#edf3f7; --text-dim:#b0c3d1; --accent:#8fc4e8; --accent-soft:#243e50;
+        --green:#90d1b7; --green-soft:#213d34; --amber:#eac176; --amber-soft:#403623;
+        --red:#efaca5; --red-soft:#402d2b;
+      }
+    }
+    * { box-sizing:border-box; }
+    html { font-size:17px; scroll-behavior:smooth; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.85; word-break:keep-all; overflow-wrap:break-word; }
+    a { color:var(--accent); text-decoration-thickness:1px; text-underline-offset:.18em; }
+    a:hover { text-decoration-thickness:2px; }
+    :focus-visible { outline:3px solid var(--accent); outline-offset:4px; }
+    button,input,summary { font:inherit; }
+    button,summary,label { -webkit-tap-highlight-color:transparent; }
+    button { cursor:pointer; }
+    h1,h2,h3,p,figure,ul,ol,dl { margin:0; }
+    h1,h2,h3 { text-wrap:balance; line-height:1.45; letter-spacing:-.035em; }
+    h1 { font-size:clamp(2rem,4.5vw,3.05rem); font-weight:700; }
+    h2 { font-size:1.65rem; font-weight:700; }
+    h3 { font-size:1.16rem; font-weight:700; }
+    p + p { margin-top:.8rem; }
+    code { font-family:var(--font-mono); font-size:.82rem; overflow-wrap:anywhere; padding:.12em .3em; background:var(--surface2); border-radius:3px; }
+    strong { font-weight:700; }
+    ul,ol { padding-left:1.35rem; }
+    li + li { margin-top:.45rem; }
+    .skip { position:absolute; top:-5rem; left:1rem; padding:.5rem 1rem; background:var(--surface); z-index:10; }
+    .skip:focus { top:.5rem; }
+    .layout { max-width:1280px; margin:auto; padding:2.5rem 2rem 5rem; display:grid; grid-template-columns:180px minmax(0,1fr); gap:3rem; }
+    .toc { position:sticky; top:2rem; align-self:start; max-height:calc(100dvh - 4rem); overflow:auto; }
+    .toc-title { color:var(--text-dim); font-size:.76rem; letter-spacing:.06em; padding:.5rem .65rem 1rem; }
+    .toc a { display:block; color:var(--text-dim); font-size:.84rem; line-height:1.5; text-decoration:none; padding:.65rem .7rem; border-left:2px solid transparent; }
+    .toc a.active { border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
+    main,section,.two-col > *, .flow-box { min-width:0; }
+    header { padding-bottom:2.5rem; border-bottom:1px solid var(--border); }
+    .context { display:flex; flex-wrap:wrap; gap:.6rem 1.1rem; color:var(--text-dim); font-size:.8rem; margin-bottom:1rem; }
+    .lead { font-size:1.12rem; max-width:44rem; margin-top:1.4rem; }
+    .verdict { margin-top:1.6rem; background:var(--accent-soft); padding:1.1rem 1.3rem; border:1px solid var(--border); }
+    .verdict strong { color:var(--accent); }
+    .small { font-size:.84rem; color:var(--text-dim); }
+    .section { padding-top:3.2rem; scroll-margin-top:1.5rem; }
+    .section-intro { margin-top:.9rem; max-width:44rem; }
+    .block { margin-top:1.5rem; }
+    .two-col { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+    .sheet { background:var(--surface); border:1px solid var(--border); padding:1.35rem; border-radius:6px; }
+    .sheet p,.sheet ul { margin-top:.65rem; }
+    .term { display:inline-flex; align-items:center; justify-content:center; width:2.25rem; height:2.25rem; font-family:var(--font-mono); font-weight:700; color:var(--accent); background:var(--accent-soft); margin-bottom:.7rem; }
+    .term-b { color:var(--green); background:var(--green-soft); }
+    .note { background:var(--surface2); padding:1rem 1.2rem; margin-top:1rem; border-radius:4px; }
+    .note.good { background:var(--green-soft); }
+    .note.caution { background:var(--amber-soft); }
+    .glossary { margin-top:1rem; display:grid; grid-template-columns:7.2rem minmax(0,1fr); gap:.6rem 1rem; }
+    .glossary dt { font-weight:700; }
+    .glossary dd { margin:0; color:var(--text-dim); }
+    details { margin-top:1rem; background:var(--surface); border:1px solid var(--border); padding:.85rem 1.15rem; border-radius:5px; }
+    summary { cursor:pointer; font-weight:700; }
+    details[open] summary { margin-bottom:.8rem; }
+    .tabs { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1.2rem; }
+    .tabs button { color:var(--text); background:var(--surface); border:1px solid var(--border); padding:.65rem 1rem; border-radius:5px; font-size:.9rem; min-height:44px; }
+    .tabs button[aria-pressed=true] { color:var(--accent); border:2px solid var(--accent); padding:calc(.65rem - 1px) calc(1rem - 1px); background:var(--accent-soft); font-weight:700; }
+    .flow { background:var(--surface); border:1px solid var(--border); padding:1.4rem; margin-top:.8rem; }
+    .flow-heading { display:flex; align-items:baseline; justify-content:space-between; gap:.6rem; flex-wrap:wrap; padding-bottom:1rem; }
+    .flow-list { padding:0; list-style:none; display:grid; gap:0; }
+    .flow-list > li { position:relative; margin:0; padding:0 0 1.15rem 2.6rem; }
+    .flow-list > li:not(:last-child)::after { content:''; position:absolute; top:2rem; bottom:.2rem; left:.85rem; border-left:1px solid var(--border); }
+    .step { position:absolute; left:0; top:.12rem; display:grid; place-items:center; width:1.8rem; height:1.8rem; border:1px solid var(--border); border-radius:50%; font-size:.76rem; color:var(--text-dim); background:var(--bg); }
+    .flow-box { border:1px solid var(--border); border-radius:4px; padding:.8rem 1rem; }
+    .flow-box p { margin-top:.25rem; font-size:.9rem; }
+    .flow-box.emphasis { border-color:var(--amber); background:var(--amber-soft); }
+    .flow-box.chosen { border-color:var(--green); background:var(--green-soft); }
+    .flow-result { padding:1rem 1.15rem; background:var(--accent-soft); }
+    figcaption { margin-top:.8rem; font-size:.82rem; line-height:1.7; color:var(--text-dim); }
+    .evidence { font-size:.7rem; line-height:1.5; display:inline-block; padding:.2rem .55rem; border:1px solid currentColor; border-radius:3px; white-space:nowrap; font-weight:700; }
+    .fact { color:var(--green); background:var(--green-soft); }
+    .observed { color:var(--accent); background:var(--accent-soft); }
+    .inference { color:var(--amber); background:var(--amber-soft); }
+    .table-wrap { overflow:auto; border:1px solid var(--border); background:var(--surface); }
+    table { border-collapse:collapse; width:100%; font-size:.9rem; line-height:1.75; }
+    th,td { text-align:left; vertical-align:top; padding:.9rem 1rem; border-bottom:1px solid var(--border); }
+    th { background:var(--surface2); font-weight:700; }
+    tr:last-child td { border-bottom:0; }
+    caption { text-align:left; padding:.8rem 1rem; color:var(--text-dim); font-size:.82rem; }
+    .evidence-table { min-width:640px; }
+    .evidence-table th:nth-child(1) { width:29%; }
+    .evidence-table th:nth-child(2) { width:18%; }
+    .argument { margin-top:1.4rem; padding:1.35rem; border:1px solid var(--border); background:var(--surface); }
+    .argument h3 { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem .8rem; }
+    .argument p { margin-top:.8rem; }
+    .argument .counter { display:inline-block; color:var(--amber); font-family:var(--font-mono); font-size:.85rem; }
+    .logic { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); gap:.75rem; align-items:stretch; margin-top:1rem; }
+    .logic > div { padding:.9rem 1rem; background:var(--surface2); min-width:0; }
+    .logic > span { align-self:center; color:var(--amber); font-weight:700; }
+    .logic b { display:block; font-size:.76rem; color:var(--text-dim); margin-bottom:.35rem; }
+    .lifetime { display:grid; grid-template-columns:6.2rem repeat(4,minmax(0,1fr)); gap:.55rem; align-items:center; margin-top:1rem; }
+    .lifetime .phase { font-size:.72rem; line-height:1.55; text-align:center; color:var(--text-dim); }
+    .lifetime .row-label { font-size:.84rem; font-weight:700; }
+    .lifetime .bar { display:flex; align-items:center; justify-content:center; font-size:.79rem; line-height:1.5; min-height:3rem; padding:.4rem; border-radius:3px; text-align:center; border:1px solid var(--accent); background:var(--accent-soft); color:var(--accent); }
+    .lifetime .bar-old { grid-column:2/4; }
+    .lifetime .bar-new { grid-column:2/6; }
+    .released { font-size:.75rem; color:var(--text-dim); grid-column:4/6; text-align:center; }
+    .byte-example { padding:1.25rem; border:1px solid var(--border); background:var(--surface); }
+    .byte-pair { margin-top:1rem; display:grid; gap:.6rem; }
+    .byte-line { display:grid; grid-template-columns:7rem minmax(0,1fr); align-items:baseline; gap:.5rem; }
+    .byte-line code { font-size:1.05rem; letter-spacing:.08em; background:transparent; }
+    .bit-panel { margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border); }
+    .bits { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:.25rem; margin-top:.65rem; }
+    .bit { text-align:center; padding:.55rem .1rem; border:1px solid var(--border); background:var(--surface2); font-family:var(--font-mono); font-size:1rem; }
+    .bit.meaningful { border-color:var(--green); background:var(--green-soft); color:var(--green); font-weight:700; }
+    .bit small { display:block; font-family:var(--font-body); font-size:.66rem; line-height:1.5; color:var(--text-dim); }
+    .mask-on .bit.unused { opacity:.3; }
+    .mask-control { display:flex; align-items:center; gap:.65rem; margin-top:1rem; font-size:.88rem; cursor:pointer; }
+    .mask-control input { width:1.1rem; height:1.1rem; accent-color:var(--green); flex-shrink:0; }
+    .timeline { margin-top:1.3rem; border-left:2px solid var(--border); padding-left:1.4rem; display:grid; gap:1.45rem; }
+    .timeline time { font-size:.78rem; color:var(--text-dim); }
+    .timeline p { margin-top:.25rem; }
+    .guarantee { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:1rem; margin-top:1.3rem; }
+    .guarantee > div { padding:1.1rem; background:var(--surface); border:1px solid var(--border); }
+    .guarantee ul { margin-top:.7rem; font-size:.93rem; }
+    .sources { font-size:.87rem; line-height:1.75; }
+    .sources li { scroll-margin-top:4rem; padding-left:.2rem; }
+    .sources li + li { margin-top:.85rem; }
+    .source-note { display:block; color:var(--text-dim); font-size:.79rem; }
+    .footer { margin-top:3rem; border-top:1px solid var(--border); padding-top:1.2rem; font-size:.78rem; color:var(--text-dim); }
+    .ref { font-size:.8rem; white-space:nowrap; }
+    @media(max-width:1000px) {
+      .layout { display:block; padding:0 1.25rem 3rem; }
+      .toc { display:flex; overflow-x:auto; gap:.2rem; position:sticky; top:0; z-index:5; margin:0 -1.25rem; padding:.65rem 1.25rem; border-bottom:1px solid var(--border); background:var(--bg); max-height:none; }
+      .toc-title { display:none; }
+      .toc a { white-space:nowrap; flex-shrink:0; border-left:0; border-bottom:2px solid transparent; padding:.45rem .7rem; font-size:.77rem; }
+      .toc a.active { border-bottom-color:var(--accent); }
+      header { padding-top:2rem; }
+      .section { scroll-margin-top:5.5rem; }
+    }
+    @media(max-width:620px) {
+      html { font-size:16px; }
+      .layout { padding-left:1rem; padding-right:1rem; }
+      .toc { margin-left:-1rem; margin-right:-1rem; padding-left:1rem; padding-right:1rem; }
+      .two-col,.guarantee { grid-template-columns:1fr; }
+      h2 { font-size:1.4rem; }
+      .sheet,.argument,.flow,.byte-example { padding:1rem; }
+      .flow-list > li { padding-left:2.1rem; }
+      .flow-box { padding:.75rem; }
+      .logic { grid-template-columns:1fr; gap:.35rem; }
+      .logic > span { justify-self:center; transform:rotate(90deg); }
+      .lifetime { grid-template-columns:4.4rem repeat(4,minmax(0,1fr)); gap:.3rem; }
+      .lifetime .phase { font-size:.69rem; }
+      .lifetime .bar { font-size:.73rem; }
+      .byte-line { grid-template-columns:1fr; gap:0; }
+      .glossary { grid-template-columns:1fr; gap:.2rem; }
+      .glossary dd { margin-bottom:.65rem; }
+      .tabs button { flex:1 1 auto; }
+      .bit small { font-size:.69rem; }
+    }
+    @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } * { transition:none!important; animation:none!important; } }
+    @media print {
+      :root { --bg:#fff; --surface:#fff; --surface2:#f1f3f4; --text:#152633; --text-dim:#40505d; --border:#aab8c2; --accent:#255b7a; --accent-soft:#e4eff6; --green:#246950; --green-soft:#e7f3ec; --amber:#8b5c13; --amber-soft:#fbf0db; }
+      .layout { display:block; padding:0; } .toc,.skip,.mask-control { display:none; }
+      .section { padding-top:1.6rem; } .sheet,.argument,.byte-example { break-inside:avoid; }
+      .table-wrap { overflow:visible; } .evidence-table { min-width:0; } a { color:inherit; }
+      .tabs button { font-size:.75rem; } h1 { font-size:2rem; } body { font-size:.86rem; }
+    }
+  </style>
+</head>
+<body>
+<a class="skip" href="#main">본문으로 이동</a>
+<div class="layout">
+  <nav class="toc" aria-label="문서 목차">
+    <div class="toc-title">이 순서로 읽어보세요</div>
+    <a href="#background" class="active">1. 원래 문제</a>
+    <a href="#two-rows">2. 원본 A와 결과 B</a>
+    <a href="#paths">3. 저장 경로 비교</a>
+    <a href="#claims">4. 사실과 주장</a>
+    <a href="#reasoning">5. 논리가 약해지는 곳</a>
+    <a href="#decision">6. 원래 요구와 변경</a>
+    <a href="#filter">7. 삭제와 사전 판정</a>
+    <a href="#after">8. 현재 반영 결과</a>
+    <a href="#sources">근거 자료</a>
+  </nav>
+  <main id="main">
+    <header>
+      <div class="context"><span>CUBRID PR #7925</span><span>댓글 #4257963742</span><span>한글 해설 · 2026-10-21</span></div>
+      <h1>새 행을 이미 만들었는데,<br>왜 원래 행을 저장할까?</h1>
+      <p class="lead">리뷰어는 이 질문으로 SA 전용 분기를 재검토하자고 했습니다. 이해의 핵심은 <strong>새 행을 만드는 일</strong>과 <strong>어느 행을 저장할지 고르는 일</strong>이 서로 다른 단계라는 점입니다.</p>
+      <div class="verdict"><strong>평가:</strong> 재인코딩을 피하지 못한다는 지적은 맞습니다. 다만 버퍼를 일찍 해제하는 효과가 빠졌고, 일부 사례와 테스트 결과만으로 모든 경우의 불필요성을 입증할 수는 없습니다.</div>
+      <p class="small block">댓글은 <code>b755678cd</code>의 코드를 대상으로 합니다. 현재 PR의 <code>6a487cdb6</code>에는 해당 분기를 제거한 변경이 이미 반영돼 있습니다. 이 문서는 <strong>당시 주장</strong>과 <strong>이후 확인된 결과</strong>를 구분합니다. <a href="#sources" class="ref">근거 보기</a></p>
+    </header>
+
+    <section class="section" id="background" aria-labelledby="background-title">
+      <h2 id="background-title">1. 이 PR은 어떤 문제를 고치고 있었나?</h2>
+      <p class="section-intro">OOS는 큰 컬럼 값을 행 바깥의 별도 저장 공간으로 옮기는 기능입니다. 행 안에는 그 값을 찾아갈 참조가 남습니다. 작은 값은 행 안에 그대로 남을 수 있습니다.</p>
+      <div class="two-col block">
+        <div class="sheet"><h3>기존 standalone 적재의 문제</h3><p><code>loaddb -S</code>와 일부 <code>csql -S</code> 쓰기는 workspace에서 만든 행을 저장할 때 OOS 변환을 건너뛰었습니다.</p><p class="small">값을 다시 읽으면 맞더라도, 큰 값을 분리해야 한다는 저장 정책은 적용되지 않을 수 있었습니다.</p></div>
+        <div class="sheet"><h3>PR이 연결한 처리</h3><p>실제 저장할 목적지를 정한 뒤 기존 OOS 준비·최종화 경로를 거치게 했습니다.</p><p class="small">이 과정은 OOS 선택뿐 아니라 행을 읽고 다시 직렬화하는 작업도 수행합니다. <a href="#src-pr" class="ref">[1]</a></p></div>
+      </div>
+      <div class="note"><strong>리뷰 댓글의 범위:</strong> OOS 기능 전체를 없애자는 의견이 아닙니다. OOS 준비를 마쳤지만 값이 모두 행 안에 남은 경우, SA에서만 원래 행을 다시 선택하는 처리가 필요한지 묻는 의견입니다.</div>
+      <details><summary>용어를 먼저 확인하고 싶다면</summary>
+        <dl class="glossary">
+          <dt>workspace</dt><dd>객체를 DB에 저장하기 전에 메모리에서 관리하는 영역입니다.</dd>
+          <dt>직렬화</dt><dd>컬럼 값들을 저장 가능한 바이트 배열로 만드는 일입니다. 재인코딩은 그 배열을 읽어 다시 만드는 일입니다.</dd>
+          <dt>heap / index</dt><dd>행이 저장되는 공간과, 그 행을 빠르게 찾기 위한 인덱스입니다.</dd>
+          <dt>inline</dt><dd>컬럼 값이 OOS로 분리되지 않고 행 안에 있는 상태입니다.</dd>
+          <dt>SA / 서버</dt><dd>SA는 standalone 실행입니다. 여기서 서버 경로는 client/server 실행의 서버 쪽 코드입니다.</dd>
+          <dt>repid</dt><dd>행의 스키마 표현 버전입니다. 컬럼 추가 등으로 달라질 수 있습니다.</dd>
+          <dt>CHN</dt><dd>캐시 변경 번호입니다. 저장 바이트 중에서도 의미를 보존해야 하는 헤더 정보입니다.</dd>
+          <dt>버퍼 소유자</dt><dd>임시 메모리가 언제까지 유효하고 언제 해제되는지를 관리하는 객체입니다.</dd>
+        </dl>
+      </details>
+    </section>
+
+    <section class="section" id="two-rows" aria-labelledby="two-rows-title">
+      <h2 id="two-rows-title">2. 같은 행을 표현하는 버퍼가 두 개 생깁니다</h2>
+      <p class="section-intro">사용자가 행을 두 번 INSERT한 것이 아닙니다. <strong>한 행을 저장하기 위해 메모리에 두 가지 바이트 표현이 존재하는 상황</strong>입니다.</p>
+      <div class="two-col block">
+        <div class="sheet"><span class="term">A</span><h3>workspace가 보낸 원래 행</h3><p>객체를 workspace에서 이미 직렬화한 결과입니다. OOS 준비 함수에 들어가기 전부터 존재합니다.</p><p class="small">이 문서에서 “원본”은 원래 입력 버퍼 A를 뜻합니다.</p></div>
+        <div class="sheet"><span class="term term-b">B</span><h3>OOS 준비 함수가 다시 만든 행</h3><p><code>heap_prepare_oos_record</code>가 A의 컬럼 값을 읽고, 저장 배치를 정하고, 새 버퍼에 직렬화한 결과입니다.</p><p class="small">헤더도 원본에서 전달합니다. CHN 보존이 원본 선택 분기에만 의존하는 구조는 아닙니다. <a href="#src-prepare" class="ref">[3]</a></p></div>
+      </div>
+      <div class="note good"><strong>B를 만들었다고 OOS가 반드시 생기는 것은 아닙니다.</strong> 준비 결과 모든 값이 inline으로 남아도 B는 만들어집니다. 바로 이 경우의 A/B 선택이 댓글의 쟁점입니다.</div>
+    </section>
+
+    <section class="section" id="paths" aria-labelledby="paths-title">
+      <h2 id="paths-title">3. 세 경로를 눌러 비교해 보세요</h2>
+      <p class="section-intro">아래는 <strong>현재 표현 버전의 workspace 행이며, 준비 전후 모두 OOS가 없는 경우</strong>입니다. 모든 탭에서 2단계의 B 생성은 이미 실행됩니다.</p>
+      <div class="tabs" role="group" aria-label="저장 경로 선택">
+        <button type="button" data-path="old-sa" aria-pressed="true" aria-controls="path-view">댓글 당시 SA</button>
+        <button type="button" data-path="old-server" aria-pressed="false" aria-controls="path-view">댓글 당시 서버</button>
+        <button type="button" data-path="current" aria-pressed="false" aria-controls="path-view">현재 SA·서버</button>
+      </div>
+      <figure>
+        <div class="flow" id="path-view" aria-live="polite" aria-atomic="true">
+          <div class="flow-heading"><h3 id="path-title">댓글 당시 SA · 원본 유지 조건 충족</h3><code id="path-revision">b755678cd</code></div>
+          <ol class="flow-list" id="flow-list">
+            <li><span class="step" aria-hidden="true">1</span><div class="flow-box"><strong>원본 A를 받습니다</strong><p>저장 목적지가 결정된 뒤 OOS 처리 경계로 들어옵니다.</p></div></li>
+            <li><span class="step" aria-hidden="true">2</span><div class="flow-box emphasis"><strong>A를 읽고 새 행 B를 만듭니다</strong><p>컬럼 읽기·저장 배치 결정·새 버퍼 직렬화 비용이 이미 발생합니다.</p></div></li>
+            <li><span class="step" aria-hidden="true">3</span><div class="flow-box"><strong>이제 원본 유지 조건을 검사합니다</strong><p>SA 전용 조건이 맞으므로 B를 최종화한 뒤 B 버퍼를 해제하고, A를 검증합니다.</p></div></li>
+            <li><span class="step" aria-hidden="true">4</span><div class="flow-box chosen"><strong>원본 A를 heap/index 처리에 사용합니다</strong><p>이미 만든 B는 저장에 사용하지 않습니다.</p></div></li>
+          </ol>
+          <div class="flow-result" id="path-result"><strong>선택: A</strong> · B 생성 비용은 그대로이며, B의 메모리는 저장 처리 전에 해제됩니다.</div>
+        </div>
+        <figcaption>그림의 주장: 원본 유지 분기는 B 생성 여부를 정하지 않고, 생성된 뒤 어느 버퍼를 쓸지 정합니다. <a href="#src-helper">당시 코드 [2]</a> · <a href="#src-change">후속 변경 [8]</a></figcaption>
+      </figure>
+      <details><summary>원래 SA 분기의 정확한 조건과 최종화의 역할</summary>
+        <p>SA 빌드이고, workspace 출처이며, 호출자가 전달한 <code>pending</code> 소유자가 없고, A와 B에 모두 OOS가 없고, 두 행의 repid가 같아야 합니다. 바깥 조건에서는 root/system class와 길이가 0 이하인 입력 등을 제외합니다.</p>
+        <p><code>heap_oos_finalize_record</code>는 inline 행에도 다음 쓰기를 위한 OOS publication 상태를 초기화합니다. 원래 분기와 공통 경로 모두 이 최종화를 수행합니다. 분기 삭제는 이 작업을 생략한다는 뜻이 아닙니다. <a href="#src-finalize" class="ref">[4]</a></p>
+      </details>
+      <noscript><div class="note">버튼 비교에는 JavaScript가 필요합니다. 댓글 당시 SA는 B를 만든 뒤 A를 저장하고, 당시 서버와 현재 공통 경로는 B를 저장합니다. 공통 경로의 B는 저장 처리가 끝나 소유자가 소멸할 때 해제됩니다.</div></noscript>
+    </section>
+
+    <section class="section" id="claims" aria-labelledby="claims-title">
+      <h2 id="claims-title">4. 댓글의 근거와 결론을 분리하면</h2>
+      <p class="section-intro">코드에서 직접 보이는 사실, 리뷰어가 실행했다고 보고한 관찰, 그 둘을 바탕으로 한 판단은 증거의 성격이 다릅니다.</p>
+      <div class="table-wrap block">
+        <table class="evidence-table">
+          <caption>“관찰” 표시는 거짓이라는 뜻이 아닙니다. 이 HTML 작성 중 그 실험을 다시 실행하지 않았다는 뜻입니다.</caption>
+          <thead><tr><th scope="col">댓글 내용의 요지</th><th scope="col">종류</th><th scope="col">확인되는 범위</th></tr></thead>
+          <tbody>
+            <tr><td>원본 유지 판정 전에 재인코딩한다.</td><td><span class="evidence fact">코드 사실</span></td><td>맞습니다. 이 분기로 앞선 B 생성 비용을 피할 수 없습니다. <a href="#src-helper" class="ref">[2]</a></td></tr>
+            <tr><td>SA와 서버가 서로 다른 버퍼를 선택한다.</td><td><span class="evidence fact">코드 사실</span></td><td>해당 SA 조건을 충족하는 입력에서 맞습니다. 경로가 다르다는 사실만으로 오류가 되지는 않습니다.</td></tr>
+            <tr><td>여러 타입을 비교했더니 패딩만 달랐다.</td><td><span class="evidence observed">리뷰어 관찰</span></td><td>VARCHAR·CHAR·컬렉션·JSON·NUMERIC/DATETIME·압축 문자열 표본에 대한 보고입니다. 모든 입력을 포괄하는 증명은 아닙니다. <a href="#src-comment" class="ref">[0]</a></td></tr>
+            <tr><td>분기를 막아도 13개 workspace 사례와 21개 저장행 비교를 포함한 SA 테스트가 통과했다.</td><td><span class="evidence observed">리뷰어 관찰</span></td><td>실행한 입력과 assertion으로는 변경을 검출하지 못했다는 근거입니다. 모든 헤더·바이트·수명 계약을 검사했다는 뜻은 아닙니다.</td></tr>
+            <tr><td>분기는 비용만 더하고 의미 없는 바이트만 지킨다.</td><td><span class="evidence inference">해석·판단</span></td><td>조기 메모리 해제 효과와 표본 범위, 당시 보존 요구를 함께 고려해야 합니다.</td></tr>
+            <tr><td>분기를 제거해 공통 경로를 쓰거나, 필요성을 입증하고 판정을 앞당기자.</td><td><span class="evidence inference">설계 제안</span></td><td>합리적인 검토 방향입니다. 두 대안은 바꾸는 동작과 검증할 내용이 다릅니다.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="reasoning" aria-labelledby="reasoning-title">
+      <h2 id="reasoning-title">5. 어느 부분에서 논리가 약해지나?</h2>
+      <p class="section-intro">댓글에는 어떤 명제를 인정하고 동시에 부정하는 식의 명백한 자기모순은 없습니다. 주로 <strong>비교에서 빠진 효과</strong>와 <strong>관찰보다 넓어진 결론</strong>이 있습니다. 댓글 자체도 단정적인 오류 선언보다는 재검토 요청으로 읽는 편이 정확합니다.</p>
+
+      <article class="argument">
+        <h3><span class="counter">가.</span> 버퍼 해제는 없어지는 비용이 아닙니다</h3>
+        <p>원래 SA 분기는 B를 바로 해제합니다. 분기를 없애면 B를 저장 처리에 사용하고 나중에 해제합니다. <strong>분기를 지워도 B 메모리의 해제 자체는 필요합니다.</strong></p>
+        <figure>
+          <div class="lifetime" role="img" aria-label="준비된 B 버퍼의 생존 기간 개념도. 원래 SA는 준비와 판정 뒤 해제하며, 공통 경로는 heap 및 index 처리와 소유자 종료까지 유지한다.">
+            <div></div><div class="phase">B 생성</div><div class="phase">최종화·선택</div><div class="phase">heap/index<br>처리</div><div class="phase">소유자<br>종료</div>
+            <div class="row-label">원래 SA</div><div class="bar bar-old">B 유지 → 조기 해제</div><div class="released">B는 이미 해제됨</div>
+            <div class="row-label">공통 경로</div><div class="bar bar-new">B 유지 → 저장 처리 후 해제</div>
+          </div>
+          <figcaption>그림의 주장: 차이는 해제 유무가 아니라 해제 시점입니다. 막대는 단계 순서만 나타내며 실제 시간·메모리 측정값이 아닙니다. <a href="#src-memory">메모리 해제 근거 [5]</a></figcaption>
+        </figure>
+        <p>따라서 조기 해제는 저장 처리 중 살아 있는 임시 메모리를 줄일 수 있습니다. 한편 원본 A를 추가 검증하는 호출은 실제로 있습니다. 이 inline 경우 검증은 기본 헤더 확인 뒤 끝나므로 컬럼 전체를 다시 읽는 작업은 아닙니다. <a href="#src-finalize" class="ref">[4]</a></p>
+        <div class="note good"><strong>정확한 표현:</strong> 이 분기는 재인코딩 비용을 줄이지 못합니다. 대신 원본을 선택하고 임시 버퍼를 일찍 해제합니다. 제거하면 선택·검증 처리는 단순해지지만 B의 생존 기간은 길어집니다.</div>
+      </article>
+
+      <article class="argument">
+        <h3><span class="counter">나.</span> 패딩 차이는 이해할 수 있지만, 표본은 표본입니다</h3>
+        <p>예를 들어 고정 컬럼이 하나이고 값이 NULL이 아니라면, bound bit 영역에서는 해당 컬럼의 비트 하나만 값의 유무를 나타냅니다. 4바이트로 정렬된 나머지 공간은 그 컬럼의 의미를 결정하지 않습니다. <a href="#src-bits" class="ref">[6]</a></p>
+        <figure class="byte-example block">
+          <h3>리뷰어가 제시한 예: <code>(id, v) = (1, 'abc')</code></h3>
+          <div class="byte-pair">
+            <div class="byte-line"><span>원본 A</span><code>01 00 00 00</code></div>
+            <div class="byte-line"><span>재인코딩 B</span><code>d9 de 5a d7</code></div>
+          </div>
+          <p class="small">전체 행이 아니라 bound bit 영역만 발췌했습니다. 아래는 첫 바이트를 이진수로 펼친 것입니다.</p>
+          <div id="bit-view" class="bit-panel">
+            <div class="small">A의 첫 바이트 <code>01</code> → <code>00000001</code></div>
+            <div class="bits" aria-label="원본 첫 바이트: 0 0 0 0 0 0 0 1. 마지막에 표시된 최하위 비트 1만 해당 컬럼에 의미가 있다.">
+              <span class="bit unused">0<small>여분</small></span><span class="bit unused">0<small>여분</small></span><span class="bit unused">0<small>여분</small></span><span class="bit unused">0<small>여분</small></span><span class="bit unused">0<small>여분</small></span><span class="bit unused">0<small>여분</small></span><span class="bit unused">0<small>여분</small></span><span class="bit meaningful">1<small>유효</small></span>
+            </div>
+            <div class="small block">B의 첫 바이트 <code>d9</code> → <code>11011001</code></div>
+            <div class="bits" aria-label="재인코딩 첫 바이트: 1 1 0 1 1 0 0 1. 해당 컬럼에 의미가 있는 최하위 비트는 원본과 같은 1이다.">
+              <span class="bit unused">1<small>여분</small></span><span class="bit unused">1<small>여분</small></span><span class="bit unused">0<small>여분</small></span><span class="bit unused">1<small>여분</small></span><span class="bit unused">1<small>여분</small></span><span class="bit unused">0<small>여분</small></span><span class="bit unused">0<small>여분</small></span><span class="bit meaningful">1<small>유효</small></span>
+            </div>
+          </div>
+          <label class="mask-control"><input type="checkbox" id="bit-mask">의미 있는 비트만 강조하기</label>
+          <figcaption>그림의 주장: 이 예에서는 바이트가 달라도 해당 컬럼의 NULL 여부는 같습니다. 오른쪽 끝이 비트 0입니다. 고정 컬럼 수가 달라지면 유효한 비트 수도 달라집니다. <a href="#src-comment">보고된 바이트 예 [0]</a></figcaption>
+        </figure>
+        <div class="logic"><div><b>관찰한 내용</b>비교한 입력들에서는<br>패딩만 달랐다.</div><span aria-label="추론">→</span><div><b>범위가 넓어진 결론</b>이 분기가 보존하는 것은<br>언제나 패딩뿐이다.</div></div>
+        <p>오른쪽 결론까지 가려면 모든 적용 입력에 대한 근거가 더 필요합니다. 실제 테스트도 컬렉션은 선택적 domain 정보 때문에 올바른 직렬화가 달라질 수 있어 디코딩한 값을 비교합니다. 이는 리뷰어 표본의 반례를 재현한 것은 아니지만, <strong>값의 동일성과 바이트의 동일성이 별개</strong>임을 보여줍니다. <a href="#src-tests" class="ref">[7]</a></p>
+        <div class="note">반대 방향의 비약도 피해야 합니다. 바이트가 더 달라질 수 있다는 사실만으로 원본 보존이 필요해지는 것은 아닙니다. 보존해야 할 의미와 계약이 무엇인지 먼저 정해야 합니다.</div>
+      </article>
+
+      <article class="argument">
+        <h3><span class="counter">다.</span> 테스트 통과는 검사한 범위 안에서만 의미가 있습니다</h3>
+        <p>어떤 테스트가 저장 후 <code>id = 1</code>, <code>v = 'abc'</code>만 확인한다고 생각해 보세요. A를 저장해도 B를 저장해도 이 검사는 통과할 수 있습니다.</p>
+        <div class="logic"><div><b>실험 결과</b>분기를 막아도<br>기존 테스트가 통과했다.</div><span aria-label="추론">→</span><div><b>여기까지는 말할 수 있음</b>실행한 입력과 검사 항목에서<br>차이를 검출하지 못했다.</div></div>
+        <p>이 결과만으로 원본 버퍼 선택, 전체 바이트 보존, 모든 헤더, 모든 오류 경로가 불필요하거나 안전하다고 증명할 수는 없습니다. 기존 저장행 비교도 행 전체를 그대로 비교하지 않으며, 컬렉션과 MVCC 헤더 등의 차이를 고려합니다. <a href="#src-tests" class="ref">[7]</a></p>
+        <div class="note good"><strong>근거로 쓸 수 있는 결론:</strong> 분기 제거의 영향을 직접 확인할 assertion을 검토하고, 요구하는 동작을 명확히 한 뒤 변경된 소스에서 검증하자.</div>
+      </article>
+
+      <article class="argument">
+        <h3><span class="counter">라.</span> 모드가 다르게 동작한다는 사실은 오류의 증명이 아닙니다</h3>
+        <p>SA와 서버가 서로 다른 버퍼를 사용해도 필요한 값·헤더·소유권·트랜잭션 계약을 지키면 올바를 수 있습니다. 반대로 서버 경로에서 사용 중이라는 사실만으로 SA에도 안전하다고 결론 낼 수는 없습니다.</p>
+        <p>공통 경로를 쓰자는 제안의 강점은 <strong>특수 처리를 줄여 유지보수를 쉽게 한다는 점</strong>입니다. 정확성과 안전성은 CHN·최종화·버퍼 수명 등 필요한 계약을 확인해 뒷받침해야 합니다.</p>
+      </article>
+    </section>
+
+    <section class="section" id="decision" aria-labelledby="decision-title">
+      <h2 id="decision-title">6. 그럼 이 분기는 원래 왜 있었나?</h2>
+      <p class="section-intro">과거 단순화 사양에는 <strong>OOS로 분리한 값이 없으면 입력 행을 유지하고, 사용하지 않는 변환 버퍼를 즉시 해제한다</strong>는 요구가 있었습니다. 분기는 그 요구를 구현한 것입니다.</p>
+      <div class="timeline">
+        <div><time>기존 보존 요구</time><h3>OOS 분리가 없으면 A를 계속 사용한다</h3><p>원본 행 유지와 임시 버퍼 조기 해제를 보장했습니다. 다만 이 요구가 DB 의미상 꼭 필요한지와는 별개의 문제입니다.</p></div>
+        <div><time>2026-10-13 · 리뷰 댓글</time><h3>그 보존 요구 자체를 다시 검토하자</h3><p>이미 B를 만든 뒤 A로 돌아가는 이유와 실제 효과를 묻고, 공통 경로 또는 사전 판정을 제안했습니다.</p></div>
+        <div><time>2026-10-17 · 기록된 후속 결정</time><h3>필요한 의미를 보존하면서 B를 사용한다</h3><p>준비가 필요하면 SA와 서버 모두 준비된 행을 사용하도록 계약을 바꿨습니다. 원본 전체 바이트 동일성 대신 아래 보장을 명시했습니다. <a href="#src-decision" class="ref">[9]</a></p></div>
+      </div>
+      <div class="guarantee">
+        <div><h3>계속 보존해야 할 것</h3><ul><li>컬럼 값, NULL·빈 값, 스키마 기본값</li><li>CHN 등 의미 있는 헤더 정보</li><li>OOS 선택·저장 목적지·외부 LOB 동작</li><li>최종화, 오류 전파, 기존 트랜잭션 동작</li><li>사용이 끝날 때까지의 버퍼 유효성</li></ul></div>
+        <div><h3>동일하게 요구하지 않는 것</h3><ul><li>사용하지 않는 패딩의 바이트 값</li><li>유효한 직렬화 차이까지 포함한 입력 전체 바이트 동일성</li><li>heap/index 처리 이전의 B 버퍼 해제 시점</li></ul><p class="small">모든 입력에서 패딩만 다르다고 가정해서 내린 결정은 아닙니다.</p></div>
+      </div>
+      <div class="note"><strong>이 맥락이 중요한 이유:</strong> 분기는 아무 목적 없이 생긴 코드가 아닙니다. 그 목적을 재검토하고 계약을 바꾼 뒤 제거하는 것이 이번 변경의 정확한 성격입니다.</div>
+    </section>
+
+    <section class="section" id="filter" aria-labelledby="filter-title">
+      <h2 id="filter-title">7. 분기 삭제와 사전 판정은 서로 다른 변경입니다</h2>
+      <div class="two-col block">
+        <div class="sheet"><span class="evidence fact">현재 반영된 방향</span><h3 class="block">B를 만들었다면 B를 사용한다</h3><p>A → B 생성 → B 최종화 → B로 저장 처리</p><p>늦은 A 선택 분기를 없앱니다. <strong>B를 만드는 비용은 계속 발생합니다.</strong></p><p class="small">주된 효과는 경로와 소유권 처리를 단순하게 만드는 것입니다.</p></div>
+        <div class="sheet"><span class="evidence inference">별도로 검토할 방향</span><h3 class="block">B 생성이 필요 없는 입력은 미리 거른다</h3><p>A → 준비 필요성 검사 → 필요할 때만 B 생성</p><p>안전하게 건너뛸 수 있다면 <strong>재인코딩 자체를 피할 수 있습니다.</strong></p><p class="small">행 크기, 저장 정책, 표현 버전, 기존 OOS 참조 등을 보수적으로 판정해야 합니다.</p></div>
+      </div>
+      <p class="section-intro">원래 조건은 B에 OOS가 있는지도 확인합니다. B를 만들기 전에는 B를 볼 수 없으므로 같은 <code>if</code>문을 단순히 위로 옮길 수는 없습니다. 별도의 안전한 판정 기준이 필요하며, 댓글은 이를 PR #7927의 관련 사전 필터 의견과 연결했습니다. <a href="#src-comment" class="ref">[0]</a></p>
+      <div class="note caution">사전 판정이 보수적이라면, 검사에서 걸러내지 못해 B를 만들었지만 결과는 inline인 경우가 남을 수 있습니다. 따라서 사전 필터를 추가하는 것만으로 늦은 원본 유지 분기의 설계 문제가 자동으로 사라지지는 않습니다.</div>
+    </section>
+
+    <section class="section" id="after" aria-labelledby="after-title">
+      <h2 id="after-title">8. 현재는 어디까지 반영·검증됐나?</h2>
+      <p class="section-intro">2026-10-21에 확인한 PR head는 <code>6a487cdb6</code>입니다. 이 커밋은 늦은 SA 분기를 제거했고, 저장된 행의 CHN을 실제 flush된 workspace 객체의 CHN과 비교하는 assertion을 추가했습니다. <a href="#src-change" class="ref">[8]</a></p>
+      <div class="table-wrap block">
+        <table>
+          <caption>아래 숫자는 2026-10-17 결정 기록과 보존된 로컬 검증 결과입니다. 이번 HTML 작성 중 엔진 테스트를 재실행한 결과가 아닙니다.</caption>
+          <thead><tr><th scope="col">검증</th><th scope="col">기록된 결과</th></tr></thead>
+          <tbody>
+            <tr><td>설정된 CTest</td><td>38/38 통과 · GoogleTest 374개 통과</td></tr>
+            <tr><td>저장행 비교 / 실제 loader·workspace 사례</td><td>21/21 · 13/13 통과. CHN assertion 포함.</td></tr>
+            <tr><td>focused native 파티션 loader 회귀</td><td>1개 사례 · 28개 assertion 통과</td></tr>
+            <tr><td>debug loader 비교 측정</td><td>작은 행·OOS 행 각각 전후 5쌍. 이 두 작업에서 관찰된 성능 퇴행은 없었고, 각 작업의 전후 최대 RSS도 같았습니다.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small block">최대 RSS가 같았다는 측정은 B의 생존 기간이 같다는 뜻이 아닙니다. 이 제한된 공유 호스트·debug 측정만으로 운영 환경의 속도 향상을 입증할 수도 없습니다. PR #7927과의 실제 통합 검증은 해당 결정 기록에서 별도 범위로 남아 있습니다. <a href="#src-decision" class="ref">[9]</a></p>
+      <div class="verdict"><strong>이 댓글을 읽는 기준:</strong> “분명히 쓸모없는 코드임을 증명했다”는 평가보다, “재인코딩 뒤 원본으로 돌아갈 필요가 있는지 묻는 좋은 설계 질문이며, 비용과 증명의 범위는 더 정확히 설명해야 한다”는 평가가 근거에 맞습니다.</div>
+    </section>
+
+    <section class="section" id="sources" aria-labelledby="sources-title">
+      <h2 id="sources-title">직접 확인할 수 있는 근거</h2>
+      <p class="section-intro small">코드 링크는 댓글 당시 커밋 또는 후속 변경 커밋에 고정했습니다. 본문은 댓글을 이해하기 위한 해설이며 원문 전체를 옮기지 않았습니다.</p>
+      <ol class="sources block" start="0">
+        <li id="src-comment"><a href="https://github.com/CUBRID/cubrid/pull/7925#discussion_r4257963742">hornetmj의 리뷰 댓글</a><span class="source-note">2026-10-13 작성·수정. 바이트 비교, 분기 비활성화 테스트, 두 대안을 보고한 원문입니다.</span></li>
+        <li id="src-pr"><a href="https://github.com/CUBRID/cubrid/pull/7925">PR #7925: standalone workspace 쓰기의 OOS 지원</a><span class="source-note">원래 문제와 PR 목적. 확인한 head: 6a487cdb6, head repository: vimkim/cubrid, head branch: CBRD-27424-oos-loaddb-sa, base: feature/oos-merge.</span></li>
+        <li id="src-helper"><a href="https://github.com/CUBRID/cubrid/blob/b755678cd9a3ab465215228d5664f7f1edf24846/src/transaction/locator_sr.c#L4953">당시 locator_finalize_oos_record</a><span class="source-note">준비 호출 → SA 조건 → 최종화·조기 해제·원본 검증 또는 공통 결과 선택의 순서.</span></li>
+        <li id="src-prepare"><a href="https://github.com/CUBRID/cubrid/blob/b755678cd9a3ab465215228d5664f7f1edf24846/src/storage/heap_file.c#L13317">heap_prepare_oos_record의 값 읽기와 헤더 전달</a><span class="source-note">원본 컬럼을 읽고 새 행을 준비합니다. 원본 헤더를 가져와 표현 버전과 OOS flag를 조정해 결과에 전달합니다.</span></li>
+        <li id="src-finalize"><a href="https://github.com/CUBRID/cubrid/blob/b755678cd9a3ab465215228d5664f7f1edf24846/src/storage/heap_oos.cpp#L58">inline 행 검증</a> · <a href="https://github.com/CUBRID/cubrid/blob/b755678cd9a3ab465215228d5664f7f1edf24846/src/storage/heap_oos.cpp#L120">최종화와 publication 초기화</a><span class="source-note">inline 검증의 범위와, OOS가 없어도 남아야 하는 최종화 작업을 구분합니다.</span></li>
+        <li id="src-memory"><a href="https://github.com/CUBRID/cubrid/blob/b755678cd9a3ab465215228d5664f7f1edf24846/src/storage/record_descriptor.cpp#L245">set_external_buffer의 즉시 해제</a> · <a href="https://github.com/CUBRID/cubrid/blob/b755678cd9a3ab465215228d5664f7f1edf24846/src/base/mem_block.hpp#L358">버퍼 소유 객체의 소멸 시 해제</a><span class="source-note">원래 SA 분기와 공통 경로 사이의 해제 시점 차이.</span></li>
+        <li id="src-bits"><a href="https://github.com/CUBRID/cubrid/blob/b755678cd9a3ab465215228d5664f7f1edf24846/src/base/object_representation.h#L658">bound bit 크기·마스크·접근 매크로</a><span class="source-note">4바이트 단위 크기와 속성별 비트 접근. 예시에서 유효한 비트와 미사용 부분을 설명하는 근거입니다.</span></li>
+        <li id="src-tests"><a href="https://github.com/CUBRID/cubrid/blob/b755678cd9a3ab465215228d5664f7f1edf24846/unit_tests/oos/sql/test_oos_sql_workspace_bytes.cpp#L127">당시 저장행 비교 테스트</a><span class="source-note">컬렉션은 논리 값을 비교하며, 행 전체의 원본 바이트 동일성을 검사하는 테스트는 아닙니다.</span></li>
+        <li id="src-change"><a href="https://github.com/CUBRID/cubrid/commit/6a487cdb6cbda36ac94ad9b22009cea6cb58aa2f">분기 제거와 CHN assertion을 추가한 커밋</a><span class="source-note">소스 17줄 제거, 비교 fixture 6줄 추가. 이 문서에서 “현재 경로”라고 부른 변경입니다.</span></li>
+        <li id="src-decision"><a href="sa-inline-preservation-decision-20261017.md">후속 계약 변경과 로컬 검증의 결정 기록</a><span class="source-note">이전 사양의 입력 행 유지·즉시 해제 조항을 대체한 결정과 변경된 보존 보장입니다. 당시 사양과 원시 검증 영수증의 위치도 이 기록에 보존돼 있습니다.</span><span class="source-note">기록에 포함된 검증 요약: ctest-verification.json, native-shell-summary.json, benchmark-summary.json.</span></li>
+      </ol>
+    </section>
+    <footer class="footer">인터넷 연결 없이 본문·그림·버튼을 사용할 수 있는 단일 HTML입니다. 외부 근거 링크를 열 때만 연결이 필요합니다. 인쇄 시에도 본문을 읽을 수 있습니다.</footer>
+  </main>
+</div>
+<script>
+(() => {
+  'use strict';
+  const paths = {
+    'old-sa': {
+      title:'댓글 당시 SA · 원본 유지 조건 충족', revision:'b755678cd',
+      steps:[
+        ['원본 A를 받습니다','저장 목적지가 결정된 뒤 OOS 처리 경계로 들어옵니다.',''],
+        ['A를 읽고 새 행 B를 만듭니다','컬럼 읽기·저장 배치 결정·새 버퍼 직렬화 비용이 이미 발생합니다.','emphasis'],
+        ['이제 원본 유지 조건을 검사합니다','SA 전용 조건이 맞으므로 B를 최종화한 뒤 B 버퍼를 해제하고, A를 검증합니다.',''],
+        ['원본 A를 heap/index 처리에 사용합니다','이미 만든 B는 저장에 사용하지 않습니다.','chosen']
+      ],
+      result:'선택: A · B 생성 비용은 그대로이며, B의 메모리는 저장 처리 전에 해제됩니다.'
+    },
+    'old-server': {
+      title:'댓글 당시 서버 · SA 전용 분기 없음', revision:'b755678cd',
+      steps:[
+        ['원본 A를 받습니다','같은 종류의 workspace copy-area 입력을 서버가 받는 경우입니다.',''],
+        ['A를 읽고 새 행 B를 만듭니다','SA와 마찬가지로 컬럼을 읽고 새 버퍼에 직렬화합니다.','emphasis'],
+        ['B를 선택하고 최종화합니다','원본 A로 돌아가는 SA 전용 분기가 서버 빌드에는 없습니다.',''],
+        ['B를 heap/index 처리에 사용합니다','B 버퍼를 유지하고, 이후 소유자가 소멸할 때 해제합니다.','chosen']
+      ],
+      result:'선택: B · B 생성 비용은 그대로이며, B의 메모리는 저장 처리 동안 유지됩니다.'
+    },
+    'current': {
+      title:'현재 SA·서버 · 공통 prepared-row 경로', revision:'6a487cdb6',
+      steps:[
+        ['원본 A를 받습니다','저장 목적지가 결정된 뒤 공통 OOS 처리 경계로 들어옵니다.',''],
+        ['A를 읽고 새 행 B를 만듭니다','이번 분기 삭제로 재인코딩이 생략되지는 않습니다.','emphasis'],
+        ['두 모드 모두 B를 선택하고 최종화합니다','늦은 SA 원본 선택 분기가 제거됐습니다. 최종화는 계속 수행합니다.',''],
+        ['B를 heap/index 처리에 사용합니다','소유자가 B를 유지합니다. 후속 테스트는 저장 CHN을 실제 workspace CHN과 비교합니다.','chosen']
+      ],
+      result:'선택: B · 저장 경로를 통일했습니다. 재인코딩을 미리 피하는 사전 필터와는 별개의 변경입니다.'
+    }
+  };
+  document.querySelectorAll('[data-path]').forEach(button => {
+    button.addEventListener('click', () => {
+      const data = paths[button.dataset.path];
+      document.querySelectorAll('[data-path]').forEach(b => b.setAttribute('aria-pressed',String(b === button)));
+      document.getElementById('path-title').textContent = data.title;
+      document.getElementById('path-revision').textContent = data.revision;
+      const list = document.getElementById('flow-list');
+      list.replaceChildren(...data.steps.map(([title,body,style],index) => {
+        const item = document.createElement('li');
+        const step = document.createElement('span'); step.className='step'; step.setAttribute('aria-hidden','true'); step.textContent=String(index+1);
+        const box = document.createElement('div'); box.className='flow-box'+(style?' '+style:'');
+        const heading = document.createElement('strong'); heading.textContent=title;
+        const paragraph = document.createElement('p'); paragraph.textContent=body;
+        box.append(heading,paragraph); item.append(step,box); return item;
+      }));
+      document.getElementById('path-result').textContent=data.result;
+    });
+  });
+  document.getElementById('bit-mask').addEventListener('change',event => {
+    document.getElementById('bit-view').classList.toggle('mask-on',event.target.checked);
+  });
+  const links = [...document.querySelectorAll('.toc a')];
+  const sections = links.map(link => ({link,element:document.querySelector(link.getAttribute('href'))}));
+  let scrollQueued=false;
+  const updateNavigation=() => {
+    scrollQueued=false;
+    let current=sections[0];
+    for (const section of sections) {
+      if (section.element.getBoundingClientRect().top<=window.innerHeight*.28) current=section;
+    }
+    links.forEach(link => {
+      const active=link===current.link;
+      link.classList.toggle('active',active);
+      if (active) link.setAttribute('aria-current','location'); else link.removeAttribute('aria-current');
+    });
+    if(window.innerWidth<=1000) {
+      const nav=document.querySelector('.toc');
+      const rect=current.link.getBoundingClientRect();
+      const navRect=nav.getBoundingClientRect();
+      if(rect.left<navRect.left||rect.right>navRect.right) nav.scrollLeft+=rect.left-navRect.left-nav.clientWidth/2+rect.width/2;
+    }
+  };
+  const queueNavigation=() => {
+    if(!scrollQueued) { scrollQueued=true; requestAnimationFrame(updateNavigation); }
+  };
+  window.addEventListener('scroll',queueNavigation,{passive:true});
+  window.addEventListener('resize',queueNavigation,{passive:true});
+  updateNavigation();
+})();
+</script>
+</body>
+</html>
