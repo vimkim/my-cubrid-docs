@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="CBRD-27089, PR 7927의 OOS 분리 시점 재설계 제안을 기존 POC, 철회 기록, 승인된 설계 및 후속 추적 요청과 연결한 근거 기반 설명.">
+  <title>OOS 분리 시점 재설계 — 기존 검토와 리뷰 댓글의 맥락</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='8' fill='%23275b8e'/%3E%3Cpath d='M12 13h24v22H12zM12 20h24M24 20v15' fill='none' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E">
+  <style>
+    /* Design: a blue-and-gold engineering memo. The timeline records decisions;
+       the two parallel lanes explain the representation tradeoff, not speed. */
+    :root {
+      --bg: #f4f7fb; --surface: #ffffff; --surface-soft: #edf2f7;
+      --border: #d8e2ec; --text: #192f45; --text-dim: #51677d;
+      --accent: #275b8e; --accent-soft: #e7f0f9;
+      --gold: #8a6321; --gold-soft: #fbf2df; --green: #27624e;
+      --font-body: "Noto Sans CJK KR", "Noto Sans KR", "Malgun Gothic", sans-serif;
+      --font-mono: "DejaVu Sans Mono", "Cascadia Code", Consolas, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101b27; --surface: #172536; --surface-soft: #1c2e41;
+        --border: #31465d; --text: #e1eaf4; --text-dim: #afc1d3;
+        --accent: #85b5e3; --accent-soft: #213b55;
+        --gold: #e0ba75; --gold-soft: #3a3223; --green: #94cfb7;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { font-size: 17px; scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 1rem; line-height: 1.85; word-break: keep-all; overflow-wrap: anywhere; }
+    a { color: var(--accent); text-underline-offset: .2em; text-decoration-thickness: .06em; }
+    a:hover { text-decoration-thickness: .13em; }
+    a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; border-radius: 2px; }
+    .skip { position: absolute; top: -6rem; left: 1rem; padding: .6rem 1rem; z-index: 20; background: var(--surface); }
+    .skip:focus { top: 1rem; }
+    .layout { max-width: 1320px; margin: auto; display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 3.2rem; padding: 2.6rem 2rem 5rem; }
+    .toc { position: sticky; top: 2rem; align-self: start; max-height: calc(100dvh - 4rem); overflow-y: auto; }
+    .toc-label { color: var(--text-dim); font-size: .76rem; font-weight: 700; letter-spacing: .05em; padding: .5rem .65rem .8rem; border-bottom: 1px solid var(--border); }
+    .toc a { display: block; margin: .25rem 0; padding: .45rem .65rem; font-size: .85rem; text-decoration: none; border-left: 2px solid transparent; color: var(--text-dim); }
+    .toc a.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+    main, section, figure, .flow-stage { min-width: 0; }
+    header { padding: .35rem 0 2.5rem; border-bottom: 2px solid var(--text); }
+    .eyebrow { margin: 0 0 .8rem; color: var(--accent); font-size: .79rem; font-weight: 700; letter-spacing: .06em; }
+    h1 { max-width: 23ch; margin: 0 0 1.1rem; font-size: clamp(1.9rem, 3.7vw, 2.7rem); line-height: 1.4; letter-spacing: -.045em; text-wrap: balance; }
+    .lead { max-width: 48em; margin: 0; font-size: 1.13rem; line-height: 1.85; }
+    .meta { display: flex; flex-wrap: wrap; gap: .35rem 1.2rem; margin: 1.2rem 0 0; color: var(--text-dim); font-size: .79rem; }
+    section { padding-top: 2.7rem; scroll-margin-top: 1.2rem; }
+    h2 { margin: 0 0 1rem; font-size: 1.43rem; line-height: 1.5; letter-spacing: -.035em; text-wrap: balance; }
+    h3 { margin: 1.5rem 0 .55rem; font-size: 1.06rem; line-height: 1.65; }
+    p { margin: .75rem 0; max-width: 68ch; }
+    strong { font-weight: 700; }
+    code { font-family: var(--font-mono); font-size: .82em; padding: .12em .3em; border-radius: 3px; background: var(--surface-soft); overflow-wrap: anywhere; }
+    pre { margin: .8rem 0; padding: 1rem 1.2rem; background: var(--surface-soft); border: 1px solid var(--border); border-radius: 4px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem; line-height: 1.75; }
+    pre code { padding: 0; background: none; font-size: 1em; }
+    .ref { font-size: .78rem; white-space: nowrap; margin-left: .2rem; }
+    .note { background: var(--surface); border: 1px solid var(--border); padding: 1.1rem 1.3rem; margin: 1.2rem 0; border-radius: 5px; }
+    .note p:first-child { margin-top: 0; }
+    .note p:last-child { margin-bottom: 0; }
+    .note--warm { background: var(--gold-soft); border-color: var(--gold); }
+    .verdict { background: var(--accent-soft); padding: 1.2rem 1.4rem; border-radius: 5px; margin-top: 1.5rem; }
+    .verdict p { margin: .35rem 0; }
+    .pill { display: inline-block; padding: .1rem .5rem; border: 1px solid var(--border); border-radius: 3px; color: var(--text-dim); font-size: .72rem; font-weight: 700; line-height: 1.7; white-space: nowrap; }
+    .pill.fact { color: var(--green); }
+    .pill.interpret { color: var(--gold); }
+    .pill.request { color: var(--accent); }
+    figure { margin: 1.4rem 0; }
+    figcaption { margin-top: .65rem; color: var(--text-dim); font-size: .82rem; }
+    .flows { display: grid; gap: 1rem; }
+    .flow-lane { border: 1px solid var(--border); background: var(--surface); border-radius: 5px; padding: 1.1rem; }
+    .flow-title { margin: 0 0 .7rem; font-size: .95rem; font-weight: 700; }
+    .flow-track { display: grid; grid-template-columns: 1.2fr auto .8fr auto 1fr; align-items: stretch; gap: .65rem; }
+    .flow-stage { padding: .7rem; background: var(--surface-soft); border-radius: 3px; font-size: .87rem; line-height: 1.75; }
+    .flow-stage strong { display: block; margin-bottom: .25rem; }
+    .flow-stage small { font-size: .8rem; color: var(--text-dim); }
+    .flow-stage.final { background: var(--accent-soft); }
+    .flow-edge { align-self: center; text-align: center; font-size: .71rem; color: var(--text-dim); }
+    .flow-edge span { display: block; font-size: 1.2rem; }
+    .timeline { list-style: none; padding: 0; margin: 1.2rem 0; }
+    .timeline li { position: relative; display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: 1.25rem; padding: 0 0 1.5rem 1.25rem; border-left: 1px solid var(--border); }
+    .timeline li::before { content: ""; position: absolute; top: .55rem; left: -.28rem; width: .5rem; height: .5rem; border-radius: 50%; background: var(--accent); }
+    .timeline li:last-child { padding-bottom: 0; }
+    .timeline time { color: var(--accent); font-family: var(--font-mono); font-size: .82rem; padding-top: .17rem; font-variant-numeric: tabular-nums; }
+    .timeline h3 { margin: 0; font-size: 1rem; }
+    .timeline p { margin: .25rem 0 0; font-size: .94rem; }
+    .table-wrap { overflow-x: auto; margin: 1rem 0; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); }
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; text-align: left; line-height: 1.85; }
+    caption { text-align: left; padding: .9rem 1rem; font-weight: 700; border-bottom: 1px solid var(--border); background: var(--surface-soft); }
+    th, td { padding: .9rem 1rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { font-size: .82rem; color: var(--text-dim); background: var(--surface-soft); }
+    tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
+    tbody th { color: var(--text); background: none; font-size: .9rem; font-weight: 700; }
+    .compare th:first-child { width: 22%; }
+    .compare td { width: 39%; }
+    .evidence td:first-child { width: 26%; }
+    ul, ol { padding-left: 1.35rem; }
+    li + li { margin-top: .45rem; }
+    .timeline li + li { margin-top: 0; }
+    details { margin-top: 1rem; border: 1px solid var(--border); background: var(--surface); padding: .85rem 1.1rem; border-radius: 4px; }
+    summary { cursor: pointer; font-weight: 700; }
+    .source-list { list-style: none; padding: 0; display: grid; gap: .9rem; }
+    .source-list li { margin: 0; border-top: 1px solid var(--border); padding-top: .9rem; scroll-margin-top: 5rem; }
+    .source-list p { margin: .15rem 0; font-size: .86rem; }
+    .source-links { display: flex; flex-wrap: wrap; gap: .35rem 1rem; font-size: .81rem; }
+    .scope { color: var(--text-dim); font-size: .85rem; }
+    footer { padding-top: 2rem; margin-top: 2.5rem; border-top: 1px solid var(--border); color: var(--text-dim); font-size: .79rem; }
+    button { font: inherit; font-size: .78rem; color: var(--accent); border: 1px solid var(--border); border-radius: 4px; background: var(--surface); padding: .4rem .7rem; cursor: pointer; }
+    @media (max-width: 1000px) {
+      .layout { display: block; padding: 0 1.4rem 3rem; }
+      .toc { position: sticky; top: 0; z-index: 5; display: flex; gap: .2rem; max-height: none; overflow-x: auto; padding: .6rem 0; border-bottom: 1px solid var(--border); background: var(--bg); }
+      .toc-label { display: none; }
+      .toc a { flex-shrink: 0; white-space: nowrap; font-size: .78rem; padding: .4rem .6rem; border-left: none; border-bottom: 2px solid transparent; }
+      header { padding-top: 1.8rem; }
+      section { scroll-margin-top: 5.5rem; }
+    }
+    @media (max-width: 640px) {
+      html { font-size: 16px; }
+      .layout { padding-inline: 1rem; }
+      h1 { font-size: 1.95rem; }
+      .lead { font-size: 1.05rem; }
+      .flow-track { grid-template-columns: 1fr; gap: .25rem; }
+      .flow-edge { display: flex; align-items: center; justify-content: center; gap: .5rem; }
+      .flow-edge span { transform: rotate(90deg); }
+      .timeline li { grid-template-columns: 1fr; gap: .25rem; }
+      th, td { padding: .65rem .7rem; }
+      .table-wrap table { min-width: 570px; }
+      .note, .verdict { padding: 1rem; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    @media print {
+      :root { --bg: #fff; --surface: #fff; --surface-soft: #f1f4f6; --border: #bbc6cf; --text: #172a3d; --text-dim: #41566b; --accent: #214f78; --accent-soft: #edf3f9; --gold: #74531a; --gold-soft: #fbf6e9; --green: #235641; }
+      html { font-size: 11pt; }
+      .layout { display: block; max-width: none; padding: 0; }
+      .toc, .skip, .print-control { display: none; }
+      body { background: white; }
+      h2, h3 { break-after: avoid; }
+      .note, .verdict, figure, tr { break-inside: avoid; }
+      .table-wrap { overflow: visible; }
+      section { padding-top: 1.5rem; }
+      a { color: var(--text); }
+    }
+  </style>
+</head>
+<body>
+<a class="skip" href="#main">본문으로 이동</a>
+<div class="layout">
+  <nav class="toc" aria-label="문서 목차">
+    <div class="toc-label">검토 맥락</div>
+    <a class="active" aria-current="location" href="#question">문제와 두 설계</a>
+    <a href="#history">검토·결정 이력</a>
+    <a href="#poc">기존 POC의 증거</a>
+    <a href="#decision">승인된 설계</a>
+    <a href="#claims">댓글의 사실과 주장</a>
+    <a href="#tracking">현재 추적 상태</a>
+    <a href="#sources">근거와 확인 범위</a>
+  </nav>
+  <main id="main">
+    <header>
+      <p class="eyebrow">CBRD-27089 · PR #7927 · 리뷰 댓글 맥락 분석</p>
+      <h1>OOS 분리 시점 재설계<br>기존 검토와 리뷰 댓글의 맥락</h1>
+      <p class="lead">전체 인라인 행을 유지하는 대안은 이미 POC로 구현·검증됐고, 한계를 기록한 뒤 철회됐습니다. 이후의 리뷰는 이 대안을 후속 검토 대상으로 다시 제안했습니다. <strong>기존 분석의 존재, 설계의 채택 여부, 후속 과제의 추적 상태는 각각 확인해야 합니다.</strong></p>
+      <div class="meta">
+        <span>작성·확인: 2026-10-21 · Asia/Seoul</span>
+        <span>현재 소스: <code>4a4d069c2</code></span>
+        <span>문서 기준: <code>a082804</code></span>
+      </div>
+      <div class="verdict">
+        <p><strong>판단:</strong> 분석 기록이 없다는 넓은 해석은 기존 문서와 맞지 않습니다. 별도 Jira나 코드 TODO로 후속 검토를 추적하자는 요청은 기존 기록과 양립합니다.</p>
+        <p>현재는 요청한 TODO까지 추가됐습니다. 다만 TODO에 기존 POC·철회 이력의 연결은 없습니다. <a class="ref" href="#source-poc">[S1]</a><a class="ref" href="#source-tracking">[S7]</a><a class="ref" href="#source-current">[S8]</a></p>
+      </div>
+    </header>
+
+    <section id="question" aria-labelledby="question-title">
+      <h2 id="question-title">문제는 소유권, 설계 쟁점은 중간 행의 표현입니다</h2>
+      <p>원래 버그는 파티션 목적지가 결정되기 전에 root heap에 OOS 값을 기록하고, 행은 child heap에 저장하면서 소유 heap이 달라지는 문제입니다. PR #7927은 목적지를 선택한 뒤 해당 heap의 OOS 파일에 값을 기록하도록 순서를 바꿉니다. <a class="ref" href="#source-initial">[S9]</a><a class="ref" href="#source-flow">[S2]</a></p>
+      <p>리뷰의 재설계 제안도 같은 소유권 목표를 따릅니다. 차이는 <strong>OOS 체인을 언제 기록하는가</strong>에 더해, <strong>그 전에 값을 어떤 메모리 표현으로 유지하는가</strong>에 있습니다. 현재 방식은 먼저 compact 행과 보관 payload를 만들고, 제안 방식은 전체 인라인 행을 유지하다가 뒤에서 값을 분리합니다. <a class="ref" href="#source-approved">[S4]</a><a class="ref" href="#source-proposal">[S5]</a></p>
+      <figure>
+        <div class="flows" role="img" aria-label="두 방식 모두 목적지 선택 뒤 OOS를 기록하지만, 선택 전 행과 payload의 보관 방식이 다릅니다.">
+          <div class="flow-lane">
+            <p class="flow-title">현재 승인된 방식 · compact 행 + pending payload</p>
+            <div class="flow-track">
+              <div class="flow-stage"><strong>행과 값을 준비</strong>compact 행에 임시 stub을 두고, 선택된 OOS payload를 owner가 보관</div>
+              <div class="flow-edge">값을 읽어<span aria-hidden="true">→</span></div>
+              <div class="flow-stage"><strong>목적지를 선택</strong>reader에 owner를 전달해 파티션 키·중복 키 등을 평가</div>
+              <div class="flow-edge">목적지에<span aria-hidden="true">→</span></div>
+              <div class="flow-stage final"><strong>체인 기록·stub 교체</strong>실제 OID를 같은 stub 위치에 기록한 뒤 heap/index가 소비</div>
+            </div>
+          </div>
+          <div class="flow-lane">
+            <p class="flow-title">리뷰 제안 · 전체 인라인 행을 늦게 분리</p>
+            <div class="flow-track">
+              <div class="flow-stage"><strong>전체 행을 준비</strong>큰 값도 인라인 바이트로 유지<br><small>초기 버퍼가 전체 행 크기를 감당</small></div>
+              <div class="flow-edge">일반 reader로<span aria-hidden="true">→</span></div>
+              <div class="flow-stage"><strong>목적지를 선택</strong>인라인 값을 직접 읽어 키를 평가</div>
+              <div class="flow-edge">뒤에서 분리해<span aria-hidden="true">→</span></div>
+              <div class="flow-stage final"><strong>체인 기록·행 축소</strong>OOS 대상 값을 분리하고 stub·가변 길이 offset을 재작성</div>
+            </div>
+          </div>
+        </div>
+        <figcaption>DB_VALUE에서 행을 준비하는 대표 경로의 비교입니다. 두 방식 모두 목적지 선택 뒤 OOS를 기록하지만, 선택 전 행과 payload의 보관 방식이 다릅니다. 도식의 크기는 비용을 나타내지 않습니다.</figcaption>
+      </figure>
+      <p>이미 인라인 행을 받는 client copy-area 경로는 현재 설계에서도 목적지를 먼저 선택하고 필요한 변환을 수행합니다. 모든 입력이 같은 준비 순서를 따른다고 가정하면 실제 설계보다 단순하게 비교하게 됩니다. <a class="ref" href="#source-approved">[S4]</a></p>
+      <p>이 구분 때문에 현재 PR이 이미 올바른 목적지에 기록한다는 사실과, 표현을 바꿔 더 단순하게 만들 수 있다는 제안은 동시에 성립합니다. 재설계의 이득은 소유권 버그 수정과 별도로 입증해야 합니다.</p>
+    </section>
+
+    <section id="history" aria-labelledby="history-title">
+      <h2 id="history-title">리뷰 전에 POC와 설계 선택이 있었습니다</h2>
+      <ol class="timeline">
+        <li><time datetime="2026-10-06">2026-10-06</time><div><h3>전체 인라인 행을 유지하는 POC 구현·검증</h3><p>목적지 선택 뒤 OOS를 기록하는 단순화 후보를 baseline <code>fb567a629</code>에서 실험했습니다. POC 커밋은 <code>b81d943d2</code>이며, 검증 결과와 지원하지 않은 경로를 문서화했습니다. 문서 최초 커밋은 <code>8e54ef8</code>입니다. <a class="ref" href="#source-poc">[S1]</a></p></div></li>
+        <li><time datetime="2026-10-07">2026-10-07</time><div><h3>POC 철회와 다른 설계의 승인</h3><p>POC 브랜치·worktree를 제거하고 결과는 보존했습니다. 이후 승인된 설계는 공유 <code>RECDES</code>를 바꾸지 않고, compact 행·보관 payload·명시적 owner 인자·제자리 stub 교체를 유지하는 방식입니다. <a class="ref" href="#source-poc">[S1]</a><a class="ref" href="#source-interview">[S3]</a><a class="ref" href="#source-approved">[S4]</a></p></div></li>
+        <li><time datetime="2026-10-12">2026-10-12</time><div><h3>리뷰어가 늦은 OOS 분리를 후속 대안으로 제안</h3><p>이번 PR은 버그 수정에 집중하고, 추후 적용 가능성을 판단해 별도 이슈를 검토하자는 조건부 제안입니다. INSERT의 heap 진입부와 UPDATE의 index 갱신 직전을 후보 위치로 들었습니다. <a class="ref" href="#source-proposal">[S5]</a></p></div></li>
+        <li><time datetime="2026-10-14">2026-10-14</time><div><h3>작성자가 후속 검토 대상으로 답변</h3><p>이번 PR의 구현 범위에서 제외하고 별도 평가할 설계 제안으로 남겼습니다. bulk INSERT의 선행 페이지 fix와 UPDATE의 인덱스·복제 로그 순서를 확인할 필요도 명시했습니다. 같은 답변의 작은 copy-area 행 최적화는 이 재설계와 별도 작업입니다. <a class="ref" href="#source-reply">[S6]</a></p></div></li>
+        <li><time datetime="2026-10-19">2026-10-19</time><div><h3>분석 대상 댓글: Jira 또는 TODO 요청</h3><p>재설계 제안을 잊지 않도록 Jira를 등록하거나 코드 TODO로 남겨 달라는 요청입니다. 이 댓글 자체는 재설계 구현을 이번 PR에 넣으라고 요구하지 않습니다. <a class="ref" href="#source-tracking">[S7]</a></p></div></li>
+        <li><time datetime="2026-10-21">2026-10-21</time><div><h3>코드 TODO 추가</h3><p><code>4a4d069c2</code>에서 <code>heap_attrinfo_transform_to_disk_internal</code>의 pending 분기에 검토 방향을 기록했습니다. 현재 로컬과 PR head 모두 이 커밋입니다. <a class="ref" href="#source-current">[S8]</a></p></div></li>
+      </ol>
+      <div class="note note--warm"><p><strong>이력에서 읽을 수 있는 범위:</strong> 기록은 POC 철회 사실을 확인해 줍니다. 철회의 구체적인 동기나 리뷰어가 그 문서를 읽었는지는 확인한 자료에 없습니다. 날짜가 앞선다는 사실만으로 제안의 독창성이나 작성자의 인지 여부를 판단하지 않습니다.</p></div>
+    </section>
+
+    <section id="poc" aria-labelledby="poc-title">
+      <h2 id="poc-title">기존 POC는 무엇을 입증했습니까</h2>
+      <p>POC는 일반 SQL INSERT/UPDATE의 동기 호출 범위에서, 새 행 소유 객체 없이 전체 인라인 <code>RECDES</code>로 목적지를 선택하고 OOS를 뒤늦게 기록하는 구현이 가능함을 보였습니다. 일반 테이블, 부모 경유 INSERT, 자식 직접 INSERT, 자식 간 이동 UPDATE와 실패 문장의 부분 기록 롤백을 확인했습니다. <a class="ref" href="#source-poc">[S1]</a></p>
+      <div class="table-wrap">
+        <table class="evidence">
+          <caption>POC 보고서에 남아 있는 검증과 한계</caption>
+          <thead><tr><th scope="col">구분</th><th scope="col">기록된 증거</th><th scope="col">해석의 경계</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">빌드·테스트</th><td>Debug 빌드·설치, configured CTest <strong>35/35</strong>, 보강한 집중 SQL <strong>3/3</strong>, 실제 SERVER_MODE SQL 검증</td><td>과거 POC 리비전의 결과입니다. 35와 3은 전체 합격 건수로 더하지 않으며, 현재 PR 검증으로 재사용하지 않습니다.</td></tr>
+            <tr><th scope="row">값·소유권·실패</th><td>파티션 키 FORCE_OUTLINE, NULL·40KB 값, 이동·롤백, OOS 기록 뒤 강제 실패·인덱스 중복 오류</td><td>실행한 동기 SQL 범위의 증거입니다. 전체 producer의 동등성을 증명하지 않습니다.</td></tr>
+            <tr><th scope="row">연결하지 않은 경로</th><td>loader, 복제, REPLACE/ODKU, 별도 재평가</td><td>이 경로에서도 owner와 pending을 제거할 수 있는지는 추가 설계·실행 검증이 필요합니다.</td></tr>
+            <tr><th scope="row">메모리·성능</th><td>전체 인라인 크기의 중간 행과 copy-area 확장·복사 비용을 식별</td><td>동일 조건의 최대 메모리·처리량 비교는 수행하지 않았습니다. 코드 감소만으로 비용 우위를 결론 낼 수 없습니다.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>리뷰 제안과는 같은 계열이지만 구현 위치가 같지는 않습니다</h3>
+      <div class="table-wrap">
+        <table class="compare">
+          <caption>기존 POC와 10월 12일 리뷰 제안의 비교</caption>
+          <thead><tr><th scope="col">비교 항목</th><th scope="col">기존 POC</th><th scope="col">리뷰 제안</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">공통 원리</th><td>전체 인라인 행으로 목적지를 선택하고, 직렬화된 바이트를 OOS로 분리</td><td>같은 원리로 상위 계층의 pending 의존성을 줄이려는 방향</td></tr>
+            <tr><th scope="row">INSERT 위치</th><td>locator에서 목적지 확정 뒤 공통 OOS 함수를 호출</td><td><code>heap_insert_logical</code> 진입부, heap 데이터 페이지 fix 전</td></tr>
+            <tr><th scope="row">UPDATE 위치</th><td>같은 heap UPDATE는 index/FK 처리 전에 호출; 이동은 목적지 INSERT에 위임</td><td><code>locator_update_index</code> 직전에서 분리</td></tr>
+            <tr><th scope="row">bulk·복제 등</th><td>새 경로에 연결하지 않은 범위가 존재</td><td>bulk 선행 fix의 예외와 이미 OOS를 가진 입력을 고려하자고 제안</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>따라서 기존 POC는 제안이 전혀 검토되지 않았다는 해석을 반박하는 근거입니다. 동시에 <strong>그 POC가 리뷰어의 정확한 heap 진입 위치와 전체 producer 범위를 검증했다는 결론으로 확대할 수는 없습니다.</strong> <a class="ref" href="#source-poc">[S1]</a><a class="ref" href="#source-proposal">[S5]</a></p>
+    </section>
+
+    <section id="decision" aria-labelledby="decision-title">
+      <h2 id="decision-title">이후에는 compact 행과 owner를 유지하는 설계를 선택했습니다</h2>
+      <p>10월 7일 승인 문서는 <code>heap_pending_record</code>가 compact 행과 선택된 payload를 함께 소유하고, reader에는 이 owner를 빌려주는 구조를 명시합니다. 임시 stub에는 메모리 주소 대신 owner 내부 payload 번호를 넣고, 목적지가 결정되면 같은 24바이트 자리에 실제 OOS 참조를 덮어씁니다. <a class="ref" href="#source-approved">[S4]</a></p>
+      <p>이 선택은 reader에 owner를 전달하는 복잡성을 받아들이는 대신, 이미 만든 compact 행을 재사용하고 finalization에서 행 전체를 다시 만들지 않는 계약을 유지합니다. 인터뷰에도 compact 행 재사용, 제자리 교체, 공통 memory/disk 접근을 유지하겠다는 사용자 결정이 남아 있습니다. <a class="ref" href="#source-interview">[S3]</a></p>
+      <div class="table-wrap">
+        <table>
+          <caption>재설계를 다시 평가할 때 비교해야 할 비용</caption>
+          <thead><tr><th scope="col">현재 방식이 부담하는 것</th><th scope="col">전체 인라인 대안에서 확인할 것</th></tr></thead>
+          <tbody>
+            <tr><td>reader·routing·중복 키 경로의 owner 인자, pending 값 접근과 수명 관리</td><td>같은 경로를 일반 인라인 reader로 처리했을 때 실제로 없어지는 인터페이스와 남는 예외</td></tr>
+            <tr><td>선택된 payload의 별도 보관과 loader queue의 retained-byte 계산</td><td>큰 연속 버퍼, 확장·재배치, queue에 유지되는 전체 행의 peak 메모리</td></tr>
+            <tr><td>이미 준비한 compact 행의 stub만 제자리 교체</td><td>인라인 바이트 이동, VOT 재작성, MVCC 헤더·representation 변경과의 결합</td></tr>
+            <tr><td>현재 producer별 finalization·rollback·publication 순서</td><td>bulk 선행 페이지 fix, UPDATE 인덱스·복제 로그, 이미 OOS가 있는 복제 입력의 예외</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>리뷰의 단순화 가설에는 검토 가치가 있습니다. 다만 payload 총량이 비슷하다는 직관으로 연속 버퍼 확장·복사·queue peak까지 같다고 결론 낼 수는 없습니다. 반대로 기존 기록만으로 전체 인라인 방식이 더 느리다고 판정할 근거도 없습니다. POC가 남긴 비교 미실시 항목을 실제 측정으로 채워야 합니다. <a class="ref" href="#source-poc">[S1]</a></p>
+      <details>
+        <summary>기존 POC의 단순화를 전체 PR의 단순화로 계산하면 안 되는 이유</summary>
+        <p>POC는 짧게 살아 있는 동기 호출에서 attrinfo를 빌려 썼습니다. loader는 DB_VALUE를 정리한 뒤에도 행을 queue에 보관하므로 그 수명을 별도로 해결해야 합니다. 복제 입력은 이미 완성된 OOS stub을 가질 수 있고, REPLACE/ODKU는 실제 기록 전의 probe 단계가 있습니다.</p>
+        <p>기존 보고서도 지원 범위를 줄여 짧아진 코드를 전체 설계의 우월성으로 계산하지 말라고 명시했습니다. 이 경로들을 같은 계약으로 연결한 뒤 코드·메모리·실패 처리를 다시 비교하는 것이 다음 평가입니다. <a class="ref" href="#source-poc">[S1]</a></p>
+      </details>
+    </section>
+
+    <section id="claims" aria-labelledby="claims-title">
+      <h2 id="claims-title">첫 댓글은 어떻게 읽는 것이 정확합니까</h2>
+      <p>분석 대상은 <a href="https://github.com/CUBRID/cubrid/pull/7927#discussion_r4311386265">2026-10-19 댓글</a>입니다. 긴 설계 제안은 그보다 앞선 10월 12일 댓글에 있고, 이번 댓글은 그 제안을 추적할 곳을 요청합니다. 두 댓글의 역할을 나누면 사실과 요청이 더 선명해집니다.</p>
+      <div class="table-wrap">
+        <table>
+          <caption>댓글의 전제와 요청을 기존 기록에 대조한 판단</caption>
+          <thead><tr><th scope="col">댓글에서 읽히는 내용</th><th scope="col">성격</th><th scope="col">기록에 근거한 판단</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">재설계가 앞서 논의됐다</th><td><span class="pill fact">확인된 사실</span></td><td>기존 POC와 승인 설계 기록에 더해, 공개 리뷰·작성자 답변에도 논의가 있습니다. <a class="ref" href="#source-poc">[S1]</a><a class="ref" href="#source-proposal">[S5]</a><a class="ref" href="#source-reply">[S6]</a></td></tr>
+            <tr><th scope="row">별도 이슈로 진행하기로 했다</th><td><span class="pill interpret">합의 범위의 해석</span></td><td>후속 검토 의향은 확인됩니다. 다만 특정 위치에 구현할 최종 설계를 채택했다거나 구현을 확약했다는 근거로 쓰기에는 범위가 넓습니다. <a class="ref" href="#source-reply">[S6]</a></td></tr>
+            <tr><th scope="row">추적할 형태가 아직 없다</th><td><span class="pill interpret">범위가 불명확한 판단</span></td><td>분석·실험·철회 기록은 이미 있습니다. 별도 Jira 또는 코드 TODO만을 뜻한다면 다른 질문입니다. 이 문서는 Jira 전체를 조사하지 않았습니다. <a class="ref" href="#source-poc">[S1]</a><a class="ref" href="#source-tracking">[S7]</a></td></tr>
+            <tr><th scope="row">Jira 또는 TODO를 남겨 달라</th><td><span class="pill request">관리 방식의 요청</span></td><td>기존 분석과 모순되지 않습니다. 기존 검토 결과를 연결한 후속 추적 항목을 요구하는 것으로 읽을 수 있습니다. <a class="ref" href="#source-tracking">[S7]</a></td></tr>
+            <tr><th scope="row">INSERT·UPDATE 분리 위치를 기록해 달라</th><td><span class="pill request">설계 후보 기록</span></td><td>검토 후보로 남길 수 있습니다. 기존 POC의 지원 범위·비용 미측정·철회 이력도 함께 연결해야 채택된 설계와 혼동하지 않습니다.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>명백한 모순과 표현의 불명확성은 다릅니다</h3>
+      <p>이번 PR에서 구현을 보류하면서 지금 TODO로 남겨 달라는 요청은 모순이 아닙니다. 반면 아무 분석·기록도 없다는 뜻으로 일반화하면 기존 문서와 충돌합니다. 따라서 반박할 지점은 요청 자체보다 <strong>무엇이 미기록인지, 무엇까지 합의됐는지</strong>를 구분하지 않은 표현입니다.</p>
+      <p>작성자의 공개 답변은 이번 PR의 범위에서 제외하고 별도 평가하겠다는 내용입니다. 여기에 구체적인 구현 완료 약속을 덧붙이면 합의 수준을 확대하게 됩니다. 승인된 현재 설계와 후속 검토 후보는 계속 구분해야 합니다. <a class="ref" href="#source-reply">[S6]</a></p>
+    </section>
+
+    <section id="tracking" aria-labelledby="tracking-title">
+      <h2 id="tracking-title">현재는 TODO가 있고, 기존 분석과의 연결이 남아 있습니다</h2>
+      <p>2026-10-21 확인한 로컬과 PR #7927의 head는 모두 <code>4a4d069c21fc19f14337efceca512b726724ecd8</code>입니다. 해당 커밋은 <code>src/storage/heap_file.c:13942</code>에 별도 재설계를 평가하자는 TODO를 추가했습니다. <a class="ref" href="#source-current">[S8]</a></p>
+      <pre><code>TODO: Evaluate a separate redesign that keeps rows inline until the heap write.</code></pre>
+      <p>이어지는 두 줄에는 INSERT의 <code>heap_insert_logical</code> 진입부와 UPDATE의 <code>locator_update_index</code> 직전이라는 후보 위치가 기록돼 있습니다. 따라서 <strong>현재는 코드 TODO라는 추적 형태가 존재</strong>하며, 10월 19일 댓글의 상황을 그대로 현재 상태로 설명해서는 안 됩니다.</p>
+      <p>다만 이 TODO는 기존 POC 보고서나 철회·승인 이력을 연결하지 않습니다. 요청 이행 여부와 별개로, 다음 검토자가 같은 실험을 처음부터 반복하지 않도록 그 이력을 함께 남기는 것이 문서상 개선점입니다. 이 보고서 작성에서는 기존 TODO를 수정하지 않았습니다.</p>
+      <div class="note">
+        <h3 style="margin-top:0">후속 과제에 함께 남길 내용</h3>
+        <ol>
+          <li>목표: owner·pending 전파와 재인코딩을 줄일 수 있는지 평가한다.</li>
+          <li>기존 결과: <code>b81d943d2</code> POC는 동기 SQL 범위에서 성립했고, 전체 대체안으로 채택하지 않은 채 철회됐다.</li>
+          <li>남은 범위: loader·복제·REPLACE/ODKU·재평가, bulk latch, UPDATE의 index·복제 로그 순서를 검증한다.</li>
+          <li>비교 기준: 현재 승인 설계와 같은 지원 범위·실패 계약에서 연속 버퍼 비용, queue peak, 재인코딩 및 코드 복잡성을 측정한다.</li>
+          <li>결정 상태: INSERT·UPDATE의 제안 위치는 재평가할 후보이며, 기존 승인 설계를 대체하는 결정은 별도로 남긴다.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="sources" aria-labelledby="sources-title">
+      <h2 id="sources-title">근거 자료와 확인 범위</h2>
+      <p class="scope">문서의 테스트 수치는 기존 보고서의 과거 결과를 인용한 것입니다. 이번 작성에서 엔진 빌드·DB 실험·전체 CI를 다시 실행하지 않았습니다. Jira 신규 이슈 유무, 철회의 상세 동기, 리뷰어의 사전 인지 여부는 확인 범위 밖입니다.</p>
+      <ul class="source-list">
+        <li id="source-poc"><strong>[S1] 전체 인라인 RECDES POC 보고서</strong><p>2026-10-06 실험. 판단·구현 위치: 15–45행, 검증: 80–94행, 비용·미지원 경로: 121–127행. 1행에 10월 7일 철회가 기록돼 있습니다. 문서 최초 커밋 <code>8e54ef8</code>.</p><div class="source-links"><a href="CBRD-27089-inline-recdes-poc_b81d943d2_codex.md">저장소 문서</a><a href="https://github.com/vimkim/my-cubrid-docs/blob/a082804862d0f3225535253dc048d0c2f6d0e691/cbrd-27089/CBRD-27089-inline-recdes-poc_b81d943d2_codex.md#L15">GitHub 고정본</a></div></li>
+        <li id="source-flow"><strong>[S2] 파티션 INSERT 호출 흐름</strong><p>baseline <code>fb567a629</code>의 일반 locator INSERT에서 목적지는 heap 호출 전에 이미 결정됨을 설명합니다. 다른 호출자와 UPDATE·loader·복제로 확대하지 않는 범위도 명시합니다.</p><div class="source-links"><a href="CBRD-27089-partition-insert-call-flow_fb567a629_codex.md">저장소 문서</a><a href="https://github.com/vimkim/my-cubrid-docs/blob/a082804862d0f3225535253dc048d0c2f6d0e691/cbrd-27089/CBRD-27089-partition-insert-call-flow_fb567a629_codex.md#L99">GitHub 고정본</a></div></li>
+        <li id="source-interview"><strong>[S3] temporary OOS stub 설계 인터뷰</strong><p>사용자가 승인한 compact 행 재사용·제자리 교체와 owner 전달의 경위를 보존합니다. 310행은 철회한 전체 인라인 POC와 새 제안이 다르다고 명시합니다. 날짜별 과거 결론은 문서 첫머리의 최종 결정과 구분해 읽어야 합니다.</p><div class="source-links"><a href="design/temporary-oos-stub-interview.md">저장소 문서</a><a href="https://github.com/vimkim/my-cubrid-docs/blob/a082804862d0f3225535253dc048d0c2f6d0e691/cbrd-27089/design/temporary-oos-stub-interview.md#L160">GitHub 고정본</a></div></li>
+        <li id="source-approved"><strong>[S4] 2026-10-07 승인된 설계</strong><p>공유 RECDES 유지, payload 번호 기반 stub, borrowed owner 전달, 현재 descriptor의 stub을 제자리에서 교체하는 계약과 producer별 경계를 설명합니다.</p><div class="source-links"><a href="design/no-record-type-design.md">저장소 문서</a><a href="https://github.com/vimkim/my-cubrid-docs/blob/a082804862d0f3225535253dc048d0c2f6d0e691/cbrd-27089/design/no-record-type-design.md#L15">GitHub 고정본</a></div></li>
+        <li id="source-proposal"><strong>[S5] 2026-10-12 재설계 제안</strong><p>이번 PR에서는 버그 수정에 집중하고 추후 적용 가능성을 검토하자는 제안. INSERT·UPDATE의 후보 위치, bulk 예외와 기대하는 단순화를 포함합니다.</p><div class="source-links"><a href="https://github.com/CUBRID/cubrid/pull/7927#discussion_r4246448112">리뷰 원문</a></div></li>
+        <li id="source-reply"><strong>[S6] 2026-10-14 작성자의 답변</strong><p>재설계를 이번 PR의 구현 범위에서 제외하고 별도 평가할 제안으로 남겼으며, bulk fix·UPDATE의 index 및 복제 로그 순서를 검증할 필요를 명시했습니다.</p><div class="source-links"><a href="https://github.com/CUBRID/cubrid/pull/7927#issuecomment-6162441044">작성자 답변</a></div></li>
+        <li id="source-tracking"><strong>[S7] 2026-10-19 분석 대상 댓글</strong><p>후속 재설계를 Jira 또는 코드 TODO로 남겨 달라는 요청입니다.</p><div class="source-links"><a href="https://github.com/CUBRID/cubrid/pull/7927#discussion_r4311386265">추적 요청 원문</a></div></li>
+        <li id="source-current"><strong>[S8] 2026-10-21 현재 TODO와 변경 커밋</strong><p>소스 <code>4a4d069c2</code>의 heap_file.c 13942–13944행. 재설계 검토와 INSERT·UPDATE 후보 위치가 추가됐습니다.</p><div class="source-links"><a href="https://github.com/vimkim/cubrid/blob/4a4d069c21fc19f14337efceca512b726724ecd8/src/storage/heap_file.c#L13942">TODO 고정 소스</a><a href="https://github.com/vimkim/cubrid/commit/4a4d069c21fc19f14337efceca512b726724ecd8">변경 커밋</a></div></li>
+        <li id="source-initial"><strong>[S9] 기존 deferred-write 수용 기록</strong><p>목적지별 소유권 문제와 초기 deferred-write 설계의 producer 검토를 설명합니다. 2026-09-15까지의 역사적 기록이며 최신 소스 설명으로 사용하지 않았습니다.</p><div class="source-links"><a href="CBRD-27089-deferred-write_be7c01a_codex.md">저장소 문서</a><a href="https://github.com/vimkim/my-cubrid-docs/blob/a082804862d0f3225535253dc048d0c2f6d0e691/cbrd-27089/CBRD-27089-deferred-write_be7c01a_codex.md#L10">GitHub 고정본</a></div></li>
+      </ul>
+      <details>
+        <summary>이번 확인에 사용한 명령과 판정 방법</summary>
+        <p>문서 키워드 검색 뒤 해당 문서의 본문과 Git 이력을 읽었습니다. 공개 댓글은 GitHub API에서 다시 조회했고, 현재 TODO는 로컬 소스와 PR head를 대조했습니다.</p>
+        <pre><code>rg -n '분리 시점|인라인 행|full.inline|Withdrawn' cbrd-27089 -g '*.md'
+git log --follow --reverse -- cbrd-27089/CBRD-27089-inline-recdes-poc_b81d943d2_codex.md
+gh api repos/CUBRID/cubrid/pulls/comments/4246448112
+gh api repos/CUBRID/cubrid/issues/comments/6162441044
+gh api repos/CUBRID/cubrid/pulls/comments/4311386265
+gh pr view 7927 --repo CUBRID/cubrid --json headRefOid
+git show 4a4d069c2 -- src/storage/heap_file.c</code></pre>
+        <p>검색 명령과 문서 이력은 my-cubrid-docs에서, 마지막 소스 명령은 PR #7927 소스 worktree에서 실행하는 기준입니다. 새 실험 결과와 기존 보고서에 기록된 결과를 구분했습니다.</p>
+      </details>
+    </section>
+    <footer>
+      <p>문서 목적: 첫 번째 리뷰 댓글을 기존 검토·설계 결정·현재 추적 상태에 연결해 설명합니다. 공개 답글 게시나 Jira 수정은 수행하지 않았습니다.</p>
+      <button class="print-control" type="button" id="print-button">인쇄 / PDF 저장</button>
+    </footer>
+  </main>
+</div>
+<script>
+  (() => {
+    const links = Array.from(document.querySelectorAll('.toc a'));
+    const sections = links.map(link => ({ link, section: document.querySelector(link.getAttribute('href')) }));
+    const setActive = target => {
+      for (const item of sections) {
+        const active = item.section === target;
+        item.link.classList.toggle('active', active);
+        if (active) item.link.setAttribute('aria-current', 'location');
+        else item.link.removeAttribute('aria-current');
+      }
+    };
+    let scheduled = false;
+    const updateNavigation = () => {
+      scheduled = false;
+      let current = sections[0];
+      const threshold = Math.max(100, window.innerHeight * .22);
+      for (const item of sections) {
+        if (item.section.getBoundingClientRect().top <= threshold) current = item;
+        else break;
+      }
+      setActive(current.section);
+      if (window.innerWidth <= 1000) {
+        const nav = current.link.parentElement;
+        const left = current.link.offsetLeft;
+        if (left < nav.scrollLeft || left + current.link.offsetWidth > nav.scrollLeft + nav.clientWidth) {
+          nav.scrollLeft = Math.max(0, left - nav.clientWidth / 2 + current.link.offsetWidth / 2);
+        }
+      }
+    };
+    const scheduleNavigation = () => {
+      if (!scheduled) {
+        scheduled = true;
+        requestAnimationFrame(updateNavigation);
+      }
+    };
+    window.addEventListener('scroll', scheduleNavigation, { passive: true });
+    window.addEventListener('resize', scheduleNavigation);
+    updateNavigation();
+    document.getElementById('print-button').addEventListener('click', () => window.print());
+  })();
+</script>
+</body>
+</html>

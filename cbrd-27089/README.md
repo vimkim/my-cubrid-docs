@@ -11,7 +11,7 @@ and partition-loader validation. For the ordering history, read the local
 diagnosis and bestspace assessment: the `f3144ab` / `fb567a6` comparison reproduces
 three ordering differences, but their upstream cause remains unconfirmed.
 
-Index updated: **2026-10-14 (Asia/Seoul)**. Documents retain their recorded source
+Index updated: **2026-10-21 (Asia/Seoul)**. Documents retain their recorded source
 revisions and verification limits; dates below describe each document's history.
 
 ## PR7927 design and reviewer documents
@@ -20,6 +20,7 @@ Read these for the implementation, its design constraints, and reviewer explanat
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [OOS redesign review context (Korean HTML)](PR7927-inline-redesign-context-ko.html) | Prior inline POC, withdrawal, approved design and the later tracking request | 2026-10-21 | 2026-10-21 | Explain PR7927's redesign comment with dated evidence and current TODO status |
 | [Korean reviewer guide](review-guide-ko.md) | Full PR flow, class lifetimes, source navigation and testcase decisions | 2026-10-07 | 2026-10-07 | Explain and independently verify the final PR7927 reviewer deliverables |
 | [Approved design](design/no-record-type-design.md) | Row ownership, payload indices, value readers and storage/export guards | 2026-10-07 | 2026-10-07 | Preserve ticket context, navigation and verification evidence |
 | [Partition INSERT call flow (fb567a629)](CBRD-27089-partition-insert-call-flow_fb567a629_codex.md) | Baseline destination selection and the actual heap-insert sequence | 2026-10-06 | 2026-10-06 | Preserve ticket context, navigation and verification evidence |
