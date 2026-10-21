@@ -20,5 +20,5 @@ The former top-level `pgbuf-analysis/` and `build-analysis/` collections moved t
 were preserved. Page-buffer books already under `code-analysis/` remain at
 their established paths and are linked from the page-buffer index.
 
-Follow [repository guidance](../AGENTS.md#analysis-placement) when adding or
+Follow [repository guidance](../AGENTS.md#where-documents-belong) when adding or
 revising an analysis.
