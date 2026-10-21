@@ -6,6 +6,8 @@ This inventory assigns every operation family accepted by the Work456 specificat
 
 The engine is `1ef86a7efa34002e971b1b30bcf5d451e9db441b`. Public TC is `df8596dd999e825b1ec9812a735bbe01e50ac715`. Private baseline is `5c9d8de1a916ae0acbddc8409770b51fd31da13b`. The new observer is private commit `5e8a9eaa885a53922826ff5320787f1115034a13`. See the [baseline and runtime receipt](ticket01-baseline-and-observer-20261021.md) and [302-case C++ dispositions](supplement-cpp-inventory-work456-20261021.md).
 
+Ticket 07 now has a separate [executed alternative-write receipt](ticket07-alternative-write-paths-20261021.md) for O35–O37 and its O78 share: SQL 3 PASS, ordinary/indexed shell 8 PASS, unassigned-stub shell 2 correct FAIL linked to CBRD-27230. This does not rewrite the baseline observations below.
+
 ## State and support rules
 
 `C` means a stored record without HAS_OOS. `S` means a stored record with HAS_OOS. Each assertion must observe the actual input/output record. Policy, value length, a different fixture and aggregate SHOW statistics cannot supply that observation. Size remains relevant only to a size-dependent boundary.

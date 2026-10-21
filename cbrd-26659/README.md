@@ -20,6 +20,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [ticket07-alternative-write-paths-20261021.md](ticket07-alternative-write-paths-20261021.md) | Alternative-write full models, actual record states and retained whole-stub conformance failures | 2026-10-21 | 2026-10-21 | Close Work456 ticket07 with explicit SQL/shell/SA receipt limits |
 | [ticket15-identity-ownership-rollback-reclaim-20261021.md](ticket15-identity-ownership-rollback-reclaim-20261021.md) | Retained identity/lifetime cases, undo horizon, existing-file AES, SA/CS ownership failures and Python 3.6 compatible byte observation | 2026-10-21 | 2026-10-21 | Verify approved ticket15 contracts without engine repairs |
 | [engine-followup-client-trigger-oos-placement-20261021.md](engine-followup-client-trigger-oos-placement-20261021.md) | CS trigger placement failure, reproduction and engine repair acceptance | 2026-10-21 | 2026-10-21 | Hand off eight failed placement obligations without changing intended oracles |
 | [ticket06-dml-triggers-transactions-20261021.md](ticket06-dml-triggers-transactions-20261021.md) | Work456 DML state transitions, transaction atomicity and trigger placement failures | 2026-10-21 | 2026-10-21 | Deliver ticket06 with exact native results and retained C++ assertions |
