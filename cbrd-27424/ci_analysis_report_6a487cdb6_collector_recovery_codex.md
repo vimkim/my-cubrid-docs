@@ -1,8 +1,124 @@
 # PR7925: recovered CI evidence and shell failure analysis
 
 Date: 2026-10-17, Asia/Seoul. Work Items 397 and 393.
+Revalidated and extended: 2026-10-21, Asia/Seoul, under Work Item 393.
 PR: [CUBRID/cubrid #7925](https://github.com/CUBRID/cubrid/pull/7925).
 Engine: `6a487cdb6cbda36ac94ad9b22009cea6cb58aa2f`.
+
+## 2026-10-21 재분석: 왜 실패했나?
+
+이번 재분석의 독자는 PR 작성자이며, 질문은 현재 공개된 소스의 shell CI 실패 원인과 다음 조사 순서입니다.
+새 CI를 실행하지 않고 기존 run `38938588691`, attempt 1의 증거를 다시 수집·검증했습니다.
+**실패를 발생시킨 검사 조건은 6건 모두 확인했습니다. 각 조건을 깨뜨린 엔진·실행 환경의 근본 원인은 아직 확정하지 못했습니다.**
+이전에 기록한 수집기 오류는 이미 해결됐으며, 현재 실패 목록을 확인하지 못하는 이유가 아닙니다.
+
+SQL은 17,471/17,471, medium은 975/975 통과했습니다.
+Shell은 3,253건 통과, 6건 실패, 30건 건너뜀, 미실행 0건입니다.
+아래 이름은 뒤의 [전체 경로와 job 링크가 있는 목록](#failure-inventory)에 대응하며, 각 행은 실패한 testcase 파일 하나입니다.
+
+| Testcase | 직접 확인한 실패 조건 | 정확한 merge-base 실행과 비교 | 아직 확인할 원인 |
+| --- | --- | --- | --- |
+| `bug_bts_13242` | 잠금 수가 기대값에 도달하지 않아 3개 지점에서 각각 60회 대기를 소진하고, 정렬한 잠금 덤프가 answer와 달라짐 | 기준 실행은 통과, head에서 추가 실패 | 기대값을 초과하는 잠금의 소유자와 종류, 세션 종료·덤프 시점 |
+| CDC `thread` | 서버를 종료하는 4번 검사에서 `result4.log`에 `API ERROR`가 1회 있음. 종료 성공 문구도 1회 있음 | 기준 실행은 통과, head에서 추가 실패 | 오류를 반환한 API 호출과 서버 종료 시점의 관계 |
+| `bug_bts_14305` | 종료 요청은 성공했지만 대상 CSQL 출력에서 기대한 중단 메시지가 0회 검출됨 | 기준 실행은 통과, head에서 추가 실패 | 실제 종료한 트랜잭션과 배경 CSQL의 대응, 출력 내용 |
+| `bug_bts_15156` | master 재시작 뒤 반복해 서버를 종료해도 성공 문구가 0회 검출됨 | 기준 실행에서도 같은 실패 조건 | 이미 종료된 서버인지, 실제 종료 오류인지, 출력 기대가 다른지 |
+| `cbrd_27064` | DELETE·UPDATE CDC 추출이 `rc=-10`으로 끝나 목표 건수를 채우지 못함 | 기준 실행에서도 같은 반환 코드와 추출 부족 | 최초 실패한 요청·수신 단계와 서버 오류 |
+| `cbrd_27075` | UPDATE 2,000회는 완료했으나 4K·8K·16K 모두 CDC 추출 오류가 있어 검사 실패 | 기준 실행에서도 세 설정 모두 추출 오류 | 각 probe의 반환 코드와 서버/API 로그 |
+
+기준에도 있었던 3건, head에서 추가 관찰한 3건, 비교 불가 0건입니다.
+별도로 기준에서만 실패한 2건은 head에서 통과했습니다. 이 두 건을 head 실패 수에 더하거나, 이번 PR이 고쳤다고 해석하지 않습니다.
+현재 head와 기준의 비교 대상 8개 testcase `cases/` 디렉터리는 Git tree가 각각 같습니다.
+이 비교는 입력 소스 차이를 배제하지만 호스트 부하, 실행 순서, 난수 payload까지 같았다는 증거는 아닙니다.
+
+### 이번 변경이 원인인가?
+
+최신 커밋 `6a487cdb6`의 제품 코드 변경은 `SA_MODE`로 감싼 17줄 삭제입니다.
+나머지 변경은 저장행 비교 fixture의 CHN assertion 6줄입니다.
+[커밋 diff](https://github.com/CUBRID/cubrid/commit/6a487cdb6cbda36ac94ad9b22009cea6cb58aa2f)는 서버 빌드의 해당 분기를 바꾸지 않습니다.
+따라서 서버에서 관찰한 실패를 이 분기 삭제에 바로 귀속할 근거는 약합니다.
+다만 일부 testcase는 준비·정리 때 standalone 명령도 사용하며, 전체 PR은 기준 대비 29개 파일의 heap·query·locator 변경을 포함합니다.
+최신 커밋의 직접 영향이 약하다는 판단으로 전체 PR의 간접 영향을 배제할 수는 없습니다.
+
+CDC `-10`은 정확한 소스에서 `CUBRID_LOG_FAILED_CONNECT`입니다.
+이는 API 요청·응답 실패의 여러 경로에서 반환되므로, 이름만 보고 최초 연결 실패나 특정 overflow 손상으로 단정할 수 없습니다.
+두 CDC testcase의 손상 문구 집계는 0이지만, 그것만으로 저장 무결성을 입증할 수도 없습니다.
+해당 API 소스 파일들은 기준과 head 사이에서 바뀌지 않았습니다.
+
+### 무엇부터 조사해야 하나?
+
+1. **`bug_bts_13242`:** 현재 검사에서 기대한 잠금 수 6·8·9와 관찰한 수 8–9·12–14·15가 다른 세 지점의 전체 덤프를 확보합니다. 트랜잭션별 잠금 소유권과 배경 세션 종료 여부를 먼저 확인합니다. 대기 시간을 늘리는 것만으로 안정화됐다고 판단하지 않습니다.
+2. **CDC `thread`:** `result4.log`, `finalize.log`, 서버 오류 로그에서 최초 실패 호출을 확인합니다. `API ERROR`는 driver의 setup·connect·find_lsa·finalize 분기 모두에서 출력될 수 있습니다. 현재 요약은 어느 호출인지 알려주지 않습니다. finalize 이전 오류라면 종료 경쟁이라는 가설은 기각해야 합니다.
+3. **`bug_bts_14305`:** 이 테스트는 고정된 `kill 1`을 실행합니다. 성공 응답은 트랜잭션 하나를 종료했다는 증거이며, 배경 CSQL을 종료했다는 증거는 아닙니다. `result1.log`–`result3.log`와 실제 트랜잭션 식별자를 대조합니다. 올바른 대상을 종료한 뒤 다른 오류가 기록됐다면 대상 오인 가설을 기각해야 합니다.
+4. **기준에도 있던 세 실패:** `server.log`·`service.log`, CDC driver와 서버/API 오류 로그를 확보해 별도 원인을 추적합니다. 이전에도 관찰됐다는 이유로 CI 실패를 면제하지 않습니다.
+
+추가 세 건의 PR 연관성은 `unknown`, 엔진 근본 원인에 대한 확신은 낮습니다.
+기준과 공유하는 세 건을 이 PR이 처음 도입했을 가능성은 `unlikely`, 확신은 중간입니다.
+직접 실패 조건과 비교 분류에 대한 확신은 높습니다.
+각 가설의 반증 조건과 필요한 로그는 뒤의 원인별 분석에도 보존했습니다.
+이번 작업은 소스·testcase 수정, 로컬 재현, 추가 CI 실행을 포함하지 않습니다.
+
+### Chronicle 이력: 기존 증상인가, flaky인가?
+
+`cubrid-tcc 0.3.0`으로 전체 경로와 shell suite를 지정해 6건의 `status`, 현재 run의 `explain`, 전체 보존 이력의 `history`를 조회했습니다.
+현재 run이 처음에는 index에 없어 run `38938588691`의 shell만 한 번 `sync-data --revisit-limit 0`으로 보강한 뒤 각 `status`·`explain`을 한 번 더 확인했습니다.
+아래 이전 실패 수는 보존된 index에서 현재 실패보다 앞선 기록의 수입니다. 전체 CI의 발생 빈도가 아닙니다.
+
+| Testcase | 현재 occurrence의 execution ID | 이전 실패 수 | 확인한 이력과 한계 |
+| --- | ---: | ---: | --- |
+| `bug_bts_13242` | 12343 | 3 | run `38513338343`, execution 4263에서도 정렬한 잠금 덤프 비교 실패. 당시 testcase 디렉터리는 현재와 달라, 같은 잠금 수·원인이라고 보지 않음 |
+| CDC `thread` | 12344 | 0 | `UNKNOWN_HISTORY`. 이전 실패를 찾지 못한 것은 최초 발생의 증명이 아님 |
+| `bug_bts_15156` | 12349 | 2 | run `38507861091`, execution 4070에서도 서버 종료 성공 문구 0회. testcase 디렉터리가 현재와 같음 |
+| `bug_bts_14305` | 12353 | 3 | [PR #7971](https://github.com/CUBRID/cubrid/pull/7971)의 [run `38519453863`](https://github.com/CUBRID/cubrid/actions/runs/38519453863), execution 4699에서도 중단 메시지 0회·사용자 생성 성공·종료 응답 성공. testcase 디렉터리가 현재와 같음 |
+| `cbrd_27064` | 12357 | 1 | 부모 소스 `b755678cd`, 같은 TC의 run `38861566581`, execution 8315에 실패 기록. 그 Chronicle snapshot에는 JUnit이 없어 이 경로로는 세부 증상을 비교하지 못함 |
+| `cbrd_27075` | 12361 | 0 | `UNKNOWN_HISTORY`. 독립적으로 검증한 merge-base 실패는 위 비교에 남아 있음 |
+
+**6건 모두 flakiness 평가는 `UNKNOWN`입니다.** 서로 다른 소스에서 통과와 실패가 섞였다는 이유로 flaky라고 분류하지 않습니다.
+`14305`의 위 비교 실행은 2026-10-14의 PR #7971, `[CBRD-27433] Match queries that differ only in spacing or letter case`입니다.
+PR 연결은 Chronicle의 `run_title` 메타데이터이며, GitHub의 해당 run 제목으로도 확인했습니다.
+동일한 testcase 디렉터리와 실패 조건이 다른 PR에서 먼저 관찰됐으므로 PR #7925가 이 증상을 처음 도입했다고 보기는 어렵습니다.
+그러나 현재 정확한 merge-base 실행은 통과했으며, 이번 PR이 재발 조건이나 발생 빈도에 영향을 줬는지는 아직 배제하지 않습니다.
+이전 Engine `65a856ab…`의 Git object는 현재 소스 checkout에 없어 해당 Engine 코드와의 직접 비교는 수행하지 못했습니다.
+현재 6개 occurrence는 Engine `6a487cdb6…`, private TC `a261508a…`, 전체 경로와 run이 일치합니다.
+다만 Chronicle의 50개 shard snapshot은 partial이며 attempt·job 연결이 확정되지 않았습니다.
+전체 discovery도 불완전하고 `status` freshness는 `STALE`입니다.
+이 이력은 맥락 자료이며, 독립 검증한 `cubrid-ci` attempt 1의 결과나 정확한 기준 비교를 대체하지 않습니다.
+
+읽어 비교한 이력의 정확한 입력은 다음과 같습니다. 실행 시간의 선후만 확인했으며, 이 Engine들이 현재 head의 Git 조상이라고 주장하지 않습니다.
+
+| Execution | Engine SHA | Private TC SHA | hash 검증 후 읽은 증거 |
+| --- | --- | --- | --- |
+| 4263 | `2e6b863efc02c8433845f61a4836df0b8fcf67cf` | `e8cefadd76191deef30ac64afc6e588a2313fd63` | `test-results/test-shell.xml`, SHA-256 `dcc667e409cd54656c74892efcdca53231359fa26b0e69001cc0577ab955658b` |
+| 4699 | `65a856ab12cc9ad760298d7e46bc5940237426bb` | `3c71be06b2e9abc1b45e8928a4aa1119cdc1b9f2` | `test-results/test-shell.xml`, SHA-256 `26b98849f8462db51d00b167eccd05c2c5eac30be52f9f5559eed90d77b61acc` |
+| 4070 | `254a60fb68e4e5b6c0d323c034735aaba6f6a79f` | `43c14d88a7b90c1a686ed2917e4b5904d77a1c72` | `test-results/test-shell.xml`, SHA-256 `798e17badd3a9ba7705cb90606d94c36b0b35b81b07672f1396de89b1fa5aebf` |
+| 8315 | `b755678cd9a3ab465215228d5664f7f1edf24846` | `a261508a624efc7115ac181073d40bca7fc9448c` | retained file inventory. JUnit 없음, 세부 증상 미확인 |
+
+### 이번 재검증의 증거 범위
+
+`cubrid-ci 0.2.0 (9536bd3c2867, release)`의 doctor가 통과했습니다.
+Status 한 번, exact-head collection 한 번, exact merge-base collection 한 번을 실행했습니다. 대기 옵션이나 binary 수집은 사용하지 않았습니다.
+Head와 기준 모두 collection exit 0이며, red shell suite도 완전하게 수집됐습니다.
+
+| 항목 | Head | 정확한 merge base |
+| --- | --- | --- |
+| Engine | `6a487cdb6cbda36ac94ad9b22009cea6cb58aa2f` | `fb567a629cdb390fff920542173fa36f454c74a0` |
+| Run / attempt | `38938588691` / 1 | `36570256001` / 1 |
+| Observation | `20261021T114900.425646002Z-40875-0` | `20261021T114935.562832972Z-43237-0` |
+| Collection 완료 UTC | `2026-10-21T11:49:01.291002979Z` | `2026-10-21T11:49:35.883464171Z` |
+| 검증한 raw 파일 수 | 786 | 780 |
+
+기준 관계는 `2026-10-21T11:49:32.305564702Z`에 조회했으며, 당시 target `feature/oos-merge`의 tip도 `fb567a629…`입니다.
+두 bundle의 schema, 유일하게 일치하는 request/result observation, SHA-256·파일 길이, 61개 shard별 JUnit·할당·runner 결과, failure metadata·메시지·diff, Engine·TC provenance를 독립 검증했습니다.
+Report-mode gate는 `full`, 비교 범위는 `validated_cases_only`입니다. 이는 인과관계의 증명이 아닙니다.
+Private/public TC 및 CTP의 정확한 SHA와 환경 차이는 아래 기존 분석의 표와 같습니다.
+사용하지 않은 binary budget은 각각 512 MiB 전액이며, archive를 읽지 않았다는 것은 archive 부재의 증거가 아닙니다.
+
+이번 receipt는 `/mnt/nvme/data-5/tmp/pr7925-ci-analysis.7MV2Qb`에 있습니다.
+`status.json`, `result.json`, `base-result.json`, `head-validation.json`, `base-validation.json`, `assessment.json`, `report-mode.json`, `comparison.json`이 현재 CI 검증을 기록합니다.
+`history-summary.json`, `history-source-comparison.json`, `*-status-refreshed.json`, `*-explain-refreshed.json`, `*-history.json`, `history-refresh.json`, `history-coverage-selected.json`, `history-evidence-*.json`, `history-*.xml`, `history-*-message.txt`가 이력 조회와 hash 검증한 원문을 기록합니다.
+이 파일들은 도구가 소유한 증거 및 외부 임시 경로에 보존하며 문서 Git에는 넣지 않습니다.
+공개 TC PR3679와 비공개 TC PR4360은 이번 조회에서도 모두 OPEN이며, head는 각각 `26f964b8…`, `a261508a…`로 CI 입력과 같습니다.
+TC Merge Gate의 사람에 의한 병합·종료 처분은 남아 있으며, 이번 분석으로 해소되지 않습니다.
+아래 2026-10-17 분석과 당시 절차·브랜치 상태는 역사적 기록으로 유지합니다.
 
 ## Result and decision boundary
 

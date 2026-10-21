@@ -3,6 +3,8 @@
 Date: 2026-10-17, Asia/Seoul. Work Items 397 and 393.
 Engine: `6a487cdb6cbda36ac94ad9b22009cea6cb58aa2f`.
 
+**후속 확인, 2026-10-21:** 수집기 복구로 아래의 증거 수집 한계는 해소됐습니다. 현재 실패 원인과 검증된 6건 목록은 [복구·재검증 보고서](ci_analysis_report_6a487cdb6_collector_recovery_codex.md)를 먼저 읽으세요. 아래 경고는 최초 불완전한 관측의 기록으로 유지합니다.
+
 **Warning: this record supports no testcase-level regression or root-cause conclusion.**
 The workflow finished with failure. GitHub reports both builds, SQL, and medium successful, and shell failed.
 The collector cannot produce trustworthy testcase summaries because the shard marker contract differs from its expected contract.
