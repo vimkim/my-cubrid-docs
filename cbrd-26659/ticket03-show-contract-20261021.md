@@ -49,7 +49,7 @@
 
 **파티션 소유권 사례: FAIL 유지.** `shell/_40_guava/cbrd_26659_show_partitions/cases/cbrd_26659_show_partitions.sh`는 두 leaf에 서로 다른 id/note와 같은 구별 가능한 전체 5,107-byte 값을 삽입했다. root SELECT는 정확히 두 행, p0/p1의 직접 SELECT는 각각 올바른 한 행을 반환했다. SHOW의 class OID/HFID가 실제 root/leaf를 구별하며, 이 aggregate 관측은 파티션 행의 HAS_OOS qualification을 주장하지 않는다.
 
-| 실제 heap | 승인 기대 `(has,file chunks,slot bytes)` | 최종 관측 | 식별자 |
+| 실제 heap | 승인 기대 `(has,chunks,slot bytes)` | 최종 관측 | 식별자 |
 | --- | --- | --- | --- |
 | partition root `show_part` | `(0,0,0)` | `(1,2,10272)` | class `(0|195|2)`, HFID `(577,1,576)`, OOS `(1,768)` |
 | `show_part__p__p0` | `(1,1,5136)` | `(0,0,0)` | class `(0|195|5)`, HFID `(641,1,640)`, OOS 없음 |
@@ -97,3 +97,5 @@ runner가 생성한 slot 안에서 두 사례를 순차 실행했다. 최종 사
 Raw evidence root는 `/home/vimkim/temp/work456-implementation/ticket03`이다. 각 attempt의 `preflight.log`, `inputs.json`, `environment.json`, `expected-cases.txt`, `conf/shell.conf`, `command.json`, `run.log`, `exit.status`, `verify.log`와 `CTP/result/shell/current_runtime_logs/{test-shell.xml,test_status.data,dispatch_tc_ALL.txt,dispatch_tc_FIN_local.txt,feedback.log,test_local.log}`을 보존했다. source/install/TC/CTP의 `revisions-final01.json`, install/CTP manifests, `testkit-build.txt`, `attempts.json`, `doctor-final.log`, `cpp-show-audit.json`도 같은 root에 있다. 독립 최종 reconciliation `independent-audit.json` SHA-256은 `2b8170bf36dd4bd1111bc675d6ed9cfcd0429740e57921230b2aa324768551a6`; 최종 XML SHA-256은 `f3554f83d7b9c83cc950e4cfe8115d67eb7049bf3cec66bca8132bbcc1441c72`이다. 큰 로그와 자동 생성 inventory는 문서 Git에 넣지 않았다.
 
 **전달 범위.** `bash -n`, ShellCheck, explicit task diff와 native artifact reconciliation을 수행했다. 전용 source worktree에는 build directory와 compile database를 만들지 않아 LSP/build validation의 그 두 항목은 준비되지 않았다. 이 작업은 소스 build나 LSP에 의존하지 않았고 matching installation preflight로 실행 기준을 확정했다. 필수 SHOW 인자·권한 조합의 미실행/skip은 없으며 파티션은 실행된 엔진 FAIL이다. 파티션 행의 개별 플래그 관측은 본 aggregate 계약의 증거로 주장하지 않는다. 최종 ticket16은 두 신규 shell 사례와 별도 SA4 receipt를 분리하여 합산하고 이 FAIL 및 별도 수리 연결을 유지해야 한다. 이 전달은 CI-ready/all-green, engine repair 완료, performance/HA qualification을 뜻하지 않는다.
+
+최종 실행 뒤 live TC05 integration을 own branch로 받았다. handoff private tip은 `c81615ec4b213b8a906139222877537385b31caa`, public tip은 `754dfffd83f7b3a14e13e8a5b965ccf4f2ae2920`이다. `post-merge-input-audit.json`에서 최종 실행에 사용한 다섯 신규 파일과 shared helper를 포함한 모든 input hash가 그대로임을 확인했다. 새 통합 revision 전체를 다시 실행한 것으로 표현하지 않는다. Source는 계속 `d13aebf64`다.
