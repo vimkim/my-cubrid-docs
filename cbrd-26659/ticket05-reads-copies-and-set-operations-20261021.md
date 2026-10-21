@@ -152,4 +152,6 @@ Bash syntax, warning-level ShellCheck, Markdown source and relative-link checks 
 
 No reproducible engine failure occurred in these tested contracts. The first NOK detects the deliberately missing JDBC receipt. The second detects an answer-formatting error. Both retain their artifacts and receive no PASS credit. Final negative-control and cleanup reconciliation passed. No missing or unexecuted required ticket 05 case remains. This report grants no whole-corpus, HA, performance, vacuum/reclaim, partition or competing-source integration qualification.
 
-Local task commits only. No source/TC push, integration merge, CI trigger, TC PR action or JIRA change occurred. The coordinator owns ticket/map status and subsequent integration. The task preserves all unrelated CCI/CTP dirt and foreign resources.
+Local task commits only. No source/TC push, destination integration merge, CI trigger, TC PR action or JIRA change occurred. The coordinator owns ticket/map status and subsequent integration. The task preserves all unrelated CCI/CTP dirt and foreign resources.
+
+Before handoff, the task branches incorporated the current source, TC and docs integration tips. The incoming ticket 02 changes add policy cases and documentation. They change no ticket 05 selected input or shared helper. The final input-hash audit therefore remains valid. README resolution preserves both report rows. The coordinator still owns destination integration.
