@@ -2,13 +2,13 @@
 
 Date: 2026-10-21, Asia/Seoul. Reader: the Work456 coordinator and testcase reviewers. Related PRs: [engine 8128](https://github.com/CUBRID/cubrid/pull/8128), [private TC 4365](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4365).
 
-This report answers whether independent repeated writes preserve exact values and recover reusable OOS storage. The source is `CUBRID/cubrid@1ef86a7efa34002e971b1b30bcf5d451e9db441b`. Ticket 13 changes testcases only. All seven required shell cases executed. All four new workloads completed three cycles. Page-return observations and the retained rollback/vacuum regression failed. The product eligibility observation limit below still prevents ticket 13 completion.
+This report answers whether independent repeated writes preserve exact values and recover reusable OOS storage. The source is `CUBRID/cubrid@1ef86a7efa34002e971b1b30bcf5d451e9db441b`. Ticket 13 changes testcases only. The original seven required shell cases executed, and all four new churn workloads completed three cycles. Their page-return observations and the retained rollback/vacuum regression failed. A separate eighth case now supplies exact product-owned page census and post-restart reuse evidence. It passed on committed inputs without changing those historical oracles or reconstructing their earlier live horizons.
 
 ## Baseline and test seams
 
 The source branch is `task/work456-13-source` in `work456-ticket13`. It starts at the exact handover source above. The task branch has no associated PR. The starting branch belongs to engine PR 8128, head repository `vimkim/cubrid`, head `CBRD-26659-oos-testcases-handover`, base `feature/oos-merge`.
 
-The private TC branch `task/work456-13-private` starts at the integrated ticket 01 commit `5e8a9eaa885a53922826ff5320787f1115034a13`. The public TC head remains `df8596dd999e825b1ec9812a735bbe01e50ac715`. Ticket 13 has no public TC edits. Documentation branch `docs/work456-13` starts at `c784cd0008f8943bf7f1b25be8bd49381d60391e`.
+The private TC branch `task/work456-13-private` starts at the integrated ticket 01 commit `5e8a9eaa885a53922826ff5320787f1115034a13`. The original invocation used public TC `df8596dd999e825b1ec9812a735bbe01e50ac715`. Ticket 13 has no public TC edits. Documentation branch `docs/work456-13` starts at `c784cd0008f8943bf7f1b25be8bd49381d60391e`.
 
 The [approved supplement](supplement-spec-work456-20261021.md) supplies the test seams. Native shell controls the lifecycle and sessions. CSQL checks complete values. Existing product diagnostics observe current stored records, OOS chunks/pages, heap capacity, index capacity, file ownership, reserved sectors, and database volume use.
 
@@ -40,7 +40,7 @@ Eligibility has an additional source condition. At the pinned source, `oos_recla
 
 ## Space attribution and comparison
 
-The fresh heap has the same schema and exact two-row base model. Each cycle compares its state with the churn heap at that same live model. `SHOW HEAP OOS` identifies the owned class/HFID/VFID and reports OOS user pages, chunks, record bytes, physical bytes, and unused bytes. Unused bytes indicate aggregate slack. The tests do not measure exact fragmentation within each page.
+The fresh heap has the same schema and exact two-row base model. Each cycle compares its state with the churn heap at that same live model. `SHOW HEAP OOS` identifies the owned class/HFID/VFID and reports OOS user pages, chunks, record bytes, physical bytes, and unused bytes. Unused bytes indicate aggregate slack. The original four churn tests do not measure exact fragmentation within each page. The additional qualified census below records exact per-page free-space and occupancy fields for its separate fixture.
 
 `SHOW HEAP CAPACITY` identifies the ordinary heap separately. `SHOW ALL INDEXES CAPACITY` identifies the narrow primary-key B-tree separately. Neither count substitutes for OOS pages. `spacedb` describes the whole database, including the log-filler table and fresh reference heap. Its totals do not attribute all growth to OOS.
 
@@ -91,6 +91,49 @@ The wrong-value control changes only the expected final byte from `ef` to `ee`. 
 
 The coordinator released the native lease after both invocations and cleanup audits. The own workenv doctor reports ready without opening a DB. It reports 1,970 inaccessible other-user PIDs, so it supplies no global inactivity claim.
 
+## Qualified stopped-page census and restart probe
+
+The additional native case is `cbrd_26659_qualified_reuse`. Its implementation is private TC commit `f6b84ff96ce4b9b90267e384c59ddfde5fa5e771`. Its product source and copied immutable ticket 14 installation are `d13aebf6428a68c2852d16df143d1da203d86dea`, Linux 16 KiB optdebug with the provider's `UNIT_TEST_OOS=ON` build setting. No test hook is activated by this product case. This source adds ticket 09 unit coverage to the original product baseline. The earlier seven-case invocation remains attributed to `1ef86a7`.
+
+The case uses acknowledged owned server shutdown, then the existing `diagdb -d 1` file-table dump to enumerate every allocated VPID for the exact OOS VFID. `diagdb -d 2` independently reconciles the class/HFID/VFID ownership. Reserved but unallocated pages receive no occupancy credit. The file-table parser reconciles sector, user, table, free and allocated-page totals, including full-sector headings that the utility can append to its preceding VPID line. Volume paths come from owned `spacedb` output and must resolve inside the fixture directory.
+
+The read-only helper opens only those stopped owned volumes. Debug symbols in the actual provider library qualify the Linux little-endian layout: 16,384-byte I/O page, 32-byte reserved header, 16,344-byte DB area, eight-byte duplicate LSA watermark, 32-byte slotted-page header and four-byte slot. It validates VPID, page type, plaintext flags, watermark, slot spans and record counts. Deleted slots are empty when their offset is zero; their old length may remain. Source anchors at `d13aebf` are `src/storage/file_io.h:165`, `src/storage/slotted_page.h:64`, `src/storage/slotted_page.c:2094` and `src/transaction/log_lsa.hpp:38`. The helper requires GCC and this explicitly checked profile; a missing capability produces NOK rather than skipped proof.
+
+Every raw allocated page is copied to an attempt artifact before fixture deletion. A separate Python audit decodes the retained frames independently of the C helper. It reconciles all VPIDs, page LSAs, exact chunk counts and complete row-specific payloads. The serialized VARBIT model follows `src/base/object_representation.h:2340`: a five-byte prefix and four-byte packed alignment make a 16,000-byte value occupy 16,008 serialized bytes, plus its 24-byte OOS header. A one-chunk record therefore occupies 16,032 bytes and cannot share a data page with another such record or the survivor.
+
+The seed has the original two-row base plus 64 distinct 16,000-byte values. Their segments are `31 × 5000`, `72 × 6000`, `a3 × 4998`, then the two-byte row ID. After exact SQL equality/current-record checks and an initial stopped census, the case restarts, commits DELETE of those 64 rows, acknowledges log/vacuum progress, checks the complete surviving base, then stops again. Chunk deletion and actual page deallocation are separate observations.
+
+At that second stopped boundary, the final run found seven old data VPIDs absent from the exact allocation set, one live survivor chunk, and 57 still-allocated empty data pages. Each empty page had 16,308 total and contiguous free bytes. A fresh actual process restart ends the prior process's undo sources. Vacuum is disabled and acknowledged by hidden parameter dump in the new process. An owned non-OOS logged transaction commits before the append barrier is captured. All 57 persisted old page LSAs are strictly below barrier `[194, 8328]`. Inference from the acknowledged graceful restart and the pinned head-LSA lifecycle: fresh process transaction heads cannot retain the ended process's undo state, and new heads originate at fresh append positions after persisted old page LSAs. Pressure records start at or after the captured barrier. Individual system-head values are not reconstructed by this census. This qualifies the new restart workload, not the earlier live horizon.
+
+The next 125 independent committed inserts use distinct payloads `b4 × 5000`, `c5 × 6000`, `d6 × 4998`, then their two-byte row ID. Their intermediate stopped census proves that all 57 prior empty VPIDs now contain one exact new chunk each while the file still owns the same two sectors. This avoids inferring sector reservation order solely from page LSAs. After another acknowledged restart, eleven more committed inserts force permitted growth. No perfect-packing equality against a fresh heap is used: one survivor page, 136 full-size single-chunk pages, one protected sticky header and one file-table page require 139 pages, exceeding the prior 128-page reservation.
+
+| Stopped census, `qualified-final01` | Exact chunks | Chunk record bytes | OOS user pages | File-table pages | Reserved sectors |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Seed peak | 65 | 1,030,284 | 66 | 1 | 2 |
+| DELETE/vacuum drain | 1 | 4,236 | 59 | 1 | 2 |
+| All old candidates reused | 126 | 2,008,236 | 127 | 1 | 2 |
+| Further required growth | 137 | 2,184,588 | 138 | 1 | 3 |
+
+The final growth census preserves every candidate's new value. Each candidate's new page LSA precedes the first occupied new-sector page LSA `[205, 5200]`. The intermediate census is the direct no-growth proof; this LSA ordering is supplemental. Exact SQL equality and independent raw decoding cover all bytes at every census, with one current REC_HOME row per expected ID. OOS counts remain separate from ordinary heap/index and whole-database volume observations.
+
+These are bounded positive observations. Conditional page-latch misses and refill outcomes can permit transient growth; an unqualified ordering or failed intermediate observation would remain an observation/attribution gap, not proof that every candidate was unbusy on every allocator call. Two complete qualified invocations passed. No new engine defect is inferred from the earlier testcase-parser/configuration errors or from those permitted transient outcomes.
+
+| Additional attempt | Native artifact result | Executed scope / correction |
+| --- | --- | --- |
+| `qualified-red01` | 1 NOK, 0 skip, 17.399 s | Peak and drained logical fixture executed; parser wrongly required cleared lengths on deleted slots. |
+| `qualified-green01` | 1 NOK, 0 skip, 21.807 s | Exact drain/deallocation census passed; an unnecessary bare checkpoint-interval override rejected restart. In-controller cleanup reported failure; native containment exited and the outer copied registry was empty. |
+| `qualified-green02` | 1 NOK, 0 skip, 21.409 s | Drain and fresh restart executed; vacuum-disable validation needed the utility's hidden-parameter dump. |
+| `qualified-green03` | 1 NOK, 0 skip, 44.157 s | Complete final logical values executed; full-sector dump parsing failed. The initial record-byte model omitted packed VARBIT alignment. |
+| `qualified-green04` | 1 NOK, 0 skip, 26.515 s | All raw counts/values executed; first pressure page LSA equalled the captured append position, requiring the correct `>=` relation. |
+| `qualified-green05` | 1 PASS, 0 skip, 31.934 s | Intermediate no-growth census and all later phases passed; 63 retained empty candidates reused. |
+| `qualified-final01` | 1 PASS, 0 skip, 31.329 s | Clean committed inputs; exact one required = selected = dispatched = finished = XML PASS; 57 retained candidates reused. |
+
+The final maintained verifier reports 1 PASS, 0 failures, 0 skips. All 13 wrapper-required phases passed; there is no missing, timed-out or unexecuted required phase in this new case. The separate raw audit also checks native status totals and exact dispatch/finish/XML identities. All owned DB, registry, directory, process-group and configuration cleanup assertions passed. The native C lease was released afterward.
+
+Two read-only diagnostic controls use copied actual final pages, never a source DB: the unchanged sparse copy passes, while one changed watermark byte fails with `offline census: page watermark mismatch`; a mismatched free-page total fails exact file-header/bitmap reconciliation. The previous independent same-length wrong-value control remains valid. None changes committed expectations. The provider installation matches all 236 entries in ticket 14's final manifest after execution.
+
+Raw evidence and scripts remain under `ticket13/qualified-final01`, `qualified-offline-controls`, `offline-layout-gdb.log`, `offline-layout-enum.log`, `qualified-provider-audit.json` and `audit_qualified.py` in the external evidence root. The original attempts and their original qualification limits remain intact.
+
 ## C++ dispositions and repair boundaries
 
 Ticket 13 retains all existing C++ cases. It keeps every case at its existing seam. Product equality does not replace private hint, cursor, latch, horizon, fault, or SA lifecycle assertions. The [complete inventory](supplement-cpp-inventory-work456-20261021.md) remains authoritative for those identities.
@@ -118,10 +161,12 @@ Ticket 15 owns any further deterministic eligibility, identity, and hint asserti
 Separate repair scopes remain [CBRD-26786](https://jira.cubrid.org/browse/CBRD-26786) and [CBRD-26658](https://jira.cubrid.org/browse/CBRD-26658) for reclaim/reuse, [CBRD-27237](https://jira.cubrid.org/browse/CBRD-27237) for rollback/vacuum, and [CBRD-27230](https://jira.cubrid.org/browse/CBRD-27230) for commit-conditional notification and chain ownership. These links do not establish a common cause for a new timeout. Unresolved attribution remains under triage. Ticket 13 makes no engine repair, CI, performance, perfect-packing, or OS-shrink claim.
 
 
-## Remaining acceptance boundary
+## Acceptance boundary and handoff
 
-There is no remaining missing execution in the four new workloads. The retained regressions execute their failing assertions. The rollback error and historical page-return oracle remain visible. This report identifies their separate repair scopes.
+All eight required product case identities have executed across the original seven-case invocation and the separate qualified case. The four original independent workloads complete all required cycles and exact reader/survivor checks. The qualified case closes the additional actual-page observation obligation for its stopped-page and fresh-process restart scope, with exact empty-page identities, old LSAs, actual deallocation, reuse before further growth, and independently necessary growth.
 
-One product observation capability gap remains: the actual formatted pages and their reclaim horizon are not fully qualified in the CS invocation. The new bounded page-return NOK results therefore remain under triage for eligibility attribution. A generic C++ PASS, fresh-heap count, or successful sector reuse cannot close that gap. Ticket 15 must provide applicable actual-page/eligibility evidence or leave the gap open. Ticket 13 must not be marked resolved while this required evidence is missing.
+The earlier twelve bounded page-return observations remain under triage for their original hidden live horizon and conditional SHOW-count limits. The historical page-return and CBRD-27237 oracles remain correct FAILs and retain their separate repair links. No new result relabels those attempts. The original snapshot's later embedded churn and rollback case's later physical diagnostic remain unexecuted after their preserved failures, as recorded above; independent owned cases supply the required safe workload coverage. The new case leaves no required phase unexecuted. A conditional-latch or refill outcome is not, by itself, a new engine defect.
 
-The only retained documentation changes are this report and its README index row. Raw logs, copied installations, controls, and receipt JSON remain outside Git. Source and public TC have no task edits. No publication, integration into destination branches, CI, or TC PR action occurred. The source/TC task branches include their current integration tips. The coordinator owns final integration and tracker state.
+The source task includes the current integration tip `5551d08fcfa2dc08b3352a71e1b4568af4f72a44`; its later addition is a unit-only writer bridge and boundary tests, not a re-execution of this product receipt. The private task includes integration `216d131098becb3f44056844052ca907b67dfae0`; incoming SHOW cases do not alter any qualified-case input hash. The docs task includes main `7d789b229b987ee3072994d50ba90fe89b25b0ff`, preserving its SHOW report and README row.
+
+The retained documentation changes are this report and its README index row. Raw logs, copied installations, controls and receipt JSON remain outside Git. Ticket 13 makes no engine or public-TC edits. No publication, destination merge, CI or TC PR action occurred. The coordinator owns acceptance review, final integration and tracker state.
