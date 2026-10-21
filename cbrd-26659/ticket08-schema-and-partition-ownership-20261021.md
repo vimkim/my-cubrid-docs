@@ -121,7 +121,7 @@ Range/list membership comes from the independent literal partition bounds and li
 The manual excludes VARBIT from supported partition-key domains.
 A partition-key domain rejection and invalid ADD after MAXVALUE must preserve the original table and its complete data.
 
-The native cases exercise DEFAULT and FORCE_OUTLINE independently.
+The partition fixtures use C/S mode and exercise DEFAULT and FORCE_OUTLINE independently.
 A new database and an explicit cleanup separate each policy invocation.
 An earlier ownership failure does not stop the remaining intended operations.
 Range/list split and merge each have separate initial fixtures.
