@@ -20,6 +20,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [ticket03-show-contract-20261021.md](ticket03-show-contract-20261021.md) | SHOW 대상·권한·보존 PASS와 실행된 파티션 소유권 FAIL, SA4 유지 근거 | 2026-10-21 | 2026-10-21 | Complete approved ticket03 with independent SHOW oracles and exact receipts |
 | [ticket02-policy-contract-20261021.md](ticket02-policy-contract-20261021.md) | Work456 policy syntax, preserved schema/records and native receipts | 2026-10-21 | 2026-10-21 | Close approved ticket02 with exact policy evidence |
 | [ticket04-utility-policy-roundtrips-20261021.md](ticket04-utility-policy-roundtrips-20261021.md) | Independent policy load/compact receipts, exact values/flags/owners, SA regressions and retained C++ contracts | 2026-10-21 | 2026-10-21 | Qualify utility policy preservation without mixing source revisions or hiding required gaps |
 | [ticket05-reads-copies-and-set-operations-20261021.md](ticket05-reads-copies-and-set-operations-20261021.md) | Actual record-linked reads, set relations, copy and LOB native receipts with retained CRUD execution | 2026-10-21 | 2026-10-21 | Close Work456 ticket 05 with independent full-value and physical evidence |
