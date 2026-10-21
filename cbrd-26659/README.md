@@ -20,6 +20,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [ticket02-policy-contract-20261021.md](ticket02-policy-contract-20261021.md) | Work456 policy syntax, preserved schema/records and native receipts | 2026-10-21 | 2026-10-21 | Close approved ticket02 with exact policy evidence |
 | [ticket01-baseline-and-observer-20261021.md](ticket01-baseline-and-observer-20261021.md) | Exact baseline and actual mixed-record flag/visibility native receipt | 2026-10-21 | 2026-10-21 | Establish the prerequisite observer for Work456 supplementation |
 | [supplement-operation-inventory-work456-20261021.md](supplement-operation-inventory-work456-20261021.md) | 83 operation obligations, existing assertions and follow-up owners | 2026-10-21 | 2026-10-21 | Account for every accepted operation and record-state cell |
 | [supplement-cpp-inventory-work456-20261021.md](supplement-cpp-inventory-work456-20261021.md) | All 302 C++ case retain dispositions and execution limits | 2026-10-21 | 2026-10-21 | Preserve module assertions during later supplementation and deduplication |
