@@ -20,6 +20,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [ticket10-fk-actions-and-large-keys-20261021.md](ticket10-fk-actions-and-large-keys-20261021.md) | Ordinary and actual OOS-key FK actions, blocked cascades, exact native receipts and retained SA assertions | 2026-10-21 | 2026-10-21 | Close approved ticket 10 with full models, record states and ownership proof |
 | [ticket13-churn-reclaim-reuse-20261021.md](ticket13-churn-reclaim-reuse-20261021.md) | Independent churn, retained failures and guarded CS page return/restart reuse | 2026-10-21 | 2026-10-21 | Execute Work456 ticket 13 without letting historical failures skip churn |
 | [ticket12-physical-record-key-boundaries-20261021.md](ticket12-physical-record-key-boundaries-20261021.md) | Exact record/key boundaries, retained target failures, atomicity and native receipts | 2026-10-21 | 2026-10-21 | Complete Work456 ticket12 without weakening accepted boundary oracles |
 | [ticket07-alternative-write-paths-20261021.md](ticket07-alternative-write-paths-20261021.md) | Alternative-write full models, actual record states and retained whole-stub conformance failures | 2026-10-21 | 2026-10-21 | Close Work456 ticket07 with explicit SQL/shell/SA receipt limits |
