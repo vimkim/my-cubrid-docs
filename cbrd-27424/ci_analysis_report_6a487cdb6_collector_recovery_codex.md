@@ -5,6 +5,117 @@ Revalidated and extended: 2026-10-21, Asia/Seoul, under Work Item 393.
 PR: [CUBRID/cubrid #7925](https://github.com/CUBRID/cubrid/pull/7925).
 Engine: `6a487cdb6cbda36ac94ad9b22009cea6cb58aa2f`.
 
+## 2026-10-21 추가 확인: bug_bts_13242의 대기 조건과 재실행
+
+사용자는 CDC 실패를 이번 조사에서 제외하고, 기존 실패 run을 `/run rerun`으로 다시 실행해 `bug_bts_13242`의 통과 여부를 확인하도록 요청했습니다.
+**기존 실패에서 핵심 차이는 3번 지점의 11개 잠금 덤프와 정답의 16개입니다. 테스트의 준비 완료 조건 자체가 정답과 다릅니다.**
+아래 표는 CI가 실제 사용한 private TC `a261508a624efc7115ac181073d40bca7fc9448c`의 script·answer와 보존된 실패 로그를 대조한 결과입니다.
+
+| 검사 지점 | script가 준비 완료로 보는 잠금 수 | answer의 잠금 수 | 기존 실패에서 저장된 수 | 관찰 |
+| --- | ---: | ---: | ---: | --- |
+| 1 | 6 | 9 | 9 | 60회 대기를 소진했지만 최종 수는 answer와 같음 |
+| 2 | 4 | 4 | 4 | 수가 일치함 |
+| 3 | 11 | 16 | 11 | 첫 관측이 11이어서 즉시 대기를 끝내고 그 덤프를 저장함 |
+| 4 | 6 | 6 | 6 | 수가 일치함 |
+| 5 | 8 | 14 | 14 | 60회 대기를 소진했지만 최종 수는 answer와 같음 |
+| 6 | 9 | 15 | 15 | 60회 대기를 소진했지만 최종 수는 answer와 같음 |
+
+근거: [대기 조건과 덤프 저장, script 23–38행](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/a261508a624efc7115ac181073d40bca7fc9448c/shell/_06_issues/_14_1h/bug_bts_13242/cases/bug_bts_13242.sh#L23), [쿼리 전송·rollback 제어, 52–61행](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/a261508a624efc7115ac181073d40bca7fc9448c/shell/_06_issues/_14_1h/bug_bts_13242/cases/bug_bts_13242.sh#L52), [3번 지점의 기준값 11, 83행](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/a261508a624efc7115ac181073d40bca7fc9448c/shell/_06_issues/_14_1h/bug_bts_13242/cases/bug_bts_13242.sh#L83), [answer의 기준값 16, 93행](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/a261508a624efc7115ac181073d40bca7fc9448c/shell/_06_issues/_14_1h/bug_bts_13242/cases/issue_13242.answer#L93).
+
+기존 failure message 1149–1174행은 3번 지점에서 `locked=11` → 조건 만족 → 덤프 저장 → rollback 허용 표식 생성의 순서를 보여줍니다.
+정렬한 전체 diff의 잠금 수 차이도 actual 11과 expected 16이며, 정답에 있는 일부 instance X lock 등이 actual에는 없습니다.
+기존 분석에서 1·5·6번의 대기 소진을 강조했지만, 그 세 지점의 최종 잠금 수는 정답과 같습니다.
+따라서 이번 추가 조사는 3번 지점의 준비 완료 판정에 초점을 맞춥니다.
+
+Git 이력에서도 불일치의 도입 지점을 확인했습니다.
+2026-08-11의 `feb498a165ff411c641fc5d8bea7763e2d6cb179`는 고정 sleep을 잠금 수 polling과 flag 제어로 바꿨습니다.
+2026-08-14의 [TC commit `cdb2fd6e4456bfe0bd4d122314cf6ea56c2f9ca4`](https://github.com/CUBRID/cubrid-testcases-private-ex/commit/cdb2fd6e4456bfe0bd4d122314cf6ea56c2f9ca4)는 통계·히스토그램 변경에 맞춰 answer를 `[6,4,11,6,8,9]`에서 `[9,4,16,6,14,15]`로 갱신했습니다.
+이 testcase 디렉터리에서 그 커밋이 바꾼 파일은 answer 하나이며 script는 전후 바이트가 같습니다.
+Script의 현재 polling 값은 갱신 전 answer와 정확히 같습니다.
+따라서 **정답을 갱신할 때 대기 기준도 함께 갱신하지 않은 TC 불일치는 확인된 결함**입니다.
+커밋 설명은 추가 잠금을 기본 히스토그램 처리와 연결하지만, 이번 분석에서 그 엔진 변경 전체를 재검증한 것은 아닙니다.
+
+**가설:** 전체 잠금 수 11을 쿼리 완료 표식처럼 사용해, SELECT FOR UPDATE가 진행 중인 상태를 덤프했을 수 있습니다.
+Script는 쿼리 완료를 직접 확인하지 않고 총 잠금 수로 기다린 뒤, 같은 flag로 rollback을 허용합니다.
+1·3·5·6번의 수치 불일치는 소스로 확인한 사실이며 확신이 높습니다.
+중간 상태를 관찰한 경쟁이라는 인과 설명의 확신은 중간입니다.
+PR 연관성은 여전히 `unknown`입니다. 수치 불일치만으로 엔진의 잠금 오류 가능성까지 배제하지 않습니다.
+쿼리 완료가 독립적으로 확인된 뒤에도 11개가 유지된다면 조기 덤프 가설을 기각하고 엔진의 잠금 경로를 조사해야 합니다.
+수정이 필요하면 쿼리 완료를 확인하면서 transaction은 유지한 상태에서 덤프하는 절차가 후보입니다. 이번 확인에서는 testcase를 수정하지 않습니다.
+
+### 승인받은 재실행
+
+사용자 요청으로 [댓글 `/run rerun 38938588691`](https://github.com/CUBRID/cubrid/pull/7925#issuecomment-6315790615)을 한 번 게시했습니다.
+새 [run 39599097742](https://github.com/CUBRID/cubrid/actions/runs/39599097742), attempt 1이 두 build와 shell status에 연결된 것을 확인했습니다.
+소스 head는 `6a487cdb6…`로 유지됩니다. SQL·medium은 기존 성공 status를 유지하며 이번에 다시 실행하지 않습니다.
+
+사전 검사에서 양쪽 `tc/pr-7925`가 최신 `feature/oos-merge`보다 뒤처진 것을 확인했습니다.
+사용자는 이 사실과 rerun 명령의 범위를 안내받고 **기존 TC로 재실행**을 명시적으로 승인했습니다.
+명령에 개별 testcase 제외 옵션이 없어 이전 실패 6건에 CDC 3건도 포함됩니다. CDC는 이번 원인 분석과 통과 판단에서 제외하며, 실제 shell status는 그대로 보고합니다.
+이 실행은 최신 feature TC 전체를 검증하는 qualification이 아닙니다.
+
+**CI 판정: `bug_bts_13242`는 재실패했습니다.** 새 run은 terminal `failure`입니다.
+실패 6건을 모두 실행해 2건 통과, 4건 실패, 오류·건너뜀·미실행 0건입니다.
+사용자 요청에 따라 CDC는 판정 목록에만 남기고 원인을 분석하지 않았습니다.
+
+| 재실행 testcase | 결과 | 이번 조사에서의 처리 |
+| --- | --- | --- |
+| `bug_bts_13242` | FAIL | 3번 지점의 actual 11 / expected 16이 다시 나타남 |
+| `bug_bts_15156` | PASS | 이전 서버 종료 실패가 이번 실행에서는 관찰되지 않음 |
+| `bug_bts_14305` | PASS | 이전 중단 메시지 검사가 이번 실행에서는 통과함 |
+| CDC `thread` | FAIL | 원인 분석 제외 |
+| CDC `cbrd_27064` | FAIL | 원인 분석 제외 |
+| CDC `cbrd_27075` | FAIL | 원인 분석 제외 |
+
+새 `13242` failure message 1160–1184행은 3번 지점에서 첫 관측이 `locked=11`이고, 그 즉시 break·덤프 저장·flag 생성으로 진행한 것을 보여줍니다.
+새 diff 12–15행도 actual 11과 expected 16의 차이를 기록합니다.
+원래 run `38938588691`의 같은 지점·실패 조건과 일치합니다.
+새 shard의 검증한 `build.read`는 원래 run `38938588691`, attempt 1에서 생성한 Engine `6a487cdb6…`의 debug build를 재사용했음을 기록합니다.
+Private TC도 `a261508a…`, branch `tc/pr-7925`로 같습니다.
+이미지·CTP revision·호스트 부하·모든 runtime 설정의 동일성은 이번 비교에서 검증하지 않았습니다.
+
+재실행만으로 이 문제는 해소되지 않았습니다.
+같은 Engine·TC에서 두 번 동일한 차이가 관찰됐지만, 이것만으로 간헐적 실패라고 확정하지 않습니다.
+다음 수정 후보는 확인된 준비 완료 조건을 바로잡고, 쿼리 완료가 확인된 상태에서 같은 SQL의 잠금을 비교하는 것입니다.
+이 절차에서도 11개가 유지된다면 엔진의 실제 잠금 누락 가설을 다시 검토해야 합니다.
+이번 요청에서는 소스·TC 수정, 추가 push, 추가 CI 실행을 하지 않았습니다.
+
+두 build status는 이번 run에서 SUCCESS입니다. Shell status는 FAILURE이며, SQL·medium은 이전 전체 run의 SUCCESS를 유지합니다.
+현재 PR head도 `6a487cdb6…`입니다.
+공개 TC PR3679와 비공개 TC PR4360은 OPEN이며, TC Merge Gate의 사람에 의한 처분은 여전히 남아 있습니다.
+`gh pr checks --required`는 설정된 required check가 없다고 응답했습니다. 실제 shell 실패 status와 별도로 기록합니다.
+
+### 재실행 증거와 비교 한계
+
+`cubrid-ci` doctor 통과 후 status 1회, exact-head shell collection 1회, exact merge-base shell collection 1회를 수행했습니다.
+사용자가 결과 확인까지 요청했으므로 head collection에 `--wait`를 사용했습니다.
+두 collection은 exit 0이며, head observation은 `20261021T124010.094658181Z-969757-0`, 기준 observation은 `20261021T124057.170822449Z-1002909-0`입니다.
+Head는 UTC `2026-10-21T12:40:14.696682335Z`, 기준은 `2026-10-21T12:40:57.415583929Z`에 수집을 마쳤습니다.
+Schema, 고유하게 일치하는 observation request/result, raw 파일 digest·길이, failure metadata·message·diff, JUnit·할당·runner 집계와 provenance를 독립 검증했습니다.
+Head raw 28개 파일과 기준 raw 616개 파일이 검증됐으며, binary 수집과 소비는 없습니다.
+Report-mode gate는 `full`, 비교 범위는 `validated_cases_only`입니다.
+
+정확한 merge base는 `fb567a629cdb390fff920542173fa36f454c74a0`, 기준 run은 `36570256001`, attempt 1입니다.
+관계 조회 시각 UTC `2026-10-21T12:40:53.248319153Z`의 target `feature/oos-merge` tip도 그 SHA였습니다.
+기준 private TC는 `c4b9d482fbd491a68510b2552df2c3cac91911fc`입니다.
+비교한 비CDC 3개 testcase 디렉터리의 Git tree가 head의 `a261508a…`와 각각 같습니다.
+`13242`는 기준에서 PASS, head에서 FAIL이므로 `additional_on_head`입니다. 같은 현상의 PR 인과관계는 계속 `unknown`입니다.
+`15156`은 비교 범위 안에서 `base_only`, `14305`는 양쪽 PASS입니다. CDC 3건의 원인·회귀 분류는 제외했습니다.
+기준은 전체 shell 3,289건이고 새 실행은 6건이므로, 양쪽 전체 실패 수를 직접 비교하지 않습니다.
+새 실행에 포함되지 않은 기준 실패를 새 실행이 고쳤거나 통과했다고 해석하지 않습니다.
+
+`cubrid-tcc 0.3.0`으로 `13242`의 status·현재 run explain·보존된 전체 history를 조회했습니다.
+현재 실패가 처음에는 index에 없어 새 run의 shell만 `sync-data --run 39599097742 --suite shell --revisit-limit 0`으로 한 번 보강하고 status·explain을 한 번 더 조회했습니다.
+현재 occurrence execution 12413과 이전 동일 Engine occurrence 12343은 각각 새 run과 원래 run에 대응하며, 경로·Engine·TC SHA와 FAIL이 일치합니다.
+Chronicle은 `SEEN_BEFORE`, flakiness는 `UNKNOWN`입니다.
+Chronicle snapshot은 partial이고 attempt·job 귀속이 확정되지 않았으며 freshness도 `STALE`입니다. 이 이력은 독립 검증한 attempt 1의 판정을 대체하지 않습니다.
+
+재실행 receipt와 정적 대조 결과는 `/mnt/nvme/data-5/tmp/pr7925-lock-rerun.4QuZjh`의 `trigger-receipt.json`, `lock-readiness.json`, `pr-pretrigger.json`, `comments-pretrigger.json`, `checks-pretrigger.json`, `source-run-pretrigger.json`, `run-pickup.json`에 보존합니다.
+`threshold-history.json`은 answer 갱신 전후의 수치와 변경되지 않은 script의 SHA-256을 기록합니다.
+`analysis-status.json`, `analysis-result.json`, `base-result.json`, `head-validation.json`, `base-validation.json`, `selected-head-manifest.json`, `selected-base-manifest.json`, `scoped-comparison.json`, `assessment.json`, `report-mode.json`은 이번 snapshot의 독립 검증과 제한된 기준 비교를 기록합니다.
+`history-refresh.json`, `history-explain.json`, `history-status.json`, `history-coverage.json`은 이력 보강 범위와 불완전성을 기록합니다.
+실제 provider 원문과 observation은 위 collection 결과의 collector 소유 경로에 있습니다. 외부 receipt와 원시 로그는 문서 Git에 넣지 않습니다.
+
 ## 2026-10-21 재분석: 왜 실패했나?
 
 이번 재분석의 독자는 PR 작성자이며, 질문은 현재 공개된 소스의 shell CI 실패 원인과 다음 조사 순서입니다.
