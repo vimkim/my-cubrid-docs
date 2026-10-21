@@ -17,7 +17,7 @@
 <div class="box"><span class="label">이 문서의 목표</span>
 숙련된 C/C++ 시스템 프로그래머가 <b>원본 소스를 열지 않고 이 책만으로</b> CUBRID 페이지 버퍼를
 재작성해서, 기존 엔진에 drop-in으로 넣고 부팅·회귀 테스트·성능 특성이 같도록 만드는 것.
-세미나 리포트(<code>../pgbuf-analysis/cubrid-page-buffer-report_5cd4f860e_claude.html</code>)가
+세미나 리포트(<code>../code-analysis/pgbuf/cubrid-page-buffer-report_5cd4f860e_claude.html</code>)가
 "왜 이렇게 동작하는가"를 가르친다면, 이 책은 "정확히 무엇을 만들어야 하는가"를 규정한다.
 </div>
 
@@ -30,7 +30,7 @@ stock 11.5와 다른 지점은 본문에 표시한다.</li>
 API 의미론, 에러 코드, 카운터 증가 지점, 로그/디스크 쓰기 순서, 심지어 히트율 집계의 quirk까지 —
 재현하는 것이 목표다. drop-in 검증이 가능해야 하기 때문이다.</li>
 <li><b>알려진 결함은 각주로 처리한다.</b> 분석 중 발견된 결함 D1~D8
-(<code>../pgbuf-analysis/pgbuf-defects-report_5cd4f860e_claude.md</code>)이 걸리는 지점마다
+(<code>../code-analysis/pgbuf/pgbuf-defects-report_5cd4f860e_claude.md</code>)이 걸리는 지점마다
 <span style="border-left:3px solid var(--defect-line); padding-left:6px;">결함 각주 박스</span>로
 "충실 재현" vs "수정" 두 선택지를 명시한다. 기본 권장: <b>동작이 바뀌지 않는 결함(D2, D8)은 수정,
 동작이 바뀌는 결함(D1, D3, D4)은 1차 구현에서 충실 재현 후 별도 커밋으로 수정</b>.</li>
@@ -102,11 +102,11 @@ perfmon/시스템 파라미터: pgbuf가 호출하는 모든 외부 함수의 �
 
 <h2>0.6 함께 쓰는 자료</h2>
 <ul>
-<li><b>팩트시트 3부</b> (<code>../pgbuf-analysis/research/cubrid-*.md</code>) — 이 책의 모든 규범
+<li><b>팩트시트 3부</b> (<code>../code-analysis/pgbuf/research/cubrid-*.md</code>) — 이 책의 모든 규범
 문장의 원전. 줄번호 근거가 담겨 있다 (인용 검증: 40 confirmed / 0 wrong).</li>
 <li><b>quizzes 12종</b> (cubrid 워크트리 <code>quizzes/</code>, branch pgbuf-analysis) — 수용 테스트.
 각 퀴즈의 실측 기대치가 10장에 표로 정리되어 있다.</li>
-<li><b>결함 보고서</b> (<code>../pgbuf-analysis/pgbuf-defects-report_5cd4f860e_claude.md</code>) — D1~D8 상세.</li>
+<li><b>결함 보고서</b> (<code>../code-analysis/pgbuf/pgbuf-defects-report_5cd4f860e_claude.md</code>) — D1~D8 상세.</li>
 </ul>
 
 <p class="small">작성: Claude (Fable 5) · 2026-08-06 · 근거: CUBRID <code>5cd4f860e</code> 전수 분석

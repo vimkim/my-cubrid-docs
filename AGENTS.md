@@ -36,13 +36,78 @@ CUBRID policies take precedence over repository-local guidance.
   larger investigation; important Markdown documents there belong in the
   ticket's root index.
 
+## Analysis placement
+
+- Put analyses of CUBRID subsystems, architecture, build tooling, and performance
+  that serve readers across tickets under `code-analysis/<topic>/`. Use short,
+  stable topic names, such as `pgbuf`, `build`, or `lock-manager`; reuse an
+  existing topic before creating another. `code-analysis/README.md` is the
+  navigation entry for these topics.
+- Put an analysis whose main purpose is a ticket or PR decision in that ticket's
+  existing directory. Link shared subsystem explanations from there. Extend the
+  shared explanation when it has independent reader value; keep the ticket's
+  findings and disposition with the ticket.
+- Search both the ticket directories and `code-analysis/` before writing. Read
+  relevant existing reports and their revision limits; update or extend the
+  appropriate report instead of creating a competing explanation of the same
+  scope and revision.
+- Keep a single report in a descriptive Markdown file. Use a revision or dated
+  subdirectory when separating multiple analyses of the same topic. Preserve
+  established revision and author suffixes when reusing existing paths.
+- Treat `code-analysis/pgbuf/` and `code-analysis/build/` as the destinations for
+  the former `pgbuf-analysis/` and `build-analysis/` collections. Add future
+  subsystem analyses within `code-analysis/` rather than creating more
+  top-level analysis directories.
+
+## Analysis writing
+
+Apply these requirements when creating or substantively revising an analysis:
+
+- Start with the question, intended reader, scope, and principal finding. State
+  what the evidence establishes and which questions remain open.
+- Identify the source repository and exact commit for each codebase examined.
+  Record relevant branch, build mode, local modifications, and instrumentation
+  when they affect the findings. Include the analysis date in `Asia/Seoul` and
+  related ticket or PR identifiers when applicable.
+- Explain the responsibilities and caller contract before implementation
+  details. Cover the relevant structures, ownership and lifetime, main execution
+  paths, and failure handling. For concurrency or storage claims, explain the
+  synchronization, invariants, and recovery boundaries needed to assess them.
+- Support behavioral claims with revision-pinned source links or repository
+  paths and line references tied to the stated commit. Distinguish source
+  findings, runtime observations, inferences, and proposals. Keep historical
+  findings at their original revision; a newer report must identify what was
+  revalidated before applying them to a newer revision.
+- For experiments, record the inputs, commands, configuration, observed
+  results, and limitations needed to reproduce the conclusion. Retain concise
+  evidence in the report; apply Document selection to supporting files.
+- Scale the format to the question. Markdown is the default; use diagrams,
+  tables, or HTML when they materially help the reader. Comparisons with other
+  systems and multi-chapter books are additions for an established need.
+- Finish by updating the topic or ticket index and checking links to retained
+  documents and supporting files.
+
+## Analysis moves
+
+- When reorganizing existing analyses, preserve source revisions and historical
+  conclusions. Update repository-relative links, reader-facing path references,
+  and affected indexes together; leave source-worktree paths and recorded
+  experiment environments intact.
+- Account for every moved file under Document selection. For explicitly
+  requested cleanup of previously tracked working material, preserve useful
+  local copies in an ignored path before removing their tracked copies. Check
+  incoming links and rendering assets before committing the move.
+
 ## README index
 
-Each ticket directory's `README.md` is a curated navigation guide to its
-important Markdown documents, including those in subdirectories. Update it in
-the same change when an important document is created, modified, moved, or
-removed. Changes to supporting or local working files alone do not require an
-index update. Create the README if missing when adding an important document.
+Each ticket or analysis topic directory's `README.md` is a curated navigation
+guide to its important Markdown documents, including those in subdirectories.
+Update it in the same change when an important document is created, modified,
+moved, or removed. Changes to supporting or local working files alone do not
+require an index update. Create the README if missing when adding an important
+document.
+The collection index at `code-analysis/README.md` links topic indexes or existing
+report entry points; each topic index lists its important Markdown documents.
 
 Maintain one table row per selected important Markdown document. A row for the
 README itself is optional. When revising an existing index, trim artifact-only
@@ -56,7 +121,7 @@ Use this schema:
 | [review-guide.md](review-guide.md) | PR background and reviewer navigation | YYYY-MM-DD | YYYY-MM-DD | Help reviewers understand the change |
 ```
 
-- Link each file with a path relative to the ticket README. Keep each row on
+- Link each file with a path relative to its index README. Keep each row on
   one source line and descriptions brief and useful to a reader new to the PR.
 - Record dates as `YYYY-MM-DD` in `Asia/Seoul`. A new file starts with the same
   creation and modification date; subsequent edits preserve its creation date

@@ -92,7 +92,7 @@ pgbuf_unfix (thread_p, pg);  /* release exactly this acquisition */</code></pre>
           <div><h2>다음: 입력 5개가 정책을 어떻게 바꾸는가</h2><p>먼저 오늘 답변으로 baseline을 세운 뒤, <code>fetch_mode × latch_mode × condition</code>을 interleave한다.</p></div>
           <a href="../reference/pgbuf-fix-contract.html">Open the contract card →</a>
         </div>
-        <div class="callout"><strong>Primary reading:</strong> 전체 함수부터 읽지 말고 <a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c"><code>page_buffer.c:2246–2516</code></a>의 outer spine만 읽어라. 상세 latch CAS는 오늘의 working-memory budget 밖이다. 전체 맥락이 필요하면 <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/04-fix-lookup-load.html">offline book chapter 4</a>를 연다.</div>
+        <div class="callout"><strong>Primary reading:</strong> 전체 함수부터 읽지 말고 <a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c"><code>page_buffer.c:2246–2516</code></a>의 outer spine만 읽어라. 상세 latch CAS는 오늘의 working-memory budget 밖이다. 전체 맥락이 필요하면 <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/04-fix-lookup-load.html">offline book chapter 4</a>를 연다.</div>
         <p><a href="0002-write-latch-is-not-durability.html">Continue to Lesson 0002: WRITE latch is not durability →</a></p>
       </section>
     </article>
@@ -108,7 +108,7 @@ pgbuf_unfix (thread_p, pg);  /* release exactly this acquisition */</code></pre>
       <hr>
       <a href="../reference/pgbuf-fix-contract.html">Contract reference card</a>
       <a href="../reference/pgbuf-question-bank.html">38-question model-answer bank</a>
-      <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/index.html">Full offline book</a>
+      <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/index.html">Full offline book</a>
     </nav>
   </div>
   <footer class="footer">Questions are part of the lesson. Ask the teaching agent about any transition you cannot defend from source.</footer>

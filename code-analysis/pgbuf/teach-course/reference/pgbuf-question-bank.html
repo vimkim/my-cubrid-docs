@@ -32,7 +32,7 @@
 <blockquote>
 <p><strong>Why correct:</strong> A cache description alone omits correctness. The module must also stop two identities from claiming one frame, prevent replacement while a caller owns a page, and coordinate dirty data with WAL.</p>
 </blockquote>
-<p class="source-line">Source: <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/01-orientation.html">Book chapter 1</a>; CUBRID-C001–C004.</p>
+<p class="source-line">Source: <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/01-orientation.html">Book chapter 1</a>; CUBRID-C001–C004.</p>
 
 <h3 id="what-exactly-is-a-vpid">What exactly is a <code>VPID</code>?</h3>
 <blockquote>
@@ -59,7 +59,7 @@
 <blockquote>
 <p><strong>Why correct:</strong> Lookup alone would not prevent concurrent mutation or frame reuse. The function's success postcondition includes residency, concurrency permission, and an owned lifetime.</p>
 </blockquote>
-<p class="source-line">Source: <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/04-fix-lookup-load.html#fix-lookup-load">Book chapter 4</a>; CUBRID-C001.</p>
+<p class="source-line">Source: <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/04-fix-lookup-load.html#fix-lookup-load">Book chapter 4</a>; CUBRID-C001.</p>
 
 <h3 id="what-policy-does-each-pgbuf_fix-argument-express">What policy does each <code>pgbuf_fix()</code> argument express?</h3>
 <blockquote>
@@ -78,7 +78,7 @@
 <blockquote>
 <p><strong>Why correct:</strong> These are the common postconditions of both hit and miss paths. Durability is deliberately absent: fixing a page does not make modifications crash-safe.</p>
 </blockquote>
-<p class="source-line">Source: CUBRID-C001/C002; <a href="../reference/pgbuf-fix-contract.html">contract card</a>.</p>
+<p class="source-line">Source: CUBRID-C001/C002; <a href="pgbuf-fix-contract.html">contract card</a>.</p>
 
 <h3 id="how-do-hit-and-miss-paths-differ-and-where-do-they-converge">How do hit and miss paths differ, and where do they converge?</h3>
 <blockquote>
@@ -114,7 +114,7 @@
 <blockquote>
 <p><strong>Why correct:</strong> This preserves the invariant that one resident identity maps to one BCB while keeping partially initialized frames private.</p>
 </blockquote>
-<p class="source-line">Source: <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/04-fix-lookup-load.html#fix-lookup-load">Book chapter 4</a>; CUBRID-C001.</p>
+<p class="source-line">Source: <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/04-fix-lookup-load.html#fix-lookup-load">Book chapter 4</a>; CUBRID-C001.</p>
 
 <h3 id="why-must-the-bcbs-vpid-be-rechecked-before-granting-access">Why must the BCB's <code>vpid</code> be rechecked before granting access?</h3>
 <blockquote>
@@ -142,7 +142,7 @@
 <blockquote>
 <p><strong>Why correct:</strong> Two transactions may be logically allowed to touch different records on one page while still requiring serialized byte-level updates to that shared page frame.</p>
 </blockquote>
-<p class="source-line">Source: <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/06-caller-contracts.html#caller-contracts">Book chapter 6</a>; CUBRID-C003.</p>
+<p class="source-line">Source: <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/06-caller-contracts.html#caller-contracts">Book chapter 6</a>; CUBRID-C003.</p>
 
 <h3 id="what-is-the-difference-between-request_mode-and-condition">What is the difference between <code>request_mode</code> and <code>condition</code>?</h3>
 <blockquote>
@@ -169,7 +169,7 @@
 <blockquote>
 <p><strong>Why correct:</strong> Treating nested fixes as one boolean would either release too early or leak ownership permanently.</p>
 </blockquote>
-<p class="source-line">Source: <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/05-latch-holder-unfix.html#latch-holder-unfix">Book chapter 5</a>; CUBRID-C002.</p>
+<p class="source-line">Source: <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/05-latch-holder-unfix.html#latch-holder-unfix">Book chapter 5</a>; CUBRID-C002.</p>
 
 <h3 id="what-does-waiter_exists-accomplish">What does <code>waiter_exists</code> accomplish?</h3>
 <blockquote>
@@ -178,7 +178,7 @@
 <blockquote>
 <p><strong>Why correct:</strong> Without a gate, a steady stream of readers could starve a writer. An absolute ban on holder reentry can deadlock or break nested page-buffer operations.</p>
 </blockquote>
-<p class="source-line">Source: <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/05-latch-holder-unfix.html#latch-holder-unfix">Book chapter 5</a>; CUBRID-C002.</p>
+<p class="source-line">Source: <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/05-latch-holder-unfix.html#latch-holder-unfix">Book chapter 5</a>; CUBRID-C002.</p>
 
 <h3 id="what-does-pgbuf_unfix-actually-do">What does <code>pgbuf_unfix()</code> actually do?</h3>
 <blockquote>
@@ -206,7 +206,7 @@
 <blockquote>
 <p><strong>Why correct:</strong> The page buffer provides generic residency and concurrency machinery; it cannot know heap slots, B-tree structure invariants, or the recovery semantics of a particular mutation.</p>
 </blockquote>
-<p class="source-line">Source: <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/06-caller-contracts.html#caller-contracts">Book chapter 6</a>; CUBRID-C003.</p>
+<p class="source-line">Source: <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/06-caller-contracts.html#caller-contracts">Book chapter 6</a>; CUBRID-C003.</p>
 
 <h3 id="why-does-heap-code-use-ordered-watchers-instead-of-keeping-only-raw-pointers">Why does heap code use ordered watchers instead of keeping only raw pointers?</h3>
 <blockquote>
@@ -242,7 +242,7 @@
 <blockquote>
 <p><strong>Why correct:</strong> A leaked fix causes replacement pressure and possible latch stalls. An unearned dirty mark or missing log creates durability errors, while a missing unfix on error may be invisible until load increases.</p>
 </blockquote>
-<p class="source-line">Source: <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/06-caller-contracts.html#caller-contracts">Book chapter 6</a>; CUBRID-C003/C007.</p>
+<p class="source-line">Source: <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/06-caller-contracts.html#caller-contracts">Book chapter 6</a>; CUBRID-C003/C007.</p>
 
 <h2 id="level-5--dirty-pages-wal-flushing-and-replacement">Level 5 — Dirty pages, WAL, flushing, and replacement</h2>
 <h3 id="does-a-successful-write-fix-make-a-modification-durable">Does a successful WRITE fix make a modification durable?</h3>
@@ -252,7 +252,7 @@
 <blockquote>
 <p><strong>Why correct:</strong> Latches solve concurrent memory access. Durable WAL makes the logical change recoverable without synchronously writing every dirty data page at commit. The later page write propagates the image and eventually makes that generation clean.</p>
 </blockquote>
-<p class="source-line">Source: <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/07-dirty-wal-flush-replace.html#dirty-wal-flush-replace">Book chapter 7</a>; CUBRID-C004.</p>
+<p class="source-line">Source: <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/07-dirty-wal-flush-replace.html#dirty-wal-flush-replace">Book chapter 7</a>; CUBRID-C004.</p>
 
 <h3 id="what-do-dirty-and-oldest_unflush_lsa-mean">What do DIRTY and <code>oldest_unflush_lsa</code> mean?</h3>
 <blockquote>
@@ -297,7 +297,7 @@
 <blockquote>
 <p><strong>Why correct:</strong> Conflating them produces false claims such as “unfix writes the page” or “commit evicts it.” A dirty page can be unfixed yet resident, and a clean page can remain cached long after commit.</p>
 </blockquote>
-<p class="source-line">Source: <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/05-latch-holder-unfix.html#latch-holder-unfix">Book chapter 5</a>; CUBRID-C002/C004.</p>
+<p class="source-line">Source: <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/05-latch-holder-unfix.html#latch-holder-unfix">Book chapter 5</a>; CUBRID-C002/C004.</p>
 
 <h3 id="what-happens-under-severe-buffer-pressure-when-no-usable-victim-is-immediately-available">What happens under severe buffer pressure when no usable victim is immediately available?</h3>
 <blockquote>
@@ -306,7 +306,7 @@
 <blockquote>
 <p><strong>Why correct:</strong> A bounded pool cannot manufacture a safe frame. Progress depends on holders releasing pages and dirty generations becoming flushable.</p>
 </blockquote>
-<p class="source-line">Source: <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/07-dirty-wal-flush-replace.html#replacement">Book chapter 7</a>; CUBRID-C004/C010.</p>
+<p class="source-line">Source: <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/07-dirty-wal-flush-replace.html#replacement">Book chapter 7</a>; CUBRID-C004/C010.</p>
 
 <h2 id="level-6--experiments-comparisons-and-design-defense">Level 6 — Experiments, comparisons, and design defense</h2>
 <h3 id="what-does-a-high-page-buffer-hit-rate-proveand-what-does-it-not-prove">What does a high page-buffer hit rate prove—and what does it not prove?</h3>
@@ -316,7 +316,7 @@
 <blockquote>
 <p><strong>Why correct:</strong> Hit/miss is one event boundary. Concurrency, daemon I/O, dirty generation, and durability require different counters or source/runtime evidence.</p>
 </blockquote>
-<p class="source-line">Source: <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/08-experiments.html">Book chapter 8</a>; CUBRID-C005–C008.</p>
+<p class="source-line">Source: <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/08-experiments.html">Book chapter 8</a>; CUBRID-C005–C008.</p>
 
 <h3 id="why-must-you-verify-where-a-performance-counter-is-incremented">Why must you verify where a performance counter is incremented?</h3>
 <blockquote>
@@ -325,7 +325,7 @@
 <blockquote>
 <p><strong>Why correct:</strong> Runtime evidence proves only the events connected to the counter's real increment sites and active watcher scope.</p>
 </blockquote>
-<p class="source-line">Source: <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/08-experiments.html">Book chapter 8</a>; CUBRID-C008.</p>
+<p class="source-line">Source: <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/08-experiments.html">Book chapter 8</a>; CUBRID-C008.</p>
 
 <h3 id="how-is-cubrids-fix-contract-different-from-postgresqls-buffer-contract">How is CUBRID's fix contract different from PostgreSQL's buffer contract?</h3>
 <blockquote>
@@ -334,7 +334,7 @@
 <blockquote>
 <p><strong>Why correct:</strong> Both protect resident frames and contents, but their interface seams and cleanup ownership differ; the mapping is a partial analogy, not equivalence.</p>
 </blockquote>
-<p class="source-line">Source: <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#postgresql">Book chapter 9</a>; PG-C001/C002, CMP-C002.</p>
+<p class="source-line">Source: <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#postgresql">Book chapter 9</a>; PG-C001/C002, CMP-C002.</p>
 
 <h3 id="how-is-cubrids-fix-contract-different-from-innodbs">How is CUBRID's fix contract different from InnoDB's?</h3>
 <blockquote>
@@ -343,7 +343,7 @@
 <blockquote>
 <p><strong>Why correct:</strong> The responsibilities overlap, but ownership containers, release boundaries, and row-storage architecture differ materially.</p>
 </blockquote>
-<p class="source-line">Source: <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#mysql">Book chapter 9</a>; MYSQL-C001–C003, CMP-C002/C003.</p>
+<p class="source-line">Source: <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#mysql">Book chapter 9</a>; MYSQL-C001–C003, CMP-C002/C003.</p>
 
 <h3 id="why-are-cubrid-dwb-postgresql-full-page-images-and-innodb-doublewrite-only-partial-analogies">Why are CUBRID DWB, PostgreSQL full-page images, and InnoDB doublewrite only partial analogies?</h3>
 <blockquote>
@@ -352,7 +352,7 @@
 <blockquote>
 <p><strong>Why correct:</strong> Sharing a failure objective does not make mechanisms or performance consequences equivalent.</p>
 </blockquote>
-<p class="source-line">Source: <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#cross-database-comparison">Book chapter 9</a>; CMP-C006.</p>
+<p class="source-line">Source: <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#cross-database-comparison">Book chapter 9</a>; CMP-C006.</p>
 
 <h3 id="what-invariants-would-you-require-when-reimplementing-the-core-module">What invariants would you require when reimplementing the core module?</h3>
 <blockquote>
@@ -361,7 +361,7 @@
 <blockquote>
 <p><strong>Why correct:</strong> These invariants span identity, publication, concurrency, lifetime, replacement, and durability. An implementation that matches the happy-path function names but violates one is behaviorally incorrect.</p>
 </blockquote>
-<p class="source-line">Source: <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/10-blueprint.html#blueprint">Book chapter 10</a>; CUBRID-C001–C004/C009–C012.</p>
+<p class="source-line">Source: <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/10-blueprint.html#blueprint">Book chapter 10</a>; CUBRID-C001–C004/C009–C012.</p>
 
 <h3 id="give-the-complete-two-minute-explanation-of-a-pages-lifecycle">Give the complete two-minute explanation of a page's lifecycle.</h3>
 <blockquote>
@@ -370,7 +370,7 @@
 <blockquote>
 <p><strong>Why correct:</strong> It connects the module's five central questions—identity, ownership, concurrency, durability, and release—without claiming that fix, unfix, flush, commit, or eviction are the same operation.</p>
 </blockquote>
-<p class="source-line">Source: <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/index.html">Complete offline book</a>; claims CUBRID-C001–C004.</p>
+<p class="source-line">Source: <a href="../../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/index.html">Complete offline book</a>; claims CUBRID-C001–C004.</p>
   </article>
   <footer class="footer">Ask the teaching agent to drill any question. Include the question number in your message.</footer>
 </main>

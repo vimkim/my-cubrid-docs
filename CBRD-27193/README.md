@@ -1,6 +1,6 @@
 # CBRD-27193 — page buffer EPIC
 
-Created: 2026-10-16 KST. Last modified: 2026-10-19 KST.
+Created: 2026-10-16 KST. Last modified: 2026-10-21 KST.
 
 [JIRA EPIC](https://jira.cubrid.org/browse/CBRD-27193)의 정확성·운영성·성능 개선을 위한 회의 자료다. **10/19 17:00 KST 회의 발표는 [한국어 슬라이드](triage-presentation-2026-10-19.html)**로 진행하고, [전체 19건 triage HTML](triage-2026-10-19.html)은 상세 참고 자료로 사용한다. 슬라이드는 결정 중심의 본편과 전체 이슈 부록으로 구성했다. 두 HTML 모두 쉬운 설명·버그 수정/기능 구현 분류·제안 순서·담당 제안·첫 조치를 담는다. 기존 상위 3개 Markdown 브리핑은 10/16 기준의 제안으로 보존한다.
 
@@ -8,7 +8,7 @@ Created: 2026-10-16 KST. Last modified: 2026-10-19 KST.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [briefing-2026-10-19.md](briefing-2026-10-19.md) | 상위 3개 제안, 현재 근거, 결정 요청과 전체 subtask 링크 | 2026-10-16 | 2026-10-16 | 10/19 회의에서 우선순위·담당자·첫 조치를 결정하기 위해 |
+| [briefing-2026-10-19.md](briefing-2026-10-19.md) | 상위 3개 제안, 현재 근거, 결정 요청과 전체 subtask 링크 | 2026-10-16 | 2026-10-21 | 10/19 회의에서 우선순위·담당자·첫 조치를 결정하기 위해 |
 
 ## Page buffer 벤치마크 비교 PPT — 10/19
 
@@ -66,7 +66,7 @@ HTML은 독자가 직접 읽는 최종 회의 자료이며 CSS·JavaScript·favi
 
 ## 후보를 고른 이유와 상태 대조
 
-- **CBRD-27263:** [기존 계측 보고서](../pgbuf-analysis/e6ed61e_claude/10-CBRD-27263-repro-proof-and-solutions.md)는 `e6ed61e87`에서 등록 없는 해제와 양수 보호 카운터 감소를 기록했다. 이번에는 해당 제어 흐름의 잔존을 확인했다. 그 결과만으로 현재 데이터 손상이나 고객 노출을 확정하지 않는다.
+- **CBRD-27263:** [기존 계측 보고서](../code-analysis/pgbuf/e6ed61e_claude/10-CBRD-27263-repro-proof-and-solutions.md)는 `e6ed61e87`에서 등록 없는 해제와 양수 보호 카운터 감소를 기록했다. 이번에는 해당 제어 흐름의 잔존을 확인했다. 그 결과만으로 현재 데이터 손상이나 고객 노출을 확정하지 않는다.
 - **CBRD-27370:** [현재 이슈](https://jira.cubrid.org/browse/CBRD-27370)의 SA probe는 `11.5.0.2431-198b42a` debug 빌드에서 전역 1/스레드 3을 기록하고, 별도 `f799e05` debug/release 교차 확인과 unfix 결과를 설명한다. 현재도 두 대입이 남아 있다. API의 일반 승격 허용/금지 정책과 실제 SQL 호출 범위는 후속 검토 대상이다. 담당자는 JIRA의 현 담당자를 유지하는 제안이다.
 - **CBRD-27262:** [현재 이슈](https://jira.cubrid.org/browse/CBRD-27262)는 `e6ed61e87` 오류 주입 결과를 기록한다. 이번에는 조기 반환이 정상 오류 정리를 거치지 않는 사실을 확인했다. 곁가지 `dwb_read_page()` 실패 분기는 현재 [`double_write_buffer.cpp:3979–4015`](https://github.com/CUBRID/cubrid/blob/4adcd409072b189f5d965bde5750c53176d90de0/src/storage/double_write_buffer.cpp#L3979-L4015)의 모든 정상 반환이 `NO_ERROR`이므로 운영에서 발생하는 오류로 제시하지 않았다. 브리핑의 근거는 TDE/DWB 쓰기 준비 실패 경로다.
 - **CBRD-27630:** 현재 `page_buffer.c`의 helper 정리(:8428, :8485, :8508), simple-fix 호출자 재정리(:2643–2647), VPID로 기록을 찾는 제거 함수(:8063 이후)를 대조했다. [이슈와 고정 리비전 모델](https://jira.cubrid.org/browse/CBRD-27630)은 유용한 반례지만 실제 엔진의 동일 임시 VPID 동시 호출과 실패 도달성은 미확인이다. 기존 엔진 실행 근거가 있는 회계 후보를 먼저 제안하고 이 항목은 후속 검증에 둔다.
@@ -79,4 +79,4 @@ HTML은 독자가 직접 읽는 최종 회의 자료이며 CSS·JavaScript·favi
 
 전체 목록은 [현재 parent JQL](https://jira.cubrid.org/issues/?jql=parent%20%3D%20CBRD-27193%20ORDER%20BY%20key%20ASC)과 [EPIC의 연결 목록](https://jira.cubrid.org/browse/CBRD-27193)에서 연다. JIRA HTTPS 주소는 확인 시 HTTP 주소로 리다이렉트됐다. 10/19 회의 직전 목록·담당자·PR·develop을 다시 확인한다. 원시 조회·캐시는 로컬 작업 자료로만 보관한다.
 
-작업 373은 **자료 준비**와 **현장 결정**을 구분한다. 벤치마크·병목 조사 전략 합의는 별도 작업 374이며, [CBRD-27423](https://jira.cubrid.org/browse/CBRD-27423)과 [10/2 후보 분석](../pgbuf-analysis/report-2026-10-02.md)을 연결한다. Lean은 작은 pgbuf 하위 작업으로 유지하며 별도 대규모 계획이나 필수 설계·PR gate로 확정하지 않는다.
+작업 373은 **자료 준비**와 **현장 결정**을 구분한다. 벤치마크·병목 조사 전략 합의는 별도 작업 374이며, [CBRD-27423](https://jira.cubrid.org/browse/CBRD-27423)과 [10/2 후보 분석](../code-analysis/pgbuf/report-2026-10-02.md)을 연결한다. Lean은 작은 pgbuf 하위 작업으로 유지하며 별도 대규모 계획이나 필수 설계·PR gate로 확정하지 않는다.

@@ -263,10 +263,10 @@ Three accounting side effects lost to one `goto`, none of them mentioned in the 
 
 Nothing on the *origin* — no file mentions `CBRD-26425` (`grep -rn 26425` over the whole KB: zero hits). The existing notes describe the mechanism as it stands:
 
-- `pgbuf-analysis/e6ed61e_claude/00-overview.md:94` and `07-qa-workbook.md:127` — the three-tier fix path (lock-free fast path → normal hit → miss), with `:2311-2330` cited.
-- `pgbuf-analysis/e6ed61e_claude/01-structures.md:179` — the 64-bit latch union at `:501-510`; `:175` warns that `count_fix_and_avoid_dealloc`'s fix count is *not* the latch fix count (`atomic_latch.impl.fcnt` is) — the exact confusion at the heart of CBRD-27263.
-- `pgbuf-analysis/e6ed61e_claude/00-overview.md:185` — item 7 already lists "latch fix count vs. hot-page counter are separate" as a gotcha.
-- `pgbuf-analysis/research/cubrid-structs-fix.md:418-420, 987` — "the hot read path takes **no mutex at all**".
+- `code-analysis/pgbuf/e6ed61e_claude/00-overview.md:94` and `07-qa-workbook.md:127` — the three-tier fix path (lock-free fast path → normal hit → miss), with `:2311-2330` cited.
+- `code-analysis/pgbuf/e6ed61e_claude/01-structures.md:179` — the 64-bit latch union at `:501-510`; `:175` warns that `count_fix_and_avoid_dealloc`'s fix count is *not* the latch fix count (`atomic_latch.impl.fcnt` is) — the exact confusion at the heart of CBRD-27263.
+- `code-analysis/pgbuf/e6ed61e_claude/00-overview.md:185` — item 7 already lists "latch fix count vs. hot-page counter are separate" as a gotcha.
+- `code-analysis/pgbuf/research/cubrid-structs-fix.md:418-420, 987` — "the hot read path takes **no mutex at all**".
 - `code-analysis/cbrd-27196-…/f799e05_claude/research/jira/CBRD-27196.md:165` — for the SX-latch design, notes that any `sx` bit must be CAS-updated because *readers CAS the same 64-bit word without the mutex*; a mutex-only read-modify-write would lose concurrent `fcnt` updates. Directly relevant if a CBRD-27263 fix ever considers doing the register under the BCB mutex.
 - `pgbuf-rebuild-spec/ch01-requirements.html:412` — states the invariant `bcb.atomic_latch.fcnt == Σ_t holder(t, bcb).fix_count`.
 

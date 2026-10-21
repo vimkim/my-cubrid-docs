@@ -1,12 +1,12 @@
 # CBRD-27423 — page buffer 성능 분석·벤치마크 전략
 
-Created: 2026-10-16 KST. Last modified: 2026-10-16 KST.
+Created: 2026-10-16 KST. Last modified: 2026-10-21 KST.
 
 [JIRA CBRD-27423](https://jira.cubrid.org/browse/CBRD-27423)의 성능 분석 제안과 협업 결정을 위한 문서다. 관련 EPIC은 [CBRD-27193](https://jira.cubrid.org/browse/CBRD-27193)이다. 관련 PR: 2026-10-16 이슈 번호 검색에서 직접 관련 PR을 찾지 못했다. 구현 PR 번호는 아직 지정하지 않는다.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [benchmark-strategy-2026-10-19.md](benchmark-strategy-2026-10-19.md) | 부하·환경·지표·역할 결정안, 첫 실험과 관측별 후속 조사, 연락 문안 | 2026-10-16 | 2026-10-16 | 형규님과 첫 벤치마크 실행 및 병목 조사 전략을 합의하기 위해 |
+| [benchmark-strategy-2026-10-19.md](benchmark-strategy-2026-10-19.md) | 부하·환경·지표·역할 결정안, 첫 실험과 관측별 후속 조사, 연락 문안 | 2026-10-16 | 2026-10-21 | 형규님과 첫 벤치마크 실행 및 병목 조사 전략을 합의하기 위해 |
 
 ## 검증 기록
 
@@ -29,7 +29,7 @@ Created: 2026-10-16 KST. Last modified: 2026-10-16 KST.
 - [프레임워크 초안](https://github.com/vimkim/my-cubrid-jira/blob/c6a7ca4a9d2f0a6daab90b6ea09b8c6e876d4055/issues/CBRD-27423-page-buffer-performance-framework_c63a3b9_codex.md)은 CUBRID `c63a3b993be552ef6ad3ce244c386d5081147958`을 참고한 설계 제안이다. 조회한 현행 JIRA 본문과 목적·범위·주요 미결정 사항을 대조했다. 이 문서는 그 상세 설계를 다시 작성하지 않는다.
 - [세미나의 실제 교체 실험](https://github.com/vimkim/my-cubrid-page-buffer-seminar/blob/8dbdff4639734a2eeef327ba9a6343182548b09d/experiments/replacement/README.md)은 CUBRID `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`에 관측 패치를 적용한 debug SERVER_MODE 동작 검증이다. 유지보수 일부를 정지시키며 flush 데몬은 실행한다. 64 MiB 버퍼의 fits/cycle 조건은 과거 실험 설정이지 첫 벤치마크의 합의 조건이 아니다. 실행·데이터 준비·완전성 검증 방식을 참고할 수 있지만 시간을 일반 성능 기준으로 재사용하지 않는다.
 - 세미나 로컬 HEAD는 `83462868664feee0d2a79d71ea644a7a09331f91`이다. 위 README의 현재 파일과 링크에 고정한 `8dbdff4` 버전의 SHA-256이 모두 `19dd0159dafd1bcae83457d3a279dc3fa672a6fc2af8092aa4fc0b9dabe2146b`로 일치했다.
-- [10/2 후보 분석](../pgbuf-analysis/report-2026-10-02.md)의 holder·대기열·LRU·flush 후보는 측정으로 입증된 병목이 아니다. 이번 첫 실험은 그중 하나를 미리 결론 내리지 않는다. [작업 373의 triage 자료](../CBRD-27193/briefing-2026-10-19.md)는 별도로 유지한다.
+- [10/2 후보 분석](../code-analysis/pgbuf/report-2026-10-02.md)의 holder·대기열·LRU·flush 후보는 측정으로 입증된 병목이 아니다. 이번 첫 실험은 그중 하나를 미리 결론 내리지 않는다. [작업 373의 triage 자료](../CBRD-27193/briefing-2026-10-19.md)는 별도로 유지한다.
 
 ## 회의 전·후 갱신
 

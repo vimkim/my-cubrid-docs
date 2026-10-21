@@ -8,8 +8,9 @@ was executed, and the resulting event stream was cut into per-statement sections
 - Instrumented source: pinned revision `f799e05d77d5300c6ea5753b4a6cc7caee6d8912` **plus logging-only lab
   probes** in [`src/storage/page_buffer.c`](https://github.com/vimkim/cubrid/blob/75d64f959fae6074d4f21cfafc3d5a5bc4a8639a/src/storage/page_buffer.c)
   (branch `page-buffer-survey-with-tracers`, probe commit `75d64f959`; lab only, not for upstream).
-- Driver: [`run-monitor.sh`](./run-monitor.sh). Raw event stream: [`trace-all.log`](./trace-all.log)
-  (regenerated on each run).
+- Driver: [`run-monitor.sh`](./run-monitor.sh). Raw event stream: `trace-all.log`
+  (ignored local output, regenerated on each run). This report retains the
+  per-step counts and decisive excerpts from the historical monitoring runs.
 - Build: debug (`debug_gcc` preset), `data_buffer_size=64M`, `checkpoint_interval=1min`, single csql
   session per statement, autocommit.
 - Two independent runs were captured; every per-section counter except LRU-zone maintenance noise and the

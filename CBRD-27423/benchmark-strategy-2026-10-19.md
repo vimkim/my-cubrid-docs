@@ -63,4 +63,4 @@
 
 회의 후 선택한 내용과 남은 결정을 기록해야 작업 374의 전략 합의 여부를 판단할 수 있다. 자료 작성만으로 완료 처리하지 않는다.
 
-**연결 자료와 범위:** 상세 설계는 [기존 프레임워크 제안](https://github.com/vimkim/my-cubrid-jira/blob/c6a7ca4a9d2f0a6daab90b6ea09b8c6e876d4055/issues/CBRD-27423-page-buffer-performance-framework_c63a3b9_codex.md)을 따른다. [10/2 후보 분석](../pgbuf-analysis/report-2026-10-02.md)은 조사 가설이며 이번 측정 결과가 아니다. [EPIC triage 브리핑](../CBRD-27193/briefing-2026-10-19.md)은 작업 373, 프레임워크 설계·POC·발표는 작업 269의 별도 범위다. Lean은 작은 pgbuf 하위 작업으로 유지한다. 이번 준비는 엔진 수정·프레임워크 구현·장시간 벤치마크·JIRA 게시·조직 검증 정책 도입을 포함하지 않는다. [자료·환경 검증 기록](README.md#검증-기록)에는 확인 명령과 증거 한계를 남겼다.
+**연결 자료와 범위:** 상세 설계는 [기존 프레임워크 제안](https://github.com/vimkim/my-cubrid-jira/blob/c6a7ca4a9d2f0a6daab90b6ea09b8c6e876d4055/issues/CBRD-27423-page-buffer-performance-framework_c63a3b9_codex.md)을 따른다. [10/2 후보 분석](../code-analysis/pgbuf/report-2026-10-02.md)은 조사 가설이며 이번 측정 결과가 아니다. [EPIC triage 브리핑](../CBRD-27193/briefing-2026-10-19.md)은 작업 373, 프레임워크 설계·POC·발표는 작업 269의 별도 범위다. Lean은 작은 pgbuf 하위 작업으로 유지한다. 이번 준비는 엔진 수정·프레임워크 구현·장시간 벤치마크·JIRA 게시·조직 검증 정책 도입을 포함하지 않는다. [자료·환경 검증 기록](README.md#검증-기록)에는 확인 명령과 증거 한계를 남겼다.

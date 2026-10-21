@@ -331,12 +331,12 @@ rather than part of this ticket.
 - `my-cubrid-jira/issues/CBRD-27263-pgbuf-lockfree-avoid-dealloc-asymmetry_e6ed61e_claude.md` —
   the 5-entry-situation counter accounting table, the three fix candidates with trade-offs, and the
   instrumentation/repro recipe. This document deliberately does not restate any of it.
-- `my-cubrid-docs/pgbuf-analysis/e6ed61e_claude/05-ordered-fix-dealloc.md` — full `pgbuf_ordered_fix`
+- `my-cubrid-docs/code-analysis/pgbuf/e6ed61e_claude/05-ordered-fix-dealloc.md` — full `pgbuf_ordered_fix`
   walkthrough (phases P1-P6, the `has_dealloc_prevent_flag` demotion at `:12392`, the register/
   unregister inventory at its lines 1047-1063, and the same lock-free asymmetry at its line 607).
   My §1 table reorganizes that material around the Marker A / Marker B split, which that document
   does not draw as a distinction.
-- `my-cubrid-docs/pgbuf-analysis/e6ed61e_claude/02-fix-unfix-latch.md`,
+- `my-cubrid-docs/code-analysis/pgbuf/e6ed61e_claude/02-fix-unfix-latch.md`,
   `00-overview.md`, `09-issue-proposals.md` — mention CBRD-27263.
 - Not previously recorded anywhere I found: the **navigation-model split** of §3.2 (chain walkers vs
   directory walkers) and the **`d78d7f92b` self-contradiction** of §2. Those are this ticket's
