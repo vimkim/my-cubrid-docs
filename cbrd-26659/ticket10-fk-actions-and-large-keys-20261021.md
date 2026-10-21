@@ -22,7 +22,7 @@ An observed HAS_OOS flag therefore identifies the indexed key's stored represent
 Ordinary INT-key fixtures use an independently checked variable payload instead.
 Their OOS payload observations receive no actual-key coverage credit.
 
-Twenty-eight independent shell cases cover both kinds, single/composite keys,
+Twenty-four independent shell cases cover both kinds, single/composite keys,
 and six action declarations. Four additional cases exercise a rejected downstream cascade.
 Each case uses an owned database and cleanup audit.
 The native SQL case separately verifies logical JDBC behavior and FK build rejection.
@@ -167,7 +167,7 @@ Native shell and JDBC SQL claims remain separate.
 | Tested public TC | `d4d0443fd29d3dce711013bfd40d10a617453811` |
 | Product provider | Read-only ticket11 optdebug copy, 247 checked manifest entries |
 | Provider manifest SHA-256 | `445cfbe889268e11db98b315fc76ee18cf12e856eb3c31452914905ec8ca4e50` |
-| Native testkit executable SHA-256 | `31be3b1e542b05d1ac7581d47f785319ce61421f4b5d94681a 9c558d71445f5a` |
+| Native testkit executable SHA-256 | `31be3b1e542b05d1ac7581d47f785319ce61421f4b5d94681a9c558d71445f5a` |
 | CTP asset checkout | `9c62858b10005d721546cc007be260844033b9e9`, copied with recorded local deltas |
 | JVM for PL and JDBC | Temurin 8.0.462+8, explicit CUBRID_JAVA_HOME with release/libjvm hashes |
 | Host allocation | Master 41098, broker 41099, distinct allocated SHM IDs |
