@@ -7,3 +7,4 @@ PR: [CUBRID/cubrid #8227](https://github.com/CUBRID/cubrid/pull/8227), draft. Ta
 | [설계·구현·검증](CBRD-27712-thirdparty-prefix_15609d2_codex.md) | 합의한 계약, 구현 책임, 검증 근거와 한계 | 2026-10-21 | 2026-10-21 | PR의 동작과 검증 범위를 검토하기 위해 |
 | [PR 본문](CBRD-27712-thirdparty-prefix-pr-body_15609d2_codex.md) | GitHub에 게시할 한국어 본문 | 2026-10-21 | 2026-10-21 | 게시 전에 사람이 검토하기 위해 |
 | [PR context](CBRD-27712-thirdparty-prefix-pr-context_15609d2_codex.md) | source identity, 게시 대상·작업과 진행 상태 | 2026-10-21 | 2026-10-21 | 검토와 게시를 다른 세션에서도 이어가기 위해 |
+| [CI 실패 확인과 SQL 근거 한계](ci_analysis_report_15609d2_codex.md) | 라이선스 헤더·TC gate 실패와 SQL 수집 무결성 오류 | 2026-10-21 | 2026-10-21 | PR #8227 실패 이유와 후속 확인 범위를 구분하기 위해 |
