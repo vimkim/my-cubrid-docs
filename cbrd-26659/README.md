@@ -20,6 +20,9 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [ticket01-baseline-and-observer-20261021.md](ticket01-baseline-and-observer-20261021.md) | Exact baseline and actual mixed-record flag/visibility native receipt | 2026-10-21 | 2026-10-21 | Establish the prerequisite observer for Work456 supplementation |
+| [supplement-operation-inventory-work456-20261021.md](supplement-operation-inventory-work456-20261021.md) | 83 operation obligations, existing assertions and follow-up owners | 2026-10-21 | 2026-10-21 | Account for every accepted operation and record-state cell |
+| [supplement-cpp-inventory-work456-20261021.md](supplement-cpp-inventory-work456-20261021.md) | All 302 C++ case retain dispositions and execution limits | 2026-10-21 | 2026-10-21 | Preserve module assertions during later supplementation and deduplication |
 | [supplement-tickets/map.md](supplement-tickets/map.md) | Approved 16-ticket dependencies, shared acceptance, milestone mapping and publication boundaries | 2026-10-21 | 2026-10-21 | Publish the accepted Work456 implementation sequence |
 | [01: 기준 리비전·커버리지 확정과 HAS_OOS 관측 tracer](supplement-tickets/issues/01-baseline-and-record-observer.md) | 기준 리비전·커버리지 확정과 HAS_OOS 관측 tracer의 실행·증거 수용 조건 | 2026-10-21 | 2026-10-21 | Assign a verifiable Work456 slice with explicit blockers |
 | [02: 스토리지 정책 문법·의미·DDL 오류 보존](supplement-tickets/issues/02-policy-syntax-and-semantics.md) | 스토리지 정책 문법·의미·DDL 오류 보존의 실행·증거 수용 조건 | 2026-10-21 | 2026-10-21 | Assign a verifiable Work456 slice with explicit blockers |
