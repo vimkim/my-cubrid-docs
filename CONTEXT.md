@@ -46,6 +46,10 @@ _Avoid_: Engine acceptance, feature acceptance, done
 Merge readiness of the OOS feature itself. Not a goal of the testcase campaign.
 _Avoid_: Campaign acceptance
 
+**Supplement completion**:
+Completion of the six agreed OOS supplementation areas after all required tests are delivered and executed with independent oracles and revision-specific evidence. Linked, reproducible engine defects may remain as failures without passing coverage, but missing tests, unexecuted tests, or unclear expectations prevent completion.
+_Avoid_: Engine acceptance, passing coverage
+
 **Delivery gap**:
 A required case that was not written, or was not executed within budget.
 _Avoid_: Gap, missing test, skipped

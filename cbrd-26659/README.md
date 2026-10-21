@@ -1,6 +1,6 @@
 # CBRD-26659 documentation
 
-Last modified: 2026-10-16 (Asia/Seoul).
+Last modified: 2026-10-21 (Asia/Seoul).
 
 Start with the approved plan and current behavior coverage table. Developers create and validate public SQL and private shell cases locally, initially using optdebug. SQL and shell timing is separate; roughly ten minutes each is informal guidance. All 14 supported automation deliveries are complete. The original Standards/Spec closures and Python-based native receipts remain historical. The [2026-10-12 shell conversion](ci-replan/shell-conversion-results-20261012.md) and [recent convention study](ci-replan/shell-conventions-20261012.md) identify replacement qualification, current reviews, image probes and retained SQL evidence. Physically unmet criteria and engine/capability gaps retain partial or unverified dispositions. The HA follow-up gap remains explicit. TC head publication and current local document integration are recorded in the conversion report.
 
@@ -20,6 +20,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [supplement-inventory-work456-20261021.md](supplement-inventory-work456-20261021.md) | Current six-area inventory, branch-specific evidence, accepted completion rule, and open acceptance decisions | 2026-10-21 | 2026-10-21 | Plan Work456 from existing tests and completed Work109/401 evidence |
 | [coverage-additions-work401-20261016.md](coverage-additions-work401-20261016.md) | Direct JDBC, AES crash/sentinel regressions, native receipts, failure diagnostics and all 29 dispositions | 2026-10-16 | 2026-10-16 | Turn the accepted coverage assessment into executable evidence without concealing engine gaps |
 | [tc-category-explanation-ko.md](tc-category-explanation-ko.md) | Table of 17 SQL and 18 shell TCs linking to plain Korean details and source files | 2026-10-15 | 2026-10-15 | Explain the 31 behavior rows to teammates with dated representative evidence |
 | [plan.md](ci-replan/plan.md) | Agreed direction, sequence and approved-ticket boundary | 2026-10-08 | 2026-10-08 | Review the developer-owned local regression plan |
