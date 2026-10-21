@@ -21,6 +21,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
 | [ticket02-policy-contract-20261021.md](ticket02-policy-contract-20261021.md) | Work456 policy syntax, preserved schema/records and native receipts | 2026-10-21 | 2026-10-21 | Close approved ticket02 with exact policy evidence |
+| [ticket04-utility-policy-roundtrips-20261021.md](ticket04-utility-policy-roundtrips-20261021.md) | Independent policy load/compact receipts, exact values/flags/owners, SA regressions and retained C++ contracts | 2026-10-21 | 2026-10-21 | Qualify utility policy preservation without mixing source revisions or hiding required gaps |
 | [ticket01-baseline-and-observer-20261021.md](ticket01-baseline-and-observer-20261021.md) | Exact baseline and actual mixed-record flag/visibility native receipt | 2026-10-21 | 2026-10-21 | Establish the prerequisite observer for Work456 supplementation |
 | [ticket14-cpp-read-expand-buffer-20261021.md](ticket14-cpp-read-expand-buffer-20261021.md) | Assertion dispositions, native 302-case baseline and stored/Expand buffer regressions | 2026-10-21 | 2026-10-21 | Preserve internal read contracts and close explicit buffer proof gaps |
 | [supplement-operation-inventory-work456-20261021.md](supplement-operation-inventory-work456-20261021.md) | 83 operation obligations, existing assertions and follow-up owners | 2026-10-21 | 2026-10-21 | Account for every accepted operation and record-state cell |
