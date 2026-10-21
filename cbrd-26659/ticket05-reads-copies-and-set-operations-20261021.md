@@ -137,6 +137,8 @@ Ticket 14 executed the unchanged target at source `1ef86a7`, OptDebug with `UNIT
 
 Central artifacts are under `/home/vimkim/temp/work456-implementation/ticket14/baseline/test_oos_sql_crud/`. GTest XML SHA-256 is `e9373104c2a41e2efa33e8d0e623f011ca6fcce7c072086c051f7d497ff2e87e`. The exact executable hash is `c13c3e600ff04742aa82fc6e83dfd7ec426826bbc5663aef8935150ce10e7793`. The central receipt also identifies configuration/install hashes. This separate SA run does not replace the CS/native SQL or JDBC receipts. Internal Expand, dispatch and buffer-lifetime additions remain ticket 14's responsibility.
 
+Bash syntax, warning-level ShellCheck, Markdown source and relative-link checks pass. Source/script/document diffs pass whitespace checks. The new SQL answer preserves the native runner convention: trailing field spaces and a terminating blank line. Stock `git diff --check` reports those formatting bytes. The check passes with only `blank-at-eol` and `blank-at-eof` disabled. No answer bytes were changed after the passing native receipt.
+
 ## Coverage handoff and limits
 
 | Inventory operation | Ticket 05 disposition |
