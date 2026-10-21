@@ -48,3 +48,15 @@ Review the saved body and explanation before publication approval. The user can 
 - Source local and remote heads: `15609d2a779e3082aafe5af576487ebbdc8d70f6`.
 - Matching PR before this attempt: none.
 - Preserve the reviewed body and explanation bytes through publication.
+
+## Verified publication results
+
+- Published docs commit: `75d7f4a` on `vimkim/my-cubrid-docs:main`. The public explanation URL returned HTTP 200. Its decoded repository content matches the reviewed SHA-256.
+- Created PR: https://github.com/CUBRID/cubrid/pull/8227
+- Verified state: open, draft, assignee `vimkim`, base `develop`, head `vimkim:CBRD-27712-thirdparty-reuse` at `15609d2a779e3082aafe5af576487ebbdc8d70f6`.
+- The decoded GitHub body exactly matches the reviewed body file, including newlines. The approved title also matches.
+- CI operation: one `/run all`, receipt https://github.com/CUBRID/cubrid/pull/8227#issuecomment-6307750232, created `2026-10-21T04:04:04Z`.
+- CI pickup: https://github.com/CUBRID/cubrid/actions/runs/39541991227 . Both build contexts and all three suite contexts point to this run. The tested PR head remains the source commit above. Terminal results remain pending.
+- Separate automatic check: `license` failed at https://github.com/CUBRID/cubrid/actions/runs/39541817707/job/119031051143 . No follow-up fix, push, or rerun occurred.
+- TC PRs: https://github.com/CUBRID/cubrid-testcases/pull/3826 and https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4514 . Both draft PRs remain open. TC ancestry checks passed. The observed `Check TC PRs` required check passed. This change requires no TC changes. The human handles closure.
+- The user requested a handoff for `cubrid-jira-issue-write` while CI was in progress. The handoff records the unfinished CI completion check and the JIRA writing task. No live JIRA description update occurred in this session.

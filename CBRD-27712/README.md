@@ -1,6 +1,6 @@
 # CBRD-27712 — 3rdparty prefix
 
-PR: 생성 전. Target은 `CUBRID/CUBRID:develop`, source는 `vimkim/cubrid:CBRD-27712-thirdparty-reuse`입니다.
+PR: [CUBRID/cubrid #8227](https://github.com/CUBRID/cubrid/pull/8227), draft. Target은 `CUBRID/CUBRID:develop`, source는 `vimkim/cubrid:CBRD-27712-thirdparty-reuse`입니다.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
