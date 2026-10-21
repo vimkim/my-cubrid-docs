@@ -20,6 +20,8 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [engine-followup-client-trigger-oos-placement-20261021.md](engine-followup-client-trigger-oos-placement-20261021.md) | CS trigger placement failure, reproduction and engine repair acceptance | 2026-10-21 | 2026-10-21 | Hand off eight failed placement obligations without changing intended oracles |
+| [ticket06-dml-triggers-transactions-20261021.md](ticket06-dml-triggers-transactions-20261021.md) | Work456 DML state transitions, transaction atomicity and trigger placement failures | 2026-10-21 | 2026-10-21 | Deliver ticket06 with exact native results and retained C++ assertions |
 | [ticket03-show-contract-20261021.md](ticket03-show-contract-20261021.md) | SHOW 대상·권한·보존 PASS와 실행된 파티션 소유권 FAIL, SA4 유지 근거 | 2026-10-21 | 2026-10-21 | Complete approved ticket03 with independent SHOW oracles and exact receipts |
 | [ticket02-policy-contract-20261021.md](ticket02-policy-contract-20261021.md) | Work456 policy syntax, preserved schema/records and native receipts | 2026-10-21 | 2026-10-21 | Close approved ticket02 with exact policy evidence |
 | [ticket04-utility-policy-roundtrips-20261021.md](ticket04-utility-policy-roundtrips-20261021.md) | Independent policy load/compact receipts, exact values/flags/owners, SA regressions and retained C++ contracts | 2026-10-21 | 2026-10-21 | Qualify utility policy preservation without mixing source revisions or hiding required gaps |
