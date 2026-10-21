@@ -41,7 +41,11 @@ The malformed clauses are missing policy, unknown identifier, numeric value, quo
 
 ## Independent logical, metadata and physical oracles
 
+`C` means a current stored record with HAS_OOS clear. `S` means HAS_OOS set. These states come from stored record diagnostics. Policy and payload size do not establish either state.
+
 The new rejection fixture is one unpartitioned heap. The only variable normal attribute is `payload`. Row 1 has `id=1`, `note=101`, `X'19ab23cd45ef'`. Row 2 has `id=2` and `note=202`. Its payload has 1,701 bytes `a1`, 1,703 bytes `b2` and 1,703 bytes `c3`. The primary key, NOT NULL/default, policy, comment, class attribute, table options and collation appear in the canonical full SHOW CREATE field.
+
+The final initial diagnostic reports row 1 with flags 1 and row 2 with flags 9. Both have record type 2 (REC_HOME). HAS_OOS is bit 0x08. Allocated volume/page/slot IDs remain observations, not fixed expected constants.
 
 Each rejection checks complete value equality and exactly two rows. It then checks actual diagnostic rows, flags, record types, insert/delete IDs and stable slots against the before image. Finally, it compares the complete canonical DDL field byte for byte. The metadata helper excludes only CSQL result/timing text. A count, error or policy string cannot replace these comparisons.
 
@@ -103,31 +107,31 @@ This SA receipt belongs to the shared baseline campaign. Ticket14's later test a
 
 | Case | Disposition | Inspected assertions | Execution owner |
 | --- | --- | --- | --- |
-| `OosSqlStorage.CreateTablePersistsPreferInline` | retain | CREATE succeeds. SHOW CREATE contains PREFER_INLINE. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.CreateTablePersistsForceOutline` | retain | CREATE succeeds. SHOW CREATE contains FORCE_OUTLINE and excludes PREFER_INLINE. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.DefaultColumnHasNoStorageClause` | retain | Default CREATE succeeds. SHOW CREATE excludes PREFER_INLINE only. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.ExplicitDefaultStorageClausesActAsDefault` | retain | DEFAULT/PREFER_OUTLINE CREATE succeeds. SHOW CREATE excludes PREFER_INLINE, PREFER_OUTLINE and DEFAULT. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.CreateTableLikeCopiesPreferInline` | retain | LIKE succeeds. Copied SHOW CREATE contains PREFER_INLINE. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.CreateTableLikeCopiesForceOutline` | retain | LIKE succeeds. Copied SHOW CREATE contains FORCE_OUTLINE and excludes PREFER_INLINE. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.SharedAttributeRejectsPreferInline` | retain | Three shared spellings reject with the normal-attribute message. FORCE has a separate case. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.CreateRejectsAllStorageSettingsForFixedTypes` | retain | All four INT policies and fixed BIT PREFER_INLINE reject with the variable-normal message. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.CreateAcceptsStorageForPhysicalVariableTypes` | retain | CHAR/PREFER_INLINE and VARBIT/FORCE_OUTLINE CREATE succeeds. SHOW CREATE contains both hints. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.VclassRejectsAllStorageSettings` | retain | All four VCLASS policies reject with the variable-normal message. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.AlterRejectsAllStorageSettingsForFixedTypes` | retain | All four MODIFY INT policies and CHANGE INT/PREFER_INLINE reject with the variable-normal message. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.AlterAddDuplicateAttributeKeepsDuplicateErrorPrecedence` | retain | Two duplicate ADD policies return raw -245. A nonduplicate fixed ADD returns the domain message. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.AlterModifyClassAttributeReportsNonNormalAttributeError` | retain | MODIFY CLASS/PREFER_INLINE returns the dedicated normal-attribute message. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.AlterChangeClassAttributeReportsNonNormalAttributeError` | retain | CHANGE CLASS/PREFER_INLINE returns the dedicated normal-attribute message. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.AlterChangeClassAttributePreservesConstraintValidation` | retain | CLASS CHANGE with AUTO_INCREMENT returns raw ER_SM_INVALID_CONSTRAINT. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.ForceOutlineRejectsUnsupportedAttributes` | retain | Fixed/shared/class/view CREATE and fixed MODIFY reject with their distinct accepted messages. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.AlterModifyAddsAndDropsPreferInline` | retain | MODIFY adds PREFER_INLINE, omission preserves it and both default spellings reset it. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.AlterModifyPreservesAndTransitionsForceOutline` | retain | Omission retains FORCE. Hint transitions exclude the opposite hint. Both defaults clear FORCE/PREFER_INLINE. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.AlterModifyDropsForceOutlineForFixedType` | retain | Omitted-policy fixed conversion removes FORCE and preserves numeric value 1234. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.AlterModifyDropsPreferInlineForFixedType` | retain | Omitted-policy fixed conversion removes PREFER_INLINE and preserves numeric value 1234. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.FailedExplicitFixedTypeAlterPreservesSchemaAndData` | retain | Explicit fixed DEFAULT rejects. After abort, PREFER_INLINE remains and CAST value equals 1234. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.ForceOutlineBypassesRecordGateOnlyAboveInlineStubSize` | retain | SA stats report one file and two chunks. Lengths, disk-size floor and NULL count match. No full-value or individual-flag assertion. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.AlterForceOutlineAppliesOnlyAfterRewrite` | retain | SA stats show no file before/after ALTER, then one chunk after UPDATE. Result length is 3001. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.ForceOutlineRemainsNonReservedIdentifier` | retain | Unquoted FORCE_OUTLINE column accepts and returns integer 7. | SA shared `unittestdb`. Ticket14 receipt below. |
-| `OosSqlStorage.PreferInlineColumnRoundTripsLargeValue` | retain | Both equal-size VARBIT lengths equal 6000. No full-value or demotion-order assertion. | SA shared `unittestdb`. Ticket14 receipt below. |
+| `OosSqlStorage.CreateTablePersistsPreferInline` | retain | CREATE succeeds. SHOW CREATE contains PREFER_INLINE. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.CreateTablePersistsForceOutline` | retain | CREATE succeeds. SHOW CREATE contains FORCE_OUTLINE and excludes PREFER_INLINE. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.DefaultColumnHasNoStorageClause` | retain | Default CREATE succeeds. SHOW CREATE excludes PREFER_INLINE only. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.ExplicitDefaultStorageClausesActAsDefault` | retain | DEFAULT/PREFER_OUTLINE CREATE succeeds. SHOW CREATE excludes PREFER_INLINE, PREFER_OUTLINE and DEFAULT. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.CreateTableLikeCopiesPreferInline` | retain | LIKE succeeds. Copied SHOW CREATE contains PREFER_INLINE. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.CreateTableLikeCopiesForceOutline` | retain | LIKE succeeds. Copied SHOW CREATE contains FORCE_OUTLINE and excludes PREFER_INLINE. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.SharedAttributeRejectsPreferInline` | retain | Three shared spellings reject with the normal-attribute message. FORCE has a separate case. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.CreateRejectsAllStorageSettingsForFixedTypes` | retain | All four INT policies and fixed BIT PREFER_INLINE reject with the variable-normal message. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.CreateAcceptsStorageForPhysicalVariableTypes` | retain | CHAR/PREFER_INLINE and VARBIT/FORCE_OUTLINE CREATE succeeds. SHOW CREATE contains both hints. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.VclassRejectsAllStorageSettings` | retain | All four VCLASS policies reject with the variable-normal message. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.AlterRejectsAllStorageSettingsForFixedTypes` | retain | All four MODIFY INT policies and CHANGE INT/PREFER_INLINE reject with the variable-normal message. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.AlterAddDuplicateAttributeKeepsDuplicateErrorPrecedence` | retain | Two duplicate ADD policies return raw -245. A nonduplicate fixed ADD returns the domain message. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.AlterModifyClassAttributeReportsNonNormalAttributeError` | retain | MODIFY CLASS/PREFER_INLINE returns the dedicated normal-attribute message. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.AlterChangeClassAttributeReportsNonNormalAttributeError` | retain | CHANGE CLASS/PREFER_INLINE returns the dedicated normal-attribute message. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.AlterChangeClassAttributePreservesConstraintValidation` | retain | CLASS CHANGE with AUTO_INCREMENT returns raw ER_SM_INVALID_CONSTRAINT. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.ForceOutlineRejectsUnsupportedAttributes` | retain | Fixed/shared/class/view CREATE and fixed MODIFY reject with their distinct accepted messages. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.AlterModifyAddsAndDropsPreferInline` | retain | MODIFY adds PREFER_INLINE, omission preserves it and both default spellings reset it. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.AlterModifyPreservesAndTransitionsForceOutline` | retain | Omission retains FORCE. Hint transitions exclude the opposite hint. Both defaults clear FORCE/PREFER_INLINE. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.AlterModifyDropsForceOutlineForFixedType` | retain | Omitted-policy fixed conversion removes FORCE and preserves numeric value 1234. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.AlterModifyDropsPreferInlineForFixedType` | retain | Omitted-policy fixed conversion removes PREFER_INLINE and preserves numeric value 1234. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.FailedExplicitFixedTypeAlterPreservesSchemaAndData` | retain | Explicit fixed DEFAULT rejects. After abort, PREFER_INLINE remains and CAST value equals 1234. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.ForceOutlineBypassesRecordGateOnlyAboveInlineStubSize` | retain | SA stats report one file and two chunks. Lengths, disk-size floor and NULL count match. No full-value or individual-flag assertion. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.AlterForceOutlineAppliesOnlyAfterRewrite` | retain | SA stats show no file before/after ALTER, then one chunk after UPDATE. Result length is 3001. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.ForceOutlineRemainsNonReservedIdentifier` | retain | Unquoted FORCE_OUTLINE column accepts and returns integer 7. | SA shared `unittestdb`. Ticket14 receipt above. |
+| `OosSqlStorage.PreferInlineColumnRoundTripsLargeValue` | retain | Both equal-size VARBIT lengths equal 6000. No full-value or demotion-order assertion. | SA shared `unittestdb`. Ticket14 receipt above. |
 
 
 ## Delivery and limits
