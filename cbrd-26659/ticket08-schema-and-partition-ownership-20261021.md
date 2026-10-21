@@ -1,8 +1,10 @@
 # Work456 ticket 08: schema changes and partition ownership
 
-Date: 2026-10-21, Asia/Seoul. Audience: the author and reviewers of [PR8128](https://github.com/CUBRID/cubrid/pull/8128).
+Date: 2026-10-21; corrected verification: 2026-10-22, Asia/Seoul. Audience: the author and reviewers of [PR8128](https://github.com/CUBRID/cubrid/pull/8128).
 Scope: supplement operations O54–O56 and preserve the related standalone C++ contracts.
 
+The corrected partition run completed all required observations and retains 13 native FAIL verdicts.
+Its child memberships, logical unions, complete values, and raw destination heaps pass; 82 chain-owner and 14 attribute-state defect observations remain separate.
 The new schema fixtures compare complete values and actual stored records in SA and CS modes.
 The partition fixtures keep the intended destination heap and OOS owner requirements.
 A reproduced partition failure receives no passing coverage credit.
@@ -106,8 +108,8 @@ Any new anonymous, duplicate live, or relocated record remains an observation fa
 Direct child SQL scans are supplementary observations.
 They must agree with the independent range/list membership model and the stopped physical heap map.
 A root diagnostic traversal or root aggregate cannot substitute for a child heap.
-Hash routing has no manual-specified literal child formula in this test.
-Its ownership oracle uses the actual heap independently established from the stopped record dump.
+The manual does not publish a literal hash formula, but the exact d13 INT hash and child metadata order provide an independent implementation oracle.
+The corrected hash fixtures use that pinned expected destination and separately compare each actual chain owner with the actual record heap.
 
 ## Partition workloads and intended failures
 
@@ -142,10 +144,12 @@ The removal fixture verifies the final unpartitioned destination through actual 
 | Rejection atomicity | `partition_partition_rejection` | Expected rejection, rejected object absence, unchanged canonical DDL and full surviving values |
 
 The initial probe found actual records in a child heap while their OOS chains belonged to the root heap.
-One multirow range fixture also placed the key `3` in `p0` despite the intended `p1` destination.
+The original range fixture used `p0 < 10`, so its key `3` correctly belonged to `p0`.
+The previous attribution of that placement to an engine routing defect is withdrawn.
+The original ONLY/named-child results also cannot establish parent widening or unsupported child access; their fixture placed all three keys in p0.
 The raw record OID, class representation, complete payload, file allocation, and owner descriptor support these observations.
 These failures stay linked to [PR7927](https://github.com/CUBRID/cubrid/pull/7927) and Work393 as a separate repair scope.
-That link does not establish the internal cause of every new routing or rewrite failure.
+That link does not establish the internal cause of the observed ownership or rewrite failures.
 
 The separate ADD/DROP fixtures issue single-row INSERT statements and establish correct literal child membership before checking ownership.
 After selected DROP, the exact removed large-value chain remains allocated under the root owner with its original logged identity.
@@ -165,6 +169,120 @@ The retained public `partition` case keeps its intended movement/reorganization 
 The retained `partition_routing` case remains useful for logical routing reads and duplicate rejection.
 The retained private `partition_owner` case keeps its correct root-empty and destination-owned expectations.
 No expected answer was changed to match observed defects.
+
+## Corrected range and hash oracle
+
+The independent merger found a test-fixture error before ticket 08 integration.
+Seven range scenarios expected key 3 in p1 while their DDL assigned it to p0 below 10.
+Those routing assertions were invalid; the old receipts remain implementation history.
+The corrected fixture changes the exclusive boundary to 3 and retains the independently intended memberships.
+It does not change expected membership to match observed engine output.
+
+| Phase | Independent row-to-partition expectation |
+| --- | --- |
+| Initial range, rejection snapshots, existing-table partitioning | p0 below 3 contains 1,2; p1 from 3 contains 3 |
+| After movement and rejected movement | p0 contains 1; p1 contains 3,12; key 2 is absent |
+| Split, or the initial merge fixture | low below 2 contains 1; mid from 2 below 3 contains 2; p1 contains 3 |
+| Merged | merged below 3 contains 1,2; p1 contains 3 |
+| REMOVE PARTITIONING | All 1,2,3 rows belong to the unpartitioned root |
+| List before/split/merge | Explicit lists assign 1,2 to p0 or merged; split assigns 1 to low and 2 to mid; 3 stays in p1 |
+| d13 INT hash with two children | p0 contains 3; p1 contains 1,2 |
+| d13 INT hash with three children | p0 contains 2; p1 is empty; p2 contains 1,3 |
+
+The [range manual](https://github.com/CUBRID/cubrid-manual/blob/3b6ae97bfbdc664b010ffa933ded5a05b291ae03/en/sql/partition.rst#L64) defines continuous half-open intervals.
+The [source equality rule](https://github.com/CUBRID/cubrid/blob/d13aebf6428a68c2852d16df143d1da203d86dea/src/query/partition.c#L1454) requires `min <= key < max`.
+The [child access contract](https://github.com/CUBRID/cubrid-manual/blob/3b6ae97bfbdc664b010ffa933ded5a05b291ae03/en/sql/partition.rst#L315) supports ordinary child names and `PARTITION(name)` as single-child SQL access.
+ONLY is also supported; the old bound mismatch supplies no evidence of broader scans.
+These are logical SQL contracts, separate from the stopped root-OID-to-child-class/HFID physical proof.
+
+The INT hash oracle uses [unsigned 32-bit mixing](https://github.com/CUBRID/cubrid/blob/d13aebf6428a68c2852d16df143d1da203d86dea/src/base/memory_hash.c#L2621) before modulo.
+The independently calculated hashes for 1,2,3 are 663891101, 3329832309, and 2278584254.
+Ordered child creation, catalog serialization, heap loading, and the retained order after COALESCE establish the pN mapping for d13.
+No expected destination comes from observed row placement.
+Equality and selective IN probes compare full values before and after resizing, with documented `USING INDEX NONE` for sequential access.
+Their SQL result contract does not claim an executed-plan count of skipped partitions.
+The raw output records routing, actual owner, and attribute-state defects separately.
+
+The copied configuration has no global `vacuum_disable` setting; the d13 default is false.
+The corrected partition helper saves the exact current configuration, sets `vacuum_disable=yes` before every stopped SA diagnostic boot, and restores byte-identical prior configuration before C/S restart.
+The correction does not claim that historical unguarded diagnostics were vacuum-free.
+All 13 partition cases must rerun because they execute the changed helper: 26 independent DEFAULT/FORCE_OUTLINE invocations.
+The six schema cases and retained owner case, the four lifecycle cases, SQL5, and the five retained C++ DDL cases keep only their unchanged executed-input scope.
+The old aggregate 20-case receipt and its copied all-common-file manifest do not qualify the corrected helper.
+
+The independent oracle notes have SHA-256 `063b584a20b5b50821d4ce5b95126889fb5766e79639d459d527431e82df9b4e`.
+The complete phase audit and preserved pre-correction receipts are under the raw `range-correction` directory.
+The final committed correction ran as `r3` at private `58280d595ffa1712643a11382aa83e7f0b79f658`.
+Its exact d13 source checkout is `/home/vimkim/gh/cb/work456-ticket08-rerun-source`, separate from the later integration branch.
+The helper SHA-256 is `2d192e0fa398f77060312959bccca2913151a810db8c4b72376e111f853d6ae4`; the capture wrapper is `b2df7207dfaff06bf4f149d354fa5bad53387a5d78bcce856627a4018d4bd644`.
+The unchanged shared reader is `ec243112a0206157c119eb8b85015f375ecd9ffde86cc883480487d83ed0b058`.
+The frozen independent oracle is raw `range-correction/oracle-audit.json`, SHA-256 `b9c3e9c1fc1f8bca13ceb2027d7109fd9ead65681b804c90c2f9fa08543041b1`.
+The pre-retention `9111148b` oracle is preserved only as `range-correction/r3-before-retention-oracle-audit.json` and grants no final runtime credit.
+
+`r3` selected, dispatched, and finished exactly the same 13 cases, with both policies: 26 invocations, no skip, all declared phases and owned cleanup.
+All 48 physical snapshots qualified, including 48 preboot vacuum guards and exact configuration restores; no observer error or setup gap remains in this invocation.
+The native runner returned 0 and the verifier returned 1: all 13 case verdicts remain FAIL in 400.372325 seconds.
+Completed observations do not turn those failing contracts into passing partition coverage.
+The XML SHA-256 is `dd50f37e0fa7487331a130b2c1d38e068a14b73df462aefab896de416fedfbba`.
+The expected, dispatched, and finished lists share SHA-256 `e00f82d51c150e25492f3a8866c70e801ddbdb5cedb28ef58fe39f51ea19b11a`.
+
+| Corrected contract | Actual `r3` evidence |
+| --- | --- |
+| Named-child membership and complete child union | 104 membership checks and 46 complete logical union checks pass; zero failures |
+| Complete ordinary values | All 50 pre/post snapshot models pass, including the unpartitioned prestate |
+| Hash equality/IN reads | All 40 full-value probes pass with the independent d13 destination map |
+| Actual raw destination | All 144 current rows map to their intended actual class/HFID; zero raw routing defects |
+| Actual attribute bytes and owner | 144 complete payload comparisons; 82 actual chain-owner mismatch observations and 14 separately recorded storage-state observations |
+
+The 14 storage-state observations are not inferred from ownership metadata.
+The exact current `REC_HOME` flags and actual VOT entries are clear/inline where the independent model requires OOS.
+The only large attribute is 5,107 or 5,133 payload bytes, serialized as 5,112 or 5,140 bytes, independently above the accepted 4,060-byte target.
+Ordinary destination reserialization must apply the normative demotion rule; raw reinsertion into another heap requires Expand under specification §3.
+Complete values remain equal and the recorded DEFAULT/FORCE_OUTLINE policies remain unchanged.
+The breakdown is COALESCE row 3 under both policies (2); REMOVE rows 2 and 3 under both policies (4); range/list SPLIT row 2 under both policies (4); and range/list MERGE row 2 under both policies (4).
+For example, COALESCE row 3 moves from the correct p2 current OID `(1,1025,2)` with flags 9 and a 24-byte stub to correct p0 OID `(1,769,2)` with flags 0 and a 5,140-byte inline field.
+Its full payload SHA-256 remains `8239374ab423f18cfb8b420d4a08559c2a6b9db7b7f242c7432d7141a0ea274e`.
+That is a storage-state failure with passing routing and full values, not another chain-owner count.
+The owner failures remain linked to the separate [PR7927](https://github.com/CUBRID/cubrid/pull/7927)/Work393 repair scope; these observations do not establish its internal cause or integrate any repair.
+
+The intermediate `r2` run completed 13 cases, 26 policy invocations, and 48 raw snapshots in 415.818780 seconds.
+Its supplementary `direct_child_identity` comparison incorrectly searched a numeric subsequence in an array of row pairs with `jq index($pair)`.
+That built an empty subset and produced 46 harness failures; those failures receive no engine attribution.
+The corrected helper uses exact pair membership, compares the complete ordinary child pair union with the root logical identities, and leaves physical membership to the stopped raw class/HFID proof.
+The complete root value and physical population queries have no child ID filter, so an extra row outside a child query's selected IDs is still rejected.
+Pure controls cover 23 supported child phases, 145 invalid child populations/metadata, and positive plus extra/missing/duplicate/wrong-value root populations.
+
+The `r2` independent raw classification found zero routing defects and zero ordinary child membership failures.
+It recorded 82 actual chain-owner defect observations and 14 attribute-state observations, counted separately from the 46 harness failures.
+The 14 storage-state observations are COALESCE row 3 twice; REMOVE rows 2 and 3 under both policies four times; range/list SPLIT row 2 four times; and range/list MERGE row 2 four times.
+These are repeated observations across fixtures and phases, not 96 distinct engine issues.
+The stopped diagnostic and page-frame inputs were not retained in `r2`, so the final run adds replayable input retention and supersedes that receipt.
+
+The partition-only retention wrapper delegates to the byte-identical qualified reader.
+It records the exact frames returned by that reader's existing page reads, with source volume, VPID, byte offset, and SHA-256.
+It preserves stopped heaphex, filetable and file diagnostics, complete root scan and retirement ledger, current row/model inputs, phase SQL/policy observations, guarded configuration, and reader code before cleanup.
+Each phase writes a compressed archive under the owned installation's `oos08_evidence` directory.
+Offline replay uses only those inputs and frames and never opens the original database volume.
+Pure controls prove byte-identical stdout, stderr, and exit status for reader results 0, 1, and 2; changed or missing frames/dumps are rejected.
+Archive-only replay also succeeds after the original volume and diagnostic paths are removed.
+All five added Python testcase files pass a Python 3.6 AST/API inspection; no actual Python 3.6 interpreter execution is claimed.
+The shared reader remains unchanged, preserving the separate schema and lifecycle executed-input scope.
+The six schema cases and retained owner case reuse only `final01` public `a55886659` / private `754defba5` input closures.
+The four lifecycle cases reuse only `lifecycle-final01` private `9b4ec150e`; SQL5 reuses `final-sql01` public `a55886659` / private `9b4ec150e`.
+Before the unrelated integration merges, only the unexecuted partition module differed in those two broad common-file manifests; no SQL5 input differed.
+After the merges, the unexecuted `snapshot_controller.sh` also differs, and the corrected run's broad manifest additionally includes an unrelated change to `oos15_notify.sh`.
+The final closure audit verifies all 29 executed corrected-partition dependencies byte-for-byte and excludes those unrelated modules explicitly.
+The later native partition receipt grants no new replay or passing coverage to those earlier invocations.
+
+The first corrected attempt, `corrected-partitions01`, failed server startup before loading the partition helper.
+Its five dispatched failures and interrupted selection receive no partition conformance credit.
+The exact `CUBRID_TMP` was 83 bytes: the PL socket fit at 105 bytes including NUL, but the server-to-master socket required 113 bytes with the retained namespace PID 11508.
+The [server handshake path](https://github.com/CUBRID/cubrid/blob/d13aebf6428a68c2852d16df143d1da203d86dea/src/connection/master_connector.cpp#L451) appends `cubrid_tcp_setup_server<PID>`.
+The [socket setup](https://github.com/CUBRID/cubrid/blob/d13aebf6428a68c2852d16df143d1da203d86dea/src/connection/tcp.c#L881) passes the complete pathname length to `bind`; Linux's `sun_path` field holds 108 bytes.
+The retained server stderr contains only repeated master-reconnect messages; the master stdout and stderr are empty.
+The native containment cleanup left zero owned processes, an empty registry, and no database assets.
+The retry runner now rejects oversized master, PL, server, and csql socket paths before boot for both policies and a maximum ten-digit PID.
+This is an attempt setup failure, separate from any OOS ownership verdict.
 
 ## C++ disposition and execution
 
@@ -191,7 +309,7 @@ Neither the C++ DDL baseline nor these schema SQL fixtures substitute for those 
 
 ## Native receipts and handoff
 
-The frozen `final01` shell selection contains exactly 20 cases: 6 schema PASS, 14 partition FAIL, and zero skips in 809.274748 seconds.
+The historical `final01` shell selection contains exactly 20 cases: 6 schema PASS, 14 partition FAIL, and zero skips in 809.274748 seconds.
 The native runner returned `0`; the independent verifier returned `1` because the 14 failures remain failures.
 All 30 new mode/policy invocations reached `all_required_phases` and `owned_cleanup`.
 The independent audit found zero observer errors and 58 raw attribute/owner snapshots.
@@ -205,7 +323,8 @@ They do not change the frozen 20-case receipt.
 
 | Native selection | Exact verdict | Wall time | Observation limit |
 | --- | --- | --- | --- |
-| `final01`, shell 20 | 6 PASS, 14 FAIL, 0 skip | 809.274748 s | Four new schema modes, retained schema CS/SA, 13 independent partition cases, and retained partition owner |
+| `r3`, corrected shell 13 | 0 PASS, 13 FAIL, 0 skip | 400.372325 s | Governs all 13 corrected partition cases; 26 policy invocations, 48 retained/replayed raw snapshots |
+| `final01`, historical shell 20 | 6 PASS, 14 FAIL, 0 skip | 809.274748 s | Reuse only six unchanged schema cases and retained owner; all 13 partition-helper cases are superseded |
 | `lifecycle-final01`, shell 4 | 0 PASS, 4 FAIL, 0 skip | 326.312484 s | Range/list ADD/DROP and PROMOTE, both policies, all eight invocations reached every declared phase and cleanup |
 | `final-sql01`, JDBC 5 | 5 PASS, 0 FAIL, 0 skip | 51.981954 s | `schema`, `schema_materialize`, `schema_rewrites`, `partition`, and `partition_routing`; logical invocation only |
 | `control-flag01`, shell 1 | 1 deliberate FAIL | 9.013243 s | Copied corpus changes only row 2's expected `has_oos` from true to false; actual stored flags reject it |
@@ -217,7 +336,8 @@ The controls intentionally stop at the changed assertion and receive no later-ph
 The unmodified attribute CS case passed in `final01` before these disposable corpora were used.
 No tracked test or expected answer was modified for a control.
 
-Across the two final shell selections, all 38 new mode/policy invocations reached all required phases and cleanup.
+Across the two original shell selections, all 38 new mode/policy invocations mechanically reached all declared phases and cleanup.
+This does not validate the seven inconsistent range routing oracles; the corrected partition receipt supersedes that scope.
 The audit found 86 raw snapshots, no observer errors, and no changed input bytes.
 Missing OOS owners after PROMOTE remain explicit conformance failures with no reconstructed-payload credit.
 A failing SQL/JDBC case could not provide these physical facts; the independent SQL selection passed all five logical contracts.
@@ -243,19 +363,38 @@ The runner SHA-256 is `31be3b1e542b05d1ac7581d47f785319ce61421f4b5d94681a9c558d7
 Its Go revision is `5f641188b4ca5d9404a43bcc00ed65fa6ebc60b0`, with `vcs.modified=true` recorded.
 No runner rebuild or shared installation mutation occurred.
 The cleanup receipt confirms no owned process, registered database, or database asset remains.
+`r3` actual PID/IPC/mount/network identities are `4026537061`/`4026537060`/`4026537059`/`4026537062`; all differ from the captured host identities.
+Every policy logs actual master port 1568, broker master SHM 1568, and broker ports/application SHM 10090 and 13091.
+These actual copied settings are distinct from the auxiliary worktree's allocation labels 41102/41103.
+The actual native slot's 38 engine/library/VM artifacts match immutable provider14, independently of the host copied-prefix view.
+The final short TMP is 63 bytes, with maximum master/PL/server/csql socket lengths 76/85/98/96 including NUL and a ten-digit PID.
+
+The native slot's CUBRID filesystem is a separate mount view.
+The exporter pins its live source evidence directory, reads completed archives through that directory FD, validates gzip/tar and every manifest hash, and copies them to `r3/retained-archives` before namespace teardown.
+All 48 archive hashes match the hashes printed by the native cases.
+They contain 54 actual 16 KiB page frames (884,736 bytes), in 2,647,062 compressed bytes with diagnostics and code.
+After cleanup, all original database/volume paths are absent and all 48 archives replay with byte-identical stdout, stderr, and exit status.
+Four disposable copies of actual product evidence reject changed/missing frames and heap dumps; retained archives remain unchanged.
+Replay entrypoint: `python3 code/oos08_partition_capture.py --replay EXTRACTED_ARCHIVE_DIRECTORY`.
+`r3/offline-replay-receipt.json` records exact archive, manifest, and replay identities.
+The merger independently replayed all 48 archives and separately decoded 144 heap records, 82 complete chains, 62 complete inline values, and 60 owning-file descriptors from 48 allocation dumps.
+Its independent raw audit is `independent-r3-raw-audit.json`, SHA-256 `041f286a87c661f8fa64c321821d36cb7e4cafb9cc18c6a0d477815642cb3ece`.
+It confirms zero membership/routing defects, 82 owner observations, and the same 14 storage-state observations; destination integration remains the coordinator's separate review.
+The exporter closes its source directory FD after the 48 copies; no native process or resource lease remains.
 The SQL registry retains only its normal comment header.
 The six sampled binaries in every final attempt match the immutable ticket 14 d13 provider exactly.
 
-The read-only handoff source branch includes integration `9c21a1ae701c847803690bd1c567b74f0d0918a9`.
-The public task branch includes integration `65f9393ada5455a4908c649a7dc0469f5a7e2ebb` at `376c5a6ee130a91d925c606a2b0a244f6fb6f4dd`.
-The private task branch includes integration `5c0fc6175881efac22f623dbc1169b84b0aa455b` at `0833ba939a2ca8201ab16ef82f4b6975d1f68f4d`.
-All selected input bytes remain identical after these merges.
+The handoff source branch includes integration `9c21a1ae701c847803690bd1c567b74f0d0918a9`.
+The public task branch includes integration `ae5714ab4689d01adf243c92426d9efd2b48b8a6` at `59f077ad4e4e4fac8120604105d80b8e7c48cff5`.
+The private task branch includes integration `a5a886bd762f6469281b489ecad3641de1377f86` at `304ca9f3639a41fdc44851811eab2e513552d67d`.
+The corrected runtime remains frozen at `58280d595`; later merges bring unrelated tickets without transferring their execution credit.
+The executed dependency closure remains byte-identical after these merges; unrelated changed common modules receive no ticket 08 execution credit.
 These merge identities do not transfer d13 execution credit to another source installation.
 The coordinator's final combined qualification remains separate.
 There is no ticket 08 engine change.
 
 Earlier `probe01`–`probe04`, `green01`–`green04`, and `lifecycle-probe01` remain implementation history.
-They include the rejected unqualified class-name/ONLY-child observations, helper initialization corrections, and the initial diagnostic-error classification.
+They include initial unqualified class-name probes, the range-bound mismatch, helper initialization corrections, and the initial diagnostic-error classification.
 Their passes do not substitute for the final frozen selections.
 The exact revision, environment, configuration, command, case list, inputs, raw native results, independent audits, and cleanup receipt remain in the raw attempt root.
 The raw attempt root is `/home/vimkim/temp/work456-implementation/ticket08`.
