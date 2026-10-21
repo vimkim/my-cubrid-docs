@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="CUBRID PR 8196의 페이지 배치 실행 구조, 빌드와 리뷰 결과, OOS 통합 가능성과 필요한 보완을 설명합니다.">
+<title>CUBRID PR 8196 리뷰와 OOS 통합 설명</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%231c5da8'/%3E%3Cpath d='M14 18h36M14 32h36M14 46h36M26 12v40' stroke='%23fff' stroke-width='5'/%3E%3C/svg%3E">
+<style>
+:root{--bg:#f4f7fa;--surface:#ffffff;--surface2:#eaf0f6;--border:#ccd9e4;--text:#183247;--text-dim:#536a7b;--accent:#1c5da8;--accent-soft:#e6effb;--good:#147568;--good-soft:#e5f4ee;--warn:#92551d;--warn-soft:#fff2df;--danger:#ac3833;--danger-soft:#ffebe8;--body:"Noto Sans KR","Noto Sans CJK KR","Pretendard","Apple SD Gothic Neo",sans-serif;--mono:"IBM Plex Mono","D2Coding","DejaVu Sans Mono",monospace}
+@media(prefers-color-scheme:dark){:root{--bg:#101c26;--surface:#172733;--surface2:#203440;--border:#354d5e;--text:#e2edf3;--text-dim:#a9becb;--accent:#8bbcf6;--accent-soft:#203b56;--good:#85d5bd;--good-soft:#183f38;--warn:#edbf80;--warn-soft:#403323;--danger:#ffaaa0;--danger-soft:#472b2c}}
+*{box-sizing:border-box}html{font-size:17px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:var(--body);font-size:1rem;line-height:1.85;word-break:keep-all;overflow-wrap:break-word}a{color:var(--accent);text-underline-offset:.23em}a:hover{text-decoration-thickness:2px}button{font:inherit;color:inherit;cursor:pointer}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:4px}button:disabled{opacity:.45;cursor:default}code,pre,.mono{font-family:var(--mono)}code{font-size:.8rem;overflow-wrap:anywhere;background:var(--surface2);padding:.12em .3em;border-radius:3px}pre{margin:0;padding:1.2rem;font-size:.8rem;line-height:1.8;overflow:auto;background:var(--surface2);white-space:pre;tab-size:2}pre code{font-size:inherit;background:none;padding:0;overflow-wrap:normal}h1,h2,h3{line-height:1.5;text-wrap:balance;margin:0}h1{font-size:clamp(1.8rem,3.4vw,2.7rem);letter-spacing:-.055em}h2{font-size:1.55rem;letter-spacing:-.035em}h3{font-size:1.1rem;letter-spacing:-.02em}p{margin:0 0 1rem}p:last-child{margin-bottom:0}ul,ol{padding-left:1.3rem;margin:.6rem 0}li+li{margin-top:.35rem}.wrap{display:grid;grid-template-columns:190px minmax(0,1fr);gap:3rem;max-width:1370px;margin:auto;padding:2rem 2.2rem 5rem}.main{min-width:0}.toc{position:sticky;top:1.5rem;align-self:start;max-height:calc(100dvh - 3rem);overflow-y:auto;padding:.8rem 0}.toc-title{font-size:.8rem;font-weight:700;padding-bottom:.9rem;border-bottom:1px solid var(--border);margin-bottom:.7rem}.toc a{display:block;text-decoration:none;color:var(--text-dim);font-size:.83rem;padding:.5rem .65rem;border-left:2px solid transparent}.toc a.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft)}.toc .revision{font-size:.72rem;color:var(--text-dim);margin-top:1.1rem;line-height:1.7}.page-head{padding:1rem 0 1.7rem;border-bottom:2px solid var(--text)}.eyebrow{font-size:.76rem;letter-spacing:.09em;color:var(--accent);font-weight:700;margin-bottom:.8rem}.subtitle{color:var(--text-dim);max-width:66ch;margin-top:1rem}.meta{display:flex;flex-wrap:wrap;gap:.5rem 1.2rem;font-size:.76rem;color:var(--text-dim);margin-top:1.3rem}.section{padding:2.6rem 0;scroll-margin-top:1.5rem;border-bottom:1px solid var(--border)}.section-head{margin-bottom:1.3rem}.section-head p{color:var(--text-dim);margin-top:.6rem;max-width:66ch}.lead{font-size:1.13rem;max-width:65ch}.callout{padding:1.15rem 1.3rem;background:var(--accent-soft);border-left:4px solid var(--accent);margin:1.2rem 0}.callout.good{background:var(--good-soft);border-color:var(--good)}.callout.warn{background:var(--warn-soft);border-color:var(--warn)}.callout.danger{background:var(--danger-soft);border-color:var(--danger)}.tag{display:inline-block;padding:.12rem .55rem;font-size:.71rem;line-height:1.6;border:1px solid var(--border);border-radius:4px;white-space:nowrap;font-weight:700;background:var(--surface)}.tag.runtime{color:var(--danger);background:var(--danger-soft);border-color:var(--danger)}.tag.static{color:var(--accent);background:var(--accent-soft)}.tag.gap{color:var(--warn);background:var(--warn-soft)}.tag.ok{color:var(--good);background:var(--good-soft)}.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:1.4rem 0;border-block:1px solid var(--border)}.fact{padding:1rem;border-right:1px solid var(--border)}.fact:last-child{border-right:0}.fact b{display:block;font-size:1.45rem;font-variant-numeric:tabular-nums;line-height:1.5}.fact span{font-size:.78rem;color:var(--text-dim)}.two-col{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.2rem}.two-col>*{min-width:0}.panel{background:var(--surface);border:1px solid var(--border);padding:1.2rem}.panel h3{margin-bottom:.7rem}.label{font-size:.76rem;color:var(--text-dim);font-weight:700;margin-bottom:.5rem}.source{font-size:.77rem;color:var(--text-dim);margin-top:.8rem}.note{font-size:.82rem;color:var(--text-dim)}.stack{display:grid;gap:1.1rem}figure{margin:1.2rem 0}figcaption{font-size:.81rem;color:var(--text-dim);margin-top:.7rem}.flow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);align-items:stretch;gap:.45rem}.flow-box{background:var(--surface);border:1px solid var(--border);padding:1rem;min-width:0}.flow-box b{display:block;margin-bottom:.5rem}.flow-box p{font-size:.9rem;color:var(--text-dim)}.edge{display:flex;flex-direction:column;justify-content:center;align-items:center;font-size:.7rem;color:var(--accent);padding:0 .15rem}.edge span{font-size:1.3rem;line-height:1.2}.flow-foot{padding:.8rem 1rem;margin-top:.7rem;background:var(--warn-soft);font-size:.85rem;border:1px dashed var(--warn)}.table-wrap{overflow:auto;max-width:100%;border:1px solid var(--border);background:var(--surface)}table{border-collapse:collapse;width:100%;font-size:.875rem}th,td{text-align:left;vertical-align:top;padding:.85rem 1rem;border-bottom:1px solid var(--border);overflow-wrap:break-word}th{font-size:.77rem;background:var(--surface2);font-weight:700}tr:last-child td{border-bottom:0}table.wide{min-width:660px}td p{margin:0}.filters,.controls{display:flex;gap:.5rem;flex-wrap:wrap;margin:1rem 0}.filters button,.controls button,.copy{border:1px solid var(--border);padding:.48rem .8rem;background:var(--surface);border-radius:4px;font-size:.8rem;min-height:2.4rem}.filters button[aria-pressed=true],.controls button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--surface)}.count{font-size:.76rem;color:var(--text-dim);margin:.5rem 0}.finding{padding:1.5rem 0;border-top:1px solid var(--border)}.finding:first-of-type{border-top:0}.finding-head{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:.8rem}.finding-head h3{flex-basis:100%}.finding p{max-width:70ch}.demo{border:1px solid var(--border);background:var(--surface);padding:1.1rem;margin:1rem 0}.demo .code-line{display:block;padding:.4rem .65rem;border-left:3px solid transparent;font-size:.78rem;background:var(--surface2);font-family:var(--mono);overflow-wrap:anywhere;word-break:break-all}.demo .code-line.risk{border-left-color:var(--danger);background:var(--danger-soft)}.demo-status{padding:.8rem 0 0;font-size:.88rem;min-height:4rem}.cache-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.5rem;margin:.9rem 0}.cache-cell{padding:.8rem .45rem;text-align:center;border:1px solid var(--border);background:var(--surface2)}.cache-cell small{display:block;color:var(--text-dim);font-size:.7rem}.cache-cell b{display:block;font-family:var(--mono);font-size:1.05rem}.cache-cell.stale{border-color:var(--danger);background:var(--danger-soft);color:var(--danger)}.step-text{font-size:.88rem;min-height:4rem}.code-head{display:flex;justify-content:space-between;align-items:center;padding:.55rem .8rem;border:1px solid var(--border);border-bottom:0;background:var(--surface);font-size:.77rem}.code-block{border:1px solid var(--border);margin:1rem 0}.code-block .code-head{border:0;border-bottom:1px solid var(--border)}.copy{margin:0;padding:.25rem .6rem;min-height:2rem}.result{border:1px solid var(--danger);background:var(--danger-soft);padding:1rem 1.2rem;margin-top:1rem}.result strong{font-family:var(--mono);font-size:.9rem}.oos-layout{display:grid;grid-template-columns:2fr 1fr;gap:.8rem;margin:1rem 0}.record{border:1px solid var(--border);padding:1rem;background:var(--surface)}.record .bytes{display:flex;gap:.3rem;flex-wrap:wrap;margin:.7rem 0}.bytes span{border:1px solid var(--border);padding:.3rem .5rem;font-size:.75rem;background:var(--surface2)}.bytes .stub{border-color:var(--warn);color:var(--warn);background:var(--warn-soft)}.scenario-result{padding:1rem;background:var(--surface2);border:1px solid var(--border);min-height:8rem}.scenario-result h3{margin-bottom:.5rem}.scenario-result p{font-size:.9rem}.stage-list{list-style:none;padding:0;counter-reset:stage;display:grid;gap:.8rem}.stage-list li{counter-increment:stage;background:var(--surface);border:1px solid var(--border);padding:1rem 1rem 1rem 3.5rem;position:relative;margin:0}.stage-list li:before{content:counter(stage);position:absolute;left:1rem;top:1rem;color:var(--accent);font-family:var(--mono);font-weight:700}.stage-list p{font-size:.88rem;color:var(--text-dim);margin-top:.3rem}details{background:var(--surface);border:1px solid var(--border);padding:.9rem 1.1rem;margin:.8rem 0}summary{cursor:pointer;font-weight:700;font-size:.92rem}details[open] summary{margin-bottom:.8rem}dl{display:grid;grid-template-columns:8rem minmax(0,1fr);gap:.6rem 1rem;margin:.8rem 0;font-size:.83rem}dt{color:var(--text-dim)}dd{margin:0;min-width:0;overflow-wrap:anywhere}.footer{font-size:.77rem;color:var(--text-dim);padding-top:1.5rem}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}[hidden]{display:none!important}
+@media(max-width:1000px){.wrap{grid-template-columns:1fr;gap:0;padding:0 1.2rem 3rem}.toc{position:sticky;top:0;z-index:10;display:flex;align-items:center;overflow-x:auto;max-height:none;gap:.3rem;background:var(--bg);margin:0 -1.2rem;padding:.5rem 1.2rem;border-bottom:1px solid var(--border)}.toc a{white-space:nowrap;border-left:0;border-bottom:2px solid transparent;font-size:.77rem;padding:.5rem}.toc a.active{border-bottom-color:var(--accent)}.toc-title,.toc .revision{display:none}.page-head{padding-top:2rem}.section{scroll-margin-top:4.4rem}.main{width:100%}.flow-box{padding:.85rem}.facts{grid-template-columns:repeat(2,minmax(0,1fr))}.fact:nth-child(2){border-right:0}.fact:nth-child(-n+2){border-bottom:1px solid var(--border)}}
+@media(max-width:650px){html{font-size:16px}.wrap{padding-inline:1rem}.toc{margin-inline:-1rem;padding-inline:1rem}.two-col,.oos-layout{grid-template-columns:1fr}.flow{grid-template-columns:1fr}.edge{padding:.15rem;flex-direction:row;gap:.5rem}.edge span{transform:rotate(90deg)}.section{padding-block:2rem}.panel{padding:1rem}dl{grid-template-columns:1fr;gap:.2rem}dd{margin-bottom:.6rem}.finding-head h3{font-size:1.15rem}.meta{gap:.45rem}.cache-cell{padding:.65rem .25rem}.demo-status,.step-text{min-height:0}.fact b{font-size:1.3rem}.oos-layout{gap:.6rem}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important;animation:none!important}}
+@media print{:root{--bg:#fff;--surface:#fff;--surface2:#f3f5f7;--text:#182b3a;--text-dim:#4c606f;--border:#b9c7d1;--accent:#174c86;--accent-soft:#edf3f9;--good:#246653;--good-soft:#eef7f1;--warn:#845018;--warn-soft:#fff6e9;--danger:#972d29;--danger-soft:#fff0ed}.wrap{display:block;padding:0;max-width:none}.toc,.controls,.filters,.copy{display:none}.section{break-inside:auto}.panel,.demo,.finding,.code-block{break-inside:avoid}a{color:var(--text)}pre{white-space:pre-wrap}table.wide{min-width:0}}
+</style>
+</head>
+<body>
+<a class="sr-only" href="#main">본문으로 이동</a>
+<div class="wrap">
+<nav class="toc" aria-label="문서 목차">
+<div class="toc-title">PR 8196 검토 설명</div>
+<a href="#summary" class="active">검토 결론</a><a href="#pipeline">배치 실행 구조</a><a href="#evidence">확인 수준</a><a href="#findings">발견한 문제</a><a href="#repro">NULL 읽기 재현</a><a href="#oos">OOS와의 관계</a><a href="#requirements">요구사항과 검증</a><a href="#next">리뷰 순서</a><a href="#sources">근거와 환경</a>
+<div class="revision">검토 기준<br><code>908bdc5af</code><br>2026-10-21 · Asia/Seoul</div>
+</nav>
+<main class="main" id="main">
+<header class="page-head">
+<div class="eyebrow">CUBRID · CBRD-27361 · 구현 리뷰</div>
+<h1>페이지 배치 실행을 이해하고<br>OOS와의 통합을 판단하기</h1>
+<p class="subtitle">PR #8196이 실행 비용을 줄이는 방식, 실제 검증에서 확인한 문제, 그리고 OOS와 함께 동작하려면 지켜야 할 조건을 설명합니다.</p>
+<div class="meta"><span>PR <code>908bdc5af</code></span><span>OOS <code>fb567a629</code></span><span>2026-10-21 검토</span><a href="https://github.com/CUBRID/cubrid/pull/8196">원본 PR</a></div>
+</header>
+<section class="section" id="summary">
+<div class="section-head"><h2>빌드는 성공했고, 승인 전 보완할 문제가 있습니다</h2></div>
+<p class="lead">독립 리뷰 worktree에서 debug 빌드와 설치를 마쳤습니다. 실제 실행에서는 <strong>NULL NUMERIC을 읽을 때 초기화되지 않은 값을 사용하는 문제</strong>를 Valgrind로 재현했습니다. 병렬 GROUP BY와 런타임 필터의 오류 처리 문제는 소스에서 확인했습니다.</p>
+<div class="facts"><div class="fact"><b>36</b><span>변경 파일</span></div><div class="fact"><b>33</b><span>커밋 · develop 병합 2개 포함</span></div><div class="fact"><b>14,669</b><span>추가된 줄</span></div><div class="fact"><b>1 context</b><span>격리한 Valgrind 오류</span></div></div>
+<div class="callout good"><strong>OOS와 함께 동작하도록 만드는 것은 가능합니다.</strong><p>OOS는 큰 값의 저장·읽기 방식을 바꾸고, 이 PR은 여러 행의 평가 단위를 바꿉니다. 논리적으로 양립할 수 있습니다. 다만 현재의 raw 문자열 경로에는 OOS stub을 구분하는 처리가 빠져 있어, 충돌 해결만으로 통합을 끝낼 수는 없습니다.</p></div>
+<p class="note">이 문서는 두 고정 커밋의 검토 결과입니다. OOS와 합친 실행 파일을 빌드하거나 통합 오답을 재현한 결과는 포함하지 않습니다.</p>
+</section>
+<section class="section" id="pipeline">
+<div class="section-head"><h2>행마다 왕복하던 호출을 청크 단위로 묶습니다</h2><p>필터·표현식·집계 자체보다 행을 꺼내고 DB_VALUE로 바꿔 여러 함수를 오가는 비용을 줄이려는 변경입니다.</p></div>
+<div class="two-col"><div class="panel"><div class="label">기존 행 경로</div><h3>한 행의 전체 작업을 끝낸 뒤 다음 행으로</h3><p>가시성 확인 → 속성 디코드 → 필터 → 피연산자 계산 → 집계를 행마다 반복합니다. 타입별 연산에 도달하기까지 호출과 값 변환이 반복됩니다.</p></div><div class="panel"><div class="label">새 배치 경로</div><h3>여러 행에 같은 연산을 연속해서 적용</h3><p>한 페이지의 가시 행을 청크로 모읍니다. 필요한 컬럼만 배열이나 레코드 참조로 읽고, 선택 벡터에 남은 행들을 다음 연산에 넘깁니다.</p></div></div>
+<figure>
+<div class="flow" role="img" aria-label="페이지의 가시 행을 수집하고 청크에서 필터와 표현식을 평가한 뒤 소비 노드가 집계 또는 투영합니다.">
+<div class="flow-box"><b>가시 행 수집</b><p><code>heap_page_collect_visible()</code><br>페이지를 고정한 동안 유효한 PEEK 레코드 참조를 모읍니다.</p></div><div class="edge">청크 전달<span aria-hidden="true">→</span></div>
+<div class="flow-box"><b>필터·표현식 평가</b><p><code>expr_batch_run()</code><br>배열 위에 연산을 적용하고 통과한 행의 인덱스를 남깁니다.</p></div><div class="edge">선택된 행 전달<span aria-hidden="true">→</span></div>
+<div class="flow-box"><b>소비 노드</b><p>그룹 없는 집계, 투영, 해시 GROUP BY가 결과를 누적하거나 다음 단계로 넘깁니다.</p></div>
+</div><div class="flow-foot">처리할 수 없는 레코드나 연산 → 현재 청크와 페이지의 남은 부분을 기존 행 경로로 다시 처리합니다.</div>
+<figcaption>핵심 계약은 “페이지 참조의 수명”과 “fallback 전후에 같은 행을 중복·누락 없이 처리하는가”입니다.</figcaption>
+</figure>
+<p>청크의 기준은 <strong>8KB의 바이트 예산</strong>입니다. 항상 8KB 힙 페이지 하나나 고정 64개 행을 뜻하지는 않습니다. 플랜의 행당 작업 공간에 따라 청크 행 수가 달라집니다.</p>
+<details><summary>리뷰에서 특히 봐야 할 소유권과 수명</summary><ul><li>PEEK 포인터는 해당 페이지가 고정되어 있는 동안만 사용할 수 있습니다.</li><li>조인·서브쿼리 쪽으로 행을 넘기는 필터 반복자는 살아남은 레코드를 복사하고 페이지를 놓습니다.</li><li>소비 노드가 레코드나 값을 보관한다면 복사 또는 명시적인 소유권이 필요합니다.</li><li>청크를 다시 실행할 수 있다면 이전 평가의 부작용이 반복되지 않아야 합니다.</li></ul></details>
+<p class="source">소스: <a href="https://github.com/CUBRID/cubrid/blob/908bdc5af67a752fd168b71cdf2c6f140520861d/src/query/expr_batch.h#L21">청크 계약</a> · <a href="https://github.com/CUBRID/cubrid/blob/908bdc5af67a752fd168b71cdf2c6f140520861d/src/query/scan_manager.c#L8522">레코드 복사와 페이지 해제</a></p>
+</section>
+<section class="section" id="evidence">
+<div class="section-head"><h2>재현·소스 확인·검증 공백을 구분합니다</h2><p>문제의 중요도와 증거의 수준은 별개입니다. “아직 증거가 없다”는 항목을 실행 결함으로 세지 않았습니다.</p></div>
+<div class="filters" role="group" aria-label="검토 항목의 확인 수준 선택"><button type="button" data-filter="all" aria-pressed="true">전체</button><button type="button" data-filter="runtime" aria-pressed="false">실행 재현</button><button type="button" data-filter="static" aria-pressed="false">소스 확인</button><button type="button" data-filter="gap" aria-pressed="false">요구사항·검증</button><button type="button" data-filter="pending" aria-pressed="false">추가 확인</button></div>
+<div class="count" id="evidence-count" role="status">10개 항목 표시 · 아래 OOS 검토는 별도</div>
+<div class="table-wrap"><table class="wide"><caption class="sr-only">기존 PR 리뷰 항목과 확인 수준</caption><thead><tr><th scope="col">항목</th><th scope="col">확인 수준</th><th scope="col">판정</th></tr></thead><tbody id="evidence-rows">
+<tr data-kind="runtime"><td><a href="#numeric">NULL NUMERIC 읽기</a></td><td><span class="tag runtime">실행 재현</span></td><td>Valgrind에서 한 오류 context로 격리. 관측한 SQL 결과는 정상입니다.</td></tr>
+<tr data-kind="static"><td><a href="#worker">병렬 작업 생성 실패</a></td><td><span class="tag static">소스 확인</span></td><td>할당 실패·STL 예외를 작업 정리 경로로 옮기는 처리가 필요합니다.</td></tr>
+<tr data-kind="static"><td><a href="#oom">메모리 부족 시 정리</a></td><td><span class="tag static">소스 확인</span></td><td>한 배열만 할당된 경우 NULL 배열에 접근할 수 있습니다. 기존 봇 지적과 일치합니다.</td></tr>
+<tr data-kind="static"><td><a href="#rtf">런타임 필터의 scan 오류</a></td><td><span class="tag static">소스 확인</span></td><td>S_ERROR와 S_END를 구분하지 않고 불완전한 필터를 설치합니다.</td></tr>
+<tr data-kind="static"><td><a href="#cache">GROUP BY 캐시 축출</a></td><td><span class="tag static">소스 확인</span></td><td>충돌 구간의 슬롯 이동 후 오래된 위치를 사용해 무효화를 놓칠 수 있습니다.</td></tr>
+<tr data-kind="gap"><td>기능 on/off 제어</td><td><span class="tag gap">요구사항 누락</span></td><td>JIRA가 요구한 hidden enable/disable 제어가 보이지 않습니다.</td></tr>
+<tr data-kind="gap"><td>UPDATE·vacuum 동시성</td><td><span class="tag gap">검증 증거 부족</span></td><td>요구된 동시성 퍼저 통과를 현재 자료로 확인하지 못했습니다.</td></tr>
+<tr data-kind="gap"><td>확대된 구현 범위</td><td><span class="tag gap">범위 합의</span></td><td>직렬·문자열·잔여 집계 병합·런타임 필터를 한 PR에 포함하는 범위를 합의해야 합니다.</td></tr>
+<tr data-kind="gap"><td>최종 커밋 성능 수치</td><td><span class="tag gap">완료 증거 부족</span></td><td>PR의 성능표는 최신 수정 전 수치이며 JIRA 기록도 필요합니다.</td></tr>
+<tr data-kind="pending"><td>잔여 predicate의 부작용 반복</td><td><span class="tag">추가 확인</span></td><td>가능한 재실행 경로는 있지만 준비한 serial probe에서는 중복 실행이 재현되지 않았습니다.</td></tr>
+</tbody></table></div>
+<p class="note" style="margin-top:.8rem">기존 두 축의 결과는 Standards 3건, Spec 4건입니다. 위 표는 추가로 확인한 기존 봇 피드백과 미재현 항목을 함께 보여 주므로 “버그 10건”이라는 뜻은 아닙니다.</p>
+</section>
+<section class="section" id="findings">
+<div class="section-head"><h2>문제가 생기는 지점을 따라가 봅니다</h2></div>
+<article class="finding" id="numeric"><div class="finding-head"><span class="tag runtime">실행 재현</span><span class="tag">기존 봇 지적 재확인</span><h3>NULL인데 계수의 부호와 숫자를 읽습니다</h3></div>
+<p><code>eb_cell_num()</code>은 NULL이면 0을 반환하며 출력 변수 <code>nv</code>를 채우지 않습니다. 호출자는 그 직후 <code>nv.is_negative</code>와 <code>nv.coefficient</code>를 먼저 읽습니다. 반환값이 0인지 확인하는 시점이 늦습니다.</p>
+<div class="demo"><div class="label">입력에 따른 코드의 의미 · 설명용 전환</div><div class="controls" role="group" aria-label="NUMERIC 입력 선택"><button type="button" id="null-input" aria-pressed="true">NULL 입력</button><button type="button" id="value-input" aria-pressed="false">1.25 입력</button></div><span class="code-line">got = eb_cell_num(col, layout, &amp;nv);</span><span class="code-line risk" id="numeric-read">an = nv.is_negative ? -nv.coefficient : nv.coefficient;</span><div class="demo-status" id="numeric-status" aria-live="polite"><strong>got = 0</strong> · nv는 채워지지 않았는데 다음 줄에서 읽습니다.</div></div>
+<p>비교 결과를 나중에 버리더라도 이미 초기화되지 않은 값에 접근했습니다. 개선 방향은 <code>got &gt; 0</code>일 때만 계수를 만들고, NULL과 읽기 실패를 각각 먼저 처리하는 것입니다.</p><p class="source"><a href="https://github.com/CUBRID/cubrid/blob/908bdc5af67a752fd168b71cdf2c6f140520861d/src/query/expr_batch.c#L3464">expr_batch.c:3464–3479</a> · <a href="#repro">실제 재현 SQL과 결과</a></p></article>
+<article class="finding" id="worker"><div class="finding-head"><span class="tag static">소스 확인</span><span class="tag">Standards · P1</span><h3>병렬 작업을 만들지 못했을 때의 경계가 없습니다</h3></div><p><code>new callable_task(...)</code> 결과를 바로 작업 관리자에 넘깁니다. 서버의 wrapped new는 NULL을 반환할 수 있고, 내부 <code>std::function</code> 구성은 할당 중 예외를 던질 수 있습니다.</p><p>이미 제출한 작업을 기다린 뒤 예약 worker와 merge 상태를 정리하고, 실패를 CUBRID 오류 코드로 전달해야 합니다. 이 리뷰에서 메모리 부족을 주입하지는 않았습니다.</p><p class="source"><a href="https://github.com/CUBRID/cubrid/blob/908bdc5af67a752fd168b71cdf2c6f140520861d/src/query/query_executor.c#L7005">query_executor.c:7005</a> · <a href="https://github.com/CUBRID/cubrid/blob/908bdc5af67a752fd168b71cdf2c6f140520861d/src/query/parallel/px_callable_task.hpp#L84">callable_task 구성자</a></p></article>
+<article class="finding" id="oom"><div class="finding-head"><span class="tag static">소스 확인</span><span class="tag">Standards · P1</span><h3>오류를 정리하다가 다른 NULL 포인터를 읽습니다</h3></div><p><code>out_rows</code> 할당은 성공하고 <code>out_partials</code> 할당만 실패할 수 있습니다. 그런데 정리 루프는 <code>out_rows != NULL</code>만 확인한 후 두 배열을 모두 인덱싱합니다.</p><div class="callout danger">out_rows 성공 → out_partials 실패 → 오류 정리 진입 → out_partials[w] 접근<br><strong>정상적인 OOM 반환 경로가 충돌 경로가 될 수 있습니다.</strong></div><p>두 배열을 독립적으로 검사해야 합니다. 이는 기존 Greptile 지적을 소스로 재확인한 것으로, 새로운 실행 재현은 아닙니다.</p><p class="source"><a href="https://github.com/CUBRID/cubrid/blob/908bdc5af67a752fd168b71cdf2c6f140520861d/src/query/query_executor.c#L7034">query_executor.c:7034–7039</a></p></article>
+<article class="finding" id="rtf"><div class="finding-head"><span class="tag static">소스 확인</span><span class="tag">Standards · P2</span><h3>입력 읽기 오류를 정상적인 끝으로 취급합니다</h3></div><p>런타임 필터는 build 입력의 키를 전부 읽어야 안전하게 probe 행을 버릴 수 있습니다. 현재 루프는 <code>S_SUCCESS</code> 동안만 돌고, 끝난 이유가 <code>S_END</code>인지 <code>S_ERROR</code>인지 확인하지 않은 채 필터를 설치합니다.</p><div class="callout">설명용 예: 필요한 키가 {3, 7, 11}인데 {3, 7}을 읽은 뒤 오류가 났다면, 이 집합으로 11을 가진 행을 거절하면 안 됩니다. 실제 I/O 오류를 주입한 실험 결과는 아닙니다.</div><p>마지막 scan 코드를 보존하고 오류를 전파한 후에만 필터 설치 여부를 결정해야 합니다.</p><p class="source"><a href="https://github.com/CUBRID/cubrid/blob/908bdc5af67a752fd168b71cdf2c6f140520861d/src/query/query_hash_join.c#L4935">query_hash_join.c:4935–4971</a></p></article>
+<article class="finding" id="cache"><div class="finding-head"><span class="tag static">소스 확인</span><span class="tag">기존 봇 지적 재확인</span><h3>캐시 슬롯이 이동했는데 옛 위치로 다음 항목을 지웁니다</h3></div><p>GROUP BY 캐시는 실제 aggregate 값의 포인터를 보관합니다. 같은 충돌 구간의 그룹 여러 개가 축출될 때, 첫 항목을 지우면서 뒤 항목을 앞으로 당깁니다. 다음 항목도 지우려면 이동한 위치를 반영해야 하지만 현재 코드는 미리 저장한 슬롯 번호를 계속 사용합니다.</p>
+<figure class="demo"><div role="img" aria-label="동일한 충돌 구간에서 A를 삭제하면 B가 슬롯0으로 이동하지만 저장된 B의 슬롯1은 변하지 않는 예시입니다."><div class="label">축출 대상으로 기록한 위치: A → slot 0, B → slot 1</div><div class="cache-grid"><div class="cache-cell" id="cache-0"><small>slot 0</small><b>A</b></div><div class="cache-cell" id="cache-1"><small>slot 1</small><b>B</b></div><div class="cache-cell" id="cache-2"><small>slot 2</small><b>C</b></div><div class="cache-cell" id="cache-3"><small>slot 3</small><b>빈칸</b></div></div></div><div class="controls"><button type="button" id="cache-prev" disabled>이전 단계</button><button type="button" id="cache-next">다음 단계</button><button type="button" id="cache-reset">처음으로</button></div><div class="step-text" id="cache-status" aria-live="polite">1 / 3 · A와 B가 같은 충돌 구간에 있습니다. 두 항목의 축출 전 위치를 저장했습니다.</div><figcaption>슬롯 이동을 설명하는 개념 예시입니다. SQL 오답을 실행으로 재현한 화면은 아닙니다.</figcaption></figure>
+<p>무효화를 놓치면 나중에 이미 축출되었거나 slab에서 재사용된 aggregate 값에 접근할 수 있습니다. 여러 항목을 먼저 표시한 뒤 재배치하는 등, 슬롯 이동과 독립적인 무효화 방식이 필요합니다.</p><p class="source"><a href="https://github.com/CUBRID/cubrid/blob/908bdc5af67a752fd168b71cdf2c6f140520861d/src/query/query_executor.c#L11800">슬롯 재배치</a> · <a href="https://github.com/CUBRID/cubrid/blob/908bdc5af67a752fd168b71cdf2c6f140520861d/src/query/query_executor.c#L11901">저장한 위치를 사용하는 축출 루프</a></p></article>
+</section>
+<section class="section" id="repro"><div class="section-head"><h2>NULL 읽기는 두 행으로 재현했습니다</h2><p>기존 데이터에 영향을 주지 않는 격리 DB에서 실행했습니다. 첫 행을 NULL로 두어 문제 지점을 분리했습니다.</p></div>
+<div class="code-block"><div class="code-head"><span>새 DB에서 한 번 실행할 준비 SQL</span><button class="copy" type="button" data-copy="setup-code">복사</button></div><pre><code id="setup-code">create table review_null_first (n integer, x numeric(18,2));
+insert into review_null_first values (1,null),(2,1.25);
+commit;</code></pre></div>
+<div class="code-block"><div class="code-head"><span>별도 파일로 실행할 조회 SQL</span><button class="copy" type="button" data-copy="probe-code">복사</button></div><pre><code id="probe-code">select n from review_null_first where x &lt; 10;</code></pre></div>
+<div class="code-block"><div class="code-head"><span>Memcheck 실행 예 · 해당 설치 환경을 선택한 셸</span><button class="copy" type="button" data-copy="valgrind-code">복사</button></div><pre><code id="valgrind-code">valgrind --tool=memcheck --track-origins=yes --leak-check=no \
+  --error-exitcode=77 --log-file=null-numeric-valgrind.log \
+  csql -S -u dba -i null-numeric-probe.sql testdb</code></pre></div>
+<div class="result"><strong>SQL: n = 2 한 행 반환 · Memcheck 종료 코드: 77</strong><p>관측한 결과값은 맞았지만, <code>eb_raw_kid()</code>의 <code>expr_batch.c:3471</code>에서 미초기화 값에 의존하는 조건 분기가 검출됐습니다. projection만 남긴 실행에서 <strong>1 error / 1 context</strong>로 격리했습니다.</p></div>
+<details><summary>오류 스택과 해석 범위</summary><pre>Conditional jump or move depends on uninitialised value(s)
+  at eb_raw_kid (...) (expr_batch.c:3471)
+  by eb_filter (...) (expr_batch.c:3654)
+  by expr_batch_run (...) (expr_batch.c:3997)
+Uninitialised value was created by a stack allocation
+  at eb_raw_kid (...) (expr_batch.c:3430)
+ERROR SUMMARY: 1 errors from 1 contexts</pre><p class="note">앞선 집계 probe에서는 별도의 serialization 경고도 나왔습니다. 그 경고들은 이 PR에 귀속시키지 않았습니다. GDB에서도 새 배치 경로 진입을 확인했습니다.</p></details>
+<div class="sr-only" id="copy-status" role="status"></div>
+</section>
+<section class="section" id="oos"><div class="section-head"><h2>OOS와는 논리적으로 함께 동작할 수 있습니다</h2><p>저장 표현과 실행 단위는 서로 다른 관심사입니다. 통합의 핵심은 raw 디코더가 OOS 표현을 식별하고 올바른 읽기 경로를 선택하게 만드는 것입니다.</p></div>
+<div class="two-col"><div class="panel"><div class="label">OOS의 역할</div><h3>큰 값은 밖에 두고 필요할 때 읽습니다</h3><p>heap 레코드에는 OOS inline stub을 두고, 실제 값은 OOS value chain에 저장합니다. 작은 컬럼만 사용하는 질의는 큰 값을 읽지 않을 수 있습니다.</p></div><div class="panel"><div class="label">배치 실행의 역할</div><h3>필요한 값들을 묶어 평가합니다</h3><p>가시 행을 모으고 사용하는 컬럼만 처리해 필터·집계의 CPU 비용을 줄입니다. OOS 값을 쓰지 않는 경우에도 이 최적화가 의미를 가질 수 있습니다.</p></div></div>
+<div class="callout good"><strong>서로 보완할 수 있는 방향입니다.</strong> OOS는 불필요한 큰 값 읽기를 줄이고, 배치는 작은 컬럼에 대한 행별 평가 비용을 줄일 수 있습니다. 다만 통합 성능은 아직 측정하지 않았습니다.</div>
+<h3>지금의 호환성 공백: 값이 있는 자리에 stub이 있습니다</h3>
+<figure><div class="oos-layout" role="img" aria-label="OOS-backed 가변 속성은 VOT IS_OOS flag로 표시되고 heap에는24바이트 inline stub이 들어 있으며 실제 값은 OOS chain에서 읽습니다."><div class="record"><b>heap의 정상적인 REC_HOME 레코드</b><div class="bytes"><span>MVCC header</span><span>VOT · IS_OOS</span><span>작은 컬럼</span><span class="stub">24B inline stub</span></div><p class="note">stub = head OOS OID 8B + full length 8B + identity stamp 8B</p></div><div class="record"><b>OOS value chain</b><p class="note">실제 큰 값의 직렬화 바이트<br>필요한 속성만 Resolve하여 읽음</p></div></div><figcaption>OOS-backed 레코드도 REC_HOME일 수 있습니다. REC_BIGONE을 거절하는 기존 fallback만으로는 OOS stub을 차단하지 못합니다.</figcaption></figure>
+<p>새 <code>eb_cell_str()</code>는 필드의 첫 바이트를 짧은 문자열 길이로 해석합니다. OOS의 <code>IS_OOS</code>를 확인하는 단계가 없으므로, 이 경로를 그대로 합치면 stub을 문자열로 해석할 수 있습니다. 예를 들어 stub 첫 바이트가 0이면 실제 긴 값 대신 길이 0인 문자열처럼 받아들일 수 있습니다.</p>
+<div class="callout warn"><strong>소스로 확인한 통합 공백입니다.</strong> 실제 값이 긴 “A…” 문자열인 행에 <code>WHERE v LIKE 'A%'</code>를 적용하는 경우가 통합 재현 후보입니다. OOS와 합친 바이너리에서 오답을 재현한 결과로 표현해서는 안 됩니다.</div>
+<p class="source">PR: <a href="https://github.com/CUBRID/cubrid/blob/908bdc5af67a752fd168b71cdf2c6f140520861d/src/query/expr_batch.c#L958">eb_cell_str():958–975</a> · OOS: <a href="https://github.com/CUBRID/cubrid/blob/fb567a629cdb390fff920542173fa36f454c74a0/src/storage/heap_file.c#L11160">IS_OOS 검사 후 Resolve</a></p>
+<h3 style="margin-top:1.6rem">호환성을 확보하는 단계</h3>
+<ol class="stage-list"><li><strong>먼저 기존 OOS 읽기 계약을 보존합니다</strong><p>현재 develop의 속성 디코드 API와 OOS-only 호출부를 맞춥니다. Resolve한 임시 버퍼를 COPY한 뒤 해제하는 소유권 처리를 유지해야 합니다.</p></li><li><strong>안전한 초기 버전은 HAS_OOS 행을 fallback합니다</strong><p>배치 평가와 소비가 시작되기 전에 해당 행을 포함한 청크를 행 경로로 넘깁니다. 성능상 보수적이지만 stub 오해석을 차단할 수 있습니다.</p></li><li><strong>이후 사용하는 컬럼의 IS_OOS만 검사합니다</strong><p>읽지 않는 큰 컬럼 때문에 숫자 컬럼 배치를 포기하지 않도록 범위를 좁힙니다. 사용하는 OOS-backed 속성은 행 경로 또는 명시적인 Resolve로 처리합니다.</p></li><li><strong>Resolve 결과의 소유권과 GROUP BY 키를 정의합니다</strong><p>heap 페이지 고정만으로 OOS 임시 버퍼 수명까지 보장되지는 않습니다. 물리 stub과 논리 값의 차이를 캐시 키·무효화 정책에 반영해야 합니다.</p></li><li><strong>혼합 데이터와 동시성으로 검증한 뒤 성능을 측정합니다</strong><p>같은 컬럼의 inline/OOS 혼재, LIKE·IN·NULL·GROUP BY, 직렬/병렬, UPDATE·vacuum·이전 버전 읽기를 대조합니다.</p></li></ol>
+<div class="demo"><div class="label">질의가 사용하는 컬럼에 따른 통합 방향 · 제안이며 구현 완료 상태가 아닙니다</div><div class="controls" role="group" aria-label="OOS 사용 시나리오"><button type="button" data-scenario="none" aria-pressed="true">OOS 없음</button><button type="button" data-scenario="unused" aria-pressed="false">미사용 속성값이 OOS</button><button type="button" data-scenario="used" aria-pressed="false">사용 속성값이 OOS</button></div><div class="scenario-result" id="scenario-result" aria-live="polite"><h3>기존 배치 경로를 유지할 수 있습니다</h3><p>일반 inline 값만 처리합니다. 이 PR 자체의 NULL·오류 처리 등 리뷰 문제는 별도로 수정해야 합니다.</p></div></div>
+<div class="callout">모든 행을 무조건 <strong>Expand</strong>하는 방법은 우선 권장하지 않습니다. 쓰지 않는 큰 값까지 가져오면 OOS의 I/O 절약을 없앨 수 있습니다. <strong>Resolve</strong>는 속성 단위의 지연 읽기, <strong>Expand</strong>는 레코드 전체의 eager 복원이라는 차이를 유지해야 합니다.</div>
+<details><summary>가상 병합에서 확인한 사실과 기존 통합 부채</summary><p>최신 원격 참조를 fetch한 뒤 <code>git merge-tree --write-tree</code>로 checkout을 바꾸지 않고 비교했습니다.</p><div class="table-wrap"><table><thead><tr><th>비교 대상</th><th>충돌 파일 수</th><th>의미</th></tr></thead><tbody><tr><td>PR base c966fabc6 + OOS fb567a629</td><td>4</td><td>heap_file.c, error_code.h, 영문·한글 메시지 파일</td></tr><tr><td>PR head 908bdc5af + 같은 OOS</td><td>5</td><td>위 네 파일에 scan_manager.c가 추가</td></tr></tbody></table></div><p style="margin-top:.8rem">따라서 다섯 충돌을 모두 이 PR이 새로 만든 것으로 볼 수 없습니다. OOS는 PR base에 이미 있는 HEAP_REC_LAYOUT·디코드 API 변경과도 차이가 있습니다. 반면 새 raw 문자열 경로의 OOS 식별 누락은 이 PR을 통합할 때 추가로 해결해야 하는 문제입니다.</p><p class="note">실제 브랜치 병합, 충돌 해결, 통합 빌드와 회귀 실행은 하지 않았습니다. 가상 merge tree에는 충돌 표시가 남아 있으며 빌드 가능한 결과물로 취급하지 않았습니다.</p></details>
+<details><summary>문제가 아닌 부분과 별도 점검할 부분</summary><ul><li>OOS의 VOT offset 매크로는 flag 비트를 제거합니다. OOS 매크로를 보존한다면 flag가 그대로 offset에 섞이는 문제가 핵심은 아닙니다.</li><li>MVCC header 크기는 하위 세 flag 비트로 계산되어 HAS_OOS 메타데이터 비트를 크기로 세지 않습니다.</li><li>문제는 올바른 위치를 얻은 뒤 그 필드가 inline 값인지 stub인지 검사하지 않는다는 점입니다.</li><li>GROUP BY의 raw 바이트 캐시는 서로 다른 OOS chain에 있는 같은 값에 대해 miss가 늘 수 있습니다. miss가 행 경로로 가므로, 이것만으로 잘못된 그룹 결과가 재현되었다고 판정하지 않았습니다.</li><li>검토한 지점에서 별도의 watcher 위반이나 OOS 임시 버퍼 수명 결함을 추가로 입증하지는 않았습니다.</li></ul></details>
+</section>
+<section class="section" id="requirements"><div class="section-head"><h2>빌드 성공과 요구사항 충족을 따로 판단합니다</h2></div>
+<div class="table-wrap"><table class="wide"><thead><tr><th>검증 또는 요구사항</th><th>확인 결과</th><th>다음 확인</th></tr></thead><tbody><tr><td>debug_gcc configure·build·install</td><td><span class="tag ok">성공</span></td><td>PR 단독 빌드입니다. OOS 통합 빌드 결과는 아닙니다.</td></tr><tr><td>로컬 CTest</td><td><span class="tag gap">등록된 테스트 0개</span></td><td>종료 코드 0을 테스트 통과 증거로 세지 않습니다.</td></tr><tr><td>기존 CUBRID CI</td><td>검토 시점의 동일 PR head에서 debug/release·SQL·medium·shell 성공</td><td>관측한 NULL 및 오류 처리 문제의 부재를 보장하지 않습니다.</td></tr><tr><td>TC Merge Gate</td><td>검토 시점 실패</td><td>TC PR 3791·4469의 사람 검토·처리가 별도로 필요합니다.</td></tr><tr><td>hidden on/off 제어</td><td>JIRA 요구사항에 비해 누락</td><td>문제 발생 시 새 경로를 끌 수 있는 제어를 추가하거나 계약을 합의합니다.</td></tr><tr><td>UPDATE·vacuum 동시성 퍼저</td><td>요구된 통과 증거를 확인하지 못함</td><td>RR 두 세션 재현과 별도로 동시성 퍼저 결과를 확보합니다.</td></tr><tr><td>현재 head의 성능과 JIRA 기록</td><td>부분 완료</td><td>최종 수정 후 측정값과 비교 커밋을 기록합니다.</td></tr></tbody></table></div>
+<p class="source"><a href="https://jira.cubrid.org/browse/CBRD-27361">JIRA 요구사항</a> · <a href="https://github.com/CUBRID/cubrid/actions/runs/39374265629">검토한 CI run</a> · <a href="https://github.com/CUBRID/cubrid/actions/runs/39380404935/job/118487988070">TC Merge Gate</a></p>
+<p class="note" style="margin-top:.8rem">이 설명을 만들며 전체 회귀, 새 성능 측정, OOM/I/O fault injection, 동시성 퍼저를 추가 실행하지 않았습니다. JIRA 설계 첨부 전체를 검토한 것으로도 간주하지 않습니다.</p>
+</section>
+<section class="section" id="next"><div class="section-head"><h2>다음 리뷰는 가시성·수명·OOS 경계부터 진행합니다</h2><p>대규모 diff를 한 번에 승인하기보다 작성자가 제안한 여섯 단위를 따라 검증 범위를 나누는 편이 좋습니다.</p></div>
+<ol class="stage-list"><li><strong>코어: heap 가시성·청크·기본 집계</strong><p>heap_next_1page와 같은 가시 행을 반환하는지, 중간 fallback에서 행이 중복·누락되지 않는지 확인합니다. OOS 식별 gate를 이 단계에 포함합니다.</p></li><li><strong>투영·해시 GROUP BY 소비 노드</strong><p>NULL·누산기·레코드 소유권과 캐시 축출을 확인합니다. inline/OOS가 섞인 같은 논리 키도 포함합니다.</p></li><li><strong>숫자 리프와 조인 아래 필터</strong><p>타입·오버플로·scan reset과 페이지 해제를 확인합니다.</p></li><li><strong>문자열·IN·OR·SUBSTRING</strong><p>collation·공백·3값 논리를 확인하고, OOS-backed 문자열의 안전한 fallback 또는 Resolve를 검증합니다.</p></li><li><strong>잔여 GROUP BY 병합·병렬화·slab</strong><p>메모리 예산, spill, 순서 의존 집계와 작업 생성·정리 실패를 확인합니다.</p></li><li><strong>해시 조인 런타임 필터</strong><p>허용되는 join 모양, 전체 키 집합의 완성, 오류 전파와 filter 수명을 확인합니다.</p></li></ol>
+<div class="callout good"><strong>통합 목표는 “큰 값은 필요할 때만 읽고, 작은 값의 평가는 묶어서 처리하기”입니다.</strong> 안전한 행 경로를 유지하며 OOS-aware 배치 범위를 넓히는 방식으로 접근할 수 있습니다.</div>
+</section>
+<section class="section" id="sources"><div class="section-head"><h2>검토 기준과 근거</h2></div>
+<dl><dt>PR 커밋</dt><dd><code>908bdc5af67a752fd168b71cdf2c6f140520861d</code></dd><dt>PR base</dt><dd><code>c966fabc6b4c8ac86aa4b5abb0a4cbefae01bf5b</code> · develop</dd><dt>OOS 커밋</dt><dd><code>fb567a629cdb390fff920542173fa36f454c74a0</code> · origin/feature/oos-merge · 2026-10-21 fetch 확인</dd><dt>환경</dt><dd>Linux x86_64 · GCC 11.5.0 · debug_gcc · CUBRID 11.5.0.2736-908bdc5 · Valgrind 3.24.0</dd><dt>source worktree</dt><dd><code>/home/vimkim/gh/cb/review-CBRD-27361-pr-8196</code></dd><dt>OOS 규범 문서</dt><dd>OOS-CONTEXT.md 전체 확인 · Last updated 2026-10-08<br><code>SHA-256 b38059a3a8e9495a88c16cfe14daec89d72586e3d0ef2c86755b64305ebccb65</code></dd></dl>
+<div class="stack"><p><a href="https://dev2.baboon-rudd.ts.net:8443/home/vimkim/gh/my-cubrid-docs-pr8196-review/CBRD-27361/pr8196-review_908bdc5_codex.md">이전 영문 검토 기록과 재현 SQL</a><br><a href="https://dev2.baboon-rudd.ts.net:8443/home/vimkim/gh/cubrid-oos-context/OOS-CONTEXT.md">OOS 규범 문서</a> · <a href="https://dev2.baboon-rudd.ts.net:8443/home/vimkim/gh/cubrid-oos-context/docs/adr/0003-oos-expansion-is-opt-in.md">ADR-0003: Expand는 raw-byte 소비자의 명시적 선택</a></p><p><a href="https://github.com/CUBRID/cubrid/blob/fb567a629cdb390fff920542173fa36f454c74a0/src/base/object_representation.h#L457">OOS flag·24B stub·offset 매크로</a><br><a href="https://github.com/CUBRID/cubrid/blob/fb567a629cdb390fff920542173fa36f454c74a0/src/storage/heap_file.c#L11136">OOS 속성 Resolve와 버퍼 소유권</a><br><a href="https://github.com/CUBRID/cubrid/blob/908bdc5af67a752fd168b71cdf2c6f140520861d/src/query/expr_batch.c#L3144">배치의 representation 검사</a></p></div>
+<p class="note" style="margin-top:1rem">검토와 설명 문서만 작성했습니다. 엔진 수정, 실제 통합 병합, 원격 리뷰 게시, push, CI 재실행은 하지 않았습니다. 라이트·다크 모드는 기기 설정을 따르며, 문서 본문과 도식은 외부 라이브러리 없이 표시됩니다.</p>
+</section>
+<footer class="footer">Standards 3건 · Spec 4건의 기존 리뷰와 추가 OOS 호환성 검토를 구분했습니다. 재현된 현상, 소스에 근거한 판단, 향후 제안을 같은 확실성으로 읽지 않도록 표기했습니다.</footer>
+</main></div>
+<script>
+(() => {
+  'use strict';
+  const filterButtons = [...document.querySelectorAll('[data-filter]')];
+  const evidenceRows = [...document.querySelectorAll('#evidence-rows tr')];
+  filterButtons.forEach(button => button.addEventListener('click', () => {
+    filterButtons.forEach(other => other.setAttribute('aria-pressed', String(other === button)));
+    const choice = button.dataset.filter;
+    evidenceRows.forEach(row => { row.hidden = choice !== 'all' && row.dataset.kind !== choice; });
+    document.getElementById('evidence-count').textContent = evidenceRows.filter(row => !row.hidden).length + '개 항목 표시 · 아래 OOS 검토는 별도';
+  }));
+  const setNumeric = isNull => {
+    document.getElementById('null-input').setAttribute('aria-pressed', String(isNull));
+    document.getElementById('value-input').setAttribute('aria-pressed', String(!isNull));
+    document.getElementById('numeric-read').classList.toggle('risk', isNull);
+    document.getElementById('numeric-status').textContent = isNull
+      ? 'got = 0 · nv는 채워지지 않았는데 다음 줄에서 읽습니다.'
+      : 'got = 1 · nv에 값이 채워졌으므로 이 입력의 계수 읽기는 유효합니다. NULL 입력의 오류는 여전히 남아 있습니다.';
+  };
+  document.getElementById('null-input').addEventListener('click', () => setNumeric(true));
+  document.getElementById('value-input').addEventListener('click', () => setNumeric(false));
+  let cacheStep = 0;
+  const cacheStates = [
+    {cells:['A','B','C','빈칸'], text:'1 / 3 · A와 B가 같은 충돌 구간에 있습니다. 두 항목의 축출 전 위치를 저장했습니다.'},
+    {cells:['B','C','빈칸','빈칸'], text:'2 / 3 · A를 제거하면서 B는 slot 0으로, C는 slot 1로 당겨집니다. 미리 저장한 B의 위치는 여전히 slot 1입니다.'},
+    {cells:['B · 남음','C','빈칸','빈칸'], text:'3 / 3 · B를 지우려고 옛 slot 1을 검사하지만 C가 있으므로 포인터 검사가 실패합니다. 축출된 B의 캐시 항목은 slot 0에 남을 수 있습니다.'}
+  ];
+  const updateCache = () => {
+    const state = cacheStates[cacheStep];
+    state.cells.forEach((value,index) => {
+      const cell = document.getElementById('cache-' + index);
+      cell.querySelector('b').textContent = value;
+      cell.classList.toggle('stale', cacheStep === 2 && index === 0);
+    });
+    document.getElementById('cache-status').textContent = state.text;
+    document.getElementById('cache-prev').disabled = cacheStep === 0;
+    document.getElementById('cache-next').disabled = cacheStep === 2;
+  };
+  document.getElementById('cache-prev').addEventListener('click', () => {cacheStep = Math.max(0,cacheStep - 1);updateCache();});
+  document.getElementById('cache-next').addEventListener('click', () => {cacheStep = Math.min(2,cacheStep + 1);updateCache();});
+  document.getElementById('cache-reset').addEventListener('click', () => {cacheStep = 0;updateCache();});
+  const scenarioData = {
+    none:['기존 배치 경로를 유지할 수 있습니다','일반 inline 값만 처리합니다. 이 PR 자체의 NULL·오류 처리 등 리뷰 문제는 별도로 수정해야 합니다.'],
+    unused:['초기에는 행 fallback, 이후에는 작은 컬럼 배치를 유지할 수 있습니다','예: 큰 설명 컬럼의 값은 OOS-backed이지만 질의는 정수 컬럼만 집계합니다. 행 전체 HAS_OOS gate는 이 행도 넘기지만, 사용하는 속성만 검사하는 후속 설계라면 큰 값을 읽지 않고 배치 평가할 수 있습니다.'],
+    used:['해당 값을 올바르게 Resolve하거나 행 경로로 넘겨야 합니다','예: OOS-backed VARCHAR에 LIKE를 적용합니다. 현재 raw 디코더로 stub을 읽으면 안 됩니다. 필요한 값만 Resolve한 뒤 버퍼 수명·타입·collation을 보존하거나, 평가 전 청크를 행 경로로 넘겨야 합니다.']
+  };
+  const scenarioButtons = [...document.querySelectorAll('[data-scenario]')];
+  scenarioButtons.forEach(button => button.addEventListener('click', () => {
+    scenarioButtons.forEach(other => other.setAttribute('aria-pressed', String(other === button)));
+    const data = scenarioData[button.dataset.scenario];
+    document.querySelector('#scenario-result h3').textContent = data[0];
+    document.querySelector('#scenario-result p').textContent = data[1];
+  }));
+  document.querySelectorAll('[data-copy]').forEach(button => button.addEventListener('click', async () => {
+    const value = document.getElementById(button.dataset.copy).textContent;
+    try {
+      if(navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(value);
+      else {
+        const area = document.createElement('textarea');
+        area.value = value; area.setAttribute('aria-hidden','true'); area.style.position = 'fixed'; area.style.opacity = '0';
+        document.body.appendChild(area); area.select();
+        let copied;
+        try { copied = document.execCommand('copy'); } finally { area.remove(); }
+        if(!copied) throw new Error('copy unavailable');
+      }
+      button.textContent = '복사됨';
+      document.getElementById('copy-status').textContent = '코드를 복사했습니다.';
+    } catch (_) { button.textContent = '코드 직접 선택'; document.getElementById('copy-status').textContent = '자동 복사를 사용할 수 없습니다. 코드 내용을 직접 선택해 복사하세요.'; }
+  }));
+  const navLinks = [...document.querySelectorAll('.toc a')];
+  const activate = id => navLinks.forEach(link => {
+    const active = link.getAttribute('href') === '#' + id;
+    link.classList.toggle('active',active);
+    if(active) link.setAttribute('aria-current','location'); else link.removeAttribute('aria-current');
+  });
+  if('IntersectionObserver' in window){
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {if(entry.isIntersecting) activate(entry.target.id);});
+    },{rootMargin:'-8% 0px -75% 0px'});
+    document.querySelectorAll('main .section').forEach(section => observer.observe(section));
+  }
+  navLinks.forEach(link => link.addEventListener('click', () => activate(link.hash.slice(1))));
+})();
+</script>
+</body>
+</html>
