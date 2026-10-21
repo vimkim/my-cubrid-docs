@@ -20,6 +20,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [supplement-spec-work456-20261021.md](supplement-spec-work456-20261021.md) | Accepted HAS_OOS-based supplementation scope, user stories, existing test seams, and milestone acceptance | 2026-10-21 | 2026-10-21 | Turn the Work456 interview decisions into an implementation specification |
 | [supplement-inventory-work456-20261021.md](supplement-inventory-work456-20261021.md) | Six-area inventory, branch-specific evidence, HAS_OOS classification, and accepted scope/completion criteria | 2026-10-21 | 2026-10-21 | Plan Work456 from existing tests and completed Work109/401 evidence |
 | [coverage-additions-work401-20261016.md](coverage-additions-work401-20261016.md) | Direct JDBC, AES crash/sentinel regressions, native receipts, failure diagnostics and all 29 dispositions | 2026-10-16 | 2026-10-16 | Turn the accepted coverage assessment into executable evidence without concealing engine gaps |
 | [tc-category-explanation-ko.md](tc-category-explanation-ko.md) | Table of 17 SQL and 18 shell TCs linking to plain Korean details and source files | 2026-10-15 | 2026-10-15 | Explain the 31 behavior rows to teammates with dated representative evidence |

@@ -5,7 +5,8 @@ Date: 2026-10-21, Asia/Seoul. Audience: the author planning Work456 and its six 
 The question is which requested tests already exist and what still needs a completion rule.
 Syntax and semantic tests already exist. The main uncovered dimensions are the systematic operation/HAS_OOS matrix, some grammar and utility cases, exact limits, repeated storage workloads, and large indexed OOS values.
 This is a static inventory. No build, database, testcase, or CI run was started for this report.
-The user answered Q1-Q6. Final shared-understanding confirmation remains pending.
+The user answered Q1-Q6 and confirmed the final shared-understanding summary on 2026-10-21.
+The resulting [supplementation specification](supplement-spec-work456-20261021.md) is published to the local tracker.
 This report does not authorize implementation or claim that Work458 is complete.
 
 ## Evidence identities
@@ -133,6 +134,6 @@ The original performance request remains preserved in the intake.
 Functional PASS does not establish performance PASS. Future performance work needs its own acceptance decision.
 Removing the small/large matrix axis does not remove size-dependent boundary cases from Work460.
 
-Final shared-understanding confirmation remains pending before specification or implementation.
+Shared understanding is confirmed. Specification is authorized and published. Implementation has not started.
 HA Work463 remains deferred. Work371 remains the separate integration/readiness effort.
 No new testcase tickets, expected-answer changes, source integration, publication, or CI trigger occurred in this planning phase.
