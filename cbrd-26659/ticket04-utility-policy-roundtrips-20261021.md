@@ -9,11 +9,13 @@ CS load, SA unload followed by CS load, and independent CS/SA compaction preserv
 | Component | Identity |
 | --- | --- |
 | Engine source and immutable installation | `CUBRID/cubrid@1ef86a7efa34002e971b1b30bcf5d451e9db441b`. Own branch `task/work456-04-source`, worktree `/home/vimkim/gh/cb/work456-ticket04`, starts exactly at the handover integration tip. No source changes or source build. |
-| Private TC base | `5e8a9eaa885a53922826ff5320787f1115034a13`, including the accepted ticket01 observer. Own branch `task/work456-04-private`, final implementation tip `373c16c62`. |
-| Public TC | `df8596dd999e825b1ec9812a735bbe01e50ac715`. Own branch `task/work456-04-public`, no changes or new public SQL-suite receipt. |
+| Private TC base | `5e8a9eaa885a53922826ff5320787f1115034a13`, including the accepted ticket01 observer. Own branch `task/work456-04-private`, tested implementation tip `373c16c62`, handoff merge `66c8fae05`. |
+| Public TC | `df8596dd999e825b1ec9812a735bbe01e50ac715` baseline. Own branch `task/work456-04-public` later fast-forwards to integration `410ba5d2c`, with no ticket04 delta or new public SQL-suite receipt. |
 | Documentation base | `c784cd0008f8943bf7f1b25be8bd49381d60391e`, own branch `docs/work456-04`. |
 | Runner | `cubrid-testkit dev`, SHA-256 `31be3b1e542b05d1ac7581d47f785319ce61421f4b5d94681a9c558d71445f5a`. Go build revision `5f641188b4ca5d9404a43bcc00ed65fa6ebc60b0`, modified working tree. |
 | Normative context | Complete read of `OOS-CONTEXT.md`, dated 2026-10-08. Unchanged SHA-256 `b38059a3a8e9495a88c16cfe14daec89d72586e3d0ef2c86755b64305ebccb65`. |
+
+The starting `gh-pr-info` lookup identifies `vimkim/cubrid:CBRD-26659-oos-testcases-handover` targeting `feature/oos-merge`, PR8128. The own source topic branch has no PR, as expected.
 
 The [ticket01 receipt](ticket01-baseline-and-observer-20261021.md) identifies the shared read-only installation and dependencies. Each ticket04 attempt copies that installation and CTP into its own directory. No attempt modifies the shared installation. Each attempt has its own HOME, TMP, configuration and initially empty registry. Successful preflight requires `commit_match=yes`, no mismatch exception, and available containment.
 
@@ -101,10 +103,12 @@ Shared receipt: `/home/vimkim/temp/work456-implementation/ticket14/baseline/rece
 | `test_oos_server`, 36 | Protected owner enumeration, publication/reset/error state, allocation faults, replica fixup, batching and read bytes | Utility success cannot replace injected faults or replica-local publication contracts. Shared baseline execution: ticket14. |
 | `test_oos_tde_gate`, 3 | User-data recovery-index classification and metadata-only negative control | This classifies WAL. It neither proves ciphertext nor replaces existing-file encryption application. Shared baseline execution: ticket14. |
 
-Engine source stays unchanged. No engine/TC push, CI trigger, integration merge, TC closure or branch deletion occurs in this ticket's implementation. The required existing-file TDE gap remains outside this report's passing coverage. The 82 internal passes do not close that missing application proof.
+Engine source stays unchanged. No engine/TC push, CI trigger, merge into an integration destination, TC closure or branch deletion occurs in this ticket's implementation. The required existing-file TDE gap remains outside this report's passing coverage. The 82 internal passes do not close that missing application proof.
 
 ## Delivery and remaining requirements
 
 The private TC delta contains six native entrypoints, the policy controller, and a library route in the existing utility controller. Source and public TC remain unchanged. All task files pass Bash syntax, warning-level ShellCheck and Git whitespace checks. The report and README pass the Markdown source check and relative-link checks. Raw logs, helpers for independent audits and complete input/configuration manifests remain outside Git. The only selected documents are this report and its README index row.
 
 Ticket04 supplies every new required utility route and preserves the intended engine failures. Its 82 retained internal cases also executed and passed. The existing-file TDE application requirement remains explicitly assigned to ticket15. It must not become unsupported or PASS because the present utility controls cannot reach it. No statement here completes all of Work456 or combined-source integration. The coordinator owns ticket status, local integration and ticket16's final replay/publication gates.
+
+Before handoff, the private branch merged current integration `f934b5662` into itself as `66c8fae05`. The selected utility controller, entrypoints, observer and policy parser remain byte-identical to tested `373c16c62`. The docs branch merges current main `52386ee`, preserving ticket02 and the unrelated CBRD-27124 report. Its README conflict retains both ticket02 and ticket04 rows. Source stays at `1ef86a7`. Public follows current integration `410ba5d2c`.
