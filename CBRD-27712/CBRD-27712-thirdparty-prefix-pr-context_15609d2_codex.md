@@ -39,3 +39,12 @@ The proposal excludes source merge, deployment, TC PR merge/closure, TC branch d
 The explanation records local validation and its host-specific corrections. Standards review found 0 issues. Spec review found 1 issue, resolved by `15609d2a7` and independently rechecked. The source branch contains the committed changes. PR creation and CI remain pending.
 
 Review the saved body and explanation before publication approval. The user can edit the body directly. Reread and check the current files before an approved publication attempt. Record their SHA-256 fingerprints for that attempt. Upload the reviewed text unchanged.
+
+## Publication attempt — 2026-10-21
+
+- Authorization: the user answered `yes` after reviewing the saved files and proposed operations in the conversation.
+- Reviewed body SHA-256: `d74bf092b10e095c5f50d040b36e10600cc804b115561a3a5829d4945c0be123`.
+- Reviewed explanation SHA-256: `9538206b441aa250e0db7ff803ccb6e23a85d8dbfdb048ec2b2cd4f96ae89cda`.
+- Source local and remote heads: `15609d2a779e3082aafe5af576487ebbdc8d70f6`.
+- Matching PR before this attempt: none.
+- Preserve the reviewed body and explanation bytes through publication.
