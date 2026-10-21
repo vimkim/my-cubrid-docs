@@ -46,7 +46,7 @@ Stopped diagdb joins that VFID with the heap and class owner.
 The observer disables SA startup vacuum before boot and verifies its effective parameter.
 It restores the exact configuration before the next CS server starts.
 Parent, child, and applicable grandchild VFIDs must differ.
-The failed downstream cascade must preserve every row and each heap's chain count and bytes.
+The failed downstream cascade must preserve every row and each heap's stored chunk-record count and bytes.
 Its grandchild FK uses fixed INT child IDs. Its separate OOS attribute is payload.
 Only the parent/child keys receive actual large-key FK coverage credit.
 The documented outer cascade error is -926 and names the outer fk_ref constraint.
@@ -124,6 +124,8 @@ Ticket 09's committed duplicate-key oracle supplies -670 for direct duplicate DM
 | Other key-domain/collation matrices | No FK claim. Ticket 09 retains its separate PK/UNIQUE matrix. |
 
 These owner observations establish file association and survivor values.
+SHOW counts stored chunk records, including any retained MVCC versions.
+Those counts do not identify which transaction can reclaim an individual chain.
 They do not establish full 24-byte stub identity or vacuum reclamation eligibility.
 Ticket 15 retains those distinct internal contracts.
 
@@ -171,7 +173,7 @@ Native shell and JDBC SQL claims remain separate.
 | Host allocation | Master 41098, broker 41099, distinct allocated SHM IDs |
 | Required shell schedule | 28 independently named cases,676 phases, 84 named positive index plans |
 | Actual physical observations | 672 observations, 3,098 qualified stored rows |
-| Rejected/rollback owner comparisons | 156 class/heap/OOS identity and live-chain population comparisons |
+| Rejected/rollback owner comparisons | 156 class/heap/OOS identity and stored chunk-record count/byte comparisons |
 | Native SQL | 1 case, 56.922 s, committed answer and actual result byte-identical |
 | SQL error blocks | 13 × -922, 4 × -670, 2 × -924, 1 × -493, all independently specified |
 | Wrong flag / wrong tail / wrong SQL controls | Each 1 NOK/0 skip,9.431 s / 14.272 s / 60.171 s |
