@@ -52,3 +52,20 @@ Read the relevant section of `DOCUMENTATION.md` before the named action:
   Preserve valuable local material before cleanup.
 
 These procedures supplement the inherited Git workflow.
+
+## Agent skills
+
+### Issue tracker
+
+Use local Markdown under `.scratch/`. Before working with specs, tickets,
+or maps, read `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the default five triage roles. Before assigning a role, read
+`docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Use a single-context layout. Before exploring domain concepts or recording
+decisions, read `docs/agents/domain.md`.
