@@ -4,6 +4,14 @@ Canonical domain vocabulary for the design notes in this repository.
 
 ## Out-of-row overflow storage
 
+**HAS_OOS record**:
+A stored heap record with its HAS_OOS flag set, indicating that it contains at least one OOS inline stub. Its size and its table's storage policy do not define this state.
+_Avoid_: Large record, OOS-enabled table
+
+**Record without HAS_OOS**:
+A stored heap record with its HAS_OOS flag clear. Other records in the same heap may still contain OOS inline stubs.
+_Avoid_: Small record, table without OOS
+
 **Partitioned root**:
 The table through which a set of child partitions is addressed as one logical table. Naming the root as the input target does not identify the partition that will own a particular row.
 _Avoid_: Parent heap insertion when referring only to an insertion requested through the root

@@ -20,7 +20,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [supplement-inventory-work456-20261021.md](supplement-inventory-work456-20261021.md) | Current six-area inventory, branch-specific evidence, accepted completion rule, and open acceptance decisions | 2026-10-21 | 2026-10-21 | Plan Work456 from existing tests and completed Work109/401 evidence |
+| [supplement-inventory-work456-20261021.md](supplement-inventory-work456-20261021.md) | Six-area inventory, branch-specific evidence, HAS_OOS classification, and accepted scope/completion criteria | 2026-10-21 | 2026-10-21 | Plan Work456 from existing tests and completed Work109/401 evidence |
 | [coverage-additions-work401-20261016.md](coverage-additions-work401-20261016.md) | Direct JDBC, AES crash/sentinel regressions, native receipts, failure diagnostics and all 29 dispositions | 2026-10-16 | 2026-10-16 | Turn the accepted coverage assessment into executable evidence without concealing engine gaps |
 | [tc-category-explanation-ko.md](tc-category-explanation-ko.md) | Table of 17 SQL and 18 shell TCs linking to plain Korean details and source files | 2026-10-15 | 2026-10-15 | Explain the 31 behavior rows to teammates with dated representative evidence |
 | [plan.md](ci-replan/plan.md) | Agreed direction, sequence and approved-ticket boundary | 2026-10-08 | 2026-10-08 | Review the developer-owned local regression plan |
