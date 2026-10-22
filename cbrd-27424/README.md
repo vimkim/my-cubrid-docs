@@ -4,7 +4,7 @@ Last modified: 2026-10-22 (Asia/Seoul).
 
 [PR #7925](https://github.com/CUBRID/cubrid/pull/7925) supports OOS storage in standalone object loading and CSQL workspace writes.
 
-최신 [동기화 후 CI·로컬 빌드 확인](ci_analysis_report_925232529_codex.md)은 엔진 `925232529`, CI `39736508190`의 두 build job이 30분 제한으로 종료됐으며 회귀 테스트 판정이 없음을 기록한다. 사용자 보고의 네트워크 장애 가설과 로컬에서 확인한 Manager 링크·release 경고 오류를 구분한다. 새 CI는 사용자 확인 전이며, 전체 CI 통과를 주장하지 않는다. Snapshot: 2026-10-22, Asia/Seoul.
+최신 [동기화 후 CI·로컬 빌드 확인](ci_analysis_report_925232529_codex.md)은 엔진 `925232529`, CI `39736508190`의 두 build job이 30분 제한으로 종료됐으며 회귀 테스트 판정이 없음을 기록한다. 추가 원본 로그의 OpenSSL 다운로드 시간 초과, 사용자 보고의 패킷 손실, 별도의 로컬 Manager 링크·release 경고 오류를 구분한다. 승인된 재실행 `39744814589`는 빌드 진행 중이며 전체 CI 통과를 주장하지 않는다. Snapshot: 2026-10-22, Asia/Seoul.
 
 Start with the [Korean reviewer guide](review-guide-pr7925-28b65d18a-ko.md), covering locally integrated `28b65d18a` and both completed review simplifications. It distinguishes the published PR HEAD `1c660d22e`, the pinned PR7927 dependency, and pending shared integration. Snapshot: 2026-10-07, Asia/Seoul.
 
@@ -32,7 +32,7 @@ Dates for older unindexed files come from their Git history. Raw logs retain nat
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [ci_analysis_report_925232529_codex.md](ci_analysis_report_925232529_codex.md) | 동기화 후 CI 30분 제한, 미실행 suite, 정확한 로컬 빌드 결과와 네트워크 가설의 한계 | 2026-10-22 | 2026-10-22 | CI 시간 초과와 로컬 오류를 구분하고 확인받을 재실행을 준비 |
+| [ci_analysis_report_925232529_codex.md](ci_analysis_report_925232529_codex.md) | CI 30분 제한, OpenSSL 다운로드 시간 초과, 로컬 빌드와 승인된 재실행 관측 | 2026-10-22 | 2026-10-22 | CI 시간 초과와 로컬 오류를 구분하고 확인받을 재실행을 준비 |
 | [ci_analysis_report_6a487cdb6_collector_recovery_codex.md](ci_analysis_report_6a487cdb6_collector_recovery_codex.md) | Six failures, exact-base/history evidence, lock-readiness mismatch, and scoped rerun | 2026-10-17 | 2026-10-21 | Resolve the collector evidence limit and identify bounded follow-up work |
 | [ci_analysis_report_6a487cdb6_codex.md](ci_analysis_report_6a487cdb6_codex.md) | Historical incomplete collection warning, with a pointer to recovered evidence | 2026-10-17 | 2026-10-21 | Record the requested CI result without unsupported testcase attribution |
 | [sa-inline-preservation-decision-20261017.md](sa-inline-preservation-decision-20261017.md) | Accepted guarantee, source change, local verification, and loader measurements | 2026-10-17 | 2026-10-17 | Record the user's selected response to the SA-only retention review |

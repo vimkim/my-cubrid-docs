@@ -2,7 +2,7 @@
 
 작성·검증: 2026-10-22, Asia/Seoul. 대상 독자는 PR 작성자와 리뷰어다. 질문은 기준 브랜치 동기화 후 CI가 왜 종료됐으며, 같은 엔진이 로컬에서 빌드되는지다.
 
-**증거 제한:** 이번 CI는 두 빌드의 30분 제한 초과로 종료됐다. SQL·medium·shell은 모두 `job_level_failure`이며, 검증된 testcase 요약이 없다. 이 스냅샷으로 테스트 회귀나 CI 지연의 근본 원인을 판정할 수 없다. 사용자가 보고한 20% 초과 패킷 손실은 네트워크 지연 가설을 뒷받침하는 별도 정보이며, 직접 측정하거나 다운로드 실패 로그로 입증한 사실은 아니다.
+**증거 제한:** 이번 CI는 두 빌드의 30분 제한 초과로 종료됐다. SQL·medium·shell은 모두 `job_level_failure`이며, 검증된 testcase 요약이 없다. 이 스냅샷으로 테스트 회귀나 CI 지연의 근본 원인을 판정할 수 없다. 17:42 KST에 추가 확보한 원본 release 빌드 로그는 OpenSSL 다운로드의 시간 초과를 직접 기록한다. 사용자가 보고한 20% 초과 패킷 손실은 별도 정보이며, 다운로드 시간 초과의 원인으로 직접 측정·입증한 사실은 아니다.
 
 ## 정확한 입력과 관측
 
@@ -31,9 +31,19 @@ TC 두 브랜치는 각 저장소의 `feature/oos-merge`를 포함하도록 동�
 | debug | [119683377602](https://github.com/CUBRID/cubrid/actions/runs/39736508190/job/119683377602) | 15:51:30 KST 시작, 약 16:21:50 KST에 취소 처리·잔여 로그 출력 |
 | release | [119683377455](https://github.com/CUBRID/cubrid/actions/runs/39736508190/job/119683377455) | 15:52:33 KST 시작, 약 16:22:57 KST에 취소 처리 |
 
-debug 로그의 `BUILD_ARGS`는 `-m optdebug`다. 일반 `Debug` 빌드와 구분해야 한다. release는 기본 release 모드다. 남아 있는 출력에서는 컴파일러 오류나 다운로드 오류 진단을 확인하지 못했다. debug는 취소 처리 시점에 `[1411/1411] Linking ... cub_manager`까지 출력하지만, 성공한 build artifact의 게시나 성공 job을 의미하지 않는다. Java 하위 빌드의 `BUILD SUCCESSFUL`도 엔진 전체 성공을 뜻하지 않는다.
+debug 로그의 `BUILD_ARGS`는 `-m optdebug`다. 일반 `Debug` 빌드와 구분해야 한다. release는 기본 release 모드다. 처음 확보한 GitHub job 로그에서는 컴파일러 오류나 다운로드 오류 진단을 확인하지 못했다. debug는 취소 처리 시점에 `[1411/1411] Linking ... cub_manager`까지 출력하지만, 성공한 build artifact의 게시나 성공 job을 의미하지 않는다. Java 하위 빌드의 `BUILD SUCCESSFUL`도 엔진 전체 성공을 뜻하지 않는다.
 
-debug 로그에는 rapidjson configure 출력인 15:52:41 KST부터 다음 progress 출력인 16:13:40 KST까지 약 21분의 공백이 있다. release는 libtbb 관련 출력 뒤 긴 공백을 두고 취소 시점에 잘린 progress를 남긴다. 병렬 빌드와 출력 버퍼링 때문에 이 공백을 특정 라이브러리의 다운로드 소요 시간으로 해석할 수 없다. 사용자 보고와 함께 지연을 의심할 근거는 되지만, 실패한 URL이나 네트워크 인과관계는 미확인이다.
+debug 로그에는 rapidjson configure 출력인 15:52:41 KST부터 다음 progress 출력인 16:13:40 KST까지 약 21분의 공백이 있다. release는 libtbb 관련 출력 뒤 긴 공백을 두고 취소 시점에 잘린 progress를 남긴다. 병렬 빌드와 출력 버퍼링 때문에 이 공백을 특정 라이브러리의 다운로드 소요 시간으로 해석할 수 없다. 이 GitHub 출력 공백만으로는 실패한 URL이나 네트워크 인과관계를 식별할 수 없다.
+
+### 추가 확보한 원본 build.log: release 다운로드 시간 초과
+
+17:42 KST에 workflow가 별도로 보존한 `/runs/39736508190/build/{debug,release}/build.log`를 읽었다. 기존 collector 결과는 job-level 상태만 제공해 build log를 포함하지 않았다. 따라서 이 파일들은 별도의 제한된 읽기 전용 API 증거로 저장했으며 collector schema 출력에 합치지 않았다. testcase summary나 baseline 검증을 대신하지 않는다.
+
+release 원본 로그 639행은 `FAILED: 3rdparty/Stamp/libopenssl/libopenssl-download`를 기록한다. 649~651행에는 공개 의존성 URL `https://github.com/CUBRID/3rdparty/raw/develop/openssl/openssl-3.5.7.tar.gz` 다운로드 실패, `status_code: 28`, `status_string: "Timeout was reached"`가 있다. 643~644행의 다운로드 제한은 전체 1,800초·비활성 60초이며, 21,755행은 최근 60초간 전송량이 초당 1 byte 미만이었다는 진단을 기록한다. **release의 third-party 다운로드 실패와 전송 정체는 이제 직접 관측됐다.** 이 추가 관측은 앞 문단의 GitHub 출력 공백에서 실패 URL을 식별할 수 없었던 한계를 보완한다. 패킷 손실률, 대역폭 제한과의 인과관계, debug job의 지연 원인은 여전히 미확인이다.
+
+debug 원본 로그에는 컴파일러 오류를 확인하지 못했다. 전체 1,411개 build progress와 후속 JDBC 출력이 있지만 artifact 게시 성공을 입증하지 않는다. 두 job의 네트워크 계측 출력은 각각 수신량 200 MB·124 MB다. 이 계측은 `/proc/net/dev`에서 loopback 이외 인터페이스의 수신 byte를 합산하므로 외부 다운로드만의 전송량이나 패킷 손실률을 측정한 값이 아니다.
+
+두 GET은 HTTP 200이었다. debug 파일은 172,589 bytes, SHA-256 `fa7e8997396605db1d7d78a63879454d9bef121f5fc80ba55400dc9edeebfbd9`이고 release는 316,030 bytes, SHA-256 `8bd001bcf437b03e7720178c1caff35289b01df491af80be76cee8289c2d94eb`다. 원본·수집 사유·endpoint·시각·길이·digest·진단 행 번호는 `/mnt/nvme/data-5/tmp/pr7925-retry-20261022.0li9k39h/old-build-fallback/`에 보존했다.
 
 ## suite 상태와 수집 한계
 
@@ -53,7 +63,7 @@ exact merge-base 수집은 한 번 시도했으나 Git fetch가 42분 이상 진
 
 ## 요청받은 로컬 빌드 재실행
 
-원래 소스·설치·DB 환경을 보존하기 위해 `/home/vimkim/gh/cb/pr7925-build-check-925232529`, branch `verify/pr7925-build-925232529`에서 동일한 엔진 HEAD를 사용했다. 호스트는 GCC 11.5.0, glibc 2.34다. CCI/JDBC/Manager는 각각 정확한 gitlink `79d0888c26a2543d31f53eb7b6c9738db110fff4`, `57d2c75d73ee820c26ac049b7ba758f5e646519a`, `4ccc2c4107e1728a182a9baf19e9cc2018e50a3d`로 로컬 Git 객체에서 초기화했다.
+원래 소스·설치·DB 환경을 보존하기 위해 `/home/vimkim/gh/cb/pr7925-build-check-925232529`, branch `verify/pr7925-build-925232529`에서 동일한 엔진 HEAD를 사용했다. 호스트는 GCC 11.5.0, glibc 2.34다. 추가 확보한 이전 CI 원본 로그는 두 모드 모두 C/C++ compiler identification을 GNU 8.5.0으로 기록한다. 이번 로컬 검증은 같은 소스와 build mode를 사용했지만 CI 컨테이너·toolchain 전체를 재현한 실험은 아니다. CCI/JDBC/Manager는 각각 정확한 gitlink `79d0888c26a2543d31f53eb7b6c9738db110fff4`, `57d2c75d73ee820c26ac049b7ba758f5e646519a`, `4ccc2c4107e1728a182a9baf19e9cc2018e50a3d`로 로컬 Git 객체에서 초기화했다.
 
 새 build directory 두 개에 기존 다운로드 압축 파일 8개만 복사했다. 이전 object·build stamp·완성된 third-party prefix는 복사하지 않았다. CMake 다운로드 단계가 모든 압축 파일의 해시를 확인해 다운로드를 생략했다. 컴파일러 캐시는 사용했으므로 아래 시간은 cold build 성능 측정이 아니다. 로컬 캐시 사용은 CI 네트워크 경로를 재현하지 않는다.
 
@@ -73,7 +83,9 @@ release는 [동일 HEAD의 `object_representation.c:6284`](https://github.com/CU
 
 ## 다음 증거를 얻기 위한 조치
 
-사용자의 요청에 따라 새 CI는 아직 시작하지 않았다. 네트워크 복구를 확인한 후, 변경 없는 HEAD에 `/run all` 한 번을 제안한다. 이번 workflow는 전체 취소됐고 테스트가 실행되지 않아 failure-only testcase 목록이 없다. 재실행 직전 PR HEAD, TC 기준점, 새 `/run` 댓글과 활성 실행을 재확인해야 한다. 새 head나 경쟁 실행이 발견되면 기존 선택을 그대로 실행하지 않는다.
+사용자가 로컬 결과를 검토하고 `/run all` 한 번을 승인했다. HEAD·TC 기준점·새 `/run` 댓글·활성 실행을 재확인한 뒤 [17:02:33 KST에 한 번 요청](https://github.com/CUBRID/cubrid/pull/7925#issuecomment-6335843415)했다. 새 [run 39744814589, attempt 1](https://github.com/CUBRID/cubrid/actions/runs/39744814589)에 다섯 gha-ci context가 모두 연결됐다. 엔진과 TC 입력은 위와 같다. 이전 workflow는 전체 취소됐고 테스트가 실행되지 않아 failure-only testcase 목록을 사용하지 않았다.
+
+새 debug job은 17:30:27 KST, release는 17:32:52 KST에 runner를 배정받았다. 그전에는 두 job이 `queued`였고, 이전에 요청된 PR #7927의 두 빌드도 같은 대기를 보였다. 이 관측은 runner 대기 지연을 보여 주지만 원인을 특정하지 않는다. 이전 workflow commit `2646be1cbe159db119d7da51354c5c156c5cd3f0`와 새 `60ad770f0f84c54cf9fdf8ee213d543bb36a6906`의 `.github/workflows/gha-ci.yml`은 동일하다. 이는 실행 환경 전체의 동일성이나 CI 호스트의 네트워크 복구를 입증하지 않는다. 17:47 KST 관측에서는 두 빌드가 진행 중이고 새 테스트 판정은 아직 없다.
 
 같은 입력이 네트워크 복구 후에도 동일 단계에서 30분을 넘는다면 네트워크만으로 설명하는 가설은 약해진다. 그때 CI 컨테이너의 실제 compiler·dependency 단계 로그·자원 제한을 수집해야 한다. 로컬 Manager와 release 오류는 별도 후속 항목이며, 이번 조사에서는 소스 수정·경고 비활성화·추가 push를 하지 않았다. TC PR 병합·종료도 수행하지 않았다.
 
