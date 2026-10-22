@@ -2,10 +2,11 @@
 
 Analysis and CI reports for [PR 7990](https://github.com/CUBRID/cubrid/pull/7990) and earlier OOS PR revisions. Each report applies to its stated source revision.
 
-Last modified: 2026-10-21, Asia/Seoul.
+Last modified: 2026-10-22, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [non_cdc_followup_1a8c705_codex.md](non_cdc_followup_1a8c705_codex.md) | Crash attempts, default repair, controlled experiments, and merge/ticket attribution | 2026-10-22 | 2026-10-22 | Explain non-CDC failures and prepare the confirmed repair |
 | [ci_analysis_report_1a8c705_codex.md](ci_analysis_report_1a8c705_codex.md) | Four non-CDC shell failures, validated evidence, unavailable baseline, history, and focused reproduction | 2026-10-21 | 2026-10-21 | Explain failures after the develop merge at `1a8c705` |
 | [ci_analysis_report_07fef9d_claude.md](ci_analysis_report_07fef9d_claude.md) | CI Failure Analysis: PR #6864 at `07fef9d` | 2026-08-05 | 2026-08-05 | Preserve revision-specific analysis and follow-up context |
 | [ci_analysis_report_1ec35f8_codex.md](ci_analysis_report_1ec35f8_codex.md) | PR #7990 CI 수집 경고 — 1ec35f8 | 2026-09-29 | 2026-09-29 | Preserve revision-specific analysis and follow-up context |
