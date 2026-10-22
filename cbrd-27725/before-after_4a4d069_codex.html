@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="CBRD-27725의 before와 after를 메모리와 디스크로 나누어 설명한다. 현재 승인 설계와 미채택 전체 인라인 대안을 같은 단계에서 비교한다.">
+  <title>CBRD-27725 · 큰 값을 메모리에서 언제 분리하는가</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='6' fill='%2317324D'/%3E%3Crect x='7' y='12' width='12' height='16' fill='%23DDEAF5'/%3E%3Crect x='22' y='12' width='11' height='16' fill='%23F8D777'/%3E%3C/svg%3E">
+  <style>
+    :root { --bg:#f4f7fa; --surface:#fff; --border:#b5c8d8; --text:#17324d; --text-dim:#435f78; --accent:#1b608e; --soft:#ddeaf5; --focus:#906500; color-scheme:light; }
+    @media (prefers-color-scheme:dark) { :root { --bg:#101d29; --surface:#182b3b; --border:#456078; --text:#e0eaf3; --text-dim:#b2c6d8; --accent:#8fcdf4; --soft:#233d52; --focus:#f8d777; color-scheme:dark; } }
+    * { box-sizing:border-box; }
+    html { font-size:17px; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:"Noto Sans CJK KR","Noto Sans KR",sans-serif; line-height:1.75; }
+    main { width:min(100% - 3rem,80rem); margin:2.5rem auto 3rem; }
+    header { max-width:64rem; }
+    .context { margin:0 0 .5rem; color:var(--text-dim); font-size:.82rem; letter-spacing:.06em; }
+    h1 { font-size:clamp(1.65rem,3.2vw,2.5rem); line-height:1.35; letter-spacing:-.04em; margin:0 0 1rem; text-wrap:balance; }
+    .lead { max-width:56rem; margin:0 0 1rem; font-size:1.1rem; }
+    .scope { font-size:.88rem; color:var(--text-dim); margin:0; }
+    a { color:var(--accent); text-underline-offset:.2em; overflow-wrap:anywhere; }
+    a:hover { text-decoration-thickness:2px; }
+    button,a:focus-visible { outline-offset:4px; }
+    :focus-visible { outline:3px solid var(--focus); }
+    .controls { display:flex; flex-wrap:wrap; align-items:center; gap:.55rem; margin:1.5rem 0 .6rem; }
+    button,.asset { font:inherit; font-size:.88rem; line-height:1.5; padding:.5rem .85rem; border:1px solid var(--border); border-radius:5px; background:var(--surface); color:var(--text); cursor:pointer; text-decoration:none; }
+    button[aria-pressed="true"] { background:var(--text); color:var(--bg); border-color:var(--text); }
+    button:hover,.asset:hover { box-shadow:0 0 0 1px var(--border); }
+    .asset { margin-left:auto; }
+    figure { margin:0; }
+    .canvas { overflow:auto; border:1px solid var(--border); border-radius:8px; background:#f4f7fa; }
+    .canvas svg { display:block; width:100%; min-width:1000px; height:auto; }
+    figcaption { margin:.8rem 0 0; max-width:65ch; font-size:.94rem; }
+    .mobile-note { display:none; color:var(--text-dim); font-size:.82rem; }
+    .explanation { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-top:2rem; }
+    .explanation section { min-width:0; border-top:2px solid var(--border); padding-top:1rem; }
+    h2 { margin:0 0 .7rem; font-size:1.25rem; line-height:1.5; }
+    p { margin:0 0 .8rem; }
+    ul { padding-left:1.25rem; margin:.5rem 0; }
+    li { margin:.4rem 0; }
+    code { font-family:"Noto Sans Mono CJK KR","DejaVu Sans Mono",monospace; font-size:.83em; background:var(--soft); border-radius:3px; padding:.12em .25em; overflow-wrap:anywhere; }
+    details { border:1px solid var(--border); background:var(--surface); padding:1rem 1.2rem; border-radius:6px; margin-top:1.6rem; }
+    summary { cursor:pointer; font-weight:700; }
+    details[open] summary { margin-bottom:1rem; }
+    .evidence { font-size:.9rem; color:var(--text-dim); max-width:70rem; }
+    footer { margin-top:1.5rem; font-size:.8rem; color:var(--text-dim); }
+    @media (max-width:750px) { main { width:calc(100% - 1.4rem); margin-top:1.5rem; } .explanation { grid-template-columns:1fr; gap:1rem; } .mobile-note { display:block; } .asset { margin-left:0; } }
+    @media print { :root { --bg:#fff; --surface:#fff; --text:#17324d; --text-dim:#435f78; --border:#b5c8d8; --accent:#1b608e; --soft:#ddeaf5; } main { width:100%; margin:0; } .controls,.mobile-note { display:none; } .canvas svg { min-width:0; } .canvas { overflow:visible; } figure { break-inside:avoid; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="context">CBRD-27725 · PR #7927의 승인 방식과 후속 평가 후보</p>
+    <h1>큰 값을 미리 꺼내 둘까,<br>행 안에 두고 나중에 분리할까?</h1>
+    <p class="lead">비교할 대상은 <strong>파티션을 고르는 동안의 메모리 모습</strong>입니다. 두 방식 모두 목적지가 정해진 뒤 OOS 파일에 값을 기록하며, 최종 디스크 모습은 같습니다.</p>
+    <p class="scope">Before는 PR #7927의 승인 설계입니다. After는 이슈에서 평가할 대안이며, 아직 채택된 구현을 뜻하지 않습니다.</p>
+  </header>
+  <div class="controls" role="group" aria-label="도식에서 볼 단계 선택">
+    <button type="button" data-view="all" aria-pressed="true">전체 흐름</button>
+    <button type="button" data-view="memory" aria-pressed="false">① 메모리 차이 확대</button>
+    <button type="button" data-view="reading" aria-pressed="false">② 값 읽기 비교</button>
+    <button type="button" data-view="storage" aria-pressed="false">③ 최종 저장 비교</button>
+    <a class="asset" href="before-after_4a4d069_codex.svg" download>SVG 다운로드</a>
+  </div>
+  <p class="mobile-note">작은 화면에서는 도식 영역을 좌우로 스크롤할 수 있습니다.</p>
+  <figure>
+    <div class="canvas" role="img" aria-label="현재 방식은 작은 행과 별도 본문을 owner가 관리하고, 제안 방식은 본문을 행 안에 유지한다. 최종 디스크 형식은 같다." tabindex="0">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 1150" width="1360" height="1150" role="img" aria-labelledby="comparison-title comparison-desc" lang="ko">
+  <title id="comparison-title">CBRD-27725: 큰 값을 메모리에서 언제 행 밖으로 꺼내는가</title>
+  <desc id="comparison-desc">왼쪽 before는 PR7927의 승인 설계이다. 작은 행에는 임시 표식을 두고 본문은 별도 메모리에 보관하며 owner를 함께 전달한다. 오른쪽 after는 미채택 평가 후보이다. 큰 본문을 행 안에 유지한 채 읽고 목적지를 선택한다. 두 방식 모두 목적지 확정 뒤 OOS 파일에 본문을 기록한다. 최종 디스크에는 작은 heap 행과 OOS 본문이 남는다.</desc>
+  <defs>
+    <marker id="flow-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#17324D"/></marker>
+    <marker id="disk-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#23745C"/></marker>
+  </defs>
+  <g font-family="Noto Sans CJK KR, Noto Sans KR, sans-serif" fill="#17324D">
+    <rect width="1360" height="1150" fill="#F4F7FA"/>
+    <text x="40" y="47" font-size="31" font-weight="700">큰 값은 같은데, 메모리에 두는 자리가 다릅니다</text>
+    <text x="40" y="82" font-size="18">예시: id = 7, OOS 대상으로 선택된 본문 40KB · 파랑은 행, 노랑은 같은 본문, 녹색 테두리는 디스크</text>
+    <line x1="40" y1="104" x2="1320" y2="104" stroke="#B5C8D8"/>
+    <text x="40" y="141" font-size="25" font-weight="700">BEFORE · PR #7927 승인 방식</text>
+    <text x="700" y="141" font-size="25" font-weight="700">AFTER · 평가할 제안, 아직 미채택</text>
+
+    <g id="memory-stage">
+      <text x="40" y="181" font-size="21" font-weight="700">① 목적지 선택 전 · 양쪽 모두 아직 OOS 파일에 쓰지 않았습니다</text>
+      <rect x="40" y="198" width="620" height="252" rx="8" fill="white" stroke="#B5C8D8"/>
+      <rect x="700" y="198" width="620" height="252" rx="8" fill="white" stroke="#B5C8D8"/>
+      <rect x="62" y="216" width="576" height="216" rx="6" fill="#F4F7FA" stroke="#17324D" stroke-dasharray="7 5"/>
+      <text x="82" y="247" font-size="19" font-weight="700">owner가 작은 행과 별도 본문을 함께 관리</text>
+      <rect x="84" y="267" width="484" height="48" rx="3" fill="#DDEAF5" stroke="#17324D"/>
+      <line x1="180" y1="267" x2="180" y2="315" stroke="#17324D"/>
+      <text x="101" y="298" font-size="21">id = 7</text>
+      <text x="199" y="298" font-size="20">본문: 임시 표식 (번호·길이)</text>
+      <path d="M374 318 L374 344" stroke="#17324D" stroke-width="2" marker-end="url(#flow-arrow)"/>
+      <text x="392" y="337" font-size="16">owner 안의 번호로 찾음</text>
+      <rect x="180" y="355" width="388" height="52" rx="3" fill="#F8D777" stroke="#17324D"/>
+      <text x="199" y="389" font-size="21">별도 메모리: 본문 40KB</text>
+      <text x="724" y="247" font-size="19" font-weight="700">본문을 포함한 전체 행을 유지</text>
+      <rect x="724" y="267" width="572" height="104" rx="3" fill="#DDEAF5" stroke="#17324D"/>
+      <rect x="820" y="268" width="475" height="102" fill="#F8D777"/>
+      <line x1="820" y1="267" x2="820" y2="371" stroke="#17324D"/>
+      <text x="741" y="326" font-size="21">id = 7</text>
+      <text x="844" y="312" font-size="23" font-weight="700">본문 40KB</text>
+      <text x="844" y="345" font-size="19">값이 행 안에 그대로 들어 있음</text>
+      <text x="724" y="410" font-size="19">별도 본문 보관과 임시 표식을 줄이는 것이 목표</text>
+      <text x="62" y="479" font-size="19">행 바깥에 꺼내 뒀어도, 아직 디스크가 아닌 메모리입니다.</text>
+      <text x="724" y="479" font-size="19">큰 연속 행 버퍼를 목적지 선택 때까지 유지합니다.</text>
+    </g>
+
+    <g id="reading-stage">
+      <text x="40" y="525" font-size="21" font-weight="700">② 값을 읽으며 목적지를 결정 · 도중에 본문이 필요하다면</text>
+      <rect x="40" y="545" width="620" height="138" rx="8" fill="#DDEAF5"/>
+      <rect x="700" y="545" width="620" height="138" rx="8" fill="#DDEAF5"/>
+      <text x="64" y="581" font-size="23" font-weight="700">작은 행 + owner를 함께 전달</text>
+      <text x="64" y="617" font-size="19">읽기 함수가 임시 표식을 이해하고 별도 본문을 찾습니다.</text>
+      <text x="64" y="653" font-size="19">이 연결이 파티션·중복 키 등 여러 경로에 필요합니다.</text>
+      <text x="724" y="581" font-size="23" font-weight="700">전체 행에서 본문을 직접 읽음</text>
+      <text x="724" y="617" font-size="19">일반 행 읽기를 활용해 owner 의존성을 줄이려 합니다.</text>
+      <text x="724" y="653" font-size="19">목적지 결정 결과의 예: 파티션 p1</text>
+    </g>
+
+    <g id="storage-stage">
+      <path d="M350 688 L350 718" stroke="#17324D" stroke-width="2" marker-end="url(#flow-arrow)"/>
+      <path d="M1010 688 L1010 718" stroke="#17324D" stroke-width="2" marker-end="url(#flow-arrow)"/>
+      <text x="370" y="711" font-size="16">목적지 확정</text>
+      <text x="1030" y="711" font-size="16">목적지 확정</text>
+      <text x="40" y="752" font-size="21" font-weight="700">③ 목적지 확정 뒤 · 본문을 OOS 파일에 기록하고, 완성된 행을 저장</text>
+      <rect x="40" y="771" width="620" height="57" rx="4" fill="white" stroke="#B5C8D8"/>
+      <rect x="700" y="771" width="620" height="57" rx="4" fill="white" stroke="#B5C8D8"/>
+      <text x="64" y="807" font-size="21">보관한 본문 기록 → 임시 표식 24B만 교체</text>
+      <text x="724" y="807" font-size="21">행 안의 본문 기록 → 행 축소·컬럼 위치 갱신</text>
+      <rect x="40" y="850" width="620" height="176" rx="6" fill="white" stroke="#23745C" stroke-width="3"/>
+      <rect x="700" y="850" width="620" height="176" rx="6" fill="white" stroke="#23745C" stroke-width="3"/>
+      <text x="62" y="881" font-size="19" fill="#23745C" font-weight="700">최종 디스크 · 선택한 파티션 p1</text>
+      <text x="722" y="881" font-size="19" fill="#23745C" font-weight="700">최종 디스크 · 선택한 파티션 p1</text>
+      <rect x="62" y="898" width="300" height="99" rx="3" fill="#DDEAF5" stroke="#17324D"/>
+      <rect x="722" y="898" width="300" height="99" rx="3" fill="#DDEAF5" stroke="#17324D"/>
+      <text x="80" y="929" font-size="21" font-weight="700">heap 행</text>
+      <text x="740" y="929" font-size="21" font-weight="700">heap 행</text>
+      <text x="80" y="969" font-size="19">id = 7 | 실제 OOS 참조</text>
+      <text x="740" y="969" font-size="19">id = 7 | 실제 OOS 참조</text>
+      <rect x="438" y="898" width="200" height="99" rx="3" fill="#F4F7FA" stroke="#23745C"/>
+      <rect x="1098" y="898" width="200" height="99" rx="3" fill="#F4F7FA" stroke="#23745C"/>
+      <text x="454" y="929" font-size="21" font-weight="700">OOS 파일</text>
+      <text x="1114" y="929" font-size="21" font-weight="700">OOS 파일</text>
+      <rect x="452" y="943" width="172" height="38" rx="3" fill="#F8D777"/>
+      <rect x="1112" y="943" width="172" height="38" rx="3" fill="#F8D777"/>
+      <text x="466" y="969" font-size="19">본문 40KB</text>
+      <text x="1126" y="969" font-size="19">본문 40KB</text>
+      <path d="M370 955 L426 955" stroke="#23745C" stroke-width="2" marker-end="url(#disk-arrow)"/>
+      <path d="M1030 955 L1086 955" stroke="#23745C" stroke-width="2" marker-end="url(#disk-arrow)"/>
+      <text x="381" y="939" font-size="16" fill="#23745C">참조</text>
+      <text x="1041" y="939" font-size="16" fill="#23745C">참조</text>
+    </g>
+    <text x="40" y="1073" font-size="26" font-weight="700">비교할 차이: 저장 전의 메모리 표현 · 최종 저장 결과는 같습니다.</text>
+    <text x="40" y="1110" font-size="17">범위: DB_VALUE에서 준비하는 대표 INSERT 경로. UPDATE·bulk 등은 별도 평가. 도형 크기는 메모리 측정값이 아닙니다.</text>
+    <text x="40" y="1138" font-size="16">CBRD-27725 · PR #7927 기준 소스 4a4d069c21fc19f14337efceca512b726724ecd8 · 설명 작성 2026-10-22</text>
+  </g>
+</svg>
+    </div>
+    <figcaption id="step-caption" aria-live="polite">왼쪽은 값을 일찍 분리해 메모리에 따로 보관합니다. 오른쪽은 값을 행 안에 유지합니다. 양쪽 모두 실제 OOS 기록은 목적지 확정 뒤에 수행합니다.</figcaption>
+  </figure>
+  <div class="explanation">
+    <section aria-labelledby="burden-title">
+      <h2 id="burden-title">줄이려는 부담은 무엇인가</h2>
+      <p>현재 방식에서는 본문을 읽는 함수가 작은 행만 받아서는 부족합니다. 임시 표식에 대응하는 값을 찾도록 <strong>owner도 함께 전달</strong>해야 합니다. Owner는 행과 별도 본문을 사용이 끝날 때까지 살려 두는 관리 객체입니다.</p>
+      <p>제안은 도중에 평범한 전체 행을 읽게 해 이 의존성을 줄이려 합니다. 현재 방식에는 처음 만든 작은 행을 끝까지 재사용하고, 마지막에 참조 자리 24바이트만 바꾸는 장점이 있습니다.</p>
+    </section>
+    <section aria-labelledby="evaluation-title">
+      <h2 id="evaluation-title">바꿀 가치가 있는지 평가하는 이슈</h2>
+      <p>전체 행을 유지하면 큰 연속 메모리가 필요하고, 나중에 본문을 참조로 바꾸며 행과 컬럼 위치 정보를 정리해야 합니다. loader·복제·중복 키·재평가 경로에서도 같은 방식이 성립하는지 확인해야 합니다.</p>
+      <p>이 단순화가 새 비용을 감당할 만큼 이득인지 비교합니다. <strong>현재 설계를 유지한다는 결론도 가능합니다.</strong> 성능 우위나 재설계 구현을 미리 약속한 과제가 아닙니다.</p>
+    </section>
+  </div>
+  <details>
+    <summary>그림의 범위와 근거</summary>
+    <div class="evidence">
+      <p>작성일은 2026-10-22(Asia/Seoul)이며, 비교 기준 소스는 <code>vimkim/cubrid</code> 의 <code>4a4d069c21fc19f14337efceca512b726724ecd8</code> 이다. 이 그림은 해당 revision과 승인 설계를 설명하며, 이후 PR의 최신 상태를 주장하지 않는다.</p>
+      <ul>
+        <li><a href="../cbrd-27089/design/no-record-type-design.md">2026-10-07 승인 설계</a>: compact 행과 payload의 공동 소유, owner 전달, 제자리 stub 교체.</li>
+        <li><a href="https://github.com/CUBRID/cubrid/pull/7927#discussion_r4246448112">2026-10-12 리뷰 제안</a>: 전체 인라인 행 유지와 늦은 OOS 분리라는 평가 후보.</li>
+        <li><a href="https://github.com/vimkim/cubrid/blob/4a4d069c21fc19f14337efceca512b726724ecd8/src/storage/heap_file.c#L13942">기준 소스의 TODO</a>와 <a href="https://github.com/vimkim/my-cubrid-jira/blob/905093460cd61621b615e2f3a3fa79163d779177/issues/CBRD-27725-oos-late-externalization-evaluation_4a4d069_codex.md">게시한 평가 이슈의 Markdown</a>.</li>
+      </ul>
+      <p>도식은 DB_VALUE에서 행을 준비하는 대표 INSERT 경로를 비교한다. 본문 40KB가 OOS 대상으로 선택되었다고 가정하며, 박스 크기는 실측 메모리 비율을 나타내지 않는다. 일부 컬럼만 읽는 경로에 본문 읽기가 항상 필요한 것은 아니다.</p>
+      <p>Client copy-area처럼 이미 인라인 행을 받는 입력은 현재 방식에서도 목적지를 먼저 선택하므로 이 도식의 준비 순서를 일률적으로 적용하지 않는다. UPDATE는 인덱스 갱신 전 분리를, bulk INSERT는 heap 데이터 페이지 latch 전 OOS 처리를 별도로 평가해야 한다.</p>
+      <p>기존 제한된 동기 SQL POC의 성공은 전체 경로의 동등성이나 비용 우위를 입증하지 않는다. 이번 시각화 작업에서 새 엔진 빌드·DB 실험·성능 측정은 수행하지 않았다.</p>
+    </div>
+  </details>
+  <footer>파랑: 행 버퍼 · 노랑: 본문 값 · 녹색 테두리: 최종 디스크 · SVG는 인쇄·공유를 위해 밝은 배경을 유지합니다.</footer>
+</main>
+<script>
+  const diagram = document.querySelector('.canvas svg');
+  const caption = document.getElementById('step-caption');
+  const views = {
+    all: ['0 0 1360 1150', '왼쪽은 값을 일찍 분리해 메모리에 따로 보관합니다. 오른쪽은 값을 행 안에 유지합니다. 양쪽 모두 실제 OOS 기록은 목적지 확정 뒤에 수행합니다.'],
+    memory: ['0 105 1360 395', '① 왼쪽의 본문은 행 밖에 있지만 아직 메모리입니다. 오른쪽의 본문은 행 안에 그대로 있습니다. 노란색 두 박스는 같은 40KB 본문을 뜻합니다.'],
+    reading: ['0 105 1360 595', '② 도중에 본문을 읽으려면 왼쪽은 작은 행과 owner를 함께 사용합니다. 오른쪽은 행 안의 값을 읽는 것이 목표입니다.'],
+    storage: ['0 725 1360 425', '③ 두 방식 모두 선택한 파티션의 OOS 파일에 본문을 기록합니다. 왼쪽은 임시 표식을 교체하고, 오른쪽은 본문을 참조로 바꾸며 행을 줄입니다. 최종 저장 모습은 같습니다.']
+  };
+  document.querySelectorAll('[data-view]').forEach(button => {
+    button.addEventListener('click', () => {
+      const [box, text] = views[button.dataset.view];
+      diagram.setAttribute('viewBox', box);
+      diagram.removeAttribute('height');
+      caption.textContent = text;
+      document.querySelectorAll('[data-view]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    });
+  });
+</script>
+</body>
+</html>

@@ -11,7 +11,10 @@ and partition-loader validation. For the ordering history, read the local
 diagnosis and bestspace assessment: the `f3144ab` / `fb567a6` comparison reproduces
 three ordering differences, but their upstream cause remains unconfirmed.
 
-Index updated: **2026-10-21 (Asia/Seoul)**. Documents retain their recorded source
+For a step-by-step comparison of the approved memory layout and the unadopted
+full-inline alternative, see the [CBRD-27725 visual explanation](../cbrd-27725/README.md).
+
+Index updated: **2026-10-22 (Asia/Seoul)**. Documents retain their recorded source
 revisions and verification limits; dates below describe each document's history.
 
 ## PR7927 design and reviewer documents

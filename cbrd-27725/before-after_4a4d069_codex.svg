@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 1150" width="1360" height="1150" role="img" aria-labelledby="comparison-title comparison-desc" lang="ko">
+  <title id="comparison-title">CBRD-27725: 큰 값을 메모리에서 언제 행 밖으로 꺼내는가</title>
+  <desc id="comparison-desc">왼쪽 before는 PR7927의 승인 설계이다. 작은 행에는 임시 표식을 두고 본문은 별도 메모리에 보관하며 owner를 함께 전달한다. 오른쪽 after는 미채택 평가 후보이다. 큰 본문을 행 안에 유지한 채 읽고 목적지를 선택한다. 두 방식 모두 목적지 확정 뒤 OOS 파일에 본문을 기록한다. 최종 디스크에는 작은 heap 행과 OOS 본문이 남는다.</desc>
+  <defs>
+    <marker id="flow-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#17324D"/></marker>
+    <marker id="disk-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#23745C"/></marker>
+  </defs>
+  <g font-family="Noto Sans CJK KR, Noto Sans KR, sans-serif" fill="#17324D">
+    <rect width="1360" height="1150" fill="#F4F7FA"/>
+    <text x="40" y="47" font-size="31" font-weight="700">큰 값은 같은데, 메모리에 두는 자리가 다릅니다</text>
+    <text x="40" y="82" font-size="18">예시: id = 7, OOS 대상으로 선택된 본문 40KB · 파랑은 행, 노랑은 같은 본문, 녹색 테두리는 디스크</text>
+    <line x1="40" y1="104" x2="1320" y2="104" stroke="#B5C8D8"/>
+    <text x="40" y="141" font-size="25" font-weight="700">BEFORE · PR #7927 승인 방식</text>
+    <text x="700" y="141" font-size="25" font-weight="700">AFTER · 평가할 제안, 아직 미채택</text>
+
+    <g id="memory-stage">
+      <text x="40" y="181" font-size="21" font-weight="700">① 목적지 선택 전 · 양쪽 모두 아직 OOS 파일에 쓰지 않았습니다</text>
+      <rect x="40" y="198" width="620" height="252" rx="8" fill="white" stroke="#B5C8D8"/>
+      <rect x="700" y="198" width="620" height="252" rx="8" fill="white" stroke="#B5C8D8"/>
+      <rect x="62" y="216" width="576" height="216" rx="6" fill="#F4F7FA" stroke="#17324D" stroke-dasharray="7 5"/>
+      <text x="82" y="247" font-size="19" font-weight="700">owner가 작은 행과 별도 본문을 함께 관리</text>
+      <rect x="84" y="267" width="484" height="48" rx="3" fill="#DDEAF5" stroke="#17324D"/>
+      <line x1="180" y1="267" x2="180" y2="315" stroke="#17324D"/>
+      <text x="101" y="298" font-size="21">id = 7</text>
+      <text x="199" y="298" font-size="20">본문: 임시 표식 (번호·길이)</text>
+      <path d="M374 318 L374 344" stroke="#17324D" stroke-width="2" marker-end="url(#flow-arrow)"/>
+      <text x="392" y="337" font-size="16">owner 안의 번호로 찾음</text>
+      <rect x="180" y="355" width="388" height="52" rx="3" fill="#F8D777" stroke="#17324D"/>
+      <text x="199" y="389" font-size="21">별도 메모리: 본문 40KB</text>
+      <text x="724" y="247" font-size="19" font-weight="700">본문을 포함한 전체 행을 유지</text>
+      <rect x="724" y="267" width="572" height="104" rx="3" fill="#DDEAF5" stroke="#17324D"/>
+      <rect x="820" y="268" width="475" height="102" fill="#F8D777"/>
+      <line x1="820" y1="267" x2="820" y2="371" stroke="#17324D"/>
+      <text x="741" y="326" font-size="21">id = 7</text>
+      <text x="844" y="312" font-size="23" font-weight="700">본문 40KB</text>
+      <text x="844" y="345" font-size="19">값이 행 안에 그대로 들어 있음</text>
+      <text x="724" y="410" font-size="19">별도 본문 보관과 임시 표식을 줄이는 것이 목표</text>
+      <text x="62" y="479" font-size="19">행 바깥에 꺼내 뒀어도, 아직 디스크가 아닌 메모리입니다.</text>
+      <text x="724" y="479" font-size="19">큰 연속 행 버퍼를 목적지 선택 때까지 유지합니다.</text>
+    </g>
+
+    <g id="reading-stage">
+      <text x="40" y="525" font-size="21" font-weight="700">② 값을 읽으며 목적지를 결정 · 도중에 본문이 필요하다면</text>
+      <rect x="40" y="545" width="620" height="138" rx="8" fill="#DDEAF5"/>
+      <rect x="700" y="545" width="620" height="138" rx="8" fill="#DDEAF5"/>
+      <text x="64" y="581" font-size="23" font-weight="700">작은 행 + owner를 함께 전달</text>
+      <text x="64" y="617" font-size="19">읽기 함수가 임시 표식을 이해하고 별도 본문을 찾습니다.</text>
+      <text x="64" y="653" font-size="19">이 연결이 파티션·중복 키 등 여러 경로에 필요합니다.</text>
+      <text x="724" y="581" font-size="23" font-weight="700">전체 행에서 본문을 직접 읽음</text>
+      <text x="724" y="617" font-size="19">일반 행 읽기를 활용해 owner 의존성을 줄이려 합니다.</text>
+      <text x="724" y="653" font-size="19">목적지 결정 결과의 예: 파티션 p1</text>
+    </g>
+
+    <g id="storage-stage">
+      <path d="M350 688 L350 718" stroke="#17324D" stroke-width="2" marker-end="url(#flow-arrow)"/>
+      <path d="M1010 688 L1010 718" stroke="#17324D" stroke-width="2" marker-end="url(#flow-arrow)"/>
+      <text x="370" y="711" font-size="16">목적지 확정</text>
+      <text x="1030" y="711" font-size="16">목적지 확정</text>
+      <text x="40" y="752" font-size="21" font-weight="700">③ 목적지 확정 뒤 · 본문을 OOS 파일에 기록하고, 완성된 행을 저장</text>
+      <rect x="40" y="771" width="620" height="57" rx="4" fill="white" stroke="#B5C8D8"/>
+      <rect x="700" y="771" width="620" height="57" rx="4" fill="white" stroke="#B5C8D8"/>
+      <text x="64" y="807" font-size="21">보관한 본문 기록 → 임시 표식 24B만 교체</text>
+      <text x="724" y="807" font-size="21">행 안의 본문 기록 → 행 축소·컬럼 위치 갱신</text>
+      <rect x="40" y="850" width="620" height="176" rx="6" fill="white" stroke="#23745C" stroke-width="3"/>
+      <rect x="700" y="850" width="620" height="176" rx="6" fill="white" stroke="#23745C" stroke-width="3"/>
+      <text x="62" y="881" font-size="19" fill="#23745C" font-weight="700">최종 디스크 · 선택한 파티션 p1</text>
+      <text x="722" y="881" font-size="19" fill="#23745C" font-weight="700">최종 디스크 · 선택한 파티션 p1</text>
+      <rect x="62" y="898" width="300" height="99" rx="3" fill="#DDEAF5" stroke="#17324D"/>
+      <rect x="722" y="898" width="300" height="99" rx="3" fill="#DDEAF5" stroke="#17324D"/>
+      <text x="80" y="929" font-size="21" font-weight="700">heap 행</text>
+      <text x="740" y="929" font-size="21" font-weight="700">heap 행</text>
+      <text x="80" y="969" font-size="19">id = 7 | 실제 OOS 참조</text>
+      <text x="740" y="969" font-size="19">id = 7 | 실제 OOS 참조</text>
+      <rect x="438" y="898" width="200" height="99" rx="3" fill="#F4F7FA" stroke="#23745C"/>
+      <rect x="1098" y="898" width="200" height="99" rx="3" fill="#F4F7FA" stroke="#23745C"/>
+      <text x="454" y="929" font-size="21" font-weight="700">OOS 파일</text>
+      <text x="1114" y="929" font-size="21" font-weight="700">OOS 파일</text>
+      <rect x="452" y="943" width="172" height="38" rx="3" fill="#F8D777"/>
+      <rect x="1112" y="943" width="172" height="38" rx="3" fill="#F8D777"/>
+      <text x="466" y="969" font-size="19">본문 40KB</text>
+      <text x="1126" y="969" font-size="19">본문 40KB</text>
+      <path d="M370 955 L426 955" stroke="#23745C" stroke-width="2" marker-end="url(#disk-arrow)"/>
+      <path d="M1030 955 L1086 955" stroke="#23745C" stroke-width="2" marker-end="url(#disk-arrow)"/>
+      <text x="381" y="939" font-size="16" fill="#23745C">참조</text>
+      <text x="1041" y="939" font-size="16" fill="#23745C">참조</text>
+    </g>
+    <text x="40" y="1073" font-size="26" font-weight="700">비교할 차이: 저장 전의 메모리 표현 · 최종 저장 결과는 같습니다.</text>
+    <text x="40" y="1110" font-size="17">범위: DB_VALUE에서 준비하는 대표 INSERT 경로. UPDATE·bulk 등은 별도 평가. 도형 크기는 메모리 측정값이 아닙니다.</text>
+    <text x="40" y="1138" font-size="16">CBRD-27725 · PR #7927 기준 소스 4a4d069c21fc19f14337efceca512b726724ecd8 · 설명 작성 2026-10-22</text>
+  </g>
+</svg>
