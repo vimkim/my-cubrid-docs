@@ -1,8 +1,10 @@
 # CBRD-27424: standalone workspace OOS
 
-Last modified: 2026-10-21 (Asia/Seoul).
+Last modified: 2026-10-22 (Asia/Seoul).
 
 [PR #7925](https://github.com/CUBRID/cubrid/pull/7925) supports OOS storage in standalone object loading and CSQL workspace writes.
+
+최신 [동기화 후 CI·로컬 빌드 확인](ci_analysis_report_925232529_codex.md)은 엔진 `925232529`, CI `39736508190`의 두 build job이 30분 제한으로 종료됐으며 회귀 테스트 판정이 없음을 기록한다. 사용자 보고의 네트워크 장애 가설과 로컬에서 확인한 Manager 링크·release 경고 오류를 구분한다. 새 CI는 사용자 확인 전이며, 전체 CI 통과를 주장하지 않는다. Snapshot: 2026-10-22, Asia/Seoul.
 
 Start with the [Korean reviewer guide](review-guide-pr7925-28b65d18a-ko.md), covering locally integrated `28b65d18a` and both completed review simplifications. It distinguishes the published PR HEAD `1c660d22e`, the pinned PR7927 dependency, and pending shared integration. Snapshot: 2026-10-07, Asia/Seoul.
 
@@ -30,6 +32,7 @@ Dates for older unindexed files come from their Git history. Raw logs retain nat
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [ci_analysis_report_925232529_codex.md](ci_analysis_report_925232529_codex.md) | 동기화 후 CI 30분 제한, 미실행 suite, 정확한 로컬 빌드 결과와 네트워크 가설의 한계 | 2026-10-22 | 2026-10-22 | CI 시간 초과와 로컬 오류를 구분하고 확인받을 재실행을 준비 |
 | [ci_analysis_report_6a487cdb6_collector_recovery_codex.md](ci_analysis_report_6a487cdb6_collector_recovery_codex.md) | Six failures, exact-base/history evidence, lock-readiness mismatch, and scoped rerun | 2026-10-17 | 2026-10-21 | Resolve the collector evidence limit and identify bounded follow-up work |
 | [ci_analysis_report_6a487cdb6_codex.md](ci_analysis_report_6a487cdb6_codex.md) | Historical incomplete collection warning, with a pointer to recovered evidence | 2026-10-17 | 2026-10-21 | Record the requested CI result without unsupported testcase attribution |
 | [sa-inline-preservation-decision-20261017.md](sa-inline-preservation-decision-20261017.md) | Accepted guarantee, source change, local verification, and loader measurements | 2026-10-17 | 2026-10-17 | Record the user's selected response to the SA-only retention review |
@@ -40,7 +43,7 @@ Dates for older unindexed files come from their Git history. Raw logs retain nat
 | [CBRD-27424-sa-loaddb-diagnosis_f4299ac_codex.md](CBRD-27424-sa-loaddb-diagnosis_f4299ac_codex.md) | Historical standalone loader diagnosis at f4299ac | 2026-09-15 | 2026-09-15 | Explain the original missing OOS conversion path |
 | [CBRD-27424-sa-workspace-oos_e24b458_codex.md](CBRD-27424-sa-workspace-oos_e24b458_codex.md) | Historical implementation and reproduction at e24b458 | 2026-09-11 | 2026-09-11 | Document standalone workspace OOS implementation |
 | [CBRD-27424-workspace-oos-revert-rationale_a142503dc_codex.md](CBRD-27424-workspace-oos-revert-rationale_a142503dc_codex.md) | Historical direct-byte benchmark and restoration rationale | 2026-10-07 | 2026-10-07 | Explain the measured decision to restore attrinfo conversion |
-| [README.md](README.md) | Ticket overview and file index | 2026-10-07 | 2026-10-21 | Help readers find the ticket documents and evidence |
+| [README.md](README.md) | Ticket overview and file index | 2026-10-07 | 2026-10-22 | Help readers find the ticket documents and evidence |
 | [ci-fix/pr-7925/index.md](ci-fix/pr-7925/index.md) | Historical local CI-repair index | 2026-09-15 | 2026-09-15 | Explain retained repair artifacts |
 | [ci_analysis_report_e24b458_codex.md](ci_analysis_report_e24b458_codex.md) | Historical exact-revision CI analysis at e24b458 | 2026-09-15 | 2026-09-15 | Preserve CI evidence for the original implementation |
 | [ci_analysis_report_fe1a918_codex.md](ci_analysis_report_fe1a918_codex.md) | Historical exact-revision CI analysis at fe1a918 | 2026-09-15 | 2026-09-15 | Assess CI after the Python dependency change |
