@@ -38,6 +38,7 @@ Local checks are scoped to their pinned revisions and remain separate from remot
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [PR7927 통합 후 CI 증거 경고 (cbf57ffa6)](ci_analysis_report_cbf57ffa6_codex.md) | SQL 집계 무결성 장애, 검증된 medium·shell 결과와 원인 판정 경계 | 2026-10-22 | 2026-10-22 | 통합 후 실패 6개 분석의 증거 상태와 선행 해결 조건을 남김 |
 | [Public TC PR #3664 review](tc-pr-3664-review_0d9f5b448_codex.md) | Standards/Spec review of deterministic conversion output at 0d9f5b448, with execution evidence limits | 2026-10-14 | 2026-10-14 | Review and report the public testcase changes associated with PR7927 |
 | [Private TC PR #4335 review](tc-pr-4335-review_10f350029_codex.md) | Standards/Spec review of partition-loader validation and rollback at 10f350029, with Windows and revision limits | 2026-10-14 | 2026-10-14 | Review and report the private testcase changes associated with PR7927 |
 | [Native medium diagnosis (f3144ab / fb567a6)](medium-local-diagnosis/report.md) | 558-case head/base comparison, heap placement and remaining causal gap | 2026-10-07 | 2026-10-07 | Explain reproduced ordering and the remaining causal boundary |
