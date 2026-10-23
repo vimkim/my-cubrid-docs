@@ -317,3 +317,9 @@ Source/TC 게시·CI는 아직 없다. 올바른 엔진 FAIL은 별도 수정과
 - Source53의602 whole proof·2651 PID와 최종 cached observation은 Root05b6/c987·동결 complete refs dba681bb로 수용됐다. PID2593 PASS/58 FAIL·실패 AID27, Source94 별도 repair를 보존한다. Stage2 원래 producer exit/final IO는 미복구 상태로 남긴다.
 - Retained body/direct byte transport80/2421/3661은 수용됐으나, owner65 v5 원래5053의17/65 생산 성공86d54081은 독립 operand review를 기다린다. Retained567 whole과715 PID/148 source FAIL의 engine qualification·별도 repair는 pending이다.
 - [기존 최종 보고서의 현재 checkpoint](../../ticket16-final-coverage-and-ci-handoff-20261022.md#source602-owner65-current-20261024)에 완료된 범위, 최종1270/5274·384/83/60 witness의 빈 slot과 게시 준비의 제한을 기록했다. Native13392 PASS/41 NOK·CPP315 PASS/기존27230 FAIL1·SQL28 PASS는 유지한다. Tickets01–15 resolved,16/Work456 active다. Source/TC push0·CI0, performance·HA463 보류다.
+
+### 2026-10-24: Owner65 독립 수용과 candidate transport 실패
+
+- Owner65는 독립17 case/65 unit·0 GAP 수용2e1e04f6와 동결 complete refs40f2956b를 받았다. Retained567 whole·715 PID/148 source engine qualification은 여전히 별도 pending이다.
+- Candidate64577/91043은 transport guard에서 exit1·reap됐고 원본·부분 파일·차감을 보존했다. Terminal index와 완료 population/witness credit은 없다. Source602/native133/CPP316/SQL28 결과와 performance·HA463 보류는 그대로다.
+- [기존 보고서의 canonical report-witness binding checklist](../../ticket16-final-coverage-and-ci-handoff-20261022.md#human-report-canonical-binding)에 metadata8과 final reader가 동일하게 선택할 파일·section·byte witness 조건을 기록했다. 두 dynamic claim과 최종1270/5274·384/83/60·whole/FAIL·CI slot은 미수용으로 남는다.

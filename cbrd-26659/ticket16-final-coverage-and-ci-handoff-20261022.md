@@ -13,7 +13,7 @@
 | Source53 mutation246 | 현재53 case source-only 의미·qualification transport 수용 | 246 AID | 0 | 710 witness·1,136 model·711 ACK; 새 native/physical credit 없음 |
 | Retained80 body·direct flat | Root c64a/97f1:80 case·2421 PID·3661 source의 record/provenance·byte transport 수용 | 관측 PID1706 / source3513 | 관측 PID715 / source148 | required record 0 GAP; fresh whole·FAIL qualification 별도 |
 | Retained80 native metadata | Root8ac7·complete refs06ba 수용 | native133에 포함 | native133에 포함 | 50 OK/30 NOK 유지; 새 engine/whole PASS 없음 |
-| Retained owner65 v5 | 원래5053 exit0/reap·17 case/65 clause producer transport86d54081 수용 | 의미 판정 미수용 | 원래 FAIL 유지 | 독립 full-operand/model review pending |
+| Retained owner65 v5 | 생산5053 뒤 독립17 case/65 unit·0 GAP 수용2e1e04f6, complete refs40f2956b 동결 | owner relation65 | 원래 전체 FAIL 유지 | Retained567 whole·715 PID/148 source qualification 별도 |
 | Retained567 whole·각 FAIL | whole 의미·715 PID/148 source의 engine qualification·별도 repair pending | 미집계 | 관측 FAIL 보존 | count·native NOK·capture만으로 귀속하지 않음 |
 | 최종1270/5274·384/83/60 | required-final·source/aux·metadata·story·repair join pending | 미집계 | 미집계 | 최종 reader 실행·완전한 witness 미수용 |
 | 게시·CI | Source/TC push0·CI0 | 해당 없음 | 해당 없음 | 최종 gates 뒤 게시와 ONE CI terminal·URL·TC Merge Gate 확인 |
@@ -22,7 +22,7 @@
 
 ## 2026-10-24: Source602 수용과 Retained whole의 남은 경계
 
-이 초안은 조정자의2026-10-23T21:29:52Z 상태와 Work456 notes5365/5374/5378, owner65 실행 수용86d54081을 반영한다. 날짜는 Asia/Seoul 기준이다. 아래 이전 checkpoint는 당시 snapshot으로 보존한다. Tickets01–15는 로컬 resolved,16과 Work456은 active다. Handover·별도 `u5`·SA-loaddb 결과를 현재 전체 campaign에 합산하지 않는다.
+이 초안은 조정자의 owner65 독립 수용2e1e04f6와2026-10-23T22:53:14Z까지의 candidate64577/91043 실패 수용을 반영한다. 날짜는 Asia/Seoul 기준이다. 아래 이전 checkpoint는 당시 snapshot으로 보존한다. Tickets01–15는 로컬 resolved,16과 Work456은 active다. Handover·별도 `u5`·SA-loaddb 결과를 현재 전체 campaign에 합산하지 않는다.
 
 **Source 구성요소의 필수602 whole proof와 최종 관측 transport는 수용됐다.** [독립 whole proof Root05b69c2f](https://dev2.baboon-rudd.ts.net:8443/mnt/nvme/data-1/vimkim-work456-oos-supplement-20261022T1753Z/source53-independent-whole-proof-review-control-v1/root-complete602-Source-whole-proof-independent-actual-acceptance-v1.json)는53 case/602 assertion의 required proof GAP0을 확인했다. [Cached observation Rootc987da29](https://dev2.baboon-rudd.ts.net:8443/mnt/nvme/data-1/vimkim-work456-oos-supplement-20261022T1753Z/source53-final-materialization-control-v1/root-complete602-cached-Source-observation-transport-actual-acceptance-v1.json)는602 assertion/2651 predicate와 정확한 bindings를 독립 대조했다. [동결 complete references dba681bb](https://dev2.baboon-rudd.ts.net:8443/mnt/nvme/data-1/vimkim-work456-oos-supplement-20261022T1753Z/source53-final-materialization-control-v1/root-once-frozen-complete602-reviewed-Source-observation-reference-objects-v1.json)의 원래 객체를 후속 입력에 그대로 사용한다. 관측 PID2593 PASS/58 FAIL, 실패 AID27과 Source94의 별도 attribution/repair를 보존한다. 이는 전체1270 assertion의 완료 선언이 아니다.
 
@@ -30,7 +30,9 @@
 
 **Retained의 record·byte transport와 whole 의미 승인은 다르다.** [Rootc64a의80 body 수용](https://dev2.baboon-rudd.ts.net:8443/mnt/nvme/data-1/vimkim-work456-oos-supplement-20261022T1753Z/retained80-current855-v1/control/body-v9-independent-validation-control-v1/root-complete80-independent-body-record-actual-acceptance-v1.json)과 [Root97f1의 direct flat 대조](https://dev2.baboon-rudd.ts.net:8443/mnt/nvme/data-1/vimkim-work456-oos-supplement-20261022T1753Z/retained80-current855-v1/control/direct-current-body-flat-v6-control-v1/root-complete80-direct-flat-independent-byte-transport-actual-acceptance-v1.json)는80 case/567 AID/2421 PID/3661 source 및14개 zero-AID case를 포함한다. 원래 PID715 FAIL/source148 FAIL과20개 original AID 부재를 보존했다. [Ret148 Rootf8de의 measurement-only 수용](https://dev2.baboon-rudd.ts.net:8443/mnt/nvme/data-1/vimkim-work456-oos-supplement-20261022T1753Z/retained80-current855-v1/control/root-retained148-source-failure-operand-measurement-only-acceptance-v1.json)은148개 전체 측정과 별도 repair 초안을 받았지만 engine qualification은0/148이다. Intended model·full whole relation과 실제 native gate에 대한 독립 대조가 남는다. 모든 FAIL을 ENGINE으로 묶거나 summary가 같다는 이유로 통과시키지 않는다.
 
-**Owner65 v5는 생산·전달만 수용됐다.** [위임 조정자의86d54081](https://dev2.baboon-rudd.ts.net:8443/mnt/nvme/data-1/vimkim-work456-oos-supplement-20261022T1753Z/retained80-current855-v1/control/coordinator-owner65-v5-producer-execution-and-physical-debit-acceptance-v1.json)은 원래5053의98.279초·exit0/reap,17 case/65 clause의 정확한 scope와 transport를 확인했다. 독립 full-operand/model review는 pending이다. Producer는16 case의 canonical array exact와 `gap_recreate`의 source-qualified evidence multiset 비교를 구분했다. Recreate의 byte equality는 false이며 원래·재생성 hash를 모두 보존한다. 원래 arrays·None field·expected·outcome은 고치지 않았다. 앞선 owner46437의 strict equality 실패와 diagnostic40775도 원래 이력으로 남는다. 생산 성공만으로 sidecar 의미·Retained567 whole·FAIL 귀속을 승인하지 않는다.
+**Owner65의 독립 operand review도 완료됐다.** [생산·전달86d54081](https://dev2.baboon-rudd.ts.net:8443/mnt/nvme/data-1/vimkim-work456-oos-supplement-20261022T1753Z/retained80-current855-v1/control/coordinator-owner65-v5-producer-execution-and-physical-debit-acceptance-v1.json) 뒤 [독립17 case/65 unit 수용2e1e04f6](https://dev2.baboon-rudd.ts.net:8443/mnt/nvme/data-1/vimkim-work456-oos-supplement-20261022T1753Z/retained80-current855-v1/control/coordinator-complete65-independent-owner-operands-actual-acceptance-v2.json)과 [동결 complete references40f2956b](https://dev2.baboon-rudd.ts.net:8443/mnt/nvme/data-1/vimkim-work456-oos-supplement-20261022T1753Z/retained80-current855-v1/control/coordinator-once-frozen-complete17-reviewed-owner65-reference-objects-v2.json)를 받았다. 독립 검토의 owner relation은65 PASS/0 GAP이며 원래 None field를 보존했다. 이것은 Retained567 whole이나715 PID/148 source의 engine qualification이 아니다. 독립 review가 regenerated-array multiset을 다시 계산했다는 주장도 하지 않는다. Producer의16 case canonical exact와 `gap_recreate`의 source-qualified evidence multiset 비교는 구분하며 recreate byte equality는 false다. 원래·재생성 hash와 최초46437 실패·diagnostic40775 이력은 보존한다.
+
+**후속 candidate 두 시도는 transport guard에서 실패했다.** [원래64577의 reap·차감79fb110f](https://dev2.baboon-rudd.ts.net:8443/mnt/nvme/data-1/vimkim-work456-oos-supplement-20261022T1753Z/retained80-current855-v1/control/coordinator-candidate64577-incomplete-reap-debit-acceptance-v1.json)은 서로 다른 원래 pointer/evidence scope의 per-PID relation occurrence를 하나의 key로 합친 경계에서 exit1이었다. [후속91043의 reap·차감afde4def](https://dev2.baboon-rudd.ts.net:8443/mnt/nvme/data-1/vimkim-work456-oos-supplement-20261022T1753Z/retained80-current855-v1/control/coordinator-candidate91043-incomplete-reap-debit-acceptance-v2.json)은 `_finite_named_record`의 `unqualified inherited named-fact runtime` guard에서 exit1이었다. 두 원본·부분 파일·물리 차감을 보존했다. 두 시도 모두 terminal index와 완료 population/count·최종 barrier 수용이 없으며 passing/coverage credit도 없다. 이 transport 실패를 새 engine FAIL로 분류하거나 원래 expected를 바꾸지 않는다.
 
 Native13392 PASS/41 NOK, C++316 중315 PASS/기존 CBRD-27230 FAIL1·0 GAP, SQL28 PASS는 기존 source3ace/public78/private855/providerb20에서 유지한다. 새 native 실행은 없었다. 부재를 `HAS_OOS` clear record로 해석하지 않는다. Performance와 HA Work463은 계속 보류다.
 
@@ -39,13 +41,76 @@ Native13392 PASS/41 NOK, C++316 중315 PASS/기존 CBRD-27230 FAIL1·0 GAP, SQL2
 | 보고 slot | 현재 값 | 최종 reader 전 필요한 근거 |
 | --- | --- | --- |
 | Source whole·observation | 602/2651 수용;58 PID·27 AID FAIL 보존 | dba681bb complete references와 별도 repair를 그대로 연결 |
-| Retained full operands·whole | owner65 독립 review와567 whole pending | 전체 own vector·runtime·source-unit union·독립 whole/model receipt |
+| Retained full operands·whole | owner65 독립17/65 수용;567 whole pending | 전체 own vector·runtime·source-unit union·독립 whole/model receipt |
 | Retained FAIL·repair | PID715/source148 관측 FAIL, engine qualification pending | 각 실패의 직접 relation·정확한 scope·독립 attribution·별도 repair |
 | required-final1270/5274 | 아직 최종 집계·witness 없음 | 모든 구성요소·metadata·source/aux·strict bindings의 실제 final-reader 대조 |
 | 384 cell/83 operation/60 story | 전체 완료 수용 없음 | 정확한 final population과 각 coverage witness·공백0 확인 |
 | 게시·ONE CI | 미실행 | 실제 게시 commit·PR head, CI run URL·terminal 결과·TC Merge Gate |
 
 필수 관측 누락, 모호한 expected 또는 미수용 attribution이 있으면 완료하지 않는다. 올바른 oracle로 입증한 engine FAIL은 별도 수리를 연결하고 passing coverage에서 제외한다. 최종 reader의 관측·receipt가 생기기 전에 위 pending slot을 정적 count로 채우지 않는다.
+
+<a id="human-report-canonical-binding"></a>
+
+### Report witness의 canonical 파일·section binding
+
+이 절은 현재 metadata8 방법과 final reader가 사용할 **경로·section 준비표**다. 실제 witness contract·외부 acceptance·metadata PASS를 만들지 않는다. Canonical docs-main root는 `/home/vimkim/gh/my-cubrid-docs`다. 현재 `my-cubrid-docs-work456-ticket16`의 문서는 로컬 draft이며 아직 main에 통합하지 않았다.
+
+| 역할 | canonical docs-main 상대 경로 | 사용할 section |
+| --- | --- | --- |
+| `current_human_report` 한 파일 | `cbrd-26659/ticket16-final-coverage-and-ci-handoff-20261022.md` | 아래 join·population·scope witness slot 모두 |
+| 별도 실패·repair 설명 | `cbrd-26659/ticket16-native-failure-handoff-20261022.md` | 현재 FAIL qualification 범위와 원래 시도 이력 |
+| 사용자 탐색·진행 상태 | `cbrd-26659/README.md` | 최신 checkpoint와 report 링크 |
+| 수용 조건·활성 티켓 | `cbrd-26659/supplement-tickets/map.md`, `cbrd-26659/supplement-tickets/issues/16-final-coverage-and-ci-handoff.md` | 최종 reader·게시·ONE CI가 남은 active 상태 |
+
+`current_human_report`는 위의 첫 파일 하나다. 다른 파일의 설명이나 단순 anchor를 그 파일의 byte witness로 대신하지 않는다. 별도 repair 문서는 이 보고서에서 연결하되 full machine receipt와 독립 repair acceptance가 필요하다.
+
+<a id="current-join-reference-witness"></a>
+
+#### Current join reference witness — PENDING
+
+`current_join_references`는 아직 미수용이다. 완성된 current population의 `context` 세 reference(`active_pointer`, `current_static_plan`, `current_static_definitions`), `population_result`, `selected_observation_partitions`, `combined_bindings`를 해당 원본 객체 전체와 정확한 hash로 기록해야 한다. 정적 plan이나 이 Markdown 경로만으로 이 slot을 채우지 않는다.
+
+<a id="observed-population-witness"></a>
+
+#### Observed population witness — PENDING
+
+`observed_current_population`은 아직 미수용이다. 실제 population에서 `delivery_counts`, `conformance_counts`, `qualified_predicate_failures`, `GAP_assertion_ids`를 가져와야 한다. 현재 Source602 수용이나 Retained1706/715 관측 count를 전체1270/5274 집계로 바꾸지 않는다. Whole·715 PID/148 source qualification,384 cell/83 operation/60 story 및 모든 필수 source/aux witness가 아직 pending이다.
+
+<a id="qualification-scope-witness"></a>
+
+#### Qualification scope witness — 현재 명시한 범위
+
+아래 값은 보고서의 범위다. 완료·engine PASS 또는 metadata acceptance가 아니다. 일반 단일 노드 FK는 승인된 기능 범위에 포함되지만, 그 결과를 HA나 performance qualification으로 바꾸지 않는다. 실행 시간도 성능 benchmark가 아니다. Metadata 검토는 CI terminal을 선행 조건으로 삼지 않지만, ticket16의 ONE CI 전달 의무는 별도로 남는다.
+
+```json
+{
+  "HA_qualification": "WORK463_DEFERRED",
+  "performance_qualification": "DEFERRED_UNMEASURED",
+  "ordinary_single_node_FK_applicable": true,
+  "functional_native_results_as_HA_or_performance_qualification": false,
+  "operational_timing_is_performance_qualification": false,
+  "terminal_CI_required_by_metadata": false,
+  "overall_Ticket16_CI_handoff_is_separate_required_work": true
+}
+```
+
+<a id="metadata8-finalreader-binding-checklist"></a>
+
+#### Metadata8·final reader 입력을 동결하기 전 확인
+
+| 필수 metadata ID | 이 보고서의 대상 section | 아직 필요한 actual binding |
+| --- | --- | --- |
+| `STORY55:metadata:1`–`STORY59:metadata:1` | [Observed population witness](#observed-population-witness) | 원래 여섯 O83 assertion/24 PID, exact current bindings·모든 qualification과 독립 population 대조. 다섯 proof-completeness component는 현재 pending |
+| `STORY1:metadata:4` | [Current join reference witness](#current-join-reference-witness), [Observed population witness](#observed-population-witness) | 실제 `current_join_references`와 `observed_current_population` 값의 literal witness |
+| `STORY60:metadata:3` | [Qualification scope witness](#qualification-scope-witness) | HA·performance·functional-native scope의 세 exact claim witness |
+| `STORY60:metadata:4` | 위 join·population·scope 세 section | 두 dynamic claim과 일곱 scope claim, 총9 role의 exact witness |
+
+1. 기존 canonical 파일 경로와 실제 current context·population·mandatory-source·qualification을 동결한다. 미수용 Retained whole/FAIL을 NULL이나 count로 통과시키지 않는다.
+2. Canonical main 보고서의 최종 UTF-8 bytes와 전체 SHA를 선택한다. 각 claim에 `claim_role`, `byte_offset`, `byte_length`, `required_literal`, `span_sha256`, `evaluated_claim`을 연결한다. Section anchor만으로는 부족하다. 두 dynamic slot은 현재 pending이며 미래 값을 미리 넣지 않는다.
+3. 독립 검토한 `human_report_contract.required_claims`는 computed population의9 role과 정확히 같아야 한다. `witnesses`도 각 role을 빠짐없이 한 번씩 포함해야 한다. 원래 complete reference 객체를 임의로 축약하지 않는다.
+4. 외부 `ROOT_ACCEPTS_EXACT_CURRENT_HUMAN_REPORT_WITNESSES` receipt가 그 exact `report`, `contract`, 세 field `context`를 선택해야 한다. Metadata8의 `selected.current_human_report`와 final reader의 `E.current_human_report`는 동일한 canonical path/SHA 객체를 사용한다. 양쪽 `human_report_contract`·`human_report_ROOT_acceptance`도 동일해야 한다.
+5. 기존 순서 `population → mandatory_source → metadata → stories`를 유지한다. Eight-component 후보의 생성은 독립 component review·외부 metadata acceptance와 다르다. Final reader에는 complete16 component/acceptance와 같은 current context가 필요하다.
+6. Witness를 봉인한 뒤 보고서 bytes나 경로를 바꾸면 해당 report hash·span·외부 acceptance를 새로 검토해야 한다. 현재 이 checklist는 그 acceptance가 아니며 metadata8·최종 reader의 actual 실행과 결과는 모두 pending이다.
 
 ### 게시 준비의 현재 범위
 

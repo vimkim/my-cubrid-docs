@@ -13,12 +13,12 @@
 | Source53 mutation246 | 현재53 case source-only 의미·qualification transport 수용 | 246 AID | 0 | 710 witness·1,136 model·711 ACK; 새 native/physical credit 없음 |
 | Retained80 body·direct flat | Root c64a/97f1:80 case·2421 PID·3661 source의 record/provenance·byte transport 수용 | 관측 PID1706 / source3513 | 관측 PID715 / source148 | required record 0 GAP; fresh whole·FAIL qualification 별도 |
 | Retained80 native metadata | Root8ac7·complete refs06ba 수용 | native133에 포함 | native133에 포함 | 50 OK/30 NOK 유지; 새 engine/whole PASS 없음 |
-| Retained owner65 v5 | 원래5053 exit0/reap·17 case/65 clause producer transport86d54081 수용 | 의미 판정 미수용 | 원래 FAIL 유지 | 독립 full-operand/model review pending |
+| Retained owner65 v5 | 생산5053 뒤 독립17 case/65 unit·0 GAP 수용2e1e04f6, complete refs40f2956b 동결 | owner relation65 | 원래 전체 FAIL 유지 | Retained567 whole·715 PID/148 source qualification 별도 |
 | Retained567 whole·각 FAIL | whole 의미·715 PID/148 source의 engine qualification·별도 repair pending | 미집계 | 관측 FAIL 보존 | count·native NOK·capture만으로 귀속하지 않음 |
 | 최종1270/5274·384/83/60 | required-final·source/aux·metadata·story·repair join pending | 미집계 | 미집계 | 최종 reader 실행·완전한 witness 미수용 |
 | 게시·CI | Source/TC push0·CI0 | 해당 없음 | 해당 없음 | 최종 gates 뒤 게시와 ONE CI terminal·URL·TC Merge Gate 확인 |
 
-현재 Source94는 Root 수용94 FAIL/0 review GAP와 별도 repair를 유지한다. Source602 whole·2651 PID 및 cached observation c987/dba 수용은 PID58 FAIL·AID27 FAIL을 보존한다. Retained body와 direct byte transport는 Root c64a/97f1로 수용됐지만 원래 PID715/source148 FAIL의 engine qualification·whole/model·별도 repair는 pending이다. Ret148 f8de는 측정만 수용했으며 qualified engine attribution은0/148이다. Owner65 v5 원래5053의 exit0/reap·17/65 생산 수용86d54081도 독립 operand/model 승인이 아니다. No-prior284/observed-before426을 구분하고 부재를 clear record나 full-value preimage로 해석하지 않는다. [현재 checkpoint](ticket16-final-coverage-and-ci-handoff-20261022.md#source602-owner65-current-20261024)의 남은 최종 reader·보고 slot을 따른다. Source/TC push·CI 미실행과 performance·HA463 보류를 유지한다.
+현재 Source94는 Root 수용94 FAIL/0 review GAP와 별도 repair를 유지한다. Source602 whole·2651 PID 및 cached observation c987/dba 수용은 PID58 FAIL·AID27 FAIL을 보존한다. Retained body와 direct byte transport는 Root c64a/97f1로 수용됐지만 원래 PID715/source148 FAIL의 engine qualification·whole/model·별도 repair는 pending이다. Ret148 f8de는 측정만 수용했으며 qualified engine attribution은0/148이다. Owner65는 이후 독립17 case/65 unit·0 GAP 수용2e1e04f6와 complete refs40f2956b를 받았다. 이 범위는 Retained567 whole·715 PID/148 source engine qualification과 다르다. Candidate64577/91043의 transport guard 실패에는 terminal/population credit이 없다. No-prior284/observed-before426을 구분하고 부재를 clear record나 full-value preimage로 해석하지 않는다. [현재 checkpoint](ticket16-final-coverage-and-ci-handoff-20261022.md#source602-owner65-current-20261024)의 남은 최종 reader·보고 slot을 따른다. Source/TC push·CI 미실행과 performance·HA463 보류를 유지한다.
 
 아래 시도별 문단은 당시 snapshot이다. 원래 실패·중단 기록과 Stage2 producer exit/final IO 미복구 한계를 보존한다.
 

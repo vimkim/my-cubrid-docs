@@ -13,12 +13,12 @@
 | Source53 mutation246 | 현재53 case source-only 의미·qualification transport 수용 | 246 AID | 0 | 710 witness·1,136 model·711 ACK; 새 native/physical credit 없음 |
 | Retained80 body·direct flat | Root c64a/97f1:80 case·2421 PID·3661 source의 record/provenance·byte transport 수용 | 관측 PID1706 / source3513 | 관측 PID715 / source148 | required record 0 GAP; fresh whole·FAIL qualification 별도 |
 | Retained80 native metadata | Root8ac7·complete refs06ba 수용 | native133에 포함 | native133에 포함 | 50 OK/30 NOK 유지; 새 engine/whole PASS 없음 |
-| Retained owner65 v5 | 원래5053 exit0/reap·17 case/65 clause producer transport86d54081 수용 | 의미 판정 미수용 | 원래 FAIL 유지 | 독립 full-operand/model review pending |
+| Retained owner65 v5 | 생산5053 뒤 독립17 case/65 unit·0 GAP 수용2e1e04f6, complete refs40f2956b 동결 | owner relation65 | 원래 전체 FAIL 유지 | Retained567 whole·715 PID/148 source qualification 별도 |
 | Retained567 whole·각 FAIL | whole 의미·715 PID/148 source의 engine qualification·별도 repair pending | 미집계 | 관측 FAIL 보존 | count·native NOK·capture만으로 귀속하지 않음 |
 | 최종1270/5274·384/83/60 | required-final·source/aux·metadata·story·repair join pending | 미집계 | 미집계 | 최종 reader 실행·완전한 witness 미수용 |
 | 게시·CI | Source/TC push0·CI0 | 해당 없음 | 해당 없음 | 최종 gates 뒤 게시와 ONE CI terminal·URL·TC Merge Gate 확인 |
 
-최신 checkpoint는2026-10-24, Asia/Seoul 기준 [Source602 수용과 Retained whole의 남은 경계](ticket16-final-coverage-and-ci-handoff-20261022.md#source602-owner65-current-20261024)다. Source53/602 whole·2651 PID와 cached observation c987/dba는 수용됐으며 PID2593 PASS/58 FAIL·실패 AID27을 유지한다. Stage2의 원래 producer exit/final IO 미복구 한계는 그대로다. Retained body/direct byte transport는 수용됐지만 owner65 v5의 생산 성공86d54081 이후 독립 operand review·567 whole·715 PID/148 source FAIL qualification은 pending이다. 최종1270/5274·384/83/60 witness와 Source/TC 게시·CI는 아직 없다. Native13392 PASS/41 NOK·C++315 PASS/1 known FAIL·SQL28 PASS, tickets01–15 resolved/16 active와 performance·HA463 보류를 유지한다.
+최신 checkpoint는2026-10-24, Asia/Seoul 기준 [Source602 수용과 Retained whole의 남은 경계](ticket16-final-coverage-and-ci-handoff-20261022.md#source602-owner65-current-20261024)다. Source53/602 whole·2651 PID와 cached observation c987/dba는 수용됐으며 PID2593 PASS/58 FAIL·실패 AID27을 유지한다. Stage2의 원래 producer exit/final IO 미복구 한계는 그대로다. Retained body/direct byte transport와 owner65의 독립17/65·0 GAP는 수용됐다(2e1e04f6/40f2956b). Candidate64577/91043은 transport guard에서 실패해 terminal/population credit이 없다. Retained567 whole·715 PID/148 source FAIL qualification은 pending이다. 최종1270/5274·384/83/60 witness와 Source/TC 게시·CI는 아직 없다. Native13392 PASS/41 NOK·C++315 PASS/1 known FAIL·SQL28 PASS, tickets01–15 resolved/16 active와 performance·HA463 보류를 유지한다.
 
 아래 시도별 문단은 당시의 snapshot과 allocation을 보존한 이력이다. 현재 수용 범위는 위 표와 최신 checkpoint를 따른다.
 
@@ -73,7 +73,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [ticket16-final-coverage-and-ci-handoff-20261022.md](ticket16-final-coverage-and-ci-handoff-20261022.md) | Source602 whole·최종 관측 수용과 남은 Retained567 whole/FAIL·final reader·게시·CI 경계 | 2026-10-22 | 2026-10-24 | 올바른 engine FAIL과 observer·미실행 GAP을 구분한 pre-CI 전달 |
+| [ticket16-final-coverage-and-ci-handoff-20261022.md](ticket16-final-coverage-and-ci-handoff-20261022.md) | Source602·owner65 독립 수용, 실패한 candidate와 남은 whole/FAIL·report witness·final reader 경계 | 2026-10-22 | 2026-10-24 | 올바른 engine FAIL과 observer·미실행 GAP을 구분한 pre-CI 전달 |
 | [ticket16-native-failure-handoff-20261022.md](ticket16-native-failure-handoff-20261022.md) | Source94 repair 유지와 Retained715 PID/148 source의 미수용 whole/engine qualification 경계 | 2026-10-22 | 2026-10-24 | 역사적 증상과 최종 실행의 수리 범위를 분리 |
 | [ticket08-schema-and-partition-ownership-20261021.md](ticket08-schema-and-partition-ownership-20261021.md) | Corrected routing oracles, replayable physical ownership, schema and lifecycle checks | 2026-10-21 | 2026-10-22 | Retract fixture/harness attribution; retain 13 corrected native failures with separate owner/storage evidence |
 | [ticket10-fk-actions-and-large-keys-20261021.md](ticket10-fk-actions-and-large-keys-20261021.md) | Ordinary and actual OOS-key FK actions, blocked cascades, exact native receipts and retained SA assertions | 2026-10-21 | 2026-10-21 | Close approved ticket 10 with full models, record states and ownership proof |
