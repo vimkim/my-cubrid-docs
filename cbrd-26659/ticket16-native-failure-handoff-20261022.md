@@ -8,14 +8,20 @@
 | DB 부재 뒤 raw48 | archive·own case context 수용 | 전체144 logical value 일치 | owner82·state14 불일치 보존 | raw closure 0; assertion credit 별도 |
 | Source53 code-qualified content | 정확한53개·실행 코드·독립 의미 검토 수용 | 42 case / 209,185 source check | 11 case / 36 source check | content 0;2651 content-only 후보 수출, qualification 별도 |
 | Source53 ordered graph·scalar | 완전한 원본 source/member 연결과 독립 검토 수용 | 해당 없음 | 원본36 source FAIL 유지 | 계산된9952 logical /407849 primitive는 진단 수, 추가 coverage가 아님 |
-| Source53 mutation246 | 첫221 PASS/25 GAP 보존; v2·v3 timeout·report 없음 | 첫 검토221 scoped PASS | 첫 검토0 | full246 qualification·admission 없음; 새 actual 결과로 합산하지 않음 |
-| Source53 predicate·flat payload | 53개 후보의 독립 의미 검토와 flat2,651·pending94 card의 현재 binding·형식 수용 | 2,593 content-semantic | 58 content-semantic | semantic 0; attribution/repair 수용; mutation qualification·base602·whole/leaf는 pending |
+| Source53 mutation246 | Root03e5가 현재53 case의 source-only 의미 수용 | 246 AID | 0 | semantic GAP0;710 witness·1,136 model·711 ACK, engine/native/physical credit 없음 |
+| Source53 mutation qualification transport | Root533d/a608가 원래72377의246 qualification·710 witness·284 descriptor 실제 검토 수용 | 추가 passing credit 없음 | 기존 판정 보존 | full246 refs666 동결;53 case input PREPcddabd, whole/leaf 별도 |
+| Source53 predicate·flat payload | 53개 후보의 독립 의미 검토와 flat2,651·pending94 card의 현재 binding·형식 수용 | 2,593 content-semantic | 58 content-semantic | semantic 0; attribution/repair·mutation transport 수용; base602·generic proof·whole/leaf는 pending |
 | Source53 LF-bound runtime transport | 현재53 LF/ACK·5 gate·원래 metadata 독립 수용 | native133에 포함 | native133에 포함 | 42 OK/11 NOK 유지; 현재94 attribution/repair 수용, whole/leaf 별도 |
-| Source53 현재94 FAIL 검토 | Root가 현재 own attribution·별도 repair scope 수용 | passing credit 없음 | 58 PID +36 source =94 FAIL | review GAP0;27 assertion pair·11 case map 수용, mutation·whole/leaf·최종 join 별도 |
-| Retained80 전체 body·diagnostic | 수용된 full body 없음; diagnostic-v3 원래59753 실행 중 | 미집계 | 미집계 | diagnostic-v2는24 attempted/23 counts-only/1 fatal/56 unreached; admission 없음 |
+| Source53 현재94 FAIL 검토 | Root가 현재 own attribution·별도 repair scope 수용 | passing credit 없음 | 58 PID +36 source =94 FAIL | review GAP0;27 assertion pair·11 case map 수용, whole/leaf·최종 join 별도 |
+| Retained80 전체 body·diagnostic | 8 seam 방법 수용; fullbody-v7 미완료, quarantine-v6 원래20142 실행 중 | 미집계 | 미집계 | v7의23 pending/56 unreached 보존; 모든 diagnostic count는 admission 아님 |
 | 별도 focused `u5` 26A/114P | 해당5개 own attempt만 수용 | 102 predicate | 12 predicate | 0; 새 전체133의 의미 판정으로 복사하지 않음 |
+| Source generic·Retained whole | Source 필수7 field gap95c9·Retained 독립 whole adjudicator PREP | 미집계 | 미집계 | bridge0a1a의3 P2 수정(16 control PASS)은 Root806bec 방법 수용; whole 실제 검토·grant 없음 |
 | 최종 regular·campaign·384/83/60 | pending | 미집계 | 미집계 | 정확한 whole/leaf·bindings·source/aux/repair·16 metadata·human report join 필요 |
 | 게시·CI | 미실행 | 해당 없음 | 해당 없음 | 최종 검토 후 source/TC 게시와 ONE CI terminal·URL·TC Merge Gate 확인 |
+
+현재 Source94의 Root 수용94 FAIL/0 review GAP·27 assertion pair·11 case repair map은 그대로다. [새 mutation246 checkpoint](ticket16-final-coverage-and-ci-handoff-20261022.md#source-mutation246-current-20261023)의246 PASS는 Source-only mutation 의미에 한정하며 이94 FAIL이나 native133의41 NOK를 바꾸지 않는다. Witness의 현재 구분은 no-prior284/observed-before426이며 no-prior는 clear record/full-value preimage가 아니다. Formatter72377의246 qualification·710 witness·284 descriptor는 Root533d/a608가 transport 범위로 수용해 full refs666을 동결했다. Runtime0d/maps76c/mutation666을 복사한53개 input은 PREPcddabd다. Retained v7의23 pending/56 unreached 및 실행 중인 quarantine-v6(원래20142)는 admission이 아니다. Bridge0a1a의3 P2는 Root806bec 방법 준비 수용으로 닫았지만 actual grant는 없다. Source generic7 field/proof enrichment·Retained whole adjudication·최종 join은 pending이다. Source/TC push·CI 미실행과 HA463/performance 보류를 유지한다.
+
+아래 시도별 문단은 당시 snapshot이다. 현재 상태와 allocation은 [최신 checkpoint](ticket16-final-coverage-and-ci-handoff-20261022.md#source-mutation246-current-20261023)를 따르며 원래 실패·중단 기록은 보존한다.
 
 [현재133 runtime·DB 부재 수용](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket16/final-review/root-current855-full133-runtime-reap-dbabsence-acceptance-and-resource-release-v1.json) · [현재raw48 수용](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket16/final-review/root-current855-full48-runtime-absence-raw-context-acceptance-v1.json) · [현재53 content 의미 수용](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket16/final-review/root-current855-source53-codequalified53-content-semantic-acceptance-v1.json) · [완전한 graph·scalar 수용](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket16/final-review/root-current855-normalized-complete-source-AND-graph-and-scalar-actual-acceptance-v1.json) · [과거 mutation-v2 원본 handoff와27 GAP](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket16/source53-current855-mutation53-independent-review-handoff-v2/index.json).
 

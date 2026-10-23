@@ -8,14 +8,20 @@
 | DB 부재 뒤 raw48 | archive·own case context 수용 | 전체144 logical value 일치 | owner82·state14 불일치 보존 | raw closure 0; assertion credit 별도 |
 | Source53 code-qualified content | 정확한53개·실행 코드·독립 의미 검토 수용 | 42 case / 209,185 source check | 11 case / 36 source check | content 0;2651 content-only 후보 수출, qualification 별도 |
 | Source53 ordered graph·scalar | 완전한 원본 source/member 연결과 독립 검토 수용 | 해당 없음 | 원본36 source FAIL 유지 | 계산된9952 logical /407849 primitive는 진단 수, 추가 coverage가 아님 |
-| Source53 mutation246 | 첫221 PASS/25 GAP 보존; v2·v3 timeout·report 없음 | 첫 검토221 scoped PASS | 첫 검토0 | full246 qualification·admission 없음; 새 actual 결과로 합산하지 않음 |
-| Source53 predicate·flat payload | 53개 후보의 독립 의미 검토와 flat2,651·pending94 card의 현재 binding·형식 수용 | 2,593 content-semantic | 58 content-semantic | semantic 0; attribution/repair 수용; mutation qualification·base602·whole/leaf는 pending |
+| Source53 mutation246 | Root03e5가 현재53 case의 source-only 의미 수용 | 246 AID | 0 | semantic GAP0;710 witness·1,136 model·711 ACK, engine/native/physical credit 없음 |
+| Source53 mutation qualification transport | Root533d/a608가 원래72377의246 qualification·710 witness·284 descriptor 실제 검토 수용 | 추가 passing credit 없음 | 기존 판정 보존 | full246 refs666 동결;53 case input PREPcddabd, whole/leaf 별도 |
+| Source53 predicate·flat payload | 53개 후보의 독립 의미 검토와 flat2,651·pending94 card의 현재 binding·형식 수용 | 2,593 content-semantic | 58 content-semantic | semantic 0; attribution/repair·mutation transport 수용; base602·generic proof·whole/leaf는 pending |
 | Source53 LF-bound runtime transport | 현재53 LF/ACK·5 gate·원래 metadata 독립 수용 | native133에 포함 | native133에 포함 | 42 OK/11 NOK 유지; 현재94 attribution/repair 수용, whole/leaf 별도 |
-| Source53 현재94 FAIL 검토 | Root가 현재 own attribution·별도 repair scope 수용 | passing credit 없음 | 58 PID +36 source =94 FAIL | review GAP0;27 assertion pair·11 case map 수용, mutation·whole/leaf·최종 join 별도 |
-| Retained80 전체 body·diagnostic | 수용된 full body 없음; diagnostic-v3 원래59753 실행 중 | 미집계 | 미집계 | diagnostic-v2는24 attempted/23 counts-only/1 fatal/56 unreached; admission 없음 |
+| Source53 현재94 FAIL 검토 | Root가 현재 own attribution·별도 repair scope 수용 | passing credit 없음 | 58 PID +36 source =94 FAIL | review GAP0;27 assertion pair·11 case map 수용, whole/leaf·최종 join 별도 |
+| Retained80 전체 body·diagnostic | 8 seam 방법 수용; fullbody-v7 미완료, quarantine-v6 원래20142 실행 중 | 미집계 | 미집계 | v7의23 pending/56 unreached 보존; 모든 diagnostic count는 admission 아님 |
 | 별도 focused `u5` 26A/114P | 해당5개 own attempt만 수용 | 102 predicate | 12 predicate | 0; 새 전체133의 의미 판정으로 복사하지 않음 |
+| Source generic·Retained whole | Source 필수7 field gap95c9·Retained 독립 whole adjudicator PREP | 미집계 | 미집계 | bridge0a1a의3 P2 수정(16 control PASS)은 Root806bec 방법 수용; whole 실제 검토·grant 없음 |
 | 최종 regular·campaign·384/83/60 | pending | 미집계 | 미집계 | 정확한 whole/leaf·bindings·source/aux/repair·16 metadata·human report join 필요 |
 | 게시·CI | 미실행 | 해당 없음 | 해당 없음 | 최종 검토 후 source/TC 게시와 ONE CI terminal·URL·TC Merge Gate 확인 |
+
+최신 checkpoint는2026-10-23, Asia/Seoul 기준 [Source mutation246 수용과 남은 연결 경계](ticket16-final-coverage-and-ci-handoff-20261022.md#source-mutation246-current-20261023)다. Root03e5는53 case/246 AID의 source-only246 PASS·0 GAP를 수용했고, witness는 no-prior284/observed-before426이다. Formatter72377 출력은 Root533d/a608가 실제 transport 범위로 수용했고 complete246 refs666을 동결했다. 전체53 qualification input은 PREPcddabd이며 Retained fullbody·generic proof/enrichment·whole 연결·최종 join은 pending이다. Native13392 PASS/41 NOK·C++315 PASS/1 FAIL·SQL28 PASS와 Source94의94 FAIL/0 review GAP·별도 repair는 유지한다. Tickets01–15는 로컬 resolved,16은 active다. 현재 잔여 allocation은 Source6,303,444,992B/Retained14,894,309,376B이며 Source/TC push·CI 미실행, HA463/performance 보류다.
+
+아래 시도별 문단은 당시의 snapshot과 allocation을 보존한 이력이다. 현재 수용 범위는 위 표와 최신 checkpoint를 따른다.
 
 [현재133 runtime·DB 부재 수용](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket16/final-review/root-current855-full133-runtime-reap-dbabsence-acceptance-and-resource-release-v1.json) · [현재raw48 수용](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket16/final-review/root-current855-full48-runtime-absence-raw-context-acceptance-v1.json) · [현재53 content 의미 수용](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket16/final-review/root-current855-source53-codequalified53-content-semantic-acceptance-v1.json) · [완전한 graph·scalar 수용](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket16/final-review/root-current855-normalized-complete-source-AND-graph-and-scalar-actual-acceptance-v1.json) · [과거 mutation-v2 원본 handoff와27 GAP](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket16/source53-current855-mutation53-independent-review-handoff-v2/index.json).
 
@@ -68,8 +74,8 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [ticket16-final-coverage-and-ci-handoff-20261022.md](ticket16-final-coverage-and-ci-handoff-20261022.md) | 현재855 native133·raw48와 source53 content/graph 수용, Source94 Root 수용·mutation 두 timeout·Retained 진단 미완료 및 final join·CI pending;33ca 이력 별도 | 2026-10-22 | 2026-10-23 | 올바른 engine FAIL과 observer·미실행 GAP을 구분한 pre-CI 전달 |
-| [ticket16-native-failure-handoff-20261022.md](ticket16-native-failure-handoff-20261022.md) | Revision·mode·artifact별 관측과 별도 repair 전달 | 2026-10-22 | 2026-10-23 | 역사적 증상과 최종 실행의 수리 범위를 분리 |
+| [ticket16-final-coverage-and-ci-handoff-20261022.md](ticket16-final-coverage-and-ci-handoff-20261022.md) | 현재855 native133·raw48·Source94·mutation246/transport 수용;53 case input PREP·Retained/generic whole·최종 join·CI pending | 2026-10-22 | 2026-10-23 | 올바른 engine FAIL과 observer·미실행 GAP을 구분한 pre-CI 전달 |
+| [ticket16-native-failure-handoff-20261022.md](ticket16-native-failure-handoff-20261022.md) | 현재855 Source94 별도 repair와 mutation의 Source-only 한계, Retained 미완료; 과거 revision 실패 별도 | 2026-10-22 | 2026-10-23 | 역사적 증상과 최종 실행의 수리 범위를 분리 |
 | [ticket08-schema-and-partition-ownership-20261021.md](ticket08-schema-and-partition-ownership-20261021.md) | Corrected routing oracles, replayable physical ownership, schema and lifecycle checks | 2026-10-21 | 2026-10-22 | Retract fixture/harness attribution; retain 13 corrected native failures with separate owner/storage evidence |
 | [ticket10-fk-actions-and-large-keys-20261021.md](ticket10-fk-actions-and-large-keys-20261021.md) | Ordinary and actual OOS-key FK actions, blocked cascades, exact native receipts and retained SA assertions | 2026-10-21 | 2026-10-21 | Close approved ticket 10 with full models, record states and ownership proof |
 | [ticket13-churn-reclaim-reuse-20261021.md](ticket13-churn-reclaim-reuse-20261021.md) | Independent churn, retained failures and guarded CS page return/restart reuse | 2026-10-21 | 2026-10-21 | Execute Work456 ticket 13 without letting historical failures skip churn |
