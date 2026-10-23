@@ -4,7 +4,7 @@
 이 지도는 구현 순서와 완료 조건을 정의한다. 테스트 실행 또는 엔진 통과 보고가 아니다.
 
 게시 시 16개 티켓은 모두 `ready-for-agent`였다. 이 label은 명세 준비를 뜻한다. **01–15**는 개별 구현·검토·로컬 통합 단계에서 `resolved`로 기록했다. **16의 최종 대조에서 필수 관측과 observer 보호 공백을 추가 확인했으므로 전체 required-cell 완료는 아직 아니다.** 후속 보완은 별도 worktree에서 수행하고 영향받는 사례를 재실행한다.
-실제 시작 가능 여부는 **Blocked by**로 판단한다. 01–15의 의존성이 모두 해소되어 현재 **16**이 전체 대조·최종 native 검증을 시작한다.
+실제 시작 가능 여부는 **Blocked by**로 판단한다. 01–15의 의존성이 모두 해소되어 현재 **16**이 독립 whole/FAIL qualification과 최종 reader 대조를 진행한다.
 기존 Work456–462 milestone은 완료 조건을 개별 추적한다. 티켓 게시만으로 완료된 work는 없다.
 
 ## 승인 근거
@@ -440,3 +440,9 @@ Source/TC 게시·CI는 아직 없다. 올바른 엔진 FAIL은 별도 수정과
 - Retained body-v9 원래23991은553.789초·exit0/reap,80 case/2421 PID/3661 source·required record GAP0을 기록했다. 원래 PID1706 PASS/715 FAIL·source3513 PASS/148 FAIL은 아직 독립 body·whole·각 FAIL repair 수용 전의 진단 수다. Native metadata80은 Root8ac7/동결 complete refs06ba로 별도 수용돼50 OK/30 NOK를 유지한다.
 - Source v1의544 proof/5 case GAP를 보존한다. Exact fifth-field 수정ae9/c0/961은 두 축0 finding과 Root4d9f를 거쳤고, 별도grant3619의v2 원래12225는 조정자16:21:59Z snapshot 기준 실행 중이다. Stage2·독립 proof-review는 검토된 PREP이며 실제602 proof·assembly acceptance가 아니다.
 - [현재 전체 보고서](../ticket16-final-coverage-and-ci-handoff-20261022.md#retained80-body-native-source-proof-current-20261024)에 수용 범위와 새 allocation을 기록했다. Source94의94 FAIL/0 review GAP·별도 repair와 mutation246 source-only 수용은 유지한다. 최종1270/5274·384/83/60 및 source/aux/whole/leaf/repair 연결, 게시와 CI는 pending이다. Tickets01–15 로컬 resolved,16/Work456 active; performance·HA463 보류다.
+
+### 2026-10-24: Source602 수용·owner65 생산과 남은 최종 qualification
+
+- Source53의602 whole proof·2651 PID와 최종 cached observation은 Root05b6/c987·동결 complete refs dba681bb로 수용됐다. PID2593 PASS/58 FAIL·실패 AID27, Source94 별도 repair를 보존한다. Stage2 원래 producer exit/final IO는 미복구 상태로 남긴다.
+- Retained body/direct byte transport80/2421/3661은 수용됐으나, owner65 v5 원래5053의17/65 생산 성공86d54081은 독립 operand review를 기다린다. Retained567 whole과715 PID/148 source FAIL의 engine qualification·별도 repair는 pending이다.
+- [기존 최종 보고서의 현재 checkpoint](../ticket16-final-coverage-and-ci-handoff-20261022.md#source602-owner65-current-20261024)에 완료된 범위, 최종1270/5274·384/83/60 witness의 빈 slot과 게시 준비의 제한을 기록했다. Native13392 PASS/41 NOK·CPP315 PASS/기존27230 FAIL1·SQL28 PASS는 유지한다. Tickets01–15 resolved,16/Work456 active다. Source/TC push0·CI0, performance·HA463 보류다.

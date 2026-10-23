@@ -4,24 +4,21 @@
 
 | 현재855 범위 | 전달 상태 | PASS | FAIL / NOK | GAP·남은 경계 |
 | --- | --- | --- | --- | --- |
-| 전체 private native133 | runtime·FIN/ACK/XML·reap·DB 부재 수용 | 92 | 41 | runtime 0; semantic PASS 수와 다름 |
-| DB 부재 뒤 raw48 | archive·own case context 수용 | 전체144 logical value 일치 | owner82·state14 불일치 보존 | raw closure 0; assertion credit 별도 |
-| Source53 code-qualified content | 정확한53개·실행 코드·독립 의미 검토 수용 | 42 case / 209,185 source check | 11 case / 36 source check | content 0;2651 content-only 후보 수출, qualification 별도 |
-| Source53 ordered graph·scalar | 완전한 원본 source/member 연결과 독립 검토 수용 | 해당 없음 | 원본36 source FAIL 유지 | 계산된9952 logical /407849 primitive는 진단 수, 추가 coverage가 아님 |
-| Source53 mutation246 | Root03e5가 현재53 case의 source-only 의미 수용 | 246 AID | 0 | semantic GAP0;710 witness·1,136 model·711 ACK, engine/native/physical credit 없음 |
-| Source53 mutation qualification transport | Root533d/a608가 원래72377의246 qualification·710 witness·284 descriptor 실제 검토 수용 | 추가 passing credit 없음 | 기존 판정 보존 | full246 refs666 동결;53 case input PREPcddabd, whole/leaf 별도 |
-| Source53 predicate·flat payload | 53개 후보의 독립 의미 검토와 flat2,651·pending94 card의 현재 binding·형식 수용 | 2,593 content-semantic | 58 content-semantic | semantic 0; attribution/repair·mutation transport 수용; base602·generic proof·whole/leaf는 pending |
-| Source53 LF-bound runtime transport | 현재53 LF/ACK·5 gate·원래 metadata 독립 수용 | native133에 포함 | native133에 포함 | 42 OK/11 NOK 유지; 현재94 attribution/repair 수용, whole/leaf 별도 |
-| Source53 현재94 FAIL 검토 | Root가 현재 own attribution·별도 repair scope 수용 | passing credit 없음 | 58 PID +36 source =94 FAIL | review GAP0;27 assertion pair·11 case map 수용, whole/leaf·최종 join 별도 |
-| Retained80 native metadata | Root8ac7 실제 transport 수용·complete refs06ba 동결 | native133에 포함 | native133에 포함 | 50 OK/30 NOK 유지; 새 engine/whole PASS credit 없음 |
-| Retained80 전체 body-v9 | 원래23991 종료·reap0;80 case/2421 PID/3661 source record 생성 완료 | 미수용 진단:1706 PID·3513 source | 미수용 진단:715 PID·148 source | required record GAP0; 독립 body·whole·각 FAIL repair 수용 pending |
-| Source53 whole proof Stage1 | v1의544 proof/5 case GAP 보존; strict5 수정 두 축0·v2 원래12225 실행 중 | passing credit 없음 | 기존 FAIL 유지 | 전체602 proof의 실제 독립 수용 pending |
-| 별도 focused `u5` 26A/114P | 해당5개 own attempt만 수용 | 102 predicate | 12 predicate | 0; 새 전체133의 의미 판정으로 복사하지 않음 |
-| Source generic·Retained whole | Source Stage2·독립 proof-review 방법은 검토된 PREP; Retained whole·repair 별도 | 미집계 | 미집계 | complete accepted proof map·실제 assembly·독립 whole/repair·최종 join pending |
-| 최종 regular·campaign·384/83/60 | pending | 미집계 | 미집계 | 정확한 whole/leaf·bindings·source/aux/repair·16 metadata·human report join 필요 |
-| 게시·CI | 미실행 | 해당 없음 | 해당 없음 | 최종 검토 후 source/TC 게시와 ONE CI terminal·URL·TC Merge Gate 확인 |
+| 전체 private native133 | Root92a9104d: runtime·FIN/ACK/XML·reap·DB 부재 수용 | 92 | 41 | runtime 0; semantic PASS 수와 구분 |
+| DB 부재 뒤 raw48 | Root4114: archive·own case context 수용 | 전체144 logical value 일치 | owner82·state14 불일치 보존 | raw closure 0; assertion credit 별도 |
+| C++ 전체316 | 원래 revision의 실행·별도 repair 유지 | 315 | 기존 CBRD-27230 1 | 0 GAP |
+| SQL28 | 원래 focused native SQL 실행 수용 | 28 | 0 | 0 GAP |
+| Source53 whole602·2651 PID | 독립 whole05b69c2f·cached transport c987 수용, complete refs dba681bb 동결 | PID2,593 | PID58 / AID27 | required whole proof 0 GAP; 전체 final join 별도 |
+| Source53 현재94 FAIL 검토 | Root a47b: own attribution·별도 repair scope 수용 | passing credit 없음 | 58 PID +36 source =94 FAIL | review 0 GAP;27 assertion pair·11 case map 보존 |
+| Source53 mutation246 | 현재53 case source-only 의미·qualification transport 수용 | 246 AID | 0 | 710 witness·1,136 model·711 ACK; 새 native/physical credit 없음 |
+| Retained80 body·direct flat | Root c64a/97f1:80 case·2421 PID·3661 source의 record/provenance·byte transport 수용 | 관측 PID1706 / source3513 | 관측 PID715 / source148 | required record 0 GAP; fresh whole·FAIL qualification 별도 |
+| Retained80 native metadata | Root8ac7·complete refs06ba 수용 | native133에 포함 | native133에 포함 | 50 OK/30 NOK 유지; 새 engine/whole PASS 없음 |
+| Retained owner65 v5 | 원래5053 exit0/reap·17 case/65 clause producer transport86d54081 수용 | 의미 판정 미수용 | 원래 FAIL 유지 | 독립 full-operand/model review pending |
+| Retained567 whole·각 FAIL | whole 의미·715 PID/148 source의 engine qualification·별도 repair pending | 미집계 | 관측 FAIL 보존 | count·native NOK·capture만으로 귀속하지 않음 |
+| 최종1270/5274·384/83/60 | required-final·source/aux·metadata·story·repair join pending | 미집계 | 미집계 | 최종 reader 실행·완전한 witness 미수용 |
+| 게시·CI | Source/TC push0·CI0 | 해당 없음 | 해당 없음 | 최종 gates 뒤 게시와 ONE CI terminal·URL·TC Merge Gate 확인 |
 
-최신 checkpoint는2026-10-24, Asia/Seoul 기준 [Retained80 record 생성과 native metadata 수용](ticket16-final-coverage-and-ci-handoff-20261022.md#retained80-body-native-source-proof-current-20261024)이다. Body-v9는80 case/2421 PID/3661 source·required record GAP0을 생성했지만 PID1706 PASS/715 FAIL·source3513 PASS/148 FAIL의 독립 body/whole/repair 수용은 pending이다. Native transport80은 Root8ac7/full refs06ba로 수용됐고 원래50 OK/30 NOK를 유지한다. Source v1의544 proof/5 GAP는 보존하며 strict5 수정 두 축0 뒤v2 원래12225는 조정자 snapshot 기준 실행 중이다. Stage2·proof-review는 검토된 PREP이며 실제 acceptance가 아니다. Native13392 PASS/41 NOK·C++315 PASS/1 FAIL·SQL28 PASS와 Source94 repair는 그대로다. Tickets01–15 로컬 resolved,16/Work456 active이며 게시·CI는 미실행, performance·HA463은 보류다.
+최신 checkpoint는2026-10-24, Asia/Seoul 기준 [Source602 수용과 Retained whole의 남은 경계](ticket16-final-coverage-and-ci-handoff-20261022.md#source602-owner65-current-20261024)다. Source53/602 whole·2651 PID와 cached observation c987/dba는 수용됐으며 PID2593 PASS/58 FAIL·실패 AID27을 유지한다. Stage2의 원래 producer exit/final IO 미복구 한계는 그대로다. Retained body/direct byte transport는 수용됐지만 owner65 v5의 생산 성공86d54081 이후 독립 operand review·567 whole·715 PID/148 source FAIL qualification은 pending이다. 최종1270/5274·384/83/60 witness와 Source/TC 게시·CI는 아직 없다. Native13392 PASS/41 NOK·C++315 PASS/1 known FAIL·SQL28 PASS, tickets01–15 resolved/16 active와 performance·HA463 보류를 유지한다.
 
 아래 시도별 문단은 당시의 snapshot과 allocation을 보존한 이력이다. 현재 수용 범위는 위 표와 최신 checkpoint를 따른다.
 
@@ -76,8 +73,8 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [ticket16-final-coverage-and-ci-handoff-20261022.md](ticket16-final-coverage-and-ci-handoff-20261022.md) | 현재855 Source94·mutation 수용, Retained80 record 생성/native metadata 수용과 whole/repair·Source proof·최종 join·CI 경계 | 2026-10-22 | 2026-10-24 | 올바른 engine FAIL과 observer·미실행 GAP을 구분한 pre-CI 전달 |
-| [ticket16-native-failure-handoff-20261022.md](ticket16-native-failure-handoff-20261022.md) | 현재 Source94 repair와 미수용 Retained v9 FAIL·whole/repair 경계; native80 수용과 원래 revision 실패 분리 | 2026-10-22 | 2026-10-24 | 역사적 증상과 최종 실행의 수리 범위를 분리 |
+| [ticket16-final-coverage-and-ci-handoff-20261022.md](ticket16-final-coverage-and-ci-handoff-20261022.md) | Source602 whole·최종 관측 수용과 남은 Retained567 whole/FAIL·final reader·게시·CI 경계 | 2026-10-22 | 2026-10-24 | 올바른 engine FAIL과 observer·미실행 GAP을 구분한 pre-CI 전달 |
+| [ticket16-native-failure-handoff-20261022.md](ticket16-native-failure-handoff-20261022.md) | Source94 repair 유지와 Retained715 PID/148 source의 미수용 whole/engine qualification 경계 | 2026-10-22 | 2026-10-24 | 역사적 증상과 최종 실행의 수리 범위를 분리 |
 | [ticket08-schema-and-partition-ownership-20261021.md](ticket08-schema-and-partition-ownership-20261021.md) | Corrected routing oracles, replayable physical ownership, schema and lifecycle checks | 2026-10-21 | 2026-10-22 | Retract fixture/harness attribution; retain 13 corrected native failures with separate owner/storage evidence |
 | [ticket10-fk-actions-and-large-keys-20261021.md](ticket10-fk-actions-and-large-keys-20261021.md) | Ordinary and actual OOS-key FK actions, blocked cascades, exact native receipts and retained SA assertions | 2026-10-21 | 2026-10-21 | Close approved ticket 10 with full models, record states and ownership proof |
 | [ticket13-churn-reclaim-reuse-20261021.md](ticket13-churn-reclaim-reuse-20261021.md) | Independent churn, retained failures and guarded CS page return/restart reuse | 2026-10-21 | 2026-10-21 | Execute Work456 ticket 13 without letting historical failures skip churn |
@@ -97,7 +94,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 | [ticket14-cpp-read-expand-buffer-20261021.md](ticket14-cpp-read-expand-buffer-20261021.md) | Assertion dispositions, native 302-case baseline and stored/Expand buffer regressions | 2026-10-21 | 2026-10-21 | Preserve internal read contracts and close explicit buffer proof gaps |
 | [supplement-operation-inventory-work456-20261021.md](supplement-operation-inventory-work456-20261021.md) | 83 operation obligations, existing assertions and follow-up owners | 2026-10-21 | 2026-10-21 | Account for every accepted operation and record-state cell |
 | [supplement-cpp-inventory-work456-20261021.md](supplement-cpp-inventory-work456-20261021.md) | All 302 C++ case retain dispositions and execution limits | 2026-10-21 | 2026-10-21 | Preserve module assertions during later supplementation and deduplication |
-| [supplement-tickets/map.md](supplement-tickets/map.md) | Approved dependencies and current body/native/proof milestones with pending acceptance and publication gates | 2026-10-21 | 2026-10-24 | Publish the accepted Work456 implementation sequence |
+| [supplement-tickets/map.md](supplement-tickets/map.md) | Source proof accepted; Retained whole, final witnesses and publication remain pending | 2026-10-21 | 2026-10-24 | Publish the accepted Work456 implementation sequence |
 | [01: 기준 리비전·커버리지 확정과 HAS_OOS 관측 tracer](supplement-tickets/issues/01-baseline-and-record-observer.md) | 기준 리비전·커버리지 확정과 HAS_OOS 관측 tracer의 실행·증거 수용 조건 | 2026-10-21 | 2026-10-23 | Assign a verifiable Work456 slice with explicit blockers |
 | [02: 스토리지 정책 문법·의미·DDL 오류 보존](supplement-tickets/issues/02-policy-syntax-and-semantics.md) | 스토리지 정책 문법·의미·DDL 오류 보존의 실행·증거 수용 조건 | 2026-10-21 | 2026-10-23 | Assign a verifiable Work456 slice with explicit blockers |
 | [03: SHOW 대상·인자·권한·관측 결과](supplement-tickets/issues/03-show-targets-and-permissions.md) | SHOW 대상·인자·권한·관측 결과의 실행·증거 수용 조건 | 2026-10-21 | 2026-10-23 | Assign a verifiable Work456 slice with explicit blockers |
@@ -113,7 +110,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 | [13: 반복 쓰기·회수·재사용·단편화 추세](supplement-tickets/issues/13-churn-reclaim-reuse-and-fragmentation.md) | 반복 쓰기·회수·재사용·단편화 추세의 실행·증거 수용 조건 | 2026-10-21 | 2026-10-23 | Assign a verifiable Work456 slice with explicit blockers |
 | [14: C++ 읽기·Expand·버퍼·dispatch 증명 보완](supplement-tickets/issues/14-cpp-read-expand-and-buffer-contracts.md) | C++ 읽기·Expand·버퍼·dispatch 증명 보완의 실행·증거 수용 조건 | 2026-10-21 | 2026-10-23 | Assign a verifiable Work456 slice with explicit blockers |
 | [15: C++ identity·소유권·rollback·reclaim 증명 보완](supplement-tickets/issues/15-cpp-identity-rollback-and-reclaim.md) | C++ identity·소유권·rollback·reclaim 증명 보완의 실행·증거 수용 조건 | 2026-10-21 | 2026-10-23 | Assign a verifiable Work456 slice with explicit blockers |
-| [16: 전체 커버리지 대조·최종 native 검증·CI 전달](supplement-tickets/issues/16-final-coverage-and-ci-handoff.md) | Retained body/native·Source proof 진행과 남은 전체 수용·게시·CI 조건 | 2026-10-21 | 2026-10-24 | Assign a verifiable Work456 slice with explicit blockers |
+| [16: 전체 커버리지 대조·최종 native 검증·CI 전달](supplement-tickets/issues/16-final-coverage-and-ci-handoff.md) | Source602 수용·owner65 생산과 남은 whole/FAIL qualification·최종 대조·CI 조건 | 2026-10-21 | 2026-10-24 | Assign a verifiable Work456 slice with explicit blockers |
 | [supplement-spec-work456-20261021.md](supplement-spec-work456-20261021.md) | Accepted HAS_OOS-based supplementation scope, user stories, existing test seams, and milestone acceptance | 2026-10-21 | 2026-10-21 | Turn the Work456 interview decisions into an implementation specification |
 | [supplement-inventory-work456-20261021.md](supplement-inventory-work456-20261021.md) | Six-area inventory, branch-specific evidence, HAS_OOS classification, and accepted scope/completion criteria | 2026-10-21 | 2026-10-21 | Plan Work456 from existing tests and completed Work109/401 evidence |
 | [coverage-additions-work401-20261016.md](coverage-additions-work401-20261016.md) | Direct JDBC, AES crash/sentinel regressions, native receipts, failure diagnostics and all 29 dispositions | 2026-10-16 | 2026-10-16 | Turn the accepted coverage assessment into executable evidence without concealing engine gaps |

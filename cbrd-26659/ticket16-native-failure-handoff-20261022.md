@@ -4,26 +4,23 @@
 
 | 현재855 범위 | 전달 상태 | PASS | FAIL / NOK | GAP·남은 경계 |
 | --- | --- | --- | --- | --- |
-| 전체 private native133 | runtime·FIN/ACK/XML·reap·DB 부재 수용 | 92 | 41 | runtime 0; semantic PASS 수와 다름 |
-| DB 부재 뒤 raw48 | archive·own case context 수용 | 전체144 logical value 일치 | owner82·state14 불일치 보존 | raw closure 0; assertion credit 별도 |
-| Source53 code-qualified content | 정확한53개·실행 코드·독립 의미 검토 수용 | 42 case / 209,185 source check | 11 case / 36 source check | content 0;2651 content-only 후보 수출, qualification 별도 |
-| Source53 ordered graph·scalar | 완전한 원본 source/member 연결과 독립 검토 수용 | 해당 없음 | 원본36 source FAIL 유지 | 계산된9952 logical /407849 primitive는 진단 수, 추가 coverage가 아님 |
-| Source53 mutation246 | Root03e5가 현재53 case의 source-only 의미 수용 | 246 AID | 0 | semantic GAP0;710 witness·1,136 model·711 ACK, engine/native/physical credit 없음 |
-| Source53 mutation qualification transport | Root533d/a608가 원래72377의246 qualification·710 witness·284 descriptor 실제 검토 수용 | 추가 passing credit 없음 | 기존 판정 보존 | full246 refs666 동결;53 case input PREPcddabd, whole/leaf 별도 |
-| Source53 predicate·flat payload | 53개 후보의 독립 의미 검토와 flat2,651·pending94 card의 현재 binding·형식 수용 | 2,593 content-semantic | 58 content-semantic | semantic 0; attribution/repair·mutation transport 수용; base602·generic proof·whole/leaf는 pending |
-| Source53 LF-bound runtime transport | 현재53 LF/ACK·5 gate·원래 metadata 독립 수용 | native133에 포함 | native133에 포함 | 42 OK/11 NOK 유지; 현재94 attribution/repair 수용, whole/leaf 별도 |
-| Source53 현재94 FAIL 검토 | Root가 현재 own attribution·별도 repair scope 수용 | passing credit 없음 | 58 PID +36 source =94 FAIL | review GAP0;27 assertion pair·11 case map 수용, whole/leaf·최종 join 별도 |
-| Retained80 native metadata | Root8ac7 실제 transport 수용·complete refs06ba 동결 | native133에 포함 | native133에 포함 | 50 OK/30 NOK 유지; 새 engine/whole PASS credit 없음 |
-| Retained80 전체 body-v9 | 원래23991 종료·reap0;80 case/2421 PID/3661 source record 생성 완료 | 미수용 진단:1706 PID·3513 source | 미수용 진단:715 PID·148 source | required record GAP0; 독립 body·whole·각 FAIL repair 수용 pending |
-| Source53 whole proof Stage1 | v1의544 proof/5 case GAP 보존; strict5 수정 두 축0·v2 원래12225 실행 중 | passing credit 없음 | 기존 FAIL 유지 | 전체602 proof의 실제 독립 수용 pending |
-| 별도 focused `u5` 26A/114P | 해당5개 own attempt만 수용 | 102 predicate | 12 predicate | 0; 새 전체133의 의미 판정으로 복사하지 않음 |
-| Source generic·Retained whole | Source Stage2·독립 proof-review 방법은 검토된 PREP; Retained whole·repair 별도 | 미집계 | 미집계 | complete accepted proof map·실제 assembly·독립 whole/repair·최종 join pending |
-| 최종 regular·campaign·384/83/60 | pending | 미집계 | 미집계 | 정확한 whole/leaf·bindings·source/aux/repair·16 metadata·human report join 필요 |
-| 게시·CI | 미실행 | 해당 없음 | 해당 없음 | 최종 검토 후 source/TC 게시와 ONE CI terminal·URL·TC Merge Gate 확인 |
+| 전체 private native133 | Root92a9104d: runtime·FIN/ACK/XML·reap·DB 부재 수용 | 92 | 41 | runtime 0; semantic PASS 수와 구분 |
+| DB 부재 뒤 raw48 | Root4114: archive·own case context 수용 | 전체144 logical value 일치 | owner82·state14 불일치 보존 | raw closure 0; assertion credit 별도 |
+| C++ 전체316 | 원래 revision의 실행·별도 repair 유지 | 315 | 기존 CBRD-27230 1 | 0 GAP |
+| SQL28 | 원래 focused native SQL 실행 수용 | 28 | 0 | 0 GAP |
+| Source53 whole602·2651 PID | 독립 whole05b69c2f·cached transport c987 수용, complete refs dba681bb 동결 | PID2,593 | PID58 / AID27 | required whole proof 0 GAP; 전체 final join 별도 |
+| Source53 현재94 FAIL 검토 | Root a47b: own attribution·별도 repair scope 수용 | passing credit 없음 | 58 PID +36 source =94 FAIL | review 0 GAP;27 assertion pair·11 case map 보존 |
+| Source53 mutation246 | 현재53 case source-only 의미·qualification transport 수용 | 246 AID | 0 | 710 witness·1,136 model·711 ACK; 새 native/physical credit 없음 |
+| Retained80 body·direct flat | Root c64a/97f1:80 case·2421 PID·3661 source의 record/provenance·byte transport 수용 | 관측 PID1706 / source3513 | 관측 PID715 / source148 | required record 0 GAP; fresh whole·FAIL qualification 별도 |
+| Retained80 native metadata | Root8ac7·complete refs06ba 수용 | native133에 포함 | native133에 포함 | 50 OK/30 NOK 유지; 새 engine/whole PASS 없음 |
+| Retained owner65 v5 | 원래5053 exit0/reap·17 case/65 clause producer transport86d54081 수용 | 의미 판정 미수용 | 원래 FAIL 유지 | 독립 full-operand/model review pending |
+| Retained567 whole·각 FAIL | whole 의미·715 PID/148 source의 engine qualification·별도 repair pending | 미집계 | 관측 FAIL 보존 | count·native NOK·capture만으로 귀속하지 않음 |
+| 최종1270/5274·384/83/60 | required-final·source/aux·metadata·story·repair join pending | 미집계 | 미집계 | 최종 reader 실행·완전한 witness 미수용 |
+| 게시·CI | Source/TC push0·CI0 | 해당 없음 | 해당 없음 | 최종 gates 뒤 게시와 ONE CI terminal·URL·TC Merge Gate 확인 |
 
-현재 Source94의 Root 수용94 FAIL/0 review GAP·27 assertion pair·11 case repair map과 Source-only mutation246 수용은 유지한다. No-prior284/observed-before426을 구분하며 부재는 clear record/full-value preimage가 아니다. Retained body-v9는80 case/2421 PID/3661 source record·required GAP0을 생성했지만, 원래 PID715 FAIL/source148 FAIL을 포함한 진단 판정은 독립 body·whole·각 FAIL repair 수용 전이다. Native metadata80은 Root8ac7/complete refs06ba로 별도 수용됐고50 OK/30 NOK를 보존한다. Source Stage1 v1의544 proof/5 GAP는 원본으로 남으며 strict5 수정 뒤v2 원래12225는 조정자16:21:59Z snapshot 기준 실행 중이다. Stage2와 proof-review 방법의 PREP 검토는 실제 whole 수용이 아니다. [현재 checkpoint](ticket16-final-coverage-and-ci-handoff-20261022.md#retained80-body-native-source-proof-current-20261024)에서 남은 whole/repair·최종 join과 allocation을 확인한다. Source/TC push·CI 미실행과 performance·HA463 보류를 유지한다.
+현재 Source94는 Root 수용94 FAIL/0 review GAP와 별도 repair를 유지한다. Source602 whole·2651 PID 및 cached observation c987/dba 수용은 PID58 FAIL·AID27 FAIL을 보존한다. Retained body와 direct byte transport는 Root c64a/97f1로 수용됐지만 원래 PID715/source148 FAIL의 engine qualification·whole/model·별도 repair는 pending이다. Ret148 f8de는 측정만 수용했으며 qualified engine attribution은0/148이다. Owner65 v5 원래5053의 exit0/reap·17/65 생산 수용86d54081도 독립 operand/model 승인이 아니다. No-prior284/observed-before426을 구분하고 부재를 clear record나 full-value preimage로 해석하지 않는다. [현재 checkpoint](ticket16-final-coverage-and-ci-handoff-20261022.md#source602-owner65-current-20261024)의 남은 최종 reader·보고 slot을 따른다. Source/TC push·CI 미실행과 performance·HA463 보류를 유지한다.
 
-아래 시도별 문단은 당시 snapshot이다. 현재 상태와 allocation은 [최신 checkpoint](ticket16-final-coverage-and-ci-handoff-20261022.md#retained80-body-native-source-proof-current-20261024)를 따르며 원래 실패·중단 기록은 보존한다.
+아래 시도별 문단은 당시 snapshot이다. 원래 실패·중단 기록과 Stage2 producer exit/final IO 미복구 한계를 보존한다.
 
 [현재133 runtime·DB 부재 수용](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket16/final-review/root-current855-full133-runtime-reap-dbabsence-acceptance-and-resource-release-v1.json) · [현재raw48 수용](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket16/final-review/root-current855-full48-runtime-absence-raw-context-acceptance-v1.json) · [현재53 content 의미 수용](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket16/final-review/root-current855-source53-codequalified53-content-semantic-acceptance-v1.json) · [완전한 graph·scalar 수용](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket16/final-review/root-current855-normalized-complete-source-AND-graph-and-scalar-actual-acceptance-v1.json) · [과거 mutation-v2 원본 handoff와27 GAP](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket16/source53-current855-mutation53-independent-review-handoff-v2/index.json).
 
