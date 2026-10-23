@@ -10,7 +10,7 @@
 | Source53 ordered graph·scalar | 완전한 원본 source/member 연결과 독립 검토 수용 | 해당 없음 | 원본36 source FAIL 유지 | 계산된9952 logical /407849 primitive는 진단 수, 추가 coverage가 아님 |
 | Source53 mutation-v4 후보 | 새53개 명령 종료·reap; real Reader bridge 실행 | 246 own-ACK supported 후보 | 해당 없음 | candidate 누락0·case GAP0; 독립 의미·qualification 검토 전 |
 | Source53 predicate·flat payload | 53개 후보의 독립 의미 검토와 flat2,651·pending94 card의 현재 binding·형식 수용 | 2,593 content-semantic | 58 content-semantic | semantic 0; attribution/repair·mutation qualification·base602·whole/leaf는 pending |
-| Retained80 전체 body | 세 actual attempt 모두 observer 선택에서 종료·reap, body result 0 | 미집계 | 미집계 | `fresh/checkdb`·database ownership·selected-clause 보호 GAP 보존; singleton diagnostic PREP와 새 exact phase 필요 |
+| Retained80 전체 body | 다섯 actual attempt 모두 종료·reap; 수용된 full body 없음 | 미집계 | 미집계 | v5는3 pending/18 local GAP/58 unreached/1 global fatal; full index·최종 end barrier·admission 없음 |
 | 별도 focused `u5` 26A/114P | 해당5개 own attempt만 수용 | 102 predicate | 12 predicate | 0; 새 전체133의 의미 판정으로 복사하지 않음 |
 | 최종 regular·campaign·384/83/60 | pending | 미집계 | 미집계 | 정확한 whole/leaf·bindings·source/aux/repair·16 metadata·human report join 필요 |
 | 게시·CI | 미실행 | 해당 없음 | 해당 없음 | 최종 검토 후 source/TC 게시와 ONE CI terminal·URL·TC Merge Gate 확인 |
@@ -24,6 +24,8 @@
 별도 [predicate53 원래 handoff](https://dev2.baboon-rudd.ts.net:8443/mnt/nvme/data-1/vimkim-work456-oos-supplement-20261022T1753Z/source53-current855-predicate53-independent-review-handoff-v1/index.json)는2,651개 content-only 후보를 수출했지만, 독립 mutation·attribution·repair·최종 join을 대신하지 않는다.
 
 새 flat-leaf writer는 별도 exact Root phase에서 한 번 실행했고, 원래 session4365는149.91초·exit0으로 종료·회수됐다. [Root의 flat2,651 payload·현재94 pending card 형식 수용](https://dev2.baboon-rudd.ts.net:8443/mnt/nvme/data-1/vimkim-work456-oos-supplement-20261022T1753Z/source53-final-materialization-control-v1/root-current855-flat2651-payload-and-current94-card-format-review-v1.json)은 이미 독립 검토한53개 후보의 expected/actual/evidence와 각 leaf hash, 현재 LF·case binding을 대조했다. 58 PID FAIL·36 source FAIL card는 모두 PENDING/UNKNOWN이며 attribution·repair 승인이 아니다. Base602 파일·reviewed qualification·whole/leaf는 다음 assembly phase에 남는다. [전체 산출물·원래 launcher·handoff의 물리 차감](https://dev2.baboon-rudd.ts.net:8443/mnt/nvme/data-1/vimkim-work456-oos-supplement-20261022T1753Z/source53-final-materialization-control-v1/root-flat2651-writer-original-reap-and-whole-output-physical-debit-v1.json)은998,526,976B이며, 남은 Source allocation6,361,341,952B와 전체 미래 forecast5,677,758,094B를 구분한다. 필요한 base·whole·carrier·독립 검토·maps·final reader·Root selected array의 미래 비용은 모두 유지한다.
+
+Retained v5의 원래 session26698는98.27초에 global `KeyError('case_actual_HOME_roles')`로 종료했다. 3개 pending result·18개 local GAP diagnostic·58개 unreached case와 현재 fatal1을 보존하며 전체 body나 passing coverage로 계산하지 않는다. [Root의 v5 original reap·전체 workspace 물리 차감](https://dev2.baboon-rudd.ts.net:8443/mnt/nvme/data-1/vimkim-work456-oos-supplement-20261022T1753Z/retained80-current855-v1/control/root-retained80-v5-incomplete-reap-and-whole-workspace-physical-debit-v1.json)은 원래 runner/child·process group 부재와26,812,416B 차감만 수용한다. 최종 end barrier는 도달하지 않았고 마지막 성공 기록은 보존했다. 남은 Retained allocation15,005,540,352B는 향후6GiB body cap과 별도 미래 산출물8,563,089,408B를 포함한다. 이 metadata API 중단의 원인·수정·semantic 판정은 별도 검토 사항이다.
 
 확인된 FAIL은 FAIL로 유지한다. 미실행·관측 누락·아직 미수용한 qualification을 PASS로 채우지 않는다. HA/Work463, single-node FK 범위, 측정하지 않은 performance, 아직 실행하지 않은 CI는 각 제한으로 남는다. 과거33ca·u1·u5·첫53 진단 결과는 자신의 revision/attempt에만 적용한다.
 
