@@ -2,10 +2,15 @@
 
 Analysis and CI reports for [PR 7990](https://github.com/CUBRID/cubrid/pull/7990) and earlier OOS PR revisions. Each report applies to its stated source revision.
 
-Last modified: 2026-10-26, Asia/Seoul.
+Last modified: 2026-10-27, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [CBRD-26357-tc-pr-changes_5a70787_claude.md](CBRD-26357-tc-pr-changes_5a70787_claude.md) | 엔진 `5a70787`과 짝인 TC PR 두 개(#3551, #4210)의 모든 테스트 변경, 이유, 근거 커밋, 머지 시 주의점 | 2026-10-27 | 2026-10-27 | TC PR 본문의 상세 근거와 리뷰어용 변경 이력을 남김 |
+| [CBRD-26357-public-tc-changes-pr-body_70db22a_claude.md](CBRD-26357-public-tc-changes-pr-body_70db22a_claude.md) | cubrid-testcases#3551 본문: SQL·medium 테스트 3개의 변경과 이유 | 2026-10-27 | 2026-10-27 | public TC PR 본문을 실제 변경 내용으로 교체 |
+| [CBRD-26357-public-tc-changes-pr-context_70db22a_claude.md](CBRD-26357-public-tc-changes-pr-context_70db22a_claude.md) | #3551 본문 게시용 리비전, 원본 지문, 게시 단계 | 2026-10-27 | 2026-10-27 | 게시 전 검토 범위와 재개 조건을 보존 |
+| [CBRD-26357-private-tc-changes-pr-body_75a0202_claude.md](CBRD-26357-private-tc-changes-pr-body_75a0202_claude.md) | cubrid-testcases-private-ex#4210 본문: shell 테스트 17개의 변경과 이유 | 2026-10-27 | 2026-10-27 | private TC PR 본문을 실제 변경 내용으로 교체 |
+| [CBRD-26357-private-tc-changes-pr-context_75a0202_claude.md](CBRD-26357-private-tc-changes-pr-context_75a0202_claude.md) | #4210 본문 게시용 리비전, 원본 지문, 게시 단계 | 2026-10-27 | 2026-10-27 | 게시 전 검토 범위와 재개 조건을 보존 |
 | [CBRD-26357-oos-index-capacity-pr-body_3252fcf_codex.md](CBRD-26357-oos-index-capacity-pr-body_3252fcf_codex.md) | PR 7990 본문에 추가할 인덱스 TC 변경 이유와 검증 결과 | 2026-10-22 | 2026-10-22 | 페이지 수 기대값 조정을 리뷰어에게 설명 |
 | [CBRD-26357-oos-index-capacity-pr-context_3252fcf_codex.md](CBRD-26357-oos-index-capacity-pr-context_3252fcf_codex.md) | 본문 원본 지문, 소스·TC 커밋 및 게시 결과 | 2026-10-22 | 2026-10-23 | 게시 전 검토 범위와 재개 조건을 보존 |
 | [CBRD-26357-oos-index-capacity_3252fcf_codex.md](CBRD-26357-oos-index-capacity_3252fcf_codex.md) | OOS 페이지 배치 근거와 현재 head의 TC 수정 전후 검증 | 2026-10-22 | 2026-10-22 | 최소 답지 수정의 근거와 검증 한계를 기록 |
