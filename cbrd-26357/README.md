@@ -6,6 +6,9 @@ Last modified: 2026-10-27, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [CBRD-26357-oos-engine_5a70787_claude.md](CBRD-26357-oos-engine_5a70787_claude.md) | 엔진 PR #7990(`5a70787`)의 구조, 저장 형식, 읽기·쓰기·vacuum·복제, 호환성, 검증, 알려진 미해결 사항 | 2026-10-27 | 2026-10-27 | 리뷰어가 149개 파일을 이해하고 머지 위험을 판단하도록 설명 |
+| [CBRD-26357-oos-engine-pr-body_5a70787_claude.md](CBRD-26357-oos-engine-pr-body_5a70787_claude.md) | 엔진 PR #7990 본문: 목적, 구현 요약, 검증, 호환성, 미해결 사항 | 2026-10-27 | 2026-10-27 | 준비 중이던 PR 본문을 실제 내용으로 교체 |
+| [CBRD-26357-oos-engine-pr-context_5a70787_claude.md](CBRD-26357-oos-engine-pr-context_5a70787_claude.md) | #7990 본문 게시용 리비전, 원본 본문과 지문, 게시 단계 | 2026-10-27 | 2026-10-27 | 게시 전 검토 범위와 재개 조건을 보존 |
 | [CBRD-26357-tc-pr-changes_5a70787_claude.md](CBRD-26357-tc-pr-changes_5a70787_claude.md) | 엔진 `5a70787`과 짝인 TC PR 두 개(#3551, #4210)의 모든 테스트 변경, 이유, 근거 커밋, 머지 시 주의점 | 2026-10-27 | 2026-10-27 | TC PR 본문의 상세 근거와 리뷰어용 변경 이력을 남김 |
 | [CBRD-26357-public-tc-changes-pr-body_70db22a_claude.md](CBRD-26357-public-tc-changes-pr-body_70db22a_claude.md) | cubrid-testcases#3551 본문: SQL·medium 테스트 3개의 변경과 이유 | 2026-10-27 | 2026-10-27 | public TC PR 본문을 실제 변경 내용으로 교체 |
 | [CBRD-26357-public-tc-changes-pr-context_70db22a_claude.md](CBRD-26357-public-tc-changes-pr-context_70db22a_claude.md) | #3551 본문 게시용 리비전, 원본 지문, 게시 단계 | 2026-10-27 | 2026-10-27 | 게시 전 검토 범위와 재개 조건을 보존 |
