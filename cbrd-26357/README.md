@@ -2,10 +2,11 @@
 
 Analysis and CI reports for [PR 7990](https://github.com/CUBRID/cubrid/pull/7990) and earlier OOS PR revisions. Each report applies to its stated source revision.
 
-Last modified: 2026-10-23, Asia/Seoul.
+Last modified: 2026-10-26, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [ci_analysis_report_5a65b28_codex.md](ci_analysis_report_5a65b28_codex.md) | Exact-head shell evidence and stale partition-loader expectation after PR 7927 | 2026-10-26 | 2026-10-26 | Explain the remaining non-CDC failure and define its testcase repair |
 | [CBRD-26357-oos-index-capacity-pr-body_3252fcf_codex.md](CBRD-26357-oos-index-capacity-pr-body_3252fcf_codex.md) | PR 7990 본문에 추가할 인덱스 TC 변경 이유와 검증 결과 | 2026-10-22 | 2026-10-22 | 페이지 수 기대값 조정을 리뷰어에게 설명 |
 | [CBRD-26357-oos-index-capacity-pr-context_3252fcf_codex.md](CBRD-26357-oos-index-capacity-pr-context_3252fcf_codex.md) | 본문 원본 지문, 소스·TC 커밋 및 게시 결과 | 2026-10-22 | 2026-10-23 | 게시 전 검토 범위와 재개 조건을 보존 |
 | [CBRD-26357-oos-index-capacity_3252fcf_codex.md](CBRD-26357-oos-index-capacity_3252fcf_codex.md) | OOS 페이지 배치 근거와 현재 head의 TC 수정 전후 검증 | 2026-10-22 | 2026-10-22 | 최소 답지 수정의 근거와 검증 한계를 기록 |
