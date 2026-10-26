@@ -7,6 +7,8 @@
 
 **현재 활성 SQL 25개가 포함된 SQL CI job과 활성 OOS shell 69개의 실행은 PASS다. SQL 3개와 shell 64개는 실패 또는 60초 초과 실행으로 비활성화되어 있다. 따라서 활성 선택의 CI 통과와 피드백 전체의 검증 완료는 구분해야 한다.** 비활성 FAIL은 통과 커버리지에 포함하지 않으며, 필수 항목별 독립 검증이 남아 있어 전체 Work456은 미완료다.
 
+[대화형 OOS TC 탐색기](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/.agent/diagrams/cbrd-26659-oos-tc-explorer.html)에서 피드백·종류·기능 분류·결과·활성/비활성·관측 run·실행 시간·텍스트로 목록을 필터링하고 정렬할 수 있다. 행을 선택하면 TC 원문, SQL answer, 관련 controller/fixture와 실행 리비전을 읽을 수 있으며, 필터 결과를 CSV로 내보낼 수 있다. SQL 28개·shell 133개와 별도의 C++ 보완 함수 14개를 수록했다. 비공개 TC 원본을 내장한 약 2 MB의 내부 공유용 HTML이며, 파일을 내려받아 오프라인으로도 사용할 수 있다. HTML과 내장 소스는 공개 Git 저장소 밖에서 보관한다.
+
 ## 1. 피드백별 대응 요약
 
 | 항목 | 피드백과 보완 내용 | TC를 찾을 위치 | 현재 판단 |
@@ -49,6 +51,8 @@
 | [Shell-only CI 40335925801](https://github.com/CUBRID/cubrid/actions/runs/40335925801) | Engine `c4c4f5c5`, private `8486abd`, build·shell PASS. 41분 49초, 50개 shell shard PASS | 전체 shell 3,523 PASS / 0 FAIL / 30 SKIP / 미실행 0. 활성 OOS 69개는 모두 실행·PASS, skip 0. 비활성 OOS 64개는 실행 목록에 없음. 활성 OOS 최대 45.180초 |
 
 최신 실행은 shell만 재실행했다. SQL·medium PASS는 앞선 full run의 결과로 유지되며, 하나의 동일 입력 full run이 모두 PASS한 것으로 합치지 않는다. 별도의 handover native 실행, SA-loaddb 및 deferred-write 결과도 합산하지 않는다. 최신 shell은 해당 source의 기존 release/debug build artifact를 재사용했고, actual input은 workflow plan/build 증거에서 확인했다.
+
+대화형 목록을 위한 추가 대조(2026-10-27)에서는 run `40324320840`의 SQL shard 09 전체 462개에 대해 summary/JUnit의 identity·결과·시간, `tc.read`의 public `4f6557f`, `build.read`의 Engine `c4c4f5c5`, 실행 완료 기록을 확인했다. 이 범위에서 활성 OOS SQL 25개는 각각 PASS이며 개별 실행 시간도 HTML에 표시한다. SQL 전체 collector는 다른 shard 01의 결과/JUnit 수 불일치로 여전히 미완료다. 이 한정 대조는 전체 SQL 수집 완료나 필수 독립 oracle·물리 상태 검증 완료를 뜻하지 않는다.
 
 현재 [SQL 비활성 목록](https://github.com/CUBRID/cubrid-testcases/blob/4f6557f7f96ac789e1697ef8b27dd8bf2807802e/disabled/README.md)은 실패 3개다. [Shell 비활성 목록](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/8486abdac52ffc1ea4cae3c8a28fad888014caea/disabled/README.md)은 관측 FAIL 61개와 60초 초과 8개, 중복 5개를 제외한 64개다. 이 중 FAIL 없이 장시간만으로 제외된 것은 3개다. 비활성화 시 TC 본문·assertion·expected answer를 바꾸지 않았다. Shell 실행 helper는 C++17·Bash/jq를 사용하며 Python helper를 요구하지 않는다.
 
