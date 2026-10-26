@@ -331,6 +331,36 @@ Each Engine change applies to one of these conditions:
 
 The vacuum boot hint (`interrupted_partial_blockid`) can mark one consumed block as interrupted in server mode. No observed signature involves vacuum.
 
+## Addendum: rerun `40334404336` outcome
+
+Added 2026-10-26 after the rerun finished. This addendum does not change the decision boundary above, which covers the collector snapshot.
+
+**The required collection did not validate the rerun.**
+The new `cubrid-ci collect 7990 --commit 52987c654b6f04734cad01c11c80c7f30358b33c` (Action 1) exited `4`, with all three suites `collection_failed`:
+- `test_sql` and `test_medium`: `integrity/malformed: plan.tsv is empty`. The rerun carried both suites forward without planning any cases for them.
+- `test_shell`: `unavailable: shard acquisition stopped after another mandatory shard failed`.
+
+These failures limit the collector for rerun-shaped runs. They are not CI verdicts.
+
+**GitHub job-log observation (raw, not collector-validated):**
+- The PR's required gha-ci statuses for `52987c654b6f04734cad01c11c80c7f30358b33c` all report `SUCCESS` from run `40334404336`: `build (release)`, `test_shell`, `test_sql` and `test_medium`.
+- Shell shard job `121612848221` (`shard shell 00`) logs `SHA: 52987c654b6f04734cad01c11c80c7f30358b33c`.
+- It ran exactly the three failed cases, each with `[OK]`:
+  - `shell/_06_issues/_12_2h/bug_bts_7456_1/cases/bug_bts_7456_1.sh`
+  - `shell/_35_cherry/issue_21654_server_side_loaddb/syntax/cases/syntax.sh`
+  - `shell/_36_damson/cbrd_23608_tde/temp_enc_06/cases/temp_enc_06.sh`
+- Its summary line is `assigned 3 / run 3 / failed 0 / skipped 0`.
+
+**What this changes:**
+- **F1 and F2** now each have a FAIL (run `40323508581`) and a PASS (run `40334404336`) on the same Engine build `52987c65`, with no source or testcase change in between. This is the pair Action 1 required for a flakiness claim. Together with their history (0 failures in 186–187 earlier runs) and the falsifier analysis above, F1 and F2 are best classified as intermittent test or environment failures, PR relation `unlikely`.
+- **F3** passed on the same build and keeps its separate testcase-defect mechanism.
+- **Formal limit:** under this skill's gate, a full classification still needs a collector-validated bundle. The pass/fail pair above comes from raw job logs.
+
+**Updated actions:**
+1. Treat the PR7990 gha-ci merge gate for `52987c654` as satisfied by run `40334404336`. Keep this report's flakiness classification provisional until a collector release validates rerun-shaped runs.
+2. Report the collector limitation (an empty `plan.tsv` for carried-forward suites under `/run rerun`) to `cubrid-ci` as a follow-up.
+3. Keep F3 (`temp_enc_06` only searching `_latest.err`) as separate testcase-defect follow-up in `cubrid-testcases-private-ex`.
+
 ## Unknowns
 
 - The validated verdict of rerun `40334404336`.
