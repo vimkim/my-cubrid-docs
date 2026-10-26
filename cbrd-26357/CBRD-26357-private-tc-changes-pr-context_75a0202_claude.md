@@ -1,7 +1,7 @@
 # CBRD-26357: private TC PR body context
 
 Prepared: 2026-10-27, Asia/Seoul. Agent: `claude`.
-Status: prepared for review; not published.
+Status: published and checked on 2026-10-27. GitHub body matches the approved file.
 This context does not establish publication permission.
 
 ## Source and target
@@ -41,3 +41,10 @@ The original body was the sync-bot template plus a note about the earlier `feat/
 4. Verify the published body SHA-256 equals the body file SHA-256 and record the result here.
 
 No source push is needed.
+
+## Publication record
+
+- Confirmed by the user in conversation on 2026-10-27 ("게시해").
+- Docs: commit `86ce44b` fast-forwarded into `main` and pushed to `origin main`. The raw GitHub content of the explanation matches the reviewed file (SHA-256 `97d242d89a2ed48edd6a852f64e24c333532ffe11a8dad1feaf02e011d90740e`).
+- Before the write, the PR head, title, state and original body fingerprint matched this context.
+- Body updated with `gh pr edit 4210 --body-file`. Published body SHA-256 `737cb5685eaaef9930c6d1648944e1c35ed9f761f218944813b8f907c5791389` equals the body file SHA-256. Title, head and draft/ready state are unchanged.
