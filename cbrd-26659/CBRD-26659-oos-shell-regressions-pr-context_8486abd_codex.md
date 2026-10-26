@@ -1,7 +1,7 @@
 # CBRD-26659: shell TC PR body publication context
 
 Prepared: 2026-10-27, Asia/Seoul. Agent: `codex`.
-Status: prepared for review. GitHub body update is pending confirmation.
+Status: published and checked. GitHub body matches the approved file.
 This context does not establish publication permission.
 
 ## Source and target
@@ -68,7 +68,9 @@ and branch deletion remain human actions.
 
 ## Publication record
 
-- Confirmation: pending. Establish it from the conversation after draft review.
-- Docs integration/push: not performed.
-- GitHub body update: not performed.
-- Checked remote body fingerprint: pending.
+- Confirmation: the user said `yes publish` after the assistant presented both body drafts and the shared operation list.
+- Docs integration/push: commit `57ce44eb6e5e18802b77f70e604e63d40725627b` was fast-forwarded into `main` and pushed to `origin main` before the GitHub edits.
+- GitHub body update: https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4365, checked at `2026-10-26T15:21:46.991266+00:00`.
+- Checked remote body fingerprint: `7d4a5537bdd04487afc3972c8e14ed93cab48138bffa369a2a828c1cee283354`. Decoded UTF-8 bytes equal the approved body file.
+- GitHub returned the same source revision, head/base branches, OPEN state, title, and draft state.
+- This attempt changed only the two PR bodies and the approved docs. It did not push source/TC commits or trigger CI.
