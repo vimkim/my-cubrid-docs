@@ -2,6 +2,8 @@
 
 Last modified: 2026-10-27 (Asia/Seoul).
 
+2026-10-27 팀장 보고용 [피드백별 TC 대응표](CBRD-26659-feedback-testcase-coverage-report_20261027_codex.md)는 여섯 보완 항목과 SQL 28개·shell 133개·C++ 보완 함수 14개를 연결한다. 최신 활성 shell 실행, SQL job 상태, 비활성 FAIL·장시간 사례와 남은 독립 검증을 구분한다. 두 TC PR의 Ready for review 전환도 반영한다.
+
 Current TC description refresh (2026-10-27): the [public SQL body](CBRD-26659-oos-sql-regressions-pr-body_4f6557f_codex.md) and [private shell body](CBRD-26659-oos-shell-regressions-pr-body_8486abd_codex.md) were published at TC heads `4f6557f` and `8486abd`. They describe 28 SQL pairs (25 enabled, 3 disabled), 133 OOS shell entries (69 enabled, 64 disabled), the Python-free OOS helper, and separate CI results. Both GitHub descriptions match the saved body files. Their titles, OPEN/draft states, heads, and bases are preserved. The successful shell-only run40335925801 does not establish complete Work456 independent qualification. The older records below keep their original revision limits.
 
 Start with the approved plan and current behavior coverage table. Developers create and validate public SQL and private shell cases locally, initially using optdebug. SQL and shell timing is separate; roughly ten minutes each is informal guidance. All 14 supported automation deliveries are complete. The original Standards/Spec closures and Python-based native receipts remain historical. The [2026-10-12 shell conversion](ci-replan/shell-conversion-results-20261012.md) and [recent convention study](ci-replan/shell-conventions-20261012.md) identify replacement qualification, current reviews, image probes and retained SQL evidence. Physically unmet criteria and engine/capability gaps retain partial or unverified dispositions. The HA follow-up gap remains explicit. TC head publication and current local document integration are recorded in the conversion report.
@@ -22,6 +24,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [CBRD-26659-feedback-testcase-coverage-report_20261027_codex.md](CBRD-26659-feedback-testcase-coverage-report_20261027_codex.md) | 피드백 6항목과 전체 SQL·shell 및 C++ 보완 TC의 대응·실행 상태 | 2026-10-27 | 2026-10-27 | 팀장에게 보완 범위와 남은 검증을 보고 |
 | [CBRD-26659-oos-sql-regressions-pr-body_4f6557f_codex.md](CBRD-26659-oos-sql-regressions-pr-body_4f6557f_codex.md) | Published TC PR body | 2026-10-27 | 2026-10-27 | Review current testcase scope, quarantine and CI evidence |
 | [CBRD-26659-oos-sql-regressions-pr-context_4f6557f_codex.md](CBRD-26659-oos-sql-regressions-pr-context_4f6557f_codex.md) | TC body source identity and checked publication record | 2026-10-27 | 2026-10-27 | Resume the exact approved body publication safely |
 | [CBRD-26659-oos-shell-regressions-pr-body_8486abd_codex.md](CBRD-26659-oos-shell-regressions-pr-body_8486abd_codex.md) | Published TC PR body | 2026-10-27 | 2026-10-27 | Review current testcase scope, quarantine and CI evidence |
