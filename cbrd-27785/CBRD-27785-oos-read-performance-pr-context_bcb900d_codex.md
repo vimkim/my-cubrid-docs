@@ -1,7 +1,8 @@
 # CBRD-27785 PR publication proposal
 
 Prepared: 2026-10-27, Asia/Seoul. Agent: `codex`.
-This file records a proposal. It does not record publication approval.
+This file records the reviewed proposal and verified publication results.
+It does not authorize later source or text changes.
 
 ## Source and target
 
@@ -77,7 +78,39 @@ pass the class 1 +2% instruction budget. Engine and C++ test blobs match the
 measured `e77ffbf0e3c4a2dcf1f3a918bafcabf91ac136cd` build; source publication
 cherry-picks changed commit identities, without changing those blobs.
 
-No remote writes or merge into the local feature destination have been performed.
-On approval, reread the saved files unchanged, record body/explanation SHA-256
-fingerprints, and verify source and remote freshness before writes. Rediscover
-local worktrees through Git. Record publication results here after verification.
+At preparation, no remote writes or merge into the local feature destination had
+been performed. The verified publication results are recorded below. Rediscover
+local worktrees through Git when resuming; this record does not authorize future
+source or text changes.
+
+## Publication results — 2026-10-27
+
+The user confirmed the saved material and listed operations in the conversation
+with “응 만들어줘.” The reviewed source and publication text were unchanged.
+
+- Draft PR: [CUBRID/CUBRID #8299](https://github.com/CUBRID/cubrid/pull/8299).
+  Title, exact body, draft status, `vimkim` assignment, source repository/branch,
+  head `bcb900d1696756a120ec0a2b7885c212f71ebc07`, and base `feature/oos-merge`
+  were verified after creation. GitHub reported the PR as mergeable.
+- The source was rebased without changes and fast-forwarded into the local
+  `feature/oos-merge`. The fork branch was pushed and its remote SHA verified.
+  The organization feature branch remained at `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`.
+- Docs commit `ab91eaa3da360b2da824bbd005e04d9692afb054` was fast-forwarded
+  into docs `main` and pushed. The explanation at the recorded public URL was
+  fetched and matched the approved file byte for byte before PR creation.
+- JIRA notes commit `b8f0130b87b6be22d40329cc19c1acacdd1d931a` was fast-forwarded
+  into notes `main` and pushed before the live description update.
+- CBRD-27785's description was updated from the reviewed report. CLI read-back
+  confirmed the final results. Status `Open`, priority `Minor`, type `Sub-task`,
+  and assignee `Daehyun Kim` were preserved.
+
+| Published material | SHA-256 |
+| --- | --- |
+| PR body | `72209fca6a2339f85678c825de913635f32d5108f3b4741ece9fa753d37bdc5e` |
+| Explanation | `b5c51e749379b71898e1a4a87208d91e51af24e13c72bcfff4ecc8e0e6313e30` |
+| JIRA report | `0014540f07ad8818847eac2d220206e24d2a270496c8823a117ee9d525a04a21` |
+
+No additional company CI was triggered. Class 2/3 and UPDATE/I/O performance
+remain follow-ups. Raw evidence, databases, logs, installations, and the separate
+planning branch are retained. Earlier worker cleanup was limited by Git's
+submodule worktree restriction; no force cleanup was used.
