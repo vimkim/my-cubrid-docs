@@ -12,7 +12,12 @@
 
 이 문서의 `path:line`은 모두 head `5a70787fe` 기준입니다. "구현됨"은 그 리비전의 코드를 읽어 확인했다는 뜻이고, 실행 확인은 [Test Plan](#test-plan)에 따로 적었습니다.
 
-**상태 갱신 (2026-10-27):** PR head는 이후 `4408135c0833ec959da3590f12c14efa69610c7e`가 되었습니다. 추가된 커밋 2개(`224104a36`, `4408135c0`)는 `unit_tests/oos`의 테스트 스크립트와 CTest 설정만 바꿨으므로, 엔진 설명과 `path:line`은 그대로 유효합니다. [Test Plan](#test-plan), [테스트](#12-테스트), [알려진 미해결 사항](#알려진-미해결-사항)은 Greptile 4차 리뷰 P1 3건의 처리 결과에 맞춰 이 head 기준으로 갱신했습니다.
+**상태 갱신 (2026-10-27):** PR head는 이후 `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`이 되었습니다. `5a70787fe` 뒤에 커밋 5개가 추가되었습니다.
+
+- `224104a36`, `4408135c0`(Greptile 4차 리뷰 P1 처리), `dcbf09e4f`(fixture 등록 비교 수정)는 `unit_tests/oos`의 테스트 스크립트와 CTest 설정만 바꿨습니다.
+- `1e8701b4f`, `d8ed97f77`은 엔진을 바꿨습니다. 시작할 때 첫 볼륨의 저장 형식 번호를 검사해 다른 형식의 DB를 거부하고([호환성](#호환성)), `PAGE_OOS`·`PERF_PAGE_OOS`를 각 enum의 `PAGE_VACUUM_DATA`·`PERF_PAGE_VACUUM_DATA` 뒤로 옮겼습니다. 이 검사의 CTest 항목(`test_oos_storage_format_guard`)과 DB fixture 2개가 추가되어 CTest 항목은 44개입니다.
+
+그 밖의 엔진 설명은 그대로 유효합니다. `path:line`은 계속 `5a70787fe` 기준이며, `1e8701b4f`·`d8ed97f77`이 바꾼 엔진 파일(`boot_sr.c`, `disk_manager.c`, `page_buffer.c`, `storage_common.h`, `perf_monitor.h` 등)의 줄 번호는 현재 head와 다를 수 있습니다. [Test Plan](#test-plan), [호환성](#호환성), [알려진 미해결 사항](#알려진-미해결-사항)은 `dcbf09e4f` 기준으로, [테스트](#12-테스트)는 `4408135c0` 기준으로 갱신했습니다.
 
 ## Purpose
 
@@ -181,6 +186,8 @@ develop의 마지막 번호(135) 뒤에 새 recovery index를 붙였습니다(`r
 | 정적 검사 | `5a70787fe` | code-style, cppcheck, license, pr-style, memory-monitor-check 통과 |
 | OOS CTest (로컬, `debug_gcc`) | `5a70787fe` | 33/33 통과. crash_recovery, no_logging, real_vacuum, workspace 4개 대상은 이 실행에서 빠졌습니다. |
 | OOS CTest (로컬, `debug_gcc`) | `4408135c0` | 39/39 통과. crash_recovery, no_logging과 각 전용 DB fixture를 포함하고 real_vacuum, workspace 2개 대상만 뺐습니다. 테스트 스크립트 수명주기 회귀 11개 케이스 포함. 이 갱신 시점(2026-10-27)에 `4408135c0`의 gha-ci [run 40450836569](https://github.com/CUBRID/cubrid/actions/runs/40450836569)는 대기 중이었습니다. |
+| OOS CTest (로컬, `debug_gcc`) | `dcbf09e4f` 내용 | 42/42 통과. 새 `test_oos_storage_format_guard`(자기 DB의 형식 번호를 0으로 바꾸고 csql·checkdb·emergency_patchlog가 거부하는지 확인)와 그 DB fixture 2개를 포함하고, real_vacuum, workspace 2개 대상만 뺐습니다(등록 항목 44개). 이 갱신에는 `dcbf09e4f`의 gha-ci 결과가 없습니다. |
+| 다른 빌드의 DB 거부 (로컬, debug) | develop 빌드 `11.5.0.2635`로 만든 DB, 엔진 `1e8701b4f`·`d8ed97f77` 내용 | csql `-S`, checkdb `-S`, upgradedb, 서버 시작이 모두 -1392 메시지(형식 0, 현재 빌드 1)로 거부했고, deletedb는 성공했습니다. 검사가 없는 이전 PR 엔진은 같은 DB에서 `pgbuf_check_page_ptype_internal` assert로 중단되었습니다. |
 | 이전 full CI | `52987c654` | shell 3개 실패, 같은 빌드 재실행에서 모두 통과(간헐 실패로 분류, [보고서](ci_analysis_report_52987c6_claude.md)) |
 | 수동 QA | `1ec35f8` (2026-09-29) | 139개 실패 중 확인된 OOS 엔진 결함 0개([요약](../feature-oos-merge/merge-readiness/team-lead-summary_20260929_codex.md)). 이후 변경이 많아 참고용입니다. |
 | 성능 | — | 이 head에서 측정한 OOS 성능 결과는 없습니다. 지연 쓰기(CBRD-27089)의 이전 측정에서 작은 행 CPU 영향은 판단 보류였습니다([측정](../cbrd-27089/design/ticket06-measurements-b871ea386-codex.md)). |
@@ -196,10 +203,13 @@ Greptile 4차 리뷰의 P1 3건은 모두 확인했고 스레드에 답했습니
 ### 호환성
 
 - 디스크 호환성 버전은 11.5 그대로입니다(`release_string.c` 변경 없음). ADR-0005의 결정입니다.
-- 하지만 저장 형식이 바뀌어 **이 PR 이전 엔진(develop 포함)으로 만든 DB는 이 엔진에서 올바르게 읽을 수 없습니다.** 시작할 때 거부하지도 않습니다.
-  - `PAGE_TYPE`에 `PAGE_OOS`가 중간에 들어가 이후 값의 번호가 바뀝니다(`storage_common.h:159`).
+- 하지만 저장 형식이 바뀌어 **이 PR 이전 엔진(develop 포함)으로 만든 DB는 이 엔진에서 올바르게 읽을 수 없습니다.** `1e8701b4f`부터는 시작할 때 이런 DB를 거부합니다(아래).
   - `HEAP_HDR_STATS` 중간에 `oos_vfid`가 들어갑니다(`heap_file.c:216`).
   - VOT offset의 하위 2비트를 플래그로 씁니다.
+  - `PAGE_OOS`는 `1e8701b4f`부터 `PAGE_TYPE`의 끝(`PAGE_VACUUM_DATA` 뒤)에 붙으므로, 기존 페이지 종류의 번호는 develop과 같습니다(`dcbf09e4f` 기준 `storage_common.h:166`). `5a70787fe`에서는 `PAGE_OOS`가 중간(`storage_common.h:159`)에 들어가 이후 값의 번호가 바뀌었습니다.
+- **시작할 때 거부(`1e8701b4f`, `d8ed97f77`):** `disk_format()`이 첫 볼륨 헤더의 예약 필드 `reserved0`(이제 `storage_format`)에 `DISK_STORAGE_FORMAT_REVISION`(1)을 기록합니다. 이전 11.x 빌드는 이 필드에 0을 썼습니다. `boot_restart_server`와 `xboot_emergency_patch`는 볼륨 0을 마운트한 직후, 다른 페이지 읽기와 DWB·로그 복구 전에 이 값을 검사하고, 다르면 새 오류 `ER_BO_INCOMPATIBLE_STORAGE_FORMAT`(-1392)로 거부합니다. deletedb는 검사하지 않으므로 거부된 DB도 지울 수 있습니다. diagdb는 이 값을 출력합니다.
+  - 출시된 11.4 이하 버전의 DB는 이보다 먼저 실행되는 디스크 호환성 검사에서 `ER_LOG_INCOMPATIBLE_DATABASE`(-86)로 거부됩니다.
+  - 한계: 한 방향 검사입니다. 이전 빌드는 이 필드를 보지 않으므로 새 DB를 열 수 있습니다. 이전 형식의 백업은 restoredb가 파일을 복원한 뒤, 시작할 때 거부됩니다.
 - 그래서 develop·QA·daily 환경의 DB는 이 PR 머지 후 다시 만들어야 합니다. 11.5는 아직 출시되지 않았습니다(최신 태그 `v11.4.6.1963`).
 - 내부 enum(`LC_FLUSH_INSERT_OOS`, `SHOWSTMT_HEAP_OOS`, `PERF_PAGE_OOS`)이 중간에 추가되어, client(CAS 포함)와 server는 같은 빌드여야 합니다.
 
@@ -211,7 +221,7 @@ Greptile 4차 리뷰의 P1 3건은 모두 확인했고 스레드에 답했습니
 | CBRD-27237 | UPDATE를 rollback한 뒤 vacuum이 undo 이미지를 보고 현재 행의 체인을 지울 수 있는 문제. 명세는 undo 이미지를 삭제 근거로 쓰지 말라고 정했습니다. | 코드상 아직 가능해 보임. 이 head에서 재현하지 않음. 회귀 테스트 없음 |
 | CBRD-27230 | UPDATE에서 바꾸지 않은 컬럼의 체인 재사용과 커밋 시점 vacuum 알림 | 구현 안 됨 |
 | CBRD-27057 | demotion 기준을 페이지 1/4(약 4,086B) 대신 행 4개가 확실히 들어가는 크기(16KB 페이지에서 4,060B)로 | 구현 안 됨(draft PR #7462) |
-| CDC 테스트 `cbrd_27064`, `cbrd_27075` | OOS 엔진에서 실패. 2026-10-26 결정으로 gha-ci에서만 격리 | ADR-0005 문구("실패를 보이게 둔다")와 다름. 복원 조건은 readme에 기록 |
+| CDC 테스트 `cbrd_27064`, `cbrd_27075` | OOS 엔진에서 실패(CDC·flashback의 OOS 이력이 없음). QA팀과 협의해 [#4210](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4210)에서 `_25_unstable`로 옮겨 develop CI(gha-ci `test_shell`)에서는 실행하지 않고, QA 회귀 테스트에서는 계속 실행합니다. OOS + CDC는 CBRD-26939에서 따로 구현합니다([리뷰 답변](https://github.com/CUBRID/cubrid/pull/7990#issuecomment-6435671972)) | QA팀과 합의해 이 상태로 머지. ADR-0005 문구("실패를 보이게 둔다")와 다름. 복원 조건은 readme에 기록 |
 | `cbrd_23136` shell 테스트 | `1a8c705`의 CI에서 csql allocator abort 1회 | 원인 미확인. 로컬 재현 안 됨, 이후 full shell 3회에서 재발 없음 |
 | 명세와 다른 구현 | `FORCE_OUTLINE`/`PREFER_OUTLINE`은 명세에 없는 옵션. 조회 API는 명세의 `_expand_oos` 함수 대신 정책 인자 방식 | 리뷰 판단 필요 |
 
