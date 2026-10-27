@@ -2,6 +2,8 @@
 
 Last modified: 2026-10-27 (Asia/Seoul).
 
+2026-10-27 [run40472072791 shell 실패 분석](ci_analysis_report_e3589ae_run40472072791_shell_claude.md)은 Engine `e3589ae`·private TC `98723aa`에서 실패한 `cbrd_26659_record_{residual,layout,keys}` 세 건의 공통 원인을 다룬다. Engine `1e8701b4f`(ADR-0006)가 `PAGE_OOS`를 8에서 14로 옮겼지만 TC native 검증기는 OOS page type 8을 하드코딩한다. 로컬 재현과 SA probe로 확인했다. Merge-base baseline은 수집 실패로 비교할 수 없다. TC 수정·CI 재실행은 하지 않았다.
+
 2026-10-27 팀장 보고용 [피드백별 TC 대응표](CBRD-26659-feedback-testcase-coverage-report_20261027_codex.md)는 여섯 보완 항목과 SQL 28개·shell 133개·C++ 보완 함수 14개를 연결한다. 최신 활성 shell 실행, SQL job 상태, 비활성 FAIL·장시간 사례와 남은 독립 검증을 구분한다. 두 TC PR의 Ready for review 전환도 반영한다.
 
 보고서의 [대화형 TC 탐색기](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/.agent/diagrams/cbrd-26659-oos-tc-explorer.html)는 필터·정렬·CSV와 TC 원문·answer·관련 controller 조회를 제공한다. 비공개 소스를 내장한 HTML은 내부 공유용 파일로 보관하며 공개 Git에는 링크와 설명만 기록한다. 활성 SQL 25개의 개별 결과·시간은 run40324320840의 shard09 한정 대조로 보완했고, 다른 shard01 때문에 SQL 전체 collection이 미완료라는 한계를 유지한다.
@@ -26,6 +28,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [ci_analysis_report_e3589ae_run40472072791_shell_claude.md](ci_analysis_report_e3589ae_run40472072791_shell_claude.md) | Run40472072791 shell 3건: OOS page type 8→14 불일치, 로컬 재현·probe, baseline/이력 한계 | 2026-10-27 | 2026-10-27 | 기준 동기화 뒤 실패한 record boundary TC의 원인과 다음 조치를 근거와 함께 정리 |
 | [CBRD-26659-feedback-testcase-coverage-report_20261027_codex.md](CBRD-26659-feedback-testcase-coverage-report_20261027_codex.md) | 피드백 6항목과 TC 대응·실행 상태, 내부 HTML 탐색기 연결 | 2026-10-27 | 2026-10-27 | 팀장에게 보완 범위와 남은 검증을 보고 |
 | [CBRD-26659-oos-sql-regressions-pr-body_4f6557f_codex.md](CBRD-26659-oos-sql-regressions-pr-body_4f6557f_codex.md) | Published TC PR body | 2026-10-27 | 2026-10-27 | Review current testcase scope, quarantine and CI evidence |
 | [CBRD-26659-oos-sql-regressions-pr-context_4f6557f_codex.md](CBRD-26659-oos-sql-regressions-pr-context_4f6557f_codex.md) | TC body source identity and checked publication record | 2026-10-27 | 2026-10-27 | Resume the exact approved body publication safely |
