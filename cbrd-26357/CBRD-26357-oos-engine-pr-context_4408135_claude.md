@@ -1,7 +1,7 @@
 # CBRD-26357: engine PR #7990 body context (revision `4408135`)
 
 Prepared: 2026-10-27, Asia/Seoul. Agent: `claude`.
-Status: prepared; publication record below.
+Status: published and checked on 2026-10-27. GitHub body matches the body file.
 This context does not establish publication permission.
 
 ## Source and target
@@ -65,3 +65,6 @@ No source push, PR comment, CI trigger, or explanation change.
 ## Publication record
 
 - Authorized by the user for this revision (body update, docs commit and push) on 2026-10-27, through the delegating session.
+- Docs: commit `a73d464` fast-forwarded into `main` and pushed to `origin main`.
+- Before the write, the PR head (`4408135c0`), title, base, open state, draft=`false`, and the original body SHA-256 matched this context. The material checker passed.
+- Body updated with `gh pr edit 7990 --body-file`. Published body SHA-256 `0c309c7b9fc6143a684626dc93b3efafb74311f42fa493eb08d633c88a5dff74` equals the body file SHA-256. Title, head, base, and draft/ready state are unchanged.
