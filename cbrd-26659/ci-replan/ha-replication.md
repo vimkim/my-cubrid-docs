@@ -1,13 +1,14 @@
 # CBRD-26659: 실제 두 노드 OOS HA 복제 TC와 PR CI shell 경로
 
-작성: 2026-10-27 (Asia/Seoul). Work463. 이 문서는 실행 증거와 남은 범위를 기록한다. 새 spec이나 승인된 테스트 행렬이 아니다.
+작성: 2026-10-27 (Asia/Seoul). 갱신: 2026-10-28, 실제 PR CI 결과 반영. Work463. 이 문서는 실행 증거와 남은 범위를 기록한다. 새 spec이나 승인된 테스트 행렬이 아니다.
 
 ## 결론
 
 현재 PR CI의 `gha-ci` **shell** suite 안에서, shell TC 하나가 스스로 격리된 HA 노드 두 개(active/standby)를 구성하고 OOS 값의 실제 복제를 검증할 수 있다. 새 suite나 HA 전용 job이 필요 없다.
 
 - CI와 같은 이미지·entrypoint·CTP로 로컬에서 실행했다. 결과는 PASS(81 OK, 0 NOK)다.
-- **실제 GitHub PR CI에서는 아직 실행하지 않았다.** TC는 로컬 topic branch에만 있다. push와 `/run` trigger는 별도 승인이 필요하다.
+- **실제 PR CI에서도 통과했다.** PR #8128의 `/run shell` run [40507894187](https://github.com/CUBRID/cubrid/actions/runs/40507894187) shard 18에서 `[OK]`다. 그 shard의 72건이 모두 통과했다.
+- 같은 run의 `test_shell` 실패는 shard 39의 server-side loaddb case `_enhance_1008` 한 건이다. 이 실패는 HA TC와 관계없다고 판단한다([근거](#실제-pr-ci-실행)). 재실행 run [40552401255](https://github.com/CUBRID/cubrid/actions/runs/40552401255)에서 OK가 되었고, 현재 head의 `gha-ci` context 다섯 개가 모두 pass다.
 - 장애 전환(failover)은 다루지 않는다. 별도 단계로 범위를 정한다.
 
 ## 입력 revision
@@ -19,7 +20,7 @@
 | Test image | `cubridci/cubridci:test_rl8.10` `sha256:54e1835de00fa38c2539d268023ab1d34e653f0558f32f5f450e8b6b2721a15d` (2026-10-26) |
 | CTP | `cubrid-testtools` develop `7dc9f4192bb96988d1bab78df3e45df88628b814` |
 | Workflow | `CUBRID/cubrid` develop `2d925cb8685600135eb1fb1781811f6b45fdecb0` `.github/workflows/gha-ci.yml` |
-| Testcase | `cubrid-testcases-private-ex` branch `task/oos-ha-replication` `3bba57e1f`, base `tc/pr-8128` `5a3c7d8ff` |
+| Testcase | `cubrid-testcases-private-ex` `tc/pr-8128` `3bba57e1f`. `task/oos-ha-replication`을 `5a3c7d8ff` 위에 fast-forward merge하고 2026-10-27에 push |
 
 ## CI shell 경로에서 확인한 사실
 
@@ -93,10 +94,29 @@ HAS_OOS는 `SELECT /*+ SELECT_RECORD_INFO */`의 `t_flags & 0x08`이다. 삭제 
 
 r6 단계별 시간: setup 약 27 s(A `to-be-active` 2 s 포함), 검사 약 14 s, 정리 4 s.
 
+## 실제 PR CI 실행
+
+입력: PR #8128 head `e3589ae`, `tc/pr-8128` `3bba57e1f`, CTP `7dc9f41`. 2026-10-27 12:57:19Z에 `/run shell`을 게시했다([comment](https://github.com/CUBRID/cubrid/pull/8128#issuecomment-6442446964)). 직전 run 40499093799(`tc/pr-8128` `5a3c7d8ff`, 새 case 없음)가 끝난 뒤 게시해서 그 run을 취소하지 않았다.
+
+| Run | 내용 | 결과 |
+|---|---|---|
+| [40507894187](https://github.com/CUBRID/cubrid/actions/runs/40507894187) shard 18 (job 122202487940) | 새 case 배정과 실행. provenance: engine `11.5.0.2793-e3589ae` optdebug, private-ex `3bba57e1f`, CTP `7dc9f41` | `[OK]`, case 약 44 s. shard: assigned 72 / run 72 / failed 0 / skipped 0 |
+| 40507894187 전체 | shell suite | `test_shell` failure. shard 39에서 `_35_cherry/issue_21654_server_side_loaddb/loaddb_CS/_01_utility/_17_loaddb/_enhance_1008` 한 건이 NOK (assigned 72 / run 71 / failed 1 / skipped 1) |
+| [40552401255](https://github.com/CUBRID/cubrid/actions/runs/40552401255) | `/run rerun 40507894187` | `_enhance_1008`만 재실행, `[OK]` (assigned 1 / run 1 / failed 0). `test_shell` success |
+
+`_enhance_1008` 실패가 HA TC와 관계없다고 보는 근거:
+
+- 같은 engine `e3589ae`의 직전 run 40499093799에서 `_enhance_1008`은 OK(shard 47)였다. 그 run의 유일한 NOK인 `cbrd_23280_auth`(같은 server-side loaddb 영역)는 이번 run에서 OK였다. 같은 영역의 서로 다른 case가 run마다 실패한다.
+- HA case는 shard 18의 별도 pod에서 실행됐다. shard 39와 process, network를 공유하지 않는다.
+- 같은 commit의 재실행에서 OK였다.
+
+`_enhance_1008`의 실패 원인은 분석하지 않았다.
+
+`/run rerun 40507894187` 댓글은 `vimkim` 계정으로 세 번(17:29Z, 17:35Z, 17:37Z) 게시됐다. 앞의 두 run(40551063742, 40551989314)은 `gate` job에서 `could not read the jobs of run 40507894187`로 실패했다(GitHub API HTTP 502, stream error). 세 번째가 위의 40552401255다.
+
 ## 한계와 미실행
 
-- 로컬 실행은 rootless podman의 `--privileged`다. CI pod는 실제 root와 `privileged: true`다. 실제 ARC pod에서의 실행은 아직 증명하지 않았다.
-- 실제 PR CI에서의 discovery와 실행은 push와 `/run shell` 후에만 증명된다.
+- 실제 ARC pod(root, `privileged: true`)에서 통과한 것은 한 번(run 40507894187)이다. 반복 실행 안정성은 로컬 동시 실행 3회 외에는 측정하지 않았다.
 - 비 root 경로는 library 최소 sentinel만 실행했다. 전체 TC를 비 root CTP로 실행하지 않았다. 개인 native runner(`cubrid-test-shell-run`)로도 실행하지 않았다.
 - 장애 전환, 재기동, master 교체 후 OOS 값, 대량/동시 쓰기에서의 queue alignment는 다루지 않는다. coverage R28의 queue alignment 부분은 여전히 미검증이다.
 - 기존 QA HA corpus(`cubrid-testcases-private/HA/shell`)와는 별개다.
@@ -107,6 +127,6 @@ r6 단계별 시간: setup 약 27 s(A `to-be-active` 2 s 포함), 검사 약 14 
 
 ## 다음 단계
 
-1. `task/oos-ha-replication`을 `tc/pr-8128`에 rebase 후 local merge(승인 필요).
-2. `tc/pr-8128` push와 PR #8128에서 `/run shell` 실행(각각 명시적 요청 필요). shard 로그에서 case가 배정·실행되고 OK인지 확인한다.
-3. failover 범위 결정: 같은 library로 A의 server 종료 후 B 승격, 승격 후 OOS 읽기·쓰기, 이전 master 재합류.
+TC를 `tc/pr-8128`에 merge, push하고 PR CI에서 실행하는 단계는 2026-10-27에 끝났다.
+
+1. failover 범위 결정: 같은 library로 A의 server 종료 후 B 승격, 승격 후 OOS 읽기·쓰기, 이전 master 재합류.
