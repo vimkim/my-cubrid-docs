@@ -12,6 +12,8 @@
 
 이 문서의 `path:line`은 모두 head `5a70787fe` 기준입니다. "구현됨"은 그 리비전의 코드를 읽어 확인했다는 뜻이고, 실행 확인은 [Test Plan](#test-plan)에 따로 적었습니다.
 
+**상태 갱신 (2026-10-27):** PR head는 이후 `4408135c0833ec959da3590f12c14efa69610c7e`가 되었습니다. 추가된 커밋 2개(`224104a36`, `4408135c0`)는 `unit_tests/oos`의 테스트 스크립트와 CTest 설정만 바꿨으므로, 엔진 설명과 `path:line`은 그대로 유효합니다. [Test Plan](#test-plan), [테스트](#12-테스트), [알려진 미해결 사항](#알려진-미해결-사항)은 Greptile 4차 리뷰 P1 3건의 처리 결과에 맞춰 이 head 기준으로 갱신했습니다.
+
 ## Purpose
 
 ### 무엇을 하는 PR인가
@@ -167,7 +169,7 @@ develop의 마지막 번호(135) 뒤에 새 recovery index를 붙였습니다(`r
 - `unit_tests/oos/`: GoogleTest 바이너리 34개(SA 13, SERVER 6, CS 1, SQL 14)와 스크립트 7개, CTest 항목 41개, 약 386개 케이스입니다.
 - 범위: 파일 API와 여러 chunk 값, 삭제와 식별 stamp, 빈 공간과 빈 페이지 반환, vacuum, 즉시 정리, 로그 없음과 crash 복구, TDE, SQL 동작(CRUD, DDL, 트랜잭션, `STORAGE` 옵션, `SHOW`, 지연 쓰기), loaddb와 workspace.
 - `UNIT_TEST_OOS` 옵션을 켜야 빌드됩니다(`unit_tests/CMakeLists.txt:43`). gha-ci는 이 테스트를 실행하지 않습니다. GoogleTest는 FetchContent로 받으므로 configure에 네트워크가 필요합니다.
-- 없는 테스트: rollback 후 vacuum(CBRD-27237), UPDATE 체인 재사용.
+- 없는 테스트: rollback 후 vacuum(CBRD-27237), UPDATE 체인 재사용, 삭제 rollback과 슬롯 재사용 충돌(CBRD-27781. 재현 테스트는 수정 전까지 실패하므로 티켓에 첨부).
 
 ## Remarks
 
@@ -178,11 +180,18 @@ develop의 마지막 번호(135) 뒤에 새 recovery index를 붙였습니다(`r
 | gha-ci [run 40349442612](https://github.com/CUBRID/cubrid/actions/runs/40349442612) | 엔진 `5a70787fe`, TC public `70db22a1c` / private `75a02020e` | build release·debug 성공. `test_medium` 975/975, `test_shell` 3,460 PASS / 0 FAIL / 30 SKIP, `test_sql` 실패 0건(17,628건 실행). 테스트는 debug 빌드로만 실행됩니다. |
 | 정적 검사 | `5a70787fe` | code-style, cppcheck, license, pr-style, memory-monitor-check 통과 |
 | OOS CTest (로컬, `debug_gcc`) | `5a70787fe` | 33/33 통과. crash_recovery, no_logging, real_vacuum, workspace 4개 대상은 이 실행에서 빠졌습니다. |
+| OOS CTest (로컬, `debug_gcc`) | `4408135c0` | 39/39 통과. crash_recovery, no_logging과 각 전용 DB fixture를 포함하고 real_vacuum, workspace 2개 대상만 뺐습니다. 테스트 스크립트 수명주기 회귀 11개 케이스 포함. 이 갱신 시점(2026-10-27)에 `4408135c0`의 gha-ci [run 40450836569](https://github.com/CUBRID/cubrid/actions/runs/40450836569)는 대기 중이었습니다. |
 | 이전 full CI | `52987c654` | shell 3개 실패, 같은 빌드 재실행에서 모두 통과(간헐 실패로 분류, [보고서](ci_analysis_report_52987c6_claude.md)) |
 | 수동 QA | `1ec35f8` (2026-09-29) | 139개 실패 중 확인된 OOS 엔진 결함 0개([요약](../feature-oos-merge/merge-readiness/team-lead-summary_20260929_codex.md)). 이후 변경이 많아 참고용입니다. |
 | 성능 | — | 이 head에서 측정한 OOS 성능 결과는 없습니다. 지연 쓰기(CBRD-27089)의 이전 측정에서 작은 행 CPU 영향은 판단 보류였습니다([측정](../cbrd-27089/design/ticket06-measurements-b871ea386-codex.md)). |
 
 Greptile 1·2차 리뷰의 7개 지적은 모두 고쳤고 스레드에 답했습니다(`a967e1041`, `16c5a148a`, `793db7881`, `003de820e`, `cecb5ad0d`, `792c54e50`, `7e7303b0e`).
+
+Greptile 4차 리뷰의 P1 3건은 모두 확인했고 스레드에 답했습니다.
+
+- 테스트 준비 스크립트가 같은 이름의 기존 DB를 지운다는 지적([r4380243555](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4380243555))은 `224104a36`, `4408135c0`에서 고쳤습니다. 이제 스크립트는 자기가 만든 DB만 다시 만들거나 지웁니다.
+- 힙 헤더 형식 변경으로 develop에서 만든 DB를 잘못 읽는다는 지적([r4380243545](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4380243545))은 [호환성](#호환성)의 재생성 정책대로 형식을 유지한다고 답했고, Greptile이 지적을 철회했습니다. develop도 11.5 개발 중에 같은 힙 헤더(`e84a7f6dc`)와 B-tree overflow 헤더(`10a1df3e6`)를 버전 변경 없이 바꿨습니다.
+- 삭제 rollback과 슬롯 재사용이 충돌한다는 지적([r4380243533](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4380243533))은 확인된 결함이며, CBRD-27781로 분리했습니다([알려진 미해결 사항](#알려진-미해결-사항)).
 
 ### 호환성
 
@@ -198,9 +207,7 @@ Greptile 1·2차 리뷰의 7개 지적은 모두 고쳤고 스레드에 답했�
 
 | 항목 | 내용 | 상태 |
 | --- | --- | --- |
-| Greptile [r4380243533](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4380243533) | OOS 페이지 슬롯이 rollback용 공간 예약 없이 재사용되어, 삭제 rollback과 다른 트랜잭션의 삽입이 충돌할 수 있다는 지적 (`oos_file.cpp:3174`) | 답변·확인 필요 |
-| Greptile [r4380243545](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4380243545) | 힙 헤더 형식 변경으로 develop에서 만든 DB를 잘못 읽는다는 지적 | 위 [호환성](#호환성)의 결정과 같은 문제. 답변 필요 |
-| Greptile [r4380243555](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4380243555) | 테스트 준비 스크립트가 같은 이름의 기존 DB를 확인 없이 지운다는 지적 (`setup_isolated_db.sh:43`) | 수정 필요(테스트 전용) |
+| [CBRD-27781](http://jira.cubrid.org/browse/CBRD-27781) (Greptile [r4380243533](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4380243533)) | OOS 페이지는 지운 슬롯과 공간을 바로 재사용합니다(`oos_file.cpp:3174`, rollback용 공간 예약 없음). 삭제가 끝나기 전에 다른 트랜잭션이 그 자리에 값을 넣고 commit한 뒤 삭제가 rollback되면, undo가 같은 슬롯에 이전 chunk를 되돌리다 충돌합니다. 현실적인 경우는 오류로 중단된 vacuum의 OOS 삭제 시스템 작업입니다. SERVER_MODE의 즉시 정리 경로는 대상 시스템 클래스 행이 OOS 기준을 넘지 않아 실제로는 도달하지 않습니다. | 확인된 결함. SERVER_MODE 단위 테스트로 재현했고 이 PR에서 분리. 수정 방안은 티켓에서 결정 |
 | CBRD-27237 | UPDATE를 rollback한 뒤 vacuum이 undo 이미지를 보고 현재 행의 체인을 지울 수 있는 문제. 명세는 undo 이미지를 삭제 근거로 쓰지 말라고 정했습니다. | 코드상 아직 가능해 보임. 이 head에서 재현하지 않음. 회귀 테스트 없음 |
 | CBRD-27230 | UPDATE에서 바꾸지 않은 컬럼의 체인 재사용과 커밋 시점 vacuum 알림 | 구현 안 됨 |
 | CBRD-27057 | demotion 기준을 페이지 1/4(약 4,086B) 대신 행 4개가 확실히 들어가는 크기(16KB 페이지에서 4,060B)로 | 구현 안 됨(draft PR #7462) |

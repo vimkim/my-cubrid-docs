@@ -6,7 +6,7 @@ Last modified: 2026-10-27, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [CBRD-26357-oos-engine_5a70787_claude.md](CBRD-26357-oos-engine_5a70787_claude.md) | 엔진 PR #7990(`5a70787`)의 구조, 저장 형식, 읽기·쓰기·vacuum·복제, 호환성, 검증, 알려진 미해결 사항 | 2026-10-27 | 2026-10-27 | 리뷰어가 149개 파일을 이해하고 머지 위험을 판단하도록 설명 |
+| [CBRD-26357-oos-engine_5a70787_claude.md](CBRD-26357-oos-engine_5a70787_claude.md) | 엔진 PR #7990(`5a70787`)의 구조, 저장 형식, 읽기·쓰기·vacuum·복제, 호환성, 검증, 알려진 미해결 사항. 검증과 미해결 사항은 head `4408135` 기준으로 갱신(Greptile 4차 P1 결과, CBRD-27781) | 2026-10-27 | 2026-10-27 | 리뷰어가 149개 파일을 이해하고 머지 위험을 판단하도록 설명 |
 | [CBRD-26357-oos-engine-pr-body_5a70787_claude.md](CBRD-26357-oos-engine-pr-body_5a70787_claude.md) | 엔진 PR #7990 본문: 목적, 구현 요약, 검증, 호환성, 미해결 사항 | 2026-10-27 | 2026-10-27 | 준비 중이던 PR 본문을 실제 내용으로 교체 |
 | [CBRD-26357-oos-engine-pr-context_5a70787_claude.md](CBRD-26357-oos-engine-pr-context_5a70787_claude.md) | #7990 본문 게시용 리비전, 원본 본문과 지문, 게시 단계 | 2026-10-27 | 2026-10-27 | 게시 전 검토 범위와 재개 조건을 보존 |
 | [CBRD-26357-oos-engine-pr-body_4408135_claude.md](CBRD-26357-oos-engine-pr-body_4408135_claude.md) | 엔진 PR #7990 본문 `4408135` 개정: Greptile P1 3건의 결과(수정, 형식 유지, CBRD-27781 분리)와 새 head 검증 | 2026-10-27 | 2026-10-27 | Greptile 4차 리뷰 P1 처리 결과를 본문의 미해결 사항에 반영 |
