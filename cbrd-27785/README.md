@@ -2,7 +2,7 @@
 
 관련 이슈: [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785).
 관련 PR: [OOS 통합 PR #7990](https://github.com/CUBRID/cubrid/pull/7990).
-성능 수정: [draft PR #8299](https://github.com/CUBRID/cubrid/pull/8299).
+성능 수정: [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785) ([draft PR #8299](https://github.com/CUBRID/cubrid/pull/8299)).
 대상은 `feature/oos-merge`다.
 작성·수정일: 2026-10-27, Asia/Seoul.
 

@@ -13,7 +13,7 @@
 | --- | --- |
 | 성능 보고의 비교 | PR head `4408135c0833ec959da3590f12c14efa69610c7e` / develop `4781495f01523a3ecc5891e3377ad62cf876a1cd` |
 | 조회한 PR #7990 | head `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`, base develop `4781495f01523a3ecc5891e3377ad62cf876a1cd` |
-| 별도 성능 수정안 PR #8299 | Draft·Open, head `bcb900d1696756a120ec0a2b7885c212f71ebc07`, base `feature/oos-merge` 의 `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67` |
+| 별도 성능 수정안 CBRD-27785 (PR #8299) | Draft·Open, head `bcb900d1696756a120ec0a2b7885c212f71ebc07`, base `feature/oos-merge` 의 `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67` |
 | 소스 검토 범위 | `CUBRID/CUBRID` 의 위 PR revision과 `vimkim/cubrid` 의 수정안 `bcb900d` |
 | 실행 근거 | 기존 [분석·검증 기록](CBRD-27785-oos-read-performance_bcb900d_codex.md)을 인용한다. 이번 답변 준비에서 빌드·벤치마크는 실행하지 않았다. |
 
@@ -30,11 +30,11 @@ PR 상태와 JIRA 상태는 2026-10-27 조회 시점의 관찰이다. PR #7990�
 <a id="reply-1-inline-reads"></a>
 ### 1. OOS 값이 없는 일반 테이블의 성능 저하
 
-말씀하신 일반 테이블의 스캔 비용 증가를 별도 실험에서도 확인했습니다. OOS 값이 없는 행을 읽을 때도 OOS용 준비 작업을 거치던 부분과, 가변 컬럼 위치를 해석하는 비용을 줄인 수정안을 [PR #8299](https://github.com/CUBRID/cubrid/pull/8299)에 준비했습니다.
+말씀하신 일반 테이블의 스캔 비용 증가를 별도 실험에서도 확인했습니다. OOS 값이 없는 행을 읽을 때도 OOS용 준비 작업을 거치던 부분과, 가변 컬럼 위치를 해석하는 비용을 줄인 수정안을 [CBRD-27785](http://jira.cubrid.org/browse/CBRD-27785) ([PR #8299](https://github.com/CUBRID/cubrid/pull/8299))에 준비했습니다.
 
 양쪽 모두 heap에만 저장되는 작은 행 20만 개로 비교했을 때, 수정 전에는 좁은 컬럼 스캔과 여러 컬럼 스캔의 instructions가 기준 대비 약 5.12%, 8.89% 증가했습니다. 수정 후에는 약 1.11%, 1.36% 증가로 줄었고, 실행 순서를 뒤집어도 같은 수준이었습니다. 다만 원본 SQL을 그대로 재실행한 결과는 아니며, 보고해 주신 조건에 맞춰 재구성한 실험입니다.
 
-현재 확인한 범위는 이 두 SELECT 스캔입니다. 일반 테이블의 UPDATE를 포함한 나머지 CRUD까지 해결한 것은 아니며, PR #8299도 아직 PR #7990에 반영되기 전입니다.
+현재 확인한 범위는 이 두 SELECT 스캔입니다. 일반 테이블의 UPDATE를 포함한 나머지 CRUD까지 해결한 것은 아니며, 이 수정안도 아직 PR #7990에 반영되기 전입니다.
 
 <a id="reply-2-update-reuse"></a>
 ### 2. 작은 컬럼만 바꾸는 UPDATE와 변경 없는 OOS 값 재사용
