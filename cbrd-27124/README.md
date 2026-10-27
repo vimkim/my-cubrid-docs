@@ -1,6 +1,6 @@
 # CBRD-27124: 빌드 버전 갱신과 재빌드 범위
 
-[CBRD-27124](https://jira.cubrid.org/browse/CBRD-27124)의 분석, 설계 결정 준비, 캐시 실측을 모은다. 2026-10-27 구현 `0d2a76e`의 draft PR 발행 자료를 준비했다. 관련 PR은 아직 없다. 빌드별 통계 기반은 [PR #8254](https://github.com/CUBRID/cubrid/pull/8254)로 머지되었다.
+[CBRD-27124](https://jira.cubrid.org/browse/CBRD-27124)의 분석, 설계 결정 준비, 캐시 실측을 모은다. 2026-10-27 구현 `0d2a76e`를 [Draft PR #8298](https://github.com/CUBRID/cubrid/pull/8298)로 발행했다. 빌드별 통계 기반은 [PR #8254](https://github.com/CUBRID/cubrid/pull/8254)로 머지되었다.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |

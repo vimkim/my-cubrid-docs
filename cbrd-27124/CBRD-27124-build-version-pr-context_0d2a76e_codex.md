@@ -42,8 +42,18 @@ Docs remain locally committed on their task branch. No docs integration, docs pu
 - No-op: 0 compilations in 1.629 seconds. ctest found no registered tests.
 - Source checkout restored to the named topic branch and SOURCE_COMMIT. Temporary detached measurement commits are absent from PR history.
 - Unrelated changes preserved in starting develop and the older CBRD-27124 analysis worktree.
-- CI result: pending publication, no trigger issued.
+- CI result: draft PR #8298 published; run 40487586838 in progress. See execution record below.
 
 ## Execution record
 
-No publication operations have been performed. Record receipts and body fingerprints only after the user confirms the saved material.
+User confirmed the saved material and proposed operations with `yes` in this conversation.
+
+- Publication attempt started: 2026-10-27T10:18:36.709793+00:00
+- Approved body SHA-256: `51ed92e44b58087b72728e9481dbe659349255e494e6e1c63e4f559fe39e0634`
+- Source, destination and draft status remain as proposed.
+- Source push verified: `vimkim/cubrid:CBRD-27124-isolate-build-version` = SOURCE_COMMIT.
+- Created draft PR: https://github.com/CUBRID/cubrid/pull/8298 (2026-10-27T10:18:47Z). Base `develop`, head repository `vimkim/cubrid`, headRefName as proposed; assignee `vimkim` verified.
+- Published body bytes and SHA-256 match the saved approved body.
+- Both testcase branches verified at latest develop; no TC changes. No active or completed same-head gha-ci run existed before trigger.
+- Triggered `/run all` exactly once: https://github.com/CUBRID/cubrid/pull/8298#issuecomment-6439297216 . Tested head is SOURCE_COMMIT. Pickup verified: both build contexts and all three suite contexts point to https://github.com/CUBRID/cubrid/actions/runs/40487586838 . Terminal results pending.
+- TC PRs: https://github.com/CUBRID/cubrid-testcases/pull/3897 and https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4588 . No TC edits. The agent will not merge or close these PRs.
