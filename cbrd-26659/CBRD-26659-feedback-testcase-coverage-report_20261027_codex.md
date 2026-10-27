@@ -1,3 +1,396 @@
+# CBRD-26659 — TC 여섯 항목 보완 내용 검토
+
+작성·대조: **2026-10-27, Asia/Seoul**. 보고 대상: **2팀 민준 팀장님**.
+
+민준 팀장님이 요청하신 여섯 카테고리의 TC 추가·보완과 PR 반영을 완료했습니다. 이 문서는 각 항목이 어떤 검사로 보완됐고, 통과·실패·비활성 상태와 남은 검토가 무엇인지 설명합니다. **TC 보완 완료와 전체 동작 검증 완료는 구분합니다.**
+
+- **Engine PR:** [#8128](https://github.com/CUBRID/cubrid/pull/8128)
+- **TC Public PR:** [#3688](https://github.com/CUBRID/cubrid-testcases/pull/3688)
+- **TC Private PR:** [#4365](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4365)
+
+**목차:** [전체 결과](#전체-결과) · [여섯 항목](#여섯-항목-한눈에-보기) · [TC별 목록](#현재-tc별-목록) · [이전 기록](#이전-리비전-기록)
+
+<br>
+
+## 전체 결과
+
+**TC 추가·보완과 PR 반영은 완료했으나, 여섯 항목의 전체 검증 완료를 뜻하지는 않습니다.** 현재 PR의 파일과 비활성 목록을 대조하고, [최신 CI 40472072791](https://github.com/CUBRID/cubrid/actions/runs/40472072791)의 개별 TC 로그를 확인했습니다.
+
+| 종류 | 전체 | 활성 | disabled | 최신 CI의 활성 TC 결과 |
+| --- | ---: | ---: | ---: | --- |
+| SQL | 28 | 25 | 3 | 25 PASS · 0 FAIL |
+| shell | 133 | 69 | 64 | 66 PASS · **3 FAIL** |
+| **합계** | **161** | **94** | **67** | **91 PASS · 3 FAIL · SKIP/미실행 0** |
+
+C++ 보완 함수 **14개는 별도**입니다. 14개 모두 PR에 있으나 현재 리비전의 개별 실행 결과는 아직 대조하지 않았습니다. 위 161개는 기존 TC를 포함한 **이번 OOS 보완 목록**이며, 새로 만든 TC 수나 전체 CUBRID 회귀 TC 수가 아닙니다.
+
+**PR 반영 확인:** public #3688의 SQL 28개·answer 28개, private #4365의 shell 진입점 133개와 관련 파일, engine #8128의 C++ 보완 함수 14개가 모두 포함되어 있습니다. disabled TC의 보존 파일도 목록의 해시와 일치합니다. 최신 CI 입력은 Engine `e3589ae42`, public `45e21ad79`, private `98723aa47`로 2026-10-27 19:40 확인 당시 PR head와 같습니다.
+
+[현재 TC별 목록·개별 비활성 사유](#현재-tc별-목록)에서 TC 원문과 SQL answer를 볼 수 있습니다. 아래 `SQL-`·`SH-`·`UT-` 번호는 이 목록의 조회 번호입니다.
+
+<br>
+
+## 비활성 67개 — 기능 실패와 장시간을 구분
+
+아래 사유는 **비활성화 당시 관측**을 유지한 것입니다. 최신 CI에서는 이 TC들을 재실행하지 않았습니다.
+
+| 비활성 사유 | SQL | shell | 합계 | 보고 시 해석 |
+| --- | ---: | ---: | ---: | --- |
+| **기능·정합성 검사 FAIL만** | 3 | 56 | **59** | 기대값·상태·오류 검사에서 실패를 관측했습니다. 엔진 결함인지 TC 기대값 문제인지 개별 원인 분석이 필요합니다. |
+| **장시간만** | 0 | 3 | **3** | 당시 기능 검사는 PASS했으나 개별 실행이 60초를 넘었습니다. |
+| **FAIL + 장시간** | 0 | 5 | **5** | 실패와 60초 초과가 모두 기록되어 있습니다. 실행 시간만 줄여도 해결되지 않습니다. |
+| **합계 — 중복 제외** | **3** | **64** | **67** | 최신 CI에서는 이 67개를 실행하지 않았습니다. |
+
+즉, **실패 사유가 있는 TC는 64개**, **장시간 사유가 있는 TC는 8개**이며 5개가 겹칩니다. 60초는 TC 선택에 적용한 실행 시간 기준입니다. **장시간 8개를 제품 성능 회귀 8건으로 보고하지 않습니다.** 비활성 FAIL도 원인 확인 전 데이터 손상 결함으로 단정하지 않습니다.
+
+장시간만으로 제외된 3개는 `dml_transitions` **101.085초**, `schema_sa` **81.389초**, `large_keys` **381.773초**입니다. 별도 회귀로 운영할지, TC를 나눠 정규 CI에 넣을지 검토가 필요합니다.
+
+<br><br>
+
+## 여섯 항목 한눈에 보기
+
+| 요청 항목 | SQL·shell 전체 / 활성 / disabled | 최신 활성 PASS / FAIL | disabled 사유 | 검토 핵심 |
+| --- | --- | --- | --- | --- |
+| [① 구문·의미·SHOW·유틸리티](#tc-1) | **29 / 11 / 18** | 11 / 0 | 실패만 18 | 확장 SHOW와 정책별 load/unload·compact는 미완료 |
+| [② 사용자 연산·OOS 유무](#tc-2) | **136 / 84 / 52** | 84 / 0 | 실패만 49 · 장시간만 2 · 둘 다 1 | 연산별 TC는 있으나 모든 연산×저장 상태 조합의 독립 검증은 남음 |
+| [③ C++ 내부 검증·중복 정리](#tc-3) | 별도 **14함수** | 최신 결과 미대조 | 위 비활성 집계와 별도 | 반영 14/14 확인, 현재 실행 결과·대체 가능성 검토 필요 |
+| [④ 경계값·limit+1](#tc-4) | **15 / 9 / 6** | 6 / **3** | 실패만 6 | 활성 3개도 현재 실패. 경계 기대값·저장 경로부터 확인 |
+| [⑤ 저장 효율·회수·단편화](#tc-5) | **17 / 5 / 12** | 5 / 0 | 실패만 8 · 둘 다 4 | 핵심 반복 작업·회수 TC가 비활성. 효율 검증 완료로 볼 수 없음 |
+| [⑥ 큰 OOS PK/UNIQUE](#tc-6) | **20 / 18 / 2** | 17 / **1** | 실패만 1 · 장시간만 1 | 큰 키 종합 TC는 장시간 제외, key-overflow 경계는 현재 실패 |
+
+한 TC가 여러 항목을 검사하므로 **이 표의 행을 합산하면 중복**됩니다. ④의 `record_keys` 실패 1개는 ⑥에도 표시했습니다. C++ 14개 중 10개는 경계, 2개는 회수 항목에도 연결됩니다.
+
+<br><br>
+
+<a id="tc-1"></a>
+
+## ① SQL 구문·의미·SHOW·유틸리티 — CBRD-26659
+
+**SQL 2개·shell 27개 중 11개 활성 PASS, 18개는 기능 검사 FAIL로 disabled**입니다.
+
+| 검토할 내용 | 반영한 검사와 현재 상태 | 특이사항·남은 확인 |
+| --- | --- | --- |
+| STORAGE 정책의 정상·오류 입력 | SQL-08·27, SH-097·110: 정책 구문, 잘못된 절·도메인·문맥, 오류 후 값·정책 보존 | 기본 SQL과 SH-110은 PASS. 확장 정책 SH-097은 FAIL로 비활성이어서 전체 의미 검사 완료는 아님 |
+| SHOW 대상·권한·파티션 | SH-072·115·116: 정상/잘못된 대상, DBA·일반 사용자, 객체·파티션 귀속 | SH-072는 PASS. 확장 SHOW 2개는 FAIL로 비활성 |
+| load/unload·backup/restore·compact | 일반 경로 4개와 compact 3개는 PASS. 정책별 CS/SA load/unload 12개, compact 전환·정책 보존 3개는 비활성 | 값만 복원됐는지 외에 **정책·실제 OOS 저장 상태까지 보존되는지** 확인 필요 |
+
+**검토 요청:** 기본 경로의 통과를 인정하는 범위와, 확장 SHOW·정책별 유틸리티 실패 18개의 분석·수정 우선순위를 확인 부탁드립니다.
+
+<br><br>
+
+<a id="tc-2"></a>
+
+## ② 사용자 연산·OOS 유무 — CBRD-26659
+
+**SQL 19개·shell 117개 중 84개 활성 PASS, 52개 disabled**입니다. 비활성 사유는 실패만 49개, 장시간만 2개, 실패+장시간 1개입니다.
+
+| 검토할 내용 | 반영한 검사와 현재 상태 | 특이사항·남은 확인 |
+| --- | --- | --- |
+| 읽기·복사·DML·제약·트랜잭션·트리거·FK | 연산별 SQL·shell TC 반영. `alt_duplicate`·`alt_replace`는 덮어쓰기 전 `note=111`과 **큰 값 전체의 정확한 일치**를 추가했고 최신 CI 두 개 모두 PASS | 최종 값만 맞아 중간 오류를 놓치는 문제를 보완함. SQL 결과 통과만으로 물리 OOS 상태를 입증하지는 않음 |
+| 실제 OOS 유무와 상태 전환 | SH-100의 실제 레코드 `HAS_OOS` 검사, INSERT와 UPDATE의 clear/set 전환 검사 | **clear는 존재하는 레코드의 OOS 플래그 해제 상태**임. 삭제된 행을 clear로 세지 않으며, 다른 실행의 물리 검사로 해당 SQL의 상태 검증을 대신하지 않음 |
+| 스키마·CTAS·파티션·소유권 | 해당 연산 TC를 포함했지만 파티션 shell 18개 중 17개, CTAS 교차 상태 2개 등은 실패로 비활성 | **지원 연산×적용 가능한 clear/set 상태**의 요구 조합을 모두 독립 대조한 상태는 아님 |
+| 장시간 사례 | `dml_transitions`·`schema_sa`는 당시 PASS지만 60초 초과. `schema_rewrites_sa`는 FAIL이면서 94.311초 | 장시간 PASS 2개와 기능 실패 1개를 같은 사유로 취급하지 않음 |
+
+**검토 요청:** TC 추가 자체의 누락과 실행·증명 부족을 구분해 검토 부탁드립니다. 특히 파티션·스키마·소유권 실패와 아직 대조되지 않은 연산×상태 조합의 처리 순서를 확인 부탁드립니다.
+
+<br><br>
+
+<a id="tc-3"></a>
+
+## ③ C++ 내부 검증·중복 정리 — CBRD-26659
+
+**보완 함수 14개 모두 engine #8128에 반영되어 있습니다.** 최신 리비전에서 14개가 각각 실행·PASS했는지는 이번 대조에서 확인하지 못했습니다. 이 14개를 위 SQL·shell 비활성 67개에 더하지 않습니다.
+
+| 검토할 내용 | 반영·유지한 검사 | 특이사항·남은 확인 |
+| --- | --- | --- |
+| SQL로 관찰하기 어려운 내부 동작 | chunk·VOT·stub 경계, 읽기·Expand 재시도, 호출자 버퍼, system-worker undo, 소유권·기존 파일 TDE | 결과값 외에 **버퍼·참조·수명과 내부 상태**를 검사하므로 SQL TC와 겹친다는 이유만으로 삭제할 수 없음 |
+| 중복 TC 정리 | 동등한 대체 assertion을 입증하지 못한 기존 내부 검증은 유지 | “C++ 중복 정리 완료”나 “최신 C++ 전체 PASS”로 보고하지 않음. 현재 source의 discovery·실행·결과 대조가 필요 |
+| 후속 UPDATE 계약 | UT-13은 할당하지 않은 OOS 값의 stub 보존 검사 | [CBRD-27230](https://jira.cubrid.org/browse/CBRD-27230)는 **develop 병합 이후 TODO로 확정**. 이 관련 항목을 새 병합 전 요청으로 올리지 않음 |
+
+**검토 요청:** 최신 source에서 필요한 C++ 선택을 재실행·대조할 범위와, 동등한 검증을 확인한 뒤 정리할 중복 TC를 확인 부탁드립니다. 과거 리비전의 302개 GTest PASS는 현재 14개의 통과 근거로 옮겨 쓰지 않았습니다.
+
+<br><br>
+
+<a id="tc-4"></a>
+
+## ④ 경계값·limit+1 — CBRD-26659
+
+**SQL 7개·shell 8개 중 9개 활성, 6개 disabled**입니다. 최신 활성 결과는 **6 PASS·3 FAIL**이며, 비활성 6개도 모두 기능 검사 FAIL 사유입니다. C++ 경계 보완 10개는 별도입니다.
+
+| 검토할 내용 | 반영한 검사와 현재 상태 | 특이사항·남은 확인 |
+| --- | --- | --- |
+| 직렬화·chunk·VOT·stub/버퍼 | 24B stub와 다음 가능한 직렬화 크기, chunk 용량 전후, VOT 폭, exact/한 byte 부족 버퍼 | 문자 수와 실제 저장 byte 수를 구분해야 함. 큰 길이의 parser/정수 변환 guard TC는 **실제 최대 크기 저장 시험을 대신하지 않음** |
+| record target·큰 행·잔여 고정 부분 | `record_target0/10`, `serialized_chunks`, SQL `record_boundaries`·`sql05_bigone`·`sql09_lob_maxcols`는 비활성 | 페이지 내 목표 크기와 실제 저장 한계를 혼동하지 않는지, unfill과 독립적인 target인지 기대값부터 확인 필요 |
+| 현재 활성 실패 | `record_keys`·`record_layout`·`record_residual` | 과거 PASS와 달리 현재 CI에서 실패. 엔진·fixture·기대값 중 원인은 아직 미확정 |
+| overflow 구분 | develop의 **heap 큰 행 overflow**, OOS, **B-tree key overflow**를 별도 관찰 | 키가 커져 B-tree overflow에 정상 저장되는 경로를 오류로 기대하지 않는지 확인 필요. OOS+REC_BIGONE 미지원 조건도 구분 |
+
+현재 실패 로그: [record_residual](https://github.com/CUBRID/cubrid/actions/runs/40472072791/job/122086744588) · [record_layout](https://github.com/CUBRID/cubrid/actions/runs/40472072791/job/122086744633) · [record_keys](https://github.com/CUBRID/cubrid/actions/runs/40472072791/job/122086744964).
+
+**검토 요청:** 활성 FAIL 3개의 원인·기대값 대조를 우선 진행하고, 비활성 경계 6개의 수정·재활성화 순서를 확인 부탁드립니다. “경계 TC를 넣었다”와 “경계 동작이 검증됐다”를 구분할 필요가 있습니다.
+
+<br><br>
+
+<a id="tc-5"></a>
+
+## ⑤ 저장 효율·공간 회수·단편화 — CBRD-26659
+
+**shell 17개 중 5개 활성 PASS, 12개 disabled**입니다. 비활성은 실패만 8개, 실패+장시간 4개이며 **장시간만으로 제외된 TC는 없습니다.** C++ 관련 보완 2개는 별도입니다.
+
+| 검토할 내용 | 반영한 검사와 현재 상태 | 특이사항·남은 확인 |
+| --- | --- | --- |
+| 반복 INSERT/DELETE·INSERT/UPDATE/DELETE, abort/retry·restart | `churn_*` 4개는 FAIL이면서 약84~95초로 비활성 | 반복 뒤 survivor 값, chunk/page 수, 회수·재사용과 불필요한 volume 증가를 검증 완료로 볼 수 없음 |
+| snapshot 이후 회수·소유권·알림·rollback/vacuum | `snapshots_reclaim`, `notify_*`, `qualified_reuse`, `alt_stub_*`, `rollback_vacuum` 등 8개 비활성 | **값 읽기 성공과 페이지 반환 성공은 다른 검사**임. chunk 삭제와 비어 있는 페이지 회수도 구분해야 함 |
+| 현재 PASS 범위 | snapshot 가시성, committed/undo crash, DROP/recreate 후 독립 survivor 등 5개 | 특정 가시성·복구·파일 수명 검증임. 반복 작업의 공간 효율·단편화 전체를 대체하지 못함 |
+
+**검토 요청:** 이 항목을 “저장 효율 검증 완료”로 수용하지 않고, 핵심 반복·회수 실패를 우선 추적할지 확인 부탁드립니다. `rollback_vacuum`은 [CBRD-27237](https://jira.cubrid.org/browse/CBRD-27237)과 연결해 스펙 회귀 판단에도 반영해야 합니다.
+
+<br><br>
+
+<a id="tc-6"></a>
+
+## ⑥ 큰 OOS PK/UNIQUE — CBRD-26659
+
+**SQL 3개·shell 17개 중 18개 활성, 2개 disabled**입니다. 최신 활성 결과는 **17 PASS·1 FAIL**입니다. 비활성은 기능 실패 1개와 장시간만 1개입니다.
+
+| 검토할 내용 | 반영한 검사와 현재 상태 | 특이사항·남은 확인 |
+| --- | --- | --- |
+| 단일·복합 PK/UNIQUE, 생성·변경·중복·NULL·rollback | SQL-25·26, SH-004와 OOS key FK 14개 등 활성 PASS | 일반 key+OOS payload 대조군과 **indexed attribute 자체가 OOS인 경우**를 구분. SQL의 값 통과만으로 indexed attribute의 물리 OOS 상태까지 입증하지 않음 |
+| 타입·정책·키·생성/유지 조합의 종합 검사 | `large_keys`는 당시 기능 PASS, **381.773초**로 disabled | 정합성 FAIL로 제외한 TC가 아님. 현재 정규 CI가 이 종합 조합을 실행·통과한 것으로 계산하지 않음 |
+| key-overflow·물리 귀속 경계 | `record_keys`는 최신 FAIL, SQL `record_boundaries`는 실패로 disabled | ④와 공유하는 실패임. 별도 실패 1건을 추가해 총 4건으로 세지 않음 |
+
+**검토 요청:** 큰 키 종합 TC를 분할하거나 별도 회귀로 실행할 방식, 실제 OOS 인덱스 키의 물리 상태 검증, key-overflow 경계 실패의 처리를 확인 부탁드립니다. 이 항목은 기능 검증이며 성능 비교·HA 검증 완료를 뜻하지 않습니다.
+
+<br>
+
+
+## 실행 입력과 대조 방법
+
+| 저장소 | 검토 커밋 |
+| --- | --- |
+| CUBRID/cubrid | `e3589ae42d42b04eb020e1ae43e165b01d31b12a` |
+| CUBRID/cubrid-testcases | `45e21ad799d82ebadc04a93c7d2f69517d53bf39` |
+| CUBRID/cubrid-testcases-private-ex | `98723aa473cde722abbc729799cf489b7f3f732f` |
+
+기존 피드백 대응표의 요구 영역·TC 매핑을 기준으로 현재 Git 객체의 파일 존재와 보존 해시를 대조했습니다. SQL·answer 56/56개, shell 진입점·관련 파일 204/204개, C++ 파일 4/4개와 보완 함수 14/14개를 확인했습니다. SQL `alt_duplicate`·`alt_replace`와 answer 두 개에 추가한 중간값 검사를 제외하면 해당 대상의 내용은 기존 검토본과 같습니다.
+
+[CI 40472072791](https://github.com/CUBRID/cubrid/actions/runs/40472072791)의 checkout/build 입력을 위 커밋과 대조하고, 전체 job 로그에서 활성 TC의 실제 경로와 개별 `[OK]`/`[NOK]`를 확인했습니다. SQL 25개·shell 69개 모두 경로가 일치했고 비활성 67개는 실행되지 않았습니다. 이 문서 정리를 위해 엔진·TC를 수정하거나 새 CI를 실행하지 않았습니다.
+
+비활성 사유는 [SQL manifest](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/disabled/oos-pr8128.tsv)와 [shell inventory](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/oos-pr8128-inventory.tsv)의 당시 관측을 유지했습니다. FAIL의 개별 원인 분석과 최신 C++ 실행 대조는 이번 검토에 포함하지 않았습니다.
+
+<br><br>
+
+## 현재 TC별 목록
+
+아래 대응표는 각 TC의 요구 영역·PR 원문·현재 선택·최신 실행 결과와 비활성 사유를 연결합니다. **① 구문·유틸리티 / ② 사용자 연산 / ③ C++ 내부 / ④ 경계 / ⑤ 효율·회수 / ⑥ 큰 키**를 뜻하며 항목 간 중복이 있습니다. `SQL-`·`SH-`·`UT-`는 조회 번호입니다.
+
+### SQL TC 28개
+
+| 번호 | 대응 항목 | TC 원문 | 선택 | 최신 CI 결과 | 비활성 사유·당시 시간 |
+| --- | --- | --- | --- | --- | --- |
+| SQL-01 | 2 | [oos_alt_duplicate](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_alt_duplicate.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_alt_duplicate.answer) | 활성 | PASS | — |
+| SQL-02 | 2 | [oos_alt_merge](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_alt_merge.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_alt_merge.answer) | 활성 | PASS | — |
+| SQL-03 | 2 | [oos_alt_replace](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_alt_replace.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_alt_replace.answer) | 활성 | PASS | — |
+| SQL-04 | 4 | [oos_chunk_boundaries](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_chunk_boundaries.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_chunk_boundaries.answer) | 활성 | PASS | — |
+| SQL-05 | 2 | [oos_dml_forms](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_dml_forms.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_dml_forms.answer) | 활성 | PASS | — |
+| SQL-06 | 2 | [oos_partition](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_partition.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_partition.answer) | 활성 | PASS | — |
+| SQL-07 | 2 | [oos_partition_routing](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_partition_routing.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_partition_routing.answer) | 활성 | PASS | — |
+| SQL-08 | 1 | [oos_policy_syntax](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_policy_syntax.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_policy_syntax.answer) | 활성 | PASS | — |
+| SQL-09 | 2 | [oos_read_relations](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_read_relations.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_read_relations.answer) | 활성 | PASS | — |
+| SQL-10 | 4·6 | [oos_record_boundaries](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/disabled/failing/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_record_boundaries.sql.disabled) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/disabled/failing/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_record_boundaries.answer) | **disabled** | 미실행 | 기능 검사 FAIL · 0.040초 |
+| SQL-11 | 4 | [oos_representation](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_representation.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_representation.answer) | 활성 | PASS | — |
+| SQL-12 | 2 | [oos_schema](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_schema.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_schema.answer) | 활성 | PASS | — |
+| SQL-13 | 2 | [oos_schema_materialize](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_schema_materialize.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_schema_materialize.answer) | 활성 | PASS | — |
+| SQL-14 | 2 | [oos_schema_rewrites](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_schema_rewrites.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_schema_rewrites.answer) | 활성 | PASS | — |
+| SQL-15 | 2 | [oos_sql01_insert_select](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql01_insert_select.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_sql01_insert_select.answer) | 활성 | PASS | — |
+| SQL-16 | 2 | [oos_sql04_delete](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql04_delete.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_sql04_delete.answer) | 활성 | PASS | — |
+| SQL-17 | 2 | [oos_sql04_update](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql04_update.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_sql04_update.answer) | 활성 | PASS | — |
+| SQL-18 | 4 | [oos_sql05_bigone](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/disabled/failing/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql05_bigone.sql.disabled) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/disabled/failing/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_sql05_bigone.answer) | **disabled** | 미실행 | 기능 검사 FAIL · 0.048초 |
+| SQL-19 | 2 | [oos_sql05_constraints](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql05_constraints.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_sql05_constraints.answer) | 활성 | PASS | — |
+| SQL-20 | 2 | [oos_sql05_transactions](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql05_transactions.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_sql05_transactions.answer) | 활성 | PASS | — |
+| SQL-21 | 2 | [oos_sql06_triggers](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql06_triggers.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_sql06_triggers.answer) | 활성 | PASS | — |
+| SQL-22 | 2 | [oos_sql07_read_paths](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql07_read_paths.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_sql07_read_paths.answer) | 활성 | PASS | — |
+| SQL-23 | 2 | [oos_sql09_lob_copy](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql09_lob_copy.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_sql09_lob_copy.answer) | 활성 | PASS | — |
+| SQL-24 | 4 | [oos_sql09_lob_maxcols](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/disabled/failing/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql09_lob_maxcols.sql.disabled) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/disabled/failing/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_sql09_lob_maxcols.answer) | **disabled** | 미실행 | 기능 검사 FAIL · 0.797초 |
+| SQL-25 | 6 | [oos_sql18_large_keys](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql18_large_keys.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_sql18_large_keys.answer) | 활성 | PASS | — |
+| SQL-26 | 2·6 | [oos_sql19_fk_actions](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_sql19_fk_actions.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_sql19_fk_actions.answer) | 활성 | PASS | — |
+| SQL-27 | 1·4 | [oos_storage_policy](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_storage_policy.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_storage_policy.answer) | 활성 | PASS | — |
+| SQL-28 | 4 | [oos_vot_many_attributes](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/cases/cbrd_26659_oos_vot_many_attributes.sql) · [answer](https://github.com/CUBRID/cubrid-testcases/blob/45e21ad799d82ebadc04a93c7d2f69517d53bf39/sql/_36_guava/cbrd_26659/answers/cbrd_26659_oos_vot_many_attributes.answer) | 활성 | PASS | — |
+
+<br>
+
+### shell TC 133개
+
+| 번호 | 대응 항목 | TC 원문 | 선택 | 최신 CI 결과 | 비활성 사유·당시 시간 |
+| --- | --- | --- | --- | --- | --- |
+| SH-001 | 2 | [alt_duplicate_select](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_alt_duplicate_select/cases/cbrd_26659_alt_duplicate_select.sh) | 활성 | PASS | — |
+| SH-002 | 2 | [alt_duplicate_set](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_alt_duplicate_set/cases/cbrd_26659_alt_duplicate_set.sh) | 활성 | PASS | — |
+| SH-003 | 2 | [alt_duplicate_values](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_alt_duplicate_values/cases/cbrd_26659_alt_duplicate_values.sh) | 활성 | PASS | — |
+| SH-004 | 2·6 | [alt_indexed](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_alt_indexed/cases/cbrd_26659_alt_indexed.sh) | 활성 | PASS | — |
+| SH-005 | 2 | [alt_merge](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_alt_merge/cases/cbrd_26659_alt_merge.sh) | 활성 | PASS | — |
+| SH-006 | 2 | [alt_replace_select](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_alt_replace_select/cases/cbrd_26659_alt_replace_select.sh) | 활성 | PASS | — |
+| SH-007 | 2 | [alt_replace_set](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_alt_replace_set/cases/cbrd_26659_alt_replace_set.sh) | 활성 | PASS | — |
+| SH-008 | 2 | [alt_replace_values](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_alt_replace_values/cases/cbrd_26659_alt_replace_values.sh) | 활성 | PASS | — |
+| SH-009 | 2·5 | [alt_stub_duplicate](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_alt_stub_duplicate/cases/cbrd_26659_alt_stub_duplicate.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 15.505초 |
+| SH-010 | 2·5 | [alt_stub_merge](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_alt_stub_merge/cases/cbrd_26659_alt_stub_merge.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 16.267초 |
+| SH-011 | 1·2 | [backup_restore](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_backup_restore/cases/cbrd_26659_backup_restore.sh) | 활성 | PASS | — |
+| SH-012 | 5 | [churn_abort_retry](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/long_running/shell/_40_guava/cbrd_26659_churn_abort_retry/cases/cbrd_26659_churn_abort_retry.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL + 60초 초과 · 83.614초 |
+| SH-013 | 5 | [churn_insert_delete](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/long_running/shell/_40_guava/cbrd_26659_churn_insert_delete/cases/cbrd_26659_churn_insert_delete.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL + 60초 초과 · 83.570초 |
+| SH-014 | 5 | [churn_insert_update_delete](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/long_running/shell/_40_guava/cbrd_26659_churn_insert_update_delete/cases/cbrd_26659_churn_insert_update_delete.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL + 60초 초과 · 90.506초 |
+| SH-015 | 5 | [churn_restart](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/long_running/shell/_40_guava/cbrd_26659_churn_restart/cases/cbrd_26659_churn_restart.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL + 60초 초과 · 94.797초 |
+| SH-016 | 2·5 | [crash_committed](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_crash_committed/cases/cbrd_26659_crash_committed.sh) | 활성 | PASS | — |
+| SH-017 | 2·5 | [crash_undo](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_crash_undo/cases/cbrd_26659_crash_undo.sh) | 활성 | PASS | — |
+| SH-018 | 2 | [dml_atomicity](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_dml_atomicity/cases/cbrd_26659_dml_atomicity.sh) | 활성 | PASS | — |
+| SH-019 | 2 | [dml_forms](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_dml_forms/cases/cbrd_26659_dml_forms.sh) | 활성 | PASS | — |
+| SH-020 | 2 | [dml_states](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_dml_states/cases/cbrd_26659_dml_states.sh) | 활성 | PASS | — |
+| SH-021 | 2 | [dml_transactions](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_dml_transactions/cases/cbrd_26659_dml_transactions.sh) | 활성 | PASS | — |
+| SH-022 | 2 | [dml_transitions](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/long_running/shell/_40_guava/cbrd_26659_dml_transitions/cases/cbrd_26659_dml_transitions.sh.disabled) | **disabled** | 미실행 | 60초 초과만 · 당시 PASS · 101.085초 |
+| SH-023 | 2 | [dml_triggers_delete](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_dml_triggers_delete/cases/cbrd_26659_dml_triggers_delete.sh) | 활성 | PASS | — |
+| SH-024 | 2 | [dml_triggers_insert](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_dml_triggers_insert/cases/cbrd_26659_dml_triggers_insert.sh) | 활성 | PASS | — |
+| SH-025 | 2 | [dml_triggers_reject](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_dml_triggers_reject/cases/cbrd_26659_dml_triggers_reject.sh) | 활성 | PASS | — |
+| SH-026 | 2 | [dml_triggers_update](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_dml_triggers_update/cases/cbrd_26659_dml_triggers_update.sh) | 활성 | PASS | — |
+| SH-027 | 2·6 | [fk_key_composite_cascade](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_key_composite_cascade/cases/cbrd_26659_fk_key_composite_cascade.sh) | 활성 | PASS | — |
+| SH-028 | 2·6 | [fk_key_composite_cascade_block](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_key_composite_cascade_block/cases/cbrd_26659_fk_key_composite_cascade_block.sh) | 활성 | PASS | — |
+| SH-029 | 2·6 | [fk_key_composite_default](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_key_composite_default/cases/cbrd_26659_fk_key_composite_default.sh) | 활성 | PASS | — |
+| SH-030 | 2·6 | [fk_key_composite_delete_null](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_key_composite_delete_null/cases/cbrd_26659_fk_key_composite_delete_null.sh) | 활성 | PASS | — |
+| SH-031 | 2·6 | [fk_key_composite_noaction](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_key_composite_noaction/cases/cbrd_26659_fk_key_composite_noaction.sh) | 활성 | PASS | — |
+| SH-032 | 2·6 | [fk_key_composite_restrict](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_key_composite_restrict/cases/cbrd_26659_fk_key_composite_restrict.sh) | 활성 | PASS | — |
+| SH-033 | 2·6 | [fk_key_composite_update_null](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_key_composite_update_null/cases/cbrd_26659_fk_key_composite_update_null.sh) | 활성 | PASS | — |
+| SH-034 | 2·6 | [fk_key_single_cascade](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_key_single_cascade/cases/cbrd_26659_fk_key_single_cascade.sh) | 활성 | PASS | — |
+| SH-035 | 2·6 | [fk_key_single_cascade_block](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_key_single_cascade_block/cases/cbrd_26659_fk_key_single_cascade_block.sh) | 활성 | PASS | — |
+| SH-036 | 2·6 | [fk_key_single_default](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_key_single_default/cases/cbrd_26659_fk_key_single_default.sh) | 활성 | PASS | — |
+| SH-037 | 2·6 | [fk_key_single_delete_null](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_key_single_delete_null/cases/cbrd_26659_fk_key_single_delete_null.sh) | 활성 | PASS | — |
+| SH-038 | 2·6 | [fk_key_single_noaction](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_key_single_noaction/cases/cbrd_26659_fk_key_single_noaction.sh) | 활성 | PASS | — |
+| SH-039 | 2·6 | [fk_key_single_restrict](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_key_single_restrict/cases/cbrd_26659_fk_key_single_restrict.sh) | 활성 | PASS | — |
+| SH-040 | 2·6 | [fk_key_single_update_null](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_key_single_update_null/cases/cbrd_26659_fk_key_single_update_null.sh) | 활성 | PASS | — |
+| SH-041 | 2 | [fk_payload_composite_cascade](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_payload_composite_cascade/cases/cbrd_26659_fk_payload_composite_cascade.sh) | 활성 | PASS | — |
+| SH-042 | 2 | [fk_payload_composite_cascade_block](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_payload_composite_cascade_block/cases/cbrd_26659_fk_payload_composite_cascade_block.sh) | 활성 | PASS | — |
+| SH-043 | 2 | [fk_payload_composite_default](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_payload_composite_default/cases/cbrd_26659_fk_payload_composite_default.sh) | 활성 | PASS | — |
+| SH-044 | 2 | [fk_payload_composite_delete_null](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_payload_composite_delete_null/cases/cbrd_26659_fk_payload_composite_delete_null.sh) | 활성 | PASS | — |
+| SH-045 | 2 | [fk_payload_composite_noaction](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_payload_composite_noaction/cases/cbrd_26659_fk_payload_composite_noaction.sh) | 활성 | PASS | — |
+| SH-046 | 2 | [fk_payload_composite_restrict](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_payload_composite_restrict/cases/cbrd_26659_fk_payload_composite_restrict.sh) | 활성 | PASS | — |
+| SH-047 | 2 | [fk_payload_composite_update_null](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_payload_composite_update_null/cases/cbrd_26659_fk_payload_composite_update_null.sh) | 활성 | PASS | — |
+| SH-048 | 2 | [fk_payload_single_cascade](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_payload_single_cascade/cases/cbrd_26659_fk_payload_single_cascade.sh) | 활성 | PASS | — |
+| SH-049 | 2 | [fk_payload_single_cascade_block](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_payload_single_cascade_block/cases/cbrd_26659_fk_payload_single_cascade_block.sh) | 활성 | PASS | — |
+| SH-050 | 2 | [fk_payload_single_default](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_payload_single_default/cases/cbrd_26659_fk_payload_single_default.sh) | 활성 | PASS | — |
+| SH-051 | 2 | [fk_payload_single_delete_null](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_payload_single_delete_null/cases/cbrd_26659_fk_payload_single_delete_null.sh) | 활성 | PASS | — |
+| SH-052 | 2 | [fk_payload_single_noaction](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_payload_single_noaction/cases/cbrd_26659_fk_payload_single_noaction.sh) | 활성 | PASS | — |
+| SH-053 | 2 | [fk_payload_single_restrict](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_payload_single_restrict/cases/cbrd_26659_fk_payload_single_restrict.sh) | 활성 | PASS | — |
+| SH-054 | 2 | [fk_payload_single_update_null](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_fk_payload_single_update_null/cases/cbrd_26659_fk_payload_single_update_null.sh) | 활성 | PASS | — |
+| SH-055 | 1·2 | [gap_compact_cs_cs](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_gap_compact_cs_cs/cases/cbrd_26659_gap_compact_cs_cs.sh) | 활성 | PASS | — |
+| SH-056 | 1·2 | [gap_compact_cs_sc](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_gap_compact_cs_sc/cases/cbrd_26659_gap_compact_cs_sc.sh) | 활성 | PASS | — |
+| SH-057 | 1·2 | [gap_compact_sa_cs](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_gap_compact_sa_cs/cases/cbrd_26659_gap_compact_sa_cs.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 28.774초 |
+| SH-058 | 1·2 | [gap_compact_sa_sc](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_gap_compact_sa_sc/cases/cbrd_26659_gap_compact_sa_sc.sh) | 활성 | PASS | — |
+| SH-059 | 2 | [gap_ctas_cs](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_gap_ctas_cs/cases/cbrd_26659_gap_ctas_cs.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 35.715초 |
+| SH-060 | 2 | [gap_ctas_sc](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_gap_ctas_sc/cases/cbrd_26659_gap_ctas_sc.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 19.610초 |
+| SH-061 | 1·2 | [gap_load_cs_cs](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_gap_load_cs_cs/cases/cbrd_26659_gap_load_cs_cs.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 37.429초 |
+| SH-062 | 1·2 | [gap_load_cs_sc](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_gap_load_cs_sc/cases/cbrd_26659_gap_load_cs_sc.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 24.320초 |
+| SH-063 | 1·2 | [gap_load_sa_cs](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_gap_load_sa_cs/cases/cbrd_26659_gap_load_sa_cs.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 44.750초 |
+| SH-064 | 1·2 | [gap_load_sa_nolog_cs](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_gap_load_sa_nolog_cs/cases/cbrd_26659_gap_load_sa_nolog_cs.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 28.089초 |
+| SH-065 | 1·2 | [gap_load_sa_nolog_sc](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_gap_load_sa_nolog_sc/cases/cbrd_26659_gap_load_sa_nolog_sc.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 43.871초 |
+| SH-066 | 1·2 | [gap_load_sa_sc](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_gap_load_sa_sc/cases/cbrd_26659_gap_load_sa_sc.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 27.929초 |
+| SH-067 | 2·5 | [gap_recreate](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_gap_recreate/cases/cbrd_26659_gap_recreate.sh) | 활성 | PASS | — |
+| SH-068 | 2 | [gap_replace_select_cs](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_gap_replace_select_cs/cases/cbrd_26659_gap_replace_select_cs.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 20.137초 |
+| SH-069 | 2 | [gap_replace_select_sc](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_gap_replace_select_sc/cases/cbrd_26659_gap_replace_select_sc.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 19.754초 |
+| SH-070 | 1·2 | [gap_unload_sa_cs](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_gap_unload_sa_cs/cases/cbrd_26659_gap_unload_sa_cs.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 26.275초 |
+| SH-071 | 1·2 | [gap_unload_sa_sc](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_gap_unload_sa_sc/cases/cbrd_26659_gap_unload_sa_sc.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 26.372초 |
+| SH-072 | 1·2 | [jdbc_storage](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_jdbc_storage/cases/cbrd_26659_jdbc_storage.sh) | 활성 | PASS | — |
+| SH-073 | 6 | [large_keys](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/long_running/shell/_40_guava/cbrd_26659_large_keys/cases/cbrd_26659_large_keys.sh.disabled) | **disabled** | 미실행 | 60초 초과만 · 당시 PASS · 381.773초 |
+| SH-074 | 2 | [lob_locators](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_lob_locators/cases/cbrd_26659_lob_locators.sh) | 활성 | PASS | — |
+| SH-075 | 2·5 | [notify_abort](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_notify_abort/cases/cbrd_26659_notify_abort.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 1.615초 |
+| SH-076 | 2·5 | [notify_commit](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_notify_commit/cases/cbrd_26659_notify_commit.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 17.025초 |
+| SH-077 | 2·5 | [notify_nodrop](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_notify_nodrop/cases/cbrd_26659_notify_nodrop.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 1.603초 |
+| SH-078 | 2·5 | [owner_drop](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_owner_drop/cases/cbrd_26659_owner_drop.sh) | 활성 | PASS | — |
+| SH-079 | 2 | [partition_add_drop_list](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_partition_add_drop_list/cases/cbrd_26659_partition_add_drop_list.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 39.417초 |
+| SH-080 | 2 | [partition_add_drop_range](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_partition_add_drop_range/cases/cbrd_26659_partition_add_drop_range.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 55.311초 |
+| SH-081 | 2 | [partition_hash_coalesce](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_partition_hash_coalesce/cases/cbrd_26659_partition_hash_coalesce.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 24.926초 |
+| SH-082 | 2 | [partition_hash_resize](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_partition_hash_resize/cases/cbrd_26659_partition_hash_resize.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 9.035초 |
+| SH-083 | 2 | [partition_move](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_partition_move/cases/cbrd_26659_partition_move.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 25.063초 |
+| SH-084 | 2 | [partition_owner](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_partition_owner/cases/cbrd_26659_partition_owner.sh) | 활성 | PASS | — |
+| SH-085 | 2 | [partition_partition_rejection](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_partition_partition_rejection/cases/cbrd_26659_partition_partition_rejection.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 25.677초 |
+| SH-086 | 2 | [partition_promote_list](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_partition_promote_list/cases/cbrd_26659_partition_promote_list.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 56.639초 |
+| SH-087 | 2 | [partition_promote_range](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_partition_promote_range/cases/cbrd_26659_partition_promote_range.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 56.241초 |
+| SH-088 | 2 | [partition_remove](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_partition_remove/cases/cbrd_26659_partition_remove.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 8.960초 |
+| SH-089 | 2 | [partition_reorganize_list](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_partition_reorganize_list/cases/cbrd_26659_partition_reorganize_list.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 8.556초 |
+| SH-090 | 2 | [partition_reorganize_list_merge](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_partition_reorganize_list_merge/cases/cbrd_26659_partition_reorganize_list_merge.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 9.358초 |
+| SH-091 | 2 | [partition_reorganize_range](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_partition_reorganize_range/cases/cbrd_26659_partition_reorganize_range.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 25.887초 |
+| SH-092 | 2 | [partition_reorganize_range_merge](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_partition_reorganize_range_merge/cases/cbrd_26659_partition_reorganize_range_merge.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 24.727초 |
+| SH-093 | 2 | [partition_repartition](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_partition_repartition/cases/cbrd_26659_partition_repartition.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 24.690초 |
+| SH-094 | 2 | [partition_route_hash](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_partition_route_hash/cases/cbrd_26659_partition_route_hash.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 26.230초 |
+| SH-095 | 2 | [partition_route_list](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_partition_route_list/cases/cbrd_26659_partition_route_list.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 24.538초 |
+| SH-096 | 2 | [partition_route_range](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_partition_route_range/cases/cbrd_26659_partition_route_range.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 23.872초 |
+| SH-097 | 1 | [policy_contract](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_policy_contract/cases/cbrd_26659_policy_contract.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 17.357초 |
+| SH-098 | 5 | [qualified_reuse](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_qualified_reuse/cases/cbrd_26659_qualified_reuse.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 22.482초 |
+| SH-099 | 2 | [read_paths](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_read_paths/cases/cbrd_26659_read_paths.sh) | 활성 | PASS | — |
+| SH-100 | 2 | [record_flags](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_record_flags/cases/cbrd_26659_record_flags.sh) | 활성 | PASS | — |
+| SH-101 | 4·6 | [record_keys](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_record_keys/cases/cbrd_26659_record_keys.sh) | 활성 | **FAIL** | — |
+| SH-102 | 4 | [record_layout](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_record_layout/cases/cbrd_26659_record_layout.sh) | 활성 | **FAIL** | — |
+| SH-103 | 4 | [record_residual](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_record_residual/cases/cbrd_26659_record_residual.sh) | 활성 | **FAIL** | — |
+| SH-104 | 4 | [record_target0](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_record_target0/cases/cbrd_26659_record_target0.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 7.867초 |
+| SH-105 | 4 | [record_target10](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_record_target10/cases/cbrd_26659_record_target10.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 22.644초 |
+| SH-106 | 4 | [representation_chunks](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_representation_chunks/cases/cbrd_26659_representation_chunks.sh) | 활성 | PASS | — |
+| SH-107 | 2 | [schema_attributes_cs](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_schema_attributes_cs/cases/cbrd_26659_schema_attributes_cs.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 20.820초 |
+| SH-108 | 2 | [schema_attributes_sa](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_schema_attributes_sa/cases/cbrd_26659_schema_attributes_sa.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 21.308초 |
+| SH-109 | 2 | [schema_cs](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_schema_cs/cases/cbrd_26659_schema_cs.sh) | 활성 | PASS | — |
+| SH-110 | 1·2·4 | [schema_policy](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_schema_policy/cases/cbrd_26659_schema_policy.sh) | 활성 | PASS | — |
+| SH-111 | 2 | [schema_rewrites_cs](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_schema_rewrites_cs/cases/cbrd_26659_schema_rewrites_cs.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 20.186초 |
+| SH-112 | 2 | [schema_rewrites_sa](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/long_running/shell/_40_guava/cbrd_26659_schema_rewrites_sa/cases/cbrd_26659_schema_rewrites_sa.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL + 60초 초과 · 94.311초 |
+| SH-113 | 2 | [schema_sa](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/long_running/shell/_40_guava/cbrd_26659_schema_sa/cases/cbrd_26659_schema_sa.sh.disabled) | **disabled** | 미실행 | 60초 초과만 · 당시 PASS · 81.389초 |
+| SH-114 | 4 | [serialized_chunks](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_serialized_chunks/cases/cbrd_26659_serialized_chunks.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 21.250초 |
+| SH-115 | 1 | [show_contract](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_show_contract/cases/cbrd_26659_show_contract.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 1.482초 |
+| SH-116 | 1·2 | [show_partitions](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_show_partitions/cases/cbrd_26659_show_partitions.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 1.480초 |
+| SH-117 | 2·5 | [snapshot_visibility](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_snapshot_visibility/cases/cbrd_26659_snapshot_visibility.sh) | 활성 | PASS | — |
+| SH-118 | 5 | [snapshots_reclaim](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_snapshots_reclaim/cases/cbrd_26659_snapshots_reclaim.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 18.640초 |
+| SH-119 | 2 | [tde_crash_committed](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_tde_crash_committed/cases/cbrd_26659_tde_crash_committed.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 6.079초 |
+| SH-120 | 2 | [tde_crash_undo](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_tde_crash_undo/cases/cbrd_26659_tde_crash_undo.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 6.076초 |
+| SH-121 | 2 | [tde_storage](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_tde_storage/cases/cbrd_26659_tde_storage.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 7.274초 |
+| SH-122 | 2 | [tde_wal](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_tde_wal/cases/cbrd_26659_tde_wal.sh) | 활성 | PASS | — |
+| SH-123 | 2 | [transactions](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_transactions/cases/cbrd_26659_transactions.sh) | 활성 | PASS | — |
+| SH-124 | 1·2 | [utility_compact_cs](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_utility_compact_cs/cases/cbrd_26659_utility_compact_cs.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 21.124초 |
+| SH-125 | 1·2 | [utility_compact_sa](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_utility_compact_sa/cases/cbrd_26659_utility_compact_sa.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 21.659초 |
+| SH-126 | 1·2 | [utility_cs](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_utility_cs/cases/cbrd_26659_utility_cs.sh) | 활성 | PASS | — |
+| SH-127 | 1·2 | [utility_policy_cs](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_utility_policy_cs/cases/cbrd_26659_utility_policy_cs.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 22.137초 |
+| SH-128 | 1·2 | [utility_policy_sa](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_utility_policy_sa/cases/cbrd_26659_utility_policy_sa.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 22.454초 |
+| SH-129 | 1·2 | [utility_policy_sa_nolog](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_utility_policy_sa_nolog/cases/cbrd_26659_utility_policy_sa_nolog.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 20.604초 |
+| SH-130 | 1·2 | [utility_policy_unload_sa](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_26659_utility_policy_unload_sa/cases/cbrd_26659_utility_policy_unload_sa.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 20.858초 |
+| SH-131 | 1·2 | [utility_sa](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_utility_sa/cases/cbrd_26659_utility_sa.sh) | 활성 | PASS | — |
+| SH-132 | 1·2 | [utility_sa_physical](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/shell/_40_guava/cbrd_26659_utility_sa_physical/cases/cbrd_26659_utility_sa_physical.sh) | 활성 | PASS | — |
+| SH-133 | 2·5 | [cbrd_27237_rollback_vacuum](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/98723aa473cde722abbc729799cf489b7f3f732f/disabled/failing/shell/_40_guava/cbrd_27237_rollback_vacuum/cases/cbrd_27237_rollback_vacuum.sh.disabled) | **disabled** | 미실행 | 기능 검사 FAIL · 11.066초 |
+
+<br>
+
+### C++ 보완 14함수
+
+보완 함수 14개가 현재 PR에 정확히 보존된 것을 확인했습니다. 아래는 함수 존재와 검사 의도의 목록이며 최신 PASS 목록이 아닙니다. SQL·shell 비활성 수와 합산하지 않습니다.
+
+| 번호 | 대응 항목 | 함수 원문 | 검사 내용 | 현재 실행 결과 |
+| --- | --- | --- | --- | --- |
+| UT-01 | 3·4 | [OosBoundaries.ExactChunkCapacityAndOneByteOverStoreOneAndTwoChunks](https://github.com/CUBRID/cubrid/blob/e3589ae42d42b04eb020e1ae43e165b01d31b12a/unit_tests/oos/test_oos_boundaries.cpp#L68) | raw chunk 용량과 +1B·실제 chunk 수·전체 재구성 | 미대조 |
+| UT-02 | 3·4 | [OosBoundaries.CallerLengthOneByteEitherSideRejectsAndPreservesStoredBytes](https://github.com/CUBRID/cubrid/blob/e3589ae42d42b04eb020e1ae43e165b01d31b12a/unit_tests/oos/test_oos_boundaries.cpp#L122) | 호출 길이 ±1B 거부·기존 저장 값 보존 | 미대조 |
+| UT-03 | 3·4 | [OosBoundaries.InsertLengthNarrowingGuardOnlyRejectsWithoutTouchingExistingChain](https://github.com/CUBRID/cubrid/blob/e3589ae42d42b04eb020e1ae43e165b01d31b12a/unit_tests/oos/test_oos_boundaries.cpp#L156) | INT_MAX 초과 길이 guard·기존 chain 보존 | 미대조 |
+| UT-04 | 3·4 | [OosBoundaries.InlineLengthEndpointsAreParserGuardsOnly](https://github.com/CUBRID/cubrid/blob/e3589ae42d42b04eb020e1ae43e165b01d31b12a/unit_tests/oos/test_oos_boundaries.cpp#L185) | stub 길이 endpoint parser guard만 검증 | 미대조 |
+| UT-05 | 3·4 | [OosBoundaries.EveryVotWidthRequiresExactlyOneStubWithinFieldAndRecord](https://github.com/CUBRID/cubrid/blob/e3589ae42d42b04eb020e1ae43e165b01d31b12a/unit_tests/oos/test_oos_boundaries.cpp#L217) | VOT 폭별 field/record 범위와 정확한 stub | 미대조 |
+| UT-06 | 3·4 | [OosBoundaries.StubWriterUsesValueCursorAndRetriesAtExactCapacity](https://github.com/CUBRID/cubrid/blob/e3589ae42d42b04eb020e1ae43e165b01d31b12a/unit_tests/oos/test_oos_boundaries.cpp#L251) | 실제 value cursor·exact capacity·재시도 | 미대조 |
+| UT-07 | 3·4 | [OosBoundaries.StubWriterOffsetEntryOneByteShortChangesNothing](https://github.com/CUBRID/cubrid/blob/e3589ae42d42b04eb020e1ae43e165b01d31b12a/unit_tests/oos/test_oos_boundaries.cpp#L288) | offset entry 한 byte 부족·무변경 | 미대조 |
+| UT-08 | 3·4 | [OosBoundaries.StoredVotBoundariesAndExpandedValuesPreserveMixedRows](https://github.com/CUBRID/cubrid/blob/e3589ae42d42b04eb020e1ae43e165b01d31b12a/unit_tests/oos/test_oos_boundaries.cpp#L303) | 실제 저장 VOT·Expand 뒤 혼합 row 보존 | 미대조 |
+| UT-09 | 3·4 | [OosBoundaries.NonOosShortIntVotBoundaryPreservesCompleteValues](https://github.com/CUBRID/cubrid/blob/e3589ae42d42b04eb020e1ae43e165b01d31b12a/unit_tests/oos/test_oos_boundaries.cpp#L393) | non-OOS SHORT/INT VOT·전체 값 | 미대조 |
+| UT-10 | 3 | [OosSqlVisibleVersion.StoredAndExpandedFetchPreserveMixedRowsAndCallerOwnedBytes](https://github.com/CUBRID/cubrid/blob/e3589ae42d42b04eb020e1ae43e165b01d31b12a/unit_tests/oos/sql/test_oos_sql_visible_version.cpp#L196) | stored/expanded fetch·호출자 소유 byte 수명 | 미대조 |
+| UT-11 | 3·4 | [OosSqlVisibleVersion.ExpandRetryPreservesCallerBufferAndStoredReference](https://github.com/CUBRID/cubrid/blob/e3589ae42d42b04eb020e1ae43e165b01d31b12a/unit_tests/oos/sql/test_oos_sql_visible_version.cpp#L305) | Expand 재시도·호출자 버퍼·저장 참조 | 미대조 |
+| UT-12 | 3·5 | [OosFileDestroyServerTest.SystemWorkerUndoDefersPageReturnAndAbortRestoresTheChain](https://github.com/CUBRID/cubrid/blob/e3589ae42d42b04eb020e1ae43e165b01d31b12a/unit_tests/oos/test_oos_remove_file_server.cpp#L292) | system-worker undo horizon·abort 후 chain 복원 | 미대조 |
+| UT-13 | 3·5 | [OosSqlOwnership.UnassignedUpdateRetainsWholeStubAcrossCommitAndAbort](https://github.com/CUBRID/cubrid/blob/e3589ae42d42b04eb020e1ae43e165b01d31b12a/unit_tests/oos/sql/test_oos_sql_ownership.cpp#L128) | 미할당 stub 전체 identity·commit/abort 소유권 | 미대조 |
+| UT-14 | 3 | [OosSqlOwnership.ExistingOosFileReceivesClassAesAndPreservesIdentityAndValues](https://github.com/CUBRID/cubrid/blob/e3589ae42d42b04eb020e1ae43e165b01d31b12a/unit_tests/oos/sql/test_oos_sql_ownership.cpp#L163) | 기존 파일의 class AES 적용·identity/값 보존 | 미대조 |
+
+UT-13의 할당하지 않은 OOS 값 보존은 [CBRD-27230](https://jira.cubrid.org/browse/CBRD-27230)과 관련되며 **develop 병합 이후 TODO로 확정**했습니다. 이번 병합 전 새 검토 요청으로 추가하지 않습니다.
+
+
+<br><br>
+
+## 이전 리비전 기록
+
+아래 기록은 이전 Engine `c4c4f5c5`, public `4f6557f`, private `8486abd`와 과거 실행에 한정됩니다. **당시 shell 69개 PASS를 현재 결과로 해석하지 않습니다.** 현재 판정은 위의 66 PASS·3 FAIL입니다. 기존 원문·실험 경로·참고 문서와 결론을 보존했습니다.
+
+<details>
+<summary>이전 보완 과정과 실행 기록 펼치기</summary>
+
 # OOS 테스트 보완 결과와 피드백별 TC 대응표
 
 작성일: 2026-10-27, Asia/Seoul. 보고 대상: 팀장 및 OOS TC 검토자.
@@ -366,3 +759,5 @@ TC 이름은 공통 접두사 `cbrd_26659_` 와 `.sh` 를 생략했다. 다른 �
 Shell 133개는 티켓 접두사만으로 선별하지 않고 PR의 OOS 진입점 전체와 공통 helper 참조를 기준으로 확인했다. `cbrd_27237_rollback_vacuum` 을 포함하며 helper 자체를 추가 TC로 세지 않았다. report 생성 시 모든 133개 진입점의 hash를 inventory와 대조하고, 최신 JUnit에서 활성 69개의 유일한 실행·PASS 및 비활성 64개의 부재를 확인했다. SQL 28개는 실제 SQL/answer 짝을 확인했고 비활성 3개의 원본 hash를 대조했다. C++ 보완 함수 14개는 해당 선언·파일·줄 번호를 확인했다. 이 보고서를 작성하면서 테스트를 새로 실행하거나 source/TC를 변경하지 않았다.
 
 연산별 완료 판단에는 [승인 spec](supplement-spec-work456-20261021.md)과 [기존 요구사항 지도](supplement-operation-inventory-work456-20261021.md)를 사용한다. 과거 개별 티켓의 완료 문구는 그 문서의 리비전과 범위에 한정한다. 최신 CI의 실행 선택과 실패 제외는 [SQL manifest](https://github.com/CUBRID/cubrid-testcases/blob/4f6557f7f96ac789e1697ef8b27dd8bf2807802e/disabled/oos-pr8128.tsv), [shell inventory](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/8486abdac52ffc1ea4cae3c8a28fad888014caea/disabled/oos-pr8128-inventory.tsv) 및 각 run URL로 재확인할 수 있다.
+
+</details>
