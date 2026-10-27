@@ -42,7 +42,7 @@ Docs remain locally committed on their task branch. No docs integration, docs pu
 - No-op: 0 compilations in 1.629 seconds. ctest found no registered tests.
 - Source checkout restored to the named topic branch and SOURCE_COMMIT. Temporary detached measurement commits are absent from PR history.
 - Unrelated changes preserved in starting develop and the older CBRD-27124 analysis worktree.
-- CI result: draft PR #8298 published; run 40487586838 in progress. See execution record below.
+- CI result: draft PR #8298 published; run 40487586838 completed with failure. Both builds, shell and medium passed; SQL 3 cases failed. TC Merge Gate blocked by two open empty TC PRs. See final record below.
 
 ## Execution record
 
@@ -55,7 +55,7 @@ User confirmed the saved material and proposed operations with `yes` in this con
 - Created draft PR: https://github.com/CUBRID/cubrid/pull/8298 (2026-10-27T10:18:47Z). Base `develop`, head repository `vimkim/cubrid`, headRefName as proposed; assignee `vimkim` verified.
 - Published body bytes and SHA-256 match the saved approved body.
 - Both testcase branches verified at latest develop; no TC changes. No active or completed same-head gha-ci run existed before trigger.
-- Triggered `/run all` exactly once: https://github.com/CUBRID/cubrid/pull/8298#issuecomment-6439297216 . Tested head is SOURCE_COMMIT. Pickup verified: both build contexts and all three suite contexts point to https://github.com/CUBRID/cubrid/actions/runs/40487586838 . Terminal results pending.
+- Triggered `/run all` exactly once: https://github.com/CUBRID/cubrid/pull/8298#issuecomment-6439297216 . Tested head is SOURCE_COMMIT. Pickup verified: both build contexts and all three suite contexts point to https://github.com/CUBRID/cubrid/actions/runs/40487586838 . Terminal result recorded below.
 - TC PRs: https://github.com/CUBRID/cubrid-testcases/pull/3897 and https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4588 . No TC edits. The agent will not merge or close these PRs.
 
 ### Build results observed while suites wait
@@ -66,3 +66,30 @@ User confirmed the saved material and proposed operations with `yes` in this con
 - medium shard job 122136911807: assigned 975, run 975, failed 0, skipped 0. SQL/shell still queued. Final suite status waits for collection.
 - Follow-up GCC 8 experiment: existing local Rocky8.10 container, GCC8.5.0, ccache3.7.7. Unused included version macro A->B with -ggdb3: miss1/hit0; independent no-version-header library: hit1/miss0; -ggdb version consumer: preprocessed hit1/miss0. No additional CI run or source push.
 - User asked about clean/3rdparty and GCC8. Answers and limits are recorded in the verification report. Whole-build ~60% does not establish engine-only cache reuse. Per-file attribution is not retained by this CI log.
+
+### Monitoring at 2026-10-27T11:22:30Z
+
+- User requested checks once every 10 minutes; the finite watcher stops at run completion.
+- shell: 50 shards running. SQL: 8 shards successful, sql 03 failed, 1 shard running. medium: 975 cases passed.
+- Failed SQL job: https://github.com/CUBRID/cubrid/actions/runs/40487586838/job/122136912412 . Assigned/run 2842, failed 1, skipped 0.
+- Failed case: `sql/_13_issues/_24_1h/cases/cbrd_25238.sql`. No failure attribution, repair, source push or rerun performed. Wait for terminal results before final report.
+
+### Monitoring at 2026-10-27T11:32:32Z
+
+- shell: 50 shards running. SQL: all shards finished, 8 successful and 2 failed; 3 failed cases observed. medium: 975 passed.
+- SQL shard 09: https://github.com/CUBRID/cubrid/actions/runs/40487586838/job/122136912437 . Assigned/run 455, failed 2, skipped 0.
+- Additional failed cases: `sql/_36_guava/cbrd_27657/cases/cbrd_27657.sql`, `sql/_36_guava/cbrd_27644/cases/cbrd_27644.sql`.
+- No failure attribution, source/TC changes, extra push or rerun. Final result still waits for shell and collection.
+
+## Final execution record
+
+- Run: https://github.com/CUBRID/cubrid/actions/runs/40487586838 ; completed/failure, final API updatedAt 2026-10-27T11:44:36Z, detected at scheduled 11:52:30Z check.
+- Exactly one `/run all` receipt exists from this execution. Source SHA remains SOURCE_COMMIT. PR is still draft, assigned to vimkim, base develop.
+- Release and OptDebug builds passed. shell50/50 shards successful; medium975/975 cases passed. SQL8 shards successful/2failed, three failed cases listed above. No failure attribution or repairs performed.
+- Final current-head gha-ci statuses: release success, debug success, shell success, medium success, sql failure.
+- Final required checks: 9 total, 7 pass, 2 fail (test_sql, Check TC PRs). TC PR3897 and4588 both remain OPEN/DRAFT with zero changed files; human closure plus TC Merge Gate recheck is required. No TC mutation by agent.
+- CI cache rates: Release80.28%, OptDebug59.25%; baseline97.39%/60.81%. Local post-fix warm-cache result99.07% is a separate condition. CI improvement remains unproven.
+- Additional G++8.5.0/ccache3.7.7 fixture preserved the OptDebug option order including trailing -ggdb; version-macro A->B still missed, independent library hit.
+- Finite 600-second watcher stopped automatically on terminal state. All owned compiler-probe containers were removed. No follow-up source/TC change, push or CI rerun.
+- Approved/published body remains byte-identical with SHA-25651ed92e44b58087b72728e9481dbe659349255e494e6e1c63e4f559fe39e0634. No PR body update after publication.
+- Source and docs topic worktrees retained. No engine merge, docs integration or docs push was performed. Existing unrelated develop/older-analysis dirt preserved.

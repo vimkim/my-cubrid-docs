@@ -4,7 +4,7 @@
 
 2026-10-27 KST 기준 구현 검토자와 CI 담당자를 위한 기록이다. 커밋 정보만 바뀔 때 공통 헤더 소비자가 다시 컴파일되는지, 새 커밋의 전체 컴파일에서도 수정 후 캐시를 재사용하는지 확인했다.
 
-**로컬 Debug에서는 일반 빌드의 재컴파일이 버전 소비자 11개로 제한되고, 같은 경로·옵션에서 새 커밋의 전체 재빌드 hit율은 99.07%였다. 실제 CI 개선 폭은 아직 확인하지 않았다.**
+**로컬 Debug에서는 일반 빌드의 재컴파일이 버전 소비자 11개로 제한되고, 같은 경로·옵션에서 새 커밋의 전체 재빌드 hit율은 99.07%였다. 최초 실제 CI의 hit율은 Release 80.28%, OptDebug 59.25%였으며 상승은 확인되지 않았다. CI 빌드·shell·medium은 통과했고 SQL 3개 실패로 전체 run은 실패했다.**
 
 - 소스: `CUBRID/cubrid`, 기준 `2d925cb8685600135eb1fb1781811f6b45fdecb0`.
 - 구현: `0d2a76e60f944be0ababe9c466766c553189fcda`, 소스 tree `7ba3a7225217f9dd7957478a28118973b9ab5aba`.
@@ -74,7 +74,22 @@ B의 `version.h` 내용과 mtime은 모두 보존되었다. `build_version.h`, `
 
 ### 실제 CI 빌드 결과
 
-[Draft PR #8298](https://github.com/CUBRID/cubrid/pull/8298)을 발행하고, 승인한 소스 SHA 그대로 `/run all`을 한 번 실행했다. [Run 40487586838](https://github.com/CUBRID/cubrid/actions/runs/40487586838)의 Release와 OptDebug 빌드는 모두 통과했다. medium shard는 975개 실행, 실패 0개, skip 0개로 성공했다. SQL·shell의 최종 결과는 아직 러너 대기 중이다.
+[Draft PR #8298](https://github.com/CUBRID/cubrid/pull/8298)을 발행하고, 승인한 소스 SHA 그대로 `/run all`을 한 번 실행했다. [Run 40487586838](https://github.com/CUBRID/cubrid/actions/runs/40487586838)은 **failure로 종료**했다. API 최종 갱신 시각은 2026-10-27T11:44:36Z이며, 요청한 10분 주기 감시에서 20:52 KST에 완료를 확인했다.
+
+| 검증 | 최종 결과 |
+| --- | --- |
+| Release 빌드 | 통과 |
+| OptDebug 빌드 | 통과 |
+| shell | 50개 shard 모두 성공, suite 상태 통과 |
+| medium | 975개 실행, 실패 0, skip 0, suite 상태 통과 |
+| SQL | 8개 shard 성공, 2개 shard 실패, 실패 testcase 3개 |
+
+SQL 실패 목록은 다음과 같다. 각 shard가 배정된 testcase를 모두 실행한 뒤 실패 수를 보고했음을 로그에서 확인했다. 이번 변경과의 관련성이나 원인은 분석하지 않았다.
+
+- [SQL shard 03](https://github.com/CUBRID/cubrid/actions/runs/40487586838/job/122136912412): `sql/_13_issues/_24_1h/cases/cbrd_25238.sql` — 2,842개 실행 중 1개 실패, skip 0.
+- [SQL shard 09](https://github.com/CUBRID/cubrid/actions/runs/40487586838/job/122136912437): `sql/_36_guava/cbrd_27657/cases/cbrd_27657.sql`, `sql/_36_guava/cbrd_27644/cases/cbrd_27644.sql` — 455개 실행 중 2개 실패, skip 0.
+
+최종 `gh pr checks --required`에서 9개 필수 검사 중 7개가 통과하고 `gha-ci: test_sql`과 `Check TC PRs`가 실패했다. `code-style`, `pr-style`, `license`, `cppcheck`와 나머지 필수 gha-ci 검사들은 통과했다. OptDebug 빌드 상태도 통과했다.
 
 비교 대상은 PR의 기준 소스 `2d925cb8685600135eb1fb1781811f6b45fdecb0`의 [develop push run 40481418559](https://github.com/CUBRID/cubrid/actions/runs/40481418559)이다. 아래 값은 #8254가 추가한 **빌드별 합계**이며, 엔진 외에 3rdparty 컴파일도 포함한다. 노드 누적 `ccache -s` 수치는 사용하지 않았다.
 
@@ -85,7 +100,7 @@ B의 `version.h` 내용과 mtime은 모두 보존되었다. `build_version.h`, `
 | [기준 OptDebug](https://github.com/CUBRID/cubrid/actions/runs/40481418559/job/122112434693) | `2d925cb` | 1,916 | 16 | 1,245 | 60.81% |
 | [PR OptDebug](https://github.com/CUBRID/cubrid/actions/runs/40487586838/job/122133226809) | `0d2a76e` | 1,916 | 16 | 1,329 | 59.25% |
 
-**이번 최초 PR 빌드에서 CI 적중률 상승은 확인되지 않았다.** 기준과 PR의 통계 호출 수도 3,177개와 3,261개로 다르다. 이 합계만으로 엔진과 3rdparty 각각의 적중률 또는 추가 miss 84개의 원인을 확정할 수 없다.
+**이번 최초 PR 빌드에서 CI 적중률 상승은 확인되지 않았다.** 기준과 PR의 hit/miss 집계 대상 수도 3,177개와 3,261개로 다르다. 이 합계만으로 엔진과 3rdparty 각각의 적중률 또는 추가 miss 84개의 원인을 확정할 수 없다. OptDebug의 hit 수는 두 빌드 모두 1,932개로 같다. 60.81% → 59.25%의 수치 변화는 miss가 84개 늘어 분모가 커진 결과다. 바깥 Ninja 로그의 C/C++ 오브젝트 컴파일 작업은 두 빌드 모두 1,251개였다. 따라서 빌드 전체 hit/miss 집계 수를 그대로 엔진 오브젝트 수로 읽지 않는다.
 
 CI의 PR 빌드는 `CCACHE_READONLY=1 CCACHE_NOSTATS=1`이다. 현재 공유 캐시는 수정 전 공통 버전 매크로가 있던 컴파일 결과를 담고 있다. 이번 변경은 매크로 정의를 제거하여 첫 전처리 입력을 바꾸므로, 수정 전 캐시와의 비교에서 바로 높은 적중률을 기대할 수 없다. 새 구조로 만든 결과도 PR 빌드에서는 공유 캐시에 저장하지 않는다. 로컬 99.07%는 수정 후 캐시를 먼저 채웠으므로 비교 조건이 다르다. 수정 후 커밋 사이의 CI 재사용을 검증하려면 같은 CI 경로·옵션에서 수정본 A로 전용 캐시를 채우고 수정본 B로 비교해야 한다. 이 실험은 아직 하지 않았다.
 
@@ -99,6 +114,8 @@ CI의 PR 빌드는 `CCACHE_READONLY=1 CCACHE_NOSTATS=1`이다. 현재 공유 캐
 | `-ggdb3`, 버전 헤더를 포함하지 않는 독립 라이브러리 소스 | direct hit 1 / miss 0 | 입력 동일 |
 | `-ggdb`, 버전 헤더를 포함하는 소스의 매크로 A → B | preprocessed hit 1 / miss 0 | 같음 |
 | `-ggdb`, 독립 라이브러리 소스 | direct hit 1 / miss 0 | 입력 동일 |
+
+추가로 G++ 8.5.0에 CUBRID OptDebug의 주요 옵션 순서인 `-O2 -finline-functions -ggdb3 -Wall -DCUBRID_OPTDEBUG -ggdb -fno-omit-frame-pointer -fPIE -std=c++17`를 적용해 같은 실험을 반복했다. 뒤에 `-ggdb`가 있어도 전처리 출력에 버전 매크로가 남았고, 버전 매크로 변경 소스는 hit 0 / miss 1, 독립 라이브러리는 direct hit 1 / miss 0이었다.
 
 이는 GCC 8의 동작이 달라서 CI 전체 hit가 약 60%가 된다는 설명을 지지하지 않는다. [GCC 8 문서](https://gcc.gnu.org/onlinedocs/gcc-8.1.0/gcc/Debugging-Options.html)도 디버그 레벨 3이 매크로 정의를 포함한다고 설명한다. `-ggdb3`인 모든 컴파일이 항상 miss인 것이 아니라, 해당 소스의 전처리 입력에 포함된 매크로 정의가 달라지는 조건이 문제다.
 
@@ -114,4 +131,6 @@ CI의 PR 빌드는 `CCACHE_READONLY=1 CCACHE_NOSTATS=1`이다. 현재 공유 캐
 
 CI는 매번 clean하므로 로컬 증분 빌드의 “11개만 컴파일” 효과는 직접 적용되지 않는다. CI에서는 전체 컴파일 명령이 실행되는 조건에서도 수정 후 캐시를 다른 커밋에서 재사용하는 효과를 검증해야 한다.
 
-SQL·shell·medium TC 변경은 없다. 자동 생성된 [공개 TC PR #3897](https://github.com/CUBRID/cubrid-testcases/pull/3897), [비공개 TC PR #4588](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4588)은 인간에게 종료를 요청했다. Agent는 merge/close하지 않았다. 이 CI가 끝나면 결과와 TC Merge Gate를 보고하고 후속 수정이나 재실행 없이 지시를 기다린다.
+SQL·shell·medium TC 변경은 없다. 자동 생성된 [공개 TC PR #3897](https://github.com/CUBRID/cubrid-testcases/pull/3897), [비공개 TC PR #4588](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4588)은 모두 OPEN/DRAFT이며 실제 changedFiles/additions/deletions가 0/0/0이다. 최종 [TC Merge Gate](https://github.com/CUBRID/cubrid/pull/8298#issuecomment-6439286293)는 이 두 PR이 열려 있어 차단 상태다. 인간이 빈 TC PR을 닫고 TC Merge Gate 검사를 다시 실행해야 한다. Agent는 TC PR merge/close나 gate 재실행을 하지 않았다.
+
+이 한 번의 gha-ci 실행 결과를 기록하고 감시를 종료했다. 소스·TC 후속 수정, 추가 push, CI 재실행은 하지 않았다. 소스 checkout은 `CBRD-27124-isolate-build-version`의 `0d2a76e60f944be0ababe9c466766c553189fcda`로 깨끗하며 원격 head도 같다. 기존 develop과 이전 분석 worktree의 변경은 보존했다. 문서는 별도 docs task branch에 로컬 커밋으로 남기고 main 통합·push는 하지 않았다.
