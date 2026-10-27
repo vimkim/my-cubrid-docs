@@ -7,6 +7,7 @@
 | [CBRD-27124-build-version-pr-body_0d2a76e_codex.md](CBRD-27124-build-version-pr-body_0d2a76e_codex.md) | 버전 헤더 분리 draft PR 본문 | 2026-10-27 | 2026-10-27 | PR 발행 전 본문 검토 |
 | [CBRD-27124-build-version-pr-context_0d2a76e_codex.md](CBRD-27124-build-version-pr-context_0d2a76e_codex.md) | 소스 revision, 발행 대상·작업, 검증 및 재개 정보 | 2026-10-27 | 2026-10-27 | 동일 자료로 PR 발행과 CI를 재개 |
 | [CBRD-27124-build-version-verification_0d2a76e_codex.md](CBRD-27124-build-version-verification_0d2a76e_codex.md) | 로컬 hit 99.07%, 실제 CI·SQL 실패·TC gate, GCC8 및 clean/3rdparty 검증 | 2026-10-27 | 2026-10-27 | 로컬 실측과 실제 CI 결론의 범위 구분 |
+| [ccache-reset-and-controlled-measurement_2026-10-27.md](ccache-reset-and-controlled-measurement_2026-10-27.md) | 공유 캐시 초기화 필요성, 원본 CI 수치의 의미, 전용 캐시 A→B 실행 초안과 정확성 검증 | 2026-10-27 | 2026-10-27 | 운영 캐시를 보존하며 헤더 분리 효과를 공정하게 측정 |
 | [ccache-commit-change-measurement_2026-10-21.md](ccache-commit-change-measurement_2026-10-21.md) | 같은 커밋, 빈 커밋 후 재구성, 원래 커밋 복귀의 Debug 빌드 실측과 한계 | 2026-10-21 | 2026-10-21 | 버전 변경이 실제 CUBRID 재빌드와 캐시 hit에 미치는 영향 확인 |
 | [wayfinder/map.md](wayfinder/map.md) | 버전 갱신 계약과 구현 명세를 결정하는 분석 지도 | 2026-08-18 | 2026-08-18 | 구현 전 결정할 계약과 순서 정리 |
 | [wayfinder/tickets/T1-lock-git-revision-refresh-contract.md](wayfinder/tickets/T1-lock-git-revision-refresh-contract.md) | Git revision 변경 감지 계약 | 2026-08-18 | 2026-08-18 | 일반 빌드의 버전 갱신 계약 결정 |
