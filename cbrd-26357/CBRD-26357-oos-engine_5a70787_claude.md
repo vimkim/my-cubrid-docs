@@ -207,7 +207,7 @@ Greptile 4차 리뷰의 P1 3건은 모두 확인했고 스레드에 답했습니
   - `HEAP_HDR_STATS` 중간에 `oos_vfid`가 들어갑니다(`heap_file.c:216`).
   - VOT offset의 하위 2비트를 플래그로 씁니다.
   - `PAGE_OOS`는 `1e8701b4f`부터 `PAGE_TYPE`의 끝(`PAGE_VACUUM_DATA` 뒤)에 붙으므로, 기존 페이지 종류의 번호는 develop과 같습니다(`dcbf09e4f` 기준 `storage_common.h:166`). `5a70787fe`에서는 `PAGE_OOS`가 중간(`storage_common.h:159`)에 들어가 이후 값의 번호가 바뀌었습니다.
-- **시작할 때 거부(`1e8701b4f`, `d8ed97f77`):** `disk_format()`이 첫 볼륨 헤더의 예약 필드 `reserved0`(이제 `storage_format`)에 `DISK_STORAGE_FORMAT_REVISION`(1)을 기록합니다. 이전 11.x 빌드는 이 필드에 0을 썼습니다. `boot_restart_server`와 `xboot_emergency_patch`는 볼륨 0을 마운트한 직후, 다른 페이지 읽기와 DWB·로그 복구 전에 이 값을 검사하고, 다르면 새 오류 `ER_BO_INCOMPATIBLE_STORAGE_FORMAT`(-1392)로 거부합니다. deletedb는 검사하지 않으므로 거부된 DB도 지울 수 있습니다. diagdb는 이 값을 출력합니다.
+- **시작할 때 거부(`1e8701b4f`, `d8ed97f77`, [ADR-0006](https://github.com/vimkim/cubrid-oos-context/blob/3462a7f/docs/adr/0006-reject-pre-stamp-databases-at-boot.md)):** `disk_format()`이 첫 볼륨 헤더의 예약 필드 `reserved0`(이제 `storage_format`)에 `DISK_STORAGE_FORMAT_REVISION`(1)을 기록합니다. 이전 11.x 빌드는 이 필드에 0을 썼습니다. `boot_restart_server`와 `xboot_emergency_patch`는 볼륨 0을 마운트한 직후, 다른 페이지 읽기와 DWB·로그 복구 전에 이 값을 검사하고, 다르면 새 오류 `ER_BO_INCOMPATIBLE_STORAGE_FORMAT`(-1392)로 거부합니다. deletedb는 검사하지 않으므로 거부된 DB도 지울 수 있습니다. diagdb는 이 값을 출력합니다.
   - 출시된 11.4 이하 버전의 DB는 이보다 먼저 실행되는 디스크 호환성 검사에서 `ER_LOG_INCOMPATIBLE_DATABASE`(-86)로 거부됩니다.
   - 한계: 한 방향 검사입니다. 이전 빌드는 이 필드를 보지 않으므로 새 DB를 열 수 있습니다. 이전 형식의 백업은 restoredb가 파일을 복원한 뒤, 시작할 때 거부됩니다.
 - 그래서 develop·QA·daily 환경의 DB는 이 PR 머지 후 다시 만들어야 합니다. 11.5는 아직 출시되지 않았습니다(최신 태그 `v11.4.6.1963`).
@@ -221,7 +221,7 @@ Greptile 4차 리뷰의 P1 3건은 모두 확인했고 스레드에 답했습니
 | CBRD-27237 | UPDATE를 rollback한 뒤 vacuum이 undo 이미지를 보고 현재 행의 체인을 지울 수 있는 문제. 명세는 undo 이미지를 삭제 근거로 쓰지 말라고 정했습니다. | 코드상 아직 가능해 보임. 이 head에서 재현하지 않음. 회귀 테스트 없음 |
 | CBRD-27230 | UPDATE에서 바꾸지 않은 컬럼의 체인 재사용과 커밋 시점 vacuum 알림 | 구현 안 됨 |
 | CBRD-27057 | demotion 기준을 페이지 1/4(약 4,086B) 대신 행 4개가 확실히 들어가는 크기(16KB 페이지에서 4,060B)로 | 구현 안 됨(draft PR #7462) |
-| CDC 테스트 `cbrd_27064`, `cbrd_27075` | OOS 엔진에서 실패(CDC·flashback의 OOS 이력이 없음). QA팀과 협의해 [#4210](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4210)에서 `_25_unstable`로 옮겨 develop CI(gha-ci `test_shell`)에서는 실행하지 않고, QA 회귀 테스트에서는 계속 실행합니다. OOS + CDC는 CBRD-26939에서 따로 구현합니다([리뷰 답변](https://github.com/CUBRID/cubrid/pull/7990#issuecomment-6435671972)) | QA팀과 합의해 이 상태로 머지. ADR-0005 문구("실패를 보이게 둔다")와 다름. 복원 조건은 readme에 기록 |
+| CDC 테스트 `cbrd_27064`, `cbrd_27075` | OOS 엔진에서 실패(CDC·flashback의 OOS 이력이 없음). QA팀과 협의해 [#4210](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4210)에서 `_25_unstable`로 옮겨 develop CI(gha-ci `test_shell`)에서는 실행하지 않고, QA 회귀 테스트에서는 계속 실행합니다. OOS + CDC는 CBRD-26939에서 따로 구현합니다([리뷰 답변](https://github.com/CUBRID/cubrid/pull/7990#issuecomment-6435671972)) | QA팀과 합의해 이 상태로 머지. [ADR-0007](https://github.com/vimkim/cubrid-oos-context/blob/3462a7f/docs/adr/0007-run-deferred-cdc-regressions-in-qa-regression-only.md)이 ADR-0005의 테스트 정책("실패를 보이게 둔다")을 대체. 복원 조건은 readme에 기록 |
 | `cbrd_23136` shell 테스트 | `1a8c705`의 CI에서 csql allocator abort 1회 | 원인 미확인. 로컬 재현 안 됨, 이후 full shell 3회에서 재발 없음 |
 | 명세와 다른 구현 | `FORCE_OUTLINE`/`PREFER_OUTLINE`은 명세에 없는 옵션. 조회 API는 명세의 `_expand_oos` 함수 대신 정책 인자 방식 | 리뷰 판단 필요 |
 
