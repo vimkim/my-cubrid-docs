@@ -5,6 +5,8 @@
 상위 [CBRD-26583](https://jira.cubrid.org/browse/CBRD-26583),
 회귀 대응 [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785).
 
+> 2026-10-28 후속: [캐시 해제 후 큰 컬럼 조회 원인 진단](CBRD-27788-oos-cold-read-diagnosis_dcbf09e_codex.md)에서 읽기 주소와 대기를 추적하고, 동일 페이지 집합의 순서·요청 방식을 바꿔 지연의 인과 영향을 검증했다. 아래는 2026-10-27 실측 기록을 보존한다.
+
 ## 질문과 결론
 
 최신 OOS 구현에서 큰 컬럼을 읽지 않는 SELECT가 기존 heap·overflow 대비 얼마나
