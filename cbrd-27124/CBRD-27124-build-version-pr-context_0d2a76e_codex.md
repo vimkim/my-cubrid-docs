@@ -57,3 +57,12 @@ User confirmed the saved material and proposed operations with `yes` in this con
 - Both testcase branches verified at latest develop; no TC changes. No active or completed same-head gha-ci run existed before trigger.
 - Triggered `/run all` exactly once: https://github.com/CUBRID/cubrid/pull/8298#issuecomment-6439297216 . Tested head is SOURCE_COMMIT. Pickup verified: both build contexts and all three suite contexts point to https://github.com/CUBRID/cubrid/actions/runs/40487586838 . Terminal results pending.
 - TC PRs: https://github.com/CUBRID/cubrid-testcases/pull/3897 and https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4588 . No TC edits. The agent will not merge or close these PRs.
+
+### Build results observed while suites wait
+
+- Release job 122133226817: success; direct 1919, preprocessed 699, miss 643, whole-build hit 80.28%.
+- OptDebug job 122133226809: success; direct 1916, preprocessed 16, miss 1329, whole-build hit 59.25%.
+- Baseline source 2d925cb8685600135eb1fb1781811f6b45fdecb0, develop push run 40481418559: Release 97.39%, OptDebug 60.81%. This is not a post-fix warm-cache comparison.
+- medium shard job 122136911807: assigned 975, run 975, failed 0, skipped 0. SQL/shell still queued. Final suite status waits for collection.
+- Follow-up GCC 8 experiment: existing local Rocky8.10 container, GCC8.5.0, ccache3.7.7. Unused included version macro A->B with -ggdb3: miss1/hit0; independent no-version-header library: hit1/miss0; -ggdb version consumer: preprocessed hit1/miss0. No additional CI run or source push.
+- User asked about clean/3rdparty and GCC8. Answers and limits are recorded in the verification report. Whole-build ~60% does not establish engine-only cache reuse. Per-file attribution is not retained by this CI log.

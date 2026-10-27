@@ -72,10 +72,46 @@ B의 `version.h` 내용과 mtime은 모두 보존되었다. `build_version.h`, `
 
 측정 준비 중 `include/system.h`를 touch해 전체 컴파일을 강제한 별도 실험에서는 0/1,177 hit를 관찰했다. 이 경우 헤더 시간 정보도 바뀌므로 커밋 정보만 달라지는 비교에 사용하지 않았다. 해당 현상의 원인을 이 작업에서 확정하지 않았다. 위 99.07%는 오브젝트만 제거하고 헤더 시간 정보를 보존한 독립 측정의 결과다.
 
-### CI에서 확인할 내용
+### 실제 CI 빌드 결과
 
-CI는 Release와 OptDebug를 빌드하며 ccache 3.7.7과 노드별 공유 캐시를 사용한다. PR 빌드는 `CCACHE_READONLY=1 CCACHE_NOSTATS=1`이므로 수정 후 캐시를 공유 저장소에 채우지 않는다. `version.h` 구조가 다른 기존 develop 캐시와 비교하는 첫 PR 빌드에서는 엔진 miss가 많을 수 있다. 이 한 번의 수치만으로 버전 변경 사이의 정상 재사용 여부를 판정하지 않는다.
+[Draft PR #8298](https://github.com/CUBRID/cubrid/pull/8298)을 발행하고, 승인한 소스 SHA 그대로 `/run all`을 한 번 실행했다. [Run 40487586838](https://github.com/CUBRID/cubrid/actions/runs/40487586838)의 Release와 OptDebug 빌드는 모두 통과했다. medium shard는 975개 실행, 실패 0개, skip 0개로 성공했다. SQL·shell의 최종 결과는 아직 러너 대기 중이다.
 
-Draft PR 발행 후 `/run all` 한 번을 실행하고, #8254가 추가한 `ccache, this build:` 줄을 Release/OptDebug 각각 기록할 예정이다. 노드 누적 `ccache -s` 수치를 현재 빌드의 적중률로 사용하지 않는다. 로컬 99.07%를 실제 CI 개선율로 제시하지 않는다. CI의 수정 후 warm-cache 비교에는 같은 경로·옵션의 수정 후 캐시가 먼저 있어야 한다.
+비교 대상은 PR의 기준 소스 `2d925cb8685600135eb1fb1781811f6b45fdecb0`의 [develop push run 40481418559](https://github.com/CUBRID/cubrid/actions/runs/40481418559)이다. 아래 값은 #8254가 추가한 **빌드별 합계**이며, 엔진 외에 3rdparty 컴파일도 포함한다. 노드 누적 `ccache -s` 수치는 사용하지 않았다.
 
-SQL·shell·medium TC 변경은 필요하지 않다. 자동 생성된 TC PR은 인간에게 알려 종료하도록 요청하며 agent가 merge/close하지 않는다. CI가 끝나면 결과와 TC Merge Gate를 보고하고 후속 수정이나 재실행 없이 지시를 기다린다.
+| 빌드 | 소스 | direct hit | preprocessed hit | miss | hit율 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| [기준 Release](https://github.com/CUBRID/cubrid/actions/runs/40481418559/job/122112434651) | `2d925cb` | 1,919 | 1,175 | 83 | 97.39% |
+| [PR Release](https://github.com/CUBRID/cubrid/actions/runs/40487586838/job/122133226817) | `0d2a76e` | 1,919 | 699 | 643 | 80.28% |
+| [기준 OptDebug](https://github.com/CUBRID/cubrid/actions/runs/40481418559/job/122112434693) | `2d925cb` | 1,916 | 16 | 1,245 | 60.81% |
+| [PR OptDebug](https://github.com/CUBRID/cubrid/actions/runs/40487586838/job/122133226809) | `0d2a76e` | 1,916 | 16 | 1,329 | 59.25% |
+
+**이번 최초 PR 빌드에서 CI 적중률 상승은 확인되지 않았다.** 기준과 PR의 통계 호출 수도 3,177개와 3,261개로 다르다. 이 합계만으로 엔진과 3rdparty 각각의 적중률 또는 추가 miss 84개의 원인을 확정할 수 없다.
+
+CI의 PR 빌드는 `CCACHE_READONLY=1 CCACHE_NOSTATS=1`이다. 현재 공유 캐시는 수정 전 공통 버전 매크로가 있던 컴파일 결과를 담고 있다. 이번 변경은 매크로 정의를 제거하여 첫 전처리 입력을 바꾸므로, 수정 전 캐시와의 비교에서 바로 높은 적중률을 기대할 수 없다. 새 구조로 만든 결과도 PR 빌드에서는 공유 캐시에 저장하지 않는다. 로컬 99.07%는 수정 후 캐시를 먼저 채웠으므로 비교 조건이 다르다. 수정 후 커밋 사이의 CI 재사용을 검증하려면 같은 CI 경로·옵션에서 수정본 A로 전용 캐시를 채우고 수정본 B로 비교해야 한다. 이 실험은 아직 하지 않았다.
+
+### GCC 8에서도 매크로 변경은 miss를 만드는가
+
+사용자의 후속 질문에 따라, 로컬에 있던 Rocky Linux 8.10 컨테이너에서 GCC 8.5.0 (`Red Hat 8.5.0-28`)과 ccache 3.7.7로 최소 실험을 추가했다. 새 CI 실행은 하지 않았다. 별도 임시 캐시에서 첫 컴파일을 저장하고, 사용하지 않는 `VERSION_STRING` 정의만 A에서 B로 바꾼 뒤 같은 소스를 다시 컴파일했다. 비교용 라이브러리 소스는 이 버전 헤더를 포함하지 않는다.
+
+| 옵션과 입력 | 두 번째 컴파일 | 전처리 A/B |
+| --- | --- | --- |
+| `-ggdb3`, 버전 헤더를 포함하는 소스의 매크로 A → B | hit 0 / miss 1 | 다름 |
+| `-ggdb3`, 버전 헤더를 포함하지 않는 독립 라이브러리 소스 | direct hit 1 / miss 0 | 입력 동일 |
+| `-ggdb`, 버전 헤더를 포함하는 소스의 매크로 A → B | preprocessed hit 1 / miss 0 | 같음 |
+| `-ggdb`, 독립 라이브러리 소스 | direct hit 1 / miss 0 | 입력 동일 |
+
+이는 GCC 8의 동작이 달라서 CI 전체 hit가 약 60%가 된다는 설명을 지지하지 않는다. [GCC 8 문서](https://gcc.gnu.org/onlinedocs/gcc-8.1.0/gcc/Debugging-Options.html)도 디버그 레벨 3이 매크로 정의를 포함한다고 설명한다. `-ggdb3`인 모든 컴파일이 항상 miss인 것이 아니라, 해당 소스의 전처리 입력에 포함된 매크로 정의가 달라지는 조건이 문제다.
+
+이슈의 “CUBRID 소스 구간 0%”와 CI의 “빌드 전체 60.81%”는 분모가 다르다. 기준 OptDebug는 `(1916 + 16) / (1916 + 16 + 1245) = 60.81%`다. 독립적으로 빌드하는 3rdparty가 CUBRID 버전 헤더의 영향을 받지 않아 hit를 유지하면, 엔진이 miss여도 전체 hit율은 높게 남을 수 있다. 현재 로그는 파일별 cache 결과를 보존하지 않아 1,932개 hit의 정확한 소속은 확정하지 않았다. 원래 이슈가 실제 CI 엔진 구간에서도 정확히 0%인지까지 이번 합계로 검증한 것은 아니다.
+
+### clean build와 3rdparty의 관계
+
+사용자가 제시한 `./build.sh clean build` 경로도 확인했다. `CUBRID/cubridci`의 `build_rl8.10` 브랜치 소스 `4ea4e8a714078e11002d9402b9011e647c473bea`에서 [entrypoint](https://github.com/CUBRID/cubridci/blob/4ea4e8a714078e11002d9402b9011e647c473bea/docker/ci/docker-entrypoint.sh)는 `./build.sh -p $CUBRID $@ clean build`를 실행한다. [Dockerfile](https://github.com/CUBRID/cubridci/blob/4ea4e8a714078e11002d9402b9011e647c473bea/docker/ci/Dockerfile)은 `CC="ccache gcc"`, `CXX="ccache g++"`를 설정한다. 실제 workflow는 `cubridci/cubridci:build_rl8.10` 태그를 사용하며 이미지 빌드 commit/digest는 이번 작업에서 확정하지 않았다.
+
+구현 커밋의 `build.sh:162`부터 시작하는 `build_clean()`은 선택한 빌드 디렉터리의 내용을 제거한다. `3rdparty/CMakeLists.txt:103`은 ExternalProject 상태를 그 아래에 둔다. 따라서 clean 뒤에는 3rdparty의 download/configure/build/install 단계도 다시 실행된다. 이번 실제 PR 로그에도 libedit와 OpenSSL 등의 단계가 다시 나온다.
+
+그러나 ccache 저장소는 workflow가 지정한 `/home/ci/cache/ccache/develop-<mode>`로 빌드 디렉터리 밖에 있다. clean이 이 저장소를 지우지는 않는다. 따라서 **3rdparty를 다시 빌드 대상으로 삼는 것과 컴파일 캐시가 miss가 되는 것은 별개**다. 캐시가 있으면 컴파일은 재사용할 수 있지만 configure, 링크, 설치 등의 비용은 남는다. direct hit 수도 기준과 PR에서 각각 1,919/1,916으로 같았다. 이 숫자를 파일별 근거 없이 모두 3rdparty hit라고 단정하지 않는다.
+
+CI는 매번 clean하므로 로컬 증분 빌드의 “11개만 컴파일” 효과는 직접 적용되지 않는다. CI에서는 전체 컴파일 명령이 실행되는 조건에서도 수정 후 캐시를 다른 커밋에서 재사용하는 효과를 검증해야 한다.
+
+SQL·shell·medium TC 변경은 없다. 자동 생성된 [공개 TC PR #3897](https://github.com/CUBRID/cubrid-testcases/pull/3897), [비공개 TC PR #4588](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4588)은 인간에게 종료를 요청했다. Agent는 merge/close하지 않았다. 이 CI가 끝나면 결과와 TC Merge Gate를 보고하고 후속 수정이나 재실행 없이 지시를 기다린다.
