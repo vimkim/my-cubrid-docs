@@ -1,6 +1,6 @@
 # CBRD-26659: 실제 두 노드 OOS HA 복제 TC와 PR CI shell 경로
 
-작성: 2026-10-27 (Asia/Seoul). 갱신: 2026-10-28, 실제 PR CI 결과 반영. Work463. 이 문서는 실행 증거와 남은 범위를 기록한다. 새 spec이나 승인된 테스트 행렬이 아니다.
+작성: 2026-10-27 (Asia/Seoul). 갱신: 2026-10-28, 실제 PR CI 결과와 미검증 범위 보완. Work463. 이 문서는 실행 증거와 남은 범위를 기록한다. 새 spec이나 승인된 테스트 행렬이 아니다.
 
 ## 결론
 
@@ -55,6 +55,8 @@ flowchart LR
 | `ip` 없음 | test image | `oos_veth_pair.pl`이 `RTM_NEWLINK` 요청을 직접 보낸다 |
 | 고아 daemon 회수 | `hb_get_deactivating_server_count`가 `kill(pid, 0)`으로 server 종료를 확인한다 | node holder(PID namespace의 PID 1)가 `waitpid`로 회수. `sleep`이면 zombie 때문에 `heartbeat stop`이 끝나지 않았다(r1) |
 | 비 root 실행(QA VM, 개인 runner) | — | root가 아니면 root로 mapping된 user namespace 하나가 두 노드의 namespace를 소유 |
+
+HA 설정은 `ha_mode=on`, `ha_node_list=oosha@oos-ha-node-a:oos-ha-node-b`, `ha_copy_sync_mode=sync:sync`다.
 
 시작 순서는 CTP `make_ha_upper.sh`와 같다. A의 heartbeat를 먼저 시작하고 `to-be-active`를 기다린 뒤 B를 시작한다. 그다음 B `standby`, A `active`를 기다린다. A는 slave가 붙을 때까지 `to-be-active`에 머문다.
 
@@ -118,7 +120,9 @@ r6 단계별 시간: setup 약 27 s(A `to-be-active` 2 s 포함), 검사 약 14 
 
 - 실제 ARC pod(root, `privileged: true`)에서 통과한 것은 한 번(run 40507894187)이다. 반복 실행 안정성은 로컬 동시 실행 3회 외에는 측정하지 않았다.
 - 비 root 경로는 library 최소 sentinel만 실행했다. 전체 TC를 비 root CTP로 실행하지 않았다. 개인 native runner(`cubrid-test-shell-run`)로도 실행하지 않았다.
-- 장애 전환, 재기동, master 교체 후 OOS 값, 대량/동시 쓰기에서의 queue alignment는 다루지 않는다. coverage R28의 queue alignment 부분은 여전히 미검증이다.
+- 장애 전환, 재기동, master 교체 후 OOS 값, 이전 master 재합류, 대량/동시 쓰기에서의 queue alignment는 다루지 않는다. coverage R28의 queue alignment 부분은 여전히 미검증이다.
+- 복제 모드는 `ha_copy_sync_mode=sync:sync` 하나만 실행했다. engine이 받는 `async`, `semisync`(`src/executables/util_common.c:683`)는 실행하지 않았다.
+- 두 노드는 같은 host의 namespace다. veth 연결에는 지연과 손실이 없고, 두 노드가 kernel, 디스크, 시계를 공유한다. 네트워크 지연·단절, 노드 단위 host·디스크 장애는 재현하지 않는다.
 - 기존 QA HA corpus(`cubrid-testcases-private/HA/shell`)와는 별개다.
 
 ## 다른 문서에 영향을 주는 관찰
