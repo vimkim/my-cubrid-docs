@@ -33,7 +33,7 @@
 
 ## 검토 후 제안하는 게시 작업
 
-현재는 초안 작성 단계이며 아래 작업의 승인을 기록한 문서가 아니다. 사용자의 대화상 명시적 승인 후에만 수행한다.
+아래는 초안 검토 때 제안한 게시 작업이다. 이번 실행 결과는 다음 게시 기록을 따른다. 이 문서의 제안·기록 자체는 미래 작업의 승인 토큰이 아니다.
 
 1. 원격 PR HEAD·base·제목·본문 fingerprint와 사용자가 검토한 파일을 다시 확인한다. HEAD나 기존 본문이 달라지면 조정 후 다시 검토받는다.
 2. 관련 문서 변경 전체를 현재 docs `main`에 rebase하고 검산·링크·선택 파일을 확인한 뒤 fast-forward merge한다. 대상 파일은 아래 목록이며 필요 실행 기록도 같은 문서 워크플로를 따른다. `origin/main`에 push하고 내용 반영을 확인한다.
@@ -50,3 +50,13 @@
 - `cbrd-26659/CBRD-26659-oos-tc-ci-qa-pr-context_e3589ae_codex.md`
 - `cbrd-26659/CBRD-26659-oos-sql-ci-qa-pr-context_45e21ad_codex.md`
 - `cbrd-26659/CBRD-26659-oos-shell-ci-qa-pr-context_4ef07ee_codex.md`
+
+## 게시 실행 결과
+
+- 확인 시각: 2026-10-28 17:32:58 KST. 사용자가 이 대화에서 `yes`로 문서 main 병합·push와 세 PR body 반영을 승인했다.
+- 문서 commit `1b4e2a03e6e1395aaec40d3dbdf19b6bacee4e38`을 `origin/main`에 push하고 원격 SHA 일치를 확인한 뒤 PR body를 갱신했다. 초기 승인 commit `b90ac21`은 최신 main 위에 rebase되어 이 commit이 됐다.
+- 게시 대상: [CUBRID/cubrid#8128](https://github.com/CUBRID/cubrid/pull/8128). GitHub connector의 body update로 검토한 파일 전체를 그대로 반영했다.
+- 게시 후 본문을 다시 읽었으며 body 파일과 문자·줄바꿈이 완전히 일치한다. 게시 body SHA-256: `6e193b6aae94290c5aa8120f70b9780cdedd9cd533f1195859e77b08959c817d`.
+- 게시 후 HEAD: `e3589ae42d42b04eb020e1ae43e165b01d31b12a`. 기존 title·base·OPEN 상태와 Ready for review 상태를 유지했다.
+- 이번 작업은 본문 갱신과 문서 게시다. Source·TC push, PR merge·close·branch 삭제, CI trigger 및 QA 연락은 수행하지 않았다.
+- 대표 TC 선별, 실패 원인 규명·수정·재활성화, QA와 유용한 장시간 TC의 실행 위치·주기 합의와 이전은 Work543의 후속 범위로 남는다.

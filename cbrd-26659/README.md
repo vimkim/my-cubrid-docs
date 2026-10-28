@@ -2,7 +2,7 @@
 
 Last modified: 2026-10-28 (Asia/Seoul).
 
-2026-10-28 [TC CI 시간 비교와 QA 선별 방향](CBRD-26659-tc-ci-runtime-comparison_20261028_codex.md)은 PR #7990 본문의 전체 성공 실행47분14초와 추가 TC 전체 실행57분00초를 비교한다. Medium·SQL·shell span과 누적 시간, 최신 PR #7990의 부분 재실행을 구분한다. Engine #8128·public #3688·private #4365의 QA용 body 초안에는 대표 TC 선별, 비활성 실패의 원인 규명·재활성화, 유용한60초초과 TC의 별도 장시간 suite 편입 방침을 기록했다. 아직 GitHub body를 변경하지 않았다.
+2026-10-28 [TC CI 시간 비교와 QA 선별 방향](CBRD-26659-tc-ci-runtime-comparison_20261028_codex.md)은 PR #7990 본문의 전체 성공 실행47분14초와 추가 TC 전체 실행57분00초를 비교한다. Medium·SQL·shell span과 누적 시간, 최신 PR #7990의 부분 재실행을 구분한다. Engine #8128·public #3688·private #4365의 QA용 body에는 대표 TC 선별, 비활성 실패의 원인 규명·재활성화, 유용한60초초과 TC의 별도 장시간 suite 편입 방침을 기록했다. 사용자 검토·승인 후 세 PR에 게시하고 본문 일치를 확인했다. TC 선별·이전·실패 수정은 후속 작업이다.
 
 2026-10-27 [run40472072791 shell 실패 분석](ci_analysis_report_e3589ae_run40472072791_shell_claude.md)은 Engine `e3589ae`·private TC `98723aa`에서 실패한 `cbrd_26659_record_{residual,layout,keys}` 세 건의 공통 원인을 다룬다. Engine `1e8701b4f`(ADR-0006)가 `PAGE_OOS`를 8에서 14로 옮겼지만 TC native 검증기는 OOS page type 8을 하드코딩한다. 로컬 재현과 SA probe로 확인했다. Merge-base baseline은 수집 실패로 비교할 수 없다. TC 수정·CI 재실행은 하지 않았다.
 
@@ -32,12 +32,12 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 | --- | --- | --- | --- | --- |
 | [oos-ha-bugs-explained-ko_e3589ae_codex.md](oos-ha-bugs-explained-ko_e3589ae_codex.md) | CBRD-27800 버퍼 재사용과 CBRD-27801 복합 PK UPDATE 장애의 처리 흐름과 확인 범위 | 2026-10-28 | 2026-10-28 | 두 OOS HA 문제를 구분해 이해하고 다시 읽을 수 있도록 설명을 보존 |
 | [TC CI 시간 비교와 QA 선별 방향](CBRD-26659-tc-ci-runtime-comparison_20261028_codex.md) | 전체·medium·SQL·shell 시간 변화, 최신 부분 재실행과 원인 해석 한계 | 2026-10-28 | 2026-10-28 | 47분 대비57분 관측과 TC 선별·후속 처리 기준을 QA에 설명 |
-| [Engine PR #8128 QA body 초안](CBRD-26659-oos-tc-ci-qa-pr-body_e3589ae_codex.md) | 최신 검증·시간 영향과 TC 선별·비활성 후속 방침 | 2026-10-28 | 2026-10-28 | QA 검토용 기존 PR 본문 갱신안을 준비 |
-| [Engine PR #8128 QA body context](CBRD-26659-oos-tc-ci-qa-pr-context_e3589ae_codex.md) | 정확한 HEAD·기존 본문 해시·대상 파일과 승인 후 게시 작업 | 2026-10-28 | 2026-10-28 | 검토한 본문을 정확한 PR에 반영할 재개 정보를 보존 |
-| [Public SQL PR #3688 QA body 초안](CBRD-26659-oos-sql-ci-qa-pr-body_45e21ad_codex.md) | 최신 검증·시간 영향과 TC 선별·비활성 후속 방침 | 2026-10-28 | 2026-10-28 | QA 검토용 기존 PR 본문 갱신안을 준비 |
-| [Public SQL PR #3688 QA body context](CBRD-26659-oos-sql-ci-qa-pr-context_45e21ad_codex.md) | 정확한 HEAD·기존 본문 해시·대상 파일과 승인 후 게시 작업 | 2026-10-28 | 2026-10-28 | 검토한 본문을 정확한 PR에 반영할 재개 정보를 보존 |
-| [Private shell PR #4365 QA body 초안](CBRD-26659-oos-shell-ci-qa-pr-body_4ef07ee_codex.md) | 최신 검증·시간 영향과 TC 선별·비활성 후속 방침 | 2026-10-28 | 2026-10-28 | QA 검토용 기존 PR 본문 갱신안을 준비 |
-| [Private shell PR #4365 QA body context](CBRD-26659-oos-shell-ci-qa-pr-context_4ef07ee_codex.md) | 정확한 HEAD·기존 본문 해시·대상 파일과 승인 후 게시 작업 | 2026-10-28 | 2026-10-28 | 검토한 본문을 정확한 PR에 반영할 재개 정보를 보존 |
+| [Engine PR #8128 QA body 게시본](CBRD-26659-oos-tc-ci-qa-pr-body_e3589ae_codex.md) | 게시한 검증·시간 영향과 TC 선별·비활성 후속 방침 | 2026-10-28 | 2026-10-28 | QA 검토용 기존 PR 본문 갱신안을 준비 |
+| [Engine PR #8128 QA body context](CBRD-26659-oos-tc-ci-qa-pr-context_e3589ae_codex.md) | 정확한 HEAD·원본/게시 본문 해시·승인 범위와 게시 검증 결과 | 2026-10-28 | 2026-10-28 | 검토한 본문을 정확한 PR에 반영할 재개 정보를 보존 |
+| [Public SQL PR #3688 QA body 게시본](CBRD-26659-oos-sql-ci-qa-pr-body_45e21ad_codex.md) | 게시한 검증·시간 영향과 TC 선별·비활성 후속 방침 | 2026-10-28 | 2026-10-28 | QA 검토용 기존 PR 본문 갱신안을 준비 |
+| [Public SQL PR #3688 QA body context](CBRD-26659-oos-sql-ci-qa-pr-context_45e21ad_codex.md) | 정확한 HEAD·원본/게시 본문 해시·승인 범위와 게시 검증 결과 | 2026-10-28 | 2026-10-28 | 검토한 본문을 정확한 PR에 반영할 재개 정보를 보존 |
+| [Private shell PR #4365 QA body 게시본](CBRD-26659-oos-shell-ci-qa-pr-body_4ef07ee_codex.md) | 게시한 검증·시간 영향과 TC 선별·비활성 후속 방침 | 2026-10-28 | 2026-10-28 | QA 검토용 기존 PR 본문 갱신안을 준비 |
+| [Private shell PR #4365 QA body context](CBRD-26659-oos-shell-ci-qa-pr-context_4ef07ee_codex.md) | 정확한 HEAD·원본/게시 본문 해시·승인 범위와 게시 검증 결과 | 2026-10-28 | 2026-10-28 | 검토한 본문을 정확한 PR에 반영할 재개 정보를 보존 |
 | [ci_analysis_report_e3589ae_run40472072791_shell_claude.md](ci_analysis_report_e3589ae_run40472072791_shell_claude.md) | Run40472072791 shell 3건: OOS page type 8→14 불일치, 로컬 재현·probe, baseline/이력 한계 | 2026-10-27 | 2026-10-27 | 기준 동기화 뒤 실패한 record boundary TC의 원인과 다음 조치를 근거와 함께 정리 |
 | [CBRD-26659-feedback-testcase-coverage-report_20261027_codex.md](CBRD-26659-feedback-testcase-coverage-report_20261027_codex.md) | 피드백 6항목과 TC 대응·실행 상태, TC 원문 커밋 고정 링크 | 2026-10-27 | 2026-10-28 | 팀장에게 보완 범위와 남은 검증을 보고 |
 | [CBRD-26659-oos-sql-regressions-pr-body_4f6557f_codex.md](CBRD-26659-oos-sql-regressions-pr-body_4f6557f_codex.md) | Published TC PR body | 2026-10-27 | 2026-10-27 | Review current testcase scope, quarantine and CI evidence |
