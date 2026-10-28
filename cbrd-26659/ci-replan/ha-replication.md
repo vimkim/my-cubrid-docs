@@ -1,6 +1,6 @@
 # CBRD-26659: 실제 두 노드 OOS HA 복제 TC와 PR CI shell 경로
 
-작성: 2026-10-27 (Asia/Seoul). 갱신: 2026-10-28, 실제 PR CI 결과와 미검증 범위 보완. Work463. 이 문서는 실행 증거와 남은 범위를 기록한다. 새 spec이나 승인된 테스트 행렬이 아니다.
+작성: 2026-10-27 (Asia/Seoul). 갱신: 2026-10-28, 실제 PR CI 결과와 미검증 범위 보완(Work463), 검사 함수 이동과 장애 전환 TC 연결(Work540). 이 문서는 실행 증거와 남은 범위를 기록한다. 새 spec이나 승인된 테스트 행렬이 아니다.
 
 ## 결론
 
@@ -9,7 +9,7 @@
 - CI와 같은 이미지·entrypoint·CTP로 로컬에서 실행했다. 결과는 PASS(81 OK, 0 NOK)다.
 - **실제 PR CI에서도 통과했다.** PR #8128의 `/run shell` run [40507894187](https://github.com/CUBRID/cubrid/actions/runs/40507894187) shard 18에서 `[OK]`다. 그 shard의 72건이 모두 통과했다.
 - 같은 run의 `test_shell` 실패는 shard 39의 server-side loaddb case `_enhance_1008` 한 건이다. 이 실패는 HA TC와 관계없다고 판단한다([근거](#실제-pr-ci-실행)). 재실행 run [40552401255](https://github.com/CUBRID/cubrid/actions/runs/40552401255)에서 OK가 되었고, 현재 head의 `gha-ci` context 다섯 개가 모두 pass다.
-- 장애 전환(failover)은 다루지 않는다. 별도 단계로 범위를 정한다.
+- 장애 전환, 이전 master 재합류, 수동 failback은 별도 TC `cbrd_26659_ha_failover`가 다룬다. PR CI run [40594246823](https://github.com/CUBRID/cubrid/actions/runs/40594246823)에서 두 TC가 모두 `[OK]`다([기록](ha-failover.md)).
 
 ## 입력 revision
 
@@ -66,6 +66,8 @@ HA 설정은 `ha_mode=on`, `ha_node_list=oosha@oos-ha-node-a:oos-ha-node-b`, `ha
 
 `shell/_40_guava/cbrd_26659_ha_replication/cases/cbrd_26659_ha_replication.sh`. 모든 표에 PK가 있다(매뉴얼 `ha.rst`: HA는 PK 기반 복제).
 
+`c0400c8f2`부터 검사 함수(`sql_on`, `rows_on`, `oos_flags_on`, `heap_oos_on`, barrier 등)는 `oos_common/oos_ha_checks.sh`에 있다. 장애 전환 TC와 같이 쓰려고 옮겼고, master와 slave는 역할 변수가 되었다. 흐름과 검사는 바뀌지 않았다. 이동 뒤 로컬 run rep1이 81 OK, 0 NOK로 r6과 같은 검사 label을 냈고, PR CI run 40594246823 shard 49에서 `[OK]`다.
+
 각 단계 후 master의 barrier row를 갱신하고, slave에서 그 값이 보일 때까지 최대 120초 polling한다. applylogdb는 commit 순서로 적용하므로 이전 commit이 모두 적용됐다는 뜻이다. 검사는 **각 노드에서 따로**, TC에 적은 기대값 식과 비교한다. master와 slave를 서로 비교하지 않는다. OOS OID는 비교하지 않는다.
 
 | 단계 | 동작 | 노드별 검사 |
@@ -120,7 +122,7 @@ r6 단계별 시간: setup 약 27 s(A `to-be-active` 2 s 포함), 검사 약 14 
 
 - 실제 ARC pod(root, `privileged: true`)에서 통과한 것은 한 번(run 40507894187)이다. 반복 실행 안정성은 로컬 동시 실행 3회 외에는 측정하지 않았다.
 - 비 root 경로는 library 최소 sentinel만 실행했다. 전체 TC를 비 root CTP로 실행하지 않았다. 개인 native runner(`cubrid-test-shell-run`)로도 실행하지 않았다.
-- 장애 전환, 재기동, master 교체 후 OOS 값, 이전 master 재합류, 대량/동시 쓰기에서의 queue alignment는 다루지 않는다. coverage R28의 queue alignment 부분은 여전히 미검증이다.
+- 장애 전환, 재기동, master 교체 후 OOS 값, 이전 master 재합류는 이 TC가 아니라 [장애 전환 TC](ha-failover.md)가 다룬다. 대량/동시 쓰기에서의 queue alignment는 다루지 않는다. coverage R28의 queue alignment 부분은 여전히 미검증이다.
 - 복제 모드는 `ha_copy_sync_mode=sync:sync` 하나만 실행했다. engine이 받는 `async`, `semisync`(`src/executables/util_common.c:683`)는 실행하지 않았다.
 - 두 노드는 같은 host의 namespace다. veth 연결에는 지연과 손실이 없고, 두 노드가 kernel, 디스크, 시계를 공유한다. 네트워크 지연·단절, 노드 단위 host·디스크 장애는 재현하지 않는다.
 - 기존 QA HA corpus(`cubrid-testcases-private/HA/shell`)와는 별개다.
@@ -133,4 +135,4 @@ r6 단계별 시간: setup 약 27 s(A `to-be-active` 2 s 포함), 검사 약 14 
 
 TC를 `tc/pr-8128`에 merge, push하고 PR CI에서 실행하는 단계는 2026-10-27에 끝났다.
 
-1. failover 범위 결정: 같은 library로 A의 server 종료 후 B 승격, 승격 후 OOS 읽기·쓰기, 이전 master 재합류.
+장애 전환 범위는 2026-10-28에 정했고 TC가 PR CI에서 통과했다([기록](ha-failover.md)). 남은 결정은 그 문서의 다음 단계에 있다.
