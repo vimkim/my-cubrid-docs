@@ -8,6 +8,7 @@
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [리뷰어 SQL과 잠정 +2% 검증](CBRD-27785-reviewer-reproduction_dcbf09e_codex.md) | 일반 조회·UPDATE 판정, 6KB 손익, 새 복제본·연속 UPDATE와 threshold 후속 범위 | 2026-10-28 | 2026-10-28 | PR #7990 새 재현 정보로 현재 우선 기준 1·3을 검증하기 위해 |
 | [공통 읽기 경로와 실제 OOS 비용 조사](CBRD-27785-shared-read-path_f1b9903_codex.md) | production A/B/C callstack, allocator tree-key 폭 결함의 수명 추적·재현·통제와 공통 reader 비용 | 2026-10-28 | 2026-10-28 | 같은 reader를 유지하면서 두 경로를 함께 개선할 수 있는지 판단하기 위해 |
 | [분석과 검증](CBRD-27785-oos-read-performance_bcb900d_codex.md) | 원인, 읽기 계약, 세 저장 경로 구분과 최종 측정·검증 | 2026-10-27 | 2026-10-27 | 일반 heap 읽기 수정의 근거와 범위를 검토하기 위해 |
 | [PR 본문](CBRD-27785-oos-read-performance-pr-body_bcb900d_codex.md) | 게시할 한국어 PR 설명 | 2026-10-27 | 2026-10-27 | GitHub 게시 전 본문을 검토하기 위해 |
