@@ -2,6 +2,8 @@
 
 Last modified: 2026-10-29 (Asia/Seoul).
 
+2026-10-29 [Engine PR #8128 본문 수정안](CBRD-26659-oos-ci-runtime-refresh-20261029-pr-body_e3589ae_codex.md)은 새로 완료한 #7990 전체 실행 44분 10초와 HA를 제외한 #8128 전체 실행 42분 28초를 비교한다. 두 실행 모두 shell 1건이 실패했고 누적 shell shard 시간은 2.6% 늘었다. HA 분리와 잠정 20초 기준도 반영했다. [게시 제안과 근거](CBRD-26659-oos-ci-runtime-refresh-20261029-pr-context_e3589ae_codex.md)를 함께 저장했으며, 아직 GitHub 본문에 게시하지 않았다.
+
 2026-10-28 [개별 TC 실행 시간 히스토그램](CBRD-26659-tc-runtime-histogram_20261028_codex.md)은 CI40643373124의 전체 suite와 OOS TC 분포를 그린다. HA를 제외한69개 중20초초과38개가 heavy 후보이며31개가 남는다. HA 일반 CI 제외는 private-ex02d023932에 반영했고, 전용 HA 저장소 이전은 2026-10-29 승인 후 [draft TC PR #1666](https://github.com/CUBRID/cubrid-testcases-private/pull/1666)에 게시했다. Native 최종2 PASS·2 FAIL과 GitHub CI의 기존 TC 실패를 본문에 유지했다.
 
 2026-10-28 [TC CI 시간 비교와 QA 선별 방향](CBRD-26659-tc-ci-runtime-comparison_20261028_codex.md)은 PR #7990 본문의 전체 성공 실행47분14초와 추가 TC 전체 실행57분00초를 비교한다. Medium·SQL·shell span과 누적 시간, 최신 PR #7990의 부분 재실행을 구분한다. Engine #8128·public #3688·private #4365의 QA용 body에는 대표 TC 선별, 비활성 실패의 원인 규명·재활성화, 유용한60초초과 TC의 별도 장시간 suite 편입 방침을 기록했다. 사용자 검토·승인 후 세 PR에 게시하고 본문 일치를 확인했다. TC 선별·이전·실패 수정은 후속 작업이다.
@@ -32,6 +34,8 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [최신 전체 CI 비교 PR body](CBRD-26659-oos-ci-runtime-refresh-20261029-pr-body_e3589ae_codex.md) | 전체 실행 44분 10초→42분 28초, 실패와 측정 한계, 현재 HA 분류 | 2026-10-29 | 2026-10-29 | #8128 본문을 최신 전체 실행 근거로 갱신하기 전 검토 |
+| [최신 전체 CI 비교 게시 context](CBRD-26659-oos-ci-runtime-refresh-20261029-pr-context_e3589ae_codex.md) | 원본 본문 식별값, 정확한 CI 입력, 비교 한계와 게시 제안 | 2026-10-29 | 2026-10-29 | 검토한 본문과 게시 대상을 확인하고 재개 |
 | [개별 TC 시간 분포](CBRD-26659-tc-runtime-histogram_20261028_codex.md) | 전체 suite·OOS 히스토그램,20초 후보38개와 측정·분류 한계 | 2026-10-28 | 2026-10-29 | HA와 heavy 분류를 개별 실행 시간으로 검토 |
 | [HA 전용 suite PR body](CBRD-26659-oos-ha-suite-pr-body_ae2bcec_codex.md) | HA4개·비활성재현2개 이전과 native 실패를 포함한 게시 본문 | 2026-10-28 | 2026-10-28 | 새 전용 HA TC PR 본문 검토 |
 | [HA 전용 suite PR context](CBRD-26659-oos-ha-suite-pr-context_ae2bcec_codex.md) | ae2bcec·develop·새TC PR·문서 통합/게시 제안과 검증 한계 | 2026-10-28 | 2026-10-29 | 검토한 파일과 정확한 원격 작업 범위를 보존 |
