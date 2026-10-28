@@ -2,6 +2,8 @@
 
 Last modified: 2026-10-28 (Asia/Seoul).
 
+2026-10-28 [개별 TC 실행 시간 히스토그램](CBRD-26659-tc-runtime-histogram_20261028_codex.md)은 CI40643373124의 전체 suite와 OOS TC 분포를 그린다. HA를 제외한69개 중20초초과38개가 heavy 후보이며31개가 남는다. HA 일반 CI 제외는 private-ex02d023932에 반영했고, 전용 HA 저장소 이전의 검증 한계와 게시안은 별도 PR 초안으로 준비했다.
+
 2026-10-28 [TC CI 시간 비교와 QA 선별 방향](CBRD-26659-tc-ci-runtime-comparison_20261028_codex.md)은 PR #7990 본문의 전체 성공 실행47분14초와 추가 TC 전체 실행57분00초를 비교한다. Medium·SQL·shell span과 누적 시간, 최신 PR #7990의 부분 재실행을 구분한다. Engine #8128·public #3688·private #4365의 QA용 body에는 대표 TC 선별, 비활성 실패의 원인 규명·재활성화, 유용한60초초과 TC의 별도 장시간 suite 편입 방침을 기록했다. 사용자 검토·승인 후 세 PR에 게시하고 본문 일치를 확인했다. TC 선별·이전·실패 수정은 후속 작업이다.
 
 2026-10-27 [run40472072791 shell 실패 분석](ci_analysis_report_e3589ae_run40472072791_shell_claude.md)은 Engine `e3589ae`·private TC `98723aa`에서 실패한 `cbrd_26659_record_{residual,layout,keys}` 세 건의 공통 원인을 다룬다. Engine `1e8701b4f`(ADR-0006)가 `PAGE_OOS`를 8에서 14로 옮겼지만 TC native 검증기는 OOS page type 8을 하드코딩한다. 로컬 재현과 SA probe로 확인했다. Merge-base baseline은 수집 실패로 비교할 수 없다. TC 수정·CI 재실행은 하지 않았다.
@@ -30,6 +32,9 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [개별 TC 시간 분포](CBRD-26659-tc-runtime-histogram_20261028_codex.md) | 전체 suite·OOS 히스토그램,20초 후보38개와 측정·분류 한계 | 2026-10-28 | 2026-10-28 | HA와 heavy 분류를 개별 실행 시간으로 검토 |
+| [HA 전용 suite PR body](CBRD-26659-oos-ha-suite-pr-body_ae2bcec_codex.md) | HA4개·비활성재현2개 이전과 native 실패를 포함한 게시 초안 | 2026-10-28 | 2026-10-28 | 새 전용 HA TC PR 본문 검토 |
+| [HA 전용 suite PR context](CBRD-26659-oos-ha-suite-pr-context_ae2bcec_codex.md) | ae2bcec·develop·새TC PR·문서 통합/게시 제안과 검증 한계 | 2026-10-28 | 2026-10-28 | 검토한 파일과 정확한 원격 작업 범위를 보존 |
 | [oos-ha-bugs-explained-ko_e3589ae_codex.md](oos-ha-bugs-explained-ko_e3589ae_codex.md) | CBRD-27800 버퍼 재사용과 CBRD-27801 복합 PK UPDATE 장애의 처리 흐름과 확인 범위 | 2026-10-28 | 2026-10-28 | 두 OOS HA 문제를 구분해 이해하고 다시 읽을 수 있도록 설명을 보존 |
 | [TC CI 시간 비교와 QA 선별 방향](CBRD-26659-tc-ci-runtime-comparison_20261028_codex.md) | 전체·medium·SQL·shell 시간 변화, 최신 부분 재실행과 원인 해석 한계 | 2026-10-28 | 2026-10-28 | 47분 대비57분 관측과 TC 선별·후속 처리 기준을 QA에 설명 |
 | [Engine PR #8128 QA body 게시본](CBRD-26659-oos-tc-ci-qa-pr-body_e3589ae_codex.md) | 게시한 검증·시간 영향과 TC 선별·비활성 후속 방침 | 2026-10-28 | 2026-10-28 | QA 검토용 기존 PR 본문 갱신안을 준비 |
