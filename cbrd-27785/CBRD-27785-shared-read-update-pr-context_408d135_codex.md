@@ -74,3 +74,19 @@ The human closes them if no TC changes are required. The agent does not merge, c
 
 The new follow-up creation is complete. Source push, documentation integration/push, PR title/body update and CI remain unexecuted. The user agreed with the earlier proposal and requested a three-way before/after table. The body and supporting material were revised to include fresh measurements; present this revised text for review before publication.
 The original CBRD-27785 investigation report was updated locally at docs commit `4d7a149`; that separate branch is outside these publication operations.
+
+## Publication results - 2026-10-28
+
+The user confirmed the revised material with “이대로 게시해.” No approved body or explanation text changed during publication.
+
+- Source `408d1352941e9d28a88b4d5c899bacf34e2ec1a0` was pushed by normal fast-forward to `vimkim/cubrid:CBRD-27785-oos-read-performance`; the remote SHA was verified.
+- Docs commit `34a7c05aee4d06ef61b2e312b09e01ff4d652b14` was fast-forwarded into docs `main` and pushed. The public explanation was fetched and matched the approved SHA-256 before the PR update.
+- JIRA notes commit `3ae9edc88485be3c83d2b599095b0b888ce8f597` was fast-forwarded into notes `main` and pushed. No additional live JIRA write occurred.
+- PR #8299's exact body, replacement title, head SHA, base and draft state were read back and verified. The PR remains open and draft against `feature/oos-merge`; no feature branch merge or push occurred.
+- Both feature testcase ancestry checks passed. TC PRs public #3898 and private #4589 remain human-owned merge-gate decisions; the agent did not change or close them.
+- Exactly one [/run all request](https://github.com/CUBRID/cubrid/pull/8299#issuecomment-6468727959) started [gha-ci run 40686397319](https://github.com/CUBRID/cubrid/actions/runs/40686397319). All five gha-ci contexts on engine commit `408d135` linked to this run. At this record, the run is active and terminal verification is pending.
+
+| Published material | Approved SHA-256 |
+| --- | --- |
+| PR body | `06ddbda7bd2e49945babe1576383e74d7dfc4d02c322bdf683a2e055e18f66e7` |
+| Explanation | `708543c6b083d8f1f5ee3ef56883b041a14665eaad91476d17fdc1e715b76583` |
