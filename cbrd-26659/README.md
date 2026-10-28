@@ -28,6 +28,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [oos-ha-bugs-explained-ko_e3589ae_codex.md](oos-ha-bugs-explained-ko_e3589ae_codex.md) | CBRD-27800 버퍼 재사용과 CBRD-27801 복합 PK UPDATE 장애의 처리 흐름과 확인 범위 | 2026-10-28 | 2026-10-28 | 두 OOS HA 문제를 구분해 이해하고 다시 읽을 수 있도록 설명을 보존 |
 | [ci_analysis_report_e3589ae_run40472072791_shell_claude.md](ci_analysis_report_e3589ae_run40472072791_shell_claude.md) | Run40472072791 shell 3건: OOS page type 8→14 불일치, 로컬 재현·probe, baseline/이력 한계 | 2026-10-27 | 2026-10-27 | 기준 동기화 뒤 실패한 record boundary TC의 원인과 다음 조치를 근거와 함께 정리 |
 | [CBRD-26659-feedback-testcase-coverage-report_20261027_codex.md](CBRD-26659-feedback-testcase-coverage-report_20261027_codex.md) | 피드백 6항목과 TC 대응·실행 상태, TC 원문 커밋 고정 링크 | 2026-10-27 | 2026-10-28 | 팀장에게 보완 범위와 남은 검증을 보고 |
 | [CBRD-26659-oos-sql-regressions-pr-body_4f6557f_codex.md](CBRD-26659-oos-sql-regressions-pr-body_4f6557f_codex.md) | Published TC PR body | 2026-10-27 | 2026-10-27 | Review current testcase scope, quarantine and CI evidence |
