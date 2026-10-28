@@ -1,0 +1,13 @@
+diff --git a/src/heaplayers/malloc_2_8_3.c b/src/heaplayers/malloc_2_8_3.c
+index d0a3bc85f..a6a0c4e50 100644
+--- a/src/heaplayers/malloc_2_8_3.c
++++ b/src/heaplayers/malloc_2_8_3.c
+@@ -3099,7 +3099,7 @@ internal_malloc_stats (mstate m)
+   }\
+   else {\
+     tchunkptr T = *H;\
+-    size_t K = S << leftshift_for_tree_index(I);\
++    size_t K = (size_t)(S) << leftshift_for_tree_index(I);\
+     for (;;) {\
+       if (chunksize(T) != S) {\
+         tchunkptr* C = &(T->child[(K >> (SIZE_T_BITSIZE-SIZE_T_ONE)) & 1]);\

@@ -1,0 +1,197 @@
+--- a/src/storage/heap_file.c
++++ b/src/storage/heap_file.c
+@@ -770,9 +770,8 @@
+ 					   int oos_scratch_size, bool * oos_owned_buffer,
+                                          const heap_pending_record *pending = nullptr);
+ static int heap_attrvalue_point_variable (RECDES * recdes, const HEAP_REC_LAYOUT * layout,
+-					  HEAP_CACHE_ATTRINFO * attr_info, OR_ATTRIBUTE * attrepr, RECDES * raw,
+-					  bool * oos_owned_buffer, char *oos_scratch, int oos_scratch_size,
+-                                          const heap_pending_record *pending = nullptr);
++                                          HEAP_CACHE_ATTRINFO * attr_info, OR_ATTRIBUTE * attrepr, RECDES * raw,
++                                          bool *is_oos);
+ static int heap_attrvalue_transform_to_dbvalue (HEAP_ATTRVALUE * value, OR_ATTRIBUTE * attrepr, RECDES * raw,
+ 						bool oos_owned_buffer);
+ static int heap_attrvalue_read (RECDES * recdes, HEAP_ATTRVALUE * value, HEAP_CACHE_ATTRINFO * attr_info,
+@@ -11203,25 +11202,49 @@
+  *                          unless raw->data == oos_scratch.
+  *   oos_scratch / oos_scratch_size(in): optional fast-path buffer; NULL forces heap alloc.
+  */
+-static int
++static inline __attribute__ ((always_inline)) int
+ heap_attrvalue_point_variable (RECDES * recdes, const HEAP_REC_LAYOUT * layout, HEAP_CACHE_ATTRINFO * attr_info,
+-			       OR_ATTRIBUTE * attrepr, RECDES * raw, bool * oos_owned_buffer,
+-			       char *oos_scratch, int oos_scratch_size, const heap_pending_record * pending)
++			       OR_ATTRIBUTE * attrepr, RECDES * raw, bool * is_oos)
+ {
+   int offset;
+-  int error;
+   int this_off, next_off;
+-
+-  *oos_owned_buffer = false;
+-  error = heap_recdes_get_var_offset_entry (recdes, attrepr->location, &offset);
+-  if (error != NO_ERROR)
++  const int location = attrepr->location;
++  const int table_bytes = recdes->length - (int) (layout->var_table - recdes->data);
++
++  *is_oos = false;
++  /* Preserve heap_recdes_get_var_offset_entry's header and entry bounds using the
++   * layout already derived from this record, without decoding its header again. */
++  if (recdes->length < OR_MVCC_MIN_HEADER_SIZE || table_bytes < 0 || location < 0
++      || location >= table_bytes / layout->offset_size)
+     {
+       er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_GENERIC_ERROR, 0);
+-      return error;
++      return ER_FAILED;
++    }
++
++  /* Read both bounding entries with the same width dispatch. Keep the raw first
++   * entry's IS_OOS bit even when the record's summary flag is absent. */
++  const char *entry = layout->var_table + location * layout->offset_size;
++  switch (layout->offset_size)
++    {
++    case OR_BYTE_SIZE:
++      offset = OR_GET_BYTE (entry);
++      next_off = OR_GET_VAR_OFFSET (OR_GET_BYTE (entry + OR_BYTE_SIZE));
++      break;
++    case OR_SHORT_SIZE:
++      offset = OR_GET_SHORT (entry);
++      next_off = OR_GET_VAR_OFFSET (OR_GET_SHORT (entry + OR_SHORT_SIZE));
++      break;
++    case OR_INT_SIZE:
++      offset = OR_GET_INT (entry);
++      next_off = OR_GET_VAR_OFFSET (OR_GET_INT (entry + OR_INT_SIZE));
++      break;
++    default:
++      assert_release (false);
++      er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_GENERIC_ERROR, 0);
++      return ER_GENERIC_ERROR;
+     }
+ 
+   this_off = OR_GET_VAR_OFFSET (offset);
+-  next_off = OR_VAR_TABLE_ELEMENT_OFFSET_INTERNAL (layout->var_table, attrepr->location + 1, layout->offset_size);
+   if (next_off - this_off == 0)
+     {
+       return NO_ERROR;
+@@ -11229,9 +11252,8 @@
+ 
+   if (OR_IS_OOS (offset))
+     {
+-      /* Resolve validates the stub and marks transient data for copying and cleanup. */
+-      return heap_attrvalue_read_oos_inline (recdes, attrepr->location, raw, oos_scratch, oos_scratch_size,
+-					     oos_owned_buffer, pending);
++      *is_oos = true;
++      return NO_ERROR;
+     }
+ 
+   raw->data = layout->var_table + this_off;
+@@ -11274,7 +11296,7 @@
+  *   data(in): Disk value pointer
+  *   length(in): Disk value length
+  */
+-static int
++static inline __attribute__ ((always_inline)) int
+ heap_attrvalue_transform_to_dbvalue (HEAP_ATTRVALUE * value, OR_ATTRIBUTE * attrepr, RECDES * raw,
+ 				     bool oos_owned_buffer)
+ {
+@@ -11536,7 +11558,7 @@
+   value->rd_attrepr = attrepr;
+ }
+ 
+-static int
++static inline __attribute__ ((always_inline)) int
+ heap_attrvalue_read (RECDES * recdes, HEAP_ATTRVALUE * value, HEAP_CACHE_ATTRINFO * attr_info,
+ 		     const HEAP_REC_LAYOUT * layout, const heap_pending_record * pending)
+ {
+@@ -11546,7 +11568,7 @@
+ 
+   bool oos_owned_buffer = false;
+   /* OOS Resolve uses scratch up to one I/O page and allocates larger values. */
+-  char oos_scratch_buf[IO_MAX_PAGE_SIZE + MAX_ALIGNMENT];
++  char oos_scratch_buf[4 * IO_MAX_PAGE_SIZE + MAX_ALIGNMENT];
+   char *oos_scratch = PTR_ALIGN (oos_scratch_buf, MAX_ALIGNMENT);
+   int error;
+ 
+@@ -11589,9 +11611,13 @@
+ 	}
+       else
+ 	{
+-	  error =
+-	    heap_attrvalue_point_variable (recdes, layout, attr_info, attrepr, &raw, &oos_owned_buffer, oos_scratch,
+-					   IO_MAX_PAGE_SIZE, pending);
++	  bool is_oos;
++          error = heap_attrvalue_point_variable (recdes, layout, attr_info, attrepr, &raw, &is_oos);
++          if (error == NO_ERROR && is_oos)
++            {
++              error = heap_attrvalue_read_oos_inline (recdes, attrepr->location, &raw, oos_scratch,
++                                                     4 * IO_MAX_PAGE_SIZE, &oos_owned_buffer, pending);
++            }
+ 	  if (error != NO_ERROR)
+ 	    {
+ 	      return error;
+@@ -11615,7 +11641,7 @@
+  *
+  *   Keeps the per-attribute OOS Resolve path and its stack-scratch fast path.
+  */
+-static int
++static inline __attribute__ ((always_inline)) int
+ heap_attrinfo_read_dbvalues_individually (RECDES * recdes, HEAP_CACHE_ATTRINFO * attr_info,
+ 					  const HEAP_REC_LAYOUT * layout, const heap_pending_record * pending)
+ {
+@@ -11666,7 +11692,7 @@
+  *   cardinality: 0 or 1 keeps the per-attribute loop and its stack-scratch fast path; >= 2 uses
+  *   grouped Resolve.
+  */
+-static int
++static inline __attribute__ ((always_inline)) int
+ heap_attrinfo_read_dbvalues_with_oos_prefetch (THREAD_ENTRY * thread_p, RECDES * recdes,
+ 					       HEAP_CACHE_ATTRINFO * attr_info, const heap_pending_record * pending)
+ {
+@@ -11768,9 +11794,13 @@
+ 	    }
+ 	  else
+ 	    {			/* A variable attribute */
+-	      error =
+-		heap_attrvalue_point_variable (recdes, &layout, attr_info, att, &raw, &oos_owned_buffer, oos_scratch,
+-					       IO_MAX_PAGE_SIZE, pending);
++	      bool is_oos;
++          error = heap_attrvalue_point_variable (recdes, &layout, attr_info, att, &raw, &is_oos);
++          if (error == NO_ERROR && is_oos)
++            {
++              error = heap_attrvalue_read_oos_inline (recdes, att->location, &raw, oos_scratch,
++                                                     IO_MAX_PAGE_SIZE, &oos_owned_buffer, pending);
++            }
+ 	      if (error != NO_ERROR)
+ 		{
+ 		  return error;
+--- a/src/storage/heap_oos.cpp
++++ b/src/storage/heap_oos.cpp
+@@ -745,6 +745,11 @@
+   assert (recdes != NULL && recdes->data != NULL && heap_recdes_contains_oos (recdes));
+   *grouped_applied = false;
+ 
++  if (attr_info->num_values < 2)
++    {
++      return NO_ERROR;
++    }
++
+   for (i = 0; i < attr_info->num_values; i++)
+     {
+       if (heap_oos_attr_has_inline_ref (recdes, &attr_info->values[i]))
+--- a/src/storage/oos_file.cpp
++++ b/src/storage/oos_file.cpp
+@@ -2877,7 +2877,14 @@
+ 
+   try
+     {
+-      std::vector<bool> done (requests.size (), false);
++      char small_done[8] = { 0 };
++      std::vector<char> large_done;
++      char *done = small_done;
++      if (requests.size () > sizeof (small_done))
++        {
++          large_done.resize (requests.size (), 0);
++          done = large_done.data ();
++        }
+       std::vector<oos_read_continuation> continuations;
+ 
+       for (std::size_t i = 0; i < requests.size (); i++)

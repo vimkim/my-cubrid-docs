@@ -1,0 +1,29 @@
+--- a/src/storage/heap_file.c
++++ b/src/storage/heap_file.c
+@@ -11536,7 +11536,7 @@
+   value->rd_attrepr = attrepr;
+ }
+ 
+-static int
++static inline __attribute__ ((always_inline)) int
+ heap_attrvalue_read (RECDES * recdes, HEAP_ATTRVALUE * value, HEAP_CACHE_ATTRINFO * attr_info,
+ 		     const HEAP_REC_LAYOUT * layout, const heap_pending_record * pending)
+ {
+@@ -11615,7 +11615,7 @@
+  *
+  *   Keeps the per-attribute OOS Resolve path and its stack-scratch fast path.
+  */
+-static int
++static inline __attribute__ ((always_inline)) int
+ heap_attrinfo_read_dbvalues_individually (RECDES * recdes, HEAP_CACHE_ATTRINFO * attr_info,
+ 					  const HEAP_REC_LAYOUT * layout, const heap_pending_record * pending)
+ {
+@@ -11666,7 +11666,7 @@
+  *   cardinality: 0 or 1 keeps the per-attribute loop and its stack-scratch fast path; >= 2 uses
+  *   grouped Resolve.
+  */
+-static int
++static inline __attribute__ ((always_inline)) int
+ heap_attrinfo_read_dbvalues_with_oos_prefetch (THREAD_ENTRY * thread_p, RECDES * recdes,
+ 					       HEAP_CACHE_ATTRINFO * attr_info, const heap_pending_record * pending)
+ {
