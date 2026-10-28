@@ -84,9 +84,19 @@ The user confirmed the revised material with “이대로 게시해.” No appro
 - JIRA notes commit `3ae9edc88485be3c83d2b599095b0b888ce8f597` was fast-forwarded into notes `main` and pushed. No additional live JIRA write occurred.
 - PR #8299's exact body, replacement title, head SHA, base and draft state were read back and verified. The PR remains open and draft against `feature/oos-merge`; no feature branch merge or push occurred.
 - Both feature testcase ancestry checks passed. TC PRs public #3898 and private #4589 remain human-owned merge-gate decisions; the agent did not change or close them.
-- Exactly one [/run all request](https://github.com/CUBRID/cubrid/pull/8299#issuecomment-6468727959) started [gha-ci run 40686397319](https://github.com/CUBRID/cubrid/actions/runs/40686397319). All five gha-ci contexts on engine commit `408d135` linked to this run. At this record, the run is active and terminal verification is pending.
+- Exactly one [/run all request](https://github.com/CUBRID/cubrid/pull/8299#issuecomment-6468727959) started [gha-ci run 40686397319](https://github.com/CUBRID/cubrid/actions/runs/40686397319). All five gha-ci contexts on engine commit `408d135` linked to this run; terminal verification follows below.
 
 | Published material | Approved SHA-256 |
 | --- | --- |
 | PR body | `06ddbda7bd2e49945babe1576383e74d7dfc4d02c322bdf683a2e055e18f66e7` |
 | Explanation | `708543c6b083d8f1f5ee3ef56883b041a14665eaad91476d17fdc1e715b76583` |
+
+### Terminal CI verification
+
+Run `40686397319` finished with status **completed**, conclusion **success**. Release and debug builds passed; all **50 shell**, **10 SQL** and **1 medium** shards passed. All five gha-ci contexts on source `408d135` were success and linked to this one run. The five ordinary PR checks also passed. No source repair, extra push or CI rerun occurred after the result.
+
+The final PR read-back retained the exact approved body, replacement title, source head, `feature/oos-merge` base and draft state. The independent Standards/Spec reviews each had zero actionable findings. GitHub human review approval has not occurred; this record does not claim such approval.
+
+The live `gh pr checks --required` command reported no required checks for this feature-targeted branch; a fixed required-check total is therefore not claimed. Both linked TC PRs were still open on final inspection. There are no testcase repository changes in this update, so the human closes public #3898 and private #4589 under the TC Merge Gate workflow. The agent did not merge or close them.
+
+Residual ordinary UPDATE cost and the prior +5.0158% batch remain CBRD-27816. The original overall +2% robustness criterion is unmet; passing this CI does not change that performance conclusion. Reclaim, allocator implementation and threshold/criterion 2 remain outside this PR.
