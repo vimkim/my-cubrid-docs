@@ -1,6 +1,6 @@
 # CBRD-26659: 실제 두 노드 OOS HA 복제 TC와 PR CI shell 경로
 
-작성: 2026-10-27 (Asia/Seoul). 갱신: 2026-10-28, 실제 PR CI 결과와 미검증 범위 보완(Work463), 검사 함수 이동과 장애 전환 TC 연결(Work540). 이 문서는 실행 증거와 남은 범위를 기록한다. 새 spec이나 승인된 테스트 행렬이 아니다.
+작성: 2026-10-27 (Asia/Seoul). 갱신: 2026-10-28, 실제 PR CI 결과와 미검증 범위 보완(Work463), 검사 함수 이동과 장애 전환 TC 연결(Work540), harness 변경과 여러 값 복제 TC 연결(Work545). 이 문서는 실행 증거와 남은 범위를 기록한다. 새 spec이나 승인된 테스트 행렬이 아니다.
 
 ## 결론
 
@@ -10,6 +10,7 @@
 - **실제 PR CI에서도 통과했다.** PR #8128의 `/run shell` run [40507894187](https://github.com/CUBRID/cubrid/actions/runs/40507894187) shard 18에서 `[OK]`다. 그 shard의 72건이 모두 통과했다.
 - 같은 run의 `test_shell` 실패는 shard 39의 server-side loaddb case `_enhance_1008` 한 건이다. 이 실패는 HA TC와 관계없다고 판단한다([근거](#실제-pr-ci-실행)). 재실행 run [40552401255](https://github.com/CUBRID/cubrid/actions/runs/40552401255)에서 OK가 되었고, 현재 head의 `gha-ci` context 다섯 개가 모두 pass다.
 - 장애 전환, 이전 master 재합류, 수동 failback은 별도 TC `cbrd_26659_ha_failover`가 다룬다. PR CI run [40594246823](https://github.com/CUBRID/cubrid/actions/runs/40594246823)에서 두 TC가 모두 `[OK]`다([기록](ha-failover.md)).
+- **갱신(Work545)**: [공용 harness를 바꿨다](ha-queue.md#harness-변경). 이 TC는 27초에 끝나고(이전 42초), setup의 heartbeat start 결과 두 개를 더해 83개를 검사한다. `/run all` run [40643373124](https://github.com/CUBRID/cubrid/actions/runs/40643373124) shard 08에서 `[OK]`다. 여러 OOS 값을 함께 보내는 경우와 `async` 모드는 [별도 TC](ha-queue.md)가 다룬다.
 
 ## 입력 revision
 
@@ -122,8 +123,8 @@ r6 단계별 시간: setup 약 27 s(A `to-be-active` 2 s 포함), 검사 약 14 
 
 - 실제 ARC pod(root, `privileged: true`)에서 통과한 것은 한 번(run 40507894187)이다. 반복 실행 안정성은 로컬 동시 실행 3회 외에는 측정하지 않았다.
 - 비 root 경로는 library 최소 sentinel만 실행했다. 전체 TC를 비 root CTP로 실행하지 않았다. 개인 native runner(`cubrid-test-shell-run`)로도 실행하지 않았다.
-- 장애 전환, 재기동, master 교체 후 OOS 값, 이전 master 재합류는 이 TC가 아니라 [장애 전환 TC](ha-failover.md)가 다룬다. 대량/동시 쓰기에서의 queue alignment는 다루지 않는다. coverage R28의 queue alignment 부분은 여전히 미검증이다.
-- 복제 모드는 `ha_copy_sync_mode=sync:sync` 하나만 실행했다. engine이 받는 `async`, `semisync`(`src/executables/util_common.c:683`)는 실행하지 않았다.
+- 장애 전환, 재기동, master 교체 후 OOS 값, 이전 master 재합류는 이 TC가 아니라 [장애 전환 TC](ha-failover.md)가 다룬다. 대량/동시 쓰기에서의 queue alignment와 `async` 모드는 [별도 TC](ha-queue.md)가 다룬다(2026-10-28). 그 과정에서 찾은 결함 두 개(CBRD-27800, CBRD-27801)는 그 문서에 있다.
+- 이 TC의 복제 모드는 `ha_copy_sync_mode=sync:sync` 하나다. `async`는 [별도 TC](ha-queue.md)가 실행한다. `semisync`(`src/executables/util_common.c:683`)는 매뉴얼상 deprecated이며 SYNC와 같다(`ha.rst:252`).
 - 두 노드는 같은 host의 namespace다. veth 연결에는 지연과 손실이 없고, 두 노드가 kernel, 디스크, 시계를 공유한다. 네트워크 지연·단절, 노드 단위 host·디스크 장애는 재현하지 않는다.
 - 기존 QA HA corpus(`cubrid-testcases-private/HA/shell`)와는 별개다.
 
@@ -135,4 +136,4 @@ r6 단계별 시간: setup 약 27 s(A `to-be-active` 2 s 포함), 검사 약 14 
 
 TC를 `tc/pr-8128`에 merge, push하고 PR CI에서 실행하는 단계는 2026-10-27에 끝났다.
 
-장애 전환 범위는 2026-10-28에 정했고 TC가 PR CI에서 통과했다([기록](ha-failover.md)). 남은 결정은 그 문서의 다음 단계에 있다.
+장애 전환 범위는 2026-10-28에 정했고 TC가 PR CI에서 통과했다([기록](ha-failover.md)). 여러 값 복제와 `async` 모드도 같은 날 TC로 진행했다([기록](ha-queue.md)). 남은 일은 그 문서의 다음 단계에 있다.

@@ -1,6 +1,6 @@
 # CBRD-26659: OOS HA 장애 전환, 재합류, failback TC
 
-작성: 2026-10-28 (Asia/Seoul). Work540. 이 문서는 실행 증거와 남은 범위를 기록한다. 새 spec이나 승인된 테스트 행렬이 아니다. 두 노드 구성과 정상 복제 TC는 [두 노드 OOS HA 복제](ha-replication.md)에 있다.
+작성: 2026-10-28 (Asia/Seoul). Work540. 갱신: 같은 날, harness 변경과 `/run all` 결과(Work545). 이 문서는 실행 증거와 남은 범위를 기록한다. 새 spec이나 승인된 테스트 행렬이 아니다. 두 노드 구성과 정상 복제 TC는 [두 노드 OOS HA 복제](ha-replication.md)에 있다.
 
 ## 결론
 
@@ -10,6 +10,7 @@
 - CI와 같은 이미지·entrypoint·CTP로 로컬에서도 실행했다. 결과는 37 OK, 0 NOK다. A가 죽고 7초 뒤 B가 active가 되었다.
 - 장애 직전 commit 앞에서 B의 applylogdb를 멈춘 변형은 의도대로 NOK다. B가 `to-be-active`에서 멈추고 TC가 120초 뒤 실패를 보고한다.
 - 복제 모드는 `sync`만 실행했다. 노드 장애는 같은 kernel 위의 process 종료다. 범위 밖 항목은 [한계](#한계와-미실행)에 있다.
+- **갱신(Work545)**: harness를 바꿔 이 TC는 51초에 끝난다(이전 69초, 기준 60초). `/run all` run [40643373124](https://github.com/CUBRID/cubrid/actions/runs/40643373124)에서도 `[OK]`다([갱신 내용](#harness-변경-후-2026-10-28)).
 
 ## 범위 결정
 
@@ -114,17 +115,32 @@ fo1 단계별 시간(harness trace): setup 26 s, before와 열린 transaction 3 
 
 이 run 뒤 head `e3589ae`의 build 두 개와 `test_shell` context는 run 40594246823을, `test_sql`과 `test_medium`은 run 40557885817을 가리킨다. 두 run의 private testcase 입력이 다르다(`c0400c8f2`, `3bba57e1f`). 바뀐 파일은 shell의 HA case와 `oos_common`뿐이다.
 
+## harness 변경 후 (2026-10-28)
+
+[여러 OOS 값을 함께 복제하는 TC](ha-queue.md#harness-변경)를 만들면서 공용 harness를 바꿨다. 이 TC에 해당하는 변경은 다음과 같다.
+
+- heartbeat 타이머 5개를 1000 ms로 줄였다. B의 승격은 7초에서 2–3초가 되었다.
+- `hp_restart`는 `cubrid heartbeat start`를 background로 실행한다. TC는 노드의 mode를 기다린 뒤 `expect_join`으로 utility의 결과를 받고, 다음 역할 변경 전에 반드시 join한다. setup의 두 heartbeat start도 crash 직전에 join해 검사가 37개에서 39개가 되었다.
+- setup은 두 노드의 applylogdb가 `db_ha_apply_info`에 시작점을 기록할 때까지 기다린다.
+
+| Run | 입력 | 결과 | 시간 |
+|---|---|---|---:|
+| f_failover (로컬) | private `479035a45`와 같은 파일 | PASS 39/39 | case 51 s |
+| [40643373124](https://github.com/CUBRID/cubrid/actions/runs/40643373124) shard 24 | PR #8128 `/run all`, private `479035a45` | `[OK]` | 약 50 s |
+
+같은 run에서 SQL, shell, medium이 모두 PASS다. 입력은 engine `e3589ae`, public `45e21ad`, private `479035a45`로 하나다. 자세한 수치는 [실제 PR CI 실행](ha-queue.md#실제-pr-ci-실행)에 있다.
+
 ## 한계와 미실행
 
 - 노드 장애는 같은 kernel 위에서 node의 process를 모두 죽이는 방식이다. OS page cache는 남는다. OS crash, 전원 장애, 디스크 유실은 재현하지 않는다.
 - server process만 죽는 장애는 다루지 않는다. 이 경우 cub_master가 server를 다시 띄우거나, 시작 직후의 반복 장애이면 master를 내린다(`ha_unacceptable_proc_restart_timediff`).
 - 네트워크 단절, split brain, `ha_ping_hosts` 판정은 다루지 않는다.
-- 복제 모드는 `sync:sync`만 실행했다. `async`는 실행하지 않았다. 매뉴얼은 `SEMISYNC`가 deprecated이고 SYNC와 같다고 쓴다(`ha.rst:252`).
-- 열린 transaction은 하나다. 동시 쓰기 중 장애 전환과 queue alignment는 검증하지 않았다.
+- 장애 전환은 `sync:sync`에서만 실행했다. `async`는 정상 복제만 [별도 TC](ha-queue.md)가 다룬다. 매뉴얼은 `SEMISYNC`가 deprecated이고 SYNC와 같다고 쓴다(`ha.rst:252`).
+- 열린 transaction은 하나다. 동시 쓰기 중 장애 전환은 검증하지 않았다. 동시 쓰기의 queue alignment는 [별도 TC](ha-queue.md)가 장애 없이 다룬다.
 - 첫 UPDATE 뒤의 chunk 수는 검사하지 않는다. 장애 전환 뒤 새 master에서 이전 chain이 회수되는지는 확인하지 않았다.
-- 실제 CI에서 통과한 것은 한 번이다. 로컬도 PASS run은 한 번이다. 반복 실행 안정성은 측정하지 않았다.
+- 실제 CI에서 통과한 것은 두 번(run 40594246823, 40643373124)이다. 반복 실행 안정성은 측정하지 않았다.
 
 ## 다음 단계
 
-1. JIRA CBRD-26659의 HA 범위와 Remaining Work에 이 결과를 반영한다.
-2. 고르지 않은 범위(`async` 정상 복제, 대량·동시 쓰기의 queue alignment)를 할지 정한다.
+1. JIRA CBRD-26659의 HA 범위와 Remaining Work에 이 결과를 반영했다(2026-10-28).
+2. 고르지 않았던 범위(`async` 정상 복제, 대량·동시 쓰기의 queue alignment)는 [별도 TC](ha-queue.md)로 진행했다.
