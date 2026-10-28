@@ -11,6 +11,9 @@
 통과한 라운드만 최종 결과로 골라 일반 UPDATE 전체를 통과로 표시하지 않는다.
 
 이번 후속은 Work **564**이며 선행 Work 542와 문서 commit `267647c`를 잇는다.
+사용자 후속 결정(2026-10-28)에 따라 Work 564는 국소 구현·검증·보고서 작성의 완료 단위로 마감한다.
+늦게 나타나는 UPDATE 추가 비용의 원인 규명과 전체 +2% 재검증은 별도 후속 **Work 571**로 분리했다.
+이 업무 분리는 성능 목표 달성이나 병합 승인 판정을 뜻하지 않는다.
 기준 2의 threshold parameter와 OOS reclaim tail은 계속 별도 후속이다. allocator 구현도 수정하지 않았다.
 아래의 기존 A/B/C·6KB 손익 표는 선행 측정 그대로 보존하며, 새 후보 D의 OOS 성능 수치로 재해석하지 않는다.
 
@@ -133,7 +136,7 @@ CMake preset·compile commands·검증 hash와 원래 checkout 보존 결과는 
 원래 `f1b9903` checkout과 기존 baseline의 source·preset·설치 DSO hash는 시작 시와 같다.
 D의 설치 prefix는 `/home/vimkim/.cub/install/CBRD-27785-ordinary-update/release_gcc`이며 원래 checkout의 설치와 다르다.
 새 source/문서 변경은 로컬 commit만 수행했다. push·merge·외부 게시·CI trigger는 수행하지 않았다.
-다음 동일 범위 작업은 늦게 나타나는 일반 UPDATE의 추가 비용을 정확히 같은 계수 창의 foreground/background별로 포착해 +2%를 재검증하는 것이다.
+Work 571의 다음 작업은 늦게 나타나는 일반 UPDATE의 추가 비용을 정확히 같은 계수 창의 foreground/background별로 포착해 +2%를 재검증하는 것이다.
 OOS reclaim·allocator·threshold/기준 2로 이 실패를 해결했다고 기록하지 않는다.
 
 ## 선행 후보 C의 판단과 범위 (문서 267647c)
