@@ -28,7 +28,13 @@ The previous PR benchmark and SQL tests remain. Focused correctness passed 15/15
 The production build and installation completed with every UNIT_TEST option OFF.
 Eight SERVER_MODE/SA_MODE compile commands include O2, NDEBUG and frame pointers without test hooks.
 Installed binary hashes and build IDs were recorded in the new PR verification artifacts.
-No new performance run on this PR binary is claimed. The historical +2% robustness gate remains unmet.
+The actual PR binary was measured in a new matched three-way campaign against pinned develop and the feature base.
+The campaign includes 90 samples in forward/reverse order, with the first of five runs discarded per round and case.
+Two SELECT overheads are +0.64% and +1.36%; fresh-clone UPDATE is +1.66% versus pinned develop.
+Against the feature base, instructions fall by 5.95%, 6.42% and 3.51%, respectively.
+The historical late +5.0158% batch remains separate; the original overall +2% robustness gate is not declared passed.
+Remote develop was observed at 639628d731be38879f8b467aa8fcbebc84164eae; the agreed regression reference stays pinned at 4781495.
+Independent Standards and Spec reviews each returned zero actionable findings; their read-only scope is recorded.
 The author accepts the currently observed approximately +5% for this integration and defers residual work to CBRD-27816.
 
 ## Saved material
@@ -39,6 +45,8 @@ Task branch: `docs/CBRD-27785-pr8299-update`. Integration branch: `main`.
 - Body: [CBRD-27785-shared-read-update-pr-body_408d135_codex.md](CBRD-27785-shared-read-update-pr-body_408d135_codex.md)
 - Explanation: [CBRD-27785-shared-read-update_408d135_codex.md](CBRD-27785-shared-read-update_408d135_codex.md)
 - Context: this file. Index: [README.md](README.md).
+- Review: [CBRD-27785-pr8299-review_408d135_codex.md](CBRD-27785-pr8299-review_408d135_codex.md).
+- Selected performance evidence: `pr-threeway-20261028/results.json`; includes all 90 counter samples and binary identities.
 - Public explanation URL: <https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-27785/CBRD-27785-shared-read-update_408d135_codex.md>
 
 JIRA notes repository: `vimkim/my-cubrid-jira`.
@@ -54,7 +62,7 @@ After the user reviews these files, request one confirmation for the following o
 
 1. Verify the current PR head, base, title, body fingerprint and source ancestry. Reconcile any external change before publication.
 2. Push `408d1352941e9d28a88b4d5c899bacf34e2ec1a0` to `vk:CBRD-27785-oos-read-performance` with a normal fast-forward push. Do not merge or push `feature/oos-merge`.
-3. Rebase and fast-forward the docs task branch into its current `main`, then push `origin/main`. Include these three files, their index and concise publication records. Preserve the separate investigation branch and its raw evidence.
+3. Rebase and fast-forward the docs task branch into its current `main`, then push `origin/main`. Include the body, explanation, context, review, selected results JSON, their index and concise publication records. Preserve the separate investigation branch and its raw evidence.
 4. Rebase and fast-forward the JIRA notes task branch into its current `main`, then push `origin/main`. Include only the CBRD-27816 report and README update. No additional live JIRA description write is proposed.
 5. Verify that the public explanation matches the reviewed file. Update PR #8299 with the exact reviewed body and replacement title. Retain its draft status, base and assignee.
 6. Trigger CUBRID CI once for this pushed PR revision, wait for completion and report the exact run and TC Merge Gate result. Stop before follow-up fixes or reruns.
@@ -64,5 +72,5 @@ No testcase repository changes are required for this source update; the added na
 TC PRs [public #3898](https://github.com/CUBRID/cubrid-testcases/pull/3898) and [private #4589](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4589) were open on inspection.
 The human closes them if no TC changes are required. The agent does not merge, close or delete TC branches.
 
-The new follow-up creation is complete. Source push, documentation integration/push, PR title/body update and CI remain unexecuted pending review confirmation.
+The new follow-up creation is complete. Source push, documentation integration/push, PR title/body update and CI remain unexecuted. The user agreed with the earlier proposal and requested a three-way before/after table. The body and supporting material were revised to include fresh measurements; present this revised text for review before publication.
 The original CBRD-27785 investigation report was updated locally at docs commit `4d7a149`; that separate branch is outside these publication operations.
