@@ -68,3 +68,26 @@ Existing public TC PR #3688 and private-ex TC PR #4365 remain OPEN. Their unreso
 This context records a proposal, not approval. Establish publication authorization
 from the conversation after the user can review the saved files. Capture the
 reviewed body fingerprint when confirmed publication begins.
+
+
+## Publication result — 2026-10-29 (Asia/Seoul)
+
+The user confirmed the saved body and listed operations after the review handoff.
+
+- Initial docs commit `d45aaff9d8d9f35ae1c774ca6867d6a4968c7719` was integrated
+  into local `main` by fast-forward and pushed to `vimkim/my-cubrid-docs:main`.
+- HA source `ae2bcec1f6a68fb76e90c0a9d50fec4b3463ca51` was pushed to
+  `CUBRID/cubrid-testcases-private:tc/pr-8128`; the remote SHA was verified.
+- Created draft PR [#1666](https://github.com/CUBRID/cubrid-testcases-private/pull/1666),
+  `tc/pr-8128 → develop`, assigned to `vimkim`. The PR remains OPEN and draft.
+- Published title: `[CBRD-26659] Move OOS HA cases to the HA shell suite`.
+- Approved and published body SHA-256 both equal
+  `bcd9817dd0c049d279485996bb8d98c950b596ce4af3e68e5c708642885f8b91`.
+- The reviewed body was uploaded unchanged. Existing PR descriptions and titles
+  were not modified. No TC PR was merged or closed, and no TC branch was deleted.
+- No new test, repair or CI run occurred during publication. The recorded native
+  failures and CI failure remain unresolved. The heavy candidate list is unchanged.
+
+This result is an execution record of that confirmation, not authorization for
+future publication or changes. The original preparation snapshot above remains
+historical.

@@ -104,4 +104,6 @@ TC PR #3688·#4365는 OPEN이며, 원래 TC Merge Gate의 머지/종료 처리�
 모두 일치한다. 마지막 native 실행은2 PASS·2 FAIL·0 SKIP이며,
 [HA PR 본문 초안](CBRD-26659-oos-ha-suite-pr-body_ae2bcec_codex.md)과
 [게시 범위](CBRD-26659-oos-ha-suite-pr-context_ae2bcec_codex.md)에
-반복 실행의 변동과 전용 HA job 미실행을 기록했다. 현재는 게시 전 검토 단계다.
+반복 실행의 변동과 전용 HA job 미실행을 기록했다. 2026-10-29 사용자 승인 후
+[draft HA TC PR #1666](https://github.com/CUBRID/cubrid-testcases-private/pull/1666)에
+동일한 본문과 소스 커밋을 게시했다. 게시 과정에서 추가 시험·수정·CI 재실행은 하지 않았다.
