@@ -230,7 +230,7 @@ Evidence root `R` is `/home/vimkim/tmp/pr7990-four-shell-analysis-20261021`. Raw
 
 Head bundle `H` is `R/ci-evidence/github-actions/CUBRID-cubrid/pr-7990/1a8c7057623d92205dbc1324ec43e3cc40fc4cd2`. The suite directory is `H/providers/github-actions/runs/39589070215/attempts/1/test_shell`.
 
-The [validated shell summary](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/tmp/pr7990-four-shell-analysis-20261021/ci-evidence/github-actions/CUBRID-cubrid/pr-7990/1a8c7057623d92205dbc1324ec43e3cc40fc4cd2/providers/github-actions/runs/39589070215/attempts/1/test_shell/summary.json) identifies every shard and failure. Each failure directory below contains `metadata.json`, `message.txt`, and `diff.txt`:
+The validated shell summary is `summary.json` in the suite directory above. Its four non-CDC failures and stable evidence directories are listed below; the original CI execution is [run39589070215](https://github.com/CUBRID/cubrid/actions/runs/39589070215). Each local failure directory contains `metadata.json`, `message.txt`, and `diff.txt`:
 
 | Case | Stable directory below suite `failures/` | Useful message lines |
 | --- | --- | --- |

@@ -192,13 +192,16 @@ Both include their latest local integration tips, with tested selected input byt
 
 | Audit | Evidence |
 | --- | --- |
-| [Shell qualification](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket10/final02/independent-audit.json) | Exact 28 cases/676 phases, stored rows, flags, plans and owner comparisons |
-| [SQL qualification](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket10/sql01/independent-audit.json) | Native 1/1, exact answer/result SHA and 20 intended errors |
-| [Wrong-flag control](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket10/negative-flag01/independent-control-audit.json) | Actual record checker rejects false HAS_OOS expectation |
-| [Wrong-tail control](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket10/negative-tail01/independent-control-audit.json) | Actual full-value checker rejects one changed tail byte |
-| [Wrong-SQL-answer control](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket10/negative-sql01/independent-control-audit.json) | Native mismatch while actual bytes still equal the committed good answer |
-| [Retained C++ audit](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket10/cpp-retained-audit.json) | Original SA 8 expected/discovered/started/XML agreement and unchanged assertions |
-| [Post-merge input audit](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/temp/work456-implementation/ticket10/postmerge-input-audit.json) | Selected TC/helper/answer bytes still equal qualified inputs |
+| Shell qualification | Exact 28 cases/676 phases, stored rows, flags, plans and owner comparisons |
+| SQL qualification | Native 1/1, exact answer/result SHA and 20 intended errors |
+| Wrong-flag control | Actual record checker rejects false HAS_OOS expectation |
+| Wrong-tail control | Actual full-value checker rejects one changed tail byte |
+| Wrong-SQL-answer control | Native mismatch while actual bytes still equal the committed good answer |
+| Retained C++ audit | Original SA 8 expected/discovered/started/XML agreement and unchanged assertions |
+| Post-merge input audit | Selected TC/helper/answer bytes still equal qualified inputs |
+
+The table preserves the audit conclusions at the source and testcase revisions above.
+The raw audit JSON remains in the owner's local evidence archive; it is not a shared download.
 
 ## Reproduction and handoff
 

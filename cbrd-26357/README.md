@@ -2,7 +2,7 @@
 
 Analysis and CI reports for [PR 7990](https://github.com/CUBRID/cubrid/pull/7990) and earlier OOS PR revisions. Each report applies to its stated source revision.
 
-Last modified: 2026-10-27, Asia/Seoul.
+Last modified: 2026-10-28, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
@@ -23,7 +23,7 @@ Last modified: 2026-10-27, Asia/Seoul.
 | [CBRD-26357-oos-index-capacity_3252fcf_codex.md](CBRD-26357-oos-index-capacity_3252fcf_codex.md) | OOS 페이지 배치 근거와 현재 head의 TC 수정 전후 검증 | 2026-10-22 | 2026-10-22 | 최소 답지 수정의 근거와 검증 한계를 기록 |
 | [non_cdc_followup_1a8c705_codex.md](non_cdc_followup_1a8c705_codex.md) | Crash attempts, default repair, controlled experiments, and merge/ticket attribution | 2026-10-22 | 2026-10-22 | Explain non-CDC failures and prepare the confirmed repair |
 | [ci_analysis_report_52987c6_claude.md](ci_analysis_report_52987c6_claude.md) | Warning snapshot at `52987c6` (rerun running), with validated run 40323508581 shell evidence, merge-base comparison, history, and provisional hypotheses for three shell failures | 2026-10-26 | 2026-10-26 | Classify the three shell failures before the rerun result is collected |
-| [ci_analysis_report_1a8c705_codex.md](ci_analysis_report_1a8c705_codex.md) | Four non-CDC shell failures, validated evidence, unavailable baseline, history, and focused reproduction | 2026-10-21 | 2026-10-21 | Explain failures after the develop merge at `1a8c705` |
+| [ci_analysis_report_1a8c705_codex.md](ci_analysis_report_1a8c705_codex.md) | Four non-CDC shell failures, inline evidence inventory and original CI run, unavailable baseline, history, and focused reproduction | 2026-10-21 | 2026-10-28 | Explain failures after the develop merge at `1a8c705` |
 | [ci_analysis_report_07fef9d_claude.md](ci_analysis_report_07fef9d_claude.md) | CI Failure Analysis: PR #6864 at `07fef9d` | 2026-08-05 | 2026-08-05 | Preserve revision-specific analysis and follow-up context |
 | [ci_analysis_report_1ec35f8_codex.md](ci_analysis_report_1ec35f8_codex.md) | PR #7990 CI 수집 경고 — 1ec35f8 | 2026-09-29 | 2026-09-29 | Preserve revision-specific analysis and follow-up context |
 | [ci_analysis_report_2940b1c_claude.md](ci_analysis_report_2940b1c_claude.md) | CI Failure Analysis: PR #6864 at `2940b1c` | 2026-09-05 | 2026-09-08 | Preserve revision-specific analysis and follow-up context |

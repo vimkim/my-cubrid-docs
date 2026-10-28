@@ -7,7 +7,7 @@
 
 **현재 활성 SQL 25개가 포함된 SQL CI job과 활성 OOS shell 69개의 실행은 PASS다. SQL 3개와 shell 64개는 실패 또는 60초 초과 실행으로 비활성화되어 있다. 따라서 활성 선택의 CI 통과와 피드백 전체의 검증 완료는 구분해야 한다.** 비활성 FAIL은 통과 커버리지에 포함하지 않으며, 필수 항목별 독립 검증이 남아 있어 전체 Work456은 미완료다.
 
-[대화형 OOS TC 탐색기](https://dev2.baboon-rudd.ts.net:8443/home/vimkim/.agent/diagrams/cbrd-26659-oos-tc-explorer.html)에서 피드백·종류·기능 분류·결과·활성/비활성·관측 run·실행 시간·텍스트로 목록을 필터링하고 정렬할 수 있다. 행을 선택하면 TC 원문, SQL answer, 관련 controller/fixture와 실행 리비전을 읽을 수 있으며, 필터 결과를 CSV로 내보낼 수 있다. SQL 28개·shell 133개와 별도의 C++ 보완 함수 14개를 수록했다. 비공개 TC 원본을 내장한 약 2 MB의 내부 공유용 HTML이며, 파일을 내려받아 오프라인으로도 사용할 수 있다. HTML과 내장 소스는 공개 Git 저장소 밖에서 보관한다.
+SQL 28개·shell 133개의 목록과 TC 원문·관련 controller/fixture는 아래 부록의 커밋 고정 링크에서 확인한다. C++ 보완 함수 14개와 기존 내부 계약의 검증 범위는 5절에서 설명한다.
 
 ## 1. 피드백별 대응 요약
 
