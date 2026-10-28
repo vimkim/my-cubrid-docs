@@ -1,0 +1,1882 @@
+{
+  "work_item": 564,
+  "predecessor": 542,
+  "date_kst": "2026-10-28",
+  "source_commit": "02df4d9fe2d1f24168a18eda8d8be216e2c4ed99",
+  "baseline": "4781495f01523a3ecc5891e3377ad62cf876a1cd",
+  "experiment_base": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67",
+  "saved_candidate_docs_commit": "267647c",
+  "raw_artifacts": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028",
+  "robust_ordinary_update_gate_passed": false,
+  "unmet": "Four symmetric fresh rounds pass, but two mixed-history fresh rounds and a later plain pre-profile batch exceed +2%. No blanket ordinary UPDATE acceptance.",
+  "fresh_aggregate_16_retained": {
+    "n_scan": {
+      "base": {
+        "retained": 16,
+        "median": {
+          "instructions:u": 250916899.5,
+          "cycles:u": 103746032.5,
+          "task-clock": 39.14
+        },
+        "instructions_min": 250851684.0,
+        "instructions_max": 251021184.0
+      },
+      "candidate": {
+        "retained": 16,
+        "median": {
+          "instructions:u": 252547395.0,
+          "cycles:u": 119357134.5,
+          "task-clock": 45.09
+        },
+        "instructions_min": 252469883.0,
+        "instructions_max": 252612666.0
+      },
+      "percent": 0.6498149400255837
+    },
+    "n_pred": {
+      "base": {
+        "retained": 16,
+        "median": {
+          "instructions:u": 531611455.0,
+          "cycles:u": 222678427.0,
+          "task-clock": 81.2
+        },
+        "instructions_min": 531564677.0,
+        "instructions_max": 531736277.0
+      },
+      "candidate": {
+        "retained": 16,
+        "median": {
+          "instructions:u": 538854283.5,
+          "cycles:u": 249536750.0,
+          "task-clock": 91.62
+        },
+        "instructions_min": 538776249.0,
+        "instructions_max": 538928033.0
+      },
+      "percent": 1.3624289755005403
+    },
+    "n_update": {
+      "base": {
+        "retained": 16,
+        "median": {
+          "instructions:u": 6472427078.5,
+          "cycles:u": 3768204691.5,
+          "task-clock": 1428.135
+        },
+        "instructions_min": 6456031387.0,
+        "instructions_max": 6493769468.0
+      },
+      "candidate": {
+        "retained": 16,
+        "median": {
+          "instructions:u": 6580234565.0,
+          "cycles:u": 3816017631.5,
+          "task-clock": 1454.7849999999999
+        },
+        "instructions_min": 6564454421.0,
+        "instructions_max": 6611380621.0
+      },
+      "percent": 1.6656423501179907
+    }
+  },
+  "consecutive_aggregate_8_retained": {
+    "base": {
+      "retained": 8,
+      "median": {
+        "instructions:u": 6457728940.5,
+        "cycles:u": 3672456676.5,
+        "task-clock": 1460.58
+      },
+      "instructions_min": 6456207779.0,
+      "instructions_max": 6472997221.0
+    },
+    "candidate": {
+      "retained": 8,
+      "median": {
+        "instructions:u": 6565067541.0,
+        "cycles:u": 3699471539.5,
+        "task-clock": 1476.905
+      },
+      "instructions_min": 6563591766.0,
+      "instructions_max": 6608646773.0
+    },
+    "percent": 1.6621725917732588
+  },
+  "symmetric_campaign": {
+    "ordinary_fresh": [
+      {
+        "round": 0,
+        "order": [
+          "base",
+          "final"
+        ],
+        "gate": {
+          "baseline": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/clean-gate-r0/summary.json",
+          "candidate": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/final/clean-gate-r0/summary.json",
+          "start_state": "fresh clone of immutable reviewer seed for every sample, including warmup",
+          "rows": [
+            {
+              "case": "n_pred",
+              "base": {
+                "instructions_median": 531658313.5,
+                "min": 531606805.0,
+                "max": 531686207.0,
+                "retained": 4,
+                "task_clock_ms_median": 76.855
+              },
+              "candidate": {
+                "instructions_median": 538879245.0,
+                "min": 538843969.0,
+                "max": 538897309.0,
+                "retained": 4,
+                "task_clock_ms_median": 96.9
+              },
+              "percent": 1.3581902730841033,
+              "pass": true
+            },
+            {
+              "case": "n_scan",
+              "base": {
+                "instructions_median": 250949018.5,
+                "min": 250916992.0,
+                "max": 251021184.0,
+                "retained": 4,
+                "task_clock_ms_median": 41.84
+              },
+              "candidate": {
+                "instructions_median": 252547395.0,
+                "min": 252520688.0,
+                "max": 252583602.0,
+                "retained": 4,
+                "task_clock_ms_median": 49.7
+              },
+              "percent": 0.6369327561247307,
+              "pass": true
+            },
+            {
+              "case": "n_update",
+              "base": {
+                "instructions_median": 6472782472.5,
+                "min": 6472208874.0,
+                "max": 6473490516.0,
+                "retained": 4,
+                "task_clock_ms_median": 1458.1399999999999
+              },
+              "candidate": {
+                "instructions_median": 6580101103.0,
+                "min": 6564744790.0,
+                "max": 6580633336.0,
+                "retained": 4,
+                "task_clock_ms_median": 1485.635
+              },
+              "percent": 1.6579984103582968,
+              "pass": true
+            }
+          ],
+          "pass": true
+        }
+      },
+      {
+        "round": 1,
+        "order": [
+          "final",
+          "base"
+        ],
+        "gate": {
+          "baseline": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/clean-gate-r1/summary.json",
+          "candidate": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/final/clean-gate-r1/summary.json",
+          "start_state": "fresh clone of immutable reviewer seed for every sample, including warmup",
+          "rows": [
+            {
+              "case": "n_pred",
+              "base": {
+                "instructions_median": 531625440.0,
+                "min": 531595950.0,
+                "max": 531736277.0,
+                "retained": 4,
+                "task_clock_ms_median": 88.315
+              },
+              "candidate": {
+                "instructions_median": 538854283.5,
+                "min": 538800742.0,
+                "max": 538870792.0,
+                "retained": 4,
+                "task_clock_ms_median": 87.42
+              },
+              "percent": 1.359762523779895,
+              "pass": true
+            },
+            {
+              "case": "n_scan",
+              "base": {
+                "instructions_median": 250908057.5,
+                "min": 250897859.0,
+                "max": 250913228.0,
+                "retained": 4,
+                "task_clock_ms_median": 37.085
+              },
+              "candidate": {
+                "instructions_median": 252564512.5,
+                "min": 252516828.0,
+                "max": 252612666.0,
+                "retained": 4,
+                "task_clock_ms_median": 47.84
+              },
+              "percent": 0.6601840596530018,
+              "pass": true
+            },
+            {
+              "case": "n_update",
+              "base": {
+                "instructions_median": 6472403789.0,
+                "min": 6456031387.0,
+                "max": 6472959907.0,
+                "retained": 4,
+                "task_clock_ms_median": 1440.565
+              },
+              "candidate": {
+                "instructions_median": 6580289724.5,
+                "min": 6564454421.0,
+                "max": 6581026324.0,
+                "retained": 4,
+                "task_clock_ms_median": 1469.85
+              },
+              "percent": 1.6668603971117246,
+              "pass": true
+            }
+          ],
+          "pass": true
+        }
+      },
+      {
+        "round": 2,
+        "order": [
+          "base",
+          "final"
+        ],
+        "gate": {
+          "baseline": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/clean-gate-r2/summary.json",
+          "candidate": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/final/clean-gate-r2/summary.json",
+          "start_state": "fresh clone of immutable reviewer seed for every sample, including warmup",
+          "rows": [
+            {
+              "case": "n_pred",
+              "base": {
+                "instructions_median": 531586297.5,
+                "min": 531564677.0,
+                "max": 531595836.0,
+                "retained": 4,
+                "task_clock_ms_median": 77.63499999999999
+              },
+              "candidate": {
+                "instructions_median": 538828575.0,
+                "min": 538776249.0,
+                "max": 538867143.0,
+                "retained": 4,
+                "task_clock_ms_median": 87.655
+              },
+              "percent": 1.3623898008770619,
+              "pass": true
+            },
+            {
+              "case": "n_scan",
+              "base": {
+                "instructions_median": 250914470.0,
+                "min": 250851684.0,
+                "max": 250923860.0,
+                "retained": 4,
+                "task_clock_ms_median": 38.614999999999995
+              },
+              "candidate": {
+                "instructions_median": 252550468.5,
+                "min": 252525515.0,
+                "max": 252570873.0,
+                "retained": 4,
+                "task_clock_ms_median": 43.504999999999995
+              },
+              "percent": 0.6520144095316649,
+              "pass": true
+            },
+            {
+              "case": "n_update",
+              "base": {
+                "instructions_median": 6472212696.0,
+                "min": 6460875576.0,
+                "max": 6472732078.0,
+                "retained": 4,
+                "task_clock_ms_median": 1407.3899999999999
+              },
+              "candidate": {
+                "instructions_median": 6580406805.0,
+                "min": 6565359363.0,
+                "max": 6585860665.0,
+                "retained": 4,
+                "task_clock_ms_median": 1356.92
+              },
+              "percent": 1.671671097380134,
+              "pass": true
+            }
+          ],
+          "pass": true
+        }
+      },
+      {
+        "round": 3,
+        "order": [
+          "final",
+          "base"
+        ],
+        "gate": {
+          "baseline": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/clean-gate-r3/summary.json",
+          "candidate": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/final/clean-gate-r3/summary.json",
+          "start_state": "fresh clone of immutable reviewer seed for every sample, including warmup",
+          "rows": [
+            {
+              "case": "n_pred",
+              "base": {
+                "instructions_median": 531618762.5,
+                "min": 531588090.0,
+                "max": 531643676.0,
+                "retained": 4,
+                "task_clock_ms_median": 80.805
+              },
+              "candidate": {
+                "instructions_median": 538865942.0,
+                "min": 538804131.0,
+                "max": 538928033.0,
+                "retained": 4,
+                "task_clock_ms_median": 91.8
+              },
+              "percent": 1.363228691538132,
+              "pass": true
+            },
+            {
+              "case": "n_scan",
+              "base": {
+                "instructions_median": 250926454.0,
+                "min": 250896970.0,
+                "max": 250989362.0,
+                "retained": 4,
+                "task_clock_ms_median": 39.855000000000004
+              },
+              "candidate": {
+                "instructions_median": 252543806.5,
+                "min": 252469883.0,
+                "max": 252581594.0,
+                "retained": 4,
+                "task_clock_ms_median": 37.269999999999996
+              },
+              "percent": 0.644552407375909,
+              "pass": true
+            },
+            {
+              "case": "n_update",
+              "base": {
+                "instructions_median": 6473739155.0,
+                "min": 6459263280.0,
+                "max": 6493769468.0,
+                "retained": 4,
+                "task_clock_ms_median": 1383.9
+              },
+              "candidate": {
+                "instructions_median": 6581799301.0,
+                "min": 6564570145.0,
+                "max": 6611380621.0,
+                "retained": 4,
+                "task_clock_ms_median": 1417.37
+              },
+              "percent": 1.669207600317657,
+              "pass": true
+            }
+          ],
+          "pass": true
+        }
+      }
+    ],
+    "ordinary_consecutive": [
+      {
+        "round": 0,
+        "order": [
+          "base",
+          "final"
+        ],
+        "gate": {
+          "baseline": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/clean-consecutive-r0/summary.json",
+          "candidate": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/final/clean-consecutive-r0/summary.json",
+          "start_state": "one fresh clone per case/round, then consecutive committed updates including warmup",
+          "rows": [
+            {
+              "case": "n_update",
+              "base": {
+                "instructions_median": 6457728940.5,
+                "min": 6456207779.0,
+                "max": 6471839673.0,
+                "retained": 4,
+                "task_clock_ms_median": 1486.16
+              },
+              "candidate": {
+                "instructions_median": 6573183387.5,
+                "min": 6564413129.0,
+                "max": 6608646773.0,
+                "retained": 4,
+                "task_clock_ms_median": 1556.275
+              },
+              "percent": 1.7878490730064645,
+              "pass": true
+            }
+          ],
+          "pass": true
+        }
+      },
+      {
+        "round": 1,
+        "order": [
+          "final",
+          "base"
+        ],
+        "gate": {
+          "baseline": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/clean-consecutive-r1/summary.json",
+          "candidate": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/final/clean-consecutive-r1/summary.json",
+          "start_state": "one fresh clone per case/round, then consecutive committed updates including warmup",
+          "rows": [
+            {
+              "case": "n_update",
+              "base": {
+                "instructions_median": 6458703865.0,
+                "min": 6456420895.0,
+                "max": 6472997221.0,
+                "retained": 4,
+                "task_clock_ms_median": 1430.21
+              },
+              "candidate": {
+                "instructions_median": 6565067541.0,
+                "min": 6563591766.0,
+                "max": 6581023738.0,
+                "retained": 4,
+                "task_clock_ms_median": 1414.34
+              },
+              "percent": 1.6468269520203416,
+              "pass": true
+            }
+          ],
+          "pass": true
+        }
+      }
+    ],
+    "complete": true
+  },
+  "mixed_history_campaign": {
+    "ordinary_fresh": [
+      {
+        "round": 0,
+        "order": [
+          "base",
+          "final"
+        ],
+        "gate": {
+          "baseline": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/gate-r0/summary.json",
+          "candidate": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/final/gate-r0/summary.json",
+          "start_state": "fresh clone of immutable reviewer seed for every sample, including warmup",
+          "rows": [
+            {
+              "case": "n_pred",
+              "base": {
+                "instructions_median": 531611086.5,
+                "min": 531588021.0,
+                "max": 531631441.0,
+                "retained": 4,
+                "task_clock_ms_median": 73.965
+              },
+              "candidate": {
+                "instructions_median": 539023608.5,
+                "min": 538952063.0,
+                "max": 539081033.0,
+                "retained": 4,
+                "task_clock_ms_median": 133.19
+              },
+              "percent": 1.3943505295952896,
+              "pass": true
+            },
+            {
+              "case": "n_scan",
+              "base": {
+                "instructions_median": 250917136.5,
+                "min": 250900648.0,
+                "max": 250944858.0,
+                "retained": 4,
+                "task_clock_ms_median": 35.114999999999995
+              },
+              "candidate": {
+                "instructions_median": 252582301.0,
+                "min": 252523740.0,
+                "max": 252602281.0,
+                "retained": 4,
+                "task_clock_ms_median": 68.375
+              },
+              "percent": 0.6636312382753529,
+              "pass": true
+            },
+            {
+              "case": "n_update",
+              "base": {
+                "instructions_median": 6472022862.5,
+                "min": 6456283517.0,
+                "max": 6472553939.0,
+                "retained": 4,
+                "task_clock_ms_median": 1366.005
+              },
+              "candidate": {
+                "instructions_median": 6580493313.0,
+                "min": 6563500952.0,
+                "max": 6707687155.0,
+                "retained": 4,
+                "task_clock_ms_median": 1295.74
+              },
+              "percent": 1.6759899154327185,
+              "pass": true
+            }
+          ],
+          "pass": true
+        }
+      },
+      {
+        "round": 1,
+        "order": [
+          "final",
+          "base"
+        ],
+        "gate": {
+          "baseline": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/gate-r1/summary.json",
+          "candidate": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/final/gate-r1/summary.json",
+          "start_state": "fresh clone of immutable reviewer seed for every sample, including warmup",
+          "rows": [
+            {
+              "case": "n_pred",
+              "base": {
+                "instructions_median": 531658582.0,
+                "min": 531623885.0,
+                "max": 531697978.0,
+                "retained": 4,
+                "task_clock_ms_median": 86.39
+              },
+              "candidate": {
+                "instructions_median": 538880270.5,
+                "min": 538868163.0,
+                "max": 539002974.0,
+                "retained": 4,
+                "task_clock_ms_median": 107.345
+              },
+              "percent": 1.3583319717765718,
+              "pass": true
+            },
+            {
+              "case": "n_scan",
+              "base": {
+                "instructions_median": 250978062.5,
+                "min": 250937230.0,
+                "max": 251018879.0,
+                "retained": 4,
+                "task_clock_ms_median": 43.66
+              },
+              "candidate": {
+                "instructions_median": 252600371.0,
+                "min": 252574100.0,
+                "max": 252638615.0,
+                "retained": 4,
+                "task_clock_ms_median": 62.435
+              },
+              "percent": 0.6463945429493467,
+              "pass": true
+            },
+            {
+              "case": "n_update",
+              "base": {
+                "instructions_median": 6475024184.5,
+                "min": 6458806433.0,
+                "max": 6689628252.0,
+                "retained": 4,
+                "task_clock_ms_median": 1429.33
+              },
+              "candidate": {
+                "instructions_median": 6579985898.5,
+                "min": 6566849193.0,
+                "max": 6580731819.0,
+                "retained": 4,
+                "task_clock_ms_median": 1571.055
+              },
+              "percent": 1.6210242774267636,
+              "pass": true
+            }
+          ],
+          "pass": true
+        }
+      },
+      {
+        "round": 2,
+        "order": [
+          "base",
+          "final"
+        ],
+        "gate": {
+          "baseline": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/gate-r2/summary.json",
+          "candidate": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/final/gate-r2/summary.json",
+          "start_state": "fresh clone of immutable reviewer seed for every sample, including warmup",
+          "rows": [
+            {
+              "case": "n_pred",
+              "base": {
+                "instructions_median": 531722157.5,
+                "min": 531673160.0,
+                "max": 531738096.0,
+                "retained": 4,
+                "task_clock_ms_median": 119.11
+              },
+              "candidate": {
+                "instructions_median": 539203118.5,
+                "min": 539112914.0,
+                "max": 539840889.0,
+                "retained": 4,
+                "task_clock_ms_median": 158.935
+              },
+              "percent": 1.4069304606701527,
+              "pass": true
+            },
+            {
+              "case": "n_scan",
+              "base": {
+                "instructions_median": 251167706.0,
+                "min": 251042851.0,
+                "max": 251250439.0,
+                "retained": 4,
+                "task_clock_ms_median": 71.44999999999999
+              },
+              "candidate": {
+                "instructions_median": 252771865.5,
+                "min": 252725984.0,
+                "max": 253043688.0,
+                "retained": 4,
+                "task_clock_ms_median": 80.03999999999999
+              },
+              "percent": 0.6386806351609486,
+              "pass": true
+            },
+            {
+              "case": "n_update",
+              "base": {
+                "instructions_median": 6709572114.0,
+                "min": 6475135967.0,
+                "max": 6745005825.0,
+                "retained": 4,
+                "task_clock_ms_median": 2534.575
+              },
+              "candidate": {
+                "instructions_median": 6874707009.0,
+                "min": 6568563234.0,
+                "max": 6944223179.0,
+                "retained": 4,
+                "task_clock_ms_median": 2577.49
+              },
+              "percent": 2.4611836968774004,
+              "pass": false
+            }
+          ],
+          "pass": false
+        }
+      },
+      {
+        "round": 3,
+        "order": [
+          "final",
+          "base"
+        ],
+        "gate": {
+          "baseline": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/gate-r3/summary.json",
+          "candidate": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/final/gate-r3/summary.json",
+          "start_state": "fresh clone of immutable reviewer seed for every sample, including warmup",
+          "rows": [
+            {
+              "case": "n_pred",
+              "base": {
+                "instructions_median": 531624297.5,
+                "min": 531588662.0,
+                "max": 531712022.0,
+                "retained": 4,
+                "task_clock_ms_median": 88.93
+              },
+              "candidate": {
+                "instructions_median": 539086933.0,
+                "min": 539059781.0,
+                "max": 539122392.0,
+                "retained": 4,
+                "task_clock_ms_median": 147.62
+              },
+              "percent": 1.403742367512839,
+              "pass": true
+            },
+            {
+              "case": "n_scan",
+              "base": {
+                "instructions_median": 250963359.5,
+                "min": 250958304.0,
+                "max": 250982436.0,
+                "retained": 4,
+                "task_clock_ms_median": 44.355000000000004
+              },
+              "candidate": {
+                "instructions_median": 252798489.5,
+                "min": 252767354.0,
+                "max": 252829122.0,
+                "retained": 4,
+                "task_clock_ms_median": 79.61000000000001
+              },
+              "percent": 0.7312342342149725,
+              "pass": true
+            },
+            {
+              "case": "n_update",
+              "base": {
+                "instructions_median": 6471527287.0,
+                "min": 6456279254.0,
+                "max": 6472166024.0,
+                "retained": 4,
+                "task_clock_ms_median": 1277.585
+              },
+              "candidate": {
+                "instructions_median": 6627855387.0,
+                "min": 6580915597.0,
+                "max": 6721149321.0,
+                "retained": 4,
+                "task_clock_ms_median": 2326.27
+              },
+              "percent": 2.4156291562585475,
+              "pass": false
+            }
+          ],
+          "pass": false
+        }
+      }
+    ],
+    "ordinary_consecutive": [
+      {
+        "round": 0,
+        "order": [
+          "base",
+          "final"
+        ],
+        "gate": {
+          "baseline": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/consecutive-r0/summary.json",
+          "candidate": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/final/consecutive-r0/summary.json",
+          "start_state": "one fresh clone per case/round, then consecutive committed updates including warmup",
+          "rows": [
+            {
+              "case": "n_update",
+              "base": {
+                "instructions_median": 6453861045.0,
+                "min": 6452392623.0,
+                "max": 6467855077.0,
+                "retained": 4,
+                "task_clock_ms_median": 1389.625
+              },
+              "candidate": {
+                "instructions_median": 6569095605.5,
+                "min": 6560149563.0,
+                "max": 6579224377.0,
+                "retained": 4,
+                "task_clock_ms_median": 1369.63
+              },
+              "percent": 1.785513504187941,
+              "pass": true
+            }
+          ],
+          "pass": true
+        }
+      },
+      {
+        "round": 1,
+        "order": [
+          "final",
+          "base"
+        ],
+        "gate": {
+          "baseline": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/consecutive-r1/summary.json",
+          "candidate": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/final/consecutive-r1/summary.json",
+          "start_state": "one fresh clone per case/round, then consecutive committed updates including warmup",
+          "rows": [
+            {
+              "case": "n_update",
+              "base": {
+                "instructions_median": 6459754774.0,
+                "min": 6451896212.0,
+                "max": 6469102890.0,
+                "retained": 4,
+                "task_clock_ms_median": 1270.0949999999998
+              },
+              "candidate": {
+                "instructions_median": 6561430781.0,
+                "min": 6560460145.0,
+                "max": 6591575959.0,
+                "retained": 4,
+                "task_clock_ms_median": 1341.35
+              },
+              "percent": 1.5739917467028075,
+              "pass": true
+            }
+          ],
+          "pass": true
+        }
+      }
+    ],
+    "complete": true
+  },
+  "reproduction_gate": {
+    "baseline": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/reproduce/summary.json",
+    "candidate": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/candidate/reproduce/summary.json",
+    "start_state": "fresh clone of immutable reviewer seed for every sample, including warmup",
+    "rows": [
+      {
+        "case": "n_update",
+        "base": {
+          "instructions_median": 6464030903.0,
+          "min": 6455932784.0,
+          "max": 6577988383.0,
+          "retained": 4,
+          "task_clock_ms_median": 1308.115
+        },
+        "candidate": {
+          "instructions_median": 6629785731.0,
+          "min": 6621750139.0,
+          "max": 6638035867.0,
+          "retained": 4,
+          "task_clock_ms_median": 1304.06
+        },
+        "percent": 2.5642641640693853,
+        "pass": false
+      }
+    ],
+    "pass": false
+  },
+  "plain_late_gate": {
+    "baseline": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/postprofile/summary.json",
+    "candidate": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/final/postprofile/summary.json",
+    "start_state": "fresh clone of immutable reviewer seed for every sample, including warmup",
+    "rows": [
+      {
+        "case": "n_update",
+        "base": {
+          "instructions_median": 6463623741.5,
+          "min": 6457239923.0,
+          "max": 6472176913.0,
+          "retained": 4,
+          "task_clock_ms_median": 1445.1950000000002
+        },
+        "candidate": {
+          "instructions_median": 6787825779.0,
+          "min": 6581555433.0,
+          "max": 6941707760.0,
+          "retained": 4,
+          "task_clock_ms_median": 2475.31
+        },
+        "percent": 5.015793778626776,
+        "pass": false
+      }
+    ],
+    "pass": false
+  },
+  "plain_late_samples": {
+    "base": [
+      {
+        "case": "n_update",
+        "round": 0,
+        "run": 0,
+        "warmup": true,
+        "elapsed_seconds": 1.6186898379819468,
+        "counters": {
+          "instructions:u": {
+            "value": 6507788924.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "cycles:u": {
+            "value": 3607493805.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "task-clock": {
+            "value": 1473.05,
+            "unit": "msec",
+            "running_percent": 100.0
+          }
+        },
+        "pre_count_idle_cpu_seconds": [
+          0.009999999999999787,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.009999999999999787
+        ]
+      },
+      {
+        "case": "n_update",
+        "round": 0,
+        "run": 1,
+        "warmup": false,
+        "elapsed_seconds": 1.5687458249740303,
+        "counters": {
+          "instructions:u": {
+            "value": 6457239923.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "cycles:u": {
+            "value": 3687083990.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "task-clock": {
+            "value": 1460.69,
+            "unit": "msec",
+            "running_percent": 100.0
+          }
+        },
+        "pre_count_idle_cpu_seconds": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.009999999999999787,
+          0.0
+        ]
+      },
+      {
+        "case": "n_update",
+        "round": 0,
+        "run": 2,
+        "warmup": false,
+        "elapsed_seconds": 2.373259337968193,
+        "counters": {
+          "instructions:u": {
+            "value": 6458932595.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "cycles:u": {
+            "value": 5936517253.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "task-clock": {
+            "value": 2274.25,
+            "unit": "msec",
+            "running_percent": 100.0
+          }
+        },
+        "pre_count_idle_cpu_seconds": [
+          0.00999999999999801,
+          0.0,
+          0.0,
+          0.0,
+          0.010000000000001563,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "case": "n_update",
+        "round": 0,
+        "run": 3,
+        "warmup": false,
+        "elapsed_seconds": 1.568541781976819,
+        "counters": {
+          "instructions:u": {
+            "value": 6468314888.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "cycles:u": {
+            "value": 3625512387.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "task-clock": {
+            "value": 1429.7,
+            "unit": "msec",
+            "running_percent": 100.0
+          }
+        },
+        "pre_count_idle_cpu_seconds": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.010000000000001563,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "case": "n_update",
+        "round": 0,
+        "run": 4,
+        "warmup": false,
+        "elapsed_seconds": 1.468449765990954,
+        "counters": {
+          "instructions:u": {
+            "value": 6472176913.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "cycles:u": {
+            "value": 3505404382.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "task-clock": {
+            "value": 1314.23,
+            "unit": "msec",
+            "running_percent": 100.0
+          }
+        },
+        "pre_count_idle_cpu_seconds": [
+          0.0,
+          0.0,
+          0.00999999999999801,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    "final": [
+      {
+        "case": "n_update",
+        "round": 0,
+        "run": 0,
+        "warmup": true,
+        "elapsed_seconds": 2.7218885180191137,
+        "counters": {
+          "instructions:u": {
+            "value": 6711355276.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "cycles:u": {
+            "value": 6125496149.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "task-clock": {
+            "value": 2465.85,
+            "unit": "msec",
+            "running_percent": 100.0
+          }
+        },
+        "pre_count_idle_cpu_seconds": [
+          0.0,
+          0.0,
+          0.009999999999999787,
+          0.0,
+          0.0,
+          0.009999999999999787,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "case": "n_update",
+        "round": 0,
+        "run": 1,
+        "warmup": false,
+        "elapsed_seconds": 2.617314831004478,
+        "counters": {
+          "instructions:u": {
+            "value": 6885840870.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "cycles:u": {
+            "value": 6273371148.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "task-clock": {
+            "value": 2380.42,
+            "unit": "msec",
+            "running_percent": 100.0
+          }
+        },
+        "pre_count_idle_cpu_seconds": [
+          0.0,
+          0.0,
+          0.010000000000001563,
+          0.00999999999999801,
+          0.0,
+          0.0,
+          0.0,
+          0.010000000000001563
+        ]
+      },
+      {
+        "case": "n_update",
+        "round": 0,
+        "run": 2,
+        "warmup": false,
+        "elapsed_seconds": 2.7585991640225984,
+        "counters": {
+          "instructions:u": {
+            "value": 6581555433.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "cycles:u": {
+            "value": 5835521625.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "task-clock": {
+            "value": 2437.9,
+            "unit": "msec",
+            "running_percent": 100.0
+          }
+        },
+        "pre_count_idle_cpu_seconds": [
+          0.0,
+          0.00999999999999801,
+          0.0,
+          0.010000000000001563,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "case": "n_update",
+        "round": 0,
+        "run": 3,
+        "warmup": false,
+        "elapsed_seconds": 2.8010217220289633,
+        "counters": {
+          "instructions:u": {
+            "value": 6689810688.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "cycles:u": {
+            "value": 6048097531.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "task-clock": {
+            "value": 2512.72,
+            "unit": "msec",
+            "running_percent": 100.0
+          }
+        },
+        "pre_count_idle_cpu_seconds": [
+          0.010000000000005116,
+          0.0,
+          0.00999999999999801,
+          0.0,
+          0.00999999999999801,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "case": "n_update",
+        "round": 0,
+        "run": 4,
+        "warmup": false,
+        "elapsed_seconds": 2.815022158960346,
+        "counters": {
+          "instructions:u": {
+            "value": 6941707760.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "cycles:u": {
+            "value": 6305953828.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "task-clock": {
+            "value": 2584.42,
+            "unit": "msec",
+            "running_percent": 100.0
+          }
+        },
+        "pre_count_idle_cpu_seconds": [
+          0.0,
+          0.010000000000005116,
+          0.0,
+          0.0,
+          0.0,
+          0.00999999999999801,
+          0.0,
+          0.0
+        ]
+      }
+    ]
+  },
+  "nested_profile_diagnostics": {
+    "gate_rounds": [
+      {
+        "baseline": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/exact-r0/summary.json",
+        "candidate": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/verified/exact-r0/summary.json",
+        "start_state": "fresh clone of immutable reviewer seed for every sample, including warmup",
+        "rows": [
+          {
+            "case": "n_update",
+            "base": {
+              "instructions_median": 6856397583.0,
+              "min": 6847582178.0,
+              "max": 6861659583.0,
+              "retained": 4,
+              "task_clock_ms_median": 1448.69
+            },
+            "candidate": {
+              "instructions_median": 6999910586.5,
+              "min": 6982654686.0,
+              "max": 7015189287.0,
+              "retained": 4,
+              "task_clock_ms_median": 1372.63
+            },
+            "percent": 2.0931254607496896,
+            "pass": false
+          }
+        ],
+        "pass": false
+      },
+      {
+        "baseline": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/exact-r1/summary.json",
+        "candidate": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/verified/exact-r1/summary.json",
+        "start_state": "fresh clone of immutable reviewer seed for every sample, including warmup",
+        "rows": [
+          {
+            "case": "n_update",
+            "base": {
+              "instructions_median": 6852293300.0,
+              "min": 6850259427.0,
+              "max": 6856675102.0,
+              "retained": 4,
+              "task_clock_ms_median": 1385.995
+            },
+            "candidate": {
+              "instructions_median": 7001306427.5,
+              "min": 6999809830.0,
+              "max": 7009680142.0,
+              "retained": 4,
+              "task_clock_ms_median": 1312.1
+            },
+            "percent": 2.1746460779780152,
+            "pass": false
+          }
+        ],
+        "pass": false
+      }
+    ],
+    "limitation": "perf record is nested inside perf stat; counting window includes recorder setup/teardown. Not pooled with ordinary unprofiled acceptance samples."
+  },
+  "per_thread_diagnostic": {
+    "gate": {
+      "baseline": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/thread-r0/summary.json",
+      "candidate": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/verified/thread-r0/summary.json",
+      "start_state": "fresh clone of immutable reviewer seed for every sample, including warmup",
+      "rows": [
+        {
+          "case": "n_update",
+          "base": {
+            "instructions_median": 6475143425.5,
+            "min": 6461775403.0,
+            "max": 6559403481.0,
+            "retained": 4,
+            "task_clock_ms_median": 1216.645
+          },
+          "candidate": {
+            "instructions_median": 6583427630.0,
+            "min": 6579951602.0,
+            "max": 6592431735.0,
+            "retained": 4,
+            "task_clock_ms_median": 1162.3899999999999
+          },
+          "percent": 1.6723058839679394,
+          "pass": true
+        }
+      ],
+      "pass": true
+    },
+    "samples": {
+      "base": [
+        {
+          "run": 0,
+          "warmup": true,
+          "instructions_by_comm": {
+            "cub_server": 5351.0,
+            "pl-monitor": 1384.0,
+            "deadlock-detect": 17720.0,
+            "pgbuf-maintain": 556145.0,
+            "pgbuf-page-flus": 2804.0,
+            "pgbuf-flush-con": 44984.0,
+            "dwb-flush-block": 1771456.0,
+            "dwb-file-sync": 184870.0,
+            "log-clock": 8514.0,
+            "log-flush": 379949339.0,
+            "vacuum-master": 481884.0,
+            "concurrency": 203132.0,
+            "transaction": 6124711386.0,
+            "coordinator": 47226.0,
+            "connections": 304439.0
+          },
+          "total": 6508290634.0
+        },
+        {
+          "run": 1,
+          "warmup": false,
+          "instructions_by_comm": {
+            "cub_server": 5342.0,
+            "pl-monitor": 1384.0,
+            "deadlock-detect": 17719.0,
+            "pgbuf-maintain": 556146.0,
+            "pgbuf-page-flus": 1402.0,
+            "pgbuf-flush-con": 43318.0,
+            "dwb-flush-block": 1723794.0,
+            "dwb-file-sync": 179311.0,
+            "log-rm-archive": 16725.0,
+            "log-clock": 9933.0,
+            "log-flush": 379810485.0,
+            "vacuum": 5364167.0,
+            "vacuum-master": 542175.0,
+            "concurrency": 211208.0,
+            "transaction": 6072935041.0,
+            "coordinator": 48701.0,
+            "connections": 308552.0
+          },
+          "total": 6461775403.0
+        },
+        {
+          "run": 2,
+          "warmup": false,
+          "instructions_by_comm": {
+            "cub_server": 5512.0,
+            "pl-monitor": 1384.0,
+            "deadlock-detect": 17719.0,
+            "pgbuf-maintain": 527105.0,
+            "pgbuf-page-flus": 1402.0,
+            "pgbuf-flush-con": 41652.0,
+            "dwb-flush-block": 1695823.0,
+            "dwb-file-sync": 177920.0,
+            "log-clock": 9933.0,
+            "log-flush": 379552434.0,
+            "vacuum": 103255832.0,
+            "vacuum-master": 536801.0,
+            "concurrency": 210633.0,
+            "transaction": 6073011713.0,
+            "coordinator": 49412.0,
+            "connections": 308206.0
+          },
+          "total": 6559403481.0
+        },
+        {
+          "run": 3,
+          "warmup": false,
+          "instructions_by_comm": {
+            "cub_server": 5392.0,
+            "pl-monitor": 1384.0,
+            "deadlock-detect": 16356.0,
+            "pgbuf-maintain": 508897.0,
+            "pgbuf-page-flus": 1402.0,
+            "pgbuf-flush-con": 39998.0,
+            "dwb-flush-block": 1597951.0,
+            "dwb-file-sync": 166800.0,
+            "log-clock": 8514.0,
+            "log-flush": 379336628.0,
+            "vacuum-master": 434248.0,
+            "concurrency": 195052.0,
+            "transaction": 6092573818.0,
+            "coordinator": 46893.0,
+            "connections": 305993.0
+          },
+          "total": 6475239326.0
+        },
+        {
+          "run": 4,
+          "warmup": false,
+          "instructions_by_comm": {
+            "cub_server": 5392.0,
+            "pl-monitor": 1384.0,
+            "deadlock-detect": 16356.0,
+            "pgbuf-maintain": 528665.0,
+            "pgbuf-page-flus": 2804.0,
+            "pgbuf-flush-con": 41652.0,
+            "dwb-flush-block": 1625936.0,
+            "dwb-file-sync": 169580.0,
+            "log-clock": 8514.0,
+            "log-flush": 379091841.0,
+            "vacuum-master": 439191.0,
+            "concurrency": 195080.0,
+            "transaction": 6092571279.0,
+            "coordinator": 46111.0,
+            "connections": 303740.0
+          },
+          "total": 6475047525.0
+        }
+      ],
+      "verified": [
+        {
+          "run": 0,
+          "warmup": true,
+          "instructions_by_comm": {
+            "cub_server": 5379.0,
+            "pl-monitor": 1384.0,
+            "deadlock-detect": 17719.0,
+            "pgbuf-maintain": 574292.0,
+            "pgbuf-page-flus": 1402.0,
+            "pgbuf-flush-con": 44985.0,
+            "dwb-flush-block": 1792285.0,
+            "dwb-file-sync": 187651.0,
+            "log-clock": 9933.0,
+            "log-flush": 380223600.0,
+            "vacuum-master": 504172.0,
+            "concurrency": 203327.0,
+            "transaction": 6232737236.0,
+            "coordinator": 45298.0,
+            "connections": 305087.0,
+            "vacuum": 24290.0
+          },
+          "total": 6616678040.0
+        },
+        {
+          "run": 1,
+          "warmup": false,
+          "instructions_by_comm": {
+            "cub_server": 5377.0,
+            "pl-monitor": 1384.0,
+            "deadlock-detect": 17719.0,
+            "pgbuf-maintain": 527049.0,
+            "pgbuf-page-flus": 1402.0,
+            "pgbuf-flush-con": 43344.0,
+            "dwb-flush-block": 1676278.0,
+            "dwb-file-sync": 175140.0,
+            "log-rm-archive": 16738.0,
+            "log-clock": 8514.0,
+            "log-flush": 380156854.0,
+            "vacuum-master": 539399.0,
+            "concurrency": 210871.0,
+            "transaction": 6196816798.0,
+            "coordinator": 44915.0,
+            "connections": 303380.0,
+            "vacuum": 11886573.0
+          },
+          "total": 6592431735.0
+        },
+        {
+          "run": 2,
+          "warmup": false,
+          "instructions_by_comm": {
+            "cub_server": 5100.0,
+            "pl-monitor": 1384.0,
+            "deadlock-detect": 16356.0,
+            "pgbuf-maintain": 537880.0,
+            "pgbuf-page-flus": 2804.0,
+            "pgbuf-flush-con": 39986.0,
+            "dwb-flush-block": 1607786.0,
+            "dwb-file-sync": 166801.0,
+            "log-clock": 8514.0,
+            "log-flush": 379848973.0,
+            "vacuum-master": 439623.0,
+            "concurrency": 194477.0,
+            "transaction": 6196731280.0,
+            "coordinator": 48179.0,
+            "connections": 302459.0
+          },
+          "total": 6579951602.0
+        },
+        {
+          "run": 3,
+          "warmup": false,
+          "instructions_by_comm": {
+            "cub_server": 5100.0,
+            "pl-monitor": 1384.0,
+            "deadlock-detect": 16356.0,
+            "pgbuf-maintain": 537879.0,
+            "pgbuf-page-flus": 1402.0,
+            "pgbuf-flush-con": 39986.0,
+            "dwb-flush-block": 1597963.0,
+            "dwb-file-sync": 166801.0,
+            "log-clock": 8514.0,
+            "log-flush": 379622738.0,
+            "vacuum-master": 435385.0,
+            "concurrency": 194699.0,
+            "transaction": 6200592841.0,
+            "coordinator": 47080.0,
+            "connections": 304416.0
+          },
+          "total": 6583572544.0
+        },
+        {
+          "run": 4,
+          "warmup": false,
+          "instructions_by_comm": {
+            "cub_server": 5101.0,
+            "pl-monitor": 2768.0,
+            "deadlock-detect": 16356.0,
+            "pgbuf-maintain": 528621.0,
+            "pgbuf-page-flus": 1402.0,
+            "pgbuf-flush-con": 39986.0,
+            "dwb-flush-block": 1609148.0,
+            "dwb-file-sync": 168202.0,
+            "log-clock": 8556.0,
+            "log-flush": 379444108.0,
+            "vacuum-master": 438212.0,
+            "concurrency": 195081.0,
+            "transaction": 6200477026.0,
+            "coordinator": 45007.0,
+            "connections": 303142.0
+          },
+          "total": 6583282716.0
+        }
+      ]
+    }
+  },
+  "ranked_hypothesis_probes": {
+    "update_header": {
+      "instructions_median": 6635618316.5,
+      "samples": [
+        6618109733.0,
+        6634045980.0,
+        6637190653.0,
+        6700311709.0
+      ],
+      "comparison": "exploratory DB, not the final symmetric campaign"
+    },
+    "fused_layout": {
+      "instructions_median": 6610555234.0,
+      "samples": [
+        6609944022.0,
+        6609811868.0,
+        6611166446.0,
+        6626885540.0
+      ],
+      "comparison": "exploratory DB, not the final symmetric campaign"
+    },
+    "lazy_received": {
+      "instructions_median": 6602708905.5,
+      "samples": [
+        6587362712.0,
+        6602951728.0,
+        6602466083.0,
+        6604021347.0
+      ],
+      "comparison": "exploratory DB, not the final symmetric campaign"
+    },
+    "writer_layout": {
+      "instructions_median": 6595880184.0,
+      "samples": [
+        6588285149.0,
+        6604140997.0,
+        6588096107.0,
+        6603475219.0
+      ],
+      "comparison": "exploratory DB, not the final symmetric campaign"
+    },
+    "header_writer": {
+      "instructions_median": 6600402746.5,
+      "samples": [
+        6599760658.0,
+        6599452056.0,
+        6601044835.0,
+        6602229467.0
+      ],
+      "comparison": "exploratory DB, not the final symmetric campaign"
+    }
+  },
+  "verification": {
+    "returncode": 0,
+    "expression": "^(test_oos|test_oos_identity_stamp|test_oos_server|test_oos_sql_(crud|ddl|boundary|txn|bigone|deferred_write|visible_version|workspace_bytes)|test_oos_record_flags|test_oos_reference_errors)$",
+    "unit_test_oos": "ON for correctness only",
+    "symbolizer": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/verification/tools/addr2line",
+    "timeouts": "unchanged",
+    "measured_source_sha256": {
+      "src/storage/heap_file.c": "a0804bce007dbbb28baf117c25bc201a6da58450b382201c2bc29c62e88df932",
+      "src/storage/heap_oos.cpp": "b9ff610c3b209f6302439e529b431e5a3e8658798c710dd235f1c4946c41c088",
+      "src/storage/oos_file.cpp": "5ed4f311222f2d1342d05cb96145c5ec2ebca5b7e6bb8c832a2843f87e4b248f",
+      "src/heaplayers/lea_heap.c": "997d477f83fb03733ad308ad1b7f07f146e57fad76104b43269cca9ee3ee0859",
+      "src/heaplayers/malloc_2_8_3.c": "32eb78f993688a64c5e2b3d0c76c937281a15bd8f1c06ee237e42cbd140da672",
+      "src/transaction/locator_sr.c": "45acaf8f40f40c62914133a96552de446050a3e13b83b45199fccca594246e78"
+    },
+    "verified_source_sha256": {
+      "src/storage/heap_file.c": "a0804bce007dbbb28baf117c25bc201a6da58450b382201c2bc29c62e88df932",
+      "src/storage/heap_oos.cpp": "b9ff610c3b209f6302439e529b431e5a3e8658798c710dd235f1c4946c41c088",
+      "src/storage/oos_file.cpp": "90254c1515d9df96c422be2a250fea572d92dafa3c02b77d06f1a721ace1a741",
+      "src/heaplayers/lea_heap.c": "997d477f83fb03733ad308ad1b7f07f146e57fad76104b43269cca9ee3ee0859",
+      "src/heaplayers/malloc_2_8_3.c": "32eb78f993688a64c5e2b3d0c76c937281a15bd8f1c06ee237e42cbd140da672",
+      "src/transaction/locator_sr.c": "45acaf8f40f40c62914133a96552de446050a3e13b83b45199fccca594246e78"
+    },
+    "source_delta": "oos_file.cpp indentation only; diff -w is empty",
+    "production_sections": {
+      "bin/cub_server": {
+        ".text": {
+          "measured": "c7ccdd0fb808d5da1c26414b70153d46595eaaa5f3b8805e5b956dd5031990d2",
+          "restored": "c7ccdd0fb808d5da1c26414b70153d46595eaaa5f3b8805e5b956dd5031990d2",
+          "identical": true
+        },
+        ".rodata": {
+          "measured": "e0e0c735841f4ba5e50509bb2735905fe9b930a758a1a0081fc0c6e8b211798e",
+          "restored": "e0e0c735841f4ba5e50509bb2735905fe9b930a758a1a0081fc0c6e8b211798e",
+          "identical": true
+        }
+      },
+      "bin/csql": {
+        ".text": {
+          "measured": "fdf1a4e696f0978f808f440722570a19cb7fba83574eedfe83ac2b73bca2bdf0",
+          "restored": "fdf1a4e696f0978f808f440722570a19cb7fba83574eedfe83ac2b73bca2bdf0",
+          "identical": true
+        },
+        ".rodata": {
+          "measured": "cb6df78d38dc436c11b56784f05f4b2a89b8a6ade9d44ffc357541afd2b79450",
+          "restored": "cb6df78d38dc436c11b56784f05f4b2a89b8a6ade9d44ffc357541afd2b79450",
+          "identical": true
+        }
+      },
+      "lib/libcubrid.so.11.5": {
+        ".text": {
+          "measured": "04c64f7f729fbc3adc65d997d8bf3b9554ea6e415f9173c342e96638c4d1c25a",
+          "restored": "04c64f7f729fbc3adc65d997d8bf3b9554ea6e415f9173c342e96638c4d1c25a",
+          "identical": true
+        },
+        ".rodata": {
+          "measured": "c75ecf719332389b2ee851c170f9633c15261ffdac192cc17920baae73d824b7",
+          "restored": "7d09d9027a9b0f76e7e1037588fab309d05ecde2751aaad1c026b905f5c1cf66",
+          "identical": false
+        }
+      }
+    },
+    "production_build_time_only_difference": {
+      "section": ".rodata",
+      "offset": 329471,
+      "measured": "18:35:05",
+      "restored": "19:29:43",
+      "differing_bytes": 5,
+      "rest_of_rodata_identical": true,
+      "all_text_sections_identical": true
+    }
+  },
+  "runtime_parameters": {
+    "base": {
+      "sort_buffer_size": "16.0M",
+      "data_buffer_size": "4.0G",
+      "log_buffer_size": "256.0M",
+      "checkpoint_interval": "360.000 sec",
+      "cubrid_port_id": "41156",
+      "max_clients": "50",
+      "log_max_archives": "0",
+      "log_volume_size": "1.0G",
+      "vacuum_worker_count": "10"
+    },
+    "final": {
+      "sort_buffer_size": "16.0M",
+      "data_buffer_size": "4.0G",
+      "log_buffer_size": "256.0M",
+      "checkpoint_interval": "360.000 sec",
+      "cubrid_port_id": "41154",
+      "max_clients": "50",
+      "log_max_archives": "0",
+      "log_volume_size": "1.0G",
+      "vacuum_worker_count": "10"
+    }
+  },
+  "builds": {
+    "base": {
+      "variant": "base",
+      "worktree": "/home/vimkim/gh/cb/oos-update-base-4781495",
+      "install": "/home/vimkim/.cub/install/oos-update-base-4781495/release_gcc",
+      "head": "4781495f01523a3ecc5891e3377ad62cf876a1cd",
+      "engine_base": "4781495f01523a3ecc5891e3377ad62cf876a1cd",
+      "binary_identity": {
+        "bin/cub_server": {
+          "sha256": "addc5cff118521b8cb967e3fbc98601adb69003f09531ec171980a7f2536ec00",
+          "build_id": "95b8910913d35d88a7337fd34da34d8f570597ee"
+        },
+        "bin/csql": {
+          "sha256": "4d83a15290cea9b17bfd7757659c1a24d40e9cce5d869bf70235f91347429ad6",
+          "build_id": "bad8503f389a7c5400c4a37f5ad756b8152458a7"
+        },
+        "lib/libcubrid.so.11.5": {
+          "sha256": "19361b5f089fc873457900fe3e9ea15d2cdeeb8a21192db820fa58842861ac3b",
+          "build_id": "b34333e955ca9f7d39fabcc0aa6e2e9fd0bf1d1c"
+        }
+      },
+      "source_sha256": {
+        "src/storage/heap_file.c": "3b2e698547ff067e22dd68ff8e8a90b8dcedae7bf768c701bc6fdcadd4cc8dc1",
+        "src/heaplayers/lea_heap.c": "997d477f83fb03733ad308ad1b7f07f146e57fad76104b43269cca9ee3ee0859",
+        "src/heaplayers/malloc_2_8_3.c": "32eb78f993688a64c5e2b3d0c76c937281a15bd8f1c06ee237e42cbd140da672"
+      }
+    },
+    "candidate": {
+      "variant": "candidate",
+      "worktree": "/home/vimkim/gh/cb/CBRD-27785-ordinary-update",
+      "install": "/home/vimkim/.cub/install/CBRD-27785-ordinary-update/release_gcc",
+      "head": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67",
+      "engine_base": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67",
+      "binary_identity": {
+        "bin/cub_server": {
+          "sha256": "e4cc0f8511be37560ac9ad0f920884c012fe09cf04159d2fe0a41cd2fd396262",
+          "build_id": "92fd7f019637d92419486abfbab9c7d4c5cbcb86"
+        },
+        "bin/csql": {
+          "sha256": "cd95e359c47aab106abe66d2d19eee027bed76ae7be4d694892a0bc809977099",
+          "build_id": "5a3d060a74257f62e67262ab4432b671bc0a6d9d"
+        },
+        "lib/libcubrid.so.11.5": {
+          "sha256": "43883f3197c1ee7f19fc81197e371b15b5aab440c6daee4a9ea0ece38e23463e",
+          "build_id": "83d2ce973622792aa4b917135f1b75daf95e421c"
+        }
+      },
+      "source_sha256": {
+        "src/storage/heap_file.c": "22000c2b35e95effde5ea81a20839ff81f64a5d1e4c1879c83aa140b70f3c07b",
+        "src/storage/heap_oos.cpp": "b9ff610c3b209f6302439e529b431e5a3e8658798c710dd235f1c4946c41c088",
+        "src/storage/oos_file.cpp": "5ed4f311222f2d1342d05cb96145c5ec2ebca5b7e6bb8c832a2843f87e4b248f",
+        "src/heaplayers/lea_heap.c": "997d477f83fb03733ad308ad1b7f07f146e57fad76104b43269cca9ee3ee0859",
+        "src/heaplayers/malloc_2_8_3.c": "32eb78f993688a64c5e2b3d0c76c937281a15bd8f1c06ee237e42cbd140da672"
+      }
+    },
+    "final": {
+      "variant": "final",
+      "worktree": "/home/vimkim/gh/cb/CBRD-27785-ordinary-update",
+      "install": "/home/vimkim/.cub/install/CBRD-27785-ordinary-update/release_gcc",
+      "head": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67",
+      "engine_base": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67",
+      "binary_identity": {
+        "bin/cub_server": {
+          "sha256": "e4cc0f8511be37560ac9ad0f920884c012fe09cf04159d2fe0a41cd2fd396262",
+          "build_id": "92fd7f019637d92419486abfbab9c7d4c5cbcb86"
+        },
+        "bin/csql": {
+          "sha256": "cd95e359c47aab106abe66d2d19eee027bed76ae7be4d694892a0bc809977099",
+          "build_id": "5a3d060a74257f62e67262ab4432b671bc0a6d9d"
+        },
+        "lib/libcubrid.so.11.5": {
+          "sha256": "567ad10af0ab91fdccb9f0e1d19ab255eb32c43058cb2bace5acadd55b13b8dc",
+          "build_id": "3bdb9d93583ea9fb46e015fa52bf3fdab01574b6"
+        }
+      },
+      "source_sha256": {
+        "src/storage/heap_file.c": "a0804bce007dbbb28baf117c25bc201a6da58450b382201c2bc29c62e88df932",
+        "src/storage/heap_oos.cpp": "b9ff610c3b209f6302439e529b431e5a3e8658798c710dd235f1c4946c41c088",
+        "src/storage/oos_file.cpp": "5ed4f311222f2d1342d05cb96145c5ec2ebca5b7e6bb8c832a2843f87e4b248f",
+        "src/heaplayers/lea_heap.c": "997d477f83fb03733ad308ad1b7f07f146e57fad76104b43269cca9ee3ee0859",
+        "src/heaplayers/malloc_2_8_3.c": "32eb78f993688a64c5e2b3d0c76c937281a15bd8f1c06ee237e42cbd140da672",
+        "src/transaction/locator_sr.c": "45acaf8f40f40c62914133a96552de446050a3e13b83b45199fccca594246e78"
+      }
+    },
+    "verified": {
+      "variant": "verified",
+      "worktree": "/home/vimkim/gh/cb/CBRD-27785-ordinary-update",
+      "install": "/home/vimkim/.cub/install/CBRD-27785-ordinary-update/release_gcc",
+      "head": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67",
+      "engine_base": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67",
+      "binary_identity": {
+        "bin/cub_server": {
+          "sha256": "e4cc0f8511be37560ac9ad0f920884c012fe09cf04159d2fe0a41cd2fd396262",
+          "build_id": "92fd7f019637d92419486abfbab9c7d4c5cbcb86"
+        },
+        "bin/csql": {
+          "sha256": "cd95e359c47aab106abe66d2d19eee027bed76ae7be4d694892a0bc809977099",
+          "build_id": "5a3d060a74257f62e67262ab4432b671bc0a6d9d"
+        },
+        "lib/libcubrid.so.11.5": {
+          "sha256": "39f1c40e68e8084d9d425fefc2b06c01e5dc4a06ff2f2dbfcdf05989610f2391",
+          "build_id": "d367fb7a97d94171b0f5bd0cf7f8dac768fdd9eb"
+        }
+      },
+      "source_sha256": {
+        "src/storage/heap_file.c": "a0804bce007dbbb28baf117c25bc201a6da58450b382201c2bc29c62e88df932",
+        "src/storage/heap_oos.cpp": "b9ff610c3b209f6302439e529b431e5a3e8658798c710dd235f1c4946c41c088",
+        "src/storage/oos_file.cpp": "90254c1515d9df96c422be2a250fea572d92dafa3c02b77d06f1a721ace1a741",
+        "src/heaplayers/lea_heap.c": "997d477f83fb03733ad308ad1b7f07f146e57fad76104b43269cca9ee3ee0859",
+        "src/heaplayers/malloc_2_8_3.c": "32eb78f993688a64c5e2b3d0c76c937281a15bd8f1c06ee237e42cbd140da672",
+        "src/transaction/locator_sr.c": "45acaf8f40f40c62914133a96552de446050a3e13b83b45199fccca594246e78"
+      }
+    }
+  },
+  "preservation": {
+    "/home/vimkim/gh/cb/CBRD-27785-oos-performance": {
+      "head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "status": "",
+      "file_hashes_match": {
+        "/home/vimkim/gh/cb/CBRD-27785-oos-performance/src/storage/heap_file.c": true,
+        "/home/vimkim/gh/cb/CBRD-27785-oos-performance/CMakeUserPresets.json": true,
+        "/home/vimkim/.cub/install/CBRD-27785-oos-performance/release_gcc/lib/libcubrid.so.11.5": true
+      },
+      "preserved": true
+    },
+    "/home/vimkim/gh/cb/oos-perf-27785-base-4781495": {
+      "head": "4781495f01523a3ecc5891e3377ad62cf876a1cd",
+      "status": "",
+      "file_hashes_match": {
+        "/home/vimkim/gh/cb/oos-perf-27785-base-4781495/src/storage/heap_file.c": true,
+        "/home/vimkim/gh/cb/oos-perf-27785-base-4781495/CMakeUserPresets.json": true,
+        "/home/vimkim/.cub/install/oos-perf-27785-base-4781495/release_gcc/lib/libcubrid.so.11.5": true
+      },
+      "preserved": true
+    }
+  },
+  "profiles": {
+    "base/reproduce": {
+      "command": "cycles:u,499Hz,frame-pointer,-m16; twenty fresh-clone UPDATEs; separate from stat samples",
+      "record_log": "[ perf record: Woken up 67908 times to write data ]\n[ perf record: Captured and wrote 2.746 MB /mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/reproduce/n_update-r0.data (13806 samples) ]",
+      "data": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/reproduce/n_update-r0.data"
+    },
+    "base/postprofile": {
+      "command": "cycles:u,499Hz,frame-pointer,-m16; twenty fresh-clone UPDATEs; separate from stat samples",
+      "record_log": "[ perf record: Woken up 88 times to write data ]\n[ perf record: Captured and wrote 2.930 MB /mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/postprofile/n_update-r0.data (15342 samples) ]",
+      "data": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/base/postprofile/n_update-r0.data"
+    },
+    "candidate/reproduce": {
+      "command": "cycles:u,499Hz,frame-pointer,-m16; twenty fresh-clone UPDATEs; separate from stat samples",
+      "record_log": "[ perf record: Woken up 73106 times to write data ]\n[ perf record: Captured and wrote 2.865 MB /mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/candidate/reproduce/n_update-r0.data (14474 samples) ]",
+      "data": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/candidate/reproduce/n_update-r0.data"
+    },
+    "final/postprofile": {
+      "command": "cycles:u,499Hz,frame-pointer,-m16; twenty fresh-clone UPDATEs; separate from stat samples",
+      "record_log": "[ perf record: Woken up 77 times to write data ]\n[ perf record: Captured and wrote 2.555 MB /mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/final/postprofile/n_update-r0.data (13440 samples) ]",
+      "data": "/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028/final/postprofile/n_update-r0.data"
+    }
+  },
+  "physical_active_log_bytes": {
+    "base": 1073741824,
+    "final": 1073741824
+  },
+  "physical_data_volume_bytes": {
+    "base": 2147483648,
+    "final": 2147483648
+  },
+  "late_storage_before": {
+    "base": [
+      "dba.ou27785_pffr0_n_update0\t(0|214|7)\t0\t59584\t59585\t200000\t0\t0\t1429\t92\t2831\t2831\t563\t1\t3\t2\t1\t0\t0\t8",
+      "dba.ou27785_pffr0_n_update1\t(0|214|8)\t0\t61376\t61377\t200000\t0\t0\t1429\t92\t2831\t2831\t563\t1\t3\t2\t1\t0\t0\t8",
+      "dba.ou27785_pffr0_n_update2\t(0|214|9)\t0\t63232\t63233\t200000\t0\t0\t1429\t92\t2831\t2831\t563\t1\t3\t2\t1\t0\t0\t8",
+      "dba.ou27785_pffr0_n_update3\t(0|214|10)\t0\t65024\t65025\t200000\t0\t0\t1429\t92\t2831\t2831\t563\t1\t3\t2\t1\t0\t0\t8",
+      "dba.ou27785_pffr0_n_update4\t(0|214|11)\t0\t66816\t66817\t200000\t0\t0\t1429\t92\t2831\t2831\t563\t1\t3\t2\t1\t0\t0\t8"
+    ],
+    "final": [
+      "dba.ou27785_pffr0_n_update0\t(0|214|7)\t0\t59584\t59585\t200000\t0\t0\t1429\t92\t2831\t2831\t563\t1\t3\t2\t1\t0\t0\t8",
+      "dba.ou27785_pffr0_n_update1\t(0|214|8)\t0\t61376\t61377\t200000\t0\t0\t1429\t92\t2831\t2831\t563\t1\t3\t2\t1\t0\t0\t8",
+      "dba.ou27785_pffr0_n_update2\t(0|214|9)\t0\t63232\t63233\t200000\t0\t0\t1429\t92\t2831\t2831\t563\t1\t3\t2\t1\t0\t0\t8",
+      "dba.ou27785_pffr0_n_update3\t(0|214|10)\t0\t65024\t65025\t200000\t0\t0\t1429\t92\t2831\t2831\t563\t1\t3\t2\t1\t0\t0\t8",
+      "dba.ou27785_pffr0_n_update4\t(0|214|11)\t0\t66816\t66817\t200000\t0\t0\t1429\t92\t2831\t2831\t563\t1\t3\t2\t1\t0\t0\t8"
+    ]
+  },
+  "late_storage_geometry_matches": true
+}

@@ -3,7 +3,140 @@
 작성일: 2026-10-28, Asia/Seoul. 독자: PR #7990의 성능 판정을 검토하는 엔진 개발자.
 질문: [새 리뷰 답변](https://github.com/CUBRID/cubrid/pull/7990#issuecomment-6461744209)의 재현 조건에서 공통 경로 개선으로 현재 우선 기준을 충족할 수 있는가?
 
-## 현재 판단과 범위
+## 2026-10-28 후속: 일반 UPDATE 구현과 재검증
+
+**일반 UPDATE의 반복 작업을 줄였지만, +2% 목표를 전체 검증에서 충족했다고 판정하지 않는다.**
+새 DB에서 실행 이력을 맞춘 네 라운드는 UPDATE +1.66–1.67%, 두 SELECT는 +0.64–1.36%였다.
+그러나 뒤의 추가 plain UPDATE batch는 **+5.0158%**였고, 탐색 이력이 다른 DB에서도 두 라운드가 +2%를 넘었다.
+통과한 라운드만 최종 결과로 골라 일반 UPDATE 전체를 통과로 표시하지 않는다.
+
+이번 후속은 Work **564**이며 선행 Work 542와 문서 commit `267647c`를 잇는다.
+기준 2의 threshold parameter와 OOS reclaim tail은 계속 별도 후속이다. allocator 구현도 수정하지 않았다.
+아래의 기존 A/B/C·6KB 손익 표는 선행 측정 그대로 보존하며, 새 후보 D의 OOS 성능 수치로 재해석하지 않는다.
+
+### revision과 실제 구현
+
+| 역할 | revision / checkout |
+| --- | --- |
+| A, 고정 develop 기준 | `4781495f01523a3ecc5891e3377ad62cf876a1cd`; `oos-update-base-4781495`, detached HEAD |
+| OOS 실험 출발점 | `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67` |
+| D, 후속 구현 | 로컬 branch `CBRD-27785-ordinary-update`, commit `02df4d9fe2d1f24168a18eda8d8be216e2c4ed99` |
+| 재구성한 C | 위 OOS 출발점에 기존 `reviewer-20261028/candidate.patch` 적용 |
+| 보존한 원래 checkout | `CBRD-27785-oos-performance`, `f1b99031c0402d521a785815f107be7a83b27717` |
+
+D의 [누적 patch](ordinary-update-20261028/candidate.patch)는 **dcbf09e에 적용**한다.
+C의 decoder·변환·Resolve 공통 경로를 유지하고 다음 세 작업을 줄였다.
+
+1. `src/storage/heap_file.c:13156`, `heap_attrinfo_determine_disk_layout`: payload 크기 계산과 FORCE_OUTLINE 선택을 한 번의 순회로 수행한다. 강제 선택 뒤 payload로 header를 한 번 계산한다. largest-first·PREFER_INLINE 순서, 24B보다 커야 하는 조건, OOS+bigone 거부는 유지한다.
+2. 같은 파일의 fixed/variable/columns writer (`13856`, `13950`, `14136`행): 방금 기록한 header size와 offset width로 VOT·bound bitmap을 구한다. fixed column은 bitmap과 fixed length로 위치를 구해 column마다 header를 다시 해석하지 않는다. 기존 buffer 경계 검사와 grow-and-retry는 유지한다.
+3. `src/transaction/locator_sr.c:5534`, `locator_update_force`: native UPDATE가 이미 가진 pending owner는 그대로 사용한다. 별도 received owner는 copy-area/workspace 입력일 때만 `std::optional`에 생성한다. 생성된 owner는 heap/index write와 오류 정리까지 함수 scope에 남는다. finalization, pending 소유권·identity 검사, COPY와 MVCC/WAL 경로를 생략하지 않는다.
+
+reader 우회나 threshold 변경으로 수치를 낮추지 않았다. `lea_heap.c`·`malloc_2_8_3.c`의 hash는 보존했고 reclaim 경로도 수정하지 않았다.
+기존 후보의 GNU inline 선언에는 INDENT 보호를 붙였고 추가 블록의 저장소 code style 검사를 통과했다.
+의미 없는 기존 코드 재정렬은 추가하지 않았다. 이 검증은 GCC 대상이며 다른 compiler/platform 검증은 남아 있다.
+
+### 재현, 가설과 profile의 범위
+
+기존 후보의 재현은 A **6,464.031M**, C **6,629.786M**, **+2.5643%**로 실패했다.
+당시 양쪽에 새로운 1GB active log를 만들고 일반 테이블만 생성했다.
+원래 스크립트의 기존 checkout 복원·덮어쓰기 동작을 새 작업에 재사용하지 않고, 새 checkout만 빌드하는 helper로 바꿨다.
+
+검사한 가설과 결과는 다음과 같다. 아래 scout들은 탐색 DB에서의 비교이며 독립 기여율을 더하는 근거가 아니다.
+
+| 가설 / probe | UPDATE instructions 중앙값 | 채택 |
+| --- | ---: | --- |
+| 추가 uninitialized-reader header 재사용 | 6,635.618M | 단독 효과 확인 안 됨, 제외 |
+| payload·FORCE 선택 순회 합치기 | 6,610.555M | 채택 |
+| 위 순회 + received owner 지연 생성 | 6,602.709M | 조합에 채택 |
+| 순회 + writer layout 재사용 | 6,595.880M | 채택 |
+| writer 조합에 uninitialized-reader header 재사용 재시도 | 6,600.403M | 제외 |
+
+변경 전과 뒤에 각각 A와 상대 후보의 matched `cycles:u`, 499Hz, FP profile을 수집했다.
+각 profile은 **새 복제본 20개의 첫 UPDATE**를 기록하며 plain `perf stat` batch와 별도 실행이다.
+page buffer·locking·allocation·serialization에 비용이 분산됐고 writer의 반복 header 해석과 초기화 작업을 확인했다.
+후속 matched profile의 writer self 표본은 A 1.35%, D 0.85%였으나, 이를 절대 instructions 기여율로 환산하지 않는다.
+
+**추가 batch의 +5.0158% 구간과 뒤의 profile 구간은 서로 다른 실행이다.**
+뒤 profile이 그 실패 구간의 직접 원인을 포착했다고 주장하지 않는다.
+별도 recorder를 `perf stat` 안에 넣은 진단 두 라운드도 +2.0931%/+2.1746%였지만,
+recorder 시작·종료를 포함해 계수 창이 넓어지므로 plain acceptance 표본과 합치지 않는다.
+마지막 plain per-thread 역순 진단은 +1.6723%였고 한 A 표본의 vacuum이 약 103M instructions를 사용했다.
+이는 좁은 +2% 판정에 background가 영향을 줄 수 있다는 증거이며, 이전 D 실패의 원인을 vacuum 하나로 확정한 결과가 아니다.
+
+### 새 복제본과 연속 UPDATE의 통제 결과
+
+`og27785` DB를 양쪽에 새로 만들고 같은 순서로 seed·테이블을 생성했다.
+각 라운드 5회 중 첫 회를 버렸다. 새 복제본 네 라운드의 남은 16회와 연속 두 라운드의 남은 8회는 **합치지 않는다**.
+표의 변화율은 각 집합에서 A/D instructions 중앙값의 비율이다.
+
+| 작업 | A develop | D 후속 | D / A |
+| --- | ---: | ---: | ---: |
+| 일반 풀 스캔 | 250.917M | 252.547M | +0.6498% |
+| 일반 조건 스캔 | 531.611M | 538.854M | +1.3624% |
+| 일반 UPDATE, 매번 새 복제본 | 6,472.427M | 6,580.235M | +1.6656% |
+| 일반 UPDATE, 연속 COMMIT 별도 표본 | 6,457.729M | 6,565.068M | +1.6622% |
+
+각 새 복제본 라운드의 중앙값 비율도 모두 남긴다.
+
+| 라운드 | 실행 순서 | 풀 스캔 | 조건 스캔 | UPDATE |
+| --- | --- | ---: | ---: | ---: |
+| 1 | A→D | +0.6369% | +1.3582% | +1.6580% |
+| 2 | D→A | +0.6602% | +1.3598% | +1.6669% |
+| 3 | A→D | +0.6520% | +1.3624% | +1.6717% |
+| 4 | D→A | +0.6446% | +1.3632% | +1.6692% |
+
+별도 연속 UPDATE 라운드는 +1.7878%, +1.6468%였다.
+이 통제는 통과했지만 아래 실패 때문에 일반 UPDATE의 모든 검증을 통과로 묶지 않는다.
+
+### 통과 판정에서 제외할 수 없는 실패
+
+탐색 DB `ou27785`에서는 후보 쪽에 prototype 테이블이 더 많았고 512MB data volume이 추가됐다.
+네 fresh 라운드의 UPDATE는 +1.6760%, +1.6210%, **+2.4612%, +2.4156%**였다.
+이 물리·실행 이력 차이를 발견해 양쪽 새 DB로 위 통제를 추가했으며 실패 기록을 삭제하지 않았다.
+
+새 DB의 통제 네 라운드 뒤에도, profile 직전의 별도 **plain** batch가 A **6,463.624M**, D **6,787.826M**, **+5.0158%**였다.
+5회 중 첫 회를 버렸고 양쪽 테이블은 대응하는 OID/HFID·1,429 heap pages·200,000행·평균 92B가 같았다.
+설정과 physical log도 같았다. 따라서 앞선 DB 이력 차이만으로 이 실패까지 설명할 수 없다.
+소스의 일정한 추가 비용과 background·timing에 따른 변동을 정확히 나누는 후속 진단이 남아 있다.
+**현재 미충족 항목은 전체 plain 반복에서 일반 UPDATE를 +2% 이내로 보장하는 것이다.**
+
+### 설정, binary와 correctness
+
+양쪽 GCC **11.5.0**, RelWithDebInfo, 실제 SERVER_MODE/SA_MODE compile command에서 `-O2`, `-DNDEBUG`, debug info,
+`-fno-omit-frame-pointer`를 확인했다. 성능 계수는 모든 UNIT_TEST 옵션 OFF이며 `CUBRID_UNIT_TEST_ENABLED`가 없다.
+실행 파일·DSO의 SHA-256/build ID와 PID 시작 시각·maps를 대조했다. server 16–19, CSQL 12로 고정하고 server는 직렬 실행했다.
+`paramdump -C -b`로 실제 server의 4G buffer·256M log buffer·16M sort·max_clients 50·1G log·archives 0을 확인했다.
+master port는 각 workenv의 41156/41154다. 데이터 primary는 각각 2,147,483,648B, active log는 각각 1,073,741,824B였다.
+새 DB 통제의 계수 전에는 0.25초 간격의 낮은 CPU 사용을 8회 연속 확인했으며, 실행 중 새 background 작업까지 제거하는 통제는 아니다.
+모든 sample의 결과·counter running 비율을 검사했고 invalid counter를 통과 표본으로 쓰지 않았다.
+
+통제 집합의 task-clock 중앙값(ms)은 A/D 순으로 풀 스캔 39.14/45.09, 조건 스캔 81.20/91.62,
+새 복제본 UPDATE 1,428.14/1,454.78, 연속 UPDATE 1,460.58/1,476.91이었다.
+CPU 시간과 cycles는 공유 host의 순서·시점에 따라 변했다. +2%는 instructions 판정이며 CPU 시간 비회귀 인증이 아니다.
+
+선택한 소스 그대로 correctness용 UNIT_TEST_OOS=ON으로 빌드해 집중 CTest **15/15**, **49.88초**를 통과했다.
+native·identity·SERVER_MODE, SQL CRUD·DDL·경계·transaction·bigone·deferred write·visible version·workspace bytes와
+record flags·reference errors를 포함한다. 원래 timeout과 assertion은 바꾸지 않고 local PATH prefix로 `/usr/bin/addr2line`을 선택했다.
+검사 뒤 모든 test 옵션 OFF로 복구해 다시 빌드·설치했다. 측정 build와 복구 build의 세 실행물 `.text` hash는 모두 같았다.
+DSO `.rodata`의 차이는 8글자 build-time 문자열 안의 5바이트뿐임을 확인했다.
+CMake preset·compile commands·검증 hash와 원래 checkout 보존 결과는 [선별 증거](ordinary-update-20261028/results.json)에 있다.
+전체 CI·HA는 이 작업에서 실행하지 않았다.
+
+원본·실패·script·DB·정확한 DSO와 perf.data는 다음 새 경로에 보존했다.
+
+```text
+/mnt/nvme/data-5/tmp/CBRD-27785-ordinary-update-20261028
+```
+
+저장소에는 누적 patch와 선별 JSON만 남긴다. `reproduce.py`, `clean_campaign.py`, `postprofile.py`, `exact_profile.py`,
+`thread_campaign.py`, `verify.py`와 각 실행의 `harness.py`는 위 root에 있다.
+원래 `f1b9903` checkout과 기존 baseline의 source·preset·설치 DSO hash는 시작 시와 같다.
+D의 설치 prefix는 `/home/vimkim/.cub/install/CBRD-27785-ordinary-update/release_gcc`이며 원래 checkout의 설치와 다르다.
+새 source/문서 변경은 로컬 commit만 수행했다. push·merge·외부 게시·CI trigger는 수행하지 않았다.
+다음 동일 범위 작업은 늦게 나타나는 일반 UPDATE의 추가 비용을 정확히 같은 계수 창의 foreground/background별로 포착해 +2%를 재검증하는 것이다.
+OOS reclaim·allocator·threshold/기준 2로 이 실패를 해결했다고 기록하지 않는다.
+
+## 선행 후보 C의 판단과 범위 (문서 267647c)
 
 일반 테이블의 두 조회는 후보 적용 후 +2% instructions 이내였지만, **일반 UPDATE는 기준을 넘었다.**
 따라서 이번 후보만으로 성능 기준 1을 충족해 머지할 수 있다고 결론 내리지 않는다.
@@ -19,7 +152,7 @@
 
 이 문서는 성능 조사다. PR의 전체 정합성·HA·release qualification이나 리뷰어의 머지 승인까지 인증하지 않는다.
 
-## 소스와 후보
+### 소스와 후보
 
 소스 저장소는 `CUBRID/cubrid`다. 측정 시 PR #7990 head는 `dcbf09e`였다.
 
@@ -47,7 +180,7 @@ OOS payload COPY·임시 버퍼 해제·identity stamp·stub 경계·page fix/un
 규범은 `cubrid-oos-context/OOS-CONTEXT.md`, SHA-256 `6300aa1fa6ffb54033b9c7f7ea959466e9d88f0530e1ab0d7178b4459d4fcf63`를 확인했다.
 이 revision의 원래 raw quarter-page 정책은 승인된 physical target 식과 차이가 있다. 후보는 이 정책 차이를 수정하지 않는다.
 
-## 최종 instructions 비교
+### 최종 instructions 비교
 
 각 항목은 5회 중 첫 실행을 버린 4회의 중앙값이다. 일반 테이블 판정 외의 행에는 통과·실패를 붙이지 않는다.
 변화율의 분모는 같은 순서의 A다. 원본 PR과 후보를 혼동하지 않도록 둘을 함께 표시한다.
@@ -76,7 +209,7 @@ OOS payload COPY·임시 버퍼 해제·identity stamp·stub 경계·page fix/un
 
 UPDATE의 잔여 비용이 있기 때문에 두 조회의 통과를 일반 테이블 전체의 통과로 확대하지 않는다.
 
-## UPDATE 시작 상태를 분리한 보조 비교
+### UPDATE 시작 상태를 분리한 보조 비교
 
 위 표의 UPDATE는 **매 실행마다 seed를 새 테이블에 복제**한 뒤 한 번 UPDATE하고 COMMIT한다.
 초기 논리 값·페이지 배치·기존 MVCC version 차이를 줄이는 통제다. 모든 `a` 값과 행 수를 실행 후 검증하고,
@@ -110,7 +243,7 @@ UPDATE의 잔여 비용이 있기 때문에 두 조회의 통과를 일반 테�
 리뷰어 댓글에는 DB locale·모든 실행 사이의 유지 상태가 명시되지 않았다. 로컬은 `en_US.utf8`이며 위 두 시작 상태를 명시적으로 분리했다.
 차이의 원인을 locale나 MVCC 하나로 확정하지도 않는다. 일반 테이블의 회귀 방향과 조회 개선은 별도로 확인된 결과다.
 
-## 연속 OOS UPDATE tail의 호출 경로
+### 연속 OOS UPDATE tail의 호출 경로
 
 별도 새 테이블에서 첫 UPDATE를 COMMIT한 뒤 두 번째 UPDATE를 production 후보로 profile했다.
 `cycles:u`, 499Hz, FP, 80,286개 표본이며 기존 성능 계수와 다른 실행이다.
@@ -136,7 +269,7 @@ pending deletes 또는 boot 상태에 따라 sector bitmap을 얻고 후보 페�
 후속 개선은 같은 horizon·lap의 중복 검사를 줄이는 방향으로 검토하되, 새 삭제·rollback·horizon 변화와 boot 이후의 재검증 계약을 보존해야 한다.
 빈 페이지 회수·LSA reclaim gate·identity 검사를 생략한 성능 수치는 이번 후보에 포함하지 않았다.
 
-## CPU 시간과 판정의 한계
+### CPU 시간과 판정의 한계
 
 아래는 정방향 실행의 서버 task-clock 중앙값(ms)이다. 원본 PR과 후보 모두 같은 방법으로 측정했다.
 
@@ -155,7 +288,7 @@ pending deletes 또는 boot 상태에 따라 sector bitmap을 얻고 후보 페�
 이 결과로 2% 이내의 응답시간·throughput 비회귀까지 인증하지 않는다. 계수별 중앙값·범위·유효 표본과 실제 경과시간은
 [results.json](reviewer-20261028/results.json)에 보존했다. OOS가 포함된 UPDATE에서 instructions가 줄어도 CPU 시간이 늘 수 있으므로 둘을 함께 보고한다.
 
-## 입력·저장 형태·설정
+### 입력·저장 형태·설정
 
 리뷰어 DDL과 데이터 생성 SQL을 사용하되 기존 자료와 충돌하지 않도록 테이블 이름만 접두사로 바꿨다.
 
@@ -195,7 +328,7 @@ RelWithDebInfo/GCC 11.5.0, SERVER_MODE·SA_MODE, `-O2 -DNDEBUG -fno-omit-frame-p
 compact OOS heap은 직렬이었다. 측정 조회의 TRACE `ioread`는 0이었다. 이는 기본 query policy를 포함한 비교다.
 CPU reader 자체만의 비용 비교를 원하면 양쪽을 직렬로 맞춘 기존 보고서의 별도 결과를 사용한다.
 
-## 진단과 검증
+### 진단과 검증
 
 새 재현 SQL의 기존 공통 reader는 일반 조회 두 개가 약 +2.2%/+2.1%였고 UPDATE도 남았다.
 작은 배열·지연 계획은 UPDATE의 명령 수를 줄였고, header 재사용은 두 조회를 +2% 안으로 내렸다.
@@ -235,7 +368,7 @@ workspace bytes 검사는 FORCE_OUTLINE/PREFER_INLINE, offset width, 70개 이�
 현재 원본 UPDATE는 UPDATE에서 값을 지정하지 않은 OOS 컬럼도 읽고 새 chain으로 쓰는 경로를 가진다. 승인된 CBRD-27230의 해당 chain 재사용은 별도 구현 범위다.
 이번 일반 UPDATE 개선은 그 소유권·vacuum·복제 설계를 구현하거나 인증한 결과가 아니다.
 
-## 보존과 다음 작업
+### 보존과 다음 작업
 
 원본 artifact root는 다음과 같다. DB·로그·정확한 DSO·compile commands·source patch·perf.data와 단계별 결과를 보존했다.
 
