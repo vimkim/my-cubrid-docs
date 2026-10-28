@@ -84,3 +84,20 @@ No testcase selection or threshold changes occur in this wording task.
 
 Raw API responses, job/stamp/status/summary evidence, provenance logs, reproducible
 collectors and the original decoded body snapshot remain outside Git.
+
+## Publication result
+
+- The user confirmed the saved material and listed operations after the review handoff.
+- Published and verified at 2026-10-29 03:53:38 (Asia/Seoul).
+- Updated only the body of <https://github.com/CUBRID/cubrid/pull/8128>.
+- The decoded GitHub body matches the reviewed body file byte for byte.
+- Reviewed and published body SHA-256: `fe16afba3aa83ef50068b489e0eb3114353701403c7e25bc666f70e30be37d58`.
+- Before the write, the source head and original body fingerprint matched the preparation snapshot.
+- The title, `feature/oos-merge` base, source repository/branch, source head
+  `e3589ae42d42b04eb020e1ae43e165b01d31b12a`, OPEN state and ready state remain unchanged.
+- The material checker passed immediately before the write.
+- Docs preparation commit `86371992fec7bb7feace1384e34fc57ee9603549` was rebased onto local `main`,
+  fast-forward merged and pushed to `origin/main`; the remote tip was verified.
+- This context and its index record the publication result under the same approved operations.
+- No source/TC push, CI trigger, PR #7990 body update, TC PR merge/closure or TC branch deletion occurred.
+- Preexisting CCI/JDBC changes remain outside this task.
