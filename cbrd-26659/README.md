@@ -2,6 +2,8 @@
 
 Last modified: 2026-10-29 (Asia/Seoul).
 
+2026-10-29 [CBRD-26659 현황보고](CBRD-26659-status-report_20261029_e3589ae_codex.md)는 현재 PR과 실행 선택, 과거 SQL 3개·shell 61개 실패, HA 검증과 확인한 엔진 결함, 20초 초과 PASS 후보 및 미실행인 2분 제한 검증을 구분한다. 실패 원인 분석·heavy 이관·TC 리뷰와 병합의 남은 작업을 정리한다.
+
 2026-10-29 [Engine PR #8128 본문](CBRD-26659-oos-ci-runtime-refresh-20261029-pr-body_e3589ae_codex.md)은 새로 완료한 #7990 전체 실행 44분 10초와 HA를 제외한 #8128 전체 실행 42분 28초를 비교한다. 두 실행 모두 shell 1건이 실패했고 누적 shell shard 시간은 2.6% 늘었다. HA 분리와 잠정 20초 기준도 반영했다. 사용자 승인 후 GitHub 본문에 게시하고 저장 파일과의 일치를 확인했다. [근거와 게시 기록](CBRD-26659-oos-ci-runtime-refresh-20261029-pr-context_e3589ae_codex.md)에 원본 식별값과 검증 결과를 보존했다.
 
 2026-10-28 [개별 TC 실행 시간 히스토그램](CBRD-26659-tc-runtime-histogram_20261028_codex.md)은 CI40643373124의 전체 suite와 OOS TC 분포를 그린다. HA를 제외한69개 중20초초과38개가 heavy 후보이며31개가 남는다. HA 일반 CI 제외는 private-ex02d023932에 반영했고, 전용 HA 저장소 이전은 2026-10-29 승인 후 [draft TC PR #1666](https://github.com/CUBRID/cubrid-testcases-private/pull/1666)에 게시했다. Native 최종2 PASS·2 FAIL과 GitHub CI의 기존 TC 실패를 본문에 유지했다.
@@ -34,6 +36,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [CBRD-26659 현황보고](CBRD-26659-status-report_20261029_e3589ae_codex.md) | 현재 PR·TC 분류, 실패 진단과 heavy·2분 초과 처리의 남은 작업 | 2026-10-29 | 2026-10-29 | 개발·QA 담당자에게 TC 검증·이관 현황과 후속 조치를 보고 |
 | [최신 전체 CI 비교 PR body](CBRD-26659-oos-ci-runtime-refresh-20261029-pr-body_e3589ae_codex.md) | 게시한 전체 실행 44분 10초→42분 28초 비교, 실패·측정 한계와 HA 분류 | 2026-10-29 | 2026-10-29 | #8128 본문을 최신 전체 실행 근거로 갱신하기 전 검토 |
 | [최신 전체 CI 비교 게시 context](CBRD-26659-oos-ci-runtime-refresh-20261029-pr-context_e3589ae_codex.md) | 원본·게시 본문 식별값, 정확한 CI 입력, 비교 한계와 게시 확인 | 2026-10-29 | 2026-10-29 | 검토한 본문과 게시 대상을 확인하고 재개 |
 | [개별 TC 시간 분포](CBRD-26659-tc-runtime-histogram_20261028_codex.md) | 전체 suite·OOS 히스토그램,20초 후보38개와 측정·분류 한계 | 2026-10-28 | 2026-10-29 | HA와 heavy 분류를 개별 실행 시간으로 검토 |
