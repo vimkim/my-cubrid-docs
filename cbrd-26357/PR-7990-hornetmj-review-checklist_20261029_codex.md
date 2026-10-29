@@ -51,6 +51,18 @@ GitHub 기본 stacked PR은 모든 브랜치가 같은 저장소에 있어야 �
 
 이 기록 시점에는 스택을 초기화하거나 원격에 게시하지 않았다. R1 티켓을 확정한 뒤 ticket 이름의 브랜치와 PR 본문을 준비한다. PR 게시와 머지의 권한은 각 단계에서 현재 지시와 저장소 정책에 따라 확인한다.
 
+## 회사 리뷰 기록과 CI의 필수 조건
+
+2026-10-29 사용자는 리뷰 기록이 회사 자산이므로 회사 저장소에서 관리·보존돼야 하며, 회사 CI로 검증받아야 한다고 명시했다. 개인 fork 내부 PR을 공식 리뷰 장소로 쓰는 안은 이 조건을 충족하지 않는다. fork 내부 PR을 나중에 upstream PR로 변경해 원본 리뷰 이력을 이전하는 일반 기능은 없다. PR의 base는 같은 저장소 안의 브랜치로만 변경할 수 있다. [GitHub PR 수정 API](https://docs.github.com/en/rest/pulls/pulls#update-a-pull-request).
+
+브랜치의 저장소와 PR의 저장소는 별개다. `vimkim/cubrid` 브랜치에서 `CUBRID/cubrid:feature/oos-merge`를 대상으로 PR을 열면 리뷰는 처음부터 회사 PR에 기록된다. GitHub는 fork에서 upstream으로 연 PR의 이벤트를 upstream 저장소에 전달한다. [Fork PR의 Actions 이벤트](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull-request-events-for-forked-repositories).
+
+실제 [CUBRID PR 8235](https://github.com/CUBRID/cubrid/pull/8235)는 `xmilex-git/cubrid`의 head `c2d8e24ff6a74ac11044910f0038ea0c155abbc1`에서 열린 회사 PR이다. 조회 시 해당 PR의 release/debug build와 SQL·medium·shell gha-ci 상태가 모두 SUCCESS였으며 [회사 CI 실행 40784946595](https://github.com/CUBRID/cubrid/actions/runs/40784946595)으로 연결됐다. 따라서 fork 브랜치라는 이유만으로 회사 CI를 사용할 수 없는 것은 아니다. 이 관찰은 새 PR에서 자동 실행되거나 별도 권한·테스트 브랜치 준비 없이 실행된다는 보장은 아니다.
+
+현재 회사 `gha-ci`는 PR head SHA와 실제 base ref를 읽고 `develop` 또는 `feature/*` base만 허용한다. 기본 stacked PR의 Actions 지원과 별도로 회사의 사용자 정의 base 검사를 확인해야 한다. [조회한 develop 리비전의 gate](https://github.com/CUBRID/cubrid/blob/4f1a68c1ebec12f29bc8ba98b5ce8cacb1fc8735/.github/workflows/gha-ci.yml#L294-L305).
+
+조직 브랜치를 늘리지 않으면서 회사 리뷰 기록과 기존 CI 경로를 유지하는 제안은 fork의 독립 브랜치마다 회사의 `feature/oos-merge`를 대상으로 일반 PR을 여는 것이다. native stack을 반드시 유지하는 경우에는 조직 저장소의 작업 브랜치와 회사 CI의 base 처리에 대한 별도 합의가 필요하다. 이 두 구성을 아직 게시하거나 실행하지 않았다.
+
 ## 진행 점검
 
 - [x] **Blocking first steps.** 개인 정책, 두 저장소의 작업 상태, PR head, 세 종류의 댓글과 thread 상태를 확인한다.
