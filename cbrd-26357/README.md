@@ -2,10 +2,11 @@
 
 Analysis and CI reports for [PR 7990](https://github.com/CUBRID/cubrid/pull/7990) and earlier OOS PR revisions. Each report applies to its stated source revision.
 
-Last modified: 2026-10-28, Asia/Seoul.
+Last modified: 2026-10-29, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [PR-7990-hornetmj-review-checklist_20261029_codex.md](PR-7990-hornetmj-review-checklist_20261029_codex.md) | hornetmj 리뷰 6개의 단계별 검토·결정·수정·검증 체크리스트 | 2026-10-29 | 2026-10-29 | 팀장님 리뷰를 하나씩 이해하고 근거와 진행 상태를 보존 |
 | [CBRD-26357-oos-engine_5a70787_claude.md](CBRD-26357-oos-engine_5a70787_claude.md) | 엔진 PR #7990(`5a70787`)의 구조, 저장 형식, 읽기·쓰기·vacuum·복제, 호환성, 검증, 알려진 미해결 사항. 검증, 호환성, 미해결 사항은 head `dcbf09e` 기준으로 갱신(시작 시 저장 형식 거부 -1392, CDC 테스트의 QA 합의, Greptile 4차 P1 결과) | 2026-10-27 | 2026-10-27 | 리뷰어가 149개 파일을 이해하고 머지 위험을 판단하도록 설명 |
 | [CBRD-26357-oos-engine-pr-body_5a70787_claude.md](CBRD-26357-oos-engine-pr-body_5a70787_claude.md) | 엔진 PR #7990 본문: 목적, 구현 요약, 검증, 호환성, 미해결 사항 | 2026-10-27 | 2026-10-27 | 준비 중이던 PR 본문을 실제 내용으로 교체 |
 | [CBRD-26357-oos-engine-pr-context_5a70787_claude.md](CBRD-26357-oos-engine-pr-context_5a70787_claude.md) | #7990 본문 게시용 리비전, 원본 본문과 지문, 게시 단계 | 2026-10-27 | 2026-10-27 | 게시 전 검토 범위와 재개 조건을 보존 |
