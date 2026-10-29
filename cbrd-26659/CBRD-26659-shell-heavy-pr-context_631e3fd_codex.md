@@ -188,3 +188,60 @@ No Engine/public SQL push, TC merge/closure, branch deletion, extra CI trigger,
 follow-up fix, or expectation change occurred. Heavy scheduling and actual
 TC review/merge remain unfinished. The required-check query reports no required
 checks for this Engine branch; this does not make the open TC PRs completed.
+
+## Terminal CI result and evidence limits
+
+[Run 40837919358](https://github.com/CUBRID/cubrid/actions/runs/40837919358),
+attempt 1, completed with GitHub conclusion **SUCCESS** at
+2026-10-29 09:37:42 UTC (18:37:42 Asia/Seoul). All 50 shell, 10 SQL and one
+medium shard succeeded. The five commit contexts, debug build, release build,
+shell, SQL and medium, all report SUCCESS and link to this same run.
+
+The plan and retained shard identities confirm Engine
+`e3589ae42d42b04eb020e1ae43e165b01d31b12a`, public TC
+`45e21ad799d82ebadc04a93c7d2f69517d53bf39`, and organization private TC
+`a229e1978abc4cc6c280783703c03f75524c0f05`. The cached debug artifact's producer
+is run `40472072791`, attempt 1, for that same Engine commit; this is not a new
+Engine build or a different tested source. The CI did not use the personal
+fork's heavy head.
+
+| Suite | GitHub CI | Exact-run artifact verification |
+| --- | --- | --- |
+| shell | SUCCESS | 3,521 planned; 3,491 PASS, 0 FAIL, 0 error, 30 SKIP, 0 unrun |
+| medium | SUCCESS | 975 planned; 975 PASS, 0 FAIL, 0 error, 0 SKIP, 0 unrun |
+| SQL | SUCCESS | Incomplete: workflow and JUnit counts disagree in shard 01; no certified total PASS count |
+
+`cubrid-ci collect 8128 --commit e3589ae42d42b04eb020e1ae43e165b01d31b12a`
+collected all three suite statuses from this exact run. It accepted shell and
+medium artifacts, but exited 4 with an integrity error for SQL:
+`result identity mismatch: shard 01 workflow result and JUnit counts disagree`.
+This is an evidence-collection failure despite the successful GitHub verdict.
+
+[SQL shard 01](https://github.com/CUBRID/cubrid/actions/runs/40837919358/job/123327783700)
+reports `assigned 3533 / run 3533 / failed 0 / skipped 0` in its executed verdict.
+Its retained `shard.done` assigns 3,533 cases, while `summary_info` and actual
+JUnit testcase elements both contain 3,531. Across the ten SQL shards, assigned
+counts total 17,655 and JUnit testcase elements total 17,653. The source of the
+two-count difference is not established. Do not call it an Engine/TC failure,
+infer which cases are missing, or certify complete SQL coverage from this run.
+The checklist records this discrepancy as a separate unfinished follow-up.
+
+The verified shell plan is 38 entries smaller than the prior 3,559-entry plan,
+consistent with the transfer manifest. The 31 remaining OOS regular entries
+and the 38 excluded/heavy entries are also verified by the retained static
+verifier. Actual CI XML contains exactly those 31 OOS regular paths, each PASS
+with no skip, failure or error, and contains none of the 38 transferred paths.
+The heavy category's execution evidence remains the separate native
+38 PASS, 0 FAIL, 0 SKIP run; ordinary CI does not run `shell_heavy`.
+
+Both TC PR heads and approved body bytes were rechecked after CI. Heavy #4627
+is OPEN/draft at `631e3fd`; regular #4365 is OPEN/ready at `a229e19`. Neither was
+merged or closed. The final required-check query again reports no required
+checks on this feature branch. A named failed TC Merge Gate or automatic gate
+association for the fork PR is therefore not established. Human TC review and
+merge, QA heavy scheduling, historical failures, older slow PASS cases and HA
+follow-ups remain unfinished.
+
+No second CI trigger, rerun, repair, source/TC push, PR body rewrite, TC merge,
+closure or branch deletion followed this result. Final result records are
+integrated into docs `main` under the same publication approval.
