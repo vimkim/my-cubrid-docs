@@ -43,7 +43,11 @@ R1은 사용자가 지정한 링크이므로 먼저 다룬다. 이후에는 커�
 | R3와 R4 | R4의 힌트 복원을 R3의 회수 스윕에 넣으면 구현 의존성이 생길 수 있다. redesign으로 처리하는 경우는 별도 범위다. | R4 구현 방향을 정할 때 의존 관계 확정 |
 | R6 | 미사용 복구 인덱스와 후속 번호 조정은 다른 수정과 직접 의존하지 않는다. | 독립 검증 단위를 유지하고 번호 변경 후에는 새 테스트 DB 사용 |
 
-GitHub 기본 stacked PR은 모든 브랜치가 같은 저장소에 있어야 하며 cross-fork 스택을 지원하지 않는다. [공식 요구 사항](https://docs.github.com/en/pull-requests/reference/stacked-pull-requests). 이번 스택의 브랜치는 `CUBRID/cubrid`의 `origin`에 게시한다. 일반 개인 브랜치의 기본 `vk` 경로보다 이번 사용자의 명시적 선택을 우선한다. 조회 당시 계정의 저장소 권한은 `WRITE`였다.
+GitHub 기본 stacked PR은 모든 브랜치가 같은 저장소에 있어야 하며 cross-fork 스택을 지원하지 않는다. [공식 요구 사항](https://docs.github.com/en/pull-requests/reference/stacked-pull-requests). 당시에는 `CUBRID/cubrid`의 `origin`에 스택 브랜치를 게시하는 방향을 기록했으나, 이후 사용자가 조직 저장소의 브랜치 증가를 우려하며 `vimkim/cubrid` 구성을 재검토하도록 요청했다. 현재 게시 위치는 확정 전이다. 조회 당시 조직 저장소 권한은 `WRITE`, 개인 fork 권한은 `ADMIN`이었다.
+
+같은 `vimkim/cubrid` 안에 trunk와 모든 작업 브랜치, PR을 두는 스택은 같은 저장소 조건을 만족한다. 제한되는 것은 `CUBRID/cubrid`와 fork를 가로지르는 native stack이다. fork 안에서 PR을 리뷰·머지하면 조직 저장소에 자동 반영되지 않으므로, 이후 upstream 반영 절차가 별도로 필요하다. 조직 저장소의 PR마다 리뷰 이력을 남기려면 fork의 독립 브랜치에서 `CUBRID/cubrid:feature/oos-merge`로 각각 일반 PR을 열 수도 있다. [Fork의 upstream PR](https://docs.github.com/en/pull-requests/how-tos/create-pull-requests/creating-a-pull-request-from-a-fork).
+
+현재 소스 검토만으로 변경이 많이 겹친다고 볼 근거는 없다. R2와 R5는 같은 vacuum 흐름이지만 준비와 실행의 수정 지점이 다르고, R1과 R3은 같은 파일의 다른 함수다. R3과 R4는 스윕을 공유하는 수정안을 택할 때 결합될 수 있다. 실제 수정은 R1만 작성했으므로 나머지 패치 사이의 충돌 수를 측정한 것은 아니다.
 
 이 기록 시점에는 스택을 초기화하거나 원격에 게시하지 않았다. R1 티켓을 확정한 뒤 ticket 이름의 브랜치와 PR 본문을 준비한다. PR 게시와 머지의 권한은 각 단계에서 현재 지시와 저장소 정책에 따라 확인한다.
 
