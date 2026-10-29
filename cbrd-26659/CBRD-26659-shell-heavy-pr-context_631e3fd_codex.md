@@ -149,3 +149,42 @@ permissions or create another fork.
 
 This context proposes operations. Publication still requires the user's
 confirmation after the completed files are available for review.
+
+## Publication result, 2026-10-29
+
+The user replied `yes` after the completed files and exact operations were
+presented. The preparation sections above preserve the reviewed snapshot.
+
+- Rebased the two docs commits onto current local `main` without conflicts.
+  Both approved body fingerprints were unchanged. The rebased commits are
+  `218e226` and `4117e83`; fast-forwarded and pushed docs `main` at
+  `4117e83d8898eb3e4ad47ddca593ab23cb8e785b`.
+- Pushed heavy source `631e3fd3cbc202cec45b56ae6cec7e4f1c86e2f1` to
+  `vimkim/cubrid-testcases-private-ex:tc/pr-8128` and verified its remote SHA.
+- Created [draft heavy PR #4627](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4627),
+  personal-fork `tc/pr-8128` to organization `feature/oos-merge`, assigned to
+  `vimkim`. The title and OPEN/draft state match the proposal. Its 74 changed
+  files are the 72 imported implementation files, manifest and README.
+- Verified the new PR body equals the approved file, SHA-256
+  `b0a02477bebf20d18669cbd7b70032f1c540a872f27be9c2db9cd293d3ed6412`.
+- Pushed regular exclusion `a229e1978abc4cc6c280783703c03f75524c0f05` to
+  `CUBRID/cubrid-testcases-private-ex:tc/pr-8128` and uploaded the exact approved
+  PR #4365 body. Verified the published head, title and OPEN/ready state.
+  The body SHA-256 is
+  `556fac919d9d1edb0d48c85b3f139028b768f88a331641ea260fa0ac59f6f8bc`.
+- The post-push feature-baseline check passed in both testcase repositories.
+  Public TC is `45e21ad799d82ebadc04a93c7d2f69517d53bf39`; private TC is
+  `a229e1978abc4cc6c280783703c03f75524c0f05`.
+- After verifying that the old linked run was terminal and no competing
+  command appeared, posted exactly one
+  [`/run all` comment](https://github.com/CUBRID/cubrid/pull/8128#issuecomment-6491066013).
+  All five gha-ci contexts pointed to the new
+  [run 40837919358](https://github.com/CUBRID/cubrid/actions/runs/40837919358),
+  attempt 1, Engine `e3589ae42d42b04eb020e1ae43e165b01d31b12a`.
+- CI is pending at this checkpoint. Its result is not yet PASS. It qualifies
+  the regular selection and does not execute the heavy category.
+
+No Engine/public SQL push, TC merge/closure, branch deletion, extra CI trigger,
+follow-up fix, or expectation change occurred. Heavy scheduling and actual
+TC review/merge remain unfinished. The required-check query reports no required
+checks for this Engine branch; this does not make the open TC PRs completed.

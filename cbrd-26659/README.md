@@ -2,7 +2,7 @@
 
 Last modified: 2026-10-29 (Asia/Seoul).
 
-2026-10-29 [shell_heavy PR 준비 기록](CBRD-26659-shell-heavy-pr-context_631e3fd_codex.md)은 개인 fork의 별도 heavy PR과 기존 PR #4365의 일반 CI 제외를 함께 준비한 내역이다. [신규 PR 본문](CBRD-26659-shell-heavy-pr-body_631e3fd_codex.md)과 [기존 PR 갱신 본문](CBRD-26659-shell-heavy-exclusion-pr-body_a229e19_codex.md)은 게시 전 검토 파일이다. 원문·mode 보존과 native 실행 결과를 구분하며, 공개 게시와 정기 heavy 실행 경로 확정은 남아 있다.
+2026-10-29 [shell_heavy 게시 기록](CBRD-26659-shell-heavy-pr-context_631e3fd_codex.md)은 native 38 PASS·0 FAIL·0 SKIP 검증 후 사용자 승인으로 생성한 [heavy draft PR #4627](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4627)과 기존 PR #4365의 일반 CI 제외를 기록한다. [신규 PR 본문](CBRD-26659-shell-heavy-pr-body_631e3fd_codex.md)과 [기존 PR 갱신 본문](CBRD-26659-shell-heavy-exclusion-pr-body_a229e19_codex.md)은 승인한 내용 그대로 게시했다. 전체 [CI 40837919358](https://github.com/CUBRID/cubrid/actions/runs/40837919358)은 진행 중이며, 정기 heavy 실행 경로와 실제 TC 리뷰·병합은 남아 있다.
 
 2026-10-29 [TODO checklist](CBRD-26659-todo-checklist_20261029_codex.md)는 현황보고의 남은 작업을 실행 순서와 검증 조건으로 정리한다. 첫 작업은 PASS한 20초 초과 비HA shell 38개의 heavy 이관이며, 실패 분석·기존 장시간 사례·HA 후속 검증과 TC 리뷰·병합을 별도 추적한다.
 
@@ -40,9 +40,9 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [shell_heavy PR body](CBRD-26659-shell-heavy-pr-body_631e3fd_codex.md) | PASS한 20초 초과 OOS 38개와 독립 실행 지원 파일의 이관 본문 | 2026-10-29 | 2026-10-29 | 별도 heavy draft PR에 게시할 내용을 검토 |
-| [일반 shell 제외 PR body](CBRD-26659-shell-heavy-exclusion-pr-body_a229e19_codex.md) | 기존 PR #4365의 31개 일반·38개 heavy 제외 집계와 검증 범위 | 2026-10-29 | 2026-10-29 | heavy 분리 후 기존 PR의 설명을 실제 실행 선택에 맞게 갱신 |
-| [shell_heavy 게시 context](CBRD-26659-shell-heavy-pr-context_631e3fd_codex.md) | 두 TC 커밋·fork head·기존 본문 식별값·검증과 승인할 게시 범위 | 2026-10-29 | 2026-10-29 | 짝을 이루는 heavy 추가·일반 제외를 검토하고 일관되게 게시 |
+| [shell_heavy PR body](CBRD-26659-shell-heavy-pr-body_631e3fd_codex.md) | draft PR #4627에 게시한 OOS 38개·지원 파일 이관 본문 | 2026-10-29 | 2026-10-29 | 별도 heavy draft PR에 게시할 내용을 검토 |
+| [일반 shell 제외 PR body](CBRD-26659-shell-heavy-exclusion-pr-body_a229e19_codex.md) | PR #4365에 게시한 31개 일반·38개 heavy 제외 집계와 검증 범위 | 2026-10-29 | 2026-10-29 | heavy 분리 후 기존 PR의 설명을 실제 실행 선택에 맞게 갱신 |
+| [shell_heavy 게시 context](CBRD-26659-shell-heavy-pr-context_631e3fd_codex.md) | 승인한 두 TC 게시 결과, 본문 일치·native 검증과 단일 CI 경과 | 2026-10-29 | 2026-10-29 | 짝을 이루는 heavy 추가·일반 제외를 검토하고 일관되게 게시 |
 | [CBRD-26659 TODO checklist](CBRD-26659-todo-checklist_20261029_codex.md) | heavy 이관부터 실패·2분 초과 분석, HA 검증과 리뷰·병합까지의 실행 항목 | 2026-10-29 | 2026-10-29 | 현황보고의 남은 작업을 하나씩 실행하고 근거와 함께 완료 표시 |
 | [CBRD-26659 현황보고](CBRD-26659-status-report_20261029_e3589ae_codex.md) | 현재 PR·TC 분류, 실패 진단과 heavy·2분 초과 처리의 남은 작업 | 2026-10-29 | 2026-10-29 | 개발·QA 담당자에게 TC 검증·이관 현황과 후속 조치를 보고 |
 | [최신 전체 CI 비교 PR body](CBRD-26659-oos-ci-runtime-refresh-20261029-pr-body_e3589ae_codex.md) | 게시한 전체 실행 44분 10초→42분 28초 비교, 실패·측정 한계와 HA 분류 | 2026-10-29 | 2026-10-29 | #8128 본문을 최신 전체 실행 근거로 갱신하기 전 검토 |

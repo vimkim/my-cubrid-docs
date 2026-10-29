@@ -20,7 +20,7 @@
 - [x] 이관한 전체 38개를 직렬 실행하고 각 TC에 120초 제한을 적용한다.
 - [x] 실행 목록·완료 목록·assertion·summary·XML을 대조하여 PASS·FAIL·시간 초과를 기록한다.
 - [x] 검증 결과에 맞는 별도 PR 본문과 게시 대상을 파일로 준비한다.
-- [ ] 검토한 게시 범위의 승인을 받은 뒤 heavy draft PR과 기존 PR의 변경을 게시한다.
+- [x] 검토한 게시 범위의 승인을 받은 뒤 heavy draft PR과 기존 PR의 변경을 게시한다.
 - [ ] 일반 CI 제외 검증을 1회 실행하고 종료 결과를 기록한다. 실패 시 임의 수정·재실행하지 않는다.
 - [ ] QA 담당자와 heavy 실행 위치·주기·담당을 정하고 실제 TC PR 검토·병합을 확인한다.
 
@@ -79,7 +79,8 @@
 | 2026-10-29 | 이관 구성과 정적 검증 | 로컬에서 heavy 38개·지원 파일 34개를 구성하고, 기존 38개를 `disabled/heavy`로 보존했다. 일반 31개와 기존 제외 70개를 포함한 원문·mode 검사는 PASS다. 게시 전 상태다. |
 | 2026-10-29 | 대표 TC 검증 | Engine `e3589ae` optdebug, 격리한 native 실행에서 새 heavy 위치의 `utility_sa`가 1 PASS·0 FAIL·0 SKIP이다. 전체 38개는 TC당 120초 제한으로 직렬 검증 중이다. |
 | 2026-10-29 | 전체 heavy 검증과 게시 준비 | 동일 Engine의 격리한 native 전체 실행이 38 PASS·0 FAIL·0 SKIP으로 종료했다. 모두 120초 안에 완료했고 실행·완료 목록과 summary·XML이 일치한다. 로컬 이관 준비는 완료했으며 PR 게시·CI·리뷰·병합은 남아 있다. |
+| 2026-10-29 | PR 게시와 일반 CI 시작 | 승인 후 [heavy draft PR #4627](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4627)을 생성하고 기존 [PR #4365](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4365)에 제외 커밋·본문을 게시했다. 전체 [CI 40837919358](https://github.com/CUBRID/cubrid/actions/runs/40837919358)을 1회 시작했으며 종료 결과를 기다린다. |
 
-[신규 heavy PR 본문](CBRD-26659-shell-heavy-pr-body_631e3fd_codex.md), [기존 PR #4365 갱신 본문](CBRD-26659-shell-heavy-exclusion-pr-body_a229e19_codex.md), [게시 범위와 검증 기록](CBRD-26659-shell-heavy-pr-context_631e3fd_codex.md)을 검토한 뒤 게시한다. Heavy import의 로컬 커밋은 `631e3fd`, 일반 CI 제외는 `a229e19`다. 아직 원격에는 반영하지 않았다.
+[신규 heavy PR 본문](CBRD-26659-shell-heavy-pr-body_631e3fd_codex.md)과 [기존 PR #4365 갱신 본문](CBRD-26659-shell-heavy-exclusion-pr-body_a229e19_codex.md)은 검토·승인한 내용 그대로 게시했다. Heavy import `631e3fd`와 일반 CI 제외 `a229e19`의 원격 head를 확인했다. [게시 범위와 검증 기록](CBRD-26659-shell-heavy-pr-context_631e3fd_codex.md)에 본문 식별값과 CI 경과를 보존한다.
 
 정적 검증은 [이관 대조 스크립트](tools/verify-heavy-transfer.py)로 다시 실행할 수 있다. `--regular`에는 기존 PR checkout, `--heavy`에는 별도 heavy PR checkout을 전달한다. 스크립트는 고정된 원본 커밋 `02d023932`와 실제 파일을 비교한다. 정적 대조는 실행 PASS나 heavy의 정기 실행을 증명하지 않는다.
