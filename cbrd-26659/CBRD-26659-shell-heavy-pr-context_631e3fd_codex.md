@@ -1,0 +1,151 @@
+# CBRD-26659 shell_heavy publication context
+
+Prepared: 2026-10-29, Asia/Seoul. Agent: `codex`.
+
+## Scope and source identities
+
+The user requested a persistent TODO checklist and selected passing shell cases
+over 20 seconds as the first migration. This preparation separates the 38 cases
+without changing their assertions, expected values, bytes, or modes. Historical
+failures, three previously disabled slow PASS cases, and HA cases stay separate.
+
+| Change | Repository and local branch | Commit | Publication target |
+| --- | --- | --- | --- |
+| Heavy import | `vimkim/cubrid-testcases-private-ex`, local `CBRD-26659-oos-shell-heavy` | `631e3fd3cbc202cec45b56ae6cec7e4f1c86e2f1` | New fork head `tc/pr-8128`, draft PR into `CUBRID/cubrid-testcases-private-ex:feature/oos-merge` |
+| Regular exclusion | `CUBRID/cubrid-testcases-private-ex:tc/pr-8128` | `a229e1978abc4cc6c280783703c03f75524c0f05` | Existing [PR #4365](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4365) |
+
+The import starts at feature base `75a02020e19be4bfc64e47f7c7a3d5c2b02d7676`.
+The original source and observed organization remote head are
+`02d023932b8aa39b2807cc6a77d72f3d58e231d6`. The personal fork exists and the
+authenticated user has push permission. No fork `tc/pr-8128` head or matching
+open PR was observed during preparation. Recheck before publication.
+
+The organization and fork heads deliberately share the authoritative
+`tc/pr-8128` name in different repositories. The two diffs are independent against
+`feature/oos-merge`. They do not require an extra Engine carrier PR or a PR based
+on the bot-managed testcase head. Both testcase PRs still need human review and
+integration. Do not merge, close, or delete either testcase branch.
+
+Engine [PR #8128](https://github.com/CUBRID/cubrid/pull/8128) remains at
+`e3589ae42d42b04eb020e1ae43e165b01d31b12a` in
+`vimkim/cubrid:CBRD-26659-oos-testcases-handover`, targeting `feature/oos-merge`.
+Public SQL [PR #3688](https://github.com/CUBRID/cubrid-testcases/pull/3688) remains
+at `45e21ad799d82ebadc04a93c7d2f69517d53bf39` and is outside the change.
+
+## Files for human review
+
+- Docs repository: `vimkim/my-cubrid-docs`.
+- Docs task branch: `docs/cbrd-26659-status-ko-20261029`; integration: `main`.
+- New title: `[CBRD-26659] Move passing OOS cases to shell_heavy`.
+- New PR body: `cbrd-26659/CBRD-26659-shell-heavy-pr-body_631e3fd_codex.md`.
+- Existing PR body: `cbrd-26659/CBRD-26659-shell-heavy-exclusion-pr-body_a229e19_codex.md`.
+- This context: `cbrd-26659/CBRD-26659-shell-heavy-pr-context_631e3fd_codex.md`.
+- Checklist: `cbrd-26659/CBRD-26659-todo-checklist_20261029_codex.md`.
+- Existing status report: `cbrd-26659/CBRD-26659-status-report_20261029_e3589ae_codex.md`.
+- Supporting verifier: `cbrd-26659/tools/verify-heavy-transfer.py`.
+- Ticket index: `cbrd-26659/README.md`.
+
+The existing status report's local commit `83b2eaf` is part of this docs branch
+and has not entered `main`. Include it in the incoming-history review. The
+verifier is retained so the paired imports, exclusions, and preservation checks
+can be repeated. Logs, raw downloads, scratch scripts, native attempts, and
+generated exports remain outside Git.
+
+## Existing PR freshness
+
+- Target: `CUBRID/cubrid-testcases-private-ex#4365`.
+- Existing title: `[CBRD-26659] Draft: TC changes for PR CUBRID/cubrid#8128`.
+- Existing state: OPEN, ready for review; preserve both.
+- Head/base: organization `tc/pr-8128` to `feature/oos-merge`.
+- Observed remote head: `02d023932b8aa39b2807cc6a77d72f3d58e231d6`.
+- Original decoded UTF-8 body SHA-256, with no appended newline:
+  `7af46c51dd40ebf5738bebfb8678365d10d3d1eac74335e4d7f8ec8c26b90bcd`.
+
+The revised body preserves the existing Purpose. Implementation reflects the
+paired heavy exclusion and HA split. Remarks distinguish historical CI from
+the pending qualification of the new regular selection. A changed source,
+destination, or body requires reconciliation before publication.
+
+## Verification
+
+- 38 candidate entries came from one CI observation,
+  [run 40643373124](https://github.com/CUBRID/cubrid/actions/runs/40643373124),
+  private TC `479035a45f06545db1974e1369e88000fb98a89a`, Engine `e3589ae`.
+  They all passed and took strictly more than 20 seconds in that run.
+- Static source closure is 38 entries and 34 support files. All 72 imported
+  files match the original source bytes and Git modes. The 38 archived entries
+  match too; remaining 31 inventory entries, all 70 prior exclusions, and
+  original support remain unchanged. The 70 files include 66 older disabled
+  cases and four HA exclusions.
+- All four original TDE companion files remain. In particular, the disabled
+  `cbrd_26659_tde_storage` reproducer still reaches its original observer and AWK
+  helper. The independent heavy import includes its own complete support closure.
+- All 55 imported Bash files passed syntax checks. Static discovery finds
+  exactly 38 new OOS heavy entries and 31 remaining OOS regular entries.
+  Heavy's complete preexisting-plus-new category has 138 entries; the focused
+  native run selects only the new 38.
+- The original default loaded install was `1ef86a7` and failed identity
+  preflight. No mismatch exception was used. New disposable CUBRID and CTP
+  copies of the retained exact `e3589ae` optdebug CI artifact passed preflight;
+  containment is available. The source's preexisting CCI/JDBC dirt is preserved.
+- The relocated `utility_sa` smoke attempt passed 1/1 with no failures or skips.
+- Full verification of 38 relocated cases completed serially with
+  `TESTKIT_NATIVE=shell`, `TESTKIT_CONTAIN=1`, `scenario_disk=on`, file feedback,
+  no updates, retry, or continuation, and a 120-second timeout per testcase.
+  The result is **38 PASS, 0 FAIL, 0 SKIP**. Exact dispatch and completion sets,
+  assertions, summary and XML passed the focused verifier. All 38 unique XML
+  testcase records have no failure, error, or skip; every recorded duration is
+  below 120 seconds, from 8.606 to 58.963 seconds. This is one local native
+  observation, not a speed comparison with CI. Selection retains the original
+  CI-based 20-second criterion rather than reclassifying cases by host timings.
+- Execution started from the transferred working files before the local TC
+  commit was recorded. The attempt identities preserve that fact, the exact
+  input hashes and patch. Static checks before and after execution bind all
+  72 unchanged files and modes to committed heavy `631e3fd`; Git metadata
+  changes did not change the executed testcase material.
+- The unmodified vendor `LICENSE.MIT` line 1 has a trailing space at the pinned
+  source. Full `git diff --check` flags that imported line. Its original bytes
+  are preserved; the check passes with that exact vendor license excluded.
+- Current `gha-ci` does not include `shell_heavy`. Native execution does not
+  establish the QA heavy job's schedule, ownership, or whole-corpus qualification.
+- The new fork PR has not been created. Its association with the automated TC
+  Merge Gate is unverified; report the actual gate state after publication.
+
+The read-only verifier accepts `--regular` and `--heavy` checkout arguments.
+It compares actual files with the pinned Git source, not cached observations.
+
+## Exact proposed publication operations
+
+1. Reread the reviewed body files and checklist. Verify source commits, clean
+   task worktrees, current remote refs, original body fingerprint and absence of
+   an already matching fork PR. Record the reviewed body fingerprints.
+2. Rebase the docs task on current local `main`. Audit every incoming commit and
+   path, validate links/material, fast-forward into clean `main`, and push docs
+   `main` to `origin`. Include final execution-record commits under the same
+   approval and preserve other worktrees and local material.
+3. Push heavy `631e3fd3cbc202cec45b56ae6cec7e4f1c86e2f1` to
+   `vimkim/cubrid-testcases-private-ex:tc/pr-8128`. Create one draft PR against
+   `CUBRID/cubrid-testcases-private-ex:feature/oos-merge`, assigned to `vimkim`,
+   with the exact reviewed title/body. Reuse an already matching PR rather
+   than duplicate it. Verify its head and body.
+4. After the heavy draft is verified, push regular exclusion
+   `a229e1978abc4cc6c280783703c03f75524c0f05` to organization
+   `CUBRID/cubrid-testcases-private-ex:tc/pr-8128`. Upload the exact reviewed
+   existing-PR body. Preserve its title and ready/open state. Verify both.
+5. Trigger exactly one normal qualification CI on Engine PR #8128 after the
+   testcase pushes. Wait for its terminal result and report suite verdicts,
+   the run URL and any testcase merge blockers. This CI validates the regular
+   selection; it does not execute the heavy category.
+6. Update the checklist and this context with verified publication and CI
+   results, integrate/push those docs records under the same approval, then
+   stop. No follow-up fix, push or rerun follows a CI failure without direction.
+
+No Engine or public SQL source push, TC merge/closure, remote branch deletion,
+force push, QA messaging, or general heavy-CI implementation is proposed.
+The GitHub app cannot read the private personal fork, while authenticated `gh`
+can. Use the existing authenticated CLI for fork publication if app access
+remains unavailable. This is a capability fallback, not a request to alter
+permissions or create another fork.
+
+This context proposes operations. Publication still requires the user's
+confirmation after the completed files are available for review.
