@@ -4,10 +4,11 @@
 관련 PR: [OOS 통합 PR #7990](https://github.com/CUBRID/cubrid/pull/7990).
 성능 수정: [draft PR #8299](https://github.com/CUBRID/cubrid/pull/8299).
 대상은 `feature/oos-merge`다.
-작성일: 2026-10-27. 수정일: 2026-10-28, Asia/Seoul.
+작성일: 2026-10-27. 수정일: 2026-10-29, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [읽기 최적화 코드 해설서](CBRD-27785-code-walkthrough_f1b99031c_codex.md) | f1b99031c 읽기 diff의 전후 흐름도, 함수 책임, COPY·버퍼 수명, 테스트와 예상 질문 | 2026-10-29 | 2026-10-29 | 팀원이 읽기 변경을 이해하고 코드 리뷰 질문에 답하도록 돕기 위해 |
 | [공통 reader·UPDATE 개선](CBRD-27785-shared-read-update_408d135_codex.md) | 실제 develop·feature·HEAD 3-way 측정과 개별 counter, 약 +5% 수용 결정과 CBRD-27816 후속, 검증과 한계 | 2026-10-28 | 2026-10-28 | 지금까지 확보한 개선을 PR #8299 하나로 검토하기 위해 |
 | [통합 PR 본문](CBRD-27785-shared-read-update-pr-body_408d135_codex.md) | 기존 #8299에 반영할 한국어 본문과 3-way 전후 수치 | 2026-10-28 | 2026-10-28 | 게시 전 변경 범위와 미달 기준을 검토하기 위해 |
 | [통합 게시 context](CBRD-27785-shared-read-update-pr-context_408d135_codex.md) | source SHA와 승인 본문 fingerprint, 게시·전체 CI 성공 및 남은 TC gate | 2026-10-28 | 2026-10-28 | 검토한 자료만 승인 후 게시하기 위해 |
