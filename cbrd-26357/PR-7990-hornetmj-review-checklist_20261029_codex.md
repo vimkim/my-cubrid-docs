@@ -11,7 +11,7 @@ R1은 실제 동시 INSERT로 같은 assertion을 재현한 뒤 7줄을 삭제�
 ## 작업 범위와 재개 위치
 
 - 기존 Work Item `508`에 이 체크리스트와 단계별 결과를 연결한다. 전체 PR 머지 완료를 이 문서의 초기 작성 완료와 혼동하지 않는다.
-- 엔진 수정 작업은 `/home/vimkim/gh/cb/pr7990-hornet-r1`, `review/pr7990-hornet-r1`에서 시작한다. 수정 PR 스택의 trunk는 `feature/oos-merge`이다. 팀 리뷰와 해당 PR head 검증을 받은 뒤 GitHub PR로 반영한다.
+- 엔진 수정 작업은 `/home/vimkim/gh/cb/pr7990-hornet-r1`, `review/pr7990-hornet-r1`에서 시작한다. 각 독립 수정 PR의 base는 `CUBRID/cubrid:feature/oos-merge`이다. 팀 리뷰와 해당 PR head 검증을 받은 뒤 GitHub PR로 반영한다.
 - 문서 작업은 `/home/vimkim/gh/my-cubrid-docs-pr7990-hornet-review`, `docs/pr7990-hornet-review-20261029`에서 진행한다. 로컬 통합 대상은 문서 저장소 `main`이다.
 - 각 항목의 순서는 검토, 이해, 결정, 수정, 검증, 기록이다. 하나의 수정과 검증을 마친 뒤 다음 수정을 시작한다.
 - 현재 단계는 R1의 로컬 수정·검증 완료와 독립 JIRA·PR 준비이다. 앞선 직접 로컬 통합 승인 요청은 철회했다. 다음 기술 검토는 R5이다. R2부터 R6까지의 수정은 아직 시작하지 않았다.
@@ -30,7 +30,7 @@ R1은 사용자가 지정한 링크이므로 먼저 다룬다. 이후에는 커�
 | 5 | [R3. 페이지 할당 시 전체 파일 스윕](#r3-페이지-할당-시-전체-파일-스윕) | 큰 파일의 INSERT 지연 | 스윕 발동 조건과 진행 위치 | 대기 |
 | 6 | [R4. 재시작 후 bestspace 복원](#r4-재시작-후-bestspace-복원) | 빈 공간 미사용, 파일 증가 | redesign 후 적용 계획과 R3 의존성 | 후속 계획 확인 대기 |
 
-## 합의한 PR 방식과 의존 관계
+## PR 방식 검토 이력과 의존 관계
 
 2026-10-29 사용자는 빠른 순차 리뷰를 위해 하나의 stacked PR 구성을 선택했다. 수정끼리 필수 의존성이 없는 경우에도 이 전달 순서를 사용한다. 수정량이 작더라도 독립된 결함의 티켓, 검증 근거와 리뷰를 유지한다. 기존 티켓이 같은 문제를 다루면 새 티켓을 중복 생성하지 않는다.
 
@@ -43,7 +43,7 @@ R1은 사용자가 지정한 링크이므로 먼저 다룬다. 이후에는 커�
 | R3와 R4 | R4의 힌트 복원을 R3의 회수 스윕에 넣으면 구현 의존성이 생길 수 있다. redesign으로 처리하는 경우는 별도 범위다. | R4 구현 방향을 정할 때 의존 관계 확정 |
 | R6 | 미사용 복구 인덱스와 후속 번호 조정은 다른 수정과 직접 의존하지 않는다. | 독립 검증 단위를 유지하고 번호 변경 후에는 새 테스트 DB 사용 |
 
-GitHub 기본 stacked PR은 모든 브랜치가 같은 저장소에 있어야 하며 cross-fork 스택을 지원하지 않는다. [공식 요구 사항](https://docs.github.com/en/pull-requests/reference/stacked-pull-requests). 당시에는 `CUBRID/cubrid`의 `origin`에 스택 브랜치를 게시하는 방향을 기록했으나, 이후 사용자가 조직 저장소의 브랜치 증가를 우려하며 `vimkim/cubrid` 구성을 재검토하도록 요청했다. 현재 게시 위치는 확정 전이다. 조회 당시 조직 저장소 권한은 `WRITE`, 개인 fork 권한은 `ADMIN`이었다.
+GitHub 기본 stacked PR은 모든 브랜치가 같은 저장소에 있어야 하며 cross-fork 스택을 지원하지 않는다. [공식 요구 사항](https://docs.github.com/en/pull-requests/reference/stacked-pull-requests). 당시에는 `CUBRID/cubrid`의 `origin`에 스택 브랜치를 게시하는 방향을 기록했으나, 이후 사용자가 조직 저장소의 브랜치 증가를 우려하며 `vimkim/cubrid` 구성을 재검토하도록 요청했다. 이후 최종 합의는 아래의 "확정한 전달 방식"을 따른다. 조회 당시 조직 저장소 권한은 `WRITE`, 개인 fork 권한은 `ADMIN`이었다.
 
 같은 `vimkim/cubrid` 안에 trunk와 모든 작업 브랜치, PR을 두는 스택은 같은 저장소 조건을 만족한다. 제한되는 것은 `CUBRID/cubrid`와 fork를 가로지르는 native stack이다. fork 안에서 PR을 리뷰·머지하면 조직 저장소에 자동 반영되지 않으므로, 이후 upstream 반영 절차가 별도로 필요하다. 조직 저장소의 PR마다 리뷰 이력을 남기려면 fork의 독립 브랜치에서 `CUBRID/cubrid:feature/oos-merge`로 각각 일반 PR을 열 수도 있다. [Fork의 upstream PR](https://docs.github.com/en/pull-requests/how-tos/create-pull-requests/creating-a-pull-request-from-a-fork).
 
@@ -62,6 +62,19 @@ GitHub 기본 stacked PR은 모든 브랜치가 같은 저장소에 있어야 �
 현재 회사 `gha-ci`는 PR head SHA와 실제 base ref를 읽고 `develop` 또는 `feature/*` base만 허용한다. 기본 stacked PR의 Actions 지원과 별도로 회사의 사용자 정의 base 검사를 확인해야 한다. [조회한 develop 리비전의 gate](https://github.com/CUBRID/cubrid/blob/4f1a68c1ebec12f29bc8ba98b5ce8cacb1fc8735/.github/workflows/gha-ci.yml#L294-L305).
 
 조직 브랜치를 늘리지 않으면서 회사 리뷰 기록과 기존 CI 경로를 유지하는 제안은 fork의 독립 브랜치마다 회사의 `feature/oos-merge`를 대상으로 일반 PR을 여는 것이다. native stack을 반드시 유지하는 경우에는 조직 저장소의 작업 브랜치와 회사 CI의 base 처리에 대한 별도 합의가 필요하다. 이 두 구성을 아직 게시하거나 실행하지 않았다.
+
+## 확정한 전달 방식
+
+2026-10-29 사용자는 조직 브랜치를 사용하는 native stack을 별도로 합의하기 전에는 기존 fork 기여 방식으로 진행하기로 확인했다. 이 절이 앞선 스택 검토 이력보다 우선한다.
+
+- 각 독립 수정은 `feature/oos-merge`를 기반으로 ticket별 작업 브랜치를 만든다.
+- 브랜치는 `vimkim/cubrid`의 `vk` remote에 게시한다.
+- 각 브랜치에서 `CUBRID/cubrid:feature/oos-merge`를 대상으로 개별 PR을 연다. 앞선 수정 PR의 브랜치를 다음 PR의 base로 삼지 않는다.
+- 리뷰, 승인과 회사 CI 결과는 처음부터 회사 PR에 남긴다. 개인 fork 내부 PR을 공식 리뷰 장소로 사용하지 않는다.
+- 이 작업에서는 native stack을 초기화하거나 조직 저장소에 작업 브랜치를 게시하지 않는다. 스택 도입은 조직 브랜치 운영과 층별 CI 처리를 별도로 합의할 때 재검토한다.
+- 실제 수정안에서 필수 선행 관계가 생기면 해당 항목에 근거를 기록하고 전달 순서를 다시 검토한다. 같은 파일을 수정한다는 이유만으로 의존성을 가정하지 않는다.
+
+다음 작업은 R1의 기존 티켓 중복 확인, ticket 확정과 회사 PR 본문 준비이다. R1의 기존 재현·수정 커밋과 검증 결과는 보존한다. 이 기록 시점에는 티켓이나 PR을 새로 만들지 않았다.
 
 ## 진행 점검
 
