@@ -2,7 +2,7 @@
 
 팀장님 리뷰를 하나씩 이해하고 결정한 뒤, 필요한 수정과 검증을 마친다. 이 문서는 OOS 작성자와 리뷰어가 다음 작업을 이어갈 수 있도록 진행 상태와 근거를 보존한다.
 
-R1은 실제 동시 INSERT로 같은 assertion을 재현한 뒤 7줄을 삭제해 수정했다. 수정 후 CS 10회와 집중 CTest가 통과했다. 나머지 다섯 항목은 아직 수정하지 않았다.
+R1은 실제 동시 INSERT로 같은 assertion을 재현한 뒤 7줄을 삭제해 수정했다. 수정 후 CS 10회와 집중 CTest가 통과했고, [회사 draft PR 8330](https://github.com/CUBRID/cubrid/pull/8330)으로 게시했다. 나머지 다섯 항목은 아직 수정하지 않았다.
 
 분석일은 2026-10-29, Asia/Seoul이다. 대상은 [CUBRID/cubrid PR 7990](https://github.com/CUBRID/cubrid/pull/7990)이다. 검토 기준 소스는 `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`, 브랜치는 `feature/oos-merge`이다. 수집 당시 hornetmj님의 inline 리뷰 6개는 모두 미해결이며 outdated가 아니다. 빈 COMMENTED 리뷰 요약은 별도 작업으로 세지 않는다.
 
@@ -12,10 +12,10 @@ R1은 실제 동시 INSERT로 같은 assertion을 재현한 뒤 7줄을 삭제�
 
 - 기존 Work Item `508`에 이 체크리스트와 단계별 결과를 연결한다. 전체 PR 머지 완료를 이 문서의 초기 작성 완료와 혼동하지 않는다.
 - 엔진 수정 작업은 `/home/vimkim/gh/cb/pr7990-hornet-r1`, `CBRD-27827-oos-insert-header-wait`에서 진행한다. 초기 브랜치 이름은 `review/pr7990-hornet-r1`이었다. 각 독립 수정 PR의 base는 `CUBRID/cubrid:feature/oos-merge`이다. 팀 리뷰와 해당 PR head 검증을 받은 뒤 GitHub PR로 반영한다.
-- 문서 작업은 `/home/vimkim/gh/my-cubrid-docs-pr7990-hornet-review`, `docs/pr7990-hornet-review-20261029`에서 진행한다. 로컬 통합 대상은 문서 저장소 `main`이다.
+- 문서는 `my-cubrid-docs`의 `main`에 통합·게시한다. 초기 task worktree는 `/home/vimkim/gh/my-cubrid-docs-pr7990-hornet-review`, 브랜치는 `docs/pr7990-hornet-review-20261029`이다. 통합 후 정리되면 `main`의 이 문서에서 재개한다.
 - 각 항목의 순서는 검토, 이해, 결정, 수정, 검증, 기록이다. 하나의 수정과 검증을 마친 뒤 다음 수정을 시작한다.
-- 현재 단계는 R1의 JIRA CBRD-27827 발급 완료와 회사 PR 본문 검토이다. 앞선 직접 로컬 통합 승인 요청은 철회했다. 다음 기술 검토는 R5이다. R2부터 R6까지의 수정은 아직 시작하지 않았다.
-- 현재 단계는 독립 PR의 본문 준비이다. 기존 PR의 충돌 해결, CI 재실행, 원격 push, 리뷰 답글 게시, thread resolve, PR 머지는 이 단계의 작업에 포함하지 않는다.
+- 현재 단계는 R1의 회사 draft PR 8330 게시 완료와 회사 CI·팀 리뷰 대기이다. [gha-ci 40853451200](https://github.com/CUBRID/cubrid/actions/runs/40853451200)의 build 두 개와 SQL·medium·shell 상태가 모두 PENDING으로 등록됐다. 앞선 직접 로컬 소스 통합 승인 요청은 철회했다. 다음 기술 검토는 R5이다. R2부터 R6까지의 수정은 아직 시작하지 않았다.
+- 사용자가 승인한 범위는 문서·JIRA 노트 통합 및 게시, R1 소스의 fork push, 회사 draft PR 생성·담당자 지정, 사전 조건 통과 후 전체 CI 한 번이다. 리뷰 답글 게시, thread resolve, 소스 PR 머지는 포함하지 않는다.
 
 ## 처리 순서
 
@@ -23,7 +23,7 @@ R1은 사용자가 지정한 링크이므로 먼저 다룬다. 이후에는 커�
 
 | 순서 | 항목 | 사용자 영향 | 첫 확인 사항 | 상태 |
 | --- | --- | --- | --- | --- |
-| 1 | [R1. 동시 INSERT의 파일 소유 확인 실패](#r1-동시-insert의-파일-소유-확인-실패) | INSERT 실패, debug abort | zero-wait 범위와 파일 헤더 경합 | CBRD-27827 발급, PR 본문 검토 |
+| 1 | [R1. 동시 INSERT의 파일 소유 확인 실패](#r1-동시-insert의-파일-소유-확인-실패) | INSERT 실패, debug abort | zero-wait 범위와 파일 헤더 경합 | CBRD-27827, 회사 draft PR 8330 게시 |
 | 2 | [R5. relocation undo가 재사용 슬롯을 덮어씀](#r5-relocation-undo가-재사용-슬롯을-덮어씀) | 커밋 행 손실, 힙 손상 | forward 페이지 공개와 sysop 경계 | 대기 |
 | 3 | [R2. vacuum과 새 힙 페이지 할당의 교착](#r2-vacuum과-새-힙-페이지-할당의-교착) | INSERT 장시간 대기와 abort | PR 8235의 처리 범위와 미통합 변경 | 대기 |
 | 4 | [R6. 미사용 복구 인덱스 제거](#r6-미사용-복구-인덱스-제거) | 불필요한 로그 형식 번호 고정 | 로그 생산자 존재 여부 | 대기 |
@@ -74,7 +74,7 @@ GitHub 기본 stacked PR은 모든 브랜치가 같은 저장소에 있어야 �
 - 이 작업에서는 native stack을 초기화하거나 조직 저장소에 작업 브랜치를 게시하지 않는다. 스택 도입은 조직 브랜치 운영과 층별 CI 처리를 별도로 합의할 때 재검토한다.
 - 실제 수정안에서 필수 선행 관계가 생기면 해당 항목에 근거를 기록하고 전달 순서를 다시 검토한다. 같은 파일을 수정한다는 이유만으로 의존성을 가정하지 않는다.
 
-R1은 기존 티켓의 중복 검색을 마치고 [CBRD-27827](https://jira.cubrid.org/browse/CBRD-27827)을 Correct Error로 발급했다. JIRA 설명을 재조회해 검증했다. [PR 본문](../cbrd-27827/CBRD-27827-oos-insert-header-wait-pr-body_4db11c5_codex.md)과 [게시 맥락](../cbrd-27827/CBRD-27827-oos-insert-header-wait-pr-context_4db11c5_codex.md)을 준비했다. 기존 재현·수정 커밋과 검증 결과는 보존한다. 아직 소스를 push하거나 회사 PR을 새로 만들지 않았다.
+R1은 기존 티켓의 중복 검색을 마치고 [CBRD-27827](https://jira.cubrid.org/browse/CBRD-27827)을 Correct Error로 발급했다. [검토한 PR 본문](../cbrd-27827/CBRD-27827-oos-insert-header-wait-pr-body_4db11c5_codex.md) 그대로 [회사 draft PR 8330](https://github.com/CUBRID/cubrid/pull/8330)을 만들고 `vimkim`을 담당자로 지정했다. source head는 `4db11c5f12f9c67134aad7f547df8704d1e5c591`이며, 소스는 `vimkim/cubrid`에만 push했다. 실제 게시 결과는 [게시 맥락](../cbrd-27827/CBRD-27827-oos-insert-header-wait-pr-context_4db11c5_codex.md)에 기록한다.
 
 ## 진행 점검
 
@@ -110,7 +110,8 @@ R1은 기존 티켓의 중복 검색을 마치고 [CBRD-27827](https://jira.cubr
 - [x] 근거, 커밋, 검증 한계와 답글 초안을 기록한다.
 - [x] 기존 이슈와 PR을 검색하고 CBRD-27827을 발급해 재조회한다.
 - [x] 새 ticket 이름으로 브랜치를 정리하고 회사 PR 본문을 저장한다.
-- [ ] 검토한 본문의 게시 승인을 받은 뒤 fork에 push하고 회사 draft PR을 만든다.
+- [x] 검토한 본문의 게시 승인을 받은 뒤 fork에 push하고 회사 draft PR을 만든다.
+- [x] 두 testcase baseline을 확인하고 전체 CI 한 번을 요청해 다섯 gha-ci 상태의 시작을 확인한다.
 - [ ] 회사 CI와 팀 리뷰를 받은 뒤 PR을 반영한다.
 
 소스에서 확인한 사실은 [대기 시간 변경](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/storage/oos_file.cpp#L560-L582), [조건부 후보 래치와 소유 확인](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/storage/oos_file.cpp#L654-L706), [대기 시간 복원](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/storage/oos_file.cpp#L768-L772)이다. 오류 코드를 추가하는 것만으로는 경합으로 인한 INSERT 실패가 없어지지 않는다는 판단은 이 호출 흐름에 근거한다. 수정 전 debug 실행에서 아래와 같이 같은 위치의 assertion을 직접 재현했다.
@@ -268,6 +269,8 @@ PR 8235가 고쳤을 수 있다는 원문의 설명은 확인할 대상이다. �
 | 2026-10-29 | 전체 | R1부터 한 항목씩 수정하고 검증한다. R5는 그다음 우선 검토 대상으로 둔다. | 사용자의 단계별 진행 요청, R5의 커밋 행 손실 보고 | R1 통합 승인, 이후 R5 검토 |
 | 2026-10-29 | R4 | 후속 적용 계획을 보존하고 즉시 수정 대상으로 확정하지 않는다. | 리뷰 원문의 redesign 안정화 후 적용 설명 | 소유 작업과 적용 시점 확인 |
 | 2026-10-29 | R1 | 원인을 재현하고 zero-wait 설정을 제거했다. CS 10회와 집중 CTest 4개가 통과했다. | `3c39a813a`, `4db11c5f1`, 위 검증 결과 | 독립 PR 리뷰·검증. release와 혼합 부하는 미검증 |
+| 2026-10-29 | R1 게시 | fork push, 회사 draft PR 8330 생성, 담당자 지정과 본문 재조회를 완료했다. 전체 CI 한 번의 시작을 확인했다. | [PR 8330](https://github.com/CUBRID/cubrid/pull/8330), [CI 실행](https://github.com/CUBRID/cubrid/actions/runs/40853451200), 게시 맥락 | CI 완료와 팀 리뷰, 이후 별도 머지 판단 |
+| 2026-10-29 | JIRA 도구 | Python의 `{code}`가 블록을 끝내는 변환기 결함을 서브에이전트로 분석·수정했다. 원본 Markdown을 보존해 실제 본문을 복구하고 서버 렌더 결과를 검증했다. | `cubrid-jira` 후보 `3f282aa`, 전체 테스트 297개, 독립 검토 112개 | CLI main 통합·푸시·설치 승인 대기, Work 617 |
 
 수집 원본은 `/home/vimkim/temp/pr7990-hornet-review-20261029/review-snapshot.json`에 보관한다. 원본 JSON, 빌드 로그, 중간 산출물은 문서 저장소에 커밋하지 않는다.
 

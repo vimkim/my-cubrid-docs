@@ -55,4 +55,25 @@ This file records a publication proposal. It does not grant permission.
 
 ## Approval state
 
-The conversation authorizes R1 work and ticket creation. PR publication requires explicit confirmation after this body and these operations are available for review under cubrid-pr-create. No approval is stored in this file.
+The user confirmed the saved body and listed publication operations in the conversation on 2026-10-29. The same message requested a separate investigation and repair of broken JIRA rendering. That repair did not revoke R1 publication approval. This record does not grant permission for future operations.
+
+## Publication results, 2026-10-29
+
+- The docs task was rebased onto the current local main, checked across its five retained paths, merged by fast-forward and pushed to `vimkim/my-cubrid-docs:main` at `84658d1b8673607da5b8a3e250e8c3a34468a519`.
+- The JIRA notes task was merged by fast-forward and pushed to `vimkim/my-cubrid-jira:main` at `0f41cc4bc65b35a160b45953e3ae1eeb35679c3d`. Incoming paths were only the issue report and README.
+- A normal push published the reviewed source commit to `vimkim/cubrid:CBRD-27827-oos-insert-header-wait`. The remote SHA was read back and matched `4db11c5f12f9c67134aad7f547df8704d1e5c591`.
+- Created [CUBRID/cubrid PR 8330](https://github.com/CUBRID/cubrid/pull/8330) as a draft, assigned to `vimkim`, targeting `feature/oos-merge`. Title, source repository, branch, commit, base, draft status and assignee were read back and matched the proposal.
+- Published body SHA256 is `0e59fe52a0198c67bed2525fb3f0713e1cc53c415adf83ea1b561a164eb0e3ee`, identical to the approved file including its final newline.
+- The feature testcase baseline check passed for both automatically created `tc/pr-8330` branches. Public tip was `70db22a1c99dbbaa27fa1438c8967effdfcad551`; private tip was `75a02020e19be4bfc64e47f7c7a3d5c2b02d7676`. Each equaled the fetched feature baseline. No testcase branches were changed by this agent.
+- The fresh activity snapshot contained no `/run` comment or gha-ci commit statuses. Posted one approved [`/run all`](https://github.com/CUBRID/cubrid/pull/8330#issuecomment-6493562314). Both build contexts and SQL, medium and shell contexts became PENDING and pointed to [gha-ci run 40853451200](https://github.com/CUBRID/cubrid/actions/runs/40853451200). The PR head remained the reviewed `4db11c5f1`. No stable required gha-ci context was missing at pickup; this does not establish a passing result.
+- The live `gh pr checks --required` view returned exit 1 with `no required checks reported on the 'CBRD-27827-oos-insert-header-wait' branch`. The five observed gha-ci statuses were checked separately. CI completion and team review remain pending.
+
+## JIRA rendering repair
+
+- The user reported that the JIRA web issue body was broken. Two independent agents traced this to the literal `{code}` inside the embedded Python f-string, which Jira interprets as the closing code macro.
+- The `cubrid-jira` candidate uses a noformat block when code contains that marker and rejects a fenced block containing both closing markers before publication. Syntax highlighting is lost for this block. The original Markdown and Python were preserved.
+- A related readback regression removed indentation from a code block at the start of a document. The candidate preserves leading indentation and trims only boundary newlines.
+- Candidate commits are `43cb00d`, `7482a69`, `55200fd` and `3f282aa`. All 297 default tests passed. A fresh independent audit passed 112 focused tests and found no blockers.
+- The real Jira preview first reproduced the broken Python and swallowed Expected Result heading. After conversion, both were intact. One authorized live description update was then read back through `fields.description` and `renderedFields.description`: the complete Python text matched the original and the Expected Result heading and following body were preserved.
+- Original issue Markdown SHA256 remained `c88fe7ff5adee90d81101750c36d1fad91d5b5f581b3e1f09e1de5a2fdba31e0`. No issue summary, assignment, priority or workflow state was changed.
+- Separate CLI main integration, push and installation approval is pending. Work item `617` records that boundary; the live description repair is complete.
