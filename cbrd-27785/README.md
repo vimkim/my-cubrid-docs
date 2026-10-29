@@ -8,6 +8,7 @@
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [Release CI 경고 수정](release_ci_repair_067aae4e4_codex.md) | 세 줄 수정의 GCC8 strict red/green, native 검증과 한 번의 전체 CI 실행 기록 | 2026-10-29 | 2026-10-29 | 검증한 수정과 최종 CI 판정을 함께 검토하기 위해 |
 | [PR8299 CI 복구 검토](ci_analysis_report_fd8624c_codex.md) | release 경고 수정 후보, shell 두 실패의 이력과 SQL 수집 무결성 한계 | 2026-10-29 | 2026-10-29 | 재실행과 소스·TC 수정 중 다음 조치를 판단하기 위해 |
 | [공통 reader·UPDATE 개선](CBRD-27785-shared-read-update_408d135_codex.md) | 실제 develop·feature·HEAD 3-way 측정과 개별 counter, 약 +5% 수용 결정과 CBRD-27816 후속, 검증과 한계 | 2026-10-28 | 2026-10-28 | 지금까지 확보한 개선을 PR #8299 하나로 검토하기 위해 |
 | [통합 PR 본문](CBRD-27785-shared-read-update-pr-body_408d135_codex.md) | 기존 #8299에 반영할 한국어 본문과 3-way 전후 수치 | 2026-10-28 | 2026-10-28 | 게시 전 변경 범위와 미달 기준을 검토하기 위해 |
