@@ -1,0 +1,85 @@
+# CBRD-27785 발표 연습 질문 모음
+
+팀원에게 읽기 최적화의 변경 이유와 성능 근거를 설명하기 위한 질문 모음이다.
+학습 중 다시 풀 가치가 있어 선택한 질문을 기록한다.
+질문을 먼저 보고 답한 뒤, 접힌 영역을 열어 첫 답변과 교정 내용을 비교한다.
+
+작성일과 근거 확인일은 2026-10-29, Asia/Seoul이다.
+관련 이슈와 PR은 [티켓 문서 목록](README.md)에 있다.
+주교재는 [읽기 최적화 코드 해설서](CBRD-27785-code-walkthrough_f1b99031c_codex.md)다.
+
+| 구분 | CUBRID/CUBRID 고정 revision |
+| --- | --- |
+| 수정 전 OOS 통합 feature | `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67` |
+| 학습 대상 읽기 최적화 | `f1b99031c0402d521a785815f107be7a83b27717` |
+
+이 질문집은 위 읽기 단계에 한정한다. 이후 shared reader와 UPDATE 변경은 별도 범위다.
+질문 저장 과정에서 엔진 빌드, DB 실행이나 성능 측정을 새로 수행하지 않았다.
+
+| 번호 | 질문 | 학습 상태 |
+| --- | --- | --- |
+| [Q001](#q001) | 일반 정수 읽기의 동적 할당을 없앤 최적화인가? | 첫 답변 기록, 교정 후 재답변 대기 |
+
+<a id="q001"></a>
+## Q001. 일반 정수 읽기의 동적 할당을 없앤 최적화인가?
+
+OOS 값이 없는 일반 heap 행에서 정수 컬럼 `v`의 `SUM(v)`를 구하는 상황이다.
+팀원이 다음과 같이 설명한다.
+
+> "일반 정수를 읽을 때마다 하던 동적 메모리 할당을 없애서 빨라진 거네요."
+
+**이 설명에서 어떤 점을 바로잡아야 할까요?**
+
+<details>
+<summary>첫 답변, 교정과 근거 펼치기</summary>
+
+### 첫 답변
+
+2026-10-29의 첫 답변이다.
+
+> "scratch 배열 때문에 문제가 생긴거에요"
+
+scratch를 원인 후보로 짚었다. 다만 지역 배열과 동적 메모리 할당의 차이를 설명하지 않아,
+질문 속 "일반 정수 읽기마다 동적 할당을 했다"는 해석을 아직 바로잡지 못했다.
+교정 내용을 반영한 재답변은 아직 받지 않았다.
+
+### 교정
+
+수정 전 `heap_attrvalue_read`에는 `char oos_scratch_buf[IO_MAX_PAGE_SIZE + MAX_ALIGNMENT]`라는
+지역 배열이 있었다. 지역 배열 선언은 일반 값을 읽을 때마다 `malloc`을 호출한다는 뜻이 아니다.
+배열 전체를 매번 초기화한다는 뜻도 아니다.
+
+이번 변경은 OOS 전용 scratch와 그 bytes의 수명 처리를 `heap_attrvalue_read_oos`로 옮겼다.
+실제 OOS 필드를 읽을 때만 이 helper를 호출한다. 일반 정수 읽기는 이 helper에 들어가지 않으며,
+기존 `heap_attrvalue_transform_to_dbvalue` 변환을 사용한다.
+
+소스는 이 책임 분리를 보여 준다. 실제 stack frame과 inlining 결과는 생성된 코드에서 확인해야 하고,
+CPU 비용 변화는 측정 결과로 설명해야 한다. 기존 보고서는 scratch 분리, inlining과 코드 배치의
+성능 기여율을 각각 분리해 측정했다고 주장하지 않는다.
+
+### 발표용 답변
+
+> "매번 하던 malloc을 없앤 변경은 아닙니다. 일반 값도 읽는 공통 함수 안에 OOS용 지역 scratch가
+> 있었고, 이를 실제 OOS 필드를 읽을 때 사용하는 함수로 분리했습니다. 값 변환은 계속 공유합니다.
+> 성능 개선을 설명할 때도 scratch 하나만의 효과로 단정하지 않고, 생성된 코드와 측정 근거를
+> 함께 봐야 합니다."
+
+### 근거
+
+- [코드 해설서의 배경과 목표](CBRD-27785-code-walkthrough_f1b99031c_codex.md#background)는
+  지역 배열 선언, 생성된 stack frame과 측정 instructions를 구분한다.
+- [scalar reader와 OOS reader의 책임 분리](CBRD-27785-code-walkthrough_f1b99031c_codex.md#change-scalar)는
+  OOS scratch의 위치와 공통 변환을 설명한다.
+- [기존 원인 분석 보고서](CBRD-27785-oos-read-performance_bcb900d_codex.md)는 assembly와
+  진단 실험의 근거 및 개별 변경의 기여율을 분리하지 못한 한계를 기록한다. 이 질문집의 새 측정은 아니다.
+- 위 수정 전 revision의 `src/storage/heap_file.c:11549`에 지역 scratch 선언이 있다.
+  학습 대상 revision의 같은 파일 `:11566`에는 OOS reader가, `:11591`에는 scalar reader가 있다.
+  `:11643`의 `is_oos` 분기에서만 OOS reader를 호출한다.
+
+### 다시 답할 때 확인할 것
+
+- 지역 scratch 배열과 동적 메모리 할당을 구분했는가?
+- 일반 경로에서 어떤 OOS 전용 준비를 분리했는지 설명했는가?
+- 소스로 확인한 구조와 생성 코드 및 측정으로 확인할 효과를 구분했는가?
+
+</details>
