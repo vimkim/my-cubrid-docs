@@ -29,7 +29,7 @@
 - [x] T03. 배열 선언의 블록 위치만으로 생성된 stack frame 축소를 보장할 수 없음을 설명한다.
 - [x] T04. helper 반환 후 지역 scratch의 수명이 끝나는 문제와 Resolve·변환을 같은 수명에 묶는 이유를 설명한다.
 - [x] T05. 일반 inline bytes와 임시 OOS bytes의 수명, COPY 요청과 type handler의 기존 계약을 설명한다.
-- [ ] T06. record의 `HAS_OOS`, 개별 필드의 `IS_OOS`, 요청한 OOS 속성 수에 따른 scalar·grouped 선택을 설명한다.
+- [x] T06. record의 `HAS_OOS`, 개별 필드의 `IS_OOS`, 요청한 OOS 속성 수에 따른 scalar·grouped 선택을 설명한다.
 - [ ] T07. 기존 record layout 재사용, offset 폭과 길이 계산, collection의 물리 순서 처리를 설명한다.
 - [ ] T08. 일반·without-OID·lazy 읽기와 index-key 소비자의 연결 및 변경 범위를 설명한다.
 - [ ] T09. NULL·기본값·구 representation·pending owner와 오류 시 정리가 유지되는 경로를 설명한다.
@@ -38,9 +38,12 @@
 
 ## 다음에 이어갈 위치
 
-다음 항목은 T06의 record·필드 flag와 grouped 선택이다.
-T05의 inline 문자열 COPY 질문은 철회하고, record bytes와 OOS scratch의 수명 차이 및
-COPY 요청이 모든 타입의 실제 복사 여부를 보장하지는 않는다는 내용을 설명했다.
+다음 항목은 T07의 record layout 재사용과 offset·길이 계산이다.
+T06에서는 record의 요약 flag와 필드 flag를 구분하고, reader에 요청한 OOS 속성이
+0개면 OOS Resolve 없이, 1개면 scalar Resolve로, 2개 이상이면 grouped Resolve로
+읽는 선택을 설명했다. 이 선택 정책은 수정 전부터 있었으며, 이번 변경은 grouped 준비 상태를
+별도 OOS helper로 옮긴 것이다. 근거는 [flag 구분](CBRD-27785-code-walkthrough_f1b99031c_codex.md#mental-model)과
+[dispatcher의 책임 분리](CBRD-27785-code-walkthrough_f1b99031c_codex.md#change-dispatch)에 있다.
 
 ## 지금까지 답변에서 확인한 내용
 
