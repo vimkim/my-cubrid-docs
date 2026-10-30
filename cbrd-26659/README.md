@@ -2,6 +2,8 @@
 
 Last modified: 2026-10-30 (Asia/Seoul).
 
+2026-10-30 [비활성 SQL 3개 재현](CBRD-26659-disabled-sql-reproduction_20261030_e3589ae_codex.md)은 Engine `e3589ae`에서 원본 답안으로 3 NOK를 확인했다. 세 TC 모두 오류 번호 `-1384`와 `-1388` 차이 총 4곳이 원인이고 다른 출력은 같다. 실제 PASS 검증과 재활성화는 남아 있으며, 준비 실패와 120초 감시 한계를 별도 기록했다.
+
 2026-10-30 [SQL 결과 2건 집계 차이 분석](CBRD-26659-sql-count-discrepancy_20261030_run40837919358_codex.md)은 실제 CTP 코드로 중첩 TC의 합계·JUnit 누락을 재현한다. 원인 조사는 완료했으며 CTP 수리와 SQL 전체 증거 정합성 검증은 남았다. 원래 CI의 SQL 수집 실패 상태를 유지한다.
 
 2026-10-29 [shell_heavy 게시 기록](CBRD-26659-shell-heavy-pr-context_631e3fd_codex.md)은 native 38 PASS·0 FAIL·0 SKIP 검증 후 사용자 승인으로 생성한 [heavy draft PR #4627](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4627)과 기존 PR #4365의 일반 CI 제외를 기록한다. [신규 PR 본문](CBRD-26659-shell-heavy-pr-body_631e3fd_codex.md)과 [기존 PR 갱신 본문](CBRD-26659-shell-heavy-exclusion-pr-body_a229e19_codex.md)은 승인한 내용 그대로 게시했다. 전체 [CI 40837919358](https://github.com/CUBRID/cubrid/actions/runs/40837919358)은 SUCCESS로 종료했다. Shell·medium 증거 검증은 완료했으나 SQL shard 01의 workflow·JUnit 건수 차이는 별도 확인이 필요하다. 정기 heavy 실행 경로와 실제 TC 리뷰·병합도 남아 있다.
@@ -42,11 +44,12 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [비활성 SQL 3개 재현과 실패 원인](CBRD-26659-disabled-sql-reproduction_20261030_e3589ae_codex.md) | 원본 3 NOK, 오류 번호 불일치 4곳의 소스·실행 근거와 감시 한계 | 2026-10-30 | 2026-10-30 | 과거 실패 SQL의 현재 원인과 답안 수정·재활성화의 후속 범위를 확정 |
 | [SQL 결과 2건 집계 차이 분석](CBRD-26659-sql-count-discrepancy_20261030_run40837919358_codex.md) | CTP 중첩 결과 집계 누락의 원본 대조·실제 클래스 재현과 한계 | 2026-10-30 | 2026-10-30 | 실행 누락과 집계 오류를 구분하고 SQL 무결성 실패의 후속 처리를 정리 |
 | [shell_heavy PR body](CBRD-26659-shell-heavy-pr-body_631e3fd_codex.md) | draft PR #4627에 게시한 OOS 38개·지원 파일 이관 본문 | 2026-10-29 | 2026-10-29 | 별도 heavy draft PR에 게시할 내용을 검토 |
 | [일반 shell 제외 PR body](CBRD-26659-shell-heavy-exclusion-pr-body_a229e19_codex.md) | PR #4365에 게시한 31개 일반·38개 heavy 제외 집계와 검증 범위 | 2026-10-29 | 2026-10-29 | heavy 분리 후 기존 PR의 설명을 실제 실행 선택에 맞게 갱신 |
 | [shell_heavy 게시 context](CBRD-26659-shell-heavy-pr-context_631e3fd_codex.md) | 두 TC 게시·단일 CI 성공과 SQL 집계 누락의 후속 분석 | 2026-10-29 | 2026-10-30 | 짝을 이루는 heavy 추가·일반 제외를 검토하고 일관되게 게시 |
-| [CBRD-26659 TODO checklist](CBRD-26659-todo-checklist_20261029_codex.md) | heavy 이관, SQL 집계 조사와 남은 실패·장시간·HA·리뷰 항목 | 2026-10-29 | 2026-10-30 | 현황보고의 남은 작업을 하나씩 실행하고 근거와 함께 완료 표시 |
+| [CBRD-26659 TODO checklist](CBRD-26659-todo-checklist_20261029_codex.md) | heavy 이관·SQL 집계·SQL3 원인 분석 완료와 남은 수정·검증 항목 | 2026-10-29 | 2026-10-30 | 현황보고의 남은 작업을 하나씩 실행하고 근거와 함께 완료 표시 |
 | [CBRD-26659 현황보고](CBRD-26659-status-report_20261029_e3589ae_codex.md) | 현재 PR·TC 분류, 실패 진단과 heavy·2분 초과 처리의 남은 작업 | 2026-10-29 | 2026-10-29 | 개발·QA 담당자에게 TC 검증·이관 현황과 후속 조치를 보고 |
 | [최신 전체 CI 비교 PR body](CBRD-26659-oos-ci-runtime-refresh-20261029-pr-body_e3589ae_codex.md) | 게시한 전체 실행 44분 10초→42분 28초 비교, 실패·측정 한계와 HA 분류 | 2026-10-29 | 2026-10-29 | #8128 본문을 최신 전체 실행 근거로 갱신하기 전 검토 |
 | [최신 전체 CI 비교 게시 context](CBRD-26659-oos-ci-runtime-refresh-20261029-pr-context_e3589ae_codex.md) | 원본·게시 본문 식별값, 정확한 CI 입력, 비교 한계와 게시 확인 | 2026-10-29 | 2026-10-29 | 검토한 본문과 게시 대상을 확인하고 재개 |

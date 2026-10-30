@@ -31,9 +31,11 @@
 ## 2. 과거 실패 TC를 재현하고 원인을 분류
 
 - [x] 과거 SQL FAIL 3개와 shell FAIL 61개의 전체 목록·원본 경로·관측 리비전을 확보한다.
-- [ ] SQL `cbrd_26659_oos_record_boundaries`를 재현하고 최초 실패와 원인을 기록한다.
-- [ ] SQL `cbrd_26659_oos_sql05_bigone`을 재현하고 최초 실패와 원인을 기록한다.
-- [ ] SQL `cbrd_26659_oos_sql09_lob_maxcols`를 재현하고 최초 실패와 원인을 기록한다.
+- [x] SQL `cbrd_26659_oos_record_boundaries`를 재현하고 최초 실패와 원인을 기록한다.
+- [x] SQL `cbrd_26659_oos_sql05_bigone`을 재현하고 최초 실패와 원인을 기록한다.
+- [x] SQL `cbrd_26659_oos_sql09_lob_maxcols`를 재현하고 최초 실패와 원인을 기록한다.
+- [x] SQL 3개의 원본 NOK를 TC 답안의 오류 번호 불일치로 분류하고 [현재 재현 근거](CBRD-26659-disabled-sql-reproduction_20261030_e3589ae_codex.md)를 연결한다.
+- [ ] 답안 3개의 오류 번호 4곳을 현재 상수에 맞춘 뒤 실제 native PASS와 정리를 확인하고 재활성화를 검토한다. 재실행 전에는 TC 시작을 포함하는 120초 감시 기준을 검증한다.
 - [ ] shell 61개를 공통 실패 지점으로 묶되 각 TC의 개별 결과를 유지한다.
 - [ ] 각 실패를 엔진·TC·환경 문제 또는 원인 미확정으로 분류하고 근거를 연결한다.
 - [ ] 확인한 엔진 결함에 후속 이슈와 재현 TC를 연결한다.
@@ -41,6 +43,8 @@
 - [ ] 실패가 해결된 TC의 재활성화 여부와 일반·heavy 실행 위치를 정한다.
 
 과거 FAIL을 현재 리비전의 FAIL로 단정하지 않는다. 전체 목록은 현황보고의 [실패 TC 현황](CBRD-26659-status-report_20261029_e3589ae_codex.md#3-실패-tc-현황)에 연결되어 있다.
+
+2026-10-30 Engine `e3589ae`·public TC `45e21ad`에서 원본 SQL 3개의 현재 판정은 0 PASS·3 NOK다. 답안의 `Error:-1384`와 현재 `Error:-1388` 차이 4곳 외에는 실제 출력이 바이트 단위로 일치한다. TC 시간은 각각 0.093초·0.122초·1.079초다. 준비·정리까지 포함한 각 명령도 120초 미만에 끝났다. 완료 로그를 시작 신호로 사용한 감시 스크립트의 한계는 재현 보고서에 기록했다. 답안 수정·재활성화·게시·CI 실행은 하지 않았다.
 
 ## 3. 이전부터 비활성인 PASS 3개와 2분 초과 TC를 처리
 
@@ -84,6 +88,7 @@
 | 2026-10-29 | PR 게시와 일반 CI 시작 | 승인 후 [heavy draft PR #4627](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4627)을 생성하고 기존 [PR #4365](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4365)에 제외 커밋·본문을 게시했다. 전체 [CI 40837919358](https://github.com/CUBRID/cubrid/actions/runs/40837919358)을 1회 시작했으며 종료 결과를 기다린다. |
 | 2026-10-29 | 일반 CI 종료와 증거 검증 | 같은 CI가 SUCCESS로 종료했다. Build debug·release와 shell·SQL·medium의 5개 context가 모두 SUCCESS다. 증거 검증은 shell 3,491 PASS·0 FAIL·30 SKIP, medium 975 PASS·0 FAIL·0 SKIP이다. SQL은 GitHub 성공이지만 shard 01의 workflow 3,533개와 JUnit·summary 3,531개가 달라 수집기가 무결성 오류로 거부했다. SQL 전체 PASS 건수의 검증 완료는 보류하며 추가 수정·재실행은 하지 않았다. |
 | 2026-10-30 | SQL 2건 집계 차이 조사 | `cbrd-27556`의 두 결과 행을 식별했다. 실제 CTP 코드에서 직접 TC와 하위 TC가 공존할 때 합계·JUnit이 하위 TC를 누락하는 현상을 재현했다. 구조만 바꾼 대조군은 모두 집계된다. 조사 항목은 완료했으나 CTP 수리·원래 두 TC의 독립 실행 확인·SQL 전체 정합성 검증은 남았다. CI 재실행이나 엔진·TC·CTP 수정은 하지 않았다. |
+| 2026-10-30 | 비활성 SQL 3개 현재 재현·원인 분류 | 원본 입력·답안의 native 결과는 3 NOK이며 모두 TC 시간 120초 미만이다. 같은 오류 상수의 과거 번호 `-1384`와 현재 `-1388` 차이 총 4곳이 전부임을 확인했다. 준비 실패는 별도 보존했다. 답안 수정과 실제 PASS 검증·재활성화는 남아 있다. |
 
 [신규 heavy PR 본문](CBRD-26659-shell-heavy-pr-body_631e3fd_codex.md)과 [기존 PR #4365 갱신 본문](CBRD-26659-shell-heavy-exclusion-pr-body_a229e19_codex.md)은 검토·승인한 내용 그대로 게시했다. Heavy import `631e3fd`와 일반 CI 제외 `a229e19`의 원격 head를 확인했다. [게시 범위와 검증 기록](CBRD-26659-shell-heavy-pr-context_631e3fd_codex.md)에 본문 식별값과 CI 경과를 보존한다.
 
