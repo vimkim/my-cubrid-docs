@@ -2,7 +2,7 @@
 
 팀장님 리뷰를 하나씩 이해하고 결정한 뒤, 필요한 수정과 검증을 마친다. 이 문서는 OOS 작성자와 리뷰어가 다음 작업을 이어갈 수 있도록 진행 상태와 근거를 보존한다.
 
-R1은 실제 동시 INSERT로 같은 assertion을 재현한 뒤 7줄을 삭제해 수정했다. 수정 후 CS 10회와 집중 CTest가 통과했고, [회사 draft PR 8330](https://github.com/CUBRID/cubrid/pull/8330)으로 게시했다. 나머지 다섯 항목은 아직 수정하지 않았다.
+R1은 실제 동시 INSERT로 같은 assertion을 재현한 뒤 7줄을 삭제해 수정했다. 수정 후 CS 10회와 집중 CTest가 통과했고, [회사 draft PR 8330](https://github.com/CUBRID/cubrid/pull/8330)으로 게시했다. R5는 수정 전 debug·release와 재시작 복구의 손상을 재현했고, forward 페이지를 sysop commit 뒤까지 고정하는 로컬 수정으로 같은 주입을 통과했다. R5의 티켓과 PR은 아직 만들지 않았다. 나머지 네 항목은 아직 수정하지 않았다.
 
 분석일은 2026-10-29, Asia/Seoul이다. 대상은 [CUBRID/cubrid PR 7990](https://github.com/CUBRID/cubrid/pull/7990)이다. 검토 기준 소스는 `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`, 브랜치는 `feature/oos-merge`이다. 수집 당시 hornetmj님의 inline 리뷰 6개는 모두 미해결이며 outdated가 아니다. 빈 COMMENTED 리뷰 요약은 별도 작업으로 세지 않는다.
 
@@ -14,7 +14,7 @@ R1은 실제 동시 INSERT로 같은 assertion을 재현한 뒤 7줄을 삭제�
 - 엔진 수정 작업은 `/home/vimkim/gh/cb/pr7990-hornet-r1`, `CBRD-27827-oos-insert-header-wait`에서 진행한다. 초기 브랜치 이름은 `review/pr7990-hornet-r1`이었다. 각 독립 수정 PR의 base는 `CUBRID/cubrid:feature/oos-merge`이다. 팀 리뷰와 해당 PR head 검증을 받은 뒤 GitHub PR로 반영한다.
 - 문서는 `my-cubrid-docs`의 `main`에 통합·게시한다. 초기 task worktree는 `/home/vimkim/gh/my-cubrid-docs-pr7990-hornet-review`, 브랜치는 `docs/pr7990-hornet-review-20261029`이다. 통합 후 정리되면 `main`의 이 문서에서 재개한다.
 - 각 항목의 순서는 검토, 이해, 결정, 수정, 검증, 기록이다. 하나의 수정과 검증을 마친 뒤 다음 수정을 시작한다.
-- 현재 단계는 R1의 회사 draft PR 8330 게시 완료와 팀 리뷰 대기이다. [gha-ci 40853451200](https://github.com/CUBRID/cubrid/actions/runs/40853451200)는 release/debug 빌드와 SQL·medium이 통과했고 shell은 `temp_enc_06` 한 건이 실패했다. 사용자는 이 케이스가 알려진 flaky라고 확인했다. 실패 목록이 일치하므로 이를 R1 회귀 의심으로 별도 조사하느라 R5를 미루지 않는다. CI의 실제 shell 실패 상태는 그대로 기록한다. 다음 기술 검토는 R5이며, R2부터 R6까지의 수정은 아직 시작하지 않았다.
+- 현재 단계는 R1의 회사 draft PR 8330 게시 완료와 팀 리뷰 대기이다. [gha-ci 40853451200](https://github.com/CUBRID/cubrid/actions/runs/40853451200)는 release/debug 빌드와 SQL·medium이 통과했고 shell은 `temp_enc_06` 한 건이 실패했다. 사용자는 이 케이스가 알려진 flaky라고 확인했다. 실패 목록이 일치하므로 이를 R1 회귀 의심으로 별도 조사하느라 R5를 미루지 않는다. CI의 실제 shell 실패 상태는 그대로 기록한다. 2026-10-30에 R5의 재현, 수정, 검증을 로컬에서 마쳤다. 다음 단계는 R5 티켓과 회사 PR 준비이며 게시 승인이 필요하다. R2, R3, R4, R6의 수정은 아직 시작하지 않았다.
 - 사용자가 승인한 범위는 문서·JIRA 노트 통합 및 게시, R1 소스의 fork push, 회사 draft PR 생성·담당자 지정, 사전 조건 통과 후 전체 CI 한 번이다. 리뷰 답글 게시, thread resolve, 소스 PR 머지는 포함하지 않는다.
 
 ## 처리 순서
@@ -24,7 +24,7 @@ R1은 사용자가 지정한 링크이므로 먼저 다룬다. 이후에는 커�
 | 순서 | 항목 | 사용자 영향 | 첫 확인 사항 | 상태 |
 | --- | --- | --- | --- | --- |
 | 1 | [R1. 동시 INSERT의 파일 소유 확인 실패](#r1-동시-insert의-파일-소유-확인-실패) | INSERT 실패, debug abort | zero-wait 범위와 파일 헤더 경합 | 회사 PR 8330 리뷰 대기. shell은 알려진 flaky `temp_enc_06` 한 건 실패 |
-| 2 | [R5. relocation undo가 재사용 슬롯을 덮어씀](#r5-relocation-undo가-재사용-슬롯을-덮어씀) | 커밋 행 손실, 힙 손상 | forward 페이지 공개와 sysop 경계 | 대기 |
+| 2 | [R5. relocation undo가 재사용 슬롯을 덮어씀](#r5-relocation-undo가-재사용-슬롯을-덮어씀) | 커밋 행 손실, 힙 손상 | forward 페이지 공개와 sysop 경계 | 로컬 수정 `c05abc8b4`와 검증 완료. 티켓과 PR 준비 대기 |
 | 3 | [R2. vacuum과 새 힙 페이지 할당의 교착](#r2-vacuum과-새-힙-페이지-할당의-교착) | INSERT 장시간 대기와 abort | PR 8235의 처리 범위와 미통합 변경 | 대기 |
 | 4 | [R6. 미사용 복구 인덱스 제거](#r6-미사용-복구-인덱스-제거) | 불필요한 로그 형식 번호 고정 | 로그 생산자 존재 여부 | 대기 |
 | 5 | [R3. 페이지 할당 시 전체 파일 스윕](#r3-페이지-할당-시-전체-파일-스윕) | 큰 파일의 INSERT 지연 | 스윕 발동 조건과 진행 위치 | 대기 |
@@ -193,14 +193,93 @@ ctest --test-dir "$CUBRID_BUILD_DIR" -R '^(test_oos_bestspace|test_oos_growth_sw
 [리뷰 원문](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4409499688). 대상은 `vacuum_heap_record`의 `REC_RELOCATION` 경로이다.
 
 - [x] 원문을 수집한다.
-- [ ] forward 슬롯을 비우는 시점, bestpage 공개, 래치 해제, OOS 삭제, sysop abort 순서를 확인한다.
-- [ ] 기존 CBRD-27781의 OOS 슬롯 충돌과 이번 힙 forward 슬롯 충돌의 차이를 확인한다.
-- [ ] OOS 삭제 실패를 주입하고 동시 INSERT로 슬롯 재사용을 재현한다.
-- [ ] 슬롯을 공개해도 되는 복구 경계를 결정하고 최소 수정한다.
-- [ ] debug와 release의 오류 경로, 행 보존, 인덱스와 힙 일치, `checkdb`를 확인한다.
-- [ ] 결과와 답글 초안을 기록한다.
+- [x] forward 슬롯을 비우는 시점, bestpage 공개, 래치 해제, OOS 삭제, sysop abort 순서를 확인한다.
+- [x] 기존 CBRD-27781의 OOS 슬롯 충돌과 이번 힙 forward 슬롯 충돌의 차이를 확인한다.
+- [x] OOS 삭제 실패를 주입하고 동시 INSERT로 슬롯 재사용을 재현한다.
+- [x] 슬롯을 공개해도 되는 복구 경계를 결정하고 최소 수정한다.
+- [x] debug와 release의 오류 경로, 행 보존, 인덱스와 힙 일치, `checkdb`를 확인한다.
+- [x] 결과와 답글 초안을 기록한다.
+- [ ] 중복 이슈를 검색하고 R5 티켓을 발급한다. 회사 PR 본문을 준비해 게시 승인을 받는다.
 
-리뷰어는 debug abort와 release의 커밋 행 손실을 보고했다. 이 작업에서 독립 재현하거나 기존 티켓과 동일한 결함이라고 판단한 상태는 아니다.
+분석일은 2026-10-30, Asia/Seoul이다. 기준 소스는 `feature/oos-merge`의 `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`이다. 수정 커밋은 `/home/vimkim/gh/cb/pr7990-hornet-r5`의 로컬 task branch `pr7990-hornet-r5`에 있는 `c05abc8b4`이며 아직 게시하지 않았다. release 실험은 별도 워크트리 `/home/vimkim/gh/cb/pr7990-hornet-r5-release`에서 실행했다. 결론은 리뷰어의 지적을 수용한다는 것이다. 수정 전 코드에서 debug assertion, release 페이지 손상, 재시작 복구 실패를 직접 재현했다. forward 페이지를 sysop commit 뒤까지 고정하는 수정 후에는 같은 주입에서 커밋된 행이 보존됐다.
+
+### R5에서 이해한 실패 경로
+
+vacuum은 삭제가 확정된 relocation 행을 지울 때 home 페이지의 `REC_RELOCATION` 슬롯과 forward 페이지의 `REC_NEWHOME` 슬롯을 하나의 sysop으로 지운다. 행에 OOS 값이 있으면 같은 sysop 안에서 OOS chunk도 지운다. sysop이 끝나기 전에는 abort나 재시작 복구가 이 변경을 undo할 수 있다. forward 슬롯의 undo는 옛 `REC_NEWHOME`을 같은 슬롯 번호에 다시 넣는다.
+
+기준 소스의 [REC_RELOCATION 처리](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/query/vacuum.c#L2532-L2577) 순서는 다음과 같다.
+
+1. `spage_vacuum_slot`이 forward 슬롯을 재사용 가능한 빈 슬롯으로 만든다.
+2. `heap_add_bestpage`가 그 페이지의 빈 공간을 INSERT 후보로 알린다.
+3. forward 페이지의 undo 로그를 남기고 `pgbuf_set_dirty (..., FREE)`로 래치를 놓는다.
+4. OOS 삭제가 성공하면 `log_sysop_commit`, 실패하면 `log_sysop_abort`를 호출한다.
+
+3과 4 사이에 다른 트랜잭션이 그 페이지에 INSERT해 같은 슬롯 번호를 받고 commit할 수 있다. 그 뒤 4가 abort하면 undo는 [`vacuum_rv_undo_vacuum_heap_record`](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/query/vacuum.c#L7771-L7776)에서 `heap_rv_redo_insert`를 거쳐 `spage_insert_for_recovery`로 옛 레코드를 같은 슬롯에 넣는다. 이 함수는 [슬롯이 비어 있다고 가정](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/storage/slotted_page.c#L1964-L1970)한다. debug는 이 assertion으로 종료한다. release는 슬롯 형식을 바꾸고 다시 할당해 옛 레코드를 쓰므로, 커밋된 행의 레코드는 슬롯에서 떨어져 페이지 레코드 수가 맞지 않게 된다.
+
+develop `4f1a68c1e`의 같은 경로도 [FREE 뒤에 sysop을 commit](https://github.com/CUBRID/cubrid/blob/4f1a68c1ebec12f29bc8ba98b5ce8cacb1fc8735/src/query/vacuum.c#L2428-L2442)하지만, 그 사이에 실패할 수 있는 처리가 없다. PR 7990이 그 사이에 OOS 삭제를 넣으면서 abort 경로가 생겼다. 재시작 복구도 끝나지 않은 sysop을 같은 undo 함수로 되돌리므로, commit 전에 서버가 죽어도 같은 손상이 생긴다. develop에도 FREE와 commit 사이의 매우 짧은 창은 있다. OOS 삭제가 이 창을 페이지 고정과 I/O가 있는 구간으로 넓혔다는 점은 소스에서 추론한 것이다.
+
+`REC_HOME`의 OOS 경로는 home 페이지를 sysop이 끝난 뒤까지 고정하므로 이 문제가 없다. `REC_BIGONE`도 vacuum한 home 슬롯의 페이지를 고정한 채 실패를 처리한다.
+
+[CBRD-27781](https://jira.cubrid.org/browse/CBRD-27781)은 같은 부류의 결함이지만 대상이 다르다. CBRD-27781은 OOS 파일의 chunk 슬롯이고, R5는 heap 파일의 forward 슬롯이다. R5의 수정은 OOS chunk 슬롯의 재사용을 막지 않는다. 이번 재현은 OOS chunk를 지우기 전에 실패를 주입하므로 CBRD-27781의 경로를 실행하지 않는다.
+
+### R5 재현 방법
+
+재현 전용 hook을 기준 소스에 더한 로컬 커밋 `dd9f052c0`(`pr7990-hornet-r5-repro`)을 사용했다. 게시하지 않는다. 서버 환경에 `CUBRID_R5_REPRO_DIR`이 있고 그 아래 `arm` 파일이 있을 때만 한 번 동작한다. forward 페이지를 놓은 직후, OOS 삭제 helper를 호출하는 자리에서 forward OID를 파일에 쓰고 `go` 파일을 최대 120초 기다린다. 그 뒤 helper가 메모리 부족으로 실패한 것처럼 `ER_OUT_OF_VIRTUAL_MEMORY`를 반환한다. 이 오류는 호출자가 블록을 미완료로 남겨 다시 시도하는 [기존 경로](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/query/vacuum.c#L1829-L1833)를 탄다.
+
+드라이버 `r5_repro.py`는 CS 모드 csql로 다음을 수행한다. 각 실행은 새 테이블을 만들고, 테이블과 출력은 지우지 않는다.
+
+1. `id INT PRIMARY KEY, pad VARCHAR(16000), big VARCHAR(8000) STORAGE FORCE_OUTLINE`인 기본 테이블에 피해 행 하나와 filler 40행을 넣는다. 피해 행의 `pad`를 100자에서 3,400자로 늘려 relocation을 만들고, `SHOW HEAP CAPACITY`의 `Num_relocated_recs`가 1인지 확인한다.
+2. `arm` 파일을 만들고 피해 행을 DELETE한다. 다른 테이블에 로그를 써서 vacuum이 hook에 도달하게 한다.
+3. hook이 기록한 forward 슬롯을 `SET TRANSACTION LOCK TIMEOUT 0`과 `SHOW SLOTTED PAGE SLOTS`로 관찰한다. 행마다 commit하는 INSERT를 그 슬롯이 `HOME`이 될 때까지 반복한다.
+4. abort 모드는 `go`를 만들어 실패를 주입한다. crash 모드는 `go` 대신 서버를 `kill -9`한다. 그 뒤 인덱스 경로(`id >= 1000`)와 힙 경로(`id + 0 >= 1000`)의 결과를 커밋된 id와 비교한다. 행이 맞으면 vacuum 재시도로 피해 행의 OOS 레코드 수가 0이 되는지 확인한다.
+
+준비 중 확인한 조건이 있다. 반복 문자열은 압축돼 relocation이 생기지 않으므로 난수 hex 값을 쓴다. 레코드가 `DB_PAGESIZE/4`를 넘으면 큰 열이 OOS로 이동하므로 커진 피해 행을 4KB 미만으로 둔다. 기본 테이블은 REUSE_OID여서 OID를 조회할 수 없으므로 슬롯을 직접 본다. 페이지 래치 대기는 lock timeout이 아니라 300초 고정값을 쓰며, zero-wait만 조건부 고정으로 바뀐다.
+
+각 빌드는 별도 workenv와 이 작업에서 만든 DB만 사용했다. hook, 드라이버, 실행별 결과는 로컬 증거 경로 `/home/vimkim/temp/pr7990-hornet-review-20261029/r5/`에 보존하고 이 저장소에 커밋하지 않는다.
+
+### R5 수정 전 결과
+
+| 빌드와 모드 | 관찰 |
+| --- | --- |
+| debug, abort | forward `1|1603|6`이 `DELETED_WILL_REUSE`인 동안 커밋된 INSERT id 1000이 그 슬롯에 `HOME` 3,344바이트로 들어갔다. 실패를 주입하자 `slotted_page.c:1969`의 `offset_to_record == SPAGE_EMPTY_OFFSET` assertion으로 서버가 종료했다. master의 자동 재시작과 SA `checkdb`의 복구 모두 UNDO에서 같은 assertion으로 실패했다. 이 DB는 다시 열 수 없다. |
+| release, abort | `1|707|6`에 id 1000이 들어간 뒤 실패를 주입했다. abort 중 "page 707 ... may be corrupted"가 기록됐고, 이어서 `spage_compact`가 "6 records was found when 7 was expected" FATAL로 서버를 종료했다. 재시작 UNDO도 같은 손상과 FATAL로 끝났다. |
+| release, crash | OOS 실패 없이 같은 구간에서 `kill -9`했다. 재시작 UNDO가 page 707 손상을 기록했고 이어서 `spage_compact` FATAL이 났다. |
+
+리뷰어의 release 관찰은 서버 유지, 커밋 행 1건 유실, `checkdb`의 레코드 수 불일치였다. 이번 실행도 같은 페이지 레코드 수 불일치이며, 손상 직후 compaction이 일어나 FATAL로 이어졌다.
+
+### R5 결정과 최소 수정
+
+슬롯을 공개해도 되는 경계는 sysop의 끝이다. 그 전에는 abort나 재시작 undo가 슬롯에 옛 레코드를 다시 넣을 수 있다. 따라서 forward 페이지를 `log_sysop_commit` 뒤까지 고정한다.
+
+커밋 `c05abc8b4`는 forward 페이지의 `pgbuf_set_dirty`를 `FREE`에서 `DONT_FREE`로 바꾸고, commit 뒤에 `pgbuf_unfix_and_init`을 호출한다. 실패 경로는 abort 후 반환한다. 호출자는 이미 [반환 뒤 forward 페이지를 unfix](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/query/vacuum.c#L1820-L1823)한다. `heap_add_bestpage`의 위치는 바꾸지 않았다. 페이지를 고정한 동안 후보 페이지의 조건부 래치는 실패하므로 INSERT가 그 공간을 쓰지 못한다. 새 재시도 계층이나 대기 모드는 추가하지 않았다.
+
+수정 후 vacuum은 home과 forward 페이지를 쓰기 래치로 쥔 채 OOS 페이지를 고정한다. `REC_HOME`의 OOS 경로가 이미 home 페이지를 쥔 채 OOS를 지우므로 heap 다음 OOS의 순서는 같다. `oos_delete`는 OOS 데이터 페이지와 OOS 내부 상태만 다루며 heap 페이지나 heap 헤더를 고정하지 않는다. abort의 undo는 같은 스레드가 쓰기 래치를 가진 페이지를 다시 고정하며, `REC_HOME`의 OOS abort가 home 페이지에서 이미 같은 방식을 쓴다. 비용은 OOS 삭제 동안 forward 페이지 래치를 더 쥐는 것이다. 수정 후 실험에서 INSERT가 이 페이지를 기다렸고, 인위적 정지 때문에 약 100초가 걸렸다.
+
+R2는 준비 단계에서 heap 헤더를 기다리는 교착이다. 이 수정은 실행 단계에서 heap 헤더를 고정하지 않으므로 R2의 순환을 새로 만들지 않는다. R2를 수정할 때 forward 페이지의 고정 범위를 함께 확인한다.
+
+### R5 수정 후 검증
+
+수정과 hook을 함께 담은 로컬 테스트 브랜치 `pr7990-hornet-r5-fixed-repro`(`74f82fabb`)로 같은 드라이버를 실행했다.
+
+| 검증 | 관찰 결과 |
+| --- | --- |
+| debug, abort | hook 정지 중 forward `1|963`의 zero-wait 조회가 페이지 래치 대기로 실패했다. 첫 INSERT는 105초를 기다린 뒤 진행했다. hook이 120초 뒤 실패를 주입해 abort한 뒤, vacuum 재시도가 OOS 레코드를 0으로 정리했다. id 1000과 1001이 인덱스와 힙에서 모두 조회됐고 assertion은 없었다. |
+| debug, crash | hook 정지 중 INSERT가 30초 동안 막힌 상태에서 `kill -9`했다. 재시작이 정상 완료됐고, 재시도 후 forward 슬롯이 `DELETED_WILL_REUSE`, OOS 레코드가 0이 됐다. |
+| release, abort | debug와 같은 순서와 결과. id 1000과 1001이 보존됐고 서버 오류 로그에 FATAL과 손상 메시지가 없다. |
+| release, crash | debug와 같은 결과. 재시작 후 서버 오류 로그에 FATAL과 손상 메시지가 없다. |
+| SA `checkdb` | 수정 후 DB `r5fix1`, `r5fix2`, `r5relfix1`, `r5relfix2` 모두 rc 0 |
+| CTest | hook 없는 수정 커밋 `c05abc8b4`의 debug 빌드에서 구성된 44개 전체 통과(OOS fixture, `test_oos_vacuum_server`, `test_oos_real_vacuum_server`, `test_oos_sql_crash_recovery` 포함). 504초 |
+| 빌드와 스타일 | debug·release 빌드와 설치, pre-commit codestyle 통과 |
+
+수정 후 첫 두 abort 시도는 드라이버 문제로 결론 없이 끝났다. 하나는 zero-wait로 바꾸기 전 관찰 쿼리가 60초 타임아웃에 걸렸고, 다른 하나는 일시적인 접속 실패였다. 서버는 살아 있었고 assertion도 없었으므로 엔진 실패로 세지 않는다.
+
+남은 한계가 있다. hook으로 창을 넓힌 결정적 재현이며 실제 발생 빈도는 측정하지 않았다. hook은 서버 코드에 환경 변수 검사를 넣으므로 게시하지 않고, 회귀 테스트로도 남기지 않았다. 여러 chunk의 OOS 삭제 도중 실패, DONT_REUSE_OID 테이블, HA 복제는 확인하지 않았다. OOS chunk 슬롯의 같은 부류 문제는 CBRD-27781에 남는다.
+
+### R5 답글 초안
+
+> 지적하신 경로를 재현했습니다. forward 페이지를 놓은 직후 OOS 삭제 실패를 주입했고, 그 사이 커밋된 INSERT가 바로 그 forward 슬롯에 들어간 것을 `SHOW SLOTTED PAGE SLOTS`로 확인했습니다. debug는 `spage_insert_for_recovery`의 assertion으로 종료했고 재시작 복구도 같은 assertion에서 실패했습니다. release는 abort 중 페이지 손상 후 `spage_compact`의 레코드 수 불일치 FATAL로 종료했습니다. OOS 실패 없이 같은 구간에서 서버를 강제 종료해도 재시작 undo가 같은 손상을 냈습니다. forward 페이지를 sysop commit 뒤에 놓도록 수정했고, 같은 주입에서 INSERT가 페이지를 기다린 뒤 진행하며 행 보존, 인덱스와 힙 일치, `checkdb`를 debug와 release에서 확인했습니다. OOS chunk 슬롯의 같은 부류 문제는 CBRD-27781에서 따로 다룹니다.
+
+초안은 아직 게시하지 않았다. GitHub thread도 미해결 상태로 유지한다.
 
 ## R2. vacuum과 새 힙 페이지 할당의 교착
 
@@ -276,6 +355,7 @@ PR 8235가 고쳤을 수 있다는 원문의 설명은 확인할 대상이다. �
 | 2026-10-30 | JIRA 도구 완료 | 승인받은 `3f282aa`를 main에 fast-forward로 통합·push하고 `just sync`로 설치했다. 재검증 297개와 설치된 CLI의 실제 변환·readback 검사가 통과했고, 현재 JIRA 웹 본문도 정상이다. | 설치본과 main의 변환기 바이트 일치, 원본 issue payload 일치, Work 617 | 완료. 병합된 임시 worktree·브랜치 정리, main clean |
 | 2026-10-30 | R1 부모 연결 | 사용자 승인 후 CBRD-27827을 Correct Error에서 Sub-task로 전환하고 부모를 OOS M2 CBRD-26583으로 지정했다. API 재조회로 이슈 번호·제목·본문·Open 상태·우선순위·담당자·링크 보존과 웹 렌더 결과를 확인했다. | Convert wizard 결과와 전후 issue 스냅샷, 게시 맥락 | 부모 연결 완료. 독립 회사 PR 8330의 리뷰·검증 방식 유지 |
 | 2026-10-30 | R1 CI 분류 | release/debug 빌드와 SQL·medium이 통과했다. shell 실패는 `_36_damson/cbrd_23608_tde/temp_enc_06` 한 건으로 로그에서 확인했다. 사용자가 알려진 flaky라고 확인했으므로 별도 R1 회귀 조사를 다음 작업의 선행 조건으로 두지 않는다. | shell 05의 NOK 항목, collect의 `shell: 1 failed`, 사용자 확인 | 다음은 R5 검토. CI 실패 상태와 팀 리뷰 대기는 유지 |
+| 2026-10-30 | R5 | 수용. 수정 전 debug assertion, release 페이지 손상 FATAL, 재시작 복구 실패를 재현했다. forward 페이지를 `log_sysop_commit` 뒤에 놓도록 수정하고 같은 주입의 abort·crash 모드를 debug·release에서 통과했다. | 재현 hook `dd9f052c0`(게시하지 않음), 수정 `c05abc8b4`, 위 R5 검증 결과 | 중복 검색, 티켓 발급, 회사 PR 본문과 게시 승인 |
 
 수집 원본은 `/home/vimkim/temp/pr7990-hornet-review-20261029/review-snapshot.json`에 보관한다. 원본 JSON, 빌드 로그, 중간 산출물은 문서 저장소에 커밋하지 않는다.
 
