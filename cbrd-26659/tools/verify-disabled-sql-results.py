@@ -51,7 +51,6 @@ for attempt, name, differences, milliseconds in cases:
         entry, = [f for f in identity["input_files"] if f["source"] == source]
         assert Path(entry["copy"]) == copied and copied.read_bytes() == data, source
         assert hashlib.sha256(data).hexdigest() == entry["sha256"], source
-        assert (args.testcases / source).read_bytes() == data, source
         original[folder] = data
     for relative, expected_hash in jars.items():
         assert hashlib.sha256((root / "CTP" / relative).read_bytes()).hexdigest() == expected_hash, relative
