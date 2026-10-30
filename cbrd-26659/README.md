@@ -47,8 +47,8 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
 | [SQL 3개 수정·재활성화 결과](CBRD-26659-sql3-restoration_20261030_b038c42_codex.md) | native·CI의 복원 3 PASS, 120초 감시 정정과 CI 실패·집계 제한 | 2026-10-30 | 2026-10-30 | 원인 분석을 마친 SQL 3개의 복구와 게시·검증 범위를 보고 |
-| [SQL 재활성화 PR body 초안](CBRD-26659-oos-sql-reactivation-pr-body_b038c42_codex.md) | PR #3688의 활성 28쌍·복원 검증과 최종 CI 실패·제한 설명 | 2026-10-30 | 2026-10-30 | 실제 실행 선택에 맞춘 PR 본문을 게시 전 검토 |
-| [SQL 재활성화 PR context](CBRD-26659-oos-sql-reactivation-pr-context_b038c42_codex.md) | 고정 TC head·기존 본문 식별값과 문서·본문 게시 제안 | 2026-10-30 | 2026-10-30 | 승인 범위와 게시 대상을 확인하고 중단된 준비를 재개 |
+| [SQL 재활성화 PR body](CBRD-26659-oos-sql-reactivation-pr-body_b038c42_codex.md) | PR #3688에 게시한 활성 28쌍·복원 검증과 최종 CI 실패·제한 설명 | 2026-10-30 | 2026-10-30 | 실제 실행 선택에 맞춘 PR 본문을 게시 전 검토 |
+| [SQL 재활성화 PR context](CBRD-26659-oos-sql-reactivation-pr-context_b038c42_codex.md) | 고정 TC head·본문 식별값과 승인한 문서·PR 게시 결과 | 2026-10-30 | 2026-10-30 | 승인 범위와 게시 대상을 확인하고 중단된 준비를 재개 |
 | [비활성 SQL 3개 재현과 실패 원인](CBRD-26659-disabled-sql-reproduction_20261030_e3589ae_codex.md) | 원본 3 NOK와 오류 번호 불일치 근거, 후속 복구·감시 설명 정정 | 2026-10-30 | 2026-10-30 | 과거 실패 SQL의 현재 원인과 답안 수정·재활성화의 후속 범위를 확정 |
 | [SQL 결과 2건 집계 차이 분석](CBRD-26659-sql-count-discrepancy_20261030_run40837919358_codex.md) | CTP 중첩 결과 집계 누락의 원본 대조·실제 클래스 재현과 한계 | 2026-10-30 | 2026-10-30 | 실행 누락과 집계 오류를 구분하고 SQL 무결성 실패의 후속 처리를 정리 |
 | [shell_heavy PR body](CBRD-26659-shell-heavy-pr-body_631e3fd_codex.md) | draft PR #4627에 게시한 OOS 38개·지원 파일 이관 본문 | 2026-10-29 | 2026-10-29 | 별도 heavy draft PR에 게시할 내용을 검토 |
