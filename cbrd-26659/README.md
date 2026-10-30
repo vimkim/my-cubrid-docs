@@ -48,7 +48,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [shell 실패 61개 분류와 첫 대표](CBRD-26659-shell61-classification_20261030_e3589ae_codex.md) | 사례별 과거 증상 61개, 원문 show_contract의 native PASS와 남은 원인 분석 | 2026-10-30 | 2026-10-30 | 비활성 shell의 재현 순서와 원인 미확정 범위를 근거와 함께 인계 |
+| [shell 실패 61개 분류와 첫 대표](CBRD-26659-shell61-classification_20261030_e3589ae_codex.md) | 과거 증상 61개, 원문 show_contract PASS와 환경·helper 리비전 차이 | 2026-10-30 | 2026-10-30 | 비활성 shell의 재현 순서와 원인 미확정 범위를 근거와 함께 인계 |
 | [SQL 3개 수정·재활성화 결과](CBRD-26659-sql3-restoration_20261030_b038c42_codex.md) | native·CI의 복원 3 PASS, 120초 감시 정정과 CI 실패·집계 제한 | 2026-10-30 | 2026-10-30 | 원인 분석을 마친 SQL 3개의 복구와 게시·검증 범위를 보고 |
 | [SQL 재활성화 PR body](CBRD-26659-oos-sql-reactivation-pr-body_b038c42_codex.md) | PR #3688에 게시한 활성 28쌍·복원 검증과 최종 CI 실패·제한 설명 | 2026-10-30 | 2026-10-30 | 실제 실행 선택에 맞춘 PR 본문을 게시 전 검토 |
 | [SQL 재활성화 PR context](CBRD-26659-oos-sql-reactivation-pr-context_b038c42_codex.md) | 고정 TC head·본문 식별값과 승인한 문서·PR 게시 결과 | 2026-10-30 | 2026-10-30 | 승인 범위와 게시 대상을 확인하고 중단된 준비를 재개 |

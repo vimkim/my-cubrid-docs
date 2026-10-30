@@ -46,9 +46,11 @@ A에는 OOS FAIL 60개가 있지만 manifest는 중복 사례의 더 늦은 B �
 
 `CUBRID_TMP` 미정의 그룹 5개 중 `cbrd_26659_show_contract`를 선택했다. 과거 로그가 실패 위치를 명시하고 입력·의존 경로가 작아 환경 전제와 엔진 검사를 구분하기 쉽기 때문이다. 가장 큰 39개 그룹의 해결을 대신하는 대표는 아니다.
 
-과거 A의 shard 19 message 103행은 `show_controller.sh: line 15: CUBRID_TMP: unbound variable`다. 당시 [controller](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/10a8fc82d34cd2c54c2caa403886e3528852d6fe/shell/_40_guava/cbrd_26659_show_contract/cases/show_controller.sh#L15)는 `set -u` 상태에서 그 변수를 읽는다. 같은 controller·직접 참조 helper는 현재 TC와 바이트가 같다. 이 오류는 당시 shell 프로세스의 미정의 변수 접근을 보여 준다. 환경변수 제공 계약과 TC의 환경 전제 중 어느 쪽을 바꿔야 하는지는 아직 판단하지 않았다.
+과거 A의 shard 19 message 103행은 `show_controller.sh: line 15: CUBRID_TMP: unbound variable`다. 당시 [controller](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/10a8fc82d34cd2c54c2caa403886e3528852d6fe/shell/_40_guava/cbrd_26659_show_contract/cases/show_controller.sh#L15)는 `set -u` 상태에서 그 변수를 읽는다. Entry와 확인한 controller·rows·runtime·lifecycle·observer·record flags·subreaper·policy metadata 파일은 현재 TC와 바이트가 같다. 이 오류는 당시 shell 프로세스의 미정의 변수 접근을 보여 준다. 환경변수 제공 계약과 TC의 환경 전제 중 어느 쪽을 바꿔야 하는지는 아직 판단하지 않았다.
 
 원래 비활성 entry를 disposable corpus의 원래 `shell/.../cases/*.sh` 경로로 복사했다. `show_contract`, `policy_contract`, `oos_common`, `oos_native`의 파일을 포함한 총 53개 입력의 bytes·mode를 현재 TC Git 객체와 대조했다. 원본 TC checkout은 그대로 두고 `scenario_disk=on` overlay에서 실행했다. 원본 assertion·helper·300초 내부 timeout은 수정하지 않았다. 첫 대표 실행은 `show01` 한 번이다.
+
+복사한 53개 전체를 과거 TC와도 직접 비교했다. 37개는 같고, 11개는 다르며, 5개는 과거 리비전에 없다. 이 범위에는 실제로 쓰이지 않는 helper·test 파일도 포함하며 전체 동적 사용 여부는 추적하지 않았다. 현재 TC의 bytes를 보존한 사실과 과거 helper 전체가 동일하다는 주장을 구분한다. 파일별 결과는 `show01/historical-input-comparison.json`에 보존한다.
 
 | 실제 관측 | 결과 |
 | --- | --- |
@@ -61,7 +63,7 @@ A에는 OOS FAIL 60개가 있지만 manifest는 중복 사례의 더 늦은 B �
 | 실제 환경 | 보존된 `show.identity.log`에 attempt-local `CUBRID_TMP`가 있음 |
 | 정리 | 관측한 전용 PID·IPC·mount·user namespace가 있었고, 종료 후 해당 설치 프로세스·관측 namespace holder는 모두 0 |
 
-시간은 서로 다른 구간의 기록이다. 성능 비교가 아니다. 현재 native 환경에서 원래 검사를 끝까지 실행해 PASS했지만, 과거 CI와 Engine·runner·환경이 함께 다르다. 따라서 과거 실패의 원인이 엔진 수정으로 해결됐다고 귀속하지 않는다. 같은 그룹의 다른 4개도 PASS했다고 간주하지 않는다. 현재 이 TC는 원래 저장소에서 여전히 비활성이다.
+시간은 서로 다른 구간의 기록이다. 성능 비교가 아니다. 이번 `CUBRID_TMP` 값은 실행 준비 스크립트가 환경에 명시적으로 주입했다. 현재 native 환경에서 원래 entry의 검사를 끝까지 실행해 PASS했지만, 과거 CI와 Engine·runner·환경·일부 helper 리비전이 함께 다르다. 따라서 과거 실패의 원인이 엔진 수정으로 해결됐다고 귀속하지 않는다. 같은 그룹의 다른 4개도 PASS했다고 간주하지 않는다. 현재 이 TC는 원래 저장소에서 여전히 비활성이다.
 
 ### 120초 제한의 범위
 
