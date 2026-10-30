@@ -30,7 +30,7 @@
 - [x] T04. helper 반환 후 지역 scratch의 수명이 끝나는 문제와 Resolve·변환을 같은 수명에 묶는 이유를 설명한다.
 - [x] T05. 일반 inline bytes와 임시 OOS bytes의 수명, COPY 요청과 type handler의 기존 계약을 설명한다.
 - [x] T06. record의 `HAS_OOS`, 개별 필드의 `IS_OOS`, 요청한 OOS 속성 수에 따른 scalar·grouped 선택을 설명한다.
-- [ ] T07. 기존 record layout 재사용, offset 폭과 길이 계산, collection의 물리 순서 처리를 설명한다.
+- [x] T07. 기존 record layout 재사용, offset 폭과 길이 계산, collection의 물리 순서 처리를 설명한다.
 - [ ] T08. 일반·without-OID·lazy 읽기와 index-key 소비자의 연결 및 변경 범위를 설명한다.
 - [ ] T09. NULL·기본값·구 representation·pending owner와 오류 시 정리가 유지되는 경로를 설명한다.
 - [ ] T10. 코드 diff와 성능 비교의 기준 revision, instructions와 경과 시간, 테스트 및 측정 범위의 한계를 설명한다.
@@ -38,12 +38,15 @@
 
 ## 다음에 이어갈 위치
 
-다음 항목은 T07의 record layout 재사용과 offset·길이 계산이다.
-T06에서는 record의 요약 flag와 필드 flag를 구분하고, reader에 요청한 OOS 속성이
-0개면 OOS Resolve 없이, 1개면 scalar Resolve로, 2개 이상이면 grouped Resolve로
-읽는 선택을 설명했다. 이 선택 정책은 수정 전부터 있었으며, 이번 변경은 grouped 준비 상태를
-별도 OOS helper로 옮긴 것이다. 근거는 [flag 구분](CBRD-27785-code-walkthrough_f1b99031c_codex.md#mental-model)과
-[dispatcher의 책임 분리](CBRD-27785-code-walkthrough_f1b99031c_codex.md#change-dispatch)에 있다.
+다음 항목은 T08의 일반·without-OID·lazy 읽기와 index-key 소비자다.
+T07에서는 수정 전에도 record당 한 번 계산하던 layout의 `var_table`과 `offset_size`를
+재사용해 1·2·4바이트 중 같은 폭의 분기에서 두 offset을 읽는 변경을 설명했다.
+두 offset의 차이가 0이면 기존 NULL 변환으로 보낸다. 이 helper가 모든 타입의 길이를
+그 차이로 확정하는 것은 아니며, collection·LOB 이외에는 `raw.length=-1`로 둔다.
+collection·LOB는 속성 순서와 물리 순서가 다를 수 있어 현재보다 큰 offset 중 가장 작은 값을
+끝 경계로 찾는다. 이 규칙을 유지하면서 header 재해석을 줄인 변경이다.
+근거는 [variable helper 해설](CBRD-27785-code-walkthrough_f1b99031c_codex.md#change-variable)과
+고정 학습 revision의 `src/storage/heap_file.c:11206`이다.
 
 ## 지금까지 답변에서 확인한 내용
 
