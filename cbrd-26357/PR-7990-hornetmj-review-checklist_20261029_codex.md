@@ -14,7 +14,8 @@ R1은 실제 동시 INSERT로 같은 assertion을 재현한 뒤 7줄을 삭제�
 - 엔진 수정 작업은 `/home/vimkim/gh/cb/pr7990-hornet-r1`, `CBRD-27827-oos-insert-header-wait`에서 진행한다. 초기 브랜치 이름은 `review/pr7990-hornet-r1`이었다. 각 독립 수정 PR의 base는 `CUBRID/cubrid:feature/oos-merge`이다. 팀 리뷰와 해당 PR head 검증을 받은 뒤 GitHub PR로 반영한다.
 - 문서는 `my-cubrid-docs`의 `main`에 통합·게시한다. 초기 task worktree는 `/home/vimkim/gh/my-cubrid-docs-pr7990-hornet-review`, 브랜치는 `docs/pr7990-hornet-review-20261029`이다. 통합 후 정리되면 `main`의 이 문서에서 재개한다.
 - 각 항목의 순서는 검토, 이해, 결정, 수정, 검증, 기록이다. 하나의 수정과 검증을 마친 뒤 다음 수정을 시작한다.
-- 현재 단계는 R1의 회사 draft PR 8330 게시 완료와 팀 리뷰 대기이다. [gha-ci 40853451200](https://github.com/CUBRID/cubrid/actions/runs/40853451200)는 release/debug 빌드와 SQL·medium이 통과했고 shell은 `temp_enc_06` 한 건이 실패했다. 사용자는 이 케이스가 알려진 flaky라고 확인했다. 실패 목록이 일치하므로 이를 R1 회귀 의심으로 별도 조사하느라 R5를 미루지 않는다. CI의 실제 shell 실패 상태는 그대로 기록한다. 2026-10-30에 R5의 재현, 수정, 검증을 로컬에서 마쳤다. 다음 단계는 R5 티켓과 회사 PR 준비이며 게시 승인이 필요하다. R2, R3, R4, R6의 수정은 아직 시작하지 않았다.
+- R1은 회사 draft PR 8330의 팀 리뷰 대기이다. [gha-ci 40853451200](https://github.com/CUBRID/cubrid/actions/runs/40853451200)는 release/debug 빌드와 SQL·medium이 통과했고 shell은 `temp_enc_06` 한 건이 실패했다. 사용자는 이 케이스가 알려진 flaky라고 확인했다. 실패 목록이 일치하므로 이를 R1 회귀 의심으로 별도 조사하느라 다른 리뷰를 미루지 않는다. CI의 실제 shell 실패 상태는 그대로 기록한다. 2026-10-30 사용자가 R5는 다른 서브에이전트가 진행한다고 알렸고, root는 독립적인 R6을 진행한다. R2·R3·R4의 수정은 아직 시작하지 않았다.
+- R5는 별도 담당자가 2026-10-30 재현·수정·검증을 로컬에서 마쳤다. source는 `c05abc8b4`이며 다음 단계는 R5 티켓과 회사 PR 준비이다. 해당 담당자의 게시 승인 절차를 따르고 R6과 함께 묶지 않는다.
 - 사용자가 승인한 범위는 문서·JIRA 노트 통합 및 게시, R1 소스의 fork push, 회사 draft PR 생성·담당자 지정, 사전 조건 통과 후 전체 CI 한 번이다. 리뷰 답글 게시, thread resolve, 소스 PR 머지는 포함하지 않는다.
 
 ## 처리 순서
@@ -26,7 +27,7 @@ R1은 사용자가 지정한 링크이므로 먼저 다룬다. 이후에는 커�
 | 1 | [R1. 동시 INSERT의 파일 소유 확인 실패](#r1-동시-insert의-파일-소유-확인-실패) | INSERT 실패, debug abort | zero-wait 범위와 파일 헤더 경합 | 회사 PR 8330 리뷰 대기. shell은 알려진 flaky `temp_enc_06` 한 건 실패 |
 | 2 | [R5. relocation undo가 재사용 슬롯을 덮어씀](#r5-relocation-undo가-재사용-슬롯을-덮어씀) | 커밋 행 손실, 힙 손상 | forward 페이지 공개와 sysop 경계 | 로컬 수정 `c05abc8b4`와 검증 완료. 티켓과 PR 준비 대기 |
 | 3 | [R2. vacuum과 새 힙 페이지 할당의 교착](#r2-vacuum과-새-힙-페이지-할당의-교착) | INSERT 장시간 대기와 abort | PR 8235의 처리 범위와 미통합 변경 | 대기 |
-| 4 | [R6. 미사용 복구 인덱스 제거](#r6-미사용-복구-인덱스-제거) | 불필요한 로그 형식 번호 고정 | 로그 생산자 존재 여부 | 대기 |
+| 4 | [R6. 미사용 복구 인덱스 제거](#r6-미사용-복구-인덱스-제거) | 불필요한 로그 형식 번호 고정 | 로그 생산자 존재 여부 | root가 독립 검토·검증 진행 |
 | 5 | [R3. 페이지 할당 시 전체 파일 스윕](#r3-페이지-할당-시-전체-파일-스윕) | 큰 파일의 INSERT 지연 | 스윕 발동 조건과 진행 위치 | 대기 |
 | 6 | [R4. 재시작 후 bestspace 복원](#r4-재시작-후-bestspace-복원) | 빈 공간 미사용, 파일 증가 | redesign 후 적용 계획과 R3 의존성 | 후속 계획 확인 대기 |
 
@@ -300,12 +301,14 @@ PR 8235가 고쳤을 수 있다는 원문의 설명은 확인할 대상이다. �
 [리뷰 원문](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4409612618). 대상은 `RVOOS_NOTIFY_VACUUM`이다.
 
 - [x] 원문을 수집한다.
-- [ ] 전체 소스에서 해당 로그의 생산자와 소비자를 검색한다.
-- [ ] `recovery.h`, `recovery.c`, `mvcc.h`의 네 참조와 후속 번호를 확인한다.
-- [ ] 현재 저장 형식 정책과 번호 재배치의 영향을 판단한다.
+- [x] 전체 소스에서 해당 로그의 생산자와 소비자를 검색한다. 선언, 빈 테이블 항목과 두 분류 조건 외에 생산자는 없다.
+- [x] `recovery.h`, `recovery.c`, `mvcc.h`의 네 참조와 후속 번호를 확인한다.
+- [x] 현재 저장 형식 정책과 번호 재배치의 영향을 판단한다. ADR-0006에 따라 형식 번호도 1에서 2로 올려 기존 개발 DB를 복구 전에 거부한다.
 - [ ] 불필요한 참조를 제거하고 후속 인덱스를 조정한다.
 - [ ] `rv_check_rvfuns`, OOS 변경 중 강제 종료와 복구, `checkdb`를 확인한다.
 - [ ] 결과와 답글 초안을 기록한다.
+
+R6은 `review/pr7990-hornet-r6`의 독립 worktree에서 진행하며 R5 worktree를 수정하지 않는다. [상세 판단·검증 기록](PR-7990-R6-recovery-index-cleanup_dcbf09e_codex.md)을 함께 갱신한다. 현재의 빈 예약 항목을 제거하는 작업은 CBRD-27230의 실제 commit 알림 구현 완료를 의미하지 않는다.
 
 ## R3. 페이지 할당 시 전체 파일 스윕
 
