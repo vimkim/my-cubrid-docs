@@ -33,23 +33,35 @@
 - [x] T07. 기존 record layout 재사용, offset 폭과 길이 계산, collection의 물리 순서 처리를 설명한다.
 - [x] T08. 일반·without-OID·lazy 읽기와 index-key 소비자의 연결 및 변경 범위를 설명한다.
 - [x] T09. NULL·기본값·구 representation·pending owner와 오류 시 정리가 유지되는 경로를 설명한다.
-- [ ] T10. 코드 diff와 성능 비교의 기준 revision, instructions와 경과 시간, 테스트 및 측정 범위의 한계를 설명한다.
+- [x] T10. 코드 diff와 성능 비교의 기준 revision, instructions와 경과 시간, 테스트 및 측정 범위의 한계를 설명한다.
 - [ ] T11. 앞의 내용을 팀 발표 순서로 정리하고, 예상 질문에 대한 설명을 준비한다.
 
 ## 다음에 이어갈 위치
 
-다음 항목은 T10의 성능 비교 기준과 검증 범위다.
-T09에서는 성능을 위해 OOS 전용 준비를 분리하되, 값 해석은 기존 공통 변환을 유지한다는
-연결을 설명했다. Fixed NULL은 bound bitmap, variable NULL은 기존 offset 규칙을 따르며,
-구 representation에 속성이 없으면 cache의 default를 사용한다.
-pending 메모리 값의 해석에는 기존 owner를 Resolve까지 전달하고, reader가 owner를 새로
-만들거나 수명을 끝내지 않는다. Resolve 실패, 변환 실패와 grouped 준비 중 실패에도
-할당된 임시 OOS buffer를 담당 경로가 정리한다.
-근거는 [수명·오류·representation 계약](CBRD-27785-code-walkthrough_f1b99031c_codex.md#ownership)에 있다.
-고정 학습 revision의 `unit_tests/oos/sql/test_oos_sql_crud.cpp:328`에서 NULL과
-옛 행의 추가 컬럼 default를, `unit_tests/oos/sql/test_oos_sql_deferred_write.cpp:991`에서
-source 정리 후 pending grouped·scalar 값의 내용을 검사하는 코드를 확인했다.
-이 학습 과정에서 테스트를 새로 실행한 것은 아니다.
+다음 항목은 T11의 팀 발표 순서와 예상 질문에 대한 설명 정리다.
+T10에서는 코드 diff의 base `dcbf09e4f`와 성능 증가율의 분모인 통합 전 고정 기준
+`4781495f0`를 구분했다. 학습 소스는 `f1b99031c`다.
+기존 기록의 메모리 상주 일반 heap 200,000행 스캔 두 건에서 서버 `instructions:u`는
+통합 전 기준보다 약 +1.11%, +1.36% 많았고, 실행 순서를 뒤집어도 비슷했다.
+이는 당시 두 heap/heap 스캔에 적용한 +2% 범위였다는 기록이며, 같은 비율의 SQL 경과 시간
+단축이나 최신 PR 전체의 합격을 뜻하지 않는다. Warm scan의 I/O read 0과 실제 heap 저장을
+확인했다고 보고돼 있으므로 큰 값의 I/O 이득을 측정한 결과로 해석하지 않는다.
+기존 측정은 실행당 20회 스캔, 질의별 2라운드의 각 5회 실행 중 첫 실행을 제외한 방식이다.
+최종 표본의 instructions 범위가 중앙값의 0.009% 미만이었다는 것도 기존 기록이며 새 실측은 아니다.
+
+기존 기능 측 빌드에는 `CUBRID_UNIT_TEST_ENABLED`가 포함됐고 baseline에는 이 OOS 테스트
+코드가 없었다는 차이를 함께 설명했다. 동일한 모든 production 조건의 성능 보장으로 확대하지 않는다.
+기존 집중 CTest 15/15, snapshot·vacuum 3/3과 characterization 4/4는 과거 실행 결과다.
+UPDATE, heap/OOS·overflow/OOS 비교, 큰 데이터 I/O 이득과 전체 HA·복구 검증은 이 읽기
+측정의 결론 밖에 있다. 근거와 전체 source SHA는 [기존 분석·검증 기록](CBRD-27785-oos-read-performance_bcb900d_codex.md)에 있다.
+
+이번 학습에서는 실측 엔진 `e77ffbf0e3c4a2dcf1f3a918bafcabf91ac136cd`와 학습 revision 사이의
+`src`·`unit_tests` diff가 비어 있음을 확인했다. 학습 revision과 공유용
+`bcb900d1696756a120ec0a2b7885c212f71ebc07` 사이에는 `src`·`unit_tests`·`contrib` diff도 없다.
+이는 소스 대응을 확인한 것이며, 학습 revision의 바이너리를 새로 빌드하거나 raw 성능 로그를
+재감사한 것은 아니다. 이번 학습에서 엔진 테스트·성능 측정·CI를 새로 실행하지 않았다.
+
+## 보충 설명 기록
 
 T08 보충으로 lazy 읽기의 의미를 설명했다. Heap record를 이미 가져온 뒤에도,
 속성을 `DB_VALUE`로 읽는 작업은 그 값이 실제로 필요할 때까지 미룰 수 있다.
