@@ -55,6 +55,19 @@ T08 보충으로 lazy 읽기의 의미를 설명했다. Heap record를 이미 �
 `heap_attrvalue_peek_lazy`가 처음 접근할 때 읽는다. 같은 행에서 다시 접근하면 읽은 값을 재사용한다.
 근거는 고정 학습 revision의 `src/storage/heap_file.c:12008`과 `:12389`다.
 
+T08의 추가 보충에서는 회귀 원인과 수정의 영향을 받는 소비자를 구분했다.
+lazy는 불필요한 속성 읽기를 건너뛰는 방식이고, 실제로 읽을 때는 공통 scalar reader를 호출한다.
+따라서 공통 reader의 OOS 대응 비용을 줄이는 수정이 lazy 소비자에도 연결되는 것이며,
+lazy 선택 로직 자체가 회귀 원인으로 입증됐다는 뜻은 아니다.
+OOS 통합 전 기준 `4781495f01523a3ecc5891e3377ad62cf876a1cd`의
+`src/storage/heap_file.c:11462`에도 lazy 읽기 함수가 있다.
+수정 전 feature `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`와 학습 revision 사이에는
+이 lazy 읽기 함수의 본문이 같다는 점도 확인했다.
+[기존 진단 기록](CBRD-27785-oos-read-performance_bcb900d_codex.md)은 일반 행의 reader와 loop를
+기준 구조로 바꾸면 추가 instructions가 줄고, 원상 복구하면 다시 늘었다고 기록한다.
+이는 공통 읽기 경로의 OOS 대응 준비·dispatch 비용을 뒷받침하며,
+scratch·inlining·코드 배치 각각의 기여율을 분리한 증거는 아니다. 새 측정을 수행한 것은 아니다.
+
 ## 지금까지 답변에서 확인한 내용
 
 질문형으로 진행하던 시기의 기록이며, 앞으로 퀴즈를 계속한다는 뜻은 아니다.
