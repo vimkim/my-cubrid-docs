@@ -32,20 +32,24 @@
 - [x] T06. record의 `HAS_OOS`, 개별 필드의 `IS_OOS`, 요청한 OOS 속성 수에 따른 scalar·grouped 선택을 설명한다.
 - [x] T07. 기존 record layout 재사용, offset 폭과 길이 계산, collection의 물리 순서 처리를 설명한다.
 - [x] T08. 일반·without-OID·lazy 읽기와 index-key 소비자의 연결 및 변경 범위를 설명한다.
-- [ ] T09. NULL·기본값·구 representation·pending owner와 오류 시 정리가 유지되는 경로를 설명한다.
+- [x] T09. NULL·기본값·구 representation·pending owner와 오류 시 정리가 유지되는 경로를 설명한다.
 - [ ] T10. 코드 diff와 성능 비교의 기준 revision, instructions와 경과 시간, 테스트 및 측정 범위의 한계를 설명한다.
 - [ ] T11. 앞의 내용을 팀 발표 순서로 정리하고, 예상 질문에 대한 설명을 준비한다.
 
 ## 다음에 이어갈 위치
 
-다음 항목은 T09의 NULL·기본값·구 representation·pending owner와 오류 시 정리다.
-T08에서는 일반 읽기와 without-OID 읽기가 representation을 맞춘 뒤 같은 dispatcher로
-이어지고, lazy 읽기는 record와 layout을 함께 보관해 필요한 속성을 scalar reader로 읽는
-연결을 설명했다. Grouped prefetch 값은 scalar reader를 거치지 않고 공통 변환기로 간다.
-index-key는 변경된 variable helper에서 OOS 여부를 받아 자체 Resolve와 type handler 변환을
-수행하며, 자체 scratch 배열과 임시 OOS bytes의 COPY·해제 처리가 남는다.
-근거는 [읽기 진입점](CBRD-27785-code-walkthrough_f1b99031c_codex.md#mental-model)과
-[index-key 변경 범위](CBRD-27785-code-walkthrough_f1b99031c_codex.md#change-index)에 있다.
+다음 항목은 T10의 성능 비교 기준과 검증 범위다.
+T09에서는 성능을 위해 OOS 전용 준비를 분리하되, 값 해석은 기존 공통 변환을 유지한다는
+연결을 설명했다. Fixed NULL은 bound bitmap, variable NULL은 기존 offset 규칙을 따르며,
+구 representation에 속성이 없으면 cache의 default를 사용한다.
+pending 메모리 값의 해석에는 기존 owner를 Resolve까지 전달하고, reader가 owner를 새로
+만들거나 수명을 끝내지 않는다. Resolve 실패, 변환 실패와 grouped 준비 중 실패에도
+할당된 임시 OOS buffer를 담당 경로가 정리한다.
+근거는 [수명·오류·representation 계약](CBRD-27785-code-walkthrough_f1b99031c_codex.md#ownership)에 있다.
+고정 학습 revision의 `unit_tests/oos/sql/test_oos_sql_crud.cpp:328`에서 NULL과
+옛 행의 추가 컬럼 default를, `unit_tests/oos/sql/test_oos_sql_deferred_write.cpp:991`에서
+source 정리 후 pending grouped·scalar 값의 내용을 검사하는 코드를 확인했다.
+이 학습 과정에서 테스트를 새로 실행한 것은 아니다.
 
 T08 보충으로 lazy 읽기의 의미를 설명했다. Heap record를 이미 가져온 뒤에도,
 속성을 `DB_VALUE`로 읽는 작업은 그 값이 실제로 필요할 때까지 미룰 수 있다.
