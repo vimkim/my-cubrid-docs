@@ -2,7 +2,7 @@
 
 팀장님 리뷰를 하나씩 이해하고 결정한 뒤, 필요한 수정과 검증을 마친다. 이 문서는 OOS 작성자와 리뷰어가 다음 작업을 이어갈 수 있도록 진행 상태와 근거를 보존한다.
 
-R1은 실제 동시 INSERT로 같은 assertion을 재현한 뒤 7줄을 삭제해 수정했다. 수정 후 CS 10회와 집중 CTest가 통과했고, [회사 draft PR 8330](https://github.com/CUBRID/cubrid/pull/8330)으로 게시했다. R5는 수정 전 debug·release와 재시작 복구의 손상을 재현했고, forward 페이지를 sysop commit 뒤까지 고정하는 로컬 수정으로 같은 주입을 통과했다. R5의 티켓과 PR은 아직 만들지 않았다. R6도 독립 브랜치에서 수정·로컬 검증을 마치고 [회사 draft PR 8347](https://github.com/CUBRID/cubrid/pull/8347)으로 게시했다. R2·R3·R4는 대기 중이다.
+R1은 실제 동시 INSERT로 같은 assertion을 재현한 뒤 7줄을 삭제해 수정했다. 수정 후 CS 10회와 집중 CTest가 통과했고, [회사 draft PR 8330](https://github.com/CUBRID/cubrid/pull/8330)으로 게시했다. R5는 수정 전 debug·release와 재시작 복구의 손상을 재현했고, forward 페이지를 sysop commit 뒤까지 고정하는 로컬 수정으로 같은 주입을 통과했다. R5는 중복 검색 뒤 [CBRD-27858](https://jira.cubrid.org/browse/CBRD-27858)을 발급하고 회사 PR 본문을 준비했다. PR은 아직 만들지 않았다. R6도 독립 브랜치에서 수정·로컬 검증을 마치고 [회사 draft PR 8347](https://github.com/CUBRID/cubrid/pull/8347)으로 게시했다. R2·R3·R4는 대기 중이다.
 
 분석일은 2026-10-29, Asia/Seoul이다. 대상은 [CUBRID/cubrid PR 7990](https://github.com/CUBRID/cubrid/pull/7990)이다. 검토 기준 소스는 `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`, 브랜치는 `feature/oos-merge`이다. 수집 당시 hornetmj님의 inline 리뷰 6개는 모두 미해결이며 outdated가 아니다. 빈 COMMENTED 리뷰 요약은 별도 작업으로 세지 않는다.
 
@@ -15,7 +15,7 @@ R1은 실제 동시 INSERT로 같은 assertion을 재현한 뒤 7줄을 삭제�
 - 문서는 `my-cubrid-docs`의 `main`에 통합·게시한다. 초기 task worktree는 `/home/vimkim/gh/my-cubrid-docs-pr7990-hornet-review`, 브랜치는 `docs/pr7990-hornet-review-20261029`이다. 통합 후 정리되면 `main`의 이 문서에서 재개한다.
 - 각 항목의 순서는 검토, 이해, 결정, 수정, 검증, 기록이다. 하나의 수정과 검증을 마친 뒤 다음 수정을 시작한다.
 - R1은 회사 draft PR 8330의 팀 리뷰 대기이다. [gha-ci 40853451200](https://github.com/CUBRID/cubrid/actions/runs/40853451200)는 release/debug 빌드와 SQL·medium이 통과했고 shell은 `temp_enc_06` 한 건이 실패했다. 사용자는 이 케이스가 알려진 flaky라고 확인했다. 실패 목록이 일치하므로 이를 R1 회귀 의심으로 별도 조사하느라 다른 리뷰를 미루지 않는다. CI의 실제 shell 실패 상태는 그대로 기록한다. 2026-10-30 사용자가 R5는 다른 서브에이전트가 진행한다고 알렸다. root의 R6은 회사 draft PR 8347로 게시했고 [전체 CI 41048233875](https://github.com/CUBRID/cubrid/actions/runs/41048233875)의 다섯 상태 등록을 확인했다. R6의 CI 완료와 팀 리뷰가 남아 있다. R2·R3·R4의 수정은 아직 시작하지 않았다.
-- R5는 별도 담당자가 2026-10-30 재현·수정·검증을 로컬에서 마쳤다. source는 `c05abc8b4`이며 다음 단계는 R5 티켓과 회사 PR 준비이다. 해당 담당자의 게시 승인 절차를 따르고 R6과 함께 묶지 않는다.
+- R5는 별도 담당자가 2026-10-30 재현·수정·검증을 로컬에서 마치고 [CBRD-27858](https://jira.cubrid.org/browse/CBRD-27858)을 CBRD-26583의 Sub-task로 발급했다. source 브랜치는 `CBRD-27858-oos-relocation-forward-slot`, 커밋은 접두어만 고친 `628857607`이며 검증한 `c05abc8b4`와 트리가 같다. 다음 단계는 회사 draft PR 게시이다. 해당 담당자의 게시 승인 절차를 따르고 R6과 함께 묶지 않는다.
 - R1에 이어 R6도 저장한 본문과 게시 작업에 대해 별도 승인을 받았다. 승인 범위는 해당 문서·JIRA 노트 통합 및 게시, 해당 source의 fork push, 회사 draft PR 생성·담당자 지정, 사전 조건 통과 후 전체 CI 한 번이다. 리뷰 답글 게시, thread resolve, reviewer 요청과 source PR 머지는 포함하지 않는다. R5 게시 승인과 혼동하지 않는다.
 
 ## 처리 순서
@@ -25,7 +25,7 @@ R1은 사용자가 지정한 링크이므로 먼저 다룬다. 이후에는 커�
 | 순서 | 항목 | 사용자 영향 | 첫 확인 사항 | 상태 |
 | --- | --- | --- | --- | --- |
 | 1 | [R1. 동시 INSERT의 파일 소유 확인 실패](#r1-동시-insert의-파일-소유-확인-실패) | INSERT 실패, debug abort | zero-wait 범위와 파일 헤더 경합 | 회사 PR 8330 리뷰 대기. shell은 알려진 flaky `temp_enc_06` 한 건 실패 |
-| 2 | [R5. relocation undo가 재사용 슬롯을 덮어씀](#r5-relocation-undo가-재사용-슬롯을-덮어씀) | 커밋 행 손실, 힙 손상 | forward 페이지 공개와 sysop 경계 | 로컬 수정 `c05abc8b4`와 검증 완료. 티켓과 PR 준비 대기 |
+| 2 | [R5. relocation undo가 재사용 슬롯을 덮어씀](#r5-relocation-undo가-재사용-슬롯을-덮어씀) | 커밋 행 손실, 힙 손상 | forward 페이지 공개와 sysop 경계 | CBRD-27858 발급. 로컬 수정 `628857607`(검증한 `c05abc8b4`와 같은 트리). PR 게시 승인 대기 |
 | 3 | [R2. vacuum과 새 힙 페이지 할당의 교착](#r2-vacuum과-새-힙-페이지-할당의-교착) | INSERT 장시간 대기와 abort | PR 8235의 처리 범위와 미통합 변경 | 대기 |
 | 4 | [R6. 미사용 복구 인덱스 제거](#r6-미사용-복구-인덱스-제거) | 불필요한 로그 형식 번호 고정 | 로그 생산자 존재 여부 | CBRD-27841, 회사 draft PR 8347 게시, CI·팀 리뷰 대기 |
 | 5 | [R3. 페이지 할당 시 전체 파일 스윕](#r3-페이지-할당-시-전체-파일-스윕) | 큰 파일의 INSERT 지연 | 스윕 발동 조건과 진행 위치 | 대기 |
@@ -200,9 +200,12 @@ ctest --test-dir "$CUBRID_BUILD_DIR" -R '^(test_oos_bestspace|test_oos_growth_sw
 - [x] 슬롯을 공개해도 되는 복구 경계를 결정하고 최소 수정한다.
 - [x] debug와 release의 오류 경로, 행 보존, 인덱스와 힙 일치, `checkdb`를 확인한다.
 - [x] 결과와 답글 초안을 기록한다.
-- [ ] 중복 이슈를 검색하고 R5 티켓을 발급한다. 회사 PR 본문을 준비해 게시 승인을 받는다.
+- [x] 중복 이슈를 검색한다. 2026-10-30 검색에서 이 heap forward 슬롯 결함의 별도 티켓은 없었다.
+- [x] JIRA 초안과 회사 PR 본문 초안을 준비한다. [PR 본문 초안](CBRD-XXXXX-oos-relocation-forward-slot-pr-body_c05abc8_claude.md)과 [게시 맥락](CBRD-XXXXX-oos-relocation-forward-slot-pr-context_c05abc8_claude.md)을 참조한다.
+- [x] 초안 검토 뒤 R5 티켓을 발급하고, 브랜치와 커밋 접두어를 새 키로 바꾼다. [CBRD-27858](https://jira.cubrid.org/browse/CBRD-27858)을 CBRD-26583의 Sub-task로 발급했다.
+- [ ] 회사 draft PR의 게시 승인을 받는다. [PR 본문](../cbrd-27858/CBRD-27858-oos-relocation-forward-slot-pr-body_6288576_claude.md)과 [게시 맥락](../cbrd-27858/CBRD-27858-oos-relocation-forward-slot-pr-context_6288576_claude.md)을 참조한다.
 
-분석일은 2026-10-30, Asia/Seoul이다. 기준 소스는 `feature/oos-merge`의 `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`이다. 수정 커밋은 `/home/vimkim/gh/cb/pr7990-hornet-r5`의 로컬 task branch `pr7990-hornet-r5`에 있는 `c05abc8b4`이며 아직 게시하지 않았다. release 실험은 별도 워크트리 `/home/vimkim/gh/cb/pr7990-hornet-r5-release`에서 실행했다. 결론은 리뷰어의 지적을 수용한다는 것이다. 수정 전 코드에서 debug assertion, release 페이지 손상, 재시작 복구 실패를 직접 재현했다. forward 페이지를 sysop commit 뒤까지 고정하는 수정 후에는 같은 주입에서 커밋된 행이 보존됐다.
+분석일은 2026-10-30, Asia/Seoul이다. 기준 소스는 `feature/oos-merge`의 `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`이다. 수정 커밋은 `/home/vimkim/gh/cb/pr7990-hornet-r5`의 로컬 task branch `pr7990-hornet-r5`에 있는 `c05abc8b4`였다. 티켓 발급 뒤 브랜치 이름을 `CBRD-27858-oos-relocation-forward-slot`으로 바꾸고 커밋 메시지 접두어만 고쳐 `628857607`이 됐다. 트리와 부모가 같으므로 아래 검증 결과가 그대로 적용된다. 아직 게시하지 않았다. release 실험은 별도 워크트리 `/home/vimkim/gh/cb/pr7990-hornet-r5-release`에서 실행했다. 결론은 리뷰어의 지적을 수용한다는 것이다. 수정 전 코드에서 debug assertion, release 페이지 손상, 재시작 복구 실패를 직접 재현했다. forward 페이지를 sysop commit 뒤까지 고정하는 수정 후에는 같은 주입에서 커밋된 행이 보존됐다.
 
 ### R5에서 이해한 실패 경로
 
@@ -243,7 +246,7 @@ develop `4f1a68c1e`의 같은 경로도 [FREE 뒤에 sysop을 commit](https://gi
 | 빌드와 모드 | 관찰 |
 | --- | --- |
 | debug, abort | forward `1|1603|6`이 `DELETED_WILL_REUSE`인 동안 커밋된 INSERT id 1000이 그 슬롯에 `HOME` 3,344바이트로 들어갔다. 실패를 주입하자 `slotted_page.c:1969`의 `offset_to_record == SPAGE_EMPTY_OFFSET` assertion으로 서버가 종료했다. master의 자동 재시작과 SA `checkdb`의 복구 모두 UNDO에서 같은 assertion으로 실패했다. 이 DB는 다시 열 수 없다. |
-| release, abort | `1|707|6`에 id 1000이 들어간 뒤 실패를 주입했다. abort 중 "page 707 ... may be corrupted"가 기록됐고, 이어서 `spage_compact`가 "6 records was found when 7 was expected" FATAL로 서버를 종료했다. 재시작 UNDO도 같은 손상과 FATAL로 끝났다. |
+| release, abort | `1|707|6`에 id 1000이 들어간 뒤 실패를 주입했다. abort 중 "page 707 ... may be corrupted"가 기록됐고, 이어서 `spage_compact`가 "6 records was found when 7 was expected" FATAL로 서버를 종료했다. master가 다시 시작한 서버에서 재시작 UNDO가 같은 손상을 다시 기록했고, 복구를 마친 서버도 같은 FATAL로 종료했다. |
 | release, crash | OOS 실패 없이 같은 구간에서 `kill -9`했다. 재시작 UNDO가 page 707 손상을 기록했고 이어서 `spage_compact` FATAL이 났다. |
 
 리뷰어의 release 관찰은 서버 유지, 커밋 행 1건 유실, `checkdb`의 레코드 수 불일치였다. 이번 실행도 같은 페이지 레코드 수 불일치이며, 손상 직후 compaction이 일어나 FATAL로 이어졌다.
@@ -368,6 +371,8 @@ R6은 `CBRD-27841-remove-unused-oos-recovery-index`의 독립 worktree에서 진
 | 2026-10-30 | R1 부모 연결 | 사용자 승인 후 CBRD-27827을 Correct Error에서 Sub-task로 전환하고 부모를 OOS M2 CBRD-26583으로 지정했다. API 재조회로 이슈 번호·제목·본문·Open 상태·우선순위·담당자·링크 보존과 웹 렌더 결과를 확인했다. | Convert wizard 결과와 전후 issue 스냅샷, 게시 맥락 | 부모 연결 완료. 독립 회사 PR 8330의 리뷰·검증 방식 유지 |
 | 2026-10-30 | R1 CI 분류 | release/debug 빌드와 SQL·medium이 통과했다. shell 실패는 `_36_damson/cbrd_23608_tde/temp_enc_06` 한 건으로 로그에서 확인했다. 사용자가 알려진 flaky라고 확인했으므로 별도 R1 회귀 조사를 다음 작업의 선행 조건으로 두지 않는다. | shell 05의 NOK 항목, collect의 `shell: 1 failed`, 사용자 확인 | 다음은 R5 검토. CI 실패 상태와 팀 리뷰 대기는 유지 |
 | 2026-10-30 | R5 | 수용. 수정 전 debug assertion, release 페이지 손상 FATAL, 재시작 복구 실패를 재현했다. forward 페이지를 `log_sysop_commit` 뒤에 놓도록 수정하고 같은 주입의 abort·crash 모드를 debug·release에서 통과했다. | 재현 hook `dd9f052c0`(게시하지 않음), 수정 `c05abc8b4`, 위 R5 검증 결과 | 중복 검색, 티켓 발급, 회사 PR 본문과 게시 승인 |
+| 2026-10-30 | R5 게시 준비 | `REC_NEWHOME`, `REC_RELOCATION`, `spage_insert_for_recovery`, `vacuum_heap_oos_delete`, `spage_compact`, sysop과 vacuum의 조합으로 JIRA를 검색해 별도 티켓이 없음을 확인했다. R1과 같이 CBRD-26583의 Sub-task로 발급하는 JIRA 초안과 회사 PR 본문 초안을 준비했다. 생성 명령의 dry-run 변환은 오류가 없었다. | JIRA 노트 task 커밋 `cd1bd26`, 이 문서의 PR 본문·게시 맥락 | 초안 검토, 티켓 발급, 브랜치 이름 변경, fork push와 draft PR 생성 승인 |
+| 2026-10-30 | R5 티켓 발급 | 사용자 승인 후 [CBRD-27858](https://jira.cubrid.org/browse/CBRD-27858)을 CBRD-26583의 Sub-task로 만들고 `vimkim`에게 배정했다. 재조회한 본문이 dry-run 변환과 같고 계측·드라이버 코드 블록이 온전했다. 소스 브랜치를 `CBRD-27858-oos-relocation-forward-slot`으로 바꾸고 커밋 접두어만 고쳤다. | 생성 결과와 재조회, 소스 `628857607`(트리 동일) | PR 본문 검토, 문서 통합, fork push와 draft PR 생성 승인 |
 
 수집 원본은 `/home/vimkim/temp/pr7990-hornet-review-20261029/review-snapshot.json`에 보관한다. 원본 JSON, 빌드 로그, 중간 산출물은 문서 저장소에 커밋하지 않는다.
 
