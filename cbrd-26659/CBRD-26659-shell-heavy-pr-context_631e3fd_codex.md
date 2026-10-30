@@ -245,3 +245,17 @@ follow-ups remain unfinished.
 No second CI trigger, rerun, repair, source/TC push, PR body rewrite, TC merge,
 closure or branch deletion followed this result. Final result records are
 integrated into docs `main` under the same publication approval.
+
+## SQL accounting follow-up, 2026-10-30
+
+The [focused SQL count investigation](CBRD-26659-sql-count-discrepancy_20261030_run40837919358_codex.md)
+identifies the two text-only paths under `cbrd-27556`. Exact CTP classes reproduce
+an aggregate/JUnit traversal defect when a category contains both direct cases
+and nested case categories. A layout-only control retains all three seeded
+results. This explains how one result generation can produce the observed
+two-count difference without stale data or mixed acquisition being necessary.
+
+The investigation is complete; repair is not. The original SQL collection stays
+`collection_failed`, and no complete SQL PASS count is certified. The probe does
+not independently establish the historical two cases' full execution or PASS.
+No CI rerun, Engine/TC/CTP repair or PR body change followed this investigation.

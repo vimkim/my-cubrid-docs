@@ -1,6 +1,6 @@
 # CBRD-26659 TODO checklist
 
-작성·갱신 기준은 2026-10-29, Asia/Seoul이다. [현황보고](CBRD-26659-status-report_20261029_e3589ae_codex.md)를 기준으로 남은 작업을 하나씩 실행하고 결과를 기록한다. **첫 작업은 기준 CI에서 PASS한 20초 초과 shell TC 38개의 `shell_heavy` 이관이다.** 실패 원인 분석과 2분 초과 TC 처리는 별도 작업으로 유지한다.
+작성 기준은 2026-10-29, 갱신 기준은 2026-10-30, Asia/Seoul이다. [현황보고](CBRD-26659-status-report_20261029_e3589ae_codex.md)를 기준으로 남은 작업을 하나씩 실행하고 결과를 기록한다. **첫 작업은 기준 CI에서 PASS한 20초 초과 shell TC 38개의 `shell_heavy` 이관이다.** 실패 원인 분석과 2분 초과 TC 처리는 별도 작업으로 유지한다.
 
 체크 표시는 해당 항목의 산출물과 검증 근거가 확보되었음을 뜻한다. 로컬 준비, PR 게시, 실제 병합은 각각 구분한다. 성능 비교는 이 체크리스트의 완료 조건에 포함하지 않는다.
 
@@ -22,7 +22,8 @@
 - [x] 검증 결과에 맞는 별도 PR 본문과 게시 대상을 파일로 준비한다.
 - [x] 검토한 게시 범위의 승인을 받은 뒤 heavy draft PR과 기존 PR의 변경을 게시한다.
 - [x] 일반 CI 제외 검증을 1회 실행하고 종료 결과를 기록한다. 실패 시 임의 수정·재실행하지 않는다.
-- [ ] SQL shard 01의 workflow 처리 3,533개와 JUnit·summary 3,531개 불일치를 별도로 확인한다. GitHub CI 성공과 전체 SQL 증거 검증 완료를 구분한다.
+- [x] SQL shard 01의 workflow 처리 3,533개와 JUnit·summary 3,531개 차이를 조사한다. [분석](CBRD-26659-sql-count-discrepancy_20261030_run40837919358_codex.md)에서 CTP 중첩 디렉터리 집계 누락을 실제 코드로 재현했다.
+- [ ] CTP 집계·JUnit 순회를 별도 수정한 뒤 원래 두 TC의 실행 근거와 SQL 전체 자료 정합성을 확인한다. 기존 SQL 수집 실패와 전체 PASS 미인증 상태는 유지한다.
 - [ ] QA 담당자와 heavy 실행 위치·주기·담당을 정하고 실제 TC PR 검토·병합을 확인한다.
 
 38개 이관에 과거 실패 61개, 이전부터 비활성인 PASS 3개, HA TC를 섞지 않는다. 기존 CUBRID `gha-ci`의 suite 목록에는 `shell_heavy`가 없으므로 일반 CI에서 제외한 사실과 heavy 실행 경로가 확보된 사실을 구분한다.
@@ -82,6 +83,7 @@
 | 2026-10-29 | 전체 heavy 검증과 게시 준비 | 동일 Engine의 격리한 native 전체 실행이 38 PASS·0 FAIL·0 SKIP으로 종료했다. 모두 120초 안에 완료했고 실행·완료 목록과 summary·XML이 일치한다. 로컬 이관 준비는 완료했으며 PR 게시·CI·리뷰·병합은 남아 있다. |
 | 2026-10-29 | PR 게시와 일반 CI 시작 | 승인 후 [heavy draft PR #4627](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4627)을 생성하고 기존 [PR #4365](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4365)에 제외 커밋·본문을 게시했다. 전체 [CI 40837919358](https://github.com/CUBRID/cubrid/actions/runs/40837919358)을 1회 시작했으며 종료 결과를 기다린다. |
 | 2026-10-29 | 일반 CI 종료와 증거 검증 | 같은 CI가 SUCCESS로 종료했다. Build debug·release와 shell·SQL·medium의 5개 context가 모두 SUCCESS다. 증거 검증은 shell 3,491 PASS·0 FAIL·30 SKIP, medium 975 PASS·0 FAIL·0 SKIP이다. SQL은 GitHub 성공이지만 shard 01의 workflow 3,533개와 JUnit·summary 3,531개가 달라 수집기가 무결성 오류로 거부했다. SQL 전체 PASS 건수의 검증 완료는 보류하며 추가 수정·재실행은 하지 않았다. |
+| 2026-10-30 | SQL 2건 집계 차이 조사 | `cbrd-27556`의 두 결과 행을 식별했다. 실제 CTP 코드에서 직접 TC와 하위 TC가 공존할 때 합계·JUnit이 하위 TC를 누락하는 현상을 재현했다. 구조만 바꾼 대조군은 모두 집계된다. 조사 항목은 완료했으나 CTP 수리·원래 두 TC의 독립 실행 확인·SQL 전체 정합성 검증은 남았다. CI 재실행이나 엔진·TC·CTP 수정은 하지 않았다. |
 
 [신규 heavy PR 본문](CBRD-26659-shell-heavy-pr-body_631e3fd_codex.md)과 [기존 PR #4365 갱신 본문](CBRD-26659-shell-heavy-exclusion-pr-body_a229e19_codex.md)은 검토·승인한 내용 그대로 게시했다. Heavy import `631e3fd`와 일반 CI 제외 `a229e19`의 원격 head를 확인했다. [게시 범위와 검증 기록](CBRD-26659-shell-heavy-pr-context_631e3fd_codex.md)에 본문 식별값과 CI 경과를 보존한다.
 
