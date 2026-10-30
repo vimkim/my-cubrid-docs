@@ -27,7 +27,7 @@ R1은 사용자가 지정한 링크이므로 먼저 다룬다. 이후에는 커�
 | 1 | [R1. 동시 INSERT의 파일 소유 확인 실패](#r1-동시-insert의-파일-소유-확인-실패) | INSERT 실패, debug abort | zero-wait 범위와 파일 헤더 경합 | 회사 PR 8330 리뷰 대기. shell은 알려진 flaky `temp_enc_06` 한 건 실패 |
 | 2 | [R5. relocation undo가 재사용 슬롯을 덮어씀](#r5-relocation-undo가-재사용-슬롯을-덮어씀) | 커밋 행 손실, 힙 손상 | forward 페이지 공개와 sysop 경계 | CBRD-27858, 회사 draft PR 8348 게시(`628857607`, 검증한 `c05abc8b4`와 같은 트리). gha-ci 41050496911 실행 중, 팀 리뷰 대기 |
 | 3 | [R2. vacuum과 새 힙 페이지 할당의 교착](#r2-vacuum과-새-힙-페이지-할당의-교착) | INSERT 장시간 대기와 abort | PR 8235의 처리 범위와 미통합 변경 | 대기 |
-| 4 | [R6. 미사용 복구 인덱스 제거](#r6-미사용-복구-인덱스-제거) | 불필요한 로그 형식 번호 고정 | 로그 생산자 존재 여부 | CBRD-27841, PR 8347 shell 두 건 실패. SQL 증거 수집 오류 해결·팀 리뷰 대기 |
+| 4 | [R6. 미사용 복구 인덱스 제거](#r6-미사용-복구-인덱스-제거) | 불필요한 로그 형식 번호 고정 | 로그 생산자 존재 여부 | CBRD-27841, PR 8347 shell 두 건 실패. CTP 생성기 수정은 CUBRIDQA-1693·회사 PR 793으로 게시, runtime·새 CI·팀 리뷰 대기 |
 | 5 | [R3. 페이지 할당 시 전체 파일 스윕](#r3-페이지-할당-시-전체-파일-스윕) | 큰 파일의 INSERT 지연 | 스윕 발동 조건과 진행 위치 | 대기 |
 | 6 | [R4. 재시작 후 bestspace 복원](#r4-재시작-후-bestspace-복원) | 빈 공간 미사용, 파일 증가 | redesign 후 적용 계획과 R3 의존성 | 후속 계획 확인 대기 |
 
@@ -315,7 +315,8 @@ PR 8235가 고쳤을 수 있다는 원문의 설명은 확인할 대상이다. �
 - [x] CBRD-27841을 OOS M2의 Sub-task로 발급·재조회하고 독립 회사 PR 본문을 저장한다.
 - [x] PR 게시 승인 후 fork push, 회사 draft PR, 회사 CI를 진행한다. PR 8347과 전체 CI 한 번의 다섯 상태 등록을 확인했다.
 - [x] CI 종료와 shell 두 실패의 실제 검사 조건을 기록한다. [증거 수집 경고](../cbrd-27841/ci_analysis_report_eac70c7_codex.md)를 함께 읽는다.
-- [x] SQL 집계 불일치를 정확한 CTP 버전에서 재현하고 [생성기 로컬 수정과 검증](../cbrd-27841/SQL-summary-nested-category_1c6b224_codex.md)을 기록한다. 별도 회사 리뷰·runtime 반영은 남아 있다.
+- [x] SQL 집계 불일치를 정확한 CTP 버전에서 재현하고 [생성기 로컬 수정과 검증](../cbrd-27841/SQL-summary-nested-category_1c6b224_codex.md)을 기록한다.
+- [x] 생성기 수정의 별도 [CUBRIDQA-1693](https://jira.cubrid.org/browse/CUBRIDQA-1693)과 [회사 draft PR 793](https://github.com/CUBRID/cubrid-testtools/pull/793)을 게시·재조회하고 [게시 기록](../cbrd-27841/CTP-nested-summary-publication_4f720bd_codex.md)을 남긴다. 회사 리뷰·runtime 반영·새 CI 검증은 남아 있다.
 - [ ] SQL shard 01 집계 불일치를 해결한 뒤 전체 증거·기준 비교·이력을 검증한다. 현재 자료로 회귀나 flaky 여부를 단정하지 않는다.
 - [ ] CI 결과와 팀 리뷰를 받은 뒤 source PR을 반영한다.
 
@@ -379,6 +380,7 @@ R6은 `CBRD-27841-remove-unused-oos-recovery-index`의 독립 worktree에서 진
 | 2026-10-30 | R5 게시 준비 | `REC_NEWHOME`, `REC_RELOCATION`, `spage_insert_for_recovery`, `vacuum_heap_oos_delete`, `spage_compact`, sysop과 vacuum의 조합으로 JIRA를 검색해 별도 티켓이 없음을 확인했다. R1과 같이 CBRD-26583의 Sub-task로 발급하는 JIRA 초안과 회사 PR 본문 초안을 준비했다. 생성 명령의 dry-run 변환은 오류가 없었다. | JIRA 노트 task 커밋 `cd1bd26`, 이 문서의 PR 본문·게시 맥락 | 초안 검토, 티켓 발급, 브랜치 이름 변경, fork push와 draft PR 생성 승인 |
 | 2026-10-30 | R5 티켓 발급 | 사용자 승인 후 [CBRD-27858](https://jira.cubrid.org/browse/CBRD-27858)을 CBRD-26583의 Sub-task로 만들고 `vimkim`에게 배정했다. 재조회한 본문이 dry-run 변환과 같고 계측·드라이버 코드 블록이 온전했다. 소스 브랜치를 `CBRD-27858-oos-relocation-forward-slot`으로 바꾸고 커밋 접두어만 고쳤다. | 생성 결과와 재조회, 소스 `628857607`(트리 동일) | PR 본문 검토, 문서 통합, fork push와 draft PR 생성 승인 |
 | 2026-10-30 | R5 PR 게시 | 사용자 승인 후 문서와 JIRA 노트를 `main`에 통합·push했다. 동시에 진행된 R6 기록과 공유 문서가 충돌해 두 저장소 모두 squash로 병합했다. 수정 브랜치만 `vk`에 push하고 [회사 draft PR 8348](https://github.com/CUBRID/cubrid/pull/8348)를 `feature/oos-merge` 대상으로 만들어 `vimkim`을 지정했다. | PR 재조회: head `628857607`, draft, 본문 SHA256이 승인 파일과 같음 | 회사 CI 승인, 팀 리뷰 |
+| 2026-10-31 | R6 CI 증거 생성기 후속 게시 | 승인 후 공통 CTP 결함을 독립 CUBRIDQA-1693으로 발급하고 `4f720bd`를 개인 fork에서 회사 draft PR 793으로 게시했다. 승인한 PR 본문과 head를 재조회했고 JIRA의 두 상대 문서 링크는 공개 고정 URL로 보정했다. | [게시 결과와 검증 경계](../cbrd-27841/CTP-nested-summary-publication_4f720bd_codex.md) | 회사 리뷰, runtime 반영과 새 CI 집계 검증 후 R6 실패 분석 재개 |
 
 수집 원본은 `/home/vimkim/temp/pr7990-hornet-review-20261029/review-snapshot.json`에 보관한다. 원본 JSON, 빌드 로그, 중간 산출물은 문서 저장소에 커밋하지 않는다.
 
