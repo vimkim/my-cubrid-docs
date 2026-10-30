@@ -270,7 +270,8 @@ PR 8235가 고쳤을 수 있다는 원문의 설명은 확인할 대상이다. �
 | 2026-10-29 | R4 | 후속 적용 계획을 보존하고 즉시 수정 대상으로 확정하지 않는다. | 리뷰 원문의 redesign 안정화 후 적용 설명 | 소유 작업과 적용 시점 확인 |
 | 2026-10-29 | R1 | 원인을 재현하고 zero-wait 설정을 제거했다. CS 10회와 집중 CTest 4개가 통과했다. | `3c39a813a`, `4db11c5f1`, 위 검증 결과 | 독립 PR 리뷰·검증. release와 혼합 부하는 미검증 |
 | 2026-10-29 | R1 게시 | fork push, 회사 draft PR 8330 생성, 담당자 지정과 본문 재조회를 완료했다. 전체 CI 한 번의 시작을 확인했다. | [PR 8330](https://github.com/CUBRID/cubrid/pull/8330), [CI 실행](https://github.com/CUBRID/cubrid/actions/runs/40853451200), 게시 맥락 | CI 완료와 팀 리뷰, 이후 별도 머지 판단 |
-| 2026-10-29 | JIRA 도구 | Python의 `{code}`가 블록을 끝내는 변환기 결함을 서브에이전트로 분석·수정했다. 원본 Markdown을 보존해 실제 본문을 복구하고 서버 렌더 결과를 검증했다. | `cubrid-jira` 후보 `3f282aa`, 전체 테스트 297개, 독립 검토 112개 | CLI main 통합·푸시·설치 승인 대기, Work 617 |
+| 2026-10-29 | JIRA 도구 | Python의 `{code}`가 블록을 끝내는 변환기 결함을 서브에이전트로 분석·수정했다. 원본 Markdown을 보존해 실제 본문을 복구하고 서버 렌더 결과를 검증했다. | `cubrid-jira` 후보 `3f282aa`, 전체 테스트 297개, 독립 검토 112개 | 2026-10-30 승인 후 아래와 같이 통합·설치 완료 |
+| 2026-10-30 | JIRA 도구 완료 | 승인받은 `3f282aa`를 main에 fast-forward로 통합·push하고 `just sync`로 설치했다. 재검증 297개와 설치된 CLI의 실제 변환·readback 검사가 통과했고, 현재 JIRA 웹 본문도 정상이다. | 설치본과 main의 변환기 바이트 일치, 원본 issue payload 일치, Work 617 | 완료. 병합된 임시 worktree·브랜치 정리, main clean |
 
 수집 원본은 `/home/vimkim/temp/pr7990-hornet-review-20261029/review-snapshot.json`에 보관한다. 원본 JSON, 빌드 로그, 중간 산출물은 문서 저장소에 커밋하지 않는다.
 
