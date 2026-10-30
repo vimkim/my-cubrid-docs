@@ -315,6 +315,7 @@ PR 8235가 고쳤을 수 있다는 원문의 설명은 확인할 대상이다. �
 - [x] CBRD-27841을 OOS M2의 Sub-task로 발급·재조회하고 독립 회사 PR 본문을 저장한다.
 - [x] PR 게시 승인 후 fork push, 회사 draft PR, 회사 CI를 진행한다. PR 8347과 전체 CI 한 번의 다섯 상태 등록을 확인했다.
 - [x] CI 종료와 shell 두 실패의 실제 검사 조건을 기록한다. [증거 수집 경고](../cbrd-27841/ci_analysis_report_eac70c7_codex.md)를 함께 읽는다.
+- [x] SQL 집계 불일치를 정확한 CTP 버전에서 재현하고 [생성기 로컬 수정과 검증](../cbrd-27841/SQL-summary-nested-category_1c6b224_codex.md)을 기록한다. 별도 회사 리뷰·runtime 반영은 남아 있다.
 - [ ] SQL shard 01 집계 불일치를 해결한 뒤 전체 증거·기준 비교·이력을 검증한다. 현재 자료로 회귀나 flaky 여부를 단정하지 않는다.
 - [ ] CI 결과와 팀 리뷰를 받은 뒤 source PR을 반영한다.
 

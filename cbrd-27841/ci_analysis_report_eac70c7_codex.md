@@ -4,6 +4,8 @@ PR 7990의 R6 작성자와 리뷰어가 [PR 8347](https://github.com/CUBRID/cubr
 
 **전체 증거 수집이 불완전하므로 이번 자료로 회귀 여부나 근본 원인을 결론 내릴 수 없다.** head와 merge-base 양쪽에서 SQL shard `01`의 workflow 결과와 JUnit 집계가 달라 수집기가 exit `4`로 종료됐다. 검증한 medium·shell 결과와 shell의 실제 실패 조건만 아래에 기록한다. 두 실패를 flaky로 분류하거나 R6과 무관하다고 판단하지 않는다.
 
+2026-10-30 후속 조사에서 SQL 불일치는 CTP의 중첩 범주 집계 누락으로 재현됐고 로컬 수정·검증을 마쳤다. [별도 생성기 조사와 수정 기록](SQL-summary-nested-category_1c6b224_codex.md)을 참고한다. 이 후속 결과는 기존 CI bundle을 완전하게 만들지 않으며 아래 shell 인과관계 판단 제한도 유지한다.
+
 ## 대상과 관찰 결과
 
 - 엔진 저장소는 `CUBRID/cubrid`, head는 `eac70c7e740d55b4623b46bb84797e8214dcdcc4`이다.
