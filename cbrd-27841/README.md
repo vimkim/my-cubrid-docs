@@ -8,5 +8,6 @@ Last modified: 2026-10-30, Asia/Seoul.
 | --- | --- | --- | --- | --- |
 | [CBRD-27841-recovery-index-cleanup-pr-body_eac70c7_codex.md](CBRD-27841-recovery-index-cleanup-pr-body_eac70c7_codex.md) | 회사 PR의 변경·호환성·검증과 한계 | 2026-10-30 | 2026-10-30 | 실제 게시 전에 본문을 검토하도록 보존 |
 | [CBRD-27841-recovery-index-cleanup-pr-context_eac70c7_codex.md](CBRD-27841-recovery-index-cleanup-pr-context_eac70c7_codex.md) | source/base, 검증·승인 범위와 실제 게시 결과 | 2026-10-30 | 2026-10-30 | 다른 에이전트의 작업과 승인 범위를 구분 |
+| [ci_analysis_report_eac70c7_codex.md](ci_analysis_report_eac70c7_codex.md) | CI 종료, shell 두 실패의 관찰과 SQL 수집 무결성 경고 | 2026-10-30 | 2026-10-30 | R6 회귀 여부를 단정하지 않고 다음 검증에 필요한 증거를 보존 |
 
 See the [R6 analysis and evidence](../cbrd-26357/PR-7990-R6-recovery-index-cleanup_dcbf09e_codex.md) and [shared checklist](../cbrd-26357/PR-7990-hornetmj-review-checklist_20261029_codex.md).

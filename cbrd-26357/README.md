@@ -6,7 +6,7 @@ Last modified: 2026-10-30, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [PR-7990-hornetmj-review-checklist_20261029_codex.md](PR-7990-hornetmj-review-checklist_20261029_codex.md) | 리뷰 6개의 체크리스트, R1·R6 회사 PR 게시, R5 로컬 재현·검증과 CBRD-27858 발급, 리뷰·CI 상태 | 2026-10-29 | 2026-10-30 | 팀장님 리뷰를 하나씩 이해하고 근거와 진행 상태를 보존 |
+| [PR-7990-hornetmj-review-checklist_20261029_codex.md](PR-7990-hornetmj-review-checklist_20261029_codex.md) | 리뷰 6개의 체크리스트, 독립 PR 상태와 R6 shell 실패·증거 수집 경고 | 2026-10-29 | 2026-10-30 | 팀장님 리뷰를 하나씩 이해하고 근거와 진행 상태를 보존 |
 | [PR-7990-R6-recovery-index-cleanup_dcbf09e_codex.md](PR-7990-R6-recovery-index-cleanup_dcbf09e_codex.md) | 미사용 인덱스 제거, 형식 2의 근거, 수정 전후 CTest와 데이터 보존 검증·한계 | 2026-10-30 | 2026-10-30 | R6 수정의 호환성과 실행 근거를 독립 리뷰 단위로 보존 |
 | [CBRD-XXXXX-oos-relocation-forward-slot-pr-body_c05abc8_claude.md](CBRD-XXXXX-oos-relocation-forward-slot-pr-body_c05abc8_claude.md) | R5 회사 PR 본문의 티켓 발급 전 초안. [cbrd-27858](../cbrd-27858/README.md)의 본문으로 대체됨 | 2026-10-30 | 2026-10-30 | 티켓 발급과 게시 전에 본문을 검토 |
 | [CBRD-XXXXX-oos-relocation-forward-slot-pr-context_c05abc8_claude.md](CBRD-XXXXX-oos-relocation-forward-slot-pr-context_c05abc8_claude.md) | R5의 티켓 발급 전 게시 제안. [cbrd-27858](../cbrd-27858/README.md)의 게시 맥락으로 대체됨 | 2026-10-30 | 2026-10-30 | 승인 범위와 티켓 발급 뒤의 재개 절차를 보존 |
