@@ -48,4 +48,16 @@ This records reviewable material and proposed operations. It does not grant perm
 
 ## Approval state
 
-The user authorized proceeding with R6 and the previously agreed independent issue/PR workflow. The issue has been created and local changes committed. Publication of this new PR and document integration/push await explicit confirmation of these saved files and operations under cubrid-pr-create and the user's Git workflow.
+The user confirmed the saved body and listed operations with `yes` on 2026-10-30. This authorization covers this publication attempt, including the document integration/push, personal-fork source push, company draft PR and one full CI after its preflight. It does not grant permission for future source changes, reviewer requests or source merges.
+
+## Publication results, 2026-10-30
+
+- Docs main had advanced to `0b0ba75027de27922e3d01f4a0ca283ee91c8d2e` with the other agent's completed R5 evidence. Rebase conflicts were confined to the shared checklist and index. R5's detailed section was preserved byte-for-byte, and only the status summaries were combined. The approved PR body, context, R6 report and ticket index were unchanged during conflict resolution.
+- Audited the full incoming history and six intended R6 document paths, validated links and material, then fast-forward merged and pushed docs main at `db85923346beb2879aa54153e8f04433034a6dc5`. Final publication records are integrated separately under the same approval.
+- JIRA notes main was fast-forward merged and pushed at `1938d1f39ccc62d38a7dde2760e46b933c88b872`. Only README and the keyed report were incoming. Its Markdown SHA256 remains `09e21b2c005917af66215a2389d0f0eaf1834f396ccd17b4b96ecfb6a0496456`. The live issue description and fields were not rewritten.
+- A normal push published `vimkim/cubrid:CBRD-27841-remove-unused-oos-recovery-index`. The remote commit was read back and matched `eac70c7e740d55b4623b46bb84797e8214dcdcc4`.
+- Created [CUBRID/cubrid PR 8347](https://github.com/CUBRID/cubrid/pull/8347), draft, assigned to `vimkim`, base `feature/oos-merge`. Source repository, branch, commit, base, title, draft state and assignee matched the proposal on readback.
+- The published body SHA256 is `769d90fee615ac67452a0b887e999805150ae33a5c5ee85f9264e62ea0d3cffc`, exactly matching the reviewed file including its final newline.
+- Both feature testcase ancestry checks passed. Public `tc/pr-8347` was `f54abce15d6d21e87a20f47fda2d678d100124fd`, containing baseline `70db22a1c99dbbaa27fa1438c8967effdfcad551`. Private `tc/pr-8347` equaled its baseline `75a02020e19be4bfc64e47f7c7a3d5c2b02d7676`. The agent changed no testcase branches.
+- With no existing `/run` comment or gha-ci activity for this head, posted one approved [`/run all`](https://github.com/CUBRID/cubrid/pull/8347#issuecomment-6521534443). Both build contexts and SQL, medium and shell contexts became PENDING and pointed to [gha-ci 41048233875](https://github.com/CUBRID/cubrid/actions/runs/41048233875). No stable required gha-ci context was missing at pickup.
+- `gh pr checks --required` returned exit 1 with `no required checks reported on the 'CBRD-27841-remove-unused-oos-recovery-index' branch`. The five gha-ci statuses were verified separately. CI completion and company review remain pending; this record does not claim a passing result.

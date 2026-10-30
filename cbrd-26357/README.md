@@ -6,7 +6,7 @@ Last modified: 2026-10-30, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [PR-7990-hornetmj-review-checklist_20261029_codex.md](PR-7990-hornetmj-review-checklist_20261029_codex.md) | 리뷰 6개의 체크리스트, R1 게시, R5 로컬 재현·검증과 R6 CBRD-27841의 로컬 검증·PR 준비 | 2026-10-29 | 2026-10-30 | 팀장님 리뷰를 하나씩 이해하고 근거와 진행 상태를 보존 |
+| [PR-7990-hornetmj-review-checklist_20261029_codex.md](PR-7990-hornetmj-review-checklist_20261029_codex.md) | 리뷰 6개의 체크리스트, R1·R6 회사 PR 게시, R5 로컬 재현·검증과 리뷰·CI 상태 | 2026-10-29 | 2026-10-30 | 팀장님 리뷰를 하나씩 이해하고 근거와 진행 상태를 보존 |
 | [PR-7990-R6-recovery-index-cleanup_dcbf09e_codex.md](PR-7990-R6-recovery-index-cleanup_dcbf09e_codex.md) | 미사용 인덱스 제거, 형식 2의 근거, 수정 전후 CTest와 데이터 보존 검증·한계 | 2026-10-30 | 2026-10-30 | R6 수정의 호환성과 실행 근거를 독립 리뷰 단위로 보존 |
 | [CBRD-26357-oos-engine_5a70787_claude.md](CBRD-26357-oos-engine_5a70787_claude.md) | 엔진 PR #7990(`5a70787`)의 구조, 저장 형식, 읽기·쓰기·vacuum·복제, 호환성, 검증, 알려진 미해결 사항. 검증, 호환성, 미해결 사항은 head `dcbf09e` 기준으로 갱신(시작 시 저장 형식 거부 -1392, CDC 테스트의 QA 합의, Greptile 4차 P1 결과) | 2026-10-27 | 2026-10-27 | 리뷰어가 149개 파일을 이해하고 머지 위험을 판단하도록 설명 |
 | [CBRD-26357-oos-engine-pr-body_5a70787_claude.md](CBRD-26357-oos-engine-pr-body_5a70787_claude.md) | 엔진 PR #7990 본문: 목적, 구현 요약, 검증, 호환성, 미해결 사항 | 2026-10-27 | 2026-10-27 | 준비 중이던 PR 본문을 실제 내용으로 교체 |

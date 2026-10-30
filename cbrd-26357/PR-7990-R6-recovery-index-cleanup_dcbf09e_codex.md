@@ -34,7 +34,8 @@
 - [x] OOS 행의 commit·rollback·재시작 후 값과 `checkdb`를 확인한다.
 - [x] 변경 범위, 검증 한계와 재현 가능한 명령을 검토한 뒤 커밋한다.
 - [x] 별도 issue/PR 검토 자료를 준비한다.
-- [ ] 검토한 PR 본문과 게시 작업을 승인받고 별도 회사 draft PR을 만든다.
+- [x] 검토한 PR 본문과 게시 작업을 승인받고 별도 회사 draft PR을 만든다. PR 8347로 게시하고 전체 CI 한 번의 시작을 확인했다.
+- [ ] 회사 CI 결과와 팀 리뷰를 받은 뒤 source PR을 반영한다.
 
 ## 수행한 검증
 
@@ -73,4 +74,4 @@ ctest --test-dir "$CUBRID_BUILD_DIR" \
 
 release, 별도 HA replica 재생, 변경된 두 번호를 실제 발생시키는 MVCC relocation 통합 실행은 하지 않았다. SA crash redo와 실제 빌드의 배열 검사를 이 경로들의 end-to-end 검증으로 표시하지 않는다. R5의 오류 경로도 이 작업의 실행 범위가 아니다.
 
-[검토할 PR 본문](../cbrd-27841/CBRD-27841-recovery-index-cleanup-pr-body_eac70c7_codex.md)과 [게시 작업 제안](../cbrd-27841/CBRD-27841-recovery-index-cleanup-pr-context_eac70c7_codex.md)을 저장했다. source는 아직 push하지 않았고 회사 PR과 CI도 만들거나 실행하지 않았다.
+[검토한 PR 본문](../cbrd-27841/CBRD-27841-recovery-index-cleanup-pr-body_eac70c7_codex.md) 그대로 [회사 draft PR 8347](https://github.com/CUBRID/cubrid/pull/8347)을 만들었다. source는 개인 fork의 승인한 commit에 push했고, 담당자·base·본문을 재조회했다. [전체 CI 41048233875](https://github.com/CUBRID/cubrid/actions/runs/41048233875)의 다섯 상태가 같은 실행으로 연결되는 것을 확인했다. CI 완료와 팀 리뷰는 대기 중이다. [게시 맥락](../cbrd-27841/CBRD-27841-recovery-index-cleanup-pr-context_eac70c7_codex.md)에 실제 작업 결과를 기록한다.
