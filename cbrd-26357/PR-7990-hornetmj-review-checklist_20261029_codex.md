@@ -14,7 +14,7 @@ R1은 실제 동시 INSERT로 같은 assertion을 재현한 뒤 7줄을 삭제�
 - 엔진 수정 작업은 `/home/vimkim/gh/cb/pr7990-hornet-r1`, `CBRD-27827-oos-insert-header-wait`에서 진행한다. 초기 브랜치 이름은 `review/pr7990-hornet-r1`이었다. 각 독립 수정 PR의 base는 `CUBRID/cubrid:feature/oos-merge`이다. 팀 리뷰와 해당 PR head 검증을 받은 뒤 GitHub PR로 반영한다.
 - 문서는 `my-cubrid-docs`의 `main`에 통합·게시한다. 초기 task worktree는 `/home/vimkim/gh/my-cubrid-docs-pr7990-hornet-review`, 브랜치는 `docs/pr7990-hornet-review-20261029`이다. 통합 후 정리되면 `main`의 이 문서에서 재개한다.
 - 각 항목의 순서는 검토, 이해, 결정, 수정, 검증, 기록이다. 하나의 수정과 검증을 마친 뒤 다음 수정을 시작한다.
-- 현재 단계는 R1의 회사 draft PR 8330 게시 완료와 회사 CI·팀 리뷰 대기이다. [gha-ci 40853451200](https://github.com/CUBRID/cubrid/actions/runs/40853451200)의 build 두 개와 SQL·medium·shell 상태가 모두 PENDING으로 등록됐다. 앞선 직접 로컬 소스 통합 승인 요청은 철회했다. 다음 기술 검토는 R5이다. R2부터 R6까지의 수정은 아직 시작하지 않았다.
+- 현재 단계는 R1의 회사 draft PR 8330 게시 완료와 팀 리뷰 대기이다. [gha-ci 40853451200](https://github.com/CUBRID/cubrid/actions/runs/40853451200)는 release/debug 빌드와 SQL·medium이 통과했고 shell은 `temp_enc_06` 한 건이 실패했다. 사용자는 이 케이스가 알려진 flaky라고 확인했다. 실패 목록이 일치하므로 이를 R1 회귀 의심으로 별도 조사하느라 R5를 미루지 않는다. CI의 실제 shell 실패 상태는 그대로 기록한다. 다음 기술 검토는 R5이며, R2부터 R6까지의 수정은 아직 시작하지 않았다.
 - 사용자가 승인한 범위는 문서·JIRA 노트 통합 및 게시, R1 소스의 fork push, 회사 draft PR 생성·담당자 지정, 사전 조건 통과 후 전체 CI 한 번이다. 리뷰 답글 게시, thread resolve, 소스 PR 머지는 포함하지 않는다.
 
 ## 처리 순서
@@ -23,7 +23,7 @@ R1은 사용자가 지정한 링크이므로 먼저 다룬다. 이후에는 커�
 
 | 순서 | 항목 | 사용자 영향 | 첫 확인 사항 | 상태 |
 | --- | --- | --- | --- | --- |
-| 1 | [R1. 동시 INSERT의 파일 소유 확인 실패](#r1-동시-insert의-파일-소유-확인-실패) | INSERT 실패, debug abort | zero-wait 범위와 파일 헤더 경합 | CBRD-27827, 회사 draft PR 8330 게시 |
+| 1 | [R1. 동시 INSERT의 파일 소유 확인 실패](#r1-동시-insert의-파일-소유-확인-실패) | INSERT 실패, debug abort | zero-wait 범위와 파일 헤더 경합 | 회사 PR 8330 리뷰 대기. shell은 알려진 flaky `temp_enc_06` 한 건 실패 |
 | 2 | [R5. relocation undo가 재사용 슬롯을 덮어씀](#r5-relocation-undo가-재사용-슬롯을-덮어씀) | 커밋 행 손실, 힙 손상 | forward 페이지 공개와 sysop 경계 | 대기 |
 | 3 | [R2. vacuum과 새 힙 페이지 할당의 교착](#r2-vacuum과-새-힙-페이지-할당의-교착) | INSERT 장시간 대기와 abort | PR 8235의 처리 범위와 미통합 변경 | 대기 |
 | 4 | [R6. 미사용 복구 인덱스 제거](#r6-미사용-복구-인덱스-제거) | 불필요한 로그 형식 번호 고정 | 로그 생산자 존재 여부 | 대기 |
@@ -113,6 +113,7 @@ R1은 기존 티켓의 중복 검색을 마치고 [CBRD-27827](https://jira.cubr
 - [x] 검토한 본문의 게시 승인을 받은 뒤 fork에 push하고 회사 draft PR을 만든다.
 - [x] 사용자 승인 후 CBRD-27827을 OOS M2의 Sub-task로 전환하고 부모·본문·기존 상태 보존을 재조회한다.
 - [x] 두 testcase baseline을 확인하고 전체 CI 한 번을 요청해 다섯 gha-ci 상태의 시작을 확인한다.
+- [x] CI 완료 결과와 실패 목록을 확인한다. shell의 유일한 실패는 `temp_enc_06`이며, 사용자가 알려진 flaky로 확인했다. 다음 기술 검토는 R5로 유지한다.
 - [ ] 회사 CI와 팀 리뷰를 받은 뒤 PR을 반영한다.
 
 소스에서 확인한 사실은 [대기 시간 변경](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/storage/oos_file.cpp#L560-L582), [조건부 후보 래치와 소유 확인](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/storage/oos_file.cpp#L654-L706), [대기 시간 복원](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/storage/oos_file.cpp#L768-L772)이다. 오류 코드를 추가하는 것만으로는 경합으로 인한 INSERT 실패가 없어지지 않는다는 판단은 이 호출 흐름에 근거한다. 수정 전 debug 실행에서 아래와 같이 같은 위치의 assertion을 직접 재현했다.
@@ -274,6 +275,7 @@ PR 8235가 고쳤을 수 있다는 원문의 설명은 확인할 대상이다. �
 | 2026-10-29 | JIRA 도구 | Python의 `{code}`가 블록을 끝내는 변환기 결함을 서브에이전트로 분석·수정했다. 원본 Markdown을 보존해 실제 본문을 복구하고 서버 렌더 결과를 검증했다. | `cubrid-jira` 후보 `3f282aa`, 전체 테스트 297개, 독립 검토 112개 | 2026-10-30 승인 후 아래와 같이 통합·설치 완료 |
 | 2026-10-30 | JIRA 도구 완료 | 승인받은 `3f282aa`를 main에 fast-forward로 통합·push하고 `just sync`로 설치했다. 재검증 297개와 설치된 CLI의 실제 변환·readback 검사가 통과했고, 현재 JIRA 웹 본문도 정상이다. | 설치본과 main의 변환기 바이트 일치, 원본 issue payload 일치, Work 617 | 완료. 병합된 임시 worktree·브랜치 정리, main clean |
 | 2026-10-30 | R1 부모 연결 | 사용자 승인 후 CBRD-27827을 Correct Error에서 Sub-task로 전환하고 부모를 OOS M2 CBRD-26583으로 지정했다. API 재조회로 이슈 번호·제목·본문·Open 상태·우선순위·담당자·링크 보존과 웹 렌더 결과를 확인했다. | Convert wizard 결과와 전후 issue 스냅샷, 게시 맥락 | 부모 연결 완료. 독립 회사 PR 8330의 리뷰·검증 방식 유지 |
+| 2026-10-30 | R1 CI 분류 | release/debug 빌드와 SQL·medium이 통과했다. shell 실패는 `_36_damson/cbrd_23608_tde/temp_enc_06` 한 건으로 로그에서 확인했다. 사용자가 알려진 flaky라고 확인했으므로 별도 R1 회귀 조사를 다음 작업의 선행 조건으로 두지 않는다. | shell 05의 NOK 항목, collect의 `shell: 1 failed`, 사용자 확인 | 다음은 R5 검토. CI 실패 상태와 팀 리뷰 대기는 유지 |
 
 수집 원본은 `/home/vimkim/temp/pr7990-hornet-review-20261029/review-snapshot.json`에 보관한다. 원본 JSON, 빌드 로그, 중간 산출물은 문서 저장소에 커밋하지 않는다.
 

@@ -86,3 +86,10 @@ The user confirmed the saved body and listed publication operations in the conve
 - After recording the current Correct Error issue with no parent, one conversion used the CLI's Convert wizard. A direct issue GET verified type Sub-task and parent CBRD-26583.
 - Issue key and numeric ID, summary, raw description, status Open, priority, assignee and issue links matched the pre-conversion snapshot. The live rendered description still preserved the complete original Python and Expected Result heading/body.
 - The source branch, PR number 8330 and approved PR body were not edited. The parent relationship organizes the work under M2 while each engine fix retains its independent company PR and CI.
+
+## CI inventory update, 2026-10-30
+
+- The reviewed head's release/debug builds, SQL and medium statuses passed. Shell failed in [run 40853451200](https://github.com/CUBRID/cubrid/actions/runs/40853451200).
+- Failed shard shell 05 recorded exactly one NOK case, `cubrid-testcases-private-ex/shell/_36_damson/cbrd_23608_tde/temp_enc_06/cases/temp_enc_06.sh`. The collect job reported `shell: 1 failed`.
+- The user identified `temp_enc_06` as a well-known flaky case. That classification comes from the user; the match to this run's sole failing case was checked directly in its logs.
+- Separate investigation of this failure as a suspected R1 regression is not a prerequisite for starting R5. The actual shell FAILURE status remains recorded. No CI rerun, merge-gate override, review request or source merge was performed.
