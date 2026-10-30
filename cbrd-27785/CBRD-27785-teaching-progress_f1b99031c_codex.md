@@ -200,6 +200,34 @@ DB 이력과 실행 시점의 모든 차이를 통제한 인과 실험은 아니
 유사한 회귀 방향을 관측한 기록과 원문 수치의 검증 완료를 구분한다.
 이 차이만으로 원댓글이 틀렸다고 단정하지도 않는다.
 
+### T10. Release 빌드와 재현 절차 대조
+
+보존된 8개 질의 pair의 baseline·feature와 후속 일반 테이블 3-way 모두 CMake cache는
+`RelWithDebInfo`다. CUBRID의 `build.sh`는 `release`를 이 build type으로 설정한다.
+각 variant의 저장된 `compile-commands.json`에서 서버 `heap_file.c`의 실제 옵션은
+`-O2 -DNDEBUG -finline-functions -ggdb -fno-omit-frame-pointer`였고,
+`CUBRID_UNIT_TEST_ENABLED`는 없었다. 보존 cache의 모든 `UNIT_TEST*` 옵션도 OFF다.
+따라서 CUBRID 기준 release 빌드는 맞으며, `RelWithDebInfo`라는 이름만으로
+비최적화 debug 빌드라고 판정하지 않는다. 원댓글의 전체 compiler command는 없으므로
+리뷰어와 컴파일러·전체 옵션이 동일하다는 검증까지 마친 것은 아니다.
+
+원댓글의 SQL을 사용했다는 사실과 전체 측정 절차를 그대로 반복했다는 주장을 구분한다.
+앞서 인용한 큰 값 포함 pair는 다음 차이가 있다.
+
+| 항목 | 원댓글 | 보존된 8개 질의 pair |
+| --- | --- | --- |
+| 데이터·질의 | 제공한 DDL·8개 SQL | 원문 DDL로 seed 생성, 같은 형태의 8개 SQL 사용 |
+| 측정 테이블 생성 | 제공한 INSERT로 생성 | seed에서 `ORDER BY id`로 복제하고 통계 갱신 |
+| 반복 | 4라운드, 각각 5회 중 첫 회 제외 | 1라운드, 5회 중 첫 회 제외 |
+| UPDATE 시작 상태 | 표본마다 초기화하는지 명시하지 않음 | 매 표본 새 복제본, UPDATE와 COMMIT을 계수 구간에 포함 |
+| 빌드 | release로 기재 | 실제 O2·NDEBUG와 테스트 옵션 OFF 확인, 원문 전체 옵션과의 일치는 미확인 |
+
+두 완료 summary의 round 값은 0 하나뿐이고, 각각 8개 작업·40표본·warmup 8개다.
+따라서 정확한 표현은 원문 SQL을 사용한 별도 재현 실험이며, 원문의 전체 절차를
+동일하게 반복한 검증 완료 기록은 아니다. 복제·통계·UPDATE 이력·반복 수의 차이가
+관측된 절대 instructions 불일치의 원인이라는 인과관계도 아직 입증하지 않았다.
+원문과 동일한 develop 절대 계수를 얻는지부터 확인한 뒤 회귀율을 대조해야 한다.
+
 ## 지금까지 답변에서 확인한 내용
 
 질문형으로 진행하던 시기의 기록이며, 앞으로 퀴즈를 계속한다는 뜻은 아니다.
