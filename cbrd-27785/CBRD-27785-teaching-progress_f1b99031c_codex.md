@@ -47,6 +47,14 @@ index-key는 변경된 variable helper에서 OOS 여부를 받아 자체 Resolve
 근거는 [읽기 진입점](CBRD-27785-code-walkthrough_f1b99031c_codex.md#mental-model)과
 [index-key 변경 범위](CBRD-27785-code-walkthrough_f1b99031c_codex.md#change-index)에 있다.
 
+T08 보충으로 lazy 읽기의 의미를 설명했다. Heap record를 이미 가져온 뒤에도,
+속성을 `DB_VALUE`로 읽는 작업은 그 값이 실제로 필요할 때까지 미룰 수 있다.
+실행기가 `a` 조건을 먼저 평가하고 그 결과만으로 AND가 거짓이면, 뒤 조건의 `b`는
+읽지 않아도 된다. 이는 SQL에 적은 순서가 평가 순서를 보장한다는 뜻은 아니다.
+이 구현은 먼저 평가할 속성을 즉시 읽고 나머지를 lazy 상태로 두며,
+`heap_attrvalue_peek_lazy`가 처음 접근할 때 읽는다. 같은 행에서 다시 접근하면 읽은 값을 재사용한다.
+근거는 고정 학습 revision의 `src/storage/heap_file.c:12008`과 `:12389`다.
+
 ## 지금까지 답변에서 확인한 내용
 
 질문형으로 진행하던 시기의 기록이며, 앞으로 퀴즈를 계속한다는 뜻은 아니다.
