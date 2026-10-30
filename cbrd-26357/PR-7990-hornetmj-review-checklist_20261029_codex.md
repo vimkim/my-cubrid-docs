@@ -25,7 +25,7 @@ R1은 사용자가 지정한 링크이므로 먼저 다룬다. 이후에는 커�
 | 순서 | 항목 | 사용자 영향 | 첫 확인 사항 | 상태 |
 | --- | --- | --- | --- | --- |
 | 1 | [R1. 동시 INSERT의 파일 소유 확인 실패](#r1-동시-insert의-파일-소유-확인-실패) | INSERT 실패, debug abort | zero-wait 범위와 파일 헤더 경합 | 회사 PR 8330 리뷰 대기. shell은 알려진 flaky `temp_enc_06` 한 건 실패 |
-| 2 | [R5. relocation undo가 재사용 슬롯을 덮어씀](#r5-relocation-undo가-재사용-슬롯을-덮어씀) | 커밋 행 손실, 힙 손상 | forward 페이지 공개와 sysop 경계 | CBRD-27858, 회사 draft PR 8348 게시(`628857607`, 검증한 `c05abc8b4`와 같은 트리). CI·팀 리뷰 대기 |
+| 2 | [R5. relocation undo가 재사용 슬롯을 덮어씀](#r5-relocation-undo가-재사용-슬롯을-덮어씀) | 커밋 행 손실, 힙 손상 | forward 페이지 공개와 sysop 경계 | CBRD-27858, 회사 draft PR 8348 게시(`628857607`, 검증한 `c05abc8b4`와 같은 트리). gha-ci 41050496911 실행 중, 팀 리뷰 대기 |
 | 3 | [R2. vacuum과 새 힙 페이지 할당의 교착](#r2-vacuum과-새-힙-페이지-할당의-교착) | INSERT 장시간 대기와 abort | PR 8235의 처리 범위와 미통합 변경 | 대기 |
 | 4 | [R6. 미사용 복구 인덱스 제거](#r6-미사용-복구-인덱스-제거) | 불필요한 로그 형식 번호 고정 | 로그 생산자 존재 여부 | CBRD-27841, 회사 draft PR 8347 게시, CI·팀 리뷰 대기 |
 | 5 | [R3. 페이지 할당 시 전체 파일 스윕](#r3-페이지-할당-시-전체-파일-스윕) | 큰 파일의 INSERT 지연 | 스윕 발동 조건과 진행 위치 | 대기 |
@@ -204,7 +204,8 @@ ctest --test-dir "$CUBRID_BUILD_DIR" -R '^(test_oos_bestspace|test_oos_growth_sw
 - [x] JIRA 초안과 회사 PR 본문 초안을 준비한다. [PR 본문 초안](CBRD-XXXXX-oos-relocation-forward-slot-pr-body_c05abc8_claude.md)과 [게시 맥락](CBRD-XXXXX-oos-relocation-forward-slot-pr-context_c05abc8_claude.md)을 참조한다.
 - [x] 초안 검토 뒤 R5 티켓을 발급하고, 브랜치와 커밋 접두어를 새 키로 바꾼다. [CBRD-27858](https://jira.cubrid.org/browse/CBRD-27858)을 CBRD-26583의 Sub-task로 발급했다.
 - [x] 회사 draft PR의 게시 승인을 받는다. 승인 후 [회사 draft PR 8348](https://github.com/CUBRID/cubrid/pull/8348)를 만들었다. [PR 본문](../cbrd-27858/CBRD-27858-oos-relocation-forward-slot-pr-body_6288576_claude.md)과 [게시 맥락](../cbrd-27858/CBRD-27858-oos-relocation-forward-slot-pr-context_6288576_claude.md)을 참조한다.
-- [ ] 회사 CI 실행은 별도 승인을 받는다. CI 결과와 팀 리뷰를 받은 뒤 source PR을 반영한다.
+- [x] 회사 CI 실행은 별도 승인을 받는다. 승인 후 testcase 기준 확인을 통과하고 `/run all`을 한 번 올려 [gha-ci 41050496911](https://github.com/CUBRID/cubrid/actions/runs/41050496911)의 다섯 상태 등록을 확인했다.
+- [ ] CI 결과와 팀 리뷰를 받은 뒤 source PR을 반영한다.
 
 분석일은 2026-10-30, Asia/Seoul이다. 기준 소스는 `feature/oos-merge`의 `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`이다. 수정 커밋은 `/home/vimkim/gh/cb/pr7990-hornet-r5`의 로컬 task branch `pr7990-hornet-r5`에 있는 `c05abc8b4`였다. 티켓 발급 뒤 브랜치 이름을 `CBRD-27858-oos-relocation-forward-slot`으로 바꾸고 커밋 메시지 접두어만 고쳐 `628857607`이 됐다. 트리와 부모가 같으므로 아래 검증 결과가 그대로 적용된다. 아직 게시하지 않았다. release 실험은 별도 워크트리 `/home/vimkim/gh/cb/pr7990-hornet-r5-release`에서 실행했다. 결론은 리뷰어의 지적을 수용한다는 것이다. 수정 전 코드에서 debug assertion, release 페이지 손상, 재시작 복구 실패를 직접 재현했다. forward 페이지를 sysop commit 뒤까지 고정하는 수정 후에는 같은 주입에서 커밋된 행이 보존됐다.
 

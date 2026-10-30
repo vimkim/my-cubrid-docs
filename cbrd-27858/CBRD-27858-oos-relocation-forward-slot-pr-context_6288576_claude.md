@@ -68,3 +68,11 @@ On 2026-10-30 the user approved the duplicate search and drafts, then ticket iss
 - Created [CUBRID/cubrid PR 8348](https://github.com/CUBRID/cubrid/pull/8348) as a draft. Read-back showed head `vimkim/cubrid:CBRD-27858-oos-relocation-forward-slot` at `628857607265880ef7bbdda4973b1b6f06e8b797`, base `feature/oos-merge`, state OPEN, assignee `vimkim` and the proposed title.
 - The published body equals the approved file exactly. Its SHA256 is `bf32dc3e2e77b0bc4412941abad5470a41658b6ac960599ac8362ba02f3efd72`.
 - No CI trigger, review reply, thread resolution, reviewer request or PR 7990 change was made. Company CI and team review remain pending.
+
+## CI trigger, 2026-10-30
+
+- The user approved one full company CI run after the same prechecks as R1.
+- `cubrid-pr-tc-base-check --pr 8348` passed for both automatically created `tc/pr-8348` branches. Public tip `683bf41f9747250f615f23577cc62c1a4c4c17cf` contains feature baseline `70db22a1c99dbbaa27fa1438c8967effdfcad551`. Private tip `a0b3bb729263cee95431542322301505121c3621` contains feature baseline `75a02020e19be4bfc64e47f7c7a3d5c2b02d7676`. No testcase branch was changed by this agent.
+- Before the trigger, the PR head was `628857607265880ef7bbdda4973b1b6f06e8b797`, the only issue comment was the TC environment bot comment, no gha-ci status existed and no gha-ci run for PR 8348 was active.
+- Posted one [`/run all`](https://github.com/CUBRID/cubrid/pull/8348#issuecomment-6521877949). Both build contexts and the SQL, medium and shell contexts became PENDING and point to [gha-ci run 41050496911](https://github.com/CUBRID/cubrid/actions/runs/41050496911), queued by `issue_comment`. The head stayed `628857607`. No stable required gha-ci context was missing at pickup; this does not establish a passing result.
+- The live `gh pr checks --required` view reported `no required checks reported on the 'CBRD-27858-oos-relocation-forward-slot' branch`. CI completion and team review remain pending.
