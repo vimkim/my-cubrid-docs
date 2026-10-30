@@ -4,6 +4,8 @@
 
 **답안 3개의 오류 번호 총 4곳을 수정한 뒤 실제 native 실행에서 3 PASS·0 FAIL·0 SKIP을 확인했다. 세 SQL 입력을 그대로 정규 경로에 복원했고, 현재 OOS SQL은 28쌍 활성·0쌍 비활성이다.** 기존 25쌍은 바이트와 mode가 같다. 이번 focused 검증에서 그 25개를 다시 실행하지는 않았다.
 
+복원 뒤 한 번 실행한 CI는 별도 shell 1건 실패로 FAILURE다. 보존된 SQL shard 09 자료에서는 OOS 28개와 복원한 세 사례의 PASS가 관측된다. SQL 전체는 shard 01의 건수 불일치 때문에 수집기가 검증을 거부했다. **CI 전체 성공·SQL 전체 PASS·실패의 근본 원인을 확정하는 보고서는 아니다.**
+
 감시 스크립트가 완료 로그부터 시간을 잰다는 이전 설명은 잘못됐다. 실행 중 부분 로그를 관측하고 실제 120초 중단을 시험해 기존 감시가 작동함을 확인했다. 감시 코드·엔진·설치된 testkit은 수정하지 않았다.
 
 ## 수정과 실제 실행 결과
@@ -98,8 +100,41 @@ python3 cbrd-26659/tools/verify-sql-restoration.py \
 
 두 testcase 저장소의 최신 `feature/oos-merge` 조상 검사는 PASS다. 기존 완료 CI는 이번 복원 전 TC를 사용했으므로, TC push 뒤 프로젝트 지침에 따라 `/run all`을 한 번 게시했다. [요청](https://github.com/CUBRID/cubrid/pull/8128#issuecomment-6519189513)에 대응하는 [CI 41031622190](https://github.com/CUBRID/cubrid/actions/runs/41031622190), attempt 1의 build debug·release와 SQL·shell·medium 다섯 context가 같은 새 실행을 가리킨다. Engine PR head는 `e3589ae`다.
 
-CI 최종 결과는 종료 후 기록한다. 현재 이 문서는 native 3 PASS와 정규 복원·TC head push를 확인하며, CI 종료 판정은 아직 내리지 않는다. 추가 TC 수정·push·CI 재실행은 하지 않는다.
+CI는 2026-10-30에 FAILURE로 종료했다. 실패 job은 `shard shell 05`와 최종 `collect`다. 추가 TC 수정·push·CI 재실행은 하지 않았다.
+
+| 대상 | GitHub 상태 | 수집·검증 결과 |
+| --- | --- | --- |
+| build debug·release | SUCCESS | 같은 run의 두 context가 성공 |
+| `test_medium` | SUCCESS | completed, 975 PASS·0 FAIL·0 SKIP |
+| `test_shell` | FAILURE | completed, 3,490 PASS·1 FAIL·30 SKIP, 계획 3,521·실행 3,491·미실행 0 |
+| `test_sql` | SUCCESS | collection_failed, shard 01의 배정 3,533건과 summary·JUnit 3,531건 불일치 |
+
+`cubrid-ci 0.2.0 (dd290e9f7b9b, release)`로 SQL은 19:34:27 KST, shell·medium은 19:34:56 KST에 수집했다. 두 수집의 request·terminal observation·manifest를 schema와 대조하고 동일 Engine·run·attempt임을 확인했다. Shell·medium은 summary·raw index의 hash와 건수·실패 목록도 일치한다. 모든 SQL 10개·shell 50개·medium 1개 shard의 acquisition 상태는 `retained`다. 이는 원본 자료 확보 상태이며 전체 SQL 판정이 아니다. Binary 다운로드는 요청하지 않았고 소비한 binary budget은 0이다.
+
+SQL 수집의 진단은 `result identity mismatch: shard 01 workflow result and JUnit counts disagree`다. 최종 report-mode 검사는 `warning`, `regression_conclusions_allowed=false`다. 이전 집계 차이와 같은 건수가 보이지만 이번 결과로 원인이나 회귀 여부를 재확정하지 않는다. 정확한 merge-base 비교와 testcase 이력 분석은 이번 복구 단위에서 수행하지 않았다.
+
+실제 CI 산출물의 `build.read`는 Engine `e3589ae`, **debug**, 생산 run `40472072791` attempt 1을 가리킨다. 이는 회귀 실행 run `41031622190`과 구분한다. Public TC는 `b038c424b6a8d078671132e2369040493a5fc1f6`, shell private-ex TC는 `a229e1978abc4cc6c280783703c03f75524c0f05`이며 모두 `tc/pr-8128`이다. 로컬 native의 optdebug 시간과 CI debug 시간을 성능 비교하지 않는다.
+
+### 복원 SQL의 CI 관측 범위
+
+전체 SQL 수집 실패 상태를 유지한 채 보존된 shard 09 원본만 별도로 대조했다. 배정표·`shard.done`·summary·고유 JUnit testcase가 모두 468건이고 FAIL·ERROR·SKIP은 없다. OOS 경로는 summary 28/28·JUnit 28건이며 TC `b038c424`의 정상 SQL 목록과 정확히 같다. 원본 자료의 receipt hash와 Engine·TC 식별도 일치한다.
+
+| 복원 TC | CI shard 09 관측 | JUnit 시간 |
+| --- | --- | ---: |
+| `record_boundaries` | PASS | 0.047초 |
+| `sql05_bigone` | PASS | 0.051초 |
+| `sql09_lob_maxcols` | PASS | 0.832초 |
+
+이는 특정 shard에서 확인한 원본 관측이다. 수집기가 발행한 검증 완료 SQL suite summary는 없으며, 이 표로 SQL 전체의 무결성 오류를 해제하지 않는다.
+
+### Shell 실패의 관측과 남은 분석
+
+검증된 실패는 `shell/_40_guava/cbrd_25977/cases/cbrd_25977.sh` 한 건이며 shard 05에서 111.928초 후 FAIL이다. `diff.txt`의 실패 표시는 `cbrd_25977-16 : NOK`다. [고정 TC 소스](https://github.com/CUBRID/cubrid-testcases-private-ex/blob/a229e1978abc4cc6c280783703c03f75524c0f05/shell/_40_guava/cbrd_25977/cases/cbrd_25977.sh)의 16번 검사 로그에서 `run_cte '' 8`은 오류 없이 끝났고 값 검사 두 개도 PASS다. 하지만 정렬한 `parallel workers`는 기대 `2·3·4`와 달리 `2·4`였다. 이 배열 비교가 NOK의 직접 조건이다. 1~15·17~18번은 OK다.
+
+왜 worker 3이 없었는지는 미확정이다. 엔진·TC·환경 원인, PR과의 관계, 과거 재현 여부를 판단하지 않았다. 이번에는 로컬 재현이나 수정·재실행 없이 결과를 인계한다. 사람의 다음 지시 후 별도 실패 분석 단위에서 조사한다.
+
+CI 자료는 이번 작업 자료 아래 `ci-evidence/`와 `ci-other-evidence/`에 보존한다. 각각의 `ci-sql-collector.json`·`ci-other-collector.json`은 수집 결과이며 `ci-final.json`·`ci-final-checks.json`은 종료 상태다. 로컬 `check-ci-evidence.py`의 실제 대조 결과는 `ci-restored-sql-evidence.json`, 보고 범위 제한은 `ci-report-mode.json`이다. 생성 자료·원본 로그는 Git 밖에 둔다.
 
 현재 feature base의 `gh pr checks --required`는 required check가 없다고 보고했다. 확인한 TC Merge Gate workflow의 PR 이벤트 대상은 `develop`이며, 이 feature PR의 화면에 gate 성공이 붙었다고 주장하지 않는다. 두 연결 TC PR의 실제 검토·병합은 여전히 사람의 작업이다. TC PR을 merge·close하거나 브랜치를 삭제하지 않았다.
 
-이번 수정으로 SQL 3개의 복구·재활성화 단위를 마쳤다. shell 실패 61개, 이전 장시간 PASS 3개, HA, 요구사항 전체의 독립 검증·TC 리뷰와 병합은 남아 있다. 이전 SQL 전체 수집의 정합성 문제도 이번 focused PASS로 해제하지 않는다. CBRD-26659 전체와 Work456은 미완료다.
+이번 수정으로 SQL 3개의 복구·재활성화와 1회 CI 결과 기록을 마쳤다. 과거 shell 실패 61개, 이번 `cbrd_25977-16`, 이전 장시간 PASS 3개, HA, 요구사항 전체의 독립 검증·TC 리뷰와 병합은 남아 있다. SQL 전체 수집의 정합성 문제도 이번 focused PASS로 해제하지 않는다. CBRD-26659 전체와 Work456은 미완료다.
