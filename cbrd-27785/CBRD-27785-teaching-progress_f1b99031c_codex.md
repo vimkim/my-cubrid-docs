@@ -31,22 +31,21 @@
 - [x] T05. 일반 inline bytes와 임시 OOS bytes의 수명, COPY 요청과 type handler의 기존 계약을 설명한다.
 - [x] T06. record의 `HAS_OOS`, 개별 필드의 `IS_OOS`, 요청한 OOS 속성 수에 따른 scalar·grouped 선택을 설명한다.
 - [x] T07. 기존 record layout 재사용, offset 폭과 길이 계산, collection의 물리 순서 처리를 설명한다.
-- [ ] T08. 일반·without-OID·lazy 읽기와 index-key 소비자의 연결 및 변경 범위를 설명한다.
+- [x] T08. 일반·without-OID·lazy 읽기와 index-key 소비자의 연결 및 변경 범위를 설명한다.
 - [ ] T09. NULL·기본값·구 representation·pending owner와 오류 시 정리가 유지되는 경로를 설명한다.
 - [ ] T10. 코드 diff와 성능 비교의 기준 revision, instructions와 경과 시간, 테스트 및 측정 범위의 한계를 설명한다.
 - [ ] T11. 앞의 내용을 팀 발표 순서로 정리하고, 예상 질문에 대한 설명을 준비한다.
 
 ## 다음에 이어갈 위치
 
-다음 항목은 T08의 일반·without-OID·lazy 읽기와 index-key 소비자다.
-T07에서는 수정 전에도 record당 한 번 계산하던 layout의 `var_table`과 `offset_size`를
-재사용해 1·2·4바이트 중 같은 폭의 분기에서 두 offset을 읽는 변경을 설명했다.
-두 offset의 차이가 0이면 기존 NULL 변환으로 보낸다. 이 helper가 모든 타입의 길이를
-그 차이로 확정하는 것은 아니며, collection·LOB 이외에는 `raw.length=-1`로 둔다.
-collection·LOB는 속성 순서와 물리 순서가 다를 수 있어 현재보다 큰 offset 중 가장 작은 값을
-끝 경계로 찾는다. 이 규칙을 유지하면서 header 재해석을 줄인 변경이다.
-근거는 [variable helper 해설](CBRD-27785-code-walkthrough_f1b99031c_codex.md#change-variable)과
-고정 학습 revision의 `src/storage/heap_file.c:11206`이다.
+다음 항목은 T09의 NULL·기본값·구 representation·pending owner와 오류 시 정리다.
+T08에서는 일반 읽기와 without-OID 읽기가 representation을 맞춘 뒤 같은 dispatcher로
+이어지고, lazy 읽기는 record와 layout을 함께 보관해 필요한 속성을 scalar reader로 읽는
+연결을 설명했다. Grouped prefetch 값은 scalar reader를 거치지 않고 공통 변환기로 간다.
+index-key는 변경된 variable helper에서 OOS 여부를 받아 자체 Resolve와 type handler 변환을
+수행하며, 자체 scratch 배열과 임시 OOS bytes의 COPY·해제 처리가 남는다.
+근거는 [읽기 진입점](CBRD-27785-code-walkthrough_f1b99031c_codex.md#mental-model)과
+[index-key 변경 범위](CBRD-27785-code-walkthrough_f1b99031c_codex.md#change-index)에 있다.
 
 ## 지금까지 답변에서 확인한 내용
 
