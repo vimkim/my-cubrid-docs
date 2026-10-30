@@ -57,4 +57,14 @@ This file records a publication proposal. It does not grant permission.
 
 ## Approval state
 
-On 2026-10-30 the user approved the duplicate search and drafts, then ticket issuance with the local branch rename and commit reword. The operations above still need explicit approval.
+On 2026-10-30 the user approved the duplicate search and drafts, then ticket issuance with the local branch rename and commit reword. The user then confirmed the saved body and publication operations 1 to 6 above. A company CI trigger was not approved. This record does not grant permission for future operations.
+
+## Publication results, 2026-10-30
+
+- Before the remote writes, the body SHA256 was `bf32dc3e2e77b0bc4412941abad5470a41658b6ac960599ac8362ba02f3efd72` and the material check passed. Local source HEAD was `628857607265880ef7bbdda4973b1b6f06e8b797`. The `vk` branch and a matching PR were absent. The base was still `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`.
+- Docs `main` had gained three concurrent R6 commits that changed the shared checklist and `cbrd-26357/README.md`. The rebase stopped on those two files, so it was aborted and the task was squash-merged. The resolution kept the R6 text and changed only the R5 status sentences and index rows. The body, context and ticket README equaled the task branch files. Docs `main` was pushed at `350d0ae`.
+- JIRA notes `main` had gained a concurrent CBRD-27841 README entry. The same squash fallback kept both entries. The issue report SHA256 stayed `3c037c1a46d2ed30bb20b134d955b680238f2f950d0610218be2f987e6b21d48`. Notes `main` was pushed at `0378cdb`.
+- A normal push created `vimkim/cubrid:CBRD-27858-oos-relocation-forward-slot`. The remote SHA was read back and matched `628857607265880ef7bbdda4973b1b6f06e8b797`. The reproduction branches were not pushed.
+- Created [CUBRID/cubrid PR 8348](https://github.com/CUBRID/cubrid/pull/8348) as a draft. Read-back showed head `vimkim/cubrid:CBRD-27858-oos-relocation-forward-slot` at `628857607265880ef7bbdda4973b1b6f06e8b797`, base `feature/oos-merge`, state OPEN, assignee `vimkim` and the proposed title.
+- The published body equals the approved file exactly. Its SHA256 is `bf32dc3e2e77b0bc4412941abad5470a41658b6ac960599ac8362ba02f3efd72`.
+- No CI trigger, review reply, thread resolution, reviewer request or PR 7990 change was made. Company CI and team review remain pending.
