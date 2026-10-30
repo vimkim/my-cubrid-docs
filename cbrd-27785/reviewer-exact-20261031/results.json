@@ -1,0 +1,3812 @@
+{
+  "date_kst": "2026-10-31",
+  "source": "https://github.com/CUBRID/cubrid/pull/7990#issuecomment-6461744209",
+  "raw_root": "/mnt/nvme/data-5/tmp/CBRD-27785-reviewer-exact-20261031-kpeajbx3",
+  "comment_sha256": "848440b2a3ead6f8746d0355dd6b110c7e742a7c113c7c9daf5f6eca7d1098e8",
+  "harness_sha256": "d5908f21395345c3356c3a50495cc598b28555717c678052114dab9fb951d400",
+  "locale_launcher_sha256": "7f0a1d2dab830a26a15fcfbcd0253fc73cbd8c362ed5f797f0b6777ac2036555",
+  "fixture_sha256": "7220cd5fcd0af3af009a9576e2227ef033346292ebd3effe06f4fb06ffc9d7d5",
+  "queries_sha256": "11b4d8b8b4cbed9f106146b4cc7e1abf33496a001034a3ac90ce640d88c16076",
+  "primary_metric": "server process instructions:u, actual perf records",
+  "warmup": "first of each five discarded, including actual committed UPDATE",
+  "original_claims_M": {
+    "w_small": [
+      43.6,
+      33.6,
+      -23.1
+    ],
+    "w_length": [
+      186.1,
+      261.7,
+      40.6
+    ],
+    "w_substr": [
+      195.1,
+      270.7,
+      38.7
+    ],
+    "w_update_small": [
+      3467,
+      6021.9,
+      73.7
+    ],
+    "w_update_big": [
+      1789.8,
+      2408.7,
+      34.6
+    ],
+    "n_scan": [
+      252.7,
+      272.9,
+      8.0
+    ],
+    "n_pred": [
+      476.8,
+      524.1,
+      9.9
+    ],
+    "n_update": [
+      6323.8,
+      6769.6,
+      7.0
+    ]
+  },
+  "campaigns": {
+    "utf8": {
+      "locale": "en_US.utf8",
+      "variants": {
+        "base": {
+          "revision": "4781495f01523a3ecc5891e3377ad62cf876a1cd",
+          "worktree": "/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031",
+          "install": "/home/vimkim/.cub/install/CBRD-27785-exact-base-20261031/release_gcc_nounit",
+          "compiler": "g++ (GCC) 11.5.0 20240719 (Red Hat 11.5.0-5)",
+          "unit_options": {
+            "UNIT_TESTS": "OFF",
+            "UNIT_TEST_OOS": "OFF",
+            "UNIT_TEST_PAGE_BUFFER": "OFF",
+            "UNIT_TEST_SPAGE": "OFF"
+          },
+          "binary_identity": {
+            "bin/cub_server": {
+              "sha256": "0bbb18a1dc5fd7ae30385143bb7b6b28154f87fe13853c0a1b03e653651c950b",
+              "build_id": "43c83637f3750ad7f67e6d4ada39549eec226d06"
+            },
+            "bin/csql": {
+              "sha256": "1966a49092f629111fabb000e99a3e573f29f7fa6ae9ceaf5d7f850bc73d2f99",
+              "build_id": "c5aca9ef9710cf0a446c5ffb967f0b5c4259c6dd"
+            },
+            "lib/libcubrid.so.11.5": {
+              "sha256": "4bce98c437bfbe2c1ba9f6bc39ab46cd17027d10cdcbd2a1b67124653b25041f",
+              "build_id": "279102e2216ae316f8c0f0c16abb2e3011d69af7"
+            }
+          },
+          "configuration": "[service]\nservice = server,broker\n\n[common]\ncubrid_port_id = 41178\ndata_buffer_size = 4G\nlog_buffer_size = 256M\nmax_clients = 50\nstored_procedure = yes\nstored_procedure_uds = yes\nha_mode = off\nsort_buffer_size = 16M\ndb_volume_size = 2G\nlog_volume_size = 1G\nlog_max_archives = 0\n\n",
+          "heap_server_compile_command": "/usr/lib64/ccache/g++ -DCUBRID_EXPORTING -DEnableThreadMonitoring -DGCC -DI386 -DLINUX -DMAXPATHLEN=1024 -DSERVER_MODE -DSYSV -DX86 -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -D_REENTRANT -Dcubrid_EXPORTS -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/include -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/api -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/base -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/broker -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/communication -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/compat -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/connection -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/debugging -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/executables -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/heaplayers -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/sp -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/loaddb -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/method -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/monitor -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/object -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/optimizer -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/optimizer/histogram -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/parser -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/replication -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/query -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/session -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/storage -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/thread -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/transaction -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/xasl -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/query/parallel/px_hash_join -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/query/parallel/px_merge_join -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/query/parallel/px_scan -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/query/parallel/px_scan/index -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/query/parallel -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/query/parallel/px_query_execute -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/cubrid-cci/src/cci -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/cubrid-cci/src/tools -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/vm/jdk8/include -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/vm/jdk8/include/linux -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/3rdparty/include/expat -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/3rdparty/include -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/3rdparty/Source/lz4/lib -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/3rdparty/Source/rapidjson/include -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/3rdparty/Source/re2 -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/3rdparty/Source/libtbb/include/tbb -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/3rdparty/Source/libtbb/include/oneapi -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/3rdparty/Source/libtbb/include/oneapi/tbb -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/3rdparty/Source/libtbb/include/oneapi/tbb/detail -x c++ -fdiagnostics-color=always -Wall -Werror -Wformat -Wformat-security -Werror=format-security -Wwrite-strings  -Wredundant-decls -Wextra -Wno-unused -Wno-unused-result -Wno-unused-parameter -pthread -O2 -ggdb3 -DNDEBUG -finline-functions -Wno-error=stringop-truncation -Wno-error=maybe-uninitialized -Wno-error=format-overflow -Wno-error=format-truncation -O2 -DNDEBUG -finline-functions -ggdb -fno-omit-frame-pointer -fPIE -std=c++17 -std=gnu++17 -fPIC -fdiagnostics-color=always -o cubrid/CMakeFiles/cubrid.dir/__/src/storage/heap_file.c.o -c /home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/storage/heap_file.c",
+          "physical_data_bytes": 2147483648,
+          "physical_log_bytes": 1073741824,
+          "cases": {
+            "w_small": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    46472681,
+                    44002123,
+                    43901238,
+                    44002104,
+                    43906508
+                  ],
+                  "seconds": [
+                    0.06556089909281582,
+                    0.06554556696210057,
+                    0.06548071291763335,
+                    0.06550082401372492,
+                    0.06545383005868644
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    55457839,
+                    46246286,
+                    43992455,
+                    43984545,
+                    44025537
+                  ],
+                  "seconds": [
+                    0.11575332703068852,
+                    0.06584740406833589,
+                    0.06555072404444218,
+                    0.06564497703220695,
+                    0.06576115498319268
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    55307868,
+                    46263692,
+                    44055927,
+                    43989910,
+                    44038554
+                  ],
+                  "seconds": [
+                    0.11571545898914337,
+                    0.06556946493219584,
+                    0.06553077092394233,
+                    0.06562458700500429,
+                    0.06557065900415182
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    55266096,
+                    46247130,
+                    43929035,
+                    43989706,
+                    43942681
+                  ],
+                  "seconds": [
+                    0.11552569409832358,
+                    0.06548340199515224,
+                    0.06560689106117934,
+                    0.06555382197257131,
+                    0.06550812197383493
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 43997279.5,
+              "min": 43901238,
+              "max": 46263692
+            },
+            "w_length": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    294542892,
+                    294328793,
+                    294190132,
+                    294340876,
+                    294273075
+                  ],
+                  "seconds": [
+                    0.06552119494881481,
+                    0.06550033192615956,
+                    0.06567804794758558,
+                    0.06562570494133979,
+                    0.06560269999317825
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    294299445,
+                    294051667,
+                    294061995,
+                    293999422,
+                    294090530
+                  ],
+                  "seconds": [
+                    0.06566594692412764,
+                    0.06581164395902306,
+                    0.06566459499299526,
+                    0.06572125700768083,
+                    0.06575712794438004
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    294164565,
+                    293936393,
+                    293953634,
+                    293854893,
+                    293969139
+                  ],
+                  "seconds": [
+                    0.0654716610442847,
+                    0.06549054605420679,
+                    0.06560242490377277,
+                    0.06560345401521772,
+                    0.06554481701459736
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    294554796,
+                    294129480,
+                    294019470,
+                    294101591,
+                    294119790
+                  ],
+                  "seconds": [
+                    0.06551787408534437,
+                    0.06551670504268259,
+                    0.06557838304433972,
+                    0.06551231699995697,
+                    0.06555768090765923
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 294076262.5,
+              "min": 293854893,
+              "max": 294340876
+            },
+            "w_substr": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    498893413,
+                    498615721,
+                    498630810,
+                    498542265,
+                    498662903
+                  ],
+                  "seconds": [
+                    0.06562125100754201,
+                    0.06545019207987934,
+                    0.06555047305300832,
+                    0.0655617049196735,
+                    0.06558106897864491
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    498955000,
+                    498489064,
+                    498428983,
+                    498431810,
+                    498482150
+                  ],
+                  "seconds": [
+                    0.06567699799779803,
+                    0.06572409102227539,
+                    0.06590921594761312,
+                    0.06583559396676719,
+                    0.0655694711022079
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    498788749,
+                    498392606,
+                    498375187,
+                    498313370,
+                    498330640
+                  ],
+                  "seconds": [
+                    0.06550032005179673,
+                    0.06546090997289866,
+                    0.0655704679666087,
+                    0.06546253699343652,
+                    0.06554614694323391
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    498847353,
+                    498542900,
+                    498685744,
+                    498533961,
+                    498491704
+                  ],
+                  "seconds": [
+                    0.06553238106425852,
+                    0.06545672006905079,
+                    0.065545140998438,
+                    0.06554521399084479,
+                    0.06562719598878175
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 498490384.0,
+              "min": 498313370,
+              "max": 498685744
+            },
+            "w_update_small": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    3478276337,
+                    3348069216,
+                    3341052273,
+                    3353286452,
+                    3345221301
+                  ],
+                  "seconds": [
+                    1.3178538579959422,
+                    1.1176656739553437,
+                    1.068065671948716,
+                    1.1689123850082979,
+                    1.0676418219227344
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    3272656628,
+                    3366576419,
+                    3362635559,
+                    3358545190,
+                    3343695634
+                  ],
+                  "seconds": [
+                    1.819672379991971,
+                    1.1680641390848905,
+                    1.1685548349050805,
+                    1.1180872650584206,
+                    1.1682821129215881
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    3273187916,
+                    3371604100,
+                    3335121158,
+                    3352697527,
+                    3358042254
+                  ],
+                  "seconds": [
+                    1.5683940080925822,
+                    1.1180012749973685,
+                    1.067524121957831,
+                    1.0676031589973718,
+                    1.0176004660315812
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    3271975171,
+                    3356644195,
+                    3365846165,
+                    3339987505,
+                    3339782622
+                  ],
+                  "seconds": [
+                    1.6181537610245869,
+                    1.1679122229106724,
+                    1.2178937069838867,
+                    1.2179417329607531,
+                    1.1677850690903142
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 3352991989.5,
+              "min": 3335121158,
+              "max": 3371604100
+            },
+            "w_update_big": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    2001600839,
+                    1916634291,
+                    1917023175,
+                    1912550399,
+                    1912377638
+                  ],
+                  "seconds": [
+                    0.466377099044621,
+                    0.46631289809010923,
+                    0.4662341399816796,
+                    0.46635051001794636,
+                    0.46659841702785343
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    2000615387,
+                    1909555921,
+                    1911074736,
+                    1908696945,
+                    1911227444
+                  ],
+                  "seconds": [
+                    0.5163677970413119,
+                    0.46643191506154835,
+                    0.5165241010254249,
+                    0.46642640698701143,
+                    0.466707740095444
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    2007677670,
+                    1930488853,
+                    1905510751,
+                    1908294556,
+                    1920629127
+                  ],
+                  "seconds": [
+                    0.46640380402095616,
+                    0.4663005319889635,
+                    0.4662727169925347,
+                    0.46643054496962577,
+                    0.4663323079003021
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    1984386514,
+                    1922067408,
+                    1907947936,
+                    1906746912,
+                    1910952233
+                  ],
+                  "seconds": [
+                    0.4663255359046161,
+                    0.46615599596407264,
+                    0.4663102290360257,
+                    0.46637816599104553,
+                    0.4666124819777906
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 1911151090.0,
+              "min": 1905510751,
+              "max": 1930488853
+            },
+            "n_scan": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    251739063,
+                    251217459,
+                    251216813,
+                    251078373,
+                    251140064
+                  ],
+                  "seconds": [
+                    0.06559690996073186,
+                    0.06550397397950292,
+                    0.06547660601790994,
+                    0.06549447600264102,
+                    0.06540591607335955
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    253027723,
+                    251436939,
+                    251029148,
+                    251098906,
+                    251104477
+                  ],
+                  "seconds": [
+                    0.06564622197765857,
+                    0.06577557197306305,
+                    0.06557743507437408,
+                    0.06558532000053674,
+                    0.06552606204058975
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    253021660,
+                    251331838,
+                    250998658,
+                    251014051,
+                    251106100
+                  ],
+                  "seconds": [
+                    0.06561621697619557,
+                    0.06541836692485958,
+                    0.06554138893261552,
+                    0.06540375505574048,
+                    0.06569882307667285
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    252920921,
+                    251439555,
+                    251125015,
+                    251019617,
+                    251103993
+                  ],
+                  "seconds": [
+                    0.06573459599167109,
+                    0.06566108798142523,
+                    0.06558281800244004,
+                    0.06576027895789593,
+                    0.06565091700758785
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 251105288.5,
+              "min": 250998658,
+              "max": 251439555
+            },
+            "n_pred": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    532199683,
+                    533736760,
+                    531826780,
+                    531860591,
+                    531823491
+                  ],
+                  "seconds": [
+                    0.065907261101529,
+                    0.0655787920113653,
+                    0.06533301796298474,
+                    0.06540157704148442,
+                    0.06553911603987217
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    532043628,
+                    531829632,
+                    531772350,
+                    531838350,
+                    531798596
+                  ],
+                  "seconds": [
+                    0.06564012297894806,
+                    0.06563840294256806,
+                    0.0656030069803819,
+                    0.06552762701176107,
+                    0.06568083795718849
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    532055726,
+                    531806902,
+                    531777563,
+                    531688802,
+                    531772248
+                  ],
+                  "seconds": [
+                    0.06540857499931008,
+                    0.06545690400525928,
+                    0.0653829500079155,
+                    0.06542820495087653,
+                    0.06533157709054649
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    532019283,
+                    531799011,
+                    531769218,
+                    531787007,
+                    531779590
+                  ],
+                  "seconds": [
+                    0.0654126750305295,
+                    0.06570169900078326,
+                    0.06551097496412694,
+                    0.06550659006461501,
+                    0.06559440400451422
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 531798803.5,
+              "min": 531688802,
+              "max": 533736760
+            },
+            "n_update": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    6509284423,
+                    6525206639,
+                    6645610739,
+                    6699563872,
+                    6525631839
+                  ],
+                  "seconds": [
+                    1.2675109789706767,
+                    1.2679908709833398,
+                    1.2178575999569148,
+                    1.2677060429705307,
+                    1.2676927979337052
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    6583065436,
+                    6617667178,
+                    6524448869,
+                    6525251595,
+                    6589149374
+                  ],
+                  "seconds": [
+                    1.3178206039592624,
+                    1.2683381979586557,
+                    1.2681147849652916,
+                    1.3682687850669026,
+                    1.317612826009281
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    6505903645,
+                    6521829982,
+                    6717159422,
+                    6600459990,
+                    6525842719
+                  ],
+                  "seconds": [
+                    1.2179704000009224,
+                    1.2177661129971966,
+                    1.2175361890112981,
+                    1.2679744579363614,
+                    1.2678418789291754
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    6520115904,
+                    6585121147,
+                    6613091547,
+                    6542276403,
+                    6526236594
+                  ],
+                  "seconds": [
+                    1.2677953040692955,
+                    1.2177756930468604,
+                    1.268036541994661,
+                    1.2677642989438027,
+                    1.3211260279640555
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 6563698775.0,
+              "min": 6521829982,
+              "max": 6717159422
+            }
+          }
+        },
+        "feature": {
+          "revision": "4408135c0833ec959da3590f12c14efa69610c7e",
+          "worktree": "/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031",
+          "install": "/home/vimkim/.cub/install/CBRD-27785-exact-feature-20261031/release_gcc_nounit",
+          "compiler": "g++ (GCC) 11.5.0 20240719 (Red Hat 11.5.0-5)",
+          "unit_options": {
+            "UNIT_TESTS": "OFF",
+            "UNIT_TEST_OOS": "OFF",
+            "UNIT_TEST_PAGE_BUFFER": "OFF",
+            "UNIT_TEST_SPAGE": "OFF"
+          },
+          "binary_identity": {
+            "bin/cub_server": {
+              "sha256": "2fa1d5347b3fef8149687ca9d24795464c27683ec2e9c309ef2ccef41475cddc",
+              "build_id": "b64018b969a7500f3d9bd356eb9c59d47cf4f719"
+            },
+            "bin/csql": {
+              "sha256": "2e2387a1bd534a8300943945e3e056224144aefdbe4dd94495e21aa84925b3db",
+              "build_id": "b2787913114f457ee07b236b1d2f708412e48e71"
+            },
+            "lib/libcubrid.so.11.5": {
+              "sha256": "17500caea044ba67a83ffb5731ae6b812bde13ffda7ed26cb00368ded63afce1",
+              "build_id": "d79b52248a71a0d33ce48c4e5c1eb575bd1ff0d4"
+            }
+          },
+          "configuration": "[service]\nservice = server,broker\n\n[common]\ncubrid_port_id = 41180\ndata_buffer_size = 4G\nlog_buffer_size = 256M\nmax_clients = 50\nstored_procedure = yes\nstored_procedure_uds = yes\nha_mode = off\nsort_buffer_size = 16M\ndb_volume_size = 2G\nlog_volume_size = 1G\nlog_max_archives = 0\n\n",
+          "heap_server_compile_command": "/usr/lib64/ccache/g++ -DCUBRID_EXPORTING -DEnableThreadMonitoring -DGCC -DI386 -DLINUX -DMAXPATHLEN=1024 -DSERVER_MODE -DSYSV -DX86 -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -D_REENTRANT -Dcubrid_EXPORTS -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/include -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/api -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/base -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/broker -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/communication -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/compat -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/connection -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/debugging -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/executables -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/heaplayers -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/sp -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/loaddb -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/method -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/monitor -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/object -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/optimizer -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/optimizer/histogram -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/parser -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/replication -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/query -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/session -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/storage -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/thread -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/transaction -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/xasl -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/query/parallel/px_hash_join -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/query/parallel/px_merge_join -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/query/parallel/px_scan -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/query/parallel/px_scan/index -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/query/parallel -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/query/parallel/px_query_execute -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/cubrid-cci/src/cci -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/cubrid-cci/src/tools -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/vm/jdk8/include -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/vm/jdk8/include/linux -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/3rdparty/include/expat -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/3rdparty/include -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/3rdparty/Source/lz4/lib -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/3rdparty/Source/rapidjson/include -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/3rdparty/Source/re2 -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/3rdparty/Source/libtbb/include/tbb -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/3rdparty/Source/libtbb/include/oneapi -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/3rdparty/Source/libtbb/include/oneapi/tbb -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/3rdparty/Source/libtbb/include/oneapi/tbb/detail -x c++ -fdiagnostics-color=always -Wall -Werror -Wformat -Wformat-security -Werror=format-security -Wwrite-strings  -Wredundant-decls -Wextra -Wno-unused -Wno-unused-result -Wno-unused-parameter -pthread -O2 -ggdb3 -DNDEBUG -finline-functions -Wno-error=stringop-truncation -Wno-error=maybe-uninitialized -Wno-error=format-overflow -Wno-error=format-truncation -O2 -DNDEBUG -finline-functions -ggdb -fno-omit-frame-pointer -fPIE -std=c++17 -std=gnu++17 -fPIC -fdiagnostics-color=always -o cubrid/CMakeFiles/cubrid.dir/__/src/storage/heap_file.c.o -c /home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/storage/heap_file.c",
+          "physical_data_bytes": 2147483648,
+          "physical_log_bytes": 1073741824,
+          "cases": {
+            "w_small": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    35085731,
+                    35022909,
+                    34885845,
+                    34996662,
+                    35009950
+                  ],
+                  "seconds": [
+                    0.06544374802615494,
+                    0.06549595599062741,
+                    0.06547514395788312,
+                    0.06544373696669936,
+                    0.06539674091618508
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    36148123,
+                    35758686,
+                    35801512,
+                    35707293,
+                    35738136
+                  ],
+                  "seconds": [
+                    0.06556166196241975,
+                    0.06552403711248189,
+                    0.06552455492783338,
+                    0.0654715090058744,
+                    0.06543722900096327
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    36220655,
+                    35831419,
+                    35711736,
+                    35752180,
+                    35846653
+                  ],
+                  "seconds": [
+                    0.0655207900563255,
+                    0.06546833703760058,
+                    0.06547249807044864,
+                    0.06558821990620345,
+                    0.06549579207785428
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    36138761,
+                    35751198,
+                    35817433,
+                    35701590,
+                    35733431
+                  ],
+                  "seconds": [
+                    0.0655867779860273,
+                    0.06562682695221156,
+                    0.06541646807454526,
+                    0.06551767105702311,
+                    0.06555333698634058
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 35735783.5,
+              "min": 34885845,
+              "max": 35846653
+            },
+            "w_length": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    371754470,
+                    371509948,
+                    371523617,
+                    371498288,
+                    371508559
+                  ],
+                  "seconds": [
+                    0.1155726540600881,
+                    0.11548885004594922,
+                    0.11568901804275811,
+                    0.11560933897271752,
+                    0.11547219299245626
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    389634136,
+                    382580192,
+                    377412525,
+                    377464460,
+                    377307763
+                  ],
+                  "seconds": [
+                    0.2157397239934653,
+                    0.1155261400854215,
+                    0.11552909400779754,
+                    0.11563825304619968,
+                    0.1155779460677877
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    389278709,
+                    382551487,
+                    377061501,
+                    377102798,
+                    377060442
+                  ],
+                  "seconds": [
+                    0.26597941399086267,
+                    0.21577750600408763,
+                    0.11564961506519467,
+                    0.11575509107206017,
+                    0.11555556103121489
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    390537133,
+                    383427406,
+                    378158656,
+                    378185312,
+                    378187032
+                  ],
+                  "seconds": [
+                    0.26587497105356306,
+                    0.16561746399383992,
+                    0.11553091905079782,
+                    0.11562707892153412,
+                    0.11561312596313655
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 377360144.0,
+              "min": 371498288,
+              "max": 383427406
+            },
+            "w_substr": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    575099683,
+                    574908517,
+                    574902370,
+                    574868304,
+                    574818443
+                  ],
+                  "seconds": [
+                    0.16557757393456995,
+                    0.16576482309028506,
+                    0.1657089409418404,
+                    0.16573697398416698,
+                    0.16551046504173428
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    577856264,
+                    577713644,
+                    577690398,
+                    577664325,
+                    577801358
+                  ],
+                  "seconds": [
+                    0.16577658301685005,
+                    0.1656979719409719,
+                    0.16571852494962513,
+                    0.16553513100370765,
+                    0.16569455503486097
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    577260817,
+                    577066822,
+                    577094831,
+                    577066914,
+                    577122670
+                  ],
+                  "seconds": [
+                    0.16569032007828355,
+                    0.16572091705165803,
+                    0.16572668799199164,
+                    0.16589836799539626,
+                    0.1657637640601024
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    578949193,
+                    578715458,
+                    578862420,
+                    578791563,
+                    578909355
+                  ],
+                  "seconds": [
+                    0.16578162100631744,
+                    0.16565028904005885,
+                    0.16572539694607258,
+                    0.16561562195420265,
+                    0.21587953297421336
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 577393497.5,
+              "min": 574818443,
+              "max": 578909355
+            },
+            "w_update_small": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    3016549078,
+                    194509679626,
+                    6200781129,
+                    8571034793,
+                    10762727192
+                  ],
+                  "seconds": [
+                    1.1170987680088729,
+                    33.12509672192391,
+                    1.6191355710616335,
+                    1.618617799016647,
+                    1.8194653689861298
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    6162869672,
+                    9238138836,
+                    10200012392,
+                    7114766143,
+                    8955940175
+                  ],
+                  "seconds": [
+                    1.718392024980858,
+                    2.1190395220182836,
+                    2.0194909040583298,
+                    1.7185685810400173,
+                    1.7683943710289896
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    5948832158,
+                    10134608705,
+                    9355900479,
+                    6715833420,
+                    9635021535
+                  ],
+                  "seconds": [
+                    1.9189499960048124,
+                    1.9689413700252771,
+                    1.7685652780346572,
+                    1.4687576360302046,
+                    1.6685017289128155
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    6108639724,
+                    9605475122,
+                    9291357412,
+                    6910142564,
+                    9045155869
+                  ],
+                  "seconds": [
+                    1.9688723060535267,
+                    2.070238598040305,
+                    1.7687203049426898,
+                    1.5682283960049972,
+                    1.8694850530009717
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 9264748124.0,
+              "min": 6200781129,
+              "max": 194509679626
+            },
+            "w_update_big": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    3025690105,
+                    2266986390,
+                    2268967092,
+                    2272779075,
+                    2486961878
+                  ],
+                  "seconds": [
+                    0.7168337329057977,
+                    0.4661989159649238,
+                    0.516507065971382,
+                    0.41644249204546213,
+                    0.4666064999764785
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    3534222882,
+                    2944970741,
+                    2988241948,
+                    3040878565,
+                    3222944383
+                  ],
+                  "seconds": [
+                    0.817397198989056,
+                    0.5662780599668622,
+                    0.6167119840392843,
+                    0.6167854380328208,
+                    0.7665781519608572
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    4120674418,
+                    2240180207,
+                    2222415832,
+                    2327689939,
+                    2324827087
+                  ],
+                  "seconds": [
+                    0.8170648369705305,
+                    0.5166464860085398,
+                    0.5166760629508644,
+                    0.5667198379524052,
+                    0.5670288009569049
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    2893801422,
+                    2510305660,
+                    2566521524,
+                    2483200639,
+                    2610166677
+                  ],
+                  "seconds": [
+                    0.8669464970007539,
+                    0.5666574949864298,
+                    0.6168428750243038,
+                    0.566283063031733,
+                    0.5664014189969748
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 2485081258.5,
+              "min": 2222415832,
+              "max": 3222944383
+            },
+            "n_scan": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    269471285,
+                    269021390,
+                    268754637,
+                    268860533,
+                    268726176
+                  ],
+                  "seconds": [
+                    0.06576791999395937,
+                    0.06582320400048047,
+                    0.06551093293819577,
+                    0.06570754304993898,
+                    0.06565744697581977
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    270665153,
+                    268925795,
+                    268611541,
+                    268710196,
+                    268677404
+                  ],
+                  "seconds": [
+                    0.06552592210937291,
+                    0.06553546502254903,
+                    0.0654513780027628,
+                    0.06547294103074819,
+                    0.0654442289378494
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    270640393,
+                    268973615,
+                    268708471,
+                    268717113,
+                    268630737
+                  ],
+                  "seconds": [
+                    0.06556399294640869,
+                    0.06562245998065919,
+                    0.06556406302843243,
+                    0.06571514497045428,
+                    0.06566493294667453
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    270667684,
+                    269056688,
+                    268637548,
+                    268709195,
+                    268610007
+                  ],
+                  "seconds": [
+                    0.06569773494265974,
+                    0.0657106019789353,
+                    0.06543588207568973,
+                    0.06539212993811816,
+                    0.0654484850820154
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 268713654.5,
+              "min": 268610007,
+              "max": 269056688
+            },
+            "n_pred": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    576308309,
+                    576042460,
+                    576047057,
+                    576002021,
+                    576013158
+                  ],
+                  "seconds": [
+                    0.06552286993246526,
+                    0.06554495298769325,
+                    0.06554509105626494,
+                    0.06561737402807921,
+                    0.06555121706333011
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    576337343,
+                    576011069,
+                    575918148,
+                    576103823,
+                    576123865
+                  ],
+                  "seconds": [
+                    0.06553388596512377,
+                    0.06534656207077205,
+                    0.06556181900668889,
+                    0.11558013106696308,
+                    0.11556676193140447
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    576342116,
+                    575961385,
+                    576008057,
+                    575998902,
+                    575903296
+                  ],
+                  "seconds": [
+                    0.06555980897974223,
+                    0.06566549290437251,
+                    0.06553399108815938,
+                    0.06555223104078323,
+                    0.06571105599869043
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    576339646,
+                    575938183,
+                    576034223,
+                    576002457,
+                    575889362
+                  ],
+                  "seconds": [
+                    0.06559768703300506,
+                    0.1157325980020687,
+                    0.06549722899217159,
+                    0.06543982890434563,
+                    0.06558377796318382
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 576005257.0,
+              "min": 575889362,
+              "max": 576123865
+            },
+            "n_update": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    6853982939,
+                    7077680733,
+                    6953726650,
+                    6933253523,
+                    6873550342
+                  ],
+                  "seconds": [
+                    1.3183569610118866,
+                    1.3676281209336594,
+                    1.367852934054099,
+                    1.3677247599698603,
+                    1.4177139340899885
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    6885593846,
+                    6978349395,
+                    6955607852,
+                    6873083418,
+                    7060999036
+                  ],
+                  "seconds": [
+                    1.4678109330125153,
+                    1.518466815003194,
+                    1.618156332988292,
+                    1.3677861810429022,
+                    1.4181657419539988
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    6885799433,
+                    6872275145,
+                    6871580117,
+                    6960484746,
+                    7079823983
+                  ],
+                  "seconds": [
+                    1.4181984399911016,
+                    1.468413240974769,
+                    1.4184883310226724,
+                    1.4183990050805733,
+                    1.4690252740401775
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    6885824785,
+                    6959390168,
+                    6873120751,
+                    6907298197,
+                    6871299133
+                  ],
+                  "seconds": [
+                    1.4180727250641212,
+                    1.4179686510469764,
+                    1.367550114984624,
+                    1.3674741820432246,
+                    1.3680494929431006
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 6943490086.5,
+              "min": 6871299133,
+              "max": 7079823983
+            }
+          }
+        }
+      },
+      "scope": {
+        "update_state": "same original tables, consecutive autocommitted UPDATEs; no reset between samples or rounds",
+        "round_order": [
+          [
+            "base",
+            "feature"
+          ],
+          [
+            "feature",
+            "base"
+          ],
+          [
+            "base",
+            "feature"
+          ],
+          [
+            "feature",
+            "base"
+          ]
+        ],
+        "known_gaps": [
+          "Later comment omits feature SHA; use 4408135 named in first comment",
+          "Original compiler, full flags, locale, client options and UPDATE/reset cadence are not supplied",
+          "Four rounds collected in one session unless separately resumed; original spans two days",
+          "Host workenv allocates distinct master ports instead of shared port 1523",
+          "Variant order and server restart cadence are explicit local assumptions"
+        ],
+        "user_selected_assumptions": [
+          "Use first comment feature 4408135 and consecutive UPDATEs because no extra information is available",
+          "Run all four rounds today and disclose the original two-day spacing difference"
+        ]
+      },
+      "started_utc": "2026-10-30T19:13:18.566323+00:00",
+      "ended_utc": "2026-10-30T19:19:01.192436+00:00"
+    },
+    "iso88591": {
+      "locale": "en_US.iso88591",
+      "variants": {
+        "base": {
+          "revision": "4781495f01523a3ecc5891e3377ad62cf876a1cd",
+          "worktree": "/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031",
+          "install": "/home/vimkim/.cub/install/CBRD-27785-exact-base-20261031/release_gcc_nounit",
+          "compiler": "g++ (GCC) 11.5.0 20240719 (Red Hat 11.5.0-5)",
+          "unit_options": {
+            "UNIT_TESTS": "OFF",
+            "UNIT_TEST_OOS": "OFF",
+            "UNIT_TEST_PAGE_BUFFER": "OFF",
+            "UNIT_TEST_SPAGE": "OFF"
+          },
+          "binary_identity": {
+            "bin/cub_server": {
+              "sha256": "0bbb18a1dc5fd7ae30385143bb7b6b28154f87fe13853c0a1b03e653651c950b",
+              "build_id": "43c83637f3750ad7f67e6d4ada39549eec226d06"
+            },
+            "bin/csql": {
+              "sha256": "1966a49092f629111fabb000e99a3e573f29f7fa6ae9ceaf5d7f850bc73d2f99",
+              "build_id": "c5aca9ef9710cf0a446c5ffb967f0b5c4259c6dd"
+            },
+            "lib/libcubrid.so.11.5": {
+              "sha256": "4bce98c437bfbe2c1ba9f6bc39ab46cd17027d10cdcbd2a1b67124653b25041f",
+              "build_id": "279102e2216ae316f8c0f0c16abb2e3011d69af7"
+            }
+          },
+          "configuration": "[service]\nservice = server,broker\n\n[common]\ncubrid_port_id = 41178\ndata_buffer_size = 4G\nlog_buffer_size = 256M\nmax_clients = 50\nstored_procedure = yes\nstored_procedure_uds = yes\nha_mode = off\nsort_buffer_size = 16M\ndb_volume_size = 2G\nlog_volume_size = 1G\nlog_max_archives = 0\n\n",
+          "heap_server_compile_command": "/usr/lib64/ccache/g++ -DCUBRID_EXPORTING -DEnableThreadMonitoring -DGCC -DI386 -DLINUX -DMAXPATHLEN=1024 -DSERVER_MODE -DSYSV -DX86 -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -D_REENTRANT -Dcubrid_EXPORTS -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/include -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/api -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/base -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/broker -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/communication -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/compat -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/connection -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/debugging -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/executables -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/heaplayers -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/sp -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/loaddb -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/method -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/monitor -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/object -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/optimizer -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/optimizer/histogram -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/parser -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/replication -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/query -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/session -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/storage -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/thread -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/transaction -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/xasl -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/query/parallel/px_hash_join -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/query/parallel/px_merge_join -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/query/parallel/px_scan -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/query/parallel/px_scan/index -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/query/parallel -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/query/parallel/px_query_execute -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/cubrid-cci/src/cci -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/cubrid-cci/src/tools -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/vm/jdk8/include -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/vm/jdk8/include/linux -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/3rdparty/include/expat -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/3rdparty/include -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/3rdparty/Source/lz4/lib -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/3rdparty/Source/rapidjson/include -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/3rdparty/Source/re2 -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/3rdparty/Source/libtbb/include/tbb -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/3rdparty/Source/libtbb/include/oneapi -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/3rdparty/Source/libtbb/include/oneapi/tbb -I/home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/build_preset_release_gcc_nounit/3rdparty/Source/libtbb/include/oneapi/tbb/detail -x c++ -fdiagnostics-color=always -Wall -Werror -Wformat -Wformat-security -Werror=format-security -Wwrite-strings  -Wredundant-decls -Wextra -Wno-unused -Wno-unused-result -Wno-unused-parameter -pthread -O2 -ggdb3 -DNDEBUG -finline-functions -Wno-error=stringop-truncation -Wno-error=maybe-uninitialized -Wno-error=format-overflow -Wno-error=format-truncation -O2 -DNDEBUG -finline-functions -ggdb -fno-omit-frame-pointer -fPIE -std=c++17 -std=gnu++17 -fPIC -fdiagnostics-color=always -o cubrid/CMakeFiles/cubrid.dir/__/src/storage/heap_file.c.o -c /home/vimkim/gh/cb/CBRD-27785-exact-base-20261031/src/storage/heap_file.c",
+          "physical_data_bytes": 2147483648,
+          "physical_log_bytes": 1073741824,
+          "cases": {
+            "w_small": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    46583583,
+                    43938900,
+                    43906098,
+                    44017347,
+                    43976730
+                  ],
+                  "seconds": [
+                    0.11576939991209656,
+                    0.06555733806453645,
+                    0.06547531101386994,
+                    0.06557024002540857,
+                    0.06549623992759734
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    55286285,
+                    46241880,
+                    43904447,
+                    43903663,
+                    44022171
+                  ],
+                  "seconds": [
+                    0.11555071896873415,
+                    0.06538185500539839,
+                    0.06538249098230153,
+                    0.0652758419746533,
+                    0.06551148695871234
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    55374490,
+                    46231472,
+                    43926062,
+                    43990886,
+                    43938948
+                  ],
+                  "seconds": [
+                    0.11556019296403974,
+                    0.0658278310438618,
+                    0.06548672704957426,
+                    0.065487528918311,
+                    0.06569082499481738
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    55305491,
+                    46267169,
+                    43909063,
+                    43911349,
+                    44027863
+                  ],
+                  "seconds": [
+                    0.11583389807492495,
+                    0.06568486196920276,
+                    0.06599111505784094,
+                    0.06558943691197783,
+                    0.06576112494803965
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 43957839.0,
+              "min": 43903663,
+              "max": 46267169
+            },
+            "w_length": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    189112272,
+                    188775922,
+                    188725201,
+                    188729826,
+                    188777197
+                  ],
+                  "seconds": [
+                    0.06551675102673471,
+                    0.06556072400417179,
+                    0.06563613598700613,
+                    0.06560808001086116,
+                    0.06562568002846092
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    188964210,
+                    188624167,
+                    188596221,
+                    188508410,
+                    188612453
+                  ],
+                  "seconds": [
+                    0.06543349393177778,
+                    0.06552339589688927,
+                    0.06577976595144719,
+                    0.06568109802901745,
+                    0.06547532102558762
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    188811768,
+                    188475102,
+                    188426762,
+                    188603666,
+                    188474966
+                  ],
+                  "seconds": [
+                    0.0655839869286865,
+                    0.06561243906617165,
+                    0.06573840393684804,
+                    0.06549368507694453,
+                    0.06545565102715045
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    188915343,
+                    188736720,
+                    188565938,
+                    188587612,
+                    188648247
+                  ],
+                  "seconds": [
+                    0.06561578903347254,
+                    0.0660198830300942,
+                    0.06564830907154828,
+                    0.06563128402922302,
+                    0.06554321805015206
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 188608059.5,
+              "min": 188426762,
+              "max": 188777197
+            },
+            "w_substr": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    199408101,
+                    199170876,
+                    199198303,
+                    199037488,
+                    199105520
+                  ],
+                  "seconds": [
+                    0.065619022003375,
+                    0.06545533705502748,
+                    0.06548231700435281,
+                    0.06556392298080027,
+                    0.06564570404589176
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    199280900,
+                    199050658,
+                    199026602,
+                    198949314,
+                    198816039
+                  ],
+                  "seconds": [
+                    0.06552257703151554,
+                    0.06547478504944593,
+                    0.06545838806778193,
+                    0.06548456102609634,
+                    0.06547645898535848
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    199183685,
+                    198841074,
+                    198710260,
+                    198792513,
+                    198822120
+                  ],
+                  "seconds": [
+                    0.06559662509243935,
+                    0.06558804400265217,
+                    0.06557607802096754,
+                    0.06564206094481051,
+                    0.06554310605861247
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    199250093,
+                    199016852,
+                    198990929,
+                    198999272,
+                    198977397
+                  ],
+                  "seconds": [
+                    0.06566254002973437,
+                    0.06549713702406734,
+                    0.06550682801753283,
+                    0.065634876023978,
+                    0.06554071593564004
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 198995100.5,
+              "min": 198710260,
+              "max": 199198303
+            },
+            "w_update_small": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    3485077665,
+                    3354950027,
+                    3366244731,
+                    3346592453,
+                    3346689096
+                  ],
+                  "seconds": [
+                    1.4184010069584474,
+                    1.1677390879485756,
+                    1.0678048470290378,
+                    1.067544523975812,
+                    1.067611056030728
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    3271694873,
+                    3360153060,
+                    3355669106,
+                    3331333901,
+                    3326096701
+                  ],
+                  "seconds": [
+                    1.2177598850103095,
+                    0.9673595579806715,
+                    1.0173495130147785,
+                    1.017798814107664,
+                    1.0173630469944328
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    3273531544,
+                    3363637204,
+                    3352425527,
+                    3346314971,
+                    3352456407
+                  ],
+                  "seconds": [
+                    1.3683006479404867,
+                    1.1177661219844595,
+                    1.0675851840060204,
+                    1.067629758035764,
+                    1.0680637919576839
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    3271334505,
+                    3370007682,
+                    3345512561,
+                    3340804120,
+                    3346229521
+                  ],
+                  "seconds": [
+                    1.3689285829896107,
+                    1.1682364490116015,
+                    1.2178936749696732,
+                    1.1177940389607102,
+                    1.1178126520244405
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 3349557311.5,
+              "min": 3326096701,
+              "max": 3370007682
+            },
+            "w_update_big": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    1760468890,
+                    1699108971,
+                    1712248927,
+                    1701846875,
+                    1713472321
+                  ],
+                  "seconds": [
+                    0.46649098594207317,
+                    0.46652622998226434,
+                    0.41661629790905863,
+                    0.41636621998623013,
+                    0.4165999040706083
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    1780827022,
+                    1709763437,
+                    1699262356,
+                    1696929132,
+                    1705229303
+                  ],
+                  "seconds": [
+                    0.41617787606082857,
+                    0.4162675180705264,
+                    0.416303031030111,
+                    0.41622102190740407,
+                    0.41672208497766405
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    1771220133,
+                    1700846933,
+                    1699685262,
+                    1696875381,
+                    1705085141
+                  ],
+                  "seconds": [
+                    0.5166332089575008,
+                    0.4663726509315893,
+                    0.4665524390293285,
+                    0.46660810499452055,
+                    0.4663970029214397
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    1779178979,
+                    1699053609,
+                    1707355015,
+                    1694504367,
+                    1704971861
+                  ],
+                  "seconds": [
+                    0.4664680340792984,
+                    0.4160432330099866,
+                    0.4666376350214705,
+                    0.4663042000029236,
+                    0.4662919130641967
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 1701346904.0,
+              "min": 1694504367,
+              "max": 1713472321
+            },
+            "n_scan": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    257735396,
+                    251170281,
+                    251279666,
+                    251204806,
+                    251242841
+                  ],
+                  "seconds": [
+                    0.06560482701752335,
+                    0.06545009999535978,
+                    0.0656303180148825,
+                    0.06566118402406573,
+                    0.06574254902079701
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    253066876,
+                    251444950,
+                    251004575,
+                    251093450,
+                    251098607
+                  ],
+                  "seconds": [
+                    0.06553366500884295,
+                    0.06565522809978575,
+                    0.06553408305626363,
+                    0.11557959299534559,
+                    0.06543774204328656
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    252957032,
+                    251349677,
+                    251141571,
+                    251022423,
+                    251089446
+                  ],
+                  "seconds": [
+                    0.0656786480685696,
+                    0.06544351298362017,
+                    0.06563089601695538,
+                    0.06551265600137413,
+                    0.06581160705536604
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    252967355,
+                    251439869,
+                    251003513,
+                    251063709,
+                    251104453
+                  ],
+                  "seconds": [
+                    0.06566990003921092,
+                    0.06553372694179416,
+                    0.06552996195387095,
+                    0.06564126699231565,
+                    0.06546711199916899
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 251123012.0,
+              "min": 251003513,
+              "max": 251444950
+            },
+            "n_pred": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    492139694,
+                    491810441,
+                    491823656,
+                    491675572,
+                    491669522
+                  ],
+                  "seconds": [
+                    0.06568310898728669,
+                    0.11575376195833087,
+                    0.06555894203484058,
+                    0.06574444507714361,
+                    0.06555783003568649
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    491826823,
+                    491600608,
+                    491578376,
+                    491467830,
+                    491617348
+                  ],
+                  "seconds": [
+                    0.06543411803431809,
+                    0.06556270597502589,
+                    0.06561254197731614,
+                    0.06552982795983553,
+                    0.06546723505016416
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    491911703,
+                    491575344,
+                    491594021,
+                    491582970,
+                    491657184
+                  ],
+                  "seconds": [
+                    0.06556339608505368,
+                    0.06563040800392628,
+                    0.06543039507232606,
+                    0.06557829200755805,
+                    0.06560162105597556
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    491799599,
+                    491606846,
+                    491563646,
+                    491605865,
+                    491577836
+                  ],
+                  "seconds": [
+                    0.06561528600286692,
+                    0.06574566091876477,
+                    0.0657143440330401,
+                    0.06553030700888485,
+                    0.06556754501070827
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 491603236.5,
+              "min": 491467830,
+              "max": 491823656
+            },
+            "n_update": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    6597314751,
+                    6694295714,
+                    6744148016,
+                    6570649056,
+                    6528264786
+                  ],
+                  "seconds": [
+                    1.2683771350421011,
+                    1.2678919340251014,
+                    1.4183651059865952,
+                    1.3182309360709041,
+                    1.3184970120200887
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    6507137474,
+                    6523527670,
+                    6697987055,
+                    6537317523,
+                    6605966294
+                  ],
+                  "seconds": [
+                    1.1677945039700717,
+                    1.267746679019183,
+                    1.2181039970600978,
+                    1.318100776989013,
+                    1.2680493120569736
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    6507856327,
+                    6523593073,
+                    6616513476,
+                    6526323419,
+                    6606643103
+                  ],
+                  "seconds": [
+                    1.3182571690995246,
+                    1.3684262180468068,
+                    1.3683326640166342,
+                    1.3183904339093715,
+                    1.3679577290313318
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    6567320576,
+                    6536568182,
+                    6528121728,
+                    6544554601,
+                    6545474377
+                  ],
+                  "seconds": [
+                    1.2177437449572608,
+                    1.2178696120390669,
+                    1.3178951640147716,
+                    1.3179643549956381,
+                    1.3679974810220301
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 6545014489.0,
+              "min": 6523527670,
+              "max": 6744148016
+            }
+          }
+        },
+        "feature": {
+          "revision": "4408135c0833ec959da3590f12c14efa69610c7e",
+          "worktree": "/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031",
+          "install": "/home/vimkim/.cub/install/CBRD-27785-exact-feature-20261031/release_gcc_nounit",
+          "compiler": "g++ (GCC) 11.5.0 20240719 (Red Hat 11.5.0-5)",
+          "unit_options": {
+            "UNIT_TESTS": "OFF",
+            "UNIT_TEST_OOS": "OFF",
+            "UNIT_TEST_PAGE_BUFFER": "OFF",
+            "UNIT_TEST_SPAGE": "OFF"
+          },
+          "binary_identity": {
+            "bin/cub_server": {
+              "sha256": "2fa1d5347b3fef8149687ca9d24795464c27683ec2e9c309ef2ccef41475cddc",
+              "build_id": "b64018b969a7500f3d9bd356eb9c59d47cf4f719"
+            },
+            "bin/csql": {
+              "sha256": "2e2387a1bd534a8300943945e3e056224144aefdbe4dd94495e21aa84925b3db",
+              "build_id": "b2787913114f457ee07b236b1d2f708412e48e71"
+            },
+            "lib/libcubrid.so.11.5": {
+              "sha256": "17500caea044ba67a83ffb5731ae6b812bde13ffda7ed26cb00368ded63afce1",
+              "build_id": "d79b52248a71a0d33ce48c4e5c1eb575bd1ff0d4"
+            }
+          },
+          "configuration": "[service]\nservice = server,broker\n\n[common]\ncubrid_port_id = 41180\ndata_buffer_size = 4G\nlog_buffer_size = 256M\nmax_clients = 50\nstored_procedure = yes\nstored_procedure_uds = yes\nha_mode = off\nsort_buffer_size = 16M\ndb_volume_size = 2G\nlog_volume_size = 1G\nlog_max_archives = 0\n\n",
+          "heap_server_compile_command": "/usr/lib64/ccache/g++ -DCUBRID_EXPORTING -DEnableThreadMonitoring -DGCC -DI386 -DLINUX -DMAXPATHLEN=1024 -DSERVER_MODE -DSYSV -DX86 -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -D_REENTRANT -Dcubrid_EXPORTS -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/include -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/api -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/base -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/broker -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/communication -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/compat -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/connection -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/debugging -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/executables -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/heaplayers -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/sp -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/loaddb -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/method -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/monitor -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/object -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/optimizer -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/optimizer/histogram -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/parser -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/replication -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/query -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/session -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/storage -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/thread -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/transaction -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/xasl -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/query/parallel/px_hash_join -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/query/parallel/px_merge_join -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/query/parallel/px_scan -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/query/parallel/px_scan/index -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/query/parallel -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/query/parallel/px_query_execute -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/cubrid-cci/src/cci -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/cubrid-cci/src/tools -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/vm/jdk8/include -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/vm/jdk8/include/linux -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/3rdparty/include/expat -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/3rdparty/include -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/3rdparty/Source/lz4/lib -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/3rdparty/Source/rapidjson/include -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/3rdparty/Source/re2 -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/3rdparty/Source/libtbb/include/tbb -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/3rdparty/Source/libtbb/include/oneapi -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/3rdparty/Source/libtbb/include/oneapi/tbb -I/home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/build_preset_release_gcc_nounit/3rdparty/Source/libtbb/include/oneapi/tbb/detail -x c++ -fdiagnostics-color=always -Wall -Werror -Wformat -Wformat-security -Werror=format-security -Wwrite-strings  -Wredundant-decls -Wextra -Wno-unused -Wno-unused-result -Wno-unused-parameter -pthread -O2 -ggdb3 -DNDEBUG -finline-functions -Wno-error=stringop-truncation -Wno-error=maybe-uninitialized -Wno-error=format-overflow -Wno-error=format-truncation -O2 -DNDEBUG -finline-functions -ggdb -fno-omit-frame-pointer -fPIE -std=c++17 -std=gnu++17 -fPIC -fdiagnostics-color=always -o cubrid/CMakeFiles/cubrid.dir/__/src/storage/heap_file.c.o -c /home/vimkim/gh/cb/CBRD-27785-exact-feature-20261031/src/storage/heap_file.c",
+          "physical_data_bytes": 2147483648,
+          "physical_log_bytes": 1073741824,
+          "cases": {
+            "w_small": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    35082275,
+                    35009556,
+                    34884747,
+                    34960839,
+                    34980560
+                  ],
+                  "seconds": [
+                    0.06576898891944438,
+                    0.06561612000223249,
+                    0.06546755693852901,
+                    0.06554908200632781,
+                    0.0655722611118108
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    36167319,
+                    35798594,
+                    35819085,
+                    35725337,
+                    35778404
+                  ],
+                  "seconds": [
+                    0.11577392497565597,
+                    0.06550180702470243,
+                    0.06552478496450931,
+                    0.06560289696790278,
+                    0.0655530549120158
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    36164917,
+                    35775244,
+                    35736009,
+                    35826300,
+                    35752964
+                  ],
+                  "seconds": [
+                    0.06553584802895784,
+                    0.06547833606600761,
+                    0.06553910102229565,
+                    0.06560668104793876,
+                    0.06555929803289473
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    36165621,
+                    35794969,
+                    35816900,
+                    35726134,
+                    35778528
+                  ],
+                  "seconds": [
+                    0.06557962205260992,
+                    0.06554576603230089,
+                    0.06550851196516305,
+                    0.06543498102109879,
+                    0.06553422193974257
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 35764104.0,
+              "min": 34884747,
+              "max": 35826300
+            },
+            "w_length": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    266273522,
+                    266046481,
+                    265972175,
+                    266025447,
+                    266065717
+                  ],
+                  "seconds": [
+                    0.11554847797378898,
+                    0.1155958300223574,
+                    0.11558296799194068,
+                    0.11561988899484277,
+                    0.11558607895858586
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    284716549,
+                    277130647,
+                    271993039,
+                    272061677,
+                    271869539
+                  ],
+                  "seconds": [
+                    0.2658437399659306,
+                    0.11561271303799003,
+                    0.11570483702234924,
+                    0.11546398198697716,
+                    0.11561578302644193
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    283836316,
+                    276805244,
+                    271614587,
+                    271667636,
+                    271610040
+                  ],
+                  "seconds": [
+                    0.21586148696951568,
+                    0.11576151696499437,
+                    0.11549896898213774,
+                    0.11561463307589293,
+                    0.11562690092250705
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    285236648,
+                    277910531,
+                    272745769,
+                    272653099,
+                    272716247
+                  ],
+                  "seconds": [
+                    0.2662084379699081,
+                    0.11554886004887521,
+                    0.11548237106762826,
+                    0.11561760504264385,
+                    0.11566255195066333
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 271931289.0,
+              "min": 265972175,
+              "max": 277910531
+            },
+            "w_substr": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    275440149,
+                    275351531,
+                    275345640,
+                    275304590,
+                    275330941
+                  ],
+                  "seconds": [
+                    0.11553848604671657,
+                    0.11568473803345114,
+                    0.11562676099129021,
+                    0.1156960470834747,
+                    0.11564896698109806
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    278362002,
+                    278179757,
+                    278119750,
+                    278176790,
+                    278197074
+                  ],
+                  "seconds": [
+                    0.11579200194682926,
+                    0.11566846701316535,
+                    0.11566336499527097,
+                    0.11572418292053044,
+                    0.1155444571049884
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    277724160,
+                    277529321,
+                    277443156,
+                    277533102,
+                    277482293
+                  ],
+                  "seconds": [
+                    0.1156024809461087,
+                    0.1155327910091728,
+                    0.11565764003898948,
+                    0.11571442801505327,
+                    0.11563313798978925
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    279296511,
+                    279139860,
+                    279148090,
+                    279239990,
+                    279162430
+                  ],
+                  "seconds": [
+                    0.16568311804439873,
+                    0.11552881996612996,
+                    0.11563471797853708,
+                    0.11548724700696766,
+                    0.11595060303807259
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 277826426.0,
+              "min": 275304590,
+              "max": 279239990
+            },
+            "w_update_small": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    3026982687,
+                    194590669494,
+                    6334513547,
+                    8350065684,
+                    10981837961
+                  ],
+                  "seconds": [
+                    1.017498161061667,
+                    35.037844649050385,
+                    1.6695129540748894,
+                    1.6686507769627497,
+                    1.8691984710749239
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    6199511299,
+                    8641050453,
+                    10193603819,
+                    6585589901,
+                    9116007104
+                  ],
+                  "seconds": [
+                    1.668994021951221,
+                    1.8697135440306738,
+                    1.7693117780145258,
+                    1.3682640129700303,
+                    2.0199864299502224
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    5983992775,
+                    9560600530,
+                    9360971268,
+                    6804139876,
+                    9550035578
+                  ],
+                  "seconds": [
+                    1.5689447890035808,
+                    1.8193120750365779,
+                    1.5682810469297692,
+                    1.3192760180681944,
+                    1.5685983230359852
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    6128311282,
+                    10075235468,
+                    8955765927,
+                    6440106932,
+                    9869169454
+                  ],
+                  "seconds": [
+                    1.7693903039908037,
+                    2.1695459759794176,
+                    1.7187741489615291,
+                    1.5185943969991058,
+                    1.7187820000108331
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 9238489186.0,
+              "min": 6334513547,
+              "max": 194590669494
+            },
+            "w_update_big": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    2958345337,
+                    1985535566,
+                    2072171852,
+                    2092790095,
+                    2121049577
+                  ],
+                  "seconds": [
+                    0.7169420140562579,
+                    0.516561069060117,
+                    0.46659152198117226,
+                    0.5165067539783195,
+                    0.4161678459495306
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    3388808571,
+                    2726291744,
+                    2810500999,
+                    2831273386,
+                    2885098787
+                  ],
+                  "seconds": [
+                    0.767072202055715,
+                    0.51657986396458,
+                    0.5165581229375675,
+                    0.5664252680726349,
+                    0.6169238199945539
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    4127753728,
+                    2194265702,
+                    1987504793,
+                    2046491667,
+                    2089922789
+                  ],
+                  "seconds": [
+                    0.766979718930088,
+                    0.5163251160411164,
+                    0.46622131997719407,
+                    0.5164823919767514,
+                    0.5164780600462109
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    2948171548,
+                    2136030085,
+                    2270314218,
+                    2245664120,
+                    2303795572
+                  ],
+                  "seconds": [
+                    0.8169688020134345,
+                    0.5664491959614679,
+                    0.5665201490046456,
+                    0.5665019489824772,
+                    0.566573882009834
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 2165147893.5,
+              "min": 1985535566,
+              "max": 2885098787
+            },
+            "n_scan": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    269426040,
+                    268623667,
+                    268734411,
+                    268845726,
+                    268728749
+                  ],
+                  "seconds": [
+                    0.06557061697822064,
+                    0.06531196704600006,
+                    0.0652593809645623,
+                    0.06538022705353796,
+                    0.06555265700444579
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    270667370,
+                    268944592,
+                    268731360,
+                    268683202,
+                    268759950
+                  ],
+                  "seconds": [
+                    0.06583808804862201,
+                    0.06577186495997012,
+                    0.06561453698668629,
+                    0.06553669995628297,
+                    0.06561393500305712
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    270554145,
+                    269045991,
+                    268735666,
+                    268615636,
+                    268729135
+                  ],
+                  "seconds": [
+                    0.06558165501337498,
+                    0.06546396703924984,
+                    0.06549952598288655,
+                    0.06556301703676581,
+                    0.06565013097133487
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    270699999,
+                    268954062,
+                    268721141,
+                    268703668,
+                    268622145
+                  ],
+                  "seconds": [
+                    0.06562498107086867,
+                    0.06552464095875621,
+                    0.06560262106359005,
+                    0.06551494693849236,
+                    0.06550955795682967
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 268730247.5,
+              "min": 268615636,
+              "max": 269045991
+            },
+            "n_pred": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    536373969,
+                    570936298,
+                    536191653,
+                    535998352,
+                    535919631
+                  ],
+                  "seconds": [
+                    0.06564575899392366,
+                    0.06568244297523052,
+                    0.06553657189942896,
+                    0.06542970007285476,
+                    0.06546820292714983
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    536194670,
+                    535898938,
+                    535870991,
+                    535813190,
+                    535700951
+                  ],
+                  "seconds": [
+                    0.06554502004291862,
+                    0.06550713593605906,
+                    0.06560083897784352,
+                    0.06570569903124124,
+                    0.06585206603631377
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    536136259,
+                    535828247,
+                    535776701,
+                    535707036,
+                    535810523
+                  ],
+                  "seconds": [
+                    0.06550648901611567,
+                    0.06553483207244426,
+                    0.06564242497552186,
+                    0.06559142901096493,
+                    0.06575430708471686
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    536145840,
+                    535837176,
+                    535867220,
+                    535811493,
+                    535696101
+                  ],
+                  "seconds": [
+                    0.06562358792871237,
+                    0.1156810011016205,
+                    0.06558915495406836,
+                    0.0655934470705688,
+                    0.0657015920151025
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 535832711.5,
+              "min": 535696101,
+              "max": 570936298
+            },
+            "n_update": {
+              "rounds": [
+                {
+                  "round": 0,
+                  "instructions": [
+                    6855364485,
+                    6872804235,
+                    6873841566,
+                    6874559366,
+                    6955993174
+                  ],
+                  "seconds": [
+                    1.3683453800622374,
+                    1.4180271639488637,
+                    1.4185479340376332,
+                    1.3680786290206015,
+                    1.3685926790349185
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 1,
+                  "instructions": [
+                    6887665642,
+                    6873053172,
+                    6872468034,
+                    6873492316,
+                    6876733248
+                  ],
+                  "seconds": [
+                    1.418169620912522,
+                    1.3684325428912416,
+                    1.3681283289333805,
+                    1.3683358989655972,
+                    1.3683826740598306
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 2,
+                  "instructions": [
+                    6893904331,
+                    7040033038,
+                    6903075682,
+                    6874002147,
+                    6872515026
+                  ],
+                  "seconds": [
+                    1.3179546780884266,
+                    1.3186327690491453,
+                    1.3180393449729308,
+                    1.3682922120206058,
+                    1.3680940729100257
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                },
+                {
+                  "round": 3,
+                  "instructions": [
+                    6990862976,
+                    6874395571,
+                    6958807945,
+                    6874138482,
+                    7062174027
+                  ],
+                  "seconds": [
+                    1.5682750940322876,
+                    1.5184094320284203,
+                    1.3183645530370995,
+                    1.3179815449984744,
+                    1.3180249519646168
+                  ],
+                  "running_percent": [
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0
+                  ]
+                }
+              ],
+              "retained_n": 16,
+              "median": 6874267026.5,
+              "min": 6872468034,
+              "max": 7062174027
+            }
+          }
+        }
+      },
+      "scope": {
+        "update_state": "same original tables, consecutive autocommitted UPDATEs; no reset between samples or rounds",
+        "round_order": [
+          [
+            "base",
+            "feature"
+          ],
+          [
+            "feature",
+            "base"
+          ],
+          [
+            "base",
+            "feature"
+          ],
+          [
+            "feature",
+            "base"
+          ]
+        ],
+        "known_gaps": [
+          "Later comment omits feature SHA; use 4408135 named in first comment",
+          "Original compiler, full flags, locale, client options and UPDATE/reset cadence are not supplied",
+          "Four rounds collected in one session unless separately resumed; original spans two days",
+          "Host workenv allocates distinct master ports instead of shared port 1523",
+          "Variant order and server restart cadence are explicit local assumptions",
+          "ISO-8859-1 is a separate local hypothesis, not a confirmed reviewer input"
+        ],
+        "user_selected_assumptions": [
+          "Use first comment feature 4408135 and consecutive UPDATEs because no extra information is available",
+          "Run all four rounds today and disclose the original two-day spacing difference"
+        ]
+      },
+      "started_utc": "2026-10-30T19:20:12.808278+00:00",
+      "ended_utc": "2026-10-30T19:25:51.209706+00:00"
+    }
+  },
+  "audit": {
+    "native_perf_sql_exit_records_verified": 640,
+    "total_warmups": 128,
+    "total_retained": 512,
+    "final_state_checks": 16,
+    "final_updates_per_update_case_per_database": 20,
+    "measurement_sql_errors": 0,
+    "fixture_and_query_blocks_match_comment": true,
+    "median_recomputed_from_native_perf": true
+  },
+  "post_measurement_diagnostics": {
+    "separate_uncounted_execution": true,
+    "warm_reads_ioread_zero": true,
+    "summary": {
+      "utf8": {
+        "base": {
+          "collations": [
+            "utf8_bin",
+            "utf8_bin"
+          ],
+          "traces": {
+            "w_small": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": [
+                4
+              ]
+            },
+            "w_length": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": [
+                4
+              ]
+            },
+            "w_substr": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": [
+                4
+              ]
+            },
+            "n_scan": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": [
+                4
+              ]
+            },
+            "n_pred": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": [
+                4
+              ]
+            }
+          }
+        },
+        "feature": {
+          "collations": [
+            "utf8_bin",
+            "utf8_bin"
+          ],
+          "traces": {
+            "w_small": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": []
+            },
+            "w_length": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": []
+            },
+            "w_substr": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": []
+            },
+            "n_scan": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": [
+                4
+              ]
+            },
+            "n_pred": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": [
+                4
+              ]
+            }
+          }
+        }
+      },
+      "iso88591": {
+        "base": {
+          "collations": [
+            "iso88591_bin",
+            "iso88591_bin"
+          ],
+          "traces": {
+            "w_small": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": [
+                4
+              ]
+            },
+            "w_length": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": [
+                4
+              ]
+            },
+            "w_substr": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": [
+                4
+              ]
+            },
+            "n_scan": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": [
+                4
+              ]
+            },
+            "n_pred": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": [
+                4
+              ]
+            }
+          }
+        },
+        "feature": {
+          "collations": [
+            "iso88591_bin",
+            "iso88591_bin"
+          ],
+          "traces": {
+            "w_small": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": []
+            },
+            "w_length": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": []
+            },
+            "w_substr": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": []
+            },
+            "n_scan": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": [
+                4
+              ]
+            },
+            "n_pred": {
+              "ioread_values": [
+                0,
+                0
+              ],
+              "parallel_workers": [
+                4
+              ]
+            }
+          }
+        }
+      }
+    },
+    "first_attempt": "Immediate shutdown assertion failed; original log preserved; owned processes were absent on recheck. A bounded exit wait passed on the separate rerun."
+  }
+}

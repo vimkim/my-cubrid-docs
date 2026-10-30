@@ -1,0 +1,6 @@
+create table seq(n int primary key);
+insert into seq select rownum from db_attribute a, db_attribute b, db_attribute c limit 200000;
+create table w(id int primary key, a int, s varchar(40), big varchar(20000));
+create table n(id int primary key, a int, s varchar(100));
+insert into w select n, n mod 100, 's'||n, concat(sha2(n||'_0',512),sha2(n||'_1',512),sha2(n||'_2',512),sha2(n||'_3',512),sha2(n||'_4',512),sha2(n||'_5',512),sha2(n||'_6',512),sha2(n||'_7',512),sha2(n||'_8',512),sha2(n||'_9',512),sha2(n||'_10',512),sha2(n||'_11',512),sha2(n||'_12',512),sha2(n||'_13',512),sha2(n||'_14',512),sha2(n||'_15',512),sha2(n||'_16',512),sha2(n||'_17',512),sha2(n||'_18',512),sha2(n||'_19',512),sha2(n||'_20',512),sha2(n||'_21',512),sha2(n||'_22',512),sha2(n||'_23',512),sha2(n||'_24',512),sha2(n||'_25',512),sha2(n||'_26',512),sha2(n||'_27',512),sha2(n||'_28',512),sha2(n||'_29',512),sha2(n||'_30',512),sha2(n||'_31',512),sha2(n||'_32',512),sha2(n||'_33',512),sha2(n||'_34',512),sha2(n||'_35',512),sha2(n||'_36',512),sha2(n||'_37',512),sha2(n||'_38',512),sha2(n||'_39',512),sha2(n||'_40',512),sha2(n||'_41',512),sha2(n||'_42',512),sha2(n||'_43',512),sha2(n||'_44',512),sha2(n||'_45',512),sha2(n||'_46',512)) from seq where n<=20000;
+insert into n select n, n mod 100, sha2(n||'',256) from seq;
