@@ -4,7 +4,7 @@ This file records a publication proposal. It does not grant permission.
 
 ## Source and target
 
-- Ticket is [CBRD-27827](https://jira.cubrid.org/browse/CBRD-27827). It was created as Correct Error and read back on 2026-10-29. The default live status is Open; no assignment, priority change or transition was requested.
+- Ticket is [CBRD-27827](https://jira.cubrid.org/browse/CBRD-27827). It was created as Correct Error and read back on 2026-10-29. On 2026-10-30 it was converted to a Sub-task of OOS M2, CBRD-26583, after the user approved the concrete target and type change. Status remained Open.
 - Source repository is `vimkim/cubrid`.
 - Source branch is `CBRD-27827-oos-insert-header-wait`.
 - Source commit is `4db11c5f12f9c67134aad7f547df8704d1e5c591`.
@@ -79,3 +79,10 @@ The user confirmed the saved body and listed publication operations in the conve
 - On 2026-10-30 the user approved CLI integration, push and installation. The clean task was rebased onto unchanged main `5d70fc6` and all 297 default tests passed again. The approved tip `3f282aae346368cae982354777b40cd17ddf402f` was merged by fast-forward, pushed to `vimkim/cubrid-jira:main` and installed through the CLI repository's sync recipe.
 - The installed package's converter bytes matched main. The installed CLI dry-run matched the verified issue payload exactly; leading code indentation and rejection of both closing markers also passed. A fresh read of the live issue confirmed the original Python and Expected Result heading/body remained intact. No additional live description write was needed.
 - The merged CLI task worktree and local branch were removed without force. Only disposable uv and Python caches were present; evidence was preserved separately. CLI main is clean and work item `617` is complete.
+
+## JIRA parent conversion, 2026-10-30
+
+- The user asked to place R1 under OOS M2 and confirmed the proposed conversion. A live check identified [CBRD-26583](https://jira.cubrid.org/browse/CBRD-26583) as `[OOS] [EPIC] [M2] 마일스톤 2`, type Development Subject, with 46 existing subtasks before conversion.
+- After recording the current Correct Error issue with no parent, one conversion used the CLI's Convert wizard. A direct issue GET verified type Sub-task and parent CBRD-26583.
+- Issue key and numeric ID, summary, raw description, status Open, priority, assignee and issue links matched the pre-conversion snapshot. The live rendered description still preserved the complete original Python and Expected Result heading/body.
+- The source branch, PR number 8330 and approved PR body were not edited. The parent relationship organizes the work under M2 while each engine fix retains its independent company PR and CI.

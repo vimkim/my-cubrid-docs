@@ -95,7 +95,7 @@ R1은 기존 티켓의 중복 검색을 마치고 [CBRD-27827](https://jira.cubr
 
 ## R1. 동시 INSERT의 파일 소유 확인 실패
 
-이슈는 [CBRD-27827](https://jira.cubrid.org/browse/CBRD-27827)이다.
+이슈는 [CBRD-27827](https://jira.cubrid.org/browse/CBRD-27827)이다. 2026-10-30 사용자 승인 후 [OOS M2, CBRD-26583](https://jira.cubrid.org/browse/CBRD-26583)의 Sub-task로 전환했다. 초기 생성 유형은 Correct Error였다.
 
 [리뷰 원문](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4398825716). 대상은 `src/storage/oos_file.cpp`의 `oos_stats_find_page_in_bestspace`이다.
 
@@ -111,6 +111,7 @@ R1은 기존 티켓의 중복 검색을 마치고 [CBRD-27827](https://jira.cubr
 - [x] 기존 이슈와 PR을 검색하고 CBRD-27827을 발급해 재조회한다.
 - [x] 새 ticket 이름으로 브랜치를 정리하고 회사 PR 본문을 저장한다.
 - [x] 검토한 본문의 게시 승인을 받은 뒤 fork에 push하고 회사 draft PR을 만든다.
+- [x] 사용자 승인 후 CBRD-27827을 OOS M2의 Sub-task로 전환하고 부모·본문·기존 상태 보존을 재조회한다.
 - [x] 두 testcase baseline을 확인하고 전체 CI 한 번을 요청해 다섯 gha-ci 상태의 시작을 확인한다.
 - [ ] 회사 CI와 팀 리뷰를 받은 뒤 PR을 반영한다.
 
@@ -272,6 +273,7 @@ PR 8235가 고쳤을 수 있다는 원문의 설명은 확인할 대상이다. �
 | 2026-10-29 | R1 게시 | fork push, 회사 draft PR 8330 생성, 담당자 지정과 본문 재조회를 완료했다. 전체 CI 한 번의 시작을 확인했다. | [PR 8330](https://github.com/CUBRID/cubrid/pull/8330), [CI 실행](https://github.com/CUBRID/cubrid/actions/runs/40853451200), 게시 맥락 | CI 완료와 팀 리뷰, 이후 별도 머지 판단 |
 | 2026-10-29 | JIRA 도구 | Python의 `{code}`가 블록을 끝내는 변환기 결함을 서브에이전트로 분석·수정했다. 원본 Markdown을 보존해 실제 본문을 복구하고 서버 렌더 결과를 검증했다. | `cubrid-jira` 후보 `3f282aa`, 전체 테스트 297개, 독립 검토 112개 | 2026-10-30 승인 후 아래와 같이 통합·설치 완료 |
 | 2026-10-30 | JIRA 도구 완료 | 승인받은 `3f282aa`를 main에 fast-forward로 통합·push하고 `just sync`로 설치했다. 재검증 297개와 설치된 CLI의 실제 변환·readback 검사가 통과했고, 현재 JIRA 웹 본문도 정상이다. | 설치본과 main의 변환기 바이트 일치, 원본 issue payload 일치, Work 617 | 완료. 병합된 임시 worktree·브랜치 정리, main clean |
+| 2026-10-30 | R1 부모 연결 | 사용자 승인 후 CBRD-27827을 Correct Error에서 Sub-task로 전환하고 부모를 OOS M2 CBRD-26583으로 지정했다. API 재조회로 이슈 번호·제목·본문·Open 상태·우선순위·담당자·링크 보존과 웹 렌더 결과를 확인했다. | Convert wizard 결과와 전후 issue 스냅샷, 게시 맥락 | 부모 연결 완료. 독립 회사 PR 8330의 리뷰·검증 방식 유지 |
 
 수집 원본은 `/home/vimkim/temp/pr7990-hornet-review-20261029/review-snapshot.json`에 보관한다. 원본 JSON, 빌드 로그, 중간 산출물은 문서 저장소에 커밋하지 않는다.
 
