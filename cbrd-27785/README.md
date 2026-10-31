@@ -12,10 +12,10 @@
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [TODO 체크리스트](CBRD-27785-todo-checklist.md) | 구현·CI·본문 초안 준비 완료와 남은 게시·사람의 TC 종료·성능 수락 | 2026-10-29 | 2026-10-31 | CBRD-27785의 남은 작업과 완료 조건을 한곳에서 추적하기 위해 |
+| [TODO 체크리스트](CBRD-27785-todo-checklist.md) | 구현·CI·본문 게시 완료와 남은 사람의 TC 종료·리뷰·성능 수락 | 2026-10-29 | 2026-10-31 | CBRD-27785의 남은 작업과 완료 조건을 한곳에서 추적하기 위해 |
 | [현재 공통 reader 구현·CI와 과거 성능](CBRD-27785-common-reader_067aae4_codex.md) | 067aae4 구현·CI, fd8624c 선택 계수와 문자셋·UPDATE·재현 한계 | 2026-10-31 | 2026-10-31 | 현재 head와 실제 측정 revision을 구분해 PR 본문을 정리하기 위해 |
-| [현재 head의 PR 본문 초안](CBRD-27785-common-reader-pr-body_067aae4_codex.md) | PR8299에 게시할 구현·CI·과거 성능 범위와 남은 TC 처리 | 2026-10-31 | 2026-10-31 | 변경된 본문을 사용자 검토 후 정확히 게시하기 위해 |
-| [현재 head의 게시 context](CBRD-27785-common-reader-pr-context_067aae4_codex.md) | source·본문 fingerprint, 선택 자료와 docs·본문 게시 제안 | 2026-10-31 | 2026-10-31 | 게시 승인 범위와 실제 실행 결과를 추적하기 위해 |
+| [현재 head의 PR 본문](CBRD-27785-common-reader-pr-body_067aae4_codex.md) | PR8299에 게시한 구현·CI·과거 성능 범위와 남은 TC 처리 | 2026-10-31 | 2026-10-31 | 변경된 본문을 사용자 검토 후 정확히 게시하기 위해 |
+| [현재 head의 게시 context](CBRD-27785-common-reader-pr-context_067aae4_codex.md) | source·본문 fingerprint, 선택 자료와 승인 후 게시·일치 검증 기록 | 2026-10-31 | 2026-10-31 | 게시 승인 범위와 실제 실행 결과를 추적하기 위해 |
 | [읽기 최적화 코드 해설서](CBRD-27785-code-walkthrough_f1b99031c_codex.md) | f1b99031c 읽기 diff·COPY·버퍼 수명과 성능 수치를 설명할 때의 문자셋 조건 | 2026-10-29 | 2026-10-31 | 팀원이 읽기 변경을 이해하고 코드 리뷰 질문에 답하도록 돕기 위해 |
 | [보고서 학습 진행표](CBRD-27785-teaching-progress_f1b99031c_codex.md) | 질문 없이 T01부터 T11까지 설명 제공 완료, 발표 원고 연결과 원댓글 재현의 한계 | 2026-10-30 | 2026-10-31 | 설명 진도를 유지하고 다음 대화에서 남은 범위부터 이어가기 위해 |
 | [읽기 최적화 발표 원고와 예상 답변](CBRD-27785-presentation_f1b99031c_codex.md) | f1b99031c의 5분 가안 원고, 예상 팀원 질문 12개와 코드·측정·재현 범위 구분 | 2026-10-31 | 2026-10-31 | 학습한 읽기 최적화를 팀원에게 설명할 발표와 답변을 준비하기 위해 |

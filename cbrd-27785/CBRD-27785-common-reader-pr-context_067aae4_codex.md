@@ -74,3 +74,19 @@ engine source push, engine PR 병합, CI 재실행, TC PR merge·close·branch �
 상대 링크 36개가 보존할 Git 파일을 가리키며 내부 anchor 2개도 확인했다.
 주석 검토 대상인 code comment나 suppression은 없었다. 독립 내용·코드 리뷰를 수행한 것으로 기록하지 않는다.
 승인 후 실제 게시 결과는 수행하고 확인할 때 기록한다.
+
+## 승인 후 게시 결과
+
+2026-10-31에 사용자가 위 파일과 조치의 게시를 확인했다. 권한 근거는 해당 대화의 확인이며 이 context를 승인 토큰으로 사용하지 않는다.
+
+- 승인한 본문·보고서의 fingerprint, source HEAD, 원격 PR head·branch·base·OPEN draft 상태와 기존 body fingerprint를 다시 확인했다. 준비 당시 값과 일치했다.
+- 승인한 7개 파일을 포함한 `db28c48199770c4e6455e9cb4aad54259b5ec803`을 docs `main`에 fast-forward 병합하고 `origin/main`에 push했다. 당시 `ls-remote`의 main SHA와 로컬 HEAD가 일치했다.
+- `vimkim/my-cubrid-docs`가 PUBLIC인 것을 확인했다. 계획한 공개 URL에서 보고서를 다시 받아 승인한 보고서의 bytes와 SHA-256이 같음을 확인했다.
+- 본문 게시 직전에 material 검사, 본문·보고서 fingerprint와 PR freshness 검사를 다시 통과했다.
+- 저장한 본문을 `--body-file`로 [PR #8299](https://github.com/CUBRID/cubrid/pull/8299)에 게시했다. 다시 읽은 GitHub body는 파일의 bytes와 같고 SHA-256은 `f2209fa2de23279d33b2c7885115618a45483de10844e2b58448bb412d3f1270`이다.
+- 제목, source head `067aae4e4e91fec8c71c914a4c7fc3c4b13dcd65`, head repository·branch, base `feature/oos-merge`, OPEN draft 상태가 유지됐음을 확인했다.
+- 게시 후 status-only 조회에서도 CI 10개 성공, 미해결 review thread 0개, MERGEABLE/CLEAN이었다. 이것을 draft 해제나 리뷰어 승인으로 해석하지 않는다.
+- TC #3898과 #4589는 게시 후 재조회에서도 OPEN draft다. source push, CI 요청, TC PR 변경이나 engine PR 병합은 수행하지 않았다.
+
+본문·문서 게시 단위는 완료했다. 사람의 TC PR 종료와 리뷰·병합 판단은 별도로 남는다.
+이 실행 기록과 체크리스트를 같은 승인 범위에서 docs `main`에 통합·push한 뒤 이 task의 worktree와 branch만 정리한다.
