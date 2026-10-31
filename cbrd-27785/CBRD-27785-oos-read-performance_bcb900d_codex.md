@@ -1,6 +1,6 @@
 # CBRD-27785: 일반 heap 읽기의 OOS 통합 후 CPU 회귀 개선
 
-작성일: 2026-10-27, Asia/Seoul. 대상 독자: OOS 성능 변경을 검토하는 엔진 개발자.
+작성일: 2026-10-27. 수정일: 2026-10-31, Asia/Seoul. 대상 독자: OOS 성능 변경을 검토하는 엔진 개발자.
 관련 이슈: [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785).
 출발점: [PR #7990 성능 보고](https://github.com/CUBRID/cubrid/pull/7990#issuecomment-6434778190).
 
@@ -14,9 +14,11 @@
 - AS-IS: 일반 값 읽기에도 OOS Resolve의 큰 stack frame과 행별 준비 비용이 포함됐다.
 - TO-BE: 일반 값은 작은 읽기 경로를 사용하며, 실제 OOS 값만 Resolve 준비를 수행한다.
 
-이 결론은 양쪽 모두 heap인 작은 행의 읽기에 한정한다. 원본 리뷰어의 전체 SQL과
-하네스는 제공되지 않아 보고된 조건을 토대로 새로 구성했다. 같은 비율의 원본 재측정을
-수행했다는 뜻은 아니다. UPDATE·큰 값 스캔·I/O 이득은 다음 조사다.
+이 결론은 양쪽 모두 heap인 작은 행의 읽기에 한정한다. 2026-10-27 조사 당시에는 원본
+리뷰어의 전체 SQL과 하네스가 제공되지 않아 보고된 조건을 토대로 새로 구성했다.
+10월 28일에는 상세 DDL·SQL이 제공됐고, 10월 31일의
+[별도 원문 재현](CBRD-27785-reviewer-reproduction_4408135c_20261031_codex.md)에서 실행했다.
+본문의 재구성 실험을 원댓글 전체 수치의 동일 재현으로 해석하지 않는다.
 
 ### 저장 경로에 따른 판정
 
@@ -105,6 +107,11 @@ sampling 비중을 instructions 증가량으로 해석하지 않았다.
 RelWithDebInfo의 `-O2 -ggdb3 -DNDEBUG -finline-functions` 조건이다. feature 빌드에는
 기존 OOS native 테스트용 `CUBRID_UNIT_TEST_ENABLED`가 포함되며, baseline에는 이 OOS
 테스트 코드가 없다. compiler와 최적화 설정은 맞췄다.
+
+이 기록에는 DB 생성 locale과 실제 테이블·컬럼의 charset·collation이 측정 조건으로
+명시되지 않았다. 원댓글과 이 조건이 같은지는 미확인이다. 아래 수치는 당시 고정 입력의
+비교 결과로 보존하며 다른 문자셋에 적용하거나 새 실험의 locale을 소급해 붙이지 않는다.
+후속 비교에는 [문자셋을 포함한 측정 조건](CBRD-27785-pr7990-performance-acceptance_dcbf09e_codex.md#charset-conditions)을 기록한다.
 
 `data_buffer_size=4G`, `log_buffer_size=16M`, `max_clients=20`, query cache entries/pages는
 모두 0이다. registry·master port·TMP는 분리했다. 서버 CPU는 같은 NUMA node의 서로

@@ -1,6 +1,6 @@
 # CBRD-27785: 공통 reader와 일반 UPDATE 비용 개선
 
-작성일: 2026-10-28, Asia/Seoul. 독자: [PR #8299](https://github.com/CUBRID/cubrid/pull/8299)를 검토하는 엔진 개발자.
+작성일: 2026-10-28. 수정일: 2026-10-31, Asia/Seoul. 독자: [PR #8299](https://github.com/CUBRID/cubrid/pull/8299)를 검토하는 엔진 개발자.
 질문: 지금까지 확보한 일반 읽기·UPDATE 개선을 하나의 PR로 제안할 때 무엇을 검증했고 무엇이 남았는가?
 
 공통 heap/OOS reader를 유지하면서 반복 layout 해석과 불필요한 준비를 줄였다. 실제 PR HEAD를 사용한 새 3-way 비교에서 일반 UPDATE의 develop 대비 증가는 feature의 +5.35%에서 HEAD의 +1.66%로 줄었다. 같은 엔진 소스의 이전 추가 batch에는 +5.0158%도 있었다. **전체 +2% 목표는 미충족**이며 작성자는 현재 관측된 약 +5%를 수용해 개선분을 먼저 제안하기로 했다. 이 작성자 결정과 리뷰어의 수락은 구분한다.
@@ -38,6 +38,13 @@ fixed/variable/columns writer (`heap_file.c:13856`, `13950`, `14136`)는 방금 
 `src/transaction/locator_sr.c:5534`의 `locator_update_force`는 native UPDATE가 가진 pending owner를 사용한다. copy-area/workspace 입력에 필요한 별도 owner는 `std::optional`로 늦게 생성한다. owner는 heap/index write와 오류 정리를 마칠 때까지 함수 scope에 남는다. finalization과 ownership·identity 검사, MVCC 및 WAL 처리 순서는 바꾸지 않는다.
 
 ## Three-way performance evidence
+
+이 절의 과거 계수와 revision은 그대로 보존한다. 이 보고서는 DB 생성 locale과 실제
+테이블·컬럼의 charset·collation을 측정 조건으로 명시하지 않았으므로 원댓글과의 일치는
+미확인이다. 2026-10-31의 [별도 문자셋 재현](CBRD-27785-reviewer-reproduction_4408135c_20261031_codex.md)은
+같은 SQL의 instructions가 문자셋에 따라 달라짐을 확인했다. 그 실험은 feature `4408135c`를
+사용했으며 아래 `dcbf09e`·`408d135` 표를 재측정하거나 대체한 결과가 아니다.
+후속 비교에는 [문자셋을 포함한 측정 조건](CBRD-27785-pr7990-performance-acceptance_dcbf09e_codex.md#charset-conditions)을 함께 확인한다.
 
 최종 대상 develop의 회귀 기준 `4781495`, 이 PR의 직접 base인 `feature/oos-merge`의 `dcbf09e`, PR HEAD `408d135`를 비교했다. 2026-10-28 원격 조회에서 feature tip은 여전히 `dcbf09e`였지만 develop tip은 `639628d731be38879f8b467aa8fcbebc84164eae`였다. 이번 비교는 처음 지정한 회귀 기준을 고정했으며 최신 develop tip의 성능이나 그 위로 rebase한 결과를 뜻하지 않는다.
 

@@ -8,7 +8,7 @@
 <a id="scope"></a>
 ## 1. 설명 대상과 근거
 
-작성일과 근거 확인일은 2026-10-29, Asia/Seoul이다. 저장소는 `CUBRID/CUBRID`이며, 로컬 작업 브랜치는 `CBRD-27785-oos-performance`다. 관련 이슈는 [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785)다.
+작성일과 코드 근거 확인일은 2026-10-29, 수정일은 2026-10-31, Asia/Seoul이다. 저장소는 `CUBRID/CUBRID`이며, 로컬 작업 브랜치는 `CBRD-27785-oos-performance`다. 관련 이슈는 [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785)다.
 
 | 구분 | 고정 revision과 의미 |
 | --- | --- |
@@ -253,6 +253,13 @@ pending 테스트에서는 `heap_attrinfo_set`이 bytes를 빌리는 기간에 s
 | candidate, report, base | +1.107484% | +1.362450% |
 
 표는 [기존 보고서의 최종 하네스 결과](CBRD-27785-oos-read-performance_bcb900d_codex.md)를 그대로 인용한다. 기존 기록상 두 쿼리는 해당 일반 heap 저장 경우의 +2% 기준을 통과했다. 이를 SQL 경과 시간이 같은 비율로 단축됐다는 뜻이나 모든 OOS 쿼리의 합격으로 해석하지 않는다. UPDATE, heap에서 OOS로 바뀌는 경우, overflow와 OOS 비교, 큰 데이터의 I/O 이득은 이 읽기 단계의 측정 범위 밖이다.
+
+문자셋도 비교 조건이다. 기존 표에는 DB 생성 locale과 실제 테이블·컬럼의 charset·collation이
+명시되지 않았으므로 원댓글과의 일치는 미확인이다. 별도의
+[원문 SQL 재실행](CBRD-27785-reviewer-reproduction_4408135c_20261031_codex.md)에서는 같은 develop의
+큰 값 LENGTH가 UTF-8 294.076M, ISO-8859-1 188.608M으로 달랐다.
+이 실험은 위 학습 revision의 +1.11%·+1.36%를 재측정한 결과가 아니다. 발표할 때는
+고정 revision·workload와 함께 [문자셋 조건과 미확인 범위](CBRD-27785-pr7990-performance-acceptance_dcbf09e_codex.md#charset-conditions)를 밝힌다.
 
 ### 7.3 벤치마크 하네스도 이번 diff의 일부다
 
