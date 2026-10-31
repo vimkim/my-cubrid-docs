@@ -2,6 +2,8 @@
 
 Last modified: 2026-10-31 (Asia/Seoul).
 
+2026-10-31 [남은 공용 helper 의존성 감사](CBRD-26659-helper-dependency-audit_20261031_6334dc6_codex.md)는 `policy_metadata.sh`·`tde_observe.sh`의 시나리오별 호출과 실제 선별 24회를 대조한다. 일반 소비자는 비활성이고 heavy crash는 AES 조건부다. Metadata 이동을 먼저, TDE helper·AWK 이동을 다음 단위로 제안했으며 TC 실행·수리는 하지 않았다. [선별 검증 스크립트](tools/verify-cross-case-helper-dependencies.py)는 삭제·보존과 전이 의존성을 재확인하는 근거로 보존한다.
+
 2026-10-31 [공용 policy helper 이동과 선별 후 검증](CBRD-26659-policy-helper-relocation_20261031_6334dc6_codex.md)은 일반 호출자 7곳·heavy 복사본 1곳을 새 공용 위치로 전환한다. 수정 전 helper 삭제·수정 후 보존과 선별 후 원문 대표 1 PASS를 확인했다. 앞선 전체 명령 timeout은 미완료로 남긴다. TC `6334dc6`·`81e6072`를 게시했고 CI 41175186516과 5개 gha context는 SUCCESS로 종료했다. 나머지 38개 실행·재활성화·종료 지연 원인은 후속 항목이다.
 
 2026-10-30 [policy helper 39개 그룹 조사](CBRD-26659-policy-helper-pruning_20261030_e3589ae_codex.md)는 개별 TC의 `cases` 아래 공용 helper가 shard 선별에서 삭제되는 소스 동작을 원본 목록으로 재현한다. 당시 이미지 원본은 없어 역사적 원인은 강한 추론이다. 현재 원문 `gap_ctas_cs`는 1 PASS이며, 앞선 전체 명령 timeout은 별도 미완료로 남긴다. 그룹 38개, 전체 과거 shell 중 59개 현재 검증과 timeout 원인 분석은 남았다.
@@ -52,6 +54,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [남은 공용 helper 의존성 감사](CBRD-26659-helper-dependency-audit_20261031_6334dc6_codex.md) | Metadata·TDE의 조건부 호출, 선별 24회·parser 대조, 최소 수리·검증 제안 | 2026-10-31 | 2026-10-31 | 남은 교차 TC 의존성과 실제 실행 범위를 구분하고 후속 수리 순서를 결정 |
 | [공용 policy helper 이동과 선별 후 검증](CBRD-26659-policy-helper-relocation_20261031_6334dc6_codex.md) | 일반·heavy 경로 수리, 실제 선별 전후 대조·대표 PASS·별도 timeout·CI | 2026-10-31 | 2026-10-31 | 공용 checker 배치 취약점을 수리하고 선별 후 실행·게시 범위를 근거와 함께 인계 |
 | [policy helper 39개 조사와 대표](CBRD-26659-policy-helper-pruning_20261030_e3589ae_codex.md) | shard 삭제 재현·역사적 추론 한계, 대표 PASS와 별도 종료 timeout | 2026-10-30 | 2026-10-30 | 가장 큰 누락 그룹의 배치 원인 후보와 현재 policy 검증을 구분해 인계 |
 | [shell 실패 61개 분류와 첫 대표](CBRD-26659-shell61-classification_20261030_e3589ae_codex.md) | 과거 증상 61개, 원문 show_contract PASS와 환경·helper 리비전 차이 | 2026-10-30 | 2026-10-30 | 비활성 shell의 재현 순서와 원인 미확정 범위를 근거와 함께 인계 |
