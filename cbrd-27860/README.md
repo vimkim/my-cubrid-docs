@@ -1,6 +1,6 @@
 # CBRD-27860 OOS vacuum and heap page allocation latch cycle
 
-Related work is the R2 review on [PR 7990](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4399323155) and [CBRD-27860](https://jira.cubrid.org/browse/CBRD-27860). No company PR is published yet. Source revision is `1ef6ed6125eb6028c06b0e05282dc0041bde3f48`. Reproduction, fix and verification details are in the [R2 analysis](../cbrd-26357/PR-7990-R2-vacuum-heap-header-deadlock_dcbf09e_codex.md).
+Related work is the R2 review on [PR 7990](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4399323155) and [CBRD-27860](https://jira.cubrid.org/browse/CBRD-27860). The company PR is draft [8350](https://github.com/CUBRID/cubrid/pull/8350). Source revision is `1ef6ed6125eb6028c06b0e05282dc0041bde3f48`. Reproduction, fix and verification details are in the [R2 analysis](../cbrd-26357/PR-7990-R2-vacuum-heap-header-deadlock_dcbf09e_codex.md).
 
 Last modified: 2026-10-31, Asia/Seoul.
 

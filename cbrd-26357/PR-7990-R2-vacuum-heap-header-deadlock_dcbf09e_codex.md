@@ -1,6 +1,6 @@
 # PR 7990 R2의 vacuum과 힙 페이지 할당 교착
 
-2026-10-31, Asia/Seoul. OOS 작성자와 리뷰어가 [hornetmj의 R2](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4399323155)를 이해하고 수정 여부를 판단하기 위한 기록이다. PR 8235는 이 경로를 수정하지 않는다. 이 작업에서 실제 vacuum worker로 래치 순환을 재현했고, 로컬 수정 후 같은 테스트가 통과했다. 티켓은 [CBRD-27860](https://jira.cubrid.org/browse/CBRD-27860)으로 발급했고, 회사 PR 게시는 아직 하지 않았다.
+2026-10-31, Asia/Seoul. OOS 작성자와 리뷰어가 [hornetmj의 R2](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4399323155)를 이해하고 수정 여부를 판단하기 위한 기록이다. PR 8235는 이 경로를 수정하지 않는다. 이 작업에서 실제 vacuum worker로 래치 순환을 재현했고, 로컬 수정 후 같은 테스트가 통과했다. 티켓은 [CBRD-27860](https://jira.cubrid.org/browse/CBRD-27860), 회사 draft PR은 [8350](https://github.com/CUBRID/cubrid/pull/8350)이다. 팀 리뷰와 회사 CI는 아직 받지 않았다.
 
 ## 기준과 범위
 
@@ -8,7 +8,7 @@
 | --- | --- |
 | 저장소·소스 | `CUBRID/cubrid`, `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67` |
 | source 작업 | `/home/vimkim/gh/cb/pr7990-hornet-r2`, `review/pr7990-hornet-r2` |
-| 로컬 커밋 | 실패 테스트 `7e48b1dac`, 수정 `1ef6ed612`, 브랜치 `CBRD-27860-oos-vacuum-heap-header-wait`. 티켓 발급 전의 `e1d0aa65a`, `b5d53109a`에서 커밋 메시지 접두어만 바꿨다. 미게시. |
+| 로컬 커밋 | 실패 테스트 `7e48b1dac`, 수정 `1ef6ed612`, 브랜치 `CBRD-27860-oos-vacuum-heap-header-wait`. 티켓 발급 전의 `e1d0aa65a`, `b5d53109a`에서 커밋 메시지 접두어만 바꿨다. `vk`에 push했다. |
 | 반영 대상 | `feature/oos-merge`. R5를 기반으로 쌓지 않고 독립 검증한다. |
 | 비교한 PR | [8235](https://github.com/CUBRID/cubrid/pull/8235), merge `9b93263d07cab80edf02217e8d6c4f0fcf2fd9ac` |
 | 문서 작업 | `my-cubrid-docs-pr7990-hornet-r2`, `docs/pr7990-hornet-r2-20261031` |
@@ -98,7 +98,8 @@ R5는 실행 단계에서 forward 슬롯 삭제 후 sysop 종료까지 forward �
 - [x] 같은 재현과 전체 CTest를 검증한다.
 - [x] R5 결합 검증을 마친다.
 - [x] 별도 티켓 중복 여부와 회사 PR 초안을 준비한다. [CBRD-27860](https://jira.cubrid.org/browse/CBRD-27860), [PR 초안](../cbrd-27860/README.md).
-- [ ] 회사 draft PR을 게시한다.
+- [x] 회사 draft PR을 게시한다. [PR 8350](https://github.com/CUBRID/cubrid/pull/8350).
+- [ ] 팀 리뷰와 회사 CI 결과를 확인한다.
 
 ## 현재 증거와 한계
 

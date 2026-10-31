@@ -11,8 +11,8 @@ This file records a publication proposal. It does not grant permission.
 - Source remote is `vk`. No push to the organization repository is proposed.
 - Target repository is `CUBRID/cubrid`. Base branch is `feature/oos-merge`.
 - Observed base commit is `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`, fetched on 2026-10-31.
-- No R2 branch exists on `vk`. The open fork PRs to that base are 8348, 8347, 8330, 8299 and 8128, none for R2.
-- Operation is create a new draft PR. Proposed assignee is `vimkim`.
+- Before publication no R2 branch existed on `vk`. The open fork PRs to that base were 8348, 8347, 8330, 8299 and 8128, none for R2.
+- Operation was create a new draft PR. Proposed assignee is `vimkim`.
 - Proposed title is `[CBRD-27860] Fix vacuum latch cycle with heap page allocation`.
 - No existing PR title, body fingerprint or draft state applies.
 
@@ -52,3 +52,12 @@ The ticket step is done. The publication step needs explicit approval:
 4. Create one draft PR in `CUBRID/cubrid` with head `vimkim:CBRD-27860-oos-vacuum-heap-header-wait`, base `feature/oos-merge`, the proposed title, the exact reviewed body and assignee `vimkim`.
 
 Not proposed: changes to PR 7990, review replies, thread resolution, reviewer requests, or a company CI trigger.
+
+## Publication record, 2026-10-31
+
+The user approved publication operations 1 to 4 above on 2026-10-31. A company CI trigger was not approved. This record does not grant permission for future operations.
+
+- Before the remote writes, the body SHA256 was `0877867846a1fe204332d3952581037bf64754e3b30b2856e379ef5cad15d1c9` and the material check passed. Local source HEAD was `1ef6ed6125eb6028c06b0e05282dc0041bde3f48`. The `vk` branch and a matching PR were absent. The base was still `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`.
+- A normal push created `CBRD-27860-oos-vacuum-heap-header-wait` on `vk`. Its remote head equals the source commit.
+- Draft PR [8350](https://github.com/CUBRID/cubrid/pull/8350) was created. Read-back shows title `[CBRD-27860] Fix vacuum latch cycle with heap page allocation`, state open and draft, base `feature/oos-merge`, head `vimkim:CBRD-27860-oos-vacuum-heap-header-wait` at the source commit, and assignee `vimkim`. The live body SHA256 equals the file's.
+- The docs and JIRA notes tasks are integrated into their `main` branches after this record.
