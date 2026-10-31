@@ -1,8 +1,8 @@
 # CBRD-27785 TODO 체크리스트
 
-작성일·확인일은 2026-10-29, Asia/Seoul이다.
+작성일은 2026-10-29, 현재 PR·TC 상태 확인일은 2026-10-31, Asia/Seoul이다.
 대상은 [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785)의 구현 반영, 성능 수락, performance TC 편입이다.
-현재 구현·CI는 완료됐으며, 다음 우선순위는 최신 문서·PR 본문 정리와 TC gate 해소다.
+현재 구현·CI는 완료됐고 최신 문서·PR 본문 초안도 준비했다. 게시 확인과 사람의 TC 종료 처리가 남았다.
 
 확인한 소스는 `vimkim/cubrid:CBRD-27785-oos-read-performance`의 `067aae4e4e91fec8c71c914a4c7fc3c4b13dcd65`다.
 [PR #8299](https://github.com/CUBRID/cubrid/pull/8299)는 OPEN draft이며 대상은 `feature/oos-merge`다.
@@ -17,14 +17,19 @@
 
 ## 지금 처리할 항목
 
-- [ ] PR 본문과 보고서를 `067aae4e4` 및 CI 성공 상태로 갱신한다. 성능 수치는 실제 측정 revision을 유지한다.
+- [x] PR 본문과 보고서의 새 초안을 `067aae4e4` 및 CI 성공 상태에 맞춰 준비한다. 성능 수치는 실제 측정 revision을 유지한다.
 - [ ] 갱신한 문서·본문의 검토 및 게시 승인을 받는다.
 - [ ] 승인받은 보고서를 게시한 뒤 PR #8299 본문을 업데이트한다.
 - [ ] TC 변경이 불필요한 [공개 TC PR #3898](https://github.com/CUBRID/cubrid-testcases/pull/3898)과 [비공개 TC PR #4589](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4589)를 사람이 닫아 TC gate를 해소한다.
 - [ ] PR 리뷰를 요청하고 승인을 확보한다.
 - [ ] 승인 후 PR #8299를 `feature/oos-merge`에 반영한다.
 
-TC PR 두 개는 확인 시점에 모두 OPEN draft다.
+2026-10-31 조회에서 TC PR 두 개는 모두 OPEN draft이며 diff가 없다.
+Engine PR은 OPEN draft, MERGEABLE/CLEAN이고 현재 head의 CI 10개가 모두 성공했다.
+이 GitHub mergeState가 사람의 TC 처리나 리뷰어 승인을 대신하지 않는다.
+[새 본문](CBRD-27785-common-reader-pr-body_067aae4_codex.md),
+[근거 보고서](CBRD-27785-common-reader_067aae4_codex.md),
+[게시 context](CBRD-27785-common-reader-pr-context_067aae4_codex.md)를 검토할 수 있다.
 이 체크리스트 작성은 PR 상태 변경, TC PR 종료, 병합, 게시의 실행 기록이 아니다.
 
 ## 성능 수락 항목
@@ -52,9 +57,10 @@ Parameter의 실제 이름·지원 상태·필요 구현을 먼저 확인한다.
 
 | 작업 | 용도 | 확인한 상태 |
 | --- | --- | --- |
-| 584 | PR #8299 검증과 문서·게시 인계 | 컴파일 수정·CI 완료. 사람의 TC 종료 및 문서·본문 정리 대기. |
+| 584 | PR #8299 검증과 문서·게시 인계 | 컴파일 수정·CI 및 새 문서·본문 초안 준비 완료. 게시 확인과 사람의 TC 종료 대기. |
 | 544 | 성능 regression TC 승인·performance 편입 | Pending. |
 | 571 | CBRD-27816 UPDATE 잔여 비용·변동 분석 | Pending. |
 
-확인 시점의 JIRA 상태는 Develop, Resolution은 Unresolved다.
+2026-10-29에 기록한 JIRA 상태는 Develop, Resolution은 Unresolved였다.
+2026-10-31의 실시간 조회는 DNS 오류로 실패했으므로 현재 상태는 미확인이다.
 실제 리뷰어 답변이나 승인 근거가 생겼을 때 해당 항목을 완료 표시한다.
