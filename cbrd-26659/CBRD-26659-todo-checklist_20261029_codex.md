@@ -1,6 +1,6 @@
 # CBRD-26659 TODO checklist
 
-작성 기준은 2026-10-29, 갱신 기준은 2026-11-02, Asia/Seoul이다. [현황보고](CBRD-26659-status-report_20261029_e3589ae_codex.md)를 기준으로 남은 작업을 하나씩 실행하고 결과를 기록한다. **첫 작업은 기준 CI에서 PASS한 20초 초과 shell TC 38개의 `shell_heavy` 이관이다.** 실패 원인 분석과 2분 초과 TC 처리는 별도 작업으로 유지한다.
+작성 기준은 2026-10-29, 갱신 기준은 2026-11-03, Asia/Seoul이다. [현황보고](CBRD-26659-status-report_20261029_e3589ae_codex.md)를 기준으로 남은 작업을 하나씩 실행하고 결과를 기록한다. 초기 heavy 이관·검증과 후속 재현 결과를 반영하며, 실제 TC PR 병합과 남은 실패·timeout 처리는 미완료다.
 
 체크 표시는 해당 항목의 산출물과 검증 근거가 확보되었음을 뜻한다. 로컬 준비, PR 게시, 실제 병합은 각각 구분한다. 성능 비교는 이 체크리스트의 완료 조건에 포함하지 않는다.
 
@@ -52,7 +52,11 @@
 - [x] policy helper 그룹 잔여 38개를 Engine `e3589ae`·TC `01df2600a`에서 직렬 검증한다. [Work699 보고서](CBRD-26659-policy38-native_e3589ae_20261103_work699_codex.md)에 37 PASS·1 FAIL·0 TIMEOUT과 전부의 종료·정리를 기록했다. REPARTITION의 두 정책은 `root_has_no_oos`에서 실패하며 Engine·TC 귀속은 미확정이다.
 - [x] REPARTITION의 root_has_no_oos 실패를 조사하고 정책별 owner 증거를 확보한다. [Work702 진단](CBRD-26659-repartition-root-oos_e3589ae_20261103_work702_codex.md)은 SA records0·Has1과 최소 red/green을 통해 기존 root의 파일 연결을 즉시 없애야 한다는 TC 조건의 범위 오류로 분류했다. 원래 TC는 아직 FAIL이다.
 - [ ] REPARTITION의 기존-root oracle 수정안을 검토하고 원래 두 정책의 전체 TC를 재검증한다. 값·실제 destination ownership 검사는 유지하고 다른 partition 시나리오의 조건을 일괄 삭제하지 않는다.
-- [ ] 기존 61개 분류에서 policy 그룹 밖의 미검증 21개를 확인한다. 미정의 변수 그룹 나머지 4개와 다른 17개이며, 이번 Work699의 실행 대상은 아니다. 서로 다른 리비전의 대표와 이번 결과를 전체 suite 판정으로 합산하지 않는다.
+- [x] 기존 61개 분류에서 policy 그룹 밖의 잔여 21개를 원문 실행하고 판정한다. [Work704 보고서](CBRD-26659-remaining21-native_e3589ae_20261103_work704_codex.md)에 Engine `e3589ae`·TC `01df2600a`의 4 PASS·16 FAIL·외부 명령 TIMEOUT 1개와 초기 별도 INCONCLUSIVE 시도를 기록했다. 미착수는 0개지만 timeout TC의 정상 완료는 미확인이다. 서로 다른 리비전의 대표와 이 결과를 한 번의 전체 suite 실행으로 합산하지 않는다.
+- [ ] Work704의 assertion·controller FAIL 14개를 현재 관측별로 분석하고 Engine·TC·환경 귀속을 확인한다. 기존 미정의 변수 증상을 현재 원인으로 자동 이월하지 않는다.
+- [ ] TDE committed·undo wrapper 두 개의 누락 sibling 진입점 의존성을 수리하고 원래 AES crash 검증에 도달하는지 확인한다. Work704의 두 FAIL은 본래 crash 검증에 도달하지 못했다.
+- [ ] `schema_rewrites_sa`의 외부 120초 invocation deadline을 분석하고 정상 완료 근거와 장시간 실행·분할 필요성을 확인한다. Work704는 exit 124·123.322초이며 native testcase 자체 timeout 판정은 미확인이다.
+- [ ] `serialized_chunks`의 PASS와 별도로 `cubrid.conf.org` 누락 framework 복원 진단을 확인한다. Disposable 시도의 프로세스·namespace 정리와 framework 설정 복원은 구분한다.
 - [ ] 각 실패를 엔진·TC·환경 문제 또는 원인 미확정으로 분류하고 근거를 연결한다.
 - [ ] 확인한 엔진 결함에 후속 이슈와 재현 TC를 연결한다.
 - [ ] TC 문제는 올바른 기대값을 유지하여 수정하고 PASS·자원 정리를 확인한다.

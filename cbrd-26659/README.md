@@ -2,6 +2,8 @@
 
 Last modified: 2026-11-03 (Asia/Seoul).
 
+2026-11-03 [policy 그룹 밖 잔여 shell 21개 검증](CBRD-26659-remaining21-native_e3589ae_20261103_work704_codex.md)은 Engine `e3589ae`·TC `01df2600a`에서 4 PASS·16 FAIL·외부 명령 TIMEOUT 1개를 확인했다. 16 FAIL은 assertion·controller 14개와 sibling 진입점 누락 TDE wrapper 2개다. 초기 full-shell의 비선택 macro SKIP 관측도 보존했고 13,597개 입력·21개 판정·종료·정리 근거를 재검증했다. `schema_rewrites_sa`의 정상 완료와 나머지 실패 귀속·수리, PASS의 재활성화는 후속이다. Source·TC·CI는 변경하지 않았다.
+
 2026-11-03 [REPARTITION 루트 OOS 연결과 TC oracle 진단](CBRD-26659-repartition-root-oos_e3589ae_20261103_work702_codex.md)은 기존 파일 연결이 즉시 없어야 한다고 본 TC 조건을 원인으로 분류한다. 원래 두 정책 archive·JSON과 최소 red/green·SA 대조를 확보했다. SA는 root records0·Has1, 작은 값은 Has0·PASS이며 원래 TC와 Engine은 수정하지 않았다.
 
 2026-11-03 [policy helper 잔여 38개 native 검증](CBRD-26659-policy38-native_e3589ae_20261103_work699_codex.md)은 Engine `e3589ae`·TC `01df2600a`에서 37 PASS·1 FAIL·0 TIMEOUT을 확인했다. REPARTITION은 두 정책에서 루트 OOS 파일 존재 검사에 실패했으며 Engine·TC 귀속은 미확정이다. 모든 실행의 종료·정리와 증거 대조를 확인했고, 부가 owner snapshot 부재를 한계로 남긴다.
@@ -64,6 +66,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [policy 그룹 밖 잔여 shell 21개 native 검증](CBRD-26659-remaining21-native_e3589ae_20261103_work704_codex.md) | 4 PASS·16 FAIL·명령 TIMEOUT 1개, 원문 판정·부가 진단·입력·정리 근거 | 2026-11-03 | 2026-11-03 | 마지막 미착수 21개를 실행하고 실패·완료 미확인 범위를 인계 |
 | [REPARTITION 루트 OOS 연결과 TC oracle 진단](CBRD-26659-repartition-root-oos_e3589ae_20261103_work702_codex.md) | 정책별 원본 증거·최소화·red/green·SA 대조와 범위를 제한한 TC 수정 제안 | 2026-11-03 | 2026-11-03 | REPARTITION FAIL의 Engine·TC 귀속을 실제 대조로 판단 |
 | [policy helper 잔여 38개 native 검증](CBRD-26659-policy38-native_e3589ae_20261103_work699_codex.md) | 37 PASS·1 FAIL, 고정 리비전·원본 판정·정리·부가 자료 한계와 재검증 | 2026-11-03 | 2026-11-03 | 미검증 policy 그룹을 실제 실행하고 REPARTITION 잔여 실패를 인계 |
 | [테스트 종류별 성공·실패·타임아웃 현황](CBRD-26659-suite-verdict-report_20261102_e3589ae_codex.md) | SQL·shell·heavy·perf·HA·medium·C++의 등록·판정·미검증과 최신 CI 무결성 경고 | 2026-11-02 | 2026-11-03 | 전부 통과했는지와 남은 실패·timeout을 입력 리비전별로 판단 |
