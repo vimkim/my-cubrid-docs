@@ -1,6 +1,6 @@
 # PR 7990 R2의 vacuum과 힙 페이지 할당 교착
 
-2026-10-31, Asia/Seoul. OOS 작성자와 리뷰어가 [hornetmj의 R2](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4399323155)를 이해하고 수정 여부를 판단하기 위한 기록이다. PR 8235는 이 경로를 수정하지 않는다. 이 작업에서 실제 vacuum worker로 래치 순환을 재현했고, 로컬 수정 후 같은 테스트가 통과했다. 티켓은 [CBRD-27860](https://jira.cubrid.org/browse/CBRD-27860), 회사 draft PR은 [8350](https://github.com/CUBRID/cubrid/pull/8350)이다. 팀 리뷰와 회사 CI는 아직 받지 않았다.
+2026-10-31, Asia/Seoul. OOS 작성자와 리뷰어가 [hornetmj의 R2](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4399323155)를 이해하고 수정 여부를 판단하기 위한 기록이다. PR 8235는 이 경로를 수정하지 않는다. 이 작업에서 실제 vacuum worker로 래치 순환을 재현했고, 로컬 수정 후 같은 테스트가 통과했다. 티켓은 [CBRD-27860](https://jira.cubrid.org/browse/CBRD-27860), 회사 draft PR은 [8350](https://github.com/CUBRID/cubrid/pull/8350)이다. 2026-11-02 회사 CI [gha-ci 41390306929](https://github.com/CUBRID/cubrid/actions/runs/41390306929)가 통과했다. 리뷰 답글은 초안 상태이며 팀 리뷰는 아직 받지 않았다.
 
 ## 기준과 범위
 
@@ -85,8 +85,13 @@ R5는 실행 단계에서 forward 슬롯 삭제 후 sysop 종료까지 forward �
 | 전체 CTest 44건, 수정 후 | 모두 통과, 498.5초 |
 | R5 `628857607`를 커밋 없이 결합한 전체 CTest | 44건 모두 통과, 439.9초. 재현 테스트 245 ms. 확인 뒤 결합을 되돌리고 수정만 다시 설치함 |
 | GNU indent·astyle 사전 점검 | 변경 없음 |
+| 회사 CI, PR 8350 head `1ef6ed612` | [gha-ci 41390306929](https://github.com/CUBRID/cubrid/actions/runs/41390306929)에서 release·debug 빌드와 shell·SQL·medium 모두 통과. 2026-11-02 사용자 승인 후 `/run all`을 한 번 게시함 |
 
 로컬 빌드는 `debug_gcc`이다. 작업 환경은 `cub-workenv init --no-db`로 R2 worktree에 격리했다. CTest의 `LD_LIBRARY_PATH`가 설치본을 먼저 읽으므로 런타임 검증 전에는 `just build-and-install`이 필요하다.
+
+## 리뷰 답글 초안
+
+[답글 초안](../cbrd-27860/CBRD-27860-pr7990-r2-reply_1ef6ed6_claude.md)은 thread에 올릴 본문 그대로이다. 원문이 확인을 요청한 PR 8235의 해결 여부에 답하고, 재현·수정·검증과 확인하지 못한 범위를 적는다. 원문은 수정 방향을 따르면 헤더 페이지 자체를 쥔 경우의 대기도 줄어들 것으로 보았다. 이 수정은 그 대기를 줄이지 않으므로 답글에서 바로잡는다. 아직 게시하지 않았다.
 
 ## 진행 체크리스트
 
@@ -99,7 +104,9 @@ R5는 실행 단계에서 forward 슬롯 삭제 후 sysop 종료까지 forward �
 - [x] R5 결합 검증을 마친다.
 - [x] 별도 티켓 중복 여부와 회사 PR 초안을 준비한다. [CBRD-27860](https://jira.cubrid.org/browse/CBRD-27860), [PR 초안](../cbrd-27860/README.md).
 - [x] 회사 draft PR을 게시한다. [PR 8350](https://github.com/CUBRID/cubrid/pull/8350).
-- [ ] 팀 리뷰와 회사 CI 결과를 확인한다.
+- [x] 회사 CI 결과를 확인한다. [gha-ci 41390306929](https://github.com/CUBRID/cubrid/actions/runs/41390306929) 통과.
+- [ ] 리뷰 답글을 사용자 승인 후 게시하고 PR 8350을 ready로 바꾼다. thread는 resolve하지 않는다.
+- [ ] 팀 리뷰 결과를 확인한다.
 
 ## 현재 증거와 한계
 
@@ -107,7 +114,7 @@ R5는 실행 단계에서 forward 슬롯 삭제 후 sysop 종료까지 forward �
 
 - 재현 테스트는 `heap_alloc_new_pages`를 직접 호출한다. bestspace를 거치는 논리 INSERT와 SQL 종단 실행은 재현하지 않았다.
 - `REC_RELOCATION`의 경합 경로는 실행으로 검증하지 않았다. 두 호출 지점은 같은 helper를 쓰며 차이는 forward 해제뿐이다. 리뷰어도 이 경로는 코드로만 확인했다.
-- release 빌드와 SQL·shell 회귀는 실행하지 않았다.
+- 로컬에서는 release 빌드와 SQL·shell 회귀를 실행하지 않았다. 회사 CI가 release·debug 빌드와 shell·SQL·medium 회귀를 통과했다. 이 회귀들이 R2의 경합 시점을 만든다는 근거는 없으므로 R2 재현 검증으로 세지 않는다.
 - 재현 테스트는 header를 쥔 채 OOS insert와 log flush를 하는 테스트 전용 순서를 쓴다. 엔진 코드에는 테스트 seam을 추가하지 않았다.
 
 이전 세션에서 GDB 기반 드라이버 작성 위임과 test seam 조사 위임이 자동 검토의 "possible cybersecurity risk"로 거절됐다. 두 요청은 재전송하지 않았다. 이번 세션은 fixture 소스를 직접 확인하고 표준 GoogleTest 케이스로 재현했다. 실제 보안 결함을 뜻하지 않는다.

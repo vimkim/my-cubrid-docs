@@ -2,7 +2,7 @@
 
 팀장님 리뷰를 하나씩 이해하고 결정한 뒤, 필요한 수정과 검증을 마친다. 이 문서는 OOS 작성자와 리뷰어가 다음 작업을 이어갈 수 있도록 진행 상태와 근거를 보존한다.
 
-R1은 실제 동시 INSERT로 같은 assertion을 재현한 뒤 7줄을 삭제해 수정했다. 수정 후 CS 10회와 집중 CTest가 통과했고, [회사 draft PR 8330](https://github.com/CUBRID/cubrid/pull/8330)으로 게시했다. R5는 수정 전 debug·release와 재시작 복구의 손상을 재현했고, forward 페이지를 sysop commit 뒤까지 고정하는 로컬 수정으로 같은 주입을 통과했다. R5는 중복 검색 뒤 [CBRD-27858](https://jira.cubrid.org/browse/CBRD-27858)을 발급하고 [회사 draft PR 8348](https://github.com/CUBRID/cubrid/pull/8348)로 게시했다. PR 8348의 gha-ci는 재실행 후 모두 통과했고, 리뷰 thread에는 짧은 답글을 게시했다. R6도 독립 브랜치에서 수정·로컬 검증을 마치고 [회사 draft PR 8347](https://github.com/CUBRID/cubrid/pull/8347)으로 게시했다. R2·R3·R4는 대기 중이다.
+R1은 실제 동시 INSERT로 같은 assertion을 재현한 뒤 7줄을 삭제해 수정했다. 수정 후 CS 10회와 집중 CTest가 통과했고, [회사 draft PR 8330](https://github.com/CUBRID/cubrid/pull/8330)으로 게시했다. R5는 수정 전 debug·release와 재시작 복구의 손상을 재현했고, forward 페이지를 sysop commit 뒤까지 고정하는 로컬 수정으로 같은 주입을 통과했다. R5는 중복 검색 뒤 [CBRD-27858](https://jira.cubrid.org/browse/CBRD-27858)을 발급하고 [회사 draft PR 8348](https://github.com/CUBRID/cubrid/pull/8348)로 게시했다. PR 8348의 gha-ci는 재실행 후 모두 통과했고, 리뷰 thread에는 짧은 답글을 게시했다. R6도 독립 브랜치에서 수정·로컬 검증을 마치고 [회사 draft PR 8347](https://github.com/CUBRID/cubrid/pull/8347)으로 게시했다. R2는 실제 vacuum worker로 래치 순환을 재현하고 수정해 [CBRD-27860](https://jira.cubrid.org/browse/CBRD-27860)과 [회사 draft PR 8350](https://github.com/CUBRID/cubrid/pull/8350)으로 게시했고, gha-ci가 통과했다. R3·R4는 대기 중이다.
 
 분석일은 2026-10-29, Asia/Seoul이다. 대상은 [CUBRID/cubrid PR 7990](https://github.com/CUBRID/cubrid/pull/7990)이다. 검토 기준 소스는 `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`, 브랜치는 `feature/oos-merge`이다. 수집 당시 hornetmj님의 inline 리뷰 6개는 모두 미해결이며 outdated가 아니다. 빈 COMMENTED 리뷰 요약은 별도 작업으로 세지 않는다.
 
@@ -14,7 +14,7 @@ R1은 실제 동시 INSERT로 같은 assertion을 재현한 뒤 7줄을 삭제�
 - 엔진 수정 작업은 `/home/vimkim/gh/cb/pr7990-hornet-r1`, `CBRD-27827-oos-insert-header-wait`에서 진행한다. 초기 브랜치 이름은 `review/pr7990-hornet-r1`이었다. 각 독립 수정 PR의 base는 `CUBRID/cubrid:feature/oos-merge`이다. 팀 리뷰와 해당 PR head 검증을 받은 뒤 GitHub PR로 반영한다.
 - 문서는 `my-cubrid-docs`의 `main`에 통합·게시한다. 초기 task worktree는 `/home/vimkim/gh/my-cubrid-docs-pr7990-hornet-review`, 브랜치는 `docs/pr7990-hornet-review-20261029`이다. 통합 후 정리되면 `main`의 이 문서에서 재개한다.
 - 각 항목의 순서는 검토, 이해, 결정, 수정, 검증, 기록이다. 하나의 수정과 검증을 마친 뒤 다음 수정을 시작한다.
-- R1은 회사 draft PR 8330의 팀 리뷰 대기이다. [gha-ci 40853451200](https://github.com/CUBRID/cubrid/actions/runs/40853451200)는 release/debug 빌드와 SQL·medium이 통과했고 shell은 `temp_enc_06` 한 건이 실패했다. 사용자는 이 케이스가 알려진 flaky라고 확인했다. 실패 목록이 일치하므로 이를 R1 회귀 의심으로 별도 조사하느라 다른 리뷰를 미루지 않는다. CI의 실제 shell 실패 상태는 그대로 기록한다. 2026-10-30 사용자가 R5는 다른 서브에이전트가 진행한다고 알렸다. root의 R6은 회사 draft PR 8347로 게시했다. [전체 CI 41048233875](https://github.com/CUBRID/cubrid/actions/runs/41048233875)는 빌드 두 종류와 SQL·medium 상태가 SUCCESS이고 shell 두 건이 실패하며 종료됐다. 후속 수집에서 head와 기준 모두 SQL 집계 무결성 오류가 발생해 회귀·flaky 판단을 보류했다. [CI 수집 경고와 관찰](../cbrd-27841/ci_analysis_report_eac70c7_codex.md)의 증거 문제 해결과 팀 리뷰가 남아 있다. R2·R3·R4의 수정은 아직 시작하지 않았다.
+- R1은 회사 draft PR 8330의 팀 리뷰 대기이다. [gha-ci 40853451200](https://github.com/CUBRID/cubrid/actions/runs/40853451200)는 release/debug 빌드와 SQL·medium이 통과했고 shell은 `temp_enc_06` 한 건이 실패했다. 사용자는 이 케이스가 알려진 flaky라고 확인했다. 실패 목록이 일치하므로 이를 R1 회귀 의심으로 별도 조사하느라 다른 리뷰를 미루지 않는다. CI의 실제 shell 실패 상태는 그대로 기록한다. 2026-10-30 사용자가 R5는 다른 서브에이전트가 진행한다고 알렸다. root의 R6은 회사 draft PR 8347로 게시했다. [전체 CI 41048233875](https://github.com/CUBRID/cubrid/actions/runs/41048233875)는 빌드 두 종류와 SQL·medium 상태가 SUCCESS이고 shell 두 건이 실패하며 종료됐다. 후속 수집에서 head와 기준 모두 SQL 집계 무결성 오류가 발생해 회귀·flaky 판단을 보류했다. [CI 수집 경고와 관찰](../cbrd-27841/ci_analysis_report_eac70c7_codex.md)의 증거 문제 해결과 팀 리뷰가 남아 있다. R2는 회사 draft PR 8350의 [gha-ci 41390306929](https://github.com/CUBRID/cubrid/actions/runs/41390306929)가 모두 통과했고, 리뷰 답글은 초안 상태이다. R3·R4의 수정은 아직 시작하지 않았다.
 - R5는 별도 담당자가 2026-10-30 재현·수정·검증을 로컬에서 마치고 [CBRD-27858](https://jira.cubrid.org/browse/CBRD-27858)을 CBRD-26583의 Sub-task로 발급했다. source 브랜치는 `CBRD-27858-oos-relocation-forward-slot`, 커밋은 접두어만 고친 `628857607`이며 검증한 `c05abc8b4`와 트리가 같다. [회사 draft PR 8348](https://github.com/CUBRID/cubrid/pull/8348)로 게시했다. 첫 CI의 shell 실패 1건(`_enhance_10010`)은 R5와 관련이 낮다고 판단했고, 그 건만 재실행해 gha-ci 다섯 상태가 모두 SUCCESS가 됐다. 2026-10-31 리뷰 thread에 [R5 답글](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4430899042)을 게시했고 thread는 미해결로 둔다. 팀 리뷰가 남아 있다. 해당 담당자의 게시 승인 절차를 따르고 R6과 함께 묶지 않는다.
 - R1에 이어 R6도 저장한 본문과 게시 작업에 대해 별도 승인을 받았다. 승인 범위는 해당 문서·JIRA 노트 통합 및 게시, 해당 source의 fork push, 회사 draft PR 생성·담당자 지정, 사전 조건 통과 후 전체 CI 한 번이다. 리뷰 답글 게시, thread resolve, reviewer 요청과 source PR 머지는 포함하지 않는다. R5 게시 승인과 혼동하지 않는다.
 
@@ -26,7 +26,7 @@ R1은 사용자가 지정한 링크이므로 먼저 다룬다. 이후에는 커�
 | --- | --- | --- | --- | --- |
 | 1 | [R1. 동시 INSERT의 파일 소유 확인 실패](#r1-동시-insert의-파일-소유-확인-실패) | INSERT 실패, debug abort | zero-wait 범위와 파일 헤더 경합 | 회사 PR 8330 리뷰 대기. shell은 알려진 flaky `temp_enc_06` 한 건 실패 |
 | 2 | [R5. relocation undo가 재사용 슬롯을 덮어씀](#r5-relocation-undo가-재사용-슬롯을-덮어씀) | 커밋 행 손실, 힙 손상 | forward 페이지 공개와 sysop 경계 | CBRD-27858, 회사 draft PR 8348 게시(`628857607`, 검증한 `c05abc8b4`와 같은 트리). gha-ci 통과(재실행 41110368711), 답글 게시, 팀 리뷰 대기 |
-| 3 | [R2. vacuum과 새 힙 페이지 할당의 교착](#r2-vacuum과-새-힙-페이지-할당의-교착) | INSERT 장시간 대기와 abort | PR 8235의 처리 범위와 미통합 변경 | PR 8235는 미포함이며 다른 교착을 수정함. CBRD-27860, 회사 draft PR 8350 게시(`1ef6ed612`). 실제 vacuum으로 재현, 수정 후 통과. 회사 CI와 팀 리뷰 대기 |
+| 3 | [R2. vacuum과 새 힙 페이지 할당의 교착](#r2-vacuum과-새-힙-페이지-할당의-교착) | INSERT 장시간 대기와 abort | PR 8235의 처리 범위와 미통합 변경 | PR 8235는 미포함이며 다른 교착을 수정함. CBRD-27860, 회사 draft PR 8350 게시(`1ef6ed612`). 실제 vacuum으로 재현, 수정 후 통과. gha-ci 41390306929 통과. 답글 초안 작성, 게시·ready 전환과 팀 리뷰 대기 |
 | 4 | [R6. 미사용 복구 인덱스 제거](#r6-미사용-복구-인덱스-제거) | 불필요한 로그 형식 번호 고정 | 로그 생산자 존재 여부 | CBRD-27841, PR 8347 shell 두 건 실패. CTP 생성기 수정은 CUBRIDQA-1693·회사 PR 793으로 게시, runtime·새 CI·팀 리뷰 대기 |
 | 5 | [R3. 페이지 할당 시 전체 파일 스윕](#r3-페이지-할당-시-전체-파일-스윕) | 큰 파일의 INSERT 지연 | 스윕 발동 조건과 진행 위치 | 대기 |
 | 6 | [R4. 재시작 후 bestspace 복원](#r4-재시작-후-bestspace-복원) | 빈 공간 미사용, 파일 증가 | redesign 후 적용 계획과 R3 의존성 | 후속 계획 확인 대기 |
@@ -301,9 +301,11 @@ R2는 준비 단계에서 heap 헤더를 기다리는 교착이다. 이 수정�
 - [x] 마지막 힙 페이지를 vacuum이 보유하고 INSERT가 새 페이지를 할당하는 실행을 재현한다. 실패 테스트 `7e48b1dac`, 실제 할당은 약 316초 뒤 latch timeout.
 - [x] 조건부 헤더 조회, 페이지 해제, 대기, 레코드 재확인 구조를 결정한다. `heap_oos_find_vfid_nowait`와 레코드당 한 번의 재시작.
 - [x] R5의 sysop 경계를 보존하면서 필요한 수정을 적용한다. 수정 `1ef6ed612`는 준비 단계만 바꾼다. 재현 테스트와 CTest 44건 통과.
-- [ ] 교착 재현과 일반 INSERT·DELETE·vacuum 실행을 검증하고 결과를 기록한다.
+- [x] 교착 재현과 수정 후 결과를 기록한다. SQL 수준의 INSERT·DELETE·vacuum 부하는 실행하지 않았고, 게시를 막지 않는 한계로 PR 본문에 적었다.
+- [x] CBRD-27860과 회사 draft PR 8350을 게시하고 [gha-ci 41390306929](https://github.com/CUBRID/cubrid/actions/runs/41390306929) 통과를 확인한다.
+- [ ] [답글 초안](../cbrd-27860/CBRD-27860-pr7990-r2-reply_1ef6ed6_claude.md)을 사용자 승인 후 게시하고 PR 8350을 ready로 바꾼다. thread는 resolve하지 않는다.
 
-PR 8235가 고쳤을 수 있다는 원문의 설명은 확인할 대상이다. 이미 해결된 항목으로 표시하지 않는다.
+원문은 PR 8235가 고쳤을 수 있다고 확인을 요청했다. PR 8235는 OOS VFID 조회, 레코드 준비, 힙 할당을 바꾸지 않으므로 R2를 해결하지 않는다. 답글 초안에서 이를 답한다.
 
 ## R6. 미사용 복구 인덱스 제거
 
