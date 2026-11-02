@@ -8,4 +8,4 @@ Last modified: 2026-11-02, Asia/Seoul.
 | --- | --- | --- | --- | --- |
 | [CBRD-27860-oos-vacuum-heap-header-wait-pr-body_1ef6ed6_claude.md](CBRD-27860-oos-vacuum-heap-header-wait-pr-body_1ef6ed6_claude.md) | 회사 PR의 목적, 조건부 조회와 재시작 수정, 새 테스트의 수정 전후 결과, CTest와 미검증 범위 | 2026-10-31 | 2026-10-31 | 팀 리뷰 전 게시 내용을 검토하도록 보존 |
 | [CBRD-27860-oos-vacuum-heap-header-wait-pr-context_1ef6ed6_claude.md](CBRD-27860-oos-vacuum-heap-header-wait-pr-context_1ef6ed6_claude.md) | 티켓 생성 기록, source/base, 게시 대상, 제안 작업과 승인 범위 | 2026-10-31 | 2026-10-31 | 중복 PR과 승인 범위 확장을 방지하고 게시 결과를 기록 |
-| [CBRD-27860-pr7990-r2-reply_1ef6ed6_claude.md](CBRD-27860-pr7990-r2-reply_1ef6ed6_claude.md) | PR 7990 R2 thread에 올릴 답글 본문. PR 8235와의 관계, 재현·수정·검증, 확인하지 못한 범위 | 2026-11-02 | 2026-11-02 | 게시 전 검토하고 승인한 본문을 그대로 올리도록 보존 |
+| [CBRD-27860-pr7990-r2-reply_1ef6ed6_claude.md](CBRD-27860-pr7990-r2-reply_1ef6ed6_claude.md) | PR 7990 R2 thread에 올릴 답글 본문. PR 8235와의 관계, 재현·수정·검증, 확인하지 못한 범위 | 2026-11-02 | 2026-11-02 | 게시 전 검토하고 승인한 본문을 그대로 올리도록 보존. 2026-11-02 [게시](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4439602464) |

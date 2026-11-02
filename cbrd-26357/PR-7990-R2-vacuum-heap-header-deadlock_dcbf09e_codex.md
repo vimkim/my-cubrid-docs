@@ -1,6 +1,6 @@
 # PR 7990 R2의 vacuum과 힙 페이지 할당 교착
 
-2026-10-31, Asia/Seoul. OOS 작성자와 리뷰어가 [hornetmj의 R2](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4399323155)를 이해하고 수정 여부를 판단하기 위한 기록이다. PR 8235는 이 경로를 수정하지 않는다. 이 작업에서 실제 vacuum worker로 래치 순환을 재현했고, 로컬 수정 후 같은 테스트가 통과했다. 티켓은 [CBRD-27860](https://jira.cubrid.org/browse/CBRD-27860), 회사 draft PR은 [8350](https://github.com/CUBRID/cubrid/pull/8350)이다. 2026-11-02 회사 CI [gha-ci 41390306929](https://github.com/CUBRID/cubrid/actions/runs/41390306929)가 통과했다. 리뷰 답글은 초안 상태이며 팀 리뷰는 아직 받지 않았다.
+2026-10-31, Asia/Seoul. OOS 작성자와 리뷰어가 [hornetmj의 R2](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4399323155)를 이해하고 수정 여부를 판단하기 위한 기록이다. PR 8235는 이 경로를 수정하지 않는다. 이 작업에서 실제 vacuum worker로 래치 순환을 재현했고, 로컬 수정 후 같은 테스트가 통과했다. 티켓은 [CBRD-27860](https://jira.cubrid.org/browse/CBRD-27860), 회사 draft PR은 [8350](https://github.com/CUBRID/cubrid/pull/8350)이다. 2026-11-02 회사 CI [gha-ci 41390306929](https://github.com/CUBRID/cubrid/actions/runs/41390306929)가 통과했다. 같은 날 사용자 승인 후 [리뷰 답글](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4439602464)을 게시했다. PR 8350의 ready 전환은 사용자가 직접 검토하고 CBRD-27860의 triage를 받은 뒤로 둔다. 팀 리뷰는 아직 받지 않았다.
 
 ## 기준과 범위
 
@@ -91,7 +91,7 @@ R5는 실행 단계에서 forward 슬롯 삭제 후 sysop 종료까지 forward �
 
 ## 리뷰 답글 초안
 
-[답글 초안](../cbrd-27860/CBRD-27860-pr7990-r2-reply_1ef6ed6_claude.md)은 thread에 올릴 본문 그대로이다. 원문이 확인을 요청한 PR 8235의 해결 여부에 답하고, 재현·수정·검증과 확인하지 못한 범위를 적는다. 원문은 수정 방향을 따르면 헤더 페이지 자체를 쥔 경우의 대기도 줄어들 것으로 보았다. 이 수정은 그 대기를 줄이지 않으므로 답글에서 바로잡는다. 아직 게시하지 않았다.
+[답글 초안](../cbrd-27860/CBRD-27860-pr7990-r2-reply_1ef6ed6_claude.md)은 thread에 올릴 본문 그대로이다. 원문이 확인을 요청한 PR 8235의 해결 여부에 답하고, 재현·수정·검증과 확인하지 못한 범위를 적는다. 원문은 수정 방향을 따르면 헤더 페이지 자체를 쥔 경우의 대기도 줄어들 것으로 보았다. 이 수정은 그 대기를 줄이지 않으므로 답글에서 바로잡는다. 2026-11-02 사용자 승인 후 파일 그대로 [게시](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4439602464)했다. 게시 본문과 파일의 SHA-256은 모두 `06381a2254afbd9881a23acd067db06214f737d74d5b71d6b308339102ff0d3b`이다. thread는 resolve하지 않았다.
 
 ## 진행 체크리스트
 
@@ -105,7 +105,8 @@ R5는 실행 단계에서 forward 슬롯 삭제 후 sysop 종료까지 forward �
 - [x] 별도 티켓 중복 여부와 회사 PR 초안을 준비한다. [CBRD-27860](https://jira.cubrid.org/browse/CBRD-27860), [PR 초안](../cbrd-27860/README.md).
 - [x] 회사 draft PR을 게시한다. [PR 8350](https://github.com/CUBRID/cubrid/pull/8350).
 - [x] 회사 CI 결과를 확인한다. [gha-ci 41390306929](https://github.com/CUBRID/cubrid/actions/runs/41390306929) 통과.
-- [ ] 리뷰 답글을 사용자 승인 후 게시하고 PR 8350을 ready로 바꾼다. thread는 resolve하지 않는다.
+- [x] 리뷰 답글을 사용자 승인 후 게시한다. [답글](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4439602464). thread는 resolve하지 않았다.
+- [ ] 사용자가 PR 8350을 직접 검토하고 CBRD-27860의 triage를 받은 뒤 ready로 바꾼다.
 - [ ] 팀 리뷰 결과를 확인한다.
 
 ## 현재 증거와 한계
