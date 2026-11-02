@@ -6,7 +6,7 @@
 
 질문은 metadata 소비자만 선별해도 `policy_metadata.sh`가 남으며 원래 계약을 유지하는지다. 일반 TC에서 helper를 `oos_common`으로 옮기고 네 호출 인자를 바꿨다. Parser 출력·종료 상태는 독립 기대값 17개와 이전 버전에 대해 일치했다. 실제 CI 선별 함수를 사용한 같은 기본 검증 명령은 수정 전 교차 소비자 네 곳에서 실패했고 수정 후 통과했다. 선별 후 입력 64개로 실행한 원문 SHOW 대표는 1 PASS·0 FAIL·0 SKIP이다.
 
-일반 TC 커밋 [`41eae6a9c30f98434521c44476aa27e768e3332b`](https://github.com/CUBRID/cubrid-testcases-private-ex/commit/41eae6a9c30f98434521c44476aa27e768e3332b)을 정규 `tc/pr-8128` head에 게시했다. 이후 [전체 CI 41394321292](https://github.com/CUBRID/cubrid/actions/runs/41394321292)를 한 번 요청했다. 종료 판정은 아래 CI 절에 기록한다.
+일반 TC 커밋 [`41eae6a9c30f98434521c44476aa27e768e3332b`](https://github.com/CUBRID/cubrid-testcases-private-ex/commit/41eae6a9c30f98434521c44476aa27e768e3332b)을 정규 `tc/pr-8128` head에 게시했다. 이후 한 번 요청한 [전체 CI 41394321292](https://github.com/CUBRID/cubrid/actions/runs/41394321292)는 SUCCESS로 종료했고 다섯 gha context도 모두 SUCCESS다. 추가 TC·source 수정·push·CI 재실행은 하지 않았다.
 
 Schema·partition의 native 실행, TDE helper·AWK 이동, 비활성 TC 재활성화는 이번 범위에 포함하지 않는다. 앞선 native 두 시도의 준비 환경 NOK를 보존한다. SHOW는 이전에 검증한 같은 대표이므로 과거 shell 61개의 서로 다른 현재 검증 수를 늘리지 않는다. 나머지 59개, 그중 policy helper 그룹 38개와 기존 종료 지연 조사는 남는다.
 
@@ -89,7 +89,7 @@ Native testkit `/home/vimkim/.local/bin/testkit`의 SHA-256은 `31be3b1e542b05d1
 
 Case-log 수집은 독립 `.json`·`.before` 파일을 보존하지 않는다. DDL은 retained `show.controller.log`의 `EVIDENCE=...ddl.json` 완전한 출력으로 검증했다. Config 복원은 원문 assertion 8과 controller 정리 결과가 근거다. 해당 파일들이 따로 보존됐다고 가정한 검증기 초안 두 실패는 산출물 관측 오류로 남겼다. 이를 고치기 위해 testcase assertion을 바꾸거나 native를 다시 실행하지 않았다.
 
-세 시도 모두 1초 간격의 두 read-only residue scan을 보존한다. 관측한 owned process·namespace holder, 실행 경로 아래 host mount·UNIX socket 잔류가 없다. 첫 두 시도의 case 자체 `owned_cleanup=0`과 외부 containment 정리 결과를 구분한다. 별도 부모 cleanup signal은 보내지 않았다. 모든 host IPC 객체의 부재를 인증하는 검사는 아니다.
+세 시도 모두 1초 간격의 두 read-only residue scan을 보존한다. 관측한 owned process·namespace holder, 실행 경로 아래 host mount·UNIX socket 잔류가 없다. 각 scan에는 읽을 수 없었던 process 4개도 기록되어 있다. 첫 두 시도의 case 자체 `owned_cleanup=0`과 외부 containment 정리 결과를 구분한다. 별도 부모 cleanup signal은 보내지 않았다. 모든 host IPC 객체의 부재를 인증하는 검사는 아니다.
 
 다음 명령은 보존된 세 번째 결과를 읽으며 native 실행을 시작하지 않는다.
 
@@ -108,11 +108,17 @@ python3 cbrd-26659/tools/verify-policy-metadata-native.py \
 
 Feature baseline ancestry 검사는 public·private 둘 다 PASS였다. 진행 중 같은 PR CI와 새 `/run` 요청이 없는지 다시 확인한 뒤 [`/run all` 댓글](https://github.com/CUBRID/cubrid/pull/8128#issuecomment-6569836762)을 정확히 한 번 게시했다. Engine head가 같아도 새 TC push 뒤 한 번 CI를 실행한다는 사용자 지침과 승인한 Work662 범위를 적용했다. Testtools override는 없다.
 
-CI plan 실제 checkout은 Engine `e3589ae42d42b04eb020e1ae43e165b01d31b12a`, public `b038c424b6a8d078671132e2369040493a5fc1f6`, private `41eae6a9c30f98434521c44476aa27e768e3332b`다. CTP는 `CUBRID/cubrid-testtools` develop `1c6b224d6f48eea01b8b4efa9f64f2521c40f2fd`다. Issue-comment workflow 자체의 `head_sha`는 develop `1684945ed05fdd37be55a706390d976c24ef3f9b`로 Engine 테스트 대상과 구분한다.
+CI의 [plan job](https://github.com/CUBRID/cubrid/actions/runs/41394321292/job/125112610331) 실제 checkout은 Engine `e3589ae42d42b04eb020e1ae43e165b01d31b12a`, public `b038c424b6a8d078671132e2369040493a5fc1f6`, private `41eae6a9c30f98434521c44476aa27e768e3332b`다. CTP는 `CUBRID/cubrid-testtools` develop `1c6b224d6f48eea01b8b4efa9f64f2521c40f2fd`다. Issue-comment workflow 자체의 `head_sha`는 develop `1684945ed05fdd37be55a706390d976c24ef3f9b`로 Engine 테스트 대상과 구분한다.
 
-**CI 종료 기록은 대기 중이다.** 새 실행의 build debug·release, shell·SQL·medium 다섯 context pickup을 확인했다. 종료 후 run과 context 결과를 대조해 이 문단을 갱신한다. CI 종료 뒤에는 추가 TC·source 수정, push 또는 rerun을 하지 않는다.
+Metadata 소비 진입점은 비활성으로 유지되어 이번 일반 CI 실행 대상에 포함되지 않는다. Metadata의 native 근거는 별도 선별 fixture에서 실행한 SHOW 1 PASS다.
 
-TC Merge Gate는 현재 check 목록에 표시되지 않는다. `gh pr checks --required`의 “no required checks reported”도 해당 CLI 조회 결과일 뿐 required rule 부재나 Gate PASS 근거가 아니다. Public #3688·private #4365의 실제 리뷰·병합은 사람의 후속 작업이다. 이번 CI가 성공하더라도 기존 SQL 3,533/3,531건 집계 정합성 미인증, heavy 정기 실행 경로와 비활성 TC 전체 검증은 별도로 남는다.
+2026-11-02 16:25:51 KST에 run의 `completed/success`를 관측했다. API의 최종 `updated_at`은 16:22:05 KST다. Job 72개 중 71개가 success, `nightly batch` 하나가 조건부 skipped다. 이 숫자는 job 수이며 testcase PASS 수가 아니다. 최종 PR 조회에서 build debug·release, shell·SQL·medium 다섯 context가 모두 같은 run을 가리키며 SUCCESS임을 확인했다.
+
+Shell·SQL shard 60개의 긴 runner 배정 대기를 관측했다. Runner 목록 조회는 HTTP 403으로 거절되어 pool 상태는 확인하지 못했다. 사용자가 공유 runner 경합 가능성을 설명하며 추가 약 3시간·10분 간격 확인을 지시했다. 로컬 30초 watcher만 중단하고, 18:34:26 KST까지 최대 대기하는 10분 watcher로 바꿨다. CI 자체를 cancel하거나 새 요청을 게시하지 않았다. 이 대기 창 안에 종료를 관측했고 watcher도 exit 0으로 끝났다. Pool 혼잡을 확정 원인으로 귀속하지 않는다.
+
+TC Merge Gate는 최종 check 목록에도 표시되지 않는다. `gh pr checks --required`의 “no required checks reported”도 해당 CLI 조회 결과일 뿐 required rule 부재나 Gate PASS 근거가 아니다. Workflow 안의 `gate` job 성공과 TC Merge Gate를 구분한다. 최종 조회에서 public #3688·private #4365는 모두 OPEN이며 실제 리뷰·병합은 사람의 후속 작업이다. 두 TC PR 처리를 요구하는 병합 정책은 남는다. 이번 CI SUCCESS와 기존 SQL 3,533/3,531건 집계 정합성 미인증, heavy 정기 실행 경로·비활성 TC 전체 검증은 별도로 유지한다.
+
+종료 후 일반 TC `41eae6a9c`의 clean 상태, public `b038c424`·heavy `81e6072`의 변경 없음, Engine `e3589ae`와 기존 CCI·JDBC dirt를 대조했다. PR head도 같은 값을 유지한다. 이후 TC·source 수정, push 또는 CI rerun을 하지 않았다.
 
 ## 보존 자료와 후속 작업
 
@@ -127,7 +133,7 @@ Raw 산출물의 canonical root는 `/home/vimkim/temp/cbrd-26659-policy-metadata
 | `probe-socket-path.py`, `socket-path-probe.json`, `native03-path.json` | UNIX socket 길이 대조와 짧은 물리 경로 선택 |
 | `native-proof-v1.*`, `native-proof-v2.*`, `native-proof-parent.json` | 관측 오류의 보존과 최종 commit 대응 검증 |
 | `tc-commit.json`, `tc-committed.patch`, `tc-publication.json`, `tc-push.log` | 검토한 변경과 게시 head 대응 |
-| `ci-preflight`, `ci-trigger`, `ci-status` | Baseline 검사, 단일 게시 receipt, CI plan·종료 근거 |
+| `ci-preflight`, `ci-trigger`, `ci-status`, `post-ci-preservation.json` | Baseline 검사, 단일 게시 receipt, CI plan·10분 대기 지시·최종 run/context·source 보존 근거 |
 
 Git에 남기는 지원 파일은 parser·실제 선별을 재검증하는 `verify-policy-metadata-relocation.py`와 retained native 결과·최종 TC commit 대응을 검사하는 `verify-policy-metadata-native.py` 두 개다. 첫 local docs 커밋 이후 보강한 native 검증은 실제 runtime tmp와 retained 자료 형식을 반영한다. Report·checklist·README와 함께 결과를 재검토하는 도구이므로 보존한다. Raw log·inventory·실험 실행 wrapper는 선택하지 않았다.
 
