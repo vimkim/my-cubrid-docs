@@ -6,7 +6,10 @@ Last modified: 2026-11-02, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [PR-7990-hornetmj-review-checklist_20261029_codex.md](PR-7990-hornetmj-review-checklist_20261029_codex.md) | 리뷰 6개의 체크리스트, R6 CI 경고와 CTP 생성기 수정·별도 회사 PR 793 게시 | 2026-10-29 | 2026-11-02 | 팀장님 리뷰를 하나씩 이해하고 근거와 진행 상태를 보존 |
+| [PR-7990-hornetmj-review-checklist_20261029_codex.md](PR-7990-hornetmj-review-checklist_20261029_codex.md) | 리뷰 6개의 체크리스트, R6 CI 경고와 CTP 생성기 수정·별도 회사 PR 793 게시, R3·R4 추적 단위(CBRD-27872, CBRD-27213) | 2026-10-29 | 2026-11-02 | 팀장님 리뷰를 하나씩 이해하고 근거와 진행 상태를 보존 |
+| [PR-7990-R3-R4-tracking-decision_dcbf09e_claude.md](PR-7990-R3-R4-tracking-decision_dcbf09e_claude.md) | R3·R4 결론 표, CBRD-27872 발급과 CBRD-27213 편입, 두 이슈의 중복 요구 조정, 열린 결정 | 2026-11-02 | 2026-11-02 | 독립 분석 두 개를 검토해 추적 단위를 정함 |
+| [PR-7990-R3-growth-sweep-cost_dcbf09e_claude.md](PR-7990-R3-growth-sweep-cost_dcbf09e_claude.md) | 성장 게이트 sweep의 발동 조건·lap·카운터, 중복 후보 비교, 신규 Sub-task 문안. CBRD-27872의 근거 | 2026-11-02 | 2026-11-02 | R3를 별도 Sub-task로 추적할지 판단 |
+| [PR-7990-R4-restart-bestspace_dcbf09e_claude.md](PR-7990-R4-restart-bestspace_dcbf09e_claude.md) | 재시작 후 bestspace 경로, sync 발동 조건이 늘 거짓인 원인(CBRD-26824), CBRD-27213 보강안 | 2026-11-02 | 2026-11-02 | R4를 신규 Sub-task와 CBRD-27213 편입 중 어디서 추적할지 판단 |
 | [PR-7990-R6-recovery-index-cleanup_dcbf09e_codex.md](PR-7990-R6-recovery-index-cleanup_dcbf09e_codex.md) | 미사용 인덱스 제거, 형식 2의 근거, 수정 전후 CTest와 데이터 보존 검증·한계 | 2026-10-30 | 2026-10-30 | R6 수정의 호환성과 실행 근거를 독립 리뷰 단위로 보존 |
 | [PR-7990-R2-vacuum-heap-header-deadlock_dcbf09e_codex.md](PR-7990-R2-vacuum-heap-header-deadlock_dcbf09e_codex.md) | PR 8235 비교, OOS vacuum과 힙 할당의 래치 순환, 실제 vacuum 재현, 조건부 조회와 재시작 수정, 검증과 한계, 회사 CI 결과와 리뷰 답글 초안 | 2026-10-31 | 2026-11-02 | R2를 기존 수정과 구분하고 재현·수정·결정 근거를 보존 |
 | [CBRD-XXXXX-oos-vacuum-heap-header-wait-pr-body_b5d5310_claude.md](CBRD-XXXXX-oos-vacuum-heap-header-wait-pr-body_b5d5310_claude.md) | R2 회사 PR 본문의 티켓 발급 전 초안. [cbrd-27860](../cbrd-27860/README.md)의 본문으로 대체됨 | 2026-10-31 | 2026-10-31 | 티켓 발급과 게시 전에 본문을 검토 |

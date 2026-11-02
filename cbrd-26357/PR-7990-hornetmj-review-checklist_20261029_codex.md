@@ -2,7 +2,7 @@
 
 팀장님 리뷰를 하나씩 이해하고 결정한 뒤, 필요한 수정과 검증을 마친다. 이 문서는 OOS 작성자와 리뷰어가 다음 작업을 이어갈 수 있도록 진행 상태와 근거를 보존한다.
 
-R1은 실제 동시 INSERT로 같은 assertion을 재현한 뒤 7줄을 삭제해 수정했다. 수정 후 CS 10회와 집중 CTest가 통과했고, [회사 draft PR 8330](https://github.com/CUBRID/cubrid/pull/8330)으로 게시했다. R5는 수정 전 debug·release와 재시작 복구의 손상을 재현했고, forward 페이지를 sysop commit 뒤까지 고정하는 로컬 수정으로 같은 주입을 통과했다. R5는 중복 검색 뒤 [CBRD-27858](https://jira.cubrid.org/browse/CBRD-27858)을 발급하고 [회사 draft PR 8348](https://github.com/CUBRID/cubrid/pull/8348)로 게시했다. PR 8348의 gha-ci는 재실행 후 모두 통과했고, 리뷰 thread에는 짧은 답글을 게시했다. R6도 독립 브랜치에서 수정·로컬 검증을 마치고 [회사 draft PR 8347](https://github.com/CUBRID/cubrid/pull/8347)으로 게시했다. R2는 실제 vacuum worker로 래치 순환을 재현하고 수정해 [CBRD-27860](https://jira.cubrid.org/browse/CBRD-27860)과 [회사 draft PR 8350](https://github.com/CUBRID/cubrid/pull/8350)으로 게시했고, gha-ci가 통과했다. R3·R4는 대기 중이다.
+R1은 실제 동시 INSERT로 같은 assertion을 재현한 뒤 7줄을 삭제해 수정했다. 수정 후 CS 10회와 집중 CTest가 통과했고, [회사 draft PR 8330](https://github.com/CUBRID/cubrid/pull/8330)으로 게시했다. R5는 수정 전 debug·release와 재시작 복구의 손상을 재현했고, forward 페이지를 sysop commit 뒤까지 고정하는 로컬 수정으로 같은 주입을 통과했다. R5는 중복 검색 뒤 [CBRD-27858](https://jira.cubrid.org/browse/CBRD-27858)을 발급하고 [회사 draft PR 8348](https://github.com/CUBRID/cubrid/pull/8348)로 게시했다. PR 8348의 gha-ci는 재실행 후 모두 통과했고, 리뷰 thread에는 짧은 답글을 게시했다. R6도 독립 브랜치에서 수정·로컬 검증을 마치고 [회사 draft PR 8347](https://github.com/CUBRID/cubrid/pull/8347)으로 게시했다. R2는 실제 vacuum worker로 래치 순환을 재현하고 수정해 [CBRD-27860](https://jira.cubrid.org/browse/CBRD-27860)과 [회사 draft PR 8350](https://github.com/CUBRID/cubrid/pull/8350)으로 게시했고, gha-ci가 통과했다. R3·R4는 추적 단위를 정했다. R3는 [CBRD-27872](https://jira.cubrid.org/browse/CBRD-27872)로 발급했고, R4는 [CBRD-27213](https://jira.cubrid.org/browse/CBRD-27213)에 편입한다. 근거는 [R3·R4 추적 단위 종합](PR-7990-R3-R4-tracking-decision_dcbf09e_claude.md)에 있다. 두 항목의 수정은 시작하지 않았다.
 
 분석일은 2026-10-29, Asia/Seoul이다. 대상은 [CUBRID/cubrid PR 7990](https://github.com/CUBRID/cubrid/pull/7990)이다. 검토 기준 소스는 `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`, 브랜치는 `feature/oos-merge`이다. 수집 당시 hornetmj님의 inline 리뷰 6개는 모두 미해결이며 outdated가 아니다. 빈 COMMENTED 리뷰 요약은 별도 작업으로 세지 않는다.
 
@@ -28,8 +28,8 @@ R1은 사용자가 지정한 링크이므로 먼저 다룬다. 이후에는 커�
 | 2 | [R5. relocation undo가 재사용 슬롯을 덮어씀](#r5-relocation-undo가-재사용-슬롯을-덮어씀) | 커밋 행 손실, 힙 손상 | forward 페이지 공개와 sysop 경계 | CBRD-27858, 회사 draft PR 8348 게시(`628857607`, 검증한 `c05abc8b4`와 같은 트리). gha-ci 통과(재실행 41110368711), 답글 게시, 팀 리뷰 대기 |
 | 3 | [R2. vacuum과 새 힙 페이지 할당의 교착](#r2-vacuum과-새-힙-페이지-할당의-교착) | INSERT 장시간 대기와 abort | PR 8235의 처리 범위와 미통합 변경 | PR 8235는 미포함이며 다른 교착을 수정함. CBRD-27860, 회사 draft PR 8350 게시(`1ef6ed612`). 실제 vacuum으로 재현, 수정 후 통과. gha-ci 41390306929 통과. 답글 게시. 사용자 검토와 JIRA triage 뒤 ready 전환, 팀 리뷰 대기 |
 | 4 | [R6. 미사용 복구 인덱스 제거](#r6-미사용-복구-인덱스-제거) | 불필요한 로그 형식 번호 고정 | 로그 생산자 존재 여부 | CBRD-27841, PR 8347 shell 두 건 실패. CTP 생성기 수정은 CUBRIDQA-1693·회사 PR 793으로 게시, runtime·새 CI·팀 리뷰 대기 |
-| 5 | [R3. 페이지 할당 시 전체 파일 스윕](#r3-페이지-할당-시-전체-파일-스윕) | 큰 파일의 INSERT 지연 | 스윕 발동 조건과 진행 위치 | 대기 |
-| 6 | [R4. 재시작 후 bestspace 복원](#r4-재시작-후-bestspace-복원) | 빈 공간 미사용, 파일 증가 | redesign 후 적용 계획과 R3 의존성 | 후속 계획 확인 대기 |
+| 5 | [R3. 페이지 할당 시 전체 파일 스윕](#r3-페이지-할당-시-전체-파일-스윕) | 큰 파일의 INSERT 지연 | 스윕 발동 조건과 진행 위치 | CBRD-27872 발급(부모 CBRD-26583). 추적 단위 분석 완료, 수정 미착수 |
+| 6 | [R4. 재시작 후 bestspace 복원](#r4-재시작-후-bestspace-복원) | 빈 공간 미사용, 파일 증가 | redesign 후 적용 계획과 R3 의존성 | CBRD-27213 편입 권고, 본문 보강안 작성. 수정 미착수 |
 
 ## PR 방식 검토 이력과 의존 관계
 
@@ -339,9 +339,11 @@ R6은 `CBRD-27841-remove-unused-oos-recovery-index`의 독립 worktree에서 진
 
 [리뷰 원문](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4399899312). 대상은 `oos_alloc_page_with_reclaim`과 `oos_reclaim_sweep_step`이다.
 
+2026-11-02 [R3 분석](PR-7990-R3-growth-sweep-cost_dcbf09e_claude.md)은 기존 이슈가 발동 조건과 할당당 상한을 다루지 않는다고 확인하고 신규 Sub-task를 권고했다. 사용자가 [CBRD-27872](https://jira.cubrid.org/browse/CBRD-27872)로 발급했다.
+
 - [x] 원문을 수집한다.
-- [ ] `pending_deletes`, `swept_this_boot`, sweep cursor의 실제 상태 전이를 확인한다.
-- [ ] vacuum 즉시 회수와 LSA 지연, non-MVCC 삭제, SA 즉시 삭제를 구분한다.
+- [x] `pending_deletes`, `swept_this_boot`, sweep cursor의 실제 상태 전이를 확인한다.
+- [x] vacuum 즉시 회수와 LSA 지연, non-MVCC 삭제, SA 즉시 삭제를 구분한다.
 - [ ] 스윕 발동 조건 개선과 할당당 검사 상한을 각각 검토한다.
 - [ ] 할당당 검사 페이지 수와 빈 페이지 회수의 진행 보장을 검증할 방법을 정한다.
 - [ ] R4의 힌트 복원 계획과 충돌하지 않는 최소 수정을 결정한다.
@@ -352,9 +354,11 @@ R6은 `CBRD-27841-remove-unused-oos-recovery-index`의 독립 worktree에서 진
 
 [리뷰 원문](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4409283403). 원문은 bestspace redesign 안정화 후 OOS에 적용할 계획을 먼저 밝힌다.
 
+2026-11-02 [R4 분석](PR-7990-R4-restart-bestspace_dcbf09e_claude.md)은 3단계 sync의 발동 조건이 운영 경로에서 늘 거짓임을 소스로 확인했다. 새 Sub-task 대신 [CBRD-27213](https://jira.cubrid.org/browse/CBRD-27213) 편입을 권고했고, 편입하려면 본문 보강이 필요하다.
+
 - [x] 원문과 후속 적용 계획을 수집한다.
 - [ ] redesign의 소유 작업과 적용 시점을 확인한다.
-- [ ] `num_pages`와 `num_other_high_best`의 기록 위치, 임시 헤더 갱신, scan cursor를 확인한다.
+- [x] `num_pages`와 `num_other_high_best`의 기록 위치, 임시 헤더 갱신, scan cursor를 확인한다.
 - [ ] 재시작 전후 동일한 빈 공간과 입력으로 페이지 재사용을 비교한다.
 - [ ] 지금 수정할 부분과 redesign에서 처리할 부분을 결정한다.
 - [ ] 지금 수정하는 경우 R3의 bounded sweep과 함께 회수·힌트 등록을 검증한다.
