@@ -160,7 +160,7 @@ adversary가 증명하고 조정자가 다시 실행하지 않은 테스트 공�
 
 ## 재현 자료
 
-리뷰 harness는 로컬 브랜치 `CBRD-27785-review-harness`(`7472ed577`, parent `f8114e432`)에 보관했다. 이 브랜치는 원격에 올리지 않았다. 각 harness는 같은 파일을 head와 base worktree에서 실행해 결과를 비교한다.
+리뷰 harness는 브랜치 `CBRD-27785-review-harness`(`7472ed577`, parent `f8114e432`)에 보관했다. CUBRID 저장소에는 올리지 않았고, 개인 fork의 [같은 이름 브랜치](https://github.com/vimkim/cubrid/tree/CBRD-27785-review-harness)에서 볼 수 있다. 각 harness는 같은 파일을 head와 base worktree에서 실행해 결과를 비교한다.
 
 - `test_oos_sql_zz_readdiff`: `$OOS_READDIFF_OUT`에 읽기 결과를 dump한다. BLOB/CLOB locator 줄은 실행마다 다르다.
 - `test_oos_sql_zz_writediff`: `$WRITEDIFF_OUT`에 레코드를 dump한다. `padding_bytes=` 줄을 빼고 비교한다.
