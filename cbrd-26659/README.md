@@ -1,6 +1,8 @@
 # CBRD-26659 documentation
 
-Last modified: 2026-11-02 (Asia/Seoul).
+Last modified: 2026-11-03 (Asia/Seoul).
+
+2026-11-03 [테스트 종류별 성공·실패·타임아웃 현황](CBRD-26659-suite-verdict-report_20261102_e3589ae_codex.md)은 OOS SQL·shell 계열의 중복 없는 등록 167개와 실행 판정을 구분한다. 최신 일반 shell의 활성 OOS 31 PASS, 과거 heavy 전체 38 PASS와 현 head 대표 1 PASS, HA 최종 2 PASS·2 FAIL을 기록한다. 비활성 과거 실패 중 59개 현재 native 미확인, 실행 명령 timeout 두 시도, performance·C++ 검증 공백과 최신 SQL 집계 무결성 거부를 유지한다. 일반 CI 전체의 shell 3,491 PASS·30 SKIP, medium 975 PASS와 OOS 전용 결과를 구분하며 새 실행이나 실패 수리는 하지 않았다.
 
 2026-11-02 [TDE helper 공용 이동과 AES crash 검증](CBRD-26659-tde-helper-relocation_20261102_work691_codex.md)은 일반·heavy helper와 AWK를 공용 위치로 함께 옮겼다. 같은 gate의 실제 선별 18회와 독립 parser 104쌍, owner 제외 입력 35개의 원문 committed AES crash 1 PASS를 확인했다. 일반 `01df2600a`·heavy `d5247632b`를 게시했고 단일 CI 41431239377과 다섯 gha context는 SUCCESS로 종료했다. 활성·비활성 선택과 assertion을 유지했으며 wrapper의 sibling 의존성, TC 리뷰·병합과 나머지 Work456은 별도다.
 
@@ -58,6 +60,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [테스트 종류별 성공·실패·타임아웃 현황](CBRD-26659-suite-verdict-report_20261102_e3589ae_codex.md) | SQL·shell·heavy·perf·HA·medium·C++의 등록·판정·미검증과 최신 CI 무결성 경고 | 2026-11-02 | 2026-11-03 | 전부 통과했는지와 남은 실패·timeout을 입력 리비전별로 판단 |
 | [TDE helper 공용 이동과 AES crash 검증](CBRD-26659-tde-helper-relocation_20261102_work691_codex.md) | 일반·heavy helper/AWK 이동, 선별 18회·parser 104쌍·원문 AES 대표·게시·단일 CI | 2026-11-02 | 2026-11-02 | TDE 교차 TC 의존성을 수리하고 실제 AES 검증과 남은 경계를 인계 |
 | [공용 metadata helper 이동과 선별 후 SHOW 검증](CBRD-26659-policy-metadata-relocation_20261102_41eae6a9c_codex.md) | Metadata 이동·parser 17개·실제 선별 전후·대표 PASS와 준비 NOK·게시·CI | 2026-11-02 | 2026-11-02 | Metadata의 교차 TC 의존성을 수리하고 검증·게시 범위를 인계 |
 | [남은 공용 helper 의존성 감사](CBRD-26659-helper-dependency-audit_20261031_6334dc6_codex.md) | Metadata·TDE의 조건부 호출, 선별 24회·parser 대조, 최소 수리·검증 제안 | 2026-10-31 | 2026-10-31 | 남은 교차 TC 의존성과 실제 실행 범위를 구분하고 후속 수리 순서를 결정 |
