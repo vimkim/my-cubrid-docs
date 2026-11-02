@@ -8,7 +8,7 @@ Last modified: 2026-11-03 (Asia/Seoul).
 
 2026-11-03 [policy helper 잔여 38개 native 검증](CBRD-26659-policy38-native_e3589ae_20261103_work699_codex.md)은 Engine `e3589ae`·TC `01df2600a`에서 37 PASS·1 FAIL·0 TIMEOUT을 확인했다. REPARTITION은 두 정책에서 루트 OOS 파일 존재 검사에 실패했으며 Engine·TC 귀속은 미확정이다. 모든 실행의 종료·정리와 증거 대조를 확인했고, 부가 owner snapshot 부재를 한계로 남긴다.
 
-2026-11-03 [테스트 종류별 성공·실패·타임아웃 현황](CBRD-26659-suite-verdict-report_20261102_e3589ae_codex.md)은 OOS SQL·shell 계열의 중복 없는 등록 167개와 실행 판정을 구분한다. 최신 일반 shell의 활성 OOS 31 PASS, 과거 heavy 전체 38 PASS와 현 head 대표 1 PASS, HA 최종 2 PASS·2 FAIL을 기록한다. 비활성 과거 실패 중 59개 현재 native 미확인, 실행 명령 timeout 두 시도, performance·C++ 검증 공백과 최신 SQL 집계 무결성 거부를 유지한다. 일반 CI 전체의 shell 3,491 PASS·30 SKIP, medium 975 PASS와 OOS 전용 결과를 구분하며 새 실행이나 실패 수리는 하지 않았다.
+2026-11-03 [테스트 종류별 성공·실패·타임아웃 현황](CBRD-26659-suite-verdict-report_20261102_e3589ae_codex.md)은 **2026-11-02 수집 snapshot**이다. OOS SQL·shell 계열의 등록 167개와 실행 판정을 구분하며, 당시 활성 OOS shell 31 PASS, 과거 heavy 전체 38 PASS·현 head 대표 1 PASS, HA 최종 2 PASS·2 FAIL을 기록한다. 당시 비활성 과거 실패 중 59개 native 미확인, 실행 명령 timeout 두 시도, performance·C++ 공백과 SQL 집계 무결성 거부를 보존한다. 일반 CI 전체 shell 3,491 PASS·30 SKIP, medium 975 PASS와 OOS 전용 결과를 구분한다. 이후 native 검증의 최신 결과는 위 Work699·Work704 보고서를 따른다.
 
 2026-11-02 [TDE helper 공용 이동과 AES crash 검증](CBRD-26659-tde-helper-relocation_20261102_work691_codex.md)은 일반·heavy helper와 AWK를 공용 위치로 함께 옮겼다. 같은 gate의 실제 선별 18회와 독립 parser 104쌍, owner 제외 입력 35개의 원문 committed AES crash 1 PASS를 확인했다. 일반 `01df2600a`·heavy `d5247632b`를 게시했고 단일 CI 41431239377과 다섯 gha context는 SUCCESS로 종료했다. 활성·비활성 선택과 assertion을 유지했으며 wrapper의 sibling 의존성, TC 리뷰·병합과 나머지 Work456은 별도다.
 
