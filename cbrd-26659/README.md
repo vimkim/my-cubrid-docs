@@ -2,6 +2,8 @@
 
 Last modified: 2026-11-03 (Asia/Seoul).
 
+2026-11-03 [REPARTITION 루트 OOS 연결과 TC oracle 진단](CBRD-26659-repartition-root-oos_e3589ae_20261103_work702_codex.md)은 기존 파일 연결이 즉시 없어야 한다고 본 TC 조건을 원인으로 분류한다. 원래 두 정책 archive·JSON과 최소 red/green·SA 대조를 확보했다. SA는 root records0·Has1, 작은 값은 Has0·PASS이며 원래 TC와 Engine은 수정하지 않았다.
+
 2026-11-03 [policy helper 잔여 38개 native 검증](CBRD-26659-policy38-native_e3589ae_20261103_work699_codex.md)은 Engine `e3589ae`·TC `01df2600a`에서 37 PASS·1 FAIL·0 TIMEOUT을 확인했다. REPARTITION은 두 정책에서 루트 OOS 파일 존재 검사에 실패했으며 Engine·TC 귀속은 미확정이다. 모든 실행의 종료·정리와 증거 대조를 확인했고, 부가 owner snapshot 부재를 한계로 남긴다.
 
 2026-11-03 [테스트 종류별 성공·실패·타임아웃 현황](CBRD-26659-suite-verdict-report_20261102_e3589ae_codex.md)은 OOS SQL·shell 계열의 중복 없는 등록 167개와 실행 판정을 구분한다. 최신 일반 shell의 활성 OOS 31 PASS, 과거 heavy 전체 38 PASS와 현 head 대표 1 PASS, HA 최종 2 PASS·2 FAIL을 기록한다. 비활성 과거 실패 중 59개 현재 native 미확인, 실행 명령 timeout 두 시도, performance·C++ 검증 공백과 최신 SQL 집계 무결성 거부를 유지한다. 일반 CI 전체의 shell 3,491 PASS·30 SKIP, medium 975 PASS와 OOS 전용 결과를 구분하며 새 실행이나 실패 수리는 하지 않았다.
@@ -62,6 +64,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [REPARTITION 루트 OOS 연결과 TC oracle 진단](CBRD-26659-repartition-root-oos_e3589ae_20261103_work702_codex.md) | 정책별 원본 증거·최소화·red/green·SA 대조와 범위를 제한한 TC 수정 제안 | 2026-11-03 | 2026-11-03 | REPARTITION FAIL의 Engine·TC 귀속을 실제 대조로 판단 |
 | [policy helper 잔여 38개 native 검증](CBRD-26659-policy38-native_e3589ae_20261103_work699_codex.md) | 37 PASS·1 FAIL, 고정 리비전·원본 판정·정리·부가 자료 한계와 재검증 | 2026-11-03 | 2026-11-03 | 미검증 policy 그룹을 실제 실행하고 REPARTITION 잔여 실패를 인계 |
 | [테스트 종류별 성공·실패·타임아웃 현황](CBRD-26659-suite-verdict-report_20261102_e3589ae_codex.md) | SQL·shell·heavy·perf·HA·medium·C++의 등록·판정·미검증과 최신 CI 무결성 경고 | 2026-11-02 | 2026-11-03 | 전부 통과했는지와 남은 실패·timeout을 입력 리비전별로 판단 |
 | [TDE helper 공용 이동과 AES crash 검증](CBRD-26659-tde-helper-relocation_20261102_work691_codex.md) | 일반·heavy helper/AWK 이동, 선별 18회·parser 104쌍·원문 AES 대표·게시·단일 CI | 2026-11-02 | 2026-11-02 | TDE 교차 TC 의존성을 수리하고 실제 AES 검증과 남은 경계를 인계 |

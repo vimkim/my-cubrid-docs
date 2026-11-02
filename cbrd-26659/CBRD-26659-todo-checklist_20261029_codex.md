@@ -50,6 +50,8 @@
 - [x] Helper 수리 게시 후 한 번 시작한 [CI 41175186516](https://github.com/CUBRID/cubrid/actions/runs/41175186516)의 SUCCESS와 5개 gha context SUCCESS를 기록한다. Plan에서 public `b038c424`·private `6334dc6`을 확인했다. 이전 SQL 전체 집계 미인증과 TC PR 검토·병합은 별도다. 추가 TC 수정·push·CI 재실행은 하지 않았다.
 - [ ] `ctas02`의 TC 완료 후 native 명령 timeout 원인을 추가 분석한다. 결과 파일은 성공이지만 130.013초에 exit -9로 끝나 미완료다. 추가 관측 `ctas03`은 56.908초에 정상 종료해 원래 지연을 재현하지 못했다. Work647의 선별 후 `fixed01`에서도 종료 지연을 관측했고 `fixed02`는 40.879초에 정상 종료했다. 첫 실패를 미완료로 유지하며 원인 확정이나 runner 수리 credit은 주지 않는다.
 - [x] policy helper 그룹 잔여 38개를 Engine `e3589ae`·TC `01df2600a`에서 직렬 검증한다. [Work699 보고서](CBRD-26659-policy38-native_e3589ae_20261103_work699_codex.md)에 37 PASS·1 FAIL·0 TIMEOUT과 전부의 종료·정리를 기록했다. REPARTITION의 두 정책은 `root_has_no_oos`에서 실패하며 Engine·TC 귀속은 미확정이다.
+- [x] REPARTITION의 root_has_no_oos 실패를 조사하고 정책별 owner 증거를 확보한다. [Work702 진단](CBRD-26659-repartition-root-oos_e3589ae_20261103_work702_codex.md)은 SA records0·Has1과 최소 red/green을 통해 기존 root의 파일 연결을 즉시 없애야 한다는 TC 조건의 범위 오류로 분류했다. 원래 TC는 아직 FAIL이다.
+- [ ] REPARTITION의 기존-root oracle 수정안을 검토하고 원래 두 정책의 전체 TC를 재검증한다. 값·실제 destination ownership 검사는 유지하고 다른 partition 시나리오의 조건을 일괄 삭제하지 않는다.
 - [ ] 기존 61개 분류에서 policy 그룹 밖의 미검증 21개를 확인한다. 미정의 변수 그룹 나머지 4개와 다른 17개이며, 이번 Work699의 실행 대상은 아니다. 서로 다른 리비전의 대표와 이번 결과를 전체 suite 판정으로 합산하지 않는다.
 - [ ] 각 실패를 엔진·TC·환경 문제 또는 원인 미확정으로 분류하고 근거를 연결한다.
 - [ ] 확인한 엔진 결함에 후속 이슈와 재현 TC를 연결한다.

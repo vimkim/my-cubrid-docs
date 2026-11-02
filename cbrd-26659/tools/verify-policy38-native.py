@@ -52,6 +52,8 @@ assert summary['counts'] == dict(collections.Counter(row['verdict'] for row in s
 proof = []
 private_namespaces = collections.defaultdict(set)
 owned_installs = set()
+owned_slots = set()
+known_generations = set()
 for record in summary['results']:
     attempt = Path(record['attempt'])
     identity = json.loads((attempt / 'identity.json').read_text())
@@ -91,6 +93,8 @@ for record in summary['results']:
         assert observation['observed_private_namespace_inodes'][kind]
         private_namespaces[kind].update(observation['observed_private_namespace_inodes'][kind])
     owned_installs.add(str(attempt / 'cubrid'))
+    owned_slots.add(str(attempt / 'slots'))
+    known_generations.update((row['pid'], str(row['start_ticks'])) for row in observation['observed_processes'])
     checked = subprocess.run(['python3', str(args.focused_helper), 'verify', '--suite', 'shell', '--result-dir', record['result_dir'], '--expected-list', str(attempt / 'expected-cases.txt'), '--run-log', str(attempt / 'run.log'), '--runner-exit', str(record['runner_exit'])], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=30)
     if record['verdict'] == 'PASS':
         assert checked.returncode == 0, checked.stdout
@@ -100,6 +104,7 @@ for record in summary['results']:
     proof.append({'case': record['case'], 'verdict': record['verdict'], 'focused_verifier_exit': checked.returncode, 'focused_verifier_output': checked.stdout, 'attempt': str(attempt)})
 remaining_owned = []
 remaining_namespace_holders = []
+foreign_namespace_matches = []
 for proc in Path('/proc').iterdir():
     if not proc.name.isdigit():
         continue
@@ -107,14 +112,19 @@ for proc in Path('/proc').iterdir():
         if proc.stat().st_uid != os.getuid():
             continue
         values = (proc / 'environ').read_bytes().split(b'\0')
-        selected_installs = [value.split(b'=', 1)[1].decode(errors='replace') for value in values if value.startswith(b'CUBRID=')]
-        if any(value in owned_installs for value in selected_installs):
+        selected = dict(value.decode(errors='replace').split('=', 1) for value in values if value.startswith((b'CUBRID=', b'TESTKIT_SLOT_ROOT=')))
+        start_ticks = (proc / 'stat').read_text().rsplit(')', 1)[1].split()[19]
+        known_generation = (int(proc.name), start_ticks) in known_generations
+        task_owned = known_generation or selected.get('CUBRID') in owned_installs or selected.get('TESTKIT_SLOT_ROOT') in owned_slots
+        if task_owned:
             remaining_owned.append(int(proc.name))
         held = {kind: os.readlink(proc / 'ns' / kind) for kind in private_namespaces}
         if any(held[kind] in private_namespaces[kind] for kind in held):
-            remaining_namespace_holders.append({'pid': int(proc.name), 'namespaces': held})
+            record = {'pid': int(proc.name), 'start_ticks': start_ticks, 'namespaces': held, 'selected_environment': selected}
+            foreign = not task_owned and bool(selected.get('CUBRID')) and bool(selected.get('TESTKIT_SLOT_ROOT'))
+            (foreign_namespace_matches if foreign else remaining_namespace_holders).append(record)
     except (FileNotFoundError, PermissionError, ProcessLookupError):
         continue
 assert not remaining_owned, remaining_owned
 assert not remaining_namespace_holders, remaining_namespace_holders
-print(json.dumps({'verified': True, 'engine_head': manifest['engine_head'], 'tc_head': manifest['tc_head'], 'input_files_verified': len(inputs['files']), 'cases_verified': len(proof), 'counts': summary['counts'], 'remaining_owned_processes': remaining_owned, 'remaining_namespace_holders': remaining_namespace_holders, 'cases': proof}, ensure_ascii=False, indent=2))
+print(json.dumps({'verified': True, 'engine_head': manifest['engine_head'], 'tc_head': manifest['tc_head'], 'input_files_verified': len(inputs['files']), 'cases_verified': len(proof), 'counts': summary['counts'], 'remaining_owned_processes': remaining_owned, 'remaining_namespace_holders': remaining_namespace_holders, 'foreign_namespace_matches': foreign_namespace_matches, 'cases': proof}, ensure_ascii=False, indent=2))
