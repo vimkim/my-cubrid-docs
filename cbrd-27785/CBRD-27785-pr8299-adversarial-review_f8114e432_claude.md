@@ -14,6 +14,7 @@
 - 증명된 결함은 모두 minor다. PR 테스트가 PR이 주장한 동작을 고정하지 못한 곳, 벤치마크 스크립트의 종료 코드, 이전 head를 가리키는 PR 본문이다.
 - 리뷰 후 PR head `5837393ff`에 테스트 보강, 벤치마크 수정, stack 배열 경계 수정이 들어갔다. PR 본문 갱신과 현재 head의 CI 결과는 이 문서 작성 시점에 남아 있다.
 - 리뷰 중 발견한 기존 문제는 OOS 코드에 속한 것과 `develop`에도 있는 것으로 나눴다. OOS 쪽은 CBRD-27873 후보로 넘기고, 나머지는 [OOS와 무관한 기존 문제](#non-oos-existing)에 기록한다.
+- 같은 head를 독립적으로 본 다른 리뷰와 [결과를 비교](#review-comparison)했다. 그 리뷰가 증명한 OOS 기존 문제 두 건을 이 리뷰는 놓쳤고, OOS 후보에 추가했다.
 
 ## 대상 revision
 
@@ -128,6 +129,18 @@ adversary가 증명하고 조정자가 다시 실행하지 않은 테스트 공�
   - [`locator_fixup_oos_oids_in_recdes()`, `locator_sr.c:14471`](https://github.com/CUBRID/cubrid/blob/f8114e432d3e97cc7a11149ab8ac852de4a1b935/src/transaction/locator_sr.c#L14471)
 - `OR_VAR_IS_NULL`은 `location`과 `location + 1` 엔트리를 레코드 길이 확인 없이 읽는다. 잘린 레코드가 다중 컬럼 index key 생성이나 OOS OID fixup 경로로 들어오면 VOT를 범위 밖에서 읽을 수 있다. 이 경로의 harness는 만들지 않았으므로 실행으로 증명하지 않았다.
 
+아래 두 건은 [다른 리뷰](#review-comparison)가 찾았고 이 리뷰가 놓쳤다.
+
+- [`heap_recdes_get_oos_inline_stub()`의 끝 검사(`heap_file.c:11126-11127`)](https://github.com/CUBRID/cubrid/blob/f8114e432d3e97cc7a11149ab8ac852de4a1b935/src/storage/heap_file.c#L11126)는 `header_size + next_offset > recdes->length`로 비교한다. 4바이트 offset이 `INT_MAX`에 가까우면 덧셈이 signed overflow를 일으켜 레코드 밖 필드를 받아들인다.
+  - 다른 리뷰가 offset `INT_MAX - 27`과 `INT_MAX - 3`을 가진 16바이트 레코드로 실행했다. head와 base 접근 함수가 모두 `NO_ERROR`를 반환하고 `record.data`에서 2,147,483,628바이트 떨어진 포인터를 넘겼다.
+  - 같은 식이 base(`dcbf09e4f`, 11111행)와 후속 반영 후 head `5837393ff`(11129-11130행)에도 있다. 기존 문제다.
+  - 이 리뷰의 adversary 1은 큰 offset을 VOT 엔트리 하나에만 넣었다. 두 엔트리의 차이가 정확히 stub 크기이면서 둘 다 `INT_MAX` 근처인 경우를 만들지 않아 이 결함을 놓쳤다.
+  - 덧셈을 없앤 비교(`next_offset > recdes->length - header_size`)로 고칠 수 있다.
+- OOS 분리 기준이 명세의 물리 목표와 다르다. 명세는 16,344바이트 page에 레코드 네 개가 들어가는 4,060바이트를 목표로 하고, stub보다 큰 값을 OOS로 보내도록 요구한다.
+  - [`heap_attrinfo_determine_disk_layout()`(13187, 13220행)](https://github.com/CUBRID/cubrid/blob/f8114e432d3e97cc7a11149ab8ac852de4a1b935/src/storage/heap_file.c#L13187)은 `DB_PAGESIZE / 4`로 판정한다.
+  - 다른 리뷰가 head 서버에서 `(id INT, p BIT VARYING)`에 4,030바이트 값을 넣었을 때 `SHOW HEAP CAPACITY`는 `Avg_rec_len=4064`, `SHOW HEAP OOS`는 OOS 레코드 0개였다.
+  - base에도 같은 식(13177, 13210행)이 있어 기존 문제다. 기준값 변경은 CBRD-27816의 보류 범위("threshold/criterion2")와 겹칠 수 있다.
+
 <a id="non-oos-existing"></a>
 ## OOS와 무관한 기존 문제
 
@@ -143,6 +156,28 @@ adversary가 증명하고 조정자가 다시 실행하지 않은 테스트 공�
    - `do_prepare_update()`와 `do_prepare_delete()`는 안쪽 block에 `XASL_NODE_HEADER xasl_header`를 선언하고 `stream.xasl_header = &xasl_header`를 넣는다. block 밖의 두 번째 `prepare_query (contextp, &stream)`가 이 포인터로 쓴다. ASan은 `qmgr_prepare_query()`의 `memset`에서 stack-use-after-scope를 보고했다. `develop`의 같은 위치는 [`execute_statement.c:10035-10038`과 `10125`](https://github.com/CUBRID/cubrid/blob/d5674fe94f08d084c6832ba4e3f6521d66cbee0e/src/query/execute_statement.c#L10035), [`11430-11433`과 `11508`](https://github.com/CUBRID/cubrid/blob/d5674fe94f08d084c6832ba4e3f6521d66cbee0e/src/query/execute_statement.c#L11430)이다.
    - `db_shutdown()` 중 [`db_ws_free()`의 header 검사(quick_fit.c:256 부근)](https://github.com/CUBRID/cubrid/blob/d5674fe94f08d084c6832ba4e3f6521d66cbee0e/src/object/quick_fit.c#L256)에서 global-buffer-overflow가 났다. `quick_fit.c`는 `develop`과 feature에서 같다. 해제 대상 포인터가 무엇인지는 추적하지 않았다.
    - 클라이언트 쪽 `pr_do_db_value_string_compression`과 authorization cache에서 누수가 보고됐다.
+
+<a id="review-comparison"></a>
+## 다른 리뷰와 비교
+
+같은 head `f8114e432`를 다른 세션이 독립적으로 리뷰했다(work-tracker 668). 정적 검토, adversary 두 명(`astra`, `terra`), 주석·계약 감사로 구성됐다. 보고서는 그 세션의 로컬 디렉터리 `/home/vimkim/temp/pr8299-adversarial-20261102/`에 있고 공유 저장소에는 없다.
+
+| 항목 | 다른 리뷰 | 이 리뷰 | 처리 |
+|---|---|---|---|
+| 16 KB OOS scratch가 caller 프레임에 상주 | 지적(`-fstack-usage`) | 같은 측정, 의심점 | `5c5f2a170` |
+| `heap_file.o` text +6.5%, 강제 inline에 따른 코드 크기 | 지적 | 다루지 않음 | 회귀 아님. release scan 명령어 수가 줄었다 |
+| PR 본문의 head가 이전 것 | 지적 | 증명 | 남음 |
+| `bad_alloc` 처리 위치와 `er_set` 크기 | 지적 | 사소함으로 기록 | `12fe25a2c` |
+| 벤치마크가 다른 바이트의 fixture를 같은 fixture로 받아들임 (PR이 만든 문제) | 실행으로 증명 | 놓침 | `b01204f51`가 `OCTET_LENGTH`와 `HEX` 검사 추가 |
+| OOS stub 끝 검사의 signed overflow (기존 문제) | 실행으로 증명 | 놓침 | 남음, OOS 후보 |
+| OOS 분리 기준 `DB_PAGESIZE / 4`와 명세의 4,060바이트 목표 (기존 문제) | head 실행으로 확인 | 놓침 | 남음, OOS 후보 |
+| PR 테스트가 동작을 고정하지 못한 곳 | 없음 | 7건 이상 증명 | `a4cdd6191`, `5837393ff` |
+| `bench.py`의 `MemoryError` 종료 코드 | 없음 | 증명 | `eabea7c54` |
+| head와 base의 읽기·쓰기 결과 동등성 | 개별 probe | dump 약 160만 줄 비교 | 깨끗함 |
+| OOS 코드의 검사 없는 `OR_VAR_IS_NULL` 두 곳 | 없음 | 코드 근거 | OOS 후보 |
+| `develop`에도 있는 기존 문제 세 건 | 없음 | 기록 | 이 문서에 기록 |
+
+두 리뷰 모두 PR이 만든 엔진 회귀를 찾지 못했다. 이 리뷰는 mutation과 head·base dump 비교로 테스트 공백과 동작 동등성을 넓게 다뤘다. 다른 리뷰는 명세 대조와 극단적인 손상 입력에서 이 리뷰가 놓친 것을 찾았다.
 
 ## 기각한 주장
 
