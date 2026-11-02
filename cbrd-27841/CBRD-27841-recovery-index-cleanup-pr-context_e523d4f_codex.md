@@ -48,3 +48,6 @@ TC baseline 검사는 public·private 모두 PASS였다. [public TC PR 3962](htt
 - 사용자는 2026-11-02 현재 대화에서 검토 파일과 게시 범위에 대해 "문서와 PR 본문에 반영"을 선택했다. 문서 3개의 `main` 통합·push와 PR 8347 body 교체에 대한 승인이다.
 - 이번 게시 시도의 body 파일 SHA-256은 `bb4e0161537b53cb95a49f0a253c0bc554581d2cd59680564f365a05d9d6bb47`이다. 본문을 다시 읽고 material checker를 통과한 뒤 파일을 변경하지 않는다.
 - 재조회한 PR source head는 승인한 `e523d4f51572c0299daba4c14ba92f511a6fc17e`와 일치했다. 기존 원격 body도 준비 시 fingerprint와 같았다. PR은 open·draft, base는 `feature/oos-merge`였다.
+- 승인한 문서 3개를 local `main`에 rebase·fast-forward merge하고 `origin/main`에 push했다. 첫 게시 docs commit은 `b62b87c976d648b4c7e6a61bb0c4a210a74f585f`다.
+- PR 8347 body를 승인 파일 그대로 교체했다. GitHub 재조회 body가 파일과 바이트 단위로 일치했고 SHA-256도 위 게시 시도 값과 같았다. source head·title·base·draft 상태를 유지했다.
+- 이 결과 기록과 index 갱신도 승인한 후속 문서 통합·push 범위에 포함한다. CI 최종 결과는 별도로 보고하며 source 후속 수정이나 추가 CI는 실행하지 않는다.

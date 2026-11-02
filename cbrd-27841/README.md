@@ -1,13 +1,13 @@
 # CBRD-27841 unused OOS recovery index
 
-R6 of [PR 7990](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4409612618), tracked as [CBRD-27841](https://jira.cubrid.org/browse/CBRD-27841). Company draft is [PR 8347](https://github.com/CUBRID/cubrid/pull/8347). Source is `e523d4f51572c0299daba4c14ba92f511a6fc17e`, which restores storage revision 1 during ongoing development. The description update below awaits review. Earlier documents retain the `eac70c7` decision and evidence.
+R6 of [PR 7990](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4409612618), tracked as [CBRD-27841](https://jira.cubrid.org/browse/CBRD-27841). Company draft is [PR 8347](https://github.com/CUBRID/cubrid/pull/8347). Source is `e523d4f51572c0299daba4c14ba92f511a6fc17e`, which restores storage revision 1 during ongoing development. The revised description is published. Earlier documents retain the `eac70c7` decision and evidence.
 
 Last modified: 2026-11-02, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
 | [CBRD-27841-recovery-index-cleanup-pr-body_e523d4f_codex.md](CBRD-27841-recovery-index-cleanup-pr-body_e523d4f_codex.md) | revision 1 유지와 현재 검증을 반영한 PR 본문 수정안 | 2026-11-02 | 2026-11-02 | 원격 본문을 바꾸기 전에 변경 범위를 검토 |
-| [CBRD-27841-recovery-index-cleanup-pr-context_e523d4f_codex.md](CBRD-27841-recovery-index-cleanup-pr-context_e523d4f_codex.md) | source push 결과와 설명 게시·CI 대체 제안 범위 | 2026-11-02 | 2026-11-02 | 현재 지시와 이전 승인·검증 이력을 구분 |
+| [CBRD-27841-recovery-index-cleanup-pr-context_e523d4f_codex.md](CBRD-27841-recovery-index-cleanup-pr-context_e523d4f_codex.md) | source·설명 게시 완료와 현재 CI 검증 경계 | 2026-11-02 | 2026-11-02 | 현재 지시와 이전 승인·검증 이력을 구분 |
 | [CBRD-27841-recovery-index-cleanup-pr-body_eac70c7_codex.md](CBRD-27841-recovery-index-cleanup-pr-body_eac70c7_codex.md) | 회사 PR의 변경·호환성·검증과 한계 | 2026-10-30 | 2026-10-30 | 실제 게시 전에 본문을 검토하도록 보존 |
 | [CBRD-27841-recovery-index-cleanup-pr-context_eac70c7_codex.md](CBRD-27841-recovery-index-cleanup-pr-context_eac70c7_codex.md) | source/base, 검증·승인 범위와 실제 게시 결과 | 2026-10-30 | 2026-10-30 | 다른 에이전트의 작업과 승인 범위를 구분 |
 | [ci_analysis_report_eac70c7_codex.md](ci_analysis_report_eac70c7_codex.md) | CI 종료, shell 두 실패의 관찰과 SQL 수집 무결성 경고 | 2026-10-30 | 2026-10-30 | R6 회귀 여부를 단정하지 않고 다음 검증에 필요한 증거를 보존 |
