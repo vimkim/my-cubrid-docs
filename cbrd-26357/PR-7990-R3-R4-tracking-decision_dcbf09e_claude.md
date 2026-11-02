@@ -7,7 +7,7 @@
 - R3 보고서는 [R3 sweep 비용 분석](PR-7990-R3-growth-sweep-cost_dcbf09e_claude.md)이다.
 - R4 보고서는 [R4 재시작 후 bestspace 분석](PR-7990-R4-restart-bestspace_dcbf09e_claude.md)이다.
 
-**후속 결정.** 2026-11-02 사용자가 R3를 [CBRD-27872](https://jira.cubrid.org/browse/CBRD-27872)(Sub-task, 부모 CBRD-26583, 제목 `[OOS] [M2] sweep cost`)로 발급했다. R3 agent가 후속 처리 기준으로 제안한 CBRD-26978 대신 M2 운영 품질 묶음인 CBRD-26583을 골랐다. R1·R2·R5·R6 대응 이슈와 같은 부모다. 리뷰어가 R3를 병합 조건으로 보는지는 아직 확인하지 않았다. 두 이슈 본문은 이 종합을 반영해 my-cubrid-jira의 `issues/CBRD-27872-oos-growth-sweep-cost_dcbf09e_claude.md`와 `issues/CBRD-27213-oos-bestspace-shared-module_dcbf09e_claude.md`로 다시 썼다.
+**후속 결정.** 2026-11-02 사용자가 R3를 [CBRD-27872](https://jira.cubrid.org/browse/CBRD-27872)(Sub-task, 부모 CBRD-26583, 제목 `[OOS] [M2] sweep cost`)로 발급했다. R3 agent가 후속 처리 기준으로 제안한 CBRD-26978 대신 M2 운영 품질 묶음인 CBRD-26583을 골랐다. R1·R2·R5·R6 대응 이슈와 같은 부모다. 리뷰어가 R3를 병합 조건으로 보는지는 아직 확인하지 않았다. 같은 날 두 이슈의 설명과 제목을 JIRA에 반영했다. Relates 링크는 CBRD-27872와 CBRD-26786·CBRD-27213, CBRD-27213과 CBRD-27761·CBRD-26824로 만들었다. 두 이슈 본문은 이 종합을 반영해 my-cubrid-jira의 `issues/CBRD-27872-oos-growth-sweep-cost_dcbf09e_claude.md`와 `issues/CBRD-27213-oos-bestspace-shared-module_dcbf09e_claude.md`로 다시 썼다.
 
 ## 결론은 R3 신규 Sub-task, R4 기존 이슈 확장이다
 
