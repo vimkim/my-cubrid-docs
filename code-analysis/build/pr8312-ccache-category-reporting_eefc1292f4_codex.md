@@ -106,4 +106,4 @@ python3 code-analysis/build/pr8312-ccache-category-reporting_eefc1292f4_codex-as
 
 ## 승인 리뷰 초안
 
-게시 전에 사용자 검토를 받을 [5줄 승인 리뷰 초안](pr8312-approval-review_eefc1292f4_codex.md)을 별도 파일에 준비했다. 이 문서 작성 시점에는 GitHub 승인 리뷰와 요약 댓글을 제출하지 않았다.
+게시 전에 사용자 검토를 받을 [승인 리뷰 초안](pr8312-approval-review_eefc1292f4_codex.md)을 별도 파일에 준비했다. 승인 요약은 확인한 동작과 검증 범위를 설명한다. 자동 테스트, 경로 누락의 구분, 범주 해석 안내는 승인의 조건으로 요구하지 않는 `nit`으로 분리했다. 이 문서 작성 시점에는 GitHub 승인 리뷰와 요약 댓글을 제출하지 않았다.
