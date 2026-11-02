@@ -58,3 +58,16 @@ engine source push, engine PR 병합, 추가 CI 실행, TC PR merge·close·bran
 검토할 본문 SHA-256은 `03db19346dff6d7ac5578f30f5a66cd4d14365d4797431a93c5ced1d87b12499`이다.
 근거 문서 SHA-256은 `6f2fb5537bdec9538a66225908390a56b5711b054902fab771b2205038c18a10`다.
 둘 다 파일의 실제 UTF-8 bytes로 계산했다.
+
+## 승인 후 게시 결과
+
+2026-11-02에 사용자가 위 파일과 조치의 게시를 확인했다. 권한 근거는 해당 대화의 확인이며 이 context를 승인 토큰으로 사용하지 않는다.
+
+- 게시 직전에 본문·근거 문서 fingerprint, material 검사, source HEAD, 원격 PR head·branch·base·OPEN draft 상태와 기존 body fingerprint를 다시 확인했다. 준비 당시 값과 일치했다.
+- docs task commit `ad4d81f8d9060493ea111aa034a35b348e57d800`을 docs `main`에 fast-forward 병합하고 `origin/main`에 push했다. 들어간 파일은 모두 `cbrd-27785/` 아래였고, `ls-remote`의 main SHA가 로컬과 같았다.
+- `vimkim/my-cubrid-docs`가 PUBLIC인 것을 확인했다. 공개 경로에서 근거 문서를 다시 받아 SHA-256이 승인한 값과 같음을 확인했다.
+- 저장한 본문을 `--body-file`로 [PR #8299](https://github.com/CUBRID/cubrid/pull/8299)에 게시했다. 다시 읽은 GitHub body는 파일의 bytes와 같고 SHA-256은 `03db19346dff6d7ac5578f30f5a66cd4d14365d4797431a93c5ced1d87b12499`다.
+- 제목, source head `5837393ffb9d69bccb93271d63b0e38b884e0ed4`, base `feature/oos-merge`, OPEN draft 상태가 유지됐다.
+- source push, CI 요청, TC PR 변경, engine PR 병합은 수행하지 않았다.
+
+이 실행 기록과 체크리스트를 같은 승인 범위에서 docs `main`에 통합·push한 뒤 이 task의 worktree와 branch만 정리한다.

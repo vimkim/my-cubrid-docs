@@ -2,7 +2,7 @@
 
 작성일은 2026-10-29, 현재 PR·TC 상태 확인일은 2026-11-02, Asia/Seoul이다.
 대상은 [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785)의 구현 반영, 성능 수락, performance TC 편입이다.
-리뷰 수정 후 최종 head의 CI가 통과했다. 새 PR 본문은 게시 검토 중이다. 사람의 TC 종료 처리와 PR 리뷰·병합 판단이 남았다.
+리뷰 수정 후 최종 head의 CI가 통과했다. 새 PR 본문을 게시했다. 사람의 TC 종료 처리와 PR 리뷰·병합 판단이 남았다.
 
 확인한 소스는 `vimkim/cubrid:CBRD-27785-oos-read-performance`의 `5837393ffb9d69bccb93271d63b0e38b884e0ed4`다.
 [PR #8299](https://github.com/CUBRID/cubrid/pull/8299)는 OPEN draft이며 대상은 `feature/oos-merge`다.
@@ -24,8 +24,8 @@
 - [x] 갱신한 문서·본문의 검토 및 게시 승인을 받는다.
 - [x] 승인받은 보고서를 게시한 뒤 PR #8299 본문을 업데이트한다.
 - [x] `5837393ff`의 PR 본문과 [근거 문서](CBRD-27785-review-fixes_5837393_claude.md) 초안을 준비한다.
-- [ ] 새 본문·문서의 검토와 게시 승인을 받는다.
-- [ ] 승인받은 근거 문서를 게시한 뒤 PR #8299 본문을 업데이트한다.
+- [x] 새 본문·문서의 검토와 게시 승인을 받는다.
+- [x] 승인받은 근거 문서를 게시한 뒤 PR #8299 본문을 업데이트한다.
 - [ ] TC 변경이 불필요한 [공개 TC PR #3898](https://github.com/CUBRID/cubrid-testcases/pull/3898)과 [비공개 TC PR #4589](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4589)를 사람이 닫아 TC gate를 해소한다.
 - [ ] PR 리뷰를 요청하고 승인을 확보한다.
 - [ ] 승인 후 PR #8299를 `feature/oos-merge`에 반영한다.
@@ -65,7 +65,7 @@ Parameter의 실제 이름·지원 상태·필요 구현을 먼저 확인한다.
 | 작업 | 용도 | 확인한 상태 |
 | --- | --- | --- |
 | 584 | PR #8299 검증과 문서·게시 인계 | 컴파일 수정·CI·문서·본문 게시 완료. 사람의 TC 종료 및 리뷰·병합 판단 대기. |
-| 670 | PR #8299 리뷰 수정·최종 head CI·본문 갱신 | 수정·CI 통과. 본문 게시 승인 대기. |
+| 670 | PR #8299 리뷰 수정·최종 head CI·본문 갱신 | 수정·CI 통과·본문 게시 완료. 사람의 TC 종료 및 리뷰·병합 판단 대기. |
 | 544 | 성능 regression TC 승인·performance 편입 | Pending. |
 | 571 | CBRD-27816 UPDATE 잔여 비용·변동 분석 | Pending. |
 
