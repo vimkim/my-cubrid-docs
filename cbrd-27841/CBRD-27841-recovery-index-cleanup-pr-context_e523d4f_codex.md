@@ -42,3 +42,9 @@
 기존 실행이 끝난 뒤 standing authorization으로 새 head의 `/run all`을 한 번 게시했다. 영수증은 [2026-11-02 11:01:47 UTC comment](https://github.com/CUBRID/cubrid/pull/8347#issuecomment-6575491972), 새 실행은 [41433477060](https://github.com/CUBRID/cubrid/actions/runs/41433477060)이다. 두 build와 세 suite status가 모두 같은 실행을 pending으로 가리키는 것을 확인했다. 최종 결과를 기다린 뒤 보고하며, 지시 없이 후속 수정·push·rerun을 하지 않는다. `gh pr checks --required`는 현재 required check 없음으로 반환했으므로, 이를 CI 통과로 해석하지 않는다.
 
 TC baseline 검사는 public·private 모두 PASS였다. [public TC PR 3962](https://github.com/CUBRID/cubrid-testcases/pull/3962)와 [private TC PR 4673](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4673)는 open·draft다. 이 작업에는 TC 변경이 필요 없으므로 human이 처리한다. Agent는 두 PR을 merge·close하거나 branch를 삭제하지 않는다.
+
+## 게시 실행 기록
+
+- 사용자는 2026-11-02 현재 대화에서 검토 파일과 게시 범위에 대해 "문서와 PR 본문에 반영"을 선택했다. 문서 3개의 `main` 통합·push와 PR 8347 body 교체에 대한 승인이다.
+- 이번 게시 시도의 body 파일 SHA-256은 `bb4e0161537b53cb95a49f0a253c0bc554581d2cd59680564f365a05d9d6bb47`이다. 본문을 다시 읽고 material checker를 통과한 뒤 파일을 변경하지 않는다.
+- 재조회한 PR source head는 승인한 `e523d4f51572c0299daba4c14ba92f511a6fc17e`와 일치했다. 기존 원격 body도 준비 시 fingerprint와 같았다. PR은 open·draft, base는 `feature/oos-merge`였다.
