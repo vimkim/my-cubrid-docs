@@ -32,12 +32,13 @@
 
 1. 위 body·context·README만 포함한 docs task commit을 현재 local `main`에 rebase하고 fast-forward merge한다. squash는 fast-forward가 불가능할 때의 대안이다. `origin/main`에 push하고 이 task worktree와 branch만 정리한다. 게시 결과 기록에 필요한 같은 파일의 후속 commit도 포함한다.
 2. Source head와 기존 GitHub body의 fingerprint를 다시 확인한 뒤 저장한 body를 그대로 PR 8347에 반영한다. title·base·draft 상태는 유지한다. Source push는 이미 완료했으므로 추가 push는 제안하지 않는다.
-3. 사용자가 기존 실행 대체까지 명시 승인하는 경우에만, [진행 중인 CI 41431046311](https://github.com/CUBRID/cubrid/actions/runs/41431046311)을 대체하는 `/run all`을 한 번 게시한다. 정확한 새 head를 확인하고 pickup과 최종 결과를 보고한다. 기존 실행이 먼저 끝나면 일반적인 새 head CI 사전 검사를 적용한다.
 
 이 파일은 승인 기록이 아니다. 본문을 저장한 뒤 대화에서 명시 승인을 받아야 한다. source merge, TC PR merge·close, remote branch 삭제는 제안 범위에 없다.
 
 ## 현재 CI와 TC 경계
 
-새 source push 전 별도 작업에서 시작한 `/run rerun 41048233875`가 실행 중이었다. 영수증은 [2026-11-02 10:43:09 UTC comment](https://github.com/CUBRID/cubrid/pull/8347#issuecomment-6575144874), 실행은 [41431046311](https://github.com/CUBRID/cubrid/actions/runs/41431046311)이다. 이 실행은 이전 head `eac70c7`의 검증이며 새 head의 검증으로 표시하지 않는다. 실행 중인 같은 PR의 CI를 임의로 취소하지 않았다.
+새 source push 전 별도 작업에서 시작한 `/run rerun 41048233875`가 실행 중이었다. 영수증은 [2026-11-02 10:43:09 UTC comment](https://github.com/CUBRID/cubrid/pull/8347#issuecomment-6575144874), 실행은 [41431046311](https://github.com/CUBRID/cubrid/actions/runs/41431046311)이다. 11:01 UTC 최종 재조회에서 success로 끝났다. 이는 이전 head `eac70c7`의 검증이며 새 head의 검증으로 표시하지 않는다. 실행 중인 같은 PR의 CI를 임의로 취소하지 않았다.
+
+기존 실행이 끝난 뒤 standing authorization으로 새 head의 `/run all`을 한 번 게시했다. 영수증은 [2026-11-02 11:01:47 UTC comment](https://github.com/CUBRID/cubrid/pull/8347#issuecomment-6575491972), 새 실행은 [41433477060](https://github.com/CUBRID/cubrid/actions/runs/41433477060)이다. 두 build와 세 suite status가 모두 같은 실행을 pending으로 가리키는 것을 확인했다. 최종 결과를 기다린 뒤 보고하며, 지시 없이 후속 수정·push·rerun을 하지 않는다. `gh pr checks --required`는 현재 required check 없음으로 반환했으므로, 이를 CI 통과로 해석하지 않는다.
 
 TC baseline 검사는 public·private 모두 PASS였다. [public TC PR 3962](https://github.com/CUBRID/cubrid-testcases/pull/3962)와 [private TC PR 4673](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4673)는 open·draft다. 이 작업에는 TC 변경이 필요 없으므로 human이 처리한다. Agent는 두 PR을 merge·close하거나 branch를 삭제하지 않는다.
