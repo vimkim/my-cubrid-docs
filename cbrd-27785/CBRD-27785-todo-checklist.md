@@ -1,10 +1,10 @@
 # CBRD-27785 TODO 체크리스트
 
-작성일은 2026-10-29, 현재 PR·TC 상태 확인일은 2026-10-31, Asia/Seoul이다.
+작성일은 2026-10-29, 현재 PR·TC 상태 확인일은 2026-11-02, Asia/Seoul이다.
 대상은 [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785)의 구현 반영, 성능 수락, performance TC 편입이다.
-현재 구현·CI와 최신 문서·PR 본문 게시를 완료했다. 사람의 TC 종료 처리와 PR 리뷰·병합 판단이 남았다.
+리뷰 수정 후 최종 head의 CI가 통과했다. 새 PR 본문은 게시 검토 중이다. 사람의 TC 종료 처리와 PR 리뷰·병합 판단이 남았다.
 
-확인한 소스는 `vimkim/cubrid:CBRD-27785-oos-read-performance`의 `067aae4e4e91fec8c71c914a4c7fc3c4b13dcd65`다.
+확인한 소스는 `vimkim/cubrid:CBRD-27785-oos-read-performance`의 `5837393ffb9d69bccb93271d63b0e38b884e0ed4`다.
 [PR #8299](https://github.com/CUBRID/cubrid/pull/8299)는 OPEN draft이며 대상은 `feature/oos-merge`다.
 구현·CI 완료를 이슈 전체 수락 완료로 표시하지 않는다.
 
@@ -14,18 +14,24 @@
 - [x] 엄격한 GCC 8.5 컴파일 검증과 집중 테스트 통과.
 - [x] [전체 CI run 40827634555](https://github.com/CUBRID/cubrid/actions/runs/40827634555) 통과. Release·debug 빌드, shell 50개, SQL 10개, medium 1개 shard가 통과했다.
 - [x] 기존 성능 측정 결과·원시 자료·보고서 초안 보존.
+- [x] [적대적 리뷰](CBRD-27785-pr8299-adversarial-review_f8114e432_claude.md)의 지적 반영. OOS Resolve 임시 버퍼 분리, 할당 실패 처리, 테스트 보강, `bench.py` 수정을 `5837393ff`까지 push했다.
+- [x] `5837393ff`의 strict GCC 8.5 컴파일, debug OOS CTest 44/44, `f8114e432` 대비 release 명령어 수 회귀 없음 확인. [검증·측정 근거](CBRD-27785-review-fixes_5837393_claude.md)에 있다.
+- [x] `5837393ff`의 [전체 CI run 41435647083](https://github.com/CUBRID/cubrid/actions/runs/41435647083)에서 shell `cbrd_26280` 1건이 무관한 출력 순서 문제로 실패했다. [재실행 run 41459706876](https://github.com/CUBRID/cubrid/actions/runs/41459706876)에서 통과해 gha-ci status 5개가 모두 성공이다.
 
 ## 지금 처리할 항목
 
 - [x] PR 본문과 보고서의 새 초안을 `067aae4e4` 및 CI 성공 상태에 맞춰 준비한다. 성능 수치는 실제 측정 revision을 유지한다.
 - [x] 갱신한 문서·본문의 검토 및 게시 승인을 받는다.
 - [x] 승인받은 보고서를 게시한 뒤 PR #8299 본문을 업데이트한다.
+- [x] `5837393ff`의 PR 본문과 [근거 문서](CBRD-27785-review-fixes_5837393_claude.md) 초안을 준비한다.
+- [ ] 새 본문·문서의 검토와 게시 승인을 받는다.
+- [ ] 승인받은 근거 문서를 게시한 뒤 PR #8299 본문을 업데이트한다.
 - [ ] TC 변경이 불필요한 [공개 TC PR #3898](https://github.com/CUBRID/cubrid-testcases/pull/3898)과 [비공개 TC PR #4589](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4589)를 사람이 닫아 TC gate를 해소한다.
 - [ ] PR 리뷰를 요청하고 승인을 확보한다.
 - [ ] 승인 후 PR #8299를 `feature/oos-merge`에 반영한다.
 
-2026-10-31 조회에서 TC PR 두 개는 모두 OPEN draft이며 diff가 없다.
-Engine PR은 OPEN draft, MERGEABLE/CLEAN이고 현재 head의 CI 10개가 모두 성공했다.
+2026-11-02 조회에서 TC PR 두 개는 모두 OPEN이다.
+Engine PR은 OPEN draft이고 `5837393ff`의 gha-ci status 5개가 모두 성공이다.
 이 GitHub mergeState가 사람의 TC 처리나 리뷰어 승인을 대신하지 않는다.
 [게시한 본문](CBRD-27785-common-reader-pr-body_067aae4_codex.md),
 [근거 보고서](CBRD-27785-common-reader_067aae4_codex.md),
@@ -59,6 +65,7 @@ Parameter의 실제 이름·지원 상태·필요 구현을 먼저 확인한다.
 | 작업 | 용도 | 확인한 상태 |
 | --- | --- | --- |
 | 584 | PR #8299 검증과 문서·게시 인계 | 컴파일 수정·CI·문서·본문 게시 완료. 사람의 TC 종료 및 리뷰·병합 판단 대기. |
+| 670 | PR #8299 리뷰 수정·최종 head CI·본문 갱신 | 수정·CI 통과. 본문 게시 승인 대기. |
 | 544 | 성능 regression TC 승인·performance 편입 | Pending. |
 | 571 | CBRD-27816 UPDATE 잔여 비용·변동 분석 | Pending. |
 

@@ -12,8 +12,11 @@
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [최종 head의 검증·측정 근거](CBRD-27785-review-fixes_5837393_claude.md) | 5837393ff의 OOS Resolve 분리, stack frame·코드 크기, f8114e432 대비 release 명령어 수와 cycles, CI 재실행 판정 | 2026-11-02 | 2026-11-02 | PR 본문이 인용하는 최종 head의 근거를 한곳에 두기 위해 |
+| [최종 head의 PR 본문](CBRD-27785-review-fixes-pr-body_5837393_claude.md) | 5837393ff 기준 구현·CI·측정 요약과 남은 TC 처리 | 2026-11-02 | 2026-11-02 | 리뷰 수정 후 본문을 사용자 검토 뒤 게시하기 위해 |
+| [최종 head의 게시 context](CBRD-27785-review-fixes-pr-context_5837393_claude.md) | source·기존 본문 fingerprint와 승인 후 게시 조치·결과 | 2026-11-02 | 2026-11-02 | 게시 승인 범위와 실제 실행 결과를 추적하기 위해 |
 | [PR #8299 적대적 리뷰와 후속 조치](CBRD-27785-pr8299-adversarial-review_f8114e432_claude.md) | f8114e432 적대적 리뷰의 증명된 결함·처리 상태, eec338aaa 재검증·release 벤치마크, 다른 리뷰와의 비교, OOS 후보(CBRD-27873)와 OOS 무관 기존 문제 | 2026-11-02 | 2026-11-02 | 머지 전 PR의 동작 동등성을 실행으로 검증하고 후속 작업을 분류하기 위해 |
-| [TODO 체크리스트](CBRD-27785-todo-checklist.md) | 구현·CI·본문 게시 완료와 남은 사람의 TC 종료·리뷰·성능 수락 | 2026-10-29 | 2026-10-31 | CBRD-27785의 남은 작업과 완료 조건을 한곳에서 추적하기 위해 |
+| [TODO 체크리스트](CBRD-27785-todo-checklist.md) | 최종 head CI 통과, 본문 게시 승인 대기와 남은 사람의 TC 종료·리뷰·성능 수락 | 2026-10-29 | 2026-11-02 | CBRD-27785의 남은 작업과 완료 조건을 한곳에서 추적하기 위해 |
 | [현재 공통 reader 구현·CI와 과거 성능](CBRD-27785-common-reader_067aae4_codex.md) | 067aae4 구현·CI, fd8624c 선택 계수와 문자셋·UPDATE·재현 한계 | 2026-10-31 | 2026-10-31 | 현재 head와 실제 측정 revision을 구분해 PR 본문을 정리하기 위해 |
 | [현재 head의 PR 본문](CBRD-27785-common-reader-pr-body_067aae4_codex.md) | PR8299에 게시한 구현·CI·과거 성능 범위와 남은 TC 처리 | 2026-10-31 | 2026-10-31 | 변경된 본문을 사용자 검토 후 정확히 게시하기 위해 |
 | [현재 head의 게시 context](CBRD-27785-common-reader-pr-context_067aae4_codex.md) | source·본문 fingerprint, 선택 자료와 승인 후 게시·일치 검증 기록 | 2026-10-31 | 2026-10-31 | 게시 승인 범위와 실제 실행 결과를 추적하기 위해 |
