@@ -4,7 +4,7 @@
 관련 PR: [OOS 통합 PR #7990](https://github.com/CUBRID/cubrid/pull/7990).
 성능 수정: [draft PR #8299](https://github.com/CUBRID/cubrid/pull/8299).
 대상은 `feature/oos-merge`다.
-작성일: 2026-10-27. 수정일: 2026-10-31, Asia/Seoul.
+작성일: 2026-10-27. 수정일: 2026-11-02, Asia/Seoul.
 
 성능을 비교할 때 DB 생성 locale과 실제 테이블·컬럼의 charset·collation을 확인한다.
 기존 기록에서 누락된 조건은 미확인으로 두며, 다른 문자셋에 수치를 일반화하지 않는다.
@@ -12,6 +12,7 @@
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [PR #8299 적대적 리뷰와 후속 조치](CBRD-27785-pr8299-adversarial-review_f8114e432_claude.md) | f8114e432 적대적 리뷰의 증명된 결함·처리 상태, eec338aaa 재검증·release 벤치마크, OOS 후보(CBRD-27873)와 OOS 무관 기존 문제 | 2026-11-02 | 2026-11-02 | 머지 전 PR의 동작 동등성을 실행으로 검증하고 후속 작업을 분류하기 위해 |
 | [TODO 체크리스트](CBRD-27785-todo-checklist.md) | 구현·CI·본문 게시 완료와 남은 사람의 TC 종료·리뷰·성능 수락 | 2026-10-29 | 2026-10-31 | CBRD-27785의 남은 작업과 완료 조건을 한곳에서 추적하기 위해 |
 | [현재 공통 reader 구현·CI와 과거 성능](CBRD-27785-common-reader_067aae4_codex.md) | 067aae4 구현·CI, fd8624c 선택 계수와 문자셋·UPDATE·재현 한계 | 2026-10-31 | 2026-10-31 | 현재 head와 실제 측정 revision을 구분해 PR 본문을 정리하기 위해 |
 | [현재 head의 PR 본문](CBRD-27785-common-reader-pr-body_067aae4_codex.md) | PR8299에 게시한 구현·CI·과거 성능 범위와 남은 TC 처리 | 2026-10-31 | 2026-10-31 | 변경된 본문을 사용자 검토 후 정확히 게시하기 위해 |
