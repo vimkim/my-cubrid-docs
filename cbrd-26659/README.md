@@ -1,6 +1,8 @@
 # CBRD-26659 documentation
 
-Last modified: 2026-10-31 (Asia/Seoul).
+Last modified: 2026-11-02 (Asia/Seoul).
+
+2026-11-02 [공용 metadata helper 이동과 선별 후 SHOW 검증](CBRD-26659-policy-metadata-relocation_20261102_41eae6a9c_codex.md)은 byte-identical helper 이동과 호출 인자 4곳 변경을 기록한다. 독립 parser 기대값 17개·실제 선별 전후 대조와 입력 64개의 원문 SHOW 1 PASS를 확인했다. 준비 환경 NOK 두 시도는 보존했다. TC `41eae6a9c`를 게시했고 CI 41394321292 종료를 기다린다. Parser·선별 검증기와 native artifact 검증기는 결과·commit 대응을 재확인하는 근거로 보존한다. TDE 이동·비활성 재활성화·나머지 TC 검증은 후속이다.
 
 2026-10-31 [남은 공용 helper 의존성 감사](CBRD-26659-helper-dependency-audit_20261031_6334dc6_codex.md)는 `policy_metadata.sh`·`tde_observe.sh`의 시나리오별 호출과 실제 선별 24회를 대조한다. 일반 소비자는 비활성이고 heavy crash는 AES 조건부다. Metadata 이동을 먼저, TDE helper·AWK 이동을 다음 단위로 제안했으며 TC 실행·수리는 하지 않았다. [선별 검증 스크립트](tools/verify-cross-case-helper-dependencies.py)는 삭제·보존과 전이 의존성을 재확인하는 근거로 보존한다.
 
@@ -54,6 +56,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [공용 metadata helper 이동과 선별 후 SHOW 검증](CBRD-26659-policy-metadata-relocation_20261102_41eae6a9c_codex.md) | Metadata 이동·parser 17개·실제 선별 전후·대표 PASS와 준비 NOK·게시·CI | 2026-11-02 | 2026-11-02 | Metadata의 교차 TC 의존성을 수리하고 검증·게시 범위를 인계 |
 | [남은 공용 helper 의존성 감사](CBRD-26659-helper-dependency-audit_20261031_6334dc6_codex.md) | Metadata·TDE의 조건부 호출, 선별 24회·parser 대조, 최소 수리·검증 제안 | 2026-10-31 | 2026-10-31 | 남은 교차 TC 의존성과 실제 실행 범위를 구분하고 후속 수리 순서를 결정 |
 | [공용 policy helper 이동과 선별 후 검증](CBRD-26659-policy-helper-relocation_20261031_6334dc6_codex.md) | 일반·heavy 경로 수리, 실제 선별 전후 대조·대표 PASS·별도 timeout·CI | 2026-10-31 | 2026-10-31 | 공용 checker 배치 취약점을 수리하고 선별 후 실행·게시 범위를 근거와 함께 인계 |
 | [policy helper 39개 조사와 대표](CBRD-26659-policy-helper-pruning_20261030_e3589ae_codex.md) | shard 삭제 재현·역사적 추론 한계, 대표 PASS와 별도 종료 timeout | 2026-10-30 | 2026-10-30 | 가장 큰 누락 그룹의 배치 원인 후보와 현재 policy 검증을 구분해 인계 |
@@ -66,7 +69,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 | [shell_heavy PR body](CBRD-26659-shell-heavy-pr-body_631e3fd_codex.md) | draft PR #4627에 게시한 OOS 38개·지원 파일 이관 본문 | 2026-10-29 | 2026-10-29 | 별도 heavy draft PR에 게시할 내용을 검토 |
 | [일반 shell 제외 PR body](CBRD-26659-shell-heavy-exclusion-pr-body_a229e19_codex.md) | PR #4365에 게시한 31개 일반·38개 heavy 제외 집계와 검증 범위 | 2026-10-29 | 2026-10-29 | heavy 분리 후 기존 PR의 설명을 실제 실행 선택에 맞게 갱신 |
 | [shell_heavy 게시 context](CBRD-26659-shell-heavy-pr-context_631e3fd_codex.md) | 두 TC 게시·단일 CI 성공과 SQL 집계 누락의 후속 분석 | 2026-10-29 | 2026-10-30 | 짝을 이루는 heavy 추가·일반 제외를 검토하고 일관되게 게시 |
-| [CBRD-26659 TODO checklist](CBRD-26659-todo-checklist_20261029_codex.md) | heavy·SQL3·shell61·policy helper 수리, 남은 CI·의존성·timeout·검증 | 2026-10-29 | 2026-10-31 | 현황보고의 남은 작업을 하나씩 실행하고 근거와 함께 완료 표시 |
+| [CBRD-26659 TODO checklist](CBRD-26659-todo-checklist_20261029_codex.md) | heavy·SQL3·shell61·policy·metadata 수리, 남은 CI·TDE·timeout·검증 | 2026-10-29 | 2026-11-02 | 현황보고의 남은 작업을 하나씩 실행하고 근거와 함께 완료 표시 |
 | [CBRD-26659 현황보고](CBRD-26659-status-report_20261029_e3589ae_codex.md) | 현재 PR·TC 분류, 실패 진단과 heavy·2분 초과 처리의 남은 작업 | 2026-10-29 | 2026-10-29 | 개발·QA 담당자에게 TC 검증·이관 현황과 후속 조치를 보고 |
 | [최신 전체 CI 비교 PR body](CBRD-26659-oos-ci-runtime-refresh-20261029-pr-body_e3589ae_codex.md) | 게시한 전체 실행 44분 10초→42분 28초 비교, 실패·측정 한계와 HA 분류 | 2026-10-29 | 2026-10-29 | #8128 본문을 최신 전체 실행 근거로 갱신하기 전 검토 |
 | [최신 전체 CI 비교 게시 context](CBRD-26659-oos-ci-runtime-refresh-20261029-pr-context_e3589ae_codex.md) | 원본·게시 본문 식별값, 정확한 CI 입력, 비교 한계와 게시 확인 | 2026-10-29 | 2026-10-29 | 검토한 본문과 게시 대상을 확인하고 재개 |

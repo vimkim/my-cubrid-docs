@@ -1,6 +1,6 @@
 # CBRD-26659 TODO checklist
 
-작성 기준은 2026-10-29, 갱신 기준은 2026-10-31, Asia/Seoul이다. [현황보고](CBRD-26659-status-report_20261029_e3589ae_codex.md)를 기준으로 남은 작업을 하나씩 실행하고 결과를 기록한다. **첫 작업은 기준 CI에서 PASS한 20초 초과 shell TC 38개의 `shell_heavy` 이관이다.** 실패 원인 분석과 2분 초과 TC 처리는 별도 작업으로 유지한다.
+작성 기준은 2026-10-29, 갱신 기준은 2026-11-02, Asia/Seoul이다. [현황보고](CBRD-26659-status-report_20261029_e3589ae_codex.md)를 기준으로 남은 작업을 하나씩 실행하고 결과를 기록한다. **첫 작업은 기준 CI에서 PASS한 20초 초과 shell TC 38개의 `shell_heavy` 이관이다.** 실패 원인 분석과 2분 초과 TC 처리는 별도 작업으로 유지한다.
 
 체크 표시는 해당 항목의 산출물과 검증 근거가 확보되었음을 뜻한다. 로컬 준비, PR 게시, 실제 병합은 각각 구분한다. 성능 비교는 이 체크리스트의 완료 조건에 포함하지 않는다.
 
@@ -43,7 +43,8 @@
 - [x] 가장 큰 39개 `policy_ddl.sh` 누락 그룹의 대표를 재현해 파일 배치·정리·선행 TC 영향과 policy assertion을 구분한다. [조사 보고서](CBRD-26659-policy-helper-pruning_20261030_e3589ae_codex.md)에 원본 shard 목록의 helper 삭제 재현과 현재 `gap_ctas_cs` 1 PASS를 기록했다. 당시 이미지 원본이 없어 과거 원인은 강한 추론이며, 전체 39개 원인 확정은 아니다.
 - [x] 공용 policy helper를 개별 TC의 `cases` 밖으로 옮기고 모든 호출자·shard 선별 후 입력을 검증한다. [수리·검증 보고서](CBRD-26659-policy-helper-relocation_20261031_6334dc6_codex.md)에 일반 7곳·heavy 복사본 1곳의 경로 변경, 수정 전 helper 삭제·수정 후 보존 대조, 선별 후 원문 대표 1 PASS를 기록했다. Checker bytes·mode·assertion과 일반 31개·heavy 38개 선택은 유지했다.
 - [x] 다른 TC의 `cases` 아래 `policy_metadata.sh`·`tde_observe.sh` 의존성을 실제 scenario 호출별로 확인하고 후속 수리 범위를 정한다. [Work654 감사](CBRD-26659-helper-dependency-audit_20261031_6334dc6_codex.md)에서 metadata 소비자의 비활성 상태, AES 조건부 TDE 호출, 미호출 lifecycle 정의와 wrapper의 별도 sibling 의존성을 구분했다. 실제 선별 24회·합성 parser 대조이며 TC 실행이나 수리 완료는 아니다.
-- [ ] 일반 metadata helper를 `oos_common`으로 이동하고 호출 경로 4곳을 정리한다. 원래 parser 계약·비활성 선택을 유지하며 owner 제외 후 생존과 원문 대표를 검증한다.
+- [x] 일반 metadata helper를 `oos_common`으로 이동하고 호출 경로 4곳을 정리한다. [Work662 보고서](CBRD-26659-policy-metadata-relocation_20261102_41eae6a9c_codex.md)에 byte-identical 이동, parser 독립 기대값 17개, 같은 기본 gate의 수정 전 네 누락·수정 후 생존, 선별 후 입력 64개의 원문 SHOW 1 PASS를 기록했다. 준비 환경 NOK 두 시도는 보존하며 원래 parser·assertion·비활성 선택을 유지했다. 정규 TC head `41eae6a9c`에 게시했다.
+- [ ] Metadata 수리 게시 후 한 번 시작한 [CI 41394321292](https://github.com/CUBRID/cubrid/actions/runs/41394321292)의 종료 결과를 기록한다. Plan의 private `41eae6a9c`·public `b038c424`를 확인했다. CI 종료 뒤 추가 수정·push·재실행은 사람의 다음 지시를 기다린다.
 - [ ] 일반·heavy TDE helper와 AWK를 함께 공용 위치로 옮기고 JSON source·모든 호출 경로를 정리한다. 네 명령과 AES 실제 경로를 검증한다. 비활성 암호화 wrapper의 sibling 진입점 의존성은 별도 복원·수리 결정을 남긴다.
 - [x] Helper 수리 게시 후 한 번 시작한 [CI 41175186516](https://github.com/CUBRID/cubrid/actions/runs/41175186516)의 SUCCESS와 5개 gha context SUCCESS를 기록한다. Plan에서 public `b038c424`·private `6334dc6`을 확인했다. 이전 SQL 전체 집계 미인증과 TC PR 검토·병합은 별도다. 추가 TC 수정·push·CI 재실행은 하지 않았다.
 - [ ] `ctas02`의 TC 완료 후 native 명령 timeout 원인을 추가 분석한다. 결과 파일은 성공이지만 130.013초에 exit -9로 끝나 미완료다. 추가 관측 `ctas03`은 56.908초에 정상 종료해 원래 지연을 재현하지 못했다. Work647의 선별 후 `fixed01`에서도 종료 지연을 관측했고 `fixed02`는 40.879초에 정상 종료했다. 첫 실패를 미완료로 유지하며 원인 확정이나 runner 수리 credit은 주지 않는다.
@@ -105,6 +106,7 @@
 | 2026-10-30 | policy helper 39개 그룹 조사와 대표 재현 | Work640에서 과거 Git의 helper 존재와 원본 shard 13 목록에 따른 삭제·보존 대조를 확인했다. 실제 과거 이미지 bytes는 미확보여서 선별 시 삭제는 강한 추론이다. `ctas01`은 준비 실패, `ctas02`는 성공 TC 결과 뒤 전체 명령 timeout, `ctas03`은 원문 `gap_ctas_cs`의 native 1 PASS다. 27개 TC assertion·26개 controller 검사·정리를 확인했다. 원래 timeout 원인은 미확정이다. 그룹 38개, 전체 과거 shell 중 59개 현재 검증이 남았다. 수리·재활성화·CI 재실행은 하지 않았다. |
 | 2026-10-31 | 공용 policy helper 이동과 선별 후 대표 검증 | Work647에서 일반 7곳·heavy 1곳을 새 공용 위치로 전환하고 동일 checker를 이동했다. 실제 keep의 수정 전 삭제·수정 후 보존을 검증했다. Native `fixed01`은 성공 TC 결과 뒤 전체 timeout으로 미완료이고 `fixed02`는 전체 40.879초의 1 PASS다. 일반 `6334dc6`·heavy `81e6072`를 각 TC PR head에 게시했다. CI 41175186516은 1회 실행 후 SUCCESS이며 5개 gha context도 모두 SUCCESS다. SQL 전체 증거 정합성과 TC PR 검토·병합은 별도다. 비활성 TC 복원·나머지 38개 실행·종료 지연 원인 확정은 남았다. |
 | 2026-10-31 | 남은 공용 helper 의존성 감사 | Work654에서 metadata·TDE 실제 scenario 분기와 전이 의존성을 조사했다. 복사 fixture의 실제 선별 24회에서 owner 제외 11개는 helper 누락·parser exit 127, owner 선택 대조 13개는 보존·exit 0이다. AWK·JSON 누락 대조도 실패를 확인했다. Metadata 일반 이동을 먼저, TDE 일반·heavy 이동을 다음 단위로 제안했다. TC·Engine·CI는 바꾸거나 실행하지 않았으며 수리·대표 native 검증은 남았다. |
+| 2026-11-02 | Metadata helper 이동과 선별 후 SHOW 검증 | Work662에서 일반 helper와 호출 인자 네 곳을 이동하고 원래 parser·선택·assertion을 유지했다. 독립 parser 17개와 실제 선별 gate의 수정 전 실패·수정 후 PASS, 입력 64개의 원문 SHOW 1 PASS를 확인했다. 앞선 두 준비 환경 NOK를 보존하고 실제 runner의 tmp 경로를 짧게 구성했다. 정규 TC `41eae6a9c`를 게시했고 CI 41394321292 종료를 기다린다. TDE 이동·재활성화·나머지 TC 현재 검증은 남는다. |
 
 [신규 heavy PR 본문](CBRD-26659-shell-heavy-pr-body_631e3fd_codex.md)과 [기존 PR #4365 갱신 본문](CBRD-26659-shell-heavy-exclusion-pr-body_a229e19_codex.md)은 검토·승인한 내용 그대로 게시했다. Heavy import `631e3fd`와 일반 CI 제외 `a229e19`의 원격 head를 확인했다. [게시 범위와 검증 기록](CBRD-26659-shell-heavy-pr-context_631e3fd_codex.md)에 본문 식별값과 CI 경과를 보존한다.
 

@@ -106,19 +106,26 @@ assert all(not xml.findall('.//' + tag) for tag in ('failure', 'error', 'skipped
 phases = ['mixed_records', 'stable_stats', 'targets', 'arguments', 'permissions', 'preserved', 'owned_cleanup', 'cleanup']
 for name in ('feedback.log', 'test_local.log'):
     data = (logs / name).read_text()
-    assert re.findall(r'cbrd_26659_show_contract-(\d+) : (OK|NOK)\b', data) == [(str(i), 'OK') for i in range(1, 9)]
+    assert re.findall(r'^cbrd_26659_show_contract-(\d+) : (OK|NOK)\b', data, re.MULTILINE) == [(str(i), 'OK') for i in range(1, 9)]
     for i, phase in enumerate(phases, 1):
-        assert re.search(r'cbrd_26659_show_contract-' + str(i) + r' : OK\s+[\'"]?\s*' + phase + ':', data)
+        assert re.search(r'^cbrd_26659_show_contract-' + str(i) + r' : OK\s+[\'"]?\s*' + phase + ':', data, re.MULTILINE)
 feedback = (logs / 'feedback.log').read_text()
 assert '[OK]:  ' + expected in feedback and '[TEST STOP]' in feedback
 art = d / 'CTP/result/shell/case-logs/_40_guava/cbrd_26659_show_contract/cases/case'
+actual_environment = dict(line.split('=', 1) for line in (art / 'show.identity.log').read_text().splitlines() if line.startswith(('CUBRID=', 'CUBRID_DATABASES=', 'CUBRID_TMP=')))
+assert set(actual_environment) == {'CUBRID', 'CUBRID_DATABASES', 'CUBRID_TMP'}
+assert all(actual_environment[key] == env[key] for key in actual_environment)
+assert len(actual_environment['CUBRID_TMP'].encode()) + len('/cubrid_tcp_setup_server') + 7 <= 107
 assert (art / 'show.controller-exit.log').read_text().strip() == 'controller_exit_status=0'
 assert (art / 'show.cleanup.log').read_text().strip() == 'owned_cleanup=1'
 journal = [json.loads(line) for line in (art / 'show.journal.log').read_text().splitlines()]
 assert len(journal) == 7 and {x['phase'] for x in journal} == set(phases[:7]) and all(x['event'] == 'PASS' for x in journal)
-ddl = list(art.glob('show.*.ddl.json'))
-assert len(ddl) > 1 and all(x.read_bytes() == (art / 'show.before.ddl.json').read_bytes() for x in ddl)
-assert (art / 'show.framework.conf.before').read_bytes() == (art / 'show.controller.conf.before').read_bytes()
+ddl_dump = re.findall(r'^EVIDENCE=(show\.[^\r\n]+\.ddl\.json)\n([^\n]*)', (art / 'show.controller.log').read_text(), re.MULTILINE)
+ddl = dict(ddl_dump)
+assert len(ddl_dump) == len(ddl) > 1 and 'show.before.ddl.json' in ddl and 'show.final.ddl.json' in ddl
+assert isinstance(json.loads(ddl['show.before.ddl.json']), str)
+assert all(value == ddl['show.before.ddl.json'] for value in ddl.values())
+assert re.search(r'^cbrd_26659_show_contract-8 : OK\s+cleanup: framework configuration restored\s*$', feedback, re.MULTILINE)
 assert obs['exit'] == 0 and obs['deadline_outcome'] is False and 0 < obs['invocation_seconds'] <= 120
 assert obs['observed_processes'] and all(obs['observed_private_namespace_inodes'][ns] for ns in ('pid', 'ipc', 'mnt', 'user'))
 assert obs['remaining_owned_processes'] == obs['remaining_observed_namespace_holders'] == []
