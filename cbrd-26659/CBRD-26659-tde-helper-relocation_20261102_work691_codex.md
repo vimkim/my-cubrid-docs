@@ -2,7 +2,7 @@
 
 작성일은 2026-11-02, Asia/Seoul이다. TC 작성자와 QA 리뷰어를 위한 Work691 결과다. 질문은 일반·heavy suite에서 WAL owner TC를 선택하지 않아도 TDE 관측 의존 파일이 남고 기존 계약을 유지하는지다. 상위 Work456과 완료된 metadata 단위 Work662에서 이어졌다.
 
-두 suite의 helper와 AWK를 기존 `oos_common`으로 옮겼다. 실제 선별의 수정 전 누락 7개 경로를 수정 후 같은 검증기로 통과했다. Owner가 없는 선별 입력으로 원문 committed crash를 AES 설정에서 실행해 1 PASS를 확인했다. 일반·heavy TC head에 각각 게시했다. 게시 후 요청한 단일 CI는 아래에 종료 상태를 기록한다.
+두 suite의 helper와 AWK를 기존 `oos_common`으로 옮겼다. 실제 선별의 수정 전 누락 7개 경로를 수정 후 같은 검증기로 통과했다. Owner가 없는 선별 입력으로 원문 committed crash를 AES 설정에서 실행해 1 PASS를 확인했다. 일반·heavy TC head에 각각 게시했고, 이후 한 번 요청한 CI와 다섯 gha context는 모두 SUCCESS로 종료했다.
 
 관련 PR은 [Engine #8128](https://github.com/CUBRID/cubrid/pull/8128), [일반 TC #4365](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4365), [heavy TC #4627](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4627)이다. 비활성 TC 복원, wrapper의 별도 sibling 의존성 수리, SQL 집계, 나머지 Work456 TODO는 이번 범위가 아니다. TC PR은 사람이 리뷰·병합한다.
 
@@ -93,7 +93,19 @@ Feature testcase baseline 검사는 게시 전·요청 직전에 통과했다. �
 
 Plan job 원문 로그에서 Engine `e3589ae42d42b04eb020e1ae43e165b01d31b12a`, public `b038c424b6a8d078671132e2369040493a5fc1f6`, private `01df2600ac75180812451462b5c044cfa56b732a` checkout을 확인했다. Workflow run 자체의 `head_sha`를 tested Engine commit으로 대신 쓰지 않았다.
 
-CI 종료 결과는 아직 관측 중이다. 이 문단은 종료 뒤 갱신한다. 일반 CI가 heavy fork의 새 TDE 경로를 실행했다는 근거로 사용하지 않는다. 그 경로의 native 근거는 앞의 별도 AES 대표다. 실제 TC 리뷰·병합과 TC Merge Gate는 일반 CI 성공과 구분해 기록한다.
+CI는 SUCCESS로 종료했다. GitHub의 최종 `updated_at`은 2026-11-02 21:42:54 KST이며, 21:43:41 KST 관측에서 job 72개가 모두 종료돼 성공 71개·skip 1개였다. 남은 60개 shard가 대기하다가 20:56 KST에 첫 실행을 관측했고 21:08 KST에는 대기가 해소됐다. 이는 실행·대기 상태의 관측이며 대기 원인을 확정한 결과가 아니다.
+
+| 최종 context | 상태 |
+| --- | --- |
+| `gha-ci: build (release)` | SUCCESS |
+| `gha-ci: build (debug)` | SUCCESS |
+| `gha-ci: test_shell` | SUCCESS |
+| `gha-ci: test_sql` | SUCCESS |
+| `gha-ci: test_medium` | SUCCESS |
+
+다섯 context 모두 같은 run을 가리킨다. `gh pr checks --required`는 exit 1과 `no required checks reported`를 반환했다. TC Merge Gate context는 최종 check 목록에 없다. 자동 TC PR #4365·#3688은 모두 OPEN이고, heavy #4627도 OPEN draft다. 따라서 CI SUCCESS를 TC Merge Gate PASS나 TC 병합으로 해석하지 않는다. Agent는 TC PR을 merge·close하거나 branch를 삭제하지 않았다.
+
+일반 CI가 heavy fork의 새 TDE 경로를 실행했다는 근거로 사용하지 않는다. 그 경로의 native 근거는 앞의 별도 AES 대표다. SQL 전체 자료 정합성의 기존 미인증 상태도 그대로다. 종료 뒤 Engine `e3589ae`와 사용자 CCI·JDBC dirt, public `b038c424`, 일반·heavy 게시 커밋과 clean 상태를 재확인했다. 추가 TC/source 수정·push·CI 재실행은 하지 않았다.
 
 ## 보존 자료와 남은 범위
 

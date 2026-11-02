@@ -2,7 +2,7 @@
 
 Last modified: 2026-11-02 (Asia/Seoul).
 
-2026-11-02 [TDE helper 공용 이동과 AES crash 검증](CBRD-26659-tde-helper-relocation_20261102_work691_codex.md)은 일반·heavy helper와 AWK를 공용 위치로 함께 옮겼다. 같은 gate의 실제 선별 18회와 독립 parser 104쌍, owner 제외 입력 35개의 원문 committed AES crash 1 PASS를 확인했다. 일반 `01df2600a`·heavy `d5247632b`를 게시했고 단일 CI 41431239377의 종료를 관측 중이다. 활성·비활성 선택과 assertion을 유지했으며 wrapper의 sibling 의존성과 나머지 Work456은 별도다.
+2026-11-02 [TDE helper 공용 이동과 AES crash 검증](CBRD-26659-tde-helper-relocation_20261102_work691_codex.md)은 일반·heavy helper와 AWK를 공용 위치로 함께 옮겼다. 같은 gate의 실제 선별 18회와 독립 parser 104쌍, owner 제외 입력 35개의 원문 committed AES crash 1 PASS를 확인했다. 일반 `01df2600a`·heavy `d5247632b`를 게시했고 단일 CI 41431239377과 다섯 gha context는 SUCCESS로 종료했다. 활성·비활성 선택과 assertion을 유지했으며 wrapper의 sibling 의존성, TC 리뷰·병합과 나머지 Work456은 별도다.
 
 2026-11-02 [공용 metadata helper 이동과 선별 후 SHOW 검증](CBRD-26659-policy-metadata-relocation_20261102_41eae6a9c_codex.md)은 byte-identical helper 이동과 호출 인자 4곳 변경을 기록한다. 독립 parser 기대값 17개·실제 선별 전후 대조와 입력 64개의 원문 SHOW 1 PASS를 확인했다. 준비 환경 NOK 두 시도는 보존했다. TC `41eae6a9c`를 게시했고 한 번 실행한 CI 41394321292와 다섯 gha context는 SUCCESS로 종료했다. Parser·선별 검증기와 native artifact 검증기는 결과·commit 대응을 재확인하는 근거로 보존한다. TDE 이동·비활성 재활성화·나머지 TC 검증은 후속이다.
 
