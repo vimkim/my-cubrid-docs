@@ -104,6 +104,8 @@ python3 code-analysis/build/pr8312-ccache-category-reporting_eefc1292f4_codex-as
 
 이 검증은 합성 로그의 파싱과 출력 동작을 확인한다. 실제 ccache 3.7.7로 컴파일하지 않았고, CI의 gawk 4.2.1에서 실행하지 않았다. 전체 워크플로의 actionlint, 새 CI 실행, 운영 다운로드 URL의 도달성도 확인하지 않았다. 작성자가 보고한 fork 실행과 실제 빌드 로그 검증은 PR 본문의 별도 증거로 남긴다.
 
-## 승인 리뷰 초안
+## 승인과 댓글 게시
 
-게시 전에 사용자 검토를 받을 [승인 리뷰 초안](pr8312-approval-review_eefc1292f4_codex.md)을 별도 파일에 준비했다. 승인 요약은 확인한 동작과 검증 범위를 설명한다. 자동 테스트, 경로 누락의 구분, 범주 해석 안내는 승인의 조건으로 요구하지 않는 `nit`으로 분리했다. 이 문서 작성 시점에는 GitHub 승인 리뷰와 요약 댓글을 제출하지 않았다.
+2026-11-02에 `eefc1292f4e65cb6c505c2965591873e3bf2300f`를 대상으로 [승인 리뷰](https://github.com/CUBRID/cubrid/pull/8312#pullrequestreview-5732803124)를 제출하고 [요약 댓글](https://github.com/CUBRID/cubrid/pull/8312#issuecomment-6570637935)을 게시했다. 사용자가 승인한 게시 범위에 따라 `nit` 제안은 댓글에서 제외했다. 분석 문서의 후속 개선 항목은 검토 근거로 유지한다.
+
+[게시한 댓글 원문](pr8312-approval-review_eefc1292f4_codex.md)은 확인한 동작과 검증 범위를 설명한다. 게시 뒤 GitHub에서 승인 상태가 `APPROVED`이고 댓글 본문이 저장한 원문과 일치하며 `nit`이 없음을 확인했다.

@@ -15,4 +15,4 @@ design proposals remain tied to each report's inspected revision and environment
 | [ccache-per-build-stats-log-guide_2026-10-27.md](ccache-per-build-stats-log-guide_2026-10-27.md) | 빌드별 STATSLOG 사용법, NOSTATS 관계, 버전별 기능과 PR #8254 전환 조건 | 2026-10-27 | 2026-10-27 | PR #8254 승인 시 공식 통계 기능의 후속 검토 자료로 공유하기 위해 작성 |
 | [cubrid-ci-compiler-cache-survey-plan_2026-10-27.md](cubrid-ci-compiler-cache-survey-plan_2026-10-27.md) | 현재 공유 캐시, 최신 ccache·sccache 대안, CBRD-27124 검증 공백과 후속 실험 계획 | 2026-10-27 | 2026-10-27 | 캐시 대안의 운영 적합성을 비교하기 위한 예비 조사로 작성 |
 | [pr8312-ccache-category-reporting_eefc1292f4_codex.md](pr8312-ccache-category-reporting_eefc1292f4_codex.md) | PR #8312의 PID별 로그 복원, 범주별 집계, 검증 범위와 후속 개선 | 2026-11-02 | 2026-11-02 | ccache 통계 분리의 해결 방식과 해석상 한계를 리뷰 근거로 보존 |
-| [pr8312-approval-review_eefc1292f4_codex.md](pr8312-approval-review_eefc1292f4_codex.md) | PR #8312의 승인 요약·검증 범위·후속 nit를 정리한 게시 전 초안 | 2026-11-02 | 2026-11-02 | 검증 범위와 후속 제안을 포함한 게시 문구를 사전에 검토 |
+| [pr8312-approval-review_eefc1292f4_codex.md](pr8312-approval-review_eefc1292f4_codex.md) | PR #8312에 게시한 승인 요약과 검증 범위, nit 제외 | 2026-11-02 | 2026-11-02 | 검증 범위와 후속 제안을 포함한 게시 문구를 사전에 검토 |
