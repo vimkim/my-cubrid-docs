@@ -159,6 +159,8 @@ OOS chunk 삭제는 되돌리지 않는다. 삭제를 결정하는 단위(트랜
 3. 꼬리 chunk부터 지우고 head를 마지막에 지운다. 각 삭제는 slot 번호만 담은 redo-only 로그를 남긴다.
 4. 비워진 page를 page 회수에 넘긴다.
 
+결정 3의 모델은 이 순서와 링크 stamp, 오류 시 재실행을 함께 갖춘 조합만 재시도에서 수렴한다는 것을 보였다([결정 3](reclaim-decisions.md#결정-3-d3-회수기가-재시도에서-수렴하는-방법)).
+
 head를 마지막에 지우는 이유가 있다. head가 남아 있는 동안은 재시도가 남은 chain을 찾을 수 있다. head를 먼저 지우고 crash하면 재시도는 head가 없으니 회수가 끝났다고 판단하고, 나머지 chunk는 고아로 남는다. CBRD-27781 수정 후보 보고서가 C의 반증 조건으로 든 경우다.
 
 링크에 stamp를 넣는 이유도 있다. 이미 지운 chunk의 slot을 다른 chain이 가져갔을 수 있다. OID만 따라가는 재시도는 그 다른 chain의 chunk를 지운다. 지금 `oos_delete_chain`은 head에서만 stamp를 비교하고([oos_file.cpp L3346-L3352](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/storage/oos_file.cpp#L3346-L3352)), continuation chunk는 stamp 확인 없이 `pgbuf_fix`로 고정한다([oos_file.cpp L3305](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/storage/oos_file.cpp#L3305)). 지금은 chain 삭제 전체가 sysop 하나라서 이 문제가 드러나지 않는다. D3는 원자성을 버리고 재시도로 끝을 보장하므로 이 확인이 필요하다.
@@ -175,7 +177,7 @@ head를 마지막에 지우는 이유가 있다. head가 남아 있는 동안은
 
 - `RVOOS_DELETE`의 undo. 지금은 chunk 레코드 전체를 undo 데이터로 쓴다.
 - forward-walk 삭제와 그 sysop wrapper `vacuum_forward_walk_oos_delete_atomic`.
-- LSA reclaim gate일 가능성이 있다. 이 gate는 "끝나지 않은 삭제자가 chunk 삭제를 그 page에 되돌릴 수 있다"는 이유로 있다. D3에서는 chunk 삭제를 되돌리지 않는다. INSERT rollback의 undo는 레코드를 지울 뿐 공간을 쓰지 않는다. 그래서 gate가 필요 없을 수 있다(추론, 모델의 U2에서 확인한다).
+- LSA reclaim gate. 이 gate는 "끝나지 않은 삭제자가 chunk 삭제를 그 page에 되돌릴 수 있다"는 이유로 있다. D3에서는 chunk 삭제를 되돌리지 않는다. 결정 4의 모델에서 D3는 gate 없이도 undo가 회수된 page를 대상으로 삼지 않았다([결정 4](reclaim-decisions.md#결정-4-d3에서-lsa-reclaim-gate가-필요한가)). 이 모델은 undo라는 이유 하나만 다룬다.
 - CBRD-27781 후보 A의 in-memory 보호 map. 만들 필요가 없다.
 
 ### 남는 것
@@ -242,7 +244,7 @@ U1은 현재 설계의 결함을 결함별로 구분하려고 이 성질들을 �
 ### 작업 단위와 확인 기준
 
 1. **U1. 현재 설계 재현(완료, [U1 결과](#u1-결과)).** 설계 모델에 현재 설계를 넣는다. TLC가 CBRD-27858, CBRD-27781, CBRD-27237, stamp 이전의 CBRD-26950을 모두 반례로 찾아야 한다. "공간 재사용 시점" 설정 하나와 "삭제 결정 근거" 설정 하나로 이 반례들이 모두 설명되면 가정 두 개가 맞은 것이다. 설명되지 않으면 이 문서의 가설이 틀린 것이고, 설계를 다시 본다.
-2. **U2. 후보 비교.** D1, D2, D3를 같은 모델의 대안 설정으로 넣고 같은 성질을 검사한다. crash는 모든 지점에서 허용한다. D3에서는 회수기 두 개가 같은 chain을 겹쳐 처리하는 경우와, 회수 도중 crash가 반복되는 경우를 포함한다. LSA gate를 뺀 D3도 함께 검사한다.
+2. **U2. 후보 비교(결정별 모델 완료, [설계 결정의 TLA+ 검증](reclaim-decisions.md)).** D1, D2, D3를 같은 모델의 대안 설정으로 넣고 같은 성질을 검사한다. crash는 모든 지점에서 허용한다. D3에서는 회수기 두 개가 같은 chain을 겹쳐 처리하는 경우와, 회수 도중 crash가 반복되는 경우를 포함한다. LSA gate를 뺀 D3도 함께 검사한다.
 3. **U3. 사양 개정.** U2를 통과한 설계로 `OOS-CONTEXT.md`의 §2, §3, §4를 개정하고 ADR을 쓴다.
 4. **U4. 구현.** PR을 나누어 구현한다. PR마다 적합성 모델을 갱신하고, 오류 주입 ctest로 반례의 실행 순서를 실제 코드에서 재현한다.
 
