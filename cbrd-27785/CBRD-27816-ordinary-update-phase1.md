@@ -1,6 +1,6 @@
 # CBRD-27816 1단계 보고서
 
-갱신: 2026-11-03 20:05 KST. 1단계(재현과 원인 분리) 측정을 마쳤다. 검토에서 나온 정정과 L1, L1b, h3 결과, 18:51 사용자 결정을 반영했다. 할 일과 결정 사항은 이 파일에서 관리한다.
+갱신: 2026-11-03 20:13 KST. 1단계(재현과 원인 분리) 측정을 마쳤다. 검토에서 나온 정정과 L1, L1b, h3 결과, 18:51 사용자 결정을 반영했다. 할 일과 결정 사항은 이 파일에서 관리한다.
 
 관련 이슈: [CBRD-27816](https://jira.cubrid.org/browse/CBRD-27816), [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785). 관련 PR: [#8299](https://github.com/CUBRID/cubrid/pull/8299). 이 보고서는 2026-11-03에 로컬 산출물 디렉터리 `/mnt/nvme/data-5/tmp/CBRD-27816-20261103/phase1-report.md`에서 옮겨 왔다. 본문의 상대 경로(`harness/`, `base|cand/...`, `decisions.tsv` 등)는 모두 그 디렉터리 기준이다.
 
@@ -15,7 +15,7 @@
 
 1. **정상 상태 차이는 +86.8M(+1.34%)다.** 판정 구간(csql 하나), c1, 한쪽당 유지 표본 36개 기준이다. 차이는 transaction worker 하나에 있다(+86.2M). log-flush는 같다.
 2. **worker 차이는 세 경로의 증가에서 줄어든 몫을 뺀 것이다.** 셋은 서로 겹치지 않는다(`--under`로 확인).
-   - A. record 복사 +54.0M
+   - A. record 복사 +54.0M. **20:13 정정: 실제 증가가 아니다.** 기준 build는 `spage_get_record`를 tail call(`jmp`)로 불러서 그 복사가 profile에서 `heap_get_last_version` 바로 아래에 잡혔다. 후보는 일반 `call`이다. `heap_get_last_version` 전체로 보면 후보가 −14.2M다. 아래 "2단계 첫 일" 절
    - B. OOS 열이 없는 행에서도 도는 OOS 처리 약 +61M
    - C. `heap_update_logical` 안의 증가 +51.2M
 
@@ -73,13 +73,54 @@
 - 결정 3(DB 정리): 3-가. 2단계를 할지 정할 때까지 그대로 둔다.
 - 결정 4(보고서 보존): 4-가. 오늘 결정을 반영한 뒤 my-cubrid-docs로 옮긴다. push는 따로 요청할 때만 한다.
 
+## 2단계 첫 일: OOS 규칙 확인과 A·B·C 재분해 (2026-11-03 20:13)
+
+결정 1-가에 따라 코드를 고치기 전에 OOS 규칙을 확인하고 p1b profile(r410, r411)을 다시 나눴다. 새 도구는 `harness/profile_children.py`다. 한 함수의 호출자와 직접 callee를 표본 × period로 나눈다. 결과 파일은 `p2-A-children.txt`, `p2-last-version-children.txt`, `p2-update-children.txt`, `p2-B-children.txt`, `p2-C-children.txt`다.
+
+**OOS 규칙.** `/home/vimkim/gh/cubrid-oos-context/OOS-CONTEXT.md`(sha256 `6300aa1f…`, 2026-10-27)를 끝까지 읽었다.
+
+- HAS_OOS는 "record에 stub이 있을 때만 참"이다(Core Terminology). stub이 없는 record에는 Expand할 것도, 새로 넣을 OOS 값도 없다. 그래서 OOS가 없는 새 record에서 OOS 처리를 건너뛰는 것은 명세와 충돌하지 않는다.
+- 단, 건너뛰는 조건은 **새** record에 stub이 없다는 것이어야 한다. 옛 record의 stub이 빠진 경우에는 commit hook의 `RVOOS_NOTIFY_VACUUM`으로 버린 chain을 알려야 한다(§3 CBRD-27230). 이 일은 finalize 경로가 아니라 update와 commit 경로에 있다.
+- 명세 §5의 "PEEK mode 없음"은 OOS 계층에서 OOS 값을 읽는 방식이다. heap record를 PEEK하는 것과는 관계가 없다. 결정 세션의 "A는 PEEK가 없어 막힐 수 있다"는 메모는 이 문장을 heap record로 읽은 것이다.
+- pending record의 상태 기계와 `heap_oos_begin_insert_publication`의 초기화는 명세에 없는 구현 세부다.
+
+**A는 없다.** 기준과 후보 모두 COPY로 record를 복사한다.
+
+| `heap_get_last_version` 직접 callee | 기준 | 후보 |
+|---|---|---|
+| `heap_get_record_data_when_all_ready` | 29.2 | 82.5 |
+| `memmove` | 32.0 | 0 |
+| `spage_get_record` + `spage_get_record_data` | 35.3 | 5.7 |
+| `heap_scan_cache_allocate_area` / `assign_recdes_to_area` | 21.6 | 22.8 |
+| `heap_record_replace_oos_oids` (후보는 tail call) | 0 | 8.7 |
+| `heap_get_last_version` 전체 | 534.5 | 520.3 (−14.2) |
+
+- 실행 파일로 확인했다. 기준 `libcubrid.so.11.5`의 `heap_get_record_data_when_all_ready`는 `spage_get_record`로 `jmp`한다. 후보는 `call spage_get_record` 뒤 `heap_record_replace_oos_oids`로 `jmp`한다.
+- frame pointer 호출 사슬은 tail call한 함수를 빠뜨린다. 그래서 기준의 복사가 한 단계 위 함수에 잡혔다. 1단계의 `--under` 확인은 겹침만 보았고 이 이동은 보지 못했다.
+- 1단계 "검토에서 나온 주의 사항"의 inlining 경고와 결정 세션 검토의 "기준도 복사한다"는 지적이 맞았다.
+
+**B는 있지만 작고 흩어져 있다.** 행 20만 개 기준으로 행 하나당 약 300 instructions다.
+
+| B 구성 | 후보 M | 행당 | 내용 |
+|---|---|---|---|
+| `heap_oos_finalize_record` | 31.5 | 157 | OOS 없는 행에서도 header 검사, `owns`, `heap_oos_begin_insert_publication`(8.3M, tdes 조회와 두 container 초기화), 길이·type 설정 |
+| `heap_pending_record` 생성·소멸 | 18.8 | 94 | 새 record의 소유자. 기준의 copy area 할당·해제를 대신하므로 전부 OOS 비용은 아니다 |
+| `heap_record_replace_oos_oids` | 9.7 | 16/호출 | 행마다 세 번 불린다. 정책 검사와 HAS_OOS 검사 뒤 바로 돌아온다. 거의 호출 비용이다 |
+| `locator_finalize_oos_record`, `heap_recdes_contains_oos`, `heap_oos_validate_disk_record` | 8.3 | 42 | 작은 검사 |
+
+OOS 없는 행의 finalize를 빠른 경로로 바꾸면 줄일 수 있는 양은 약 20~30M로 추정한다(추정, 측정 아님). 정상 상태 +1.34%가 약 +0.9~1.0%로 내려가는 크기다. spike는 vacuum 시점 때문이므로 바뀌지 않는다.
+
+**C는 한 원인이 아니다.** `heap_update_logical` +51.2M는 직접 callee 25개 이상에 1~11M씩 퍼져 있다. 가장 큰 것은 자기 자신 +10.8M, `heap_log_update_physical` +9.0M, `heap_page_get_vacuum_status` +7.3M, `oid_check_cached_class_oid` +7.2M, `heap_update_physical` +7.0M다. OOS 고유 검사는 `heap_oos_validate_disk_record` +4.5M 하나다. 나머지는 code 배치와 inlining 차이로 보인다(추정). 고칠 한 곳을 가리키지 않는다.
+
+**결론.** 정상 상태 +86.8M는 한 곳의 큰 비용이 아니라 행마다 쌓인 작은 비용의 합이다. 코드로 줄일 수 있는 것은 B의 빠른 경로 하나이고, 그 효과도 +2% 판정을 바꾸지 못한다.
+
 ## 2단계 결정 (사용자에게 묻는 것)
 
 근거가 가리키는 코드는 다음과 같다. 1단계에서는 고치지 않았다. 수치는 UPDATE 하나당 instructions이고, p1b·p3 profile의 표본 합계 기준이다.
 
 | 후보 | 위치 | 크기 | 판정 구간 영향 |
 |---|---|---|---|
-| A. 마지막 버전 읽기에서 record 복사 | `heap_file.c:7582` `heap_get_record_data_when_all_ready`, `heap_get_last_version` 아래. 호출처는 `locator_lock_and_get_object_with_evaluation`(+28.8M), `locator_attribute_info_force`(+25.5M), `locator_update_index` → `heap_get_class_record`(+15.1M) | +54.0M | 직접 |
+| A. 마지막 버전 읽기에서 record 복사 (20:13 정정: tail call에 의한 귀속 착시, 실제 증가 아님) | `heap_file.c:7582` `heap_get_record_data_when_all_ready`, `heap_get_last_version` 아래. 호출처는 `locator_lock_and_get_object_with_evaluation`(+28.8M), `locator_attribute_info_force`(+25.5M), `locator_update_index` → `heap_get_class_record`(+15.1M) | +54.0M | 직접 |
 | B. OOS 열이 없는 행에서도 도는 OOS 처리 | `heap_oos.cpp:155` `heap_oos_finalize_record`(31.5M, `heap_oos_begin_insert_publication` 8.3M 포함), `heap_pending_record` 생성 9.3M·소멸 9.5M, `heap_record_replace_oos_oids` 9.7M | 약 +61M | 직접 |
 | C. `heap_update_logical` 안의 증가 | 로그 기록 +16.3M, `logtb_find_tranid` +14.5M, `spage_update` +11.2M, `log_can_skip_undo_logging` +10.4M. 로그 양은 양쪽이 같다(UPDATE당 57.750MB 대 57.754MB) | +51.2M | 직접. 원인 코드는 특정하지 못했다 |
 | D. vacuum의 undo 풀기와 OOS 검사 | `vacuum.c:4276` `vacuum_process_log_record`의 조기 반환 조건, `vacuum_oos.cpp:267` `vacuum_forward_walk_reclaim_oos` | +34.6M (vacuum) | 대부분 구간 밖, spike 때만 안 |
