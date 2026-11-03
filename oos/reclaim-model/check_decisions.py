@@ -58,11 +58,18 @@ DROP = {
     "commit_filter": [F, P],
     "commit_hook": [F, P],
     "postpone": [P, P],
+    "commit_clr": [P, P],
+    "head_mark": [P, P],
 }
 DROP_REASONS = {
+    "commit_filter": [("CommitMeansMoved", F)],
     "commit_hook": [("NotifyDurableOnlyWithCommit", F), ("NotifyOnlyForSurvivingUpdate", P)],
     "postpone": [("NotifyDurableOnlyWithCommit", P), ("NotifyOnlyForSurvivingUpdate", P)],
+    "commit_clr": [("UncompensatedCommitMeansMoved", P)],
+    "head_mark": [("MarkFinalWhenEnded", P)],
 }
+# The run that breaks B (statement rollback, then commit) is reachable where B3 and B4 pass.
+DROP_WITNESSES = {"commit_clr": ["WitnessRollbackThenCommit"], "head_mark": ["WitnessRollbackThenCommit"]}
 
 # Decision 3: OosReclaimRetry. Key (Order, LinkStamp, OnError).
 RETRY_PROPS = ["OtherRecordIntact", "ReclaimedWhenDone"]
@@ -74,26 +81,46 @@ def retry_expected(order, link, on_error):
     return [other, reclaimed]
 
 
-# Decision 5: OosReclaimDesign, the chosen combination and one variant per undone decision.
+# Decision 5: OosReclaimDesign, the chosen combination, one variant per undone decision, and the
+# alternatives B3 (head mark instead of A'), B2 (REMOVE reclaims first, no postpone), and both.
+def design(horizon=True, notify="postpone", link=True, remove="postpone"):
+    return {"Horizon": horizon, "Notify": notify, "LinkStamp": link, "RemoveOrder": remove}
+
+
 DESIGN_CONFIGS = {
-    "design": {"Horizon": True, "Notify": "postpone", "LinkStamp": True},
-    "no_horizon": {"Horizon": False, "Notify": "postpone", "LinkStamp": True},
-    "undo_image": {"Horizon": True, "Notify": "undo_image", "LinkStamp": True},
-    "no_link_stamp": {"Horizon": True, "Notify": "postpone", "LinkStamp": False},
+    "design": design(),
+    "no_horizon": design(horizon=False),
+    "undo_image": design(notify="undo_image"),
+    "no_link_stamp": design(link=False),
+    "head_mark": design(notify="head_mark"),
+    "head_mark_no_horizon": design(horizon=False, notify="head_mark"),
+    "reclaim_first": design(remove="reclaim_first"),
+    "reclaim_first_head_mark": design(notify="head_mark", remove="reclaim_first"),
 }
 DESIGN_PROPS = ["NeededChainsIntact", "ReuseKeepsChain", "ReaderSeesIntactChain", "OtherRecordIntact",
-                "NoOrphanWhenQuiescent"]
-DESIGN_REASONS = ["ReclaimOnlyUnreachable", "NotifyOnlyForCommittedDrop", "RemainingIsPrefix",
-                  "ListStillNamesChain"]
+                "NoOrphanWhenQuiescent", "HeapRecordNamesIntactChain"]
+DESIGN_REASONS = ["ReclaimOnlyUnreachable", "NotifyOnlyForCommittedDrop", "MarkOnlyForCommittedDrop",
+                  "RemainingIsPrefix", "ListStillNamesChain"]
 DESIGN_EXPECTED = {
-    "design": ([P, P, P, P, P], [P, P, P, P]),
-    "no_horizon": ([P, P, F, P, P], [F, P, P, P]),
-    "undo_image": ([F, F, F, P, P], [F, P, P, P]),
-    "no_link_stamp": ([P, P, P, F, P], [P, P, P, F]),
+    "design": ([P, P, P, P, P, P], [P, P, P, P, P]),
+    "no_horizon": ([P, P, F, P, P, P], [F, P, P, P, P]),
+    "undo_image": ([F, F, F, P, P, F], [F, P, P, P, P]),
+    "no_link_stamp": ([P, P, P, F, P, P], [P, P, P, P, F]),
+    "head_mark": ([P, P, P, P, P, P], [P, P, P, P, P]),
+    "head_mark_no_horizon": ([P, P, F, P, P, P], [F, P, P, P, P]),
+    "reclaim_first": ([P, P, P, P, P, F], [P, P, P, P, P]),
+    "reclaim_first_head_mark": ([P, P, P, P, P, F], [P, P, P, P, P]),
 }
-# Each witness must fail in the design: TLC then shows a path that reaches the situation.
-DESIGN_WITNESSES = ["WitnessBothChainsReclaimed", "WitnessReusedChainReclaimed", "WitnessVacuumWaitsForSnapshot",
-                    "WitnessRerunStopsAtReusedSlot", "WitnessDeallocDuringReclaim"]
+# Each witness must fail in its setting: TLC then shows a path that reaches the situation.
+DESIGN_WITNESSES = {
+    "design": ["WitnessBothChainsReclaimed", "WitnessReusedChainReclaimed", "WitnessVacuumWaitsForSnapshot",
+               "WitnessRerunStopsAtReusedSlot", "WitnessDeallocDuringReclaim"],
+    "head_mark": ["WitnessBothChainsReclaimed", "WitnessMarkWaitsForSnapshot", "WitnessUndoneMarkKeepsChain",
+                  "WitnessRerunStopsAtReusedSlot"],
+    "reclaim_first": ["WitnessBothChainsReclaimed", "WitnessReusedChainReclaimed", "WitnessRemoveJobReruns",
+                      "WitnessDeadRecordNamesPartialChain"],
+    "reclaim_first_head_mark": ["WitnessBothChainsReclaimed", "WitnessRemoveJobReruns"],
+}
 
 RETRY_REASONS = {
     ("head_first", True, "rerun"): [("RemainingIsPrefix", F)],
@@ -124,6 +151,8 @@ def checks():
             out.append(("2", "OosDropDecision", {"Notify": notify}, prop, exp, "property"))
         for reason, exp in DROP_REASONS.get(notify, []):
             out.append(("2", "OosDropDecision", {"Notify": notify}, reason, exp, "reason"))
+        for witness in DROP_WITNESSES.get(notify, []):
+            out.append(("2", "OosDropDecision", {"Notify": notify}, witness, F, "witness"))
     for order in ["head_first", "tail_first"]:
         for link in [False, True]:
             for on_error in ["discard", "rerun"]:
@@ -138,8 +167,9 @@ def checks():
             out.append(("5", "OosReclaimDesign", settings, prop, exp, "property"))
         for reason, exp in zip(DESIGN_REASONS, reasons):
             out.append(("5", "OosReclaimDesign", settings, reason, exp, "reason"))
-    for witness in DESIGN_WITNESSES:
-        out.append(("5", "OosReclaimDesign", DESIGN_CONFIGS["design"], witness, F, "witness"))
+    for config, witnesses in DESIGN_WITNESSES.items():
+        for witness in witnesses:
+            out.append(("5", "OosReclaimDesign", DESIGN_CONFIGS[config], witness, F, "witness"))
     return out
 
 
@@ -174,7 +204,8 @@ def run(check, out, jar, java):
         result = "DEADLOCK"
     else:
         result = "ERROR"
-    distinct = re.search(r"(\d+) distinct states found", text)
+    # Progress lines also report distinct states; only the final summary line counts.
+    distinct = re.search(r"^\d+ states generated, (\d+) distinct states found", text, re.M)
     trace = re.findall(r'^/\\ last = "(.*)"$', text, re.M) if result != P else []
     return {"decision": decision, "module": module, "settings": settings, "invariant": inv,
             "kind": kind, "expected": exp, "result": result, "name": name,

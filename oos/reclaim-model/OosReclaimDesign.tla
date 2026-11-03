@@ -11,31 +11,43 @@
 (*   the reclaimer reads the chain from the head, deletes it from the     *)
 (*        tail with the head last, compares link stamps, and reruns       *)
 (*        after an error or a crash                                       *)
-(*                                                                         *)
+(*                                                                        *)
 (* The row starts at version v0 with chain A (a1 -> a2).  T1 updates it:  *)
 (* "assign" writes chain B (b1) and drops A; "reuse" leaves the OOS       *)
 (* attribute unassigned and keeps the stub of A (OOS-CONTEXT section 3).  *)
-(* T1 may undo the UPDATE with a statement rollback, commit, or roll back. *)
+(* T1 may undo the UPDATE with a statement rollback, commit, or roll back.*)
 (* Then T3 may delete the row.  Reader R takes one snapshot and later     *)
 (* reads the chain of the version that the snapshot sees.  Vacuum         *)
-(* consumes the notification and removes the deleted row; both run the   *)
+(* consumes the notification and removes the deleted row; both run the    *)
 (* same reclaimer.  T2 may insert one record into a free or deallocated   *)
 (* slot.  Each slot is on its own page.  At most one disruption happens:  *)
-(* a reclaimer error or a crash.                                           *)
-(*                                                                         *)
+(* a reclaimer error or a crash.                                          *)
+(*                                                                        *)
 (* The settings undo one decision each, to show that the checks can fail: *)
 (*   Horizon    FALSE: vacuum ignores R's snapshot                        *)
 (*   Notify     "undo_image": vacuum drops A when an UPDATE undo image    *)
 (*              exists (the forward-walk), instead of A'                  *)
 (*   LinkStamp  FALSE: the reclaimer follows next links by OID only       *)
+(*                                                                        *)
+(* Two settings replace a decision with an alternative instead:           *)
+(*   Notify     "head_mark" (B3): the UPDATE writes T1's delete MVCCID    *)
+(*              into the head of chain A with an undoable log record;     *)
+(*              every rollback undoes it.  Vacuum reads the head when it  *)
+(*              processes the block and starts the reclaimer if the mark  *)
+(*              is there.  No postpone and no RVOOS_NOTIFY_VACUUM.        *)
+(*   RemoveOrder "reclaim_first" (B2): vacuum REMOVE reclaims the chain   *)
+(*              first and removes the heap record after the reclaimer     *)
+(*              ends.  No postpone: after an error or a crash the vacuum  *)
+(*              job runs again from the heap record that is still there.  *)
 (***************************************************************************)
 EXTENDS Naturals, Sequences
 
-CONSTANTS Horizon, Notify, LinkStamp
+CONSTANTS Horizon, Notify, LinkStamp, RemoveOrder
 
 ASSUME /\ Horizon \in BOOLEAN
-       /\ Notify \in {"postpone", "undo_image"}
+       /\ Notify \in {"postpone", "undo_image", "head_mark"}
        /\ LinkStamp \in BOOLEAN
+       /\ RemoveOrder \in {"postpone", "reclaim_first"}
 
 Nil == "nil"
 Slots == {"a1", "a2", "b1"}
@@ -57,6 +69,7 @@ VARIABLES
     live,        \* T1's UPDATE has not been rolled back
     ppLive,      \* A': the postpone that names chain A is not cancelled
     notified,    \* RVOOS_NOTIFY_VACUUM for chain A is in the log
+    mark,        \* B3: the head of chain A carries T1's delete MVCCID
     t3,          \* "idle", "active", "committed", "aborted"
     gone,        \* vacuum removed the heap record
     r,           \* "none", "active", "done"
@@ -65,14 +78,15 @@ VARIABLES
     rbroken,     \* R found its chain damaged
     vdrop,       \* "pending", "done": vacuum's work for T1's UPDATE
     rc,          \* the reclaimer: [c, pc, list, pos]
+    vjob,        \* B2: the REMOVE job, "none", "reclaim", "done"
     disrupted,
     t2at,        \* slot that T2 took, or "none"
     last
 
-vars == <<slot, t1, kind, live, ppLive, notified, t3, gone, r, rseesT1,
-          rseesT3, rbroken, vdrop, rc, disrupted, t2at, last>>
-view == <<slot, t1, kind, live, ppLive, notified, t3, gone, r, rseesT1,
-          rseesT3, rbroken, vdrop, rc, disrupted, t2at>>
+vars == <<slot, t1, kind, live, ppLive, notified, mark, t3, gone, r, rseesT1,
+          rseesT3, rbroken, vdrop, rc, vjob, disrupted, t2at, last>>
+view == <<slot, t1, kind, live, ppLive, notified, mark, t3, gone, r, rseesT1,
+          rseesT3, rbroken, vdrop, rc, vjob, disrupted, t2at>>
 
 \* stop: the last walk stopped at a slot that holds another record.
 Idle == [c |-> "none", pc |-> "idle", list |-> <<>>, pos |-> 0, stop |-> FALSE]
@@ -86,6 +100,7 @@ Init ==
     /\ live = FALSE
     /\ ppLive = FALSE
     /\ notified = FALSE
+    /\ mark = FALSE
     /\ t3 = "idle"
     /\ gone = FALSE
     /\ r = "none"
@@ -94,6 +109,7 @@ Init ==
     /\ rbroken = FALSE
     /\ vdrop = "pending"
     /\ rc = Idle
+    /\ vjob = "none"
     /\ disrupted = FALSE
     /\ t2at = "none"
     /\ last = "initial state"
@@ -123,21 +139,27 @@ T1Update ==
          /\ kind' = k
          /\ slot' = IF k = "assign" THEN [slot EXCEPT !["b1"] = RecB] ELSE slot
          /\ ppLive' = (k = "assign" /\ Notify = "postpone")
+         /\ mark' = (k = "assign" /\ Notify = "head_mark")
          /\ last' = IF k = "assign"
                       THEN "T1: UPDATE assigns the OOS attribute: new chain B"
                            \o (IF Notify = "postpone" THEN "; A' leaves a postpone that names chain A" ELSE "")
+                           \o (IF Notify = "head_mark" THEN "; the head of chain A gets T1's delete MVCCID (undoable)" ELSE "")
                       ELSE "T1: UPDATE leaves the OOS attribute unassigned and keeps the stub of chain A"
     /\ t1' = "active"
     /\ live' = TRUE
-    /\ UNCHANGED <<notified, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, disrupted, t2at>>
+    /\ UNCHANGED <<notified, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, vjob, disrupted, t2at>>
 
 T1StatementRollback ==
     /\ t1 = "active" /\ live
     /\ live' = FALSE
     /\ ppLive' = FALSE
+    /\ mark' = FALSE
     /\ slot' = IF kind = "assign" THEN UndoInsertB ELSE slot
-    /\ last' = "T1: a statement rollback undoes the UPDATE (and the insert of chain B); the postpone is cancelled"
-    /\ UNCHANGED <<t1, kind, notified, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, disrupted, t2at>>
+    /\ last' = "T1: a statement rollback undoes the UPDATE (and the insert of chain B)"
+               \o (CASE Notify = "postpone" -> "; the postpone is cancelled"
+                     [] Notify = "head_mark" -> "; the head mark is undone"
+                     [] OTHER -> "")
+    /\ UNCHANGED <<t1, kind, notified, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, vjob, disrupted, t2at>>
 
 T1Commit ==
     /\ t1 = "active"
@@ -145,7 +167,7 @@ T1Commit ==
     /\ last' = IF Notify = "postpone"
                  THEN "T1: logtb_complete_mvcc, then LOG_COMMIT_WITH_POSTPONE is flushed"
                  ELSE "T1 commits"
-    /\ UNCHANGED <<slot, kind, live, ppLive, notified, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, disrupted, t2at>>
+    /\ UNCHANGED <<slot, kind, live, ppLive, notified, mark, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, vjob, disrupted, t2at>>
 
 T1RunPostpone ==
     /\ t1 = "pp"
@@ -153,7 +175,7 @@ T1RunPostpone ==
     /\ notified' = ppLive
     /\ last' = IF ppLive THEN "T1: the postpone appends RVOOS_NOTIFY_VACUUM for chain A; LOG_COMMIT"
                ELSE "T1: no live postpone; LOG_COMMIT"
-    /\ UNCHANGED <<slot, kind, live, ppLive, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, disrupted, t2at>>
+    /\ UNCHANGED <<slot, kind, live, ppLive, mark, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, vjob, disrupted, t2at>>
 
 T1Abort ==
     /\ t1 = "active"
@@ -161,8 +183,9 @@ T1Abort ==
     /\ slot' = IF kind = "assign" /\ live THEN UndoInsertB ELSE slot
     /\ live' = FALSE
     /\ ppLive' = FALSE
+    /\ mark' = FALSE
     /\ last' = "T1 rolls back; the row keeps chain A"
-    /\ UNCHANGED <<kind, notified, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, disrupted, t2at>>
+    /\ UNCHANGED <<kind, notified, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, vjob, disrupted, t2at>>
 
 -----------------------------------------------------------------------------
 \* T3 deletes the row after T1 ended.
@@ -171,19 +194,19 @@ T3Delete ==
     /\ t3 = "idle" /\ T1Ended
     /\ t3' = "active"
     /\ last' = "T3: heap_delete sets the delete MVCCID of the row"
-    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, disrupted, t2at>>
+    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, mark, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, vjob, disrupted, t2at>>
 
 T3Commit ==
     /\ t3 = "active"
     /\ t3' = "committed"
     /\ last' = "T3 commits"
-    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, disrupted, t2at>>
+    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, mark, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, vjob, disrupted, t2at>>
 
 T3Abort ==
     /\ t3 = "active"
     /\ t3' = "aborted"
     /\ last' = "T3 rolls back"
-    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, disrupted, t2at>>
+    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, mark, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, vjob, disrupted, t2at>>
 
 -----------------------------------------------------------------------------
 \* Reader R
@@ -197,7 +220,7 @@ RSnapshot ==
                \o (CASE T1Committed -> " after T1's commit"
                      [] t1 = "aborted" -> " after T1's rollback"
                      [] OTHER -> " before T1's commit")
-    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, t3, gone, rbroken, vdrop, rc, disrupted, t2at>>
+    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, mark, t3, gone, rbroken, vdrop, rc, vjob, disrupted, t2at>>
 
 RRead ==
     /\ r = "active"
@@ -205,7 +228,7 @@ RRead ==
     /\ rbroken' = (RChain # "none" /\ ~Intact(RChain))
     /\ last' = "R reads chain " \o RChain \o " of the version its snapshot sees"
                \o (IF RChain # "none" /\ ~Intact(RChain) THEN ": oos_read fails (ER_HEAP_OOS_CORRUPTED_RECORD)" ELSE "")
-    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, t3, gone, rseesT1, rseesT3, vdrop, rc, disrupted, t2at>>
+    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, mark, t3, gone, rseesT1, rseesT3, vdrop, rc, vjob, disrupted, t2at>>
 
 \* oldest_visible: vacuum may treat T1's or T3's change as dead only when no
 \* active snapshot is older than that commit.
@@ -215,8 +238,9 @@ SafeFor(seen) == Horizon => ~(r = "active" /\ ~seen)
 \* Vacuum
 
 DropDecided ==
-    IF Notify = "postpone" THEN notified
-    ELSE T1Ended /\ kind # "none"      \* any UPDATE undo image names chain A
+    CASE Notify = "postpone" -> notified
+      [] Notify = "head_mark" -> mark
+      [] OTHER -> T1Ended /\ kind # "none"      \* any UPDATE undo image names chain A
 
 ConsumeDrop ==
     /\ vdrop = "pending" /\ T1Ended /\ rc.pc = "idle"
@@ -224,22 +248,45 @@ ConsumeDrop ==
     /\ vdrop' = "done"
     /\ IF DropDecided
          THEN /\ rc' = [c |-> "A", pc |-> "start", list |-> <<>>, pos |-> 0, stop |-> FALSE]
-              /\ last' = IF Notify = "postpone"
-                           THEN "vacuum: consumes RVOOS_NOTIFY_VACUUM and starts the reclaimer for chain A"
-                           ELSE "vacuum: the forward-walk finds T1's UPDATE undo image and starts the reclaimer for chain A"
+              /\ last' = CASE Notify = "postpone" ->
+                               "vacuum: consumes RVOOS_NOTIFY_VACUUM and starts the reclaimer for chain A"
+                          [] Notify = "head_mark" ->
+                               "vacuum: processes T1's head mark; the head of chain A still carries it, so start the reclaimer"
+                          [] OTHER ->
+                               "vacuum: the forward-walk finds T1's UPDATE undo image and starts the reclaimer for chain A"
          ELSE /\ UNCHANGED rc
               /\ last' = "vacuum: nothing to drop for T1"
-    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, t3, gone, r, rseesT1, rseesT3, rbroken, disrupted, t2at>>
+    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, mark, t3, gone, r, rseesT1, rseesT3, rbroken, vjob, disrupted, t2at>>
 
 \* REMOVE: in one sysop, remove the heap record and leave a postponed reclaim
 \* intent; log_sysop_commit runs the postpone.
 Remove ==
+    /\ RemoveOrder = "postpone"
     /\ t3 = "committed" /\ ~gone /\ rc.pc = "idle" /\ vdrop = "done"
     /\ SafeFor(rseesT3)
     /\ gone' = TRUE
     /\ rc' = [c |-> CommittedChain, pc |-> "start", list |-> <<>>, pos |-> 0, stop |-> FALSE]
     /\ last' = "vacuum: REMOVE removes the heap record; log_sysop_commit runs the reclaim intent for chain " \o CommittedChain
-    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, t3, r, rseesT1, rseesT3, rbroken, vdrop, disrupted, t2at>>
+    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, mark, t3, r, rseesT1, rseesT3, rbroken, vdrop, vjob, disrupted, t2at>>
+
+\* B2: reclaim the chain that the dead heap record names, then remove the
+\* record.  The vacuum job is not finished until the record is gone, so an
+\* error or a crash makes it run again from the record.
+RemoveReclaimFirst ==
+    /\ RemoveOrder = "reclaim_first"
+    /\ t3 = "committed" /\ ~gone /\ vjob = "none" /\ rc.pc = "idle" /\ vdrop = "done"
+    /\ SafeFor(rseesT3)
+    /\ vjob' = "reclaim"
+    /\ rc' = [c |-> CommittedChain, pc |-> "start", list |-> <<>>, pos |-> 0, stop |-> FALSE]
+    /\ last' = "vacuum: the heap record is dead; reclaim chain " \o CommittedChain \o " before removing the record"
+    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, mark, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, disrupted, t2at>>
+
+RemoveRecordAfterReclaim ==
+    /\ vjob = "reclaim" /\ rc.pc = "idle"
+    /\ gone' = TRUE
+    /\ vjob' = "done"
+    /\ last' = "vacuum: the reclaimer ended; remove the heap record"
+    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, mark, t3, r, rseesT1, rseesT3, rbroken, vdrop, rc, disrupted, t2at>>
 
 Follows(rec, n) ==
     /\ n # Nil
@@ -263,7 +310,7 @@ ReclaimStart ==
                  /\ last' = "reclaimer: the head of chain " \o rc.c \o " matches; read the chain and delete from the tail"
             ELSE /\ rc' = Idle
                  /\ last' = "reclaimer: the head of chain " \o rc.c \o " is gone or reused; nothing to do"
-    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, disrupted, t2at>>
+    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, mark, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, vjob, disrupted, t2at>>
 
 ReclaimStep ==
     /\ rc.pc = "run"
@@ -273,14 +320,14 @@ ReclaimStep ==
           /\ last' = IF ok THEN "reclaimer: delete slot " \o e.s \o " (redo-only); the slot is reusable at once"
                      ELSE "reclaimer: slot " \o e.s \o " no longer holds the chunk; skip"
     /\ rc' = IF rc.pos = 1 THEN Idle ELSE [rc EXCEPT !.pos = @ - 1]
-    /\ UNCHANGED <<t1, kind, live, ppLive, notified, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, disrupted, t2at>>
+    /\ UNCHANGED <<t1, kind, live, ppLive, notified, mark, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, vjob, disrupted, t2at>>
 
 ReclaimFail ==
     /\ ~disrupted /\ rc.pc = "run"
     /\ rc' = [rc EXCEPT !.pc = "start", !.list = <<>>, !.pos = 0]
     /\ disrupted' = TRUE
     /\ last' = "reclaimer: a delete step fails; the reclaim runs again from the head"
-    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, t2at>>
+    /\ UNCHANGED <<slot, t1, kind, live, ppLive, notified, mark, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, vjob, t2at>>
 
 -----------------------------------------------------------------------------
 \* Crash and restart recovery
@@ -295,12 +342,17 @@ Crash ==
     /\ slot' = IF t1 = "active" /\ kind = "assign" /\ live THEN UndoInsertB ELSE slot
     /\ live' = IF t1 = "active" THEN FALSE ELSE live
     /\ ppLive' = IF t1 = "active" THEN FALSE ELSE ppLive
+    /\ mark' = IF t1 = "active" THEN FALSE ELSE mark
     /\ t3' = IF t3 = "active" THEN "aborted" ELSE t3
     /\ r' = IF r = "active" THEN "done" ELSE r
-    /\ rc' = IF rc.pc = "run" THEN [rc EXCEPT !.pc = "start", !.list = <<>>, !.pos = 0] ELSE rc
+    \* B2: the interrupted REMOVE job runs again from the heap record.
+    /\ rc' = CASE vjob = "reclaim" -> [c |-> CommittedChain, pc |-> "start", list |-> <<>>, pos |-> 0, stop |-> FALSE]
+               [] rc.pc = "run" -> [rc EXCEPT !.pc = "start", !.list = <<>>, !.pos = 0]
+               [] OTHER -> rc
     /\ disrupted' = TRUE
     /\ last' = "crash; recovery undoes active transactions, finishes T1's postpones, and the reclaimer reruns from the head"
-    /\ UNCHANGED <<kind, gone, rseesT1, rseesT3, rbroken, vdrop, t2at>>
+               \o (IF vjob = "reclaim" THEN " (the interrupted vacuum job runs again)" ELSE "")
+    /\ UNCHANGED <<kind, gone, rseesT1, rseesT3, rbroken, vdrop, vjob, t2at>>
 
 -----------------------------------------------------------------------------
 \* Other activity
@@ -312,7 +364,7 @@ T2Insert ==
          /\ slot' = [slot EXCEPT ![s] = RecT2]
          /\ t2at' = s
          /\ last' = "T2: an INSERT takes slot " \o s \o (IF slot[s].st = "dealloc" THEN " on a reallocated page" ELSE "") \o " and commits"
-    /\ UNCHANGED <<t1, kind, live, ppLive, notified, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, disrupted>>
+    /\ UNCHANGED <<t1, kind, live, ppLive, notified, mark, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, vjob, disrupted>>
 
 \* oos_reclaim_empty_pages without the LSA gate.
 Dealloc ==
@@ -320,10 +372,10 @@ Dealloc ==
          /\ slot[s].st = "free"
          /\ slot' = [slot EXCEPT ![s] = Empty("dealloc")]
          /\ last' = "oos_reclaim_empty_pages deallocates the page of slot " \o s \o " (no LSA gate)"
-    /\ UNCHANGED <<t1, kind, live, ppLive, notified, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, disrupted, t2at>>
+    /\ UNCHANGED <<t1, kind, live, ppLive, notified, mark, t3, gone, r, rseesT1, rseesT3, rbroken, vdrop, rc, vjob, disrupted, t2at>>
 
 Quiescent ==
-    /\ T1Ended /\ vdrop = "done" /\ rc.pc = "idle" /\ r # "active"
+    /\ T1Ended /\ vdrop = "done" /\ rc.pc = "idle" /\ r # "active" /\ vjob # "reclaim"
     /\ t3 \in {"idle", "committed", "aborted"}
     /\ t3 = "committed" => gone
 
@@ -333,7 +385,8 @@ Next ==
     \/ T1Update \/ T1StatementRollback \/ T1Commit \/ T1RunPostpone \/ T1Abort
     \/ T3Delete \/ T3Commit \/ T3Abort
     \/ RSnapshot \/ RRead
-    \/ ConsumeDrop \/ Remove \/ ReclaimStart \/ ReclaimStep \/ ReclaimFail
+    \/ ConsumeDrop \/ Remove \/ RemoveReclaimFirst \/ RemoveRecordAfterReclaim
+    \/ ReclaimStart \/ ReclaimStep \/ ReclaimFail
     \/ Crash \/ T2Insert \/ Dealloc \/ Finished
 
 Spec == Init /\ [][Next]_vars
@@ -364,6 +417,10 @@ NoOrphanWhenQuiescent ==
 \* CBRD-27230: an UPDATE that keeps the stub of chain A never loses chain A.
 ReuseKeepsChain == kind = "reuse" => NeededChainsIntact
 
+\* A heap record that still exists, dead or alive, names an intact chain.  It
+\* matters to readers that do not use an MVCC snapshot; B2 gives it up.
+HeapRecordNamesIntactChain == ~gone => Intact(CommittedChain)
+
 \* Reasons for the design.
 
 \* The reclaimer only works on a chain that nothing can reach.
@@ -375,6 +432,11 @@ ReclaimOnlyUnreachable ==
 \* A notification exists only for a committed UPDATE that dropped chain A.
 NotifyOnlyForCommittedDrop ==
     notified => T1Committed /\ kind = "assign" /\ live
+
+\* B3: once T1 has ended, a head mark belongs to a committed UPDATE that
+\* dropped chain A, because every rollback undoes the mark first.
+MarkOnlyForCommittedDrop ==
+    (mark /\ T1Ended) => T1Committed /\ kind = "assign" /\ live
 
 \* The remaining chunks of chain A form a prefix, so a rerun from the head
 \* finds all of them; every list entry still to delete names a chunk.
@@ -402,5 +464,18 @@ WitnessRerunStopsAtReusedSlot ==
 \* A page is deallocated while the reclaimer still runs.
 WitnessDeallocDuringReclaim ==
     ~(rc.pc = "run" /\ \E s \in Slots : slot[s].st = "dealloc")
+\* B3: vacuum waits for a snapshot taken before T1's commit.
+WitnessMarkWaitsForSnapshot ==
+    ~(r = "active" /\ ~rseesT1 /\ mark /\ T1Ended /\ vdrop = "pending")
+\* B3: a statement rollback undid the mark, T1 committed, and vacuum kept A.
+WitnessUndoneMarkKeepsChain ==
+    ~(t1 = "committed" /\ kind = "assign" /\ ~live /\ vdrop = "done" /\ Intact("A"))
+\* B2: the REMOVE job starts over after part of the chain is gone, while the
+\* heap record still exists.
+WitnessRemoveJobReruns ==
+    ~(vjob = "reclaim" /\ rc.pc = "start" /\ ~Intact(CommittedChain) /\ ~gone)
+\* B2: the dead heap record names a chain that is partly reclaimed.
+WitnessDeadRecordNamesPartialChain ==
+    ~(vjob = "reclaim" /\ ~Intact(CommittedChain) /\ \E s \in Slots : slot[s].own = CommittedChain)
 
 =============================================================================

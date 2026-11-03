@@ -10,26 +10,31 @@
 | --- | --- | --- | --- |
 | 1. 지운 chunk의 slot과 바이트를 undo 때까지 지키는 방법 | D2b slot과 바이트 예약, D2c page 제외, D3 undo 없음 | 현재 코드(slot과 바이트를 다른 INSERT가 가져감), D1 latch 유지(두 vacuum worker가 서로의 page latch를 기다림), D2a slot만 예약(바이트를 다른 INSERT가 가져감) | D3 |
 | 4. D3에서 LSA reclaim gate가 필요한가 | gate 없이도 안전: D1, D2c, D3 | gate 없으면 깨짐: 현재 코드, D2a, D2b | D3에서 gate를 없앤다 |
-| 2. chain이 죽었다는 판단의 근거 | A' postpone 알림 | 현재 코드(rollback한 UPDATE), B commit 확인(statement rollback 뒤 commit), A commit hook 알림(hook과 commit 레코드 사이의 crash) | A' |
+| 2. chain이 죽었다는 판단의 근거 | A' postpone 알림, B3 head chunk의 MVCC 삭제 표시, B4 commit 확인과 보상 레코드 확인 | 현재 코드(rollback한 UPDATE), B commit 확인(statement rollback 뒤 commit), A commit hook 알림(hook과 commit 레코드 사이의 crash) | A'(ADR-0008 초안). 추가 검토는 B3를 권한다 |
 | 3. D3 회수기가 재시도에서 수렴하는 방법 | 꼬리부터 지우고 head를 마지막에, next 링크에 stamp, 오류 시 다시 실행 | head부터 지움(나머지 chunk가 고아가 됨), 링크 stamp 없음(재시도가 다른 레코드를 지움), 오류를 버림(회수가 멈춤) | 가능한 후보 그대로 |
+| REMOVE가 회수 의도를 남기는 방법 | sysop 안의 postpone, B2 chain을 먼저 회수하고 heap 레코드를 나중에 지움 | 없음. 다만 B2에서는 남아 있는 heap 레코드가 일부 지운 chain을 가리키는 상태가 생긴다 | postpone 유지 |
 | 조합. 고른 후보를 함께 쓸 때 | 설계 조합(D3, gate 없음, A', 꼬리부터 회수)이 모든 성질을 통과 | 결정을 하나씩 되돌린 변형 셋이 각자 반례: snapshot을 기다리지 않음, undo image로 판단, 링크 stamp 없음 | 설계 조합, 알림 소비는 snapshot horizon을 기다린다 |
 
 "가능하다"는 모델의 모든 도달 가능 상태에서 성질이 성립한다는 뜻이다. "왜 가능한가"는 이유 불변식으로 답한다. 이유 불변식은 후보가 성질을 지키는 메커니즘을 상태 조건으로 쓴 것이다. TLC는 이 조건이 모든 도달 가능 상태에서 성립하는지 확인했다. 그 조건이 성질을 함의한다는 것은 각 절의 설명이 보이는 논증이다.
 
 이 결과는 설계에 대한 것이다. 코드가 설계를 따르는지, 성능이 어떤지, 구현이 얼마나 어려운지는 답하지 않는다.
 
+2026-11-04에 ADR-0008 확정 전에 남은 대안을 더 검토했다. B2, B3, B4는 같은 모델에 설정으로 넣어 TLC로 검사했고, 나머지는 엔진 소스와 사양으로 판단했다. 결과와 권고는 [추가 대안 검토](#추가-대안-검토) 절에 있다.
+
 ## 기준과 실행
 
 | 항목 | 값 |
 | --- | --- |
 | 근거 코드 | CUBRID/cubrid `feature/oos-merge` `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67` |
-| 작성일 | 2026-11-03 (Asia/Seoul) |
+| 작성일 | 2026-11-03 (Asia/Seoul). 추가 대안 검토는 2026-11-04 |
 | 모델 | [OosSpaceProtect.tla](reclaim-model/OosSpaceProtect.tla) (결정 1, 4), [OosDropDecision.tla](reclaim-model/OosDropDecision.tla) (결정 2), [OosReclaimRetry.tla](reclaim-model/OosReclaimRetry.tla) (결정 3), [OosReclaimDesign.tla](reclaim-model/OosReclaimDesign.tla) (조합) |
-| 실행 도구 | [check_decisions.py](reclaim-model/check_decisions.py). 검사 137개와 기대값을 담고 있다. 결과표에서 조합 검사는 decision `5`로 나온다. |
+| 실행 도구 | [check_decisions.py](reclaim-model/check_decisions.py). 검사 208개와 기대값을 담고 있다. 결과표에서 조합 검사는 decision `5`로 나온다. |
 | TLC | `~/.cache/tlaplus/tla2tools-1.7.4.jar`, SHA-256 `936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88`, TLC 2.19, Temurin 1.8.0_462 |
-| 결과 | 137개 모두 기대값과 같다. 종료 코드 0, 8개 병렬 실행으로 약 27초. |
+| 결과 | 208개 모두 기대값과 같다. 종료 코드 0, 80개 병렬 실행으로 약 18초. |
 
-모델 파일의 SHA-256은 다음과 같다. `OosSpaceProtect.tla` `b283293cf0744e2581af573600bf78cca7187e8b0f2b1f8d2d3f798686e82f92`, `OosDropDecision.tla` `13029048d9ad3052e45cb1339aa41deab08d4cd71ed8b2e26aed6fa97c62623d`, `OosReclaimRetry.tla` `3ddbae04a3233d9391f0ff62f95e72329874ea106dce27e10f94e748178409a6`, `OosReclaimDesign.tla` `7110e9f92022d7c8d0a9dd7b7aa7013d5b07e9e902b05a67efd68c3c27800054`.
+모델 파일의 SHA-256은 다음과 같다. `OosSpaceProtect.tla` `b283293cf0744e2581af573600bf78cca7187e8b0f2b1f8d2d3f798686e82f92`, `OosDropDecision.tla` `16420273f0c787f2b767c3b611b2cd5ff39fc52c32f129657d21983d36849e58`, `OosReclaimRetry.tla` `3ddbae04a3233d9391f0ff62f95e72329874ea106dce27e10f94e748178409a6`, `OosReclaimDesign.tla` `76927cdbb4e8091d4ce30bdcfd1cd6fc53fd98432c349f3a4c22022082e9e38c`.
+
+2026-11-04에 실행 도구의 버그 하나를 고쳤다. 상태 수를 TLC의 진행 줄(`Progress(...)`)에서 읽을 수 있었는데, 이제 마지막 요약 줄만 읽는다. 기대값 비교에는 영향이 없었다. 이 문서에 적은 2026-11-03의 상태 수는 고친 도구로 다시 실행해도 같다.
 
 다시 실행하려면 다음 명령을 쓴다. `--out`은 새 디렉터리여야 한다.
 
@@ -37,7 +42,7 @@
 python3 oos/reclaim-model/check_decisions.py --out <새 디렉터리>
 ```
 
-출력 디렉터리의 `summary.md`에 전체 결과표와 모든 반례가 남는다. 통과한 검사의 상태 수는 모델 전체의 도달 가능 상태 수다. 결정 1은 138-460개, 결정 2는 20-28개, 결정 3은 32-50개, 조합 모델의 설계 조합은 2,960개다. 반례의 상태 수는 TLC가 반례를 찾을 때까지 본 수라 더 작다.
+출력 디렉터리의 `summary.md`에 전체 결과표와 모든 반례가 남는다. 통과한 검사의 상태 수는 모델 전체의 도달 가능 상태 수다. 결정 1은 138-460개, 결정 2는 20-28개, 결정 3은 32-50개, 조합 모델의 설계 조합은 2,960개, 추가 대안 설정은 2,900-4,136개다. 반례의 상태 수는 TLC가 반례를 찾을 때까지 본 수라 더 작다.
 
 ## 결정 1. 지운 chunk의 slot과 바이트를 undo 때까지 지키는 방법
 
@@ -164,13 +169,15 @@ T1이 row를 chain A(버전 v0)에서 chain B(버전 v1)로 UPDATE한다. T1은 
 | `commit_filter` | B | 위 조건에 더해 로그에 T1의 commit 레코드가 있다 |
 | `commit_hook` | A (사양 §3 step 3) | 로그에 `RVOOS_NOTIFY_VACUUM`이 있다. commit hook이 commit 레코드 앞에 남긴다. 버린 chain 목록은 statement rollback을 따라 줄어든다(A에 가장 유리한 가정). |
 | `postpone` | A' | 로그에 알림이 있다. UPDATE가 postpone 레코드를 남기고, `LOG_COMMIT_WITH_POSTPONE`이 durable해진 뒤 postpone 실행이 알림을 남긴다. statement rollback은 그 postpone을 취소한다. |
+| `commit_clr` | B4 (추가 검토) | B의 조건에 더해, 그 UPDATE의 undo 레코드에 보상 레코드(CLR)가 없다 |
+| `head_mark` | B3 (추가 검토) | chain A의 head chunk에 T1의 delete MVCCID가 있다. UPDATE가 되돌릴 수 있는 로그로 표시를 쓰고, 모든 rollback이 그 표시를 지운다. vacuum은 block을 처리할 때 head를 읽는다. |
 
 ### 결과
 
-| 성질 | 현재 코드 | B | A | A' |
-| --- | --- | --- | --- | --- |
-| `RowChainIntact` row가 참조하는 chain은 지워지지 않는다 | 반례 | 반례 | 반례 | 통과 |
-| `DroppedChainReclaimed` commit된 UPDATE가 버린 chain은 지워진다 | 통과 | 통과 | 통과 | 통과 |
+| 성질 | 현재 코드 | B | A | A' | B4 | B3 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `RowChainIntact` row가 참조하는 chain은 지워지지 않는다 | 반례 | 반례 | 반례 | 통과 | 통과 | 통과 |
+| `DroppedChainReclaimed` commit된 UPDATE가 버린 chain은 지워진다 | 통과 | 통과 | 통과 | 통과 | 통과 | 통과 |
 
 ### 깨지는 후보의 반례
 
@@ -193,6 +200,26 @@ NotifyOnlyForSurvivingUpdate ==  \* 알림은 되돌려지지 않은 UPDATE에�
 첫 조건이 있으면 복구가 T1을 loser로 만들 수 없다. 알림이 남아 있다면 commit 결정도 남아 있기 때문이다. 둘째 조건이 있으면 statement rollback으로 되돌린 UPDATE에는 알림이 없다. 두 조건이 함께 성립하므로 알림은 "commit된 UPDATE가 chain A를 버렸다"는 사실과 같다. 그래서 vacuum은 알림만 보고 지워도 된다.
 
 A에서는 둘째 조건은 성립하고 첫 조건이 깨진다. 반례는 위 A 반례의 앞 세 단계다. A와 A'의 차이는 알림이 commit 결정보다 먼저 durable해질 수 있는지 하나뿐이다.
+
+### B4와 B3가 가능한 이유
+
+B가 깨지는 이유부터 상태 조건으로 쓰면 `CommitMeansMoved`다. B에서 이 조건은 B 반례의 앞 세 단계로 깨진다. commit 레코드가 있어도 그 UPDATE는 statement rollback으로 되돌려졌을 수 있다.
+
+```tla
+CommitMeansMoved ==               \* commit 레코드가 있으면 row는 chain B로 옮겨 갔다
+    (t1 \in {"committed", "aborted"} /\ InLog("upd") /\ InLog("commit")) => row = "v1"
+UncompensatedCommitMeansMoved ==  \* B4: commit과, 보상되지 않은 UPDATE가 있으면 옮겨 갔다
+    (t1 \in {"committed", "aborted"} /\ InLog("upd") /\ InLog("commit") /\ ~InLog("clr"))
+        => row = "v1"
+MarkFinalWhenEnded ==             \* B3: T1이 끝난 뒤 남은 표시는 살아남은 commit된 UPDATE의 것이다
+    (t1 \in {"committed", "aborted"} /\ mark) => (t1 = "committed" /\ updLive)
+```
+
+B4는 B에 "그 UPDATE가 보상되지 않았다"는 조건 하나를 더한다. 그래서 `UncompensatedCommitMeansMoved`가 성립한다.
+
+B3는 알림을 따로 만들지 않는다. 표시는 UPDATE와 같은 트랜잭션이 남긴 되돌릴 수 있는 변경이다. 그래서 statement rollback, rollback, crash 복구가 모두 UPDATE와 함께 표시를 지운다. T1이 끝난 뒤에도 남아 있는 표시는 최종 정보이고, 이것이 `MarkFinalWhenEnded`다. heap 레코드의 MVCC 삭제 표시가 vacuum에게 최종 정보가 되는 것과 같은 이유다.
+
+두 후보 모두 B를 깨는 실행(statement rollback 뒤 commit)에 도달하고, 거기서 chain A를 지킨다. witness `WitnessRollbackThenCommit`가 네 단계로 이 경로에 도달했다. 이 모델은 정확성만 본다. 엔진에서의 비용과 구현 조건은 [추가 대안 검토](#추가-대안-검토)에 있다.
 
 ## 결정 3. D3 회수기가 재시도에서 수렴하는 방법
 
@@ -271,6 +298,13 @@ D2b와 D2c도 결정 1을 통과하므로 대안으로 남는다. 둘 다 chunk 
 | `Notify` | `postpone`: A' 알림이 있을 때만 chain A를 회수한다 | `undo_image`: UPDATE undo image가 있으면 회수한다(지금의 forward-walk) |
 | `LinkStamp` | `TRUE`: 회수기가 next 링크의 stamp를 비교한다 | `FALSE`: OID만 따라간다 |
 
+추가 대안 검토에서 설정 값 두 개를 더했다. 결정을 되돌리는 값이 아니라 다른 후보로 바꾸는 값이다. 결과는 [추가 대안 검토](#추가-대안-검토)에 있다.
+
+| 설정 | 값 | 후보 |
+| --- | --- | --- |
+| `Notify` | `head_mark` | B3. UPDATE가 chain A의 head에 T1의 delete MVCCID를 되돌릴 수 있게 쓴다. vacuum은 block을 처리할 때 표시가 남아 있으면 회수기를 시작한다. postpone과 `RVOOS_NOTIFY_VACUUM`이 없다. |
+| `RemoveOrder` | `reclaim_first` | B2. REMOVE가 chain을 먼저 회수하고, 회수기가 끝난 뒤 heap 레코드를 지운다. postpone이 없다. 오류나 crash가 나면 vacuum job이 아직 남아 있는 heap 레코드에서 다시 시작한다. 설계 값은 `postpone`이다. |
+
 ### 결과
 
 | 성질 | 설계 | `Horizon=FALSE` | `Notify=undo_image` | `LinkStamp=FALSE` |
@@ -280,8 +314,9 @@ D2b와 D2c도 결정 1을 통과하므로 대안으로 남는다. 둘 다 chunk 
 | `ReaderSeesIntactChain` 독자는 자기 snapshot의 chain을 온전히 읽는다 | 통과 | 반례 | 반례 | 통과 |
 | `OtherRecordIntact` T2의 레코드가 남는다 | 통과 | 통과 | 통과 | 반례 |
 | `NoOrphanWhenQuiescent` 할 일이 끝나면 참조되는 chain만 slot을 차지한다 | 통과 | 통과 | 통과 | 통과 |
+| `HeapRecordNamesIntactChain` 남아 있는 heap 레코드는 살았든 죽었든 온전한 chain을 가리킨다 | 통과 | 통과 | 반례 | 통과 |
 
-설계 조합은 상태 2,960개에서 다섯 성질을 모두 통과했다. 변형 셋은 각자 되돌린 결정에 해당하는 성질만 깨뜨렸다.
+설계 조합은 상태 2,960개에서 여섯 성질을 모두 통과했다. 변형 셋은 각자 되돌린 결정에 해당하는 성질만 깨뜨렸다. 여섯째 성질은 추가 대안 검토에서 더했다. MVCC snapshot 없이 heap 레코드를 읽는 경로를 위한 성질이다.
 
 ### 변형의 반례
 
@@ -327,6 +362,122 @@ ReclaimOnlyUnreachable ==
 - vacuum의 알림 소비는 그 UPDATE의 commit보다 오래된 snapshot이 끝날 때까지 기다려야 한다. 지금 vacuum block의 조건(block의 newest MVCCID가 oldest visible보다 작음)을 알림 레코드에도 적용하면 된다(추론).
 - 회수기가 다시 실행될 때는 마지막으로 남은 chunk의 다음 slot을 한 번 읽는다. 그 slot의 page는 이미 회수되었을 수 있다(`WitnessDeallocDuringReclaim`). 그래서 continuation page를 고정할 때도 head처럼 `OLD_PAGE_MAYBE_DEALLOCATED`를 써야 한다. 지금 `oos_delete_chain`은 continuation page를 plain `pgbuf_fix`로 고정한다(`oos_file.cpp:3305`). 모델은 이 slot을 "사용 중이 아님"으로만 보므로, 이 요구는 모델 결과에서 추론한 것이다.
 
+## 추가 대안 검토
+
+### 질문과 결론
+
+ADR-0008 확정 전에, 고른 조합보다 나은 대안이 남아 있는지 검토했다. 대안은 세 갈래다.
+
+- 결정 2의 판단 근거를 바꾸는 대안: B3, B4, B6.
+- 회수 의도를 durable하게 남기는 방법을 바꾸는 대안: B2, B5.
+- 저장 구조를 바꾸는 대안: C1부터 C4.
+
+B2, B3, B4는 같은 모델에 설정으로 넣어 TLC로 검사했다. 나머지는 엔진 소스와 사양으로 판단했다. 엔진 사실은 [엔진 조사 보고서](reclaim-engine-facts.md)에 file:line 근거와 함께 있다. 판단을 좌우한 주장은 이 문서의 작성자가 소스에서 다시 확인했고, 그 경우 "확인"으로 표시했다. 보고서에서만 가져온 주장은 "엔진 조사"로 표시했다.
+
+결론은 다음과 같다.
+
+- D3의 핵심은 그대로 둔다. chunk 삭제는 되돌리지 않고, 확정 뒤에만 회수한다. 회수기는 꼬리부터 지우고, 링크 stamp를 비교하고, 다시 실행한다.
+- 결정 2에서는 A'보다 B3를 권한다. 두 후보 모두 모델을 통과한다. 그러나 A'에는 엔진이 지금 허용하지 않는 기록 경로가 필요하고, B3는 엔진의 MVCC 장치를 그대로 쓴다. B3는 UPDATE 경로의 비용을 늘리므로, ADR-0008 결정 7의 UPDATE 지연 측정으로 채택을 정한다.
+- REMOVE는 sysop 안의 postpone을 유지한다. B2도 모델의 기존 성질은 통과한다. 그러나 실패하면 heap 레코드가 지운 chain을 가리킨 채 남고, 엔진에는 그 상태를 읽는 경로가 있다.
+- B4, B5, B6, C1부터 C4는 채택하지 않는다.
+
+### 대안과 판단
+
+| 대안 | 바꾸는 것 | 검사 | 결과 | 판단 |
+| --- | --- | --- | --- | --- |
+| B2. REMOVE에서 chain을 먼저 회수 | REMOVE의 postpone | TLC, 조합 모델 | 기존 다섯 성질은 통과. `HeapRecordNamesIntactChain` 반례 | 채택하지 않는다 |
+| B3. head chunk의 MVCC 삭제 표시 | 결정 2의 A' | TLC, 결정 2 모델과 조합 모델 | 모든 성질 통과. horizon이 없으면 독자가 깨진다 | A' 대신 권한다. UPDATE 지연 측정이 조건이다 |
+| B4. commit 확인과 보상 레코드 확인 | 결정 2의 B | TLC, 결정 2 모델 | 통과 | 채택하지 않는다. vacuum은 보상 레코드를 보지 못한다 |
+| B5. OOS 파일의 영속 회수 목록 | 회수 의도를 두는 곳 | 논증 | 기록 시점에 따라 A'나 B3와 의미가 같다 | 채택하지 않는다 |
+| B6. commit 때 postpone이 바로 회수 | 결정 2의 vacuum 단계 | TLC, 조합 모델 `Horizon=FALSE` | 독자가 깨진다 | 채택하지 않는다. 동시 독자가 없는 eager 경로에서만 쓴다 |
+| C1. chain마다 전용 page | 저장 구조 | 사양과 소스 | slot 재사용 문제는 없어진다. 작은 값 하나가 page 하나를 차지한다 | 채택하지 않는다 |
+| C2. 다시 넣지 않는 page, 빈 page만 회수 | 저장 구조 | 논증 | slot 재사용은 없어진다. page 회수와 undo는 여전히 겹친다 | 채택하지 않는다 |
+| C3. 논리 chunk ID와 위치 map | 식별 방식 | 논증 | 세 가정을 모두 없앤다 | 지금은 채택하지 않는다. 변경이 가장 크다 |
+| C4. chain을 제자리에서 덮어쓰기 | UPDATE 방식 | 논증 | 옛 값 전체가 undo 로그에 들어간다 | 채택하지 않는다 |
+
+### B3를 A'보다 권하는 이유
+
+**모델 결과.** 결정 2 모델에서 B3는 `RowChainIntact`와 `DroppedChainReclaimed`를 통과했고, 이유 불변식 `MarkFinalWhenEnded`도 성립했다. 조합 모델의 `Notify=head_mark`는 상태 2,900개에서 여섯 성질과 이유 불변식 다섯 개를 모두 통과했다. 이유 불변식 하나는 이 설정을 위해 더했다.
+
+```tla
+MarkOnlyForCommittedDrop ==   \* T1이 끝난 뒤 남은 표시는 chain A를 버린 commit된 UPDATE의 것이다
+    (mark /\ T1Ended) => T1Committed /\ kind = "assign" /\ live
+```
+
+A'에서 `NotifyOnlyForCommittedDrop`이 하던 일을 B3에서는 이 불변식이 한다. `Horizon=FALSE`로 바꾸면 `ReaderSeesIntactChain`이 일곱 단계 반례로 깨진다. T1의 commit 전에 snapshot을 찍은 독자가 chain A를 읽는 도중에 vacuum이 a2를 지운다. 표시가 남아 있다는 것은 "commit된 UPDATE가 chain A를 버렸다"까지만 말한다. 언제 지워도 되는지는 여전히 snapshot horizon이 정한다.
+
+witness 네 개가 B3 설정에서 도달했다.
+
+| witness | 도달한 상황 | 단계 |
+| --- | --- | --- |
+| `WitnessBothChainsReclaimed` | chain A는 표시로, chain B는 REMOVE로 회수된다 | 11 |
+| `WitnessMarkWaitsForSnapshot` | 표시가 있지만 오래된 snapshot 때문에 vacuum이 기다린다 | 3 |
+| `WitnessUndoneMarkKeepsChain` | statement rollback이 표시를 지우고, T1이 commit한 뒤 vacuum이 chain A를 남긴다 | 4 |
+| `WitnessRerunStopsAtReusedSlot` | 재실행한 회수기가 a2에서 T2의 레코드를 만나 읽기를 멈춘다 | 8 |
+
+**B3가 기대는 엔진 순서.** B3의 정확성은 엔진이 heap 레코드에 이미 쓰는 순서에 기댄다.
+
+- abort는 모든 undo를 끝낸 뒤에 MVCCID를 끝낸다(`log_manager.c:5383` 다음에 `5396`, 확인). statement rollback과 savepoint rollback은 MVCCID를 끝내지 않는다(엔진 조사 Q1). 그러므로 T1이 끝난 뒤에 남은 표시는 commit된 UPDATE의 것이다. `MarkFinalWhenEnded`가 가정한 순서다.
+- vacuum은 MVCCID를 비교할 뿐, commit 여부를 따로 묻지 않는다(`mvcc.c:320-374`, 엔진 조사 Q1). heap 레코드도 위 순서 덕분에 안전하다.
+- vacuum master는 block의 newest MVCCID가 oldest visible보다 작을 때만 block을 처리한다(`vacuum.c:3287`, 엔진 조사 Q1). commit하는 트랜잭션은 commit 레코드를 쓸 때까지 threshold를 자기 MVCCID에 묶어 둔다(`mvcc_table.cpp:490-507`, 엔진 조사 Q1). 그래서 표시 레코드에는 snapshot horizon이 새 구현 없이 붙는다(추론).
+- vacuum은 restart의 redo, undo, 2PC 정리가 끝난 뒤에 시작한다(`boot_sr.c:2435`, `2451`, 엔진 조사 Q1).
+
+**A'의 구현 장애.** MVCC 레코드를 쓰려면 지금 트랜잭션에 유효한 MVCCID가 있어야 한다(`log_append.cpp:966-971`, 확인). 그런데 commit은 postpone을 실행하기 전에 `logtb_complete_mvcc`로 트랜잭션의 MVCC 정보를 지운다(`log_manager.c:5267`, `5285`, 확인). 그래서 postpone이 `RVOOS_NOTIFY_VACUUM`을 지금 방식의 MVCC 레코드로 쓸 수 없다. A'에는 이미 끝난 MVCCID를 받아 vacuum block에 연결하는 새 기록 경로가 필요하다. ADR-0008 결과 2가 열어 둔 문제가 실제 장애라는 것을 확인했다. 복구 중 postpone을 다시 실행할 때도 같은 문제가 있다.
+
+**B3의 비용과 조건.**
+
+- UPDATE가 chain을 버릴 때마다 그 head page를 write latch로 고정하고, MVCC undo/redo 레코드를 하나 쓴다. 지금 UPDATE는 옛 chain에 쓰지 않는다. 대입하지 않은 OOS 속성의 옛 chain은 읽고, 모든 OOS 속성을 새 chain으로 다시 쓴다(엔진 조사 Q5). chain 재사용(CBRD-27230)이 아직 없으므로, B3에서는 UPDATE마다 옛 버전의 OOS 속성 전부에 표시가 붙는다.
+- 새 chain을 쓰는 비용에 비하면 표시 하나는 작다(추론). 다만 대입한 속성의 옛 head page는 buffer에 없을 수 있어서 읽기 I/O가 생길 수 있다(추론). 측정하지 않았다.
+- head chunk header에 delete MVCCID 8B가 더 든다. 링크 stamp까지 합치면 header는 24B에서 40B가 된다(추론). 표시를 head에만 두는 형식도 가능하다.
+- vacuum 쪽 코드가 새로 필요하다. 새 rcvindex를 `LOG_IS_MVCC_OPERATION`에 넣고, `vacuum_process_log_block`에 분기를 더한다. 지금은 모르는 MVCC rcvindex가 safeguard의 `assert_release (false)`로 간다(엔진 조사 Q2). 표시 레코드에는 heap vfid를 실어야 DROP TABLE 뒤의 dropped-file 필터가 동작한다(엔진 조사 Q2, 추론).
+- SA 모드는 MVCC 레코드를 쓰지 못한다(엔진 조사 Q2). SA 모드와 비-MVCC class는 지금처럼 eager 정리를 쓴다. D3의 eager postpone은 그대로 필요하다.
+- forward-walk는 B3에서도 없애야 한다. 남겨 두면 CBRD-27237이 그대로 남는다(엔진 조사 Q1).
+- release 빌드에서 runtime undo가 실패하면 오류만 남기고 abort를 끝낸다(`log_manager.c:7609-7619`, 엔진 조사 Q1). 그러면 표시가 abort 뒤에도 남을 수 있다. heap 레코드의 MVCC 삭제 표시도 같은 위험을 이미 진다. B3의 강도는 heap MVCC와 같다.
+
+A'는 UPDATE마다 postpone 레코드 하나와 commit 때 알림 하나를 쓰고, OOS page는 건드리지 않는다. 그래서 UPDATE 경로만 보면 A'가 싸다.
+
+**판단.** B3는 엔진이 heap에 이미 쓰는 "되돌릴 수 있는 MVCC 표시와 snapshot horizon" 장치를 OOS chain에 그대로 쓴다. A'는 같은 성질을 postpone과 새 기록 경로로 다시 만든다. 정확성의 근거가 엔진의 기존 순서에 있으므로 B3를 권한다. 채택 조건은 ADR-0008 결정 7의 UPDATE 지연 측정이다. 측정에서 UPDATE가 나빠지면 A'를 쓰고, 새 기록 경로를 만든다.
+
+### B2를 채택하지 않는 이유
+
+**모델 결과.** 조합 모델의 `RemoveOrder=reclaim_first`는 상태 4,136개에서 기존 다섯 성질과 이유 불변식 다섯 개를 모두 통과했다. 죽은 heap 레코드는 MVCC snapshot에 보이지 않으므로 독자 R은 깨지지 않는다. 대신 `HeapRecordNamesIntactChain`이 여덟 단계 반례로 깨진다.
+
+1. T1이 chain B를 쓰는 UPDATE를 하고 rollback한다. row는 chain A를 가리킨다.
+2. T3가 row를 DELETE하고 commit한다.
+3. vacuum이 heap 레코드를 지우기 전에 chain A부터 회수한다. a2를 지운다.
+4. 이때 heap 레코드는 남아 있고, chain A는 일부가 없다.
+
+witness `WitnessRemoveJobReruns`는 이 상태에서 회수기 오류 뒤에 job이 다시 시작하는 경로에 도달했다(아홉 단계). B2와 B3를 함께 쓴 설정도 같은 결과였다(상태 4,076개).
+
+**엔진에서 이 상태가 문제인 이유.**
+
+- MVCC snapshot 없이 heap 레코드를 읽고 stub을 따라가는 경로가 있다. `btree_load`는 threshold를 한 번만 읽고, 그보다 오래된 삭제만 건너뛴다(`btree_load.c:1505`, `5986`, 확인). unloaddb `--latest-image`의 `xlocator_fetch_all`도 snapshot 없이 읽는다(엔진 조사 Q4). 이 경로가 chain이 없는 stub을 만나면 `ER_HEAP_OOS_CORRUPTED_RECORD`로 실패한다.
+- 지금은 home page write latch를 쥔 채, slot 제거와 chunk 삭제를 sysop 하나로 한다(엔진 조사 Q3). 그래서 latch를 쥐고 읽는 독자에게 이 상태가 보이지 않는다.
+- B2에서 crash가 나면 redo-only chunk 삭제는 남고, 끝나지 않은 sysop의 slot 제거는 되돌려진다. latch를 계속 쥐어도 crash 뒤에는 이 상태가 생긴다(엔진 조사 Q6, 추론).
+- release 빌드에서 vacuum은 REMOVE 오류를 지우고 진행하며, 그 block을 끝난 것으로 표시한다(`vacuum.c:1606-1615`, `3785-3799`, 확인). B2에서는 이 경우 heap 레코드가 지운 chain을 가리킨 채 영구히 남는다. 설계의 postpone이 같은 이유로 실패하면 chunk 누수로 끝난다. heap 레코드가 이미 없으므로 그 chain을 가리키는 곳이 없다.
+- B2의 chunk 삭제가 redo-only가 되려면 vacuum worker가 sysop 밖에서 지워야 한다(`log_manager.c:4394-4399`, 확인). sysop 안에서 지우면 지금처럼 undo가 붙는다.
+
+**판단.** B2가 덜어내는 것은 vacuum sysop 안의 postpone 하나다. 그 대가로 실패와 crash가 dangling 참조를 남긴다. postpone을 유지한다.
+
+### B4, B5, B6
+
+- **B4.** 모델에서는 통과한다. 그러나 vacuum block에는 undo를 가진 MVCC 레코드만 연결되고, 보상 레코드는 연결되지 않는다(`log_append.cpp:1411-1452`, 엔진 조사 Q2). B4를 하려면 vacuum이 UPDATE 레코드마다 T1의 뒤쪽 로그를 찾아 보상 여부를 확인해야 한다. 새 색인이나 로그 탐색이 필요하므로 채택하지 않는다(추론).
+- **B5.** 목록에 넣는 시점이 commit 전이면, rollback이 그 항목을 지워야 하므로 B3의 표시와 같다. commit 때 넣으면 A'의 postpone과 같다. 저장소와 복구 코드만 늘어나므로 채택하지 않는다.
+- **B6.** postpone이 vacuum을 거치지 않고 commit 때 바로 chain A를 회수한다. 조합 모델 `Horizon=FALSE`의 반례와 같은 이유로 깨진다. commit 전에 snapshot을 찍은 독자가 chain A를 읽기 때문이다. 동시 독자가 없는 SA 모드와 비-MVCC eager 정리에서만 쓸 수 있고, D3는 이미 그렇게 한다.
+
+### 저장 구조 대안 C1부터 C4
+
+- **C1. chain마다 전용 page.** page 단위로 `file_dealloc`해서 회수한다. `file_dealloc`은 일반 파일에서 해제를 postpone으로 미루므로(`file_manager.c:6170-6175`, 확인) 확정 뒤 해제가 따라온다. 그러나 OOS 적격성은 24B를 넘는 값이고(`OOS-CONTEXT.md` §2), heap 레코드가 page의 약 4분의 1을 넘으면 큰 값부터 OOS로 보낸다(사양 목표 4,060B). 그래서 수백 B 값도 OOS가 될 수 있고, 그런 값 하나가 16,344B page를 차지한다(추론, 값 크기 분포는 측정하지 않았다).
+- **C2. 다시 넣지 않는 page.** 지운 slot을 아무도 쓰지 않으므로 slot undo 문제는 없다. 그러나 살아 있는 chunk 하나가 page 전체를 붙잡는다. 압축하려면 chunk를 옮겨야 하는데, 그러면 OOS OID가 바뀐다. stub은 heap 레코드뿐 아니라 로그의 undo image에도 있어서 로그 쪽은 고칠 수 없다(추론). 또 page 회수가 undo와 겹치므로 결정 4의 gate 문제가 남는다(추론, D2b의 gate 반례와 같은 구조).
+- **C3. 논리 chunk ID와 위치 map.** undo가 다른 자리에 써도 map만 고치면 된다. 압축도 되고, OID 재사용 문제도 없어진다. 대신 모든 읽기에 map 조회가 하나 더 붙고, map 자체의 동시성과 복구가 필요하다. 세 가정을 모두 없애지만 D3보다 훨씬 큰 형식 변경이다.
+- **C4. 제자리 덮어쓰기.** chain을 제자리에서 덮어쓰고 옛 값은 undo 로그에 둔다. 옛 snapshot은 heap의 `prev_version_lsa`처럼 로그에서 옛 값을 읽는다. 값 전체가 undo 로그에 들어가므로, 값 내용을 담는 로그를 줄이려는 D3의 성능 목표와 반대다. 값의 길이가 바뀌면 chunk 수도 바뀌므로 제자리에 쓸 수도 없다.
+
+### 문서와 사양에 미치는 영향
+
+- B3를 채택하면 ADR-0008 결정 2와 사양 개정안 §3 step 3을 바꿔야 한다. UPDATE-drop postpone과 `RVOOS_NOTIFY_VACUUM` 대신 head chunk의 MVCC 표시를 쓰고, chunk header에 delete MVCCID가 들어간다.
+- B3를 채택해도 REMOVE의 reclaim-intent postpone과 eager 정리의 postpone은 그대로다.
+- 이 변경은 담당자가 정한 뒤 ADR-0008과 [확정 요청서](adr-0008-confirmation.md)에 반영한다.
+
 ## 모델의 한계
 
 - 규모가 작다. 결정 1은 worker 둘, chain 둘, 다른 INSERT 하나, 방해 한 번이다. 결정 2와 3은 트랜잭션 하나와 chain 하나다. 조합 모델은 row 하나, UPDATE 하나, DELETE 하나, 독자 하나, 다른 INSERT 하나, 방해 한 번이고, vacuum worker는 하나다.
@@ -334,4 +485,7 @@ ReclaimOnlyUnreachable ==
 - 결정 1의 바이트는 레코드당 1단위로 단순화했다. D2b의 예약은 sysop이 끝날 때 풀린다고 가정한다. 실제 `spage_save_space`는 트랜잭션 단위로 예약을 관리한다.
 - 결정 4의 `lsa` gate는 "열린 sysop이 쓴 page는 회수하지 않는다"로 단순화했다. 실제 gate는 page LSA와 활성 트랜잭션, system tdes의 head LSA를 비교한다.
 - 결정 2에는 MVCC snapshot 독자, HA replica, prepared 2PC, 복구 중 postpone 재실행의 MVCCID 문제가 없다. 마지막 문제는 CBRD-27237 심층 분석이 구현 때 정할 일로 남겼다.
+- B2 모델은 회수기 오류를 재실행으로 처리한다. release 빌드의 지금 오류 정책, 곧 오류를 지우고 block을 끝내는 동작은 모델에 없다. 결정 3의 `discard` 반례가 그 경우를 다룬다.
+- 같은 heap 레코드를 vacuum job 여럿이 처리하는 경우(엔진 조사 Q3)는 모델에 없다. 지금 엔진은 home page latch로 이들을 줄 세운다.
+- B3의 UPDATE 비용과 A'의 새 기록 경로 비용은 측정하지 않았다.
 - 모두 설계 모델이다. 코드가 이 설계를 따르는지는 `cubrid-verify-vacuum-slot-undo` 같은 적합성 모델과 오류 주입 테스트로 확인해야 한다.

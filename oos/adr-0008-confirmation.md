@@ -1,6 +1,6 @@
 # ADR-0008 확정 요청: OOS 삭제를 확정 뒤 회수로 바꾸는 사양 개정
 
-작성 2026-11-03 (Asia/Seoul). 확정 미팅 요청일 2026-11-04.
+작성 2026-11-03 (Asia/Seoul). 확정 미팅 요청일 2026-11-04. 2026-11-04에 [추가 대안 검토](#추가-대안-검토-결과)를 반영했다.
 
 ## 요청
 
@@ -25,15 +25,30 @@ TLA+ 모델은 이 결함들이 현재 설계의 가정에서 나온다는 것�
 
 | # | 결정 | 고른 이유(모델 결과) | 영향 |
 | --- | --- | --- | --- |
-| 1 | OOS chunk 삭제는 undo하지 않는다. 삭제를 정한 트랜잭션이나 sysop은 회수 의도를 postpone으로 남기고, commit 뒤 회수기가 redo-only로 지운다. | 다른 후보와 비교했다. latch 유지는 vacuum worker끼리 교착한다. slot만 예약하면 바이트를 다른 INSERT가 가져간다. 바이트 예약과 page 제외는 가능하지만, 값 전체를 undo로 쓰는 비용이 남고 page 공간이 묶인다. | 새 recovery index가 필요하다. vacuum REMOVE와 eager 정리 경로를 바꾼다. |
-| 2 | UPDATE가 버린 chain은 postpone이 commit 뒤에 남기는 `RVOOS_NOTIFY_VACUUM`으로만 vacuum에 알린다(A'). vacuum은 그 commit보다 오래된 snapshot이 끝난 뒤에 회수한다. | 다른 방식은 모두 반례가 나왔다. 지금의 undo image 판단은 rollback된 UPDATE에서 깨진다. commit 레코드 확인은 statement rollback 뒤 commit에서 깨진다. 사양의 commit hook 알림은 commit 레코드 전 crash에서 깨진다. snapshot을 기다리지 않으면 독자가 회수된 chain을 읽는다. | `RVOOS_NOTIFY_VACUUM`의 발행과 소비를 새로 구현한다. forward-walk 삭제를 지운다. |
+| 1 | OOS chunk 삭제는 undo하지 않는다. 삭제를 정한 트랜잭션이나 sysop은 회수 의도를 postpone으로 남기고, commit 뒤 회수기가 redo-only로 지운다. | 다른 후보와 비교했다. latch 유지는 vacuum worker끼리 교착한다. slot만 예약하면 바이트를 다른 INSERT가 가져간다. 바이트 예약과 page 제외는 가능하지만, 값 전체를 undo로 쓰는 비용이 남고 page 공간이 묶인다. REMOVE에서 postpone 없이 chain을 먼저 지우는 방식(B2)은 실패하면 heap 레코드가 지운 chain을 가리킨 채 남는다. | 새 recovery index가 필요하다. vacuum REMOVE와 eager 정리 경로를 바꾼다. |
+| 2 | UPDATE가 버린 chain은 postpone이 commit 뒤에 남기는 `RVOOS_NOTIFY_VACUUM`으로만 vacuum에 알린다(A'). vacuum은 그 commit보다 오래된 snapshot이 끝난 뒤에 회수한다. **추가 검토는 A' 대신 B3를 권한다.** B3에서는 UPDATE가 버린 chain의 head에 delete MVCCID를 되돌릴 수 있게 표시하고, vacuum이 heap 레코드와 같은 방식으로 판단한다. | 지금의 undo image 판단은 rollback된 UPDATE에서 깨진다. commit 레코드 확인은 statement rollback 뒤 commit에서 깨진다. 사양의 commit hook 알림은 commit 레코드 전 crash에서 깨진다. snapshot을 기다리지 않으면 독자가 회수된 chain을 읽는다. A'와 B3는 모두 통과한다. A'에는 엔진이 지금 허용하지 않는 기록 경로가 필요하다. | A'면 `RVOOS_NOTIFY_VACUUM`의 발행 경로와 소비를 새로 구현한다. B3면 head 표시용 MVCC 레코드와 vacuum 분기를 새로 구현하고, UPDATE가 옛 head page에 쓴다. 어느 쪽이든 forward-walk 삭제를 지운다. |
 | 3 | 회수기는 head부터 chain을 읽고 꼬리부터 지우며 head를 마지막에 지운다. 오류나 crash 뒤에는 끝날 때까지 다시 실행한다. | 다른 방식은 반례가 나왔다. head부터 지우면 나머지 chunk가 고아가 된다. 오류를 버리면 회수가 멈춘다. | 오류 시 서버를 멈출지(fail-stop), 회수 의도를 다시 쌓을지는 구현 때 정한다. |
 | 4 | chunk header의 next 링크에 다음 chunk의 identity stamp를 둔다. header가 24B에서 32B가 된다. | stamp가 없으면, 재실행이 이미 지운 slot을 재사용한 다른 레코드를 지운다. | OOS 레코드 형식이 바뀐다. |
 | 5 | LSA reclaim gate를 없앤다. | gate의 유일한 이유는 "끝나지 않은 삭제가 그 page로 undo될 수 있다"였다. 1번 결정으로 그런 undo가 없어지므로, 모델에서 gate 없이도 안전했다. | gate 코드를 지운다. 빈 page를 더 빨리 반납한다. |
 | 6 | PR #7990 병합 전의 형식 변경은 storage-format revision 1을 유지한다. | 담당자 판단이다. 출시 전이고 ADR-0005가 개발 DB 재생성을 요구한다. | 이전 개발 빌드로 만든 DB는 다시 만들어야 한다. stamp로는 이 DB를 검출하지 못한다. |
 | 7 | 엔진 반영은 성능 개선을 측정한 뒤에 한다. | 담당자 조건이다. | 측정 항목은 네 가지다. 회수한 값당 로그 바이트, OOS UPDATE 부하에서 vacuum의 log block 처리 시간, UPDATE와 DELETE 반복 뒤 OOS 파일 크기, INSERT와 UPDATE 지연(나빠지지 않아야 함)이다. |
 
-1번부터 5번까지를 함께 쓴 조합은 하나의 모델로 다시 검사했다. 이 모델에는 오래된 snapshot을 쥔 독자, chain을 재사용하는 UPDATE(CBRD-27230), gate 없는 page 회수, crash가 함께 들어 있다. 조합은 모든 성질을 통과했다. 결정을 하나씩 되돌린 변형은 각자 반례를 냈다. 전체 검사는 137개이고 모두 기대값과 같았다.
+1번부터 5번까지를 함께 쓴 조합은 하나의 모델로 다시 검사했다. 이 모델에는 오래된 snapshot을 쥔 독자, chain을 재사용하는 UPDATE(CBRD-27230), gate 없는 page 회수, crash가 함께 들어 있다. 조합은 모든 성질을 통과했다. 결정을 하나씩 되돌린 변형은 각자 반례를 냈다. 추가 대안을 넣은 뒤 전체 검사는 208개이고 모두 기대값과 같았다.
+
+## 추가 대안 검토 결과
+
+2026-11-04에 남은 대안 아홉 개를 더 검토했다. B2, B3, B4는 TLC로 검사했고, 나머지는 엔진 소스와 사양으로 판단했다. 근거는 [추가 대안 검토](reclaim-decisions.md#추가-대안-검토)와 [엔진 조사 보고서](reclaim-engine-facts.md)에 있다.
+
+| 대안 | 판단 | 이유 |
+| --- | --- | --- |
+| B3. head chunk의 MVCC 삭제 표시(결정 2) | A' 대신 권한다 | 엔진이 heap에 쓰는 순서를 그대로 쓴다. abort는 undo를 끝낸 뒤에 MVCCID를 끝내고, vacuum은 threshold로 snapshot horizon을 지킨다. A'는 commit의 postpone에서 MVCC 레코드를 써야 하는데, 엔진은 그 시점에 이미 MVCC 정보를 지운다(`log_manager.c:5267`, `log_append.cpp:966-971`). B3는 UPDATE 경로가 무거워지므로 UPDATE 지연 측정이 채택 조건이다. |
+| B2. REMOVE에서 chain을 먼저 회수 | 채택하지 않는다 | 실패나 crash 뒤에 heap 레코드가 지운 chain을 가리킨 채 남는다. release 빌드는 vacuum 오류 뒤 block을 끝난 것으로 표시하므로 재시도도 없다. `btree_load` 같은 snapshot 없는 독자가 그 상태를 읽는다. |
+| B4. commit과 보상 레코드 확인 | 채택하지 않는다 | vacuum은 보상 레코드를 보지 못한다. 새 색인이나 로그 탐색이 필요하다. |
+| B5. 영속 회수 목록 | 채택하지 않는다 | A'나 B3와 의미가 같고 저장소만 늘어난다. |
+| B6. commit 때 바로 회수 | 채택하지 않는다 | 오래된 snapshot이 회수된 chain을 읽는다. |
+| C1부터 C4. 저장 구조 변경 | 채택하지 않는다 | 작은 값의 공간 낭비, 압축 불가, 큰 형식 변경, 값 전체 undo 중 하나를 치른다. |
+
+결정 2를 A'와 B3 중 무엇으로 할지 정해 주시기를 요청한다. B3로 정하면 ADR-0008 결정 2와 사양 개정안 §3 step 3, chunk 형식 절을 고친 뒤 다시 확정을 요청한다.
 
 ## 사양에서 바뀌는 곳
 
@@ -67,7 +82,7 @@ TLA+ 모델은 이 결함들이 현재 설계의 가정에서 나온다는 것�
 ## 확정 뒤 진행 순서
 
 1. ADR-0008의 상태를 `accepted`로 바꾸고, 확정자와 날짜를 적은 뒤 사양 브랜치를 병합한다.
-2. 구현을 PR 여러 개로 나눈다. 32B header와 링크 stamp, 회수 의도와 회수기, A' 알림과 snapshot horizon, forward-walk와 LSA gate 제거 순서를 제안한다.
+2. 구현을 PR 여러 개로 나눈다. 32B header와 링크 stamp, 회수 의도와 회수기, 결정 2의 장치(A' 알림 또는 B3 표시)와 snapshot horizon, forward-walk와 LSA gate 제거 순서를 제안한다.
 3. PR마다 `cubrid-verify-vacuum-slot-undo` 같은 적합성 모델과 오류 주입 테스트를 갱신한다.
 4. 7번의 성능 측정을 한 뒤 엔진에 반영한다.
 
@@ -76,12 +91,13 @@ TLA+ 모델은 이 결함들이 현재 설계의 가정에서 나온다는 것�
 - 모델은 설계 모델이고 규모가 작다. 조합 모델은 row 하나, vacuum worker 하나, 방해 한 번으로 검사했다. 코드가 설계를 따르는지는 아직 검사하지 않았다.
 - 성능은 측정하지 않았다. 지금 회수는 값 내용을 undo로 남기지만, undo 데이터는 압축될 수 있다. 그래서 실제 로그 감소량은 측정으로만 알 수 있다.
 - HA replica, prepared 2PC, 여러 vacuum worker, eager 정리는 모델에 없다.
-- postpone 재실행이 옛 MVCCID를 어떻게 다룰지는 구현 때 정해야 한다. CBRD-27237 심층 분석이 이 문제를 열린 항목으로 남겼다.
+- A'를 고르면, postpone이 이미 끝난 MVCCID로 알림을 쓰는 경로와 복구 중 postpone 재실행의 MVCCID 처리를 새로 만들어야 한다. CBRD-27237 심층 분석이 열린 항목으로 남긴 문제이고, 추가 검토에서 실제 장애임을 소스로 확인했다. B3를 고르면 이 문제가 없다.
 
 ## 근거
 
 - [설계 개정안](reclaim-redesign.md): 가정과 결함의 대응, D3 설계, 회수 로그 비용, 사양 개정안, U1 모델 결과.
 - [설계 결정의 TLA+ 검증](reclaim-decisions.md): 결정별 후보, 반례, 통과 이유 불변식, 조합 모델.
+- [엔진 조사 보고서](reclaim-engine-facts.md): 추가 대안 검토가 기댄 엔진 사실과 file:line 근거.
 - 모델과 실행 도구: `reclaim-model/` 디렉터리. `python3 oos/reclaim-model/check_decisions.py --out <새 디렉터리>`로 다시 실행할 수 있다.
 - [CBRD-27237 수정 후보 심층 분석](../cbrd-27237/CBRD-27237-fix-options-deep-dive_dcbf09e_claude.md): A' 추천과 commit hook 장애 구간.
 - 사양 개정안 원문: `cubrid-oos-context` 브랜치 `docs/adr-0008-reclaim-after-finality`, commit `591638b`.
