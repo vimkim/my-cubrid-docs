@@ -56,3 +56,13 @@ engine source push, engine PR 병합, 추가 CI 실행, TC PR merge·close·bran
 
 검토할 본문 SHA-256은 `34e4875903dc1ee7091b3845c4a3e34cb99df11f9c3cbc77d42d405ad3d7875a`이다.
 근거 문서 SHA-256은 `c12177f4158f54923e5f74271d0d3cc871c47aa89355ac40a65c56450cf8f663`이다.
+
+## 승인 후 게시 결과
+
+사용자가 2026-11-03에 docs·JIRA·PR 본문 게시를 승인했다. 결과는 다음과 같다.
+
+- docs task commit 2개를 `main`에 rebase했다. 그사이 `main`에 다른 세션의 commit 6개가 들어와 `cbrd-27785/README.md` 색인이 충돌했다. 양쪽 행을 모두 남겨 풀었고 검토 파일의 fingerprint는 바뀌지 않았다. fast-forward 병합 후 `origin/main`에 push했다(`33551e3`).
+- 공개 URL의 근거 문서와 PR 본문 bytes가 위 SHA-256과 같았다.
+- my-cubrid-jira `main`에 JIRA 본문 commit `d006fb9`를 병합·push했다. 게시 직전 CBRD-27785 본문이 11-02 이후 바뀌지 않았음을 확인했다. `cubrid-jira update`의 dry-run 뒤 live update가 description 필드만 바꿨다. 다시 읽은 결과 상태는 Develop, 담당자는 그대로였다.
+- 게시 직전 PR head `4c3c8d791`, title, base, draft 상태, 본문 fingerprint `054a0038…`가 준비 때와 같았다.
+- 2026-11-03 15:49(KST)에 본문을 올렸다. GitHub body의 SHA-256이 `34e4875903dc1ee7091b3845c4a3e34cb99df11f9c3cbc77d42d405ad3d7875a`로 저장 파일과 같다. title·base·draft 상태는 바뀌지 않았다.
