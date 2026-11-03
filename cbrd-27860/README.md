@@ -1,11 +1,12 @@
 # CBRD-27860 OOS vacuum and heap page allocation latch cycle
 
-Related work is the R2 review on [PR 7990](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4399323155) and [CBRD-27860](https://jira.cubrid.org/browse/CBRD-27860). The company PR is draft [8350](https://github.com/CUBRID/cubrid/pull/8350). Source revision is `1ef6ed6125eb6028c06b0e05282dc0041bde3f48`. Reproduction, fix and verification details are in the [R2 analysis](../cbrd-26357/PR-7990-R2-vacuum-heap-header-deadlock_dcbf09e_codex.md).
+Related work is the R2 review on [PR 7990](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4399323155) and [CBRD-27860](https://jira.cubrid.org/browse/CBRD-27860). The company PR is [8350](https://github.com/CUBRID/cubrid/pull/8350). Source revision is `1ef6ed6125eb6028c06b0e05282dc0041bde3f48`. Reproduction, fix and verification details are in the [R2 analysis](../cbrd-26357/PR-7990-R2-vacuum-heap-header-deadlock_dcbf09e_codex.md).
 
-Last modified: 2026-11-02, Asia/Seoul.
+Last modified: 2026-11-03, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
 | [CBRD-27860-oos-vacuum-heap-header-wait-pr-body_1ef6ed6_claude.md](CBRD-27860-oos-vacuum-heap-header-wait-pr-body_1ef6ed6_claude.md) | 회사 PR의 목적, 조건부 조회와 재시작 수정, 새 테스트의 수정 전후 결과, CTest와 미검증 범위 | 2026-10-31 | 2026-10-31 | 팀 리뷰 전 게시 내용을 검토하도록 보존 |
 | [CBRD-27860-oos-vacuum-heap-header-wait-pr-context_1ef6ed6_claude.md](CBRD-27860-oos-vacuum-heap-header-wait-pr-context_1ef6ed6_claude.md) | 티켓 생성 기록, source/base, 게시 대상, 제안 작업과 승인 범위 | 2026-10-31 | 2026-10-31 | 중복 PR과 승인 범위 확장을 방지하고 게시 결과를 기록 |
 | [CBRD-27860-pr7990-r2-reply_1ef6ed6_claude.md](CBRD-27860-pr7990-r2-reply_1ef6ed6_claude.md) | PR 7990 R2 thread에 올릴 답글 본문. PR 8235와의 관계, 재현·수정·검증, 확인하지 못한 범위 | 2026-11-02 | 2026-11-02 | 게시 전 검토하고 승인한 본문을 그대로 올리도록 보존. 2026-11-02 [게시](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4439602464) |
+| [code-review.md](code-review.md) | PR 8350 independent five-specialist review, source arguments, formal checks, CTest results and limits | 2026-11-03 | 2026-11-03 | Record the fixed-revision review and separate new findings from baseline risks |

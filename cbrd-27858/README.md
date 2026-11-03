@@ -2,7 +2,7 @@
 
 Related work is the R5 review on [PR 7990](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4409499688) and [CBRD-27858](https://jira.cubrid.org/browse/CBRD-27858). The company PR is [8348](https://github.com/CUBRID/cubrid/pull/8348). Source revision is `628857607265880ef7bbdda4973b1b6f06e8b797`. Reproduction and verification details are in the [shared checklist](../cbrd-26357/PR-7990-hornetmj-review-checklist_20261029_codex.md#r5-relocation-undo가-재사용-슬롯을-덮어씀).
 
-Last modified: 2026-10-30, Asia/Seoul.
+Last modified: 2026-11-03, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
@@ -10,3 +10,4 @@ Last modified: 2026-10-30, Asia/Seoul.
 | [CBRD-27858-oos-relocation-forward-slot-pr-context_6288576_claude.md](CBRD-27858-oos-relocation-forward-slot-pr-context_6288576_claude.md) | 티켓 생성 기록, source/base, 게시 대상, 제안 작업과 승인 범위 | 2026-10-30 | 2026-10-30 | 중복 PR과 승인 범위 확장을 방지하고 게시 결과를 기록 |
 | [ci_analysis_report_6288576_claude.md](ci_analysis_report_6288576_claude.md) | PR 8348 gha-ci 41050496911의 검증한 medium·shell 결과와 shell 실패 조건. SQL 수집 무결성 오류로 회귀 결론을 허용하지 않는 경고 보고서 | 2026-10-30 | 2026-10-30 | CI 증거의 범위와 한계를 보존 |
 | [CBRD-27858-enhance-10010-shell-failure_6288576_claude.md](CBRD-27858-enhance-10010-shell-failure_6288576_claude.md) | `_enhance_10010` 4번 검사 실패의 과거 이력, 로컬 반복 실행, R5 변경 범위와의 관계 판단 | 2026-10-30 | 2026-10-30 | shell 실패를 R5와 연결할지 판단할 근거를 보존 |
+| [code-review.md](code-review.md) | PR 8348 independent five-specialist review, source arguments, formal checks, CTest results and limits | 2026-11-03 | 2026-11-03 | Record the fixed-revision review and separate new findings from baseline risks |
