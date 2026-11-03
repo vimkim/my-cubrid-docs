@@ -13,7 +13,7 @@
 핵심 결과는 다음과 같다.
 
 - **확인된 결함.** CBRD-27858, CBRD-27781, CBRD-27237은 소스에서 경로를 확인했다. CBRD-27237은 `dcbf09e4f`에서 실행으로 재현된 기록이 있다. CBRD-27858과 CBRD-27781은 기존 TLA+ 모델의 반례이고, CBRD-27781은 `224104a36` debug 테스트로 재현된 기록이 있다.
-- **가설.** 위 결함들과 CBRD-26950, CBRD-26786은 가정 두 개에서 나온다. 하나는 "비운 공간은 되돌려지지 않는다"이고, 다른 하나는 "확정되지 않은 정보로 삭제를 정해도 된다"이다. 소스 근거는 있지만 모델 검사는 아직 하지 않았다.
+- **U1 결과(모델 검사).** 설계 모델 `OosReclaim.tla`가 현재 설계에서 네 결함을 모두 반례로 재현했다. CBRD-27858과 CBRD-27781은 "비운 공간은 되돌려지지 않는다"는 가정 하나에만 걸리고, CBRD-27237은 "확정되지 않은 정보로 삭제를 정해도 된다"는 가정 하나에만 걸린다. CBRD-26950은 두 가정과 무관한 세 번째 가정, "OOS OID는 계속 같은 값을 가리킨다"에 걸린다. 그래서 처음 세운 "가정 두 개" 가설은 세 결함에 대해서만 맞다. 결과는 [U1 결과](#u1-결과) 절에 있다.
 - **제안.** OOS chain 삭제를 "결정이 확정된 뒤에 실행하는 redo-only, 멱등 회수"로 바꾼다. 이 문서는 이 설계를 D3라고 부른다. D3에서는 OOS에서 삭제를 undo하는 경로가 없어진다.
 - **성능.** 지금 vacuum은 chunk를 지울 때 chunk 레코드 전체를 undo 데이터로 로그에 쓴다(소스). D3는 slot 번호만 쓴다. 회수 로그 양이 OOS 값 크기에 비례하지 않게 된다(추론, 측정 전).
 - **열린 것.** D3 자체의 정확성(특히 회수 도중 crash 뒤 재시도), postpone 실행 실패 정책, 실제 성능 수치가 아직 열려 있다.
@@ -21,10 +21,10 @@
 ## 보고 요약
 
 - OOS에는 commit된 데이터를 잃거나 page를 손상시킬 수 있는 결함 세 개가 열려 있다. vacuum 실패나 재시작 undo가 다른 트랜잭션이 쓴 slot을 덮어쓰는 결함(CBRD-27858, CBRD-27781)과, rollback한 UPDATE의 원래 값을 vacuum이 지우는 결함(CBRD-27237)이다.
-- 세 결함은 따로 생긴 것이 아니다. OOS는 비운 slot을 즉시 재사용하게 하면서, 그 삭제를 나중에 undo할 수 있게 만들었다. 또 commit 여부를 확인하지 않은 정보로 삭제를 결정한다. heap과 file manager는 같은 문제를 "commit 뒤에 해제"하는 postpone으로 이미 피하고 있다.
+- 세 결함은 따로 생긴 것이 아니다. OOS는 비운 slot을 즉시 재사용하게 하면서, 그 삭제를 나중에 undo할 수 있게 만들었다. 또 commit 여부를 확인하지 않은 정보로 삭제를 결정한다. TLA+ 모델에서 이 두 가정을 하나씩 되돌리면 각 결함의 반례가 사라지고, 하나씩 다시 넣으면 해당 결함만 다시 나타난다. heap과 file manager는 같은 문제를 "commit 뒤에 해제"하는 postpone으로 이미 피하고 있다.
 - 수정 방향은 OOS도 같은 원칙을 따르게 하는 것이다. 삭제 결정은 postpone으로 남기고, 실제 삭제는 확정 뒤에 되돌리지 않는 방식으로 실행한다. 결함마다 하나씩 붙은 장치(latch 연장, in-memory 보호 map, LSA reclaim gate)가 필요 없어지거나 줄어든다.
 - 기대 효과는 정확성과 성능이다. vacuum이 OOS 값을 회수할 때 값 전체를 로그에 쓰던 비용이 없어진다. 이 효과는 측정으로 확인한 뒤 채택한다.
-- 검증 순서는 모델, 사양, 구현이다. 먼저 TLA+ 모델이 현재 설계에서 알려진 결함을 모두 재현하는지 확인한다. 그다음 새 설계가 같은 검사를 통과하는지 확인한다. 통과하면 사양을 개정하고 구현한다.
+- 검증 순서는 모델, 사양, 구현이다. 첫 단계(U1)는 끝났다. TLA+ 모델이 현재 설계에서 알려진 결함 네 개를 모두 재현했다. 다음 단계(U2)는 새 설계가 같은 검사를 통과하는지 확인하는 것이다. 통과하면 사양을 개정하고 구현한다.
 - 일정 영향이 있다. PR #7990 병합 전에 하면 형식 변경 비용이 없다. 병합 뒤에 하면 OOS page와 로그 형식의 호환성 문제가 생긴다.
 
 ## 기준과 근거 범위
@@ -47,7 +47,7 @@
 - 사양 개정은 담당자가 하고 팀장에게 보고한다.
 - 채택 조건은 성능 개선이다.
 
-## 결함들이 공유하는 가정 두 개
+## 결함들이 공유하는 가정
 
 ### 가정 1. 비운 공간은 되돌려지지 않는다
 
@@ -72,6 +72,12 @@ vacuum의 forward-walk는 `RVHF_UPDATE_NOTIFY_VACUUM` 레코드의 undo image를
 
 identity stamp로는 이 결함을 막을 수 없다. undo image의 stub과 되살아난 stub은 stamp가 같다(사양 §3 step 4). 사양 §3은 commit 조건부 알림 `RVOOS_NOTIFY_VACUUM`을 요구한다. 그러나 `dcbf09e4f`에는 이 알림을 남기는 코드가 없다([recovery.h L206-L209](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/transaction/recovery.h#L206-L209)).
 
+### 가정 3. OOS OID는 계속 같은 값을 가리킨다
+
+OOS OID는 물리 주소다. slot을 다른 chain이 다시 쓰면, 같은 OID가 다른 값을 가리킨다. vacuum block을 다시 실행하면 바뀌지 않는 undo image에서 옛 OID를 다시 읽는다. CBRD-26950 이전 코드는 그 slot에 레코드가 있는지만 확인하고 지웠으므로, 다른 chain의 값을 지웠다. 지금은 head의 identity stamp를 비교해 이 경우를 no-op으로 처리한다.
+
+U1 모델은 이 결함이 가정 1, 2와 무관하다는 것을 보여 준다. 재사용을 확정 뒤로 미루고 commit된 정보로만 삭제해도, 확정된 삭제 뒤에 slot이 재사용되면 재시도가 그 slot을 지운다. D3도 회수기를 재시도하므로 identity stamp를 유지한다.
+
 ### 결함과 가정의 대응
 
 | 결함 | 증상 | 가정 | 현재 대응 | 상태 |
@@ -79,11 +85,11 @@ identity stamp로는 이 결함을 막을 수 없다. undo image의 stub과 되�
 | CBRD-27858 | 다른 INSERT가 가져간 forward slot에 abort나 재시작 undo가 옛 레코드를 씀 | 1 | forward page latch를 sysop 끝까지 유지 | #8348 draft |
 | CBRD-27781 | 다른 INSERT가 가져간 OOS chunk slot에 undo가 씀 | 1 | 후보 비교 중 | 미해결. 2026-10-27 리뷰에서 병합 차단 지적 |
 | CBRD-26786 | 빈 page가 아직 undo 대상일 수 있음 | 1 (page 단위) | LSA reclaim gate | 구현됨 |
-| CBRD-26950 | vacuum 재시도가 재사용된 slot의 다른 값을 지움 | 1, 2 | page-LSA identity stamp | 구현됨 |
+| CBRD-26950 | vacuum 재시도가 재사용된 slot의 다른 값을 지움 | 3 | page-LSA identity stamp | 구현됨 |
 | CBRD-27237 | rollback한 UPDATE의 원래 chain을 vacuum이 지움 | 2 | 사양 §3 알림. emitter 없음 | 미해결. `dcbf09e4f`에서 재현 |
 | CBRD-27860 | vacuum과 heap page 할당이 서로의 latch를 기다림 | 별개 (latch 순서) | 조건부 조회 뒤 재시작 | #8350 draft |
 
-가정 1 하나를 latch 연장, LSA gate, identity stamp가 각각 다른 자리에서 막는다. CBRD-27781 후보에는 in-memory 보호 map이 하나 더 있다. slot, page, 재시도마다 장치가 따로 있다는 뜻이다(추론).
+가정 1 하나를 latch 연장과 LSA gate가 각각 다른 자리에서 막는다. CBRD-27781 후보에는 in-memory 보호 map이 하나 더 있다. 같은 가정을 slot과 page에서 장치를 따로 두어 막는다는 뜻이다(추론). identity stamp는 가정 3을 막는 장치이고 D3에서도 남는다.
 
 CBRD-27860은 이 표에서 원인이 다르다. vacuum이 heap page를 쥔 채 heap header에서 OOS VFID를 찾는 latch 순서 문제다. TLA+로 교착을 검사할 수는 있지만, 이 문서의 설계 변경으로 해결되지는 않는다.
 
@@ -218,7 +224,7 @@ head를 마지막에 지우는 이유가 있다. head가 남아 있는 동안은
 
 ### 모델을 두 층으로 나눈다
 
-- **설계 모델(새로 만든다).** 코드 줄이 아니라 프로토콜을 모델링한다. 행위자는 user 트랜잭션(INSERT, UPDATE, DELETE, commit, abort, savepoint rollback), vacuum worker(REMOVE, 알림 소비, block 재시도), 다른 INSERT, crash와 재시작 복구다. 상태는 slot 상태, row 버전과 stub, undo 로그, postpone 로그, snapshot이다.
+- **설계 모델([reclaim-model/OosReclaim.tla](reclaim-model/OosReclaim.tla)).** 코드 줄이 아니라 프로토콜을 모델링한다. 행위자는 user 트랜잭션(INSERT, UPDATE, DELETE, commit, abort, savepoint rollback), vacuum worker(REMOVE, 알림 소비, block 재시도), 다른 INSERT, crash와 재시작 복구다. 상태는 slot 상태, row 버전과 stub, undo 로그, postpone 로그, snapshot이다.
 - **적합성 모델(이미 있다).** `cubrid-verify-vacuum-slot-undo` 스킬은 코드에서 latch 해제 지점을 읽어 TLA+ 모델에 넣고, 코드가 성질을 지키는지 검사한다. D3를 구현하는 PR마다 같은 방식으로 이 층을 갱신한다.
 
 ### 검사할 성질
@@ -231,9 +237,11 @@ head를 마지막에 지우는 이유가 있다. head가 남아 있는 동안은
 | `NoForeignRead` | 읽기는 다른 chain의 바이트를 돌려주지 않는다 | CBRD-26950 |
 | `EventuallyReclaimed` | 참조가 끊긴 chain과 빈 page는 결국 회수된다. fairness 가정이 필요한 liveness 성질이다. | CBRD-26786, 고아 chain |
 
+U1은 현재 설계의 결함을 결함별로 구분하려고 이 성질들을 더 잘게 나누어 검사했다. 이름과 대응은 [U1 결과](#u1-결과)에 있다. U2에서 D3를 검사할 때 `NoForeignDelete`와 `EventuallyReclaimed`를 더한다.
+
 ### 작업 단위와 확인 기준
 
-1. **U1. 현재 설계 재현.** 설계 모델에 현재 설계를 넣는다. TLC가 CBRD-27858, CBRD-27781, CBRD-27237, stamp 이전의 CBRD-26950을 모두 반례로 찾아야 한다. "공간 재사용 시점" 설정 하나와 "삭제 결정 근거" 설정 하나로 이 반례들이 모두 설명되면 가정 두 개가 맞은 것이다. 설명되지 않으면 이 문서의 가설이 틀린 것이고, 설계를 다시 본다.
+1. **U1. 현재 설계 재현(완료, [U1 결과](#u1-결과)).** 설계 모델에 현재 설계를 넣는다. TLC가 CBRD-27858, CBRD-27781, CBRD-27237, stamp 이전의 CBRD-26950을 모두 반례로 찾아야 한다. "공간 재사용 시점" 설정 하나와 "삭제 결정 근거" 설정 하나로 이 반례들이 모두 설명되면 가정 두 개가 맞은 것이다. 설명되지 않으면 이 문서의 가설이 틀린 것이고, 설계를 다시 본다.
 2. **U2. 후보 비교.** D1, D2, D3를 같은 모델의 대안 설정으로 넣고 같은 성질을 검사한다. crash는 모든 지점에서 허용한다. D3에서는 회수기 두 개가 같은 chain을 겹쳐 처리하는 경우와, 회수 도중 crash가 반복되는 경우를 포함한다. LSA gate를 뺀 D3도 함께 검사한다.
 3. **U3. 사양 개정.** U2를 통과한 설계로 `OOS-CONTEXT.md`의 §2, §3, §4를 개정하고 ADR을 쓴다.
 4. **U4. 구현.** PR을 나누어 구현한다. PR마다 적합성 모델을 갱신하고, 오류 주입 ctest로 반례의 실행 순서를 실제 코드에서 재현한다.
@@ -241,6 +249,95 @@ head를 마지막에 지우는 이유가 있다. head가 남아 있는 동안은
 규모는 기존 모델과 비슷하게 잡는다. vacuum worker 하나, 트랜잭션 둘, row 하나, chunk 둘, crash 한 번이다. 기존 모델은 이 정도 규모에서 한 번 실행에 약 5초가 걸린다(스킬 기록). snapshot을 넣으면 상태 수가 늘겠지만 감당할 만할 것으로 본다(추측). TLC 1.7.4와 Java 8이 작업 서버에 있다.
 
 모델이 통과해도 그것은 이 규모 안에서 설계가 맞다는 뜻이다. 코드가 설계를 따르는지는 적합성 모델과 오류 주입 테스트가 확인한다.
+
+## U1 결과
+
+2026-11-03에 실행했다. 모델은 [OosReclaim.tla](reclaim-model/OosReclaim.tla), 실행 도구는 [run.py](reclaim-model/run.py)다.
+
+### 모델이 다루는 것
+
+모델은 코드 줄이 아니라 `dcbf09e4f`의 프로토콜을 따른다. 설정 세 개가 현재 설계의 가정 세 개를 나타낸다. 각 설정의 첫 값이 현재 코드다.
+
+| 설정 | 값 | 뜻 |
+| --- | --- | --- |
+| `ReuseAt` | `immediate`, `final` | 되돌릴 수 있는 삭제가 비운 slot을 다른 트랜잭션이 언제 가져갈 수 있는가 |
+| `DecideFrom` | `ended`, `committed` | forward-walk가 undo image를 쓰기 전에 UPDATE에 대해 무엇을 확인하는가 |
+| `HeadIdentity` | `stamp`, `none` | 삭제가 head chunk에서 무엇을 비교하는가. `none`은 CBRD-26950 이전 코드 |
+
+작업 부하는 두 가지다. `del`에서는 T1이 relocated row를 지우고, vacuum REMOVE가 sysop 하나로 forward slot과 chunk 두 개짜리 chain A를 지운다. `upd`에서는 T1이 row를 새 chain B로 UPDATE한 뒤 commit하거나 rollback하고, vacuum forward-walk가 chain A를 자기 sysop에서 지운다. 다른 트랜잭션 T2는 빈 slot 하나를 가져갈 수 있다. 실행 중 방해는 많아야 한 번 일어난다. 삭제 단계 실패, block 중단, crash 중 하나다.
+
+| 모델 동작 | 코드 |
+| --- | --- |
+| `RemoveStart`, `RemoveForwardSlot` | `vacuum_heap_record`의 `log_sysop_start`, `spage_vacuum_slot (forward_page, ..., true)`, 로그, forward page latch 해제 |
+| `WalkStart` | `vacuum_process_log_block`에서 `vacuum_forward_walk_reclaim_oos`, `vacuum_forward_walk_oos_delete_atomic`의 `log_sysop_start` |
+| `HeadAbsent`, `HeadStale`, `DeleteChunk` | `oos_delete_chain`의 head 확인, `RVOOS_DELETE` 로그, `spage_delete`, chunk마다 latch 해제 |
+| `SysopCommit`, `BlockDone` | `log_sysop_commit`, block의 `set_vacuumed` |
+| `FailStep` | 삭제 단계 실패와 `log_sysop_abort`. REMOVE는 block을 다시 실행하고, forward-walk는 오류를 지우고 block을 끝내거나 `ER_INTERRUPTED`면 다시 실행한다 |
+| `Interrupt` | sysop commit 뒤, block 완료 전 중단. block을 `start_lsa`부터 다시 실행한다 |
+| `Crash` | 재시작 복구가 열린 sysop과 T1을 undo하고 block을 다시 실행한다 |
+| `T2Insert` | 다른 트랜잭션의 INSERT가 `spage_find_free_slot`으로 빈 slot을 받아 쓰고 commit한다 |
+
+검사한 성질은 다섯 개다.
+
+| 성질 | 내용 | 결함 |
+| --- | --- | --- |
+| `ForwardUndoFindsEmptySlot` | undo가 forward record를 다른 레코드 위에 쓰지 않는다 | CBRD-27858 |
+| `ChunkUndoFindsEmptySlot` | undo가 OOS chunk를 다른 레코드 위에 쓰지 않는다 | CBRD-27781 |
+| `RowChainIntact` | row가 아직 참조하는 chain은 지워지지 않는다 | CBRD-27237 |
+| `OtherRecordIntact` | T2가 commit한 레코드는 사라지지 않는다 | CBRD-26950, 그리고 CBRD-27858과 CBRD-27781의 결과 |
+| `ReclaimedWhenDone` | block이 끝나면 죽은 chain과 forward record가 해제되어 있다 | 회수 누락 |
+
+### 실행 명령과 결과
+
+```sh
+python3 oos/reclaim-model/run.py --out <새 디렉터리>
+```
+
+설정 8개, 작업 부하 2개, 성질 5개를 곱한 80회를 실행했다. 실행마다 distinct state는 15-124개이고, 8개를 병렬로 돌린 전체 실행은 약 12초 걸렸다. 80회 모두 `run.py`의 `expected`와 같았고 종료 코드는 0이었다. 실행한 spec의 SHA-256은 `1f9eeda8b269efc107415f56eb3171ee787e1ea410f58f8cf5910b81a231a22d`다. TLC는 `~/.cache/tlaplus/tla2tools-1.7.4.jar`(SHA-256 `936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88`, TLC 2.19)이고 Java는 Temurin 1.8.0_462다.
+
+현재 코드의 설정에서 네 결함을 모두 재현했다.
+
+| 결함 | 작업 부하 | 설정 | 성질 | 결과 |
+| --- | --- | --- | --- | --- |
+| CBRD-27858 | `del` | 현재 코드 | `ForwardUndoFindsEmptySlot` | 반례 |
+| CBRD-27781 | `del` | 현재 코드 | `ChunkUndoFindsEmptySlot` | 반례 |
+| CBRD-27237 | `upd` | 현재 코드 | `RowChainIntact` | 반례 |
+| CBRD-26950 | `upd` | `ReuseAt=final`, `DecideFrom=committed`, `HeadIdentity=none` | `OtherRecordIntact` | 반례 |
+
+CBRD-26950은 다른 두 가정을 막은 설정에서 확인했다. 현재 코드의 재사용 설정에서는 undo 덮어쓰기가 같은 성질을 먼저 깨므로, 재시도 경로만 분리해 보기 위해서다.
+
+가설은 다음 표로 검사했다. 세 가정을 모두 막은 설정(`final`, `committed`, `stamp`)에서 시작해, 가정 하나만 현재 코드로 되돌렸을 때 무엇이 깨지는지 본다.
+
+| 작업 부하 | 성질 | 시작 설정 | 깨뜨리는 설정 하나 |
+| --- | --- | --- | --- |
+| `del` | `ForwardUndoFindsEmptySlot` | 통과 | `ReuseAt=immediate` |
+| `del` | `ChunkUndoFindsEmptySlot` | 통과 | `ReuseAt=immediate` |
+| `del` | `OtherRecordIntact` | 통과 | `ReuseAt=immediate` |
+| `upd` | `ChunkUndoFindsEmptySlot` | 통과 | `ReuseAt=immediate` |
+| `upd` | `RowChainIntact` | 통과 | `DecideFrom=ended` |
+| `upd` | `OtherRecordIntact` | 통과 | `ReuseAt=immediate`, 또는 `HeadIdentity=none` |
+| `upd` | `ReclaimedWhenDone` | 반례 | 설정과 무관 |
+
+표에서 읽을 수 있는 것은 다음과 같다.
+
+- 각 가정은 자기 결함만 일으킨다. 가정 하나를 넣으면 그 가정에 걸린 결함만 나타나고, 다른 결함은 나타나지 않는다. 그래서 수정도 가정 단위로 할 수 있다. D3는 가정 1과 2를 없애고, 가정 3은 identity stamp로 계속 막는다.
+- forward-walk에도 CBRD-27781과 같은 반례가 있다(`upd`의 `ChunkUndoFindsEmptySlot`). CBRD-27237 심층 분석이 `vacuum_forward_walk_oos_delete_atomic`에 대해 추론한 위험을 모델에서 확인한 것이다. 기존 적합성 모델은 이 wrapper를 다루지 않는다.
+- forward-walk는 어느 설정에서도 회수를 빠뜨릴 수 있다(`upd`의 `ReclaimedWhenDone`). 삭제 단계가 실패하면 오류를 지우고 block을 끝내기 때문이다. 코드가 "leaving OOS unreclaimed (bounded leak)"라고 기록하는 의도된 동작이다([vacuum_oos.cpp L346-L355](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/query/vacuum_oos.cpp#L346-L355)). D3의 실패 정책 절이 다루는 문제다.
+
+CBRD-27237의 반례는 다음과 같다. 다른 반례는 실행 출력의 `summary.md`에 같은 형식으로 남는다.
+
+1. T1: heap_update가 새 chain B로 새 버전을 쓴다. undo image에는 chain A의 stub이 남는다.
+2. T1이 rollback한다. chain A의 stub을 가진 옛 레코드가 복원되고 chain B의 insert는 undo된다.
+3. vacuum: forward-walk가 UPDATE undo image에서 chain A의 stub을 읽고(block은 T1이 끝났는지만 확인한다) `log_sysop_start`를 부른다.
+4. vacuum: `oos_delete_chain`이 `RVOOS_DELETE`를 기록하고 `spage_delete`로 slot a1을 비운다. row는 아직 chain A를 참조한다.
+
+### 모델의 한계
+
+- 이 결과는 위 규모 안에서만 성립한다. row 하나, T1 연산 하나, T2 INSERT 하나, 방해 한 번이다.
+- slot 하나가 page 하나의 관심 slot을 나타낸다. 바이트 공간은 모델링하지 않는다. 그래서 `ReuseAt=final`은 "slot 번호와 공간을 모두 확정까지 막는다"는 추상적인 설정이다. D2의 MARKDELETED 방식은 slot 번호만 막으므로 이 설정과 같지 않다.
+- T2의 INSERT는 slot 획득부터 commit까지를 한 단계로 본다. commit이 로그를 flush하므로, T2의 commit보다 앞선 vacuum 로그도 durable하다고 가정한다.
+- MVCC snapshot 독자, savepoint rollback, eager 정리, UPDATE의 chain 재사용(CBRD-27230), HA는 모델에 없다. U2에서 D3를 검사할 때 eager 정리와 savepoint rollback을 넣는다.
+- 설계 모델이다. 코드가 모델대로 동작하는지는 확인하지 않는다. 그 일은 `cubrid-verify-vacuum-slot-undo` 같은 적합성 모델과 오류 주입 테스트가 맡는다.
 
 ## 다른 검증 방법과 비교
 
