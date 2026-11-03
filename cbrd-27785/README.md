@@ -12,6 +12,8 @@
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [최종 head의 PR 본문 (cycles 재측정 반영)](CBRD-27785-final-head-pr-body_4c3c8d7_claude.md) | 다른 세션이 4c3c8d791로 갱신한 본문에 11-03 cycles 재측정과 근거 링크를 더한 판 | 2026-11-03 | 2026-11-03 | 재측정 결과를 사용자 검토 뒤 게시하기 위해 |
+| [최종 head의 게시 context (cycles 재측정 반영)](CBRD-27785-final-head-pr-context_4c3c8d7_claude.md) | 기존 본문 fingerprint, 본문 변경 범위, 승인 후 조치 | 2026-11-03 | 2026-11-03 | 게시 승인 범위와 실행 결과를 추적하기 위해 |
 | [narrow scan cycles 변동의 원인](CBRD-27785-pr8299-cycles-layout_5837393_claude.md) | f8114e432 대비 5837393ff의 조용한 시간 ABBA 12라운드, 서버 시작별 두 갈래 cycles와 ASLR·분기 예측 실패 진단, PR 밖 분기 위치 | 2026-11-03 | 2026-11-03 | 지난 측정에서 원인을 모른 cycles 차이를 판정하고 근거를 남기기 위해 |
 | [4-record 기준 반영 PR 본문](CBRD-27785-four-record-target-pr-body_4c3c8d7_claude.md) | 4c3c8d791 기준 구현(CBRD-27057의 4,060B OOS 분리 기준 포함)·CI·측정 요약과 남은 TC 처리 | 2026-11-03 | 2026-11-03 | 기준 수정 후 본문을 사용자 검토 뒤 게시하기 위해 |
 | [4-record 기준 반영 게시 context](CBRD-27785-four-record-target-pr-context_4c3c8d7_claude.md) | source·기존 본문 fingerprint와 승인 후 게시 조치·결과 | 2026-11-03 | 2026-11-03 | 게시 승인 범위와 실제 실행 결과를 추적하기 위해 |
