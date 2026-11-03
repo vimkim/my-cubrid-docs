@@ -1,0 +1,403 @@
+From 164db20814f77704f3d59a86148bdec132c58f71 Mon Sep 17 00:00:00 2001
+From: Daehyun Kim <kimdhyungg@gmail.com>
+Date: Tue, 3 Nov 2026 16:38:24 +0900
+Subject: [PATCH] [CBRD-27237] Probe: savepoint, concurrent-update,
+ relocated-row cases (local only)
+
+Three throwaway probes next to RolledBackUpdateKeepsCommittedOosAfterVacuum,
+to weigh fix options B and C with runtime evidence. Each expects the
+correct behavior, so a failure is the defect showing.
+
+- P1: ROLLBACK TO SAVEPOINT undoes the UPDATE, then the transaction
+  commits. A commit-status gate (option B) would not skip this record.
+- P2: T1's aborted UPDATE is vacuumed while T2's later in-place UPDATE
+  is still active, then T2 rolls back. A reader snapshot holds T1's
+  block until T2's UPDATE is in place. A current-record guard
+  (option C) sees T2's version, not the original.
+- P3: a relocated row's aborted UPDATE back into its home page deletes
+  the old REC_NEWHOME with RVHF_DELETE_NEWHOME_NOTIFY_VACUUM.
+
+build_heap_recdes_with_oos gains an aligned padding parameter so P3
+can grow a row out of its home page.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01VC8p7DEh6NxSFKB6FVM3Nb
+---
+ .../oos/test_oos_real_vacuum_server.cpp       | 326 +++++++++++++++++-
+ 1 file changed, 322 insertions(+), 4 deletions(-)
+
+diff --git a/unit_tests/oos/test_oos_real_vacuum_server.cpp b/unit_tests/oos/test_oos_real_vacuum_server.cpp
+index cf56654d0..9cd650527 100644
+--- a/unit_tests/oos/test_oos_real_vacuum_server.cpp
++++ b/unit_tests/oos/test_oos_real_vacuum_server.cpp
+@@ -87,7 +87,7 @@ static const int MVCC_HEADER_SPARE = 2 * OR_MVCCID_SIZE;
+ static int
+ build_heap_recdes_with_oos (const std::vector<OID> &oos_oids,
+ 			    const std::vector<INT64> &oos_lengths,
+-			    RECDES &rec_out)
++			    RECDES &rec_out, int pad_bytes = 0)
+ {
+   const int n_oos = (int) oos_oids.size ();
+   assert (n_oos > 0);
+@@ -108,13 +108,15 @@ build_heap_recdes_with_oos (const std::vector<OID> &oos_oids,
+   const int n_var = repr->n_variable;
+   const int repr_id = repr->id;
+   heap_classrepr_free_and_init (repr, &cache_index);
+-  if (n_var < n_oos)
++  /* VOT offsets carry flags in their low two bits, so the padding keeps them aligned. */
++  if (n_var < n_oos || (pad_bytes > 0 && n_var == n_oos) || pad_bytes % VOT_ENTRY_SZ != 0)
+     {
+       return ER_FAILED;
+     }
+ 
+   const int vot_bytes = (n_var + 1) * VOT_ENTRY_SZ;	/* one entry per attribute plus the terminator */
+-  const int data_bytes = n_oos * OOS_INLINE_SZ;
++  /* pad_bytes become the value of the first non-OOS variable attribute, to grow the record */
++  const int data_bytes = n_oos * OOS_INLINE_SZ + pad_bytes;
+   const int total = HEAP_HDR_SIZE + vot_bytes + data_bytes;
+ 
+   int err = recdes_allocate_data_area (&rec_out, total + MVCC_HEADER_SPARE);
+@@ -145,7 +147,7 @@ build_heap_recdes_with_oos (const std::vector<OID> &oos_oids,
+     }
+   for (int i = n_oos; i <= n_var; ++i)
+     {
+-      const int offset = vot_bytes + n_oos * OOS_INLINE_SZ;
++      const int offset = vot_bytes + n_oos * OOS_INLINE_SZ + (i > n_oos ? pad_bytes : 0);
+       OR_PUT_INT (vot + i * VOT_ENTRY_SZ, i == n_var ? OR_SET_VAR_LAST_ELEMENT (offset) : offset);
+     }
+ 
+@@ -438,8 +440,121 @@ class OosRealVacuum : public ::testing::Test
+       er_clear ();
+       return err != NO_ERROR;
+     }
++
++    /* Insert a new OOS payload and MVCC-update heap_oid to reference it, inside the current
++     * transaction. Neither commits nor aborts. */
++    void update_row_in_current_tran (OID &heap_oid, const std::string &payload, OID &new_oos_oid_out,
++				     int pad_bytes = 0)
++    {
++      RECDES new_oos_rec {};
++      ASSERT_EQ (test_oos_utils::from_string_into_recdes (payload, new_oos_rec), NO_ERROR);
++      test_oos_utils::auto_freed_recdes_ptr defer_oos (&new_oos_rec, recdes_free_data_area);
++
++      new_oos_oid_out = OID_INITIALIZER;
++      ASSERT_EQ (test_oos_utils::oos_insert_from_recdes (thread_p, oos_vfid, new_oos_rec, new_oos_oid_out), NO_ERROR);
++
++      RECDES new_heap_rec {};
++      ASSERT_EQ (build_heap_recdes_with_oos ({new_oos_oid_out}, { (INT64) new_oos_rec.length}, new_heap_rec,
++					     pad_bytes), NO_ERROR);
++      test_oos_utils::auto_freed_recdes_ptr defer_heap (&new_heap_rec, recdes_free_data_area);
++
++      ASSERT_EQ (heap_update_mvcc (hfid, class_oid, scan_cache, heap_oid, new_heap_rec), NO_ERROR);
++    }
++
++    /* Head OIDs of the OOS stubs in the record physically stored for heap_oid, following a
++     * REC_RELOCATION home to its REC_NEWHOME. An active transaction's uncommitted version is what
++     * this sees, because MVCC UPDATE rewrites the slot in place. */
++    int current_row_oos_heads (const OID &heap_oid, INT16 &home_type, std::vector<OID> &heads)
++    {
++      heads.clear ();
++      home_type = REC_UNKNOWN;
++      OID oid = heap_oid;
++      for (int hop = 0; hop < 2; ++hop)
++	{
++	  VPID vpid;
++	  VPID_GET_FROM_OID (&vpid, &oid);
++	  PAGE_PTR page = pgbuf_fix (thread_p, &vpid, OLD_PAGE, PGBUF_LATCH_READ, PGBUF_UNCONDITIONAL_LATCH);
++	  if (page == NULL)
++	    {
++	      return ER_FAILED;
++	    }
++	  RECDES rec {};
++	  if (spage_get_record (thread_p, page, oid.slotid, &rec, PEEK) != S_SUCCESS)
++	    {
++	      pgbuf_unfix_and_init (thread_p, page);
++	      return ER_FAILED;
++	    }
++	  if (hop == 0)
++	    {
++	      home_type = rec.type;
++	      if (rec.type == REC_RELOCATION)
++		{
++		  oid = * (OID *) rec.data;
++		  pgbuf_unfix_and_init (thread_p, page);
++		  continue;
++		}
++	    }
++	  int err = NO_ERROR;
++	  if ((rec.type == REC_HOME || rec.type == REC_NEWHOME) && heap_recdes_contains_oos (&rec))
++	    {
++	      OOS_REF_VECTOR refs;
++	      err = heap_recdes_get_oos_refs (&rec, refs);
++	      for (const oos_chain_ref &ref : refs)
++		{
++		  heads.push_back (ref.head_oid);
++		}
++	    }
++	  pgbuf_unfix_and_init (thread_p, page);
++	  return err;
++	}
++      return ER_FAILED;
++    }
++
++    static bool heads_contain (const std::vector<OID> &heads, const OID &oid)
++    {
++      for (const OID &head : heads)
++	{
++	  if (OID_EQ (&head, &oid))
++	    {
++	      return true;
++	    }
++	}
++      return false;
++    }
++
++    /* Read oid and compare it with expected. Returns the oos_read error code. */
++    int read_oos_value (const OID &oid, const std::string &expected, bool &matches)
++    {
++      RECDES out {};
++      int err = test_oos_utils::oos_read_with_alloc (thread_p, oid, out);
++      matches = err == NO_ERROR && out.length > 0 && std::string (out.data, out.length - 1) == expected;
++      if (out.data != nullptr)
++	{
++	  recdes_free_data_area (&out);
++	}
++      er_clear ();
++      return err;
++    }
++
++    /* Assign a new transaction index; it becomes the thread's current transaction. */
++    int begin_other_tran ()
++    {
++      TRAN_STATE state;
++      return logtb_assign_tran_index (thread_p, NULL_TRANID, TRAN_ACTIVE, NULL, &state, TRAN_LOCK_INFINITE_WAIT,
++				      TRAN_REPEATABLE_READ);
++    }
++
++    void abort_and_release_tran (int tran_index, int back_to_index)
++    {
++      LOG_SET_CURRENT_TRAN_INDEX (thread_p, tran_index);
++      EXPECT_EQ (log_abort (thread_p, tran_index), TRAN_UNACTIVE_ABORTED);
++      logtb_release_tran_index (thread_p, tran_index);
++      LOG_SET_CURRENT_TRAN_INDEX (thread_p, back_to_index);
++    }
+ };
+ 
++#define PROBE_LOG(...) do { std::printf ("[CBRD-27237 probe] " __VA_ARGS__); std::printf ("\n"); std::fflush (stdout); } while (0)
++
+ // ============================================================================
+ // TC-R1: Single row DELETE — real vacuum drains the OOS completely
+ // ============================================================================
+@@ -904,6 +1019,209 @@ TEST_F (OosRealVacuum, RolledBackUpdateKeepsCommittedOosAfterVacuum)
+   EXPECT_EQ (std::string (after_vacuum.data, after_vacuum.length - 1), original);
+ }
+ 
++/* CBRD-27237 probe P1 (local only). ROLLBACK TO SAVEPOINT undoes the UPDATE and the transaction
++ * then COMMITs, so a commit-status gate on the forward-walk would not skip its log record. */
++TEST_F (OosRealVacuum, ProbeP1SavepointRollbackThenCommitKeepsOriginalOos)
++{
++  const std::string original (4096, 'a');
++  OID heap_oid, original_oid;
++  insert_row_with_oos (original, heap_oid, original_oid);
++
++  OID witness_heap_oid, witness_oos_oid;
++  insert_row_with_oos (std::string (4096, 'w'), witness_heap_oid, witness_oos_oid);
++
++  LOG_LSA savept_lsa = LSA_INITIALIZER;
++  ASSERT_EQ (xtran_server_savepoint (thread_p, "cbrd27237_p1", &savept_lsa), NO_ERROR);
++
++  OID replacement_oid;
++  update_row_in_current_tran (heap_oid, std::string (4096, 'b'), replacement_oid);
++  ASSERT_FALSE (HasFatalFailure ());
++  const VACUUM_LOG_BLOCKID update_block = current_log_blockid ();
++
++  LOG_LSA partial_abort_lsa = LSA_INITIALIZER;
++  ASSERT_EQ (xtran_server_partial_abort (thread_p, "cbrd27237_p1", &partial_abort_lsa), TRAN_UNACTIVE_ABORTED);
++  ASSERT_TRUE (LOG_ISTRAN_ACTIVE (LOG_FIND_CURRENT_TDES (thread_p))) << "partial abort must keep the transaction";
++  const MVCCID update_mvccid = LOG_FIND_CURRENT_TDES (thread_p)->mvccinfo.id;
++  commit_current_tran ();
++  PROBE_LOG ("P1 update block %lld, transaction mvccid %llu committed after ROLLBACK TO SAVEPOINT",
++	     (long long) update_block, (unsigned long long) update_mvccid);
++
++  INT16 home_type;
++  std::vector<OID> heads;
++  ASSERT_EQ (current_row_oos_heads (heap_oid, home_type, heads), NO_ERROR);
++  PROBE_LOG ("P1 after commit: home type %d, row references original %d|%d|%d: %s", home_type,
++	     OID_AS_ARGS (&original_oid), heads_contain (heads, original_oid) ? "yes" : "no");
++  ASSERT_TRUE (heads_contain (heads, original_oid));
++
++  bool matches = false;
++  ASSERT_EQ (read_oos_value (original_oid, original, matches), NO_ERROR);
++  ASSERT_TRUE (matches) << "original value must read back right after commit";
++
++  delete_row_and_close_block (witness_heap_oid);
++  ASSERT_TRUE (wait_for_vacuum ([this, &witness_oos_oid] { return oos_unreadable (witness_oos_oid); }, 60))
++      << "committed-delete witness did not establish vacuum progress";
++
++  const int after_err = read_oos_value (original_oid, original, matches);
++  PROBE_LOG ("P1 after vacuum progress: read original -> %d, value matches: %s", after_err, matches ? "yes" : "no");
++  ASSERT_EQ (after_err, NO_ERROR) << "savepoint-rolled-back UPDATE must not make the committed OOS value reclaimable";
++  EXPECT_TRUE (matches);
++}
++
++/* CBRD-27237 probe P2 (local only). A guard that checks only the row's current record must see
++ * a version the aborted UPDATE did not write. T2's later UPDATE is in place and still active when
++ * vacuum walks T1's aborted UPDATE, so the current record no longer references the original chain,
++ * yet T2's own rollback restores the original row.
++ *
++ * Ordering. A reader snapshot taken before T1 holds T1's block back until T2's UPDATE is in place.
++ * Without it the daemon may walk T1's block while the current record is still the restored
++ * original, which would not exercise the counterexample. */
++TEST_F (OosRealVacuum, ProbeP2ConcurrentActiveUpdateThenRollbackKeepsOriginalOos)
++{
++  const std::string original (4096, 'a');
++  OID heap_oid, original_oid;
++  insert_row_with_oos (original, heap_oid, original_oid);
++
++  OID witness_heap_oid, witness_oos_oid;
++  insert_row_with_oos (std::string (4096, 'w'), witness_heap_oid, witness_oos_oid);
++
++  const int worker_idx = LOG_FIND_THREAD_TRAN_INDEX (thread_p);
++
++  const int gate_idx = begin_other_tran ();
++  ASSERT_NE (gate_idx, NULL_TRAN_INDEX);
++  ASSERT_NE (logtb_get_mvcc_snapshot (thread_p), nullptr);
++  LOG_SET_CURRENT_TRAN_INDEX (thread_p, worker_idx);
++
++  OID t1_oid;
++  update_row_in_current_tran (heap_oid, std::string (4096, 'b'), t1_oid);
++  ASSERT_FALSE (HasFatalFailure ());
++  const VACUUM_LOG_BLOCKID t1_block = current_log_blockid ();
++  ASSERT_EQ (xtran_server_abort (thread_p), TRAN_UNACTIVE_ABORTED);
++
++  INT16 home_type;
++  std::vector<OID> heads;
++  ASSERT_EQ (current_row_oos_heads (heap_oid, home_type, heads), NO_ERROR);
++  ASSERT_TRUE (heads_contain (heads, original_oid)) << "T1 rollback must restore the original stub";
++
++  const VACUUM_LOG_BLOCKID witness_block = current_log_blockid ();
++  delete_row_and_close_block (witness_heap_oid);
++  ASSERT_FALSE (HasFatalFailure ());
++
++  const int t2_idx = begin_other_tran ();
++  ASSERT_NE (t2_idx, NULL_TRAN_INDEX);
++  OID t2_oid;
++  update_row_in_current_tran (heap_oid, std::string (4096, 'c'), t2_oid);
++  const VACUUM_LOG_BLOCKID t2_block = current_log_blockid ();
++  const MVCCID t2_mvccid = LOG_FIND_CURRENT_TDES (thread_p)->mvccinfo.id;
++  LOG_SET_CURRENT_TRAN_INDEX (thread_p, worker_idx);
++  ASSERT_FALSE (HasFatalFailure ());
++  PROBE_LOG ("P2 blocks: T1 update %lld, witness delete %lld, T2 update %lld (T2 mvccid %llu, active)",
++	     (long long) t1_block, (long long) witness_block, (long long) t2_block, (unsigned long long) t2_mvccid);
++
++  ASSERT_EQ (current_row_oos_heads (heap_oid, home_type, heads), NO_ERROR);
++  PROBE_LOG ("P2 with T2 active: row references original %d|%d|%d: %s, references T2 value %d|%d|%d: %s",
++	     OID_AS_ARGS (&original_oid), heads_contain (heads, original_oid) ? "yes" : "no",
++	     OID_AS_ARGS (&t2_oid), heads_contain (heads, t2_oid) ? "yes" : "no");
++  ASSERT_FALSE (heads_contain (heads, original_oid));
++  ASSERT_TRUE (heads_contain (heads, t2_oid));
++
++  bool matches = false;
++  ASSERT_EQ (read_oos_value (original_oid, original, matches), NO_ERROR);
++  ASSERT_TRUE (matches) << "original must still be readable before the gate opens";
++
++  abort_and_release_tran (gate_idx, worker_idx);
++
++  ASSERT_TRUE (wait_for_vacuum ([this, &witness_oos_oid] { return oos_unreadable (witness_oos_oid); }, 60))
++      << "committed-delete witness did not establish vacuum progress while T2 is active";
++  const bool original_gone = wait_for_vacuum ([this, &original_oid] { return oos_unreadable (original_oid); }, 5);
++  PROBE_LOG ("P2 witness reclaimed while T2 active; original chain readable: %s", original_gone ? "no" : "yes");
++
++  abort_and_release_tran (t2_idx, worker_idx);
++
++  ASSERT_EQ (current_row_oos_heads (heap_oid, home_type, heads), NO_ERROR);
++  PROBE_LOG ("P2 after T2 rollback: row references original %d|%d|%d: %s", OID_AS_ARGS (&original_oid),
++	     heads_contain (heads, original_oid) ? "yes" : "no");
++  ASSERT_TRUE (heads_contain (heads, original_oid)) << "T2 rollback must restore the original stub";
++
++  const int after_err = read_oos_value (original_oid, original, matches);
++  PROBE_LOG ("P2 after T2 rollback: read original -> %d, value matches: %s", after_err, matches ? "yes" : "no");
++  ASSERT_EQ (after_err, NO_ERROR) << "the restored row must still find its committed OOS value";
++  EXPECT_TRUE (matches);
++}
++
++/* CBRD-27237 probe P3 (local only). The relocated-row branch: an aborted UPDATE moves a
++ * REC_RELOCATION row back into its home page, which deletes the old REC_NEWHOME with
++ * RVHF_DELETE_NEWHOME_NOTIFY_VACUUM. Rollback restores that REC_NEWHOME. */
++TEST_F (OosRealVacuum, ProbeP3RelocatedRowRolledBackUpdateKeepsNewhomeOos)
++{
++  OID heap_oid, first_oid;
++  insert_row_with_oos (std::string (4096, 'a'), heap_oid, first_oid);
++
++  OID witness_heap_oid, witness_oos_oid;
++  insert_row_with_oos (std::string (4096, 'w'), witness_heap_oid, witness_oos_oid);
++
++  /* Fill the home page so a larger version cannot stay there. */
++  const int filler_size = DB_PAGESIZE / 16;
++  int fillers_in_home = 0;
++  for (int i = 0; i < 128; ++i)
++    {
++      RECDES filler {};
++      ASSERT_EQ (build_plain_heap_recdes (filler_size, filler), NO_ERROR);
++      OID filler_oid = OID_INITIALIZER;
++      int err = heap_insert_mvcc (hfid, class_oid, scan_cache, filler, filler_oid);
++      recdes_free_data_area (&filler);
++      ASSERT_EQ (err, NO_ERROR);
++      if (filler_oid.pageid != heap_oid.pageid || filler_oid.volid != heap_oid.volid)
++	{
++	  break;
++	}
++      ++fillers_in_home;
++    }
++  commit_current_tran ();
++
++  const std::string relocated (4096, 'x');
++  OID relocated_oid;
++  update_row_in_current_tran (heap_oid, relocated, relocated_oid, (DB_PAGESIZE * 3 / 8) & ~7);
++  ASSERT_FALSE (HasFatalFailure ());
++  commit_current_tran ();
++
++  INT16 home_type;
++  std::vector<OID> heads;
++  ASSERT_EQ (current_row_oos_heads (heap_oid, home_type, heads), NO_ERROR);
++  PROBE_LOG ("P3 %d fillers in home page; after committed grow: home type %d (REC_RELOCATION=%d), "
++	     "newhome references %d|%d|%d: %s", fillers_in_home, home_type, REC_RELOCATION, OID_AS_ARGS (&relocated_oid),
++	     heads_contain (heads, relocated_oid) ? "yes" : "no");
++  ASSERT_EQ (home_type, REC_RELOCATION) << "the row must be relocated before the probed UPDATE";
++  ASSERT_TRUE (heads_contain (heads, relocated_oid));
++
++  OID back_home_oid;
++  update_row_in_current_tran (heap_oid, std::string (4096, 'h'), back_home_oid);
++  ASSERT_FALSE (HasFatalFailure ());
++  ASSERT_EQ (current_row_oos_heads (heap_oid, home_type, heads), NO_ERROR);
++  PROBE_LOG ("P3 before abort: home type %d (REC_HOME=%d)", home_type, REC_HOME);
++  ASSERT_EQ (home_type, REC_HOME) << "the probed UPDATE must move the row home and delete the old REC_NEWHOME";
++  ASSERT_EQ (xtran_server_abort (thread_p), TRAN_UNACTIVE_ABORTED);
++
++  ASSERT_EQ (current_row_oos_heads (heap_oid, home_type, heads), NO_ERROR);
++  PROBE_LOG ("P3 after abort: home type %d, newhome references %d|%d|%d: %s", home_type,
++	     OID_AS_ARGS (&relocated_oid), heads_contain (heads, relocated_oid) ? "yes" : "no");
++  ASSERT_EQ (home_type, REC_RELOCATION);
++  ASSERT_TRUE (heads_contain (heads, relocated_oid));
++
++  bool matches = false;
++  ASSERT_EQ (read_oos_value (relocated_oid, relocated, matches), NO_ERROR);
++  ASSERT_TRUE (matches);
++
++  delete_row_and_close_block (witness_heap_oid);
++  ASSERT_TRUE (wait_for_vacuum ([this, &witness_oos_oid] { return oos_unreadable (witness_oos_oid); }, 60))
++      << "committed-delete witness did not establish vacuum progress";
++
++  const int after_err = read_oos_value (relocated_oid, relocated, matches);
++  PROBE_LOG ("P3 after vacuum progress: read relocated value -> %d, value matches: %s", after_err,
++	     matches ? "yes" : "no");
++  ASSERT_EQ (after_err, NO_ERROR) << "rolled-back relocated UPDATE must not reclaim the restored REC_NEWHOME's OOS";
++  EXPECT_TRUE (matches);
++}
++
+ int
+ main (int argc, char **argv)
+ {
+-- 
+2.47.3
+

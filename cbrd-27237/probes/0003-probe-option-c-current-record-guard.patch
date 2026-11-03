@@ -1,0 +1,199 @@
+From 28280aa19c786ad457617fe66b1c66abdccd5301 Mon Sep 17 00:00:00 2001
+From: Daehyun Kim <kimdhyungg@gmail.com>
+Date: Tue, 3 Nov 2026 16:46:00 +0900
+Subject: [PATCH] [CBRD-27237] Probe: option C current-record guard in the
+ forward-walk (local only)
+
+Throwaway prototype of fix option C, to measure it against the probes.
+Not a fix. Before deleting the chains named by an undo image, the
+forward-walk reads the record now stored at the log record's slot,
+follows REC_RELOCATION to REC_NEWHOME, and keeps every chain whose head
+OID that record still references. A REC_BIGONE record keeps all chains.
+
+The row identity is the slot the notify-vacuum log record names: the
+home slot for heap_update_home and update_old_home, the forward slot
+for update_old_forward and RVHF_DELETE_NEWHOME_NOTIFY_VACUUM.
+
+Latch order: heap pages are read-latched one at a time and released
+before the delete sysop starts, so no heap latch is held together with
+an OOS latch. The record can change after the latch is released.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01VC8p7DEh6NxSFKB6FVM3Nb
+---
+ src/query/vacuum.c       |  9 +++-
+ src/query/vacuum_oos.cpp | 95 +++++++++++++++++++++++++++++++++++++++-
+ src/query/vacuum_oos.hpp |  2 +-
+ 3 files changed, 102 insertions(+), 4 deletions(-)
+
+diff --git a/src/query/vacuum.c b/src/query/vacuum.c
+index aebb42f68..81d6f86a8 100644
+--- a/src/query/vacuum.c
++++ b/src/query/vacuum.c
+@@ -3616,7 +3616,8 @@ vacuum_process_log_block (THREAD_ENTRY * thread_p, VACUUM_DATA_ENTRY * data, boo
+ 	  if (log_record_data.rcvindex == RVHF_UPDATE_NOTIFY_VACUUM)
+ 	    {
+ 	      error_code =
+-		vacuum_forward_walk_reclaim_oos (thread_p, undo_data, undo_data_size, &log_vacuum.vfid, &oos_vfid_memo);
++		vacuum_forward_walk_reclaim_oos (thread_p, undo_data, undo_data_size, &log_vacuum.vfid, &oos_vfid_memo,
++						 &heap_object_oid);
+ 	      if (error_code != NO_ERROR)
+ 		{
+ 		  vacuum_check_shutdown_interruption (thread_p, error_code);
+@@ -3760,8 +3761,12 @@ vacuum_process_log_block (THREAD_ENTRY * thread_p, VACUUM_DATA_ENTRY * data, boo
+ 	   * record survives only in this delete's undo image; its OOS records are reclaimed here. This is
+ 	   * deliberately OUTSIDE the LOG_IS_MVCC_HEAP_OPERATION block (no slot to collect — the slot was
+ 	   * physically deleted). The undo image is always the forward REC_NEWHOME pre-image. */
++	  heap_object_oid.pageid = log_record_data.pageid;
++	  heap_object_oid.volid = log_record_data.volid;
++	  heap_object_oid.slotid = heap_rv_remove_flags_from_offset (log_record_data.offset);
+ 	  error_code =
+-	    vacuum_forward_walk_reclaim_oos (thread_p, undo_data, undo_data_size, &log_vacuum.vfid, &oos_vfid_memo);
++	    vacuum_forward_walk_reclaim_oos (thread_p, undo_data, undo_data_size, &log_vacuum.vfid, &oos_vfid_memo,
++					     &heap_object_oid);
+ 	  if (error_code != NO_ERROR)
+ 	    {
+ 	      vacuum_check_shutdown_interruption (thread_p, error_code);
+diff --git a/src/query/vacuum_oos.cpp b/src/query/vacuum_oos.cpp
+index 5c8f0bd03..572544a16 100644
+--- a/src/query/vacuum_oos.cpp
++++ b/src/query/vacuum_oos.cpp
+@@ -30,6 +30,8 @@
+ #include "object_representation.h"
+ #include "oid.h"
+ #include "oos_file.hpp"
++#include "page_buffer.h"
++#include "slotted_page.h"
+ #include "storage_common.h"
+ #include "vacuum.h"
+ 
+@@ -58,6 +60,76 @@ static VACUUM_OOS_VFID_LOOKUP_RESULT vacuum_oos_vfid_lookup (THREAD_ENTRY *threa
+     VACUUM_OOS_VFID_MEMO *memo, const VFID *heap_vfid, VFID *out_oos_vfid);
+ static int vacuum_forward_walk_oos_delete_atomic (THREAD_ENTRY *thread_p, const VFID *oos_vfid,
+     OOS_REF_VECTOR oos_refs);
++static int vacuum_forward_walk_current_heads (THREAD_ENTRY *thread_p, const OID *row_oid, std::vector<OID> &heads,
++    bool *keep_all);
++
++/*
++ * vacuum_forward_walk_current_heads () - CBRD-27237 probe C (local only). Collect the head OOS OIDs
++ *   that the record now stored at row_oid references, following a REC_RELOCATION home to its
++ *   REC_NEWHOME. A missing page or slot means no current record, so heads stays empty.
++ *
++ *   Latch order: each heap page is read-latched and released before the next fix and before the
++ *   caller touches any OOS page, so a heap latch and an OOS latch are never held together and no
++ *   heap latch is held inside the delete sysop. The record can change after the latch is released.
++ *
++ * keep_all (out) : set for a REC_BIGONE record, whose stubs this probe does not parse.
++ */
++static int
++vacuum_forward_walk_current_heads (THREAD_ENTRY *thread_p, const OID *row_oid, std::vector<OID> &heads,
++				   bool *keep_all)
++{
++  OID oid = *row_oid;
++
++  heads.clear ();
++  *keep_all = false;
++
++  for (int hop = 0; hop < 2; ++hop)
++    {
++      VPID vpid;
++      PAGE_PTR page = NULL;
++      RECDES record;
++
++      VPID_GET_FROM_OID (&vpid, &oid);
++      int error_code =
++	      pgbuf_fix_if_not_deallocated (thread_p, &vpid, PGBUF_LATCH_READ, PGBUF_UNCONDITIONAL_LATCH, &page);
++      if (error_code != NO_ERROR || page == NULL)
++	{
++	  return error_code;
++	}
++      if (pgbuf_get_page_ptype (thread_p, page) != PAGE_HEAP
++	  || spage_get_record (thread_p, page, oid.slotid, &record, PEEK) != S_SUCCESS)
++	{
++	  er_clear ();
++	  pgbuf_unfix_and_init (thread_p, page);
++	  return NO_ERROR;
++	}
++
++      if (hop == 0 && record.type == REC_RELOCATION)
++	{
++	  oid = * (OID *) record.data;
++	  pgbuf_unfix_and_init (thread_p, page);
++	  continue;
++	}
++
++      if (record.type == REC_BIGONE)
++	{
++	  *keep_all = true;
++	}
++      else if ((record.type == REC_HOME || record.type == REC_NEWHOME) && heap_recdes_contains_oos (&record))
++	{
++	  OOS_REF_VECTOR current_refs;
++	  error_code = heap_recdes_get_oos_refs (&record, current_refs);
++	  for (const oos_chain_ref &ref : current_refs)
++	    {
++	      heads.push_back (ref.head_oid);
++	    }
++	}
++      pgbuf_unfix_and_init (thread_p, page);
++      return error_code;
++    }
++
++  return NO_ERROR;
++}
+ 
+ /*
+  * vacuum_oos_vfid_lookup () - Find the OOS file that belongs to a given heap file.
+@@ -265,7 +337,7 @@ vacuum_oos_reclaim_empty_pages (THREAD_ENTRY *thread_p, const VFID *oos_vfid,
+  */
+ int
+ vacuum_forward_walk_reclaim_oos (THREAD_ENTRY *thread_p, char *undo_data, int undo_data_size,
+-				 const VFID *heap_vfid, VACUUM_OOS_VFID_MEMO *oos_vfid_memo)
++				 const VFID *heap_vfid, VACUUM_OOS_VFID_MEMO *oos_vfid_memo, const OID *row_oid)
+ {
+   int error_code = NO_ERROR;
+ 
+@@ -331,6 +403,27 @@ vacuum_forward_walk_reclaim_oos (THREAD_ENTRY *thread_p, char *undo_data, int un
+       OOS_REF_VECTOR oos_refs;
+       int oos_err = heap_recdes_get_oos_refs (&parse_recdes, oos_refs);
+ 
++      /* CBRD-27237 probe C: keep every chain the row's current record still references. */
++      if (oos_err == NO_ERROR && row_oid != NULL)
++	{
++	  std::vector<OID> current_heads;
++	  bool keep_all = false;
++	  oos_err = vacuum_forward_walk_current_heads (thread_p, row_oid, current_heads, &keep_all);
++	  if (oos_err == NO_ERROR)
++	    {
++	      const size_t n_undo_refs = oos_refs.size ();
++	      oos_refs.erase (std::remove_if (oos_refs.begin (), oos_refs.end (), [&] (const oos_chain_ref &ref)
++	      {
++		return keep_all || std::any_of (current_heads.begin (), current_heads.end (), [&] (const OID &head)
++		{
++		  return OID_EQ (&head, &ref.head_oid);
++		});
++	      }), oos_refs.end ());
++	      vacuum_er_log (VACUUM_ER_LOG_HEAP, "CBRD-27237 probe C: row %d|%d|%d keeps %d of %d undo-image chains",
++			     OID_AS_ARGS (row_oid), (int) (n_undo_refs - oos_refs.size ()), (int) n_undo_refs);
++	    }
++	}
++
+       if (oos_err == NO_ERROR)
+ 	{
+ 	  oos_err = vacuum_forward_walk_oos_delete_atomic (thread_p, &oos_vfid, std::move (oos_refs));
+diff --git a/src/query/vacuum_oos.hpp b/src/query/vacuum_oos.hpp
+index 35051632a..df4e1ea6b 100644
+--- a/src/query/vacuum_oos.hpp
++++ b/src/query/vacuum_oos.hpp
+@@ -55,7 +55,7 @@ struct vacuum_oos_vfid_memo
+ };
+ 
+ extern int vacuum_forward_walk_reclaim_oos (THREAD_ENTRY *thread_p, char *undo_data, int undo_data_size,
+-    const VFID *heap_vfid, VACUUM_OOS_VFID_MEMO *oos_vfid_memo);
++    const VFID *heap_vfid, VACUUM_OOS_VFID_MEMO *oos_vfid_memo, const OID *row_oid = NULL);
+ extern int vacuum_oos_find_vfid_for_heap_record (THREAD_ENTRY *thread_p, const HFID *hfid, const RECDES *record,
+     PGSLOTID slotid, INT16 record_type, VFID *oos_vfid);
+ extern int vacuum_heap_oos_delete_within_sysop (THREAD_ENTRY *thread_p, const VFID *oos_vfid, const RECDES *record,
+-- 
+2.47.3
+
