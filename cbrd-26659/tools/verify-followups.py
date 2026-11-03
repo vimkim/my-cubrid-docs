@@ -66,4 +66,15 @@ for file in checks["changed_paths"]:
     assert blobs[0] == blobs[1], file
 receipt = json.loads((root / "ci-trigger-receipt.json").read_text())
 assert receipt["engine"] == engine and receipt["tc_private"] == checks["tip"]
-print(json.dumps({"verified": True, "engine": engine, "tc_published": checks["tip"], "tde_pass": 2, "repartition_pass": 1, "repartition_policies": 2, "retained_failures": 14, "supported_engine_findings": 8, "unknown_causes": 6, "schema_extended_diagnostic_pass": 1, "original_schema_timeout_retained": True, "ci_terminal_present": (root / "ci-terminal.json").exists()}, indent=2))
+plan = (root / "ci-plan-job.log").read_text()
+assert "[checkout] cubrid-testcases-private-ex @ tc/pr-8128 -> " + checks["tip"] in plan
+assert "[checkout] cubrid-testcases @ tc/pr-8128 -> " + receipt["tc_public"] in plan
+assert engine in plan
+ci_conclusion = None
+if (root / "ci-terminal.json").exists():
+    terminal = json.loads((root / "ci-terminal.json").read_text())
+    pickup = json.loads((root / "ci-pickup.json").read_text())
+    assert terminal["summary"]["url"] == pickup["run_url"]
+    assert terminal["summary"]["status"] == "completed"
+    ci_conclusion = terminal["summary"]["conclusion"]
+print(json.dumps({"verified": True, "engine": engine, "tc_published": checks["tip"], "tde_pass": 2, "repartition_pass": 1, "repartition_policies": 2, "retained_failures": 14, "supported_engine_findings": 8, "unknown_causes": 6, "schema_extended_diagnostic_pass": 1, "original_schema_timeout_retained": True, "ci_terminal_present": (root / "ci-terminal.json").exists(), "ci_conclusion": ci_conclusion}, indent=2))

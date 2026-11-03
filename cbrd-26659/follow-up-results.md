@@ -85,7 +85,7 @@ Target의 stored length 4048B에는 정책 비교용 MVCC reserve 16B를 더해 
 
 두 TC push 이후 [CI 41595701615](https://github.com/CUBRID/cubrid/actions/runs/41595701615)를 `/run all`로 한 번 시작했다. Engine은 `e3589ae`, private TC는 `09ea46e1b`, public은 `b038c424`다. 양쪽 feature testcase baseline ancestry check는 PASS했다. 기존 실행 종료와 새 trigger 부재를 확인하고 요청했으며 다섯 gha context가 같은 새 run을 가리켰다.
 
-2026-11-03 16:27 KST 관측에서 두 build와 plan은 성공했고 회귀 작업 60개는 모두 runner 대기 중이다. 아직 회귀 판정은 없다. 이 기록은 진행 중 snapshot이며 최종 CI 결과를 추가할 예정이다.
+2026-11-03 16:36 KST 관측에서 두 build와 plan, medium shard가 SUCCESS다. SQL·shell 작업 60개는 `cubrid-arc` runner 대기 중이다. 전체 CI는 미완료이며 최종 결과를 추가할 예정이다. Plan 로그에서 Engine·public·private TC의 위 리비전 일치를 확인했다.
 
 일반 CI가 성공해도 비활성 TC의 focused 결과, SQL 전체 자료 정합성 미인증, heavy·HA·C++와 미해결 Engine/TC 항목은 각각의 범위로 남는다. 수정한 wrapper·REPARTITION의 실제 활성·비활성 선택은 유지했으므로 CI가 이 세 TC를 새로 실행했다고 해석하지 않는다. TC PR의 실제 리뷰·병합과 QA heavy·HA 환경·주기·담당 합의가 남는다. 성능 Work544를 새 완료 조건으로 추가하지 않는다.
 
@@ -93,7 +93,7 @@ Target의 stored length 4048B에는 정책 비교용 MVCC reserve 16B를 더해 
 
 원본 raw root는 `/home/vimkim/temp/cbrd26659-followups-17mm966k`다. `identity.json`, `worker-contract.md`, `plan.md`, `a-tde/`, `b-repartition/`, `c-fail14/`, `d-timeout/`, gate 기록, TC 통합·게시 proof, CI receipt·snapshot을 보존한다. 이전 Work704·702·699·691 원본은 수정하지 않았다. 소스 개발 도구의 `PRESET_MODE` 미설정·broken compile_commands 경고가 있어 직접 source·raw artifact를 읽었으며 Engine workspace를 수리하지 않았다.
 
-[증거 재검증기](tools/verify-followups.py)는 DB를 새로 실행하지 않는다. 고정 hash의 worker 검사 도구, 원래 raw dispatch·FIN·XML·journal·archive, 정책별 owner와 잘못된 owner 대조, 14개 모집단, 원래 timeout과 연장 진단의 구분, 실행 후보와 게시 blob 일치를 확인한다. 일부 인과관계는 독립 raw 검토로 뒷받침하며 자동 검사 하나로 모든 원인을 증명하지 않는다. Raw 절대 경로와 기존 Git 객체를 보존해야 재실행할 수 있다.
+[증거 재검증기](tools/verify-followups.py)는 DB를 새로 실행하지 않는다. 고정 hash의 worker 검사 도구, 원래 raw dispatch·FIN·XML·journal·archive, 정책별 owner와 잘못된 owner 대조, 14개 모집단, 원래 timeout과 연장 진단의 구분, 실행 후보와 게시 blob 일치를 확인한다. 일부 인과관계는 독립 raw 검토로 뒷받침하며 자동 검사 하나로 모든 원인을 증명하지 않는다. 검증기 PASS는 증거 일치이며 전체 TC·CI의 PASS 인증이 아니다. Raw 절대 경로와 기존 Git 객체를 보존해야 재실행할 수 있다.
 
 ```sh
 python3 cbrd-26659/tools/verify-followups.py \
