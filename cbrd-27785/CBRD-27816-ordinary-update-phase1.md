@@ -1,6 +1,6 @@
 # CBRD-27816 1단계 보고서
 
-갱신: 2026-11-03 20:16 KST. 1단계(재현과 원인 분리) 측정을 마쳤다. 검토에서 나온 정정과 L1, L1b, h3 결과, 18:51 사용자 결정을 반영했다. 할 일과 결정 사항은 이 파일에서 관리한다.
+갱신: 2026-11-03 20:22 KST. 1단계(재현과 원인 분리) 측정을 마쳤다. 검토에서 나온 정정과 L1, L1b, h3 결과, 18:51 사용자 결정을 반영했다. 할 일과 결정 사항은 이 파일에서 관리한다.
 
 관련 이슈: [CBRD-27816](https://jira.cubrid.org/browse/CBRD-27816), [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785). 관련 PR: [#8299](https://github.com/CUBRID/cubrid/pull/8299). 이 보고서는 2026-11-03에 로컬 산출물 디렉터리 `/mnt/nvme/data-5/tmp/CBRD-27816-20261103/phase1-report.md`에서 옮겨 왔다. 본문의 상대 경로(`harness/`, `base|cand/...`, `decisions.tsv` 등)는 모두 그 디렉터리 기준이다.
 
@@ -80,6 +80,7 @@
 - B 코드 수정: "고치지 않고 닫기". 2단계 코드 변경은 하지 않는다. 결정 1-가는 이 답으로 대체된다.
 - 결정 2-2(`ordinary.py` idle 마감)는 2단계 측정이 없으므로 적용하지 않았다. 다음에 오래 떠 있는 서버에서 측정할 때 다시 본다.
 - my-cubrid-docs: main에 local merge한다. push는 하지 않는다.
+- 20:19 DB 정리: "두 DB만 지우기". `u816b`와 `u816c`를 각 workenv에서 `cubrid deletedb`로 지웠다(rc 0, 등록부 줄도 빠짐). 약 21G가 비었다. `pristine/`(6.1G)과 표본·profile·harness는 남겼다. 산출물 디렉터리는 6.2G다.
 
 ## 2단계 첫 일: OOS 규칙 확인과 A·B·C 재분해 (2026-11-03 20:13)
 
@@ -314,7 +315,7 @@ OOS 없는 행의 finalize를 빠른 경로로 바꾸면 줄일 수 있는 양�
 - 전체 값과 build ID는 `base/build.json`, `cand/build.json`에 있다. block마다 다시 확인했다.
 - compile flag는 공통 파일 565개에서 모두 같다. 후보에만 OOS 파일 6개가 더 있다.
 - 설정 `[common]`은 양쪽이 같다. `data_buffer_size=4G`, `log_buffer_size=256M`, `sort_buffer_size=16M`, `max_clients=50`, `db_volume_size=2G`, `log_volume_size=1G`, `log_max_archives=0`이다. live 값은 block마다 `lifecycle-r*/parameters.stdout`에 남는다.
-- DB는 `u816b`(기준)와 `u816c`(후보)다. 데이터 2GiB, 활성 로그 1GiB다. 설치된 `cub-workenv`는 64M/32M로 만들기 때문에, 그 한 줄만 바꾼 사본(`sized-workenv/`)으로 만들었다. 처음에 32M로 잘못 만든 내 DB 두 개는 지웠다. 그 생성 기록은 `stale-createdb-records/`로 옮겨 보존했다.
+- DB는 `u816b`(기준)와 `u816c`(후보)다. 데이터 2GiB, 활성 로그 1GiB다. 설치된 `cub-workenv`는 64M/32M로 만들기 때문에, 그 한 줄만 바꾼 사본(`sized-workenv/`)으로 만들었다. 처음에 32M로 잘못 만든 내 DB 두 개는 지웠다. 그 생성 기록은 `stale-createdb-records/`로 옮겨 보존했다. 20:19 정정: 두 DB를 지운 뒤 그 생성 기록(같은 파일 이름)을 같은 곳으로 옮기다가 처음 기록 네 파일(`created-u816b.json`, `createdb-u816b.log`, `created-u816c.json`, `createdb-u816c.log`)을 덮어썼다. 처음 기록의 내용은 남아 있지 않다. 처음 DB가 64M/32M였다는 사실은 이 절과 `decisions.tsv`에 남아 있다.
 - 서버는 CPU 16~19, client는 CPU 12에 고정했다. block마다 서버를 새로 띄우고 DB는 이어서 쓴다. 쌓인 log archive(각 12개)와 자동 확장 볼륨(각 2개)은 양쪽이 같다.
 - 계수 명령은 `perf stat --per-thread -x ; -e instructions:u,cycles:u,task-clock -p SERVER -- csql ...`이다. `ordinary.py`와 구간과 event가 같고 `--per-thread`만 다르다. 구간 중에 생긴 thread의 계수는 부모 thread 줄에 합쳐진다.
 - `block2.py`는 h2→p1→t1 실행 중에 고쳤다. 그 실행들의 환경변수 조합에서는 동작이 같도록 고쳤고, 고친 뒤 구문 검사를 했다. 다만 manifest의 harness 해시는 block마다 다르다(예: base r200과 cand r200).
@@ -387,7 +388,7 @@ reviewed by Sonnet 5.5. 작업 모델(Opus 5.5)과 같은 Claude 계열이다. �
 
 ## 산출물
 
-- 산출물 디렉터리 `/mnt/nvme/data-5/tmp/CBRD-27816-20261103/`. 아래 상대 경로는 이 디렉터리 기준이다
+- 산출물 디렉터리 `/mnt/nvme/data-5/tmp/CBRD-27816-20261103/`. 아래 상대 경로는 이 디렉터리 기준이다. 측정 DB `db-base/`, `db-cand/`는 2026-11-03 20:19에 지웠다. 서버를 띄우기 전 사본 `pristine/`(`pristine.sha256`)은 남아 있다
 - 결정 기록 `decisions.tsv`
 - 측정과 분석 스크립트 `harness/` (`threads.py`, `threads2.py`, `block.py`, `block2.py`, `campaign.py`, `campaign2.py`, `profile.py`, `profile2.py`, `analyze.py`, `spikes.py`, `events.py`, `profile_diff.py`, `profile_inclusive.py`)
 - 표본 원자료 `base|cand/threads-r*/`, profile 원자료 `base|cand/profile-r*/`
