@@ -2,7 +2,7 @@
 
 Last modified: 2026-11-03 (Asia/Seoul).
 
-2026-11-03 [후속 수리와 실패·timeout 분석](follow-up-results.md)은 TDE AES 2 PASS·수정 REPARTITION의 두 정책 PASS, 보존 실패 14개의 8개 Engine 근거·6개 원인 미확정, SA schema의 제한 연장 진단 PASS를 기록한다. TC `09ea46e1b`를 게시했고 단일 CI 결과는 보고서에서 추적한다. 원래 120초 TIMEOUT과 미해결 실패·실제 TC 리뷰·병합은 남는다.
+2026-11-03 [후속 수리와 실패·timeout 분석](follow-up-results.md)은 TDE AES 2 PASS·수정 REPARTITION의 두 정책 PASS, 보존 실패 14개의 8개 Engine 근거·6개 원인 미확정, SA schema의 제한 연장 진단 PASS를 기록한다. TC `09ea46e1b`를 게시했고 단일 CI 41595701615와 다섯 gha context는 SUCCESS다. 원래 120초 TIMEOUT과 미해결 실패·실제 TC 리뷰·병합은 남는다.
 
 2026-11-03 [policy 그룹 밖 잔여 shell 21개 검증](CBRD-26659-remaining21-native_e3589ae_20261103_work704_codex.md)은 Engine `e3589ae`·TC `01df2600a`에서 4 PASS·16 FAIL·외부 명령 TIMEOUT 1개를 확인했다. 16 FAIL은 assertion·controller 14개와 sibling 진입점 누락 TDE wrapper 2개다. 초기 full-shell의 비선택 macro SKIP 관측도 보존했고 13,597개 입력·21개 판정·종료·정리 근거를 재검증했다. `schema_rewrites_sa`의 정상 완료와 나머지 실패 귀속·수리, PASS의 재활성화는 후속이다. Source·TC·CI는 변경하지 않았다.
 

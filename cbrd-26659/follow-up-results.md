@@ -85,7 +85,11 @@ Target의 stored length 4048B에는 정책 비교용 MVCC reserve 16B를 더해 
 
 두 TC 수리 커밋을 push한 뒤 [CI 41595701615](https://github.com/CUBRID/cubrid/actions/runs/41595701615)를 `/run all`로 한 번 시작했다. Engine은 `e3589ae`, private TC는 `09ea46e1b`, public은 `b038c424`다. 양쪽 feature testcase baseline ancestry check는 PASS했다. 기존 실행 종료와 새 trigger 부재를 확인하고 요청했으며 다섯 gha context가 같은 새 run을 가리켰다.
 
-2026-11-03 16:36 KST 관측에서 두 build와 plan, medium shard가 SUCCESS다. SQL·shell 작업 60개는 `cubrid-arc` runner 대기 중이다. 전체 CI는 미완료이며 최종 결과를 추가할 예정이다. Plan 로그에서 Engine·public·private TC의 위 리비전 일치를 확인했다.
+CI는 2026-11-03 18:49 KST에 SUCCESS로 완료됐고 최종 job은 성공 71개·skip 1개다. Release·debug build, SQL·shell·medium의 다섯 `gha-ci:` context가 모두 같은 run에서 SUCCESS다. SQL shard 10개·medium 1개·shell 50개가 모두 SUCCESS다. 이는 workflow·job 판정이며 전체 TC artifact 정합성 재인증과 구분한다.
+
+Trigger는 16:20 KST, SQL·shell의 첫 runner 배정은 18:02 KST였다. 앞선 장시간 대기는 testcase timeout과 구분한다. Plan 로그는 Engine `e3589ae`·public `b038c424`·private `09ea46e1b` 일치를 확인했다. CI 종료 뒤 추가 source·TC 수정·push·재실행은 하지 않았다.
+
+Live `gh pr checks --required`는 해당 branch에 required checks가 없다는 응답으로 exit 1이다. 이를 CI 실패나 gate 면제로 해석하지 않는다. TC Merge Gate context는 표시되지 않는다. 자동 SQL [#3688](https://github.com/CUBRID/cubrid-testcases/pull/3688)은 OPEN·Draft, 일반 shell [#4365](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4365)는 OPEN·Ready다. 프로젝트 정책상 두 TC PR의 사람 리뷰·병합 또는 닫힘 조건이 아직 완료되지 않았다. 별도 heavy [#4627](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4627)와 HA [#1666](https://github.com/CUBRID/cubrid-testcases-private/pull/1666)도 OPEN·Draft다.
 
 일반 CI가 성공해도 비활성 TC의 focused 결과, SQL 전체 자료 정합성 미인증, heavy·HA·C++와 미해결 Engine/TC 항목은 각각의 범위로 남는다. 수정한 wrapper·REPARTITION의 실제 활성·비활성 선택은 유지했으므로 CI가 이 세 TC를 새로 실행했다고 해석하지 않는다. TC PR의 실제 리뷰·병합과 QA heavy·HA 환경·주기·담당 합의가 남는다. 성능 Work544를 새 완료 조건으로 추가하지 않는다.
 
