@@ -1,47 +1,70 @@
 # CBRD-27881 담당자가 정할 것
 
-작성일 2026-11-03 (Asia/Seoul). 기준 commit은 `feature/oos-merge` `dcbf09e4f`이다.
+작성일 2026-11-03 (Asia/Seoul). 같은 날 오후에 1절을 고쳤다. 기준 commit은 `feature/oos-merge` `dcbf09e4f`이다.
 
-CBRD-27881 야간 작업은 OOS 리팩토링 draft PR 7개를 만들고, 조사 결과를 [후보 조사 보고서](CBRD-27881-oos-refactoring-candidates_dcbf09e_claude.md)에 정리했다. 이 문서는 그중 담당자가 직접 정해야 하는 네 가지만 쉬운 말로 다시 적는다. 리팩토링 항목 7개의 결정은 [결정 필요 리팩토링 항목](CBRD-27881-needs-decision-items_dcbf09e_claude.md)에 따로 있다.
+CBRD-27881 야간 작업은 OOS 리팩토링 draft PR 7개를 만들고, 조사 결과를 [후보 조사 보고서](CBRD-27881-oos-refactoring-candidates_dcbf09e_claude.md)에 정리했다. 이 문서는 그중 담당자가 직접 정해야 하는 것만 쉬운 말로 다시 적는다. 리팩토링 항목 7개의 결정은 [결정 필요 리팩토링 항목](CBRD-27881-needs-decision-items_dcbf09e_claude.md)에 따로 있다.
 
 ## 한눈에 보기
 
-| 순서 | 정할 것 | 급한 정도 | 추천 |
-| --- | --- | --- | --- |
-| 1 | CBRD-27237을 어떤 방식으로 고칠지 | 높음. #8347이 이 결정을 기다린다. | 사양 §3 방식(A) |
-| 2 | PR 7개를 언제, 누구에게 리뷰 요청할지 | 중간 | 실행 코드 변화가 적은 PR부터 |
-| 3 | #8371의 동작 차이를 받아들일지 | 중간. #8371 리뷰 전에 정한다. | 받아들인다 |
-| 4 | DF-04를 새 버그 티켓으로 등록할지 | 낮음 | 작은 별도 티켓으로 등록한다 |
+| 순서 | 정할 것 | 급한 정도 | 추천 | 할 일 |
+| --- | --- | --- | --- | --- |
+| 1 | CBRD-27237을 어떤 방식으로 고칠지 | 높음. 데이터 손실 결함이고 CBRD-27089의 최종 검증을 막는다. | 사양 §3 방식(A) | 705 |
+| 1-b | #8347 보류를 1번과 별개로 풀지 | 중간 | 푼다 | 705 |
+| 2 | PR 7개를 언제, 누구에게 리뷰 요청할지 | 담당자가 직접 한다. | 실행 코드 변화가 적은 PR부터 | 없음 |
+| 3 | #8371의 동작 차이를 받아들일지 | 중간. #8371 리뷰 전에 정한다. | 받아들인다 | 712 |
+| 4 | DF-04를 새 버그 티켓으로 등록할지 | 낮음 | 작은 별도 티켓으로 등록한다 | 713 |
 
 이미 정한 것은 다음과 같다.
 
-- #8347은 1번이 정해질 때까지 보류한다. draft 상태이므로 따로 손대지 않았다.
-- PR 7개는 draft로 둔다. ready 전환과 리뷰어 지정은 담당자가 한다.
+- #8347은 1번이 정해질 때까지 보류한다. draft 상태이므로 따로 손대지 않았다. 다만 1번과 #8347의 충돌은 처음 적은 것보다 약하다. 1절의 "#8347과의 관계"를 보라.
+- PR 7개는 draft로 둔다. ready 전환, 리뷰어 지정, 리뷰 요청은 담당자가 직접 한다.
 - #8367과 #8368의 commit 메시지는 `[CBRD-27881]`로 둔다. squash merge는 PR 제목(`[CBRD-27882]`, `[CBRD-27883]`)을 쓴다.
 
 ## 1. CBRD-27237을 어떤 방식으로 고칠지
 
 **무슨 문제인가.** 행을 UPDATE한 뒤 ROLLBACK하면 그 행은 원래 값으로 돌아가야 한다. 그런데 vacuum이 그 원래 값의 OOS 데이터를 지운다. vacuum은 지워진 데이터를 나중에 치우는 백그라운드 작업이다. 그 뒤 행을 읽으면 `-1389`(`ER_HEAP_OOS_CORRUPTED_RECORD`) 에러가 난다. 데이터 손실이다. 2026-11-03 새벽 `dcbf09e4f`에서 단위 테스트, gdb, SQL로 재현했다.
 
-**원인.** vacuum은 UPDATE 로그의 undo 이미지(바뀌기 전 행)를 따라가서 옛 OOS 값을 지운다. 이 경로는 트랜잭션이 COMMIT했는지 ROLLBACK했는지 보지 않는다. ROLLBACK한 경우 undo 이미지가 가리키는 값은 옛 값이 아니라 다시 살아난 현재 값이다.
+**원인.** vacuum은 UPDATE 로그의 undo 이미지(바뀌기 전 행)를 따라가서 옛 OOS 값을 지운다. 이 경로는 트랜잭션이 COMMIT했는지 ROLLBACK했는지 보지 않는다. ROLLBACK한 경우 undo 이미지가 가리키는 값은 옛 값이 아니라 다시 살아난 현재 값이다. 지금 있는 identity stamp 검사로도 막을 수 없다. 되살아난 행과 undo 이미지가 같은 stamp를 가지기 때문이다.
 
-**왜 지금 정해야 하나.** 고치는 방식에 따라 #8347(CBRD-27841)을 병합해도 되는지가 달라진다. #8347은 지금 아무 데서도 쓰지 않는 복구 인덱스 `RVOOS_NOTIFY_VACUUM` 하나를 지우는 PR이다. 그런데 사양 §3의 해결책이 바로 그 인덱스를 쓴다.
+**왜 지금 정해야 하나.** CBRD-27237은 fix-before-release 결함이다. 2026-09-09 CBRD-27237 댓글은 이 결함을 CBRD-27089(#7600) 최종 검증의 선행 조건으로 정했다. JIRA의 "이슈 수행 방안"은 아직 TBD다.
 
-**선택지.**
+**선택지.** [CBRD-27237 분석 문서](https://github.com/vimkim/my-cubrid-jira/blob/main/issues/CBRD-27237-oos-forward-walk-rollback-delete_dcbf09e_claude.md)는 후보 세 개를 비교한다. 처음 이 문서에는 A와 B만 적었다. 아래 표의 위험 판단은 그 분석 문서의 소스 추론이며, 실행으로 확인하지 않았다.
 
-| | A. 사양 §3대로 고친다 | B. 지금 경로를 두고 ROLLBACK만 걸러낸다 |
-| --- | --- | --- |
-| 방법 | COMMIT한 UPDATE만 commit 직전에 `RVOOS_NOTIFY_VACUUM` 로그를 남긴다. 로그에는 지워도 되는 옛 OOS chain 목록이 들어간다. vacuum은 이 목록만 보고 지운다. undo 이미지를 따라가 지우는 지금 경로는 없앤다. | vacuum이 undo 이미지를 따라가는 지금 경로를 두고, ROLLBACK한 트랜잭션의 로그는 건너뛰게 한다. |
-| 크기 | 크다(추론). commit hook, 새 로그 기록, vacuum 소비 경로가 필요하다. | 작다(추론). |
-| 사양 | 이미 승인된 사양 그대로다. | 사양 §3을 바꿔야 한다. |
-| #8347 | 닫거나, `RVOOS_NOTIFY_VACUUM` 삭제를 빼고 다른 미사용 인덱스 `RVREPL_OOS_DELETE` 삭제(R-29)만 담도록 바꾼다. | 그대로 병합해도 된다. |
-| 확인하지 않은 것 | 구현 작업량 | 사양 §3이 함께 다루는 공유 chain(여러 행 버전이 같은 OOS chain을 함께 쓰는 경우)도 B로 막히는지 |
+| | A. 사양 §3대로 고친다 | B. ROLLBACK한 트랜잭션을 건너뛴다 | C. 지우기 전에 현재 행을 확인한다 |
+| --- | --- | --- | --- |
+| 방법 | COMMIT한 UPDATE만 commit 직전에 `RVOOS_NOTIFY_VACUUM` 로그를 남긴다. 로그에는 UPDATE가 버린 OOS chain 목록이 들어간다. vacuum은 이 목록만 보고 지운다. undo 이미지를 따라가 지우는 지금 경로는 없앤다. | 지금 경로를 두고, vacuum이 그 경로에 들어가기 전에 트랜잭션이 COMMIT했는지 확인한다. | 지금 경로를 두고, chain을 지우기 전에 현재 행이 그 chain을 아직 가리키는지 확인한다. |
+| 크기 | 크다. 새 로그 기록, commit hook, vacuum 처리 경로가 필요하다. | 작다. 다만 vacuum은 끝난 트랜잭션의 COMMIT 여부를 보관하지 않는다. 그 정보를 얻을 방법이 필요하다. | 중간. vacuum이 heap 페이지를 fix해야 하므로 latch 순서와 성능을 봐야 한다. |
+| 남는 위험 | 부분 rollback이 있으면 COMMIT 시점에 실제로 버린 chain만 골라야 한다. | savepoint까지 되돌린 뒤 COMMIT한 트랜잭션은 막지 못한다. | 더 새로운 UPDATE가 아직 COMMIT하지 않았다면, 이전 snapshot이 아직 읽는 chain을 지울 수 있다. |
+| 사양 | 승인된 사양 그대로다. | 사양 §3을 바꿔야 한다. | 사양 §3을 바꿔야 한다. |
+| #8347 | 병합해도 된다. 알림을 구현할 때 실제 복구 인덱스를 새로 정의한다. | 병합해도 된다. | 병합해도 된다. |
 
-**추천은 A다.** 이미 승인된 사양이고, 문제를 만든 경로 자체를 없앤다. B는 ROLLBACK이라는 증상 하나만 막는다. 그리고 사양 변경과 공유 chain 검증이 따로 필요하다. release 전에 급히 막아야 하면 B를 임시로 넣고 A를 이어서 하는 방법도 있다. 다만 이 경우 vacuum 경로를 두 번 고치게 된다.
+**추천은 A다.** 이미 승인된 사양이다. 삭제 근거를 COMMIT한 연산으로만 한정해서, 문제를 만든 경로 자체를 없앤다. CBRD-27230의 chain 재사용과도 맞는다. B와 C는 지금 경로를 두기 때문에 부분 rollback이나 동시 UPDATE 같은 다른 조건에서 같은 손실이 남을 수 있다. release 전에 급히 막아야 하면 B를 임시로 넣고 A를 이어서 하는 방법도 있다. 다만 이 경우 vacuum 경로를 두 번 고치게 된다.
 
-**정한 뒤 할 일.** A면 #8347의 범위를 바꾸거나 닫는다. B면 #8347 보류를 풀고 사양 §3을 고친다. 어느 쪽이든 회귀 테스트로 `OosRealVacuum.RolledBackUpdateKeepsCommittedOosAfterVacuum`을 쓸 수 있다. 이 테스트를 `dcbf09e4f`로 옮긴 commit은 로컬 브랜치 `CBRD-27881-df03-probe`의 `338b7a1dd`다. 지금은 두 번 모두 실패한다.
+**A를 고르면 함께 정할 것.**
+
+- 알림 부분만 CBRD-27237에서 먼저 구현할지, CBRD-27230의 chain 재사용과 함께 구현할지 정한다. CBRD-27230은 Open이고 담당자가 없다. 재사용이 없으면 UPDATE는 OOS 값을 늘 새 chain에 쓰므로, 버린 chain은 옛 행의 OOS chain 전부가 된다. 그래서 알림 부분만 떼어 구현할 수 있다고 본다. 이것은 설계 문서를 읽고 낸 추론이고 확인하지 않았다.
+- 알림을 남긴 뒤 commit 로그를 쓰기 전에 서버가 죽는 경우를 확인한다. 복구는 그 UPDATE를 되돌리지만 알림 로그는 남는다. vacuum이 그 알림을 처리하면 같은 손실이 좁은 구간에 남는다. [CBRD-27230 설계](https://github.com/vimkim/my-cubrid-jira/blob/main/issues/CBRD-27230-oos-update-dedup_725a32c_claude.md)는 commit 전 장애에서 알림이 없다고 가정한다. 이 가정이 위 경우에도 맞는지는 두 문서를 읽고 낸 의문이고, 확인하지 않았다.
+
+**#8347과의 관계.** 처음 이 문서는 "A면 #8347을 닫거나 범위를 줄인다"고 적었다. 그런데 [CBRD-27841](https://jira.cubrid.org/browse/CBRD-27841) 설명은 다음과 같이 적는다. 쓰이지 않는 인덱스를 지워도 CBRD-27230의 요구가 끝나거나 취소되지 않는다. 알림을 구현할 때 실제 복구 인덱스를 다시 정의해야 한다. 따라서 어느 선택지를 골라도 #8347은 병합할 수 있다. A를 고르고 #8347을 먼저 병합하면, 지운 인덱스 하나를 나중에 다시 추가하게 된다. CBRD-27841은 병합 뒤 로그 형식이 고정되기 전에 정리하려는 작업이다. 그래서 `feature/oos-merge` 안에서 인덱스를 지웠다가 다시 추가하는 비용은 작다고 본다(추론). **추천은 #8347 보류를 1번과 별개로 푸는 것이다.**
+
+**정한 뒤 할 일.**
+
+- CBRD-27237의 "이슈 수행 방안"에 고른 방식을 적는다.
+- A면 알림 로그의 내용과 기록 위치를 정하고 구현한다. 위 장애 구간을 함께 확인한다. B나 C면 사양 §3을 고친 뒤 수정한다.
+- 어느 쪽이든 회귀 테스트 `OosRealVacuum.RolledBackUpdateKeepsCommittedOosAfterVacuum`을 켜서 통과시킨다. 이 테스트를 `dcbf09e4f`로 옮긴 commit은 로컬 브랜치 `CBRD-27881-df03-probe`의 `338b7a1dd`다. 지금은 두 번 모두 실패한다.
+- CBRD-27237의 Triage Request는 다음도 확인하라고 한다. SQL 재현 시나리오 세 개, 다른 위치로 옮겨진 행, kill -9 뒤 재기동이다. COMMIT한 UPDATE의 옛 chain이 계속 회수되는지도 확인한다.
+
+**자세히 읽을 자료.** 아래 순서로 읽으면 된다.
+
+1. [CBRD-27237 분석 문서](https://github.com/vimkim/my-cubrid-jira/blob/main/issues/CBRD-27237-oos-forward-walk-rollback-delete_dcbf09e_claude.md). 문제, 재현, 후보 세 개의 비교가 한 곳에 있다. JIRA 본문보다 자세하다. 끝의 "Options for Analysis" 표가 핵심이다.
+2. [OOS 사양 §3 UPDATE ownership](https://github.com/vimkim/cubrid-oos-context/blob/3462a7f69a7ec0de8a0b97ad8da32b463ecf0e8c/OOS-CONTEXT.md?plain=1#L208-L222). A의 근거다. undo 이미지는 삭제 근거가 될 수 없다는 소유권 규칙과 commit hook 위치가 있다. 같은 파일의 [Vacuum + OOS 절](https://github.com/vimkim/cubrid-oos-context/blob/3462a7f69a7ec0de8a0b97ad8da32b463ecf0e8c/OOS-CONTEXT.md?plain=1#L245-L249)과 [implementation-observations의 CBRD-27237 절](https://github.com/vimkim/cubrid-oos-context/blob/3462a7f69a7ec0de8a0b97ad8da32b463ecf0e8c/docs/reference/implementation-observations.md#cbrd-27237-rollback-and-vacuum)도 함께 본다.
+3. [CBRD-27230 이슈 문서](https://github.com/vimkim/my-cubrid-jira/blob/main/issues/CBRD-27230-oos-update-dedup_725a32c_claude.md)의 "2. 알림 레코드"와 "3. 제거 및 불변 항목". A를 실제로 어떻게 만드는지 적었다. 2026-08 문서라 "generation"이라고 쓴 것은 지금의 identity stamp다.
+4. [CBRD-27237](https://jira.cubrid.org/browse/CBRD-27237) 댓글 두 개와 [CBRD-27841](https://jira.cubrid.org/browse/CBRD-27841) 설명.
+5. 코드. 삭제 경로 본체는 [vacuum_oos.cpp L248-L369](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/query/vacuum_oos.cpp#L248-L369)이고, 호출하는 곳은 [vacuum.c L3616-L3621](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/query/vacuum.c#L3616-L3621)과 [vacuum.c L3757-L3765](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/query/vacuum.c#L3757-L3765)다.
 
 ## 2. PR 7개를 언제, 누구에게 리뷰 요청할지
+
+**담당자가 직접 한다.** 아래 표는 참고용 추천 순서다.
 
 7개 모두 `feature/oos-merge` 대상 draft이고 gha-ci 5개 항목을 통과했다. 서로 의존하지 않으므로 어떤 순서로 병합해도 된다. GitHub CI는 OOS 단위 테스트를 돌리지 않는다. 그래서 실행 코드를 바꾼 6개는 로컬에서 OOS ctest 44개를 수정 전후로 돌려 확인했다.
 
@@ -55,11 +78,11 @@ CBRD-27881 야간 작업은 OOS 리팩토링 draft PR 7개를 만들고, 조사 
 | 6 | [#8371](https://github.com/CUBRID/cubrid/pull/8371) | heap 삭제 두 경로에 복사된 OOS 파일 정리 코드를 합친다. | +41/-38 | 아래 3번의 동작 차이 |
 | 7 | [#8372](https://github.com/CUBRID/cubrid/pull/8372) | ALTER에서 복사된 플래그 판정 블록 세 개를 합친다. | +53/-79 | develop에 원래 있던 INVISIBLE 블록도 바뀐다. |
 
-**추천.** 위 순서로 한두 개씩 ready로 바꾼다. 실행 코드 변화가 적은 PR이 먼저 들어가면, 뒤 PR의 리뷰가 그만큼 가벼워진다. 리뷰어는 담당자가 정한다. ready 전환은 `gh pr ready <번호> --repo CUBRID/cubrid`로 하거나, 말해 주면 대신 한다.
+실행 코드 변화가 적은 PR이 먼저 들어가면, 뒤 PR의 리뷰가 그만큼 가벼워진다. ready 전환은 `gh pr ready <번호> --repo CUBRID/cubrid`로 한다.
 
 ## 3. #8371의 동작 차이를 받아들일지
 
-#8371은 heap 테이블을 지울 때 OOS 파일도 지우는 코드 두 벌을 하나로 합친다. 정상 경로의 동작은 같다. heap header 페이지가 손상된 경우에만 다르다.
+할 일 712번이다. #8371은 heap 테이블을 지울 때 OOS 파일도 지우는 코드 두 벌을 하나로 합친다. 정상 경로의 동작은 같다. heap header 페이지가 손상된 경우에만 다르다.
 
 | 경우 | 이전 코드 | #8371 |
 | --- | --- | --- |
@@ -71,7 +94,7 @@ CBRD-27881 야간 작업은 OOS 리팩토링 draft PR 7개를 만들고, 조사 
 
 ## 4. DF-04를 새 버그 티켓으로 등록할지
 
-조사 중 찾은 결함 후보 세 개를 2026-11-03 12:40에 JIRA에서 다시 찾아봤다.
+할 일 713번이다. 조사 중 찾은 결함 후보 세 개를 2026-11-03 12:40에 JIRA에서 다시 찾아봤다.
 
 | ID | 내용 | JIRA 상태 |
 | --- | --- | --- |

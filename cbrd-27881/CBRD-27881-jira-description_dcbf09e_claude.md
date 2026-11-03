@@ -37,7 +37,7 @@
 
 유지보수자가 정해야 할 주요 항목은 다음과 같다.
 
-- DF-03과 #8347. 사양 §3이 CBRD-27237(아래 DF-03)의 해결 방안으로 정한 commit 조건부 `RVOOS_NOTIFY_VACUUM`을 #8347(CBRD-27841)이 쓰이지 않는 인덱스로 보고 지운다. #8347을 병합하기 전에 CBRD-27237의 해결 방식을 먼저 정해야 한다. 해결 방식이 정해질 때까지 #8347은 보류한다.
+- DF-03과 #8347. 사양 §3은 CBRD-27237(아래 DF-03)의 해결 방안으로 commit 조건부 `RVOOS_NOTIFY_VACUUM`을 정했다. #8347(CBRD-27841)은 지금 기록하는 곳이 없는 이 인덱스를 지운다. CBRD-27841 설명대로 알림을 구현할 때 실제 복구 인덱스를 다시 정의하면 되므로, 어느 해결 방식을 골라도 #8347은 병합할 수 있다. CBRD-27237의 해결 방식은 사양 §3 방식, COMMIT 여부 확인, 삭제 전 현재 행 확인 중에서 정한다. 담당자는 해결 방식이 정해질 때까지 #8347을 보류하기로 했다.
 - R-34. tier-3 bestspace sync(아래 DF-01)를 사양대로 고칠 것인가, 쓰이지 않는 코드로 보고 지울 것인가. 기존 이슈 [CBRD-27213](https://jira.cubrid.org/browse/CBRD-27213)은 이 sync를 지우고 heap bestspace 재설계 기반으로 바꾸는 방향을 정했다.
 - R-05. 운영 코드 호출이 없는 `oos_chunk_exists`, `oos_get_identity_stamp`, `oos_get_length`를 진단 API로 남길 것인가, 테스트 빌드에서만 컴파일할 것인가.
 - R-39. `FILE_OOS`의 진단 문자열 "OUT_OF_LINE_OVERFLOW_STORAGE"를 기능 이름(Out-of-row Overflow Storage)에 맞게 바꿀 것인가.

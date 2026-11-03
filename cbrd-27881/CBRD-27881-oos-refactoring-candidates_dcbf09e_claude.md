@@ -181,7 +181,7 @@ REJECTED 5개는 다음과 같다. R-02(전방 선언 9개 삭제)는 CUBRID가 
 | 3 | DF-02 | demotion 기준이 사양의 4,060 B가 아니라 `DB_PAGESIZE / 4`다. | 소스(재확인) | [#8299](https://github.com/CUBRID/cubrid/pull/8299)(CBRD-27785)의 commit `4c3c8d791`이 고친다. |
 | 4 | DF-04 | `oos_find_best_page`의 이른 fallback이 에러를 버리고 새 페이지를 할당한다. | 소스(재확인), 영향은 추론 | 다루는 이슈가 없다(2026-11-03 12:40 JQL 검색). 새 버그 후보. R-22보다 먼저 고친다. |
 
-**DF-03 (CBRD-27237).** vacuum은 `RVHF_UPDATE_NOTIFY_VACUUM`과 `RVHF_DELETE_NEWHOME_NOTIFY_VACUUM` 로그의 undo image를 따라가 옛 OOS chain을 지운다. 이 경로에는 commit과 abort를 구분하는 조건이 없다(소스 재확인). ROLLBACK한 UPDATE의 undo image는 아직 살아 있는 원래 값을 가리킨다. 사양 §3은 commit hook에서 `RVOOS_NOTIFY_VACUUM`을 남기고 이 forward-walk 삭제 경로를 없애라고 정한다. dcbf09e4f에는 이 인덱스를 기록하는 곳이 없고, #8347은 이 인덱스를 지운다.
+**DF-03 (CBRD-27237).** vacuum은 `RVHF_UPDATE_NOTIFY_VACUUM`과 `RVHF_DELETE_NEWHOME_NOTIFY_VACUUM` 로그의 undo image를 따라가 옛 OOS chain을 지운다. 이 경로에는 commit과 abort를 구분하는 조건이 없다(소스 재확인). ROLLBACK한 UPDATE의 undo image는 아직 살아 있는 원래 값을 가리킨다. 사양 §3은 commit hook에서 `RVOOS_NOTIFY_VACUUM`을 남기고 이 forward-walk 삭제 경로를 없애라고 정한다. dcbf09e4f에는 이 인덱스를 기록하는 곳이 없고, #8347은 이 인덱스를 지운다. CBRD-27841 설명은 이 삭제가 CBRD-27230의 요구를 끝내거나 취소하지 않으며, 알림을 구현할 때 실제 복구 인덱스를 다시 정의해야 한다고 적는다. 그래서 #8347은 해결 방식과 무관하게 병합할 수 있다.
 
 2026-11-03 02:09에 dcbf09e4f의 `debug_gcc` 빌드에서 다음을 관찰했다.
 
@@ -230,8 +230,8 @@ REJECTED 5개는 다음과 같다. R-02(전방 선언 9개 삭제)는 CUBRID가 
 
 ## Next steps
 
-1. CBRD-27237(DF-03)을 먼저 고친다. 데이터 손실이며 fix-before-release 항목이다. 고치기 전에 사양 §3의 `RVOOS_NOTIFY_VACUUM` 방식과 #8347의 인덱스 삭제가 충돌하지 않는지 정한다. 회귀 테스트는 479cd960e의 비활성 테스트를 다시 켜면 된다. 2026-11-03에 담당자는 수정 방식이 정해질 때까지 #8347을 보류하기로 했다.
-2. PR 7개는 모두 CI 5/5를 통과했고 draft로 둔다. 리뷰 요청 시점은 담당자가 정한다. 서로 독립이므로 어떤 순서로도 병합할 수 있다. 실행 코드 변화가 적은 순서로 #8367, #8368, #8373, #8370, #8369, #8371, #8372를 제안한다.
+1. CBRD-27237(DF-03)을 먼저 고친다. 데이터 손실이며 fix-before-release 항목이다. 수정 방식 후보는 세 개다. 사양 §3의 commit 조건부 알림(A), COMMIT 여부 확인(B), 삭제 전 현재 행 확인(C)이다. 비교와 읽을 자료는 [담당자가 정할 것](CBRD-27881-owner-decisions_dcbf09e_claude.md) 1절에 있다. 어느 방식을 골라도 #8347은 병합할 수 있다. A를 고르면 알림을 구현할 때 복구 인덱스를 다시 정의한다. 회귀 테스트는 479cd960e의 비활성 테스트를 다시 켜면 된다. 2026-11-03에 담당자는 수정 방식이 정해질 때까지 #8347을 보류하기로 했다.
+2. PR 7개는 모두 CI 5/5를 통과했고 draft로 둔다. ready 전환과 리뷰 요청은 담당자가 직접 한다. 서로 독립이므로 어떤 순서로도 병합할 수 있다. 실행 코드 변화가 적은 순서로 #8367, #8368, #8373, #8370, #8369, #8371, #8372를 제안한다.
 3. NEEDS-DECISION 7개를 정한다. R-34(DF-01의 tier-3 sync를 고칠지 지울지)는 CBRD-27213의 방향(지우고 재설계)을 따르면 된다. R-05와 R-39는 짧게 정할 수 있다.
 4. DF-04를 JIRA에 등록할지 정한다. DF-01은 CBRD-27213이, DF-02는 #8299가 이미 다룬다.
 
