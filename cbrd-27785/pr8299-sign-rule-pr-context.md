@@ -57,4 +57,13 @@ engine source push, PR 병합, CI 실행, title 변경, TC PR 조치는 제안�
 
 ## 승인 후 게시 결과
 
-아직 없다.
+사용자가 2026-11-04에 초안과 위 조치를 보고 "yes"로 게시를 확인했다. 결과는 다음과 같다.
+
+- 게시 직전 저장한 본문의 SHA-256은 검토 때와 같았다. PR material 검사와 공유 링크 검사가 다시 통과했다.
+- docs task commit `17998cb`는 rebase 없이 docs `main`에 fast-forward 병합했고 `origin/main`에 push했다. 그사이 `main`은 움직이지 않았다.
+- my-cubrid-jira `main`에 JIRA 본문 commit `c305474`와 `a4aa7c4`를 병합·push했다. 두 이슈에서 "링크한 보고서는 반대 부호" 문장을 고쳤고, phase-1 보고서 고정 링크를 `fcca125`에서 `17998cb`로 바꿨다.
+  - 게시 직전 CBRD-27785·CBRD-27816 본문이 지난 게시 뒤의 read-back과 같았다.
+  - dry-run 뒤 live update가 두 이슈 모두 description 필드만 바꿨다.
+  - 다시 읽은 본문을 지난 read-back과 비교하니 의도한 문장 세 곳과 링크 두 곳만 달랐다.
+- 게시 직전 PR head `4c3c8d791`, head branch, base, OPEN·ready 상태, title, 본문 fingerprint `34e48759…`가 준비 때와 같았다. 로컬 source `HEAD`도 `4c3c8d791`이었다.
+- 2026-11-04에 본문을 올렸다. GitHub body의 SHA-256이 `06a8e150791150b2ff1c2d705ab06651ad8d497190a6d4a6aaf3c90778ed5c95`로 저장 파일과 같다. head, base, ready 상태, title은 바뀌지 않았다.
