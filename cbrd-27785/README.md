@@ -3,6 +3,7 @@
 관련 이슈: [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785).
 관련 PR: [OOS 통합 PR #7990](https://github.com/CUBRID/cubrid/pull/7990).
 성능 수정: [draft PR #8299](https://github.com/CUBRID/cubrid/pull/8299).
+후속 진단: [CBRD-27816](https://jira.cubrid.org/browse/CBRD-27816).
 대상은 `feature/oos-merge`다.
 작성일: 2026-10-27. 수정일: 2026-11-03, Asia/Seoul.
 
@@ -12,6 +13,7 @@
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [CBRD-27816 일반 UPDATE 1단계 원인 분리](CBRD-27816-ordinary-update-phase1.md) | 4c3c8d791 대 4781495의 thread별 계수, worker 증가 A·B·C 분해, 늦은 spike를 비동기 vacuum으로 설명한 근거, 기각한 가설, 11-03 사용자 결정 | 2026-11-03 | 2026-11-03 | 남은 UPDATE 비용과 늦은 spike의 출처를 실행 근거로 가리고 2단계 결정을 기록하기 위해 |
 | [최종 head의 PR 본문 (cycles 재측정 반영)](CBRD-27785-final-head-pr-body_4c3c8d7_claude.md) | 다른 세션이 4c3c8d791로 갱신한 본문에 11-03 cycles 재측정과 근거 링크를 더한 판 | 2026-11-03 | 2026-11-03 | 재측정 결과를 사용자 검토 뒤 게시하기 위해 |
 | [최종 head의 게시 context (cycles 재측정 반영)](CBRD-27785-final-head-pr-context_4c3c8d7_claude.md) | 기존 본문 fingerprint, 본문 변경 범위, 승인 후 조치 | 2026-11-03 | 2026-11-03 | 게시 승인 범위와 실행 결과를 추적하기 위해 |
 | [narrow scan cycles 변동의 원인](CBRD-27785-pr8299-cycles-layout_5837393_claude.md) | f8114e432 대비 5837393ff의 조용한 시간 ABBA 12라운드, 서버 시작별 두 갈래 cycles와 ASLR·분기 예측 실패 진단, PR 밖 분기 위치 | 2026-11-03 | 2026-11-03 | 지난 측정에서 원인을 모른 cycles 차이를 판정하고 근거를 남기기 위해 |
