@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Check each OOS reclaim design decision with TLC and compare the results with EXPECTED.
 
+Decisions 1-4 have one model each; decision 5 checks the chosen combination in OosReclaimDesign.
+
 Usage: python3 check_decisions.py --out NEW_DIR [--jar tla2tools.jar] [--java java] [--jobs N]
 
 Each check runs one model with one setting and one invariant. A "reason" check runs the state
@@ -72,6 +74,27 @@ def retry_expected(order, link, on_error):
     return [other, reclaimed]
 
 
+# Decision 5: OosReclaimDesign, the chosen combination and one variant per undone decision.
+DESIGN_CONFIGS = {
+    "design": {"Horizon": True, "Notify": "postpone", "LinkStamp": True},
+    "no_horizon": {"Horizon": False, "Notify": "postpone", "LinkStamp": True},
+    "undo_image": {"Horizon": True, "Notify": "undo_image", "LinkStamp": True},
+    "no_link_stamp": {"Horizon": True, "Notify": "postpone", "LinkStamp": False},
+}
+DESIGN_PROPS = ["NeededChainsIntact", "ReuseKeepsChain", "ReaderSeesIntactChain", "OtherRecordIntact",
+                "NoOrphanWhenQuiescent"]
+DESIGN_REASONS = ["ReclaimOnlyUnreachable", "NotifyOnlyForCommittedDrop", "RemainingIsPrefix",
+                  "ListStillNamesChain"]
+DESIGN_EXPECTED = {
+    "design": ([P, P, P, P, P], [P, P, P, P]),
+    "no_horizon": ([P, P, F, P, P], [F, P, P, P]),
+    "undo_image": ([F, F, F, P, P], [F, P, P, P]),
+    "no_link_stamp": ([P, P, P, F, P], [P, P, P, F]),
+}
+# Each witness must fail in the design: TLC then shows a path that reaches the situation.
+DESIGN_WITNESSES = ["WitnessBothChainsReclaimed", "WitnessReusedChainReclaimed", "WitnessVacuumWaitsForSnapshot",
+                    "WitnessRerunStopsAtReusedSlot", "WitnessDeallocDuringReclaim"]
+
 RETRY_REASONS = {
     ("head_first", True, "rerun"): [("RemainingIsPrefix", F)],
     ("tail_first", False, "rerun"): [("RemainingIsPrefix", P), ("ListStillNamesChain", F)],
@@ -109,6 +132,14 @@ def checks():
                     out.append(("3", "OosReclaimRetry", settings, prop, exp, "property"))
                 for reason, exp in RETRY_REASONS.get((order, link, on_error), []):
                     out.append(("3", "OosReclaimRetry", settings, reason, exp, "reason"))
+    for config, settings in DESIGN_CONFIGS.items():
+        props, reasons = DESIGN_EXPECTED[config]
+        for prop, exp in zip(DESIGN_PROPS, props):
+            out.append(("5", "OosReclaimDesign", settings, prop, exp, "property"))
+        for reason, exp in zip(DESIGN_REASONS, reasons):
+            out.append(("5", "OosReclaimDesign", settings, reason, exp, "reason"))
+    for witness in DESIGN_WITNESSES:
+        out.append(("5", "OosReclaimDesign", DESIGN_CONFIGS["design"], witness, F, "witness"))
     return out
 
 
@@ -166,7 +197,7 @@ def main():
     os.makedirs(args.out, exist_ok=True)
 
     shas = {}
-    for module in ["OosSpaceProtect", "OosDropDecision", "OosReclaimRetry"]:
+    for module in ["OosSpaceProtect", "OosDropDecision", "OosReclaimRetry", "OosReclaimDesign"]:
         with open(os.path.join(HERE, module + ".tla"), "rb") as f:
             shas[module] = hashlib.sha256(f.read()).hexdigest()
     with open(args.jar, "rb") as f:
@@ -187,7 +218,8 @@ def main():
     lines += ["", "## Counterexamples", ""]
     for r in results:
         if r["result"] != P:
-            lines.append("### Decision {}: {} breaks {}".format(r["decision"], label(r["settings"]), r["invariant"]))
+            verb = "reaches" if r["kind"] == "witness" else "breaks"
+            lines.append("### Decision {}: {} {} {}".format(r["decision"], label(r["settings"]), verb, r["invariant"]))
             lines.append("")
             lines += ["{}. {}".format(i, s) for i, s in enumerate(r["trace"][1:], 1)]
             lines.append("")

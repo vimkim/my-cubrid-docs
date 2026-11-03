@@ -2,7 +2,7 @@
 
 ## 질문, 독자, 결론
 
-[OOS 삭제를 확정 뒤 회수로 바꾸는 설계 개정안](reclaim-redesign.md)에는 정해야 할 결정이 네 개 있다. 이 문서는 결정마다 후보를 TLA+ 모델에 넣고, 각 후보가 가능한지, 가능하다면 왜 가능한지를 TLC 검사 결과로 설명한다.
+[OOS 삭제를 확정 뒤 회수로 바꾸는 설계 개정안](reclaim-redesign.md)에는 정해야 할 결정이 네 개 있다. 이 문서는 결정마다 후보를 TLA+ 모델에 넣고, 각 후보가 가능한지, 가능하다면 왜 가능한지를 TLC 검사 결과로 설명한다. 그다음 고른 후보들을 하나의 모델로 합쳐 결정 사이의 상호작용을 검사한다.
 
 독자는 OOS 설계 담당자와 보고를 받는 팀장이다. 담당자는 이 문서로 후보를 고르고 구현할 조건을 확인한다. 팀장은 이 절의 표만 읽어도 무엇이 가능하고 무엇이 불가능한지 알 수 있다.
 
@@ -12,6 +12,7 @@
 | 4. D3에서 LSA reclaim gate가 필요한가 | gate 없이도 안전: D1, D2c, D3 | gate 없으면 깨짐: 현재 코드, D2a, D2b | D3에서 gate를 없앤다 |
 | 2. chain이 죽었다는 판단의 근거 | A' postpone 알림 | 현재 코드(rollback한 UPDATE), B commit 확인(statement rollback 뒤 commit), A commit hook 알림(hook과 commit 레코드 사이의 crash) | A' |
 | 3. D3 회수기가 재시도에서 수렴하는 방법 | 꼬리부터 지우고 head를 마지막에, next 링크에 stamp, 오류 시 다시 실행 | head부터 지움(나머지 chunk가 고아가 됨), 링크 stamp 없음(재시도가 다른 레코드를 지움), 오류를 버림(회수가 멈춤) | 가능한 후보 그대로 |
+| 조합. 고른 후보를 함께 쓸 때 | 설계 조합(D3, gate 없음, A', 꼬리부터 회수)이 모든 성질을 통과 | 결정을 하나씩 되돌린 변형 셋이 각자 반례: snapshot을 기다리지 않음, undo image로 판단, 링크 stamp 없음 | 설계 조합, 알림 소비는 snapshot horizon을 기다린다 |
 
 "가능하다"는 모델의 모든 도달 가능 상태에서 성질이 성립한다는 뜻이다. "왜 가능한가"는 이유 불변식으로 답한다. 이유 불변식은 후보가 성질을 지키는 메커니즘을 상태 조건으로 쓴 것이다. TLC는 이 조건이 모든 도달 가능 상태에서 성립하는지 확인했다. 그 조건이 성질을 함의한다는 것은 각 절의 설명이 보이는 논증이다.
 
@@ -23,12 +24,12 @@
 | --- | --- |
 | 근거 코드 | CUBRID/cubrid `feature/oos-merge` `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67` |
 | 작성일 | 2026-11-03 (Asia/Seoul) |
-| 모델 | [OosSpaceProtect.tla](reclaim-model/OosSpaceProtect.tla) (결정 1, 4), [OosDropDecision.tla](reclaim-model/OosDropDecision.tla) (결정 2), [OosReclaimRetry.tla](reclaim-model/OosReclaimRetry.tla) (결정 3) |
-| 실행 도구 | [check_decisions.py](reclaim-model/check_decisions.py). 검사 96개와 기대값을 담고 있다. |
+| 모델 | [OosSpaceProtect.tla](reclaim-model/OosSpaceProtect.tla) (결정 1, 4), [OosDropDecision.tla](reclaim-model/OosDropDecision.tla) (결정 2), [OosReclaimRetry.tla](reclaim-model/OosReclaimRetry.tla) (결정 3), [OosReclaimDesign.tla](reclaim-model/OosReclaimDesign.tla) (조합) |
+| 실행 도구 | [check_decisions.py](reclaim-model/check_decisions.py). 검사 137개와 기대값을 담고 있다. 결과표에서 조합 검사는 decision `5`로 나온다. |
 | TLC | `~/.cache/tlaplus/tla2tools-1.7.4.jar`, SHA-256 `936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88`, TLC 2.19, Temurin 1.8.0_462 |
-| 결과 | 96개 모두 기대값과 같다. 종료 코드 0, 8개 병렬 실행으로 약 18초. |
+| 결과 | 137개 모두 기대값과 같다. 종료 코드 0, 8개 병렬 실행으로 약 27초. |
 
-모델 파일의 SHA-256은 다음과 같다. `OosSpaceProtect.tla` `b283293cf0744e2581af573600bf78cca7187e8b0f2b1f8d2d3f798686e82f92`, `OosDropDecision.tla` `13029048d9ad3052e45cb1339aa41deab08d4cd71ed8b2e26aed6fa97c62623d`, `OosReclaimRetry.tla` `3ddbae04a3233d9391f0ff62f95e72329874ea106dce27e10f94e748178409a6`.
+모델 파일의 SHA-256은 다음과 같다. `OosSpaceProtect.tla` `b283293cf0744e2581af573600bf78cca7187e8b0f2b1f8d2d3f798686e82f92`, `OosDropDecision.tla` `13029048d9ad3052e45cb1339aa41deab08d4cd71ed8b2e26aed6fa97c62623d`, `OosReclaimRetry.tla` `3ddbae04a3233d9391f0ff62f95e72329874ea106dce27e10f94e748178409a6`, `OosReclaimDesign.tla` `7110e9f92022d7c8d0a9dd7b7aa7013d5b07e9e902b05a67efd68c3c27800054`.
 
 다시 실행하려면 다음 명령을 쓴다. `--out`은 새 디렉터리여야 한다.
 
@@ -36,7 +37,7 @@
 python3 oos/reclaim-model/check_decisions.py --out <새 디렉터리>
 ```
 
-출력 디렉터리의 `summary.md`에 전체 결과표와 모든 반례가 남는다. 통과한 검사의 상태 수는 모델 전체의 도달 가능 상태 수다. 결정 1은 138-460개, 결정 2는 20-28개, 결정 3은 32-50개다. 반례의 상태 수는 TLC가 반례를 찾을 때까지 본 수라 더 작다.
+출력 디렉터리의 `summary.md`에 전체 결과표와 모든 반례가 남는다. 통과한 검사의 상태 수는 모델 전체의 도달 가능 상태 수다. 결정 1은 138-460개, 결정 2는 20-28개, 결정 3은 32-50개, 조합 모델의 설계 조합은 2,960개다. 반례의 상태 수는 TLC가 반례를 찾을 때까지 본 수라 더 작다.
 
 ## 결정 1. 지운 chunk의 slot과 바이트를 undo 때까지 지키는 방법
 
@@ -246,12 +247,90 @@ ListStillNamesChain ==   \* 아직 지울 목록의 slot은 모두 chain A의 ch
 - 회수기는 head부터 chain을 읽고 꼬리부터 지우며, head를 마지막에 지운다. next 링크에 다음 chunk의 stamp를 둔다. 실패하면 오류를 버리지 않고 다시 실행한다.
 - LSA reclaim gate는 없앤다. heap forward slot(CBRD-27858)은 이 모델 밖이며, #8348처럼 forward page latch를 sysop 끝까지 쥐는 방식으로 둔다.
 
+다음 절은 이 조합을 하나의 모델로 함께 검사한다. 그 검사에서 요구가 하나 더 나왔다. vacuum은 알림을 받은 뒤에도, 그 UPDATE의 commit보다 오래된 snapshot이 모두 끝날 때까지 회수를 시작하지 않아야 한다.
+
 D2b와 D2c도 결정 1을 통과하므로 대안으로 남는다. 둘 다 chunk 삭제의 undo를 유지하므로, chunk 레코드 전체를 undo로 쓰는 비용이 그대로 남는다. D2b는 gate도 남는다. 결정 2는 어느 후보를 고르든 필요하다. 결정 3은 D3를 고를 때만 필요하다. D2b나 D2c에서는 chain 삭제가 지금처럼 sysop 하나로 원자적이므로 head stamp만으로 재시도가 안전하다(U1의 CBRD-26950 결과).
+
+## 고른 조합을 하나의 모델로 검사
+
+### 모델
+
+[OosReclaimDesign.tla](reclaim-model/OosReclaimDesign.tla)는 고른 조합을 한 모델에 넣는다. D3, gate 없음, A', 꼬리부터 지우는 회수기(링크 stamp, 재실행)다. 따로 만든 모델로는 검사할 수 없던 상호작용을 다룬다.
+
+- vacuum의 알림 소비와 REMOVE가 같은 회수기를 쓴다. chain A는 알림으로, chain B는 REMOVE로 회수된다.
+- MVCC snapshot을 쥔 독자 R이 있다. R은 snapshot이 보는 버전의 chain을 읽는다.
+- UPDATE는 OOS 속성에 값을 대입해 chain B를 새로 쓰거나(`assign`), 대입하지 않아 chain A의 stub을 그대로 두는(`reuse`, 사양 §3의 CBRD-27230) 두 경우가 있다.
+- page는 gate 없이 비는 즉시 회수될 수 있다. T2는 비었거나 회수된 page의 slot에 레코드를 넣을 수 있다.
+- 방해는 한 번이다. 회수기 오류 뒤의 재실행이거나, crash 뒤의 복구다. 복구는 진행 중인 트랜잭션을 되돌리고, T1의 postpone을 마저 실행하고, 회수기를 head부터 다시 실행한다.
+
+행위자는 T1(UPDATE, statement rollback, commit, rollback), T3(UPDATE 뒤 row DELETE), 독자 R, vacuum과 회수기, T2다. 설정 세 개는 각각 결정 하나를 되돌린다.
+
+| 설정 | 설계 값 | 되돌린 값 |
+| --- | --- | --- |
+| `Horizon` | `TRUE`: vacuum은 그 commit보다 오래된 snapshot이 끝날 때까지 기다린다 | `FALSE`: snapshot을 보지 않는다 |
+| `Notify` | `postpone`: A' 알림이 있을 때만 chain A를 회수한다 | `undo_image`: UPDATE undo image가 있으면 회수한다(지금의 forward-walk) |
+| `LinkStamp` | `TRUE`: 회수기가 next 링크의 stamp를 비교한다 | `FALSE`: OID만 따라간다 |
+
+### 결과
+
+| 성질 | 설계 | `Horizon=FALSE` | `Notify=undo_image` | `LinkStamp=FALSE` |
+| --- | --- | --- | --- | --- |
+| `NeededChainsIntact` row와 T1이 참조하는 chain은 지워지지 않는다 | 통과 | 통과 | 반례 | 통과 |
+| `ReuseKeepsChain` stub을 그대로 둔 UPDATE 뒤에도 chain A가 남는다 | 통과 | 통과 | 반례 | 통과 |
+| `ReaderSeesIntactChain` 독자는 자기 snapshot의 chain을 온전히 읽는다 | 통과 | 반례 | 반례 | 통과 |
+| `OtherRecordIntact` T2의 레코드가 남는다 | 통과 | 통과 | 통과 | 반례 |
+| `NoOrphanWhenQuiescent` 할 일이 끝나면 참조되는 chain만 slot을 차지한다 | 통과 | 통과 | 통과 | 통과 |
+
+설계 조합은 상태 2,960개에서 다섯 성질을 모두 통과했다. 변형 셋은 각자 되돌린 결정에 해당하는 성질만 깨뜨렸다.
+
+### 변형의 반례
+
+- **`Horizon=FALSE`(여덟 단계).** T1이 chain B를 쓰는 UPDATE를 한다. R이 T1의 commit 전에 snapshot을 찍는다. T1이 commit하고 postpone이 알림을 남긴다. vacuum이 알림을 소비해 chain A의 a2를 지운다. R이 자기 snapshot의 chain A를 읽다가 `oos_read`가 실패한다(`ER_HEAP_OOS_CORRUPTED_RECORD`). A'는 "죽었다"는 판단을 바로잡지만, "언제 지워도 되는가"는 따로 지켜야 한다는 뜻이다. 사양 §3 step 3의 "Vacuum consumes the notification when reclamation is safe for MVCC readers"가 바로 이 조건이다.
+- **`Notify=undo_image`, chain을 그대로 둔 UPDATE(다섯 단계).** T1이 OOS 속성을 대입하지 않는 UPDATE를 하고 commit한다. forward-walk는 UPDATE undo image에 chain A의 stub이 있다는 이유로 chain A를 회수한다. row는 여전히 chain A를 참조한다. CBRD-27230의 재사용이 들어오면 지금의 forward-walk는 commit된 UPDATE에서도 살아 있는 chain을 지운다. CBRD-27237 심층 분석의 시나리오 12를 모델로 확인한 것이다. 같은 변형은 rollback한 UPDATE에서도 깨진다(CBRD-27237).
+- **`LinkStamp=FALSE`(열 단계).** 회수기가 a2를 지운 뒤 실패한다. T2가 비어 있는 a2에 레코드를 넣는다. 재실행은 a1의 next 링크를 따라 a2를 chain의 일부로 읽고 T2의 레코드를 지운다.
+
+### 설계가 통과하는 이유
+
+핵심 이유 불변식은 하나다. 회수기가 일하는 chain에는 아무도 닿지 못한다.
+
+```tla
+ReclaimOnlyUnreachable ==
+    rc.pc # "idle" =>
+        /\ rc.c \notin Needed                  \* row와 T1이 참조하지 않는다
+        /\ (r = "active" => rc.c # RChain)      \* 열린 snapshot이 보지 않는다
+```
+
+이 모델에서 chain을 지우는 것은 회수기뿐이다. T1의 rollback은 자기가 넣은 chain B만 지운다. 그러므로 이 불변식이 성립하면 `NeededChainsIntact`, `ReuseKeepsChain`, `ReaderSeesIntactChain`이 따라 나온다. 이 불변식은 세 가지가 함께 지킨다.
+
+- `NotifyOnlyForCommittedDrop`: 알림은 chain A를 실제로 버린 commit된 UPDATE에만 있다. A'의 이유다.
+- 알림 소비와 REMOVE는 그 commit보다 오래된 snapshot이 끝난 뒤에만 회수기를 시작한다. `Horizon`의 이유다.
+- REMOVE는 DELETE가 commit된 뒤에만 그 시점의 chain을 회수한다.
+
+`OtherRecordIntact`와 `NoOrphanWhenQuiescent`는 결정 3의 두 이유 불변식 `RemainingIsPrefix`와 `ListStillNamesChain`이 지킨다. 조합 모델에서도 두 불변식이 성립했다.
+
+변형마다 깨지는 이유 불변식이 다르다. `Horizon=FALSE`와 `Notify=undo_image`는 `ReclaimOnlyUnreachable`을 깨고, `LinkStamp=FALSE`는 `ListStillNamesChain`을 깬다.
+
+### 검사가 비어 있지 않다는 확인
+
+통과한 검사가 아무 일도 일어나지 않는 모델에서 나온 것이 아님을 보이려고, 도달 확인(witness) 다섯 개를 설계 조합에서 실행했다. 각 witness는 "이 상황에 도달하지 않는다"는 불변식이다. 다섯 개 모두 반례가 나왔으므로, 설계 조합은 다섯 상황에 모두 도달한다.
+
+| witness | 도달한 상황 | 단계 |
+| --- | --- | --- |
+| `WitnessBothChainsReclaimed` | chain A는 알림으로, chain B는 REMOVE로 회수된다 | 12 |
+| `WitnessReusedChainReclaimed` | stub을 그대로 둔 UPDATE 뒤 알림 없이 REMOVE가 chain A를 한 번 회수한다 | 10 |
+| `WitnessVacuumWaitsForSnapshot` | 알림이 있지만 오래된 snapshot 때문에 vacuum이 기다린다 | 4 |
+| `WitnessRerunStopsAtReusedSlot` | 재실행한 회수기가 a2에서 T2의 레코드를 만나 읽기를 멈춘다 | 9 |
+| `WitnessDeallocDuringReclaim` | 회수기가 아직 도는 동안 비워진 page가 gate 없이 회수된다 | 7 |
+
+### 조합 검사에서 나온 구현 요구
+
+- vacuum의 알림 소비는 그 UPDATE의 commit보다 오래된 snapshot이 끝날 때까지 기다려야 한다. 지금 vacuum block의 조건(block의 newest MVCCID가 oldest visible보다 작음)을 알림 레코드에도 적용하면 된다(추론).
+- 회수기가 다시 실행될 때는 마지막으로 남은 chunk의 다음 slot을 한 번 읽는다. 그 slot의 page는 이미 회수되었을 수 있다(`WitnessDeallocDuringReclaim`). 그래서 continuation page를 고정할 때도 head처럼 `OLD_PAGE_MAYBE_DEALLOCATED`를 써야 한다. 지금 `oos_delete_chain`은 continuation page를 plain `pgbuf_fix`로 고정한다(`oos_file.cpp:3305`). 모델은 이 slot을 "사용 중이 아님"으로만 보므로, 이 요구는 모델 결과에서 추론한 것이다.
 
 ## 모델의 한계
 
-- 결정마다 따로 만든 작은 모델이다. 결정 사이의 상호작용은 아직 검사하지 않았다. 예를 들어 A'의 알림을 소비하는 vacuum이 D3 회수기를 부르는 전체 경로가 그렇다. 다음 단계에서 하나의 모델로 합친다.
-- 규모가 작다. worker 둘, chain 둘, 다른 INSERT 하나, 방해 한 번이다. 결정 2와 3은 트랜잭션 하나와 chain 하나다.
+- 규모가 작다. 결정 1은 worker 둘, chain 둘, 다른 INSERT 하나, 방해 한 번이다. 결정 2와 3은 트랜잭션 하나와 chain 하나다. 조합 모델은 row 하나, UPDATE 하나, DELETE 하나, 독자 하나, 다른 INSERT 하나, 방해 한 번이고, vacuum worker는 하나다.
+- 조합 모델에는 결정 1의 다른 후보와 heap 쪽 undo가 없다. REMOVE의 heap 레코드 제거와 sysop은 한 단계로 묶었다. 여러 vacuum worker, 여러 row, eager 정리, HA는 아직 없다.
 - 결정 1의 바이트는 레코드당 1단위로 단순화했다. D2b의 예약은 sysop이 끝날 때 풀린다고 가정한다. 실제 `spage_save_space`는 트랜잭션 단위로 예약을 관리한다.
 - 결정 4의 `lsa` gate는 "열린 sysop이 쓴 page는 회수하지 않는다"로 단순화했다. 실제 gate는 page LSA와 활성 트랜잭션, system tdes의 head LSA를 비교한다.
 - 결정 2에는 MVCC snapshot 독자, HA replica, prepared 2PC, 복구 중 postpone 재실행의 MVCCID 문제가 없다. 마지막 문제는 CBRD-27237 심층 분석이 구현 때 정할 일로 남겼다.
