@@ -1,10 +1,10 @@
 # CBRD-27785 TODO 체크리스트
 
-작성일은 2026-10-29, 현재 PR·TC 상태 확인일은 2026-11-02, Asia/Seoul이다.
+작성일은 2026-10-29, 현재 PR·TC 상태 확인일은 2026-11-03, Asia/Seoul이다.
 대상은 [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785)의 구현 반영, 성능 수락, performance TC 편입이다.
 리뷰 수정 후 최종 head의 CI가 통과했다. 새 PR 본문을 게시했다. 사람의 TC 종료 처리와 PR 리뷰·병합 판단이 남았다.
 
-확인한 소스는 `vimkim/cubrid:CBRD-27785-oos-read-performance`의 `5837393ffb9d69bccb93271d63b0e38b884e0ed4`다.
+확인한 소스는 `vimkim/cubrid:CBRD-27785-oos-read-performance`의 `4c3c8d791ee619ad61701eff9555bc9ef27d9994`다.
 [PR #8299](https://github.com/CUBRID/cubrid/pull/8299)는 OPEN draft이며 대상은 `feature/oos-merge`다.
 구현·CI 완료를 이슈 전체 수락 완료로 표시하지 않는다.
 
@@ -17,6 +17,9 @@
 - [x] [적대적 리뷰](CBRD-27785-pr8299-adversarial-review_f8114e432_claude.md)의 지적 반영. OOS Resolve 임시 버퍼 분리, 할당 실패 처리, 테스트 보강, `bench.py` 수정을 `5837393ff`까지 push했다.
 - [x] `5837393ff`의 strict GCC 8.5 컴파일, debug OOS CTest 44/44, `f8114e432` 대비 release 명령어 수 회귀 없음 확인. [검증·측정 근거](CBRD-27785-review-fixes_5837393_claude.md)에 있다.
 - [x] `5837393ff`의 [전체 CI run 41435647083](https://github.com/CUBRID/cubrid/actions/runs/41435647083)에서 shell `cbrd_26280` 1건이 무관한 출력 순서 문제로 실패했다. [재실행 run 41459706876](https://github.com/CUBRID/cubrid/actions/runs/41459706876)에서 통과해 gha-ci status 5개가 모두 성공이다.
+- [x] OOS 분리 기준을 명세의 4-record 목표(16KB page에서 4,060B)로 맞췄다. 병합되지 않은 [CBRD-27057](https://jira.cubrid.org/browse/CBRD-27057) 수정을 `4c3c8d791`로 옮겼다. 경위는 [적대적 리뷰](CBRD-27785-pr8299-adversarial-review_f8114e432_claude.md#oos-existing)에 있다.
+- [x] `4c3c8d791`의 debug OOS CTest 44/44와 [전체 CI run 41485345491](https://github.com/CUBRID/cubrid/actions/runs/41485345491)이 통과했다. gha-ci status 5개가 모두 성공이다.
+- [x] `feat/oos` 대상으로 남은 draft PR #7462·#7614·#6945·#6887을 닫고 CBRD-27057에 댓글을 남겼다. #7614·#6945·#6887의 내용은 다른 형태로 `feature/oos-merge`에 있다.
 
 ## 지금 처리할 항목
 
@@ -26,12 +29,13 @@
 - [x] `5837393ff`의 PR 본문과 [근거 문서](CBRD-27785-review-fixes_5837393_claude.md) 초안을 준비한다.
 - [x] 새 본문·문서의 검토와 게시 승인을 받는다.
 - [x] 승인받은 근거 문서를 게시한 뒤 PR #8299 본문을 업데이트한다.
+- [x] `4c3c8d791`에 맞춘 [PR 본문](CBRD-27785-four-record-target-pr-body_4c3c8d7_claude.md)을 승인받아 게시했다. 게시 기록은 [context](CBRD-27785-four-record-target-pr-context_4c3c8d7_claude.md)에 있다.
 - [ ] TC 변경이 불필요한 [공개 TC PR #3898](https://github.com/CUBRID/cubrid-testcases/pull/3898)과 [비공개 TC PR #4589](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4589)를 사람이 닫아 TC gate를 해소한다.
 - [ ] PR 리뷰를 요청하고 승인을 확보한다.
 - [ ] 승인 후 PR #8299를 `feature/oos-merge`에 반영한다.
 
-2026-11-02 조회에서 TC PR 두 개는 모두 OPEN이다.
-Engine PR은 OPEN draft이고 `5837393ff`의 gha-ci status 5개가 모두 성공이다.
+2026-11-03 조회에서 TC PR 두 개는 모두 OPEN이다.
+Engine PR은 OPEN draft이고 `4c3c8d791`의 gha-ci status 5개가 모두 성공이다.
 이 GitHub mergeState가 사람의 TC 처리나 리뷰어 승인을 대신하지 않는다.
 [게시한 본문](CBRD-27785-common-reader-pr-body_067aae4_codex.md),
 [근거 보고서](CBRD-27785-common-reader_067aae4_codex.md),
@@ -54,6 +58,7 @@ AC-P1·P3의 비교 범위와 판정은 [성능 수락 기준](CBRD-27785-pr7990
 ## 후속으로 분리해 유지할 항목
 
 - [ ] [CBRD-27816](https://jira.cubrid.org/browse/CBRD-27816), 작업 571에서 UPDATE 잔여 비용과 변동을 분석한다. 엄격한 +2% 목표는 완료 처리하지 않는다.
+- [ ] 작업 710에서 `4c3c8d791`의 성능을 다시 잰다. PR 본문의 stack과 명령어 수는 `5837393ff`에서 잰 값이다. 벤치마크 값은 80B라 저장 형태는 같지만 OOS 분리 판정 코드가 바뀌었다.
 - [ ] **AC-P2**의 threshold 지원·저장 경계를 확인한 뒤 동일 저장 정책으로 재측정한다. 현재 단계의 필수 조건으로 다시 추가하지 않는다.
 
 AC-P2는 기존 overflow처럼 행이 페이지 크기를 넘을 때 OOS로 보내는 설정을 확인한 뒤 측정한다.
@@ -68,6 +73,8 @@ Parameter의 실제 이름·지원 상태·필요 구현을 먼저 확인한다.
 | 670 | PR #8299 리뷰 수정·최종 head CI·본문 갱신 | 수정·CI 통과·본문 게시 완료. 사람의 TC 종료 및 리뷰·병합 판단 대기. |
 | 544 | 성능 regression TC 승인·performance 편입 | Pending. |
 | 571 | CBRD-27816 UPDATE 잔여 비용·변동 분석 | Pending. |
+| 701 | CBRD-27057의 4-record 기준을 PR #8299에 반영 | `4c3c8d791` push·CI 통과·본문 게시 완료. |
+| 710 | `4c3c8d791` 성능 재측정 | Pending. 사용자가 나중에 하기로 했다. |
 
 2026-10-29에 기록한 JIRA 상태는 Develop, Resolution은 Unresolved였다.
 2026-10-31의 실시간 조회는 DNS 오류로 실패했으므로 현재 상태는 미확인이다.

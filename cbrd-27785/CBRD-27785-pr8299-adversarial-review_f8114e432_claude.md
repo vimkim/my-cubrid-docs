@@ -3,6 +3,7 @@
 - 작성일: 2026-11-02, Asia/Seoul. 작성: Claude Code (claude-opus-5-5) 세션과 그 하위 에이전트.
 - 관련: [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785), [PR #8299](https://github.com/CUBRID/cubrid/pull/8299), OOS 후속 후보 [CBRD-27873](https://jira.cubrid.org/browse/CBRD-27873).
 - 독자: PR 작성자와 리뷰어, OOS 후속 작업을 고르는 사람.
+- 갱신: 2026-11-03. OOS 분리 기준 항목에 원인과 PR head `4c3c8d791`의 수정을 적었다.
 
 ## 질문과 결론
 
@@ -14,7 +15,7 @@
 - 증명된 결함은 모두 minor다. PR 테스트가 PR이 주장한 동작을 고정하지 못한 곳, 벤치마크 스크립트의 종료 코드, 이전 head를 가리키는 PR 본문이다.
 - 리뷰 후 PR head `5837393ff`에 테스트 보강, 벤치마크 수정, stack 배열 경계 수정이 들어갔다. PR 본문 갱신과 현재 head의 CI 결과는 이 문서 작성 시점에 남아 있다.
 - 리뷰 중 발견한 기존 문제는 OOS 코드에 속한 것과 `develop`에도 있는 것으로 나눴다. OOS 쪽은 CBRD-27873 후보로 넘기고, 나머지는 [OOS와 무관한 기존 문제](#non-oos-existing)에 기록한다.
-- 같은 head를 독립적으로 본 다른 리뷰와 [결과를 비교](#review-comparison)했다. 그 리뷰가 증명한 OOS 기존 문제 두 건을 이 리뷰는 놓쳤고, OOS 후보에 추가했다.
+- 같은 head를 독립적으로 본 다른 리뷰와 [결과를 비교](#review-comparison)했다. 그 리뷰가 증명한 OOS 기존 문제 두 건을 이 리뷰는 놓쳤다. stub 끝 검사는 OOS 후보에 추가했고, OOS 분리 기준은 PR에서 고쳤다.
 
 ## 대상 revision
 
@@ -136,10 +137,14 @@ adversary가 증명하고 조정자가 다시 실행하지 않은 테스트 공�
   - 같은 식이 base(`dcbf09e4f`, 11111행)와 후속 반영 후 head `5837393ff`(11129-11130행)에도 있다. 기존 문제다.
   - 이 리뷰의 adversary 1은 큰 offset을 VOT 엔트리 하나에만 넣었다. 두 엔트리의 차이가 정확히 stub 크기이면서 둘 다 `INT_MAX` 근처인 경우를 만들지 않아 이 결함을 놓쳤다.
   - 덧셈을 없앤 비교(`next_offset > recdes->length - header_size`)로 고칠 수 있다.
-- OOS 분리 기준이 명세의 물리 목표와 다르다. 명세는 16,344바이트 page에 레코드 네 개가 들어가는 4,060바이트를 목표로 하고, stub보다 큰 값을 OOS로 보내도록 요구한다.
-  - [`heap_attrinfo_determine_disk_layout()`(13187, 13220행)](https://github.com/CUBRID/cubrid/blob/f8114e432d3e97cc7a11149ab8ac852de4a1b935/src/storage/heap_file.c#L13187)은 `DB_PAGESIZE / 4`로 판정한다.
+- OOS 분리 기준이 명세의 물리 목표와 달랐다. 명세는 16,344바이트 page에 레코드 네 개가 들어가는 4,060바이트를 목표로 하고, stub보다 큰 값을 OOS로 보내도록 요구한다. PR head `4c3c8d791`에서 고쳤다.
+  - [`heap_attrinfo_determine_disk_layout()`(13187, 13220행)](https://github.com/CUBRID/cubrid/blob/f8114e432d3e97cc7a11149ab8ac852de4a1b935/src/storage/heap_file.c#L13187)은 `DB_PAGESIZE / 4`(4,086바이트)로 판정한다.
   - 다른 리뷰가 head 서버에서 `(id INT, p BIT VARYING)`에 4,030바이트 값을 넣었을 때 `SHOW HEAP CAPACITY`는 `Avg_rec_len=4064`, `SHOW HEAP OOS`는 OOS 레코드 0개였다.
-  - base에도 같은 식(13177, 13210행)이 있어 기존 문제다. 기준값 변경은 CBRD-27816의 보류 범위("threshold/criterion2")와 겹칠 수 있다.
+  - base에도 같은 식(13177, 13210행)이 있어 기존 문제다.
+  - 원인은 병합되지 않은 수정이다. 이 차이를 고친 [CBRD-27057](https://jira.cubrid.org/browse/CBRD-27057)의 commit `a2f51b7dc`는 `feat/oos` 대상 draft [PR #7462](https://github.com/CUBRID/cubrid/pull/7462)로 남았다. 그 뒤 OOS 통합 branch가 `feature/oos-merge`로 바뀌면서 이 수정은 넘어가지 않았다. JIRA에는 Resolved로 남아 있었다.
+  - 같은 수정을 [`4c3c8d791`](https://github.com/CUBRID/cubrid/pull/8299/commits/4c3c8d791ee619ad61701eff9555bc9ef27d9994)로 PR에 넣었다. `heap_oos_inline_target_size()`가 4,060바이트를 계산하고, layout의 분리 시작·중단 조건과 workspace 입력의 준비 생략 조건(`heap_oos_needs_record_preparation()`)이 이 값을 쓴다. 생략 조건을 그대로 두면 4,012바이트 값을 workspace에서 flush할 때 준비 단계를 건너뛰어 inline에 남는다.
+  - 4,011바이트 값은 inline(레코드 4,044바이트), 4,012바이트 값은 OOS인지 확인하는 경계 테스트를 추가했다. 수정 전 코드에서는 4,012바이트가 inline에 남아 실패한다. 수정 후 OOS CTest 44/44와 [CI run 41485345491](https://github.com/CUBRID/cubrid/actions/runs/41485345491)이 통과했고, 실제 서버에서도 같은 경계를 확인했다.
+  - PR #7462는 닫고 CBRD-27057에 경위를 댓글로 남겼다. `feat/oos` 대상으로 남은 다른 draft PR 세 개(#7614, #6945, #6887)도 닫았다. 그 내용은 다른 형태로 `feature/oos-merge`에 들어 있다.
 
 <a id="non-oos-existing"></a>
 ## OOS와 무관한 기존 문제
@@ -166,11 +171,11 @@ adversary가 증명하고 조정자가 다시 실행하지 않은 테스트 공�
 |---|---|---|---|
 | 16 KB OOS scratch가 caller 프레임에 상주 | 지적(`-fstack-usage`) | 같은 측정, 의심점 | `5c5f2a170` |
 | `heap_file.o` text +6.5%, 강제 inline에 따른 코드 크기 | 지적 | 다루지 않음 | 회귀 아님. release scan 명령어 수가 줄었다 |
-| PR 본문의 head가 이전 것 | 지적 | 증명 | 남음 |
+| PR 본문의 head가 이전 것 | 지적 | 증명 | `5837393ff`, `4c3c8d791` 기준으로 본문 갱신 |
 | `bad_alloc` 처리 위치와 `er_set` 크기 | 지적 | 사소함으로 기록 | `12fe25a2c` |
 | 벤치마크가 다른 바이트의 fixture를 같은 fixture로 받아들임 (PR이 만든 문제) | 실행으로 증명 | 놓침 | `b01204f51`가 `OCTET_LENGTH`와 `HEX` 검사 추가 |
-| OOS stub 끝 검사의 signed overflow (기존 문제) | 실행으로 증명 | 놓침 | 남음, OOS 후보 |
-| OOS 분리 기준 `DB_PAGESIZE / 4`와 명세의 4,060바이트 목표 (기존 문제) | head 실행으로 확인 | 놓침 | 남음, OOS 후보 |
+| OOS stub 끝 검사의 signed overflow (기존 문제) | 실행으로 증명 | 놓침 | 남음, CBRD-27873 후보 4번 |
+| OOS 분리 기준 `DB_PAGESIZE / 4`와 명세의 4,060바이트 목표 (기존 문제) | head 실행으로 확인 | 놓침 | `4c3c8d791`에서 고침 (CBRD-27057 수정 반영) |
 | PR 테스트가 동작을 고정하지 못한 곳 | 없음 | 7건 이상 증명 | `a4cdd6191`, `5837393ff` |
 | `bench.py`의 `MemoryError` 종료 코드 | 없음 | 증명 | `eabea7c54` |
 | head와 base의 읽기·쓰기 결과 동등성 | 개별 probe | dump 약 160만 줄 비교 | 깨끗함 |
