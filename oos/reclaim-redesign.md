@@ -15,7 +15,7 @@
 - **확인된 결함.** CBRD-27858, CBRD-27781, CBRD-27237은 소스에서 경로를 확인했다. CBRD-27237은 `dcbf09e4f`에서 실행으로 재현된 기록이 있다. CBRD-27858과 CBRD-27781은 기존 TLA+ 모델의 반례이고, CBRD-27781은 `224104a36` debug 테스트로 재현된 기록이 있다.
 - **U1 결과(모델 검사).** 설계 모델 `OosReclaim.tla`가 현재 설계에서 네 결함을 모두 반례로 재현했다. CBRD-27858과 CBRD-27781은 "비운 공간은 되돌려지지 않는다"는 가정 하나에만 걸리고, CBRD-27237은 "확정되지 않은 정보로 삭제를 정해도 된다"는 가정 하나에만 걸린다. CBRD-26950은 두 가정과 무관한 세 번째 가정, "OOS OID는 계속 같은 값을 가리킨다"에 걸린다. 그래서 처음 세운 "가정 두 개" 가설은 세 결함에 대해서만 맞다. 결과는 [U1 결과](#u1-결과) 절에 있다.
 - **제안.** OOS chain 삭제를 "결정이 확정된 뒤에 실행하는 redo-only, 멱등 회수"로 바꾼다. 이 문서는 이 설계를 D3라고 부른다. D3에서는 OOS에서 삭제를 undo하는 경로가 없어진다.
-- **성능.** 지금 vacuum은 chunk를 지울 때 chunk 레코드 전체를 undo 데이터로 로그에 쓴다(소스). D3는 slot 번호만 쓴다. 회수 로그 양이 OOS 값 크기에 비례하지 않게 된다(추론, 측정 전).
+- **성능.** 지금 vacuum은 회수 도중 실패하면 이미 지운 chunk를 복원하기 위해, chunk 레코드 전체를 undo 데이터로 로그에 쓴다(소스). D3는 회수를 되돌리는 대신 재시도로 끝내므로 값 내용을 담는 undo 로그를 없앤다. 삭제를 재현하는 작은 redo 로그와 회수 의도는 남는다. 로그 양은 chunk 수와 압축률에도 영향을 받으며, 실제 감소량은 측정 전이다.
 - **열린 것.** D3 자체의 정확성(특히 회수 도중 crash 뒤 재시도), postpone 실행 실패 정책, 실제 성능 수치가 아직 열려 있다.
 
 ## 보고 요약
@@ -23,7 +23,7 @@
 - OOS에는 commit된 데이터를 잃거나 page를 손상시킬 수 있는 결함 세 개가 열려 있다. vacuum 실패나 재시작 undo가 다른 트랜잭션이 쓴 slot을 덮어쓰는 결함(CBRD-27858, CBRD-27781)과, rollback한 UPDATE의 원래 값을 vacuum이 지우는 결함(CBRD-27237)이다.
 - 세 결함은 따로 생긴 것이 아니다. OOS는 비운 slot을 즉시 재사용하게 하면서, 그 삭제를 나중에 undo할 수 있게 만들었다. 또 commit 여부를 확인하지 않은 정보로 삭제를 결정한다. TLA+ 모델에서 이 두 가정을 하나씩 되돌리면 각 결함의 반례가 사라지고, 하나씩 다시 넣으면 해당 결함만 다시 나타난다. heap과 file manager는 같은 문제를 "commit 뒤에 해제"하는 postpone으로 이미 피하고 있다.
 - 수정 방향은 OOS도 같은 원칙을 따르게 하는 것이다. 삭제 결정은 postpone으로 남기고, 실제 삭제는 확정 뒤에 되돌리지 않는 방식으로 실행한다. 결함마다 하나씩 붙은 장치(latch 연장, in-memory 보호 map, LSA reclaim gate)가 필요 없어지거나 줄어든다.
-- 기대 효과는 정확성과 성능이다. vacuum이 OOS 값을 회수할 때 값 전체를 로그에 쓰던 비용이 없어진다. 이 효과는 측정으로 확인한 뒤 채택한다.
+- 기대 효과는 정확성과 성능이다. 지금 vacuum은 회수 도중 실패하면 정리 작업을 되돌리기 위해, 지우는 OOS 값의 내용 전체를 chunk별 undo 로그로 남긴다. 새 설계는 회수를 되돌리지 않고 재시도로 끝내므로 이 복원용 데이터가 필요 없어진다. 삭제를 장애 뒤에 재현할 작은 redo 로그는 유지한다. 실제 로그 감소량과 성능 개선은 측정으로 확인한 뒤 채택한다([회수 로그가 필요한 이유](#회수-로그가-필요한-이유)).
 - 검증 순서는 모델, 사양, 구현이다. 첫 단계(U1)는 끝났다. TLA+ 모델이 현재 설계에서 알려진 결함 네 개를 모두 재현했다. 다음 단계(U2)는 새 설계가 같은 검사를 통과하는지 확인하는 것이다. 통과하면 사양을 개정하고 구현한다.
 - 일정 영향이 있다. PR #7990 병합 전에 하면 형식 변경 비용이 없다. 병합 뒤에 하면 OOS page와 로그 형식의 호환성 문제가 생긴다.
 
@@ -187,10 +187,39 @@ head를 마지막에 지우는 이유가 있다. head가 남아 있는 동안은
 
 ## 성능 영향
 
+### 회수 로그가 필요한 이유
+
+vacuum은 기존 로그에서 회수 대상을 찾고, 실제로 OOS chunk를 지우면서 새 로그를 남긴다. forward-walk가 읽는 것은 UPDATE 전 heap 레코드의 undo image이며, 그 안의 stub으로 옛 OOS chain을 찾는다. REMOVE 경로는 제거할 heap 레코드의 stub에서 chain을 찾는다. 어느 경로든 chunk 삭제는 OOS page를 새로 바꾸는 작업이므로 장애 복구 대상이다.
+
+이 삭제 로그의 redo와 undo는 목적과 필요한 데이터가 다르다.
+
+| 역할 | 필요한 상황 | 필요한 데이터 |
+| --- | --- | --- |
+| redo | 삭제를 확정했지만 변경된 page가 디스크에 기록되기 전에 crash한 경우, 재시작 때 삭제를 다시 적용한다. | 삭제할 page와 slot, 복구 함수 식별 정보. 삭제할 값의 내용은 필요 없다. |
+| undo | 현재 구현에서 회수 도중 실패하거나 sysop 확정 전에 crash한 경우, 이미 지운 chunk를 원래 slot에 복원한다. | 복원할 chunk 레코드의 내용 전체. |
+
+`RVOOS_DELETE` 는 undo를 `oos_rv_redo_insert`, redo를 `oos_rv_redo_delete` 에 연결한다([recovery.c L887-L890](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/transaction/recovery.c#L887-L890)). redo 함수는 로그의 slot 번호로 `spage_delete` 를 호출한다. undo 함수는 로그에 담긴 레코드를 `spage_insert_for_recovery` 로 복원한다([oos_file.cpp L3672-L3712](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/storage/oos_file.cpp#L3672-L3712)).
+
+예를 들어 회수할 chain이 `A → B → C` 라면, 지금은 A를 지운 뒤 B 처리에 실패했을 때 A를 복원해 회수 시작 전 상태로 돌아간다. forward-walk의 `vacuum_forward_walk_oos_delete_atomic` 은 성공하면 `log_sysop_commit`, 실패하면 `log_sysop_abort` 를 호출한다([vacuum_oos.cpp L172-L207](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/query/vacuum_oos.cpp#L172-L207)). REMOVE 경로는 heap slot 제거와 OOS 삭제를 호출자의 같은 sysop에 넣는다([vacuum_oos.cpp L428-L437](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/query/vacuum_oos.cpp#L428-L437)). 여기서 되돌리는 단위는 vacuum의 정리 작업이다.
+
+이 복원을 위해 `oos_log_delete_physical` 은 chunk를 지우기 전에 다음 호출로 레코드 전체를 undo 입력으로 넘긴다([oos_file.cpp L3213-L3221](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/storage/oos_file.cpp#L3213-L3221)).
+
+```cpp
+log_append_undoredo_recdes (thread_p, RVOOS_DELETE, &log_addr, recdes_p, NULL);
+```
+
+`recdes_p` 는 삭제 전 chunk 레코드다. 마지막 인자 `NULL` 은 별도의 redo payload가 없다는 뜻이다. redo에 쓰는 page와 slot 정보는 로그 주소에 남는다. 이 로깅 방식은 [PR #6909](https://github.com/CUBRID/cubrid/pull/6909)의 OOS 삭제 API에 처음 들어왔다([도입 commit의 코드](https://github.com/CUBRID/cubrid/blob/f883c60f65bdf42c7aac04d34e488e59a02293db/src/storage/oos_file.cpp#L650-L667)). vacuum이 이 API를 호출하도록 연결한 것은 [PR #6986](https://github.com/CUBRID/cubrid/pull/6986)이다.
+
+따라서 값 전체를 로그에 담는 비용은 현재의 "실패하면 회수 전체를 되돌린다"는 방식에서 나온다. D3는 회수 의도를 먼저 확정하고, 꼬리부터 head 순서로 지우며, 실패 뒤 재시도로 남은 정리를 끝내자는 제안이다. 작은 redo 로그와 회수 의도를 유지하면서 chunk를 복원하는 undo 데이터만 없앤다. 이 변경의 채택에는 [회수기의 동작](#회수기의-동작)과 실패 정책의 검증이 필요하다.
+
+### 로그 양의 비교와 측정
+
+모든 chunk의 payload를 합치면 값 전체가 undo 로그 입력에 포함된다. 예를 들어 1MB 값을 회수하면 압축 전 undo 입력에는 1MB의 값 내용과 chunk header, 레코드 형식 정보가 들어간다. 로그 계층은 undo 데이터를 압축할 수 있으므로 실제 디스크 로그 증가량이 1MB라고 단정할 수 없다([log_manager.c L2600-L2606](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/transaction/log_manager.c#L2600-L2606), [log_append.cpp L809-L811](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/transaction/log_append.cpp#L809-L811)). D3의 로그도 chunk 수에 비례하므로, 값이 커져 chunk 수가 늘면 로그 양이 늘어난다. 줄어드는 부분은 값 내용 전체를 복원용으로 다시 기록하는 비용이다.
+
 | 항목 | 지금 | D3 | 근거 |
 | --- | --- | --- | --- |
-| chunk 삭제 로그 | chunk 레코드 전체를 undo로 쓴다(`log_append_undoredo_recdes (..., RVOOS_DELETE, ..., recdes_p, NULL)`, [oos_file.cpp L3221](https://github.com/CUBRID/cubrid/blob/dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67/src/storage/oos_file.cpp#L3221)) | slot 번호만 담은 redo-only 레코드 | 지금은 소스, D3는 제안 |
-| 값 크기와 회수 로그 양 | 1MB 값을 회수하면 약 1MB를 로그에 쓴다 | chunk 수에 비례하는 작은 레코드 | 추론, 측정 전 |
+| chunk 삭제 로그 | chunk 레코드 전체를 undo로 쓴다. redo는 page와 slot 정보로 삭제를 재현한다. | 값 내용을 담는 undo 없이, page와 slot을 식별하는 redo-only 레코드 | 지금은 위 소스, D3는 제안 |
+| 값 크기와 회수 로그 양 | 압축 전 undo 입력에 값 전체와 chunk header가 포함된다. 실제 로그 양은 압축률과 로그 형식에도 달려 있다. | chunk 수에 비례하는 작은 레코드와 chain별 회수 의도 | 소스와 설계에서의 추론, 실제 감소량은 측정 전 |
 | 빈 page 회수 | LSA gate가 일부 page를 미룬다 | gate를 없애면 바로 회수한다 | 추론 |
 | 삽입 경로 | 변화 없음 | 변화 없음. 후보 A는 map 조회가 붙는다. | 제안 |
 | latch 보유 시간 | chunk마다 짧다 | 같다. D1은 길어진다. | 제안 |
