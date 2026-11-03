@@ -22,12 +22,12 @@
 
 결함의 범위도 넓혀 확인했다. 연결 끊김, deadlock 희생, server kill -9 뒤 복구, 두 번의 kill -9, statement rollback 뒤 COMMIT, savepoint rollback 뒤 COMMIT, relocated 행이 모두 vacuum 뒤 값을 잃었다 [실행]. 복구 뒤 vacuum이 되돌린 트랜잭션의 UPDATE 레코드를 처리하는 것도 server log로 확인했다 [실행].
 
-B와 C를 추천하지 않는 이유는 실행으로 확인했다.
+C를 추천하지 않는 이유는 prototype 실행으로 확인했다. B는 만들지 않았다. B를 추천하지 않는 이유는 현재 code의 실행 결과와 B의 정의를 맞춰 본 판단이다.
 
 - **B는 savepoint로 되돌린 뒤 COMMIT한 트랜잭션을 막지 못한다.** probe P1에서 현재 code는 원래 값을 잃었다. SQL에서도 unique 위반으로 실패한 UPDATE 문 뒤 COMMIT, `rollback work to savepoint` 뒤 COMMIT이 모두 값을 잃었다. 그 UPDATE 레코드의 트랜잭션은 COMMIT했으므로 B도 건너뛰지 않는다 [실행, B 판단은 추론]. 이 경로는 드물지 않다. server 쪽 UPDATE는 모두 topop 안에서 돌고, 실패하면 그 topop만 되돌린 뒤 트랜잭션이 계속된다(`src/query/query_executor.c:11237`, `:11836`) [소스].
 - **단순 C는 T1 ROLLBACK 뒤 T2가 아직 COMMIT하지 않은 UPDATE를 한 경우 원래 값을 잃는다.** C를 prototype으로 만들어 돌렸다. 기존 regression, P1, P3는 통과했고 P2는 실패했다 [실행]. 안전한 C는 현재 행뿐 아니라 `prev_version_lsa`로 이어진 이전 버전도 모두 봐야 한다. 그러려면 사양, 로그 형식, vacuum 비용을 모두 바꿔야 한다 [추론].
 
-release 전에 임시 조치가 꼭 필요하다면 B보다 단순 C가 낫다. 단순 C는 이번 probe 4건 중 3건을 막았고, B가 놓치는 부분 rollback도 막았다 [실행]. 그래도 추천은 임시 조치 없이 A'로 바로 가는 것이다. 임시 조치를 넣으면 vacuum 경로를 두 번 고치고 사양에서도 잠시 벗어난다.
+release 전에 임시 조치가 꼭 필요하다면 B보다 단순 C가 낫다. 단순 C는 이번 probe 4건 중 3건을 막았고, B가 놓치는 부분 rollback도 막았다 [실행]. 다만 단순 C에도 조용한 손실이 남는다. P2(시나리오 8)에서 값을 잃었고 [실행], 오래된 snapshot의 읽기 실패(시나리오 9)도 남는다 [추론]. `REC_BIGONE` 처리와 latch를 놓은 뒤의 창은 시험하지 않았다. 그래서 추천은 임시 조치 없이 A'로 바로 가는 것이다. 임시 조치를 넣으면 vacuum 경로를 두 번 고치고 사양에서도 잠시 벗어난다.
 
 ## 시나리오별 결과
 
@@ -179,7 +179,7 @@ latch 순서 위험은 낮다. vacuum의 기존 순서가 heap home page 다음 
 | 경로 | 실행 횟수 | abort 근거 | vacuum 뒤 결과 |
 | --- | --- | --- | --- |
 | S1. 미커밋 UPDATE 중인 csql client를 SIGKILL | 2 | `cubrid tranlist`가 kill 전 `1(ACTIVE) ... csql`, kill 뒤 1초 안에 트랜잭션 없음 | -1389 |
-| S2. deadlock 희생자 | 유효 4 (설계 오류 1회 제외) | 희생자에게 "unilaterally aborted by the system"(-72). server log에 직전 -1021 | 희생자 행 -1389. COMMIT한 생존자 행은 30000 |
+| S2. deadlock 희생자 | 유효 4 (설계 오류 1회 제외) | 희생자에게 "unilaterally aborted by the system"(-72). server log에 직전 -1021 | 희생자 행은 4회 모두 -1389. 생존자가 COMMIT한 변형(2회)에서 생존자 행은 30000. 생존자가 ROLLBACK한 변형(2회)에서는 생존자 행도 -1389로, 명시적 ROLLBACK과 같은 결과다 |
 | S3. 미커밋 UPDATE 중 `cub_server` kill -9, 재기동 | 3 | 복구 log "UNDO Phase is started ... transactions to undo: 3" | -1389 |
 | S4. S3 뒤 vacuum 전에 한 번 더 kill -9 | 2 | 두 번의 재기동 모두 정상 | -1389. 손실이 두 번째 재기동 뒤에도 남는다 |
 | S5a. 여러 행 UPDATE가 unique 위반(-670)으로 실패한 뒤 COMMIT | 2 | 실패 직후 같은 session에서 두 행 모두 원래 값 | 두 행 모두 -1389 |
@@ -189,7 +189,9 @@ S5는 B를 실행으로 반박한다. 두 경우 모두 트랜잭션은 COMMIT�
 
 **S3에서 vacuum이 복구로 되돌린 트랜잭션의 레코드를 처리했다 [실행].** S3 첫 실행의 server error log에서 "Server status is UP"(2524행) 뒤에 vacuum worker가 `process log entry at log_lsa 1069|8624`, `collected oid 1|3649|1, in file 1|3648, based on 1069|8624`를 남겼다(3692-3695행). `1069|8624`는 kill 전 미커밋 UPDATE의 레코드다. 이것은 1절 4단계의 전제(vacuum이 loser의 MVCC 레코드를 거르지 않는다)를 실행으로 뒷받침한다. 사양대로 만든 A의 알림도 같은 stream에 들어가므로 같은 처리를 받는다 [추론].
 
-DF-30(재기동 복구 중 `log_rv_analysis_sysop_end` assert)은 재기동 8회에서 나오지 않았다. kill 시점을 하나만 썼으므로 위험이 없다는 증거는 아니다.
+vacuum 전 기준값은 일부 실행에만 있다. S3의 둘째, 셋째 실행과 S5의 둘째 실행에서는 harness의 "vacuum 전" 읽기보다 vacuum이 먼저 해당 block을 처리했다. 그래서 그 실행들의 "vacuum 전 30000"은 관찰하지 못했다. 이 기준값은 S3 첫 실행과 S5 첫 실행에 있다. S4에서는 master가 첫 kill 뒤 server를 다시 띄우지 않아 직접 띄웠다. 원인은 모른다.
+
+DF-30(재기동 복구 중 `log_rv_analysis_sysop_end` assert)은 재기동 8회에서 나오지 않았다. 이 8회에는 vacuum이 바쁜 중에 kill한 추가 실행 1회가 들어 있다. kill 시점이 다양하지 않으므로 위험이 없다는 증거는 아니다.
 
 ### 7. 관련 결함과의 상호작용
 
@@ -215,11 +217,20 @@ DF-30(재기동 복구 중 `log_rv_analysis_sysop_end` assert)은 재기동 8회
 | 사양 | `OOS-CONTEXT.md` §3 step 3의 발행 위치, §4 Recovery 3, §4 Vacuum + OOS | 소스 |
 | 선택. 142 `RVHF_DELETE_NEWHOME_NOTIFY_VACUUM`을 일반 레코드로 돌림 | `recovery.h:216-217`, `recovery.c:918-924`, `heap_file.c:24887-24896` | 소스 |
 
-**B.** `vacuum.c:3619`, `:3764`에서 판정을 추가한다. log scan 함수나 새 영속 구조를 만든다. 사양 §3과 §4를 바꾼다. 부분 rollback 문제는 남는다.
+**B, 단순 C, 안전한 C.**
 
-**단순 C.** prototype 크기는 3 files, +102/-4다. 사양 §3과 §4를 바꾼다. 시나리오 8, 9가 남는다.
+| 항목 | B | 단순 C | 안전한 C |
+| --- | --- | --- | --- |
+| 판정 지점 | `vacuum.c:3619`, `:3764` 앞 | `vacuum_forward_walk_reclaim_oos`(`vacuum_oos.cpp:266`) 안 | 단순 C와 같다 |
+| 새 함수 | 트랜잭션 끝 레코드를 찾는 log scan(선례 `cdc_find_user`, `log_manager.c:14013-14084`), 또는 abort MVCCID 영속 구조 | 현재 레코드의 head 목록을 읽는 함수. prototype의 `vacuum_forward_walk_current_heads` | 단순 C에 `prev_version_lsa` 사슬을 따라 undo image를 읽는 함수 |
+| 함수 signature | forward-walk에 trid나 MVCCID 전달 | forward-walk에 row OID 전달(prototype은 기본값 인자) | 같다 |
+| 로그 형식 | 바꾸지 않는다(log scan). 영속 구조면 새 레코드 | 바꾸지 않는다 | `RVHF_DELETE_NEWHOME_NOTIFY_VACUUM`, `update_old_forward`에 home OID 추가(`heap_file.c:24895`, `:24930`) |
+| 사양 | §3 소유권 규칙, §4 Recovery 2와 3, §4 Vacuum + OOS | 같다 | 같다 |
+| 테스트 | `test_oos_vacuum_server.cpp`의 직접 호출 갱신 | heap row fixture 필요(prototype은 기본값으로 피함) | 같다 |
+| 남는 손실 | 시나리오 2, 3, 12 | 시나리오 8, 9 | 확인하지 않음 |
+| 크기 | 중간. scan 비용은 트랜잭션 길이에 비례 | 3 files, +102/-4 (prototype) | 큼 |
 
-**안전한 C.** 단순 C에 버전 사슬 확인, 로그 형식 변경(home OID), 테스트용 heap fixture가 더해진다. 사양 §3과 §4를 바꾼다.
+모든 칸은 소스와 추론이다. 단순 C의 크기만 prototype 실측이다.
 
 ## 담당자가 정할 것
 
@@ -268,7 +279,9 @@ vacuum은 filler table에 3,000자 행 500개를 COMMIT한 뒤 30초 기다려 �
 - B와 안전한 C, A'는 만들지 않았다. 표의 해당 칸은 추론이다.
 - 단순 C의 `REC_BIGONE` 처리와 latch를 놓은 뒤의 창은 시험하지 않았다.
 - 1절의 crash 구간은 소스 분석이다. 알림이 없으므로 그 구간을 실행으로 만들 수 없다. 7번 시나리오의 실행은 "vacuum이 복구로 되돌린 트랜잭션의 레코드를 처리한다"는 전제를 확인한다.
-- HA와 replica는 실행하지 않았다.
+- HA와 replica는 실행하지 않았다. A'의 2PC와 replica 적용 경로도 source로 따로 확인하지 않았다.
+- P3는 첫 실행이 probe 자체의 문제로 -1387에서 멈췄다. VOT offset이 정렬되지 않아 OOS flag bit를 건드렸다. padding을 8의 배수로 고친 뒤 다시 돌린 결과를 실었다.
+- 1절의 crash 구간은 기존 `RVES_NOTIFY_VACUUM`으로 실행해 볼 수 있다. commit 레코드 append 직전에 gdb로 멈추고 log를 flush한 뒤 kill -9하면 된다. 이번에는 하지 않았다.
 
 ## 열린 질문
 
