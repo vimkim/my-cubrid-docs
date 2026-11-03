@@ -37,8 +37,8 @@
 
 유지보수자가 정해야 할 주요 항목은 다음과 같다.
 
-- DF-03과 #8347. 사양 §3이 CBRD-27237(아래 DF-03)의 해결 방안으로 정한 commit 조건부 `RVOOS_NOTIFY_VACUUM`을 #8347(CBRD-27841)이 쓰이지 않는 인덱스로 보고 지운다. #8347을 병합하기 전에 CBRD-27237의 해결 방식을 먼저 정해야 한다.
-- R-34. tier-3 bestspace sync(아래 DF-01)를 사양대로 고칠 것인가, 쓰이지 않는 코드로 보고 지울 것인가.
+- DF-03과 #8347. 사양 §3이 CBRD-27237(아래 DF-03)의 해결 방안으로 정한 commit 조건부 `RVOOS_NOTIFY_VACUUM`을 #8347(CBRD-27841)이 쓰이지 않는 인덱스로 보고 지운다. #8347을 병합하기 전에 CBRD-27237의 해결 방식을 먼저 정해야 한다. 해결 방식이 정해질 때까지 #8347은 보류한다.
+- R-34. tier-3 bestspace sync(아래 DF-01)를 사양대로 고칠 것인가, 쓰이지 않는 코드로 보고 지울 것인가. 기존 이슈 [CBRD-27213](https://jira.cubrid.org/browse/CBRD-27213)은 이 sync를 지우고 heap bestspace 재설계 기반으로 바꾸는 방향을 정했다.
 - R-05. 운영 코드 호출이 없는 `oos_chunk_exists`, `oos_get_identity_stamp`, `oos_get_length`를 진단 API로 남길 것인가, 테스트 빌드에서만 컴파일할 것인가.
 - R-39. `FILE_OOS`의 진단 문자열 "OUT_OF_LINE_OVERFLOW_STORAGE"를 기능 이름(Out-of-row Overflow Storage)에 맞게 바꿀 것인가.
 - R-35. `LC_IS_FLUSH_INSERT` 매크로를 일반 insert용과 OOS insert용으로 나눌 것인가.
@@ -54,9 +54,9 @@
 | ID | 내용 | 근거 | 처리 |
 | --- | --- | --- | --- |
 | DF-03 | ROLLBACK한 UPDATE의 원래 OOS chain을 vacuum이 지운다. 그 행을 읽으면 -1389(`ER_HEAP_OOS_CORRUPTED_RECORD`)가 난다. | 기준 commit에서 재현했다. 단위 테스트 2회 모두 실패, gdb로 `vacuum_forward_walk_reclaim_oos`가 `oos_delete_chain`을 부르는 것을 확인, SQL 대조 실험에서 COMMIT한 행은 정상 | [CBRD-27237](https://jira.cubrid.org/browse/CBRD-27237)에 댓글로 남겼다. |
-| DF-01 | `oos_find_best_page`의 tier-3 sync 조건은 sync 안에서만 쓰는 값에 기대므로 참이 될 수 없다. 반쯤 빈 페이지를 다시 찾지 못해 OOS 파일이 커질 수 있다(추론). | 소스 확인. OOS 테스트 바이너리 36개를 gdb로 실행했을 때 sync-scan 지점 0회 | 새 버그 후보 |
-| DF-02 | demotion 기준이 사양의 `heap_oos_inline_target_size()`(16 KB 페이지에서 4,060 B)가 아니라 `DB_PAGESIZE / 4`(4,086 B)다. | 소스 확인. CBRD-27057은 Resolved지만 그 구현 draft #7462는 병합되지 않고 닫혔다. | [CBRD-27057](https://jira.cubrid.org/browse/CBRD-27057) 재오픈 또는 갱신 후보 |
-| DF-04 | `oos_find_best_page`의 이른 fallback이 header 조회 실패 에러(`ER_INTERRUPTED` 포함)를 버리고 새 페이지를 할당한다. | 소스 확인 | 새 버그 후보. 관련 리팩토링(R-22)보다 먼저 고친다. |
+| DF-01 | `oos_find_best_page`의 tier-3 sync 조건은 sync 안에서만 쓰는 값에 기대므로 참이 될 수 없다. 반쯤 빈 페이지를 다시 찾지 못해 OOS 파일이 커질 수 있다(추론). | 소스 확인. OOS 테스트 바이너리 36개를 gdb로 실행했을 때 sync-scan 지점 0회 | 기존 이슈 [CBRD-27213](https://jira.cubrid.org/browse/CBRD-27213)이 다룬다. |
+| DF-02 | demotion 기준이 사양의 `heap_oos_inline_target_size()`(16 KB 페이지에서 4,060 B)가 아니라 `DB_PAGESIZE / 4`(4,086 B)다. | 소스 확인. CBRD-27057은 Resolved지만 그 구현 draft #7462는 병합되지 않고 닫혔다. | [CBRD-27057](https://jira.cubrid.org/browse/CBRD-27057) 댓글대로 [#8299](https://github.com/CUBRID/cubrid/pull/8299)(CBRD-27785)의 commit `4c3c8d791`이 고친다. |
+| DF-04 | `oos_find_best_page`의 이른 fallback이 header 조회 실패 에러(`ER_INTERRUPTED` 포함)를 버리고 새 페이지를 할당한다. | 소스 확인. 다루는 이슈 없음(JQL 검색) | 새 버그 후보. 관련 리팩토링(R-22)보다 먼저 고친다. |
 
 DF-03의 확인하지 않은 범위는 kill -9 뒤 복구, savepoint rollback, release 빌드다.
 

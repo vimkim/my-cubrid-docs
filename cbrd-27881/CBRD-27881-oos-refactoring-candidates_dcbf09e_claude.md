@@ -26,7 +26,7 @@
 - 실행 코드를 바꾼 PR 6개는 로컬 OOS ctest 44개를 통과했다. GitHub CI(gha-ci)는 `unit_tests/oos`를 빌드하지도 실행하지도 않는다. 그래서 단위 테스트 수준의 확인은 이 로컬 결과뿐이다. 주석만 바꾼 PR7은 주석을 뺀 token 비교로 실행 코드 차이가 빈 `if` 하나뿐임을 확인했다.
 - 시험 삼아 만든 PR 2개(R-15, R-11)는 코드가 읽기 쉬워지지 않아 게시하지 않았다.
 - DF-03은 CBRD-27237과 같은 결함이며, dcbf09e4f에서 재현했다. UPDATE를 ROLLBACK한 행의 원래 OOS 값을 vacuum이 지운다. 그 뒤 행을 읽으면 `ER_HEAP_OOS_CORRUPTED_RECORD`(-1389)가 난다.
-- DF-01(tier-3 bestspace sync가 운영 경로에서 실행되지 않음), DF-02(demotion 기준이 사양과 다름), DF-04(`oos_find_best_page`가 에러를 버림)는 소스로 확인했다. DF-01은 gdb 관찰 하나가 소스 판정을 뒷받침한다.
+- DF-01(tier-3 bestspace sync가 운영 경로에서 실행되지 않음), DF-02(demotion 기준이 사양과 다름), DF-04(`oos_find_best_page`가 에러를 버림)는 소스로 확인했다. DF-01은 gdb 관찰 하나가 소스 판정을 뒷받침한다. 2026-11-03 12:40에 JIRA를 다시 검색했다. DF-01은 CBRD-27213이, DF-02는 #8299(CBRD-27785)가 이미 다룬다. DF-04를 다루는 이슈는 없다.
 
 | 확인된 것 | 열려 있는 것 |
 | --- | --- |
@@ -117,7 +117,7 @@
 
 | 항목 | 현재 상태 | 유지보수자가 정할 것 |
 | --- | --- | --- |
-| R-34 | tier-3 sync 추정치, `second_best` ring, `idx_badspace`, sync 상수가 운영 경로에서 쓰이지 않는다(DF-01). | tier-3 bestspace sync를 사양 §2대로 고칠 것인가, 지울 것인가. 고치면 R-34는 DF-01 수정이 된다. 지우면 사양 §2도 바꾼다. |
+| R-34 | tier-3 sync 추정치, `second_best` ring, `idx_badspace`, sync 상수가 운영 경로에서 쓰이지 않는다(DF-01). | tier-3 bestspace sync를 사양 §2대로 고칠 것인가, 지울 것인가. 고치면 R-34는 DF-01 수정이 된다. 지우면 사양 §2도 바꾼다. 기존 이슈 CBRD-27213은 지우고 heap bestspace 재설계 기반으로 바꾸는 방향을 정했다. |
 | R-05 | `oos_chunk_exists`, `oos_get_identity_stamp`, `oos_get_length`를 부르는 운영 코드가 없다. header 주석은 "tests and diagnostics"용이라고 적는다. | 진단 API로 남길 것인가, `CUBRID_UNIT_TEST_ENABLED` 빌드에서만 컴파일할 것인가. |
 | R-35 | `LC_IS_FLUSH_INSERT`는 일반 insert와 `LC_FLUSH_INSERT_OOS`를 함께 참으로 본다. 오래된 TODO는 PR7에서 설명으로 바꿨다. | 매크로를 일반용과 OOS용으로 나눌 것인가, 지금 매크로를 유지할 것인가. |
 | R-36 | 손상 검출 exit 16곳이 같은 에러 설정 순서를 반복한다. | `OOS_RETURN_ERROR` 같은 에러 매크로를 CUBRID 관례로 받아들일 것인가. |
@@ -176,9 +176,9 @@ REJECTED 5개는 다음과 같다. R-02(전방 선언 9개 삭제)는 CUBRID가 
 | 순위 | ID | 결함 후보 | 근거 종류 | 처리 |
 | --- | --- | --- | --- | --- |
 | 1 | DF-03 | ROLLBACK한 UPDATE의 원래 OOS chain을 vacuum이 지운다. | 실행, 소스(재확인) | CBRD-27237에 재현 근거 댓글을 남겼다. |
-| 2 | DF-01 | tier-3 bestspace sync가 운영 경로에서 실행되지 않는다. | 소스(재확인), 실행(gdb 0회 관찰), 영향은 추론 | 새 버그 후보. R-34와 같은 결정이다. |
-| 3 | DF-02 | demotion 기준이 사양의 4,060 B가 아니라 `DB_PAGESIZE / 4`다. | 소스(재확인) | CBRD-27057 재오픈 또는 갱신 후보 |
-| 4 | DF-04 | `oos_find_best_page`의 이른 fallback이 에러를 버리고 새 페이지를 할당한다. | 소스(재확인), 영향은 추론 | 새 버그 후보. R-22보다 먼저 고친다. |
+| 2 | DF-01 | tier-3 bestspace sync가 운영 경로에서 실행되지 않는다. | 소스(재확인), 실행(gdb 0회 관찰), 영향은 추론 | [CBRD-27213](https://jira.cubrid.org/browse/CBRD-27213)(Open)이 이미 다룬다. 그 이슈는 legacy sync를 고치지 않고, heap bestspace 재설계 기반으로 바꾸면서 지운다. |
+| 3 | DF-02 | demotion 기준이 사양의 4,060 B가 아니라 `DB_PAGESIZE / 4`다. | 소스(재확인) | [#8299](https://github.com/CUBRID/cubrid/pull/8299)(CBRD-27785)의 commit `4c3c8d791`이 고친다. |
+| 4 | DF-04 | `oos_find_best_page`의 이른 fallback이 에러를 버리고 새 페이지를 할당한다. | 소스(재확인), 영향은 추론 | 다루는 이슈가 없다(2026-11-03 12:40 JQL 검색). 새 버그 후보. R-22보다 먼저 고친다. |
 
 **DF-03 (CBRD-27237).** vacuum은 `RVHF_UPDATE_NOTIFY_VACUUM`과 `RVHF_DELETE_NEWHOME_NOTIFY_VACUUM` 로그의 undo image를 따라가 옛 OOS chain을 지운다. 이 경로에는 commit과 abort를 구분하는 조건이 없다(소스 재확인). ROLLBACK한 UPDATE의 undo image는 아직 살아 있는 원래 값을 가리킨다. 사양 §3은 commit hook에서 `RVOOS_NOTIFY_VACUUM`을 남기고 이 forward-walk 삭제 경로를 없애라고 정한다. dcbf09e4f에는 이 인덱스를 기록하는 곳이 없고, #8347은 이 인덱스를 지운다.
 
@@ -189,11 +189,11 @@ REJECTED 5개는 다음과 같다. R-02(전방 선언 9개 삭제)는 CUBRID가 
 - SQL. CBRD-27237의 재현 절차대로 UPDATE 뒤 ROLLBACK한 행은 vacuum 뒤 조회에서 -1389로 실패했다. UPDATE 뒤 COMMIT한 대조 행은 vacuum 뒤에도 정상으로 읽혔다.
 - 확인하지 않은 범위. kill -9 뒤 복구, savepoint rollback, release 빌드.
 
-**DF-01.** `oos_find_best_page`는 `estimates.num_other_high_best / estimates.num_pages`가 0.1 이상일 때만 sync를 부른다. `estimates.num_pages`를 쓰는 곳은 sync 안뿐이다. OOS 파일을 만들 때 header 통계는 0으로 채워진다. 그리고 유일한 sync 호출은 이 조건 안에 있으며, 실제 header가 아니라 0으로 채운 임시 `tmp_hdr`를 넘긴다. 그래서 실제 header의 `num_pages`는 0으로 남고 조건은 참이 되지 않는다(소스 재확인). #8370 검증 중 OOS 테스트 바이너리 36개를 gdb로 실행했을 때 sync-scan 지점에는 한 번도 닿지 않았다(실행). 영향은 추론이다. in-memory cache와 `best[]`에 없는 반쯤 빈 페이지를 다시 찾지 못해, OOS 파일이 공간을 재사용하지 않고 커질 수 있다. 사양 §2는 cache miss 때 `oos_stats_sync_bestspace()`를 부른다고 적는다. 등록 전에 `UNIT_TESTS=ON` 빌드에서 sync 호출 횟수를 세어 확인하는 것이 좋다.
+**DF-01.** `oos_find_best_page`는 `estimates.num_other_high_best / estimates.num_pages`가 0.1 이상일 때만 sync를 부른다. `estimates.num_pages`를 쓰는 곳은 sync 안뿐이다. OOS 파일을 만들 때 header 통계는 0으로 채워진다. 그리고 유일한 sync 호출은 이 조건 안에 있으며, 실제 header가 아니라 0으로 채운 임시 `tmp_hdr`를 넘긴다. 그래서 실제 header의 `num_pages`는 0으로 남고 조건은 참이 되지 않는다(소스 재확인). #8370 검증 중 OOS 테스트 바이너리 36개를 gdb로 실행했을 때 sync-scan 지점에는 한 번도 닿지 않았다(실행). 영향은 추론이다. in-memory cache와 `best[]`에 없는 반쯤 빈 페이지를 다시 찾지 못해, OOS 파일이 공간을 재사용하지 않고 커질 수 있다. 사양 §2는 cache miss 때 `oos_stats_sync_bestspace()`를 부른다고 적는다. 같은 결함은 CBRD-27213의 설명에 이미 기록되어 있다. CBRD-27213은 legacy 해시, `best[]`, sync를 지우고 heap bestspace 재설계 기반으로 바꾸는 것을 해결 방향으로 정했다.
 
-**DF-02.** demotion 판정과 중단 조건은 `DB_PAGESIZE / 4`(16 KB 페이지에서 4,086 B)를 쓴다. 사양 §1은 `heap_oos_inline_target_size()`(16 KB 페이지에서 4,060 B)를 요구하고 raw `DB_PAGESIZE/4`를 명시적으로 거부한다. 이 함수는 dcbf09e4f 소스에 없다. CBRD-27057은 JIRA에서 Resolved/Fixed지만, 그 구현인 draft #7462는 병합되지 않고 닫혔다. #8299가 demotion planner를 다시 쓰므로 함께 조정해야 한다.
+**DF-02.** demotion 판정과 중단 조건은 `DB_PAGESIZE / 4`(16 KB 페이지에서 4,086 B)를 쓴다. 사양 §1은 `heap_oos_inline_target_size()`(16 KB 페이지에서 4,060 B)를 요구하고 raw `DB_PAGESIZE/4`를 명시적으로 거부한다. 이 함수는 dcbf09e4f 소스에 없다. CBRD-27057은 JIRA에서 Resolved/Fixed지만, 그 구현인 draft #7462는 병합되지 않고 닫혔다. 2026-11-03 01:54에 CBRD-27057에 남은 댓글에 따르면, 같은 수정이 #8299(CBRD-27785)의 commit `4c3c8d791`로 옮겨졌다. 12:40에 이 commit이 #8299에 있는 것을 확인했다. 따라서 DF-02는 #8299가 병합되면 풀린다.
 
-**DF-04.** `file_get_sticky_first_page`가 실패해도 에러를 스택에 둔 채 새 페이지를 할당한다. header `pgbuf_fix`가 실패해도, `ER_INTERRUPTED`인 경우까지 포함해 할당으로 넘어간다. 반면 sync 뒤 header를 다시 fix하는 곳은 `ER_INTERRUPTED`를 확인하고 멈춘다. 이른 fallback 경로는 새 페이지를 cache에 등록하는 단계도 건너뛴다(소스 재확인). 인터럽트된 요청이 멈추지 않고 페이지를 하나 더 할당하며, 남은 에러가 뒤의 판단을 흐릴 수 있다(추론).
+**DF-04.** `file_get_sticky_first_page`가 실패해도 에러를 스택에 둔 채 새 페이지를 할당한다. header `pgbuf_fix`가 실패해도, `ER_INTERRUPTED`인 경우까지 포함해 할당으로 넘어간다. 반면 sync 뒤 header를 다시 fix하는 곳은 `ER_INTERRUPTED`를 확인하고 멈춘다. 이른 fallback 경로는 새 페이지를 cache에 등록하는 단계도 건너뛴다(소스 재확인). 인터럽트된 요청이 멈추지 않고 페이지를 하나 더 할당하며, 남은 에러가 뒤의 판단을 흐릴 수 있다(추론). 2026-11-03 12:40 JQL 검색에서 이 문제를 다루는 이슈는 없었다.
 
 ### Other defect candidates
 
@@ -228,10 +228,12 @@ REJECTED 5개는 다음과 같다. R-02(전방 선언 9개 삭제)는 CUBRID가 
 
 ## Next steps
 
-1. CBRD-27237(DF-03)을 먼저 고친다. 데이터 손실이며 fix-before-release 항목이다. 고치기 전에 사양 §3의 `RVOOS_NOTIFY_VACUUM` 방식과 #8347의 인덱스 삭제가 충돌하지 않는지 정한다. 회귀 테스트는 479cd960e의 비활성 테스트를 다시 켜면 된다.
-2. 10:30 CI 결과를 확인하고 PR 7개를 리뷰 요청 상태로 바꿀지 정한다. 서로 독립이므로 어떤 순서로도 병합할 수 있다. 실행 코드 변화가 적은 순서로 #8367, #8368, PR7, #8370, #8369, #8371, PR6을 제안한다.
-3. NEEDS-DECISION 7개를 정한다. R-34(DF-01의 tier-3 sync를 고칠지 지울지)가 가장 크다. R-05와 R-39는 짧게 정할 수 있다.
-4. DF-01, DF-02, DF-04를 JIRA에 등록한다. DF-02는 CBRD-27057을 다시 열거나 갱신한다. DF-01은 sync 호출 횟수를 실행으로 확인한 뒤 등록한다.
+1. CBRD-27237(DF-03)을 먼저 고친다. 데이터 손실이며 fix-before-release 항목이다. 고치기 전에 사양 §3의 `RVOOS_NOTIFY_VACUUM` 방식과 #8347의 인덱스 삭제가 충돌하지 않는지 정한다. 회귀 테스트는 479cd960e의 비활성 테스트를 다시 켜면 된다. 2026-11-03에 담당자는 수정 방식이 정해질 때까지 #8347을 보류하기로 했다.
+2. PR 7개는 모두 CI 5/5를 통과했고 draft로 둔다. 리뷰 요청 시점은 담당자가 정한다. 서로 독립이므로 어떤 순서로도 병합할 수 있다. 실행 코드 변화가 적은 순서로 #8367, #8368, #8373, #8370, #8369, #8371, #8372를 제안한다.
+3. NEEDS-DECISION 7개를 정한다. R-34(DF-01의 tier-3 sync를 고칠지 지울지)는 CBRD-27213의 방향(지우고 재설계)을 따르면 된다. R-05와 R-39는 짧게 정할 수 있다.
+4. DF-04를 JIRA에 등록할지 정한다. DF-01은 CBRD-27213이, DF-02는 #8299가 이미 다룬다.
+
+정할 항목을 쉬운 말로 다시 쓴 문서가 두 개 있다. [담당자가 정할 것](CBRD-27881-owner-decisions_dcbf09e_claude.md)은 CBRD-27237 수정 방식, PR 리뷰 요청, #8371 동작 차이, DF-04를 다룬다. [결정 필요 리팩토링 항목](CBRD-27881-needs-decision-items_dcbf09e_claude.md)은 NEEDS-DECISION 7개를 다룬다.
 5. R-29를 #8347(CBRD-27841) 작성자에게, DF-24를 #8128(CBRD-26659) 작성자에게 전달한다.
 6. 진행 중 PR이 병합될 때마다 DEFERRED 항목을 다시 본다. #8330은 R-18, R-21, R-22, R-28을 연다. #8128은 R-24, R-30을, #8299는 R-20, R-23, R-25, R-27, R-32를 연다. #8367은 R-13을, #8368은 R-16을 연다.
 7. DF-30을 kill 뒤 복구 재현으로 확인해, 실제 복구 결함인지 테스트 DB 문제인지 가른다.
@@ -253,6 +255,7 @@ REJECTED 5개는 다음과 같다. R-02(전방 선언 9개 삭제)는 CUBRID가 
 - 상위 작업 [CBRD-27881](https://jira.cubrid.org/browse/CBRD-27881). sub-task는 위 PR 표에 링크했다.
 - [CBRD-27237](https://jira.cubrid.org/browse/CBRD-27237). DF-03 재현 근거를 댓글 4777509로 남겼다.
 - [CBRD-27057](https://jira.cubrid.org/browse/CBRD-27057)(DF-02), [CBRD-27841](https://jira.cubrid.org/browse/CBRD-27841)(R-29 전달 대상).
+- [CBRD-27213](https://jira.cubrid.org/browse/CBRD-27213)(DF-01과 R-34를 다루는 기존 이슈), [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785)(DF-02 수정을 담은 #8299의 이슈).
 
 ### Source at dcbf09e4f
 
