@@ -1,6 +1,6 @@
 # CBRD-27816 1단계 보고서
 
-갱신: 2026-11-03 20:13 KST. 1단계(재현과 원인 분리) 측정을 마쳤다. 검토에서 나온 정정과 L1, L1b, h3 결과, 18:51 사용자 결정을 반영했다. 할 일과 결정 사항은 이 파일에서 관리한다.
+갱신: 2026-11-03 20:16 KST. 1단계(재현과 원인 분리) 측정을 마쳤다. 검토에서 나온 정정과 L1, L1b, h3 결과, 18:51 사용자 결정을 반영했다. 할 일과 결정 사항은 이 파일에서 관리한다.
 
 관련 이슈: [CBRD-27816](https://jira.cubrid.org/browse/CBRD-27816), [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785). 관련 PR: [#8299](https://github.com/CUBRID/cubrid/pull/8299). 이 보고서는 2026-11-03에 로컬 산출물 디렉터리 `/mnt/nvme/data-5/tmp/CBRD-27816-20261103/phase1-report.md`에서 옮겨 왔다. 본문의 상대 경로(`harness/`, `base|cand/...`, `decisions.tsv` 등)는 모두 그 디렉터리 기준이다.
 
@@ -50,6 +50,8 @@
 - [x] L1b: 후보·기준 1 block씩 (r503). checkpoint 대기는 양쪽 21~22초. 바쁜 호스트 아래 기준에서 늦은 spike 12번 연속 재현
 - [x] h3: client CPU 경합 (r600). 조작이 약해 가설을 가르지 못함. 후보 block은 harness 오류로 멈춤(파서 고침)
 - [ ] 명세 항목 중 하지 않은 것. 같은 표를 연속으로 UPDATE하는 측정. `ordinary.py`가 지원하지 않아 하지 않았다
+- [x] 2단계 첫 일: OOS 규칙 확인, A·B·C 재분해. A 철회
+- [x] (사용자 결정) B 코드 수정 여부. 20:15 고치지 않고 닫는다
 - [x] (사용자 결정) 2단계 코드 변경 여부. 18:51 1-가(A, B를 고치고 C는 더 나눈다)
 - [x] (사용자 결정) 판정 지표에 vacuum 비용을 넣을지. 18:51 2-가(넣지 않고 별도 줄로 보고), 2-2 `ordinary.py` idle 마감은 늘린다
 - [x] (사용자 결정) DB 정리. 18:51 3-가(그대로 둔다). 산출물은 1단계 중간에 57G(DB 각 26G, pristine 6.1G)였고, 20시에는 약 27G(`db-base` 11G, `db-cand` 9.8G, `pristine` 6.1G)다. 줄어든 것은 서버 자신이 log archive를 지웠기 때문이다. 각 DB의 `*_lginf`에 `REMOVE` 기록이 두 번씩 있다(기준 17:32:43, 17:44:34, 후보 17:39:20, 17:40:28). 이유는 "Number of active log archives has been exceeded the max desired number"다. 설정은 `log_max_archives=0`이다. 기준의 두 기록은 L1 끝(r500, 17:32:56 종료)과 L1b(r503) 중이고, 후보의 두 기록은 L1b(r503, 17:41:07 종료) 중이다
@@ -72,6 +74,12 @@
 - 결정 2-2(`ordinary.py` idle 대기 마감 10초): 늘린다. 2단계 측정 전에 local commit으로 고친다.
 - 결정 3(DB 정리): 3-가. 2단계를 할지 정할 때까지 그대로 둔다.
 - 결정 4(보고서 보존): 4-가. 오늘 결정을 반영한 뒤 my-cubrid-docs로 옮긴다. push는 따로 요청할 때만 한다.
+
+2026-11-03 20:15 "2단계 첫 일" 절의 결과(A 없음, B는 작음, C는 흩어짐)를 보이고 질문 창으로 다시 물었다.
+
+- B 코드 수정: "고치지 않고 닫기". 2단계 코드 변경은 하지 않는다. 결정 1-가는 이 답으로 대체된다.
+- 결정 2-2(`ordinary.py` idle 마감)는 2단계 측정이 없으므로 적용하지 않았다. 다음에 오래 떠 있는 서버에서 측정할 때 다시 본다.
+- my-cubrid-docs: main에 local merge한다. push는 하지 않는다.
 
 ## 2단계 첫 일: OOS 규칙 확인과 A·B·C 재분해 (2026-11-03 20:13)
 
@@ -350,7 +358,9 @@ python3 harness/profile_inclusive.py . 420,421 --comm vacuum --plain-base 389.2 
 
 - transaction worker가 15.9M 간격의 두 값으로 갈리는 이유. run 1과 4가 높은 값일 때가 많다.
 - 첫 UPDATE(warmup)가 worker에서 약 +50~66M 더 쓰는 이유. 양쪽에 같다.
-- C(`heap_update_logical` +51.2M)의 원인 코드.
+- C(`heap_update_logical` +51.2M)의 원인 코드. 2단계 첫 일에서 직접 callee 25개 이상에 흩어진 것을 확인했다. 한 원인은 없다.
+- B 빠른 경로(OOS 없는 행의 finalize)의 실제 효과. 약 20~30M로 추정만 했고 고치거나 재지 않았다(20:15 사용자 결정).
+- 1단계의 다른 profile 귀속에도 tail call 착시가 있는지. A 말고는 확인하지 않았다.
 - 질의 실행 밖의 약 +27M.
 - vacuum 시작과 csql 종료 사이 시간. 10-28처럼 spike가 잦은 조건.
 - 10-28 후보 쪽에서만 vacuum worker가 매번 새로 생긴 이유.
