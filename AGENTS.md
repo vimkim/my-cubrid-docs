@@ -28,9 +28,14 @@ Its personal policies override repository-local guidance.
 - Put shared subsystem, architecture, build, and performance analyses in
   `code-analysis/<topic>/`. Reuse short, stable topic names.
   Keep ticket decisions with the ticket and link shared explanations.
-- Use descriptive filenames and one Markdown file per report.
-  Use revision or dated subdirectories when needed; preserve established
-  revision and author suffixes.
+- Use short descriptive filenames for new reports, such as `ci-analysis.md`
+  or `review-guide.md`, and one Markdown file per report. Record relevant
+  revisions and dates in the report or companion context. Use the README
+  index for navigation; do not require SHA or author suffixes in new names.
+- Extend an existing report when its scope matches. Preserve separately cited
+  historical snapshots and reviewed drafts. Add a short purpose or PR
+  discriminator only when distinct reports would otherwise share a path.
+  Preserve existing paths, including established revision and author suffixes.
 
 ## Required procedures
 
