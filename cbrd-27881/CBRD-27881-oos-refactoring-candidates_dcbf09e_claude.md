@@ -158,6 +158,7 @@
 | R-64 | `OosFileTest` fixture, `insert_string` helper | 범위가 크다. R-07, R-16 뒤에 본다. |
 | R-65 | `OOS_TEST_MAIN`, `gtest_main` 연결 | 효과가 작다. |
 | R-66 | `xoos_get_stats_by_class_oid`를 `heap_oos.cpp`로 | 이미 테스트 빌드 전용이다. |
+| R-71 | 여러 sector에 걸친 OOS 파일의 통계 테스트. `oos_get_stats_by_vfid()`(`SHOW HEAP OOS` 경로)가 sector bitmap을 펼쳐 세는 `num_recs`와 `recs_sumlen`을 sector 하나보다 큰 파일에서 확인하는 테스트가 없다. 지금 확인은 작은 파일뿐이고, `SweepCursorWrapsAcrossSectorBoundary`는 회수 sweep의 cursor와 페이지 수만 본다. 2026-11-03에 닫힌 PR #7614(CBRD-26831)와 비교해 추가했다. | 동작 결함은 찾지 못했고 테스트 보강만 남는다. #7614의 `BestspaceSectorBitmapSyncAcrossSectors`는 `oos_delete`가 `oos_chain_ref`를 받고 성장 게이트 sweep이 빈 페이지를 회수하도록 바뀌어 그대로 옮길 수 없다. sync 쪽 확인은 CBRD-27213이 sync를 지우면 필요 없다. |
 
 REJECTED 5개는 다음과 같다. R-02(전방 선언 9개 삭제)는 CUBRID가 static 함수 prototype 블록을 빠짐없이 두는 관례와 맞지 않는다. R-03(`case FILE_OOS` fallthrough)은 문서화된 의도적 fallthrough다. R-04(`oos_info`와 FATAL 삭제)는 대칭인 로그 함수군의 일부다. R-52(`oos_vpid_init_new` 반환값)는 `FILE_INIT_PAGE_FUNC` callback이라 signature를 바꿀 수 없다. R-70은 모양만 바꾸는 변경 모음이라 리뷰어에게 잡음이 된다.
 
@@ -215,6 +216,7 @@ REJECTED 5개는 다음과 같다. R-02(전방 선언 9개 삭제)는 CUBRID가 
 | DF-19 | 잘못된 인자 처리가 함수마다 다르고, `oos_read`는 head NULL 확인이 없다. | 소스(조사) | 중 | 기록 |
 | DF-13 | cache 힌트는 `spage_get_free_space_without_saving` 값을 저장하고, 조회는 `spage_max_space_for_new_record`와 비교한다. page fix 때 바로잡힌다. | 소스(조사) | 중 | 기록 |
 | DF-15 | sync가 `ER_INTERRUPTED`를 지운다. DF-01이 남아 있는 동안은 실행되지 않는다. | 소스(조사) | 중 | DF-01과 함께 |
+| DF-31 | `oos_get_stats_by_vfid()`가 page fix 실패를 모두 `er_clear ()`하고 넘어가(`oos_file.cpp:3880-3886`) `ER_INTERRUPTED`를 지운다. `pgbuf_fix`는 인터럽트를 감지하면 표시를 지우고 이 에러만 남기므로, `SHOW HEAP OOS` 중의 ^C와 KILL이 사라진다. 같은 파일의 `oos_reclaim_fix_candidate()`는 `ER_INTERRUPTED`를 돌려준다. DF-15와 달리 운영 경로에서 실행된다. 2026-11-03에 닫힌 PR #7614와 비교해 추가했다. | 소스(재확인), 실행 안 함 | 중 | 기록. 고칠 때는 `ER_INTERRUPTED`만 돌려주고 busy와 deallocated page는 계속 건너뛴다. #7614처럼 모든 오류를 돌려주면 `lock_timeout=0`에서 busy page도 실패가 된다(추론). |
 | DF-27 | `oos_insert_within_page`는 정렬하지 않은 크기를, `oos_insert_many`는 정렬한 크기를 `oos_find_best_page`에 넘긴다. | 소스(조사), 영향 미증명 | 낮음 | 기록 |
 | DF-28 | 오류 경로 7곳이 `heap_oos_begin_insert_publication`의 `S_ERROR`를 무시한다. | 소스(조사) | 낮음 | 기록 |
 | DF-16 | sweep 대기자가 인터럽트 확인 없이 `pthread_cond_wait`에서 기다린다. 의도된 절충일 가능성이 크다. | 소스(조사) | 낮음 | 기록 |

@@ -60,6 +60,8 @@
 
 DF-03의 확인하지 않은 범위는 kill -9 뒤 복구, savepoint rollback, release 빌드다.
 
+2026-11-03 추가: 닫힌 PR #7614(CBRD-26831)와 비교해 R-71(여러 sector 통계 테스트)과 DF-31(`SHOW HEAP OOS` 경로의 `ER_INTERRUPTED` 소실)을 조사 문서에 더했다.
+
 ---
 
 ## AI-Generated Context
