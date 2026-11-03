@@ -51,11 +51,12 @@
 - [ ] `ctas02`의 TC 완료 후 native 명령 timeout 원인을 추가 분석한다. 결과 파일은 성공이지만 130.013초에 exit -9로 끝나 미완료다. 추가 관측 `ctas03`은 56.908초에 정상 종료해 원래 지연을 재현하지 못했다. Work647의 선별 후 `fixed01`에서도 종료 지연을 관측했고 `fixed02`는 40.879초에 정상 종료했다. 첫 실패를 미완료로 유지하며 원인 확정이나 runner 수리 credit은 주지 않는다.
 - [x] policy helper 그룹 잔여 38개를 Engine `e3589ae`·TC `01df2600a`에서 직렬 검증한다. [Work699 보고서](CBRD-26659-policy38-native_e3589ae_20261103_work699_codex.md)에 37 PASS·1 FAIL·0 TIMEOUT과 전부의 종료·정리를 기록했다. REPARTITION의 두 정책은 `root_has_no_oos`에서 실패하며 Engine·TC 귀속은 미확정이다.
 - [x] REPARTITION의 root_has_no_oos 실패를 조사하고 정책별 owner 증거를 확보한다. [Work702 진단](CBRD-26659-repartition-root-oos_e3589ae_20261103_work702_codex.md)은 SA records0·Has1과 최소 red/green을 통해 기존 root의 파일 연결을 즉시 없애야 한다는 TC 조건의 범위 오류로 분류했다. 원래 TC는 아직 FAIL이다.
-- [ ] REPARTITION의 기존-root oracle 수정안을 검토하고 원래 두 정책의 전체 TC를 재검증한다. 값·실제 destination ownership 검사는 유지하고 다른 partition 시나리오의 조건을 일괄 삭제하지 않는다.
+- [x] REPARTITION의 기존-root oracle을 좁게 수정하고 원래 두 정책의 전체 TC를 재검증한다. [Work717 결과](follow-up-results.md#repartition은-기존-root의-파일-연결과-현재-소유권을-구분)에 default·force_outline PASS와 raw owner·값·잘못된 owner 대조를 기록했다. TC `09ea46e1b`에 게시했으며 예전 root의 전체 vacuum·page 회수는 별도다.
 - [x] 기존 61개 분류에서 policy 그룹 밖의 잔여 21개를 원문 실행하고 판정한다. [Work704 보고서](CBRD-26659-remaining21-native_e3589ae_20261103_work704_codex.md)에 Engine `e3589ae`·TC `01df2600a`의 4 PASS·16 FAIL·외부 명령 TIMEOUT 1개와 초기 별도 INCONCLUSIVE 시도를 기록했다. 미착수는 0개지만 timeout TC의 정상 완료는 미확인이다. 서로 다른 리비전의 대표와 이 결과를 한 번의 전체 suite 실행으로 합산하지 않는다.
-- [ ] Work704의 assertion·controller FAIL 14개를 현재 관측별로 분석하고 Engine·TC·환경 귀속을 확인한다. 기존 미정의 변수 증상을 현재 원인으로 자동 이월하지 않는다.
-- [ ] TDE committed·undo wrapper 두 개의 누락 sibling 진입점 의존성을 수리하고 원래 AES crash 검증에 도달하는지 확인한다. Work704의 두 FAIL은 본래 crash 검증에 도달하지 못했다.
-- [ ] `schema_rewrites_sa`의 외부 120초 invocation deadline을 분석하고 정상 완료 근거와 장시간 실행·분할 필요성을 확인한다. Work704는 exit 124·123.322초이며 native testcase 자체 timeout 판정은 미확인이다.
+- [ ] Work704의 assertion·controller FAIL 14개의 귀속과 미확정 원인을 마무리한다. [Work718 분석](follow-up-results.md#실패-14개는-8개-근거-확보와-6개-원인-미확정으로-분류)은 고정 Engine의 명세 차이·값 안전성 실패 8개를 뒷받침하지만, 회수 5개·compact 1개는 추가 관측이 필요하다. 원래 14개 판정은 FAIL로 유지한다.
+- [x] TDE committed·undo wrapper 두 개의 누락 sibling 진입점 의존성을 수리하고 원래 AES crash 검증까지 확인한다. [Work716 결과](follow-up-results.md#tde-wrapper-두-개는-원래-aes-crash-검증까지-통과)에 body byte-identical 이동·네 선별 대조와 native 2 PASS를 기록했다. 정규 TC `09ea46e1b`에 게시했고 선택·assertion은 유지했다. 일반 NONE 진입점의 새 native 검증은 별도다.
+- [x] `schema_rewrites_sa`의 외부 120초 deadline을 분석하고 원문 정상 완료 근거·장시간 분류를 확보한다. [Work719 진단](follow-up-results.md#sa-schema는-원문-정상-완료-근거를-확보하고-장시간-분류-유지)은 순차 SQL 진행과 제한 연장 native PASS·18 phase·정리를 확인했다. 기존 120초 TIMEOUT은 유지하고 실제 timeout 설정·활성화·suite 배치는 바꾸지 않았다.
+- [ ] `schema_rewrites_sa`의 장시간 실행 위치·주기를 정한다. 120초 gate가 필수이면 의존 schema state와 assertion을 보존하는 분할을 별도 설계·검증한다.
 - [ ] `serialized_chunks`의 PASS와 별도로 `cubrid.conf.org` 누락 framework 복원 진단을 확인한다. Disposable 시도의 프로세스·namespace 정리와 framework 설정 복원은 구분한다.
 - [ ] 각 실패를 엔진·TC·환경 문제 또는 원인 미확정으로 분류하고 근거를 연결한다.
 - [ ] 확인한 엔진 결함에 후속 이슈와 재현 TC를 연결한다.
