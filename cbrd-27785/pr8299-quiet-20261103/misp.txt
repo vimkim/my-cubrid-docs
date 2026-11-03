@@ -1,0 +1,16 @@
+== fix-m0 cycles 2595422306.0 br_misp 116349.0 baclears 291624.0
+ 25.00% [.] spage_search_record(char*, short*, recdes*, int, int, bool)+0x81
+ 6.25% [.] parallel_scan::task<(parallel_scan::RESULT_TYPE)3, (parallel_scan::SCAN_TYPE)0>::drain_slot_oids(cubthread::entry&, bool&)+0x146
+ 3.75% [.] pgbuf_remove_watcher(pgbuf_holder*, pgbuf_watcher*)+0x4
+== fix-m1 cycles 2882516288.0 br_misp 4109307.0 baclears 23977650.0
+ 97.45% [.] parallel_scan::result_handler<(parallel_scan::RESULT_TYPE)3>::write(cubthread::entry*)+0x53
+ 0.92% [.] spage_search_record(char*, short*, recdes*, int, int, bool)+0x81
+ 0.15% [.] pgbuf_fix_release(cubthread::entry*, vpid const*, PAGE_FETCH_MODE, PGBUF_LATCH_MODE, PGBUF_LATCH_CONDITION)+0x6d9
+== fix-m2 cycles 2854932450.0 br_misp 4104591.0 baclears 24035114.0
+ 97.73% [.] parallel_scan::result_handler<(parallel_scan::RESULT_TYPE)3>::write(cubthread::entry*)+0x53
+ 0.61% [.] spage_search_record(char*, short*, recdes*, int, int, bool)+0x81
+ 0.22% [.] heap_next_1page(cubthread::entry*, hfid const*, vpid const*, db_identifier*, db_identifier*, recdes*, heap_scancache*, int)+0x118
+== fix-m3 cycles 2542467385.0 br_misp 103466.0 baclears 296403.0
+ 40.91% [.] spage_search_record(char*, short*, recdes*, int, int, bool)+0x81
+ 3.41% [.] parallel_scan::slot_iterator::next_qualified_slot_with_peek(cubthread::entry*)+0x94
+ 3.41% [.] parallel_scan::task<(parallel_scan::RESULT_TYPE)3, (parallel_scan::SCAN_TYPE)0>::drain_slot_oids(cubthread::entry&, bool&)+0x146

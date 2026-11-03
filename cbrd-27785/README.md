@@ -12,6 +12,7 @@
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [narrow scan cycles 변동의 원인](CBRD-27785-pr8299-cycles-layout_5837393_claude.md) | f8114e432 대비 5837393ff의 조용한 시간 ABBA 12라운드, 서버 시작별 두 갈래 cycles와 ASLR·분기 예측 실패 진단, PR 밖 분기 위치 | 2026-11-03 | 2026-11-03 | 지난 측정에서 원인을 모른 cycles 차이를 판정하고 근거를 남기기 위해 |
 | [4-record 기준 반영 PR 본문](CBRD-27785-four-record-target-pr-body_4c3c8d7_claude.md) | 4c3c8d791 기준 구현(CBRD-27057의 4,060B OOS 분리 기준 포함)·CI·측정 요약과 남은 TC 처리 | 2026-11-03 | 2026-11-03 | 기준 수정 후 본문을 사용자 검토 뒤 게시하기 위해 |
 | [4-record 기준 반영 게시 context](CBRD-27785-four-record-target-pr-context_4c3c8d7_claude.md) | source·기존 본문 fingerprint와 승인 후 게시 조치·결과 | 2026-11-03 | 2026-11-03 | 게시 승인 범위와 실제 실행 결과를 추적하기 위해 |
 | [최종 head의 검증·측정 근거](CBRD-27785-review-fixes_5837393_claude.md) | 5837393ff의 OOS Resolve 분리, stack frame·코드 크기, f8114e432 대비 release 명령어 수와 cycles, CI 재실행 판정 | 2026-11-02 | 2026-11-02 | PR 본문이 인용하는 최종 head의 근거를 한곳에 두기 위해 |
