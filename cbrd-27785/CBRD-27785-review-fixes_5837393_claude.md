@@ -3,6 +3,19 @@
 - 작성일: 2026-11-02, Asia/Seoul. 작성: Claude Code 세션.
 - 관련: [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785), [PR #8299](https://github.com/CUBRID/cubrid/pull/8299).
 - 독자: PR #8299 리뷰어와 PR 작성자.
+- 수정일: 2026-11-04, Asia/Seoul.
+- 수정 이력. 2026-11-04: 성능 변화의 부호를 좋아지면 +로 바꿨다.
+
+### 수치를 읽는 법
+
+- **성능 변화의 부호.** 이 문서의 성능 변화 % 값은 모두 (기준 값 − 비교 대상 값) ÷ 기준 값이다. 비교 대상이 좋아지면 +, 나빠지면 −다. 예를 들어 narrow scan의 명령어 수 +1.33%는 `eec338aaa`가 `f8114e432`보다 명령어를 1.33% 덜 썼다는 뜻이다.
+- **지표 두 가지.** 수치마다 어떤 지표인지 적었다.
+  - **명령어 수**는 DB 서버 프로세스가 그 SQL을 처리하는 동안 실행한 user-space CPU 명령어 수(`instructions:u`)다. 이 문서의 판정 지표다. 호스트 부하에 거의 흔들리지 않는다.
+  - **cycles**는 CPU가 그 일에 쓴 clock 수(`cycles:u`)다. 명령어 수가 같아도 cache miss나 분기 예측 실패가 늘면 커진다. 실제 CPU 시간에 가깝다. 이 측정에서는 서버 재시작마다 크게 흔들려 참고로만 적었다.
+- **기준.** 모든 성능 비교의 기준은 이전 PR head `f8114e432`다. develop이나 PR base 대비 값이 아니다.
+- **목표.** `f8114e432` 대비 명령어 수가 2% 넘게 나빠지면 회귀로 본다.
+- **크기.** stack frame과 코드 크기는 성능 변화가 아니다. bytes 값을 그대로 적었다.
+- **주의.** 아래 재현 자료 절의 도구 출력은 반대 부호를 쓴다. 그 출력에서는 늘면 +다.
 
 ## Purpose
 
@@ -136,13 +149,13 @@ GCC 11.5, release SERVER_MODE의 컴파일 명령에 `-fstack-usage`만 더해 `
 - scan 경우: PR의 `bench.py`로 200,000행 표를 읽었다. narrow는 `SUM(v)`, wide는 `SUM(id)`, `SUM(v)`, `SUM(LENGTH(payload))`다. 각 run의 첫 실행은 버렸고 쪽마다 sample 64개다.
 - 일반 경우: PR의 `ordinary.py`로 200,000행 표를 썼다. 일반 scan은 `COUNT(*), SUM(a)`, 조건 scan은 `SUBSTR(s,30,1)='a'` 조건, UPDATE는 `SET a=a+1`이다. UPDATE는 sample마다 새 복제본에서 시작했다. 각 run의 첫 실행은 버렸고 쪽마다 sample 32개다.
 
-| 경우 | 명령어 수 (`f8114e432` → `eec338aaa`) |
+| 경우 | 성능 변화 (명령어 수, `f8114e432` 대비 `eec338aaa`) |
 |---|---:|
-| narrow scan | -1.33% |
-| wide scan | -1.78% |
-| 일반 scan | -1.82% |
-| 조건 scan | -0.82% |
-| UPDATE | -0.47% |
+| narrow scan | +1.33% |
+| wide scan | +1.78% |
+| 일반 scan | +1.82% |
+| 조건 scan | +0.82% |
+| UPDATE | +0.47% |
 
 - 명령어 수는 같은 revision 안에서 거의 변하지 않는다. 5개 경우 모두 모든 sample 쌍에서 `eec338aaa`가 적었다.
 - `bench.py compare --max-overhead-percent 2`는 round 0과 1에서 모두 `within_budget`, exit 0이었다.
@@ -154,16 +167,16 @@ GCC 11.5, release SERVER_MODE의 컴파일 명령에 `-fstack-usage`만 더해 `
 cycles는 공유 호스트와 서버 재시작의 영향을 크게 받는다.
 일반 scan을 서버 시작마다 100회 `perf stat`으로 쟀을 때 `f8114e432`는 8.80~9.12e9, `eec338aaa`는 8.80~9.29e9 cycles였다. `eec338aaa`의 두 서버 시작은 서로 약 3% 달랐다.
 
-| 경우 | 하위 10% cycles 차이 | 중앙값 cycles 차이 |
+| 경우 | 성능 변화 (cycles 하위 10%, `f8114e432` 대비) | 성능 변화 (cycles 중앙값, `f8114e432` 대비) |
 |---|---:|---:|
-| narrow scan | -0.05% | +12.86% |
-| wide scan | -1.73% | +3.64% |
-| 일반 scan | +2.79% | +1.60% |
-| 조건 scan | -1.88% | -10.46% |
-| UPDATE | -2.66% | -2.20% |
+| narrow scan | +0.05% | −12.86% |
+| wide scan | +1.73% | −3.64% |
+| 일반 scan | −2.79% | −1.60% |
+| 조건 scan | +1.88% | +10.46% |
+| UPDATE | +2.66% | +2.20% |
 
 - narrow scan의 중앙값은 12.86% 높지만 하위 10%와 최솟값은 거의 같다. 분포로 보면 두 revision 모두 느린 sample이 섞였고 그 비율이 달랐다. 원인은 확인하지 못했다.
-- 일반 scan의 하위 10% +2.79%는 위의 재시작 간 차이 안에 있다.
+- 일반 scan의 하위 10% cycles −2.79%는 위의 재시작 간 차이 안에 있다.
 - 일반 scan의 `perf record`에서 `heap_attrinfo_read_dbvalues`는 가장 큰 심볼이다. cycles 비율은 16.8%에서 14.5%로, 절대 sample은 10~13% 줄었다. 바꾸지 않은 호출자 몇 개는 5~10% 늘었다. 코드 배치가 바뀐 영향으로 추정하지만 증명하지 않았다.
 
 ### 한계
@@ -180,3 +193,5 @@ cycles는 공유 호스트와 서버 재시작의 영향을 크게 받는다.
 - `analysis-all.txt`는 8 round 전체의 명령어 수와 cycles 중앙값 비교다. 파일의 `head`는 `f8114e432`, `fix`는 `eec338aaa`다.
 - `analysis-min.txt`는 cycles의 최솟값과 하위 백분위 비교다.
 - `compare-r0.txt`, `compare-r1.txt`는 round 0과 1의 `bench.py compare` 출력이다.
+
+세 파일은 도구 출력 그대로다. 도구는 옛 부호로 출력한다. 그래서 명령어 수나 cycles가 늘면 +다.

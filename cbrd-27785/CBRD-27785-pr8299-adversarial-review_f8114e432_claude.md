@@ -4,6 +4,15 @@
 - 관련: [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785), [PR #8299](https://github.com/CUBRID/cubrid/pull/8299), OOS 후속 후보 [CBRD-27873](https://jira.cubrid.org/browse/CBRD-27873).
 - 독자: PR 작성자와 리뷰어, OOS 후속 작업을 고르는 사람.
 - 갱신: 2026-11-03. OOS 분리 기준 항목에 원인과 PR head `4c3c8d791`의 수정을 적었다.
+- 갱신: 2026-11-04. 성능 변화의 부호를 좋아지면 +로 바꿨다.
+
+### 수치를 읽는 법
+
+- **성능 변화의 부호.** 성능 변화 % 값은 (기준 값 − 비교 대상 값) ÷ 기준 값이다. 비교 대상이 좋아지면 +, 나빠지면 −다. 예를 들어 narrow의 명령어 수 +1.33%는 `eec338aaa`가 `f8114e432`보다 명령어를 1.33% 덜 썼다는 뜻이다.
+- **지표.** 판정 지표는 **명령어 수**다. DB 서버 프로세스가 그 SQL을 처리하는 동안 실행한 user-space CPU 명령어 수다. 호스트 부하에 거의 흔들리지 않는다. 경과 시간은 공유 호스트라 판정에 쓰지 않았다.
+- **기준.** release 벤치마크의 기준은 리뷰한 head `f8114e432`다. base `dcbf09e4f` 대비 값이 아니다.
+- **목표.** `f8114e432` 대비 명령어 수가 2% 넘게 나빠지면 재작업 대상으로 본다.
+- **성능 변화가 아닌 값.** stack frame 크기, `heap_file.o` text 같은 코드 크기, 같은 쪽 안 spread는 성능 변화가 아니다. 그대로 적었다.
 
 ## 질문과 결론
 
@@ -113,12 +122,12 @@ adversary가 증명하고 조정자가 다시 실행하지 않은 테스트 공�
 - 순서: `f8114e432`, `eec338aaa`를 번갈아 세 쌍. 쌍마다 서버를 새로 시작하고 끝나면 정지했다.
 - 판정: 공유 호스트이므로 경과 시간이 아니라 서버 프로세스의 user 명령어 수로 판정했다.
 
-| case | 명령어 수 변화 (`eec338aaa` 대 `f8114e432`) | 같은 쪽 안 spread | `compare --max-overhead-percent 2` |
+| case | 성능 변화 (명령어 수, `f8114e432` 대비 `eec338aaa`) | 같은 쪽 안 spread | `compare --max-overhead-percent 2` |
 |---|---|---|---|
-| narrow | -1.33%, 세 쌍 모두 같음 | 0.009% 이하 | 세 번 모두 `within_budget`, exit 0 |
-| wide | -1.78%, 세 쌍 모두 같음 | 0.005% 이하 | 세 번 모두 `within_budget`, exit 0 |
+| narrow | +1.33%, 세 쌍 모두 같음 | 0.009% 이하 | 세 번 모두 `within_budget`, exit 0 |
+| wide | +1.78%, 세 쌍 모두 같음 | 0.005% 이하 | 세 번 모두 `within_budget`, exit 0 |
 
-판정은 회귀 없음이다. 원인은 분리하지 못했다. `-fstack-clash-protection`이 꺼져 있어 stack probe 때문은 아니다(prologue가 `sub $0x4138,%rsp`에서 `sub $0x108,%rsp`로 바뀔 뿐이다). 1회 `perf record` 비교는 변화가 바뀌지 않은 함수에 흩어져 있고 전체 차이(-8.4%)가 벤치마크(-1.3%)보다 훨씬 커서 대표성이 없다. 따라서 이 결과를 "이 커밋으로 1.3% 빨라졌다"로 쓰지 말고 "회귀 없음"으로 써야 한다. 단건 OOS 읽기 경로와 UPDATE는 측정하지 않았다.
+판정은 회귀 없음이다. 원인은 분리하지 못했다. `-fstack-clash-protection`이 꺼져 있어 stack probe 때문은 아니다(prologue가 `sub $0x4138,%rsp`에서 `sub $0x108,%rsp`로 바뀔 뿐이다). 1회 `perf record` 비교는 변화가 바뀌지 않은 함수에 흩어져 있고 전체 성능 변화(`perf record` 표본, +8.4%)가 벤치마크(명령어 수, +1.3%)보다 훨씬 커서 대표성이 없다. 따라서 이 결과를 "이 커밋으로 1.3% 빨라졌다"로 쓰지 말고 "회귀 없음"으로 써야 한다. 단건 OOS 읽기 경로와 UPDATE는 측정하지 않았다.
 
 <a id="oos-existing"></a>
 ## OOS 코드의 기존 문제 (CBRD-27873 후보)
@@ -170,7 +179,7 @@ adversary가 증명하고 조정자가 다시 실행하지 않은 테스트 공�
 | 항목 | 다른 리뷰 | 이 리뷰 | 처리 |
 |---|---|---|---|
 | 16 KB OOS scratch가 caller 프레임에 상주 | 지적(`-fstack-usage`) | 같은 측정, 의심점 | `5c5f2a170` |
-| `heap_file.o` text +6.5%, 강제 inline에 따른 코드 크기 | 지적 | 다루지 않음 | 회귀 아님. release scan 명령어 수가 줄었다 |
+| `heap_file.o` text 6.5% 증가, 강제 inline에 따른 코드 크기 | 지적 | 다루지 않음 | 회귀 아님. release scan 명령어 수가 줄었다 |
 | PR 본문의 head가 이전 것 | 지적 | 증명 | `5837393ff`, `4c3c8d791` 기준으로 본문 갱신 |
 | `bad_alloc` 처리 위치와 `er_set` 크기 | 지적 | 사소함으로 기록 | `12fe25a2c` |
 | 벤치마크가 다른 바이트의 fixture를 같은 fixture로 받아들임 (PR이 만든 문제) | 실행으로 증명 | 놓침 | `b01204f51`가 `OCTET_LENGTH`와 `HEX` 검사 추가 |
