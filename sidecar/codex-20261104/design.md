@@ -68,7 +68,9 @@ attribute set before any reentrant user callback or mutation by the same
 transaction. Do not retain lazy references across either boundary. The
 baseline visibility probe shows that an own DELETE can hide a chunk under
 the same snapshot, so a snapshot lease alone cannot promise stable own-write
-reads. Copied `DB_VALUE` results own the bytes needed after the view closes.
+reads. Abort, statement cancellation, and rollback invalidate the lazy view
+without materialization or allocation. Copied `DB_VALUE` results own the bytes
+needed after the view closes.
 Small-column-only queries still request no cold values. Predicate-based
 deferral across user callbacks is outside the initial optimization.
 
@@ -170,7 +172,7 @@ immutable small chunk can relocate when DELETE adds MVCC metadata and its page
 has insufficient space. Source evidence is
 `src/storage/heap_file.c:23317` through `23417` at the stated revision.
 
-The [formal result](verification.md) finds a conditional conflict in ordinary
+The [legacy formal result](verification.md) finds a conditional conflict in ordinary
 relocation vacuum. It does not establish allocator reachability or reproduce
 an engine failure. Before Sidecar relies on this path, force the complete
 schedule against the real allocator and restart logic. A demonstrated failure
@@ -220,11 +222,16 @@ without contacting the source heap, decodes complete values, and applies them
 through replica-local row mutation. Internal chunk writes have physical WAL
 but no independent user-table replication event. Apply position and local
 commit must be atomic or have a proven equivalent deduplication protocol.
+Stage every surviving operation of the source transaction, then publish the
+entire local transaction with its durable apply progress. A valid operation
+prefix alone must not become visible. Crash discards unpublished staging.
 
 CDC, flashback, and optional applier SQL logging use the same decoder. Archive
-retention protects every descriptor dependency until all registered consumers
-pass it. Logical DML LSA alone cannot be an archive-deletion watermark when a
-required fragment is earlier. Expired history produces the established
+retention protects the full transaction dependency interval, including the
+cancellation and commit records, until all registered consumers pass it.
+Retaining image fragments while deleting their cancellation metadata can
+reintroduce a rolled-back operation. Logical DML LSA alone cannot be an
+archive-deletion watermark when a required fragment is earlier. Expired history produces the established
 unavailable-history behavior, never a fabricated value.
 
 ## Other supported paths enter the same contracts
@@ -304,3 +311,14 @@ utilities rather than treating them as deferred correctness exceptions.
 Approval authorizes the phased [POC plan](poc-plan.md). It does not authorize
 deployment, publication, production migration, or a claim that performance and
 regressions have passed.
+
+## Design-level protocol checks
+
+The [expanded formal report](formal-verification.md) checks the proposed
+lifetime, history, undo-resource, and integration protocols. The shared
+history predicates are imported into the integration model. These finite
+searches do not establish action refinement of the detailed lifetime and
+undo models or conformance of future engine code. In particular, completed
+crash abort and completed savepoint cancellation must account for every
+represented inserted chunk, rather than merely label recovery complete.
+The POC must re-establish these contracts against actual storage and recovery.

@@ -1,14 +1,22 @@
 # Build and judge the Sidecar POC
 
-The user wants a real-engine demonstration of the [approved design](design.md).
+The user wants a real-engine demonstration of the [proposed design](design.md).
 This plan is prepared for approval on 2026-11-04, Asia/Seoul. Nothing below is
 an engine test result. The baseline is CUBRID/CUBRID commit
 `e64a04a79a5842827a124b3f8313516d0da2594c`.
 
-The approval covers the implementation phases below on `sidecar-codex` with
-local commits. It includes disposable test databases and isolated processes.
+The proposed approval would cover the implementation phases below on
+`sidecar-codex` with local commits. It includes disposable test databases and isolated processes.
 It excludes deployment, production data, pushing branches, and upgrade of
 existing databases. A separate merge approval is required for `develop`.
+
+## Design verification before engine approval
+
+The [protocol models](formal-verification.md) and their rerunnable skill are
+implemented. They verify finite design state machines and deliberately broken
+variants. They do not implement `accept.py` or close any real-engine phase
+below. Engine implementation still requires the handoff's explicit approval.
+Keep the legacy heap-vacuum finding separate from passing proposed guards.
 
 ## Build the checker before the storage
 
@@ -53,7 +61,7 @@ fixture and measurement code must produce equivalent logical inputs on both.
 | 4. `reclamation` | Hold an old snapshot over overwrite and DELETE. It reads the old full value while a new snapshot reads the committed replacement. Finish snapshots and drain vacuum. The quiescent checker finds no incomplete referenced ID, no unowned live ID, and no retired chunk or index entry past the vacuum horizon. Repeat churn and show reclaimed space is reusable before unjustified file growth. |
 | 5. `transport` | Exercise full object fetch and load-unload-load, compact, representation change, drop, truncate, failed DDL, triggers, and standalone DML. Test simple, prefix, function, composite, and unique indexes, including uniqueness failure and rollback. Exact values and index queries match an ordinary-table oracle. No internal reference reaches a legacy client decoder. |
 | 6. `history` | Emit complete images before old chunks become invisible to the writer. Savepoint-rolled-back operations emit no HA or CDC event. After live chunk vacuum and source restart, CDC and flashback return the exact supported old/new values from retained WAL. A manifest with a missing fragment fails explicitly. Every descriptor dependency remains retained until consumers advance. |
-| 7. `ha` | Give source and replica different allocation histories. Stop the applier, overwrite and delete source values, vacuum, restart, and make the source server unavailable. Resume from retained archives. Full replica values equal the expected committed source state. Crash the replica before and after local apply commit and checkpoint. Resume without loss or duplicates. Include optional applier SQL logging. |
+| 7. `ha` | Give source and replica different allocation histories. Stop the applier, overwrite and delete source values, vacuum, restart, and make the source server unavailable. Resume from retained archives. Full replica values equal the expected committed source state. Crash the replica before and after local apply commit and checkpoint. Resume without loss or duplicates. Include two surviving operations in one source transaction; concurrent readers must see the whole transaction after local commit. Include optional applier SQL logging. |
 | 8. `encryption` | Enable TDE, change its algorithm, restart, archive, back up and restore. Confirm metadata and successful decryption. Scan data files, live/archived WAL, and backup for a planted long marker with no expected plaintext occurrence. Include hidden indexes and new page-less logical images. Report this as exercised encryption behavior, not cryptographic proof. |
 | 9. `compatibility` | The exact unmodified baseline binary and baseline log readers refuse the new database/log format before writable recovery or apply. Record refusal and unchanged files. New binary reads its supported ordinary databases. Mixed-version HA and in-place upgrade remain unsupported by this POC. |
 | 10. `projection` | For matched wide fixtures, a forced and verified heap scan returns equal small-column aggregates, performs zero cold-chunk and chunk-index page fixes, and touches strictly fewer distinct total data pages than baseline. Count heap, overflow, and chunk data pages together. Report all index pages separately and include them in a second total to expose hidden lookup costs. |
