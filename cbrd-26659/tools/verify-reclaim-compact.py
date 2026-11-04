@@ -10,17 +10,17 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 CASES = {
-    'a02': ('full3cycle', []),
-    'a03': ('iud', ['diagnostic_cycle0_idle']),
-    'a04': ('restart', ['diagnostic_cycle0_idle']),
-    'a06': ('snapshot', ['diagnostic_snapshot_idle', 'diagnostic_snapshot_churn_idle']),
-    'a08': ('compact_sa_original_and_dml_control', []),
-    'a10': ('compact_cs_patched_control', []),
-    'a11': ('abortretry', ['diagnostic_cycle0_idle']),
-    'a12': ('id', ['diagnostic_cycle0_idle', 'diagnostic_after_pressure']),
-    'a13': ('abort_targeted_followup', []),
-    'a14': ('abort_residual_identity_checked', ['diagnostic_cycle0_idle']),
-    'a15': ('abort_symbol_entry', ['diagnostic_cycle0_idle']),
+    'a02': ('full3cycle', {}),
+    'a03': ('iud', {'diagnostic_cycle0_idle': (191, 191, [])}),
+    'a04': ('restart', {'diagnostic_cycle0_idle': (89, 89, [])}),
+    'a06': ('snapshot', {'diagnostic_snapshot_idle': (5, 5, []), 'diagnostic_snapshot_churn_idle': (15, 15, [])}),
+    'a08': ('compact_sa_original_and_dml_control', {}),
+    'a10': ('compact_cs_patched_control', {}),
+    'a11': ('abortretry', {'diagnostic_cycle0_idle': (11, 9, [[1,1312],[1,1313]])}),
+    'a12': ('id', {'diagnostic_cycle0_idle': (20, 20, []), 'diagnostic_after_pressure': (0, 0, [])}),
+    'a13': ('abort_targeted_followup', {}),
+    'a14': ('abort_residual_identity_checked', {'diagnostic_cycle0_idle': (10, 8, [[1,1312],[1,1313]])}),
+    'a15': ('abort_symbol_entry', {'diagnostic_cycle0_idle': (8, 6, [[1,1312],[1,1313]])}),
 }
 
 
@@ -167,8 +167,8 @@ def journal(attempt, scenario):
 
 def compact(attempt):
     dirs = list((attempt / 'CTP/result/shell/case-logs').glob('*/cases/case'))
-    if not dirs:
-        return {'status': 'pending'}
+    if len(dirs) != 1:
+        raise ValueError(f'{attempt}: expected exactly one retained compact directory')
     d = dirs[0]
     physical = {}
     for p in sorted(d.glob('oos12.*.physical.log')):
@@ -193,7 +193,7 @@ def compact(attempt):
     expected_owner = 'FAIL' if attempt.name == 'a08' else 'PASS'
     if expected_owner + ' materialized.owner_presence' not in controller:
         raise ValueError(f'{attempt}: changed materialized owner result')
-    return {'physical': physical, 'expected_physical_matches': physical_matches, 'checks': checks, 'cleanup': cleanup}
+    return {'status':'observed', 'physical': physical, 'expected_physical_matches': physical_matches, 'checks': checks, 'cleanup': cleanup}
 
 
 
@@ -216,7 +216,7 @@ def pressure(before, after, barrier_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Read native verdicts, diagnostic traces, and raw OOS pages; do not infer a testcase pass.')
+    parser = argparse.ArgumentParser(description='Cross-check the fixed Work756 observations and retained artifacts; do not infer a testcase pass.')
     parser.add_argument('--root', type=Path, required=True)
     args = parser.parse_args()
     result = {'root': str(args.root), 'engine': 'e3589ae42d42b04eb020e1ae43e165b01d31b12a', 'original_tc': '01df2600ac75180812451462b5c044cfa56b732a', 'attempts': {}}
@@ -244,10 +244,15 @@ def main():
                 summary, pages = census(attempt / 'evidence' / capture_scenario / ('oos11.' + capture), sample)
                 if summary['status'] != 'observed':
                     raise ValueError(f'{attempt}: retained raw census missing: {summary}')
+                expected_empty, expected_matched, expected_unmatched = captures[capture]
+                if summary['empty_pages'] != expected_empty or len(summary['matched_rejected_vpids']) != expected_matched or [list(v) for v in summary['unmatched_vpids']] != expected_unmatched:
+                    raise ValueError(f'{attempt}: documented raw census or gate evidence changed for {capture}')
                 item['censuses'][capture] = summary
                 decoded[(name, capture)] = pages
         if name in ('a08', 'a10'):
             item['compact'] = compact(attempt)
+            if item['compact']['status'] != 'observed':
+                raise ValueError(f'{attempt}: compact evidence incomplete')
         result['attempts'][name] = item
     result['id_pressure'] = pressure(decoded.get(('a12', 'diagnostic_cycle0_idle')), decoded.get(('a12', 'diagnostic_after_pressure')), args.root / 'a12/evidence/id/oos11.diagnostic_barrier.lsa.json')
     if result['id_pressure']['status'] != 'observed':
@@ -262,7 +267,7 @@ def main():
             growth = [e for e in entries['candidates'] if e.get('vpid.pageid') == page and e.get('vpid.volid') == 1 and e.get('caller') == 'oos_reclaim_sweep_step']
             lsa = empty.get((1,page))
             blocked = [e for e in growth if lsa and lsa > (e['horizon.pageid'], e['horizon.offset'])]
-            if not undo or not blocked:
+            if len(undo) != 1 or len(blocked) != 3:
                 raise ValueError(f'rollback residual page {page} lacks entry, raw emptiness, or restrictive sampled horizon')
             checks.append({'vpid':[1,page], 'raw_lsa':lsa, 'undo_calls':len(undo), 'growth_entries_with_older_horizon':len(blocked), 'final_reclaim_enum_observed':False})
         result['abort_residual_entry_crosscheck'] = checks

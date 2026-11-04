@@ -11,7 +11,7 @@
 | Engine | `vimkim/cubrid`의 `e3589ae42d42b04eb020e1ae43e165b01d31b12a`, OptDebug 보존 설치본. PR #8128의 head는 `CBRD-26659-oos-testcases-handover`, base는 `feature/oos-merge`다. |
 | TC | 원래 `01df2600ac75180812451462b5c044cfa56b732a`의 보존 projected corpus. 이번 실행의 진단 변경은 attempt별 입력과 patch로 보존했다. 게시 TC `09ea46e1b`를 수정하지 않았다. |
 | 명세 | [OOS-CONTEXT.md](https://github.com/vimkim/cubrid-oos-context/blob/281a940eafb5db507bce8e75a51de0ea94b4bfde/OOS-CONTEXT.md), SHA-256 `6300aa1fa6ffb54033b9c7f7ea959466e9d88f0530e1ab0d7178b4459d4fcf63`. |
-| 실행 | Native `cubrid-testkit` shell, containment, 한 slot, `scenario_disk=on`. 시도별 설치·CTP·HOME·registry·TMP·cache·corpus를 분리하고 공용 flock으로 직렬 실행했다. |
+| 실행 | Native `cubrid-testkit` shell, containment, 한 slot, `scenario_disk=on`. 설치·CTP·HOME·registry·TMP·cache는 시도별로 분리하고 공용 flock으로 직렬 실행했다. a02·a05는 root의 projected corpus를 공유했고, 나머지는 attempt별 corpus를 사용했다. |
 | 관측 | GDB에서 설치본의 심볼과 gate 입력을 읽고, 종료한 서버의 정확한 파일 allocation과 16KiB raw page를 대조했다. 진단 SA boot는 vacuum을 비활성화하고 원래 설정을 복원했다. |
 | 원본 보존 | `/home/vimkim/temp/w704-rjVY4qVI`와 `/home/vimkim/temp/cbrd26659-followups-17mm966k`는 변경하지 않았다. 기존 CCI/JDBC dirt도 보존했다. |
 
@@ -113,7 +113,7 @@ python3 cbrd-26659/tools/verify-reclaim-compact.py \
 
 검증기는 원문 source identity와 config, 단일 dispatch·FIN·XML·status, 정리 결과, 물리 page header·slot·LSA·allocation roster, gate 입력, compact 물리 결과와 pressure의 재사용 순서를 대조한다. 출력의 `retained_evidence_crosscheck`는 증거 정합성 판정이며 전체 TC의 PASS 인증이 아니다. Raw root가 보존돼 있어야 재실행할 수 있다.
 
-Raw binary 한 바이트를 잘라낸 음성 대조에서 검증기는 exit 1로 거부했다. Compact의 물리 관측값이 달라지면 실패하며, 불완전한 gate sample과 a13·a14의 target 불일치 자료를 원인 증거로 승격하지 않는다.
+Raw binary 한 바이트의 절단, compact 길이 변경, gate JSONL의 전체 누락, compact evidence directory 누락의 네 음성 대조를 모두 exit 1로 거부했다. 고정 case 표의 문서화된 빈 페이지·거부 연결 수와 일치해야 완료한다. 불완전한 gate sample과 a13·a14의 target 불일치 자료를 원인 증거로 승격하지 않는다.
 
 남은 사항은 horizon을 제한한 실제 undo source와 abort 두 페이지의 latch·최종 enum, idle eventual return과 compact rewrite의 계약·TC 처리 결정, 기존 Engine 차이의 후속 연결, 실제 TC 리뷰·병합이다. QA의 heavy·장시간·HA 환경·주기·담당 합의와 다른 기존 TODO도 유지한다. 정규 Engine·TC 저장소의 수정·push와 CI trigger는 하지 않았다.
 
