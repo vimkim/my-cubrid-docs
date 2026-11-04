@@ -1,8 +1,8 @@
 # CBRD-27933 vacuum의 OOS 파일 조회 실패 재현과 원인 분석
 
-- 분석일은 2026-11-04 (Asia/Seoul)이다.
+- 분석일은 2026-11-04 (Asia/Seoul)이다. 선택지 B prototype은 2026-11-05에 추가했다.
 - 대상 이슈는 [CBRD-27933](https://jira.cubrid.org/browse/CBRD-27933)이다. 요구사항 출처는 [PR #8350 리뷰 댓글](https://github.com/CUBRID/cubrid/pull/8350#discussion_r4452180248)이다. 작업 추적은 Work 781이다.
-- 소스 기준은 `CUBRID/cubrid` 의 `1ef6ed6125eb6028c06b0e05282dc0041bde3f48` (PR #8350 head)이다. 엔진 소스는 수정하지 않았다. 재현 테스트는 로컬 브랜치 `CBRD-27933-vacuum-oos-vfid-lookup-error` 의 커밋 `ec3edd1ab` 에만 있고, 원격에는 게시하지 않았다.
+- 소스 기준은 `CUBRID/cubrid` 의 `1ef6ed6125eb6028c06b0e05282dc0041bde3f48` (PR #8350 head)이다. 엔진 소스는 수정하지 않았다. 재현 테스트는 로컬 브랜치 `CBRD-27933-vacuum-oos-vfid-lookup-error` 의 커밋 `ec3edd1ab` 와 `a8065e5fe` 에만 있고, 원격에는 게시하지 않았다.
 - 빌드는 `debug_gcc` (Debug, `-O0`)와 `release_gcc` (RelWithDebInfo, `-O2 -DNDEBUG`)를 사용했다.
 - 같은 날 `origin/feature/oos-merge` 는 `f67f2f692a7ad9f9efada2178759ca713e596b9d` 였고 PR head와의 merge-base는 `dcbf09e4f` 다. 이 보고서의 런타임 결과는 PR head에서만 얻었다.
 
@@ -14,7 +14,8 @@
 2. 리뷰어가 제시한 트리거는 실제로 발생한다. vacuum 워커는 infinite wait인 `TRAN_ACTIVE` system tdes로 헤더를 기다리고, `pgbuf_timed_sleep` 은 timeout 오류를 반환한다.
 3. debug 빌드는 helper에 도달하기 전에 `pgbuf_timed_sleep` 의 `assert (0)` 에서 중단한다. debug에서 관측되는 증상은 누수가 아니라 서버 중단이다.
 4. helper가 오류를 반환하게만 바꾼 prototype은 일시 오류와 셧다운을 해결했다. 일시 오류 뒤에는 OOS 값이 회수되었다. 셧다운 중 실패는 블록을 `interrupted` 로 남겼다. 지속 오류에서는 워커가 같은 페이지를 latch timeout 주기로 끝없이 재시도했다.
-5. 수리는 오류 반환 한 줄로 끝나지 않는다. debug assertion 세 곳, 지속 오류의 진행 정책, 회귀 테스트를 돌릴 빌드를 함께 정해야 한다.
+5. 지속 오류에서는 B가 낫다. B는 오류를 반환한 뒤 블록을 `interrupted` 로 넘겨 나중에 다시 실행한다. vacuum 워커가 하나일 때 A는 60초 동안 다른 heap의 블록을 처리하지 못했고, B는 14.6초에 처리했다. 일시 오류와 셧다운에서는 B와 A의 결과가 같았다.
+6. 수리는 오류 반환 한 줄로 끝나지 않는다. debug assertion 세 곳, 대기 없이 바로 실패하는 오류의 재시도 간격, 회귀 테스트를 돌릴 빌드를 함께 정해야 한다.
 
 ## 실패 경로
 
@@ -91,13 +92,13 @@ E2와 E3에서 헤더를 쥔 6초 동안 슬롯이 그대로였던 이유는 rel
 
 E3과 E4에서는 prototype의 오류가 `Could not prepare vacuum for object 1|643|1` 과 `Vacuum heap page 1|643, error_code=-72` 로 기록되었다. 이 두 줄은 수정 없는 엔진에서는 나오지 않았다. 이 차이로 prototype 코드가 실행되었음을 확인했다.
 
-E4에서 latch timeout은 57.2초 동안 22회 기록되었다. 간격의 중앙값은 2.00초이고 최댓값은 17.13초였다. 중앙값은 latch timeout과 같다. 워커는 실패 직후 다시 헤더에 줄을 섰다. 최댓값은 첫 call stack 기록이다. 이 실행의 서버 로그는 54,529줄, 약 3.9 MB였고 `VACUUM ERROR` 는 66줄이었다.
+E4에서 latch timeout은 57.2초 동안 22회 기록되었다. 간격의 중앙값은 2.00초이고 최댓값은 17.13초였다. 중앙값은 latch timeout과 같다. 워커는 실패 직후 다시 헤더에 줄을 섰다. 최댓값은 첫 call stack 기록이다. 이 실행의 서버 로그는 54,529줄, 약 3.9 MB였다. 그 대부분은 테스트가 켠 `CUBRID_ER_LOG_VACUUM=4099` 의 job 로그다. 기본값 1에서도 남는 오류 기록만 따로 세면 증가 속도는 1.7 KiB/s였다 (P-A-persistent60에서 측정).
 
 ## 분석 질문에 대한 답
 
 **일시 오류.** 현재 코드에서는 한 번의 timeout이 영구 누수가 된다 (E2). 오류를 반환하면 release의 페이지 재시도가 헤더가 풀린 뒤 OOS 값을 회수한다 (E3). `REC_HOME` 과 `REC_RELOCATION` 모두 같다.
 
-**지속 오류.** 현재 코드에서는 실패한 레코드마다 OOS 값이 새고, vacuum은 계속 진행한다. 오류를 반환하면 그 페이지를 맡은 워커가 다음 페이지로 가지 못하고 블록은 끝나지 않는다 (E4). 재시도 주기는 latch timeout이 정한다. 기본값 300초에서는 워커 하나가 5분마다 오류 하나와 call stack 하나를 남기며 그 페이지에 묶인다 (추론, 측정 안 함). 헤더 페이지 읽기 오류처럼 대기 없이 바로 실패하는 오류는 이 주기의 제한을 받지 않고 바로 반복될 수 있다 (추론, 실행 안 함).
+**지속 오류.** 현재 코드에서는 실패한 레코드마다 OOS 값이 새고, vacuum은 계속 진행한다. 오류를 반환하고 페이지를 재시도하면(A) 그 페이지를 맡은 워커가 다음 페이지로 가지 못하고 블록은 끝나지 않는다 (E4). 오류를 반환하고 블록을 넘기면(B) 워커가 다른 블록을 처리한다 ([선택지 B prototype 결과](#선택지-b-prototype-결과)). 재시도 주기는 latch timeout이 정한다. 기본값 300초에서는 워커 하나가 5분마다 오류 하나와 call stack 하나를 남기며 그 페이지에 묶인다 (추론, 측정 안 함). 헤더 페이지 읽기 오류처럼 대기 없이 바로 실패하는 오류는 이 주기의 제한을 받지 않고 바로 반복될 수 있다 (추론, 실행 안 함).
 
 **셧다운.** 셧다운은 헤더를 기다리는 워커를 깨우지 않는다. 대기는 timeout으로 끝난다 (E5에서 17.4초, 그중 대부분은 call stack 기록). 현재 코드에서는 그 실패가 누수가 되고 블록은 `complete` 로 끝나므로, 재기동해도 다시 처리하지 않는다 (E2 셧다운). 오류를 반환하면 블록이 `interrupted` 로 남는다 (E5). 재기동 뒤 그 블록을 다시 실행해 회수하는 단계는 실행하지 않았다. 근거는 `interrupted` 판정과 `was_interrupted` 재실행 경로의 소스다.
 
@@ -112,15 +113,42 @@ E4에서 latch timeout은 57.2초 동안 22회 기록되었다. 간격의 중앙
 | 선택지 | 일시 오류 | 지속 오류 | 셧다운 | 근거 |
 | --- | --- | --- | --- | --- |
 | A. 현재 release의 페이지 재시도에 맡긴다 | 회수 | 워커가 그 페이지에 묶이고 오류 로그가 계속 쌓인다 | 블록 `interrupted` | E3, E4, E5에서 실행 |
-| B. 이 오류를 `ER_OUT_OF_VIRTUAL_MEMORY` 처럼 미완료 블록으로 넘긴다 | 블록 재실행으로 회수 | 워커는 다른 블록으로 가고, 같은 블록이 반복 실행된다 | 블록 `interrupted` | OOM 경로의 소스 선례. 실행 안 함 |
+| B. 이 오류를 `ER_OUT_OF_VIRTUAL_MEMORY` 처럼 미완료 블록으로 넘긴다 | 블록 재실행으로 회수 | 워커는 다른 블록으로 가고, 같은 블록이 반복 실행된다 | 블록 `interrupted` | P 실행에서 확인 |
 | C. helper 안에서 정해진 횟수만큼 다시 기다린다 | 대부분 그 자리에서 회수 | 해결하지 못하므로 A나 B가 필요하다 | A나 B를 따른다 | 실행 안 함 |
 
-내 판단으로는 B가 지속 오류에서 더 낫다. A는 워커 하나를 무기한 그 페이지에 묶는다. B는 그 비용을 블록 재실행 간격으로 옮기고, release와 debug가 같은 경로를 탄다. B의 남은 질문은 같은 블록을 몇 번, 어떤 간격으로 다시 실행할지와 끝까지 실패할 때 무엇을 진단으로 남길지다. B를 prototype으로 만들어 E4, E5와 같은 조건에서 실행하는 것이 다음 단계다.
+B를 택한다. 근거는 다음 절의 prototype 실행이다. A는 워커 하나를 무기한 그 페이지에 묶고, 워커가 하나뿐이면 vacuum 전체가 멈춘다. B는 그 비용을 블록 재실행 간격으로 옮긴다. B의 남은 질문은 대기 없이 바로 실패하는 오류에서 같은 블록을 얼마나 자주 다시 실행할지와, 끝까지 실패할 때 무엇을 진단으로 남길지다.
 
 선택지와 별개로 두 가지를 정해야 한다.
 
 - debug 정책. 헤더 조회 실패를 vacuum 워커에서 예상 가능한 오류로 볼지 정한다. 예상 가능한 오류로 보면 `vacuum_check_shutdown_interruption` 과 `vacuum_finished_block_vacuum` 이 메모리 부족처럼 이 오류를 받아들여야 한다.
 - 회귀 테스트의 빌드. 이번 재현기는 release에서만 판정이 난다. debug CI에서 쓰려면 `pgbuf_timed_sleep` 의 `FIXME` assert를 지우거나 (모든 infinite wait timeout에 영향), debug에서 이 case를 건너뛰거나, `heap_oos_find_vfid` 에 debug 전용 장애 주입점을 둔다.
+
+## 선택지 B prototype 결과
+
+B prototype은 A의 helper 변경 위에 다음을 더했다 ([`retry-block-later-prototype.patch`](retry-block-later-prototype.patch), `a8065e5fe` 에 적용). `VACUUM_WORKER` 에 `retry_block_later` 를 두고, `vacuum_heap_prepare_oos_vfid` 가 helper 실패에서만 이 값을 켠다. `vacuum_heap` 은 job마다 값을 끄고, 값이 켜진 오류를 `ER_OUT_OF_VIRTUAL_MEMORY` 처럼 반환한다. 그래서 forward 페이지 timeout 같은 다른 -72 오류는 지금처럼 페이지를 재시도한다. debug assertion은 고치지 않았다. throwaway prototype이며 수리 코드가 아니다.
+
+A와 B를 가르는 case를 추가했다 (`UnrelatedHeapVacuumedWhileHeaderLookupKeepsFailing`, 커밋 `a8065e5fe`). 한 트랜잭션이 OOS 행(블록 44)과 두 번째 heap의 OOS 없는 행(블록 45)을 삭제한다. 테스트는 첫 heap의 헤더를 60초 동안 쥐고, 두 번째 heap의 행이 언제 vacuum되는지 기록한다. 헤더를 놓은 뒤에는 OOS 회수를 요구한다. 이 커밋은 헤더를 쥐는 helper가 vacuum 워커 수와 페이지 vacuum 상태도 출력하게 했다.
+
+모든 실행은 release, latch timeout 2초, 1회씩이다. `i` 는 `interrupted`, `c` 는 `complete` 판정이다.
+
+| 실행 | 변형 | Case | 관측 | 판정 |
+| --- | --- | --- | --- | --- |
+| P-base-unrelated-w1 | 수정 없음, 워커 1 | 다른 heap | 다른 행은 14.9초에 처리, OOS 회수 안 됨, 블록 44 `c` | 누수 |
+| P-A-unrelated-w1 | A, 워커 1 | 다른 heap | 60초 동안 다른 행을 처리하지 못함, 헤더를 놓은 뒤 처리, 블록 45 `c` | 정체 |
+| P-B-unrelated-w1 | B, 워커 1 | 다른 heap | 다른 행은 14.6초에 처리, 블록 44 `i` 23회 뒤 `c`, OOS 회수 | 통과 |
+| P-B-unrelated-w10 | B, 워커 10 | 다른 heap | 다른 행은 즉시 처리, 판정 순서는 위와 같음 | 통과 |
+| P-A-transient-shutdown | A | 일시 오류 두 case, 셧다운 | 일시 오류는 OOS 회수, 셧다운은 블록 `i` 와 슬롯 유지 | 통과 |
+| P-B-transient-shutdown | B | 같은 세 case | 일시 오류는 블록 `i` 뒤 `c` 와 OOS 회수, 셧다운은 블록 `i` 와 슬롯 유지 | 통과 |
+| P-A-persistent60 | A | `REC_HOME`, 60초 | timeout 23회, 간격 중앙값 2.00초, 블록 42 `c` 1회, OOS 회수 | 통과 |
+| P-B-persistent60 | B | `REC_HOME`, 60초 | timeout 23회, 간격 중앙값 2.00초, 블록 42 `i` 23회 뒤 `c`, OOS 회수 | 통과 |
+
+판정 기준은 실행 전에 정했다. 워커가 하나이고 조회가 계속 실패할 때, 다른 heap의 다음 블록이 B에서만 처리되어야 한다. 그리고 일시 오류와 셧다운에서 B가 A와 같아야 한다. 결과는 기준을 모두 만족했다. B는 블록 44를 23번 다시 실행하는 사이에 블록 45를 처리했으므로 재실행이 다른 블록을 굶기지 않았다. B의 모든 실행에서 OOS 값이 회수되었고, 알려진 테스트 probe 잡음 밖의 assertion 알림은 없었다.
+
+B는 페이지 vacuum 상태를 ONCE로 남겼다. A는 NONE으로 끝났다 (측정). 이것은 `was_interrupted` 재실행이 원래 따르는 경로다. `vacuum_heap_page` 의 주석은 재실행에서 ONCE를 NONE으로 바꾸는 것이 안전하지 않다고 설명한다. NONE은 페이지를 해제해도 된다는 뜻이기 때문이다 (소스 확인). 셧다운과 메모리 부족 뒤의 재실행도 같은 결과를 낸다. ONCE는 남은 vacuum을 과대 표시하는 안전한 쪽이다. 그 비용은 그 실행에서 페이지 제거를 고려하지 않는 것이다 (소스 추론).
+
+재시도 비용은 A와 B가 비슷했다. 둘 다 latch timeout마다 한 번 재시도했고, job 로그를 뺀 오류 기록은 1.7 KiB/s로 늘었다. B는 재시도마다 "Processing log block N is interrupted!" 한 줄을 더 남겨, 분당 약 4.7 KB가 더 늘었다 (측정).
+
+실행하지 않은 조건은 다음과 같다. 헤더 읽기 I/O 오류처럼 대기 없이 바로 실패하는 오류에서는, B의 master가 같은 블록을 master 주기(`vacuum_master_interval_in_msecs`)마다 다시 실행할 수 있다 (소스 추론). 수리에는 이 경우의 재실행 간격이나 진단 기준이 필요하다. 재기동 뒤의 `interrupted` 블록 재실행, TC-R11, debug 빌드, 기본 latch timeout, 반복 실행도 하지 않았다.
 
 ## 실행하지 못한 조건과 한계
 
@@ -156,6 +184,6 @@ workenv가 초기화되어 `CUBRID_DATABASES` 가 configure 시점에 잡혀 있
 direnv exec . ctest --test-dir "$CUBRID_BUILD_DIR" -R '^test_oos_real_vacuum_latch_timeout$' --output-on-failure
 ```
 
-prototype은 [`return-lookup-error-prototype.patch`](return-lookup-error-prototype.patch) 를 `git apply -p1` 로 적용한 뒤 다시 빌드하고 설치한다. 테스트 binary는 `LD_LIBRARY_PATH` 의 설치본 `libcubrid` 를 먼저 읽으므로 설치를 빠뜨리면 이전 엔진이 실행된다.
+prototype A는 [`return-lookup-error-prototype.patch`](return-lookup-error-prototype.patch), B는 [`retry-block-later-prototype.patch`](retry-block-later-prototype.patch) 를 `git apply -p1` 로 적용한 뒤 다시 빌드하고 설치한다. B 패치는 A의 변경을 포함한다. 워커 수를 바꾸려면 `EXTRA_ENV` 에 `CUBRID_VACUUM_WORKER_COUNT=1` 을 넣는다. `EXTRA_ENV` 를 주면 `CUBRID_ER_LOG_VACUUM=4099` 도 직접 넣어야 블록 판정이 기록된다. 테스트 binary는 `LD_LIBRARY_PATH` 의 설치본 `libcubrid` 를 먼저 읽으므로 설치를 빠뜨리면 이전 엔진이 실행된다.
 
 이미 구성된 build tree에서 `just configure` 를 다시 실행하면 CMake가 compiler 변경으로 cache를 지운다. 이때 `UNIT_TEST_OOS` 가 사라져 OOS 테스트가 빌드에서 빠진다. 이 문제를 만나면 build tree의 `CMakeCache.txt` 를 지우고 configure를 다시 실행한다.

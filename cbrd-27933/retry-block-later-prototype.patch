@@ -1,0 +1,67 @@
+diff --git a/src/query/vacuum.c b/src/query/vacuum.c
+index 1b463b4..0f4fe4a 100644
+--- a/src/query/vacuum.c
++++ b/src/query/vacuum.c
+@@ -1565,6 +1565,7 @@ vacuum_heap (THREAD_ENTRY * thread_p, VACUUM_WORKER * worker, MVCCID threshold_m
+ 
+   /* Set state to execute mode. */
+   worker->state = VACUUM_WORKER_STATE_EXECUTE;
++  worker->retry_block_later = false;
+ 
+   /* Sort all objects. Sort function will order all objects first by VFID then by OID. All objects belonging to one
+    * file will be consecutive. Also, all objects belonging to one page will be consecutive. Vacuum will be called for
+@@ -1592,7 +1593,7 @@ vacuum_heap (THREAD_ENTRY * thread_p, VACUUM_WORKER * worker, MVCCID threshold_m
+       /* Vacuum page. */
+       error_code =
+ 	vacuum_heap_page (thread_p, page_ptr, object_count, threshold_mvccid, &hfid, &reusable, was_interrupted);
+-      if (error_code == ER_OUT_OF_VIRTUAL_MEMORY)
++      if (error_code == ER_OUT_OF_VIRTUAL_MEMORY || (error_code != NO_ERROR && worker->retry_block_later))
+ 	{
+ 	  /* Keep the incomplete block retryable in both debug and release builds. */
+ 	  return error_code;
+@@ -2336,6 +2337,11 @@ vacuum_heap_prepare_oos_vfid (THREAD_ENTRY * thread_p, VACUUM_HEAP_HELPER * help
+ 						     helper->record_type, &helper->oos_vfid);
+   if (error_code != NO_ERROR)
+     {
++      if (vacuum_is_thread_vacuum_worker (thread_p))
++	{
++	  /* CBRD-27933 prototype B: the heap header may stay unreadable, so move on to other blocks. */
++	  vacuum_get_vacuum_worker (thread_p)->retry_block_later = true;
++	}
+       return error_code;
+     }
+ 
+diff --git a/src/query/vacuum.h b/src/query/vacuum.h
+index fe26260..6419503 100644
+--- a/src/query/vacuum.h
++++ b/src/query/vacuum.h
+@@ -127,6 +127,7 @@ struct vacuum_worker
+ 
+   bool allocated_resources;
+   int idx;			// -1 for vacuum_master;  Otherwise, the sequence number of vacuum_worker
++  bool retry_block_later;	/* CBRD-27933 prototype B: a heap page error leaves the block for a later run */
+ };
+ 
+ #define VACUUM_MAX_WORKER_COUNT	  50
+diff --git a/src/query/vacuum_oos.cpp b/src/query/vacuum_oos.cpp
+index 5c8f0bd..a2752f8 100644
+--- a/src/query/vacuum_oos.cpp
++++ b/src/query/vacuum_oos.cpp
+@@ -415,13 +415,11 @@ vacuum_oos_find_vfid_for_heap_record (THREAD_ENTRY *thread_p, const HFID *hfid,
+ 			 VFID_AS_ARGS (&hfid->vfid), (int) slotid, (int) record_type,
+ 			 record->length, repid_and_flags, record_flags, offset_size);
+   }
+-  /* In debug builds, abort so the bug that set the bad flag is caught the first time vacuum sees it.
+-   * In release builds, assert_release only records a notification error, which the er_clear() below
+-   * wipes out before we skip - so vacuum keeps running. */
+-  assert_release (false);
+-  er_clear ();
++  /* CBRD-27933 prototype: report the lookup failure so vacuum retries instead of skipping OOS cleanup. */
++  int error_code;
++  ASSERT_ERROR_AND_SET (error_code);
+   VFID_SET_NULL (oos_vfid);
+-  return NO_ERROR;
++  return error_code;
+ }
+ 
+ /*
