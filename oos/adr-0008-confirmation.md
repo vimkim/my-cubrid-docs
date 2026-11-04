@@ -4,7 +4,7 @@
 
 ## 요청
 
-OOS 정규 사양 개정안을 확정해 주시기를 요청한다. 개정안은 `cubrid-oos-context` 저장소의 ADR-0008(상태 `proposed`)과, 그에 맞춘 `OOS-CONTEXT.md` §2, §3, §4 수정이다. 브랜치는 `docs/adr-0008-reclaim-after-finality`, commit은 `591638b`이다. 이 브랜치는 로컬에만 있고 원격에 올리지 않았다. 확정 전까지는 기존 사양(context commit `281a940`)이 유효하다.
+OOS 정규 사양 개정안을 확정해 주시기를 요청한다. 개정안은 `cubrid-oos-context` 저장소의 ADR-0008(상태 `proposed`)과, 그에 맞춘 `OOS-CONTEXT.md` §2, §3, §4 수정이다. 브랜치는 `docs/adr-0008-reclaim-after-finality`, commit은 `d5e81a7`이다(처음 제안은 `591638b`, 추가 대안 반영은 `d5e81a7`). 이 브랜치는 로컬에만 있고 원격에 올리지 않았다. 확정 전까지는 기존 사양(context commit `281a940`)이 유효하다.
 
 아래 일곱 항목을 하나씩 확정, 수정, 보류 중 하나로 정해 주면 된다. 근거의 수준은 다음과 같다.
 
@@ -100,4 +100,4 @@ TLA+ 모델은 이 결함들이 현재 설계의 가정에서 나온다는 것�
 - [엔진 조사 보고서](reclaim-engine-facts.md): 추가 대안 검토가 기댄 엔진 사실과 file:line 근거.
 - 모델과 실행 도구: `reclaim-model/` 디렉터리. `python3 oos/reclaim-model/check_decisions.py --out <새 디렉터리>`로 다시 실행할 수 있다.
 - [CBRD-27237 수정 후보 심층 분석](../cbrd-27237/CBRD-27237-fix-options-deep-dive_dcbf09e_claude.md): A' 추천과 commit hook 장애 구간.
-- 사양 개정안 원문: `cubrid-oos-context` 브랜치 `docs/adr-0008-reclaim-after-finality`, commit `591638b`.
+- 사양 개정안 원문: `cubrid-oos-context` 브랜치 `docs/adr-0008-reclaim-after-finality`, commit `d5e81a7`.
