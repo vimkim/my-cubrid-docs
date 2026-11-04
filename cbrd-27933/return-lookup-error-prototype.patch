@@ -1,0 +1,20 @@
+--- a/src/query/vacuum_oos.cpp
++++ b/src/query/vacuum_oos.cpp
+@@ -415,13 +415,11 @@
+ 			 VFID_AS_ARGS (&hfid->vfid), (int) slotid, (int) record_type,
+ 			 record->length, repid_and_flags, record_flags, offset_size);
+   }
+-  /* In debug builds, abort so the bug that set the bad flag is caught the first time vacuum sees it.
+-   * In release builds, assert_release only records a notification error, which the er_clear() below
+-   * wipes out before we skip - so vacuum keeps running. */
+-  assert_release (false);
+-  er_clear ();
++  /* CBRD-27933 prototype: report the lookup failure so vacuum retries instead of skipping OOS cleanup. */
++  int error_code;
++  ASSERT_ERROR_AND_SET (error_code);
+   VFID_SET_NULL (oos_vfid);
+-  return NO_ERROR;
++  return error_code;
+ }
+ 
+ /*
