@@ -1,9 +1,10 @@
 # CBRD-27816 1단계 보고서
 
-갱신: 2026-11-04. 1단계(재현과 원인 분리) 측정은 2026-11-03에 마쳤다. 검토에서 나온 정정과 L1, L1b, h3 결과, 18:51 사용자 결정을 반영했다. 할 일과 결정 사항은 이 파일에서 관리한다.
+갱신: 2026-11-04. 1단계(재현과 원인 분리) 측정은 2026-11-03에 마쳤다. 검토에서 나온 정정과 L1, L1b, h3 결과, 18:51 사용자 결정을 반영했다. 2026-11-04에 명세에서 남은 같은 표 연속 UPDATE 측정을 더했다. 할 일과 결정 사항은 이 파일에서 관리한다.
 
 - 2026-11-03 20:22 KST: 1단계 결과와 사용자 결정을 반영했다.
 - 2026-11-04: 성능 변화의 부호를 좋아지면 +로 바꿨다. 결론 8의 최악값을 판정과 같은 develop 중앙값 기준(약 −7.9%)으로 고쳤다. 이전 값 6.5%는 후보 자신의 중앙값과 비교한 값이었다.
+- 2026-11-04 14:40 KST: 같은 표 연속 UPDATE 측정 결과를 더했다(결론 9, "같은 표 연속 UPDATE" 절).
 
 관련 이슈: [CBRD-27816](https://jira.cubrid.org/browse/CBRD-27816), [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785). 관련 PR: [#8299](https://github.com/CUBRID/cubrid/pull/8299). 이 보고서는 2026-11-03에 로컬 산출물 디렉터리 `/mnt/nvme/data-5/tmp/CBRD-27816-20261103/phase1-report.md`에서 옮겨 왔다. 본문의 상대 경로(`harness/`, `base|cand/...`, `decisions.tsv` 등)는 모두 그 디렉터리 기준이다.
 
@@ -44,6 +45,7 @@
    - PR의 중단 job 재시도(`force_data_update (true)`)
    - 크기 기준 checkpoint. 오래 떠 있는 서버(L1, L1b)에서 checkpoint가 구간에 들어와도 spike는 없었다(약 3M). 다만 checkpoint 뒤 서버가 21~22초 동안 idle이 되지 않아, `ordinary.py`의 10초 마감에 걸릴 수 있다(L1 후보 실패).
 8. **2% 판정.** 판정 구간의 정상 상태 값(성능 변화 −1.34%, 명령어 수)은 성능 저하 2% 이내다. 그러나 명세의 지표는 spike를 포함한다. 후보 표본 하나에 vacuum이 다 들어오면 develop 중앙값 대비 약 −7.9%까지 나빠질 수 있다(계산값). 그래서 성능 저하 2% 이내 기준은 여전히 미충족이다. vacuum을 늘 포함하는 꼬리 지표로는 121~125M를 더 쓴다(성능 −1.76~−1.82%, t1, 진단 전용).
+9. **(2026-11-04) 같은 표를 연속으로 UPDATE해도 정상 상태 차이는 같다.** 쉬어 가며 연속으로 UPDATE하면 후보는 86.7M를 더 쓴다(성능 −1.33%, 명령어 수, 한쪽 유지 표본 36개). 중앙값으로는 성능 저하 2% 이내다. vacuum이 들어온 최악 후보 표본은 −2.94%였으므로 결론 8의 판단은 그대로다. 쉬지 않고 이어 돌리면 vacuum까지 합쳐 UPDATE 하나당 117.3M를 더 쓴다(−1.70%, 진단 전용). 후보 vacuum의 추가 비용이 다음 UPDATE의 worker 명령어를 늘리지는 않는다. 아래 "같은 표 연속 UPDATE" 절
 
 ## 할 일
 
@@ -62,7 +64,7 @@
 - [x] L1: 서버 한 번에 UPDATE 20개 (r500). 기준은 완료. checkpoint가 구간에 들어와도 spike 없음. 후보는 UPDATE 10개 뒤 idle 대기 실패
 - [x] L1b: 후보·기준 1 block씩 (r503). checkpoint 대기는 양쪽 21~22초. 바쁜 호스트 아래 기준에서 늦은 spike 12번 연속 재현
 - [x] h3: client CPU 경합 (r600). 조작이 약해 가설을 가르지 못함. 후보 block은 harness 오류로 멈춤(파서 고침)
-- [ ] 명세 항목 중 하지 않은 것. 같은 표를 연속으로 UPDATE하는 측정. `ordinary.py`가 지원하지 않아 하지 않았다
+- [x] 명세 항목인 같은 표 연속 UPDATE 측정. 2026-11-04에 `harness/consecutive.py`로 했다(s1 r700~r703, b1 r800~r805). `ordinary.py`는 UPDATE마다 새 복제본만 지원한다
 - [x] 2단계 첫 일: OOS 규칙 확인, A·B·C 재분해. A 철회
 - [x] (사용자 결정) B 코드 수정 여부. 20:15 고치지 않고 닫는다
 - [x] (사용자 결정) 2단계 코드 변경 여부. 18:51 1-가(A, B를 고치고 C는 더 나눈다)
@@ -94,6 +96,12 @@
 - 결정 2-2(`ordinary.py` idle 마감)는 2단계 측정이 없으므로 적용하지 않았다. 다음에 오래 떠 있는 서버에서 측정할 때 다시 본다.
 - my-cubrid-docs: main에 local merge한다. push는 하지 않는다.
 - 20:19 DB 정리: "두 DB만 지우기". `u816b`와 `u816c`를 각 workenv에서 `cubrid deletedb`로 지웠다(rc 0, 등록부 줄도 빠짐). 약 21G가 비었다. `pristine/`(6.1G)과 표본·profile·harness는 남겼다. 산출물 디렉터리는 6.2G다.
+
+2026-11-04 사용자 결정.
+
+- 같은 표 연속 UPDATE를 측정하기로 했다. 결과를 본 뒤 이 보고서와 JIRA CBRD-27816 반영을 승인했다.
+- 측정 DB 두 개를 지우기로 했다. 측정에 쓴 `u816b`, `u816c`는 각 workenv에서 `cubrid deletedb`로 지웠다(rc 0, 등록부 줄도 빠짐). `pristine/`은 B 빠른 경로 설명을 들은 뒤 정한다.
+- CBRD-27816을 언제 닫을지는 B 빠른 경로 설명을 들은 뒤 정한다.
 
 ## 2단계 첫 일: OOS 규칙 확인과 A·B·C 재분해 (2026-11-03 20:13)
 
@@ -135,6 +143,49 @@ OOS 없는 행의 finalize를 빠른 경로로 바꾸면 줄일 수 있는 양�
 **C는 한 원인이 아니다.** `heap_update_logical`이 더 쓰는 51.2M는 직접 callee 25개 이상에 1~11M씩 퍼져 있다. 가장 많이 더 쓰는 것은 자기 자신 10.8M, `heap_log_update_physical` 9.0M, `heap_page_get_vacuum_status` 7.3M, `oid_check_cached_class_oid` 7.2M, `heap_update_physical` 7.0M다. OOS 고유 검사는 `heap_oos_validate_disk_record`(4.5M 더 씀) 하나다. 나머지는 code 배치와 inlining 차이로 보인다(추정). 고칠 한 곳을 가리키지 않는다.
 
 **결론.** 정상 상태에서 더 쓰는 86.8M는 한 곳의 큰 비용이 아니라 행마다 쌓인 작은 비용의 합이다. 코드로 줄일 수 있는 것은 B의 빠른 경로 하나이고, 그 효과도 2% 판정을 바꾸지 못한다.
+
+## 같은 표 연속 UPDATE (2026-11-04)
+
+명세(work-tracker 571)의 "연속 UPDATE 측정"이다. 10-28의 `--repeat-updates`와 같은 조건을 판정 줄로 삼았다. 계획은 측정 전에 `consecutive-plan.md`에 적었고, 계획과 다르게 한 것은 없다. 전체 결과는 `consecutive-report.md`에 있다. 측정 시각은 2026-11-04 14:01~14:15 KST다.
+
+**방법.**
+
+- 설치본, 설정, 계수 명령, CPU 고정은 1단계와 같다. block마다 binary identity가 `build.json`과 같았다. 양쪽 live parameter 차이는 port 번호, error log 이름, 후보 기본값에 OOS 오류 코드 셋이 더해진 `call_stack_dump_activation_list`뿐이다.
+- DB `u816b`, `u816c`는 `pristine/`에서 원래 위치로 복원했다(hash 12개 일치). 측정 뒤 다시 지웠다.
+- block마다 새 표 `rN_update` 하나를 복제하고, 그 표만 `UPDATE t SET a=a+1; COMMIT;`으로 계속 UPDATE했다. csql 한 번이 UPDATE 하나다.
+- 계수 구간이 끝날 때마다 모든 행을 검증했다(`a = MOD(id,100) + 지금까지의 UPDATE 수` 등). block 24개(smoke 4개 포함)가 모두 rc=0이고 검증 실패는 0이었다.
+- **s1(판정 줄, 쉬어 가며).** 매 UPDATE 전에 `ordinary.py`의 idle 규칙을 지킨다. 마감은 120초다(결정 2-2). csql 하나가 계수 구간이다. block마다 UPDATE 10개 중 첫 회를 버렸고, 4 ABBA 라운드로 한쪽 유지 표본 36개를 얻었다.
+- **b1(진단, 쉬지 않고).** warmup 1개 뒤 UPDATE 10개를 이어 돌린다. 계수 구간 하나가 10개 전체와 그 뒤 서버가 idle이 될 때까지를 덮는다. 그래서 10개가 남긴 vacuum이 모두 들어간다. 6 ABBA 라운드를 돌았고, 값은 구간 합계 ÷ 10이다.
+
+**s1 결과 (UPDATE 하나당).**
+
+| 항목 (명령어 수, M) | 기준 중앙값 (범위) | 후보 중앙값 (범위) | 차이 |
+|---|---|---|---|
+| 서버 전체 | 6,531.21 (6,467.24~6,632.16) | 6,617.89 (6,555.04~6,723.17) | 86.7 더 씀 (성능 −1.33%) |
+| transaction worker | 6,144.31 | 6,224.95 | 80.6 더 씀 (같은 라운드·순번끼리는 중앙값 86.2) |
+| vacuum + vacuum-master | 1.90 | 1.91 | 같음 |
+| log-flush | 380.76 | 380.78 | 같음 |
+
+- 평균으로도 −1.33%다. 기준 표본과 후보 표본을 하나씩 짝지으면 짝의 94%에서 후보가 더 썼다.
+- worker 값은 양쪽 모두 세 덩어리로 갈렸다(기준 약 6,082, 6,130, 6,146, 후보 약 6,170, 6,217, 6,232). 그래서 worker 차이는 같은 라운드·순번끼리 본다.
+- 중앙값보다 15M 넘게 높은 표본은 기준 4개(초과 31~101M), 후보 6개(18~105M)였다. 초과분은 모두 vacuum이다. 가장 나쁜 후보 표본은 기준 중앙값 대비 −2.94%였다. 그 표본에는 vacuum 107.6M가 들어왔다.
+- idle 규칙 때문에 직전 UPDATE의 vacuum은 다음 UPDATE 전에 끝난다. 그래서 구간에 들어온 vacuum은 계수 중인 UPDATE 자신의 COMMIT이 남긴 것이다. 결론 3의 설명과 같다.
+- 서버 전체 값은 새 복제본(c1)보다 양쪽 모두 약 60M 많다(중앙값). 후보와 기준의 차이는 같다. 원인은 보지 않았다.
+
+**b1 결과 (UPDATE 하나당, 진단 전용).**
+
+| 항목 (명령어 수, M) | 기준 중앙값 (범위) | 후보 중앙값 (범위) | 차이 |
+|---|---|---|---|
+| 서버 전체 | 6,899.30 (6,899.02~6,902.57) | 7,016.64 (7,015.34~7,020.27) | 117.3 더 씀 (성능 −1.70%) |
+| transaction worker | 6,138.51 | 6,224.29 | 85.8 더 씀 (−1.40%) |
+| vacuum + vacuum-master | 376.43 | 407.66 | 31.2 더 씀 (vacuum 성능 −8.30%) |
+| log-flush | 380.80 | 380.79 | 같음 |
+
+- 양쪽 범위가 겹치지 않는다. t1의 꼬리 지표(121~125M 더 씀, −1.76~−1.82%)와 맞는다.
+- UPDATE 하나당 vacuum은 t1(기준 390.1M, 후보 424.7M)보다 양쪽 모두 14~17M 적다. 차이는 비슷하다(31.2M 대 34.6M). 줄어든 이유는 보지 않았다.
+- **상호작용.** 쉬지 않고 돌리면 worker 값이 쉬어 갈 때보다 기준 4.7M, 후보 6.9M 늘었다(평균). 두 증가의 차이 2.2M는 worker 값의 0.04%로, worker 덩어리 간격(15~48M)보다 작다. 그래서 후보 vacuum의 추가 비용이 다음 UPDATE의 worker 명령어를 늘린다는 근거는 없다. vacuum을 기다리는 시간 영향은 명령어 수로 알 수 없다. 경과 시간은 UPDATE 10개에 기준 13.6초, 후보 14.1초였다(공유 호스트, 참고).
+
+**한계.** 낮 시간에 쟀고 quiet gate는 쓰지 않았다. 호스트 전체 CPU는 s1 중앙값 10.4%(최대 64.1%), b1 중앙값 16.2%(최대 100%)였다. DB는 복원 직후부터 이어서 썼으므로, 1단계 DB의 오래된 이력은 재현하지 않았다.
 
 ## 2단계 결정 (사용자에게 묻는 것)
 
@@ -348,6 +399,9 @@ OOS 없는 행의 finalize를 빠른 경로로 바꾸면 줄일 수 있는 양�
 | l1 | 서버 한 번에 UPDATE 20개 (r500) | 2 | 기준 완료. 후보는 UPDATE 10개 뒤 idle 10초 마감 실패. 캠페인 중단, r501 안 돎 |
 | l1b | 서버 한 번에 UPDATE 20개, idle 마감 120초 (r503) | 2 | 모두 완료 |
 | h3 | client CPU 12, 52 경합, UPDATE 10개 (r600) | 2 | 기준 완료. 후보는 perf 중복 줄로 harness 실패(파서 고침), 다시 돌리지 않음 |
+| s0, b0 | 11-04 연속 UPDATE smoke (r690, r691) | 4 | 정상. 판정에 쓰지 않음 |
+| s1 | 11-04 같은 표 연속 UPDATE, 쉬어 가며, UPDATE 10개 (r700~r703) | 8 | 모두 완료, 실패 0 |
+| b1 | 11-04 같은 표 연속 UPDATE, 쉬지 않고 10개 (r800~r805) | 12 | 모두 완료, 실패 0 |
 
 명령은 다음과 같다. 모두 `/mnt/nvme/data-5/tmp/CBRD-27816-20261103`에서 실행했다.
 
@@ -361,6 +415,9 @@ BLOCK_MODE=profile BLOCK_PROFILE=profile2.py BLOCK_EXTRA_ARGS="--period 3000017 
 python3 harness/campaign2.py l1 500 2 20
 BLOCK_THREADS=threads3.py BLOCK_EXTRA_ARGS="--idle-deadline 120" python3 harness/campaign2.py l1b 503 1 20
 BLOCK_HOG_CPUS=12,52 python3 harness/campaign2.py h3 600 1 10
+BLOCK_THREADS=consecutive.py BLOCK_EXTRA_ARGS="--mode spaced" python3 harness/campaign2.py s1 700 4 10
+BLOCK_THREADS=consecutive.py BLOCK_EXTRA_ARGS="--mode burst" python3 harness/campaign2.py b1 800 6 10
+python3 harness/consecutive_analyze.py . --spaced 700,701,702,703 --burst 800,801,802,803,804,805 --samples
 python3 harness/analyze.py . --rounds smoke0,1,2,3,4,5,6,7,8
 python3 harness/spikes.py . --threshold-m 15
 python3 harness/profile_inclusive.py . 410,411 --comm transaction
@@ -378,7 +435,8 @@ python3 harness/profile_inclusive.py . 420,421 --comm vacuum --plain-base 389.2 
 - 질의 실행 밖에서 더 쓰는 약 27M.
 - vacuum 시작과 csql 종료 사이 시간. 10-28처럼 spike가 잦은 조건.
 - 10-28 후보 쪽에서만 vacuum worker가 매번 새로 생긴 이유.
-- 같은 표를 연속으로 UPDATE하는 측정(명세 항목)은 하지 않았다.
+- 같은 표 연속 UPDATE에서 서버 전체 값이 새 복제본보다 양쪽 모두 약 60M 많은 이유.
+- 쉬지 않고 연속 UPDATE할 때 UPDATE 하나당 vacuum이 t1보다 양쪽 모두 14~17M 적은 이유.
 
 ## 검토에서 나온 주의 사항
 
@@ -390,7 +448,7 @@ reviewed by Sonnet 5.5. 작업 모델(Opus 5.5)과 같은 Claude 계열이다. �
 4. **(정정함) spike B 재분류의 근거.** thread 생성은 결정 근거가 아니었다(150개 중 70개 표본에서 생김). vacuum-master 자신의 CPU tick 1개가 근거다.
 5. **(반영함) vacuum race는 크기를 설명하지만 빈도는 설명하지 못한다.**
 6. **(반영함) 10-29 −3.84% 표본**을 보고서에 넣었다.
-7. **(일부 반영) 명세의 "늦은 이력 재현"과 "연속 UPDATE 측정".** L1과 L1b로 오래 떠 있는 서버를 쟀고, 기준에서 늦은 spike를 재현했다. 같은 표를 연속으로 UPDATE하는 측정은 하지 않았다.
+7. **(반영함) 명세의 "늦은 이력 재현"과 "연속 UPDATE 측정".** L1과 L1b로 오래 떠 있는 서버를 쟀고, 기준에서 늦은 spike를 재현했다. 같은 표 연속 UPDATE는 2026-11-04에 쟀다.
 8. **(반영함) checkpoint 기각의 범위**를 "block마다 새 서버" 조건으로 좁혔다.
 9. **(반영함) t1은 vacuum 양을 보였을 뿐 경쟁 시점은 재지 않았다.** 또 statdump의 vacuum 계수는 쓸 수 없다. 100M가 넘는 vacuum 표본에서도 변화가 0이었다.
 10. **(기록함) 운영상 주의.**
@@ -401,8 +459,9 @@ reviewed by Sonnet 5.5. 작업 모델(Opus 5.5)과 같은 Claude 계열이다. �
 
 ## 산출물
 
-- 산출물 디렉터리 `/mnt/nvme/data-5/tmp/CBRD-27816-20261103/`. 아래 상대 경로는 이 디렉터리 기준이다. 측정 DB `db-base/`, `db-cand/`는 2026-11-03 20:19에 지웠다. 서버를 띄우기 전 사본 `pristine/`(`pristine.sha256`)은 남아 있다
+- 산출물 디렉터리 `/mnt/nvme/data-5/tmp/CBRD-27816-20261103/`. 아래 상대 경로는 이 디렉터리 기준이다. 측정 DB `db-base/`, `db-cand/`는 2026-11-03 20:19에 지웠다. 2026-11-04에 `pristine/`에서 다시 복원해 연속 UPDATE를 쟀고, 끝난 뒤 다시 지웠다(`deletedb-u816[bc]-20261104.log`). 서버를 띄우기 전 사본 `pristine/`(`pristine.sha256`)은 남아 있다
 - 결정 기록 `decisions.tsv`
+- 연속 UPDATE 계획 `consecutive-plan.md`, 결과 `consecutive-report.md`, 스크립트 `harness/consecutive.py`, `harness/consecutive_analyze.py`, 표본 `base|cand/threads-r69[01]`, `base|cand/threads-r70[0-3]`, `base|cand/threads-r80[0-5]`
 - 측정과 분석 스크립트 `harness/` (`threads.py`, `threads2.py`, `block.py`, `block2.py`, `campaign.py`, `campaign2.py`, `profile.py`, `profile2.py`, `analyze.py`, `spikes.py`, `events.py`, `profile_diff.py`, `profile_inclusive.py`)
 - 표본 원자료 `base|cand/threads-r*/`, profile 원자료 `base|cand/profile-r*/`
 - profile 분석 결과 `p1b-transaction-inclusive-raw.txt`, `p1b-under-heap_update_logical.txt`, `p3-vacuum-inclusive.txt`

@@ -17,7 +17,7 @@
 | --- | --- | --- | --- | --- |
 | [PR #8299 본문 (부호 규칙 정리)](pr8299-sign-rule-pr-body.md) | 성능 수치를 좋아지면 +로 바꾸고, develop 대비 문장을 4c3c8d791의 11-03 측정으로 바꾼 본문 | 2026-11-04 | 2026-11-04 | JIRA·docs와 같은 부호 규칙의 본문을 사용자 검토 뒤 게시하기 위해 |
 | [PR #8299 본문 (부호 규칙 정리) 게시 context](pr8299-sign-rule-pr-context.md) | 기존 본문 fingerprint, 본문 변경 범위, 확인 후 조치와 결과 | 2026-11-04 | 2026-11-04 | 게시 확인 범위와 실행 결과를 추적하기 위해 |
-| [CBRD-27816 일반 UPDATE 1단계 원인 분리](CBRD-27816-ordinary-update-phase1.md) | 4c3c8d791 대 4781495의 thread별 계수, worker 증가 A·B·C 분해, 늦은 spike를 비동기 vacuum으로 설명한 근거, 기각한 가설, 11-03 사용자 결정 | 2026-11-03 | 2026-11-04 | 남은 UPDATE 비용과 늦은 spike의 출처를 실행 근거로 가리고 2단계 결정을 기록하기 위해 |
+| [CBRD-27816 일반 UPDATE 1단계 원인 분리](CBRD-27816-ordinary-update-phase1.md) | 4c3c8d791 대 4781495의 thread별 계수, worker 증가 A·B·C 분해, 늦은 spike를 비동기 vacuum으로 설명한 근거, 기각한 가설, 11-03 사용자 결정, 11-04 같은 표 연속 UPDATE 측정 | 2026-11-03 | 2026-11-04 | 남은 UPDATE 비용과 늦은 spike의 출처를 실행 근거로 가리고 2단계 결정을 기록하기 위해 |
 | [최종 head의 PR 본문 (cycles 재측정 반영)](CBRD-27785-final-head-pr-body_4c3c8d7_claude.md) | 다른 세션이 4c3c8d791로 갱신한 본문에 11-03 cycles 재측정과 근거 링크를 더한 판 | 2026-11-03 | 2026-11-03 | 재측정 결과를 사용자 검토 뒤 게시하기 위해 |
 | [최종 head의 게시 context (cycles 재측정 반영)](CBRD-27785-final-head-pr-context_4c3c8d7_claude.md) | 기존 본문 fingerprint, 본문 변경 범위, 승인 후 조치 | 2026-11-03 | 2026-11-03 | 게시 승인 범위와 실행 결과를 추적하기 위해 |
 | [narrow scan cycles 변동의 원인](CBRD-27785-pr8299-cycles-layout_5837393_claude.md) | f8114e432 대비 5837393ff의 조용한 시간 ABBA 12라운드, 서버 시작별 두 갈래 cycles와 ASLR·분기 예측 실패 진단, PR 밖 분기 위치 | 2026-11-03 | 2026-11-04 | 지난 측정에서 원인을 모른 cycles 차이를 판정하고 근거를 남기기 위해 |
