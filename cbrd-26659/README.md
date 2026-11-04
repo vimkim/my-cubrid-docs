@@ -90,7 +90,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 | [shell_heavy PR body](CBRD-26659-shell-heavy-pr-body_631e3fd_codex.md) | draft PR #4627에 게시한 OOS 38개·지원 파일 이관 본문 | 2026-10-29 | 2026-10-29 | 별도 heavy draft PR에 게시할 내용을 검토 |
 | [일반 shell 제외 PR body](CBRD-26659-shell-heavy-exclusion-pr-body_a229e19_codex.md) | PR #4365에 게시한 31개 일반·38개 heavy 제외 집계와 검증 범위 | 2026-10-29 | 2026-10-29 | heavy 분리 후 기존 PR의 설명을 실제 실행 선택에 맞게 갱신 |
 | [shell_heavy 게시 context](CBRD-26659-shell-heavy-pr-context_631e3fd_codex.md) | 두 TC 게시·단일 CI 성공과 SQL 집계 누락의 후속 분석 | 2026-10-29 | 2026-10-30 | 짝을 이루는 heavy 추가·일반 제외를 검토하고 일관되게 게시 |
-| [CBRD-26659 TODO checklist](CBRD-26659-todo-checklist_20261029_codex.md) | heavy·SQL3·shell61·policy·metadata·TDE 수리, 남은 CI·timeout·검증 | 2026-10-29 | 2026-11-02 | 현황보고의 남은 작업을 하나씩 실행하고 근거와 함께 완료 표시 |
+| [CBRD-26659 TODO checklist](CBRD-26659-todo-checklist_20261029_codex.md) | heavy·SQL·helper 수리, 회수·compact 관측과 남은 계약·검증 | 2026-10-29 | 2026-11-04 | 현황보고의 남은 작업을 하나씩 실행하고 근거와 함께 완료 표시 |
 | [CBRD-26659 현황보고](CBRD-26659-status-report_20261029_e3589ae_codex.md) | 현재 PR·TC 분류, 실패 진단과 heavy·2분 초과 처리의 남은 작업 | 2026-10-29 | 2026-10-29 | 개발·QA 담당자에게 TC 검증·이관 현황과 후속 조치를 보고 |
 | [최신 전체 CI 비교 PR body](CBRD-26659-oos-ci-runtime-refresh-20261029-pr-body_e3589ae_codex.md) | 게시한 전체 실행 44분 10초→42분 28초 비교, 실패·측정 한계와 HA 분류 | 2026-10-29 | 2026-10-29 | #8128 본문을 최신 전체 실행 근거로 갱신하기 전 검토 |
 | [최신 전체 CI 비교 게시 context](CBRD-26659-oos-ci-runtime-refresh-20261029-pr-context_e3589ae_codex.md) | 원본·게시 본문 식별값, 정확한 CI 입력, 비교 한계와 게시 확인 | 2026-10-29 | 2026-10-29 | 검토한 본문과 게시 대상을 확인하고 재개 |
