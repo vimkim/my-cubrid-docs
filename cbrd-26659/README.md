@@ -1,6 +1,8 @@
 # CBRD-26659 documentation
 
-Last modified: 2026-11-03 (Asia/Seoul).
+Last modified: 2026-11-04 (Asia/Seoul).
+
+2026-11-04 [회수·compact 원인 관측](reclaim-compact-diagnosis.md)은 빈 페이지의 raw VPID·LSA와 gate 거부, 성장 전 재사용, abort 잔여 두 페이지의 undo·성장 경로, SA·CS compact의 실제 representation 차이를 기록한다. Horizon 공급자와 abort의 최종 enum, idle eventual return·compact 배치의 계약 판단은 남아 있다. 원래 FAIL·TIMEOUT과 실제 TC 리뷰·병합의 미완료 상태를 유지한다.
 
 2026-11-03 [후속 수리와 실패·timeout 분석](follow-up-results.md)은 TDE AES 2 PASS·수정 REPARTITION의 두 정책 PASS, 보존 실패 14개의 8개 Engine 근거·6개 원인 미확정, SA schema의 제한 연장 진단 PASS를 기록한다. TC `09ea46e1b`를 게시했고 단일 CI 41595701615와 다섯 gha context는 SUCCESS다. 원래 120초 TIMEOUT과 미해결 실패·실제 TC 리뷰·병합은 남는다.
 
@@ -68,6 +70,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [회수·compact 원인 관측](reclaim-compact-diagnosis.md) | Raw page·gate 대조, 성장 전 재사용, SA·CS rewrite 차이와 관측 한계 | 2026-11-04 | 2026-11-04 | 원인 미확정 6건을 판별하고 수리·TC 계약 판단의 근거를 제공 |
 | [후속 수리와 실패·timeout 분석](follow-up-results.md) | TDE·REPARTITION 수리, 실패 14개 귀속과 SA 장시간 진단·게시·단일 CI | 2026-11-03 | 2026-11-03 | 네 후속 작업의 근거와 남은 범위를 함께 검토 |
 | [policy 그룹 밖 잔여 shell 21개 native 검증](CBRD-26659-remaining21-native_e3589ae_20261103_work704_codex.md) | 4 PASS·16 FAIL·명령 TIMEOUT 1개, 원문 판정·부가 진단·입력·정리 근거 | 2026-11-03 | 2026-11-03 | 마지막 미착수 21개를 실행하고 실패·완료 미확인 범위를 인계 |
 | [REPARTITION 루트 OOS 연결과 TC oracle 진단](CBRD-26659-repartition-root-oos_e3589ae_20261103_work702_codex.md) | 정책별 원본 증거·최소화·red/green·SA 대조와 범위를 제한한 TC 수정 제안 | 2026-11-03 | 2026-11-03 | REPARTITION FAIL의 Engine·TC 귀속을 실제 대조로 판단 |

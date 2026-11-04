@@ -1,6 +1,6 @@
 # CBRD-26659 TODO checklist
 
-작성 기준은 2026-10-29, 갱신 기준은 2026-11-03, Asia/Seoul이다. [현황보고](CBRD-26659-status-report_20261029_e3589ae_codex.md)를 기준으로 남은 작업을 하나씩 실행하고 결과를 기록한다. 초기 heavy 이관·검증과 후속 재현 결과를 반영하며, 실제 TC PR 병합과 남은 실패·timeout 처리는 미완료다.
+작성 기준은 2026-10-29, 갱신 기준은 2026-11-04, Asia/Seoul이다. [현황보고](CBRD-26659-status-report_20261029_e3589ae_codex.md)를 기준으로 남은 작업을 하나씩 실행하고 결과를 기록한다. 초기 heavy 이관·검증과 후속 재현 결과를 반영하며, 실제 TC PR 병합과 남은 실패·timeout 처리는 미완료다.
 
 체크 표시는 해당 항목의 산출물과 검증 근거가 확보되었음을 뜻한다. 로컬 준비, PR 게시, 실제 병합은 각각 구분한다. 성능 비교는 이 체크리스트의 완료 조건에 포함하지 않는다.
 
@@ -54,6 +54,10 @@
 - [x] REPARTITION의 기존-root oracle을 좁게 수정하고 원래 두 정책의 전체 TC를 재검증한다. [Work717 결과](follow-up-results.md#repartition은-기존-root의-파일-연결과-현재-소유권을-구분)에 default·force_outline PASS와 raw owner·값·잘못된 owner 대조를 기록했다. TC `09ea46e1b`에 게시했으며 예전 root의 전체 vacuum·page 회수는 별도다.
 - [x] 기존 61개 분류에서 policy 그룹 밖의 잔여 21개를 원문 실행하고 판정한다. [Work704 보고서](CBRD-26659-remaining21-native_e3589ae_20261103_work704_codex.md)에 Engine `e3589ae`·TC `01df2600a`의 4 PASS·16 FAIL·외부 명령 TIMEOUT 1개와 초기 별도 INCONCLUSIVE 시도를 기록했다. 미착수는 0개지만 timeout TC의 정상 완료는 미확인이다. 서로 다른 리비전의 대표와 이 결과를 한 번의 전체 suite 실행으로 합산하지 않는다.
 - [ ] Work704의 assertion·controller FAIL 14개의 귀속과 미확정 원인을 마무리한다. [Work718 분석](follow-up-results.md#실패-14개는-8개-근거-확보와-6개-원인-미확정으로-분류)은 고정 Engine의 명세 차이·값 안전성 실패 8개를 뒷받침하지만, 회수 5개·compact 1개는 추가 관측이 필요하다. 원래 14개 판정은 FAIL로 유지한다.
+- [x] 원인 미확정 6개의 회수·compact 경로를 추가 관측한다. [Work756 진단](reclaim-compact-diagnosis.md)에 raw page와 gate 입력의 대조, 첫 20초 반환 FAIL, 빈 20개 VPID의 성장 전 재사용, SA·CS·일반 UPDATE의 representation·길이·flag 차이를 기록했다. 원래 FAIL과 실행 범위의 차이는 유지한다.
+- [x] Abort/retry의 잔여 VPID `1|1312`, `1|1313`을 함수 symbol에서 추가 관측한다. [a15 결과](reclaim-compact-diagnosis.md#abort의-추가-두-페이지)에 rollback undo 호출, 성장 경로 진입과 horizon·raw LSA의 관계를 기록했다. Source line probe의 불일치 자료는 제외했다.
+- [ ] Horizon을 제한한 실제 undo source와 abort 두 페이지의 latch·최종 reclaim enum을 추가 관측한다. 함수 진입과 이후 raw 상태의 연결을 최종 enum의 직접 관측으로 표현하지 않는다.
+- [ ] Idle eventual return과 compact의 내부 rewrite 배치 계약을 명확히 하고 Engine 수리·TC 기대값·후속 이슈를 결정한다. 성장 대조의 재사용 성공을 일반 eventual-return 인증으로 확대하지 않는다.
 - [x] TDE committed·undo wrapper 두 개의 누락 sibling 진입점 의존성을 수리하고 원래 AES crash 검증까지 확인한다. [Work716 결과](follow-up-results.md#tde-wrapper-두-개는-원래-aes-crash-검증까지-통과)에 body byte-identical 이동·네 선별 대조와 native 2 PASS를 기록했다. 정규 TC `09ea46e1b`에 게시했고 선택·assertion은 유지했다. 일반 NONE 진입점의 새 native 검증은 별도다.
 - [x] TDE wrapper·REPARTITION 수리 두 커밋 게시 뒤 단일 [CI 41595701615](https://github.com/CUBRID/cubrid/actions/runs/41595701615)의 SUCCESS를 기록한다. Engine `e3589ae`·public `b038c424`·private `09ea46e1b` 일치, job 성공 71개·skip 1개와 다섯 gha context SUCCESS를 확인했다. TC Merge Gate context는 미표시이며 자동 TC PR 두 개와 heavy·HA PR은 OPEN이다. 종료 후 추가 source·TC 수정·push·재실행은 하지 않았다. 전체 SQL 정합성 재인증과 실제 TC 리뷰·병합은 별도다.
 - [x] `schema_rewrites_sa`의 외부 120초 deadline을 분석하고 원문 정상 완료 근거·장시간 분류를 확보한다. [Work719 진단](follow-up-results.md#sa-schema는-원문-정상-완료-근거를-확보하고-장시간-분류-유지)은 순차 SQL 진행과 제한 연장 native PASS·18 phase·정리를 확인했다. 기존 120초 TIMEOUT은 유지하고 실제 timeout 설정·활성화·suite 배치는 바꾸지 않았다.
