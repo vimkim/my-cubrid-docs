@@ -44,3 +44,4 @@
 | [분석과 검증](CBRD-27785-oos-read-performance_bcb900d_codex.md) | 원인·읽기 계약·저장 경로와 당시 측정 결과, 문자셋 조건의 검증 한계 | 2026-10-27 | 2026-11-04 | 일반 heap 읽기 수정의 근거와 범위를 검토하기 위해 |
 | [PR 본문](CBRD-27785-oos-read-performance-pr-body_bcb900d_codex.md) | 게시할 한국어 PR 설명 | 2026-10-27 | 2026-10-27 | GitHub 게시 전 본문을 검토하기 위해 |
 | [게시 context](CBRD-27785-oos-read-performance-pr-context_bcb900d_codex.md) | source SHA, branch, 승인 범위와 검증한 게시 결과 | 2026-10-27 | 2026-10-27 | 승인 후 정확한 revision과 작업으로 이어가기 위해 |
+| [code-review.md](code-review.md) | Independent five-specialist review, fresh native verification and remaining checks | 2026-11-04 | 2026-11-04 | Preserve the pinned PR review and its evidence limits |
