@@ -7,7 +7,7 @@ Prepared 2026-11-05 (Asia/Seoul). This file records the proposal. It is not an a
 | Item | Value |
 | --- | --- |
 | Ticket | CBRD-27259 |
-| Source commit | `aa951eebf7d534de8480d2a15554f452c97666fa` (adds the non-OOS `REC_BIGONE` warning on top of `e19d8c613`) |
+| Source commit | `9ae07b9491b1393841ecb0f3579752a598bf68ec` (adds the non-OOS `REC_BIGONE` notification on top of `e19d8c613`; replaced the unpushed `aa951eebf`) |
 | Source repository and branch | `vimkim/cubrid` (remote `vk`), `CBRD-27259-storage-force-inline` |
 | Observed remote head | `e19d8c613c581cde2350474fe3451c60ecb04c66` (2026-11-05) |
 | Base | `CUBRID/cubrid` `feature/oos-merge` |
@@ -35,7 +35,8 @@ After the source push, one `/run all` runs CI on the new head, as the user chose
 
 ## Conversation record
 
-- 2026-11-05: the user asked for a warning on non-OOS `REC_BIGONE` for every user-table row ("사용자 테이블 행 전부", "경고만 남기고 저장") and for CI on the new head after the current run ("현재 run 완료 후 실행"). Publication of this body still needs the user's confirmation after review.
+- 2026-11-05: the user asked for a warning on non-OOS `REC_BIGONE` for every user-table row ("사용자 테이블 행 전부", "경고만 남기고 저장") and for CI on the new head after the current run ("현재 run 완료 후 실행").
+- 2026-11-05: the user approved the first version of this revision ("1. 승인"), then asked for the report to reach the log with default parameters ("평상시에도 문제가 생기면 로그에 남게 하고 싶은데"). The body changed to notification wording, so it returns to review; the approved version is commit `defe2ce`.
 
 ## Publication record
 
