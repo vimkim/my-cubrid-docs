@@ -36,7 +36,14 @@ After the PR exists, the standing CUBRID PR instruction covers one CI trigger. N
 ## Conversation record
 
 - 2026-11-05: the user chose the draft PR route over a local merge ("1. 좋아"). Publication of this body still needs the user's confirmation after review.
+- 2026-11-05: after review, the user approved the three listed operations ("1. 승인").
 
 ## Publication record
 
-Not started.
+| Step | Result (2026-11-05) |
+| --- | --- |
+| Body fingerprint (SHA-256) | `8894bd68e1609b87d5bbb5df4d3877d24362bb8361212a3c6f81e136d356d259` |
+| Source push | `vk/CBRD-27259-storage-force-inline` = `e19d8c613c581cde2350474fe3451c60ecb04c66` |
+| Draft PR | https://github.com/CUBRID/cubrid/pull/8416, draft, base `feature/oos-merge`, assignee `vimkim` |
+| Body check | Published body is byte-identical to `cbrd-27259/pr-body.md` |
+| Docs integration | This commit, merged into `main` and pushed after the PR write |
