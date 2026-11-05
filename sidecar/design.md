@@ -9,7 +9,7 @@ Conventions. Every `path:line` is under `src/` at `e64a04a79` unless the path sa
 
 ## 1. Summary
 
-Sidecar keeps each row's small columns in its ordinary heap record, the **hot record**, and moves each large variable-length value into its own **store record** in a per-heap **store** file. The store is a stock `FILE_HEAP`, and a store record is an ordinary MVCC heap record. Vacuum leaves a removed store slot `REC_MARKDELETED`, so a store OID names one value for the life of the store. The hot record keeps a 16-byte **ref** in the value's own variable slot, a short **trailer** at the record end that names the slots that hold refs, and MVCC flag bit `0x08`. Inserts, deletes, undo, redo and vacuum of store records run the existing heap code. Sidecar adds no recovery index, no page type, no file type and no vacuum logic. Its write hooks sit inside `heap_insert_logical`, `heap_update_logical` and `heap_delete_logical`, so every producer of rows reaches them. Its read hooks sit at the exits of the heap fetch functions. A caller that ignores Sidecar still gets correct values, because every fetch returns an inline record unless the caller opted in and is protected.
+Sidecar keeps each row's small columns in its ordinary heap record, the **hot record**, and moves each large variable-length value into its own **store record** in a per-heap **store** file. The store is a stock `FILE_HEAP`, and a store record is an ordinary MVCC heap record. Vacuum leaves a removed store slot `REC_MARKDELETED`, so a store OID names one value for the life of the store. The hot record keeps a 16-byte **ref** in the value's own variable slot, a short **trailer** at the record end that names the slots that hold refs, and MVCC flag bit `0x08`. Inserts, deletes, undo, redo and vacuum of store records run the existing heap code. Sidecar adds one recovery index, `RVHF_SIDECAR_LINK`, for the 12 link bytes of a heap header, and no page type, no file type and no vacuum logic. Its write hooks sit inside `heap_insert_logical`, `heap_update_logical` and `heap_delete_logical`, so every producer of rows reaches them. Its read hooks sit at the exits of the heap fetch functions. A caller that ignores Sidecar still gets correct values, because every fetch returns an inline record unless the caller opted in and is protected.
 
 **Lifecycle rule.** A store value is inserted by the row's own transaction before the hot record that names it, is stamped with DELID by the transaction that writes the first hot version that stops naming it, and is removed only by stock vacuum from its own header.
 
@@ -174,12 +174,17 @@ struct sidecar_ref
 
 /* Trailer, read backwards from recdes->length. It needs no class representation.
  *   UINT16 ref_location[n_pad];  OR_ATTRIBUTE.location of each ref slot, ascending,
- *                                n_pad = n_refs rounded up to even, padding 0xFFFF
+ *                                n_pad = n_refs rounded up to odd (n_refs | 1), padding 0xFFFF
+ *   UINT16 n_variable;           variable attributes of the representation the record was
+ *                                written with: the offset table has n_variable + 1 entries
  *   UINT16 n_refs;               1 .. n_variable
  *   UINT16 magic;                0x5343
- * Size = 2 * n_pad + 4: 8 bytes for one or two refs, 12 for three or four. */
+ * Size = 2 * n_pad + 6, a multiple of 4: 8 bytes for one ref, 12 for two or three,
+ * 16 for four or five. */
 #define SIDECAR_TRAILER_MAGIC 0x5343
 ```
+
+**Why the trailer carries `n_variable`.** Expansion rewrites the variable offset table, and trailing NULL values make `entry[n_variable]` impossible to find by scanning. The count in the trailer keeps three things true. The P4 splice stays a pure codec with no server state. Expansion fixes only the hot page and one store page at a time, because a `heap_classrepr_get` miss would fix catalog or class pages under the hot latch, an edge that I-7 does not cover. I-9 holds for expansion too. The count stays right across `ADD COLUMN` and `DROP COLUMN`, because a record's offset table has as many entries as the representation it was written with. The cost is 0 to 4 B per flagged record. P1a measured this layout (`ab1d549c8`, P1a decision D1). The verifier checks the count against the record's representation, and the attribute layer asserts it when P1c gives it a reader.
 
 **Headroom rule.** A hot record that holds a ref is at most `heap_Maxslotted_reclength - OR_MVCC_MAX_HEADER_SIZE`, which is 16,236 - 32 = 16,204 B (derived from `storage/heap_file.c:3752-3754` and `base/object_representation_constants.h:142`). The stock code grows a stored record only by its MVCC header. An UPDATE adds INSID and PREV_LSA (`heap_update_adjust_recdes_header`, `storage/heap_file.c:21725`), and a DELETE adds DELID (`heap_delete_home`, `:23310-23356`, and `heap_delete_relocation`, `:22826-22832`). Every other change is a new image, which passes through the write hook again. The header never exceeds 32 B, so a ref-holding record never crosses `heap_is_big_length` and never becomes `REC_BIGONE`. If externalizing every eligible value still leaves the record above 16,204 B, the hook externalizes nothing and inlines every kept ref, and the row takes the `develop` path as a `REC_BIGONE` record with no refs. The interrogation probe found the `develop` boundary at a 16,203 B value, a 16,236 B record, and saw that record turn `REC_BIGONE` after an UPDATE of another column and after an uncommitted DELETE (measured, `adv-1/bigone_probe.py`).
 
@@ -187,7 +192,9 @@ struct sidecar_ref
 
 ```c
 /* An ordinary heap record of the store file:
- *   [MVCC header written by the stock heap code: repid SIDECAR_STORE_REPID (0x00FFFFFF), CHN, INSID, DELID?]
+ *   [MVCC header written by the stock heap code: repid SIDECAR_STORE_REPID (0x007FFFFF), CHN, INSID, DELID?]
+ * MVCC_REC_HEADER.repid is a signed 24-bit bitfield (transaction/mvcc.h:41). 0x00FFFFFF reads back as -1, and a
+ * header rewrite through the struct then sets every flag bit, 0x08 among them (measured in P1a, decision D2).
  *   [SIDECAR_VALUE_HEADER]
  *   [value bytes: exactly ref.length bytes, the attribute's own disk encoding]
  * 8 + 8 + length bytes after vacuum clears INSID; 16 + 8 + length at insert.
@@ -224,6 +231,8 @@ struct sidecar_store_entry
 ```
 
 The store is one `FILE_HEAP` file per hot heap, so one per partition. It is created by `heap_create_internal (thread_p, &store_hfid, class_oid, false)` (`storage/heap_file.c:4796`). That call may reuse a heap file marked deleted (`:4829-4855`), and it applies the class TDE algorithm on both paths (`:4983-4992`). The reuse path walks the pages of a dropped file (`heap_reuse`, `:5140`) while the creator holds the hot header latch, which adds latency to the first externalization of a table but no wait cycle, because no other thread uses a dropped file. Its `unfill_space` is 512 B instead of 10% of the page (`:4925`), because store records never grow except by the 8-byte DELID. At the 256 B minimum value a page holds at most 57 store records, and 57 x 8 = 456 B (derived). Vacuum passes `reusable` only for `FILE_HEAP_REUSE_SLOTS` (`query/vacuum.c:2568`), so a vacuumed store slot becomes `REC_MARKDELETED` (`storage/slotted_page.c:4853-4860`), and an insert reuses only `REC_DELETED_WILL_REUSE` slots (`:1286`). Empty store pages stay in the file (`query/vacuum.c:1853`). Section 13 states the space cost. Its overflow file is created lazily by the existing `heap_ovf_find_vfid` (`storage/heap_file.c:6062`), which inherits TDE from the class (`:6119-6133`).
+
+**Store page identity (open, P1b1).** A store page carries the hot class OID in its heap page header, and `develop` code that goes from a page to its class and from the class to its HFID reaches the hot heap. P1a measured one such site. Undoing a store insert offered the store page to the hot heap's bestspace, the next hot INSERT went into it, and a heap scan missed the row (P1a decision D3). P1a patched `heap_rv_undo_insert` with a test of the store repid. The other sites are `heap_get_file_type` without a scan cache, `pgbuf_get_groupid_and_unfix` for watchers with a NULL HFID, and the bestspace candidate and insert-hint checks. P1b1 fixes the cause before it adds store writes that reach them.
 
 **Per-column state.**
 
@@ -429,14 +438,14 @@ Rollback keeps the claim. Undo runs in reverse order. The hot version is restore
 
 ## 6. Flows
 
-Notation. "Latch" is a page latch, "lock" is an object or class lock. Every flow names the log records it writes. No flow uses a new recovery index. Only the first store creation of a heap starts a system operation.
+Notation. "Latch" is a page latch, "lock" is an object or class lock. Every flow names the log records it writes. No row flow uses a new recovery index. The store link in the heap header uses `RVHF_SIDECAR_LINK` (7.7). Only the first store creation of a heap starts a system operation.
 
 ### INSERT (one 4 KB value, AUTO)
 
 1. `locator_insert_force` (`transaction/locator_sr.c:4913`) prunes partitions and calls `heap_insert_logical` (`:5040`), as on `develop`.
 2. At the entry of `heap_insert_logical`, before `heap_insert_adjust_recdes_header` (`storage/heap_file.c:24697`), the hook tests the image. The fast exit tests the store-op flag, the length against the cached target, the force parameter and the image flag. The thread holds no permanent page here.
 3. The policy picks the value. The row is 80 + 4,104 = 4,184 B against the 4,060 B target (derived, section 9).
-4. The store HFID comes from the cache. On the first value of this heap, the module creates the store in a system operation that commits even if the transaction aborts. It X-latches the hot heap header with no data page held, calls `heap_create_internal (..., false)`, sets `unfill_space` to 512, writes the owner back-pointer and magic, writes the store HFID into the hot header (`RVHF_STATS` undo and redo), updates the cache entry, raises the compatibility level if Gate 1 Q3 says so, and commits. This is the `heap_ovf_find_vfid` pattern (`storage/heap_file.c:6091-6137`).
+4. The store HFID comes from the cache. On the first value of this heap, the module creates the store in a system operation that commits even if the transaction aborts, because other transactions may have stored values in it by then. A transaction that holds SCH_M on the class, such as one that created or truncated it in the same transaction, attaches the system operation to itself instead. Its abort then destroys the store and undoes the link, and until it ends it reads the link from the header and leaves the cache alone (P1a decision D18, found when `CREATE TABLE`, a large INSERT and ROLLBACK leaked a committed store). It X-latches the hot heap header with no data page held, calls `heap_create_internal (..., false)`, sets `unfill_space` to 512, writes the owner back-pointer and magic, writes the store HFID into the hot header (`RVHF_SIDECAR_LINK` undo and redo), updates the cache entry, raises the compatibility level (Gate 1 Q3), and commits. This is the `heap_ovf_find_vfid` pattern (`storage/heap_file.c:6091-6137`).
 5. The module saves `tdes->repl_insert_lsa` and `repl_update_lsa`, as `locator_update_index` does around FK checks (`transaction/locator_sr.c:8885-8902`). It calls `heap_insert_logical` on the store with `sidecar_store_op` and `no_supplemental_log` set and with the hot context's `is_bulk_op`. Log `RVHF_MVCC_INSERT`, with empty undo and the store record as redo. A store record over 16,236 B logs `RVFL_ALLOC`, `LOG_DUMMY_OVF_RECORD`, one `RVOVF_NEWPAGE_INSERT` per page, then `RVHF_MVCC_INSERT` of the 8-byte map record (`storage/overflow_file.c:82-251`). The module records `(attrid, LSA of that RVHF_MVCC_INSERT)` and restores the replication LSAs. It latches one store page X at a time and releases it before the next step. A BIGONE store record also latches the store header page briefly.
 6. The module builds the hot record in one pass, with the ref in the value's slot, the trailer and the flag, and sets `context->recdes_p` to it. The caller's `RECDES` still holds the inline image.
 7. `heap_insert_logical` continues as on `develop`. Log `RVHF_MVCC_INSERT`, which sets `repl_insert_lsa` (`transaction/log_manager.c:2283-2286`). It latches the hot page X and takes the class IX lock and the MVCCID self-lock, with no row lock (`storage/heap_file.c:22111-22156`).
@@ -582,7 +591,7 @@ No undo of a delete writes a store record image into an empty slot in server mod
 
 ### Crash recovery
 
-Analysis, redo and undo are the stock ones (`transaction/log_recovery.c:2609`, `:3406`, `:4585`). There is no recovery index to add to `transaction/recovery.c`.
+Analysis, redo and undo are the stock ones (`transaction/log_recovery.c:2609`, `:3406`, `:4585`). The one recovery index added to `transaction/recovery.c` is `RVHF_SIDECAR_LINK`, for the heap header link (7.7).
 
 | Crash point | Outcome |
 |---|---|
@@ -700,16 +709,16 @@ flowchart LR
 | `ALTER ... STORAGE` | Flag only. No new representation. Applies to later writes. |
 | `TRUNCATE` | `sm_truncate_using_destroy_heap` destroys the old heap with `heap_destroy_newly_created (..., true)` (`object/schema_manager.c:16011`), which reaches `xheap_destroy`. In delete mode, each row is deleted through the hook and its store records are stamped. |
 | `DROP TABLE` | `locator_remove_class` calls `heap_destroy_newly_created` (`transaction/locator_cl.c:5690`). A `FILE_HEAP` hot heap is marked deleted for reuse (`storage/heap_file.c:5515-5522`), and a reuse heap goes to `xheap_destroy` (`:5511`). |
-| Both drop paths | Today `xheap_destroy` (`:5469-5479`) and the mark-deleted branch of `xheap_destroy_newly_created` (`:5515-5522`) each register the dropped file and postpone the overflow file's destroy. Sidecar moves that shared code into one helper, `heap_drop_dependent_files`, which also calls `sidecar_store_drop` once. That registers the store VFID as dropped, postpones the destroy of the store's overflow file and the store, clears the hot header's link with a logged `RVHF_STATS` change, and drops the cache entry. An abort undoes the link change and skips the postponed destroys. `heap_reuse` (`:5140`) does not reset `reserve0..2` (`:5315-5326`), so it asserts that the link is NULL. |
-| Partitions | One store per partition heap. A row that moves to another partition goes through `sidecar_inline_kept` (section 6). `REORGANIZE` and `PROMOTE` read through the fetch exits, so refs never cross heaps (I-3). In the POC, partitioned tables do not externalize. |
+| Both drop paths | Today `xheap_destroy` (`:5469-5479`) and the mark-deleted branch of `xheap_destroy_newly_created` (`:5515-5522`) each register the dropped file and postpone the overflow file's destroy. Sidecar moves that shared code into one helper, `heap_drop_dependent_files`, which also calls `sidecar_store_drop` once. That registers the store VFID as dropped, postpones the destroy of the store's overflow file and the store, clears the hot header's link with `RVHF_SIDECAR_LINK`, and drops the cache entry. That record undoes and redoes the 12 link bytes alone. `RVHF_STATS` would write the whole header back on undo, so a DROP that aborts would erase a committed change made in between, such as vacuum removing a page of a REUSE_OID heap (P1a decision D5). An abort undoes the link change and skips the postponed destroys. `heap_reuse` (`:5140`) does not reset `reserve0..2` (`:5315-5326`), so it asserts that the link is NULL. |
+| Partitions | One store per partition heap. A row that moves to another partition goes through `sidecar_inline_kept` (section 6). `REORGANIZE` and `PROMOTE` read through the fetch exits, so refs never cross heaps (I-3). Partitioned tables externalize, one store per partition heap, keyed by the partition heap's VFID (P1a decision D10). |
 | System and MVCC-disabled classes | Never externalize (`mvcc_is_mvcc_disabled_class`). |
 
 ### 7.8 Disk-format policy
 
-- **What changes on disk.** Flag `0x08` and the trailer in hot records, the meaning of `reserve0..2` in heap headers, one `FILE_HEAP` store file per heap that has externalized a value, and two appended replication sub-types. No page type, file type or recovery index is added.
+- **What changes on disk.** Flag `0x08` and the trailer in hot records, the meaning of `reserve0..2` in heap headers, one `FILE_HEAP` store file per heap that has externalized a value, two appended replication sub-types, and one appended recovery index, `RVHF_SIDECAR_LINK`. No page type or file type is added.
 - **Old databases** contain no flagged record and no store, so the new engine opens them unchanged and they gain a store lazily.
 - **Older binaries must refuse a database that has Sidecar records.** The redo of a flagged insert copies the logged flag (`storage/heap_file.c:17465`), so an older binary would index the 8-entry table past its end during recovery, and its writes would treat refs as values. So the check must run before recovery. The log header compatibility check does (`transaction/log_manager.c:1303-1315`). The `sysmeta_version` check runs after recovery (`transaction/boot_sr.c:2611-2617`), which is too late.
-- **Recommendation (Gate 1 Q3).** Raise a one-way compatibility level in the log header inside the first store-creation sysop, and flush the header before that sysop commits. New binaries accept both levels. Older binaries refuse with `ER_LOG_INCOMPATIBLE_DATABASE`. The backup header carries the same level. OOS ADR-0006 stamps the volume header at `createdb` and makes new builds reject old databases. That is the other direction, and it does not stop an older binary, so its boot-before-recovery placement is kept and its direction is not.
+- **Recommendation (Gate 1 Q3).** Raise a one-way compatibility level in the log header inside the first store-creation sysop, and flush the header before that sysop commits. New binaries accept both levels. Older binaries refuse with `ER_LOG_INCOMPATIBLE_DATABASE`. `logpb_copy_log_header` copies the level, so an older binary refuses a `copydb` copy (measured in P1a). The backup header is unchanged. A restored log header carries the raised level, so an older binary should refuse the restored database at boot (inferred, P1a decision D12). An older-binary `restoredb` of such a backup is not tested yet. OOS ADR-0006 stamps the volume header at `createdb` and makes new builds reject old databases. That is the other direction, and it does not stop an older binary, so its boot-before-recovery placement is kept and its direction is not.
 - **OOS-branch databases** are not supported. Recreate them (ADR-0005).
 
 ## 8. Cost when unused
@@ -833,7 +842,7 @@ Class numbers follow grounding report 05, section 1.
 
 ## 11. Synthesis decision
 
-**Base.** The base is candidate 2's lifecycle. A value is an ordinary MVCC heap record in a companion heap, written before the hot record, stamped with DELID by the transaction that drops it, and removed by stock vacuum. It adds no recovery index and no vacuum logic, and its inline-by-default fetch makes a caller that ignores Sidecar correct.
+**Base.** The base is candidate 2's lifecycle. A value is an ordinary MVCC heap record in a companion heap, written before the hot record, stamped with DELID by the transaction that drops it, and removed by stock vacuum. It adds no vacuum logic and only one recovery index, for the heap header link, and its inline-by-default fetch makes a caller that ignores Sidecar correct.
 
 **Grafts.**
 
