@@ -1,10 +1,10 @@
 # CBRD-27933 vacuum의 OOS 파일 조회 실패 재현과 원인 분석
 
-- 분석일은 2026-11-04 (Asia/Seoul)이다. 선택지 B prototype은 2026-11-05에 추가했다.
+- 분석일은 2026-11-04 (Asia/Seoul)이다. 선택지 B prototype과 PR #8350 병합 뒤 재실행은 2026-11-05에 추가했다.
 - 대상 이슈는 [CBRD-27933](https://jira.cubrid.org/browse/CBRD-27933)이다. 요구사항 출처는 [PR #8350 리뷰 댓글](https://github.com/CUBRID/cubrid/pull/8350#discussion_r4452180248)이다. 작업 추적은 Work 781이다.
-- 소스 기준은 `CUBRID/cubrid` 의 `1ef6ed6125eb6028c06b0e05282dc0041bde3f48` (PR #8350 head)이다. 엔진 소스는 수정하지 않았다. 재현 테스트는 로컬 브랜치 `CBRD-27933-vacuum-oos-vfid-lookup-error` 의 커밋 `ec3edd1ab` 와 `a8065e5fe` 에만 있고, 원격에는 게시하지 않았다.
+- 소스 기준은 `CUBRID/cubrid` 의 `1ef6ed6125eb6028c06b0e05282dc0041bde3f48` (PR #8350 head)이다. 엔진 소스는 수정하지 않았다. 재현 테스트는 로컬 브랜치 `CBRD-27933-vacuum-oos-vfid-lookup-error` 의 커밋 `ec3edd1ab` 와 `a8065e5fe` 에만 있고, 원격에는 게시하지 않았다. PR #8350 병합 뒤 두 커밋을 `d52b1889e` 위로 옮겼고, 옮긴 커밋은 `36a31b6d3` 와 `85fc8b67f` 다.
 - 빌드는 `debug_gcc` (Debug, `-O0`)와 `release_gcc` (RelWithDebInfo, `-O2 -DNDEBUG`)를 사용했다.
-- 같은 날 `origin/feature/oos-merge` 는 `f67f2f692a7ad9f9efada2178759ca713e596b9d` 였고 PR head와의 merge-base는 `dcbf09e4f` 다. 이 보고서의 런타임 결과는 PR head에서만 얻었다.
+- 같은 날 `origin/feature/oos-merge` 는 `f67f2f692a7ad9f9efada2178759ca713e596b9d` 였고 PR head와의 merge-base는 `dcbf09e4f` 다. PR #8350은 2026-11-05에 `feature/oos-merge` 로 squash 병합되었고, 병합 커밋은 `d52b1889e` 다. [병합 뒤 기준에서 재실행](#병합-뒤-기준에서-재실행)을 뺀 런타임 결과는 모두 PR head에서 얻었다.
 
 ## 질문과 결론
 
@@ -94,6 +94,18 @@ E3과 E4에서는 prototype의 오류가 `Could not prepare vacuum for object 1|
 
 E4에서 latch timeout은 57.2초 동안 22회 기록되었다. 간격의 중앙값은 2.00초이고 최댓값은 17.13초였다. 중앙값은 latch timeout과 같다. 워커는 실패 직후 다시 헤더에 줄을 섰다. 최댓값은 첫 call stack 기록이다. 이 실행의 서버 로그는 54,529줄, 약 3.9 MB였다. 그 대부분은 테스트가 켠 `CUBRID_ER_LOG_VACUUM=4099` 의 job 로그다. 기본값 1에서도 남는 오류 기록만 따로 세면 증가 속도는 1.7 KiB/s였다 (P-A-persistent60에서 측정).
 
+### 병합 뒤 기준에서 재실행
+
+PR #8350이 병합된 뒤 `feature/oos-merge` 의 `d52b1889e` 위에서 수정 없는 release 엔진으로 세 case를 다시 실행했다 (`R-tip-d52b1889e-release-baseline`, 테스트 커밋 `85fc8b67f`). `1ef6ed612` 이후 vacuum 쪽 엔진 변경은 `vacuum.c` 와 `vacuum_oos.cpp` 의 주석뿐이다.
+
+| Case | 헤더를 쥔 동안 | 헤더를 놓은 뒤 | 삭제 블록 판정 |
+| --- | --- | --- | --- |
+| `REC_HOME` | 슬롯 2, OOS 있음 | 슬롯 6, OOS 남음 | `complete` |
+| `REC_RELOCATION` | 슬롯 4, OOS 있음 | 슬롯 6, OOS 남음 | `complete` |
+| 셧다운 | 워커가 15.5초 뒤 정지, 슬롯 6, OOS 있음 | 슬롯 6, OOS 남음 | `complete` |
+
+결과는 E2와 같다. case마다 latch timeout(-836, -72)이 한 번 나고 helper의 "OOS flag set but no OOS VFID" 로그와 `vacuum_oos.cpp:423` 의 `assert_release` 알림이 이어졌다. 이 assert는 E2의 것과 같은 코드이고, 위 주석이 바뀌어 줄 번호만 2줄 밀렸다. `REC_RELOCATION` case에는 `slotted_page.c:3833` 의 -46과 `oos_file.cpp:3742` 의 -2가 한 번씩 더 기록되었다. E2의 요약은 오류 출처를 모으지 않았으므로 같은 오류가 그때도 있었는지는 비교하지 못했다.
+
 ## 분석 질문에 대한 답
 
 **일시 오류.** 현재 코드에서는 한 번의 timeout이 영구 누수가 된다 (E2). 오류를 반환하면 release의 페이지 재시도가 헤더가 풀린 뒤 OOS 값을 회수한다 (E3). `REC_HOME` 과 `REC_RELOCATION` 모두 같다.
@@ -157,7 +169,7 @@ B는 페이지 vacuum 상태를 ONCE로 남겼다. A는 NONE으로 끝났다 (�
 - 기본 latch timeout(300초)에서의 재시도 주기는 측정하지 않았다.
 - 각 조건은 1회씩 실행했다. E2는 첫 실행과 최종 실행이 같았다.
 - E3, E4, E5는 중간 테스트 revision으로 실행했다. 판정 논리는 커밋된 revision과 같고, case 이름과 주석이 달랐다. E3에는 삭제 블록 출력과 셧다운 옵션이 아직 없었다.
-- `origin/feature/oos-merge` 의 현재 tip에서는 실행하지 않았다.
+- PR #8350 병합 뒤 `feature/oos-merge` (`d52b1889e`)에서는 수정 없는 release 엔진의 세 case만 다시 실행했다. prototype A, B와 debug, `UnrelatedHeapVacuumedWhileHeaderLookupKeepsFailing` 은 다시 실행하지 않았다.
 - `REC_BIGONE` 은 OOS를 가질 수 없으므로 범위 밖이다.
 
 ## 다시 실행하는 방법
