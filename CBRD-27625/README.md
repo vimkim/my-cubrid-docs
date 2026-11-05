@@ -5,4 +5,4 @@
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [reference-commits.md](reference-commits.md) | 세 JIRA와 커밋의 대응, 선행 조건, 검증 한계 및 미등록 TODO 제안 | 2026-11-05 | 2026-11-05 | 공유 구현을 향후 이슈 진행 시 참고하고 TODO 등록 범위를 확인하기 위해 |
+| [reference-commits.md](reference-commits.md) | 세 JIRA와 커밋의 대응, 선행 조건, 검증 한계 및 등록한 참고 TODO | 2026-11-05 | 2026-11-05 | 공유 구현을 향후 이슈 진행 시 참고하고 TODO 등록 범위를 확인하기 위해 |
