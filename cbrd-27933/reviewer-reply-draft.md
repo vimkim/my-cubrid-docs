@@ -1,6 +1,6 @@
 # PR #8350 리뷰 스레드 회신 초안
 
-이 글은 hornetmj 팀장님의 [PR #8350 리뷰 댓글](https://github.com/CUBRID/cubrid/pull/8350#discussion_r4452180248) 스레드에 답글로 올릴 초안이다. 아직 게시하지 않았다. 숫자와 관측의 근거는 [repro-analysis.md](repro-analysis.md)에 있다.
+이 글은 hornetmj 팀장님의 [PR #8350 리뷰 댓글](https://github.com/CUBRID/cubrid/pull/8350#discussion_r4452180248) 스레드에 답글로 올린 글이다. 2026-11-05에 [r4477032325](https://github.com/CUBRID/cubrid/pull/8350#discussion_r4477032325)로 게시했다. 뒤에 덧붙인 답글 두 개도 함께 남긴다. 숫자와 관측의 근거는 [repro-analysis.md](repro-analysis.md)에 있다.
 
 ## 답글 본문
 
@@ -41,3 +41,33 @@
 - PR #8350이 병합된 뒤의 `feature/oos-merge` 에서는 아직 다시 돌리지 않았습니다.
 
 재현 절차와 측정 기록은 [재현 분석 문서](https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-27933/repro-analysis.md)에 정리했습니다. 재현 테스트는 수리 PR에 함께 올리겠습니다. 이 방향으로 진행해도 괜찮을지 의견 부탁드립니다.
+
+## 덧붙인 답글. 병합 뒤 기준에서 재실행
+
+[r4477099365](https://github.com/CUBRID/cubrid/pull/8350#discussion_r4477099365)로 게시했다.
+
+덧붙입니다. PR #8350이 병합된 뒤의 `feature/oos-merge` (`d52b1889e`)에서도 release로 다시 돌려 보았습니다. `REC_HOME`, `REC_RELOCATION`, 셧다운 중 실패 세 경우 모두 같은 누수가 재현되었고, 블록은 complete로 끝났습니다. 위 답글의 "아직 확인하지 않은 것" 중 마지막 항목은 이것으로 확인했습니다. 결과는 [재현 분석 문서](https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-27933/repro-analysis.md#병합-뒤-기준에서-재실행)에 추가했습니다.
+
+## 덧붙인 답글. POC 결과 공유
+
+[r4478428677](https://github.com/CUBRID/cubrid/pull/8350#discussion_r4478428677)로 게시했다. 숫자의 근거는 [fix-decisions.md의 구현에서 바뀐 것](fix-decisions.md#구현에서-바뀐-것)에 있다.
+
+팀장님, 위에서 말씀드린 방향(조회 실패 시 블록을 interrupted로 넘기는 방식)을 POC로 구현해 debug와 release에서 돌려 보았습니다. 답을 주실 때 참고가 될 것 같아 결과를 먼저 공유드립니다.
+
+**확인된 것**
+
+- release에서 `REC_HOME` 과 `REC_RELOCATION` 은 헤더가 풀린 뒤 OOS 값이 회수되었습니다. 셧다운 중 실패는 블록이 interrupted로 남았습니다.
+- vacuum 워커 1개로 헤더를 60초 잡아 둔 경우에도 다른 heap의 삭제 행은 16.0초에 vacuum되었습니다.
+- debug에서는 latch timeout 대신 장애 주입으로 조회 실패를 만들었습니다. 일시 오류, 다른 블록, 같은 블록의 세 테스트가 통과했고, 기존 OOS ctest 48개도 모두 통과했습니다.
+
+**POC에서 새로 나온 것**
+
+1. 같은 로그 블록에 다른 heap의 행이 함께 있을 때, 조회가 실패한 자리에서 블록 처리를 바로 멈추면 그 행이 굶었습니다. 장애 주입으로 30초 동안 계속 실패시키는 사이 블록은 1116번 다시 실행되었지만, 다른 heap의 행은 한 번도 vacuum되지 않았습니다. 그래서 블록의 나머지는 끝까지 처리하고, 블록만 interrupted로 넘기겠습니다. 이 방식에서는 그 행이 12.2초와 13.5초(두 번 실행)에 vacuum되었고, 실패한 행의 슬롯과 OOS 값은 그대로 남았습니다.
+2. 기다리지 않고 바로 실패하는 오류에서는 같은 블록이 vacuum master 주기(10ms)마다 다시 실행되었습니다. debug의 기본 로그 설정에서 초당 약 51번 실행되었고, CPU를 한 코어의 67~76% 썼고, 서버 로그가 초당 약 340KB씩 늘었습니다. 재실행 간격을 1초로 두면 초당 0.9번으로 줄었고 CPU는 거의 유휴 수준이 되었습니다. 그래서 interrupted로 넘긴 블록에는 블록마다 재실행 간격을 두겠습니다. latch timeout처럼 기다린 뒤 실패하는 오류는 이미 timeout만큼 간격이 생기므로, 이 간격은 주로 바로 실패하는 오류에 효과가 있습니다.
+3. 조회는 성공했는데 OOS flag가 있는 행의 heap에 OOS 파일이 없다면 그것은 논리 결함입니다. 이 경우는 debug에서 assert로 바로 멈추게 했습니다. OOS ctest 48개에서는 한 번도 걸리지 않았습니다.
+
+**함께 찾은 것**
+
+`vacuum_forward_walk_reclaim_oos` 도 같은 OOS 파일 조회 실패를 지우고 블록을 complete로 끝냅니다. UPDATE로 대체된 이전 OOS 값을 회수하는 경로라서, 같은 종류의 영구 누수가 됩니다. 소스로 확인했고 실행으로 재현하지는 않았습니다. 블록을 다시 실행할 때 이미 지운 OOS를 다시 지워도 안전한지 따로 따져야 해서 CBRD-27953으로 분리했습니다. http://jira.cubrid.org/browse/CBRD-27953
+
+이 방향으로 정식 구현을 시작하겠습니다. 다른 의견이 있으시면 말씀 부탁드립니다.
