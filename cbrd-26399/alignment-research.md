@@ -1,8 +1,10 @@
 # CBRD-26399 slotted page 정렬 회계 재검증
 
 - 분석일은 2026-11-05 (Asia/Seoul)이다. 작업 추적은 Work 805이다.
-- 대상 이슈는 [CBRD-26399](http://jira.cubrid.org/browse/CBRD-26399)이다. 현재 JIRA 요약은 `fix align bug in spage_max_record_size()`이고 상태는 Open이다. 설명은 2025-11-24 작성본이고 코멘트는 2026-07-29 보고자 코멘트와 2026-10-01 반박 코멘트 두 개다.
+- 대상 이슈는 [CBRD-26399](http://jira.cubrid.org/browse/CBRD-26399)이다. 분석을 시작할 때 JIRA 요약은 `fix align bug in spage_max_record_size()`이고 상태는 Open이었다. 설명은 2025-11-24 작성본이고 코멘트는 2026-07-29 보고자 코멘트와 2026-10-01 반박 코멘트 두 개였다.
+- 2026-11-05에 이 보고서로 이슈 본문을 바꾸고, OOS 확인 코멘트를 남긴 뒤 resolution `Not a bug` 로 종료했다. [CBRD-27781](http://jira.cubrid.org/browse/CBRD-27781) 과는 `Relates` 로 연결했다.
 - 소스 기준은 `CUBRID/cubrid` develop의 `e64a04a79a5842827a124b3f8313516d0da2594c` 이다. 2026-11-05에 받은 `origin/develop` `2362424f25bcebd1bd9733bddd59a993e2852ac5` 와 비교하면 `slotted_page.c`, `slotted_page.h`, `memory_alloc.h`, `storage_common.c`, `heap_file.c`, `system_catalog.c` 는 같다. `external_sort.c` 와 `list_file.c` 의 차이는 `put_fn` 오류 처리와 정렬 목록 helper뿐이라 이 결론에 영향이 없다.
+- OOS 브랜치 `feature/oos-merge` 의 `d52b1889e907abcf84190ec504dde3bc93de260d` 도 확인했다. 이 브랜치의 `slotted_page.c` 는 develop과 비교해 `spage_boot()` 반환형과 `PAGE_OOS` 페이지 종류 처리만 다르다. OOS가 이 결론에 주는 영향은 [OOS 브랜치](#oos-브랜치) 절에 적는다.
 - 엔진 소스는 수정하지 않았다. 실험은 `debug_gcc` 빌드(Debug, `-O0`)의 SA 모드 `slotted_page.c` 객체에 별도 하네스를 링크해 실행했다. 하네스와 결과는 [evidence/](evidence/) 에 있다.
 - 이 문서는 소스 추적, 계산, 이전 보고 인용, 이번 실행 결과를 구분해 적는다. 각 항목에 어느 종류인지 표시한다.
 
@@ -144,11 +146,21 @@ heap 페이지의 anchor 종류는 항상 `ANCHORED_DONT_REUSE_SLOTS` 다 ([heap
 
 ## 범위 밖 관찰
 
-조사 중 정렬과 slot 회계에 관련된 세 가지를 더 확인했다. 셋 다 현재 도달할 수 없어서 CBRD-26399의 결론을 바꾸지 않는다.
+조사 중 정렬과 slot 회계에 관련된 세 가지를 더 확인했다. develop에서는 셋 다 결함 조건에 도달할 수 없어서 CBRD-26399의 결론을 바꾸지 않는다. 1번과 2번은 코드가 실제로 실행되지만, 결함을 드러내는 입력이나 페이지 상태를 지금 호출자가 만들지 않는다. 3번은 develop에 해당 페이지 조합이 없다.
 
-1. **`external_sort.c` 의 `SORT_MAXREC_LENGTH`.** 질의 정렬은 `slotted_page.c` 가 아닌 자체 slotted page 구현을 쓴다. 헤더는 16바이트, slot은 6바이트, 정렬은 8이다 ([external_sort.c:212-230][es-struct], [:2345][es-init]). 최대 길이는 `DB_PAGESIZE - 16 - 6` 인데 ([:91-92][es-max]), 빈 페이지가 실제로 받는 최대 길이는 `DB_PAGESIZE - 24` 다. 따라서 `DB_PAGESIZE - 23` 과 `DB_PAGESIZE - 22` 길이는 사전 검사를 통과한 뒤 빈 페이지 삽입에서 실패하고, 정렬은 `ER_FATAL_ERROR_SEVERITY` 로 `ER_GENERIC_ERROR` 를 낸다 ([:2389-2395][es-fail]). 그러나 정렬 입력 레코드는 네 호출 경로 모두 `qfile_make_sort_key()` 가 만들고, 그 길이는 항상 4의 배수다 ([list_file.c:268-270][lf-aslot], [qfile_tuple_layout.h:617][qt-align]). 두 길이는 4의 배수가 아니므로 현재 도달할 수 없다. B+tree 정렬의 복사본은 이미 정렬 낭비를 반영한 `BTSORT_MAXREC_LENGTH` 를 쓴다 ([btree_sort.c:104-109][bs-max], CBRD-27235).
-2. **정렬 1에서 `spage_check()` 의 오탐.** `spage_check()` 는 `cont_free <= -(alignment - 1)` 이면 오류로 본다 ([slotted_page.c:4432][sp-check-cfree]). 정렬 1에서는 꽉 찬 정상 페이지 (`cont_free == 0`) 도 오류가 된다. 첫 실행이 이 assert로 멈췄다. 운영 코드에서 정렬 1 페이지를 만드는 곳은 없다.
-3. **`ANCHORED` 페이지의 재사용 불가 slot.** `spage_max_space_for_new_record()` 는 `ANCHORED` 페이지에서 `num_slots > num_records` 이면 재사용할 slot이 있다고 보고 slot 4바이트를 빼지 않는다. `spage_vacuum_slot (..., reusable = false)` 가 남긴 `REC_MARKDELETED` slot만 있으면 이 가정이 틀려 4바이트 크게 보고한다 ([slotted_page.c:4859][sp-vacuum]). 실행에서 본 37,126회 실패가 모두 이 경우였다. 그러나 운영 코드에서 `ANCHORED` 로 초기화하는 페이지는 없고, `spage_vacuum_slot()` 은 heap 페이지 (`ANCHORED_DONT_REUSE_SLOTS`) 에만 쓰인다.
+1. **`external_sort.c` 의 `SORT_MAXREC_LENGTH`.** 질의 정렬은 `slotted_page.c` 가 아닌 자체 slotted page 구현을 쓴다. 헤더는 16바이트, slot은 6바이트, 정렬은 8이다 ([external_sort.c:212-230][es-struct], [:2345][es-init]). 최대 길이는 `DB_PAGESIZE - 16 - 6` 인데 ([:91-92][es-max]), 빈 페이지가 실제로 받는 최대 길이는 `DB_PAGESIZE - 24` 다. 따라서 `DB_PAGESIZE - 23` 과 `DB_PAGESIZE - 22` 길이는 사전 검사를 통과한 뒤 빈 페이지 삽입에서 실패하고, 정렬은 `ER_FATAL_ERROR_SEVERITY` 로 `ER_GENERIC_ERROR` 를 낸다 ([:2389-2395][es-fail]). 그러나 정렬 입력 레코드는 네 호출 경로 모두 `qfile_make_sort_key()` 가 만들고, 그 길이는 항상 4의 배수다 ([list_file.c:268-270][lf-aslot], [qfile_tuple_layout.h:617][qt-align]). 두 길이는 4의 배수가 아니므로 현재 도달할 수 없다. 정렬 버퍼의 첫 레코드는 `malloc` 결과에서 8바이트 뒤에 놓이고 ([external_sort.c:1921][es-buf]), 다음 레코드는 `DB_ALIGN (len, 8) + 8` 만큼 뒤에 놓인다 ([:2177][es-advance]). 그래서 정렬 레코드의 시작 주소는 항상 8의 배수이고, 데이터 앞 헤더 부분의 길이도 8의 배수가 된다. 조건이 깨지더라도 결과는 질의 하나의 실패다. fatal 심각도는 로그와 call stack 덤프만 남기고 서버를 내리지 않는다 ([error_manager.c:1549][em-dump]). 예외는 `er_stop_on_error` 를 그 오류 번호로 설정한 경우다 ([:1579-1582][em-stop]). B+tree 정렬의 복사본은 이미 정렬 낭비를 반영한 `BTSORT_MAXREC_LENGTH` 를 쓴다 ([btree_sort.c:104-109][bs-max], CBRD-27235).
+2. **정렬 1에서 `spage_check()` 의 오탐.** `spage_check()` 는 `cont_free <= -(alignment - 1)` 이면 오류로 본다 ([slotted_page.c:4432][sp-check-cfree]). 정렬 1에서는 꽉 찬 정상 페이지 (`cont_free == 0`) 도 오류가 된다. 첫 실행이 이 assert로 멈췄다. `cont_free` 는 `SPAGE_VERIFY_HEADER` 가 0 이상으로 assert하므로 ([slotted_page.c:77][sp-verify]) 잘못 판정하는 경우는 정렬 1이면서 `cont_free == 0` 일 때뿐이다. `spage_check()` 호출자는 heap 점검 ([heap_file.c:15542][hf-check]) 과 B+tree 점검 ([btree.c:8824][bt-check]) 이고, 운영 코드에서 정렬 1 페이지를 만드는 곳은 없다.
+3. **`ANCHORED` 페이지의 재사용 불가 slot.** `spage_max_space_for_new_record()` 는 `ANCHORED` 페이지에서 `num_slots > num_records` 이면 재사용할 slot이 있다고 보고 slot 4바이트를 빼지 않는다. `spage_vacuum_slot (..., reusable = false)` 가 남긴 `REC_MARKDELETED` slot만 있으면 이 가정이 틀려 4바이트 크게 보고한다 ([slotted_page.c:4859][sp-vacuum]). 실행에서 본 37,126회 실패가 모두 이 경우였다. develop에서는 `ANCHORED` 값이 enum 정의 ([slotted_page.h:38][sph-anchored]) 와 이름 출력 ([slotted_page.c:4114][sp-anchored-name]) 에만 나오고, `spage_initialize()` 에 넘기는 곳이 없다. `heap_get_spage_type()` 은 git 이력이 시작된 2014-04부터 항상 `ANCHORED_DONT_REUSE_SLOTS` 를 반환했다. `spage_vacuum_slot()` 은 heap 페이지에만 쓰인다. OOS 브랜치는 `ANCHORED` 페이지를 쓰므로 [OOS 브랜치](#oos-브랜치) 절에서 따로 다룬다.
+
+## OOS 브랜치
+
+OOS (Out-of-row Overflow Storage) 는 develop에 아직 없고 `feature/oos-merge` 에 있다. 기준은 `d52b1889e907abcf84190ec504dde3bc93de260d` 이다 (소스). 결론은 바뀌지 않는다. 다만 범위 밖 관찰 3은 앞으로의 OOS 변경에 조건이 붙는다.
+
+- **페이지 형태.** OOS 페이지는 `ANCHORED`, 정렬 8, `is_saving=false` 로 초기화된다 ([oos_file.cpp:128][oos-align], [:3152][oos-init]).
+- **정렬 4바이트 차이는 이미 보정되어 있다.** OOS는 정렬 8 페이지에서 `spage_max_record_size()` 를 쓰지만 `DB_ALIGN_BELOW (spage_max_record_size (), OOS_ALIGNMENT)` 로 내려서 쓴다 ([:2226][oos-cap], [:2511][oos-assert], [:3626][oos-limit]). 이 값은 `DB_PAGESIZE - 40` 이고 정렬 8 빈 페이지에 실제로 들어가는 최대 길이와 같다 (계산).
+- **범위 밖 관찰 3의 조건은 아직 생기지 않는다.** OOS에서 slot을 비우는 함수는 `spage_delete()` 뿐이다 (삭제 [:3359][oos-del], redo [:3655][oos-rv-del]). 이 함수는 `ANCHORED` 페이지에서 slot을 `REC_DELETED_WILL_REUSE` 로 남긴다 ([slotted_page.c:2093-2095][oos-sp-delete]). undo의 `spage_insert_for_recovery()` 는 빈 slot을 채울 뿐 재사용 불가 slot을 만들지 않는다. `REC_MARKDELETED` 를 만드는 `spage_vacuum_slot()` 호출은 모두 heap vacuum이다 (소스).
+- **조건이 생기면 결과는 삽입 실패다.** OOS는 `spage_max_space_for_new_record()` ([slotted_page.c:960-967][oos-sp-maxnew]) 가 돌려준 값으로 삽입할 페이지를 고른다 ([oos_file.cpp:725][oos-pick]). 그 뒤 `spage_insert()` 가 실패하면 `ER_GENERIC_ERROR` 를 반환한다 ([:2479-2484][oos-fail]). `spage_insert()` 가 다시 판정하므로 페이지 손상은 없다 (소스 근거 추론, 실행하지 않음).
+- **CBRD-27781 수정의 조건.** [CBRD-27781](http://jira.cubrid.org/browse/CBRD-27781) 은 OOS 삭제를 취소할 때 복원할 slot을 다른 트랜잭션이 먼저 쓰는 결함이다. 그 수정이 삭제된 OOS slot을 비운 채 재사용 불가로 남기면 관찰 3이 실제로 발생한다. 그 경우 같은 변경에서 `spage_max_space_for_new_record()` 의 `ANCHORED` 분기가 재사용 가능한 slot을 확인하게 하거나, OOS 페이지를 `ANCHORED_DONT_REUSE_SLOTS` 로 바꿔야 한다. slot을 재사용 가능으로 둔 채 페이지를 잠시 삽입 후보에서 빼는 방식이면 해당하지 않는다. 이 조건은 CBRD-27781 코멘트에도 남겼다.
 
 ## 결함과 해석 차이를 가르는 질문
 
@@ -156,13 +168,14 @@ heap 페이지의 anchor 종류는 항상 `ANCHORED_DONT_REUSE_SLOTS` 다 ([heap
 | --- | --- | --- |
 | 지원하는 페이지 크기와 헤더 크기에서 초기화의 올림이 값을 바꾸는가? | 아니다 | 계산, 실행 |
 | `spage_max_record_size()` 를 통과한 길이를 정렬 낭비나 slot 없이 받아들이는 삽입·갱신 경로가 있는가? | 없다. 모든 경로가 낭비와 slot을 더해 다시 검사한다 | 소스, 실행 |
-| 정렬 8 페이지의 외부 호출자 중 `spage_max_record_size()` 를 "들어간다는 보장"으로 쓰는 곳이 있는가? | 없다. catalog의 유일한 사용은 읽히지 않는다 | 소스 |
+| 정렬 8 페이지의 외부 호출자 중 `spage_max_record_size()` 를 "들어간다는 보장"으로 쓰는 곳이 있는가? | develop에는 없다. catalog의 유일한 사용은 읽히지 않는다. OOS 브랜치는 정렬 8로 내린 값을 쓴다 | 소스 |
 | 연산이 이어져도 `total_free` 가 실제 배치와 맞는가? | 맞다. 72만 회 동안 항등식이 유지되었다 | 실행 |
 | 제안한 assertion이 정상 페이지에서 성립하는가? | 정렬 assertion은 성립하지 않는다. 침범 검사는 이미 `spage_check()` 에 있다 | 소스, 실행 |
 
 ## 권고
 
-- CBRD-26399는 코드 수정 없이 결함 아님으로 종료한다. 이슈 본문은 이 검증 결과로 바꾸어 기록을 남긴다.
+- CBRD-26399는 코드 수정 없이 결함 아님으로 종료한다. 이슈 본문은 이 검증 결과로 바꾸어 기록을 남긴다. 2026-11-05에 이대로 처리했다.
+- OOS 삭제 slot의 재사용 방식을 바꾸는 CBRD-27781 수정은 범위 밖 관찰 3을 함께 고친다. 조건은 [OOS 브랜치](#oos-브랜치) 절에 있다.
 - 선택적 하드닝은 별도 판단이다. `SPAGE_HEADER` 크기의 정렬 요구를 컴파일 시점 검사로 바꾸거나, `spage_max_record_size()` 주석에 "정렬 무관 사전 상한"임을 적을 수 있다. 둘 다 동작을 바꾸지 않는다.
 - 범위 밖 관찰 1의 `SORT_MAXREC_LENGTH` 는 `BTSORT_MAXREC_LENGTH` 와 같은 식으로 맞출 수 있다. 현재 도달할 수 없으므로 우선순위는 낮다. 정렬 레코드 길이 규칙이 바뀌는 변경이 있을 때 함께 보는 것이 적절하다.
 
@@ -200,3 +213,23 @@ heap 페이지의 anchor 종류는 항상 `ANCHORED_DONT_REUSE_SLOTS` 다 ([heap
 [lf-aslot]: https://github.com/CUBRID/cubrid/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/list_file.c#L268-L270
 [qt-align]: https://github.com/CUBRID/cubrid/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/qfile_tuple_layout.h#L617
 [bs-max]: https://github.com/CUBRID/cubrid/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/storage/btree_sort.c#L104-L109
+[es-buf]: https://github.com/CUBRID/cubrid/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/storage/external_sort.c#L1921
+[es-advance]: https://github.com/CUBRID/cubrid/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/storage/external_sort.c#L2177
+[em-dump]: https://github.com/CUBRID/cubrid/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/base/error_manager.c#L1549
+[em-stop]: https://github.com/CUBRID/cubrid/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/base/error_manager.c#L1579-L1582
+[sp-verify]: https://github.com/CUBRID/cubrid/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/storage/slotted_page.c#L77
+[hf-check]: https://github.com/CUBRID/cubrid/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/storage/heap_file.c#L15542
+[bt-check]: https://github.com/CUBRID/cubrid/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/storage/btree.c#L8824
+[sph-anchored]: https://github.com/CUBRID/cubrid/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/storage/slotted_page.h#L38
+[sp-anchored-name]: https://github.com/CUBRID/cubrid/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/storage/slotted_page.c#L4114
+[oos-align]: https://github.com/CUBRID/cubrid/blob/d52b1889e907abcf84190ec504dde3bc93de260d/src/storage/oos_file.cpp#L128
+[oos-init]: https://github.com/CUBRID/cubrid/blob/d52b1889e907abcf84190ec504dde3bc93de260d/src/storage/oos_file.cpp#L3152
+[oos-pick]: https://github.com/CUBRID/cubrid/blob/d52b1889e907abcf84190ec504dde3bc93de260d/src/storage/oos_file.cpp#L725
+[oos-cap]: https://github.com/CUBRID/cubrid/blob/d52b1889e907abcf84190ec504dde3bc93de260d/src/storage/oos_file.cpp#L2226
+[oos-fail]: https://github.com/CUBRID/cubrid/blob/d52b1889e907abcf84190ec504dde3bc93de260d/src/storage/oos_file.cpp#L2479-L2484
+[oos-assert]: https://github.com/CUBRID/cubrid/blob/d52b1889e907abcf84190ec504dde3bc93de260d/src/storage/oos_file.cpp#L2511
+[oos-limit]: https://github.com/CUBRID/cubrid/blob/d52b1889e907abcf84190ec504dde3bc93de260d/src/storage/oos_file.cpp#L3626
+[oos-del]: https://github.com/CUBRID/cubrid/blob/d52b1889e907abcf84190ec504dde3bc93de260d/src/storage/oos_file.cpp#L3359
+[oos-rv-del]: https://github.com/CUBRID/cubrid/blob/d52b1889e907abcf84190ec504dde3bc93de260d/src/storage/oos_file.cpp#L3655
+[oos-sp-maxnew]: https://github.com/CUBRID/cubrid/blob/d52b1889e907abcf84190ec504dde3bc93de260d/src/storage/slotted_page.c#L960-L967
+[oos-sp-delete]: https://github.com/CUBRID/cubrid/blob/d52b1889e907abcf84190ec504dde3bc93de260d/src/storage/slotted_page.c#L2093-L2095
