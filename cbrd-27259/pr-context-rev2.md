@@ -36,8 +36,15 @@ After the source push, one `/run all` runs CI on the new head, as the user chose
 ## Conversation record
 
 - 2026-11-05: the user asked for a warning on non-OOS `REC_BIGONE` for every user-table row ("사용자 테이블 행 전부", "경고만 남기고 저장") and for CI on the new head after the current run ("현재 run 완료 후 실행").
-- 2026-11-05: the user approved the first version of this revision ("1. 승인"), then asked for the report to reach the log with default parameters ("평상시에도 문제가 생기면 로그에 남게 하고 싶은데"). The body changed to notification wording, so it returns to review; the approved version is commit `defe2ce`.
+- 2026-11-05: the user approved the first version of this revision ("1. 승인"), then asked for the report to reach the log with default parameters ("평상시에도 문제가 생기면 로그에 남게 하고 싶은데"). The body changed to notification wording, so it returned to review; the earlier approved version is commit `defe2ce`.
+- 2026-11-05: the user approved this version ("이대로 진행해줘").
 
 ## Publication record
 
-Not started.
+| Step | Result (2026-11-05) |
+| --- | --- |
+| Prior CI | https://github.com/CUBRID/cubrid/actions/runs/42015351873 completed with success on `e19d8c613` |
+| Body fingerprint (SHA-256) | `2ac1b9ffb6e4521cf466ef11b4c204293a08788d9f768891ba6a9d3c00415a23` |
+| Source push | `vk/CBRD-27259-storage-force-inline` = `9ae07b9491b1393841ecb0f3579752a598bf68ec`; PR head matches |
+| Body update | Live body matched `8894bd68…` before the edit; published body is byte-identical to `cbrd-27259/pr-body-rev2.md`; title and draft status unchanged |
+| Docs integration | This commit, merged into `main` and pushed |
