@@ -208,10 +208,16 @@ sleep 중에 kill -9했다. commit 경로에 들어가지 않았으므로 직접
 
 ## 6. 남은 질문
 
-- E1' 재시작 직후 lob 루트의 `ces_*` 디렉터리(클라이언트 측 경로가 만든 파일, `ces_047`, `ces_169` 등)가 vacuum 처리 전에 이미 없었다. lob 루트 디렉터리 mtime은 재시작 시각 `21:15:54`였다. 무엇이 지웠는지 찾지 못했다 [실행, 원인 미확인]. 클래스 디렉터리(`70517040/`) 아래 파일은 남아 있었다. 결론 1과 2에는 영향이 없다.
+- E1' 재시작 직후 lob 루트의 `ces_*` 디렉터리(클라이언트 측 경로가 만든 파일, `ces_047`, `ces_169` 등)가 vacuum 처리 전에 이미 없었다. lob 루트 디렉터리 mtime은 재시작 시각 `21:15:54`였다. 보고서를 쓴 뒤 찾은 [CBRD-27892](http://jira.cubrid.org/browse/CBRD-27892)가 이를 설명한다. 서버는 부팅할 때 lob 루트 바로 아래 `ces_xxx`를 임시 파일 자리로 보고 지운다(CBRD-23700). 트리거가 있는 테이블의 UPDATE는 새 LOB를 클래스 디렉터리로 옮기지 않아 그 자리에 남는다. E1'의 `t2`가 바로 이 경우다 [JIRA 기록과 일치, 부팅 정리 코드는 직접 읽지 않음]. 클래스 디렉터리(`70517040/`) 아래 파일은 남아 있었다. 결론 1과 2에는 영향이 없다.
 - 직접 삭제를 notify로 바꾸면 런타임 문제는 vacuum의 MVCC 보호로 풀린다 [추론]. crash 구간은 notify 경로가 그대로 이어받는다. 다만 이전 commit LOB에 대한 notify는 rollback 뒤 행이 다시 가리키는 파일이므로, 그때는 브리프가 걱정한 손상이 실제로 생긴다 [추론]. 고칠 때는 notify를 commit 레코드 뒤로 미루거나 loser notify를 vacuum이 건너뛰게 해야 한다. CBRD-27237의 OOS 알림 설계와 같은 문제다.
 - 서버 측 경로에서 목록 키가 temp 이름으로 남는 동작(3.3절)이 의도인지 확인하지 않았다.
 
-## 7. 재현 자료
+## 7. 관련 이슈
+
+- [CBRD-27964](http://jira.cubrid.org/browse/CBRD-27964). 이 보고서의 결론 2와 3을 등록한 결함.
+- [CBRD-20009](http://jira.cubrid.org/browse/CBRD-20009). 2016년 RQG(READ COMMITTED, DELETE와 LOB 조회 동시 실행)에서 같은 `External file ... was not found`가 났다. 원인 분석 없이 열려 있다. 결론 3과 같은 증상이다 [추론, 그 테스트는 실행하지 않음].
+- [CBRD-27892](http://jira.cubrid.org/browse/CBRD-27892). 트리거 테이블 LOB가 부팅 정리로 사라지는 다른 결함. 6절 첫 항목을 설명한다.
+
+## 8. 재현 자료
 
 gdb 드라이버와 원시 로그는 세션 scratchpad(`/mnt/nvme/data-5/tmp/claude-1000/-home-vimkim-gh-cb-CBRD-LOB-notify-crash-repro/21213b5e-31f7-4f39-b8ec-53e6acd6bc26/scratchpad/`)에 있다. 저장소에는 넣지 않았다. 필요한 발췌는 이 보고서에 옮겼다.
