@@ -19,3 +19,10 @@
 ## Decisions recorded
 
 - 2026-11-05: the user chose to open the draft PR after the fix round without waiting for the team lead, to keep the fixed 1 s re-run gate, and to keep the new error code -1393.
+
+## Publication record (2026-11-05)
+
+- Docs `main` fast-forwarded and pushed (`8c9540b..165f0c0`). The public `fix-decisions.md` matched the reviewed file (sha256 `fc30b962...`).
+- Source branch pushed to `vk` at `80d6e721edebf11331e97eed6eae58dbaa2e10d6`.
+- Draft PR created: https://github.com/CUBRID/cubrid/pull/8417 (base `feature/oos-merge`, assignee `vimkim`). Its body matches `pr-body.md` (sha256 `6975ac26...`) except the final newline that GitHub drops.
+- Both `tc/pr-8417` branches contained the latest `feature/oos-merge` testcases. CI was triggered with `/run all` (https://github.com/CUBRID/cubrid/pull/8417#issuecomment-6657425058), run https://github.com/CUBRID/cubrid/actions/runs/42023440775.

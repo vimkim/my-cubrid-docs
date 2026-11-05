@@ -1,6 +1,6 @@
 # CBRD-27933 vacuum OOS VFID lookup failure
 
-[CBRD-27933](https://jira.cubrid.org/browse/CBRD-27933) tracks the defect raised in the [PR #8350 review comment](https://github.com/CUBRID/cubrid/pull/8350#discussion_r4452180248). The fix PR is drafted in [pr-body.md](pr-body.md) and not yet created. The source revision is `1ef6ed6125eb6028c06b0e05282dc0041bde3f48`, the PR #8350 head before its squash merge as `d52b1889e`. The reproduction tests are the local CUBRID commits `ec3edd1ab` and `a8065e5fe` on branch `CBRD-27933-vacuum-oos-vfid-lookup-error`, now rebased onto `d52b1889e` as `36a31b6d3` and `85fc8b67f`. The related latch-cycle fix is in [cbrd-27860](../cbrd-27860/README.md).
+[CBRD-27933](https://jira.cubrid.org/browse/CBRD-27933) tracks the defect raised in the [PR #8350 review comment](https://github.com/CUBRID/cubrid/pull/8350#discussion_r4452180248). The fix PR is [#8417](https://github.com/CUBRID/cubrid/pull/8417) (draft), with its body in [pr-body.md](pr-body.md). The source revision is `1ef6ed6125eb6028c06b0e05282dc0041bde3f48`, the PR #8350 head before its squash merge as `d52b1889e`. The reproduction tests are the local CUBRID commits `ec3edd1ab` and `a8065e5fe` on branch `CBRD-27933-vacuum-oos-vfid-lookup-error`, now rebased onto `d52b1889e` as `36a31b6d3` and `85fc8b67f`. The related latch-cycle fix is in [cbrd-27860](../cbrd-27860/README.md).
 
 Last modified: 2026-11-05, Asia/Seoul.
 
