@@ -1107,7 +1107,7 @@ The phases run in riskiest-first order. 774 (CBRD-27937), 775 (CBRD-27935) and 7
 
 - CDC and flashback support (no externalization while `supplemental_log > 0`).
 - The `STORAGE` DDL clause and its printing. Parameters stand in for it.
-- Partitioned tables (no externalization). Partition moves are still tested, because they leave a non-partitioned table.
+- Nothing here for partitioned tables any more. P1a externalizes them, one store per partition heap (P1a decision D10), and P1b2 makes partition moves carry values with `sidecar_inline_kept`.
 - `ALTER ... ENCRYPT` of an existing store. TDE is applied at creation only.
 - The reuse store and its early pin (section 13), and any address reclaim on a store.
 - `compactdb` SA tuning and spacedb labeling.
