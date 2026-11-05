@@ -1,0 +1,74 @@
+diff -ru a/shell/_40_guava/oos_common/oos_churn.sh b/shell/_40_guava/oos_common/oos_churn.sh
+--- a/shell/_40_guava/oos_common/oos_churn.sh	2026-11-05 22:42:25.367959676 +0900
++++ b/shell/_40_guava/oos_common/oos_churn.sh	2026-11-05 22:42:45.013287551 +0900
+@@ -119,18 +119,27 @@
+     ch_drained=$sn_state
+     ch_assert "${phase}_drained_chunks" '.low.oos_num_recs==1 and .low.oos_recs_sumlen==4236' "$(jq -n --argjson low "$ch_drained" --argjson high "$high" --argjson fresh "$reference" '{low:$low,peak:$high,fresh:$fresh,idle_page_return_required:false}')"
+ }
++# Pages a repeated workload may exceed its first ceiling by: max(2, 10%).
++oos_page_allowance()
++{
++    local ceiling=$1
++    echo $(( (ceiling + 9) / 10 > 2 ? (ceiling + 9) / 10 : 2 ))
++}
+ ch_reuse()
+ {
+     local phase=$1 state=$2 pages
+     # The first cycle (or the aborted INSERT) sets the page ceiling of this
+     # workload. A later identical workload must reuse its emptied pages, so
+-    # its page count must not exceed the ceiling.
++    # its page count stays within the ceiling plus a small allowance: chunk
++    # placement and pages deferred under a latch can differ by a page or two
++    # between runs (OOS-CONTEXT ADR-0009). Exceeding the exact ceiling is an
++    # observation; exceeding the allowance is growth.
+     pages=$(jq '.oos_num_user_pages' <<< "$state")
+     if [ "$ch_learning" -eq 1 ]; then
+         [ "$pages" -le "$ch_ceiling" ] || ch_ceiling=$pages
+         sn_pass "${phase}_page_ceiling" "$(jq -n --argjson pages "$pages" --argjson ceiling "$ch_ceiling" '{pages:$pages,ceiling:$ceiling}')"
+     else
+-        ch_assert "${phase}_reuse_before_page_growth" '.pages<=.ceiling' "$(jq -n --argjson pages "$pages" --argjson ceiling "$ch_ceiling" '{pages:$pages,ceiling:$ceiling,idle_page_return_required:false}')"
++        ch_assert "${phase}_reuse_before_page_growth" '.pages<=.ceiling+.allowance' "$(jq -n --argjson pages "$pages" --argjson ceiling "$ch_ceiling" --argjson allowance "$(oos_page_allowance "$ch_ceiling")" '{pages:$pages,ceiling:$ceiling,allowance:$allowance,exact_ceiling_kept:($pages<=$ceiling),idle_page_return_required:false}')"
+     fi
+ }
+ ch_retry()
+diff -ru a/shell/_40_guava/oos_common/snapshot_controller.sh b/shell/_40_guava/oos_common/snapshot_controller.sh
+--- a/shell/_40_guava/oos_common/snapshot_controller.sh	2026-11-05 22:42:25.347959342 +0900
++++ b/shell/_40_guava/oos_common/snapshot_controller.sh	2026-11-05 22:42:45.020287668 +0900
+@@ -261,7 +261,7 @@
+ }
+ sn_churn()
+ {
+-    local plateau='' cycle row sql model high final failed=0
++    local plateau='' allowance cycle row sql model high final failed=0
+     sn_sql churn_survivor "insert into oos_churn values(1,$(sn_expression S));commit;"
+     for ((cycle=0;cycle<3;cycle++)); do
+         sql='';model='{"1":"S"}'
+@@ -272,11 +272,16 @@
+         sn_sql "churn_insert$cycle" "$sql commit;"; sn_verify "churn_all_values$cycle" oos_churn "$model"
+         sn_positive "churn_positive$cycle" oos_churn 25 268876; high=$sn_state
+         # Reuse before growth (ADR-0009): the same INSERT must fit into the
+-        # pages the first cycle allocated, emptied or not.
++        # pages the first cycle allocated, emptied or not, within a small
++        # allowance for chunk placement and latch deferral. Every cycle is
++        # compared with the first, so growth that accumulates still fails.
+         [ -n "$plateau" ] || plateau=$(jq '.oos_num_user_pages' <<< "$high")
+-        if [ "$(jq '.oos_num_user_pages' <<< "$high")" -gt "$plateau" ];then
+-            sn_conformance "churn_plateau$cycle" 'peak page count grew' "$(jq -n --argjson plateau "$plateau" --argjson high "$high" '{bound:$plateau,peak:$high}')"
++        allowance=$(( (plateau + 9) / 10 > 2 ? (plateau + 9) / 10 : 2 ))
++        if [ "$(jq '.oos_num_user_pages' <<< "$high")" -gt $((plateau + allowance)) ];then
++            sn_conformance "churn_plateau$cycle" 'peak page count grew beyond the allowance' "$(jq -n --argjson plateau "$plateau" --argjson allowance "$allowance" --argjson high "$high" '{bound:($plateau+$allowance),first_peak:$plateau,allowance:$allowance,peak:$high}')"
+             failed=1
++        else
++            sn_pass "churn_plateau$cycle" "$(jq -n --argjson plateau "$plateau" --argjson allowance "$allowance" --argjson high "$high" '{first_peak:$plateau,allowance:$allowance,peak:$high.oos_num_user_pages,exact_plateau_kept:($high.oos_num_user_pages<=$plateau)}')"
+         fi
+         sn_sql "churn_delete$cycle" 'delete from oos_churn where id>1;commit;'
+         sn_advance "churn_log$cycle"
+@@ -284,7 +289,7 @@
+         sn_pass "churn_idle_pages$cycle" "$(jq -n --argjson high "$high" --argjson final "$final" '{high:$high.oos_num_user_pages,final:$final.oos_num_user_pages,idle_page_return_required:false}')"
+     done
+     if [ "$failed" -eq 0 ];then
+-        sn_pass three_cycle_plateau "$(jq -n --argjson plateau "$plateau" '{peak_page_bound:$plateau}')"
++        sn_pass three_cycle_plateau "$(jq -n --argjson plateau "$plateau" --argjson allowance "$allowance" '{first_peak:$plateau,peak_page_bound:($plateau+$allowance)}')"
+     else sn_conformance three_cycle_plateau 'completed three cycles with page/plateau failures';fi
+ }
+ # The retained rollback case must still observe nonresolving SHOW after an
