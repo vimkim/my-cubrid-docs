@@ -1,0 +1,5 @@
+Systems + Storage/Performance reviewer (opus). The agent could not write this file, so the coordinator saved its returned text in summary form.
+Result: no defects. Compile-only probe (systems/probes/syntax_check.py, .out): 14 -fsyntax-only compiles of fault_injection.c, vacuum.c and vacuum_oos.cpp across cs/sa/server in debug and release gcc, all exit 0. nm on release vacuum_oos.cpp.o: no fi_* symbol and no heap_oos_find_vfid_nowait.
+Cleared: error code -1393 and catalogs (6 args match er_set at vacuum.c:2380); dbi_compat.h unaffected; FI debug-only; helper error propagation; page cleanup on deferral; er_stack balance on every exit; VFID-sorted skip; asserts; gate master-only; tests assert observable state.
+SYS-1 (P3, unproven): persistent failure on one heap makes K interrupted blocks re-run each gate period (work about K^2), with latch-timeout worker occupancy and vacuum data growth. Fix direction: backoff or per-heap memo.
+INFO-1 SA xvacuum stops at first -1393 block (conservative). INFO-2 shutdown ER_INTERRUPTED becomes -1393 (bounded extra work).

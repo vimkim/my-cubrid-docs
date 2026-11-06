@@ -1,8 +1,8 @@
 # CBRD-27933 vacuum OOS VFID lookup failure
 
-[CBRD-27933](https://jira.cubrid.org/browse/CBRD-27933) tracks the defect raised in the [PR #8350 review comment](https://github.com/CUBRID/cubrid/pull/8350#discussion_r4452180248). The fix PR is [#8417](https://github.com/CUBRID/cubrid/pull/8417) (draft), with its body in [pr-body.md](pr-body.md). The source revision is `1ef6ed6125eb6028c06b0e05282dc0041bde3f48`, the PR #8350 head before its squash merge as `d52b1889e`. The reproduction tests are the local CUBRID commits `ec3edd1ab` and `a8065e5fe` on branch `CBRD-27933-vacuum-oos-vfid-lookup-error`, now rebased onto `d52b1889e` as `36a31b6d3` and `85fc8b67f`. The related latch-cycle fix is in [cbrd-27860](../cbrd-27860/README.md).
+[CBRD-27933](https://jira.cubrid.org/browse/CBRD-27933) tracks the defect raised in the [PR #8350 review comment](https://github.com/CUBRID/cubrid/pull/8350#discussion_r4452180248). The fix PR is [#8417](https://github.com/CUBRID/cubrid/pull/8417) (ready for review), with its body in [pr-body.md](pr-body.md). The source revision is `1ef6ed6125eb6028c06b0e05282dc0041bde3f48`, the PR #8350 head before its squash merge as `d52b1889e`. The reproduction tests are the local CUBRID commits `ec3edd1ab` and `a8065e5fe` on branch `CBRD-27933-vacuum-oos-vfid-lookup-error`, now rebased onto `d52b1889e` as `36a31b6d3` and `85fc8b67f`. The related latch-cycle fix is in [cbrd-27860](../cbrd-27860/README.md).
 
-Last modified: 2026-11-05, Asia/Seoul.
+Last modified: 2026-11-06, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
@@ -11,5 +11,6 @@ Last modified: 2026-11-05, Asia/Seoul.
 | [reviewer-reply-draft.md](reviewer-reply-draft.md) | PR #8350 스레드에 게시한 답글 세 개. 블록 단위 재시도를 고른 이유, 병합 뒤 기준의 재실행, POC 결과 공유 | 2026-11-05 | 2026-11-05 | 수리 전에 리뷰어에게 방향 변경과 실험 근거를 알리도록 작성 |
 | [pr-body.md](pr-body.md) | 수리 PR 본문 초안. 목적, 구현, 검증과 제한 | 2026-11-05 | 2026-11-05 | 수리 PR을 올리기 전에 본문을 검토받도록 작성 |
 | [pr-context.md](pr-context.md) | PR 본문의 소스 커밋, 대상 브랜치, 게시 작업 목록 | 2026-11-05 | 2026-11-05 | PR 게시를 이어서 하거나 다시 확인할 수 있도록 작성 |
+| [code-review-pr8417-1f9f09f/report.md](code-review-pr8417-1f9f09f/report.md) | PR #8417 head `1f9f09f36` 코드 리뷰 결과. 확인된 결함 없음, 남은 설계 위험, 기각과 기존 결함, 커버리지와 리뷰어 보고서 | 2026-11-06 | 2026-11-06 | PR을 ready로 바꾸기 전에 다중 리뷰어 검토 결과를 남기도록 작성 |
 
 Supporting files are linked from the analysis. [`run-repro.sh`](run-repro.sh) runs the reproduction cases and summarizes their evidence. [`gdb-debug-abort.sh`](gdb-debug-abort.sh) captures the debug abort stack. [`return-lookup-error-prototype.patch`](return-lookup-error-prototype.patch) and [`retry-block-later-prototype.patch`](retry-block-later-prototype.patch) are the throwaway engine changes for prototypes A and B.
