@@ -1,6 +1,8 @@
 # JIRA 보충 댓글 초안: 성장 상한 설계 (Work821)
 
-2026-11-05, Asia/Seoul. 게시 전 초안이다. 게시는 사용자 승인 뒤에 `cubrid-jira` 로 한다. 근거는 [growth-bound-design.md](growth-bound-design.md)다.
+2026-11-05, Asia/Seoul. 근거는 [growth-bound-design.md](growth-bound-design.md)다.
+
+**게시 기록 (2026-11-06):** 사용자 승인 뒤 `cubrid-jira comment` 로 게시했다. CBRD-27925 댓글 4778015, CBRD-26659 댓글 4778016. 게시본은 아래 초안에서 목록 줄바꿈을 고치고, 외부 독자가 열 수 없는 `my-cubrid-docs` 경로와 Work820 실행 ID를 뺐다. 내용과 판정 기준은 같다.
 
 이미 게시된 CBRD-27925 본문, 댓글 4777975, CBRD-26659 댓글 4777976의 핵심은 바꾸지 않는다. 핵심은 "새 sector를 예약하기 전에 회수하거나 재사용한다"이다. 두 댓글은 그 규칙을 지키는 방식과 TC 판정을 보충한다.
 
