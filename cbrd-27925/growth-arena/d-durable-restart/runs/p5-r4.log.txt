@@ -1,0 +1,7 @@
+spec sha256 f005a1f4c2b24984242928b834af99211962f4efd6ccc2484840802706baf043  Cap=2 L=2 Slack=1 MaxPages=[5]
+| design | crashes | writes in grow | K | MaxPages | safety | strict | strict outside window | set complete | max R | max cost/grow | no futile work | states | TLC s |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ckpt_redo | True | True | full | 5 | PASS | PASS | PASS | PASS | 4 | 5 | - | 33280 | 70.9 |
+| hdr_list | True | True | full | 5 | PASS | PASS | PASS | PASS | 4 | 3 | - | 12240 | 2.8 |
+all results match EXPECTED
+exit 0

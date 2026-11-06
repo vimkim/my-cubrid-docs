@@ -1,0 +1,529 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 15 and seed 6795854803449665748 with 1 worker on 80 cores with 7282MB heap and 64MB offheap memory (Linux 5.14.0-570.30.1.el9_6.x86_64 amd64, Temurin 1.8.0_462 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file /home/vimkim/gh/my-cubrid-docs-CBRD-27925-growth-arena/cbrd-27925/growth-arena/c-reuse-first/runs/v4/4-leaky/OosReuseFirst.tla
+Parsing file /home/vimkim/gh/my-cubrid-docs-CBRD-27925-growth-arena/cbrd-27925/growth-arena/c-reuse-first/runs/v4/4-leaky/tmp-hybrid_leaky-crash-quiet-P4-ce-NoOverflow/Integers.tla
+Parsing file /home/vimkim/gh/my-cubrid-docs-CBRD-27925-growth-arena/cbrd-27925/growth-arena/c-reuse-first/runs/v4/4-leaky/tmp-hybrid_leaky-crash-quiet-P4-ce-NoOverflow/FiniteSets.tla
+Parsing file /home/vimkim/gh/my-cubrid-docs-CBRD-27925-growth-arena/cbrd-27925/growth-arena/c-reuse-first/runs/v4/4-leaky/tmp-hybrid_leaky-crash-quiet-P4-ce-NoOverflow/TLC.tla
+Parsing file /home/vimkim/gh/my-cubrid-docs-CBRD-27925-growth-arena/cbrd-27925/growth-arena/c-reuse-first/runs/v4/4-leaky/tmp-hybrid_leaky-crash-quiet-P4-ce-NoOverflow/Naturals.tla
+Parsing file /home/vimkim/gh/my-cubrid-docs-CBRD-27925-growth-arena/cbrd-27925/growth-arena/c-reuse-first/runs/v4/4-leaky/tmp-hybrid_leaky-crash-quiet-P4-ce-NoOverflow/Sequences.tla
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module OosReuseFirst
+Starting... (2026-11-06 16:32:35)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-06 16:32:36.
+Error: Invariant NoOverflow is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ unknown = FALSE
+/\ strongBroken = FALSE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {}
+/\ R = 0
+/\ rechecks = 0
+/\ pg = <<-1, -1, -1, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ sysops = 0
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ live = 0
+/\ busy = 0
+
+State 2: <StartGrow line 200, col 3 to line 206, col 37 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = FALSE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {}
+/\ R = 0
+/\ rechecks = 0
+/\ pg = <<-1, -1, -1, -1>>
+/\ startClean = TRUE
+/\ checked = {}
+/\ sysops = 0
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "pick"
+/\ live = 0
+/\ busy = 0
+
+State 3: <PickStep line 256, col 3 to line 286, col 92 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = FALSE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {}
+/\ R = 0
+/\ rechecks = 0
+/\ pg = <<-1, -1, -1, -1>>
+/\ startClean = TRUE
+/\ checked = {}
+/\ sysops = 0
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "alloc"
+/\ live = 0
+/\ busy = 0
+
+State 4: <Alloc line 309, col 3 to line 326, col 55 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = FALSE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {}
+/\ R = 1
+/\ rechecks = 0
+/\ pg = <<1, -1, -1, -1>>
+/\ startClean = TRUE
+/\ checked = {}
+/\ sysops = 1
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ live = 1
+/\ busy = 0
+
+State 5: <VacuumDelete line 131, col 3 to line 140, col 68 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = FALSE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {1}
+/\ R = 1
+/\ rechecks = 0
+/\ pg = <<0, -1, -1, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ sysops = 1
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ live = 0
+/\ busy = 0
+
+State 6: <HintEvict line 181, col 3 to line 186, col 97 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = FALSE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {}
+/\ R = 1
+/\ rechecks = 0
+/\ pg = <<0, -1, -1, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ sysops = 1
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ live = 0
+/\ busy = 0
+
+State 7: <StartGrow line 200, col 3 to line 206, col 37 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = FALSE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {}
+/\ R = 1
+/\ rechecks = 0
+/\ pg = <<0, -1, -1, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ sysops = 0
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {1}
+/\ examined = 0
+/\ gpc = "pick"
+/\ live = 0
+/\ busy = 0
+
+State 8: <PickStep line 256, col 3 to line 286, col 92 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = FALSE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {}
+/\ R = 1
+/\ rechecks = 0
+/\ pg = <<0, -1, -1, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ sysops = 0
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {1}
+/\ examined = 0
+/\ gpc = "alloc"
+/\ live = 0
+/\ busy = 0
+
+State 9: <Alloc line 309, col 3 to line 326, col 55 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = TRUE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {}
+/\ R = 2
+/\ rechecks = 0
+/\ pg = <<0, 1, -1, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ sysops = 1
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {1}
+/\ examined = 0
+/\ gpc = "idle"
+/\ live = 1
+/\ busy = 0
+
+State 10: <VacuumDelete line 131, col 3 to line 140, col 68 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = TRUE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {2}
+/\ R = 2
+/\ rechecks = 0
+/\ pg = <<0, 0, -1, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ sysops = 1
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {1}
+/\ examined = 0
+/\ gpc = "idle"
+/\ live = 0
+/\ busy = 0
+
+State 11: <HintEvict line 181, col 3 to line 186, col 97 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = TRUE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {}
+/\ R = 2
+/\ rechecks = 0
+/\ pg = <<0, 0, -1, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ sysops = 1
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {1}
+/\ examined = 0
+/\ gpc = "idle"
+/\ live = 0
+/\ busy = 0
+
+State 12: <StartGrow line 200, col 3 to line 206, col 37 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = TRUE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {}
+/\ R = 2
+/\ rechecks = 0
+/\ pg = <<0, 0, -1, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ sysops = 0
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {1, 2}
+/\ examined = 0
+/\ gpc = "pick"
+/\ live = 0
+/\ busy = 0
+
+State 13: <PickStep line 256, col 3 to line 286, col 92 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = TRUE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {}
+/\ R = 2
+/\ rechecks = 0
+/\ pg = <<0, 0, -1, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ sysops = 0
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {1, 2}
+/\ examined = 0
+/\ gpc = "alloc"
+/\ live = 0
+/\ busy = 0
+
+State 14: <Alloc line 309, col 3 to line 326, col 55 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = TRUE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {}
+/\ R = 3
+/\ rechecks = 0
+/\ pg = <<0, 0, 1, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ sysops = 1
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {1, 2}
+/\ examined = 0
+/\ gpc = "idle"
+/\ live = 1
+/\ busy = 0
+
+State 15: <VacuumDelete line 131, col 3 to line 140, col 68 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = TRUE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {3}
+/\ R = 3
+/\ rechecks = 0
+/\ pg = <<0, 0, 0, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ sysops = 1
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {1, 2}
+/\ examined = 0
+/\ gpc = "idle"
+/\ live = 0
+/\ busy = 0
+
+State 16: <HintEvict line 181, col 3 to line 186, col 97 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = TRUE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {}
+/\ R = 3
+/\ rechecks = 0
+/\ pg = <<0, 0, 0, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ sysops = 1
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {1, 2}
+/\ examined = 0
+/\ gpc = "idle"
+/\ live = 0
+/\ busy = 0
+
+State 17: <StartGrow line 200, col 3 to line 206, col 37 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = TRUE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {}
+/\ R = 3
+/\ rechecks = 0
+/\ pg = <<0, 0, 0, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ sysops = 0
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {1, 2, 3}
+/\ examined = 0
+/\ gpc = "pick"
+/\ live = 0
+/\ busy = 0
+
+State 18: <PickStep line 256, col 3 to line 286, col 92 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = TRUE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {}
+/\ R = 3
+/\ rechecks = 0
+/\ pg = <<0, 0, 0, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ sysops = 0
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {1, 2, 3}
+/\ examined = 0
+/\ gpc = "alloc"
+/\ live = 0
+/\ busy = 0
+
+State 19: <Alloc line 309, col 3 to line 326, col 55 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = TRUE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {}
+/\ R = 4
+/\ rechecks = 0
+/\ pg = <<0, 0, 0, 1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ sysops = 1
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {1, 2, 3}
+/\ examined = 0
+/\ gpc = "idle"
+/\ live = 1
+/\ busy = 0
+
+State 20: <StartGrow line 200, col 3 to line 206, col 37 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = TRUE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {}
+/\ R = 4
+/\ rechecks = 0
+/\ pg = <<0, 0, 0, 1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ sysops = 0
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {1, 2, 3}
+/\ examined = 0
+/\ gpc = "pick"
+/\ live = 1
+/\ busy = 0
+
+State 21: <PickStep line 256, col 3 to line 286, col 92 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = TRUE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {}
+/\ R = 4
+/\ rechecks = 0
+/\ pg = <<0, 0, 0, 1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ sysops = 0
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {1, 2, 3}
+/\ examined = 0
+/\ gpc = "alloc"
+/\ live = 1
+/\ busy = 0
+
+State 22: <Alloc line 309, col 3 to line 326, col 55 of module OosReuseFirst>
+/\ unknown = FALSE
+/\ strongBroken = TRUE
+/\ lapOn = FALSE
+/\ E = {}
+/\ H = {}
+/\ R = 4
+/\ rechecks = 0
+/\ pg = <<0, 0, 0, 1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ sysops = 1
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ badClaim = FALSE
+/\ overflow = TRUE
+/\ cursor = 0
+/\ stale = {1, 2, 3}
+/\ examined = 0
+/\ gpc = "idle"
+/\ live = 1
+/\ busy = 0
+
+84902 states generated, 22609 distinct states found, 6484 states left on queue.
+The depth of the complete state graph search is 22.
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 7 and the 95th percentile is 4).
+Finished in 02s at (2026-11-06 16:32:36)

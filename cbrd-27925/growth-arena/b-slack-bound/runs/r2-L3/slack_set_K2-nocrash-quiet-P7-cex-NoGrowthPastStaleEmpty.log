@@ -1,0 +1,159 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 65 and seed -112617937339774884 with 3 workers on 80 cores with 27305MB heap and 64MB offheap memory (Linux 5.14.0-570.30.1.el9_6.x86_64 amd64, Temurin 1.8.0_462 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file /home/vimkim/gh/my-cubrid-docs-CBRD-27925-growth-arena/cbrd-27925/growth-arena/b-slack-bound/runs/r2-L3/OosSlackBound.tla
+Parsing file /home/vimkim/gh/my-cubrid-docs-CBRD-27925-growth-arena/cbrd-27925/growth-arena/b-slack-bound/runs/r2-L3/tmp-slack_set_K2-nocrash-quiet-P7-cex-NoGrowthPastStaleEmpty/Integers.tla
+Parsing file /home/vimkim/gh/my-cubrid-docs-CBRD-27925-growth-arena/cbrd-27925/growth-arena/b-slack-bound/runs/r2-L3/tmp-slack_set_K2-nocrash-quiet-P7-cex-NoGrowthPastStaleEmpty/FiniteSets.tla
+Parsing file /home/vimkim/gh/my-cubrid-docs-CBRD-27925-growth-arena/cbrd-27925/growth-arena/b-slack-bound/runs/r2-L3/tmp-slack_set_K2-nocrash-quiet-P7-cex-NoGrowthPastStaleEmpty/Naturals.tla
+Parsing file /home/vimkim/gh/my-cubrid-docs-CBRD-27925-growth-arena/cbrd-27925/growth-arena/b-slack-bound/runs/r2-L3/tmp-slack_set_K2-nocrash-quiet-P7-cex-NoGrowthPastStaleEmpty/Sequences.tla
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module OosSlackBound
+Starting... (2026-11-06 16:39:17)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-06 16:39:17.
+Error: Invariant NoGrowthPastStaleEmpty is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ unknown = FALSE
+/\ futile = FALSE
+/\ cand = {}
+/\ strongBroken = FALSE
+/\ lapOn = FALSE
+/\ R = 0
+/\ n = 0
+/\ pg = <<-1, -1, -1, -1, -1, -1, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ weakBroken = FALSE
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ live = 0
+/\ busy = 0
+/\ maxDrift = 0
+
+State 2: <StartGrow line 169, col 3 to line 180, col 61 of module OosSlackBound>
+/\ unknown = FALSE
+/\ futile = FALSE
+/\ cand = {}
+/\ strongBroken = FALSE
+/\ lapOn = FALSE
+/\ R = 0
+/\ n = 0
+/\ pg = <<-1, -1, -1, -1, -1, -1, -1>>
+/\ startClean = TRUE
+/\ checked = {}
+/\ weakBroken = FALSE
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "alloc"
+/\ live = 0
+/\ busy = 0
+/\ maxDrift = 0
+
+State 3: <Alloc line 241, col 3 to line 258, col 83 of module OosSlackBound>
+/\ unknown = FALSE
+/\ futile = FALSE
+/\ cand = {}
+/\ strongBroken = FALSE
+/\ lapOn = FALSE
+/\ R = 1
+/\ n = 0
+/\ pg = <<1, -1, -1, -1, -1, -1, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ weakBroken = FALSE
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ live = 1
+/\ busy = 0
+/\ maxDrift = 0
+
+State 4: <VacuumDelete line 105, col 3 to line 114, col 21 of module OosSlackBound>
+/\ unknown = FALSE
+/\ futile = FALSE
+/\ cand = {1}
+/\ strongBroken = FALSE
+/\ lapOn = FALSE
+/\ R = 1
+/\ n = 0
+/\ pg = <<0, -1, -1, -1, -1, -1, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ weakBroken = FALSE
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ live = 0
+/\ busy = 0
+/\ maxDrift = 0
+
+State 5: <StartGrow line 169, col 3 to line 180, col 61 of module OosSlackBound>
+/\ unknown = FALSE
+/\ futile = FALSE
+/\ cand = {1}
+/\ strongBroken = FALSE
+/\ lapOn = FALSE
+/\ R = 1
+/\ n = 0
+/\ pg = <<0, -1, -1, -1, -1, -1, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ weakBroken = FALSE
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {1}
+/\ examined = 0
+/\ gpc = "alloc"
+/\ live = 0
+/\ busy = 0
+/\ maxDrift = 0
+
+State 6: <Alloc line 241, col 3 to line 258, col 83 of module OosSlackBound>
+/\ unknown = FALSE
+/\ futile = FALSE
+/\ cand = {1}
+/\ strongBroken = TRUE
+/\ lapOn = FALSE
+/\ R = 2
+/\ n = 0
+/\ pg = <<0, 1, -1, -1, -1, -1, -1>>
+/\ startClean = FALSE
+/\ checked = {}
+/\ weakBroken = FALSE
+/\ lapLeft = 0
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ cursor = 0
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ live = 1
+/\ busy = 0
+/\ maxDrift = 0
+
+137 states generated, 71 distinct states found, 29 states left on queue.
+The depth of the complete state graph search is 9.
+The average outdegree of the complete state graph is 2 (minimum is 0, the maximum 5 and the 95th percentile is 4).
+Finished in 00s at (2026-11-06 16:39:17)

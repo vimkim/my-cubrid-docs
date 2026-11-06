@@ -1,0 +1,155 @@
+spec sha256 239ab785a681c4765fcf2f0d38c5edfd8297b7d02be5d3c1c75bcbe0f85ec151  Cap=2 L=2 MaxPages=5 (bound runs up to 7), liveness MaxPages=4
+| design | crashes | writes in grow | safety | bound (max R) | max gap | max cost/grow | states (main) | secs |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| cand_base | False | False | PASS | 3 | 0 | 3 | 421 | 6.0 |
+| cand_base | False | True | PASS | 4 | 0 | 3 | 4417 | 7.0 |
+| cand_base | True | False | PASS | 3 | 0 | 6 | 1947 | 6.1 |
+| cand_base | True | True | PASS | 4 | 0 | 7 | 17499 | 7.5 |
+| off_S0 | False | False | PASS | 3 | 0 | 4 | 4460 | 6.699999999999999 |
+| off_S0 | False | True | PASS | 4 | 0 | 4 | 55232 | 14.8 |
+| off_S0 | True | False | PASS | 3 | 0 | 7 | 24384 | 11.5 |
+| off_S0 | True | True | PASS | 4 | 0 | 8 | 272233 | 36.0 |
+| off_S1 | False | False | PASS | 4 | 1 | 4 | 23234 | 10.6 |
+| off_S1 | False | True | PASS | 5 | 1 | 4 | 355123 | 55.0 |
+| off_S1 | True | False | PASS | 4 | 1 | 8 | 174904 | 25.2 |
+| off_S1 | True | True | PASS | 5 | 1 | 9 | 2175023 | 90.5 |
+| off_S2 | False | False | PASS | 5 | 2 | 4 | 94348 | 24.8 |
+| off_S2 | False | True | PASS | 6 | 2 | 4 | 633581 | 120.2 |
+| off_S2 | True | False | PASS | 5 | 2 | 9 | 894122 | 55.7 |
+| off_S2 | True | True | PASS | 6 | 2 | 9 | 3979715 | 270.4 |
+| pure_bg | False | False | PASS | cap | 4 | 0 | 47964 | 22.900000000000002 |
+| pure_bg | False | True | PASS | cap | 4 | 0 | 95352 | 26.0 |
+| pure_bg | True | False | PASS | cap | 4 | 0 | 742530 | 106.8 |
+| pure_bg | True | True | PASS | cap | 4 | 0 | 1318122 | 44.099999999999994 |
+| off_S1_bg | False | False | PASS | 4 | 1 | 4 | 23234 | 16.3 |
+| off_S1_bg | False | True | PASS | 5 | 1 | 4 | 355123 | 74.6 |
+| off_S1_bg | True | False | PASS | cap | 4 | 4 | 2628121 | 73.19999999999999 |
+| off_S1_bg | True | True | PASS | cap | 4 | 4 | 8641383 | 206.10000000000002 |
+| off_S1_bgslack | False | False | PASS | 4 | 1 | 4 | 23234 | 14.100000000000001 |
+| off_S1_bgslack | False | True | PASS | 5 | 1 | 4 | 355123 | 71.39999999999999 |
+| off_S1_bgslack | True | False | PASS | cap | 4 | 9 | 4085737 | 172.10000000000002 |
+| off_S1_bgslack | True | True | PASS | cap | 4 | 9 | 11656484 | 505.50000000000006 |
+
+| crash budget: design | max restarts | writes in grow | bound (max R) | secs |
+| --- | --- | --- | --- | --- |
+| off_S1 | 1 | False | 4 | 11.9 |
+| off_S1 | 1 | True | 5 | 38.8 |
+| off_S1 | 2 | False | 4 | 12.1 |
+| off_S1 | 2 | True | 5 | 48.4 |
+| off_S1_bgslack | 1 | False | 5 | 24.9 |
+| off_S1_bgslack | 1 | True | 6 | 135.0 |
+| off_S1_bgslack | 2 | False | 6 | 92.3 |
+| off_S1_bgslack | 2 | True | 7 | 787.5 |
+| off_S1_bg | 1 | False | cap | 35.5 |
+| off_S1_bg | 1 | True | cap | 60.2 |
+| off_S1_bg | 2 | False | cap | 54.599999999999994 |
+| off_S1_bg | 2 | True | cap | 89.4 |
+
+bug_norecheck: FAIL Safe states=27 secs=2.4
+    1:Initial unknown=FALSE chk={} Q=<<>> R=0 pg=<<-1, -1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    2:StartGrow unknown=FALSE chk={} Q=<<>> R=0 pg=<<-1, -1, -1, -1, -1>> stale={} gpc="sync" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    3:SyncStep unknown=FALSE chk={} Q=<<>> R=0 pg=<<-1, -1, -1, -1, -1>> stale={} gpc="alloc" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    4:Alloc unknown=FALSE chk={} Q=<<>> R=1 pg=<<1, -1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+    5:VacuumDelete unknown=FALSE chk={} Q=<<1>> R=1 pg=<<0, -1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    6:WorkerPickP unknown=FALSE chk={} Q=<<1>> R=1 pg=<<0, -1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=0 wpc="fixed" wp=1 busy=0
+    7:Insert unknown=FALSE chk={} Q=<<>> R=1 pg=<<1, -1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=1 wpc="fixed" wp=1 busy=0
+    8:WorkerFree unknown=FALSE chk={} Q=<<>> R=1 pg=<<-1, -1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+strict_off_S1: FAIL Strict states=31 secs=2.4
+    1:Initial unknown=FALSE chk={} Q=<<>> R=0 pg=<<-1, -1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    2:StartGrow unknown=FALSE chk={} Q=<<>> R=0 pg=<<-1, -1, -1, -1, -1>> stale={} gpc="sync" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    3:SyncStep unknown=FALSE chk={} Q=<<>> R=0 pg=<<-1, -1, -1, -1, -1>> stale={} gpc="alloc" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    4:Alloc unknown=FALSE chk={} Q=<<>> R=1 pg=<<1, -1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+    5:VacuumDelete unknown=FALSE chk={} Q=<<1>> R=1 pg=<<0, -1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    6:StartGrow unknown=FALSE chk={} Q=<<1>> R=1 pg=<<0, -1, -1, -1, -1>> stale={1} gpc="sync" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    7:SyncStep unknown=FALSE chk={} Q=<<1>> R=1 pg=<<0, -1, -1, -1, -1>> stale={1} gpc="alloc" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    8:Alloc unknown=FALSE chk={} Q=<<1>> R=2 pg=<<0, 1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+strict_off_S0_crash: PASS  states=272233 secs=18.7
+strict_cand_base_crash: PASS  states=17499 secs=3.8
+overflow_pure_bg: FAIL NoOverflow states=4679 secs=3.0
+    1:Initial unknown=FALSE chk={} Q=<<>> R=0 pg=<<-1, -1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    2:StartGrow unknown=FALSE chk={} Q=<<>> R=0 pg=<<-1, -1, -1, -1, -1>> stale={} gpc="sync" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    3:SyncStep unknown=FALSE chk={} Q=<<>> R=0 pg=<<-1, -1, -1, -1, -1>> stale={} gpc="alloc" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    4:Alloc unknown=FALSE chk={} Q=<<>> R=1 pg=<<1, -1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+    5:VacuumDelete unknown=FALSE chk={} Q=<<1>> R=1 pg=<<0, -1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    6:StartGrow unknown=FALSE chk={} Q=<<1>> R=1 pg=<<0, -1, -1, -1, -1>> stale={} gpc="sync" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    7:SyncStep unknown=FALSE chk={} Q=<<1>> R=1 pg=<<0, -1, -1, -1, -1>> stale={} gpc="alloc" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    8:Alloc unknown=FALSE chk={} Q=<<1>> R=2 pg=<<0, 1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+    9:VacuumDelete unknown=FALSE chk={} Q=<<1, 2>> R=2 pg=<<0, 0, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    10:StartGrow unknown=FALSE chk={} Q=<<1, 2>> R=2 pg=<<0, 0, -1, -1, -1>> stale={} gpc="sync" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    11:SyncStep unknown=FALSE chk={} Q=<<1, 2>> R=2 pg=<<0, 0, -1, -1, -1>> stale={} gpc="alloc" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    12:Alloc unknown=FALSE chk={} Q=<<1, 2>> R=3 pg=<<0, 0, 1, -1, -1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+    13:VacuumDelete unknown=FALSE chk={} Q=<<1, 2, 3>> R=3 pg=<<0, 0, 0, -1, -1>> stale={} gpc="idle" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    14:StartGrow unknown=FALSE chk={} Q=<<1, 2, 3>> R=3 pg=<<0, 0, 0, -1, -1>> stale={} gpc="sync" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    15:SyncStep unknown=FALSE chk={} Q=<<1, 2, 3>> R=3 pg=<<0, 0, 0, -1, -1>> stale={} gpc="alloc" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    16:Alloc unknown=FALSE chk={} Q=<<1, 2, 3>> R=4 pg=<<0, 0, 0, 1, -1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+    17:VacuumDelete unknown=FALSE chk={} Q=<<1, 2, 3, 4>> R=4 pg=<<0, 0, 0, 0, -1>> stale={} gpc="idle" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    18:StartGrow unknown=FALSE chk={} Q=<<1, 2, 3, 4>> R=4 pg=<<0, 0, 0, 0, -1>> stale={} gpc="sync" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    19:SyncStep unknown=FALSE chk={} Q=<<1, 2, 3, 4>> R=4 pg=<<0, 0, 0, 0, -1>> stale={} gpc="alloc" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    20:Alloc unknown=FALSE chk={} Q=<<1, 2, 3, 4>> R=5 pg=<<0, 0, 0, 0, 1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+    21:StartGrow unknown=FALSE chk={} Q=<<1, 2, 3, 4>> R=5 pg=<<0, 0, 0, 0, 1>> stale={} gpc="sync" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+    22:SyncStep unknown=FALSE chk={} Q=<<1, 2, 3, 4>> R=5 pg=<<0, 0, 0, 0, 1>> stale={} gpc="alloc" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+    23:Alloc unknown=FALSE chk={} Q=<<1, 2, 3, 4>> R=5 pg=<<0, 0, 0, 0, 1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+overflow_off_S1_bgslack_crash: FAIL NoOverflow states=85970 secs=8.6
+    1:Initial unknown=FALSE chk={} Q=<<>> R=0 pg=<<-1, -1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    2:StartGrow unknown=FALSE chk={} Q=<<>> R=0 pg=<<-1, -1, -1, -1, -1>> stale={} gpc="sync" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    3:SyncStep unknown=FALSE chk={} Q=<<>> R=0 pg=<<-1, -1, -1, -1, -1>> stale={} gpc="alloc" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    4:Alloc unknown=FALSE chk={} Q=<<>> R=1 pg=<<1, -1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+    5:VacuumDelete unknown=FALSE chk={} Q=<<1>> R=1 pg=<<0, -1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    6:StartGrow unknown=FALSE chk={} Q=<<1>> R=1 pg=<<0, -1, -1, -1, -1>> stale={} gpc="sync" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    7:SyncStep unknown=FALSE chk={} Q=<<1>> R=1 pg=<<0, -1, -1, -1, -1>> stale={} gpc="alloc" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    8:Alloc unknown=FALSE chk={} Q=<<1>> R=2 pg=<<0, 1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+    9:StartGrow unknown=FALSE chk={} Q=<<1>> R=2 pg=<<0, 1, -1, -1, -1>> stale={} gpc="sync" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+    10:SyncStep unknown=FALSE chk={} Q=<<1>> R=2 pg=<<0, 1, -1, -1, -1>> stale={} gpc="alloc" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+    11:UndoLatch unknown=FALSE chk={} Q=<<1, 2>> R=2 pg=<<0, 0, -1, -1, -1>> stale={} gpc="alloc" ncrash=0 live=0 wpc="idle" wp=0 busy=2
+    12:Alloc unknown=FALSE chk={} Q=<<1, 2>> R=3 pg=<<0, 0, 1, -1, -1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=2
+    13:VacuumDelete unknown=FALSE chk={} Q=<<1, 2, 3>> R=3 pg=<<0, 0, 0, -1, -1>> stale={} gpc="idle" ncrash=0 live=0 wpc="idle" wp=0 busy=2
+    14:Crash unknown=TRUE chk={} Q=<<>> R=3 pg=<<0, 0, 0, -1, -1>> stale={} gpc="idle" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    15:StartGrow unknown=TRUE chk={} Q=<<>> R=3 pg=<<0, 0, 0, -1, -1>> stale={} gpc="sync" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    16:SyncStep unknown=TRUE chk={} Q=<<>> R=3 pg=<<0, 0, 0, -1, -1>> stale={} gpc="alloc" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    17:Alloc unknown=TRUE chk={} Q=<<>> R=4 pg=<<0, 0, 0, 1, -1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+    18:VacuumDelete unknown=TRUE chk={} Q=<<4>> R=4 pg=<<0, 0, 0, 0, -1>> stale={} gpc="idle" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    19:Crash unknown=TRUE chk={} Q=<<>> R=4 pg=<<0, 0, 0, 0, -1>> stale={} gpc="idle" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    20:StartGrow unknown=TRUE chk={} Q=<<>> R=4 pg=<<0, 0, 0, 0, -1>> stale={} gpc="sync" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    21:SyncStep unknown=TRUE chk={} Q=<<>> R=4 pg=<<0, 0, 0, 0, -1>> stale={} gpc="alloc" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    22:Alloc unknown=TRUE chk={} Q=<<>> R=5 pg=<<0, 0, 0, 0, 1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+    23:Crash unknown=TRUE chk={} Q=<<>> R=5 pg=<<0, 0, 0, 0, 1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+    24:StartGrow unknown=TRUE chk={} Q=<<>> R=5 pg=<<0, 0, 0, 0, 1>> stale={} gpc="sync" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+    25:SyncStep unknown=TRUE chk={} Q=<<>> R=5 pg=<<0, 0, 0, 0, 1>> stale={} gpc="alloc" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+    26:Alloc unknown=TRUE chk={} Q=<<>> R=5 pg=<<0, 0, 0, 0, 1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+fair_overflow_pure_bg: FAIL NoOverflow states=2189 secs=3.7
+    1:Initial unknown=FALSE chk={} Q=<<>> R=0 pg=<<-1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    2:StartGrow unknown=FALSE chk={} Q=<<>> R=0 pg=<<-1, -1, -1, -1>> stale={} gpc="sync" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    3:SyncStep unknown=FALSE chk={} Q=<<>> R=0 pg=<<-1, -1, -1, -1>> stale={} gpc="alloc" ncrash=0 live=0 wpc="idle" wp=0 busy=0
+    4:Alloc unknown=FALSE chk={} Q=<<>> R=1 pg=<<1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=0
+    5:Insert unknown=FALSE chk={} Q=<<>> R=1 pg=<<2, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=2 wpc="idle" wp=0 busy=0
+    6:UndoLatch unknown=FALSE chk={} Q=<<>> R=1 pg=<<1, -1, -1, -1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=1
+    7:StartGrow unknown=FALSE chk={} Q=<<>> R=1 pg=<<1, -1, -1, -1>> stale={} gpc="sync" ncrash=0 live=1 wpc="idle" wp=0 busy=1
+    8:SyncStep unknown=FALSE chk={} Q=<<>> R=1 pg=<<1, -1, -1, -1>> stale={} gpc="alloc" ncrash=0 live=1 wpc="idle" wp=0 busy=1
+    9:Alloc unknown=FALSE chk={} Q=<<>> R=2 pg=<<1, 1, -1, -1>> stale={} gpc="idle" ncrash=0 live=2 wpc="idle" wp=0 busy=1
+    10:VacuumDelete unknown=FALSE chk={} Q=<<2>> R=2 pg=<<1, 0, -1, -1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=1
+    11:StartGrow unknown=FALSE chk={} Q=<<2>> R=2 pg=<<1, 0, -1, -1>> stale={} gpc="sync" ncrash=0 live=1 wpc="idle" wp=0 busy=1
+    12:SyncStep unknown=FALSE chk={} Q=<<2>> R=2 pg=<<1, 0, -1, -1>> stale={} gpc="alloc" ncrash=0 live=1 wpc="idle" wp=0 busy=1
+    13:Alloc unknown=FALSE chk={} Q=<<2>> R=3 pg=<<1, 0, 1, -1>> stale={} gpc="idle" ncrash=0 live=2 wpc="idle" wp=0 busy=1
+    14:VacuumDelete unknown=FALSE chk={} Q=<<2, 3>> R=3 pg=<<1, 0, 0, -1>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=1
+    15:StartGrow unknown=FALSE chk={} Q=<<2, 3>> R=3 pg=<<1, 0, 0, -1>> stale={} gpc="sync" ncrash=0 live=1 wpc="idle" wp=0 busy=1
+    16:SyncStep unknown=FALSE chk={} Q=<<2, 3>> R=3 pg=<<1, 0, 0, -1>> stale={} gpc="alloc" ncrash=0 live=1 wpc="idle" wp=0 busy=1
+    17:Alloc unknown=FALSE chk={} Q=<<2, 3>> R=4 pg=<<1, 0, 0, 1>> stale={} gpc="idle" ncrash=0 live=2 wpc="idle" wp=0 busy=1
+    18:VacuumDelete unknown=FALSE chk={} Q=<<2, 3, 4>> R=4 pg=<<1, 0, 0, 0>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=1
+    19:StartGrow unknown=FALSE chk={} Q=<<2, 3, 4>> R=4 pg=<<1, 0, 0, 0>> stale={} gpc="sync" ncrash=0 live=1 wpc="idle" wp=0 busy=1
+    20:SyncStep unknown=FALSE chk={} Q=<<2, 3, 4>> R=4 pg=<<1, 0, 0, 0>> stale={} gpc="alloc" ncrash=0 live=1 wpc="idle" wp=0 busy=1
+    21:Alloc unknown=FALSE chk={} Q=<<2, 3, 4>> R=4 pg=<<1, 0, 0, 0>> stale={} gpc="idle" ncrash=0 live=1 wpc="idle" wp=0 busy=1
+
+| liveness: design | spec | worker order | EmptyEventuallyGone | states | secs |
+| --- | --- | --- | --- | --- | --- |
+| pure_bg | Spec | fifo | FAIL | 16738 | 6.5 |
+| pure_bg | WeakSpec | any | FAIL | 3100 | 5.7 |
+| pure_bg | WeakSpec | fifo | PASS | 40672 | 37.7 |
+| off_S1 | Spec | fifo | FAIL | 16020 | 5.9 |
+| off_S1 | WeakSpec | any | FAIL | 3565 | 5.8 |
+| off_S1 | WeakSpec | fifo | PASS | 121205 | 107.7 |
+| cand_base | WeakSpec | fifo | FAIL | 3133 | 6.2 |
+all results match EXPECTED
+
+real	22m43.749s
+user	345m40.471s
+sys	15m47.122s

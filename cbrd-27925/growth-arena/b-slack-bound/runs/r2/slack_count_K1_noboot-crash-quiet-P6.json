@@ -1,0 +1,69 @@
+{
+ "design": "slack_count_K1_noboot",
+ "crashes": true,
+ "writes": false,
+ "max_pages": 6,
+ "states": 217361,
+ "secs": 37.0,
+ "R": 6,
+ "examined": 6,
+ "maxDrift": 6,
+ "traces": {
+  "NoGrowthPastStaleEmpty": [
+   "1 Initial predicate: pg=<<-1, -1, -1, -1, -1, -1>> R=0 busy=0 cand={} n=0 unknown=FALSE gpc=\"idle\" stale={}",
+   "2 StartGrow: pg=<<-1, -1, -1, -1, -1, -1>> R=0 busy=0 cand={} n=0 unknown=FALSE gpc=\"alloc\" stale={}",
+   "3 Alloc: pg=<<1, -1, -1, -1, -1, -1>> R=1 busy=0 cand={} n=0 unknown=FALSE gpc=\"idle\" stale={}",
+   "4 VacuumDelete: pg=<<0, -1, -1, -1, -1, -1>> R=1 busy=0 cand={} n=1 unknown=FALSE gpc=\"idle\" stale={}",
+   "5 StartGrow: pg=<<0, -1, -1, -1, -1, -1>> R=1 busy=0 cand={} n=1 unknown=FALSE gpc=\"alloc\" stale={1}",
+   "6 Alloc: pg=<<0, 1, -1, -1, -1, -1>> R=2 busy=0 cand={} n=1 unknown=FALSE gpc=\"idle\" stale={}"
+  ],
+  "NoGrowthPastSlack": [
+   "1 Initial predicate: pg=<<-1, -1, -1, -1, -1, -1>> R=0 busy=0 cand={} n=0 unknown=FALSE gpc=\"idle\" stale={}",
+   "2 StartGrow: pg=<<-1, -1, -1, -1, -1, -1>> R=0 busy=0 cand={} n=0 unknown=FALSE gpc=\"alloc\" stale={}",
+   "3 Alloc: pg=<<1, -1, -1, -1, -1, -1>> R=1 busy=0 cand={} n=0 unknown=FALSE gpc=\"idle\" stale={}",
+   "4 VacuumDelete: pg=<<0, -1, -1, -1, -1, -1>> R=1 busy=0 cand={} n=1 unknown=FALSE gpc=\"idle\" stale={}",
+   "5 StartGrow: pg=<<0, -1, -1, -1, -1, -1>> R=1 busy=0 cand={} n=1 unknown=FALSE gpc=\"alloc\" stale={1}",
+   "6 Alloc: pg=<<0, 1, -1, -1, -1, -1>> R=2 busy=0 cand={} n=1 unknown=FALSE gpc=\"idle\" stale={}",
+   "7 VacuumDelete: pg=<<0, 0, -1, -1, -1, -1>> R=2 busy=0 cand={} n=2 unknown=FALSE gpc=\"idle\" stale={}",
+   "8 Crash: pg=<<0, 0, -1, -1, -1, -1>> R=2 busy=0 cand={} n=0 unknown=FALSE gpc=\"idle\" stale={}",
+   "9 StartGrow: pg=<<0, 0, -1, -1, -1, -1>> R=2 busy=0 cand={} n=0 unknown=FALSE gpc=\"alloc\" stale={1, 2}",
+   "10 Alloc: pg=<<0, 0, 1, -1, -1, -1>> R=3 busy=0 cand={} n=0 unknown=FALSE gpc=\"idle\" stale={}"
+  ],
+  "NoOverflow": [
+   "1 Initial predicate: pg=<<-1, -1, -1, -1, -1, -1>> R=0 busy=0 cand={} n=0 unknown=FALSE gpc=\"idle\" stale={}",
+   "2 StartGrow: pg=<<-1, -1, -1, -1, -1, -1>> R=0 busy=0 cand={} n=0 unknown=FALSE gpc=\"alloc\" stale={}",
+   "3 Alloc: pg=<<1, -1, -1, -1, -1, -1>> R=1 busy=0 cand={} n=0 unknown=FALSE gpc=\"idle\" stale={}",
+   "4 UndoLatch: pg=<<0, -1, -1, -1, -1, -1>> R=1 busy=1 cand={} n=1 unknown=FALSE gpc=\"idle\" stale={}",
+   "5 StartGrow: pg=<<0, -1, -1, -1, -1, -1>> R=1 busy=1 cand={} n=1 unknown=FALSE gpc=\"alloc\" stale={}",
+   "6 Alloc: pg=<<0, 1, -1, -1, -1, -1>> R=2 busy=1 cand={} n=1 unknown=FALSE gpc=\"idle\" stale={}",
+   "7 VacuumDelete: pg=<<0, 0, -1, -1, -1, -1>> R=2 busy=1 cand={} n=2 unknown=FALSE gpc=\"idle\" stale={}",
+   "8 Crash: pg=<<0, 0, -1, -1, -1, -1>> R=2 busy=0 cand={} n=0 unknown=FALSE gpc=\"idle\" stale={}",
+   "9 StartGrow: pg=<<0, 0, -1, -1, -1, -1>> R=2 busy=0 cand={} n=0 unknown=FALSE gpc=\"alloc\" stale={1, 2}",
+   "10 Alloc: pg=<<0, 0, 1, -1, -1, -1>> R=3 busy=0 cand={} n=0 unknown=FALSE gpc=\"idle\" stale={}",
+   "11 UndoLatch: pg=<<0, 0, 0, -1, -1, -1>> R=3 busy=3 cand={} n=1 unknown=FALSE gpc=\"idle\" stale={}",
+   "12 StartGrow: pg=<<0, 0, 0, -1, -1, -1>> R=3 busy=3 cand={} n=1 unknown=FALSE gpc=\"alloc\" stale={1, 2}",
+   "13 Alloc: pg=<<0, 0, 0, 1, -1, -1>> R=4 busy=3 cand={} n=1 unknown=FALSE gpc=\"idle\" stale={}",
+   "14 VacuumDelete: pg=<<0, 0, 0, 0, -1, -1>> R=4 busy=3 cand={} n=2 unknown=FALSE gpc=\"idle\" stale={}",
+   "15 Crash: pg=<<0, 0, 0, 0, -1, -1>> R=4 busy=0 cand={} n=0 unknown=FALSE gpc=\"idle\" stale={}",
+   "16 StartGrow: pg=<<0, 0, 0, 0, -1, -1>> R=4 busy=0 cand={} n=0 unknown=FALSE gpc=\"alloc\" stale={1, 2, 3, 4}",
+   "17 Alloc: pg=<<0, 0, 0, 0, 1, -1>> R=5 busy=0 cand={} n=0 unknown=FALSE gpc=\"idle\" stale={}",
+   "18 VacuumDelete: pg=<<0, 0, 0, 0, 0, -1>> R=5 busy=0 cand={} n=1 unknown=FALSE gpc=\"idle\" stale={}",
+   "19 StartGrow: pg=<<0, 0, 0, 0, 0, -1>> R=5 busy=0 cand={} n=1 unknown=FALSE gpc=\"alloc\" stale={1, 2, 3, 4, 5}",
+   "20 Alloc: pg=<<0, 0, 0, 0, 0, 1>> R=6 busy=0 cand={} n=1 unknown=FALSE gpc=\"idle\" stale={}",
+   "21 StartGrow: pg=<<0, 0, 0, 0, 0, 1>> R=6 busy=0 cand={} n=1 unknown=FALSE gpc=\"alloc\" stale={1, 2, 3, 4, 5}",
+   "22 Alloc: pg=<<0, 0, 0, 0, 0, 1>> R=6 busy=0 cand={} n=1 unknown=FALSE gpc=\"idle\" stale={}"
+  ],
+  "NoDrift": [
+   "1 Initial predicate: pg=<<-1, -1, -1, -1, -1, -1>> R=0 busy=0 cand={} n=0 unknown=FALSE gpc=\"idle\" stale={}",
+   "2 StartGrow: pg=<<-1, -1, -1, -1, -1, -1>> R=0 busy=0 cand={} n=0 unknown=FALSE gpc=\"alloc\" stale={}",
+   "3 Alloc: pg=<<1, -1, -1, -1, -1, -1>> R=1 busy=0 cand={} n=0 unknown=FALSE gpc=\"idle\" stale={}",
+   "4 VacuumDelete: pg=<<0, -1, -1, -1, -1, -1>> R=1 busy=0 cand={} n=1 unknown=FALSE gpc=\"idle\" stale={}",
+   "5 Crash: pg=<<0, -1, -1, -1, -1, -1>> R=1 busy=0 cand={} n=0 unknown=FALSE gpc=\"idle\" stale={}",
+   "6 StartGrow: pg=<<0, -1, -1, -1, -1, -1>> R=1 busy=0 cand={} n=0 unknown=FALSE gpc=\"alloc\" stale={1}"
+  ]
+ },
+ "strongBroken": true,
+ "weakBroken": true,
+ "overflow": true,
+ "futile": false
+}

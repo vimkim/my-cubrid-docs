@@ -1,0 +1,36 @@
+done cand_fullboot-nocrash-quiet-P8: states=6204 secs=2.8 R=4 exam=3
+done slack_set_K1-nocrash-quiet-P8: states=9867 secs=3.6 R=4 exam=3
+done slack_set_K2-nocrash-quiet-P8: states=18470 secs=5.3 R=5 exam=3
+done cand_fullboot-nocrash-quiet-P7: states=6204 secs=3.0 R=4 exam=3
+done slack_count_K1-nocrash-quiet-P8: states=18407 secs=5.4 R=4 exam=4
+done slack_set_K1-nocrash-quiet-P7: states=9867 secs=3.9 R=4 exam=3
+done slack_set_K2-nocrash-quiet-P7: states=18470 secs=5.2 R=5 exam=3
+done slack_count_K1-nocrash-quiet-P7: states=18407 secs=4.7 R=4 exam=4
+OosSlackBound.tla sha256 2146e770314918e8b293b5af6e0e4722162c945d483aaeecd1219e25d2cca6de
+Cap=2 L=3
+| design | crashes | writes | MaxPages | current spec | slack spec | max R | max exam/grow | futile work | max drift | states | secs |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| cand_fullboot | False | False | 7 | PASS | PASS | 4 | 3 | no | 0 | 6204 | 3.0 |
+| cand_fullboot | False | False | 8 | PASS | PASS | 4 | 3 | no | 0 | 6204 | 2.8 |
+| slack_set_K1 | False | False | 7 | FAIL | PASS | 4 | 3 | no | 0 | 9867 | 3.9 |
+| slack_set_K1 | False | False | 8 | FAIL | PASS | 4 | 3 | no | 0 | 9867 | 3.6 |
+| slack_set_K2 | False | False | 7 | FAIL | PASS | 5 | 3 | no | 0 | 18470 | 5.2 |
+| slack_set_K2 | False | False | 8 | FAIL | PASS | 5 | 3 | no | 0 | 18470 | 5.3 |
+| slack_count_K1 | False | False | 7 | FAIL | PASS | 4 | 4 | no | 0 | 18407 | 4.7 |
+| slack_count_K1 | False | False | 8 | FAIL | PASS | 4 | 4 | no | 0 | 18407 | 5.4 |
+done cand_fullboot-nocrash-writes-P8: states=146030 secs=25.7 R=5 exam=3
+done slack_set_K1-nocrash-writes-P8: states=297543 secs=46.6 R=5 exam=3
+done slack_set_K2-nocrash-writes-P8: states=305193 secs=47.7 R=5 exam=3
+done cand_fullboot-nocrash-writes-P7: states=146030 secs=23.0 R=5 exam=3
+done slack_set_K1-nocrash-writes-P7: states=297543 secs=52.4 R=5 exam=3
+done slack_set_K2-nocrash-writes-P7: states=305193 secs=54.1 R=5 exam=3
+OosSlackBound.tla sha256 2146e770314918e8b293b5af6e0e4722162c945d483aaeecd1219e25d2cca6de
+Cap=2 L=3
+| design | crashes | writes | MaxPages | current spec | slack spec | max R | max exam/grow | futile work | max drift | states | secs |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| cand_fullboot | False | True | 7 | PASS | PASS | 5 | 3 | no | 0 | 146030 | 23.0 |
+| cand_fullboot | False | True | 8 | PASS | PASS | 5 | 3 | no | 0 | 146030 | 25.7 |
+| slack_set_K1 | False | True | 7 | FAIL | PASS | 5 | 3 | no | 0 | 297543 | 52.4 |
+| slack_set_K1 | False | True | 8 | FAIL | PASS | 5 | 3 | no | 0 | 297543 | 46.6 |
+| slack_set_K2 | False | True | 7 | FAIL | PASS | 5 | 3 | no | 0 | 305193 | 54.1 |
+| slack_set_K2 | False | True | 8 | FAIL | PASS | 5 | 3 | no | 0 | 305193 | 47.7 |

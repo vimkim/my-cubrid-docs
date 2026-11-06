@@ -1,0 +1,570 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 110 and seed -8029076200678275431 with 1 worker on 80 cores with 27305MB heap and 64MB offheap memory (Linux 5.14.0-570.30.1.el9_6.x86_64 amd64, Temurin 1.8.0_462 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file /home/vimkim/gh/my-cubrid-docs-CBRD-27925-growth-arena/cbrd-27925/growth-arena/e-offpath-sweep/runs/run2/OffPathSweep.tla
+Parsing file /home/vimkim/gh/my-cubrid-docs-CBRD-27925-growth-arena/cbrd-27925/growth-arena/e-offpath-sweep/runs/run2/tmp-overflow-off_S1_bgslack-crash/Integers.tla
+Parsing file /home/vimkim/gh/my-cubrid-docs-CBRD-27925-growth-arena/cbrd-27925/growth-arena/e-offpath-sweep/runs/run2/tmp-overflow-off_S1_bgslack-crash/FiniteSets.tla
+Parsing file /home/vimkim/gh/my-cubrid-docs-CBRD-27925-growth-arena/cbrd-27925/growth-arena/e-offpath-sweep/runs/run2/tmp-overflow-off_S1_bgslack-crash/Sequences.tla
+Parsing file /home/vimkim/gh/my-cubrid-docs-CBRD-27925-growth-arena/cbrd-27925/growth-arena/e-offpath-sweep/runs/run2/tmp-overflow-off_S1_bgslack-crash/TLC.tla
+Parsing file /home/vimkim/gh/my-cubrid-docs-CBRD-27925-growth-arena/cbrd-27925/growth-arena/e-offpath-sweep/runs/run2/tmp-overflow-off_S1_bgslack-crash/Naturals.tla
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module OffPathSweep
+Starting... (2026-11-06 16:16:13)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-06 16:16:14.
+Progress(23) at 2026-11-06 16:16:17: 144,404 states generated (144,404 s/min), 37,645 distinct states found (37,645 ds/min), 9,522 states left on queue.
+Error: Invariant NoOverflow is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ grace = 0
+/\ unknown = FALSE
+/\ chk = {}
+/\ Q = <<>>
+/\ R = 0
+/\ pg = <<-1, -1, -1, -1, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 0
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 2: <StartGrow line 214, col 3 to line 222, col 23 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = FALSE
+/\ chk = {}
+/\ Q = <<>>
+/\ R = 0
+/\ pg = <<-1, -1, -1, -1, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "sync"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 0
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 3: <SyncStep line 240, col 3 to line 255, col 23 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = FALSE
+/\ chk = {}
+/\ Q = <<>>
+/\ R = 0
+/\ pg = <<-1, -1, -1, -1, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "alloc"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 0
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 4: <Alloc line 260, col 3 to line 276, col 23 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = FALSE
+/\ chk = {}
+/\ Q = <<>>
+/\ R = 1
+/\ pg = <<1, -1, -1, -1, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 1
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 5: <VacuumDelete line 115, col 3 to line 123, col 45 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = FALSE
+/\ chk = {}
+/\ Q = <<1>>
+/\ R = 1
+/\ pg = <<0, -1, -1, -1, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 0
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 6: <StartGrow line 214, col 3 to line 222, col 23 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = FALSE
+/\ chk = {}
+/\ Q = <<1>>
+/\ R = 1
+/\ pg = <<0, -1, -1, -1, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "sync"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 0
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 7: <SyncStep line 240, col 3 to line 255, col 23 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = FALSE
+/\ chk = {}
+/\ Q = <<1>>
+/\ R = 1
+/\ pg = <<0, -1, -1, -1, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "alloc"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 0
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 8: <Alloc line 260, col 3 to line 276, col 23 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = FALSE
+/\ chk = {}
+/\ Q = <<1>>
+/\ R = 2
+/\ pg = <<0, 1, -1, -1, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 1
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 9: <StartGrow line 214, col 3 to line 222, col 23 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = FALSE
+/\ chk = {}
+/\ Q = <<1>>
+/\ R = 2
+/\ pg = <<0, 1, -1, -1, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "sync"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 1
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 10: <SyncStep line 240, col 3 to line 255, col 23 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = FALSE
+/\ chk = {}
+/\ Q = <<1>>
+/\ R = 2
+/\ pg = <<0, 1, -1, -1, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "alloc"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 1
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 11: <UndoLatch line 127, col 3 to line 138, col 45 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = FALSE
+/\ chk = {}
+/\ Q = <<1, 2>>
+/\ R = 2
+/\ pg = <<0, 0, -1, -1, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = TRUE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "alloc"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 0
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 2
+
+State 12: <Alloc line 260, col 3 to line 276, col 23 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = FALSE
+/\ chk = {}
+/\ Q = <<1, 2>>
+/\ R = 3
+/\ pg = <<0, 0, 1, -1, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 1
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 2
+
+State 13: <VacuumDelete line 115, col 3 to line 123, col 45 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = FALSE
+/\ chk = {}
+/\ Q = <<1, 2, 3>>
+/\ R = 3
+/\ pg = <<0, 0, 0, -1, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 0
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 2
+
+State 14: <Crash line 148, col 3 to line 155, col 40 of module OffPathSweep>
+/\ grace = 1
+/\ unknown = TRUE
+/\ chk = {}
+/\ Q = <<>>
+/\ R = 3
+/\ pg = <<0, 0, 0, -1, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 0
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 15: <StartGrow line 214, col 3 to line 222, col 23 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = TRUE
+/\ chk = {}
+/\ Q = <<>>
+/\ R = 3
+/\ pg = <<0, 0, 0, -1, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "sync"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 0
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 16: <SyncStep line 240, col 3 to line 255, col 23 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = TRUE
+/\ chk = {}
+/\ Q = <<>>
+/\ R = 3
+/\ pg = <<0, 0, 0, -1, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "alloc"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 0
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 17: <Alloc line 260, col 3 to line 276, col 23 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = TRUE
+/\ chk = {}
+/\ Q = <<>>
+/\ R = 4
+/\ pg = <<0, 0, 0, 1, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 1
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 18: <VacuumDelete line 115, col 3 to line 123, col 45 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = TRUE
+/\ chk = {}
+/\ Q = <<4>>
+/\ R = 4
+/\ pg = <<0, 0, 0, 0, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 0
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 19: <Crash line 148, col 3 to line 155, col 40 of module OffPathSweep>
+/\ grace = 1
+/\ unknown = TRUE
+/\ chk = {}
+/\ Q = <<>>
+/\ R = 4
+/\ pg = <<0, 0, 0, 0, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 0
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 20: <StartGrow line 214, col 3 to line 222, col 23 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = TRUE
+/\ chk = {}
+/\ Q = <<>>
+/\ R = 4
+/\ pg = <<0, 0, 0, 0, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "sync"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 0
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 21: <SyncStep line 240, col 3 to line 255, col 23 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = TRUE
+/\ chk = {}
+/\ Q = <<>>
+/\ R = 4
+/\ pg = <<0, 0, 0, 0, -1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "alloc"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 0
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 22: <Alloc line 260, col 3 to line 276, col 23 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = TRUE
+/\ chk = {}
+/\ Q = <<>>
+/\ R = 5
+/\ pg = <<0, 0, 0, 0, 1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 1
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 23: <Crash line 148, col 3 to line 155, col 40 of module OffPathSweep>
+/\ grace = 1
+/\ unknown = TRUE
+/\ chk = {}
+/\ Q = <<>>
+/\ R = 5
+/\ pg = <<0, 0, 0, 0, 1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 1
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 24: <StartGrow line 214, col 3 to line 222, col 23 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = TRUE
+/\ chk = {}
+/\ Q = <<>>
+/\ R = 5
+/\ pg = <<0, 0, 0, 0, 1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "sync"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 1
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 25: <SyncStep line 240, col 3 to line 255, col 23 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = TRUE
+/\ chk = {}
+/\ Q = <<>>
+/\ R = 5
+/\ pg = <<0, 0, 0, 0, 1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = FALSE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "alloc"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 1
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+State 26: <Alloc line 260, col 3 to line 276, col 23 of module OffPathSweep>
+/\ grace = 0
+/\ unknown = TRUE
+/\ chk = {}
+/\ Q = <<>>
+/\ R = 5
+/\ pg = <<0, 0, 0, 0, 1>>
+/\ wlap = 0
+/\ wlapOn = FALSE
+/\ relatched = FALSE
+/\ overflow = TRUE
+/\ stale = {}
+/\ examined = 0
+/\ gpc = "idle"
+/\ glap = 0
+/\ ncrash = 0
+/\ live = 1
+/\ wpc = "idle"
+/\ wp = 0
+/\ busy = 0
+
+346712 states generated, 85970 distinct states found, 19556 states left on queue.
+The depth of the complete state graph search is 26.
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 9 and the 95th percentile is 3).
+Finished in 07s at (2026-11-06 16:16:20)

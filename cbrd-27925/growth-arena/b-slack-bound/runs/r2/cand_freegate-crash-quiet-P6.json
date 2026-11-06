@@ -1,0 +1,26 @@
+{
+ "design": "cand_freegate",
+ "crashes": true,
+ "writes": false,
+ "max_pages": 6,
+ "states": 9364,
+ "secs": 3.3,
+ "R": 3,
+ "examined": 4,
+ "maxDrift": 0,
+ "traces": {
+  "NoFutileWork": [
+   "1 Initial predicate: pg=<<-1, -1, -1, -1, -1, -1>> R=0 busy=0 cand={} n=0 unknown=FALSE gpc=\"idle\" stale={}",
+   "2 StartGrow: pg=<<-1, -1, -1, -1, -1, -1>> R=0 busy=0 cand={} n=0 unknown=FALSE gpc=\"alloc\" stale={}",
+   "3 Alloc: pg=<<1, -1, -1, -1, -1, -1>> R=1 busy=0 cand={} n=0 unknown=FALSE gpc=\"idle\" stale={}",
+   "4 Crash: pg=<<1, -1, -1, -1, -1, -1>> R=1 busy=0 cand={} n=0 unknown=TRUE gpc=\"idle\" stale={}",
+   "5 StartGrow: pg=<<1, -1, -1, -1, -1, -1>> R=1 busy=0 cand={} n=0 unknown=TRUE gpc=\"cand\" stale={}",
+   "6 CandStep: pg=<<1, -1, -1, -1, -1, -1>> R=1 busy=0 cand={} n=0 unknown=TRUE gpc=\"scan\" stale={}",
+   "7 ScanStep: pg=<<1, -1, -1, -1, -1, -1>> R=1 busy=0 cand={} n=0 unknown=TRUE gpc=\"scan\" stale={}"
+  ]
+ },
+ "strongBroken": false,
+ "weakBroken": false,
+ "overflow": false,
+ "futile": true
+}

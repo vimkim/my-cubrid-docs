@@ -1,0 +1,66 @@
+spec sha256 8fc8cee2d9d55980c1d6b317cdf20951a0e631e98aa2910519f6123067b5b401  Cap=2 L=2
+| design | setting | max_pages | misfit | relatch_any | Safe | SetComplete | StrictRule | NoOverflow | max_R | max_cost | max_sysops | NoFutileWork | states | secs | workers | shortest counterexample lengths |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| cand_recheck | nocrash-quiet | 4 | True | False | PASS | PASS | PASS | PASS | 3 | 3 | 2 | PASS | 4763 | 5 | 1 | - |
+| cand_recheck | nocrash-quiet | 5 | True | False | PASS | PASS | PASS | PASS | 3 | 3 | 2 | PASS | 4763 | 5 | 1 | - |
+| cand_recheck | nocrash-writes | 4 | True | False | PASS | PASS | PASS | PASS | 4 | 3 | 2 | PASS | 44235 | 14 | 1 | - |
+| cand_recheck | nocrash-writes | 5 | True | False | PASS | PASS | PASS | PASS | 4 | 3 | 2 | PASS | 44235 | 15 | 1 | - |
+| cand_recheck | crash-quiet | 4 | True | False | PASS | PASS | PASS | PASS | 3 | 5 | 2 | - | 54370 | 11 | 1 | - |
+| cand_recheck | crash-quiet | 5 | True | False | PASS | PASS | PASS | PASS | 3 | 5 | 2 | - | 54370 | 13 | 1 | - |
+| reuse | nocrash-quiet | 4 | True | False | PASS | PASS | PASS | PASS | 3 | 3 | 1 | PASS | 2540 | 3 | 1 | - |
+| reuse | nocrash-quiet | 5 | True | False | PASS | PASS | PASS | PASS | 3 | 3 | 1 | PASS | 2540 | 5 | 1 | - |
+| reuse | nocrash-writes | 4 | True | False | PASS | PASS | PASS | PASS | 4 | 3 | 1 | PASS | 14263 | 7 | 1 | - |
+| reuse | nocrash-writes | 5 | True | False | PASS | PASS | PASS | PASS | 4 | 3 | 1 | PASS | 14263 | 7 | 1 | - |
+| reuse | crash-quiet | 4 | True | False | PASS | PASS | PASS | PASS | 3 | 4 | 1 | - | 22998 | 7 | 1 | - |
+| reuse | crash-quiet | 5 | True | False | PASS | PASS | PASS | PASS | 3 | 4 | 1 | - | 22998 | 7 | 1 | - |
+| reuse_noreinit | nocrash-quiet | 4 | True | False | PASS | PASS | FAIL | FAIL | cap | 4 | 1 | PASS | 29742 | 7 | 1 | StrictRule:9, NoOverflow:25 |
+| reuse_noreinit | nocrash-quiet | 5 | True | False | PASS | PASS | FAIL | FAIL | cap | 5 | 1 | PASS | 172188 | 28 | 1 | StrictRule:9, NoOverflow:33 |
+| reuse_noreinit | nocrash-writes | 4 | True | False | PASS | PASS | FAIL | FAIL | cap | 4 | 1 | PASS | 72978 | 16 | 1 | StrictRule:9, NoOverflow:25 |
+| reuse_noreinit | nocrash-writes | 5 | True | False | PASS | PASS | FAIL | FAIL | cap | 5 | 1 | PASS | 440479 | 74 | 1 | StrictRule:9, NoOverflow:33 |
+| reuse_noreinit | crash-quiet | 4 | True | False | PASS | PASS | FAIL | FAIL | cap | 9 | 1 | - | 695404 | 68 | 1 | StrictRule:9, NoOverflow:25 |
+| reuse_noreinit | crash-quiet | 5 | True | False | PASS | PASS | FAIL | FAIL | cap | 11 | 1 | - | 5337296 | 433 | 1 | StrictRule:9, NoOverflow:33 |
+| hybrid | nocrash-quiet | 4 | True | False | PASS | PASS | PASS | PASS | 3 | 3 | 1 | PASS | 6754 | 3 | 1 | - |
+| hybrid | nocrash-quiet | 5 | True | False | PASS | PASS | PASS | PASS | 3 | 3 | 1 | PASS | 6754 | 5 | 1 | - |
+| hybrid | nocrash-writes | 4 | True | False | PASS | PASS | PASS | PASS | 4 | 3 | 1 | PASS | 67566 | 18 | 1 | - |
+| hybrid | nocrash-writes | 5 | True | False | PASS | PASS | PASS | PASS | 4 | 3 | 1 | PASS | 67566 | 22 | 1 | - |
+| hybrid | crash-quiet | 4 | True | False | PASS | PASS | PASS | PASS | 3 | 4 | 1 | - | 59118 | 12 | 1 | - |
+| hybrid | crash-quiet | 5 | True | False | PASS | PASS | PASS | PASS | 3 | 4 | 1 | - | 59118 | 13 | 1 | - |
+| hybrid_cand | nocrash-quiet | 4 | True | False | PASS | PASS | PASS | PASS | 3 | 3 | 2 | PASS | 7007 | 4 | 1 | - |
+| hybrid_cand | nocrash-quiet | 5 | True | False | PASS | PASS | PASS | PASS | 3 | 3 | 2 | PASS | 7007 | 5 | 1 | - |
+| hybrid_cand | nocrash-writes | 4 | True | False | PASS | PASS | PASS | PASS | 4 | 3 | 2 | PASS | 78023 | 20 | 1 | - |
+| hybrid_cand | nocrash-writes | 5 | True | False | PASS | PASS | PASS | PASS | 4 | 3 | 2 | PASS | 78023 | 21 | 1 | - |
+| hybrid_cand | crash-quiet | 4 | True | False | PASS | PASS | PASS | PASS | 3 | 5 | 2 | - | 98874 | 17 | 1 | - |
+| hybrid_cand | crash-quiet | 5 | True | False | PASS | PASS | PASS | PASS | 3 | 5 | 2 | - | 98874 | 20 | 1 | - |
+spec sha256 8fc8cee2d9d55980c1d6b317cdf20951a0e631e98aa2910519f6123067b5b401  Cap=2 L=2
+| design | setting | max_pages | misfit | relatch_any | Safe | SetComplete | StrictRule | NoOverflow | max_R | max_cost | max_sysops | NoFutileWork | states | secs | workers | shortest counterexample lengths |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| reuse | crash-writes | 4 | True | False | PASS | PASS | PASS | PASS | 4 | 7 | 1 | - | 212671 | 19 | 1 | - |
+| reuse_noreinit | crash-writes | 4 | True | False | PASS | PASS | FAIL | FAIL | cap | 9 | 1 | - | 1757234 | 143 | 1 | StrictRule:9, NoOverflow:25 |
+spec sha256 8fc8cee2d9d55980c1d6b317cdf20951a0e631e98aa2910519f6123067b5b401  Cap=2 L=2
+| design | setting | max_pages | misfit | relatch_any | Safe | SetComplete | StrictRule | NoOverflow | max_R | max_cost | max_sysops | NoFutileWork | states | secs | workers | shortest counterexample lengths |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| cand_recheck | nocrash-quiet | 4 | False | True | PASS | PASS | PASS | PASS | 3 | 3 | 2 | PASS | 4763 | 1 | 1 | - |
+| cand_recheck | nocrash-quiet | 5 | False | True | PASS | PASS | PASS | PASS | 3 | 3 | 2 | PASS | 4763 | 1 | 1 | - |
+| cand_recheck | nocrash-writes | 4 | False | True | PASS | PASS | PASS | FAIL | cap | 4 | 2 | PASS | 102019 | 11 | 1 | NoOverflow:34 |
+| cand_recheck | nocrash-writes | 5 | False | True | PASS | PASS | PASS | FAIL | cap | 5 | 2 | PASS | 772344 | 87 | 1 | NoOverflow:51 |
+| cand_recheck | crash-quiet | 4 | False | True | PASS | PASS | PASS | PASS | 3 | 5 | 2 | - | 54370 | 7 | 1 | - |
+| cand_recheck | crash-quiet | 5 | False | True | PASS | PASS | PASS | PASS | 3 | 5 | 2 | - | 54370 | 6 | 1 | - |
+| reuse | nocrash-quiet | 4 | False | True | PASS | PASS | PASS | PASS | 3 | 3 | 1 | PASS | 1465 | 1 | 1 | - |
+| reuse | nocrash-quiet | 5 | False | True | PASS | PASS | PASS | PASS | 3 | 3 | 1 | PASS | 1465 | 1 | 1 | - |
+| reuse | nocrash-writes | 4 | False | True | PASS | PASS | PASS | FAIL | cap | 4 | 1 | PASS | 17175 | 3 | 1 | NoOverflow:34 |
+| reuse | nocrash-writes | 5 | False | True | PASS | PASS | PASS | FAIL | cap | 5 | 1 | PASS | 83086 | 10 | 1 | NoOverflow:51 |
+| reuse | crash-quiet | 4 | False | True | PASS | PASS | PASS | PASS | 3 | 4 | 1 | - | 13214 | 2 | 1 | - |
+| reuse | crash-quiet | 5 | False | True | PASS | PASS | PASS | PASS | 3 | 4 | 1 | - | 13214 | 2 | 1 | - |
+| hybrid_cand | nocrash-quiet | 4 | False | True | PASS | PASS | PASS | PASS | 3 | 3 | 2 | PASS | 7007 | 1 | 1 | - |
+| hybrid_cand | nocrash-quiet | 5 | False | True | PASS | PASS | PASS | PASS | 3 | 3 | 2 | PASS | 7007 | 2 | 1 | - |
+| hybrid_cand | nocrash-writes | 4 | False | True | PASS | PASS | PASS | FAIL | cap | 4 | 2 | PASS | 166907 | 18 | 1 | NoOverflow:34 |
+| hybrid_cand | nocrash-writes | 5 | False | True | PASS | PASS | PASS | FAIL | cap | 5 | 2 | PASS | 1494675 | 168 | 1 | NoOverflow:51 |
+| hybrid_cand | crash-quiet | 4 | False | True | PASS | PASS | PASS | PASS | 3 | 5 | 2 | - | 98874 | 8 | 1 | - |
+| hybrid_cand | crash-quiet | 5 | False | True | PASS | PASS | PASS | PASS | 3 | 5 | 2 | - | 98874 | 9 | 1 | - |
+spec sha256 8fc8cee2d9d55980c1d6b317cdf20951a0e631e98aa2910519f6123067b5b401  Cap=2 L=2
+| design | setting | max_pages | misfit | relatch_any | Safe | SetComplete | StrictRule | NoOverflow | max_R | max_cost | max_sysops | NoFutileWork | states | secs | workers | shortest counterexample lengths |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| cand_recheck | crash-writes | 5 | False | False | PASS | PASS | PASS | PASS | 4 | 7 | 2 | - | 675015 | 64 | 1 | - |
+| reuse | crash-writes | 5 | False | False | PASS | PASS | PASS | PASS | 4 | 7 | 1 | - | 122221 | 11 | 1 | - |
+| hybrid_cand | crash-writes | 5 | False | False | PASS | PASS | PASS | PASS | 4 | 7 | 2 | - | 1847979 | 215 | 1 | - |
+ALLDONE
