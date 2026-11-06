@@ -1,6 +1,6 @@
 # PR draft context: CBRD-27781 / CBRD-27237 reclaim after finality
 
-Not uploaded. Resume metadata for `pr-body.md`.
+Draft PR created 2026-11-06: https://github.com/CUBRID/cubrid/pull/8434. Metadata for `pr-body.md`.
 
 | Item | Value |
 | --- | --- |
@@ -9,13 +9,13 @@ Not uploaded. Resume metadata for `pr-body.md`.
 | Source commit | `3e8072f56` (two commits over the base: `62d0b35b6`, `3e8072f56`), branch `CBRD-27781-postpone-commit` |
 | Base | `feature/oos-merge` at `d52b1889e907abcf84190ec504dde3bc93de260d` (the PR #7990 head branch) |
 | Source repository / push routing | `vimkim/cubrid` (`vk`) for the head branch; target `CUBRID/cubrid` base `feature/oos-merge` |
-| Observed remote head | branch not pushed (none) |
-| Operation | create a draft PR (not yet authorized) |
+| Observed remote head | `vk/CBRD-27781-postpone-commit` at `3e8072f56` |
+| Operation | draft PR #8434 created (approved 2026-11-06) |
 | Proposed title | `[CBRD-27781] Reclaim OOS chains only after the delete is final` |
 | Assignee | vimkim (default for creation) |
 | Merge order (user decision 2026-11-05) | finish and verify this fix, then merge PR #7990 to develop |
 
-## Proposed operations (each needs explicit approval; none run)
+## Operations (all approved and done 2026-11-06)
 
 1. Integrate this docs task branch `docs/CBRD-27781-postpone-commit` into `my-cubrid-docs` `main` and push.
 2. Push `CBRD-27781-postpone-commit` to `vk`.
