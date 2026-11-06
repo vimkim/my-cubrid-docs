@@ -167,7 +167,7 @@ class Runner:
         self.csv_path = self.out / "results.csv"
         new = not self.csv_path.exists()
         self.fh = open(self.csv_path, "a", newline="")
-        self.conc_iters, self.workers = 0, 8
+        self.conc_iters, self.workers, self.plain_n = 0, 8, 0
         self.w = csv.writer(self.fh)
         if new:
             self.w.writerow(["label", "sha", "round", "item", "iter", "metric", "value"])
@@ -264,6 +264,12 @@ class Runner:
                 self.emit(b, rnd, "restart", 0, f"{tag}_ms", round(sec * 1000, 3))
                 for k, v in st.items():
                     self.emit(b, rnd, "restart", 0, f"{tag}_{k}", v)
+            if self.plain_n:
+                # no delete since the restart lap: every INSERT needs a new page and the gate is idle
+                times, stats = self.insert_session(b, "t", 10000, "plain-insert", n=self.plain_n)
+                for i, (sec, st) in enumerate(zip(times, stats)):
+                    self.emit(b, rnd, "plain", i, "ms", round(sec * 1000, 3))
+                    self.emit(b, rnd, "plain", i, "data_page_fetches", st["data_page_fetches"])
             self.insert_session(b, "u", 10000, "warm-u", n=1)
             self.drain(b)
             for it in range(iters):
@@ -325,6 +331,7 @@ def main():
     ap.add_argument("--create", action="store_true")
     ap.add_argument("--conc-iters", type=int, default=0)
     ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument("--plain", type=int, default=0, help="consecutive no-delete INSERTs per round")
     ap.add_argument("--skip-rounds", action="store_true")
     a = ap.parse_args()
     out = pathlib.Path(a.out)
@@ -336,7 +343,7 @@ def main():
         label, install, sha = spec.split("=", 2)
         builds.append(Build(label, install, sha, out / label, 35100 + 10 * i))
     r = Runner(out)
-    r.conc_iters, r.workers = a.conc_iters, a.workers
+    r.conc_iters, r.workers, r.plain_n = a.conc_iters, a.workers, a.plain
     if a.create:
         for b in builds:
             info = b.create()
