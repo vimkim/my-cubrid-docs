@@ -1,0 +1,34 @@
+No symbol table is loaded.  Use the "file" command.
+Make breakpoint pending on future shared library load? (y or [n]) [answered N; input not from terminal]
+Warning: 'set logging on', an alias for the command 'set logging enabled', is deprecated.
+Use 'set logging enabled on'.
+
+Warning: 'set logging off', an alias for the command 'set logging enabled', is deprecated.
+Use 'set logging enabled off'.
+
+Function "heap_attrinfo_determine_disk_layout" not defined.
+Breakpoint 1 (heap_attrinfo_determine_disk_layout) pending.
+Function "heap_oos_warn_bigone_without_oos" not defined.
+Breakpoint 2 (heap_oos_warn_bigone_without_oos) pending.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib64/libthread_db.so.1".
+[Detaching after fork from child process 2010079]
+
+Breakpoint 1, heap_attrinfo_determine_disk_layout (attr_info=0x7fffffff61d0, is_mvcc_class=true, offset_size_ptr=0x7fffffff54d8, oos_plan=0x7fffffff54b0, has_oos=0x7fffffff54d7, inline_size_after_oos_ptr=0x7fffffff54e8) 
+13146	  std::vector<int> column_size (attr_info->num_values);
+#0  heap_attrinfo_determine_disk_layout (attr_info=0x7fffffff61d0, is_mvcc_class=true, offset_size_ptr=0x7fffffff54d8, oos_plan=0x7fffffff54b0, has_oos=0x7fffffff54d7, inline_size_after_oos_ptr=0x7fffffff54e8) at /home/v
+#1  0x00007ffff6baabae in heap_attrinfo_transform_to_disk_internal (thread_p=0x55555566de10, attr_info=0x7fffffff61d0, old_recdes=0x0, new_recdes=0x7fffffff5a10, lob_create_flag=1, pending=0x7fffffff5a10) at /home/vimkim
+#2  0x00007ffff6ba9623 in heap_attrinfo_prepare_record (thread_p=0x55555566de10, attr_info=0x7fffffff61d0, old_recdes=0x0, pending=0x7fffffff5a10, copy_lobs=true) at /home/vimkim/gh/cb/CBRD-27259-storage-force-inline/src
+#3  0x00007ffff69ee051 in locator_attribute_info_force (thread_p=0x55555566de10, hfid=0x555556b9e658, oid=0x7fffffff6268, attr_info=0x7fffffff61d0, att_id=0x0, n_att_id=0, operation=LC_FLUSH_INSERT, op_type=1, scan_cache
+#4  0x00007ffff66866a6 in qexec_execute_insert (thread_p=0x55555566de10, xasl=0x555556b9e4c8, xasl_state=0x7fffffff6850, skip_aptr=false) at /home/vimkim/gh/cb/CBRD-27259-storage-force-inline/src/query/query_executor.c:1
+#5  0x00007ffff668b02e in qexec_execute_mainblock_internal (thread_p=0x55555566de10, xasl=0x555556b9e4c8, xasl_state=0x7fffffff6850, p_class_instance_lock_info=0x0) at /home/vimkim/gh/cb/CBRD-27259-storage-force-inline/s
+#6  0x00007ffff668a73d in qexec_execute_mainblock (thread_p=0x55555566de10, xasl=0x555556b9e4c8, xstate=0x7fffffff6850, p_class_instance_lock_info=0x0) at /home/vimkim/gh/cb/CBRD-27259-storage-force-inline/src/query/quer
+#7  0x00007ffff668da1b in qexec_execute_query (thread_p=0x55555566de10, xasl=0x555556b9e4c8, dbval_cnt=2, dbval_ptr=0x55555565abc8, query_id=1) at /home/vimkim/gh/cb/CBRD-27259-storage-force-inline/src/query/query_execut
+#8  0x00007ffff66ac394 in qmgr_process_query (thread_p=0x55555566de10, xasl_tree=0x555556b9e4c8, xasl_stream=0x0, xasl_stream_size=0, dbval_count=2, dbvals_p=0x55555565abc8, flag=98309, query_p=0x555556b9f7a0, tran_entry
+#9  0x00007ffff66accce in xqmgr_execute_query (thread_p=0x55555566de10, xasl_id_p=0x555556b73e80, query_id_p=0x555556b6f610, dbval_count=2, dbval_p=0x55555565abc8, flag_p=0x7fffffff6b28, client_cache_time_p=0x0, server_c
+#10 0x00007ffff631b396 in qmgr_execute_query (xasl_id=0x555556b73e80, query_idp=0x555556b6f610, dbval_cnt=2, dbvals=0x555556b721b0, flag=98309, clt_cache_time=0x0, srv_cache_time=0x0, query_timeout=0) at /home/vimkim/gh/
+#11 0x00007ffff6659186 in execute_query (xasl_id=0x555556b73e80, query_idp=0x555556b6f610, var_cnt=2, varptr=0x555556b721b0, list_idp=0x7fffffff6c10, flag=98309, clt_cache_time=0x0, srv_cache_time=0x0) at /home/vimkim/gh
+1 row affected. (1.288886 sec) Committed. (0.000591 sec) 
+[Inferior 1 (process 2007647) exited normally]
+/home/vimkim/gh/my-cubrid-docs/cbrd-27259/review-20261106/reviewers/storage-recovery/gdb4.cmd:8: Error in sourced command file:
+No stack.

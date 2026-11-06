@@ -1,0 +1,1 @@
+SELECT id, BIT_LENGTH(a), c FROM q1 ORDER BY id;

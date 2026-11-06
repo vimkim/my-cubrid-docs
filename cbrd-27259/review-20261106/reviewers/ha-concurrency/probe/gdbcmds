@@ -1,0 +1,13 @@
+set pagination off
+set breakpoint pending on
+break heap_attrinfo_determine_disk_layout
+run
+delete 1
+break heap_file.c:14271
+commands
+silent
+printf "HIT class=%d|%d|%d nvals=%d inline=%d has_oos=%d max=%d\n", attr_info->class_oid.volid, attr_info->class_oid.pageid, attr_info->class_oid.slotid, attr_info->num_values, (int)inline_size_after_oos, has_oos, heap_Maxslotted_reclength
+continue
+end
+continue
+quit

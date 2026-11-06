@@ -1,0 +1,153 @@
+Execute OK. (0.023913 sec) Committed. (0.000689 sec) 
+
+=== <Result of SELECT Command in Line 3> ===
+
+  TABLE                 CREATE TABLE        
+============================================
+  'dba.pt'              'CREATE TABLE [pt] ([id] INTEGER, [c] CHARACTER VARYING(100) STORAGE FORCE_INLINE, [d] CHARACTER VARYING(1073741823)) REUSE_OID, COLLATE utf8_bin PARTITION BY HASH ([id]) PARTITIONS 2'
+
+1 row selected. (0.001080 sec) Committed. (0.000029 sec) 
+
+=== <Result of SELECT Command in Line 4> ===
+
+  TABLE                 CREATE TABLE        
+============================================
+  'dba.pt__p__p0'       'CREATE TABLE [pt__p__p0] UNDER [dba.pt] REUSE_OID, COLLATE utf8_bin'
+
+1 row selected. (0.000447 sec) Committed. (0.000020 sec) 
+Execute OK. (0.004819 sec) Committed. (0.000424 sec) 
+
+=== <Result of SELECT Command in Line 6> ===
+
+  TABLE                 CREATE TABLE        
+============================================
+  'dba.pt__p__p1'       'CREATE TABLE [pt__p__p1] UNDER [dba.pt] REUSE_OID, COLLATE utf8_bin'
+
+1 row selected. (0.000497 sec) Committed. (0.000018 sec) 
+Execute OK. (0.004819 sec) Committed. (0.000566 sec) 
+
+=== <Result of SELECT Command in Line 8> ===
+
+  TABLE                 CREATE TABLE        
+============================================
+  'dba.pt__p__p0'       'CREATE TABLE [pt__p__p0] UNDER [dba.pt] REUSE_OID, COLLATE utf8_bin'
+
+1 row selected. (0.000308 sec) Committed. (0.000019 sec) 
+Execute OK. (0.006500 sec) Committed. (0.000603 sec) 
+
+=== <Result of SELECT Command in Line 10> ===
+
+  TABLE                 CREATE TABLE        
+============================================
+  'dba.pt__p__p0'       'CREATE TABLE [pt__p__p0] UNDER [dba.pt] REUSE_OID, COLLATE utf8_bin'
+
+1 row selected. (0.000314 sec) Committed. (0.000020 sec) 
+Execute OK. (0.013849 sec) Committed. (0.000545 sec) 
+Execute OK. (0.012041 sec) Committed. (0.000814 sec) 
+
+=== <Result of SELECT Command in Line 13> ===
+
+  TABLE                 CREATE TABLE        
+============================================
+  'dba.rp__p__p1'       'CREATE TABLE [rp__p__p1] UNDER [dba.rp] REUSE_OID, COLLATE utf8_bin'
+
+1 row selected. (0.000730 sec) Committed. (0.000024 sec) 
+Execute OK. (0.024607 sec) Committed. (0.001399 sec) 
+
+=== <Result of SELECT Command in Line 15> ===
+
+  TABLE                 CREATE TABLE        
+============================================
+  'dba.rp'              'CREATE TABLE [rp] ([id] INTEGER, [c] CHARACTER VARYING(1073741823) STORAGE FORCE_INLINE) REUSE_OID, COLLATE utf8_bin'
+
+1 row selected. (0.000565 sec) Committed. (0.000026 sec) 
+Execute OK. (0.003720 sec) Committed. (0.000435 sec) 
+Execute OK. (0.006122 sec) Committed. (0.000507 sec) 
+
+=== <Result of SELECT Command in Line 18> ===
+
+  TABLE                 CREATE TABLE        
+============================================
+  'dba.sub'             'CREATE TABLE [sub] UNDER [dba.sup] ([x] INTEGER) REUSE_OID, COLLATE utf8_bin'
+
+1 row selected. (0.000756 sec) Committed. (0.000025 sec) 
+Execute OK. (0.003865 sec) Committed. (0.000557 sec) 
+
+=== <Result of SELECT Command in Line 20> ===
+
+  TABLE                 CREATE TABLE        
+============================================
+  'dba.sub'             'CREATE TABLE [sub] UNDER [dba.sup] ([x] INTEGER) REUSE_OID, COLLATE utf8_bin'
+
+1 row selected. (0.000427 sec) Committed. (0.000023 sec) 
+
+In the command from line 21,
+
+ERROR: Cannot change attribute "a". CUBRID cannot change the requested attribute's properties if the class has subclasses.
+
+
+=== <Result of SELECT Command in Line 22> ===
+
+  TABLE                 CREATE TABLE        
+============================================
+  'dba.sub'             'CREATE TABLE [sub] UNDER [dba.sup] ([x] INTEGER) REUSE_OID, COLLATE utf8_bin'
+
+1 row selected. (0.000372 sec) Committed. (0.000022 sec) 
+
+In the command from line 23,
+
+ERROR: Cannot change attribute "a". CUBRID cannot change the requested attribute's properties if the class has subclasses.
+
+
+=== <Result of SELECT Command in Line 24> ===
+
+  TABLE                 CREATE TABLE        
+============================================
+  'dba.sub'             'CREATE TABLE [sub] UNDER [dba.sup] ([x] INTEGER) REUSE_OID, COLLATE utf8_bin'
+
+1 row selected. (0.000335 sec) Committed. (0.000020 sec) 
+Execute OK. (0.012012 sec) Committed. (0.000613 sec) 
+
+=== <Result of SELECT Command in Line 26> ===
+
+  TABLE                 CREATE TABLE        
+============================================
+  'dba.lk'              'CREATE TABLE [lk] ([a] CHARACTER VARYING(100) STORAGE FORCE_INLINE, [b] INTEGER, [c] INTEGER, [d] CHARACTER VARYING(1073741823) STORAGE PREFER_INLINE, [e] CHARACTER VARYING(1073741823) STORAGE FORCE_OUTLINE, [f] CHARACTER VARYING(1073741823), [g] CHARACTER VARYING(1073741823), [h] CHARACTER(10) STORAGE FORCE_INLINE, [i] BIT(80)) REUSE_OID, COLLATE utf8_bin'
+
+1 row selected. (0.000921 sec) Committed. (0.000033 sec) 
+Execute OK. (0.005189 sec) Committed. (0.000426 sec) 
+
+=== <Result of SELECT Command in Line 28> ===
+
+  TABLE                 CREATE TABLE        
+============================================
+  'dba.ct1'             'CREATE TABLE [ct1] ([c] CHARACTER VARYING(1073741823) STORAGE FORCE_INLINE) REUSE_OID, COLLATE utf8_bin'
+
+1 row selected. (0.000599 sec) Committed. (0.000026 sec) 
+Execute OK. (0.006361 sec) Committed. (0.000425 sec) 
+
+=== <Result of SELECT Command in Line 30> ===
+
+  TABLE                 CREATE TABLE        
+============================================
+  'dba.ct2'             'CREATE TABLE [ct2] ([z] CHARACTER VARYING(1073741823) STORAGE FORCE_INLINE, [a] CHARACTER VARYING(100)) REUSE_OID, COLLATE utf8_bin'
+
+1 row selected. (0.000633 sec) Committed. (0.000025 sec) 
+Execute OK. (0.013073 sec) Committed. (0.000597 sec) 
+
+=== <Result of SELECT Command in Line 32> ===
+
+  TABLE                 CREATE TABLE        
+============================================
+  'dba.ct3'             'CREATE TABLE [ct3] ([a] CHARACTER VARYING(100), [b] INTEGER, [c] INTEGER, [d] CHARACTER VARYING(1073741823), [e] CHARACTER VARYING(1073741823), [f] CHARACTER VARYING(1073741823), [g] CHARACTER VARYING(1073741823), [h] CHARACTER(10), [i] BIT(80)) REUSE_OID, COLLATE utf8_bin'
+
+1 row selected. (0.000664 sec) Committed. (0.000028 sec) 
+Execute OK. (0.006071 sec) Committed. (0.000420 sec) 
+
+=== <Result of SELECT Command in Line 34> ===
+
+  TABLE                 CREATE TABLE        
+============================================
+  'dba.ct4'             'CREATE TABLE [ct4] ([z] INTEGER, [y] INTEGER) REUSE_OID, COLLATE utf8_bin'
+
+1 row selected. (0.000655 sec) Committed. (0.000025 sec) 

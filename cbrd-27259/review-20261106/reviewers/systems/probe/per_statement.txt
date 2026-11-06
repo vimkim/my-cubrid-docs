@@ -1,0 +1,12 @@
+s0 exit=0 notifications=0 ::  
+s1_insert_new exit=0 notifications=1 :: 1 row affected  
+s2_replace_dup exit=0 notifications=2 :: 2 rows affected  
+s3_replace_new exit=0 notifications=2 :: 1 row affected  
+s4_odku_dup_small_update exit=0 notifications=1 :: 2 rows affected  
+s5_odku_new exit=0 notifications=2 :: 1 row affected  
+s6_update_big exit=0 notifications=1 :: 1 row affected  
+s7_update_other_col_of_big_row exit=0 notifications=1 :: 1 row affected  
+s8_dup_insert_fail exit=0 notifications=0 ::  ERROR: before '  VALUES (2, CAST(REPEAT('FF', 17000) AS BIT VARYING)); ROLLBA...'
+s9_check exit=0 notifications=0 ::  
+s8b_dup_insert_fail exit=0 notifications=1 ::  ERROR: Operation would have caused one or more unique constraint violations. INDEX pk_q1_id(B+tree: 1|1920|1921) ON CLASS dba.q1(CLASS_OID: 0|202|61). key: 2(OID: 1|1985|4).  
+s4b_odku_dup_small_update_check exit=0 notifications=1 :: 2 rows affected  

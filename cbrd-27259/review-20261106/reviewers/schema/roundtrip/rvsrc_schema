@@ -1,0 +1,118 @@
+
+CREATE CLASS [dba].[t1] REUSE_OID, COLLATE utf8_bin;
+
+CREATE CLASS [dba].[force_inline] REUSE_OID, COLLATE utf8_bin;
+
+CREATE CLASS [dba].[m] REUSE_OID, COLLATE utf8_bin;
+
+CREATE CLASS [dba].[rp] REUSE_OID, COLLATE utf8_bin;
+
+CREATE CLASS [dba].[sup] REUSE_OID, COLLATE utf8_bin;
+
+CREATE CLASS [dba].[sub] REUSE_OID, COLLATE utf8_bin;
+
+CREATE CLASS [dba].[lk] REUSE_OID, COLLATE utf8_bin;
+
+CREATE CLASS [dba].[ct1] REUSE_OID, COLLATE utf8_bin;
+
+CREATE CLASS [dba].[ct2] REUSE_OID, COLLATE utf8_bin;
+
+CREATE CLASS [dba].[ct3] REUSE_OID, COLLATE utf8_bin;
+
+CREATE CLASS [dba].[ct4] REUSE_OID, COLLATE utf8_bin;
+
+CREATE CLASS [dba].[rp2] REUSE_OID, COLLATE utf8_bin;
+
+CREATE CLASS [dba].[pt] REUSE_OID, COLLATE utf8_bin;
+
+ALTER CLASS [dba].[sub] ADD SUPERCLASS [dba].[sup];
+
+ALTER CLASS [dba].[t1] ADD ATTRIBUTE
+       [a] character varying(100) COLLATE utf8_bin STORAGE FORCE_INLINE,
+       [b] integer,
+       [c] integer,
+       [d] character varying(1073741823) COLLATE utf8_bin STORAGE PREFER_INLINE,
+       [e] character varying(1073741823) COLLATE utf8_bin STORAGE FORCE_OUTLINE,
+       [f] character varying(1073741823) COLLATE utf8_bin,
+       [g] character varying(1073741823) COLLATE utf8_bin,
+       [h] character(10) COLLATE utf8_bin STORAGE FORCE_INLINE,
+       [i] bit(80);
+
+ALTER CLASS [dba].[force_inline] ADD ATTRIBUTE
+       [force_inline] integer,
+       [force_inline2] character varying(1073741823) COLLATE utf8_bin STORAGE FORCE_INLINE;
+
+ALTER CLASS [dba].[m] ADD ATTRIBUTE
+       [id] integer,
+       [c4] character varying(30) COLLATE utf8_bin STORAGE FORCE_INLINE,
+       [n1r] character varying(1073741823) COLLATE utf8_bin INVISIBLE STORAGE FORCE_INLINE DEFAULT 'y' NOT NULL,
+       [n2] integer,
+       [n3] integer;
+ALTER CLASS [dba].[m] ADD CLASS ATTRIBUTE 
+       [ca3] character varying(1073741823) COLLATE utf8_bin;
+
+ALTER CLASS [dba].[rp] ADD ATTRIBUTE
+       [id] integer,
+       [c] character varying(1073741823) COLLATE utf8_bin STORAGE FORCE_INLINE;
+
+ALTER CLASS [dba].[sup] ADD ATTRIBUTE
+       [a] character varying(1073741823) COLLATE utf8_bin STORAGE FORCE_INLINE,
+       [b] character varying(1073741823) COLLATE utf8_bin STORAGE FORCE_INLINE;
+
+ALTER CLASS [dba].[sub] ADD ATTRIBUTE
+       [x] integer;
+
+ALTER CLASS [dba].[lk] ADD ATTRIBUTE
+       [a] character varying(100) COLLATE utf8_bin STORAGE FORCE_INLINE,
+       [b] integer,
+       [c] integer,
+       [d] character varying(1073741823) COLLATE utf8_bin STORAGE PREFER_INLINE,
+       [e] character varying(1073741823) COLLATE utf8_bin STORAGE FORCE_OUTLINE,
+       [f] character varying(1073741823) COLLATE utf8_bin,
+       [g] character varying(1073741823) COLLATE utf8_bin,
+       [h] character(10) COLLATE utf8_bin STORAGE FORCE_INLINE,
+       [i] bit(80);
+
+ALTER CLASS [dba].[ct1] ADD ATTRIBUTE
+       [c] character varying(1073741823) COLLATE utf8_bin STORAGE FORCE_INLINE;
+
+ALTER CLASS [dba].[ct2] ADD ATTRIBUTE
+       [z] character varying(1073741823) COLLATE utf8_bin STORAGE FORCE_INLINE,
+       [a] character varying(100) COLLATE utf8_bin;
+
+ALTER CLASS [dba].[ct3] ADD ATTRIBUTE
+       [a] character varying(100) COLLATE utf8_bin,
+       [b] integer,
+       [c] integer,
+       [d] character varying(1073741823) COLLATE utf8_bin,
+       [e] character varying(1073741823) COLLATE utf8_bin,
+       [f] character varying(1073741823) COLLATE utf8_bin,
+       [g] character varying(1073741823) COLLATE utf8_bin,
+       [h] character(10) COLLATE utf8_bin,
+       [i] bit(80);
+
+ALTER CLASS [dba].[ct4] ADD ATTRIBUTE
+       [z] integer,
+       [y] integer;
+
+ALTER CLASS [dba].[rp2] ADD ATTRIBUTE
+       [id] integer,
+       [c] character varying(500) COLLATE utf8_bin STORAGE FORCE_INLINE,
+       [d] character varying(20) COLLATE utf8_bin STORAGE FORCE_INLINE;
+
+ALTER CLASS [dba].[rp2] 
+PARTITION BY RANGE ( [id] ) 
+  ( PARTITION [p0]  VALUES LESS THAN (10),
+ PARTITION [p1a]  VALUES LESS THAN (15),
+ PARTITION [p1b]  VALUES LESS THAN (20) ) ;
+
+ALTER CLASS [dba].[pt] ADD ATTRIBUTE
+       [id] integer,
+       [c] integer,
+       [d] character varying(1073741823) COLLATE utf8_bin STORAGE FORCE_INLINE;
+
+ALTER CLASS [dba].[pt] 
+PARTITION BY HASH ( [id] ) 
+  PARTITIONS 2;
+
+COMMIT WORK;

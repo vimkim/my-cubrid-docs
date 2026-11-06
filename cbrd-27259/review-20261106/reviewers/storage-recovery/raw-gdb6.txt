@@ -1,0 +1,24 @@
+No symbol table is loaded.  Use the "file" command.
+Make breakpoint pending on future shared library load? (y or [n]) [answered N; input not from terminal]
+
+
+Function "heap_oos_warn_bigone_without_oos" not defined.
+Breakpoint 1 (heap_oos_warn_bigone_without_oos) pending.
+Function "er_set" not defined.
+Breakpoint 2 (er_set if err_id == -1388) pending.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib64/libthread_db.so.1".
+[Detaching after fork from child process 2051780]
+1 row affected. (0.316235 sec) Committed. (0.000589 sec) 
+1 row affected. (0.005029 sec) Committed. (0.000564 sec) 
+[Inferior 1 (process 2048970) exited normally]
+Num     Type           Disp Enb Address            What
+1       breakpoint     keep y   0x00007ffff6be1b49 in heap_oos_warn_bigone_without_oos(db_identifier const*, int, int) at /home/vimkim/gh/cb/CBRD-27259-storage-force-inline/src/storage/heap_oos.cpp:11
+        silent
+        printf "WARN size=%d max=%d\n", record_size, max_size
+        continue
+2       breakpoint     keep y   0x00007ffff624e327 in er_set(int, char const*, int, int, int, ...) at /home/vimkim/gh/cb/CBRD-27259-storage-force-inline/src/base/error_manager.c:1233
+	stop only if err_id == -1388
+        silent
+        printf "ER1388\n"
+        continue

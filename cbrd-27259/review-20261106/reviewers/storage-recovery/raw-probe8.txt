@@ -1,0 +1,37 @@
+1 row affected. (0.002847 sec) Committed. (0.005952 sec) 
+1 row affected. (0.001659 sec) Committed. (0.003033 sec) 
+1 row affected. (0.001249 sec) Committed. (0.008194 sec) 
+1 row affected. (0.001235 sec) Committed. (0.000943 sec) 
+1 row affected. (0.001187 sec) Committed. (0.004407 sec) 
+1 row affected. (0.001844 sec) Committed. (0.001533 sec) 
+1 row affected. (0.005002 sec) Committed. (0.008818 sec) 
+1 row affected. (0.018162 sec) Committed. (0.009470 sec) 
+1 row affected. (0.002287 sec) Committed. (0.000848 sec) 
+1 row affected. (0.011236 sec) Committed. (0.001164 sec) 
+
+In the command from line 51,
+
+ERROR: The record cannot be stored because its size (20084 bytes) still exceeds the maximum record size (16236 bytes) even after moving large variable-length columns to out-of-row storage (OOS). Reduce the size of fixed-length or non-eligible columns.
+
+1 row affected. (0.002417 sec) Committed. (0.002215 sec) 
+1 row affected. (0.002154 sec) Committed. (0.005286 sec) 
+1 row affected. (0.002296 sec) Committed. (0.001090 sec) 
+1 row affected. (0.001440 sec) Committed. (0.001567 sec) 
+
+=== <Result of SELECT Command in Line 81> ===
+
+           id   char_length(a)   char_length(b)
+===============================================
+          150             5000               10
+          202            20000               10
+          250            15000               10
+          260            16000               10
+          261            16150               10
+          261            16100               10
+          262            16200               10
+          263            16300               10
+          263            16384               10
+          300            20000               10
+          400            30000               10
+
+11 rows selected. (0.002724 sec) Committed. (0.000044 sec) 

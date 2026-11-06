@@ -1,0 +1,99 @@
+Execute OK. (0.018636 sec) Committed. (0.002373 sec) 
+
+=== <Result of SELECT Command in Line 3> ===
+
+  TABLE                 CREATE TABLE        
+============================================
+  'dba.t1'              'CREATE TABLE [t1] ([a] CHARACTER VARYING(100) STORAGE FORCE_INLINE, [b] INTEGER, [c] INTEGER, [d] CHARACTER VARYING(1073741823) STORAGE PREFER_INLINE, [e] CHARACTER VARYING(1073741823) STORAGE FORCE_OUTLINE, [f] CHARACTER VARYING(1073741823), [g] CHARACTER VARYING(1073741823), [h] CHARACTER(10) STORAGE FORCE_INLINE, [i] BIT(80)) REUSE_OID, COLLATE utf8_bin'
+
+1 row selected. (0.001835 sec) Committed. (0.000036 sec) 
+Execute OK. (0.008264 sec) Committed. (0.005362 sec) 
+
+=== <Result of SELECT Command in Line 5> ===
+
+  TABLE                 CREATE TABLE        
+============================================
+  'dba.force_inline'    'CREATE TABLE [force_inline] ([force_inline] INTEGER, [force_inline2] CHARACTER VARYING(1073741823) STORAGE FORCE_INLINE) REUSE_OID, COLLATE utf8_bin'
+
+1 row selected. (0.001595 sec) Committed. (0.000041 sec) 
+
+=== <Result of SELECT Command in Line 6> ===
+
+There are no results.
+0 row selected. (0.001977 sec) Committed. (0.000032 sec) 
+
+In line 7, column 24,
+
+ERROR: before ' ); '
+STORAGE option is not allowed on 'a'. STORAGE options apply only to normal attributes of a class, and fixed-type attributes accept only DEFAULT and FORCE_INLINE.
+
+
+In line 8, column 24,
+
+ERROR: before ' ); '
+STORAGE option is not allowed on 'a'. STORAGE options apply only to normal attributes of a class, and fixed-type attributes accept only DEFAULT and FORCE_INLINE.
+
+
+In line 9, column 24,
+
+ERROR: before ' ); '
+STORAGE option is not allowed on 'a'. STORAGE options apply only to normal attributes of a class, and fixed-type attributes accept only DEFAULT and FORCE_INLINE.
+
+
+In line 10, column 35,
+
+ERROR: In line 10, column 35 before ' ca varchar storage force_inline); '
+Syntax error: unexpected 'attribute', expecting CHECK or FOREIGN or PRIMARY or UNIQUE
+
+
+In line 11, column 39,
+
+ERROR: 'b' is a CLASS or SHARED attribute but only normal attributes can set storage options.
+
+
+In line 12, column 39,
+
+ERROR: 'b' is a CLASS or SHARED attribute but only normal attributes can set storage options.
+
+
+In line 13, column 35,
+
+ERROR: In line 13, column 35 before ' ca int storage default); '
+Syntax error: unexpected 'attribute', expecting CHECK or FOREIGN or PRIMARY or UNIQUE
+
+
+In line 14, column 27,
+
+ERROR: before ' ) as select 'x'; '
+STORAGE option is not allowed on 'a'. STORAGE options apply only to normal attributes of a class, and fixed-type attributes accept only DEFAULT and FORCE_INLINE.
+
+
+In line 15, column 23,
+
+ERROR: before ' ) as select 1; '
+STORAGE option is not allowed on 'a'. STORAGE options apply only to normal attributes of a class, and fixed-type attributes accept only DEFAULT and FORCE_INLINE.
+
+
+In line 16, column 19,
+
+ERROR: before ' ; '
+Unknown class "dba.e4".
+
+
+In line 17, column 19,
+
+ERROR: before ' ; '
+Unknown class "dba.e5".
+
+
+In line 18, column 19,
+
+ERROR: before ' ; '
+Unknown class "dba.e6".
+
+
+In line 19, column 19,
+
+ERROR: before ' ; '
+Unknown class "dba.e7".
+

@@ -1,0 +1,14 @@
+
+
+Function "heap_attrinfo_determine_disk_layout" not defined.
+Breakpoint 1 (heap_attrinfo_determine_disk_layout) pending.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib64/libthread_db.so.1".
+[Detaching after fork from child process 2112064]
+LAYOUT nvalues=3 class=0|202|1
+#0  heap_attrinfo_determine_disk_layout (attr_info=0x7fffffff61d0, is_mvcc_class=true, offset_size_ptr=0x7fffffff54d8, oos_plan=0x7fffffff54b0, has_oos=0x7fffffff54d7, inline_size_after_oos_ptr=0x7fff
+#1  0x00007ffff6baabae in heap_attrinfo_transform_to_disk_internal (thread_p=0x55555566de10, attr_info=0x7fffffff61d0, old_recdes=0x0, new_recdes=0x7fffffff5a10, lob_create_flag=1, pending=0x7fffffff5
+#2  0x00007ffff6ba9623 in heap_attrinfo_prepare_record (thread_p=0x55555566de10, attr_info=0x7fffffff61d0, old_recdes=0x0, pending=0x7fffffff5a10, copy_lobs=true) at /home/vimkim/gh/cb/CBRD-27259-stor
+#3  0x00007ffff69ee051 in locator_attribute_info_force (thread_p=0x55555566de10, hfid=0x555558b16158, oid=0x7fffffff6268, attr_info=0x7fffffff61d0, att_id=0x0, n_att_id=0, operation=LC_FLUSH_INSERT, o
+1 row affected. (7.930929 sec) Committed. (0.000686 sec) 
+[Inferior 1 (process 2108857) exited normally]

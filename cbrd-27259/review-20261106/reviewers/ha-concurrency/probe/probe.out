@@ -1,0 +1,37 @@
+Execute OK. (0.011050 sec) Committed. (0.000486 sec) 
+Execute OK. (0.008910 sec) Committed. (0.000792 sec) 
+
+=== <Help: Schema of a Class> ===
+
+
+ <Class Name> 
+
+     dba.t1
+
+ <Attributes> 
+
+     id                   INTEGER
+     a                    CHARACTER VARYING(20000) STORAGE FORCE_INLINE
+     b                    CHARACTER VARYING(20000) STORAGE FORCE_INLINE
+     c                    CHARACTER VARYING(20000) STORAGE FORCE_INLINE
+
+1 row affected. (0.002122 sec) Committed. (0.004056 sec) 
+
+=== <Result of SELECT Command in Line 5> ===
+
+           id   char_length(a)+ char_length(b)+ char_length(c)
+==============================================================
+            1                                            21000
+
+1 row selected. (0.001853 sec) Committed. (0.000052 sec) 
+1 row affected. (0.002613 sec) Committed. (0.000604 sec) 
+
+=== <Result of SELECT Command in Line 7> ===
+
+           id   char_length(a)+ char_length(b)+ char_length(c)
+==============================================================
+            1                                            21000
+
+1 row selected. (0.001624 sec) Committed. (0.000037 sec) 
+Execute OK. (0.000037 sec) 
+exit=0

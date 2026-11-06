@@ -1,0 +1,1456 @@
+diff --git a/msg/en_US.utf8/cubrid.msg b/msg/en_US.utf8/cubrid.msg
+index f9168cbfb..c00245050 100644
+--- a/msg/en_US.utf8/cubrid.msg
++++ b/msg/en_US.utf8/cubrid.msg
+@@ -1510,7 +1510,9 @@ Check the path of the key file (_keys) and make sure that it includes proper key
+ 
+ 1392 The database was created by a CUBRID build with an incompatible storage format (format %1$d, this build %2$d). Unload it with the build that created it, then load it into a database created by this build.
+ 
+-1393 Last Error
++1393 A record of class %3$d|%4$d|%5$d needs %1$d bytes, more than the maximum record size (%2$d bytes), and is stored as a multipage overflow record (REC_BIGONE) without out-of-row storage (OOS). To keep the record within one page, reduce its fixed-length columns, small variable-length columns, or STORAGE FORCE_INLINE columns.
++
++1394 Last Error
+ 
+ $set 6 MSGCAT_SET_INTERNAL
+ 1 Error in error subsystem (line %1$d):
+@@ -2023,7 +2025,7 @@ $set 8 MSGCAT_SET_PARSER_SEMANTIC
+ 337 The partition name is too long.
+ 338 Undefined argument. UUID only supports UUIDv4, or UUIDv7; the version argument cannot be NULL.
+ 339 '%1$s' is a CLASS or SHARED attribute but only normal attributes can set storage options.
+-340 STORAGE options can be set only on variable-type normal attributes of a class: '%1$s'.
++340 STORAGE option is not allowed on '%1$s'. STORAGE options apply only to normal attributes of a class, and fixed-type attributes accept only DEFAULT and FORCE_INLINE.
+ 341 Column '%1$s' of the SEMI/ANTI JOIN inner table cannot be referenced.
+ 342 SEMI/ANTI JOIN requires a join predicate that references the outer (left) side.
+ 343 SEMI/ANTI JOIN is not allowed in a hierarchical query (CONNECT BY).
+diff --git a/msg/ko_KR.utf8/cubrid.msg b/msg/ko_KR.utf8/cubrid.msg
+index 7df38c59f..f4b020335 100644
+--- a/msg/ko_KR.utf8/cubrid.msg
++++ b/msg/ko_KR.utf8/cubrid.msg
+@@ -1509,7 +1509,9 @@ $ LOADDB
+ 
+ 1392 저장 형식이 호환되지 않는 CUBRID 빌드로 생성된 데이터베이스입니다(형식 %1$d, 현재 빌드 %2$d). 데이터베이스를 생성한 빌드로 unloaddb 한 뒤, 현재 빌드로 생성한 데이터베이스에 loaddb 하십시오.
+ 
+-1393 마지막 에러
++1393 클래스 %3$d|%4$d|%5$d 의 레코드가 %1$d 바이트로 최대 레코드 크기(%2$d 바이트)를 넘어, out-of-row 저장소(OOS) 없이 여러 페이지에 걸친 overflow 레코드(REC_BIGONE)로 저장됩니다. 레코드가 한 페이지에 들어가도록 고정 길이 컬럼, 작은 가변 길이 컬럼, STORAGE FORCE_INLINE 컬럼의 크기를 줄이십시오.
++
++1394 마지막 에러
+ 
+ $set 6 MSGCAT_SET_INTERNAL
+ 1 에러 서브 시스템에 에러 발생(라인 %1$d):
+@@ -2022,7 +2024,7 @@ $set 8 MSGCAT_SET_PARSER_SEMANTIC
+ 337 파티션 이름이 너무 깁니다.
+ 338 잘못된 인자입니다. UUID는 UUIDv4, 또는 UUIDv7만 지원하며, 버전 인자는 NULL일 수 없습니다.
+ 339 '%1$s'은 CLASS 또는 SHARED 속성 컬럼입니다. 일반적인 컬럼에서만 storage 옵션을 정의할 수 있습니다.
+-340 STORAGE 옵션은 클래스의 가변 타입 일반 속성에만 지정할 수 있습니다: '%1$s'.
++340 '%1$s'에는 이 STORAGE 옵션을 지정할 수 없습니다. STORAGE 옵션은 클래스의 일반 속성에만 지정할 수 있으며, 고정 타입 속성에는 DEFAULT와 FORCE_INLINE만 지정할 수 있습니다.
+ 341 SEMI/ANTI JOIN inner 테이블의 컬럼 '%1$s'은 참조할 수 없습니다.
+ 342 SEMI/ANTI JOIN은 outer(left) 측을 참조하는 join 술어가 필요합니다.
+ 343 SEMI/ANTI JOIN은 계층 질의(CONNECT BY)에서 사용할 수 없습니다.
+diff --git a/src/base/error_code.h b/src/base/error_code.h
+index c5ed880bb..35556e5ce 100644
+--- a/src/base/error_code.h
++++ b/src/base/error_code.h
+@@ -1800,7 +1800,9 @@
+ 
+ #define ER_BO_INCOMPATIBLE_STORAGE_FORMAT           -1392
+ 
+-#define ER_LAST_ERROR                               -1393
++#define ER_HEAP_BIGONE_WITHOUT_OOS                  -1393
++
++#define ER_LAST_ERROR                               -1394
+ 
+ 
+ /*
+diff --git a/src/base/object_representation_sr.c b/src/base/object_representation_sr.c
+index 113334c36..42cd39b7f 100644
+--- a/src/base/object_representation_sr.c
++++ b/src/base/object_representation_sr.c
+@@ -2486,19 +2486,24 @@ or_get_current_representation (RECDES * record, int do_indexes)
+       att->is_autoincrement = (attribute_flags & SM_ATTFLAG_AUTO_INCREMENT) ? 1 : 0;
+       att->is_notnull = (attribute_flags & SM_ATTFLAG_NON_NULL) ? 1 : 0;
+       att->is_invisible = (attribute_flags & SM_ATTFLAG_INVISIBLE_COLUMN) ? 1 : 0;
+-      assert ((attribute_flags & (SM_ATTFLAG_OOS_PREFER_INLINE | SM_ATTFLAG_OOS_FORCE_OUTLINE))
+-	      != (SM_ATTFLAG_OOS_PREFER_INLINE | SM_ATTFLAG_OOS_FORCE_OUTLINE));
+-      if (attribute_flags & SM_ATTFLAG_OOS_FORCE_OUTLINE)
++      switch (attribute_flags & SM_ATTFLAG_OOS_STORAGE_MASK)
+ 	{
++	case SM_ATTFLAG_OOS_FORCE_OUTLINE:
+ 	  att->oos_storage = OR_ATTRIBUTE_OOS_STORAGE_FORCE_OUTLINE;
+-	}
+-      else if (attribute_flags & SM_ATTFLAG_OOS_PREFER_INLINE)
+-	{
++	  break;
++
++	case SM_ATTFLAG_OOS_PREFER_INLINE:
+ 	  att->oos_storage = OR_ATTRIBUTE_OOS_STORAGE_PREFER_INLINE;
+-	}
+-      else
+-	{
++	  break;
++
++	case SM_ATTFLAG_OOS_FORCE_INLINE:
++	  att->oos_storage = OR_ATTRIBUTE_OOS_STORAGE_FORCE_INLINE;
++	  break;
++
++	default:
++	  assert ((attribute_flags & SM_ATTFLAG_OOS_STORAGE_MASK) == 0);
+ 	  att->oos_storage = OR_ATTRIBUTE_OOS_STORAGE_DEFAULT;
++	  break;
+ 	}
+ 
+       att->type = (DB_TYPE) OR_GET_INT (ptr + ORC_ATT_TYPE_OFFSET);
+diff --git a/src/base/object_representation_sr.h b/src/base/object_representation_sr.h
+index 1c67dbf27..0d44801f6 100644
+--- a/src/base/object_representation_sr.h
++++ b/src/base/object_representation_sr.h
+@@ -94,7 +94,8 @@ typedef enum
+ {
+   OR_ATTRIBUTE_OOS_STORAGE_DEFAULT,
+   OR_ATTRIBUTE_OOS_STORAGE_PREFER_INLINE,
+-  OR_ATTRIBUTE_OOS_STORAGE_FORCE_OUTLINE
++  OR_ATTRIBUTE_OOS_STORAGE_FORCE_OUTLINE,
++  OR_ATTRIBUTE_OOS_STORAGE_FORCE_INLINE
+ } OR_ATTRIBUTE_OOS_STORAGE;
+ 
+ struct or_attribute
+diff --git a/src/compat/db_info.c b/src/compat/db_info.c
+index 10e8f012a..35620d28b 100644
+--- a/src/compat/db_info.c
++++ b/src/compat/db_info.c
+@@ -1394,6 +1394,18 @@ db_attribute_is_oos_force_outline (DB_ATTRIBUTE * attribute)
+   return attribute != NULL && (attribute->flags & SM_ATTFLAG_OOS_FORCE_OUTLINE) != 0;
+ }
+ 
++/*
++ * db_attribute_is_oos_force_inline() - This function tests if attribute forbids
++ *     moving its value to OOS.
++ * return : non-zero if the STORAGE FORCE_INLINE option is set.
++ * attribute(in): attribute descriptor
++ */
++int
++db_attribute_is_oos_force_inline (DB_ATTRIBUTE * attribute)
++{
++  return attribute != NULL && (attribute->flags & SM_ATTFLAG_OOS_FORCE_INLINE) != 0;
++}
++
+ 
+ /*
+  * db_attribute_is_reverse_unique() - This function tests the status of the
+diff --git a/src/compat/dbi.h b/src/compat/dbi.h
+index a8af37bcd..30ec0d92f 100644
+--- a/src/compat/dbi.h
++++ b/src/compat/dbi.h
+@@ -346,6 +346,7 @@ extern "C"
+   extern int db_attribute_is_invisible_column (DB_ATTRIBUTE * attribute);
+   extern int db_attribute_is_oos_prefer_inline (DB_ATTRIBUTE * attribute);
+   extern int db_attribute_is_oos_force_outline (DB_ATTRIBUTE * attribute);
++  extern int db_attribute_is_oos_force_inline (DB_ATTRIBUTE * attribute);
+   extern int db_attribute_is_reverse_unique (DB_ATTRIBUTE * attribute);
+   extern int db_attribute_is_non_null (DB_ATTRIBUTE * attribute);
+   extern int db_attribute_is_indexed (DB_ATTRIBUTE * attribute);
+diff --git a/src/compat/dbi_compat.h b/src/compat/dbi_compat.h
+index 5ab70308f..3ee566a0b 100644
+--- a/src/compat/dbi_compat.h
++++ b/src/compat/dbi_compat.h
+@@ -381,6 +381,7 @@ extern "C"
+   extern int db_attribute_is_invisible_column (DB_ATTRIBUTE * attribute);
+   extern int db_attribute_is_oos_prefer_inline (DB_ATTRIBUTE * attribute);
+   extern int db_attribute_is_oos_force_outline (DB_ATTRIBUTE * attribute);
++  extern int db_attribute_is_oos_force_inline (DB_ATTRIBUTE * attribute);
+   extern int db_attribute_is_reverse_unique (DB_ATTRIBUTE * attribute);
+   extern int db_attribute_is_non_null (DB_ATTRIBUTE * attribute);
+   extern int db_attribute_is_indexed (DB_ATTRIBUTE * attribute);
+diff --git a/src/executables/unload_schema.c b/src/executables/unload_schema.c
+index 8d75e444d..bb55a517f 100644
+--- a/src/executables/unload_schema.c
++++ b/src/executables/unload_schema.c
+@@ -3092,6 +3092,10 @@ emit_attribute_def (extract_context & ctxt, print_output & output_ctx, DB_ATTRIB
+     {
+       output_ctx (" STORAGE FORCE_OUTLINE");
+     }
++  else if (db_attribute_is_oos_force_inline (attribute))
++    {
++      output_ctx (" STORAGE FORCE_INLINE");
++    }
+ 
+   if (emit_autoincrement_def (output_ctx, attribute) != NO_ERROR)
+     {
+diff --git a/src/object/class_object.c b/src/object/class_object.c
+index 25e994691..330cd40ae 100644
+--- a/src/object/class_object.c
++++ b/src/object/class_object.c
+@@ -6462,16 +6462,16 @@ classobj_copy_attribute_like (DB_CTMPL * ctemplate, SM_ATTRIBUTE * attribute, co
+     }
+ 
+ #if !defined (NDEBUG)
+-  if (attribute->flags & (SM_ATTFLAG_OOS_PREFER_INLINE | SM_ATTFLAG_OOS_FORCE_OUTLINE))
++  if (attribute->flags & SM_ATTFLAG_OOS_STORAGE_MASK)
+     {
+       assert (attribute->header.name_space != ID_CLASS_ATTRIBUTE);
+       assert (attribute->header.name_space != ID_SHARED_ATTRIBUTE);
+-      assert ((attribute->flags & (SM_ATTFLAG_OOS_PREFER_INLINE | SM_ATTFLAG_OOS_FORCE_OUTLINE))
+-	      != (SM_ATTFLAG_OOS_PREFER_INLINE | SM_ATTFLAG_OOS_FORCE_OUTLINE));
++      assert ((attribute->flags & SM_ATTFLAG_OOS_STORAGE_MASK
++	       & ((attribute->flags & SM_ATTFLAG_OOS_STORAGE_MASK) - 1)) == 0);
+     }
+ #endif
+ 
+-  if (attribute->flags & (SM_ATTFLAG_INVISIBLE_COLUMN | SM_ATTFLAG_OOS_PREFER_INLINE | SM_ATTFLAG_OOS_FORCE_OUTLINE))
++  if (attribute->flags & (SM_ATTFLAG_INVISIBLE_COLUMN | SM_ATTFLAG_OOS_STORAGE_MASK))
+     {
+       SM_ATTRIBUTE *att;
+       error =
+@@ -6479,9 +6479,7 @@ classobj_copy_attribute_like (DB_CTMPL * ctemplate, SM_ATTRIBUTE * attribute, co
+ 			    attribute->header.name_space == ID_CLASS_ATTRIBUTE ? 1 : 0, &att);
+       if (error == NO_ERROR)
+ 	{
+-	  att->flags |=
+-	    (attribute->flags
+-	     & (SM_ATTFLAG_INVISIBLE_COLUMN | SM_ATTFLAG_OOS_PREFER_INLINE | SM_ATTFLAG_OOS_FORCE_OUTLINE));
++	  att->flags |= (attribute->flags & (SM_ATTFLAG_INVISIBLE_COLUMN | SM_ATTFLAG_OOS_STORAGE_MASK));
+ 	}
+     }
+ 
+diff --git a/src/object/object_printer.cpp b/src/object/object_printer.cpp
+index 87099a8bf..f48af98fa 100644
+--- a/src/object/object_printer.cpp
++++ b/src/object/object_printer.cpp
+@@ -512,13 +512,23 @@ void object_printer::describe_attribute (const struct db_object &cls, const sm_a
+       m_buf (" INVISIBLE");
+     }
+ 
+-  if (attribute.flags & SM_ATTFLAG_OOS_PREFER_INLINE)
++  switch (attribute.flags & SM_ATTFLAG_OOS_STORAGE_MASK)
+     {
++    case SM_ATTFLAG_OOS_PREFER_INLINE:
+       m_buf (" STORAGE PREFER_INLINE");
+-    }
+-  else if (attribute.flags & SM_ATTFLAG_OOS_FORCE_OUTLINE)
+-    {
++      break;
++
++    case SM_ATTFLAG_OOS_FORCE_OUTLINE:
+       m_buf (" STORAGE FORCE_OUTLINE");
++      break;
++
++    case SM_ATTFLAG_OOS_FORCE_INLINE:
++      m_buf (" STORAGE FORCE_INLINE");
++      break;
++
++    default:
++      assert ((attribute.flags & SM_ATTFLAG_OOS_STORAGE_MASK) == 0);
++      break;
+     }
+ 
+   if (attribute.header.name_space == ID_SHARED_ATTRIBUTE)
+diff --git a/src/parser/csql_grammar.y b/src/parser/csql_grammar.y
+index d14d41775..abeffeb7a 100644
+--- a/src/parser/csql_grammar.y
++++ b/src/parser/csql_grammar.y
+@@ -1566,6 +1566,7 @@ BEGIN_SUPPRESS_WARNING_BISON_FLEX
+ %token <cptr> FILL_FACTOR
+ %token <cptr> FIRST_VALUE
+ %token <cptr> FORCE
++%token <cptr> FORCE_INLINE
+ %token <cptr> FORCE_OUTLINE
+ %token <cptr> FULLSCAN
+ %token <cptr> GE_INF_
+@@ -10692,6 +10693,11 @@ column_storage_def
+ 			PT_NODE* attr_node = parser_get_attr_def_one ();
+ 			attr_node->info.attr_def.attr_storage = PT_ATTR_STORAGE_FORCE_OUTLINE;
+ 		}}
++	| STORAGE FORCE_INLINE
++		{{
++			PT_NODE* attr_node = parser_get_attr_def_one ();
++			attr_node->info.attr_def.attr_storage = PT_ATTR_STORAGE_FORCE_INLINE;
++		}}
+ 	| STORAGE DEFAULT
+ 		{{
+ 			PT_NODE* attr_node = parser_get_attr_def_one ();
+@@ -20808,6 +20814,7 @@ identifier
+ 	| EXPLAIN                {{ SET_CPTR_2_PTNAME($$, $1, @1, @$.buffer_pos);  }}
+ 	| FILL_FACTOR            {{ SET_CPTR_2_PTNAME($$, $1, @1, @$.buffer_pos);  }}
+ 	| FIRST_VALUE            {{ SET_CPTR_2_PTNAME($$, $1, @1, @$.buffer_pos);  }}
++	| FORCE_INLINE           {{ SET_CPTR_2_PTNAME($$, $1, @1, @$.buffer_pos);  }}
+ 	| FORCE_OUTLINE          {{ SET_CPTR_2_PTNAME($$, $1, @1, @$.buffer_pos);  }}
+ 	| FULLSCAN               {{ SET_CPTR_2_PTNAME($$, $1, @1, @$.buffer_pos);  }}
+ 	| GE_INF_                {{ SET_CPTR_2_PTNAME($$, $1, @1, @$.buffer_pos);  }}
+diff --git a/src/parser/csql_lexer.l b/src/parser/csql_lexer.l
+index f2d9bf9b6..ffa6c87d8 100644
+--- a/src/parser/csql_lexer.l
++++ b/src/parser/csql_lexer.l
+@@ -393,6 +393,8 @@ IDL       [a-zA-Z0-9_]
+ 									  return FIRST_VALUE; }
+ [fF][oO][rR][cC][eE]							{ csql_yylval.cptr = pt_makename(yytext);
+                                                                           return FORCE; }
++[fF][oO][rR][cC][eE][_][iI][nN][lL][iI][nN][eE]				{ csql_yylval.cptr = pt_makename(yytext);
++									  return FORCE_INLINE; }
+ [fF][oO][rR][cC][eE][_][oO][uU][tT][lL][iI][nN][eE]			{ csql_yylval.cptr = pt_makename(yytext);
+ 									  return FORCE_OUTLINE; }
+ [fF][oO][rR][eE][iI][gG][nN]						{ return FOREIGN; }
+diff --git a/src/parser/keyword.c b/src/parser/keyword.c
+index 2bdef6cdb..52cea7288 100644
+--- a/src/parser/keyword.c
++++ b/src/parser/keyword.c
+@@ -217,6 +217,7 @@ static KEYWORD_RECORD keywords[] = {
+   {FLOAT_, "REAL", 0},
+   {For, "FOR", 0},
+   {FORCE, "FORCE", 1},
++  {FORCE_INLINE, "FORCE_INLINE", 1},
+   {FORCE_OUTLINE, "FORCE_OUTLINE", 1},
+   {FOREIGN, "FOREIGN", 0},
+   {FOUND, "FOUND", 0},
+diff --git a/src/parser/parse_tree.h b/src/parser/parse_tree.h
+index 73131f85c..80595cc48 100644
+--- a/src/parser/parse_tree.h
++++ b/src/parser/parse_tree.h
+@@ -1962,10 +1962,11 @@ typedef enum
+ typedef enum
+ {
+   PT_ATTR_STORAGE_UNSET,	/* clause omitted: preserve existing setting on MODIFY/CHANGE */
+-  PT_ATTR_STORAGE_DEFAULT,	/* STORAGE DEFAULT/PREFER_OUTLINE: current size-order OOS demotion */
+-  PT_ATTR_STORAGE_PREFER_OUTLINE = PT_ATTR_STORAGE_DEFAULT,
++  PT_ATTR_STORAGE_DEFAULT,
++  PT_ATTR_STORAGE_PREFER_OUTLINE,
+   PT_ATTR_STORAGE_PREFER_INLINE,	/* STORAGE PREFER_INLINE: lower OOS demotion priority */
+-  PT_ATTR_STORAGE_FORCE_OUTLINE	/* STORAGE FORCE_OUTLINE: bypass record gate for values larger than OOS stub */
++  PT_ATTR_STORAGE_FORCE_OUTLINE,	/* STORAGE FORCE_OUTLINE: bypass record gate for values larger than OOS stub */
++  PT_ATTR_STORAGE_FORCE_INLINE
+ } PT_ATTR_STORAGE_SETTING;
+ 
+ /* Info for ATTR_DEF */
+@@ -1981,7 +1982,7 @@ struct pt_attr_def_info
+   int size_constraint;		/* max length of STRING */
+   short constrain_not_null;
+   PT_ATTR_INVISIBLE_SETTING attr_invisible:2;	/* unchange | VISIBLE | INVISIBLE */
+-  PT_ATTR_STORAGE_SETTING attr_storage:2;	/* unset | DEFAULT/PREFER_OUTLINE | PREFER_INLINE | FORCE_OUTLINE */
++  PT_ATTR_STORAGE_SETTING attr_storage:3;
+ };
+ 
+ /* Info for ALTER TABLE ADD COLUMN [FIRST | AFTER column_name ] */
+diff --git a/src/parser/parse_tree_cl.c b/src/parser/parse_tree_cl.c
+index d1de6c47d..ca23e1c42 100644
+--- a/src/parser/parse_tree_cl.c
++++ b/src/parser/parse_tree_cl.c
+@@ -7275,6 +7275,10 @@ pt_print_attr_def (PARSER_CONTEXT * parser, PT_NODE * p)
+     {
+       q = pt_append_nulstring (parser, q, " storage force_outline ");
+     }
++  else if (p->info.attr_def.attr_storage == PT_ATTR_STORAGE_FORCE_INLINE)
++    {
++      q = pt_append_nulstring (parser, q, " storage force_inline ");
++    }
+ 
+   if (p->info.attr_def.data_default)
+     {
+diff --git a/src/query/execute_schema.c b/src/query/execute_schema.c
+index b7a65b2c9..b134f17de 100644
+--- a/src/query/execute_schema.c
++++ b/src/query/execute_schema.c
+@@ -177,6 +177,7 @@ enum
+   P_COMMENT,			/* has comment */
+   P_OOS_PREFER_INLINE,		/* STORAGE PREFER_INLINE (lower OOS demotion priority) */
+   P_OOS_FORCE_OUTLINE,		/* STORAGE FORCE_OUTLINE (bypass record gate for values larger than OOS stub) */
++  P_OOS_FORCE_INLINE,
+   NUM_ATT_CHG_PROP
+ };
+ 
+@@ -197,6 +198,21 @@ struct sm_attr_properties_chg
+   bool class_has_subclass;	/* if class is part of a hierarchy and if it has subclasses */
+ };
+ 
++typedef struct oos_policy_flag OOS_POLICY_FLAG;
++struct oos_policy_flag
++{
++  int prop;
++  int flag;
++};
++
++static const OOS_POLICY_FLAG oos_Policy_flags[] = {
++  {P_OOS_PREFER_INLINE, SM_ATTFLAG_OOS_PREFER_INLINE},
++  {P_OOS_FORCE_OUTLINE, SM_ATTFLAG_OOS_FORCE_OUTLINE},
++  {P_OOS_FORCE_INLINE, SM_ATTFLAG_OOS_FORCE_INLINE}
++};
++
++#define OOS_POLICY_FLAG_COUNT (sizeof (oos_Policy_flags) / sizeof (oos_Policy_flags[0]))
++
+ /* sm_partition_alter_info :
+  * helper object for altering partitioning
+  */
+@@ -8193,28 +8209,66 @@ get_attr_name (PT_NODE * attribute)
+ }
+ 
+ static bool
+-do_is_oos_storage_eligible_attribute (DB_CTMPL * ctemplate, SM_NAME_SPACE name_space, const TP_DOMAIN * domain)
++do_is_normal_attribute_of_class (DB_CTMPL * ctemplate, SM_NAME_SPACE name_space)
+ {
+   assert (ctemplate != NULL);
++
++  return name_space == ID_ATTRIBUTE && smt_get_class_type (ctemplate) == SM_CLASS_CT;
++}
++
++static bool
++do_is_oos_storage_eligible_attribute (DB_CTMPL * ctemplate, SM_NAME_SPACE name_space, const TP_DOMAIN * domain)
++{
+   assert (domain != NULL);
+ 
+-  return name_space == ID_ATTRIBUTE && smt_get_class_type (ctemplate) == SM_CLASS_CT
+-    && pr_is_variable_type (TP_DOMAIN_TYPE (domain));
++  return do_is_normal_attribute_of_class (ctemplate, name_space) && pr_is_variable_type (TP_DOMAIN_TYPE (domain));
+ }
+ 
+ static int
+-do_validate_oos_storage_setting (PARSER_CONTEXT * parser, DB_CTMPL * ctemplate, PT_NODE * attribute,
+-				 SM_NAME_SPACE name_space, const TP_DOMAIN * domain)
++do_resolve_oos_storage_flag (PARSER_CONTEXT * parser, DB_CTMPL * ctemplate, PT_NODE * attribute,
++			     SM_NAME_SPACE name_space, const TP_DOMAIN * domain, int *oos_flag)
+ {
+-  if (attribute->info.attr_def.attr_storage == PT_ATTR_STORAGE_UNSET
+-      || do_is_oos_storage_eligible_attribute (ctemplate, name_space, domain))
++  const PT_ATTR_STORAGE_SETTING setting = attribute->info.attr_def.attr_storage;
++  bool is_variable;
++  bool is_allowed_on_fixed_type;
++
++  *oos_flag = 0;
++  if (setting == PT_ATTR_STORAGE_UNSET)
+     {
+       return NO_ERROR;
+     }
+ 
+-  PT_ERRORmf (parser, attribute, MSGCAT_SET_PARSER_SEMANTIC,
+-	      MSGCAT_SEMANTIC_STORAGE_REQUIRES_VARIABLE_NORMAL_ATT, get_attr_name (attribute));
+-  return ER_PT_SEMANTIC;
++  is_variable = do_is_oos_storage_eligible_attribute (ctemplate, name_space, domain);
++  is_allowed_on_fixed_type = (setting == PT_ATTR_STORAGE_DEFAULT || setting == PT_ATTR_STORAGE_FORCE_INLINE);
++  if (!do_is_normal_attribute_of_class (ctemplate, name_space) || (!is_variable && !is_allowed_on_fixed_type))
++    {
++      PT_ERRORmf (parser, attribute, MSGCAT_SET_PARSER_SEMANTIC,
++		  MSGCAT_SEMANTIC_STORAGE_REQUIRES_VARIABLE_NORMAL_ATT, get_attr_name (attribute));
++      return ER_PT_SEMANTIC;
++    }
++
++  if (is_variable)
++    {
++      switch (setting)
++	{
++	case PT_ATTR_STORAGE_PREFER_INLINE:
++	  *oos_flag = SM_ATTFLAG_OOS_PREFER_INLINE;
++	  break;
++
++	case PT_ATTR_STORAGE_FORCE_OUTLINE:
++	  *oos_flag = SM_ATTFLAG_OOS_FORCE_OUTLINE;
++	  break;
++
++	case PT_ATTR_STORAGE_FORCE_INLINE:
++	  *oos_flag = SM_ATTFLAG_OOS_FORCE_INLINE;
++	  break;
++
++	default:
++	  break;
++	}
++    }
++
++  return NO_ERROR;
+ }
+ 
+ /*
+@@ -8242,6 +8296,7 @@ do_add_attribute (PARSER_CONTEXT * parser, DB_CTMPL * ctemplate, PT_NODE * attri
+   MOP auto_increment_obj = NULL;
+   SM_ATTRIBUTE *att = NULL;
+   SM_NAME_SPACE name_space = ID_NULL;
++  int oos_flag = 0;
+   bool add_first = false;
+   const char *add_after_attr = NULL;
+   PT_NODE *cnstr, *pk_attr, *comment;
+@@ -8402,17 +8457,13 @@ do_add_attribute (PARSER_CONTEXT * parser, DB_CTMPL * ctemplate, PT_NODE * attri
+ 
+       if (error == NO_ERROR)
+ 	{
+-	  error = do_validate_oos_storage_setting (parser, ctemplate, attribute, name_space, att->domain);
++	  error = do_resolve_oos_storage_flag (parser, ctemplate, attribute, name_space, att->domain, &oos_flag);
+ 	}
+-    }
+ 
+-  if (error == NO_ERROR && attribute->info.attr_def.attr_storage == PT_ATTR_STORAGE_PREFER_INLINE)
+-    {
+-      att->flags |= SM_ATTFLAG_OOS_PREFER_INLINE;
+-    }
+-  else if (error == NO_ERROR && attribute->info.attr_def.attr_storage == PT_ATTR_STORAGE_FORCE_OUTLINE)
+-    {
+-      att->flags |= SM_ATTFLAG_OOS_FORCE_OUTLINE;
++      if (error == NO_ERROR)
++	{
++	  att->flags |= oos_flag;
++	}
+     }
+ 
+   comment = attribute->info.attr_def.comment;
+@@ -11905,26 +11956,19 @@ do_change_att_schema_only (PARSER_CONTEXT * parser, DB_CTMPL * ctemplate, PT_NOD
+       found_att->flags &= ~(SM_ATTFLAG_INVISIBLE_COLUMN);
+     }
+ 
+-  /* add or drop STORAGE PREFER_INLINE option */
+-  if (is_att_prop_set (attr_chg_prop->p[P_OOS_PREFER_INLINE], ATT_CHG_PROPERTY_GAINED))
+-    {
+-      found_att->flags &= ~(SM_ATTFLAG_OOS_FORCE_OUTLINE);
+-      found_att->flags |= SM_ATTFLAG_OOS_PREFER_INLINE;
+-    }
+-  else if (is_att_prop_set (attr_chg_prop->p[P_OOS_PREFER_INLINE], ATT_CHG_PROPERTY_LOST))
++  for (size_t policy = 0; policy < OOS_POLICY_FLAG_COUNT; policy++)
+     {
+-      found_att->flags &= ~(SM_ATTFLAG_OOS_PREFER_INLINE);
+-    }
++      const int prop = attr_chg_prop->p[oos_Policy_flags[policy].prop];
++      const int flag = oos_Policy_flags[policy].flag;
+ 
+-  /* add or drop STORAGE FORCE_OUTLINE option */
+-  if (is_att_prop_set (attr_chg_prop->p[P_OOS_FORCE_OUTLINE], ATT_CHG_PROPERTY_GAINED))
+-    {
+-      found_att->flags &= ~(SM_ATTFLAG_OOS_PREFER_INLINE);
+-      found_att->flags |= SM_ATTFLAG_OOS_FORCE_OUTLINE;
+-    }
+-  else if (is_att_prop_set (attr_chg_prop->p[P_OOS_FORCE_OUTLINE], ATT_CHG_PROPERTY_LOST))
+-    {
+-      found_att->flags &= ~(SM_ATTFLAG_OOS_FORCE_OUTLINE);
++      if (is_att_prop_set (prop, ATT_CHG_PROPERTY_GAINED))
++	{
++	  found_att->flags = (found_att->flags & ~SM_ATTFLAG_OOS_STORAGE_MASK) | flag;
++	}
++      else if (is_att_prop_set (prop, ATT_CHG_PROPERTY_LOST))
++	{
++	  found_att->flags &= ~flag;
++	}
+     }
+ 
+   /* delete or (re-)create auto_increment attribute's serial object */
+@@ -12340,18 +12384,6 @@ build_attr_change_map (PARSER_CONTEXT * parser, DB_CTMPL * ctemplate, PT_NODE *
+ 				   attr_def->info.attr_def.attr_invisible == PT_ATTR_INVISIBLE_UNSET,
+ 				   attr_def->info.attr_def.attr_invisible == PT_ATTR_INVISIBLE);
+ 
+-  /* STORAGE PREFER_INLINE: lost when the new definition sets another STORAGE option */
+-  build_attr_flag_change_property (&attr_chg_properties->p[P_OOS_PREFER_INLINE],
+-				   (att->flags & SM_ATTFLAG_OOS_PREFER_INLINE) != 0,
+-				   attr_def->info.attr_def.attr_storage == PT_ATTR_STORAGE_UNSET,
+-				   attr_def->info.attr_def.attr_storage == PT_ATTR_STORAGE_PREFER_INLINE);
+-
+-  /* STORAGE FORCE_OUTLINE: lost when the new definition sets another STORAGE option */
+-  build_attr_flag_change_property (&attr_chg_properties->p[P_OOS_FORCE_OUTLINE],
+-				   (att->flags & SM_ATTFLAG_OOS_FORCE_OUTLINE) != 0,
+-				   attr_def->info.attr_def.attr_storage == PT_ATTR_STORAGE_UNSET,
+-				   attr_def->info.attr_def.attr_storage == PT_ATTR_STORAGE_FORCE_OUTLINE);
+-
+   /* check for existing constraints: FK referenced, unique, non-unique idx */
+   if (ctemplate->current != NULL)
+     {
+@@ -12607,28 +12639,27 @@ build_attr_change_map (PARSER_CONTEXT * parser, DB_CTMPL * ctemplate, PT_NODE *
+       return (er_errid ());
+     }
+ 
+-  error = do_validate_oos_storage_setting (parser, ctemplate, attr_def, attr_chg_properties->new_name_space,
+-					   attr_db_domain);
+-  if (error != NO_ERROR)
+-    {
+-      tp_domain_free (attr_db_domain);
+-      return error;
+-    }
++  {
++    int oos_flag = 0;
++    const bool keeps_current_policy = attr_def->info.attr_def.attr_storage == PT_ATTR_STORAGE_UNSET
++      && do_is_oos_storage_eligible_attribute (ctemplate, attr_chg_properties->new_name_space, attr_db_domain);
+ 
+-  if (attr_def->info.attr_def.attr_storage == PT_ATTR_STORAGE_UNSET
+-      && !do_is_oos_storage_eligible_attribute (ctemplate, attr_chg_properties->new_name_space, attr_db_domain))
+-    {
+-      if (att->flags & SM_ATTFLAG_OOS_PREFER_INLINE)
+-	{
+-	  attr_chg_properties->p[P_OOS_PREFER_INLINE] |= ATT_CHG_PROPERTY_LOST;
+-	  attr_chg_properties->p[P_OOS_PREFER_INLINE] &= ~(ATT_CHG_PROPERTY_PRESENT_OLD | ATT_CHG_PROPERTY_UNCHANGED);
+-	}
+-      if (att->flags & SM_ATTFLAG_OOS_FORCE_OUTLINE)
+-	{
+-	  attr_chg_properties->p[P_OOS_FORCE_OUTLINE] |= ATT_CHG_PROPERTY_LOST;
+-	  attr_chg_properties->p[P_OOS_FORCE_OUTLINE] &= ~(ATT_CHG_PROPERTY_PRESENT_OLD | ATT_CHG_PROPERTY_UNCHANGED);
+-	}
+-    }
++    error = do_resolve_oos_storage_flag (parser, ctemplate, attr_def, attr_chg_properties->new_name_space,
++					 attr_db_domain, &oos_flag);
++    if (error != NO_ERROR)
++      {
++	tp_domain_free (attr_db_domain);
++	return error;
++      }
++
++    for (size_t policy = 0; policy < OOS_POLICY_FLAG_COUNT; policy++)
++      {
++	const int flag = oos_Policy_flags[policy].flag;
++
++	build_attr_flag_change_property (&attr_chg_properties->p[oos_Policy_flags[policy].prop],
++					 (att->flags & flag) != 0, keeps_current_policy, oos_flag == flag);
++      }
++  }
+ 
+   attr_chg_properties->p[P_TYPE] = 0;
+   attr_chg_properties->p[P_TYPE] |= ATT_CHG_PROPERTY_PRESENT_NEW;
+diff --git a/src/storage/heap_file.c b/src/storage/heap_file.c
+index ed2a47a66..ec867ee50 100644
+--- a/src/storage/heap_file.c
++++ b/src/storage/heap_file.c
+@@ -13188,6 +13188,7 @@ heap_attrinfo_determine_disk_layout (HEAP_CACHE_ATTRINFO * attr_info, bool is_mv
+ 	  /* a variable column is OOS-eligible only if externalizing it shrinks the inline record:
+ 	   * its value must be larger than the OOS stub (OID + length) it is replaced with */
+ 	  if (!(*oos_plan)[i].selected && !attr_info->values[i].last_attrepr->is_fixed
++	      && attr_info->values[i].last_attrepr->oos_storage != OR_ATTRIBUTE_OOS_STORAGE_FORCE_INLINE
+ 	      && column_size[i] > OR_OOS_INLINE_SIZE)
+ 	    {
+ 	      /* *INDENT-OFF* */
+@@ -14267,6 +14268,11 @@ heap_attrinfo_transform_to_disk_internal (THREAD_ENTRY * thread_p, HEAP_CACHE_AT
+       return S_ERROR;
+     }
+ 
++  if (!has_oos && heap_is_big_length ((int) inline_size_after_oos))
++    {
++      heap_oos_warn_bigone_without_oos (&attr_info->class_oid, (int) inline_size_after_oos, heap_Maxslotted_reclength);
++    }
++
+   if (has_oos)
+     {
+       /* Retain selected values until routing, or publish immediately for legacy callers. */
+diff --git a/src/storage/heap_oos.cpp b/src/storage/heap_oos.cpp
+index bd3fba32d..8ce6c279d 100644
+--- a/src/storage/heap_oos.cpp
++++ b/src/storage/heap_oos.cpp
+@@ -298,6 +298,7 @@ static std::atomic<bool> heap_Oos_test_fail_before_vfid_lookup { false };
+ static std::atomic<int> heap_Oos_test_skipped_cleanup_diagnostics { 0 };
+ static std::atomic<int> heap_Oos_test_last_skipped_cleanup_outcome { -1 };
+ static std::atomic<int> heap_Oos_test_last_skipped_cleanup_count { 0 };
++static std::atomic<int> heap_Oos_test_bigone_without_oos_warnings { 0 };
+ #endif
+ 
+ static void heap_oos_diagnose_skipped_cleanup (const HEAP_OPERATION_CONTEXT *context, const char *op_ctx,
+@@ -1095,7 +1096,26 @@ heap_oos_diagnose_skipped_cleanup (const HEAP_OPERATION_CONTEXT *context, const
+ #endif
+ }
+ 
++void
++heap_oos_warn_bigone_without_oos (const OID *class_oid, int record_size, int max_size)
++{
++  er_stack_push ();
++  er_set (ER_NOTIFICATION_SEVERITY, ARG_FILE_LINE, ER_HEAP_BIGONE_WITHOUT_OOS, 5, record_size, max_size,
++	  OID_AS_ARGS (class_oid));
++  er_stack_pop ();
++
+ #if defined(CUBRID_UNIT_TEST_ENABLED)
++  heap_Oos_test_bigone_without_oos_warnings.fetch_add (1, std::memory_order_relaxed);
++#endif
++}
++
++#if defined(CUBRID_UNIT_TEST_ENABLED)
++int
++heap_oos_test_bigone_without_oos_warnings ()
++{
++  return heap_Oos_test_bigone_without_oos_warnings.load (std::memory_order_relaxed);
++}
++
+ int
+ heap_oos_test_skipped_cleanup_notifications ()
+ {
+diff --git a/src/storage/heap_oos.hpp b/src/storage/heap_oos.hpp
+index ce4fd86ef..35d619e29 100644
+--- a/src/storage/heap_oos.hpp
++++ b/src/storage/heap_oos.hpp
+@@ -122,7 +122,14 @@ extern void heap_oos_test_disarm_fail_before_vfid_lookup ();
+ extern int heap_oos_delete_unreferenced (THREAD_ENTRY *thread_p, HEAP_OPERATION_CONTEXT *context,
+     const RECDES *old_recdes, const RECDES *new_recdes, const char *op_ctx);
+ 
++/* Report that a record with no OOS values still exceeds max_size and becomes REC_BIGONE. The report is a
++ * notification, so the server error log keeps it with default parameters, and it leaves the caller's error
++ * state unchanged. */
++extern void heap_oos_warn_bigone_without_oos (const OID *class_oid, int record_size, int max_size);
++
+ #if defined(CUBRID_UNIT_TEST_ENABLED)
++extern int heap_oos_test_bigone_without_oos_warnings ();
++
+ /* Observability of the skipped-cleanup diagnostic: how many notifications heap_oos_delete_unreferenced
+  * emitted since the last reset, and the first outcome (-1 when none) and chain count (0 when none) the
+  * last one carried. */
+diff --git a/src/storage/storage_common.h b/src/storage/storage_common.h
+index 4ef16a902..e0b8f8ff9 100644
+--- a/src/storage/storage_common.h
++++ b/src/storage/storage_common.h
+@@ -1109,9 +1109,13 @@ typedef enum
+   SM_ATTFLAG_PARTITION_KEY = 1024,	/* attribute is the partitioning key for the class 0x400 */
+   SM_ATTFLAG_INVISIBLE_COLUMN = 2048,	/* attribute is invisible 0x800 */
+   SM_ATTFLAG_OOS_PREFER_INLINE = 4096,	/* attribute prefers inline storage: lower OOS demotion priority 0x1000 */
+-  SM_ATTFLAG_OOS_FORCE_OUTLINE = 8192	/* attribute bypasses the record gate for profitable OOS values 0x2000 */
++  SM_ATTFLAG_OOS_FORCE_OUTLINE = 8192,	/* attribute bypasses the record gate for profitable OOS values 0x2000 */
++  SM_ATTFLAG_OOS_FORCE_INLINE = 16384
+ } SM_ATTRIBUTE_FLAG;
+ 
++#define SM_ATTFLAG_OOS_STORAGE_MASK \
++  (SM_ATTFLAG_OOS_PREFER_INLINE | SM_ATTFLAG_OOS_FORCE_OUTLINE | SM_ATTFLAG_OOS_FORCE_INLINE)
++
+ /* delete or update action type for foreign key */
+ typedef enum
+ {
+diff --git a/unit_tests/oos/sql/test_oos_sql_storage.cpp b/unit_tests/oos/sql/test_oos_sql_storage.cpp
+index a5e08ba96..4aafdd171 100644
+--- a/unit_tests/oos/sql/test_oos_sql_storage.cpp
++++ b/unit_tests/oos/sql/test_oos_sql_storage.cpp
+@@ -28,23 +28,38 @@
+  *   - CREATE TABLE ... LIKE      -> classobj_copy_attribute_like flag copy
+  *   - ALTER TABLE ... MODIFY     -> build_attr_change_map GAINED/LOST state machine
+  *
+- * FORCE_OUTLINE placement is observable through SHOW HEAP OOS because even a small
+- * record with a value larger than the OOS stub creates an OOS file and value record.
+- * PREFER_INLINE ordering is not observable
+- * from SQL (see test_oos_sql_boundary.cpp). The unloaddb emit path (a separate utility
+- * binary) is not reachable from this in-process harness and is left to a shell-level test.
++ * FORCE_OUTLINE placement is observable through the OOS statistics of the heap: even a
++ * small record with a value larger than the OOS stub creates an OOS file and value record.
++ * PREFER_INLINE ordering is not observable from SQL (see test_oos_sql_boundary.cpp). The
++ * unloaddb emit path (a separate utility binary) is not reachable from this in-process
++ * harness and is left to a shell-level test.
+  */
+ 
++#include <iterator>
+ #include <string>
++#include <vector>
+ 
+ #include "test_oos_sql_common.hpp"
++#include "heap_oos.hpp"
+ 
+ // XXX: SHOULD BE THE LAST INCLUDE HEADER
+ #include "memory_wrapper.hpp"
+ 
+ namespace
+ {
+-  const char *const STORAGE_SETTINGS[] = { "PREFER_INLINE", "FORCE_OUTLINE", "PREFER_OUTLINE", "DEFAULT" };
++  const char *const DIRECTIONAL_STORAGE_SETTINGS[] = { "PREFER_INLINE", "FORCE_OUTLINE", "PREFER_OUTLINE" };
++  const char *const TYPE_DEFAULT_STORAGE_SETTINGS[] = { "DEFAULT", "FORCE_INLINE" };
++  const char *const FIXED_TYPES[] = { "INT", "BIT(128)" };
++
++  std::vector<std::string>
++  all_storage_settings ()
++  {
++    std::vector<std::string> settings (std::begin (DIRECTIONAL_STORAGE_SETTINGS),
++				       std::end (DIRECTIONAL_STORAGE_SETTINGS));
++    settings.insert (settings.end (), std::begin (TYPE_DEFAULT_STORAGE_SETTINGS),
++		     std::end (TYPE_DEFAULT_STORAGE_SETTINGS));
++    return settings;
++  }
+ 
+   // SHOW CREATE TABLE returns one row with column 0 = table name and column 1 = the
+   // CREATE TABLE statement. Read both columns directly (mirroring fetch_single_int's
+@@ -104,6 +119,24 @@ namespace
+     return ddl.find ("STORAGE FORCE_OUTLINE") != std::string::npos;
+   }
+ 
++  bool
++  ddl_has_force_inline (const std::string &ddl)
++  {
++    return ddl.find ("STORAGE FORCE_INLINE") != std::string::npos;
++  }
++
++  bool
++  ddl_has_storage_clause (const std::string &ddl)
++  {
++    return ddl.find ("STORAGE") != std::string::npos;
++  }
++
++  std::string
++  ddl_statement (const std::string &ddl)
++  {
++    return ddl.substr (ddl.find ('\n') + 1);
++  }
++
+   bool
+   ddl_has_prefer_outline (const std::string &ddl)
+   {
+@@ -134,10 +167,16 @@ namespace
+     return xoos_get_stats_by_class_oid (thread_get_thread_entry_info (), class_oid, out_stats);
+   }
+ 
++  std::string
++  uncompressed_bit_varying (int n)
++  {
++    return "CAST(REPEAT('AA', " + std::to_string (n) + ") AS BIT VARYING)";
++  }
++
+   enum class storage_attribute_error
+   {
+     NON_NORMAL_ATTRIBUTE,
+-    NON_VARIABLE_NORMAL_ATTRIBUTE
++    STORAGE_NOT_ALLOWED
+   };
+ 
+   void
+@@ -149,7 +188,7 @@ namespace
+     const char *expected_message =
+ 	    expected_error == storage_attribute_error::NON_NORMAL_ATTRIBUTE
+ 	    ? "only normal attributes can set storage options"
+-	    : "STORAGE options can be set only on variable-type normal attributes";
++	    : "STORAGE options apply only to normal attributes of a class";
+     EXPECT_NE (error.find (expected_message), std::string::npos) << message;
+   }
+ }
+@@ -276,45 +315,113 @@ TEST_F (OosSqlStorage, CreateTableLikeCopiesForceOutline)
+   EXPECT_FALSE (ddl_has_prefer_inline (ddl)) << "cloned DDL was:\n" << ddl;
+ }
+ 
+-// STORAGE PREFER_INLINE is meaningful only for normal instance attributes; shared
+-// attributes are not stored in each heap record and must not persist a no-op policy.
+-TEST_F (OosSqlStorage, SharedAttributeRejectsPreferInline)
++TEST_F (OosSqlStorage, SharedAttributeRejectsAllStorageSettings)
+ {
+-  int rc = exec_sql ("CREATE TABLE t_oos_stg (s VARCHAR(4096) SHARED 'x' STORAGE PREFER_INLINE)");
+-  EXPECT_LT (rc, 0);
+-  expect_storage_attribute_error (storage_attribute_error::NON_NORMAL_ATTRIBUTE);
+-  db_abort_transaction ();
+-
+-  rc = exec_sql ("CREATE TABLE t_oos_stg (s VARCHAR(4096) SHARED 'x' STORAGE PREFER_OUTLINE)");
+-  EXPECT_LT (rc, 0);
+-  expect_storage_attribute_error (storage_attribute_error::NON_NORMAL_ATTRIBUTE);
+-  db_abort_transaction ();
++  for (const std::string &setting : all_storage_settings ())
++    {
++      SCOPED_TRACE (setting);
++      std::string sql = "CREATE TABLE t_oos_stg (s VARCHAR(4096) SHARED 'x' STORAGE " + setting + ")";
+ 
+-  rc = exec_sql ("CREATE TABLE t_oos_stg (s VARCHAR(4096) SHARED 'x' STORAGE DEFAULT)");
+-  EXPECT_LT (rc, 0);
+-  expect_storage_attribute_error (storage_attribute_error::NON_NORMAL_ATTRIBUTE);
+-  db_abort_transaction ();
++      int rc = exec_sql (sql.c_str ());
++      EXPECT_LT (rc, 0);
++      expect_storage_attribute_error (storage_attribute_error::NON_NORMAL_ATTRIBUTE);
++      db_abort_transaction ();
++    }
+ }
+ 
+-TEST_F (OosSqlStorage, CreateRejectsAllStorageSettingsForFixedTypes)
++TEST_F (OosSqlStorage, ClassAttributeRejectsAllStorageSettings)
+ {
+-  for (const char *setting : STORAGE_SETTINGS)
++  int rc = exec_sql ("CREATE TABLE t_oos_stg (a INT, CLASS ca VARCHAR(100))");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  for (const std::string &setting : all_storage_settings ())
+     {
+       SCOPED_TRACE (setting);
+-      std::string sql = "CREATE TABLE t_oos_stg (c INT STORAGE ";
+-      sql += setting;
+-      sql += ")";
++      std::string sql = "CREATE TABLE t_oos_stg_like CLASS ATTRIBUTE (c VARCHAR(4096) STORAGE " + setting + ")";
++      rc = exec_sql (sql.c_str ());
++      EXPECT_LT (rc, 0);
++      expect_storage_attribute_error (storage_attribute_error::NON_NORMAL_ATTRIBUTE);
++      db_abort_transaction ();
+ 
+-      int rc = exec_sql (sql.c_str ());
++      sql = "ALTER TABLE t_oos_stg MODIFY CLASS ATTRIBUTE ca VARCHAR(4096) STORAGE " + setting;
++      rc = exec_sql (sql.c_str ());
+       EXPECT_LT (rc, 0);
+-      expect_storage_attribute_error (storage_attribute_error::NON_VARIABLE_NORMAL_ATTRIBUTE);
++      expect_storage_attribute_error (storage_attribute_error::NON_NORMAL_ATTRIBUTE);
+       db_abort_transaction ();
+     }
++}
+ 
+-  int rc = exec_sql ("CREATE TABLE t_oos_stg (c BIT(128) STORAGE PREFER_INLINE)");
+-  EXPECT_LT (rc, 0);
+-  expect_storage_attribute_error (storage_attribute_error::NON_VARIABLE_NORMAL_ATTRIBUTE);
+-  db_abort_transaction ();
++TEST_F (OosSqlStorage, FixedTypesAcceptTypeDefaultSettingsOnAllDdlPaths)
++{
++  for (const char *type : FIXED_TYPES)
++    {
++      for (const char *setting : TYPE_DEFAULT_STORAGE_SETTINGS)
++	{
++	  SCOPED_TRACE (std::string (type) + " STORAGE " + setting);
++	  const std::string column = std::string ("c ") + type + " STORAGE " + setting;
++	  std::string ddl;
++
++	  exec_sql ("DROP TABLE IF EXISTS t_oos_stg");
++	  db_commit_transaction ();
++	  ASSERT_GE (exec_sql (("CREATE TABLE t_oos_stg (" + column + ")").c_str ()), 0) << "CREATE";
++	  db_commit_transaction ();
++	  ASSERT_EQ (get_create_table_ddl ("t_oos_stg", ddl), NO_ERROR);
++	  EXPECT_FALSE (ddl_has_storage_clause (ddl)) << "after CREATE, DDL was:\n" << ddl;
++
++	  exec_sql ("DROP TABLE IF EXISTS t_oos_stg");
++	  db_commit_transaction ();
++	  ASSERT_GE (exec_sql ("CREATE TABLE t_oos_stg (id INT)"), 0);
++	  ASSERT_GE (exec_sql (("ALTER TABLE t_oos_stg ADD ATTRIBUTE " + column).c_str ()), 0) << "ADD";
++	  db_commit_transaction ();
++	  ASSERT_EQ (get_create_table_ddl ("t_oos_stg", ddl), NO_ERROR);
++	  EXPECT_FALSE (ddl_has_storage_clause (ddl)) << "after ADD, DDL was:\n" << ddl;
++
++	  ASSERT_GE (exec_sql (("ALTER TABLE t_oos_stg MODIFY " + column).c_str ()), 0) << "MODIFY";
++	  db_commit_transaction ();
++	  ASSERT_EQ (get_create_table_ddl ("t_oos_stg", ddl), NO_ERROR);
++	  EXPECT_FALSE (ddl_has_storage_clause (ddl)) << "after MODIFY, DDL was:\n" << ddl;
++
++	  ASSERT_GE (exec_sql (("ALTER TABLE t_oos_stg CHANGE c " + column).c_str ()), 0) << "CHANGE";
++	  db_commit_transaction ();
++	  ASSERT_EQ (get_create_table_ddl ("t_oos_stg", ddl), NO_ERROR);
++	  EXPECT_FALSE (ddl_has_storage_clause (ddl)) << "after CHANGE, DDL was:\n" << ddl;
++	}
++    }
++}
++
++TEST_F (OosSqlStorage, FixedTypesRejectDirectionalSettingsOnAllDdlPaths)
++{
++  for (const char *type : FIXED_TYPES)
++    {
++      for (const char *setting : DIRECTIONAL_STORAGE_SETTINGS)
++	{
++	  SCOPED_TRACE (std::string (type) + " STORAGE " + setting);
++	  const std::string column = std::string ("c ") + type + " STORAGE " + setting;
++
++	  exec_sql ("DROP TABLE IF EXISTS t_oos_stg");
++	  db_commit_transaction ();
++	  EXPECT_LT (exec_sql (("CREATE TABLE t_oos_stg (" + column + ")").c_str ()), 0) << "CREATE";
++	  expect_storage_attribute_error (storage_attribute_error::STORAGE_NOT_ALLOWED);
++	  db_abort_transaction ();
++
++	  ASSERT_GE (exec_sql (("CREATE TABLE t_oos_stg (d " + std::string (type) + ")").c_str ()), 0);
++	  db_commit_transaction ();
++
++	  EXPECT_LT (exec_sql (("ALTER TABLE t_oos_stg ADD ATTRIBUTE " + column).c_str ()), 0) << "ADD";
++	  expect_storage_attribute_error (storage_attribute_error::STORAGE_NOT_ALLOWED);
++	  db_abort_transaction ();
++
++	  EXPECT_LT (exec_sql (("ALTER TABLE t_oos_stg MODIFY d " + std::string (type) + " STORAGE " + setting).c_str ()), 0)
++	      << "MODIFY";
++	  expect_storage_attribute_error (storage_attribute_error::STORAGE_NOT_ALLOWED);
++	  db_abort_transaction ();
++
++	  EXPECT_LT (exec_sql (("ALTER TABLE t_oos_stg CHANGE d " + column).c_str ()), 0) << "CHANGE";
++	  expect_storage_attribute_error (storage_attribute_error::STORAGE_NOT_ALLOWED);
++	  db_abort_transaction ();
++	}
++    }
+ }
+ 
+ TEST_F (OosSqlStorage, CreateAcceptsStorageForPhysicalVariableTypes)
+@@ -334,7 +441,7 @@ TEST_F (OosSqlStorage, CreateAcceptsStorageForPhysicalVariableTypes)
+ 
+ TEST_F (OosSqlStorage, VclassRejectsAllStorageSettings)
+ {
+-  for (const char *setting : STORAGE_SETTINGS)
++  for (const std::string &setting : all_storage_settings ())
+     {
+       SCOPED_TRACE (setting);
+       std::string sql = "CREATE VCLASS t_oos_stg_v (c VARCHAR(4096) STORAGE ";
+@@ -343,18 +450,18 @@ TEST_F (OosSqlStorage, VclassRejectsAllStorageSettings)
+ 
+       int rc = exec_sql (sql.c_str ());
+       EXPECT_LT (rc, 0);
+-      expect_storage_attribute_error (storage_attribute_error::NON_VARIABLE_NORMAL_ATTRIBUTE);
++      expect_storage_attribute_error (storage_attribute_error::STORAGE_NOT_ALLOWED);
+       db_abort_transaction ();
+     }
+ }
+ 
+-TEST_F (OosSqlStorage, AlterRejectsAllStorageSettingsForFixedTypes)
++TEST_F (OosSqlStorage, AlterRejectsDirectionalStorageSettingsForFixedTypes)
+ {
+   int rc = exec_sql ("CREATE TABLE t_oos_stg (c INT)");
+   ASSERT_GE (rc, 0);
+   db_commit_transaction ();
+ 
+-  for (const char *setting : STORAGE_SETTINGS)
++  for (const char *setting : DIRECTIONAL_STORAGE_SETTINGS)
+     {
+       SCOPED_TRACE (setting);
+       std::string sql = "ALTER TABLE t_oos_stg MODIFY c INT STORAGE ";
+@@ -362,13 +469,13 @@ TEST_F (OosSqlStorage, AlterRejectsAllStorageSettingsForFixedTypes)
+ 
+       rc = exec_sql (sql.c_str ());
+       EXPECT_LT (rc, 0);
+-      expect_storage_attribute_error (storage_attribute_error::NON_VARIABLE_NORMAL_ATTRIBUTE);
++      expect_storage_attribute_error (storage_attribute_error::STORAGE_NOT_ALLOWED);
+       db_abort_transaction ();
+     }
+ 
+   rc = exec_sql ("ALTER TABLE t_oos_stg CHANGE c c INT STORAGE PREFER_INLINE");
+   EXPECT_LT (rc, 0);
+-  expect_storage_attribute_error (storage_attribute_error::NON_VARIABLE_NORMAL_ATTRIBUTE);
++  expect_storage_attribute_error (storage_attribute_error::STORAGE_NOT_ALLOWED);
+   db_abort_transaction ();
+ }
+ 
+@@ -391,7 +498,7 @@ TEST_F (OosSqlStorage, AlterAddDuplicateAttributeKeepsDuplicateErrorPrecedence)
+ 
+   rc = exec_sql ("ALTER TABLE t_oos_stg ADD ATTRIBUTE d INT STORAGE PREFER_INLINE");
+   EXPECT_LT (rc, 0);
+-  expect_storage_attribute_error (storage_attribute_error::NON_VARIABLE_NORMAL_ATTRIBUTE);
++  expect_storage_attribute_error (storage_attribute_error::STORAGE_NOT_ALLOWED);
+   db_abort_transaction ();
+ }
+ 
+@@ -434,7 +541,7 @@ TEST_F (OosSqlStorage, ForceOutlineRejectsUnsupportedAttributes)
+ {
+   int rc = exec_sql ("CREATE TABLE t_oos_stg (c INT STORAGE FORCE_OUTLINE)");
+   EXPECT_LT (rc, 0);
+-  expect_storage_attribute_error (storage_attribute_error::NON_VARIABLE_NORMAL_ATTRIBUTE);
++  expect_storage_attribute_error (storage_attribute_error::STORAGE_NOT_ALLOWED);
+   db_abort_transaction ();
+ 
+   rc = exec_sql ("CREATE TABLE t_oos_stg (c VARCHAR(4096) SHARED 'x' STORAGE FORCE_OUTLINE)");
+@@ -453,12 +560,12 @@ TEST_F (OosSqlStorage, ForceOutlineRejectsUnsupportedAttributes)
+ 
+   rc = exec_sql ("ALTER TABLE t_oos_stg MODIFY c INT STORAGE FORCE_OUTLINE");
+   EXPECT_LT (rc, 0);
+-  expect_storage_attribute_error (storage_attribute_error::NON_VARIABLE_NORMAL_ATTRIBUTE);
++  expect_storage_attribute_error (storage_attribute_error::STORAGE_NOT_ALLOWED);
+   db_abort_transaction ();
+ 
+   rc = exec_sql ("CREATE VCLASS t_oos_stg_v (c VARCHAR(4096) STORAGE FORCE_OUTLINE)");
+   EXPECT_LT (rc, 0);
+-  expect_storage_attribute_error (storage_attribute_error::NON_VARIABLE_NORMAL_ATTRIBUTE);
++  expect_storage_attribute_error (storage_attribute_error::STORAGE_NOT_ALLOWED);
+   db_abort_transaction ();
+ }
+ 
+@@ -639,9 +746,9 @@ TEST_F (OosSqlStorage, FailedExplicitFixedTypeAlterPreservesSchemaAndData)
+   ASSERT_GE (rc, 0);
+   db_commit_transaction ();
+ 
+-  rc = exec_sql ("ALTER TABLE t_oos_stg MODIFY c INT STORAGE DEFAULT");
++  rc = exec_sql ("ALTER TABLE t_oos_stg MODIFY c INT STORAGE PREFER_OUTLINE");
+   EXPECT_LT (rc, 0);
+-  expect_storage_attribute_error (storage_attribute_error::NON_VARIABLE_NORMAL_ATTRIBUTE);
++  expect_storage_attribute_error (storage_attribute_error::STORAGE_NOT_ALLOWED);
+   db_abort_transaction ();
+ 
+   std::string ddl;
+@@ -789,6 +896,427 @@ TEST_F (OosSqlStorage, PreferInlineColumnRoundTripsLargeValue)
+   EXPECT_EQ (len, 6000);
+ }
+ 
++TEST_F (OosSqlStorage, AlterModifyToFixedTypeWithTypeDefaultSettingClearsPolicy)
++{
++  for (const char *setting : TYPE_DEFAULT_STORAGE_SETTINGS)
++    {
++      SCOPED_TRACE (setting);
++      exec_sql ("DROP TABLE IF EXISTS t_oos_stg");
++      ASSERT_GE (exec_sql ("CREATE TABLE t_oos_stg (c VARCHAR(4) STORAGE PREFER_INLINE)"), 0);
++      ASSERT_GE (exec_sql ("INSERT INTO t_oos_stg VALUES ('1234')"), 0);
++      db_commit_transaction ();
++
++      std::string sql = "ALTER TABLE t_oos_stg MODIFY c INT STORAGE ";
++      sql += setting;
++      ASSERT_GE (exec_sql (sql.c_str ()), 0);
++      db_commit_transaction ();
++
++      std::string ddl;
++      ASSERT_EQ (get_create_table_ddl ("t_oos_stg", ddl), NO_ERROR);
++      EXPECT_FALSE (ddl_has_storage_clause (ddl)) << "after MODIFY to fixed type, DDL was:\n" << ddl;
++
++      int value = 0;
++      ASSERT_EQ (fetch_single_int ("SELECT c FROM t_oos_stg", &value), NO_ERROR);
++      EXPECT_EQ (value, 1234);
++    }
++}
++
++TEST_F (OosSqlStorage, CreateTablePersistsForceInline)
++{
++  int rc = exec_sql ("CREATE TABLE t_oos_stg ("
++		     "  id INT PRIMARY KEY,"
++		     "  payload VARCHAR(4096) STORAGE FORCE_INLINE)");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  std::string ddl;
++  rc = get_create_table_ddl ("t_oos_stg", ddl);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_TRUE (ddl_has_force_inline (ddl)) << "DDL was:\n" << ddl;
++  EXPECT_FALSE (ddl_has_prefer_inline (ddl)) << "DDL was:\n" << ddl;
++  EXPECT_FALSE (ddl_has_force_outline (ddl)) << "DDL was:\n" << ddl;
++}
++
++TEST_F (OosSqlStorage, CreateTableLikeCopiesForceInline)
++{
++  int rc = exec_sql ("CREATE TABLE t_oos_stg ("
++		     "  id INT PRIMARY KEY,"
++		     "  payload VARCHAR(4096) STORAGE FORCE_INLINE)");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  rc = exec_sql ("CREATE TABLE t_oos_stg_like LIKE t_oos_stg");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  std::string ddl;
++  rc = get_create_table_ddl ("t_oos_stg_like", ddl);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_TRUE (ddl_has_force_inline (ddl)) << "cloned DDL was:\n" << ddl;
++}
++
++TEST_F (OosSqlStorage, ForceInlineSurvivesDdlRoundTrip)
++{
++  int rc = exec_sql ("CREATE TABLE t_oos_stg ("
++		     "  id INT PRIMARY KEY,"
++		     "  payload VARCHAR(4096) STORAGE FORCE_INLINE)");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  std::string ddl;
++  rc = get_create_table_ddl ("t_oos_stg", ddl);
++  ASSERT_EQ (rc, NO_ERROR);
++  ASSERT_TRUE (ddl_has_force_inline (ddl)) << "DDL was:\n" << ddl;
++  const std::string statement = ddl_statement (ddl);
++
++  rc = exec_sql ("DROP TABLE t_oos_stg");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  rc = exec_sql (statement.c_str ());
++  ASSERT_GE (rc, 0) << "statement was:\n" << statement;
++  db_commit_transaction ();
++
++  rc = get_create_table_ddl ("t_oos_stg", ddl);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_TRUE (ddl_has_force_inline (ddl)) << "recreated DDL was:\n" << ddl;
++}
++
++TEST_F (OosSqlStorage, AlterModifyTransitionsForceInline)
++{
++  int rc = exec_sql ("CREATE TABLE t_oos_stg (id INT PRIMARY KEY, c VARCHAR(4096))");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  std::string ddl;
++  rc = get_create_table_ddl ("t_oos_stg", ddl);
++  ASSERT_EQ (rc, NO_ERROR);
++  ASSERT_FALSE (ddl_has_storage_clause (ddl)) << "initial DDL was:\n" << ddl;
++
++  rc = exec_sql ("ALTER TABLE t_oos_stg MODIFY c VARCHAR(4096) STORAGE FORCE_INLINE");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  rc = get_create_table_ddl ("t_oos_stg", ddl);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_TRUE (ddl_has_force_inline (ddl)) << "after MODIFY FORCE_INLINE, DDL was:\n" << ddl;
++
++  rc = exec_sql ("ALTER TABLE t_oos_stg MODIFY c VARCHAR(8192)");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  rc = get_create_table_ddl ("t_oos_stg", ddl);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_TRUE (ddl_has_force_inline (ddl)) << "after omitted STORAGE clause, DDL was:\n" << ddl;
++
++  rc = exec_sql ("ALTER TABLE t_oos_stg MODIFY c VARCHAR(8192) STORAGE PREFER_INLINE");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  rc = get_create_table_ddl ("t_oos_stg", ddl);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_TRUE (ddl_has_prefer_inline (ddl)) << "after MODIFY PREFER_INLINE, DDL was:\n" << ddl;
++  EXPECT_FALSE (ddl_has_force_inline (ddl)) << "after MODIFY PREFER_INLINE, DDL was:\n" << ddl;
++
++  rc = exec_sql ("ALTER TABLE t_oos_stg MODIFY c VARCHAR(8192) STORAGE FORCE_INLINE");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  rc = get_create_table_ddl ("t_oos_stg", ddl);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_TRUE (ddl_has_force_inline (ddl)) << "after MODIFY FORCE_INLINE, DDL was:\n" << ddl;
++  EXPECT_FALSE (ddl_has_prefer_inline (ddl)) << "after MODIFY FORCE_INLINE, DDL was:\n" << ddl;
++
++  rc = exec_sql ("ALTER TABLE t_oos_stg MODIFY c VARCHAR(8192) STORAGE FORCE_OUTLINE");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  rc = get_create_table_ddl ("t_oos_stg", ddl);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_TRUE (ddl_has_force_outline (ddl)) << "after MODIFY FORCE_OUTLINE, DDL was:\n" << ddl;
++  EXPECT_FALSE (ddl_has_force_inline (ddl)) << "after MODIFY FORCE_OUTLINE, DDL was:\n" << ddl;
++
++  rc = exec_sql ("ALTER TABLE t_oos_stg MODIFY c VARCHAR(8192) STORAGE FORCE_INLINE");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  rc = get_create_table_ddl ("t_oos_stg", ddl);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_TRUE (ddl_has_force_inline (ddl)) << "after MODIFY FORCE_INLINE, DDL was:\n" << ddl;
++  EXPECT_FALSE (ddl_has_force_outline (ddl)) << "after MODIFY FORCE_INLINE, DDL was:\n" << ddl;
++
++  rc = exec_sql ("ALTER TABLE t_oos_stg MODIFY c VARCHAR(8192) STORAGE DEFAULT");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  rc = get_create_table_ddl ("t_oos_stg", ddl);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_FALSE (ddl_has_storage_clause (ddl)) << "after MODIFY DEFAULT, DDL was:\n" << ddl;
++}
++
++TEST_F (OosSqlStorage, AlterModifyToFixedTypeDropsForceInlineForGood)
++{
++  int rc = exec_sql ("CREATE TABLE t_oos_stg (c VARCHAR(4) STORAGE FORCE_INLINE)");
++  ASSERT_GE (rc, 0);
++  rc = exec_sql ("INSERT INTO t_oos_stg VALUES ('1234')");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  rc = exec_sql ("ALTER TABLE t_oos_stg MODIFY c INT");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  std::string ddl;
++  rc = get_create_table_ddl ("t_oos_stg", ddl);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_FALSE (ddl_has_storage_clause (ddl)) << "after MODIFY to fixed type, DDL was:\n" << ddl;
++
++  rc = exec_sql ("ALTER TABLE t_oos_stg MODIFY c VARCHAR(100)");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  rc = get_create_table_ddl ("t_oos_stg", ddl);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_FALSE (ddl_has_storage_clause (ddl)) << "after MODIFY back to variable type, DDL was:\n" << ddl;
++
++  int value = 0;
++  rc = fetch_single_int ("SELECT CAST(c AS INT) FROM t_oos_stg", &value);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (value, 1234);
++}
++
++TEST_F (OosSqlStorage, ForceInlineKeepsLargeValueOutOfOos)
++{
++  int rc = exec_sql ("CREATE TABLE t_oos_stg (id INT, a BIT VARYING STORAGE FORCE_INLINE)");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  rc = exec_sql (("INSERT INTO t_oos_stg VALUES (1, " + uncompressed_bit_varying (8000) + ")").c_str ());
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  OOS_STATS_INFO stats;
++  rc = get_oos_stats ("t_oos_stg", &stats);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (stats.has_oos_file, 0);
++
++  int bits = 0;
++  rc = fetch_single_int ("SELECT BIT_LENGTH(a) FROM t_oos_stg WHERE id = 1", &bits);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (bits, 8000 * 8);
++}
++
++TEST_F (OosSqlStorage, ForceInlineColumnIsSkippedWhenDemotingLargestFirst)
++{
++  int rc = exec_sql ("CREATE TABLE t_oos_stg (id INT, a BIT VARYING STORAGE FORCE_INLINE, b BIT VARYING)");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  rc = exec_sql (("INSERT INTO t_oos_stg VALUES (1, " + uncompressed_bit_varying (8000) + ", "
++		  + uncompressed_bit_varying (3000) + ")").c_str ());
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  OOS_STATS_INFO stats;
++  rc = get_oos_stats ("t_oos_stg", &stats);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (stats.num_recs, 1);
++  EXPECT_LT (stats.recs_sumlen, 8000) << "the 8000-byte FORCE_INLINE value must not be the one that went out";
++
++  int bits = 0;
++  rc = fetch_single_int ("SELECT BIT_LENGTH(a) FROM t_oos_stg WHERE id = 1", &bits);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (bits, 8000 * 8);
++  rc = fetch_single_int ("SELECT BIT_LENGTH(b) FROM t_oos_stg WHERE id = 1", &bits);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (bits, 3000 * 8);
++}
++
++TEST_F (OosSqlStorage, ForceInlineValueAssignedByUpdateStaysInline)
++{
++  int rc = exec_sql ("CREATE TABLE t_oos_stg (id INT, a BIT VARYING STORAGE FORCE_INLINE)");
++  ASSERT_GE (rc, 0);
++  rc = exec_sql ("INSERT INTO t_oos_stg VALUES (1, NULL)");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  rc = exec_sql (("UPDATE t_oos_stg SET a = " + uncompressed_bit_varying (8000) + " WHERE id = 1").c_str ());
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  OOS_STATS_INFO stats;
++  rc = get_oos_stats ("t_oos_stg", &stats);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (stats.has_oos_file, 0);
++
++  int bits = 0;
++  rc = fetch_single_int ("SELECT BIT_LENGTH(a) FROM t_oos_stg WHERE id = 1", &bits);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (bits, 8000 * 8);
++}
++
++TEST_F (OosSqlStorage, ForceInlineNonOosBigoneIsStoredWithWarning)
++{
++  int rc = exec_sql ("CREATE TABLE t_oos_stg (id INT, a BIT VARYING STORAGE FORCE_INLINE, b BIT VARYING)");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  const int warnings_before = heap_oos_test_bigone_without_oos_warnings ();
++  rc = exec_sql (("INSERT INTO t_oos_stg VALUES (1, " + uncompressed_bit_varying (17000) + ", NULL)").c_str ());
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++  EXPECT_EQ (heap_oos_test_bigone_without_oos_warnings () - warnings_before, 1);
++
++  OOS_STATS_INFO stats;
++  rc = get_oos_stats ("t_oos_stg", &stats);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (stats.has_oos_file, 0);
++
++  int bits = 0;
++  rc = fetch_single_int ("SELECT BIT_LENGTH(a) FROM t_oos_stg WHERE id = 1", &bits);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (bits, 17000 * 8);
++}
++
++TEST_F (OosSqlStorage, FixedTypeNonOosBigoneIsStoredWithWarning)
++{
++  int rc = exec_sql ("CREATE TABLE t_oos_stg (id INT, a BIT(136000))");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  const int warnings_before = heap_oos_test_bigone_without_oos_warnings ();
++  rc = exec_sql ("INSERT INTO t_oos_stg VALUES (1, CAST(REPEAT('AA', 17000) AS BIT(136000)))");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++  EXPECT_EQ (heap_oos_test_bigone_without_oos_warnings () - warnings_before, 1);
++
++  int bits = 0;
++  rc = fetch_single_int ("SELECT BIT_LENGTH(a) FROM t_oos_stg WHERE id = 1", &bits);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (bits, 17000 * 8);
++}
++
++TEST_F (OosSqlStorage, UpdateIntoNonOosBigoneWarns)
++{
++  int rc = exec_sql ("CREATE TABLE t_oos_stg (id INT, a BIT VARYING STORAGE FORCE_INLINE)");
++  ASSERT_GE (rc, 0);
++  rc = exec_sql (("INSERT INTO t_oos_stg VALUES (1, " + uncompressed_bit_varying (100) + ")").c_str ());
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  const int warnings_before = heap_oos_test_bigone_without_oos_warnings ();
++  rc = exec_sql (("UPDATE t_oos_stg SET a = " + uncompressed_bit_varying (17000) + " WHERE id = 1").c_str ());
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++  EXPECT_EQ (heap_oos_test_bigone_without_oos_warnings () - warnings_before, 1);
++
++  int bits = 0;
++  rc = fetch_single_int ("SELECT BIT_LENGTH(a) FROM t_oos_stg WHERE id = 1", &bits);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (bits, 17000 * 8);
++}
++
++TEST_F (OosSqlStorage, OosBackedLargeRecordDoesNotWarn)
++{
++  int rc = exec_sql ("CREATE TABLE t_oos_stg (id INT, a BIT VARYING)");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  const int warnings_before = heap_oos_test_bigone_without_oos_warnings ();
++  rc = exec_sql (("INSERT INTO t_oos_stg VALUES (1, " + uncompressed_bit_varying (17000) + ")").c_str ());
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++  EXPECT_EQ (heap_oos_test_bigone_without_oos_warnings (), warnings_before);
++
++  OOS_STATS_INFO stats;
++  rc = get_oos_stats ("t_oos_stg", &stats);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (stats.has_oos_file, 1);
++  EXPECT_GE (stats.recs_sumlen, 17000);
++}
++
++TEST_F (OosSqlStorage, ForceInlineWithOosBigoneIsRejectedWithoutOrphanChain)
++{
++  int rc = exec_sql ("CREATE TABLE t_oos_stg (id INT, a BIT VARYING STORAGE FORCE_INLINE, b BIT VARYING)");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  const int warnings_before = heap_oos_test_bigone_without_oos_warnings ();
++  rc = exec_sql (("INSERT INTO t_oos_stg VALUES (1, " + uncompressed_bit_varying (17000) + ", "
++		  + uncompressed_bit_varying (1000) + ")").c_str ());
++  int errid = er_errid ();
++  EXPECT_LT (rc, 0);
++  EXPECT_EQ (errid, ER_HEAP_OOS_OVERPASS_MAXOBJ_SIZE);
++  EXPECT_EQ (heap_oos_test_bigone_without_oos_warnings (), warnings_before);
++  db_abort_transaction ();
++
++  int count = -1;
++  rc = fetch_single_int ("SELECT COUNT(*) FROM t_oos_stg", &count);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (count, 0);
++
++  OOS_STATS_INFO stats;
++  rc = get_oos_stats ("t_oos_stg", &stats);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (stats.num_recs, 0);
++}
++
++TEST_F (OosSqlStorage, AlterForceInlineAppliesOnlyToNewWrites)
++{
++  int rc = exec_sql ("CREATE TABLE t_oos_stg (id INT, a BIT VARYING)");
++  ASSERT_GE (rc, 0);
++  rc = exec_sql (("INSERT INTO t_oos_stg VALUES (1, " + uncompressed_bit_varying (8000) + ")").c_str ());
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  OOS_STATS_INFO stats;
++  rc = get_oos_stats ("t_oos_stg", &stats);
++  ASSERT_EQ (rc, NO_ERROR);
++  const auto oos_recs_before = stats.num_recs;
++  ASSERT_GT (oos_recs_before, 0) << "the unrestricted 8000-byte value must have been demoted";
++
++  rc = exec_sql ("ALTER TABLE t_oos_stg MODIFY a BIT VARYING STORAGE FORCE_INLINE");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  rc = get_oos_stats ("t_oos_stg", &stats);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (stats.num_recs, oos_recs_before);
++
++  int bits = 0;
++  rc = fetch_single_int ("SELECT BIT_LENGTH(a) FROM t_oos_stg WHERE id = 1", &bits);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (bits, 8000 * 8);
++
++  rc = exec_sql (("INSERT INTO t_oos_stg VALUES (2, " + uncompressed_bit_varying (8000) + ")").c_str ());
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  rc = get_oos_stats ("t_oos_stg", &stats);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (stats.num_recs, oos_recs_before);
++
++  rc = fetch_single_int ("SELECT BIT_LENGTH(a) FROM t_oos_stg WHERE id = 2", &bits);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (bits, 8000 * 8);
++}
++
++TEST_F (OosSqlStorage, ForceInlineRemainsNonReservedIdentifier)
++{
++  int rc = exec_sql ("CREATE TABLE t_oos_stg (force_inline INT)");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  rc = exec_sql ("INSERT INTO t_oos_stg (force_inline) VALUES (7)");
++  ASSERT_GE (rc, 0);
++  db_commit_transaction ();
++
++  int value = 0;
++  rc = fetch_single_int ("SELECT force_inline FROM t_oos_stg", &value);
++  ASSERT_EQ (rc, NO_ERROR);
++  EXPECT_EQ (value, 7);
++}
++
+ int
+ main (int argc, char **argv)
+ {

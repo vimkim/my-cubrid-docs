@@ -1,0 +1,10 @@
+create table t1 (id int, a varchar(30000) storage force_inline, b varchar(100));
+create table t2 (id int, a varchar(30000) storage prefer_inline, b varchar(100));
+create table t3 (id int, a varchar(30000), b varchar(100));
+create table t4 (id int, a int storage force_inline, c char(20) storage default);
+create table t5 (id int, a bit varying(200000) storage force_outline);
+create table t6 (id int, a varchar(30000) storage force_outline);
+create table t7 (id int, a varchar(30000) storage prefer_outline);
+create table t8 (id int, a varchar(30000) storage default);
+alter table t1 modify a varchar(30000) storage force_outline;
+alter table t1 modify a varchar(30000) storage force_inline;

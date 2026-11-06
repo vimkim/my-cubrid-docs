@@ -1,0 +1,37 @@
+=== <Result of SELECT Command in Line 1> ===
+           id   char_length(a)   char_length(b)
+===============================================
+          204            20000               30
+          205            20000               10
+2 rows selected. (0.003149 sec) Committed. (0.000053 sec) 
+Execute OK. (0.002584 sec) Committed. (0.007299 sec) 
+=== <Result of SELECT Command in Line 3> ===
+  TABLE                 CREATE TABLE        
+============================================
+  'dba.t3'              'CREATE TABLE [t3] ([id] INTEGER, [a] CHARACTER VARYING(30000) STORAGE FORCE_INLINE, [b] CHARACTER VARYING(100)) REUSE_OID, COLLATE utf8_bin'
+1 row selected. (0.001403 sec) Committed. (0.000041 sec) 
+=== <Result of SELECT Command in Line 4> ===
+           id   char_length(a)   char_length(b)
+===============================================
+          204            20000               30
+          205            20000               10
+2 rows selected. (0.001590 sec) Committed. (0.000026 sec) 
+In the command from line 5,
+ERROR: The record cannot be stored because its size (20084 bytes) still exceeds the maximum record size (16236 bytes) even after moving large variable-length columns to out-of-row storage (OOS). Reduce the size of fixed-length or non-eligible columns.
+1 row affected. (0.002534 sec) Committed. (0.012451 sec) 
+=== <Result of SELECT Command in Line 7> ===
+           id   char_length(a)   char_length(b)
+===============================================
+          204            20000               30
+          905            20000               10
+2 rows selected. (0.002272 sec) Committed. (0.000044 sec) 
+0 row affected. (0.001349 sec) Committed. (0.000031 sec) 
+=== <Result of SELECT Command in Line 9> ===
+           id   char_length(a)   char_length(b)
+===============================================
+            1            20000               10
+            2            20000               30
+            9            20000               30
+          204            20000               30
+          905            20000               10
+5 rows selected. (0.001838 sec) Committed. (0.000024 sec) 

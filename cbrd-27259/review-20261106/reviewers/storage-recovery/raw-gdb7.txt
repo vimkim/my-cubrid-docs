@@ -1,0 +1,14 @@
+Breakpoint 1 (heap_attrinfo_get_record_payload_size) pending.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib64/libthread_db.so.1".
+[Detaching after fork from child process 2088751]
+
+Breakpoint 1, heap_attrinfo_get_record_payload_size (attr_info=0x7fffffff61d0, column_size=0x7fffffff53c0) at /home/vimkim/gh/cb/CBRD-27259-storage-force-inline/src/storage/heap_file.c:13067
+13067	  size = 0;
+0x00007ffff6ba83d0 in heap_attrinfo_determine_disk_layout (attr_info=0x7fffffff61d0, is_mvcc_class=true, offset_size_ptr=0x7fffffff54d8, oos_plan=0x7fffffff54b0, has_oos=0x7fffffff54d7, inline_size_after_oos_ptr=0x7fffffff54e8) at /home/vimkim/gh/cb/
+13155	  payload_size = heap_attrinfo_get_record_payload_size (attr_info, &column_size);
+Value returned is $1 = 136
+$2 = 3
+$3 = OR_ATTRIBUTE_OOS_STORAGE_DEFAULT
+$4 = 0
+$5 = 4 '\004'
