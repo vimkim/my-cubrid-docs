@@ -1,6 +1,6 @@
 # CBRD-27781
 
-Documents for JIRA [CBRD-27781](https://jira.cubrid.org/browse/CBRD-27781) (OOS chunk undo writes over a reused slot) and the companion [CBRD-27237](https://jira.cubrid.org/browse/CBRD-27237) (forward-walk deletes the chain of a rolled-back UPDATE), implemented together under ADR-0008. No PR exists yet; the engine branch is `CBRD-27781-postpone-commit` (`62d0b35b6`, `3e8072f56`) over `feature/oos-merge` `d52b1889e`.
+Documents for JIRA [CBRD-27781](https://jira.cubrid.org/browse/CBRD-27781) (OOS chunk undo writes over a reused slot) and the companion [CBRD-27237](https://jira.cubrid.org/browse/CBRD-27237) (forward-walk deletes the chain of a rolled-back UPDATE), implemented together under ADR-0008. PR: CUBRID/cubrid#8434; the engine branch is `CBRD-27781-postpone-commit` (`0034bc2fb`) over `feature/oos-merge` `95ff126a8`.
 
 Last modified: 2026-11-06 (Asia/Seoul).
 

@@ -6,10 +6,10 @@ Draft PR created 2026-11-06: https://github.com/CUBRID/cubrid/pull/8434. Metadat
 | --- | --- |
 | Tickets | CBRD-27781 (primary), CBRD-27237 |
 | Design | ADR-0008 "Reclaim OOS chains only after the delete is final", accepted 2026-11-05 (team lead, reported by the OOS owner); `cubrid-oos-context` branch `docs/adr-0008-reclaim-after-finality` (local, not merged) |
-| Source commit | `2e32517bb` (five commits over the base: `62d0b35b6`, `3e8072f56`, `6ac2d7de6`, `9406a0f71`, `2e32517bb`), branch `CBRD-27781-postpone-commit` |
-| Base | `feature/oos-merge` at `d52b1889e907abcf84190ec504dde3bc93de260d` (the PR #7990 head branch) |
+| Source commit | `0034bc2fb` (seven commits over the base: `d103d8b3d`, `c255c7c3b`, `f722cdd83`, `c2e93c66e`, `e1d5bb60d`, `b6bcc09c6`, `0034bc2fb`), branch `CBRD-27781-postpone-commit`; rebased 2026-11-09 |
+| Base | `feature/oos-merge` at `95ff126a8464179a2fab3092b6f56468528ab954` (includes CBRD-27933 #8417) |
 | Source repository / push routing | `vimkim/cubrid` (`vk`) for the head branch; target `CUBRID/cubrid` base `feature/oos-merge` |
-| Observed remote head | `vk/CBRD-27781-postpone-commit` at `2e32517bb` (pushed 2026-11-06 after review fixes) |
+| Observed remote head | `vk/CBRD-27781-postpone-commit` at `0034bc2fb` (force-pushed 2026-11-09 after the rebase) |
 | Operation | draft PR #8434 created (approved 2026-11-06) |
 | Proposed title | `[CBRD-27781] Reclaim OOS chains only after the delete is final` |
 | Assignee | vimkim (default for creation) |

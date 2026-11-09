@@ -1,6 +1,6 @@
 # Handoff: ADR-0008 decision 7 — INSERT·UPDATE 지연 재측정
 
-2026-11-06, Work742. 다른(조용한) 장비에서 사람이 이어서 할 측정이다. 결과로 ADR-0008 decision 7의 마지막 조건, "INSERT와 UPDATE 지연이 나빠지지 않을 것"을 판정한다.
+2026-11-06, Work742 (2026-11-09 base 갱신). 다른(조용한) 장비에서 사람이 이어서 할 측정이다. 결과로 ADR-0008 decision 7의 마지막 조건, "INSERT와 UPDATE 지연이 나빠지지 않을 것"을 판정한다.
 
 ## 지금까지
 
@@ -12,8 +12,8 @@
 
 | 이름 | 커밋 | 얻는 곳 |
 |---|---|---|
-| base | `d52b1889e` (`feature/oos-merge`, PR #8434의 base) | `https://github.com/CUBRID/cubrid` |
-| new | PR #8434의 현재 head. `6a8d16da7` 이후 커밋이어야 한다 | `https://github.com/vimkim/cubrid` 브랜치 `CBRD-27781-postpone-commit` |
+| base | `95ff126a8` (`feature/oos-merge`, PR #8434의 base. 2026-11-09 rebase 후) | `https://github.com/CUBRID/cubrid` |
+| new | PR #8434의 현재 head. `0034bc2fb` 이후 커밋이어야 한다 | `https://github.com/vimkim/cubrid` 브랜치 `CBRD-27781-postpone-commit` |
 
 new의 커밋은 측정 시점에 `git ls-remote https://github.com/vimkim/cubrid CBRD-27781-postpone-commit`로 확인하고 결과에 적는다. PR 리뷰로 head가 더 움직였으면 최신 head를 잰다.
 
@@ -29,7 +29,7 @@ new의 커밋은 측정 시점에 `git ls-remote https://github.com/vimkim/cubri
 
 ```bash
 # base
-git clone https://github.com/CUBRID/cubrid cubrid-base && cd cubrid-base && git checkout d52b1889e
+git clone https://github.com/CUBRID/cubrid cubrid-base && cd cubrid-base && git checkout 95ff126a8
 export CUBRID=$HOME/cub-install/base
 cmake --preset release && cmake --build build_preset_release && cmake --install build_preset_release
 cd ..
@@ -81,7 +81,7 @@ OUT=$HOME/oos-latency-$(date +%Y%m%d) REPEATS=10 \
 
 ## 결과를 남길 곳
 
-- [perf.md](perf.md)에 "재측정 (지연)" 절을 추가한다. 장비 사양, 두 커밋, 반복 수, 표, 판정을 적는다. 원자료 CSV는 `bench/results-<new>-vs-d52b1889e-latency.csv`로 넣는다.
+- [perf.md](perf.md)에 "재측정 (지연)" 절을 추가한다. 장비 사양, 두 커밋, 반복 수, 표, 판정을 적는다. 원자료 CSV는 `bench/results-<new>-vs-95ff126a8-latency.csv`로 넣는다.
 - 판정이 나면 함께 갱신할 곳:
   - ADR-0008 decision 7 문장(`cubrid-oos-context`의 `docs/adr/0008-reclaim-oos-chains-after-the-delete-is-final.md`): 지연이 "판단 못함"으로 남아 있다.
   - PR #8434 본문의 성능 항목. 원본은 [pr-body.md](pr-body.md)이다.
