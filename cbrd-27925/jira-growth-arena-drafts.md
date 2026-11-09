@@ -1,6 +1,6 @@
 # JIRA 보충 댓글 초안: 성장 상한 arena 결과 (Work829)
 
-2026-11-09, Asia/Seoul. 근거는 [growth-arena/](growth-arena/)의 다섯 보고서와 cubrid-oos-context branch `docs/adr-0010-emptied-page-candidates` `01cc902`의 ADR-0010 개정본이다. 아직 게시하지 않았다. 게시는 사용자 승인 뒤 `cubrid-jira comment`로 한다.
+2026-11-09, Asia/Seoul. 근거는 [growth-arena/](growth-arena/)의 다섯 보고서와 cubrid-oos-context branch `docs/adr-0010-emptied-page-candidates` `01cc902`의 ADR-0010 개정본이다. **게시 기록 (2026-11-09):** 사용자 승인 뒤 `cubrid-jira comment`로 게시했다. CBRD-27925 댓글 4778209, CBRD-26659 댓글 4778210. 게시본은 아래 초안의 목록 줄바꿈과 코드 표기만 고쳤다.
 
 CBRD-27925 댓글 4778015(2026-11-06)는 "후보 집합은 동시 쓰기가 있어도 유계", "구현은 ADR-0008 구현과 함께"라고 썼다. arena 결과로 두 문장을 바로잡는다. 게시본에서는 외부 독자가 열 수 없는 `my-cubrid-docs` 경로와 Work 번호를 뺀다.
 
