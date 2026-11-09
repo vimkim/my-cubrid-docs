@@ -2,7 +2,7 @@
 
 This directory checks the Sidecar design (`../../design.md`, Gate 1 approved on 2026-11-04) for three things before any engine code exists: crash recovery keeps each row whole, every undo that Sidecar can start finds its slot and its bytes, and the latch order cannot deadlock. A separate model in `../lifecycle/` checks the value lifecycle and reader safety. This is a design model, not a verify skill. Each model action names the design section and the `develop` line at `e64a04a79` (worktree `/home/vimkim/gh/cb/sidecar`) that it stands for.
 
-Last modified: 2026-11-04, Asia/Seoul.
+Last modified: 2026-11-09, Asia/Seoul. The store cursor runs (`latch-cursor`, `latch-cursor-keep-across-hot-fix`, `latch-cursor-keep-across-call`) were added on 2026-11-09 against the P1c code on branch `sidecar` at `407ecead8`. Their code lines in the mapping table refer to that commit.
 
 ## Run it
 
@@ -12,7 +12,7 @@ python3 run.py
 
 `run.py` runs every configuration in `cfg/` with Java on `PATH` and `~/.cache/tlaplus/tla2tools-1.7.4.jar` (`TLA2TOOLS_JAR` overrides it). It prints one line per run with `PASS` or `FAIL`, the distinct state count, the time, and the expected result, then the steps of every counterexample in design words. TLC output goes to a new directory under the system temp directory, and `run.py` prints its path. `--only TEXT` runs the configurations whose name contains `TEXT`. The exit status is 0 when every run matches its expectation, 1 when one does not, and 2 when TLC cannot run.
 
-The 35 runs take about 2.5 minutes of wall time on this 80-core host (143 s measured on 2026-11-04), at 8 TLC workers per run and 10 runs at a time. The largest run has 2.9 million distinct states.
+The 38 runs take about 2.5 minutes of wall time on this 80-core host (149 s measured on 2026-11-09), at 8 TLC workers per run and 10 runs at a time. The largest run has 2.9 million distinct states.
 
 | File | What it is |
 | --- | --- |
@@ -40,6 +40,8 @@ The 35 runs take about 2.5 minutes of wall time on this 80-core host (143 s meas
 - One crash at any point, then restart undo of the losers and of an open vacuum sysop in reverse LSA order.
 
 **`SidecarLatch.tla`.** Pages: the hot header `HH`, hot pages `H1` and `H2`, and store pages `S1` and `S2`. Each thread runs a fixed sequence of fixes and unfixes. The model applies plain fixes, ordered fixes with conditional latches and the unfix and refix of later pages, and the page buffer's grant rule for readers behind waiting writers. It explores both orders of the two heap files. The design threads are a reader, the large-column UPDATE writer with its plan read and store writes, store vacuum (REL), the store-creation sysop, and a stock hot UPDATE that relocates its row.
+
+The store cursor runs replace that reader with a fixed heap scan whose store cursor keeps one store page between the rows of hot page `H1` (I-7, the store cursor rule). The scan calls a stored procedure while it is on `H1`, re-fixes the store page for the next row, and then moves to `H2`, keeping `H1` until `H2` is fixed. The other threads are a large-column UPDATE on `H2`, store vacuum (REL), and a worker that runs the routine's SQL, which is another large-column UPDATE on `H2`. The caller waits until the worker finishes, and `NoDeadlock` counts that wait as an edge from the caller to the worker. The design program releases the kept page before the call and before the next hot page fix. Each broken variant drops one of the two releases.
 
 ## Mapping from model to design and code
 
@@ -79,6 +81,9 @@ Lines are under `src/` at `e64a04a79`.
 | latch `creator` | 6 INSERT step 4; I-7 | the `heap_ovf_find_vfid` pattern, plain X fix of the header, `storage/heap_file.c:6062`, `:6079` |
 | latch `hotreloc` | none (stock) | `heap_fix_header_page` `:21428-21450`, called at `:24313`, then `heap_insert_newhome` |
 | latch `multirow` | 6 Multi-row insert; interrogation finding 1d | `locator_multi_insert_force` `transaction/locator_sr.c:14144`, batch page held with a watcher `:14235` |
+| latch `reader`, cursor variants (`CursorProgs`) | 5.5 I-7, the store cursor rule; 6 Wide scan step 2 | at `407ecead8`: the kept page is released before a routine call, `cubpl::executor::execute` `sp/pl_executor.cpp:288`, and before a hot page fix, `heap_scan_pb_latch_and_fetch` `storage/heap_file.c:1057` through `sidecar_cursor_before_hot_fix` `storage/sidecar.hpp:172-182`; `heap_next` keeps the old hot page until the new one is fixed `storage/heap_file.c:8039`, `:8058-8062`; the keep itself, `sidecar_lazy_note` `storage/sidecar.cpp:1988-2003` |
+| latch `writer` (cursor variants), `worker` | 5.5 the store cursor rule; P1c E18 | the same UPDATE shape as `writer`, on `H2`; the routine's SQL runs on another worker while the caller waits in `cubpl::executor::execute` |
+| latch `CallReturn`, `WorkerStart` | P1c E18 | the caller returns only after the worker's SQL ends; no lock manager or latch timeout sees this wait |
 | latch `Arrive`, `Serve` | none | `pgbuf_ordered_fix_release` `storage/page_buffer.c:12444`: conditional latch when other pages are held `:12511-12520`, plain fixes skipped `:12635`, only pages that sort after the request are unfixed `:12792`, order `:12364-12418`; a read request waits behind waiters, `pgbuf_latch_bcb_upon_fix` `:6371`, `:6449-6470` |
 
 ## Bounds and assumptions
@@ -90,10 +95,11 @@ Lines are under `src/` at `e64a04a79`.
 - An undo runs as `TRAN_UNACTIVE_ABORTED` or in crash recovery, so its room test is `total_free`. An active transaction's insert subtracts all saved space on the page. Saved space is lost in a crash.
 - A failed undo stops the run (`logpb_fatal_error`), except a re-insert over a live record, which a release build performs.
 - The latch model has 5 pages and 4 to 6 threads with fixed programs. Waiters are served in arrival order, readers together.
+- The store cursor runs have 4 threads: the cursor scan, one UPDATE on `H2`, store vacuum and the routine's worker. The scan reads two rows on `H1` with one routine call between them and then moves to `H2`.
 
 ## Results
 
-Every run matched its expectation (`python3 run.py`, exit 0, 2026-11-04). Counts are distinct states. A PASS count is the whole state space and repeats exactly. A FAIL count is where TLC stopped, and it varies a little between runs with the timing of the TLC workers. The counterexamples are the shortest ones, rechecked with one TLC worker.
+Every run matched its expectation (`python3 run.py`, exit 0, 2026-11-04, and again with the store cursor runs on 2026-11-09). Counts are distinct states. A PASS count is the whole state space and repeats exactly. A FAIL count is where TLC stopped, and it varies a little between runs with the timing of the TLC workers. The counterexamples are the shortest ones, rechecked with one TLC worker.
 
 | Configuration | `UndoFindsEmptySlot` | `UndoFindsRoom` | `AtomicRow` |
 | --- | --- | --- | --- |
@@ -107,6 +113,7 @@ Every run matched its expectation (`python3 run.py`, exit 0, 2026-11-04). Counts
 | Latch configuration | `NoDeadlock` |
 | --- | --- |
 | Design (`latch-design`) | PASS 560,576 |
+| Store cursor keeps one page across rows, releases it before the call and the next hot fix (`latch-cursor`) | PASS 74,532 |
 
 ### Which Sidecar paths need which fix
 
@@ -135,6 +142,8 @@ Every run matched its expectation (`python3 run.py`, exit 0, 2026-11-04). Counts
 | Multi-row insert writes an existing store with its batch page latched (`latch-multirow-store-write`) | `NoDeadlock` | FAIL 372,186 |
 | Reader latches store, then hot (`latch-reader-store-first`) | `NoDeadlock` | FAIL 8,409 |
 | Store cursor fixes the next store page before releasing the previous one (`latch-cursor-two-pages`) | `NoDeadlock` | FAIL 3,790 (finding 2) |
+| Store cursor keeps its page while the scan fixes the next hot page (`latch-cursor-keep-across-hot-fix`) | `NoDeadlock` | FAIL 44,885 (finding 4) |
+| Store cursor keeps its page across a stored procedure call (`latch-cursor-keep-across-call`) | `NoDeadlock` | FAIL 3,137 (finding 4) |
 
 ## Findings
 
@@ -161,6 +170,25 @@ The same holds for `sidecar_plan_update` when it compares two kept values on two
 
 **3. The multi-row insert rule holds, and for a second reason.** Design 6 Multi-row insert keeps policy records out of the latched batch page. The model confirms that the batch page must not be held across store creation (a scan holds `HH` and waits for the batch page while the creator holds the batch page and waits for `HH`). It also shows that a store write alone under the batch page deadlocks when the store's header page sorts before the hot heap's. The batch page is held with a watcher (`transaction/locator_sr.c:14235`), so the ordered fix of a store page unfixes the batch page and fixes it again after the store page. That is store-then-hot order, against a writer that holds the hot page and plain-fixes the store page in its plan read.
 
+**4. The store cursor rule holds, and each of its two releases is needed.** With the kept page released before the routine call and before the next hot page fix, the cursor scan, an UPDATE, store vacuum and the routine's worker never deadlock (`latch-cursor`). Dropping either release deadlocks.
+
+Kept across the call (`latch-cursor-keep-across-call`), in 4 steps. This is the hang that P1c review R1 found and test `sp_keeps_no_store_page` measured.
+
+1. The scan read-latches `H1` and keeps store page `S1` for its row's value.
+2. Store vacuum asks for `S1` to write and waits for the scan.
+3. The scan calls the routine and waits for its worker.
+4. The worker's UPDATE plan asks for `S1` to read. Vacuum waits ahead of it with a write request, so the worker queues behind vacuum. Without vacuum, the worker's stamp of `S1` waits for the scan directly.
+
+Kept across the next hot page fix (`latch-cursor-keep-across-hot-fix`), a three-thread cycle.
+
+1. The scan holds `H1` and keeps store page `S1`.
+2. An UPDATE write-latches `H2`.
+3. The scan asks for `H2` with `H1` still held, as `heap_next` does. The conditional latch fails, and the scan waits for `H2` while it keeps `S1`.
+4. Store vacuum asks for `S1` to write and waits for the scan.
+5. The UPDATE's plan asks for `S1` to read and queues behind vacuum.
+
+TLC's shortest path also runs the routine call first, because the broken program places the call before the page move. The call adds nothing to the cycle.
+
 ## What the models do not cover
 
 - Reader safety, MVCC visibility and the retry rule. The lifecycle model in `../lifecycle/` covers them.
@@ -168,6 +196,7 @@ The same holds for `sidecar_plan_update` when it compares two kept values on two
 - The store-creation sysop's crash undo, the compatibility-level flush inside it, and the store header page. I-7 says that nobody fixes a store header page while holding a store data page, but the stock stamp of a store record within 8 B of `heap_Maxslotted_reclength` (design 5.1) calls `heap_ovf_insert` with the store home page held (`storage/heap_file.c:23435`), which plain-fixes the store header (`:6174`, `:6079`). I found no thread that holds the store header while it waits for a store data page, but neither model includes that page.
 - Overflow pages: BIGONE store inserts and stamps, `RVFL_ALLOC`, and postponed page deallocation.
 - Several values per row, several rows, several writers, repeated crashes, nested sysops, SA mode, HA replication, CDC, and TDE (item 774).
-- Locks, file manager and disk manager latches, log latches, and the `LK_FORCE_ZERO_WAIT` page scans in `bestspace`.
+- Locks, file manager and disk manager latches, log latches, and the `LK_FORCE_ZERO_WAIT` page scans in `bestspace`. The store cursor's release before a lock wait (`lock_internal_perform_lock_object`, `transaction/lock_manager.c:3579` at `407ecead8`) is therefore not checked.
+- Other store cursor release sites: inner scans of joins and subqueries (`scan_manager.c`), the parallel heap worker's page step, `heap_get_bigone_content`, and `pgbuf_fix` as the release of last resort. The cursor runs have one scan on one thread, and only the two releases above.
 
 A pass covers these models under these bounds, not the engine.

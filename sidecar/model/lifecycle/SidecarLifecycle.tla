@@ -34,7 +34,14 @@ CONSTANTS
   VacuumUncommitted, \* store vacuum also removes a record whose DELID writer is still active
   ResolveUnderLatch, \* heap-path unprotected readers resolve before they release the hot latch
   SnapRegister,      \* the snapshot reader's snapshot is registered (5.6 a)
-  PinDeadRow         \* with a pin, a version whose DELID precedes the pin is dead (first draft, section 13)
+  PinDeadRow,        \* with a pin, a version whose DELID precedes the pin is dead (first draft, section 13)
+  LockFallback,      \* an exhausted committed fetch re-reads the row under an S lock (5.6 c, lock fallback)
+  FallbackLocks,     \* the lock fallback takes the S lock before it reads the last version
+  NoLazyWithRoutine, \* a statement that calls a routine reads nothing lazily (5.6 a, E22)
+  TridCheck,         \* the attribute layer compares the lazy keep's trid (ER_SIDECAR_LAZY_AFTER_TRAN_END, E19)
+  \* Scenario switches, not design rules.
+  RoutineCommit,     \* a protected reader's statement may call a routine that COMMITs between fetch and decode
+  OtherKeep          \* another keep of the same thread may replace the lazy note between fetch and decode
 
 NoSlot == 0
 Slots == 1..NSlots
@@ -49,14 +56,16 @@ VARIABLES
   hot, hlog,                                            \* current hot version, its prev_version chain
   store, nvals, nforeign, fslots,                       \* store slots, value counters, other row's slots
   committedLive, everCommitted, stampErr,               \* ghosts
-  rcls, rpc, rver, rres, rtry, rreg, rsnap, rlatch, rabsent, rdrops   \* the reader
+  rcls, rpc, rver, rres, rtry, rreg, rsnap, rlatch, rabsent, rdrops,  \* the reader
+  rfb, rrout, rtend, rnote                                             \* fallback, routine, tran end, lazy note
 
 wv  == <<wst, wid, wops, wop, wpc, wold, wnew, wundo, wsave>>
 sv  == <<nextId, lockOwner, nstmts>>
 hv  == <<hot, hlog>>
 stv == <<store, nvals, nforeign, fslots>>
 gv  == <<committedLive, everCommitted, stampErr>>
-rv  == <<rcls, rpc, rver, rres, rtry, rreg, rsnap, rlatch, rabsent, rdrops>>
+rv  == <<rcls, rpc, rver, rres, rtry, rreg, rsnap, rlatch, rabsent, rdrops, rfb, rrout, rtend, rnote>>
+xv  == <<rfb, rrout, rtend, rnote>>
 vars == <<wv, sv, hv, stv, gv, rv>>
 
 Min(S) == CHOOSE x \in S : \A y \in S : x <= y
@@ -204,7 +213,7 @@ Commit(w) ==
   /\ wsave' = [wsave EXCEPT ![w] = 0]
   /\ lockOwner' = "none"
   /\ UNCHANGED <<wid, wop, wpc, nextId, nstmts, hv, stv, stampErr,
-                 rcls, rpc, rver, rres, rtry, rreg, rsnap, rlatch>>
+                 rcls, rpc, rver, rres, rtry, rreg, rsnap, rlatch, xv>>
 
 Abort(w) ==
   /\ wst[w] = "work"
@@ -303,7 +312,22 @@ RStart(c) ==
                [] c \in UClasses -> (IF Pin = "before" THEN LowestActive ELSE 0)
                [] OTHER          -> 0
   /\ rsnap' = IF c = "snap" THEN CommittedIds ELSE {}
-  /\ UNCHANGED <<wv, sv, hv, stv, gv, rver, rres, rtry, rlatch, rdrops>>
+  /\ rrout' \in IF RoutineCommit /\ c \in {"snap", "lock"} THEN BOOLEAN ELSE {FALSE}
+  /\ UNCHANGED <<wv, sv, hv, stv, gv, rver, rres, rtry, rlatch, rdrops, rfb, rtend, rnote>>
+
+\* Protected readers keep the record lazy and dereference later with no hot latch (sidecar_read_value).
+\* A protected reader that finds the record absent stops with ER_SIDECAR_DANGLING_REF.
+Deref(v) ==
+  IF v.ref = NoSlot THEN Res("val", v.val)
+  ELSE IF Live(v.ref) THEN Res("val", store[v.ref].val) ELSE Res("dangling", 0)
+
+\* A protected read keeps the version lazy (sidecar_keep_lazy, storage/sidecar.cpp:2008, notes the
+\* trid at :2001), unless its statement calls a routine: scan_start_scan opts no scan in
+\* (query/scan_manager.c:4063), so the fetch exit expands the version at once (E22).
+Keep(v) ==
+  IF rrout /\ NoLazyWithRoutine
+  THEN rres' = Deref(v) /\ rver' = v /\ rpc' = "release" /\ UNCHANGED rnote
+  ELSE rver' = v /\ rpc' = "resolve" /\ rnote' = TRUE /\ UNCHANGED rres
 
 \* (a) Snapshot reader.  heap_get_visible_version_internal: TOO_NEW_FOR_SNAPSHOT follows prev_version_lsa
 \* into the undo log (storage/heap_file.c:27039-27047); TOO_OLD is a committed delete it sees.
@@ -316,40 +340,64 @@ SnapVisible(S) ==
 SnapRead ==
   /\ rpc = "read" /\ rcls = "snap"
   /\ LET v == SnapVisible(rsnap) IN
-       IF v = NoVer THEN rres' = Res("absent", 0) /\ rpc' = "release" /\ UNCHANGED rver
-       ELSE rver' = v /\ rpc' = "resolve" /\ UNCHANGED rres
-  /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rtry, rreg, rsnap, rlatch, rabsent, rdrops>>
+       IF v = NoVer THEN rres' = Res("absent", 0) /\ rpc' = "release" /\ UNCHANGED <<rver, rnote>>
+       ELSE Keep(v)
+  /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rtry, rreg, rsnap, rlatch, rabsent, rdrops, rfb, rrout, rtend>>
 
 \* (b) Row-lock holder.  heap_get_last_version (storage/heap_file.c:27197) under the row lock; a version
 \* deleted by a committed transaction gives S_DOESNT_EXIST (transaction/locator_sr.c:13206-13256).
+\* The lock fallback (rfb) reads the same way: sidecar_fetch_locked (storage/sidecar.cpp:2372) takes
+\* S_LOCK with lock_object, reads the last version and applies mvcc_satisfies_committed to it.
+\* Without FallbackLocks the fallback reads the last version with no lock (broken variant).
 LockAcquire ==
-  /\ rpc = "lock" /\ lockOwner = "none"
-  /\ lockOwner' = "reader" /\ rpc' = "read"
-  /\ UNCHANGED <<wv, nextId, nstmts, hv, stv, gv, rcls, rver, rres, rtry, rreg, rsnap, rlatch, rabsent, rdrops>>
+  /\ rpc = "lock"
+  /\ IF rfb /\ ~FallbackLocks
+     THEN UNCHANGED lockOwner
+     ELSE lockOwner = "none" /\ lockOwner' = "reader"
+  /\ rpc' = "read"
+  /\ UNCHANGED <<wv, nextId, nstmts, hv, stv, gv, rcls, rver, rres, rtry, rreg, rsnap, rlatch, rabsent, rdrops, xv>>
 
 LockRead ==
-  /\ rpc = "read" /\ rcls = "lock"
+  /\ rpc = "read" /\ (rcls = "lock" \/ rfb)
   /\ IF hot = NoVer \/ (hot.del # 0 /\ ~Active(hot.del))
-     THEN rres' = Res("absent", 0) /\ rpc' = "release" /\ UNCHANGED rver
-     ELSE rver' = hot /\ rpc' = "resolve" /\ UNCHANGED rres
-  /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rtry, rreg, rsnap, rlatch, rabsent, rdrops>>
+     THEN rres' = Res("absent", 0) /\ rpc' = "release" /\ UNCHANGED <<rver, rnote>>
+     ELSE IF rfb
+     THEN rver' = hot /\ rpc' = "resolve" /\ UNCHANGED <<rres, rnote>>
+     ELSE Keep(hot)
+  /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rtry, rreg, rsnap, rlatch, rabsent, rdrops, rfb, rrout, rtend>>
 
-\* Protected readers keep the record lazy and dereference later with no hot latch (sidecar_read_value).
-\* A protected reader that finds the record absent stops with ER_SIDECAR_DANGLING_REF.
-Deref(v) ==
-  IF v.ref = NoSlot THEN Res("val", v.val)
-  ELSE IF Live(v.ref) THEN Res("val", store[v.ref].val) ELSE Res("dangling", 0)
+\* A routine called by the reader's statement COMMITs between the fetch and the decode.  log_complete
+\* replaces LOG_TDES.trid, reset_transaction_lowest_active drops the registered lowest visible MVCCID
+\* (transaction/log_manager.c:5841, :6128), and the commit releases the row lock.
+RCommit ==
+  /\ rpc = "resolve" /\ rcls \in {"snap", "lock"} /\ ~rfb /\ rrout /\ ~rtend
+  /\ rtend' = TRUE /\ rreg' = 0
+  /\ lockOwner' = IF lockOwner = "reader" THEN "none" ELSE lockOwner
+  /\ UNCHANGED <<wv, nextId, nstmts, hv, stv, gv, rcls, rpc, rver, rres, rtry, rsnap, rlatch, rabsent, rdrops,
+                 rfb, rrout, rnote>>
 
+\* The thread's lazy note is one per thread (sidecar_Lazy, storage/sidecar.cpp:1967).  Another scan's
+\* keep, such as an inner scan of a join, replaces it before the outer row's column is decoded.
+RReplaceNote ==
+  /\ OtherKeep /\ rpc = "resolve" /\ rcls \in {"snap", "lock"} /\ ~rfb /\ rnote
+  /\ rnote' = FALSE
+  /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rpc, rver, rres, rtry, rreg, rsnap, rlatch, rabsent, rdrops,
+                 rfb, rrout, rtend>>
+
+\* sidecar_resolve_slot (storage/sidecar.cpp:2504): a ref inside the latest lazy note whose trid is no
+\* longer the transaction's fails with ER_SIDECAR_LAZY_AFTER_TRAN_END and reads nothing.
 PResolve ==
-  /\ rpc = "resolve" /\ rcls \in {"snap", "lock"}
-  /\ rres' = Deref(rver) /\ rpc' = "release"
-  /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rver, rtry, rreg, rsnap, rlatch, rabsent, rdrops>>
+  /\ rpc = "resolve" /\ (rcls \in {"snap", "lock"} \/ rfb)
+  /\ rres' = IF ~rfb /\ rtend /\ TridCheck /\ rnote /\ rver.ref # NoSlot THEN Res("tranend", 0) ELSE Deref(rver)
+  /\ rpc' = "release"
+  /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rver, rtry, rreg, rsnap, rlatch, rabsent, rdrops, xv>>
 
+\* The fallback releases its S lock when the fetch ends (storage/sidecar.cpp:2425).
 PRelease ==
   /\ rpc = "release"
   /\ rpc' = "done" /\ rreg' = 0
-  /\ lockOwner' = IF rcls = "lock" THEN "none" ELSE lockOwner
-  /\ UNCHANGED <<wv, nextId, nstmts, hv, stv, gv, rcls, rver, rres, rtry, rsnap, rlatch, rabsent, rdrops>>
+  /\ lockOwner' = IF lockOwner = "reader" THEN "none" ELSE lockOwner
+  /\ UNCHANGED <<wv, nextId, nstmts, hv, stv, gv, rcls, rver, rres, rtry, rsnap, rlatch, rabsent, rdrops, xv>>
 
 \* (c) Unprotected readers: committed snapshot (mvcc_satisfies_committed, transaction/mvcc.c:642-675),
 \* dirty snapshot (mvcc_satisfies_dirty, :516-620) and no snapshot.  They read under the hot latch.
@@ -358,7 +406,7 @@ PRelease ==
 AfterRead == IF Pin = "after" THEN "pin" ELSE "resolve"
 
 URead ==
-  /\ rpc = "read" /\ rcls \in UClasses
+  /\ rpc = "read" /\ rcls \in UClasses /\ ~rfb
   /\ IF hot = NoVer
      THEN Finish(Res("absent", 0)) /\ UNCHANGED rver
      ELSE IF rcls = "committed" /\ Active(hot.ins)
@@ -374,32 +422,38 @@ URead ==
      THEN Finish(Res("absent", 0)) /\ UNCHANGED rver
      ELSE /\ rver' = hot /\ rpc' = AfterRead /\ rlatch' = ResolveUnderLatch
           /\ UNCHANGED <<rres, rreg>>
-  /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rtry, rsnap, rabsent, rdrops>>
+  /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rtry, rsnap, rabsent, rdrops, xv>>
 
 \* First draft's horizon pin, taken after the visibility decision.
 UPin ==
   /\ rpc = "pin"
   /\ rreg' = LowestActive /\ rpc' = "resolve"
-  /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rver, rres, rtry, rsnap, rlatch, rabsent, rdrops>>
+  /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rver, rres, rtry, rsnap, rlatch, rabsent, rdrops, xv>>
 
-\* sidecar_on_fetch and the retry rule (5.6 c).  The pin variants add the first draft's dead-row rule.
+\* sidecar_on_fetch and the retry rule (5.6 c), sidecar_on_absent (storage/sidecar.cpp:2214-2247).
+\* Past the bound a committed reader returns S_SIDECAR_LOCK_NEEDED, and xlocator_fetch's
+\* locator_get_object path calls sidecar_fetch_locked (transaction/locator_sr.c:2345-2349).
+\* The pin variants add the first draft's dead-row rule.
 UResolve ==
-  /\ rpc = "resolve" /\ rcls \in UClasses
+  /\ rpc = "resolve" /\ rcls \in UClasses /\ ~rfb
   /\ IF rver.ref = NoSlot
-     THEN Finish(Res("val", rver.val)) /\ UNCHANGED <<rver, rtry>>
+     THEN Finish(Res("val", rver.val)) /\ UNCHANGED <<rver, rtry, rfb>>
      ELSE IF Pin # "none" /\ PinDeadRow /\ rver.del # 0 /\ rver.del < rreg
-     THEN Finish(Res("absent", 0)) /\ UNCHANGED <<rver, rtry>>
+     THEN Finish(Res("absent", 0)) /\ UNCHANGED <<rver, rtry, rfb>>
      ELSE IF Live(rver.ref)
-     THEN Finish(Res("val", store[rver.ref].val)) /\ UNCHANGED <<rver, rtry>>
+     THEN Finish(Res("val", store[rver.ref].val)) /\ UNCHANGED <<rver, rtry, rfb>>
      ELSE IF DeadRowTest /\ rver.del # 0 /\ ~Active(rver.del)
-     THEN Finish(Res("absent", 0)) /\ UNCHANGED <<rver, rtry>>
+     THEN Finish(Res("absent", 0)) /\ UNCHANGED <<rver, rtry, rfb>>
      ELSE IF ~Retry
-     THEN Finish(Res("absent", 0)) /\ UNCHANGED <<rver, rtry>>
+     THEN Finish(Res("absent", 0)) /\ UNCHANGED <<rver, rtry, rfb>>
      ELSE IF rtry < MaxRetry
      THEN /\ rtry' = rtry + 1 /\ rpc' = "read" /\ rlatch' = FALSE /\ rver' = NoVer
-          /\ UNCHANGED <<rres, rreg>>
-     ELSE Finish(Res("exhausted", 0)) /\ UNCHANGED <<rver, rtry>>
-  /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rsnap, rabsent, rdrops>>
+          /\ UNCHANGED <<rres, rreg, rfb>>
+     ELSE IF LockFallback /\ rcls = "committed"
+     THEN /\ rfb' = TRUE /\ rpc' = "lock" /\ rlatch' = FALSE /\ rver' = NoVer
+          /\ UNCHANGED <<rres, rreg, rtry>>
+     ELSE Finish(Res("exhausted", 0)) /\ UNCHANGED <<rver, rtry, rfb>>
+  /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rsnap, rabsent, rdrops, rrout, rtend, rnote>>
 
 -----------------------------------------------------------------------------
 
@@ -435,6 +489,10 @@ Init ==
   /\ rlatch = FALSE
   /\ rabsent = FALSE
   /\ rdrops = 0
+  /\ rfb = FALSE
+  /\ rrout = FALSE
+  /\ rtend = FALSE
+  /\ rnote = FALSE
 
 \* Every transaction ended, the reader is done and vacuum has nothing left: a correct end state.
 Terminated ==
@@ -453,7 +511,7 @@ Next ==
   \/ \E k \in Slots : StoreVacuum(k)
   \/ HotVacuum
   \/ \E c \in ReaderClasses : RStart(c)
-  \/ SnapRead \/ LockAcquire \/ LockRead \/ PResolve \/ PRelease
+  \/ SnapRead \/ LockAcquire \/ LockRead \/ RCommit \/ RReplaceNote \/ PResolve \/ PRelease
   \/ URead \/ UPin \/ UResolve
   \/ Terminated
 
@@ -482,8 +540,12 @@ NoDanglingRef ==
 \* some moment of its call.
 NoLostRow == (rcls \in UClasses /\ rres.k = "absent") => rabsent
 
-\* The retry loop ends within MaxRetry retries.
+\* The retry loop ends within MaxRetry retries, or the lock fallback reads the row.
 Bounded == rres.k # "exhausted"
+
+\* A protected reader never fails with ER_SIDECAR_LAZY_AFTER_TRAN_END, an error where develop returns the
+\* value from the record it holds (P1c review R2).
+NoLazyAfterTranEnd == rres.k # "tranend"
 
 \* Each retry needs a distinct transaction that stamped a store record to commit during the fetch.
 RetryNeedsCommit == rtry <= rdrops

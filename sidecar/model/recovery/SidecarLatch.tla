@@ -31,13 +31,16 @@ CONSTANTS
     Variant   \* "design" or one broken variant below
 
 ASSUME Variant \in {"design", "multirow_under_latch", "multirow_store_write",
-                    "reader_store_first", "cursor_two_pages"}
+                    "reader_store_first", "cursor_two_pages",
+                    "cursor", "cursor_keep_across_hot_fix", "cursor_keep_across_call"}
 
 Pages == {"HH", "H1", "H2", "S1", "S2"}
 Other(p) == CASE p = "S1" -> "S2" [] p = "S2" -> "S1" [] p = "H1" -> "H2" [] p = "H2" -> "H1"
 
 F(p, m, k) == [op |-> "fix", page |-> p, mode |-> m, kind |-> k]
 U(p) == [op |-> "unfix", page |-> p, mode |-> "none", kind |-> "none"]
+Call == [op |-> "call", page |-> "none", mode |-> "none", kind |-> "none"]
+Begin == [op |-> "begin", page |-> "none", mode |-> "none", kind |-> "none"]
 
 \* Reader, design 6 Wide scan: scan_batch_next_page fixes the header, then
 \* the data page with the header still held (query/scan_manager.c:7858-7912);
@@ -91,18 +94,49 @@ TwoPageCursorProgs ==
     { <<F("H1", "S", "ord"), F(a, "S", "plain"), F(Other(a), "S", "plain"), U(a), U(Other(a)), U("H1")>>
       : a \in {"S1", "S2"} }
 
+\* The store cursor rule (design 5.5, I-7).  A fixed heap scan keeps store page a
+\* between the rows of hot page H1.  It releases a before a stored procedure call
+\* (cubpl::executor::execute, src/sp/pl_executor.cpp:288) and before it fixes the
+\* next hot page (heap_scan_pb_latch_and_fetch, src/storage/heap_file.c:1057).
+\* heap_next keeps H1 fixed until H2 is fixed (:8039, :8058-8062).  The routine's
+\* SQL runs on another worker and the caller waits for it.
+CursorProgs(relCall, relHot) ==
+    { <<F("H1", "S", "ord"), F(a, "S", "plain")>>
+      \o (IF relCall THEN <<U(a), Call, F(a, "S", "plain")>> ELSE <<Call>>)
+      \o (IF relHot THEN <<U(a), F("H2", "S", "ord"), U("H1")>>
+                     ELSE <<F("H2", "S", "ord"), U("H1"), U(a)>>)
+      \o <<U("H2")>>
+      : a \in {"S1", "S2"} }
+
+\* The large-column UPDATE on hot page H2, as WriterProgs.
+WriterH2Progs ==
+    { <<F("H2", "X", "ord"), F(a, "S", "plain"), U(a), U("H2"),
+        F(a, "X", "ord"), F(Other(a), "X", "ord"), U(Other(a)), U(a),
+        F("H2", "X", "ord"), U("H2")>>
+      : a \in {"S1", "S2"} }
+
+\* The routine's SQL: an UPDATE of a row on H2 whose old value is on a store page.
+WorkerProgs == { <<Begin>> \o w : w \in WriterH2Progs }
+
+CursorVariants == {"cursor", "cursor_keep_across_hot_fix", "cursor_keep_across_call"}
+
 Th == CASE Variant = "design" -> {"reader", "writer", "svacuum", "creator", "hotreloc"}
         [] Variant \in {"multirow_under_latch", "multirow_store_write"} ->
               {"reader", "writer", "svacuum", "creator", "hotreloc", "multirow"}
         [] Variant = "reader_store_first" -> {"reader", "writer", "svacuum", "creator", "hotreloc"}
         [] Variant = "cursor_two_pages" -> {"reader", "reader2", "writer", "svacuum"}
+        [] Variant \in CursorVariants -> {"reader", "writer", "svacuum", "worker"}
 
 ProgsOf(t) ==
     CASE t = "reader" -> IF Variant = "reader_store_first" THEN StoreFirstReaderProgs
                          ELSE IF Variant = "cursor_two_pages" THEN TwoPageCursorProgs
+                         ELSE IF Variant = "cursor" THEN CursorProgs(TRUE, TRUE)
+                         ELSE IF Variant = "cursor_keep_across_hot_fix" THEN CursorProgs(TRUE, FALSE)
+                         ELSE IF Variant = "cursor_keep_across_call" THEN CursorProgs(FALSE, TRUE)
                          ELSE ReaderProgs
       [] t = "reader2" -> TwoPageCursorProgs
-      [] t = "writer" -> WriterProgs
+      [] t = "writer" -> IF Variant \in CursorVariants THEN WriterH2Progs ELSE WriterProgs
+      [] t = "worker" -> WorkerProgs
       [] t = "svacuum" -> StoreVacuumProgs
       [] t = "creator" -> CreateProgs
       [] t = "hotreloc" -> HotRelocProgs
@@ -215,24 +249,41 @@ Unfix(t) ==
     /\ last' = t \o " unfixes " \o CurOp(t).page
     /\ UNCHANGED <<hotFirst, prog, pend, queue>>
 
+\* The caller returns once the routine's SQL has finished.
+CallReturn(t) ==
+    /\ CurOp(t).op = "call" /\ CurOp("worker").op = "end"
+    /\ pc' = [pc EXCEPT ![t] = @ + 1]
+    /\ last' = t \o " returns from the routine call"
+    /\ UNCHANGED <<hotFirst, prog, held, kind, pend, queue>>
+
+\* The routine's SQL starts when the caller calls it.
+WorkerStart(t) ==
+    /\ CurOp(t).op = "begin" /\ CurOp("reader").op = "call"
+    /\ pc' = [pc EXCEPT ![t] = @ + 1]
+    /\ last' = "reader calls the routine, and " \o t \o " runs its SQL"
+    /\ UNCHANGED <<hotFirst, prog, held, kind, pend, queue>>
+
 AllDone == \A t \in Th : CurOp(t).op = "end"
 Done == AllDone /\ UNCHANGED vars
 
-Next == (\E t \in Th : Arrive(t) \/ Serve(t) \/ Unfix(t)) \/ Done
+Next == (\E t \in Th : Arrive(t) \/ Serve(t) \/ Unfix(t) \/ CallReturn(t) \/ WorkerStart(t)) \/ Done
 
 Spec == Init /\ [][Next]_vars
 
 ---------------------------------------------------------------------------
 \* t waits for every thread that holds its page in a conflicting mode and
-\* for every thread queued ahead of it that it cannot overtake.
+\* for every thread queued ahead of it that it cannot overtake.  A caller in a
+\* routine call waits for the worker that runs the routine's SQL.
 WaitsFor(t) ==
-    IF ~Queued(t) THEN {}
-    ELSE LET r == Req(t)
-             p == r.page
-             k == Pos(p, t)
-         IN  {u \in Th \ {t} : held[u][p] = "X" \/ (r.mode = "X" /\ held[u][p] = "S")}
-             \cup {queue[p][j] : j \in {j2 \in 1..(k - 1) :
-                                         r.mode = "X" \/ Req(queue[p][j2]).mode = "X"}}
+    (IF CurOp(t).op = "call" /\ CurOp("worker").op # "end" THEN {"worker"} ELSE {})
+    \cup
+    (IF ~Queued(t) THEN {}
+     ELSE LET r == Req(t)
+              p == r.page
+              k == Pos(p, t)
+          IN  {u \in Th \ {t} : held[u][p] = "X" \/ (r.mode = "X" /\ held[u][p] = "S")}
+              \cup {queue[p][j] : j \in {j2 \in 1..(k - 1) :
+                                          r.mode = "X" \/ Req(queue[p][j2]).mode = "X"}})
 
 RECURSIVE Reach(_, _)
 Reach(S, n) == IF n = 0 THEN S ELSE Reach(S \cup UNION {WaitsFor(u) : u \in S}, n - 1)

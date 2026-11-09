@@ -2,6 +2,8 @@
 
 This TLA+ model checks the value lifecycle and reader safety of the Sidecar design in [`../../design.md`](../../design.md) (revision of 2026-11-04, Gate 1 approved), against the engine behavior the design relies on at CUBRID `develop` `e64a04a79` (`/home/vimkim/gh/cb/sidecar`). It replaces the Python interleaving check `/home/vimkim/gh/my-cubrid-docs/.scratch/sidecar/interrogate/revise/retry_rule.py`. A separate model covers recovery, undo and latching (`../recovery/`).
 
+On 2026-11-09 the model gained the rules added after that run: the lock fallback of 5.6 (c), and the P1c rules for lazy reads in 5.6 (a) and I-6 (no lazy read in a statement that calls a routine, and the trid backstop). Their actions map to the code on branch `sidecar` at `407ecead8`, in the same worktree. The store cursor rule of I-7 is checked in the latch model (`../recovery/`, finding 4 there).
+
 ## Run
 
 ```sh
@@ -9,7 +11,7 @@ python3 run.py              # every run; TLC output goes to a new directory unde
 python3 run.py NAME ...     # selected runs, by cfg name
 ```
 
-It needs `java` on PATH and `~/.cache/tlaplus/tla2tools-1.7.4.jar` (TLC 2.19). It prints one line per run with PASS or FAIL, the invariant that failed, the distinct and generated state counts and the time, then OK or UNEXPECTED against the expectation table in `run.py`. It exits 1 if any result is unexpected. The 30 runs took 426 s on 2026-11-04 (measured, 32 workers). With several workers TLC does not always report the shortest counterexample; the paths below come from `/statechart`, which uses one worker.
+It needs `java` on PATH and `~/.cache/tlaplus/tla2tools-1.7.4.jar` (TLC 2.19). It prints one line per run with PASS or FAIL, the invariant that failed, the distinct and generated state counts and the time, then OK or UNEXPECTED against the expectation table in `run.py`. It exits 1 if any result is unexpected. The 38 runs took 671 s on 2026-11-09 (measured, 32 workers), and no single run took more than 62 s. With several workers TLC does not always report the shortest counterexample; the paths below come from `/statechart`, which uses one worker. The paths of the 2026-11-09 variants come from one-worker runs, with two writers and three statements for the lazy variants.
 
 ## Properties
 
@@ -22,7 +24,8 @@ Each property has its own run on the design, and the broken variants below show 
 | `NoOrphan` | After every transaction ends and vacuum quiesces, every live store record is named by exactly one current version, and the current version's ref resolves to its own value. | Store space leaks forever, or a row's value is gone after vacuum. |
 | `OneOwner` | I-2, checked whenever no writer holds the row lock. A live unstamped store record is named by exactly one (row, attribute) in the current version, every version in the row's log chain that names a live record names a record of this row, and the current live version names a live unstamped record. | `sidecar_verify_class` reports an orphan or a shared record, and a later stamp or vacuum removes a value that another row still names. |
 | `StoreIdentity` | A slot that holds a live record holds the value that every version of the row naming that slot expects (5.6, "Store identity"). | The section 5.6 argument "a present record is the right one" no longer holds, so reader safety needs some other protection. |
-| `Bounded` | An unprotected reader's retry loop ends within `MaxRetry` retries (design: 3). | The fetch fails with `ER_SIDECAR_RESOLVE_RETRY` on a row that exists. |
+| `Bounded` | An unprotected reader's retry loop ends within `MaxRetry` retries (design: 3), or the lock fallback reads the row. | The fetch fails with `ER_SIDECAR_RESOLVE_RETRY` on a row that exists. |
+| `NoLazyAfterTranEnd` | A protected reader never fails with `ER_SIDECAR_LAZY_AFTER_TRAN_END`. | A statement fails where `develop` returns the value from the record it holds, which the P1c coordinator ruled a user-visible regression (review R2). |
 | `RetryNeedsCommit` | Each retry is paid for by a distinct transaction that stamped a store record and committed during the fetch. | Retries would come from something other than concurrent commits, and no bound would follow from the write rate. |
 | `HeapPathNoRetry` | A dirty or no-snapshot reader, which resolves under the hot latch, never retries (5.6 c, "No retry runs on this path"). | The heap-path half of the 5.6 (c) proof is wrong, and those readers can fail or loop where the design says they cannot. |
 
@@ -35,43 +38,53 @@ One hot row with one large column. Each version of the row names at most one sto
 - Hot vacuum and store vacuum each remove a record whose own DELID precedes the vacuum threshold. The threshold is the lowest active MVCCID and every registered lowest visible MVCCID.
 - The store is non-reuse. A vacuumed slot becomes `REC_MARKDELETED`. Insert undo frees a slot for reuse, as `spage_delete_for_recovery` does in any heap. Another row's INSERT can take a freed slot.
 - One reader runs one fetch, of a class chosen from `ReaderClasses`: a snapshot reader (heap or undo log), a row-lock holder, or an unprotected reader with the committed, dirty or no snapshot that expands under the hot latch with the retry rule and its bound.
+- Lock fallback. A committed reader that finds a store record absent after `MaxRetry` retries takes the row S lock, waits while a writer holds the row lock, reads the last version, reports the row absent if a committed transaction deleted it, and otherwise resolves it before it releases the lock.
+- Lazy reads across a commit (`RoutineCommit`). A snapshot reader or a row-lock holder may run a statement that calls a routine. Such a reader either expands at the fetch (`NoLazyWithRoutine`) or keeps the version lazy. While it holds a lazy version, the routine may COMMIT. The commit drops the reader's registered lowest visible MVCCID, releases its row lock and changes its trid. The later decode then fails with `ER_SIDECAR_LAZY_AFTER_TRAN_END` when the trid check applies (`TridCheck`), and dereferences otherwise. With `OtherKeep`, another keep of the same thread may replace the lazy note before the decode, and the trid check then does not apply, as in the code.
 
 ## Results
 
-Measured on 2026-11-04 with `python3 run.py` (32 TLC workers, TLC 2.19 on Java 8, an 80-core host shared with other jobs). Every result matched its expectation in `run.py`.
+Measured on 2026-11-09 with `python3 run.py` (32 TLC workers, TLC 2.19 on Java 8, an 80-core host shared with other jobs). Every result matched its expectation in `run.py`. The 38 runs took 671 s wall, and the longest single run took 62 s (measured). Every design and PASS count of the 30 runs from 2026-11-04 is unchanged, so the new variables add no state where their switches are off. A FAIL count is where TLC stopped, and it varies a little between runs.
 
 | Run | Result | Distinct states | Time |
 |---|---|---|---|
 | `design_NoDanglingRef` | PASS | 4,686,531 | 50 s |
-| `design_NoLostRow` | PASS | 2,912,498 | 30 s |
+| `design_NoLostRow` | PASS | 2,912,498 | 31 s |
 | `design_Bounded` | PASS | 2,912,498 | 30 s |
-| `design_RetryNeedsCommit` | PASS | 2,912,498 | 29 s |
-| `design_HeapPathNoRetry` | PASS | 1,751,866 | 21 s |
+| `design_RetryNeedsCommit` | PASS | 2,912,498 | 31 s |
+| `design_HeapPathNoRetry` | PASS | 1,751,866 | 20 s |
 | `design_NoOrphan` | PASS | 214,853 | 7 s |
-| `design_OneOwner` | PASS | 214,853 | 7 s |
-| `design_StoreIdentity` | PASS | 214,853 | 7 s |
-| `bound_1_two_commits` | FAIL `Bounded` | 891,425 | 12 s |
-| `bound_3_four_commits` | FAIL `Bounded` | 330,585 | 14 s |
-| `broken_no_retry` | FAIL `NoLostRow` | 38,761 | 3 s |
-| `broken_no_dead_row_test` | FAIL `Bounded` | 322,436 | 7 s |
-| `broken_reuse_no_pin` | FAIL `NoDanglingRef` | 21,217 | 3 s |
-| `broken_reuse_pin_after` | FAIL `NoDanglingRef` | 169,288 | 5 s |
-| `broken_delete_no_stamp` | FAIL `NoOrphan` | 912 | 1 s |
-| `broken_delete_no_stamp_OneOwner` | FAIL `OneOwner` | 485 | 1 s |
-| `broken_stamp_after_hot_readers` | PASS | 4,707,276 | 47 s |
+| `design_OneOwner` | PASS | 214,853 | 8 s |
+| `design_StoreIdentity` | PASS | 214,853 | 8 s |
+| `bound_1_two_commits` | FAIL `Bounded` | 1,018,433 | 14 s |
+| `bound_3_four_commits` | FAIL `Bounded` | 330,271 | 14 s |
+| `broken_no_retry` | FAIL `NoLostRow` | 52,231 | 4 s |
+| `broken_no_dead_row_test` | FAIL `Bounded` | 335,235 | 8 s |
+| `broken_reuse_no_pin` | FAIL `NoDanglingRef` | 22,663 | 3 s |
+| `broken_reuse_pin_after` | FAIL `NoDanglingRef` | 172,316 | 6 s |
+| `broken_delete_no_stamp` | FAIL `NoOrphan` | 868 | 1 s |
+| `broken_delete_no_stamp_OneOwner` | FAIL `OneOwner` | 448 | 1 s |
+| `broken_stamp_after_hot_readers` | PASS | 4,707,276 | 48 s |
 | `broken_stamp_after_hot_store` | PASS | 215,379 | 7 s |
-| `broken_vacuum_uncommitted` | FAIL `NoDanglingRef` | 12,574 | 3 s |
-| `broken_resolve_after_latch` | FAIL `NoDanglingRef` | 8,906 | 2 s |
-| `broken_resolve_after_latch_RetryNeedsCommit` | FAIL `RetryNeedsCommit` | 4,806 | 2 s |
-| `broken_resolve_after_latch_HeapPathNoRetry` | FAIL `HeapPathNoRetry` | 4,696 | 2 s |
-| `broken_snapshot_unregistered` | FAIL `NoDanglingRef` | 32,309 | 3 s |
-| `later_reuse_pin_before_NoDanglingRef` | PASS | 5,394,191 | 51 s |
-| `later_reuse_pin_before_NoLostRow` | PASS | 3,477,520 | 36 s |
-| `later_reuse_pin_before_Bounded` | PASS | 3,477,520 | 36 s |
-| `later_reuse_pin_before_NoOrphan` | PASS | 238,634 | 8 s |
-| `later_reuse_pin_before_OneOwner` | FAIL `OneOwner` | 1,435 | 1 s |
-| `later_reuse_pin_before_StoreIdentity` | FAIL `StoreIdentity` | 1,711 | 1 s |
-| `later_reuse_pin_before_no_dead_row` | FAIL `NoDanglingRef` | 31,615 | 3 s |
+| `broken_vacuum_uncommitted` | FAIL `NoDanglingRef` | 12,093 | 3 s |
+| `broken_resolve_after_latch` | FAIL `NoDanglingRef` | 9,298 | 2 s |
+| `broken_resolve_after_latch_RetryNeedsCommit` | FAIL `RetryNeedsCommit` | 5,081 | 2 s |
+| `broken_resolve_after_latch_HeapPathNoRetry` | FAIL `HeapPathNoRetry` | 3,704 | 2 s |
+| `broken_snapshot_unregistered` | FAIL `NoDanglingRef` | 33,326 | 3 s |
+| `later_reuse_pin_before_NoDanglingRef` | PASS | 5,394,191 | 54 s |
+| `later_reuse_pin_before_NoLostRow` | PASS | 3,477,520 | 38 s |
+| `later_reuse_pin_before_Bounded` | PASS | 3,477,520 | 48 s |
+| `later_reuse_pin_before_NoOrphan` | PASS | 238,634 | 10 s |
+| `later_reuse_pin_before_OneOwner` | FAIL `OneOwner` | 2,589 | 4 s |
+| `later_reuse_pin_before_StoreIdentity` | FAIL `StoreIdentity` | 1,113 | 4 s |
+| `later_reuse_pin_before_no_dead_row` | FAIL `NoDanglingRef` | 19,993 | 6 s |
+| `fallback_two_commits` | PASS | 1,375,715 | 37 s |
+| `fallback_four_commits` | PASS | 331,558 | 28 s |
+| `broken_fallback_no_lock` | FAIL `NoDanglingRef` | 25,310 | 7 s |
+| `lazy_design` | PASS | 4,092,289 | 57 s |
+| `broken_lazy_across_commit` | FAIL `NoDanglingRef` | 114,375 | 6 s |
+| `lazy_backstop_only_NoDanglingRef` | PASS | 4,801,135 | 62 s |
+| `lazy_backstop_only_NoLazyAfterTranEnd` | FAIL `NoLazyAfterTranEnd` | 5,395 | 2 s |
+| `lazy_backstop_other_keep` | FAIL `NoDanglingRef` | 189,198 | 7 s |
 
 ## Broken variants
 
@@ -139,7 +152,7 @@ This is why 5.6 (a) compares the snapshot with the transaction's registered snap
 3. A reader with no snapshot reads the deleted hot record, finds slot 1 absent and retries.
 4. Every re-read finds the same record, so after three retries the fetch fails with `ER_SIDECAR_RESOLVE_RETRY`.
 
-**Retry bound** (`bound_1_two_commits`, bound 1) fails `Bounded` in 26 steps.
+**Retry bound without the lock fallback** (`bound_1_two_commits`, bound 1, `LockFallback = FALSE`) fails `Bounded` in 26 steps.
 
 1. T1 inserts the row with value 1 in slot 1 and commits.
 2. T2 inserts value 2 in slot 2, stamps slot 1 and writes a version naming slot 2. T3 takes an MVCCID.
@@ -148,13 +161,51 @@ This is why 5.6 (a) compares the snapshot with the transaction's registered snap
 5. The reader retries and reads T2's version from the undo log, because T3 is active.
 6. T3 commits and vacuum removes slot 2. The reader has no retry left.
 
-**Design retry bound** (`bound_3_four_commits`, bound 3) fails `Bounded` in 47 steps. The path comes from the run's own TLC trace, because a one-worker search of this cfg is slow. Five writers run one statement each, INSERT or LARGE, without rollback.
+**Design retry bound without the lock fallback** (`bound_3_four_commits`, bound 3, `LockFallback = FALSE`) fails `Bounded` in 47 steps. The path comes from the run's own TLC trace, because a one-worker search of this cfg is slow. Five writers run one statement each, INSERT or LARGE, without rollback.
 
 1. T1 inserts the row with value 1 in slot 1 and commits. T2 inserts value 2 in slot 2, stamps slot 1 and writes its version.
 2. A committed-snapshot reader reads T1's version from the undo log.
 3. T2 commits. T3 inserts value 3, stamps slot 2 and writes its version, and vacuum removes slot 1. The reader finds slot 1 absent, retries and reads T2's version from the undo log, because T3 is active.
 4. T3 and then T4 repeat step 3. Each commits after the next writer has written its version, vacuum removes the record the reader holds, and the reader retries and reads the next older version from the undo log.
 5. After its third retry the reader holds T4's version. T5 commits and vacuum removes slot 4, so the fetch fails with `ER_SIDECAR_RESOLVE_RETRY` although the row is live.
+
+**Lock fallback** (`fallback_two_commits`, `fallback_four_commits`) passes `NoDanglingRef`, `NoLostRow` and `Bounded` on the same two shapes. The paths above now end in `sidecar_fetch_locked`. The S lock waits until no writer holds the row, every stamp needs the row X lock, and so the store records the last version names stay present until the reader releases the lock. Lifecycle finding 1 no longer fails.
+
+**Lock fallback without the S lock** (`broken_fallback_no_lock`, bound 1, four writers) fails `NoDanglingRef` in 39 steps.
+
+1. T1 inserts the row with value 1 in slot 1 and commits. T2 inserts value 2 in slot 2, stamps slot 1 and writes its version.
+2. A committed-snapshot reader reads T1's version from the undo log. T2 commits. T3 inserts value 3 in slot 3, stamps slot 2 and writes its version. Vacuum removes slot 1.
+3. The reader retries and reads T2's version from the undo log. T3 commits. T4 inserts value 4 in slot 4 and stamps slot 3. Vacuum removes slot 2.
+4. The reader has no retry left and takes the fallback, but without the lock. It reads the last version, T3's, which names slot 3.
+5. T4 writes its version and commits, and vacuum removes slot 3. The reader finds slot 3 absent (`ER_SIDECAR_DANGLING_REF`).
+
+The S lock is what makes the fallback's read safe. It is not only a way to stop retrying.
+
+**Lazy read across a routine's COMMIT** (`broken_lazy_across_commit`: `NoLazyWithRoutine = FALSE`, `TridCheck = FALSE`) fails `NoDanglingRef` in 18 steps. This is P1c review R2.
+
+1. T1 inserts the row with value 1 in slot 1 and commits.
+2. T2 stamps slot 1 and writes a version with an inline value.
+3. A repeatable-read reader registers its snapshot. Its statement calls a routine. T2 commits.
+4. The reader reads T1's version from the undo log and keeps it lazy. It names slot 1.
+5. The routine commits the reader's transaction, which resets its registered lowest visible MVCCID. Vacuum removes slot 1.
+6. The reader decodes the column and finds slot 1 absent (`ER_SIDECAR_DANGLING_REF`).
+
+**The design rules for lazy reads** (`lazy_design`) pass `NoDanglingRef` and `NoLazyAfterTranEnd` for snapshot readers and row-lock holders whose statement may call a committing routine, with the lazy note replaceable. A statement with a routine call reads expanded at the fetch, so no lazy version lives across the commit, and the trid check never fires.
+
+**Only the trid backstop** (`lazy_backstop_only_*`: `NoLazyWithRoutine = FALSE`, standing for a routine call the mark misses) passes `NoDanglingRef` but fails `NoLazyAfterTranEnd` in 11 steps.
+
+1. T1 inserts the row with value 1 in slot 1 and commits.
+2. A reader whose statement calls a routine reads T1's version and keeps it lazy.
+3. The routine commits.
+4. The reader decodes the column. The trid differs, so it fails with `ER_SIDECAR_LAZY_AFTER_TRAN_END` and reads nothing.
+
+The backstop turns a wrong read into an error, which is why E22's mark, not the check, is the fix.
+
+**The backstop with a replaced note** (`lazy_backstop_other_keep`: the mark missed and `OtherKeep = TRUE`) fails `NoDanglingRef` in 19 steps (finding 5).
+
+1. Steps 1 to 5 of `broken_lazy_across_commit`. The reader holds T1's version lazy, the routine commits, and vacuum removes slot 1.
+2. Another keep on the same thread replaces the lazy note.
+3. The reader decodes the column. Its ref is outside the latest note, so `sidecar_resolve_slot` does not compare the trid. It reads slot 1 and finds it absent (`ER_SIDECAR_DANGLING_REF`).
 
 **Stamp after the hot write** (`broken_stamp_after_hot_readers`, `broken_stamp_after_hot_store`) passes every property. UPDATE and DELETE write the hot version first and stamp the dropped record afterwards, inside the same transaction. The row X lock keeps other writers out, and vacuum waits for the stamper's commit either way, so no reader and no store state can tell the two orders apart. The "before the hot write" half of I-4 is therefore not what keeps readers safe. The order still matters to section 7.1 as written (inferred from its text, not checked). The module restores the replication LSAs after its last store write and before the hot write, so that the hot write is the last capture, and a stamp that relocates its record logs `RVHF_INSERT_NEWHOME`, which sets `repl_update_lsa`. A stamp after the hot write would need its own save and restore that keeps the hot write's `repl_update_lsa`. This model does not cover replication or recovery.
 
@@ -176,7 +227,7 @@ The pin protects only stamps at or after it. A row deleted before the pin can al
 
 No property fails on the design within the bounds. Every broken variant fails the property it guards, except stamping after the hot write (finding 3). These points remain.
 
-**1. The retry bound of three holds only while at most three stamping commits meet one fetch.** `RetryNeedsCommit` passes, so every retry is paid for by a distinct transaction that stamped one of the row's store records and committed during the fetch, and vacuum removed that record inside the same window. Within the bounds nothing else causes a retry on the design. A committed-snapshot fetch therefore exceeds the bound only when four such transactions commit on the same row during that one fetch, and `bound_3_four_commits` shows that path. The fetch then fails with `ER_SIDECAR_RESOLVE_RETRY` on a live row. Section 5.6 (c) and section 12 call the bound a guess and leave it to P3. The model states the condition that P3's stress run must provoke: a row under a stream of large-column UPDATEs or DELETEs, each committed and vacuumed while one committed-snapshot fetch is open. Dirty and no-snapshot readers never retry on the design, because they resolve under the hot latch.
+**1. The retry bound of three holds only while at most three stamping commits meet one fetch. Resolved by the lock fallback (2026-11-09).** `fallback_four_commits` passes on the path below, and `fallback_two_commits` passes with bound 1 against every statement kind and rollback. The fallback can wait for the row's writer, where `develop`'s committed fetch never waits. The model has no fairness, so it does not show that the wait ends. `RetryNeedsCommit` passes, so every retry is paid for by a distinct transaction that stamped one of the row's store records and committed during the fetch, and vacuum removed that record inside the same window. Within the bounds nothing else causes a retry on the design. A committed-snapshot fetch therefore exceeds the bound only when four such transactions commit on the same row during that one fetch, and `bound_3_four_commits` shows that path. The fetch then fails with `ER_SIDECAR_RESOLVE_RETRY` on a live row. Section 5.6 (c) and section 12 call the bound a guess and leave it to P3. The model states the condition that P3's stress run must provoke: a row under a stream of large-column UPDATEs or DELETEs, each committed and vacuumed while one committed-snapshot fetch is open. Dirty and no-snapshot readers never retry on the design, because they resolve under the hot latch.
 
 **2. The 5.6 (c) log-path argument misses one case, though its conclusion holds.** The text says the stamper "wrote the first version after V that dropped s" and the retry reads a current version that "does not name s". A DELETE breaks that sentence. The shortest path, found with a scratch invariant that counted only UPDATE stamps, has 18 steps.
 
@@ -191,6 +242,8 @@ The argument should say that the current version either no longer names `s` or c
 **3. The order half of I-4 is not load-bearing for reader safety.** Stamping after the hot write passes every property here (see the variant above). I-4 states the order without a reason. As far as this model can tell, the reason lives in section 7.1's replication-LSA capture and in the crash cases of section 6, which the recovery model checks. Saying so in I-4 would keep a later change from dropping or keeping the order for the wrong reason.
 
 **4. The documented later optimization is safe for readers in the model, but it needs I-2 and section 5.6 restated.** With the reuse store and the pin before the visibility decision, plus the dead-row rule, no reader returns a wrong value, loses a live row or exhausts its retries. Old versions in a row's undo log chain do name slots that later hold another row's value, so I-2 must count only versions a reader can still reach, and the 5.6 "store identity" step no longer holds. Without the dead-row rule the pin alone fails (`later_reuse_pin_before_no_dead_row`), which matches section 13's "plus the first draft's dead-row rule".
+
+**5. The trid backstop covers only the thread's latest lazy keep.** `sidecar_Lazy` is one record per thread (`storage/sidecar.cpp:1967`), and every keep replaces it (`sidecar_lazy_note`, `:1988-2003`). `sidecar_resolve_slot` compares the trid only for a ref inside that latest range (`:2504`). A ref kept earlier is dereferenced without the check (`lazy_backstop_other_keep`). On the design this is harmless, because a statement with a routine call keeps nothing lazy (`lazy_design` passes). It matters only when the routine mark misses a call, which is the one case the backstop exists for. Whether an earlier keep can still be decoded after a later keep on the same thread, as an outer scan's column after an inner scan's fetch in a join, is a guess. It was not traced in the code. The lock holder's lazy read of an UPDATE's old record (`HEAP_SIDECAR_LAZY_LOCKED`, `storage/sidecar.cpp:2274-2283`) records no note at all (inferred from reading). Its read and decode run inside `locator_attribute_info_force` with no routine call between them (inferred, not checked).
 
 ## Mapping from model to design and code
 
@@ -218,7 +271,22 @@ Paths are under `src/` at `e64a04a79`. "New" means Sidecar code that does not ex
 | `UResolve` | `sidecar_on_fetch` and the retry rule (5.6 c) | New |
 | `UPin`, `Pin = "before"` | The first draft's horizon pin and dead-row rule (11 change 1; 13) | New |
 
-Design switches in each cfg select the broken variants. `StoreReuse` makes vacuum leave a store slot free for reuse (`FILE_HEAP_REUSE_SLOTS`). `Pin` adds the horizon pin before or after the visibility decision. `Retry`, `DeadRowTest`, `DeleteStamps`, `StampFirst`, `ResolveUnderLatch` and `SnapRegister` turn off one rule each. `VacuumUncommitted` lets store vacuum remove a record whose DELID writer is still active.
+The rows below map to branch `sidecar` at `407ecead8`.
+
+| Model action or definition | Design | Code at `407ecead8` |
+|---|---|---|
+| `UResolve`, retry and exhaustion | 5.6 (c), retry rule | `sidecar_on_absent` `storage/sidecar.cpp:2214-2247`, `SIDECAR_RETRY_BOUND` `:364`; past the bound a committed snapshot returns `S_SIDECAR_LOCK_NEEDED` `:2238-2244` |
+| `UResolve` to `LockAcquire` with `rfb` | 5.6 (c), lock fallback; I-6 | `xlocator_fetch` path, `locator_get_object` then `sidecar_fetch_locked` `transaction/locator_sr.c:2345-2349` |
+| `LockAcquire` (`rfb`) | 5.6 (c), lock fallback | `lock_object (..., S_LOCK, LK_UNCOND_LOCK)` `storage/sidecar.cpp:2381` |
+| `LockRead`, `PResolve` (`rfb`) | 5.6 (b) | `heap_get_last_version` `:2387`, `mvcc_satisfies_committed` on its header `:2400-2421`; `TOO_OLD_FOR_SNAPSHOT` gives `S_DOESNT_EXIST` |
+| `PRelease` (`rfb`) | 5.6 (c), "releases the lock when the fetch ends" | `lock_unlock_object` unless the lock was held before `:2425-2428` |
+| `RStart` with `rrout` | 5.6 (a), no lazy read in a statement that calls a routine; I-6 | `XASL_HAS_ROUTINE_CALL` from the unpacker (E23); `qexec_execute_query` sets `sidecar_no_lazy` `query/query_executor.c:22720-22721`, restores it `:22907` |
+| `Keep` | 5.6 (a); P1c E2, E22 | `scan_start_scan` opts in only without the mark `query/scan_manager.c:4063`, `:4167`; `sidecar_keep_lazy` `storage/sidecar.cpp:2008-2015` notes the trid `:2001` |
+| `RCommit` | 5.6 (a), "Protection ends with the transaction" | a routine's COMMIT: `log_complete` replaces `LOG_TDES.trid`; `reset_transaction_lowest_active` `transaction/log_manager.c:5841`, `:6128` |
+| `RReplaceNote` | none | `sidecar_Lazy` is one per thread `storage/sidecar.cpp:1967`; `sidecar_lazy_note` overwrites it `:1988-2003` |
+| `PResolve` with `TridCheck` | 5.6 (a), the trid backstop; I-6 | `sidecar_resolve_slot` `storage/sidecar.cpp:2504-2511`, `ER_SIDECAR_LAZY_AFTER_TRAN_END` `base/error_code.h:1803` |
+
+Design switches in each cfg select the broken variants. `LockFallback`, `FallbackLocks`, `NoLazyWithRoutine` and `TridCheck` are design rules, TRUE on the design. `RoutineCommit` and `OtherKeep` are scenario switches that let the reader's statement commit through a routine and let another keep replace the lazy note. `StoreReuse` makes vacuum leave a store slot free for reuse (`FILE_HEAP_REUSE_SLOTS`). `Pin` adds the horizon pin before or after the visibility decision. `Retry`, `DeadRowTest`, `DeleteStamps`, `StampFirst`, `ResolveUnderLatch` and `SnapRegister` turn off one rule each. `VacuumUncommitted` lets store vacuum remove a record whose DELID writer is still active.
 
 ## Bounds and assumptions
 
@@ -230,7 +298,9 @@ The design runs use these bounds. The cfg files state them.
 - One reader with one fetch, and the design's retry bound of three.
 - Symmetry over writer names. Reader runs stop exploring a behavior once the reader is done (`CONSTRAINT ReaderOpen`), because its result is final there.
 
-Under these bounds a fetch can meet at most two commits that stamp a store record, so `design_Bounded` cannot reach the bound of three. `bound_3_four_commits` (five writers, one statement each, INSERT and LARGE only, the committed reader) checks the design bound itself.
+Under these bounds a fetch can meet at most two commits that stamp a store record, so `design_Bounded` cannot reach the bound of three. `bound_3_four_commits` and `fallback_four_commits` (five writers, one statement each, INSERT and LARGE only, no rollback, the committed reader) check the design bound itself. `fallback_two_commits` uses the design bounds with bound 1, so the fallback meets every statement kind, rollback and statement rollback. `broken_fallback_no_lock` uses four writers, one statement each, INSERT and LARGE only, and bound 1, because the fallback's own read needs a fourth stamping writer to go wrong.
+
+The lazy runs (`lazy_*`, `broken_lazy_across_commit`) use the design bounds with the snapshot and row-lock reader classes. The reader's one fetch may call one committing routine between its fetch and its decode.
 
 The model rests on these assumptions. Each one either matches the code or only adds behaviors.
 
@@ -251,10 +321,12 @@ The model rests on these assumptions. Each one either matches the code or only a
 - CDC and flashback, deferred in the POC (Q4).
 - Partition moves and `sidecar_inline_kept`, the I-3 checks of kept refs, and the equal-length compare of fully inline UPDATE images. The model has the two outcomes of that compare, KEEP and LARGE, as statements.
 - Sub-transaction MVCCIDs of `SELECT ... INCR` (`query/query_executor.c:20198`), which commit before their parent. They update numeric columns only, so they would be KEEP updates.
-- SA mode, MVCC-disabled classes, bulk load, the page batch, `heap_prefetch`, copy-area asserts and the store cursor.
+- SA mode, MVCC-disabled classes, bulk load, the page batch, `heap_prefetch` and copy-area asserts. The store cursor is in the latch model (`../recovery/`).
+- A routine's COMMIT before the fetch or between two rows, a snapshot rebuilt by a nested READ COMMITTED statement (P1c E13), parallel workers that read the leader's mark (E24), the batch's page and copy keeps (E14, E25), and the UPDATE's locked old-record read (`HEAP_SIDECAR_LAZY_LOCKED`). The lazy runs have one fetch with one commit between it and its decode.
+- Whether the lock fallback's wait ends. Without fairness, a writer that never commits keeps the reader waiting.
 - Liveness beyond the retry bound. The model has no fairness, so it does not show that a writer or vacuum eventually runs.
 - Larger counts than the bounds above.
 
 ## Keeping it in step
 
-Last confirmed against `design.md` of 2026-11-04 and `develop` `e64a04a79`. Recheck the model when a change touches sections 5.5, 5.6 or 6 of the design, the retry rule, the store's slot policy, or any engine line in the mapping table. Move this line forward only after rereading those sections and lines.
+Last confirmed against `design.md` of 2026-11-04 and `develop` `e64a04a79`. The lock fallback and lazy-read actions were confirmed against `design.md` of 2026-11-09 (5.5, 5.6) and branch `sidecar` at `407ecead8`. Recheck the model when a change touches sections 5.5, 5.6 or 6 of the design, the retry rule, the store's slot policy, or any engine line in the mapping table. Move this line forward only after rereading those sections and lines.

@@ -54,6 +54,14 @@ EXPECT = {
     'later_reuse_pin_before_OneOwner': 'OneOwner',
     'later_reuse_pin_before_StoreIdentity': 'StoreIdentity',
     'later_reuse_pin_before_no_dead_row': 'NoDanglingRef',
+    'fallback_two_commits': 'PASS',
+    'fallback_four_commits': 'PASS',
+    'broken_fallback_no_lock': 'NoDanglingRef',
+    'lazy_design': 'PASS',
+    'broken_lazy_across_commit': 'NoDanglingRef',
+    'lazy_backstop_only_NoDanglingRef': 'PASS',
+    'lazy_backstop_only_NoLazyAfterTranEnd': 'NoLazyAfterTranEnd',
+    'lazy_backstop_other_keep': 'NoDanglingRef',
 }
 
 
