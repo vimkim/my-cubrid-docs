@@ -1,6 +1,6 @@
 # CBRD-27424: standalone workspace OOS
 
-Last modified: 2026-10-21 (Asia/Seoul).
+Last modified: 2026-11-09 (Asia/Seoul).
 
 [PR #7925](https://github.com/CUBRID/cubrid/pull/7925) supports OOS storage in standalone object loading and CSQL workspace writes.
 
@@ -30,6 +30,8 @@ Dates for older unindexed files come from their Git history. Raw logs retain nat
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [tc-pr4360-review.md](tc-pr4360-review.md) | Pinned TC4360 correctness review, two specialists and coordinator evidence | 2026-11-09 | 2026-11-09 | Review restored loader assertions and lock synchronization before human review |
+| [tc-pr4360-coverage.md](tc-pr4360-coverage.md) | Changed-path owners, independent challenge and verification limits | 2026-11-09 | 2026-11-09 | Make the bounded TC4360 review coverage auditable |
 | [ci_analysis_report_6a487cdb6_collector_recovery_codex.md](ci_analysis_report_6a487cdb6_collector_recovery_codex.md) | Six failures, exact-base/history evidence, lock-readiness mismatch, and scoped rerun | 2026-10-17 | 2026-10-21 | Resolve the collector evidence limit and identify bounded follow-up work |
 | [ci_analysis_report_6a487cdb6_codex.md](ci_analysis_report_6a487cdb6_codex.md) | Historical incomplete collection warning, with a pointer to recovered evidence | 2026-10-17 | 2026-10-21 | Record the requested CI result without unsupported testcase attribution |
 | [sa-inline-preservation-decision-20261017.md](sa-inline-preservation-decision-20261017.md) | Accepted guarantee, source change, local verification, and loader measurements | 2026-10-17 | 2026-10-17 | Record the user's selected response to the SA-only retention review |
@@ -40,7 +42,7 @@ Dates for older unindexed files come from their Git history. Raw logs retain nat
 | [CBRD-27424-sa-loaddb-diagnosis_f4299ac_codex.md](CBRD-27424-sa-loaddb-diagnosis_f4299ac_codex.md) | Historical standalone loader diagnosis at f4299ac | 2026-09-15 | 2026-09-15 | Explain the original missing OOS conversion path |
 | [CBRD-27424-sa-workspace-oos_e24b458_codex.md](CBRD-27424-sa-workspace-oos_e24b458_codex.md) | Historical implementation and reproduction at e24b458 | 2026-09-11 | 2026-09-11 | Document standalone workspace OOS implementation |
 | [CBRD-27424-workspace-oos-revert-rationale_a142503dc_codex.md](CBRD-27424-workspace-oos-revert-rationale_a142503dc_codex.md) | Historical direct-byte benchmark and restoration rationale | 2026-10-07 | 2026-10-07 | Explain the measured decision to restore attrinfo conversion |
-| [README.md](README.md) | Ticket overview and file index | 2026-10-07 | 2026-10-21 | Help readers find the ticket documents and evidence |
+| [README.md](README.md) | Ticket overview and file index | 2026-10-07 | 2026-11-09 | Help readers find the ticket documents and evidence |
 | [ci-fix/pr-7925/index.md](ci-fix/pr-7925/index.md) | Historical local CI-repair index | 2026-09-15 | 2026-09-15 | Explain retained repair artifacts |
 | [ci_analysis_report_e24b458_codex.md](ci_analysis_report_e24b458_codex.md) | Historical exact-revision CI analysis at e24b458 | 2026-09-15 | 2026-09-15 | Preserve CI evidence for the original implementation |
 | [ci_analysis_report_fe1a918_codex.md](ci_analysis_report_fe1a918_codex.md) | Historical exact-revision CI analysis at fe1a918 | 2026-09-15 | 2026-09-15 | Assess CI after the Python dependency change |
