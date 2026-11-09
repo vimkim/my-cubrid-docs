@@ -1,0 +1,16 @@
+diff --git a/shell/_06_issues/_14_1h/bug_bts_13242/cases/bug_bts_13242.sh b/shell/_06_issues/_14_1h/bug_bts_13242/cases/bug_bts_13242.sh
+index b6b387113..01efa7daa 100644
+--- a/shell/_06_issues/_14_1h/bug_bts_13242/cases/bug_bts_13242.sh
++++ b/shell/_06_issues/_14_1h/bug_bts_13242/cases/bug_bts_13242.sh
+@@ -63 +63 @@ EOF
+-	csql -u dba --no-auto-commit -i lock_query.sql $test_db &
++	csql -u dba --no-auto-commit -i lock_query.sql $test_db 2> lock_query.stderr &
+@@ -78,0 +79,5 @@ EOF
++	if [ -s lock_query.stderr ]
++	then
++		write_nok "CSQL reported an error"
++		cat lock_query.stderr
++	fi
+@@ -83 +88 @@ EOF
+-	rm -f $flag $ready_flag $timeout_flag lock_query.sql
++	rm -f $flag $ready_flag $timeout_flag lock_query.sql lock_query.stderr

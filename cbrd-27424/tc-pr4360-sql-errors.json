@@ -1,0 +1,127 @@
+{
+  "date": "2026-11-09",
+  "timezone": "Asia/Seoul",
+  "repository": "CUBRID/cubrid-testcases-private-ex",
+  "before": "1d349fe7392b41384bbf3bdb327755f10f4a4286",
+  "after_local_only": "8de2ebcf7ab047277017af81525c837ccce982f5",
+  "engine": "95ff126a8464179a2fab3092b6f56468528ab954",
+  "preset": "debug_gcc",
+  "case": "shell/_06_issues/_14_1h/bug_bts_13242/cases/bug_bts_13242.sh",
+  "original_six_queries_unchanged": true,
+  "diagnostic_injection": "select 1 + ; on a separate line after each original SELECT, before ;shell_cmd",
+  "scope_limit": "The appended-statement probe demonstrates SQL-error blindness. It does not prove an unchanged original SELECT fails with golden-equivalent locks.",
+  "native_invocation": "TESTKIT_NATIVE=shell TESTKIT_CONTAIN=1 testkit shell -c <private-attempt-conf>",
+  "selection": "One case; one slot; scenario_disk=on; no retries, updates or continuation; per-attempt runtime, CTP, HOME and registry.",
+  "attempts": [
+    {
+      "attempt": "attempt-projection-error-03",
+      "case_total": 1,
+      "success": 0,
+      "fail": 1,
+      "skip": 0,
+      "sql_error_diagnostics": 1,
+      "assertions": [
+        "bug_bts_13242-1 : NOK"
+      ],
+      "runner_exit": 0,
+      "strict_verifier_exit": 1,
+      "strict_verifier_output": "FAIL: fail count is 1 even though runner exit was 0",
+      "xml_parse_error": "not well-formed (invalid token): line 785, column 185",
+      "artifact_sha256": {
+        "feedback.log": "f726ddb28405676caa39a8a0d49877a2218153da79c85358ccc246bd100d6862",
+        "test_status.data": "c5a349b8f0fb26df46ae7278a802d48ff963b819a2f40a3c34280aa384cceac0",
+        "test-shell.xml": "50f4a08b259c45e23a7f36a12ccb3a77ae46487296dd195f97a571af990e436f",
+        "test_local.log": "2398ff4b994659108c83603d0887cb3cab7fd096a4ca7f0f795e86cada61a1cc"
+      },
+      "config_sha256": "5a1e6653924529eb977f7bfeb76593593af3d753e534292cdc30cf4fd801d122",
+      "expected_cases_sha256": "c2053ac2f294b2cebe5b8eda8f77ee500604bfd3336d9a5d9039a3e75dc568c0"
+    },
+    {
+      "attempt": "attempt-post-query-error",
+      "case_total": 1,
+      "success": 1,
+      "fail": 0,
+      "skip": 0,
+      "sql_error_diagnostics": 6,
+      "assertions": [
+        "bug_bts_13242-1 : OK"
+      ],
+      "runner_exit": 0,
+      "strict_verifier_exit": 0,
+      "strict_verifier_output": "suite=shell\ntotal=1\nsuccess=1\nfail=0\nresult_dir=/tmp/tc4360-followup-20261109-dz39uvov/attempt-post-query-error/CTP/result/shell/current_runtime_logs",
+      "xml_parse_error": null,
+      "artifact_sha256": {
+        "feedback.log": "b00b17c3e419096abe67aa5bc2ddc552ba37e95d769cc1d08a98f9722cc6a8bf",
+        "test_status.data": "ff7a404989a3e774af33a4c3e820cd92c7db54179cbc924b9fa4dd0ddb7c02f1",
+        "test-shell.xml": "ef78e794e0133d9587e251994a17dc45176de9346b24cbc88d15ba9a3ba0d9c2",
+        "test_local.log": "a7e1d796559ebf1afd8c477caa8935bc1b166a029c5e891d19842043ea6d8415"
+      },
+      "config_sha256": "0fc13393793a028dc2a4c05ef104bcb51f85a797a6990ab6d8344d1fa718434a",
+      "expected_cases_sha256": "c2bc20e914c31cc6c01ef17e7a1261f83bbc6f2a8ca874d587868df7e2b07541"
+    },
+    {
+      "attempt": "attempt-fixed-normal",
+      "case_total": 1,
+      "success": 1,
+      "fail": 0,
+      "skip": 0,
+      "sql_error_diagnostics": 0,
+      "assertions": [
+        "bug_bts_13242-1 : OK"
+      ],
+      "runner_exit": 0,
+      "strict_verifier_exit": 0,
+      "strict_verifier_output": "suite=shell\ntotal=1\nsuccess=1\nfail=0\nresult_dir=/tmp/tc4360-followup-20261109-dz39uvov/attempt-fixed-normal/CTP/result/shell/current_runtime_logs",
+      "xml_parse_error": null,
+      "artifact_sha256": {
+        "feedback.log": "839f84cace16e19e627f975269b9a71bf7337d21d35138bc29c1668bdc5e24d7",
+        "test_status.data": "ff7a404989a3e774af33a4c3e820cd92c7db54179cbc924b9fa4dd0ddb7c02f1",
+        "test-shell.xml": "507e270705e5ebe602bef72b355cd4b89bf235896b5ea33f137caa07c99c6bfb",
+        "test_local.log": "75abbaa8a91e283ee71d8d1baefba55e94411e3ae6bf788617bc1a5965f6351d"
+      },
+      "config_sha256": "004af9fdf38d8ee5bfe6caa3d04042174d095dcb824157258d03df326c4865b9",
+      "expected_cases_sha256": "33da30ea22e070f77b675cc7f05ff3afcfa8fb00201fae6c6f9f7ae2075384f9"
+    },
+    {
+      "attempt": "attempt-fixed-error",
+      "case_total": 1,
+      "success": 0,
+      "fail": 1,
+      "skip": 0,
+      "sql_error_diagnostics": 6,
+      "assertions": [
+        "bug_bts_13242-1 : NOK CSQL reported an error",
+        "bug_bts_13242-2 : NOK CSQL reported an error",
+        "bug_bts_13242-3 : NOK CSQL reported an error",
+        "bug_bts_13242-4 : NOK CSQL reported an error",
+        "bug_bts_13242-5 : NOK CSQL reported an error",
+        "bug_bts_13242-6 : NOK CSQL reported an error",
+        "bug_bts_13242-7 : OK"
+      ],
+      "runner_exit": 0,
+      "strict_verifier_exit": 1,
+      "strict_verifier_output": "FAIL: fail count is 1 even though runner exit was 0",
+      "xml_parse_error": "not well-formed (invalid token): line 621, column 185",
+      "artifact_sha256": {
+        "feedback.log": "bf54e743d43b464daf75f6cab1dc942659148932344a26c08b96bdc22dd0f8ec",
+        "test_status.data": "c5a349b8f0fb26df46ae7278a802d48ff963b819a2f40a3c34280aa384cceac0",
+        "test-shell.xml": "8c580c9768ea0bbfe8c61d7dff3978fc34e407c037c970b5a18b8617c98d5721",
+        "test_local.log": "5fc0a350387c8a6b851facbcf597f3cb5283d4519dad2584a869434cbffe4ce4"
+      },
+      "config_sha256": "ad4e070b1c722615ea2f3002da11a7b1474ca02abfe9869ca10e52ceda4a1d43",
+      "expected_cases_sha256": "aac8d7ee1a8776b0e12b5fcce76f0cd3293a97b439697a314cf20d475f00ce48"
+    }
+  ],
+  "earlier_setup_attempts": [
+    {
+      "attempt": "attempt-projection-error",
+      "outcome": "INCONCLUSIVE",
+      "reason": "direnv launched from incorrect cwd; no testcase ran"
+    },
+    {
+      "attempt": "attempt-projection-error-02",
+      "outcome": "INCONCLUSIVE",
+      "reason": "HOME change selected mise shims; testkit shim failed before testcase execution; Python auto-install retained in that attempt"
+    }
+  ]
+}

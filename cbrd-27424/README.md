@@ -30,7 +30,7 @@ Dates for older unindexed files come from their Git history. Raw logs retain nat
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [tc-pr4360-review.md](tc-pr4360-review.md) | Pinned TC4360 correctness review, two specialists and coordinator evidence | 2026-11-09 | 2026-11-09 | Review restored loader assertions and lock synchronization before human review |
+| [tc-pr4360-review.md](tc-pr4360-review.md) | Pinned review, inherited SQL-error reproduction and verified local correction | 2026-11-09 | 2026-11-09 | Review restored loader assertions and lock synchronization before human review |
 | [tc-pr4360-coverage.md](tc-pr4360-coverage.md) | Changed-path owners, independent challenge and verification limits | 2026-11-09 | 2026-11-09 | Make the bounded TC4360 review coverage auditable |
 | [ci_analysis_report_6a487cdb6_collector_recovery_codex.md](ci_analysis_report_6a487cdb6_collector_recovery_codex.md) | Six failures, exact-base/history evidence, lock-readiness mismatch, and scoped rerun | 2026-10-17 | 2026-10-21 | Resolve the collector evidence limit and identify bounded follow-up work |
 | [ci_analysis_report_6a487cdb6_codex.md](ci_analysis_report_6a487cdb6_codex.md) | Historical incomplete collection warning, with a pointer to recovered evidence | 2026-10-17 | 2026-10-21 | Record the requested CI result without unsupported testcase attribution |
