@@ -1092,7 +1092,7 @@ Each predicate is a falsifiable check with a metric, a command and a pass thresh
 - Command. `python3 -B io_bench.py sample --layout L --case q1 --server-pid PID --cache {restart-only,file-evict} --repeat 5`, then `summarize`. The query is the narrow `SUM(id)`.
 - Metrics. `SET TRACE ON` fetch and `Num_data_page_fetches` (deterministic). Engine `ioread` after a server restart. `/proc/<pid>/io` `read_bytes` with the file cache evicted.
 - Pass, fetches. The `develop`/Sidecar fetch ratio is at least 9.6 at 1 KB, 41 at 4 KB and 376 at 16 KB, which is 0.9 times the 10.7, 46.4 and 418 of section 9.
-- Pass, hot heap size. Sidecar's narrow-scan fetch count divided by `develop`'s on the table with `v` NULL is at most 1.35. Section 9 measured 1.30.
+- Pass, hot heap size. Sidecar's narrow-scan fetch count divided by `develop`'s on the table with `v` NULL is at most 1.35. Section 9 measured 1.30. Both tables are loaded in one transaction, as section 9 loaded them. A load in committed chunks lets vacuum pack the short null rows tighter, and gives 1.375 (measured, P2 decision G8), which is reported, not gated.
 - Pass, `ioread` after restart. The `develop`/Sidecar page ratio is at least 0.8 times section 9's distinct-page ratio, so at least 8.6, 37 and 223.
 - Pass, OS bytes. The `develop`/Sidecar `read_bytes` ratio is at least 1.5 at 1 KB, 6.6 at 4 KB and 40 at 16 KB, 0.75 times section 9's worst case of 2.0, 8.8 and 52.8.
 - Reported, no threshold. The W4 fixture under AUTO (expected near OOS), the wide-scan fix and distinct-page ratios against section 9, and the trace factor on each build.
@@ -1173,6 +1173,8 @@ The phases run in riskiest-first order. 774 (CBRD-27937), 775 (CBRD-27935) and 7
 - Measured. A2, plus the `strace` overshoot analysis and the `read_ahead_kb` sweep where possible.
 - Exit. A2 passes, or a written decision on the extent policy with numbers.
 - Effort. 4 days.
+- Result, 2026-11-09. A2 passes all ten thresholds (measured, `.scratch/sidecar/p2/SUMMARY.md`). Fetch ratios are 10.9, 47.4 and 426 at 1 KB, 4 KB and 16 KB, against 10.7, 46.4 and 418 predicted. `ioread` ratios are 11.0, 47.7 and 286. OS `read_bytes` ratios with the file cache evicted are 2.9, 11.5 and 102, above section 9's worst case, because a 1 MiB run of hot pages ends before readahead grows to 4 MiB (guess). 64 KB gives 817 fetches against 836 predicted. The hot heap ratio is 1.336, against 1.30 predicted, because the ref and trailer take 28 B, not 24 B (inferred). The release build's trace factor is 1, so the factor 4 of section 9 belongs to the debug build. W4 under AUTO reads 4.4% more bytes than `develop`, as OOS did, so beating it still needs an extent policy, which A2 does not require.
+- Open after P2. The wide scan fixes 1.67 and 1.33 times `develop`'s pages at 16 KB and 64 KB, against 0.67 and 0.84 predicted. Each BIGONE value pays two map-page fixes and a separate header read. These are buffer hits, not IO. The smallest fix reads the value from the map record the cursor already holds, straight into its overflow chain. At 1 KB and 4 KB consecutive refs alternate between two store pages (P1c open item, now measured on 100,000 rows).
 
 **P3, correctness.**
 
