@@ -39,6 +39,7 @@ skill `verify-sidecar-protocol` cites `12b1d0d` as its design basis.
 | --- | --- | --- | --- | --- |
 | [design.md](design.md) | Proposed storage, ownership, history, and integration contracts | 2026-11-04 | 2026-11-04 | Obtain an explicit design decision before engine implementation |
 | [poc-plan.md](poc-plan.md) | Phases, planned acceptance CLI, metrics, and stop conditions | 2026-11-04 | 2026-11-04 | Make POC success falsifiable |
+| [storage-slice-1.md](storage-slice-1.md) | First phase 2 engine slice: reference format, hook points, accepted deviations, order of work | 2026-11-10 | 2026-11-10 | Bound the first storage implementation |
 | [grounding.md](grounding.md) | Exact-revision engine architecture and constraints | 2026-11-04 | 2026-11-04 | Keep design claims tied to source |
 | [verification.md](verification.md) | Bounded slot-undo model result, mutation checks, and limits | 2026-11-04 | 2026-11-04 | Explain what the executable formal skill establishes |
 | [formal-verification.md](formal-verification.md) | Expanded protocol results, repaired verification gaps, and finite limits | 2026-11-04 | 2026-11-04 | Explain the deeper checks before engine approval |
