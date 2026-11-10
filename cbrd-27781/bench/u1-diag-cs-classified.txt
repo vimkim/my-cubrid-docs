@@ -1,0 +1,64 @@
+== base-ins-64
+   23331  47.8%  network recv / worker idle
+   10667  21.8%  oos header/bestspace
+    5307  10.9%  page buffer latch
+    3142   6.4%  log flush / commit wait
+    3066   6.3%  daemons
+    2228   4.6%  lock manager
+     620   1.3%  file_alloc (file header latch etc.)
+     275   0.6%  log append
+     178   0.4%  btree
+       9   0.0%  oos reclaim sweep step
+       8   0.0%  other: __sched_yield
+       7   0.0%  other: read
+       6   0.0%  other: __GI___libc_write
+       2   0.0%  other: tbb::detail::d2::micro_queue<cubconn::connection::coordinator::message, tbb::detail::d1::cache_aligned_allocator<cubconn::connection::coordinator::message> >::pop(void*, unsigned long, tbb::detail::d2::concurrent_queue_rep<cubconn::connection::coordinator::message, tbb::detail::d1::cache_aligned_allocator<cubconn::connection::coordinator::message> >&, tbb::detail::d1::cache_aligned_allocator<tbb::detail::d2::concurrent_queue_rep<cubconn::connection::coordinator::message, tbb::detail::d1::cache_aligned_allocator<cubconn::connection::coordinator::message> > >&) (inlined)
+   48857 total
+== head-ins-64
+   24218  47.1%  network recv / worker idle
+   11063  21.5%  oos header/bestspace
+    5826  11.3%  page buffer latch
+    3415   6.6%  log flush / commit wait
+    3142   6.1%  daemons
+    2146   4.2%  lock manager
+     547   1.1%  file_alloc (file header latch etc.)
+     449   0.9%  growth lock wait (oos_reclaim_claim_growth)
+     373   0.7%  log append
+     144   0.3%  btree
+      20   0.0%  oos reclaim sweep step
+       5   0.0%  other: _int_free
+       4   0.0%  heap
+       4   0.0%  other: read
+   51371 total
+== base-mixed-64
+   28431  47.8%  network recv / worker idle
+    8307  14.0%  page buffer latch
+    5943  10.0%  log flush / commit wait
+    5418   9.1%  oos header/bestspace
+    4823   8.1%  log append
+    2595   4.4%  daemons
+    1796   3.0%  oos reclaim sweep step
+    1406   2.4%  lock manager
+     772   1.3%  file_alloc (file header latch etc.)
+      12   0.0%  btree
+       4   0.0%  other: rmutex_lock(cubthread::entry*, sync_rmutex*)
+       3   0.0%  other: read
+       3   0.0%  heap
+       2   0.0%  other: cubconn::connection::worker::run()
+   59524 total
+== head-mixed-64
+   26755  45.6%  network recv / worker idle
+    8660  14.8%  page buffer latch
+    5875  10.0%  log flush / commit wait
+    5050   8.6%  oos header/bestspace
+    4823   8.2%  log append
+    2632   4.5%  daemons
+    2267   3.9%  growth lock wait (oos_reclaim_claim_growth)
+    1648   2.8%  lock manager
+     728   1.2%  file_alloc (file header latch etc.)
+     141   0.2%  oos reclaim sweep step
+      13   0.0%  btree
+       6   0.0%  other: __GI___libc_write
+       3   0.0%  other: _int_free
+       2   0.0%  heap
+   58614 total
