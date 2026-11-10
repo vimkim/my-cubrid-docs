@@ -6,7 +6,7 @@ Last modified: 2026-11-10 (Asia/Seoul).
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [pr-body.md](pr-body.md) | Draft PR body (Korean) | 2026-11-05 | 2026-11-05 | Review before a draft PR is created |
+| [pr-body.md](pr-body.md) | PR body (Korean), as published on PR #8434 at head `8e139f4db` | 2026-11-05 | 2026-11-10 | Review before a draft PR is created |
 | [pr-context.md](pr-context.md) | Draft context: source commit, base, proposed operations | 2026-11-05 | 2026-11-05 | Resume and publication bookkeeping |
 | [perf.md](perf.md) | Release measurement for ADR-0008 decision 7: log bytes, OOS file size, latency, method and limits | 2026-11-05 | 2026-11-05 | Decision 7 requires measured improvement |
 | [perf-latency-handoff.md](perf-latency-handoff.md) | Handoff (Korean) for remeasuring INSERT/UPDATE latency on a quiet machine: commits, build, run, judgment, where results go | 2026-11-06 | 2026-11-06 | Decision 7 latency condition is still undecided |
