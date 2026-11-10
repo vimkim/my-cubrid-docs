@@ -263,7 +263,7 @@ develop이 error code -1392..-1394를 새로 써서, OOS error code를 다시 -1
 
 baseline은 같은 날 develop 대상 PR run 3개이다. [42807018862](https://github.com/CUBRID/cubrid/actions/runs/42807018862)(#8409), [42790013637](https://github.com/CUBRID/cubrid/actions/runs/42790013637)(#8356), [42784848562](https://github.com/CUBRID/cubrid/actions/runs/42784848562)(#8168)이다. 실패 목록은 artifact server의 `/runs/<run>/<suite>/collect/failed.list`에서 읽었다. 이번 비교는 case 이름만 비교했고, `sql_by_cci` diff signature 비교는 하지 않았다.
 
-- `test_sql` 2개(`cbrd_27762.sql`, `r_outer_join.sql`)는 #8409, #8168 run에서도 실패한다.
+- `test_sql` 2개(`cbrd_27762.sql`, `r_outer_join.sql`)는 #8168 run에서도 똑같이 실패한다.
 - `test_sql_by_cci` 38개는 모두 baseline run 중 하나 이상에서 실패한다. 1차 run(34개)보다 늘어난 4개(`cbrd_27337.sql`, `r_outer_join.sql`, `cbrd_25984.sql`, `cbrd_27762.sql`)도 develop에서 실패한다.
 - `test_shell`의 `cbrd_27571.sh`는 develop에서도 실패한다.
 
