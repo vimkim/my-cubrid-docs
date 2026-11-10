@@ -64,6 +64,10 @@ EXPECT = {
     'lazy_backstop_other_keep': 'PASS',
     'lazy_backstop_other_keep_NoLazy': 'NoLazyAfterTranEnd',
     'broken_backstop_latest_only': 'NoDanglingRef',
+    'lazy_earlier_keep': 'PASS',
+    'broken_first_keep_per_request': 'NoLazyAfterTranEnd',
+    'lazy_backstop_other_keep_earlier': 'PASS',
+    'broken_first_keep_any_scan_end': 'NoDanglingRef',
 }
 
 

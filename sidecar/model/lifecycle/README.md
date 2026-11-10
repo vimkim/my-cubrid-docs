@@ -87,6 +87,10 @@ Measured on 2026-11-09 with `python3 run.py` (32 TLC workers, TLC 2.19 on Java 8
 | `lazy_backstop_other_keep` | PASS (FAIL `NoDanglingRef`, 189,198 states, before P3 868) | 7,156,831 | 68 s |
 | `lazy_backstop_other_keep_NoLazy` | FAIL `NoLazyAfterTranEnd` | 4,607 | 2 s |
 | `broken_backstop_latest_only` | FAIL `NoDanglingRef` | 226,889 | 7 s |
+| `lazy_earlier_keep` | PASS | 2,647,626 | 33 s |
+| `broken_first_keep_per_request` | FAIL `NoLazyAfterTranEnd` | 3,250 | 2 s |
+| `lazy_backstop_other_keep_earlier` | PASS | 7,156,831 | 73 s |
+| `broken_first_keep_any_scan_end` | FAIL `NoDanglingRef` | 259,185 | 7 s |
 
 ## Broken variants
 
@@ -204,6 +208,8 @@ The S lock is what makes the fallback's read safe. It is not only a way to stop 
 The backstop turns a wrong read into an error, which is why E22's mark, not the check, is the fix.
 
 **The backstop with a replaced note** (`lazy_backstop_other_keep`: the mark missed and `OtherKeep = TRUE`) failed `NoDanglingRef` in 19 steps (finding 5). With `FirstKeepTrid` (P3 868) it passes, and the same run checked for `NoLazyAfterTranEnd` shows the decode fails with the backstop error. `broken_backstop_latest_only` sets `FirstKeepTrid = FALSE` and fails `NoDanglingRef`.
+
+**When the first keep is forgotten** (P3 868 round 2, measured 2026-11-11). `rfirst` is the first keep the trid check uses for a ref outside the latest note: none, a keep of an ended earlier transaction (`stale`), the reader's own transaction (`own`), or a keep made after the routine's COMMIT (`late`). `EarlierKeep` lets an ended scan of the same thread have kept a record in an earlier transaction with no request end since, as in SA_MODE. `FirstKeepReset` picks the rule. The design, `"noscan"`, forgets the first keep when the thread's last scan that kept ends. `lazy_earlier_keep` (no routine commit, another keep, an earlier keep) passes `NoLazyAfterTranEnd`. `broken_first_keep_per_request` forgets it only at the request's end, as `6ec8d66eb` did, and fails `NoLazyAfterTranEnd`: a valid read fails with the backstop error. `broken_first_keep_any_scan_end` forgets it when the other scan ends while the reader's scan is open, and fails `NoDanglingRef`. `lazy_backstop_other_keep_earlier` passes `NoDanglingRef`.
 
 1. Steps 1 to 5 of `broken_lazy_across_commit`. The reader holds T1's version lazy, the routine commits, and vacuum removes slot 1.
 2. Another keep on the same thread replaces the lazy note.

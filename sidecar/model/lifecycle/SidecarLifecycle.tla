@@ -39,10 +39,14 @@ CONSTANTS
   FallbackLocks,     \* the lock fallback takes the S lock before it reads the last version
   NoLazyWithRoutine, \* a statement that calls a routine reads nothing lazily (5.6 a, E22)
   TridCheck,         \* the attribute layer compares the lazy keep's trid (ER_SIDECAR_LAZY_AFTER_TRAN_END, E19)
-  FirstKeepTrid,     \* a ref outside the latest note is checked against the trid of the request's first keep (P3 868)
+  FirstKeepTrid,     \* a ref outside the latest note is checked against the trid of the thread's first keep (P3 868)
+  FirstKeepReset,    \* when that first keep is forgotten: "noscan" (design: the thread's last scan that kept ends),
+                     \* "request" (only at the request's end), "anyscan" (any scan that kept ends)
   \* Scenario switches, not design rules.
   RoutineCommit,     \* a protected reader's statement may call a routine that COMMITs between fetch and decode
-  OtherKeep          \* another keep of the same thread may replace the lazy note between fetch and decode
+  OtherKeep,         \* another keep of the same thread may replace the lazy note between fetch and decode
+  EarlierKeep        \* an ended scan of the same thread kept a record in an earlier, ended transaction, with no
+                     \* request end since (an SA_MODE process, or a procedure that COMMITs between two queries)
 
 NoSlot == 0
 Slots == 1..NSlots
@@ -58,15 +62,16 @@ VARIABLES
   store, nvals, nforeign, fslots,                       \* store slots, value counters, other row's slots
   committedLive, everCommitted, stampErr,               \* ghosts
   rcls, rpc, rver, rres, rtry, rreg, rsnap, rlatch, rabsent, rdrops,  \* the reader
-  rfb, rrout, rtend, rnote                                             \* fallback, routine, tran end, lazy note
+  rfb, rrout, rtend, rnote, rfirst                                     \* fallback, routine, tran end, lazy note,
+                                                                       \* first keep
 
 wv  == <<wst, wid, wops, wop, wpc, wold, wnew, wundo, wsave>>
 sv  == <<nextId, lockOwner, nstmts>>
 hv  == <<hot, hlog>>
 stv == <<store, nvals, nforeign, fslots>>
 gv  == <<committedLive, everCommitted, stampErr>>
-rv  == <<rcls, rpc, rver, rres, rtry, rreg, rsnap, rlatch, rabsent, rdrops, rfb, rrout, rtend, rnote>>
-xv  == <<rfb, rrout, rtend, rnote>>
+rv  == <<rcls, rpc, rver, rres, rtry, rreg, rsnap, rlatch, rabsent, rdrops, rfb, rrout, rtend, rnote, rfirst>>
+xv  == <<rfb, rrout, rtend, rnote, rfirst>>
 vars == <<wv, sv, hv, stv, gv, rv>>
 
 Min(S) == CHOOSE x \in S : \A y \in S : x <= y
@@ -314,7 +319,7 @@ RStart(c) ==
                [] OTHER          -> 0
   /\ rsnap' = IF c = "snap" THEN CommittedIds ELSE {}
   /\ rrout' \in IF RoutineCommit /\ c \in {"snap", "lock"} THEN BOOLEAN ELSE {FALSE}
-  /\ UNCHANGED <<wv, sv, hv, stv, gv, rver, rres, rtry, rlatch, rdrops, rfb, rtend, rnote>>
+  /\ UNCHANGED <<wv, sv, hv, stv, gv, rver, rres, rtry, rlatch, rdrops, rfb, rtend, rnote, rfirst>>
 
 \* Protected readers keep the record lazy and dereference later with no hot latch (sidecar_read_value).
 \* A protected reader that finds the record absent stops with ER_SIDECAR_DANGLING_REF.
@@ -327,8 +332,9 @@ Deref(v) ==
 \* (query/scan_manager.c:4063), so the fetch exit expands the version at once (E22).
 Keep(v) ==
   IF rrout /\ NoLazyWithRoutine
-  THEN rres' = Deref(v) /\ rver' = v /\ rpc' = "release" /\ UNCHANGED rnote
+  THEN rres' = Deref(v) /\ rver' = v /\ rpc' = "release" /\ UNCHANGED <<rnote, rfirst>>
   ELSE rver' = v /\ rpc' = "resolve" /\ rnote' = TRUE /\ UNCHANGED rres
+       /\ rfirst' = IF rfirst = "none" THEN "own" ELSE rfirst
 
 \* (a) Snapshot reader.  heap_get_visible_version_internal: TOO_NEW_FOR_SNAPSHOT follows prev_version_lsa
 \* into the undo log (storage/heap_file.c:27039-27047); TOO_OLD is a committed delete it sees.
@@ -341,7 +347,7 @@ SnapVisible(S) ==
 SnapRead ==
   /\ rpc = "read" /\ rcls = "snap"
   /\ LET v == SnapVisible(rsnap) IN
-       IF v = NoVer THEN rres' = Res("absent", 0) /\ rpc' = "release" /\ UNCHANGED <<rver, rnote>>
+       IF v = NoVer THEN rres' = Res("absent", 0) /\ rpc' = "release" /\ UNCHANGED <<rver, rnote, rfirst>>
        ELSE Keep(v)
   /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rtry, rreg, rsnap, rlatch, rabsent, rdrops, rfb, rrout, rtend>>
 
@@ -361,9 +367,9 @@ LockAcquire ==
 LockRead ==
   /\ rpc = "read" /\ (rcls = "lock" \/ rfb)
   /\ IF hot = NoVer \/ (hot.del # 0 /\ ~Active(hot.del))
-     THEN rres' = Res("absent", 0) /\ rpc' = "release" /\ UNCHANGED <<rver, rnote>>
+     THEN rres' = Res("absent", 0) /\ rpc' = "release" /\ UNCHANGED <<rver, rnote, rfirst>>
      ELSE IF rfb
-     THEN rver' = hot /\ rpc' = "resolve" /\ UNCHANGED <<rres, rnote>>
+     THEN rver' = hot /\ rpc' = "resolve" /\ UNCHANGED <<rres, rnote, rfirst>>
      ELSE Keep(hot)
   /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rtry, rreg, rsnap, rlatch, rabsent, rdrops, rfb, rrout, rtend>>
 
@@ -375,25 +381,40 @@ RCommit ==
   /\ rtend' = TRUE /\ rreg' = 0
   /\ lockOwner' = IF lockOwner = "reader" THEN "none" ELSE lockOwner
   /\ UNCHANGED <<wv, nextId, nstmts, hv, stv, gv, rcls, rpc, rver, rres, rtry, rsnap, rlatch, rabsent, rdrops,
-                 rfb, rrout, rnote>>
+                 rfb, rrout, rnote, rfirst>>
 
-\* The thread's lazy note is one per thread (sidecar_Lazy, storage/sidecar.cpp:1967).  Another scan's
-\* keep, such as an inner scan of a join, replaces it before the outer row's column is decoded.
+\* The thread's lazy note is one per thread (sidecar_Lazy, storage/sidecar.cpp).  Another scan's
+\* keep, such as an inner scan of a join, replaces it before the outer row's column is decoded.  A keep
+\* while the thread has no first keep becomes the first: in the current transaction, which after RCommit
+\* is a later one than the reader's ("late").
 RReplaceNote ==
-  /\ OtherKeep /\ rpc = "resolve" /\ rcls \in {"snap", "lock"} /\ ~rfb /\ rnote
+  /\ OtherKeep /\ rpc = "resolve" /\ rcls \in {"snap", "lock"} /\ ~rfb /\ (rnote \/ rfirst = "none")
   /\ rnote' = FALSE
+  /\ rfirst' = IF rfirst = "none" THEN (IF rtend THEN "late" ELSE "own") ELSE rfirst
   /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rpc, rver, rres, rtry, rreg, rsnap, rlatch, rabsent, rdrops,
                  rfb, rrout, rtend>>
 
+\* The other scan ends while the reader's scan is still open (sidecar_scan_end ()).  Only a rule that
+\* forgets the first keep at any scan's end forgets it now; the design waits for the reader's scan too.
+ROtherEnd ==
+  /\ OtherKeep /\ FirstKeepReset = "anyscan" /\ rpc = "resolve" /\ ~rnote /\ rfirst \in {"own", "late"}
+  /\ rfirst' = "none"
+  /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rpc, rver, rres, rtry, rreg, rsnap, rlatch, rabsent, rdrops,
+                 rfb, rrout, rtend, rnote>>
+
 \* sidecar_resolve_slot (storage/sidecar.cpp): a ref inside the latest lazy note whose trid is no
 \* longer the transaction's fails with ER_SIDECAR_LAZY_AFTER_TRAN_END and reads nothing.  With
-\* FirstKeepTrid, a ref outside the latest note is compared with sidecar_Lazy_first_trid, the trid of the
-\* thread's first keep since the request began.  That keep came no later than the reader's own, which
-\* came before RCommit, so after the commit it is never the current trid: the model needs no variable
-\* for it.
+\* FirstKeepTrid, a ref outside the latest note is compared with sidecar_Lazy_first_trid (rfirst): a
+\* keep of an ended earlier transaction ("stale") never matches, the reader's own transaction ("own")
+\* stops matching at RCommit, a keep after RCommit ("late") matches, and no first keep ("none") is not
+\* checked.
+TranEnded ==
+  IF rnote THEN rtend
+  ELSE FirstKeepTrid /\ (rfirst = "stale" \/ (rfirst = "own" /\ rtend))
+
 PResolve ==
   /\ rpc = "resolve" /\ (rcls \in {"snap", "lock"} \/ rfb)
-  /\ rres' = IF ~rfb /\ rtend /\ TridCheck /\ (rnote \/ FirstKeepTrid) /\ rver.ref # NoSlot
+  /\ rres' = IF ~rfb /\ TridCheck /\ TranEnded /\ rver.ref # NoSlot
              THEN Res("tranend", 0) ELSE Deref(rver)
   /\ rpc' = "release"
   /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rver, rtry, rreg, rsnap, rlatch, rabsent, rdrops, xv>>
@@ -459,7 +480,7 @@ UResolve ==
      THEN /\ rfb' = TRUE /\ rpc' = "lock" /\ rlatch' = FALSE /\ rver' = NoVer
           /\ UNCHANGED <<rres, rreg, rtry>>
      ELSE Finish(Res("exhausted", 0)) /\ UNCHANGED <<rver, rtry, rfb>>
-  /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rsnap, rabsent, rdrops, rrout, rtend, rnote>>
+  /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rsnap, rabsent, rdrops, rrout, rtend, rnote, rfirst>>
 
 -----------------------------------------------------------------------------
 
@@ -499,6 +520,9 @@ Init ==
   /\ rrout = FALSE
   /\ rtend = FALSE
   /\ rnote = FALSE
+  \* The earlier scan ended before the reader's fetch: the design forgot its keep then; a rule that
+  \* forgets only at the request's end still has it (sidecar_request_end (), never called in SA_MODE).
+  /\ rfirst = IF EarlierKeep /\ FirstKeepReset = "request" THEN "stale" ELSE "none"
 
 \* Every transaction ended, the reader is done and vacuum has nothing left: a correct end state.
 Terminated ==
@@ -517,7 +541,7 @@ Next ==
   \/ \E k \in Slots : StoreVacuum(k)
   \/ HotVacuum
   \/ \E c \in ReaderClasses : RStart(c)
-  \/ SnapRead \/ LockAcquire \/ LockRead \/ RCommit \/ RReplaceNote \/ PResolve \/ PRelease
+  \/ SnapRead \/ LockAcquire \/ LockRead \/ RCommit \/ RReplaceNote \/ ROtherEnd \/ PResolve \/ PRelease
   \/ URead \/ UPin \/ UResolve
   \/ Terminated
 
@@ -595,4 +619,5 @@ TypeOK ==
   /\ \A k \in Slots : store[k].st \in {"unused", "live", "markdel", "reuse"}
   /\ rpc \in {"idle", "lock", "read", "pin", "resolve", "release", "done"}
   /\ rtry \in 0..MaxRetry
+  /\ rfirst \in {"none", "stale", "own", "late"}
 =============================================================================

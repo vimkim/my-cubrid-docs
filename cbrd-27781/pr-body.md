@@ -21,7 +21,7 @@ https://jira.cubrid.org/browse/CBRD-27781
 
 ## Remarks
 
-- 검증: head `94ed2ea46`에서 debug_gcc OOS ctest 54/54 통과(`8e139f4db`에서도 54/54). gha-ci(run [42603737999](https://github.com/CUBRID/cubrid/actions/runs/42603737999))는 build(release·debug), test_shell, test_sql, test_medium 통과. `test_sql_by_cci`의 실패 57건은 이 PR의 커밋이 없는 `feature/oos-merge` PR #8348에서도 diff까지 같아 브랜치에 원래 있던 실패로 보고 [CBRD-28013](https://jira.cubrid.org/browse/CBRD-28013)으로 따로 추적합니다(분석: https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-27781/ci-analysis-sql-by-cci.md).
+- 검증: head `94ed2ea46`에서 debug_gcc OOS ctest 54/54 통과(`8e139f4db`에서도 54/54). gha-ci(head `94ed2ea46`, run [42865575934](https://github.com/CUBRID/cubrid/actions/runs/42865575934))는 build(release·debug), test_shell, test_sql, test_medium 통과. `test_sql_by_cci`의 실패 57건은 이 PR의 커밋이 없는 `feature/oos-merge` PR #8348에서도 diff까지 같아 브랜치에 원래 있던 실패로 보고 [CBRD-28013](https://jira.cubrid.org/browse/CBRD-28013)으로 따로 추적합니다(분석: https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-27781/ci-analysis-sql-by-cci.md).
   - 신규 `test_oos_reclaim`: redo-only라 바깥 abort가 재사용된 slot에 쓰지 않음(CBRD-27781 형태), 부분 회수 후 재실행 완료, 재사용 slot으로의 링크 미추적, abort된 의도 폐기, fail-stop.
   - 신규 real-vacuum 테스트: rollback·savepoint rollback된 UPDATE의 chain이 vacuum 뒤에도 남음(CBRD-27237), commit된 UPDATE의 빈 페이지 fast path 반환. 기존 old-snapshot 테스트도 A' 경로로 통과.
   - 신규 SQL crash 테스트: commit 회수 실패 → fail-stop → 재시작 복구 중 재실패 → 다음 재시작에서 회수 완료.
