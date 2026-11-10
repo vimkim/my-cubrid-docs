@@ -172,7 +172,12 @@ cubrid-ci 0.2.0의 collector는 `sql_by_cci` suite를 지원하지 않는다. �
 3. 두 merge 뒤 #7990에서 `test_sql_by_cci`를 다시 실행하고 develop run과 같은 방법으로 비교한다. 그때도 develop에서 통과하는데 OOS에서만 실패하는 case가 OOS 작업의 대상이다.
 4. (a) 29개는 develop 공통 실패이다. 이 문서의 범위가 아니며 `test_sql_by_cci` 도입 작업(CUBRIDQA-1709 계열)에서 다룬다.
 
-추가 표본: `feature/oos-merge`를 base로 하는 PR #8416의 run [42573078376](https://github.com/CUBRID/cubrid/actions/runs/42573078376)이 2026-11-09 16시(KST) 기준 queue에 있다. 이 run이 끝나면 같은 28개가 나오는지 확인할 수 있다.
+## 추가 표본: PR #8416 (2026-11-10 확인)
+
+`feature/oos-merge`를 base로 하는 PR #8416(엔진 `abd2136f5`, [CBRD-27259] STORAGE FORCE_INLINE)의 run [42573078376](https://github.com/CUBRID/cubrid/actions/runs/42573078376)을 같은 방법으로 비교했다. 실행 17630건 중 61건이 실패했다.
+
+- (b) 28개는 #8416에서도 모두 실패한다. 28개가 한 PR이 아니라 `feature/oos-merge` 전체의 차이라는 분류를 두 번째 표본이 뒷받침한다.
+- #8416에만 있는 실패가 4개 있다. `_36_guava/cbrd_25717/cases/`의 `cbrd_25717_null_join_key.sql`, `cbrd_25717_overflow_dependent_list.sql`, `cbrd_25717_overflow_record.sql`과 `_36_guava/cbrd_26719/cases/cbrd_26719_03_probe_overflow_tuple.sql`이다. 모두 기대 결과 대신 `Error:-1388`을 낸다. 같은 4개는 #8434 run과 develop run 6개에서 모두 통과한다. 그래서 #8416의 변경 자체에서 온 실패일 가능성이 크다(추론). 이 4개는 #8416에서 다룰 일이며 이 문서의 (b) 집합에 넣지 않는다.
 
 ## develop 동기화 결과 (2026-11-10)
 
