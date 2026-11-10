@@ -1,6 +1,6 @@
 # CBRD-27925 조사 기록
 
-Last modified: 2026-11-09 (Asia/Seoul).
+Last modified: 2026-11-10 (Asia/Seoul).
 
 [CBRD-27925](https://jira.cubrid.org/browse/CBRD-27925)는 PR [#7990](https://github.com/CUBRID/CUBRID/pull/7990)의 OOS 빈 페이지 반환·재시도 후속 작업이다.
 
@@ -11,4 +11,4 @@ Last modified: 2026-11-09 (Asia/Seoul).
 | [explore_sweep_lap.py](explore_sweep_lap.py) | INSERT undo와 sweep lap의 전수 interleaving 순수 모델(소스 SHA 고정) | 2026-11-05 | 2026-11-05 | adr0008-claude-review.md의 모델 근거 |
 | [growth-bound-design.md](growth-bound-design.md) | 성장 전 회수 규칙의 비용 원인, 다섯 설계의 TLA+ 비교(현재 규칙·유계 성장·헛된 검사), 빈 페이지 후보 집합 권고, READ 경합 (a)/(b) 결정, TC 여유분 판정과 a01 관측 | 2026-11-05 | 2026-11-05 | Work821에서 강한 회수 규칙이 INSERT/UPDATE 성능을 해치는지와 더 약한 유계 성장 보장을 검토하기 위해 |
 | [jira-growth-bound-drafts.md](jira-growth-bound-drafts.md) | CBRD-27925·CBRD-26659 보충 댓글 초안과 게시 기록(4778015, 4778016) | 2026-11-05 | 2026-11-06 | 위 결론을 JIRA에 알린 기록 |
-| [growth-gate-guide.md](growth-gate-guide.md) | 성장 게이트 입문: 옛 삭제 카운터·전체 sweep의 비용과 rollback 경합, 빈 페이지 후보 집합(ADR-0010, `076c3e4c6`)의 넣기·빼기·unknown 규칙, C안 재사용 우선과의 차이, 점검 문제 | 2026-11-09 | 2026-11-09 | Work840 작업의 배경을 처음 보는 독자에게 설명하기 위해 |
+| [growth-gate-guide.md](growth-gate-guide.md) | 성장 게이트 입문: 옛 삭제 카운터·전체 sweep의 비용과 rollback 경합, 빈 페이지 후보 집합(ADR-0010, PR #8434 head `8e139f4db`)의 넣기·빼기·unknown 규칙, 성장 lock과 재확인 보강, C안 재사용 우선과의 차이, 점검 문제 | 2026-11-09 | 2026-11-10 | Work840 작업의 배경을 처음 보는 독자에게 설명하기 위해 |

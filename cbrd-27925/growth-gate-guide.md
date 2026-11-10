@@ -1,8 +1,8 @@
 # OOS 성장 게이트 입문
 
-2026-11-09, Asia/Seoul. [CBRD-27925](https://jira.cubrid.org/browse/CBRD-27925) 작업(Work840)을 처음 보는 사람을 위한 설명서다. "성장 게이트"가 무엇인지, 옛 방식의 무엇이 문제였는지, 빈 페이지 후보 집합(ADR-0010)이 그것을 어떻게 고치는지, 그리고 다음 단계인 C안(재사용 우선)이 무엇이 다른지를 순서대로 설명한다.
+2026-11-09, Asia/Seoul. 2026-11-10 개정. [CBRD-27925](https://jira.cubrid.org/browse/CBRD-27925) 작업(Work840)을 처음 보는 사람을 위한 설명서다. "성장 게이트"가 무엇인지, 옛 방식의 무엇이 문제였는지, 빈 페이지 후보 집합(ADR-0010)이 그것을 어떻게 고치는지, 그리고 다음 단계인 C안(재사용 우선)이 무엇이 다른지를 순서대로 설명한다.
 
-기준 소스는 `CBRD-27781-postpone-commit` `6a8d16da7`(옛 방식)과 `CBRD-27925-emptied-set` `076c3e4c6`(새 방식)이다. 함수 이름은 모두 `src/storage/oos_file.cpp` 의 것이다.
+기준 소스는 옛 방식이 `CBRD-27781-postpone-commit` `6a8d16da7`, 새 방식이 PR [#8434](https://github.com/CUBRID/cubrid/pull/8434) head `8e139f4db` 다. 새 방식은 commit 두 개다. `e01d8d576` 이 빈 페이지 후보 집합을 넣고, `8e139f4db` 가 동시 성장과 재확인을 보강한다(6절 끝). 함수 이름은 모두 `src/storage/oos_file.cpp` 의 것이다. ADR-0010은 2026-11-10 현재 accepted다.
 
 ## 1. 한 줄 요약
 
@@ -189,6 +189,8 @@ latch를 쥐고 있으면 그 사이에 누가 페이지를 다시 비울 수 �
 
 `unknown` 인 파일의 다음 성장은 옛 방식처럼 sector 표를 따라 파일 전체를 한 바퀴 돈다. 그 lap이 BUSY로 만난 페이지는 집합에 넣고, 아무것도 회수하지 못하고 끝까지 돌면 표시를 끈다. 즉 비싼 전체 lap은 재시작 뒤나 상한 초과 뒤 파일마다 한 번만 낸다.
 
+lap 도중 집합이 다시 넘치면 표시가 다시 켜진 채로 남는다. 이번 성장은 그대로 할당하고, 다음 성장이 lap을 한 번 더 돈다. 넘쳐서 집합에 들어가지 못한 페이지가 그 lap에서 잡힌다.
+
 ### 로그 형식 변경: rollback이 파일 이름을 알아야 한다
 
 rollback undo가 받는 정보(`LOG_RCV`)에는 페이지는 있지만 그 페이지가 어느 파일 것인지는 없다. 집합은 파일별이므로, 파일을 모르면 넣을 곳이 없다. 그래서 RVOOS_INSERT 로그의 undo 데이터에 OOS 파일 ID(VFID) 8바이트를 넣었다.
@@ -196,6 +198,15 @@ rollback undo가 받는 정보(`LOG_RCV`)에는 페이지는 있지만 그 페�
 - redo 데이터는 그대로다. HA log applier는 redo만 읽는다.
 - VFID가 없는 옛 레코드는 bestspace 힌트로 파일을 찾고, 그것도 없으면 알려진 모든 파일을 `unknown` 으로 표시한다.
 - PR #7990 병합 전 변경이라 ADR-0006(ADR-0008 결정 6으로 개정)에 따라 storage format revision은 1로 둔다.
+
+### 보강: 두 grower와 성장 도중 비는 페이지
+
+첫 구현 뒤 TLA+ 모델(Work829 growth arena)이 반례 두 개를 찾았다. 둘 다 `8e139f4db` 에서 고쳤다.
+
+1. **두 grower.** 회수 확인만 잠그고 `file_alloc` 전에 lock을 풀었다. 그래서 grower A가 확인을 마치고 할당하기 전에 grower B가 끼어들어 sector를 잡을 수 있었다. 이제 파일당 성장 lock을 확인부터 `file_alloc` 까지 쥔다. 대가로 같은 파일의 새 페이지 할당은 하나씩 차례로 돈다.
+2. **성장 도중 비는 페이지.** 성장은 시작할 때 찍은 집합 사본만 확인했다. lap이 cursor 뒤에서 비게 된 페이지를 못 보고 끝나면, 그 페이지가 집합에 있어도 확인하지 않고 할당했다. 이제 성장은 도중에 들어온 항목까지 읽고, lap이 끝나면 집합을 한 번 더 확인한다. 한 페이지는 성장 한 번에 한 번만 확인한다.
+
+빈 페이지가 없는 파일의 성장은 여전히 페이지를 하나도 읽지 않는다.
 
 ## 7. 옛 방식과 새 방식 비교
 
@@ -213,17 +224,17 @@ rollback undo가 받는 정보(`LOG_RCV`)에는 페이지는 있지만 그 페�
 - 단위 테스트 `test_oos_growth_sweep` 에 ADR-0010 결과 5의 네 경우를 넣었다.
   - rollback이 비운 페이지가 busy여도 후보로 남는다.
   - 페이지를 비우지 않은 삭제 뒤 성장은 페이지를 하나도 확인하지 않는다.
-  - 재시작 뒤 lap이 busy 페이지를 집합에 넣고 표시를 끈다.
+  - 재시작 뒤 lap이 busy 페이지를 집합에 넣고, 같은 성장이 lap 뒤 재확인으로 그 페이지를 재사용하며, 표시를 끈다.
   - 상한을 넘으면 lap 한 번으로 빈 페이지를 모두 재사용한다.
-- 옛 동작을 되살리는 변형 세 가지에서 각 테스트가 실패하는 것을 확인했다. 테스트가 결함을 실제로 잡는다는 뜻이다.
-- 디버그 빌드에서 OOS ctest 52개가 모두 통과했다. 재시작 복구 테스트 두 개가 새 로그 형식을 지난다.
+- 옛 동작을 되살리는 변형 네 가지(busy 페이지 버리기, 매번 lap, 넘침 무시, lap 뒤 재확인 빼기)에서 각 테스트가 실패하는 것을 확인했다. 테스트가 결함을 실제로 잡는다는 뜻이다.
+- PR head `8e139f4db` 의 디버그 빌드에서 OOS ctest 54개가 모두 통과했다. 재시작 복구 테스트 두 개가 새 로그 형식을 지난다. load average 100 이상에서는 일부 테스트가 ctest 시간 제한을 넘겼고, 제한 없이 단독으로 돌리면 통과했다.
 - 측정은 5절의 표와 같다.
 
 ## 9. 다음 단계: C안 (재사용 우선)
 
 사용자는 2026-11-06에 성장 게이트 대안 비교(Work829 arena)를 보고 **C안**을 채택했다. 집합은 그대로 쓰고, 집합에서 찾은 빈 페이지를 처리하는 방식만 바꾼다.
 
-| | 지금 구현 (반환형, `076c3e4c6`) | C안 (재사용 우선) |
+| | 지금 구현 (반환형, `8e139f4db`) | C안 (재사용 우선) |
 | --- | --- | --- |
 | 빈 페이지를 찾으면 | `file_dealloc` 으로 돌려준 뒤 `file_alloc` 이 다시 받음 | 돌려주지 않고 그 자리에서 바로 씀 |
 | 회수 sysop과 헤더 WRITE latch | INSERT 경로에서 냄 | 없음 |
@@ -235,9 +246,9 @@ C안에서 추가로 지킬 조건은 다음과 같다(arena c-reuse-first 보�
 - 다시 채워진 페이지는 그 자리에서 바로 집합에서 뺀다. 지금 구현이 이미 한다.
 - INSERT rollback이 파일 ID를 알아야 한다. 지금 구현의 로그 변경이 이미 한다.
 - 꺼낸 페이지는 조건부 WRITE latch 아래에서 OOS 페이지인지, 이 파일 것인지, 비었는지, 공간이 충분한지 다시 확인한다.
-- 재시작 뒤 lap이 끝나면 집합을 한 번 더 확인한다.
+- 재시작 뒤 lap이 끝나면 집합을 한 번 더 확인한다. 지금 구현이 이미 한다(`8e139f4db`).
 
-현재 상태는 이렇다. C안 구현 commit은 아직 없다. 측정(Work839)은 C안 commit이 나오면 같은 harness로 다시 잰다. 체크포인트로 재시작 lap을 없애는 D안은 보류했다.
+현재 상태는 이렇다. 반환형은 1단계로 PR #8434에 들어갔다. 측정(Work839)은 성장 lock과 재확인을 넣은 반환형(`e8e714dae`, `8e139f4db` 와 같은 patch)으로 다시 했고 ADR-0010 결정 7을 충족했다. 삭제와 vacuum 뒤 INSERT 중앙값은 51 ms에서 4.6 ms로, 동시에 성장하는 INSERT 8개 중 가장 느린 것은 69 ms에서 5.9 ms로 줄었고, churn 뒤 sector 수는 같았다(load average 68~132, ADR-0010 결정 7). C안은 2단계로, PR #8434 CI가 통과한 뒤 시작한다. C안 commit이 나오면 같은 harness로 다시 잰다. 체크포인트로 재시작 lap을 없애는 D안은 보류했다.
 
 ## 10. 용어
 
@@ -276,4 +287,4 @@ C안에서 추가로 지킬 조건은 다음과 같다(arena c-reuse-first 보�
 - [growth-bound-design.md](growth-bound-design.md): 옛 엔진의 비용 구조와 줄 번호, 다섯 설계의 TLA+ 비교, 후보 집합 권고 (Work821)
 - [adr0008-claude-review.md](adr0008-claude-review.md): rollback READ 경합의 발견 (Work818)
 - [growth-cost-measurement.md](../cbrd-27872/growth-cost-measurement.md): 전후 측정 (Work839)
-- ADR-0010 `0010-arm-growth-reclaim-with-emptied-pages.md` (cubrid-oos-context, branch `docs/adr-0010-emptied-page-candidates`, 아직 proposed)
+- ADR-0010 `0010-arm-growth-reclaim-with-emptied-pages.md` (cubrid-oos-context main, accepted)
