@@ -38,3 +38,8 @@ Prepared 2026-11-09 by another session; recorded and published 2026-11-11 (Asia/
 ## Conversation record
 
 - 2026-11-10: the user approved finishing and publishing revision 3 ("좋아. 승인"). The TC bullet was published unchanged because CI was not complete; the body describes the code at the PR head, and the live body described the replaced notification behavior.
+
+## Results
+
+- 2026-11-11: docs commit `ac060f6` merged into `main` and pushed.
+- 2026-11-11: before the edit, the PR head was still `6d6a01ef4` and the live body SHA-256 still matched the recorded original. `gh pr edit 8416 --body-file cbrd-27259/pr-body-rev3.md` succeeded. Read-back equals the file except one trailing blank line that GitHub drops. Title and ready state unchanged.
