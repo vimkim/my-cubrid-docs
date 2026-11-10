@@ -115,3 +115,5 @@ CBRD-27881 야간 작업은 OOS 리팩토링 draft PR 7개를 만들고, 조사 
 **선택지.** (a) 작은 Correct Error 티켓을 새로 만든다. (b) CBRD-27213의 완료 조건에 넣는다. (c) 보고서 기록으로만 둔다.
 
 **추천은 (a)다.** 수정이 한 함수 안에서 끝날 것으로 보인다(추론). CBRD-27213은 담당자가 없는 큰 재설계라 언제 끝날지 모른다. 그리고 리팩토링 R-22(#8330 병합 뒤 `oos_find_best_page` fallback 정리)는 DF-04를 고친 뒤에 해야 한다. 말해 주면 티켓 초안을 쓴다.
+
+**후속 (2026-11-10).** (a)로 정했다. DF-04는 [CBRD-28017](https://jira.cubrid.org/browse/CBRD-28017)로 등록됐다. OOS TODO [CBRD-26978](https://jira.cubrid.org/browse/CBRD-26978)의 Sub-task이고 담당은 Joon Min이다. R-22는 CBRD-28017을 고친 뒤에 한다.
