@@ -6,7 +6,7 @@
 
 **이슈 수행 목적**: heap 데이터 페이지를 쥔 스레드가 heap header latch를 무조건 기다리지 않게 한다. 그러면 heap 페이지 할당과의 순환 대기가 생기지 않는다. 또는 이 경로가 페이지 할당과 겹칠 수 없음을 근거로 확인하고 그 근거를 남긴다.
 
-**이슈 수행 이유**: non-MVCC 연산의 heap UPDATE·DELETE는 home 페이지(relocation이면 forward 페이지도)를 쥔 채 `heap_oos_delete_unreferenced`를 부른다. 이 함수는 `heap_oos_find_vfid`로 OOS VFID를 찾는다. 이때 heap header 페이지를 `PGBUF_UNCONDITIONAL_LATCH` READ로 fix한다. 반대로 `heap_alloc_new_pages`는 header를 WRITE로 잡은 뒤 마지막 heap 페이지를 잡는다. page latch에는 deadlock 탐지가 없다. 따라서 두 스레드가 서로를 page latch timeout까지 기다릴 수 있다. [CBRD-27860](https://jira.cubrid.org/browse/CBRD-27860)(PR #8350, `d52b1889e`)은 vacuum에 있던 같은 순서 문제를 고쳤지만, 이 경로는 고치지 않았다. PR #8434 base `d52b1889e`와 head `2e32517bb` 모두 같은 경로를 가진다.
+**이슈 수행 이유**: non-MVCC 연산의 heap UPDATE·DELETE는 home 페이지(relocation이면 forward 페이지도)를 쥔 채 `heap_oos_delete_unreferenced`를 부른다. 이 함수는 `heap_oos_find_vfid`로 OOS VFID를 찾는다. 이때 heap header 페이지를 `PGBUF_UNCONDITIONAL_LATCH` READ로 fix한다. 반대로 `heap_alloc_new_pages`는 header를 WRITE로 잡은 뒤 마지막 heap 페이지를 잡는다. page latch에는 deadlock 탐지가 없다. 따라서 두 스레드가 서로를 page latch timeout까지 기다릴 수 있다. [CBRD-27860](https://jira.cubrid.org/browse/CBRD-27860)(PR #8350, `d52b1889e`)은 vacuum에 있던 같은 순서 문제를 고쳤지만, 이 경로는 고치지 않았다. PR #8434 base `95ff126a8`(CBRD-27860 수정 포함)와 head `8e139f4db` 모두 같은 경로를 가진다.
 
 **영향**: 순환 대기가 생기면 한쪽이 page latch timeout으로 실패한다. CBRD-27860에서는 삽입 트랜잭션이 abort되었다. 이 경로가 실제로 순환에 들어가려면 SERVER 모드의 non-MVCC 연산이 OOS를 가진 레코드의 chain을 버려야 한다. 동시에 다른 스레드가 같은 heap에 페이지를 할당해야 한다. 이 조합이 실제로 생기는지는 확인하지 않았다. 발생 가능성과 빈도는 알지 못한다.
 
@@ -31,31 +31,31 @@ home 또는 forward 페이지가 마지막 heap 페이지이면 두 스레드가
 
 호출 지점은 `!is_mvcc_op`일 때만 `heap_oos_delete_unreferenced`를 부른다. 각 함수는 호출 직전이나 직후에 같은 home/forward 페이지의 watcher로 slot을 읽거나 `heap_delete_physical`·`heap_update_physical`을 수행한다. 따라서 호출 시점에 그 페이지를 쥐고 있다.
 
-| 호출 함수 | `feature/oos-merge` `d52b1889e` | PR head `2e32517bb` |
+| 호출 함수 | `feature/oos-merge` `95ff126a8` | PR head `8e139f4db` |
 |---|---|---|
-| `heap_delete_relocation` | [heap_file.c:23983](https://github.com/CUBRID/cubrid/blob/d52b1889e907abcf84190ec504dde3bc93de260d/src/storage/heap_file.c#L23983) | [heap_file.c:23983](https://github.com/CUBRID/cubrid/blob/2e32517bb9ee4690f49907a1c0a4b90786917008/src/storage/heap_file.c#L23983) |
-| `heap_delete_home` | [heap_file.c:24329](https://github.com/CUBRID/cubrid/blob/d52b1889e907abcf84190ec504dde3bc93de260d/src/storage/heap_file.c#L24329) | [heap_file.c:24328](https://github.com/CUBRID/cubrid/blob/2e32517bb9ee4690f49907a1c0a4b90786917008/src/storage/heap_file.c#L24328) |
-| `heap_update_relocation` | [heap_file.c:24761](https://github.com/CUBRID/cubrid/blob/d52b1889e907abcf84190ec504dde3bc93de260d/src/storage/heap_file.c#L24761) | [heap_file.c:24757](https://github.com/CUBRID/cubrid/blob/2e32517bb9ee4690f49907a1c0a4b90786917008/src/storage/heap_file.c#L24757) |
-| `heap_update_home` | [heap_file.c:25246](https://github.com/CUBRID/cubrid/blob/d52b1889e907abcf84190ec504dde3bc93de260d/src/storage/heap_file.c#L25246) | [heap_file.c:25233](https://github.com/CUBRID/cubrid/blob/2e32517bb9ee4690f49907a1c0a4b90786917008/src/storage/heap_file.c#L25233) |
+| `heap_delete_relocation` | [heap_file.c:23983](https://github.com/CUBRID/cubrid/blob/95ff126a8464179a2fab3092b6f56468528ab954/src/storage/heap_file.c#L23983) | [heap_file.c:23983](https://github.com/CUBRID/cubrid/blob/8e139f4dbb2635058032d0b9dafd5f624c726754/src/storage/heap_file.c#L23983) |
+| `heap_delete_home` | [heap_file.c:24329](https://github.com/CUBRID/cubrid/blob/95ff126a8464179a2fab3092b6f56468528ab954/src/storage/heap_file.c#L24329) | [heap_file.c:24328](https://github.com/CUBRID/cubrid/blob/8e139f4dbb2635058032d0b9dafd5f624c726754/src/storage/heap_file.c#L24328) |
+| `heap_update_relocation` | [heap_file.c:24761](https://github.com/CUBRID/cubrid/blob/95ff126a8464179a2fab3092b6f56468528ab954/src/storage/heap_file.c#L24761) | [heap_file.c:24757](https://github.com/CUBRID/cubrid/blob/8e139f4dbb2635058032d0b9dafd5f624c726754/src/storage/heap_file.c#L24757) |
+| `heap_update_home` | [heap_file.c:25246](https://github.com/CUBRID/cubrid/blob/95ff126a8464179a2fab3092b6f56468528ab954/src/storage/heap_file.c#L25246) | [heap_file.c:25233](https://github.com/CUBRID/cubrid/blob/8e139f4dbb2635058032d0b9dafd5f624c726754/src/storage/heap_file.c#L25233) |
 
 이후 header fix까지의 경로는 다음과 같다.
 
-- base: `heap_oos_delete_unreferenced`([heap_oos.cpp:953](https://github.com/CUBRID/cubrid/blob/d52b1889e907abcf84190ec504dde3bc93de260d/src/storage/heap_oos.cpp#L953))가 [994행](https://github.com/CUBRID/cubrid/blob/d52b1889e907abcf84190ec504dde3bc93de260d/src/storage/heap_oos.cpp#L994)에서 `heap_oos_find_vfid`를 직접 부른다. base는 이 자리에서 chunk도 바로 지웠다.
-- PR head: `heap_oos_delete_unreferenced`([heap_oos.cpp:1038-1054](https://github.com/CUBRID/cubrid/blob/2e32517bb9ee4690f49907a1c0a4b90786917008/src/storage/heap_oos.cpp#L1038-L1054))가 1048행에서 `heap_oos_resolve_vfid`를 부르고, 이 함수가 [988행](https://github.com/CUBRID/cubrid/blob/2e32517bb9ee4690f49907a1c0a4b90786917008/src/storage/heap_oos.cpp#L985-L988)에서 `heap_oos_find_vfid`를 부른다. PR은 chunk 삭제를 commit 뒤 postpone으로 옮겼지만, 회수 의도에 넣을 OOS VFID는 여전히 이 자리에서 찾는다.
-- 공통: `heap_oos_find_vfid`([heap_file.c:13350](https://github.com/CUBRID/cubrid/blob/2e32517bb9ee4690f49907a1c0a4b90786917008/src/storage/heap_file.c#L13350-L13353))는 `PGBUF_UNCONDITIONAL_LATCH`로 `heap_oos_find_vfid_internal`을 부른다. 이 함수가 [13258행](https://github.com/CUBRID/cubrid/blob/2e32517bb9ee4690f49907a1c0a4b90786917008/src/storage/heap_file.c#L13237-L13258)에서 header 페이지를 fix한다(docreate false이므로 READ). 이 줄 번호는 두 리비전에서 같다.
-- `heap_alloc_new_pages`는 header를 WRITE로 fix하고([heap_file.c:28606](https://github.com/CUBRID/cubrid/blob/2e32517bb9ee4690f49907a1c0a4b90786917008/src/storage/heap_file.c#L28606)) 이어서 마지막 페이지를 잡는다([28656](https://github.com/CUBRID/cubrid/blob/2e32517bb9ee4690f49907a1c0a4b90786917008/src/storage/heap_file.c#L28656)). base에서는 28619, 28669행이다.
+- base: `heap_oos_delete_unreferenced`([heap_oos.cpp:953](https://github.com/CUBRID/cubrid/blob/95ff126a8464179a2fab3092b6f56468528ab954/src/storage/heap_oos.cpp#L953))가 [994행](https://github.com/CUBRID/cubrid/blob/95ff126a8464179a2fab3092b6f56468528ab954/src/storage/heap_oos.cpp#L994)에서 `heap_oos_find_vfid`를 직접 부른다. base는 이 자리에서 chunk도 바로 지웠다.
+- PR head: `heap_oos_delete_unreferenced`([heap_oos.cpp:1038-1054](https://github.com/CUBRID/cubrid/blob/8e139f4dbb2635058032d0b9dafd5f624c726754/src/storage/heap_oos.cpp#L1038-L1054))가 1048행에서 `heap_oos_resolve_vfid`를 부르고, 이 함수가 [988행](https://github.com/CUBRID/cubrid/blob/8e139f4dbb2635058032d0b9dafd5f624c726754/src/storage/heap_oos.cpp#L985-L988)에서 `heap_oos_find_vfid`를 부른다. PR은 chunk 삭제를 commit 뒤 postpone으로 옮겼지만, 회수 의도에 넣을 OOS VFID는 여전히 이 자리에서 찾는다.
+- 공통: `heap_oos_find_vfid`([heap_file.c:13350](https://github.com/CUBRID/cubrid/blob/8e139f4dbb2635058032d0b9dafd5f624c726754/src/storage/heap_file.c#L13350-L13353))는 `PGBUF_UNCONDITIONAL_LATCH`로 `heap_oos_find_vfid_internal`을 부른다. 이 함수가 [13258행](https://github.com/CUBRID/cubrid/blob/8e139f4dbb2635058032d0b9dafd5f624c726754/src/storage/heap_file.c#L13237-L13258)에서 header 페이지를 fix한다(docreate false이므로 READ). 이 줄 번호는 두 리비전에서 같다.
+- `heap_alloc_new_pages`는 header를 WRITE로 fix하고([heap_file.c:28606](https://github.com/CUBRID/cubrid/blob/8e139f4dbb2635058032d0b9dafd5f624c726754/src/storage/heap_file.c#L28606)) 이어서 마지막 페이지를 잡는다([28656](https://github.com/CUBRID/cubrid/blob/8e139f4dbb2635058032d0b9dafd5f624c726754/src/storage/heap_file.c#L28656)). base `95ff126a8`에서는 28619, 28669행이다.
 
-리뷰는 이 경로를 `heap_oos.cpp:985/1030` → `heap_file.c:13350`으로 인용했다(리뷰 시점 `3e8072f56`). `3e8072f56`과 `2e32517bb`의 해당 줄 번호는 같다. 985는 `heap_oos_resolve_vfid`의 정의다. 1030은 `heap_oos_delete_unreferenced` 앞 주석 안의 줄이다. 실제 정의는 1038행, 호출은 1048행이다.
+리뷰는 이 경로를 `heap_oos.cpp:985/1030` → `heap_file.c:13350`으로 인용했다(리뷰 시점 `3e8072f56`). `3e8072f56`과 `8e139f4db`의 해당 줄 번호는 같다. 985는 `heap_oos_resolve_vfid`의 정의다. 1030은 `heap_oos_delete_unreferenced` 앞 주석 안의 줄이다. 실제 정의는 1038행, 호출은 1048행이다.
 
-header를 미리 잡는 하위 경로도 있다. 새 레코드가 크거나 제자리에 들어가지 않는 UPDATE는 `heap_fix_header_page`로 header를 먼저 잡는다(예: [heap_file.c:24719-24732](https://github.com/CUBRID/cubrid/blob/2e32517bb9ee4690f49907a1c0a4b90786917008/src/storage/heap_file.c#L24719-L24732)). non-MVCC DELETE와, 새 레코드가 제자리에 들어가는 UPDATE는 header를 미리 잡지 않는다. 이 이슈는 그 경우를 다룬다.
+header를 미리 잡는 하위 경로도 있다. 새 레코드가 크거나 제자리에 들어가지 않는 UPDATE는 `heap_fix_header_page`로 header를 먼저 잡는다(예: [heap_file.c:24719-24732](https://github.com/CUBRID/cubrid/blob/8e139f4dbb2635058032d0b9dafd5f624c726754/src/storage/heap_file.c#L24719-L24732)). non-MVCC DELETE와, 새 레코드가 제자리에 들어가는 UPDATE는 header를 미리 잡지 않는다. 이 이슈는 그 경우를 다룬다.
 
 ### non-MVCC 연산이 되는 조건
 
 SA_MODE에서는 모든 heap UPDATE·DELETE가 non-MVCC 연산이다. SERVER 모드에서 non-MVCC 연산이 되는 조건은 다음과 같다.
 
-- UPDATE: MVCC가 꺼진 클래스이거나 in-place UPDATE(`update_in_place != UPDATE_INPLACE_NONE`)일 때([heap_file.c:169-174](https://github.com/CUBRID/cubrid/blob/2e32517bb9ee4690f49907a1c0a4b90786917008/src/storage/heap_file.c#L169-L174))
-- DELETE: MVCC가 꺼진 클래스, `REC_ASSIGN_ADDRESS` 레코드 또는 bulk 연산일 때([heap_file.c:25514-25528](https://github.com/CUBRID/cubrid/blob/2e32517bb9ee4690f49907a1c0a4b90786917008/src/storage/heap_file.c#L25514-L25528))
-- MVCC가 꺼진 클래스: root class, serial, collation, ha_apply_info([mvcc.c:683-708](https://github.com/CUBRID/cubrid/blob/2e32517bb9ee4690f49907a1c0a4b90786917008/src/transaction/mvcc.c#L683-L708))
+- UPDATE: MVCC가 꺼진 클래스이거나 in-place UPDATE(`update_in_place != UPDATE_INPLACE_NONE`)일 때([heap_file.c:169-174](https://github.com/CUBRID/cubrid/blob/8e139f4dbb2635058032d0b9dafd5f624c726754/src/storage/heap_file.c#L169-L174))
+- DELETE: MVCC가 꺼진 클래스, `REC_ASSIGN_ADDRESS` 레코드 또는 bulk 연산일 때([heap_file.c:25514-25528](https://github.com/CUBRID/cubrid/blob/8e139f4dbb2635058032d0b9dafd5f624c726754/src/storage/heap_file.c#L25514-L25528))
+- MVCC가 꺼진 클래스: root class, serial, collation, ha_apply_info([mvcc.c:683-708](https://github.com/CUBRID/cubrid/blob/8e139f4dbb2635058032d0b9dafd5f624c726754/src/transaction/mvcc.c#L683-L708))
 - in-place UPDATE를 쓰는 사용자 테이블 경로의 예: `heap_object_upgrade_domain`(컬럼 타입 변경), `redistribute_partition_data`(파티션 재분배). 이 목록이 전부인지는 확인하지 않았다.
 
 ### 확인하지 않은 것
@@ -78,9 +78,9 @@ ANALYSIS에서 검토할 후보는 두 가지다. 어느 쪽을 쓸지는 ANALYS
 
 | 기준 | 커밋 | 결과 |
 |---|---|---|
-| PR #8434 head | `2e32517bb` | 같은 경로 있음 |
-| PR #8434 리뷰 시점 head | `3e8072f56` | 같은 경로, 줄 번호도 `2e32517bb`와 같음 |
-| `feature/oos-merge` (PR base, CBRD-27860 수정 포함) | `d52b1889e` | 같은 경로 있음 |
+| PR #8434 head | `8e139f4db` | 같은 경로 있음 |
+| PR #8434 리뷰 시점 head | `3e8072f56` | 같은 경로, 줄 번호도 `8e139f4db`와 같음 |
+| `feature/oos-merge` (PR base, CBRD-27860 수정 포함) | `95ff126a8` | 같은 경로 있음 |
 
 ## Repro
 
