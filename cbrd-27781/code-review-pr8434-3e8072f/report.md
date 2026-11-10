@@ -78,8 +78,8 @@ Debug ordering asserts remain. The release consequence in run 1 is disproven: in
 
 ## Pre-existing (reported separately)
 
-- P-1: the eager path still fixes the heap header while holding a heap data page (`heap_oos.cpp:985/1030` → `heap_file.c:13350`), the cycle CBRD-27860 fixed for vacuum. Same in base; the rewrite could carry the HFID as the MVCC path does.
-- P-2: on a reused heap VFID, a notification from an older transaction is classified as dropped and skipped → chain leak. FILE_HEAP tables without reuse-OID only.
+- P-1: the eager path still fixes the heap header while holding a heap data page (`heap_oos.cpp:985/1030` → `heap_file.c:13350`), the cycle CBRD-27860 fixed for vacuum. Tracked as [CBRD-28012](https://jira.cubrid.org/browse/CBRD-28012). Same in base; the rewrite could carry the HFID as the MVCC path does.
+- P-2: on a reused heap VFID, a notification from an older transaction is classified as dropped and skipped → chain leak. FILE_HEAP tables without reuse-OID only. Tracked as [CBRD-27982](https://jira.cubrid.org/browse/CBRD-27982).
 
 ## Missing evidence and spec conformance
 
@@ -134,6 +134,10 @@ Executed checks and fixes on top of `3e8072f56`, pushed to the PR as `6ac2d7de6`
 | R5 | Fixed (`9406a0f71`): `oos_rv_reclaim_on_postpone` wraps the reclaim in `pgbuf_force_latch_wait`. | Not tested (needs a contended latch from another thread); `test_oos_server` 38/38 shows no hang. |
 | R9, R10 | Fixed (`9406a0f71`). | Source. |
 | cppcheck | Fixed (`2e32517bb`): dump arguments spelled out. | cppcheck not available locally. |
-| R6, R7, R8, P-1, P-2 | Open; see the PR discussion. | — |
+| R6 | Fixed (`b6bcc09c6`, first committed as `6a8d16da7`): the notification consumer fail-stops on every error but a shutdown interrupt; the redundant undo-data copy is gone and a successful OOS file lookup no longer reads a stale `er_errid ()`. | New test `NotifyConsumerFailStopsOnAHeapWithoutAnOosFileDespiteAStaleError` returns `ER_INTERRUPTED` without a fail-stop before the fix and passes with it. |
+| R7 | Split to [CBRD-27981](https://jira.cubrid.org/browse/CBRD-27981). | [jira-drafts/CBRD-27981-null-snapshot-reader-link-stamp.md](../jira-drafts/CBRD-27981-null-snapshot-reader-link-stamp.md) |
+| R8 | Recorded without a code change as ADR-0008 consequence 8 (2026-11-06). Line references still hold at `8e139f4db`. | ADR-0008 consequence 8 |
+| P-1 | Split to [CBRD-28012](https://jira.cubrid.org/browse/CBRD-28012) (2026-11-10); the path is unchanged at `8e139f4db`. | [jira-drafts/CBRD-28012-eager-oos-heap-header-latch-order.md](../jira-drafts/CBRD-28012-eager-oos-heap-header-latch-order.md) |
+| P-2 | Split to [CBRD-27982](https://jira.cubrid.org/browse/CBRD-27982). | [jira-drafts/CBRD-27982-reused-heap-vfid-notification-skip.md](../jira-drafts/CBRD-27982-reused-heap-vfid-notification-skip.md) |
 
 Debug OOS ctest: 52/52 at `2e32517bb` (two tests over their 60 s limit under load average 100–195 passed when run directly: `test_oos_identity_stamp` 33/33, `test_oos_server` 38/38). gha-ci passed at `3e8072f56` (run 42169072318).
