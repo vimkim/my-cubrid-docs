@@ -5,7 +5,7 @@
 성능 수정: [draft PR #8299](https://github.com/CUBRID/cubrid/pull/8299).
 후속 진단: [CBRD-27816](https://jira.cubrid.org/browse/CBRD-27816).
 대상은 `feature/oos-merge`다.
-작성일: 2026-10-27. 수정일: 2026-11-04, Asia/Seoul.
+작성일: 2026-10-27. 수정일: 2026-11-11, Asia/Seoul.
 
 성능을 비교할 때 DB 생성 locale과 실제 테이블·컬럼의 charset·collation을 확인한다.
 기존 기록에서 누락된 조건은 미확인으로 두며, 다른 문자셋에 수치를 일반화하지 않는다.
@@ -15,6 +15,7 @@
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [855f220 CI 분석](ci-analysis-855f220.md) | base `50619ce53` merge 후 head 855f220의 run 42801815682 실패 귀속: shell 4·sql_by_cci 38·sql shard 09 2건은 base 공통, sql shard 03 서버 종료만 head에서 관찰(수집기 판정 warning) | 2026-11-11 | 2026-11-11 | 새 base로 돌린 전체 CI의 실패가 이 PR 때문인지 증거로 가리기 위해 |
 | [PR #8299 본문 (부호 규칙 정리)](pr8299-sign-rule-pr-body.md) | 성능 수치를 좋아지면 +로 바꾸고, develop 대비 문장을 4c3c8d791의 11-03 측정으로 바꾼 본문 | 2026-11-04 | 2026-11-04 | JIRA·docs와 같은 부호 규칙의 본문을 사용자 검토 뒤 게시하기 위해 |
 | [PR #8299 본문 (부호 규칙 정리) 게시 context](pr8299-sign-rule-pr-context.md) | 기존 본문 fingerprint, 본문 변경 범위, 확인 후 조치와 결과 | 2026-11-04 | 2026-11-04 | 게시 확인 범위와 실행 결과를 추적하기 위해 |
 | [CBRD-27816 일반 UPDATE 1단계 원인 분리](CBRD-27816-ordinary-update-phase1.md) | 4c3c8d791 대 4781495의 thread별 계수, worker 증가 A·B·C 분해, 늦은 spike를 비동기 vacuum으로 설명한 근거, 기각한 가설, 11-03 사용자 결정, 11-04 같은 표 연속 UPDATE 측정 | 2026-11-03 | 2026-11-04 | 남은 UPDATE 비용과 늦은 spike의 출처를 실행 근거로 가리고 2단계 결정을 기록하기 위해 |
