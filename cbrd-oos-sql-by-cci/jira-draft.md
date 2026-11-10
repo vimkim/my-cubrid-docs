@@ -1,3 +1,5 @@
+> **등록하지 않음 (2026-11-10).** develop 동기화 뒤 `feature/oos-merge`에서만 실패하는 case가 0개가 되었다. 근거는 [report.md](report.md)의 "develop 동기화 결과"에 있다. 이 초안은 기록으로만 남긴다.
+
 # [OOS] feature/oos-merge에서 새 CI suite test_sql_by_cci를 통과시킨다
 
 **한 줄 요약**: 새로 도입된 gha-ci suite `test_sql_by_cci`에서 `feature/oos-merge`만 실패하는 28개 case를 없애, feature merge PR #7990이 develop과 같은 기준으로 CI를 통과하게 한다.

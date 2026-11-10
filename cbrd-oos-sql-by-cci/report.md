@@ -3,6 +3,8 @@
 작성: 2026-11-09 (Asia/Seoul). 대상: PR [CUBRID/cubrid#8434](https://github.com/CUBRID/cubrid/pull/8434) gha-ci run [42562225722](https://github.com/CUBRID/cubrid/actions/runs/42562225722).
 관련: feature merge PR [CUBRID/cubrid#7990](https://github.com/CUBRID/cubrid/pull/7990), 상위 이슈 CBRD-26978.
 
+> **2026-11-10 갱신.** develop 동기화 뒤 다시 실행한 결과, `feature/oos-merge`에서만 실패하는 case는 0개이다. 자세한 내용은 아래 "develop 동기화 결과"에 있다. JIRA 등록은 필요 없다.
+
 ## 질문과 결론
 
 질문은 새 CI suite `gha-ci: test_sql_by_cci`의 실패 중 무엇을 `feature/oos-merge`가 스스로 고쳐야 하는가이다.
@@ -171,6 +173,65 @@ cubrid-ci 0.2.0의 collector는 `sql_by_cci` suite를 지원하지 않는다. �
 4. (a) 29개는 develop 공통 실패이다. 이 문서의 범위가 아니며 `test_sql_by_cci` 도입 작업(CUBRIDQA-1709 계열)에서 다룬다.
 
 추가 표본: `feature/oos-merge`를 base로 하는 PR #8416의 run [42573078376](https://github.com/CUBRID/cubrid/actions/runs/42573078376)이 2026-11-09 16시(KST) 기준 queue에 있다. 이 run이 끝나면 같은 28개가 나오는지 확인할 수 있다.
+
+## develop 동기화 결과 (2026-11-10)
+
+### 동기화한 commit
+
+| 저장소 | `feature/oos-merge` 이전 | 이후 | 내용 |
+|---|---|---|---|
+| CUBRID/cubrid | `95ff126a8` | `dcf38cb0a` | develop `1b2645925` merge(`336bfe814`), page batch OOS 수정(`dcf38cb0a`) |
+| CUBRID/cubrid-testcases | `70db22a1c` | `36412f7e8` | develop merge(`54d2a2fc9`), OOS error code 번호 변경(`36412f7e8`) |
+| CUBRID/cubrid-testcases-private-ex | `75a02020e` | `5c440ce44` | develop merge |
+
+두 testcase 저장소의 `tc/pr-7990`도 같은 tip으로 맞췄다.
+엔진 merge에서 바뀐 점 두 가지는 이 분류와 관련이 있다.
+
+- develop이 error code -1387..-1391을 새로 썼다. 그래서 OOS error code를 -1392..-1398로 옮겼다. `ER_HEAP_OOS_OVERPASS_MAXOBJ_SIZE`는 -1388에서 -1393이 되었고, 이 번호가 들어 있는 sql answer 2개를 함께 바꿨다.
+- develop의 page batch(CBRD-27361)는 heap record bytes에서 column을 바로 읽는다. OOS 값이 있는 record를 읽으면 틀린 결과가 나왔다. `test_oos_sql_workspace_bytes`의 `LargestFirstAndPreferInline`이 2가 아니라 0을 셌다. `dcf38cb0a`는 이런 record가 든 chunk를 row path로 보낸다. 수정 뒤 OOS ctest 50개가 모두 통과했다.
+
+### 다시 실행한 run
+
+#7990 head `dcf38cb0a`에서 `/run sql_by_cci`를 실행했다. run은 [42763653366](https://github.com/CUBRID/cubrid/actions/runs/42763653366)이고, testcase는 `36412f7e8`(`tc/pr-7990`)이다.
+build 2개는 통과했다. `test_sql_by_cci`는 10 shard를 모두 끝냈고 34개 case가 실패했다.
+
+비교 baseline은 위 표의 develop run 5개에 2026-11-10 run 2개를 더했다.
+#8433 run은 이번에 쓰지 않았다.
+
+| run | PR | 실패 수 |
+|---|---|---|
+| [42763131880](https://github.com/CUBRID/cubrid/actions/runs/42763131880) | #8019 | 36 |
+| [42762733877](https://github.com/CUBRID/cubrid/actions/runs/42762733877) | #8424 | 48 |
+
+### 방법
+
+위 "방법"과 같다.
+실패 목록은 shard log의 `Case Name:`/`Test Result: NOK`에서 뽑았다. diff는 artifact server(`/runs/<run>/sql_by_cci/shard/<n>/test-results/`)의 JUnit XML에서 읽었다.
+8개 run 모두 log와 XML의 실패 수가 같다.
+이 절차로 이전 OOS run 42562225722를 다시 세면 57개가 나오고, develop run 5개도 위 표의 수와 같다.
+
+diff 비교는 case마다 `+` 줄 집합과 `-` 줄 집합을 비교했다. 줄 안의 공백은 하나로 줄였다.
+
+### 결과
+
+| 분류 | 수 |
+|---|---|
+| develop에서도 실패 | 34 |
+| `feature/oos-merge`에서만 실패 | 0 |
+
+- 34개 모두 develop run 7개 중 1개 이상에서 실패한다.
+- 34개 모두 diff가 develop run 중 하나와 줄 단위로 같다. OOS run에만 나오는 출력 줄은 없다.
+- 이전 run의 (b) 28개는 모두 통과한다. (b1) 18개는 develop testcase를 merge해서 없어졌다. (b2) 10개는 develop 엔진을 merge해서 없어졌다. 이것은 (b2)를 develop 차이로 본 위 추론과 맞는다. 다만 원인 commit이 `52193efa9`인지는 여전히 bisect로 확인하지 않았다.
+- (a)에서 OOS 쪽만 다르던 `Error:-1118` statement(`11087.sql`, percentile 2개)도 이제 develop과 같은 diff를 낸다.
+- 새로 실패하는 17개는 develop run에서도 실패한다(7개 중 3~7개). 이번 merge로 develop의 기존 실패가 함께 들어온 것이다.
+
+### 판단
+
+`test_sql_by_cci`에서 OOS 작업이 고칠 case는 없다. [jira-draft.md](jira-draft.md)는 등록하지 않는다.
+남은 34개는 develop 공통 실패로, `test_sql_by_cci` 도입 작업(CUBRIDQA-1709 계열)의 범위이다.
+
+이 결과는 `sql_by_cci`만 다룬다. head `dcf38cb0a`에서 `test_shell`, `test_sql`, `test_medium`은 아직 실행하지 않았다.
+엔진 `feature/oos-merge`는 2026-11-10 기준 develop보다 11 commit 뒤처져 있다.
 
 ## 한계
 
