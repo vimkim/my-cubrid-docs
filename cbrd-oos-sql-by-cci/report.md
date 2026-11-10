@@ -177,7 +177,7 @@ cubrid-ci 0.2.0의 collector는 `sql_by_cci` suite를 지원하지 않는다. �
 `feature/oos-merge`를 base로 하는 PR #8416(엔진 `abd2136f5`, [CBRD-27259] STORAGE FORCE_INLINE)의 run [42573078376](https://github.com/CUBRID/cubrid/actions/runs/42573078376)을 같은 방법으로 비교했다. 실행 17630건 중 61건이 실패했다.
 
 - (b) 28개는 #8416에서도 모두 실패한다. 28개가 한 PR이 아니라 `feature/oos-merge` 전체의 차이라는 분류를 두 번째 표본이 뒷받침한다.
-- #8416에만 있는 실패가 4개 있다. `_36_guava/cbrd_25717/cases/`의 `cbrd_25717_null_join_key.sql`, `cbrd_25717_overflow_dependent_list.sql`, `cbrd_25717_overflow_record.sql`과 `_36_guava/cbrd_26719/cases/cbrd_26719_03_probe_overflow_tuple.sql`이다. 모두 기대 결과 대신 `Error:-1388`을 낸다. 같은 4개는 #8434 run과 develop run 6개에서 모두 통과한다. 그래서 #8416의 변경 자체에서 온 실패일 가능성이 크다(추론). 이 4개는 #8416에서 다룰 일이며 이 문서의 (b) 집합에 넣지 않는다.
+- #8416에만 있는 실패가 4개 있다. `_36_guava/cbrd_25717/cases/`의 `cbrd_25717_null_join_key.sql`, `cbrd_25717_overflow_dependent_list.sql`, `cbrd_25717_overflow_record.sql`과 `_36_guava/cbrd_26719/cases/cbrd_26719_03_probe_overflow_tuple.sql`이다. 모두 기대 결과 대신 `Error:-1388`을 낸다. #8416 엔진 `abd2136f5`에서 -1388은 `ER_HEAP_OOS_OVERPASS_MAXOBJ_SIZE`이다(develop 동기화 뒤 번호는 -1393). 즉 #8416에서는 이 case들의 큰 record가 OOS로 나가지 못하고 저장 한도를 넘는다. 같은 4개는 #8434 run과 develop run 6개에서 모두 통과한다. 그래서 #8416의 변경 자체에서 온 실패일 가능성이 크다(추론). 이 4개는 #8416에서 다룰 일이며 이 문서의 (b) 집합에 넣지 않는다.
 
 ## develop 동기화 결과 (2026-11-10)
 
