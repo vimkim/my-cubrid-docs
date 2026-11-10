@@ -78,3 +78,12 @@ Notes:
 | `/home/vimkim/tk/s9` | failed: workenv conf/port override (#5) |
 | `/home/vimkim/tk/d1` | aborted: testcase path `tc-pr-8416` does not exist (no testkit run) |
 | `/home/vimkim/tk/d2` | harness OK, runner exit 0; verify FAIL (1 case failed: -1388, real verdict) |
+
+## Follow-up (2026-11-11)
+
+- Recommended changes 1-2 were applied in my-cubrid-skills commit `71f1cb0` ("fix(common): make focused testkit runs
+  work from a cub-workenv worktree"). It was pushed to origin/main and the installed copy matches the source. It adds
+  the preflight `env_unset=` line, `CCACHE_DISABLE=1`, the absolute `"$TESTKIT"` path, the JDBC-jar check, and the
+  96-character `CUBRID_TMP` limit in prepare-config.
+- Passing proof: `/home/vimkim/tk/s11` ran cbrd_26719_03 from TC `tc/pr-8416` at `d7b1d3a3c` and passed verify with
+  total=1 and success=1 (install 6d6a01e). The d2 `-1388` failure came from the old pre-PR case on `feature/oos-merge`.

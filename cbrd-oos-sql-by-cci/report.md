@@ -271,11 +271,11 @@ baseline은 같은 날 develop 대상 PR run 3개이다. [42807018862](https://g
 
 `bug_bts_9836`, `bug_bts_14120`, `bug_bts_15529`는 모두 `call_stack_dump_activation_list` 기본값 출력만 다르다. 엔진은 OOS code `-1395,-1397,-1398`을 내고, private-ex answer는 1차 번호 `-1387,-1389,-1390`을 갖고 있었다. 2차 번호 변경 때 이 answer 5개를 고치지 않은 것이 원인이다. 엔진 결함이 아니다.
 
-private-ex 로컬 commit `8ef4f6278`이 answer 5개를 고쳤다. 같은 변경은 이전 merge에서도 있었다(`aa1db95f8`). 이 commit은 아직 push하지 않았고, push 뒤 `/run shell`로 확인해야 한다.
+private-ex commit `8ef4f6278`이 answer 5개를 고쳤다. 같은 변경은 이전 merge에서도 있었다(`aa1db95f8`). 이 commit을 `feature/oos-merge`와 `tc/pr-7990`에 push한 뒤 `/run shell`([run 42819814597](https://github.com/CUBRID/cubrid/actions/runs/42819814597))을 실행했다. 세 case는 모두 통과했고, 실패는 develop 공통 실패인 `cbrd_27571.sh` 1건만 남았다. 이 case는 develop run(#8409, #8168)에서도 서버 재시작이 `log_append_compensate_internal`의 같은 assertion으로 멈춘다.
 
 ### 판단
 
-OOS 작업이 고칠 엔진 실패는 없다. 남은 일은 private-ex answer 5개 push와 `test_shell` 재확인이다.
+OOS 작업이 고칠 엔진 실패는 없다. 남은 실패 41건(`test_sql` 2, `test_sql_by_cci` 38, `test_shell` 1)은 모두 develop run과 diff가 같다. 이 결론은 [CBRD-28013](https://jira.cubrid.org/browse/CBRD-28013) 본문에 기록했다.
 
 ## 한계
 
