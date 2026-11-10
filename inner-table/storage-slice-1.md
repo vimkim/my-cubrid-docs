@@ -2,7 +2,7 @@
 
 This plan covers the first engine slice of POC phase 2 (`storage`) in the
 [POC plan](poc-plan.md). It is written for the implementer and the POC reviewer.
-It was written on 2026-11-10, against branch `inner-table` of the CUBRID
+It was written on 2026-11-10 and updated on 2026-11-11 to match the code, against branch `inner-table` of the CUBRID
 checkout `/home/vimkim/gh/cb/inner-table`, on top of baseline
 `e64a04a79a5842827a124b3f8313516d0da2594c`. Source lines below refer to that
 checkout. No code for this slice exists yet.
@@ -33,9 +33,9 @@ NULL and never a partial value.
 
 | Design | Slice 1 | Closed by |
 | --- | --- | --- |
-| Hidden chunk class owned by the parent | A visible companion class `<table>__inner (value_id BIGINT, ord INT, data VARCHAR)`, with a unique index on `(value_id, ord)`, created by ordinary DDL in the test script. The server finds it by name. | phase 5 (`transport`: drop, truncate, DDL) |
+| Hidden chunk class owned by the parent | A visible companion class `<table>__inner (ck BIGINT PRIMARY KEY, chunk BIT VARYING)`, created by ordinary DDL in the test script. The key `ck` is `value_id << 20 | ord`. The server finds the class by name. | phase 5 (`transport`: drop, truncate, DDL) |
 | Per-column opt-in | Hidden server parameter `inner_table_threshold` (bytes, 0 = off). A table is opted in when its companion class exists. Every VARCHAR column at or over the threshold is moved. | later slice |
-| WAL-reserved ValueId counter per relation generation | One serial `<table>__inner_seq`, read on the server through `xserial_get_next_value`. A rollback leaves gaps, as the design allows. | phase 3 (`recovery`) review |
+| WAL-reserved ValueId counter per relation generation | An in-memory counter per companion class, seeded on first use from the largest key in its index. A rollback leaves gaps, as the design allows. After a restart an ID can be used again. That is safe for MVCC reads, because no snapshot survives a restart. | phase 3 (`recovery`) review |
 | Keep the reference when the value is unchanged | Kept only when `locator_update_force` gets an attribute list that leaves the column out. Otherwise the old chunks are retired and new ones are written. | later slice |
 | Projection without chunk reads | Every record fetch on the server expands references. | phase 10 (`projection`) |
 | HA, CDC, flashback, TDE, loaddb multi-insert | Not handled. The parent's replication log holds references. | phases 6 to 8 |
@@ -50,8 +50,10 @@ The reference reuses the existing large-string prefix. A VARCHAR of 255 bytes
 or more is written as byte `0xFF`, then int32 `compressed_len`, then int32
 `decompressed_len`, then the payload
 (`src/object/object_primitive.c:14648`). A reference uses
-`compressed_len = -1`, then `decompressed_len` = the exact byte length, then
-int64 `value_id` and int32 `chunk_count`.
+`compressed_len = -1`, then int32 `decompressed_len`, int64 `value_id`, int32
+`total_len` (the byte length of the original encoding) and int32
+`chunk_count`, padded to 28 bytes. The chunks hold the original encoding bytes,
+so expansion restores the record byte for byte.
 
 Only the expander may read a reference. Every other reader of the `0xFF` form
 gets expanded records. The implementation must list each `0xFF` reader and
@@ -91,21 +93,22 @@ Read path. Expand references where a record leaves the heap layer:
 `heap_get_last_version` (27197), `heap_next_internal` (7553) and the
 `heap_prev` variants (20528, 20554). The expander copies into the caller's
 buffer and returns `S_DOESNT_FIT` when the buffer is too small, as these callers
-already handle. It finds each chunk with `xbtree_find_unique` on
-`(value_id, ord)`. It reads the chunk with `heap_get_visible_version` under the
+already handle. It finds each chunk with `btree_find_unique_visible`, a new
+lookup that takes the caller's snapshot and no lock. `xbtree_find_unique` would
+S-lock every chunk, so a reader would wait for a writer that retires it. It reads the chunk with `heap_get_visible_version` under the
 caller's snapshot, so an old snapshot reads old chunks. It checks every
 ordinal from 0 to `chunk_count - 1`, and that the total length is exactly
-`decompressed_len`. A missing or malformed chunk is an error.
+`total_len`. A missing or malformed chunk is an error.
 
 A record whose version comes from a WAL undo image also passes through
 `heap_get_visible_version_internal`. It gets the same expansion.
 
-Policy cache. Add `inner_class_oid`, `inner_hfid`, `inner_btid` and
-`inner_serial_oid` to `OR_CLASSREP` (`src/base/object_representation_sr.h:210`).
-Resolve them once, when `heap_classrepr_get` (`src/storage/heap_file.c:2072`)
-loads the representation and the parameter is on. A table that is not opted in
-does one integer test per force call and per record fetch. Phase 11 measures
-that cost.
+Policy cache. A map in `src/storage/inner_table.cpp`, keyed by class OID,
+holds the opt-in decision and the companion's class OID, HFID and index. It is
+filled on first use and cleared by `heap_classrepr_decache`. With the
+parameter at 0, a fetch or force call does one integer test. With the parameter
+on, every call also takes a mutex for the map lookup. Phase 11 measures that
+cost.
 
 Vacuum needs no change. Chunk rows are ordinary MVCC rows. Their MVCC DELETE
 makes them dead for later snapshots, and vacuum removes them after the
