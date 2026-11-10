@@ -21,7 +21,7 @@ https://jira.cubrid.org/browse/CBRD-27781
 
 ## Remarks
 
-- 검증: head `8e139f4db`에서 debug_gcc OOS ctest 54/54 통과. gha-ci(run [42603737999](https://github.com/CUBRID/cubrid/actions/runs/42603737999))는 build(release·debug), test_shell, test_sql, test_medium 통과. `test_sql_by_cci`의 실패 57건은 이 PR의 커밋이 없는 `feature/oos-merge` PR #8348에서도 diff까지 같아 브랜치에 원래 있던 실패로 보고 [CBRD-28013](https://jira.cubrid.org/browse/CBRD-28013)으로 따로 추적합니다(분석: https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-27781/ci-analysis-sql-by-cci.md).
+- 검증: head `94ed2ea46`에서 debug_gcc OOS ctest 54/54 통과(`8e139f4db`에서도 54/54). gha-ci(run [42603737999](https://github.com/CUBRID/cubrid/actions/runs/42603737999))는 build(release·debug), test_shell, test_sql, test_medium 통과. `test_sql_by_cci`의 실패 57건은 이 PR의 커밋이 없는 `feature/oos-merge` PR #8348에서도 diff까지 같아 브랜치에 원래 있던 실패로 보고 [CBRD-28013](https://jira.cubrid.org/browse/CBRD-28013)으로 따로 추적합니다(분석: https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-27781/ci-analysis-sql-by-cci.md).
   - 신규 `test_oos_reclaim`: redo-only라 바깥 abort가 재사용된 slot에 쓰지 않음(CBRD-27781 형태), 부분 회수 후 재실행 완료, 재사용 slot으로의 링크 미추적, abort된 의도 폐기, fail-stop.
   - 신규 real-vacuum 테스트: rollback·savepoint rollback된 UPDATE의 chain이 vacuum 뒤에도 남음(CBRD-27237), commit된 UPDATE의 빈 페이지 fast path 반환. 기존 old-snapshot 테스트도 A' 경로로 통과.
   - 신규 SQL crash 테스트: commit 회수 실패 → fail-stop → 재시작 복구 중 재실패 → 다음 재시작에서 회수 완료.
@@ -30,12 +30,13 @@ https://jira.cubrid.org/browse/CBRD-27781
   - 신규 TC-V11b(R6): OOS 파일이 없는 heap의 알림은 앞서 남은 `ER_INTERRUPTED`가 있어도 `ER_HEAP_OOS_CORRUPTED_RECORD`로 fail-stop함. 수정 전 코드에서 실패함을 확인했습니다.
   - CBRD-27953: `UpdateNotificationDeferralLeavesRestOfBlockToVacuum`, `FailingHeapNotificationsCostOneLookupPerRun`. 앞의 것은 수정 전 코드에서 실패함을 확인했습니다.
   - CBRD-27925: `test_oos_growth_sweep`에 ADR-0010 consequence 5의 네 경우와 `LapAfterRestartRechecksBusyPage`. 각각 이전 동작을 되돌린 변형에서 실패합니다.
+  - U-2: `test_oos_growth_sweep`의 `StaleBadPageIdErrorDoesNotStrandABusyPage`. 앞서 남은 `ER_PB_BAD_PAGEID`가 있어도 latch된 페이지를 해제된 페이지로 보지 않음. 수정 전 코드에서는 파일이 3 페이지로 커져 실패함을 확인했습니다.
   - 재시작 undo: 커밋하지 않은 200 KB OOS insert가 있는 서버를 `kill -9` 뒤 재시작하면 그 insert만 undo되고 `checkdb`가 통과함(코드 리뷰에서 실행).
   - 이전 의미(삭제 abort 복원, LSA gate 유예, DML 시점 eager 삭제)를 가정한 기존 테스트는 새 계약으로 고쳤습니다. 한 트랜잭션 안에서는 옛 chain과 새 chain이 commit까지 함께 남습니다.
 - TLA+ conformance(`cubrid-verify-vacuum-slot-undo` 갱신본): OOS chunk undo 성질은 공허하게 통과(undo 가능한 chunk 삭제 없음), 신규 `OosReclaimDeletesOnlyItsChain`·`OosReclaimFinishesChain` 통과, 각 성질의 실패 변형 확인. 모델 범위 안의 결과이며 코드 전체의 증명은 아닙니다.
 - 성능(ADR-0008 decision 7, release, 3000행·6 KB 값·UPDATE 3회, 3회 반복 중앙값): UPDATE churn 로그 114.8 → 66.2 MB(−42%), 버린 값 하나당 회수 로그 약 6.1 → 0.71 KB, DELETE drain 로그 16.5 → 2.8 MB, churn 뒤 OOS 페이지 3539 → 1502, DELETE 뒤 3539 → 1. INSERT·UPDATE 지연은 부하가 큰 공용 장비라 범위가 겹쳐 판단하지 못했습니다(재측정 필요). 방법과 한계: https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-27781/perf.md
 - 코드 리뷰(전문 리뷰어 5명, 소스 판독): 지적된 R1–R6·R9·R10은 이 PR에서 고쳤고, R8은 ADR-0008에 적었으며, R7은 CBRD-27981, P-2는 CBRD-27982로 분리했습니다. P-1은 CBRD-28012로 분리했습니다. 보고서: https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-27781/code-review-pr8434-3e8072f/report.md
-- 후속 코드 리뷰(`8e139f4db`, 리뷰어 5명): 확인된 결함은 없습니다. 판정은 검토 미완료입니다. growth lock이 모든 OOS 페이지 할당과 `file_alloc`을 감싸면서 생길 수 있는 처리량 저하(U-1)를 측정하지 않았기 때문입니다. 그 밖의 P3 위험과 테스트 공백은 보고서에 있습니다: https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-27781/code-review-pr8434-8e139f4/report.md
+- 후속 코드 리뷰(`8e139f4db`, 리뷰어 5명): 확인된 결함은 없습니다. 판정은 검토 미완료입니다. growth lock이 모든 OOS 페이지 할당과 `file_alloc`을 감싸면서 생길 수 있는 처리량 저하(U-1)를 측정하지 않았기 때문입니다. U-2(`oos_reclaim_fix_candidate`가 앞서 남은 오류를 읽음)는 이 PR에서 고쳤습니다(`94ed2ea46`, 조건부 fix의 오류만 별도 error stack에서 읽음). 그 밖의 P3 위험과 테스트 공백은 보고서에 있습니다: https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-27781/code-review-pr8434-8e139f4/report.md
 - 범위 밖: heap forward slot 보호(CBRD-27858)는 별도 수정입니다. develop에도 있는 debug 전용 복구 analysis assert(`tran_start_postpone_lsa`)를 발견해 따로 기록했습니다: https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-27781/recovery-analysis-assert.md
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
