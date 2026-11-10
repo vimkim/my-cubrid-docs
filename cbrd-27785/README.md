@@ -15,6 +15,9 @@
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [PR #8299 본문 (새 base 반영)](pr8299-newbase-pr-body.md) | head 855f220d5(feature/oos-merge 50619ce53 merge), 새 base 대비 명령어 수, release CTest 50/50, TC 브랜치 갱신을 반영한 Remarks | 2026-11-10 | 2026-11-10 | base merge 뒤의 본문을 사용자 검토 뒤 게시하기 위해 |
+| [PR #8299 본문 (새 base 반영) 게시 context](pr8299-newbase-pr-context.md) | 기존 본문 fingerprint, Remarks 변경 범위, 확인 후 조치와 결과 | 2026-11-10 | 2026-11-10 | 게시 확인 범위와 실행 결과를 추적하기 위해 |
+| [새 base 기준 성능 재측정](pr8299-newbase-perf.md) | 50619ce53 대 855f220d5의 bench.py·ordinary.py 서버 명령어 수·cycles, compare exit, 별도 prefix 실행과 한계 ([집계](pr8299-newbase-20261110/analysis.txt)) | 2026-11-10 | 2026-11-10 | page batch가 들어온 새 base에서 PR의 CPU 회귀 여부를 다시 판정하기 위해 |
 | [855f220 CI 분석](ci-analysis-855f220.md) | base `50619ce53` merge 후 head 855f220의 run 42801815682 실패 귀속: shell 4·sql_by_cci 38·sql shard 09 2건은 base 공통, sql shard 03 서버 종료만 head에서 관찰(수집기 판정 warning) | 2026-11-11 | 2026-11-11 | 새 base로 돌린 전체 CI의 실패가 이 PR 때문인지 증거로 가리기 위해 |
 | [PR #8299 본문 (부호 규칙 정리)](pr8299-sign-rule-pr-body.md) | 성능 수치를 좋아지면 +로 바꾸고, develop 대비 문장을 4c3c8d791의 11-03 측정으로 바꾼 본문 | 2026-11-04 | 2026-11-04 | JIRA·docs와 같은 부호 규칙의 본문을 사용자 검토 뒤 게시하기 위해 |
 | [PR #8299 본문 (부호 규칙 정리) 게시 context](pr8299-sign-rule-pr-context.md) | 기존 본문 fingerprint, 본문 변경 범위, 확인 후 조치와 결과 | 2026-11-04 | 2026-11-04 | 게시 확인 범위와 실행 결과를 추적하기 위해 |
