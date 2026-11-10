@@ -48,4 +48,4 @@ Purpose와 Implementation은 바꾸지 않는다. Remarks만 바꾼다.
 
 ## 실행 기록
 
-아직 없음.
+- 2026-11-11: CI run 42801815682가 failure로 끝났다. test_shell, test_sql, test_sql_by_cci, code-style이 실패했고, build 두 개와 test_medium은 성공했다. 게시 확인의 조건에 따라 docs integration과 PR 본문 갱신을 하지 않았다. GitHub 본문은 바꾸지 않았다.
