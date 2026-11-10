@@ -28,3 +28,7 @@ Prepared and published 2026-11-11 (Asia/Seoul). Revision 3 and its record are in
 
 - 2026-11-11: the user approved option (a) for the loader test, the source push, `/run all`, and the body update ("yes").
 - `/run all` was not posted: another session posted `/run all` at 2026-11-10T16:07:59Z (run 42851484010, watch #11), and a new `/run` would cancel it. That decision went back to the user.
+
+## Results
+
+- 2026-11-11: docs `bf94f69` pushed; `gh pr edit 8416 --body-file cbrd-27259/pr-body-rev4.md` succeeded and the read-back matches the file. Title and ready state unchanged.
