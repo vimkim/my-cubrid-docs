@@ -11,7 +11,7 @@ python3 run.py              # every run; TLC output goes to a new directory unde
 python3 run.py NAME ...     # selected runs, by cfg name
 ```
 
-It needs `java` on PATH and `~/.cache/tlaplus/tla2tools-1.7.4.jar` (TLC 2.19). It prints one line per run with PASS or FAIL, the invariant that failed, the distinct and generated state counts and the time, then OK or UNEXPECTED against the expectation table in `run.py`. It exits 1 if any result is unexpected. The 38 runs took 671 s on 2026-11-09 (measured, 32 workers), and no single run took more than 62 s. With several workers TLC does not always report the shortest counterexample; the paths below come from `/statechart`, which uses one worker. The paths of the 2026-11-09 variants come from one-worker runs, with two writers and three statements for the lazy variants.
+It needs `java` on PATH and `~/.cache/tlaplus/tla2tools-1.7.4.jar` (TLC 2.19). It prints one line per run with PASS or FAIL, the invariant that failed, the distinct and generated state counts and the time, then OK or UNEXPECTED against the expectation table in `run.py`. It exits 1 if any result is unexpected. The 38 runs took 671 s on 2026-11-09 (measured, 32 workers), and no single run took more than 62 s. After P3 868 round 2 the 44 runs took 785 s on 2026-11-11, all as expected (measured, 32 workers). With several workers TLC does not always report the shortest counterexample; the paths below come from `/statechart`, which uses one worker. The paths of the 2026-11-09 variants come from one-worker runs, with two writers and three statements for the lazy variants.
 
 ## Properties
 
