@@ -84,7 +84,9 @@ Measured on 2026-11-09 with `python3 run.py` (32 TLC workers, TLC 2.19 on Java 8
 | `broken_lazy_across_commit` | FAIL `NoDanglingRef` | 114,375 | 6 s |
 | `lazy_backstop_only_NoDanglingRef` | PASS | 4,801,135 | 62 s |
 | `lazy_backstop_only_NoLazyAfterTranEnd` | FAIL `NoLazyAfterTranEnd` | 5,395 | 2 s |
-| `lazy_backstop_other_keep` | FAIL `NoDanglingRef` | 189,198 | 7 s |
+| `lazy_backstop_other_keep` | PASS (FAIL `NoDanglingRef`, 189,198 states, before P3 868) | 7,156,831 | 68 s |
+| `lazy_backstop_other_keep_NoLazy` | FAIL `NoLazyAfterTranEnd` | 4,607 | 2 s |
+| `broken_backstop_latest_only` | FAIL `NoDanglingRef` | 226,889 | 7 s |
 
 ## Broken variants
 
@@ -201,7 +203,7 @@ The S lock is what makes the fallback's read safe. It is not only a way to stop 
 
 The backstop turns a wrong read into an error, which is why E22's mark, not the check, is the fix.
 
-**The backstop with a replaced note** (`lazy_backstop_other_keep`: the mark missed and `OtherKeep = TRUE`) fails `NoDanglingRef` in 19 steps (finding 5).
+**The backstop with a replaced note** (`lazy_backstop_other_keep`: the mark missed and `OtherKeep = TRUE`) failed `NoDanglingRef` in 19 steps (finding 5). With `FirstKeepTrid` (P3 868) it passes, and the same run checked for `NoLazyAfterTranEnd` shows the decode fails with the backstop error. `broken_backstop_latest_only` sets `FirstKeepTrid = FALSE` and fails `NoDanglingRef`.
 
 1. Steps 1 to 5 of `broken_lazy_across_commit`. The reader holds T1's version lazy, the routine commits, and vacuum removes slot 1.
 2. Another keep on the same thread replaces the lazy note.
@@ -243,7 +245,7 @@ The argument should say that the current version either no longer names `s` or c
 
 **4. The documented later optimization is safe for readers in the model, but it needs I-2 and section 5.6 restated.** With the reuse store and the pin before the visibility decision, plus the dead-row rule, no reader returns a wrong value, loses a live row or exhausts its retries. Old versions in a row's undo log chain do name slots that later hold another row's value, so I-2 must count only versions a reader can still reach, and the 5.6 "store identity" step no longer holds. Without the dead-row rule the pin alone fails (`later_reuse_pin_before_no_dead_row`), which matches section 13's "plus the first draft's dead-row rule".
 
-**5. The trid backstop covers only the thread's latest lazy keep.** `sidecar_Lazy` is one record per thread (`storage/sidecar.cpp:1967`), and every keep replaces it (`sidecar_lazy_note`, `:1988-2003`). `sidecar_resolve_slot` compares the trid only for a ref inside that latest range (`:2504`). A ref kept earlier is dereferenced without the check (`lazy_backstop_other_keep`). On the design this is harmless, because a statement with a routine call keeps nothing lazy (`lazy_design` passes). It matters only when the routine mark misses a call, which is the one case the backstop exists for. Whether an earlier keep can still be decoded after a later keep on the same thread, as an outer scan's column after an inner scan's fetch in a join, is a guess. It was not traced in the code. The lock holder's lazy read of an UPDATE's old record (`HEAP_SIDECAR_LAZY_LOCKED`, `storage/sidecar.cpp:2274-2283`) records no note at all (inferred from reading). Its read and decode run inside `locator_attribute_info_force` with no routine call between them (inferred, not checked).
+**5. The trid backstop covers only the thread's latest lazy keep.** `sidecar_Lazy` is one record per thread (`storage/sidecar.cpp:1967`), and every keep replaces it (`sidecar_lazy_note`, `:1988-2003`). `sidecar_resolve_slot` compares the trid only for a ref inside that latest range (`:2504`). A ref kept earlier is dereferenced without the check (`lazy_backstop_other_keep`). On the design this is harmless, because a statement with a routine call keeps nothing lazy (`lazy_design` passes). It matters only when the routine mark misses a call, which is the one case the backstop exists for. An earlier keep is decoded after a later one on the same thread (inferred from code, P3 868): a filter iterator driving a join hands out each copied row and reads its values after the inner scan kept its row (`scan_batch_iter_next`). Fixed by `sidecar_Lazy_first_trid` (rule `FirstKeepTrid`). The lock holder's lazy read of an UPDATE's old record (`HEAP_SIDECAR_LAZY_LOCKED`, `storage/sidecar.cpp:2274-2283`) records no note at all (inferred from reading). Its read and decode run inside `locator_attribute_info_force` with no routine call between them (inferred, not checked).
 
 ## Mapping from model to design and code
 

@@ -61,7 +61,9 @@ EXPECT = {
     'broken_lazy_across_commit': 'NoDanglingRef',
     'lazy_backstop_only_NoDanglingRef': 'PASS',
     'lazy_backstop_only_NoLazyAfterTranEnd': 'NoLazyAfterTranEnd',
-    'lazy_backstop_other_keep': 'NoDanglingRef',
+    'lazy_backstop_other_keep': 'PASS',
+    'lazy_backstop_other_keep_NoLazy': 'NoLazyAfterTranEnd',
+    'broken_backstop_latest_only': 'NoDanglingRef',
 }
 
 

@@ -39,6 +39,7 @@ CONSTANTS
   FallbackLocks,     \* the lock fallback takes the S lock before it reads the last version
   NoLazyWithRoutine, \* a statement that calls a routine reads nothing lazily (5.6 a, E22)
   TridCheck,         \* the attribute layer compares the lazy keep's trid (ER_SIDECAR_LAZY_AFTER_TRAN_END, E19)
+  FirstKeepTrid,     \* a ref outside the latest note is checked against the trid of the request's first keep (P3 868)
   \* Scenario switches, not design rules.
   RoutineCommit,     \* a protected reader's statement may call a routine that COMMITs between fetch and decode
   OtherKeep          \* another keep of the same thread may replace the lazy note between fetch and decode
@@ -384,11 +385,16 @@ RReplaceNote ==
   /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rpc, rver, rres, rtry, rreg, rsnap, rlatch, rabsent, rdrops,
                  rfb, rrout, rtend>>
 
-\* sidecar_resolve_slot (storage/sidecar.cpp:2504): a ref inside the latest lazy note whose trid is no
-\* longer the transaction's fails with ER_SIDECAR_LAZY_AFTER_TRAN_END and reads nothing.
+\* sidecar_resolve_slot (storage/sidecar.cpp): a ref inside the latest lazy note whose trid is no
+\* longer the transaction's fails with ER_SIDECAR_LAZY_AFTER_TRAN_END and reads nothing.  With
+\* FirstKeepTrid, a ref outside the latest note is compared with sidecar_Lazy_first_trid, the trid of the
+\* thread's first keep since the request began.  That keep came no later than the reader's own, which
+\* came before RCommit, so after the commit it is never the current trid: the model needs no variable
+\* for it.
 PResolve ==
   /\ rpc = "resolve" /\ (rcls \in {"snap", "lock"} \/ rfb)
-  /\ rres' = IF ~rfb /\ rtend /\ TridCheck /\ rnote /\ rver.ref # NoSlot THEN Res("tranend", 0) ELSE Deref(rver)
+  /\ rres' = IF ~rfb /\ rtend /\ TridCheck /\ (rnote \/ FirstKeepTrid) /\ rver.ref # NoSlot
+             THEN Res("tranend", 0) ELSE Deref(rver)
   /\ rpc' = "release"
   /\ UNCHANGED <<wv, sv, hv, stv, gv, rcls, rver, rtry, rreg, rsnap, rlatch, rabsent, rdrops, xv>>
 
