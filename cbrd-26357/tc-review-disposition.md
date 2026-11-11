@@ -87,7 +87,8 @@ TC 저장소의 `feature/oos-merge`는 각 `tc/pr-7990`보다 develop revert 커
 - 회신: A [r4536792764](https://github.com/CUBRID/cubrid-testcases/pull/3551#discussion_r4536792764), A' [r4536793953](https://github.com/CUBRID/cubrid-testcases/pull/3551#discussion_r4536793953), B [r4536795283](https://github.com/CUBRID/cubrid-testcases/pull/3551#discussion_r4536795283), C [r4536795579](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4536795579). 게시 본문은 아래 초안에 B·A의 커밋 SHA를 더한 것이다.
 - #3551, #4210 본문을 위 "PR 본문에서 고칠 부분"대로 고쳤다. #4210 검증 문단은 run 42819814597(엔진 `e30370dc0`, 전체 결과 failure, 해당 3 case 통과)을 인용한다.
 - #3551에서 shparkcubrid에게 재리뷰를 요청했다.
-- 멈춘 일: CI 재실행. PR 7990은 feature 병합 PR이라 두 TC 저장소에서 `tc/pr-7990`과 TC `feature/oos-merge`의 tip이 같아야 한다(`cubrid-feature-tc-sync-check`). push 뒤 public 저장소는 1커밋씩 갈라졌고, private 저장소는 develop revert 1커밋 뒤처졌다. 두 branch를 모두 fast-forward하는 merge commit `2a9496b5a`(로컬 branch `CBRD-26357-tc-sync`)를 준비했다. 공유 branch TC `feature/oos-merge`에 push하는 일은 별도 승인을 기다린다.
+- TC 동기화: PR 7990은 feature 병합 PR이라 두 TC 저장소에서 `tc/pr-7990`과 TC `feature/oos-merge`의 tip이 같아야 한다(`cubrid-feature-tc-sync-check`). 첫 push 뒤 public 저장소가 1커밋씩 갈라졌다. 사용자 승인 후 merge commit `2a9496b5a`를 public `feature/oos-merge`(`e3e7bce0d..`)와 `tc/pr-7990`(`7bc7d7237..`)에 fast-forward로 push했다. private `tc/pr-7990`은 `b91e7f640`으로 fast-forward했다. 검사 결과 두 저장소 모두 synced.
+- CI: 엔진 head가 `67220b7e2`(#8299 병합)로 바뀌었고, OOS 오류 번호는 그대로다(-1395..-1398). `/run sql`([comment](https://github.com/CUBRID/cubrid/pull/7990#issuecomment-6793611938))이 [run 43005450417](https://github.com/CUBRID/cubrid/actions/runs/43005450417)로 잡혔다. 결과는 `cubrid-ci-watch` 요청 23으로 추적한다.
 
 ## 회신 초안 (게시된 원문)
 
