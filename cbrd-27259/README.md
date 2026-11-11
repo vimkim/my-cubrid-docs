@@ -16,3 +16,5 @@
 | [pr-body-rev4.md](pr-body-rev4.md) | PR description after the base merge: message 1396, `loaddb` rejection remark, TC PR links | 2026-11-11 | 2026-11-11 | Keep the body accurate after the merge and the loader test change |
 | [pr-context-rev4.md](pr-context-rev4.md) | Source, changes, operations, and open CI decision for revision 4 | 2026-11-11 | 2026-11-11 | Review and resume the body update |
 | [ci-analysis.md](ci-analysis.md) | Failure attribution for gha-ci run 42865557030 on head `89496263e` | 2026-11-11 | 2026-11-11 | Separate failures caused by the PR from those caused by the base merge |
+| [pr-body-rev5.md](pr-body-rev5.md) | PR description after review 5857391949: ALTER `FORCE_INLINE` row check, DDL limitation (CBRD-28051), assert follow-up (CBRD-27924) | 2026-11-11 | 2026-11-11 | Keep the body accurate after commit `87f6f85` |
+| [review-20261111/](review-20261111/) | Analyses of the three comments in review 5857391949, reply drafts, and the CBRD-28051 description | 2026-11-11 | 2026-11-11 | Decide and answer each review comment with evidence |
