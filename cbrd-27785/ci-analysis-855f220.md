@@ -164,6 +164,27 @@ index를 새로 받지 않았다. 이번 결론에 필요한 비교는 같은 ba
 4. `test_sql_by_cci` 38건은 알려진 이슈로 둔다.
 5. 수집기 쪽: base `test_sql` shard 01 JUnit 누락(PL/CSQL 6건)과 head shard 07 응답 decode 오류는 수집기·CI 결과 기록 문제로 따로 다룬다.
 
+## 후속: base에서 온 실패의 원인과 처리 (2026-11-11)
+
+이 PR에서 고칠 base 쪽 실패는 없다. 아래 네 건 모두 #8299의 `feature/oos-merge` 병합을 미룰 이유가 아니다. 단, 새 run에서 head에서만 나는 실패가 없어야 한다(위 4절의 shard 03 fatal 등).
+
+| 실패 | 원인 | 처리 | 병합 차단 |
+| --- | --- | --- | --- |
+| shell `cbrd_27571.sh` | private TC PR [#4582](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4582)(CBRD-27571)가 2026-11-10 06:14Z에 develop에 들어갔다. engine 수정 [#8284](https://github.com/CUBRID/cubrid/pull/8284)는 아직 OPEN(APPROVED)이다. develop은 같은 날 [#4827](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4827)(`aedb39fab`)로 TC를 되돌렸다. | private `feature/oos-merge`에 같은 revert `b91e7f640`(2026-11-11 14:35 KST)이 들어갔고, `tc/pr-8299`가 `0eb25d3e5`로 받았다. 두 branch 모두 `cbrd_27571` 디렉터리가 없다. | 아니오 |
+| sql `r_outer_join.sql`, `cbrd_27762.sql` | public TC PR [#4038](https://github.com/CUBRID/cubrid-testcases/pull/4038)(CBRD-27762, `91483832b`)이 develop에 들어갔다. 이 commit이 `r_outer_join.answer`도 바꾼다. engine 수정 [#8409](https://github.com/CUBRID/cubrid/pull/8409)는 아직 OPEN(APPROVED)이다. develop 대상 PR run(#8168 [42784848562](https://github.com/CUBRID/cubrid/actions/runs/42784848562))도 같은 두 case가 실패한다. | #8409 병합 뒤 다음 develop sync에서 풀린다. #8299에서 할 일은 없다. | 아니오 |
+| `test_sql_by_cci` 38건 | 알려진 이슈(만료 2026-12-09). [CBRD-28013](https://jira.cubrid.org/browse/CBRD-28013)에 develop과 diff가 같다고 기록했다. | 둔다. | 아니오 |
+| code-style `src/storage/heap_file.h` | develop의 `heap_attrinfo_raw_key_locator` 두 줄 선언(CBRD-27361, #8196) 바로 뒤에 `/* *INDENT-OFF* */`가 붙었다. OOS 통합의 develop merge `336bfe814`(2026-11-09) 충돌 해결에서 생겼다. develop 원본에서는 이 선언 뒤에 다른 `extern`이 온다. | #8299의 `cd24a212a`가 빈 줄 한 줄로 고쳤다. #8299가 병합되면 base도 깨끗해진다. | 아니오 |
+
+병합 규칙 근거:
+
+- `gh pr checks 8299 --required`는 "no required checks reported"이다. `feature/oos-merge`의 ruleset은 비어 있다. branch protection은 `protected: true`이지만 세부 설정은 권한이 없어 404이다. 그래서 막는 required check가 없다는 판단은 추론이다.
+- TC Merge Gate(`tc-merge-gate.yml`)는 `develop` 대상 PR에만 걸린다.
+- 앞서 `feature/oos-merge`에 병합된 #8417, #8330은 gha-ci 기록 없이 병합됐다.
+
+리뷰어에게 보낼 설명:
+
+> shell `cbrd_27571.sh`와 sql `r_outer_join.sql`, `cbrd_27762.sql`은 base와 develop PR run에서도 같은 형태로 실패합니다. 원인은 testcase가 engine 수정(#8284, #8409, 둘 다 미병합)보다 먼저 develop TC에 병합된 것입니다. `cbrd_27571`은 develop에서 #4827로 되돌렸고 `tc/pr-8299`에도 반영했습니다. `sql_by_cci` 38건은 CBRD-28013으로 추적하는 develop 공통 실패입니다. 이 PR에서 생긴 실패는 아닙니다.
+
 ## 증거 파일
 
 - head 수집기 bundle: `~/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-8299/855f220d532e222f2a266a0883c94a40bed3a388/providers/github-actions/runs/42801815682/attempts/1/{test_medium,test_shell,test_sql_by_cci}/summary.json`
