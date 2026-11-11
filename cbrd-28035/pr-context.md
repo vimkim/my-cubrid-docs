@@ -68,3 +68,13 @@ Operations:
 2. Push `CBRD-28035-serial-oos-chain-leak` to `vk` (fast-forward, no force).
 3. Post `/run all` for the new head; it supersedes run 43016763833 on the obsolete head.
 4. `gh pr edit 8492 --body-file cbrd-28035/pr-body-rev2.md --title <proposed title>`. The PR stays a draft.
+
+### Revision 2 execution record
+
+2026-11-11 (Asia/Seoul). Body SHA-256 at upload `28d24968d4c4aebb1cbe1a89c125dbc24bde28ade2b925940877b38ea8152cfe`.
+
+1. Docs commit `cd41fbf` on `main`, pushed; `race-repro.md` public URL returned HTTP 200.
+2. `vk` fast-forwarded `bee96e666` to `7e9a4a513788bdc382cce525373db4ea11fe05bb`.
+3. `/run all` posted (https://github.com/CUBRID/cubrid/pull/8492#issuecomment-6796813764); run 43027438539 picked up
+   all six gha-ci contexts; `cubrid-ci-watch` request 30. Run 43016763833 on the obsolete head is superseded.
+4. PR #8492 body and title updated; published body equals `pr-body-rev2.md` apart from the final newline; still draft.
