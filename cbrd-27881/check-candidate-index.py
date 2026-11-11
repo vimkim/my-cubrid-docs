@@ -16,13 +16,16 @@ catalog_path = root / "refactoring-candidates.md"
 catalog = catalog_path.read_text()
 historical = root / "CBRD-27881-oos-refactoring-candidates_dcbf09e_claude.md"
 snapshot = root / "survey-2026-11-11.md"
+structural = root / "structure-survey.md"
 original_ids = set(re.findall(r"\bR-\d+\b", historical.read_text()))
 new_ids = set(re.findall(r"\bN-20261111-\d+\b", snapshot.read_text()))
 assert len(original_ids) == 68 and len(new_ids) == 2, "Source candidate inventory changed."
-expected = original_ids | new_ids
+structural_ids = set(re.findall(r"^### (N-\d{8}-\d+)\.", structural.read_text(), re.MULTILINE))
+assert structural_ids == {"N-20261111-03"}, "Structural survey candidate inventory changed."
+expected = original_ids | new_ids | structural_ids
 headings = re.findall(r"^### \[(\d{4}-\d{2}-\d{2})\] (R-\d+|N-\d{8}-\d+) (.+)$", catalog, re.MULTILINE)
 counts = Counter(ident for date, ident, title in headings)
-assert expected <= set(counts) and all(count == 1 for count in counts.values()), "A source candidate is missing or a heading is repeated."
+assert expected == set(counts) and all(count == 1 for count in counts.values()), "Candidate headings differ from source inventories or a heading is repeated."
 for date, ident, title in headings:
     calendar_date.fromisoformat(date)
     if ident in expected:
@@ -38,7 +41,7 @@ preserved_body = snapshot.read_text().split("## 보존한 조사 본문\n", 1)[1
 assert hashlib.sha256(preserved_body.encode()).hexdigest() == "564378eab7f12410fdf3f6b1426d54eabef570da54fd07897bb41c13cd0a478f", "The preserved JIRA analysis changed."
 assert "최초 기록일" in catalog and "실제 최초 발견 시각" in catalog, "Date provenance is missing."
 
-documents = [catalog_path, snapshot, root / "README.md"]
+documents = [catalog_path, snapshot, structural, root / "README.md"]
 if args.jira_file:
     documents.append(args.jira_file.resolve())
 checked_links = 0

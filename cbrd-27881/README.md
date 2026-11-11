@@ -4,11 +4,12 @@ Documents for JIRA [CBRD-27881](https://jira.cubrid.org/browse/CBRD-27881) "[OOS
 
 Last modified: 2026-11-11 (Asia/Seoul).
 
-Start with [the current candidate catalog](refactoring-candidates.md) to choose the next sub-task. It contains all 70 R/N records with dated titles, current selection guidance and links to the historical evidence. The JIRA issue tracks the shortlist and existing sub-tasks.
+Start with [the current candidate catalog](refactoring-candidates.md) to choose the next sub-task. It contains 71 R/N records with dated titles, current selection guidance and links to historical evidence. For architecture and ownership choices, read the [structural survey](structure-survey.md). The JIRA index read for this survey reflected the earlier 70-record publication; this run has not published the local report there.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [refactoring-candidates.md](refactoring-candidates.md) | Current catalog of 70 candidates, first-recorded dates, selection guidance and prerequisites | 2026-11-11 | 2026-11-11 | Make candidate selection possible through one stable ID index |
+| [refactoring-candidates.md](refactoring-candidates.md) | Current catalog of 71 candidate records, first-recorded dates, selection guidance and prerequisites | 2026-11-11 | 2026-11-11 | Make candidate selection possible through one stable ID index |
+| [structure-survey.md](structure-survey.md) | Structural choices, caller and ownership evidence, independent objections and two native source-contract probes | 2026-11-11 | 2026-11-11 | Support selection of substantive follow-up work for PR #7990 |
 | [survey-2026-11-11.md](survey-2026-11-11.md) | Preserved JIRA analysis, owner decisions and Nov11 scope clarifications before the issue became an index | 2026-11-11 | 2026-11-11 | Keep the prior detailed evidence accessible after shortening JIRA |
 | [pr-body.md](pr-body.md) | Body of R-16 draft PR [#8485](https://github.com/CUBRID/cubrid/pull/8485), tracked by Sub-task [CBRD-28037](https://jira.cubrid.org/browse/CBRD-28037) | 2026-11-11 | 2026-11-11 | Review the six-file refactor before draft PR publication |
 | [pr-context.md](pr-context.md) | R-16 source identity, verification, publication and correction to Sub-task CBRD-28037 | 2026-11-11 | 2026-11-11 | Resume publication against remote feature/oos-merge without unrelated postpone commits |

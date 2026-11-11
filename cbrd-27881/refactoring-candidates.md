@@ -1,12 +1,12 @@
 # OOS 리팩토링 후보 목록
 
-OOS 유지보수자가 다음 sub-task를 고를 때 쓰는 목록이다. 기존 R 항목 68개와 2026-11-11 추가된 N 항목 2개를 ID별로 정리했다. 먼저 R-16과 N-20261111-02의 작은 테스트 helper 정리를 검토하고, 각 절의 선행조건과 검증 부담을 함께 판단한다. [CBRD-27881](https://jira.cubrid.org/browse/CBRD-27881)
+OOS 유지보수자가 다음 sub-task를 고를 때 쓰는 목록이다. 기존 R 항목 68개와 N 항목 3개를 ID별로 정리했다. 오후의 [구조 심층 조사](structure-survey.md)는 책임·타입·소유권을 기준으로 R-33·R-43·R-47·R-54·R-58·R-61의 범위와 선택 조건을 구체화했다. R-16은 별도 구현과 공개 base 검증을 마쳐 draft PR #8485가 열렸다. 각 절의 선행조건과 검증 부담을 함께 판단한다. [CBRD-27881](https://jira.cubrid.org/browse/CBRD-27881)
 
 ## 이름과 날짜
 
 후보 제목은 `[YYYY-MM-DD] ID 구체적인 변경 내용` 형식이다. 날짜는 현재 보존된 조사 자료에서 확인할 수 있는 최초 기록일이다. 기존 R 항목은 2026-11-03 보고서, 신규 N 항목은 2026-11-11 기록을 근거로 삼았다. 실제 최초 발견 시각이 더 이른지는 확인되지 않았다. 재검토 날짜와 소스 revision은 각 절과 아래 분석 기준에서 구분한다. 기존 ID와 `#r-16` 같은 링크는 후속 수정에서도 유지한다.
 
-이 문서는 현재 선정 판단을 갱신하는 곳이다. 과거 보고서는 해당 날짜의 조사와 실험을 인용할 때 사용한다. 기각·보류와 병합 기록을 포함한 누적 70개이며, 다음 sub-task의 범위는 선택 시 결정한다.
+이 문서는 현재 선정 판단을 갱신하는 곳이다. 과거 보고서는 해당 날짜의 조사와 실험을 인용할 때 사용한다. 기각·보류와 병합 기록을 포함한 누적 71개이며, 다음 sub-task의 범위는 선택 시 결정한다.
 
 ## 분석 기준과 확인한 상태
 
@@ -34,7 +34,7 @@ OOS 유지보수자가 다음 sub-task를 고를 때 쓰는 목록이다. 기존
 | [R-13](#r-13) | 2026-11-03 | bestspace 내부 정의 분리 | 판단 보류 |
 | [R-14](#r-14) | 2026-11-03 | heap 삭제의 OOS 파일 정리 통합 | PR 병합 확인 |
 | [R-15](#r-15) | 2026-11-03 | class repr 해제와 오류 helper 재검토 | 과거 보고 유지 |
-| [R-16](#r-16) | 2026-11-03 | 테스트의 page free-space 조회 중복 제거 | 먼저 검토 |
+| [R-16](#r-16) | 2026-11-03 | 테스트의 page free-space 조회 중복 제거 | draft PR #8485 게시 |
 | [R-17](#r-17) | 2026-11-03 | prefetch 조건과 OOS 사전 검사 정리 | 과거 보고 유지 |
 | [R-18](#r-18) | 2026-11-03 | 잠금 상태의 bestspace entry 제거 공유 | 조건 확인 후 |
 | [R-19](#r-19) | 2026-11-03 | 테스트 bridge 선언 공유 | 이어서 검토 |
@@ -51,7 +51,7 @@ OOS 유지보수자가 다음 sub-task를 고를 때 쓰는 목록이다. 기존
 | [R-30](#r-30) | 2026-11-03 | SQL 테스트 등록 목록 공유 | 이어서 검토 |
 | [R-31](#r-31) | 2026-11-03 | SQL 테스트 fixture 공통화 | 기존 보류 |
 | [R-32](#r-32) | 2026-11-03 | 큰 OOS 테스트 파일 분리 | 기존 보류 |
-| [R-33](#r-33) | 2026-11-03 | 복제 LSA 상태와 suppression guard 정리 | 통합 설계 확인 |
+| [R-33](#r-33) | 2026-11-03 | 복제 LSA 상태와 suppression guard 정리 | 부모 publication 보존 조건부 |
 | [R-34](#r-34) | 2026-11-03 | tier-3 bestspace sync 처리 결정 | CBRD-27213 이관 |
 | [R-35](#r-35) | 2026-11-03 | flush insert 매크로 분리 여부 결정 | 담당자 결정 대기 |
 | [R-36](#r-36) | 2026-11-03 | 손상 오류 반환 매크로 도입 결정 | 담당자 결정 대기 |
@@ -61,25 +61,25 @@ OOS 유지보수자가 다음 sub-task를 고를 때 쓰는 목록이다. 기존
 | [R-40](#r-40) | 2026-11-03 | 셸 DB 수명 helper와 도구 정리 | 과거 보고 유지 |
 | [R-41](#r-41) | 2026-11-03 | 파일 수집기와 bitmap 순회 정리 | 과거 보고 유지 |
 | [R-42](#r-42) | 2026-11-03 | reclaim 페이지 처리 단계 분리 | 과거 보고 유지 |
-| [R-43](#r-43) | 2026-11-03 | reclaim sweep 단계와 registry 분리 | 과거 보고 유지 |
+| [R-43](#r-43) | 2026-11-03 | reclaim sweep 단계와 registry 분리 | unknown-lap 전이 조건부 |
 | [R-44](#r-44) | 2026-11-03 | cache API 계약 정리 | 과거 보고 유지 |
 | [R-45](#r-45) | 2026-11-03 | sysop guard 도입 검토 | 과거 보고 유지 |
 | [R-46](#r-46) | 2026-11-03 | chunk header peek helper 도입 검토 | 과거 보고 유지 |
-| [R-47](#r-47) | 2026-11-03 | insert API 배관 정리 | 과거 보고 유지 |
+| [R-47](#r-47) | 2026-11-03 | 행 입력과 OOS 확정 수명 정리 | 최소 storage 묶음만 보조 검토 |
 | [R-48](#r-48) | 2026-11-03 | 페이지 간 삽입 복제 guard 정리 | 과거 보고 유지 |
 | [R-49](#r-49) | 2026-11-03 | chain 삭제의 head 검증 분리 검토 | 과거 보고 유지 |
 | [R-50](#r-50) | 2026-11-03 | physical log helper의 const_cast 정리 | 과거 보고 유지 |
 | [R-51](#r-51) | 2026-11-03 | 작은 코드 정리 항목 검토 | 과거 보고 유지 |
 | [R-52](#r-52) | 2026-11-03 | 페이지 초기화 callback 반환값 정리 검토 | 기각 |
 | [R-53](#r-53) | 2026-11-03 | VOT decoder 공용 accessor 사용 검토 | 과거 보고 유지 |
-| [R-54](#r-54) | 2026-11-03 | OOS payload 소유권 타입 검토 | 과거 보고 유지 |
+| [R-54](#r-54) | 2026-11-03 | OOS payload 소유권 타입 검토 | scalar 수명 경계 조건부 |
 | [R-55](#r-55) | 2026-11-03 | eager cleanup gate helper 검토 | 과거 보고 유지 |
 | [R-56](#r-56) | 2026-11-03 | 복제 OOS 레코드 재구성 정리 | 과거 보고 유지 |
 | [R-57](#r-57) | 2026-11-03 | 현재 로그 정보 구조체 배열 검토 | 과거 보고 유지 |
-| [R-58](#r-58) | 2026-11-03 | sql.log OOS cache 클래스 분리 검토 | 과거 보고 유지 |
+| [R-58](#r-58) | 2026-11-03 | sql.log OOS cache 소유권 정리 검토 | 동일 파일 owner 조건부 |
 | [R-59](#r-59) | 2026-11-03 | 파일 header class OID helper 검토 | 과거 보고 유지 |
 | [R-60](#r-60) | 2026-11-03 | OOS 저장 속성 mask 검토 | 과거 보고 유지 |
-| [R-61](#r-61) | 2026-11-03 | 복제 적용 prologue helper 검토 | 과거 보고 유지 |
+| [R-61](#r-61) | 2026-11-03 | 복제 적용 buffer 수명과 queue 계약 정리 | 운영 도달성 검증 후 구조 비교 |
 | [R-62](#r-62) | 2026-11-03 | overflow 목록 해제와 header 분리 검토 | 과거 보고 유지 |
 | [R-63](#r-63) | 2026-11-03 | SA와 SERVER 테스트 본문 공유 검토 | 과거 보고 유지 |
 | [R-64](#r-64) | 2026-11-03 | OOS 파일 테스트 fixture 정리 검토 | 과거 보고 유지 |
@@ -89,6 +89,7 @@ OOS 유지보수자가 다음 sub-task를 고를 때 쓰는 목록이다. 기존
 | [R-71](#r-71) | 2026-11-03 | 여러 sector의 OOS 통계 테스트 보강 | 과거 보고 유지 |
 | [N-20261111-01](#n-20261111-01) | 2026-11-11 | STORAGE 거부 검사 재사용 | 조건 확인 후 |
 | [N-20261111-02](#n-20261111-02) | 2026-11-11 | SQL 테스트 정수 변환 공유 | 먼저 검토 |
+| [N-20261111-03](#n-20261111-03) | 2026-11-11 | 확정 뒤 물리 삭제 primitive의 운영 공개 범위 축소 | #8434 이후 보조 후보 |
 
 ## 담당자 결정과 결함 근거
 
@@ -280,7 +281,7 @@ DF 결함 후보의 관찰·재현 결과와 한계는 기존 보고서에서 �
 
 ### [2026-11-03] R-16 테스트의 page free-space 조회 중복 제거
 
-선정 판단은 **먼저 검토**이다.
+선정 판단은 **draft PR #8485 게시**이다.
 
 2026-11-03 기록의 분류는 `DEFERRED`였다. 원래 범위는 다음과 같다. 테스트 파일마다 복사된 page와 chunk helper를 공용 header로 이동. 당시 판단과 선행조건도 함께 기록했다. #8368 병합 후 새 header 위에 작업.
 
@@ -293,6 +294,10 @@ DF 결함 후보의 관찰·재현 결과와 한계는 기존 보고서에서 �
 상세 근거와 원문의 제한은 [후속 조사 기록](survey-2026-11-11.md)에 있다.
 
 근거는 `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`의 [기존 조사](CBRD-27881-oos-refactoring-candidates_dcbf09e_claude.md#deferred)다.
+
+2026-11-11 15:24 KST의 Work #894 확인에서 로컬 commit `f1f5e0cbb4ac66d0efc197b0f9a62a669552d737`의 구현·debug 검증 완료를 확인했다. 공개 feature base에 맞춘 PR branch 정리가 남아 있고 source/destination은 병합되지 않았다. 이번 구조 조사의 신규 구현·발견으로 세지 않는다.
+
+2026-11-11 15:53 KST에 [draft PR #8485](https://github.com/CUBRID/cubrid/pull/8485)의 Open·draft, base `50619ce53ef7b0e6bc8b468b2065ae7da4ef592f`, head `b8d6d6d606daaf301d42269c67b0bc83b4bddcc7`를 직접 확인했다. 별도 Work #894는 게시까지 완료됐다. 위 PR 준비 대기는 당시 기록으로 보존한다. 이번 조사가 구현·게시하거나 새로 발견한 작업이 아니다.
 
 <a id="r-17"></a>
 
@@ -546,7 +551,7 @@ DF 결함 후보의 관찰·재현 결과와 한계는 기존 보고서에서 �
 
 ### [2026-11-03] R-33 복제 LSA 상태와 suppression guard 정리
 
-선정 판단은 **통합 설계 확인**이다.
+선정 판단은 **부모 publication 보존 조건부**이다.
 
 2026-11-03 기록의 분류는 `DEFERRED`였다. 원래 범위는 다음과 같다. tdes의 OOS 복제 LSA 상태 타입과 중첩 suppression guard 도입. 당시 판단과 선행조건도 함께 기록했다. #8299와 #8330 병합 후. WAL 경로이므로 별도 리뷰.
 
@@ -559,6 +564,8 @@ DF 결함 후보의 관찰·재현 결과와 한계는 기존 보고서에서 �
 상세 근거와 원문의 제한은 [후속 조사 기록](survey-2026-11-11.md)에 있다.
 
 근거는 `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`의 [기존 조사](CBRD-27881-oos-refactoring-candidates_dcbf09e_claude.md#deferred)다.
+
+2026-11-11 오후 심층 조사에서는 다음과 같이 구체화했다. paired reset은 이미 한 함수에 있다. FK 한 구역의 전체 FIFO와 consumed head·참조 vector를 보존하는 continuation을 가장 작은 경쟁안으로 남긴다. thread 또는 tdes로 전체 owner를 옮기는 안은 actor·수명 증명이 필요하다. R-48은 제약으로 포함하며 별도 성과로 세지 않는다. 실제 revision·호출자·유지안·경쟁 인터페이스·검증 조건은 [구조 조사 R-33](structure-survey.md#r-33)에서 확인한다. 이전 분류와 기각·보류 이유는 위에 보존한다. 엔진 구현이나 sub-task 생성은 하지 않았다.
 
 <a id="r-34"></a>
 
@@ -670,11 +677,13 @@ DF 결함 후보의 관찰·재현 결과와 한계는 기존 보고서에서 �
 
 ### [2026-11-03] R-43 reclaim sweep 단계와 registry 분리
 
-선정 판단은 **과거 보고 유지**이다.
+선정 판단은 **unknown-lap 전이 조건부**이다.
 
 2026-11-03 기록의 분류는 `REPORT-ONLY`였다. 원래 범위는 다음과 같다. reclaim sweep 단계 분리와 side map registry 클래스. 당시 판단과 선행조건도 함께 기록했다. single-flight와 condvar 동작을 건드림.
 
 근거는 `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`의 [기존 조사](CBRD-27881-oos-refactoring-candidates_dcbf09e_claude.md#report-only)다.
+
+2026-11-11 오후 심층 조사에서는 다음과 같이 구체화했다. #8434 head 443073283d89e4511b2fa9a5b6a16898770f7e65의 emptied-set 구현에서 unknown-lap session과 candidate snapshot만 같은 파일·mutex 안에 모으는 조건부 안이다. bitmap lap 완료와 전체 작업 성공은 다르다. 기존 growth claim과 recovery 원자성을 유지하며 R-28 파일 분리는 선정하지 않는다. 실제 revision·호출자·유지안·경쟁 인터페이스·검증 조건은 [구조 조사 R-43](structure-survey.md#r-43)에서 확인한다. 이전 분류와 기각·보류 이유는 위에 보존한다. 엔진 구현이나 sub-task 생성은 하지 않았다.
 
 <a id="r-44"></a>
 
@@ -708,13 +717,15 @@ DF 결함 후보의 관찰·재현 결과와 한계는 기존 보고서에서 �
 
 <a id="r-47"></a>
 
-### [2026-11-03] R-47 insert API 배관 정리
+### [2026-11-03] R-47 행 입력과 OOS 확정 수명 정리
 
-선정 판단은 **과거 보고 유지**이다.
+선정 판단은 **최소 storage 묶음만 보조 검토**이다.
 
 2026-11-03 기록의 분류는 `REPORT-ONLY`였다. 원래 범위는 다음과 같다. insert API 배관 정리. 당시 판단과 선행조건도 함께 기록했다. 작은 단계만 떼면 효과가 작음.
 
 근거는 `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`의 [기존 조사](CBRD-27881-oos-refactoring-candidates_dcbf09e_claude.md#report-only)다.
+
+2026-11-11 오후 심층 조사에서는 다음과 같이 구체화했다. 기존 insert API plumbing 범위를 받은 행의 변환 owner·RECDES view 수명으로 구체화했다. 초기에는 force-local holder를 우선 비교했지만, 마지막 검토에서 finalize 한 번을 위해 추가 binding 상태를 저장하는 이득이 작아 보조 정리로 내렸다. received/converted storage만 묶는 최소 안과 현재 helper 유지를 먼저 비교한다. received 정책과 optional owner는 독립적이며, reevaluation·partition·FK의 mutable alias를 보존한다. 실제 revision·호출자·유지안·경쟁 인터페이스·검증 조건은 [구조 조사 R-47](structure-survey.md#r-47)에서 확인한다. 이전 분류와 기각·보류 이유는 위에 보존한다. 엔진 구현이나 sub-task 생성은 하지 않았다.
 
 <a id="r-48"></a>
 
@@ -780,11 +791,13 @@ DF 결함 후보의 관찰·재현 결과와 한계는 기존 보고서에서 �
 
 ### [2026-11-03] R-54 OOS payload 소유권 타입 검토
 
-선정 판단은 **과거 보고 유지**이다.
+선정 판단은 **scalar 수명 경계 조건부**이다.
 
 2026-11-03 기록의 분류는 `REPORT-ONLY`였다. 원래 범위는 다음과 같다. 소유권을 가진 OOS payload 타입 도입. 당시 판단과 선행조건도 함께 기록했다. 여러 파일과 allocator 변경 필요.
 
 근거는 `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`의 [기존 조사](CBRD-27881-oos-refactoring-candidates_dcbf09e_claude.md#report-only)다.
+
+2026-11-11 오후 심층 조사에서는 다음과 같이 구체화했다. 범용 payload owner 대신 #8299가 이미 도입한 attribute scalar Resolve 수명 경계를 index decode와 비교한다. 두 소비자에서 OOS COPY·scratch/private 해제 판단을 없애는 좁은 안이다. grouped·pending·serializer의 allocator와 수명을 하나로 합치지 않는다. 실제 revision·호출자·유지안·경쟁 인터페이스·검증 조건은 [구조 조사 R-54](structure-survey.md#r-54)에서 확인한다. 이전 분류와 기각·보류 이유는 위에 보존한다. 엔진 구현이나 sub-task 생성은 하지 않았다.
 
 <a id="r-55"></a>
 
@@ -818,13 +831,15 @@ DF 결함 후보의 관찰·재현 결과와 한계는 기존 보고서에서 �
 
 <a id="r-58"></a>
 
-### [2026-11-03] R-58 sql.log OOS cache 클래스 분리 검토
+### [2026-11-03] R-58 sql.log OOS cache 소유권 정리 검토
 
-선정 판단은 **과거 보고 유지**이다.
+선정 판단은 **동일 파일 owner 조건부**이다.
 
 2026-11-03 기록의 분류는 `REPORT-ONLY`였다. 원래 범위는 다음과 같다. sql.log OOS cache를 별도 TU 클래스로 분리. 당시 판단과 선행조건도 함께 기록했다. 300줄 넘는 변경.
 
 근거는 `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`의 [기존 조사](CBRD-27881-oos-refactoring-candidates_dcbf09e_claude.md#report-only)다.
+
+2026-11-11 오후 심층 조사에서는 다음과 같이 구체화했다. cache는 LRU가 아니고 native bridge 테스트 네 개가 이미 있다. 단독 TU 이동보다 현재 유지안과 동일 파일 owner를 비교한다. MHT rehash 할당 실패의 NULL-after-insert 계약은 독립 원문 함수 probe로 확인했지만 실제 applier 도달성과 영향은 미확인이다. 오류 계약 수리와 구조 추출을 분리한다. 실제 revision·호출자·유지안·경쟁 인터페이스·검증 조건은 [구조 조사 R-58](structure-survey.md#r-58)에서 확인한다. 이전 분류와 기각·보류 이유는 위에 보존한다. 엔진 구현이나 sub-task 생성은 하지 않았다.
 
 <a id="r-59"></a>
 
@@ -848,13 +863,15 @@ DF 결함 후보의 관찰·재현 결과와 한계는 기존 보고서에서 �
 
 <a id="r-61"></a>
 
-### [2026-11-03] R-61 복제 적용 prologue helper 검토
+### [2026-11-03] R-61 복제 적용 buffer 수명과 queue 계약 정리
 
-선정 판단은 **과거 보고 유지**이다.
+선정 판단은 **운영 도달성 검증 후 구조 비교**이다.
 
 2026-11-03 기록의 분류는 `REPORT-ONLY`였다. 원래 범위는 다음과 같다. la_apply_* prologue helper 도입. 당시 판단과 선행조건도 함께 기록했다. flush 묶음 처리를 건드리고 단위 테스트가 없음.
 
 근거는 `dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67`의 [기존 조사](CBRD-27881-oos-refactoring-candidates_dcbf09e_claude.md#report-only)다.
+
+2026-11-11 오후 심층 조사에서는 다음과 같이 구체화했다. 기존 apply prologue와 flush 묶음의 우려를 queue/packer까지의 record-buffer 차용 수명으로 구체화했다. 원문 ring 함수의 201번째 할당이 기존 200-slot borrow를 재사용함을 native probe로 확인했다. HA 결함 재현은 아니다. 안정된 pool/spill, enqueue 시 수명 이전, deep copy와 완성된 행 묶음을 비교하고 동작 수리는 분리한다. 실제 revision·호출자·유지안·경쟁 인터페이스·검증 조건은 [구조 조사 R-61](structure-survey.md#r-61)에서 확인한다. 이전 분류와 기각·보류 이유는 위에 보존한다. 엔진 구현이나 sub-task 생성은 하지 않았다.
 
 <a id="r-62"></a>
 
@@ -954,6 +971,18 @@ get_int_column을 기존 SQL 공용 header로 옮겨 cursor 위치 선정에 성
 
 근거 소스는 `50619ce53ef7b0e6bc8b468b2065ae7da4ef592f`다. 기존 항목과의 중복 판정, source anchor와 정적 확인 범위는 [2026-11-11 조사](survey-2026-11-11.md)에 있다.
 
+<a id="n-20261111-03"></a>
+
+### [2026-11-11] N-20261111-03 확정 뒤 물리 삭제 primitive의 운영 공개 범위 축소
+
+선정 판단은 **#8434 이후 보조 후보**이다.
+
+#8434 head `443073283d89e4511b2fa9a5b6a16898770f7e65`에서 redo-only `oos_delete`의 운영 직접 호출 두 곳이 모두 `oos_file.cpp` 내부에 있다. header는 이미 commit 또는 MVCC safety를 확보해야 한다는 전제를 외부 caller에게 공개한다. 실제 필요한 intent와 알림 진입점은 유지하고 raw primitive를 구현 내부로 제한하는 안이다.
+
+현재 유지안, test-only 선언·linkage, 내부 함수와 test bridge를 비교한다. source census의 테스트 호출 49줄은 의도적인 물리 삭제 우회가 필요하다. 공개 범위 축소는 finality의 증명이 아니며, 실질적인 commit/scheduler 근거가 없는 token 도입은 권하지 않는다. disk/WAL·오류·callback·테스트 동작을 유지하고 SA/SERVER 및 일반/test-enabled compile/link와 reclaim 회귀를 검증해야 한다. 구현과 이 검증은 미실행이다.
+
+공개 #7990 head `50619ce`에는 외부 직접 삭제 호출이 남아 있어 즉시 적용하지 않는다. R-05의 진단 probe, R-45의 sysop guard, R-49의 head 분리와 다르다. 정확한 source·caller·반박·검증 조건은 [구조 심층 조사](structure-survey.md#n-20261111-03)에 있다. 새 sub-task는 만들지 않았다.
+
 ## 목록 검증
 
-문서 디렉터리에서 `python3 check-candidate-index.py`를 실행한다. 기존 68개와 신규 2개의 ID, 제목의 날짜 형식, 고정 앵커와 인덱스 연결, 원문 보존 및 로컬 문서 링크를 대조한다.
+문서 디렉터리에서 `python3 check-candidate-index.py`를 실행한다. 기존 R 68개, 이전 N 2개와 구조 심층 조사의 N 1개를 source inventory와 정확히 대조한다. 제목의 날짜, 고정 앵커, 인덱스 연결, 원문 보존 및 구조 보고서를 포함한 로컬 문서 링크도 검사한다. 등록되지 않은 extra ID를 넣은 음성 대조에서 checker가 예상대로 거부함을 확인했다.
