@@ -1,8 +1,8 @@
 # Sidecar
 
-Sidecar is a proposed replacement for CUBRID OOS. It stores large column values outside the heap record, in a per-heap store of ordinary MVCC heap records, so that scans of small columns read fewer pages. No PR exists yet. Engine work happens in the worktree `/home/vimkim/gh/cb/sidecar`, branch `sidecar`, based on `develop` `e64a04a79`. Work-tracker item 772 tracks the project.
+Sidecar is a proposed replacement for CUBRID OOS. It stores large column values outside the heap record, in a per-heap store of ordinary MVCC heap records, so that scans of small columns read fewer pages. No PR exists yet. JIRA epic: [CBRD-28053](https://jira.cubrid.org/browse/CBRD-28053); PR draft in [../CBRD-28053/README.md](../CBRD-28053/README.md). Engine work happens in the worktree `/home/vimkim/gh/cb/sidecar`, branch `sidecar`, based on `develop` `e64a04a79`. Work-tracker item 772 tracks the project.
 
-Last modified: 2026-11-10, Asia/Seoul.
+Last modified: 2026-11-11, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
