@@ -1,6 +1,6 @@
-# R-16 draft PR 준비
+# R-16 draft PR 게시 기록
 
-2026-11-11 Asia/Seoul 기준이다. OOS 단위 테스트 유지보수자가 페이지의 남은 공간을 조회하는 중복 helper를 한 곳에서 관리하도록 한다. 이 문서는 게시 제안과 재개 정보를 보존한다. 게시 승인 기록이 아니다.
+2026-11-11 Asia/Seoul 기준이다. OOS 단위 테스트 유지보수자가 페이지의 남은 공간을 조회하는 중복 helper를 한 곳에서 관리하도록 한다. 이 문서는 검토 당시 제안과 실제 게시 결과를 보존한다. 승인 근거는 사용자의 대화이며, 이 문서가 후속 작업의 승인을 대신하지 않는다.
 
 ## 소스와 대상
 
@@ -64,9 +64,9 @@ git diff --check 50619ce53ef7b0e6bc8b468b2065ae7da4ef592f...b8d6d6d606daaf301d42
 | Index | `cbrd-27881/README.md` |
 | Additional explanation | 없음. 이 변경은 짧은 본문으로 설명한다. |
 
-사용자는 2026-11-11에 "Work894를 이어서 R-16 draft PR 준비를 진행해줘"라고 요청했다. 구체적인 본문과 아래 게시 작업에 대한 검토 후 승인은 아직 없다. 본문 파일을 직접 편집할 수 있다. 승인 후에는 현재 내용을 다시 읽고 fingerprint를 기록한다.
+사용자는 2026-11-11에 "Work894를 이어서 R-16 draft PR 준비를 진행해줘"라고 요청했다. 준비 단계에서는 구체적인 본문과 아래 게시 작업에 대한 승인이 없었다. 이후 사용자는 본문과 게시 작업을 제시한 최종 응답에 "yes"라고 답해 승인했다. 게시 직전에 본문과 source revision을 다시 확인하고 fingerprint를 기록했다.
 
-승인받을 작업은 다음과 같다.
+검토 시 제안한 작업은 다음과 같다.
 
 1. 위 문서 3개를 담은 docs task 커밋을 최신 로컬 `main` 위로 rebase한다. 검증 후 fast-forward 병합하고 `origin/main`으로 push한다. 게시 결과를 context에 기록하는 후속 문서 커밋에도 같은 절차를 적용한다.
 2. 정확한 `SOURCE_COMMIT`을 `vk`의 `refs/heads/CBRD-27881-r16-free-space-pr`로 일반 push한다.
@@ -74,3 +74,24 @@ git diff --check 50619ce53ef7b0e6bc8b468b2065ae7da4ef592f...b8d6d6d606daaf301d42
 4. 실제 PR의 draft 상태, base, head SHA, 본문과 변경 파일을 읽어 확인하고 게시 결과를 기록한다. docs task worktree는 문서 병합과 결과 기록까지 끝난 뒤 비강제로 정리한다.
 
 feature 브랜치의 직접 병합, 엔진 PR 병합과 CI 수동 실행은 제안에 포함하지 않는다. source PR 브랜치는 draft PR이 열려 있는 동안 유지한다. 게시 직전에 base나 source revision이 바뀌면 변경 범위와 검증을 조정하고 다시 검토를 받는다.
+
+## 게시 결과
+
+2026-11-11 15:41 Asia/Seoul에 실제 GitHub 내용을 읽어 확인했다.
+
+| 항목 | 확인한 결과 |
+| --- | --- |
+| PR | [CUBRID/cubrid #8485](https://github.com/CUBRID/cubrid/pull/8485) |
+| 상태 | Open, draft |
+| 제목 | `[CBRD-27881] Share the OOS test page free-space helper` |
+| Base | `feature/oos-merge`, `50619ce53ef7b0e6bc8b468b2065ae7da4ef592f` |
+| Head | `vimkim/cubrid:CBRD-27881-r16-free-space-pr`, `b8d6d6d606daaf301d42269c67b0bc83b4bddcc7` |
+| Assignee | `vimkim` |
+| 변경 범위 | 1커밋, 테스트 코드 6개 파일, +41/-108 |
+| 본문 SHA-256 | `7ad2cf8b1dfb1678612a1c9cdff330d7be6f0e09cc596d03d35be8b12a1dff3a` |
+| GitHub diff stable patch ID | `2baae436a4471b4cbbf2e8ad5ca7c4c17871935f` |
+| 최초 문서 게시 커밋 | `85cf9943c453e893c5b4aeb22be761df3e7f8467`, `origin/main`에서 확인 |
+
+검토한 본문 파일과 GitHub에서 다시 읽은 본문은 개행까지 같다. GitHub에서 읽은 6개 파일의 patch도 검토한 source commit과 같은 stable patch ID다. source branch의 일반 push 결과는 `SOURCE_COMMIT`과 같다. 문서 작업 브랜치는 당시 최신 로컬 `main`으로 충돌 없이 rebase한 뒤 fast-forward 병합·push했다.
+
+게시 과정에서 source code를 바꾸지 않았으므로 위 Debug 빌드·설치와 CTest 7/7 결과의 source identity도 유지된다. 이 기록은 draft PR 게시 완료를 뜻하며 엔진 병합이나 전체 회귀 통과를 뜻하지 않는다.
