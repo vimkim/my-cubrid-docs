@@ -41,3 +41,14 @@ below.
 Scripts and outputs live in the session scratchpad, not in Git. The combination build is a temporary branch in the
 scratch worktree: PR #8434 head `0d9732a63` merged with `feature/oos-merge` `67220b7e23`, then the #8492 commits and
 this branch's commits.
+
+## Execution record
+
+2026-11-11 (Asia/Seoul), attempt 1. Body SHA-256 at upload recorded before publication; unchanged at upload.
+
+1. Docs commit `92b93e5` fast-forwarded to `main` and pushed to `origin`.
+2. `CBRD-28052-serial-sa-rollback` pushed to `vk`; remote head `9ba684e54761521b57d47baaf34124bf56b1db38` equals SOURCE_COMMIT.
+3. Draft PR created: https://github.com/CUBRID/cubrid/pull/8496. Verified draft, base `feature/oos-merge`, head
+   `9ba684e547`, assignee `vimkim`, title as proposed. Published body equals `pr-body.md` apart from the final newline.
+4. The TC Branch Sync bot opened CUBRID/cubrid-testcases#4153. This PR needs no testcase change.
+5. gha-ci not triggered: the PR merges only after #8492 and #8434, so a run on this head would not test the merged code.
