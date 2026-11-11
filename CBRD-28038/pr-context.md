@@ -58,7 +58,23 @@ does not waive content, source-head, remote-target, or draft-status checks.
   monitoring. Remote polling is owned solely by the shared watch CLI at its
   default 15-minute interval; the session consumes its local meaningful events.
   The optional sql_by_cci result will be checked at a meaningful completion event.
-- CI outcome. Pending.
+- CI outcome. The workflow completed with failure on attempt 1. Both builds and
+  test_shell, test_sql, and test_medium succeeded. The optional test_sql_by_cci
+  context failed on the same head and run.
+- Known issue. The shared cubrid-common known-ci-issues.md entry for sql_by_cci
+  covers every branch and is unexpired through 2026-12-09. Classify this as the
+  known issue, not caused by this PR; no root-cause investigation or fix was made.
+- Watch outcome. Request 20 emitted complete/success event 88 at
+  2026-11-11T10:00:13Z. That outcome covers its three registered suites and both
+  builds, so it does not override the optional CCI failure or the full workflow
+  conclusion. One fresh status snapshot after that meaningful event verified all
+  six gha-ci contexts and the workflow conclusion.
+- TC Merge Gate. Check TC PRs is failing. Public TC PR 4142 and private TC PR
+  4843 remain open with zero changed files. Human closure is required; neither
+  testcase PR was closed or merged by the agent.
+- Final state. The PR remains a draft targeting develop at the recorded source
+  head. Its body is unchanged and was read back again. No additional source push,
+  CI rerun, or local develop integration occurred.
 
 The latest-base source review confirmed one required addition for permanent-file
 bulk destruction. The final disk/file reference now names header/file-table WAL
