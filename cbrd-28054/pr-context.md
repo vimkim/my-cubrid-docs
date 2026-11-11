@@ -9,3 +9,4 @@
 - Docs: task branch `docs/cbrd-28054-pr-body`, integration branch `main`; body `cbrd-28054/pr-body.md`, context `cbrd-28054/pr-context.md`
 - Operations: integrate and push this docs commit to `main`; push `inner-table` to `vk`; create the draft PR; assign `vimkim`.
 - Authorization: on 2026-11-11 the user approved item 1 ("1은 진행하고"), after the push, the develop target, the CBRD-27935/27936 note and possible TC PRs were listed.
+- Published 2026-11-11: docs main 6021ad3; source pushed to vk/inner-table at 22f75cdc5c; draft PR https://github.com/CUBRID/cubrid/pull/8494 (draft, base develop, assignee vimkim); body matches pr-body.md except the trailing newline.
