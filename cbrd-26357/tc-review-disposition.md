@@ -60,11 +60,11 @@ TC 저장소의 `feature/oos-merge`는 각 `tc/pr-7990`보다 develop revert 커
 | 시도 | TC | case | 결과 |
 | --- | --- | --- | --- |
 | `~/tk/t911a` | `b53a7984c` | `bug_bts_10516` | PASS (total 1, success 1, fail 0) |
-| `~/tk/t911b` | `b53a7984c` | `fbo_ddl02` | 작성 시점에 실행 중 |
-| `~/tk/t911c` | `7bc7d7237` | `bug_bts_10516` | 대기 |
-| `~/tk/t911d` | `7bc7d7237` | `fbo_ddl02` | 대기 |
+| `~/tk/t911b` | `b53a7984c` | `fbo_ddl02` | PASS (1/1, fail 0) |
+| `~/tk/t911c` | `7bc7d7237` | `bug_bts_10516` | PASS (1/1, fail 0) |
+| `~/tk/t911d` | `7bc7d7237` | `fbo_ddl02` | PASS (1/1, fail 0) |
 
-t911b~d의 판정은 각 디렉터리의 `verify.log`에서 확인한다. 보강 후보는 t911c·d가 PASS일 때만 반영한다.
+각 시도는 `testkit-focused.py verify`로 판정했다(기대 case 일치, summary·XML·`.result` 존재, 실패 0). 현재 head와 보강 후보 모두 OOS 엔진 head에서 통과한다.
 
 ## PR 본문에서 고칠 부분
 
