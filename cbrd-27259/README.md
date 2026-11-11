@@ -15,3 +15,4 @@
 | [pr-context-rev3.md](pr-context-rev3.md) | Source, target, operations, results, and open CI items for revision 3 | 2026-11-11 | 2026-11-11 | Review and resume the body update |
 | [pr-body-rev4.md](pr-body-rev4.md) | PR description after the base merge: message 1396, `loaddb` rejection remark, TC PR links | 2026-11-11 | 2026-11-11 | Keep the body accurate after the merge and the loader test change |
 | [pr-context-rev4.md](pr-context-rev4.md) | Source, changes, operations, and open CI decision for revision 4 | 2026-11-11 | 2026-11-11 | Review and resume the body update |
+| [ci-analysis.md](ci-analysis.md) | Failure attribution for gha-ci run 42865557030 on head `89496263e` | 2026-11-11 | 2026-11-11 | Separate failures caused by the PR from those caused by the base merge |
