@@ -5,6 +5,7 @@
 - 2026-11-03 20:22 KST: 1단계 결과와 사용자 결정을 반영했다.
 - 2026-11-04: 성능 변화의 부호를 좋아지면 +로 바꿨다. 결론 8의 최악값을 판정과 같은 develop 중앙값 기준(약 −7.9%)으로 고쳤다. 이전 값 6.5%는 후보 자신의 중앙값과 비교한 값이었다.
 - 2026-11-04 14:40 KST: 같은 표 연속 UPDATE 측정 결과를 더했다(결론 9, "같은 표 연속 UPDATE" 절).
+- 2026-11-11: B 빠른 경로 결정과 CBRD-27816 종결을 기록했다("사용자 결정 기록"의 2026-11-04 B 설명 뒤 결정, 2026-11-11 종결).
 
 관련 이슈: [CBRD-27816](https://jira.cubrid.org/browse/CBRD-27816), [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785). 관련 PR: [#8299](https://github.com/CUBRID/cubrid/pull/8299). 이 보고서는 2026-11-03에 로컬 산출물 디렉터리 `/mnt/nvme/data-5/tmp/CBRD-27816-20261103/phase1-report.md`에서 옮겨 왔다. 본문의 상대 경로(`harness/`, `base|cand/...`, `decisions.tsv` 등)는 모두 그 디렉터리 기준이다.
 
@@ -102,6 +103,14 @@
 - 같은 표 연속 UPDATE를 측정하기로 했다. 결과를 본 뒤 이 보고서와 JIRA CBRD-27816 반영을 승인했다.
 - 측정 DB 두 개를 지우기로 했다. 측정에 쓴 `u816b`, `u816c`는 각 workenv에서 `cubrid deletedb`로 지웠다(rc 0, 등록부 줄도 빠짐). `pristine/`은 B 빠른 경로 설명을 들은 뒤 정한다.
 - CBRD-27816을 언제 닫을지는 B 빠른 경로 설명을 들은 뒤 정한다.
+
+2026-11-04 B 빠른 경로 설명 뒤 사용자 결정(선택 1).
+
+- B 빠른 경로는 구현하지 않는다. OOS 값이 없는 행의 finalize, pending, `heap_record_replace_oos_oids` 비용은 합쳐 약 61M이다. 빠른 경로로 줄일 수 있는 양은 약 20~30M로 추정한다(추정, 측정 아님). 정상 상태 명령어 수 성능 변화가 −1.34%에서 약 −0.9~−1.0%로 좋아지는 크기다. vacuum이 들어온 표본의 판정은 바꾸지 못한다.
+- B는 알려진 작은 최적화 후보로 남긴다. 구현할 때 주의할 점이 있다. `heap_oos_begin_insert_publication`을 건너뛰려면 `thread_p->oos_oids`와 `tdes->oos_insert_lsa_queue`가 비어 있다는 별도 보장이 필요하다. HA 복제가 이 둘을 읽기 때문이다(`locator_sr.c:8366`, `replication.c:478`, 추론).
+- PR #8299가 `feature/oos-merge`에 병합되면 CBRD-27816을 닫는다. `pristine/`(6.1G)은 지웠다.
+
+2026-11-11 종결. PR #8299가 2026-11-11 `feature/oos-merge`에 squash merge됐다(`67220b7e2`). 위 결정대로 엔진 코드를 바꾸지 않고 CBRD-27816을 Resolved로 닫았다.
 
 ## 2단계 첫 일: OOS 규칙 확인과 A·B·C 재분해 (2026-11-03 20:13)
 
