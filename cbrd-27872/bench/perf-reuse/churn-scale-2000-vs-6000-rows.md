@@ -1,0 +1,26 @@
+| rows | build | statement | cycle | n | median ms | range ms |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2000 | stage1h | delete | c1 | 2 | 15.9 | 15.2-16.5 |
+| 2000 | stage1h | delete | c2+ | 4 | 13.9 | 11.6-14.6 |
+| 2000 | stage1h | reinsert | c1 | 2 | 51.6 | 48.5-54.8 |
+| 2000 | stage1h | reinsert | c2+ | 4 | 51.5 | 50.3-53.4 |
+| 2000 | stage1h | update | c1 | 2 | 162.6 | 140.1-185.0 |
+| 2000 | stage1h | update | c2+ | 4 | 147.5 | 124.8-171.9 |
+| 2000 | stage2 | delete | c1 | 2 | 11.9 | 11.1-12.6 |
+| 2000 | stage2 | delete | c2+ | 4 | 13.0 | 9.7-22.4 |
+| 2000 | stage2 | reinsert | c1 | 2 | 48.0 | 47.0-49.0 |
+| 2000 | stage2 | reinsert | c2+ | 4 | 48.5 | 45.7-49.3 |
+| 2000 | stage2 | update | c1 | 2 | 128.2 | 125.6-130.8 |
+| 2000 | stage2 | update | c2+ | 4 | 119.8 | 111.8-120.5 |
+| 6000 | stage1h | delete | c1 | 2 | 31.8 | 28.6-34.9 |
+| 6000 | stage1h | delete | c2+ | 4 | 30.7 | 22.3-37.6 |
+| 6000 | stage1h | reinsert | c1 | 2 | 124.7 | 123.4-126.0 |
+| 6000 | stage1h | reinsert | c2+ | 4 | 133.8 | 125.8-143.2 |
+| 6000 | stage1h | update | c1 | 2 | 412.0 | 399.0-424.9 |
+| 6000 | stage1h | update | c2+ | 4 | 371.7 | 369.4-396.5 |
+| 6000 | stage2 | delete | c1 | 2 | 28.2 | 24.5-31.9 |
+| 6000 | stage2 | delete | c2+ | 4 | 22.1 | 19.1-27.0 |
+| 6000 | stage2 | reinsert | c1 | 2 | 127.1 | 124.8-129.3 |
+| 6000 | stage2 | reinsert | c2+ | 4 | 126.0 | 111.4-186.5 |
+| 6000 | stage2 | update | c1 | 2 | 387.1 | 384.2-390.0 |
+| 6000 | stage2 | update | c2+ | 4 | 979.6 | 885.0-1118.6 |
