@@ -277,6 +277,25 @@ private-ex commit `8ef4f6278`이 answer 5개를 고쳤다. 같은 변경은 이�
 
 OOS 작업이 고칠 엔진 실패는 없다. 남은 실패 41건(`test_sql` 2, `test_sql_by_cci` 38, `test_shell` 1)은 모두 develop run과 diff가 같다. 이 결론은 [CBRD-28013](https://jira.cubrid.org/browse/CBRD-28013) 본문에 기록했다.
 
+## 계속 추적하는 방법
+
+develop을 다시 merge할 때마다 같은 일이 생길 수 있다. 이번에 두 번 생긴 것은 다음 두 종류이다.
+
+- develop이 error code를 새로 써서 OOS error code 번호가 밀린다. 그러면 그 번호가 들어 있는 sql·shell answer도 바꿔야 한다. 확인 방법: `git grep -E -e '-13[89][0-9]'`으로 옛 번호가 남아 있는지 찾는다.
+- develop의 새 실행 경로가 record bytes를 직접 읽어 OOS 값을 잘못 읽는다(page batch, `dcf38cb0a`). 이 경우는 OOS ctest가 먼저 잡았다.
+
+#7990에서 run을 돌릴 때마다 [tools/oos-ci-compare.py](tools/oos-ci-compare.py)로 develop 대상 PR run과 비교한다.
+
+```
+python3 -I tools/oos-ci-compare.py <OOS run> <develop PR run> [<develop PR run> ...]
+```
+
+- suite마다 `failed.list`와 실패한 shard의 JUnit XML을 읽는다. case마다 `same`(develop run과 같은 diff), `differs`(develop에서도 실패하지만 diff가 다름), `oos-only`(develop에서는 실패하지 않음) 중 하나로 분류한다.
+- shell은 `-N : NOK` 줄을 비교하고, assertion의 소스 줄 번호는 무시한다.
+- `differs`나 `oos-only`가 하나라도 있으면 exit 1이다. 그 case만 직접 보면 된다.
+- baseline으로는 같은 날 develop 대상 PR run 여러 개를 쓴다. artifact server에 결과가 남아 있는 run만 쓸 수 있다.
+- 검증: run 42785110884를 이 스크립트로 비교한 결과는 수작업 분석과 같았다(`oos-only` 3, `same` 41).
+
 ## 한계
 
 - develop baseline은 develop push run이 아니라 develop 기반 PR run이다. 각 PR 변경이 일부 case에 영향을 줄 수 있다. 그래서 6개 run을 썼고, (b)는 6개 모두에서 통과한 case만 넣었다.
