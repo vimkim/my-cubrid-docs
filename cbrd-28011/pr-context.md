@@ -30,3 +30,4 @@ Not included: CI trigger, TC PR edits, JIRA updates, reviewer messages.
 - Operation: update existing PR #8491 body only; title and draft status unchanged; no source push.
 - Remote body before update equals revision 1 (`b961c46:cbrd-28011/pr-body.md`).
 - Changes: release-build OOS fetch composition (measured: 3 fetches for one chunk, +1 per chunk; 800 for 200 rows x 2 chunks), debug-build numbers kept for contrast, TC reference CUBRID/cubrid-testcases#4148 (local native run PASS).
+- Revision 2 published: PR #8491 body updated and verified equal to `cbrd-28011/pr-body.md`; title, draft status and head a4fec6f8e2 unchanged.
