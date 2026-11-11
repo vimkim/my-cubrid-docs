@@ -6,6 +6,7 @@ Last modified: 2026-11-11, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [shpark-review-assessment.md](shpark-review-assessment.md) | shparkcubrid의 #7990 리뷰 전 항목 판정(데이터 손실 2건은 #8434로 해결 가능, 기준 2·CDC·구조는 팀 결정), 직접 확인한 근거, 팀이 정할 것, 엔진 순서. 탭별 상세 보고서 3개(`shpark-review-20261111/`) 링크 | 2026-11-11 | 2026-11-11 | 리뷰를 만족시킬 수 있는지와 남은 결정을 정리 |
 | [tc-review-disposition.md](tc-review-disposition.md) | 필수 TC #3551·#4210 리뷰 전수, 넓은 행 -1396 경위와 LOB 개수별 크기 측정, 다중 LOB 보강 후보와 testkit 검증, 본문 갱신점, 머지 순서, 회신·릴리스 노트 초안 | 2026-11-11 | 2026-11-11 | 철회된 블로킹과 TC 리뷰를 맞추고 머지 전 처리 근거를 남김 |
 | [PR-7990-hornetmj-review-checklist_20261029_codex.md](PR-7990-hornetmj-review-checklist_20261029_codex.md) | 리뷰 6개의 체크리스트, R6 CI 경고와 CTP 생성기 수정·별도 회사 PR 793 게시, R3·R4 추적 단위(CBRD-27872, CBRD-27213) | 2026-10-29 | 2026-11-02 | 팀장님 리뷰를 하나씩 이해하고 근거와 진행 상태를 보존 |
 | [PR-7990-R3-R4-tracking-decision_dcbf09e_claude.md](PR-7990-R3-R4-tracking-decision_dcbf09e_claude.md) | R3·R4 결론 표, CBRD-27872 발급과 CBRD-27213 편입, 두 이슈의 중복 요구 조정, 열린 결정 | 2026-11-02 | 2026-11-02 | 독립 분석 두 개를 검토해 추적 단위를 정함 |
