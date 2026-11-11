@@ -19,9 +19,9 @@ https://jira.cubrid.org/browse/CBRD-27785
 
 ## Remarks
 
-- 현재 head는 `855f220d5`입니다. base `feature/oos-merge`(`50619ce53`, develop 반영 포함)를 merge했습니다. 충돌은 `heap_file.c`의 속성 reader와 OOS SQL 테스트 공통 헤더에서 났습니다. 이 PR의 reader 구조를 유지하고, base가 더한 함수 인덱스 검사([CBRD-25984](https://jira.cubrid.org/browse/CBRD-25984))를 새 reader에 넣었습니다.
-- [전체 CI run 42801815682](https://github.com/CUBRID/cubrid/actions/runs/42801815682)는 진행 중입니다.
-- 로컬에서 `855f220d5`의 release CTest 50/50이 통과했습니다. 이전 head `4c3c8d791`에서는 debug OOS CTest 44/44가 통과했고, 기준 변경 전 코드에서는 새 경계 테스트의 4,012B가 inline에 남아 실패합니다. strict GCC 8.5 컴파일(SA·SERVER)은 `5837393ff`에서 확인했습니다.
+- 현재 head는 `cd24a212a`입니다. `855f220d5`에서 base `feature/oos-merge`(`50619ce53`, develop 반영 포함)를 merge했습니다. 충돌은 `heap_file.c`의 속성 reader와 OOS SQL 테스트 공통 헤더에서 났습니다. 이 PR의 reader 구조를 유지하고, base가 더한 함수 인덱스 검사([CBRD-25984](https://jira.cubrid.org/browse/CBRD-25984))를 새 reader에 넣었습니다. `cd24a212a`는 `heap_file.h`에 빈 줄 하나를 더합니다. GNU indent가 `/* *INDENT-OFF* */` 바로 앞 선언의 마지막 줄을 옮기지 않게 하는 수정이며, base에도 같은 code-style 문제가 있습니다.
+- [전체 CI run 42968315485](https://github.com/CUBRID/cubrid/actions/runs/42968315485)에서 release·debug 빌드, SQL, medium, code-style이 성공했습니다. shell은 `cbrd_25894.sh` 1건이 실패했고 [재실행 run 42990122676](https://github.com/CUBRID/cubrid/actions/runs/42990122676)에서 성공했습니다. SQL(CCI)은 develop에서도 나는 공통 실패와 같은 shard에서 실패했습니다. 이전 run에서 base TC 때문에 실패하던 shell `cbrd_27571.sh`와 SQL `cbrd_27762.sql`, `r_outer_join.sql`은 develop의 TC revert를 두 TC 레포의 `feature/oos-merge`에 가져와 해소했습니다. `cbrd_27179.sh`의 vacuum assertion은 한 번 났고, 재실행과 로컬 debug 5회에서 재현되지 않았습니다.
+- 로컬에서 `855f220d5`의 release CTest 50/50이 통과했습니다(`cd24a212a`는 빈 줄 하나만 더합니다). 이전 head `4c3c8d791`에서는 debug OOS CTest 44/44가 통과했고, 기준 변경 전 코드에서는 새 경계 테스트의 4,012B가 inline에 남아 실패합니다. strict GCC 8.5 컴파일(SA·SERVER)은 `5837393ff`에서 확인했습니다.
 - 새 base `50619ce53` 대비 `855f220d5`의 서버 명령어 수(release, 좋아지면 +)는 narrow scan +5.44%, wide scan +9.64%, 일반 테이블 풀 스캔 +0.05%, 조건 스캔 +7.26%, UPDATE +3.84%입니다. 서버 시작 사이 편차는 0.1% 이하입니다. 측정 전에 정한 회귀 기준(2% 넘게 나빠짐)에 해당하는 경우는 없습니다. 원인은 profile로 확인하지 않았으므로 속도 개선으로 주장하지 않습니다.
 - 이 항목의 수치는 merge 전 base에서 잰 값입니다. `-fstack-usage`로 잰 레코드 읽기 함수의 stack frame은 `f8114e432`의 16.6~16.8KB에서 128~336 bytes로 줄었습니다. `f8114e432` 대비 서버 명령어 수는 5개 경우 모두 0.46~1.82% 적었고, cycles도 회귀 기준에 해당하지 않았습니다(`5837393ff`에서 측정).
 - develop `4781495` 대비 성능은 merge 전 11-03에 `4c3c8d791`에서 다시 쟀습니다. 서버 명령어 수 기준이며, 좋아지면 +, 나빠지면 −로 적습니다. 일반 테이블의 풀 스캔은 +0.79%, 조건 스캔은 −0.83%, UPDATE는 −1.34%(중앙값)입니다. DB locale은 `en_US.utf8`이며 테이블 문자셋은 따로 기록하지 않았습니다.
