@@ -41,3 +41,30 @@ The user has authorized this draft PR. Do not mark it ready. Do not merge it." I
 3. Draft PR created: https://github.com/CUBRID/cubrid/pull/8492. Verified draft, base `feature/oos-merge`, head
    `bee96e666`, assignee `vimkim`, title as proposed. Published body equals `pr-body.md` byte for byte apart from
    the final newline.
+
+## Revision 2 (2026-11-11)
+
+A review finding (approved by the user and handed to this session, file `CBRD-28035-reader-race.md`) showed that the
+eager reclaim in `bee96e666` races non-fixed scans. Reproduced: 354 and 492 reader errors with the eager design,
+0 on base. The design changes to keeping the unchanged OOS chain.
+
+| Field | Value |
+| --- | --- |
+| Operation | update existing PR #8492 (body and title) |
+| SOURCE_COMMIT | `7e9a4a513788bdc382cce525373db4ea11fe05bb` |
+| Remote head at preparation | `bee96e66649344d6dfff31740e0746511af5f92a` |
+| Existing body SHA-256 | `bfa2d16d3566bb014805e065942f31e88366658864edb3f8418bda8f6c130432` (matches `pr-body.md`) |
+| Existing title | `[CBRD-28035] Reclaim the old OOS chain when NEXT VALUE updates a serial` |
+| Proposed title | `[CBRD-28035] Reuse the serial comment's OOS chain in NEXT VALUE` |
+| Body | `cbrd-28035/pr-body-rev2.md` |
+| Explanation | `cbrd-28035/race-repro.md`, public URL `https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-28035/race-repro.md` |
+
+Authorization: the finding says "Update the PR body to match the design that you choose" and "Keep PR #8492 as a
+draft". The earlier "1번 해줘" asks to mark the PR ready after CI passes; that now waits for CI on the new head.
+
+Operations:
+
+1. Merge `docs/CBRD-28035-pr-body-rev2` to my-cubrid-docs `main` and push.
+2. Push `CBRD-28035-serial-oos-chain-leak` to `vk` (fast-forward, no force).
+3. Post `/run all` for the new head; it supersedes run 43016763833 on the obsolete head.
+4. `gh pr edit 8492 --body-file cbrd-28035/pr-body-rev2.md --title <proposed title>`. The PR stays a draft.
