@@ -2,12 +2,14 @@
 
 **Goal.** Check that a commit with postpone actions can wait for one log flush instead of two without losing durability or atomicity.
 
-**Most consequential result.** No confirmed defect. The guard for `RVHF_LOB_REMOVE_DIR` closes the one data-loss path that a plain flush removal opens; a crash test reproduces the loss without the guard and shows the fix. One related risk stays unverified: vacuum can delete external-storage LOB files of a transaction whose commit is not yet durable (R-1). The window is pre-existing, and this PR makes it longer for transactions with postpone actions.
+**Most consequential result.** No confirmed defect. The guard for `RVHF_LOB_REMOVE_DIR` closes the one data-loss path that a plain flush removal opens; a crash test reproduces the loss without the guard and shows the fix. A known LOB data-loss defect, CBRD-27964 (an old LOB file is deleted without a log record before the commit is durable), keeps its window open longer for a transaction with postpone actions (R-1); it is fixed in CBRD-27964, not here.
 
 ## Verdict and follow-up
 
-- **Verdict:** `incomplete`. No confirmed findings; R-1 and R-3 are material safety facts without execution evidence.
-- **Follow-up review required:** yes. Run the R-1 fault-injection check before merge, or record a decision that R-1 is tracked as a separate develop issue because it predates this PR. R-3 is optional evidence.
+- **Verdict:** `incomplete`. No confirmed findings; R-3 is a new reachable combination without execution evidence.
+- **Follow-up review required:** yes. Run the R-3 check before merge. R-1 is tracked in CBRD-27964 and R-2 is pre-existing; neither blocks this PR.
+
+Revision 2026-11-11: R-1 was restated after reading CBRD-27964 (see below).
 
 ## Snapshot
 
@@ -43,7 +45,7 @@ None.
 
 | ID | Risk | Attribution | Owner | Decisive check |
 |---|---|---|---|---|
-| R-1 | Vacuum deletes external-storage LOB files (`RVES_NOTIFY_VACUUM`, vacuum.c:3572) once a block's newest MVCCID is below the oldest visible MVCCID and the block is a page behind the append position (vacuum.c:3132-3152). It does not check that the deleting transaction's commit is durable. `logtb_complete_mvcc` runs before CWP is appended. If the server crashes before the commit is durable, the transaction is undone and its row comes back without its LOB file. | Pre-existing for every transaction (window from MVCC completion to the commit flush). This PR lengthens the window for a transaction with postpone actions by the postpone run time. | recovery | Debug build with a fault-injection pause after `log_append_commit_postpone`: delete a BLOB row and drop a large table in one transaction, let vacuum process the block, SIGKILL, restart, read the BLOB. |
+| R-1 | The reviewer's first scenario was vacuum deleting `RVES_NOTIFY_VACUUM` LOB files (vacuum.c:3572) before the commit is durable. CBRD-27964 executed that path and showed it cannot cause loss: those files were created by the same transaction, so no row points to them after a rollback. The real loss path is CBRD-27964 itself: `tx_lob_locator_clear` deletes a LOB file committed by an earlier transaction with `es_delete_file` and no log (transaction_transient.cpp:452) before the commit record. A crash before the commit is durable leaves the row with the old locator and no file. | Pre-existing (CBRD-27964, Confirmed). The delete happens before CWP, so this PR does not cause it, but for a transaction with postpone actions the window now lasts until the LOG_COMMIT flush instead of the CWP flush (source argument, not executed). | CBRD-27964 | Fix in CBRD-27964; when its delete waits for a durable commit, this window disappears. |
 | R-2 | `logpb_flush_pages` waits while `nxio_lsa < flush_lsa` (log_page_buffer.c:4144), but `logpb_need_wal` uses `<=`. When the log was fully flushed just before a commit record was appended, `nxio_lsa` can equal that record's start and the commit may return before the record is durable. | Pre-existing, base identical. This PR now relies on the same wait for the only durability barrier of a postpone commit. | systems, recovery | Instrumented run that records `nxio_lsa` and the commit start LSA at return. |
 | R-3 | `file_destroy` discards the file's dirty pages (`pgbuf_discard_pages_of_sectors`, file_manager.c:4201). If CWP is then lost, the transaction is undone and the file returns with possibly older disk pages. The source argument says redo replays the discarded changes because the redo start cannot pass CWP. | New reachable combination. | recovery | `FI_TEST_FILE_MANAGER_DESTROY_HOLD` plus a checkpoint, then crash and `checkdb`. The 24-kill DROP test covers this path without a forced checkpoint. |
 
@@ -68,7 +70,7 @@ Checks run by the coordinator:
 | Release and debug builds | head | pass |
 | gha-ci `/run all` | head | running at report time (run 43020466468) |
 
-Not run: ctest, debug-build crash tests (CBRD-27987 asserts first), 2PC participant crash test, the R-1/R-2/R-3 checks.
+Not run: ctest, debug-build crash tests (CBRD-27987 asserts first), 2PC participant crash test, the R-2/R-3 checks. R-1 relies on the executed analysis in CBRD-27964.
 
 ## Budget
 

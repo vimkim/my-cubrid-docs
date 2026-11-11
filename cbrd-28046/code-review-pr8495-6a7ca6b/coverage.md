@@ -16,7 +16,7 @@
 |---|---|---|---|
 | Commit-with-postpone durability, recovery, checkpoint, archive | recovery (opus) | Safe at level 3; DROP crash test level 4 | R-3 runtime check (optional) |
 | LOB dir guard | recovery (opus), systems (sonnet) | Correct in all caller contexts; level 5 crash test with negative control | none |
-| Q1 shared | recovery (opus), HA (sonnet), independent | No other direct non-WAL postpone; indirect vacuum ES delete R-1 (recovery only) | R-1 check before merge or deferral |
+| Q1 shared | recovery (opus), HA (sonnet), independent | No other direct non-WAL postpone; indirect LOB delete R-1 (recovery only), restated as CBRD-27964 | tracked in CBRD-27964 |
 | HA, CDC, flashback, 2PC, async, SA_MODE | HA (sonnet) | No defect, level 3; 2PC participant path partially traced | 2PC participant crash test (not run) |
 | Thread context, LOG_CS, latches, compile | systems (sonnet) | No defect; heap_file.c compiles in SA and SERVER modes | none |
 | Reuse before CWP is durable | systems (sonnet) | Logged reuse safe; no-redo index build C1 disproven by coordinator (level 3) | none |
