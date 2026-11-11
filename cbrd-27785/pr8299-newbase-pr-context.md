@@ -55,3 +55,4 @@ Purpose와 Implementation은 바꾸지 않는다. Remarks만 바꾼다.
 ## 게시 확인 (cd24a212a 판)
 
 2026-11-11에 사용자가 고친 본문과 조치 목록(docs를 `main`에 merge·push, PR 본문 갱신)을 보고 "1 진행해줘."라고 답했다. 위 "확인할 조치" 1~3번을 이 판으로 실행한다.
+- 2026-11-11: docs를 `main`(`d2beb57`)에 fast-forward merge하고 push했다. PR #8299 본문을 `pr8299-newbase-pr-body.md`로 갱신했다. 게시된 본문 SHA-256은 `969a01ec05fa3f60447648878f16f6a958d16f41426e1c2d589477de5a6ed54c`이며 파일과 같다. title, base, ready 상태는 그대로다.
