@@ -1,0 +1,162 @@
+{
+  "jar_sha256": "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88",
+  "model_sha256": "3d3e3680dda3c7bc12244992c88d07bd2ba5b7731868246ea64d5f7c712c1959",
+  "checker_sha256": "ee23f7b17ffa81c4e1fd95603bb9a4acdce63044b1d785aeb6c21426849966b3",
+  "seconds": 29.057,
+  "budget_seconds": 300,
+  "cases": [
+    {
+      "case": "complete",
+      "result": "PASS",
+      "expected_violation": null,
+      "found_violation": null,
+      "seconds": 4.606,
+      "exit_code": 0,
+      "settings": {
+        "GuardMode": "all",
+        "MetadataMode": "complete",
+        "LifetimeMode": "execute",
+        "Classifier": "semantic",
+        "MaxDepth": 3
+      },
+      "generated": 145720,
+      "distinct": 6092
+    },
+    {
+      "case": "no-select-check",
+      "result": "PASS",
+      "expected_violation": "NoWritesUnderSelect",
+      "found_violation": "NoWritesUnderSelect",
+      "seconds": 3.389,
+      "exit_code": 12,
+      "settings": {
+        "GuardMode": "no-select-check",
+        "MetadataMode": "complete",
+        "LifetimeMode": "execute",
+        "Classifier": "semantic",
+        "MaxDepth": 3
+      },
+      "generated": 861,
+      "distinct": 176
+    },
+    {
+      "case": "no-overlap-check",
+      "result": "PASS",
+      "expected_violation": "NoWritesToAncestorTables",
+      "found_violation": "NoWritesToAncestorTables",
+      "seconds": 3.495,
+      "exit_code": 12,
+      "settings": {
+        "GuardMode": "no-overlap-check",
+        "MetadataMode": "complete",
+        "LifetimeMode": "execute",
+        "Classifier": "semantic",
+        "MaxDepth": 3
+      },
+      "generated": 356,
+      "distinct": 84
+    },
+    {
+      "case": "top-only",
+      "result": "PASS",
+      "expected_violation": "NoWritesToAncestorTables",
+      "found_violation": "NoWritesToAncestorTables",
+      "seconds": 4.116,
+      "exit_code": 12,
+      "settings": {
+        "GuardMode": "top",
+        "MetadataMode": "complete",
+        "LifetimeMode": "execute",
+        "Classifier": "semantic",
+        "MaxDepth": 3
+      },
+      "generated": 16801,
+      "distinct": 1869
+    },
+    {
+      "case": "cache-empty",
+      "result": "PASS",
+      "expected_violation": "NoWritesToAncestorTables",
+      "found_violation": "NoWritesToAncestorTables",
+      "seconds": 2.983,
+      "exit_code": 12,
+      "settings": {
+        "GuardMode": "all",
+        "MetadataMode": "cache-empty",
+        "LifetimeMode": "execute",
+        "Classifier": "semantic",
+        "MaxDepth": 3
+      },
+      "generated": 716,
+      "distinct": 308
+    },
+    {
+      "case": "xasl-type-only",
+      "result": "PASS",
+      "expected_violation": "NoWritesUnderSelect",
+      "found_violation": "NoWritesUnderSelect",
+      "seconds": 3.127,
+      "exit_code": 12,
+      "settings": {
+        "GuardMode": "all",
+        "MetadataMode": "complete",
+        "LifetimeMode": "execute",
+        "Classifier": "xasl",
+        "MaxDepth": 3
+      },
+      "generated": 861,
+      "distinct": 176
+    },
+    {
+      "case": "prepare-only",
+      "result": "PASS",
+      "expected_violation": "NoWritesToAncestorTables",
+      "found_violation": "NoWritesToAncestorTables",
+      "seconds": 3.182,
+      "exit_code": 12,
+      "settings": {
+        "GuardMode": "all",
+        "MetadataMode": "complete",
+        "LifetimeMode": "prepare-only",
+        "Classifier": "semantic",
+        "MaxDepth": 3
+      },
+      "generated": 356,
+      "distinct": 84
+    },
+    {
+      "case": "error-frame-leak",
+      "result": "PASS",
+      "expected_violation": "FramesFollowExecution",
+      "found_violation": "FramesFollowExecution",
+      "seconds": 2.567,
+      "exit_code": 12,
+      "settings": {
+        "GuardMode": "all",
+        "MetadataMode": "complete",
+        "LifetimeMode": "leak-on-error",
+        "Classifier": "semantic",
+        "MaxDepth": 3
+      },
+      "generated": 266,
+      "distinct": 34
+    },
+    {
+      "case": "deny-all-writes",
+      "result": "PASS",
+      "expected_violation": "DecisionsMatchRules",
+      "found_violation": "DecisionsMatchRules",
+      "seconds": 1.57,
+      "exit_code": 12,
+      "settings": {
+        "GuardMode": "deny-all-writes",
+        "MetadataMode": "complete",
+        "LifetimeMode": "execute",
+        "Classifier": "semantic",
+        "MaxDepth": 3
+      },
+      "generated": 110,
+      "distinct": 16
+    }
+  ]
+}

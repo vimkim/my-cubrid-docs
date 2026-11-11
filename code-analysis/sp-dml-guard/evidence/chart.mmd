@@ -1,0 +1,32 @@
+---
+title: "바깥 참조 테이블 검사를 제거한 설계의 최단 반례"
+---
+stateDiagram-v2
+  state "Legend" as legend {
+    lg0: safe
+    lg1: broken
+    lg2: Breaks NoWritesToAncestorTables
+    lg3: Path to the NoWritesToAncestorTables bug
+  }
+  class lg0 blue
+  class lg1 pink
+  class lg2 breaks
+  class lg3 bugPath
+  s0: 활성 SQL이 없음
+  s1: 바깥 SQL을 준비함
+  s2: 바깥 SQL을 실행 중
+  s3: 바깥 참조 테이블에 SP 쓰기를 허용함
+  [*] --> s0
+  s0 --> s1: SQL을 준비함
+  s1 --> s2: 준비한 SQL을 실행함
+  s2 --> s3: 준비한 SQL을 실행함
+  classDef breaks fill:#ffecee,stroke:#e72e3b,stroke-width:2.5px,color:#cd2834
+  class s0 blue
+  class s0 bugPath
+  class s1 blue
+  class s1 bugPath
+  class s2 blue
+  class s2 bugPath
+  class s3 pink
+  class s3 breaks
+  class s3 bugPath
