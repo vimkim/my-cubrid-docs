@@ -1,4 +1,4 @@
-https://jira.cubrid.org/browse/CBRD-27881
+https://jira.cubrid.org/browse/CBRD-28037
 
 ## Purpose
 

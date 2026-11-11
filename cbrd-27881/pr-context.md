@@ -6,17 +6,20 @@
 
 | 항목 | 값 |
 | --- | --- |
-| Ticket | CBRD-27881, R-16 |
-| Operation | `create`, 새 draft PR |
+| Ticket | [CBRD-28037](https://jira.cubrid.org/browse/CBRD-28037), R-16 |
+| Parent | CBRD-27881, OOS refactor TODO |
+| Operation | `update`, 기존 draft PR의 제목과 JIRA 링크 정정 |
+| Existing PR | [CUBRID/cubrid #8485](https://github.com/CUBRID/cubrid/pull/8485) |
 | Target repository | `CUBRID/cubrid` |
 | Base branch | `feature/oos-merge` |
 | Observed remote base | `50619ce53ef7b0e6bc8b468b2065ae7da4ef592f` |
 | Source repository | `vimkim/cubrid` |
 | Source branch | `CBRD-27881-r16-free-space-pr` |
 | SOURCE_COMMIT | `b8d6d6d606daaf301d42269c67b0bc83b4bddcc7` |
-| Observed remote head | 없음. `git ls-remote vk refs/heads/CBRD-27881-r16-free-space-pr` 결과가 비어 있다. |
-| Existing matching PR | 정확한 head와 base를 검색한 결과 없음. 생성 직전에 다시 확인한다. |
-| Proposed title | `[CBRD-27881] Share the OOS test page free-space helper` |
+| Observed remote head | `b8d6d6d606daaf301d42269c67b0bc83b4bddcc7` |
+| Title before correction | `[CBRD-27881] Share the OOS test page free-space helper` |
+| Body SHA-256 before correction | `7ad2cf8b1dfb1678612a1c9cdff330d7be6f0e09cc596d03d35be8b12a1dff3a` |
+| Proposed title | `[CBRD-28037] Share the OOS test page free-space helper` |
 | Proposed assignee | `vimkim` |
 | Draft status | 사용자가 요청한 draft를 유지한다. |
 
@@ -57,7 +60,7 @@ git diff --check 50619ce53ef7b0e6bc8b468b2065ae7da4ef592f...b8d6d6d606daaf301d42
 | 항목 | 값 |
 | --- | --- |
 | Docs repository | `vimkim/my-cubrid-docs` |
-| Docs task branch | `docs/r16-pr-prep` |
+| Docs task branch | `docs/r16-subtask-link` |
 | Integration branch | `main` |
 | body_file | `cbrd-27881/pr-body.md` |
 | context_file | `cbrd-27881/pr-context.md` |
@@ -95,3 +98,13 @@ feature 브랜치의 직접 병합, 엔진 PR 병합과 CI 수동 실행은 제�
 검토한 본문 파일과 GitHub에서 다시 읽은 본문은 개행까지 같다. GitHub에서 읽은 6개 파일의 patch도 검토한 source commit과 같은 stable patch ID다. source branch의 일반 push 결과는 `SOURCE_COMMIT`과 같다. 문서 작업 브랜치는 당시 최신 로컬 `main`으로 충돌 없이 rebase한 뒤 fast-forward 병합·push했다.
 
 게시 과정에서 source code를 바꾸지 않았으므로 위 Debug 빌드·설치와 CTest 7/7 결과의 source identity도 유지된다. 이 기록은 draft PR 게시 완료를 뜻하며 엔진 병합이나 전체 회귀 통과를 뜻하지 않는다.
+
+## 하위 이슈 연결 정정
+
+최초 게시에서 총괄 부모 CBRD-27881을 PR의 작업 번호로 사용하고 하위 이슈를 만들지 않은 누락이 있었다. 사용자는 총괄 이슈 아래의 sub-task를 사용해야 한다고 정정했고, R-16 전용 하위 이슈를 만든 뒤 PR 제목과 본문을 그 번호로 연결한다는 제안에 "좋아"라고 답했다.
+
+R-16의 별도 [CBRD-28037](https://jira.cubrid.org/browse/CBRD-28037)을 생성했다. JIRA에서 실제 유형이 `Sub-task`, 부모가 `CBRD-27881`임을 확인했다. raw description과 summary는 생성 dry-run payload와 정확히 같다. 기존 CBRD-27883은 PR #8368로 완료한 선행 공용 헤더 정리이며 R-16과 범위가 달라 재사용하지 않았다. 중복 검색은 정상 sync한 상위 후보 20개에서 중복을 찾지 못했다.
+
+이번 PR 수정은 제목의 이슈 번호와 본문 첫 줄의 JIRA 링크만 바꾼다. 기존 본문의 나머지 내용과 source commit, base, head, assignee, draft 상태는 유지한다. source push는 필요하지 않다. 최초 게시 기록과 기존 문서 링크를 보존하려고 본문과 context의 저장 경로는 기존 부모 디렉터리를 사용한다.
+
+이슈 원문은 `vimkim/my-cubrid-jira`의 `issues/CBRD-28037-oos-r16-page-free-space-helper.md`에 보존한다. 문서 정정 커밋도 task branch에서 검증한 뒤 main으로 rebase·fast-forward 병합·push하고 병합된 문서 task만 비강제로 정리한다. 이 기록은 후속 엔진 병합이나 JIRA 상태 변경의 승인을 대신하지 않는다.
