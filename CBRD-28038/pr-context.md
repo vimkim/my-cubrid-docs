@@ -69,9 +69,13 @@ does not waive content, source-head, remote-target, or draft-status checks.
   builds, so it does not override the optional CCI failure or the full workflow
   conclusion. One fresh status snapshot after that meaningful event verified all
   six gha-ci contexts and the workflow conclusion.
-- TC Merge Gate. Check TC PRs is failing. Public TC PR 4142 and private TC PR
-  4843 remain open with zero changed files. Human closure is required; neither
-  testcase PR was closed or merged by the agent.
+- TC follow-up. The user explicitly authorized closure with "그거 닫자" after
+  the zero-change PRs were presented. Public TC PR 4142 was closed at
+  2026-11-11T10:24:14Z and private TC PR 4843 at 10:24:16Z. Both had zero changed
+  files immediately before closure; closed/unmerged state was read back.
+- TC Merge Gate. The first post-closure snapshot still showed the failed
+  10:22:21Z verdict from before closure. No manual branch deletion or CI rerun
+  was performed.
 - Final state. The PR remains a draft targeting develop at the recorded source
   head. Its body is unchanged and was read back again. No additional source push,
   CI rerun, or local develop integration occurred.
