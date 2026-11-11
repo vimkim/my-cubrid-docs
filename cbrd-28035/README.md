@@ -6,5 +6,5 @@ Last modified: 2026-11-11 (Asia/Seoul).
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [pr-body.md](pr-body.md) | PR body (Korean) for the draft PR at source `bee96e666` | 2026-11-11 | 2026-11-11 | Draft PR against `feature/oos-merge` |
+| [pr-body.md](pr-body.md) | PR body (Korean), as published on draft PR CUBRID/cubrid#8492 at `bee96e666` | 2026-11-11 | 2026-11-11 | Draft PR against `feature/oos-merge` |
 | [pr-context.md](pr-context.md) | Draft context: source commit, base, authorization, operations, execution record | 2026-11-11 | 2026-11-11 | Resume and publication bookkeeping |

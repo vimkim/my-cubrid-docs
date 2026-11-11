@@ -33,3 +33,11 @@ The user has authorized this draft PR. Do not mark it ready. Do not merge it." I
    --assignee vimkim --title <proposed title> --body-file cbrd-28035/pr-body.md`.
 
 ## Execution record
+
+2026-11-11 (Asia/Seoul), attempt 1. Body SHA-256 at upload `bfa2d16d3566bb014805e065942f31e88366658864edb3f8418bda8f6c130432`.
+
+1. Docs commit `97d0c21` fast-forwarded to `main` and pushed to `origin`.
+2. `CBRD-28035-serial-oos-chain-leak` pushed to `vk`; remote head `bee96e66649344d6dfff31740e0746511af5f92a` equals SOURCE_COMMIT.
+3. Draft PR created: https://github.com/CUBRID/cubrid/pull/8492. Verified draft, base `feature/oos-merge`, head
+   `bee96e666`, assignee `vimkim`, title as proposed. Published body equals `pr-body.md` byte for byte apart from
+   the final newline.
