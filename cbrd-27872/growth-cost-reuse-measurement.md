@@ -16,7 +16,9 @@
 4. **drain이 오래 걸린다 (측정함, 원인 모름).** `5d7eda23c`부터 나타난다. cycle 2 이후 UPDATE 뒤 vacuum이 옛 chunk를 모두 지울 때까지 1단계는 0.34 s, 2단계는 2.4 s가 걸렸다. 같은 로그를 큰 filler 한 번으로 밀면 두 빌드 모두 즉시 끝난다.
 5. **요청서의 기준선 가정이 틀렸다 (측정함).** `e8e714dae`와 `94ed2ea46`은 같은 동작이 아니다. 그래서 run을 둘 돌렸다. 아래 "기준선 정정"을 먼저 읽을 것.
 
-복사를 고친 뒤 같은 시험(`churn_scale.py`, 6,000행)으로 다시 재고 진행하기를 권한다. 이 수정은 시도하지 않았다. 사용자가 정할 일은 셋이다. 집합 복사를 고친 뒤에 진행할지. sector 조항을 허용치 안에서 읽을지. drain 지연의 원인을 확인할지.
+**후속 (같은 날 저녁):** 부모 세션이 `f8cdfca747`로 복사를 고쳤고 같은 시험으로 다시 쟀다. 6,000행 UPDATE는 1단계와 같아졌고(339 대 379 ms) `perf`의 set 연산은 22%에서 0.4%로 줄었으며 단건 INSERT 수치는 그대로다. 로그 block 가설도 시험했다. drain 지연이 로그 완료에 의존한다는 부분은 확인되고, 100쪽과 1 sector가 늦은 vacuum 때문이라는 부분은 반박됐다. 아래 "수정판 `f8cdfca747`"와 "로그 block 가설 시험" 절을 볼 것. 이 위의 결론 문장은 `b8a7e5d74` 기준이다.
+
+복사를 고친 뒤 같은 시험(`churn_scale.py`, 6,000행)으로 다시 재고 진행하기를 권했다(수정은 부모 세션이 했다). 사용자가 정할 일은 셋이다. 집합 복사를 고친 뒤에 진행할지. sector 조항을 허용치 안에서 읽을지. drain 지연의 원인을 확인할지.
 
 ## 기준선 정정
 
@@ -37,7 +39,8 @@
 | stage1 | `e8e714dae` (1단계, 옛 base. run 1) | 11.5.0.2797-e8e714d, 2026-11-09 16:40 | `/home/vimkim/gh/cb/CBRD-27872-after2` | `~/.cub/install/CBRD-27872-after2/release_gcc` |
 | stage1h | `94ed2ea46` (1단계 head, 2단계의 base. run 2) | 11.5.0.2801-94ed2ea, 2026-11-11 15:49 | `/home/vimkim/gh/cb/CBRD-27872-after2h` | `~/.cub/install/CBRD-27872-after2h/release_gcc` |
 | stage2a | `5d7eda23c` (fast path 제거, 아직 dealloc 기반 성장. 귀속용) | 11.5.0.2802-5d7eda2, 2026-11-11 16:42 | `/home/vimkim/gh/cb/CBRD-27872-after2m` | `~/.cub/install/CBRD-27872-after2m/release_gcc` |
-| stage2 | `b8a7e5d74` (2단계, 재사용 우선) | 11.5.0.2803-b8a7e5d, 2026-11-11 15:01 | `/home/vimkim/gh/cb/CBRD-27872-after3` | `~/.cub/install/CBRD-27872-after3/release_gcc` |
+| stage2 | `b8a7e5d74` (2단계, 재사용 우선) | 11.5.0.2803-b8a7e5d, 2026-11-11 15:01 | `/home/vimkim/gh/cb/CBRD-27872-after3` (수정판 측정 때 아래 행으로 옮김) | 복사본 `~/.cub/install/CBRD-27872-after3-b8a7e5d74/release_gcc` |
+| stage2fix | `f8cdfca747` (`b8a7e5d74` 위에 집합 복사 제거) | 11.5.0.2804-f8cdfca, 2026-11-11 17:10 | `/home/vimkim/gh/cb/CBRD-27872-after3` (detached, 위 행의 같은 worktree) | `~/.cub/install/CBRD-27872-after3/release_gcc` |
 
 네 빌드 모두 detached worktree에 로컬 수정이 없고, `release_gcc` preset(RelWithDebInfo, `-O2 -ggdb3 -DNDEBUG`), `/usr/bin/g++` 11.5.0(ccache 경유)이다. 빌드는 `just prepare-build`, `just preset release_gcc`, `direnv exec . just configure`, `direnv exec . just build-and-install` 순서로 했고 3rdparty 다운로드는 실패하지 않았다. `git diff --stat`는 `e8e714dae`와 `94ed2ea46` 사이에서 `3rdparty`, `cmake`, `CMakeLists.txt`가 같음을 보였다. 빌드가 올바른 소스인지 `libcubridsa.so`의 심볼로 확인했다. 2단계가 지우는 함수 세 개(`oos_reclaim_empty_pages`, `oos_try_reclaim_page_internal`, `oos_alloc_page_with_reclaim`)의 이름과 일치하는 심볼 수가 `e8e714dae` 10개, `94ed2ea46` 6개, `5d7eda23c` 4개(fast path 함수만 없음), `b8a7e5d74` 0개다.
 
@@ -161,7 +164,7 @@ run 2는 부하가 run 1의 두 배였고 두 빌드의 값이 모두 커졌다.
 - 페이지 조항(첫 cycle peak + max(2쪽, 10%))은 2단계가 충족한다. cycle 2에서 100쪽 한 번 늘고 18 cycle 동안 평평하다. 쪽당 한 쪽씩 쌓이는 증가라면 5 cycle 안에 허용치 201쪽을 넘었을 것이다.
 - sector 조항("재INSERT 뒤 예약 sector가 첫 peak를 넘지 않는다")은 허용치 없이 읽으면 2단계가 1 sector 넘는다(33 sector = 2,112쪽, 첫 peak 2,001쪽은 32 sector). 허용치 10%를 이 조항에도 적용하면 충족한다(2,112쪽은 첫 peak의 105.5%). ADR 문장은 어느 쪽인지 말하지 않는다. 사용자가 정할 일이다.
 - 1 sector는 64쪽이므로 2단계는 c 파일에서 디스크를 약 1 MiB(64쪽 × 16 KiB) 더 쓴다.
-- **100쪽이 왜 늘어나는가는 모른다.** 2단계에서는 cycle 2의 UPDATE가 살아 있는 2,000개 chunk 위에 새 2,000개를 놓아야 한다. 1단계는 페이지를 반환해 살아 있는 chunk가 1,001쪽에 촘촘히 모여 있다. 2단계는 살아 있는 chunk가 처음 놓인 자리에 흩어져 있다. 반쯤 찬 페이지를 bestspace hint가 모두 알려 주지 못해 약 5%가 더 필요하다는 것이 내 추정이다. 페이지를 chunk 수별로 세어 확인하지는 않았다.
+- **100쪽이 왜 늘어나는가는 모른다.** 2단계에서는 cycle 2의 UPDATE가 살아 있는 2,000개 chunk 위에 새 2,000개를 놓아야 한다. 1단계는 페이지를 반환해 살아 있는 chunk가 1,001쪽에 촘촘히 모여 있다. 2단계는 살아 있는 chunk가 처음 놓인 자리에 흩어져 있다. 반쯤 찬 페이지를 bestspace hint가 모두 알려 주지 못해 약 5%가 더 필요하다는 것이 내 추정이다. 페이지를 chunk 수별로 세어 확인하지는 않았다. 후속 행 수 시험에서 이 증가가 파일의 5%에 비례함을 확인했고 늦은 vacuum 가설은 반박됐다("로그 block 가설 시험" 절).
 
 ### 최종 상태
 
@@ -250,6 +253,150 @@ cycle 1에서는 UPDATE 뒤 filler가 모두 1개다(중앙값. stage2 drain 1.0
 
 이 harness에서 2단계의 서버 CPU(`perf`의 cycles)가 1단계의 1.7-1.8배인 것도 이 filler와 poll(2,101쪽 파일 전체를 읽는 `SHOW HEAP OOS`) 때문으로 보인다(`nums` 전체를 읽는 `heap_next_internal`, `eval_data_filter`가 stage2 상위에 있다). 엔진의 비용이라고 보지 않는다(추정).
 
+## 수정판 `f8cdfca747`
+
+부모 세션이 `b8a7e5d74` 위에 `f8cdfca747`을 올렸다. `oos_reclaim_check_emptied`가 집합 전체를 `examined`와 `batch`에 복사하지 않고 아직 보지 않은 원소 하나씩 고른다(`git diff --stat b8a7e5d74 f8cdfca747`는 `oos_file.cpp` 1파일, 29줄 추가 28줄 삭제). `CBRD-27872-after3`를 이 커밋으로 detached 이동하고 `release_gcc`를 다시 빌드해 설치했다(11.5.0.2804-f8cdfca, 소스 상태 깨끗함). 이전 `b8a7e5d74` 설치는 `~/.cub/install/CBRD-27872-after3-b8a7e5d74`로 복사해 두었다(가설 시험에서 쓴다). `libcubridsa.so`에 `oos_reclaim_check_emptied`가 있고 제거된 함수는 없다. 결과 label은 `stage2fix`이고 기준은 `stage1h`(`94ed2ea46`)다. 새 DB(`/mnt/nvme/data-5/tmp/w878/fix`)를 만들어 run 2와 같은 파라미터로 돌렸다. 두 빌드를 번갈아 돌렸고 서버는 한 번에 하나였다.
+
+load average(1분): 집합 크기 시험, perf, 가설 시험 17:12-17:24는 중앙값 71.7(29-187), 본 측정 17:24-17:47은 47개 표본, 중앙값 66.2(37-117), 후속 17:47-18:00은 중앙값 77.0(39-125)이다([bench/loadavg-reuse-fix.txt](bench/loadavg-reuse-fix.txt)).
+
+### (a) 집합 크기 시험 (측정함)
+
+[churn_scale.py](bench/churn_scale.py), 서버 실행 3회 × cycle 2-3 = 6회(cycle 1은 3회)의 중앙값(범위)이다. 이전 시험(`b8a7e5d74`)의 칸은 같은 표에서 가져왔다.
+
+| 행 수 | 문장 | cycle | stage1h | stage2fix | 이전 stage2 (`b8a7e5d74`) |
+| --- | --- | --- | --- | --- | --- |
+| 6,000 | UPDATE ms | 1 | 429 | 388 | 387 / 397 |
+| 6,000 | UPDATE ms | **2 이후** | **378.5** (359-387) | **338.8** (333-620) | **980 / 1,000** |
+| 6,000 | 재INSERT ms | 2 이후 | 136.5 | 113.2 | 126 / 125 |
+| 6,000 | DELETE ms (대조군) | 2 이후 | 31.3 | 22.4 | 22 / 24 |
+| 2,000 | UPDATE ms | 2 이후 | 138.6 | 112.0 | 120 / 126 |
+
+6,000행 UPDATE의 cycle 2 이후 중앙값이 1단계와 같은 수준(10% 빠름)으로 돌아왔다. stage2fix 6회는 333, 336, 338, 340, 385, 620 ms이고 stage1h 6회는 359-387 ms다. 620 ms는 한 번의 이상치로 보인다. 본 측정 churn(2,000행)의 문장 시간도 같다. 수정판 대 stage1h는 UPDATE cycle 2 이후 133.7 대 148.6 ms(n=60), 재INSERT 63.9 대 58.4 ms(cycle 1 대조군도 63.1 대 52.1 ms라서 구별되지 않음), DELETE 15.4 대 18.0 ms이다.
+
+### (b) perf 프로파일 (측정함)
+
+6,000행 churn 3 cycle의 서버 CPU 표본이다([perf-reuse/](bench/perf-reuse/)의 `*-fixrun.txt`와 `perf-6000rows-stage2fix-f8cdfca747.txt`). 같은 심볼(`std::_Rb_tree<vpid, ..., oos_vpid_order>`와 `_Rb_tree_insert_and_rebalance`, `_Rb_tree_increment`, `_Rb_tree_rebalance_for_erase`) 합이다.
+
+| 빌드 | set 연산 CPU 표본 비중 | `malloc`/`free` 계열 | 서버 cycles |
+| --- | --- | --- | --- |
+| stage1h (`94ed2ea46`) | 0.09% | 6.0% | 6.0 G |
+| 이전 stage2 (`b8a7e5d74`, 이전 프로파일) | **22.0%** | 16.4% | 15.0 G |
+| stage2fix (`f8cdfca747`) | **0.44%** (`equal_range` 0.17, `rebalance_for_erase` 0.15, `_M_insert_unique` 0.10) | 4.6% | 6.7 G |
+
+set 연산이 사라졌다. 남은 0.44%는 집합의 조회, 삽입, 삭제로 보인다(추정). 서버 cycles는 stage1h의 1.12배다(이전 1.77배).
+
+### (c) growth_cost (run 2 파라미터) (측정함)
+
+8 round, 삭제 항목 40회, 동시 8 세션 16회, 재시작 18회, 일반 INSERT 10 round × 30, churn 4회 × 6 cycle이다. 원자료는 [results-reuse-f8cdfca747-vs-94ed2ea46.csv](bench/results-reuse-f8cdfca747-vs-94ed2ea46.csv)이다. 오류 없이 끝났다(모든 단계 rc 0).
+
+| 지표 | stage1h | stage2fix | 이전 stage2 / stage1h (run 2) |
+| --- | --- | --- | --- |
+| 재시작 첫 INSERT ms | 298 (394; 236-399) | 289 (509; 216-510) | 269 / 242 |
+| 재시작 첫 INSERT fetch | 20,271 | 20,270 | 20,270 / 20,271 |
+| 재시작 둘째 INSERT ms | 3.47 (4.38; 2.30-4.51) | 3.07 (4.70; 2.21-5.59) | 3.63 / 3.09 |
+| 비우는 삭제 뒤 INSERT ms | 4.00 (5.55; 2.63-10.7) | 4.06 (11.3; 2.43-41.5) | 4.95 / 4.94 |
+| 같은 INSERT의 fetch, dirty 페이지 | 42, **18** | 42, **9** | 42, 9 / 42, 18 |
+| 이어진 INSERT ms | 3.26 (4.48; 2.05-5.95) | 2.85 (6.78; 2.02-8.67) | 4.94 / 4.17 |
+| 이어진 INSERT fetch | 32 | **34** | 34 / 32 |
+| 비우지 않는 삭제 뒤 INSERT ms | 3.70 (5.48; 2.35-5.96) | 3.81 (7.24; 2.39-10.7) | 4.67 / 3.93 |
+| 동시 8 세션, 회당 가장 느린 ms | 6.26 (15.6; 4.80-16.9) | 5.84 (15.3; 4.83-17.3) | 8.73 / 10.4 |
+| 동시 세션 INSERT ms (n=128) | 5.46 (10.8; 2.63-16.9) | 5.53 (15.3; 2.57-17.3) | 7.84 / 7.62 |
+| 일반 INSERT ms (n=300) | 3.63 (10.8; 1.90-195) | 3.87 (7.71; 2.08-200) | 3.37 / 2.85 |
+
+이 run은 부하 중앙값이 66으로 run 2(80)보다 낮고 값이 전반적으로 작다. 같은 서버 실행 짝의 비교다(stage2fix - stage1h, [paired_rounds.py](bench/paired_rounds.py), 부호 검정 p는 정확 이항 검정).
+
+| 항목 | 짝 | 차이의 중앙값 ms | stage2fix가 느린 짝 | p |
+| --- | --- | --- | --- | --- |
+| 재시작 첫 INSERT | 18 | -14.1 | 8/18 | 0.81 |
+| 재시작 둘째 INSERT | 18 | -0.19 | 7/18 | 0.48 |
+| 비우는 삭제 뒤 INSERT | 8 | -0.13 | 4/8 | 1.00 |
+| 이어진 INSERT (비우는 삭제) | 8 | -0.38 | 3/8 | 0.73 |
+| 비우지 않는 삭제 뒤 INSERT | 8 | +0.30 | 6/8 | 0.29 |
+| 이어진 INSERT (비우지 않는 삭제) | 8 | +0.28 | 5/8 | 0.73 |
+| 일반 INSERT | 10 | -0.01 | 5/10 | 1.00 |
+| 동시 8 세션 가장 느린 세션 | 8 | -0.05 | 4/8 | 1.00 |
+| 동시 세션 INSERT | 8 | +0.05 | 6/8 | 0.29 |
+
+모든 항목이 노이즈 안이다. 이전 `b8a7e5d74`에서 보이던 비우지 않는 삭제 항목의 +0.5, +0.9 ms 경향은 +0.3 ms로 줄었다. 동시 세션의 직렬 구간 상한 (가장 느린 - 가장 빠른) / 7은 stage1h 0.39 ms, stage2fix 0.34 ms다.
+
+파일 크기와 로그는 `b8a7e5d74`와 같다. 복사 수정은 둘을 건드리지 않는다.
+
+| 지표 | stage1h | stage2fix |
+| --- | --- | --- |
+| cycle별 peak (2,000행, cycle 1 / cycle 2-20) | 스냅샷 신뢰 불가 | 2,001 / 2,101 |
+| sector, 6 cycle 뒤 (c) | 32 | 33 |
+| sector, 1 / 2 / 20 cycle 뒤 | 32 / 32 / 32 | 32 / 33 / 33 |
+| INSERT 1000건당 로그 레코드 (DML 구간) | 10,177 | 6,253 |
+| UPDATE 문장 중 `file_alloc` / `file_dealloc` | 1,000 / 240 | 0 / 0 (cycle 2만 +100) |
+| UPDATE 뒤 drain의 filler 수 (cycle 2-6) | 1 | 12 |
+| DELETE 뒤 drain의 filler 수 | 7.5 | 13 |
+
+### 수정판의 판정 변화
+
+| 조건 | 이전 (`b8a7e5d74`) | 수정판 (`f8cdfca747`) |
+| --- | --- | --- |
+| ADR-0010 결정 7: INSERT 시간이 1단계보다 나빠지지 않는다 | 일부 미충족 | **충족**. 단건 INSERT 5개 항목은 구별 불가(p ≥ 0.29), 6,000행 UPDATE는 339 대 379 ms |
+| ADR-0010 결정 7: churn 뒤 파일 크기 | 충족(조건부) | 변화 없음. sector 33 대 32 |
+| ADR-0009 결정 4 peak 조항 | 충족 | 변화 없음 |
+| ADR-0009 결정 4 sector 조항 | 해석에 따라 다름 | 변화 없음. 아래 가설 시험에서 이 차이가 파일 크기에 비례함을 확인했다 |
+
+## 로그 block 가설 시험
+
+시험한 가설은 이렇다(추론이고 측정이 아니었다). vacuum은 가득 찬 로그 block만 처리한다. 2단계는 로그 레코드를 약 40% 적게 쓰므로 cycle 끝의 마지막 block이 늦게 차고, 옛 chunk가 늦게 vacuum되며, 다음 cycle의 UPDATE가 페이지를 100쪽 더 필요로 한다. 한 block은 31 로그 페이지다(`vacuum.h`의 `VACUUM_LOG_BLOCK_PAGES_DEFAULT`. 이 DB에서 파라미터를 바꾸지 않았다).
+
+### 설계
+
+[bench/log_traffic_churn.py](bench/log_traffic_churn.py)는 harness의 churn을 그대로 돌리되 drain의 filler 크기만 바꾼다.
+
+- `small`: 지금까지의 filler(200행 INSERT, 로그 약 5쪽)를 poll마다 한 번.
+- `big`: 같은 poll인데 filler가 6,000행(`small`의 30배)이다. UPDATE나 DELETE의 마지막 로그 block이 filler 하나로 완성된다.
+
+빌드는 stage1h, stage2(`b8a7e5d74`의 보존한 설치), stage2fix이고, 모드당 3회 × 6 cycle이다. 요약은 [bench/logtraffic_summary.py](bench/logtraffic_summary.py), 원자료는 [results-reuse-logtraffic.csv](bench/results-reuse-logtraffic.csv)다. 중앙값(범위)이고, stage1h의 peak는 스냅샷이라 하한이다.
+
+| 빌드 | 모드 | cycle 1 peak | cycle 2+ peak | sector c | UPDATE drain s | UPDATE drain filler 수 | DELETE drain s | DELETE drain filler 수 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| stage1h | small | 1,527 (1,077-1,582) | 1,782 (1,689-1,828) | 32 | 0.34 | 1 | 1.89 | 7 |
+| stage1h | big | 1,084 (1,083-1,665) | 1,657 (1,178-1,981) | 32 | 0.33 | 1 | 0.39 | 1 |
+| stage2 | small | 2,001 | 2,101 | 33 | **2.45** | **12** | 2.62 | 13 |
+| stage2 | big | 2,001 | **2,101** | **33** | **0.33** | **1** | 0.39 | 1 |
+| stage2fix | small | 2,001 | 2,101 | 33 | 2.44 | 12 | 2.78 | 13 |
+| stage2fix | big | 2,001 | **2,101** | **33** | **0.31** | **1** | 0.41 | 1 |
+
+### 행 수 시험
+
+UPDATE 크기를 바꾸면 로그 양도 바뀐다. `--rows`를 바꿔 같은 `small` 모드를 stage1h와 stage2fix에 돌렸다(서버 실행 2회 × 4 cycle, 2,000행은 위 표의 3회 × 6 cycle). 이 시험은 load 중앙값이 137(108-180)로 높았다([bench/loadavg-reuse-rows.txt](bench/loadavg-reuse-rows.txt)).
+
+| 행 수 | 빌드 | cycle 1 peak | cycle 2+ peak | sector c | UPDATE drain s | UPDATE drain filler 수 | DELETE drain filler 수 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1,000 | stage1h | 1,001 | 1,001 (896-1,001) | 16 | 0.88 | 2 | 2 |
+| 1,000 | stage2fix | 1,001 | **1,001** | **16** | **5.49** | **15** | 15 |
+| 2,000 | stage1h | 1,527 | 1,782 | 32 | 0.34 | 1 | 7 |
+| 2,000 | stage2fix | 2,001 | **2,101** (+100, +5.0%) | **33** | 2.44 | 12 | 13 |
+| 4,000 | stage1h | 2,482 | 2,802 | 63 | 0.50 | 1 | 1.5 |
+| 4,000 | stage2fix | 4,001 | **4,202** (+201, +5.0%) | **66** | 1.20 | 3 | 8 |
+| 6,000 | stage1h | 4,060 | 3,873 | 94 | 0.27 | 1 | 1 |
+| 6,000 | stage2fix | 6,001 | **6,302** (+301, +5.0%) | **99** | 0.28 | 1 | 1 |
+
+### 판정
+
+1. **drain 지연은 로그 완료에 의존한다: 확인.** `big`에서 stage2와 stage2fix의 UPDATE drain이 2.45 s와 12 filler에서 0.33 s와 1 filler로 줄어 stage1h(0.33 s, 1 filler)와 같다. DELETE drain도 2.62 s와 13 filler에서 0.39 s와 1 filler다. 행 수가 늘수록 UPDATE가 스스로 쓰는 로그가 많아져 지연이 줄어든다(filler 15, 12, 3, 1). 이전의 큰 filler 시험([bench/drain_probe.py](bench/drain_probe.py), 세 빌드 24회)과 같은 결론이다.
+2. **그 원인이 "2단계가 로그 레코드를 40% 적게 쓴다"는 것: 반박.** 근거는 둘이다.
+   - 중간 커밋 `5d7eda23c`(stage2a)는 UPDATE 로그를 stage1h와 거의 같게 쓴다(레코드 15,338 대 16,066, 로그 118쪽 대 123쪽, 위 귀속 절). 그런데 drain 지연은 stage2와 같다(filler 13.5 대 12, stage1h는 1).
+   - 비슷한 UPDATE 로그에서 두 빌드가 다르게 행동한다. stage1h는 1,000행(로그는 2,000행의 약 절반인 8K 레코드로 가정한다. 선형 가정이고 이 행 수에서는 재지 않았다)에서 filler 2개로 끝난다. stage2fix는 그보다 많은 UPDATE 로그(2,000행, 10.2K 레코드, 93쪽)에서 filler 12개가 필요하다. 필요한 추가 로그가 약 60쪽(12 filler × 5.2쪽, 두 block)이다. 이는 두 빌드의 UPDATE 로그 차이(2,000행에서 123쪽 대 93쪽, 30쪽)보다 크고 cycle마다 같다.
+   - 따라서 UPDATE의 로그 양이 지연을 정하지 않는다. vacuum이 옛 chunk를 지우려면 UPDATE 뒤 로그가 두 block쯤 더 필요한 어떤 이유가 `5d7eda23c`부터 생겼고, 그 이유는 찾지 못했다.
+3. **그래서 다음 cycle의 UPDATE가 100쪽 더 필요하다: 반박.** 근거는 셋이다.
+   - `big`에서 drain이 1 filler로 끝나 stage1h와 같은 속도가 되었는데 stage2와 stage2fix의 cycle별 peak는 그대로 2,001에서 2,101이고 sector는 33이다(3회 × 6 cycle, 두 빌드 모두 변함없음).
+   - 지연과 페이지 증가가 같이 움직이지 않는다. 1,000행에서는 drain이 가장 늦는데(filler 15, 5.5 s) 페이지 증가가 0이다(1,001에서 1,001, sector 16 대 16). 6,000행에서는 drain이 stage1h와 같은데(filler 1) 증가가 +301쪽(+5.0%)이다.
+   - harness의 drain은 `Oos_num_recs`가 목표에 도달할 때까지 기다린 뒤에 다음 단계로 간다. 모든 모드에서 옛 chunk는 다음 UPDATE 전에 이미 지워져 있다.
+4. **새로 알게 된 것: 파일 크기 증가는 파일에 비례하는 약 5%다 (측정함).** 2,000행의 +1 sector는 일회성이 아니었다. +100쪽, +201쪽, +301쪽이 첫 cycle peak의 정확히 5.0%이고, sector 증가는 +1, +3, +5개(32에서 33, 63에서 66, 94에서 99: 각 +3%, +4.8%, +5.3%)다. 1,000행에서는 0이다. 원인은 모른다. 이 비례 관계가 더 큰 파일에서도 유지되는지는 재지 않았다. ADR-0009 결정 4의 페이지 조항은 10% 허용치 안이므로 충족하지만, sector 조항을 허용치 없이 읽으면 파일이 클수록 초과 sector가 늘어난다.
+
+### 한계
+
+- 행 수 시험은 서버 실행 2회, 부하가 높았다(중앙값 137). filler 수의 범위가 넓은 칸(4,000행 stage1h 1-9 등)이 있다.
+- 1,000행의 stage1h UPDATE 로그 양은 선형 가정이다.
+- 가설 시험에서 stage2는 `b8a7e5d74`의 복사본 설치를 썼다. 복사한 설치가 원본과 같은 동작인지 `cubrid --version`(11.5.0.2803-b8a7e5d)과 결과 일치(stage2와 stage2fix의 모든 행)로만 확인했다.
+- 5% 증가와 drain 지연의 원인은 모른다. `5d7eda23c`(fast path 제거)에서 시작되었다는 것까지만 안다.
+
 ## 한계
 
 - 공용 서버에서 load average 13-207 아래 측정했다(본 측정은 33-138). 1 ms 이하의 차이는 가릴 수 없다. 단건 INSERT에서 2단계가 최대 1 ms 느려졌을 가능성은 배제하지 못한다.
@@ -259,20 +406,21 @@ cycle 1에서는 UPDATE 뒤 filler가 모두 1개다(중앙값. stage2 drain 1.0
 - 서버 카운터는 filler 보정을 써서 단계별 값이 근사다. DML 구간(filler 없음)의 값만 정확하다.
 - 파일 크기의 sector 조항 해석은 ADR 문장이 정하지 않는다. 1 sector 차이의 판정은 사용자 몫이다.
 - 동시 INSERT에서 bestspace mutex 점유(집합 복사 구간)가 다른 OOS 파일에 미치는 영향은 재지 않았다.
-- 단위 테스트(`unit_tests/oos`)는 실행하지 않았다.
+- 단위 테스트(`unit_tests/oos`)는 실행하지 않았다. 수정판의 단위 테스트는 부모 세션이 통과(debug, 10/10)했다고 전했고 여기서 재실행하지 않았다.
+- 수정판에서도 집합이 4,096쪽에 닿는 경우와 동시 INSERT에서 bestspace mutex 점유 영향은 재지 않았다. 6,000행 churn의 집합은 약 3,000쪽이다.
 
 ## ADR 판정
 
 | 조건 | 판정 | 근거 |
 | --- | --- | --- |
-| ADR-0010 결정 7: INSERT 시간이 1단계보다 나빠지지 않는다 | **일부 미충족** | 단건 INSERT 5개 항목은 충족(차이 구별 불가, 짝 검정 p ≥ 0.21). 집합이 큰 대량 UPDATE는 미충족(6,000행 UPDATE, cycle 2 이후 372-386 ms에서 980-1,000 ms. 시험 두 번) |
-| ADR-0010 결정 7: churn 뒤 파일 크기가 커지지 않는다 | 충족(조건부) | sector 33 대 32. 1 sector 증가는 1회에 그치고 20 cycle 동안 누적되지 않음 |
+| ADR-0010 결정 7: INSERT 시간이 1단계보다 나빠지지 않는다 (`b8a7e5d74` 기준. 수정판 `f8cdfca747`은 충족, 위 절) | **일부 미충족** | 단건 INSERT 5개 항목은 충족(차이 구별 불가, 짝 검정 p ≥ 0.21). 집합이 큰 대량 UPDATE는 미충족(6,000행 UPDATE, cycle 2 이후 372-386 ms에서 980-1,000 ms. 시험 두 번) |
+| ADR-0010 결정 7: churn 뒤 파일 크기가 커지지 않는다 | 충족(조건부) | sector 33 대 32. 2,000행에서 증가는 cycle 2에서 한 번이고 20 cycle 동안 누적되지 않음. 단 행 수 시험에서 증가가 파일의 약 5%(4,000행 +3, 6,000행 +5 sector)임이 드러났다("로그 block 가설 시험" 절) |
 | ADR-0009 결정 4: cycle별 peak가 첫 cycle peak + max(2쪽, 10%) 이내 | 충족 | 2,001, 2,101(+100, 허용 201), 20 cycle 평평 |
 | ADR-0009 결정 4: 재INSERT 뒤 예약 sector가 첫 peak를 넘지 않는다 | 해석에 따라 다름 | 33 sector(2,112쪽) 대 첫 peak 2,001쪽(32 sector). 허용치 없이 읽으면 1 sector 초과 |
 
 ## 산출물
 
-- 소스: `CBRD-27925-emptied-set` `b8a7e5d74`, 측정용 detached worktree `/home/vimkim/gh/cb/CBRD-27872-after3`(2단계), `CBRD-27872-after2h`(`94ed2ea46`), `CBRD-27872-after2m`(`5d7eda23c`). 설치는 `~/.cub/install/CBRD-27872-after3`, `-after2h`, `-after2m`의 `release_gcc`. 정리하지 않았다.
-- 출력 디렉터리: `/mnt/nvme/data-5/tmp/w878/measure`(run 1), `measure-h`(run 2), `measure-counters`, `measure-h-counters`, `attrib-counters`, `measure-h-perf`, `measure-h-perf6000`, `attrib-create`(stage2a DB). 처음 시도한 감시자 없는 카운터(전부 0)는 `measure-counters-nowatcher-all-zero`에 남겼다.
-- 원자료: [bench/](bench/) 아래 `results-reuse-*.csv`(카운터 CSV의 run 3이 귀속 시험), `loadavg-reuse-*.txt`, `perf-reuse/`(`perf report` 텍스트, 집합 크기 시험, drain 시험).
-- 스크립트: [growth_cost.py](bench/growth_cost.py)(변경 없음), [summarize.py](bench/summarize.py)(변경 없음), [paired_rounds.py](bench/paired_rounds.py), [churn_peak.py](bench/churn_peak.py), [churn_counters.py](bench/churn_counters.py), [churn_scale.py](bench/churn_scale.py), [perf_churn.py](bench/perf_churn.py), [drain_probe.py](bench/drain_probe.py).
+- 소스: `CBRD-27925-emptied-set` `b8a7e5d74`와 `f8cdfca747`, 측정용 detached worktree `/home/vimkim/gh/cb/CBRD-27872-after3`(지금 `f8cdfca747`), `CBRD-27872-after2h`(`94ed2ea46`), `CBRD-27872-after2m`(`5d7eda23c`). 설치는 `~/.cub/install/CBRD-27872-after3`(`f8cdfca747`), `-after3-b8a7e5d74`(이전 2단계의 복사본), `-after2h`, `-after2m`의 `release_gcc`. 정리하지 않았다.
+- 출력 디렉터리: `/mnt/nvme/data-5/tmp/w878/measure`(run 1), `measure-h`(run 2), `measure-counters`, `measure-h-counters`, `attrib-counters`, `measure-h-perf`, `measure-h-perf6000`, `attrib-create`(stage2a DB), `fix`(수정판 DB와 본 측정), `fix-counters`, `fix-perf6000`, `hyp`, `hyp-rows1000`, `hyp-rows4000`, `hyp-rows6000`. 처음 시도한 감시자 없는 카운터(전부 0)는 `measure-counters-nowatcher-all-zero`에 남겼다.
+- 원자료: [bench/](bench/) 아래 `results-reuse-*.csv`(카운터 CSV의 run 3이 귀속 시험, run 4가 수정판. cycle 수별 CSV의 run 3이 수정판. 가설 시험은 `results-reuse-logtraffic.csv`), `loadavg-reuse-*.txt`, `perf-reuse/`(`perf report` 텍스트, 집합 크기 시험, drain 시험).
+- 스크립트: [growth_cost.py](bench/growth_cost.py)(변경 없음), [summarize.py](bench/summarize.py)(변경 없음), [paired_rounds.py](bench/paired_rounds.py), [churn_peak.py](bench/churn_peak.py), [churn_counters.py](bench/churn_counters.py), [churn_scale.py](bench/churn_scale.py), [perf_churn.py](bench/perf_churn.py), [drain_probe.py](bench/drain_probe.py), [log_traffic_churn.py](bench/log_traffic_churn.py), [logtraffic_summary.py](bench/logtraffic_summary.py).
