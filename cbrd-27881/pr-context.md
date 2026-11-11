@@ -108,3 +108,11 @@ R-16의 별도 [CBRD-28037](https://jira.cubrid.org/browse/CBRD-28037)을 생성
 이번 PR 수정은 제목의 이슈 번호와 본문 첫 줄의 JIRA 링크만 바꾼다. 기존 본문의 나머지 내용과 source commit, base, head, assignee, draft 상태는 유지한다. source push는 필요하지 않다. 최초 게시 기록과 기존 문서 링크를 보존하려고 본문과 context의 저장 경로는 기존 부모 디렉터리를 사용한다.
 
 이슈 원문은 `vimkim/my-cubrid-jira`의 `issues/CBRD-28037-oos-r16-page-free-space-helper.md`에 보존한다. 문서 정정 커밋도 task branch에서 검증한 뒤 main으로 rebase·fast-forward 병합·push하고 병합된 문서 task만 비강제로 정리한다. 이 기록은 후속 엔진 병합이나 JIRA 상태 변경의 승인을 대신하지 않는다.
+
+### 정정 결과
+
+PR #8485를 다시 읽어 제목이 `[CBRD-28037] Share the OOS test page free-space helper`, 본문 첫 줄이 `https://jira.cubrid.org/browse/CBRD-28037`임을 확인했다. 본문의 나머지 내용은 최초 게시본과 같다.
+
+정정 후 본문 SHA-256은 `4cba3b566ca57837f321ad770399683cc93707b72b9c855297aef4d41fd34f8e`이다. 기존 source commit `b8d6d6d606daaf301d42269c67b0bc83b4bddcc7`, base와 head, 1커밋·6파일 +41/-108, `vimkim` 담당자와 Open·draft 상태를 유지했다. 코드 변경이 없어 기존 빌드·테스트의 source identity도 유지된다.
+
+이슈 원문은 `vimkim/my-cubrid-jira` main 커밋 `5355688b86a0b8945c9757b3620cafef8f1c5bdc`로 게시했다. PR 본문 정정은 `vimkim/my-cubrid-docs` main 커밋 `5724bb59a442efda870a93ae29f41ec2df1993be`로 먼저 보존했다. 부모 이슈의 다른 필드나 JIRA workflow 상태는 변경하지 않았다.
