@@ -13,7 +13,7 @@ PR 브랜치에 `feature/oos-merge` 최신을 merge하고 TC 브랜치를 맞춘
 | `test_sql` | FAILURE | collection_failed | 원본 JUnit: shard 09에서 12건 | base 공통 2건, head만 10건 | head만의 10건은 서버 crash 1번과 그 여파. PR 관련성 `unlikely` (중간) |
 | `test_sql_by_cci` | FAILURE | validated | 17,771 계획, 17,733 통과, 실패 38 | 38건 목록이 base와 같음 | 알려진 이슈. 이 PR 원인 아님 |
 
-다음 작업: `test_sql` shard 09 crash가 다시 나는지 보려고 `/run rerun 42788743110`을 돌린다. 승인이 필요하다.
+**재실행(run 42850100191) 결과:** crash는 재발하지 않았고, head에만 있는 실패는 없다. 남은 실패는 모두 merge-base 공통이다. 자세한 내용은 [재실행 결과](#재실행-결과-run-42850100191)에 있다.
 
 ## 대상과 증거 범위
 
@@ -73,10 +73,25 @@ PR 브랜치에 `feature/oos-merge` 최신을 merge하고 TC 브랜치를 맞춘
 - 앞 실행(head `00b421e`)의 shell `bug_bts_5492` 실패는 이번에 나오지 않았다. 일시적인 실패로 본다.
 - sql_by_cci는 57건에서 38건으로 줄었다. TC를 feature 최신으로 맞추면서 `answer_cci`가 갱신된 영향으로 보인다(확인하지 않음).
 
+## 재실행 결과 (run 42850100191)
+
+`/run rerun 42788743110`으로 2026-11-10T15:59:17Z에 같은 head(`2253759`)로 다시 돌렸다. 지난 실행의 실패 케이스와 TC 변경으로 영향받는 케이스만 다시 실행했다. private `tc/pr-8348`은 `06abbce75`(answer 번호 수정 커밋 `8ef4f6278` 포함)였다. 결과는 CI 산출물 서버의 JUnit 원본으로 읽었고, 수집기로 검증하지는 않았다.
+
+| Suite | 실행 | 실패 | 판단 |
+|---|---|---|---|
+| test_medium | 975건 유지 | 0 | PASS |
+| test_shell | 4건 | 1건 `cbrd_27571` | base 공통. CBRD-27571(Develop) |
+| test_sql | 402건 | 2건 `r_outer_join`, `cbrd_27762` | 둘 다 base 공통 |
+| test_sql_by_cci | 8167건 | 38건 | base 목록과 같음. Known CI issue |
+
+- answer를 고친 shell 3건(`bug_bts_9836`, `bug_bts_14120`, `bug_bts_15529`)은 통과했다.
+- `cbrd_27515` 12건은 모두 통과했고 `lock_unlock_all` assertion crash는 재발하지 않았다. 일시적 실패로 보고 로컬 재현은 하지 않는다. 다시 나오면 이 판단을 다시 본다.
+- 결론: head에만 있는 실패는 없다. `test_shell`, `test_sql`이 빨간 것은 merge-base에서도 나는 기존 실패 때문이다.
+
 ## 우선순위
 
-1. `/run rerun 42788743110`으로 sql shard 09 crash와 실패 케이스를 다시 돌린다. `test_sql`은 머지 조건이다.
-2. shell 4건(cbrd_27571 복구 assertion, `call_stack_dump_activation_list` answer 3건)은 feature/oos-merge에도 있다. 이 PR을 막는 원인이 아니지만 `test_shell`이 머지 조건이라 feature 쪽 수정이 필요하다.
+1. ~~`/run rerun 42788743110`~~ 완료(run 42850100191). crash 재발 없음.
+2. shell `cbrd_27571`은 feature/oos-merge에도 있다(CBRD-27571). answer 3건은 `8ef4f6278`로 해결됐다. 이 PR을 막는 원인이 아니지만 `test_shell`이 머지 조건이라 feature 쪽 수정이 필요하다.
 3. `test_sql` 수집 오류(shard 01 JUnit 누락)는 수집기 쪽 문제로 따로 다룬다.
 
 ## 증거 파일
