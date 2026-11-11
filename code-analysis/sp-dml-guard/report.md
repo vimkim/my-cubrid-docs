@@ -96,11 +96,15 @@ INSERT는 대상 클래스를 목록 앞에 넣고 소스 SELECT의 목록을 �
 
 ### 4.3. 캐시 적중과 재컴파일에서의 정보 공백
 
+캐시 조회부터 새 XASL 생성까지의 함수 순서와 관측할 필드는 부록 A.1에 정리했다.
+
 관찰된 prepare는 서버의 계획 캐시를 먼저 조회한다. 적중하면 로컬 XASL을 새로 만들지 않고 반환된 `XASL_ID`를 사용할 수 있다. 서버 응답의 `XASL_NODE_HEADER`에는 flag와 id만 있으며 테이블 목록과 SQL 문장 종류는 없다. 서버 캐시에 메타데이터가 있다는 사실과 CAS가 그 메타데이터를 받는다는 주장은 다르다. [UPDATE 캐시 조회](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L10022), [SELECT 캐시 조회](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L15455), [응답 구성](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/communication/network_interface_sr.cpp#L5596), [헤더 정의](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/xasl.h#L69).
 
 관찰된 콜백 실행은 invalid XASL 오류가 나면 다시 prepare하고 실행한다. CAS에도 실행 시 재컴파일 경로가 있다. 그러므로 최초 prepare에서 얻은 포인터나 메타데이터를 재실행 때 그대로 쓰는 설계는 충분하지 않다. [콜백 재시도](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/method/method_callback.cpp#L347), [CAS 실행 시 컴파일](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/broker/cas_execute.c#L1139), [세션 교체](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/broker/cas_execute.c#L10691).
 
 ### 4.4. 의미상 DML과 SELECT 계획의 불일치
+
+UPDATE의 내부 SELECT 생성과 후속 객체 수정 경로는 부록 A.2에, 원래 SQL 종류를 유지하는 위치는 부록 A.3에 정리했다.
 
 관찰된 UPDATE는 trigger, virtual class 등의 조건에 따라 내부 SELECT를 준비하고 그 XASL ID를 UPDATE 문장에 보관한다. 실행 시 그 결과의 OID를 사용해 클라이언트에서 객체를 수정한다. DELETE에도 같은 계열의 경로가 있다. 이 SELECT를 독립적인 읽기 전용 조상으로 push하면 관계없는 테이블에 대한 중첩 쓰기까지 잘못 거절한다. 반대로 SELECT 정보만 보관하면 외부 UPDATE의 쓰기 대상을 잃는다. [UPDATE 경로 선택](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L9965), [UPDATE 내부 SELECT 준비](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L10177), [UPDATE 객체 수정](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L10404), [DELETE 내부 SELECT](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L11541).
 
@@ -264,3 +268,100 @@ python3 code-analysis/sp-dml-guard/check.py --out /tmp/sp-dml-check-review
 ```
 
 실행 환경에 따라 소요 시간은 달라진다. 비교할 값은 정상 사례의 오류 없는 완료, 변형별 예상 위반과 종료 코드, 모델 및 검사기 해시다. 엔진 구현, 빌드, 실제 SQL 검증은 이 명령에 포함되지 않는다.
+
+## 부록 A. 코드 추적 안내
+
+아래 경로와 줄 번호는 본문과 같은 CUBRID 리비전 `e64a04a79a5842827a124b3f8313516d0da2594c`를 기준으로 한다. 함수 호출과 분기는 소스에서 확인한 사실이다. 그 정보를 불완전하게 사용하는 가드의 허용·거절 사례는 설계상 가능한 오류를 설명하며, 현재 엔진에 해당 가드를 구현해 재현한 결과는 아니다.
+
+### A.1. 캐시 적중 시 새 XASL 생성과 테이블 수집을 건너뛰는 경로
+
+출발점은 `execute_statement.c`의 [do_prepare_select()](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L15382)다. 이 함수는 먼저 서버에 기존 계획을 조회한다.
+
+```text
+클라이언트 do_prepare_select()
+  → prepare_query()
+    → qmgr_prepare_query()
+      → 서버 sqmgr_prepare_query()
+        → xqmgr_prepare_query()
+          → xcache_find_sha1()
+```
+
+클라이언트의 호출은 [prepare_query() 진입](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L15462), [query_cl.c의 전달](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/query_cl.c#L53), [qmgr_prepare_query()의 네트워크 요청](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/communication/network_interface_cl.c#L7394)을 통해 이어진다. 서버는 [xcache_find_sha1()](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/query_manager.c#L1037)로 캐시를 조회한다. 재컴파일이 필요 없는 적중에서는 [기존 XASL_ID를 복사](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/query_manager.c#L1057)하고 반환한다.
+
+캐시에서 찾지 못하면 클라이언트 [prepare_query()가 stream->xasl_id를 비운다](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/query_cl.c#L82). `do_prepare_select()`의 새 계획 생성은 다음 조건 안에 있다. 중간 코드는 생략했다. [조건 검사](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L15513), [parser_generate_xasl() 호출](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L15522).
+
+```c
+if (stream.xasl_id == NULL && err == NO_ERROR)
+	{
+		/* 중간 코드 생략 */
+		contextp->xasl = parser_generate_xasl (parser, statement);
+	}
+```
+
+따라서 테이블 수집을 `parser_generate_xasl()` 안에만 추가하면 재컴파일 없는 캐시 적중에서 그 수집은 실행되지 않는다. 이 차이는 `stream.xasl_id`, `contextp->recompile_xasl`, `contextp->xasl`을 함께 보면 확인할 수 있다.
+
+캐시 응답이 테이블 목록을 제공하는지도 구분해야 한다. 서버는 [작은 헤더를 포장](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/communication/network_interface_sr.cpp#L5623)하고 [XASL_ID를 포장](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/communication/network_interface_sr.cpp#L5636)한다. 이때의 [XASL_NODE_HEADER](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/xasl.h#L75)는 다음 두 필드다.
+
+```c
+struct xasl_node_header
+{
+	int xasl_flag;
+	int id;
+};
+```
+
+전체 XASL이 갖는 [class_oid_list와 class_locks](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/xasl.h#L1367)는 이 헤더에 없다. 즉, 캐시 응답만으로는 기존 계획의 클래스 목록을 얻지 못한다.
+
+정책 예시는 `INSERT INTO t1 SELECT f() FROM t2`에서 `f()`가 `t2`를 수정하는 경우다. 이 쓰기는 외부 DML이 읽는 테이블에 대한 쓰기이므로 거절해야 한다. 그러나 새 XASL 생성 때만 수집하고 캐시 적중 시 누락된 목록을 빈 참조 집합으로 취급한다면 충돌을 놓칠 수 있다. 캐시 재사용에서도 접근 정보를 얻는 별도 경로가 필요하다. CAS에 원래 SQL의 파스 트리가 없다는 결론은 아니며, 그 트리나 별도로 보관한 자료를 활용하는 설계도 가능하다.
+
+### A.2. 사용자 UPDATE가 내부 SELECT의 XASL_ID를 사용하는 경로
+
+출발점은 [do_prepare_update()](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L9842)다. [server_update 결정](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L9966)은 다음과 같다.
+
+```c
+server_update = (!has_trigger && !has_virt
+		&& !update_check_having_meta_attr (parser, statement->info.update.assignment));
+```
+
+아래는 `server_update`가 거짓인 경우 중 수정할 행의 OID를 먼저 조회하는 분기다. 클래스 속성 수정처럼 별도 처리하는 경우까지 모두 내부 SELECT를 만든다는 뜻은 아니다. `has_trigger`는 [TR_EVENT_UPDATE 검사](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L9914)의 결과다. [문장 단위 UPDATE 트리거](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L9925)를 확인하는 `has_any_update_trigger`와 구분하므로 모든 트리거가 같은 조건을 만든다고 해석하면 안 된다.
+
+준비와 실행을 연결하면 아래 순서다.
+
+```text
+do_prepare_update()
+  → pt_to_upd_del_query(..., S_UPDATE)로 내부 SELECT 생성
+  → do_prepare_select(select_statement)
+  → 내부 SELECT의 XASL_ID를 원래 UPDATE의 statement->xasl_id에 저장
+
+do_execute_update()
+  → execute_query(statement->xasl_id, ...)로 대상 행 조회
+  → update_objs_for_list_file(...)로 선택된 객체 수정
+```
+
+| 소스 위치 | 확인할 동작 |
+| --- | --- |
+| [내부 SELECT 생성](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L10208) | UPDATE 대상과 조건을 `pt_to_upd_del_query()`에 전달한다. |
+| [내부 SELECT 준비](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L10237) | `do_prepare_select()`로 얻은 ID를 `stream.xasl_id`로 옮긴다. |
+| [원래 UPDATE에 ID 저장](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L10252) | 원래 문장은 UPDATE인 채 내부 SELECT의 ID를 사용한다. |
+| [계획 실행](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L10405) | 조회 결과를 `list_id`로 받는다. |
+| [클라이언트 객체 수정](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L10444) | `server_update`가 거짓인 경로에서 조회한 객체를 수정한다. |
+
+원래 `statement`와 `statement->info.update`는 UPDATE 정보를 유지하지만, 해당 `xasl_id`는 내부 SELECT의 계획을 가리킬 수 있다. 그러므로 `XASL_NODE.type`만 원래 문장 종류의 대용으로 사용하면 이 UPDATE를 읽기 전용 조상으로 잘못 분류할 수 있다.
+
+예를 들어 외부 UPDATE가 `t1`만 참조하고, 그 평가 중 SP가 `t3`을 수정한다고 가정한다. 다른 금지 조상도 없다면 정책상 허용할 수 있다. 그런데 내부 조회 계획을 사용자 SELECT 조상으로 기록하면 SELECT 아래 쓰기 금지 규칙을 잘못 적용해 `t3` 쓰기까지 거절하게 된다. 이는 원래 SQL 종류와 내부 계획 종류를 분리해야 하는 이유다.
+
+### A.3. 원래 SQL 종류를 유지하는 위치와 구현 검토 범위
+
+CAS는 [db_get_statement_type()](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/broker/cas_execute.c#L848)으로 원래 문장 종류를 얻는다. 공통 문장 실행기의 [PT_UPDATE 분기](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L4487)도 원래 UPDATE임을 알고 `do_check_update_trigger()`로 들어간다. 따라서 현재 코드에 원래 SQL 종류를 얻을 위치가 없다는 뜻은 아니다.
+
+보완 구현의 후보는 원래 문장 종류를 아는 범위에서 접근 정보를 유지하고, 내부 SELECT 조회와 후속 객체 수정을 하나의 UPDATE 실행으로 감싸는 방식이다. 트리거 래퍼는 [tr_before()](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L6742), DML 본체, [tr_after()](https://github.com/CUBRID/CUBRID/blob/e64a04a79a5842827a124b3f8313516d0da2594c/src/query/execute_statement.c#L6758)를 차례로 실행한다. 서버 계획 요청만 감싸는 범위는 이 전후 활동을 놓칠 수 있다.
+
+소스 추적이나 중단점 설정의 시작 위치는 다음과 같다.
+
+| 실행 위치 | 시작할 함수와 관측할 값 |
+| --- | --- |
+| CAS 등 클라이언트 라이브러리 | `do_prepare_select()`의 `stream.xasl_id`, `contextp->recompile_xasl`, 새 XASL 생성 여부 |
+| DB 서버 | `sqmgr_prepare_query()`와 `xqmgr_prepare_query()`의 캐시 적중 및 응답 구성 |
+| CAS 등 클라이언트 라이브러리 | `do_prepare_update()`와 `do_execute_update()`의 원래 문장 종류, `server_update`, `statement->xasl_id`, `list_id` |
+
+이 위치들은 구현 검토의 출발점이다. 모든 prepare 평가, 트리거, 오류 복귀, cursor 경로를 포괄하는 단일 가드 위치로 검증한 것은 아니다. 완전한 접근 정보 추출과 실행 경계 포괄은 본문 7절의 미증명 계약으로 남는다.

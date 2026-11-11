@@ -4,13 +4,15 @@ Created: 2026-11-11. Last modified: 2026-11-11 (Asia/Seoul).
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [report.md](report.md) | 원안의 불충분성, 보강 모델의 조건부 결과와 변형 검출을 구분한 기술 논문 | 2026-11-11 | 2026-11-11 | CAS와 XASL 정보만으로 두 제한 규칙을 적용할 수 있는지 판단 |
+| [report.md](report.md) | 원안의 불충분성, 보강 모델 결과와 캐시·UPDATE 경로의 코드 추적 안내 | 2026-11-11 | 2026-11-11 | CAS와 XASL 정보만으로 두 제한 규칙을 적용할 수 있는지 판단 |
 | [evidence/statechart.md](evidence/statechart.md) | 바깥 참조 테이블 검사를 제거했을 때의 최단 반례 | 2026-11-11 | 2026-11-11 | 잘못된 설계에서 실제로 위반을 찾는지 설명 |
 | [verify/SKILL.md](verify/SKILL.md) | 검증 실행과 소스 동기화 절차 | 2026-11-11 | 2026-11-11 | 후속 구현 검토 시 모델의 가정과 실제 코드의 차이를 유지 |
 
 보고서의 근거를 재현하기 위해 `SpDmlGuard.tla`, `check.py`, `view.mjs`를 보존한다. `evidence/results.json`은 원래 실행의 결과와 해시다. `evidence/no-overlap-check.cfg`와 `evidence/chart.mmd`는 반례 그림의 입력과 출력이다. 원문 로그와 후속 실행 출력은 `.scratch/`에 로컬 자료로 보존하고 Git 추적 대상에서 제외한다.
 
 기존 CAS 가시 XASL 정보만으로 제한을 적용하는 원안은 소스 근거상 불충분하다. 유한 모델 검사는 정확한 입력과 실행 경계를 가정한 보강 알고리즘을 대상으로 한다. 여덟 변형의 `PASS`는 예상 위반 검출을 뜻한다. [기술 보고서](report.md)는 이 세 결과와 남은 구현 계약을 구분한다.
+
+보고서 부록 A는 캐시 적중과 UPDATE의 내부 SELECT 경로를 함수·조건·필드 순서로 설명한다. 각 위치는 분석 리비전의 소스 링크로 연결된다. 원래 SQL 종류가 유지되는 지점과 구현 검토 범위도 함께 정리했다.
 
 ## 준비
 
