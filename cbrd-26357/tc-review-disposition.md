@@ -89,6 +89,7 @@ TC 저장소의 `feature/oos-merge`는 각 `tc/pr-7990`보다 develop revert 커
 - #3551에서 shparkcubrid에게 재리뷰를 요청했다.
 - TC 동기화: PR 7990은 feature 병합 PR이라 두 TC 저장소에서 `tc/pr-7990`과 TC `feature/oos-merge`의 tip이 같아야 한다(`cubrid-feature-tc-sync-check`). 첫 push 뒤 public 저장소가 1커밋씩 갈라졌다. 사용자 승인 후 merge commit `2a9496b5a`를 public `feature/oos-merge`(`e3e7bce0d..`)와 `tc/pr-7990`(`7bc7d7237..`)에 fast-forward로 push했다. private `tc/pr-7990`은 `b91e7f640`으로 fast-forward했다. 검사 결과 두 저장소 모두 synced.
 - CI: 엔진 head가 `67220b7e2`(#8299 병합)로 바뀌었고, OOS 오류 번호는 그대로다(-1395..-1398). `/run sql`([comment](https://github.com/CUBRID/cubrid/pull/7990#issuecomment-6793611938))이 [run 43005450417](https://github.com/CUBRID/cubrid/actions/runs/43005450417)로 잡혔다. 결과는 `cubrid-ci-watch` 요청 23으로 추적한다.
+- 릴리스 노트: 회신 C의 문안에 측정 요약을 더해 CBRD-26357에 JIRA 코멘트 4778347로 남겼다(2026-11-11 20:18 KST).
 
 ## 회신 초안 (게시된 원문)
 
