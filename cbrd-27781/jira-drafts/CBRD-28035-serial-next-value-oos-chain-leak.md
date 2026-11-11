@@ -8,9 +8,9 @@
 
 **이슈 수행 이유**: serial 값을 내줄 때 `_db_serial` 행을 고치는 경로는 `heap_update`를 거치지 않는다. `heap_attrinfo_transform_to_disk`로 새 레코드를 만들고 `spage_update`로 slot을 직접 덮어쓴다. `transform_to_disk`는 OOS로 보낼 열이 있으면 그 값을 새 chain으로 쓴다. 그런데 덮어쓰기 전 레코드가 가리키던 chain을 회수하는 단계(`heap_oos_delete_unreferenced`)는 heap delete와 update 경로에만 있다. 그래서 갱신할 때마다 이전 chain이 고아로 남는다. debug 빌드에서 NEXT VALUE 50회와 100회를 실행해, OOS 레코드 수가 실행 횟수만큼 늘어나는 것을 확인했다.
 
-**영향**: comment가 OOS로 나간 serial을 쓰는 DB는 NEXT VALUE를 쓸수록 `_db_serial`의 OOS 파일이 커진다. 실측에서는 갱신 100회에 OOS 레코드 100개(4K page 35개)가 쌓였고, 서버를 재시작해도 줄지 않았다. 버려진 chain은 non-MVCC 행의 것이라 vacuum도 회수하지 않는 것으로 보인다(소스 근거). 조회 결과는 틀리지 않는다. 행은 마지막 chain을 가리키고, comment와 현재 값은 정상으로 읽혔다. 기본 16K page에서 이 조건이 얼마나 자주 생기는지는 모른다. 그 경우 OOS로 나가려면 serial 행이 4KB를 넘어야 하고, 그러려면 다국어 comment처럼 큰 값이 필요하다.
+**영향**: comment가 OOS로 나간 serial을 쓰는 DB는 NEXT VALUE를 쓸수록 `_db_serial`의 OOS 파일이 커진다. 실측에서는 갱신 100회에 OOS 레코드 100개(4K page 35개)가 쌓였고, 서버를 재시작해도 줄지 않았다. 버려진 chain은 non-MVCC 행의 것이라 vacuum도 회수하지 않는 것으로 보인다(소스 근거). 조회 결과는 틀리지 않는다. 행은 마지막 chain을 가리키고, comment와 현재 값은 정상으로 읽혔다. 기본 16K page에서는 생기지 않는 것으로 본다(소스와 실행 근거로 한 추론). 16K page에서 OOS로 나가려면 serial 행이 약 4KB를 넘어야 한다. 그런데 comment는 1024바이트로 제한되고(`ERROR: Maximum length of a comment is 1024 bytes.`), 나머지 열을 더해도 그 크기에 못 미친다. 4K page에서는 생기고, 8K page에서는 이름이 긴 serial에서 생길 수 있다.
 
-**이슈 수행 방안**: TBD - ANALYSIS 단계에서 해결 방안과 구현 범위를 결정한다.
+**이슈 수행 방안**: TBD - ANALYSIS 단계에서 해결 방안과 구현 범위를 결정한다. 제안 수정은 draft PR [CUBRID/cubrid#8492](https://github.com/CUBRID/cubrid/pull/8492)이다.
 
 ---
 
