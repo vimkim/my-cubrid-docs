@@ -49,3 +49,9 @@ Purpose와 Implementation은 바꾸지 않는다. Remarks만 바꾼다.
 ## 실행 기록
 
 - 2026-11-11: CI run 42801815682가 failure로 끝났다. test_shell, test_sql, test_sql_by_cci, code-style이 실패했고, build 두 개와 test_medium은 성공했다. 게시 확인의 조건에 따라 docs integration과 PR 본문 갱신을 하지 않았다. GitHub 본문은 바꾸지 않았다.
+- 2026-11-11: head가 `cd24a212aa81e2a11d72d1ac57bb10113727a4d8`로 바뀌었다(`heap_file.h`에 빈 줄 하나 추가, code-style 수정). source commit을 이 값으로 바꾸고 본문의 head·CTest·CI 줄을 고쳤다(`a0a1af0`). 원격 PR head도 같은 값이다. 두 TC 레포의 `feature/oos-merge`에 develop의 TC revert를 가져오고 `tc/pr-8299`에 반영했다.
+- 2026-11-11: CI run 42968315485에서 build 두 개, SQL, medium, code-style이 성공했다. shell `cbrd_25894.sh` 1건은 재실행 run 42990122676에서 성공했다. SQL(CCI)만 develop 공통 실패로 남았다.
+
+## 게시 확인 (cd24a212a 판)
+
+2026-11-11에 사용자가 고친 본문과 조치 목록(docs를 `main`에 merge·push, PR 본문 갱신)을 보고 "1 진행해줘."라고 답했다. 위 "확인할 조치" 1~3번을 이 판으로 실행한다.
