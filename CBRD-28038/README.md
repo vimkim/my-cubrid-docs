@@ -3,6 +3,7 @@
 Parent issue is [CBRD-27537](https://jira.cubrid.org/browse/CBRD-27537).
 This follow-up corrects the storage references originally created under
 [CBRD-26974](https://jira.cubrid.org/browse/CBRD-26974).
+Draft PR is [CUBRID/cubrid #8486](https://github.com/CUBRID/cubrid/pull/8486).
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |

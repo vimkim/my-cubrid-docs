@@ -42,8 +42,19 @@ does not waive content, source-head, remote-target, or draft-status checks.
 - JIRA child created. https://jira.cubrid.org/browse/CBRD-28038.
 - Raw description equals the create dry-run payload; parent, Sub-task type,
   assignee vimkim, and Minor priority were read back and verified.
-- Source push and draft PR. Pending.
-- CI. Pending.
+- Source push verified. vimkim/cubrid CBRD-28038-storage-docs points to
+  a8e4a31475d81cd8f2ed9cf55a6f7c3174f7e293.
+- Draft PR. https://github.com/CUBRID/cubrid/pull/8486.
+- Live PR verification. Body bytes, title, develop base, source repository/branch,
+  source SHA, draft status, and vimkim assignment match the prepared material.
+- Published body SHA-256. 05c767be6ee3d2cbd1bfd4aef994821ebd8b0a9c735eea49a884024436d46b08.
+- CI trigger. One /run all comment at 2026-11-11T07:10:54Z,
+  https://github.com/CUBRID/cubrid/pull/8486#issuecomment-6789528271.
+- CI run. https://github.com/CUBRID/cubrid/actions/runs/42977613860, attempt 1.
+- Pickup. Both builds and all four suites point to that new run and are pending.
+- Monitoring. Existing shared poller observed. The installed watcher accepts only
+  shell, sql, and medium suites; sql_by_cci is also observed directly from the run.
+- CI outcome. Pending.
 
 The latest-base source review confirmed one required addition for permanent-file
 bulk destruction. The final disk/file reference now names header/file-table WAL
