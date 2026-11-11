@@ -24,3 +24,9 @@ Not included: CI trigger, TC PR edits, JIRA updates, reviewer messages.
 - Op 1 (docs merge/push) deferred: docs `main` checkout had unrelated uncommitted changes.
 - Op 2 done: `vk/CBRD-28011-oos-sql-trace` = a4fec6f8e26a36834c3dde4df0ed0af5ecc6d914.
 - Op 3 done: draft PR https://github.com/CUBRID/cubrid/pull/8491, assigned to vimkim.
+
+## Revision 2 (body update proposal, 2026-11-11)
+
+- Operation: update existing PR #8491 body only; title and draft status unchanged; no source push.
+- Remote body before update equals revision 1 (`b961c46:cbrd-28011/pr-body.md`).
+- Changes: release-build OOS fetch composition (measured: 3 fetches for one chunk, +1 per chunk; 800 for 200 rows x 2 chunks), debug-build numbers kept for contrast, TC reference CUBRID/cubrid-testcases#4148 (local native run PASS).

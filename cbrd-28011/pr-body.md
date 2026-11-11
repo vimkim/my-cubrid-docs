@@ -19,6 +19,7 @@ https://jira.cubrid.org/browse/CBRD-28011
   - 20000바이트 값 200행 full scan, cache가 빈 상태: `heap ... fetch: 2208, ioread: 401` 중 `oos ... fetch: 2200, ioread: 400`. ioread 400은 200행 × OOS page 2개와 맞습니다.
   - 같은 테이블에서 큰 컬럼을 읽지 않는 쿼리와 OOS가 없는 테이블: `oos` 출력이 없고 결과가 같습니다.
   - index lookup, partition별 줄, parallel heap/index scan(OOS fetch가 serial과 같은 7000), JSON 출력에서 `oos`를 확인했습니다.
-- debug 빌드의 OOS fetch는 chunk 1개에 7번, chunk 하나가 늘 때마다 4번씩 늘었습니다. release 빌드에서는 page 검증 fix가 없으므로 수가 더 작을 것으로 예상합니다.
+- OOS fetch 수 (release 빌드 실측): 값 하나에 chunk 1개면 3번입니다(head page 1번, page 할당 확인 fix 2번). chunk가 하나 늘 때마다 1번씩 늘어납니다. 200행 × chunk 2개 테이블은 800으로 측정되었습니다. debug 빌드는 page마다 검증 fix가 더해져 chunk 1개에 7번, chunk 하나당 4번씩 늘어납니다.
+- 테스트: CUBRID/cubrid-testcases#4148에 `sql/_13_issues/_26_2h/cases/cbrd_28011.sql`을 추가했습니다. `oos` 표시 여부만 확인하므로 빌드 종류와 상관없이 같은 답을 냅니다. 로컬 실행 결과 PASS입니다.
 - 제한: parallel worker별 요약 줄(`parallel workers: ...`)에는 OOS를 따로 표시하지 않습니다. 합계 줄에는 포함됩니다.
 - 이 PR은 #7990 병합 조건이 아닌 별도 후속 작업입니다.
