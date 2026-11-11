@@ -4,7 +4,7 @@ This directory checks the Sidecar POC code on branch `sidecar`, not the design t
 
 The verify skill `cubrid-verify-sidecar-code` (in `my-cubrid-formal-verification-skills`) tells an agent when to run it and how to read a result. Read every result, failing or passing, with the `/statechart` skill on the `<Module>.tla` and `<Property>.cfg` of that run's folder.
 
-Last modified: 2026-11-11, Asia/Seoul. Sync commit `b1267b2055` on branch `sidecar-storeread` (the P3 store-read fix on top of `sidecar` `0026f92098`). Move it to the commit on `sidecar` once the fix is picked there.
+Last modified: 2026-11-11, Asia/Seoul. Sync commit `ac714e909e` on branch `sidecar` (the store-read fix `b1267b2055` cherry-picked after the A4 test hooks; `check.py` exits 0 there, measured).
 
 ## Run
 
@@ -162,7 +162,7 @@ Not covered: crash and restart (see `../recovery/` and the A3 kill tests), REC_B
 
 <!-- coverage:begin -->
 ```text
-sync-commit: b1267b2055c86771b782e45676bbae9f13e5c203
+sync-commit: ac714e909e922cf2f962041bb60e898fbe91e0c0
 covers:
   src/storage/sidecar.cpp: sidecar_read_store_record_at, sidecar_apply_plan, sidecar_apply_plan_body, sidecar_insert_values, sidecar_stamp_values, sidecar_plan_update_body, sidecar_plan_delete_body, sidecar_on_absent, sidecar_on_fetch_body, sidecar_fetch_locked, sidecar_cursor_read_value, sidecar_cursor_unfix, sidecar_cursor_release, sidecar_lazy_note
   src/storage/heap_file.c: heap_update_logical, heap_delete_logical, heap_insert_logical, heap_sidecar_plan, heap_sidecar_fetch_exit, heap_get_last_version, heap_delete_home, heap_scan_pb_latch_and_fetch, heap_prepare_object_page, heap_rv_undo_insert
