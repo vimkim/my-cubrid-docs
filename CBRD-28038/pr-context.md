@@ -52,8 +52,12 @@ does not waive content, source-head, remote-target, or draft-status checks.
   https://github.com/CUBRID/cubrid/pull/8486#issuecomment-6789528271.
 - CI run. https://github.com/CUBRID/cubrid/actions/runs/42977613860, attempt 1.
 - Pickup. Both builds and all four suites point to that new run and are pending.
-- Monitoring. Existing shared poller observed. The installed watcher accepts only
-  shell, sql, and medium suites; sql_by_cci is also observed directly from the run.
+- Monitoring. Existing shared poller observed, watcher request 20. The installed
+  watcher accepts shell, sql, and medium suites. Extra gh run watch and direct
+  50-second GitHub polling were stopped after the user pointed out the duplicate
+  monitoring. Remote polling is owned solely by the shared watch CLI at its
+  default 15-minute interval; the session consumes its local meaningful events.
+  The optional sql_by_cci result will be checked at a meaningful completion event.
 - CI outcome. Pending.
 
 The latest-base source review confirmed one required addition for permanent-file
