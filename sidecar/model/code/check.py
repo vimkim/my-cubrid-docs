@@ -43,12 +43,12 @@ TLA2TOOLS_URL = "https://github.com/tlaplus/tlaplus/releases/download/v1.7.4/tla
 YN = ("yes", "no")
 SHAPE_DOMAINS = {
     # store read (SidecarStoreRead)
-    "home_recheck": YN,
+    "home_recheck": ("on_miss", "always", "no"),
     "fwd_type_check": YN,
     "fwd_slot_reuse": YN,
     "vacuum_fwd_held": YN,
     "stamp_relocates": YN,
-    "reread_bound": tuple(str(n) for n in range(1, 11)),
+    "reread_bound": ("none",) + tuple(str(n) for n in range(1, 11)),
     "model.stamp_cycles": ("reread_bound", "below_reread_bound"),
     # row write and fetch (SidecarRowWrite)
     "write_order": ("store_then_hot", "hot_then_store"),
@@ -205,22 +205,43 @@ def extract_shape(src):
     fwd_fix = rd.require(r"sidecar_fix_store_page\s*\(\s*thread_p\s*,\s*&forward\s*,", "fixes the forward page")
     again = rd.find(r"sidecar_fix_store_page\s*\(\s*thread_p\s*,\s*oid\s*,", fwd_fix.end())
     same = rd.find(r"OID_EQ\s*\(\s*\(OID\s*\*\)\s*peeked\.data\s*,\s*&forward\s*\)", fwd_fix.end())
-    put("home_recheck", "yes" if again and same else "no",
-        "home page fixed again at %s" % rd.at(again) if again else "no second home fix after the forward fix")
+    miss = rd.find(r"missed\s*=\s*forward\s*;", fwd_fix.end())
+    miss_test = rd.find(r"OID_EQ\s*\(\s*&forward\s*,\s*&missed\s*\)[^;]*\)\s*\{[^}]*return\s+SIDECAR_READ_ABSENT",
+                        first.end())
+    copy_ret = rd.find(r"if\s*\(\s*read\s*\)\s*\{\s*return\s+SIDECAR_READ_PRESENT", fwd_fix.end())
+    if again and same:
+        put("home_recheck", "always", "home page fixed again at %s" % rd.at(again))
+    elif miss and miss_test and copy_ret:
+        put("home_recheck", "on_miss", "REC_NEWHOME copy returned at %s; missed forward slot kept at %s, absent when "
+            "the home forwards to it again at %s" % (rd.at(copy_ret), rd.at(miss), rd.at(miss_test)))
+    else:
+        put("home_recheck", "no", "no second home fix after the forward fix")
     ty = rd.find(r"spage_get_record_type\s*\(\s*page\s*,\s*forward\.slotid\s*\)\s*==\s*REC_NEWHOME", fwd_fix.end())
     put("fwd_type_check", "yes" if ty else "no", "REC_NEWHOME test at %s" % rd.at(ty) if ty else "no REC_NEWHOME test")
-    val, where = define(src, SC, "SIDECAR_REREAD_BOUND")
+    try:
+        val, where = define(src, SC, "SIDECAR_REREAD_BOUND")
+    except ShapeError:
+        loop = rd.require(r"while\s*\(\s*true\s*\)", "loops over rounds")
+        val, where = "none", "no SIDECAR_REREAD_BOUND; unbounded loop at %s" % rd.at(loop)
     put("reread_bound", val, where)
     rd.require(r"type\s*!=\s*REC_HOME\s*&&\s*type\s*!=\s*REC_RELOCATION", "reads only REC_HOME, REC_RELOCATION and REC_BIGONE")
 
     sdr = Fn(src, "src/storage/slotted_page.c", "spage_delete_for_recovery")
     reuse = sdr.find(r"slot_p->record_type\s*=\s*REC_DELETED_WILL_REUSE")
+    rui = Fn(src, HF, "heap_rv_undo_insert")
+    store_keep = rui.find(r"if\s*\(\s*sidecar_store\s*\)\s*\{[^}]*\bspage_delete\s*\(")
+    if store_keep and rui.find(r"sidecar_store\s*=\s*heap_page_is_sidecar_store\s*\("):
+        reuse = None
     vac = Fn(src, "src/query/vacuum.c", "vacuum_heap_record")
     vfwd = vac.find(r"spage_vacuum_slot\s*\(\s*thread_p\s*,\s*helper->forward_page\s*,[^;]*,\s*true\s*\)")
+    vkeep = vac.find(r"forward_reusable\s*=\s*!\s*heap_page_is_sidecar_store\s*\(\s*thread_p\s*,\s*helper->forward_page")
+    if not vfwd and not vkeep:
+        vfwd = vac.find(r"spage_vacuum_slot\s*\(\s*thread_p\s*,\s*helper->forward_page")
     put("fwd_slot_reuse", "yes" if reuse or vfwd else "no",
         "; ".join(x for x in ["undo of a newhome insert: REC_DELETED_WILL_REUSE at %s" % sdr.at(reuse) if reuse else "",
                               "vacuum of a forward slot with reuse at %s" % vac.at(vfwd) if vfwd else ""] if x)
-        or "no forward slot is freed for reuse")
+        or "a freed store slot stays REC_MARKDELETED: heap_rv_undo_insert at %s, vacuum_heap_record at %s"
+        % (rui.at(store_keep), vac.at(vkeep)) if store_keep and vkeep else "no forward slot is freed for reuse")
     dont = vac.find(r"pgbuf_set_dirty\s*\(\s*thread_p\s*,\s*helper->forward_page\s*,\s*DONT_FREE\s*\)")
     commit = vac.find(r"log_sysop_commit\s*\(", dont.end()) if dont else None
     unfix = vac.find(r"pgbuf_unfix_and_init\s*\(\s*thread_p\s*,\s*helper->forward_page\s*\)", commit.end()) if commit else None
@@ -345,9 +366,10 @@ def B(v):
 
 def runs_for(shape):
     v = {k: x[0] for k, x in shape.items()}
-    bound = int(v["reread_bound"])
-    cycles = bound if v["model.stamp_cycles"] == "reread_bound" else bound - 1
-    read = {"RereadBound": str(bound), "MaxStampsB": "1", "HomeRecheck": B(v["home_recheck"]),
+    # with no bound, the old code's bound of 8 stamp cycles
+    bound = 0 if v["reread_bound"] == "none" else int(v["reread_bound"])
+    cycles = (bound or 8) if v["model.stamp_cycles"] == "reread_bound" else (bound or 8) - 1
+    read = {"RereadBound": str(bound), "MaxStampsB": "1", "HomeRecheck": '"%s"' % v["home_recheck"],
             "FwdTypeCheck": B(v["fwd_type_check"]), "FwdSlotReuse": B(v["fwd_slot_reuse"]),
             "VacuumAtomic": B(v["vacuum_fwd_held"])}
     if v["stamp_relocates"] != "yes":
@@ -362,9 +384,11 @@ def runs_for(shape):
              "RelBeforeStoreFix": B(v["rel_before_store_fix"]), "FixGuard": B(v["fix_guard"]),
              "ApplyNoPage": B(v["apply_no_page"])}
     return [
-        ("SidecarStoreRead", "ReadReturnsOwnValue", dict(read, MaxStampsA="2"), "View",
+        ("SidecarStoreRead", "ReadReturnsOwnValue", dict(read, MaxStampsA="2", FwdSlots='{"F", "O", "P"}'), "View",
          "the read of store record A; stamps of A twice and B once, each relocating or in place, rollback, commit, vacuum"),
-        ("SidecarStoreRead", "AbsentOnlyIfRemoved", dict(read, MaxStampsA=str(cycles)), "View",
+        ("SidecarStoreRead", "AbsentOnlyIfRemoved",
+         dict(read, MaxStampsA=str(cycles), FwdSlots="{%s}" % ", ".join('"F%d"' % i for i in range(1, cycles + 1))),
+         "View",
          "the read of A while A is stamped and rolled back up to %d times" % cycles),
         ("SidecarRowWrite", "LatchedReaderFinds", dict(row, Writers=w3), "View",
          "three writers (UPDATE or DELETE, commit or rollback), store vacuum, a latched reader"),

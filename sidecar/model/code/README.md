@@ -4,7 +4,7 @@ This directory checks the Sidecar POC code on branch `sidecar`, not the design t
 
 The verify skill `cubrid-verify-sidecar-code` (in `my-cubrid-formal-verification-skills`) tells an agent when to run it and how to read a result. Read every result, failing or passing, with the `/statechart` skill on the `<Module>.tla` and `<Property>.cfg` of that run's folder.
 
-Last modified: 2026-11-11, Asia/Seoul. Sync commit `0026f92098` on branch `sidecar`.
+Last modified: 2026-11-11, Asia/Seoul. Sync commit `b1267b2055` on branch `sidecar-storeread` (the P3 store-read fix on top of `sidecar` `0026f92098`). Move it to the commit on `sidecar` once the fix is picked there.
 
 ## Run
 
@@ -18,7 +18,7 @@ python3 /home/vimkim/gh/my-cubrid-docs/sidecar/model/code/check.py
 - `--set KEY=VALUE` tries a shape that the code does not have, for example `--set fwd_slot_reuse=no`. The output marks it `HYPOTHETICAL`. Keys and values are in `SHAPE_DOMAINS` in `check.py`.
 - `--only TEXT` runs the properties whose name contains `TEXT`.
 - It needs Python 3 and Java 8 or later. TLA+ tools 1.7.4 are read from `~/.cache/tlaplus/` and downloaded with a SHA-256 check if missing (`TLA2TOOLS_JAR` overrides).
-- A run takes about 1 minute of wall time and 35 CPU minutes (measured on 2026-11-11, 4 parallel TLC runs of 8 workers each, on a host with load about 47).
+- A run takes about 9 minutes of wall time and 85 CPU minutes (measured on 2026-11-11 at `b1267b2055`, 4 parallel TLC runs of 8 workers each, on a host with load about 120); `AbsentOnlyIfRemoved` with eight free forward slots is most of it.
 
 Exit status: `0` all pass or only known findings; `1` a new finding or a hypothetical failure; `2` out of sync or a tool error; `3` as `0`, but covered code changed since the sync commit.
 
@@ -44,12 +44,12 @@ Exit status: `0` all pass or only known findings; `1` a new finding or a hypothe
 
 ## Results at the sync commit
 
-Measured on 2026-11-11 with `--rev 0026f92098`. Counts are distinct states.
+Measured on 2026-11-11 at `b1267b2055`. Counts are distinct states.
 
 | Property | Bounds | Result |
 | --- | --- | --- |
-| `ReadReturnsOwnValue` | A stamped up to 2 times and B once, each in place or relocated, rollback, commit, vacuum; two free forward slots | known finding `store-read-forward-aba` (about 5,000); `PASS` 5,269 with `fwd_slot_reuse=no` |
-| `AbsentOnlyIfRemoved` | A stamped up to 8 times (`SIDECAR_REREAD_BOUND`) | known finding `store-read-reread-bound` (about 111,000); `PASS` 85,180 with 7 stamp cycles |
+| `ReadReturnsOwnValue` | A stamped up to 2 times and B once, each in place or relocated, rollback, commit, vacuum; three free forward slots | `PASS` 9,577 |
+| `AbsentOnlyIfRemoved` | A stamped and rolled back up to 8 times (the old `SIDECAR_REREAD_BOUND`), eight free forward slots | `PASS` 24,842,792 (4 min) |
 | `LatchedReaderFinds` | 3 writers, each UPDATE or DELETE, each commit or rollback; store vacuum | `PASS` 372,627 |
 | `StoreMatchesRow` | as above | `PASS` 372,627 |
 | `FetchNoLostRow` | as above, with one committed fetch | `PASS` 372,627 |
@@ -58,26 +58,17 @@ Measured on 2026-11-11 with `--rev 0026f92098`. Counts are distinct states.
 | `FetchNoError` | the bound reduced to 1 with 4 UPDATEs: the fallback, then a second visible read | `PASS` 2,962,537 |
 | `NoDeadlock` | a cursor scan over two hot pages with a routine call and values on both store pages, a large-column UPDATE, store vacuum of a relocated store record, the routine's worker | `PASS` 84,284 |
 
-The same results hold at `41d7901ce3`. The only change between the two commits in covered code is the debug kill points of A3 (`FI_TEST_SIDECAR_KILL_*`), which write nothing.
+At `0026f92098`, before the fix, the two store read properties failed as the findings below; the other seven results were the same.
 
 ## Findings
 
-Both were found by the model and walked through the code at the sync commit. Neither was replayed on a running server.
+Both findings were fixed by `b1267b2055` and are no longer in `known_findings.json`. Both were replayed on a debug server before the fix and pass after it (measured; scripts and outputs in `.scratch/sidecar/p3-storeread/replay/`). The replay fills a store page with in-place stamps until under 8 B are free, so the next stamp relocates, and holds the reader between its page fixes with the debug fault injections 700020 and 700021.
 
-**1. A store read can return another store record's value** (`store-read-forward-aba`, property `ReadReturnsOwnValue`). `sidecar_read_store_record_at` reads a relocated store record in three fixes, one store page at a time (`storage/sidecar.cpp:684-765`). The home recheck compares only the forward OID. A forward slot can hold another record in between, and A can be relocated back into the same slot before the recheck.
+**1. A store read could return another store record's value** (`store-read-forward-aba`, property `ReadReturnsOwnValue`). `sidecar_read_store_record_at` read a relocated store record A in three fixes and rechecked only that A's home still forwarded to the same slot F. The undo of a newhome insert (`heap_rv_undo_insert`, `spage_delete_for_recovery`) and store vacuum of a relocated record (`vacuum_heap_record`) made F reusable, so between the fixes A's stamp could roll back, a stamp of B could relocate B into F, the read could copy B, B could leave F and a new stamp of A could relocate A into F again. The recheck matched and B's value came back as A's. Replay before the fix: the read of row 1 returned row 2's value, with no error, in two runs.
 
-1. T1 stamps store record A (an UPDATE or DELETE of A's row). The DELID does not fit, so `heap_delete_home` puts A in forward slot F with `heap_insert_newhome` (`storage/heap_file.c:24068`) and makes A's home REC_RELOCATION to F.
-2. A reader of A (any class) fixes A's home page, sees REC_RELOCATION to F, and releases the page (`sidecar.cpp:690-731`).
-3. T1 rolls back. The undo writes A back into its home, and the undo of the newhome insert, `heap_rv_undo_insert` then `spage_delete_for_recovery`, makes F `REC_DELETED_WILL_REUSE` (`storage/slotted_page.c:2169`).
-4. T2 stamps store record B of another row of the same class, and the relocation takes F.
-5. The reader fixes F, finds REC_NEWHOME, and copies B's bytes (`sidecar.cpp:732-746`).
-6. B leaves F: T2 rolls back, or T2 commits and store vacuum frees F with reuse (`query/vacuum.c:2428`).
-7. T3 stamps A again, and the relocation takes F again.
-8. The reader fixes A's home, finds REC_RELOCATION to F, and returns the bytes it copied (`sidecar.cpp:750-760`). `sidecar_store_value` checks only the attribute id and the length (`sidecar.cpp:793-807`), so a value of B with the same length passes.
+**2. The reread bound could be exhausted for a live record** (`store-read-reread-bound`, property `AbsentOnlyIfRemoved`). Each relocate-and-rollback of A during the read cost one of `SIDECAR_REREAD_BOUND` (8) rounds, after which the read reported A absent. Replay before the fix: after 8 such writers a protected reader got `ER_SIDECAR_DANGLING_REF` for live row 1.
 
-The result is a wrong value with no error. It needs three stamping transactions of two rows, two relocations into the same slot and one rollback, all while one reader is between two page fixes, so it is rare (guess). The model passes when a freed forward slot is never handed out again (`--set fwd_slot_reuse=no`). That is only a way to show the cause. Fix candidates that the model does not contain: a recheck that also proves the forward record is A's, or a read that keeps the home page while it reads the forward page (two store pages, which I-7 limits).
-
-**2. The reread bound can be exhausted for a live record** (`store-read-reread-bound`, property `AbsentOnlyIfRemoved`). Each round of the same read can fail when A is relocated and its stamp rolls back during the round. After `SIDECAR_REREAD_BOUND` (8) such rounds the read reports A absent. A protected reader or a lock holder then fails with `ER_SIDECAR_DANGLING_REF` (`sidecar_read_value_locked`, `sidecar.cpp:844`; `sidecar_on_absent`, `:2325-2329`), and a committed-snapshot reader retries. It needs 8 writers of the same row that each relocate A and roll back while one read runs. The code marks the bound a guess. It passes with 7 stamp cycles.
+**The fix.** A store slot holds one store record in its life. On a store page, `heap_rv_undo_insert` deletes the slot with `spage_delete`, which leaves it `REC_MARKDELETED`, and `vacuum_heap_record` vacuums the forward slot without reuse, as store vacuum already did for home slots. A `REC_NEWHOME` record in the slot a home forwarded to is then that home's record, so the read returns it with no second home fix. A forward slot without it lost the record to a rollback or vacuum, which both change the home first, so the read starts over with no bound; each further round needs another writer that stamps and rolls back A. A home that forwards again to the slot that held nothing is a broken store, and the read reports it absent. The model shows that the non-reuse store is what makes both properties hold: with `fwd_slot_reuse=yes` and the new read both fail, and a bound on the new read fails `AbsentOnlyIfRemoved` again.
 
 ## What each model action stands for
 
@@ -85,10 +76,10 @@ Lines are at the sync commit `0026f92098`.
 
 | Model action | Code |
 | --- | --- |
-| `SidecarStoreRead` `R1`, `R2`, `R3` | `sidecar_read_store_record_at` (`storage/sidecar.cpp:686`): home fix and type test `:690-702`, REC_HOME copy `:704-708`, forward fix and REC_NEWHOME copy `:732-746`, home fix again and `OID_EQ` `:750-757`, round bound `SIDECAR_REREAD_BOUND` `:623` |
+| `SidecarStoreRead` `R1`, `R2` | `sidecar_read_store_record_at` (`storage/sidecar.cpp:700`): unbounded loop `:706`, home fix and type test, REC_HOME copy, absent when the home forwards to the slot that missed `:751`, forward fix and REC_NEWHOME copy returned `:765-772`, the missed slot kept `:778`. `R3`, `R3Skip` and a nonzero `RereadBound` model the code before the fix and broken variants |
 | `StampInPlace`, `StampNewHome`, `StampHome` | `sidecar_stamp_values` (`sidecar.cpp:1562`) calls `heap_delete_logical`, then `heap_delete_home` (`storage/heap_file.c:23876`): `spage_is_updatable` or `REC_NEWHOME` and `heap_insert_newhome` (`:24068`) with the home page held, then the home becomes REC_RELOCATION |
-| `Rollback`, `UndoStep` | `log_abort_local`, `log_rollback` in reverse LSA order; the newhome insert's undo `heap_rv_undo_insert` (`heap_file.c:17986`), `spage_delete_for_recovery` (`storage/slotted_page.c:2149`, REC_DELETED_WILL_REUSE `:2169`) |
-| `VacuumHome`, `VacuumForward` | `vacuum_heap_record` (`query/vacuum.c:2375`): forward slot vacuumed with reuse `:2428`, forward page kept until `log_sysop_commit` and unfixed `:2445` (775), so one step |
+| `Rollback`, `UndoStep` | `log_abort_local`, `log_rollback` in reverse LSA order; the newhome insert's undo `heap_rv_undo_insert` (`heap_file.c:17985`), which leaves a store slot `REC_MARKDELETED` with `spage_delete` (`:17999`) and other slots reusable with `spage_delete_for_recovery` |
+| `VacuumHome`, `VacuumForward` | `vacuum_heap_record` (`query/vacuum.c:2375`): forward slot vacuumed without reuse on a store page `:2432`, forward page kept until `log_sysop_commit` and unfixed `:2450` (775), so one step |
 | `SidecarRowWrite` `WLock` | the row's X lock that the locator takes before `heap_update_logical` and `heap_delete_logical` (assumed, not read from the code) |
 | `WPlan` | `heap_get_record_location` after `relocate:` (`heap_file.c:25917`, `:25664`), then `heap_sidecar_plan` (`:25173`) under the hot latch: `sidecar_plan_update_body` (`sidecar.cpp:1198`) or `sidecar_plan_delete_body` (`:1438`) |
 | `WInsert` | `heap_unfix_watchers` (`heap_file.c:25964`, `:25700`), `sidecar_apply_plan` (`sidecar.cpp:1710`), `sidecar_insert_values` (`:1492`, called `:1660`) |
@@ -110,8 +101,8 @@ Lines are at the sync commit `0026f92098`.
 
 | Key | Code value | Model constant |
 | --- | --- | --- |
-| `home_recheck`, `fwd_type_check`, `reread_bound` | yes, yes, 8 | `HomeRecheck`, `FwdTypeCheck`, `RereadBound` |
-| `fwd_slot_reuse` | yes | `FwdSlotReuse` |
+| `home_recheck`, `fwd_type_check`, `reread_bound` | `on_miss`, yes, `none` (before the fix: `always`, yes, 8) | `HomeRecheck`, `FwdTypeCheck`, `RereadBound` (0 for none) |
+| `fwd_slot_reuse` | no: `heap_rv_undo_insert` and `vacuum_heap_record` keep a freed store slot (before the fix: yes) | `FwdSlotReuse` |
 | `vacuum_fwd_held` | yes (775) | `VacuumAtomic` |
 | `stamp_relocates` | yes | required; without it the store read model does not apply |
 | `write_order` | `store_then_hot` | `WriteOrder` |
@@ -120,13 +111,16 @@ Lines are at the sync commit `0026f92098`.
 | `retry_bound`, `on_absent`, `delid_test` | 3, `retry`, yes | `RetryBound`, `OnAbsent`, `DelidTest` |
 | `fallback`, `fallback_lock` | yes, `s_lock_around_read` | `Fallback`, `FallbackLock` |
 | `rel_before_call`, `rel_before_hot_fix`, `rel_before_store_fix`, `fix_guard`, `apply_no_page` | all yes | `RelBeforeCall`, `RelBeforeHotFix`, `RelBeforeStoreFix`, `FixGuard`, `ApplyNoPage` |
-| `model.stamp_cycles` | `reread_bound` | `MaxStampsA` of `AbsentOnlyIfRemoved`; a model bound, not code |
+| `model.stamp_cycles` | `reread_bound` | `MaxStampsA` of `AbsentOnlyIfRemoved`, 8 when the code has no bound, with as many free forward slots (`FwdSlots`); a model bound, not code |
 
 ## Evidence that the check can fail
 
 | Variant | Property | Result (measured 2026-11-11) |
 | --- | --- | --- |
-| `--set home_recheck=no` | `ReadReturnsOwnValue` | fails (1,212 states) |
+| `--set fwd_slot_reuse=yes` | `ReadReturnsOwnValue`, `AbsentOnlyIfRemoved` | both fail (1,076 and 16,419) |
+| `--set reread_bound=3` | `AbsentOnlyIfRemoved` | fails (21,607); `ReadReturnsOwnValue` passes (9,865). `reread_bound=8` with 8 cycles did not finish in 25 min |
+| `--set home_recheck=always --set fwd_slot_reuse=yes --set reread_bound=3`, the code before the fix | `ReadReturnsOwnValue`, `AbsentOnlyIfRemoved` | both fail (10,997 and 34,414) |
+| `--set home_recheck=no` | `ReadReturnsOwnValue` | passes (11,221): with a non-reuse store the home recheck is not needed, which is why the fix drops it |
 | `WriteOrder = "hot_then_store"` | `LatchedReaderFinds` | fails (465) |
 | `PlanOnce = FALSE` | `StoreMatchesRow` | fails (4,551) |
 | `RowLock = FALSE` | `StoreMatchesRow` | fails (20,717) |
@@ -168,7 +162,7 @@ Not covered: crash and restart (see `../recovery/` and the A3 kill tests), REC_B
 
 <!-- coverage:begin -->
 ```text
-sync-commit: 0026f920988964c5f63c787ea3c144dc3d8d375d
+sync-commit: b1267b2055c86771b782e45676bbae9f13e5c203
 covers:
   src/storage/sidecar.cpp: sidecar_read_store_record_at, sidecar_apply_plan, sidecar_apply_plan_body, sidecar_insert_values, sidecar_stamp_values, sidecar_plan_update_body, sidecar_plan_delete_body, sidecar_on_absent, sidecar_on_fetch_body, sidecar_fetch_locked, sidecar_cursor_read_value, sidecar_cursor_unfix, sidecar_cursor_release, sidecar_lazy_note
   src/storage/heap_file.c: heap_update_logical, heap_delete_logical, heap_insert_logical, heap_sidecar_plan, heap_sidecar_fetch_exit, heap_get_last_version, heap_delete_home, heap_scan_pb_latch_and_fetch, heap_prepare_object_page, heap_rv_undo_insert
