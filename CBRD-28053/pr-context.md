@@ -11,7 +11,7 @@ Status: PR body draft only. Not published. The user chose on 2026-11-11 to open 
 | Base | `CUBRID/CUBRID` `develop`; branch starts at `e64a04a79` |
 | Target repository | `CUBRID/CUBRID` |
 | Operation | create |
-| Proposed title | `[CBRD-28053] Add Sidecar out-of-row storage for large columns (POC)` |
+| Proposed title | `[CBRD-28053] Add Sidecar out-of-row storage for large columns (POC-1)` |
 | Body | `CBRD-28053/pr-body.md` |
 | Context | `CBRD-28053/pr-context.md` |
 | Detailed explanation | None; the body links `sidecar/` design documents |
