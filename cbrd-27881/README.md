@@ -2,10 +2,14 @@
 
 Documents for JIRA [CBRD-27881](https://jira.cubrid.org/browse/CBRD-27881) "[OOS] refactor TODO": OOS refactoring candidates on `feature/oos-merge` and the small refactoring PRs cut from them.
 
-Last modified: 2026-11-03 (Asia/Seoul).
+Last modified: 2026-11-11 (Asia/Seoul).
+
+Start with [the current candidate catalog](refactoring-candidates.md) to choose the next sub-task. It contains all 70 R/N records with dated titles, current selection guidance and links to the historical evidence. The JIRA issue tracks the shortlist and existing sub-tasks.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [refactoring-candidates.md](refactoring-candidates.md) | Current catalog of 70 candidates, first-recorded dates, selection guidance and prerequisites | 2026-11-11 | 2026-11-11 | Make candidate selection possible through one stable ID index |
+| [survey-2026-11-11.md](survey-2026-11-11.md) | Preserved JIRA analysis, owner decisions and Nov11 scope clarifications before the issue became an index | 2026-11-11 | 2026-11-11 | Keep the prior detailed evidence accessible after shortening JIRA |
 | [CBRD-27881-oos-refactoring-candidates_dcbf09e_claude.md](CBRD-27881-oos-refactoring-candidates_dcbf09e_claude.md) | Survey of OOS refactoring candidates at feature/oos-merge dcbf09e: PRs made, deferred and decision items, defect candidates, next steps | 2026-11-03 | 2026-11-10 | Final write-up of the overnight CBRD-27881 survey |
 | [CBRD-27881-jira-description_dcbf09e_claude.md](CBRD-27881-jira-description_dcbf09e_claude.md) | The description uploaded to JIRA CBRD-27881: sub-task table, decision items, defect highlights | 2026-11-03 | 2026-11-03 | Keep the published JIRA text under version control |
 | [CBRD-27881-owner-decisions_dcbf09e_claude.md](CBRD-27881-owner-decisions_dcbf09e_claude.md) | Plain-language guide to the four owner decisions: CBRD-27237 fix approach and #8347, PR review order, the #8371 behavior difference, and a DF-04 ticket | 2026-11-03 | 2026-11-10 | The owner asked for an easy decision report after the overnight run |
