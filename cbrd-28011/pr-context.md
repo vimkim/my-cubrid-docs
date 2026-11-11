@@ -17,3 +17,10 @@
 3. Create draft PR vimkim:CBRD-28011-oos-sql-trace -> CUBRID/cubrid:feature/oos-merge with the body file unchanged, assigned to `vimkim`.
 
 Not included: CI trigger, TC PR edits, JIRA updates, reviewer messages.
+
+## Publication record (2026-11-11)
+
+- Body fingerprint (sha256 prefix): 6aae2ef8d7dee573.
+- Op 1 (docs merge/push) deferred: docs `main` checkout had unrelated uncommitted changes.
+- Op 2 done: `vk/CBRD-28011-oos-sql-trace` = a4fec6f8e26a36834c3dde4df0ed0af5ecc6d914.
+- Op 3 done: draft PR https://github.com/CUBRID/cubrid/pull/8491, assigned to vimkim.
