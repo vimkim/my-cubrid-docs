@@ -15,4 +15,9 @@
 1. Create a draft PR on CUBRID/cubrid from `vimkim:CBRD-27925-emptied-set` into `feature/oos-merge` with the body above, assigned to `vimkim`.
 2. Merge this docs task branch into my-cubrid-docs `main` (ff-only) and push `main`, adding the created PR URL to this context.
 
-User request (2026-11-11): chose "Push + draft PR (Recommended)". Body review pending.
+User request (2026-11-11): chose "Push + draft PR (Recommended)". Body reviewed and confirmed.
+
+## Execution record (2026-11-11)
+
+- User confirmed: "좋아. 이대로 해줘." Body sha256 e41e3b2da1fc7e20 at publication.
+- Created draft PR https://github.com/CUBRID/cubrid/pull/8493 (base `feature/oos-merge`, head 8c0b30dab2, assignee vimkim); body verified equal to the file.
