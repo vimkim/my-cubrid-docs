@@ -1,0 +1,172 @@
+--- a/src/storage/oos_file.cpp
++++ b/src/storage/oos_file.cpp
+@@ -178,6 +178,18 @@
+ 
+ static const int oos_Find_best_page_limit = 100;
+ 
++/* DIAG (scratch, never committed) */
++#include <cstdio>
++static std::atomic<long> oos_Diag_hint_hash {0}, oos_Diag_hint_best {0}, oos_Diag_grow {0}, oos_Diag_reuse_set {0},
++       oos_Diag_reuse_sync {0}, oos_Diag_reuse_lap {0}, oos_Diag_alloc {0}, oos_Diag_sync {0},
++       oos_Diag_cache_rejected {0}, oos_Diag_cache_new {0}, oos_Diag_cache_upd {0};
++static int
++oos_diag_cache_cap (void)
++{
++  static int cap = getenv ("OOS_DIAG_CACHE_CAP") != NULL ? atoi (getenv ("OOS_DIAG_CACHE_CAP")) : OOS_BESTSPACE_CACHE_CAPACITY;
++  return cap;
++}
++
+ #if defined(CUBRID_UNIT_TEST_ENABLED)
+ #define OOS_DEBUG_COUNTER_FIELDS(OP) \
+   OP (insert_many_calls) \
+@@ -397,12 +409,14 @@
+   if (ent != NULL)
+     {
+       ent->best.freespace = freespace;
++      oos_Diag_cache_upd++;
+       pthread_mutex_unlock (&oos_Bestspace->bestspace_mutex);
+       return ent;
+     }
+ 
+-  if (oos_Bestspace->num_stats_entries >= OOS_BESTSPACE_CACHE_CAPACITY)
++  if (oos_Bestspace->num_stats_entries >= oos_diag_cache_cap ())
+     {
++      oos_Diag_cache_rejected++;
+       pthread_mutex_unlock (&oos_Bestspace->bestspace_mutex);
+       return NULL;
+     }
+@@ -445,6 +459,7 @@
+     }
+ 
+   oos_Bestspace->num_stats_entries++;
++  oos_Diag_cache_new++;
+   pthread_mutex_unlock (&oos_Bestspace->bestspace_mutex);
+ 
+   return ent;
+@@ -716,6 +731,7 @@
+ 	{
+ 	  *out_vpid = candidate_vpid;
+ 	  found = OOS_FINDSPACE_FOUND;
++	  if (found_in_hash) oos_Diag_hint_hash++; else oos_Diag_hint_best++;
+ 
+ 	  /* Update cache with actual freespace */
+ 	  if (found_in_hash)
+@@ -2919,6 +2935,7 @@
+ 
+   oos_trace ("allocated new page {volid=%d, pageid=%d}",
+ 	     vpid_out.volid, vpid_out.pageid);
++  oos_Diag_alloc++;
+ 
+   log_sysop_commit (thread_p);
+ 
+@@ -3014,9 +3031,11 @@
+ 			     bool sync_may_help, VPID &vpid_out, PAGE_PTR &page_out)
+ {
+   std::set<VPID, oos_vpid_order> examined;
++  oos_Diag_grow++;
+   int err = oos_reclaim_check_emptied (thread_p, oos_vfid, hdr_vpid, rec_length, examined, vpid_out, page_out);
+   if (err != NO_ERROR || page_out != NULL)
+     {
++      if (page_out != NULL) oos_Diag_reuse_set++;
+       return err;
+     }
+ 
+@@ -3027,16 +3046,20 @@
+       OOS_HDR_STATS tmp_hdr;
+       memset (&tmp_hdr, 0, sizeof (tmp_hdr));
+       VPID sync_hdr_vpid = hdr_vpid;
++      oos_Diag_sync++;
+       (void) oos_stats_sync_bestspace (thread_p, &oos_vfid, &tmp_hdr, &sync_hdr_vpid, false);
+ 
+       err = oos_find_page_in_hints (thread_p, oos_vfid, hdr_vpid, rec_length, NULL, vpid_out, page_out);
+       if (err != NO_ERROR || page_out != NULL)
+ 	{
++	  if (page_out != NULL) oos_Diag_reuse_sync++;
+ 	  return err;
+ 	}
+     }
+ 
+-  return oos_reclaim_lap (thread_p, oos_vfid, hdr_vpid, rec_length, examined, vpid_out, page_out);
++  err = oos_reclaim_lap (thread_p, oos_vfid, hdr_vpid, rec_length, examined, vpid_out, page_out);
++  if (page_out != NULL) oos_Diag_reuse_lap++;
++  return err;
+ }
+ 
+ /*
+@@ -4417,6 +4440,8 @@
+ 
+   INT64 total_recs = 0;
+   INT64 total_sumlen = 0;
++  int diag_hist[4] = {0, 0, 0, 0}, diag_reclen = 0, diag_one_free_min = INT_MAX, diag_one_free_max = 0;
++  int diag_one_cached = 0, diag_empty_cached = 0;
+   for (const VPID &scan_vpid : scan_vpids)
+     {
+       if (!VPID_ISNULL (&hdr_vpid) && VPID_EQ (&scan_vpid, &hdr_vpid))
+@@ -4443,17 +4468,67 @@
+        * records starting at slot 0, so it undercounts by one record per page. */
+       PGSLOTID slotid = -1;
+       RECDES slot_recdes;
++      int page_recs = 0;
+       while (spage_next_record (page_ptr, &slotid, &slot_recdes, PEEK) == S_SUCCESS)
+ 	{
+ 	  total_recs++;
++	  page_recs++;
+ 	  total_sumlen += slot_recdes.length;
++	  diag_reclen = slot_recdes.length;
+ 	}
++      int page_free = spage_max_space_for_new_record (thread_p, page_ptr);
+       pgbuf_unfix_and_init (thread_p, page_ptr);
++      diag_hist[page_recs > 3 ? 3 : page_recs]++;
++      (void) pthread_mutex_lock (&oos_Bestspace->bestspace_mutex);
++      OOS_STATS_ENTRY *dent = (OOS_STATS_ENTRY *) mht_get (oos_Bestspace->vpid_ht, &scan_vpid);
++      pthread_mutex_unlock (&oos_Bestspace->bestspace_mutex);
++      if (page_recs == 1)
++	{
++	  diag_one_free_min = MIN (diag_one_free_min, page_free);
++	  diag_one_free_max = MAX (diag_one_free_max, page_free);
++	  if (dent != NULL) diag_one_cached++;
++	}
++      if (page_recs == 0 && dent != NULL) diag_empty_cached++;
+     }
+ 
+   out->num_recs = (int) total_recs;
+   out->recs_sumlen = total_sumlen;
+ 
++  const char *diag_path = getenv ("OOS_DIAG_FILE");
++  if (diag_path != NULL)
++    {
++      int cache_vfid = 0, cache_vfid_room = 0, cache_total = 0;
++      size_t set_size = 0;
++      (void) pthread_mutex_lock (&oos_Bestspace->bestspace_mutex);
++      void *last = NULL;
++      OOS_STATS_ENTRY *e;
++      while ((e = (OOS_STATS_ENTRY *) mht_get2 (oos_Bestspace->vfid_ht, &oos_vfid, &last)) != NULL)
++	{
++	  cache_vfid++;
++	  if (e->best.freespace >= diag_reclen) cache_vfid_room++;
++	}
++      cache_total = oos_Bestspace->num_stats_entries;
++      auto sit = oos_Reclaim_states.find (oos_vfid);
++      if (sit != oos_Reclaim_states.end ()) set_size = sit->second.emptied.size ();
++      pthread_mutex_unlock (&oos_Bestspace->bestspace_mutex);
++      FILE *f = fopen (diag_path, "a");
++      if (f != NULL)
++	{
++	  fprintf (f, "DIAG vfid=%d|%d pages=%d recs=%lld h0=%d h1=%d h2=%d h3p=%d reclen=%d one_free=[%d,%d] "
++		   "one_cached=%d empty_cached=%d cache_vfid=%d cache_vfid_room=%d cache_total=%d cap=%d set=%zu | "
++		   "hint_hash=%ld hint_best=%ld grow=%ld reuse_set=%ld reuse_sync=%ld reuse_lap=%ld alloc=%ld sync=%ld "
++		   "cache_new=%ld cache_upd=%ld cache_rej=%ld\n",
++		   VFID_AS_ARGS (&oos_vfid), num_user_pages, (long long) total_recs, diag_hist[0], diag_hist[1],
++		   diag_hist[2], diag_hist[3], diag_reclen, diag_one_free_min == INT_MAX ? -1 : diag_one_free_min,
++		   diag_one_free_max, diag_one_cached, diag_empty_cached, cache_vfid, cache_vfid_room, cache_total,
++		   oos_diag_cache_cap (), set_size, oos_Diag_hint_hash.load (), oos_Diag_hint_best.load (),
++		   oos_Diag_grow.load (), oos_Diag_reuse_set.load (), oos_Diag_reuse_sync.load (),
++		   oos_Diag_reuse_lap.load (), oos_Diag_alloc.load (), oos_Diag_sync.load (), oos_Diag_cache_new.load (),
++		   oos_Diag_cache_upd.load (), oos_Diag_cache_rejected.load ());
++	  fclose (f);
++	}
++    }
++
+   return NO_ERROR;
+ }
+ 

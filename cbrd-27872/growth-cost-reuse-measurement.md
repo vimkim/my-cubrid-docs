@@ -18,6 +18,8 @@
 
 **후속 (같은 날 저녁):** 부모 세션이 `f8cdfca747`로 복사를 고쳤고 같은 시험으로 다시 쟀다. 6,000행 UPDATE는 1단계와 같아졌고(339 대 379 ms) `perf`의 set 연산은 22%에서 0.4%로 줄었으며 단건 INSERT 수치는 그대로다. 로그 block 가설도 시험했다. drain 지연이 로그 완료에 의존한다는 부분은 확인되고, 100쪽과 1 sector가 늦은 vacuum 때문이라는 부분은 반박됐다. 아래 "수정판 `f8cdfca747`"와 "로그 block 가설 시험" 절을 볼 것. 이 위의 결론 문장은 `b8a7e5d74` 기준이다.
 
+**후속 2 (같은 날 밤):** 5% 증가의 원인을 찾아 `b24fe8741e`로 고쳤다. 빈 페이지의 항목이 bestspace 캐시(1,000 항목)를 채워서 반쯤 찬 페이지가 캐시에 들어가지 못한 것이 원인이다. 수정 뒤 churn의 cycle별 peak는 첫 cycle과 같고(2,001쪽, 6,001쪽) sector는 1단계와 같은 32와 94다. 6,000행 UPDATE는 334 ms로 수정 전과 같다. 아래 "5% 증가의 원인과 수정" 절을 볼 것.
+
 복사를 고친 뒤 같은 시험(`churn_scale.py`, 6,000행)으로 다시 재고 진행하기를 권했다(수정은 부모 세션이 했다). 사용자가 정할 일은 셋이다. 집합 복사를 고친 뒤에 진행할지. sector 조항을 허용치 안에서 읽을지. drain 지연의 원인을 확인할지.
 
 ## 기준선 정정
@@ -395,7 +397,154 @@ UPDATE 크기를 바꾸면 로그 양도 바뀐다. `--rows`를 바꿔 같은 `s
 - 행 수 시험은 서버 실행 2회, 부하가 높았다(중앙값 137). filler 수의 범위가 넓은 칸(4,000행 stage1h 1-9 등)이 있다.
 - 1,000행의 stage1h UPDATE 로그 양은 선형 가정이다.
 - 가설 시험에서 stage2는 `b8a7e5d74`의 복사본 설치를 썼다. 복사한 설치가 원본과 같은 동작인지 `cubrid --version`(11.5.0.2803-b8a7e5d)과 결과 일치(stage2와 stage2fix의 모든 행)로만 확인했다.
-- 5% 증가와 drain 지연의 원인은 모른다. `5d7eda23c`(fast path 제거)에서 시작되었다는 것까지만 안다.
+- 5% 증가와 drain 지연의 원인은 모른다. `5d7eda23c`(fast path 제거)에서 시작되었다는 것까지만 안다. (5% 증가의 원인은 아래 절에서 찾았다.)
+
+## 5% 증가의 원인과 수정 (`b24fe8741e`)
+
+2026-11-11 저녁, Work878 후속. 목표는 그대로다. churn에서 OOS 파일이 1단계보다 커지지 않고, INSERT와 UPDATE가 느려지지 않아야 한다. 이 절은 2단계의 cycle 2 이후 peak가 첫 peak보다 정확히 5% 큰 원인을 찾고 고친 기록이다. 수정은 `CBRD-27925-emptied-set`의 `b24fe8741e`이다(`f8cdfca747` 위의 로컬 커밋. push하지 않았다).
+
+**결론: 빈 페이지의 항목이 bestspace 캐시(모든 OOS 파일이 함께 쓰는 1,000 항목)를 채웠다. 그래서 반쯤 찬 페이지가 캐시에 들어가지 못했고, 그 빈 반쪽을 어떤 INSERT도 찾지 못했다. 다음 UPDATE는 빈 페이지를 100쪽 일찍 다 쓰고 새로 할당했다. 이제 삭제로 빈 페이지는 캐시에 항목을 남기지 않는다. 수정 뒤 cycle별 peak는 2,000행에서 2,001쪽, 6,000행에서 6,001쪽으로 평평하다. sector는 32와 94로 1단계와 같다. 6,000행 UPDATE는 cycle 2 이후 334 ms로 수정 전(335 ms)과 같고 1단계(386 ms)보다 빠르다.** 모든 수치는 측정함이다. 코드를 읽어서 안 것과 추정은 따로 표시했다.
+
+### 재현과 계측 (측정함)
+
+[churn_diag.py](bench/churn_diag.py)는 harness의 churn(`growth_cost.Runner.churn`)을 그대로 돌린다. 그리고 단계마다 `SHOW HEAP OOS`가 남기는 계측 줄을 모은다. 계측 코드는 [diag-bestspace-occupancy.patch](bench/diag-bestspace-occupancy.patch)이다. `f8cdfca747`에 대는 임시 패치이고 커밋하지 않았다. 이 패치를 넣으면 `oos_get_stats_by_vfid`가 `$OOS_DIAG_FILE`에 다음 값을 쓴다.
+
+- 페이지별 레코드 수(0, 1, 2개)의 분포.
+- 반쯤 찬 페이지 중 캐시 항목이 있는 수, 캐시의 빈 페이지 항목 수, 캐시 총 항목 수, emptied 집합 크기.
+- 누적 카운터: 캐시가 꽉 차서 거절한 추가 수, `file_alloc` 수, 성장이 집합에서 가져간 페이지 수, sync 수.
+
+환경 변수 `OOS_DIAG_CACHE_CAP`은 캐시 상한(1,000)을 바꾼다. 같은 release 설치 하나로 상한만 다르게 돌렸다. 원자료는 [diag-cachefix-before.log](bench/diag-cachefix-before.log)와 [diag-cachefix-after.log](bench/diag-cachefix-after.log)다.
+
+2,000행, 3 cycle, 빌드당 서버 실행 1회(18:15-18:31, load 27-56)다.
+
+| 빌드 | cycle 1 / 2 / 3 peak | sector |
+| --- | --- | --- |
+| stage1h `94ed2ea46` | 1,166 / 1,173 / 1,758 (스냅샷이라 하한) | 32 |
+| stage2a `5d7eda23c` (fast path 제거) | 2,001 / 2,101 / 2,101 | 33 |
+| `f8cdfca747` + 계측 | 2,001 / 2,101 / 2,101 | 33 |
+| `f8cdfca747` + 계측, 캐시 상한 1,000,000 | **2,001 / 2,001 / 2,001** | **32** |
+| `b24fe8741e` + 계측 | **2,001 / 2,001 / 2,001** | **32** |
+
+요청서가 먼저 확인하라고 한 `5d7eda23c`는 귀속 절과 같은 값(2,101쪽, 33 sector)을 다시 냈다. 증가는 fast path 제거에서 시작하고, 제자리 재사용과는 관계없다. 캐시 상한만 올려도 증가가 사라진다. 그래서 캐시가 넘치는 것이 기제다.
+
+cycle 1의 단계별 계측이다. 먼저 `f8cdfca747` + 계측:
+
+| 시점 | 빈 쪽 | 반쯤 찬 쪽 | 꽉 찬 쪽 | 캐시 항목 (그중 빈 쪽) | 반쯤 찬 쪽 중 캐시에 있는 수 | 누적 거절 | 집합 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| UPDATE drain 뒤 | 1,000 | 0 | 1,000 | 1,000 (999) | 0 | 2 | 1,000 |
+| DELETE drain 뒤 | 1,200 | **200** | 600 | 1,000 (999) | **1** | **601** | 1,200 |
+| 재INSERT 뒤 | 900 | **200** | 900 | 700 (699) | 1 | 601 | 900 |
+| cycle 2 UPDATE 직후 | 579 | 142 | 1,379 | 639 (579) | 60 | 601 | 579 |
+
+같은 시점의 `b24fe8741e` + 계측:
+
+| 시점 | 빈 쪽 | 반쯤 찬 쪽 | 꽉 찬 쪽 | 캐시 항목 (그중 빈 쪽) | 반쯤 찬 쪽 중 캐시에 있는 수 | 누적 거절 | 집합 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| UPDATE drain 뒤 | 1,000 | 0 | 1,000 | 1 (0) | 0 | 0 | 1,000 |
+| DELETE drain 뒤 | 1,200 | 200 | 600 | 200 (0) | **200** | 0 | 1,200 |
+| 재INSERT 뒤 | 1,000 | **0** | 1,000 | 1 (0) | 0 | 0 | 1,000 |
+| cycle 2 UPDATE 직후 | 565 | 155 | 1,280 | 156 (0) | 155 | 0 | 565 |
+
+- 수정 전에는 누적 `file_alloc`이 cycle 1까지 2,000회였고 cycle 2에서 2,100회가 되었다(+100). 수정 뒤에는 cycle 3까지 2,000회에 머물렀다.
+- 성장 안의 bestspace sync는 두 빌드 모두 한 번도 돌지 않았다. header의 `best[]`로 찾은 INSERT는 수정 전 0회, 수정 뒤 재INSERT마다 10회였다.
+- 레코드 길이는 7,040바이트다. 값이 하나 남은 페이지의 빈 공간은 9,264바이트라서 값이 하나 더 들어간다.
+
+### 원인
+
+코드를 읽어서 안 것(`f8cdfca747`):
+
+1. `oos_delete_chain`은 chunk를 지울 때마다 `oos_stats_update`를 부른다. 이 함수는 페이지가 비었어도 그 빈 공간을 bestspace 캐시에 넣는다(`oos_stats_add_bestspace`). 캐시는 모든 OOS 파일이 함께 쓰는 해시다. 항목이 `OOS_BESTSPACE_CACHE_CAPACITY`(1,000)에 닿으면 새 항목을 버린다. 이미 있는 항목의 갱신은 버리지 않는다.
+2. 1단계에서는 vacuum의 fast path가 빈 페이지를 반환하면서 그 항목을 지웠다(`oos_try_reclaim_page_internal`의 `oos_stats_del_bestspace_by_vpid`). `5d7eda23c`가 fast path를 없앤 뒤에는 빈 페이지의 항목이 남는다. 그 페이지는 emptied 집합에도 있다.
+3. 반쯤 찬 페이지를 INSERT가 찾는 길은 bestspace 힌트뿐이다(캐시, header의 `best[]` 10개, sync). 성장은 빈 페이지만 가져간다.
+
+측정한 연쇄(2,000행, 위 표):
+
+1. cycle 1 UPDATE의 옛 값 2,000개를 vacuum이 지우면 1,000쪽이 빈다. 그 항목 999개가 캐시를 채운다.
+2. `DELETE ... WHERE MOD(id, 10) < 3`은 다섯 쪽마다 한 쪽을 비우고 한 쪽을 반만 비운다(코드를 읽어서 안 것: 값이 id 순서로 두 개씩 놓여 있다). 200쪽이 반쯤 찼다. 캐시가 꽉 차서 추가 599개가 거절되었고, 200쪽 중 1쪽만 캐시에 있다.
+3. 재INSERT 600개는 캐시에 있는 빈 페이지 300쪽에 들어간다. 반쯤 찬 200쪽은 그대로 남는다. 1단계는 이 600개를 반쯤 찬 200쪽과 새 200쪽에 넣었다(1단계의 재INSERT 뒤 1,001쪽).
+4. cycle 2 UPDATE는 값 2,000개를 놓을 자리가 필요하다. 빈 페이지는 900쪽(1,800개 자리)이다. 반쯤 찬 페이지의 200개 자리는 어떤 힌트에도 없다. 200개가 모자라 100쪽을 새로 할당한다. 2,000쪽의 5%다.
+5. cycle 3부터는 cycle 2가 할당한 100쪽이 같은 부족분을 메운다. 그래서 다시 늘지 않는다.
+
+이 연쇄는 앞 절의 행 수 시험 값과도 맞는다(추정. 1,000행과 4,000행은 계측하지 않았다). 반쯤 찬 페이지 수는 행 수의 10%이고, 새로 필요한 쪽은 그 절반이다. 4,000행은 +200, 6,000행은 +300이 예측이고, 측정값은 +201과 +301이었다. 1,000행에서는 빈 페이지가 500쪽뿐이라 캐시가 차지 않으므로 0이 예측이고, 측정값도 0이었다.
+
+drain 지연은 이 원인과 따로다. 이 수정이 drain 지연을 바꾸는지는 재지 않았다.
+
+### 수정
+
+`b24fe8741e`는 `oos_file.cpp` 1파일(12줄 추가, 5줄 삭제)과 단위 테스트 76줄이다. `oos_delete_chain`에서 삭제 뒤 페이지가 비었으면 `oos_stats_update`를 부르지 않는다. 대신 그 페이지의 캐시 항목을 지우고 emptied 집합에만 넣는다. 빈 페이지는 다음 성장이 집합에서 가져간다. 캐시 항목이 없는 빈 페이지는 수정 전에도 이 길로 쓰였다. 캐시에는 힌트로만 찾을 수 있는 반쯤 찬 페이지가 남는다. 1단계에서 fast path가 반환과 함께 항목을 지우던 결과를, 페이지를 반환하지 않고 얻는다. dealloc sysop과 vacuum fast path는 다시 넣지 않았다.
+
+- 회복 경로(`oos_rv_delete_chunk`)는 원래 모든 삭제에서 항목을 지운다. 바꾸지 않았다.
+- INSERT가 실패해서 빈 페이지가 생기는 두 곳(`oos_reclaim_add_if_emptied`)과 sync가 빈 페이지를 캐시에 넣는 경로는 바꾸지 않았다. 이번 churn에서 sync는 한 번도 돌지 않았고 INSERT 실패도 없었다. 근거가 없는 변경은 넣지 않았다.
+
+### 단위 테스트 (측정함)
+
+`OosBestspaceTest.ChurnDoesNotGrowPastTheFirstPeak`(`unit_tests/oos/test_oos_bestspace.cpp`)는 같은 churn을 `oos_insert`와 `oos_delete`로 돈다. 7,000바이트 값 2,000개를 넣는다. 새 값을 넣은 뒤 옛 값을 지우고(vacuum과 같은 순서), 30%를 지우고 다시 넣고, 한 번 더 다시 쓴다. 두 번째 다시 쓰기 뒤 페이지 수가 첫 peak(2,001쪽) 이하여야 한다.
+
+수정 전(`f8cdfca747`에 테스트만 더한 debug 빌드):
+
+```text
+[ RUN      ] OosBestspaceTest.ChurnDoesNotGrowPastTheFirstPeak
+/home/vimkim/gh/cb/CBRD-27925-emptied-set/unit_tests/oos/test_oos_bestspace.cpp:1615: Failure
+Expected: (count_pages ()) <= (first_peak), actual: 2101 vs 2001
+the second rewrite grew the file past the first peak
+```
+
+수정 뒤에는 `[       OK ] OosBestspaceTest.ChurnDoesNotGrowPastTheFirstPeak (1560 ms)`이다. 서버에서 잰 2,101과 2,001이 단위 테스트에서도 그대로 나온다.
+
+debug 빌드의 OOS ctest(`ctest -R oos`, 53개)는 52개가 통과했다. 여기에 growth_sweep, bestspace, test_oos, vacuum server 테스트들, SQL 테스트, crash recovery 테스트가 들어 있다. `test_oos_real_vacuum_server`는 840초 제한에 걸렸다. 그때까지 끝난 7개 case는 모두 OK였지만 case마다 71-212초가 걸렸다. 이전 실행 6회의 평균은 바이너리 전체 48초였다. 같은 시간대에 다른 테스트도 평소보다 5-15배 느렸다(`test_oos_vacuum_server` 44초 대 평균 3초, `test_oos_real_vacuum_latch_timeout` 403초 대 평균 77초). `/proc/pressure/io`의 full avg300은 약 19%였다.
+
+이 느림이 수정 때문인지 가렸다. 같은 debug 설치에서 `oos_file.cpp`만 `f8cdfca747`로 되돌린 빌드와 수정판을 번갈아, `test_oos_real_vacuum_server`의 case 4개를 돌렸다. `SingleRowDeleteDrainsCompletely`와 `OosRealVacuumUpdateNotify`의 3개이고, vacuum이 비운 페이지를 다음 INSERT가 가져가는지 보는 `CommittedUpdateLeavesThePageItsDroppedChainEmptiedToTheNextInsert`가 들어 있다. 모두 통과했다.
+
+| 실행 | SingleRowDelete | RolledBackUpdate | SavepointRolledBack | CommittedUpdate...ToTheNextInsert | 합 |
+| --- | --- | --- | --- | --- | --- |
+| 수정판 1회차 | 53.6 s | 54.1 s | 61.9 s | 44.4 s | 214 s |
+| 수정 전 | 56.4 s | 46.2 s | 35.0 s | 30.1 s | 168 s |
+| 수정판 2회차 | 46.8 s | 24.7 s | 54.4 s | 14.2 s | 140 s |
+
+같은 빌드 안에서도 case 시간이 두 배 넘게 흔들리고 방향이 일정하지 않다. 수정이 바꾸는 것은 vacuum이 페이지를 비울 때 캐시 항목 하나를 지우는 일뿐이다(코드를 읽어서 안 것). 이 case들의 시간은 filler INSERT와 commit으로 로그 block을 닫는 반복과 vacuum 대기가 차지한다. 그래서 느림은 장비의 IO 부하 때문이라고 판단했다(추정). 이어서 수정판 바이너리 전체를 ctest 제한 없이 다시 돌렸다. 16개 통과, 10개 건너뜀(`OosRealVacuumHeaderHeld`는 짧은 latch timeout 환경에서만 돈다. 그 환경으로 도는 `test_oos_real_vacuum_latch_timeout`은 위 ctest에서 통과했다)이고, 488초로 840초 제한 안이었다.
+
+### release 재측정 (측정함)
+
+`CBRD-27872-after3`를 `b24fe8741e`로 detached 이동했다. 계측 패치는 버렸다. 그리고 `release_gcc`를 다시 configure, build, install했다(`cubrid_rel`은 11.5.0.2805-b24fe87, 작업 트리는 깨끗하고, 설치한 라이브러리에 계측 문자열이 없다). 수정 전 `f8cdfca747` 설치는 `~/.cub/install/CBRD-27872-after3-f8cdfca747`로 복사해 두고 같은 시간대에 돌렸다. 라벨은 `stage2fix`(`f8cdfca747`)와 `stage2bs`(`b24fe8741e`)다. churn용 DB는 [create_churn_dbs.py](bench/create_churn_dbs.py)로 새로 만들었다(`/mnt/nvme/data-5/tmp/w878/fix2`). 측정에는 [churn_scale.py](bench/churn_scale.py)를 바꾸지 않고 썼다. 서버는 한 번에 하나였다. 두 번 돌렸고 두 번째는 빌드 순서를 뒤집었다. 페이지와 sector는 [scale_peaks.py](bench/scale_peaks.py)로 [results-cachefix-scale.csv](bench/results-cachefix-scale.csv)에서, 문장 시간은 [scale_times.py](bench/scale_times.py)로 csql 로그에서 뽑았다.
+
+```sh
+python3 -I -B cbrd-27872/bench/churn_scale.py --dbs /mnt/nvme/data-5/tmp/w878/fix2 \
+  --build stage1h=$HOME/.cub/install/CBRD-27872-after2h/release_gcc=94ed2ea46 \
+  --build stage2fix=$HOME/.cub/install/CBRD-27872-after3-f8cdfca747/release_gcc=f8cdfca747 \
+  --build stage2bs=$HOME/.cub/install/CBRD-27872-after3/release_gcc=b24fe8741e \
+  --rows 2000 6000 --reps 3 --cycles 3
+# 두 번째: 같은 명령, --build 순서만 stage2bs, stage2fix, stage1h
+python3 -I -B cbrd-27872/bench/scale_peaks.py results.csv --rows 2000 6000 2000 6000
+python3 -I -B cbrd-27872/bench/scale_times.py /mnt/nvme/data-5/tmp/w878/fix2 --rows 2000 6000
+```
+
+load average(1분)는 첫 번째 18:41-18:45에 중앙값 48(36-121), 두 번째 18:51-18:55에 중앙값 28(23-43)이다([loadavg-cachefix.txt](bench/loadavg-cachefix.txt)). 첫 번째 동안 같은 장비에서 위 debug ctest가 함께 돌았다.
+
+빌드당 서버 실행 6회(행 수마다), 각 3 cycle이다. 페이지는 6회 모두 같은 값이다(stage1h 제외). 시간은 중앙값(범위)이고 cycle 2 이후는 n=12, cycle 1은 n=6이다.
+
+| 행 수 | 빌드 | cycle 1 / 2 / 3 peak | sector c | UPDATE ms, cycle 1 | UPDATE ms, cycle 2 이후 | 재INSERT ms, cycle 2 이후 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2,000 | stage1h | 1,166-1,678 / 1,172-1,819 / 1,711-1,758 (스냅샷) | 32 | 143.0 | 128.8 (120.9-230.6) | 52.2 |
+| 2,000 | stage2fix `f8cdfca747` | 2,001 / 2,101 / 2,101 | 33 | 130.0 | 114.0 (105.3-224.2) | 48.9 |
+| 2,000 | **stage2bs `b24fe8741e`** | **2,001 / 2,001 / 2,001** | **32** | 138.3 | **110.8** (108.3-188.1) | 49.0 |
+| 6,000 | stage1h | 3,890-3,961 / 3,525-4,379 / 3,271-4,793 (스냅샷) | 94 | 414.5 | 385.8 (358.1-438.9) | 128.3 |
+| 6,000 | stage2fix `f8cdfca747` | 6,001 / 6,302 / 6,302 | 99 | 435.1 | 334.7 (314.9-415.7) | 116.1 |
+| 6,000 | **stage2bs `b24fe8741e`** | **6,001 / 6,001 / 6,001** | **94** | 373.8 | **334.0** (315.6-403.5) | 114.2 |
+
+stage1h의 peak는 스냅샷이라 하한이다. 1단계에서는 vacuum이 페이지를 반환하면서 파일이 줄기 때문이다. 1단계와는 sector로 비교한다.
+
+- **파일 크기는 1단계와 같아졌다.** 수정판의 peak는 12회 모두 첫 cycle과 같다(2,001쪽, 6,001쪽). 수정 전은 2,101쪽과 6,302쪽이었다. sector는 수정판 32와 94, stage1h 32와 94, 수정 전 33과 99다.
+- **속도는 바뀌지 않았다.** 6,000행 UPDATE의 cycle 2 이후 중앙값은 수정판 334.0 ms, 수정 전 334.7 ms, stage1h 385.8 ms다. 범위가 셋 모두 겹치고, 수정판과 수정 전의 차이는 범위(약 90 ms)보다 훨씬 작다. 요청서의 기준 약 340 ms 안이다. 재INSERT도 114 대 116 ms다.
+- 수정 뒤에는 빈 페이지를 캐시 대신 성장(집합)으로 찾는다. 계측에서 cycle마다 집합에서 가져간 페이지가 약 1,000쪽으로 늘었다(수정 전 200-300쪽). `f8cdfca747` 이후 집합에서 하나를 고르는 비용은 O(log n)이고, 문장 시간에 차이가 보이지 않았다.
+
+### 이 절의 한계
+
+- 계측은 2,000행에서만 했다. 1,000행과 4,000행의 설명은 같은 기제에서 나온 추정이다. release 재측정은 2,000행과 6,000행이다.
+- 공용 서버에서 쟀다. 측정 동안 다른 사용자의 `cub_server` 여러 개와 다른 worktree의 ctest가 돌았다.
+- 캐시 상한 1,000은 모든 OOS 파일이 함께 쓴다. 여러 파일이 동시에 churn하면 반쯤 찬 페이지끼리도 캐시를 다툰다. 1단계도 같은 상한이므로 이 수정의 범위 밖이고, 재지 않았다.
+- 빈 페이지가 집합 상한(4,096쪽)을 넘는 churn은 재지 않았다. 넘은 페이지는 lap이 찾는다(코드를 읽어서 안 것).
+- sync가 빈 페이지를 캐시에 넣는 경로는 그대로다. sync가 자주 도는 작업에서 같은 밀어내기가 생기는지는 재지 않았다.
+- drain 지연(UPDATE 뒤 filler 12개)의 원인은 여전히 모른다.
 
 ## 한계
 
@@ -414,9 +563,9 @@ UPDATE 크기를 바꾸면 로그 양도 바뀐다. `--rows`를 바꿔 같은 `s
 | 조건 | 판정 | 근거 |
 | --- | --- | --- |
 | ADR-0010 결정 7: INSERT 시간이 1단계보다 나빠지지 않는다 (`b8a7e5d74` 기준. 수정판 `f8cdfca747`은 충족, 위 절) | **일부 미충족** | 단건 INSERT 5개 항목은 충족(차이 구별 불가, 짝 검정 p ≥ 0.21). 집합이 큰 대량 UPDATE는 미충족(6,000행 UPDATE, cycle 2 이후 372-386 ms에서 980-1,000 ms. 시험 두 번) |
-| ADR-0010 결정 7: churn 뒤 파일 크기가 커지지 않는다 | 충족(조건부) | sector 33 대 32. 2,000행에서 증가는 cycle 2에서 한 번이고 20 cycle 동안 누적되지 않음. 단 행 수 시험에서 증가가 파일의 약 5%(4,000행 +3, 6,000행 +5 sector)임이 드러났다("로그 block 가설 시험" 절) |
-| ADR-0009 결정 4: cycle별 peak가 첫 cycle peak + max(2쪽, 10%) 이내 | 충족 | 2,001, 2,101(+100, 허용 201), 20 cycle 평평 |
-| ADR-0009 결정 4: 재INSERT 뒤 예약 sector가 첫 peak를 넘지 않는다 | 해석에 따라 다름 | 33 sector(2,112쪽) 대 첫 peak 2,001쪽(32 sector). 허용치 없이 읽으면 1 sector 초과 |
+| ADR-0010 결정 7: churn 뒤 파일 크기가 커지지 않는다 | 충족(조건부). `b24fe8741e`는 충족 | sector 33 대 32. 2,000행에서 증가는 cycle 2에서 한 번이고 20 cycle 동안 누적되지 않음. 단 행 수 시험에서 증가가 파일의 약 5%(4,000행 +3, 6,000행 +5 sector)임이 드러났다("로그 block 가설 시험" 절). `b24fe8741e`는 2,000행 32, 6,000행 94 sector로 1단계와 같다("5% 증가의 원인과 수정" 절) |
+| ADR-0009 결정 4: cycle별 peak가 첫 cycle peak + max(2쪽, 10%) 이내 | 충족 | 2,001, 2,101(+100, 허용 201), 20 cycle 평평. `b24fe8741e`는 3 cycle 모두 2,001과 6,001(+0) |
+| ADR-0009 결정 4: 재INSERT 뒤 예약 sector가 첫 peak를 넘지 않는다 | 해석에 따라 다름. `b24fe8741e`는 충족 | 33 sector(2,112쪽) 대 첫 peak 2,001쪽(32 sector). 허용치 없이 읽으면 1 sector 초과. `b24fe8741e`는 32 sector(2,048쪽)로 첫 peak 2,001쪽에 필요한 sector와 같다 |
 
 ## 산출물
 
@@ -424,3 +573,4 @@ UPDATE 크기를 바꾸면 로그 양도 바뀐다. `--rows`를 바꿔 같은 `s
 - 출력 디렉터리: `/mnt/nvme/data-5/tmp/w878/measure`(run 1), `measure-h`(run 2), `measure-counters`, `measure-h-counters`, `attrib-counters`, `measure-h-perf`, `measure-h-perf6000`, `attrib-create`(stage2a DB), `fix`(수정판 DB와 본 측정), `fix-counters`, `fix-perf6000`, `hyp`, `hyp-rows1000`, `hyp-rows4000`, `hyp-rows6000`. 처음 시도한 감시자 없는 카운터(전부 0)는 `measure-counters-nowatcher-all-zero`에 남겼다.
 - 원자료: [bench/](bench/) 아래 `results-reuse-*.csv`(카운터 CSV의 run 3이 귀속 시험, run 4가 수정판. cycle 수별 CSV의 run 3이 수정판. 가설 시험은 `results-reuse-logtraffic.csv`), `loadavg-reuse-*.txt`, `perf-reuse/`(`perf report` 텍스트, 집합 크기 시험, drain 시험).
 - 스크립트: [growth_cost.py](bench/growth_cost.py)(변경 없음), [summarize.py](bench/summarize.py)(변경 없음), [paired_rounds.py](bench/paired_rounds.py), [churn_peak.py](bench/churn_peak.py), [churn_counters.py](bench/churn_counters.py), [churn_scale.py](bench/churn_scale.py), [perf_churn.py](bench/perf_churn.py), [drain_probe.py](bench/drain_probe.py), [log_traffic_churn.py](bench/log_traffic_churn.py), [logtraffic_summary.py](bench/logtraffic_summary.py).
+- 원인과 수정 절(`b24fe8741e`): 소스는 `CBRD-27925-emptied-set` `b24fe8741e`. 측정용 worktree `CBRD-27872-after3`는 지금 `b24fe8741e`(detached, 작업 트리 깨끗함)이고 설치 `~/.cub/install/CBRD-27872-after3`도 그 빌드다. 수정 전 `f8cdfca747` 설치는 `~/.cub/install/CBRD-27872-after3-f8cdfca747`, 계측+수정 빌드는 `~/.cub/install/scratch-diagfix`에 복사해 두었다. 출력 디렉터리는 `/mnt/nvme/data-5/tmp/w878/diag1`(수정 전 계측, 캐시 상한 시험, stage2a, stage1h), `diag2`(수정 뒤 계측), `fix2`(release 재측정 DB와 csql 로그). 원자료는 [diag-cachefix-before.log](bench/diag-cachefix-before.log), [diag-cachefix-after.log](bench/diag-cachefix-after.log), [results-cachefix-scale.csv](bench/results-cachefix-scale.csv), [loadavg-cachefix.txt](bench/loadavg-cachefix.txt). 스크립트와 계측 패치는 [churn_diag.py](bench/churn_diag.py), [create_churn_dbs.py](bench/create_churn_dbs.py), [scale_peaks.py](bench/scale_peaks.py), [scale_times.py](bench/scale_times.py), [diag-bestspace-occupancy.patch](bench/diag-bestspace-occupancy.patch).
