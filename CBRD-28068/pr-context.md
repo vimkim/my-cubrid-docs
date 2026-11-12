@@ -46,3 +46,12 @@ The source checkout is clean. Unrelated modifications and untracked files in the
 5. Trigger CUBRID CI once after the source push, wait for completion, report the run URL, result and any TC Merge Gate blocker, then stop for human direction.
 
 No engine merge, deployment, TC PR merge or closure, remote deletion, or force push is proposed. This file records a proposal. Approval must come from the conversation.
+
+## Publication attempt on 2026-11-12
+
+The user explicitly resumed the approved documentation integration and push, source push, draft PR creation, and one CI run on 2026-11-12. This section records execution, not permission for later operations.
+
+- The approved body SHA-256 is `e7967470cad2e809628b4f872302b94e632d2aced1329e354b6718be8e20c3dc`.
+- The source commit still equals `2e04e056af7c9fd7ad5c45f4ba5873339d6c65e0`.
+- Before publication, the fork branch was absent and the exact head/base search found no open PR.
+- Both documentation integration checkouts had unrelated tracked edits. Preserve those edits through scoped temporary stashes and verify their restoration after integration.
