@@ -5,6 +5,8 @@
 - 측정일: 2026-11-12 22:07 ~ 2026-11-13 00:34 (Asia/Seoul)
 - 원시 결과: 로컬 `/home/vimkim/temp/oos-pocs-benchmark/runs/run-20261112-220750/` (git에 넣지 않음). 집계 표 전체는 [results-tables.md](results-tables.md)에 있다.
 
+> **정정 (2026-11-13).** S7과 S8b는 의도한 크기의 값을 쓰지 않았다. develop에서 같은 형태의 UPDATE가 재사용된 plan으로 실행되면 `REPEAT(X'..', N)`이 N/4 크기의 텍스트를 저장한다. 그래서 S7·S8b는 첫 실행만 의도한 크기였다. S8s, S9와 io 조건의 변경도 그 상태 위에서 측정되었다. 반복 측정과 결과·값 길이 검사를 더한 3차 실행이 이 항목들을 대체한다: [run3-report.md](run3-report.md) (원인은 6.4절). S1·S2·S3·S5의 방향과 OOS 재적재 확인은 3차 실행에서도 재현되었다.
+
 ## 질문과 결론
 
 큰 컬럼 값을 행 밖에 두는 세 설계(OOS, Sidecar, Inner Table)는 develop과 비교해 어떤 workload에서 이득을 보고 어떤 workload에서 손해를 보는가? 대상 독자는 OOS 이후 저장 구조를 결정하는 엔진 개발자와 리뷰어다.

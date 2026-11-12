@@ -339,7 +339,9 @@ class Bench:
 
     # -- workload text ---------------------------------------------------------------------------------------
     def value(self, byte):
-        return f"REPEAT(X'{byte}', {self.size})"
+        # The CAST matters: with a reused plan, a bare REPEAT(X'..', N) in UPDATE stores N/4 bytes of ASCII hex text
+        # instead of N bytes (develop a7f220d5d7, found in CBRD-28077 run 2). The first execution is correct.
+        return f"CAST(REPEAT(X'{byte}', {self.size}) AS BIT VARYING)"
 
     def load_sql(self, n):
         return (f'create table seq (n int primary key);\n'
