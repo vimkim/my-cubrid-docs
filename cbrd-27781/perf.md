@@ -39,6 +39,7 @@ vacuum은 닫힌 로그 block만 처리하므로 drain 동안 OOS가 없는 fill
 ## 한계
 
 - 측정 장비는 80코어 공용 서버이고 측정 중 load average가 57–60이었다. 지연의 범위가 겹치고 반복이 3회뿐이라 INSERT·UPDATE 지연이 나빠지지 않았다고 말할 수 없다. decision 7의 지연 조건은 조용한 장비에서 반복을 늘려 다시 재야 한다.
+  - 2026-11-12에 다시 쟀다([재측정](latency-8495/README.md)). PR만으로는 지연 조건을 통과하지 못한다. postpone이 있는 커밋이 로그를 두 번 flush해서, 행 단위 UPDATE+COMMIT 3000번이 base 12.28 s에서 16.22 s(+32%)로 늘었다. 이 flush를 없애는 #8495(CBRD-28046)를 얹으면 11.13 s로 base와 차이가 없다. 그래서 #8434는 #8495가 `feature/oos-merge`에 들어온 뒤 merge한다.
 - vacuum 시간은 log block당 시간이 아니라 drain 벽시계로만 봤다. vacuum이 UPDATE 동안 대부분 따라잡아 차이가 작다.
 - 부하는 단일 세션, 값당 chunk 하나다. 다중 chunk 값, 동시 UPDATE, 긴 snapshot은 재지 않았다.
 - `REPEAT(MD5(...))`처럼 압축이 잘 되는 값으로 처음 잰 결과(로그가 오히려 늘어 보임)는 로그 압축이 undo image를 줄여 이 변경의 효과를 가렸으므로 쓰지 않았다.
