@@ -1,0 +1,931 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sidecar 동작 해설</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1d2330;
+  --muted: #5b6475;
+  --line: #4a5568;
+  --rule: #d9dee7;
+  --box: #f4f6fa;
+  --hot: #e3efff;
+  --hot-line: #2f6fd6;
+  --store: #e6f6ec;
+  --store-line: #23864a;
+  --warn: #fff1dc;
+  --warn-line: #b86e00;
+  --bad: #fde6e6;
+  --bad-line: #c0392b;
+  --code-bg: #eef1f6;
+  --link: #1f5fbf;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14171d;
+    --fg: #e4e8ef;
+    --muted: #9aa4b5;
+    --line: #a9b4c6;
+    --rule: #2c323d;
+    --box: #1c212a;
+    --hot: #16263f;
+    --hot-line: #6fa3f5;
+    --store: #14301f;
+    --store-line: #5cc787;
+    --warn: #33270f;
+    --warn-line: #e3a54a;
+    --bad: #3a1a1a;
+    --bad-line: #ef7b6e;
+    --code-bg: #232933;
+    --link: #8ab6ff;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14171d;
+  --fg: #e4e8ef;
+  --muted: #9aa4b5;
+  --line: #a9b4c6;
+  --rule: #2c323d;
+  --box: #1c212a;
+  --hot: #16263f;
+  --hot-line: #6fa3f5;
+  --store: #14301f;
+  --store-line: #5cc787;
+  --warn: #33270f;
+  --warn-line: #e3a54a;
+  --bad: #3a1a1a;
+  --bad-line: #ef7b6e;
+  --code-bg: #232933;
+  --link: #8ab6ff;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.65 system-ui, -apple-system, "Segoe UI", "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+}
+main { max-width: 900px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 1.7rem; line-height: 1.3; margin: 0 0 8px; }
+h2 { font-size: 1.3rem; margin: 48px 0 12px; padding-top: 12px; border-top: 1px solid var(--rule); }
+h3 { font-size: 1.08rem; margin: 28px 0 8px; }
+p, li, figcaption, td, th, .note, .diff { overflow-wrap: anywhere; }
+a { color: var(--link); }
+code {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.88em;
+  background: var(--code-bg);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+.meta { color: var(--muted); font-size: 0.92rem; }
+.meta code { font-size: 0.85em; }
+nav.toc { background: var(--box); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 16px; margin: 20px 0; }
+nav.toc ol { margin: 4px 0 0; padding-left: 20px; }
+figure { margin: 18px 0 24px; }
+.fig-scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--bg); }
+.fig-scroll svg { display: block; width: 100%; min-width: 680px; height: auto; }
+figcaption { color: var(--muted); font-size: 0.88rem; margin-top: 6px; }
+.table-scroll { overflow-x: auto; margin: 14px 0 20px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 0.92rem; }
+th, td { border: 1px solid var(--rule); padding: 6px 8px; vertical-align: top; text-align: left; }
+th { background: var(--box); }
+.note { border-left: 4px solid var(--warn-line); background: var(--warn); padding: 8px 12px; border-radius: 4px; margin: 14px 0; }
+.diff { border-left: 4px solid var(--hot-line); background: var(--hot); padding: 8px 12px; border-radius: 4px; margin: 14px 0; }
+.legend span { display: inline-block; margin-right: 14px; font-size: 0.88rem; }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -1px; margin-right: 4px; border: 1px solid var(--line); }
+
+/* SVG */
+svg text { fill: var(--fg); font-family: system-ui, "Noto Sans KR", sans-serif; font-size: 12px; }
+svg .mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+svg .small { font-size: 11px; fill: var(--muted); }
+svg .title { font-weight: 600; font-size: 13px; }
+svg .mono.title { font-size: 11.5px; }
+svg .lbl { paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
+svg .box { fill: var(--box); stroke: var(--line); stroke-width: 1; }
+svg .hot { fill: var(--hot); stroke: var(--hot-line); stroke-width: 1.2; }
+svg .store { fill: var(--store); stroke: var(--store-line); stroke-width: 1.2; }
+svg .warnb { fill: var(--warn); stroke: var(--warn-line); stroke-width: 1.2; }
+svg .badb { fill: var(--bad); stroke: var(--bad-line); stroke-width: 1.2; }
+svg .frame { fill: none; stroke: var(--line); stroke-width: 1; stroke-dasharray: 5 4; }
+svg .life { stroke: var(--line); stroke-width: 1; stroke-dasharray: 4 4; }
+svg .arr { stroke: var(--line); stroke-width: 1.4; fill: none; marker-end: url(#ah); }
+svg .arr-hot { stroke: var(--hot-line); stroke-width: 1.6; fill: none; marker-end: url(#ah-hot); }
+svg .arr-store { stroke: var(--store-line); stroke-width: 1.6; fill: none; marker-end: url(#ah-store); }
+svg .dash { stroke-dasharray: 5 4; }
+svg .ahead { fill: var(--line); }
+svg .ahead-hot { fill: var(--hot-line); }
+svg .ahead-store { fill: var(--store-line); }
+svg .bar-hot { fill: var(--hot-line); opacity: 0.85; }
+svg .bar-store { fill: var(--store-line); opacity: 0.85; }
+svg .axis { stroke: var(--line); stroke-width: 1; }
+</style>
+</head>
+<body>
+<main>
+
+<!-- shared arrow markers -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ahead" d="M0,0 L10,5 L0,10 z"/></marker>
+    <marker id="ah-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ahead-hot" d="M0,0 L10,5 L0,10 z"/></marker>
+    <marker id="ah-store" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ahead-store" d="M0,0 L10,5 L0,10 z"/></marker>
+  </defs>
+</svg>
+
+<h1>Sidecar 동작 해설</h1>
+<p class="meta">
+CBRD-28053 (POC-1). 코드 기준은 <code>sidecar-poc1</code> 브랜치 <code>84e24e39f4</code>다.
+설계 문서는 <a href="design.md">design.md</a>, <a href="grounding.md">grounding.md</a>, <a href="decisions.tsv">decisions.tsv</a>다.
+작성일은 2026-11-13 (Asia/Seoul)이다.
+코드 인용 경로는 CUBRID 저장소의 <code>src/</code> 기준이다.
+이 페이지는 소스를 읽고 쓴 설명이다. 빌드하거나 실행해서 확인한 내용은 없다.
+설계와 코드가 다른 곳은 코드를 따르고, 파란 상자에 차이를 적었다.
+</p>
+<p class="legend">
+<span><i class="sw" style="background:var(--hot)"></i>hot heap (원래 테이블 heap)</span>
+<span><i class="sw" style="background:var(--store)"></i>store heap (큰 값 저장소)</span>
+<span><i class="sw" style="background:var(--warn)"></i>조건, 주의</span>
+<span><i class="sw" style="background:var(--bad)"></i>오류 결과</span>
+</p>
+
+<nav class="toc" aria-label="목차">
+<strong>목차</strong>
+<ol>
+  <li><a href="#summary">요약과 store로 가는 조건</a></li>
+  <li><a href="#layout">데이터 배치</a></li>
+  <li><a href="#write">쓰기 경로: INSERT, UPDATE, DELETE</a></li>
+  <li><a href="#read">읽기 경로: eager, lazy, store cursor, 재시도</a></li>
+  <li><a href="#mvcc">MVCC와 정리: 가시성, vacuum, undo, recovery</a></li>
+  <li><a href="#oos">OOS와 비교</a></li>
+  <li><a href="#limits">알려진 한계와 미결 항목</a></li>
+  <li><a href="#sources">출처</a></li>
+</ol>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="summary">1. 요약과 store로 가는 조건</h2>
+
+<p>
+Sidecar는 큰 가변 길이 컬럼 값을 heap record 밖으로 옮긴다.
+옮긴 값은 테이블마다 하나 있는 <strong>store</strong>에 들어간다.
+store는 보통의 <code>FILE_HEAP</code>이고, 값 하나가 보통의 MVCC heap record 하나다.
+원래 레코드(<strong>hot record</strong>)는 값 자리에 16바이트 <code>SIDECAR_REF</code>를 두고, 끝에 trailer를 붙이고, MVCC flag <code>OR_MVCC_FLAG_HAS_SIDECAR</code>(0x08)를 켠다.
+OOS는 값마다 별도 주소와 별도 생명주기를 두었다. Sidecar는 값이 행의 생명주기를 따르게 한다.
+그래서 store record의 생성, 삭제 표시, undo, redo, vacuum은 기존 heap 코드가 그대로 처리한다.
+새 recovery index는 store 연결용 <code>RVHF_SIDECAR_LINK</code> 하나뿐이다 (<code>transaction/recovery.h:197</code>).
+목적은 작은 컬럼만 읽는 scan이 읽는 페이지 수를 줄이는 것이다 (<a href="design.md">design.md</a> 3, 12행).
+</p>
+
+<h3>store로 보낼지 정하는 규칙</h3>
+<p>
+결정 단위는 INSERT나 UPDATE 이미지 하나다. 그 안에서 어떤 컬럼 값을 옮길지 고른다.
+결정 함수는 <code>sidecar_policy_choose</code>(<code>base/sidecar_format.c</code>)다.
+먼저 <code>sidecar_record_needs_policy</code>가 싼 검사를 한다. 레코드 길이가 <code>sidecar_Policy_min_length</code>보다 길거나 이미 ref가 있을 때만 정책을 돈다 (<code>storage/sidecar.hpp:230</code>).
+</p>
+
+<figure>
+<div class="fig-scroll">
+<svg viewBox="0 0 760 430" role="img" aria-labelledby="f-policy-t">
+  <title id="f-policy-t">store로 보낼 값을 고르는 흐름</title>
+  <rect class="box" x="230" y="4" width="300" height="56" rx="6"/>
+  <text class="mono title" x="380" y="21" text-anchor="middle">sidecar_policy_admits</text>
+  <text class="small" x="380" y="37" text-anchor="middle">MVCC user class, supplemental_log = 0,</text>
+  <text class="small" x="380" y="52" text-anchor="middle">HA 꺼짐, DELID 없음, page 미보유</text>
+
+  <path class="arr" d="M530,33 L600,33"/>
+  <text class="small lbl" x="565" y="26" text-anchor="middle">아니오</text>
+  <rect class="hot" x="600" y="12" width="150" height="42" rx="6"/>
+  <text x="675" y="38" text-anchor="middle">전부 inline</text>
+
+  <path class="arr" d="M380,60 L380,86"/>
+  <text class="small lbl" x="392" y="75">예</text>
+  <rect class="warnb" x="230" y="86" width="300" height="46" rx="6"/>
+  <text class="mono title" x="380" y="106" text-anchor="middle">sidecar_force_external ?</text>
+  <text class="small" x="380" y="123" text-anchor="middle">hidden 파라미터, 이 커밋의 기본값 true</text>
+
+  <path class="arr" d="M530,109 L600,109"/>
+  <text class="small lbl" x="565" y="102" text-anchor="middle">예</text>
+  <rect class="store" x="600" y="84" width="150" height="50" rx="6"/>
+  <text x="675" y="104" text-anchor="middle">64 B 이상인 eligible</text>
+  <text x="675" y="121" text-anchor="middle">값을 모두 store로</text>
+
+  <path class="arr" d="M380,132 L380,162"/>
+  <text class="small lbl" x="392" y="151">아니오</text>
+  <rect class="warnb" x="190" y="162" width="380" height="46" rx="6"/>
+  <text class="title" x="380" y="182" text-anchor="middle">행 길이 ≤ sidecar_inline_target (4060)</text>
+  <text class="small" x="380" y="199" text-anchor="middle">그리고 STORAGE EXTERNAL 컬럼 없음?</text>
+
+  <path class="arr" d="M570,185 L600,185"/>
+  <text class="small lbl" x="585" y="178" text-anchor="middle">예</text>
+  <rect class="hot" x="600" y="164" width="150" height="42" rx="6"/>
+  <text x="675" y="190" text-anchor="middle">그대로 inline</text>
+
+  <path class="arr" d="M380,208 L380,238"/>
+  <text class="small lbl" x="392" y="227">아니오</text>
+  <rect class="store" x="150" y="238" width="460" height="62" rx="6"/>
+  <text class="title" x="380" y="258" text-anchor="middle">EXTERNAL 컬럼 먼저, 그다음 큰 값부터</text>
+  <text x="380" y="275" text-anchor="middle">값 ≥ sidecar_min_value_size (256) 인 것만, hot 추정 길이 ≤ 4060 될 때까지</text>
+  <text class="small" x="380" y="292" text-anchor="middle">추정 = 길이 − 옮긴 값 + ref 16 B + trailer (sidecar_policy_estimate)</text>
+
+  <path class="arr" d="M380,300 L380,330"/>
+  <rect class="warnb" x="190" y="330" width="380" height="46" rx="6"/>
+  <text class="title" x="380" y="350" text-anchor="middle">hot record 본문 &gt; headroom ?</text>
+  <text class="small" x="380" y="367" text-anchor="middle">headroom = 최대 레코드 길이 − 32 (16 KB에서 16,204 B)</text>
+
+  <path class="arr" d="M570,353 L600,353"/>
+  <text class="small lbl" x="585" y="346" text-anchor="middle">예</text>
+  <rect class="hot" x="600" y="332" width="150" height="42" rx="6"/>
+  <text x="675" y="350" text-anchor="middle">아무것도 안 옮김</text>
+  <text class="small" x="675" y="366" text-anchor="middle">stock 경로 (I-9)</text>
+
+  <path class="arr" d="M380,376 L380,400"/>
+  <text class="small lbl" x="392" y="393">아니오</text>
+  <text class="title" x="380" y="420" text-anchor="middle">고른 값을 store에 쓰고 hot record에는 ref를 둔다</text>
+</svg>
+</div>
+<figcaption>그림 1. 정책 흐름. <code>base/sidecar_format.c</code>의 <code>sidecar_policy_admits</code>, <code>sidecar_policy_choose</code>, <code>storage/sidecar.cpp:450-467</code>의 <code>sidecar_refresh_parameters</code>.</figcaption>
+</figure>
+
+<div class="table-scroll">
+<table>
+<thead><tr><th>파라미터, 상수</th><th>값</th><th>뜻</th><th>위치</th></tr></thead>
+<tbody>
+<tr><td><code>sidecar_inline_target</code></td><td>4060</td><td>hot record 목표 길이. 16 KB 페이지에 레코드 넷</td><td><code>base/system_parameter.c:5781</code></td></tr>
+<tr><td><code>sidecar_min_value_size</code></td><td>256 (하한 64)</td><td>AUTO 정책이 옮기는 값의 최소 길이</td><td><code>base/system_parameter.c:5794</code></td></tr>
+<tr><td><code>sidecar_force_external</code></td><td>hidden, 이 커밋 기본값 <code>true</code></td><td>64 B 이상 eligible 값을 행 길이와 무관하게 모두 옮긴다</td><td><code>base/system_parameter.c:5807</code></td></tr>
+<tr><td><code>sidecar_Policy_min_length</code></td><td>force면 64, 아니면 inline_target</td><td>정책을 돌릴지 정하는 사전 필터</td><td><code>storage/sidecar.cpp:71, 450</code></td></tr>
+<tr><td>eligible 타입</td><td>가변 길이 속성 중 set, BLOB, CLOB, ELO 제외</td><td>고정 길이 속성은 옮기지 않는다</td><td><code>storage/sidecar.cpp:564</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="diff">
+<strong>설계와 다른 점.</strong>
+설계는 <code>sidecar_force_external</code>을 디버그 파라미터로 둔다 (<a href="design.md">design.md</a> 249행).
+<code>84e24e39f4</code>에서는 기본값이 <code>true</code>다. 이 값은 CI 전용 커밋 <code>d3403c0533</code>에서 왔다.
+회귀 테스트가 모든 eligible 값을 store로 보내게 하려는 커밋이고, 병합 대상이 아니다.
+이 커밋을 빼면 기본 동작은 AUTO 정책(4060 / 256)이다.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="layout">2. 데이터 배치</h2>
+
+<p>
+테이블(파티션)마다 hot heap 하나와 store heap 하나가 있다.
+store는 첫 값을 옮길 때 <code>heap_sidecar_create_store</code>가 만든다 (<code>storage/heap_file.c:6445</code>).
+hot heap header의 옛 <code>reserve0..2</code> 12바이트가 union이 되어 <code>store_hfid</code>를 담는다 (<code>storage/heap_file.c:227-248</code>).
+store header의 같은 자리에는 거꾸로 <code>owner_vfid</code>와 magic <code>0xA51DECA5</code>가 들어간다.
+</p>
+
+<figure>
+<div class="fig-scroll">
+<svg viewBox="0 0 760 500" role="img" aria-labelledby="f-layout-t">
+  <title id="f-layout-t">hot heap, store heap, hot record, store record의 배치</title>
+  <!-- hot heap -->
+  <rect class="frame" x="10" y="10" width="360" height="200" rx="8"/>
+  <text class="title" x="22" y="30">hot heap · <tspan class="mono">FILE_HEAP</tspan></text>
+  <rect class="hot" x="25" y="42" width="330" height="54" rx="5"/>
+  <text class="mono" x="37" y="62">header page · HEAP_HDR_STATS</text>
+  <text class="mono" x="37" y="82">store_hfid</text>
+  <text class="small" x="120" y="82">union, 옛 reserve0..2 (12 B)</text>
+  <rect class="hot" x="25" y="108" width="330" height="90" rx="5"/>
+  <text class="mono" x="37" y="128">data page · hot record (REC_HOME)</text>
+  <text class="small" x="37" y="148">작은 컬럼은 그대로, 큰 값 자리에 SIDECAR_REF</text>
+  <text class="small" x="37" y="166">ref 없는 행은 기존 형식과 같다</text>
+  <text class="small" x="37" y="184">unfill_space 1,634 B (stock)</text>
+
+  <!-- store heap -->
+  <rect class="frame" x="390" y="10" width="360" height="200" rx="8"/>
+  <text class="title" x="402" y="30">store heap · <tspan class="mono">FILE_HEAP</tspan>, 파티션마다 하나</text>
+  <rect class="store" x="405" y="42" width="330" height="54" rx="5"/>
+  <text class="mono" x="417" y="62">header page · HEAP_HDR_STATS</text>
+  <text class="mono" x="417" y="82">owner_vfid + 0xA51DECA5</text>
+  <text class="small" x="610" y="82">unfill_space 512</text>
+  <rect class="store" x="405" y="108" width="330" height="90" rx="5"/>
+  <text class="mono" x="417" y="128">page flag HEAP_PAGE_FLAG_SIDECAR_STORE</text>
+  <text class="small" x="417" y="148">slot k: store record (값 하나)</text>
+  <text class="small" x="417" y="166">slot j: REC_MARKDELETED, 재사용 안 함 (I-5)</text>
+  <text class="small" x="417" y="184">page의 class OID는 hot heap의 class</text>
+
+  <path class="arr-hot" d="M355,72 L405,72"/>
+  <path class="arr-store dash" d="M405,86 L355,86"/>
+  <text class="small lbl" x="380" y="104" text-anchor="middle">RVHF_SIDECAR_LINK</text>
+
+  <!-- hot record bar -->
+  <text class="title" x="10" y="245">hot record 바이트 배치</text>
+  <rect class="hot" x="10" y="255" width="200" height="40"/>
+  <text class="mono" x="110" y="272" text-anchor="middle">MVCC header</text>
+  <text class="small" x="110" y="288" text-anchor="middle">flags에 HAS_SIDECAR 0x08</text>
+  <rect class="hot" x="210" y="255" width="80" height="40"/>
+  <text x="250" y="279" text-anchor="middle">고정 속성</text>
+  <rect class="hot" x="290" y="255" width="90" height="40"/>
+  <text x="335" y="272" text-anchor="middle">offset</text>
+  <text x="335" y="288" text-anchor="middle">table</text>
+  <rect class="hot" x="380" y="255" width="90" height="40"/>
+  <text x="425" y="272" text-anchor="middle">작은</text>
+  <text x="425" y="288" text-anchor="middle">가변 값</text>
+  <rect class="store" x="470" y="255" width="110" height="40"/>
+  <text class="mono" x="525" y="272" text-anchor="middle">SIDECAR_REF</text>
+  <text class="small" x="525" y="288" text-anchor="middle">16 B</text>
+  <rect class="warnb" x="580" y="255" width="170" height="40"/>
+  <text class="mono" x="665" y="279" text-anchor="middle">trailer</text>
+
+  <!-- ref detail -->
+  <rect class="box" x="300" y="312" width="250" height="78" rx="5"/>
+  <text class="mono title" x="310" y="330">SIDECAR_REF</text>
+  <text class="mono small" x="310" y="347">pageid INT32 · volid INT16</text>
+  <text class="mono small" x="310" y="363">slotid INT16 · length INT32</text>
+  <text class="mono small" x="310" y="379">flags (BIGONE 0x1) · attrid_check</text>
+  <path class="arr dash" d="M525,295 L470,312"/>
+
+  <rect class="box" x="560" y="312" width="190" height="78" rx="5"/>
+  <text class="mono title" x="570" y="330">trailer (big-endian)</text>
+  <text class="mono small" x="570" y="347">ref_location[n_pad]</text>
+  <text class="mono small" x="570" y="363">n_variable · n_refs</text>
+  <text class="mono small" x="570" y="379">magic 0x5343</text>
+  <path class="arr dash" d="M665,295 L655,312"/>
+
+  <!-- store record bar -->
+  <text class="title" x="10" y="425">store record 바이트 배치</text>
+  <rect class="store" x="10" y="435" width="300" height="50"/>
+  <text class="mono" x="160" y="453" text-anchor="middle">MVCC header</text>
+  <text class="small" x="160" y="469" text-anchor="middle">repid 0x007FFFFF · INSID · DELID (stamp 때 +8 B)</text>
+  <rect class="store" x="310" y="435" width="230" height="50"/>
+  <text class="mono" x="425" y="453" text-anchor="middle">SIDECAR_VALUE_HEADER</text>
+  <text class="small" x="425" y="469" text-anchor="middle">attrid · format=1 · reserved (8 B)</text>
+  <rect class="store" x="540" y="435" width="210" height="50"/>
+  <text x="645" y="458" text-anchor="middle">값 바이트</text>
+  <text class="small" x="645" y="474" text-anchor="middle">inline일 때와 같은 디스크 인코딩</text>
+
+  <path class="arr-store" d="M480,295 C420,305 260,300 225,340 S170,410 160,433"/>
+  <text class="small lbl" x="235" y="410">ref의 (volid, pageid, slotid) = store record OID</text>
+</svg>
+</div>
+<figcaption>그림 2. 데이터 배치. <code>base/sidecar_format.h:19-113</code>, <code>storage/heap_file.c:227-256, 6431-6521</code>. trailer 크기는 <code>2·n_pad + 6</code>바이트이고 <code>n_pad</code>는 ref 수를 홀수로 올린 값이다.</figcaption>
+</figure>
+
+<ul>
+<li>값 하나가 store record 하나다. 값을 조각으로 나누는 코드는 없다. 페이지보다 큰 값은 일반 heap 경로를 따라 store의 overflow file에 <code>REC_BIGONE</code>으로 들어간다. 이때 ref에 <code>SIDECAR_REF_BIGONE</code>을 켠다 (<code>storage/sidecar.cpp:1566</code>).</li>
+<li><code>SIDECAR_STORE_REPID</code>가 <code>0x007FFFFF</code>인 이유는 header를 다시 쓸 때 repid가 -1로 읽히지 않게 하려는 것이다 (<code>base/sidecar_format.h:96-99</code>).</li>
+<li>store의 <code>unfill_space</code>가 512인 이유는 store record가 자라는 경우가 DELID 8바이트뿐이기 때문이다. 256 B 값이면 페이지에 최대 57개, 57 × 8 = 456 B다 (<code>storage/heap_file.c:242-244</code>).</li>
+<li>store를 만들 때 <code>log_raise_sidecar_compatibility</code>가 디스크 호환 레벨을 한 방향으로 올린다 (<code>transaction/log_manager.c:1642</code>).</li>
+<li>store HFID는 <code>sidecar_store_for</code>가 hot VFID를 키로 lock-free hash에 캐시한다. 진실은 header의 링크다 (<code>storage/sidecar.cpp:505</code>).</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="write">3. 쓰기 경로</h2>
+
+<p>
+세 쓰기 경로 모두 hook은 <code>heap_insert_logical</code>, <code>heap_update_logical</code>, <code>heap_delete_logical</code> 안에 있다.
+공통 규칙은 둘이다.
+store record를 hot record보다 먼저 쓴다. 그래서 hot record가 없는 store record를 가리키는 순간이 없다 (I-1).
+store를 쓰는 동안 데이터 페이지를 쥐지 않는다 (I-7). 그래서 UPDATE와 DELETE는 hot page를 놓고 store를 쓴 뒤, 행을 다시 찾는다(<code>goto relocate</code>).
+store 쓰기는 <code>sidecar_store_op = true</code>인 보통의 <code>heap_insert_logical</code>, <code>heap_delete_logical</code> 호출이다. 이 플래그가 있으면 Sidecar hook을 다시 타지 않는다.
+</p>
+
+<h3 id="write-insert">INSERT</h3>
+<figure>
+<div class="fig-scroll">
+<svg viewBox="0 0 760 470" role="img" aria-labelledby="f-ins-t">
+  <title id="f-ins-t">INSERT 순서도</title>
+  <rect class="hot" x="5" y="14" width="150" height="44" rx="6"/>
+  <text class="mono title" x="80" y="34" text-anchor="middle">heap_insert_logical</text>
+  <text class="small" x="80" y="50" text-anchor="middle">heap_file.c:25593</text>
+  <rect class="box" x="215" y="14" width="150" height="44" rx="6"/>
+  <text class="mono title" x="290" y="34" text-anchor="middle">sidecar.cpp</text>
+  <text class="small" x="290" y="50" text-anchor="middle">계획과 적용</text>
+  <rect class="store" x="425" y="14" width="150" height="44" rx="6"/>
+  <text class="mono title" x="500" y="34" text-anchor="middle">store heap</text>
+  <text class="small" x="500" y="50" text-anchor="middle">sidecar_store_op = true</text>
+  <rect class="hot" x="610" y="14" width="140" height="44" rx="6"/>
+  <text class="mono title" x="680" y="34" text-anchor="middle">hot page</text>
+  <text class="small" x="680" y="50" text-anchor="middle">데이터 페이지</text>
+  <line class="life" x1="80" y1="58" x2="80" y2="455"/>
+  <line class="life" x1="290" y1="58" x2="290" y2="455"/>
+  <line class="life" x1="500" y1="58" x2="500" y2="455"/>
+  <line class="life" x1="680" y1="58" x2="680" y2="455"/>
+
+  <path class="arr" d="M80,100 L288,100"/>
+  <text class="mono lbl" x="185" y="94" text-anchor="middle">sidecar_plan_insert</text>
+  <text class="small lbl" x="185" y="115" text-anchor="middle">정책 결정, state = DECIDED (:25643)</text>
+
+  <path class="arr" d="M80,150 L288,150"/>
+  <text class="mono lbl" x="185" y="144" text-anchor="middle">sidecar_apply_plan</text>
+  <text class="small lbl" x="185" y="165" text-anchor="middle">데이터 페이지를 쥐고 있으면 안 됨 (:25646)</text>
+
+  <path class="arr-store" d="M290,200 L498,200"/>
+  <text class="mono lbl" x="395" y="194" text-anchor="middle">sidecar_store_for</text>
+  <text class="small lbl" x="395" y="215" text-anchor="middle">store가 없으면 heap_sidecar_create_store (sysop, RVHF_SIDECAR_LINK)</text>
+
+  <path class="arr-store" d="M290,255 L498,255"/>
+  <text class="mono lbl" x="395" y="249" text-anchor="middle">sidecar_insert_values</text>
+  <text class="small lbl" x="395" y="270" text-anchor="middle">값마다 heap_insert_logical 한 번 (RVHF_MVCC_INSERT)</text>
+
+  <path class="arr dash" d="M500,300 L292,300"/>
+  <text class="small lbl" x="395" y="294" text-anchor="middle">store record OID → SIDECAR_REF</text>
+
+  <path class="arr" d="M290,335 C330,335 330,360 292,360"/>
+  <text class="mono lbl" x="338" y="345">sidecar_plan_build_hot</text>
+  <text class="small lbl" x="338" y="362">ref 자리 + trailer + HAS_SIDECAR</text>
+
+  <path class="arr-hot" d="M80,405 L678,405"/>
+  <text class="mono lbl" x="380" y="399" text-anchor="middle">heap_insert_physical</text>
+  <text class="small lbl" x="380" y="420" text-anchor="middle">hot record를 맨 마지막에 쓴다 (I-1)</text>
+
+  <path class="arr" d="M80,435 C120,435 120,452 82,452"/>
+  <text class="mono lbl" x="126" y="447">sidecar_op_end</text>
+  <text class="small lbl" x="230" y="447">recdes_p 복원, plan 해제 (:25825)</text>
+</svg>
+</div>
+<figcaption>그림 3. INSERT. <code>storage/heap_file.c:25641-25825</code>, <code>storage/sidecar.cpp:1139, 1508, 1727</code>. 호출자가 페이지를 쥔 INSERT는 계획이 admit되지 않아 inline으로 남는다.</figcaption>
+</figure>
+
+<h3 id="write-update">UPDATE</h3>
+<p>
+<code>sidecar_plan_update</code>(<code>storage/sidecar.cpp:1442</code>)는 옛 hot record와 새 이미지를 비교해 <code>sidecar_plan</code>을 채운다.
+계획에는 새 버전의 모든 ref 슬롯(<code>slots</code>, 각 슬롯이 <code>fresh</code>인지 표시)과, 새 버전이 더 이상 가리키지 않는 옛 ref 목록(<code>stamps</code>)이 들어간다.
+</p>
+<ul>
+<li><strong>kept ref.</strong> 값을 바꾸지 않은 컬럼은 옛 ref를 그대로 넘긴다. 속성 계층의 <code>sidecar_keep_ref</code>(<code>storage/heap_file.c:13720</code>)가 표시하고 <code>sidecar_write_kept_ref</code>가 새 이미지에 복사한다. 작은 컬럼만 바꾸는 UPDATE는 store를 읽지도 쓰지도 않는다.</li>
+<li><strong>같은 길이 비교.</strong> 옛 버전이 ref였던 자리에 같은 길이의 inline 값이 오면 store 값을 읽어 비교한다. 같으면 ref를 유지한다 (<code>PSTAT_SC_COMPARE_KEPT</code>, <code>storage/sidecar.cpp:1195-1213</code>).</li>
+<li><strong>fresh 값.</strong> 나머지 inline 값에는 AUTO 정책을 다시 돌린다.</li>
+<li><strong>headroom (I-9).</strong> hot record가 headroom을 넘으면 <code>inline_all</code>을 켠다. kept 값은 <code>sidecar_expand_locked</code>로 inline에 다시 읽어 넣은 뒤 그 store record에 stamp한다.</li>
+<li><strong>stamp.</strong> 유지하지 않는 옛 ref는 <code>stamps</code>에 들어가고, 적용 단계에서 그 store record에 DELID를 찍는다.</li>
+</ul>
+
+<figure>
+<div class="fig-scroll">
+<svg viewBox="0 0 760 640" role="img" aria-labelledby="f-upd-t">
+  <title id="f-upd-t">UPDATE 순서도</title>
+  <rect class="hot" x="5" y="14" width="150" height="44" rx="6"/>
+  <text class="mono title" x="80" y="34" text-anchor="middle">heap_update_logical</text>
+  <text class="small" x="80" y="50" text-anchor="middle">heap_file.c:26070</text>
+  <rect class="box" x="215" y="14" width="150" height="44" rx="6"/>
+  <text class="mono title" x="290" y="34" text-anchor="middle">sidecar.cpp</text>
+  <text class="small" x="290" y="50" text-anchor="middle">sidecar_plan</text>
+  <rect class="store" x="425" y="14" width="150" height="44" rx="6"/>
+  <text class="mono title" x="500" y="34" text-anchor="middle">store heap</text>
+  <text class="small" x="500" y="50" text-anchor="middle">sidecar_store_op = true</text>
+  <rect class="hot" x="610" y="14" width="140" height="44" rx="6"/>
+  <text class="mono title" x="680" y="34" text-anchor="middle">hot page</text>
+  <text class="small" x="680" y="50" text-anchor="middle">home / forward</text>
+  <line class="life" x1="80" y1="58" x2="80" y2="590"/>
+  <line class="life" x1="290" y1="58" x2="290" y2="590"/>
+  <line class="life" x1="500" y1="58" x2="500" y2="590"/>
+  <line class="life" x1="680" y1="58" x2="680" y2="590"/>
+
+  <path class="arr" d="M80,95 L288,95"/>
+  <text class="mono lbl" x="185" y="89" text-anchor="middle">sidecar_prepare_update</text>
+  <text class="small lbl" x="185" y="110" text-anchor="middle">래치 없이 PREPARED 계획 (:26171)</text>
+
+  <path class="arr-hot" d="M80,145 L678,145"/>
+  <text class="mono lbl" x="380" y="139" text-anchor="middle">relocate: heap_get_record_location + fix</text>
+  <text class="small lbl" x="380" y="160" text-anchor="middle">home record, relocated 행이면 forward record를 읽는다 (:26183)</text>
+
+  <path class="arr" d="M80,195 L288,195"/>
+  <text class="mono lbl" x="185" y="189" text-anchor="middle">heap_sidecar_plan</text>
+  <text class="small lbl" x="185" y="210" text-anchor="middle">→ sidecar_plan_update (:26220)</text>
+  <path class="arr" d="M290,225 C330,225 330,250 292,250"/>
+  <text class="small lbl" x="336" y="236">kept ref, 같은 길이 비교, fresh 값, stamps, headroom</text>
+  <text class="small lbl" x="336" y="253">state = DECIDED</text>
+
+  <path class="arr-hot dash" d="M80,290 L678,290"/>
+  <text class="mono lbl" x="380" y="284" text-anchor="middle">heap_unfix_watchers</text>
+  <text class="small lbl" x="380" y="305" text-anchor="middle">sidecar_plan_writes_store일 때만. hot page를 놓는다 (I-7, :26227)</text>
+
+  <path class="arr" d="M80,340 L288,340"/>
+  <text class="mono lbl" x="185" y="334" text-anchor="middle">sidecar_apply_plan</text>
+
+  <path class="arr-store" d="M290,380 L498,380"/>
+  <text class="mono lbl" x="395" y="374" text-anchor="middle">sidecar_insert_values</text>
+  <text class="small lbl" x="395" y="395" text-anchor="middle">fresh 값마다 store record insert</text>
+
+  <path class="arr-store" d="M290,425 L498,425"/>
+  <text class="mono lbl" x="395" y="419" text-anchor="middle">sidecar_stamp_values</text>
+  <text class="small lbl" x="395" y="440" text-anchor="middle">stamps마다 heap_delete_logical, DELID stamp (I-4)</text>
+
+  <path class="arr-hot" d="M80,475 L678,475"/>
+  <text class="mono lbl" x="380" y="469" text-anchor="middle">goto relocate (:26237)</text>
+  <text class="small lbl" x="380" y="490" text-anchor="middle">다시 fix. 계획은 이미 APPLIED라 다시 결정하지 않는다</text>
+
+  <path class="arr" d="M290,510 C330,510 330,530 292,530"/>
+  <text class="mono lbl" x="336" y="522">sidecar_plan_build_hot</text>
+  <text class="small lbl" x="500" y="522">kept ref + 새 ref + trailer</text>
+
+  <path class="arr-hot" d="M80,565 L678,565"/>
+  <text class="mono lbl" x="380" y="559" text-anchor="middle">heap_update_home / _relocation / _bigone</text>
+  <text class="small lbl" x="380" y="580" text-anchor="middle">새 hot record를 마지막에 쓴다</text>
+
+  <rect class="warnb" x="10" y="598" width="740" height="36" rx="6"/>
+  <text x="22" y="614">래치가 없는 구간 동안 행의 X lock이 행을 계획 때 모습 그대로 둔다.</text>
+  <text x="22" y="629">store를 쓰지 않는 계획은 래치를 쥔 채 바로 hot record를 만든다 (sidecar.cpp:1430-1438).</text>
+</svg>
+</div>
+<figcaption>그림 4. UPDATE. 적용 순서는 fresh insert, 그다음 stamp다 (<code>storage/sidecar.cpp:1676-1686</code>). store 쓰기가 hot 쓰기보다 앞서는 이유는 I-1(없는 store record를 가리키지 않음)과 I-7(hot 래치를 쥔 채 store를 쓰지 않음) 두 가지다.</figcaption>
+</figure>
+
+<h3 id="write-delete">DELETE</h3>
+<figure>
+<div class="fig-scroll">
+<svg viewBox="0 0 760 450" role="img" aria-labelledby="f-del-t">
+  <title id="f-del-t">DELETE 순서도</title>
+  <rect class="hot" x="5" y="14" width="150" height="44" rx="6"/>
+  <text class="mono title" x="80" y="34" text-anchor="middle">heap_delete_logical</text>
+  <text class="small" x="80" y="50" text-anchor="middle">heap_file.c:25841</text>
+  <rect class="box" x="215" y="14" width="150" height="44" rx="6"/>
+  <text class="mono title" x="290" y="34" text-anchor="middle">sidecar.cpp</text>
+  <text class="small" x="290" y="50" text-anchor="middle">sidecar_plan</text>
+  <rect class="store" x="425" y="14" width="150" height="44" rx="6"/>
+  <text class="mono title" x="500" y="34" text-anchor="middle">store heap</text>
+  <text class="small" x="500" y="50" text-anchor="middle">sidecar_store_op = true</text>
+  <rect class="hot" x="610" y="14" width="140" height="44" rx="6"/>
+  <text class="mono title" x="680" y="34" text-anchor="middle">hot page</text>
+  <text class="small" x="680" y="50" text-anchor="middle">home / forward</text>
+  <line class="life" x1="80" y1="58" x2="80" y2="395"/>
+  <line class="life" x1="290" y1="58" x2="290" y2="395"/>
+  <line class="life" x1="500" y1="58" x2="500" y2="395"/>
+  <line class="life" x1="680" y1="58" x2="680" y2="395"/>
+
+  <path class="arr-hot" d="M80,95 L678,95"/>
+  <text class="mono lbl" x="380" y="89" text-anchor="middle">relocate: home record COPY (:25931)</text>
+
+  <path class="arr" d="M80,145 L288,145"/>
+  <text class="mono lbl" x="185" y="139" text-anchor="middle">heap_sidecar_plan</text>
+  <text class="small lbl" x="185" y="160" text-anchor="middle">→ sidecar_plan_delete (:25957)</text>
+  <path class="arr" d="M290,175 C330,175 330,195 292,195"/>
+  <text class="small lbl" x="336" y="189">trailer의 모든 ref를 stamps에 넣는다. 그 밖에는 없음</text>
+
+  <path class="arr-hot dash" d="M80,235 L678,235"/>
+  <text class="mono lbl" x="380" y="229" text-anchor="middle">heap_unfix_watchers (:25964)</text>
+
+  <path class="arr" d="M80,275 L288,275"/>
+  <text class="mono lbl" x="185" y="269" text-anchor="middle">sidecar_apply_plan</text>
+
+  <path class="arr-store" d="M290,315 L498,315"/>
+  <text class="mono lbl" x="395" y="309" text-anchor="middle">sidecar_stamp_values</text>
+  <text class="small lbl" x="395" y="330" text-anchor="middle">ref마다 heap_delete_logical, DELID stamp</text>
+
+  <path class="arr-hot" d="M80,365 L678,365"/>
+  <text class="mono lbl" x="380" y="359" text-anchor="middle">goto relocate → heap_delete_home / _relocation / _bigone</text>
+  <text class="small lbl" x="380" y="380" text-anchor="middle">hot record에 DELID</text>
+
+  <rect class="warnb" x="10" y="400" width="740" height="40" rx="6"/>
+  <text x="22" y="417">store record는 바로 지우지 않는다. 같은 트랜잭션의 DELID만 찍고, 제거는 vacuum이 한다.</text>
+  <text x="22" y="433">SA 모드에서는 삭제가 물리 삭제이고, undo가 레코드를 되살린다 (sidecar.cpp:1573-1577).</text>
+</svg>
+</div>
+<figcaption>그림 5. DELETE. <code>storage/heap_file.c:25931-26026</code>, <code>storage/sidecar.cpp:1484, 1578</code>. DELID가 붙어 store record가 커지면 stock <code>heap_delete_home</code>이 <code>REC_NEWHOME</code>으로 옮길 수 있다. store에서는 그 forward slot도 재사용하지 않는다.</figcaption>
+</figure>
+
+<!-- ============================================================ -->
+<h2 id="read">4. 읽기 경로</h2>
+
+<p>
+읽기 hook은 heap의 fetch 출구에 있다.
+ref가 있는 레코드가 출구를 지나면 <code>heap_sidecar_fetch_exit</code>(<code>storage/heap_file.c:28218</code>)가 <code>sidecar_on_fetch</code>(<code>storage/sidecar.cpp:2469</code>)를 부른다.
+<code>sidecar_classify</code>(<code>storage/sidecar.cpp:2002</code>)가 reader를 넷으로 나눈다. 분류가 값을 바로 펼칠지(eager), ref를 남겨 두고 나중에 읽을지(lazy) 정한다.
+</p>
+
+<figure>
+<div class="fig-scroll">
+<svg viewBox="0 0 760 442" role="img" aria-labelledby="f-read-t">
+  <title id="f-read-t">reader 분류와 eager, lazy 경로</title>
+  <rect class="hot" x="80" y="10" width="600" height="46" rx="6"/>
+  <text class="title" x="380" y="29" text-anchor="middle">fetch 출구</text>
+  <text class="mono small" x="380" y="46" text-anchor="middle">heap_get_visible_version_internal · heap_get_last_version · record info</text>
+  <path class="arr" d="M380,56 L380,78"/>
+  <rect class="box" x="160" y="78" width="440" height="46" rx="6"/>
+  <text class="mono title" x="380" y="97" text-anchor="middle">heap_sidecar_fetch_exit → sidecar_on_fetch</text>
+  <text class="mono small" x="380" y="114" text-anchor="middle">sidecar_classify (reader, fetch kind)</text>
+
+  <path class="arr" d="M300,124 L95,150"/>
+  <path class="arr" d="M350,124 L285,150"/>
+  <path class="arr" d="M410,124 L475,150"/>
+  <path class="arr" d="M460,124 L665,150"/>
+
+  <rect class="box" x="10" y="150" width="170" height="70" rx="6"/>
+  <text class="mono title" x="95" y="170" text-anchor="middle">HOLDER</text>
+  <text class="small" x="95" y="188" text-anchor="middle">LAST_VERSION fetch</text>
+  <text class="small" x="95" y="204" text-anchor="middle">행 lock 보유</text>
+  <rect class="box" x="200" y="150" width="170" height="70" rx="6"/>
+  <text class="mono title" x="285" y="170" text-anchor="middle">PROTECTED</text>
+  <text class="small" x="285" y="188" text-anchor="middle">트랜잭션 자신의</text>
+  <text class="small" x="285" y="204" text-anchor="middle">등록된 snapshot</text>
+  <rect class="box" x="390" y="150" width="170" height="70" rx="6"/>
+  <text class="mono title" x="475" y="170" text-anchor="middle">LATCHED</text>
+  <text class="small" x="475" y="188" text-anchor="middle">RECORD_INFO fetch,</text>
+  <text class="small" x="475" y="204" text-anchor="middle">snapshot 없음, dirty</text>
+  <rect class="box" x="580" y="150" width="170" height="70" rx="6"/>
+  <text class="mono title" x="665" y="170" text-anchor="middle">COMMITTED</text>
+  <text class="small" x="665" y="188" text-anchor="middle">그 밖. 예: xlocator_fetch</text>
+  <text class="small" x="665" y="204" text-anchor="middle">의 committed snapshot</text>
+
+  <path class="arr" d="M95,220 L95,262"/>
+  <path class="arr" d="M285,220 L285,262"/>
+  <path class="arr" d="M475,220 L520,262"/>
+  <path class="arr" d="M665,220 L620,262"/>
+  <text class="small lbl" x="190" y="248" text-anchor="middle">scan이 opt-in했을 때</text>
+
+  <rect class="store" x="10" y="262" width="360" height="150" rx="6"/>
+  <text class="title" x="22" y="282">lazy: ref를 남긴다</text>
+  <text class="small" x="22" y="302">조건: SCAN 또는 INDEX_SCAN cache가 opt-in</text>
+  <text class="mono small" x="22" y="318">heap_scancache_allow_lazy_sidecar</text>
+  <text class="small" x="22" y="334">(scan_manager.c:4309, 4413)</text>
+  <text class="mono small" x="22" y="354">sidecar_keep_lazy (sidecar.cpp:2106)</text>
+  <text class="small" x="22" y="372">컬럼을 decode할 때 store cursor로 읽는다</text>
+  <text class="mono small" x="22" y="388">sidecar_point_variable · sidecar_midxkey_point</text>
+  <text class="small" x="22" y="404">routine 호출 문장은 opt-in 안 함 (sidecar_no_lazy)</text>
+
+  <rect class="hot" x="390" y="262" width="360" height="150" rx="6"/>
+  <text class="title" x="402" y="282">eager: 출구에서 값을 펼친다</text>
+  <text class="small" x="402" y="302">ref마다 store record를 읽어 값을 끼워 넣는다</text>
+  <text class="mono small" x="402" y="320">sidecar_on_fetch_body 루프 (sidecar.cpp:2438)</text>
+  <text class="mono small" x="402" y="336">→ sidecar_read_value (sidecar.cpp:827)</text>
+  <text class="small" x="402" y="356">결과는 ref가 없는 보통 레코드다</text>
+  <text class="small" x="402" y="372">Sidecar를 모르는 호출자는 이 결과만 본다</text>
+  <text class="small" x="402" y="388">store record가 없으면 재시도 규칙 (그림 8)</text>
+
+  <path class="arr dash" d="M370,337 L388,337"/>
+  <text class="small lbl" x="380" y="432" text-anchor="middle">opt-in 없는 HOLDER, PROTECTED도 eager로 간다</text>
+</svg>
+</div>
+<figcaption>그림 6. reader 분류. <code>storage/sidecar.cpp:2002-2030, 2377-2465</code>. UPDATE가 옛 레코드를 읽을 때는 <code>HEAP_SIDECAR_LAZY_LOCKED</code>로 저장된 형태 그대로 받는다 (<code>transaction/locator_sr.c:6866, 8238</code>).</figcaption>
+</figure>
+
+<p>
+lazy 레코드는 그것을 가져온 트랜잭션 안에서만 유효하다.
+<code>sidecar_lazy_keep</code>이 trid를 기록하고, 커밋이나 abort가 vacuum 기준을 풀어 준다 (<code>storage/sidecar.cpp:2037-2046</code>).
+unexpanded ref가 클라이언트 경계까지 가면 <code>ER_SIDECAR_UNEXPANDED_RECORD</code>로 막는다 (<code>transaction/locator_sr.c:2211, 2994, 12750</code>).
+</p>
+
+<h3 id="cursor">store cursor</h3>
+<p>
+store cursor는 별도 struct가 아니다. <code>THREAD_ENTRY</code>의 두 필드 <code>sidecar_cursor_page</code>와 <code>sidecar_cursor_owner</code>다 (<code>thread/thread_entry.hpp:294-301</code>).
+store page 하나를 READ 래치로 쥐고(<code>sidecar_fix_store_page</code>, <code>storage/sidecar.cpp:627</code>), 같은 페이지의 다음 값을 fix 없이 읽게 한다 (<code>PSTAT_SC_CURSOR_HITS</code>).
+페이지를 남겨 두는 경우는 fixed heap scan의 <code>HEAP_SIDECAR_LAZY_SCAN</code>뿐이다. 인덱스 scan도 lazy로 읽지만 cursor 페이지는 남기지 않는다 (<code>storage/sidecar.cpp:2077-2101, 2310-2318</code>).
+</p>
+
+<figure>
+<div class="fig-scroll">
+<svg viewBox="0 0 760 290" role="img" aria-labelledby="f-cur-t">
+  <title id="f-cur-t">store cursor의 페이지 보유 시간선</title>
+  <text class="title" x="10" y="22">heap scan 한 구간의 페이지 보유</text>
+  <text x="10" y="70">hot page</text>
+  <text x="10" y="130">store page</text>
+  <text class="small" x="10" y="146">(sidecar_cursor_page)</text>
+
+  <rect class="bar-hot" x="140" y="56" width="330" height="20" rx="3"/>
+  <text class="mono lbl" x="150" y="50">H1 fix (scan cache)</text>
+  <rect class="bar-hot" x="520" y="56" width="230" height="20" rx="3"/>
+  <text class="mono lbl" x="530" y="50">H2 fix</text>
+
+  <rect class="bar-store" x="200" y="116" width="270" height="20" rx="3"/>
+  <text class="mono lbl" x="205" y="110">P fix, READ</text>
+
+  <line class="axis" x1="140" y1="170" x2="750" y2="170"/>
+  <line class="axis" x1="200" y1="164" x2="200" y2="176"/>
+  <line class="axis" x1="330" y1="164" x2="330" y2="212"/>
+  <line class="axis" x1="470" y1="164" x2="470" y2="176"/>
+  <line class="axis" x1="520" y1="164" x2="520" y2="176"/>
+
+  <text class="small" x="200" y="192" text-anchor="middle">행 1 컬럼 decode</text>
+  <text class="mono small" x="200" y="207" text-anchor="middle">sidecar_fix_store_page</text>
+  <text class="small" x="330" y="228" text-anchor="middle">행 2, 같은 page P</text>
+  <text class="mono small" x="330" y="243" text-anchor="middle">CURSOR_HITS, fix 없음</text>
+  <text class="small" x="470" y="192" text-anchor="middle">다음 hot fix 직전</text>
+  <text class="mono small" x="470" y="207" text-anchor="middle">sidecar_cursor_before_hot_fix</text>
+  <text class="small" x="540" y="236" text-anchor="start">P를 놓은 뒤에야 H2를 fix한다</text>
+
+  <rect class="warnb" x="10" y="258" width="740" height="24" rx="4"/>
+  <text x="20" y="275">래치 순서는 hot → store 하나뿐이다. store page를 쥔 채 hot page를 fix하지 않는다 (I-7).</text>
+</svg>
+</div>
+<figcaption>그림 7. store cursor. 해제 지점: <code>sidecar_cursor_before_hot_fix</code>(<code>storage/sidecar.hpp:172</code>, 호출은 <code>heap_scan_pb_latch_and_fetch</code>, <code>heap_get_bigone_content</code>, <code>heap_prepare_object_page</code>, <code>scan_batch_next_page</code>, <code>lock_manager.c:3661</code>), <code>sidecar_scan_end</code>, <code>scan_release_sidecar_cursor</code>, <code>sidecar_request_end</code>, <code>pl_executor.cpp:288</code>. 마지막 안전망은 <code>pgbuf_fix_release</code>(<code>storage/page_buffer.c:2312-2326</code>)다. debug에서는 assert하고 release에서는 cursor를 놓는다.</figcaption>
+</figure>
+
+<h3 id="retry">store record를 못 찾을 때: 재시도와 lock fallback</h3>
+<p>
+<code>sidecar_read_store_record_at</code>(<code>storage/sidecar.cpp:702</code>)는 store page를 한 번에 하나만 fix하고 slot 종류를 본다.
+<code>REC_HOME</code>이면 복사하고, <code>REC_BIGONE</code>이면 overflow를 읽고, <code>REC_RELOCATION</code>이면 home을 놓고 forward page로 간다.
+결과는 <code>PRESENT</code>, <code>ABSENT</code>, <code>FAILED</code>다.
+<code>ABSENT</code>는 오래된 hot 버전의 store record를 vacuum이 이미 치웠거나, stamp나 insert가 abort로 되돌려진 경우에 나온다.
+그때 <code>sidecar_on_absent</code>(<code>storage/sidecar.cpp:2331</code>)가 아래 순서로 판단한다.
+</p>
+
+<figure>
+<div class="fig-scroll">
+<svg viewBox="0 0 760 470" role="img" aria-labelledby="f-retry-t">
+  <title id="f-retry-t">ABSENT 처리, 재시도, lock fallback</title>
+  <rect class="store" x="190" y="10" width="380" height="44" rx="6"/>
+  <text class="mono title" x="380" y="30" text-anchor="middle">sidecar_read_store_record_at</text>
+  <text class="small" x="380" y="46" text-anchor="middle">ref의 OID로 store slot을 읽는다</text>
+  <path class="arr" d="M570,32 L628,32"/>
+  <text class="small lbl" x="598" y="25" text-anchor="middle">PRESENT</text>
+  <rect class="hot" x="628" y="10" width="122" height="44" rx="6"/>
+  <text x="689" y="28" text-anchor="middle">값 복사</text>
+  <text class="small" x="689" y="45" text-anchor="middle">attrid_check, length</text>
+
+  <path class="arr" d="M380,54 L380,80"/>
+  <text class="small lbl" x="392" y="72">ABSENT → sidecar_on_absent</text>
+
+  <rect class="warnb" x="190" y="80" width="380" height="44" rx="6"/>
+  <text class="title" x="380" y="99" text-anchor="middle">1. hot의 DELID가 커밋됨, reader ≠ PROTECTED ?</text>
+  <text class="small" x="380" y="116" text-anchor="middle">writer가 log_Gl.mvcc_table에 없다</text>
+  <path class="arr" d="M570,102 L610,102"/>
+  <rect class="box" x="610" y="80" width="140" height="44" rx="6"/>
+  <text class="mono" x="680" y="99" text-anchor="middle">S_DOESNT_EXIST</text>
+  <text class="small" x="680" y="116" text-anchor="middle">행이 지워졌다</text>
+
+  <path class="arr" d="M380,124 L380,150"/>
+  <rect class="warnb" x="190" y="150" width="380" height="44" rx="6"/>
+  <text class="title" x="380" y="169" text-anchor="middle">2. reader가 PROTECTED, HOLDER, LATCHED ?</text>
+  <text class="small" x="380" y="186" text-anchor="middle">이 reader는 항상 찾아야 한다</text>
+  <path class="arr" d="M570,172 L610,172"/>
+  <rect class="badb" x="610" y="150" width="140" height="44" rx="6"/>
+  <text class="mono" x="680" y="169" text-anchor="middle">ER_SIDECAR_</text>
+  <text class="mono" x="680" y="185" text-anchor="middle">DANGLING</text>
+
+  <path class="arr" d="M380,194 L380,220"/>
+  <text class="small lbl" x="392" y="212">COMMITTED</text>
+  <rect class="warnb" x="190" y="220" width="380" height="44" rx="6"/>
+  <text class="title" x="380" y="239" text-anchor="middle">3. attempt &lt; SIDECAR_RETRY_BOUND (3) ?</text>
+  <text class="small" x="380" y="256" text-anchor="middle">sidecar.cpp:415</text>
+  <path class="arr" d="M190,242 L120,242 L120,32 L188,32"/>
+  <rect class="box" x="14" y="100" width="166" height="74" rx="6"/>
+  <text class="mono" x="22" y="120">S_SIDECAR_RETRY</text>
+  <text class="small" x="22" y="138">heap_sidecar_fetch_exit가</text>
+  <text class="small" x="22" y="153">watcher를 놓고 hot을</text>
+  <text class="small" x="22" y="168">다시 읽는다. attempt++</text>
+
+  <path class="arr" d="M380,264 L380,292"/>
+  <text class="small lbl" x="392" y="284">재시도 소진</text>
+  <rect class="box" x="190" y="292" width="380" height="40" rx="6"/>
+  <text class="mono title" x="380" y="317" text-anchor="middle">S_SIDECAR_LOCK_NEEDED</text>
+  <path class="arr" d="M380,332 L380,356"/>
+
+  <rect class="hot" x="90" y="356" width="580" height="104" rx="6"/>
+  <text class="mono title" x="102" y="376">sidecar_fetch_locked (sidecar.cpp:2490)</text>
+  <text class="small" x="102" y="396">1. lock_object(S_LOCK, LK_UNCOND_LOCK). 원래 없던 lock이면 끝나고 푼다</text>
+  <text class="small" x="102" y="414">2. heap_get_last_version으로 HOLDER로 읽는다. 행 lock이 store record를 고정한다</text>
+  <text class="small" x="102" y="432">3. mvcc_satisfies_committed로 다시 확인. 자기 버전이면 heap_get_visible_version</text>
+  <text class="small" x="102" y="450">호출자: xlocator_fetch, xlocator_fetch_all (locator_sr.c:2376, 2979)</text>
+</svg>
+</div>
+<figcaption>그림 8. 재시도 규칙. 재시도 한도 3은 설계에서 추측값이다. 정확성이 아니라 비용을 정한다 (<a href="design.md">design.md</a> 441, 974행). lock fallback은 <code>mvcc_satisfies_committed</code> snapshot에서만 쓴다.</figcaption>
+</figure>
+
+<!-- ============================================================ -->
+<h2 id="mvcc">5. MVCC와 정리</h2>
+
+<h3>store 버전의 가시성</h3>
+<p>
+reader는 store record의 MVCC header를 평가하지 않는다.
+<code>sidecar_store_value</code>는 ref의 slot, <code>attrid_check</code>, 길이만 확인한다 (<code>storage/sidecar.cpp:811-824</code>).
+가시성은 hot record에서 정한다. 보통의 MVCC 검사로 보이는 hot 버전을 고르고, 그 버전의 ref를 따라간다.
+store 안에는 버전 체인이 없다. hot 버전마다 자기 ref를 들고 있다.
+여러 hot 버전이 같은 store record를 가리킬 수 있고, 누가 가리키는지 추적하지 않는다.
+</p>
+
+<figure>
+<div class="fig-scroll">
+<svg viewBox="0 0 760 360" role="img" aria-labelledby="f-mvcc-t">
+  <title id="f-mvcc-t">UPDATE 한 번 뒤의 hot 버전과 store record</title>
+  <text class="title" x="10" y="22">T2가 컬럼 b만 바꾼 UPDATE 뒤</text>
+
+  <rect class="hot" x="10" y="40" width="260" height="78" rx="6"/>
+  <text class="title" x="22" y="60">hot v1 (INSID T1)</text>
+  <text class="small" x="22" y="78">이전 버전. log의 undo 이미지로 남는다</text>
+  <text class="mono" x="22" y="94">a → S1</text>
+  <text class="mono" x="22" y="111">b → S2</text>
+
+  <rect class="hot" x="10" y="150" width="260" height="78" rx="6"/>
+  <text class="title" x="22" y="170">hot v2 (INSID T2)</text>
+  <text class="small" x="22" y="188">home slot의 현재 버전</text>
+  <text class="mono" x="22" y="204">a → S1 (kept ref)</text>
+  <text class="mono" x="22" y="221">b → S3</text>
+
+  <rect class="store" x="470" y="40" width="280" height="50" rx="6"/>
+  <text class="mono title" x="482" y="60">S1 · INSID T1 · DELID 없음</text>
+  <text class="small" x="482" y="78">v1, v2가 함께 가리킨다</text>
+  <rect class="store" x="470" y="110" width="280" height="50" rx="6"/>
+  <text class="mono title" x="482" y="130">S2 · INSID T1 · DELID T2</text>
+  <text class="small" x="482" y="148">sidecar_stamp_values가 찍음 (I-4)</text>
+  <rect class="store" x="470" y="180" width="280" height="50" rx="6"/>
+  <text class="mono title" x="482" y="200">S3 · INSID T2</text>
+  <text class="small" x="482" y="218">sidecar_insert_values가 씀</text>
+
+  <path class="arr-store" d="M270,90 C350,90 400,62 468,62"/>
+  <path class="arr-store" d="M270,107 C350,107 400,132 468,132"/>
+  <path class="arr-store" d="M270,200 C360,200 400,78 468,76"/>
+  <path class="arr-store" d="M270,217 C350,217 400,205 468,205"/>
+
+  <rect class="warnb" x="10" y="250" width="740" height="96" rx="6"/>
+  <text class="title" x="22" y="270">vacuum 뒤</text>
+  <text x="22" y="290">T2가 커밋하고 S2의 DELID가 vacuum 기준보다 오래되면 stock vacuum이 S2를 지운다.</text>
+  <text x="22" y="309">slot은 REC_MARKDELETED로 남고 재사용하지 않는다 (I-5). 그래서 OID 하나는 store 수명 내내 값 하나만 뜻한다.</text>
+  <text x="22" y="328">그 뒤 v1을 보는 오래된 COMMITTED reader는 ABSENT를 받고 그림 8의 규칙으로 간다.</text>
+</svg>
+</div>
+<figcaption>그림 9. 버전과 store record. 생명주기 규칙: 행의 트랜잭션이 값을 가리키는 hot record보다 먼저 store에 넣는다. 값을 더 이상 가리키지 않는 첫 hot 버전을 쓰는 트랜잭션이 DELID를 찍는다. 지우는 것은 vacuum뿐이다 (<a href="design.md">design.md</a> 14행).</figcaption>
+</figure>
+
+<h3>vacuum</h3>
+<ul>
+<li>Sidecar 전용 vacuum 코드는 없다. store record는 자기 DELID로 보통 heap record처럼 vacuum된다. <code>heap_get_file_type</code>이 store op에서 <code>FILE_HEAP</code>을 돌려주어 vacuum이 store 파일을 heap으로 다룬다 (<code>storage/heap_file.c:22251</code>).</li>
+<li>hook은 하나다. <code>vacuum_heap_record</code>의 <code>REC_RELOCATION</code> 처리에서 <code>forward_reusable = !heap_page_is_sidecar_store (...)</code>다 (<code>query/vacuum.c:2432</code>). store의 <code>REC_NEWHOME</code> slot을 재사용 불가로 남긴다. 앞서 home을 읽은 reader가 forward slot에 와서 다른 레코드를 만나지 않게 하려는 것이다.</li>
+<li>hot heap을 drop하면 <code>sidecar_store_drop</code>(<code>storage/sidecar.cpp:2766</code>)이 링크를 끊고(<code>RVHF_SIDECAR_LINK</code>), <code>vacuum_log_add_dropped_file</code>로 vacuum이 store를 건너뛰게 하고, store와 그 overflow file을 postpone destroy한다.</li>
+</ul>
+
+<h3>rollback, undo, recovery</h3>
+<div class="table-scroll">
+<table>
+<thead><tr><th>동작</th><th>log record</th><th>undo 때 일어나는 일</th></tr></thead>
+<tbody>
+<tr><td>store 생성, 링크 쓰기</td><td><code>RVHF_SIDECAR_LINK</code> (새 index 136), sysop 안</td><td><code>heap_rv_sidecar_link</code>(<code>storage/heap_file.c:6341</code>)가 header의 <code>store_hfid</code> 바이트만 되돌린다. SCH_M 없이 만든 store는 sysop commit으로 abort 뒤에도 남는다</td></tr>
+<tr><td>store record insert</td><td><code>RVHF_MVCC_INSERT</code> 등 stock</td><td><code>heap_rv_undo_insert</code>가 store page면 <code>spage_delete</code>만 부른다. slot은 <code>REC_MARKDELETED</code>로 남고 bestspace에 다시 넣지 않는다 (<code>storage/heap_file.c:18252-18266</code>)</td></tr>
+<tr><td>DELID stamp</td><td><code>RVHF_MVCC_DELETE_REC_HOME</code>, <code>_REC_NEWHOME</code>, <code>_MODIFY_HOME</code>, <code>_OVERFLOW</code></td><td><code>heap_rv_mvcc_undo_delete</code>가 DELID를 지운다</td></tr>
+<tr><td>vacuum 제거</td><td><code>RVVAC_HEAP_RECORD_VACUUM</code></td><td>stock. vacuum은 sysop이 끝날 때까지 forward page를 쥔다 (<code>query/vacuum.c:2444-2447</code>)</td></tr>
+</tbody>
+</table>
+</div>
+<p>
+store page에서는 <code>spage_delete_for_recovery</code>를 쓰지 않는다. 이 함수는 slot을 <code>REC_DELETED_WILL_REUSE</code>로 바꿔 재사용을 허락한다. store slot은 수명 동안 레코드 하나만 담아야 한다 (I-5).
+crash가 store 쓰기와 hot 쓰기 사이에 나면 고아 store record가 남을 수 있다. 설계가 허용하는 결과다.
+<code>sidecar_verify_heap</code>(<code>storage/sidecar.cpp:3136</code>)이 checkdb에서 양방향을 검사한다. 살아 있는 store record는 hot record 하나가 가리켜야 하고, ref는 같은 속성과 길이의 살아 있는 레코드를 가리켜야 한다.
+fault injection 지점은 <code>FI_TEST_SIDECAR_KILL_AFTER_STORE_INSERT</code>, <code>FI_TEST_SIDECAR_KILL_AFTER_STAMP</code>, <code>FI_TEST_SIDECAR_KILL_AT_RELOCATE</code>, <code>FI_TEST_SIDECAR_KILL_COMMIT_WINDOW</code>다.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="oos">6. OOS와 비교</h2>
+<div class="table-scroll">
+<table>
+<thead><tr><th>항목</th><th>OOS</th><th>Sidecar</th><th>바꾼 이유</th></tr></thead>
+<tbody>
+<tr><td>값이 사는 곳</td><td>별도 OOS chunk file. 자체 할당자, bestspace, 페이지 회수</td><td>테이블별 store. 보통의 <code>FILE_HEAP</code>과 MVCC heap record</td><td>heap의 할당자, vacuum, TDE, 도구를 그대로 쓴다. 새 할당자의 결함군이 없어진다 (<a href="design.md">design.md</a> 900행)</td></tr>
+<tr><td>생명주기</td><td>값마다 자기 주소와 생명주기, 별도 소유 프로토콜</td><td>값이 행의 트랜잭션을 따른다. INSID, DELID, vacuum으로 끝난다</td><td>OOS 결함의 공통 원인이 별도 생명주기였다 (<a href="design.md">design.md</a> 42행)</td></tr>
+<tr><td>버전 공유</td><td>바뀌지 않은 값도 버전 사이에 공유하기 어렵다 (UPDATE 증폭, CBRD-27230)</td><td>kept ref로 여러 hot 버전이 store record 하나를 공유한다. 작은 컬럼 UPDATE는 store를 건드리지 않는다</td><td>참조 추적 없이 가시성과 vacuum 기준이 안전을 보장한다</td></tr>
+<tr><td>회수와 slot 재사용</td><td>free가 확정되기 전에 slot을 재사용할 수 있어 undo가 남의 chunk를 덮었다 (CBRD-27858, CBRD-27781). rollback된 UPDATE의 undo 정보로 옛 chain을 지웠다 (CBRD-27237)</td><td>vacuum은 store record 자신의 DELID만 본다. 지운 slot은 <code>REC_MARKDELETED</code>로 두고 재사용하지 않는다</td><td>slot 재사용과 undo가 겹치는 창 자체를 없앤다</td></tr>
+<tr><td>recovery</td><td>OOS 고유의 recovery 동작</td><td>stock analysis, redo, undo. 새 index는 <code>RVHF_SIDECAR_LINK</code> 하나</td><td>검증된 heap recovery를 물려받는다</td></tr>
+<tr><td>읽기</td><td>raw byte를 쓰는 곳마다 stub를 펼쳐야 한다 (8곳)</td><td>fetch 출구에서 기본으로 펼친다. lazy는 보호된 reader만. 나머지는 재시도와 lock fallback</td><td>stub가 새는 결함군을 출구 한 곳으로 모은다</td></tr>
+<tr><td>HA 복제</td><td>replica가 값을 다시 넣고 OID를 고쳐 쓴다</td><td>POC-1은 HA가 켜지면 값을 옮기지 않는다</td><td>설계의 LSA 기반 전송은 P4다</td></tr>
+<tr><td>측정 (설계 문서 기록)</td><td></td><td>작은 컬럼 scan의 page fetch가 develop 대비 10.9배, 47.4배, 426배 감소 (1, 4, 16 KB 값)</td><td><a href="design.md">design.md</a> 1196행. 이 페이지에서 다시 재지 않았다</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="limits">7. 알려진 한계와 미결 항목</h2>
+
+<h3>코드에 아직 없는 것</h3>
+<ul>
+<li>HA 복제. <code>sidecar_policy_admits</code>가 HA가 켜지면 값을 옮기지 않는다. <code>sidecar_format.h:206</code>은 "replication of stored refs comes in P4"라고 적는다.</li>
+<li>CDC와 flashback. <code>supplemental_log</code>가 켜진 테이블은 inline으로 남는다 (<code>base/sidecar_format.h:205</code>).</li>
+<li><code>STORAGE INLINE</code>, <code>STORAGE EXTERNAL</code> DDL 절. 속성 bit와 파라미터만 있다 (<a href="design.md">design.md</a> 299, 1198행).</li>
+<li>store slot 재사용과 early pin. POC는 재사용하지 않는 store다. slot 디렉터리 4바이트가 값마다 영구히 남는다 (<a href="design.md">design.md</a> 1033행).</li>
+<li><code>REORGANIZE</code>, <code>COALESCE</code>, <code>REMOVE PARTITIONING</code>은 값을 inline으로 둔다. 파티션 이동은 <code>sidecar_inline_kept</code>가 kept 값을 inline으로 되읽는다 (<code>transaction/locator_sr.c:5821</code>).</li>
+<li>데이터 페이지를 쥔 호출자의 UPDATE, DELETE는 release 빌드에서 <code>ER_SIDECAR_NOT_SUPPORTED</code>로 실패한다 (<code>storage/sidecar.cpp:1618-1634</code>).</li>
+</ul>
+
+<h3>성능과 측정의 미결 항목 (<a href="decisions.tsv">decisions.tsv</a>)</h3>
+<ul>
+<li>DELETE가 develop보다 instructions +58%다. stamp 공간을 미리 잡는 안(recovery 형식 변경, -6.8%)은 사용자 결정으로 미뤘다 (90, 91행).</li>
+<li>큰 값 읽기 instructions +6 ~ +14% (87행).</li>
+<li>wide scan에서 <code>REC_BIGONE</code> 때문에 fix가 더 든다. 1, 4 KB 값에서 4 ~ 12% (86행, <a href="design.md">design.md</a> 1033행).</li>
+<li>A1 narrow-scan wall의 CI95 상한 +7.39%와 loaddb wall 잡음이 열려 있다. 둘 다 차단 항목은 아니다 (84행).</li>
+<li>A6 회귀는 부분 통과다. <code>test_shell</code>은 일부만 돌렸다 (92, 93행).</li>
+</ul>
+
+<h3>설계의 미결 질문 (<a href="design.md">design.md</a>)</h3>
+<ul>
+<li>재시도 한도 3은 추측값이다 (974행).</li>
+<li>release-and-relocate는 새 제어 흐름이다. 모든 record type에서 다시 찾는 것이 안전한지 P1에서 보여야 한다 (975행).</li>
+<li>인덱스 scan cursor 절감은 열린 질문이다 (589행).</li>
+<li>TLA+ 모델이 다루지 않는 것: lifecycle 모델의 crash와 restart, 큰 컬럼 둘 이상, 복제, CDC, 파티션 이동, SA 모드, page batch, liveness, store header page, overflow page, TDE (1003, 1015행).</li>
+<li>Sidecar는 develop 결함 수정 세 개를 전제로 한다. CBRD-27937, CBRD-27935, CBRD-27936이다 (1056-1064행).</li>
+</ul>
+
+<div class="diff">
+<strong>설계와 코드의 차이 정리.</strong>
+<code>sidecar_force_external</code> 기본값은 CI 전용 커밋 때문에 <code>true</code>다 (1절).
+<code>btree.c</code>에는 Sidecar hook이 없다. 인덱스 key는 속성 계층의 <code>sidecar_midxkey_point</code>(<code>storage/heap_file.c:12341</code>)가 store 값을 읽어 만든다.
+locator hook은 <code>transaction/locator_sr.c</code>에 있다.
+store 쓰기 전용 log record는 없다. store insert와 stamp는 stock heap log record다.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="sources">8. 출처</h2>
+<ul>
+<li>코드: CUBRID <code>sidecar-poc1</code> 브랜치, 커밋 <code>84e24e39f4</code>. 주요 파일은 <code>src/storage/sidecar.cpp</code>, <code>src/storage/sidecar.hpp</code>, <code>src/base/sidecar_format.h</code>, <code>src/base/sidecar_format.c</code>, <code>src/storage/heap_file.c</code>, <code>src/transaction/locator_sr.c</code>, <code>src/query/vacuum.c</code>, <code>src/query/scan_manager.c</code>, <code>src/storage/page_buffer.c</code>.</li>
+<li>설계: <a href="design.md">design.md</a>, <a href="grounding.md">grounding.md</a>, <a href="interrogate.md">interrogate.md</a>, <a href="decisions.tsv">decisions.tsv</a>.</li>
+<li>TLA+ 모델: <a href="model/lifecycle/README.md">model/lifecycle</a>(생명주기와 reader 안전), <a href="model/recovery/README.md">model/recovery</a>(crash, undo, 래치 순서), <a href="model/code/README.md">model/code</a>(코드 수준 store read, 쓰기 순서, 래치).</li>
+<li>PR 초안: <a href="../CBRD-28053/README.md">CBRD-28053</a>.</li>
+</ul>
+
+</main>
+</body>
+</html>
