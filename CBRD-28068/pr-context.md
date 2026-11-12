@@ -55,3 +55,14 @@ The user explicitly resumed the approved documentation integration and push, sou
 - The source commit still equals `2e04e056af7c9fd7ad5c45f4ba5873339d6c65e0`.
 - Before publication, the fork branch was absent and the exact head/base search found no open PR.
 - Both documentation integration checkouts had unrelated tracked edits. Preserve those edits through scoped temporary stashes and verify their restoration after integration.
+
+## Publication results
+
+- PR material was integrated and pushed to `vimkim/my-cubrid-docs:main` at `5230cd5ff1f6bb35278794cca9c287a5383c0ac7`.
+- The issue report was integrated and pushed to `vimkim/my-cubrid-jira:main` at `6dff2cf809f1d20564bf0b5c5b29cdfafdd38ae8`.
+- Both main checkouts' unrelated edits were restored. Binary diff comparisons matched their saved pre-integration contents.
+- `vimkim/cubrid:CBRD-28068-partition-key-build` was pushed and its remote head verified as `2e04e056af7c9fd7ad5c45f4ba5873339d6c65e0`.
+- Draft PR https://github.com/CUBRID/cubrid/pull/8510 was created against `develop` and assigned to `vimkim`. Read-back verified the exact body, title, source repository, source commit, branches, and draft state. The published body SHA-256 equals the approved fingerprint above.
+- Automatic TC PRs https://github.com/CUBRID/cubrid-testcases/pull/4169 and https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4873 each contain only the bot's empty initialization commit and have zero changed files. No testcase edit is required. The human closes these unchanged PRs.
+- One `/run all` was posted at `2026-11-12T09:03:35Z`. Its receipt is https://github.com/CUBRID/cubrid/pull/8510#issuecomment-6819366084.
+- Both build contexts and all suite contexts were observed pending on https://github.com/CUBRID/cubrid/actions/runs/43188099115. Completion remains pending at this execution-record commit. Work Tracker item 936 records the terminal result after observation.
