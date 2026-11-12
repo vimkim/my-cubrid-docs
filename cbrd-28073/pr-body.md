@@ -10,14 +10,16 @@ https://jira.cubrid.org/browse/CBRD-28073
 
 - `heap_attrinfo_transform_to_disk_keep_form`을 추가했다. 일반 인코딩과 같지만, 가변 열마다 기존 레코드의 형태를 따른다. OOS로 내보내는 결정과 OOS 삽입을 하지 않는다.
 - `serial_update_serial_object`가 이 함수를 쓴다. 바뀌는 값(`current_val`, `started`)은 평소처럼 인코딩된다. NUMERIC은 값이 커지면 저장 바이트가 늘어나므로, 제자리 패치 대신 인코딩을 다시 하는 방식을 택했다.
-- 기존 OOS 열의 참조를 읽을 때 `or_rep_id()`로 표현 ID를 비교한다. `OR_GET_REPID`는 HAS_OOS 플래그 비트를 지우지 않는다.
+- 기존 행에 OOS 열이 없으면 모든 열이 inline이므로 열 위치를 읽지 않는다. OOS 열이 있을 때만 `or_rep_id()`로 표현 ID가 같은지 확인하고 참조를 읽는다. `OR_GET_REPID`는 HAS_OOS 플래그 비트를 지우지 않으므로 쓰지 않는다.
 - 로그 형식은 바뀌지 않는다. HA applier는 이전처럼 RVHF_UPDATE의 전체 레코드 이미지를 읽는다.
 
 ## Remarks
 
 - 이 PR은 #8492(CBRD-28035)와 #8496(CBRD-28052)을 대체한다. 두 PR은 "NEXT VALUE가 OOS chain을 쓴다"는 결과를 각각 수습하는 방식이었다. #8434(CBRD-27781)에 의존하지 않는다.
 - 첫 커밋은 테스트만 담는다. 수정 전 소스에서 chain 수 테스트와 롤백 테스트가 실패하는 것을 확인했다.
-- HA 복제는 실행하지 않았다. 로그 형식이 같다는 점과 applier 코드를 읽은 결과에 근거한다.
+- inline 행은 develop과 같은 방식으로 갱신된다. comment가 inline에 남아 행이 크지만, 값이 커져도 늘어나는 양은 수십 바이트 이하다.
+- HA 복제는 실행하지 않았다. 로그 형식이 같다는 점과 applier 코드를 읽은 결과에 근거한다. 이전 빌드에서 comment가 OOS로 옮겨진 DB는 이전과 같이 OOS 참조를 담은 이미지를 복제한다.
+- 검증은 debug 빌드에서 했다. release 빌드는 CI로 확인한다.
 - serial을 ALTER하면 클라이언트가 행을 일반 update로 다시 쓰므로, comment의 OOS 배치는 그때 정상 경로로 정해진다.
 
 ### Test Plan
@@ -29,5 +31,6 @@ debug 빌드, `--db-page-size=4K` DB, `feature/oos-merge` `67220b7e23` 기준.
 | `test_oos_sql_serial` (chain 수, `current_val` 크기 증가) | chain 1개, 10개, 10개 남음 | 통과 |
 | `test_oos_sql_serial_rollback` (첫/이후 NEXT VALUE, ALTER, CREATE 롤백, 종료 시 cache 기록) | -1397 | 통과 |
 | SA와 서버 모드의 롤백, `kill -9` 뒤 복구, 다른 serial의 ALTER/DROP과 섞인 롤백 | SA에서 -1397 | 정상, OOS 레코드 0개, `checkdb` 통과 |
+| 4K page를 채운 serial 24개의 값을 1에서 2×10^30으로 증가 | | 오류 없음, comment 정상 |
 | 이전 빌드에서 comment가 OOS로 옮겨진 DB | | 기존 chain 3개 재사용, 값과 comment 정상 |
-| `ctest -R oos` | | 전체 통과 |
+| `ctest -R oos` | | 53개 모두 통과 |

@@ -10,8 +10,8 @@ Resume and publication bookkeeping for `pr-body.md`. This file is not uploaded.
 | Base | `feature/oos-merge` (`67220b7e23`) |
 | Source repository / branch | `vimkim/cubrid` / `CBRD-28073-serial-nextval-keep-form` |
 | Head spec | `vimkim:CBRD-28073-serial-nextval-keep-form` |
-| SOURCE_COMMIT | `87a6f40ac1512367dbbf1fc2698a56488421ef55` |
-| Remote head at preparation | branch absent on `vk`; no PR for this head |
+| SOURCE_COMMIT | `f3076784bcd0eb2539c4409ed9b07fb3874bbe0d` |
+| Remote head at preparation | `87a6f40ac1` on `vk` (fast-forward to SOURCE_COMMIT); no PR for this head |
 | Proposed title | `[CBRD-28073] Keep serial row storage form in NEXT VALUE` |
 | Assignee | `vimkim` |
 | Docs task branch | `cbrd-28073-pr-body` (integration branch `main`) |
@@ -21,7 +21,8 @@ Resume and publication bookkeeping for `pr-body.md`. This file is not uploaded.
 ## Authorization
 
 On 2026-11-12 the user approved the plan "vk에 push한 뒤 feature/oos-merge 대상 draft PR을 만들겠습니다" with
-"좋아. 승인할게." The PR body itself awaits the user's review before creation.
+"좋아. 승인할게." After the risk review the user said "응 바로 만들자. 고치고 테스트를 다시 돌린 뒤 draft PR 을 만들자."
+(2026-11-12), which directs creation once the hardening commit passes the tests.
 
 ## Proposed operations
 
@@ -34,4 +35,5 @@ On 2026-11-12 the user approved the plan "vk에 push한 뒤 feature/oos-merge �
 
 ## Execution record
 
-(none yet)
+- 2026-11-12: hardening commit `f3076784bc`; OOS ctest 53/53; SA/CS matrix, cross-serial, grow, page-full and upgrade
+  scenarios all intact (scratch output `keepform-final3.txt`).
