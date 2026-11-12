@@ -1,0 +1,14 @@
+/home/vimkim/gh/my-cubrid-docs/.scratch/sidecar/ci-fix/btree-del/check_index_keys.sh: line 49: 2757333 Aborted                 (core dumped) csql -u dba "-$mode" -i "$WORK/dml.sql" "$db" < /dev/null > dml.log 2>&1
+FAIL  force_external=yes csql -S: the load and the DML run without error [csql: /home/vimkim/gh/cb/sidecar-fix-btree-del/src/storage/btree.c:36823: int btree_key_delete_remove_object(THREAD_ENTRY*, BTID_INT*, DB_VALUE*, char**, BTREE_SEARCH_KEY_HELPER*, bool*, void*): Assertion `false' failed.]
+FAIL  force_external=yes csql -S: every row is gone
+PASS  force_external=yes csql -S: checkdb is clean
+FAIL  force_external=yes csql -C: the load and the DML run without error [ERROR: Your transaction has been aborted by the system due to server failure or mode change.]
+FAIL  force_external=yes csql -C: every row is gone
+FAIL  force_external=yes csql -C: checkdb is clean
+/home/vimkim/gh/my-cubrid-docs/.scratch/sidecar/ci-fix/btree-del/check_index_keys.sh: line 49: 2807487 Aborted                 (core dumped) csql -u dba "-$mode" -i "$WORK/dml.sql" "$db" < /dev/null > dml.log 2>&1
+FAIL  force_external=no csql -S: the load and the DML run without error [csql: /home/vimkim/gh/cb/sidecar-fix-btree-del/src/storage/btree.c:36823: int btree_key_delete_remove_object(THREAD_ENTRY*, BTID_INT*, DB_VALUE*, char**, BTREE_SEARCH_KEY_HELPER*, bool*, void*): Assertion `false' failed.]
+FAIL  force_external=no csql -S: every row is gone
+PASS  force_external=no csql -S: checkdb is clean
+FAIL  force_external=no csql -C: the load and the DML run without error [ERROR: Your transaction has been aborted by the system due to server failure or mode change.]
+FAIL  force_external=no csql -C: every row is gone
+FAIL  force_external=no csql -C: checkdb is clean
