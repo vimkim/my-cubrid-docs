@@ -8,7 +8,7 @@ https://jira.cubrid.org/browse/CBRD-28046
 
 ## Implementation
 
-- `log_append_commit_postpone`에서 `logpb_flush_pages` 호출을 뺐다. sysop의 `log_append_sysop_start_postpone`은 10.1(CBRD-20097)부터 이미 flush 없이 동작한다.
+- `log_append_commit_postpone`에서 `logpb_flush_pages` 호출을 뺐다. sysop 쪽은 이미 flush 없이 동작한다. CUBRIDSUS-17980(`5fe4e4eb97`, 10.0)이 `log_append_topope_commit_postpone`에서 flush를 뺐고, 10.1의 CBRD-20185가 이 함수를 지금의 `log_append_sysop_start_postpone`으로 새로 쓰면서 그 형태를 유지했다.
 - 페이지를 바꾸는 postpone은 이 flush가 없어도 안전하다. 로그는 LSA 순서로 디스크에 쓰이고, 페이지는 자기 로그보다 먼저 디스크에 쓰이지 않는다(WAL). 그래서 postpone의 결과가 디스크에 있으면 `LOG_COMMIT_WITH_POSTPONE`도 디스크에 있다.
 - 예외는 `RVHF_LOB_REMOVE_DIR` 하나다. 이 postpone은 `fileio_lob_remove_matching_dir`로 LOB 파일을 지우고, 이 동작은 로그로 되돌릴 수 없다. 그래서 `heap_rv_lob_remove_dir`이 파일을 지우기 전에 `logpb_flush_log_for_wal`로 `tran_start_postpone_lsa`까지 로그를 확정한다. 복구 중에는 이미 디스크에 있으므로 아무 일도 하지 않는다.
 
