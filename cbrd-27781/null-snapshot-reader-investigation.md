@@ -6,10 +6,11 @@
 - 기준: `CUBRID/cubrid` PR #8434 head [`94ed2ea46`](https://github.com/CUBRID/cubrid/commit/94ed2ea463f17694db33a283b56fdeb42856e835)(base `feature/oos-merge` `95ff126a8`). 소스만 읽었고, 빌드와 실행은 하지 않았다.
 - 조사일: 2026-11-11(Asia/Seoul).
 - 추가 조사(같은 날): 남은 질문 1을 PR head [`443073283`](https://github.com/CUBRID/cubrid/commit/443073283d89e4511b2fa9a5b6a16898770f7e65)에서 확인했다. 이번에는 debug 빌드로 실행한 결과도 포함한다. 결과는 아래 "추가 조사: MVCC가 꺼진 catalog 행"에 있고, 결론의 (c) 항목을 그에 맞게 고쳤다.
+- 정정(2026-11-12): 같은 판본에서 호출자 쪽 보호 후보 두 가지(cached scan 제외, SELECT instance S lock)가 이 틈을 막지 못한다는 것을 소스로 확인했다. serial에 대한 앞의 추론도 틀렸다. 같은 틈은 serial 경로에서 실행으로 재현되었다([CBRD-28035](https://jira.cubrid.org/browse/CBRD-28035)). 아래 "정정: 호출자 쪽 보호 후보"에 있고, 결론과 이슈 처리 방향을 그에 맞게 고쳤다.
 
 ## 결론
 
-(a)와 (b)에서는 회수 중인 chain과 겹칠 수 있는 snapshot 없는 reader를 찾지 못했다. 이 판정은 `94ed2ea46`의 소스 판독에 근거한다. (c)에서는 겹칠 수 있는 조합 하나가 원리상 성립한다. 이 판정은 `443073283`의 소스 판독과 실행에 근거하고, 경합 자체는 재현하지 않았다.
+(a)와 (b)에서는 회수 중인 chain과 겹칠 수 있는 snapshot 없는 reader를 찾지 못했다. 이 판정은 `94ed2ea46`의 소스 판독에 근거한다. (c)에서는 겹칠 수 있는 조합 하나가 원리상 성립한다. 이 판정은 `443073283`의 소스 판독과 실행에 근거한다. ha_apply_info에서 경합 자체는 재현하지 않았지만, 같은 틈은 serial 경로에서 재현되었다.
 
 - **(a) vacuum REMOVE**: OOS 회수는 vacuum이 heap home page의 WRITE latch를 쥔 동안 끝난다. 다음 두 종류의 reader는 모두 home page latch를 쥔 채 OOS를 읽는다.
   - snapshot 없이 heap 레코드를 OOS 값으로 펼치는 reader(`HEAP_RECDES_CONSUME_RAW_BYTES`)
@@ -19,10 +20,10 @@
 - **(b) `RVOOS_NOTIFY_VACUUM`**: 이 경로가 회수하는 chain은 UPDATE가 버린 이전 버전의 chain이다. heap slot의 현재 레코드는 이 chain을 가리키지 않는다. latch를 놓은 뒤 OOS를 읽는 유일한 snapshot 없는 경로는 instance X lock을 쥐고 있어 동시 UPDATE를 막는다.
 - **(c) non-MVCC commit 회수**: `db_ha_apply_info`에서 다음 조합이 원리상 성립한다.
   - `copied_log_path`(`varchar(4096)`)가 길면 행이 `DB_PAGESIZE/4`를 넘어 OOS를 가진다.
-  - 이 클래스에 대한 SELECT는 cached scan 대상이고 instance lock을 걸지 않는다. 그래서 page 복사본에 남은 이전 OOS 참조로 읽을 수 있다.
+  - 이 클래스를 읽는 fixed가 아닌 scan(cached scan, join, subquery 등)은 행을 복사하고 latch를 놓은 뒤 OOS를 읽는다. instance lock도 걸지 않는다. 그래서 복사본에 남은 이전 OOS 참조로 읽을 수 있다.
   - applylogdb의 counter UPDATE는 바뀌지 않은 `copied_log_path`도 새 chain으로 쓰고, 이전 chain을 commit 때 회수한다(실행으로 확인).
 
-  serial은 SELECT가 instance S lock을 걸어 막히는 것으로 추론한다. collation은 OOS를 가질 수 없다. 실제 위험은 낮다. 경로가 page의 1/4을 넘어야 하고, 16K page에서는 약 4KB가 필요하기 때문이다.
+  serial에도 같은 틈이 있다. 지금까지 겹치지 않은 이유는 serial 갱신이 이전 chain을 지우지 않았기 때문이다(그 대가가 CBRD-28035의 누수). collation은 OOS를 가질 수 없다. 실제 위험은 낮다. 경로가 page의 1/4을 넘어야 하고, 16K page에서는 약 4KB가 필요하기 때문이다.
 
 `oos_read_within_page` 주석은 일반 fix를 쓰는 근거로 "head의 identity를 확인했으므로 chain이 살아 있다"고 적는다. 위 결론에 따르면 이 근거는 head stamp가 아니다. 실제 근거는 호출자 쪽의 보호, 즉 home page latch, instance lock, A'다.
 
@@ -133,6 +134,7 @@ OOS 기준은 레코드 길이가 `DB_PAGESIZE/4`를 넘는지다([heap_file.c:1
   - cached scan이면 page를 쥐지 않은 상태라 lock을 무조건 잡고 레코드를 다시 읽는다.
   - serial을 바꾸는 트랜잭션은 instance X lock을 commit까지 쥐고, 회수 postpone은 lock을 풀기 전에 끝난다.
   - 따라서 serial reader는 회수가 끝난 뒤의 새 레코드를 읽는다고 추론한다(INFERRED). OOS 값을 이 재읽기 뒤에 읽는지는 따라가지 않았다.
+  - **정정(2026-11-12)**: 이 추론은 틀렸다. READ COMMITTED에서는 이 S lock이 잡은 직후 풀리고, NEXT VALUE는 instance X lock을 잡지 않는다. 아래 "정정: 호출자 쪽 보호 후보"를 본다.
 - `_db_ha_apply_info`에 대한 SELECT는 lock을 걸지 않는다.
 
 ### ha_apply_info UPDATE는 매번 chain을 회수한다 (실행 확인)
@@ -159,16 +161,48 @@ UPDATE는 바뀌지 않은 OOS 열도 새 chain으로 쓰고, 이전 chain은 co
 
 ### 함께 찾은 별도 결함
 
-serial 행 갱신 경로(`serial_update_serial_object`)는 `heap_update`를 거치지 않고 레코드를 직접 덮어쓴다. comment가 OOS로 나간 serial은 갱신마다 새 chain이 생기고 이전 chain은 회수되지 않는다. 이 경로는 회수를 하지 않으므로 (c)와 겹치지 않는다. 누수는 [CBRD-28035](https://jira.cubrid.org/browse/CBRD-28035)로 따로 등록했다.
+serial 행 갱신 경로(`serial_update_serial_object`)는 `heap_update`를 거치지 않고 레코드를 직접 덮어쓴다. comment가 OOS로 나간 serial은 갱신마다 새 chain이 생기고 이전 chain은 회수되지 않는다. 이 경로는 회수를 하지 않으므로 (c)와 겹치지 않는다. 누수는 [CBRD-28035](https://jira.cubrid.org/browse/CBRD-28035)로 따로 등록했다. 수정 PR [#8492](https://github.com/CUBRID/cubrid/pull/8492)(draft)는 이전 chain을 바로 지우는 설계에서 아래 틈을 재현한 뒤, 바뀌지 않은 comment의 chain을 재사용하는 설계로 바꿨다.
+
+## 정정: 호출자 쪽 보호 후보 (`443073283`, 2026-11-12)
+
+앞 판본의 "이슈 처리 방향"은 호출자 쪽 보호의 예로 두 가지를 들었다. MVCC가 꺼진 클래스를 cached scan에서 빼는 것과, ha_apply_info SELECT에도 instance lock을 거는 것이다. 소스를 다시 읽어 보니 둘 다 이 틈을 막지 못한다.
+
+### cached scan에서 빼도 막히지 않는다
+
+- cached scan은 원래 fixed가 아닌 scan에만 쓰인다. 자격 조건에 `!fixed`가 있다([query_executor.c:10789](https://github.com/CUBRID/cubrid/blob/443073283d89e4511b2fa9a5b6a16898770f7e65/src/query/query_executor.c#L10789)).
+- fixed가 아닌 scan은 cached scan이 아니어도 COPY로 읽고 latch를 놓는다.
+  - `is_peeking = scan_id->fixed`이고([scan_manager.c:5415](https://github.com/CUBRID/cubrid/blob/443073283d89e4511b2fa9a5b6a16898770f7e65/src/query/scan_manager.c#L5415)), scan cache의 `cache_last_fix_page`도 `scan_id->fixed`다([4052](https://github.com/CUBRID/cubrid/blob/443073283d89e4511b2fa9a5b6a16898770f7e65/src/query/scan_manager.c#L4052)).
+  - `heap_next`는 끝에서 page를 놓는다([heap_file.c:8087](https://github.com/CUBRID/cubrid/blob/443073283d89e4511b2fa9a5b6a16898770f7e65/src/storage/heap_file.c#L8087)). `HEAP_RECDES_DONT_CONSUME_RAW_BYTES`로 읽으므로 OOS 값은 그 뒤 `fetch_val_list`나 `heap_attrinfo_read_dbvalues`에서 latch 없이 읽힌다.
+- fixed scan은 단순한 XASL에만 켜진다([query_executor.c:22304-22355](https://github.com/CUBRID/cubrid/blob/443073283d89e4511b2fa9a5b6a16898770f7e65/src/query/query_executor.c#L22304-L22355)). join, subquery, `aptr`가 있는 scan은 fixed가 아니다.
+
+### SELECT에 instance S lock을 걸어도 막히지 않는다
+
+- 기본 격리 수준은 READ COMMITTED다([dbtran_def.h:53](https://github.com/CUBRID/cubrid/blob/443073283d89e4511b2fa9a5b6a16898770f7e65/src/compat/dbtran_def.h#L53)). 이 격리 수준에서 page를 놓은 scan이 잡은 S lock은 잡은 직후 풀린다([scan_manager.c:5685-5689](https://github.com/CUBRID/cubrid/blob/443073283d89e4511b2fa9a5b6a16898770f7e65/src/query/scan_manager.c#L5685-L5689)). scan은 이어서 행을 COPY로 다시 읽고, latch를 놓은 뒤 OOS를 읽는다.
+- serial 갱신(NEXT VALUE)은 serial 행에 instance X lock을 잡지 않는다([serial.c:508](https://github.com/CUBRID/cubrid/blob/443073283d89e4511b2fa9a5b6a16898770f7e65/src/query/serial.c#L508)). 그래서 serial의 S lock은 갱신을 기다리지도 않는다.
+
+### 같은 틈이 serial에서 재현되었다
+
+- CBRD-28035 수정 PR #8492의 첫 설계는 NEXT VALUE에서 이전 chain을 바로 지웠다. 이때 join·subquery reader 4개가 OOS 손상 오류를 냈다. 두 번 실행해 354건과 492건이었다. 바뀌지 않은 chain을 재사용하는 설계와 수정 전 엔진에서는 0건이었다. 절차와 결과는 [race-repro.md](../cbrd-28035/race-repro.md)에 있다.
+- ha_apply_info에서는 재현하지 않았다. applylogdb의 UPDATE는 X lock을 쥐고 commit 때 회수하지만 reader는 lock을 걸지 않으므로, 같은 순서가 성립한다고 추론한다(INFERRED).
+
+### 남은 후보
+
+| 후보 | 막는 방식 | 한계와 확인할 것 |
+|---|---|---|
+| (나) reader 쪽 확인 | 연속 chunk에서 `next_chunk_stamp`를 비교해, 지워졌거나 재사용된 chunk를 알아챈다 | OOS 읽기 한 곳에서 모든 호출 경로를 덮는다. 불일치를 알아챈 뒤 행을 다시 읽는 처리(호출자 재시도 또는 오류)가 필요하다 |
+| (다) latch를 쥔 채 펼치기 | MVCC가 꺼진 클래스만 cached scan에서 빼고, heap 읽기를 `HEAP_RECDES_CONSUME_RAW_BYTES`로 한다. 펼치기는 home page(와 forward page)를 fix한 채 실행된다([heap_file.c:7637](https://github.com/CUBRID/cubrid/blob/443073283d89e4511b2fa9a5b6a16898770f7e65/src/storage/heap_file.c#L7637), [7659](https://github.com/CUBRID/cubrid/blob/443073283d89e4511b2fa9a5b6a16898770f7e65/src/storage/heap_file.c#L7659)) | heap scan만이 아니라 index scan의 heap fetch 등 이 클래스를 읽는 모든 경로에 적용해야 한다. 경로 목록은 만들지 않았다 |
+| (라) 쓰는 쪽에서 재사용 | 바뀌지 않은 OOS 열은 이전 chain을 그대로 써서 회수할 chain을 만들지 않는다. PR #8492가 serial에 쓴 방식이다 | applylogdb의 counter UPDATE에는 맞는다. 그러나 `copied_log_path`가 실제로 바뀌는 UPDATE에는 틈이 남는다. 일반 `heap_update` 경로라 UPDATE chain 재사용(CBRD-27230)과 겹친다 |
+
+어느 후보로 할지는 ANALYSIS에서 정한다. (나)는 호출 경로를 하나하나 세지 않고 모든 경로를 덮는 유일한 후보다. (라)는 ha_apply_info에서 틈이 생기는 빈도를 줄이지만 틈 자체를 닫지는 못한다.
 
 ## 남은 질문
 
-1. ~~MVCC가 꺼진 클래스의 행이 OOS를 가질 수 있는가?~~ 위 "추가 조사"에서 답했다. serial과 ha_apply_info는 가질 수 있고, ha_apply_info에서는 (c)와 cached scan이 겹칠 수 있다. 경합 재현은 ANALYSIS로 넘긴다.
+1. ~~MVCC가 꺼진 클래스의 행이 OOS를 가질 수 있는가?~~ 위 "추가 조사"에서 답했다. serial과 ha_apply_info는 가질 수 있고, ha_apply_info에서는 (c)와 fixed가 아닌 scan이 겹칠 수 있다. 같은 틈은 serial 경로에서 재현되었다(위 "정정").
 2. `UPDATE_INPLACE_*` 호출자(`redistribute_partition_data`, catalog, TDE, boot)가 쥐는 class lock이 같은 클래스의 query scan을 막는가? 이 보고서는 막는다고 추론했다.
 3. reader가 home page latch를 쥔 채 OOS를 읽는다는 판정 가운데 일부는 PEEK 의미에서 추론했다. 확인하려면 debug 빌드에서 `oos_read` 진입 시 home page fix 여부를 assert로 확인하는 실험이 필요하다.
 
 ## 이슈 처리 방향
 
-- CBRD-27981은 "겹치는 호출자 없음"으로 닫을 수 없다. `db_ha_apply_info`의 cached scan과 applylogdb UPDATE의 commit 회수가 원리상 겹친다. 실제 위험은 낮다.
-- R7의 보강(연속 chunk에서 `next_chunk_stamp` 비교, 해제 허용 fix)은 이 조합을 reader 쪽에서 막는다. 호출자 쪽 보호를 넓히는 방법도 있다. 예를 들어 MVCC가 꺼진 클래스를 cached scan에서 빼거나, ha_apply_info SELECT에도 instance lock을 거는 것이다. 어느 쪽으로 할지, 경합을 debug 빌드에서 재현할지는 ANALYSIS에서 정한다.
+- CBRD-27981은 "겹치는 호출자 없음"으로 닫을 수 없다. `db_ha_apply_info`의 fixed가 아닌 scan과 applylogdb UPDATE의 commit 회수가 원리상 겹친다. 실제 위험은 낮다.
+- cached scan 제외와 SELECT instance S lock은 이 틈을 막지 못한다(위 "정정"). ANALYSIS는 남은 후보 (나) reader 쪽 확인, (다) latch를 쥔 채 펼치기, (라) 쓰는 쪽 재사용 가운데에서 고른다. ha_apply_info 경합은 따로 재현하지 않는다. 같은 틈이 serial 경로에서 이미 재현되었기 때문이다.
 - 결론과 상관없이 `oos_read_within_page`의 주석([oos_file.cpp:2777-2779](https://github.com/CUBRID/cubrid/blob/94ed2ea463f17694db33a283b56fdeb42856e835/src/storage/oos_file.cpp#L2777-L2779))은 실제 근거인 호출자 쪽 보호를 적도록 고칠 대상이다.
