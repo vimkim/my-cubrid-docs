@@ -37,7 +37,7 @@
 - Description conversion dry-run contains one PUT request to the exact issue and only the description field. BMP and shared-link checks passed.
 - The original notes checkout has unrelated dirt in `issues/CBRD-27259-storage-force-inline_bc8a895_codex.md`. Preserve it. A separate clean integration checkout is prepared for notes main integration.
 
-## Proposed remaining operations
+## Approved publication operations
 
 1. Rebase the docs task branch onto current local main, review and check, fast-forward merge, and push docs main. Include the body, context, verification, index and three supporting files named above.
 2. Rebase and integrate the JIRA notes task commit into clean notes main, check and push notes main. Preserve the original dirty checkout.
@@ -45,7 +45,17 @@
 4. Create the draft PR with the exact reviewed body, proposed title, head and base above, and assign vimkim. Verify its state, refs and body.
 5. Record publication outcomes in this context, check and commit the execution record, and integrate/push it under the same publication approval.
 
-No CI trigger is proposed. PR creation awaits explicit confirmation after this body preview under cubrid-pr-create. The requested JIRA change is authorized; document main integration and push still follow the user's Git approval gate. This context records a proposal and completed observations, not an approval token.
+The user replied “yes” on 2026-11-12 after reviewing the saved body, issue revision, and all five operations above. Publication used those unchanged files. This records the confirmation for this attempt and does not authorize future changes. No CI trigger was included.
+
+## Verified execution results
+
+- Created [draft PR #8511](https://github.com/CUBRID/cubrid/pull/8511), assigned to `vimkim`. Read-back confirmed the exact title and body, open draft status, base `feature/oos-merge`, head repository `vimkim/cubrid`, branch `CBRD-28067-oos-test-1min`, and full `SOURCE_COMMIT` above.
+- Published body SHA-256 remains `8f6f65c4036ae50a7ec311c5f600012daafe042aadb78071c618c3b0465ca90f`; published detail SHA-256 remains `6a746cd0d293d685d58b6c1ca084170ab4f34b2c47f81cfee2fada8069b54a0d`.
+- Rebased and fast-forwarded docs task commit to main as `0e58800b4778d1eb82f83b019c54b75d201b2bee`, pushed it, and verified the public detail URL and its approved contents before PR creation.
+- Rebased and fast-forwarded the JIRA notes task to main as `2064dde55d23550a5cb7ceacb66fb6ca75cbed31` and pushed it. The report fingerprint remains the reviewed value above.
+- Updated only the description of [CBRD-28067](https://jira.cubrid.org/browse/CBRD-28067) from the pushed Markdown. The live raw description exactly matched the retained converted dry-run payload. Summary, status and assignee were unchanged.
+- Used clean integration checkouts for both document repositories because their original checkouts contained unrelated edits. Those edits were preserved.
+- No CI trigger was sent. These execution-record changes follow the same approved docs integration and push workflow.
 
 ## Review and current limits
 
