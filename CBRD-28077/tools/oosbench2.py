@@ -30,7 +30,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import oosbench as b  # noqa: E402
 
 b.VARIANTS['develop-e64a'] = {'worktree': b.CB / 'b28077-develop-e64a', 'conf': {}}
-SHORT = {'develop': 'dv', 'develop-e64a': 'de', 'oos': 'os', 'sidecar': 'sc', 'inner': 'in'}
+b.VARIANTS['oos-base'] = {'worktree': b.CB / 'b28077-oos-base', 'conf': {}}  # feature/oos-merge 67220b7e23, base of PR #8493
+b.VARIANTS['oos-8493'] = {'worktree': b.CB / 'b28077-oos-8493', 'conf': {}}  # PR #8493 head f1c78ce70b (CBRD-27925)
+SHORT = {'develop': 'dv', 'develop-e64a': 'de', 'oos': 'os', 'sidecar': 'sc', 'inner': 'in', 'oos-base': 'ob', 'oos-8493': 'op'}
 ROWS = {100: 200_000, 4096: 80_000, 8192: 40_000, 65536: 6_000}
 IO_READ_REPS, WARM_READ_REPS, MUT_REPS = 3, 3, 3
 LOOPS = 600

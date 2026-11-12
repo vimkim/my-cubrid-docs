@@ -13,7 +13,7 @@ import json
 import statistics
 from pathlib import Path
 
-BUILDS = ('develop', 'develop-e64a', 'oos', 'sidecar', 'inner')
+BUILDS = tuple(__import__('os').environ.get('BUILDS', 'develop,develop-e64a,oos,sidecar,inner').split(','))
 DESIGNS = ('oos', 'sidecar', 'inner')
 SCEN = ('S4', 'S1', 'S2', 'S3n', 'S3w', 'S5', 'S6', 'S7', 'S8b', 'S8s', 'S9', 'S11', 'S12')
 LABEL = {'S4': '적재 INSERT', 'S1': '작은 컬럼 scan', 'S2': '큰 값 비교 scan', 'S3n': 'PK 조회 5천 회, 작은 컬럼',

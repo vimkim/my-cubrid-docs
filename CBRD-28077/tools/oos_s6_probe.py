@@ -4,8 +4,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import oosbench2 as o2
 out = Path(sys.argv[1] if len(sys.argv) > 1 else 'out-s6').resolve()
-args = types.SimpleNamespace(root=str(out), tag='s6', variant='oos', sizes=[65536], quick=False, only_scenarios=None)
-bench = o2.Bench2(args); inst = o2.Inst('oos', bench.run_dir)
+VARIANT = sys.argv[2] if len(sys.argv) > 2 else 'oos'
+args = types.SimpleNamespace(root=str(out), tag='s6', variant=VARIANT, sizes=[65536], quick=False, only_scenarios=None)
+bench = o2.Bench2(args); inst = o2.Inst(VARIANT, bench.run_dir)
 bench.inst, bench.size, bench.n = inst, 65536, o2.ROWS[65536]
 inst.create(65536)
 try:
