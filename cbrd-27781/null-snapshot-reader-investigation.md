@@ -139,7 +139,7 @@ OOS 기준은 레코드 길이가 `DB_PAGESIZE/4`를 넘는지다([heap_file.c:1
 
 ### ha_apply_info UPDATE는 매번 chain을 회수한다 (실행 확인)
 
-applylogdb는 `copied_log_path`를 그대로 두고 counter와 시각만 바꾸는 UPDATE를 반복한다([log_applier.c:1923](https://github.com/CUBRID/cubrid/blob/443073283d89e4511b2fa9a5b6a16898770f7e65/src/transaction/log_applier.c#L1923), [2135](https://github.com/CUBRID/cubrid/blob/443073283d89e4511b2fa9a5b6a16898770f7e65/src/transaction/log_applier.c#L2135)). 같은 형태의 UPDATE를 debug 빌드(4K page)에서 한 트랜잭션으로 실행하고, `SHOW HEAP OOS OF _db_ha_apply_info`로 OOS 레코드 수를 셌다. `_db_ha_apply_info`에 쓰려면 `csql --sysadm`이 필요하다.
+applylogdb는 `copied_log_path`를 그대로 두고 counter와 시각만 바꾸는 UPDATE를 반복한다([log_applier.c:1923](https://github.com/CUBRID/cubrid/blob/443073283d89e4511b2fa9a5b6a16898770f7e65/src/transaction/log_applier.c#L1923), [2135](https://github.com/CUBRID/cubrid/blob/443073283d89e4511b2fa9a5b6a16898770f7e65/src/transaction/log_applier.c#L2135)). 같은 형태의 UPDATE를 debug 빌드(4K page)에서 한 트랜잭션으로 실행하고, `SHOW HEAP OOS OF _db_ha_apply_info`로 OOS 레코드 수를 셌다. `_db_ha_apply_info`에 쓰려면 `csql --sysadm`이 필요하다. 실행에 쓴 스크립트는 [scripts/ha-apply-info.sh](scripts/ha-apply-info.sh)다.
 
 | 시점 | `Oos_num_recs` |
 |---|---|
