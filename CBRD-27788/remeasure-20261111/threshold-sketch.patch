@@ -1,0 +1,39 @@
+From 9a304a9d043e47be4bd0494ceedd754cc5ab70a6 Mon Sep 17 00:00:00 2001
+From: Daehyun Kim <kimdhyungg@gmail.com>
+Date: Wed, 11 Nov 2026 21:13:11 +0900
+Subject: [PATCH] SKETCH (measurement only, do not push): OOS demotion target =
+ heap_Maxslotted_reclength
+
+---
+ src/storage/heap_file.c | 15 +--------------
+ 1 file changed, 1 insertion(+), 14 deletions(-)
+
+diff --git a/src/storage/heap_file.c b/src/storage/heap_file.c
+index d783ca6ea4..cece8ecc7c 100644
+--- a/src/storage/heap_file.c
++++ b/src/storage/heap_file.c
+@@ -13745,20 +13745,7 @@ heap_attrinfo_get_record_header_size (HEAP_CACHE_ATTRINFO * attr_info, int paylo
+ int
+ heap_oos_inline_target_size (void)
+ {
+-  const int page_capacity = heap_nonheader_page_capacity ();
+-  int target_size;
+-  int packed_size;
+-  int next_packed_size;
+-
+-  target_size = (page_capacity - HEAP_OOS_MIN_RECS_PER_PAGE * SPAGE_SLOT_SIZE) / HEAP_OOS_MIN_RECS_PER_PAGE;
+-  target_size = DB_ALIGN_BELOW (target_size, HEAP_MAX_ALIGN);
+-
+-  packed_size = HEAP_OOS_MIN_RECS_PER_PAGE * ((int) DB_ALIGN (target_size, HEAP_MAX_ALIGN) + SPAGE_SLOT_SIZE);
+-  next_packed_size = HEAP_OOS_MIN_RECS_PER_PAGE * ((int) DB_ALIGN (target_size + 1, HEAP_MAX_ALIGN) + SPAGE_SLOT_SIZE);
+-  assert (packed_size <= page_capacity);
+-  assert (next_packed_size > page_capacity);
+-
+-  return target_size;
++  return heap_Maxslotted_reclength;
+ }
+ 
+ /*
+-- 
+2.47.3
+
