@@ -1,0 +1,8 @@
+PASS  force_external=yes: diagdb -d 9 exits 0
+FAIL  force_external=yes: diagdb -d 9 --dump-records exits 0 [cubrid: /home/vimkim/gh/cb/sidecar-fix-diagdb/src/storage/heap_file.c:2369: OR_CLASSREP* heap_classrepr_get(THREAD_ENTRY*, const OID*, RECDES*, REPR_ID, int*): Assertion `false' failed.]
+PASS  force_external=no: diagdb -d 9 exits 0
+FAIL  force_external=no: diagdb -d 9 --dump-records exits 0 [cubrid: /home/vimkim/gh/cb/sidecar-fix-diagdb/src/storage/heap_file.c:2369: OR_CLASSREP* heap_classrepr_get(THREAD_ENTRY*, const OID*, RECDES*, REPR_ID, int*): Assertion `false' failed.]
+FAIL  force_external=yes: the dump lists the stores as owner sections [0, catalog and big at least]
+FAIL  a store is not dumped as a heap of its own [heaps yes 37, no 36]
+FAIL  force_external=yes: --dump-records prints the 100 foo objects [0]
+PASS  force_external=yes: without --dump-records no object is printed [0]

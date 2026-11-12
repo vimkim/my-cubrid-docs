@@ -1,0 +1,8 @@
+PASS  force_external=yes: diagdb -d 9 exits 0
+PASS  force_external=yes: diagdb -d 9 --dump-records exits 0 []
+PASS  force_external=no: diagdb -d 9 exits 0
+PASS  force_external=no: diagdb -d 9 --dump-records exits 0 []
+PASS  force_external=yes: the dump lists the stores as owner sections [2, catalog and big at least]
+PASS  a store is not dumped as a heap of its own [heaps yes 35, no 35]
+PASS  force_external=yes: --dump-records prints the 100 foo objects [100]
+PASS  force_external=yes: without --dump-records no object is printed [0]
