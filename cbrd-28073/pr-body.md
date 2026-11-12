@@ -24,7 +24,7 @@ https://jira.cubrid.org/browse/CBRD-28073
 
 ### Test Plan
 
-debug 빌드, `--db-page-size=4K` DB, `feature/oos-merge` `67220b7e23` 기준.
+debug 빌드, `--db-page-size=4K` DB, `feature/oos-merge` `c02f897268` 기준.
 
 | 경우 | 수정 전 | 수정 후 |
 |---|---|---|
@@ -33,4 +33,4 @@ debug 빌드, `--db-page-size=4K` DB, `feature/oos-merge` `67220b7e23` 기준.
 | SA와 서버 모드의 롤백, `kill -9` 뒤 복구, 다른 serial의 ALTER/DROP과 섞인 롤백 | SA에서 -1397 | 정상, OOS 레코드 0개, `checkdb` 통과 |
 | 4K page를 채운 serial 24개의 값을 1에서 2×10^30으로 증가 | | 오류 없음, comment 정상 |
 | 이전 빌드에서 comment가 OOS로 옮겨진 DB | | 기존 chain 3개 재사용, 값과 comment 정상 |
-| `ctest -R oos` | | 53개 모두 통과 |
+| OOS ctest | | 66개 모두 통과 |

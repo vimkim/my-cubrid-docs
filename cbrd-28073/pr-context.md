@@ -7,10 +7,10 @@ Resume and publication bookkeeping for `pr-body.md`. This file is not uploaded.
 | Ticket | [CBRD-28073](https://jira.cubrid.org/browse/CBRD-28073) (Sub-task of CBRD-26978) |
 | Operation | create (draft PR) |
 | Target repository | `CUBRID/cubrid` |
-| Base | `feature/oos-merge` (`67220b7e23`) |
+| Base | `feature/oos-merge` (`c02f897268`) |
 | Source repository / branch | `vimkim/cubrid` / `CBRD-28073-serial-nextval-keep-form` |
 | Head spec | `vimkim:CBRD-28073-serial-nextval-keep-form` |
-| SOURCE_COMMIT | `f3076784bcd0eb2539c4409ed9b07fb3874bbe0d` |
+| SOURCE_COMMIT | `31c72e8342cb05fc60860d7fcec2da60e2e0b9ab` (rebased onto `c02f897268`; previous head `f3076784bc`) |
 | Remote head at preparation | `87a6f40ac1` on `vk` (fast-forward to SOURCE_COMMIT); no PR for this head |
 | Proposed title | `[CBRD-28073] Keep serial row storage form in NEXT VALUE` |
 | Assignee | `vimkim` |
@@ -37,3 +37,10 @@ On 2026-11-12 the user approved the plan "vk에 push한 뒤 feature/oos-merge �
 
 - 2026-11-12: hardening commit `f3076784bc`; OOS ctest 53/53; SA/CS matrix, cross-serial, grow, page-full and upgrade
   scenarios all intact (scratch output `keepform-final3.txt`).
+- 2026-11-12: draft PR https://github.com/CUBRID/cubrid/pull/8514 created at `f3076784bc`; first `/run all` (run 43217057347)
+  failed shell, sql, sql_by_cci on a base 33 commits behind `feature/oos-merge`.
+- 2026-11-13: user approved rebase ("1. yes"). Rebased onto `c02f897268`, resolved `unit_tests/oos/sql/CMakeLists.txt`,
+  capped the `oosserialdb` setup fixture at 60 s for CBRD-28067's timeout check. OOS ctest 66/66 in this worktree
+  (earlier ctest runs after the hardening had followed an inherited `CUBRID_BUILD_DIR` into the #8492 worktree and
+  are not evidence). Scenario scripts intact (`keepform-rebased.txt`). Force-pushed with lease to `31c72e8342`; PR body
+  updated with the new base and ctest count.
