@@ -105,7 +105,10 @@ base에만 있는 case(base_only)는 5개다. crash 뒤에 남은 case가 run마
 - 미확인: 서버 error log(`basic_20261112_1450.err`)는 artifact로 남지 않아서 stack을 확인하지 못했다.
 - 반증 조건: develop의 반복 run에서 이 FATAL이 없고, PR head에서만 반복되면 PR 관련성을 다시 본다.
   특히 postpone 실행이 아직 log buffer로 옮겨지지 않은 레코드를 읽는 경로가 있는지 확인해야 한다.
-- 조치: 이 PR의 코드 수정 근거는 없다. 이 FATAL 자체는 develop의 별도 결함이므로 이슈로 추적할 가치가 있다.
+- 기존 이슈: [CBRD-28058](https://jira.cubrid.org/browse/CBRD-28058)과 증상과 순서가 같다. CBRD-27151(`063d84e53`) 이후
+  checkpoint가 redo 시작점을 이미 지운 archive 안으로 낮추는 회귀다. merge-base `2d1513a8af`는 `063d84e53` 이후 커밋이다.
+  2026-11-12에 occurrence 5건을 CBRD-28058 댓글로 남겼다. core stack이 없어서 `logpb_checkpoint` 경로인지는 확인하지 못했다.
+- 조치: 이 PR의 코드 수정 근거는 없다. CBRD-28058로 추적한다.
 
 ### D. TC Merge Gate
 
@@ -124,7 +127,7 @@ merge-base 비교와 retained evidence 검색만 근거로 쓴다.
 1. failure-only rerun은 현재 head에서 효과가 없다. `cubrid-pr-tc-base-check --pr 8495`도 실패했다
    (두 TC 브랜치 모두 최신 TC develop을 포함하지 않음). PR을 develop으로 rebase하고 TC 브랜치를 맞춘 뒤 `/run all`을 돌린다.
 2. 사람이 TC PR 두 개를 닫은 뒤 TC Merge Gate를 다시 돌린다.
-3. 별도 작업: `log_fetch_from_archive` FATAL(`_36_guava`, develop 재현)을 이슈로 등록하고 server error log를 확보한다.
+3. 별도 작업: `log_fetch_from_archive` FATAL은 [CBRD-28058](https://jira.cubrid.org/browse/CBRD-28058)로 추적한다(occurrence 댓글 등록 완료).
 4. 별도 작업: collector의 test_sql shard 01 JUnit/summary_info 불일치(17 case)를 확인한다.
 
 ## Evidence 파일
