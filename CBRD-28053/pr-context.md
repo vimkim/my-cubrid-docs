@@ -1,6 +1,6 @@
 # CBRD-28053 PR draft context
 
-Status: Draft PR https://github.com/CUBRID/cubrid/pull/8504 opened 2026-11-12 from `vimkim:sidecar-poc1` (head d3403c0533 = `sidecar` 7c5028d5bd + CI-only force_external=yes commit). `/run all` posted 2026-11-12T06:20:50Z, gha-ci run 43167500136. The branch conflicts with current develop (100 commits ahead); gha-ci tests the PR head. Earlier status follows.
+Status (2026-11-12 17:39 KST): head 84e24e39f4 = merge of develop 173d92e454 (e757545dde) + GCC 11 planner build fix; P1c 466/466; `/run all` gha-ci run 43184757385. Earlier: draft PR https://github.com/CUBRID/cubrid/pull/8504 opened 2026-11-12 from `vimkim:sidecar-poc1` (head d3403c0533 = `sidecar` 7c5028d5bd + CI-only force_external=yes commit). `/run all` posted 2026-11-12T06:20:50Z, gha-ci run 43167500136. The branch conflicts with current develop (100 commits ahead); gha-ci tests the PR head. Earlier status follows.
 
 Previous status: PR body draft only. The user chose on 2026-11-11 to open the PR only after the A7 store-read fix (branch `sidecar-storeread`, commits `5587aeead` and `b1267b205`, work-tracker #913) is merged into `sidecar`. That merge changes the source revision, so this draft must be reconciled and reviewed again before publication.
 
