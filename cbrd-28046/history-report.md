@@ -74,7 +74,7 @@ blame 해석 시 주의할 점:
 - 같은 문제를 다룬 조사 티켓이 따로 있습니다. CUBRIDSUS-17074(2015-06)와 그 복제본 CBRD-20097(Razvan Radulescu, 2016-03, Fix Version 10.1)입니다. 본문은 "Most system operations commits are performed during transaction, while locks and page latches are hold and any synchronous IO job will affect performance. Investigate if log flush is required during log_append_topope_commit_postpone function."입니다.
 - CBRD-20097은 2017-03 Remzi Ibram의 코멘트 "log is no longer flushed when system operation is committed with postpone. it was removed along with file manager redesign."와 함께 닫혔습니다.
 - 이후 Remzi Ibram의 `cc368329d0` "[CBRD-20185] File manager redesign (#197)"(2016-11-23)이 지금의 `log_append_sysop_start_postpone()`을 만들었고, 역시 flush가 없습니다. CBRD-20097 종료 코멘트의 "file manager redesign"은 이 커밋을 가리키는 것으로 보입니다.
-- 정리하면, 코드에서 flush를 처음 뺀 것은 CUBRIDSUS-17980(`git describe` 기준 v10.0에 포함)입니다. 10.1의 CBRD-20185가 함수를 새로 쓰면서 그 형태를 유지했고, CBRD-20097은 그 결과를 확인하고 닫은 조사 티켓입니다. 세 티켓은 서로를 언급하지 않으므로 이 연결은 추정입니다. PR 본문은 선례를 "10.1(CBRD-20097)"로 적었으니, 실제 제거 커밋인 CUBRIDSUS-17980을 함께 적는 편이 정확합니다.
+- 정리하면, 코드에서 flush를 처음 뺀 것은 CUBRIDSUS-17980(`git describe` 기준 v10.0에 포함)입니다. 10.1의 CBRD-20185가 함수를 새로 쓰면서 그 형태를 유지했고, CBRD-20097은 그 결과를 확인하고 닫은 조사 티켓입니다. 세 티켓은 서로를 언급하지 않으므로 이 연결은 추정입니다. PR 본문의 선례 표기는 2026-11-12에 CUBRIDSUS-17980과 CBRD-20185로 고쳤습니다.
 - 같은 시기 vacuum postpone 작업이 이어졌습니다. CUBRIDSUS-17890(Alexandru Stan, vacuum이 postpone으로 page dealloc), CUBRIDSUS-17689(Remzi Ibram, recovery 중 top op commit postpone 수정). 이 커밋들도 flush의 안전성은 논하지 않습니다.
 - 현재 `log_append_sysop_start_postpone()`은 `prior_lsa_next_record()`만 호출하고 flush하지 않습니다. 트랜잭션 쪽 flush는 그 뒤에도 남아 있었습니다(2016 CBRD-20214의 backtrace에 `log_append_commit_postpone`의 `logpb_flush_pages` 호출이 나옵니다).
 
@@ -96,7 +96,7 @@ heap_rv_lob_remove_dir (THREAD_ENTRY * thread_p, LOG_RCV * rcv)
 - 파일 삭제는 로그로 되돌릴 수 없습니다. 기존에는 commit-with-postpone flush가 "삭제 전에 commit이 디스크에 있다"는 것을 암묵적으로 보장했습니다.
 - 이번 PR은 그 보장을 이 함수로 옮겼습니다. 삭제 전에 `logpb_flush_log_for_wal (thread_p, &tdes->rcv.tran_start_postpone_lsa)`를 호출합니다.
 - 비슷한 선례. `file_destroy`는 page를 버리기 전에 `pgbuf_flush_with_wal`로 dirty page를 WAL에 맞춰 내립니다(`063d84e537`, CBRD-27151, Yunjun Lee). `vacuum_flush_data`도 `logpb_flush_log_for_wal`을 씁니다(CUBRIDSUS-17704). 다만 postpone 실행 중에 CWP LSA까지 로그를 flush하는 경우는 이번 LOB 가드가 처음입니다.
-- sysop postpone에서는 `tran_start_postpone_lsa`가 설정되지 않아 가드가 flush를 건너뜁니다. `xlob_remove_dir`는 트랜잭션 postpone으로만 등록되는 것으로 보이지만 확인하지 않았습니다.
+- sysop postpone에서는 `tran_start_postpone_lsa`가 설정되지 않아 가드가 flush를 건너뜁니다. `RVHF_LOB_REMOVE_DIR` postpone을 등록하는 곳은 `xlob_remove_dir`(`locator_sr.c:14844`) 하나이고, 이 함수는 서버 요청 핸들러(`network_interface_sr.cpp:13302`)에서만 불리므로 sysop 안에서 등록되지 않습니다.
 - `log_append_postpone` 호출 지점을 모두 확인한 결과, 로그로 보호되지 않는 효과를 가진 postpone은 `RVHF_LOB_REMOVE_DIR`(`locator_sr.c` `xlob_remove_dir`) 하나였습니다(`cbrd-28046/pr-context.md:26`).
 
 ### 5. 검증 근거
