@@ -12,8 +12,9 @@
 - 한계: report gate 결과는 `warning`이다. `test_sql`과 `test_sql_by_cci`는 collector가 validated
   summary를 만들지 못했다. 이 두 suite의 비교는 raw job log와 `failed.list`에서 읽은 것이다.
   validated summary 기반의 결론은 아니다.
-- 다음 조치: 코드 수정은 필요하지 않다. 실패한 job만 rerun한다. 아래 기존 실패는 develop 문제이므로
-  rerun에서도 다시 실패할 가능성이 높다(추정). TC PR 두 개는 사람이 닫는다.
+- 다음 조치: 코드 수정은 필요하지 않다. 현재 head로 failure-only rerun을 하면 test_shell과 test_sql은
+  다시 실패한다(원인 A 참고). PR을 현재 develop(`98b892cf49` 이후)로 rebase하고, `tc/pr-8495` 두 브랜치를
+  TC develop에 맞춘 뒤 `/run all`을 돌려야 한다. TC PR 두 개는 사람이 닫는다.
 
 ## 분석 범위
 
@@ -72,14 +73,21 @@ base에만 있는 case(base_only)는 5개다. crash 뒤에 남은 case가 run마
 
 - 관찰: shell `cbrd_27236_merge`의 서버 시작이 `The 'index_build_merge_fanin' parameter ... Unrecognized keyword`로
   실패한다. sql `cbrd_27236_*` 3 case도 NOK이다. 같은 실패가 develop `2d1513a8af`에서도 난다.
-- 추론: TC develop에는 CBRD-27236 testcase가 들어갔지만, 엔진 develop에는 그 파라미터가 아직 없다.
+- 관찰: `tc/pr-8495`의 분기점은 두 TC 저장소 모두 CBRD-27236 TC 커밋 이후다. private-ex의 분기점은
+  `90f15f0c8c6c` "[CBRD-27236] Add shell testcases for the merge and the temp space of an index build,
+  and update the answer of temp_enc_08 (#4687)"다. 이 커밋이 temp_enc_08 answer도 바꿨다.
+- 관찰: CBRD-27236 엔진 변경 `4255a337dd` (#8358)는 merge-base `2d1513a8af` 이후에 develop에 들어왔다.
+  `origin/develop`의 `src/base/system_parameter.c`에는 `index_build_merge_fanin`이 있다.
+- 추론: 이 PR의 엔진은 CBRD-27236 이전이고, testcase는 CBRD-27236 이후다. 그래서 shell 2건과 sql 3건이 실패한다.
+  B의 temp_enc_08도 같은 원인이다(answer가 CBRD-27236 동작 기준으로 바뀜).
 - 반증 조건: develop tip run에서 이 case가 통과하는데 PR head에서만 실패하면 이 판단은 틀린다.
-- 조치: 이 PR과 무관하다. CBRD-27236 엔진 변경이 develop에 들어오면 해소된다.
+- 조치: PR을 현재 develop으로 rebase하면 해소될 것으로 본다(추정, rebase 뒤 run으로 확인).
 
 ### B. temp_enc_08의 temporary 파일 생성 수
 
 - 관찰: answer보다 temporary `file_create` 출력이 더 많다. NOK 수와 위치가 base와 같다.
-- 추론: develop의 기존 실패다. 이 PR은 commit postpone 로그 flush만 바꾸고 temp 파일 생성 경로는 건드리지 않는다.
+- 추론: 원인 A와 같다. TC 커밋 #4687이 CBRD-27236 엔진 동작 기준으로 answer를 바꿨다.
+  이 PR은 commit postpone 로그 flush만 바꾸고 temp 파일 생성 경로는 건드리지 않는다.
 - 반증 조건: base에서 통과하는 run이 반복해서 나오고 head에서만 실패하면 다시 본다.
 - 조치: PR 조치는 없다.
 
@@ -113,7 +121,8 @@ merge-base 비교와 retained evidence 검색만 근거로 쓴다.
 
 ## 우선순위 조치
 
-1. 실패한 job만 rerun한다(failure-only). 기존 실패라서 다시 실패할 가능성이 높다(추정).
+1. failure-only rerun은 현재 head에서 효과가 없다. `cubrid-pr-tc-base-check --pr 8495`도 실패했다
+   (두 TC 브랜치 모두 최신 TC develop을 포함하지 않음). PR을 develop으로 rebase하고 TC 브랜치를 맞춘 뒤 `/run all`을 돌린다.
 2. 사람이 TC PR 두 개를 닫은 뒤 TC Merge Gate를 다시 돌린다.
 3. 별도 작업: `log_fetch_from_archive` FATAL(`_36_guava`, develop 재현)을 이슈로 등록하고 server error log를 확보한다.
 4. 별도 작업: collector의 test_sql shard 01 JUnit/summary_info 불일치(17 case)를 확인한다.
