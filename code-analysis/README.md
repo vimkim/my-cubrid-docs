@@ -1,6 +1,6 @@
 # CUBRID analysis library
 
-Created: 2026-10-21. Last modified: 2026-11-11 (Asia/Seoul).
+Created: 2026-10-21. Last modified: 2026-11-13 (Asia/Seoul).
 
 Start here for analyses of CUBRID subsystems and build tooling. Each report has
 its own source revision and verification limits. Ticket-specific findings and
@@ -15,6 +15,7 @@ PR decisions remain in the relevant ticket directory.
 | SX page latch and asynchronous I/O | [Codex report](cbrd-27196-sx-page-latch-aio-direct-i-o-cubrid/f799e05_codex/index.html), [Claude report](cbrd-27196-sx-page-latch-aio-direct-i-o-cubrid/f799e05_claude/index.html) | Revision-specific CBRD-27196 analysis and verification |
 | OOS and vacuum | [OOS/vacuum book, 07fef9d](cbrd-26950-oos-vacuum-delete-overlap-oos-lsa-generation-id-vacuu/07fef9d_claude/index.html) | Overflow deletion, identity, lifecycle, and vacuum interaction |
 | SP DML restrictions | [SP DML guard index](sp-dml-guard/README.md) | CAS callbacks, semantic statement ancestry, XASL metadata limits, and bounded TLA+ verification |
+| Duplicated-code drift | [Clone drift index](clone-drift/README.md) | Copies where a fix reached only one side (CBRD-28080 class), found with PMD CPD and same-name function pairs |
 
 The former top-level `pgbuf-analysis/` and `build-analysis/` collections moved to
 `pgbuf/` and `build/` on 2026-10-21. Existing report names and historical findings
