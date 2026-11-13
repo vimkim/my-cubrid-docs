@@ -1,0 +1,1144 @@
+{
+ "sha256": {
+  "OosChainReuse": "acf940a2837dc578625a2a53f7388daa53af971a856640dbe848316d1c393afd",
+  "tla2tools": "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88"
+ },
+ "bounds": {
+  "safety": {
+   "Txns": "{\"T1\", \"T2\"}",
+   "Readers": "{\"R1\"}",
+   "Slots": "{1, 2, 3, 4}",
+   "MaxStmts": "2",
+   "MaxStamp": "6",
+   "MaxNotes": "8"
+  },
+  "liveness": {
+   "Txns": "{\"T1\", \"T2\"}",
+   "Readers": "{\"R1\"}",
+   "Slots": "{1, 2, 3}",
+   "MaxStmts": "1",
+   "MaxStamp": "5",
+   "MaxNotes": "4"
+  }
+ },
+ "results": [
+  {
+   "config": "design",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NeededChainsLive",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "design-NeededChainsLive",
+   "distinct": 9649400,
+   "trace": []
+  },
+  {
+   "config": "design",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NoWrongDelete",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "design-NoWrongDelete",
+   "distinct": 9649400,
+   "trace": []
+  },
+  {
+   "config": "design",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NotifyOnlyForCommittedDrop",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "design-NotifyOnlyForCommittedDrop",
+   "distinct": 9649400,
+   "trace": []
+  },
+  {
+   "config": "design",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "GarbageReclaimed",
+   "kind": "liveness",
+   "bounds": "liveness",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "design-GarbageReclaimed",
+   "distinct": 189483,
+   "trace": []
+  },
+  {
+   "config": "publish_before_commit",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "before_commit",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NeededChainsLive",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "publish_before_commit-NeededChainsLive",
+   "distinct": 634,
+   "trace": [
+    "initial state",
+    "T1: UPDATE assigns no OOS attribute; the postpone names nothing",
+    "T1: UPDATE assigns c1; the postpone names the dropped chains",
+    "T1: the commit hook appends RVOOS_NOTIFY_VACUUM before the commit record (flushed)",
+    "crash; recovery undoes active transactions and reruns unfinished postpones",
+    "vacuum: consumes notification 1 and reclaims its chains (redo-only)"
+   ]
+  },
+  {
+   "config": "publish_before_commit",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "before_commit",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NoWrongDelete",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "publish_before_commit-NoWrongDelete",
+   "distinct": 1226378,
+   "trace": []
+  },
+  {
+   "config": "publish_before_commit",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "before_commit",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NotifyOnlyForCommittedDrop",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "publish_before_commit-NotifyOnlyForCommittedDrop",
+   "distinct": 214,
+   "trace": [
+    "initial state",
+    "T1: UPDATE assigns c1; the postpone names the dropped chains",
+    "T1: UPDATE assigns no OOS attribute; the postpone names nothing",
+    "T1: the commit hook appends RVOOS_NOTIFY_VACUUM before the commit record (flushed)",
+    "crash; recovery undoes active transactions and reruns unfinished postpones"
+   ]
+  },
+  {
+   "config": "publish_before_commit",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "before_commit",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "GarbageReclaimed",
+   "kind": "liveness",
+   "bounds": "liveness",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "publish_before_commit-GarbageReclaimed",
+   "distinct": 48627,
+   "trace": []
+  },
+  {
+   "config": "no_horizon",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": false,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NeededChainsLive",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "no_horizon-NeededChainsLive",
+   "distinct": 1214,
+   "trace": [
+    "initial state",
+    "T1: UPDATE assigns c1; the postpone names the dropped chains",
+    "T1: UPDATE assigns no OOS attribute; the postpone names nothing",
+    "R1 takes a snapshot",
+    "T1: logtb_complete_mvcc, then LOG_COMMIT_WITH_POSTPONE is flushed",
+    "T1: a postpone appends RVOOS_NOTIFY_VACUUM under the UPDATE's MVCCID (durable)",
+    "vacuum: consumes notification 1 and reclaims its chains (redo-only)"
+   ]
+  },
+  {
+   "config": "no_horizon",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": false,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NoWrongDelete",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "no_horizon-NoWrongDelete",
+   "distinct": 10507208,
+   "trace": []
+  },
+  {
+   "config": "no_horizon",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": false,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NotifyOnlyForCommittedDrop",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "no_horizon-NotifyOnlyForCommittedDrop",
+   "distinct": 10507208,
+   "trace": []
+  },
+  {
+   "config": "no_horizon",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": false,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "GarbageReclaimed",
+   "kind": "liveness",
+   "bounds": "liveness",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "no_horizon-GarbageReclaimed",
+   "distinct": 208487,
+   "trace": []
+  },
+  {
+   "config": "no_cancel",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": false,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NeededChainsLive",
+   "kind": "safety",
+   "bounds": "liveness",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "no_cancel-NeededChainsLive",
+   "distinct": 769,
+   "trace": [
+    "initial state",
+    "T1: UPDATE assigns c1; the postpone names the dropped chains",
+    "T1: a statement rollback undoes its newest statement; its postpone stays",
+    "T1: logtb_complete_mvcc, then LOG_COMMIT_WITH_POSTPONE is flushed",
+    "T1: a postpone appends RVOOS_NOTIFY_VACUUM under the UPDATE's MVCCID (durable)",
+    "vacuum: consumes notification 1 and reclaims its chains (redo-only)"
+   ]
+  },
+  {
+   "config": "no_cancel",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": false,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NoWrongDelete",
+   "kind": "safety",
+   "bounds": "liveness",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "no_cancel-NoWrongDelete",
+   "distinct": 3754692,
+   "trace": []
+  },
+  {
+   "config": "no_cancel",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": false,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NotifyOnlyForCommittedDrop",
+   "kind": "safety",
+   "bounds": "liveness",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "no_cancel-NotifyOnlyForCommittedDrop",
+   "distinct": 352,
+   "trace": [
+    "initial state",
+    "T1: UPDATE assigns c1; the postpone names the dropped chains",
+    "T1: a statement rollback undoes its newest statement; its postpone stays",
+    "T1: logtb_complete_mvcc, then LOG_COMMIT_WITH_POSTPONE is flushed",
+    "T1: a postpone appends RVOOS_NOTIFY_VACUUM under the UPDATE's MVCCID (durable)"
+   ]
+  },
+  {
+   "config": "undo_image_drop",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "undo_image",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NeededChainsLive",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "undo_image_drop-NeededChainsLive",
+   "distinct": 461,
+   "trace": [
+    "initial state",
+    "T1: UPDATE assigns no OOS attribute; the postpone names the dropped chains",
+    "T1: UPDATE assigns no OOS attribute; the postpone names the dropped chains",
+    "T1: logtb_complete_mvcc, then LOG_COMMIT_WITH_POSTPONE is flushed",
+    "T1: a postpone appends RVOOS_NOTIFY_VACUUM under the UPDATE's MVCCID (durable)",
+    "vacuum: consumes notification 1 and reclaims its chains (redo-only)"
+   ]
+  },
+  {
+   "config": "undo_image_drop",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "undo_image",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NoWrongDelete",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "undo_image_drop-NoWrongDelete",
+   "distinct": 100366842,
+   "trace": []
+  },
+  {
+   "config": "undo_image_drop",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "undo_image",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NotifyOnlyForCommittedDrop",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "undo_image_drop-NotifyOnlyForCommittedDrop",
+   "distinct": 180,
+   "trace": [
+    "initial state",
+    "T1: UPDATE assigns no OOS attribute; the postpone names the dropped chains",
+    "T1: UPDATE assigns no OOS attribute; the postpone names the dropped chains",
+    "T1: logtb_complete_mvcc, then LOG_COMMIT_WITH_POSTPONE is flushed",
+    "T1: a postpone appends RVOOS_NOTIFY_VACUUM under the UPDATE's MVCCID (durable)"
+   ]
+  },
+  {
+   "config": "undo_image_drop",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "undo_image",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "GarbageReclaimed",
+   "kind": "liveness",
+   "bounds": "liveness",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "undo_image_drop-GarbageReclaimed",
+   "distinct": 930228,
+   "trace": []
+  },
+  {
+   "config": "no_identity",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": false,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NeededChainsLive",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "no_identity-NeededChainsLive",
+   "distinct": 32543,
+   "trace": [
+    "initial state",
+    "T1: UPDATE assigns c1; the postpone names the dropped chains",
+    "T1: UPDATE assigns no OOS attribute; the postpone names nothing",
+    "T1: logtb_complete_mvcc, then LOG_COMMIT_WITH_POSTPONE is flushed",
+    "T1: a postpone appends RVOOS_NOTIFY_VACUUM under the UPDATE's MVCCID (durable)",
+    "T1: the postpone is marked run (durable)",
+    "vacuum: consumes notification 1 and reclaims its chains (redo-only)",
+    "crash; recovery undoes active transactions and reruns unfinished postpones",
+    "T1: LOG_COMMIT; the row lock is released",
+    "T2: UPDATE assigns c1; the postpone names the dropped chains",
+    "vacuum: consumes notification 1 and reclaims its chains (redo-only)"
+   ]
+  },
+  {
+   "config": "no_identity",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": false,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NoWrongDelete",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "no_identity-NoWrongDelete",
+   "distinct": 35013,
+   "trace": [
+    "initial state",
+    "T1: UPDATE assigns c1; the postpone names the dropped chains",
+    "T1: logtb_complete_mvcc, then LOG_COMMIT_WITH_POSTPONE is flushed",
+    "T1: a postpone appends RVOOS_NOTIFY_VACUUM under the UPDATE's MVCCID (durable)",
+    "T1: the postpone is marked run (durable)",
+    "vacuum: consumes notification 1 and reclaims its chains (redo-only)",
+    "crash; recovery undoes active transactions and reruns unfinished postpones",
+    "T1: LOG_COMMIT; the row lock is released",
+    "T2: UPDATE assigns c1; the postpone names the dropped chains",
+    "vacuum: consumes notification 1 and reclaims its chains (redo-only)"
+   ]
+  },
+  {
+   "config": "no_identity",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": false,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NotifyOnlyForCommittedDrop",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "no_identity-NotifyOnlyForCommittedDrop",
+   "distinct": 13962878,
+   "trace": []
+  },
+  {
+   "config": "no_identity",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": false,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "GarbageReclaimed",
+   "kind": "liveness",
+   "bounds": "liveness",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "no_identity-GarbageReclaimed",
+   "distinct": 241215,
+   "trace": []
+  },
+  {
+   "config": "no_rerun",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": false,
+    "UndoFrees": "created"
+   },
+   "property": "NeededChainsLive",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "no_rerun-NeededChainsLive",
+   "distinct": 3558440,
+   "trace": []
+  },
+  {
+   "config": "no_rerun",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": false,
+    "UndoFrees": "created"
+   },
+   "property": "NoWrongDelete",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "no_rerun-NoWrongDelete",
+   "distinct": 3558440,
+   "trace": []
+  },
+  {
+   "config": "no_rerun",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": false,
+    "UndoFrees": "created"
+   },
+   "property": "NotifyOnlyForCommittedDrop",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "no_rerun-NotifyOnlyForCommittedDrop",
+   "distinct": 3558440,
+   "trace": []
+  },
+  {
+   "config": "no_rerun",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": false,
+    "UndoFrees": "created"
+   },
+   "property": "GarbageReclaimed",
+   "kind": "liveness",
+   "bounds": "liveness",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "no_rerun-GarbageReclaimed",
+   "distinct": 7569,
+   "trace": [
+    "initial state",
+    "R1 takes a snapshot",
+    "T1: UPDATE assigns c1; the postpone names the dropped chains",
+    "T1: a statement rollback undoes its newest statement and cancels its postpone",
+    "T1: UPDATE assigns c2; the postpone names the dropped chains",
+    "T1: logtb_complete_mvcc, then LOG_COMMIT_WITH_POSTPONE is flushed",
+    "crash; recovery undoes active transactions and reruns unfinished postpones",
+    "T1: LOG_COMMIT; the row lock is released"
+   ]
+  },
+  {
+   "config": "restamp",
+   "settings": {
+    "Reuse": "restamp",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NeededChainsLive",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "restamp-NeededChainsLive",
+   "distinct": 2,
+   "trace": [
+    "initial state",
+    "T1: UPDATE assigns no OOS attribute; the postpone names the dropped chains"
+   ]
+  },
+  {
+   "config": "restamp",
+   "settings": {
+    "Reuse": "restamp",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NoWrongDelete",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "restamp-NoWrongDelete",
+   "distinct": 586184,
+   "trace": []
+  },
+  {
+   "config": "restamp",
+   "settings": {
+    "Reuse": "restamp",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NotifyOnlyForCommittedDrop",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "restamp-NotifyOnlyForCommittedDrop",
+   "distinct": 586184,
+   "trace": []
+  },
+  {
+   "config": "restamp",
+   "settings": {
+    "Reuse": "restamp",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "GarbageReclaimed",
+   "kind": "liveness",
+   "bounds": "liveness",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "restamp-GarbageReclaimed",
+   "distinct": 5355,
+   "trace": [
+    "initial state",
+    "T2: UPDATE assigns no OOS attribute; the postpone names the dropped chains",
+    "T2: a statement rollback undoes its newest statement and cancels its postpone",
+    "crash; recovery undoes active transactions and reruns unfinished postpones",
+    "T1: DELETE sets the delete MVCCID; the chains stay for older snapshots",
+    "T1 rolls back; its postpones are discarded"
+   ]
+  },
+  {
+   "config": "snapshot_source",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "snapshot",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NeededChainsLive",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "snapshot_source-NeededChainsLive",
+   "distinct": 439,
+   "trace": [
+    "initial state",
+    "T1: UPDATE assigns c1; the postpone names the dropped chains",
+    "T1: UPDATE assigns no OOS attribute; the postpone names the dropped chains",
+    "T1: logtb_complete_mvcc, then LOG_COMMIT_WITH_POSTPONE is flushed",
+    "T1: a postpone appends RVOOS_NOTIFY_VACUUM under the UPDATE's MVCCID (durable)",
+    "vacuum: consumes notification 1 and reclaims its chains (redo-only)"
+   ]
+  },
+  {
+   "config": "snapshot_source",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "snapshot",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NoWrongDelete",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "snapshot_source-NoWrongDelete",
+   "distinct": 62001044,
+   "trace": []
+  },
+  {
+   "config": "snapshot_source",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "snapshot",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "NotifyOnlyForCommittedDrop",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "snapshot_source-NotifyOnlyForCommittedDrop",
+   "distinct": 217,
+   "trace": [
+    "initial state",
+    "T1: UPDATE assigns c1; the postpone names the dropped chains",
+    "T1: UPDATE assigns no OOS attribute; the postpone names the dropped chains",
+    "T1: logtb_complete_mvcc, then LOG_COMMIT_WITH_POSTPONE is flushed",
+    "T1: a postpone appends RVOOS_NOTIFY_VACUUM under the UPDATE's MVCCID (durable)"
+   ]
+  },
+  {
+   "config": "snapshot_source",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "snapshot",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "GarbageReclaimed",
+   "kind": "liveness",
+   "bounds": "liveness",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "snapshot_source-GarbageReclaimed",
+   "distinct": 352083,
+   "trace": []
+  },
+  {
+   "config": "undo_frees_reused",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "new_record"
+   },
+   "property": "NeededChainsLive",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "undo_frees_reused-NeededChainsLive",
+   "distinct": 36,
+   "trace": [
+    "initial state",
+    "T1: UPDATE assigns no OOS attribute; the postpone names nothing",
+    "T1: UPDATE assigns c1; the postpone names the dropped chains",
+    "T1: a statement rollback undoes its newest statement and cancels its postpone"
+   ]
+  },
+  {
+   "config": "undo_frees_reused",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "new_record"
+   },
+   "property": "NoWrongDelete",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "undo_frees_reused-NoWrongDelete",
+   "distinct": 103122262,
+   "trace": []
+  },
+  {
+   "config": "undo_frees_reused",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "new_record"
+   },
+   "property": "NotifyOnlyForCommittedDrop",
+   "kind": "safety",
+   "bounds": "safety",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "undo_frees_reused-NotifyOnlyForCommittedDrop",
+   "distinct": 103122262,
+   "trace": []
+  },
+  {
+   "config": "undo_frees_reused",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "new_record"
+   },
+   "property": "GarbageReclaimed",
+   "kind": "liveness",
+   "bounds": "liveness",
+   "expected": "PASS",
+   "result": "PASS",
+   "name": "undo_frees_reused-GarbageReclaimed",
+   "distinct": 865830,
+   "trace": []
+  },
+  {
+   "config": "design",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "WitnessSharedChainReclaimed",
+   "kind": "witness",
+   "bounds": "safety",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "design-WitnessSharedChainReclaimed",
+   "distinct": 346,
+   "trace": [
+    "initial state",
+    "T1: UPDATE assigns no OOS attribute; the postpone names nothing",
+    "T1: UPDATE assigns c1; the postpone names the dropped chains",
+    "T1: logtb_complete_mvcc, then LOG_COMMIT_WITH_POSTPONE is flushed",
+    "T1: a postpone appends RVOOS_NOTIFY_VACUUM under the UPDATE's MVCCID (durable)",
+    "vacuum: consumes notification 1 and reclaims its chains (redo-only)"
+   ]
+  },
+  {
+   "config": "design",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "WitnessSnapshotHoldsReclaim",
+   "kind": "witness",
+   "bounds": "safety",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "design-WitnessSnapshotHoldsReclaim",
+   "distinct": 435,
+   "trace": [
+    "initial state",
+    "T1: UPDATE assigns no OOS attribute; the postpone names nothing",
+    "T1: UPDATE assigns c1; the postpone names the dropped chains",
+    "R1 takes a snapshot",
+    "T1: logtb_complete_mvcc, then LOG_COMMIT_WITH_POSTPONE is flushed",
+    "T1: a postpone appends RVOOS_NOTIFY_VACUUM under the UPDATE's MVCCID (durable)"
+   ]
+  },
+  {
+   "config": "design",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "WitnessDuplicateNotify",
+   "kind": "witness",
+   "bounds": "safety",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "design-WitnessDuplicateNotify",
+   "distinct": 1048,
+   "trace": [
+    "initial state",
+    "T1: UPDATE assigns c1; the postpone names the dropped chains",
+    "T1: UPDATE assigns no OOS attribute; the postpone names nothing",
+    "T1: logtb_complete_mvcc, then LOG_COMMIT_WITH_POSTPONE is flushed",
+    "T1: a postpone appends RVOOS_NOTIFY_VACUUM under the UPDATE's MVCCID (durable)",
+    "crash; recovery undoes active transactions and reruns unfinished postpones",
+    "T1: a postpone appends RVOOS_NOTIFY_VACUUM under the UPDATE's MVCCID (durable)"
+   ]
+  },
+  {
+   "config": "design",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "WitnessCrashInPostponeThenReclaim",
+   "kind": "witness",
+   "bounds": "safety",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "design-WitnessCrashInPostponeThenReclaim",
+   "distinct": 15716,
+   "trace": [
+    "initial state",
+    "T1: UPDATE assigns no OOS attribute; the postpone names nothing",
+    "T1: UPDATE assigns c1; the postpone names the dropped chains",
+    "T1: logtb_complete_mvcc, then LOG_COMMIT_WITH_POSTPONE is flushed",
+    "crash; recovery undoes active transactions and reruns unfinished postpones",
+    "T1: a postpone appends RVOOS_NOTIFY_VACUUM under the UPDATE's MVCCID (durable)",
+    "T1: the postpone is marked run (durable)",
+    "vacuum: consumes notification 1 and reclaims its chains (redo-only)",
+    "vacuum: marks the block done",
+    "T1: LOG_COMMIT; the row lock is released"
+   ]
+  },
+  {
+   "config": "design",
+   "settings": {
+    "Reuse": "copy",
+    "Source": "latest",
+    "Drop": "set_diff",
+    "Publish": "postpone",
+    "Cancel": true,
+    "Horizon": true,
+    "Identity": true,
+    "Rerun": true,
+    "UndoFrees": "created"
+   },
+   "property": "WitnessPartialRollbackThenCommit",
+   "kind": "witness",
+   "bounds": "safety",
+   "expected": "FAIL",
+   "result": "FAIL",
+   "name": "design-WitnessPartialRollbackThenCommit",
+   "distinct": 3661,
+   "trace": [
+    "initial state",
+    "T1: UPDATE assigns no OOS attribute; the postpone names nothing",
+    "T1: UPDATE assigns c1; the postpone names the dropped chains",
+    "T1: a statement rollback undoes its newest statement and cancels its postpone",
+    "T1: UPDATE assigns c1; the postpone names the dropped chains",
+    "T1: logtb_complete_mvcc, then LOG_COMMIT_WITH_POSTPONE is flushed",
+    "T1: a postpone appends RVOOS_NOTIFY_VACUUM under the UPDATE's MVCCID (durable)",
+    "T1: the postpone is marked run (durable)",
+    "T1: LOG_COMMIT; the row lock is released"
+   ]
+  }
+ ]
+}
