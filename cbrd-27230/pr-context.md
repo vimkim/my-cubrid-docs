@@ -16,6 +16,17 @@
 3. `gh pr create --draft --repo CUBRID/cubrid --base feature/oos-merge --head vimkim:CBRD-27230-oos-update-dedup --title "<title>" --body-file cbrd-27230/pr-body.md --assignee vimkim`.
 4. Per AGENTS.override standing authorization: trigger CUBRID CI once after the push, wait, report result and run URL, then stop. TC repos: report TC PRs the bot creates; no TC changes planned (unit tests only).
 
+## Static check (cubrid-static-check b049fa155c..f0d6b03a56, 2026-11-16)
+
+| Check | New |
+| --- | --- |
+| cppcheck (high-signal) | 0 |
+| clang-tidy (bugprone-*) | 0 |
+| Duplicated code (CPD) | 0 |
+| Function complexity (lizard) | 1 flag |
+
+Disposition: `heap_attrinfo_transform_to_disk_internal` CCN 20 -> 27 (+7), length +8. Not a defect; the added branches thread the reuse plan through layout. Left as is; a reviewer may ask to split it.
+
 ## Publication record
 
 (filled during publication)
