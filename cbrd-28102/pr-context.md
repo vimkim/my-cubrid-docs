@@ -1,6 +1,6 @@
 # CBRD-28102 PR draft context
 
-Not uploaded. Resume and publication bookkeeping for `pr-body.md`.
+Resume and publication bookkeeping for `pr-body.md`. Published as PR #8565.
 
 ## Source and target
 
@@ -44,4 +44,10 @@ Not uploaded. Resume and publication bookkeeping for `pr-body.md`.
 
 ## Execution record
 
-(empty)
+Confirmation: the user replied "yes" on 2026-11-16 to the three proposed operations above.
+
+- Body fingerprint for this attempt: sha256 `9d8f9bad8135de9cd2271dd5b650aaad6a6771d5c2bd12ea512665962f930140`; material checker passed before the push and before the create.
+- Source push: `vk` `CBRD-28102-sysop-postpone` created at `436d1cd5bbe14bc09e7cd2e7f6e327972034b0f8` (verified with `git ls-remote`).
+- Draft PR: https://github.com/CUBRID/cubrid/pull/8565, base `develop`, head `vimkim:CBRD-28102-sysop-postpone` at `436d1cd5bb`, draft, open, assignee `vimkim`. The decoded GitHub body equals `pr-body.md` byte for byte (same sha256).
+- Docs integration: this commit, rebased onto `main` and fast-forwarded, then `main` pushed to `origin`.
+- Pending, not authorized in this proposal: rename the TC branch to `tc/pr-8565`, push it, and open the TC PR.
