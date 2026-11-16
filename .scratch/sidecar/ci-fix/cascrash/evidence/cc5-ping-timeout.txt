@@ -1,0 +1,16 @@
+# cc5 CAS error log (broker1_2.err): the ping sent at 20:45:32.742 fails after the 5000 ms timeout
+Time: 11/16/26 20:45:32.742 - DEBUG *** file /home/vimkim/gh/cb/sidecar-poc1/src/communication/network_cl.c, line 3448
+The net_client_ping_server() is calling.
+Time: 11/16/26 20:45:38.355 - ERROR *** file /home/vimkim/gh/cb/sidecar-poc1/src/communication/network_cl.c, line 3475 ERROR CODE = -186, Tran = 2, EID = 47
+Error receiving data from server.
+[16] 0x00000000006706d7: er_dump_call_stack_internal(print_output&) at /home/vimkim/gh/cb/sidecar-poc1/src/base/stack_dump.c:388
+
+# cc5 CAS SQL log
+3501-26-11-16 20:45:32.742 (319) cursor_close srv_h_id 1
+3502:26-11-16 20:45:38.713 (0) SERVER DOWN
+
+# cc5 server error log: last record before the stall and the first after it (tools/gaps.py)
+Time: 11/16/26 20:45:32.738 - NOTIFICATION *** file /home/vimkim/gh/cb/sidecar-poc1/src/storage/btree.c, line 37679  CODE = -1127, Tran = 0, CLIENT = :(0), EID = 9
+Delete an empty overflow page. INDEX i__db_domain_data_type(B+tree: 0|1536|1537) ON CLASS *UNKNOWN-CLASS*(CLASS_OID: 0|193|8). key: 32(OID: 0|1603|64).
+Time: 11/16/26 20:45:39.646 - DEBUG *** file /home/vimkim/gh/cb/sidecar-poc1/src/communication/network_interface_sr.cpp, line 542
+The server_ping() is called.

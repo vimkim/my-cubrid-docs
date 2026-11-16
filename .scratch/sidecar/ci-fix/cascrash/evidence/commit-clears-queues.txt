@@ -1,0 +1,15 @@
+# cc8 (base 173d92e454): every tran_server_commit clears data/request/abort/error queues, not buffer_queue
+REMOVE_ALL_UNEXPECTED
+#0  connection_cl::css_remove_all_unexpected_packets (this=0x7f4e5d98bfe0 <__gv_client_support>, conn=0x55d846ec8930) at /home/vimkim/gh/cb/sidecar-cascrash-base/src/connection/connection_cl.cpp:1536
+#1  0x00007f4e5c811faf in client_support::css_cleanup_client_queues (this=0x7f4e5d98bfe0 <__gv_client_support>, host_name=0x7f4e5d98b140 <net_Server_host> "localhost") at /home/vimkim/gh/cb/sidecar-cascrash-base/src/connection/cli
+#2  0x00007f4e5c80cb41 in net_cleanup_client_queues () at /home/vimkim/gh/cb/sidecar-cascrash-base/src/communication/network_cl.c:3750
+#3  0x00007f4e5c7f5fd3 in tran_server_commit (retain_lock=false) at /home/vimkim/gh/cb/sidecar-cascrash-base/src/communication/network_interface_cl.c:2986
+#4  0x00007f4e5cd8ef2a in tran_commit (retain_lock=false) at /home/vimkim/gh/cb/sidecar-cascrash-base/src/transaction/transaction_cl.c:331
+#5  0x00007f4e5cd75066 in boot_register_and_init_client (client_credential=0x7fff51c59cc0, is_sub_client=false) at /home/vimkim/gh/cb/sidecar-cascrash-base/src/transaction/boot_cl.c:1299
+REMOVE_ALL_UNEXPECTED
+#0  connection_cl::css_remove_all_unexpected_packets (this=0x7fe8359c7fe0 <__gv_client_support>, conn=0x558780ba2930) at /home/vimkim/gh/cb/sidecar-cascrash-base/src/connection/connection_cl.cpp:1536
+#1  0x00007fe83484dfaf in client_support::css_cleanup_client_queues (this=0x7fe8359c7fe0 <__gv_client_support>, host_name=0x7fe8359c7140 <net_Server_host> "localhost") at /home/vimkim/gh/cb/sidecar-cascrash-base/src/connection/cli
+#2  0x00007fe834848b41 in net_cleanup_client_queues () at /home/vimkim/gh/cb/sidecar-cascrash-base/src/communication/network_cl.c:3750
+#3  0x00007fe834831fd3 in tran_server_commit (retain_lock=false) at /home/vimkim/gh/cb/sidecar-cascrash-base/src/communication/network_interface_cl.c:2986
+#4  0x00007fe834dcaf2a in tran_commit (retain_lock=false) at /home/vimkim/gh/cb/sidecar-cascrash-base/src/transaction/transaction_cl.c:331
+#5  0x00007fe834db1066 in boot_register_and_init_client (client_credential=0x7ffe24861760, is_sub_client=false) at /home/vimkim/gh/cb/sidecar-cascrash-base/src/transaction/boot_cl.c:1299

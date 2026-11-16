@@ -1,0 +1,32 @@
+# cc5 (head f69816c086, 1..122, call_stack_dump_on_error=yes): cub_cas state at SIGSEGV (tools/atcrash.gdb)
+Program received signal SIGSEGV, Segmentation fault.
+0x00007fe302000000 in ?? ()
+rip            0x7fe302000000      0x7fe302000000
+rsp            0x7ffeb5cf6900      0x7ffeb5cf6900
+rbp            0x7ffeb5cf6970      0x7ffeb5cf6970
+conn=0x558d0e3b3d20 request_id=6840 status=1
+css_receive_data locals: req_id=6840 rid=6840 type=2 buf=0x7ffeb5cf68f8 buf_size=4
+buffer_queue[0] key=6840 buffer=0x7ffeb5cf6ae8 size=8
+buffer_queue entries=1
+
+# stack words from rsp: css_receive_data frame, then its callers (the frame below rsp held css_net_recv's return address)
+0x7ffeb5cf6900:	0x7ffeb5cf6930	0x7ffeb5cf6a34
+0x7ffeb5cf6910:	0x7ffeb5cf6a28	0x1ab8ffffffff
+0x7ffeb5cf6920:	0x558d0e3b3d20	0x7fe38ca55160 <__gv_client_support>
+0x7ffeb5cf6930:	0x40e3b3d20	0x2000000001
+0x7ffeb5cf6940:	0x2000000	0x200000000000000
+0x7ffeb5cf6950:	0xb81a0000	0x800000000000000
+0x7ffeb5cf6960:	0x1ab800000002	0x7ffeb5cf68f8
+0x7ffeb5cf6970:	0x7ffeb5cf69b0	0x7fe38b8d9ed9 <_ZN14client_support41css_receive_data_from_server_with_timeoutEjPPcPii+135>
+0x7ffeb5cf6980:	0x7ffeb5cf6a34	0x7ffeb5cf6a28
+0x7ffeb5cf6990:	0x11ab8ffffffff	0x7fe38ca55160 <__gv_client_support>
+0x7ffeb5cf69a0:	0x1ab8b5cf6b00	0x558d0e3b3c90
+0x7ffeb5cf6cf0:	0x7ffeb5cf71c0	0x558d0da058a3 <_Z13cas_main_loopP12CAS_MAIN_OPS+1973>
+# stale buffer 0x7ffeb5cf68f8 = process_request rbp 0x7ffeb5cf6cf0 - 0x3f8
+
+# cc4 (same setup)
+rbp            0x7fff78d33830      0x7fff78d33830
+rsp            0x7fff78d337c0      0x7fff78d337c0
+rip            0x7f6802000000      0x7f6802000000
+0x7fff78d33bb0:	0x7fff78d34080	0x56480ef1c8a3 <_Z13cas_main_loopP12CAS_MAIN_OPS+1973>
+# css_receive_data local buf at rbp-0x8 (0x7fff78d33828) = 0x7fff78d337b8 = process_request rbp 0x7fff78d33bb0 - 0x3f8

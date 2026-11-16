@@ -1,0 +1,18 @@
+# tools/one.sh verdict lines for cc7..cc21 (cc1..cc6 ran before one.sh existed; see decisions.md).
+# cas_sigsegv counts SIGSEGV only: the SIGABRT of cc19, cc20 and cc21 shows in the gdb logs (evidence/cc19-lf4-rerun.txt, evidence/cc20-base-forced.txt).
+# ping_timeout_bp is the rare-path breakpoint (GDB_PRE=rare-*.gdb only); cas_err186 counts -186 in the CAS error log, natural or forced.
+cc7 ok=122 nok=0 cas_sigsegv=0 ping_timeout_bp=0 cas_err186=0 stackdump=no extra=
+cc8 ok=122 nok=0 cas_sigsegv=0 ping_timeout_bp=0 cas_err186=0 stackdump=yes extra=
+cc9 ok=122 nok=0 cas_sigsegv=0 ping_timeout_bp=1 cas_err186=1 stackdump=yes extra=sidecar_force_external=no
+cc10 ok=122 nok=0 cas_sigsegv=0 ping_timeout_bp=0 cas_err186=0 stackdump=no extra=
+cc11 ok=122 nok=0 cas_sigsegv=0 ping_timeout_bp=1 cas_err186=1 stackdump=yes extra=
+cc12 ok=122 nok=0 cas_sigsegv=0 ping_timeout_bp=0 cas_err186=0 stackdump=no extra=
+cc13 ok=122 nok=0 cas_sigsegv=0 ping_timeout_bp=0 cas_err186=0 stackdump=no extra=
+cc14 ok=122 nok=0 cas_sigsegv=0 ping_timeout_bp=0 cas_err186=1 stackdump=no extra=
+cc15 ok=122 nok=0 cas_sigsegv=0 ping_timeout_bp=0 cas_err186=1 stackdump=no extra=
+cc16 ok=122 nok=0 cas_sigsegv=0 ping_timeout_bp=0 cas_err186=0 stackdump=yes extra=
+cc17 ok=122 nok=0 cas_sigsegv=0 ping_timeout_bp=0 cas_err186=0 stackdump=yes extra=
+cc18 ok=160 nok=0 cas_sigsegv=0 ping_timeout_bp=0 cas_err186=1 stackdump=no extra=
+cc20 ok=122 nok=0 cas_sigsegv=0 ping_timeout_bp=0 cas_err186=1 stackdump=no extra=
+cc19 ok=395 nok=4 cas_sigsegv=0 ping_timeout_bp=0 cas_err186=1 stackdump=yes extra=
+cc21 ok=122 nok=0 cas_sigsegv=0 ping_timeout_bp=0 cas_err186=1 stackdump=no extra=

@@ -1,0 +1,53 @@
+# cc19 (head, call_stack_dump_on_error=yes, cases 1..399, 20M log volume): the lf4 setup. 395 OK, 4 NOK
+[22:26:25] Testing sql/_33_elderberry/cbrd_24141/cases/column_name_serial_03.sql (122/399 30.58%) [NOK]
+[22:29:07] Testing sql/_35_fig_cake/cbrd_25147/cases/cbrd_25147_3.sql (206/399 51.63%)[WARN] slot0: the server left a crash report while sql/_35_fig_cake/cbrd_25147/cases/cbrd_25147_3.sql ran: /home/v
+ [NOK]
+[ERROR] sql/_35_fig_cake/cbrd_25147/cases/cbrd_25147_3.sql: the server left a crash report: broker1_cub_cas_2_20261116222908.527.coredump (broker1_cub_cas_2, unknown function at broker1_cub_cas_2)
+[22:29:11] Testing sql/_35_fig_cake/cbrd_25352/cases/02_system_method.sql (208/399 52.13%) [NOK]
+[22:29:21] Testing sql/_35_fig_cake/cbrd_25352/cases/06_javasp_with_trigger.sql (211/399 52.88%) [NOK]
+
+# ping timeout (CAS SQL log)
+26-11-16 22:24:47.973 (319) cursor_close srv_h_id 1
+26-11-16 22:24:53.975 (0) SERVER DOWN
+
+# case 122: the CAS error log
+Time: 11/16/26 22:24:53.585 - ERROR *** file sidecar-poc1/src/communication/network_cl.c, line 3475 ERROR CODE = -186, Tran = 2, EID = 47
+Time: 11/16/26 22:26:26.141 - ERROR *** file sidecar-poc1/src/communication/network_cl.c, line 549 ERROR CODE = -187, Tran = 2, EID = 181
+Communications buffer not used.
+
+# diff answer result: column_name_serial_03
+198c198
+< 0
+---
+> Error:-187
+# diff answer result: 02_system_method
+19a20
+> TEST_USER2     PUBLIC     
+36a38
+> TEST_USER2     PUBLIC     
+# diff answer result: 06_javasp_with_trigger
+30a31
+> TEST_USER2     
+43c44
+< 1
+---
+> Error:-528
+
+# case 206 cbrd_25147_3.sql: the CAS aborts in free() (gdb watcher)
+Program received signal SIGABRT, Aborted.
+#0  0x00007f938488bedc in __pthread_kill_implementation () from /lib64/libc.so.6
+#1  0x00007f938483eb46 in raise () from /lib64/libc.so.6
+#2  0x00007f9384828833 in abort () from /lib64/libc.so.6
+#3  0x00007f9384829172 in __libc_message.cold () from /lib64/libc.so.6
+#4  0x00007f9384895f87 in malloc_printerr () from /lib64/libc.so.6
+#5  0x00007f938489783c in _int_free () from /lib64/libc.so.6
+#6  0x00007f938489a2c5 in free () from /lib64/libc.so.6
+#7  0x00007f9385aeeb97 in net_client_request_with_callback (request=100, argbuf=0x7fff045700a0 "k\362\370\333)X\001\331\353ZXk\245\307:D[\227ݚj\373", 
+#8  0x00007f9385ae3451 in qmgr_execute_query (xasl_id=0x564fbe6719e0, query_idp=0x564fbe849370, dbval_cnt=1, dbvals=0x564fbe57ed40, flag=16901, clt_ca
+#9  0x00007f9385f5f0d0 in execute_query (xasl_id=0x564fbe6719e0, query_idp=0x564fbe849370, var_cnt=1, varptr=0x564fbe57ed40, list_idp=0x7fff04570410, 
+#10 0x00007f9385f3052c in do_execute_select (parser=0x564fbe849220, statement=0x564fbe807320) at sidecar-poc1/src/query/execute_sta
+#11 0x00007f9385f18ef6 in do_execute_statement (parser=0x564fbe849220, statement=0x564fbe807320) at sidecar-poc1/src/query/execute_
+#12 0x00007f9385a492c4 in db_execute_and_keep_statement_local (session=0x564fbe84e010, stmt_ndx=0, result=0x7fff04570a38) at sideca
+#13 0x00007f9385a4dcc5 in db_execute_statement_local (session=0x564fbe84e010, stmt_ndx=1, result=0x7fff04570a38) at sidecar-poc1/sr
+#14 0x00007f9385b2ff68 in au_drop_user (user=0x564fbe856510) at sidecar-poc1/src/object/authenticate_access_user.cpp:1363
+#15 0x00007f93859c56ab in db_drop_user (user=0x564fbe856510) at sidecar-poc1/src/compat/db_admin.c:2099

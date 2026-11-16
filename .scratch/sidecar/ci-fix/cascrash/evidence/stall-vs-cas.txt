@@ -1,0 +1,48 @@
+== cc5 server error log, longest pauses (tools/gaps.py)
+ 17.291s after 20:44:53.248000 NOTIFICATION *** file sidecar-poc1/src/storage/btree.c, line 34557  CODE = -1126, Tran = 2,
+ 11.965s after 20:44:19.068000 DEBUG *** file sidecar-poc1/src/transaction/log_tran_table.c, line 3441
+  9.565s after 20:44:31.886000 DEBUG *** file sidecar-poc1/src/connection/master_connector.cpp, line 975
+  6.908s after 20:45:32.738000 NOTIFICATION *** file sidecar-poc1/src/storage/btree.c, line 37679  CODE = -1127, Tran = 0,
+== cc5 CAS SQL log, longest pauses (tools/caslog-gap.py)
+ 27.878s  20:44:01.264000 (0) CAS STARTED pid 61
+          -> 20:44:29.142000 (0) CAS TERMINATED pid 61
+ 19.890s  20:44:29.552000 (0) CAS STARTED pid 449
+          -> 20:44:49.442000 (0) CLIENT IP 127.0.0.1
+ 17.367s  20:44:53.246000 (31) execute_all srv_h_id 1 create table u1.t1 (c1 int primary key, c2 varchar, c3 datetim
+          -> 20:45:10.613000 (31) execute_all 0 tuple 0 time 17.367
+  6.791s  20:45:17.945000 (157) execute_all srv_h_id 1 insert into u1.t1 values (2); 
+          -> 20:45:24.736000 (157) execute_all error:-526 tuple 0 time 6.791, EID = 32 ~ 33
+  5.971s  20:45:32.742000 (319) cursor_close srv_h_id 1
+          -> 20:45:38.713000 (0) SERVER DOWN
+== cc7 server error log, longest pauses (tools/gaps.py)
+ 10.642s after 21:00:57.162000 DEBUG *** file sidecar-poc1/src/connection/master_connector.cpp, line 975
+  4.401s after 21:00:52.761000 DEBUG *** file sidecar-poc1/src/transaction/log_tran_table.c, line 3441
+  4.367s after 21:01:07.811000 DEBUG *** file sidecar-poc1/src/connection/connection_worker.cpp, line 1060
+  2.639s after 21:01:23.908000 DEBUG *** file sidecar-poc1/src/communication/network_interface_sr.cpp, line 542
+== cc7 CAS SQL log, longest pauses (tools/caslog-gap.py)
+ 21.651s  21:00:43.411000 (0) CAS STARTED pid 41
+          -> 21:01:05.062000 (0) CAS TERMINATED pid 41
+  8.503s  21:01:05.465000 (0) CAS STARTED pid 331
+          -> 21:01:13.968000 (0) CLIENT IP 127.0.0.1
+  1.540s  21:01:24.986000 (1256) execute_all srv_h_id 1 truncate parent cascade; 
+          -> 21:01:26.526000 (1256) execute_all 0 tuple 0 time 1.540
+  0.737s  21:01:29.444000 (1321) execute_all srv_h_id 1 truncate a cascade; 
+          -> 21:01:30.181000 (1321) execute_all 0 tuple 0 time 0.737
+  0.649s  21:01:49.363000 (3166) execute_all srv_h_id 1 CREATE OR REPLACE FUNCTION add_aa(str VARCHAR) RETURN VARCHA
+          -> 21:01:50.012000 (3166) execute_all 0 tuple 0 time 0.649
+== cc8 server error log, longest pauses (tools/gaps.py)
+ 16.552s after 21:06:03.571000 NOTIFICATION *** file sidecar-cascrash-base/src/storage/btree.c, line 34557  CODE = -1126, 
+ 11.989s after 21:05:27.962000 DEBUG *** file sidecar-cascrash-base/src/transaction/log_tran_table.c, line 3441
+  9.023s after 21:05:41.864000 DEBUG *** file sidecar-cascrash-base/src/connection/master_connector.cpp, line 975
+  7.394s after 21:06:40.802000 NOTIFICATION *** file sidecar-cascrash-base/src/storage/btree.c, line 37679  CODE = -1127, 
+== cc8 CAS SQL log, longest pauses (tools/caslog-gap.py)
+ 28.848s  21:05:10.274000 (0) CAS STARTED pid 61
+          -> 21:05:39.122000 (0) CAS TERMINATED pid 61
+ 19.659s  21:05:39.533000 (0) CAS STARTED pid 450
+          -> 21:05:59.192000 (0) CLIENT IP 127.0.0.1
+ 16.565s  21:06:03.568000 (31) execute_all srv_h_id 1 create table u1.t1 (c1 int primary key, c2 varchar, c3 datetim
+          -> 21:06:20.133000 (31) execute_all 0 tuple 0 time 16.565
+  8.318s  21:07:48.966000 (1599) execute_all srv_h_id 1 update statistics on tab_a; 
+          -> 21:07:57.284000 (1599) execute_all 0 tuple 0 time 8.318
+  7.340s  21:06:40.801000 (324) execute_all srv_h_id 1 create table t3 (C1 int primary key, c2 int, constraint forei
+          -> 21:06:48.141000 (324) execute_all 0 tuple 0 time 7.340

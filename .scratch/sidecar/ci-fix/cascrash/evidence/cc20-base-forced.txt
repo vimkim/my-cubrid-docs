@@ -1,0 +1,23 @@
+# cc20 (base 173d92e454, call_stack_dump_on_error default (no), cases 1..122)
+# tools/force-ping-43.gdb: only the 43rd net_client_ping_server call returns the poll-timeout error; no per-request breakpoint
+PING_43 reached
+FORCE_TIMEOUT rid=6840: return ERROR_WHEN_READING_SIZE (7) without reading, as a poll timeout does
+Program received signal SIGABRT, Aborted.
+
+# CAS SQL log at the forced timeout (same statement 319 as the head's natural timeouts)
+26-11-16 23:17:36.965 (319) cursor_close srv_h_id 1
+26-11-16 23:17:37.044 (0) SERVER DOWN
+
+# CAS aborts during case 122 (gdb log mtime 23:18:14.801); last CAS SQL log line:
+26-11-16 23:18:14.236 (3295) prepare 8 SET SYSTEM PARAMETERS 'add_column_update_hard_defau
+# stack words with symbols (bt stops at abort):
+0x7ffd7143d0e0:	0x7ffd7143d1a0	0x7fecb827ea0c <_ZN18connection_support46css_send_request_with_data_buffer_with_paddingEP14css_conn_entryiPtPKciPci+628>
+0x7ffd7143d140:	0x7fecb947c000 <_rtld_local>	0x7fecb709a2c5 <free+85>
+0x7ffd7143d1a0:	0x7ffd7143d290	0x7fecb827d3ee <_Z9css_readniPcii+180>
+0x7ffd7143d280:	0x0	0x7fecb709783c <_int_free+924>
+0x7ffd7143d300:	0x7fecb947c000 <_rtld_local>	0x7fecb709a2c5 <free+85>
+0x7ffd7143d330:	0x7ffd7143d390	0x7fecb8271e61 <net_client_request_internal(int, char*, int, char*, int, char*, int, char*, int)+371>
+0x7ffd7143d390:	0x7ffd7143d3f0	0x7fecb8271faa <_Z18net_client_requestiPciS_iS_iS_i+74>
+0x7ffd7143d3f0:	0x7ffd7143d450	0x7fecb826102a <_Z17tran_server_abortv+82>
+0x7ffd7143d450:	0x7ffd7143d470	0x7fecb87fa1b1 <_Z10tran_abortv+210>
+# net_client_request_internal+371 is network_cl.c:544 COMPARE_AND_FREE_BUFFER (replybuf, reply) on the receive-error path; tran_server_abortv+82 is network_interface_cl.c:3025
