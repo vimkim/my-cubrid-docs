@@ -1,0 +1,22 @@
+Time: 11/16/26 18:33:52.151 - ERROR *** file /home/vimkim/gh/cb/sidecar-logfatal-base/src/storage/file_io.c, line 3017 ERROR CODE = -10, Tran = 0, CLIENT = :(0), EID = 5
+Unable to mount disk volume "/home/vimkim/tk/ir22/work/lfdb_lgar001".... No such file or directory
+[22] 0x00000000006d0b59: er_dump_call_stack_internal(print_output&) at /home/vimkim/gh/cb/sidecar-logfatal-base/src/base/stack_dump.c:388
+[21] 0x00000000006d1039: er_dump_call_stack(_IO_FILE*) at /home/vimkim/gh/cb/sidecar-logfatal-base/src/base/stack_dump.c:520
+[20] 0x0000000000653706: er_call_stack_dump_on_error(int, int) at /home/vimkim/gh/cb/sidecar-logfatal-base/src/base/error_manager.c:1411
+[19] 0x0000000000653bf7: er_set_internal(int, char const*, int, int, int, bool, _IO_FILE*, __va_list_tag (*) [1]) at /home/vimkim/gh/cb/sidecar-logfatal-base/src/base/error_manager.c:1552
+[18] 0x00000000006534e3: er_set_with_oserror at /home/vimkim/gh/cb/sidecar-logfatal-base/src/base/error_manager.c:1333
+[17] 0x0000000000c207fc: fileio_mount(cubthread::entry*, char const*, char const*, short, int, bool) at /home/vimkim/gh/cb/sidecar-logfatal-base/src/storage/file_io.c:3018
+[16] 0x0000000000dae73a: logpb_fetch_from_archive(cubthread::entry*, long, log_page*, int*, log_arv_header*, bool) at /home/vimkim/gh/cb/sidecar-logfatal-base/src/transaction/log_page_buffer.c:5768
+[15] 0x0000000000da69c4: logpb_read_page_from_file(cubthread::entry*, long, log_cs_access_mode, log_page*) at /home/vimkim/gh/cb/sidecar-logfatal-base/src/transaction/log_page_buffer.c:2081
+[14] 0x0000000000da66a6: logpb_copy_page(cubthread::entry*, long, log_cs_access_mode, log_page*) at /home/vimkim/gh/cb/sidecar-logfatal-base/src/transaction/log_page_buffer.c:1981
+[13] 0x0000000000da614a: logpb_fetch_page(cubthread::entry*, log_lsa const*, log_cs_access_mode, log_page*) at /home/vimkim/gh/cb/sidecar-logfatal-base/src/transaction/log_page_buffer.c:1821
+[12] 0x0000000000dd061b: log_reader::fetch_page(cubthread::entry*) at /home/vimkim/gh/cb/sidecar-logfatal-base/src/transaction/log_reader.hpp:271
+[11] 0x0000000000dd03b2: log_reader::set_lsa_and_fetch_page(log_lsa const&, log_reader::fetch_mode) at /home/vimkim/gh/cb/sidecar-logfatal-base/src/transaction/log_reader.hpp:170
+[10] 0x0000000000dc61f6: log_recovery_redo(cubthread::entry*, log_lsa const*, log_lsa const*) at /home/vimkim/gh/cb/sidecar-logfatal-base/src/transaction/log_recovery.c:3491
+[09] 0x0000000000dc1296: log_recovery(cubthread::entry*, int, long*) at /home/vimkim/gh/cb/sidecar-logfatal-base/src/transaction/log_recovery.c:883
+[08] 0x0000000000d7a293: log_initialize_internal(cubthread::entry*, char const*, char const*, char const*, bool, bo_restart_arg*, bool) at /home/vimkim/gh/cb/sidecar-logfatal-base/src/transaction/log_manager.c:1432
+[07] 0x0000000000d7975f: log_initialize(cubthread::entry*, char const*, char const*, char const*, int, bo_restart_arg*) at /home/vimkim/gh/cb/sidecar-logfatal-base/src/transaction/log_manager.c:1080
+[06] 0x0000000000d298e8: boot_restart_server(cubthread::entry*, bool, char const*, bool, check_args*, bo_restart_arg*, bool) at /home/vimkim/gh/cb/sidecar-logfatal-base/src/transaction/boot_sr.c:2435
+[05] 0x000000000073827a: net_server_start(char const*) at /home/vimkim/gh/cb/sidecar-logfatal-base/src/communication/network_sr.c:1182
+[04] 0x000000000000724d: main at /home/vimkim/gh/cb/sidecar-logfatal-base/src/executables/s[11] 0x00000000006d0b59: er_dump_call_stack_internal(print_output&) at /home/vimkim/gh/cb/sidecar-logfatal-base/src/base/stack_du
+[10] 0x00000000006d1039: er_dump_call_stack(_IO_FILE*) at /home/vimkim/gh/cb/sidecar-logfatal-base/src/base/stack_dump.c:520

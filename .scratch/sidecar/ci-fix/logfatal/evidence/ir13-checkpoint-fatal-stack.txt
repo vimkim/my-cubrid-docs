@@ -1,0 +1,20 @@
+Time: 11/16/26 18:26:33.210 - FATAL ERROR *** file /home/vimkim/gh/cb/sidecar-poc1/src/transaction/log_page_buffer.c, line 5820 ERROR CODE = -97, Tran = 0, CLIENT = :(0), EID = 39
+Internal error: unable to find log page 1525 in log archives.
+[22] 0x00000000006f8970: er_dump_call_stack_internal(print_output&) at /home/vimkim/gh/cb/sidecar-poc1/src/base/stack_dump.c:388
+[21] 0x00000000006f8e50: er_dump_call_stack(_IO_FILE*) at /home/vimkim/gh/cb/sidecar-poc1/src/base/stack_dump.c:520
+[20] 0x00000000006796d1: er_call_stack_dump_on_error(int, int) at /home/vimkim/gh/cb/sidecar-poc1/src/base/error_manager.c:1411
+[19] 0x0000000000679bf7: er_set_internal(int, char const*, int, int, int, bool, _IO_FILE*, __va_list_tag (*) [1]) at /home/vimkim/gh/cb/sidecar-poc1/src/base/error_manager.c:1552
+[18] 0x000000000067935d: er_set at /home/vimkim/gh/cb/sidecar-poc1/src/base/error_manager.c:1276
+[17] 0x0000000000df9594: logpb_fetch_from_archive(cubthread::entry*, long, log_page*, int*, log_arv_header*, bool) at /home/vimkim/gh/cb/sidecar-poc1/src/transaction/log_page_buffer.c:5821
+[16] 0x0000000000dfd61a: logpb_checkpoint(cubthread::entry*) at /home/vimkim/gh/cb/sidecar-poc1/src/transaction/log_page_buffer.c:7781
+[15] 0x0000000000dd781d: log_checkpoint_execute(cubthread::entry&) at /home/vimkim/gh/cb/sidecar-poc1/src/transaction/log_manager.c:10610
+[14] 0x0000000000b38633: void std::__invoke_impl<void, void (*&)(cubthread::entry&), cubthread::entry&>(std::__invoke_other, void (*&)(cubthread::entry&), cubthread::entry&) at /usr/include/c++/11/bits/invoke.h:61
+[13] 0x0000000000c277e3: std::enable_if<is_invocable_r_v<void, void (*&)(cubthread::entry&), cubthread::entry&>, void>::type std::__invoke_r<void, void (*&)(cubthread::entry&), cubthread::entry&>(void (*&)(cubthread::ent
+[12] 0x0000000000c263e6: std::_Function_handler<void (cubthread::entry&), void (*)(cubthread::entry&)>::_M_invoke(std::_Any_data const&, cubthread::entry&) at /usr/include/c++/11/bits/std_function.h:291
+[11] 0x0000000000b3895b: std::function<void (cubthread::entry&)>::operator()(cubthread::entry&) const at /usr/include/c++/11/bits/std_function.h:590
+[10] 0x0000000000b386dd: cubthread::callable_task<cubthread::entry>::execute(cubthread::entry&) at /home/vimkim/gh/cb/sidecar-poc1/src/thread/thread_task.hpp:121
+[09] 0x0000000000d62c6f: cubthread::daemon::loop_with_context(cubthread::daemon*, cubthread::entry_manager*, cubthread::task<cubthread::entry>*, char const*) at /home/vimkim/gh/cb/sidecar-poc1/src/thread/thread_daemon.cp
+[08] 0x0000000000d64627: void std::__invoke_impl<void, void (*)(cubthread::daemon*, cubthread::entry_manager*, cubthread::task<cubthread::entry>*, char const*), cubthread::daemon*, cubthread::entry_manager*, cubthread::t
+[07] 0x0000000000d643fb: std::__invoke_result<void (*)(cubthread::daemon*, cubthread::entry_manager*, cubthread::task<cubthread::entry>*, char const*), cubthread::daemon*, cubthread::entry_manager*, cubthread::task<cubth
+[06] 0x0000000000d641ad: void std::thread::_Invoker<std::tuple<void (*)(cubthread::daemon*, cubthread::entry_manager*, cubthread::task<cubthread::entry>*, char const*), cubthread::daemon*, cubthread::entry_manager*, cubt
+[05] 0x0000000000d6408a: std::thread::_Invoker<std::tuple<void (*)(cubthread::daemon*, cubthread::entry_manager*, cubthread::task<cubthread::entry>*, char const*), cubthread::daemon*, cubthread::entry_manager*, cubthread
