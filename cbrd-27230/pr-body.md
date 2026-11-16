@@ -1,6 +1,6 @@
 https://jira.cubrid.org/browse/CBRD-27230
 
-> **#8434 merge 후에만 merge 가능.** 이 PR은 #8434 (CBRD-27781, OOS chain을 commit 뒤에 회수) 위에 쌓은 변경입니다. #8434가 `feature/oos-merge` 에 들어가기 전까지는 이 PR의 diff에 #8434의 commit 14개가 함께 보입니다. 이 PR의 리뷰 대상은 마지막 3개 commit입니다.
+> **#8434 merge 후에만 merge 가능.** 이 PR은 #8434 (CBRD-27781, OOS chain을 commit 뒤에 회수) 위에 쌓은 변경입니다. #8434가 `feature/oos-merge` 에 들어가기 전까지는 이 PR의 diff에 #8434의 commit 14개가 함께 보입니다. 이 PR의 리뷰 대상은 마지막 4개 commit입니다.
 
 ## Purpose
 
@@ -18,6 +18,7 @@ https://jira.cubrid.org/browse/CBRD-27230
 ## Remarks
 
 - 검증: OOS ctest 69/69 통과 (debug). 새 `test_oos_update_reuse_server` 는 재사용, 혼합 UPDATE, vacuum 회수, snapshot 대기, statement/savepoint/transaction rollback, 재사용 제외 경우를 확인합니다. crash recovery test는 재사용 chain을 포함합니다.
+- 재사용 뒤 in-place 재작성 (ALTER ... CHANGE) 이 공유 chain을 commit 때 회수해도, 그보다 오래된 snapshot은 그 chain을 읽지 못합니다. in-place 재작성이 이전 버전 링크를 지워 그 snapshot은 재사용 여부와 관계없이 행을 보지 못하기 때문입니다 (`OldSnapshotAcrossInPlaceRewriteOfReusedChainMatchesNewChains`, 재사용 없는 경우와 같은 결과로 통과). partition 이동은 MVCC delete라 vacuum이 snapshot을 기다립니다 (`OldSnapshotReadsTheReusedChainAfterTheRowIsDeleted` 통과).
 - 성능 (release, 서버 instruction, 8 KB S5 `UPDATE t SET k = k + 1`): #8434 대비 x0.15 (io) / x0.28 (warm). UPDATE 뒤 OOS 페이지 수는 그대로입니다. 결과 digest와 checksum은 develop과 일치합니다.
 - 설계는 TLA+ 모델로 확인했습니다. 안전 속성 3개와 liveness가 통과했고, 결정을 하나씩 되돌린 통제 9개는 각자 지키는 속성에서 실패합니다.
 - 미검증: 실제 HA 2대 구성, applylogdb 실행. 내용이 이미 어긋난 replica는 재사용 컬럼의 낡은 값을 유지합니다 (매뉴얼은 불일치 시 replica 재구축을 요구합니다).
