@@ -154,10 +154,23 @@ The scripts execute production blocks or exact pinned preprocessing where stated
 
 Budget mode was bounded with no user-specified absolute limit. Two initial specialists used `gpt-6.1-sol` and `gpt-6.1-terra`, both with high reasoning. Each had a 12-minute target and an 8-minute checkpoint, within a total target of 64 agent-minutes, including a 40-minute coordinator reservation, and a 30-minute elapsed target. No hard cap was enforced. Token, credit, and account allowance telemetry was unavailable, so actual per-agent usage and exact target compliance are unknown. No extra reviewer, nested agent, or retry panel was launched.
 
-## Follow-up and publication state
+## Follow-up and publication state at the original review
 
 Before finishing, the PR metadata was reread and both source SHAs remained unchanged. Revalidate them again before a follow-up review.
 
 For R1, add the common-stack dependency or adopt an explicitly scoped support contract, then replay ordinary linked reftable commits without reflogs and external branch updates. For D1, apply the source-specific definition and inspect both CCI target variants where supported, including MSVC generated commands. A polling implementation must additionally cover Windows resources, fixed-version archives, source packages, and package-time metadata.
 
 The local report is prepared for the review publication workflow. The documentation repository's `main` checkout contains an unrelated uncommitted change to `cbrd-27259/review-20261111/heap-bigone-assert.md`. It was preserved. The required clean destination precondition prevents integration and publication in this run. No report push or PR-page comment was performed. A saved draft and publication context remain in the run directory.
+
+## Direct comment and smallest validated candidate
+
+On 2026-11-16 KST, the user explicitly asked to post the findings as a PR comment and identify the simplest implementation. A self-contained [Korean CMake proposal](https://github.com/CUBRID/cubrid/pull/8508#issuecomment-6916003049) was posted as `vimkim` and read back. Its body exactly matches the saved comment. Both PR SHAs were unchanged immediately before posting. This direct comment includes source links and essential evidence without depending on publication of this report. The documentation main worktree remains untouched.
+
+The smallest proposed implementation keeps configure-time version calculation and changes two locations:
+
+- Pass `BUILD_NUMBER` as a source-specific CCI compile definition, as in D1. Retain target existence validation. Select an existing CCI target for `TARGET_DIRECTORY` when supporting alternate target names.
+- After converting `git_common_dir` to an absolute path in the existing watcher block, add `list(APPEND git_watch_files "${git_common_dir}/reftable/tables.list")`. The existing final loop already filters absent files.
+
+The coordinator ran `python3 evidence/candidate-reftable.py`. This extracts the exact head version block and adds only the latter line in its isolated fixture. The head then refreshes correctly in all three tested conditions: files-backend external branch movement, linked-reftable external branch movement, and an ordinary linked-reftable commit without reflogs. The unchanged base controls remain stale. In the reflog-free candidate, the executable advances from `dedcf0f` to its actual current HEAD `937457f`. Repeating each candidate build preserves the generated header and executable timestamps. All probe commands exit 0. Raw evidence is retained in `evidence/candidate-reftable.log` and `evidence/candidate-noop.json` in the run directory.
+
+No source patch was applied to the PR worktree. Moving the watcher into a module is optional organization. Replacing it with build-time polling remains a separate integration decision with the package, archive, and Windows requirements in D2.
