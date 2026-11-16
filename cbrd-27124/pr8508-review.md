@@ -162,9 +162,9 @@ For R1, add the common-stack dependency or adopt an explicitly scoped support co
 
 The local report is prepared for the review publication workflow. The documentation repository's `main` checkout contains an unrelated uncommitted change to `cbrd-27259/review-20261111/heap-bigone-assert.md`. It was preserved. The required clean destination precondition prevents integration and publication in this run. No report push or PR-page comment was performed. A saved draft and publication context remain in the run directory.
 
-## Direct comment and smallest validated candidate
+## Historical comment and smallest patch within the existing design
 
-On 2026-11-16 KST, the user explicitly asked to post the findings as a PR comment and identify the simplest implementation. A self-contained [Korean CMake proposal](https://github.com/CUBRID/cubrid/pull/8508#issuecomment-6916003049) was posted as `vimkim` and read back. Its body exactly matches the saved comment. Both PR SHAs were unchanged immediately before posting. This direct comment includes source links and essential evidence without depending on publication of this report. The documentation main worktree remains untouched.
+On 2026-11-16 KST, the user explicitly asked to post the findings as a PR comment and identify the simplest implementation. A self-contained Korean CMake proposal, historical comment ID `6916003049`, was posted as `vimkim` and read back. The user subsequently deleted that comment because it did not address the core complexity concern. Its body exactly matches the saved comment. Both PR SHAs were unchanged immediately before posting. This direct comment includes source links and essential evidence without depending on publication of this report. The documentation main worktree remains untouched.
 
 The smallest proposed implementation keeps configure-time version calculation and changes two locations:
 
@@ -174,3 +174,11 @@ The smallest proposed implementation keeps configure-time version calculation an
 The coordinator ran `python3 evidence/candidate-reftable.py`. This extracts the exact head version block and adds only the latter line in its isolated fixture. The head then refreshes correctly in all three tested conditions: files-backend external branch movement, linked-reftable external branch movement, and an ordinary linked-reftable commit without reflogs. The unchanged base controls remain stale. In the reflog-free candidate, the executable advances from `dedcf0f` to its actual current HEAD `937457f`. Repeating each candidate build preserves the generated header and executable timestamps. All probe commands exit 0. Raw evidence is retained in `evidence/candidate-reftable.log` and `evidence/candidate-noop.json` in the run directory.
 
 No source patch was applied to the PR worktree. Moving the watcher into a module is optional organization. Replacing it with build-time polling remains a separate integration decision with the package, archive, and Windows requirements in D2.
+
+## Clarification of the watcher design
+
+The user clarified that the question concerns the complexity and necessity of `CMakeLists.txt:157-208`, rather than how few lines can repair the current implementation. The earlier "smallest" recommendation described patch size within the existing design. It did not simplify the underlying Git-storage model. No replacement comment is requested or posted.
+
+There are two independent changes: separating the volatile version header limits recompilation, while registering Git metadata as configure inputs refreshes versions after an ordinary incremental build. On a branch, HEAD remains a symbolic `ref: refs/heads/<branch>` while the branch tip changes. The old HEAD-only input therefore misses normal commits. The new block finds additional input paths for ordinary and detached checkouts, private/common worktree metadata, reflogs, packed branch refs, and reftable, and handles older Git or absent paths. CMAKE_CONFIGURE_DEPENDS makes the next build check these inputs; this is not a background filesystem monitor.
+
+Some automatic commit-change detection is necessary for build-only freshness. This particular storage-specific algorithm is an implementation choice, not a prerequisite of header isolation. Preserving configure-time version calculation makes package and Windows resource versions update together. Querying Git at build time avoids tracking its internal file layout, but all generated consumers then need explicit update paths. The record states the refresh objective and covered cases but does not document a comparison that establishes this watcher as the simplest design. The design review should separate header isolation from the freshness strategy and justify the supported Git layouts and versions.
