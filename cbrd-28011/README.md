@@ -10,3 +10,4 @@ SQL trace shows the OOS share of a scan's fetch, ioread and time.
 | [pr-body.md](pr-body.md) | Draft PR body (target `feature/oos-merge`) | 2026-11-11 | 2026-11-11 | Prepare the PR description |
 | [pr-context.md](pr-context.md) | Draft context and proposed publication operations | 2026-11-11 | 2026-11-11 | Record PR publication context |
 | [code-review.md](code-review.md) | Review of PR #8491 at head `a4fec6f8e2`: verdict, safety facts, runtime trace evidence, open risk R-1 | 2026-11-12 | 2026-11-12 | Independent code review of the PR |
+| [oos-read-validation-handoff.md](oos-read-validation-handoff.md) | Fresh-session investigation of review 5914646248, OOS reference lifetime, allocation checks, and runtime evidence | 2026-11-17 | 2026-11-17 | Verify the reviewer's premises independently of earlier chat conclusions |
