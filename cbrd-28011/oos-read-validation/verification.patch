@@ -1,0 +1,160 @@
+diff --git a/src/storage/oos_file.cpp b/src/storage/oos_file.cpp
+index febac52fc1..866aef8965 100644
+--- a/src/storage/oos_file.cpp
++++ b/src/storage/oos_file.cpp
+@@ -2548,13 +2548,39 @@ oos_insert_within_page (THREAD_ENTRY *thread_p, const VFID &oos_vfid, oos_buffer
+  * The deallocation-tolerant fix first proves the page's sector is still reserved, which is what
+  * keeps the debug page-validation level from failing the fetch of a page whose sector was released;
+  * that probe costs two extra fixes of cached volume pages per call, on the read path too. */
++/* CBRD-28011 review validation only: CUBRID_OOS_SKIP_SECTOR_PROBE set in the process environment makes
++ * oos_fix_page_if_oos skip the sector-reservation probe and keep the rest of the deallocation-tolerant fix. */
++static bool
++oos_validation_skip_sector_probe ()
++{
++  static const bool skip = std::getenv ("CUBRID_OOS_SKIP_SECTOR_PROBE") != NULL;
++  return skip;
++}
++
+ static int
+ oos_fix_page_if_oos (THREAD_ENTRY *thread_p, const OID &oid, PGBUF_LATCH_MODE latch_mode, PAGE_PTR &page_out)
+ {
+   VPID vpid = {oid.pageid, oid.volid};
+ 
+   page_out = NULL;
+-  int error = pgbuf_fix_if_not_deallocated (thread_p, &vpid, latch_mode, PGBUF_UNCONDITIONAL_LATCH, &page_out);
++  int error = NO_ERROR;
++  if (oos_validation_skip_sector_probe ())
++    {
++      page_out = pgbuf_fix (thread_p, &vpid, OLD_PAGE_MAYBE_DEALLOCATED, latch_mode, PGBUF_UNCONDITIONAL_LATCH);
++      if (page_out == NULL && !log_is_in_crash_recovery_and_not_yet_completes_redo ())
++	{
++	  ASSERT_ERROR_AND_SET (error);
++	  if (error == ER_PB_BAD_PAGEID)
++	    {
++	      er_clear ();
++	      error = NO_ERROR;
++	    }
++	}
++    }
++  else
++    {
++      error = pgbuf_fix_if_not_deallocated (thread_p, &vpid, latch_mode, PGBUF_UNCONDITIONAL_LATCH, &page_out);
++    }
+   if (error != NO_ERROR)
+     {
+       ASSERT_ERROR ();
+diff --git a/unit_tests/oos/test_oos_identity_stamp.cpp b/unit_tests/oos/test_oos_identity_stamp.cpp
+index c9330dab4c..37c4dca4ed 100644
+--- a/unit_tests/oos/test_oos_identity_stamp.cpp
++++ b/unit_tests/oos/test_oos_identity_stamp.cpp
+@@ -1482,3 +1482,110 @@ main (int argc, char **argv)
+   test_oos_log_set_level (test_oos_log::TestOosLogLevel::INFO);
+   return RUN_ALL_TESTS ();
+ }
++
++/* CBRD-28011 review validation: destroying the whole OOS file releases the head page's sector, the one
++ * stale-reference case where the sector-reservation probe in oos_fix_page_if_oos decides the fix. The
++ * test prints what each read delivered so the run with CUBRID_OOS_SKIP_SECTOR_PROBE set is diagnosable. */
++TEST_F (OosIdentityStampTest, ValidationStaleReadAfterFileDestroyIsAControlledFailure)
++{
++  VFID doomed_vfid;
++  ASSERT_EQ (oos_create_file (thread_p, doomed_vfid), NO_ERROR);
++  const std::string payload = test_oos_utils::make_repeated_pattern_string (20000);
++  OID oid = OID_INITIALIZER;
++  LOG_LSA issued = NULL_LSA;
++  ASSERT_EQ (insert_with_stamp (doomed_vfid, payload, oid, issued), NO_ERROR);
++  ASSERT_EQ (xtran_server_commit (thread_p, false), TRAN_UNACTIVE_COMMITTED);
++  oos_chain_ref stale;
++  stale.head_oid = oid;
++  stale.identity_stamp = issued;
++  const std::size_t stale_length = payload.size () + 1;
++
++  ASSERT_EQ (oos_remove_file (thread_p, doomed_vfid), NO_ERROR);
++  ASSERT_EQ (xtran_server_commit (thread_p, false), TRAN_UNACTIVE_COMMITTED);
++  const DISK_ISVALID sector = disk_is_page_sector_reserved (thread_p, oid.volid, oid.pageid);
++  std::cout << "[validation] skip_probe=" << (std::getenv ("CUBRID_OOS_SKIP_SECTOR_PROBE") != NULL)
++	    << " head=" << oid.volid << "|" << oid.pageid << "|" << oid.slotid
++	    << " sector_reserved=" << (int) sector << std::endl;
++  EXPECT_EQ (sector, DISK_INVALID) << "the scenario requires the destroyed file to have released the head sector";
++
++  std::string out;
++  er_clear ();
++  int rc = read_scalar (stale, stale_length, out);
++  std::cout << "[validation] scalar rc=" << rc << " errid=" << er_errid ()
++	    << " original_bytes_delivered=" << (out.compare (0, payload.size (), payload) == 0) << std::endl;
++  EXPECT_EQ (rc, ER_HEAP_OOS_CORRUPTED_RECORD);
++  er_clear ();
++  rc = read_grouped (stale, stale_length, out);
++  std::cout << "[validation] grouped rc=" << rc << " errid=" << er_errid ()
++	    << " original_bytes_delivered=" << (out.compare (0, payload.size (), payload) == 0) << std::endl;
++  EXPECT_EQ (rc, ER_HEAP_OOS_CORRUPTED_RECORD);
++  er_clear ();
++}
++
++/* CBRD-28011 review validation (exploratory, second commit): the same file-destroy stale read with the
++ * stub's true length and stamp, once with the head page only in the buffer pool (flush_before_destroy=false)
++ * and once with it flushed to the volume first, so it is on disk after the destroy discards the buffer. */
++class OosValidationDestroyTest : public OosIdentityStampTest
++{
++  protected:
++    void run_case (bool flush_before_destroy)
++    {
++      /* the harness traps on the first failed expectation, which would hide the other cases and leave the shared
++       * database unrecovered; this exploratory case reports every outcome instead */
++      const bool saved_break = ::testing::GTEST_FLAG (break_on_failure);
++      ::testing::GTEST_FLAG (break_on_failure) = false;
++      VFID doomed_vfid;
++      ASSERT_EQ (oos_create_file (thread_p, doomed_vfid), NO_ERROR);
++      const std::string payload = test_oos_utils::make_repeated_pattern_string (20000);
++      OID oid = OID_INITIALIZER;
++      LOG_LSA issued = NULL_LSA;
++      ASSERT_EQ (insert_with_stamp (doomed_vfid, payload, oid, issued), NO_ERROR);
++      ASSERT_EQ (xtran_server_commit (thread_p, false), TRAN_UNACTIVE_COMMITTED);
++      if (flush_before_destroy)
++	{
++	  ASSERT_EQ (pgbuf_flush_all (thread_p, NULL_VOLID), NO_ERROR);
++	}
++      oos_chain_ref stale;
++      stale.head_oid = oid;
++      stale.identity_stamp = issued;
++
++      ASSERT_EQ (oos_remove_file (thread_p, doomed_vfid), NO_ERROR);
++      ASSERT_EQ (xtran_server_commit (thread_p, false), TRAN_UNACTIVE_COMMITTED);
++      const DISK_ISVALID sector = disk_is_page_sector_reserved (thread_p, oid.volid, oid.pageid);
++      std::cout << "[validation2] skip_probe=" << (std::getenv ("CUBRID_OOS_SKIP_SECTOR_PROBE") != NULL)
++		<< " flushed=" << flush_before_destroy << " head=" << oid.volid << "|" << oid.pageid << "|" << oid.slotid
++		<< " sector_reserved=" << (int) sector << std::endl;
++      EXPECT_EQ (sector, DISK_INVALID);
++
++      for (int exact = 1; exact >= 0; exact--)
++	{
++	  const std::size_t length = payload.size () + (exact ? 1 : 0);
++	  std::string out;
++	  er_clear ();
++	  int rc = read_scalar (stale, length, out);
++	  std::cout << "[validation2] flushed=" << flush_before_destroy << " exact_length=" << exact << " scalar rc=" << rc
++		    << " original_bytes_delivered=" << (out.size () >= payload.size () && out.compare (0, payload.size (), payload) == 0)
++		    << std::endl;
++	  EXPECT_EQ (rc, ER_HEAP_OOS_CORRUPTED_RECORD);
++	  er_clear ();
++	  out.clear ();
++	  rc = read_grouped (stale, length, out);
++	  std::cout << "[validation2] flushed=" << flush_before_destroy << " exact_length=" << exact << " grouped rc=" << rc
++		    << " original_bytes_delivered=" << (out.size () >= payload.size () && out.compare (0, payload.size (), payload) == 0)
++		    << std::endl;
++	  EXPECT_EQ (rc, ER_HEAP_OOS_CORRUPTED_RECORD);
++	  er_clear ();
++	}
++      ::testing::GTEST_FLAG (break_on_failure) = saved_break;
++    }
++};
++
++TEST_F (OosValidationDestroyTest, StaleReadAfterFileDestroyHeadPageBufferedOnly)
++{
++  run_case (false);
++}
++
++TEST_F (OosValidationDestroyTest, StaleReadAfterFileDestroyHeadPageOnDisk)
++{
++  run_case (true);
++}
