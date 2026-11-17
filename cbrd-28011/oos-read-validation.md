@@ -13,11 +13,11 @@
 1. **UPDATE rollback 뒤 vacuum (CBRD-27237).** rollback이 원래 OOS 참조를 가진 행을 되돌린다. 그 뒤 vacuum의 forward walk가 같은 chain을 삭제한다. 이후 그 행을 읽는 scan은 삭제되었거나 재사용된 head slot을 만난다. 이 경로에서는 sector 확인이 아니라 slot 확인과 stamp 확인이 오류를 낸다.
 2. **SELECT 안의 PL/CSQL COMMIT과 동시 DROP (새로 확인).** SELECT가 호출한 PL/CSQL 함수가 COMMIT하면 class IS lock과 MVCC snapshot 등록이 해제된다. 그래도 query는 계속 진행된다. 그 사이 다른 세션의 DROP TABLE이 OOS file을 파괴한다. scan은 이미 복사한 참조로 sector가 해제된 head page를 읽는다. 이 경로에서는 sector 확인만 오류를 낸다. release 빌드에서 sector 확인을 끄면 client는 오류 없이 파괴된 file의 byte를 받는다.
 
-두 경로 모두 현재 검사 덕분에 -1397(`ER_HEAP_OOS_CORRUPTED_RECORD`)로 끝난다. 잘못된 byte는 반환되지 않는다. 다만 두 경로는 검사의 정당성보다 상위의 결함이다. 첫 경로는 CBRD-27237이며 PR #8434가 해결 방안을 담고 있다. 둘째 경로는 OOS 문서와 이슈 기록에서 찾지 못했다.
+두 경로 모두 현재 검사 덕분에 -1397(`ER_HEAP_OOS_CORRUPTED_RECORD`)로 끝난다. 잘못된 byte는 반환되지 않는다. 다만 두 경로는 검사의 정당성보다 상위의 결함이다. 첫 경로는 CBRD-27237이며 PR #8434가 해결 방안을 담고 있다. 둘째 경로는 CBRD-27579가 다루는 문제의 한 증상이다. CBRD-27579는 SQL 문 안에서 호출한 SP의 COMMIT과 ROLLBACK을 거부하기로 했고, 구현 PR #8182는 아직 merge되지 않았다. PR #8182 head `13105c1636`의 `callback_handler::end_transaction ()`은 이번 재현이 쓴 COMMIT을 `ER_SP_TCL_DDL_IN_QUERY`로 거부한다 (`src/method/method_callback.cpp:233`, source 확인, 실행하지 않음).
 
 리뷰어가 보고한 수치는 그대로 재현되었다. release 빌드에서 20,000바이트 값 200행을 읽으면 OOS fetch는 800이다. head 200, continuation 200, 할당 확인 400으로 나뉜다. 할당 확인은 head마다 volume header 1번과 sector table page 1번이다.
 
-검사 제거는 이 근거로 정당화되지 않는다. 정상 SQL scan이 해제된 sector를 실제로 만날 수 있고, release에서 이를 막는 검사는 sector 확인 하나뿐이다. 비용을 줄이려면 위 경로의 근본 원인을 먼저 고치거나, 같은 보장을 더 싸게 제공하는 방법을 별도로 설계하고 검증해야 한다.
+기준 head에서 검사 제거는 이 근거로 정당화되지 않는다. 정상 SQL scan이 해제된 sector를 실제로 만날 수 있고, release에서 이를 막는 검사는 sector 확인 하나뿐이다. 비용을 줄이려면 위 경로의 근본 원인을 먼저 고치거나, 같은 보장을 더 싸게 제공하는 방법을 별도로 설계하고 검증해야 한다.
 
 ## 대상과 환경
 
@@ -79,7 +79,7 @@ release 빌드(`release_gcc_unit`, warm buffer)에서 20,000바이트 값 200행
 | partition, page batch, local page copy, lazy 속성 읽기 | 추적한 범위에서 보호 확인 (source 확인) | 복사본과 `lazy_recdes`는 scan 안에서만 산다. partition은 같은 transaction descriptor의 snapshot을 쓴다 |
 | query 결과 list file과 holdable cursor | 추적한 범위에서 보호 확인 (source 확인) | list file은 참조가 아니라 풀린 값을 저장한다 (`src/query/query_opfunc.c:666-712`) |
 | in-place UPDATE (ALTER domain 변경, partition 재분배) | 추적한 범위에서 보호 확인 (source 확인) | SCH-M으로 reader를 배제한다. 다른 in-place caller는 OOS 참조가 없는 record를 쓴다 |
-| MVCC 비활성 class `_db_ha_apply_info`의 비고정 scan | incomplete (source 반례 후보) | `copied_log_path`가 약 3.8 KB 이상이면 OOS로 갈 수 있다. index scan이나 join의 바깥 scan은 page latch를 놓은 뒤 값을 읽는다. HA applier의 UPDATE는 commit 전에 이전 chain을 즉시 지운다 (`heap_oos.cpp:957-1037`). 실행하지 않았다 |
+| MVCC 비활성 class `_db_ha_apply_info`의 비고정 scan | incomplete (source 반례 후보) | `copied_log_path`가 약 3.8 KB 이상이면 OOS로 갈 수 있다. index scan이나 join의 바깥 scan은 page latch를 놓은 뒤 값을 읽는다. HA applier의 UPDATE는 commit 전에 이전 chain을 즉시 지운다 (`heap_oos.cpp:957-1037`). 실행하지 않았다. snapshot 없는 OOS reader와 회수의 겹침은 CBRD-27981이 조사 중이다 |
 | SA 모드에서 stored function이 같은 table을 DML | incomplete (source 반례 후보) | SA에서는 eager delete가 바깥 scan이 가진 참조의 chain을 즉시 지울 수 있다. `heap_oos.cpp:923-929`의 "SA에는 reader가 없다"는 설명이 이 경우를 다루지 않는다. 실행하지 않았다 |
 | restart recovery, sysop abort 뒤 slot 재사용 | 범위 밖 | 이번 질문의 reader 수명과 별개인 slot undo 안전성 문제다 |
 
@@ -169,7 +169,7 @@ release 빌드에서 세션 1을 `oos_read` 진입에서 멈추고 다음을 관
 
 비용을 줄이는 방향은 두 가지가 있다. 어느 쪽도 이번 조사에서 구현하거나 측정하지 않았다.
 
-1. 근본 원인을 고친다. PR #8434가 반례 1을 제거한다. 반례 2는 PL COMMIT 뒤 진행 중인 query가 class lock과 snapshot 없이 계속 실행되는 문제다. OOS에 한정되지 않으므로 별도 이슈로 다뤄야 한다. 두 경로를 모두 막고 나머지 incomplete 경로를 닫은 뒤에야 scan 전용 빠른 경로를 논의할 수 있다.
+1. 근본 원인을 고친다. PR #8434가 반례 1을 제거한다. 반례 2는 PL COMMIT 뒤 진행 중인 query가 class lock과 snapshot 없이 계속 실행되는 문제이며, CBRD-27579의 규칙 1(문장 안 TCL 거부)이 막는다. 구현 PR #8182가 merge되면 이 경로는 닫힌다 (source 확인). 이 사례는 CBRD-27579에 추가 사례로 보고한다. 두 PR이 merge되고 나머지 incomplete 경로를 닫은 뒤에야 scan 전용 빠른 경로를 논의할 수 있다.
 2. 같은 보장을 더 싸게 제공한다. 예를 들어 OOS file 파괴를 file 단위 incarnation으로 감지하거나, transaction이 class lock을 보유한 동안 sector 확인을 생략하는 방법이 있다. 후자는 `pgbuf_fix_if_not_deallocated`의 기존 주석이 제안한 방향이다 (`page_buffer.c:16168-16171`). 다만 반례 2에서는 PL COMMIT이 lock을 해제했으므로 lock 보유 판단이 실제 보유 상태를 따라야 한다.
 
 어느 방향이든 debug와 release에서 직접 stale 입력, 다중 page 읽기, grouped 읽기의 부분 출력, 실제 회수와 함께 동작하는 SQL reader를 다시 검증해야 한다.
@@ -198,6 +198,7 @@ release 빌드에서 세션 1을 `oos_read` 진입에서 멈추고 다음을 관
 
 - 반례 1에서 vacuum이 head page를 실제로 해제하는 경우와 release 빌드 실행.
 - 반례 2에서 해제된 sector를 다른 file이 다시 예약하는 경우, PL ROLLBACK 변형, debug 빌드 실행.
+- PR #8182를 적용한 빌드에서 반례 2가 `ER_SP_TCL_DDL_IN_QUERY`로 끝나는지 실행 확인.
 - parallel heap scan의 출력 목록에서 COMMIT하는 SP.
 - `_db_ha_apply_info`와 SA 모드 stored function의 실행 재현.
 - 할당 확인의 실행 시간 비중. 측정하려면 benchmark 절차를 따로 적용해야 한다.
@@ -213,4 +214,4 @@ release 빌드에서 세션 1을 `oos_read` 진입에서 멈추고 다음을 관
 >
 > 말씀하신 수치도 재현됐습니다. release에서 20000바이트 200행이면 OOS fetch 800이 head 200, continuation 200, volume header 200, sector table 200으로 나뉩니다. 실행 시간은 측정하지 않았습니다.
 >
-> 그래서 지금은 확인을 빼기 어렵다고 봅니다. 비용을 줄이려면 위 두 경로를 먼저 막거나, file 파괴를 더 싸게 감지하는 방법을 따로 설계하고 검증해야 할 것 같습니다. 두 번째 경로는 OOS에 한정된 문제가 아니라서 별도 이슈로 올리려고 합니다. parallel scan 안의 SP COMMIT, HA apply info, SA 모드 같은 경로는 아직 source로만 봤습니다. 자세한 내용은 검증 보고서에 정리했습니다.
+> 그래서 지금은 확인을 빼기 어렵다고 봅니다. 비용을 줄이려면 위 두 경로를 먼저 막거나, file 파괴를 더 싸게 감지하는 방법을 따로 설계하고 검증해야 할 것 같습니다. 두 번째 경로는 SQL 문 안의 SP COMMIT을 거부하는 CBRD-27579(PR #8182)가 막을 것으로 봅니다. 코드로만 확인했고, CBRD-27579에 추가 사례로 남기려고 합니다. #8434와 #8182가 들어간 뒤 남는 경로를 다시 보고 확인 생략 여부를 판단하면 좋겠습니다. parallel scan 안의 SP COMMIT, HA apply info, SA 모드 같은 경로는 아직 source로만 봤습니다. 자세한 내용은 검증 보고서에 정리했습니다.
