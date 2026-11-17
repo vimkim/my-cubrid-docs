@@ -1,0 +1,59 @@
+# sidecar 539ab8ae8d, worktree /home/vimkim/gh/cb/sidecar-int, debug_gcc + UNIT_TEST_SIDECAR, workenv port 41386, 2026-11-17
+test_sidecar rc=0
+check_diagdb rc=0
+check_index_keys rc=0
+check_store_rollback rc=0
+## test_sidecar
+All tests passed (2686 assertions in 16 test cases)
+
+## check_diagdb.sh
+PASS  force_external=yes: diagdb -d 9 exits 0
+PASS  force_external=yes: diagdb -d 9 --dump-records exits 0 []
+PASS  force_external=no: diagdb -d 9 exits 0
+PASS  force_external=no: diagdb -d 9 --dump-records exits 0 []
+PASS  force_external=yes: the dump lists the stores as owner sections [2, catalog and big at least]
+PASS  a store is not dumped as a heap of its own [heaps yes 35, no 35]
+PASS  force_external=yes: --dump-records prints the 100 foo objects [100]
+PASS  force_external=yes: without --dump-records no object is printed [0]
+## check_index_keys.sh
+PASS  force_external=yes csql -S: the load and the DML run without error []
+PASS  force_external=yes csql -S: every row is gone
+PASS  force_external=yes csql -S: checkdb is clean
+PASS  force_external=yes csql -C: the load and the DML run without error []
+PASS  force_external=yes csql -C: every row is gone
+PASS  force_external=yes csql -C: checkdb is clean
+PASS  force_external=no csql -S: the load and the DML run without error []
+PASS  force_external=no csql -S: every row is gone
+PASS  force_external=no csql -S: checkdb is clean
+PASS  force_external=no csql -C: the load and the DML run without error []
+PASS  force_external=no csql -C: every row is gone
+PASS  force_external=no csql -C: checkdb is clean
+## check_store_rollback.sh
+PASS  csql -C: each of the 10 rounds fails on the unique key [10]
+PASS  csql -C: the store reuses the pages the rollbacks free [round 1: 14, round 10: 14]
+PASS  csql -C: checkdb is clean
+PASS  csql -S: each of the 10 rounds fails on the unique key [10]
+PASS  csql -S: the store reuses the pages the rollbacks free [round 1: 10, round 10: 14]
+PASS  csql -S: checkdb is clean
+csql -C pages.log:
+round 1 store pages 14
+round 2 store pages 14
+round 3 store pages 14
+round 4 store pages 14
+round 5 store pages 14
+round 6 store pages 14
+round 7 store pages 14
+round 8 store pages 14
+round 9 store pages 14
+round 10 store pages 14
+csql -S pages.log:
+round 1 store pages 10
+round 2 store pages 10
+round 3 store pages 10
+round 4 store pages 10
+round 5 store pages 10
+round 6 store pages 14
+round 7 store pages 14
+round 8 store pages 14
+round 9 store pages 14
+round 10 store pages 14

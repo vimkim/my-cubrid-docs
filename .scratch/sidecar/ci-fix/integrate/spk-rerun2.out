@@ -1,0 +1,12 @@
+[0mdirenv: loading ~/gh/cb/sidecar-poc1/.envrc
+Preset Mode: debug_gcc
+Install Dir: /home/vimkim/.cub/install/sidecar-poc1/debug_gcc
+DB Dir: /home/vimkim/gh/cb/sidecar-poc1/.cub-workenv/databases
+Build Dir: /home/vimkim/gh/cb/sidecar-poc1/build_preset_debug_gcc
+== sp_keeps_no_store_page
+PASS sp_keeps_no_store_page: rows 1 and 2 are on different hot pages (otherwise develop's own same-page hang, tracker 815, would decide the test)  [['1\t705', '2\t709']]
+PASS sp_keeps_no_store_page: a select-list function updating the row whose store page the scan read finishes and equals off  [on finished True rc 0 ['1\t3000\t2']; off ['1\t3000\t2']]
+PASS spk: same result on and off: select id, s, sha1(v) from T order by id;  [806 rows]
+PASS sp_keeps_no_store_page: checkdb -C clean  [rc 0]
+PASS SHOW HEAP SIDECAR agrees with the verifier after sp_keeps_no_store_page  [85 heaps compared]
+5 passed, 0 failed
