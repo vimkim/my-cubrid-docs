@@ -2,7 +2,7 @@
 
 Documents for JIRA [CBRD-27781](https://jira.cubrid.org/browse/CBRD-27781) (OOS chunk undo writes over a reused slot) and the companion [CBRD-27237](https://jira.cubrid.org/browse/CBRD-27237) (forward-walk deletes the chain of a rolled-back UPDATE), implemented together under ADR-0008. PR: CUBRID/cubrid#8434; the engine branch is `CBRD-27781-postpone-commit` (`8e139f4db`) over `feature/oos-merge` `95ff126a8`.
 
-Last modified: 2026-11-11 (Asia/Seoul).
+Last modified: 2026-11-17 (Asia/Seoul).
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
@@ -11,6 +11,7 @@ Last modified: 2026-11-11 (Asia/Seoul).
 | [perf.md](perf.md) | Release measurement for ADR-0008 decision 7: log bytes, OOS file size, latency, method and limits | 2026-11-05 | 2026-11-05 | Decision 7 requires measured improvement |
 | [perf-growth-lock.md](perf-growth-lock.md) | Release measurement (Korean) of review item U-1: concurrent page-growing OOS inserts into one file, `c255c7c3b` vs `e01d8d576` vs `8e139f4db`; no measurable throughput regression (OOS header page latch is the limiter), mixed delete+insert p99 improved | 2026-11-11 | 2026-11-11 | Close the growth-lock throughput question left open by the `8e139f4db` review |
 | [perf-latency-handoff.md](perf-latency-handoff.md) | Handoff (Korean) for remeasuring INSERT/UPDATE latency on a quiet machine: commits, build, run, judgment, where results go | 2026-11-06 | 2026-11-06 | Decision 7 latency condition is still undecided |
+| [latency-merged/README.md](latency-merged/README.md) | Latency remeasurement (Korean) after #8495 (CBRD-28046) reached `feature/oos-merge`: base `3e541fcf67` vs PR head `ca1c1176fc`, release_gcc; one `fdatasync` per commit (3011 vs 3006), per-row commit not slower (12/12 pairs faster), churn not slower; scripts and raw CSVs alongside | 2026-11-17 | 2026-11-17 | Reviewer approval condition: remeasure once #8495 is in `feature/oos-merge` |
 | [recovery-analysis-assert.md](recovery-analysis-assert.md) | A debug-only restart-recovery analysis assert found during the work, also on develop | 2026-11-05 | 2026-11-05 | Separate issue candidate, out of this change's scope |
 | [ci-analysis-sql-by-cci.md](ci-analysis-sql-by-cci.md) | CI analysis of the 57 `test_sql_by_cci` failures at head `8e139f4db` (run 42603737999): identical on unrelated `feature/oos-merge` PR #8348, PR relation unlikely | 2026-11-10 | 2026-11-10 | Decide whether the only red gha-ci suite of PR #8434 comes from the PR |
 | [code-review-pr8434-3e8072f/report.md](code-review-pr8434-3e8072f/report.md) | Five-reviewer code review of PR #8434 at `3e8072f56` (R1-R10, P-1, P-2) and the status of each item | 2026-11-06 | 2026-11-10 | Evidence-backed review before the PR left draft |
