@@ -94,7 +94,7 @@
 
 ## Testcase 이력
 
-- `cbrd_21737.sh` (shell): `cubrid-tcc 0.3.0` `history` 결과 `SEEN_BEFORE`. 색인된 실행 313건 중 PASS 311, FAIL 2. 이번 run 43854919568은 아직 색인되지 않았다.
+- `cbrd_21737.sh` (shell): `cubrid-tcc 0.3.0` `history` 결과 `SEEN_BEFORE`. sync 후 색인된 실행 484건 중 PASS 482, FAIL 2. 이번 run 43854919568은 아직 색인되지 않았다.
 
   | run | shard | engine | testcase | PR (base) | 완료 시각 | 증상 |
   | --- | --- | --- | --- | --- | --- | --- |
@@ -102,7 +102,7 @@
   | [41048233875](https://github.com/CUBRID/cubrid/actions/runs/41048233875) | 38 | `eac70c7e740d` | `8c8aec181e56` (`tc/pr-8347`) | #8347 (`feature/oos-merge`) | 2026-10-30T12:20:38Z | 같음 |
 
   두 실패는 이번 실패와 증상이 같다(retained JUnit, Chronicle execution 19076, 15861에서 확인). 두 build 모두 이 PR 커밋(2026-11-16 작성)보다 먼저 만들어졌으므로 이 PR 변경을 포함하지 않는다. `eac70c7e740d`는 로컬에서 PR 커밋을 조상으로 갖지 않음을 확인했고, `7f2f138bc974`는 로컬 객체가 없어 ancestry는 시간 순서로만 판단했다. CLI 플래키 판정은 없다(같은 engine revision에서의 PASS/FAIL 쌍이 없음). 그래서 플래키라고 단정하지 않고, "다른 engine에서 같은 증상이 반복된 간헐 실패"로만 기록한다.
-- 커버리지 한계: `cubrid-tcr check`의 `sync_hint`에 따라 `cubrid-tcc sync-data --since 2026-10-27 --until 2026-11-17 --suite shell --revisit-limit 0`을 한 번 실행했다. 보고서 작성 시점까지 끝나지 않았고(오래된 run 쪽을 수집 중), `history`의 window 2026-10-14–2026-11-17 커버리지는 `discovery_complete: false`, 누락 run 3782건이다. 그 뒤 `check` 판정은 그대로 `no_match`였다. 다시 sync하지 않았다.
+- 커버리지 한계: `cubrid-tcr check`의 `sync_hint`에 따라 `cubrid-tcc sync-data --since 2026-10-27 --until 2026-11-17 --suite shell --revisit-limit 0`을 한 번 실행했다. exit 2로 끝났다: snapshot 14965개를 넣었고 run 29개는 GitHub HTTP 502로 실패했다. `history`의 window 2026-10-14–2026-11-17 커버리지는 `discovery_complete: false`, 누락 run 3437건이다. `check` 판정은 `no_match` 그대로다. 다시 sync하지 않았다.
 - `cubrid-tcr`에 이 반복 증상을 note로 남겼다.
 - `test_sql_by_cci`: Chronicle이 이 suite를 색인하지 않아 이력이 없다.
 
