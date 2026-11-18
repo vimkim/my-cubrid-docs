@@ -2,6 +2,8 @@
 
 > **이 스냅샷으로는 회귀 여부나 근본 원인을 결론 내릴 수 없다.** head 수집이 `incomplete`로 끝났다(`test_sql`, `test_sql_by_cci` 수집 실패). `report_mode.py` 판정은 `warning`이다. 아래의 PR 관련성과 확신도는 검증된 부분 증거에서 끌어낸 추론이며, 게이트를 통과한 결론이 아니다.
 
+> **후속 갱신 (2026-11-18)**: shard 09 서버 다운은 로컬 재현으로 원인을 찾았다. PR 변경과 관계없는 develop 버그 [CBRD-28058](https://jira.cubrid.org/browse/CBRD-28058)이며, 수정 전 base에서도 같은 위치에서 재현된다. 아래 "후속 재현: shard 09 서버 다운"을 본다. PR #8565는 2026-11-17T13:30:48Z에 `93fedbbec5`로 develop에 병합되었다.
+
 ## 요약
 
 - 분석일: 2026-11-17 (Asia/Seoul). 대상: [PR #8565](https://github.com/CUBRID/cubrid/pull/8565) head `436d1cd5bbe14bc09e7cd2e7f6e327972034b0f8`, base `develop`, merge base `666bb10ae673c666c18aa9ae58dda59c9df59fdf`.
@@ -71,6 +73,8 @@
 
 ### test_sql_by_cci shard 09: head에서만 서버 연결 끊김
 
+> 후속 재현으로 원인이 확인되었다(CBRD-28058, PR 관련성 `unlikely`). 이 절은 분석 당시의 기록이다. "후속 재현: shard 09 서버 다운"을 본다.
+
 - **관측 (대체 증거)**: 아티팩트 서버의 `sql_by_cci/shard/09/artifacts/ctp_log.tgz`(sha256 `416e07ee…b61c`)의 `summary.info`에서 418개 OK, 30개 NOK. NOK 30개는 base shard 09에서도 실패한 3개(`cbrd_25984.sql`, `cbrd_26258/join_orderby_skip.sql`, `cbrd_27101.sql`), `cbrd_27485.sql`, 그리고 약 250초씩 걸린 26개다. `cbrd_27482_coalesce.sql`까지는 다른 케이스가 정상이었고, `cbrd_27485.sql`의 결과는 앞 6개 문장(drop, create, insert 50행 2번)은 정상이고 7번째 문장(`insert into outer_big ... limit 100000`)부터 끝까지 `Error:-677`이다. 다음 `cbrd_27487`부터 `cbrd_27510/21_common_value_char_types.sql`까지 26개 케이스가 각 약 250초 걸리고 결과 파일이 비어 있다. base에서 실패한 `cbrd_27683`까지는 가지 못했다. job은 "Run CTP" 단계에서 2시간(12:28:39Z–14:28:12Z) 뒤 취소되었다.
 - **관측 (검증된 base)**: base run shard 09는 9분(16:12:33Z–16:21:31Z)에 끝났다. `cbrd_27485`는 0.652초, `cbrd_27510/*` 29개는 모두 0.39초 이내에 통과했다. `cbrd_27485` 디렉터리는 두 revision에서 같은 트리(`485f62ef382a`)다.
 - **관측 (미검증 head raw)**: head debug `test_sql`(collector 무결성 검사로 suite 미검증)의 shard 09 JUnit에서 `cbrd_27485.sql`은 2.555초에 통과했다.
@@ -84,6 +88,63 @@
 
 - **관측 (대체 증거)**: collector가 디코딩하지 못한 shard 05/07 JUnit을 같은 URL에서 다시 받았다(HTTP 200, sha256 `6c6a8e29…9182`, `7b19980d…868f`). 2639개 중 1개, 2171개 중 2개 실패이며, 세 케이스 모두 base run의 검증된 실패 목록에 있다.
 - **추론**: 이 3건은 develop에 이미 있는 sql_by_cci 실패다. 대체 증거라서 정식 `also_observed_on_base` 분류는 아니다.
+
+## 후속 재현: shard 09 서버 다운
+
+2026-11-17에 로컬에서 재현했다. 이 절은 CI 수집 결과가 아니라 로컬 실험 결과이며, 위의 `warning` 판정을 바꾸지 않는다.
+
+### 결론
+
+- 서버 다운의 원인은 develop 버그 [CBRD-28058](https://jira.cubrid.org/browse/CBRD-28058)이다. checkpoint daemon이 redo 시작점을 log page 366으로 내리는데, 그 page의 archive는 `log_max_archives=0` 때문에 이미 지워졌다. 서버는 `LOG FATAL ERROR`로 멈춘다. HA 모드에서는 서버가 약 1분마다 다시 뜨지만, 매번 재시작 복구가 page 366을 다시 읽으려다 같은 오류로 멈춘다. 그래서 client는 이후 계속 `-677`을 받고, 뒤 케이스는 각 약 250초 걸린다. CI 증상과 같다.
+- 이 버그는 CBRD-27151(#7785)에서 들어왔고, develop `6796ee470d`(#8516, 2026-11-17 10:47 KST 병합)로 고쳐졌다. PR head `436d1cd5bb`와 merge base `666bb10ae6`에는 이 수정이 없다(`git merge-base --is-ancestor`로 확인).
+- **PR 관련성: `unlikely`.** 수정 전 base도 같은 page, 같은 stack에서 멈춘다. 두 stack 모두 `log_do_postpone`이나 postpone 실행 함수를 포함하지 않는다.
+- **반증 조건**: CBRD-28058 수정을 포함한 build에서 같은 fatal이 나거나, crash stack에 `log_do_postpone` 또는 `log_run_postpone_op`이 있으면 이 결론은 틀리다. 수정을 포함한 head build로는 실험하지 않았다.
+
+### 실험 구성
+
+- **바이너리**: CI 아티팩트 서버의 release build를 그대로 썼다(`builds/pr/436d1cd…/release`, `builds/develop/666bb10…/release`).
+- **환경**: CI test image `cubridci:test_rl8.10`의 `/entrypoint.sh test sql_by_cci`, CTP `5b77b12`(실행 시점 cubrid-testtools develop), testcase `15ef213`. CCI 경로는 CTP `ccqt`이고, CTP `sql_by_cci.conf` 설정(`ha_mode=yes`, `test_mode=yes`, `log_max_archives=0`, log volume 512M)을 그대로 썼다.
+- **CI와 다른 점**: rootless podman으로 실행했고 여러 container를 동시에 돌려 timing이 다르다. 전체 shard 실행은 shard 09의 디렉터리(`_33_elderberry`, `_34_fig`, `_35_fig_cake`, `_36_guava`, 540 케이스)를 복사한 git 사본으로 했다.
+
+### 실행 결과
+
+| build | 시나리오 | 실행 수 | 서버 다운(page 366 fatal) |
+| --- | --- | --- | --- |
+| head (CI binary) | shard 09 전체, 1차 | 4 | 0 |
+| head (CI binary) | shard 09 전체, 2차 | 4 | 4 (1번은 CI처럼 `cbrd_27485` 직전) |
+| head (CI binary) | shard 09 전체, base와 동시 실행 | 4 | 2 |
+| base (CI binary) | shard 09 전체, head와 동시 실행 | 4 | 1 |
+| head (CI binary) | `cbrd_27485` 단독(매번 새 DB) | 24 | 0 |
+| head (CI binary) | `cbrd_27485` 50회 반복을 한 CTP 실행으로 | 4 (200회) | 0 |
+| head (로컬 `release_gcc`) | `cbrd_27485` 단독 | 1 | 0 |
+| head (로컬 `release_gcc`) | `cbrd_27485` 50회 반복 | 2 (100회) | 0 |
+| head, base | #8516 재현 절차를 본뜬 create/insert/DROP 반복(log 20M) | 각 2 | 0 |
+
+- 다운된 실행은 모두 page 366을 찾다가 같은 stack에서 멈췄다. 다운 여부는 checkpoint가 DROP이 많은 케이스와 어느 시점에 겹치는지에 달려 있으므로, shard 안의 위치는 의미가 없다. `cbrd_27485` 자체는 관계가 없다.
+- 끝까지 실행된 전체 shard 실행은 모두 base CI run과 같은 NOK 4건(`cbrd_25984`, `join_orderby_skip`, `cbrd_27101`, `cbrd_27683`)만 냈다.
+- core는 생기지 않았다. fatal 경로가 프로세스를 종료하기 때문이다. stack은 서버 에러 로그에서 얻었다.
+- 로컬 `release_gcc` binary는 glibc 2.34가 필요해 RL8 image에서 돌지 않으므로, 같은 CTP 흐름을 rocky9 `cubrid-devbox` image에서 실행했다.
+
+### Stack
+
+```
+FATAL ERROR log_page_buffer.c:5814 ERROR CODE = -97
+Internal error: unable to find log page 366 in log archives.
+logpb_fetch_from_archive  log_page_buffer.c:5815
+logpb_checkpoint          log_page_buffer.c:7775
+cubthread::daemon::loop_with_context
+```
+
+재시작 때의 stack은 `log_recovery` → `log_recovery_redo` → `logpb_fetch_page` → `logpb_fetch_from_archive`이다. head와 base의 발췌는 [`ci-repro/logs/head-full8-fatal.txt`](ci-repro/logs/head-full8-fatal.txt), [`ci-repro/logs/base-full2-fatal.txt`](ci-repro/logs/base-full2-fatal.txt)에 있다.
+
+### 추가 증거: `cbrd_27485`에서 `log_do_postpone`은 호출되지 않는다
+
+csql CS 모드로 `cbrd_27485`를 실행하는 동안 `cubrid statdump -c`의 `Num_tran_postpone_cache_miss`와 `Num_tran_topop_postpone_cache_miss`는 계속 0이었다([`ci-repro/logs/ppcache-head-counters.txt`](ci-repro/logs/ppcache-head-counters.txt)). commit postpone과 system operation postpone은 캐시에서 처리되었고, PR이 바꾼 `log_do_postpone`은 이 케이스의 정상 실행 경로에서 호출되지 않았다.
+
+### 재현 자료
+
+- 실행 스크립트: [`ci-repro/scripts/`](ci-repro/scripts/). 원래 실험 디렉터리의 절대 경로를 쓰고, `dropstorm.sh`가 쓰는 생성 SQL(`dropstorm.sql`, 약 800KB)은 넣지 않았다.
+- 전체 실행 디렉터리(서버 로그, `lginf` archive 제거 시간표, CTP 결과)는 분석 세션의 scratch 디렉터리에만 있고 보존이 보장되지 않는다.
 
 ## Baseline 비교
 
@@ -112,7 +173,7 @@
 
 ## 우선순위별 조치
 
-1. sql_by_cci shard 09 서버 다운의 원인 증거를 얻는다: 서버 에러 로그나 core. 얻을 수 없으면 sql_by_cci만 다시 돌려 재현 여부를 본다(CI 트리거는 별도 승인).
+1. ~~sql_by_cci shard 09 서버 다운의 원인 증거를 얻는다.~~ 완료: 로컬 재현으로 CBRD-28058로 확인했다(위 "후속 재현").
 2. `test_shell`을 다시 돌려 `cbrd_21737`이 통과하는지 본다. 같은 재실행에서 sql_by_cci도 함께 본다.
 3. `test_sql` 수집 무결성 문제(shard 01 JUnit 18개 누락)는 base에도 있으므로 PR과 별도로 CI 쪽 후속 작업으로 둔다.
 4. TC PR #4942는 최종 merge handoff까지 열어 둔다.

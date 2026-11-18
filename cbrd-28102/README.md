@@ -8,4 +8,4 @@ Last modified: 2026-11-17 (Asia/Seoul).
 | --- | --- | --- | --- | --- |
 | [pr-body.md](pr-body.md) | PR body (Korean) for the draft PR against `develop` | 2026-11-16 | 2026-11-16 | Draft PR for the CBRD-28102 fix |
 | [pr-context.md](pr-context.md) | Draft context: source commit, base, operations, verification evidence, execution record | 2026-11-16 | 2026-11-16 | Resume and publication bookkeeping |
-| [ci-analysis.md](ci-analysis.md) | Warning-mode CI analysis (Korean) of PR #8565 head `436d1cd5bb`, gha-ci run 43854919568 attempt 1, against merge base `666bb10ae6` | 2026-11-17 | 2026-11-17 | Explain the test_shell and test_sql_by_cci failures and whether the PR caused them |
+| [ci-analysis.md](ci-analysis.md) | Warning-mode CI analysis (Korean) of PR #8565 head `436d1cd5bb`, gha-ci run 43854919568 attempt 1, against merge base `666bb10ae6` | 2026-11-17 | 2026-11-18 | Explain the test_shell and test_sql_by_cci failures and whether the PR caused them; the follow-up local reproduction traces the sql_by_cci outage to CBRD-28058, with scripts and log excerpts in `ci-repro/` |

@@ -1,0 +1,14 @@
+Time: 11/17/26 22:38:52.859 - FATAL ERROR *** file /__w/cubrid/cubrid/cubrid/src/transaction/log_page_buffer.c, line 5814 ERROR CODE = -97, Tran = 0, CLIENT = :(0), EID = 45535
+Internal error: unable to find log page 366 in log archives.
+[10] 0x00000000002f98fb: er_dump_call_stack_internal(print_output&) at /__w/cubrid/cubrid/cubrid/src/base/stack_dump.c:390
+[09] 0x00000000002fa522: er_dump_call_stack(_IO_FILE*) at /__w/cubrid/cubrid/cubrid/src/base/printer.hpp:43
+[08] 0x00000000002a2648: er_notify_event_on_error at /__w/cubrid/cubrid/cubrid/src/base/error_manager.c:1347
+[07] 0x00000000002a2e55: er_set at /__w/cubrid/cubrid/cubrid/src/base/error_manager.c:1278
+[06] 0x000000000080c3a2: logpb_fetch_from_archive(cubthread::entry*, long, log_page*, int*, log_arv_header*, bool) at /__w/cubrid/cubrid/cubrid/src/transaction/log_page_buffer.c:5815
+[05] 0x0000000000815953: logpb_checkpoint(cubthread::entry*) at /__w/cubrid/cubrid/cubrid/src/transaction/log_page_buffer.c:7775
+[04] 0x0000000000797e55: cubthread::daemon::loop_with_context(cubthread::daemon*, cubthread::entry_manager*, cubthread::task<cubthread::entry>*, char const*) at /__w/cubrid/cubrid/cubrid/src/thread/thread_daemon.cpp:231
+[03] 0x0000000000dfa41f: execute_native_thread_routine at thread.o:?
+[02] 0x00000000000081ca: start_thread at ??:?
+[01] 0x00000000000fe7d3: __GI___clone at :?
+
+Time: 11/17/26 22:38:54.155 - FATAL ERROR *** file /__w/cubrid/cubrid/cubrid/src/transaction/log_page_buffer.c, line 5817 ERROR CODE = -644, Tran = 0, CLIENT = :(0), EID = 45536
