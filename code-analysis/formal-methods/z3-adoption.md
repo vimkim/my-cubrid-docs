@@ -2,6 +2,8 @@
 
 작성: 2026-11-17 (Asia/Seoul). 독립 리뷰 반영: 2026-11-18. Work item: work-tracker #991.
 
+> **후속 결정 (2026-11-18): 스킬화하지 않는다.** 아래 "조건부 go" 판정은 기록으로 남기되, `cubrid-verify-*-smt` 스킬은 만들지 않기로 했다(work-tracker #995 취소). 근거였던 로컬 브랜치 `z3-spike-20261117`과 그 worktree는 삭제했으므로, 이 문서의 `formal/z3/` 경로(하네스, 로그, `REVIEW-001.md`)는 더 이상 열 수 없다. 이 검토 중 발견한 catalog repid 잘림 버그는 [CBRD-28186](https://jira.cubrid.org/browse/CBRD-28186)으로 따로 등록했다.
+
 ## 질문과 결론
 
 **질문.** CUBRID 개발에 Z3(SMT solver)를 도입할 가치가 있는가? 동시성이 없는 순수 산술·비트 연산의 경계 버그를 잡는 데 CBMC(Work #830)나 TLA+(`cubrid-verify-*` 스킬)보다 나은가?
