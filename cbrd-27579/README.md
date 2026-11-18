@@ -1,7 +1,8 @@
 # CBRD-27579: TCL, DDL, and DML in stored routines called inside SQL statements or triggers
 
-[CBRD-27579](https://jira.cubrid.org/browse/CBRD-27579) (Correct Error, status Develop; relates to CBRD-27603, CBRD-27591, CBRD-27614). No PR is linked here yet. Source evidence: develop `e64a04a79`; the fix was not yet in develop `38c931e7d`.
+[CBRD-27579](https://jira.cubrid.org/browse/CBRD-27579) (Correct Error, status Develop; relates to CBRD-27603, CBRD-27591, CBRD-27614). Fix PR: [#8182](https://github.com/CUBRID/cubrid/pull/8182) (head `1a54bb5859` on 2026-11-18). Source evidence: develop `e64a04a79`; the fix was not yet in develop `38c931e7d`.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
 | [comment-develop-repro.md](comment-develop-repro.md) | Korean comment, posted as [comment 4778317](https://jira.cubrid.org/browse/CBRD-27579?focusedCommentId=4778317#comment-4778317) on 2026-11-11: the smallest SA-mode repro (`select cf () from db_root` with a PL/CSQL function that COMMITs or ROLLBACKs) on develop `e64a04a79`. Debug `csql -S` stops on `pgbuf_unfix_all` assert, release `csql -S` segfaults, CS works. gdb stack and the held heap-scan page | 2026-11-11 | 2026-11-11 | Add develop SA evidence to the existing issue instead of filing a duplicate |
+| [plcommit-concurrent-drop.md](plcommit-concurrent-drop.md) | Korean additional case, not posted to CBRD-27579: a PL/CSQL COMMIT inside a SELECT drops the scan's locks and snapshot, so another session's DROP TABLE destroys its heap, index and OOS files mid-scan. Reproduced on PR #8491 head `a4fec6f8e2` with gdb ordering; release without the OOS sector check returns the dropped table's bytes. Linked from [CBRD-28187](https://jira.cubrid.org/browse/CBRD-28187) | 2026-11-18 | 2026-11-18 | Keep the CBRD-27579 evidence that blocks CBRD-28187 without adding a JIRA comment |
