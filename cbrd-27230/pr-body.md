@@ -1,6 +1,6 @@
 https://jira.cubrid.org/browse/CBRD-27230
 
-> **#8434 merge 후에만 merge 가능.** 이 PR은 #8434 (CBRD-27781, OOS chain을 commit 뒤에 회수) 위에 쌓은 변경입니다. #8434가 `feature/oos-merge` 에 들어가기 전까지는 이 PR의 diff에 #8434의 commit 14개가 함께 보입니다. 이 PR의 리뷰 대상은 마지막 4개 commit입니다.
+> **#8434 merge 후에만 merge 가능.** 이 PR은 #8434 (CBRD-27781, OOS chain을 commit 뒤에 회수) 위에 쌓은 변경입니다. #8434가 `feature/oos-merge` 에 들어가기 전까지는 이 PR의 diff에 #8434의 commit 17개가 함께 보입니다. 이 PR의 리뷰 대상은 마지막 4개 commit입니다.
 
 ## Purpose
 
