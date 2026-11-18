@@ -64,3 +64,54 @@
 1. #8434가 최신 `feature/oos-merge` 위로 다시 올라가면, #8559를 그 위로 옮기고 OOS ctest를 돌린 뒤 CI를 한 번 돌립니다.
 2. 그 run의 sql_by_cci shard 09 결과로 묶음 2를 확정합니다.
 3. collector의 test_sql 무결성 오류 (plcsql JUnit 누락) 는 CI 도구 문제로 따로 보고할 수 있습니다. PR 판정과는 관계없습니다.
+
+---
+
+# 추가 분석: run 44087080638 (2026-11-18)
+
+## 요약
+
+- 결론: 이번 실패도 CBRD-27230 때문이라고 볼 근거는 없습니다. testcase branch가 engine보다 한 단계 새 버전이라 생긴 불일치로 보입니다.
+- 원인: 2026-11-17에 `tc/pr-8559` 에 최신 TC `feature/oos-merge` 를 merge했습니다 (공개 `a0cbf8f12`, 비공개 `69ef93dc6`). 이 TC는 engine `feature/oos-merge` `3e541fcf67` (두 번째 develop merge) 에 맞춘 것입니다. 그러나 #8559의 engine 기반은 그 이전 `30292700ac` 입니다 (#8434 `b6bcc5ffcf` 가 그 위에 있음).
+- 다음 할 일: #8434가 `3e541fcf67` 이후로 다시 올라가면 #8559를 따라 옮기고 CI를 한 번 돌립니다. 그때 engine과 testcase 버전이 맞습니다.
+
+## CI snapshot
+
+- run: https://github.com/CUBRID/cubrid/actions/runs/44087080638 (`b3855b6d12`)
+- 이 run은 2026-11-17T12:51:29Z의 `/run all` 로 시작되었습니다. 테스트 shard는 TC push (12:53Z) 뒤에 시작해 새 testcase를 받았습니다.
+- 비교 기준: 최신 base run 43870281031 (`30292700ac`, 당시 TC). #8434 `b6bcc5ffcf` 의 run 44042316176은 모든 suite가 error라 쓸 수 없습니다.
+
+| Suite | 결과 | 실패 | base에서 통과 | base에 없음 (새 testcase) |
+| --- | --- | --- | --- | --- |
+| medium | 통과 | 0 | | |
+| shell | 실패 | 21 | 12 | 9 |
+| sql | 실패 | 7 (JUnit) / 8 (`summary_info`) | 3 | 4 (+ `cbrd_27500`) |
+| sql_by_cci | 실패 (shard 09 취소) | 8 | 3 | 5 |
+
+결과는 CI 결과 서버의 shard별 JUnit XML과 `summary_info` 에서 직접 읽었습니다. `cubrid-ci verify` 검증은 거치지 않았습니다.
+
+## 원인 묶음
+
+### 1. 새 testcase가 아직 없는 engine 수정을 요구함
+
+- 관찰: base에 없던 실패 testcase는 `cbrd_27445`, `cbrd_27571`, `cbrd_27650`, `cbrd_27780`, `cbrd_28002`, `cbrd_28058`, `cbrd_27441_partition_check`, `cbrd_27105_*` (shell), `cbrd_27914`, `cbrd_27948`, `cbrd_28024`, `cbrd_28049`, `cbrd-27500` (sql, sql_by_cci) 입니다.
+- 관찰: 이 중 CBRD-27445, 27571, 27650, 28024, 28049의 engine 수정은 `30292700ac..3e541fcf67` 에 있고, #8559 branch에는 없습니다.
+- 추론: 나머지 새 testcase도 같은 develop merge의 engine 수정을 기다리는 것으로 봅니다. 하나씩 확인하지는 않았습니다.
+- 반증 조건: `3e541fcf67` 이후 기반의 #8559 run에서도 이 testcase가 실패하는 경우입니다.
+
+### 2. OOS 오류 번호 재배치
+
+- 관찰: `bug_bts_10516.sql`, `fbo_ddl02.sql` 은 `Error:-1397` 을 기대하지만 `Error:-1396` 이 나옵니다.
+- 관찰: `3e541fcf67` 의 `src/base/error_code.h` 에서 `-1396` 은 `ER_HEAP_OOS_BAD_INLINE_HEADER`, `-1397` 은 `ER_HEAP_OOS_OVERPASS_MAXOBJ_SIZE` 입니다. #8559 branch에서는 `-1396` 이 `ER_HEAP_OOS_OVERPASS_MAXOBJ_SIZE` 입니다. TC에는 "Renumber OOS record-size errors after develop merge" commit이 있습니다.
+- 결론: 같은 오류가 번호만 다르게 나옵니다. 관련: unlikely, 확신 높음.
+
+### 3. base에서 통과하던 나머지 실패 (확인 안 함)
+
+- 대상: shell 12개 중 대부분 (`bug_bts_7894`, `bug_bts_5398`, `cbrd_20145_*`, `02_normal_ts` 등), sql `_014_repeat.sql` (`Error:-493`, `-581`), sql_by_cci `_016_insert.sql`.
+- 관찰: `bug_bts_7894` 는 loaddb 결과에 "2 errors detected" 가 더해졌습니다.
+- 추론: 같은 TC 갱신 (develop merge, 오류 번호 재배치) 에서 온 기대값 변화로 봅니다. CBRD-27230은 `locator_attribute_info_force` 의 UPDATE에서만 동작하므로 loaddb와 INSERT 경로에 닿지 않습니다. 개별 diff는 다 확인하지 않았습니다.
+- 반증 조건: 맞춘 버전의 run에서도 남는 경우입니다. 그때 하나씩 분석합니다.
+
+## 교훈
+
+- `tc/pr-<n>` 은 engine branch의 기반과 같은 시점의 TC여야 합니다. 이번에는 baseline 검사가 "최신 TC 포함" 을 요구해서 engine보다 앞선 TC를 넣었습니다. stack PR에서는 engine 기반이 따라올 때까지 TC 갱신을 미루는 편이 맞습니다.
