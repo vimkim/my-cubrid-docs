@@ -1,7 +1,5 @@
 https://jira.cubrid.org/browse/CBRD-27230
 
-> **#8434 merge 후에만 merge 가능.** 이 PR은 #8434 (CBRD-27781, OOS chain을 commit 뒤에 회수) 위에 쌓은 변경입니다. #8434가 `feature/oos-merge` 에 들어가기 전까지는 이 PR의 diff에 #8434의 commit 17개가 함께 보입니다. 이 PR의 리뷰 대상은 마지막 4개 commit입니다.
-
 ## Purpose
 
 - UPDATE가 OOS (큰 값을 heap 밖 별도 파일에 두는 저장 방식) 컬럼을 건드리지 않아도, 그 값을 다시 읽고 새로 저장했습니다.
@@ -23,3 +21,5 @@ https://jira.cubrid.org/browse/CBRD-27230
 - 설계는 TLA+ 모델로 확인했습니다. 안전 속성 3개와 liveness가 통과했고, 결정을 하나씩 되돌린 통제 9개는 각자 지키는 속성에서 실패합니다.
 - 미검증: 실제 HA 2대 구성, applylogdb 실행. 내용이 이미 어긋난 replica는 재사용 컬럼의 낡은 값을 유지합니다 (매뉴얼은 불일치 시 replica 재구축을 요구합니다).
 - 상세 설계와 측정: [design-a-prime-detail.md](https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-27230/design-a-prime-detail.md), [perf/report.md](https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-27230/perf/report.md)
+
+
