@@ -6,7 +6,7 @@ Last modified: 2026-11-17 (Asia/Seoul).
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [pr-body.md](pr-body.md) | PR body (Korean), as published on PR #8434 at head `8e139f4db` | 2026-11-05 | 2026-11-10 | Review before a draft PR is created |
+| [pr-body.md](pr-body.md) | PR body (Korean), as published on PR #8434 at head `ca1c1176fc` | 2026-11-05 | 2026-11-18 | Published |
 | [pr-context.md](pr-context.md) | Draft context: source commit, base, proposed operations | 2026-11-05 | 2026-11-05 | Resume and publication bookkeeping |
 | [perf.md](perf.md) | Release measurement for ADR-0008 decision 7: log bytes, OOS file size, latency, method and limits | 2026-11-05 | 2026-11-05 | Decision 7 requires measured improvement |
 | [perf-growth-lock.md](perf-growth-lock.md) | Release measurement (Korean) of review item U-1: concurrent page-growing OOS inserts into one file, `c255c7c3b` vs `e01d8d576` vs `8e139f4db`; no measurable throughput regression (OOS header page latch is the limiter), mixed delete+insert p99 improved | 2026-11-11 | 2026-11-11 | Close the growth-lock throughput question left open by the `8e139f4db` review |
