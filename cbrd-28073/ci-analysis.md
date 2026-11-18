@@ -88,3 +88,66 @@ head 실패 7건 중 #8434에서도 나온 것은 7건, head에만 나온 것은
 - head 근거: `cubrid-ci` 데이터 디렉터리의 `pr-8514/31c72e8342cb05fc60860d7fcec2da60e2e0b9ab/`
 - 비교 근거: 같은 디렉터리의 `pr-8434/b049fa155c900f43a7c2116c1076c8da498af35a/`
 - sql 실패 원본: `test_sql/raw/shards/09/linux_sql_64bit_optdebug.xml`, `summary_info`
+
+## 재수집: 2026-11-18, 4개 suite (`test_sql_by_cci` 포함)
+
+> **경고.** 이번 수집은 검증이 끝나지 않았다(`observation: incomplete`, `report_mode: warning`). `test_sql`과 `test_sql_by_cci`에 검증된 요약이 없다. 이 절은 회귀 여부나 원인에 대한 결론을 내리지 않는다. 위의 2026-11-13 원인 분석은 그때의 관찰로 남겨 두며, 이번 수집으로 새로 뒷받침되지는 않는다.
+
+### 대상
+
+| 항목 | 값 |
+| --- | --- |
+| PR | https://github.com/CUBRID/cubrid/pull/8514 (Draft) |
+| head | `31c72e8342cb05fc60860d7fcec2da60e2e0b9ab` (2026-11-13과 같음) |
+| run | https://github.com/CUBRID/cubrid/actions/runs/43263461440 attempt 1 (2026-11-13과 같음) |
+| 요청 suite | `test_medium`, `test_shell`, `test_sql`, `test_sql_by_cci` |
+| 수집 | 2026-11-18T04:44:23Z, `cubrid-ci 0.2.0 (961fc3e59494, release)`, collect exit 4, verify exit 3 |
+| observation | `pr-8514/31c72e8342cb05fc60860d7fcec2da60e2e0b9ab/observations/20261118T044048.330838596Z-2539929-0` |
+| verify 판정 | identity `established`, manifest `validated`, requested summaries `partial` |
+| testcase revision | shell: cubrid-testcases-private-ex `c56abd2aaddb` (`tc/pr-8514`), sql_by_cci: cubrid-testcases `4cb13426b7b9` (`tc/pr-8514`) |
+
+### Suite 상태
+
+| Suite | CI 결과 | 수집 상태 | 검증된 개수 |
+| --- | --- | --- | --- |
+| test_medium | pass | completed, summary `validated` | 975개 모두 통과 |
+| test_shell | fail | completed, summary `validated` | 3592개 중 통과 3556, failure 5, error 1, skip 30 |
+| test_sql | fail | `collection_failed` | 없음 |
+| test_sql_by_cci | fail | `job_level_failure` | 없음 |
+
+검증된 shell 실패 6건은 2026-11-13 목록의 shell 6건과 testcase 경로가 같다(`cbrd_25862_cms`, `cbrd_26850`, `cbrd_26861`, `cbrd_26915`, `cbrd_26916`(error), `cbrd_27236_merge`).
+
+### 수집 기록과 진단
+
+- `test_sql`: shard 00–09 원본은 모두 `retained`다. collector가 무결성 오류를 냈다. shard 01 JUnit이 `summary_info`보다 17개 적다(통과 3548 대 3531). 빠진 17개는 `sql/_05_plcsql/_01_testspec/_05_bug_fix/` 아래 `cbrd-27556`, `cbrd-27584`, `cbrd-27633`, `cbrd-27634`, `cbrd-27742`의 케이스다. 2026-11-13 수집과 같은 진단이다.
+- `test_sql_by_cci`: shard 00–08 원본은 `retained`, shard 09는 `failed`(stage `junit`, 소비 0 byte)다. 진단은 "shard 09 has no test_sql_by_cci JUnit XML"이다. 보관된 job 메타데이터에서 shard 09 job의 conclusion은 `cancelled`이고, shard 메타데이터의 `test_rc`는 비어 있다. shard 03, 04, 05, 06, 07 job은 `failure`다. shard 09 job 로그는 수집 중 120초 시간 초과로 받지 못했다.
+- 보관된 `test_sql_by_cci/raw/collect/failed.list`에는 shard 03–07의 20개 경로가 있다. 이 목록은 검증된 요약이 아니므로 판정으로 쓰지 않았다. 경로 이름에 `serial`이나 `oos`는 없다.
+- binary budget: 536870912 byte 중 0 byte 사용. binary 부족으로 빠진 근거는 없다.
+
+### Base 비교
+
+- `cubrid-ci collect-base`는 exit 3, baseline `unavailable`이었다. GitHub가 기록한 PR base는 여전히 `c02f897268`이고, 이 커밋에는 CI 기록이 없다(4개 suite 모두 `not_observed`, 후보 run 없음).
+- 관찰. `feature/oos-merge`의 현재 tip은 `3e541fcf6723` "[CBRD-26357] Merge develop into OOS integration"(2026-11-17)이다. `c02f897268`보다 48커밋 앞선다. 위 원인 분석에서 언급한 engine 커밋 `0afeab0196`(#8403, CMS), `b9825700a4`(CBRD-27762), `4255a337dd`(CBRD-27236)은 모두 이 tip에 들어 있다(`git merge-base --is-ancestor`로 확인).
+- 이 사실만으로는 실패가 풀린다고 판단할 수 없다. 새 base에서 CI를 돌려야 확인된다.
+
+### Testcase 이력
+
+검증된 head 근거가 완전하지 않아 이번에는 이력 조회와 `cubrid-tcr` 확인을 하지 않았다.
+
+### 모르는 것
+
+- `test_sql`과 `test_sql_by_cci`의 검증된 실패 목록과 각 실패의 내용.
+- `test_sql_by_cci` shard 09가 취소된 이유.
+- 이 PR의 변경(`src/query/serial.c`, `src/storage/heap_file.c`)이 sql_by_cci 실패와 관계가 있는지.
+
+### 다음 행동
+
+1. PR branch를 `feature/oos-merge` 현재 tip `3e541fcf6723`으로 rebase하고 CI를 한 번 다시 돌린다. 새 base에는 2026-11-13에 원인으로 추정한 develop 변경이 모두 들어 있다. rebase, push, CI 실행은 별도로 승인받아야 한다.
+2. 새 run이 끝나면 4개 suite를 다시 수집한다. `test_sql_by_cci`가 다시 shard 취소나 JUnit 누락으로 끝나면 같은 run을 다시 돌려 검증된 요약을 얻는다.
+3. `test_sql` shard 01 JUnit 17개 누락은 collector 또는 CI 결과 파일 쪽 후속 과제로 남긴다.
+
+### 근거 파일 (2026-11-18)
+
+- head observation: `cubrid-ci` 데이터 디렉터리의 `github-actions/CUBRID-cubrid/pr-8514/31c72e8342cb05fc60860d7fcec2da60e2e0b9ab/observations/20261118T044048.330838596Z-2539929-0/result.json`
+- 검증된 요약: 같은 head 디렉터리의 `providers/github-actions/runs/43263461440/attempts/1/test_medium/summary.json`, `.../test_shell/summary.json`
+- sql_by_cci 원본: `.../test_sql_by_cci/raw/github/jobs.json`, `.../test_sql_by_cci/raw/shards/09/build.read`, `.../test_sql_by_cci/raw/collect/failed.list`
