@@ -23,3 +23,12 @@
 - 실제 `build.sh dist`의 소스 TGZ와 ZIP, CPack 소스 TGZ를 열어 최상위 `VERSION-DIST`를 확인했습니다. 세 아카이브 모두 파일명과 내부 값이 `11.5.0.2966-5a08fc5`로 일치했습니다.
 - 구현의 Bash와 CPack 설정을 사용하는 축소 프로젝트에서 Ninja의 부분 빌드와 A→B→A 회귀, Make의 `preinstall` 중 HEAD 변경, Git 없는 소스 패키지 입력과 in-source clean을 확인했습니다. Make 엔진 전체 빌드, Windows, 원격 CI는 이번 검증에 포함되지 않았습니다.
 - #8606의 reftable 감지 누락과 Make 패키지 불일치는 당시 PR head의 CMake 버전 경로를 적용한 Linux 축소 프로젝트에서 재현했습니다. 이 결과는 이번 Draft head의 검증 결과와 별개입니다.
+
+## 발행 기록
+
+- 사용자가 본문과 제안한 발행 범위를 채팅에서 `yes`로 확인했습니다.
+- 발행 시도 시각은 2026-11-18T18:25:37+09:00입니다.
+- 확인한 본문 SHA-256은 `9484dba3341f0d7c496b8f3f89c0e6bbae9b0fa886a429f707900783f804b2cf`입니다. 포크의 소스 브랜치 HEAD는 `5a08fc550c41ffbb00b564f2f6dd5f90c093f1a1`와 일치했습니다.
+- 2026-11-18T09:25:39Z에 [Draft PR #8617](https://github.com/CUBRID/cubrid/pull/8617)을 생성했습니다.
+- GitHub에서 Open·Draft 상태, develop base, 포크 source 브랜치와 SOURCE_COMMIT, 제목, 담당자 vimkim을 확인했습니다.
+- GitHub 본문과 검토 파일은 바이트 단위로 일치했습니다. SHA-256은 9484dba3341f0d7c496b8f3f89c0e6bbae9b0fa886a429f707900783f804b2cf입니다.
