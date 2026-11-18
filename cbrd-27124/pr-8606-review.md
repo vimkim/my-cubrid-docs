@@ -2,7 +2,7 @@
 
 The version refresh is worth fixing. An ordinary incremental build at the merge base can report an earlier commit even after Git advances on the same branch. The PR fixes that common case on Ninja and Unix Makefiles. It also introduces a way for Make-based packaging to label an archive with a different commit from the binary it contains.
 
-**Verdict `changes-required`.** Follow-up review is required on the packaging path and the Git cases below. A focused CMake module is the smallest maintainable revision. A build-time Git query is a stronger design when the engine, bundled CCI, and CPack consume the same build version.
+**Verdict `changes-required`.** For the Linux build, calculate the version at build time and use that version for the engine, bundled CCI, and CPack. This is the preferred revision of PR 8606. The package entry point must finish building before CPack reads the version.
 
 ## Scope and necessity
 
@@ -32,13 +32,15 @@ When running Git against another repository, clear Git-local environment variabl
 
 ## Design recommendation
 
+Have a build target resolve HEAD to a full commit ID before compiling a version consumer. Use that ID for the count and abbreviated hash. On an unchanged checkout, check Git and keep the generated files as they are. On a new commit, update only the files that carry the version. This removes the need to track loose refs, packed refs, reflogs, or reftable paths. Attach the target to the engine targets that compile `release_string.c` and the bundled CCI targets. Preserve the explicit version path for `VERSION` and `VERSION-DIST`.
+
+Use a small `cmake -P` script if CMake is the only caller. A POSIX shell helper works on Linux and makes sense if `build.sh` needs to share the Git query and count formatting. Keep generated-file rules and target ordering in CMake. [Current shell version lookup](https://github.com/CUBRID/cubrid/blob/85290eb56965d46fc5a00402a01c13c146d271d0/build.sh#L123-L149)
+
+Build the artifacts before CPack initializes and pass it the version from that build. The generated `package` target already enforces that order in the tested build. For binary packages, standalone `build.sh dist` must build first or reject stale artifacts before invoking CPack. Any install step that rebuilds during packaging must use the same version that CPack read. [CPack configuration](https://cmake.org/cmake/help/v3.21/manual/cpack.1.html)
+
+The prototype generated a header and a version file and demonstrated the dependency on a named executable target. It refreshed a reftable linked worktree with reflogs off on Ninja and Make. It also picked up an external ref move, verified the archive file name and the executable extracted from it agreed after running the `package` target, and preserved header mtime with zero recompiles on the next build at the same HEAD. The prototype cached the count by commit ID. If count freshness across `git fetch --unshallow` is part of the contract, production needs to account for the changed shallow boundary in its cache or recompute the count. [Build header and CCI](https://github.com/CUBRID/cubrid/blob/85290eb56965d46fc5a00402a01c13c146d271d0/CMakeLists.txt#L861-L878), [CMake custom target and byproducts](https://cmake.org/cmake/help/v3.21/command/add_custom_target.html)
+
 If this PR keeps configure-time invalidation, extract the Git path lookup and dependency registration into `cmake/TrackGitRevision.cmake`. The same ticket's earlier PR 8298 already used that module layout. Keep the pack and ref edge cases covered by small repeatable tests. The module can use `GIT_EXECUTABLE` from `FindGit` and register `CMAKE_CONFIGURE_DEPENDS` directly. Moving only the watch logic into a shell script leaves CMake responsible for dependency registration and creates an interface for returning the path list. Preserve explicit `VERSION` and `VERSION-DIST` handling. [Earlier CMake module](https://github.com/vimkim/cubrid/blob/0d2a76e60f944be0ababe9c466766c553189fcda/cmake/TrackGitRevision.cmake), [CMake configure dependencies](https://cmake.org/cmake/help/v3.21/prop_dir/CMAKE_CONFIGURE_DEPENDS.html)
-
-For the build-time design, a small `cmake -P` script can read Git and write the version files. A POSIX shell helper is also viable on Linux. If `build.sh` continues calculating the version separately, a shared shell helper can give both entry points one implementation for reading Git and formatting the count. Keep target dependencies, generated files, and packaging order in CMake. [Current shell version lookup](https://github.com/CUBRID/cubrid/blob/85290eb56965d46fc5a00402a01c13c146d271d0/build.sh#L123-L149)
-
-Have the build target resolve the version before compilation. Resolve HEAD to a full commit ID once and use that ID for the count and abbreviation. Update generated version files only when their content changes. Attach the target to every version consumer, including the engine targets with `release_string.c` and the bundled CCI targets. Pass the same build version to CPack before it initializes. A package operation after a partial build needs a full build or a freshness check. CPack should use the version of the packaged artifacts.
-
-The prototype generated a header and a version file and demonstrated the dependency on a named executable target. It refreshed a reftable linked worktree with reflogs off on Ninja and Make. It also picked up an external ref move, packaged the matching commit through the `package` target, and preserved header mtime with zero recompiles on the next build at the same HEAD. The prototype cached the count by commit ID. If count freshness across `git fetch --unshallow` is part of the contract, production needs to account for the changed shallow boundary in its cache or recompute the count. [Build header and CCI](https://github.com/CUBRID/cubrid/blob/85290eb56965d46fc5a00402a01c13c146d271d0/CMakeLists.txt#L861-L878), [CMake custom target and byproducts](https://cmake.org/cmake/help/v3.21/command/add_custom_target.html)
 
 ## Verification and limits
 
@@ -55,6 +57,6 @@ Linux x86-64, Git 2.47.3, CMake 3.26.5, Ninja 1.10.2, and GNU Make 4.3. The prim
 | Commit between separate count and hash queries | Both revisions can persist a mixed version. This pre-existing issue supports deriving both fields from one resolved commit. |
 | Integration coverage | The CCI libraries and CUBRID engine consumers were traced from source. Verify them with the Linux packaging path on a revised PR. |
 
-Local evidence entry points are `evidence/check_watch.py`, `evidence/check_snapshot.py`, and `specialist/probe.py` in the review run. Run the first two scripts from a checkout that contains the pinned revisions. The specialist script's `reftable_no_reflog`, `foreign_hook`, and `race` cases take `base` or `head`. All reported outcomes are from those runs. The suite does not measure time or cache performance.
+Local evidence entry points are `evidence/check_watch.py`, `evidence/check_snapshot.py`, and `specialist/probe.py` in the review run. Run the first two scripts from a checkout that contains the pinned revisions. The specialist script's `reftable_no_reflog`, `foreign_hook`, and `race` cases take `base` or `head`. All reported outcomes are from those runs. The prototype showed which work the build can skip. It did not measure elapsed time or cache performance. The unchanged build still starts a version check.
 
 The review allocated one bounded specialist and coordinator replay. There was no hard budget or per-agent usage telemetry. Follow-up on the revised PR should verify CV-1 through CV-3, then exercise an engine binary, bundled CCI, and CPack on Linux.
