@@ -60,3 +60,12 @@ Disposition: nothing to fix.
 Changes: lower bound raised to the automatic target after an independent review reproduced the CBRD-28035 serial leak with a 64B threshold; interim performance evidence from the CBRD-27788 upper-bound build; CS INSERT and CS loaddb placement check.
 
 Proposed operations: push `44dab49185` to `vk/CBRD-28062-oos-param` (fast-forward); post `/run all`, which cancels the running gha-ci run 44469955870 on the old head; update the PR body; integrate this docs branch and cubrid-oos-context branch `CBRD-28062-lower-bound` into their `main` and push.
+
+### Revision 2 execution record
+
+- 2026-11-19: user confirmed operations 1-4 ("1. yes 2. yes 3. yes 4. yes").
+- `vk/CBRD-28062-oos-param` fast-forwarded `49d8df0dd5..44dab49185`; remote head equals `SOURCE_COMMIT`.
+- Docs `main` pushed at `fc4c933`; cubrid-oos-context `main` pushed at `bcb834f`.
+- PR #8632 body updated; decoded body equals `pr-body.md`. Title and draft status unchanged.
+- TC baseline check failed after the base moved to `71993ddb63` (new TCs pair with engine fixes the head lacks). User chose to run as is.
+- `/run all` posted at 2026-11-19T06:38:46Z (https://github.com/CUBRID/cubrid/pull/8632#issuecomment-7001812055); gha-ci run 44473683521 picked it up; previous run 44469955870 cancelled. cubrid-ci-watch request 73.
