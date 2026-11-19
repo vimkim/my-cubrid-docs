@@ -24,8 +24,8 @@ https://jira.cubrid.org/browse/CBRD-28073
 - 이 PR 이후 새 DB에서는 `_db_serial` 행이 OOS를 갖지 않는다. 이전 `feature/oos-merge` 빌드로 NEXT VALUE를 실행해 comment가 OOS로 옮겨진 DB에서는 그 행이 OOS 참조를 유지하고, 그 행의 NEXT VALUE는 HA에서 이전과 같이 적용되지 않는다(이 PR 전에도 같음). 해당 serial에 첫 NEXT VALUE 전에 `ALTER SERIAL <name> COMMENT '<기존 comment>'`를 실행하면 행이 inline으로 바뀌고 이전 chain은 회수된다. 양쪽 노드에서 확인했다.
 - 알려진 한계: 4K page에서 행이 약 1008바이트를 넘는 serial(긴 comment)은 이제 inline으로 남으므로, `_db_serial` heap이 `unfill_factor≈0`으로 만들어졌거나 page 예비 공간이 소진된 경우 `current_val`이 커질 때 같은 슬롯에 들어가지 못해 NEXT VALUE가 실패할 수 있다. 이전 코드는 이 경우를 redo 전용 로그 아래 새 OOS chain으로 옮겨 피했는데, 그것이 이 PR이 고치는 버그다. 같은 슬롯 갱신의 공간 부족 실패 자체는 작은 행에서도 develop부터 있던 문제다.
 - 리뷰에서 함께 발견한, 이 PR과 무관한 기존 결함은 별도 이슈로 다룬다.
-  - NEXT VALUE가 공간 확인 전에 redo를 기록한다. release 빌드에서 갱신이 실패한 뒤 크래시가 나면 재시작 시 redo가 실패한다.
-  - relocated 상태의 serial 행을 NEXT VALUE가 home 슬롯에 덮어쓴다.
+  - [CBRD-28271](https://jira.cubrid.org/browse/CBRD-28271): NEXT VALUE가 공간 확인 전에 redo를 기록한다. release 빌드에서 갱신이 실패한 뒤 크래시가 나면 재시작 시 redo가 실패한다. develop에도 있다.
+  - [CBRD-28272](https://jira.cubrid.org/browse/CBRD-28272): relocated 상태의 serial 행을 NEXT VALUE가 home 슬롯에 덮어쓴다. release/11.4에도 있다.
 - 검증은 debug 빌드에서 했다. release 빌드는 CI로 확인한다.
 
 ### Test Plan
