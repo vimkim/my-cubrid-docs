@@ -46,3 +46,17 @@ Disposition: nothing to fix.
 - 2026-11-19: docs `main` pushed at `763b528`.
 - 2026-11-19: `vk/CBRD-28062-oos-param` pushed; remote head equals `SOURCE_COMMIT`.
 - 2026-11-19: draft PR https://github.com/CUBRID/cubrid/pull/8632 created (base `feature/oos-merge`, assignee `vimkim`). Decoded body equals `pr-body.md` (1,706 characters).
+
+## Revision 2 (2026-11-19, not yet published)
+
+| Field | Value |
+| --- | --- |
+| SOURCE_COMMIT | `44dab49185` (full: 44dab49185a64f2417b7b8d1ae7d9d4e33335654) |
+| Observed remote head | `49d8df0dd5` on `vk/CBRD-28062-oos-param` |
+| Operation | update PR #8632 body (title unchanged, stays draft until gha-ci is green) |
+| Original GitHub body SHA-256 | `e220c6a6536895344683cf550f623d1212ff56f6de1ecfbd579b8d3fc5451e46` |
+| Body SHA-256 at review | `c5151c67fb0a25cfeda173cc6e7409c67c37e781c6efc9690d71a970e27778e7` |
+
+Changes: lower bound raised to the automatic target after an independent review reproduced the CBRD-28035 serial leak with a 64B threshold; interim performance evidence from the CBRD-27788 upper-bound build; CS INSERT and CS loaddb placement check.
+
+Proposed operations: push `44dab49185` to `vk/CBRD-28062-oos-param` (fast-forward); post `/run all`, which cancels the running gha-ci run 44469955870 on the old head; update the PR body; integrate this docs branch and cubrid-oos-context branch `CBRD-28062-lower-bound` into their `main` and push.
