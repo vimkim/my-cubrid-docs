@@ -156,14 +156,14 @@ OOS 값을 회수하는 시점을 삭제 확정 뒤로 바꾼 [#8434](https://gi
 | hornetmj [R3](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4399899312) | 새 OOS 페이지가 필요한 INSERT가 파일 전체를 훑는 sweep. 재시작 직후 첫 INSERT 0.23~0.25 s | [답글](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4585762624)에서 [CBRD-27872](https://jira.cubrid.org/browse/CBRD-27872)로 추적. #8434 병합 뒤에는 빈 페이지 후보 집합을 먼저 보고, 파일이 "모름"으로 표시된 경우에만 순회한다(코드 주석 기준). 순회 자체를 없애는 [#8493](https://github.com/CUBRID/cubrid/pull/8493)(CBRD-27925)은 draft | 측정하지 않음 |
 | hornetmj [R4](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4409283403) | 재시작 뒤 빈 공간 정보(bestspace)가 사라져 OOS 파일이 커짐 | 리뷰어가 "bestspace redesign 안정화 후 적용"을 밝혔다. [CBRD-27213](https://jira.cubrid.org/browse/CBRD-27213)에서 추적 | 후속 |
 
-hornetmj의 리뷰 상태는 COMMENTED이며 승인 기록은 없다. PR의 reviewDecision은 APPROVED다(2026-11-19 조회).
+hornetmj의 리뷰 상태는 COMMENTED이며 승인 기록은 없다. PR의 reviewDecision은 APPROVED(shparkcubrid), 머지 가능 상태는 MERGEABLE이다(2026-11-19, head `71993ddb63` 조회).
 
 ## 6. 측정 head와 현재 head의 차이
 
 최종 측정 head는 `2c38bef05b`다. 여기에는 PR #8299(일반 행 CPU), #8348, #8416(STORAGE FORCE_INLINE), #8434, develop을 거친 #8495, 그리고 CBRD-28194 vacuum 수정(`2c38bef05b` 자체)이 들어 있다. 4.1절과 4.4절의 결론은 이 head의 측정이다. 그 뒤의 변경은 다음과 같다.
 
-- **현재 PR head `e262e79fab`**(2026-11-19 조회): `2c38bef05b`에 develop `2e66081fd2`를 합친 것이다. 들어온 develop 커밋 4개는 broker CAS의 schema info, IN 서브쿼리 rewrite 조건, memmon 합계, cubridmanager submodule이다. heap, OOS, vacuum, 로그 코드는 바꾸지 않았다(diffstat 확인).
-- **아직 push하지 않은 로컬 커밋**: CBRD-28254 수정 `6be0dc083e`와 develop `86b3c49c10` 재동기화 `71993ddb63`이다. CBRD-28254는 다중 컬럼 인덱스 키를 만들 때 행이 옛 representation이면 그 속성 위치로 찾도록 고친다. 행이 현재 representation이면 representation id 비교 한 번만 더한다. 측정한 테이블은 단일 컬럼 PK만 있어서 이 경로를 지나지 않는다. 재동기화로 들어온 develop 변경은 restoredb 페이지 포맷, SA compactdb, `NTH_VALUE`다.
+- **develop 동기화 `e262e79fab`**: `2c38bef05b`에 develop `2e66081fd2`를 합친 것이다. 들어온 develop 커밋 4개는 broker CAS의 schema info, IN 서브쿼리 rewrite 조건, memmon 합계, cubridmanager submodule이다. heap, OOS, vacuum, 로그 코드는 바꾸지 않았다(diffstat 확인).
+- **현재 PR head `71993ddb63`**(push됨, 2026-11-19 조회): `e262e79fab` 위에 CBRD-28254 수정 `6be0dc083e`를 얹고 develop `86b3c49c10`을 다시 합친 것이다. 이 head의 전체 CI [run 44470761153](https://github.com/CUBRID/cubrid/actions/runs/44470761153)은 조회 시 진행 중이었다. CBRD-28254는 다중 컬럼 인덱스 키를 만들 때 행이 옛 representation이면 그 속성 위치로 찾도록 고친다. 행이 현재 representation이면 representation id 비교 한 번만 더한다. 측정한 테이블은 단일 컬럼 PK만 있어서 이 경로를 지나지 않는다. 재동기화로 들어온 develop 변경은 restoredb 페이지 포맷, SA compactdb, `NTH_VALUE`다.
 - **판단(추정, 재측정하지 않음):** 위 변경은 측정한 scan·UPDATE·OOS 읽기 경로를 바꾸지 않으므로 성능 결론을 바꾸지 않는다고 본다. 다중 컬럼 인덱스가 있는 테이블의 INSERT·UPDATE·DELETE는 재지 않았다.
 - **4.2·4.3·4.5절은 `67220b7e2`의 측정이다.** 그 뒤에 들어온 #8348, #8434, CBRD-28194는 vacuum과 회수 경로를 바꿨고, #8416은 컬럼 STORAGE 선택지를 더했다. 이 변경들은 OOS 값을 읽는 경로를 바꾸지 않으므로 Q1~Q5와 sweep 결론은 유지된다고 본다(추정, 최종 head에서 재측정하지 않음. #8416이 기본 저장 위치를 바꾸지 않는지도 따로 확인하지 않았다).
 

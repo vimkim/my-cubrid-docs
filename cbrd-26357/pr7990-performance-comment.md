@@ -7,4 +7,4 @@ PR #7990의 develop 머지 전 성능 평가를 기존 측정으로 정리했습
 - **커밋 지연:** 행 하나 UPDATE+COMMIT 3000회의 `fdatasync`는 develop 3011회, PR 3006회로 #8434의 추가 flush는 없습니다.
 - **UPDATE 재기록:** 작은 컬럼 UPDATE의 손해는 [CBRD-27230](https://jira.cubrid.org/browse/CBRD-27230)(#8559)으로 guava에 포함하겠습니다.
 
-`2c38bef05b` 이후의 develop 동기화와 CBRD-28254 수정은 측정한 경로를 바꾸지 않는다고 판단했으며 다시 재지는 않았습니다. 측정하지 않은 항목과 한계는 보고서 7절에 있습니다.
+측정 head `2c38bef05b`와 현재 head `71993ddb63`의 차이(develop 동기화 2번과 CBRD-28254 수정)는 측정한 경로를 바꾸지 않는다고 판단했습니다. 추정이며 현재 head에서 다시 재지는 않았습니다. 측정하지 않은 항목과 한계는 보고서 7절에 있습니다.
