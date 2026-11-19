@@ -19,7 +19,7 @@ https://jira.cubrid.org/browse/CBRD-27841
 ## Remarks
 
 - 호환성: 이전 `feature/oos-merge` 빌드로 만든 DB는 다시 만들어야 합니다. ADR-0008 결정대로 `DISK_STORAGE_FORMAT_REVISION`은 1로 둡니다.
-- 검증(debug 빌드, `9b366302dc`):
+- 검증(debug 빌드). 순서 검사와 CTest는 이 PR의 head에서, 강제 종료 검사는 rebase 전의 같은 패치(base `71993ddb63`)에서 했습니다.
   - 설치한 `libcubrid.so`와 `libcubridsa.so`에서 `RV_fun[]` 144개 항목이 모두 `recv_index == i`이고, 항목 수가 `RV_LAST_LOGID + 1`입니다.
   - 설정한 CTest: 66/66 통과.
   - OOS UPDATE·DELETE를 커밋하고 다른 UPDATE·INSERT는 커밋하지 않은 채 서버를 `kill -9`로 종료한 뒤 재시작했습니다. 데이터가 커밋 상태와 같았습니다. vacuum이 재시작 뒤 `RVOOS_NOTIFY_VACUUM` 200개를 소비해 UPDATE의 옛 OOS chain 400개를 회수했고, DELETE의 chain도 모두 회수했습니다. `checkdb`도 통과했습니다.

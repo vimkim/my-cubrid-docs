@@ -4,7 +4,7 @@
 
 `RVREPL_OOS_DELETE`(140)를 지우고 141~144를 140~143으로 당긴 변경을 검증한 기록이다. 확인할 것은 세 가지다. 남은 recovery index가 `RV_fun[]` 위치와 맞는지, 기존 테스트가 통과하는지, OOS 작업 중 서버가 강제 종료된 뒤 복구와 vacuum 회수가 정상인지다.
 
-- 대상: `CBRD-27841-drop-repl-oos-delete` `9b366302dc`, base `feature/oos-merge` `71993ddb63`
+- 대상: `CBRD-27841-drop-repl-oos-delete` `1d86f1d31b`, base `feature/oos-merge` `d25c9e8d20`. 강제 종료 검사는 rebase 전의 같은 패치 `9b366302dc`(base `71993ddb63`)에서 했다. 그 사이 base에 들어온 변경은 [#8638](https://github.com/CUBRID/cubrid/pull/8638)의 diagdb 문자열 한 줄뿐이다.
 - 빌드: debug(GCC), 2026-11-19 Asia/Seoul
 
 ## Implementation
@@ -45,8 +45,8 @@ oos_crash_recovery.sh <전용 DB 이름> <결과 디렉터리>
 | --- | --- |
 | 빌드와 설치(debug) | 성공 |
 | `RV_fun[]` 순서, `libcubrid.so` | PASS. 144개 항목, `RV_LAST_LOGID` 143, 불일치 0 |
-| `RV_fun[]` 순서, `libcubridsa.so` | PASS. 같은 결과 |
-| 설정한 CTest(`ctest --test-dir <build> --output-on-failure`) | 66/66 통과, 384초 |
+| `RV_fun[]` 순서, `libcubridsa.so` | PASS. 같은 결과. 두 라이브러리 모두 rebase 전후에 검사 |
+| 설정한 CTest(`ctest --test-dir <build> --output-on-failure`) | 66/66 통과. rebase 전 `9b366302dc` 384초, rebase 뒤 `1d86f1d31b` 335초 |
 | 강제 종료 후 복구 | PASS. 데이터 일치, vacuum 회수, `checkdb -S` 종료 코드 0 |
 | HA 복제 smoke test | 하지 않음 |
 

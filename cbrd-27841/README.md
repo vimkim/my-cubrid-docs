@@ -1,6 +1,6 @@
 # CBRD-27841 unused OOS recovery index
 
-Remove the unused recovery index `RVREPL_OOS_DELETE` (140) before [PR 7990](https://github.com/CUBRID/cubrid/pull/7990) merges, and keep `RVOOS_NOTIFY_VACUUM`, which [#8434](https://github.com/CUBRID/cubrid/pull/8434) made live. Tracked as [CBRD-27841](https://jira.cubrid.org/browse/CBRD-27841). Current source is `9b366302dc` on `feature/oos-merge` `71993ddb63`. The scope came from review [r4409612618](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4409612618).
+Remove the unused recovery index `RVREPL_OOS_DELETE` (140) before [PR 7990](https://github.com/CUBRID/cubrid/pull/7990) merges, and keep `RVOOS_NOTIFY_VACUUM`, which [#8434](https://github.com/CUBRID/cubrid/pull/8434) made live. Tracked as [CBRD-27841](https://jira.cubrid.org/browse/CBRD-27841). Current source is `1d86f1d31b` on `feature/oos-merge` `d25c9e8d20`. The scope came from review [r4409612618](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4409612618).
 
 History: the first attempt, [PR 8347](https://github.com/CUBRID/cubrid/pull/8347) (sources `eac70c7` and `e523d4f`), removed `RVOOS_NOTIFY_VACUUM` and closed unmerged on 2026-11-05. Its files below are kept as a record and are not reused.
 
