@@ -70,11 +70,16 @@ processes. F1 is the consumer that depended on it.
   2. A second debug check fired on unfix: `page_buffer.c:7388 LSA_ISNULL(oldest_unflush_lsa) || dirty`. The page holds the
      LSA of the failed record but is not dirty.
   3. I killed the process after later commits flushed the log, before the shutdown checkpoint.
-  4. The next open runs recovery. Redo applies the logged update, and it fails in `heap_update_physical`
-     (`heap_file.c:26324`, debug abort).
-  - In a release build that path returns an error to `heap_rv_undoredo_update` (19730), and `log_rv_redo_record` calls
-    `logpb_fatal_error` (log_recovery.c:465-475). So every restart fails. That last step is source-level (level 3).
-    My gdb rerun of the release restart was aborted unfinished.
+  4. The next plain open runs recovery. Redo applies the logged update, and `spage_update` fails in
+     `heap_update_physical` (`heap_file.c:26324`, debug abort). I reproduced this restart failure 4 times.
+     Backtrace: `heap_rv_undoredo_update` (19728) ← `heap_rv_redo_update` ← `log_rv_redo_record_sync`
+     (`log_recovery_redo.hpp:664`) ← `log_recovery_redo` ← `log_recovery`.
+  - A release build returns `ER_FAILED` from `heap_update_physical` (26335) and from `heap_rv_undoredo_update`
+    (19730-19731). `log_rv_redo_record_sync` then calls `logpb_fatal_error` (`log_recovery_redo.hpp:663-671`). Every
+    restart replays the same record, so the database cannot restart. This last step is source-level (level 3).
+  - The debug binary cannot emulate this step. The compiler drops the code after the unconditional
+    `assert (false)` (`__assert_fail` never returns), so a gdb jump past it lands on the success path. An apparently
+    successful restart under gdb was that artifact, not evidence.
 - **Suggested fix:**
   - Make `serial_update_serial_object` keep the stored layout: update the fixed-size columns in place, or fall back to
     `heap_update` when the new row does not fit.
@@ -155,5 +160,6 @@ processes. F1 is the consumer that depended on it.
   differ, but every process validates its own value.
 - I replayed F1, F2, F3, the 8K bounds, and the 16K upper-bound placement myself.
 - The run was bounded with no hard cap. Agents used about 120 (R1), 143 (R2) and 85 (R3) tool calls.
-- Not run: a real HA pair, a release build, and a completed gdb emulation of the release restart for F1.
+- Not run: a real HA pair and a release build. The final release-only step of F1 (`logpb_fatal_error` on restart) is
+  source-level, because the debug binary cannot emulate it.
 - Raw evidence stays in the local session scratchpad and is not retained.
