@@ -1,4 +1,4 @@
-# CI 분석: PR #8514 (run 43263461440, run 44245545024)
+# CI 분석: PR #8514 (run 43263461440, run 44245545024, run 44522105929)
 
 ## 요약
 
@@ -269,3 +269,107 @@ head 근거가 완전하지 않아 정식 이력 분석(section 3b)은 하지 �
 - test_sql 원본: `.../test_sql/raw/collect/failed.list`, `.../test_sql/raw/shards/01/summary_info`
 - baseline 시도: `github-actions/CUBRID-cubrid/commits/3e541fcf6723cd81867700659d695af8a5bc1439/`
 - 참고 비교: `github-actions/CUBRID-cubrid/pr-8434/ca1c1176fca69825fc870b0e9d81d80cb5e59d77/providers/github-actions/runs/44081723670/`, `.../runs/44236902717/`
+
+## 리뷰 수정 후 재실행: 2026-11-19, head `8e9d71fda0`, run 44522105929
+
+> **경고.** 이번 수집도 전체 검증이 끝나지 않았다(`observation: incomplete`, `report_mode: warning`). `test_sql`이 이전과 같은 collector 무결성 오류로 검증된 요약을 갖지 못했다. 그래서 이 절은 회귀나 원인을 결론으로 내리지 않는다. shell, medium, sql_by_cci의 요약은 검증됐고, merge base의 검증된 요약과 비교했다.
+
+### 요약
+
+- 검증된 실패는 shell 2건이다. `bug_bts_8907.sh`(shard 05)와 `cbrd_27780.sh`(shard 06)다. medium(975개)과 sql_by_cci(17836개)는 모두 통과했다. test_sql은 CI 결과가 SUCCESS지만 collector가 검증하지 못했다.
+- merge base `8c478d8559`(PR #7990 head)의 run 44511473106에서는 두 testcase가 통과했다. 두 testcase 파일은 head와 base의 testcase revision 사이에서 바뀌지 않았다. 그래서 두 건 모두 "head에만 있음"이다. 다만 head와 base 모두 한 번씩만 실행됐다.
+- `bug_bts_8907`은 server를 재시작하는 동안 CCI 재연결을 보는 타이밍 테스트다. develop PR 3건을 포함해 2026-11-16~17에 5번 실패한 기록이 있다. serial을 쓰지 않는다. 이 PR과 관련될 가능성은 낮다(신뢰도 중간).
+- `cbrd_27780`은 TDE 테스트다. 2026-11-18의 TC 수정(`ecbd54bbd`, `s1_heap`을 `STORAGE FORCE_INLINE`으로 바꿈) 뒤로 실패 항목이 바뀌었다. 이번에는 2번과 4번에서 암호화 테이블 `s1_heap`의 marker `S1HEAP`가 data volume에서 평문으로 1번 발견됐다. 이 PR과 관련될 가능성은 낮지만 head에서만 관찰됐으므로 확인이 필요하다(신뢰도 낮음).
+
+### 대상
+
+| 항목 | 값 |
+| --- | --- |
+| PR | https://github.com/CUBRID/cubrid/pull/8514 |
+| head | `8e9d71fda07687ca5c5c28af92d869658a527dec` |
+| base | `feature/oos-merge` `8c478d8559905330bc1a60a05dbebb273b07a16c` (merge base와 같음) |
+| run | https://github.com/CUBRID/cubrid/actions/runs/44522105929 attempt 1 (`/run all`) |
+| 요청 suite | `test_medium`, `test_shell`, `test_sql`, `test_sql_by_cci` (head에 `gha-ci: test_sql_by_cci` status가 있음) |
+| 수집 | 2026-11-19T16:15:24Z, `cubrid-ci 0.2.0 (00205d576de0, release)`, collect exit 4, verify exit 3 |
+| head observation | `pr-8514/8e9d71fda07687ca5c5c28af92d869658a527dec/observations/20261119T161517.228527912Z-2121289-0` |
+| verify 판정 | identity `established`, observation `incomplete`, manifest `validated`, requested summaries `partial` |
+| testcase revision | shell: cubrid-testcases-private-ex `b4fac751338a` (`tc/pr-8514`), sql_by_cci: cubrid-testcases `1a02bb474db8` (`tc/pr-8514`) |
+| engine 빌드 | shell shard 05, 06의 `build.read`가 `sha=8e9d71fda0`, debug |
+
+### Suite 상태
+
+| Suite | CI 결과 | 수집 상태 | head (tests/pass/fail/error/skip) | base run 44511473106 |
+| --- | --- | --- | --- | --- |
+| test_medium | pass | completed, `validated` | 975/975/0/0/0 | 975/975/0/0/0 |
+| test_shell | fail | completed, `validated` | 3652/3620/2/0/30 | 3652/3622/0/0/30 |
+| test_sql | pass | `collection_failed` | 없음 | `collection_failed` |
+| test_sql_by_cci | pass | completed, `validated` | 17836/17836/0/0/0 | 17836/17836/0/0/0 |
+
+### 실패 목록
+
+| Suite | Testcase | shard | 증상 | base 비교 | `cubrid-tcr` | PR 관련성 |
+| --- | --- | --- | --- | --- | --- | --- |
+| test_shell | `shell/_06_issues/_12_2h/bug_bts_8907/cases/bug_bts_8907.sh` | 05 | NOK 2: server 재시작 뒤 `cci_execute fail: -224`, 이어서 `cci_prepare fail: -224`가 반복되고 다시 연결되지 않음 | additional_on_head | `no_match` | unlikely, 신뢰도 중간 |
+| test_shell | `shell/_06_issues/_26_2h/cbrd_27780/cases/cbrd_27780.sh` | 06 | NOK 2, NOK 4: "found in plaintext in the data volumes: S1HEAP=1" | additional_on_head | `no_match` | unlikely, 신뢰도 낮음 |
+
+- 개수: head 실패 2건, base에서도 관찰 0건, head에만 있음 2건, 비교 불가 0건, base에만 있음 0건. test_sql은 양쪽 모두 검증된 요약이 없어 비교하지 않았다.
+
+### 원인 가설
+
+#### 재시작 타이밍 테스트: `bug_bts_8907`
+
+- 관찰. testcase는 CCI 프로그램이 1초마다 `insert into t1 values(1)`을 실행하는 동안 server를 내렸다가 다시 올린다. 그런 다음 `-677` 오류 뒤에 다시 `prepared`가 나오는지 본다(`bug_bts_8907.sh` 35–51행, revision `b4fac751338a`). 이번에는 `-224` 오류가 났고 다시 연결되지 않았다.
+- 관찰. testcase는 serial, AUTO_INCREMENT, OOS 열을 쓰지 않는다. 테이블은 `t1 (code int)` 하나다.
+- 관찰. Chronicle 기록으로 이 testcase는 통과 480번, 실패 5번이다. 실패는 2026-11-16~17에 있었고, base가 develop인 PR #8561, #8513, #8489와 `feature/oos-merge` PR #8416, PR이 없는 run 1건이다. engine revision이 서로 다르다. 보관된 이전 실패에는 NOK 내용이 없어서 증상이 같은지는 확인하지 못했다.
+- 추론. 다른 branch에서도 실패한 server 재시작 타이밍 문제다. 이 PR이 원인이 아니다.
+- 반증 조건. head에서 이 testcase를 여러 번 실행해 계속 실패하고, base에서는 계속 통과하면 이 가설은 틀렸다.
+- 다음 행동. shard 05를 다시 실행한다. 다시 실패하면 로컬에서 head와 base로 각각 반복 실행한다.
+
+#### 암호화 테이블 marker의 평문 1건: `cbrd_27780`
+
+- 관찰. 실패 항목은 2번("scenario 1: rows written")과 4번("scenario 1: pages deallocated")이다. 두 항목 모두 `S1HEAP=1`이다. 나머지 12개 항목과 checkdb는 OK다. `S1IDX`와 `S1OVF`는 발견되지 않았다.
+- 관찰. 행은 `lpad('S1HEAP' || rownum, 2000, 'S1HEAP')`이다. 그래서 평문 heap page 1개에는 marker가 수백 번 나온다. 이번에 나온 1번은 page 전체가 아닌 작은 조각으로 보인다. 조각이 어디에 있는지는 확인하지 못했다(`count_plain`은 개수만 센다).
+- 관찰. `s1_heap`을 `char(2000) storage force_inline`으로 바꾼 TC 커밋 `ecbd54bbd`(2026-11-18)는 head testcase revision `b4fac751338a`와 base testcase revision `509b01669b3f`에 모두 들어 있다. 두 revision 사이에서 testcase 디렉터리는 같다. base(`8c478d8559`)는 이 testcase를 통과했다. 이전 head(`3960d1b215`, run 44245545024)의 실패 항목(3번, 5번)은 이 TC 수정 전의 것이고 증상도 다르다.
+- 관찰. 이 PR이 바꾸는 engine 코드는 `serial.c`의 두 호출과 `heap_file.c`의 `keep_form` 경로다. `keep_form`은 기본값이 꺼져 있고, 켜는 호출자는 serial 경로뿐이다. testcase는 serial을 쓰지 않는다.
+- 추론. 평문 조각 1개는 page flush나 재사용 시점에 따라 달라지는 잔여 데이터일 가능성이 있다. 이 PR이 원인일 가능성은 낮다. 그러나 head 1번 실패, base 1번 통과뿐이어서 우연인지 결정적인지 구분하지 못한다.
+- 반증 조건. 로컬에서 같은 testcase를 head로 여러 번 실행해 매번 `S1HEAP=1`이 나오고 base에서는 나오지 않으면, 이 PR의 변경이 관련된 것이다.
+- 다음 행동. shard 06을 다시 실행한다. 로컬에서는 `cubrid-test-shell-run`으로 head와 base에서 각각 여러 번 실행한다. 다시 나오면 marker가 들어 있는 volume offset과 page 종류를 찾는다.
+
+### Base 비교
+
+- 첫 `cubrid-ci collect-base`는 GitHub API 오류(run 44511473106 jobs 조회, HTTP 502)로 exit 5였다. 일시적 원격 오류라서 한 번 다시 실행했다. 두 번째 결과는 exit 4, baseline `partial_exact`다.
+- baseline: target `feature/oos-merge` `8c478d8559`, merge base `8c478d8559`, PR #7990 run 44511473106 attempt 1, observation `commits/8c478d8559905330bc1a60a05dbebb273b07a16c/observations/20261119T161838.201167644Z-2439113-0`.
+- medium, shell, sql_by_cci는 base 요약이 검증됐다. test_sql은 head와 같은 무결성 오류로 `collection_failed`다.
+- testcase revision: shell head `b4fac751338a`, base `509b01669b3f`. 두 실패 testcase의 디렉터리는 두 revision 사이에서 차이가 없다(`git diff --stat` 결과 없음). sql_by_cci head `1a02bb474db8`, base `5720a6a24b1a`.
+- 두 run은 engine만 다르다(PR 커밋 5개). 각 testcase를 한 번씩 실행한 결과라서, base 통과가 head 실패의 원인을 정하지는 않는다.
+
+### 수집 기록과 진단
+
+- `test_sql`: 이전 run과 같은 collector 무결성 오류다. shard 01 JUnit이 `summary_info`보다 19개 적다(3557 대 3538). 빠진 testcase는 `sql/_05_plcsql/_01_testspec/_05_bug_fix/` 아래 케이스다. base run에서도 같다. 이 PR과 관계없는 기존 현상이다.
+- binary budget: 536870912 byte 중 0 byte 사용.
+
+### Testcase 이력
+
+- `cubrid-tcc 0.3.0`. 이번 run(44522105929)과 PR #8632 run 44506831955의 shell을 `--revisit-limit 0`으로 sync했다.
+- `bug_bts_8907.sh`: `SEEN_BEFORE`. 실패 occurrence는 38602(run 43831255516, PR #8416, engine `fba87586b8`), 37132(run 43897556424, engine `4b73a5f832`), 36243(run 43999554179, PR #8561, engine `2d42421a8f`), 35649(run 44013281521, PR #8513, engine `185118dde4`), 35530(run 44017820660, PR #8489, engine `3fe5c5c662`)이다. testcase revision과 engine revision이 모두 달라서 flaky라고 단정할 조건(같은 revision에서 통과와 실패)은 채우지 못한다.
+- `cbrd_27780.sh`: `UNKNOWN_HISTORY` (`never_observed`, shell 마지막 sync 2026-11-18T11:28:20Z). shell 근거에는 실패만 남으므로 통과 기록이 없는 것은 안정성에 대해 아무것도 말하지 않는다.
+- `cubrid-tcr check`: 두 건 모두 `no_match`다.
+
+### 모르는 것
+
+- `cbrd_27780`의 `S1HEAP` 조각이 들어 있는 volume, page 종류, 반복 여부.
+- `bug_bts_8907`의 이전 실패가 같은 `-224` 증상이었는지.
+- test_sql의 검증된 실패 목록. CI 결과는 SUCCESS다.
+
+### 다음 행동
+
+1. 실패한 shell shard 05, 06만 다시 실행한다(`cubrid-ci-trigger`, 실패 shard만).
+2. `cbrd_27780`이 다시 실패하면 로컬에서 head와 base로 반복 실행하고 marker 위치를 찾는다. 결과에 따라 engine 이슈 또는 TC 수정으로 나눈다.
+3. test_sql shard 01 JUnit 누락은 이전과 같이 collector 또는 CI 결과 파일 쪽 후속 과제다.
+
+### 근거 파일 (2026-11-19, head `8e9d71fda0`)
+
+- head observation: `cubrid-ci` 데이터 디렉터리의 `github-actions/CUBRID-cubrid/pr-8514/8e9d71fda07687ca5c5c28af92d869658a527dec/observations/20261119T161517.228527912Z-2121289-0/result.json`
+- 검증된 요약: 같은 head 디렉터리의 `providers/github-actions/runs/44522105929/attempts/1/{test_medium,test_shell,test_sql_by_cci}/summary.json`
+- 실패 내용: `.../test_shell/failures/shell_06_issues_12_2h_bug_bts_8907_cases_bug_bts_8907_sh-0e7a776ddd/`, `.../test_shell/failures/shell_06_issues_26_2h_cbrd_27780_cases_cbrd_27780_sh-9b5694291f/`
+- baseline: `github-actions/CUBRID-cubrid/commits/8c478d8559905330bc1a60a05dbebb273b07a16c/providers/github-actions/runs/44511473106/attempts/1/`
