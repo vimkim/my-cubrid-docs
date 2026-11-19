@@ -7,6 +7,7 @@ PRs (draft, created 2026-11-19): develop [CUBRID/cubrid#8642](https://github.com
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
 | [verification.md](verification.md) | Cause, caller audit, why the wait ends, reproduction and latency results for all lines | 2026-11-19 | 2026-11-19 | Evidence linked from every PR body |
+| [ci-analysis.md](ci-analysis.md) | gha-ci run 44496524091 on PR #8642: one test_shell failure (cbrd_27217), PR relation unlikely | 2026-11-19 | 2026-11-19 | Decide whether #8642 can go to review |
 | [pr-body.md](pr-body.md) | develop PR body | 2026-11-19 | 2026-11-19 | Draft PR description for develop |
 | [pr-context.md](pr-context.md) | develop PR metadata, proposed operations, static check disposition | 2026-11-19 | 2026-11-19 | Resume and publish the develop draft |
 | [pr-body-11.4.md](pr-body-11.4.md) | release/11.4 backport PR body | 2026-11-19 | 2026-11-19 | Draft PR description for 11.4 Patch 8 |
