@@ -12,10 +12,11 @@ https://jira.cubrid.org/browse/CBRD-27230
 - 재사용 조건: `locator_attribute_info_force` 의 UPDATE (잠근 최신 버전), MVCC update, partition이 아닌 class, 할당·증가하지 않은 컬럼, 현재 representation의 record. 그 밖에는 기존 경로입니다.
 - 버린 chain 계산은 #8434의 "옛 stub − 새 stub" 그대로이므로, 재사용 chain은 알림에 오르지 않습니다. 이를 debug assert로 확인합니다.
 - 복제: 재사용 컬럼 자리에 `RVREPL_OOS_REUSE` marker를 보냅니다. replica는 자기 최신 버전에서 같은 attribute의 stub을 가져오고, 값 길이가 다르면 오류로 멈춥니다. applylogdb sql.log는 재사용 컬럼을 SET에서 뺍니다.
+- OOS 복제 항목은 바로 뒤 행의 `RVREPL_DATA_UPDATE` 와 함께 기록되거나 함께 버려집니다. savepoint·문장 롤백과 `INCR()` flush mark에서도 행과 갈라지지 않습니다. debug 빌드는 이를 `repl_oos_items_follow_row` assert로 확인합니다.
 
 ## Remarks
 
-- 검증: OOS ctest 69/69 통과 (debug). 새 `test_oos_update_reuse_server` 는 재사용, 혼합 UPDATE, vacuum 회수, snapshot 대기, statement/savepoint/transaction rollback, 재사용 제외 경우를 확인합니다. crash recovery test는 재사용 chain을 포함합니다.
+- 검증: OOS ctest 69/69 통과 (debug). 새 `test_oos_update_reuse_server` 는 재사용, 혼합 UPDATE, vacuum 회수, snapshot 대기, statement/savepoint/transaction rollback, 재사용 제외 경우를 확인합니다. crash recovery test는 재사용 chain을 포함합니다. HA를 켠 상태에서 savepoint 롤백과 `INCR()` 를 섞은 경우도 확인합니다. 수정 전 코드에서는 이 assert가 4개 test에서 걸립니다.
 - 재사용 뒤 in-place 재작성 (ALTER ... CHANGE) 이 공유 chain을 commit 때 회수해도, 그보다 오래된 snapshot은 그 chain을 읽지 못합니다. in-place 재작성이 이전 버전 링크를 지워 그 snapshot은 재사용 여부와 관계없이 행을 보지 못하기 때문입니다 (`OldSnapshotAcrossInPlaceRewriteOfReusedChainMatchesNewChains`, 재사용 없는 경우와 같은 결과로 통과). partition 이동은 MVCC delete라 vacuum이 snapshot을 기다립니다 (`OldSnapshotReadsTheReusedChainAfterTheRowIsDeleted` 통과).
 - 성능 (release, 서버 instruction, 8 KB S5 `UPDATE t SET k = k + 1`): #8434 대비 x0.15 (io) / x0.28 (warm). UPDATE 뒤 OOS 페이지 수는 그대로입니다. 결과 digest와 checksum은 develop과 일치합니다.
 - 설계는 TLA+ 모델로 확인했습니다. 안전 속성 3개와 liveness가 통과했고, 결정을 하나씩 되돌린 통제 9개는 각자 지키는 속성에서 실패합니다.
