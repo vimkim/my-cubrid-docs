@@ -1,0 +1,45 @@
+# CBRD-28062 PR draft context
+
+Not uploaded. Resume metadata for the PR body in `pr-body.md`.
+
+| Field | Value |
+| --- | --- |
+| Ticket | CBRD-28062 |
+| SOURCE_COMMIT | `49d8df0dd5f4f6d6fc3ecd7ff94f87328ed02fc5` |
+| Source | `vimkim/cubrid` branch `CBRD-28062-oos-param` (push remote `vk`) |
+| Observed remote head | branch absent on `vk` (2026-11-19) |
+| Target | `CUBRID/cubrid`, base `feature/oos-merge` (`e262e79fab`, includes PR #8416 squash `c793adf908`) |
+| Operation | create (no existing PR for this head) |
+| Proposed title | `[CBRD-28062] Make the OOS trigger threshold configurable` |
+| Docs branch | `docs/CBRD-28062` → `main` |
+| Body | `CBRD-28062/pr-body.md` |
+
+## Proposed operations
+
+1. Integrate docs branch `docs/CBRD-28062` into `main` (rebase, `--ff-only`) and push `main` to `origin`.
+2. Push source branch `CBRD-28062-oos-param` at `SOURCE_COMMIT` to `vk`.
+3. Create a draft PR: `--repo CUBRID/cubrid --base feature/oos-merge --head vimkim:CBRD-28062-oos-param --assignee vimkim`.
+
+## Authorization
+
+Standing instruction from the user on 2026-11-19 (Asia/Seoul), after the agent listed push + PR, spec merge, and the performance sweep as remaining work: "다 진행하자."
+
+## Static check (cubrid-static-check e262e79fab..49d8df0dd5)
+
+| Check | New |
+| --- | --- |
+| cppcheck (high-signal) | 0 |
+| clang-tidy (bugprone-*) | 0 |
+| PMD CPD duplicates | 0 |
+| lizard | `heap_manager_initialize` CCN 4→7, `heap_oos_inline_target_size` CCN 1→2; below flag thresholds |
+
+Disposition: nothing to fix.
+
+## Verification evidence
+
+- debug_gcc configure/build/install and ctest 67/67 pass at `SOURCE_COMMIT`, run under the worktree's own environment on 2026-11-19.
+- Pre-rebase commit `7ecfbbf1a9` (on PR #8416 head `fba87586b8`) passed native CS/SA INSERT, CS/SA loaddb, and checkdb on 2026-11-16 (Work #982). Rebase changed only the parameter's enum/array position.
+
+## Execution record
+
+- Body fingerprint at review: `e220c6a6536895344683cf550f623d1212ff56f6de1ecfbd579b8d3fc5451e46`
