@@ -69,3 +69,15 @@ Proposed operations: push `44dab49185` to `vk/CBRD-28062-oos-param` (fast-forwar
 - PR #8632 body updated; decoded body equals `pr-body.md`. Title and draft status unchanged.
 - TC baseline check failed after the base moved to `71993ddb63` (new TCs pair with engine fixes the head lacks). User chose to run as is.
 - `/run all` posted at 2026-11-19T06:38:46Z (https://github.com/CUBRID/cubrid/pull/8632#issuecomment-7001812055); gha-ci run 44473683521 picked it up; previous run 44469955870 cancelled. cubrid-ci-watch request 73.
+
+## Revision 3 (2026-11-19, not yet published)
+
+| Field | Value |
+| --- | --- |
+| SOURCE_COMMIT | `2395d5a8f6b2eda8b051bee248a541187630651f` |
+| Observed remote head | `44dab49185` on `vk/CBRD-28062-oos-param` |
+| Operation | update PR #8632 body (title unchanged, stays draft) |
+| Live GitHub body SHA-256 before update | `c5151c67fb0a25cfeda173cc6e7409c67c37e781c6efc9690d71a970e27778e7` |
+| Body SHA-256 at review | `b41dcb06a7a06e2a01cd67abefafa959731d2373c6cbe2d30dfbafd1c3aaea22` |
+
+Changes: systemic review fixes (system classes keep the automatic target; range check skipped during restore; no size units), new test `test_oos_trigger_threshold_system`, 8KiB range, follow-up issues CBRD-28266/28267/28268.
