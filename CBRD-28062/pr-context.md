@@ -43,3 +43,6 @@ Disposition: nothing to fix.
 ## Execution record
 
 - Body fingerprint at review: `e220c6a6536895344683cf550f623d1212ff56f6de1ecfbd579b8d3fc5451e46`
+- 2026-11-19: docs `main` pushed at `763b528`.
+- 2026-11-19: `vk/CBRD-28062-oos-param` pushed; remote head equals `SOURCE_COMMIT`.
+- 2026-11-19: draft PR https://github.com/CUBRID/cubrid/pull/8632 created (base `feature/oos-merge`, assignee `vimkim`). Decoded body equals `pr-body.md` (1,706 characters).
