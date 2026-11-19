@@ -30,6 +30,11 @@ Resume metadata for `pr-body-10.2.md`. This file is not uploaded.
 
 The user confirmed these operations on 2026-11-19.
 
+## Execution record
+
+- 2026-11-19: pushed `CBRD-28065-10.2` to `vk`; the remote head equals `4f0f0c4108`.
+- 2026-11-19: created https://github.com/CUBRID/cubrid/pull/8645 (draft, base `release/10.2`, assignee `vimkim`). The published body equals `pr-body-10.2.md` apart from the trailing newline.
+
 ## Verification build on the preparing host
 
 Debug build with the Makefile generator (as build.sh does) and CMAKE_DISABLE_FIND_PACKAGE_Git=TRUE (.git/HEAD read as a file); host workarounds: AWK='gawk --traditional' for the bundled libgpg-error 1.27, GCRYPT_LIBRARIES pointed at the bundled libgcrypt.a so HAVE_LIBGCRYPT is set, -include string -include cstdlib, -Wl,--allow-multiple-definition. These settings are local to the verification build and are not part of the change.

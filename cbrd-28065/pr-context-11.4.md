@@ -30,6 +30,11 @@ Resume metadata for `pr-body-11.4.md`. This file is not uploaded.
 
 The user confirmed these operations on 2026-11-19.
 
+## Execution record
+
+- 2026-11-19: pushed `CBRD-28065-11.4` to `vk`; the remote head equals `3a9eae91f0`.
+- 2026-11-19: created https://github.com/CUBRID/cubrid/pull/8643 (draft, base `release/11.4`, assignee `vimkim`). The published body equals `pr-body-11.4.md` apart from the trailing newline.
+
 ## Verification build on the preparing host
 
 debug_gcc preset build. These settings are local to the verification build and are not part of the change.

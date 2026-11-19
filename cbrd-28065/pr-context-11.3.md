@@ -30,6 +30,11 @@ Resume metadata for `pr-body-11.3.md`. This file is not uploaded.
 
 The user confirmed these operations on 2026-11-19.
 
+## Execution record
+
+- 2026-11-19: pushed `CBRD-28065-11.3` to `vk`; the remote head equals `663f08e2c3`.
+- 2026-11-19: created https://github.com/CUBRID/cubrid/pull/8644 (draft, base `release/11.3`, assignee `vimkim`). The published body equals `pr-body-11.3.md` apart from the trailing newline.
+
 ## Verification build on the preparing host
 
 Debug build from a plain local clone at the source commit, because the branch's CMakeLists.txt reads .git/HEAD as a file (fails in a linked worktree); host workarounds: -include string (GCC 11 headers), -Wl,--allow-multiple-definition (cubrid_esql link with the host flex), WITH_JDBC=ON with the cubrid-jdbc submodule. These settings are local to the verification build and are not part of the change.

@@ -1,6 +1,8 @@
 # CBRD-28065
 
-A client could receive COMMIT success for a transaction that recovery rolled back after a kill -9, because `logpb_flush_pages` treated `nxio_lsa == flush_lsa` as durable. Fix on develop with backports to release/11.4, release/11.3 and release/10.2. No PR exists yet. The drafts below are unpublished.
+A client could receive COMMIT success for a transaction that recovery rolled back after a kill -9, because `logpb_flush_pages` treated `nxio_lsa == flush_lsa` as durable. Fix on develop with backports to release/11.4, release/11.3 and release/10.2.
+
+PRs (draft, created 2026-11-19): develop [CUBRID/cubrid#8642](https://github.com/CUBRID/cubrid/pull/8642), 11.4 [#8643](https://github.com/CUBRID/cubrid/pull/8643), 11.3 [#8644](https://github.com/CUBRID/cubrid/pull/8644), 10.2 [#8645](https://github.com/CUBRID/cubrid/pull/8645). Regression TC branch: `tc/pr-8642`.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
