@@ -81,3 +81,10 @@ Proposed operations: push `44dab49185` to `vk/CBRD-28062-oos-param` (fast-forwar
 | Body SHA-256 at review | `b41dcb06a7a06e2a01cd67abefafa959731d2373c6cbe2d30dfbafd1c3aaea22` |
 
 Changes: systemic review fixes (system classes keep the automatic target; range check skipped during restore; no size units), new test `test_oos_trigger_threshold_system`, 8KiB range, follow-up issues CBRD-28266/28267/28268.
+
+## Revision 4 (2026-11-19, proposed)
+
+- Source head unchanged: `2395d5a8f6b2eda8b051bee248a541187630651f`. PR state: open, ready for review.
+- Original GitHub body SHA-256 (decoded, no trailing newline): `ab240972249964d1e3ef05ecddace47376765be79f93fffd8e4bde624b3d94a5`.
+- Changes: Implementation states that `str_to_uint64` ignores trailing characters (`8192K` reads as 8192), tracked in CBRD-28267 (Greptile comment 4627581508). Remarks replaces the pending-sweep line with the sweep result and links `CBRD-28062/perf-sweep.md`.
+- Proposed operations: (1) ff-merge docs branch `docs/CBRD-28062-perf-sweep` into my-cubrid-docs `main` and push; (2) update the PR #8632 body only; (3) reply to Greptile comment 4627581508 with the text in the session.

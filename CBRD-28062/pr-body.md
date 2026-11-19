@@ -9,7 +9,7 @@ https://jira.cubrid.org/browse/CBRD-28062
 
 ## Implementation
 
-- 서버 파라미터 `oos_trigger_threshold` 를 추가합니다. 서버 재시작이 필요한 static 파라미터이고, 값은 바이트 정수입니다. 범위가 바이트 단위로 정확해야 해서 `4K` 같은 크기 단위는 받지 않습니다(`paramdump` 도 정확한 바이트를 출력합니다).
+- 서버 파라미터 `oos_trigger_threshold` 를 추가합니다. 서버 재시작이 필요한 static 파라미터이고, 값은 바이트 정수입니다. 범위가 바이트 단위로 정확해야 해서 `K`, `M` 같은 크기 단위는 지원하지 않습니다(`paramdump` 도 정확한 바이트를 출력합니다). 다만 기존 정수 파서 `str_to_uint64` 는 숫자 뒤 문자를 무시하므로 `8192K` 는 8192로 읽힙니다. 모든 정수형 파라미터에 해당하는 기존 동작이라 [CBRD-28267](https://jira.cubrid.org/browse/CBRD-28267) 에서 다룹니다.
   - `prm_Def[]` 의 맨 끝에 추가해서, PL 서버(`SysParam.java`)가 쓰는 기존 파라미터 번호를 바꾸지 않습니다.
 - `heap_oos_inline_target_size()` 는 값이 `0` 이 아니면 사용자 클래스에 그 값을 반환합니다. INSERT·UPDATE의 행 배치 계산과, 클라이언트가 만든 레코드를 다시 배치할지 정하는 판정이 둘 다 이 함수를 쓰므로 두 곳이 같은 임계값을 씁니다.
   - 시스템 클래스(`_db_serial` 등)는 설정과 관계없이 항상 자동 기본값을 씁니다. serial의 NEXT VALUE는 행을 제자리에서 고쳐 씁니다. 임계값을 올리면 OOS로 나갔던 comment가 행 안으로 돌아오면서 행이 커지고, 페이지에 자리가 없으면 갱신이 실패합니다(4KiB 페이지에서 재현). 시스템 클래스를 제외하면 catalog 행의 배치는 이 PR 이전과 같습니다.
@@ -21,8 +21,8 @@ https://jira.cubrid.org/browse/CBRD-28062
 
 ## Remarks
 
-- 기본값은 바꾸지 않습니다. 값별 성능 측정(sweep) 뒤에 별도로 정합니다.
-- 성능 근거: CBRD-27788에서 임계값을 상한으로 고정한 측정용 빌드는 4~16KB 값 전체 읽기 12개 경우가 develop 대비 −0.24%~+0.08%였습니다(명령어 수). 이 PR의 상한 설정과 같은 배치입니다. 이 PR 빌드로 하는 값별 측정은 진행 중이고, 결과는 CBRD-28062에 남깁니다.
+- 기본값은 바꾸지 않습니다. 아래 측정 결과를 보고 별도로 정합니다.
+- 성능 측정: 이 PR 빌드(`49d8df0dd5`)로 임계값 0~16,236을 develop과 비교했습니다(CPU 명령어 수). 4~16KB 값을 전체로 읽는 12개 경우는 기본값(0)에서 2.67~69.81% 더 쓰고, 상한(16,236)에서는 −0.16%~+0.03% 차이입니다. OOS일 때 작은 컬럼만 읽으면 26~60% 덜 쓰지만, 값이 heap에 남는 임계값에서는 이 이득도 사라집니다. 이후 커밋은 측정한 임계값에서 사용자 테이블의 배치를 바꾸지 않습니다. 자세한 결과: [perf-sweep.md](https://github.com/vimkim/my-cubrid-docs/blob/main/CBRD-28062/perf-sweep.md)
 - 컬럼 `STORAGE` 정책(`FORCE_OUTLINE`, `PREFER_INLINE`, `FORCE_INLINE`)과 overflow 거부 판정은 임계값과 관계없이 그대로 적용됩니다. 테스트는 정책을 7,500B에서, overflow 거부를 상한에서 확인합니다.
 - 추가한 테스트:
   - `test_oos_trigger_threshold`: 4KiB·16KiB DB에서 하한과 상한 경계값의 수락과 거부, 잘못된 값과 `4K` 의 시작 거부, `SET SYSTEM PARAMETERS` 거부.
