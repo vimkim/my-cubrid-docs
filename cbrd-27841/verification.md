@@ -2,9 +2,10 @@
 
 ## Purpose
 
-`RVREPL_OOS_DELETE`(140)를 지우고 141~144를 140~143으로 당긴 변경을 검증한 기록이다. 확인할 것은 세 가지다. 남은 recovery index가 `RV_fun[]` 위치와 맞는지, 기존 테스트가 통과하는지, OOS 작업 중 서버가 강제 종료된 뒤 복구와 vacuum 회수가 정상인지다.
+`RVREPL_OOS_DELETE`(140)를 지우고 뒤의 OOS 인덱스(현재 141~145)를 하나씩 당긴 변경을 검증한 기록이다. 확인할 것은 세 가지다. 남은 recovery index가 `RV_fun[]` 위치와 맞는지, 기존 테스트가 통과하는지, OOS 작업 중 서버가 강제 종료된 뒤 복구와 vacuum 회수가 정상인지다.
 
-- 대상: `CBRD-27841-drop-repl-oos-delete` `1d86f1d31b`, base `feature/oos-merge` `d25c9e8d20`. 강제 종료 검사는 rebase 전의 같은 패치 `9b366302dc`(base `71993ddb63`)에서 했다. 그 사이 base에 들어온 변경은 [#8638](https://github.com/CUBRID/cubrid/pull/8638)의 diagdb 문자열 한 줄뿐이다.
+- 대상: `CBRD-27841-drop-repl-oos-delete` `4ee2bc4ebb`, base `feature/oos-merge` `b43275e944`([#8559](https://github.com/CUBRID/cubrid/pull/8559) 병합 뒤). 이 head는 `RVREPL_OOS_REUSE`도 145에서 144로 당긴다.
+- 이전 head `9b366302dc`(base `71993ddb63`)와 `1d86f1d31b`(base `d25c9e8d20`)에서 한 결과는 아래 표의 "이전 head" 열에 남긴다.
 - 빌드: debug(GCC), 2026-11-19 Asia/Seoul
 
 ## Implementation
@@ -41,36 +42,39 @@ oos_crash_recovery.sh <전용 DB 이름> <결과 디렉터리>
 
 ### Test Plan
 
-| 검사 | 결과 |
-| --- | --- |
-| 빌드와 설치(debug) | 성공 |
-| `RV_fun[]` 순서, `libcubrid.so` | PASS. 144개 항목, `RV_LAST_LOGID` 143, 불일치 0 |
-| `RV_fun[]` 순서, `libcubridsa.so` | PASS. 같은 결과. 두 라이브러리 모두 rebase 전후에 검사 |
-| 설정한 CTest(`ctest --test-dir <build> --output-on-failure`) | 66/66 통과. rebase 전 `9b366302dc` 384초, rebase 뒤 `1d86f1d31b` 335초 |
-| 강제 종료 후 복구 | PASS. 데이터 일치, vacuum 회수, `checkdb -S` 종료 코드 0 |
-| HA 복제 smoke test | 하지 않음 |
+| 검사 | 현재 head `4ee2bc4ebb` | 이전 head `9b366302dc`, `1d86f1d31b` |
+| --- | --- | --- |
+| 빌드와 설치(debug) | 성공 | 성공 |
+| `RV_fun[]` 순서, `libcubrid.so`와 `libcubridsa.so` | PASS. 145개 항목, `RV_LAST_LOGID` 144, 불일치 0 | PASS. 144개 항목, `RV_LAST_LOGID` 143 |
+| 설정한 CTest(`ctest --test-dir <build> --output-on-failure`) | 70/70 통과, 398초 | 66/66 통과, 384초와 335초 |
+| 강제 종료 후 복구 | PASS | PASS(`9b366302dc`) |
+| HA 복제 smoke test | 하지 않음 | 하지 않음 |
 
-변경 후 140~143의 이름은 `RVOOS_NOTIFY_VACUUM`, `RVREPL_DUMMY_OOS_RECORD`, `RVOOS_RECLAIM_POSTPONE`, `RVOOS_UPDATE_DROP_POSTPONE`이다.
+현재 head에서 140~144의 이름은 `RVOOS_NOTIFY_VACUUM`, `RVREPL_DUMMY_OOS_RECORD`, `RVOOS_RECLAIM_POSTPONE`, `RVOOS_UPDATE_DROP_POSTPONE`, `RVREPL_OOS_REUSE`이다.
 
 ### 강제 종료 후 복구 결과
 
-`cub_master`는 `kill -9`로 끝난 서버를 1초 안에 스스로 다시 시작했다(`auto_restart_server`). 스크립트는 이 재시작을 받아들이고, 재시작이 없을 때만 직접 시작한다. 재시작 복구는 REDO 6,479개 로그 레코드, UNDO 6개 트랜잭션으로 끝났다.
+`cub_master`는 `kill -9`로 끝난 서버를 1~2초 안에 스스로 다시 시작했다(`auto_restart_server`). 스크립트는 이 재시작을 받아들이고, 재시작이 없을 때만 직접 시작한다. 현재 head에서 재시작 복구는 REDO 5,993개 로그 레코드, UNDO 6개 트랜잭션으로 끝났다.
 
-| 측정 | `t_upd` | `t_del` |
-| --- | --- | --- |
-| 적재 후 `Oos_num_recs` | 400 | 400 |
-| 강제 종료 직전 | 800 | 400 |
-| 같은 데이터의 참조 테이블(garbage 없음) | 400 | 200 |
-| 재시작 후 첫 확인(약 7초 뒤) | 400 | 200 |
-| 행 수와 값 비교 | 200행 모두 일치 | 100행 모두 일치 |
+| 측정 | `t_upd` 현재 head | `t_upd` 이전 head | `t_del` |
+| --- | --- | --- | --- |
+| 적재 후 `Oos_num_recs` | 400 | 400 | 400 |
+| 강제 종료 직전 | 600 | 800 | 400 |
+| 같은 데이터의 참조 테이블(garbage 없음) | 400 | 400 | 200 |
+| 재시작 후 첫 확인 | 400 | 400 | 200 |
+| 행 수와 값 비교 | 200행 모두 일치 | 200행 모두 일치 | 100행 모두 일치 |
 
-`t_upd`가 800이 되는 이유가 있다. #8559 이전에는 UPDATE가 바뀌지 않은 `w` 컬럼의 OOS 값도 새로 쓴다. 그래서 200행 UPDATE가 새 chain 400개를 만들고 옛 chain 400개를 남긴다. 오래된 snapshot을 잡은 세션 때문에 vacuum은 종료 전에 이것을 회수하지 못했다.
+강제 종료 직전 `t_upd` 값이 head마다 다른 이유가 있다. #8559 이전에는 UPDATE가 바뀌지 않은 `w` 컬럼의 OOS 값도 새로 쓴다. 그래서 200행 UPDATE가 옛 chain 400개를 남긴다. #8559 이후에는 `w`의 chain을 재사용하므로 옛 `v` chain 200개만 남는다. 오래된 snapshot을 잡은 세션 때문에 vacuum은 종료 전에 이것을 회수하지 못했다.
 
 회수가 `RVOOS_NOTIFY_VACUUM` 경로로 일어났는지는 `cubrid diagdb -d 8`로 로그를 덤프해 확인했다. 덤프는 레코드의 recovery index를 `RV_fun[]` 이름으로 출력하므로, 140으로 기록된 레코드가 `RVOOS_NOTIFY_VACUUM`으로 읽히는 것도 함께 확인된다.
 
-- 강제 종료 전: UPDATE commit의 postpone이 `RVOOS_NOTIFY_VACUUM` 200개를 기록했다.
-- 재시작(`LOG_DUMMY_CRASH_RECOVERY`) 뒤: `RVOOS_DELETE` 700개, `RVOOS_RECLAIM_POSTPONE` 200개.
-- `RVOOS_RECLAIM_POSTPONE` 200개는 삭제된 `t_del` 100행과 filler 100행이다. 이 행들의 chain은 300개다. 나머지 `RVOOS_DELETE` 400개는 `t_upd`의 옛 chain이고, 이를 지우는 경로는 vacuum의 `RVOOS_NOTIFY_VACUUM` 소비자뿐이다.
+| 로그 레코드 | 현재 head | 이전 head |
+| --- | --- | --- |
+| 강제 종료 전 `RVOOS_NOTIFY_VACUUM` | 200 | 200 |
+| 재시작 뒤 `RVOOS_DELETE` | 500 | 700 |
+| 재시작 뒤 `RVOOS_RECLAIM_POSTPONE` | 200 | 200 |
+
+`RVOOS_RECLAIM_POSTPONE` 200개는 삭제된 `t_del` 100행과 filler 100행이다. 이 행들의 chain은 300개다. 나머지 `RVOOS_DELETE`(현재 head 200개, 이전 head 400개)는 `t_upd`의 옛 chain이고, 이를 지우는 경로는 vacuum의 `RVOOS_NOTIFY_VACUUM` 소비자뿐이다.
 
 `diagdb -d 8`은 대화형으로 묻는다. 표준 입력에 `1`, `-1`, `-1`, `-1`, `y`를 차례로 주어야 한다. `/dev/null`을 주면 질문을 무한히 반복해 출력한다.
 
@@ -78,6 +82,6 @@ oos_crash_recovery.sh <전용 DB 이름> <결과 디렉터리>
 
 ### 하지 않은 검증
 
-HA 복제는 master와 slave 두 인스턴스, heartbeat, copylogdb와 applylogdb가 필요하다. 복제 로그는 HA가 켜진 서버만 기록한다. 이 변경에서 `RVREPL_OOS_INSERT`(139)는 번호가 그대로이고, `RVREPL_DUMMY_OOS_RECORD`(142 → 141)는 `replication.c`, `log_applier.c`, `log_manager.c`가 모두 이름으로 처리한다. 그래서 같은 빌드끼리의 복제는 영향을 받지 않는다고 판단했다[추론]. 서로 다른 빌드 사이의 복제 로그 호환성은 보장하지 않는다. 이전 `feature/oos-merge` 빌드의 DB와 로그는 다시 만들어야 한다.
+HA 복제는 master와 slave 두 인스턴스, heartbeat, copylogdb와 applylogdb가 필요하다. 복제 로그는 HA가 켜진 서버만 기록한다. 이 변경에서 `RVREPL_OOS_INSERT`(139)는 번호가 그대로이고, `RVREPL_DUMMY_OOS_RECORD`(142 → 141)와 `RVREPL_OOS_REUSE`(145 → 144)는 `replication.c`, `log_applier.c`, `log_manager.c`가 모두 이름으로 처리한다. 그래서 같은 빌드끼리의 복제는 영향을 받지 않는다고 판단했다[추론]. 서로 다른 빌드 사이의 복제 로그 호환성은 보장하지 않는다. 이전 `feature/oos-merge` 빌드의 DB와 로그는 다시 만들어야 한다.
 
 release 빌드는 PR CI(`gha-ci: build (release)`)에서 확인한다.

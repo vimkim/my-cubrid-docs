@@ -5,9 +5,9 @@ Resume metadata for [pr-body.md](pr-body.md). This file is not uploaded.
 ## Source and target
 
 - Ticket: CBRD-27841
-- `SOURCE_COMMIT`: `1d86f1d31b4a30efead5e789ab8bf03f357c4d3f` (rebased from `9b366302dc` with an identical patch; full SHA recorded at publication below)
+- `SOURCE_COMMIT`: `4ee2bc4ebb` after #8559 merged (earlier heads `9b366302dc`, `1d86f1d31b`; full SHA recorded below)
 - Source: `vimkim/cubrid`, branch `CBRD-27841-drop-repl-oos-delete`
-- Base: `CUBRID/cubrid` `feature/oos-merge` at `d25c9e8d20a0ef422b0878f00b91279243d7238d` (moved from `71993ddb63` by #8638 during the work)
+- Base: `CUBRID/cubrid` `feature/oos-merge` at `b43275e944` (#8559). Earlier bases `71993ddb63`, then `d25c9e8d20` (#8638)
 - Remote head before publication: branch absent on `vk`
 - Operation: create a draft PR
 - Proposed title: `[CBRD-27841] Remove the unused recovery index RVREPL_OOS_DELETE`
