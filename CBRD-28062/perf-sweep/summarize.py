@@ -37,18 +37,20 @@ def collect():
             if not m['complete']: raise ValueError(f'incomplete {unit}/{kind}')
             for s in m['samples']:
                 if s['warmup']: continue
+                if kind == 'dml' and s['case'] in ('insert', 'update_big'): continue  # REPEAT payload compressed away; see dml2
                 key = (kind, s.get('table', 'n200k'), s['case'])
                 for metric, v in sample_values(s).items():
                     groups[key][label][metric].append(v); rounds[key][label][rnd][metric].append(v)
-    for unit in sorted((ROOT / 'insert').glob('r*-*')):  # extra INSERT-only repeats join the dml INSERT groups
+    for unit in sorted((ROOT / 'dml2').glob('r*-*')):  # INSERT / UPDATE-big with an incompressible payload
         rnd, label = unit.name[1:].split('-', 1)
-        m = json.loads((unit / 'dml' / 'summary.json').read_text())
-        if not m['complete']: raise ValueError(f'incomplete {unit}')
-        for s in m['samples']:
-            if s['warmup']: continue
-            key = ('dml', s['table'], s['case'])
-            for metric, v in sample_values(s).items():
-                groups[key][label][metric].append(v); rounds[key][label][rnd][metric].append(v)
+        for kind in ('insert', 'update_big'):
+            m = json.loads((unit / kind / 'summary.json').read_text())
+            if not m['complete']: raise ValueError(f'incomplete {unit}/{kind}')
+            for s in m['samples']:
+                if s['warmup']: continue
+                key = ('dml', s['table'], s['case'])
+                for metric, v in sample_values(s).items():
+                    groups[key][label][metric].append(v); rounds[key][label][rnd][metric].append(v)
     for unit in sorted((ROOT / 'cold').glob('r*-*')):
         rnd, label = unit.name[1:].split('-', 1)
         for f in sorted(unit.glob('*/summary.json')):

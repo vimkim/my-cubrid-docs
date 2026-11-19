@@ -70,8 +70,9 @@ if __name__ == '__main__':
     print('\n## round agreement (max |r1-r2| pp)')
     for kind, cases in (('sweep', ('length', 'substr', 'fullscan', 'narrow')), ('dml', ('insert', 'update_small', 'update_big'))):
         print(kind, {l: round(v, 2) for l, v in round_agreement(kind, cases).items()})
-    print('\n## storage')
+    print('\n## storage: heap pages + OOS pages (OOS values)')
     tabs = ['w36', 'w47', 'w78', 'w110', 'perf_heap_14500', 'perf_overflow_22000']
     for label, v in storage.items():
         print(f"| {label} | " + ' | '.join(
-            f"{v[t]['Num_pages']:,}p / {v[t].get('Oos_num_recs', 0):,}" if t in v else '—' for t in tabs) + ' |')
+            f"{v[t]['Num_pages']:,} + {v[t].get('Oos_num_user_pages', 0):,} ({v[t].get('Oos_num_recs', 0):,})" if t in v else '—'
+            for t in tabs) + ' |')

@@ -14,14 +14,20 @@ import sweep
 ROWS = sweep.ROWS
 SIZES = sweep.SIZES
 COLS = "(id INT PRIMARY KEY, a INT, s VARCHAR(40), big VARCHAR(20000))"
-MARK_INSERT, MARK_UPDATE = "0123456789abcdef", "fedcba9876543210"
 PREFIX = {"insert": "ins", "update_small": "ups", "update_big": "upb"}
 SUM_A = sum(n % 100 for n in range(1, ROWS + 1))
 TRACE = re.compile(r"^\s*SELECT \(time: (\d+), fetch: (\d+), fetch_time: (\d+), ioread: (\d+)\)", re.M)
 
 
-def fill(chunks, mark):
-    return f"REPEAT('{mark}', {chunks * 8})"  # 16 chars x 8 = one 128-char SHA2-512 chunk
+def source_sql(table, chunks):
+    """One-row source table holding an incompressible value of the fixture size (LZ4 shrinks repeated text to ~nothing)."""
+    big = ",".join(f"SHA2('src_{k}',512)" for k in range(chunks))
+    return (f"DROP TABLE IF EXISTS src_{table};\nCREATE TABLE src_{table} (id INT PRIMARY KEY, big VARCHAR(20000));\n"
+            f"INSERT INTO src_{table} SELECT 1, CONCAT({big}) FROM db_root;\nCOMMIT;\n")
+
+
+def value(table):
+    return f"(SELECT big FROM src_{table})"  # uncorrelated: evaluated once per statement
 
 
 def clone(table, source):
@@ -29,8 +35,8 @@ def clone(table, source):
             f"COMMIT;\nUPDATE STATISTICS ON {table};\n")
 
 
-def check_sql(table, mark):
-    return (f"SELECT COUNT(*), SUM(a), SUM(LENGTH(big)), SUM(CASE WHEN SUBSTR(big,1,16)='{mark}' THEN 1 ELSE 0 END) "
+def check_sql(table, source_table):
+    return (f"SELECT COUNT(*), SUM(a), SUM(LENGTH(big)), SUM(CASE WHEN big={value(source_table)} THEN 1 ELSE 0 END) "
             f"FROM {table};\n")
 
 
@@ -73,9 +79,19 @@ class Run:
         bench.run(bench.csql_command(self.args.database, path, str(self.client)), self.out / name, self.args.timeout)
         return bench.results(self.out / (name + ".stdout"))
 
-    def storage(self, name, table):
+    def storage(self, name, table, length):
+        """Capture SHOW HEAP CAPACITY/OOS and assert that every row stores the full value (nothing compressed away)."""
         text = f"SHOW HEAP CAPACITY OF {table};\n" + (f"SHOW HEAP OOS OF {table};\n" if self.args.show_oos else "")
         self.sql(name, text)
+        rows = [l.split("\t") for l in (self.out / (name + ".stdout")).read_text().splitlines() if l.startswith("dba.")]
+        placement = {"num_recs": int(rows[0][5]), "heap_pages": int(rows[0][8]), "avg_rec_len": int(rows[0][9]),
+                     "oos_recs": int(rows[1][10]) if len(rows) > 1 else 0,
+                     "oos_pages": int(rows[1][8]) if len(rows) > 1 else 0,
+                     "oos_sumlen": int(rows[1][11]) if len(rows) > 1 else 0}
+        stored = placement["avg_rec_len"] + placement["oos_sumlen"] / placement["num_recs"]
+        if placement["num_recs"] != ROWS or stored < 0.98 * length:
+            raise ValueError(f"value not stored in full ({stored:.0f} B per row < {length} B): {name}")
+        return placement
 
     def counted(self, name, text, wide=False):
         """Run `text` through csql under perf stat on the server; return elapsed, counters and io delta."""
@@ -100,34 +116,36 @@ class Run:
 def dml(args):
     r = Run(args)
     r.manifest["runs"] = args.runs
+    r.manifest["cases"] = args.cases
     for table, chunks in SIZES.items():
         length = chunks * 128
+        r.sql(f"source-{table}", source_sql(table, chunks))
+        if r.sql(f"source-{table}-check", f"SELECT COUNT(*), SUM(LENGTH(big)) FROM src_{table};\n") != [(1, length)]:
+            raise ValueError(f"bad source value {table}")
         for case in args.cases.split(","):
             for i in range(args.runs):
                 name, t = f"{case}-{table}-{i}", f"{PREFIX[case]}_{table}_{i}"
                 if case == "insert":
                     r.sql(name + "-setup", f"CREATE TABLE {t} {COLS};\n")
-                    work = (f"INSERT INTO {t} SELECT n, MOD(n,100), 's'||n, {fill(chunks, MARK_INSERT)} FROM seq;\nCOMMIT;\n")
+                    work = f"INSERT INTO {t} SELECT n, MOD(n,100), 's'||n, {value(table)} FROM seq;\nCOMMIT;\n"
                     want = (ROWS, SUM_A, ROWS * length, ROWS)
-                    mark = MARK_INSERT
                 else:
                     r.sql(name + "-setup", clone(t, table))
-                    if r.sql(name + "-before", check_sql(t, MARK_UPDATE)) != [(ROWS, SUM_A, ROWS * length, 0)]:
+                    if r.sql(name + "-before", check_sql(t, table)) != [(ROWS, SUM_A, ROWS * length, 0)]:
                         raise ValueError(f"bad clone {name}")
                     if case == "update_small":
-                        work, want, mark = f"UPDATE {t} SET a=a+1;\nCOMMIT;\n", (ROWS, SUM_A + ROWS, ROWS * length, 0), MARK_UPDATE
+                        work, want = f"UPDATE {t} SET a=a+1;\nCOMMIT;\n", (ROWS, SUM_A + ROWS, ROWS * length, 0)
                     else:
-                        work = f"UPDATE {t} SET big={fill(chunks, MARK_UPDATE)};\nCOMMIT;\n"
-                        want, mark = (ROWS, SUM_A, ROWS * length, ROWS), MARK_UPDATE
+                        work, want = f"UPDATE {t} SET big={value(table)};\nCOMMIT;\n", (ROWS, SUM_A, ROWS * length, ROWS)
                 sample = r.counted(name, work)
-                got = r.sql(name + "-after", check_sql(t, mark))
+                got = r.sql(name + "-after", check_sql(t, table))
                 if got != [want]:
                     raise ValueError(f"unexpected contents {got} != {want}: {name}")
-                if i == args.runs - 1:
-                    r.storage(name + "-storage", t)
+                placement = r.storage(name + "-storage", t, length)
                 r.sql(name + "-drop", f"DROP TABLE {t};\nCOMMIT;\n")
-                r.manifest["samples"].append({"table": table, "case": case, "run": i, "warmup": i == 0, **sample})
+                r.manifest["samples"].append({"table": table, "case": case, "run": i, "warmup": i == 0, "placement": placement, **sample})
                 r.save()
+        r.sql(f"source-{table}-drop", f"DROP TABLE src_{table};\nCOMMIT;\n")
     r.manifest["complete"] = True
     r.save()
     print(r.out / "summary.json")

@@ -268,24 +268,27 @@ def cold(rounds, labels):
             print('cold', rnd, label, 'done', time.strftime('%H:%M:%S'), flush=True)
 
 
-def insert_only(rounds, labels, runs):
-    """Extra INSERT samples: the INSERT cases are the noisiest (0.3-1 s each), so they get more repeats."""
+def dml2(rounds, labels, insert_runs, update_runs):
+    """INSERT and UPDATE-big with an incompressible payload (the first cpu-stage versions used REPEAT text, which LZ4
+    shrank to ~90 B per row, so they never exercised placement). INSERT is the noisiest case, so it gets more repeats."""
     for rnd in range(1, rounds + 1):
         for label in order(rnd):
             if label not in labels: continue
-            tmp, final = unit_dir('insert', rnd, label)
+            tmp, final = unit_dir('dml2', rnd, label)
             if tmp is None: continue
             before = (cpu_stats(), os.getloadavg(), time.time())
-            env, pid = start(label, 'sw', f'insert-r{rnd}-{label}')
+            env, pid = start(label, 'sw', f'dml2-r{rnd}-{label}')
             try:
                 common = ['--database', db(label, 'sw'), '--server-pid', str(pid), '--label', label, '--source', source(label)]
-                command(['python3', '-B', str(EXTRA), 'dml', *common, '--cases', 'insert', '--runs', str(runs), '--output', str(tmp / 'dml'),
-                         *([] if label == 'base' else ['--show-oos'])], ROOT / 'harness-logs' / f'insert-r{rnd}-{label}',
-                        dict(env, PYTHONPATH=str(H)), 14400)
+                oos = [] if label == 'base' else ['--show-oos']
+                for case, runs in (('insert', insert_runs), ('update_big', update_runs)):
+                    command(['python3', '-B', str(EXTRA), 'dml', *common, '--cases', case, '--runs', str(runs),
+                             '--output', str(tmp / case), *oos], ROOT / 'harness-logs' / f'dml2-r{rnd}-{label}-{case}',
+                            dict(env, PYTHONPATH=str(H)), 14400)
             finally:
-                stop(label, 'sw', f'insert-r{rnd}-{label}', env)
+                stop(label, 'sw', f'dml2-r{rnd}-{label}', env)
             meta(tmp, before); tmp.rename(final)
-            print('insert', rnd, label, 'done', time.strftime('%H:%M:%S'), flush=True)
+            print('dml2', rnd, label, 'done', time.strftime('%H:%M:%S'), flush=True)
 
 
 IO_CASES = ('q1', 'q4', 'q5')
@@ -317,12 +320,13 @@ def io(repeats, labels):
 if __name__ == '__main__':
     (ROOT / 'failed').mkdir(parents=True, exist_ok=True)
     a = argparse.ArgumentParser()
-    a.add_argument('action', choices=['prepare-env', 'prepare', 'cpu', 'cold', 'io', 'insert'])
+    a.add_argument('action', choices=['prepare-env', 'prepare', 'cpu', 'cold', 'io', 'dml2'])
     a.add_argument('--label', action='append')
     a.add_argument('--worktree', choices=[DEV, HEAD])
     a.add_argument('--rounds', type=int, default=2)
     a.add_argument('--repeats', type=int, default=3)
-    a.add_argument('--runs', type=int, default=11)
+    a.add_argument('--insert-runs', type=int, default=11)
+    a.add_argument('--update-runs', type=int, default=6)
     args = a.parse_args()
     labels = args.label or LABELS
     if args.action == 'prepare-env': prepare_env(args.worktree)
@@ -330,5 +334,5 @@ if __name__ == '__main__':
         for l in labels: prepare(l)
     elif args.action == 'cpu': cpu(args.rounds, labels)
     elif args.action == 'cold': cold(args.rounds, labels)
-    elif args.action == 'insert': insert_only(args.rounds, labels, args.runs)
+    elif args.action == 'dml2': dml2(args.rounds, labels, args.insert_runs, args.update_runs)
     else: io(args.repeats, labels)
