@@ -1,11 +1,12 @@
 # CBRD-28073
 
-Documents for JIRA [CBRD-28073](https://jira.cubrid.org/browse/CBRD-28073): serial NEXT VALUE keeps the storage form of every `_db_serial` column and writes nothing to OOS. It replaces PR #8492 (CBRD-28035) and PR #8496 (CBRD-28052). Engine branch `CBRD-28073-serial-nextval-keep-form` over `feature/oos-merge` `3e541fcf67` since the 2026-11-18 rebase (earlier `67220b7e23`).
+Documents for JIRA [CBRD-28073](https://jira.cubrid.org/browse/CBRD-28073): serial NEXT VALUE keeps the storage form of every `_db_serial` column and writes nothing to OOS. It replaces PR #8492 (CBRD-28035) and PR #8496 (CBRD-28052). Engine branch `CBRD-28073-serial-nextval-keep-form` over `feature/oos-merge` `71993ddb63` since the 2026-11-19 rebase, head `8d736ff51c` (earlier `3e541fcf67`, `67220b7e23`).
 
-Last modified: 2026-11-18 (Asia/Seoul).
+Last modified: 2026-11-19 (Asia/Seoul).
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
 | [pr-body.md](pr-body.md) | PR body (Korean) for the draft PR against `feature/oos-merge` | 2026-11-12 | 2026-11-12 | Draft PR for the CBRD-28073 fix |
 | [pr-context.md](pr-context.md) | Draft context: source commit, base, authorization, operations, execution record | 2026-11-12 | 2026-11-12 | Resume and publication bookkeeping |
 | [ci-analysis.md](ci-analysis.md) | CI analysis of PR #8514 (Korean): 2026-11-13 shell and sql analysis and 2026-11-18 recollection for head `31c72e8342` run 43263461440; 2026-11-18 warning-level analysis after the rebase onto `feature/oos-merge` `3e541fcf67`, head `3960d1b215` run 44245545024 | 2026-11-13 | 2026-11-18 | Separate PR-caused failures from pre-existing ones |
+| [jira-comment-design-review.md](jira-comment-design-review.md) | Design review (Korean) posted as JIRA comment 4778778: root-cause diagrams, alternatives, keep_form limits, at head `3960d1b215` | 2026-11-19 | 2026-11-19 | Record why keep_form was chosen over other fixes |
