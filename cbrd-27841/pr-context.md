@@ -30,4 +30,11 @@ The operator's kickoff of 2026-11-19 (brief `brief-CBRD-27841.md`, "Authorized e
 
 ## Publication record
 
-(Filled in after publication.)
+Recorded 2026-11-19, Asia/Seoul.
+
+- Docs: `main` pushed at `341282e`, then `f27cad9` after the source rebase. The public `verification.md` matched the local file (SHA-256).
+- Source: `vk` `CBRD-27841-drop-repl-oos-delete` = `1d86f1d31b4a30efead5e789ab8bf03f357c4d3f`. `feature/oos-merge` moved to `d25c9e8d20` (#8638) during the work; the patch was rebased unchanged (range-diff `=`).
+- PR: [#8646](https://github.com/CUBRID/cubrid/pull/8646), draft, base `feature/oos-merge`, assignee `vimkim`. The live body equals `pr-body.md` (SHA-256 of the text without a trailing newline: `3ed738eabacc273bb44960c2376746f3abf7edf87334574e903e3fdc594da562`).
+- TC PRs opened by TC Branch Sync, empty: [cubrid-testcases#4342](https://github.com/CUBRID/cubrid-testcases/pull/4342), [cubrid-testcases-private-ex#5033](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/5033). `cubrid-pr-tc-base-check` passed for both.
+- CI: `/run all` at 2026-11-19T09:57:40Z ([comment](https://github.com/CUBRID/cubrid/pull/8646#issuecomment-7005770190)), run [44501180486](https://github.com/CUBRID/cubrid/actions/runs/44501180486), six `gha-ci` contexts pending at pickup. `cubrid-ci-watch` request 77.
+- JIRA: CBRD-27841 description published from `my-cubrid-jira` `2ae28ed`; the live description equals the dry-run payload. Summary, status and assignee unchanged.
