@@ -79,6 +79,8 @@ def main():
         for label in LABELS:
             if label not in by: continue
             row['labels'][label] = {metric: stats(vals) for metric, vals in by[label].items()}
+            for metric, st in row['labels'][label].items():  # keep raw values only for the judgment metric and I/O pages
+                if metric not in ('instructions', 'ioread'): del st['values']
         if 'base' in row['labels']:
             for label, metrics in row['labels'].items():
                 for metric, st in metrics.items():
@@ -89,7 +91,7 @@ def main():
                         pb = {r: statistics.median(v[metric]) for r, v in rounds[key]['base'].items() if metric in v}
                         st['change_pct_vs_base_by_round'] = {r: (pb[r] - pr[r]) / pb[r] * 100 for r in pr if r in pb and pb[r]}
         out.append(row)
-    json.dump(out, sys.stdout, indent=1)
+    json.dump(out, sys.stdout, separators=(',', ':'))
 
 
 if __name__ == '__main__':

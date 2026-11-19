@@ -135,7 +135,7 @@ def conf_tail(name):
     for label, (w, thr) in CONFIGS.items():
         if w != name: continue
         extra = f'oos_trigger_threshold={thr}\n' if thr else ''
-        out += f'\n[@{db(label, "sw")}]\ndata_buffer_size=4G\nlog_buffer_size=256M\n{extra}'
+        out += f'\n[@{db(label, "sw")}]\ndata_buffer_size=4G\nlog_buffer_size=256M\nlog_max_archives=2\n{extra}'  # archives: see report, limit added after the cpu stage
         if extra: out += f'\n[@{db(label, "io")}]\n{extra}'
     return out
 

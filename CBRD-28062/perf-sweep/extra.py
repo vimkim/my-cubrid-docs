@@ -31,7 +31,7 @@ def value(table):
 
 
 def clone(table, source):
-    return (f"CREATE TABLE {table} {COLS};\nINSERT INTO {table} SELECT id, a, s, big FROM {source} ORDER BY id;\n"
+    return (f"DROP TABLE IF EXISTS {table};\nCREATE TABLE {table} {COLS};\nINSERT INTO {table} SELECT id, a, s, big FROM {source} ORDER BY id;\n"
             f"COMMIT;\nUPDATE STATISTICS ON {table};\n")
 
 
@@ -89,7 +89,7 @@ class Run:
                      "oos_pages": int(rows[1][8]) if len(rows) > 1 else 0,
                      "oos_sumlen": int(rows[1][11]) if len(rows) > 1 else 0}
         stored = placement["avg_rec_len"] + placement["oos_sumlen"] / placement["num_recs"]
-        if placement["num_recs"] != ROWS or stored < 0.98 * length:
+        if placement["num_recs"] != ROWS or stored < 0.90 * length:  # random hex still loses ~2% to LZ4; REPEAT text lost 98%
             raise ValueError(f"value not stored in full ({stored:.0f} B per row < {length} B): {name}")
         return placement
 
@@ -126,7 +126,7 @@ def dml(args):
             for i in range(args.runs):
                 name, t = f"{case}-{table}-{i}", f"{PREFIX[case]}_{table}_{i}"
                 if case == "insert":
-                    r.sql(name + "-setup", f"CREATE TABLE {t} {COLS};\n")
+                    r.sql(name + "-setup", f"DROP TABLE IF EXISTS {t};\nCREATE TABLE {t} {COLS};\n")
                     work = f"INSERT INTO {t} SELECT n, MOD(n,100), 's'||n, {value(table)} FROM seq;\nCOMMIT;\n"
                     want = (ROWS, SUM_A, ROWS * length, ROWS)
                 else:
