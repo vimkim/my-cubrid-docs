@@ -67,3 +67,16 @@ The optional `cubrid-static-check` run was skipped. The change replaces one stri
 ## Conversation record
 
 - 2026-11-19: the operator's kickoff limits this run to local commits and this draft. It says not to push any branch and not to open any PR. Publication needs the user's confirmation after review.
+- 2026-11-19: after review, the user approved the string `OOS` and the four listed operations ("1. 2. 3. yes").
+
+## Publication record
+
+| Step | Result (2026-11-19) |
+| --- | --- |
+| Body fingerprint (SHA-256) | `bedcf19faeeead53c9c1eed624e07147351e517d47754387c8079137af18fa7e` |
+| Source push | `vk/CBRD-28023-oos-file-type-name` = `9551b59ed032ed4aac572427be9766b0445fcd61` |
+| Draft PR | https://github.com/CUBRID/cubrid/pull/8638, draft, base `feature/oos-merge`, assignee `vimkim` |
+| Body check | Published body matches `cbrd-28023/pr-body.md` (same SHA-256 with trailing newlines trimmed) |
+| TC Branch Sync | Run 44485417320 succeeded. It created `tc/pr-8638` and draft TC PRs https://github.com/CUBRID/cubrid-testcases-private-ex/pull/5024 and https://github.com/CUBRID/cubrid-testcases/pull/4336 |
+| TC push | `11ffb00ae` rebased onto the init commit `93c84aa8e` as `0cd28a065` (same tree). `origin/tc/pr-8638` in `cubrid-testcases-private-ex` = `0cd28a06584b40503246aa6bdc2b0299f6ba1ca3` |
+| Docs integration | This commit, merged into `main` and pushed after the PR write |
