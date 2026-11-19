@@ -2,10 +2,12 @@
 
 Analysis and CI reports for [PR 7990](https://github.com/CUBRID/cubrid/pull/7990) and earlier OOS PR revisions. Each report applies to its stated source revision.
 
-Last modified: 2026-11-11, Asia/Seoul.
+Last modified: 2026-11-19, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [pr7990-performance-evaluation.md](pr7990-performance-evaluation.md) | develop 머지를 위한 성능 평가: 결론, AC-P1~P3 기준과 측정 대응표, 일반 테이블 비회귀(`2c38bef05b` −2.0%~+1.2%), OOS 이득·손해, 측정 head 뒤 변경의 영향, 통과로 표시하지 않은 항목과 후속 이슈 | 2026-11-19 | 2026-11-19 | 팀장과 리뷰어가 OOS 내부를 몰라도 기존 측정으로 머지 성능을 판단하게 하려고 |
+| [pr7990-performance-comment.md](pr7990-performance-comment.md) | 위 평가 보고서를 요약하고 링크하는 #7990 PR 댓글 초안(미게시) | 2026-11-19 | 2026-11-19 | 리뷰어에게 성능 평가 결과를 짧게 알리기 위해 |
 | [shpark-review-assessment.md](shpark-review-assessment.md) | shparkcubrid의 #7990 리뷰 전 항목 판정(데이터 손실 2건은 #8434로 해결 가능, 기준 2·CDC·구조는 팀 결정), 직접 확인한 근거, 팀이 정할 것, 엔진 순서. 탭별 상세 보고서 3개(`shpark-review-20261111/`) 링크 | 2026-11-11 | 2026-11-11 | 리뷰를 만족시킬 수 있는지와 남은 결정을 정리 |
 | [tc-review-disposition.md](tc-review-disposition.md) | 필수 TC #3551·#4210 리뷰 전수, 넓은 행 -1396 경위와 LOB 개수별 크기 측정, 다중 LOB 보강 후보와 testkit 검증, 본문 갱신점, 머지 순서, 회신·릴리스 노트 초안 | 2026-11-11 | 2026-11-11 | 철회된 블로킹과 TC 리뷰를 맞추고 머지 전 처리 근거를 남김 |
 | [PR-7990-hornetmj-review-checklist_20261029_codex.md](PR-7990-hornetmj-review-checklist_20261029_codex.md) | 리뷰 6개의 체크리스트, R6 CI 경고와 CTP 생성기 수정·별도 회사 PR 793 게시, R3·R4 추적 단위(CBRD-27872, CBRD-27213) | 2026-10-29 | 2026-11-02 | 팀장님 리뷰를 하나씩 이해하고 근거와 진행 상태를 보존 |
