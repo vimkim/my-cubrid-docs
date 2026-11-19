@@ -71,7 +71,7 @@ head 실패 1, 기준선과 공유 0, head에만 0, 비교 불가 1, base에만 
 ## Actions and evidence
 
 1. #8642를 ready로 바꾸지 않고, 리뷰어를 지정하지 않으며, JIRA를 바꾸지 않았다(실패 시 지시대로).
-2. 재실행 여부를 운영자가 정한다: `gh pr comment https://github.com/CUBRID/cubrid/pull/8642 --body "/run rerun 44496524091"`. 재실행이 통과하면 #8642의 ready 전환 조건을 다시 본다.
+2. 운영자 승인으로 `/run rerun 44496524091` 을 올렸다(2026-11-19 11:34:33Z, https://github.com/CUBRID/cubrid/pull/8642#issuecomment-7007919267). 새 run은 44516062167이며 `cubrid-ci-watch` 요청 80이 감시한다. 재실행이 통과하면 #8642의 ready 전환 조건을 다시 본다.
 3. `cbrd_27217` 의 간헐적 실패는 이 PR과 별도 후속으로 남긴다.
 
 증거 파일: 위 증거 디렉터리의 `summary.json`, `failures/.../message.txt`, `failures/.../diff.txt`, `raw/shards/14/linux_shell_64bit_optdebug.xml` (`cbrd_28065` 통과). Chronicle 실행 28324의 `test-results/test-shell.xml`.
