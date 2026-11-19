@@ -2,7 +2,7 @@
 
 A client could receive COMMIT success for a transaction that recovery rolled back after a kill -9, because `logpb_flush_pages` treated `nxio_lsa == flush_lsa` as durable. Fix on develop with backports to release/11.4, release/11.3 and release/10.2.
 
-PRs (draft, created 2026-11-19): develop [CUBRID/cubrid#8642](https://github.com/CUBRID/cubrid/pull/8642), 11.4 [#8643](https://github.com/CUBRID/cubrid/pull/8643), 11.3 [#8644](https://github.com/CUBRID/cubrid/pull/8644), 10.2 [#8645](https://github.com/CUBRID/cubrid/pull/8645). Regression TC branch: `tc/pr-8642`.
+PRs (draft, created 2026-11-19): develop [CUBRID/cubrid#8642](https://github.com/CUBRID/cubrid/pull/8642), 11.4 [#8643](https://github.com/CUBRID/cubrid/pull/8643), 11.3 [#8644](https://github.com/CUBRID/cubrid/pull/8644), 10.2 [#8645](https://github.com/CUBRID/cubrid/pull/8645). Shell TC PRs (draft) in `cubrid-testcases-private-ex`: develop [#5028](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/5028) on `tc/pr-8642`, 11.4 [#5029](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/5029), 11.3 [#5030](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/5030), 10.2 [#5031](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/5031). `cubrid-testcases` [#4340](https://github.com/CUBRID/cubrid-testcases/pull/4340) is the empty TC PR that the sync workflow opened.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |

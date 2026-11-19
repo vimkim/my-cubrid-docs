@@ -37,3 +37,5 @@ The user confirmed these operations on 2026-11-19, together with the listed defa
 - 2026-11-19: pushed `CBRD-28065-commit-durability` to `vk`; the remote head equals `9cc4cf8302a857c65a2d93cfde69300a02e586e7`.
 - 2026-11-19: created https://github.com/CUBRID/cubrid/pull/8642 (draft, base `develop`, assignee `vimkim`). The published body equals `pr-body.md` (SHA-256 `5c4611ba0e76e385f02e65bcd633707ff0eeed099890a5633618fb0dc2b755f0`) apart from the trailing newline. `TC Branch Sync` created `tc/pr-8642`.
 - 2026-11-19: posted JIRA comment 4778794 on CBRD-28065 with the four PR links and the verification summary.
+- 2026-11-19: pushed shell TC `eef8e0754` to `tc/pr-8642` (TC PR #5028, retitled and described). Backport TC PRs #5029, #5030 and #5031 opened from `11.4.8-CBRD-28065`, `11.3.7-CBRD-28065` and `10.2.20-CBRD-28065`. Each TC is NOK on the unfixed build and OK on the fixed build of its line.
+- 2026-11-19: posted `/run all` on #8642 at 09:27:01Z (https://github.com/CUBRID/cubrid/pull/8642#issuecomment-7005103819), gha-ci run 44496524091 attempt 1 on head `9cc4cf8302`; `cubrid-ci-watch` request 76. Updated JIRA comment 4778794 with the TC PR links.
