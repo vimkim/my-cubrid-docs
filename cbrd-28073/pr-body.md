@@ -26,6 +26,7 @@ https://jira.cubrid.org/browse/CBRD-28073
 - 리뷰에서 함께 발견한, 이 PR과 무관한 기존 결함은 별도 이슈로 다룬다.
   - [CBRD-28271](https://jira.cubrid.org/browse/CBRD-28271): NEXT VALUE가 공간 확인 전에 redo를 기록한다. release 빌드에서 갱신이 실패한 뒤 크래시가 나면 재시작 시 redo가 실패한다. develop에도 있다.
   - [CBRD-28272](https://jira.cubrid.org/browse/CBRD-28272): relocated 상태의 serial 행을 NEXT VALUE가 home 슬롯에 덮어쓴다. release/11.4에도 있다.
+- 새 테스트는 inline comment에서 시작하므로 keep-form의 OOS stub 유지 분기와 DDL 병합 분기는 수동 시험(이전 빌드 DB, gdb로 병합 강제)으로만 확인했다. 두 분기의 자동 테스트는 [CBRD-28273](https://jira.cubrid.org/browse/CBRD-28273)에서 다룬다.
 - 검증은 debug 빌드에서 했다. release 빌드는 CI로 확인한다.
 
 ### Test Plan
