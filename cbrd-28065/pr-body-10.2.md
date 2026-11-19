@@ -2,7 +2,7 @@ https://jira.cubrid.org/browse/CBRD-28065
 
 ## Purpose
 
-- develop의 CBRD-28065 수정(develop PR #NNNN)을 release/10.2에 백포트한다. 클라이언트가 COMMIT 성공을 받은 트랜잭션은 직후 서버가 비정상 종료되어도 재시작 뒤 커밋된 상태로 남아야 한다.
+- develop의 CBRD-28065 수정(develop PR #8642)을 release/10.2에 백포트한다. 클라이언트가 COMMIT 성공을 받은 트랜잭션은 직후 서버가 비정상 종료되어도 재시작 뒤 커밋된 상태로 남아야 한다.
 - AS-IS: 커밋은 `logpb_flush_pages()`에서 `nxio_lsa`(아직 디스크에 쓰지 않은 가장 낮은 LSA)가 커밋 레코드 시작 LSA보다 작은 동안만 기다린다. 두 값이 같으면 커밋 레코드가 메모리에만 있는데도 응답하고, 직후 `kill -9` 하면 재시작 복구가 이 트랜잭션을 롤백한다.
 - TO-BE: 커밋은 자기 커밋 레코드가 디스크에 쓰인 뒤에만 응답한다.
 
