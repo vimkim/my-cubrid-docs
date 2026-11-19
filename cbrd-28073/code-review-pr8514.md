@@ -185,3 +185,27 @@ Reviewers ran as Claude Code agents in Herdr panes (workspace `develop` `w2M8`, 
 3. Fix the PR body (F4).
 4. File separate CBRD issues for PE1 (DB restart impossible) and PE2 (catalog corruption). Both are pre-existing and reachable only on tightly filled serial pages, but both are severe.
 5. Run a delta review of the rebased head.
+
+## Addendum: delta verification after the rebase (2026-11-19)
+
+This addendum does not change the findings above, which belong to head `8d736ff51c`. It records the follow-up on the rebased head.
+
+- **New head:** `8e9d71fda07687ca5c5c28af92d869658a527dec`, on `feature/oos-merge` `8c478d8559905330bc1a60a05dbebb273b07a16c`. GitHub reports `MERGEABLE`.
+- **F1 resolved.** Keep-form now uses CBRD-27230's `reused`/`reused_stub`: the stub is validated by `heap_oos_parse_inline_ref`, then byte-copied. The internal signature is `(…, pending, reuse_oos_stubs, keep_form)`, and the keep wrapper passes `nullptr, false, true`. V1 checked every caller of `heap_attrinfo_transform_to_disk_internal`; none passes a positional bool that can bind to the wrong parameter (gdb also confirmed the binding at runtime).
+- **F2 fixed** (`a39cdf84a1`). `serial_row_write_keep_value` uses keep-form. Results:
+  - V2 HA stress race: 0 of 8 runs hit, against 1 of 5 before.
+  - V2 deterministic gdb-forced merge: the head merged row stays inline and replicates. The same steps on old base `71993dd` demote the row and stall the slave with `-1040`.
+  - V1 forced merge on inherited-OOS rows: the row becomes inline, and the chain is reclaimed at commit and restored on rollback.
+- **V3-2 fixed** (`8e9d71fda0`). Keep-form without the record being replaced now returns an error in release builds; before, only an `assert` caught it.
+- **Tests:**
+  - OOS ctest 74/74 (V1).
+  - Serial ctests 4/4 at `8e9d71fda0`.
+  - Inherited-OOS rows keep byte-identical 24-byte stubs across committed and rolled-back NEXT VALUE and cache write-back (V1, level 5).
+- **Independent delta review (V3):** no P0–P2. Remaining P3 items:
+  - The OOS-keeping and DDL-merge branches are reached only by probes, not by the unit tests (still F5).
+  - The representation-mismatch branch returns a generic error.
+- **PE4 heal step (V2, level 5):** `ALTER SERIAL <name> COMMENT '<its comment>'` before the first NEXT VALUE makes an inherited OOS serial row inline on both nodes, and replication then proceeds. It does not unstick a slave that already stopped on such an image.
+- **Pre-existing defects, now drafted as JIRA issues:**
+  - PE1 reproduces on a **develop** release build. It is reachable since CBRD-26006 made NUMERIC value-sized.
+  - PE2 reproduces on **release/11.4** with default settings and plain SQL.
+- **CI:** `/run all` run 44522105929 on `8e9d71fda0`.

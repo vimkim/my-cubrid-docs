@@ -51,3 +51,10 @@ On 2026-11-12 the user approved the plan "vk에 push한 뒤 feature/oos-merge �
   `cbrd_27780` checked locally: the base fails items 3 and 5 with the old testcase and passes with the fixed one.
   ALTER-merge path (`serial.c:2285`): no OOS chain leak (JIRA comment 4778780). User approved draft -> ready with
   the body updated for the new base, ctest count and CI result.
+- 2026-11-19 (evening): five-reviewer review of `8d736ff51c` (report `code-review-pr8514.md`, PR comment 7007762519,
+  Greptile threads answered and resolved). User approved rebase + fixes: rebased onto `8c478d8559` (CBRD-27230 conflict
+  resolved onto `reused_stub`), added `a39cdf84a1` (DDL merge keep-form) and `8e9d71fda0` (release guard).
+  Delta verification V1/V2/V3 passed (OOS ctest 74/74). User approved: force-push with lease to `vk`
+  (`8d736ff51c` -> `8e9d71fda0`), PR body update from `pr-body.md`, TC sync (private `tc/pr-8514` -> `b4fac7513`,
+  public already current), `/run all` (run 44522105929), PE1/PE2 JIRA drafts.
+
