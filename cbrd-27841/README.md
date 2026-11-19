@@ -1,6 +1,6 @@
 # CBRD-27841 unused OOS recovery index
 
-Remove the unused recovery index `RVREPL_OOS_DELETE` (140) before [PR 7990](https://github.com/CUBRID/cubrid/pull/7990) merges, and keep `RVOOS_NOTIFY_VACUUM`, which [#8434](https://github.com/CUBRID/cubrid/pull/8434) made live. Tracked as [CBRD-27841](https://jira.cubrid.org/browse/CBRD-27841). Current source is `4ee2bc4ebb` on `feature/oos-merge` `b43275e944`, after #8559; it also moves `RVREPL_OOS_REUSE` from 145 to 144. The scope came from review [r4409612618](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4409612618).
+Remove the unused recovery index `RVREPL_OOS_DELETE` (140) before [PR 7990](https://github.com/CUBRID/cubrid/pull/7990) merges, and keep `RVOOS_NOTIFY_VACUUM`, which [#8434](https://github.com/CUBRID/cubrid/pull/8434) made live. Tracked as [CBRD-27841](https://jira.cubrid.org/browse/CBRD-27841). Merged into `feature/oos-merge` as `8c478d8559` (PR #8646, squash of `4ee2bc4ebb` on `b43275e944`); it also moves `RVREPL_OOS_REUSE` from 145 to 144. The scope came from review [r4409612618](https://github.com/CUBRID/cubrid/pull/7990#discussion_r4409612618).
 
 History: the first attempt, [PR 8347](https://github.com/CUBRID/cubrid/pull/8347) (sources `eac70c7` and `e523d4f`), removed `RVOOS_NOTIFY_VACUUM` and closed unmerged on 2026-11-05. Its files below are kept as a record and are not reused.
 
@@ -8,6 +8,7 @@ Last modified: 2026-11-19, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [work-report.md](work-report.md) | 작업 전체 보고: 변경, 확인한 곳, 검증, JIRA·PR·CI, 병합과 정리 결과 | 2026-11-19 | 2026-11-19 | 운영자에게 결과와 남은 단계를 전달하고 작업 흔적을 정리한 뒤에도 보존 |
 | [pr-body.md](pr-body.md) | `RVREPL_OOS_DELETE` 제거 PR 본문 | 2026-11-19 | 2026-11-19 | 새 범위의 draft PR을 만들기 전에 본문을 검토 |
 | [pr-context.md](pr-context.md) | source·base, 게시 작업과 승인 범위, 게시 결과 | 2026-11-19 | 2026-11-19 | 이전 #8347 초안과 이번 PR의 작업을 구분 |
 | [verification.md](verification.md) | `RV_fun[]` 순서, CTest, 강제 종료 후 복구와 vacuum 회수의 절차와 결과 | 2026-11-19 | 2026-11-19 | 리뷰어가 검증을 다시 실행할 수 있게 절차와 스크립트를 보존 |
