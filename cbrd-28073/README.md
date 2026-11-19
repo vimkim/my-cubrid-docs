@@ -6,7 +6,8 @@ Last modified: 2026-11-19 (Asia/Seoul).
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [pr-body.md](pr-body.md) | PR body (Korean) for the draft PR against `feature/oos-merge` | 2026-11-12 | 2026-11-12 | Draft PR for the CBRD-28073 fix |
-| [pr-context.md](pr-context.md) | Draft context: source commit, base, authorization, operations, execution record | 2026-11-12 | 2026-11-12 | Resume and publication bookkeeping |
+| [pr-body.md](pr-body.md) | PR body (Korean) for PR #8514 against `feature/oos-merge` | 2026-11-12 | 2026-11-19 | Draft PR for the CBRD-28073 fix |
+| [pr-context.md](pr-context.md) | Draft context: source commit, base, authorization, operations, execution record | 2026-11-12 | 2026-11-19 | Resume and publication bookkeeping |
 | [ci-analysis.md](ci-analysis.md) | CI analysis of PR #8514 (Korean): 2026-11-13 shell and sql analysis and 2026-11-18 recollection for head `31c72e8342` run 43263461440; 2026-11-18 warning-level analysis after the rebase onto `feature/oos-merge` `3e541fcf67`, head `3960d1b215` run 44245545024 | 2026-11-13 | 2026-11-18 | Separate PR-caused failures from pre-existing ones |
 | [jira-comment-design-review.md](jira-comment-design-review.md) | Design review (Korean) posted as JIRA comment 4778778: root-cause diagrams, alternatives, keep_form limits, at head `3960d1b215` | 2026-11-19 | 2026-11-19 | Record why keep_form was chosen over other fixes |
+| [jira-comment-alter-merge-followup.md](jira-comment-alter-merge-followup.md) | Follow-up (Korean) posted as JIRA comment 4778780: the ALTER merge path at `serial.c:2285` leaves no OOS chain | 2026-11-19 | 2026-11-19 | Close the unchecked item of the design review |

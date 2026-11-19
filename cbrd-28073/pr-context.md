@@ -44,3 +44,10 @@ On 2026-11-12 the user approved the plan "vk에 push한 뒤 feature/oos-merge �
   (earlier ctest runs after the hardening had followed an inherited `CUBRID_BUILD_DIR` into the #8492 worktree and
   are not evidence). Scenario scripts intact (`keepform-rebased.txt`). Force-pushed with lease to `31c72e8342`; PR body
   updated with the new base and ctest count.
+- 2026-11-19: user approved rebase, TC sync, `/run all`. Rebased onto `71993ddb63` (includes #8491), resolved
+  `unit_tests/oos/CMakeLists.txt` by keeping both fixtures; OOS ctest 69/69 with the direnv-pinned build dir;
+  force-pushed with lease to `8d736ff51c`. Merged `feature/oos-merge` into `tc/pr-8514` in both testcase repos
+  (public `1a02bb474`, private `a91fb1ead`). `/run all` run 44476482025: all six gha-ci contexts SUCCESS.
+  `cbrd_27780` checked locally: the base fails items 3 and 5 with the old testcase and passes with the fixed one.
+  ALTER-merge path (`serial.c:2285`): no OOS chain leak (JIRA comment 4778780). User approved draft -> ready with
+  the body updated for the new base, ctest count and CI result.
