@@ -1,4 +1,4 @@
-@hornetmj @beyondykk9 리뷰 지적을 반영하고 CI를 다시 돌렸습니다.
+리뷰 지적을 반영하고 CI를 다시 돌렸습니다.
 
 - `7e73eafc63`: OOS 복제 항목이 바로 뒤 행의 `RVREPL_DATA_UPDATE` 와 함께 기록되거나 함께 버려지도록 고쳤습니다. savepoint·문장 롤백과 `INCR()` flush mark 두 경우를 모두 다룹니다.
 - `4d6eeb345e`: 이 규칙을 debug 빌드에서 `repl_oos_items_follow_row` assert로 확인합니다. HA를 켠 savepoint 롤백·`INCR()` test를 추가했고, 수정 전 코드에서는 assert가 4개 test에서 걸립니다.
