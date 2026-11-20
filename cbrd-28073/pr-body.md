@@ -46,6 +46,6 @@ debug 빌드, `--db-page-size=4K` DB 기준. base `feature/oos-merge` `8c478d855
 | HA: DDL 병합 경로를 gdb로 고정 재현 | 병합 행이 OOS, 복제 정지 | 병합 행 inline, 정상 복제 |
 | 4K page를 채운 serial 24개의 값을 1에서 2×10^30으로 증가(기본 `unfill_factor`) | | 오류 없음, comment 정상 |
 | OOS ctest | | 74개 모두 통과 |
-| gha-ci | | head `b6de23c3f9`에서 [run 44705649588](https://github.com/CUBRID/cubrid/actions/runs/44705649588) 진행 중 |
+| gha-ci | | head `b6de23c3f9`, [run 44705649588](https://github.com/CUBRID/cubrid/actions/runs/44705649588): build, medium, sql, sql_by_cci 통과. shell 실패 2건(`cbrd_27780`, `cbrd_27863`)은 다른 develop PR(#8528, #8613, #8641, #8664)과 로컬 base `030b650ff7`에서도 같은 증상이라 이 PR과 무관하다 ([분석](https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-28073/ci-analysis.md)) |
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

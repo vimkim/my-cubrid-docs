@@ -1,4 +1,4 @@
-# CI 분석: PR #8514 (run 43263461440, run 44245545024, run 44522105929)
+# CI 분석: PR #8514 (run 43263461440, run 44245545024, run 44522105929, run 44705649588)
 
 ## 요약
 
@@ -373,3 +373,83 @@ head 근거가 완전하지 않아 정식 이력 분석(section 3b)은 하지 �
 - 검증된 요약: 같은 head 디렉터리의 `providers/github-actions/runs/44522105929/attempts/1/{test_medium,test_shell,test_sql_by_cci}/summary.json`
 - 실패 내용: `.../test_shell/failures/shell_06_issues_12_2h_bug_bts_8907_cases_bug_bts_8907_sh-0e7a776ddd/`, `.../test_shell/failures/shell_06_issues_26_2h_cbrd_27780_cases_cbrd_27780_sh-9b5694291f/`
 - baseline: `github-actions/CUBRID-cubrid/commits/8c478d8559905330bc1a60a05dbebb273b07a16c/providers/github-actions/runs/44511473106/attempts/1/`
+
+## develop 위 재실행: 2026-11-20, head `b6de23c3f9`, run 44705649588
+
+> **경고.** `test_sql`은 이전 run들과 같은 collector 무결성 오류로 검증된 요약이 없다(CI 결과는 SUCCESS). develop tip `030b650ff7`에는 test suite를 돌린 CI run이 없어서(push run은 빌드만 함) `collect-base`가 `not_observed`였다. 대신 같은 시기 develop을 base로 하는 다른 PR의 run과, 로컬 head/base 실행으로 비교했다.
+
+### 요약
+
+- 검증된 실패는 shell 2건이다. `cbrd_27780.sh`(shard 31)와 `cbrd_27863.sh`(shard 00)다. medium(975개)과 sql_by_cci(17848개)는 모두 통과했다.
+- 두 건 모두 이 PR과 관계없다(신뢰도 높음). serial을 건드리지 않는 develop PR #8528, #8664에서 `cbrd_27780`이 같은 메시지(`S1HEAP=1`)로 실패했다. `cbrd_27863`은 #8528, #8613, #8641, #8664 run 6개에서 모두 같은 값(`REQUESTS_OF_ONE_CONNECTION=10`)으로 실패했다.
+- 로컬에서 `cbrd_27863`은 head `b6de23c3f9`와 base `030b650ff7` 모두 `REQUESTS_OF_ONE_CONNECTION=10`으로 실패했다. CI와 같다.
+- 로컬에서 `cbrd_27780`은 head와 base 모두 같은 항목(3번 vacuum, 7번 kill)이 실패했고 `S1HEAP` 평문은 재현되지 않았다. head와 base의 결과가 같으므로 이 PR과의 차이는 보이지 않는다.
+- 지난 run 44522105929의 `cbrd_27780` 실패도 같은 원인으로 본다. 그때 "head에만 있음"이었던 것은 base(`feature/oos-merge`)가 한 번 통과한 결과였다.
+
+### 대상
+
+| 항목 | 값 |
+| --- | --- |
+| PR | https://github.com/CUBRID/cubrid/pull/8514 |
+| head | `b6de23c3f927f408d0c642a717a64eae45b923f7` (develop `030b650ff7` 위로 rebase, 커밋 5개 `git range-diff` 동일) |
+| base | `develop` `030b650ff7bfaab62e05bdf35d79a19b40568aea` (merge base와 같음, #8662 빌드 수정 포함) |
+| run | https://github.com/CUBRID/cubrid/actions/runs/44705649588 attempt 1 (`/run all`, 2026-11-20T08:49:41Z) |
+| testcase revision | cubrid-testcases-private-ex `6be2ee8f2` (`tc/pr-8514`), cubrid-testcases `903d902b8` (`tc/pr-8514`), 둘 다 TC develop 최신을 포함(`cubrid-pr-tc-base-check` PASS) |
+| 수집 | `cubrid-ci 0.2.0 (00205d576de0, release)`, collect exit 4(test_sql 무결성), collect-base exit 3(`not_observed`) |
+
+### Suite 상태
+
+| Suite | CI 결과 | 수집 상태 | head (tests/pass/fail/error/skip) |
+| --- | --- | --- | --- |
+| test_medium | pass | completed | 975/975/0/0/0 |
+| test_shell | fail | completed | 3659/3627/2/0/30 |
+| test_sql | pass | `collection_failed` (shard 01 JUnit 19개 누락, 이전과 같음) | 없음 |
+| test_sql_by_cci | pass | completed | 17848/17848/0/0/0 |
+
+### 실패 목록
+
+| Testcase | shard | 증상 | 다른 develop PR | 로컬 head / base | PR 관련성 |
+| --- | --- | --- | --- | --- | --- |
+| `shell/_06_issues/_26_2h/cbrd_27780/cases/cbrd_27780.sh` | 31 | NOK 2, NOK 4: "found in plaintext in the data volumes: S1HEAP=1" | #8528 run 44705951222, 44713351787; #8664 run 44701074949에서 같은 메시지 | 둘 다 NOK 3, 7 (같음), `S1HEAP` 재현 안 됨 | 없음, 신뢰도 높음 |
+| `shell/_06_issues/_26_2h/cbrd_27863/cases/cbrd_27863.sh` | 00 | NOK 1: `REQUESTS_OF_ONE_CONNECTION=10` (기준 1~8) | #8528 run 44705951222, 44713351787; #8613 run 44706214451; #8641 run 44664225458, 44702880730; #8664 run 44701074949에서 같은 값 | 둘 다 NOK 1, 값 10 (같음) | 없음, 신뢰도 높음 |
+
+### 원인 가설
+
+#### `cbrd_27863`: dba 로그인 1회의 server 요청 수
+
+- 관찰. testcase는 CAS가 server 연결을 유지한 상태에서 dba 로그인 1회가 보내는 server 요청이 8개 이하인지 본다. 엔진 수정 `6057fbf0d9`(#8447)는 develop에 있고, TC `9f6f1a7fe`(#4793)는 2026-11-20에 TC develop에 들어왔다.
+- 관찰. develop PR 4개와 이 PR, 로컬 base `030b650ff7`이 모두 10을 낸다.
+- 추론. 엔진 수정이 들어간 뒤 develop에 들어온 다른 변경이 로그인 요청을 2개 늘렸거나, TC 기준이 CI 환경과 맞지 않는다. 이 PR은 로그인 경로를 바꾸지 않는다.
+- 다음 행동. CBRD-27863 담당자에게 알린다(이 PR의 범위 밖).
+
+#### `cbrd_27780`: 암호화 테이블 marker의 평문 1건
+
+- 관찰. 같은 메시지가 serial을 건드리지 않는 develop PR 2개에서 나왔다.
+- 관찰. 이 PR의 변경은 `keep_form` 플래그로 막혀 있고, 플래그를 켜는 호출은 `serial.c`의 `serial_update_serial_object`와 `serial_row_write_keep_value`뿐이다. 다른 호출에서는 develop과 같은 코드가 실행된다. testcase는 serial과 AUTO_INCREMENT를 쓰지 않는다.
+- 관찰. 로컬 containment 실행에서는 3번(vacuum 뒤 page 수를 읽지 못함)과 7번(kill 뒤 server가 남아 있음)이 head와 base에서 똑같이 실패했다. 로컬 환경 차이로 보이며, 2번과 4번은 OK였다.
+- 추론. CI 환경에서 develop 전반에 나타나는 TC 또는 엔진 문제다. 이 PR이 원인이 아니다.
+- 다음 행동. CBRD-27780(TC)과 OOS TC 담당 쪽 문제로 넘긴다.
+
+### 로컬 재현 기록
+
+| attempt | engine | testcase | 결과 |
+| --- | --- | --- | --- |
+| `~/tk/p8514h1` | head `b6de23c3f9` | `cbrd_27780` | NOK 3, 7 |
+| `~/tk/p8514h2` | head `b6de23c3f9` | `cbrd_27863` | 결론 없음: install에 JDBC jar가 없어 `No suitable driver` |
+| `~/tk/p8514h3` | head `b6de23c3f9` (`cubrid-jdbc` submodule 초기화 후 재설치) | `cbrd_27863` | NOK 1, `REQUESTS_OF_ONE_CONNECTION=10` |
+| `~/tk/p8514b1` | base `030b650ff7` | `cbrd_27780` | NOK 3, 7 |
+| `~/tk/p8514b2` | base `030b650ff7` | `cbrd_27863` | NOK 1, `REQUESTS_OF_ONE_CONNECTION=10` |
+
+- 모두 `cubrid-testkit` native shell, `TESTKIT_CONTAIN=1`, 한 slot, testcase checkout `6be2ee8f2`(dirty 없음). 각 attempt의 `verify.log`, `run.log`, `CTP/result/shell/current_runtime_logs/`를 남겼다.
+
+### 다음 행동
+
+1. 이 PR에서 고칠 것은 없다. 남은 실패 2건은 develop 공통이다.
+2. 머지 판단에는 required context(`build (release)`, `test_shell`, `test_sql`, `test_medium`)가 필요하다. `test_shell`이 develop 공통 실패로 FAILURE이므로, 이 실패를 알려진 문제로 받아들일지는 리뷰어와 merge 담당이 정한다.
+3. test_sql shard 01 JUnit 누락은 collector 또는 CI 결과 파일 쪽 후속 과제다(이전과 같음).
+
+### 근거 파일 (2026-11-20, head `b6de23c3f9`)
+
+- head 요약: `cubrid-ci` 데이터 디렉터리의 `github-actions/CUBRID-cubrid/pr-8514/b6de23c3f927f408d0c642a717a64eae45b923f7/providers/github-actions/runs/44705649588/attempts/1/{test_medium,test_shell,test_sql_by_cci}/summary.json`
+- 실패 내용: 같은 디렉터리의 `test_shell/failures/shell_06_issues_26_2h_cbrd_27780_cases_cbrd_27780_sh-9b5694291f/`, `test_shell/failures/shell_06_issues_26_2h_cbrd_27863_cases_cbrd_27863_sh-d03fb7d9ea/`
+- 다른 PR 근거: `github-actions/CUBRID-cubrid/pr-{8528,8613,8641,8664}/<head>/providers/github-actions/runs/<run>/attempts/1/test_shell/failures/`
