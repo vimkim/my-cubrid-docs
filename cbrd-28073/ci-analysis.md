@@ -420,7 +420,8 @@ head 근거가 완전하지 않아 정식 이력 분석(section 3b)은 하지 �
 - 관찰. testcase는 CAS가 server 연결을 유지한 상태에서 dba 로그인 1회가 보내는 server 요청이 8개 이하인지 본다. 엔진 수정 `6057fbf0d9`(#8447)는 develop에 있고, TC `9f6f1a7fe`(#4793)는 2026-11-20에 TC develop에 들어왔다.
 - 관찰. develop PR 4개와 이 PR, 로컬 base `030b650ff7`이 모두 10을 낸다.
 - 추론. 엔진 수정이 들어간 뒤 develop에 들어온 다른 변경이 로그인 요청을 2개 늘렸거나, TC 기준이 CI 환경과 맞지 않는다. 이 PR은 로그인 경로를 바꾸지 않는다.
-- 다음 행동. CBRD-27863 담당자에게 알린다(이 PR의 범위 밖).
+- 원인(2026-11-20 확인). TC 기준(8)을 정한 뒤 develop에 들어온 CBRD-27445(#8337)가 로그인마다 password challenge와 response 요청을 하나씩 더 보낸다. 상한을 10으로 올리는 TC 수정 [cubrid-testcases-private-ex#5056](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/5056)이 열려 있다.
+- 다음 행동. #5056 머지 뒤 `tc/pr-8514`를 TC develop과 맞추고 `/run rerun 44705649588`을 올린다.
 
 #### `cbrd_27780`: 암호화 테이블 marker의 평문 1건
 
@@ -428,7 +429,8 @@ head 근거가 완전하지 않아 정식 이력 분석(section 3b)은 하지 �
 - 관찰. 이 PR의 변경은 `keep_form` 플래그로 막혀 있고, 플래그를 켜는 호출은 `serial.c`의 `serial_update_serial_object`와 `serial_row_write_keep_value`뿐이다. 다른 호출에서는 develop과 같은 코드가 실행된다. testcase는 serial과 AUTO_INCREMENT를 쓰지 않는다.
 - 관찰. 로컬 containment 실행에서는 3번(vacuum 뒤 page 수를 읽지 못함)과 7번(kill 뒤 server가 남아 있음)이 head와 base에서 똑같이 실패했다. 로컬 환경 차이로 보이며, 2번과 4번은 OK였다.
 - 추론. CI 환경에서 develop 전반에 나타나는 TC 또는 엔진 문제다. 이 PR이 원인이 아니다.
-- 다음 행동. CBRD-27780(TC)과 OOS TC 담당 쪽 문제로 넘긴다.
+- 원인(2026-11-20 확인). CBRD-28257(Confirmed): 시스템 카탈로그 행의 NULL 고정 길이 필드에 서버 메모리의 이전 내용이 남아 암호화 테이블 값 조각이 평문으로 기록된다. 간헐적이다. develop CI 발생 기록을 CBRD-28257에 코멘트로 남겼다([comment 4778883](https://jira.cubrid.org/browse/CBRD-28257?focusedCommentId=4778883)).
+- 다음 행동. rerun에서 다시 실패하면 CBRD-28257을 근거로 merge 담당에게 waiver를 요청한다.
 
 ### 로컬 재현 기록
 
