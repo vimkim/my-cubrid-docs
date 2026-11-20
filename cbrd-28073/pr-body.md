@@ -31,7 +31,7 @@ https://jira.cubrid.org/browse/CBRD-28073
 
 ### Test Plan
 
-debug 빌드, `--db-page-size=4K` DB 기준. base `feature/oos-merge` `8c478d8559` 위의 head에서 확인했다. 이후 OOS가 `develop`에 머지되어(#7990) 이 PR을 `develop` `b0ba2d4301` 위로 rebase했다. 커밋 5개의 내용은 바뀌지 않았다(`git range-diff`에서 모두 동일). 이전 빌드 DB는 이전 base `71993ddb63` 빌드로 만들었다. HA는 한 호스트에서 namespace로 분리한 2노드(heartbeat, copylogdb, applylogdb)로 돌렸다.
+debug 빌드, `--db-page-size=4K` DB 기준. base `feature/oos-merge` `8c478d8559` 위의 head에서 확인했다. 이후 OOS가 `develop`에 머지되어(#7990) 이 PR을 `develop` 위로 rebase했다. 그 develop의 빌드 오류가 #8662로 고쳐진 뒤 `030b650ff7` 위로 다시 rebase했다(head `b6de23c3f9`). 커밋 5개의 내용은 바뀌지 않았다(`git range-diff`에서 모두 동일). 이전 빌드 DB는 이전 base `71993ddb63` 빌드로 만들었다. HA는 한 호스트에서 namespace로 분리한 2노드(heartbeat, copylogdb, applylogdb)로 돌렸다.
 
 | 경우 | 수정 전 | 수정 후 |
 |---|---|---|
@@ -46,6 +46,6 @@ debug 빌드, `--db-page-size=4K` DB 기준. base `feature/oos-merge` `8c478d855
 | HA: DDL 병합 경로를 gdb로 고정 재현 | 병합 행이 OOS, 복제 정지 | 병합 행 inline, 정상 복제 |
 | 4K page를 채운 serial 24개의 값을 1에서 2×10^30으로 증가(기본 `unfill_factor`) | | 오류 없음, comment 정상 |
 | OOS ctest | | 74개 모두 통과 |
-| gha-ci | | `develop` 기준 head에서 [run 44697175847](https://github.com/CUBRID/cubrid/actions/runs/44697175847) 진행 중 |
+| gha-ci | | head `b6de23c3f9`에서 [run 44705649588](https://github.com/CUBRID/cubrid/actions/runs/44705649588) 진행 중 |
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
