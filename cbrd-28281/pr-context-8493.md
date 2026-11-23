@@ -20,3 +20,9 @@
 2. Merge this docs branch into my-cubrid-docs `main` (ff-only) and push `main`.
 
 User approval (2026-11-23): plan item 3 "yes" (title and body), pending review of this draft.
+
+## Execution record (2026-11-23)
+
+- User confirmed: "진행."
+- `gh pr edit 8493` applied the proposed title and this body (sha256 450bb5477f37eeb5). Read back: title `[CBRD-28281] Reuse emptied OOS pages in place instead of deallocating`, body equal to the file, Draft, base `develop`, head `f1c78ce70b` (no source push).
+- Publication record: `vimkim/my-cubrid-jira` `04d18e8` `reviews/CBRD-27925-close/PUBLICATION.md`.
