@@ -1,28 +1,27 @@
-# PR context: retarget PR #8493 from CBRD-27925 to CBRD-28281
+# PR context: update PR #8493 after CBRD-28281 technical verification
 
 - Ticket: CBRD-28281 (split from CBRD-27925; Work1049, Work878)
-- PR: https://github.com/CUBRID/cubrid/pull/8493 (Draft, base `develop` since 2026-11-20)
-- Observed remote head: `f1c78ce70bb469f5d1d39204cc71a5fe3d832b54` (vimkim:CBRD-27925-emptied-set); no source push in this operation
-- Previous body: `cbrd-27925/pr-body-stage2.md` (equal to the live body on 2026-11-23)
-- New body: `cbrd-28281/pr-body-8493.md`
-- Current title: `[CBRD-27925] Reuse emptied OOS pages in place instead of deallocating`
-- Proposed title: `[CBRD-28281] Reuse emptied OOS pages in place instead of deallocating`
+- PR: https://github.com/CUBRID/cubrid/pull/8493 (Draft, base `develop`, state `OPEN`)
+- Source branch: `CBRD-27925-emptied-set` (`vimkim/cubrid`)
+- Local `SOURCE_COMMIT`: `96fb566bcc1781f48773061d765dcd136098bafa` (`[CBRD-28281] Test crash between empty OOS page reinit and insert`)
+- Observed remote PR head: `f1c78ce70bb469f5d1d39204cc71a5fe3d832b54` (no source push before triage; `96fb566bcc` stays local until triage approval and `develop` rebase)
+- Title (unchanged): `[CBRD-28281] Reuse emptied OOS pages in place instead of deallocating`
+- Original live GitHub body SHA-256 (2026-11-23): `450bb5477f37eeb5edde1721995db13fdb4bbeea33298b2dfbf56c15b2e55fdf`
+- Docs task branch: `docs/cbrd-28281-verify` → integration target `main`
+- Body path: `cbrd-28281/pr-body-8493.md`
+- Explanation path: `cbrd-28281/adr-0011-technical-verification.md`
+- Public explanation URL: `https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-28281/adr-0011-technical-verification.md`
 
 ## Changes to the body
 
-1. Ticket link CBRD-27925 → CBRD-28281.
-2. Purpose: state that ADR-0009 is already met by #8434 (CBRD-27925) and that this PR reduces the reuse cost; adoption is decided in CBRD-28281, so the PR stays Draft.
-3. Remarks: replace the stale "stacked on #8434, before #8434 merges" note with the #7990 develop merge, the base change to develop, the conflict, the five own commits, and rebase after triage.
+1. Resolve the two open questions in Remarks using evidence from `adr-0011-technical-verification.md`:
+   - Vacuum drain delay (`0.34 s → 2.4 s`) root cause and continuous churn impact across 3 workloads.
+   - Reinit-to-insert crash window hook/tests (local commit `96fb566bcc`) and zero-undo audit.
+2. Note that `f1c78ce70b` remains the remote PR head while `96fb566bcc` is held locally for `develop` rebase after CBRD-28281 triage, leaving only multi-file concurrent churn unmeasured.
+3. Link the public verification report URL as the final Remarks bullet.
 
-## Proposed operations
+## Proposed operations (pending user confirmation)
 
-1. `gh pr edit 8493 -R CUBRID/cubrid --title "[CBRD-28281] Reuse emptied OOS pages in place instead of deallocating" --body-file cbrd-28281/pr-body-8493.md`; keep Draft; verify title and body.
-2. Merge this docs branch into my-cubrid-docs `main` (ff-only) and push `main`.
-
-User approval (2026-11-23): plan item 3 "yes" (title and body), pending review of this draft.
-
-## Execution record (2026-11-23)
-
-- User confirmed: "진행."
-- `gh pr edit 8493` applied the proposed title and this body (sha256 450bb5477f37eeb5). Read back: title `[CBRD-28281] Reuse emptied OOS pages in place instead of deallocating`, body equal to the file, Draft, base `develop`, head `f1c78ce70b` (no source push).
-- Publication record: `vimkim/my-cubrid-jira` `04d18e8` `reviews/CBRD-27925-close/PUBLICATION.md`.
+1. `my-cubrid-docs`: rebase `docs/cbrd-28281-verify` onto `main`, fast-forward merge into `main`, and push `origin main` (must precede `gh pr edit` so the linked explanation URL is live).
+2. `CUBRID/cubrid` PR #8493: `gh pr edit 8493 -R CUBRID/cubrid --body-file cbrd-28281/pr-body-8493.md`, keeping Draft status and existing title, with no source push.
+3. Verify live body and record the execution result in `cbrd-28281/pr-context-8493.md`.

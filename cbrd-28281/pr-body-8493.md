@@ -17,9 +17,11 @@ https://jira.cubrid.org/browse/CBRD-28281
 
 ## Remarks
 
-- #7990이 develop에 squash 병합되어(`68a9c7766f`) base를 develop으로 바꿨습니다. 브랜치는 아직 11-12의 `feature/oos-merge` 위에 있어 develop과 충돌하고, diff에 develop에 이미 들어간 OOS 변경이 함께 보입니다. 이 PR의 커밋은 `2d40794363`부터 `95733273fe`까지 5개입니다. CBRD-28281 triage 뒤 develop으로 rebase합니다.
+- #7990이 develop에 squash 병합되어(`68a9c7766f`) base를 develop으로 바꿨습니다. 원격 PR head(`f1c78ce70b`)는 아직 11-12의 `feature/oos-merge` 위에 있어 develop과 충돌하며, CBRD-28281 triage 뒤 추가 테스트 커밋(`96fb566bcc`, 로컬)을 포함해 develop으로 rebase하고 CI를 실행합니다.
 - 측정(CBRD-27872 churn, release 빌드, #8434 기준과 비교): sector 수는 2,000행 32, 6,000행 94로 같습니다. 반복 churn에서 파일이 첫 사이클보다 커지지 않습니다. 대량 UPDATE는 2,000행 129→111 ms, 6,000행 386→334 ms입니다. 단건·동시 INSERT는 차이가 없습니다.
 - 로그 레코드는 INSERT 1,000건당 약 10.2K에서 6.2K로 줄어듭니다.
-- 테스트: 빈 페이지 재사용, 재초기화와 abort, 재시작 후 재사용, 집합 넘침, churn 크기 테스트, 재초기화 직후 crash 뒤 재시작 테스트를 추가했습니다. 재초기화 로그를 빼거나 undo 가능하게 바꾸면 crash 테스트가 실패합니다.
-- `ctest -R oos` 53개: rebase 전에는 모두 통과했습니다. #8434 새 head로 rebase한 뒤에는 부하가 큰 상태에서 51개 통과했고, 시간 초과 1개와 vacuum 타이밍 검사 1개는 단독으로 3번 다시 돌려 모두 통과했습니다.
-- 남은 점: 재초기화 로그 뒤, INSERT 로그 전에 죽는 순간은 테스트하지 못했습니다(테스트 훅이 없음). UPDATE 뒤 vacuum이 정리를 마치는 시간이 #8434보다 길고, 원인은 아직 모릅니다. 여러 OOS 파일이 동시에 churn하는 경우는 측정하지 않았습니다.
+- 기존 테스트(`ctest -R oos` 53건): rebase 전 모두 통과했고, #8434 새 head rebase 뒤 부하 상태에서 51건 통과, 나머지 2건은 단독 3회 재실행으로 통과했습니다.
+- **vacuum drain 지연(`0.34 s → 2.4 s`) 원인 규명**: `er_log_vacuum` 분석 결과, fast path 제거 후 vacuum worker가 `file_dealloc` sysop WAL로 후속 31쪽 블록을 스스로 닫아주던 부수 효과가 사라져 idle filler가 단일 31쪽 블록을 닫아야 해서 생기는 현상입니다(`REPEAT('f', 1500)` filler는 LZ4 압축 기준 약 2.07쪽 전진). 대기·filler 없는 연속 churn 3종에서 무한 누적이나 vacuum backlog는 없었고, 섹터 수도 ADR-0010과 같거나 작았습니다(500행 16 vs 17, 1,000행 24 vs 24, 동시 4세션 47 vs 48, 2,000행 36 vs 33~37).
+- **재초기화~INSERT 사이 crash 공백 해소**: 빈 OOS 페이지를 대상으로 하는 undo 경로가 코드상 0건임을 확인했고, `oos_test_exit_after_empty_page_reinit` 훅으로 `RVPGBUF_NEW_PAGE` flush 직후 `RVOOS_INSERT` 전 crash 테스트 2건(단독·선행 미커밋 `RVOOS_INSERT`로 active UNDO 동반)을 추가해 Debug 빌드 `ctest` OOS 12/12(`test_oos_server_crash_recovery` 4건 포함)를 통과했습니다(로컬 커밋 `96fb566bcc`).
+- 남은 점: 여러 OOS 파일이 동시에 churn하는 경우는 측정하지 않았습니다.
+- 기술 검증 상세 보고서: https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-28281/adr-0011-technical-verification.md
