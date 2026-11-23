@@ -1,0 +1,27 @@
+diff --git a/src/storage/heap_file.c b/src/storage/heap_file.c
+index 3b7df622e1..aa198ebe18 100644
+--- a/src/storage/heap_file.c
++++ b/src/storage/heap_file.c
+@@ -14786,7 +14786,7 @@ heap_attrinfo_prepare_record (THREAD_ENTRY *thread_p, HEAP_CACHE_ATTRINFO *attr_
+                              heap_pending_record *pending, bool copy_lobs, bool reuse_oos_stubs)
+ {
+   record_descriptor *record = &pending->record ();
+-  assert (record->get_recdes ().data == nullptr);
++  assert (record->get_recdes ().data == nullptr || record->get_recdes ().length == 0);
+   SCAN_CODE status = S_ERROR;
+   if (heap_oos_begin_insert_publication (thread_p) != S_SUCCESS)
+     {
+diff --git a/src/transaction/locator_sr.c b/src/transaction/locator_sr.c
+index b0ba347073..6061adb264 100644
+--- a/src/transaction/locator_sr.c
++++ b/src/transaction/locator_sr.c
+@@ -9383,7 +9383,9 @@ locator_attribute_info_force (THREAD_ENTRY * thread_p, const HFID * hfid, OID *
+ 			      LOCATOR_LOCK_POLICY lock_policy)
+ {
+   /* *INDENT-OFF* */
++  cubmem::stack_block<(size_t) IO_MAX_PAGE_SIZE> pending_buf;
+   heap_pending_record pending;
++  pending.record ().set_external_buffer (pending_buf.get_ptr (), pending_buf.SIZE);
+   /* *INDENT-ON* */
+   RECDES new_recdes;
+   SCAN_CODE scan = S_SUCCESS;	/* Scan return value for next operation */
