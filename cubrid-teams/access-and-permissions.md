@@ -14,9 +14,14 @@
 
 ## 1. 핵심 결론 (TL;DR)
 
+| 작업 | 담당 도구 | 현재 방식 | 실행 주체 | 브라우저 필요 | 왜 이 방식을 쓰는가 |
+| :--- | :--- | :--- | :--- | :---: | :--- |
+| **채널 글·답글 읽기 (크롤링)** | `cubrid-teams-dev2-vimkim-bot` (`read`) | **Playwright 헤드리스 브라우저** | `dhkim@cubrid.com` 웹 세션 | **O** | Graph API 채널 읽기는 테넌트 관리자(`ChannelMessage.Read.All`) 또는 팀 소유자 RSC(`ChannelMessage.Read.Group`) 허가가 필수라, 추가 승인 없이 동작하는 브라우저 세션 사용 |
+| **스레드 댓글 쓰기 (`dhkim` 명의)** | `cubrid-teams-dev2-vimkim-bot` (`reply --transport graph`) | **Microsoft Graph API** (`ChannelMessage.Send`) | `dhkim@cubrid.com` 위임 토큰 | **X** | `ChannelMessage.Send`는 일반 사용자(`User`) 동의만으로 허용되어 관리자·팀 소유자 승인 없이 API로 직접 작성 가능 |
+| **정기 알림 발송·`@dev2bot` 멘션 응답** | `cubrid-teams-dev2bot` | **Teams Bot Framework API** | `dev2bot` 앱 자체 계정 | **X** | 등록된 일반 봇은 쓰기·채널 목록·`@멘션` 단건 수신이 기본 허용됨 (단, 일반 채널 글·과거 이력 읽기는 API 자체가 없어 불가) |
+
 1. **본인 계정 권한(Delegated)만으로는 승인 없이 채널 글을 읽을 수 없습니다.**
    - Microsoft Graph에서 채널 **쓰기(`ChannelMessage.Send`)** 는 일반 사용자(`User`) 동의로 가능하지만, 채널 **읽기(`ChannelMessage.Read.All`)** 는 Delegated 권한조차 테넌트 관리자(`Admin`) 승인이 필수입니다.
-   - 실제로 `dhkim@cubrid.com` 계정은 Graph로 스레드 댓글 전송(`reply --transport graph`)은 관리자 승인 없이 수행할 수 있지만, 채널 목록·글·답글 읽기는 현재 Playwright 웹 세션에 의존합니다.
 2. **일반 봇(`@dev2bot` 모델)은 과거 글 조회와 비멘션 글 수집이 불가합니다.**
    - 일반 Teams 봇은 채널에서 `@멘션`된 실시간 메시지만 수신하며, PR 공지처럼 멘션 없는 일반 게시글과 답글 이력을 조회할 수 없습니다.
 3. **테넌트 관리자 승인 없이 브라우저를 제거할 수 있는 유일한 공식 경로는 RSC(`ChannelMessage.Read.Group`)입니다.**
