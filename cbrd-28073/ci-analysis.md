@@ -1,4 +1,4 @@
-# CI 분석: PR #8514 (run 43263461440, run 44245545024, run 44522105929, run 44705649588)
+# CI 분석: PR #8514 (run 43263461440, run 44245545024, run 44522105929, run 44705649588, run 45132951323)
 
 ## 요약
 
@@ -455,3 +455,133 @@ head 근거가 완전하지 않아 정식 이력 분석(section 3b)은 하지 �
 - head 요약: `cubrid-ci` 데이터 디렉터리의 `github-actions/CUBRID-cubrid/pr-8514/b6de23c3f927f408d0c642a717a64eae45b923f7/providers/github-actions/runs/44705649588/attempts/1/{test_medium,test_shell,test_sql_by_cci}/summary.json`
 - 실패 내용: 같은 디렉터리의 `test_shell/failures/shell_06_issues_26_2h_cbrd_27780_cases_cbrd_27780_sh-9b5694291f/`, `test_shell/failures/shell_06_issues_26_2h_cbrd_27863_cases_cbrd_27863_sh-d03fb7d9ea/`
 - 다른 PR 근거: `github-actions/CUBRID-cubrid/pr-{8528,8613,8641,8664}/<head>/providers/github-actions/runs/<run>/attempts/1/test_shell/failures/`
+
+## ASSERT_EQ·shell TC 추가 후 재실행: 2026-11-24, head `8e2f18dcb6`, run 45132951323
+
+> **경고.** 이번 수집은 전체 검증이 끝나지 않았다(`report_mode: warning`, `observation: incomplete`, `requested_summaries: partial`, `baseline: partial_exact`, `regression_conclusions_allowed: false`, `comparison_scope: none`). `test_sql`이 head와 exact merge-base 모두에서 기존 shard 01 JUnit 19건 누락 무결성 오류로 `collection_failed`여서 검증된 요약이 없다(양쪽 모두 CI 상태는 `SUCCESS`). 따라서 이 절은 전체 회귀 결론을 내리지 않으며, 검증된 3개 suite(`test_medium`, `test_shell`, `test_sql_by_cci`)에 한정된 관찰과 merge-base 대조를 기록한다.
+
+### 요약
+
+- 검증된 3개 suite에서 head 실패는 총 3건(`test_shell` 1건 `cbrd_28061.sh`, `test_sql_by_cci` 2건 `cbrd_28202.sql`, `cbrd_27752.sql`)이며 error는 0건이다. `test_medium`(975/975)과 `gha-ci: build (debug)`/`gha-ci: build (release)`는 통과했고, `test_sql`은 CI `SUCCESS`이나 collector 검증이 미완료다.
+- 3건 모두 exact merge-base `30eb0c4b8b`의 검증된 run [45204880813](https://github.com/CUBRID/cubrid/actions/runs/45204880813) attempt 1에서 **동일한 실패 시그니처(`diff.txt` 바이트 완전 일치)**로 재현된 `also_observed_on_base` 실패다(`additional_on_head` 0건, `uncomparable` 0건, `base_only` 0건).
+- 세 실패 모두 이미 각 testcase 저장소 `develop`에 수정 PR이 머지되었다.
+  - `cbrd_28061.sh` → [CUBRID/cubrid-testcases-private-ex#5102](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/5102) (커밋 `f726b044d2`, `STORAGE FORCE_INLINE` 적용, `2026-11-24T08:34:05Z` 머지)
+  - `cbrd_28202.sql` → [CUBRID/cubrid-testcases#4405](https://github.com/CUBRID/cubrid-testcases/pull/4405) (커밋 `ffe8f3b5bf`, `autocommit off;`를 헤더 주석 앞으로 이동, `2026-11-24T02:54:45Z` 머지)
+  - `cbrd_27752.sql` → [CUBRID/cubrid-testcases#4406](https://github.com/CUBRID/cubrid-testcases/pull/4406) (커밋 `2eb52eb3f3`, `autocommit off;`를 헤더 주석 앞으로 이동, `2026-11-24T02:55:40Z` 머지)
+- 이번 PR이 private TC PR [#4877](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4877)로 추가한 `shell/_06_issues/_26_2h/cbrd_28073/cases/cbrd_28073.sh`는 shard 09에서 실행되어 통과(16.490s)했고, 기존 간헐 실패였던 `cbrd_27780.sh`(CBRD-28257)도 shard 11에서 통과(42.237s)했다.
+- `TC Merge Gate / Check TC PRs` 실패(run [45132831393](https://github.com/CUBRID/cubrid/actions/runs/45132831393/job/137552037079))는 TC PR [#4173](https://github.com/CUBRID/cubrid-testcases/pull/4173)/[#4877](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4877)을 격리 유지를 위해 열어 둔 상태이므로 회귀 실패가 아니며 최종 병합 핸드오프로 보류한다.
+- **다음 행동 핵심**: TC 수정(`#5102`, `#4405`, `#4406`)을 받기 위해 `tc/pr-8514`를 최신 TC `develop`과 동기화하면, `30eb0c4b8b` 이후 엔진 `develop`에 머지된 16개 커밋에 대응하는 새 TC들도 함께 들어온다. 특히 그중 **PR #8460 (`44e9290f38`, CBRD-27744)**이 `src/query/serial.c`(+789/-163)를 크게 변경하고 `serial_repl_prepare` 위 헬퍼에 새 `heap_attrinfo_transform_to_disk` 호출을 추가했으므로, 단순 TC 동기화+재실행보다 최신 `develop` 위로 리베이스하면서 해당 호출의 `keep_form` 적용 필요성을 먼저 점검한 뒤 승인 하에 push·TC 동기화·`/run all`을 진행하는 것이 안전하다.
+
+### 대상
+
+| 항목 | 값 |
+| --- | --- |
+| PR | https://github.com/CUBRID/cubrid/pull/8514 (`OPEN`, non-draft) |
+| head | `8e2f18dcb6fde008c137ffec19233cb4de235613` (로컬 브랜치 `CBRD-28073-serial-nextval-keep-form`, base `30eb0c4b8b` 위 커밋 6개: `e641371cde`, `c22d949de8`, `22bc063206`, `6428ad07f4`, `7303688cc5`, `8e2f18dcb6`) |
+| base / merge-base | `develop` `30eb0c4b8bf12c09697977c325918df8bbd2acb6` (merge-base와 일치) |
+| head run | https://github.com/CUBRID/cubrid/actions/runs/45132951323 attempt 1 (`issue_comment`, 2026-11-23T07:41:34Z ~ 11:23:07Z) |
+| base run | https://github.com/CUBRID/cubrid/actions/runs/45204880813 attempt 1 (`workflow_dispatch`, `dispatch all 30eb0c4b8bf12c09697977c325918df8bbd2acb6`, 2026-11-23T15:24:31Z ~ 17:29:55Z; build producer run `45131748657` attempt 1, `sha=30eb0c4b8b`) |
+| 요청 suite | `test_medium`, `test_sql`, `test_shell`, `test_sql_by_cci` (head에 `gha-ci: test_sql_by_cci` status 존재) |
+| 수집 / 검증 | head `2026-11-24T08:34:25Z` (`collect` exit 4, `verify` exit 3), base `2026-11-24T08:35:34Z` (`collect-base` exit 4, `verify` exit 3), `cubrid-ci 0.2.0 (00205d576de0, release)` |
+| head observation | `pr-8514/8e2f18dcb6fde008c137ffec19233cb4de235613/observations/20261124T083413.018220767Z-2581844-0` |
+| base observation | `commits/30eb0c4b8bf12c09697977c325918df8bbd2acb6/observations/20261124T083534.157598311Z-2627235-0` |
+| verify / report_mode | identity `established`, observation `incomplete`, manifest `validated`, requested summaries `partial`, baseline `partial_exact` → `report_mode: warning` |
+| testcase revision (head) | shell: `cubrid-testcases-private-ex` `023a5ec33d342641c05a53a85f1db6c353535aef` (`tc/pr-8514`), medium/sql_by_cci: `cubrid-testcases` `aaa0ac947c2ee400f8a08296b0844405d6385b36` (`tc/pr-8514`) |
+| testcase revision (base) | shell: `cubrid-testcases-private-ex` `913bb726d41ee48a703bd438629036cf8d415688` (`develop`), medium/sql_by_cci: `cubrid-testcases` `98b4755b9e028312065edbb84f904e0e13d3aae6` (`develop`) |
+| engine build provenance | head 모든 shard `build.sha=8e2f18dcb6...` (`run_id=45132951323`, attempt 1; medium/shell debug, sql_by_cci release); base 모든 shard `build.sha=30eb0c4b8b...` (`run_id=45131748657`, attempt 1; medium/shell debug, sql_by_cci release) |
+
+### Suite 상태
+
+| Suite | head CI 결과 | head 수집 상태 | head (tests/pass/fail/err/skip) | base run 45204880813 |
+| --- | --- | --- | --- | --- |
+| `test_medium` | `SUCCESS` | `completed` (`validated`) | 975 / 975 / 0 / 0 / 0 (`planned=975`, `run=975`) | `SUCCESS` / `completed` (`validated`) / 975 / 975 / 0 / 0 / 0 |
+| `test_shell` | `FAILURE` | `completed` (`validated`) | 3675 / 3644 / 1 / 0 / 30 (`planned=3675`, `run=3645`) | `FAILURE` / `completed` (`validated`) / 3674 / 3643 / 1 / 0 / 30 (`planned=3674`, `run=3644`) |
+| `test_sql` | `SUCCESS` | `collection_failed` (요약 없음) | 없음 (raw `failed.list` 0바이트, 미검증) | `SUCCESS` / `collection_failed` (요약 없음) |
+| `test_sql_by_cci` | `FAILURE` | `completed` (`validated`) | 17864 / 17862 / 2 / 0 / 0 (`planned=17864`, `run=17864`) | `FAILURE` / `completed` (`validated`) / 17864 / 17862 / 2 / 0 / 0 |
+
+- 기타 PR 체크 (수집 suite 외): `gha-ci: build (debug)`, `gha-ci: build (release)`, `license`, `pr-style`, `code-style`, `cppcheck`, `memory-monitor-check`는 모두 `SUCCESS`이며 `Re-check stale verdicts`는 `SKIPPED`다. `TC Merge Gate / Check TC PRs`는 run [45132831393](https://github.com/CUBRID/cubrid/actions/runs/45132831393/job/137552037079)에서 `FAILURE`("TC Merge Gate FAILED — TC changes are not on TC develop yet")를 보고했으나, 이는 TC PR `#4173`/`#4877`을 격리 유지를 위해 열어 둔 상태이므로 회귀 실패가 아니며 최종 병합 핸드오프로 보류한다.
+- `test_shell`의 head/base +1 차이는 이번 PR의 동반 TC PR `#4877`이 추가한 `shell/_06_issues/_26_2h/cbrd_28073/cases/cbrd_28073.sh`이며 shard 09에서 `16.490s`로 통과했다. 이전 run에서 반복 실패하던 `shell/_06_issues/_26_2h/cbrd_27780/cases/cbrd_27780.sh`(CBRD-28257)도 이번 head shard 11에서 `42.237s`로 통과했다.
+
+### 실패 목록
+
+| Suite | Testcase | shard (head / base) | 결과 | 관찰 시그니처 | base 비교 | 분류 / `cubrid-tcr` | PR 관련성 (확신) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `test_shell` | `shell/_06_issues/_26_2h/cbrd_28061/cases/cbrd_28061.sh` | 29 / 12 | `failure` | `cbrd_28061-1 : NOK setup: h1 holds 11520 rows in 237 pages, expected 11520 rows in more than 11520 pages` | `also_observed_on_base` | TC/OOS 기대값 불일치 (`no_match`) | `unlikely` (높음) |
+| `test_sql_by_cci` | `sql/_13_issues/_26_2h/cases/cbrd_28202.sql` | 03 / 03 | `failure` | 첫 문장(`/** ... */` 뒤 `autocommit off;`)에서 `0` 대신 `Error:-493`, 이후 statement block 불일치 (`.answer` 대조, head/base `diff.txt` 바이트 일치) | `also_observed_on_base` | CCI 러너 지시어 위치 (`known_job`: `sql-by-cci-every-branch`) | `unlikely` (높음) |
+| `test_sql_by_cci` | `sql/_36_guava/cbrd_27752/cases/cbrd_27752.sql` | 09 / 09 | `failure` | 첫 문장(`/** ... */` 뒤 `autocommit off;`)에서 `0` 대신 `Error:-493`, 이후 statement block 불일치 (`.answer` 대조, head/base `diff.txt` 바이트 일치) | `also_observed_on_base` | CCI 러너 지시어 위치 (`known_job`: `sql-by-cci-every-branch`) | `unlikely` (높음) |
+
+- **개수 정합성**: head 검증 실패 3건 (`test_shell` 1 + `test_sql_by_cci` 2, error 0) = `also_observed_on_base` 3 + `additional_on_head` 0 + `uncomparable` 0. `base_only`는 0건이다(`test_sql`은 양쪽 모두 `collection_failed`로 비교 제외).
+
+### 원인 분석
+
+#### 그룹 1: `cbrd_28061.sh` — OOS 적용 후 heap 페이지 수 기대값 불일치 (`test_shell`)
+
+- **관찰.**
+  - head (`8e2f18dcb6`, shard 29)와 exact merge-base (`30eb0c4b8b`, run `45204880813`, shard 12) 모두 동일한 실패 메시지 `cbrd_28061-1 : NOK setup: h1 holds 11520 rows in 237 pages, expected 11520 rows in more than 11520 pages`와 동일한 `diff.txt`를 냈다.
+  - testcase 파일 `shell/_06_issues/_26_2h/cbrd_28061/cases/cbrd_28061.sh`는 head(`023a5ec33d34`)와 base(`913bb726d41e`) 사이에서 `git diff --stat` 차이가 0이다.
+  - `cbrd_28061.sh`는 4K page DB(`enable_string_compression=no`)에 11,520행이 각각 1페이지씩 차지하도록 의도한 테스트로, serial/AUTO_INCREMENT를 쓰지 않는다.
+  - PR #8514는 `src/query/serial.c`(2개 호출), `src/storage/heap_file.c`/`heap_file.h`(`keep_form` 인자·`heap_attrinfo_transform_to_disk_keep_form`), `unit_tests/oos/`만 수정하며 일반 user heap의 `keep_form=false` 경로를 바꾸지 않는다.
+  - [CUBRID/cubrid-testcases-private-ex#5102](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/5102)(`[CBRD-28061] Keep each row of cbrd_28061 in one heap page with STORAGE FORCE_INLINE`, 커밋 `f726b044d2`)가 `2026-11-24T08:34:05Z`에 TC `develop`으로 머지되었다.
+- **추론.** OOS 도입 후 `cbrd_28061.sh`의 긴 문자열 행이 OOS로 빠져 11,520행이 237개 heap 페이지만 차지했기 때문에 setup 검사가 실패한 것이며, 이미 `#5102`로 해결되었다. PR #8514와는 무관하다(`unlikely`, 확신 높음).
+- **모르는 것.** `#5102`가 반영된 TC `develop` 위에서 본 PR의 head가 `cbrd_28061.sh`를 실제로 통과하는지는 아직 실행해 보지 않아 미확인이다.
+- **반증 조건.** `#5102` 커밋 `f726b044d2`를 포함한 `tc/pr-8514`로 재실행했을 때 head에서만 `cbrd_28061.sh`가 실패하고 `develop`에서는 통과하면 이 판정은 틀린다.
+- **다음 행동.** 최신 `develop` 리베이스(또는 TC 동기화) 시 `#5102`를 반영해 재실행으로 통과를 확인한다.
+
+#### 그룹 2: `cbrd_28202.sql`, `cbrd_27752.sql` — `test_sql_by_cci`에서 블록 주석 뒤 `autocommit off;` 파싱 실패
+
+- **관찰.**
+  - 두 케이스 모두 `.answer_cci`가 없고 `.answer`를 기대 출력으로 사용한다(`message.txt`의 `** Expected :`로 확인).
+  - head (`8e2f18dcb6`)와 exact merge-base (`30eb0c4b8b`) 모두 첫 문장(`/** ... */` 블록 주석 바로 뒤의 `autocommit off;`)에서 `0` 대신 `Error:-493`이 발생해 이후 statement block 전체가 어긋났으며, `diff.txt`가 head와 base에서 바이트 단위로 완전히 일치한다(`IDENTICAL`).
+  - public TC 저장소에서 head(`aaa0ac947c2e`)와 base(`98b4755b9e02`) 사이에 두 파일과 `.answer`의 차이가 0이다.
+  - CSQL을 쓰는 `test_sql`은 head와 base 모두 `SUCCESS`였다.
+  - [CUBRID/cubrid-testcases#4405](https://github.com/CUBRID/cubrid-testcases/pull/4405)(커밋 `ffe8f3b5bf`, `2026-11-24T02:54:45Z` 머지)와 [CUBRID/cubrid-testcases#4406](https://github.com/CUBRID/cubrid-testcases/pull/4406)(커밋 `2eb52eb3f3`, `2026-11-24T02:55:40Z` 머지)이 `autocommit off;`를 헤더 주석 블록 앞으로 옮겨 수정했다.
+  - `cubrid-tcr check`는 두 건 모두 활성 job 규칙 `sql-by-cci-every-branch`(만료 `2026-12-09`, 남은 일수 15일)에 의해 `known_job`으로 판정했다.
+- **추론.** `test_sql_by_cci` 실행기가 선행 `/** ... */` 주석 블록 뒤의 `autocommit off;` 지시어를 일반 SQL로 서버에 보내 `-493` 구문 오류를 일으킨 기존 TC 작성 위치 문제이며, `#4405`/`#4406`으로 이미 TC `develop`에서 수정되었다. PR #8514와는 무관하다(`unlikely`, 확신 높음).
+- **모르는 것.** `#4405`, `#4406` 반영 후 이 head에서 두 케이스가 통과하는지, 그리고 `test_sql`의 미검증 raw 결과에 다른 특이사항이 없는지는 검증된 요약이 없어 미확인이다.
+- **반증 조건.** `#4405`/`#4406` 이후의 TC에서도 head가 `cbrd_28202.sql` 또는 `cbrd_27752.sql`에서 실패하고 base가 통과하면 이 판정은 틀린다.
+- **다음 행동.** 최신 TC `develop` 동기화 시 `#4405`/`#4406`을 받아 재실행으로 통과를 확인한다. `test_sql_by_cci`는 opt-in 체크이나 head에 status가 이미 붙어 있으므로 함께 확인한다.
+
+### Base 비교
+
+- **Pinned identities**: head `8e2f18dcb6fde008c137ffec19233cb4de235613`, target `develop` tip(수집 시점 `30eb0c4b8bf12c09697977c325918df8bbd2acb6`), exact merge-base `30eb0c4b8bf12c09697977c325918df8bbd2acb6` (일치).
+- **Discovery coverage**: `all paginated exact-commit statuses and check runs; no repository-wide workflow scan`.
+- **Selected runs**: head `45132951323` attempt 1 vs base `45204880813` attempt 1 (`workflow_dispatch`, build producer run `45131748657` attempt 1, `sha=30eb0c4b8b`).
+- **TC revision 대조**:
+  - private (`cubrid-testcases-private-ex`): head `023a5ec33d342641c05a53a85f1db6c353535aef` (`tc/pr-8514`) vs base `913bb726d41ee48a703bd438629036cf8d415688` (`develop`). 차이 파일은 `shell/_06_issues/_26_2h/cbrd_28073/cases/cbrd_28073.sh`(+173줄) 1건뿐이며 `cbrd_28061` 디렉터리 diff는 없다.
+  - public (`cubrid-testcases`): head `aaa0ac947c2ee400f8a08296b0844405d6385b36` (`tc/pr-8514`) vs base `98b4755b9e028312065edbb84f904e0e13d3aae6` (`develop`). 파일 차이 0건이며 `cbrd_28202`, `cbrd_27752`와 `.answer` diff는 없다.
+- **설정 및 한계**: 양쪽 모두 `test_medium`·`test_shell`은 debug, `test_sql_by_cci`는 release 빌드로 실행되었다. `test_sql`은 양쪽 모두 `collection_failed`여서 비교할 수 없으며, head와 base 각각 1회 실행 결과다.
+
+### 수집 기록과 진단
+
+- **Acquisition ledger**: head와 base 모두 `test_medium` 1/1, `test_shell` 50/50, `test_sql` 10/10, `test_sql_by_cci` 10/10 shard가 모두 `retained`다(`failed` 0, `not_attempted` 0).
+- **Binary budget**: head와 base 모두 `configured_bytes: 536870912`, `consumed_bytes: 0`.
+- **`test_sql` 진단**: head와 base 모두 shard 01에서 JUnit이 `summary_info`보다 19개 적다(`summary_info 3557/0/0` 대 `JUnit 3538/0/0`). 누락된 19건은 모두 `sql/_05_plcsql/_01_testspec/_05_bug_fix/` 아래 `cbrd-27500`, `cbrd-27556`, `cbrd-27584`, `cbrd-27633`, `cbrd-27634`, `cbrd-27742`, `cbrd-27927` 케이스로, 이전 run들 및 develop base와 완전히 동일한 기존 문제다.
+
+### Testcase 이력
+
+- 도구 버전: `cubrid-tcc 0.3.0`, `cubrid-tcr 0.1.0`.
+- `cubrid-tcc sync-data --run 45132951323 --suite test_shell --revisit-limit 0 --json` 1회 실행 결과: `observations: 0`, `unavailable_files: 1`, `missing_remaining: 2980`.
+- `cbrd_28061.sh`: Chronicle `history_result`는 `UNKNOWN_HISTORY` (`not_indexed`, `not_indexed_reason: never_observed`, `suite_last_sync: 2026-11-18T11:28:20Z`). `cubrid-tcr show`가 안내한 날짜 구간 sync(`--since 2026-11-10T08:43:20Z --until 2026-11-24T08:37:53Z --suite shell`)와 `missing_runs: 2980` 갭은 명령 시간 제한상 실행하지 않고 기록으로 남긴다. shell 근거는 실패만 남으므로 통과 기록이 없는 것은 안정성 근거가 아니다. `cubrid-tcr check` 판정은 `no_match`다.
+- `cbrd_28202.sql`, `cbrd_27752.sql`: `test_sql_by_cci`는 Chronicle 미수집 suite(`UNSUPPORTED_SUITE` / `suite_not_collected`)이므로 이력 조회가 불가하다. `cubrid-tcr check` 판정은 두 건 모두 `known_job` (`sql-by-cci-every-branch`, 만료일 `2026-12-09`)이다.
+
+### 모르는 것
+
+- TC 수정(`#5102`, `#4405`, `#4406`)이 반영된 최신 TC `develop` 위에서 본 PR의 head가 4개 suite를 모두 통과하는지 여부.
+- `test_sql`의 검증된 요약 내용(shard 01 JUnit 19건 누락으로 `collection_failed`).
+- `30eb0c4b8b` 이후 `develop`에 머지된 PR `#8460` (`44e9290f38`, CBRD-27744)이 `src/query/serial.c`의 `serial_repl_prepare` 위 헬퍼에 새로 추가한 `heap_attrinfo_transform_to_disk` 호출이 `_db_serial`의 `keep_form` 불변식과 충돌하는지 여부.
+
+### 다음 행동
+
+1. **엔진 코드 선점검 + 리베이스 권장**: `30eb0c4b8b` 이후 `develop`에 16개 커밋(최신 `e3bbe664b5`까지)이 들어왔고, 특히 `#8460`(`44e9290f38`)이 `src/query/serial.c`를 크게 수정하며 `heap_attrinfo_transform_to_disk`를 새로 호출한다. 단순 TC 동기화 시 새 엔진용 TC도 함께 들어오므로, 사용자 승인 후 `CBRD-28073-serial-nextval-keep-form`을 최신 `develop` 위로 리베이스하고 `#8460` 상호작용을 점검한 뒤 `vk` force-push, 양쪽 `tc/pr-8514` 최신화/push, `/run all` 재실행을 진행하는 것이 안전하다.
+2. **동반 private TC PR [#4877](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4877) 정비 (승인 후)**: 현재 Draft이고 `No enlisted reviewers`로 BLOCKED다. `cbrd_28073.sh`(+173줄)가 run `45132951323`에서 통과했으므로 사용자 승인 후 Draft 해제(Ready), 제목/본문 정리 및 리뷰어 지정(`hornetmj`·`H2SU`·`shparkcubrid` 중 선택)을 진행한다.
+3. **엔진 PR [#8514](https://github.com/CUBRID/cubrid/pull/8514) 리뷰 게이트 정리**: 현재 `hornetmj`, `shparkcubrid`, `H2SU`가 `APPROVED`이고 `beyondykk9`가 `pending request`로 `BLOCKED`다. 리베이스·CI 완료 후 `beyondykk9` 재리뷰 대기, 요청 해제, 또는 명시적 예외 승인 중 하나를 사용자 결정에 따라 처리한다.
+4. **최종 병합 핸드오프**: 위 항목 완료 후 `cubrid-pr-approval-check` 재실행 → `#4877` 승인/병합 및 0-파일 `#4173` 무변경 확인 후 종료 → `Check TC PRs` 재실행 GREEN 확인 → `#8514` 병합 순서로 진행한다.
+
+### 근거 파일 (2026-11-24, head `8e2f18dcb6`)
+
+- head observation: `cubrid-ci` 데이터 디렉터리의 `github-actions/CUBRID-cubrid/pr-8514/8e2f18dcb6fde008c137ffec19233cb4de235613/observations/20261124T083413.018220767Z-2581844-0/result.json`
+- head 검증 요약: 같은 head 디렉터리의 `providers/github-actions/runs/45132951323/attempts/1/{test_medium,test_shell,test_sql_by_cci}/summary.json`
+- head 실패 상세: 같은 run 디렉터리의 `test_shell/failures/shell_06_issues_26_2h_cbrd_28061_cases_cbrd_28061_sh-6639bbc2f3/`, `test_sql_by_cci/failures/sql_13_issues_26_2h_cases_cbrd_28202_sql-932a55f4f8/`, `test_sql_by_cci/failures/sql_36_guava_cbrd_27752_cases_cbrd_27752_sql-e68bb090ac/`
+- head `cbrd_28073.sh` / `cbrd_27780.sh` 통과 JUnit: 같은 run 디렉터리의 `test_shell/raw/shards/09/linux_shell_64bit_optdebug.xml`, `test_shell/raw/shards/11/linux_shell_64bit_optdebug.xml`
+- base observation / 검증 요약: `cubrid-ci` 데이터 디렉터리의 `github-actions/CUBRID-cubrid/commits/30eb0c4b8bf12c09697977c325918df8bbd2acb6/observations/20261124T083534.157598311Z-2627235-0/result.json` 및 `providers/github-actions/runs/45204880813/attempts/1/{test_medium,test_shell,test_sql_by_cci}/summary.json`
+- TC Git 객체 확인: `/home/vimkim/gh/cubrid-testcases-private-ex/develop` (`023a5ec33d34`, `913bb726d41e`), `/home/vimkim/gh/cubrid-testcases/develop` (`aaa0ac947c2e`, `98b4755b9e02`)
