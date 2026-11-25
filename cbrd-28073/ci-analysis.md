@@ -726,3 +726,10 @@ head 근거가 완전하지 않아 정식 이력 분석(section 3b)은 하지 �
 - `cbrd_27742_02` core 분석과 결과: 아티팩트 서버 `runs/45385469421/sql/shard/01/artifacts/ctp_log.tgz` 안의 `result/y2026/m11/schedule_linux_sql_64bit_2501095798_11.5.0.3046-337e4f5/sql/_05_plcsql/_01_testspec/_05_bug_fix/cbrd-27742/cbrd_27742_02.{err,result,answer}`
 - sql shard 01 job log: job `138418185466` (`gh api …/actions/jobs/138418185466/logs`)
 - base observation과 요약: `cubrid-ci` 데이터 디렉터리의 `github-actions/CUBRID-cubrid/commits/8e052e99c508141dbdd6dc338b65e437e31d756a/observations/20261125T073206.661741922Z-3533071-0/result.json`과 `providers/github-actions/runs/45425193182/attempts/1/`
+
+### 후속 결과 (2026-11-25)
+
+- 재실행: `/run rerun 45385469421`로 시작한 run `45570850997` attempt 1에서 gha-ci 6개 context가 모두 통과했다(build release/debug, `test_shell`, `test_sql`, `test_medium`, `test_sql_by_cci`). 같은 head `337e4f5867`이다. `bug_bts_8907`과 `cbrd_27742_02`는 이번에는 실패하지 않았다.
+- `cbrd_27742_02` 교착: 로컬에서 재현했고 [CBRD-28380](https://jira.cubrid.org/browse/CBRD-28380)으로 등록했다(CBRD-27591과 relates 링크). 원인은 PL/CSQL 함수를 행마다 부르는 외부 스캔이 READ latch를 쥔 채 fixed scan을 하는 것이다. `pt_stored_procedure_to_regu` (`xasl_generation.c`)가 `XASL_NO_FIXED_SCAN`을 설정하지 않는다. 함수 안의 SQL은 다른 worker thread에서 돌고, vacuum이나 UPDATE의 WRITE 대기가 그 뒤에 끼면 세 쪽이 서로 기다린다. PR #8514와 관계없다.
+- 머지: `CUBRID/cubrid#8514`가 `develop`에 squash `cbed1d5707`으로 들어갔다. TC는 `CUBRID/cubrid-testcases-private-ex#4877`을 squash `36df907`로 머지했고, 변경이 없는 `CUBRID/cubrid-testcases#4173`은 닫았다. `TC Merge Gate / Check TC PRs`는 run `45385325626` attempt 2에서 통과했다.
+- JIRA: CBRD-28073을 `Start Develop` → `Accept the fix` → `Check in fix`로 `Resolved`(`Fixed`)까지 옮겼다.
