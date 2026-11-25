@@ -7,4 +7,4 @@ Debug-log calls whose printf format strings do not match their arguments
 | --- | --- | --- | --- | --- |
 | [pr-body.md](pr-body.md) | PR body for the 16 format-argument fixes | 2026-11-25 | 2026-11-25 | Draft PR description for review |
 | [pr-context.md](pr-context.md) | Source revision, verification evidence, publication record | 2026-11-25 | 2026-11-25 | Resume and publish the PR draft |
-| [ci-analysis.md](ci-analysis.md) | gha-ci run 45567269730 analysis at `f64df11ae6`: `test_sql` warning report and `test_shell` flaky `apis_1125` | 2026-11-25 | 2026-11-25 | Decide whether the `test_sql` failures come from this PR |
+| [ci-analysis.md](ci-analysis.md) | gha-ci run 45567269730 analysis at `f64df11ae6`: `test_sql` warning report, flaky `apis_1125`, rerun 45604548553 | 2026-11-25 | 2026-11-25 | Decide whether the `test_sql` failures come from this PR |

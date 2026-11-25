@@ -90,6 +90,19 @@
 - 반증 조건: 이 PR head에서 `apis_1125` 를 다시 실행해도 같은 하위 케이스가 계속 실패하고, 같은 base의 다른 PR에서는 계속 통과하면 이 판단은 틀립니다.
 - 후속: 이 testcase에 대한 known-issue rule이나 JIRA 이슈 등록을 검토합니다(APIS-1125 담당).
 
+## Rerun (`/run rerun 45567269730` → run 45604548553, 2026-11-25T11:59Z)
+
+| Context | 결과 |
+| --- | --- |
+| `build (release)`, `build (debug)`, `test_medium` | pass |
+| `test_shell` | **pass** (`apis_1125` 다시 실패하지 않음) |
+| `test_sql` | fail: shard 00 (`sql/_36_guava` 전체 318건)에서 `cbrd_26795`, `cbrd_27748`, `cbrd_28121` 3건만 NOK, 나머지 315건 OK |
+| `test_sql_by_cci` | fail (사용자 요청으로 제외) |
+
+- 출처: shard 00 job 로그의 `Testing ... [NOK]` 줄. `cubrid-ci collect` 는 rerun source(45567269730)의 메타데이터 불일치로 `collection_failed` (exit 4)여서 검증된 증거는 아닙니다.
+- 관찰: `apis_1125` 는 같은 head에서 재실행 시 통과했습니다. 간헐 실패 판단을 뒷받침합니다.
+- 관찰: `test_sql` 3건은 재실행에서도 같은 testcase가 실패합니다. 이 PR과 무관한 `develop` 공통 실패라는 추론과 일치합니다.
+
 ## 다음 조치
 
 1. `test_shell` 의 `apis_1125` 실패는 간헐 실패로 보고, `test_sql` 재확인 때 `/run rerun 45567269730` 으로 함께 다시 실행합니다.
