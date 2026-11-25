@@ -24,3 +24,8 @@ Last modified: 2026-11-17 (Asia/Seoul).
 | [jira-drafts/CBRD-28052-serial-sa-rollback-oos-chain.md](jira-drafts/CBRD-28052-serial-sa-rollback-oos-chain.md) | JIRA issue [CBRD-28052](https://jira.cubrid.org/browse/CBRD-28052) (Korean, registered 2026-11-11 as a Sub-task of CBRD-26978, relates to CBRD-28035): in SA mode, rolling back NEXT VALUE on a serial with an OOS comment leaves the `_db_serial` row naming a deleted OOS chain (-1397 on read); reproduced with `csql -S` on PR #8434 head `0d9732a63` + the CBRD-28035 fix; suggested type Correct Error | 2026-11-11 | 2026-11-11 | Separate defect found while fixing CBRD-28035 (PR #8492) |
 
 [bench/](bench/) holds the benchmark scripts and the raw CSVs that `perf.md` and `perf-growth-lock.md` summarize, so the numbers can be rerun.
+||||||| e81b973
+# CBRD-27781 OOS 삭제 undo 대상 보호
+관련 이슈는 [CBRD-27781](https://jira.cubrid.org/browse/CBRD-27781)이며 관련 엔진 PR은 [7990](https://github.com/CUBRID/cubrid/pull/7990)이다. 수정 후보를 비교하고 선택한 방식의 초안 PR을 준비하기 위한 자료다. 조사 기준은 `beb3facccf38c6374a7e2a29093fd84eceab98aa`이다.
+Last modified: 2026-11-03, Asia/Seoul.
+| [fix-options.md](fix-options.md) | 수정 후보, 소스 근거, 모델 범위, 추천과 초안 PR의 검증 조건 | 2026-11-03 | 2026-11-03 | 후보를 선택한 뒤 구현과 검증을 시작하도록 비교 근거 보존 |
