@@ -1,6 +1,6 @@
 # CBRD-27124: 빌드 버전 갱신과 재빌드 범위
 
-[CBRD-27124](https://jira.cubrid.org/browse/CBRD-27124)의 분석, 설계 결정 준비, 캐시 실측을 모은다. 2026-10-27 구현 `0d2a76e`를 [Draft PR #8298](https://github.com/CUBRID/cubrid/pull/8298)로 발행했다. 빌드별 통계 기반은 [PR #8254](https://github.com/CUBRID/cubrid/pull/8254)로 머지되었다.
+[CBRD-27124](https://jira.cubrid.org/browse/CBRD-27124)의 분석, 설계 결정 준비, 캐시 실측을 모은다. [PR #8508](https://github.com/CUBRID/cubrid/pull/8508)의 `7a15874` 검토는 [CMake 대안 리뷰](pr8508-review.md)에 정리했다. 2026-10-27 구현 `0d2a76e`를 [Draft PR #8298](https://github.com/CUBRID/cubrid/pull/8298)로 발행했다. 빌드별 통계 기반은 [PR #8254](https://github.com/CUBRID/cubrid/pull/8254)로 머지되었다.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
@@ -19,3 +19,4 @@
 | [wayfinder/tickets/T4-lock-minimal-rebuild-budget.md](wayfinder/tickets/T4-lock-minimal-rebuild-budget.md) | 버전 변경 시 허용할 최소 재빌드 작업량 | 2026-08-18 | 2026-08-18 | 재빌드 절감의 판정 기준 결정 |
 | [wayfinder/tickets/T5-lock-validation-and-ci-matrix.md](wayfinder/tickets/T5-lock-validation-and-ci-matrix.md) | 로컬 검증과 CI 행렬 | 2026-08-18 | 2026-08-18 | 계약을 확인할 환경과 검증 범위 결정 |
 | [wayfinder/tickets/T6-assemble-implementation-ready-spec.md](wayfinder/tickets/T6-assemble-implementation-ready-spec.md) | 구현 명세와 JIRA handoff 조립 | 2026-08-18 | 2026-08-18 | 앞선 결정들을 구현 가능한 문서로 연결 |
+| [pr8508-review.md](pr8508-review.md) | PR #8508 `7a15874`의 Git 감시 로직의 동작·복잡성, CMake 대안과 reftable 실행 검증 | 2026-11-16 | 2026-11-16 | 더 단순한 구현과 남은 버전 갱신 한계 판단 |
