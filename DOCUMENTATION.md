@@ -98,8 +98,8 @@ task branch, including work produced by other agents or skills.
    those artifacts do not enter main's history; a later deletion is insufficient.
    Preserve the original branch and useful local artifacts while preparing them.
 4. Report the selected documents, reasons for retained supporting/configuration
-   files, and checks. Follow the user's confirmation workflow for local
-   integration. After rebasing onto the current `main`, repeat the full selection
+   files, and checks. Follow the Tier 1 Git workflow in global `AGENTS.md` for
+   integration, push, and cleanup. After rebasing onto the current `main`, repeat the full selection
    audit immediately before `git merge --ff-only`. Merge only when every incoming
    path qualifies and document links resolve to retained repository files.
 5. Inspect ignored files before removing the merged task worktree and preserve
