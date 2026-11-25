@@ -3,8 +3,8 @@
 - 분석 및 작성 일시: 2026-11-25 (`Asia/Seoul`)
 - 관련 이슈: [CBRD-27539](https://jira.cubrid.org/browse/CBRD-27539) (상위 EPIC: [CBRD-27537](https://jira.cubrid.org/browse/CBRD-27537))
 - 기준 저장소 및 커밋: `CUBRID/CUBRID` `origin/develop` `cbed1d5707`
-- 재작성 로컬 커밋: `e4da2c73ea03d079973526171a2129b2dc97cc21` (브랜치 `CBRD-27539`, 미푸시)
-- 변경 범위: `AGENTS.md` (216줄 → 32줄), `src/AGENTS.md` (46줄 → 76줄). 엔진 소스, CMake 설정, SQL 동작, 하위 21개 `AGENTS.md` 파일은 변경하지 않았습니다.
+- 재작성 로컬 커밋: `e4da2c73ea03d079973526171a2129b2dc97cc21` (초안) → `bffec3aa104c05c1da9355af0fe456bf379d3cd0` (PR `#8751` 리뷰 피드백 반영, 브랜치 `CBRD-27539`, 미푸시)
+- 변경 범위: `AGENTS.md` (216줄 → 35줄), `src/AGENTS.md` (46줄 → 92줄), `src/base/AGENTS.md` (5·41·169행 참조 링크만 3줄 수정). 엔진 소스, CMake 설정, SQL 동작은 변경하지 않았습니다.
 
 ## Purpose
 
@@ -69,14 +69,30 @@
 
 저장소 내 모든 `AGENTS.md` 23개 파일을 전수 점검한 결과, 재작성된 루트 `AGENTS.md` 및 `src/AGENTS.md`와 충돌하거나 깨지는 링크·앵커는 없습니다. 다만 이번 이슈 범위 밖(수정 제외 대상)의 하위 파일에서 아래 기존 부정확성이 관찰되어 별도 후속 정리 대상으로 남깁니다.
 
-- `src/base/AGENTS.md:41,169`: 새 오류 코드 추가 시 `(see root AGENTS.md)` / `(see root AGENTS.md for 6-place procedure)`를 평문으로 참조합니다. 현재 루트 `AGENTS.md:9`가 `src/` 오류 코드 지침으로 `src/AGENTS.md`를 가리키므로 탐색 경로는 이어지지만, 추후 `src/base/AGENTS.md` 개편 시 `src/AGENTS.md` 참조로 직접 연결하면 더 명확합니다.
+- `src/base/AGENTS.md:5,41,169`: PR `#8751` 리뷰 지적을 반영해 `AGENTS.md`에서 `src/AGENTS.md`로 이동한 코딩 스타일·오류 코드 절차를 가리키도록 `[src/AGENTS.md](../AGENTS.md)`로 3줄을 직접 수정했습니다(`bffec3aa10`).
 - `src/executables/AGENTS.md:39-43`: `cub_server`(`server.c`)를 `cubrid/CMakeLists.txt`, `csql_launcher.c`를 `cs/CMakeLists.txt`, `unloaddb.c`를 `sa/CMakeLists.txt`로만 표기하고 `cub_master` 등을 `"top-level CMake"`로 묶어 실제 `util/CMakeLists.txt`(및 `cs/CMakeLists.txt`의 `unloaddb.c`)와 다릅니다.
 - `src/communication/AGENTS.md:52`: `memory_wrapper.hpp` 마지막 include 규칙만 적혀 있고 `strict_warnings_on.hpp`/`strict_warnings_off.hpp` 허용 예외는 생략되어 있습니다.
 - `unit_tests/AGENTS.md:37,58`: `lockfree/`를 비활성 상태로 표기하나, `unit_tests/CMakeLists.txt:48`에서는 이미 주석이 해제되어 있습니다.
 
 ---
 
-### 4. 시나리오 워크스루 검증 (재작성 문서 기준)
+### 4. PR `#8751` 리뷰 피드백 9건 검증 및 반영 기록 (`xmilex-git` 리뷰 + Greptile P2)
+
+| 대상 | 출처 | 검증 근거 (`origin/develop` `cbed1d5707`) | 조치 |
+|---|---|---|---|
+| `src/base/AGENTS.md:5,41,169` | `xmilex-git` 총평 | 코딩 스타일·오류 코드 절차가 `src/AGENTS.md`로 이동해 기존 루트 참조가 우회 경로가 됨 | `src/base/AGENTS.md` 3줄을 `[src/AGENTS.md](../AGENTS.md)`로 갱신 |
+| 빌드 모드 (`-Werror`, `NDEBUG`, `optdebug`) | `#discussion_r4694203731` | `CMakeLists.txt:615-621`에서 `Release\|RelWithDebInfo`만 `-Werror` 적용; `.github/workflows/gha-ci.yml:150-171,514-519`에서 `shell`/`sql`/`medium`은 `optdebug`, `sql_by_cci`는 `release` 사용 | `AGENTS.md:25,28`에 반영 |
+| `UNIT_TESTS` CI 미실행 | `#discussion_r4694203758` | `.github/`, `.circleci/`, `Jenkinsfile`에 `UNIT_TESTS`·`ctest` 실행 없음; Greptile P2(`#discussion_r4694061501`)는 후속 이슈 [CBRD-28388](https://jira.cubrid.org/browse/CBRD-28388)로 분리 | `AGENTS.md:26`에 반영, `CBRD-28388` 등록 및 Greptile 스레드 해결 |
+| 회귀 CI·CTP·`tc/pr-<N>`·`pkill cub` 주의 | `#discussion_r4694203767` | `.circleci/config.yml:582` `when: false`, `.github/workflows/gha-ci.yml:283-305` `/run`·`rerun`, `cubrid-testtools` CTP의 프로세스 정리 위험 | `AGENTS.md:28-30`에 반영 |
+| 스레드별 `db_private_alloc`·`PEEK` 비소유 계약 | `#discussion_r4694203780` | `src/base/memory_alloc.c:452,499` (`db_private_get_heapid_from_thread`, `CS_MODE` `db_ws_alloc`), `src/query/list_file.c:5664` (`qfile_retrieve_tuple` peek `size == 0`), `src/query/fetch.h:57` (`fetch_peek_dbval`) | `src/AGENTS.md:44-45`에 반영 |
+| 스레드별 에러 컨텍스트 인계 | `#discussion_r4694203795` | `src/query/parallel/px_interrupt.hpp:79` (`move_top_error_message_to_this`), `px_scan.cpp:1983` (`wait_workers`) | `src/AGENTS.md:49`에 반영 |
+| XASL 디스크 스트림·클론 재사용·`ER_QPROC_INVALID_XASLNODE` | `#discussion_r4694203805` | `src/query/stream_to_xasl.c:339,406` (`stx_map_stream_to_filter_pred`/`func_pred`), `src/query/xasl_cache.c:2804` (`xcache_retire_clone`), `src/compat/db_vdb.c:1983` | `src/AGENTS.md:73-75`에 반영 |
+| `LOG_RCVINDEX` 순서·`disk_compatibility_level` | `#discussion_r4694203814` | `src/transaction/recovery.h:35-44` 끝 추가 규칙 주석, `src/base/release_string.c:104` | `src/AGENTS.md:77`에 반영 |
+| 성능 민감 경로 (`ALWAYS_INLINE`, `m_px_stats`) | `#discussion_r4694203825` | `src/base/porting_inline.hpp:30-34`, `src/base/perf_monitor.h:1040` | `src/AGENTS.md:85-92`에 `## Performance-Sensitive Paths` 추가 |
+
+---
+
+### 5. 시나리오 워크스루 검증 (재작성 문서 기준)
 
 재작성된 `AGENTS.md`와 `src/AGENTS.md`, 그리고 두 문서가 가리키는 파일만으로 아래 3가지 시나리오를 추적했습니다.
 
