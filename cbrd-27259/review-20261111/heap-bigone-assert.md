@@ -99,11 +99,11 @@ compactdb 뒤에도 값 길이는 3000·21000B로 보존됐다. REC_HOME 행이 
 | C. 답글 + 새 JIRA 하위 이슈 | assert 작업이 독립적으로 보인다 | 27924에 의존하는 작은 작업이 하나 더 생긴다. 순서 관리가 늘어난다 |
 | D. 이 PR에 assert 추가 | 원칙을 곧바로 구조로 고정한다 | SA compact debug TC가 실패한다. 27924를 끌어와야 해서 PR 범위가 커진다 |
 
-### 권장: B
+### 권장: B (2026-11-12 작성자 결정: B 채택, delete 두 지점 제외)
 
 CBRD-27924에 다음 AC를 더한다.
 
-> heap 계층에서 multipage(REC_BIGONE) 데이터를 쓰는 insert·update 지점에 debug assert를 둔다. 대상은 `heap_insert_handle_multipage_record`, `heap_update_home`, `heap_update_relocation`, `heap_update_bigone`의 큰 레코드 분기다. 조건은 `OID_ISNULL (&context->class_oid) || oid_is_system_class (&context->class_oid)`이다. delete 두 지점(`heap_delete_home`, `heap_delete_relocation`)은 규칙 이전 데이터 때문에 제외하거나, 제외하지 않으면 그 이유를 기록한다. debug 빌드에서 unit·SQL·shell 회귀와 `gap_compact_sa_cs`가 assert 없이 통과함을 확인한다.
+> heap 계층에서 multipage(REC_BIGONE) 데이터를 쓰는 insert·update 지점에 debug assert를 둔다. 대상은 `heap_insert_handle_multipage_record`, `heap_update_home`, `heap_update_relocation`, `heap_update_bigone`의 큰 레코드 분기다. 조건은 `OID_ISNULL (&context->class_oid) || oid_is_system_class (&context->class_oid)`이다. delete 두 지점(`heap_delete_home`, `heap_delete_relocation`)은 규칙 이전에 저장된 행이 정상적으로 도달할 수 있으므로 제외한다. debug 빌드에서 unit·SQL·shell 회귀와 `gap_compact_sa_cs`가 assert 없이 통과함을 확인한다.
 
 구현 형태는 둘 중 하나다. 첫째는 static helper 하나를 네 분기에서 부르는 방식이다. 둘째는 `heap_ovf_insert`/`heap_ovf_update`에 class OID 인자를 더해 함수 안에서 한 번만 검사하는 방식이다. 둘째는 앞으로 생길 호출자도 자동으로 잡는다. 대신 delete 지점까지 포함되므로 주의점 4의 결정이 먼저 필요하다.
 
@@ -111,7 +111,7 @@ CBRD-27924에 다음 AC를 더한다.
 
 > 좋은 제안 감사합니다. 확인해 보니 말씀하신 대로 거부 검사는 행 배치 함수에만 있고, heap 계층은 길이만 보고 REC_BIGONE을 고릅니다. 현재 head(8949626)에서 SA compactdb를 실행하면 3028B REC_HOME 행이 REC_BIGONE으로 바뀌는 것도 재현했습니다.
 >
-> 한 가지 보탤 점이 있습니다. SA compactdb가 갱신하는 행은 대개 REC_HOME이라서 `heap_update_home`의 큰 레코드 분기(`heap_ovf_insert` 호출)를 지납니다. 그래서 assert 위치에 `heap_insert_logical`(실제로는 `heap_insert_handle_multipage_record`), `heap_update_bigone`, `heap_update_relocation` 외에 `heap_update_home`도 넣어야 알려진 우회를 잡을 수 있습니다. 조건은 tde keyinfo처럼 class OID가 없는 heap을 고려해 `OID_ISNULL (class_oid) || oid_is_system_class (class_oid)`로 두려고 합니다. MVCC delete로 커지는 `heap_delete_home`/`heap_delete_relocation`은 규칙 이전에 저장된 행에서 정상적으로 도달할 수 있어 따로 판단하겠습니다.
+> 한 가지 보탤 점이 있습니다. SA compactdb가 갱신하는 행은 대개 REC_HOME이라서 `heap_update_home`의 큰 레코드 분기(`heap_ovf_insert` 호출)를 지납니다. 그래서 assert 위치에 `heap_insert_logical`(실제로는 `heap_insert_handle_multipage_record`), `heap_update_bigone`, `heap_update_relocation` 외에 `heap_update_home`도 넣어야 알려진 우회를 잡을 수 있습니다. 조건은 tde keyinfo처럼 class OID가 없는 heap을 고려해 `OID_ISNULL (class_oid) || oid_is_system_class (class_oid)`로 두려고 합니다. MVCC delete로 행이 커지는 `heap_delete_home`/`heap_delete_relocation`은 제외하겠습니다. 이 규칙 이전에 저장된 행을 지우면 이 분기에 정상적으로 도달할 수 있기 때문입니다.
 >
 > 이 PR에 지금 넣으면 debug 빌드의 SA compact 테스트가 assert에 걸리므로, CBRD-27924의 Acceptance Criteria에 추가해 SA compactdb 수정과 함께 처리하겠습니다.
 
