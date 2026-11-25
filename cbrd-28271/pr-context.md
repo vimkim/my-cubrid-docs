@@ -12,7 +12,7 @@ Bookkeeping for the PR body in [pr-body.md](pr-body.md). This file is not upload
 | Remote head at preparation | branch does not exist on `vk` (2026-11-25) |
 | Base | `develop` at `bfb59bdd13` (the commit's parent; `origin/develop` tip on 2026-11-25) |
 | Target repository | `CUBRID/cubrid` |
-| Operation | `create` (no existing PR for head `CBRD-28271`) |
+| Operation | `create` (no existing PR for head `CBRD-28271`); result PR #8736 |
 | Proposed title | `[CBRD-28271] Check that a serial row fits before logging its redo` |
 | PR state | new draft PR, assignee `vimkim` |
 
@@ -52,4 +52,10 @@ CI triggering is not part of these operations.
 
 ## Execution record
 
-(empty)
+Confirmed by the user in the session on 2026-11-25 ("yes" to the listed operations). Attempt body fingerprint: sha256 `24d5c23d214f713cb2306918a396985b571605cc970bfc413737ab99e8ef3cf9`.
+
+1. Docs: `c8dc88c` fast-forwarded onto `main` and pushed to `origin`.
+2. Source: `git push vk CBRD-28271`; remote head verified `fd7d071ed5c625612d6035a5028d99f74b0922d7`.
+3. PR: [CUBRID/cubrid#8736](https://github.com/CUBRID/cubrid/pull/8736) created as draft, base `develop`, head `vimkim:CBRD-28271` at `fd7d071ed5`, assignee `vimkim`, title as proposed. Uploaded body is byte-identical to `pr-body.md` (sha256 above).
+4. TC: `TC Branch Sync` created `tc/pr-8736` (init commit `830675851`, no file changes) and draft TC PR [CUBRID/cubrid-testcases-private-ex#5146](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/5146). TC commit `9dbb84c93` cherry-picked as `c954b8366` and pushed to `origin tc/pr-8736`; remote head verified. The TC PR title, body, and draft status are unchanged.
+5. Not done: CI trigger, TC PR description update.
