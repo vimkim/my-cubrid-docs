@@ -6,3 +6,5 @@
 | --- | --- | --- | --- | --- |
 | [pr-body.md](pr-body.md) | PR body for the fix | 2026-11-25 | 2026-11-25 | Draft PR description for review |
 | [pr-context.md](pr-context.md) | Source revision, verification evidence, proposed publication steps | 2026-11-25 | 2026-11-25 | Resume and publish the PR draft |
+| [pr-body-rev2.md](pr-body-rev2.md) | Revised PR body after adding the checksum copy bound | 2026-11-25 | 2026-11-25 | Update #8737 for source `bfb6a0e57c` |
+| [pr-context-rev2.md](pr-context-rev2.md) | Revision 2 source, evidence, and proposed body/title update | 2026-11-25 | 2026-11-25 | Resume and publish the body revision |
