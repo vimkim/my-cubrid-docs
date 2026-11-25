@@ -33,4 +33,19 @@
 - 2026-11-25: TC Branch Sync created [cubrid-testcases#4461](https://github.com/CUBRID/cubrid-testcases/pull/4461) and [cubrid-testcases-private-ex#5162](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/5162); no TC changes are needed, keep both open until the merge handoff. `cubrid-pr-tc-base-check --pr 8752` passed.
 - 2026-11-25T11:59Z: posted `/run all` ([comment](https://github.com/CUBRID/cubrid/pull/8752#issuecomment-7161763552)); gha-ci run [45609432740](https://github.com/CUBRID/cubrid/actions/runs/45609432740) attempt 1 picked up all six contexts; `cubrid-ci-watch` request #107.
 - 2026-11-25: JIRA CBRD-28386 transitioned `Confirmed -> Develop` (`Start Develop`).
-- CI result: pending.
+- 2026-11-25T17:22Z: CI run [45609432740](https://github.com/CUBRID/cubrid/actions/runs/45609432740) finished with `failure`.
+  - `build (debug)`, `build (release)`, `test_medium`: pass.
+  - `test_sql` (shard 09) and `test_sql_by_cci` (shard 09): 3 failures each, the same cases:
+    `sql/_36_guava/cbrd_26795`, `sql/_36_guava/cbrd_27748`, `sql/_36_guava/cbrd_28121`.
+    The same three cases fail on unrelated PRs: #8753 (run 45615415274, latch change) and the
+    runs analyzed in `cbrd-28271/ci-analysis.md`, `cbrd-28094/ci-analysis.md`, `CBRD-28062/ci-analysis-7544aced71.md`.
+    The diffs are in plan and trace output (`skip order by`, `oos time`), not in catalog data.
+  - `test_shell`: 2 failures.
+    - `shell/_06_issues/_26_2h/cbrd_27744_sa` (shard 23): checks 13 and 14, `expected '140001 2147483647 1', got '1 2147483647 1'`.
+      The same values are a known develop regression, bisected to `e74826c46c` [CBRD-27562] in `cbrd-28271/ci-analysis.md`.
+      That commit is in this PR's base. It also failed on 8 other recent runs.
+    - `shell/_06_issues/_26_2h/cbrd_27937` (shard 40): `scenario 1: vacuum did not remove the relocated row: Num_relocated_recs=1`.
+      It also failed on 3 other recent runs (45598914244, 45599229348, 45599541635). The check is on heap vacuum, not on catalog records.
+  - Assessment (inference, no local rerun): all 5 failures are unrelated to this change.
+  - `Check TC PRs` (TC Merge Gate): fails, as expected while TC PRs #4461 and #5162 are open.
+  - Stopped after this run as the standing rule requires. No rerun, no follow-up push.
