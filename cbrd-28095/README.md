@@ -1,6 +1,6 @@
 # CBRD-28095
 
-32-character `coll_name` overwriting `codeset` in `catcls_get_db_collation ()` ([JIRA](https://jira.cubrid.org/browse/CBRD-28095)). PR: not yet created.
+32-character `coll_name` overwriting `codeset` in `catcls_get_db_collation ()` ([JIRA](https://jira.cubrid.org/browse/CBRD-28095)). PR: [CUBRID/cubrid#8737](https://github.com/CUBRID/cubrid/pull/8737) (draft).
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |

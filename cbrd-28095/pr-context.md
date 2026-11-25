@@ -66,4 +66,12 @@ Resume metadata for the PR body draft. This file is not uploaded.
 
 ## Publication record
 
-Not started.
+Confirmed by the user in conversation on 2026-11-25.
+
+- Docs: `cbrd-28091-28095-pr-body` fast-forwarded into `main` and pushed to
+  `origin` (`98021a7..be49bb7`).
+- Source: `git push vk CBRD-28095` created the branch; remote head verified
+  equal to `f3c1284ff4`.
+- GitHub: created draft PR [CUBRID/cubrid#8737](https://github.com/CUBRID/cubrid/pull/8737)
+  (base `develop`, head `vimkim:CBRD-28095`, assignee `vimkim`).
+- Published body SHA-256 `8e6a0bec6628c851e6680ddea64e43c70ad12abab70988d0776265084dc68c64`, equal to `cbrd-28095/pr-body.md`.
