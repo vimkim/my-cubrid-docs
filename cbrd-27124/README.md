@@ -4,6 +4,7 @@
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
+| [pr-body-bash-version.md](pr-body-bash-version.md) | Bash 기반 Linux 빌드 버전 PoC의 Draft PR 본문 | 2026-11-18 | 2026-11-18 | PR #8606과 설계를 비교하고 발행 전에 본문을 검토 |
 | [CBRD-27124-build-version-pr-body_0d2a76e_codex.md](CBRD-27124-build-version-pr-body_0d2a76e_codex.md) | 버전 헤더 분리 draft PR 본문 | 2026-10-27 | 2026-10-27 | PR 발행 전 본문 검토 |
 | [CBRD-27124-build-version-pr-context_0d2a76e_codex.md](CBRD-27124-build-version-pr-context_0d2a76e_codex.md) | 소스 revision, 발행 대상·작업, 검증 및 재개 정보 | 2026-10-27 | 2026-10-27 | 동일 자료로 PR 발행과 CI를 재개 |
 | [CBRD-27124-build-version-verification_0d2a76e_codex.md](CBRD-27124-build-version-verification_0d2a76e_codex.md) | 로컬 hit 99.07%, 실제 CI·SQL 실패·TC gate, GCC8 및 clean/3rdparty 검증 | 2026-10-27 | 2026-10-27 | 로컬 실측과 실제 CI 결론의 범위 구분 |
