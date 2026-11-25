@@ -27,4 +27,7 @@
 
 ## Results
 
-- (to be recorded during publication)
+- 2026-11-25: pushed `CBRD-28386` to `vk`; remote head verified `d16738b08f7b2a75bce2d23f58d34af6cd33c277`.
+- 2026-11-25: created draft PR [CUBRID/cubrid#8752](https://github.com/CUBRID/cubrid/pull/8752) (base `develop`, assignee `vimkim`).
+  Body SHA-256 at upload: `6a239fb83954aa4455db58f6cee6e4085414ef7199e0e6fe0250e84a6b926cf4`; GitHub body matches the file.
+- CI and JIRA results: see below.

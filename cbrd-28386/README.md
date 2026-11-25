@@ -3,7 +3,7 @@
 [TDE] Catalog file records (class representation and statistics) keep uninitialized server memory in the bytes that no field covers.
 
 - JIRA: <https://jira.cubrid.org/browse/CBRD-28386>
-- Engine PR: not created yet (draft prepared)
+- Engine PR: [CUBRID/cubrid#8752](https://github.com/CUBRID/cubrid/pull/8752) (draft)
 - Related: [CBRD-28257](../cbrd-28257/README.md) (catalog class heap rows, CUBRID/cubrid#8693)
 
 | File | What it contains | Created | Last modified | Why it was created |
