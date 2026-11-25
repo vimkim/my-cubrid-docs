@@ -3,7 +3,7 @@
 - 분석 및 작성 일시: 2026-11-25 (`Asia/Seoul`)
 - 관련 이슈: [CBRD-27539](https://jira.cubrid.org/browse/CBRD-27539) (상위 EPIC: [CBRD-27537](https://jira.cubrid.org/browse/CBRD-27537))
 - 기준 저장소 및 커밋: `CUBRID/CUBRID` `origin/develop` `cbed1d5707`
-- 재작성 로컬 커밋: `e4da2c73ea03d079973526171a2129b2dc97cc21` (초안) → `bffec3aa104c05c1da9355af0fe456bf379d3cd0` (PR `#8751` 리뷰 피드백 반영, 브랜치 `CBRD-27539`, 미푸시)
+- 재작성 로컬 커밋: `e4da2c73ea03d079973526171a2129b2dc97cc21` (초안) → `bffec3aa104c05c1da9355af0fe456bf379d3cd0` (PR `#8751` 리뷰 반영) → `ab090a400bf185a92d347e29cc2dea1064bd179d` (3자 교차 재검토 P0/P1/P2 보정, 브랜치 `CBRD-27539`, 미푸시)
 - 변경 범위: `AGENTS.md` (216줄 → 35줄), `src/AGENTS.md` (46줄 → 92줄), `src/base/AGENTS.md` (5·41·169행 참조 링크만 3줄 수정). 엔진 소스, CMake 설정, SQL 동작은 변경하지 않았습니다.
 
 ## Purpose
@@ -87,12 +87,25 @@
 | 스레드별 `db_private_alloc`·`PEEK` 비소유 계약 | `#discussion_r4694203780` | `src/base/memory_alloc.c:452,499` (`db_private_get_heapid_from_thread`, `CS_MODE` `db_ws_alloc`), `src/query/list_file.c:5664` (`qfile_retrieve_tuple` peek `size == 0`), `src/query/fetch.h:57` (`fetch_peek_dbval`) | `src/AGENTS.md:44-45`에 반영 |
 | 스레드별 에러 컨텍스트 인계 | `#discussion_r4694203795` | `src/query/parallel/px_interrupt.hpp:79` (`move_top_error_message_to_this`), `px_scan.cpp:1983` (`wait_workers`) | `src/AGENTS.md:49`에 반영 |
 | XASL 디스크 스트림·클론 재사용·`ER_QPROC_INVALID_XASLNODE` | `#discussion_r4694203805` | `src/query/stream_to_xasl.c:339,406` (`stx_map_stream_to_filter_pred`/`func_pred`), `src/query/xasl_cache.c:2804` (`xcache_retire_clone`), `src/compat/db_vdb.c:1983` | `src/AGENTS.md:73-75`에 반영 |
-| `LOG_RCVINDEX` 순서·`disk_compatibility_level` | `#discussion_r4694203814` | `src/transaction/recovery.h:35-44` 끝 추가 규칙 주석, `src/base/release_string.c:104` | `src/AGENTS.md:77`에 반영 |
-| 성능 민감 경로 (`ALWAYS_INLINE`, `m_px_stats`) | `#discussion_r4694203825` | `src/base/porting_inline.hpp:30-34`, `src/base/perf_monitor.h:1040` | `src/AGENTS.md:85-92`에 `## Performance-Sensitive Paths` 추가 |
+| `LOG_RCVINDEX` 순서·`disk_compatibility_level` | `#discussion_r4694203814` | `src/transaction/recovery.h:35-44,201,214`, `recovery.c:56,965-985`, `src/base/release_string.c:104,264-311` | `src/AGENTS.md:77`에 반영 후 3자 재검토로 보완 (`RV_LAST_LOGID`·`RV_fun[]`·`RCV_IS_*` 명시 및 `disk_compatibility_level` 기능 PR 비변경 명확화) |
+| 성능 민감 경로 (`ALWAYS_INLINE`, `m_px_stats`) | `#discussion_r4694203825` | `src/base/porting_inline.hpp:30-34`, `src/base/perf_monitor.h:1036-1055` | `src/AGENTS.md:85-92`에 반영 후 3자 재검토로 보완 (`release` 프로파일 확인 시 `STATIC_INLINE ... ALWAYS_INLINE`, `NDEBUG` 전용·`nm -C` 명시) |
 
 ---
 
-### 5. 시나리오 워크스루 검증 (재작성 문서 기준)
+### 5. 3자 교차 재검토(`ai-agent` + `ay` + 주관 검토) 및 P0/P1/P2 보정 (`ab090a400b`)
+
+PR `#8751` 반영본(`bffec3aa10`)을 대상으로 Herdr 서브탭 2개(`ai-agent` 및 Antigravity `ay`)와 주관 검토를 병렬 수행해 과도한 제약·위험한 지침·누락 함정을 추가 점검하고 아래 항목을 `ab090a400b`에서 교정했습니다.
+
+- **P0 — `disk_compatibility_level` 임의 상향 위험 제거** (`src/AGENTS.md:77`): `release_string.c:104`는 릴리스 단위(`11.0f → 11.2f → 11.4f → 11.5f`)로만 변경되므로 기능 PR에서 절대 올리지 말고 호환성 영향만 보고하도록 수정.
+- **P0 — 오류 코드 절차 정밀화** (`src/AGENTS.md:50`, `src/base/AGENTS.md:41,169`): `src/compat/dbi_compat.h:44`는 `error_code.h`를 include만 하고 `ER_*` 정의가 없음을 확인해 제외, `msg/*/cubrid.msg`의 `$set 5 MSGCAT_SET_ERROR` 및 양수 ID(`-ER_CODE`) 함정 명시, `cubrid-cci` 서브모듈은 엔진 PR에서 직접 수정하지 않고 별도 PR·서브모듈 범프로 분리, `src/base/AGENTS.md`의 낡은 `"~1700 codes"`/`"6-place"` 문구 제거.
+- **P0 — `LOG_RCVINDEX` 복구 테이블 4종 연동 명시** (`src/AGENTS.md:77`): enum 끝 추가 외에 `RV_LAST_LOGID`, `src/transaction/recovery.c` `RV_fun[]` 위치 일치(`!NDEBUG`에서만 검증), `RCV_IS_*` 분류 매크로까지 명시.
+- **P1 — `ALWAYS_INLINE`·핫루프·`m_px_stats` 정밀화** (`src/AGENTS.md:89-92`): `porting_inline.hpp:30-34`상 `NDEBUG`에서만 확장됨과 `STATIC_INLINE` 관례, `nm -C`(비-`-D`) 확인, `m_uses_px_stats`·`m_px_orig_thread_entry` 조건 명시.
+- **P1 — `db_private_alloc` 스레드 인자 + `malloc`/`free_and_init` 짝** (`src/AGENTS.md:44-45`): `thread_p` 인자 힙 사용(`size > 0` assert, 교차 스레드는 `malloc`/`free_and_init`), overflow tuple `peek`의 `scan_id->tplrec` 수명 보완.
+- **P1 — 빌드·CI·포맷 안전 가드** (`AGENTS.md:19,24-25,29,31`, `src/AGENTS.md:5,32,54,65,68`): `./build.sh` 무인자 `all`(`clean`) 및 `$CUBRID` 덮어쓰기 경고, `Release|RelWithDebInfo`·`-Werror=format-security` 정확화 및 반복 vs 마무리 빌드 구분, `cubrid-testcases-private-ex`·동일 PR `/run` 취소 규칙, GNU `indent 2.2.11` 핀 및 전체 파일 포맷팅 주의, `cm_broker_jni.c`/`gencat.c` C 예외, `memory_wrapper.hpp` `#if` 내부 `#include` 및 끝 공백 주의, 신규 `.c` 한정 `config.h` 규칙 반영.
+
+---
+
+### 6. 시나리오 워크스루 검증 (재작성 문서 기준)
 
 재작성된 `AGENTS.md`와 `src/AGENTS.md`, 그리고 두 문서가 가리키는 파일만으로 아래 3가지 시나리오를 추적했습니다.
 
