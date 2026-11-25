@@ -15,3 +15,8 @@ Last modified: 2026-11-13, Asia/Seoul.
 An independent Codex design with the same goal, Inner Table, is in [../inner-table/README.md](../inner-table/README.md). It uses a hidden chunk relation with logical value IDs instead of a store file addressed by OID.
 
 Related `develop` defects found during this work are tracked separately as work-tracker items 774 (TDE plaintext in relocation vacuum undo), 775 (relocation vacuum releases the forward page before its sysop commits) and 776 (commit frees saved page space before the commit record). The TLA+ check behind 775 and 776 is `cubrid-verify-heap-slot-undo` in `/home/vimkim/gh/my-cubrid-formal-verification-skills`.
+||||||| 0c5c05f
+Sidecar explores a replacement for CUBRID's OOS large-column storage. This
+branch holds the independent Codex approval package. Other sessions' working
+documents are not part of this branch.
+| [Codex approval package](codex-20261104/README.md) | Design, POC plan, protocol results, and independent review | 2026-11-04 | 2026-11-04 | Present a source-grounded decision before engine implementation |
