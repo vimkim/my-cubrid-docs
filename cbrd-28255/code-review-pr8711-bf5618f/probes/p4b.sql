@@ -1,0 +1,10 @@
+drop table if exists t4;
+create table t4 (id int primary key, a int);
+insert into t4 values (1,1),(2,2),(3,3);
+alter table t4 add column ch char(2048) default 'a';
+alter table t4 add column ch2 char(2048) default 'b';
+alter table t4 add column ch3 char(100) default 'c';
+create index i4 on t4 (ch, ch2, ch3, id);
+update t4 set a = a + 1;
+delete from t4 where id = 2;
+select id, length(ch), length(ch2) from t4 order by id;
