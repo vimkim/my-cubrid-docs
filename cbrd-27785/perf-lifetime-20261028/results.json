@@ -1,0 +1,3175 @@
+{
+  "date": "2026-10-28 Asia/Seoul",
+  "scope": "Matched production profiles and allocator lifetime diagnosis; local prototypes only",
+  "raw_artifact_root": "/mnt/nvme/data-5/tmp/CBRD-27785-perf-lifetime-20261028",
+  "host": {
+    "kernel": {
+      "system": "Linux",
+      "node": "dev2",
+      "release": "5.14.0-570.30.1.el9_6.x86_64",
+      "version": "#1 SMP PREEMPT_DYNAMIC Wed Jul 30 15:58:22 UTC 2025",
+      "machine": "x86_64",
+      "processor": "x86_64"
+    },
+    "lscpu": "{\n   \"lscpu\": [\n      {\n         \"field\": \"Architecture:\",\n         \"data\": \"x86_64\"\n      },{\n         \"field\": \"CPU op-mode(s):\",\n         \"data\": \"32-bit, 64-bit\"\n      },{\n         \"field\": \"Address sizes:\",\n         \"data\": \"46 bits physical, 48 bits virtual\"\n      },{\n         \"field\": \"Byte Order:\",\n         \"data\": \"Little Endian\"\n      },{\n         \"field\": \"CPU(s):\",\n         \"data\": \"80\"\n      },{\n         \"field\": \"On-line CPU(s) list:\",\n         \"data\": \"0-79\"\n      },{\n         \"field\": \"Vendor ID:\",\n         \"data\": \"GenuineIntel\"\n      },{\n         \"field\": \"Model name:\",\n         \"data\": \"Intel(R) Xeon(R) Gold 5218R CPU @ 2.10GHz\"\n      },{\n         \"field\": \"CPU family:\",\n         \"data\": \"6\"\n      },{\n         \"field\": \"Model:\",\n         \"data\": \"85\"\n      },{\n         \"field\": \"Thread(s) per core:\",\n         \"data\": \"2\"\n      },{\n         \"field\": \"Core(s) per socket:\",\n         \"data\": \"20\"\n      },{\n         \"field\": \"Socket(s):\",\n         \"data\": \"2\"\n      },{\n         \"field\": \"Stepping:\",\n         \"data\": \"7\"\n      },{\n         \"field\": \"Microcode version:\",\n         \"data\": \"0x5003901\"\n      },{\n         \"field\": \"CPU(s) scaling MHz:\",\n         \"data\": \"83%\"\n      },{\n         \"field\": \"CPU max MHz:\",\n         \"data\": \"4000.0000\"\n      },{\n         \"field\": \"CPU min MHz:\",\n         \"data\": \"800.0000\"\n      },{\n         \"field\": \"BogoMIPS:\",\n         \"data\": \"4200.00\"\n      },{\n         \"field\": \"Flags:\",\n         \"data\": \"fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid dca sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb cat_l3 cdp_l3 intel_ppin ssbd mba ibrs ibpb stibp ibrs_enhanced tpr_shadow flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid cqm mpx rdt_a avx512f avx512dq rdseed adx smap clflushopt clwb intel_pt avx512cd avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local dtherm ida arat pln pts vnmi pku ospke avx512_vnni md_clear flush_l1d arch_capabilities\"\n      },{\n         \"field\": \"Virtualization:\",\n         \"data\": \"VT-x\"\n      },{\n         \"field\": \"L1d cache:\",\n         \"data\": \"1.3 MiB (40 instances)\"\n      },{\n         \"field\": \"L1i cache:\",\n         \"data\": \"1.3 MiB (40 instances)\"\n      },{\n         \"field\": \"L2 cache:\",\n         \"data\": \"40 MiB (40 instances)\"\n      },{\n         \"field\": \"L3 cache:\",\n         \"data\": \"55 MiB (2 instances)\"\n      },{\n         \"field\": \"NUMA node(s):\",\n         \"data\": \"2\"\n      },{\n         \"field\": \"NUMA node0 CPU(s):\",\n         \"data\": \"0-19,40-59\"\n      },{\n         \"field\": \"NUMA node1 CPU(s):\",\n         \"data\": \"20-39,60-79\"\n      },{\n         \"field\": \"Vulnerability Gather data sampling:\",\n         \"data\": \"Mitigation; Microcode\"\n      },{\n         \"field\": \"Vulnerability Itlb multihit:\",\n         \"data\": \"KVM: Mitigation: Split huge pages\"\n      },{\n         \"field\": \"Vulnerability L1tf:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Mds:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Meltdown:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Mmio stale data:\",\n         \"data\": \"Mitigation; Clear CPU buffers; SMT vulnerable\"\n      },{\n         \"field\": \"Vulnerability Reg file data sampling:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Retbleed:\",\n         \"data\": \"Mitigation; Enhanced IBRS\"\n      },{\n         \"field\": \"Vulnerability Spec rstack overflow:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Spec store bypass:\",\n         \"data\": \"Mitigation; Speculative Store Bypass disabled via prctl\"\n      },{\n         \"field\": \"Vulnerability Spectre v1:\",\n         \"data\": \"Mitigation; usercopy/swapgs barriers and __user pointer sanitization\"\n      },{\n         \"field\": \"Vulnerability Spectre v2:\",\n         \"data\": \"Mitigation; Enhanced / Automatic IBRS; IBPB conditional; RSB filling; PBRSB-eIBRS SW sequence; BHI SW loop, KVM SW loop\"\n      },{\n         \"field\": \"Vulnerability Srbds:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Tsx async abort:\",\n         \"data\": \"Mitigation; TSX disabled\"\n      }\n   ]\n}\n",
+    "perf_version": "perf version 5.14.0-570.30.1.el9_6.x86_64\n",
+    "gcc_version": "gcc (GCC) 11.5.0 20240719 (Red Hat 11.5.0-5)\nCopyright (C) 2021 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+    "/proc/sys/kernel/perf_event_paranoid": "-1\n",
+    "/sys/devices/system/cpu/cpu16/cpufreq/scaling_governor": "performance\n",
+    "/sys/devices/system/cpu/cpu16/topology/thread_siblings_list": "16,56\n"
+  },
+  "builds": {
+    "base": {
+      "variant": "base",
+      "worktree": "/home/vimkim/gh/cb/oos-perf-27785-base-4781495",
+      "install": "/home/vimkim/.cub/install/oos-perf-27785-base-4781495/release_gcc",
+      "head": "4781495f01523a3ecc5891e3377ad62cf876a1cd",
+      "engine_base": "4781495f01523a3ecc5891e3377ad62cf876a1cd",
+      "binary_identity": {
+        "bin/cub_server": {
+          "sha256": "3f1e0a95b7f546277b5b27791f3f28cfdd17d63e27f6dfb900108024e9a5692e",
+          "build_id": "d5574a034eae7ed1203284075acbbf243ed136ce"
+        },
+        "bin/csql": {
+          "sha256": "65b5fc46079c8654cc1966d37e9f80bf3fe7fc0d86e90d1ed5fd86ec48ef0503",
+          "build_id": "af3bb0d939e59cea24c5fce247fa1d8461fc17fb"
+        },
+        "lib/libcubrid.so.11.5": {
+          "sha256": "703af6cca549235ed643f247662b9197b944d2cc690522bf1bf348483e47b934",
+          "build_id": "1e6bf5483d3df5a1a55527320f7596f658a64bda"
+        }
+      },
+      "source_sha256": {
+        "src/storage/heap_file.c": "3b2e698547ff067e22dd68ff8e8a90b8dcedae7bf768c701bc6fdcadd4cc8dc1"
+      }
+    },
+    "original": {
+      "variant": "original",
+      "worktree": "/home/vimkim/gh/cb/CBRD-27785-oos-performance",
+      "install": "/home/vimkim/.cub/install/CBRD-27785-oos-performance/release_gcc",
+      "head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "engine_base": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67",
+      "binary_identity": {
+        "bin/cub_server": {
+          "sha256": "03098542510214a70ff7c4073aa17a313a1d9e2862b6d8463ce75b25c7eb39ca",
+          "build_id": "ce70e6f93b41ffdd6b222937d549ac89a3e58be3"
+        },
+        "bin/csql": {
+          "sha256": "45d2140eb742dc0b385d16cfec0ee15dc87519603412b298fdc8b9764b3ddd12",
+          "build_id": "209898e2278452105e880df9c4fd24bf2ddf3b86"
+        },
+        "lib/libcubrid.so.11.5": {
+          "sha256": "de91315aede9408576259da94cde3a91d10a94af56f3c39d3a69952ed65ff75a",
+          "build_id": "6fc742a092073810d6ad23d96fee87bac9dd55eb"
+        }
+      },
+      "source_sha256": {
+        "src/storage/heap_file.c": "8fc71f703627d25736561e0b4e6de3eb3933218dde009f41fa8dd5dfc2a8ce4f",
+        "src/storage/heap_oos.cpp": "fd01105064c2e320bbb59aecfba411982b453bd11a088cc1253f2bcc6f2a9372",
+        "src/storage/oos_file.cpp": "b6c47c62bfcffbfd674f1fd00fb7ca3f18d72ed8d5c472913ccc0b5976d4fa3f"
+      }
+    },
+    "common_loop": {
+      "variant": "common_loop",
+      "worktree": "/home/vimkim/gh/cb/CBRD-27785-oos-performance",
+      "install": "/home/vimkim/.cub/install/CBRD-27785-oos-performance/release_gcc",
+      "head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "engine_base": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67",
+      "binary_identity": {
+        "bin/cub_server": {
+          "sha256": "03098542510214a70ff7c4073aa17a313a1d9e2862b6d8463ce75b25c7eb39ca",
+          "build_id": "ce70e6f93b41ffdd6b222937d549ac89a3e58be3"
+        },
+        "bin/csql": {
+          "sha256": "45d2140eb742dc0b385d16cfec0ee15dc87519603412b298fdc8b9764b3ddd12",
+          "build_id": "209898e2278452105e880df9c4fd24bf2ddf3b86"
+        },
+        "lib/libcubrid.so.11.5": {
+          "sha256": "177fe3a557bcd7ee957a9c3cc1faeec7f40b79d159fdc5d813429abfd7c21ff1",
+          "build_id": "32716ffa8cb947f477454ca7165d630db44f010e"
+        }
+      },
+      "source_sha256": {
+        "src/storage/heap_file.c": "98e6bf0470fc36f65e905dc4e432506137b639dc151eace34d1c46fd16ac41c5",
+        "src/storage/heap_oos.cpp": "b9ff610c3b209f6302439e529b431e5a3e8658798c710dd235f1c4946c41c088",
+        "src/storage/oos_file.cpp": "5ed4f311222f2d1342d05cb96145c5ec2ebca5b7e6bb8c832a2843f87e4b248f"
+      }
+    },
+    "allocator_wide": {
+      "variant": "allocator_wide",
+      "worktree": "/home/vimkim/gh/cb/CBRD-27785-oos-performance",
+      "install": "/home/vimkim/.cub/install/CBRD-27785-oos-performance/release_gcc",
+      "head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "engine_base": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67",
+      "binary_identity": {
+        "bin/cub_server": {
+          "sha256": "03098542510214a70ff7c4073aa17a313a1d9e2862b6d8463ce75b25c7eb39ca",
+          "build_id": "ce70e6f93b41ffdd6b222937d549ac89a3e58be3"
+        },
+        "bin/csql": {
+          "sha256": "45d2140eb742dc0b385d16cfec0ee15dc87519603412b298fdc8b9764b3ddd12",
+          "build_id": "209898e2278452105e880df9c4fd24bf2ddf3b86"
+        },
+        "lib/libcubrid.so.11.5": {
+          "sha256": "990b7006c772af6756d15c9e6c14e9d586f17ec3e77b1154e9a02a6570bc943d",
+          "build_id": "955bf290fca695f7dca9dc8690fae99cfcfbf7a2"
+        }
+      },
+      "source_sha256": {
+        "src/storage/heap_file.c": "98e6bf0470fc36f65e905dc4e432506137b639dc151eace34d1c46fd16ac41c5",
+        "src/storage/heap_oos.cpp": "b9ff610c3b209f6302439e529b431e5a3e8658798c710dd235f1c4946c41c088",
+        "src/storage/oos_file.cpp": "5ed4f311222f2d1342d05cb96145c5ec2ebca5b7e6bb8c832a2843f87e4b248f"
+      }
+    }
+  },
+  "serial_measurements": {
+    "base/forward": {
+      "narrow": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 382215215.175,
+          "min": 382211014.25,
+          "max": 382221256.0,
+          "spread_percent": 0.0026795767393275383,
+          "values_per_scan": [
+            382219403.25,
+            382211014.25,
+            382221256.0,
+            382211027.1
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 157963006.575,
+          "min": 150646237.6,
+          "max": 169523173.4,
+          "spread_percent": 11.95022569479731,
+          "values_per_scan": [
+            159086351.9,
+            150646237.6,
+            169523173.4,
+            156839661.25
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 55.480999999999995,
+          "min": 52.640499999999996,
+          "max": 59.102999999999994,
+          "spread_percent": 11.648131792866025,
+          "values_per_scan": [
+            55.775,
+            52.640499999999996,
+            59.102999999999994,
+            55.187
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.06085658720112406,
+          0.055853766802465545,
+          0.06338353670143988,
+          0.05837573375029024
+        ]
+      },
+      "wide": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 674538167.475,
+          "min": 674535358.9,
+          "max": 674544283.0,
+          "spread_percent": 0.0013229940765886446,
+          "values_per_scan": [
+            674537427.45,
+            674535358.9,
+            674538907.5,
+            674544283.0
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 269759500.65,
+          "min": 259863190.3,
+          "max": 278736387.9,
+          "spread_percent": 6.996305062295853,
+          "values_per_scan": [
+            259863190.3,
+            268142774.5,
+            271376226.8,
+            278736387.9
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 93.48400000000001,
+          "min": 91.78049999999999,
+          "max": 95.64349999999999,
+          "spread_percent": 4.132257926490094,
+          "values_per_scan": [
+            91.78049999999999,
+            93.64450000000001,
+            93.3235,
+            95.64349999999999
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.09340298695024103,
+          0.09589880224957596,
+          0.09841086470114532,
+          0.09842764575150795
+        ]
+      },
+      "sp_one_small": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 53005276.775,
+          "min": 52984461.65,
+          "max": 53017196.3,
+          "spread_percent": 0.0617573418943788,
+          "values_per_scan": [
+            53017196.3,
+            53008565.4,
+            53001988.15,
+            52984461.65
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 40554004.975,
+          "min": 34304178.35,
+          "max": 45408586.45,
+          "spread_percent": 27.381779202437457,
+          "values_per_scan": [
+            43685508.95,
+            37422501.0,
+            45408586.45,
+            34304178.35
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 14.37875,
+          "min": 11.748999999999999,
+          "max": 16.311500000000002,
+          "spread_percent": 31.73085282100324,
+          "values_per_scan": [
+            15.547,
+            13.2105,
+            16.311500000000002,
+            11.748999999999999
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.018266517599113286,
+          0.015767556949867867,
+          0.020780226498027334,
+          0.015762346898554824
+        ]
+      },
+      "sp_one_length": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 62185079.4,
+          "min": 62184248.45,
+          "max": 62190843.8,
+          "spread_percent": 0.010606000770007925,
+          "values_per_scan": [
+            62185426.25,
+            62190843.8,
+            62184732.55,
+            62184248.45
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 49794860.375,
+          "min": 49516562.9,
+          "max": 50106137.1,
+          "spread_percent": 1.1840061314761805,
+          "values_per_scan": [
+            49840438.05,
+            50106137.1,
+            49516562.9,
+            49749282.7
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 17.676000000000002,
+          "min": 17.558500000000002,
+          "max": 17.9315,
+          "spread_percent": 2.1102059289431856,
+          "values_per_scan": [
+            17.761000000000003,
+            17.9315,
+            17.591,
+            17.558500000000002
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.020785476997843944,
+          0.020785819299635477,
+          0.02079037560033612,
+          0.02077360909897834
+        ]
+      },
+      "sp_two_small": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 67707870.05,
+          "min": 67684661.35,
+          "max": 67725637.55,
+          "spread_percent": 0.06051910947685022,
+          "values_per_scan": [
+            67719647.55,
+            67725637.55,
+            67696092.55,
+            67684661.35
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 55567598.349999994,
+          "min": 55021716.5,
+          "max": 60490540.9,
+          "spread_percent": 9.841750520787082,
+          "values_per_scan": [
+            55021716.5,
+            55651806.15,
+            55483390.55,
+            60490540.9
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 19.784999999999997,
+          "min": 19.330000000000002,
+          "max": 21.3905,
+          "spread_percent": 10.414455395501632,
+          "values_per_scan": [
+            19.330000000000002,
+            19.8345,
+            19.7355,
+            21.3905
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.023277588697965257,
+          0.023275085250497797,
+          0.02597366074915044,
+          0.025781701449886896
+        ]
+      },
+      "sp_two_length": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 90820577.375,
+          "min": 90810678.05,
+          "max": 90824704.55,
+          "spread_percent": 0.015444187215507669,
+          "values_per_scan": [
+            90819234.4,
+            90810678.05,
+            90821920.35,
+            90824704.55
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 83840866.375,
+          "min": 80594228.75,
+          "max": 90130708.55,
+          "spread_percent": 11.374500541711509,
+          "values_per_scan": [
+            85333891.5,
+            90130708.55,
+            82347841.25,
+            80594228.75
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 29.0605,
+          "min": 28.73,
+          "max": 31.7985,
+          "spread_percent": 10.559006211180124,
+          "values_per_scan": [
+            28.73,
+            31.7985,
+            29.2175,
+            28.9035
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.030795035950723103,
+          0.035792901800596154,
+          0.033305044649750926,
+          0.03329539225087501
+        ]
+      },
+      "sp_large_length": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 89375681.67500001,
+          "min": 89329378.95,
+          "max": 89421393.95,
+          "spread_percent": 0.10295306091717145,
+          "values_per_scan": [
+            89421393.95,
+            89410723.95,
+            89340639.4,
+            89329378.95
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 283682629.04999995,
+          "min": 282214643.45,
+          "max": 292970987.1,
+          "spread_percent": 3.791682164685592,
+          "values_per_scan": [
+            292970987.1,
+            282414874.2,
+            282214643.45,
+            284950383.9
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 99.19175,
+          "min": 98.52000000000001,
+          "max": 103.00750000000001,
+          "spread_percent": 4.524065761517462,
+          "values_per_scan": [
+            103.00750000000001,
+            98.6335,
+            98.52000000000001,
+            99.75
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.10593179939896799,
+          0.10094412269827444,
+          0.1009152387501672,
+          0.10092851169756614
+        ]
+      },
+      "sp_large_full": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 409461601.125,
+          "min": 409457120.15,
+          "max": 409472213.0,
+          "spread_percent": 0.0036860232946278916,
+          "values_per_scan": [
+            409472213.0,
+            409465942.5,
+            409457120.15,
+            409457259.75
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 346926224.975,
+          "min": 339780248.55,
+          "max": 354321552.35,
+          "spread_percent": 4.1914686043258556,
+          "values_per_scan": [
+            354321552.35,
+            348584024.2,
+            339780248.55,
+            345268425.75
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 121.2805,
+          "min": 118.4195,
+          "max": 125.00750000000001,
+          "spread_percent": 5.432035652887322,
+          "values_per_scan": [
+            125.00750000000001,
+            122.6585,
+            118.4195,
+            119.9025
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.1309595804021228,
+          0.12848275155120065,
+          0.12594630389939993,
+          0.1259323067002697
+        ]
+      }
+    },
+    "base/reverse": {
+      "narrow": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 382203927.125,
+          "min": 382199772.05,
+          "max": 382208082.2,
+          "spread_percent": 0.0021742712228224486,
+          "values_per_scan": [
+            382199772.05,
+            382208082.2
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 148085415.14999998,
+          "min": 147037232.95,
+          "max": 149133597.35,
+          "spread_percent": 1.4156454218509893,
+          "values_per_scan": [
+            147037232.95,
+            149133597.35
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 48.30875,
+          "min": 47.709500000000006,
+          "max": 48.908,
+          "spread_percent": 2.480917018138527,
+          "values_per_scan": [
+            47.709500000000006,
+            48.908
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.050861518050078304,
+          0.05337447880010586
+        ]
+      },
+      "wide": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 674517206.0,
+          "min": 674510012.15,
+          "max": 674524399.85,
+          "spread_percent": 0.002133036766455396,
+          "values_per_scan": [
+            674524399.85,
+            674510012.15
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 257744231.7,
+          "min": 257138654.9,
+          "max": 258349808.5,
+          "spread_percent": 0.4699052203851878,
+          "values_per_scan": [
+            258349808.5,
+            257138654.9
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 84.05275,
+          "min": 82.309,
+          "max": 85.79650000000001,
+          "spread_percent": 4.149180127955375,
+          "values_per_scan": [
+            85.79650000000001,
+            82.309
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.08843484284880106,
+          0.08591057104931679
+        ]
+      },
+      "sp_one_small": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 53008318.375,
+          "min": 53007757.45,
+          "max": 53008879.3,
+          "spread_percent": 0.002116365948562388,
+          "values_per_scan": [
+            53007757.45,
+            53008879.3
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 35693177.075,
+          "min": 30420008.55,
+          "max": 40966345.6,
+          "spread_percent": 29.547207377588144,
+          "values_per_scan": [
+            30420008.55,
+            40966345.6
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 11.653500000000001,
+          "min": 10.281,
+          "max": 13.026,
+          "spread_percent": 23.555155103616933,
+          "values_per_scan": [
+            10.281,
+            13.026
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.013268179600709118,
+          0.015776453498983756
+        ]
+      },
+      "sp_one_length": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 62178334.175,
+          "min": 62177557.05,
+          "max": 62179111.3,
+          "spread_percent": 0.0024996649083997434,
+          "values_per_scan": [
+            62177557.05,
+            62179111.3
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 40551608.975,
+          "min": 39617384.5,
+          "max": 41485833.45,
+          "spread_percent": 4.607582774710366,
+          "values_per_scan": [
+            41485833.45,
+            39617384.5
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 13.7805,
+          "min": 13.247,
+          "max": 14.313999999999998,
+          "spread_percent": 7.742825006349541,
+          "values_per_scan": [
+            14.313999999999998,
+            13.247
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.018277635949198158,
+          0.01577946165052708
+        ]
+      },
+      "sp_two_small": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 67718790.725,
+          "min": 67714570.1,
+          "max": 67723011.35,
+          "spread_percent": 0.012465151709928146,
+          "values_per_scan": [
+            67723011.35,
+            67714570.1
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 50321886.9,
+          "min": 49757809.55,
+          "max": 50885964.25,
+          "spread_percent": 2.241876784632261,
+          "values_per_scan": [
+            50885964.25,
+            49757809.55
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 16.400750000000002,
+          "min": 15.4215,
+          "max": 17.380000000000003,
+          "spread_percent": 11.941527064311098,
+          "values_per_scan": [
+            17.380000000000003,
+            15.4215
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.020773074848693795,
+          0.0182800466514891
+        ]
+      },
+      "sp_two_length": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 90805873.825,
+          "min": 90804590.75,
+          "max": 90807156.9,
+          "spread_percent": 0.0028259735762814356,
+          "values_per_scan": [
+            90804590.75,
+            90807156.9
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 71594120.19999999,
+          "min": 70346161.3,
+          "max": 72842079.1,
+          "spread_percent": 3.486205002628131,
+          "values_per_scan": [
+            72842079.1,
+            70346161.3
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 24.27,
+          "min": 23.7485,
+          "max": 24.7915,
+          "spread_percent": 4.29748660898228,
+          "values_per_scan": [
+            24.7915,
+            23.7485
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.02831005180196371,
+          0.025803125099628232
+        ]
+      },
+      "sp_large_length": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 89454571.05000001,
+          "min": 89446527.65,
+          "max": 89462614.45,
+          "spread_percent": 0.017983206236610774,
+          "values_per_scan": [
+            89462614.45,
+            89446527.65
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 330387407.6,
+          "min": 328517179.4,
+          "max": 332257635.8,
+          "spread_percent": 1.132142543558623,
+          "values_per_scan": [
+            328517179.4,
+            332257635.8
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 111.22825,
+          "min": 110.6425,
+          "max": 111.81400000000001,
+          "spread_percent": 1.053239622128379,
+          "values_per_scan": [
+            111.81400000000001,
+            110.6425
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.11599470945075155,
+          0.11349074114987161
+        ]
+      },
+      "sp_large_full": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 409467368.875,
+          "min": 409460800.65,
+          "max": 409473937.1,
+          "spread_percent": 0.0032081799426752146,
+          "values_per_scan": [
+            409473937.1,
+            409460800.65
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 385656797.5,
+          "min": 385269903.2,
+          "max": 386043691.8,
+          "spread_percent": 0.2006417636136762,
+          "values_per_scan": [
+            386043691.8,
+            385269903.2
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 127.8915,
+          "min": 127.52449999999999,
+          "max": 128.2585,
+          "spread_percent": 0.5739239902573735,
+          "values_per_scan": [
+            127.52449999999999,
+            128.2585
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.13349513939756436,
+          0.13350460219953675
+        ]
+      }
+    },
+    "original/forward": {
+      "narrow": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 399432313.025,
+          "min": 399415112.15,
+          "max": 399449272.65,
+          "spread_percent": 0.008552262520098603,
+          "values_per_scan": [
+            399449272.65,
+            399420136.9,
+            399415112.15,
+            399444489.15
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 184626406.14999998,
+          "min": 157548188.5,
+          "max": 206811947.9,
+          "spread_percent": 26.682943370503352,
+          "values_per_scan": [
+            206811947.9,
+            157548188.5,
+            165603192.1,
+            203649620.2
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 63.2155,
+          "min": 55.089,
+          "max": 70.8365,
+          "spread_percent": 24.910820922083985,
+          "values_per_scan": [
+            70.8365,
+            55.089,
+            56.791,
+            69.64
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.07336795179871843,
+          0.05834008814999834,
+          0.05833384129800834,
+          0.07336861285148188
+        ]
+      },
+      "wide": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 731545203.3,
+          "min": 731543373.75,
+          "max": 731555888.55,
+          "spread_percent": 0.0017107350227297043,
+          "values_per_scan": [
+            731545598.55,
+            731544808.05,
+            731543373.75,
+            731555888.55
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 280847077.025,
+          "min": 279877150.8,
+          "max": 297067894.6,
+          "spread_percent": 6.121033546832946,
+          "values_per_scan": [
+            281492660.15,
+            280201493.9,
+            279877150.8,
+            297067894.6
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 97.6905,
+          "min": 96.197,
+          "max": 104.00550000000001,
+          "spread_percent": 7.993100659736626,
+          "values_per_scan": [
+            98.2105,
+            97.1705,
+            96.197,
+            104.00550000000001
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.10091011929907837,
+          0.10092572504945566,
+          0.09840382950205821,
+          0.10593179324932862
+        ]
+      },
+      "sp_one_small": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 42149384.975,
+          "min": 42147074.45,
+          "max": 42151004.55,
+          "spread_percent": 0.009324216717100603,
+          "values_per_scan": [
+            42150130.35,
+            42147074.45,
+            42148639.6,
+            42151004.55
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 16888222.174999997,
+          "min": 16655550.1,
+          "max": 16984410.2,
+          "spread_percent": 1.9472748320827895,
+          "values_per_scan": [
+            16842538.7,
+            16984410.2,
+            16933905.65,
+            16655550.1
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 6.0954999999999995,
+          "min": 6.0805,
+          "max": 6.189,
+          "spread_percent": 1.7800016405545118,
+          "values_per_scan": [
+            6.0805,
+            6.189,
+            6.0985,
+            6.092499999999999
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.008246557449456304,
+          0.008244281349470839,
+          0.00825125795090571,
+          0.008246664999751374
+        ]
+      },
+      "sp_one_length": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 149098938.65,
+          "min": 149093837.15,
+          "max": 149099121.0,
+          "spread_percent": 0.003543854871024623,
+          "values_per_scan": [
+            149098902.55,
+            149093837.15,
+            149099121.0,
+            149098974.75
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 99437257.625,
+          "min": 99264426.05,
+          "max": 101317594.05,
+          "spread_percent": 2.064787433843915,
+          "values_per_scan": [
+            99503210.25,
+            99264426.05,
+            99371305.0,
+            101317594.05
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 33.9965,
+          "min": 33.9265,
+          "max": 35.241,
+          "spread_percent": 3.8665745003162164,
+          "values_per_scan": [
+            34.039,
+            33.954,
+            33.9265,
+            35.241
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.03829712215228938,
+          0.03579573369934223,
+          0.03580433820025064,
+          0.03830723834980745
+        ]
+      },
+      "sp_two_small": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 42196507.75,
+          "min": 42194209.55,
+          "max": 42198287.9,
+          "spread_percent": 0.009665136328732062,
+          "values_per_scan": [
+            42194958.75,
+            42198056.75,
+            42198287.9,
+            42194209.55
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 16300245.1,
+          "min": 16297800.5,
+          "max": 16318895.35,
+          "spread_percent": 0.12941431169031703,
+          "values_per_scan": [
+            16302564.85,
+            16318895.35,
+            16297925.35,
+            16297800.5
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 5.7325,
+          "min": 5.714,
+          "max": 5.9479999999999995,
+          "spread_percent": 4.081988661142592,
+          "values_per_scan": [
+            5.727,
+            5.738,
+            5.9479999999999995,
+            5.714
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.008244395098881797,
+          0.008242683648131788,
+          0.008247474551899359,
+          0.008251666749129073
+        ]
+      },
+      "sp_two_length": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 243594261.7,
+          "min": 243571687.6,
+          "max": 243613635.3,
+          "spread_percent": 0.017220315333896834,
+          "values_per_scan": [
+            243606656.85,
+            243613635.3,
+            243581866.55,
+            243571687.6
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 176608539.85,
+          "min": 175122950.8,
+          "max": 177738871.1,
+          "spread_percent": 1.4811969467737958,
+          "values_per_scan": [
+            177010696.45,
+            175122950.8,
+            177738871.1,
+            176206383.25
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 60.28775,
+          "min": 59.126,
+          "max": 61.2715,
+          "spread_percent": 3.5587660843206215,
+          "values_per_scan": [
+            59.126,
+            60.090999999999994,
+            61.2715,
+            60.484500000000004
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.060853578100795856,
+          0.06335245325171854,
+          0.06335994749970268,
+          0.06333611189911607
+        ]
+      },
+      "sp_large_length": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 33764312.825,
+          "min": 33761425.95,
+          "max": 33766629.2,
+          "spread_percent": 0.01541050169440254,
+          "values_per_scan": [
+            33766629.2,
+            33762767.3,
+            33765858.35,
+            33761425.95
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 30885886.825,
+          "min": 30187631.2,
+          "max": 31696752.05,
+          "spread_percent": 4.886117917062599,
+          "values_per_scan": [
+            31696752.05,
+            30187631.2,
+            30564365.2,
+            31207408.45
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 10.95,
+          "min": 10.4065,
+          "max": 11.2855,
+          "spread_percent": 8.027397260273986,
+          "values_per_scan": [
+            11.2855,
+            10.4065,
+            10.8465,
+            11.0535
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.013255539649981074,
+          0.013257545651867986,
+          0.013253378251101821,
+          0.013255831200513057
+        ]
+      },
+      "sp_large_full": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 383521904.075,
+          "min": 383509367.45,
+          "max": 383530414.55,
+          "spread_percent": 0.005487848223633129,
+          "values_per_scan": [
+            383530414.55,
+            383530383.15,
+            383513425.0,
+            383509367.45
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 288377751.25,
+          "min": 286487659.85,
+          "max": 290200447.85,
+          "spread_percent": 1.2874738026448218,
+          "values_per_scan": [
+            290200447.85,
+            288669152.0,
+            288086350.5,
+            286487659.85
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 140.51774999999998,
+          "min": 134.942,
+          "max": 146.0905,
+          "spread_percent": 7.933873122790528,
+          "values_per_scan": [
+            146.0905,
+            143.6385,
+            137.397,
+            134.942
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.14851707774796524,
+          0.14600364184880163,
+          0.13852149384911172,
+          0.13597723819839302
+        ]
+      }
+    },
+    "common_loop/forward": {
+      "narrow": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 387428304.79999995,
+          "min": 387411464.55,
+          "max": 387434032.3,
+          "spread_percent": 0.0058250132270666255,
+          "values_per_scan": [
+            387424574.15,
+            387434032.3,
+            387432035.45,
+            387411464.55
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 175374448.825,
+          "min": 159008035.05,
+          "max": 182307695.0,
+          "spread_percent": 13.28566396422429,
+          "values_per_scan": [
+            170060507.65,
+            180688390.0,
+            182307695.0,
+            159008035.05
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 61.64,
+          "min": 55.826499999999996,
+          "max": 64.21000000000001,
+          "spread_percent": 13.600746268656737,
+          "values_per_scan": [
+            59.767999999999994,
+            63.512,
+            64.21000000000001,
+            55.826499999999996
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.06335244245128706,
+          0.06586186304921285,
+          0.06836971204902512,
+          0.05834337635023985
+        ]
+      },
+      "wide": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 679943347.45,
+          "min": 679932853.35,
+          "max": 679945232.75,
+          "spread_percent": 0.0018206516831737196,
+          "values_per_scan": [
+            679945232.75,
+            679942673.65,
+            679932853.35,
+            679944021.25
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 277407934.0,
+          "min": 264596835.25,
+          "max": 286315154.85,
+          "spread_percent": 7.829018906142758,
+          "values_per_scan": [
+            286315154.85,
+            271546961.0,
+            264596835.25,
+            283268907.0
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 96.80475,
+          "min": 92.34400000000001,
+          "max": 100.449,
+          "spread_percent": 8.372523042515981,
+          "values_per_scan": [
+            100.449,
+            95.392,
+            92.34400000000001,
+            98.2175
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.10346309735032264,
+          0.0984091182006523,
+          0.09590833655092865,
+          0.10092482740001288
+        ]
+      },
+      "sp_one_small": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 39947579.325,
+          "min": 39946282.05,
+          "max": 39951716.05,
+          "spread_percent": 0.013602826733982585,
+          "values_per_scan": [
+            39951716.05,
+            39946282.05,
+            39948412.7,
+            39946745.95
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 15655795.25,
+          "min": 15500044.55,
+          "max": 15957629.35,
+          "spread_percent": 2.9227822202133034,
+          "values_per_scan": [
+            15500044.55,
+            15957629.35,
+            15591127.05,
+            15720463.45
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 5.7755,
+          "min": 5.6955,
+          "max": 5.893,
+          "spread_percent": 3.419617349147256,
+          "values_per_scan": [
+            5.6955,
+            5.893,
+            5.7535,
+            5.7975
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.008257878798758611,
+          0.008257144450908527,
+          0.00825044329976663,
+          0.008245278600952588
+        ]
+      },
+      "sp_one_length": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 142615327.22500002,
+          "min": 142611646.0,
+          "max": 142617897.25,
+          "spread_percent": 0.004383294644156715,
+          "values_per_scan": [
+            142611646.0,
+            142617897.25,
+            142615055.3,
+            142615599.15
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 95461293.92500001,
+          "min": 95089975.0,
+          "max": 97090289.2,
+          "spread_percent": 2.095419114653492,
+          "values_per_scan": [
+            95631000.45,
+            97090289.2,
+            95291587.4,
+            95089975.0
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 33.2645,
+          "min": 33.196,
+          "max": 33.4325,
+          "spread_percent": 0.7109681492281547,
+          "values_per_scan": [
+            33.2485,
+            33.196,
+            33.4325,
+            33.2805
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.03580035959894303,
+          0.03580631875083782,
+          0.03579424814961385,
+          0.035796639500767925
+        ]
+      },
+      "sp_two_small": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 39997742.825,
+          "min": 39994698.25,
+          "max": 40000300.8,
+          "spread_percent": 0.014007165415582471,
+          "values_per_scan": [
+            40000300.8,
+            39995384.2,
+            39994698.25,
+            40000101.45
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 15888907.774999999,
+          "min": 15632489.05,
+          "max": 15943721.5,
+          "spread_percent": 1.958803301065792,
+          "values_per_scan": [
+            15913896.35,
+            15943721.5,
+            15863919.2,
+            15632489.05
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 5.6682500000000005,
+          "min": 5.516,
+          "max": 5.7615,
+          "spread_percent": 4.331142768932207,
+          "values_per_scan": [
+            5.7535,
+            5.516,
+            5.583,
+            5.7615
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.00824945829808712,
+          0.008247531150118448,
+          0.008245056701707654,
+          0.00824667204869911
+        ]
+      },
+      "sp_two_length": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 238660052.75,
+          "min": 238631728.1,
+          "max": 238673644.5,
+          "spread_percent": 0.017563224141207253,
+          "values_per_scan": [
+            238668400.6,
+            238673644.5,
+            238651704.9,
+            238631728.1
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 173992931.47500002,
+          "min": 171000655.1,
+          "max": 176462088.1,
+          "spread_percent": 3.138882110727998,
+          "values_per_scan": [
+            171000655.1,
+            174425769.3,
+            176462088.1,
+            173560093.65
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 60.93475,
+          "min": 59.464999999999996,
+          "max": 62.120000000000005,
+          "spread_percent": 4.357119705914947,
+          "values_per_scan": [
+            59.464999999999996,
+            61.295500000000004,
+            62.120000000000005,
+            60.574
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.06335838609957137,
+          0.06335431619954761,
+          0.06584168504923582,
+          0.06334998504898977
+        ]
+      },
+      "sp_large_length": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 31284729.625,
+          "min": 31280843.65,
+          "max": 31286489.05,
+          "spread_percent": 0.01804522547476622,
+          "values_per_scan": [
+            31284503.8,
+            31286489.05,
+            31284955.45,
+            31280843.65
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 30261565.325,
+          "min": 29898254.65,
+          "max": 31625849.05,
+          "spread_percent": 5.708873223992759,
+          "values_per_scan": [
+            30321653.45,
+            30201477.2,
+            29898254.65,
+            31625849.05
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 10.796,
+          "min": 10.6295,
+          "max": 11.142,
+          "spread_percent": 4.7471285661356,
+          "values_per_scan": [
+            10.7775,
+            10.814499999999999,
+            10.6295,
+            11.142
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.013254974901792593,
+          0.013252899950020946,
+          0.013252145098522305,
+          0.013250210499973037
+        ]
+      },
+      "sp_large_full": {
+        "retained_samples": 4,
+        "instructions:u": {
+          "median_per_scan": 381021270.5,
+          "min": 381011972.3,
+          "max": 381034681.45,
+          "spread_percent": 0.005960074084624144,
+          "values_per_scan": [
+            381011972.3,
+            381018916.25,
+            381023624.75,
+            381034681.45
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 294218082.075,
+          "min": 288350801.9,
+          "max": 307924694.5,
+          "spread_percent": 6.652851674497146,
+          "values_per_scan": [
+            288350801.9,
+            291673096.2,
+            296763067.95,
+            307924694.5
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 130.7795,
+          "min": 127.64649999999999,
+          "max": 138.32,
+          "spread_percent": 8.161447321636803,
+          "values_per_scan": [
+            127.64649999999999,
+            130.85250000000002,
+            130.7065,
+            138.32
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.13096630799991543,
+          0.13345781694806647,
+          0.13347698659927118,
+          0.13849232204956935
+        ]
+      }
+    },
+    "common_loop/reverse": {
+      "narrow": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 387414515.6,
+          "min": 387413290.05,
+          "max": 387415741.15,
+          "spread_percent": 0.0006326815081175129,
+          "values_per_scan": [
+            387415741.15,
+            387413290.05
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 157307503.25,
+          "min": 154595139.45,
+          "max": 160019867.05,
+          "spread_percent": 3.4484862374166654,
+          "values_per_scan": [
+            160019867.05,
+            154595139.45
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 54.35925,
+          "min": 53.232000000000006,
+          "max": 55.4865,
+          "spread_percent": 4.147408214793238,
+          "values_per_scan": [
+            55.4865,
+            53.232000000000006
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.05836152019910514,
+          0.055848443601280454
+        ]
+      },
+      "wide": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 679933004.45,
+          "min": 679931445.4,
+          "max": 679934563.5,
+          "spread_percent": 0.00045858929918339276,
+          "values_per_scan": [
+            679931445.4,
+            679934563.5
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 261990832.875,
+          "min": 261551465.25,
+          "max": 262430200.5,
+          "spread_percent": 0.33540686914769213,
+          "values_per_scan": [
+            262430200.5,
+            261551465.25
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 91.02125000000001,
+          "min": 90.751,
+          "max": 91.2915,
+          "spread_percent": 0.5938173778101206,
+          "values_per_scan": [
+            91.2915,
+            90.751
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.09341121070028749,
+          0.09341624554945156
+        ]
+      },
+      "sp_one_small": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 39948881.375,
+          "min": 39947576.25,
+          "max": 39950186.5,
+          "spread_percent": 0.0065339751956947,
+          "values_per_scan": [
+            39950186.5,
+            39947576.25
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 16643287.75,
+          "min": 15486446.8,
+          "max": 17800128.7,
+          "spread_percent": 13.901591649161979,
+          "values_per_scan": [
+            15486446.8,
+            17800128.7
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 6.01075,
+          "min": 5.511,
+          "max": 6.5105,
+          "spread_percent": 16.62854053154765,
+          "values_per_scan": [
+            5.511,
+            6.5105
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.008256222750060261,
+          0.010754787651239894
+        ]
+      },
+      "sp_one_length": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 142632896.325,
+          "min": 142629985.1,
+          "max": 142635807.55,
+          "spread_percent": 0.004082122813205014,
+          "values_per_scan": [
+            142635807.55,
+            142629985.1
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 114980437.225,
+          "min": 114496828.1,
+          "max": 115464046.35,
+          "spread_percent": 0.8412024456884736,
+          "values_per_scan": [
+            114496828.1,
+            115464046.35
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 40.116749999999996,
+          "min": 39.944,
+          "max": 40.2895,
+          "spread_percent": 0.8612362666467104,
+          "values_per_scan": [
+            40.2895,
+            39.944
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.04332217580231372,
+          0.043336972000543025
+        ]
+      },
+      "sp_two_small": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 40002581.125,
+          "min": 40001732.15,
+          "max": 40003430.1,
+          "spread_percent": 0.004244601103856846,
+          "values_per_scan": [
+            40001732.15,
+            40003430.1
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 17850403.299999997,
+          "min": 17048252.45,
+          "max": 18652554.15,
+          "spread_percent": 8.987481532139947,
+          "values_per_scan": [
+            18652554.15,
+            17048252.45
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 6.53875,
+          "min": 6.286,
+          "max": 6.791500000000001,
+          "spread_percent": 7.730835404320419,
+          "values_per_scan": [
+            6.791500000000001,
+            6.286
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.010757821449078619,
+          0.008257052351837046
+        ]
+      },
+      "sp_two_length": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 238718002.875,
+          "min": 238705906.5,
+          "max": 238730099.25,
+          "spread_percent": 0.010134447217484497,
+          "values_per_scan": [
+            238705906.5,
+            238730099.25
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 204565674.85,
+          "min": 202733353.25,
+          "max": 206397996.45,
+          "spread_percent": 1.7914262510986398,
+          "values_per_scan": [
+            202733353.25,
+            206397996.45
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 72.12074999999999,
+          "min": 70.4155,
+          "max": 73.826,
+          "spread_percent": 4.728874838378691,
+          "values_per_scan": [
+            70.4155,
+            73.826
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.07339001155050937,
+          0.07588467279856559
+        ]
+      },
+      "sp_large_length": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 31286809.125,
+          "min": 31285786.3,
+          "max": 31287831.95,
+          "spread_percent": 0.006538378496271501,
+          "values_per_scan": [
+            31287831.95,
+            31285786.3
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 30513306.3,
+          "min": 30148272.0,
+          "max": 30878340.6,
+          "spread_percent": 2.3926237059403865,
+          "values_per_scan": [
+            30878340.6,
+            30148272.0
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 10.880749999999999,
+          "min": 10.6625,
+          "max": 11.099,
+          "spread_percent": 4.011671989522786,
+          "values_per_scan": [
+            11.099,
+            10.6625
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.013265793648315594,
+          0.013263898002333008
+        ]
+      },
+      "sp_large_full": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 381122867.6,
+          "min": 381118438.2,
+          "max": 381127297.0,
+          "spread_percent": 0.002324394769539124,
+          "values_per_scan": [
+            381127297.0,
+            381118438.2
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 295461079.65,
+          "min": 294445195.2,
+          "max": 296476964.1,
+          "spread_percent": 0.6876604195743302,
+          "values_per_scan": [
+            296476964.1,
+            294445195.2
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 124.931,
+          "min": 124.4185,
+          "max": 125.4435,
+          "spread_percent": 0.820452889995282,
+          "values_per_scan": [
+            124.4185,
+            125.4435
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.1285151529998984,
+          0.12851424469845368
+        ]
+      }
+    },
+    "original_repeat/reverse": {
+      "narrow": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 399426959.375,
+          "min": 399426564.3,
+          "max": 399427354.45,
+          "spread_percent": 0.0001978208985223578,
+          "values_per_scan": [
+            399426564.3,
+            399427354.45
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 171860464.25,
+          "min": 169783356.8,
+          "max": 173937571.7,
+          "spread_percent": 2.417202186744341,
+          "values_per_scan": [
+            169783356.8,
+            173937571.7
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 58.81125,
+          "min": 58.384,
+          "max": 59.2385,
+          "spread_percent": 1.4529533040022131,
+          "values_per_scan": [
+            58.384,
+            59.2385
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.06088176174962427,
+          0.06087120324955322
+        ]
+      },
+      "wide": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 731544227.675,
+          "min": 731542289.4,
+          "max": 731546165.95,
+          "spread_percent": 0.0005299132784345808,
+          "values_per_scan": [
+            731546165.95,
+            731542289.4
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 283463559.3,
+          "min": 281610921.35,
+          "max": 285316197.25,
+          "spread_percent": 1.3071436445481674,
+          "values_per_scan": [
+            281610921.35,
+            285316197.25
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 96.92525,
+          "min": 96.6295,
+          "max": 97.221,
+          "spread_percent": 0.6102640952693035,
+          "values_per_scan": [
+            96.6295,
+            97.221
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.09845831240236294,
+          0.1009427549492102
+        ]
+      },
+      "sp_one_small": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 42154143.025000006,
+          "min": 42153149.2,
+          "max": 42155136.85,
+          "spread_percent": 0.004715194895125043,
+          "values_per_scan": [
+            42155136.85,
+            42153149.2
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 17038592.1,
+          "min": 16384794.2,
+          "max": 17692390.0,
+          "spread_percent": 7.674318349342964,
+          "values_per_scan": [
+            17692390.0,
+            16384794.2
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 6.2065,
+          "min": 5.9704999999999995,
+          "max": 6.4425,
+          "spread_percent": 7.6049303149923535,
+          "values_per_scan": [
+            6.4425,
+            5.9704999999999995
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.00825235270021949,
+          0.008255236750119365
+        ]
+      },
+      "sp_one_length": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 149099160.225,
+          "min": 149095406.75,
+          "max": 149102913.7,
+          "spread_percent": 0.00503487074552239,
+          "values_per_scan": [
+            149102913.7,
+            149095406.75
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 99498953.325,
+          "min": 99116590.9,
+          "max": 99881315.75,
+          "spread_percent": 0.7685757733572561,
+          "values_per_scan": [
+            99881315.75,
+            99116590.9
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 34.30800000000001,
+          "min": 32.873000000000005,
+          "max": 35.743,
+          "spread_percent": 8.365395826046395,
+          "values_per_scan": [
+            35.743,
+            32.873000000000005
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.03833510929835029,
+          0.03582859299785923
+        ]
+      },
+      "sp_two_small": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 42201897.15,
+          "min": 42199650.5,
+          "max": 42204143.8,
+          "spread_percent": 0.010647151676680061,
+          "values_per_scan": [
+            42199650.5,
+            42204143.8
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 16650119.175,
+          "min": 16642879.75,
+          "max": 16657358.6,
+          "spread_percent": 0.08695943763417313,
+          "values_per_scan": [
+            16657358.6,
+            16642879.75
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 5.959250000000001,
+          "min": 5.8005,
+          "max": 6.118,
+          "spread_percent": 5.327851659185297,
+          "values_per_scan": [
+            6.118,
+            5.8005
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.008251964850933291,
+          0.008254522149218246
+        ]
+      },
+      "sp_two_length": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 243656267.3,
+          "min": 243654847.8,
+          "max": 243657686.8,
+          "spread_percent": 0.0011651660067928816,
+          "values_per_scan": [
+            243654847.8,
+            243657686.8
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 211234206.45,
+          "min": 209638686.4,
+          "max": 212829726.5,
+          "spread_percent": 1.510664467478342,
+          "values_per_scan": [
+            212829726.5,
+            209638686.4
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 71.33250000000001,
+          "min": 70.92150000000001,
+          "max": 71.7435,
+          "spread_percent": 1.1523499106297808,
+          "values_per_scan": [
+            71.7435,
+            70.92150000000001
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.07588760109792929,
+          0.0733876666490687
+        ]
+      },
+      "sp_large_length": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 33772017.849999994,
+          "min": 33769313.05,
+          "max": 33774722.65,
+          "spread_percent": 0.016017994613257883,
+          "values_per_scan": [
+            33774722.65,
+            33769313.05
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 33014314.625,
+          "min": 31941310.25,
+          "max": 34087319.0,
+          "spread_percent": 6.5002371679554445,
+          "values_per_scan": [
+            34087319.0,
+            31941310.25
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 11.52025,
+          "min": 10.9725,
+          "max": 12.068000000000001,
+          "spread_percent": 9.509342245176981,
+          "values_per_scan": [
+            12.068000000000001,
+            10.9725
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.015772988350363448,
+          0.013264009248814546
+        ]
+      },
+      "sp_large_full": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 383609544.75,
+          "min": 383601570.9,
+          "max": 383617518.6,
+          "spread_percent": 0.004157274035097554,
+          "values_per_scan": [
+            383601570.9,
+            383617518.6
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 311766741.075,
+          "min": 303728268.2,
+          "max": 319805213.95,
+          "spread_percent": 5.156722520999268,
+          "values_per_scan": [
+            303728268.2,
+            319805213.95
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 130.13175,
+          "min": 128.844,
+          "max": 131.4195,
+          "spread_percent": 1.9791480557204564,
+          "values_per_scan": [
+            128.844,
+            131.4195
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.13104436839930714,
+          0.13600754409853835
+        ]
+      }
+    },
+    "allocator_wide/forward": {
+      "narrow": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 387424399.0,
+          "min": 387415136.55,
+          "max": 387433661.45,
+          "spread_percent": 0.0047815522325882626,
+          "values_per_scan": [
+            387433661.45,
+            387415136.55
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 169978116.175,
+          "min": 154027944.35,
+          "max": 185928288.0,
+          "spread_percent": 18.76732391666065,
+          "values_per_scan": [
+            185928288.0,
+            154027944.35
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 57.433,
+          "min": 51.184,
+          "max": 63.682,
+          "spread_percent": 21.76100847944562,
+          "values_per_scan": [
+            63.682,
+            51.184
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.0658454995485954,
+          0.05333595914999023
+        ]
+      },
+      "wide": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 679928093.9000001,
+          "min": 679927535.7,
+          "max": 679928652.1,
+          "spread_percent": 0.00016419383314088384,
+          "values_per_scan": [
+            679927535.7,
+            679928652.1
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 265274841.575,
+          "min": 264875069.0,
+          "max": 265674614.15,
+          "spread_percent": 0.3014025548947332,
+          "values_per_scan": [
+            264875069.0,
+            265674614.15
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 88.8765,
+          "min": 87.856,
+          "max": 89.897,
+          "spread_percent": 2.29644506703123,
+          "values_per_scan": [
+            87.856,
+            89.897
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.09090502195176668,
+          0.09341046959743834
+        ]
+      },
+      "sp_one_length": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 142637095.625,
+          "min": 142635926.9,
+          "max": 142638264.35,
+          "spread_percent": 0.0016387392001680622,
+          "values_per_scan": [
+            142638264.35,
+            142635926.9
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 117451481.225,
+          "min": 116649763.2,
+          "max": 118253199.25,
+          "spread_percent": 1.3651901476902784,
+          "values_per_scan": [
+            116649763.2,
+            118253199.25
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 40.039500000000004,
+          "min": 39.941500000000005,
+          "max": 40.1375,
+          "spread_percent": 0.4895166023551691,
+          "values_per_scan": [
+            39.941500000000005,
+            40.1375
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.043327147050877104,
+          0.04331960580020677
+        ]
+      },
+      "sp_two_length": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 238580874.3,
+          "min": 238576036.0,
+          "max": 238585712.6,
+          "spread_percent": 0.004055899295526238,
+          "values_per_scan": [
+            238576036.0,
+            238585712.6
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 211950463.825,
+          "min": 208788892.6,
+          "max": 215112035.05,
+          "spread_percent": 2.9833114473487603,
+          "values_per_scan": [
+            208788892.6,
+            215112035.05
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 75.031,
+          "min": 72.437,
+          "max": 77.625,
+          "spread_percent": 6.9144753501885905,
+          "values_per_scan": [
+            72.437,
+            77.625
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.07585984920151531,
+          0.08091167554957793
+        ]
+      },
+      "sp_large_length": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 31288224.525,
+          "min": 31283079.4,
+          "max": 31293369.65,
+          "spread_percent": 0.03288857119961491,
+          "values_per_scan": [
+            31283079.4,
+            31293369.65
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 33288510.200000003,
+          "min": 29328202.45,
+          "max": 37248817.95,
+          "spread_percent": 23.793841936488953,
+          "values_per_scan": [
+            29328202.45,
+            37248817.95
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 11.8205,
+          "min": 10.3905,
+          "max": 13.250499999999999,
+          "spread_percent": 24.195254007867685,
+          "values_per_scan": [
+            10.3905,
+            13.250499999999999
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.013256030497723259,
+          0.015760611597215757
+        ]
+      },
+      "sp_large_full": {
+        "retained_samples": 2,
+        "instructions:u": {
+          "median_per_scan": 351443140.475,
+          "min": 351441336.35,
+          "max": 351444944.6,
+          "spread_percent": 0.0010266952415469532,
+          "values_per_scan": [
+            351444944.6,
+            351441336.35
+          ]
+        },
+        "cycles:u": {
+          "median_per_scan": 110602918.5,
+          "min": 108386109.55,
+          "max": 112819727.45,
+          "spread_percent": 4.0085903338979305,
+          "values_per_scan": [
+            112819727.45,
+            108386109.55
+          ]
+        },
+        "task-clock": {
+          "median_per_scan": 38.5505,
+          "min": 37.466,
+          "max": 39.635000000000005,
+          "spread_percent": 5.626386168791596,
+          "values_per_scan": [
+            39.635000000000005,
+            37.466
+          ]
+        },
+        "elapsed_seconds_per_scan": [
+          0.045821415950194934,
+          0.045818039748701266
+        ]
+      }
+    }
+  },
+  "paired_instruction_percent": {
+    "forward": {
+      "narrow": {
+        "common_loop_vs_base": 1.363914731289051,
+        "original_vs_base": 4.5045558539884345
+      },
+      "wide": {
+        "common_loop_vs_base": 0.8013156609407712,
+        "original_vs_base": 8.45126911623022
+      },
+      "sp_one_length": {
+        "common_loop_vs_original": -4.348529562789061
+      },
+      "sp_two_length": {
+        "common_loop_vs_original": -2.025585050963452
+      }
+    },
+    "reverse": {
+      "narrow": {
+        "common_loop_vs_base": 1.3633006113241475,
+        "original_vs_base": 4.5062415709735015
+      },
+      "wide": {
+        "common_loop_vs_base": 0.8029147962164807,
+        "original_vs_base": 8.454494736046803
+      },
+      "sp_one_length": {
+        "common_loop_vs_original": -4.336888209324597
+      },
+      "sp_two_length": {
+        "common_loop_vs_original": -2.026734005130193
+      }
+    }
+  },
+  "profile_quality": {
+    "base/forward": {
+      "narrow": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 109,
+          "elapsed_seconds": 7.23104422603501,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "wide": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 65,
+          "elapsed_seconds": 7.182260900968686,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "sp_one_small": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 418,
+          "elapsed_seconds": 7.179894495988265,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "sp_one_length": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 340,
+          "elapsed_seconds": 7.181114476989023,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "sp_two_small": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 304,
+          "elapsed_seconds": 7.179415395017713,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "sp_two_length": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 207,
+          "elapsed_seconds": 7.178724345052615,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "sp_large_length": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 61,
+          "elapsed_seconds": 7.1782275079749525,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "sp_large_full": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 50,
+          "elapsed_seconds": 7.17839236400323,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      }
+    },
+    "original/forward": {
+      "narrow": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 95,
+          "elapsed_seconds": 6.176399629970547,
+          "unprofiled_seconds": 5.575058905989863,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "wide": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 62,
+          "elapsed_seconds": 7.2286242739646696,
+          "unprofiled_seconds": 6.07546853198437,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "sp_one_small": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 985,
+          "elapsed_seconds": 7.179915994987823,
+          "unprofiled_seconds": 6.025987000961322,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "sp_one_length": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 177,
+          "elapsed_seconds": 7.177981280954555,
+          "unprofiled_seconds": 6.075652178027667,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "sp_two_small": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 1047,
+          "elapsed_seconds": 7.179800118028652,
+          "unprofiled_seconds": 6.125840433000121,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "sp_two_length": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 100,
+          "elapsed_seconds": 7.178234205988701,
+          "unprofiled_seconds": 6.17625015496742,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "sp_large_length": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 548,
+          "elapsed_seconds": 7.179905652010348,
+          "unprofiled_seconds": 5.975742392998654,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "sp_large_full": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 43,
+          "elapsed_seconds": 7.179338320973329,
+          "unprofiled_seconds": 6.176428670994937,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      }
+    },
+    "common_loop/forward": {
+      "narrow": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 98,
+          "elapsed_seconds": 6.227124323020689,
+          "unprofiled_seconds": 5.674954538000748,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "wide": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 62,
+          "elapsed_seconds": 7.2281743309577,
+          "unprofiled_seconds": 5.975722945004236,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "sp_one_small": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 1039,
+          "elapsed_seconds": 7.179656292020809,
+          "unprofiled_seconds": 5.97510229999898,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "sp_one_length": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 181,
+          "elapsed_seconds": 7.180158203991596,
+          "unprofiled_seconds": 6.126184787019156,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "sp_two_small": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 1059,
+          "elapsed_seconds": 7.229644567007199,
+          "unprofiled_seconds": 6.125426716986112,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "sp_two_length": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 99,
+          "elapsed_seconds": 7.1778127570287324,
+          "unprofiled_seconds": 5.925201405014377,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "sp_large_length": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 556,
+          "elapsed_seconds": 7.179074827989098,
+          "unprofiled_seconds": 6.376243685022928,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      },
+      "sp_large_full": {
+        "lost_samples": 0,
+        "collection": {
+          "scans": 46,
+          "elapsed_seconds": 7.178702685981989,
+          "unprofiled_seconds": 6.176642272970639,
+          "frequency": 499,
+          "event": "cycles:u",
+          "callgraph": "fp"
+        }
+      }
+    }
+  },
+  "lifetime": {
+    "diagnostic": {
+      "full-10": {
+        "allocations": {
+          "32001": 11,
+          "32008": 10,
+          "freed_32008": 10,
+          "freed_32001": 11
+        },
+        "peak_live_payload_bytes": 96010,
+        "peak_live_buffers": 3,
+        "unfreed_at_trace_end": {},
+        "bulk_clear_without_explicit_free": [],
+        "peak_reserved_footprint": 851920,
+        "trace_sha256": "533ec2fbd62ee558c943a4cfde9349ee766d2d3a81d228c83dee2c77233907af"
+      },
+      "full-100": {
+        "allocations": {
+          "32001": 101,
+          "32008": 100,
+          "freed_32008": 100,
+          "freed_32001": 101
+        },
+        "peak_live_payload_bytes": 96010,
+        "peak_live_buffers": 3,
+        "unfreed_at_trace_end": {},
+        "bulk_clear_without_explicit_free": [],
+        "peak_reserved_footprint": 6750160,
+        "trace_sha256": "42ddfbdb62137e0170da30d8a6f0fb069dd886240ec436a767c08a2a235df58a"
+      },
+      "full-1000": {
+        "allocations": {
+          "32001": 1001,
+          "32008": 1000,
+          "freed_32008": 1000,
+          "freed_32001": 1001
+        },
+        "peak_live_payload_bytes": 96010,
+        "peak_live_buffers": 3,
+        "unfreed_at_trace_end": {},
+        "bulk_clear_without_explicit_free": [],
+        "peak_reserved_footprint": 65732560,
+        "trace_sha256": "2663c611511d29529ca7bee866cd2927a240a8e0104d1a64e3f5b5fa37edc297"
+      },
+      "length-10": {
+        "allocations": {
+          "32008": 10,
+          "32001": 10,
+          "freed_32008": 10,
+          "freed_32001": 10
+        },
+        "peak_live_payload_bytes": 64009,
+        "peak_live_buffers": 2,
+        "unfreed_at_trace_end": {},
+        "bulk_clear_without_explicit_free": [],
+        "peak_reserved_footprint": 98256,
+        "trace_sha256": "d824c67d81f44acb34a54e01e7eeb3a69a7d12f70f42e35c6901505c3da4019c"
+      },
+      "length-100": {
+        "allocations": {
+          "32008": 100,
+          "32001": 100,
+          "freed_32008": 100,
+          "freed_32001": 100
+        },
+        "peak_live_payload_bytes": 64009,
+        "peak_live_buffers": 2,
+        "unfreed_at_trace_end": {},
+        "bulk_clear_without_explicit_free": [],
+        "peak_reserved_footprint": 98256,
+        "trace_sha256": "ab108927824c4806a1d16e11b64b024fc14f22b4bcaf1438ef9a0327d81d1228"
+      },
+      "length-1000": {
+        "allocations": {
+          "32008": 1000,
+          "32001": 1000,
+          "freed_32008": 1000,
+          "freed_32001": 1000
+        },
+        "peak_live_payload_bytes": 64009,
+        "peak_live_buffers": 2,
+        "unfreed_at_trace_end": {},
+        "bulk_clear_without_explicit_free": [],
+        "peak_reserved_footprint": 98256,
+        "trace_sha256": "969d56a989f9d8825cfa4ad29d5050891d4012096043160547cfab0bf04eb8bc"
+      }
+    },
+    "allocator_wide_trace": {
+      "full-10": {
+        "allocations": {
+          "32001": 11,
+          "32008": 10,
+          "freed_32008": 10,
+          "freed_32001": 11
+        },
+        "peak_live_payload_bytes": 96010,
+        "peak_live_buffers": 3,
+        "unfreed_at_trace_end": {},
+        "bulk_clear_without_explicit_free": [],
+        "peak_reserved_footprint": 262096,
+        "trace_sha256": "5a8a14868a350e8109175c0bbd604e94cdd3e1b6801374b79d74d5fffef36eba"
+      },
+      "full-100": {
+        "allocations": {
+          "32001": 101,
+          "32008": 100,
+          "freed_32008": 100,
+          "freed_32001": 101
+        },
+        "peak_live_payload_bytes": 96010,
+        "peak_live_buffers": 3,
+        "unfreed_at_trace_end": {},
+        "bulk_clear_without_explicit_free": [],
+        "peak_reserved_footprint": 262096,
+        "trace_sha256": "6d3b7771ce764fecb1dac6911a836258e124495a0094243b2ed6cf13168e35ff"
+      },
+      "full-1000": {
+        "allocations": {
+          "32001": 1001,
+          "32008": 1000,
+          "freed_32008": 1000,
+          "freed_32001": 1001
+        },
+        "peak_live_payload_bytes": 96010,
+        "peak_live_buffers": 3,
+        "unfreed_at_trace_end": {},
+        "bulk_clear_without_explicit_free": [],
+        "peak_reserved_footprint": 262096,
+        "trace_sha256": "89bd874c7b9a1f0242c124c595eead4aeda27f6dabe83475b9b09059badb15dd"
+      },
+      "length-10": {
+        "allocations": {
+          "32008": 10,
+          "32001": 10,
+          "freed_32008": 10,
+          "freed_32001": 10
+        },
+        "peak_live_payload_bytes": 64009,
+        "peak_live_buffers": 2,
+        "unfreed_at_trace_end": {},
+        "bulk_clear_without_explicit_free": [],
+        "peak_reserved_footprint": 98256,
+        "trace_sha256": "0d398ec6ed6cf3aefe6a6fa834d9af7e113eb9334a2109da9db1c66f74d714d3"
+      },
+      "length-100": {
+        "allocations": {
+          "32008": 100,
+          "32001": 100,
+          "freed_32008": 100,
+          "freed_32001": 100
+        },
+        "peak_live_payload_bytes": 64009,
+        "peak_live_buffers": 2,
+        "unfreed_at_trace_end": {},
+        "bulk_clear_without_explicit_free": [],
+        "peak_reserved_footprint": 98256,
+        "trace_sha256": "3afb33dba52e5ddef9bf2c537b0bbf7433d4f7e1597775f5ff52e238518565a3"
+      },
+      "length-1000": {
+        "allocations": {
+          "32008": 1000,
+          "32001": 1000,
+          "freed_32008": 1000,
+          "freed_32001": 1000
+        },
+        "peak_live_payload_bytes": 64009,
+        "peak_live_buffers": 2,
+        "unfreed_at_trace_end": {},
+        "bulk_clear_without_explicit_free": [],
+        "peak_reserved_footprint": 98256,
+        "trace_sha256": "767e016dd23c5d4f651c2e8b70a8f9a47055472246036463b2bf9f329933671e"
+      }
+    }
+  },
+  "full_equality": {
+    "base": {
+      "scans": 10,
+      "counters_per_query": {
+        "instructions:u": 6534912269.5,
+        "cycles:u": 1935475067.3,
+        "task-clock": 703.624
+      },
+      "elapsed_seconds_per_query": 0.7077709258010145,
+      "diagnostic_not_balanced_gate": true,
+      "counter_units": {
+        "instructions:u": "instructions",
+        "cycles:u": "cycles",
+        "task-clock": "milliseconds"
+      }
+    },
+    "original": {
+      "scans": 1,
+      "counters_per_query": {
+        "instructions:u": 17977605818.0,
+        "cycles:u": 177475016810.0,
+        "task-clock": 62607.05
+      },
+      "elapsed_seconds_per_query": 62.03385383897694,
+      "diagnostic_not_balanced_gate": true,
+      "counter_units": {
+        "instructions:u": "instructions",
+        "cycles:u": "cycles",
+        "task-clock": "milliseconds"
+      }
+    },
+    "common_loop": {
+      "scans": 1,
+      "counters_per_query": {
+        "instructions:u": 17971986088.0,
+        "cycles:u": 176269776885.0,
+        "task-clock": 62857.71
+      },
+      "elapsed_seconds_per_query": 62.280554525961634,
+      "diagnostic_not_balanced_gate": true,
+      "counter_units": {
+        "instructions:u": "instructions",
+        "cycles:u": "cycles",
+        "task-clock": "milliseconds"
+      }
+    },
+    "allocator_wide": {
+      "scans": 10,
+      "counters_per_query": {
+        "instructions:u": 6580156848.1,
+        "cycles:u": 2045762330.2,
+        "task-clock": 751.198
+      },
+      "elapsed_seconds_per_query": 0.7578334601013921,
+      "diagnostic_not_balanced_gate": true,
+      "counter_units": {
+        "instructions:u": "instructions",
+        "cycles:u": "cycles",
+        "task-clock": "milliseconds"
+      }
+    }
+  },
+  "replay": [
+    {
+      "mode": "tree",
+      "rows": 100,
+      "seed": 0,
+      "peak_footprint": 6619088,
+      "final_footprint": 6619088,
+      "seconds": 0.001024569,
+      "version": "original",
+      "exit_code": 2
+    },
+    {
+      "mode": "tree",
+      "rows": 1000,
+      "seed": 0,
+      "peak_footprint": 65601488,
+      "final_footprint": 65601488,
+      "seconds": 0.054144538,
+      "version": "original",
+      "exit_code": 2
+    },
+    {
+      "mode": "tree",
+      "rows": 5000,
+      "seed": 0,
+      "peak_footprint": 327745488,
+      "final_footprint": 327745488,
+      "seconds": 2.724817879,
+      "version": "original",
+      "exit_code": 2
+    },
+    {
+      "mode": "tree",
+      "rows": 100,
+      "seed": 0,
+      "peak_footprint": 131024,
+      "final_footprint": 131024,
+      "seconds": 1.4316e-05,
+      "version": "allocator_wide",
+      "exit_code": 0
+    },
+    {
+      "mode": "tree",
+      "rows": 1000,
+      "seed": 0,
+      "peak_footprint": 131024,
+      "final_footprint": 131024,
+      "seconds": 8.8137e-05,
+      "version": "allocator_wide",
+      "exit_code": 0
+    },
+    {
+      "mode": "tree",
+      "rows": 5000,
+      "seed": 0,
+      "peak_footprint": 131024,
+      "final_footprint": 131024,
+      "seconds": 0.000362776,
+      "version": "allocator_wide",
+      "exit_code": 0
+    }
+  ],
+  "correctness": {
+    "ctest_expression": "^(test_oos|test_oos_identity_stamp|test_oos_server|test_oos_sql_(crud|ddl|boundary|txn|bigone|deferred_write|visible_version|workspace_bytes)|test_oos_record_flags|test_oos_reference_errors)$",
+    "returncode": 0,
+    "test_options": "UNIT_TEST_OOS=ON for correctness only; profiling artifacts remain test-OFF",
+    "prototype": "common_loop plus allocator-width.patch, no lifetime instrumentation",
+    "ctest_passed": 15,
+    "ctest_failed": 0,
+    "ctest_seconds": 184.54
+  },
+  "group_boundaries": {
+    "dso_sha256": "c818795a2c1f93cc0c822689e6d4434cdfa12f0d6cfc747b072cfd1402e1090f",
+    "results": {
+      "sp_verify_8_5000": {
+        "rows": 20,
+        "matched_values": 160,
+        "oos_chunks": 160
+      },
+      "sp_verify_9_5000": {
+        "rows": 20,
+        "matched_values": 180,
+        "oos_chunks": 180
+      },
+      "sp_verify_2_32000": {
+        "rows": 20,
+        "matched_values": 40,
+        "oos_chunks": 80
+      }
+    },
+    "complete": true
+  },
+  "excluded_attempts": [
+    "excluded-wide-build-preserved-mtime/reason.json",
+    "replay-loader-exclusion.json"
+  ],
+  "allocator_blob_in_A_and_B": "d0a3bc85ff53cb3e687cb2539873b79de8d57bf0",
+  "library_selection": "Every standalone verdict uses explicit per-variant LD_LIBRARY_PATH and verified ldd output.",
+  "automatic_parallel_measurements": {
+    "allocator_wide/auto": {
+      "mode": "auto",
+      "metrics": {
+        "narrow": {
+          "retained_samples": 2,
+          "instructions:u": {
+            "median_per_scan": 348931395.82500005,
+            "min": 348925885.55,
+            "max": 348936906.1,
+            "spread_percent": 0.0031583715687020235,
+            "values_per_scan": [
+              348925885.55,
+              348936906.1
+            ]
+          },
+          "cycles:u": {
+            "median_per_scan": 135142073.3,
+            "min": 134676178.9,
+            "max": 135607967.7,
+            "spread_percent": 0.6894883120014869,
+            "values_per_scan": [
+              134676178.9,
+              135607967.7
+            ]
+          },
+          "task-clock": {
+            "median_per_scan": 44.88175,
+            "min": 43.8335,
+            "max": 45.93,
+            "spread_percent": 4.6711636689745815,
+            "values_per_scan": [
+              43.8335,
+              45.93
+            ]
+          },
+          "elapsed_seconds_per_scan": [
+            0.015762474900111557,
+            0.015768411051249133
+          ]
+        },
+        "wide": {
+          "retained_samples": 2,
+          "instructions:u": {
+            "median_per_scan": 651821555.1,
+            "min": 651817266.6,
+            "max": 651825843.6,
+            "spread_percent": 0.0013158509308094527,
+            "values_per_scan": [
+              651817266.6,
+              651825843.6
+            ]
+          },
+          "cycles:u": {
+            "median_per_scan": 249670312.875,
+            "min": 247140273.45,
+            "max": 252200352.3,
+            "spread_percent": 2.0267042531938526,
+            "values_per_scan": [
+              247140273.45,
+              252200352.3
+            ]
+          },
+          "task-clock": {
+            "median_per_scan": 80.24225,
+            "min": 79.217,
+            "max": 81.2675,
+            "spread_percent": 2.555386968834996,
+            "values_per_scan": [
+              79.217,
+              81.2675
+            ]
+          },
+          "elapsed_seconds_per_scan": [
+            0.025774257598095575,
+            0.025783330452395604
+          ]
+        },
+        "sp_one_length": {
+          "retained_samples": 2,
+          "instructions:u": {
+            "median_per_scan": 142557630.5,
+            "min": 142557120.4,
+            "max": 142558140.6,
+            "spread_percent": 0.0007156404019973376,
+            "values_per_scan": [
+              142558140.6,
+              142557120.4
+            ]
+          },
+          "cycles:u": {
+            "median_per_scan": 117054627.525,
+            "min": 116908609.55,
+            "max": 117200645.5,
+            "spread_percent": 0.24948689015958062,
+            "values_per_scan": [
+              116908609.55,
+              117200645.5
+            ]
+          },
+          "task-clock": {
+            "median_per_scan": 38.656,
+            "min": 38.6045,
+            "max": 38.707499999999996,
+            "spread_percent": 0.266452814569522,
+            "values_per_scan": [
+              38.6045,
+              38.707499999999996
+            ]
+          },
+          "elapsed_seconds_per_scan": [
+            0.04080793665198144,
+            0.04081365280144382
+          ]
+        },
+        "sp_two_length": {
+          "retained_samples": 2,
+          "instructions:u": {
+            "median_per_scan": 238467218.85,
+            "min": 238464599.45,
+            "max": 238469838.25,
+            "spread_percent": 0.0021968637975801684,
+            "values_per_scan": [
+              238469838.25,
+              238464599.45
+            ]
+          },
+          "cycles:u": {
+            "median_per_scan": 210715394.425,
+            "min": 210431050.7,
+            "max": 210999738.15,
+            "spread_percent": 0.26988414944805134,
+            "values_per_scan": [
+              210431050.7,
+              210999738.15
+            ]
+          },
+          "task-clock": {
+            "median_per_scan": 68.39099999999999,
+            "min": 68.0835,
+            "max": 68.6985,
+            "spread_percent": 0.8992411282186179,
+            "values_per_scan": [
+              68.0835,
+              68.6985
+            ]
+          },
+          "elapsed_seconds_per_scan": [
+            0.07087948845000938,
+            0.07085891005117446
+          ]
+        }
+      },
+      "comparison_to_serial": "not valid"
+    }
+  },
+  "gdb_tree_observation": {
+    "original": {
+      "root_chunk_size": 26008,
+      "child0_size": 32696,
+      "child1": null
+    },
+    "width_control": {
+      "root_chunk_size": 26008,
+      "child0": null,
+      "child1_size": 32696
+    },
+    "raw_files": [
+      "tree-inspect-original.txt",
+      "tree-inspect-fixed.txt"
+    ]
+  },
+  "checksums": {
+    "allocator-width.patch": "e188b03836987ffa205e58354520c5f0cccd2c505728a6fae60fba3cd8ce76ca",
+    "allocator-replay.cpp": "34a8ce9cdc0dec292e5f66124620eb479aae586d6b36a6cf947d144b4b5a71c5",
+    "original.svg": "f34fba4edfabd16e6393281fffc75d440f5d4bb030006e9626d6554b790b259c",
+    "allocator_wide.svg": "4ff77fcb5083fe2b6c4fc69010aa3a27a6dbf46f0954ba2d5e936eff343b8258"
+  },
+  "figures": "Static exports of standard FlameGraph output; scripts/event handlers removed for document rendering. Raw interactive SVG retained in artifact root.",
+  "restoration": {
+    "checkouts": {
+      "base": {
+        "worktree": "/home/vimkim/gh/cb/oos-perf-27785-base-4781495",
+        "source_clean": true,
+        "preset_symlink_restored": true,
+        "shared_preset_unchanged": true,
+        "build_flags_verified": [
+          "-O2",
+          "-DNDEBUG",
+          "-fno-omit-frame-pointer"
+        ],
+        "unit_test_macro_present": false,
+        "installed_dso_sha256": "bcdfbd2596d832b04a2cd5c285d3fc5df7ebfa3c911bfa2dbf405289994a9f3e"
+      },
+      "task": {
+        "worktree": "/home/vimkim/gh/cb/CBRD-27785-oos-performance",
+        "source_clean": true,
+        "preset_symlink_restored": true,
+        "shared_preset_unchanged": true,
+        "build_flags_verified": [
+          "-O2",
+          "-DNDEBUG",
+          "-fno-omit-frame-pointer"
+        ],
+        "unit_test_macro_present": true,
+        "installed_dso_sha256": "16584a0ebbac177b0eeff115a36458fdc30aad5366aaf7cd1b2836d017d0bcba"
+      }
+    },
+    "remaining_native_processes": [],
+    "db_and_raw_artifacts": "preserved",
+    "baseline_reconfigure_note": "Compiler-path reset during restoration was detected and repaired using initial compiler paths; release flags verified after rebuild before restoring original symlink. No measurement used the reset build."
+  }
+}

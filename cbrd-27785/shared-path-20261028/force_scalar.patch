@@ -1,0 +1,11 @@
+--- a/src/storage/heap_file.c
++++ b/src/storage/heap_file.c
+@@ -11536,7 +11536,7 @@
+   value->rd_attrepr = attrepr;
+ }
+ 
+-static int
++static inline __attribute__ ((always_inline)) int
+ heap_attrvalue_read (RECDES * recdes, HEAP_ATTRVALUE * value, HEAP_CACHE_ATTRINFO * attr_info,
+ 		     const HEAP_REC_LAYOUT * layout, const heap_pending_record * pending)
+ {

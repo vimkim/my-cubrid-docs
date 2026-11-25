@@ -1,4 +1,7 @@
 # CBRD-27785: OOS 통합 후 일반 행 읽기와 UPDATE 성능
+||||||| 19ec5fb
+# CBRD-27785: OOS 통합 후 일반 행 읽기 성능
+# CBRD-27785: 일반 행과 OOS 읽기 성능
 
 관련 이슈: [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785).
 관련 PR: [OOS 통합 PR #7990](https://github.com/CUBRID/cubrid/pull/7990).
@@ -18,6 +21,8 @@
 ||||||| 22fc9b6
 작성일: 2026-10-27. 수정일: 2026-10-28, Asia/Seoul.
 작성일: 2026-10-27. 수정일: 2026-10-29, Asia/Seoul.
+||||||| 19ec5fb
+작성·수정일: 2026-10-27, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
@@ -57,6 +62,9 @@
 | [PR7990 성능 수락 기준](CBRD-27785-pr7990-performance-acceptance_dcbf09e_codex.md) | 1·3번 우선·잠정 +2% 기준, 문자셋·초기 상태·계수 경계와 AC | 2026-10-28 | 2026-11-04 | 최신 성능 요구를 CBRD-27785의 수락 조건으로 추적하기 위해 |
 | [분석과 검증](CBRD-27785-oos-read-performance_bcb900d_codex.md) | 원인·읽기 계약·저장 경로와 당시 측정 결과, 문자셋 조건의 검증 한계 | 2026-10-27 | 2026-11-04 | 일반 heap 읽기 수정의 근거와 범위를 검토하기 위해 |
 ||||||| 3e0458f
+||||||| 19ec5fb
+| [리뷰어 SQL과 잠정 +2% 검증](CBRD-27785-reviewer-reproduction_dcbf09e_codex.md) | 일반 UPDATE 구현·검증, 작성자의 약 +5% 수용과 PR #8299 통합 결정, 미충족 +2% 후속 CBRD-27816·Work 571 | 2026-10-28 | 2026-10-28 | PR #7990 새 재현 정보로 현재 우선 기준 1·3을 검증하기 위해 |
+| [공통 읽기 경로와 실제 OOS 비용 조사](CBRD-27785-shared-read-path_f1b9903_codex.md) | production A/B/C callstack, allocator tree-key 폭 결함의 수명 추적·재현·통제와 공통 reader 비용 | 2026-10-28 | 2026-10-28 | 같은 reader를 유지하면서 두 경로를 함께 개선할 수 있는지 판단하기 위해 |
 | [분석과 검증](CBRD-27785-oos-read-performance_bcb900d_codex.md) | 원인, 읽기 계약, 세 저장 경로 구분과 최종 측정·검증 | 2026-10-27 | 2026-10-27 | 일반 heap 읽기 수정의 근거와 범위를 검토하기 위해 |
 | [성능 리뷰 추천 답변](CBRD-27785-performance-review-replies_bcb900d_codex.md) | 대응 계획과 질문 1~5 답변, 3번 재현 요청·임계값 비교 제안 | 2026-10-27 | 2026-10-27 | 리뷰 답변을 작성하기 전에 사실과 후속 제안을 구분하기 위해 |
 | [PR 본문](CBRD-27785-oos-read-performance-pr-body_bcb900d_codex.md) | 게시할 한국어 PR 설명 | 2026-10-27 | 2026-10-27 | GitHub 게시 전 본문을 검토하기 위해 |

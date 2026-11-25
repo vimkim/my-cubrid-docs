@@ -1,0 +1,31 @@
+--- a/src/heaplayers/lea_heap.c
++++ b/src/heaplayers/lea_heap.c
+@@ -339,8 +339,26 @@
+       void *p;
+ 
+       if (hms != NULL)
+-	{
+-	  p = mspace_malloc (hms->ms, sz);
++        {
++/* *INDENT-OFF* */
++          static thread_local unsigned long sp542_count = 0;
++          if (sz >= 32000 && sz < 32100 && getenv ("CBRD_SP542_ALLOC_TRACE") != NULL)
++            {
++              sp542_count++;
++              if ((sp542_count & (sp542_count - 1)) == 0 || sp542_count % 10000 == 0)
++                {
++                  mstate ms = (mstate) hms->ms;
++                  size_t segments = 0;
++                  for (msegmentptr segment = &ms->seg; segment != NULL; segment = segment->next)
++                    {
++                      segments++;
++                    }
++                  fprintf (stderr, "[DEBUG-sp542] heap=%p request=%zu sequence=%lu segments=%zu footprint=%zu\n",
++                           (void *) ms, sz, sp542_count, segments, ms->footprint);
++                }
++            }
++/* *INDENT-ON* */
++          p = mspace_malloc (hms->ms, sz);
+ 	  if (p == NULL)
+ 	    {
+ 	      er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_OUT_OF_VIRTUAL_MEMORY, 1, sz);

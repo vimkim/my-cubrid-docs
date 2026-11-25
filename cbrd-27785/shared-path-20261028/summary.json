@@ -1,0 +1,1504 @@
+{
+  "date": "2026-10-28 Asia/Seoul",
+  "scope": "Shared SELECT decoding and actual OOS materialization; research prototypes only",
+  "source_base": "4781495f01523a3ecc5891e3377ad62cf876a1cd",
+  "source_original": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67",
+  "starting_head": "f1b99031c0402d521a785815f107be7a83b27717",
+  "artifact_root": "https://dev2.baboon-rudd.ts.net:8443/mnt/nvme/data-5/tmp/CBRD-27785-shared-20261028/",
+  "campaigns": {
+    "base/final2": {
+      "source_files": {
+        "src/storage/heap_file.c": "3b2e698547ff067e22dd68ff8e8a90b8dcedae7bf768c701bc6fdcadd4cc8dc1",
+        "src/storage/heap_oos.cpp": null,
+        "src/storage/oos_file.cpp": null
+      },
+      "dso_sha256": "703af6cca549235ed643f247662b9197b944d2cc690522bf1bf348483e47b934",
+      "harness_sha256": "1bb55f27559378d3f18914d112652164e4a8f453face594533b56ca13d540e10",
+      "summary_sha256": "f75c59ead498af1f5283cd0a4df08da4300ee3f8eec8505be64f3b576638d182",
+      "cases": {
+        "narrow": {
+          "instructions": 6870144721.0,
+          "cycles": 4701005355.0,
+          "task_clock_ms": 1749.22,
+          "retained": 2,
+          "spread_percent": 0.0044228180386245465
+        },
+        "wide": {
+          "instructions": 12925096254.5,
+          "cycles": 8291573551.5,
+          "task_clock_ms": 3065.33,
+          "retained": 2,
+          "spread_percent": 0.006408377807721339
+        },
+        "sp_one_small": {
+          "instructions": 1048281178.5,
+          "cycles": 1176997424.0,
+          "task_clock_ms": 487.61,
+          "retained": 2,
+          "spread_percent": 0.036174550089949936
+        },
+        "sp_one_length": {
+          "instructions": 1232241178.0,
+          "cycles": 1379592149.5,
+          "task_clock_ms": 591.765,
+          "retained": 2,
+          "spread_percent": 0.05456301996750834
+        },
+        "sp_two_small": {
+          "instructions": 1406727797.5,
+          "cycles": 1595618504.0,
+          "task_clock_ms": 681.82,
+          "retained": 2,
+          "spread_percent": 0.03867521498948698
+        },
+        "sp_two_length": {
+          "instructions": 1867828103.0,
+          "cycles": 2077542599.0,
+          "task_clock_ms": 854.935,
+          "retained": 2,
+          "spread_percent": 0.042941531863224136
+        },
+        "sp_large_small": {
+          "instructions": 1778577592.0,
+          "cycles": 6102775589.0,
+          "task_clock_ms": 2410.705,
+          "retained": 2,
+          "spread_percent": 0.007225661707313358
+        },
+        "sp_large_length": {
+          "instructions": 1786154599.5,
+          "cycles": 6580803535.0,
+          "task_clock_ms": 2576.865,
+          "retained": 2,
+          "spread_percent": 0.02841629723105052
+        }
+      },
+      "checkout_head": "4781495f01523a3ecc5891e3377ad62cf876a1cd",
+      "engine_basis": "4781495f01523a3ecc5891e3377ad62cf876a1cd"
+    },
+    "base/reverse": {
+      "source_files": {
+        "src/storage/heap_file.c": "3b2e698547ff067e22dd68ff8e8a90b8dcedae7bf768c701bc6fdcadd4cc8dc1",
+        "src/storage/heap_oos.cpp": null,
+        "src/storage/oos_file.cpp": null
+      },
+      "dso_sha256": "703af6cca549235ed643f247662b9197b944d2cc690522bf1bf348483e47b934",
+      "harness_sha256": "fa259437a12bb412b3a36e912968b5e1c017344ffbc9713420b4ae83cc6faa52",
+      "summary_sha256": "4d2295ee09e21664fc52fb68b28e13d3e9c291485237dfa34da37eb939d4eee8",
+      "cases": {
+        "narrow": {
+          "instructions": 6866417441.0,
+          "cycles": 2557002660.0,
+          "task_clock_ms": 792.64,
+          "retained": 4,
+          "spread_percent": 0.0023885527119381555
+        },
+        "wide": {
+          "instructions": 12920305352.5,
+          "cycles": 4836973477.5,
+          "task_clock_ms": 1541.8600000000001,
+          "retained": 4,
+          "spread_percent": 0.0013385751751334239
+        }
+      },
+      "checkout_head": "4781495f01523a3ecc5891e3377ad62cf876a1cd",
+      "engine_basis": "4781495f01523a3ecc5891e3377ad62cf876a1cd"
+    },
+    "base/serial": {
+      "source_files": {
+        "src/storage/heap_file.c": "3b2e698547ff067e22dd68ff8e8a90b8dcedae7bf768c701bc6fdcadd4cc8dc1",
+        "src/storage/heap_oos.cpp": null,
+        "src/storage/oos_file.cpp": null
+      },
+      "dso_sha256": "703af6cca549235ed643f247662b9197b944d2cc690522bf1bf348483e47b934",
+      "harness_sha256": "fa259437a12bb412b3a36e912968b5e1c017344ffbc9713420b4ae83cc6faa52",
+      "summary_sha256": "b3a939e6b51b352da02ee6d75f51febb3da46496d1c35e06c1298f83c3c16025",
+      "cases": {
+        "narrow": {
+          "instructions": 7643915012.5,
+          "cycles": 2882198233.5,
+          "task_clock_ms": 909.685,
+          "retained": 4,
+          "spread_percent": 0.001686845023644878
+        },
+        "wide": {
+          "instructions": 13490231024.5,
+          "cycles": 5073049264.5,
+          "task_clock_ms": 1636.125,
+          "retained": 4,
+          "spread_percent": 0.0014865053062160774
+        },
+        "sp_one_small": {
+          "instructions": 1059781475.0,
+          "cycles": 502163362.5,
+          "task_clock_ms": 172.81,
+          "retained": 4,
+          "spread_percent": 0.043749302185150954
+        },
+        "sp_one_length": {
+          "instructions": 1243414847.5,
+          "cycles": 587725804.5,
+          "task_clock_ms": 200.36,
+          "retained": 4,
+          "spread_percent": 0.002731107809133669
+        },
+        "sp_two_small": {
+          "instructions": 1353602019.0,
+          "cycles": 671669834.0,
+          "task_clock_ms": 222.76,
+          "retained": 4,
+          "spread_percent": 0.08576701155171666
+        },
+        "sp_two_length": {
+          "instructions": 1815621582.5,
+          "cycles": 972594659.5,
+          "task_clock_ms": 313.125,
+          "retained": 4,
+          "spread_percent": 0.0189273471582562
+        },
+        "sp_large_small": {
+          "instructions": 1777883837.0,
+          "cycles": 5907998995.0,
+          "task_clock_ms": 1874.875,
+          "retained": 4,
+          "spread_percent": 0.12325085331207722
+        },
+        "sp_large_length": {
+          "instructions": 1786205382.0,
+          "cycles": 5860091302.0,
+          "task_clock_ms": 1856.705,
+          "retained": 4,
+          "spread_percent": 0.0051464406571808214
+        }
+      },
+      "checkout_head": "4781495f01523a3ecc5891e3377ad62cf876a1cd",
+      "engine_basis": "4781495f01523a3ecc5891e3377ad62cf876a1cd"
+    },
+    "original/final": {
+      "source_files": {
+        "src/storage/heap_file.c": "8fc71f703627d25736561e0b4e6de3eb3933218dde009f41fa8dd5dfc2a8ce4f",
+        "src/storage/heap_oos.cpp": "fd01105064c2e320bbb59aecfba411982b453bd11a088cc1253f2bcc6f2a9372",
+        "src/storage/oos_file.cpp": "b6c47c62bfcffbfd674f1fd00fb7ca3f18d72ed8d5c472913ccc0b5976d4fa3f"
+      },
+      "dso_sha256": "fec4ded063c68c5ac7810fd9fb1269a9f9205362afd7b7514ef44c292e1859bf",
+      "harness_sha256": "71c237f27e134d0b6ac9355a87357191974f9c79c339d32d423c3517920431a4",
+      "summary_sha256": "df821373e852cef402548fc904355661da75330643383aaf446045d1bd26bb64",
+      "cases": {
+        "narrow": {
+          "instructions": 7218478927.5,
+          "cycles": 2674242122.0,
+          "task_clock_ms": 812.525,
+          "retained": 2,
+          "spread_percent": 0.0017349777045532562
+        },
+        "wide": {
+          "instructions": 14068306739.0,
+          "cycles": 5221768579.5,
+          "task_clock_ms": 1573.4450000000002,
+          "retained": 2,
+          "spread_percent": 0.0006777219303563268
+        },
+        "sp_one_small": {
+          "instructions": 841610782.5,
+          "cycles": 319489370.0,
+          "task_clock_ms": 98.36,
+          "retained": 2,
+          "spread_percent": 0.0015968188953187515
+        },
+        "sp_one_length": {
+          "instructions": 2990515473.5,
+          "cycles": 1984450114.0,
+          "task_clock_ms": 570.395,
+          "retained": 2,
+          "spread_percent": 0.00012061465763888815
+        },
+        "sp_two_small": {
+          "instructions": 842478171.5,
+          "cycles": 318897344.0,
+          "task_clock_ms": 99.505,
+          "retained": 2,
+          "spread_percent": 0.002966130262521585
+        },
+        "sp_two_length": {
+          "instructions": 4873360555.5,
+          "cycles": 3719192423.0,
+          "task_clock_ms": 1127.95,
+          "retained": 2,
+          "spread_percent": 0.006288781560685409
+        },
+        "sp_large_small": {
+          "instructions": 552026628.5,
+          "cycles": 274256721.5,
+          "task_clock_ms": 96.63,
+          "retained": 2,
+          "spread_percent": 0.007220122715511358
+        },
+        "sp_large_length": {
+          "instructions": 674068435.5,
+          "cycles": 541988985.0,
+          "task_clock_ms": 163.68,
+          "retained": 2,
+          "spread_percent": 0.01769746122461775
+        }
+      },
+      "checkout_head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "engine_basis": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67"
+    },
+    "original/serial": {
+      "source_files": {
+        "src/storage/heap_file.c": "8fc71f703627d25736561e0b4e6de3eb3933218dde009f41fa8dd5dfc2a8ce4f",
+        "src/storage/heap_oos.cpp": "fd01105064c2e320bbb59aecfba411982b453bd11a088cc1253f2bcc6f2a9372",
+        "src/storage/oos_file.cpp": "b6c47c62bfcffbfd674f1fd00fb7ca3f18d72ed8d5c472913ccc0b5976d4fa3f"
+      },
+      "dso_sha256": "fec4ded063c68c5ac7810fd9fb1269a9f9205362afd7b7514ef44c292e1859bf",
+      "harness_sha256": "fa259437a12bb412b3a36e912968b5e1c017344ffbc9713420b4ae83cc6faa52",
+      "summary_sha256": "9b72d32f72c9262f0c020fec92a0e77cae359c046fde584ce0a13b09e50872ae",
+      "cases": {
+        "narrow": {
+          "instructions": 7988124022.0,
+          "cycles": 3073621860.5,
+          "task_clock_ms": 988.47,
+          "retained": 2,
+          "spread_percent": 0.0006929286506763753
+        },
+        "wide": {
+          "instructions": 14630540985.5,
+          "cycles": 5577279150.5,
+          "task_clock_ms": 1775.135,
+          "retained": 2,
+          "spread_percent": 0.0006646029022191826
+        },
+        "sp_one_small": {
+          "instructions": 842964412.5,
+          "cycles": 320972975.5,
+          "task_clock_ms": 108.74000000000001,
+          "retained": 2,
+          "spread_percent": 0.007242179989419186
+        },
+        "sp_one_length": {
+          "instructions": 2992192883.5,
+          "cycles": 1976975744.5,
+          "task_clock_ms": 634.0999999999999,
+          "retained": 2,
+          "spread_percent": 0.0006930368732026295
+        },
+        "sp_two_small": {
+          "instructions": 843961923.0,
+          "cycles": 323016788.5,
+          "task_clock_ms": 111.535,
+          "retained": 2,
+          "spread_percent": 0.014135708821545969
+        },
+        "sp_two_length": {
+          "instructions": 4875255151.5,
+          "cycles": 3520103355.5,
+          "task_clock_ms": 1136.135,
+          "retained": 2,
+          "spread_percent": 0.006002660187128054
+        },
+        "sp_large_small": {
+          "instructions": 553483513.0,
+          "cycles": 199739392.5,
+          "task_clock_ms": 67.59,
+          "retained": 2,
+          "spread_percent": 0.0036452756994768878
+        },
+        "sp_large_length": {
+          "instructions": 675856649.0,
+          "cycles": 544049424.0,
+          "task_clock_ms": 178.28,
+          "retained": 2,
+          "spread_percent": 0.018155921108649182
+        }
+      },
+      "checkout_head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "engine_basis": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67"
+    },
+    "force_scalar/final": {
+      "source_files": {
+        "src/storage/heap_file.c": "fe71194e33dc86bc8ee56bcd07943ede1fbefd25d01652fa6d63948e0fcbfc80",
+        "src/storage/heap_oos.cpp": "fd01105064c2e320bbb59aecfba411982b453bd11a088cc1253f2bcc6f2a9372",
+        "src/storage/oos_file.cpp": "b6c47c62bfcffbfd674f1fd00fb7ca3f18d72ed8d5c472913ccc0b5976d4fa3f"
+      },
+      "dso_sha256": "a7d0a2b0b2bf80202df231ea64b8ef840f0ae5e1dcdacac70d78e21be2857dd4",
+      "harness_sha256": "71c237f27e134d0b6ac9355a87357191974f9c79c339d32d423c3517920431a4",
+      "summary_sha256": "aa2abb1cbbefe6bddc3b427e189e2b455f6bcb3a8898f021fdc070456cf4fd2e",
+      "cases": {
+        "narrow": {
+          "instructions": 7270751678.5,
+          "cycles": 2706345290.5,
+          "task_clock_ms": 902.965,
+          "retained": 2,
+          "spread_percent": 0.0005182545308406657
+        },
+        "wide": {
+          "instructions": 13936604126.0,
+          "cycles": 5166786979.0,
+          "task_clock_ms": 1742.7649999999999,
+          "retained": 2,
+          "spread_percent": 0.00048176728988621055
+        },
+        "sp_one_small": {
+          "instructions": 847592540.0,
+          "cycles": 316994065.5,
+          "task_clock_ms": 107.18,
+          "retained": 2,
+          "spread_percent": 0.0021767534669429726
+        },
+        "sp_one_length": {
+          "instructions": 2997097354.5,
+          "cycles": 1958373274.5,
+          "task_clock_ms": 628.115,
+          "retained": 2,
+          "spread_percent": 9.038745424577432e-05
+        },
+        "sp_two_small": {
+          "instructions": 848525225.0,
+          "cycles": 316124958.0,
+          "task_clock_ms": 105.85,
+          "retained": 2,
+          "spread_percent": 0.0007983262960744626
+        },
+        "sp_two_length": {
+          "instructions": 4888650218.5,
+          "cycles": 3484329955.0,
+          "task_clock_ms": 1179.79,
+          "retained": 2,
+          "spread_percent": 0.0016227587668225807
+        },
+        "sp_large_small": {
+          "instructions": 558171609.5,
+          "cycles": 194017283.5,
+          "task_clock_ms": 71.025,
+          "retained": 2,
+          "spread_percent": 0.00041904675196490805
+        },
+        "sp_large_length": {
+          "instructions": 680474400.5,
+          "cycles": 533882423.5,
+          "task_clock_ms": 178.58,
+          "retained": 2,
+          "spread_percent": 0.00921930346739032
+        }
+      },
+      "checkout_head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "engine_basis": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67"
+    },
+    "force_all/final": {
+      "source_files": {
+        "src/storage/heap_file.c": "6862fce701b533f257d44ed9ef884633d9452098addec8f5723e49e407f5a038",
+        "src/storage/heap_oos.cpp": "fd01105064c2e320bbb59aecfba411982b453bd11a088cc1253f2bcc6f2a9372",
+        "src/storage/oos_file.cpp": "b6c47c62bfcffbfd674f1fd00fb7ca3f18d72ed8d5c472913ccc0b5976d4fa3f"
+      },
+      "dso_sha256": "83fb0bb7db978b6c0f81d04acdec7547eb025d413e1627c03f28267f32dd0216",
+      "harness_sha256": "71c237f27e134d0b6ac9355a87357191974f9c79c339d32d423c3517920431a4",
+      "summary_sha256": "754dfa6fac4abf1b3ba3318e05f7558ca43d61c40c8c878bbec42f3766456edd",
+      "cases": {
+        "narrow": {
+          "instructions": 7058900846.5,
+          "cycles": 2736801125.0,
+          "task_clock_ms": 939.3399999999999,
+          "retained": 2,
+          "spread_percent": 0.007536881613286733
+        },
+        "wide": {
+          "instructions": 13732680080.0,
+          "cycles": 5179391748.5,
+          "task_clock_ms": 1748.335,
+          "retained": 2,
+          "spread_percent": 0.0012038436709872003
+        },
+        "sp_one_small": {
+          "instructions": 828367480.0,
+          "cycles": 315090676.0,
+          "task_clock_ms": 111.605,
+          "retained": 2,
+          "spread_percent": 0.0011803939961525288
+        },
+        "sp_one_length": {
+          "instructions": 2975553167.0,
+          "cycles": 1903670747.5,
+          "task_clock_ms": 651.575,
+          "retained": 2,
+          "spread_percent": 0.00400510403650939
+        },
+        "sp_two_small": {
+          "instructions": 829316442.5,
+          "cycles": 313958642.0,
+          "task_clock_ms": 110.97999999999999,
+          "retained": 2,
+          "spread_percent": 0.004340080354791711
+        },
+        "sp_two_length": {
+          "instructions": 4877153173.0,
+          "cycles": 3503853273.5,
+          "task_clock_ms": 1210.635,
+          "retained": 2,
+          "spread_percent": 0.006242166058785786
+        },
+        "sp_large_small": {
+          "instructions": 537957746.0,
+          "cycles": 215507778.0,
+          "task_clock_ms": 77.61500000000001,
+          "retained": 2,
+          "spread_percent": 0.005473664097031145
+        },
+        "sp_large_length": {
+          "instructions": 660078350.0,
+          "cycles": 538840329.5,
+          "task_clock_ms": 188.18,
+          "retained": 2,
+          "spread_percent": 0.0019879458249160878
+        }
+      },
+      "checkout_head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "engine_basis": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67"
+    },
+    "shared/final": {
+      "source_files": {
+        "src/storage/heap_file.c": "ac8e4be995a47669bb66ce68e2428cb3bbe10540718a376baecd15020b596b63",
+        "src/storage/heap_oos.cpp": "fd01105064c2e320bbb59aecfba411982b453bd11a088cc1253f2bcc6f2a9372",
+        "src/storage/oos_file.cpp": "b6c47c62bfcffbfd674f1fd00fb7ca3f18d72ed8d5c472913ccc0b5976d4fa3f"
+      },
+      "dso_sha256": "2b66cd019c997a08e0e63584956fda4b5c9509545ccde9cfc2b2551597614442",
+      "harness_sha256": "71c237f27e134d0b6ac9355a87357191974f9c79c339d32d423c3517920431a4",
+      "summary_sha256": "7d12c0e0dc2d9553f6c5bc34404a1bd181280d141e21019a84d3da5754f521e8",
+      "cases": {
+        "narrow": {
+          "instructions": 7058747602.0,
+          "cycles": 2772996432.0,
+          "task_clock_ms": 961.99,
+          "retained": 2,
+          "spread_percent": 7.451746820511971e-05
+        },
+        "wide": {
+          "instructions": 13421720078.5,
+          "cycles": 5658108735.0,
+          "task_clock_ms": 1990.085,
+          "retained": 2,
+          "spread_percent": 0.009962009281819489
+        },
+        "sp_one_small": {
+          "instructions": 828410216.5,
+          "cycles": 319235117.0,
+          "task_clock_ms": 115.02000000000001,
+          "retained": 2,
+          "spread_percent": 0.012270370159057544
+        },
+        "sp_one_length": {
+          "instructions": 2948856435.0,
+          "cycles": 1968140841.0,
+          "task_clock_ms": 690.48,
+          "retained": 2,
+          "spread_percent": 0.00019003977045087988
+        },
+        "sp_two_small": {
+          "instructions": 829292237.5,
+          "cycles": 318628927.5,
+          "task_clock_ms": 115.80000000000001,
+          "retained": 2,
+          "spread_percent": 0.0034821259254823305
+        },
+        "sp_two_length": {
+          "instructions": 4877479897.0,
+          "cycles": 3686108245.0,
+          "task_clock_ms": 1280.02,
+          "retained": 2,
+          "spread_percent": 0.001196929587263043
+        },
+        "sp_large_small": {
+          "instructions": 537973772.0,
+          "cycles": 196035266.0,
+          "task_clock_ms": 73.525,
+          "retained": 2,
+          "spread_percent": 0.00608691384307858
+        },
+        "sp_large_length": {
+          "instructions": 658768219.5,
+          "cycles": 546720760.5,
+          "task_clock_ms": 198.95499999999998,
+          "retained": 2,
+          "spread_percent": 0.010797576126848967
+        }
+      },
+      "checkout_head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "engine_basis": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67"
+    },
+    "shared_alloc/final": {
+      "source_files": {
+        "src/storage/heap_file.c": "223241fc9f29e465ceeb040a6836a9379ce8924a5c076561ef7a9c849f799053",
+        "src/storage/heap_oos.cpp": "fd01105064c2e320bbb59aecfba411982b453bd11a088cc1253f2bcc6f2a9372",
+        "src/storage/oos_file.cpp": "b6c47c62bfcffbfd674f1fd00fb7ca3f18d72ed8d5c472913ccc0b5976d4fa3f"
+      },
+      "dso_sha256": "efff8d8ab1d6874bb787082eab89c70e8b52383aab0c3de7f740cd4031ebdc5d",
+      "harness_sha256": "1bb55f27559378d3f18914d112652164e4a8f453face594533b56ca13d540e10",
+      "summary_sha256": "cd90bc3eb15bc096fe88415d3a31f52c04d643d5784af07c1f2af9ea3d97a4f9",
+      "cases": {
+        "narrow": {
+          "instructions": 7044230271.5,
+          "cycles": 3506215379.0,
+          "task_clock_ms": 1289.7849999999999,
+          "retained": 2,
+          "spread_percent": 0.013958870765174701
+        },
+        "wide": {
+          "instructions": 13410961929.0,
+          "cycles": 7046296944.0,
+          "task_clock_ms": 2534.425,
+          "retained": 2,
+          "spread_percent": 0.0025904629499302785
+        },
+        "sp_one_small": {
+          "instructions": 826462155.5,
+          "cycles": 415175531.0,
+          "task_clock_ms": 157.06,
+          "retained": 2,
+          "spread_percent": 0.0056260289343641945
+        },
+        "sp_one_length": {
+          "instructions": 3102441454.5,
+          "cycles": 3100274697.5,
+          "task_clock_ms": 1122.63,
+          "retained": 2,
+          "spread_percent": 0.00596236875740857
+        },
+        "sp_two_small": {
+          "instructions": 827460305.5,
+          "cycles": 480796754.5,
+          "task_clock_ms": 183.04500000000002,
+          "retained": 2,
+          "spread_percent": 0.016911868650356668
+        },
+        "sp_two_length": {
+          "instructions": 4876767310.0,
+          "cycles": 4746830120.5,
+          "task_clock_ms": 1714.3000000000002,
+          "retained": 2,
+          "spread_percent": 0.003136134867177003
+        },
+        "sp_large_small": {
+          "instructions": 536025910.0,
+          "cycles": 370149251.5,
+          "task_clock_ms": 144.17000000000002,
+          "retained": 2,
+          "spread_percent": 0.015160834296237657
+        },
+        "sp_large_length": {
+          "instructions": 656740963.0,
+          "cycles": 691514810.0,
+          "task_clock_ms": 261.495,
+          "retained": 2,
+          "spread_percent": 0.009873908230694603
+        }
+      },
+      "checkout_head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "engine_basis": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67"
+    },
+    "full_inline/final": {
+      "source_files": {
+        "src/storage/heap_file.c": "c54212be082fef1ae05e72205d58285c8c4fa59e5f572f43ad359d639b11d9aa",
+        "src/storage/heap_oos.cpp": "fd01105064c2e320bbb59aecfba411982b453bd11a088cc1253f2bcc6f2a9372",
+        "src/storage/oos_file.cpp": "b6c47c62bfcffbfd674f1fd00fb7ca3f18d72ed8d5c472913ccc0b5976d4fa3f"
+      },
+      "dso_sha256": "965a8a14b21f60f4f217f18dcab607bc0a17761445639028afe75d06327c1191",
+      "harness_sha256": "1bb55f27559378d3f18914d112652164e4a8f453face594533b56ca13d540e10",
+      "summary_sha256": "35b40db0d3ef68979e52cfe5ece4b57106dfefa230f375b3578865e1bf6ffddd",
+      "cases": {
+        "narrow": {
+          "instructions": 7008385486.5,
+          "cycles": 4009191820.0,
+          "task_clock_ms": 1447.49,
+          "retained": 2,
+          "spread_percent": 0.0014495920664708715
+        },
+        "wide": {
+          "instructions": 13087373282.0,
+          "cycles": 7291693673.0,
+          "task_clock_ms": 2644.705,
+          "retained": 2,
+          "spread_percent": 0.003164194915793799
+        },
+        "sp_one_small": {
+          "instructions": 821882157.0,
+          "cycles": 511285732.5,
+          "task_clock_ms": 194.5,
+          "retained": 2,
+          "spread_percent": 0.010241857580563098
+        },
+        "sp_one_length": {
+          "instructions": 2930040923.0,
+          "cycles": 2723854994.5,
+          "task_clock_ms": 972.0999999999999,
+          "retained": 2,
+          "spread_percent": 0.016354993414540785
+        },
+        "sp_two_small": {
+          "instructions": 822647623.0,
+          "cycles": 441529511.0,
+          "task_clock_ms": 162.29000000000002,
+          "retained": 2,
+          "spread_percent": 0.008462918758108416
+        },
+        "sp_two_length": {
+          "instructions": 4870862849.5,
+          "cycles": 4072578407.0,
+          "task_clock_ms": 1448.335,
+          "retained": 2,
+          "spread_percent": 0.00030312904420036474
+        },
+        "sp_large_small": {
+          "instructions": 531749604.5,
+          "cycles": 364988479.5,
+          "task_clock_ms": 139.85,
+          "retained": 2,
+          "spread_percent": 0.009956001763232154
+        },
+        "sp_large_length": {
+          "instructions": 651977843.0,
+          "cycles": 769596589.0,
+          "task_clock_ms": 288.09000000000003,
+          "retained": 2,
+          "spread_percent": 0.004048910600785554
+        }
+      },
+      "checkout_head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "engine_basis": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67"
+    },
+    "optimized/final": {
+      "source_files": {
+        "src/storage/heap_file.c": "c54212be082fef1ae05e72205d58285c8c4fa59e5f572f43ad359d639b11d9aa",
+        "src/storage/heap_oos.cpp": "b9ff610c3b209f6302439e529b431e5a3e8658798c710dd235f1c4946c41c088",
+        "src/storage/oos_file.cpp": "5ed4f311222f2d1342d05cb96145c5ec2ebca5b7e6bb8c832a2843f87e4b248f"
+      },
+      "dso_sha256": "fa98016ea99d74304bd9dc18bbae77b8cd8cffbd3555e388acda87502abd7b8c",
+      "harness_sha256": "fa259437a12bb412b3a36e912968b5e1c017344ffbc9713420b4ae83cc6faa52",
+      "summary_sha256": "ff4ef0bc7329ca2bb55da1e6d7cfd80001ea024020a23b16f0cde8760f1bffe5",
+      "cases": {
+        "narrow": {
+          "instructions": 7008217151.5,
+          "cycles": 3988258532.0,
+          "task_clock_ms": 1436.8899999999999,
+          "retained": 2,
+          "spread_percent": 0.0011998343969978511
+        },
+        "wide": {
+          "instructions": 13086388144.0,
+          "cycles": 6382608201.5,
+          "task_clock_ms": 2308.76,
+          "retained": 2,
+          "spread_percent": 0.003415762967453673
+        },
+        "sp_one_small": {
+          "instructions": 800099729.5,
+          "cycles": 443971138.0,
+          "task_clock_ms": 167.005,
+          "retained": 2,
+          "spread_percent": 0.00438857791164895
+        },
+        "sp_one_length": {
+          "instructions": 2856464306.0,
+          "cycles": 2593591498.0,
+          "task_clock_ms": 925.9549999999999,
+          "retained": 2,
+          "spread_percent": 0.001378557397594171
+        },
+        "sp_two_small": {
+          "instructions": 800995889.0,
+          "cycles": 381127911.0,
+          "task_clock_ms": 140.88,
+          "retained": 2,
+          "spread_percent": 0.009716154735470809
+        },
+        "sp_two_length": {
+          "instructions": 4774760685.5,
+          "cycles": 4536422341.5,
+          "task_clock_ms": 1619.22,
+          "retained": 2,
+          "spread_percent": 0.006715875854758585
+        },
+        "sp_large_small": {
+          "instructions": 509048498.0,
+          "cycles": 302289757.5,
+          "task_clock_ms": 116.9,
+          "retained": 2,
+          "spread_percent": 0.025710713323821653
+        },
+        "sp_large_length": {
+          "instructions": 626641620.0,
+          "cycles": 718184217.0,
+          "task_clock_ms": 261.78,
+          "retained": 2,
+          "spread_percent": 0.0119554778375557
+        }
+      },
+      "checkout_head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "engine_basis": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67"
+    },
+    "scratch64/final": {
+      "source_files": {
+        "src/storage/heap_file.c": "66ab76f8f3d2d7b1ebc807e9a8ed8e4029b14f4057578cf207a73c418c8e27f9",
+        "src/storage/heap_oos.cpp": "b9ff610c3b209f6302439e529b431e5a3e8658798c710dd235f1c4946c41c088",
+        "src/storage/oos_file.cpp": "5ed4f311222f2d1342d05cb96145c5ec2ebca5b7e6bb8c832a2843f87e4b248f"
+      },
+      "dso_sha256": "d866ae6fca56ff46dd0ae8f1d31e70b983704b870879023277d051f143acf3cd",
+      "harness_sha256": "fa259437a12bb412b3a36e912968b5e1c017344ffbc9713420b4ae83cc6faa52",
+      "summary_sha256": "299a485401a1664b0325156cc31dbf36d492b3c10a720370ef8e726e2b74bdb8",
+      "cases": {
+        "narrow": {
+          "instructions": 7006604043.5,
+          "cycles": 2617687289.5,
+          "task_clock_ms": 837.5550000000001,
+          "retained": 2,
+          "spread_percent": 0.00048307282372263825
+        },
+        "wide": {
+          "instructions": 13084386397.5,
+          "cycles": 4930488194.0,
+          "task_clock_ms": 1606.3899999999999,
+          "retained": 2,
+          "spread_percent": 3.9214678045432586e-05
+        },
+        "sp_one_small": {
+          "instructions": 799987686.5,
+          "cycles": 305756667.0,
+          "task_clock_ms": 99.53,
+          "retained": 2,
+          "spread_percent": 0.00042363152048340935
+        },
+        "sp_one_length": {
+          "instructions": 2855427478.5,
+          "cycles": 1901752133.0,
+          "task_clock_ms": 609.8050000000001,
+          "retained": 2,
+          "spread_percent": 0.0013602516713330703
+        },
+        "sp_two_small": {
+          "instructions": 800914206.5,
+          "cycles": 306445148.5,
+          "task_clock_ms": 101.14,
+          "retained": 2,
+          "spread_percent": 0.011732717341929181
+        },
+        "sp_two_length": {
+          "instructions": 4773669010.5,
+          "cycles": 3551163442.0,
+          "task_clock_ms": 1117.04,
+          "retained": 2,
+          "spread_percent": 0.004666620151292536
+        },
+        "sp_large_small": {
+          "instructions": 508906418.0,
+          "cycles": 172311581.5,
+          "task_clock_ms": 58.885,
+          "retained": 2,
+          "spread_percent": 0.0025419211749850637
+        },
+        "sp_large_length": {
+          "instructions": 615345188.0,
+          "cycles": 553598100.0,
+          "task_clock_ms": 196.325,
+          "retained": 2,
+          "spread_percent": 0.010465020488630196
+        }
+      },
+      "checkout_head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "engine_basis": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67"
+    },
+    "common_loop/final": {
+      "source_files": {
+        "src/storage/heap_file.c": "98e6bf0470fc36f65e905dc4e432506137b639dc151eace34d1c46fd16ac41c5",
+        "src/storage/heap_oos.cpp": "b9ff610c3b209f6302439e529b431e5a3e8658798c710dd235f1c4946c41c088",
+        "src/storage/oos_file.cpp": "5ed4f311222f2d1342d05cb96145c5ec2ebca5b7e6bb8c832a2843f87e4b248f"
+      },
+      "dso_sha256": "1b26c56b219735c3126cf3d6b6c635ab47b20a77969b9011611f28de594877ff",
+      "harness_sha256": "fa259437a12bb412b3a36e912968b5e1c017344ffbc9713420b4ae83cc6faa52",
+      "summary_sha256": "c3627bbbbb4d97ea3a2f503d878f30b50d50804dbc70eb21b41f69a021fbfd72",
+      "cases": {
+        "narrow": {
+          "instructions": 6978478643.5,
+          "cycles": 2602952822.5,
+          "task_clock_ms": 807.655,
+          "retained": 2,
+          "spread_percent": 0.00026230645582113975
+        },
+        "wide": {
+          "instructions": 13036422380.0,
+          "cycles": 4941625859.5,
+          "task_clock_ms": 1637.04,
+          "retained": 2,
+          "spread_percent": 5.3542297085344975e-05
+        },
+        "sp_one_small": {
+          "instructions": 797544905.5,
+          "cycles": 304894834.5,
+          "task_clock_ms": 103.09,
+          "retained": 2,
+          "spread_percent": 0.005013761573077969
+        },
+        "sp_one_length": {
+          "instructions": 2853006068.5,
+          "cycles": 1910372913.0,
+          "task_clock_ms": 581.145,
+          "retained": 2,
+          "spread_percent": 0.002697190197021132
+        },
+        "sp_two_small": {
+          "instructions": 798543016.5,
+          "cycles": 305051335.0,
+          "task_clock_ms": 101.385,
+          "retained": 2,
+          "spread_percent": 0.008077586137152074
+        },
+        "sp_two_length": {
+          "instructions": 4771858900.0,
+          "cycles": 3528714212.5,
+          "task_clock_ms": 1120.73,
+          "retained": 2,
+          "spread_percent": 0.0012075378004156828
+        },
+        "sp_large_small": {
+          "instructions": 506408385.0,
+          "cycles": 179508394.0,
+          "task_clock_ms": 64.845,
+          "retained": 2,
+          "spread_percent": 0.01626908290627929
+        },
+        "sp_large_length": {
+          "instructions": 623927777.0,
+          "cycles": 513807711.0,
+          "task_clock_ms": 160.89499999999998,
+          "retained": 2,
+          "spread_percent": 0.0031106164391844346
+        }
+      },
+      "checkout_head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "engine_basis": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67"
+    },
+    "common_loop/reverse": {
+      "source_files": {
+        "src/storage/heap_file.c": "98e6bf0470fc36f65e905dc4e432506137b639dc151eace34d1c46fd16ac41c5",
+        "src/storage/heap_oos.cpp": "b9ff610c3b209f6302439e529b431e5a3e8658798c710dd235f1c4946c41c088",
+        "src/storage/oos_file.cpp": "5ed4f311222f2d1342d05cb96145c5ec2ebca5b7e6bb8c832a2843f87e4b248f"
+      },
+      "dso_sha256": "1b26c56b219735c3126cf3d6b6c635ab47b20a77969b9011611f28de594877ff",
+      "harness_sha256": "fa259437a12bb412b3a36e912968b5e1c017344ffbc9713420b4ae83cc6faa52",
+      "summary_sha256": "bacef69e2389b951028c0806350b4de2265bd68e48a9ca3f026805286c3bac4c",
+      "cases": {
+        "narrow": {
+          "instructions": 6978512821.0,
+          "cycles": 2597163371.5,
+          "task_clock_ms": 822.215,
+          "retained": 4,
+          "spread_percent": 0.001970520131254768
+        },
+        "wide": {
+          "instructions": 13036329887.0,
+          "cycles": 4879315993.0,
+          "task_clock_ms": 1570.83,
+          "retained": 4,
+          "spread_percent": 0.001189897780622188
+        }
+      },
+      "checkout_head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "engine_basis": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67"
+    },
+    "common_loop/serial": {
+      "source_files": {
+        "src/storage/heap_file.c": "98e6bf0470fc36f65e905dc4e432506137b639dc151eace34d1c46fd16ac41c5",
+        "src/storage/heap_oos.cpp": "b9ff610c3b209f6302439e529b431e5a3e8658798c710dd235f1c4946c41c088",
+        "src/storage/oos_file.cpp": "5ed4f311222f2d1342d05cb96145c5ec2ebca5b7e6bb8c832a2843f87e4b248f"
+      },
+      "dso_sha256": "1b26c56b219735c3126cf3d6b6c635ab47b20a77969b9011611f28de594877ff",
+      "harness_sha256": "fa259437a12bb412b3a36e912968b5e1c017344ffbc9713420b4ae83cc6faa52",
+      "summary_sha256": "82f44b8c81582c83f886f823ce35fe7b6b0ce771f89e70e0dc06a9f6793c0c53",
+      "cases": {
+        "narrow": {
+          "instructions": 7747907700.0,
+          "cycles": 2963416111.5,
+          "task_clock_ms": 925.75,
+          "retained": 4,
+          "spread_percent": 0.001905946814518712
+        },
+        "wide": {
+          "instructions": 13598188647.5,
+          "cycles": 5159415269.5,
+          "task_clock_ms": 1618.295,
+          "retained": 4,
+          "spread_percent": 0.0009202990430862089
+        },
+        "sp_one_small": {
+          "instructions": 798958562.5,
+          "cycles": 306971094.0,
+          "task_clock_ms": 104.19,
+          "retained": 4,
+          "spread_percent": 0.014550316556623673
+        },
+        "sp_one_length": {
+          "instructions": 2854554770.5,
+          "cycles": 1910212343.0,
+          "task_clock_ms": 618.515,
+          "retained": 4,
+          "spread_percent": 0.004450676557792815
+        },
+        "sp_two_small": {
+          "instructions": 799909113.0,
+          "cycles": 308021864.0,
+          "task_clock_ms": 98.31,
+          "retained": 4,
+          "spread_percent": 0.010582452259173099
+        },
+        "sp_two_length": {
+          "instructions": 4774355288.5,
+          "cycles": 3594831839.0,
+          "task_clock_ms": 1118.25,
+          "retained": 4,
+          "spread_percent": 0.01619774719872107
+        },
+        "sp_large_small": {
+          "instructions": 508069605.0,
+          "cycles": 178740564.0,
+          "task_clock_ms": 67.475,
+          "retained": 4,
+          "spread_percent": 0.01922138207815049
+        },
+        "sp_large_length": {
+          "instructions": 625707395.0,
+          "cycles": 522788134.0,
+          "task_clock_ms": 165.25,
+          "retained": 4,
+          "spread_percent": 0.018812467447344137
+        }
+      },
+      "checkout_head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "engine_basis": "dcbf09e4f7fd02ff9c8fc6493ec8887fc2919d67"
+    },
+    "production_original/serial": {
+      "checkout_head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "source_files": {
+        "src/storage/heap_file.c": "8fc71f703627d25736561e0b4e6de3eb3933218dde009f41fa8dd5dfc2a8ce4f",
+        "src/storage/heap_oos.cpp": "fd01105064c2e320bbb59aecfba411982b453bd11a088cc1253f2bcc6f2a9372",
+        "src/storage/oos_file.cpp": "b6c47c62bfcffbfd674f1fd00fb7ca3f18d72ed8d5c472913ccc0b5976d4fa3f"
+      },
+      "dso_sha256": "432d6a012ddf26638b19f3f23b01a7659a4480f7f2b26edce87567d19c805c2b",
+      "harness_sha256": "71b72f54f5242968dc80eca8b2ce428b1e71a54771d6a812daad7d14e11b2593",
+      "cases": {
+        "narrow": {
+          "instructions": 7988304247.0,
+          "cycles": 3114720485.5,
+          "task_clock_ms": 1051.26,
+          "retained": 2,
+          "spread_percent": 0.0006861280980952102
+        },
+        "wide": {
+          "instructions": 14630756616.5,
+          "cycles": 5553016786.5,
+          "task_clock_ms": 1848.77,
+          "retained": 2,
+          "spread_percent": 0.0008035606297176217
+        },
+        "sp_one_small": {
+          "instructions": 842999113.0,
+          "cycles": 325720966.5,
+          "task_clock_ms": 116.22999999999999,
+          "retained": 2,
+          "spread_percent": 0.01145932403845839
+        },
+        "sp_one_length": {
+          "instructions": 2981867706.0,
+          "cycles": 1955111723.0,
+          "task_clock_ms": 663.3199999999999,
+          "retained": 2,
+          "spread_percent": 0.0016437348947901313
+        },
+        "sp_two_small": {
+          "instructions": 843993319.0,
+          "cycles": 333545520.0,
+          "task_clock_ms": 118.625,
+          "retained": 2,
+          "spread_percent": 0.006350524203616356
+        },
+        "sp_two_length": {
+          "instructions": 4872083567.5,
+          "cycles": 3465420302.5,
+          "task_clock_ms": 1160.255,
+          "retained": 2,
+          "spread_percent": 0.0034909294482252332
+        },
+        "sp_large_small": {
+          "instructions": 553519532.0,
+          "cycles": 213639727.5,
+          "task_clock_ms": 78.695,
+          "retained": 2,
+          "spread_percent": 0.00691032525298493
+        },
+        "sp_large_length": {
+          "instructions": 675294837.5,
+          "cycles": 557682859.0,
+          "task_clock_ms": 198.20499999999998,
+          "retained": 2,
+          "spread_percent": 0.013351945697348827
+        }
+      }
+    },
+    "common_loop/production-serial": {
+      "checkout_head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "source_files": {
+        "src/storage/heap_file.c": "98e6bf0470fc36f65e905dc4e432506137b639dc151eace34d1c46fd16ac41c5",
+        "src/storage/heap_oos.cpp": "b9ff610c3b209f6302439e529b431e5a3e8658798c710dd235f1c4946c41c088",
+        "src/storage/oos_file.cpp": "5ed4f311222f2d1342d05cb96145c5ec2ebca5b7e6bb8c832a2843f87e4b248f"
+      },
+      "dso_sha256": "1829ac3d02de33327a9b1c16a9197583bfa87759da0d7ac37e31dd4d2924a6dc",
+      "harness_sha256": "fa259437a12bb412b3a36e912968b5e1c017344ffbc9713420b4ae83cc6faa52",
+      "cases": {
+        "narrow": {
+          "instructions": 7748173723.5,
+          "cycles": 3061249267.5,
+          "task_clock_ms": 1034.845,
+          "retained": 4,
+          "spread_percent": 0.0018189834795848585
+        },
+        "wide": {
+          "instructions": 13598563045.5,
+          "cycles": 5237741881.5,
+          "task_clock_ms": 1777.54,
+          "retained": 4,
+          "spread_percent": 0.0009395478005470559
+        },
+        "sp_one_small": {
+          "instructions": 798959235.5,
+          "cycles": 310266064.5,
+          "task_clock_ms": 111.32,
+          "retained": 4,
+          "spread_percent": 0.007329410237476378
+        },
+        "sp_one_length": {
+          "instructions": 2852634130.5,
+          "cycles": 2349601760.0,
+          "task_clock_ms": 792.28,
+          "retained": 4,
+          "spread_percent": 0.001098318205794881
+        },
+        "sp_two_small": {
+          "instructions": 799955592.0,
+          "cycles": 312313658.5,
+          "task_clock_ms": 113.36000000000001,
+          "retained": 4,
+          "spread_percent": 0.010401077363804466
+        },
+        "sp_two_length": {
+          "instructions": 4773809861.0,
+          "cycles": 4127177318.5,
+          "task_clock_ms": 1416.8600000000001,
+          "retained": 4,
+          "spread_percent": 0.017192766865416636
+        },
+        "sp_large_small": {
+          "instructions": 508084476.0,
+          "cycles": 184345943.0,
+          "task_clock_ms": 68.375,
+          "retained": 4,
+          "spread_percent": 0.013780385606585626
+        },
+        "sp_large_length": {
+          "instructions": 625681742.5,
+          "cycles": 618368978.5,
+          "task_clock_ms": 216.715,
+          "retained": 4,
+          "spread_percent": 0.027849941617882512
+        }
+      }
+    },
+    "common_loop/production-auto": {
+      "checkout_head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "source_files": {
+        "src/storage/heap_file.c": "98e6bf0470fc36f65e905dc4e432506137b639dc151eace34d1c46fd16ac41c5",
+        "src/storage/heap_oos.cpp": "b9ff610c3b209f6302439e529b431e5a3e8658798c710dd235f1c4946c41c088",
+        "src/storage/oos_file.cpp": "5ed4f311222f2d1342d05cb96145c5ec2ebca5b7e6bb8c832a2843f87e4b248f"
+      },
+      "dso_sha256": "1829ac3d02de33327a9b1c16a9197583bfa87759da0d7ac37e31dd4d2924a6dc",
+      "harness_sha256": "71b72f54f5242968dc80eca8b2ce428b1e71a54771d6a812daad7d14e11b2593",
+      "cases": {
+        "narrow": {
+          "instructions": 6979430403.0,
+          "cycles": 2983249050.0,
+          "task_clock_ms": 1062.875,
+          "retained": 4,
+          "spread_percent": 0.011334864800141198
+        },
+        "wide": {
+          "instructions": 13037084492.5,
+          "cycles": 5305223089.0,
+          "task_clock_ms": 1887.775,
+          "retained": 4,
+          "spread_percent": 0.005667440449780455
+        }
+      }
+    }
+  },
+  "ordinary_gate": {
+    "forward": {
+      "narrow": 1.5768797732725437,
+      "wide": 0.8613175740276757
+    },
+    "reverse": {
+      "narrow": 1.6325162424682738,
+      "wide": 0.898001489396294
+    }
+  },
+  "serial_candidate_vs_original": {
+    "narrow": -3.007168157860629,
+    "wide": -7.056146037409972,
+    "sp_one_small": -5.220368659394625,
+    "sp_one_length": -4.599907771954969,
+    "sp_two_small": -5.219762740409795,
+    "sp_two_length": -2.069632457471593,
+    "sp_large_small": -8.205105831219218,
+    "sp_large_length": -7.420102187971523
+  },
+  "serial_original_vs_develop": {
+    "narrow": 4.503046003744404,
+    "wide": 8.452857174417927,
+    "sp_one_small": -20.45865752654339,
+    "sp_one_length": 140.64316824880123,
+    "sp_two_small": -37.65066015315983,
+    "sp_two_length": 168.51714027253806,
+    "sp_large_small": -68.8684096518956,
+    "sp_large_length": -62.16243351348272
+  },
+  "serial_candidate_vs_develop": {
+    "narrow": 1.3604636803253634,
+    "wide": 0.8002651904473357,
+    "sp_one_small": -24.61100884028946,
+    "sp_one_length": 129.5738044498459,
+    "sp_two_small": -40.90514776337667,
+    "sp_two_length": 162.95982238358303,
+    "sp_large_small": -71.4227895868992,
+    "sp_large_length": -64.97001961222398
+  },
+  "storage": {
+    "base": {
+      "n": {
+        "heap_records": 200000,
+        "overflow_records": 0,
+        "show_pages": 1653,
+        "average_record_length": 108,
+        "stdout_sha256": "14f70d9a27db40fa027055aae905b90adcf747d4018a2abe7952e528730e2f0b"
+      },
+      "sp_one": {
+        "heap_records": 20000,
+        "overflow_records": 0,
+        "show_pages": 10001,
+        "average_record_length": 5032,
+        "stdout_sha256": "7440a5e253a7649dd28691d8472caa7b8ef9c8e94051a6a2044f0953ab0b1349"
+      },
+      "sp_two": {
+        "heap_records": 20000,
+        "overflow_records": 0,
+        "show_pages": 20001,
+        "average_record_length": 10044,
+        "stdout_sha256": "043e9fec5c0d64bddffe3840f8626bd3763198db75c7f3b8e022838757747641"
+      },
+      "sp_large": {
+        "heap_records": 20000,
+        "overflow_records": 20000,
+        "show_pages": 40017,
+        "average_record_length": 32056,
+        "stdout_sha256": "00b64f31b104eedec68cb9a881e96d3d01de71d07131aef9fe6c7325bb6c67f5"
+      }
+    },
+    "original": {
+      "n": {
+        "heap_records": 200000,
+        "overflow_records": 0,
+        "show_pages": 1653,
+        "average_record_length": 108,
+        "stdout_sha256": "58c3f3a10f2c2699cd2534ff23620af5b2d9ed907cab207c964e3a8109263eaf",
+        "oos_user_pages": 0,
+        "oos_chunks": 0
+      },
+      "sp_one": {
+        "heap_records": 20000,
+        "overflow_records": 0,
+        "show_pages": 85,
+        "average_record_length": 48,
+        "stdout_sha256": "617fe74f09ba48ae5385058ae38e7424ff5dbe1c1ed3b008d127f3be86bac1de",
+        "oos_user_pages": 6668,
+        "oos_chunks": 20000
+      },
+      "sp_two": {
+        "heap_records": 20000,
+        "overflow_records": 0,
+        "show_pages": 117,
+        "average_record_length": 72,
+        "stdout_sha256": "565fdee99009d31b22a6623fd750801c4f19f69d78a9c21c6834c5b816c23e64",
+        "oos_user_pages": 20001,
+        "oos_chunks": 40000
+      },
+      "sp_large": {
+        "heap_records": 20000,
+        "overflow_records": 0,
+        "show_pages": 85,
+        "average_record_length": 48,
+        "stdout_sha256": "f6bce1fcc9ca5cbb39e5ee288c7fae5ba9b46b5af15631ef2fd338fae95b02ee",
+        "oos_user_pages": 40001,
+        "oos_chunks": 40000
+      }
+    }
+  },
+  "large_probes": {
+    "large-probe": {
+      "dso_sha256": "965a8a14b21f60f4f217f18dcab607bc0a17761445639028afe75d06327c1191",
+      "summary_sha256": "14a26dd6e5d895980cd328503fdb374d249a6c27af2fc5254baa3b584449e557",
+      "equal_all": {
+        "wall_seconds": 84.45359520899365,
+        "counters": {
+          "instructions:u": {
+            "value": 17985205944.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "cycles:u": {
+            "value": 232915335517.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "task-clock": {
+            "value": 84519.84,
+            "unit": "msec",
+            "running_percent": 100.0
+          }
+        }
+      },
+      "all_query_results_checked": true
+    },
+    "large-probe-scratch64": {
+      "dso_sha256": "d866ae6fca56ff46dd0ae8f1d31e70b983704b870879023277d051f143acf3cd",
+      "summary_sha256": "65d0703fd5a7b4008219fcc93bac54e2c57f1991542d0a1813172b6445a6fe60",
+      "equal_all": {
+        "wall_seconds": 1.1672948109917343,
+        "counters": {
+          "instructions:u": {
+            "value": 6567966146.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "cycles:u": {
+            "value": 1938239497.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "task-clock": {
+            "value": 600.47,
+            "unit": "msec",
+            "running_percent": 100.0
+          }
+        }
+      },
+      "all_query_results_checked": true
+    },
+    "large-probe-inverse16": {
+      "dso_sha256": "4bb454afaa204869f017ad015eb046d05c13ac424ca6bff8c52073b1ee5e3acc",
+      "summary_sha256": "03af5e7cbb4b2b647706be6f692dc3bc1f92d43e59b3a9e1c98c57c4fbc5f1b2",
+      "equal_all": {
+        "wall_seconds": 61.39149902696954,
+        "counters": {
+          "instructions:u": {
+            "value": 18011915751.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "cycles:u": {
+            "value": 182054400718.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "task-clock": {
+            "value": 61157.4,
+            "unit": "msec",
+            "running_percent": 100.0
+          }
+        }
+      },
+      "all_query_results_checked": true,
+      "sampled_allocator_contexts": [
+        {
+          "max_segments": 1,
+          "max_footprint": 65488,
+          "max_sequence": 40000
+        },
+        {
+          "max_segments": 40000,
+          "max_footprint": 1310851024,
+          "max_sequence": 40000
+        }
+      ],
+      "allocator_trace_sha256": "4e837c872705a00e4eb4ec7da55b2450b1bbf8c1850b663c0a9c6959a63777df"
+    },
+    "large-probe-inverse64": {
+      "dso_sha256": "d4fa478f96efeffe26b371f9e8dca8a101d6d4e5cb91aab10efc79d2d06846da",
+      "summary_sha256": "1d57a4f9abd89b23952d6ce0864f48ab7b930c6a23ffa630ddefa473daf3f4b4",
+      "equal_all": {
+        "wall_seconds": 1.1677092829486355,
+        "counters": {
+          "instructions:u": {
+            "value": 6605119145.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "cycles:u": {
+            "value": 2324311481.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "task-clock": {
+            "value": 704.28,
+            "unit": "msec",
+            "running_percent": 100.0
+          }
+        }
+      },
+      "all_query_results_checked": true,
+      "sampled_allocator_contexts": [
+        {
+          "max_segments": 1,
+          "max_footprint": 65488,
+          "max_sequence": 20000
+        },
+        {
+          "max_segments": 3,
+          "max_footprint": 229328,
+          "max_sequence": 20000
+        },
+        {
+          "max_segments": 1,
+          "max_footprint": 65488,
+          "max_sequence": 512
+        },
+        {
+          "max_segments": 3,
+          "max_footprint": 229328,
+          "max_sequence": 512
+        }
+      ],
+      "allocator_trace_sha256": "cc31699d3863ef96bf97e6631b0c4c81913b0e76c5c9c00cb085d10b21d03683"
+    },
+    "large-probe-develop": {
+      "dso_sha256": "703af6cca549235ed643f247662b9197b944d2cc690522bf1bf348483e47b934",
+      "summary_sha256": "7768debf2e9328dc41ab92038866c33916b547a5407ad138832731d39be8ec8b",
+      "equal_all": {
+        "wall_seconds": 1.167043627006933,
+        "counters": {
+          "instructions:u": {
+            "value": 6532857321.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "cycles:u": {
+            "value": 1915367661.0,
+            "unit": "",
+            "running_percent": 100.0
+          },
+          "task-clock": {
+            "value": 602.6,
+            "unit": "msec",
+            "running_percent": 100.0
+          }
+        }
+      },
+      "all_query_results_checked": true
+    }
+  },
+  "paired_large_control": {
+    "same_query_text": true,
+    "variables_changed": [
+      "scalar scratch capacity 16KiB -> 64KiB"
+    ],
+    "both_allocator_tracing_enabled": true,
+    "both_copy_enabled": true,
+    "note": "Paired inverse16/inverse64 include identical sparse allocator observations; earlier uninstrumented trials confirm direction but include grouped-preparation differences."
+  },
+  "patches": {
+    "force_scalar.patch": "89fb04524cfdb782c8f56fd384c1097a9f34d64b801db0133edcd8255b6209c7",
+    "force_all.patch": "0e4c990dce93be917974814224e1b1ad1cb0509afad54f44932fed4b441113a6",
+    "shared.patch": "5f1ef0cecf3a206f0f1678f7a980d27e0dffda536ff5df16e20612d19b2aa9ec",
+    "shared_alloc.patch": "fa921b351155f57cd19b7441ab1b6544b699f57b77b9a8779a7704486972b34e",
+    "full_inline.patch": "c5c3c4abebf310a89566a3bc931fed36448a8c783e540a928614aebde740bd59",
+    "optimized.patch": "d90294c79588d757d2766ed574b20200abefa487147cbc77b3a36ceba4d9c0e5",
+    "common_loop.patch": "7403bc26e5ab074b395f5ec944e3eff8a0f1a0929c60f5e02b765a73b3193825",
+    "scratch64.patch": "0633f2a0b1ab66bbe7711223af8c4ef12506ba0985ae32a07cfc47fbf12d9db4",
+    "allocator-observation.patch": "f95eb0d819b3eb09295ef1e9397c114f8124bbd64f80de9928c2958419d210f4"
+  },
+  "excluded_exploration": [
+    "original/matrix: long equality repetition terminated after operator/allocator cost emerged",
+    "original/lengths: DWARF report terminated; final symbol-only profiles used",
+    "base/final: metadata collection failed before server start; final2 and reverse used",
+    "First production reconfiguration reset CMake cache after compiler-wrapper path changed; Debug build detected and discarded before any measurement. Reconfigured and asserted O2/NDEBUG/test-macro-off before accepted production build."
+  ],
+  "validation": {
+    "focused_ctest": {
+      "passed": 15,
+      "failed": 0,
+      "seconds": 135.71,
+      "log": "common-loop-ctest-fixed.log"
+    },
+    "sql_boundary_probes": {
+      "complete": true,
+      "dso_sha256": "1b26c56b219735c3126cf3d6b6c635ab47b20a77969b9011611f28de594877ff",
+      "results": {
+        "sp_verify_8_5000": {
+          "rows": 20,
+          "matched_values": 160,
+          "oos_chunks": 160
+        },
+        "sp_verify_9_5000": {
+          "rows": 20,
+          "matched_values": 180,
+          "oos_chunks": 180
+        },
+        "sp_verify_2_32000": {
+          "rows": 20,
+          "matched_values": 40,
+          "oos_chunks": 80
+        }
+      }
+    },
+    "cleanup": {
+      "source_checkout": "/home/vimkim/gh/cb/CBRD-27785-oos-performance",
+      "branch": "CBRD-27785-oos-performance",
+      "head": "f1b99031c0402d521a785815f107be7a83b27717",
+      "tracked_and_untracked_status": "clean",
+      "preset_symlink_restored": true,
+      "shared_preset_sha256_unchanged": true,
+      "owned_native_processes_remaining": [],
+      "head_build_and_install": "passed",
+      "restored_dso_sha256": "247df5f01864d55f521e3475a3dc1331a26e2f47b958aaa3b4b7adcd53d67347",
+      "experimental_db_and_logs": "preserved"
+    },
+    "patch_application": "All 9 retained patches pass git apply --check --whitespace=error-all against dcbf09e",
+    "portable_probe": "Ran the retained measurement tool successfully: common_loop/portable",
+    "whitespace_rule": "Only unified-diff payload files have -whitespace in the local .gitattributes; source additions checked separately."
+  },
+  "supporting_scripts": {
+    "measure_shared_reads.py": "71b72f54f5242968dc80eca8b2ce428b1e71a54771d6a812daad7d14e11b2593",
+    "probe_large.py": "10199c1f64af9534ac2dda37c6c4fc42050fb53212270bd8739722b2f1d2df4b",
+    "validate_groups.py": "71627fccfe2ab10d2943ef36eb65d9dc6f167faff9c1079fc4d8be2f98cf5953"
+  },
+  "production_confirmation": {
+    "all_unit_options_off": true,
+    "server_and_sa_compile_flags_checked": true,
+    "candidate_vs_original_serial": {
+      "narrow": -3.0060262613330058,
+      "wide": -7.0549568833366605,
+      "sp_one_small": -5.224190253685357,
+      "sp_one_length": -4.333980855017849,
+      "sp_two_small": -5.21778146919194,
+      "sp_two_length": -2.017077604242057,
+      "sp_large_small": -8.208392545034894,
+      "sp_large_length": -7.34687905858602
+    },
+    "candidate_vs_develop_auto": {
+      "narrow": 1.6458795721505215,
+      "wide": 0.9038419512074736
+    }
+  }
+}
