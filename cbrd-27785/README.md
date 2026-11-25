@@ -12,6 +12,9 @@
 필수 기록은 [문자셋을 포함한 비교 조건](CBRD-27785-pr7990-performance-acceptance_dcbf09e_codex.md#charset-conditions)에 있다.
 
 성능 변화 %는 (기준 − 비교 대상) ÷ 기준이다. 좋아지면 +, 나빠지면 −다. JIRA CBRD-27785·CBRD-27816에서 링크하는 보고서는 2026-11-04에 이 규칙으로 바꿨다. 그 밖의 문서, 이전 PR 본문 판과 PR 댓글은 명령어가 늘면 +로 적는다.
+||||||| 22fc9b6
+작성일: 2026-10-27. 수정일: 2026-10-28, Asia/Seoul.
+작성일: 2026-10-27. 수정일: 2026-10-29, Asia/Seoul.
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
@@ -41,6 +44,10 @@
 | [원댓글 4라운드 재현과 문자셋 비교](CBRD-27785-reviewer-reproduction_4408135c_20261031_codex.md) | 원문 SQL의 UTF-8·ISO-8859-1 640회 실행, 실제 계수·범위와 전체 수치 재현 미확인 판정 | 2026-10-31 | 2026-11-04 | 재구성 실험과 원문 절차 재실행을 구분하고 수치 불일치를 검증하기 위해 |
 | [발표 연습 질문 모음](CBRD-27785-learning-questions_f1b99031c_codex.md) | 이전 질문형 진행의 첫 답변·재답변, 접힌 교정·발표용 답변·근거와 진행표 연결 | 2026-10-29 | 2026-10-30 | 좋은 질문을 다시 풀고 팀원 설명에 필요한 근거 구분을 연습하기 위해 |
 | [공통 reader·UPDATE 개선](CBRD-27785-shared-read-update_408d135_codex.md) | develop·feature·HEAD 3-way와 개별 counter, 문자셋 검증 한계·잔여 비용과 CBRD-27816 후속 | 2026-10-28 | 2026-11-04 | 지금까지 확보한 개선을 PR #8299 하나로 검토하기 위해 |
+||||||| 22fc9b6
+| [공통 reader·UPDATE 개선](CBRD-27785-shared-read-update_408d135_codex.md) | 실제 develop·feature·HEAD 3-way 측정과 개별 counter, 약 +5% 수용 결정과 CBRD-27816 후속, 검증과 한계 | 2026-10-28 | 2026-10-28 | 지금까지 확보한 개선을 PR #8299 하나로 검토하기 위해 |
+| [Release CI 경고 수정](release_ci_repair_067aae4e4_codex.md) | 세 줄 수정의 GCC8 strict red/green, native 검증과 한 번의 전체 CI 실행 기록 | 2026-10-29 | 2026-10-29 | 검증한 수정과 최종 CI 판정을 함께 검토하기 위해 |
+| [PR8299 CI 복구 검토](ci_analysis_report_fd8624c_codex.md) | release 경고 수정 후보, shell 두 실패의 이력과 SQL 수집 무결성 한계 | 2026-10-29 | 2026-10-29 | 재실행과 소스·TC 수정 중 다음 조치를 판단하기 위해 |
 | [통합 PR 본문](CBRD-27785-shared-read-update-pr-body_408d135_codex.md) | 기존 #8299에 반영할 한국어 본문과 3-way 전후 수치 | 2026-10-28 | 2026-10-28 | 게시 전 변경 범위와 미달 기준을 검토하기 위해 |
 | [통합 게시 context](CBRD-27785-shared-read-update-pr-context_408d135_codex.md) | source SHA와 승인 본문 fingerprint, 게시·전체 CI 성공 및 남은 TC gate | 2026-10-28 | 2026-10-28 | 검토한 자료만 승인 후 게시하기 위해 |
 | [두 축 코드 검토](CBRD-27785-pr8299-review_408d135_codex.md) | Standards·Spec 독립 검토와 각 0건의 발견사항, 정적 검토의 한계 | 2026-10-28 | 2026-10-28 | 게시할 최종 diff를 규칙과 요구사항 양쪽에서 검토하기 위해 |
