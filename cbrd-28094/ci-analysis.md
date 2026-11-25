@@ -10,7 +10,8 @@
 - `gha-ci` run [45567269730](https://github.com/CUBRID/cubrid/actions/runs/45567269730) attempt 1에서 `test_sql` 이 실패했습니다. shard 09의 3개 testcase가 `unexpected result` 입니다.
 - 같은 merge base를 쓰는 관련 없는 PR 2개(#8735, #8736)도 같은 3개 testcase에서 **바이트 단위로 같은** 실패 메시지를 냅니다(TC SHA URL만 정규화). 이 PR의 변경은 디버그 로그 메시지만 바꿉니다.
 - 추론(검증 안 됨): 이 실패는 이 PR이 아니라 현재 `develop` 엔진과 TC `develop` 의 answer 사이 불일치에서 온 것으로 보입니다. PR relation: `unlikely`, confidence: medium.
-- 분석 범위: `test_sql` 만. `test_sql_by_cci` 는 사용자 요청으로 제외했고, `test_shell` 은 관찰 시점에 아직 실행 중이었습니다.
+- 분석 범위: `test_sql`, `test_shell`. `test_sql_by_cci` 는 사용자 요청으로 제외했습니다.
+- `test_shell` (2026-11-25T11:23Z 갱신): 3665건 중 1건 실패(`apis_1125.sh`). 검증된 증거(`report mode: full`)입니다. 같은 base의 #8735는 통과했고 이 testcase는 이전 PR들에서 72번 실패한 기록이 있어 간헐 실패로 판단합니다. PR relation: `unlikely`, confidence: high.
 
 ## 관찰 범위
 
@@ -33,7 +34,7 @@
 | `gha-ci: build (debug)` | pass | |
 | `gha-ci: test_medium` | pass | |
 | `gha-ci: test_sql` | **fail** | shard 09: 571건 중 568 성공, 3 실패 (`summary_info`) |
-| `gha-ci: test_shell` | pending | 분석 범위 밖 |
+| `gha-ci: test_shell` | **fail** | 11:23Z 완료. 3695 planned, 3664 passed, 1 failed, 30 skipped (검증됨) |
 | `gha-ci: test_sql_by_cci` | fail | 사용자 요청으로 제외 (required 아님) |
 | `Check TC PRs` | fail | TC merge gate. TC PR이 열려 있어서 생긴 실패이며, 마지막 merge handoff에서 처리합니다. |
 
@@ -72,14 +73,33 @@
 - 반증 조건: merge base `bfb59bdd13` 의 `develop` 실행에서 세 testcase가 통과하거나, 이 PR을 뺀 같은 base의 다른 PR이 같은 TC SHA에서 통과하면 이 추론은 틀립니다.
 - 모르는 것: `develop` push 실행 결과(현재 `not_observed`), 어느 쪽(엔진 또는 answer)을 고쳐야 하는지, shard 01 JUnit 누락의 원인.
 
+## test_shell (2026-11-25T11:23Z)
+
+| 항목 | 값 |
+| --- | --- |
+| Collection | exit 0, `verify` exit 0: `observation: complete`, `requested_summaries: validated` |
+| Report mode | `full` (baseline 없음: `comparison_scope: none`) |
+| Counts | planned 3695, run 3665, passed 3664, failures 1, errors 0, skipped 30 |
+
+| Testcase | 증상 | Known issue (`cubrid-tcr`) | History (`cubrid-tcc`) | 같은 base의 다른 PR | PR relation |
+| --- | --- | --- | --- | --- | --- |
+| `shell/_06_issues/_26_2h/apis_1125/cases/apis_1125.sh` (shard 01) | 하위 케이스 45개 중 `_19_trailing_dot_host_name` 만 NOK. JDBC가 `localhost.:<port>` (끝에 점이 있는 호스트)로 접속할 때 `ERROR -21013 Cannot connect to a broker` | `no_match` (rule 없음) | `SEEN_BEFORE`: 2026-11-13~11-17에 72회 실패 (develop 69, unknown 3). 이전 실패의 메시지는 보존되지 않아 증상 비교는 불가 | #8735 통과, #8736 실행 중 | `unlikely` |
+
+- 관찰: testcase는 2026-11-13 `21ffd6475` ([APIS-1125] JDBC TLS 인증서 검증 TC)로 추가됐습니다. 이후 여러 PR과 엔진 리비전에서 반복 실패했고, 같은 merge base의 #8735에서는 통과했습니다.
+- 추론: 호스트 이름 `localhost.` 해석이나 CI runner 네트워크 환경에 따라 결과가 달라지는 간헐 실패입니다. 이 PR은 broker 쪽에서 shard proxy의 `PROXY_LOG` 포맷만 바꾸며, 이 testcase의 일반 broker 접속 경로를 바꾸지 않습니다.
+- 반증 조건: 이 PR head에서 `apis_1125` 를 다시 실행해도 같은 하위 케이스가 계속 실패하고, 같은 base의 다른 PR에서는 계속 통과하면 이 판단은 틀립니다.
+- 후속: 이 testcase에 대한 known-issue rule이나 JIRA 이슈 등록을 검토합니다(APIS-1125 담당).
+
 ## 다음 조치
 
-1. `test_shell` 결과를 기다립니다.
+1. `test_shell` 의 `apis_1125` 실패는 간헐 실패로 보고, `test_sql` 재확인 때 `/run rerun 45567269730` 으로 함께 다시 실행합니다.
 2. 세 testcase 실패를 이 PR과 무관한 `develop` 공통 실패로 보고, 해당 TC/엔진 담당자(CBRD-28111, CBRD-27748, CBRD-26795 / CBRD-28121)에게 알리거나 새 이슈로 등록할지 결정합니다.
 3. `develop` 쪽 수정이 들어온 뒤 `/run rerun 45567269730` 또는 `/run sql` 로 `test_sql` 을 다시 확인합니다. 이 PR의 소스 변경은 필요하지 않습니다(추론).
 4. collector의 shard 01 JUnit 누락 판정은 `cubrid-ci` 쪽 후속 확인 대상입니다.
 
 ## 증거 파일
+
+- Head `test_shell`: 같은 디렉터리의 `providers/github-actions/runs/45567269730/attempts/1/test_shell/` (`summary.json`, `failures/`)
 
 - Head: `~/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-8734/f64df11ae676aa2b840b8a996e7d87c810763789/` (`providers/github-actions/runs/45567269730/attempts/1/test_sql/raw/`)
 - 비교 PR: 같은 저장소의 `pr-8735/b6c1823f5484205c32eacc1de4fb9c33ab4b24d2/`, `pr-8736/fd7d071ed5c625612d6035a5028d99f74b0922d7/`
