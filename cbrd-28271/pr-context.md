@@ -59,3 +59,8 @@ Confirmed by the user in the session on 2026-11-25 ("yes" to the listed operatio
 3. PR: [CUBRID/cubrid#8736](https://github.com/CUBRID/cubrid/pull/8736) created as draft, base `develop`, head `vimkim:CBRD-28271` at `fd7d071ed5`, assignee `vimkim`, title as proposed. Uploaded body is byte-identical to `pr-body.md` (sha256 above).
 4. TC: `TC Branch Sync` created `tc/pr-8736` (init commit `830675851`, no file changes) and draft TC PR [CUBRID/cubrid-testcases-private-ex#5146](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/5146). TC commit `9dbb84c93` cherry-picked as `c954b8366` and pushed to `origin tc/pr-8736`; remote head verified. The TC PR title, body, and draft status are unchanged.
 5. Not done: CI trigger, TC PR description update.
+
+## Decisions
+
+- 2026-11-25: The user kept the scope of this PR (the "1. 좋아" reply to the decision list). PR #8736 adds only the space check before the redo-only log. `NEXT VALUE` still fails when the row does not fit. The fallback and the relocated serial row (CBRD-28272) stay in CBRD-28292, as the PR body Remarks state. No source or body change follows from this decision.
+- CI analysis of run 45567167574 treats a `NEXT VALUE` failure from lack of page space as the intended behavior. Other failures get a separate cause analysis.
