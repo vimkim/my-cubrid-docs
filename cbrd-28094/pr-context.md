@@ -13,7 +13,7 @@ Resume metadata for the PR body draft. This file is not uploaded.
 | Base | `develop` at `bfb59bdd13` (`origin/develop`, fetched 2026-11-25) |
 | Source push remote | `vk` = `github.com/vimkim/cubrid` |
 | Observed remote head | Branch does not exist on `vk` (checked 2026-11-25) |
-| Existing PR | None found in `CUBRID/cubrid` for `CBRD-28094` (checked 2026-11-25) |
+| Existing PR | None before creation (checked 2026-11-25); created [#8734](https://github.com/CUBRID/cubrid/pull/8734) |
 
 ## Target
 
@@ -68,4 +68,10 @@ Resume metadata for the PR body draft. This file is not uploaded.
 
 ## Publication record
 
-Not started.
+Confirmed by the user on 2026-11-25 ("1. yes 2. yes 3.yes") for operations 1-3.
+
+- Body fingerprint at publication: SHA-256 `8306b48dd35ec0e54ea46a0a8e30e51070d9c9fce1007de9d815c06ed82ccbe6`; material checker passed.
+- Docs: `main` fast-forwarded to `0d15951` and pushed to `origin`.
+- Source: pushed `CBRD-28094-debug-log-format-args` to `vk`; remote head verified `f64df11ae676aa2b840b8a996e7d87c810763789`.
+- GitHub: created draft PR [CUBRID/cubrid#8734](https://github.com/CUBRID/cubrid/pull/8734), base `develop`, head `vimkim:CBRD-28094-debug-log-format-args`, assignee `vimkim`. Fetched body SHA-256 equals the file fingerprint.
+- CI (`gha-ci`) not triggered.
