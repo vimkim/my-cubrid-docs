@@ -30,4 +30,7 @@
 - 2026-11-25: pushed `CBRD-28386` to `vk`; remote head verified `d16738b08f7b2a75bce2d23f58d34af6cd33c277`.
 - 2026-11-25: created draft PR [CUBRID/cubrid#8752](https://github.com/CUBRID/cubrid/pull/8752) (base `develop`, assignee `vimkim`).
   Body SHA-256 at upload: `6a239fb83954aa4455db58f6cee6e4085414ef7199e0e6fe0250e84a6b926cf4`; GitHub body matches the file.
-- CI and JIRA results: see below.
+- 2026-11-25: TC Branch Sync created [cubrid-testcases#4461](https://github.com/CUBRID/cubrid-testcases/pull/4461) and [cubrid-testcases-private-ex#5162](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/5162); no TC changes are needed, keep both open until the merge handoff. `cubrid-pr-tc-base-check --pr 8752` passed.
+- 2026-11-25T11:59Z: posted `/run all` ([comment](https://github.com/CUBRID/cubrid/pull/8752#issuecomment-7161763552)); gha-ci run [45609432740](https://github.com/CUBRID/cubrid/actions/runs/45609432740) attempt 1 picked up all six contexts; `cubrid-ci-watch` request #107.
+- 2026-11-25: JIRA CBRD-28386 transitioned `Confirmed -> Develop` (`Start Develop`).
+- CI result: pending.
