@@ -4,6 +4,9 @@
 관련 PR: [OOS 통합 PR #7990](https://github.com/CUBRID/cubrid/pull/7990).
 성능 수정: [draft PR #8299](https://github.com/CUBRID/cubrid/pull/8299).
 후속 진단: [CBRD-27816](https://jira.cubrid.org/browse/CBRD-27816).
+||||||| 3e0458f
+성능 수정: [draft PR #8299](https://github.com/CUBRID/cubrid/pull/8299).
+성능 수정: [CBRD-27785](https://jira.cubrid.org/browse/CBRD-27785) ([draft PR #8299](https://github.com/CUBRID/cubrid/pull/8299)).
 대상은 `feature/oos-merge`다.
 작성일: 2026-10-27. 수정일: 2026-11-11, Asia/Seoul.
 
@@ -53,5 +56,8 @@
 | [두 축 코드 검토](CBRD-27785-pr8299-review_408d135_codex.md) | Standards·Spec 독립 검토와 각 0건의 발견사항, 정적 검토의 한계 | 2026-10-28 | 2026-10-28 | 게시할 최종 diff를 규칙과 요구사항 양쪽에서 검토하기 위해 |
 | [PR7990 성능 수락 기준](CBRD-27785-pr7990-performance-acceptance_dcbf09e_codex.md) | 1·3번 우선·잠정 +2% 기준, 문자셋·초기 상태·계수 경계와 AC | 2026-10-28 | 2026-11-04 | 최신 성능 요구를 CBRD-27785의 수락 조건으로 추적하기 위해 |
 | [분석과 검증](CBRD-27785-oos-read-performance_bcb900d_codex.md) | 원인·읽기 계약·저장 경로와 당시 측정 결과, 문자셋 조건의 검증 한계 | 2026-10-27 | 2026-11-04 | 일반 heap 읽기 수정의 근거와 범위를 검토하기 위해 |
+||||||| 3e0458f
+| [분석과 검증](CBRD-27785-oos-read-performance_bcb900d_codex.md) | 원인, 읽기 계약, 세 저장 경로 구분과 최종 측정·검증 | 2026-10-27 | 2026-10-27 | 일반 heap 읽기 수정의 근거와 범위를 검토하기 위해 |
+| [성능 리뷰 추천 답변](CBRD-27785-performance-review-replies_bcb900d_codex.md) | 대응 계획과 질문 1~5 답변, 3번 재현 요청·임계값 비교 제안 | 2026-10-27 | 2026-10-27 | 리뷰 답변을 작성하기 전에 사실과 후속 제안을 구분하기 위해 |
 | [PR 본문](CBRD-27785-oos-read-performance-pr-body_bcb900d_codex.md) | 게시할 한국어 PR 설명 | 2026-10-27 | 2026-10-27 | GitHub 게시 전 본문을 검토하기 위해 |
 | [게시 context](CBRD-27785-oos-read-performance-pr-context_bcb900d_codex.md) | source SHA, branch, 승인 범위와 검증한 게시 결과 | 2026-10-27 | 2026-10-27 | 승인 후 정확한 revision과 작업으로 이어가기 위해 |
