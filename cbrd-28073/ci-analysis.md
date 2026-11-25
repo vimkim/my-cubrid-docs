@@ -1,4 +1,4 @@
-# CI 분석: PR #8514 (run 43263461440, run 44245545024, run 44522105929, run 44705649588, run 45132951323)
+# CI 분석: PR #8514 (run 43263461440, run 44245545024, run 44522105929, run 44705649588, run 45132951323, run 45385469421)
 
 ## 요약
 
@@ -585,3 +585,144 @@ head 근거가 완전하지 않아 정식 이력 분석(section 3b)은 하지 �
 - head `cbrd_28073.sh` / `cbrd_27780.sh` 통과 JUnit: 같은 run 디렉터리의 `test_shell/raw/shards/09/linux_shell_64bit_optdebug.xml`, `test_shell/raw/shards/11/linux_shell_64bit_optdebug.xml`
 - base observation / 검증 요약: `cubrid-ci` 데이터 디렉터리의 `github-actions/CUBRID-cubrid/commits/30eb0c4b8bf12c09697977c325918df8bbd2acb6/observations/20261124T083534.157598311Z-2627235-0/result.json` 및 `providers/github-actions/runs/45204880813/attempts/1/{test_medium,test_shell,test_sql_by_cci}/summary.json`
 - TC Git 객체 확인: `/home/vimkim/gh/cubrid-testcases-private-ex/develop` (`023a5ec33d34`, `913bb726d41e`), `/home/vimkim/gh/cubrid-testcases/develop` (`aaa0ac947c2e`, `98b4755b9e02`)
+
+## keep_form 반영 리베이스 후 재실행: 2026-11-25, head `337e4f5867`, run 45385469421
+
+> **경고.** 이번 수집은 전체 검증을 통과하지 못했다(`report_mode: warning`, `observation: incomplete`, `requested_summaries: partial`, `baseline: partial_exact`, `regression_conclusions_allowed: false`). `test_sql`은 head와 exact merge-base 모두 기존 shard 01 JUnit 19건 누락 무결성 오류로 `collection_failed`이다. 따라서 `test_sql` 실패 7건은 검증된 요약이 아니라 raw `summary_info`, raw JUnit, CI job log, 아티팩트 서버의 `ctp_log.tgz`(core 분석 포함)에서 직접 읽었다. 이 절의 `test_sql` 판정은 그 한계 안의 추론이다.
+
+### 요약
+
+- 분석일 2026-11-25 (Asia/Seoul). head `337e4f5867`의 run [45385469421](https://github.com/CUBRID/cubrid/actions/runs/45385469421) attempt 1에서 `test_shell` 1건, `test_sql` 7건이 실패했다. `test_medium`(975/975), `test_sql_by_cci`(17882/17882), debug/release build는 통과했다.
+- **`test_shell` `bug_bts_8907.sh`**: server 재시작 뒤 10초 안에 CCI 재연결을 기대하는 타이밍 테스트다. 이번에는 `-224`(`ER_OBJ_NO_CONNECT`)만 나왔다. 2026-11-19 run 44522105929에서도 같은 testcase가 실패했고, Chronicle에는 다른 PR 4개와 PR 없는 run 1개에서 실패 5번, 통과 480번이 있다. 간헐 실패이고 PR 관련성은 `unlikely`(확신 높음)이다.
+- **`test_sql` 7건은 원인이 하나다.** `cbrd_27742_02.sql` 실행 중 debug `cub_server`가 `pgbuf_timed_sleep`(`page_buffer.c:8063`)의 `assert (0)`으로 죽었다. vacuum worker(`vacuum_heap_page`)가 READ latch(`fcnt=1`)가 걸린 heap page에 WRITE latch를 300초 기다렸다. 나머지 6건은 그 결과다. `cbrd_27927.sql`은 server 복구 중 연결에 실패했고, 5건은 `cbrd_27742_02`가 지우지 못한 객체(`p1`–`p3`, `f4`, `f5`, `t`, `t2`, `v2`) 때문에 실패했다.
+- exact merge-base `8e052e99c5`의 run [45425193182](https://github.com/CUBRID/cubrid/actions/runs/45425193182)에서는 4개 suite가 모두 통과했다(`cbrd_27742_02` 635 ms, `bug_bts_8907` 통과). SQL testcase tree는 head와 base에서 바이트까지 같다. 따라서 8건 모두 `additional_on_head`이다. 하지만 PR diff는 `_db_serial` 행 인코딩(`keep_form`)만 바꾸고 page latch, vacuum, heap scan 경로는 바꾸지 않는다. 실패한 testcase는 serial을 쓰지 않는다.
+- `cbrd_27742_02`는 로컬에 보관된 다른 CI 번들 38개에서 모두 통과했다. 실패는 이번 1건뿐이다. vacuum 진행 타이밍에 따라 드물게 나는 page latch 교착으로 추정한다. PR 관련성은 `unlikely`(확신 중간)이다. 이 교착은 PR과 별개인 엔진 버그 후보이다.
+- **다음 행동**: `/run rerun 45385469421`(실패 job만 재실행)을 권장한다. 코드나 TC 수정은 필요 없다. `cbrd_27742_02` 교착은 별도 JIRA 후보로 추적한다(CI 통과 요건을 면제하지 않는다).
+
+### 대상
+
+| 항목 | 값 |
+| --- | --- |
+| PR | https://github.com/CUBRID/cubrid/pull/8514 (`OPEN`, non-draft) |
+| head | `337e4f5867fc524676a63f66dd11028bdebb9a83` (base `8e052e99c5` 위 커밋 8개, 마지막 2개 `bee8a9d6d9`, `337e4f5867`) |
+| base / merge-base | `develop` `8e052e99c508141dbdd6dc338b65e437e31d756a` (merge-base와 같음) |
+| head run | https://github.com/CUBRID/cubrid/actions/runs/45385469421 attempt 1 (`issue_comment`, 2026-11-24T11:34:47Z ~ 16:55:37Z) |
+| base run | https://github.com/CUBRID/cubrid/actions/runs/45425193182 attempt 1 (`workflow_dispatch`, `dispatch all 8e052e99c5…`, 2026-11-24T15:24:42Z ~ 19:57:33Z; sql shard 01 build producer run `45367274144`) |
+| 요청 suite | `test_medium`, `test_sql`, `test_shell`, `test_sql_by_cci` (head에 `gha-ci: test_sql_by_cci` status 있음) |
+| 수집 / 검증 | head `collect` exit 4, `verify` exit 3; base `collect-base` exit 4, `verify` exit 3; `cubrid-ci 0.2.0 (00205d576de0, release)` |
+| head observation | `pr-8514/337e4f5867fc524676a63f66dd11028bdebb9a83/observations/20261125T072403.224025797Z-2945664-0` |
+| base observation | `commits/8e052e99c508141dbdd6dc338b65e437e31d756a/observations/20261125T073206.661741922Z-3533071-0` |
+| verify / report_mode | identity `established`, observation `incomplete`, manifest `validated`, requested summaries `partial`, baseline `partial_exact` → `report_mode: warning` |
+| testcase revision (head) | shell: `cubrid-testcases-private-ex` `69fd91f84bd814d1948eae38693603b47f5a5b84` (`tc/pr-8514`); sql: `cubrid-testcases` `8386e07a96119a2127ca752085d6d182e560d252` (`tc/pr-8514`, "[CBRD-28073] Sync tc/pr-8514 with develop") |
+| testcase revision (base) | shell: `07af85a51694bbb11df2a04a5f76d9762b15c768` (`develop`); sql: `36ccc691414ebbcda7cf1c4b3912391957dbb7cc` (`develop`) |
+| engine build provenance | head shard `build.sha=337e4f5867…` (debug, `run_id=45385469421`); base sql shard 01 `build.sha=8e052e99c5…` (debug, `run_id=45367274144`) |
+
+### Suite 상태
+
+| Suite | head CI 결과 | head 수집 상태 | head (tests/pass/fail/err/skip) | base run 45425193182 |
+| --- | --- | --- | --- | --- |
+| `test_medium` | `SUCCESS` | `completed` (`validated`) | 975 / 975 / 0 / 0 / 0 | `SUCCESS` / `validated` / 975 / 975 / 0 / 0 / 0 |
+| `test_shell` | `FAILURE` | `completed` (`validated`) | 3684 / 3653 / 1 / 0 / 30 (`run=3654`) | `SUCCESS` / `validated` / 3683 / 3653 / 0 / 0 / 30 |
+| `test_sql` | `FAILURE` | `collection_failed` (요약 없음) | raw: shard 01 `summary_info` 3557건 중 nok 7 (JUnit 3538건 중 failure 5); 다른 shard 실패 없음 | `SUCCESS` / `collection_failed` (raw shard 01 `summary_info` 3557/0, `failed.list` 0건) |
+| `test_sql_by_cci` | `SUCCESS` | `completed` (`validated`) | 17882 / 17882 / 0 / 0 / 0 | `SUCCESS` / `validated` / 17882 / 17882 / 0 / 0 / 0 |
+
+- `test_shell`의 head/base +1 차이는 TC PR [#4877](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/4877)이 더한 `shell/_06_issues/_26_2h/cbrd_28073/cases/cbrd_28073.sh`다. 이번 head shard 28에서 통과했다(17.487 s). `cbrd_27780.sh`(CBRD-28257)도 통과했다(42.152 s).
+- `TC Merge Gate / Check TC PRs`의 `FAILURE`(run [45385325626](https://github.com/CUBRID/cubrid/actions/runs/45385325626/job/138414631738))는 TC PR을 격리하려고 열어 둔 결과다. 회귀 실패가 아니다. 최종 병합 핸드오프에서 처리한다.
+
+### 실패 목록
+
+| # | Suite | Testcase | 결과 | 관찰 시그니처 | base 비교 | 분류 | PR 관련성 (확신) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | `test_shell` | `shell/_06_issues/_12_2h/bug_bts_8907/cases/bug_bts_8907.sh` (shard 41) | failure | `bug_bts_8907-2 : NOK`; 재시작 구간에서 `cci_execute fail: -224`, 이어서 `cci_prepare fail: -224`만 반복, `-677` 뒤 `prepared` 없음 | `additional_on_head` (input 같음) | 간헐 타이밍 실패 (`cubrid-tcr`: `no_match`) | `unlikely` (높음) |
+| 2 | `test_sql` | `sql/_05_plcsql/_01_testspec/_05_bug_fix/cbrd-27742/cases/cbrd_27742_02.sql` | nok (304390 ms) | case 6 `SELECT c, f5() FROM t2 …`에서 `Error:-21019`, 이후 `-677`; `core.1060` `pgbuf_timed_sleep` `page_buffer.c:8063` assert, `vacuum_heap_page` WRITE 대기 | `additional_on_head` (input 같음, base 635 ms 통과) | 엔진 page latch 교착 추정 (`cubrid-tcr`: `no_match`) | `unlikely` (중간) |
+| 3 | `test_sql` | `sql/_05_plcsql/_01_testspec/_05_bug_fix/cbrd-27927/cases/cbrd_27927.sql` | nok | JDBC `Failed to connect to database server, 'basic'` (server 복구 중) | `additional_on_head` | #2의 결과 | `unlikely` (중간) |
+| 4 | `test_sql` | `sql/_05_plcsql/_01_testspec/_06_authorization/cases/01_normal_grant_revoke.sql` | failure | `_db_stored_procedure`, `db_stored_procedure` 조회에 `dba.p1`–`p3`, `f4`, `f5` 행 추가 | `additional_on_head` | #2의 잔여 객체 | `unlikely` (중간) |
+| 5 | `test_sql` | `sql/_05_plcsql/_01_testspec/_06_authorization/cases/07_permission_with_recursive.sql` | failure | 같은 잔여 procedure/function 행 추가 | `additional_on_head` | #2의 잔여 객체 | `unlikely` (중간) |
+| 6 | `test_sql` | `sql/_05_plcsql/_01_testspec/_06_authorization/cases/12_db_stored_procedure_view_permission.sql` | failure | 같은 잔여 procedure/function 행 추가 | `additional_on_head` | #2의 잔여 객체 | `unlikely` (중간) |
+| 7 | `test_sql` | `sql/_06_manipulation/_01_select/_001_inner_join/cases/1061.sql` | failure | `create class t2 …`에서 `Error:-494`, 이후 문장 연쇄 실패 | `additional_on_head` | #2의 잔여 `t2` | `unlikely` (중간) |
+| 8 | `test_sql` | `sql/_06_manipulation/_01_select/_002_outer_join/cases/1009.sql` | failure | `create class t ( a int )`에서 `Error:-494`, 이후 문장 연쇄 실패 | `additional_on_head` | #2의 잔여 `t` | `unlikely` (중간) |
+
+- **개수 정합성**: head 실패 8건 = `test_shell` 1(검증됨) + `test_sql` 7(raw, 미검증). `additional_on_head` 8, `also_observed_on_base` 0, `base_only` 0. `test_shell` 비교는 검증된 요약끼리 했다. `test_sql` 비교는 양쪽 raw `summary_info`로 했다. `test_sql`은 비교 범위 밖(`comparison_scope: none`)이므로 그 비교는 참고용이다.
+- `test_sql` JUnit에는 5건만 있다. `cbrd_27742_02`와 `cbrd_27927`은 JUnit이 빼는 중첩 경로 `_05_bug_fix/cbrd-*/cases` 19건에 속한다. 그래서 collector와 Chronicle은 이 두 건을 보지 못한다.
+
+### 원인 분석
+
+#### 그룹 1: `bug_bts_8907.sh` — server 재시작 타이밍 (`test_shell`)
+
+- **관찰.**
+  - testcase(revision `69fd91f84b`)는 CCI 프로그램을 띄우고 10초 뒤 server를 내린 다음, 3초 뒤 다시 올리고 10초 기다린다. 그 뒤 `cci_prepare fail: -677` 다음 줄에 `prepared`가 1번 이상 있는지 본다.
+  - 이번 결과에는 `-677`이 없다. 재시작 구간 전체에서 `-224`(`ER_OBJ_NO_CONNECT`, `src/base/error_code.h:298`)만 나왔다. 하위 항목 1, 3, 4, 5는 OK이고 core는 없다.
+  - testcase는 `t1 (code int)` 하나만 쓴다. serial, AUTO_INCREMENT, OOS 열은 쓰지 않는다. private testcase 디렉터리는 head와 base에서 같다.
+  - Chronicle: 통과 480번, 실패 5번(2026-11-16 ~ 17; PR #8416, #8561, #8513, #8489, PR 없는 run 1번). 이 PR의 이전 run 44522105929(2026-11-19)에서도 실패했다(위 절).
+- **추론.** debug build의 server 재시작이 10초 관찰 구간을 넘으면 실패하는 간헐 타이밍 실패다. PR 관련성은 `unlikely`(확신 높음)이다.
+- **모르는 것.** 이전 실패 5번의 NOK 내용은 Chronicle에 보관되지 않았다(`failed.list`, `test_status.data`만 있음). 그래서 증상이 같은지 비교하지 못했다.
+- **반증 조건.** 같은 head에서 재실행할 때 계속 실패하고 base에서 계속 통과하면 이 판정은 틀리다.
+- **다음 행동.** 재실행한다. 이번에 `cubrid-tcr` 텍스트 시그니처 `bug_bts_8907-reconnect-window-224`(`cci_prepare fail: -224`)를 추가했다.
+
+#### 그룹 2: `cbrd_27742_02.sql` 중 `cub_server` page latch 300초 대기 assert와 연쇄 실패 (`test_sql` 7건)
+
+- **관찰 (CI job log, `ctp_log.tgz`의 `cbrd_27742_02.err`).**
+  - 16:14:51Z에 `cbrd_27742_02.sql`이 시작했다. 16:19:52Z에 `cub_server: …/page_buffer.c:8063: int pgbuf_timed_sleep(THREAD_ENTRY*, PGBUF_BCB*): Assertion '0' failed.`가 나왔다. core는 `/home/CUBRID/databases/basic/core.1060`이다.
+  - 죽은 thread 스택: `vacuum_process_log_block` → `vacuum_heap` → `vacuum_heap_page` → `pgbuf_fix_debug(…, PGBUF_LATCH_WRITE, PGBUF_UNCONDITIONAL_LATCH, caller vacuum.c:1769)` → `pgbuf_latch_bcb_upon_fix` → `pgbuf_block_bcb` → `pgbuf_timed_sleep`(`wait_msecs = 300000`).
+  - 대기 당시 BCB 상태는 `old_impl = {latch_mode = PGBUF_LATCH_READ, waiter_exists = 0, fcnt = 1}`이다. 다른 thread 하나가 이 heap page를 READ로 잡고 있었다. core 분석기는 죽은 thread만 출력하므로 holder thread는 알 수 없다.
+  - `.result`와 `.answer` 비교: case 5까지는 같다. case 6 `SELECT c, f5() FROM t2 WHERE c < 3 ORDER BY c;`가 `Error:-21019`(broker 통신 실패)이고, 그 뒤 모든 문장이 `-677`이다. `f5`의 본문은 `SELECT COUNT(*) INTO n FROM (SELECT c AS x FROM t2 GROUP BY c) z`이다. 바깥 `t2` scan의 각 행에서 PL/CSQL 함수가 다시 `t2`를 scan한다.
+  - 다음 testcase에서 남은 객체가 보였다. `_06_authorization` 3건에는 `dba.p1`, `p2`, `p3`, `f4`, `f5`가 나왔다. `f7` 이후 객체는 없다. 이는 case 6에서 멈췄다는 사실과 맞는다. `1061`은 `t2`, `1009`는 `t`를 만들 때 `-494`로 실패했다. 이 객체들은 모두 `cbrd_27742_02.sql` 앞부분에서 만들고 끝의 `DROP`이 지운다.
+  - `cbrd_27927.sql`(16:19:55Z)은 server 복구 중 JDBC 연결에 실패했다.
+  - [`page_buffer.c:7050-7072`](https://github.com/CUBRID/cubrid/blob/337e4f5867fc524676a63f66dd11028bdebb9a83/src/storage/page_buffer.c#L7050-L7072) (`337e4f5867`): READ latch가 걸린 page에 대기자가 있으면, holder가 아닌 thread의 새 READ 요청은 block된다. [`page_buffer.c:8060-8063`](https://github.com/CUBRID/cubrid/blob/337e4f5867fc524676a63f66dd11028bdebb9a83/src/storage/page_buffer.c#L8060-L8063): 무한 대기 요청이 시간 초과되면 debug build에서 `assert (0)`이 실행된다.
+  - PR diff(`8e052e99c5..337e4f5867`)는 `src/query/serial.c`의 3개 호출을 `heap_attrinfo_transform_to_disk_keep_form`으로 바꾸고 `src/storage/heap_file.c`/`.h`에 `keep_form` 경로를 더한다. 나머지는 `unit_tests/oos/`이다. `keep_form=false`(일반 user heap)의 동작, `page_buffer.c`, `vacuum.c`, heap scan, PL 실행 경로는 바뀌지 않는다. `cbrd_27742_02.sql`에는 serial, AUTO_INCREMENT, `NEXT_VALUE`가 없다.
+  - `cbrd_27742`(CBRD-27742, `ad7a255c55`)와 `cbrd_27927`(CBRD-27927, `b7987f91fa`)의 엔진 수정은 base와 head에 모두 있다.
+- **추론.**
+  - case 6에서 바깥 scan이 `t2` heap page를 READ로 잡은 채 `f5()`를 호출하고, `f5`의 중첩 scan이 다른 server thread에서 같은 page에 READ를 요청할 수 있다. 그 사이 vacuum이 WRITE 대기자로 들어오면 중첩 READ는 대기자 뒤에서 block된다. 그러면 바깥 scan은 `f5`를, `f5`는 vacuum을, vacuum은 바깥 scan을 기다리는 3자 교착이 된다. 300초 뒤 vacuum 쪽 `assert (0)`이 server를 죽인다. 이 메커니즘은 BCB 상태, 멈춘 위치, 대기 규칙과 맞는다. 하지만 holder 스택이 없으므로 가설이다. vacuum이 그 page에 도착하는 시점에 따라 나므로 드물게 나타난다(로컬 보관 번들 39개 중 1번).
+  - 7건은 하나의 엔진 사건이고 PR의 serial 행 인코딩 변경과 관계가 없다. PR 관련성은 `unlikely`(확신 중간)이다. 확신이 중간인 이유는 head에서만 1번 관찰되었고 holder를 확인하지 못했기 때문이다.
+- **모르는 것.** READ holder thread의 스택. 중첩 PL/CSQL 질의가 같은 server thread에서 실행되는지 다른 thread에서 실행되는지(같은 thread이면 holder 예외로 READ가 허용되므로 위 가설은 틀리다). develop에서의 발생 빈도(Chronicle은 중첩 경로를 인덱싱하지 않는다).
+- **반증 조건.** `core.1060`의 전체 thread 스택(`thread apply all bt`)에서 holder가 `f5`를 기다리는 바깥 scan이 아니면 교착 가설은 틀리다. 같은 head에서 재실행할 때 `cbrd_27742_02`가 반복해서 실패하고 base에서는 통과하면 PR 관련성 판정을 다시 해야 한다.
+- **다음 행동.** (1) `/run rerun 45385469421`로 실패 job을 재실행한다. (2) 재실행과 별도로, PR과 관계없는 엔진 버그 후보로 추적한다. `cubrid-jira-dup` 후보는 [CBRD-27591](https://jira.cubrid.org/browse/CBRD-27591)(Resolved, "[PL/CSQL] DML on the page being scanned by the calling SELECT waits on its own page latch"), [CBRD-27723](https://jira.cubrid.org/browse/CBRD-27723)(Resolved, parallel heap scan과 vacuum 교착), [CBRD-27062](https://jira.cubrid.org/browse/CBRD-27062)(Tested, 탐지되지 않는 page latch 교착)이다. 셋 모두 같은 증상(SELECT 중 PL/CSQL 호출 + vacuum WRITE 대기)을 다루지는 않는다. 확정된 중복은 없다. 로컬 재현(debug build에서 `cbrd_27742_02.sql` 반복 실행 + vacuum 강제)으로 holder를 잡은 뒤 이슈를 작성한다.
+
+### Base 비교
+
+- **Pinned identities**: head `337e4f5867fc524676a63f66dd11028bdebb9a83`, target `develop` tip(수집 시점) `8e052e99c508141dbdd6dc338b65e437e31d756a`, exact merge-base `8e052e99c508141dbdd6dc338b65e437e31d756a`(일치), `observed_at 2026-11-25T07:29:27Z`.
+- **Selected runs**: head `45385469421` attempt 1 vs base `45425193182` attempt 1.
+- **TC revision 대조**:
+  - public `cubrid-testcases`: head `8386e07a96` vs base `36ccc69141`. `git diff`의 `sql/` 차이는 0이다. 실패한 7개 SQL 파일과 answer는 같다.
+  - private `cubrid-testcases-private-ex`: head `69fd91f84b` vs base `07af85a516`. 차이는 `cbrd_28073.sh`(+173줄) 1건이다. `bug_bts_8907` 디렉터리는 같다.
+- **설정과 한계**: 양쪽 모두 `test_shell`/`test_sql`은 debug, `test_sql_by_cci`는 release이다. 각 1번 실행했다. `test_sql`은 양쪽 `collection_failed`이어서 raw로만 대조했다. 동일 input에서 head만 실패했지만 단일 실행이므로 회귀를 증명하지 않는다.
+
+### 수집 기록과 진단
+
+- **Acquisition ledger**: head와 base 모두 `test_medium` 1/1, `test_shell` 50/50, `test_sql` 10/10, `test_sql_by_cci` 10/10 shard가 `retained`이다(`failed` 0, `not_attempted` 0).
+- **Binary budget**: 양쪽 `configured_bytes: 536870912`, `consumed_bytes: 0`.
+- **`test_sql` 진단**: head는 `summary_info 3550/7/0` 대 `JUnit 3533/5/0`, base는 `3557/0/0` 대 `3538/0/0`이다. 양쪽 모두 `_05_bug_fix/cbrd-*/cases` 19건이 JUnit에서 빠진 기존 문제다. 이번에는 빠진 19건에 실패 2건(`cbrd_27742_02`, `cbrd_27927`)이 들어 있어 JUnit 실패 수(5)와 CI가 보고한 실패 수(7)가 다르다.
+- **추가 근거 수집(읽기 전용)**: `gh api repos/CUBRID/cubrid/actions/jobs/138418185466/logs`(sql shard 01 job log), `http://192.168.1.48:30080/runs/45385469421/sql/shard/01/artifacts/ctp_log.tgz`(`cbrd_27742_02.err/.result/.answer`).
+
+### Testcase 이력
+
+- 도구 버전: `cubrid-tcc 0.3.0`, `cubrid-tcr 0.1.0`.
+- `cubrid-tcc sync-data --run 45385469421 --suite test_shell|test_sql --revisit-limit 0 --json`: 둘 다 `inserted_snapshots: 0`, `observations: 0`, `unavailable_files: 3`, `missing_remaining: 2985`이다. 이번 run은 인덱싱되지 않았다. `--missing` 갭(2985 run)은 사용자 유지보수 항목으로 남긴다.
+- `bug_bts_8907.sh`: `SEEN_BEFORE`, 실패 5번 / 통과 480번(위 그룹 1). 실패 execution: 38602(run 43831255516, PR #8416, engine `fba87586b8`), 37132(run 43897556424, PR 없음, `4b73a5f832`), 36243(run 43999554179, PR #8561, `2d42421a8f`), 35649(run 44013281521, PR #8513, `185118dde4`), 35530(run 44017820660, PR #8489, `3fe5c5c662`). engine과 testcase revision이 서로 달라 같은 revision의 PASS/FAIL 비교로 flakiness를 확정하지는 못한다. `cubrid-tcr check`: `no_match`; `--record`는 run 미인덱싱으로 `no_occurrence`이다.
+- `1009.sql`, `1061.sql`, `07_…recursive.sql`, `12_…permission.sql`: `UNKNOWN_HISTORY`(`target_failure_not_indexed`), 기존 기록은 모두 PASS(188~190번).
+- `01_normal_grant_revoke.sql`: `UNKNOWN_HISTORY`, 기존 FAIL 1번(run 38687274058, PR #7157, 2026-10-15)과 PASS 189번. 이번 증상은 잔여 객체 때문이므로 그 FAIL과 비교하지 않았다.
+- `cbrd_27742_02.sql`, `cbrd_27927.sql`: `UNKNOWN_HISTORY`(`not_indexed`, 기록 0번). JUnit이 빼는 중첩 경로라서 Chronicle이 보지 못한다. 대신 로컬 `cubrid-ci` 데이터에서 `summary_info`를 찾았다. `cbrd_27742_02.sql:ok`는 38개 번들, `:nok`는 이번 1개 번들이다.
+- `cubrid-tcr` 기록: `bug_bts_8907` 시그니처 추가, `cbrd_27742_02` note 추가(run 45385469421 근거). 둘 다 판정을 바꾸지 않는다.
+
+### 모르는 것
+
+- `core.1060`의 READ holder thread와 전체 thread 스택(아티팩트에는 core 분석 텍스트만 있다).
+- 재실행에서 두 suite가 통과하는지.
+- develop에서 `cbrd_27742_02` 교착의 발생 빈도.
+
+### 다음 행동
+
+1. **`/run rerun 45385469421`** (실패한 `test_shell`·`test_sql` job만 재실행; 사용자 승인 후 `cubrid-ci-trigger`로 진행). 두 실패 모두 PR 코드나 TC 수정이 필요 없다.
+2. 재실행에서 `cbrd_27742_02`가 다시 같은 assert로 실패하면 head와 base로 로컬 반복 실행(`cubrid-test-sql-run`)해 PR 관련성을 다시 판정한다.
+3. PR과 별개로: `cbrd_27742_02` page latch 교착을 엔진 버그 후보로 재현하고 holder 스택을 확보한 다음 JIRA 이슈를 작성한다(중복 후보 CBRD-27591, CBRD-27723, CBRD-27062 확인).
+4. `TC Merge Gate`는 TC PR 격리 결과이다. 최종 병합 핸드오프에서 처리한다.
+
+### 근거 파일 (2026-11-25, head `337e4f5867`)
+
+- head observation: `cubrid-ci` 데이터 디렉터리의 `github-actions/CUBRID-cubrid/pr-8514/337e4f5867fc524676a63f66dd11028bdebb9a83/observations/20261125T072403.224025797Z-2945664-0/result.json`
+- head 검증 요약: 같은 head 디렉터리의 `providers/github-actions/runs/45385469421/attempts/1/{test_medium,test_shell,test_sql_by_cci}/summary.json`
+- `bug_bts_8907` 실패 상세: 같은 run 디렉터리의 `test_shell/failures/shell_06_issues_12_2h_bug_bts_8907_cases_bug_bts_8907_sh-0e7a776ddd/`
+- `test_sql` raw: 같은 run 디렉터리의 `test_sql/raw/collect/failed.list`, `test_sql/raw/shards/01/{summary_info,linux_sql_64bit_optdebug.xml,build.read,tc.read}`
+- `cbrd_27742_02` core 분석과 결과: 아티팩트 서버 `runs/45385469421/sql/shard/01/artifacts/ctp_log.tgz` 안의 `result/y2026/m11/schedule_linux_sql_64bit_2501095798_11.5.0.3046-337e4f5/sql/_05_plcsql/_01_testspec/_05_bug_fix/cbrd-27742/cbrd_27742_02.{err,result,answer}`
+- sql shard 01 job log: job `138418185466` (`gh api …/actions/jobs/138418185466/logs`)
+- base observation과 요약: `cubrid-ci` 데이터 디렉터리의 `github-actions/CUBRID-cubrid/commits/8e052e99c508141dbdd6dc338b65e437e31d756a/observations/20261125T073206.661741922Z-3533071-0/result.json`과 `providers/github-actions/runs/45425193182/attempts/1/`
