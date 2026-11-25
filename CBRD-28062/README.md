@@ -9,3 +9,4 @@ Ticket: https://jira.cubrid.org/browse/CBRD-28062
 | [review-claude.md](review-claude.md) | Systemic review of PR #8632 at `44dab49185` (Claude Opus coordinator with three reviewers): serial regrowth (F1) and restoredb late check (F2), fixed in `2395d5a8f6` |
 | [systemic-review-sonnet.md](systemic-review-sonnet.md) | Independent systemic review of PR #8632 at `44dab49185` (Claude Sonnet): same two defects (S2, S1) plus parameter and test findings |
 | [perf-sweep.md](perf-sweep.md) | `oos_trigger_threshold` sweep (0 → 16,236) against develop: AC-P2 reads, small-column reads, INSERT/UPDATE, storage, I/O; harness and data in [perf-sweep/](perf-sweep/) |
+| [ci-analysis.md](ci-analysis.md) | Warning-mode CI analysis of PR #8632 at `dc1b83a33b` (run 45549760101, 2026-11-25): `test_shell` `cbrd_27780` failure is known CBRD-28257; `test_sql` evidence failed the collector integrity check; no merge-base baseline |
