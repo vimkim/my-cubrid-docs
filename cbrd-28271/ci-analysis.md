@@ -69,3 +69,50 @@
 2. Baseline: develop `bfb59bdd13` 또는 그 이후 develop 커밋에서 같은 세 testcase가 실패하는지 확인합니다. 다른 PR의 최신 run이 같은 실패를 보이면 이 PR과 무관하다는 근거가 됩니다.
 3. 참고: develop이 `bfb59bdd13` 이후 진행되었고, 그 사이에 같은 함수를 바꾸는 `cbed1d5707 [CBRD-28073] Keep serial row storage form in NEXT VALUE (#8514)`가 들어왔습니다. merge 전에 develop 반영(rebase)이 필요할 수 있습니다.
 4. 수정, push, CI 재실행은 사람의 지시 후에만 합니다.
+
+---
+
+# 두 번째 run — head `fb05460a1f`, run 45603558494 (경고 보고서)
+
+> **판정 규칙(`report_mode.py`)이 다시 `mode: warning`을 반환했습니다.** `test_sql` 수집이 첫 run과 같은 무결성 오류(shard 01 JUnit이 19건 누락)로 실패했습니다. 아래 회귀 판단은 CI 증거 비교가 아니라 로컬 재현과 bisect에 근거합니다.
+
+## 요약
+
+- Head `fb05460a1f0b8601e542b7d5a7b762d04cb1ef9b` = develop `a5ab407ba0`(CBRD-28073 포함) 위로 rebase한 같은 수정. TC: private `52eaedb2b`, public `43c1aa8de`(둘 다 develop merge).
+- Run [45603558494](https://github.com/CUBRID/cubrid/actions/runs/45603558494) attempt 1, 2026-11-25T17:16:56Z 종료, `failure`.
+- 통과: `build (debug)`, `build (release)`, `test_medium`. 실패: `test_shell`(1 failure, 1 error), `test_sql`(수집 실패), `test_sql_by_cci`(4 failures).
+- 핵심 결과: **`cbrd_27744_sa` 실패는 develop 회귀이고, 첫 bad commit은 `e74826c46c [CBRD-27562]`입니다.** 이 PR의 수정이 없는 develop에서도 같은 값으로 실패합니다.
+
+## 실패 목록 (검증된 suite)
+
+| Suite | Testcase | 관찰 | PR 관련성 (로컬 근거) |
+| --- | --- | --- | --- |
+| `test_shell` | `shell/_06_issues/_26_2h/cbrd_27744_sa/cases/cbrd_27744_sa.sh` | 13: `sa_crash serial after recovery: expected '140001 2147483647 1', got '1 2147483647 1'`; 14: `ids: expected '1 210001', got '1 70001'` | `unlikely`, 신뢰도 높음 |
+| `test_shell` | `shell/_06_issues/_26_2h/cbrd_28255/cases/cbrd_28255.sh` (error) | csql -S 139, checkdb 인덱스 0개, core (`er_dump_call_stack_internal`) | `unlikely`: 엔진 수정 `ca39c2c6a`(#8711)가 rebase 뒤(11:18:03Z)에 develop에 들어감, TC는 이미 develop에 있음 |
+| `test_sql_by_cci` | `sql/_13_issues/_26_2h/cases/cbrd_28255.sql` | `CREATE INDEX`가 `Error:-190` | 같은 이유로 `unlikely` |
+| `test_sql_by_cci` | `sql/_36_guava/cbrd_26795`, `cbrd_27748`, `cbrd_28121` | 첫 run과 같은 optimizer/trace 차이 | 첫 run과 같음 (`unknown`, serial 무관) |
+
+## `cbrd_27744_sa` 재현과 bisect
+
+로컬 debug 빌드, 최신 CTP(`cubrid-testtools` `origin/develop` `db9b870`를 별도 디렉터리에 풀어 씀. 공유 CTP checkout은 `wait_until`이 없는 32 commit 뒤 버전), TC `52eaedb2b`.
+
+| 엔진 | 결과 |
+| --- | --- |
+| `fb05460` (develop + 이 PR) | 13, 14 NOK (CI와 같은 값) |
+| `a5ab407` (develop, 이 PR 없음) | 13, 14 NOK (같은 값) |
+| `510157f` (CBRD-28073 이전) | 13, 14 NOK |
+| `47692d4`, `c0dee81`, `e74826c` | 13 NOK |
+| `9937d09` (`e74826c`의 부모) | 13 OK |
+
+- `git bisect` 결과: first bad commit `e74826c46c55015c0b5e252dc03b057bea6afcdf` "[CBRD-27562] Do not start a system operation for temporary sector reservation or temporary volume growth (#8537)".
+- 첫 run(`fd7d071` = `bfb59bd` + 이 PR)은 CI에서 `cbrd_27744_sa`를 통과했습니다(shard 28, 37.1s).
+- 병합 순서: #8537의 마지막 `test_shell`은 2026-11-21에 통과했습니다. CBRD-27744 엔진(`44e9290f38`)과 TC(`fb02a1c72`)는 2026-11-24에 들어왔습니다. 두 변경은 함께 CI를 거치지 않았습니다.
+- 추론(확인 안 됨): sa_crash는 크래시 전에 `INSERT ... SELECT ... LIMIT 5000`으로 임시 파일을 씁니다. 임시 sector 예약이 system operation 없이 진행되면서, SA 재시작 복구에서 DDL undo(`RVHF_SERIAL_DDL_UPDATE_UNDO`)가 값을 지키는 경로를 타지 못하는 것으로 보입니다. 원인 분석은 하지 않았습니다.
+- 반증 조건: `e74826c` 단독 revert로 13, 14가 OK가 되지 않으면 이 귀속은 틀립니다.
+- JIRA 중복 확인(`cubrid-jira-dup candidate-find`): 일치하는 이슈 없음. 상위 후보 CBRD-28127, CBRD-27564, CBRD-27991, CBRD-27641은 serial cache, HA, 동시 ALTER SERIAL 문제입니다.
+
+## 조치
+
+1. CBRD-27562 담당자(#8537 작성자 `hornetmj`)에게 develop 회귀를 알리고 JIRA 이슈를 만듭니다. 사람의 결정이 필요합니다.
+2. 이 PR의 CI는 develop 회귀(`cbrd_27744_sa`)와 TC/엔진 시차(`cbrd_28255`)가 해결된 develop으로 다시 rebase한 뒤 재실행해야 green이 됩니다.
+3. `test_sql` 수집 무결성 오류(shard 01 JUnit 19건 누락)는 두 run에서 반복되었습니다. collector 또는 CI 산출물 문제로 따로 다룰 필요가 있습니다.
