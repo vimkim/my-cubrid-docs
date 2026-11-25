@@ -1,5 +1,125 @@
 # CBRD-26659 PR #8128 CI analysis
 
+## Snapshot 2026-11-25: run 45578200568 attempt 1 (head `50f06c32ce`)
+
+Analysis date: 2026-11-25 (Asia/Seoul). Reader: the PR #8128 author.
+
+> **Warning report.** The exact-head evidence is incomplete. `cubrid-ci verify` returned
+> `observation: incomplete`. The collector rejected the `test_sql` summary on an integrity
+> check, so that suite has no validated summary. `report_mode.py` returned `warning`, with
+> `regression_conclusions_allowed: false` and `comparison_scope: none`. No merge-base baseline
+> exists. **This snapshot supports no regression or root-cause conclusion.** Section 4 gives
+> triage hypotheses. Each hypothesis has a falsifier. No hypothesis is a CI verdict.
+
+### 1. Result, scope, and next action
+
+- **Run:** the full `/run` that the previous snapshot recommended. It ran after these changes:
+  - The engine branch was synced to develop `e23905d89a` (merge commit `50f06c32ce`).
+  - The OOS TCs on both `tc/pr-8128` branches were updated.
+- **Change from the previous snapshot:** the validated failures went from 84 to 6.
+  - `test_shell`: 43 → 3.
+  - `test_sql_by_cci`: 41 → 3.
+  - `test_medium`: passes 975/975 in both runs.
+  - No OOS testcase fails.
+- **Engine change:** in `src/`, the PR still adds only two things. Neither can change server
+  behaviour.
+  - A unit-test seam inside `#if defined(CUBRID_UNIT_TEST_ENABLED)`: `bridge_heap_oos_write_inline`
+    in `heap_file.c`, +25 lines.
+  - A two-line comment in `locator_sr.c`.
+
+  `git diff e23905d89a..50f06c32ce` shows 9 files. The other 7 are in `unit_tests/oos/`.
+- **Six failing cases.** Each one was merged to its TC repository's `develop` between
+  2026-11-17 and 2026-11-25. This PR's TC branches change none of them.
+- **Merge blockers:**
+  - `gha-ci: test_shell` and `gha-ci: test_sql` are required checks, and both are red.
+  - `Check TC PRs` fails because TC PRs #3688 and #4365 are open. Closing the TC PRs is
+    deferred to the final handoff.
+- **Recommended next action:** do **not** use `/run rerun` yet. The SQL diffs are
+  deterministic plan and trace differences, so a rerun with the same build and testcases is
+  expected to repeat them. Run the five non-registered cases locally on the installed head
+  build to see whether they reproduce. A local failure would point to a develop-side issue for
+  the owners of those testcases.
+
+### 2. CI snapshot
+
+| Suite | State | Verdict | Tests | Passed | Failed | Skipped | TC revision |
+|---|---|---|---:|---:|---:|---:|---|
+| `test_medium` | completed, validated | pass | 975 | 975 | 0 | 0 | public `1727bde9f` |
+| `test_shell` | completed, validated | fail | 3731 | 3698 | 3 | 30 | private `4fdface37` |
+| `test_sql_by_cci` | completed, validated | fail | 17931 | 17928 | 3 | 0 | public `1727bde9f` |
+| `test_sql` | `collection_failed` | fail (status) | n/a | n/a | 3 (raw, unvalidated) | n/a | public `1727bde9f` |
+
+- Run: <https://github.com/CUBRID/cubrid/actions/runs/45578200568>, attempt 1. Both builds passed.
+- `test_sql` acquisition ledger: the integrity check failed. Shard 01's JUnit omits 19 testcases
+  that its `summary_info` reports (3557 against 3538). The omitted testcases are nested
+  `_05_plcsql` bug-fix cases. This is the same CTP nested-testcase JUnit omission as in the
+  previous snapshot.
+- The raw `collect/failed.list` from the gha-ci collect job lists 3 failures, all in shard 09.
+  They are the same three paths that failed in `test_sql_by_cci`. This list is not validated.
+
+### 3. Evidence scope
+
+- PR head `50f06c32ce08b4d0f6bf6b200e16b152fb1620b1`. Target `develop` tip at collection
+  `e23905d89a`, which is also the merge base.
+- Collector `cubrid-ci`. Evidence directory:
+  `~/.local/share/cubrid-ci-data/github-actions/CUBRID-cubrid/pr-8128/50f06c32ce08b4d0f6bf6b200e16b152fb1620b1/`.
+  Observation `20261125T122757.969116182Z-3904847-0`.
+- Testcase provenance, read from the shard summaries:
+  - Public `tc/pr-8128` at `1727bde9f`.
+  - Private `tc/pr-8128` at `4fdface37`.
+
+  The gha-ci collect job resets every shard to the planned TC commit. The private branch
+  moved to `ea0c49b61` after the run, and that move does not affect this run.
+- **Baseline: unavailable.** `cubrid-ci collect-base` resolved merge base `e23905d89a` and
+  found no gha-ci status on it (`not_observed` for all four suites). None of the last 12
+  develop commits has a gha-ci test status.
+- **History: unavailable.** `cubrid-tcc 0.3.0 sync-data --run 45578200568 --suite test_shell`
+  imported 0 observations and reported 3 unavailable files. `history` returned
+  `UNKNOWN_HISTORY` with no occurrence for every failing case except one: `cbrd_26795` has
+  PASS occurrences from October, on older TC revisions.
+
+### 4. Failure inventory and triage hypotheses
+
+| Suite | Testcase | Observed signature | `cubrid-tcr` | TC origin |
+|---|---|---|---|---|
+| shell | `shell/_06_issues/_26_2h/cbrd_27780/cases/cbrd_27780.sh` | checks 2 and 4: `S1HEAP=2` found in plaintext | `known`, rule `cbrd-28257-catalog-leak-s1-written` (CBRD-28257) | private #5015, 2026-11-20 |
+| shell | `shell/_06_issues/_26_2h/cbrd_27744_sa/cases/cbrd_27744_sa.sh` | checks 13 and 14: `sa_crash serial after recovery: expected '140001 2147483647 1', got '1 2147483647 1'`; ids `1 70001` instead of `1 210001` | `no_match` | private #4809, 2026-11-24 |
+| shell | `shell/_06_issues/_26_2h/cbrd_27650/cases/cbrd_27650.sh` | check 35: `S5: other sessions on the worker of dq at the failure: d1, expected none` | `no_match` | private #4876, 2026-11-17 |
+| cci, sql | `sql/_36_guava/cbrd_26795/cases/cbrd_26795.sql` | `show trace` prints an extra `(oos time: ?, fetch: ?, ioread: ?)` on `SCAN (table: dba.px_wide_t)` | cci `known_job` | public #4272, 2026-11-25 |
+| cci, sql | `sql/_36_guava/cbrd_27748/cases/cbrd_27748.sql` | the plan uses a direct `iscan` outer and `skip ORDER BY` instead of `temp(sort limit)` | cci `known_job` | public #4051, 2026-11-23 |
+| cci, sql | `sql/_36_guava/cbrd_28121/cases/cbrd_28121.sql` | the plan omits `skip order by: true` | cci `known_job` | public #4229, 2026-11-23 |
+
+The cci `known_job` verdicts come from rule `sql-by-cci-every-branch-20270108`. That rule covers
+the whole optional `sql_by_cci` job. It does not explain these SQL diffs.
+
+- **H1: develop-side failures, not PR-caused.** The PR source diff cannot reach the server
+  paths that these cases exercise. Every failing case was last changed on TC develop within
+  the last nine days.
+  - *Falsifier:* the same TC revisions pass on a develop build at `e23905d89a` without the
+    PR's unit-test seam.
+- **H2: `cbrd_27744_sa` needs a develop fix that is newer than the merge base.** Develop commit
+  `cbed1d5707` [CBRD-28073] ("Keep serial row storage form in NEXT VALUE") is after
+  `e23905d89a`. The failure is a serial value lost after SA crash recovery. Confidence: low.
+  - *Falsifier:* the case still fails on develop `cbed1d5707` or later.
+- **H3: the three SQL plan and trace diffs come from develop changes that interact with each
+  other.** `cbrd_27748` and `cbrd_28121` disagree about `skip order by` in opposite
+  directions. `cbrd_26795` does not expect the OOS trace segment on a wide table. Open
+  public TC PR #4323 [CBRD-28184] updates the trace answers of 198 SQL cases. It was not checked
+  whether that PR covers `cbrd_26795`.
+  - *Falsifier:* the cases pass on a develop build at the merge base with TC `1727bde9f`.
+- **H4: `cbrd_27650` check 35 is a session-to-worker timing observation.** There is no history
+  to support or reject flakiness.
+  - *Falsifier:* a local repeat on the same build passes or fails consistently.
+
+### 5. Actions
+
+1. Run `cbrd_27744_sa`, `cbrd_27650`, `cbrd_26795`, `cbrd_27748` and `cbrd_28121` locally on
+   the installed head build `50f06c32ce`. Use the focused native runners.
+2. If they reproduce, report them to the owners of the respective develop TCs or engine
+   changes. Then decide whether to wait for develop fixes and sync again before one
+   `/run rerun 45578200568`.
+3. Keep TC PRs #3688, #4365 and #5121 open until the final handoff.
+
 ## Snapshot 2026-11-25: run 45384316698 attempt 1 (head `b2440c26ed`)
 
 Analysis date: 2026-11-25 (Asia/Seoul). Reader: the PR #8128 author.

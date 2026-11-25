@@ -2,7 +2,9 @@
 
 Last modified: 2026-11-25 (Asia/Seoul).
 
-2026-11-25 [PR #8128 CI 45384316698 분석](ci-analysis.md)은 develop 대상 head `b2440c26ed`의 경고 보고서다. `test_sql` 수집 무결성 거부로 회귀 결론은 허용되지 않는다. 검증된 실패 84개(shell 43·cci 41)를 engine/TC 버전 차이 53개와 develop OOS 형식(CBRD-27781·27259·27230) 이전 기대값을 가진 OOS TC 31개로 분류한 가설과, develop 동기화·OOS TC 갱신 뒤 전체 `/run` 1회를 권고한다.
+2026-11-25 [PR #8128 CI 분석](ci-analysis.md)의 최신 스냅샷은 develop `e23905d89a` 동기화·OOS TC 갱신 뒤 run 45578200568(head `50f06c32ce`)의 경고 보고서다. 검증된 실패가 84개에서 6개(shell 3·cci 3, medium 975/975)로 줄었고, OOS TC 실패는 없다. 남은 6개는 모두 2026-11-17~25에 develop에 들어온 TC이며 PR 변경(단위 테스트 seam·주석)이 닿지 않는 경로라는 가설과 로컬 재현 권고를 기록한다. merge-base 기준선과 이력은 없다.
+
+이전 스냅샷 run 45384316698은 develop 대상 head `b2440c26ed`의 경고 보고서다. `test_sql` 수집 무결성 거부로 회귀 결론은 허용되지 않는다. 검증된 실패 84개(shell 43·cci 41)를 engine/TC 버전 차이 53개와 develop OOS 형식(CBRD-27781·27259·27230) 이전 기대값을 가진 OOS TC 31개로 분류한 가설과, develop 동기화·OOS TC 갱신 뒤 전체 `/run` 1회를 권고한다.
 
 2026-11-04 [회수·compact 원인 관측](reclaim-compact-diagnosis.md)은 빈 페이지의 raw VPID·LSA와 gate 거부, 성장 전 재사용, abort 잔여 두 페이지의 undo·성장 경로, SA·CS compact의 실제 representation 차이를 기록한다. Horizon 공급자와 abort의 최종 enum, idle eventual return·compact 배치의 계약 판단은 남아 있다. 원래 FAIL·TIMEOUT과 실제 TC 리뷰·병합의 미완료 상태를 유지한다.
 
@@ -111,7 +113,7 @@ The `campaign/` documents are historical evidence. They describe older engine/ru
 
 | File | What it contains | Created | Last modified | Why it was created |
 | --- | --- | --- | --- | --- |
-| [PR #8128 CI 45384316698 분석](ci-analysis.md) | develop 대상 head `b2440c26ed` 실패 84개 분류 가설, merge-base 비교, TC PR 상태와 다음 조치 | 2026-11-25 | 2026-11-25 | develop 재대상 후 첫 전체 CI 실패의 원인 후보와 수리 순서를 결정 |
+| [PR #8128 CI 분석](ci-analysis.md) | run 45578200568(head `50f06c32ce`) 실패 6개 가설과 run 45384316698(head `b2440c26ed`) 실패 84개 분류, TC PR 상태와 다음 조치 | 2026-11-25 | 2026-11-25 | develop 재대상 후 전체 CI 실패의 원인 후보와 수리 순서를 결정 |
 | [회수·compact 원인 관측](reclaim-compact-diagnosis.md) | Raw page·gate 대조, 성장 전 재사용, SA·CS rewrite 차이와 관측 한계 | 2026-11-04 | 2026-11-04 | 원인 미확정 6건을 판별하고 수리·TC 계약 판단의 근거를 제공 |
 | [후속 수리와 실패·timeout 분석](follow-up-results.md) | TDE·REPARTITION 수리, 실패 14개 귀속과 SA 장시간 진단·게시·단일 CI | 2026-11-03 | 2026-11-03 | 네 후속 작업의 근거와 남은 범위를 함께 검토 |
 | [policy 그룹 밖 잔여 shell 21개 native 검증](CBRD-26659-remaining21-native_e3589ae_20261103_work704_codex.md) | 4 PASS·16 FAIL·명령 TIMEOUT 1개, 원문 판정·부가 진단·입력·정리 근거 | 2026-11-03 | 2026-11-03 | 마지막 미착수 21개를 실행하고 실패·완료 미확인 범위를 인계 |
