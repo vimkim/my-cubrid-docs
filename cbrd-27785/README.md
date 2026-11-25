@@ -69,3 +69,4 @@
 | [성능 리뷰 추천 답변](CBRD-27785-performance-review-replies_bcb900d_codex.md) | 대응 계획과 질문 1~5 답변, 3번 재현 요청·임계값 비교 제안 | 2026-10-27 | 2026-10-27 | 리뷰 답변을 작성하기 전에 사실과 후속 제안을 구분하기 위해 |
 | [PR 본문](CBRD-27785-oos-read-performance-pr-body_bcb900d_codex.md) | 게시할 한국어 PR 설명 | 2026-10-27 | 2026-10-27 | GitHub 게시 전 본문을 검토하기 위해 |
 | [게시 context](CBRD-27785-oos-read-performance-pr-context_bcb900d_codex.md) | source SHA, branch, 승인 범위와 검증한 게시 결과 | 2026-10-27 | 2026-10-27 | 승인 후 정확한 revision과 작업으로 이어가기 위해 |
+| [code-review.md](code-review.md) | Independent five-specialist review, fresh native verification and remaining checks | 2026-11-04 | 2026-11-04 | Preserve the pinned PR review and its evidence limits |
