@@ -60,3 +60,16 @@ Disposition: no defect to report.
 ## Function reuse
 
 No new function under `src/`. Test-only helpers live in the test file.
+
+## Execution record (2026-11-25, Asia/Seoul)
+
+User confirmation: "do all these" (2026-11-25), covering operations 1–6 above.
+
+| Operation | Result |
+| --- | --- |
+| Source push | `vk/CBRD-28379` = `5c213aaac66549e92f805d2ed643c8fbdbc57939` (new branch) |
+| Draft PR | [CUBRID/cubrid#8753](https://github.com/CUBRID/cubrid/pull/8753), draft, base `develop`, assignee `vimkim`; uploaded body equals `cbrd-28379/pr-body.md` byte for byte (sha256 `7725633397d8f4c2…`) |
+| TC PRs (bot) | [cubrid-testcases#4462](https://github.com/CUBRID/cubrid-testcases/pull/4462), [cubrid-testcases-private-ex#5163](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/5163); no TC change needed, keep open until the final merge handoff; `cubrid-pr-tc-base-check --pr 8753` exit 0 |
+| CI | `/run all` at 2026-11-25T12:36:37Z ([comment](https://github.com/CUBRID/cubrid/pull/8753#issuecomment-7162610906)), gha-ci run [45615415274](https://github.com/CUBRID/cubrid/actions/runs/45615415274) attempt 1; `cubrid-ci-watch` request 108 |
+| JIRA transition | CBRD-28379 `Confirmed -> Develop` (`Start Develop`) |
+| F7 issue | [CBRD-28389](https://jira.cubrid.org/browse/CBRD-28389) created (Correct Error, Minor, guava, assignee vimkim), Relates CBRD-28379 and CBRD-27971; local draft `my-cubrid-jira` `issues/CBRD-28389-pgbuf-discard-flush-wait-sets-waiter-exists.md` |
