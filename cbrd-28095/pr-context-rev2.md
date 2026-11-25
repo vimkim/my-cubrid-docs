@@ -64,4 +64,12 @@ uploaded. Revision 1 (`pr-body.md`, `pr-context.md`) stays as published.
 
 ## Publication record
 
-Not started.
+Confirmed by the user in conversation on 2026-11-25 ("좋아.").
+
+- Docs: `cbrd-28095-pr-body-rev2` fast-forwarded into `main` and pushed
+  (`dce0a1b..76b03ee`).
+- GitHub: `gh pr edit 8737` updated the body and title. Verified live title
+  `[CBRD-28095] Fix string copy bounds in catcls_get_db_collation`, draft
+  kept, head `bfb6a0e57c`, body SHA-256
+  `6fa9bce9976409f089562d6666050f8e5c3a1335c8fe740e2258179495669355`
+  (equal to `pr-body-rev2.md`).
