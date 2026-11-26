@@ -49,3 +49,15 @@
   - Assessment (inference, no local rerun): all 5 failures are unrelated to this change.
   - `Check TC PRs` (TC Merge Gate): fails, as expected while TC PRs #4461 and #5162 are open.
   - Stopped after this run as the standing rule requires. No rerun, no follow-up push.
+
+## Refresh onto develop (2026-11-26)
+
+- Trigger: CBRD-28395 (`cbrd_27744_sa`) was resolved by the TC fix `CUBRID/cubrid-testcases-private-ex#5007` (`17566b7ee1`); not an engine defect.
+  The `_36_guava` SQL answers were fixed by `cubrid-testcases#4474` and `#4475`.
+- Why rebase instead of a TC-only sync plus `/run rerun`: the engine head was 17 commits behind develop, and newly merged TCs pair with engine commits missing from it (for example #5007 needs CBRD-28032 `59e357e086`).
+- User approved the rebase, the `--force-with-lease` push, the TC syncs and one `/run all` in this session ("yes", then "yes" for the force-push).
+- Engine: rebased onto develop `6f5ac7a9f9`; `855012ce0ae534c1a6bc8cb1bdcbcc106e2799da` force-pushed to `vk/CBRD-28386` with lease `d16738b08f`. Range-diff: patch unchanged.
+- TC: merged develop into `tc/pr-8752` (public `517b82ddd`, private `b01b30c90`), regular push. `cubrid-pr-tc-base-check --pr 8752`: PASS.
+- 2026-11-26T09:31:15Z: posted `/run all` ([comment](https://github.com/CUBRID/cubrid/pull/8752#issuecomment-7188100703)); gha-ci run [45792736707](https://github.com/CUBRID/cubrid/actions/runs/45792736707) attempt 1 picked up all six contexts; `cubrid-ci-watch` request #122.
+- Residual risk: `cbrd_27780` (CBRD-28257, fix PR #8693 still open) fails intermittently on other runs.
+- CI result: pending.
