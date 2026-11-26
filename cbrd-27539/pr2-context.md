@@ -32,3 +32,9 @@
 - Proposed operations (need user confirmation):
   1. `git push vk CBRD-27539-module-docs` (fast-forward to `f9d2cc1349`).
   2. `gh pr edit 8765 --repo CUBRID/cubrid --body-file cbrd-27539/pr2-body.md` (body only; title, draft status, assignee unchanged).
+
+## Revision 2 — results
+
+- 2026-11-26: user confirmed both operations ("yes").
+- Source push: `vk/CBRD-27539-module-docs` = `f9d2cc1349558c82c7459103aeaa788ca29b9e74` (fast-forward, verified).
+- PR #8765 body updated; live body sha256 `716906e00255c6b7925846104ab8b1b074876f07387e1e4eba96f9f84046ca5c` equals `pr2-body.md`. Head `f9d2cc1349`, still draft, title and assignee unchanged.
