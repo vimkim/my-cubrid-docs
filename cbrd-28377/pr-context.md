@@ -7,16 +7,16 @@ Not uploaded material. Resume metadata for `cubrid-pr-create`.
 | Ticket | [CBRD-28377](https://jira.cubrid.org/browse/CBRD-28377) |
 | Source commit | `ebdd0f0462ab32312d897805c09c207dfde550d3` (single commit on base) |
 | Source repository / branch | `vimkim/cubrid` (`vk`) / `CBRD-28377` |
-| Observed remote head | none: branch `CBRD-28377` does not exist on `vk` (checked 2026-11-25) |
+| Observed remote head | none at preparation (checked 2026-11-25); after the approved push: `ebdd0f0462ab32312d897805c09c207dfde550d3` |
 | Base | `CUBRID/cubrid` `develop` at `ca39c2c6a48df0bbc689c4d8b8d640113bb87d3e` |
 | Target repository | `CUBRID/cubrid` |
-| Operation | `create` (no existing PR) |
+| Operation | `create` (done: [CUBRID/cubrid#8757](https://github.com/CUBRID/cubrid/pull/8757), draft) |
 | Proposed title | `[CBRD-28377] Defer OOS notification reclaim on a timed-out wait` |
 | Body | `cbrd-28377/pr-body.md` |
 | Detailed explanation | `cbrd-28377/verification.md` (not linked from the body) |
 | Docs branch | `docs/cbrd-28377`, integrated into `main` |
 
-## Proposed publication operations (not authorized yet)
+## Proposed publication operations (approved 2026-11-26)
 
 1. `git push vk CBRD-28377` (new branch on the personal fork).
 2. Create a **draft** PR `vimkim:CBRD-28377` → `CUBRID/cubrid:develop` with the title above and `pr-body.md` as the body, assigned to `vimkim`.
@@ -24,7 +24,18 @@ Not uploaded material. Resume metadata for `cubrid-pr-create`.
 4. Trigger CUBRID CI once (`/run`) through `cubrid-ci-trigger`, wait, and report.
 5. JIRA `Confirmed -> Develop` transition.
 
-All five need explicit approval (session stop gate, 2026-11-25).
+The user approved steps 1, 2, 4 (as `/run all`) and 5 on 2026-11-26, in the session after the stop gate.
+
+## Execution record (2026-11-26)
+
+| Operation | Result |
+| --- | --- |
+| Source push | `git push -u vk CBRD-28377`; remote head verified `ebdd0f0462ab32312d897805c09c207dfde550d3` |
+| Draft PR | [CUBRID/cubrid#8757](https://github.com/CUBRID/cubrid/pull/8757): draft, `vimkim:CBRD-28377` → `develop`, assignee `vimkim`, title as proposed. Published body equals `pr-body.md` (SHA-256 `194ad690740114bf...`) |
+| TC Branch Sync | [cubrid-testcases#4476](https://github.com/CUBRID/cubrid-testcases/pull/4476), [cubrid-testcases-private-ex#5169](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/5169) (draft). Baseline check PASS in both. No TC change needed; keep open until the merge handoff |
+| CI | `/run all` ([comment](https://github.com/CUBRID/cubrid/pull/8757#issuecomment-7179436351), 2026-11-26T01:06:18Z) → [gha-ci run 45733438019](https://github.com/CUBRID/cubrid/actions/runs/45733438019) attempt 1; `cubrid-ci-watch` request #110 |
+| JIRA | CBRD-28377 `Confirmed` → `Develop` (`Start Develop`), verified |
+| CI result | pending |
 
 ## Static check (cubrid-static-check `ca39c2c6a4..52bf95f21e`)
 
