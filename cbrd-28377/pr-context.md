@@ -35,7 +35,7 @@ The user approved steps 1, 2, 4 (as `/run all`) and 5 on 2026-11-26, in the sess
 | TC Branch Sync | [cubrid-testcases#4476](https://github.com/CUBRID/cubrid-testcases/pull/4476), [cubrid-testcases-private-ex#5169](https://github.com/CUBRID/cubrid-testcases-private-ex/pull/5169) (draft). Baseline check PASS in both. No TC change needed; keep open until the merge handoff |
 | CI | `/run all` ([comment](https://github.com/CUBRID/cubrid/pull/8757#issuecomment-7179436351), 2026-11-26T01:06:18Z) → [gha-ci run 45733438019](https://github.com/CUBRID/cubrid/actions/runs/45733438019) attempt 1; `cubrid-ci-watch` request #110 |
 | JIRA | CBRD-28377 `Confirmed` → `Develop` (`Start Develop`), verified |
-| CI result | pending |
+| CI result | Run 45733438019 attempt 1 finished 2026-11-26T02:10:48Z: **failure**. `build (debug)`, `build (release)`, `test_sql`, `test_medium` and `test_sql_by_cci` passed. `test_shell` failed on 6 shards (07, 24, 31, 34, 37, 44), 1 failed case each. Not analyzed yet. No rerun, per the user's instruction |
 
 ## Static check (cubrid-static-check `ca39c2c6a4..52bf95f21e`)
 
