@@ -8,8 +8,9 @@ https://jira.cubrid.org/browse/CBRD-27539
 
 ## Implementation
 
-- 루트 `AGENTS.md`: 문서 간 충돌 규칙(코드와 빌드 파일 우선)을 추가했습니다. `build.sh` `clean`이 `-b`와 `-p`를 모두 지운다는 경고, DB를 띄우는 테스트 전에 `$CUBRID`·`$CUBRID_DATABASES`를 임시 경로로 지정하라는 안내, `ctest`는 `add_test`한 모듈만 실행한다는 설명과 `--no-tests=error` 권장, PR 정적 검사가 이름이 바뀐 파일을 건너뛴다는 주의, `tc/pr-<N>` 브랜치 수명 주기를 넣었습니다.
-- `src/AGENTS.md`: 에러 코드 절차(sentinel 의미, 두 `cubrid.msg`의 `Last Error` 이동), 복구 인덱스 절차(enum·alias 위치, `RV_fun[]`, `RCV_IS_*`, page-less 레코드, TDE 사용자 데이터 분류 `LOG_MAY_CONTAIN_USER_DATA`, 동기 redo, 복제 레코드), XASL 절차(`xts_sizeof_*`, `xasl_spawner` 복사, 스트림 버전 없음)의 빠진 단계를 채웠습니다.
+- 루트 `AGENTS.md`(약 1,000단어 → 449단어): 매 세션 읽히는 문서라 항상 필요한 내용만 남겼습니다. 영역별 Read First, 작업별 안내(`Before you <작업>, read <문서>`), 문서 간 충돌 규칙(코드와 빌드 파일 우선), 공통 원칙, 한 줄 위험 경고(`build.sh` `clean`의 삭제 범위, preset의 `$CUBRID` 설치, CTP가 사용자 프로세스를 모두 종료, 외부 게시 작업 확인, `ctest --no-tests=error`)로 구성합니다.
+- 작업별 절차를 `docs/`로 옮겼습니다: `docs/build.md`(빌드·설치·DB 테스트용 임시 경로), `docs/pull-requests.md`(PR 제목·라이선스·정적 검사와 rename 누락, `gha-ci`와 `/run`, `tc/pr-<N>` 수명 주기, CTP 격리), `docs/error-codes.md`(`ER_LAST_ERROR` sentinel, 두 `cubrid.msg`), `docs/recovery-index.md`(enum·alias 위치, `RV_fun[]`, `RCV_IS_*`, page-less 레코드, TDE 사용자 데이터 분류, 동기 redo, 복제), `docs/xasl-changes.md`(`xts_sizeof_*`, `xasl_spawner` 복사, 스트림 버전 없음). 빠져 있던 단계는 이번에 함께 채웠습니다.
+- `src/AGENTS.md`: 모든 `src/` 변경에 해당하는 규칙(빌드 모드 경계, CMake 등록, 메모리·오류 처리, 포맷, 모듈 간 영향, `disk_compatibility_level` 금지)만 남기고, 위 절차는 포인터로 바꿨습니다.
 - 모듈 `AGENTS.md`(base, storage, transaction, query, xasl, optimizer, parser, object, compat, sp, method, broker, communication, connection, executables, loaddb, monitor, thread, `pl_engine`, `unit_tests`, `unit_tests/oos`): 틀린 파일·심볼·타깃·역할을 고치고, `src/AGENTS.md`와의 충돌을 없애고, 실제 코드와 맞지 않는 전면 금지 규칙을 실제 조건으로 바꿨습니다. 순서가 중요한 등록 절차(네트워크 요청, `OPERATOR_TYPE`, utility map, CAS 함수 코드)에는 "끝에 추가" 같은 규칙을 명시하고, 쉽게 낡는 파일 목록과 숫자는 줄였습니다.
 - `README.md`: 대상 없는 `./build.sh` 대신 `./build.sh -m release build`를 안내하고, 대상을 생략하면 빌드·설치 디렉터리를 먼저 지운다는 점을 적었습니다. `docs/install_build_requirements.md`: 일회용 컨테이너용 절차임을 밝히고, CMake tarball로 `/usr`을 덮어쓰지 않게 바꿨습니다. `src/storage/docs/` 3개는 낡은 함수 언급과 OOS 안내만 고쳤습니다.
 - 코드 주석만 수정(동작 변경 없음): `error_code.h`의 낡은 `dbi_compat.h` 안내 삭제, `execute_statement.c`의 serial 최솟값 주석(`-e36` → `DB_SERIAL_MIN`) 정정.
@@ -22,6 +23,6 @@ https://jira.cubrid.org/browse/CBRD-27539
 ### Test Plan
 
 - `git diff --check`: 공백·개행 오류 없음.
-- 변경한 Markdown 28개의 상대 링크와 앵커가 모두 실제 파일·헤딩을 가리키는지 검사: 통과.
-- 주장 검증: 수정본을 만든 agent와 별개인 reviewer 2명이 추가·변경된 모든 주장을 `ca5c2153ed`의 코드와 대조했습니다. 지적 11건을 코드로 재확인한 뒤 모두 반영했습니다.
+- 변경·추가한 Markdown의 상대 링크와 앵커가 모두 실제 파일·헤딩을 가리키는지 검사: 통과.
+- 주장 검증: 수정본을 만든 agent와 별개인 reviewer 2명이 추가·변경된 모든 주장을 `ca5c2153ed`의 코드와 대조했습니다. 지적 11건을 코드로 재확인한 뒤 모두 반영했습니다. 문서 분리 후 별도 reviewer가 옮기기 전후를 대조해, 빠진 규칙이 없음을 확인하고 지적 5건(위험 경고 정확도, 포인터 도달성)을 반영했습니다.
 - 감사 근거(교차 검증한 문제 107건, 실제 작업 시험 8건): [agents-meta-audit.md](https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-27539/agents-meta-audit.md)

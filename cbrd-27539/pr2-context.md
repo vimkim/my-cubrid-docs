@@ -24,3 +24,11 @@
 - Body fingerprint at publication: sha256 `4a9aba1569e92d0e1746350c50cd23688a89894d39c45cc6a61bafe802a1ddea`; material check passed.
 - Source push: `vk/CBRD-27539-module-docs` = `39259c507290a7590db73f83a1688376caaf5e4d` (verified with `git ls-remote`).
 - Draft PR created: https://github.com/CUBRID/cubrid/pull/8765 (draft, base `develop`, head `39259c5072`, assignee `vimkim`). Published body equals `pr2-body.md`.
+
+## Revision 2 (doc split) — proposal
+
+- Source: local commit `f9d2cc1349558c82c7459103aeaa788ca29b9e74` on top of the published `39259c5072` (fast-forward; no rebase).
+- Live PR #8765 body fingerprint before update: sha256 `4a9aba1569e92d0e1746350c50cd23688a89894d39c45cc6a61bafe802a1ddea` (matches the revision-1 upload).
+- Proposed operations (need user confirmation):
+  1. `git push vk CBRD-27539-module-docs` (fast-forward to `f9d2cc1349`).
+  2. `gh pr edit 8765 --repo CUBRID/cubrid --body-file cbrd-27539/pr2-body.md` (body only; title, draft status, assignee unchanged).
