@@ -57,3 +57,10 @@
 - 2026-11-26: greptile P2 on `unit_tests/AGENTS.md`: the example ran `test_scope_exit` through ctest after enabling and building only `test_string_buffer`. User approved push and reply ("1. yes 2. yes").
 - Source push: `vk/CBRD-27539-module-docs` = `c73ef55685ecf4391ad423b014675d3ed76dd376` (fast-forward from `6397314daf`, verified; PR head matches). PR body unchanged.
 - Replied to the greptile comment (https://github.com/CUBRID/cubrid/pull/8765#discussion_r4705939816) and resolved the thread.
+
+## Revision 6 (root condense + doc review fixes) — results
+
+- 2026-11-26: `ay` worker proposed condensing root and `src/AGENTS.md` (`.scratch/.../pr2/CONDENSE-PROPOSAL.md`); a docs-specialized review subagent reviewed the full diff (`.scratch/.../pr2/review/PR-DOCS-REVIEW.md`: no blockers, 4 should-fix, 4 nits). User delegated the decision ("응 너가 좋다고 판단하면 승인할게"). Decision: condense root only in this PR (426 -> 316 words; engine-only rules moved to `src/AGENTS.md`); defer `src/AGENTS.md` condensation (S1-S15) to a follow-up PR after #8765 merges.
+- All 8 review findings verified against code and applied.
+- Source commit `6fdb488e0b9892351d059ddc3ac06e6d5d71186f`; link and anchor check 0 failures; `git diff --check` clean. Source push fast-forward from `c73ef55685`, verified.
+- Live body before update matched revision 4 (`3f362554…`). PR #8765 body updated; live sha256 `446a8fac8b9d0b4ae2d57bc09af7f727ef5659f9c928268b350aa5901b8de66a` equals `pr2-body.md`. Ready for review; reviewDecision APPROVED (hgryoo, before revisions 4-6).
