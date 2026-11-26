@@ -54,6 +54,16 @@ JDK 27 에서는 xstream 이 `java.util` 모듈 접근에 막혀 시험이 돌�
 
 docs 통합(`main` rebase · fast-forward · push)은 Tier 1 규칙으로 이미 승인되어 있다.
 
-## 게시 결과
+## 게시 결과 (2026-11-26)
 
-(아직 없음)
+사용자 승인("1로 가자 ... 필요하면 다 진행해줘")으로 다음을 실행하고 재조회로 확인했다.
+
+| 작업 | 결과 |
+| --- | --- |
+| CUBRIDQA-1693 을 [CUBRIDQA-1501](https://jira.cubrid.org/browse/CUBRIDQA-1501) 의 Sub-task 로 변환 | Type `Sub-task`, parent CUBRIDQA-1501, 담당자 유지 |
+| CUBRIDQA-1693 설명 교체 | [my-cubrid-jira `issues/CUBRIDQA-1693-nested-sql-summary.md`](https://github.com/vimkim/my-cubrid-jira/blob/main/issues/CUBRIDQA-1693-nested-sql-summary.md) (`2e72f61`) 를 올림. 재조회 일치. 10-31 원본은 `issues/CUBRIDQA-1693-nested-sql-summary_4f720bd_codex.md` 로 보존 |
+| CUBRIDQA-1693 Relates [CBRD-26659](https://jira.cubrid.org/browse/CBRD-26659) | 연결됨 |
+| PR 793 본문 교체 | 원래 본문 SHA-256 이 기록값과 같음을 확인한 뒤 교체. 재조회 본문 SHA-256 `8daafb00c08cd6e88468331ba53d17aa85c8e3b69a891d2760826def57972f39` = 본문 파일 |
+| PR 793 Ready for review, 리뷰 요청 | draft 해제, `tw-kang` 리뷰 요청. 제목은 바꾸지 않음 |
+
+남은 일: 리뷰 · 병합 · runtime jar 배포 뒤 `test_sql` 재실행과 `cubrid-ci collect` 로 shard 01 이 3,557개로 맞는지 확인한다(work-tracker #879).
