@@ -20,4 +20,7 @@
 
 ## Results
 
-- (none yet)
+- 2026-11-26: user confirmed both operations ("1. 2. yes").
+- Body fingerprint at publication: sha256 `4a9aba1569e92d0e1746350c50cd23688a89894d39c45cc6a61bafe802a1ddea`; material check passed.
+- Source push: `vk/CBRD-27539-module-docs` = `39259c507290a7590db73f83a1688376caaf5e4d` (verified with `git ls-remote`).
+- Draft PR created: https://github.com/CUBRID/cubrid/pull/8765 (draft, base `develop`, head `39259c5072`, assignee `vimkim`). Published body equals `pr2-body.md`.
