@@ -43,3 +43,11 @@
 
 - 2026-11-26: user confirmed pushing `cf800fa8cc` ("yes"): `docs/pull-requests.md` now says `tc-merge-gate.yml` blocks while any `tc/pr-<N>` testcase PR is open (even an empty draft) and compares branch content only after those PRs close. Found from PR #8765's own `Check TC PRs` failure.
 - Source push: `vk/CBRD-27539-module-docs` = `cf800fa8ccc3ddddd18d38a0f02f1a7b9a2510ba` (fast-forward, verified; PR head matches). PR body unchanged.
+
+## Revision 4 (source-specific checklists back to module AGENTS.md) — results
+
+- 2026-11-26: user asked whether `docs/error-codes.md`, `docs/recovery-index.md`, and `docs/xasl-changes.md` belong in root `docs/` (reviewers may find source-only procedures there odd); agreed to move each into the owning module's `AGENTS.md` and approved all steps ("응 다 진행해줘").
+- Source commit `6397314dafdbfac3e43140f949c5520ad204fb4f`: sections added to `src/base/AGENTS.md`, `src/transaction/AGENTS.md`, `src/xasl/AGENTS.md`; pointers fixed in root, `src/`, `src/compat/`, `src/query/`. Moved lines compared line by line with the deleted files (only relative links changed); link and anchor check 0 failures; `git diff --check` clean. Root `AGENTS.md` 426 words.
+- Live body fingerprint before update matched revision 2 (`716906e0…`). Source push `vk/CBRD-27539-module-docs` = `6397314daf` (fast-forward, verified).
+- PR #8765 body updated; live body sha256 `3f362554077f1af3587eb321f05cc7ebb6745eda0bd58151d311cbaa71b47ced` equals `pr2-body.md`. Still ready for review; title unchanged.
+- Note: `hgryoo` had already approved at 08:52 UTC (before this push); greptile left one P2 inline comment on `unit_tests/AGENTS.md`.
