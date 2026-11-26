@@ -38,3 +38,8 @@
 - 2026-11-26: user confirmed both operations ("yes").
 - Source push: `vk/CBRD-27539-module-docs` = `f9d2cc1349558c82c7459103aeaa788ca29b9e74` (fast-forward, verified).
 - PR #8765 body updated; live body sha256 `716906e00255c6b7925846104ab8b1b074876f07387e1e4eba96f9f84046ca5c` equals `pr2-body.md`. Head `f9d2cc1349`, still draft, title and assignee unchanged.
+
+## Revision 3 — results
+
+- 2026-11-26: user confirmed pushing `cf800fa8cc` ("yes"): `docs/pull-requests.md` now says `tc-merge-gate.yml` blocks while any `tc/pr-<N>` testcase PR is open (even an empty draft) and compares branch content only after those PRs close. Found from PR #8765's own `Check TC PRs` failure.
+- Source push: `vk/CBRD-27539-module-docs` = `cf800fa8ccc3ddddd18d38a0f02f1a7b9a2510ba` (fast-forward, verified; PR head matches). PR body unchanged.
