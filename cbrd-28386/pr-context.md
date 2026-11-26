@@ -60,4 +60,15 @@
 - TC: merged develop into `tc/pr-8752` (public `517b82ddd`, private `b01b30c90`), regular push. `cubrid-pr-tc-base-check --pr 8752`: PASS.
 - 2026-11-26T09:31:15Z: posted `/run all` ([comment](https://github.com/CUBRID/cubrid/pull/8752#issuecomment-7188100703)); gha-ci run [45792736707](https://github.com/CUBRID/cubrid/actions/runs/45792736707) attempt 1 picked up all six contexts; `cubrid-ci-watch` request #122.
 - Residual risk: `cbrd_27780` (CBRD-28257, fix PR #8693 still open) fails intermittently on other runs.
-- CI result: pending.
+- 2026-11-26T14:38Z: run [45792736707](https://github.com/CUBRID/cubrid/actions/runs/45792736707) finished with `failure`.
+  - Pass: `build (debug)`, `build (release)`, `test_medium`, `test_sql`, `test_sql_by_cci`. The 3 `_36_guava` SQL cases now pass.
+  - `test_shell`: 30 failed (`tc/pr-8752@b01b30c90`), all unclassified in `cubrid-tcr`.
+    - 29 cases (answer diffs and `Internal Error` checks, e.g. `bug_bts_8375`, `issue_12506_show_heap_header/*`, `_08_I18N/_02_msg_lang/*`):
+      the same 30-case set failed on four unrelated PRs triggered in the same window on develop `6f5ac7a9f9`
+      (#8632 run 45790454567, #8654 run 45790935511, #8757 run 45791640273, #8754 run 45792059278).
+      Later runs on other PRs (#8660, #8710, #8538) failed only `cbrd_25637_recovery`. Inference: a transient CI or environment fault in that window, not this change.
+    - `shell/_40_guava/cbrd_25637/cbrd_25637_recovery` (core file): fails on nearly every recent run. Its TC (private-ex #5127) is on develop,
+      but the engine PR it seems to need, #8725 [CBRD-28361], is still open. Inference: develop-side blocker.
+  - `cbrd_27744_sa`, `cbrd_27937`, `cbrd_27780` passed.
+  - `Check TC PRs` (TC Merge Gate) still fails while the TC PRs are open, as expected.
+  - Stopped after this run as the standing rule requires.
