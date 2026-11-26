@@ -52,3 +52,12 @@ Disposition: the flag comes from the two deferral branches (unpack and reclaim).
 
 - REMOVE / eager postpone path keeps fail-stop on -1123 (see `verification.md`, "Postpone path policy").
 - OOS-CONTEXT §4 and OOS-ADR-0008 decision 3 need the wording amendment proposed in `verification.md`, "Spec conformance".
+
+## Refresh and second CI run (2026-11-26, approved)
+
+| Operation | Result |
+| --- | --- |
+| Engine rebase | onto `origin/develop` `6f5ac7a9f9` → `8c74d7d77f1daad72319e7352f600928e0a1616f`, no conflicts; focused OOS ctests 10/10 pass; pushed with `--force-with-lease` over `ebdd0f0462` |
+| TC sync | `develop` merged into `tc/pr-8757` (public `d95657648`, private-ex `8587932ac`), no force; `cubrid-pr-tc-base-check --pr 8757` PASS |
+| CI | `/run all` ([comment](https://github.com/CUBRID/cubrid/pull/8757#issuecomment-7187927501)) → [gha-ci run 45791640273](https://github.com/CUBRID/cubrid/actions/runs/45791640273); `cubrid-ci-watch` #120 |
+| CI result | builds, `test_sql`, `test_medium`, `test_sql_by_cci` pass. `test_shell` fails 30 cases, none from this PR: 29 are in the directories that private-ex TC `e47c3ae1d` (CBRD-24777) changed while its engine PR CUBRID/cubrid#8538 is still open, and they fail on PR #8632 and #8654 in the same window; 1 is `cbrd_25637_recovery.sh`, which fails on every PR since 2026-11-26T06:43Z (CBRD-25637 engine not on `develop`). `cbrd_27780.sh` did not fail |
