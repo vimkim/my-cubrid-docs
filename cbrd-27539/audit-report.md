@@ -3,8 +3,8 @@
 - 분석 및 작성 일시: 2026-11-25 (`Asia/Seoul`)
 - 관련 이슈: [CBRD-27539](https://jira.cubrid.org/browse/CBRD-27539) (상위 EPIC: [CBRD-27537](https://jira.cubrid.org/browse/CBRD-27537))
 - 기준 저장소 및 커밋: `CUBRID/CUBRID` `origin/develop` `cbed1d5707`
-- 재작성 커밋 (`vk/CBRD-27539`): `e4da2c73ea03d079973526171a2129b2dc97cc21` (초안) → `bffec3aa104c05c1da9355af0fe456bf379d3cd0` (PR `#8751` `@xmilex-git` 리뷰 반영) → `ab090a400bf185a92d347e29cc2dea1064bd179d` (3자 교차 재검토 P0/P1/P2 보정) → `f08cfeb453482da78198b10f80dda7dc89878bfe` (`@kangmin5505` 리뷰 4건 반영, `vk/CBRD-27539` 푸시 완료)
-- 변경 범위: `AGENTS.md` (216줄 → 35줄), `src/AGENTS.md` (46줄 → 92줄), `src/base/AGENTS.md` (5·41·169행 참조 링크만 3줄 수정). 엔진 소스, CMake 설정, SQL 동작은 변경하지 않았습니다.
+- 재작성 커밋 (`vk/CBRD-27539`): `e4da2c73ea03d079973526171a2129b2dc97cc21` (초안) → `bffec3aa104c05c1da9355af0fe456bf379d3cd0` (PR `#8751` `@xmilex-git` 리뷰 반영) → `ab090a400bf185a92d347e29cc2dea1064bd179d` (3자 교차 재검토 P0/P1/P2 보정) → `f08cfeb453482da78198b10f80dda7dc89878bfe` (`@kangmin5505` 리뷰 4건 반영) → `d280e6f449846a8d42eedb3b2da5a042d19f527c` (`@kangmin5505` 추가 리뷰 2건 반영, `vk/CBRD-27539` 푸시 완료)
+- 변경 범위: `AGENTS.md` (216줄 → 35줄), `src/AGENTS.md` (46줄 → 92줄), `src/base/AGENTS.md` (5·41·169행 참조 링크·표현 및 52·146행 낡은 파일명 5줄 수정). 엔진 소스, CMake 설정, SQL 동작은 변경하지 않았습니다.
 
 ## Purpose
 
@@ -20,7 +20,7 @@
 | --- | --- | --- | --- | --- |
 | 1 | `c_to_cpp.sh` vs 실제 C++ 컴파일 근거 | `AGENTS.md:9`, `src/AGENTS.md:3` | `c_to_cpp.sh:1-12`는 `git mv "${fullpath}" "${base}.cpp"`로 확장자만 바꿉니다. 실제 `.c` 파일의 C++17 컴파일은 `CMakeLists.txt:221`(`-std=c++17`)과 각 타깃 CMake의 `set_source_files_properties(... PROPERTIES LANGUAGE CXX)`(`cubrid/CMakeLists.txt:689`, `cs/CMakeLists.txt:485,562`, `sa/CMakeLists.txt:725`, `util/CMakeLists.txt:28-294`, `broker/CMakeLists.txt:41-625`, `cm_common/CMakeLists.txt:31-96`, `timezones/CMakeLists.txt:29`, `unit_tests/*/CMakeLists.txt`)에서 결정됩니다. | `src/AGENTS.md:5`에 두 사실을 분리해 명시하고 루트 중복을 제거했습니다. |
 | 2 | C++ 예외 및 RAII 처리 | `AGENTS.md:196-197`, `src/AGENTS.md:3` | 엔진 공용 API는 `src/base/error_code.h` 음수 오류 코드(`NO_ERROR = 0`)와 `er_set()`을 유지하며 C 인터페이스로 예외를 넘기지 않습니다. 반면 `src/` 내 26개 파일(`.c` 포함)은 STL 예외를 호출부나 C 인터페이스 경계에서 잡아 `er_set()` + 오류 코드로 즉시 변환합니다(`src/storage/heap_file.c:14482`, `src/optimizer/histogram/histogram_sampler_sr.cpp:1259,1396`, `src/query/string_regex_std.cpp:126`, `src/query/vacuum_oos.cpp:260`, `src/base/lockfree_hashmap.hpp:278`). `src/base/scope_exit.hpp`, `src/base/mem_block.hpp`, `std::unique_ptr`, `std::lock_guard` 등 RAII도 사용 중입니다. | 전면 금지를 삭제하고, `src/AGENTS.md:38-46`에 C 오류 코드 경계 유지 + STL 예외 포착/변환 + 모듈 관례에 따른 RAII 사용 원칙을 명시했습니다. |
-| 3 | 메모리 해제 API 짝짓기 | `AGENTS.md:165,189` | `src/base/memory_alloc.h:124-204`는 `db_private_free_and_init(thrd, ptr)`, `free_and_init(ptr)`, `os_free_and_init(ptr)`를 각각 정의하며 `db_private_alloc`, `malloc`/`calloc`/`realloc`, `os_malloc`/`os_realloc`(공통) 및 `os_calloc`(`SERVER_MODE` 전용, `!SERVER_MODE` 미정의)와 대응합니다. `src/parser/parser.h:127`·`src/parser/parse_tree.c:957`의 `parser_alloc`은 파서 컨텍스트 수명을 따르므로 수동 해제하지 않습니다. | `src/AGENTS.md:38-43`에 4종 할당자-해제자 짝(`os_calloc` `SERVER_MODE` 전용 구분 포함)과 수명·정리 경로 검증을 정리했습니다. |
+| 3 | 메모리 해제 API 짝짓기 | `AGENTS.md:165,189` | `src/base/memory_alloc.h:124-204`는 `db_private_free_and_init(thrd, ptr)`, `free_and_init(ptr)`, `os_free_and_init(ptr)`를 각각 정의하며 `db_private_alloc`, `malloc`/`calloc`/`realloc`, `os_malloc`(공통) 및 `os_calloc`(`SERVER_MODE` 전용, `!SERVER_MODE` 미정의)와 대응합니다(`os_realloc`은 `SERVER_MODE` debug/optdebug에서 resource tracker를 거치지 않아 `os_free` `restrack_assert` 유발). `src/parser/parser.h:127`·`src/parser/parse_tree.c:957`의 `parser_alloc`은 파서 컨텍스트 수명을 따르므로 수동 해제하지 않습니다. | `src/AGENTS.md:38-43`에 4종 할당자-해제자 짝(`os_calloc` `SERVER_MODE` 전용 구분 포함)과 수명·정리 경로 검증을 정리했습니다. |
 | 4 | `memory_wrapper.hpp` include 검사 | `AGENTS.md:148,191-192` | `.github/workflows/check.yml:216-292`(`memory-monitor-check`)는 `cubrid/CMakeLists.txt`에 파일명이 포함된 `.c`/`.cpp` 파일을 검사합니다. `#include "memory_wrapper.hpp"`가 마지막 `#include`이고 직전 줄이 `// XXX: SHOULD BE THE LAST INCLUDE HEADER`여야 하나, `strict_warnings_on.hpp`·`strict_warnings_off.hpp`가 뒤에 오는 것은 허용됩니다(`.github/workflows/check.yml:252-259`, CBRD-25966). `src/heaplayers/lea_heap.c:39-40`은 위치·주석 검사가 면제되며(`.github/workflows/check.yml:251`), `src/base/memory_monitor_sr.cpp`, `src/base/memory_monitor_api.cpp`, `src/base/memory_wrapper.cpp`는 전체 검사에서 제외됩니다(`.github/workflows/check.yml:274-277`). `src/base/memory_wrapper.hpp:38-47`에 따라 헤더 파일에는 `memory_wrapper.hpp` 대신 `memory_cwrapper.h`를 사용합니다. | `src/AGENTS.md:60-64`에 검사 대상, 주석, `strict_warnings_*` 허용 예외, 면제 파일, 헤더 금지 규칙을 정확히 기술했습니다. |
 | 5 | 빌드 및 CI 안내 | `AGENTS.md:95-115,179-185` | `.github/workflows/check.yml`이 PR 정적 검사(`license`, `pr-style`, `code-style`, `cppcheck`, `memory-monitor-check`)를 실행하며, `.github/workflows/gha-ci.yml`(+ `gha-ci-suite.yml`, `tc-branch-sync.yml`, `tc-merge-gate.yml`)은 `develop` push 시 `test_run=false`로 빌드·캐시 갱신만 수행하고, `shell`·`sql`·`medium`(`optdebug`)·`sql_by_cci`(`release`) 회귀 스위트는 PR `/run` 코멘트, 야간 `schedule`(커밋별 `workflow_dispatch` 실행), 수동 `workflow_dispatch`에서 실행합니다. `Jenkinsfile`과 `.circleci/config.yml`도 보조·레거시 설정으로 저장소에 남아 있습니다. 또한 `./build.sh -h`와 `CMakePresets.json`은 `optdebug` 모드를 포함합니다. | `AGENTS.md:21-28`에 GitHub Actions 중심 진입점(`develop` push 빌드·캐시 전용과 suite 트리거 구분 포함)과 보조·레거시 파일 확인 주의사항을 배치하고, volatile 옵션 표·병렬도 수치를 삭제했습니다. |
 | 6 | CMake 소스 등록 위치 | `src/AGENTS.md:33-35` | `src/` 아래에는 모듈별 `CMakeLists.txt`가 없으나, 상위 소스 목록은 3개 라이브러리(`cubrid/`, `sa/`, `cs/`)에 그치지 않습니다. `CMakeLists.txt:387-422`의 `*_DIR` 변수는 `util/CMakeLists.txt`(`cub_server`, `csql`, `cub_master` 등), `broker/CMakeLists.txt`, `cm_common/CMakeLists.txt`, `timezones/CMakeLists.txt`, `win/CMakeLists.txt`, `unit_tests/*/CMakeLists.txt`에서도 참조됩니다. | `src/AGENTS.md:22-34`에 모든 타깃 범주와 4단계 소스 등록 절차를 명시했습니다. |
@@ -108,16 +108,18 @@ PR `#8751` 반영본(`bffec3aa10`)을 대상으로 Herdr 서브탭 2개(`ai-agen
 
 ---
 
-### 6. PR `#8751` `@kangmin5505` 리뷰 피드백 4건 검증 및 반영 (`f08cfeb453`)
+### 6. PR `#8751` `@kangmin5505` 리뷰 피드백 6건 검증 및 반영 (`f08cfeb453`, `d280e6f449`)
 
-`ab090a400b` 커밋 이후 `@kangmin5505` 님이 지적한 사실 오류 4건(인라인 3건 + PR 본문 1건)을 모두 코드·CMake·워크플로에서 확인해 `f08cfeb453` 및 PR 본문/감사 보고서에 반영했습니다.
+`ab090a400b` 및 `f08cfeb453` 커밋에 대해 `@kangmin5505` 님이 지적한 6건(인라인 4건 + PR 본문 2건)을 모두 코드·CMake·워크플로에서 확인해 `f08cfeb453`·`d280e6f449` 및 PR 본문/감사 보고서에 반영했습니다.
 
 | 대상 | 출처 | 검증 근거 | 조치 |
 |---|---|---|---|
 | XASL generation `src/optimizer/plan_generation.c` 누락 | `#discussion_r4695024226` | `src/optimizer/plan_generation.c:20`이 optimizer plan에서 XASL 트리를 생성하며 `xasl_to_stream.c` 변경 커밋 다수와 동반 수정됨 | `src/AGENTS.md:72` generation 목록에 `src/optimizer/plan_generation.c` 및 `src/optimizer/AGENTS.md` 링크 추가 |
 | `develop` push 시 회귀 스위트 미실행 | `#discussion_r4695024523` | `.github/workflows/gha-ci.yml:237-251,768,1298`에서 `push`는 `test_run=false`로 빌드·캐시 갱신만 수행하고, `develop` 커밋 suite는 `nightly` `schedule`(`:383`)의 커밋별 `workflow_dispatch`로 실행됨 | `AGENTS.md:28`에 `develop` push(`test_run=false`)와 suite 실행 트리거(PR `/run`, 야간 `schedule`, 수동 `workflow_dispatch`)를 분리 명시 |
 | `os_calloc` `SERVER_MODE` 전용 제약 | `#discussion_r4695024877` | `src/base/memory_alloc.h:170-204`에서 `!SERVER_MODE`는 `os_malloc`/`os_free`/`os_realloc`만 정의하고 `os_calloc`은 `SERVER_MODE` 분기(`:184`, `:195`)에만 존재 | `src/AGENTS.md:41`을 `os_malloc`/`os_realloc` (공통) 및 `os_calloc` (`SERVER_MODE` 전용) ↔ `os_free_and_init (ptr)`로 정정 |
-| PR 본문 Test Plan 인용 경로 검증 범위 | `#issuecomment-7162730657` | 미수정 하위 모듈 문서(`src/connection/AGENTS.md`, `src/communication/AGENTS.md`, `src/thread/AGENTS.md`)에 낡은 파일명이 남아 있음 | PR 본문 Test Plan과 본 보고서를 "전체 23개 상대 마크다운 링크·앵커 + 수정 대상 3개 파일 본문 인용 경로 통과"로 한정하고 미수정 모듈 항목을 3절에 기록 |
+| PR 본문 Test Plan 인용 경로 검증 범위 | `#issuecomment-7162730657` | 미수정 하위 모듈 문서(`src/connection/AGENTS.md`, `src/communication/AGENTS.md`, `src/thread/AGENTS.md`)에 낡은 파일명이 남아 있음 | PR 본문 Test Plan과 본 보고서를 "전체 23개 상대 마크다운 링크·앵커 + 수정 대상 3개 파일"으로 한정하고 미수정 모듈 항목을 3절에 기록 |
+| `os_realloc` ↔ `os_free_and_init` 비호환 | `#discussion_r4702948542` | `memory_alloc.h:180-190`, `resource_tracker.hpp:279-284`, `btree_load.c:513-514`: `!NDEBUG` `SERVER_MODE`에서 `os_realloc`은 `realloc` 매크로라 `os_free`의 `restrack_assert (false)` 유발 | `src/AGENTS.md:41`에서 `os_realloc`을 짝에서 제외하고 비호환 주의 명시 (`d280e6f449`) |
+| `src/base/AGENTS.md` 낡은 파일명 2건 | `#issuecomment-7180025108` | `src/base/cubrid_getopt_long.c`, `src/base/cubrid_getopt.h`, `src/base/hide_password.cpp`, `src/base/hide_password.h` 확인 | `src/base/AGENTS.md:52,146` 파일명을 함께 교정하고 단독 파일명·`.c/h` 축약 표기 전수 검증 통과 (`d280e6f449`) |
 
 ---
 
@@ -137,7 +139,7 @@ PR `#8751` 반영본(`bffec3aa10`)을 대상으로 Herdr 서브탭 2개(`ai-agen
 
 ### Test Plan
 
-- `git diff --check` (`CBRD-27539` 워크트리, `f08cfeb453`): exit code `0`, 공백/개행 오류 없음.
-- 전체 23개 `AGENTS.md` 상대 마크다운 링크·앵커 + 이번 PR 수정 대상 3개 파일(`AGENTS.md`, `src/AGENTS.md`, `src/base/AGENTS.md`) 본문 인용 경로·개인정보 정적 검증 스크립트: 통과 (미수정 하위 모듈 문서의 낡은 경로 6건은 3절 범위 외 후속 목록 참조).
+- `git diff --check` (`CBRD-27539` 워크트리, `d280e6f449`): exit code `0`, 공백/개행 오류 없음.
+- 전체 23개 `AGENTS.md` 상대 마크다운 링크·앵커 + 이번 PR 수정 대상 3개 파일(`AGENTS.md`, `src/AGENTS.md`, `src/base/AGENTS.md`) 본문 인용 경로·단독 파일명·`.c/h` 축약 표기·개인정보 전수 정적 검증 스크립트: 통과 (미수정 하위 모듈 문서의 낡은 경로는 3절 범위 외 후속 목록 참조).
 - Herdr 서브탭(`review`, Opus 5.5) 독립 리뷰 수행 후 5건의 사실 정밀화(`lea_heap.c` 부분 면제 정확화, `query_executor.c` 비대표 예제 제거, `src/optimizer/histogram/` 3모드 빌드 구분, `gha-ci.yml` 야간 스케줄·`workflow_call` 보완, `expr_compile.c`·`query_evaluator.c`·`query_dump.c` XASL 목록 추가)을 모두 반영하고 정적 검증을 재통과한 뒤 로컬 커밋(`e4da2c73ea03d079973526171a2129b2dc97cc21`)을 완료했습니다.
 - 문서 전용 변경이므로 전체 엔진 빌드 및 회귀 테스트(`shell`, `sql`, `medium`)는 생략했습니다.

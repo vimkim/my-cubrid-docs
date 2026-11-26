@@ -10,8 +10,8 @@ https://jira.cubrid.org/browse/CBRD-27539
 
 - `AGENTS.md`: 버전·디렉터리 수·파일 크기·컴파일러 버전·비활성 단위 테스트 목록 등 쉽게 낡는 정보를 제거하고, 작업 영역(`src/`, `unit_tests/`, `pl_engine/`, 서브모듈)별 조건부 읽기 규칙, 빌드 주의사항(`build.sh` 명시 타깃 및 `$CUBRID` 보호, `Release`/`RelWithDebInfo` `-Werror`/`-DNDEBUG` vs `debug`/`optdebug` 2단계 검증 시점), `UNIT_TESTS`의 CI 미실행, `develop` push(빌드·캐시 갱신 전용, `test_run=false`)와 회귀 스위트 실행 경로(PR `/run`, 야간 `schedule` → 커밋별 `workflow_dispatch`, 수동 `workflow_dispatch`) 구분, `/run` 취소 및 `cubrid-testcases-private-ex`·CTP(`pkill cub`/`kill -9`) 격리 주의, `.github/workflows/check.yml`·`gha-ci.yml` 중심 진입점으로 재구성했습니다.
 - `src/AGENTS.md`: `c_to_cpp.sh`(`git mv`)와 디렉터리 단위 `PROPERTIES LANGUAGE CXX`(및 `cm_broker_jni.c`/`gencat.c` C 예외)를 구분하고, `SERVER_MODE`/`SA_MODE`/`CS_MODE` 경계 및 예외(`src/optimizer/histogram/`, `cs/CMakeLists.txt` 클라이언트 부분집합)를 명시했습니다.
-- `src/AGENTS.md`: 할당자 짝짓기(`db_private_alloc` 호출 인자 `thread_p` 소유권·`PEEK` 비소유 계약·`os_calloc` `SERVER_MODE` 전용 제약 포함), C 오류 코드 경계·워커→요청 스레드 에러 전달·호출부 STL 예외 변환(`er_set`)·RAII 허용 범위, 실제 오류 코드 절차(`error_code.h` + `msg/*/cubrid.msg` `$set 5 MSGCAT_SET_ERROR`; 낡은 `dbi_compat.h` 제외 및 `cubrid-cci` 서브모듈 별도 PR 분리), GNU `indent` 2.2.11 주의와 `/* *INDENT-OFF* */`·`memory_wrapper.hpp` 규칙, 전체 `CMakeLists.txt` 등록, XASL 4단계(`src/optimizer/plan_generation.c` 및 `src/optimizer/AGENTS.md` 포함) 및 클론/디스크 스트림, `LOG_RCVINDEX`+`RV_LAST_LOGID`+`RV_fun[]`+`RCV_IS_*`, `disk_compatibility_level` 비변경(릴리스 단위 관리), `release` 측정 및 `STATIC_INLINE` `ALWAYS_INLINE`(`NDEBUG` 전용·`nm -C`) 지침을 정리했습니다.
-- `src/base/AGENTS.md`: `src/AGENTS.md`로 이동한 코딩 스타일·오류 코드 절차를 가리키도록 3곳(5·41·169행)의 링크와 표현을 갱신했습니다.
+- `src/AGENTS.md`: 할당자 짝짓기(`db_private_alloc` 호출 인자 `thread_p` 소유권·`PEEK` 비소유 계약·`os_calloc` `SERVER_MODE` 전용 제약·`os_realloc`과 `os_free_and_init` 비호환 `restrack_assert` 주의 포함), C 오류 코드 경계·워커→요청 스레드 에러 전달·호출부 STL 예외 변환(`er_set`)·RAII 허용 범위, 실제 오류 코드 절차(`error_code.h` + `msg/*/cubrid.msg` `$set 5 MSGCAT_SET_ERROR`; 낡은 `dbi_compat.h` 제외 및 `cubrid-cci` 서브모듈 별도 PR 분리), GNU `indent` 2.2.11 주의와 `/* *INDENT-OFF* */`·`memory_wrapper.hpp` 규칙, 전체 `CMakeLists.txt` 등록, XASL 4단계(`src/optimizer/plan_generation.c` 및 `src/optimizer/AGENTS.md` 포함) 및 클론/디스크 스트림, `LOG_RCVINDEX`+`RV_LAST_LOGID`+`RV_fun[]`+`RCV_IS_*`, `disk_compatibility_level` 비변경(릴리스 단위 관리), `release` 측정 및 `STATIC_INLINE` `ALWAYS_INLINE`(`NDEBUG` 전용·`nm -C`) 지침을 정리했습니다.
+- `src/base/AGENTS.md`: `src/AGENTS.md`로 이동한 코딩 스타일·오류 코드 절차를 가리키도록 3곳(5·41·169행)의 링크와 표현을 갱신하고, 낡은 파일명 2곳(52행 `cubrid_getopt.h`, 146행 `hide_password.cpp`)을 교정했습니다.
 
 ## Remarks
 
@@ -21,6 +21,6 @@ https://jira.cubrid.org/browse/CBRD-27539
 ### Test Plan
 
 - `git diff --check`: 공백/개행 오류 없음.
-- 링크·앵커·경로 정적 검증: 저장소 내 전체 `AGENTS.md` 23개 파일의 상대 마크다운 링크·앵커 검증 통과, 이번 PR 수정 대상 3개 파일(`AGENTS.md`, `src/AGENTS.md`, `src/base/AGENTS.md`)의 본문 인용 경로 존재 여부 검증 통과 (미수정 하위 모듈 문서의 낡은 파일명은 `CBRD-27537` 하위 후속 범위).
-- 시나리오 워크스루(소스 추가, throwing STL 사용, XASL/PRED_EXPR 변경), PR `#8751` 리뷰 피드백 반영(`@xmilex-git` 9건, `@kangmin5505` 사실 정정 4건 — `plan_generation.c`·`develop` push `test_run=false`·`os_calloc` `SERVER_MODE` 전용·Test Plan 범위 정정), 3자 교차 재검토(`ai-agent` + `ay` + 주관 리뷰) P0/P1/P2 보정까지 모두 검증·반영 완료.
+- 링크·앵커·경로 정적 검증: 저장소 내 전체 `AGENTS.md` 23개 파일의 상대 마크다운 링크·앵커 검증 통과, 이번 PR 수정 대상 3개 파일(`AGENTS.md`, `src/AGENTS.md`, `src/base/AGENTS.md`)의 본문 인용 경로·단독 파일명·`.c/h` 축약 표기 존재 여부 전수 검증 통과 (미수정 하위 모듈 문서의 낡은 파일명은 `CBRD-27537` 하위 후속 범위).
+- 시나리오 워크스루(소스 추가, throwing STL 사용, XASL/PRED_EXPR 변경), PR `#8751` 리뷰 피드백 반영(`@xmilex-git` 9건, `@kangmin5505` 6건 — `plan_generation.c`·`develop` push `test_run=false`·`os_calloc` `SERVER_MODE` 전용·`os_realloc` `restrack_assert`·Test Plan 범위 및 `src/base/AGENTS.md` 파일명 2건 정정), 3자 교차 재검토(`ai-agent` + `ay` + 주관 리뷰) P0/P1/P2 보정까지 모두 검증·반영 완료.
 - 상세 근거와 줄 단위 감사 기록: [audit-report.md](https://github.com/vimkim/my-cubrid-docs/blob/main/cbrd-27539/audit-report.md)
