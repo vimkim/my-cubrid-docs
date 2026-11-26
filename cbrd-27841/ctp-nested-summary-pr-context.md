@@ -66,4 +66,6 @@ docs 통합(`main` rebase · fast-forward · push)은 Tier 1 규칙으로 이미
 | PR 793 본문 교체 | 원래 본문 SHA-256 이 기록값과 같음을 확인한 뒤 교체. 재조회 본문 SHA-256 `8daafb00c08cd6e88468331ba53d17aa85c8e3b69a891d2760826def57972f39` = 본문 파일 |
 | PR 793 Ready for review, 리뷰 요청 | draft 해제, `tw-kang` 리뷰 요청. 제목은 바꾸지 않음 |
 
+문구 개정: 사용자 지적("cubrid-ci 는 내 개인 툴")에 따라 PR 본문과 JIRA 설명에서 `cubrid-ci collect` 가 결과를 버린다는 서술과 `collection_failed` 를 뺐다. 대신 JUnit 수가 `summary_info` 보다 적은 것 자체를 무결성 오류로 쓰고, 검증 도구(예: `cubrid-ci`)나 통계 집계에서 그렇게 보고될 수 있다고 썼다.
+
 남은 일: 리뷰 · 병합 · runtime jar 배포 뒤 `test_sql` 재실행과 `cubrid-ci collect` 로 shard 01 이 3,557개로 맞는지 확인한다(work-tracker #879).
