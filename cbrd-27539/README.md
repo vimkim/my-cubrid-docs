@@ -9,3 +9,5 @@
 | [pr-body.md](pr-body.md) | Draft GitHub PR description for `CUBRID/CUBRID` | 2026-11-25 | 2026-11-25 | Prepare standalone Korean PR body for review |
 | [agents-meta-audit.md](agents-meta-audit.md) | Post-merge audit of every agent-facing doc in `develop` `3d9a7b4ea8` (24 AGENTS.md, storage docs, CONTRIBUTING/README): 107 cross-verified findings, behavioral probes, code-fix (K) JIRA plan, personal-override conflict | 2026-11-26 | 2026-11-26 | Find instructions that mislead AI agents after PR #8751 merged, and decide follow-up doc PR and code-fix issues |
 | [pr-context.md](pr-context.md) | Draft metadata, source commit, and proposed remote operations | 2026-11-25 | 2026-11-25 | Track PR creation context and stop-gate status before remote writes |
+| [pr2-body.md](pr2-body.md) | Draft GitHub PR(2) description: module AGENTS.md and agent-doc fixes from the meta-audit | 2026-11-26 | 2026-11-26 | Prepare the second CBRD-27539 PR body for review |
+| [pr2-context.md](pr2-context.md) | PR(2) source commit, target, proposed operations, and publication results | 2026-11-26 | 2026-11-26 | Track PR(2) creation context before remote writes |
