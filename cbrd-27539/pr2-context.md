@@ -51,3 +51,9 @@
 - Live body fingerprint before update matched revision 2 (`716906e0…`). Source push `vk/CBRD-27539-module-docs` = `6397314daf` (fast-forward, verified).
 - PR #8765 body updated; live body sha256 `3f362554077f1af3587eb321f05cc7ebb6745eda0bd58151d311cbaa71b47ced` equals `pr2-body.md`. Still ready for review; title unchanged.
 - Note: `hgryoo` had already approved at 08:52 UTC (before this push); greptile left one P2 inline comment on `unit_tests/AGENTS.md`.
+
+## Revision 5 (greptile P2 fix) — results
+
+- 2026-11-26: greptile P2 on `unit_tests/AGENTS.md`: the example ran `test_scope_exit` through ctest after enabling and building only `test_string_buffer`. User approved push and reply ("1. yes 2. yes").
+- Source push: `vk/CBRD-27539-module-docs` = `c73ef55685ecf4391ad423b014675d3ed76dd376` (fast-forward from `6397314daf`, verified; PR head matches). PR body unchanged.
+- Replied to the greptile comment (https://github.com/CUBRID/cubrid/pull/8765#discussion_r4705939816) and resolved the thread.
