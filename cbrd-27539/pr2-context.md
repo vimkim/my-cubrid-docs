@@ -64,3 +64,9 @@
 - All 8 review findings verified against code and applied.
 - Source commit `6fdb488e0b9892351d059ddc3ac06e6d5d71186f`; link and anchor check 0 failures; `git diff --check` clean. Source push fast-forward from `c73ef55685`, verified.
 - Live body before update matched revision 4 (`3f362554…`). PR #8765 body updated; live sha256 `446a8fac8b9d0b4ae2d57bc09af7f727ef5659f9c928268b350aa5901b8de66a` equals `pr2-body.md`. Ready for review; reviewDecision APPROVED (hgryoo, before revisions 4-6).
+
+## Revision 7 (kangmin5505 review, 16 items) — results
+
+- 2026-11-27: kangmin5505 posted a 16-item review comment (https://github.com/CUBRID/cubrid/pull/8765#issuecomment-7187963526) at head `6fdb488e0b`. Two verification subagents checked every item against code (`.scratch/.../pr2/kangmin/verify-1-8.md`, `verify-9-16.md`): 14 correct, 2 partly correct (6: half of the cited `xts_save_*` are under `#if 0`; 16: init failure errors only during boot and in SA mode). Lead spot-checked items 5, 10, 12, 13, 15, 16.
+- Source commit `793df589160dd79eb74bdbeff32f539ba3c8330a` (13 files); link and anchor check 0 failures; `git diff --check` clean. User approved push and reply. Push fast-forward from `6fdb488e0b`, verified; PR head matches. PR body unchanged.
+- Reply posted: https://github.com/CUBRID/cubrid/pull/8765#issuecomment-7209865394
