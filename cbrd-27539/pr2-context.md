@@ -70,3 +70,10 @@
 - 2026-11-27: kangmin5505 posted a 16-item review comment (https://github.com/CUBRID/cubrid/pull/8765#issuecomment-7187963526) at head `6fdb488e0b`. Two verification subagents checked every item against code (`.scratch/.../pr2/kangmin/verify-1-8.md`, `verify-9-16.md`): 14 correct, 2 partly correct (6: half of the cited `xts_save_*` are under `#if 0`; 16: init failure errors only during boot and in SA mode). Lead spot-checked items 5, 10, 12, 13, 15, 16.
 - Source commit `793df589160dd79eb74bdbeff32f539ba3c8330a` (13 files); link and anchor check 0 failures; `git diff --check` clean. User approved push and reply. Push fast-forward from `6fdb488e0b`, verified; PR head matches. PR body unchanged.
 - Reply posted: https://github.com/CUBRID/cubrid/pull/8765#issuecomment-7209865394
+
+## Revision 8 (kangmin5505 follow-up, 3 items, plus second docs review) — results
+
+- 2026-11-27: kangmin5505 posted 3 follow-up items on `793df58916` (https://github.com/CUBRID/cubrid/pull/8765#issuecomment-7210327025): MVCC vacuum undo unpack and heap branch, `SA_MODE` `cub_pl` does not restart, `xts_save_*` assert needs `buf` assigned. Lead verified all 3 in code: correct.
+- A second docs review subagent (`.scratch/.../pr2/review/PR-DOCS-REVIEW-2.md`) on `6fdb488e0b..793df58916` found 1 should-fix (`SERVER_MODE` calls fail at connect until the monitor sees the `cub_pl` death) and 5 nits (statset complex entry, TDE `addr->vfid`, CS tracker scope, `SUFunctionCode` naming, OOS example file), plus extra evidence for item 1 (`log_append_undoredo_crumbs ()` asserts outside `SERVER_MODE`). Lead spot-checked all and applied them.
+- Source commit `2095362eafa83352aa43b9ca558decfb2569a31f` (6 files, +11/-8); link and anchor check 0 failures; `git diff --check` clean. User approved push and reply. Push fast-forward from `793df58916`, verified; PR head matches. PR body unchanged (sha256 `446a8fac…`).
+- Reply posted: https://github.com/CUBRID/cubrid/pull/8765#issuecomment-7215315140
