@@ -3,7 +3,7 @@
 [OOS] The unit test `test_oos_real_vacuum_latch_timeout_retry` waits forever for a log flush when no other thread writes the log.
 
 - JIRA: <https://jira.cubrid.org/browse/CBRD-28436>
-- Engine PR: (draft, pending creation)
+- Engine PR: [CUBRID/cubrid#8801](https://github.com/CUBRID/cubrid/pull/8801) (draft)
 - Related: CBRD-26357 (OOS), CBRD-27860, CBRD-28067
 
 | File | What it contains | Created | Last modified | Why it was created |
