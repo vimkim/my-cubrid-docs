@@ -74,3 +74,7 @@ Disposition: the flag comes from the two deferral branches (unpack and reclaim).
 ## Body revision r2 (published 2026-11-28)
 
 The published body (`cbrd-28377/pr-body.md`) says error code -1423. After refresh #2 the code is -1424. `cbrd-28377/pr-body-r2.md` changes only that number. Approved 2026-11-28 and published with `gh pr edit 8757 --repo CUBRID/cubrid --body-file cbrd-28377/pr-body-r2.md`. Before the write the live body equalled `pr-body.md` (SHA-256 `194ad690740114bf...`). After it the live body equals `pr-body-r2.md` (SHA-256 `1c723df6130e2c85...`). Title unchanged, still draft, head `7bd8bb33e9`.
+
+## Ready for review (2026-11-28, approved)
+
+After the CI success was reported, the user approved it. `gh pr ready 8757` moved the PR out of draft at head `7bd8bb33e9`. GitHub requested the code owners of the changed files: `hornetmj` (`src/storage/`, `src/query/vacuum.*`) and `beyondykk9` (`src/base/`, `src/query/`). No other reviewer was added. Review state: `REVIEW_REQUIRED`. TC PRs stay open until `/cubrid-pr-merge 8757`.
