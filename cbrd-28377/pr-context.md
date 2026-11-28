@@ -71,6 +71,6 @@ Disposition: the flag comes from the two deferral branches (unpack and reclaim).
 | CI | `/run all` ([comment](https://github.com/CUBRID/cubrid/pull/8757#issuecomment-7235712937)) → [gha-ci run 46119612530](https://github.com/CUBRID/cubrid/actions/runs/46119612530); `cubrid-ci-watch` #124 |
 | CI result | pending |
 
-## Body revision r2 (not published)
+## Body revision r2 (published 2026-11-28)
 
-The published body (`cbrd-28377/pr-body.md`) says error code -1423. After refresh #2 the code is -1424. `cbrd-28377/pr-body-r2.md` changes only that number. Proposed operation: `gh pr edit 8757 --repo CUBRID/cubrid --body-file cbrd-28377/pr-body-r2.md` (body only, title and status unchanged). Needs user approval.
+The published body (`cbrd-28377/pr-body.md`) says error code -1423. After refresh #2 the code is -1424. `cbrd-28377/pr-body-r2.md` changes only that number. Approved 2026-11-28 and published with `gh pr edit 8757 --repo CUBRID/cubrid --body-file cbrd-28377/pr-body-r2.md`. Before the write the live body equalled `pr-body.md` (SHA-256 `194ad690740114bf...`). After it the live body equals `pr-body-r2.md` (SHA-256 `1c723df6130e2c85...`). Title unchanged, still draft, head `7bd8bb33e9`.
