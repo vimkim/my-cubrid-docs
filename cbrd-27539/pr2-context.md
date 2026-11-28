@@ -77,3 +77,9 @@
 - A second docs review subagent (`.scratch/.../pr2/review/PR-DOCS-REVIEW-2.md`) on `6fdb488e0b..793df58916` found 1 should-fix (`SERVER_MODE` calls fail at connect until the monitor sees the `cub_pl` death) and 5 nits (statset complex entry, TDE `addr->vfid`, CS tracker scope, `SUFunctionCode` naming, OOS example file), plus extra evidence for item 1 (`log_append_undoredo_crumbs ()` asserts outside `SERVER_MODE`). Lead spot-checked all and applied them.
 - Source commit `2095362eafa83352aa43b9ca558decfb2569a31f` (6 files, +11/-8); link and anchor check 0 failures; `git diff --check` clean. User approved push and reply. Push fast-forward from `793df58916`, verified; PR head matches. PR body unchanged (sha256 `446a8fac…`).
 - Reply posted: https://github.com/CUBRID/cubrid/pull/8765#issuecomment-7215315140
+
+## Revision 9 (kangmin5505 follow-up on src/sp, 2 items) — results
+
+- 2026-11-28: kangmin5505 posted 2 items on `2095362eaf` (https://github.com/CUBRID/cubrid/pull/8765#issuecomment-7235188569): `SUFunctionCode` does not mirror `METHOD_CALLBACK_*` (100-201 missing, `PREPARE_AND_EXECUTE (41)` Java-only); the `SA_MODE` start-failure retry path is unreachable from SP calls because `boot_restart_server ()` waits for `cub_pl` and fails the boot. Lead verified both in code: correct. Also corrected own wording (counterparts differ in number: 100 ↔ `REQUEST_SQL_SEMANTICS (0xA0)`, translated in `pl_compile_handler.cpp`).
+- Source commit `aa6ca40ccd5f07a869e7b3b32e138e2caa12a015` (`src/sp/AGENTS.md`, +4/-2); link and anchor check 0 failures; `git diff --check` clean. User approved push and reply. Push fast-forward from `2095362eaf`, verified; PR head matches. PR body unchanged (sha256 `446a8fac…`).
+- Reply posted: https://github.com/CUBRID/cubrid/pull/8765#issuecomment-7235775338
