@@ -72,3 +72,12 @@
   - `cbrd_27744_sa`, `cbrd_27937`, `cbrd_27780` passed.
   - `Check TC PRs` (TC Merge Gate) still fails while the TC PRs are open, as expected.
   - Stopped after this run as the standing rule requires.
+
+## Second refresh onto develop (2026-11-28)
+
+- Trigger: `cbrd_25637_recovery` fixed on develop by #8787 (`bcb0759333`); Commander approved resuming.
+- Engine: rebased onto develop `08f8185500`. Conflict in `unit_tests/CMakeLists.txt` (develop added `UNIT_TEST_WORKER_POOL_ELASTIC` next to this PR's `UNIT_TEST_SYSTEM_CATALOG`); kept both. `dfdcbd4e480a7a3314047282eba35574f3acb623` pushed with `--force-with-lease` (lease `855012ce0a`).
+- Local checks: debug build and install pass; `ctest` 76/77 with `test_catalog_record_gaps` passing. `test_oos_real_vacuum_latch_timeout_retry` timed out under parallel load and passed alone in 19 s, as before.
+- TC: develop merged into `tc/pr-8752` (public `98b5438bc`, private `43802d098`); `cubrid-pr-tc-base-check --pr 8752`: PASS.
+- 2026-11-28T07:25:11Z: posted `/run all` ([comment](https://github.com/CUBRID/cubrid/pull/8752#issuecomment-7235927452)); gha-ci run [46121128471](https://github.com/CUBRID/cubrid/actions/runs/46121128471) attempt 1 picked up all six contexts; `cubrid-ci-watch` request #130.
+- CI result: pending.
