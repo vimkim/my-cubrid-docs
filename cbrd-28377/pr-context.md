@@ -69,7 +69,7 @@ Disposition: the flag comes from the two deferral branches (unpack and reclaim).
 | Engine rebase | onto `origin/develop` `08f8185500` (includes #8538 CBRD-24777 and #8693 CBRD-28257) → `7bd8bb33e91e`. One conflict: `develop` took -1423 for `ER_LOG_RESTORE_INCOMPLETE` (CBRD-28047, `ddc3e8b38d`). `ER_VACUUM_OOS_RECLAIM_DEFERRED` is now -1424 and `ER_LAST_ERROR` -1425, with the en_US/ko_KR messages renumbered. Build ok, focused OOS ctests 10/10. Pushed with `--force-with-lease` over `8c74d7d77f` |
 | TC sync | `develop` merged into `tc/pr-8757` (public `f213797a5`, private-ex `5bdb776d7`), no force; `cubrid-pr-tc-base-check --pr 8757` PASS |
 | CI | `/run all` ([comment](https://github.com/CUBRID/cubrid/pull/8757#issuecomment-7235712937)) → [gha-ci run 46119612530](https://github.com/CUBRID/cubrid/actions/runs/46119612530); `cubrid-ci-watch` #124 |
-| CI result | pending |
+| CI result | **success** (2026-11-28T07:54:41Z): `build (debug)`, `build (release)`, `test_shell`, `test_sql`, `test_medium`, `test_sql_by_cci` all pass |
 
 ## Body revision r2 (published 2026-11-28)
 
