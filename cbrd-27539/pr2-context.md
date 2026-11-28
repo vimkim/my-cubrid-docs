@@ -83,3 +83,9 @@
 - 2026-11-28: kangmin5505 posted 2 items on `2095362eaf` (https://github.com/CUBRID/cubrid/pull/8765#issuecomment-7235188569): `SUFunctionCode` does not mirror `METHOD_CALLBACK_*` (100-201 missing, `PREPARE_AND_EXECUTE (41)` Java-only); the `SA_MODE` start-failure retry path is unreachable from SP calls because `boot_restart_server ()` waits for `cub_pl` and fails the boot. Lead verified both in code: correct. Also corrected own wording (counterparts differ in number: 100 ↔ `REQUEST_SQL_SEMANTICS (0xA0)`, translated in `pl_compile_handler.cpp`).
 - Source commit `aa6ca40ccd5f07a869e7b3b32e138e2caa12a015` (`src/sp/AGENTS.md`, +4/-2); link and anchor check 0 failures; `git diff --check` clean. User approved push and reply. Push fast-forward from `2095362eaf`, verified; PR head matches. PR body unchanged (sha256 `446a8fac…`).
 - Reply posted: https://github.com/CUBRID/cubrid/pull/8765#issuecomment-7235775338
+
+## Merge plan (2026-11-28)
+
+- `pr-final-merge-handoff plan --pr 8765` blocked: required gha-ci results (`build (debug)`, `build (release)`, `test_sql`, `test_shell`, `test_medium`) missing because no `/run` was posted, and the `xmilex-git` review request is pending. Approvals: hgryoo, hornetmj, kangmin5505. No unresolved threads.
+- User decision: docs-only change, so no `/run` (save CI resources). The user will personally comment on #8765 to ask mhoh3963 for an admin merge later, as with #8751. The agent posts nothing for this.
+- After the merge: confirm the empty TC PRs (cubrid-testcases#4487, private-ex#5179) are closed, show the JIRA CBRD-27539 Resolved/Fixed dry-run for separate approval, mark work-tracker #1091 done, and delete worktree `CBRD-27539-module-docs`.
