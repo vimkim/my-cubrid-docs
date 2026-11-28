@@ -6,24 +6,42 @@
 - Locking and concurrency edge cases, and resource and error handling.
 - Whether TC PR #5070 tests the prepared-transaction restart scenario adequately.
 
-**Most consequential result.** The engine change has no confirmed defect (verified at initial snapshot `aff1baed6394` and re-verified on delta snapshot `681ee7ac4ba8`).
+**Most consequential result.** The engine change has no confirmed defect (verified at initial snapshot `aff1baed6394`, delta `681ee7ac4ba8`, and latest delta `54eb489e5b96`).
 - **Exactly-once:** two reviewers on different models independently concluded that a commit decision applies each delta exactly once at every crash point. The only exception is a TM rollback after an interrupted commit, which violates the protocol and which the PR documents.
-- **The new TC catches the bug.** It passes on the PR head (both `aff1baed` and `681ee7ac4b`), fails on the base as the bug predicts, and passed in the PR's CI (`45339799450` and `45852709587`). It needs an engine built with `SUPPORT_XA=true`.
+- **The new TC catches the bug.** It passes on the PR head (`aff1baed`, `681ee7ac4b`, and `54eb489e5b`), fails on the base as the bug predicts, and passed in the PR's CI (`45339799450` and `45852709587`). It needs an engine built with `SUPPORT_XA=true`.
 
 | Item | Value |
 |---|---|
 | Engine PR | https://github.com/CUBRID/cubrid/pull/8674 (author hornetmj; reviewers lht1199, vimkim) |
-| Current snapshot (2026-11-27 KST) | base `435b0b70059a3fb650fc18f148db4930a345ba04` / head `681ee7ac4ba89b340c77fa67de14ff5a4059e3c7` / merge-base `435b0b70059a3fb650fc18f148db4930a345ba04` |
-| Current comparison | `git diff 435b0b70059a3fb650fc18f148db4930a345ba04 681ee7ac4ba89b340c77fa67de14ff5a4059e3c7` (sha256 `f1932f2dc33e0c13a7b7bebd4451e80fcde30bd4aa7261676a2d50410f6fddc7`); 7 files under `src/transaction/` (`log_2pc.c`, `log_impl.h`, `log_manager.c`, `log_recovery.c`, `log_tran_table.c`, `recovery.c`, `recovery.h`), +451/−11 |
-| Prior snapshot (2026-11-26 KST) | base `051a19c358fd13bef2cdd4110f5e4443e81c5757` / head `aff1baed6394b547cca4739c09d3672de97a4b90` (sha256 `76521de4…8ea66f`), +447/−11 |
-| TC PR | cubrid-testcases-private-ex#5070 (private), current base `7278dbc47e545eaa6adcd0ac8dec526585491978`, head `053fbe5820b01bf7abb7f13bbb6da196cbd392c6` (prior head `c82181e2d880044defbceec1a3809060de09c957`); 2 new shell testcase files (+400) |
+| Current snapshot (2026-11-28 KST) | base `bed13689ebde7b66c7d32a5c57c6ac5f559ced42` / head `54eb489e5b961647d5d35f048a7aebef833b1f22` / merge-base `bed13689ebde7b66c7d32a5c57c6ac5f559ced42` |
+| Current comparison | `git diff bed13689ebde7b66c7d32a5c57c6ac5f559ced42 54eb489e5b961647d5d35f048a7aebef833b1f22` (sha256 `ec12a63991fb5f021d2c68a7cc7fb0de3b15b070bae93533a422370f55c46113`); 7 files under `src/transaction/` (`log_2pc.c`, `log_impl.h`, `log_manager.c`, `log_recovery.c`, `log_tran_table.c`, `recovery.c`, `recovery.h`), +465/−11 |
+| Prior snapshots | `aff1baed6394` (2026-11-26, +447/−11); `681ee7ac4ba8` (2026-11-27, +451/−11) |
+| TC PR | cubrid-testcases-private-ex#5070 (private), current base `c8407983135120a5f3f32d02d7d16fa3af2eedc7`, head `9c1d242f5f03e24bd3589547bc3d4081d41b5769` (clean `develop` merge over `053fbe5820b0`; `vimkim` approved); 2 new shell testcase files (+400) |
 | Public TC PR | cubrid-testcases#4372, no changed files |
 
 ## Verdict and follow-up
 
-- **Verdict: `no-confirmed-findings`.** Recommendation: **APPROVE** (both engine PR #8674 at `681ee7ac4ba8` and TC PR #5070 at `053fbe5820b0`), with the remaining non-blocking comments below.
+- **Verdict: `no-confirmed-findings`.** Recommendation: **APPROVE** (engine PR #8674 at `54eb489e5b96`; TC PR #5070 already approved at `9c1d242f5f`), with the remaining non-blocking comments below.
 - **Follow-up review required: no.** All remaining suggestions are optional.
 - **Merge-gate note:** the PR is not vimkim's, so merging belongs to the author. The TC Merge Gate is still open (both TC PRs open).
+
+## Delta re-review (2026-11-28 KST, `681ee7ac4ba8` -> `54eb489e5b96` / TC `053fbe5820b0` -> `9c1d242f5f03`)
+
+Since `681ee7ac4ba8`, the engine PR added commit `d79390ec95f9e2328b48d7451109f2dbfc1a2b5c` (+16/−2) and merged `develop` (`54eb489e5b961647d5d35f048a7aebef833b1f22`), and the private TC PR merged `develop` (`9c1d242f5f03e24bd3589547bc3d4081d41b5769`).
+
+- **Length-check hardening (`d79390ec95`, resolves `D1` and `D2`):**
+  - `src/transaction/log_tran_table.c`: `logtb_rv_2pc_restore_unique_stats` now checks `length < OR_INT_SIZE` (`assert (false)`, `er_set` `ER_GENERIC_ERROR`) *before* `OR_GET_INT (datap)`, eliminating uninitialized/OOB reads on `< 4`-byte payloads while keeping the overflow-safe `count` multiplication guard.
+  - `src/transaction/log_recovery.c`: `log_recovery_2pc_restore_tran_unique_stats` now checks `zip->data_length < OR_BTID_ALIGNED_SIZE` (`int < int`, `12` bytes vs `36`-byte valid stats-commit payload) before `OR_GET_BTID (zip->log_data, &btid)` and jumps to `end:` (`log_zip_free`), allowing `log_recovery_2pc_restore_unique_stats` to clear partial stats and finish restart cleanly.
+- **`develop` merge audit (`54eb489e5b` & TC `9c1d242f5f`):**
+  - `git show --cc 54eb489e5b` is empty (zero conflict drift; diff-of-diffs shows only line-number shifts). Recent `src/transaction/` `develop` commits (`CBRD-26793` lock group/execution token in `log_2pc.c`/`log_tran_table.c`, `CBRD-28431`, `CBRD-28047`) do not adversely interact with `log_2pc_prepare_global_tran`, `stats_lsa`, or unique-stats restoration.
+  - TC `9c1d242f5f` is a clean `develop` merge with `git show --remerge-diff --stat` empty.
+- **Checks run on `54eb489e5b` + TC `9c1d242f5f`:**
+  - `cubrid-static-check`: 0 new cppcheck, 0 new clang-tidy, 0 new CPD clones; lizard CCN 18 on `log_recovery_2pc_restore_tran_unique_stats`.
+  - Debug `configure-build-and-install` (`SUPPORT_XA=true`): `BUILD_RC=0`, 0 warnings in the 7 changed files.
+  - Release `-O2 -DNDEBUG -Wall -Werror` (`SERVER_MODE` & `SA_MODE`) recompile of the 5 changed `.c` files: 0 errors, 0 warnings.
+  - GNU `indent -l120 -lc120` on the 7 changed files: 0 diff lines; `RV_fun` alignment: 147 entries (0..146), 0 mismatches.
+  - Native focused shell run of the `cbrd_28200` TC (`SUPPORT_XA=true`): `RUNNER_EXIT=0`, `testkit-focused.py verify` passed (`total=1, success=1, fail=0`), **OK 25 / NOK 0** (120s).
+  - GitHub Actions static checks (`code-style`, `cppcheck`, `license`, `memory-monitor-check`, `pr-style`) passed on `54eb489e5b`; `gha-ci` regression suites have not yet run on `54eb489e5b` (prior run `45852709587` passed `build`, `test_medium`, `test_sql`, `test_sql_by_cci`, and the `cbrd_28200` shell case on `681ee7ac4ba8`).
 
 ## Delta re-review (2026-11-27 KST, `aff1baed6394` -> `681ee7ac4ba8` / TC `c82181e2d880` -> `053fbe5820b0`)
 
@@ -41,17 +59,6 @@ Since the initial review at `aff1baed6394`, the engine PR added commit `a117284f
 - **TC PR #5070 delta (`8f19dbd985ef` + `053fbe5820b0`) & PR compatibility wording:**
   - The TC helper now accepts an optional error code and `case3` waits for checkpoint completion (`-978`, `ER_LOG_CHECKPOINT_FINISHED`, logged and flushed after `LOG_CS_EXIT`) instead of checkpoint start (`-977`), resolving **T1**. `case2` also adds a guard confirming no checkpoint ran during the decision/check window before killing the server. Merge `053fbe5820b0` is clean with zero extraneous files.
   - PR #8674's `## Remarks` compatibility section and footnote `²` now accurately state the redo-range crash rule for downgrading to an older `release` binary after an abnormal stop vs. clean-shutdown downgrade safety, resolving **N2**.
-- **Delta checks run (`681ee7ac4ba8` + TC `053fbe5820b0`):**
-  - `cubrid-static-check`: 0 new cppcheck, 0 new clang-tidy, 0 new CPD clones; lizard CCN 17 on `log_recovery_2pc_restore_tran_unique_stats` (complexity only).
-  - Debug `configure-build-and-install` (`SUPPORT_XA=true`): `BUILD_RC=0`, 0 warnings in the 7 changed files.
-  - Release `-O2 -DNDEBUG -Wall -Werror` (`SERVER_MODE` & `SA_MODE`) recompile of the 5 changed `.c` files: 0 errors, 0 warnings.
-  - GNU `indent -l120 -lc120` on the 7 changed files: 0 diff lines.
-  - `RV_fun` index ↔ enum check: 147 entries (0..146), 0 mismatches.
-  - Native focused shell run of the `cbrd_28200` TC (`SUPPORT_XA=true`): `RUNNER_EXIT=0`, `testkit-focused.py verify` passed (`total=1, success=1, fail=0`), **OK 25 / NOK 0** in 125s.
-  - CI `gha-ci` run `45852709587`: builds, static checks, `test_medium`, `test_sql`, `test_sql_by_cci` all `SUCCESS`; the `cbrd_28200` shell case ran on shard 49 against `681ee7ac4ba8` + TC `053fbe5820b0` and **PASSED (`[OK]`)**; all 30 `test_shell` failures match base `develop` `435b0b70059a` (run `45848718864`) one-for-one (`PR - Base = []`, `Base - PR = []`).
-- **Additional pre-existing defensive-hygiene notes (non-blocking, P3):**
-  - `D1` (`log_tran_table.c:4117-4121`): `logtb_rv_2pc_restore_unique_stats` executes `OR_GET_INT (datap)` before checking `length < OR_INT_SIZE`. `log_zip_alloc (IO_PAGESIZE)` prevents heap OOB for the sole current caller, and `count` is discarded on short length, but reordering the check first avoids reading uninitialized heap bytes on a corrupt `< 4`-byte record.
-  - `D2` (`log_recovery.c:3674`): `OR_GET_BTID (zip->log_data, &btid)` assumes `zip->data_length >= OR_BTID_ALIGNED_SIZE` (guaranteed on valid records; `IO_PAGESIZE`-backed buffer prevents heap OOB).
 
 ## What changed (architecture, from initial review `aff1baed6394`)
 
@@ -108,8 +115,8 @@ None.
 | N3 | P3 | Open | Indexes with zero deltas and `deleted` indexes are still packed into 146. A read-only XA branch with a non-empty hash also writes the record. Consider skipping zero entries. |
 | N4 | P3 | **Resolved (`a117284`)** | Producer adjacency rule (`146` is immediately before `LOG_2PC_PREPARE`) is now enforced by debug assert in `log_2pc.c`. |
 | N5 | P3, pre-existing pattern | Open (comment updated) | The commit-side `log_append_redo_data2` still drops the stats-commit record silently on OOM. `new char[]` in `log_rv_get_unzip_log_data` is unguarded and reachable from the restore pass (fatal on failure, now noted in `log_recovery.c` comment). |
-| D1 | P3, pre-existing hygiene | Open | In `logtb_rv_2pc_restore_unique_stats`, check `length < OR_INT_SIZE` before `OR_GET_INT (datap)` so a corrupted `< 4`-byte record never reads uninitialized heap bytes from `zip->log_data`. |
-| D2 | P3, pre-existing hygiene | Open | In `log_recovery_2pc_restore_tran_unique_stats`, `OR_GET_BTID (zip->log_data, &btid)` assumes `zip->data_length >= OR_BTID_ALIGNED_SIZE` (guaranteed on valid records; `IO_PAGESIZE`-backed buffer prevents heap OOB). |
+| D1 | P3, pre-existing hygiene | **Resolved (`d79390ec95`)** | `logtb_rv_2pc_restore_unique_stats` now checks `length < OR_INT_SIZE` before `OR_GET_INT (datap)`. |
+| D2 | P3, pre-existing hygiene | **Resolved (`d79390ec95`)** | `log_recovery_2pc_restore_tran_unique_stats` now checks `zip->data_length < OR_BTID_ALIGNED_SIZE` before `OR_GET_BTID (zip->log_data, &btid)`. |
 
 ## TC PR #5070
 
@@ -124,8 +131,9 @@ The private TC adds an XA prepared-transaction restart shell test modeled on the
 
 | Run | Engine / TC | Result |
 |---|---|---|
-| CI gha-ci run `45852709587`, shell shard 49 | head `681ee7a` / TC `053fbe58` | `cbrd_28200` **OK** |
-| Local native testkit, debug + `SUPPORT_XA=true` | head `681ee7a` / TC `053fbe58` | **OK 25 / NOK 0** (125s, verify `total=1, success=1, fail=0`) |
+| Local native testkit, debug + `SUPPORT_XA=true` | head `54eb489e5b` / TC `9c1d242f5f` | **OK 25 / NOK 0** (120s, verify `total=1, success=1, fail=0`) |
+| CI gha-ci run `45852709587`, shell shard 49 | prior head `681ee7a` / TC `053fbe58` | `cbrd_28200` **OK** |
+| Local native testkit, debug + `SUPPORT_XA=true` | prior head `681ee7a` / TC `053fbe58` | **OK 25 / NOK 0** (125s, verify `total=1, success=1, fail=0`) |
 | CI gha-ci run `45339799450`, shell shard 05 | prior head `aff1bae` / TC `c82181e` | `cbrd_28200` **OK** (~118 s) |
 | Local native testkit, debug + `SUPPORT_XA=true` | prior head `aff1bae` / TC `c82181e` | **OK 25 / NOK 0**, verify PASS |
 | Local native testkit, debug + `SUPPORT_XA=true` | prior base `051a19c` / TC `c82181e` | **OK 11 / NOK 14** (demonstrates the bug) |
@@ -157,18 +165,19 @@ The private TC adds an XA prepared-transaction restart shell test modeled on the
 
 | Check | Result |
 |---|---|
-| `cubrid-static-check` (`435b0b7005..681ee7ac4b`) | 0 cppcheck, 0 clang-tidy, 0 CPD clones; lizard CCN 17 on `log_recovery_2pc_restore_tran_unique_stats` |
-| Debug build of head `681ee7ac4b` (`SUPPORT_XA=true`) | Success (`BUILD_RC=0`), 0 warnings in the 7 changed files |
-| Release-flag recompile (`-O2 -DNDEBUG -Wall -Werror`), server and SA, of changed `.c` files (`681ee7ac4b`) | 0 warnings, 0 errors |
-| GNU `indent` (`-l120 -lc120`) on the 7 files (`681ee7ac4b`) | 0 diff lines |
-| `RV_fun` index ↔ enum script (`681ee7ac4b`) | 147 entries (0..146), 0 mismatches |
-| Pack/unpack probe with real `OR_*` macros (`aff1bae`, unchanged format in `681ee7ac4b`) | Pass (1000 entries + 13 edge cases) |
-| Native focused shell TC `cbrd_28200` (`SUPPORT_XA=true`) | Head `681ee7a` / TC `053fbe58`: **OK 25/25** (125s, verify PASS); prior head `aff1bae`: **OK 25/25**; prior base `051a19c`: **OK 11 / NOK 14** |
-| PR CI (`gha-ci 45852709587`, head `681ee7ac4b` / TC `053fbe58`) | Builds, static checks, `test_medium`, `test_sql`, `test_sql_by_cci` all pass; `cbrd_28200` OK on shell shard 49; 30 `test_shell` failures match base `develop` `435b0b70059a` identically |
+| `cubrid-static-check` (`bed13689eb..54eb489e5b`) | 0 cppcheck, 0 clang-tidy, 0 CPD clones; lizard CCN 18 on `log_recovery_2pc_restore_tran_unique_stats` |
+| Debug build of head `54eb489e5b` (`SUPPORT_XA=true`) | Success (`BUILD_RC=0`), 0 warnings in the 7 changed files |
+| Release-flag recompile (`-O2 -DNDEBUG -Wall -Werror`), server and SA, of changed `.c` files (`54eb489e5b`) | 0 warnings, 0 errors |
+| GNU `indent` (`-l120 -lc120`) on the 7 files (`54eb489e5b`) | 0 diff lines |
+| `RV_fun` index ↔ enum script (`54eb489e5b`) | 147 entries (0..146), 0 mismatches |
+| Pack/unpack probe with real `OR_*` macros (`aff1bae`, unchanged format in `54eb489e5b`) | Pass (1000 entries + 13 edge cases) |
+| Native focused shell TC `cbrd_28200` (`SUPPORT_XA=true`) | Head `54eb489e5b` / TC `9c1d242f5f`: **OK 25/25** (120s, verify PASS); prior `681ee7a`: **OK 25/25**; prior `aff1bae`: **OK 25/25**; prior base `051a19c`: **OK 11 / NOK 14** |
+| PR CI (`gha-ci 45852709587` on `681ee7ac4b`; static checks on `54eb489e5b`) | Static checks pass on `54eb489e5b`; `gha-ci` regression suites not yet run on `54eb489e5b` (passed `build`, `test_medium`, `test_sql`, `test_sql_by_cci`, and `cbrd_28200` on `681ee7ac4b`) |
 
 Not run: gdb crash-point injection, the U1 probe, old-binary restart, `diagdb -d 8` on a 146 record, UBSan.
 
 ## Coverage and method
 
 - **Initial review (`aff1bae`, 2026-11-26):** Five specialist reviewers (recovery, 2PC state/concurrency, systems/C++, HA/storage/perf, TC adequacy) + build/TC worker; bounded mode.
-- **Delta re-review (`681ee7ac4b`, 2026-11-27):** Two specialist reviewers (`rev-rec`, `rev-tc`) covering engine delta `a117284`, `develop` merge `681ee7ac4b`, TC delta `8f19dbd` + `053fbe58`, CI run `45852709587`, and independent `SQ-Delta`, plus a shell build/test worker (`build`); bounded mode without a hard cap. Account-wide usage cannot be attributed to individual agents.
+- **Delta re-review (`681ee7ac4b`, 2026-11-27):** Two specialist reviewers (`rev-rec`, `rev-tc`) covering engine delta `a117284`, `develop` merge `681ee7ac4b`, TC delta `8f19dbd` + `053fbe58`, CI run `45852709587`, and independent `SQ-Delta`, plus a shell build/test worker (`build`).
+- **Mini delta re-review (`54eb489e5b`, 2026-11-28):** Coordinator source/merge audit of `d79390ec95` (+16/−2) + `develop` merge `54eb489e5b` + shell build/test worker (`build`); bounded mode without a hard cap. Account-wide usage cannot be attributed to individual agents.
