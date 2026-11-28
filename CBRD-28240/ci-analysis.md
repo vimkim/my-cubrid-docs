@@ -128,6 +128,18 @@ The testcase uses createdb, server and broker start with SSL, and a JDBC `select
 
 No `cubrid-tcr`, JIRA, or GitHub writes were made during this analysis.
 
+## Follow-up (2026-11-28)
+
+- The Case 9 comment above line 51 says the row number is intended ("with a row number, which still reads the groups in their order"). So the preferred fix keeps `rownum` and filters the late rows before it is counted:
+
+  ```sql
+  select count(*) from t28181 where k in (select k from t28181 where k < 1000 and rownum < 5000 group by k);
+  ```
+
+  `k` has no index, so the access path stays a heap scan, and the answer stays `20000`. `where id < 5000` remains the simplest fix if the row number is not needed. This replaces the `order by id limit 4999` direction above.
+- Posted to CBRD-28181 with approval: [comment 4779622](https://jira.cubrid.org/browse/CBRD-28181?focusedCommentId=4779622).
+- The remaining actions (CBRD-28420 note, `cubrid-tcr` signatures and rules, optional PR comment, TC fix watch) are tracked in work-tracker item 1126.
+
 ## Evidence files (local, not in Git)
 
 Under `/mnt/nvme/data-5/tmp/claude-1000/-home-vimkim-gh-cb-CBRD-28240/cf15d8fb-4ba1-4bc3-8658-a2f367d15f0e/scratchpad/`:
