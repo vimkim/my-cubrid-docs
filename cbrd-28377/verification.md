@@ -42,7 +42,7 @@
 
 ## Change
 
-- `oos_reclaim_notified_chains ()` 에 `defer_transient` 를 추가했다. 이 값이 참이면 위 표의 일시적 오류에서 새 오류 `ER_VACUUM_OOS_RECLAIM_DEFERRED`(-1423)를 설정하고 돌려준다. 나머지 오류는 이전처럼 멈춘다.
+- `oos_reclaim_notified_chains ()` 에 `defer_transient` 를 추가했다. 이 값이 참이면 위 표의 일시적 오류에서 새 오류 `ER_VACUUM_OOS_RECLAIM_DEFERRED`(-1424. 처음에는 -1423이었으나 2026-11-28 rebase 때 `develop` 의 `ER_LOG_RESTORE_INCOMPLETE`(-1423, CBRD-28047)와 겹쳐 옮겼다)를 설정하고 돌려준다. 나머지 오류는 이전처럼 멈춘다.
 - `vacuum_oos_reclaim_notified_chains ()` 는 vacuum worker일 때만 `defer_transient` 를 켠다. 미룬 heap을 기억해, 같은 실행에서 그 heap의 다음 알림은 다시 기다리지 않고 다음 실행으로 넘긴다(CBRD-27933의 조회 실패와 같은 방식).
 - `vacuum_process_log_block ()` 은 새 오류를 `ER_VACUUM_OOS_LOOKUP_DEFERRED` 와 같이 처리한다. 블록의 나머지를 처리하고, 블록은 완료로 표시하지 않는다. 첫 deferral 코드를 변수에 저장해 블록 끝에서 돌려준다. debug assert 세 곳이 새 코드를 허용한다.
 - 커밋 postpone 경로(`oos_rv_reclaim_on_postpone ()`, REMOVE sysop 커밋과 SA eager 삭제)는 바꾸지 않았다. 아래 "Postpone path policy" 참고.
@@ -78,7 +78,7 @@ LOG FATAL ERROR: oos_reclaim: committed reclaim failed with error -1123
 
 ```text
 ERROR CODE = -1123 ... pthread_cond_timedwait() timed out.
-ERROR CODE = -1423 ... Vacuum could not finish reclaiming the OOS chains that an UPDATE of heap file 1|704 dropped (OOS file 1|832, error -1123). The current log block is left for a later run, which reclaims the rest.
+ERROR CODE = -1423 ... (rebase 전 번호. 지금은 -1424) Vacuum could not finish reclaiming the OOS chains that an UPDATE of heap file 1|704 dropped (OOS file 1|832, error -1123). The current log block is left for a later run, which reclaims the rest.
 VACUUM ERROR (...): Processing log block 15 is interrupted!
 ```
 
