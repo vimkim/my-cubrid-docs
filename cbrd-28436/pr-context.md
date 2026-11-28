@@ -38,3 +38,4 @@
 - 2026-11-27: pushed `689429c383` to `vk` `CBRD-28436` (new branch); `git ls-remote` shows the same commit.
 - 2026-11-27: created draft PR [CUBRID/cubrid#8801](https://github.com/CUBRID/cubrid/pull/8801); verified draft, base `develop`, head `vimkim:CBRD-28436` at `689429c383`, assignee `vimkim`, no review requests, body equal to `pr-body.md` (sha256 prefix `eebabd9f2ec530d6`).
 - Not done (per instruction): ready-for-review, reviewer requests, `/run` CI.
+- 2026-11-28: merged origin/develop (08f8185500) into the PR branch without force push; head 0ba6cba33e. Synced tc/pr-8801 in both TC repos with develop (baseline check PASS). Build and ctest oos_setup_db + test_oos_real_vacuum* 7/7 pass. Posted /run all (https://github.com/CUBRID/cubrid/pull/8801#issuecomment-7235871116), gha-ci run 46120755369.
