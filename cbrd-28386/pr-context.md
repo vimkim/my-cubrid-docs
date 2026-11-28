@@ -80,4 +80,9 @@
 - Local checks: debug build and install pass; `ctest` 76/77 with `test_catalog_record_gaps` passing. `test_oos_real_vacuum_latch_timeout_retry` timed out under parallel load and passed alone in 19 s, as before.
 - TC: develop merged into `tc/pr-8752` (public `98b5438bc`, private `43802d098`); `cubrid-pr-tc-base-check --pr 8752`: PASS.
 - 2026-11-28T07:25:11Z: posted `/run all` ([comment](https://github.com/CUBRID/cubrid/pull/8752#issuecomment-7235927452)); gha-ci run [46121128471](https://github.com/CUBRID/cubrid/actions/runs/46121128471) attempt 1 picked up all six contexts; `cubrid-ci-watch` request #130.
-- CI result: pending.
+- CI result: run [46121128471](https://github.com/CUBRID/cubrid/actions/runs/46121128471) passed all six gha-ci contexts (`cubrid-ci-watch` #130 closed `success`). `Check TC PRs` fails as expected while TC PRs #4461 and #5162 are open.
+- Approval gate: `cubrid-pr-approval-check --repo CUBRID/cubrid --pr 8752` PASS (`hornetmj` APPROVED, `lht1199` APPROVED).
+- `pr-final-merge-handoff plan --pr 8752`: `review_ready: false`. Blockers: 2 unresolved Greptile P2 threads, and the squash message (supplied at `/cubrid-pr-merge`).
+  - `PRRT_kwDOAxqu78675FDZ` (`test_catalog_record_gaps.cpp`): the test does not guard the zeroing of the unused second directory item, because `catalog_add_class_info` later writes the class-info item into that slot. Code check confirms it: a test-coverage gap, not an engine defect. The fix still keeps the first `RVCT_INSERT` image clean.
+  - `PRRT_kwDOAxqu78675FDe` (`unit_tests/system_catalog/CMakeLists.txt`): the fixture scripts use `CUBRID` and `PATH` captured at configure time. Robustness of the opt-in test only.
+  - Waiting for the user to decide: reply and resolve, or change the test (new push and CI).
